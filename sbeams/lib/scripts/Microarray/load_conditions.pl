@@ -377,12 +377,8 @@ sub insertGeneExpression {
 		@rows = $sbeams->selectOneColumn($sql);
 		
 		foreach my $gene_expression_id (@rows){
-				$sql = qq~
-						DELETE FROM gene_expression
-						WHERE gene_expression_id = '$gene_expression_id'
-						~;
-				$sbeams->applySqlChange(sql_query=>$sql,
-																table_name=>'gene_expression');
+				$sql = "DELETE FROM gene_expression WHERE gene_expression_id='$gene_expression_id'";
+				$sbeams->executeSQL($sql);
 		}
 
 		## Define Column Map
