@@ -14,6 +14,7 @@ SELECT DISTINCT search_batch_id,username + '' - '' + experiment_tag + '' -> '' +
         OR table_name = 'BrowseAnnotatedPeptides'
         OR table_name = 'PR_CompareExperiments'
         OR table_name = 'PR_CompareMSRuns'
+        OR table_name = 'PR_CompareBySpectrum'
         OR table_name = 'PR_SummarizePeptides'
        )
    AND column_name = 'search_batch_id'
