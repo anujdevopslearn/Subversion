@@ -1007,6 +1007,7 @@ sub updateOrInsertRow {
 
   #### If we're just testing
   if ($testonly) {
+    #print "Not actually executing SQL...\n";
 
     #### If the user asked for the PK to be returned, make a random one up
     if ($return_PK) {
