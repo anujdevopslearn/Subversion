@@ -1023,7 +1023,7 @@ sub loadBiosequence {
           $rowdata{match_accession} = $match->{match_name}
             if ($match->{match_source} eq 'pfam');
           $rowdata{match_accession} = substr($match->{match_name},0,4)
-            if ($match->{match_source} eq 'pdbblast');
+            if ($match->{match_source} =~ /pdbblast|orfeus/);
 
         } else {
           print "WARNING: Unable to transform match source '",
