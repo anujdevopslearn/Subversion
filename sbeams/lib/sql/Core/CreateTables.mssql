@@ -258,6 +258,7 @@ GO
 CREATE TABLE dbo.project (
 	project_id		int IDENTITY(101,1) NOT NULL,
 	name			varchar(100) NOT NULL,
+	project_tag		varchar(50) NOT NULL,
 	PI_contact_id		int NOT NULL REFERENCES contact(contact_id),
 	description		text NULL,
 	budget			varchar(25) NOT NULL,
