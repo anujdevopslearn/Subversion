@@ -113,7 +113,7 @@ sub main {
     FROM ${TBSN_SNP_INSTANCE} SI
     JOIN ${TBSN_SNP_SOURCE} SS on (SS.snp_source_id = SI.snp_source_id)
     JOIN ${TBSN_ALLELE} A on (A.snp_instance_id = SI.snp_instance_id)
-    JOIN ${TBSN_ALLELE_BLAST_STATS} BS on (BS.allele_id = A.allele_id)
+    JOIN ${TBSN_ALLELE_BLAST_STATS} BS on (BS.query_sequence_id = A.query_sequence_id)
     JOIN ${TBSN_BIOSEQUENCE} B on (B.biosequence_id = BS.matched_biosequence_id)
     JOIN ${TBSN_BIOSEQUENCE_SET} BSS ON (BSS.biosequence_set_id = B.biosequence_set_id)
    WHERE BS.percent_identified >= $thresh
@@ -136,7 +136,7 @@ ORDER BY S.snp_instance_id,BSS.biosequence_set_id
     FROM ${TBSN_SNP_INSTANCE} SI
     JOIN ${TBSN_SNP_SOURCE} SS on (SS.snp_source_id = S.snp_source_id)
     JOIN ${TBSN_ALLELE} A on (A.snp_instance_id = S.snp_instance_id)
-    JOIN ${TBSN_ALLELE_BLAST_STATS} BS on (BS.allele_id = A.allele_id)
+    JOIN ${TBSN_ALLELE_BLAST_STATS} BS on (BS.query_sequence_id = A.query_sequence_id)
     JOIN ${TBSN_BIOSEQUENCE} B on (B.biosequence_id = BS.matched_biosequence_id)
     JOIN ${TBSN_BIOSEQUENCE_SET} BSS ON (BSS.biosequence_set_id = B.biosequence_set_id)
     JOIN #tmp1 tt
@@ -147,5 +147,4 @@ ORDER BY S.snp_instance_id,BSS.biosequence_set_id
 ORDER BY BSS.biosequence_set_id,BS.end_fiveprime_position
   ~;
 
-
-
+  $sbeams->executeSQL($sql);
