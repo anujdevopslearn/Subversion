@@ -4348,7 +4348,7 @@ sub unix2dosFile {
   my $file = $configuration{'file'};
 
   open (INFILE,"$file")  || die "Cannot open file '$file'";
-  open (DOSFILE,">$file.dos")  || die "Cannot open file '$file.dos    $1'";
+  open (DOSFILE,">$file.dos")  || die "Cannot open file '$file.dos'";
 
   #### Loop over all data in the file
   while ($line = <INFILE>) {
