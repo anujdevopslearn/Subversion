@@ -92,6 +92,9 @@ use vars qw(@ISA @EXPORT
     
     $TBMA_AFFY_ANALYSIS
     $TBMA_AFFY_ANALYSIS_TYPE	
+
+    $TBMA_EXPERIMENT_INFORMATION
+    $TBMA_EXPERIMENT_CONSTANTS
 	
 );
 
@@ -175,6 +178,8 @@ require Exporter;
     $TBMA_AFFY_ANALYSIS
     $TBMA_AFFY_ANALYSIS_TYPE
 
+    $TBMA_EXPERIMENT_INFORMATION
+    $TBMA_EXPERIMENT_CONSTANTS
 
 
 );
@@ -264,6 +269,8 @@ $TBMA_ALIGNMENT			=  "${mod}alignment";
 $TBMA_AFFY_ANALYSIS			=  "${mod}affy_analysis";
 $TBMA_AFFY_ANALYSIS_TYPE	=  "${mod}affy_analysis_type";
 
+$TBMA_EXPERIMENT_INFORMATION=  "${mod}experiment_information";
+$TBMA_EXPERIMENT_CONSTANTS  =  "${mod}experiment_constants";
 
 
 1;
