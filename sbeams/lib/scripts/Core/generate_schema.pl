@@ -217,6 +217,7 @@ sub generateSchema {
       if ($column_names[$i] =~ /^\"(.*)\"$/) {
         $column_names[$i] = $1;
       }
+### xxxx might need to search for blank space here, then a next
       if ($ref_columns[$i] ne $column_names[$i]) {
         print "ERROR: File header verification failed.\n";
 	print " Expected column $i to be '$ref_columns[$i]' but it appears ".

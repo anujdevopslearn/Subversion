@@ -50,6 +50,9 @@ sub readTableProperty {
 
   #### Read through the rest of the file, load the relevant data
   while ($line = <INFILE>) {
+    if ($line =~ /^\s+$/ ) { ## if there's a blank line, skip to next iteration of loop
+        next;
+    }
     my @columns = split("\t",$line);
     next if (scalar(@columns) < 4);
     my ($table_name,$category,$table_group) = @columns[0..2];
@@ -107,6 +110,9 @@ sub readTableColumn {
 
   #### Read through the rest of the file, load the relevant data
   while ($line = <INFILE>) {
+    if ($line =~ /^\s+$/ ) { ## if there's a blank line, skip to next iteration of loop
+        next;
+    }
     my @columns = split("\t",$line);
     next if (scalar(@columns) < 10);
     my @data = @columns;
