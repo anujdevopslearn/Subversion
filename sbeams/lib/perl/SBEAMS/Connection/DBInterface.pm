@@ -524,13 +524,10 @@ sub applySQLChange {
     my %args = @_;
 
     my $subname = 'applySQLChange';
-    $log->debug( "In $subname, SQL is $args{SQL_statement}" );
 
     # FIXME temporarily running both old and new versions of applySqlChange to
     # ensure a smooth transition.  New version is definitive as of 01-25-2005.
     my %asc_old = $self->applySqlChange ( %args );
-
-    $log->debug( "Went old school, did it fork us?" );
 
 
     # Check for required parameters.
@@ -638,7 +635,7 @@ sub getDbTableName {
   my $self = shift;
   my $name = shift;
 
-  $dbh ||= $self->getDBHandle();
+  $dbh = $self->getDBHandle();
 
   my $dbname = $dbh->selectrow_array( <<"  END" );
   SELECT db_table_name
@@ -651,11 +648,6 @@ sub getDbTableName {
   FROM $TB_TABLE_PROPERTY
   WHERE table_name = '$name'
   END
-
-  $log->debug( $sql );
-  $log->debug( "Table name is $dbname" );
-  $log->debug( "Evaled is " . eval "\"$dbname\"" );
-  print STDERR "Couldn't find table ( $name ) in table_property" if !$dbname;
 
   return eval "\"$dbname\"";
 } # End getDbTableName
@@ -675,7 +667,7 @@ sub selectOneColumn {
     my @rows;
 
     #### Get the database handle
-    $dbh ||= $self->getDBHandle();
+    $dbh = $self->getDBHandle();
 
     #### Convert the SQL dialect if necessary
     $sql = $self->translateSQL(sql=>$sql);
@@ -713,7 +705,7 @@ sub selectSeveralColumns {
     my @rows;
 
     #### Get the database handle
-    $dbh ||= $self->getDBHandle();
+    $dbh = $self->getDBHandle();
 
 	
     #### Convert the SQL dialect if necessary
@@ -747,7 +739,7 @@ sub selectHashArray {
     my @rows;
 
     #### Get the database handle
-    $dbh ||= $self->getDBHandle();
+    $dbh = $self->getDBHandle();
 
     #### Convert the SQL dialect if necessary
     $sql = $self->translateSQL(sql=>$sql);
@@ -779,7 +771,7 @@ sub selectTwoColumnHash {
     my %hash;
 
     #### Get the database handle
-    $dbh ||= $self->getDBHandle();
+    $dbh = $self->getDBHandle();
 
     #### Convert the SQL dialect if necessary
     $sql = $self->translateSQL(sql=>$sql);
@@ -1248,7 +1240,7 @@ sub executeSQL {
 
     #print "Content-type: text/html\n\n$sql\n\n";
     #### Get the database handle
-    $dbh ||= $self->getDBHandle();
+    $dbh = $self->getDBHandle();
 
     #### Prepare the query
     my $sth = $dbh->prepare($sql);
@@ -1857,7 +1849,7 @@ sub buildOptionList {
     }
 
     #### Get the database handle
-    $dbh ||= $self->getDBHandle();
+    $dbh = $self->getDBHandle();
 
     #### Convert the SQL dialect if necessary
     $sql_query = $self->translateSQL(sql=>$sql_query); 
@@ -1948,7 +1940,7 @@ sub displayQueryResult {
 
 
     #### Get the database handle
-    $dbh ||= $self->getDBHandle();
+    $dbh = $self->getDBHandle();
 
     #### Convert the SQL dialect if necessary
     $sql_query = $self->translateSQL(sql=>$sql_query);
@@ -2151,7 +2143,7 @@ sub fetchResultSet {
 
 
     #### Get the database handle
-    $dbh ||= $self->getDBHandle();
+    $dbh = $self->getDBHandle();
 
 
     #### Update timing info
