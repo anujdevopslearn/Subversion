@@ -105,7 +105,7 @@ sub printPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=slide_type">- Array Info</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/ShowProjectStatus.cgi">- Project Status</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/GridAlignCheck.cgi">- Grid Align Check</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/ProcessProject.cgi">- Process a Project</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Microarray/ProcessProject.cgi">- Process a Project</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=user_login">- Admin</a></td></tr>
 	</table>
