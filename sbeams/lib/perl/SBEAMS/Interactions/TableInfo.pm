@@ -86,9 +86,9 @@ sub returnTableInfo {
         if ($info_key eq "BASICQuery") {
             return qq~
 		SELECT I.interaction_id,
-			BE1.bioentity_name,BES1.bioentity_state_name,RF1.regulatory_feature_name,
+			BE1.bioentity_common_name,BES1.bioentity_state_name,RF1.regulatory_feature_name,
 			IT.interaction_type_name,
-			BE2.bioentity_name,BES2.bioentity_state_name,RF2.regulatory_feature_name
+			BE2.bioentity_common_name,BES2.bioentity_state_name,RF2.regulatory_feature_name
 		  FROM $TBIN_INTERACTION I
 		  LEFT JOIN $TBIN_INTERACTION_TYPE IT ON ( I.interaction_type_id = IT.interaction_type_id )
 		  LEFT JOIN $TBIN_BIOENTITY BE1 ON ( I.bioentity1_id = BE1.bioentity_id )
@@ -150,7 +150,7 @@ sub returnTableInfo {
         if ($info_key eq "BASICQuery") {
             return qq~
 		SELECT B.bioentity_id,
-		        O.organism_name, bioentity_name, bioentity_alias, BS.biosequence_name,
+		        O.organism_name, bioentity_common_name, bioentity_aliases, BS.biosequence_name,
 			  BT.bioentity_type_name, B.comment
 		  FROM $TBIN_BIOENTITY B
 		  LEFT JOIN $TB_ORGANISM O ON ( B.organism_id = O.organism_id )
