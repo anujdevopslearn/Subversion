@@ -1444,7 +1444,7 @@ sub parseConstraint2SQL {
     print "Parsing flexible_int $constraint_name<BR>\n" if ($verbose);
     if ($constraint_value =~ /^[\d]+$/) {
       return "   AND $constraint_column = $constraint_value";
-    } elsif ($constraint_value =~ /^between\s+[\d]+\s+and\s+[\d]+$/i) {
+    } elsif ($constraint_value =~ /^(not )*between\s+[\d]+\s+and\s+[\d]+$/i) {
       return "   AND $constraint_column $constraint_value";
     } elsif ($constraint_value =~ /^([\d]+)\s*\+\-\s*([\d]+)$/i) {
       my $lower = $1 - $2;
@@ -1463,7 +1463,7 @@ sub parseConstraint2SQL {
   #### Parse type flexible_float
   if ($constraint_type eq "flexible_float") {
     print "Parsing flexible_float $constraint_name<BR>\n" if ($verbose);
-    if ($constraint_value =~ /^between\s+[\d\.\-\+]+\s+and\s+[\d\.\-\+]+$/i) {
+    if ($constraint_value =~ /^(not )*between\s+[\d\.\-\+]+\s+and\s+[\d\.\-\+]+$/i) {
       return "   AND $constraint_column $constraint_value";
     } elsif ($constraint_value =~ /^(\-*[\d\.]+)\s*\+\-\s*([\d\.]+)$/i) {
       my $lower = $1 - $2;
