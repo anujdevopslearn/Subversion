@@ -437,18 +437,36 @@ sub executeManualCommands {
   }
 
 
+  #### And just execute it
+  print "Executing manual commands...\n";
+
+
   #### Read in all the data at once
   $sql = '';
   while ($line = <INFILE>) {
-    $sql .= $line unless ($line =~ /^\#/);
+    $line =~ s/[\r\n]//g;
+    next if ($line =~ /^\#/);
+    next if ($line =~ /^\s*$/);
+    if ($line =~ /^GO$/) {
+      print "-------------\n$sql\n\n" if ($VERBOSE);
+      $sbeams->executeSQL($sql);
+      $sql = '';
+
+    } else {
+      $sql .= "$line\n";
+    }
+
   }
+
+
+  #### If there's anything left in the buffer, run that too
+  if ($sql gt '') {
+    print "-------------\n$sql\n\n" if ($VERBOSE);
+    $sbeams->executeSQL($sql);
+  }
+
+
   close(INFILE);
-
-
-  #### And just execute it
-  print "Executing manual commands...\n";
-  print "$sql\n\n" if ($VERBOSE);
-  $sbeams->executeSQL($sql);
   print "done.\n";
 
 
