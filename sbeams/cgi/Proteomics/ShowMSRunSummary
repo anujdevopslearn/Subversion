@@ -206,9 +206,9 @@ sub handle_request {
 	The following is a listing of all MS/MS spectra that were attempted,
         labeled with their result:
         <UL>
-	<LI><font color=red>MSMS: MS/MS was attempted but spectrum was bad</font>
-	<LI><font color=blue>SEQUEST: SEQUEST attempted to identify this spectrum but the results did not get a high Probability</font>
-	<LI><font color=green>HighProb: SEQUEST identified the spectrum with a Probability &gt; 0.7</font>
+	<LI><font color=red>BadSpec: MS/MS was attempted but spectrum was bad</font>
+	<LI><font color=blue>PoorHit: SEQUEST attempted to identify this spectrum but the results did not get a high Probability</font>
+	<LI><font color=orange>HighProb: SEQUEST identified the spectrum with a Probability &gt; 0.7</font>
       </UL>Click on "SBEAMS" to see the SEQUEST search results<BR><BR>
       ~;
 
