@@ -187,6 +187,7 @@ sub handleRequest {
      INNER JOIN bioalias.dbo.genelynx_extref GX
            ON ( GA.genelynx_extref_id = GX.genelynx_extref_id )
      WHERE extref_name IN ( '$genelynx_list' )
+       AND GE.symbol IS NOT NULL
      ORDER BY GA.genelynx_entry_id,extref_name,accession
   ~;
 
@@ -444,7 +445,7 @@ sub setRelationship {
 
     #### If it is from the current evidence_source, then touch it
     if ($existing_record) {
-      print "This relationship exists already. Touch it\n";
+      print "This relationship exists already. Touch it\n" if ($VERBOSE);
       return;
     }
 
