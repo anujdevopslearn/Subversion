@@ -543,7 +543,10 @@ sub printEntryForm {
 
       #### Else if the user does Labeling and the Arrays Group does Hyb
       } elsif ( $parameters{"hybridization_request"} eq "L" ) {
-        $proc_cost = $n_slides * 50;
+        my $hyb_price = 50;
+        #### Kludge the Yeast Half Slide price to $25
+        $hyb_price = 25 if ($parameters{"slide_type_id"} == 11);
+        $proc_cost = $n_slides *  $hyb_price;
         print "<P>Total Hyb Cost: \$ $proc_cost<P>\n";
         $total_price += $proc_cost;
 
@@ -1198,7 +1201,10 @@ sub processEntryForm {
 
       #### Else if the user does Labeling and the Arrays Group does Hyb
       } elsif ( $parameters{"hybridization_request"} eq "L" ) {
-        $proc_cost = $n_slides * 50;
+        my $hyb_price = 50;
+        #### Kludge the Yeast Half Slide price to $25
+        $hyb_price = 25 if ($parameters{"slide_type_id"} == 11);
+        $proc_cost = $n_slides *  $hyb_price;
         print "<P>Total Hyb Cost: \$ $proc_cost<P>\n";
         $total_price += $proc_cost;
 
@@ -1747,7 +1753,10 @@ sub printCompletedEntry {
 
       #### Else if the user does Labeling and the Arrays Group does Hyb
       } elsif ( $parameters{"hybridization_request"} eq "L" ) {
-        $proc_cost = $n_slides * 50;
+        my $hyb_price = 50;
+        #### Kludge the Yeast Half Slide price to $25
+        $hyb_price = 25 if ($parameters{"slide_type_id"} == 11);
+        $proc_cost = $n_slides *  $hyb_price;
         print "<P>Total Hyb Cost: \$ $proc_cost<P>\n";
         $total_price += $proc_cost;
 
