@@ -24,10 +24,9 @@
 use strict;
 use Getopt::Long;
 use FindBin;
-
+use Alcyt;
 use lib "$FindBin::Bin/../../lib/perl";
-use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
-             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username $current_project_id $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
 
@@ -208,7 +207,6 @@ sub processEntryForm {
     || die "ref_parameters not passed";
   my %parameters = %{$ref_parameters};
 
-
   #### Define some generic varibles
   my ($i,$element,$key,$value,$line,$result,$sql);
 
@@ -241,9 +239,11 @@ sub processEntryForm {
   #### Obtain information about the current user
   $current_username = $sbeams->getCurrent_username;
   $current_contact_id = $sbeams->getCurrent_contact_id;
+
+ 
 #  $current_work_group_id = $sbeams->getCurrent_work_group_id;
 #  $current_work_group_name = $sbeams->getCurrent_work_group_name;
-#  $current_project_id = $sbeams->getCurrent_project_id;
+  $current_project_id = $sbeams->getCurrent_project_id;
 #  $current_project_name = $sbeams->getCurrent_project_name;
 
 
@@ -416,7 +416,7 @@ sub addFCSRun {
     filename => $filename,
     original_filepath => $parameters{filepath},
     n_data_points => $header->{TOT},
-    run_date=>'2000-01-01',
+    run_date=>$header->{DATE},
     fcs_run_description=>$header->{COM},
   );
 
@@ -471,16 +471,20 @@ sub readFCSFileHeader {
   #### Process the arguments list
   my $filepath = $args{'filepath'};
   my $filename = $args{'filename'};
-
-
-  #### Read header from file
+  $filepath .+ "/" if ($filepath !~ /\/$/);
+  
+  my @header = read_fcs_header($filepath.$filename);
+  my @keyValue = get_fcs_keywords("$filepath$filename",@header);
+  my %keyValueHash = get_fcs_key_value_hash(@keyValue);
+  
+   #### Read header from file
   my %header;
-  $header{PROJ} = 'test PROJ';
-  $header{TOT} = '10000';
-  $header{CELLS} = 'test CELLS';
-  ### Finish this!
-
-
+  $header{PROJ} = $keyValueHash{'$PROJ'};
+  $header{TOT} =  $keyValueHash{'$TOT'};
+  $header{CELLS} = $keyValueHash{'$CELLS'};
+  $header{DATE} = $keyValueHash{'$DATE'};
+  $header{COM} = $keyValueHash{'$SMNO'}."\n".$keyValueHash{'$CYT'}."\n".  $keyValueHash{'$P4N'}."\n". $keyValueHash{'$P5N'};
+  
   return \%header;
 
 } # end readFCSFileHeader
