@@ -1,4 +1,5 @@
 table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
+IS_abundance_level	Abundance_level	Immunostain_infrastructure	YES	$TBIS_ABUNDANCE_LEVEL	abundance_level_id		ManageTable.cgi?TABLE_NAME=IS_abundance_level	IS_abundance_level	
 IS_biosequence_set	BioSequence Set	Immunostain_infrastructure	YES	$TBIS_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=IS_biosequence_set	IS_biosequence_set	
 IS_dbxref	Biosequence Database Cross Reference	Immunostain_infrastructure	YES	$TB_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=IS_dbxref	IS_biosequence_dbxref	
 IS_biosequence	BioSequence	Immunostain_infrastructure	NO	$TBIS_BIOSEQUENCE	biosequence_id				
@@ -14,5 +15,3 @@ IS_slide_image	Slide Image	Immunostain_infrastructure	YES	$TBIS_SLIDE_IMAGE	slid
 IS_tissue_type	Tissue Type	Immunostain_infrastructure	YES	$TBIS_TISSUE_TYPE	tissue_type_id		ManageTable.cgi?TABLE_NAME=IS_tissue_type	"IS_cell_type,IS_tissue_type,IS_cell_presence_level"	
 IS_specimen	Specimen	Immunostain_infrastructure	YES	$TBIS_SPECIMEN	specimen_id		ManageTable.cgi?TABLE_NAME=IS_specimen	"IS_specimen,IS_specimen_block"	IS_specimen_block
 IS_specimen_block	Specimen Block	Immunostain_infrastructure	YES	$TBIS_SPECIMEN_BLOCK	specimen_block_id		ManageTable.cgi?TABLE_NAME=IS_specimen_block	"IS_specimen,IS_specimen_block"	IS_stained_slide
-IS_surgical_procedure	Surgical Procedure	Immunostain_infrastructure	YES	$TBIS_SURGICAL_PROCEDURE	surgical_procedure_id		ManageTable.cgi?TABLE_NAME=IS_surgical_procedure	"IS_surgical_procedure,IS_clinical_diagnosis"
-IS_clinical_diagnosis	Clinical Diagnosis	Immunostain_infrastructure	YES	$TBIS_CLINICAL_DIAGNOSIS	clinical_diagnosis_id		ManageTable.cgi?TABLE_NAME=IS_clinical_diagnosis	"IS_surgical_procedure,IS_clinical_diagnosis"
