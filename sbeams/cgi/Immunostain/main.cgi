@@ -207,21 +207,20 @@ sub handle_request {
     $project_id = -99 unless ($best_permission > 0 && $best_permission <=40);
 
   }
+
 	my $antibodyOption;
 	my $stainOption;
 	my $cellOption;
+
   #### Get all the experiments for this project
-  if ($project_id == 274)
-	{
-			my $action = $parameters{'action'};
-			print qq~	<TABLE WIDTH="100%" BORDER=0> ~;
-#loading the default page (start)
-			my $sub = $actionHash{$action} || $actionHash{$START};
-			if ($sub)
-			{
-#print some info about this project
-#only on the main page 
-				print qq~
+	my $action = $parameters{'action'};
+	print qq~	<TABLE WIDTH="100%" BORDER=0> ~;
+	#loading the default page (start)
+	my $sub = $actionHash{$action} || $actionHash{$START};
+	if ($sub) {
+		#print some info about this project
+		#only on the main page
+		print qq~
 				<H1>Current Project: <A class="h1" HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=$project_id">$project_name</A></H1>
 				<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
 	      <TD COLSPAN="2" WIDTH="100%"><B>Status:</B> $project_status</TD></TR>
@@ -230,36 +229,32 @@ sub handle_request {
 				<TR><TD></TD><TD COLSPAN="2"><B>Access Privileges:</B> <A HREF="$CGI_BASE_DIR/ManageProjectPrivileges">[View/Edit]</A></TD></TR>
 				<TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
 	      <TD WIDTH="100%"><TABLE BORDER=0>
-				~ if $action eq '_start' || !$action;
+		~ if $action eq '_start' || !$action;
 	
- 				&$sub (ref_parameters=>\%parameters);
-			}
-			else
-			{
-					print_fatal_error("Could not find the specified routine: $sub");
-			}
+    #### If the project_id wasn't reverted to -99, display information about it
+		if ($project_id == -99) {
+			print "	<TR><TD WIDTH=\"100%\">You do not have access to this project.  Contact the owner of this project if you want to have access.</TD></TR>\n";
+		} else {
+			&$sub(ref_parameters=>\%parameters,project_id=>$project_id);
+		}
+
+	} else {
+		print_fatal_error("Could not find the specified routine: $sub");
 	}
-	
-	else {
-			if ($project_id == -99)
-			{
-			      print "	<TR><TD WIDTH=\"100%\">You do not have access to this project.  Contact the owner of this project if you want to have access.</TD></TR>\n";
-			} 
-			else 
-			{
-					print "	<TR><TD WIDTH=\"100%\">NONE - This project contains no IHC Data</TD></TR>\n";
-			}
-			print "</table>";
-  }
+
+	print "</table>";
 	
 }
 
-  #### Finish the table
-	
-	
-			
-sub displayMain
-{
+
+
+#### Finish the table
+sub displayMain{
+  my %args = @_;
+
+  #### Process the arguments list
+  my $project_id = $args{'project_id'} || die "project_id not passed";
+
 		my $antibodyOption;
 		my $stainOption;
 		my $cellOption;
@@ -269,7 +264,8 @@ sub displayMain
 		left join $TBIS_SPECIMEN_BLOCK sb on ss.specimen_block_id = sb.specimen_block_id
 		left join $TBIS_SPECIMEN sp on sb.specimen_id = sp.specimen_id
 		left join sbeams.dbo.organism sbo on sp.organism_id = sbo.organism_id
-		left join $TBIS_SLIDE_IMAGE si on ss.stained_slide_id = si.stained_slide_id 
+		left join $TBIS_SLIDE_IMAGE si on ss.stained_slide_id = si.stained_slide_id
+		WHERE SP.project_id = '$project_id'
 		order by ORGANisM_NAME 
 		~;	
     my @rows = $sbeams->selectSeveralColumns($sql);
@@ -279,14 +275,16 @@ sub displayMain
 		my @humanSpecimenBlockArray = $sbeams->selectOneColumn("select specimen_block_id from $TBIS_SPECIMEN_BLOCK sb
 						join $TBIS_SPECIMEN s on sb.specimen_id = s.specimen_id
 						join sbeams.dbo.organism  sdo on s.organism_id  = sdo.organism_id
-						where organism_name = \'human\'"); 
+						where organism_name = \'human\'
+            AND S.project_id = '$project_id'"); 
 						
 		my $humanString = join ', ', @humanSpecimenBlockArray;
 		
 		my @mouseSpecimenBlockArray = $sbeams->selectOneColumn("select specimen_block_id from $TBIS_SPECIMEN_BLOCK sb
 						join $TBIS_SPECIMEN s on sb.specimen_id = s.specimen_id
 						join sbeams.dbo.organism  sdo on s.organism_id  = sdo.organism_id
-						where organism_name = \'mouse\'"); 
+						where organism_name = \'mouse\'
+            AND S.project_id = '$project_id'"); 
 						
 		my $mouseString = join ', ', @mouseSpecimenBlockArray;
 		
@@ -354,7 +352,7 @@ sub displayMain
   } 
 	else
 	{
-			@rows = (); 
+			print "	<TR><TD WIDTH=\"100%\"><B><NOWRAP>This project contains no IHC Data</NOWRAP></B></TD></TR>\n";
   }
 
 
