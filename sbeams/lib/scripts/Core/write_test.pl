@@ -5,7 +5,7 @@
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
 # $Id$
 #
-# Description : This script is a test of the insert_update_row() and
+# Description : This script is a test of the updateOrInsertRow() and
 #               executeSQL() APIs
 #
 # SBEAMS is Copyright (C) 2000-2002 by Eric Deutsch
@@ -146,10 +146,10 @@ sub showMainPage {
   print "returned_error = ",$returned_error,"\n";
 
 
-  #### Test insert_update_row()
+  #### Test updateOrInsertRow()
   my %rowdata = ( varcharfield => 'bozo' );
   $returned_error = 'YES';
-  $result = $sbeams->insert_update_row(
+  $result = $sbeams->updateOrInsertRow(
     insert=>1,
     table_name=>'sbeams.dbo.test',
     rowdata_ref=>\%rowdata,
@@ -164,10 +164,10 @@ sub showMainPage {
 
 
 
-  #### Test insert_update_row()
+  #### Test updateOrInsertRow()
   %rowdata = ( charfield => 'bozo' );
   $returned_error = 'YES';
-  $result = $sbeams->insert_update_row(
+  $result = $sbeams->updateOrInsertRow(
     insert=>1,
     table_name=>'sbeams.dbo.test',
     rowdata_ref=>\%rowdata,
