@@ -208,7 +208,6 @@ sub handleRequest {
   $TESTONLY = $OPTIONS{'testonly'} || 0;
   $DATABASE = $DBPREFIX{'Proteomics'};
 
-
   #### Get the file_prefix if it was specified, and otherwise guess
   unless ($file_prefix) {
     my $module = $sbeams->getSBEAMS_SUBDIR();
@@ -906,8 +905,13 @@ sub addMsmsSpectrumEntry {
 
   #### Now insert all the mass,intensity pairs
   my ($i,$mass,$intensity);
-  my $create_bcp_file = "YES";
-  $create_bcp_file = 0;
+
+  #### By default, we insert spectra into the database, but there's a hack
+  #### to bypass this and create a bcp file for one database.
+  #### This should be a SBEAMS.conf parameter.  FIXME.
+  my $create_bcp_file = 0;
+  $create_bcp_file = 'YES' if ($DBPREFIX{'Proteomics'} =~ /proteomics\.dbo\./);
+
 
   if ($create_bcp_file) {
     return $msms_spectrum_id if (defined($spectra_written{$msms_spectrum_id}));
