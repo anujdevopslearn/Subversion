@@ -237,9 +237,9 @@ sub printEntryForm {
       ["biosequence_id","BS.biosequence_id","biosequence_id"],
       ["biosequence_set_id","BS.biosequence_set_id","biosequence_set_id"],
       ["set_tag","BSS.set_tag","set_tag"],
-      ["uri","BSS.uri","uri"],
       ["biosequence_name","BS.biosequence_name","biosequence_name"],
       ["biosequence_gene_name","BS.biosequence_gene_name","gene_name"],
+      ["accessor","DBX.accessor","accessor"],
       ["biosequence_accession","BS.biosequence_accession","accession"],
       ["biosequence_desc","BS.biosequence_desc","description"],
       ["biosequence_seq","BS.biosequence_seq","sequence"],
@@ -270,6 +270,7 @@ sub printEntryForm {
       SELECT $limit_clause $columns_clause
         FROM $TBPR_BIOSEQUENCE BS
         LEFT JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( BS.biosequence_set_id = BSS.biosequence_set_id )
+        LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
        WHERE 1 = 1
       $biosequence_set_clause
       $biosequence_name_clause
@@ -281,12 +282,12 @@ sub printEntryForm {
 
 
     %url_cols = ('set_tag' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=biosequence_set&biosequence_set_id=\%$colnameidx{biosequence_set_id}V",
-                 'accession' => "\%$colnameidx{uri}V\%$colnameidx{accesssion}V",
+                 'accession' => "\%$colnameidx{accessor}V\%$colnameidx{accesssion}V",
     );
 
     %hidden_cols = ('biosequence_set_id' => 1,
                     'biosequence_id' => 1,
-                    'uri' => 1,
+                    'accessor' => 1,
      );
 
 

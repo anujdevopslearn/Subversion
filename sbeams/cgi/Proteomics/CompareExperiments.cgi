@@ -624,6 +624,7 @@ sub printEntryForm {
       if ( $parameters{display_options} =~ /GroupPeptide/ ) {
         @column_array = (
           ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
+          ["accessor","DBX.accessor","accessor"],
           ["biosequence_accession","BS.biosequence_accession","Accession"],
           ["reference","BS.biosequence_name","Reference"],
           ["peptide","peptide","Peptide"],
@@ -641,7 +642,7 @@ sub printEntryForm {
         );
 
         $group_by_clause = " GROUP BY SB.search_batch_id,SH.biosequence_id,peptide";
-        $final_group_by_clause = " GROUP BY BS.biosequence_gene_name,BS.biosequence_accession,BS.biosequence_name,peptide,BS.biosequence_desc";
+        $final_group_by_clause = " GROUP BY BS.biosequence_gene_name,BS.biosequence_accession,BS.biosequence_name,peptide,BS.biosequence_desc,DBX.accessor";
         $count_column = "COUNT(*) AS 'row_count'";
         $peptide_column = "peptide,";
 
@@ -650,6 +651,7 @@ sub printEntryForm {
       } elsif ( $parameters{display_options} =~ /GroupReference/ ) {
         @column_array = (
           ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
+          ["accessor","DBX.accessor","accessor"],
           ["biosequence_accession","BS.biosequence_accession","Accession"],
           ["reference","BS.biosequence_name","Reference"],
         );
@@ -666,7 +668,7 @@ sub printEntryForm {
         );
 
         $group_by_clause = " GROUP BY SB.search_batch_id,SH.biosequence_id";
-        $final_group_by_clause = " GROUP BY BS.biosequence_gene_name,BS.biosequence_accession,BS.biosequence_name,BS.biosequence_desc";
+        $final_group_by_clause = " GROUP BY BS.biosequence_gene_name,BS.biosequence_accession,BS.biosequence_name,BS.biosequence_desc,DBX.accessor";
         $count_column = "COUNT(*) AS 'row_count'";
 
 
@@ -674,6 +676,7 @@ sub printEntryForm {
       } else {
         @column_array = (
           ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
+          ["accessor","DBX.accessor","accessor"],
           ["biosequence_accession","BS.biosequence_accession","Accession"],
           ["reference","BS.biosequence_name","Reference"],
           ["peptide","peptide","Peptide"],
@@ -691,7 +694,7 @@ sub printEntryForm {
         );
 
         $peptide_column = "peptide,";
-        $final_group_by_clause = " GROUP BY BS.biosequence_gene_name,BS.biosequence_accession,BS.biosequence_name,peptide,BS.biosequence_desc";
+        $final_group_by_clause = " GROUP BY BS.biosequence_gene_name,BS.biosequence_accession,BS.biosequence_name,peptide,BS.biosequence_desc,DBX.accessor";
         $count_column = "1 AS 'row_count'";
       }
 
@@ -759,6 +762,7 @@ sub printEntryForm {
 	  FROM #tmpBSids tBS
 	  LEFT JOIN #tmpAnnBSids tABS ON ( tBS.biosequence_id = tABS.biosequence_id )
 	  JOIN $TBPR_BIOSEQUENCE BS ON ( tBS.biosequence_id = BS.biosequence_id )
+          LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
 	$n_annotations_clause
         $description_clause
         $final_group_by_clause
@@ -768,9 +772,7 @@ sub printEntryForm {
 
       #print "<PRE>\n$sql_query\n</PRE>\n";
 
-      %url_cols = ('Gene Name' => "http://flybase.bio.indiana.edu/.bin/fbidq.html?\%$colnameidx{biosequence_accession}V",
-		   'Gene Name_ATAG' => 'TARGET="Win1"',
-                   'Accession' => "http://flybase.bio.indiana.edu/.bin/fbidq.html?\%$colnameidx{biosequence_accession}V",
+      %url_cols = ('Accession' => "\%$colnameidx{accessor}V\%$colnameidx{biosequence_accession}V",
 		   'Accession_ATAG' => 'TARGET="Win1"',
                    'Reference' => "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi?QUERY_NAME=BrowseSearchHits&reference_constraint=\%$colnameidx{reference}V&search_batch_id=$parameters{search_batch_id}&display_options=BSDesc,MaxRefWidth&apply_action=$apply_action",
 		   'Reference_ATAG' => 'TARGET="Win1"',
@@ -778,7 +780,7 @@ sub printEntryForm {
 		   'Peptide_ATAG' => 'TARGET="Win1"',
       );
 
-      %hidden_cols = ('none' => 1,
+      %hidden_cols = ('accessor' => 1,
       );
 
 		   #######'Reference_ATAG' => "TARGET=\"Win1\" ONMOUSEOVER=\"window.status='%V'; return true\"",
