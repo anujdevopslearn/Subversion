@@ -151,86 +151,6 @@ sub handle_request {
   $current_contact_id = $sbeams->getCurrent_contact_id();
 
 
-  #### Get information about the most recent resultsets
-  $sql = qq~
-    SELECT cached_resultset_id,resultset_name,query_name,cache_descriptor,
-           date_created
-      FROM $TB_CACHED_RESULTSET
-     WHERE contact_id = '$current_contact_id'
-       AND record_status != 'D'
-       AND query_name LIKE '$SBEAMS_SUBDIR\%'
-     ORDER BY date_created DESC
-  ~;
-  @rows = $sbeams->selectSeveralColumns($sql);
-
-  #### If there's something interesting to show, show a glimpse
-  if (scalar(@rows)) {
-    print qq~
-	<H1>Recent Resultsets from Queries:</H1>
-	<TABLE BORDER=0>
-    ~;
-
-    #### Find all the resultsets with names/annotations
-    my $html_buffer = '';
-    my $output_counter = 0;
-    foreach my $row (@rows) {
-      my $resultset_name = $row->[1];
-      my $query_name = $row->[2];
-      my $cache_descriptor = $row->[3];
-      my $date_created = $row->[4];
-      if (defined($resultset_name) && $output_counter < 5) {
-        $html_buffer .= qq~
-	  <TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD><TD NOWRAP>-&nbsp;<A HREF="$CGI_BASE_DIR/$query_name?action=VIEWRESULTSET&rs_set_name=$cache_descriptor">[View]</A>&nbsp;&nbsp;&nbsp;&nbsp;<font color="green">$resultset_name:</font></TD>
-	  <TD NOWRAP>&nbsp;&nbsp;&nbsp;$query_name</A></TD>
-	  <TD NOWRAP>&nbsp;&nbsp;&nbsp;($date_created)</TD></TR>
-        ~;
-        $output_counter++;
-      }
-    }
-
-    #### If there were any, print them
-    if ($output_counter) {
-      print qq~
-	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD><TD COLSPAN=4>Most recent named resultsets:</TD></TR>
-	$html_buffer
-      ~;
-    }
-
-
-    #### Find all the resultsets without names/annotations
-    $html_buffer = '';
-    $output_counter = 0;
-    foreach my $row (@rows) {
-      my $resultset_name = $row->[1];
-      my $query_name = $row->[2];
-      my $cache_descriptor = $row->[3];
-      my $date_created = $row->[4];
-      if (!defined($resultset_name) && $output_counter < 5) {
-        $html_buffer .= qq~
-	  <TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD><TD NOWRAP>-&nbsp;<A HREF="$CGI_BASE_DIR/$query_name?action=VIEWRESULTSET&rs_set_name=$cache_descriptor">[View]</A>&nbsp;&nbsp;&nbsp;&nbsp;<font color="green">(unnamed)</font></TD>
-	  <TD NOWRAP>&nbsp;&nbsp;&nbsp;$query_name</TD>
-	  <TD NOWRAP>&nbsp;&nbsp;&nbsp;($date_created)</A></TD></TR>
-        ~;
-        $output_counter++;
-      }
-    }
-
-    #### If there were any, print them
-    if ($output_counter) {
-      print qq~
-	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD><TD COLSPAN=4>Most recent unnamed resultsets:</TD></TR>
-	$html_buffer
-      ~;
-    }
-
-    print qq~
-      <TR><TD></TD><TD COLSPAN=4><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=cached_resultset">[View all resultsets]</A></TD></TR>
-      </TABLE>
-    ~;
-
-  }
-
-
   #### Get information about the current project from the database
   $sql = qq~
 	SELECT UC.project_id,P.name,P.project_tag,P.project_status,
@@ -259,6 +179,7 @@ sub handle_request {
 	             <TD COLSPAN="2" WIDTH="100%"><B>Status:</B> $project_status</TD></TR>
 	<TR><TD></TD><TD COLSPAN="2"><B>Project Tag:</B> $project_tag</TD></TR>
 	<TR><TD></TD><TD COLSPAN="2"><B>Owner:</B> $PI_name</TD></TR>
+	<TR><TD></TD><TD COLSPAN="2"><B>Access Privileges:</B> <A HREF="$CGI_BASE_DIR/ManageProjectPrivileges">[View/Edit]</A></TD></TR>
 	<TR><TD></TD><TD COLSPAN="2"><B>Experiments:</B></TD></TR>
 	<TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
 	                 <TD WIDTH="100%"><TABLE BORDER=0>
@@ -493,7 +414,88 @@ sub handle_request {
 
 
 
+  #### Get information about the most recent resultsets
+  $sql = qq~
+    SELECT cached_resultset_id,resultset_name,query_name,cache_descriptor,
+           date_created
+      FROM $TB_CACHED_RESULTSET
+     WHERE contact_id = '$current_contact_id'
+       AND record_status != 'D'
+       AND query_name LIKE '$SBEAMS_SUBDIR\%'
+     ORDER BY date_created DESC
+  ~;
+  @rows = $sbeams->selectSeveralColumns($sql);
+
+  #### If there's something interesting to show, show a glimpse
+  if (scalar(@rows)) {
     print qq~
+	<H1>Recent Resultsets from Queries:</H1>
+	<TABLE BORDER=0>
+    ~;
+
+    #### Find all the resultsets with names/annotations
+    my $html_buffer = '';
+    my $output_counter = 0;
+    foreach my $row (@rows) {
+      my $resultset_name = $row->[1];
+      my $query_name = $row->[2];
+      my $cache_descriptor = $row->[3];
+      my $date_created = $row->[4];
+      if (defined($resultset_name) && $output_counter < 5) {
+        $html_buffer .= qq~
+	  <TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD><TD NOWRAP>-&nbsp;<A HREF="$CGI_BASE_DIR/$query_name?action=VIEWRESULTSET&rs_set_name=$cache_descriptor">[View]</A>&nbsp;&nbsp;&nbsp;&nbsp;<font color="green">$resultset_name:</font></TD>
+	  <TD NOWRAP>&nbsp;&nbsp;&nbsp;$query_name</A></TD>
+	  <TD NOWRAP>&nbsp;&nbsp;&nbsp;($date_created)</TD></TR>
+        ~;
+        $output_counter++;
+      }
+    }
+
+    #### If there were any, print them
+    if ($output_counter) {
+      print qq~
+	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD><TD COLSPAN=4>Most recent named resultsets:</TD></TR>
+	$html_buffer
+      ~;
+    }
+
+
+    #### Find all the resultsets without names/annotations
+    $html_buffer = '';
+    $output_counter = 0;
+    foreach my $row (@rows) {
+      my $resultset_name = $row->[1];
+      my $query_name = $row->[2];
+      my $cache_descriptor = $row->[3];
+      my $date_created = $row->[4];
+      if (!defined($resultset_name) && $output_counter < 5) {
+        $html_buffer .= qq~
+	  <TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD><TD NOWRAP>-&nbsp;<A HREF="$CGI_BASE_DIR/$query_name?action=VIEWRESULTSET&rs_set_name=$cache_descriptor">[View]</A>&nbsp;&nbsp;&nbsp;&nbsp;<font color="green">(unnamed)</font></TD>
+	  <TD NOWRAP>&nbsp;&nbsp;&nbsp;$query_name</TD>
+	  <TD NOWRAP>&nbsp;&nbsp;&nbsp;($date_created)</A></TD></TR>
+        ~;
+        $output_counter++;
+      }
+    }
+
+    #### If there were any, print them
+    if ($output_counter) {
+      print qq~
+	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD><TD COLSPAN=4>Most recent unnamed resultsets:</TD></TR>
+	$html_buffer
+      ~;
+    }
+
+    print qq~
+      <TR><TD></TD><TD COLSPAN=4><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=cached_resultset">[View all resultsets]</A></TD></TR>
+      </TABLE>
+    ~;
+
+  }
+
+
+
+  print qq~
 	<H1>Other Links:</H1>
 	The navigation bar on the left will take you to the various
 	capabilities available thus far, or choose from this more
