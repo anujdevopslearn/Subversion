@@ -279,6 +279,21 @@ sub get_sbeams_version {
 
 
 ###############################################################################
+# getSite	
+#
+# Returns the site of this SBEAMS instance, e.g. "ISB", "ETH", etc.
+# as specified in the SBEAMS .conf file. This is used to enable
+# special functionality in the code base which is expected to only
+# work at a particular site for the moment
+###############################################################################
+sub getSite {
+  my $site = '';
+  $site = $CONFIG_SETTING{SITE} if ($CONFIG_SETTING{SITE});
+  return $site;
+}
+
+
+###############################################################################
 # readMainConfFile: Read the contents of the main conf file
 ###############################################################################
 sub readMainConfFile {
