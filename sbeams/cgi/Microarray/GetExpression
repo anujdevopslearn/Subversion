@@ -303,10 +303,14 @@ sub handle_request {
 
   #### Define some variables needed to build the query
   my $group_by_clause = "";
-  my $final_group_by_clause = "";
   my @column_array;
-  my $peptide_column = "";
-  my $count_column = "";
+
+
+  #### Get some information about the conditions involved
+  my %condition_names;
+  %condition_names = getConditionNames($parameters{condition_id})
+    if ($parameters{condition_id});
+  my @condition_names_and_ids;
 
 
   #### Define the available data columns
@@ -321,18 +325,55 @@ sub handle_request {
     "GE.quality_flag"=>["quality_flag","GE.quality_flag","Quality Flag"],
   );
 
-  #### If the user explicitly chose which columns to show
+
+  #### If the user does not choose which columns to show, set defaults
   my @additional_columns = ();
   my $display_columns = $parameters{display_columns};
-  unless (defined($parameters{display_columns}) && $parameters{display_columns}) {
-    $display_columns = "GE.log10_ratio,GE.log10_uncertainty,GE.log10_std_deviation,".
-      "GE.lambda,GE.mu_x,GE.mu_y,GE.mean_intensity,GE.quality_flag";
+  unless (defined($parameters{display_columns}) &&
+          $parameters{display_columns}) {
+    #### If this is a pivoted query, just choose four interesting columns
+    if ($parameters{display_options} =~ /PivotConditions/) {
+      $display_columns = "GE.log10_ratio,GE.lambda,GE.mu_x,GE.mu_y";
+    #### Else, select them all
+    } else {
+      $display_columns = "GE.log10_ratio,GE.log10_uncertainty,".
+        "GE.log10_std_deviation,".
+        "GE.lambda,GE.mu_x,GE.mu_y,GE.mean_intensity,GE.quality_flag";
+    }
   }
 
+
+  #### Add the desired display columns to the assitional_columns array
   my @tmp = split(",",$display_columns);
-  foreach my $option (@tmp) {
-    if (defined($available_columns{$option})) {
-      push(@additional_columns,$available_columns{$option});
+
+  #### If this is a pivot query, design the aggregate colums
+  if ($parameters{display_options} =~ /PivotConditions/) {
+    my @condition_ids = split(/,/,$parameters{condition_id});
+    my $counter = 1;
+    foreach my $id (@condition_ids) {
+      foreach my $option (@tmp) {
+  	if (defined($available_columns{$option})) {
+          my @elements = @{$available_columns{$option}};
+          $elements[0] = $condition_names{$id}.'__'.$elements[0];
+          $elements[1] = "SUM(CASE WHEN GE.condition_id = $id ".
+            "THEN $elements[1] ELSE NULL END)";
+          $elements[2] = $condition_names{$id}.' '.$elements[2];
+  	  push(@additional_columns,\@elements);
+  	}
+      }
+      $counter++;
+    }
+
+    $group_by_clause = "   GROUP BY BS.biosequence_name,".
+      "GE.gene_name,GE.second_name";
+
+
+  #### Else, no pivot, just use the columns as is
+  } else {
+    foreach my $option (@tmp) {
+      if (defined($available_columns{$option})) {
+  	push(@additional_columns,$available_columns{$option});
+      }
     }
   }
 
@@ -348,11 +389,16 @@ sub handle_request {
   );
 
 
+  #### Hack to remove first column if GROUPing
+  shift(@column_array) if ($parameters{display_options} =~ /PivotConditions/);
+
+
   #### Adjust the columns definition based on user-selected options
   if ( $parameters{display_options} =~ /BSDesc/ ) {
     push(@column_array,
       ["biosequence_desc","BS.biosequence_desc","Biosequence Description"],
     );
+    $group_by_clause .= ",BS.biosequence_desc" if ($group_by_clause);
   }
 
 
@@ -418,6 +464,7 @@ sub handle_request {
 
         $subselect_clause
 
+	$group_by_clause
 	$order_by_clause
 	$limit_clause->{trailing_limit_clause}
        ~;
@@ -523,6 +570,30 @@ sub evalSQL {
   return eval "\"$sql\"";
 
 } # end evalSQL
+
+
+###############################################################################
+# getConditionNames: return a hash of the conditions
+#         names of the supplied list of id's.
+#         This might need to be more complicated if condition names
+#         are duplicated under different projects or such.
+###############################################################################
+sub getConditionNames {
+  my $condition_ids = shift || die "getConditionNames: missing condition_ids";
+
+  my @condition_ids = split(/,/,$condition_ids);
+
+  #### Get the data for all the specified condition_ids
+  my $sql = qq~
+      SELECT condition_id,condition_name
+        FROM $TBMA_CONDITION
+       WHERE condition_id IN ( $condition_ids )
+  ~;
+  my %hash = $sbeams->selectTwoColumnHash($sql);
+
+  return %hash;
+
+} # end getConditionNames
 
 
 
