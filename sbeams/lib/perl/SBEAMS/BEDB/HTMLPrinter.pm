@@ -58,7 +58,7 @@ sub display_page_header {
 
 
     #### Process the arguments list
-    my $navigation_bar = $args{'navigation_bar'} || "YES";
+    my $navigation_bar = $args{'navigation_bar'} || "";
     my $display_style = $args{'display_style'} || "External";
     $DISPLAY_STYLE = $display_style;
 
@@ -90,7 +90,7 @@ sub display_page_header {
     #### If External, adjust some settings
     if ($display_style eq "External") {
       $BARCOLOR = "#eeeeee";
-      $navigation_bar="YES";
+      $navigation_bar="NO" unless ($navigation_bar);
     }
 
 
@@ -138,11 +138,16 @@ sub display_page_header {
       <table width="100%" border="0" cellspacing="0" cellpadding="0">
         <tr>
           <td class="color1"><img src="/images/BEDB/logo.gif" width="507" height="35" vspace="21" hspace="0" alt="Brain Expression Database"><br>
-            <div class="topMenu"><a href="index.htm">&nbsp;HOME </a>|<a href="overview.htm">
-              OVERVIEW </a>|<span class="sel"> LIBRARY &amp; EST ARCHIVE </span>|<a href="blast.htm">
-              BLAST </a>|<a href="expression.htm"> EXPRESSION </a>|<a href="proteome.htm">
-              PROTEOME </a>|<a href="transcriptome.htm"> TRANSCRIPTOME </a>|<a href="links.htm">
-              LINKS&nbsp;</a></div>
+            <div class="topMenu">
+              &nbsp;<a href="/projects/bedb/">HOME</a>|
+              <a href="/projects/bedb/overview.htm">OVERVIEW</a>|
+              <a href="/dev2/sbeams/cgi/BEDB/show_est_library">LIBRARY &amp; EST ARCHIVE</a>|
+              <a href="/projects/bedb/blast.htm">BLAST</a>|
+              <a href="/projects/bedb/expression.htm">EXPRESSION</a>|
+              <a href="/projects/bedb/proteome.htm">PROTEOME</a>|
+              <a href="/projects/bedb/transcriptome.htm">TRANSCRIPTOME</a>|
+              <a href="/projects/bedb/links.htm">LINKS&nbsp;</a>
+            </div>
           </td>
         </tr>
         <tr>
@@ -351,11 +356,17 @@ sub display_page_footer {
       <table width="750" border="0" cellspacing="0" cellpadding="0">
         <tr>
           <td>
-            <div class="bottomMenu"><a href="index.htm">&nbsp;Home </a>|<a href="overview.htm">
-              Overview </a>|<span class="sel"> Library &amp; EST archive </span>|<a href="blast.htm">
-              Blast </a>|<a href="expression.htm"> Expression </a>|<a href="proteome.htm">
-              Proteome </a>|<a href="transcriptome.htm"> Transcriptome </a>|<a href="links.htm">
-              Links&nbsp;</a></div>
+            <div class="bottomMenu">
+              &nbsp;<a href="/projects/bedb/">Home</a>|
+              <a href="/projects/bedb/overview.htm">Overview</a>|
+              <a href="/dev2/sbeams/cgi/BEDB/show_est_library">Library &amp; EST archive</a>|
+              <a href="/projects/bedb/blast.htm">BLAST</a>|
+              <a href="/projects/bedb/expression.htm">Expression</a>|
+              <a href="/projects/bedb/proteome.htm">Proteome</a>|
+              <a href="/projects/bedb/transcriptome.htm">Transcriptome</a>|
+              <a href="/projects/bedb/links.htm">Links&nbsp;</a>
+            </div>
+
             <div class="copyright">Copyright &copy; Institute for Systems Biology,
               2002. Design by <a href="http://www.futurevision.com.ua" target="_blank">FutureVision</a></div>
           </td>
