@@ -128,6 +128,7 @@ sub main {
 		while(read(DATA, $buffer, 1024)) {
 		    print $buffer;
 		}
+		close (DATA);
 	    }else {
 		$sbeams->printPageHeader();
 		print qq~
