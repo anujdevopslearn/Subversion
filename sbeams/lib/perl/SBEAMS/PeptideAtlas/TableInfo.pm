@@ -47,15 +47,15 @@ sub returnTableInfo {
   my $project_string = join( ",", @ids );
 
 
-###############################################################################
-#
-# First we have table-specific overrides of the default answers
-#
-# This is mostly just Queries now.  This should be pushed out into a
-# nicely formatted file of queries.
-#
-###############################################################################
-###############################################################################
+   ###############################################################################
+   #
+   # First we have table-specific overrides of the default answers
+   #
+   # This is mostly just Queries now.  This should be pushed out into a
+   # nicely formatted file of queries.
+   #
+   ###############################################################################
+   ###############################################################################
   if ($table_name eq "blxxxxxx") {
 
     if ($info_key eq "BASICQuery") {
@@ -80,7 +80,9 @@ sub returnTableInfo {
       
     if ($info_key eq "BASICQuery") {
       return( <<"      END_QUERY" ); 
-     	SELECT *
+     	SELECT sample_tag, sample_title, sample_description, 
+        anatomical_site_term, developmental_stage_term, pathology_term, 
+        cell_type_term, data_contributors, is_public
       FROM $TBAT_SAMPLE 
       WHERE project_id IN ( $project_string )
       AND record_status!='D'
@@ -88,7 +90,9 @@ sub returnTableInfo {
 
     } elsif ($info_key eq "FULLQuery") {
       return( <<"      END_QUERY" ); 
-     	SELECT *
+     	SELECT sample_tag, sample_title, sample_description, 
+        anatomical_site_term, developmental_stage_term, pathology_term, 
+        cell_type_term, data_contributors, is_public
       FROM $TBAT_SAMPLE 
       WHERE project_id IN ( $project_string )
       AND record_status!='D'
@@ -102,7 +106,11 @@ sub returnTableInfo {
       WHERE sample_id = KEYVAL
       END
       return \%projectSQL
-      }
+    }
+
+    ## xxxx  need retrieval of is_display_column info from
+    ## wherever PeptideAtlas_table_column.txt is stored
+    ## by update_driver_tables.pl
       
   } elsif ( uc($table_name) eq 'AT_BIOSEQUENCE_SET' ) {
       
@@ -215,6 +223,7 @@ sub getParentProject {
 
   # Fetch SQL to retrieve project_id from table_name, if it is available.
   my $sqlref = $self->returnTableInfo( $table_name, 'projPermSQL' );
+##xxxxx may need to return isDisplayColumn here?
 
   # If we don't have it 
   unless ( ref( $sqlref ) && $sqlref->{dbsql} ) {

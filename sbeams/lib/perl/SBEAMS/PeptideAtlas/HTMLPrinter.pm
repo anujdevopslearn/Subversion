@@ -62,11 +62,11 @@ sub display_page_header {
   #### Obtain main SBEAMS object and use its http_header
   $sbeams = $self->getSBEAMS();
 
-    if( $sbeams->isGuestUser() ) {
-      $self->displayGuestPageHeader();
-    } else {
-      $self->displayStandardPageHeader();
-    }
+  if( $sbeams->isGuestUser() ) {
+    $self->displayGuestPageHeader();
+  } else {
+    $self->displayStandardPageHeader();
+   }
   }
 
 sub displayGuestPageHeader {
