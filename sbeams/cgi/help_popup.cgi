@@ -33,7 +33,7 @@
 use strict;
 use vars qw ($q $sbeams $PROGRAM_FILE_NAME
              $current_contact_id $current_username);
-use lib "$FindBin::Bin/../lib/perl";
+use lib "../lib/perl";
 use Env qw(HTTP_USER_AGENT);
 use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
@@ -44,29 +44,36 @@ use SBEAMS::Connection::Settings;
 $q   = new CGI;
 $sbeams = new SBEAMS::Connection;
 
+###############################################################################
+# Define Standard Variables
+###############################################################################
+my ($title, $text);
 
 ###############################################################################
 # The database ID for the help text being requested
 ###############################################################################
 my $help_text_id	= $q->param( 'help_text_id' );
 
+if ($help_text_id) {
 ######################################
 # Get the help text from the database
 ######################################
-my (@help_text) = $sbeams->selectSeveralColumns("
-	SELECT	title,
-			help_text
+  my (@help_text) = $sbeams->selectSeveralColumns("
+	SELECT	title,help_text
 	FROM		help_text
 	WHERE	help_text_id = '$help_text_id'
-");
+  ");
 
 #####################################
 # Get the title and text out of the 
 # array reference
 #####################################
-my $title	= $help_text[0][0];
-my $text	= $help_text[0][1];
-
+	$title	= $help_text[0][0];
+	$text	= $help_text[0][1];
+}else {
+	 $title = $q->param('title');
+	 $text = $q->param('text');
+}
 
 ########################
 #Start printing the page
