@@ -3884,247 +3884,265 @@ sub printProjectsYouHaveAccessTo {
 # printUserChooser
 ###############################################################################
 sub printUserChooser {
-		my $self = shift || croak("parameter self not passed");
-    my %args = @_;
+  my $self = shift || croak("parameter self not passed");
+  my %args = @_;
 
-		#### Define standard variables
-		my $style;
-    my ($work_group_sql, $project_sql, @rows);
-		my ($work_group_chooser, $project_chooser);
+  #### Define standard variables
+  my $style;
+  my ($work_group_sql, $project_sql, @rows);
+  my ($work_group_chooser, $project_chooser);
 
 
-    #### If the output mode is interactive text, switch to text mode
-    if ($self->output_mode() eq 'interactive') {
-      $style = 'TEXT';
+  #### If the output mode is interactive text, switch to text mode
+  if ($self->output_mode() eq 'interactive') {
+    $style = 'TEXT';
 
-    #### If the output mode is html, then switch to html mode
-    } elsif ($self->output_mode() eq 'html') {
-      $style = 'HTML';
+  #### If the output mode is html, then switch to html mode
+  }elsif ($self->output_mode() eq 'html') {
+    $style = 'HTML';
 
-    #### Otherwise, we're in some data mode and don't want to see this
-    } else {
-      return;
+  #### Otherwise, we're in some data mode and don't want to see this
+  }else {
+    return;
+  }
+
+  #### Find sub directory
+  my $subdir = $self->getSBEAMS_SUBDIR();
+  $subdir .= "/" if ($subdir);
+
+  #### Get all relevant user information 
+  my $current_username = $self->getCurrent_username;
+  my $current_contact_id = $self->getCurrent_contact_id;
+  my $current_work_group_id = $self->getCurrent_work_group_id;
+  my $current_work_group_name = $self->getCurrent_work_group_name;
+  my $current_project_id = $self->getCurrent_project_id;
+  my $current_project_name = $self->getCurrent_project_name;
+  my $current_user_context_id = $self->getCurrent_user_context_id;
+
+  #### Find out the current URI
+  my $submit_string = $ENV{'SCRIPT_URI'."?"};
+
+  #### If we're in HTML mode, print javascript
+  if ($style eq "HTML") {
+    print qq~
+
+<SCRIPT LANGUAGE="Javascript">
+function switchWorkGroup(){
+  var chooser = document.userChooser.workGroupChooser;
+  var val = chooser.options[chooser.selectedIndex].value;
+  if (document.MainForm == null) {
+    document.groupChooser.set_current_work_group.value = val;
+    document.groupChooser.submit();
+  }else {
+    document.MainForm.set_current_work_group.value = val;
+    if (document.MainForm.apply_action_hidden != null){
+      document.MainForm.apply_action_hidden.value = "REFRESH";
+    }
+    if (document.MainForm.action != null) {
+      document.MainForm.action.value = "REFRESH";
     }
 
-    #### Find sub directory
-    my $subdir = $self->getSBEAMS_SUBDIR();
-    $subdir .= "/" if ($subdir);
+    document.MainForm.submit();
+  }
+}
 
-    #### Get all relevant user information 
-    my $current_username = $self->getCurrent_username;
-    my $current_contact_id = $self->getCurrent_contact_id;
-    my $current_work_group_id = $self->getCurrent_work_group_id;
-    my $current_work_group_name = $self->getCurrent_work_group_name;
-    my $current_project_id = $self->getCurrent_project_id;
-    my $current_project_name = $self->getCurrent_project_name;
-    my $current_user_context_id = $self->getCurrent_user_context_id;
-
-		#### Find out the current URI
-		my $submit_string = $ENV{'SCRIPT_URI'."?"};
-
-		#### If we're in HTML mode, print javascript
-		if ($style eq "HTML") {
-				print qq~
-						<SCRIPT LANGUAGE="Javascript">
-						function switchWorkGroup(){
-								var chooser = document.userChooser.workGroupChooser;
-								var val = chooser.options[chooser.selectedIndex].value;
-								if (document.MainForm == null) {
-									document.groupChooser.set_current_work_group.value = val;
-									document.groupChooser.submit();
-								} else {
-									document.MainForm.set_current_work_group.value = val;
-									if (document.MainForm.apply_action_hidden != null){
-										document.MainForm.apply_action_hidden.value = "REFRESH";
-								  }
-									if (document.MainForm.action != null) {
-										document.MainForm.action.value = "REFRESH";
-								  }
-									document.MainForm.submit();
-								}
-						}
-
-				    function switchProject(){
-								var chooser = document.userChooser.projectIDChooser;
-								var val = chooser.options[chooser.selectedIndex].value;
-								if (document.MainForm == null) {
-									document.projectChooser.set_current_project_id.value = val;
-									document.projectChooser.submit();
-								} else {
-									document.MainForm.set_current_project_id.value = val;
-									if (document.MainForm.apply_action_hidden != null){
-										document.MainForm.apply_action_hidden.value = "REFRESH";
-									}
-									if (document.MainForm.action != null) {
-										document.MainForm.action.value = "REFRESH";
-									}
-									document.MainForm.submit();
-								}
-						}
-						</SCRIPT>
-						~;
-		}
-		#### Begin Table
-		print qq~
-				<TABLE>
-				<TR>
-				<TD>
-				~;
-
-
-		#### Get work groups and make <SELECT> if we're HTML mode 
-    $work_group_sql = qq~
-				SELECT WG.work_group_id,WG.work_group_name 
-				FROM $TB_WORK_GROUP WG 
-				INNER JOIN $TB_USER_WORK_GROUP UWG ON ( WG.work_group_id=UWG.work_group_id ) 
-				WHERE contact_id=$current_contact_id 
-				ORDER BY WG.work_group_name
-				~;
-		@rows = $self->selectSeveralColumns($work_group_sql);
-
-		if ($style eq "HTML") {
-				$work_group_chooser = qq~
-						<SELECT NAME="workGroupChooser" onChange="switchWorkGroup()">
-						~;
-				foreach my $row_ref (@rows) {
-						my ($work_group_id, $work_group_name) = @{$row_ref};
-						if ($work_group_id == $current_work_group_id){
-								$work_group_chooser .= qq~
-								<OPTION SELECTED VALUE="$work_group_name">$work_group_name
-										~;
-						}else {
-								$work_group_chooser .= qq~
-								<OPTION VALUE="$work_group_name">$work_group_name
-								~;
-						}
-				}
-				$work_group_chooser .= qq~
-						</SELECT>
-						~;
-		}
-		
-		#### Get accessible projects and make <SELECT> if we're in HTML mode
-		my $module = $self->getSBEAMS_SUBDIR();
-		$module =~ tr/A-Z/a-z/;
-		my @project_ids = $self->getAccessibleProjects(module=>"$module");
-		my $project_ids_list = join(',',@project_ids) || '-1';
-		$project_sql = qq~
-				SELECT P.project_id, UL.username+' - '+P.name
-				FROM $TB_PROJECT P 
-				LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
-				WHERE P.project_id IN ( $project_ids_list )
-				GROUP BY P.project_id, P.name, UL.username
-				ORDER BY UL.username, P.name;
-		~;
-
-		@rows = $self->selectSeveralColumns($project_sql);
-		if ($style eq "HTML") {
-				$project_chooser = qq~
-						<SELECT NAME="projectIDChooser" onChange="switchProject()">
-						~;
-				foreach my $row_ref (@rows) {
-						my ($project_id, $project_name) = @{$row_ref};
-						if ($project_id == $current_project_id) {
-								$project_chooser .= qq~
-										<OPTION SELECTED VALUE="$project_id">$project_name
-										~;
-						}else {
-								$project_chooser .= qq~
-										<OPTION VALUE="$project_id">$project_name
-										~;
-						}
-				}
-				$project_chooser .= qq~
-						</SELECT>
-						~;
-		}
-		
-    my $temp_current_work_group_name = $current_work_group_name;
-    if ($current_work_group_name eq "Admin") {
-				$temp_current_work_group_name = "<FONT COLOR=red><BLINK>$current_work_group_name</BLINK></FONT>";
+function switchProject(){
+  var chooser = document.userChooser.projectIDChooser;
+  var val = chooser.options[chooser.selectedIndex].value;
+  if (document.MainForm == null) {
+    document.projectChooser.set_current_project_id.value = val;
+    document.projectChooser.submit();
+  }else {
+    document.MainForm.set_current_project_id.value = val;
+    if (document.MainForm.apply_action_hidden != null){
+      document.MainForm.apply_action_hidden.value = "REFRESH";
     }
+    if (document.MainForm.action != null) {
+      document.MainForm.action.value = "REFRESH";
+    }
+    document.MainForm.submit();
+  }
+}
+
+</SCRIPT>
+~;
+}
+#### Begin Table
+  print qq~
+  <TABLE>
+  <TR>
+    <TD>
+~;
+
+
+#### Get work groups and make <SELECT> if we're HTML mode 
+  $work_group_sql = qq~
+      SELECT WG.work_group_id,WG.work_group_name 
+      FROM $TB_WORK_GROUP WG 
+      INNER JOIN $TB_USER_WORK_GROUP UWG ON ( WG.work_group_id=UWG.work_group_id ) 
+      WHERE contact_id=$current_contact_id 
+      ORDER BY WG.work_group_name
+      ~;
+  @rows = $self->selectSeveralColumns($work_group_sql);
+
+  if ($style eq "HTML") {
+    $work_group_chooser = qq~
+<SELECT NAME="workGroupChooser" onChange="switchWorkGroup()">
+  ~;
+
+    foreach my $row_ref (@rows) {
+      my ($work_group_id, $work_group_name) = @{$row_ref};
+      if ($work_group_id == $current_work_group_id){
+	$work_group_chooser .= qq~
+<OPTION SELECTED VALUE="$work_group_name">$work_group_name
+        ~;
+      }else {
+	$work_group_chooser .= qq~
+<OPTION VALUE="$work_group_name">$work_group_name
+        ~;
+      }
+    }
+
+    $work_group_chooser .= qq~
+</SELECT>
+    ~;
+  }
+
+  #### Get accessible projects and make <SELECT> if we're in HTML mode
+  my $module = $self->getSBEAMS_SUBDIR();
+  $module =~ tr/A-Z/a-z/;
+  my @project_ids = $self->getAccessibleProjects(module=>"$module");
+  my $project_ids_list = join(',',@project_ids) || '-1';
+  $project_sql = qq~
+    SELECT P.project_id, UL.username+' - '+P.name
+    FROM $TB_PROJECT P 
+    LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
+    WHERE P.project_id IN ( $project_ids_list )
+    GROUP BY P.project_id, P.name, UL.username
+    ORDER BY UL.username, P.name;
+  ~;
+
+  @rows = $self->selectSeveralColumns($project_sql);
+  if ($style eq "HTML") {
+    $project_chooser = qq~
+<SELECT NAME="projectIDChooser" onChange="switchProject()">
+    ~;
+
+    foreach my $row_ref (@rows) {
+      my ($project_id, $project_name) = @{$row_ref};
+      if ($project_id == $current_project_id) {
+	$project_chooser .= qq~
+<OPTION SELECTED VALUE="$project_id">$project_name
+        ~;
+      }else {
+	$project_chooser .= qq~
+<OPTION VALUE="$project_id">$project_name
+        ~;
+      }
+    }
+
+    $project_chooser .= qq~
+</SELECT>
+    ~;
+  }
+	
+  my $temp_current_work_group_name = $current_work_group_name;
+  if ($current_work_group_name eq "Admin") {
+    $temp_current_work_group_name = "<FONT COLOR=red><BLINK>$current_work_group_name</BLINK></FONT>";
+  }
+  
+  #### PRINT HTML ####
+  if ($style eq "HTML") {
+    print qq~
+
+<FORM NAME="userChooser">
+<TABLE WIDTH="100%"  CELLPADDING="0">
+<TR>
+  <TD NOWRAP>
+  <IMG SRC="$HTML_BASE_DIR/images/bullet.gif">Login:&nbsp;&nbsp;<B>$current_username</B> ($current_contact_id)&nbsp;&nbsp;&nbsp;&nbsp;Group:&nbsp;&nbsp;$work_group_chooser
+  </TD>
+</TR>
+
+<TR>
+  <TD NOWRAP>
+  <IMG SRC="$HTML_BASE_DIR/images/bullet.gif">Project:$project_chooser
+  </TD>
+</TR>
+</TABLE>
+</FORM>
+~;
+
+    #### FORM FOR PROJECT CHANGE
+    print qq~
+<FORM NAME="projectChooser" METHOD="GET" ACTION="$submit_string">
+    ~;
+
+
+    ## PRINT CGI parameters
+    my $project_query_string = $ENV{'QUERY_STRING'};
+    my @query_parameters = split  /&/, $project_query_string;
+    foreach my $temp_param (@query_parameters) {
+      $temp_param =~ /(.*)\=(.*)/;
+      unless ($1 eq "set_current_project_id" || $1 eq "set_current_work_group"){
+	print qq~
+<INPUT TYPE="hidden" NAME="$1" VALUE="$2">
+          ~;
+      }
+    }
+    print qq~
+<INPUT TYPE="hidden" NAME="set_current_project_id">
+</FORM>
+    ~;
+
+    #### FORM FOR WORK GROUP CHANGE
+    print qq~
+<FORM NAME="groupChooser" METHOD="GET" ACTION="$submit_string">
+    ~;
+    ## PRINT CGI parameters
+    my $group_query_string = $ENV{'QUERY_STRING'};
+    @query_parameters = split  /&/, $group_query_string;
+    foreach my $temp_param (@query_parameters) {
+      $temp_param =~ /(.*)\=(.*)/;
+      unless ($1 eq "set_current_project_id" || $1 eq "set_current_work_group"){
+	print qq~
+<INPUT TYPE="hidden" NAME="$1" VALUE="$2">
+	  ~;
+      }
+    }
+    print qq~
+<INPUT TYPE="hidden" NAME="set_current_work_group">
+</FORM>
+    ~;
+
+    #### End First TD of master TABLE, and begin new TD
+    print qq~
+</TD>
+<TD>
+   ~;
     
-    #### PRINT HTML ####
-    if ($style eq "HTML") {
-				print qq~
-						<FORM NAME="userChooser">
-						<TABLE WIDTH="100%"  CELLPADDING="0">
-						<TR><TD NOWRAP><IMG SRC="$HTML_BASE_DIR/images/bullet.gif">Login:&nbsp;&nbsp;<B>$current_username</B> ($current_contact_id)&nbsp;&nbsp;&nbsp;&nbsp;Group:&nbsp;&nbsp;$work_group_chooser</TD></TR>
-						<TR><TD NOWRAP><IMG SRC="$HTML_BASE_DIR/images/bullet.gif">Project:$project_chooser</TD></TR>
-						</TABLE>
-						</FORM>
-					~;
+    ## Suggestion Form
+    #print qq~
+    #<FORM NAME="suggestionBox" TARGET="_blank" METHOD="POST" ACTION="$HTML_BASE_DIR/cgi/suggestionBox.cgi">
+    #<INPUT TYPE="hidden" NAME="action" VALUE="printSuggestionBox">
+    #<INPUT TYPE="hidden" NAME="suggestionURL" VALUE="$ENV{'HTTP_REFERER'}">
+    #<A HREF="Javascript:document.suggestionBox.submit()"><IMG SRC="$HTML_BASE_DIR/images/sug.jpg" WIDTH="80"></A>
+    #</FORM>
+    #~;
 
-				#### FORM FOR PROJECT CHANGE
-				print qq~
-						<FORM NAME="projectChooser" METHOD="GET" ACTION="$submit_string">
-						~;
-				## PRINT CGI parameters
-				my $project_query_string = $ENV{'QUERY_STRING'};
-				my @query_parameters = split  /&/, $project_query_string;
-				foreach my $temp_param (@query_parameters) {
-						$temp_param =~ /(.*)\=(.*)/;
-						unless ($1 eq "set_current_project_id" || $1 eq "set_current_work_group"){
-								print qq~
-										<INPUT TYPE="hidden" NAME="$1" VALUE="$2">
-										~;
-						}
-				}
-				print qq~
-						<INPUT TYPE="hidden" NAME="set_current_project_id">
-						</FORM>
+    #### END master TABLE
+    print qq~
+</TD>
+</TR>
+</TABLE>
+    ~;								
+}
 
-						~;
-
-				#### FORM FOR WORK GROUP CHANGE
-				print qq~
-						<FORM NAME="groupChooser" METHOD="GET" ACTION="$submit_string">
-						~;
-				## PRINT CGI parameters
-				my $group_query_string = $ENV{'QUERY_STRING'};
-				@query_parameters = split  /&/, $group_query_string;
-				foreach my $temp_param (@query_parameters) {
-						$temp_param =~ /(.*)\=(.*)/;
-						unless ($1 eq "set_current_project_id" || $1 eq "set_current_work_group"){
-								print qq~
-										<INPUT TYPE="hidden" NAME="$1" VALUE="$2">
-										~;
-						}
-				}
-				print qq~
-						<INPUT TYPE="hidden" NAME="set_current_work_group">
-						</FORM>
-						~;
-
-				#### End First TD of master TABLE, and begin new TD
-				print qq~
-						</TD>
-						<TD>
-						~;
-
-#				## Suggestion Form
-#				print qq~
-#						<FORM NAME="suggestionBox" TARGET="_blank" METHOD="POST" ACTION="$HTML_BASE_DIR/cgi/suggestionBox.cgi">
-#						<INPUT TYPE="hidden" NAME="action" VALUE="printSuggestionBox">
-#						<INPUT TYPE="hidden" NAME="suggestionURL" VALUE="$ENV{'HTTP_REFERER'}">
-#						<A HREF="Javascript:document.suggestionBox.submit()"><IMG SRC="$HTML_BASE_DIR/images/sug.jpg" WIDTH="80"></A>
-#						</FORM>
-#						~;
-
-				#### END master TABLE
-				print qq~
-						</TD>
-						</TR>
-						</TABLE>
-						~;								
-    }
-
-		#### PRINT TEXT ####
-    if ($style eq "TEXT") {
-      print qq!Current Login: $current_username ($current_contact_id)  Current Group: $current_work_group_name ($current_work_group_id)
-Current Project: $current_project_name ($current_project_id)
-!;
-     }
+  #### PRINT TEXT ####
+  if ($style eq "TEXT") {
+    print qq!Current Login: $current_username ($current_contact_id)  Current Group: $current_work_group_name ($current_work_group_id)
+	Current Project: $current_project_name ($current_project_id)
+	!;
+  }
 }
 
 
