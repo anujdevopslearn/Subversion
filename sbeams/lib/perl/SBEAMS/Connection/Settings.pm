@@ -18,6 +18,7 @@ use vars qw($VERSION @ISA @EXPORT
     $DBTITLE
     $DBVERSION
     %DBPREFIX
+    %RAW_DATA_DIR
     $BGCOLOR
     $BARCOLOR
     $SERVER_BASE_DIR
@@ -39,6 +40,7 @@ require Exporter;
     $DBTITLE
     $DBVERSION
     %DBPREFIX
+    %RAW_DATA_DIR
     $BGCOLOR
     $BARCOLOR
     $SERVER_BASE_DIR
@@ -98,6 +100,8 @@ $DBPREFIX{Core} = 'sbeams.dbo.';
 $DBPREFIX{Proteomics} = 'proteomics.dbo.';
 $DBPREFIX{Biosap} = 'Biosap.dbo.';
 $DBPREFIX{BEDB} = 'BEDB.dbo.';
+
+$RAW_DATA_DIR{Proteomics} = '/net/db/projects/proteomics/data';
 
 
 #### Set version-specific parameters
@@ -165,6 +169,7 @@ if ( $SBEAMS_INSTANCE =~ /\/dev1\// ) {
   $UPLOAD_DIR             = "/net/dblocal/data/macrogenics/sbeams";
   $DBPREFIX{Core}         = 'MGProteomics.dbo.';
   $DBPREFIX{Proteomics}   = 'MGProteomics.dbo.';
+  $RAW_DATA_DIR{Proteomics} = '/net/dblocal/data/macrogenics/data';
 
 } else {
   $DBVERSION              = '<FONT COLOR=red>Primary</FONT>';
