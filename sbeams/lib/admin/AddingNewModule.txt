@@ -1,0 +1,122 @@
+
+Notes add a new module:
+
+set TEMPLATE = MODULETEMPLATE
+set TMPLTAG = ModTmpTAG
+
+set DEST = BioLink
+set TAG = BL
+
+---
+
+cd /net/dblocal/www/html/dev2/sbeams/lib/perl/SBEAMS
+#rm -r ${DEST} ${DEST}.pm
+cp -p $TEMPLATE.pm $DEST.pm
+cp -p -r $TEMPLATE $DEST
+replaceall.pl $TEMPLATE $DEST $DEST.pm
+cd $DEST
+replaceall.pl $TEMPLATE $DEST *.pm
+replaceall.pl ${TMPLTAG}_ ${TAG}_ *.pm
+rm -r CVS
+
+---
+
+cd /net/dblocal/www/html/dev2/sbeams/cgi
+#rm -r ${DEST}
+cp -p -r $TEMPLATE $DEST
+cd $DEST
+replaceall.pl $TEMPLATE $DEST *.cgi
+replaceall.pl sbeams$TMPLTAG sbeams$TAG *.cgi
+replaceall.pl ${TMPLTAG}_ ${TAG}_ *.cgi
+rm -r CVS
+
+---
+
+cd /net/dblocal/www/html/dev2/sbeams/lib/conf/Core
+ed Modules.conf and/or AvailableModules.conf to include new module
+
+cd /net/dblocal/www/html/dev2/sbeams/lib/perl/SBEAMS/Connection
+ed TableInfo.pm to add link to new module at top
+
+---
+
+cd /net/dblocal/www/html/dev2/sbeams/lib/perl/SBEAMS/$DEST
+ed TableInfo.pm
+ed Tables.pm
+  to add some initial tables
+
+cd /net/dblocal/www/html/dev2/sbeams/lib/conf
+ed SBEAMS.conf
+ed SBEAMS.conf.template
+  to add database location definitions for new module
+
+---
+
+This would a be good time to create a new database if the module
+calls for it, given r/w access to the sbeams user and r/o to sbeamsro.
+
+cd /net/dblocal/www/html/dev2/sbeams/lib/conf
+#rm -r $DEST
+mkdir $DEST
+cd $DEST
+cp -p ../${TEMPLATE}/${TEMPLATE}_table_property.txt ${DEST}_table_property.txt
+cp -p ../${TEMPLATE}/${TEMPLATE}_table_column.txt ${DEST}_table_column.txt
+replaceall.pl ${TMPLTAG}_ ${TAG}_ *
+replaceall.pl $TEMPLATE $DEST *
+  edit them to reflect desired tables
+
+---
+
+Create the DDL files and create the tables in the database
+
+cd /net/dblocal/www/html/dev2/sbeams/lib/scripts/Core
+setenv MODULE $DEST
+if ( ! -d "../../sql/$MODULE") mkdir ../../sql/$MODULE
+./generate_schema.pl --table_prop ../../conf/$MODULE/${MODULE}_table_property.txt --table_col ../../conf/$MODULE/${MODULE}_table_column.txt --schema_file ../../sql/$MODULE/$MODULE --destination_type mssql
+
+See section 5 of the sbeams.installnotes for details on how
+to create the database objects with the resulting files in
+/net/dblocal/www/html/dev2/sbeams/lib/sql/$DEST
+
+---
+
+Load those tables into the database if desired
+cd /net/dblocal/www/html/dev2/sbeams/lib/scripts/Core
+ed batch_update_driver_tables.pl
+  (Add two lines for new driver tables and run the additions)
+set CONFDIR = "../../conf"
+./update_driver_tables.pl $CONFDIR/${DEST}/${DEST}_table_property.txt
+./update_driver_tables.pl $CONFDIR/${DEST}/${DEST}_table_column.txt
+
+---
+
+Add in user groups like ${DEST}_admin and ${DEST}_user if desired.
+
+Create table_group_security entries for these groups and the
+table groups defined in ${DEST}_table_property.txt
+
+---
+
+Test in your dev2 area.  Once all is good, check into CVS:
+
+
+cd /net/dblocal/www/html/dev2/sbeams/cgi
+cvs add $DEST
+cvs add $DEST/*
+
+cd /net/dblocal/www/html/dev2/sbeams/lib/perl/SBEAMS
+cvs add $DEST.pm
+cvs add $DEST
+cvs add $DEST/*
+
+#cd /net/dblocal/www/html/dev2/sbeams/images
+#cvs add -kb biosap_logo.png
+
+cd /net/dblocal/www/html/dev2/sbeams/lib/conf
+cvs add $DEST
+cvs add $DEST/*
+
+cd /net/dblocal/www/html/dev2/sbeams
+cvs commit
+
+
