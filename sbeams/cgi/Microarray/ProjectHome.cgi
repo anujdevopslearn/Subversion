@@ -93,7 +93,7 @@ sub main {
   my %parameters;
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters);
-  #$sbeams->printDebuggingInfo($q);
+  $sbeams->printDebuggingInfo($q);
 
 
   #### Process generic "state" parameters before we start
@@ -304,7 +304,7 @@ sub handle_request {
       $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
 			     page_link=>$page_link,
 			     selected_tab=>0);
-      print_summary_tab(); 
+      print_summary_tab(parameters_ref=>\%parameters); 
   }
   elsif($parameters{'tab'} eq "miame_status") { 
       $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
@@ -334,11 +334,11 @@ sub handle_request {
       $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
 			     page_link=>$page_link,
 			     selected_tab=>0);
-      print_summary_tab();
+      print_summary_tab(parameters_ref=>\%parameters);
   }
   return;
 
-} # end handle_request
+}# end handle_request
 
 
 
@@ -349,6 +349,13 @@ sub print_summary_tab {
   my %args = @_;
   my $SUB_NAME = "print_summary_tab";
   
+	my $parameters_ref = $args{'parameters_ref'} || die "ERROR[$SUB_NAME] No parameters passed\n";
+	my %parameters = %{$parameters_ref};
+  my $apply_action=$parameters{'action'} || $parameters{'apply_action'} || 'QUERY';
+
+	## HACK: If set_current_project_id is a parameter, we do a 'QUERY' instead of a 'VIEWRESULTSET'
+	if ($parameters{set_current_project_id}) {$apply_action = 'QUERY';}
+
   ## Define standard variables
   my ($sql, @rows);
   my $current_contact_id = $sbeams->getCurrent_contact_id();
@@ -462,15 +469,15 @@ SELECT	A.array_id,A.array_name,
  ORDER BY A.array_name,AR.array_request_id,ARSL.array_request_slide_id
         ~;
 
-  my $base_url = "$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_";
-  my %url_cols = ('array_name' => "${base_url}array&array_id=%0V",
-		  'Sample1Name' => "${base_url}array_request_sample&array_request_sample_id=%17V",
-		  'Sample2Name' => "${base_url}array_request_sample&array_request_sample_id=%18V",
+  my $manage_table_url = "$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_";
+  my %url_cols = ('array_name' => "${manage_table_url}array&array_id=%0V",
+		  'Sample1Name' => "${manage_table_url}array_request_sample&array_request_sample_id=%17V",
+		  'Sample2Name' => "${manage_table_url}array_request_sample&array_request_sample_id=%18V",
 		  'date_requested' => "$CGI_BASE_DIR/Microarray/SubmitArrayRequest.cgi?TABLE_NAME=MA_array_request&array_request_id=%4V",
-		  'date_printed' => "${base_url}printing_batch&printing_batch_id=%7V", 
-		  'date_hybridized' => "${base_url}hybridization&hybridization_id=%9V", 
-		  'date_scanned' => "${base_url}array_scan&array_scan_id=%11V", 
-		  'date_quantitated' => "${base_url}array_quantitation&array_quantitation_id=%14V", 
+		  'date_printed' => "${manage_table_url}printing_batch&printing_batch_id=%7V", 
+		  'date_hybridized' => "${manage_table_url}hybridization&hybridization_id=%9V", 
+		  'date_scanned' => "${manage_table_url}array_scan&array_scan_id=%11V", 
+		  'date_quantitated' => "${manage_table_url}array_quantitation&array_quantitation_id=%14V", 
 		  );
 
   my %hidden_cols = ('array_id' => 1,
@@ -482,8 +489,69 @@ SELECT	A.array_id,A.array_name,
 		     'array_request_sample_id1' => 1,
 		     'array_request_sample_id2' => 1,
 		     );
-  return $sbeams->displayQueryResult(sql_query=>$sql,
-				     url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols);
+
+#########################################################################
+	my %resultset = ();
+	my $resultset_ref = \%resultset;
+	my %max_widths;
+  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+	my $base_url = "$CGI_BASE_DIR/Microarray/ProjectHome.cgi";
+
+  #### If the apply action was to recall a previous resultset, do it
+  if ($apply_action eq "VIEWRESULTSET") {
+    $sbeams->readResultSet(
+      resultset_file=>$rs_params{set_name},
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      resultset_params_ref=>\%rs_params,
+    );
+  }
+
+  #### Build ROWCOUNT constraint
+  $parameters{row_limit} = 5000
+    unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
+  my $limit_clause = $sbeams->buildLimitClause(row_limit=>$parameters{row_limit});
+
+
+	#### If the action contained QUERY, then fetch the results from
+	#### the database
+	if ($apply_action =~ /QUERY/i) {
+
+    #### Fetch the results from the database server
+    $sbeams->fetchResultSet(sql_query=>$sql,
+														resultset_ref=>$resultset_ref,
+														);
+
+		#### Store the resultset and parameters to disk resultset cache
+		$rs_params{set_name} = "SETME";
+		$sbeams->writeResultSet(resultset_file_ref=>\$rs_params{set_name},
+														resultset_ref=>$resultset_ref,
+														query_parameters_ref=>\%parameters,
+														resultset_params_ref=>\%rs_params,
+														query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+														);
+  }
+
+	#### Set the column_titles to just the column_names
+	my @column_titles = @{$resultset_ref->{column_list_ref}};
+
+	#### Display the resultset
+	$sbeams->displayResultSet(resultset_ref=>$resultset_ref,
+														query_parameters_ref=>\%parameters,
+														rs_params_ref=>\%rs_params,
+														url_cols_ref=>\%url_cols,
+														hidden_cols_ref=>\%hidden_cols,
+														max_widths=>\%max_widths,
+														column_titles_ref=>\@column_titles,
+														base_url=>$base_url,
+														);
+
+	#### Display the resultset controls
+	$sbeams->displayResultSetControls(resultset_ref=>$resultset_ref,
+																		query_parameters_ref=>\%parameters,
+																		rs_params_ref=>\%rs_params,
+																		base_url=>$base_url,
+																		);
 }
 
 
