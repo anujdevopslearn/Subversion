@@ -14,8 +14,8 @@ public class SBEAMSClient {
   private boolean useGui = false;
   private int passwordAttempts = 3;
   private static boolean DEBUG = false;
-  private static String baseURL =  "https://db.systemsbiology.net/sbeams/";
-  private static String COOKIE_URL =  baseURL + "/cgi/main.cgi";
+  private String baseURL =  "https://db.systemsbiology.net/sbeams";
+  private String COOKIE_URL =  baseURL + "/cgi/main.cgi";
   private static String DEFAULT_COOKIE_FILE = "./.sbeamsCookie";
   private static String COOKIE_ERROR = "badCookie";
 //-----------------------------------------------------------------------------------------------
@@ -40,6 +40,15 @@ public class SBEAMSClient {
   protected void destroyCookie() {
 	cookie = null;
   }//destroyCookie
+//-----------------------------------------------------------------------------------------------
+  protected void setBaseURL(String baseURL) {
+	Pattern trailingSlash = Pattern.compile(".*\\/$");
+	Matcher slashMatch = trailingSlash.matcher(baseURL);
+	if (slashMatch.matches())
+	  this.baseURL = baseURL;
+	else 
+	  this.baseURL = baseURL+"/";
+  }// setBaseURL
 //-----------------------------------------------------------------------------------------------
   protected boolean findCookie(String cookiePath) {
 	boolean cookieFound = false;
@@ -167,7 +176,7 @@ public class SBEAMSClient {
 //-----------------------------------------------------------------------------------------------
   private Response postRequest (String urlString, String params)
     throws Exception {
-	URL url = new URL(urlString);
+	URL url = new URL(formatURL(urlString));
 	HttpURLConnection uc = (HttpURLConnection)url.openConnection();
 	uc.setDoInput(true);
 	uc.setDoOutput(true);
@@ -198,8 +207,16 @@ public class SBEAMSClient {
 	res.contentType = uc.getHeaderField("Content-Type");
 	res.cookie = uc.getHeaderField("Set-Cookie");
 	return res;
-
   }//postRequest
+//-----------------------------------------------------------------------------------------------
+  private String formatURL (String urlString) {
+	Pattern sbeamsBase = Pattern.compile ("(.*?\\/sbeams)(.*)");
+	Matcher baseMatch = sbeamsBase.matcher(urlString);
+	if (baseMatch.matches())
+	  return new String(baseURL+baseMatch.group(2));
+	else 
+	  return urlString;	
+  }// formatURL
 //-----------------------------------------------------------------------------------------------
   public String fetchSbeamsPage (String urlString, String params) 
 	throws Exception{
@@ -229,7 +246,6 @@ public class SBEAMSClient {
 	if (cookie == null)
 	  fetchCookie();
    	return fetchSbeamsPage (url, "");
-
   }//fetchSbeamsPage
 //-----------------------------------------------------------------------------------------------
   public String[] fetchSbeamsResultSetColumn (String url, String columnTitle) 
@@ -416,7 +432,7 @@ public class SBEAMSClient {
 	System.out.println ("test SBEAMS Table Retrieval");
 	try {
 	  SBEAMSClient client = new SBEAMSClient(true);
-	  System.out.println(client.fetchSbeamsPage ( baseURL + "/cgi/ProteinStructure/GetAnnotations?search_scope=All&search_key=iron&action=GO&biosequence_set_id=3&action=QUERY&output_mode=tsv"));
+	  System.out.println(client.fetchSbeamsPage ( "https://db.systemsbiology.net/sbeams/cgi/ProteinStructure/GetAnnotations?search_scope=All&search_key=iron&action=GO&biosequence_set_id=3&action=QUERY&output_mode=tsv"));
 	}catch (IOException e) {
 	  System.err.println("Page Not Found");
 	}catch (Exception t) {
