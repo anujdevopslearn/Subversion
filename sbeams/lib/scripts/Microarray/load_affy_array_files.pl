@@ -622,21 +622,31 @@ sub update_data {
  ####################################################################################################
  ### Updating the Organization id
 			
-			if ($method =~ /afa_user_id$/){			#if we are updating the user ID for what ever reason we will have to update the sample_provider_organization_id too, since it is found by quering with the 
-									#user_login_id
+			if ($method =~ /afa_user_id$/){					#if we are updating the user ID for whatever reason we will have to update the sample_provider_organization_id too, since it is found by quering with the 
+											#user_login_id
+				
+				my $table_name = $TBMA_AFFY_ARRAY_SAMPLE;
+				my $clean_table_name = $TBMA_AFFY_ARRAY_SAMPLE;		#the returnTableInfo cannot contain the database name for Example Microarray.dbo.affy_array
+				$clean_table_name =~ s/.*\./MA_/;			#remove everything upto the last period and append on the db prefix to make MA_affy_array
+			
+				my ($PK_COLUMN_NAME) = $sbeams->returnTableInfo($clean_table_name,"PK_COLUMN_NAME");	#get the column name for the primary key
+			
+				
+				$pk_value = $sbeams_affy_groups->find_affy_array_sample_id(affy_array_id => $affy_array_id);
+				
 				
 				my $user_login_id = $affy_o->get_afa_user_id;
 				
-				my $org_id = $HOLD_COVERSION_VALS{'ORG_VAL'}{$user_login_id};	#need to pull the organizational info out of the HASH used to store data as the script runs
+				my $org_id = get_organization_id(user_login_id => $user_login_id);
 				
-				my $rowdata_ref = { 	$column_name  => $org_id,	
-						
-					  };  
+				my $rowdata_ref = { 	sample_provider_organization_id  => $org_id,	
+						        
+					  	  };  
 				
 				if ($DEBUG > 0) {
 				print "UPDATE DATA FOR ORGANIZATION '$table_name' CLEAN NAME '$clean_table_name' \n", 
-					"PK_NAME = '$PK_COLUMN_NAME', PK_value = '$pk_value'\n",
-					"COLUMN NAME '$column_name' DATA '" . $affy_o->$method() . "' IN PROXY FOR UPDATING OGANIZATION ID\n";
+					"USER ID = '$user_login_id' PK_NAME = '$PK_COLUMN_NAME', PK_value = '$pk_value'\n",
+					"COLUMN NAME '$column_name' DATA '$org_id' \n";
 				
 				print Dumper($rowdata_ref);
 				}
