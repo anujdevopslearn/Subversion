@@ -154,7 +154,6 @@ sub handle_request {
     ## until I get a help menu set-up
     unless ( ($parameters{'atlasName'}) && ($parameters{'searchWithinThis'}) && 
              ($parameters{'searchForThis'}) ) {
-
         $parameters{'atlasName'} = 'Human_P0.9_Ens22_NCBI34';
         $parameters{'searchWithinThis'} = 'Peptide Name';
         $parameters{'searchForThis'} = 'PAp00000001';
@@ -191,7 +190,7 @@ sub handle_request {
 
         $tabmenu->addTab( label => 'Get Peptide',
                       helptext => 'Look-up info on a peptide by sequence or name',
-                      url => "http://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptide"
+                      url => "http://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptide?_tab=2"
                       );
 
         $tabmenu->addTab( label => 'Browse Proteins',
