@@ -641,57 +641,17 @@ sub handle_request {
 
   #### Certain types of actions should be passed to links
   my $pass_action = "QUERY";
-  $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
-
-
-  #### Pass nearly all of the constraints down to a child query
-  my @parameters_to_pass;
-  my $parameters_list = '';
-  while ( ($key,$value) = each %input_types ) {
-    if ($key ne 'sort_order' && $key ne 'display_options' &&
-        $key ne 'reference_constraint') {
-      if ($parameters{$key}) {
-        push(@parameters_to_pass,"$key=$parameters{$key}");
-      }
-    }
-  }
-  if (@parameters_to_pass) {
-    $parameters_list = join('&',@parameters_to_pass);
-  }
+  $pass_action = $apply_action if ($apply_action =~ /QUERY/i);
 
 
   #### Define the hypertext links for columns that need them
-  %url_cols = ('Accession' => "\%$colnameidx{accessor}V\%$colnameidx{biosequence_accession}V\%$colnameidx{accessor_suffix}V",
-    	       'Accession_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information about this protein in source database\'; return true"',
-
-               'Reference' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=$parameters{search_batch_id}&reference_constraint=\%$colnameidx{reference}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
-    	       'Reference_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show all occurrences of this protein in these experiments\'; return true"',
-
-    	       'Peptide' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=$parameters{search_batch_id}&peptide_constraint=\%$colnameidx{peptide}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
-    	       'Peptide_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show all occurrences of this peptide in these experiments\'; return true"',
-
-	       'Peptide String' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=$parameters{search_batch_id}&peptide_string_constraint=\%$colnameidx{peptide_string}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
-	       'Peptide String_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show all occurrences of this exact peptide instance in these experiments\'; return true"',
-
-	       'Count' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=$parameters{search_batch_id}&reference_constraint=\%$colnameidx{reference}V&peptide_constraint=\%$colnameidx{peptide}V&peptide_string_constraint=\%$colnameidx{peptide_string}V&${parameters_list}&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
-	       'Count_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show just this many that match all above criteria\'; return true"',
-
-               'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
-               'Molecular Function_ATAG' => 'TARGET="WinExt"',
-               'Molecular Function_OPTIONS' => {semicolon_separated_list=>1},
-               'Biological Process' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{biological_process_GO}V",
-               'Biological Process_ATAG' => 'TARGET="WinExt"',
-               'Biological Process_OPTIONS' => {semicolon_separated_list=>1},
-               'Cellular Component' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{cellular_component_GO}V",
-               'Cellular Component_ATAG' => 'TARGET="WinExt"',
-               'Cellular Component_OPTIONS' => {semicolon_separated_list=>1},
-               'InterPro Protein Domain' => "http://www.ebi.ac.uk/interpro/IEntry?ac=\%$colnameidx{interpro_protein_domain_GO}V",
-               'InterPro Protein Domain_ATAG' => 'TARGET="WinExt"',
-               'InterPro Protein Domain_OPTIONS' => {semicolon_separated_list=>1},
+  %url_cols = getURLColumns(
+    resultset_ref => $resultset_ref,
+    query_parameters_ref => \%parameters,
+    input_types_ref => \%input_types,
+    pass_action => $pass_action,
   );
 
-
-	       ##'Reference_ATAG' => "TARGET=\"Win1\" ONMOUSEOVER=\"window.status='%V'; return true\"",
 
   #### Define columns that should be hidden in the output table
   %hidden_cols = ('accessor' => 1,
@@ -729,12 +689,21 @@ sub handle_request {
       );
 
       #### Post process the resultset
-      postProcessResultset(
-        rs_params_ref=>\%rs_params,
-        resultset_ref=>$resultset_ref,
-        query_parameters_ref=>\%parameters,
-        column_titles_ref=>\@column_titles,
-      ) if ($parameters{display_options} =~ /pivot/i);
+      if ($parameters{display_options} =~ /pivot/i) {
+	postProcessResultset(
+          rs_params_ref=>\%rs_params,
+          resultset_ref=>$resultset_ref,
+          query_parameters_ref=>\%parameters,
+          column_titles_ref=>\@column_titles,
+        );
+        #### Redefine the hypertext links for columns that need them
+        %url_cols = getURLColumns(
+     	  resultset_ref => $resultset_ref,
+     	  query_parameters_ref => \%parameters,
+      	  input_types_ref => \%input_types,
+     	  pass_action => $pass_action,
+        );
+      }
 
       #### Store the resultset and parameters to disk resultset cache
       $rs_params{set_name} = "SETME";
@@ -1012,4 +981,84 @@ sub postProcessResultset {
 } # end postProcessResult
 
 
+
+###############################################################################
+# getURLColumns
+#
+# Define the URL columns based on the latest column_list
+###############################################################################
+sub getURLColumns {
+  my %args = @_;
+
+  #### Process the arguments list
+  my $resultset_ref = $args{'resultset_ref'};
+  my $query_parameters_ref = $args{'query_parameters_ref'};
+  my $input_types_ref = $args{'input_types_ref'};
+  my $pass_action = $args{'pass_action'};
+
+  my %parameters = %{$query_parameters_ref};
+  my %input_types = %{$input_types_ref};
+  my %url_cols;
+
+
+  #### Pass nearly all of the constraints down to a child query
+  my @parameters_to_pass;
+  my $parameters_list = '';
+  while ( my ($key,$value) = each %input_types ) {
+    if ($key ne 'sort_order' && $key ne 'display_options' &&
+        $key ne 'reference_constraint') {
+      if ($parameters{$key}) {
+        push(@parameters_to_pass,"$key=$parameters{$key}");
+      }
+    }
+  }
+  if (@parameters_to_pass) {
+    $parameters_list = join('&',@parameters_to_pass);
+  }
+
+
+  #### Define the a new colnameidx based on the latest column names
+  my $column_list_ref = $resultset_ref->{column_list_ref};
+  my $i = 0;
+  my %colnameidx;
+  foreach my $column_name (@{$column_list_ref}) {
+    $colnameidx{$column_name} = $i;
+    $i++;
+  }
+
+
+  #### Define the hypertext links for columns that need them
+  %url_cols = ('Accession' => "\%$colnameidx{accessor}V\%$colnameidx{biosequence_accession}V\%$colnameidx{accessor_suffix}V",
+    	       'Accession_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information about this protein in source database\'; return true"',
+
+               'Reference' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=$parameters{search_batch_id}&reference_constraint=\%$colnameidx{reference}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
+    	       'Reference_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show all occurrences of this protein in these experiments\'; return true"',
+
+    	       'Peptide' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=$parameters{search_batch_id}&peptide_constraint=\%$colnameidx{peptide}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
+    	       'Peptide_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show all occurrences of this peptide in these experiments\'; return true"',
+
+	       'Peptide String' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=$parameters{search_batch_id}&peptide_string_constraint=\%$colnameidx{peptide_string}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
+	       'Peptide String_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show all occurrences of this exact peptide instance in these experiments\'; return true"',
+
+	       'Count' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=$parameters{search_batch_id}&reference_constraint=\%$colnameidx{reference}V&peptide_constraint=\%$colnameidx{peptide}V&peptide_string_constraint=\%$colnameidx{peptide_string}V&${parameters_list}&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
+	       'Count_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show just this many that match all above criteria\'; return true"',
+
+               'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
+               'Molecular Function_ATAG' => 'TARGET="WinExt"',
+               'Molecular Function_OPTIONS' => {semicolon_separated_list=>1},
+               'Biological Process' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{biological_process_GO}V",
+               'Biological Process_ATAG' => 'TARGET="WinExt"',
+               'Biological Process_OPTIONS' => {semicolon_separated_list=>1},
+               'Cellular Component' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{cellular_component_GO}V",
+               'Cellular Component_ATAG' => 'TARGET="WinExt"',
+               'Cellular Component_OPTIONS' => {semicolon_separated_list=>1},
+               'InterPro Protein Domain' => "http://www.ebi.ac.uk/interpro/IEntry?ac=\%$colnameidx{interpro_protein_domain_GO}V",
+               'InterPro Protein Domain_ATAG' => 'TARGET="WinExt"',
+               'InterPro Protein Domain_OPTIONS' => {semicolon_separated_list=>1},
+  );
+
+
+  return %url_cols;
+
+}
 
