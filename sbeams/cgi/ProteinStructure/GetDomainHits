@@ -429,7 +429,7 @@ sub handle_request {
     ["biosequence_accessor","DBX.accessor","biosequence_accessor"],
     ["biosequence_accession","BS.biosequence_accession","Biosequence Accession"],
     ["gene_symbol","BSA.gene_symbol","Gene Symbol"],
-    ["functional_description","BSA.functional_description","Functional Description"],
+    ["full_gene_name","BSA.full_gene_name","Full Gene Name"],
     ["protein_EC_numbers","BSA.EC_numbers","Protein EC Numbers"],
 
     @tmhmm_columns,
@@ -468,6 +468,7 @@ sub handle_request {
     ["biosequence_set_id","BSS.biosequence_set_id","biosequence_set_id"],
     ["biosequence_id","BS.biosequence_id","biosequence_id"],
     ["biosequence_annotation_id","BSA.biosequence_annotation_id","biosequence_annotation_id"],
+    ["organism_full_name","O.full_name","Organism"],
   );
 
 
@@ -510,6 +511,8 @@ sub handle_request {
           LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
           LEFT JOIN $TBPS_BIOSEQUENCE_SET BSS
                ON ( BS.biosequence_set_id = BSS.biosequence_set_id )
+          LEFT JOIN $TB_ORGANISM O
+               ON ( BSS.organism_id = O.organism_id )
           LEFT JOIN $TBPS_BIOSEQUENCE_PROPERTY_SET BPS
                ON ( BS.biosequence_id = BPS.biosequence_id )
           $GO_join
@@ -560,9 +563,11 @@ sub handle_request {
   %url_cols = ('Biosequence Accession' => "\%$colnameidx{accessor}V\%$colnameidx{biosequence_accession}V\%$colnameidx{biosequence_accessor_suffix}V",
     	       'Biosequence Accession_ATAG' => 'TARGET="Win1" ',
                'Biosequence Name' => "$CGI_BASE_DIR/ProteinStructure/GetDomainHits?QUERY_NAME=PS_GetDomainHit&biosequence_id=$parameters{biosequence_id}&biosequence_name_constraint=\%V&apply_action=$pass_action",
-               'Functional Description' => "$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=PS_biosequence_annotation&biosequence_annotation_id=\%$colnameidx{biosequence_annotation_id}V&biosequence_id=\%$colnameidx{biosequence_id}V&ShowEntryForm=1",
-	       'Functional Description_ATAG' => 'TARGET="Win1"',
-	       'Functional Description_ISNULL' => ' [Add] ',
+               'Full Gene Name' => "$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=PS_biosequence_annotation&biosequence_annotation_id=\%$colnameidx{biosequence_annotation_id}V&biosequence_id=\%$colnameidx{biosequence_id}V&ShowEntryForm=1",
+	       'Full Gene Name_ATAG' => 'TARGET="Win1"',
+	       'Full Gene Name_ISNULL' => ' [Add] ',
+               'Gene Symbol' => "$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=PS_biosequence_annotation&biosequence_annotation_id=\%$colnameidx{biosequence_annotation_id}V&biosequence_id=\%$colnameidx{biosequence_id}V&ShowEntryForm=1",
+	       'Gene Symbol_ATAG' => 'TARGET="Win1"',
 
                'Match Name' => "\%$colnameidx{match_accessor}V\%$colnameidx{match_accession}V\%$colnameidx{match_accessor_suffix}V",
     	       'Match Name_ATAG' => 'TARGET="WinExt" ',
@@ -592,6 +597,7 @@ sub handle_request {
                   'biosequence_set_id' => 1,
                   'biosequence_id' => 1,
                   'biosequence_annotation_id' => 1,
+                  'Organism' => 1,
   );
 
 
