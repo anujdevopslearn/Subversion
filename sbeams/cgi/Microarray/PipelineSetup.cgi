@@ -43,7 +43,7 @@ $sbeams = new SBEAMS::Connection;
 $sbeamsMA = new SBEAMS::Microarray;
 $sbeamsMA->setSBEAMS($sbeams);
 my $JNLP_DIRECTORY = "$PHYSICAL_BASE_DIR/tmp/Microarray/dataLoader";
-my $JAR_DIRECTORY = "$SERVER_BASE_DIR$HTML_BASE_DIR/bin/java/jars/dataLoader";
+my $JAR_DIRECTORY = "$PHYSICAL_BASE_DIR/usr/java/";
 
 ###############################################################################
 # global Variables
@@ -1871,11 +1871,11 @@ sub send_to_pipeline {
   </security>
   <resources>
     <j2se version="1.4+" max-heap-size="1024M"/>
-    <jar href="$JAR_DIRECTORY/DataLoader.jar"/>
-    <jar href="$JAR_DIRECTORY/experiment.jar"/>
-    <jar href="$JAR_DIRECTORY/jdom.jar"/>
-    <jar href="$JAR_DIRECTORY/visad.jar"/>
-    <jar href="$JAR_DIRECTORY/java-getopt-1.0.10.jar"/>
+    <jar href="$JAR_DIRECTORY/Microarray/DataLoader.jar"/>
+    <jar href="$JAR_DIRECTORY/share/util/experiment.jar"/>
+    <jar href="$JAR_DIRECTORY/share/util/jdom.jar"/>
+    <jar href="$JAR_DIRECTORY/share/util/visad.jar"/>
+    <jar href="$JAR_DIRECTORY/share/util/java-getopt-1.0.10.jar"/>
   </resources>
   <application-desc>
 $arguments
@@ -1912,12 +1912,13 @@ $arguments
   }
 
   ## Write Project Comments
-  print "<BR>Writing project comments to working directory:$proc_subdir</BR>";
-  open (COMMENTSFILE,">$queue_dir/comments$timestr") ||
-	croak ("Unable to write comments $queue_dir/comments$timestr ");
-  print COMMENTSFILE $pipeline_comments;
-  close (COMMENTSFILE);
-  chmod (0666,"$queue_dir/comments$timestr");
+ # print "<BR>Writing project comments to working directory:$output_dir/$arraybot_working_dir</BR>";
+ # my $coms_path = "$output_dir/$arraybot_working_dir/$timestr".".comments";
+ # open (COMMENTSFILE,">$coms_path") ||
+#	croak ("Unable to write comments $coms_path");
+#  print COMMENTSFILE $pipeline_comments;
+#  close (COMMENTSFILE);
+#  chmod (0666,"$coms_path");
 
 
   #### Write the plan file
