@@ -15,6 +15,7 @@ SELECT ARS.array_request_sample_id, convert(varchar(20),ARS.array_request_sample
  ORDER BY ARS.array_request_sample_id'
 WHERE table_name = 'MA_labeling'
    AND column_name = 'array_request_sample_id'
+GO
 
 
 UPDATE table_column
@@ -26,6 +27,7 @@ SELECT ARS.array_request_slide_id, convert(varchar(20),ARS.array_request_slide_i
  ORDER BY ARS.array_request_slide_id'
  WHERE table_name = 'MA_array'
    AND column_name = 'array_request_slide_id'
+GO
 
 
 UPDATE table_column
@@ -40,6 +42,7 @@ SELECT S.array_scan_id,
  ORDER BY A.array_name'
  WHERE table_name = 'MA_array_quantitation'
    AND column_name = 'array_scan_id'
+GO
 
 
 UPDATE table_column
@@ -51,6 +54,7 @@ SELECT ST.slide_type_id, name+''   ( \$''+CONVERT(varchar(50),STC.price)+'' )''
  ORDER BY sort_order,name'
  WHERE table_name = 'MA_array_request'
    AND column_name = 'slide_type_id'
+GO
 
 
 UPDATE table_column
@@ -64,3 +68,4 @@ SELECT DISTINCT condition_id,username + '' - '' + project_tag + '' -> '' + condi
  WHERE (   table_name = 'MA_GetExpression'
        )
    AND column_name = 'condition_id'
+GO
