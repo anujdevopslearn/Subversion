@@ -86,10 +86,10 @@ GL_publication	22	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact
 GL_publication	23	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 GL_publication	24	record_status	Record Status	char	1	0	N	N	N							N	N				
 GL_bioentity	1	bioentity_id	BioEntity ID	int	4	0	N		Y							N	N				pkDEFAULT
-GL_bioentity	2	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism for this BioEntity	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+GL_bioentity	2	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	Y	Organism for this BioEntity	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 GL_bioentity	3	bioentity_name	BioEntity Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Common name of this BioEntity		
 GL_bioentity	4	bioentity_alias	BioEntity Alias	varchar	255	0	Y		N			N	text	50		Y	Y	N	Other Aliases for this BioEntity		
-GL_bioentity	5	bioentity_type_id	BioEntity Type	int	4	0	N		N	GL_bioentity_type	bioentity_type_id	Y	optionlist			Y	Y	N	Type of the BioEntity	"SELECT bioentity_type_id, bioentity_type_name FROM $TBGL_BIOENTITY_TYPE ORDER BY sort_order,bioentity_type_name"	
+GL_bioentity	5	bioentity_type_id	BioEntity Type	int	4	0	N		N	GL_bioentity_type	bioentity_type_id	Y	optionlist			Y	Y	Y	Type of the BioEntity	"SELECT bioentity_type_id, bioentity_type_name FROM $TBGL_BIOENTITY_TYPE ORDER BY sort_order,bioentity_type_name"	
 GL_bioentity	6	biosequence_id	BioSequence ID	int	4	0	Y		N	GL_biosequence	biosequence_id	N	optionlist			N	N	N	BioSequence identification	"SELECT 1,2"	
 GL_bioentity	7	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 GL_bioentity	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
