@@ -52,7 +52,9 @@ my ($title, $text);
 ###############################################################################
 # The database ID for the help text being requested
 ###############################################################################
-my $help_text_id	= $q->param( 'help_text_id' );
+my $help_text_id   = $q->param( 'help_text_id' );
+my $column_name	   = $q->param( 'column_name' );
+my $table_name     = $q->param( 'table_name' );
 
 if ($help_text_id) {
 ######################################
@@ -70,6 +72,11 @@ if ($help_text_id) {
 #####################################
 	$title	= $help_text[0][0];
 	$text	= $help_text[0][1];
+}elsif ($column_name && $table_name) { # We're gonna display column_text here, boss
+
+  displayColumnText( $column_name, $table_name );
+  exit 0;
+
 }else {
 	 $title = $q->param('title');
 	 $text = $q->param('text');
@@ -127,3 +134,65 @@ form   {  font-family: Tahoma, Arial, Helvetica, sans-serif; font-size: ${FONT_S
 </HTML>
 ~;
 
+sub displayColumnText {
+  my $column_name = shift;
+  my $table_name = shift;
+
+  ($title, $text) = $sbeams->getDBHandle()->selectrow_array( <<"  END" );
+	SELECT	column_title, column_text
+	FROM	sbeams.dbo.table_column
+	WHERE	table_name = '$table_name'
+	AND	column_name = '$column_name'
+  END
+
+my $FONT_SIZE=12;
+$FONT_SIZE=10 if ( $HTTP_USER_AGENT =~ /Win/ );
+
+print $q->header( "text/html" );
+
+  print <<"  END_PAGE";
+<HTML>
+<HEAD>
+<TITLE>SBEAMs help - $title</TITLE>
+  <style type="text/css">
+  //<!--
+  body {  font-family: Tahoma, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt;}
+  td   {  font-family: Tahoma, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt;}
+  form   {  font-family: Tahoma, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt;}
+  //-->
+  </style>
+  </HEAD>
+
+  <BODY bgcolor="#ffffff" alink=#ff3399 link=#6600cc text=#000000 vlink=#993366 leftmargin=0 topmargin=0>
+  <p>
+  <table border=0 cellspacing=0 cellpadding=0 width=90% align=center>
+   <tr><TD>&nbsp;</TD>
+   </tr>
+   <tr>
+     <td ALIGN=CENTER>
+       <font size=2>
+       <b>$title:</b>
+     </td>
+   </tr>
+   <tr><TD>&nbsp;</TD>
+   </tr>
+   <tr><TD>&nbsp;</TD>
+   </tr>
+   <tr>
+     <td ALIGN=CENTER>
+       <font size=2>
+       $text
+     </td>
+   </tr>
+  </table>
+  <p>&nbsp;<p>
+  <center>
+  <font size=2 face="Tahoma, Arial, Helvetica, sans-serif">
+  <a href="#" onClick='self.close()'>Close Window</a>
+
+  </BODY>
+  </HTML>
+  END_PAGE
+ 
+
+}
