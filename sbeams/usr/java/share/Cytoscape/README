@@ -1,0 +1,20 @@
+Cytoscape Jars info.
+
+cytoscape_1.0.jar
+	
+cytoscape_2.0.jar
+	Downloaded from http://cytoscape.org 1.8.05.
+
+cytoscape_ps/
+	Cytoscape version 1 from Paul Shannon, incorporating the Gaggle and an
+	upgraded data matrix browser. Paul has not jar(ed) all the java support
+	classes into a single jar, therefore you will notice a bunch of jars
+	within the cytoscape_ps/jars directory.
+	
+plugins_1.0/
+
+plugins_2.0/
+	Initially populated with jars downloaded from http://cytoscape.org
+	1.8.05
+	
+	
