@@ -1094,7 +1094,7 @@ sub processEntryForm {
 
 
     # Execute the SQL statement extract status and PK from result
-    my @returned_information = $sbeams->applySqlChange(
+    my @returned_information = $sbeams->applySQLChange(
       SQL_statement => $sql_query,
       current_contact_id => $current_contact_id,
       table_name => $TABLE_NAME,
@@ -1142,7 +1142,7 @@ sub processEntryForm {
               ~;
 
           # Execute the SQL statement extract status and PK from result
-          my @returned_information = $sbeams->applySqlChange(
+          my @returned_information = $sbeams->applySQLChange(
               SQL_statement => $sql_query,
               current_contact_id => $current_contact_id,
               table_name => 'IJ_array_request_slide',
@@ -1191,7 +1191,7 @@ sub processEntryForm {
             ~;
 
             # Execute the SQL statement extract status and PK from result
-            my @returned_information = $sbeams->applySqlChange(
+            my @returned_information = $sbeams->applySQLChange(
               SQL_statement => $sql_query,
               current_contact_id => $current_contact_id,
               table_name => 'IJ_array_request_slide',
@@ -1242,7 +1242,7 @@ sub processEntryForm {
               ~;
 
               # Execute the SQL statement extract status and PK from result
-              my @returned_information = $sbeams->applySqlChange(
+              my @returned_information = $sbeams->applySQLChange(
                 SQL_statement => $sql_query,
                 current_contact_id => $current_contact_id,
                 table_name => 'IJ_array_request_sample',
@@ -1305,7 +1305,7 @@ sub processEntryForm {
                 ~;
 
                 # Execute the SQL statement extract status and PK from result
-                my @returned_information = $sbeams->applySqlChange(
+                my @returned_information = $sbeams->applySQLChange(
                   SQL_statement => $sql_query,
                   current_contact_id => $current_contact_id,
                   table_name => 'IJ_array_request_sample',
