@@ -309,12 +309,13 @@ my $tissueSql = qq~ select s.tissue_type_id,tissue_type_name from $TBIS_SPECIMEN
 #get all the data (specimen, stains, slides) for this project and display the data 		
 my %tissueHash = $sbeams->selectTwoColumnHash($tissueSql);
     my $sql = qq~
-		select sp.specimen_id, ss.stained_slide_id ,si.slide_image_id,sbo.organism_name,tt.tissue_type_name,sb.specimen_block_id 
+		select sp.specimen_id, ss.stained_slide_id ,si.slide_image_id,sbo.organism_name,tt.tissue_type_name,sb.specimen_block_id,
+                       sbo.organism_id,tt.tissue_type_id
 		from $TBIS_STAINED_SLIDE ss
 		left join $TBIS_SPECIMEN_BLOCK sb on ss.specimen_block_id = sb.specimen_block_id
 		left join $TBIS_SPECIMEN sp on sb.specimen_id = sp.specimen_id
 		left join $TBIS_TISSUE_TYPE tt on sp.tissue_type_id = tt.tissue_type_id
-		left join sbeams.dbo.organism sbo on sp.organism_id = sbo.organism_id
+		left join $TB_ORGANISM sbo on sp.organism_id = sbo.organism_id
 		left join $TBIS_SLIDE_IMAGE si on ss.stained_slide_id = si.stained_slide_id
 		WHERE SP.project_id = '$project_id'
 		order by Organism_Name 
@@ -325,6 +326,8 @@ my %tissueHash = $sbeams->selectTwoColumnHash($tissueSql);
 
 
  		my (%hash,%stainedSlideHash,%imageHash,%tissueTypeHash);
+	 my %organism_ids;
+	 my %tissue_type_ids;
 
 #we got some data for this project		
 		if (@rows)
@@ -332,8 +335,10 @@ my %tissueHash = $sbeams->selectTwoColumnHash($tissueSql);
 		
 	  foreach my $row (@rows)
 		{
-			my ($specimenID,$stainedSlideID,$slideImageID,$organismName,$tissueName,$specimenBlockID) = @{$row};
-			
+			my ($specimenID,$stainedSlideID,$slideImageID,$organismName,$tissueName,$specimenBlockID,$organism_id,$tissue_type_id) = @{$row};
+			$organism_ids{$organismName} = $organism_id;
+			$tissue_type_ids{$tissueName} = $tissue_type_id;
+
 			$hash{$organismName}->{specimenID}->{count}++ if ($specimenID and
         !exists($hash{$organismName}->{specimenID}->{$specimenID}));
 			$hash{$organismName}->{stainedSlideID}->{count}++ if ($stainedSlideID and
@@ -390,8 +395,7 @@ print qq *	<tr><td><b><font color =red>Project Grand Summary :</b></font></td></
 		print "<tr><td><b><font color=red>Project Summary by Organism:</b></font></td></tr><tr></tr><tr></tr><tr>";
 		foreach my $key (sort keys %hash)
 		{
-			print "<td colspan=2><B>$key </B><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&specimen_block_id=$humanString&display_options=MergeLevelsAndPivotCellTypes\"><b>[Full CD Specificity Summary]</A></b></td>" if $key =~ /human/i;
-			print	"<td colspan=2><B>$key </B><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&specimen_block_id=$mouseString&display_options=MergeLevelsAndPivotCellTypes\"><b>[Full CD Specificity Summary]</A></b></td>" if $key =~ /mouse/i;
+			print "<td colspan=2><B>$key </B><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&organism_id=$organism_ids{$key}&display_options=MergeLevelsAndPivotCellTypes\"><b>[Full CD Specificity Summary]</A></b></td>";
 		}
 		
 		print "</tr><tr>";
@@ -416,10 +420,7 @@ print qq *	<tr><td><b><font color =red>Project Grand Summary :</b></font></td></
 				foreach my $organism (sort keys %hash)
 				{
 						print "<td colspan = 2 nowrap><UL>";
-						print "<LI> Organism: <b>$organism </b><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&specimen_block_id=$humanBladderString&display_options=MergeLevelsAndPivotCellTypes\"><b>[Full CD Specificity Summary]</A></b>" if $key eq 'Bladder' and $organism eq 'Human';
-						print "<LI> Organism: <b>$organism </b><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&specimen_block_id=$humanNormalProstateString&display_options=MergeLevelsAndPivotCellTypes\"><b>[Full CD Specificity Summary]</A></b>" if $key eq 'Normal Prostate' and $organism eq 'Human';
-						print "<LI> Organism: <b>$organism </b><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&specimen_block_id=$mouseBladderString&display_options=MergeLevelsAndPivotCellTypes\"><b>[Full CD Specificity Summary]</A></b>" if $key eq 'Bladder' and $organism eq 'Mouse';
-						print "<LI> Organism: <b>$organism </b><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&specimen_block_id=$mouseNormalProstateString&display_options=MergeLevelsAndPivotCellTypes\"><b>[Full CD Specificity Summary]</A></b>" if $key eq 'Normal Prostate' and $organism eq 'Mouse';
+						print "<LI> Organism: <b>$organism </b><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&tissue_type_id=$tissue_type_ids{$key}&organism_id=$organism_ids{$organism}&display_options=MergeLevelsAndPivotCellTypes\"><b>[Full CD Specificity Summary]</A></b>";
 					print qq~
 			<LI>Total Number of Specimens: $tissueTypeHash{$key}->{$organism}->{specimenID}->{count}
 			<LI>Total Number of Stains: $tissueTypeHash{$key}->{$organism}->{stainedSlideID}->{count}
