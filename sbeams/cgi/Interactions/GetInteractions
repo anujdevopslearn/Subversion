@@ -333,8 +333,8 @@ sub handle_request {
   if ( $parameters{display_options} =~ /ShowExtraProteinProps/ ||
        $parameters{display_options} =~ /GroupCount/ ) {
     @additional_columns = (
-      ["fav_codon_frequency","STR(BS.fav_codon_frequency,10,3)","Favored Codon Frequency"],
-      ["n_transmembrane_regions","BS.n_transmembrane_regions","Number of Transmembrane Regions"],
+      ["fav_codon_frequency","STR(BPS.fav_codon_frequency,10,3)","Favored Codon Frequency"],
+      ["n_transmembrane_regions","BPS.n_transmembrane_regions","Number of Transmembrane Regions"],
       ["protein_length","DATALENGTH(BS.biosequence_seq)","Protein Length"],
       @additional_columns,
     );

@@ -405,7 +405,7 @@ sub handle_request {
 
   #### Build FAVORED CODON FREQUENCY constraint
   my $fav_codon_frequency_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"BS.fav_codon_frequency",
+    constraint_column=>"BPS.fav_codon_frequency",
     constraint_type=>"flexible_float",
     constraint_name=>"Favored Codon Frequency",
     constraint_value=>$parameters{fav_codon_frequency_constraint} );
@@ -701,14 +701,14 @@ sub handle_request {
   #### Add in some extra columns if the user wants to see them
   if ( $parameters{display_options} =~ /ShowExtraProteinProps/ ) {
     @additional_columns = (
-      ["fav_codon_frequency","STR(BS.fav_codon_frequency,10,3)","Favored Codon Frequency"],
+      ["fav_codon_frequency","STR(BPS.fav_codon_frequency,10,3)","Favored Codon Frequency"],
       ["transmembrane_class","BPS.transmembrane_class","Transmembrane Regions Class"],
       ["n_transmembrane_regions","BPS.n_transmembrane_regions","Number of Transmembrane Regions"],
       ["protein_length","MIN(DATALENGTH(BS.biosequence_seq))","Protein Length"],
       @additional_columns,
     );
 
-    $additional_grouping_columns = ",BS.fav_codon_frequency,BPS.transmembrane_class,BPS.n_transmembrane_regions".$additional_grouping_columns;
+    $additional_grouping_columns = ",BPS.fav_codon_frequency,BPS.transmembrane_class,BPS.n_transmembrane_regions".$additional_grouping_columns;
   }
 
 

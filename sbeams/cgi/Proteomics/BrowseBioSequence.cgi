@@ -338,7 +338,7 @@ sub handle_request {
 
   #### Build FAVORED CODON FREQUENCY constraint
   my $fav_codon_frequency_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"BS.fav_codon_frequency",
+    constraint_column=>"BPS.fav_codon_frequency",
     constraint_type=>"flexible_float",
     constraint_name=>"Favored Codon Frequency",
     constraint_value=>$parameters{fav_codon_frequency_constraint} );
@@ -443,7 +443,7 @@ sub handle_request {
   #### Add in some extra columns if the user wants to see them
   if ( $parameters{display_options} =~ /ShowExtraProteinProps/ ) {
     @additional_columns = (
-      ["fav_codon_frequency","STR(BS.fav_codon_frequency,10,3)","Favored Codon Frequency"],
+      ["fav_codon_frequency","STR(BPS.fav_codon_frequency,10,3)","Favored Codon Frequency"],
       ["transmembrane_class","BPS.transmembrane_class","Transmembrane Regions Class"],
       ["n_transmembrane_regions","BPS.n_transmembrane_regions","Number of Transmembrane Regions"],
       ["has_signal_peptide","BPS.has_signal_peptide","Has Signal Peptide"],
