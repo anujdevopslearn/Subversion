@@ -354,7 +354,7 @@ sub removeAtlas {
    );
 
    #my $TESTONLY = "0";
-   $VERBOSE = "1" unless ($VERBOSE);
+   my $VERBOSE = "1" unless ($VERBOSE);
 
    if ($keep_parent_record) {
       my $result = $sbeams->deleteRecordsAndChildren(
