@@ -232,6 +232,61 @@ sub handle_request {
   return if ($probability_clause == -1);
 
 
+  #### Build XCORR constraint
+  my $xcorr_clause = "";
+  my ($icharge,$xcorr);
+  for ($icharge=1;$icharge<4;$icharge++) {
+    $xcorr = $parameters{"xcorr_charge$icharge"};
+    if ($xcorr) {
+      if ($xcorr =~ /^[\d\.]+$/) {
+        $xcorr_clause .= "	    OR ( S.assumed_charge = $icharge AND SH.cross_corr = $xcorr )\n";
+      } elsif ($xcorr =~ /^between\s+[\d\.]+\s+and\s+[\d\.]+$/i) {
+        $xcorr_clause .= "	    OR ( S.assumed_charge = $icharge AND SH.cross_corr $xcorr )\n";
+      } elsif ($xcorr =~ /^[><=][=]*\s*[\d\.]+$/) {
+        $xcorr_clause .= "	    OR ( S.assumed_charge = $icharge AND SH.cross_corr $xcorr )\n";
+      } else {
+        print "<H4>Cannot parse XCorr Constraint $icharge!  Check syntax.</H4>\n\n";
+        return;
+      }
+    }
+  }
+  if ($xcorr_clause) {
+    $xcorr_clause =~ s/^\s+OR/ AND \(/;
+    $xcorr_clause .= "	     )\n";
+  }
+
+
+  #### Build FILE_ROOT constraint
+  my $file_root_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"S.file_root",
+    constraint_type=>"plain_text",
+    constraint_name=>"file_root",
+    constraint_value=>$parameters{file_root_constraint} );
+  return if ($file_root_clause == -1);
+
+
+  #### Build BEST_HIT constraint
+  my $best_hit_clause = "";
+  if ($parameters{best_hit_constraint}) {
+    if ($parameters{best_hit_constraint} =~ /Any/i) {
+      $best_hit_clause = "   AND best_hit_flag > ''";
+    } elsif ($parameters{best_hit_constraint} =~ /User/i) {
+      $best_hit_clause = "   AND best_hit_flag = 'U'";
+    } elsif ($parameters{best_hit_constraint} =~ /Default/i) {
+      $best_hit_clause = "   AND best_hit_flag = 'D'";
+    }
+  }
+
+
+  #### Build XCORR_RANK constraint
+  my $xcorr_rank_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SH.cross_corr_rank",
+    constraint_type=>"flexible_int",
+    constraint_name=>"XCorr Rank",
+    constraint_value=>$parameters{xcorr_rank_constraint} );
+  return if ($xcorr_rank_clause == -1);
+
+
   #### Build REFERENCE PROTEIN constraint
   my $reference_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"SH.reference",
@@ -311,6 +366,15 @@ sub handle_request {
   return if ($peptide_clause == -1);
 
 
+  #### Build PEPTIDE STRING constraint
+  my $peptide_string_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SH.peptide_string",
+    constraint_type=>"plain_text",
+    constraint_name=>"Peptide String",
+    constraint_value=>$parameters{peptide_string_constraint} );
+  return if ($peptide_string_clause == -1);
+
+
   #### Build CHARGE constraint
   my $charge_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"S.assumed_charge",
@@ -385,6 +449,22 @@ sub handle_request {
   return if ($n_annotations_clause == -1);
 
 
+  #### Build QUANTITATION constraint
+  my $quantitation_clause = "";
+  if ($parameters{quantitation_constraint}) {
+    if ($parameters{quantitation_constraint} =~ /^[\d\.]+$/) {
+      $quantitation_clause = "   AND d0_intensity/ISNULL(NULLIF(d8_intensity,0),0.01) = $parameters{quantitation_constraint}";
+    } elsif ($parameters{quantitation_constraint} =~ /^between\s+[\d\.]+\s+and\s+[\d\.]+$/i) {
+      $quantitation_clause = "   AND d0_intensity/ISNULL(NULLIF(d8_intensity,0),0.01) $parameters{quantitation_constraint}";
+    } elsif ($parameters{quantitation_constraint} =~ /^[><=][=]*\s*[\d\.]+$/) {
+      $quantitation_clause = "   AND d0_intensity/ISNULL(NULLIF(d8_intensity,0),0.01) $parameters{quantitation_constraint}";
+    } else {
+      print "<H4>Cannot parse Quantitation Constraint!  Check syntax.</H4>\n\n";
+      return;
+    }
+  }
+
+
   #### Build SORT ORDER
   my $order_by_clause = "";
   if ($parameters{sort_order}) {
@@ -393,6 +473,27 @@ sub handle_request {
       return;
     } else {
       $order_by_clause = " ORDER BY $parameters{sort_order}";
+    }
+  }
+
+
+  #### Build Additional peptide constraints
+  my $second_peptide_clause = "";
+  if ($parameters{peptide_options}) {
+    if ($parameters{peptide_options} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
+      print "<H4>Cannot parse Peptide Options!  Check syntax.</H4>\n\n";
+      return;
+    } else {
+      my $C = "";
+      $C = "C" if ( $parameters{peptide_options} =~ /C_containing/ );
+      if ( $parameters{peptide_options} =~ /DoublyTryptic/ ) {
+        $second_peptide_clause = "   AND SH.peptide_string LIKE '[RK].%${C}%[RK]._'";
+      } elsif ( $parameters{peptide_options} =~ /SinglyTryptic/ ) {
+        $second_peptide_clause = "   AND ( SH.peptide_string LIKE '[RK].%${C}%._' OR ".
+                                          "SH.peptide_string LIKE '_.%${C}%[RK]._' )";
+      } else {
+        $second_peptide_clause = "   AND SH.peptide_string LIKE '_.%${C}%._'";
+      }
     }
   }
 
@@ -596,6 +697,8 @@ sub handle_request {
 	  JOIN $TBPR_SEARCH S ON ( SH.search_id = S.search_id )
 	  LEFT JOIN $TBPR_SEARCH_HIT_ANNOTATION SHA
 	       ON ( SH.search_hit_id = SHA.search_hit_id )
+	  LEFT JOIN $TBPR_QUANTITATION QUAN 
+               ON ( SH.search_hit_id = QUAN.search_hit_id )
 	  JOIN $TBPR_SEARCH_BATCH SB
 	       ON ( S.search_batch_id = SB.search_batch_id )
 	  JOIN $TBPR_BIOSEQUENCE BS
@@ -604,15 +707,22 @@ sub handle_request {
 	 WHERE 1 = 1
 	$search_batch_clause
 	$probability_clause
+	$best_hit_clause
+	$xcorr_clause
+	$xcorr_rank_clause
+	$charge_clause
 	$reference_clause
 	$gene_name_clause
         $description_clause
 	$accession_clause
 	$peptide_clause
-	$charge_clause
+	$peptide_string_clause
+	$second_peptide_clause
 	$precursor_mass_clause
 	$mass_clause
 	$isoelectric_point_clause
+	$file_root_clause
+	$quantitation_clause
 	$annotation_label_clause
 	$annotation_status_clause
 	$group_by_clause
