@@ -79,33 +79,11 @@ my ($global_sql, @global_rows);
 my $ADMIN_WG_ID;
 my $ADMIN_PRIV_ID;
 my $ALTER_PRIV_CUTOFF;
-
-## set $ADMIN_WG_ID
-$global_sql = qq~
-    SELECT work_group_id
-    FROM work_group
-    WHERE work_group_name = 'Admin'
-    AND record_status != 'D'
-    ~;
-@global_rows = $sbeams->selectOneColumn($global_sql);
-$ADMIN_WG_ID = $global_rows[0];
-
-## set $ADMIN_PRIV_ID
-$global_sql = qq~
-    SELECT privilege_id
-    FROM privilege
-    WHERE name = 'administrator'
-    AND record_status != 'D'
-    ~;
-@global_rows = $sbeams->selectOneColumn($global_sql);
-$ADMIN_PRIV_ID = $global_rows[0];
-
-## set $ALTER_PRIV_CUTOFF
-$ALTER_PRIV_CUTOFF = $ADMIN_PRIV_ID;
+my $PROJ_PI_ID;
+my $PROJ_PI_NAME;
 
 main();
 exit(0);
-
 
 
 ###############################################################################
@@ -133,6 +111,9 @@ sub main {
   #### Process generic "state" parameters before we start
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
+  #### Define global variables
+  set_globals();
+
   #### Draw the page
   $sbeams->printPageHeader();
   if ($parameters{'userPermissions'}){
@@ -145,6 +126,53 @@ sub main {
   $sbeams->printPageFooter();
 
 } # end main
+
+
+
+###############################################################################
+# set_globals
+###############################################################################
+sub set_globals {
+  my ($global_sql, @global_rows);
+  
+  ## set $ADMIN_WG_ID
+  $global_sql = qq~
+      SELECT work_group_id
+      FROM work_group
+      WHERE work_group_name = 'Admin'
+      AND record_status != 'D'
+      ~;
+  @global_rows = $sbeams->selectOneColumn($global_sql);
+  $ADMIN_WG_ID = $global_rows[0];
+
+  ## set $ADMIN_PRIV_ID
+  $global_sql = qq~
+      SELECT privilege_id
+      FROM privilege
+      WHERE name = 'administrator'
+      AND record_status != 'D'
+      ~;
+  @global_rows = $sbeams->selectOneColumn($global_sql);
+  $ADMIN_PRIV_ID = $global_rows[0];
+
+  ## set $PROJ_PI_ID and $PROJ_PI_NAME
+  my $project_id = $sbeams->getCurrent_project_id;
+  $global_sql = qq~
+      SELECT P.PI_contact_id, UL.username
+      FROM project P
+      LEFT JOIN user_login UL ON (UL.contact_id = P.PI_contact_id)
+      WHERE P.project_id = '$project_id'
+      AND P.record_status != 'D'
+      ~;
+  @global_rows = $sbeams->selectSeveralColumns($global_sql);
+  ($PROJ_PI_ID, $PROJ_PI_NAME) = @{$global_rows[0]};
+
+  ## set $ALTER_PRIV_CUTOFF
+  $ALTER_PRIV_CUTOFF = $ADMIN_PRIV_ID;
+  
+  return;
+}
+
 
 
 ###############################################################################
@@ -342,19 +370,7 @@ sub retrofit {
 
   ## Define standard variables
   my ($sql, @rows);
-  my ($proj_pi_id, $proj_pi_name);
   my (%rowdata, $rowdata_ref);
-
-  # get PI information
-  $sql = qq~
-      SELECT P.PI_contact_id, UL.username
-      FROM project P
-      LEFT JOIN user_login UL ON (UL.contact_id = P.PI_contact_id)
-      WHERE P.project_id = '$current_project_id'
-      AND P.record_status != 'D'
-      ~;
-  @rows = $sbeams->selectSeveralColumns($sql);
-  ($proj_pi_id, $proj_pi_name) = @{$rows[0]};
 
   #### Make sure owner is has administrator privileges
   $sql = qq~
@@ -379,7 +395,7 @@ sub retrofit {
 				     add_audit_parameters=>1);
       }
   }else {      
-      $rowdata{'contact_id'} = $proj_pi_id;
+      $rowdata{'contact_id'} = $PROJ_PI_ID;
       $rowdata{'project_id'} = $current_project_id;
       $rowdata{'privilege_id'} = $ADMIN_PRIV_ID;
       $rowdata_ref=\%rowdata;
@@ -517,7 +533,7 @@ sub print_user_permissions {
 
   ## Define standard variables
   my ($sql, $priv_sql, $user_sql, @rows);
-  my (@users, @permissions, $proj_pi_name, $proj_pi_id);
+  my (@users, @permissions);
   my (%rowdata, $rowdata_ref);
   my $permission_to_alter;
 
@@ -528,58 +544,9 @@ sub print_user_permissions {
       $permission_to_alter = 0;
   }
 
-  # get PI information
-  $sql = qq~
-      SELECT P.PI_contact_id, UL.username
-      FROM project P
-      LEFT JOIN user_login UL ON (UL.contact_id = P.PI_contact_id)
-      WHERE P.project_id = '$current_project_id'
-      AND P.record_status != 'D'
-      ~;
-  @rows = $sbeams->selectSeveralColumns($sql);
-  ($proj_pi_id, $proj_pi_name) = @{$rows[0]};
-  # grant PI permission to alter privleges
-  if ($proj_pi_id == $current_contact_id){
+  if ($PROJ_PI_ID == $current_contact_id){
       $permission_to_alter = 1;
   }
-
-  #### Make sure owner is an administrator.
-#  $sql = qq~
-#      SELECT UPP.user_project_permission_id, UPP.privilege_id
-#      FROM user_project_permission UPP
-#      LEFT JOIN project P on (P.project_id = UPP.project_id)
-#      LEFT JOIN privilege PRIV ON (PRIV.privilege_id = UPP.privilege_id)
-#      LEFT JOIN user_login UL ON (UL.contact_id = UPP.contact_id)
-#      WHERE UPP.project_id = '$current_project_id'
-#      AND P.PI_contact_id = UPP.contact_id
-#      ~;
-#  @rows = $sbeams->selectSeveralColumns($sql);
-#
-#  if (@rows){
-#      (my $pi_upp_id,my $proj_owner_priv) = @{$rows[0]};
-#      if ($proj_owner_priv != '10') {
-#	  $rowdata{'privilege_id'} = '10';
-#	  $rowdata_ref= \%rowdata;
-#	  $sbeams->updateOrInsertRow(table_name=>'user_project_permission',
-#				     rowdata_ref=>$rowdata_ref,
-#				     update=>1,
-#				     PK_name=>'user_project_permission_id',
-#				     PK_value=>$pi_upp_id,
-#				     add_audit_parameters=>1
-#				 );
-#      }
-#  }else {      
-#      $rowdata{'contact_id'} = $proj_pi_id;
-#      $rowdata{'project_id'} = $current_project_id;
-#      $rowdata{'privilege_id'} = '10';
-#      $rowdata_ref=\%rowdata;
-#      $sbeams->updateOrInsertRow(table_name=>'user_project_permission',
-#				 rowdata_ref=>$rowdata_ref,
-#				 insert=>1,
-#				 PK_name=>'user_project_permission_id',
-#				 add_audit_parameters=>1
-#				 );
-#  }
 
   # SQL for all privileges
   $priv_sql = qq~
@@ -593,7 +560,7 @@ sub print_user_permissions {
       SELECT UL.username, UL.contact_id
       FROM user_login UL
       WHERE record_status != 'D'
-      AND UL.contact_id != '$proj_pi_id'
+      AND UL.contact_id != '$PROJ_PI_ID'
       ORDER BY UL.username
       ~;
 
@@ -620,7 +587,7 @@ sub print_user_permissions {
 	<TD><FONT COLOR="red"><B>Privilege</B></FONT></TD>
       </TR>
       <TR>
-        <TD><B>$proj_pi_name</B></TD>
+        <TD><B>$PROJ_PI_NAME</B></TD>
 	<TD><B>administrator (project PI)</B></TD>
       </TR>
       ~;
@@ -692,7 +659,7 @@ sub print_user_permissions {
       ~;
   }else {
       print qq~
-      <h3>You need 'administrator' privileges to make changes.  Contact $proj_pi_name to get access</h3>
+      <h3>You need 'administrator' privileges to make changes.  Contact $PROJ_PI_NAME to get access</h3>
       </FORM>
       ~;
   }
@@ -739,6 +706,7 @@ sub print_group_permissions {
       LEFT JOIN project P ON (P.project_id = GPP.project_id)
       WHERE P.project_id = '$current_project_id'
       AND WG.work_group_id != '$ADMIN_WG_ID'
+      AND PRIV.privilege_id < '50'
       AND WG.record_status != 'D'
       AND PRIV.record_status != 'D'
       ~;
