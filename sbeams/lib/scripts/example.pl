@@ -86,7 +86,8 @@ sub main {
 
   #### Do the SBEAMS authentication and exit if a username is not returned
   exit unless ($current_username =
-    $sbeams->Authenticate(work_group=>'Array_user'));
+    $sbeams->Authenticate(work_group=>'PeptideAtlas_admin'));
+#   $sbeams->Authenticate(work_group=>'Array_user'));
 
   #### Print the header, do what the program does, and print footer
   $sbeams->printTextHeader();

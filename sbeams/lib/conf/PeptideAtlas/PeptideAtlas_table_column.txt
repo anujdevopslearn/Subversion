@@ -47,6 +47,7 @@ AT_peptide_instance	4	best_probability	Best Observed Probability	real	4	0	N		N		
 AT_peptide_instance	5	n_observations	Number of Peptide Observations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of times the peptide was observed in the input samples		
 AT_peptide_instance	6	n_mapped_locations	Number of Mapped Locations	int	4	0	N		N			Y	text	10		Y	Y	N	Number of locations to which this peptide maps in the reference genome		
 AT_peptide_instance	7	sample_ids	Samples Observed in	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Comma-separated list of sample_ids in which which peptide was observed		
+AT_peptide_instance	8	is_exon_spanning	Does it span over introns?	char	1	0	Y		N			Y	text	3		Y	Y	N	Comma-separated list of sample_ids in which which peptide was observed		
 AT_peptide_instance_sample	1	peptide_instance_sample_id	Peptide Instance Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_peptide_instance_sample	2	peptide_instance_id	Peptide Instance ID	int	4	0	N		N	AT_peptide_instance	peptide_instance_id					N	N		Associated Atlas Build		
 AT_peptide_instance_sample	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id					N	N		Associated Sample		
@@ -131,8 +132,10 @@ AT_GetPeptides	8	chromosome_constraint	Chromosome Constraint									N	text	10		
 AT_GetPeptides	9	start_in_chromosome_constraint	Start in Chromosome Constraint									N	text	20		Y	Y	N	"Constraint for the start position of the peptide in nucleotides along the chromosome.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
 AT_GetPeptides	10	end_in_chromosome_constraint	End in Chromosome Constraint									N	text	20		Y	Y	N	"Constraint for the end position of the peptide in nucleotides along the chromosome.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
 AT_GetPeptides	11	strand_constraint	Strand									N	text	5		Y	Y	N	Constraint for the strand (orientiation) of the chromosome mapping (must be either + or -)		
-AT_GetPeptides	12	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the Protein description (description string from input FASTA file). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
-AT_GetPeptides	13	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE option_type = 'GP_display_options' ORDER BY sort_order,option_value"	
+AT_GetPeptides	12	n_mapped_locations_constraint	Number of Mapped Locations Constraint									N	text	5		Y	Y	N	Constraint for the number of mapped locations (>=0)		
+AT_GetPeptides	13	is_exon_spanning_constraint	Is Exon Spanning Constraint									N	text	5		Y	Y	N	Constraint for whether the peptide spans more than one exon (y or n)		
+AT_GetPeptides	14	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the Protein description (description string from input FASTA file). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
+AT_GetPeptides	15	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE option_type = 'GP_display_options' ORDER BY sort_order,option_value"	
 AT_dbxref	1	dbxref_id	dbxref ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_dbxref	2	dbxref_name	CrossRef Name	varchar	50	0	N		N			Y	text	40		Y	Y	N	Name of this Database Cross Reference		
 AT_dbxref	3	dbxref_tag	CrossRef Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this Database Cross Reference		

@@ -347,7 +347,6 @@ sub update_table_column {
   #### Process the arguments list
   my $source_file = $args{'source_file'} || die "source_file not passed";
 
-
   #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql);
 
