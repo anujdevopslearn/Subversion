@@ -155,7 +155,7 @@ sub handleRequest {
 
 
   #### Define a scalar and array of biosequence_set_id's
-  my ($peptide_summary_id,$n_peptide_summaries);
+  my ($peptide_summary_id);
   my @peptide_summary_ids;
 
 
@@ -168,13 +168,14 @@ sub handleRequest {
              AND record_status != 'D'
     ~;
 
+    #$sbeams->display_sql(sql=>$sql);
+
     @peptide_summary_ids = $sbeams->selectOneColumn($sql);
-    $n_peptide_summaries = @peptide_summary_ids;
 
     die "No peptide_summaries found with summary_name = '$summary_name'"
-      if ($n_peptide_summaries < 1);
+      if ($#peptide_summary_ids < 0);
     die "Too many peptide_summaries found with summary_name = '$summary_name'"
-      if ($n_peptide_summaries > 1);
+      if ($#peptide_summary_ids > 0);
 
 
   #### If there was NOT a summary_name specified, scan for all available ones
@@ -185,11 +186,11 @@ sub handleRequest {
            WHERE record_status != 'D'
     ~;
 
+    #$sbeams->display_sql(sql=>$sql);
     @peptide_summary_ids = $sbeams->selectOneColumn($sql);
-    $n_peptide_summaries = @peptide_summary_ids;
 
     die "No peptide_summaries found in this database"
-      if ($n_peptide_summaries < 1);
+      if ($#peptide_summary_ids < 0);
 
   }
 
@@ -294,7 +295,6 @@ sub deletePeptideSummary {
   my %args = @_;
   my $SUB_NAME = 'deletePeptideSummary';
 
-
   #### Decode the argument list
   my $peptide_summary_name = $args{'peptide_summary_name'}
    || die "ERROR[$SUB_NAME]: peptide_summary_name not passed";
@@ -330,7 +330,7 @@ sub deletePeptideSummary {
 
   my %table_child_relationship = (
      peptide_summary => 'peptide(C)',
-     peptide => 'modified_peptide(C),modified_peptide_property(C)',
+     peptide => 'modified_peptide(C)',
      modified_peptide => 'modified_peptide_property(C)',
   );
 
@@ -404,24 +404,24 @@ sub updatePeptideSummary {
   print "$sql\n\n" if ($VERBOSE);
   my ($count) = $sbeams->selectOneColumn($sql);
   if ($count) {
-    if ($delete_then_update) {
-      print "Deleting...\n$sql\n";
-      $sql = qq~
-        DELETE FROM $TBAPD_MODIFIED_PEPTIDE
-         WHERE peptide_id IN (
-               SELECT peptide_id FROM $TBAPD_PEPTIDE
-               WHERE peptide_summary_id = '$peptide_summary_id' )
-        DELETE FROM $TBAPD_PEPTIDE
-         WHERE peptide_summary_id = '$peptide_summary_id'
-      ~;
-      print "$sql\n\n" if ($VERBOSE);
-      $sbeams->executeSQL($sql);
-    } elsif (!($update_existing)) {
-      die("There are already peptide records for this " .
-        "peptide_summary.\nPlease delete those records before trying to " .
-        "load new peptides,\nor specify the --delete_then_update".
-        "or --update_existing flags.");
-    }
+      if ($delete_then_update) {
+          print "Deleting...\n$sql\n";
+          $sql = qq~
+              DELETE FROM $TBAPD_MODIFIED_PEPTIDE
+              WHERE peptide_id IN (
+                  SELECT peptide_id FROM $TBAPD_PEPTIDE
+                  WHERE peptide_summary_id = '$peptide_summary_id' )
+              DELETE FROM $TBAPD_PEPTIDE
+              WHERE peptide_summary_id = '$peptide_summary_id'
+          ~;
+           print "$sql\n\n" if ($VERBOSE);
+           $sbeams->executeSQL($sql);
+        } elsif (!($update_existing)) {
+            die("There are already peptide records for this " .
+              "peptide_summary.\nPlease delete those records before trying to " .
+              "load new peptides,\nor specify the --delete_then_update".
+              "or --update_existing flags.");
+        }
   }
 
 
@@ -840,13 +840,13 @@ sub getPeptideIdentifier {
   );
 
   unless ($peptide_identifier_id > 0) {
-    die("Unable to insert modified_peptide");
+    die("Unable to insert modified_peptide for $peptide");
   }
 
 
   #### Now that the database furnished the PK value, create
   #### a string according to our rules and UPDATE the record
-  my $template = "APDpep00000000";
+  my $template = "PAp00000000";
   my $identifier = substr($template,0,length($template) -
     length($peptide_identifier_id)).$peptide_identifier_id;
   $rowdata{peptide_identifier_str} = $identifier;
