@@ -744,7 +744,7 @@ sub readSummaryFile {
 ###############################################################################
 # readNfoFile
 ###############################################################################
-sub readNfoFile { 
+sub readNfoFile {
   my $self = shift;
   my %args = @_;
 
@@ -815,6 +815,54 @@ sub readNfoFile {
 
 
 } # end readNfoFile
+
+
+
+###############################################################################
+# readPrecurFile
+###############################################################################
+sub readPrecurFile {
+  my $self = shift;
+  my %args = @_;
+
+  #### Parse input parameters
+  my $source_file = $args{'source_file'} || "";
+  my $verbose = $args{'verbose'} || "";
+
+  #### Define a hash to hold the data
+  my %data;
+
+  #### Open the specified file
+  unless (open(INFILE,$source_file)) {
+    die "\nCannot open input file $source_file\n\n";
+  }
+
+  #### Read the header
+  my $line = <INFILE>;
+
+  #### Define column names
+  my @column_names = qw ( full_msrun_name spectrum_number spectrum_file_name
+			  precursor_mass precursor_intensity );
+  my %column_indices;
+  my $i = 0;
+  foreach my $name ( @column_names ) {
+    $column_indices{$name} = $i;
+    $i++;
+  }
+  $data{column_names_array} = \@column_names;
+  $data{column_names_hash} = \%column_indices;
+
+  #### Now read the data and store in the array
+  while ($line = <INFILE>) {
+    $line =~ s/[\r\n]//g;
+    my @parsed_line = split("\t",$line);
+    my $spectrum_number = $parsed_line[$column_indices{spectrum_number}];
+    $data{$spectrum_number} = \@parsed_line;
+  }
+
+  return \%data;
+
+} # end readPrecurFile
 
 
 
