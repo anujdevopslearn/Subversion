@@ -1367,10 +1367,22 @@ sub displayResultSet {
       $SORT_COLUMN = $rs_params_ref->{rs_resort_column};
       $SORT_TYPE = $rs_params_ref->{rs_resort_type} || 'ASC';
 
-      #### Define the datatypes that get sorted numerically and sort
+      #### Define the datatypes that get sorted numerically
       my @sorted_rows;
       my %numerical_types = ('int'=>1,'float'=>1);
-      if ($numerical_types{$types_ref->[$SORT_COLUMN]}) {
+      my $do_numerical_sort = 0;
+      $do_numerical_sort = 1 if ($numerical_types{$types_ref->[$SORT_COLUMN]});
+
+      #### If it's not a numerical column, have a look at it anyway
+      #### to see if they're all numbers
+      unless ($do_numerical_sort) {
+        $do_numerical_sort = $self->isResultsetColumnNumerical(
+          data_ref => $resultset_ref->{data_ref},
+          column_index => $SORT_COLUMN,
+        );
+      }
+
+      if ($do_numerical_sort) {
         @sorted_rows = sort resultsetNumerically
           @{$resultset_ref->{data_ref}};
 
@@ -1553,6 +1565,35 @@ sub displayResultSet {
 
 
 } # end displayResultSet
+
+
+###############################################################################
+# isResultsetColumnNumerical
+#
+# A simple test to see if the specified column can be treated numerically
+###############################################################################
+sub isResultsetColumnNumerical {
+  my $self = shift;
+  my %args = @_;
+
+  #### Process the arguments list
+  my $data_ref = $args{'data_ref'};
+  my $column_index = $args{'column_index'};
+
+  die("column_index not passed") unless defined($column_index);
+  die("data_ref not passed") unless defined($data_ref);
+
+  #### Loop though all elements to see if they're all consistent with
+  #### Being numerical
+  foreach my $element (@{$data_ref}) {
+    next if ($element->[$column_index] =~ /^[0-9\.\+\-\s]*$/);
+    return 0;
+  }
+
+  return 1;
+
+}
+
 
 
 ###############################################################################
