@@ -592,7 +592,7 @@ my @column_titles = ();
 
 #### If the apply action was to recall a previous resultset, do it
   if ($apply_action eq "VIEWRESULTSET"  && $apply_action ne 'QUERY') {
-   	print "PRINTING RECALL<br>";
+   	
 	$sbeams->readResultSet(
      	 resultset_file=>$rs_params{set_name},
      	 resultset_ref=>$resultset_ref,
