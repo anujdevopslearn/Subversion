@@ -680,14 +680,14 @@ sub parseConstraint2SQL {
 
 
   #### Strip leading and trailing whitespace
-  return unless (defined($constraint_value));
+  return '' unless (defined($constraint_value));
   $constraint_value =~ s/^\s+//;
   $constraint_value =~ s/\s+$//;
 
 
   #### If no value was provided, simply return an empty string
   #### Don't return is the value is "0" because that may be a value
-  return if ($constraint_value eq "");
+  return '' if ($constraint_value eq "");
 
 
   #### Parse type int
@@ -1697,12 +1697,12 @@ sub parseResultSetParams {
 
 
   #### Add some defaults if nothing was provided
-  unless ($rs_params{page_size} > 0) {
+  unless (defined($rs_params{page_size}) && $rs_params{page_size} > 0) {
     $rs_params{page_size} = 50;
     $rs_params{default_values} = 'YES';
   }
 
-  unless ($rs_params{page_number} > 0) {
+  unless (defined($rs_params{page_number}) && $rs_params{page_number} > 0) {
     $rs_params{page_number} = 1;
     $rs_params{default_values} = 'YES';
   }
