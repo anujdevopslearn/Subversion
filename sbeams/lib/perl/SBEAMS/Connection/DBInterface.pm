@@ -1187,8 +1187,8 @@ sub displayResultSetControls {
     while ( ($key,$value) = each %{$query_parameters_ref} ) {
       if ($value) {
         $param_string .= "&" if ($param_string);
-        my $value = uri_escape($value);
-	my $value =~ s/\+/\%2b/g;
+        $value = uri_escape($value);
+	$value =~ s/\+/\%2b/g;
         $param_string .= "$key=$value";
       }
     }
