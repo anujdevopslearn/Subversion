@@ -422,18 +422,23 @@ ALTER TABLE dbo.strain_parent ADD CONSTRAINT strain_parent_uk UNIQUE (strain_id,
 GO
 
 
+CREATE TABLE allele (
+	strain_id			int NOT NULL REFERENCES strain (strain_id),
+	allele_biosequence_id		int NOT NULL REFERENCES biosequence(biosequence_id),
+	locus_biosequence_id		int NOT NULL REFERENCES biosequence(biosequence_id),
+	PRIMARY KEY CLUSTERED (strain_id,allele_biosequence_id,locus_biosequence_id)
+)
+GO
 
 
 CREATE TABLE sequence_modification (
 	sequence_modification_id	int IDENTITY NOT NULL,
-	strain_id			int NULL REFERENCES strain (strain_id),
 	plasmid_id			int NULL REFERENCES plasmid (plasmid_id),
 	affected_biosequence_id		int NULL REFERENCES biosequence (biosequence_id),
 	deletion_start			int NULL,
 	deletion_length			int NULL,
 	inserted_biosequence_id		int NULL REFERENCES biosequence (biosequence_id),
 	modification_index		int NULL,
-	allele_index			int NULL,
 	comment				text NULL,
 	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	created_by_id			int NOT NULL /*REFERENCES contact(contact_id)*/,
