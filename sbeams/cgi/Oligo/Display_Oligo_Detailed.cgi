@@ -26,7 +26,7 @@ use DBI;
 use CGI::Carp qw(fatalsToBrowser croak);
 use POSIX;
 
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -40,8 +40,8 @@ $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 
-#use CGI;
-#$q = new CGI;
+use CGI;
+$q = new CGI;
 
 
 ###############################################################################
