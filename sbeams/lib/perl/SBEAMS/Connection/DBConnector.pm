@@ -96,7 +96,7 @@ sub dbConnect {
     my $db_ro_pass = decryptPassword( pass => $DB_RO_PASS, key => $ENC_KEY );
     my $db_pass = decryptPassword(  pass => $DB_PASS , key => $ENC_KEY);
 
-    if ( $db_pass ) { # Decryption succeeded, use decrypted passwd.
+    if ( $db_pass && $db_pass =~ /^\w+$/ ) { # Decryption succeeded, use decrypted passwd.
       $DB_PASS = $db_pass;
     } elsif ( !$connect_read_only ) { 
       # Decryption failed, log warning.
@@ -106,7 +106,7 @@ connection mode. Please contact $DBADMIN
 KEY: $ENC_KEY
       END_WARN
     }
-    if ( $db_ro_pass ) { # Decryption succeeded, use decrypted passwd.
+    if ( $db_ro_pass && $db_ro_pass =~ /^\w+$/) { # Decryption succeeded, use decrypted passwd.
       $DB_RO_PASS = $db_ro_pass;
     } elsif ( $connect_read_only ) { # Decryption failed, log warning.
       print STDERR <<"      END_WARN";
