@@ -271,7 +271,10 @@ sub handle_request {
   #### Print out some information about this project
   print qq~
 	<H1><CENTER>MIAME Status of $project_name : $category</CENTER></H1>
+	<FONT COLOR="green"><B>This is the first draft of a tool to ensure data is MIAME complaint<BR>Please email <A HREF="mailto:mjohnson\@systemsbiology.org">mjohnson</A> with any suggestions on how to improve this!</B></FONT><BR>
+	<A HREF="ProjectHome.cgi?tab=miame_status">back to MIAME home</A>
 	<FORM NAME="miame" METHOD="POST" onSubmit ="prepareForSubmission('$category')">
+	<INPUT TYPE="hidden" NAME="CATEGORY" VALUE="$category">
   ~;
 
   #### Experiment Design Section
@@ -489,16 +492,21 @@ sub printExperimentDesignSection {
     ~;
 
     my $expFactorsTemplate = qq~
-	  <INPUT TYPE="checkbox" NAME="expFactTime">time<BR>
-	  <INPUT TYPE="checkbox" NAME="expFactDose">dose<BR>
-	  <INPUT TYPE="checkbox" NAME="expFactGenVar">genetic variation<BR>
-	  <INPUT TYPE="checkbox" NAME="expFactOther1">Other
-	  <INPUT TYPE="text" NAME="otherExpFact1"><BR>
+				<TABLE>
+				<TR>
+				<TD><INPUT TYPE="checkbox" NAME="expFactTime">time</TD>
+				<TD><INPUT TYPE="checkbox" NAME="expFactDose">dose</TD>
+				</TR>
+				<TR>
+				<TD><INPUT TYPE="checkbox" NAME="expFactGenVar">genetic variation</TD>
+				<TD><INPUT TYPE="checkbox" NAME="expFactOther1">Other   <INPUT TYPE="text" NAME="otherExpFact1"></TD>
+				</TR>
+				</TABLE>
 	  ~;
 
     my @factors = split ',',$exp_factors;
     foreach my $factor(@factors) {
-				$expFactorsTemplate =~ s(>$factor<BR>)(CHECKED>$factor<BR>);
+				$expFactorsTemplate =~ s(>$factor<\/TD>)(CHECKED>$factor<\/TD>);
 				if ($factor =~ /^other\((.*)\)/) {
 						my $subst = $1;
 						$expFactorsTemplate =~ s(>Other)(CHECKED>Other);
@@ -516,7 +524,7 @@ sub printExperimentDesignSection {
     <TR>
       <TD><B>\# of Hybridizations</B></TD>
       <TD>
-        <INPUT="text" NAME="numHyb" SIZE="3" VALUE="$num_hyb" onChange="verifyNumber(this)">
+        <INPUT="text" NAME="numHyb" SIZE="5" VALUE="$num_hyb" onChange="verifyNumber(this)">
       </TD>
     </TR>
 		<TR><TD></TD></TR>
@@ -568,14 +576,24 @@ sub printExperimentDesignSection {
     ~;
 
     my $qcTemplate = qq~
-      <TD><INPUT TYPE="checkbox" NAME="reps">replicates<BR>
-          <INPUT TYPE="checkbox" NAME="dyeSwap">dye swapping<BR>
-	  <INPUT TYPE="checkbox" NAME="qc_other1">Other  <INPUT TYPE="text" NAME="otherQCStep1"</TD>
-	  ~;
+      <TD>
+			<TABLE>
+			<TR>
+			<TD><INPUT TYPE="checkbox" NAME="reps">replicates</TD>
+			<TD><INPUT TYPE="checkbox" NAME="dyeSwap">dye swapping</TD>
+			</TR>
+			<TR>
+			<TD><INPUT TYPE="checkbox" NAME="spikeIns">spike-in controls</TD>
+			<TD><INPUT TYPE="checkbox" NAME="qc_other1">Other  <INPUT TYPE="text" NAME="otherQCStep1"</TD>
+			</TR>
+			</TABLE>
+			</TD>
+			<TR><TD></TD></TR>
+			~;
 
     @factors = split ',', $qc_steps;
     foreach my $factor(@factors) {
-				$qcTemplate =~ s(>$factor<BR>)(CHECKED>$factor,<BR>);
+				$qcTemplate =~ s(>$factor<\/TD>)(CHECKED>$factor<\/TD>);
 				if ($factor =~ /^other\((.*)\)/) {
 						my $subst = $1;
 						$qcTemplate =~ s(>Other)(CHECKED>Other);
@@ -598,7 +616,6 @@ sub printExperimentDesignSection {
   if ($permission <= 10){
   print qq~
 			<BR>
-      <INPUT TYPE="hidden" NAME="CATEGORY" VALUE="experiment_design">
       <INPUT TYPE="submit" NAME="UPDATEMIAME" VALUE="Update Information">
       </FORM>
   ~;
@@ -736,7 +753,7 @@ sub printArrayDesignSection {
 		<TD>$dim</TD>
 		<TD>$spot_count</TD>
 		<TD>
-		<A HREF="$map_location">[Download]</A> <A HREF="$CGI_BASE_DIR/Microarray/ViewFile.cgi?FILE_NAME=$map_file" TARGET="_blank">[View]</A>
+		<A HREF="$CGI_BASE_DIR/Microarray/ViewFile.cgi?FILE_NAME=$map_file&action=download">[Download]</A> <A HREF="$CGI_BASE_DIR/Microarray/ViewFile.cgi?FILE_NAME=$map_file&action=view" TARGET="_blank">[View]</A>
 		</TD>
 		</TR>
 		~;
@@ -806,7 +823,7 @@ sub printSampleInformationSection {
 
     print qq~
 				<p>
-				SBEAMS is under construction to handle sample information effectively.
+				<B>SBEAMS is under construction to handle sample information effectively.</B>
 				</p>
 				~;
     return;
@@ -913,7 +930,7 @@ sub printLabelingAndHybridizationSection {
 		    ~;
 	    }else {
 		print qq~
-		    <TD>No Labeling Record<BR><A HREF="ManageTable.cgi?TABLE_NAME=labeling&ShowEntryForm=1" TARGET="_blank">[Insert Record]</TD></TD>
+		    <TD><FONT COLOR="red">No Labeling Record</FONT><BR><A HREF="ManageTable.cgi?TABLE_NAME=labeling&ShowEntryForm=1" TARGET="_blank">[Insert Record]</TD></TD>
 		    ~;
 	    }
 	    
@@ -924,7 +941,7 @@ sub printLabelingAndHybridizationSection {
 		    ~;
 	    }else {
 		print qq~
-		    <TD>No Hybridization Record<BR><A HREF="ManageTable.cgi?TABLE_NAME=hybridization&ShowEntryForm=1" TARGET="_blank">[Insert Record]</TD>
+		    <TD><FONT COLOR="red">No Hybridization Record</FONT><BR><A HREF="ManageTable.cgi?TABLE_NAME=hybridization&ShowEntryForm=1" TARGET="_blank">[Insert Record]</TD>
 		    ~;
 	    }
 	    
@@ -1050,7 +1067,7 @@ sub printMeasurementsSection {
 	    }else {
 	    print qq~
 	    <TD>
-	    No Record<BR>
+	    <FONT COLOR="red">No Record</FONT><BR>
 	    <A HREF="ManageTable.cgi?TABLE_NAME=array_scan&ShowEntryForm=1" TARGET="_blank">[Insert Record]</A>
 	    </TD>
 	    ~;
@@ -1177,6 +1194,9 @@ sub updateMIAMEInfo {
       if ($parameters{'dyeSwap'} eq 'on') {
 	  $qc_steps .= "dye swapping,";
       }
+			if ($parameters{'spikeIns'} eq 'on') {
+					$qc_steps .="spike-in controls,";
+			}
       if ($parameters{'qc_other1'} eq 'on') {
 	  $qc_steps .= "other($parameters{'otherQCStep1'}),";
       }
