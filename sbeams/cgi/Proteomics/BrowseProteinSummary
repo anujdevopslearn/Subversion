@@ -158,7 +158,7 @@ sub handle_request {
 
   #### Set some specific settings for this program
   #my $CATEGORY="Browse Protein Summary";
-  my $CATEGORY="Browse Protein Summary (experimental and incomplete)";
+  my $CATEGORY="Browse Protein Summary";
   $TABLE_NAME="PR_BrowseProteinSummary" unless ($TABLE_NAME);
   ($PROGRAM_FILE_NAME) =
     $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
@@ -500,7 +500,7 @@ sub handle_request {
   my @bait_columns = ();
   if ( $parameters{display_options} =~ /ShowBaitProteins/ ) {
     @bait_columns = (
-      ["pulldown_protein_name","PE.pulldown_protein_name","Pulldown Protein Name"],
+      ["pulldown_protein_name","PE.pulldown_protein_name","Pulldown Protein"],
     );
   }
 
@@ -644,15 +644,6 @@ sub handle_request {
   $pass_action = $apply_action if ($apply_action =~ /QUERY/i);
 
 
-  #### Define the hypertext links for columns that need them
-  %url_cols = getURLColumns(
-    resultset_ref => $resultset_ref,
-    query_parameters_ref => \%parameters,
-    input_types_ref => \%input_types,
-    pass_action => $pass_action,
-  );
-
-
   #### Define columns that should be hidden in the output table
   %hidden_cols = ('accessor' => 1,
                   'accessor_suffix' => 1,
@@ -696,13 +687,7 @@ sub handle_request {
           query_parameters_ref=>\%parameters,
           column_titles_ref=>\@column_titles,
         );
-        #### Redefine the hypertext links for columns that need them
-        %url_cols = getURLColumns(
-     	  resultset_ref => $resultset_ref,
-     	  query_parameters_ref => \%parameters,
-      	  input_types_ref => \%input_types,
-     	  pass_action => $pass_action,
-        );
+
       }
 
       #### Store the resultset and parameters to disk resultset cache
@@ -716,6 +701,25 @@ sub handle_request {
         column_titles_ref=>\@column_titles,
       );
     }
+
+    #### Debugging
+    if (1 == 0) {
+      for (my $itmp = 0; $itmp < scalar(@{$resultset_ref->{types_list_ref}});
+	   $itmp++) {
+	print "column $itmp: ".$resultset_ref->{column_list_ref}->[$itmp].
+	  " (type ".$resultset_ref->{types_list_ref}->[$itmp].")<BR>\n";
+      }
+    }
+
+
+    #### Define the hypertext links for columns that need them
+    %url_cols = getURLColumns(
+      resultset_ref => $resultset_ref,
+      query_parameters_ref => \%parameters,
+      input_types_ref => \%input_types,
+      pass_action => $pass_action,
+    );
+
 
     #### Display the resultset
     $sbeams->displayResultSet(
@@ -873,53 +877,89 @@ sub postProcessResultset {
 
 
   #### Define the columns that are to be in the new resultset
+  #### First the initial columns before the data points
   my @prefix_columns = qw(biosequence_name accessor accessor_suffix
     search_batch_id biosequence_accession canonical_name);
-  my @data_columns = qw(protein_probability n_peptides average_quant stdev_quant n_quant);
+  my @prefix_column_types = qw(varchar varchar varchar
+    int varchar varchar);
+
+  #### Then the data points
+  my @data_columns = qw(protein_probability n_peptides average_quant
+    stdev_quant n_quant);
+  my @data_column_types = qw(real int real real int);
+  if ($resultset_ref->{column_hash_ref}->{pulldown_protein_name}) {
+    unshift(@data_columns,'pulldown_protein_name');
+    unshift(@data_column_types,'varchar');
+  }
+
+  #### Finally the suffix columns after the data points
   my @suffix_columns = qw(fav_codon_frequency transmembrane_class
     n_transmembrane_regions protein_length
     molecular_function molecular_function_GO
     biological_process biological_process_GO
     cellular_component cellular_component_GO
     interpro_protein_domain interpro_protein_domain_GO
-     biosequence_desc organism
+    biosequence_desc organism
+  );
+  my @suffix_column_types = qw(real varchar
+    int int
+    varchar varchar
+    varchar varchar
+    varchar varchar
+    varchar varchar
+    varchar varchar
   );
 
 
   my @new_column_names;
   my @new_column_titles;
   my @new_precisions;
+  my @new_types;
   #### Push the pre-data columns onto the row array
-  foreach my $element (@prefix_columns) {
+  for (my $ielement=0; $ielement<scalar(@prefix_columns); $ielement++) {
+    my $element = $prefix_columns[$ielement];
     my $column_index = $resultset_ref->{column_hash_ref}->{$element};
     if (defined($column_index)) {
       push(@new_column_names,$element);
       push(@new_column_titles,$column_titles_ref->[$column_index]);
-      push(@new_precisions,$resultset_ref->{precisions_list_ref}->[$column_index]);
-      #print "$element ($column_titles_ref->[$column_index]) prec=".$resultset_ref->{precisions_list_ref}->[$column_index]."<BR>\n";
+      push(@new_precisions,$resultset_ref->{precisions_list_ref}->
+	   [$column_index]);
+      push(@new_types,$prefix_column_types[$ielement]);
+      #print "$element ($column_titles_ref->[$column_index]) prec=".
+        #$resultset_ref->{precisions_list_ref}->[$column_index]."<BR>\n";
     }
   }
 
 
   #### Push the data columns onto the array
-  foreach my $data_column (@data_columns) {
+  for (my $ielement=0; $ielement<scalar(@data_columns); $ielement++) {
+    my $data_column = $data_columns[$ielement];
     foreach my $condition (@conditions) {
       my $column_index = $resultset_ref->{column_hash_ref}->{$data_column};
       push(@new_column_names,$condition.'__'.$data_column);
-      push(@new_column_titles,$condition.' '.$column_titles_ref->[$column_index]);
-      push(@new_precisions,$resultset_ref->{precisions_list_ref}->[$column_index]);
-      #print $condition.'__'.$data_column." (".$condition.' '.$column_titles_ref->[$column_index].") prec=$resultset_ref->{precisions_list_ref}->[$column_index]<BR>\n";
+      push(@new_column_titles,$condition.' '.$column_titles_ref->
+	   [$column_index]);
+      push(@new_precisions,$resultset_ref->{precisions_list_ref}->
+	   [$column_index]);
+      push(@new_types,$data_column_types[$ielement]);
+      #print $condition.'__'.$data_column." (".$condition.' '.
+        #$column_titles_ref->[$column_index].") prec=$resultset_ref->".
+        #"{precisions_list_ref}->[$column_index]<BR>\n";
     }
   }
 
   #### Push the post-data columns onto the row array
-  foreach my $element (@suffix_columns) {
+  for (my $ielement=0; $ielement<scalar(@suffix_columns); $ielement++) {
+    my $element = $suffix_columns[$ielement];
     my $column_index = $resultset_ref->{column_hash_ref}->{$element};
     if (defined($column_index)) {
       push(@new_column_names,$element);
       push(@new_column_titles,$column_titles_ref->[$column_index]);
-      push(@new_precisions,$resultset_ref->{precisions_list_ref}->[$column_index]);
-      #print "$element ($column_titles_ref->[$column_index]) prec=".$resultset_ref->{precisions_list_ref}->[$column_index]."<BR>\n";
+      push(@new_precisions,$resultset_ref->{precisions_list_ref}->
+	   [$column_index]);
+      push(@new_types,$suffix_column_types[$ielement]);
+      #print "$element ($column_titles_ref->[$column_index]) prec=".
+        #$resultset_ref->{precisions_list_ref}->[$column_index]."<BR>\n";
     }
   }
 
@@ -970,6 +1010,7 @@ sub postProcessResultset {
   $resultset_ref->{column_list_ref} = \@new_column_names;
   my $n_new_columns = scalar(@new_column_names);
   $resultset_ref->{precisions_list_ref} = \@new_precisions;
+  $resultset_ref->{types_list_ref} = \@new_types;
 
   @{$column_titles_ref} = @new_column_titles;
 
