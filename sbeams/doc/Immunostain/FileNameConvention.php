@@ -36,7 +36,7 @@ CD90 02-002A 1 b a 100.jpg
  |      |  | |
  |      |  | +---------------- <font color=red>Section index</font> (1,2,3,4,...)
  |      |  |
- |      |  +------------------ <font color=red>Specimen block index</font> (A,B,C,D,....)
+ |      |  +------------------ <font color=red>Specimen block index</font> (A,B,C,D,... or A1,A2,A3,...)
  |      |
  |      +--------------------- <font color=red>Case designtor</font> (YR-NNN)
  |
