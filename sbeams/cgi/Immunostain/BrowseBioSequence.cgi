@@ -80,7 +80,7 @@ if ($DEBUG) {
   print "  DEBUG = $DEBUG\n";
 }
 
-
+my $isGuest = 0;
 ###############################################################################
 # Set Global Variables and execute main()
 ###############################################################################
@@ -97,25 +97,26 @@ sub main {
 
   #### Do the SBEAMS authentication and exit if a username is not returned
   exit unless ($current_username = $sbeams->Authenticate(
-    #connect_read_only=>1,allow_anonymous_access=>1
+   connect_read_only=>1,allow_anonymous_access=>1
   ));
-
-
+ 
   #### Read in the default input parameters
   my %parameters;
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters);
   #$sbeams->printDebuggingInfo($q);
-
+ 
 
   #### Decide what action to take based on information so far
   if ($parameters{action} eq "UPDATE") {
     updatePreferredReference();
   } else {
+	  
+	 
     $sbeamsMOD->display_page_header(
-      navigation_bar=>$parameters{navigation_bar});
+      navigation_bar=>$parameters{navigation_bar}); 
     handle_request(ref_parameters=>\%parameters);
-    $sbeamsMOD->display_page_footer();
+	 $sbeamsMOD->display_page_footer()
   }
 
 
