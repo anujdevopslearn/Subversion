@@ -272,11 +272,8 @@ sub display_page_footer {
 
   #### If finishing up the page completely is desired
   if ($display_footer eq 'YES') {
-    print qq~
-	<BR><HR SIZE="2" NOSHADE WIDTH="30%" ALIGN="LEFT">
-	SBEAMS - $SBEAMS_PART [Under Development]<BR><BR><BR>
-	</BODY></HTML>\n\n
-    ~;
+    #### Default to the Core footer
+    $sbeams->display_page_footer(display_footer=>'YES');
   }
 
 } # end display_page_footer

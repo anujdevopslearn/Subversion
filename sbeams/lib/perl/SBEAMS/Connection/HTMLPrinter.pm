@@ -572,17 +572,18 @@ sub display_page_footer {
 
   #### If finishing up the page completely is desired
   if ($display_footer eq 'YES') {
+    my $module_name = '';
+    $module_name = " - $SBEAMS_PART" if (defined($SBEAMS_PART));
+
     print qq~
 	<BR>
-	<HR SIZE="2" NOSHADE WIDTH="55%" ALIGN="LEFT" color="#FF8700">
+	<HR SIZE="2" NOSHADE WIDTH="35%" ALIGN="LEFT" color="#FF8700">
 	<TABLE>
 	<TR>
-	  <TD><IMG SRC="/images/ISB_symbol_tiny.jpg"></TD>
-	  <TD class='small_text'>SBEAMS version $SBEAMS_VERSION<TD>
-	</TR>
-	<TR>
-	  <TD>&nbsp;</TD>
-	  <TD class='small_text'>&copy; 2005 Institute for Systems Biology</TD>
+	  <TD><IMG SRC="$HTML_BASE_DIR/images/sbeamstinywhite.png"></TD>
+	  <TD class='small_text'>SBEAMS$module_name&nbsp;&nbsp;&nbsp;$SBEAMS_VERSION<BR>
+              &copy; 2005 Institute for Systems Biology<TD>
+	  <TD><IMG SRC="$HTML_BASE_DIR/images/isbtinywhite.png"></TD>
 	</TR>
 	</TABLE>
 	</BODY></HTML>\n\n

@@ -401,14 +401,8 @@ sub printPageFooter {
 
   #### If finishing up the page completely is desired
   if ($display_footer eq 'YES') {
-    print qq~
-	<BR><HR SIZE="2" NOSHADE WIDTH="70%" ALIGN="CENTER">
-	<center>
-	<font face="Helvetica,Arial,sans-serif" size=-2>
-	SBEAMS - Inkjet [Under Development]<BR>
-	&copy; 2002 Institute for Systems Biology<BR><BR>
-	</BODY></HTML>\n\n
-    ~;
+    #### Default to the Core footer
+    $sbeams->display_page_footer(display_footer=>'YES');
   }
 
 }

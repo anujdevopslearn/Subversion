@@ -226,11 +226,8 @@ sub printPageFooter {
   }
 
   if ($flag =~ /Footer/) {
-    print qq~
-	<BR><HR SIZE="2" NOSHADE WIDTH="30%" ALIGN="LEFT">
-	SBEAMS - $SBEAMS_PART [Under Development]<BR><BR><BR>
-	</BODY></HTML>\n\n
-    ~;
+    #### Default to the Core footer
+    $sbeams->display_page_footer(display_footer=>'YES');
   }
 
 }
