@@ -206,6 +206,7 @@ sub handle_request {
     parameters_ref=>\%parameters,
     input_types_ref=>\%input_types,
     mask_user_context => 0,
+    allow_NOT_flags => 1,
   );
 
 
@@ -239,7 +240,9 @@ sub handle_request {
     constraint_column=>"BS.biosequence_name",
     constraint_type=>"plain_text",
     constraint_name=>"BioSequence Name",
-    constraint_value=>$parameters{biosequence_name_constraint} );
+    constraint_value=>$parameters{biosequence_name_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_biosequence_name_constraint"},
+  );
   return if ($biosequence_name_clause eq '-1');
 
 
@@ -248,7 +251,9 @@ sub handle_request {
     constraint_column=>"BS.biosequence_gene_name",
     constraint_type=>"plain_text",
     constraint_name=>"BioSequence Gene Name",
-    constraint_value=>$parameters{biosequence_gene_name_constraint} );
+    constraint_value=>$parameters{biosequence_gene_name_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_biosequence_gene_name_constraint"},
+  );
   return if ($biosequence_gene_name_clause eq '-1');
 
 
@@ -257,7 +262,9 @@ sub handle_request {
     constraint_column=>"BS.biosequence_seq",
     constraint_type=>"plain_text",
     constraint_name=>"BioSequence Sequence",
-    constraint_value=>$parameters{biosequence_seq_constraint} );
+    constraint_value=>$parameters{biosequence_seq_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_biosequence_seq_constraint"},
+  );
   return if ($biosequence_seq_clause eq '-1');
   $biosequence_seq_clause =~ s/\*/\%/g;
 
@@ -267,7 +274,9 @@ sub handle_request {
     constraint_column=>"BS.biosequence_desc",
     constraint_type=>"plain_text",
     constraint_name=>"BioSequence Description",
-    constraint_value=>$parameters{biosequence_desc_constraint} );
+    constraint_value=>$parameters{biosequence_desc_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_biosequence_desc_constraint"},
+  );
   return if ($biosequence_desc_clause eq '-1');
 
 
@@ -276,7 +285,9 @@ sub handle_request {
     constraint_column=>"MFA.annotation",
     constraint_type=>"plain_text",
     constraint_name=>"Molecular Function",
-    constraint_value=>$parameters{molecular_function_constraint} );
+    constraint_value=>$parameters{molecular_function_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_molecular_function_constraint"},
+  );
   return if ($molecular_function_clause eq '-1');
 
 
@@ -285,7 +296,9 @@ sub handle_request {
     constraint_column=>"BPA.annotation",
     constraint_type=>"plain_text",
     constraint_name=>"Biological Process",
-    constraint_value=>$parameters{biological_process_constraint} );
+    constraint_value=>$parameters{biological_process_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_biological_process_constraint"},
+  );
   return if ($biological_process_clause eq '-1');
 
 
@@ -294,7 +307,9 @@ sub handle_request {
     constraint_column=>"CCA.annotation",
     constraint_type=>"plain_text",
     constraint_name=>"Cellular Component",
-    constraint_value=>$parameters{cellular_component_constraint} );
+    constraint_value=>$parameters{cellular_component_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_cellular_component_constraint"},
+  );
   return if ($cellular_component_clause eq '-1');
 
 
@@ -303,7 +318,9 @@ sub handle_request {
     constraint_column=>"IPDA.annotation",
     constraint_type=>"plain_text",
     constraint_name=>"InterPro Protein Domain",
-    constraint_value=>$parameters{protein_domain_constraint} );
+    constraint_value=>$parameters{protein_domain_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_protein_domain_constraint"},
+  );
   return if ($protein_domain_clause eq '-1');
 
 
@@ -417,6 +434,10 @@ sub handle_request {
       #["fav_codon_frequency","STR(BS.fav_codon_frequency,10,3)","Favored Codon Frequency"],
       ["transmembrane_class","BPS.transmembrane_class","Transmembrane Regions Class"],
       ["n_transmembrane_regions","BPS.n_transmembrane_regions","Number of Transmembrane Regions"],
+      ["has_signal_peptide","BPS.has_signal_peptide","Has Signal Peptide"],
+      ["has_signal_peptide_probability","BPS.has_signal_peptide_probability","Has Signal Peptide Prob"],
+      ["signal_peptide_length","BPS.signal_peptide_length","Signal Peptide Length"],
+      ["signal_peptide_is_cleaved","BPS.signal_peptide_is_cleaved","Signal Peptide Is Cleaved"],
       ["protein_length","DATALENGTH(BS.biosequence_seq)","Protein Length"],
       ["transmembrane_topology","BPS.transmembrane_topology","Transmembrane Regions Topology"],
       @additional_columns,
@@ -676,6 +697,15 @@ sub displaySequenceView {
   my $tmr_topology_column =
     $resultset_ref->{column_hash_ref}->{transmembrane_topology};
 
+  my $has_signal_peptide_column =
+    $resultset_ref->{column_hash_ref}->{has_signal_peptide};
+  my $has_signal_peptide_probability_column =
+    $resultset_ref->{column_hash_ref}->{has_signal_peptide_probability};
+  my $signal_peptide_length_column =
+    $resultset_ref->{column_hash_ref}->{signal_peptide_length};
+  my $signal_peptide_is_cleaved_column =
+    $resultset_ref->{column_hash_ref}->{signal_peptide_is_cleaved};
+
 
   #### Get some information about the resultset
   my $data_ref = $resultset_ref->{data_ref};
@@ -685,17 +715,19 @@ sub displaySequenceView {
   #### Define some variables
   my ($row,$pos);
   my ($biosequence_name,$description,$sequence,$seq_length,$tmr_topology,$tmr_class);
+  my ($has_signal_peptide,$has_signal_peptide_probability,$signal_peptide_length,$signal_peptide_is_cleaved);
   my ($accessor,$accession);
 
 
   #### Display each row in FASTA format
   print "<BR>Click on the gene name below to follow the link to the source ".
     "database.<BR>\n";
-  print "Referenced peptides are highlighted in <font color=\"green\">GREEN</font>.<BR>\n";
-  print "Transmembrane regions are highlighted in <font color=\"orange\">ORANGE</font>.<BR>\n"
+  print "- Referenced peptides are highlighted in <font color=\"green\">GREEN</font>.<BR>\n";
+  print "- Transmembrane regions (TMRs) are highlighted in <font color=\"orange\">ORANGE</font>.<BR>\n"
     if ($tmr_topology_column);
-  print "Signal peptides are highlighted in <font color=\"blue\">BLUE</font>.<BR>\n";
-  print "Collisions in highlighting are shown in <font color=\"red\">RED</font>.<BR>\n";
+  print "- Signal peptides are highlighted in <font color=\"blue\">BLUE</font>.<BR>\n";
+  print "- Collisions in highlighting are shown in <font color=\"red\">RED</font>.<BR>\n";
+  print "- Internal ends of TMRs are labeled <font color=\"orange\">(i)</font> and external (outer) ends are labeled <font color=\"orange\">(o)</font>.<BR>\n";
   print "<BR><PRE>\n";
   foreach $row (@{$data_ref}) {
 
@@ -706,6 +738,10 @@ sub displaySequenceView {
     $accession = $row->[$accession_column];
     $tmr_class = $row->[$tmr_class_column];
     $tmr_topology = $row->[$tmr_topology_column];
+    $has_signal_peptide = $row->[$has_signal_peptide_column];
+    $has_signal_peptide_probability = $row->[$has_signal_peptide_probability_column];
+    $signal_peptide_length = $row->[$signal_peptide_length_column];
+    $signal_peptide_is_cleaved = $row->[$signal_peptide_is_cleaved_column];
 
 
     #### Find all instances of the possibly-supplied peptide in the sequence
@@ -742,19 +778,44 @@ sub displaySequenceView {
     }
 
 
-    #### If transmembrane regions topoloy has been supplied, find the TMRs
+    #### If transmembrane regions topology has been supplied, find the TMRs
     my %tmr_start_positions;
     my %tmr_end_positions;
-    my $tmr_color = "orange";
+    my %tmr_color;
+    my $notes_buffer = '';
     if ($tmr_topology) {
       $page_width = 100;
-      my @regions = split(/[io]/,$tmr_topology);
+      my $start_side = substr($tmr_topology,0,1);
+      my $tmp = substr($tmr_topology,1,9999);
+      my @regions = split(/[io]/,$tmp);
       foreach my $region (@regions) {
         my ($start,$end) = split(/-/,$region);
-        $tmr_start_positions{$start} = 1;
-        $tmr_end_positions{$end} = 1;
+        $tmr_start_positions{$start-1} = $start_side;
+        $tmr_color{$start-1} = 'orange';
+	if ($start_side eq 'i') {
+          $start_side = 'o';
+        } elsif ($start_side eq 'o') {
+          $start_side = 'i';
+        } else {
+          $start_side = '?';
+        }
+        $tmr_end_positions{$end} = $start_side;
+        $tmr_color{$end} = 'orange';
       }
-      $tmr_color = "blue" if ($tmr_class eq 'A' || $tmr_class eq 'S');
+      $notes_buffer .= "(Used TMR topology string: $tmr_topology)\n";
+      #print "<A HREF=\"http://www.cbs.dtu.dk/cgi-bin/nph-webface?configfile=/usr/opt/www/pub/CBS/services/TMHMM-2.0/TMHMM2.cf&seqfile=outform=-noshort&SEQ=%3EANON%0D$sequence\">[See full TMHMM result]</A><BR>\n";
+      $notes_buffer .= "<A HREF=\"http://www.cbs.dtu.dk/services/TMHMM/\" TARGET=\"TMHMM\">To see full TMHMM result, click here and paste this:</A><BR>>$biosequence_name Description<BR>$sequence<BR><BR>\n";
+    }
+
+    #### If there's a signal peptide, mark it as a blue
+    if ($has_signal_peptide eq 'Y') {
+      $tmr_start_positions{0} = '';
+      $tmr_color{0} = 'blue';
+      $tmr_end_positions{$signal_peptide_length} = '';
+      $tmr_end_positions{$signal_peptide_length} = '/'
+	if ($signal_peptide_is_cleaved eq 'Y');
+      $tmr_color{$signal_peptide_length} = 'orange';
+      $notes_buffer = "(signal peptide: Y, length: $signal_peptide_length, cleaved: $signal_peptide_is_cleaved, probability: $has_signal_peptide_probability)\n".$notes_buffer;
     }
 
 
@@ -777,9 +838,12 @@ sub displaySequenceView {
       $seq_length = length($sequence);
       $i = 0;
       my $color_state = '';
+      my $tmr_color = 'orange';
       while ($i < $seq_length) {
 
-	if ($end_positions{$i}) {
+	my $trailing_flag = '';
+
+	if (defined($end_positions{$i})) {
 	  if ($color_state eq 'T+P') {
             print "</B></font><font color=\"$tmr_color\"><B>";
             $color_state = 'T';
@@ -789,34 +853,43 @@ sub displaySequenceView {
           }
 	}
 
-	if ($start_positions{$i}) {
+	if (defined($start_positions{$i})) {
 	  if ($color_state eq 'T') {
             print "</B></font><font color=\"red\"><B>";
             $color_state = 'T+P';
           } else {
-            print "<font color=\"green\"><B>";
+            print "<font color=\"#66DD00\"><B>";
             $color_state = 'P';
           }
 	}
 
-	if ($tmr_end_positions{$i}) {
+	if (defined($tmr_end_positions{$i})) {
 	  if ($color_state eq 'T+P') {
-            print "</B></font><font color=\"green\"><B>";
+	    print "($tmr_end_positions{$i})" if ($tmr_end_positions{$i});
+            print "</B></font><font color=\"#66DD00\"><B>";
             $color_state = 'P';
-          } else {
+          } elsif ($color_state eq 'T') {
+	    print "($tmr_end_positions{$i})" if ($tmr_end_positions{$i});
 	    print "</B></font>";
             $color_state = '';
-          }
+          } else {
+	    #### This must be a signal peptide misclassified as a TMR so ignore
+	  }
 	}
 
-	if ($tmr_start_positions{$i}) {
+	if (defined($tmr_start_positions{$i})) {
+	  $tmr_color = $tmr_color{$i};
 	  if ($color_state eq 'P') {
             print "</B></font><font color=\"red\"><B>";
             $color_state = 'T+P';
-          } else {
+  	    print "($tmr_start_positions{$i})" if ($tmr_start_positions{$i});
+          } elsif ($color_state eq '') {
 	    print "<font color=\"$tmr_color\"><B>";
             $color_state = 'T';
-          }
+	    print "($tmr_start_positions{$i})" if ($tmr_start_positions{$i});
+          } else {
+	    #### This must be a signal peptide misclassified as a TMR so ignore
+	  }
 	}
 
 
@@ -857,7 +930,7 @@ sub displaySequenceView {
 
       print "</B></font>" if ($end_positions{$i});
       print "\n\n";
-
+      print "Notes:\n$notes_buffer" if ($notes_buffer);
     }
 
   }
@@ -865,21 +938,22 @@ sub displaySequenceView {
 
   if (1 == 1) {
     print "\n\nCOLOR CHECK:\n";
-    print "  BLACK <font color=\"red\">AND RED</font> AND BLACK\n";
-    print "  BLACK <font color=\"DeepPink\">AND HOTPINK</font> AND BLACK\n";
-    print "  BLACK <font color=\"magenta\">AND MAGENTA</font> AND BLACK\n";
-    print "  BLACK <font color=\"purple\">AND PURPLE</font> AND BLACK\n";
-    print "  BLACK <font color=\"green\">AND GREEN</font> AND BLACK\n";
-    print "  BLACK <font color=\"SpringGreen\">AND SPRINGGREEN</font> AND BLACK\n";
-    print "  BLACK <font color=\"yellow\">AND YELLOW</font> AND BLACK\n";
-    print "  BLACK <font color=\"orange\">AND ORANGE</font> AND BLACK\n";
-    print "  BLACK <font color=\"sienna\">AND SIENNA</font> AND BLACK\n";
-    print "  BLACK <font color=\"black\">AND BLACK</font> AND BLACK\n";
-    print "  BLACK <font color=\"blue\">AND BLUE</font> AND BLACK\n";
-    print "  BLACK <font color=\"navy\">AND NAVY</font> AND BLACK\n";
-    print "  BLACK <font color=\"turquoise\">AND TURQUOISE</font> AND BLACK\n";
-    print "  BLACK <font color=\"cyan\">AND CYAN</font> AND BLACK\n";
-    print "  BLACK <font color=\"gray\">AND GRAY</font> AND BLACK\n";
+    print "  BLACK <B><font color=\"red\">AND RED</font></B> AND BLACK\n";
+    print "  BLACK <B><font color=\"DeepPink\">AND HOTPINK</font></B> AND BLACK\n";
+    print "  BLACK <B><font color=\"magenta\">AND MAGENTA</font></B> AND BLACK\n";
+    print "  BLACK <B><font color=\"purple\">AND PURPLE</font></B> AND BLACK\n";
+    print "  BLACK <B><font color=\"green\">AND GREEN</font></B> AND BLACK\n";
+    print "  BLACK <B><font color=\"#66DD00\">AND LAWNGREEN</font></B> AND BLACK\n";
+    print "  BLACK <B><font color=\"SpringGreen\">AND SPRINGGREEN</font></B> AND BLACK\n";
+    print "  BLACK <B><font color=\"yellow\">AND YELLOW</font></B> AND BLACK\n";
+    print "  BLACK <B><font color=\"orange\">AND ORANGE</font></B> AND BLACK\n";
+    print "  BLACK <B><font color=\"sienna\">AND SIENNA</font></B> AND BLACK\n";
+    print "  BLACK <B><font color=\"black\">AND BLACK</font></B> AND BLACK\n";
+    print "  BLACK <B><font color=\"blue\">AND BLUE</font></B> AND BLACK\n";
+    print "  BLACK <B><font color=\"navy\">AND NAVY</font></B> AND BLACK\n";
+    print "  BLACK <B><font color=\"turquoise\">AND TURQUOISE</font></B> AND BLACK\n";
+    print "  BLACK <B><font color=\"cyan\">AND CYAN</font></B> AND BLACK\n";
+    print "  BLACK <B><font color=\"gray\">AND GRAY</font></B> AND BLACK\n";
   }
 
 
@@ -889,7 +963,5 @@ sub displaySequenceView {
   return;
 
 }
-
-
 
 
