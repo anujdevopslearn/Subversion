@@ -72,6 +72,8 @@ sub showMainPage {
 
   $sbeams->printUserContext();
 
+  my $html_ref = $sbeams->getMainPageTabMenu( cgi => $q );
+
   print qq!
   <BR>
   You are successfully logged into the $DBTITLE - $SBEAMS_PART system.
@@ -80,10 +82,11 @@ sub showMainPage {
   This system is still under active development.  Please be
   patient and report bugs, problems, difficulties, suggestions to
   <B>edeutsch\@systemsbiology.org</B>.<P>
+  <BR>
+
+  $$html_ref
   !;
 
-  my $html_ref = $sbeams->getMainPageTabMenu( cgi => $q );
-  print $$html_ref;
 
 } # end showMainPage
 
