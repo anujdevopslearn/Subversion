@@ -143,6 +143,7 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizePeptides"><nobr>&nbsp;&nbsp;&nbsp;Summarize over</nobr><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Proteins/Peptides</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/CompareExperiments"><nobr>&nbsp;&nbsp;&nbsp;Compare Exp's</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/CompareMSRuns"><nobr>&nbsp;&nbsp;&nbsp;Compare MSRuns</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/CompareBySpectrum"><nobr>&nbsp;&nbsp;&nbsp;Compare By Spec</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseAPD"><nobr>&nbsp;&nbsp;&nbsp;Browse APD</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowsePossiblePeptides"><nobr>&nbsp;&nbsp;&nbsp;Browse Possible</nobr><BR><nobr>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Tryptic Peptides</nobr></a></td></tr>
