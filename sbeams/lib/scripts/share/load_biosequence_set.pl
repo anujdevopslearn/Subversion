@@ -141,6 +141,10 @@ sub main {
     $work_group = "ProteinStructure_admin";
     $DATABASE = $DBPREFIX{$module};
   }
+  if ($module eq 'BioLink') {
+    $work_group = "BioLink_admin";
+    $DATABASE = $DBPREFIX{$module};
+  }
 
 
   #### Do the SBEAMS authentication and exit if a username is not returned
