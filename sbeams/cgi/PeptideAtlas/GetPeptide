@@ -2,7 +2,6 @@
 
 ###############################################################################
 # Program     : GetPeptide
-# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
 # $Id$
 #
 # Description : This program that allows users to
@@ -149,10 +148,6 @@ sub handle_request {
 
     my %parameters = %{$ref_parameters};
 
-    #foreach my $k (keys %parameters) {
-    #    print "key: $k  value: $parameters{$k} \n";
-    #}
-
 
     #### Define some generic varibles
     my ($i,$element,$key,$value,$line,$result,$sql);
@@ -192,15 +187,15 @@ sub handle_request {
     #$sbeams->printDebuggingInfo($q);
 
 
-    #### If the apply action was to recall a previous resultset, do it
-    my %rs_params = $sbeams->parseResultSetParams(q=>$q);
-
-    if ($apply_action eq "VIEWRESULTSET") {
-        $sbeams->readResultSet(resultset_file=>$rs_params{set_name},
-            resultset_ref=>$resultset_ref,
-            query_parameters_ref=>\%parameters);
-        $n_params_found = 99;
-    }
+#   #### If the apply action was to recall a previous resultset, do it
+#   my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+#
+#   if ($apply_action eq "VIEWRESULTSET") {
+#       $sbeams->readResultSet(resultset_file=>$rs_params{set_name},
+#           resultset_ref=>$resultset_ref,
+#           query_parameters_ref=>\%parameters);
+#       $n_params_found = 99;
+#   }
 
 
 
@@ -248,7 +243,21 @@ sub handle_request {
 
     my $searchValue = $q->param("searchForThis");
 
-    $apply_action = $q->param("query");
+    unless ( $apply_action eq "QUERY" ) { ## if receive from link, don't assign null
+
+        $apply_action = $q->param("query");
+
+    }
+
+    ## if receive $parameters{atlas_build_id} from link, get atlas_build_name 
+    if ( $parameters{atlas_build_id} ) {
+        for (my $i=0; $i<=$#atlas_option_id_array; $i++) {
+            if ( $parameters{atlas_build_id} eq $atlas_option_id_array[$i] ) {
+                $atlas_build_name = $atlas_option_name_array[$i]
+            }
+        }
+    }
+
 
 
     if ($sbeams->output_mode() eq 'html') {
@@ -271,9 +280,6 @@ sub handle_request {
 
     } 
 
-    #print "HAH! searching for: $searchValue   within: $searchKey ";
-    #print " in atlas: $atlas_build_name <BR>";
-    #print "apply_action = $apply_action <BR>";
 
     ## store form values in %parameters:
     for (my $i=0; $i<=$#atlas_option_name_array; $i++){
@@ -351,7 +357,7 @@ sub handle_request {
     return if ($peptide_sequence_clause eq '-1');
 
 
-    ## want to replace LIKE with = , as want returned single peptide 
+    ## want to replace LIKE with = , as want single peptide 
     $peptide_name_clause =~ s/LIKE/=/gi;
     #print "peptide_name_clause: $peptide_name_clause <br>";
 
@@ -404,6 +410,12 @@ sub handle_request {
         ORDER BY P.peptide_accession
     ~;
      #$sbeams->display_sql(sql=>$sql);
+     #print "parameters{action} = $parameters{action} <BR>";
+     #print "parameters{apply_action} = $parameters{apply_action} <BR>";
+     #print "parameters{atlas_build_name} = $parameters{atlas_build_name} <BR>";
+     #print "parameters{atlas_build_id} = $parameters{atlas_build_id} <BR>";
+     #print "parameters{peptide_name_constraint} = $parameters{peptide_name_constraint} <BR>";
+     #print "apply action = $apply_action<BR>";
 
 
 
@@ -450,9 +462,9 @@ sub handle_request {
                 $i++;
             }
             
-            ##xxxx PRINT RETURN HERE... 
+            ##xxxx PRINT RETURN to HTML HERE... 
 
-            ## Yellow/Tan section:
+            ## Tan section:
             my $prnt = "<DIV ID='Section1' DIR='LTR' STYLE='background: #ffcc99'>
 	         <P>
                  <BR>
@@ -564,20 +576,4 @@ sub handle_request {
     }
 
 } # end handle_request
-
-
-
-###############################################################################
-# evalSQL
-#
-# Callback for translating Perl variables into their values,
-# especially the global table variables to table names
-###############################################################################
-sub evalSQL {
-
-    my $sql = shift;
-
-    return eval "\"$sql\"";
-
-} # end evalSQL
 
