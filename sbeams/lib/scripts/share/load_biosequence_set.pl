@@ -492,7 +492,11 @@ sub loadBiosequenceSet {
       print "Deleting...\n";
       $sql = "DELETE FROM ${DATABASE}biosequence ".
              " WHERE biosequence_set_id = '$biosequence_set_id'";
-      $sbeams->executeSQL($sql);
+      if ($TESTONLY) {
+	  print "SQL: $sql\n";
+      } else {
+	  $sbeams->executeSQL($sql);
+      }
     } elsif (!($update_existing)) {
       die("There are already biosequence records for this " .
         "biosequence_set.\nPlease delete those records before trying to load " .
@@ -1207,6 +1211,13 @@ sub specialParsing {
      $rowdata_ref->{dbxref_id} = '9';
   }
 
+  #### Conversion rules for the new IPI database 2 (dreiss)
+  if ($rowdata_ref->{biosequence_name} =~ /^IPI:(IPI[\d\.]+)\|/ ) {
+     $rowdata_ref->{biosequence_accession} = $1;
+     $rowdata_ref->{biosequence_gene_name} = $1;
+     $rowdata_ref->{dbxref_id} = '9';
+  }
+
 
   #### Conversion rules for some generic GenBank IDs
   if ($rowdata_ref->{biosequence_name} =~ /gb\|([A-Z\d\.]+)\|/ ) {
@@ -1220,6 +1231,11 @@ sub specialParsing {
   if ($rowdata_ref->{biosequence_name} =~ /gi\|(\d+)\|/ ) {
      $rowdata_ref->{biosequence_accession} = $1;
      $rowdata_ref->{dbxref_id} = '12';
+  }
+
+  #### Special Conversion rules for yeast orf names from GB (dreiss)
+  if ($rowdata_ref->{biosequence_desc} =~ /\s(\S+)p\s\[Saccharomyces cerevisiae/ ) {
+      $rowdata_ref->{biosequence_gene_name} = $1;
   }
 
 
