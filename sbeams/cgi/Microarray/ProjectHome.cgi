@@ -571,28 +571,27 @@ sub print_miame_status_tab {
 
 <H1>MIAME Status:</H1>
 <IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="100%" HEIGHT="1"><BR>
-<A HREF="MIAMEStatus.cgi?CATEGORY=all">Complete MIAME Details for this Project</A>
 <TABLE CELLSPACING="5">
 <TR><TD></TD></TR>
 <TR>
   <TD>Experiment Design</TD>
-  <TD><A HREF="MIAMEStatus.cgi?CATEGORY=experiment_design">Detailed Information</A></TD>
+  <TD><A HREF="MIAMEStatus.cgi?tab=experiment_design">Detailed Information</A></TD>
 </TR>
 <TR>
   <TD>Array Design</TD>
-  <TD><A HREF="MIAMEStatus.cgi?CATEGORY=array_design">Detailed Information</A></TD>
+  <TD><A HREF="MIAMEStatus.cgi?tab=array_design">Detailed Information</A></TD>
 </TR>
 <TR>
   <TD>Sample Information</TD>
-  <TD><A HREF="MIAMEStatus.cgi?CATEGORY=sample_information">Detailed Information</A></TD>
+  <TD><A HREF="MIAMEStatus.cgi?tab=sample_information">Detailed Information</A></TD>
 </TR>
 <TR>
   <TD>Labeling and Hybridization</TD>
-  <TD><A HREF="MIAMEStatus.cgi?CATEGORY=labeling_and_hybridization">Detailed Information</A></TD>
+  <TD><A HREF="MIAMEStatus.cgi?tab=labeling_and_hybridization">Detailed Information</A></TD>
 </TR>
 <TR>
   <TD>Measurements</TD>
-  <TD><A HREF="MIAMEStatus.cgi?CATEGORY=measurements">Detailed Information</A></TD>
+  <TD><A HREF="MIAMEStatus.cgi?tab=measurements">Detailed Information</A></TD>
 </TR>
 <TR>
   <TD></TD>
