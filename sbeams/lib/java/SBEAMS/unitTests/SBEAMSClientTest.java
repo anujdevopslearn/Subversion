@@ -14,6 +14,7 @@ public class SBEAMSClientTest extends TestCase {
 
   private String testUser = "cytoscape";
   private String testPassword = "cytoscape";
+  private String testBaseURL = "http://db.systemsbiology.net/sbeams";
   private SBEAMSClient client;
 
 //------------------------------------------------------------------------------
@@ -34,7 +35,7 @@ public void testSBEAMSClientSetup () throws Exception
 {
   System.out.println ("testSBEAMSClientSetup");
   client = new SBEAMSClient(testUser, testPassword);
-  client.fetchSbeamsPage ("http://db.systemsbiology.net/sbeams/cgi/main.cgi");
+  client.fetchSbeamsPage ( testBaseURL + "/cgi/main.cgi");
   assertTrue (client.getCookie() != null);
 } // testFileRepository
 //--------------------------------------------------------------------------------------
@@ -42,7 +43,7 @@ public void testSecureSBEAMSClientSetup () throws Exception
 {
   System.out.println ("testSecureSBEAMSClientSetup");
   client = new SBEAMSClient(testUser, testPassword);
-  client.fetchSbeamsPage ("https://db.systemsbiology.net/sbeams/cgi/main.cgi");
+  client.fetchSbeamsPage ( testBaseURL + "/cgi/main.cgi");
   assertTrue (client.getCookie() != null);
 } // testFileRepository
 //--------------------------------------------------------------------------------------
