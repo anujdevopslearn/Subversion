@@ -674,6 +674,7 @@ sub handle_request {
       ["isoelectric_point","STR(isoelectric_point,8,3)","Calc pI"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
+      ["organism","O.genus+' '+O.species","Organism"],
     );
     $group_by_clause = " GROUP BY SH.reference,$colname,isoelectric_point";
     $peptide_column = "$colname,";
@@ -693,6 +694,7 @@ sub handle_request {
       ["n_quant","tABS.n_quant","Quant N"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
+      ["organism","O.genus+' '+O.species","Organism"],
     );
     $group_by_clause = " GROUP BY SH.reference";
     $count_column = "COUNT(*) AS 'row_count',STR(AVG(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0)),10,2) AS 'average_quant',STR(STDEV(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0)),10,2) AS 'stdev_quant',SUM(CASE WHEN (NULLIF(d0_intensity,0.0) IS NULL OR NULLIF(d8_intensity,0.0) IS NULL) THEN 0 ELSE 1 END) AS 'n_quant'";
@@ -711,6 +713,7 @@ sub handle_request {
       ["isoelectric_point","STR(isoelectric_point,8,3)","Calc pI"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
+      ["organism","O.genus+' '+O.species","Organism"],
     );
     $peptide_column = "peptide,";
     $count_column = "1 AS 'row_count',STR(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0),10,2) AS 'average_quant',isoelectric_point";
@@ -820,6 +823,10 @@ sub handle_request {
           LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
           LEFT JOIN $TBPR_BIOSEQUENCE_PROPERTY_SET BPS
                ON ( BS.biosequence_id = BPS.biosequence_id )
+	 INNER JOIN $TBPR_BIOSEQUENCE_SET BSS
+               ON ( BS.biosequence_set_id = BSS.biosequence_set_id )
+	 INNER JOIN $TB_ORGANISM O
+               ON ( BSS.organism_id = O.organism_id )
           $GO_join
 	 WHERE 1 = 1
 	$n_annotations_clause
@@ -902,6 +909,7 @@ sub handle_request {
                   'biological_process_GO' => 1,
                   'cellular_component_GO' => 1,
                   'interpro_protein_domain_GO' => 1,
+                  'Organism' => 1,
   );
 
 
