@@ -186,13 +186,27 @@ sub handleRequest {
   if ($NIS_group) {
     my ($group_list) = `/usr/bin/ypmatch $NIS_group group`;
     $group_list =~ s/[\n\r]//g;
+    my @columns = split(/:/,$group_list);
+    my $NIS_group_id = $columns[2];
+
     $group_list =~ s/.+://;
     @group_members = split(",",$group_list);
+
+    my @users = `/usr/bin/ypcat passwd`;
+    foreach my $user (@users) {
+      my @parsed_line = split(":",$user);
+      my $username = $parsed_line[0];
+      my $grp = $parsed_line[3];
+      if ($grp == $NIS_group_id) {
+	push(@group_members,$username);
+      }
+    }
+
   } else {
     @group_members = @include_users;
   }
 
-  foreach my $member (@group_members) {
+  foreach my $member (sort @group_members) {
 
     #### Skip to the next if this one is exclude
     next if (grep { /$member/ } @exclude_users);
