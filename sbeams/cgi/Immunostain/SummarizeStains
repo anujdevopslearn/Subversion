@@ -731,6 +731,8 @@ sub postProcessResultset {
     my $refseq_accession = $row[$biosequence_name_column_index->{refseq_accession}];
 
     # Cell types have an intrinsic tissue_type in addition to a structural unit
+    # This code appends a linker (---) plus the tissue type id, so that s_units
+    # with the same name but different ttypes can be segregated. 
     my $cellTypeName = $row[$biosequence_name_column_index->{structural_unit_name}] .
               '---' . $struct_unit{$row[$biosequence_name_column_index->{tissue_type_name}]};
     my $cellTypeId = $row[$biosequence_name_column_index->{structural_unit_id}];
@@ -876,13 +878,18 @@ sub postProcessResultset {
         "<A HREF =\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&antibody_id=$antibodyHash{$antibodyKey}&cell_type_id=$cellIdHash{$cellKey}&organism_id=$organismID&display_options=MergeLevelsAndPivotCellTypes\">$averageNumber</A>";
         $pval = $expNumber;
       }
+
+    # Remove the tissue_type tags
+    ( my $cellType = $cellKey ) =~ s/---\d//;
+      $log->debug( "Cell key is $cellKey" );
+      $log->debug( "Cell type is $cellType" );
 				
       #### Store information needed for a Cytoscape display
       if ($averageNumber && $averageNumber > 0) {
       	my $decimal_number = sprintf("%.2f",$averageNumber);
-      	push(@{$cytoscape->{files}->{'network.sif'}},"$canonical_name\tisExpressedIn\t$cellKey");
-      	push(@{$cytoscape->{files}->{'ExpressionLevel.eda'}},"$canonical_name (isExpressedIn) $cellKey = $decimal_number");
-      	push(@{$cytoscape->{files}->{'ExpressionLevelLabel.eda'}},"$canonical_name (isExpressedIn) $cellKey = $decimal_number ($expNumber)");
+      	push(@{$cytoscape->{files}->{'network.sif'}},"$canonical_name\tisExpressedIn\t$cellType");
+      	push(@{$cytoscape->{files}->{'ExpressionLevel.eda'}},"$canonical_name (isExpressedIn) $cellType = $decimal_number");
+      	push(@{$cytoscape->{files}->{'ExpressionLevelLabel.eda'}},"$canonical_name (isExpressedIn) $cellType = $decimal_number ($expNumber)");
       }
 
       # First, add average expression regardless
