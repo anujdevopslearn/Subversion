@@ -50,7 +50,7 @@ use constant TNAME => 'BL_coordinate_lookup';
 {
 
   # Authenticate, exit on failure
-  exit unless ( $sbeams->Authenticate() );
+  exit unless ( $sbeams->Authenticate( allow_anonymous_access => 1 ) );
 
   # Read input parameters, parse then into various hashes
   $sbeams->parse_input_parameters( parameters_ref => \%params, q => $cgi ); 
