@@ -147,44 +147,23 @@ sub handle_request {
 
   #### Show current user context information
   $sbeams->printUserContext();
-  $current_contact_id = $sbeams->getCurrent_contact_id();
 
+  my $html_ref = $sbeams->getMainPageTabMenu( cgi => $q );
 
-  #### Write some welcoming text
+  # Write some welcoming text
   print qq~
-
-	<P> You are successfully logged into the <B>$DBTITLE -
-	$SBEAMS_PART</B> system.  This module is a general area of
-	central $DBTITLE information management and general tools.</P>
-
-	<P>Please choose your tasks from the menu bar on the left.</P>
-
-	<P> This system is still under active development.  Please be
-	patient and report bugs, problems, difficulties, suggestions
-	to <B>edeutsch\@systemsbiology.org</B>.</P>
+  <P> You are successfully logged into the <B>$DBTITLE -
+  $SBEAMS_PART</B> system.  This module is a general area of
+  central $DBTITLE information management and general tools.</P>
+  <P>Please choose your tasks from the menu bar on the left.</P>
+  <P> This system is still under active development.  Please be
+  patient and report bugs, problems, difficulties, suggestions
+  to <B>edeutsch\@systemsbiology.org</B>.</P>
+  <BR>
+  $$html_ref
   ~;
 
-
-  ##########################################################################
-  #### Print out some recent resultsets
-
-  $sbeams->printRecentResultsets();
-
-
-  ##########################################################################
-  #### Print out all projects owned by the user
-
-  $sbeams->printProjectsYouOwn();
-
-
-  ##########################################################################
-  #### Print out all projects user has access to
-
-  $sbeams->printProjectsYouHaveAccessTo();
-
-
   return;
-
 
 } # end handleResquest
 

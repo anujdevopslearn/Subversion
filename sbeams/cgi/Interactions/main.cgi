@@ -146,75 +146,54 @@ sub handle_request {
 
   #### Show current user context information
   $sbeams->printUserContext();
-  $current_contact_id = $sbeams->getCurrent_contact_id();
 
+  my $html_ref = $sbeams->getMainPageTabMenu( cgi => $q );
 
   print qq~
-
-	<P> You are successfully logged into the <B>$DBTITLE -
-	$SBEAMS_PART</B> system.  This module is designed as a repository
-	for curated molecular interactions.  Interactions may be queried,
-	updated, and exported to Cytoscape.</P>
-
-	<P>Please choose your tasks from the menu bar on the left.</P>
-
-	<font color=red>TO ENTER A BATCH OF INTERACTIONS:</font>
-
-	<UL>
-
-	<LI> Know the Project under which the interactions should be
-	entered.  If there isn't yet one, create it by clicking
-	[Projects] [Add Project]
-
-	<LI> Do you already have a suitable Interaction Group for your
-	interactions?  If there isn't yet one, create it by clicking
-	[Interactions] [Manage Interaction Groups] [Add Interaction
-	Group]
-
-	<P>
-
-	<LI> Enter the relevant publications with [Publications] [Add
-	Publication]
-
-	<LI> Enter the relevant assays with [Assay] [Add Assay].  If
-	the assay is just for an existing publication for which little
-	additional details are to be added, just make the Assay Name
-	the same as the Publication Name
-
-	<LI> Enter the relevant Bioentities involved in the
-	interactions with [Bioentities] [Add Bioentity]
-
-	<LI> Enter the relevant Interactions with [Interactions] [Add
-	Interaction]
-
-	</UL>
-
-	<P> This system is still under active development.  Please be
-	patient and report bugs, problems, difficulties, suggestions
-	to <B>edeutsch\@systemsbiology.org</B>.</P>
+  <P> You are successfully logged into the <B>$DBTITLE -
+  $SBEAMS_PART</B> system.  This module is designed as a repository
+  for curated molecular interactions.  Interactions may be queried,
+  updated, and exported to Cytoscape.</P>
+  
+  <P>Please choose your tasks from the menu bar on the left.</P>
+  
+  <font color=red>TO ENTER A BATCH OF INTERACTIONS:</font>
+  
+  <UL>
+  <LI> Know the Project under which the interactions should be
+  entered.  If there isn't yet one, create it by clicking
+  [Projects] [Add Project]
+  
+  <LI> Do you already have a suitable Interaction Group for your
+  interactions?  If there isn't yet one, create it by clicking
+  [Interactions] [Manage Interaction Groups] [Add Interaction
+  Group]
+  
+  <P>
+  <LI> Enter the relevant publications with [Publications] [Add
+  Publication]
+  
+  <LI> Enter the relevant assays with [Assay] [Add Assay].  If
+  the assay is just for an existing publication for which little
+  additional details are to be added, just make the Assay Name
+  the same as the Publication Name
+  
+  <LI> Enter the relevant Bioentities involved in the
+  interactions with [Bioentities] [Add Bioentity]
+  
+  <LI> Enter the relevant Interactions with [Interactions] [Add
+  Interaction]
+  
+  </UL>
+  
+  <P> This system is still under active development.  Please be
+  patient and report bugs, problems, difficulties, suggestions
+  to <B>edeutsch\@systemsbiology.org</B>.</P>
+  <BR>
+  $$html_ref
   ~;
 
-
-  ##########################################################################
-  #### Print out some recent resultsets
-
-  $sbeams->printRecentResultsets();
-
-
-  ##########################################################################
-  #### Print out all projects owned by the user
-
-  $sbeams->printProjectsYouOwn();
-
-
-  ##########################################################################
-  #### Print out all projects user has access to
-
-  $sbeams->printProjectsYouHaveAccessTo();
-
-
   return;
-
 
 } # end handleResquest
 
