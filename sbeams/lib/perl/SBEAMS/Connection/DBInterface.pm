@@ -5027,14 +5027,12 @@ sub getDataFromModules {
   # Prune list of modules to the ones we know support this functionality 
   my @supp = qw( Microarray Proteomics ProteinStructure Immunostain 
                  Cytometry Interactions Inkjet PeptideAtlas );
-  # @supp = qw( Inkjet ); 
 
   my @valid_mods;
   for my $mod ( @{$args{modules}} ) {
     $mod = ucfirst( $mod );
     push @valid_mods, $mod if grep /$mod/, @supp;
   }
-  for( @valid_mods ) { $log->debug( "$_ was installed" ); }
 
   my %sbeams;
   
@@ -5062,9 +5060,7 @@ sub getDataFromModules {
 
   # loop through sbeams objects, 
   for my $mod ( @valid_mods ) {
-    $log->debug( "$mod is current mod" );
     next unless $sbeams{$mod};
-    $log->debug( "$mod was OK" );
     $sbeams{$mod}->setSBEAMS($this) || die "Doh";
     $mod_data{$mod} = $sbeams{$mod}->getProjectData( projects => $args{projects} );
   }
