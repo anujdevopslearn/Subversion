@@ -1,18 +1,19 @@
 table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
 project	1	project_id	Project ID	int	8	0	N		Y						showPassed(this)	N	N				pkDEFAULT
-project	2	name	Project Name	varchar	100	0	N		N			Y	text	75		Y	Y	Y	Reasonably short description of project		
-project	3	PI_contact_id	PI Contact	int	8	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	Y	PI or Primary contact for this project		
-project	4	description	Description	varchar	0	0	Y		N			Y	text	75		Y	Y	N	Longer description of this project		
-project	5	budget	Budget	varchar	25	0	Y		N			Y	text	25		Y	Y	N	Budget number to be charged for experiments under this project		
-project	6	project_status	Project Status	varchar	100	0	Y		N			N	text	50		Y	Y	N	"For example: Active, Finished"		
-project	7	uri	Project URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	Project homepage or other URI		SELF
-project	8	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
-project	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-project	10	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-project	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-project	12	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-project	13	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-project	14	record_status	Record Status	char	1	0	N	N	N							N	N				
+project	2	name	Project Name	varchar	100	0	N		N			Y	text	75		Y	Y	N	Name or Title of the project		
+project	3	project_tag	Project Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	"A short 'tag' or identity of the project.  Treat this like a folder name.  Use only alphanumeric characters, no spaces (e.g., FlyCatalog, HuTCellRaft, YeastShockExpr)"		
+project	4	PI_contact_id	PI Contact	int	8	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	Y	PI or Primary contact for this project		
+project	5	description	Description	text	16	0	Y		N			Y	textarea	8		Y	Y	N	"Describe this project: what are the goals, how are the samples prepared, derived citations, etc."		
+project	6	budget	Budget	varchar	25	0	Y		N			Y	text	25		Y	Y	N	Budget number to be charged for experiments under this project		
+project	7	project_status	Project Status	varchar	100	0	Y		N			N	text	50		Y	Y	N	"For example: Active, Finished"		
+project	8	uri	Project URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	Project webpage or other URI		SELF
+project	9	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
+project	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+project	11	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+project	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+project	13	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+project	14	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+project	15	record_status	Record Status	char	1	0	N	N	N							N	N				
 hardware	1	hardware_id	Hardware ID	int	8	0	N		Y							N	N				pkDEFAULT
 hardware	2	contact_id	Contact	int	8	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Vendor/creator contact for this hardware	"SELECT contact_id, first_name+' '+last_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY organization,last_name,first_name"	
 hardware	3	hardware_type_id	Hardware Type	int	8	0	N		N		hardware_type_id	Y	optionlist			Y	Y	Y	Type of hardware	"SELECT hardware_type_id, name FROM $TB_HARDWARE_TYPE ORDER BY name"	
@@ -157,7 +158,7 @@ table_group_security	11	record_status	Record Status	char	1	0	N	N	N							N	N
 help_text	1	help_text_id	Help Text ID	int	8	0	N		Y							N	N				pkDEFAULT
 help_text	2	title	Title	varchar	255	0	Y		N			Y	text	40		Y	Y	Y	Title for the help popup		
 help_text	3	help_text	Text	text	 	0	Y		N			Y	textarea	20		Y	Y	N	HTML text for the help popup		
-help_text	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+help_text	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N
 help_text	5	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N
 help_text	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N
 help_text	7	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N
