@@ -23,11 +23,11 @@ use vars qw ($q $sbeams $sbeamsMA $dbh $current_contact_id $current_username
              $PK_COLUMN_NAME @MENU_OPTIONS);
 
 use DBI;
-#use CGI;
+use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 use POSIX;
 
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -38,7 +38,7 @@ use SBEAMS::Microarray::Tables;
 use lib "/net/arrays/Pipeline/tools/lib";
 require "QuantitationFile.pl";
 
-#$q = new CGI;
+$q = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsMA = new SBEAMS::Microarray;
 $sbeamsMA->setSBEAMS($sbeams);
@@ -104,6 +104,8 @@ sub handle_request {
 	print_preprocess_screen(parameters_ref=>\%parameters);
   }elsif($tab eq 'mergereps') {
 	print_mergereps_screen(parameters_ref=>\%parameters);
+  }elsif($tab eq 'mergeconds') {
+	print_mergeconds_screen(parameters_ref=>\%parameters);
   }elsif($tab eq 'file_output') {
 	print_file_output_screen(parameters_ref=>\%parameters);
   }elsif($tab eq 'finalize') {
@@ -386,6 +388,8 @@ SELECT	A.array_id,A.array_name,
 sub print_start_screen_javascript {
 	my $javascript = qq~
 <SCRIPT LANGUAGE="Javascript">
+
+
 function updateArrays() {
   var currentList = document.fileChooser.project_arrays;
 	var selectedFiles = document.fileChooser.selectedFiles.value;
@@ -931,7 +935,7 @@ function prepareForSubmission () {
 
 	mergeRecipe.value = mergeRec;
 	vsRecipe.value = vsRec;
-	document.mergerepsForm.tab.value = "file_output";
+	document.mergerepsForm.tab.value = "mergeconds";
 	document.mergerepsForm.submit();
 }
 
@@ -1005,6 +1009,168 @@ function processNumber(testValue,testLocation){
 }
 
 
+
+
+
+###############################################################################
+# Print mergeconds screen
+###############################################################################
+sub print_mergeconds_screen {
+  my %args = @_;
+  my $parameters_ref = $args{'parameters_ref'};
+  my %parameters = %{$parameters_ref};
+
+  ## Standard Variables
+  my $sql;
+  my $current_project = $parameters{'project_selector'} || $sbeams->getCurrent_project_id();
+  my $selected_files = $parameters{'selectedFiles'};
+  my $pp_recipe = $parameters{'ppRecipe'};
+  my $merge_recipe = $parameters{'mergeRecipe'};
+  my $vs_recipe = $parameters{'vsRecipe'};
+
+  print_mergeconds_javascript();
+
+  ## Get Conditions associated with the arrays
+  $sql = qq~
+SELECT ARSM1.name,ARSM2.name
+  FROM $TBMA_ARRAY_REQUEST AR
+  LEFT JOIN $TBMA_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )
+  LEFT JOIN $TBMA_ARRAY_REQUEST_SAMPLE ARSM1 ON ( ARSL.array_request_slide_id = ARSM1.array_request_slide_id AND ARSM1.sample_index=0)
+  LEFT JOIN $TBMA_ARRAY_REQUEST_SAMPLE ARSM2 ON ( ARSL.array_request_slide_id = ARSM2.array_request_slide_id AND ARSM2.sample_index=1)
+  LEFT JOIN $TBMA_ARRAY A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
+	WHERE A.array_id IN ($selected_files)
+   AND AR.record_status != 'D'
+   AND A.record_status != 'D'
+   ORDER BY A.array_id
+   ~; 
+
+  my @selected_arrays = $sbeams->selectSeveralColumns($sql);
+
+  my %conditions;
+  foreach my $result_id (@selected_arrays){
+	my $id = $result_id->[0];
+	my $name = "$result_id->[0]_vs_$result_id->[1]";
+	my $reverse_name = $name;
+	$reverse_name =~ s/(.*)(_vs_)(.*)/$3$2$1/;
+	unless ($conditions{$name} && !$conditions{$reverse_name}){
+	  $conditions{$name} = 1;
+	}
+  }
+
+  ## Print HTML
+  print qq~
+	<H2><U>Data Processing Pipeline</U></H2>\n
+	<BR>
+	Step 4: Ordering Conditions for Matrix Output
+	<FORM METHOD="POST" NAME="mergecondsForm"><BR>
+	<INPUT TYPE="hidden" NAME="selectedFiles" VALUE="$selected_files">
+	<INPUT TYPE="hidden" NAME="ppRecipe" VALUE="$pp_recipe">
+	<INPUT TYPE="hidden" NAME="mergeRecipe" VALUE="$merge_recipe">
+	<INPUT TYPE="hidden" NAME="vsRecipe" VALUE="$vs_recipe">
+	<INPUT TYPE="hidden" NAME="mergeConds" VALUE="">
+	<INPUT TYPE="hidden" NAME="tab" VALUE="">
+	<INPUT TYPE="button" VALUE="<--Back" OnClick="history.go(-1)">
+	<INPUT TYPE="button" NAME="actionButton" VALUE="Next-->" OnClick="prepareForSubmission()">
+  $LINESEPARATOR
+	<TABLE>
+	<TR>
+	  <TD VALIGN = "top">
+	  Conditions:<BR>
+	  <SELECT NAME= "mergeCondsList" SIZE=10 MULTIPLE>
+	~;
+  my @groups = sort(keys(%conditions));
+  for (my $i=0;$i<=$#groups;$i++){
+    print qq~
+	  <OPTION VALUE="$groups[$i]">$groups[$i]
+	  ~;
+  }
+  print qq~
+	  </SELECT>
+	  </TD>
+	</TR>
+	<TR>
+	  <TD ALIGN="center">
+	  <INPUT TYPE = "button" NAME = "upButton" VALUE ="Move Up " OnClick="moveUp(document.mergecondsForm.mergeCondsList,0)"><br>
+	  <INPUT TYPE = "button" NAME = "downButton" VALUE ="Move Down" OnClick= "moveDown(document.mergecondsForm.mergeCondsList,0)">
+	  </TD>
+	</TR>
+	</TABLE>
+	</FORM>
+	~;
+}
+
+###############################################################################
+# Print Mergeconds Javascript
+###############################################################################
+sub print_mergeconds_javascript {
+  my $javascript = qq~
+<SCRIPT LANGUAGE="Javascript">
+
+function moveUp(list, start){
+  //'start' is determines where on the list this is applicable.
+  //This was added to cement the position of the first/last elements
+  if (list.options.selectedIndex < start) return;
+  for(var i=0; i<(list.options.length); i++){
+    if(list.options[i].selected &&
+      list.options[i] != "" &&
+      list.options[i] != list.options[start]){
+      var tmpOptionValue = list.options[i].value;
+      var tmpOptionText  = list.options[i].text;
+
+      list.options[i].value   = list.options[i-1].value;
+      list.options[i].text    = list.options[i-1].text;
+
+      list.options[i-1].value = tmpOptionValue;
+      list.options[i-1].text  = tmpOptionText;
+
+      list.options[i-1].selected = true;
+      list.options[i].selected = false;
+    }
+  }
+}
+
+function moveDown(list, start){
+  //'start' is determines where on the list this is applicable.
+  //This was added to cement the position of the first/last elements
+  var start = (list.options.length-1 -start);
+  if (list.options.selectedIndex > start) return;
+  for (var i=list.options.length-1; i>=0; i--){
+    if(list.options[i].selected &&
+       list.options[i] != "" &&
+       list.options[i] != list.options[start]){
+      var tmpOptionValue = list.options[i+1].value;
+      var tmpOptionText  = list.options[i+1].text;
+
+      list.options[i+1].value = list.options[i].value;
+      list.options[i+1].text  = list.options[i].text;
+
+      list.options[i].value = tmpOptionValue;
+      list.options[i].text  = tmpOptionText;
+
+      list.options[i+1].selected = true;
+      list.options[i].selected = false;
+    }
+  }
+}
+function prepareForSubmission () {
+	var list =	document.mergecondsForm.mergeCondsList;
+	var condList = "";
+	for (var i=0;i<list.options.length-1;i++) {
+	  condList += list.options[i].value;
+	  condList += ",";
+	}
+	condList += list.options[list.options.length-1].value;
+	document.mergecondsForm.mergeConds.value = condList;
+	document.mergecondsForm.tab.value = "file_output";
+	document.mergecondsForm.submit();
+}
+
+</SCRIPT>
+
+~;
+  print $javascript;
+}
+
 ###############################################################################
 # Print_file_output screen
 ###############################################################################
@@ -1022,6 +1188,7 @@ sub print_file_output_screen {
   my $pp_recipe = $parameters{'ppRecipe'};
   my $merge_recipe = $parameters{'mergeRecipe'};
   my $vs_recipe = $parameters{'vsRecipe'};
+  my $mergeConds = $parameters{'mergeConds'};
 
   my $current_user_id = $sbeams->getCurrent_contact_id();
   # Get email address
@@ -1046,6 +1213,7 @@ sub print_file_output_screen {
 	<INPUT TYPE="hidden" NAME="ppRecipe" VALUE="$pp_recipe">
 	<INPUT TYPE="hidden" NAME="mergeRecipe" VALUE="$merge_recipe">
 	<INPUT TYPE="hidden" NAME="vsRecipe" VALUE="$vs_recipe">
+	<INPUT TYPE="hidden" NAME="mergeConds" VALUE="$mergeConds">
 	<INPUT TYPE="hidden" NAME="tab" VALUE="">
 	<INPUT TYPE="button" VALUE="<--Back" OnClick="history.go(-1)">
   <INPUT TYPE="button" NAME="actionButton" VALUE="Next-->" OnClick="prepareForSubmission()">
@@ -1202,8 +1370,12 @@ print qq~
 		</TR>
 		</TABLE>
 		<BR>
+
+		Would you like to create Cytoscape XML files for these data?<BR>
+		<INPUT TYPE="radio" NAME="loader" VALUE="Yes">Yes, I want to create these files
+		<INPUT TYPE="radio" NAME="loader" VALUE="No" CHECKED> No, I have no idea what this is about.
 		</FORM>
-~;
+		~;
 #		Would you like these data loaded into SBEAMS? This will overwrite any condition data you\'ve loaded.<BR>
 #		<INPUT TYPE="radio" NAME="dataLoad" VALUE="Yes" CHECKED>Yes, load these data into SBEAMS
 #		<INPUT TYPE="radio" NAME="dataLoad" VALUE="No">No, do <FONT COLOR="red">not</FONT> load these
@@ -1530,6 +1702,30 @@ SELECT	A.array_name,
 	}
   }
 
+  ## Print MergeConds Details
+  my $mergeconds_commands = "";
+  my @mergeconditions = split ",", $parameters{'mergeConds'};
+  if (@mergeconditions){
+	$mergeconds_commands = "\#MERGECONDS\n";
+	foreach my $c (@mergeconditions) {
+	  $mergeconds_commands .= "condition_name = $c.sig\n";
+	}
+	$mergeconds_commands .= "EXECUTE = mergeConds\n\n";
+  }
+  print $mergeconds_commands;
+
+
+  ## Data Loader Details
+  my $dataLoader_commands = "";
+  if ($parameters{'loader'} eq 'Yes'){
+	$dataLoader_commands = "#DATA LOADER\n";
+	my $pid = $parameters{'outputDirectory'};
+	$dataLoader_commands .=  "project_id = $pid\n";
+	$dataLoader_commands .= "subdirectory = TBD\n";
+	$dataLoader_commands .= "EXECUTE = data_loader\n\n";
+  }
+  print $dataLoader_commands;
+
   ## Print Load Conditions Commands
 #  if ($parameters{'dataLoad'} eq 'Yes'){
 #	print "#LOAD CONDITIONS\n";
@@ -1623,6 +1819,10 @@ sub send_to_pipeline {
   my ($sec,$min,$hour,$mday,$mon,$year) = localtime(time);
   my $timestr = strftime("%Y%m%d.%H%M%S",$sec,$min,$hour,$mday,$mon,$year);
   my $proc_subdir = $parameters{'proc_name'} || $timestr;
+
+  ## Last-minute changes
+  # identify subdirectory for data loader
+  $command_file_content =~ s/subdirectory\s?=\s?TBD/subdirectory = $proc_subdir/;
   
   ## Directories
   my $queue_dir = "/net/arrays/Pipeline/queue";
@@ -1651,7 +1851,7 @@ sub send_to_pipeline {
   $arraybot_working_dir =~ s/\'/_/g;
   $arraybot_working_dir =~ s/\"/_/g;
   $arraybot_working_dir =~ s/\./_/g;
-	
+
 
 #	## Write Project Comments
 #	print "<BR>Writing project comments to working directory:$proc_subdir</BR>";
