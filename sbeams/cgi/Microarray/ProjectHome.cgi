@@ -161,20 +161,41 @@ function viewQuantitation(status){
     var newWindow = window.open(site);
 }
 
-function viewLogFile(){
-    var id = document.logFiles.chooser.options[document.logFiles.chooser.selectedIndex].value;
-    viewFile(id);
+function actionLogFile(action){
+    var id = document.outputFiles.logChooser.options[document.outputFiles.logChooser.selectedIndex].value;
+		if (action == "get") {
+				getFile(id);
+		} else {
+				viewFile(id);
+		}
+}		
+
+function actionRepFile(){
+		var id = document.outputFiles.repChooser.options[document.outputFiles.repChooser.selectedIndex].value;
+		getFile(id);
+}
+function actionMergeFile(){
+		var id = document.outputFiles.mergeChooser.options[document.outputFiles.mergeChooser.selectedIndex].value;
+		getFile(id);
+}
+function actionSigFile(){
+		var id = document.outputFiles.sigChooser.options[document.outputFiles.sigChooser.selectedIndex].value;
+		getFile(id);
+}
+function actionCloneFile(){
+		var id = document.outputFiles.cloneChooser.options[document.outputFiles.cloneChooser.selectedIndex].value;
+		getFile(id);
 }
 
+
+function getFile(id){
+    var site = "http://db.systemsbiology.net/dev7/sbeams/cgi/Microarray/ViewFile.cgi?action=download&FILE_NAME="+id;
+    window.location = site;
+}
+		
 function viewFile(id){
-    var site = "http://db.systemsbiology.net/dev7/sbeams/cgi/Microarray/ViewFile.cgi?FILE_NAME="+id;
+    var site = "http://db.systemsbiology.net/dev7/sbeams/cgi/Microarray/ViewFile.cgi?action=view&FILE_NAME="+id;
     var newWindow = window.open(site);
-}
-
-function viewPDF(){
-    alert ("will be implemented");
-    //var id = document.pdfFiles.chooser.options[document.pdfFiles.chooser.selectedIndex].value;
-    //window.open("file://"+id);
 }
 
 //-->
@@ -253,7 +274,7 @@ sub handle_request {
       $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
 			     page_link=>$page_link,
 			     selected_tab=>1);
-      print_management_tab(); 
+      print_management_tab();
   }
   elsif($parameters{'tab'} eq "data_analysis") {
       $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
@@ -374,7 +395,7 @@ sub print_summary_tab {
   print qq~
       <TR><TD></TD><TD COLSPAN="2"><B>Array Requests: $n_array_requests</B></TD></TR>
       <TR><TD></TD><TD COLSPAN="2"><B>Array Scans: $n_array_scans</B></TD></TR>
-      <TR><TD></TD><TD COLSPAN="2"><B>Array Quantitations: $n_quantitation_files</B></TD></TR>
+     <TR><TD></TD><TD COLSPAN="2"><B>Array Quantitations: $n_quantitation_files</B></TD></TR>
       <TR><TD></TD><TD COLSPAN="2"><B>Access Privileges:</B><A HREF="$CGI_BASE_DIR/ManageProjectPrivileges">[View/Edit]</A></TD></TR>    
       <TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD></TR>
       </TABLE>
@@ -445,12 +466,8 @@ sub print_miame_status_tab {
   print qq!
       <H1>MIAME Status:</H1>
       <IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="100%" HEIGHT="1"><BR>
-      <UL>
-        <LI><A HREF="http://www.mged.org/Workgroups/MIAME/miame.html" target="_blank">MIAME Website</A><BR>
-        <LI><A HREF="MIAME_checklist.doc">Download MIAME Checklist</A>
-      </UL>
-      <A HREF="MIAMEStatus.cgi?PROJECT_ID=$project_id">Complete MIAME Details for this Project</A>
-      <TABLE CELLSPACING="5">
+			<A HREF="MIAMEStatus.cgi?CATEGORY=all">Complete MIAME Details for this Project</A>
+			<TABLE CELLSPACING="5">
         <TR><TD></TD></TR>
 	<TR>
 	<TD>Experiment Design</TD>
@@ -473,8 +490,11 @@ sub print_miame_status_tab {
 	<TD><A HREF="MIAMEStatus.cgi?CATEGORY=measurements">Detailed Information</A></TD>
 	</TR>
         <TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD></TR>
-      </TABLE>
-      $LINESEPARATOR
+      </TABLE><BR>
+			<B>Links</B><BR>
+      <A HREF="http://www.mged.org/Workgroups/MIAME/miame.html" target="_blank">-MIAME Website</A><BR>
+      <A HREF="MIAME_checklist.doc">-Download MIAME Checklist</A>
+			$LINESEPARATOR
       !;
   return;
 }
@@ -633,6 +653,12 @@ sub print_data_analysis_tab {
   my $output_dir = "/net/arrays/Pipeline/output/project_id/".$project_id;
   my @pdf_list = glob("$output_dir/*.pdf");
   my @log_list = glob("$output_dir/*.log");
+	my @sig_list = glob("$output_dir/*.sig");
+	my @clone_list = glob("$output_dir/*.clone");
+	my @merge_list = glob("$output_dir/*.merge");
+	my @rep_list = glob("$output_dir/*.rep");
+	my @matrix_list = glob("$output_dir/matrix_output");
+	my @zip_file = glob ("$output_dir/*.zip");
 
   print qq~
       <H1>Data Analysis:</H1>
@@ -641,33 +667,76 @@ sub print_data_analysis_tab {
 	<LI><A HREF="http://db.systemsbiology.net/software/ArrayProcess/" TARGET="_blank">What is the Data Processing Pipeline?</A>
       </UL>
       ~;
-#  print qq~
-#      <FORM NAME="pdfFiles">
-#      <IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="100%" HEIGHT="1">
-#      <TABLE>
-#        <TR><TD><B>Preprocess PDFs</B></TD></TR>
-#        <TR><TD><SELECT NAME="chooser">
-#  ~;
-#  
-#  foreach my $pdf(@pdf_list) {
-#      my $temp = $pdf;
-#      $temp =~ s(^.*/)();
-#      print qq~ <OPTION value="$pdf">$temp ~;
-#  }
-#
-#  print qq~
-#       </SELECT></TD></TR>
-#       <TR><TD><INPUT TYPE="button" name="pdfButton" value="view" onClick="viewPDF()"></TD></TR>
-#     </TABLE>
-#     </FORM>
-#
-#     <BR>
-#     ~;
   print qq~
-     <FORM NAME="logFiles">
+     <FORM NAME="outputFiles">
      <TABLE>
+		 ~;
+	if ($zip_file[0]){
+			$zip_file[0]=~ s(^.*/)();
+			print qq~
+		 <TR><TD><A HREF="ViewFile.cgi?action=download&FILE_NAME=$zip_file[0]"><B>Download zipped file of entire project directory</B></A></TD></TR>
+		 <TR><TD></TD></TR>
+		 ~;
+	}
+	print qq~
+		   <TR VALIGN="center"><TD><B>Rep Files</B></TD></TR>
+		   <TR><TD><SELECT NAME="repChooser">
+			 ~;
+	foreach my $rep(@rep_list) {
+			my $temp = $rep;
+			$temp =~ s(^.*/)();
+			print qq~<OPTION value="$temp">$temp~;
+	}
+	print qq~
+	 		 </SELECT></TD></TR>
+			 <TR>
+			  <TD><INPUT TYPE="button" name="repButton" value="download" onClick="actionRepFile()"</TD>
+			 </TR>
+		   <TR><TD></TD></TR>
+		   <TR><TD><B>Merge Files</B></TD></TR>
+			 <TR><TD><SELECT NAME="mergeChooser">
+			 ~;
+	foreach my $merge(@merge_list) {
+			my $temp = $merge;
+			$temp =~ s(^.*/)();
+			print qq~<OPTION value="$temp">$temp~;
+	}
+	print qq~
+			 </SELECT></TD></TR>
+			 <TR>
+			  <TD><INPUT TYPE="button" name="repButton" value="download" onClick="actionMergeFile()"</TD>
+			 </TR>
+		   <TR><TD></TD></TR>
+		   <TR><TD><B>Clone Files</B></TD></TR>
+			 <TR><TD><SELECT NAME="cloneChooser">
+			 ~;
+	foreach my $clone(@clone_list) {
+			my $temp = $clone;
+			$temp =~ s(^.*/)();
+			print qq~ <OPTION value="$temp">$temp~;
+	}
+	print qq~
+			 </SELECT></TD></TR>
+			 <TR>
+			  <TD><INPUT TYPE="button" name="repButton" value="download" onClick="actionCloneFile()"</TD>
+			 </TR>
+		   <TR><TD></TD></TR>
+		   <TR><TD><B>Sig Files</B></TD></TR>
+			 <TR><TD><SELECT NAME="sigChooser">
+			 ~;
+	foreach my $sig(@sig_list) {
+			my $temp = $sig;
+			$temp =~ s(^.*/)();
+			print qq~ <OPTION value="$temp">$temp~;
+	}
+	print qq~
+			</SELECT></TD></TR>
+			 <TR>
+			  <TD><INPUT TYPE="button" name="repButton" value="download" onClick="actionSigFile()"</TD>
+			 </TR>
+		   <TR><TD></TD></TR>
        <TR><TD><B>Log Files</B></TD></TR>
-       <TR><TD><SELECT NAME="chooser">
+       <TR><TD><SELECT NAME="logChooser">
   ~;
 
   foreach my $log(@log_list) {
@@ -679,7 +748,8 @@ sub print_data_analysis_tab {
   print qq~
        </SELECT></TD></TR>
        <TR>
-         <TD><INPUT TYPE="button" name="logButton" value="view" onClick="viewLogFile()"></TD>
+         <TD><INPUT TYPE="button" name="logButtonView" value="view" onClick="actionLogFile('view')">
+				 <INPUT TYPE="button" name="logButtonGet" value="download" onClick="actionLogFile('get')"></TD>
        </TR>
      </TABLE>
      </FORM>
