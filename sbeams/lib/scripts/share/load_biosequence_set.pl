@@ -55,11 +55,14 @@ Options:
   --quiet              Set flag to print nothing at all except errors
   --debug n            Set debug flag
   --testonly           If set, rows in the database are not changed or added
-  --delete_existing    Delete the existing biosequences for this set before
-                       loading.  Normally, if there are existing biosequences,
-                       the load is blocked.
-  --update_existing    Update the existing biosequence set with information
-                       in the file
+  --load               Load the biosequence set.
+  --load_all           Checks status of all biosequence sets and loads any
+                       that are empty.
+  --delete             Delete the existing biosequences for this set.  Preserves
+                       the biosequence_set record
+  --purge              Delete existing biosequences for this set and 
+                       biosequence_set record
+  --update_existing    Update xisting biosequences for given set_tag
   --skip_sequence      If set, only the names, descs, etc. are loaded;
                        the actual sequence (often not really necessary)
                        is not written
@@ -98,7 +101,7 @@ EOU
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
-    "delete_existing","update_existing","skip_sequence",
+    "load","load_all","delete","purge","skip_sequence","update_existing",
     "set_tag:s","file_prefix:s","check_status","fav_codon_frequency_file:s",
     "calc_n_transmembrane_regions","n_transmembrane_regions_file:s",
     "rosetta_lookup_file:s","pfam_search_results_summary_file:s",
@@ -120,6 +123,40 @@ if ($DEBUG) {
   print "  QUIET = $QUIET\n";
   print "  DEBUG = $DEBUG\n";
   print "  TESTONLY = $TESTONLY\n";
+}
+
+
+## die unless main methods are selected:
+unless ( $OPTIONS{"load"} || $OPTIONS{"load_all"} || 
+$OPTIONS{"check_status"} || $OPTIONS{"delete"} || $OPTIONS{"update_existing"})
+{
+    die "\n$USAGE";
+}
+
+
+## die if selected delete without a set_tag:
+if ($OPTIONS{"delete"} || $OPTIONS{"load"} || $OPTIONS{"purge"} || $OPTIONS{"update_existing"})
+{
+    unless ( $OPTIONS{"set_tag"} )
+    {
+        die "\n$USAGE\nNeed to specify --set_tag too ";
+    }
+}
+
+
+## die if selected check_status or load_all and delete
+if ( ($OPTIONS{"load_all"} || $OPTIONS{"check_status"}) && 
+( $OPTIONS{"delete"} || $OPTIONS{"purge"} ) )
+{
+    die "\n$USAGE\nCan't use all those tags together";
+}
+
+
+#### If there are any unresolved parameters, exit
+if ($ARGV[0]){
+    print "ERROR: Unresolved command line parameter '$ARGV[0]'.\n";
+    print "$USAGE";
+    exit;
 }
 
 
@@ -201,7 +238,10 @@ sub handleRequest {
 
 
   #### Set the command-line options
-  my $delete_existing = $OPTIONS{"delete_existing"} || '';
+  my $load = $OPTIONS{"load"} || '';
+  my $load_all = $OPTIONS{"load_all"} || '';
+  my $delete = $OPTIONS{"delete"} || '';
+  my $purge = $OPTIONS{"purge"} || '';
   my $update_existing = $OPTIONS{"update_existing"} || '';
   my $skip_sequence = $OPTIONS{"skip_sequence"} || '';
   my $check_status = $OPTIONS{"check_status"} || '';
@@ -242,6 +282,7 @@ sub handleRequest {
   #### Define a scalar and array of biosequence_set_id's
   my ($biosequence_set_id,$n_biosequence_sets);
   my @biosequence_set_ids;
+  my $sql;
 
   #### If there was a set_tag specified, identify it
   if ($set_tag) {
@@ -259,10 +300,12 @@ sub handleRequest {
       if ($n_biosequence_sets < 1);
     die "Too many biosequence_sets found with set_tag = '$set_tag'"
       if ($n_biosequence_sets > 1);
+  }
 
 
-  #### If there was NOT a set_tag specified, scan for all available ones
-  } else {
+  #### scan for all available  set_tags
+  if ($check_status || $load_all )
+  { 
     $sql = qq~
           SELECT biosequence_set_id
             FROM ${DATABASE}biosequence_set
@@ -380,32 +423,83 @@ sub handleRequest {
   }
 
 
-  #### Loop over each biosequence_set, determining its status and processing
-  #### it if desired
-  print "        set_tag      n_rows -e Dt set_path\n";
-  print "---------------  ----------  - -- -------------------------------\n";
-  foreach $biosequence_set_id (@biosequence_set_ids) {
-    my $status = getBiosequenceSetStatus(
-      biosequence_set_id => $biosequence_set_id);
-    printf("%15s  %10d  %s %s %s\n",$status->{set_tag},$status->{n_rows},
-      $status->{file_exists},$status->{is_up_to_date},$status->{set_path});
+  if ($delete || $purge ) 
+  {
+      foreach $biosequence_set_id (@biosequence_set_ids) 
+      {
+          print "Deleting biosequence_set_id $biosequence_set_id\n";
 
-    #### If we're not just checking the status
-    unless ($check_status) {
-      my $do_load = 0;
-      $do_load = 1 if ($status->{n_rows} == 0);
-      $do_load = 1 if ($update_existing);
-      $do_load = 1 if ($delete_existing);
+          my %table_child_relationship;
 
-      #### If it's determined that we need to do a load, do it
-      if ($do_load) {
-        $result = loadBiosequenceSet(set_name=>$status->{set_name},
-				     source_file=>$file_prefix.$status->{set_path},
-				     organism_id=>$status->{organism_id});
+          if ( $DATABASE eq "PeptideAtlas.dbo." )
+          {
+              %table_child_relationship = (
+                  biosequence_set => 'biosequence(C)',
+                  biosequence =>'biosequence_property_set(C)',
+              );
+          } else 
+          {
+              %table_child_relationship = (
+                  biosequence_set => 'biosequence(C)',
+              );
+          }
+         
+          my $keepParent = 1;
+          if ($purge)
+          {
+              $keepParent = 0;
+          }
+    
+          my $result = $sbeams->deleteRecordsAndChildren(
+              table_name => 'biosequence_set',
+              table_child_relationship => \%table_child_relationship,
+              delete_PKs => [ $biosequence_set_id ],
+              delete_batch => 10000,
+              database => $DATABASE,
+              verbose => $VERBOSE,
+              testonly => $TESTONLY,
+              keep_parent_record => $keepParent,
+         );
       }
-    }
   }
 
+
+  if ( ($check_status || $load_all || $load || $update_existing ) )
+  {
+      ## checking status of all biosequence sets.  will load empty sets
+      ## if load_all option was specified
+      print "        set_tag      n_rows -e Dt set_path\n";
+      print "---------------  ----------  - -- -------------------------------\n";
+      foreach $biosequence_set_id (@biosequence_set_ids) {
+
+          my $status = getBiosequenceSetStatus( biosequence_set_id => $biosequence_set_id);
+
+          printf("%15s  %10d  %s %s %s\n",$status->{set_tag},
+              $status->{n_rows},$status->{file_exists},
+              $status->{is_up_to_date},$status->{set_path});
+
+          #### If we're not just checking the status
+          my $do_load=0;
+          if ($load_all || $load || $update_existing )
+          {
+              $do_load = 1 if ($status->{n_rows} == 0);
+              $do_load = 1 if ($update_existing);
+
+              if ( $do_load )
+              {
+                  #### If it's determined that we need to do a load, do it
+                  $result = loadBiosequenceSet(
+                      set_name=>$status->{set_name},
+                      source_file=>$file_prefix.$status->{set_path},
+                      organism_id=>$status->{organism_id});
+              } else {
+                print "there are records in biosequence_set_id $biosequence_set_id".
+                    " so need to delete them first\n";
+                return;
+              }
+          }
+      }
+  }
 
   return;
 
@@ -503,7 +597,6 @@ sub loadBiosequenceSet {
   my %args = @_;
   my $SUB_NAME = 'loadBiosequenceSet';
 
-
   #### Decode the argument list
   my $set_name = $args{'set_name'}
    || die "ERROR[$SUB_NAME]: set_name not passed";
@@ -516,7 +609,6 @@ sub loadBiosequenceSet {
 
 
   #### Set the command-line options
-  my $delete_existing = $OPTIONS{"delete_existing"};
   my $update_existing = $OPTIONS{"update_existing"};
   my $skip_sequence = $OPTIONS{"skip_sequence"};
 
@@ -544,37 +636,27 @@ sub loadBiosequenceSet {
 
 
   #### Test if there are already sequences for this biosequence_set
-  $sql = "SELECT COUNT(*) FROM ${DATABASE}biosequence ".
+  my $sql = "SELECT COUNT(*) FROM ${DATABASE}biosequence ".
          " WHERE biosequence_set_id = '$biosequence_set_id'";
   my ($count) = $sbeams->selectOneColumn($sql);
-  if ($count) {
-    if ($delete_existing) {
-      print "Deleting...\n";
-      $sql = "DELETE FROM ${DATABASE}biosequence ".
-             " WHERE biosequence_set_id = '$biosequence_set_id'";
-      if ($TESTONLY) {
-	  print "SQL: $sql\n";
-      } else {
-	  $sbeams->executeSQL($sql);
+  if ($count)
+  {
+      unless ($update_existing )
+      {
+          die "There are already biosequence records for this " .
+          "biosequence_set.\nPlease delete those records before".
+          " trying to load new sequences,\nor specify the ".
+          " --delete --load flags";
       }
-    } elsif (!($update_existing)) {
-      die("There are already biosequence records for this " .
-        "biosequence_set.\nPlease delete those records before trying to load " .
-        "new sequences,\nor specify the --delete_existing ".
-        "or --update_existing flags.");
-    }
   }
-
 
   #### Open annotation file and load data
   unless (open(INFILE,"$source_file")) {
     die("Cannot open file '$source_file'");
   }
 
-
   #### Create a hash to store biosequence_names that have been seen
   my %biosequence_names;
-
 
   #### Definitions for loop
   my ($biosequence_id,$biosequence_name,$biosequence_desc,$biosequence_seq);
@@ -636,7 +718,6 @@ sub loadBiosequenceSet {
             "'$rowdata{biosequence_name}'\n";
         }
       }
-
 
 
       #### Verify that we haven't done this one already
