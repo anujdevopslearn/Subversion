@@ -508,6 +508,7 @@ sub handle_request {
   if ( $parameters{display_options} =~ /ShowModifications/ ) {
 
     @column_array = (
+      ["peptide_identifier_str","PI.peptide_identifier_str","APD ID"],
       ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
       ["accessor","DBX.accessor","accessor"],
       ["biosequence_accession","BS.biosequence_accession","Accession"],
@@ -522,9 +523,10 @@ sub handle_request {
       ["percent_ACN_avg","STR(MP.percent_ACN_avg,7,2)","Percent ACN Average"],
       ["percent_ACN_stdev","STR(MP.percent_ACN_stdev,7,2)","Percent_ACN Stdev"],
       ["charge_state","MP.charge_state","Charge"],
+      ["n_experiments","MP.n_experiments","# of Exps"],
+      ["experiment_list","MP.experiment_list","Exp List"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
-      ["experiment_list","PS.experiment_list","experiment_list"],
       ["minimum_probability","PS.minimum_probability","minimum_probability"],
     );
     $group_by_clause = "";
@@ -532,6 +534,7 @@ sub handle_request {
   #### If grouping by peptide
   } else {
     @column_array = (
+      ["peptide_identifier_str","PI.peptide_identifier_str","APD ID"],
       ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
       ["accessor","DBX.accessor","accessor"],
       ["biosequence_accession","BS.biosequence_accession","Accession"],
@@ -539,12 +542,14 @@ sub handle_request {
       ["peptide","P.peptide","Peptide"],
       ["n_peptides","n_peptides","Number of Peptides"],
       ["maximum_probability","STR(P.maximum_probability,7,3)","Highest Probability"],
+      ["n_experiments","P.n_experiments","# of Exps"],
+      ["experiment_list","P.experiment_list","Exp List"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
       ["experiment_list","PS.experiment_list","experiment_list"],
       ["minimum_probability","PS.minimum_probability","minimum_probability"],
     );
-    $group_by_clause = "  GROUP BY BS.biosequence_gene_name,DBX.accessor,BS.biosequence_accession,P.biosequence_name,P.peptide,n_peptides,STR(P.maximum_probability,7,3),BS.biosequence_desc,PS.experiment_list,PS.minimum_probability";
+    $group_by_clause = "  GROUP BY PI.peptide_identifier_str,BS.biosequence_gene_name,DBX.accessor,BS.biosequence_accession,P.biosequence_name,P.peptide,n_peptides,STR(P.maximum_probability,7,3),P.n_experiments,P.experiment_list,BS.biosequence_desc,PS.experiment_list,PS.minimum_probability";
 
     foreach $element (@additional_columns) {
       $group_by_clause .= ",".$element->[1];
@@ -581,6 +586,8 @@ sub handle_request {
           FROM $TBAPD_PEPTIDE P
          INNER JOIN $TBAPD_MODIFIED_PEPTIDE MP
 	       ON ( P.peptide_id = MP.peptide_id )
+         LEFT JOIN $TBAPD_PEPTIDE_IDENTIFIER PI
+	       ON ( P.peptide_identifier_id = PI.peptide_identifier_id )
          INNER JOIN $TBAPD_PEPTIDE_SUMMARY PS
 	       ON ( P.peptide_summary_id = PS.peptide_summary_id )
 	 INNER JOIN $TBPR_BIOSEQUENCE BS
@@ -687,7 +694,6 @@ sub handle_request {
                   'biological_process_GO' => 1,
                   'cellular_component_GO' => 1,
                   'interpro_protein_domain_GO' => 1,
-                  'experiment_list' => 1,
                   'minimum_probability' => 1,
   );
 

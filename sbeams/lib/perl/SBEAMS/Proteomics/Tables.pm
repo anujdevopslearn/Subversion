@@ -62,6 +62,7 @@ use vars qw(@ISA @EXPORT
 
     $TBAPD_PEPTIDE_SUMMARY
     $TBAPD_PEPTIDE_SUMMARY_EXPERIMENT
+    $TBAPD_PEPTIDE_IDENTIFIER
     $TBAPD_PEPTIDE
     $TBAPD_MODIFIED_PEPTIDE
     $TBAPD_MODIFIED_PEPTIDE_PROPERTY
@@ -131,6 +132,7 @@ require Exporter;
 
     $TBAPD_PEPTIDE_SUMMARY
     $TBAPD_PEPTIDE_SUMMARY_EXPERIMENT
+    $TBAPD_PEPTIDE_IDENTIFIER
     $TBAPD_PEPTIDE
     $TBAPD_MODIFIED_PEPTIDE
     $TBAPD_MODIFIED_PEPTIDE_PROPERTY
@@ -201,6 +203,7 @@ $TBPR_RAW_DATA_FILE               = "${mod}raw_data_file";
 
 $TBAPD_PEPTIDE_SUMMARY            = "APD.dbo.peptide_summary";
 $TBAPD_PEPTIDE_SUMMARY_EXPERIMENT = "APD.dbo.peptide_summary_experiment";
+$TBAPD_PEPTIDE_IDENTIFIER         = "APD.dbo.peptide_identifier";
 $TBAPD_PEPTIDE                    = "APD.dbo.peptide";
 $TBAPD_MODIFIED_PEPTIDE           = "APD.dbo.modified_peptide";
 $TBAPD_MODIFIED_PEPTIDE_PROPERTY  = "APD.dbo.modified_peptide_property";

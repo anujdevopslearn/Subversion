@@ -376,6 +376,7 @@ print "experiment_list = ",$experiment_list,"\n";
            additional_proteins AS 'additional_proteins',
            peptide_string AS 'peptide_string',
            STR(isoelectric_point,8,3) AS 'isoelectric_point',
+           SB.search_batch_id AS "search_batch_id",
            peptide AS 'peptide',
            SH.biosequence_id AS 'biosequence_id',
            S.assumed_charge AS 'assumed_charge',
@@ -420,7 +421,7 @@ print "experiment_list = ",$experiment_list,"\n";
    #### Extract data from the row
    my ($file_root,$calc_buffer_percent,$best_hit_flag,$probability,
        $precursor_mass,$hit_mass_plus_H,$ions,$reference,$additional_proteins,
-       $peptide_string,$isoelectric_point,$peptide,$biosequence_id,
+       $peptide_string,$isoelectric_point,$search_batch_id,$peptide,$biosequence_id,
        $assumed_charge,$annotation_probability) = @{$row};
 
     #### Remove the delta portion of peptide mass
@@ -456,6 +457,7 @@ print "experiment_list = ",$experiment_list,"\n";
       $peptide_data->{peptide} = $peptide;
       $peptide_data->{n_peptides} = 0;
       $peptide_data->{maximum_probability} = 0.0;
+      $peptide_data->{search_batch_ids} = {};
 
       my @modified_peptides = ( );
       $peptide_data->{modified_peptides} = \@modified_peptides;
@@ -469,6 +471,7 @@ print "experiment_list = ",$experiment_list,"\n";
     $peptide_data->{n_peptides}++;
     $peptide_data->{maximum_probability} = $probability
       if ($peptide_data->{maximum_probability} < $probability);
+    $peptide_data->{search_batch_ids}->{$search_batch_id}++;
 
 
     #### If this is exactly the same as the previous one, update stats
@@ -482,6 +485,7 @@ print "experiment_list = ",$experiment_list,"\n";
       push(@{$mod_peptide_data->{peptide_masses}},$hit_mass_plus_H);
       push(@{$mod_peptide_data->{precursor_masses}},$precursor_mass);
       push(@{$mod_peptide_data->{probabilities}},$probability);
+      $mod_peptide_data->{search_batch_ids}->{$search_batch_id}++;
 
       print "    Another $peptide_string, ".
         "charge = $assumed_charge\n" if ($VERBOSE);
@@ -514,6 +518,8 @@ print "experiment_list = ",$experiment_list,"\n";
 
       my @probabilities = ( $probability );
       $mod_peptide_data->{probabilities} = \@probabilities;
+
+      $mod_peptide_data->{search_batch_ids}->{$search_batch_id}++;
 
       print "  New peptide_string $peptide_string, ".
         "charge = $assumed_charge\n" if ($VERBOSE);
@@ -577,6 +583,15 @@ sub writePeptide {
   $rowdata{peptide} = $peptide_data->{peptide};
   $rowdata{n_peptides} = $peptide_data->{n_peptides};
   $rowdata{maximum_probability} = $peptide_data->{maximum_probability};
+
+  $rowdata{n_experiments} = scalar(keys(%{$peptide_data->{search_batch_ids}}));
+  $rowdata{experiment_list} = join(',',sort Numerically (keys(%{$peptide_data->{search_batch_ids}})));
+
+
+  #### Get the global unique identifier for this peptide
+  $rowdata{peptide_identifier_id} = getPeptideIdentifier(
+    peptide => $rowdata{peptide},
+  );
 
 
   #### Insert the data into the database
@@ -675,6 +690,10 @@ sub writeModifiedPeptide {
     array_ref=>$modified_peptide_data->{peptide_masses});
   $rowdata{calc_peptide_mass} = $peptide_mass_stats->{mean};
 
+  #### Put in a count of hte number of experiments and the individual ones
+  $rowdata{n_experiments} = scalar(keys(%{$modified_peptide_data->{search_batch_ids}}));
+  $rowdata{experiment_list} = join(',',sort Numerically (keys(%{$modified_peptide_data->{search_batch_ids}})));
+
 
   #### Insert the data into the database
   $modified_peptide_id = $sbeams->insert_update_row(
@@ -693,6 +712,86 @@ sub writeModifiedPeptide {
   unless ($modified_peptide_id > 0) {
     die("Unable to insert modified_peptide");
   }
+
+
+}
+
+
+###############################################################################
+# getPeptideIdentifier
+###############################################################################
+sub getPeptideIdentifier {
+  my %args = @_;
+  my $SUB_NAME = 'getPeptideIdentifier';
+
+
+  #### Decode the argument list
+  my $peptide = $args{'peptide'} || die "ERROR[$SUB_NAME]: peptide not passed";
+
+
+  #### See if we already have an identifier for this peptide
+  my $sql = qq~
+    SELECT peptide_identifier_id
+      FROM $TBAPD_PEPTIDE_IDENTIFIER
+     WHERE peptide = '$peptide'
+  ~;
+  my @peptides = $sbeams->selectOneColumn($sql);
+
+  #### If more than one comes back, this violates UNIQUEness!!
+  if (scalar(@peptides) > 1) {
+    die("ERROR: More than one peptide returned for $sql");
+  }
+
+  #### If we get exactly one back, then return it
+  if (scalar(@peptides) == 1) {
+    return $peptides[0];
+  }
+
+
+  #### Else, we need to add it
+  #### Create a hash for the peptide row
+  my %rowdata;
+  $rowdata{peptide} = $peptide;
+  $rowdata{peptide_identifier_str} = 'tmp';
+
+  #### Insert the data into the database
+  my $peptide_identifier_id = $sbeams->insert_update_row(
+    insert=>1,
+    table_name=>$TBAPD_PEPTIDE_IDENTIFIER,
+    rowdata_ref=>\%rowdata,
+    PK=>"peptide_identifier_id",
+    PK_value => 0,
+    return_PK => 1,
+    verbose=>$VERBOSE,
+    testonly=>$TESTONLY,
+  );
+
+  unless ($peptide_identifier_id > 0) {
+    die("Unable to insert modified_peptide");
+  }
+
+
+  #### Now that the database furnished the PK value, create
+  #### a string according to our rules and UPDATE the record
+  my $template = "APDpep00000000";
+  my $identifier = substr($template,0,length($template) -
+    length($peptide_identifier_id)).$peptide_identifier_id;
+  $rowdata{peptide_identifier_str} = $identifier;
+
+
+  #### UPDATE the record
+  my $result = $sbeams->insert_update_row(
+    update=>1,
+    table_name=>$TBAPD_PEPTIDE_IDENTIFIER,
+    rowdata_ref=>\%rowdata,
+    PK=>"peptide_identifier_id",
+    PK_value =>$peptide_identifier_id ,
+    return_PK => 1,
+    verbose=>$VERBOSE,
+    testonly=>$TESTONLY,
+  );
+
+
 
 
 }
@@ -772,3 +871,13 @@ sub calculateMoment {
 }
 
 
+###############################################################################
+# Numerically
+#
+# Sort by number instead of ascii characters
+###############################################################################
+sub Numerically {
+
+    return $a <=> $b;
+
+}
