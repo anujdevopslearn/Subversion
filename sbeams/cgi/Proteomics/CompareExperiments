@@ -382,35 +382,44 @@ sub handle_request {
   my $peptide_column = "";
   my $count_column = "";
   my %experiment_names = getExperimentNames($parameters{search_batch_id});
+  my @experiment_names_and_ids;
 
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
 
-  #### If grouping by peptide,reference
+  #### If grouping by peptide or peptide_string and reference
   if ( $parameters{display_options} =~ /GroupPeptide/ ) {
+    my $colname = "peptide";
+    my $dispname = "Peptide";
+    if ( $parameters{display_options} =~ /GroupPeptideString/ ) {
+      $colname = "peptide_string";
+      $dispname = "Peptide String";
+    }
     @column_array = (
       ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
       ["accessor","DBX.accessor","accessor"],
       ["biosequence_accession","BS.biosequence_accession","Accession"],
       ["reference","BS.biosequence_name","Reference"],
-      ["peptide","peptide","Peptide"],
+      ["$colname","$colname","$dispname"],
     );
 
     my @search_batch_ids = split(/,/,$parameters{search_batch_id});
     foreach my $id (@search_batch_ids) {
       push(@column_array, ["$experiment_names{$id}",
-        "SUM(CASE WHEN tABS.search_batch_id = $id THEN tABS.row_count ELSE 0 END)",
+        "SUM(CASE WHEN tABS.search_batch_id = $id THEN tABS.row_count ".
+          "ELSE 0 END)",
         "$experiment_names{$id}"] );
+      push(@experiment_names_and_ids,$experiment_names{$id},$id);
     }
 
     push(@column_array,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
     );
 
-    $group_by_clause = " GROUP BY SB.search_batch_id,SH.biosequence_id,peptide";
-    $final_group_by_clause = " GROUP BY BS.biosequence_gene_name,BS.biosequence_accession,BS.biosequence_name,peptide,BS.biosequence_desc,DBX.accessor";
+    $group_by_clause = " GROUP BY SB.search_batch_id,SH.biosequence_id,$colname";
+    $final_group_by_clause = " GROUP BY BS.biosequence_gene_name,BS.biosequence_accession,BS.biosequence_name,$colname,BS.biosequence_desc,DBX.accessor";
     $count_column = "COUNT(*) AS 'row_count'";
-    $peptide_column = "peptide,";
+    $peptide_column = "$colname,";
 
 
   #### If grouping by reference
@@ -425,8 +434,10 @@ sub handle_request {
     my @search_batch_ids = split(/,/,$parameters{search_batch_id});
     foreach my $id (@search_batch_ids) {
       push(@column_array, ["$experiment_names{$id}",
-        "SUM(CASE WHEN tABS.search_batch_id = $id THEN tABS.row_count ELSE 0 END)",
+        "SUM(CASE WHEN tABS.search_batch_id = $id THEN tABS.row_count ".
+           "ELSE 0 END)",
         "$experiment_names{$id}"] );
+      push(@experiment_names_and_ids,$experiment_names{$id},$id);
     }
 
     push(@column_array,
@@ -453,6 +464,7 @@ sub handle_request {
       push(@column_array, ["$experiment_names{$id}",
         "SUM(CASE WHEN tABS.search_batch_id = $id THEN tABS.row_count ELSE 0 END)",
         "$experiment_names{$id}"] );
+      push(@experiment_names_and_ids,$experiment_names{$id},$id);
     }
 
     push(@column_array,
@@ -477,6 +489,8 @@ sub handle_request {
 
   #### Build the columns part of the SQL statement
   my %colnameidx = ();
+  $colnameidx{peptide} = 99;
+  $colnameidx{peptide_string} = 99;
   my @column_titles = ();
   my $columns_clause = $sbeams->build_SQL_columns_list(
     column_array_ref=>\@column_array,
@@ -555,7 +569,8 @@ sub handle_request {
   my @parameters_to_pass;
   my $parameters_list = '';
   while ( ($key,$value) = each %input_types ) {
-    if ($key ne 'sort_order' && $key ne 'display_options') {
+    if ($key ne 'sort_order' && $key ne 'display_options' &&
+        $key ne 'search_batch_id' ) {
       if ($parameters{$key}) {
         push(@parameters_to_pass,"$key=$parameters{$key}");
       }
@@ -568,12 +583,26 @@ sub handle_request {
 
   #### Define the hypertext links for columns that need them
   %url_cols = ('Accession' => "\%$colnameidx{accessor}V\%$colnameidx{biosequence_accession}V",
-    	       'Accession_ATAG' => 'TARGET="Win1"',
-               'Reference' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&${parameters_list}&reference_constraint=\%$colnameidx{reference}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
-    	       'Reference_ATAG' => 'TARGET="Win2"',
-    	       'Peptide' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&peptide_constraint=\%$colnameidx{peptide}V&${parameters_list}&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
-    	       'Peptide_ATAG' => 'TARGET="Win2"',
+    	       'Accession_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information about this protein in source database\'; return true"',
+
+               'Reference' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=$parameters{search_batch_id}&reference_constraint=\%$colnameidx{reference}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
+    	       'Reference_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show all occurrences of this protein in these experiments\'; return true"',
+
+    	       'Peptide' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=$parameters{search_batch_id}&peptide_constraint=\%$colnameidx{peptide}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
+    	       'Peptide_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show all occurrences of this peptide in these experiments\'; return true"',
+
+	       'Peptide String' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=$parameters{search_batch_id}&peptide_string_constraint=\%$colnameidx{peptide_string}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
+	       'Peptide String_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show all occurrences of this exact peptide instance in these experiments\'; return true"',
+
   );
+
+
+  #### Add entries for each experiment
+  for ($i=0;$i<scalar(@experiment_names_and_ids);$i+=2) {
+    my $j = $i+1;
+    $url_cols{$experiment_names_and_ids[$i]} = "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&reference_constraint=\%$colnameidx{reference}V&peptide_constraint=\%$colnameidx{peptide}V&peptide_string_constraint=\%$colnameidx{peptide_string}V&search_batch_id=$experiment_names_and_ids[$j]&${parameters_list}&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action";
+    $url_cols{$experiment_names_and_ids[$i]."_ATAG"} = 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show just this many that match all above criteria for this experiment\'; return true"';
+  }
 
 
   #### Define columns that should be hidden in the output table
