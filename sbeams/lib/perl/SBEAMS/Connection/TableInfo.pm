@@ -812,6 +812,66 @@ sub getParentProject {
 
 }
 
+###########################################################################
+# Routine returns and HTML table with information and links
+# that pertain to a given project
+#
+#  narg      project_id   The ID of the project to be displayed.  Required
+#
+#  ret       scalar with HTML block as a string.
+###########################################################################
+sub getProjectDetailsTable {
+  my $self = shift;
+  my %args  = @_;
+
+  # Must...have...project_id
+  unless ( $args{project_id} ) {
+    die ( "Missing required parameter project_id" );
+  }
+  
+  my @rows = $self->selectSeveralColumns( <<"  END_SQL" );
+  SELECT project_id, project_status, project_tag,
+         first_name + ' ' + last_name AS PI_name, name 
+  FROM $TB_PROJECT p JOIN $TB_CONTACT c
+  ON c.contact_id = p.PI_contact_id
+  WHERE project_id = $args{project_id}
+  END_SQL
+
+  if( !scalar( @rows ) ) { # Can't find it.  Log error and return undef
+    print STDERR "Unable to get details for $args{project_id}\n";
+    return undef;
+  }
+    
+  my ( $project_id, $project_status, $project_tag, $PI_name, $project_name ) = @{$rows[0]};
+
+  my $table =<<"  END_TAB";
+	<H1>Current Project: 
+   <A class="h1" HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=$project_id">
+   $project_name </A>
+  </H1>
+  <TABLE WIDTH="100%" BORDER=0>
+	<TR>
+    <TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
+	  <TD COLSPAN="2" WIDTH="100%"><B>Status:</B> $project_status</TD></TR>
+	<TR>
+    <TD></TD>
+    <TD COLSPAN="2"><B>Project Tag:</B> $project_tag</TD>
+  </TR>
+	<TR>
+    <TD></TD>
+    <TD COLSPAN="2"><B>Owner:</B> $PI_name</TD>
+  </TR>
+	<TR>
+    <TD></TD>
+    <TD COLSPAN="2"><B>Access Privileges:</B> <A HREF="$CGI_BASE_DIR/ManageProjectPrivileges">[View/Edit]</A>
+    </TD>
+  </TR>
+  </TABLE>
+  END_TAB
+
+  return $table;
+
+} # End getProjectDetailsTable
 
 
 ###############################################################################
