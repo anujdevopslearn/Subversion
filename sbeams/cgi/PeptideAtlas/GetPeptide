@@ -417,9 +417,11 @@ sub handle_request {
 
             my (@peptide_accession, @peptide_sequence);
             my (@best_probability, @n_observations, @n_genome_locations, @n_protein_mappings);
-            my (@chromosome, @start_in_chromosome, @end_in_chromosome, @strand);
+            my (@chrom, @start_chrom, @end_chrom, @strand);
             my (@biosequence_name);
             my (@sample_tag, @sample_title);
+            my %chrom_HoHoHoHoA;
+            my %sample_H;
 
             my $i=0;  ##index counter
 
@@ -427,15 +429,118 @@ sub handle_request {
 
                 ($peptide_accession[$i], $peptide_sequence[$i],
                 $best_probability[$i], $n_observations[$i], $n_genome_locations[$i], $n_protein_mappings[$i],
-                $chromosome[$i], $start_in_chromosome[$i], $end_in_chromosome[$i], $strand[$i],
+                $chrom[$i], $start_chrom[$i], $end_chrom[$i], $strand[$i],
                 $biosequence_name[$i],
                 $sample_tag[$i], $sample_title[$i]) = @{$row};
 
-                #print "sql returns: $peptide_accession[$i] <br>";
+                ###  store value as array, array = $biosequence_names
+                if ($chrom_HoHoHoHoA{$chrom[$i]}{$start_chrom[$i]}{$end_chrom[$i]}{$strand[$i]} eq "" ) {
+
+                    $chrom_HoHoHoHoA{$chrom[$i]}{$start_chrom[$i]}{$end_chrom[$i]}{$strand[$i]}[0] = $i;
+
+                } else {
+
+                    push @{ $chrom_HoHoHoHoA{$chrom[$i]}{$start_chrom[$i]}{$end_chrom[$i]}{$strand[$i]} }, $i;
+                }
+
+                $sample_H{$sample_tag[$i]} = $i;
+
+                #print "sql returns: $n_observations[$i] $sample_tag[$i] <br>";
 
                 $i++;
             }
+            
             ##xxxx PRINT RETURN HERE... 
+
+            ## Yellow/Tan section:
+            my $prnt = "<DIV ID='Section1' DIR='LTR' STYLE='background: #ffcc99'>
+	         <P>
+                 <BR>
+                 &nbsp;&nbsp;&nbsp;<B>Peptide Accession:</B>&nbsp;&nbsp;&nbsp; 
+                     $peptide_accession[0] &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                 &nbsp;&nbsp;&nbsp;<B>Peptide Sequence:</B>&nbsp;&nbsp;&nbsp; 
+                     $peptide_sequence[0] <br>
+                 <HR>
+                 <BR>
+                 &nbsp;&nbsp;&nbsp;<B>Best Probability:</B>&nbsp;&nbsp;&nbsp;
+                     $best_probability[0] <br>
+                 &nbsp;&nbsp;&nbsp;<B>Number of Times Observed: </B>&nbsp;&nbsp;&nbsp;
+                     $n_observations[0]  <br>
+                 &nbsp;&nbsp;&nbsp;<B>Molecular Weight:</B>&nbsp;&nbsp;&nbsp;
+                                         <br>
+                 &nbsp;&nbsp;&nbsp;<B>pI: </B>&nbsp;&nbsp;&nbsp;
+                                         <br>
+                 <BR>
+                 </P>
+                 </DIV>";
+            print $prnt;
+
+            
+            ## Yellow section:
+            print "<DIV ID='Section2' DIR='LTR' STYLE='background: #ffffcc'>";
+            $prnt = "<BR>&nbsp;&nbsp;&nbsp;<B>Genome Mappings:</B>&nbsp;&nbsp;&nbsp; 
+                     $n_genome_locations[0] <BR><HR>";
+            print $prnt;
+
+            foreach my $tmp_chrom ( keys %chrom_HoHoHoHoA) {
+
+                print "&nbsp;&nbsp;&nbsp;&nbsp;";
+                print "Chromosome $tmp_chrom : <BR>";
+                my %tmp_hash;
+
+                foreach my $tmp_start ( keys %{$chrom_HoHoHoHoA{$tmp_chrom}}  ) {
+
+                    foreach my $tmp_end ( keys %{$chrom_HoHoHoHoA{$tmp_chrom}{$tmp_start}}  ) {
+
+                        foreach my $tmp_strand ( keys %{$chrom_HoHoHoHoA{$tmp_chrom}{$tmp_start}{$tmp_end}}  ) {
+
+                            print "&nbsp;&nbsp;&nbsp;&nbsp;";
+                            print "&nbsp;&nbsp;&nbsp;&nbsp;";
+                            print "exon:&nbsp;&nbsp;$tmp_start - $tmp_end";
+                            print "&nbsp;&nbsp;&nbsp;&nbsp;strand: &nbsp;&nbsp;$tmp_strand<BR>";
+                            my @tmp_indices=@{$chrom_HoHoHoHoA{$tmp_chrom}{$tmp_start}{$tmp_end}{$tmp_strand}};
+                            for (my $j=0; $j<=$#tmp_indices; $j++){
+                                my $i = $tmp_indices[$j];
+                                $tmp_hash{$biosequence_name[$i]} = $biosequence_name[$i];
+                            }
+                            print "<BR>";
+
+                        }
+                    }
+                }
+                print "&nbsp;&nbsp;&nbsp;&nbsp;";
+                print "&nbsp;&nbsp;&nbsp;&nbsp;";
+                print "Proteins:&nbsp;&nbsp;&nbsp;";
+                foreach my $k ( keys %tmp_hash) {
+                    print "$k &nbsp;&nbsp;&nbsp;";
+                } 
+                print "<BR><BR>";
+            }
+            print "</DIV>";
+
+
+            print "<BR>";
+            
+
+            ## Pale Green section:
+            print "<DIV ID='Section3' DIR='LTR' STYLE='background: #ccffff'>";
+            print "<BR>";
+
+            print "&nbsp;&nbsp;&nbsp;&nbsp;";
+            print "<B>Observed in Samples:</B><BR>";
+            print "<BR>";
+            print "<TABLE border=1>";
+            print "<TH> Sample Tag</TH>";
+            print "<TH> Sample Title</TH>";
+
+            foreach my $k (keys %sample_H ) {
+                my $i = $sample_H{$k};
+                print "<TR><TD>$sample_tag[$i]</TD><TD>$sample_title[$i]</TD></TR>";
+            }
+            print "</TABLE>";
+
+            print "<BR>";
+            print "</DIV>";
 
         } else {
 
