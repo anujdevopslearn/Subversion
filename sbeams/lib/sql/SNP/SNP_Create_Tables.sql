@@ -214,6 +214,21 @@ VALUES ( 'BBS_display_options','ShowSetAndName','Show Set and Name Only',70 )
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BBS_sort_options','biosequence_name','biosequence_name',10 )
 
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'GG_display_options','PlainView','Plain View',50 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'GG_display_options','SampleVsAssay','Sample vs Assay',60 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'GG_display_options','AssayVsSample','Assay vs Sample',70 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'GG_display_options','SampleVsRepeat','Sample vs Repeat',80 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'GG_display_options','ConcannonReorder','Concannon Reordering',90 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'GG_display_options','ShowSQL','Show SQL Query',100 )
+
+
+
 
 
 ----------------------------------------------------------------------------
