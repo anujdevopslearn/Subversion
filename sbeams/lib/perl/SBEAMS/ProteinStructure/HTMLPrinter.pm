@@ -413,7 +413,7 @@ sub display_ext_halo_template {
 <a href="$HALO_HOME/haloarcula/" class="Nav_link">Haloarcula marismortui</a><br>
 </tr>
 <tr>
-<td colspan="4"><img src="$HALO_HOME/images/clear.gif" width="1" height="10" border="0"></td>
+<td colspan="4"><img src="/images/clear.gif" width="1" height="10" border="0"></td>
 </tr>
 
 
