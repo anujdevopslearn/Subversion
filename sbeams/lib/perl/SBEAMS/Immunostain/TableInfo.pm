@@ -110,35 +110,38 @@ sub returnTableInfo {
 	if ($table_name eq "IS_assay_image") {
     if ($info_key eq "BASICQuery") {
       return qq~
-	    SELECT si.assay_image_id, assay_image_subfield_id, subfield_name,
-             project_tag, specimen_block_name, antibody_name, assay_name,
-             image_name, image_magnification, raw_image_file, 
-             processed_image_file, annotated_image_file, A.sort_order,
-             tissue_type_name
+	    SELECT si.assay_image_id, project_tag, specimen_block_name,
+             antibody_name, assay_name, image_name, image_magnification,
+             raw_image_file, processed_image_file, annotated_image_file,
+             A.sort_order, tissue_type_name, organism_name
 		  FROM $TBIS_ASSAY_IMAGE SI
-		  LEFT JOIN $TBIS_ASSAY_IMAGE_SUBFIELD AIS
-			ON (SI.ASSAY_IMAGE_ID = AIS.ASSAY_IMAGE_ID) 	
 		  LEFT JOIN $TBIS_ASSAY_CHANNEL AC 
-			ON (SI.ASSAY_CHANNEL_ID = AC.ASSAY_CHANNEL_ID)
+			  ON (SI.ASSAY_CHANNEL_ID = AC.ASSAY_CHANNEL_ID)
 		  LEFT JOIN $TBIS_ASSAY SS
-                       ON ( AC.ASSAY_ID = SS.ASSAY_ID )
-		  LEFT JOIN $TB_PROJECT P ON ( SS.project_id = P.project_id )
+        ON ( AC.ASSAY_ID = SS.ASSAY_ID )
+		  LEFT JOIN $TB_PROJECT P 
+        ON ( SS.project_id = P.project_id )
 		  LEFT JOIN $TBIS_SPECIMEN_BLOCK SB
-		       ON ( SS.specimen_block_id = SB.specimen_block_id )
+		    ON ( SS.specimen_block_id = SB.specimen_block_id )
 		  LEFT JOIN $TBIS_SPECIMEN S
-		       ON ( SB.specimen_id = S.specimen_id )
+		    ON ( SB.specimen_id = S.specimen_id )
 		  LEFT JOIN $TBIS_TISSUE_TYPE TT
-		       ON ( S.tissue_type_id = TT.tissue_type_id )
+		    ON ( S.tissue_type_id = TT.tissue_type_id )
 		  LEFT JOIN $TBIS_ANTIBODY A
-		       ON ( AC.antibody_id = A.antibody_id )
-		 WHERE SS.record_status!='D'
-                   AND SI.record_status!='D'
-		 ORDER BY project_tag,tissue_type_name,specimen_block_name,
-                       A.sort_order,A.antibody_name,SS.assay_name,
-                       SI.image_magnification,SI.image_name
+		    ON ( AC.antibody_id = A.antibody_id )
+		  JOIN $TB_ORGANISM O
+		    ON ( O.organism_id = S.organism_id )
+		  WHERE SS.record_status!='D'
+      AND SI.record_status!='D'
+		  ORDER BY project_tag,tissue_type_name,specimen_block_name,
+               A.sort_order,A.antibody_name,SS.assay_name,
+               SI.image_magnification,SI.image_name
       ~;
     } elsif ( $info_key eq 'hidden_cols' ) {
-        return ( sort_order => 1, tissue_type_name => 1 );
+        return ( sort_order => 1, 
+                 annotated_image_file => 1  );
+# tissue_type_name => 1 );
+
     }
 
   }
