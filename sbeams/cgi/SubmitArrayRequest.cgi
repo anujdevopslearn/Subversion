@@ -365,7 +365,7 @@ sub printEntryForm {
                labeling_method_id,SLI.array_request_slide_id,
                array_request_sample_id
           FROM $TB_ARRAY_REQUEST_SAMPLE SAM
-          LEFT JOIN $TB_ARRAY_REQUEST_SLIDE SLI ON (
+          FULL JOIN $TB_ARRAY_REQUEST_SLIDE SLI ON (
                SAM.array_request_slide_id = SLI.array_request_slide_id )
          WHERE $PK_COLUMN_NAME='$parameters{$PK_COLUMN_NAME}'!;
       my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
@@ -917,7 +917,9 @@ sub processEntryForm {
               $current_contact_id,$TB_ARRAY_REQUEST_SLIDE,
               qq~array_request_slide_id=$table_parameters{"slide${element}id"}~);
           my $returned_slide_status = shift @returned_information;
-          my $returned_slide_PK = shift @returned_information;
+          #my $returned_slide_PK = shift @returned_information;
+          shift @returned_information;
+          my $returned_slide_PK = $table_parameters{"slide${element}id"};
 
           # debugging print of INSERT result
           print "<BR>UPDATE of slide #$element (ID $returned_slide_PK)
@@ -1008,7 +1010,9 @@ sub processEntryForm {
                 qq~array_request_sample_id=$table_parameters{"sample${isample}id_$element"}~);
 
               my $returned_sample_status = shift @returned_information;
-              my $returned_sample_PK = shift @returned_information;
+              #my $returned_sample_PK = shift @returned_information;
+             shift @returned_information;
+              my $returned_sample_PK = $table_parameters{"sample${isample}id_$element"};
 
               $table_parameters{"sample${isample}id_$element"} = 
                 $returned_sample_PK;
@@ -1526,7 +1530,7 @@ sub printCompletedEntry {
                labeling_method_id,SLI.array_request_slide_id,
                array_request_sample_id
           FROM $TB_ARRAY_REQUEST_SAMPLE SAM
-          LEFT JOIN $TB_ARRAY_REQUEST_SLIDE SLI ON (
+          FULL JOIN $TB_ARRAY_REQUEST_SLIDE SLI ON (
                SAM.array_request_slide_id = SLI.array_request_slide_id )
          WHERE $PK_COLUMN_NAME='$parameters{$PK_COLUMN_NAME}'!;
       my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
