@@ -233,9 +233,13 @@ sub printEntryForm {
 
 
     #### Build ROWCOUNT constraint
-    $parameters{row_limit} = 1000;
-      ($parameters{row_limit} > 0 && $parameters{row_limit}<=99999);
-    my $limit_clause = "TOP $parameters{row_limit}";
+		$parameters{row_limit} = 1000
+			unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
+		my $limit_clause = $sbeams->buildLimitClause(row_limit=>$parameters{row_limit});
+
+#    $parameters{row_limit} = 1000;
+#      ($parameters{row_limit} > 0 && $parameters{row_limit}<=99999);
+#    my $limit_clause = "TOP $parameters{row_limit}";
 
 
     #### Define the desired columns
@@ -273,7 +277,7 @@ sub printEntryForm {
     }
 
     $sql = qq~
-      SELECT $limit_clause $columns_clause
+      SELECT $limit_clause->{top_clause}  $columns_clause
         FROM $TBBS_BIOSEQUENCE BS
         LEFT JOIN $TBBS_BIOSEQUENCE_SET BSS ON ( BS.biosequence_set_id = BSS.biosequence_set_id )
        WHERE 1 = 1
@@ -283,6 +287,7 @@ sub printEntryForm {
       $biosequence_seq_clause
       $biosequence_desc_clause
       $order_by_clause
+			$limit_clause->{trailing_limit_clause}
      ~;
 
 
