@@ -1,0 +1,750 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : BrowseProteinSummary
+# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
+# $Id$
+#
+# Description : This program that allows users to
+#               browse through a summary of proteins from experiments.
+#
+# SBEAMS is Copyright (C) 2000-2002 by Eric Deutsch
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+
+use SBEAMS::Connection;
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+
+use SBEAMS::Proteomics;
+use SBEAMS::Proteomics::Settings;
+use SBEAMS::Proteomics::Tables;
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::Proteomics;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+
+use CGI;
+$q = new CGI;
+
+
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main();
+exit(0);
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    #connect_read_only=>1,allow_anonymous_access=>1
+  ));
+
+
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters);
+  #$sbeams->printDebuggingInfo($q);
+
+
+  #### Decide what action to take based on information so far
+  if (defined($parameters{action}) && $parameters{action} eq "???") {
+    # Some action
+  } else {
+    $sbeamsMOD->display_page_header();
+    handle_request(ref_parameters=>\%parameters);
+    $sbeamsMOD->display_page_footer();
+  }
+
+
+} # end main
+
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request {
+  my %args = @_;
+
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+
+
+  #### Define some generic varibles
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+  #### Define some variables for a query and resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+
+  #### Read in the standard form values
+  my $apply_action=$parameters{'action'} || $parameters{'apply_action'} || '';
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+
+  #### Set some specific settings for this program
+  #my $CATEGORY="Browse Protein Summary";
+  my $CATEGORY="This interface is experimental";
+  $TABLE_NAME="PR_BrowseProteinSummary" unless ($TABLE_NAME);
+  ($PROGRAM_FILE_NAME) =
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+
+
+  #### Get the columns and input types for this table/query
+  my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
+  my %input_types = 
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
+
+
+  #### Read the input parameters for each column
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters,
+    columns_ref=>\@columns,input_types_ref=>\%input_types);
+
+
+  #### If the apply action was to recall a previous resultset, do it
+  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+  if ($apply_action eq "VIEWRESULTSET") {
+    $sbeams->readResultSet(
+      resultset_file=>$rs_params{set_name},
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      resultset_params_ref=>\%rs_params,
+    );
+    $n_params_found = 99;
+  }
+
+
+  #### Set some reasonable defaults if no parameters supplied
+  unless ($n_params_found) {
+    $parameters{input_form_format} = "minimum_detail";
+    $parameters{probability_constraint} = '>0.9';
+  }
+
+
+  #### Apply any parameter adjustment logic
+  #none
+
+
+  #### Display the user-interaction input form
+  $sbeams->display_input_form(
+    TABLE_NAME=>$TABLE_NAME,CATEGORY=>$CATEGORY,apply_action=>$apply_action,
+    PROGRAM_FILE_NAME=>$PROGRAM_FILE_NAME,
+    parameters_ref=>\%parameters,
+    input_types_ref=>\%input_types,
+  );
+
+
+  #### Display the form action buttons
+  $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
+
+
+  #### Finish the upper part of the page and go begin the full-width
+  #### data portion of the page
+  $sbeams->display_page_footer(close_tables=>'YES',
+    separator_bar=>'YES',display_footer=>'NO');
+
+
+
+  #########################################################################
+  #### Process all the constraints
+
+  #### Build SEARCH BATCH / EXPERIMENT constraint
+  my $search_batch_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SB.search_batch_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Search Batch List",
+    constraint_value=>$parameters{search_batch_id} );
+  return if ($search_batch_clause eq '-1');
+  unless (defined($parameters{search_batch_id}) &&
+          $parameters{search_batch_id}) {
+    print "<H4>You must select at least one experiment to browse!</H4>\n\n";
+    return;
+  }
+
+
+  #### Build PROTEIN GROUP PROBABILITY constraint
+  my $protein_group_probability_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"PG.probability",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Probability",
+    constraint_value=>$parameters{protein_group_probability_constraint} );
+  return if ($protein_group_probability_clause eq '-1');
+
+
+  #### Build PROBABILITY constraint
+  my $protein_probability_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"PROT.probability",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Probability",
+    constraint_value=>$parameters{protein_probability_constraint} );
+  return if ($protein_probability_clause eq '-1');
+
+
+  #### Build REFERENCE PROTEIN constraint
+  my $biosequence_name_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.biosequence_name",
+    constraint_type=>"plain_text",
+    constraint_name=>"Reference",
+    constraint_value=>$parameters{reference_constraint} );
+  return if ($biosequence_name_clause eq '-1');
+
+
+  #### Build GENE NAME constraint
+  my $gene_name_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.biosequence_gene_name",
+    constraint_type=>"plain_text",
+    constraint_name=>"Gene Name",
+    constraint_value=>$parameters{gene_name_constraint} );
+  return if ($gene_name_clause eq '-1');
+
+
+  #### Build PROTEIN DESCRIPTION constraint
+  my $description_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.biosequence_desc",
+    constraint_type=>"plain_text",
+    constraint_name=>"Protein Description",
+    constraint_value=>$parameters{description_constraint} );
+  return if ($description_clause eq '-1');
+
+
+  #### Build MOLECULAR FUNCTION constraint
+  my $molecular_function_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"MFA.annotation",
+    constraint_type=>"plain_text",
+    constraint_name=>"Molecular Function",
+    constraint_value=>$parameters{molecular_function_constraint} );
+  return if ($molecular_function_clause eq '-1');
+
+
+  #### Build BIOLOGICAL PROCESS constraint
+  my $biological_process_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BPA.annotation",
+    constraint_type=>"plain_text",
+    constraint_name=>"Biological Process",
+    constraint_value=>$parameters{biological_process_constraint} );
+  return if ($biological_process_clause eq '-1');
+
+
+  #### Build CELLULAR COMPONENT constraint
+  my $cellular_component_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"CCA.annotation",
+    constraint_type=>"plain_text",
+    constraint_name=>"Cellular Component",
+    constraint_value=>$parameters{cellular_component_constraint} );
+  return if ($cellular_component_clause eq '-1');
+
+
+  #### Build INTERPRO PROTEIN DOMAIN constraint
+  my $protein_domain_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"IPDA.annotation",
+    constraint_type=>"plain_text",
+    constraint_name=>"InterPro Protein Domain",
+    constraint_value=>$parameters{protein_domain_constraint} );
+  return if ($protein_domain_clause eq '-1');
+
+
+  #### Build FAVORED CODON FREQUENCY constraint
+  my $fav_codon_frequency_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.fav_codon_frequency",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Favored Codon Frequency",
+    constraint_value=>$parameters{fav_codon_frequency_constraint} );
+  return if ($fav_codon_frequency_clause eq '-1');
+
+
+  #### Build NUMBER OF TRANSMEMBRANE REGIONS constraint
+  my $n_transmembrane_regions_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.n_transmembrane_regions",
+    constraint_type=>"flexible_int",
+    constraint_name=>"Number of Transmembrane regions",
+    constraint_value=>$parameters{n_transmembrane_regions_constraint} );
+  return if ($n_transmembrane_regions_clause eq '-1');
+
+
+  #### Build PROTEIN LENGTH constraint
+  my $protein_length_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"DATALENGTH(BS.biosequence_seq)",
+    constraint_type=>"flexible_int",
+    constraint_name=>"Protein Length",
+    constraint_value=>$parameters{protein_length_constraint} );
+  return if ($protein_length_clause eq '-1');
+
+
+  #### Build ACCESSION constraint
+  my $accession_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.biosequence_accession",
+    constraint_type=>"plain_text",
+    constraint_name=>"Accession",
+    constraint_value=>$parameters{accession_constraint} );
+  return if ($accession_clause eq '-1');
+
+
+  #### Build ANNOTATION_STATUS and ANNOTATION_LABELS constraint
+  my $annotation_status_clause = "";
+  my $annotation_label_clause = "";
+
+  if ($parameters{annotation_label_id}) {
+    if ($parameters{annotation_status_id} eq 'Annot') {
+      $annotation_label_clause = "   AND SHA.annotation_label_id IN ( $parameters{annotation_label_id} )";
+    } elsif ($parameters{annotation_status_id} eq 'UNAnnot') {
+      $annotation_status_clause = "   AND SHA.annotation_label_id IS NULL";
+      $annotation_label_clause = "";
+      print "WARNING: Annotation status and Annotation label constraints conflict!<BR>\n";
+    } else {
+      $annotation_label_clause = "   AND ( SHA.annotation_label_id IN ( $parameters{annotation_label_id} ) ".
+        "OR SHA.annotation_label_id IS NULL )";
+    }
+
+
+  } else {
+    if ($parameters{annotation_status_id} eq 'Annot') {
+      $annotation_status_clause = "   AND SHA.annotation_label_id IS NOT NULL";
+    } elsif ($parameters{annotation_status_id} eq 'UNAnnot') {
+      $annotation_status_clause = "   AND SHA.annotation_label_id IS NULL";
+    } else {
+      #### Nothing
+    }
+
+  }
+
+
+  #### Build NUMBER OF ANNOTATIONS constraint
+  my $n_annotations_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"row_count",
+    constraint_type=>"flexible_int",
+    constraint_name=>"Number of Matches",
+    constraint_value=>$parameters{n_annotations_constraint} );
+  return if ($n_annotations_clause eq '-1');
+
+
+  #### Build QUANTITATION constraint
+  my $quantitation_clause = "";
+  if ($parameters{quantitation_constraint}) {
+    if ($parameters{quantitation_constraint} =~ /^[\d\.]+$/) {
+      $quantitation_clause = "   AND d0_intensity/ISNULL(NULLIF(d8_intensity,0),0.01) = $parameters{quantitation_constraint}";
+    } elsif ($parameters{quantitation_constraint} =~ /^between\s+[\d\.]+\s+and\s+[\d\.]+$/i) {
+      $quantitation_clause = "   AND d0_intensity/ISNULL(NULLIF(d8_intensity,0),0.01) $parameters{quantitation_constraint}";
+    } elsif ($parameters{quantitation_constraint} =~ /^[><=][=]*\s*[\d\.]+$/) {
+      $quantitation_clause = "   AND d0_intensity/ISNULL(NULLIF(d8_intensity,0),0.01) $parameters{quantitation_constraint}";
+    } else {
+      print "<H4>Cannot parse Quantitation Constraint!  Check syntax.</H4>\n\n";
+      return;
+    }
+  }
+
+
+  #### Build SORT ORDER
+  my $order_by_clause = "";
+  if ($parameters{sort_order}) {
+    if ($parameters{sort_order} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
+      print "<H4>Cannot parse Sort Order!  Check syntax.</H4>\n\n";
+      return;
+    } else {
+      $order_by_clause = " ORDER BY $parameters{sort_order}";
+    }
+  }
+
+
+  #### Build ROWCOUNT constraint
+  $parameters{row_limit} = 5000
+    unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
+  my $limit_clause = $sbeams->buildLimitClause(
+   row_limit=>$parameters{row_limit});
+
+
+  #### Define some variables needed to build the query
+  my $group_by_clause = "";
+  my $final_group_by_clause = "";
+  my @column_array;
+  my $peptide_column = "";
+  my $count_column = "";
+
+
+  #### If the user opted to see the GO columns, add them in
+  my @additional_columns = ();
+  if ( $parameters{display_options} =~ /ShowGOColumns/ ||
+       $molecular_function_clause.$biological_process_clause.
+       $cellular_component_clause.$protein_domain_clause ) {
+    @additional_columns = (
+      ["molecular_function","MFA.annotation","Molecular Function"],
+      ["molecular_function_GO","MFA.external_accession","molecular_function_GO"],
+      ["biological_process","BPA.annotation","Biological Process"],
+      ["biological_process_GO","BPA.external_accession","biological_process_GO"],
+      ["cellular_component","CCA.annotation","Cellular Component"],
+      ["cellular_component_GO","CCA.external_accession","cellular_component_GO"],
+      ["interpro_protein_domain","IPDA.annotation","InterPro Protein Domain"],
+      ["interpro_protein_domain_GO","IPDA.external_accession","interpro_protein_domain_GO"],
+    );
+  }
+
+  #### If the user opted to see GO columns or provided some GO constraints,
+  #### then join in the GO tables
+  my $GO_join = "";
+  if ( $parameters{display_options} =~ /ShowGOColumns/ ||
+       $molecular_function_clause.$biological_process_clause.
+       $cellular_component_clause.$protein_domain_clause ) {
+    $GO_join = qq~
+        LEFT JOIN flybase.dbo.annotated_gene AG
+             ON ( BS.biosequence_accession = AG.gene_accession )
+        LEFT JOIN flybase.dbo.gene_annotation MFA
+             ON ( AG.annotated_gene_id = MFA.annotated_gene_id
+                   AND MFA.gene_annotation_type_id = 1 AND MFA.idx = 0 )
+        LEFT JOIN flybase.dbo.gene_annotation BPA
+             ON ( AG.annotated_gene_id = BPA.annotated_gene_id
+                   AND BPA.gene_annotation_type_id = 2 AND BPA.idx = 0 )
+        LEFT JOIN flybase.dbo.gene_annotation CCA
+             ON ( AG.annotated_gene_id = CCA.annotated_gene_id
+                   AND CCA.gene_annotation_type_id = 3 AND CCA.idx = 0 )
+        LEFT JOIN flybase.dbo.gene_annotation IPDA
+             ON ( AG.annotated_gene_id = IPDA.annotated_gene_id
+                   AND IPDA.gene_annotation_type_id = 4 AND IPDA.idx = 0 )
+    ~;
+  }
+
+
+  #### Add in some extra columns if the user wants to see them
+  if ( $parameters{display_options} =~ /ShowExtraProteinProps/ ) {
+    @additional_columns = (
+      ["fav_codon_frequency","STR(BS.fav_codon_frequency,10,3)","Favored Codon Frequency"],
+      ["n_transmembrane_regions","BS.n_transmembrane_regions","Number of Transmembrane Regions"],
+      ["protein_length","DATALENGTH(BS.biosequence_seq)","Protein Length"],
+      @additional_columns,
+    );
+  }
+
+
+  #### Define the desired columns in the query
+  #### [friendly name used in url_cols,SQL,displayed column title]
+
+  #### If grouping by reference
+  if ( $parameters{display_options} =~ /GroupReference/ ) {
+    @column_array = (
+      ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
+      ["accessor","DBX.accessor","accessor"],
+      ["accessor_suffix","DBX.accessor_suffix","accessor_suffix"],
+      ["biosequence_accession","BS.biosequence_accession","Accession"],
+      ["reference","BS.biosequence_name","Reference"],
+      ["count","tABS.row_count","Count"],
+      ["average_quant","tABS.average_quant","Quant Avg"],
+      ["stdev_quant","tABS.stdev_quant","Quant StDev"],
+      ["n_quant","tABS.n_quant","Quant N"],
+      @additional_columns,
+      ["biosequence_desc","BS.biosequence_desc","Reference Description"],
+    );
+    $group_by_clause = " GROUP BY SH.reference";
+    $count_column = "COUNT(*) AS 'row_count',STR(AVG(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0)),10,2) AS 'average_quant',STR(STDEV(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0)),10,2) AS 'stdev_quant',SUM(CASE WHEN (NULLIF(d0_intensity,0.0) IS NULL OR NULLIF(d8_intensity,0.0) IS NULL) THEN 0 ELSE 1 END) AS 'n_quant'";
+
+  #### If no grouping
+  } else {
+    @column_array = (
+      ["experiment_tag","experiment_tag","Exp"],
+      ["search_batch_subdir","search_batch_subdir","DB"],
+      ["group_number","PG.group_number","Group #"],
+      ["pseudo_name","PG.pseudo_name","Group Name"],
+      ["group_probability","STR(PG.probability,7,3)","Group Prob"],
+      ["biosequence_name","BS.biosequence_name","Protein Name"],
+      ["accessor","DBX.accessor","accessor"],
+      ["accessor_suffix","DBX.accessor_suffix","accessor_suffix"],
+      ["biosequence_accession","BS.biosequence_accession","Accession"],
+      ["protein_probability","STR(PROT.probability,7,3)","Protein Prob"],
+      @additional_columns,
+      ["biosequence_desc","BS.biosequence_desc","Reference Description"],
+    );
+    $peptide_column = "";
+    $count_column = "";
+  }
+
+
+  #### Limit the width of the Reference column if user selected
+  if ( $parameters{display_options} =~ /MaxRefWidth/ ) {
+    $max_widths{'Reference'} = 20;
+  }
+  #### Set flag to display SQL statement if user selected
+  if ( $parameters{display_options} =~ /ShowSQL/ ) {
+    $show_sql = 1;
+  }
+
+
+  #### Build the columns part of the SQL statement
+  my %colnameidx = ();
+  $colnameidx{peptide} = 99;
+  $colnameidx{peptide_string} = 99;
+  my @column_titles = ();
+  my $columns_clause = $sbeams->build_SQL_columns_list(
+    column_array_ref=>\@column_array,
+    colnameidx_ref=>\%colnameidx,
+    column_titles_ref=>\@column_titles
+  );
+
+
+  #### Define the SQL statement
+  $sql = qq~
+	SELECT $limit_clause->{top_clause} $columns_clause
+	  FROM $TBPR_PROTEIN PROT
+          JOIN $TBPR_PROTEIN_GROUP PG
+               ON ( PROT.protein_group_id = PG.protein_group_id )
+	  JOIN $TBPR_BIOSEQUENCE BS
+               ON ( PROT.biosequence_id = BS.biosequence_id )
+	  JOIN $TBPR_SEARCH_BATCH SB
+	       ON ( BS.biosequence_set_id = SB.biosequence_set_id )
+	  JOIN $TBPR_PROTEOMICS_EXPERIMENT PE
+               ON ( SB.experiment_id = PE.experiment_id )
+          LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
+          $GO_join
+	 WHERE 1 = 1
+	$search_batch_clause
+	$biosequence_name_clause
+        $description_clause
+	$gene_name_clause
+	$accession_clause
+        $molecular_function_clause
+        $biological_process_clause
+        $cellular_component_clause
+	$protein_domain_clause
+        $n_transmembrane_regions_clause
+        $fav_codon_frequency_clause
+        $protein_length_clause
+	$protein_group_probability_clause
+	$protein_probability_clause
+	$quantitation_clause
+	$annotation_label_clause
+	$annotation_status_clause
+	$group_by_clause
+	$order_by_clause
+	$limit_clause->{trailing_limit_clause}
+
+  ~;
+
+
+  #### Ad-Hoc, and sort of dangerous way of reversing the sense of the
+  #### quantitation ratio
+  if ( $parameters{quantitation_values} eq "d0d8" ) {
+    #### This is the default
+  #### Swap the numerator and denominator
+  } elsif ( $parameters{quantitation_values} eq "d8d0" ) {
+    $sql =~ s/d0\_/dQQQ_/g;
+    $sql =~ s/d8\_/d0_/g;
+    $sql =~ s/dQQQ\_/d8_/g;
+  }
+
+
+  #### Certain types of actions should be passed to links
+  my $pass_action = "QUERY";
+  $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
+
+
+  #### Pass nearly all of the constraints down to a child query
+  my @parameters_to_pass;
+  my $parameters_list = '';
+  while ( ($key,$value) = each %input_types ) {
+    if ($key ne 'sort_order' && $key ne 'display_options' &&
+        $key ne 'reference_constraint') {
+      if ($parameters{$key}) {
+        push(@parameters_to_pass,"$key=$parameters{$key}");
+      }
+    }
+  }
+  if (@parameters_to_pass) {
+    $parameters_list = join('&',@parameters_to_pass);
+  }
+
+
+  #### Define the hypertext links for columns that need them
+  %url_cols = ('Accession' => "\%$colnameidx{accessor}V\%$colnameidx{biosequence_accession}V\%$colnameidx{accessor_suffix}V",
+    	       'Accession_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information about this protein in source database\'; return true"',
+
+               'Reference' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=$parameters{search_batch_id}&reference_constraint=\%$colnameidx{reference}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
+    	       'Reference_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show all occurrences of this protein in these experiments\'; return true"',
+
+    	       'Peptide' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=$parameters{search_batch_id}&peptide_constraint=\%$colnameidx{peptide}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
+    	       'Peptide_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show all occurrences of this peptide in these experiments\'; return true"',
+
+	       'Peptide String' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=$parameters{search_batch_id}&peptide_string_constraint=\%$colnameidx{peptide_string}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
+	       'Peptide String_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show all occurrences of this exact peptide instance in these experiments\'; return true"',
+
+	       'Count' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=$parameters{search_batch_id}&reference_constraint=\%$colnameidx{reference}V&peptide_constraint=\%$colnameidx{peptide}V&peptide_string_constraint=\%$colnameidx{peptide_string}V&${parameters_list}&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
+	       'Count_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show just this many that match all above criteria\'; return true"',
+
+               'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
+               'Molecular Function_ATAG' => 'TARGET="WinExt"',
+               'Molecular Function_OPTIONS' => {semicolon_separated_list=>1},
+               'Biological Process' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{biological_process_GO}V",
+               'Biological Process_ATAG' => 'TARGET="WinExt"',
+               'Biological Process_OPTIONS' => {semicolon_separated_list=>1},
+               'Cellular Component' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{cellular_component_GO}V",
+               'Cellular Component_ATAG' => 'TARGET="WinExt"',
+               'Cellular Component_OPTIONS' => {semicolon_separated_list=>1},
+               'InterPro Protein Domain' => "http://www.ebi.ac.uk/interpro/IEntry?ac=\%$colnameidx{interpro_protein_domain_GO}V",
+               'InterPro Protein Domain_ATAG' => 'TARGET="WinExt"',
+               'InterPro Protein Domain_OPTIONS' => {semicolon_separated_list=>1},
+  );
+
+
+               ##'Reference_ATAG' => "TARGET=\"Win1\" ONMOUSEOVER=\"window.status='%V'; return true\"",
+
+  #### Define columns that should be hidden in the output table
+  %hidden_cols = ('accessor' => 1,
+                  'accessor_suffix' => 1,
+                  'molecular_function_GO' => 1,
+                  'biological_process_GO' => 1,
+                  'cellular_component_GO' => 1,
+                  'interpro_protein_domain_GO' => 1,
+  );
+
+
+  #########################################################################
+  #### If QUERY or VIEWRESULTSET was selected, display the data
+  if ($apply_action =~ /QUERY/i || $apply_action eq "VIEWRESULTSET") {
+
+    #### If the action contained QUERY, then fetch the results from
+    #### the database
+    if ($apply_action =~ /QUERY/i) {
+
+      #### Show the SQL that will be or was executed
+      $sbeams->display_sql(sql=>$sql) if ($show_sql);
+
+      #### Fetch the results from the database server
+      $sbeams->fetchResultSet(
+        sql_query=>$sql,
+        resultset_ref=>$resultset_ref,
+      );
+
+      #### Store the resultset and parameters to disk resultset cache
+      $rs_params{set_name} = "SETME";
+      $sbeams->writeResultSet(
+        resultset_file_ref=>\$rs_params{set_name},
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters,
+        resultset_params_ref=>\%rs_params,
+        query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+      );
+    }
+
+    #### Display the resultset
+    $sbeams->displayResultSet(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      url_cols_ref=>\%url_cols,
+      hidden_cols_ref=>\%hidden_cols,
+      max_widths=>\%max_widths,
+      column_titles_ref=>\@column_titles,
+      base_url=>$base_url,
+    );
+
+
+    #### Display the resultset controls
+    $sbeams->displayResultSetControls(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      base_url=>$base_url,
+    );
+
+
+    #### Display a plot of data from the resultset
+    $sbeams->displayResultSetPlot(
+      rs_params_ref=>\%rs_params,
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      column_titles_ref=>\@column_titles,
+      base_url=>$base_url,
+    );
+
+
+  #### If QUERY was not selected, then tell the user to enter some parameters
+  } else {
+    if ($sbeams->invocation_mode() eq 'http') {
+      print "<H4>Select parameters above and press QUERY</H4>\n";
+    } else {
+      print "You need to supply some parameters to contrain the query\n";
+    }
+  }
+
+
+} # end handle_request
+
+
+
+###############################################################################
+# evalSQL
+#
+# Callback for translating Perl variables into their values,
+# especially the global table variables to table names
+###############################################################################
+sub evalSQL {
+  my $sql = shift;
+
+  return eval "\"$sql\"";
+
+} # end evalSQL
+
