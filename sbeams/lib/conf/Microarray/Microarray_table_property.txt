@@ -44,3 +44,4 @@ MA_trans_membrane_domain	Affy trans membrane Domain	arrays	NO	$TBMA_TRANS_MEMBRA
 MA_interpro	Affy interpro	arrays	NO	$TBMA_INTERPRO	interpro_id				
 MA_protein_domain	Affy protein domain	arrays	NO	$TBMA_PROTEIN_DOMAIN	protein_domain_id				
 MA_alignment	Affy gene alignment	arrays	NO	$TBMA_ALIGNMENT	alignment_id				
+MA_GetAffy_GeneIntensity	Get Affy Gene Intensity	QUERY	NO				GetAffy_GeneIntensity.cgi		

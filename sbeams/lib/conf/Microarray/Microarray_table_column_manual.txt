@@ -69,3 +69,52 @@ SELECT DISTINCT condition_id,username + '' - '' + project_tag + '' -> '' + condi
        )
    AND column_name = 'condition_id'
 GO
+
+
+UPDATE table_column
+  SET optionlist_query = '
+SELECT DISTINCT affy_array_id ,username + '' - '' + project_tag + '' -> '' + file_root
+  FROM $TBMA_AFFY_ARRAY afa
+ INNER JOIN $TBMA_AFFY_ARRAY_SAMPLE afs ON (afa.affy_array_sample_id = afs.affy_array_sample_id)
+ INNER JOIN $TB_PROJECT P ON ( afs.project_id = P.project_id )
+ INNER JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
+ WHERE P.project_id IN ( $parameters{project_id} ) AND
+ afa.affy_array_id IN (SELECT DISTINCT affy_array_id FROM $TBMA_AFFY_GENE_INTENSITY)
+ ORDER BY  username + '' - '' + project_tag + '' -> '' + file_root, affy_array_id'
+ WHERE (   table_name = 'MA_GetAffy_GeneIntensity'
+       )
+   AND column_name = 'affy_array_id'
+GO
+
+UPDATE table_column
+  SET optionlist_query = '
+SELECT DISTINCT P.project_id,UL.username+'' - ''+P.name 
+FROM PROJECT P 
+INNER JOIN $TBMA_AFFY_ARRAY_SAMPLE afs ON ( P.project_id = afs.project_id )
+INNER JOIN $TBMA_AFFY_ARRAY afa ON (afa.affy_array_sample_id = afs.affy_array_sample_id)  
+LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) 
+WHERE P.record_status != ''D'' 
+AND afa.affy_array_id in (SELECT DISTINCT(affy_array_id) FROM $TBMA_AFFY_GENE_INTENSITY gi)
+ORDER BY UL.username+'' - ''+P.name,P.project_id'
+ WHERE (   table_name = 'MA_GetAffy_GeneIntensity'
+       )
+   AND column_name = 'project_id'
+
+
+GO
+
+UPDATE table_column
+  SET optionlist_query = '
+SELECT affy_annotation_set_id, annotation_date + '' SLIDE TYPE = '' + st.name + '' GENOME BUILD = '' + anno_set.genome_version 
+FROM $TBMA_AFFY_ANNOTATION_SET anno_set 
+JOIN $TBMA_SLIDE_TYPE st ON (st.slide_type_id = anno_set.slide_type_id)
+ORDER BY annotation_date + '' SLIDE TYPE = '' + st.name + '' GENOME BUILD = '' + anno_set.genome_version '
+WHERE (   table_name = 'MA_GetAffy_GeneIntensity'
+	)
+    AND column_name = 'annotation_set_constraint'
+    
+GO
+
+
+
+
