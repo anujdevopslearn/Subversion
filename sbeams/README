@@ -2,6 +2,11 @@
 SBEAMS: Systems Biology Experiment Analysis Management System
 Copyright (C) 2000-2002  Eric Deutsch
 
+This software provides an extensible platform for building interfaces
+to one or more relational databases and may come with one or more
+prebuilt modules for certain type of experiments.
+
+
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or
@@ -16,16 +21,10 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
-You may contact the author at edeutsch@systemsbiology.org
+
+You may contact the SBEAMS author at edeutsch@systemsbiology.org
 
 
-For installation insformation, see doc/SBEAMS.installnotes
-
-
-
-
-
-
-
+For installation insformation, see doc/sbeams.installnotes
 
 
