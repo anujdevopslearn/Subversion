@@ -2505,6 +2505,7 @@ sub transferTable {
 
   my $verbose = $args{'verbose'} || 0;
   my $testonly = $args{'testonly'} || 0;
+  my $add_audit_parameters = $args{'add_audit_parameters'} || 0;
 
 
   #### Define standard variables
@@ -2613,6 +2614,13 @@ sub transferTable {
 
         #### If there is one matching record
         if (scalar(@results) == 1) {
+
+          #### Add audit parameters if requested
+          if ($add_audit_parameters) {
+	    $rowdata{date_modified}='CURRENT_TIMESTAMP';
+	    $rowdata{modified_by_id}=$self->getCurrent_contact_id();
+          }
+
           $result = $dest_conn->insert_update_row(update=>1,
             table_name=>$table_name,
             rowdata_ref=>\%rowdata,
@@ -2638,6 +2646,17 @@ sub transferTable {
 
     #### If we didn't do an update operation, do an INSERT
     if ($did_update == 0) {
+
+      #### Add audit parameters if requested
+      if ($add_audit_parameters) {
+        $rowdata{date_created}='CURRENT_TIMESTAMP';
+        $rowdata{date_modified}='CURRENT_TIMESTAMP';
+        $rowdata{created_by_id}=$self->getCurrent_contact_id();
+        $rowdata{modified_by_id}=$self->getCurrent_contact_id();
+        $rowdata{owner_group_id}=$self->getCurrent_work_group_id();
+        $rowdata{record_status}='N';
+      }
+
       $result = $dest_conn->insert_update_row(insert=>1,
   	table_name=>$table_name,
   	rowdata_ref=>\%rowdata,
