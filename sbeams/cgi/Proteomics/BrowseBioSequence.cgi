@@ -892,6 +892,26 @@ sub displaySequenceView {
 
   }
 
+
+  if (1 == 1) {
+    print "<font color=\"red\">THIS IS RED</font>\n";
+    print "<font color=\"DeepPink\">THIS IS HOTPINK</font>\n";
+    print "<font color=\"magenta\">THIS IS MAGENTA</font>\n";
+    print "<font color=\"purple\">THIS IS PURPLE</font>\n";
+    print "<font color=\"green\">THIS IS GREEN</font>\n";
+    print "<font color=\"yellow\">THIS IS YELLOW</font>\n";
+    print "<font color=\"orange\">THIS IS ORANGE</font>\n";
+    print "<font color=\"sienna\">THIS IS SIENNA</font>\n";
+    print "<font color=\"black\">THIS IS BLACK</font>\n";
+    print "<font color=\"blue\">THIS IS BLUE</font>\n";
+    print "<font color=\"navy\">THIS IS NAVY</font>\n";
+    print "<font color=\"turquoise\">THIS IS TURQUOISE</font>\n";
+    print "<font color=\"cyan\">THIS IS CYAN</font>\n";
+    print "<font color=\"gray\">THIS IS GRAY</font>\n";
+  }
+
+
+
   print "</PRE>\n";
 
   return;
