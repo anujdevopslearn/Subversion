@@ -10,10 +10,11 @@ PR_msms_spectrum_peak	MS/MS Spectrum Peak	Proteomics_infrastructure	NO	$TBPR_MSM
 PR_biosequence_set	BioSequence Set	Proteomics_infrastructure	YES	$TBPR_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=PR_biosequence_set	PR_biosequence_set	
 PR_dbxref	Biosequence Database Cross Reference	Proteomics_infrastructure	YES	$TB_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=PR_dbxref	PR_biosequence_dbxref	
 PR_biosequence	BioSequence	Proteomics_infrastructure	NO	$TBPR_BIOSEQUENCE	biosequence_id				
+PR_biosequence_property_set	BioSequence Property Set	Proteomics_infrastructure	NO	$TBPR_BIOSEQUENCE_PROPERTY_SET	biosequence_property_set_id				
 PR_search_batch	Search Batch	Proteomics_infrastructure	NO	$TBPR_SEARCH_BATCH	search_batch_id				
 PR_search_batch_parameter	Search Batch Parameter	Proteomics_infrastructure	NO	$TBPR_SEARCH_BATCH_PARAMETER					
 PR_search_batch_parameter_set	Search Batch Parameter Set	Proteomics_infrastructure	NO	$TBPR_SEARCH_BATCH_PARAMETER_SET					
-PR_search	Search	Proteomics_infrastructure	NO	$TBPR_SEARCH	search_id				
+PR_search	Search	Proteomics_infrastructure	NO	$TBPR_SEARCH	search_id			
 PR_search_hit	Search Hit	Proteomics_infrastructure	NO	$TBPR_SEARCH_HIT	search_hit_id			
 PR_search_hit_protein	Search Hit Protein	Proteomics_infrastructure	NO	$TBPR_SEARCH_HIT_PROTEIN	search_hit_protein_id			
 PR_quantitation	Quantitation	Proteomics_infrastructure	NO	$TBPR_QUANTITATION	quantitation_id			
