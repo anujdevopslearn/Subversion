@@ -2449,10 +2449,11 @@ sub displayResultSet {
 
 		if ($self->output_mode() eq 'tsvfull') {
 		  foreach my $tsvfull_url (@tsvfull_urls) {
-			my $linked_column_number = $tsvfull_url_column_number{$tsvfull_url};
-			$tsvfull_url =~ s/\%(\d+)V/$row[$1]/g;
-			$tsvfull_url =~ s/\%V/$row[$linked_column_number]/g;
-			push (@output_row, $tsvfull_url);
+			my $temp_url = $tsvfull_url;
+			my $linked_column_number = $tsvfull_url_column_number{$temp_url};
+			$temp_url =~ s/\%(\d+)V/$row[$1]/g;
+			$temp_url =~ s/\%V/$row[$linked_column_number]/g;
+			push (@output_row, $temp_url);
 		  }
 		}
 		
