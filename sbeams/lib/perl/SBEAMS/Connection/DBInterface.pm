@@ -3828,7 +3828,7 @@ sub display_input_form {
 
 
     #### If the action included the phrase HIDE, don't print all the options
-    if ($apply_action =~ /HIDE/i) {
+    if ( defined $apply_action && $apply_action =~ /HIDE/i) {
       print qq!
         <TD><INPUT TYPE="hidden" NAME="$column_name"
          VALUE="$parameters{$column_name}"></TD>
