@@ -1290,6 +1290,7 @@ sub displayResultSet {
         foreach $element (@{$resultset_ref->{column_list_ref}}) {
           $value = $row[$i];
           $value =~ s/\"/\'/g;
+          $value =~ s/&/&amp;/g;
           print "    $element=\"$value\"\n";
           $i++;
         }
