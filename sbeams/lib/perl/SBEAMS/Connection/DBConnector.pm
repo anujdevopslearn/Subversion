@@ -37,11 +37,27 @@ sub new {
 
 
 ###############################################################################
+# getDBHandle
+#
+# Returns the current database connection handle to be used by any query.
+# If the database handle doesn't yet exist, dbConnect() is called to create
+# one.
+###############################################################################
+sub getDBHandle {
+    my $self = shift;
+
+    $dbh = $self->dbConnect(@_) unless defined($dbh);
+
+    return $dbh;
+}
+
+
+###############################################################################
 # dbConnect
 #
 # Perform the actual database connection open call via DBI.  This should
-# be database independent, but hasn't been tested with several databases.
-# This should never be called except by getDBHandle().
+# be database independent, but hasn't been tested with many databases.
+# This should never be called directly except by getDBHandle().
 ###############################################################################
 sub dbConnect {
     my $self = shift;
@@ -106,25 +122,9 @@ sub dbDisconnect {
 
 
 ###############################################################################
-# getDBHandle
-#
-# Returns the current database connection handle to be used by any query.
-# If the database handle doesn't yet exist, dbConnect() is called to create
-# one.
-###############################################################################
-sub getDBHandle {
-    my $self = shift;
-
-    $dbh = $self->dbConnect(@_) unless defined($dbh);
-
-    return $dbh;
-}
-
-
-###############################################################################
 # getDBServer
 #
-# Return the servername of the database
+# Return the servername of the database.
 ###############################################################################
 sub getDBServer {
   return $DBCONFIG->{$DBINSTANCE}->{DB_SERVER};
@@ -144,7 +144,7 @@ sub getDBDriver {
 ###############################################################################
 # get DB Type
 #
-# Return the Server Type of the database connection.
+# Return the server type of the database connection.
 ###############################################################################
 sub getDBType {
   return $DBCONFIG->{$DBINSTANCE}->{DB_TYPE};
@@ -204,7 +204,7 @@ sub getDBDatabase {
 ###############################################################################
 # getDBUser
 #
-# Return the username used to open the connection to the database.
+# Return the username used to open the connection to the RDBMS.
 ###############################################################################
 sub getDBUser {
   return $DBCONFIG->{$DBINSTANCE}->{DB_USER};
@@ -214,7 +214,7 @@ sub getDBUser {
 ###############################################################################
 # _getDBPass
 #
-# Return the password used to open the connection to the database.
+# Return the password used to open the connection to the RDBMS.
 ###############################################################################
 sub _getDBPass {
   return $DBCONFIG->{$DBINSTANCE}->{DB_PASS};
@@ -224,7 +224,7 @@ sub _getDBPass {
 ###############################################################################
 # getDBROUser
 #
-# Return the username used to open a read-only connection to the database.
+# Return the username used to open a read-only connection to the RDBMS.
 ###############################################################################
 sub getDBROUser {
   return $DBCONFIG->{$DBINSTANCE}->{DB_RO_USER};
@@ -234,7 +234,7 @@ sub getDBROUser {
 ###############################################################################
 # _getDBROPass
 #
-# Return the password used to open the connection to the database.
+# Return the password used to open the connection to the RDBMS.
 ###############################################################################
 sub _getDBROPass {
   return $DBCONFIG->{$DBINSTANCE}->{DB_RO_PASS};
@@ -278,6 +278,54 @@ application.
     not yet exist) for a connection defined in the config file.
 
 
+=item * B<dbConnect()>
+
+    Perform the actual database connection open call via DBI.  This should
+    be database independent, but has not been tested with many databases.
+    This should never be called directly except by getDBHandle().
+
+
+=item * B<dbDisconnect()>
+
+    Forcibly disconnect from the RDBMS.  This is usually only necessary
+    when authentication fails.
+
+
+=item * B<getDBServer()>
+
+    Return the servername of the database.
+
+
+=item * B<getDBDriver()>
+
+    Return the driver name (DSN string) of the database connection.
+
+
+=item * B<getDBType()>
+
+    Return the server type of the database connection.  This is defined
+    in the conf file.  See that file for supported options.
+
+
+=item * B<getBIOSAP_DB() and similar>
+
+    This is old and fusty and should be removed in favor of a
+    getModuleDatabasePrefix()
+
+
+=item * B<getDBDatabase()>
+
+    Return the database name of the connection.
+
+
+=item * B<getDBUser()>
+
+    Return the username used to open the connection to the RDBMS.
+
+
+=item * B<getDBROUser()>
+
+    Return the username used to open a read-only connection to the RDBMS.
 
 =back
 

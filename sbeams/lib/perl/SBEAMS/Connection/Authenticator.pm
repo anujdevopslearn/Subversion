@@ -53,9 +53,9 @@ sub new {
 
 
 ###############################################################################
-# Authenticate the user making the web request.
+# Authenticate the user making the request.
 #
-# This is run with every new page, first checking to see if the user already
+# This is run with every request, first checking to see if the user already
 # has a valid cookie indicating previous login.  If so, return the username,
 # else the login process begins.  This is not really terribly secure.
 # Login information is not encrypted during transmission unless an
