@@ -1018,7 +1018,12 @@ sub parseConstraint2SQL {
   my $constraint_name = $args{'constraint_name'}
    || die "ERROR: constraint_name not passed";
   my $constraint_value = $args{'constraint_value'};
+  my $constraint_NOT_flag = $args{'constraint_NOT_flag'} || '';
   my $verbose = $args{'verbose'} || 0;
+
+
+  #### Make sure the NOT flag is either NOT or nothing
+  $constraint_NOT_flag = '' unless ($constraint_NOT_flag eq 'NOT');
 
 
   #### Strip leading and trailing whitespace
@@ -1112,7 +1117,7 @@ sub parseConstraint2SQL {
     #### quoted, so there shouldn't be a way to put in dangerous SQL...
     #if ($constraint_value =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {}
 
-    return "   AND $constraint_column LIKE '$constraint_value'";
+    return "   AND $constraint_column $constraint_NOT_flag LIKE '$constraint_value'";
   }
 
 
@@ -2917,6 +2922,7 @@ sub display_input_form {
   my $input_types_ref = $args{'input_types_ref'};
   my %input_types = %{$input_types_ref};
   my $mask_user_context = $args{'mask_user_context'};
+  my $allow_NOT_flags = $args{'allow_NOT_flags'};
 
 
   #### Define popular variables
@@ -3065,6 +3071,16 @@ sub display_input_form {
     }
 
 
+    #### Set the NOT_clause if allowed
+    my $NOT_clause = '';
+    if ($allow_NOT_flags) {
+      my $NOT_flag = '';
+      $NOT_flag = 'CHECKED' if ($parameters{"NOT_$column_name"} eq 'NOT');
+      $NOT_clause = qq~NOT<INPUT TYPE="checkbox" NAME="NOT_$column_name"
+         VALUE="NOT" $NOT_flag>~;
+    }
+
+
     #### If the action included the phrase HIDE, don't print all the options
     if ($apply_action =~ /HIDE/i) {
       print qq!
@@ -3108,7 +3124,7 @@ sub display_input_form {
 
     if ($input_type eq "text") {
       print qq!
-        <TD><INPUT TYPE="$input_type" NAME="$column_name"
+        <TD>$NOT_clause<INPUT TYPE="$input_type" NAME="$column_name"
          VALUE="$parameters{$column_name}" SIZE=$input_length $onChange></TD>
       !;
     }
