@@ -43,7 +43,7 @@ $sbeams = new SBEAMS::Connection;
 $sbeamsMA = new SBEAMS::Microarray;
 $sbeamsMA->setSBEAMS($sbeams);
 my $JNLP_DIRECTORY = "$PHYSICAL_BASE_DIR/tmp/Microarray/dataLoader";
-my $JAR_DIRECTORY = "$SERVER_BASE_DIR/$HTML_BASE_DIR/usr/java";
+my $JAR_DIRECTORY = "$SERVER_BASE_DIR$HTML_BASE_DIR/usr/java";
 
 ###############################################################################
 # global Variables
