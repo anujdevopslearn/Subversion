@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/local/bin/perl -w
 
 ###############################################################################
 # Program     : update_driver_tables.pl
@@ -96,7 +96,8 @@ sub main {
 
 
   #### Decide what action to take based on calling information
-  if ($parameters{action} eq "???") {
+  my $action = $parameters{action} || '';
+  if ($action eq "???") {
     # Some action
   } else {
     $sbeams->printPageHeader() unless ($QUIET);
