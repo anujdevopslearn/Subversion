@@ -104,7 +104,6 @@ sub applySqlChange {
     my $returned_PK;
     @ERRORS = ();
 
-
     #### Get the names of all the privilege levels
     my %level_names = $self->selectTwoColumnHash(
       "SELECT privilege_id,name FROM $TB_PRIVILEGE WHERE record_status!='D'"
@@ -243,7 +242,7 @@ sub applySqlChange {
     # Allow exception for rowprivate
     my $rprivate =  $self->isRowprivate( $DB_TABLE_NAME );
     if ( $rprivate ) {
-      $log->debug( "Allowing exception for rowprivate data" );
+      $log->info( "Allowing exception for rowprivate data" );
       $result = "SUCCESSFUL";
     }
 
@@ -507,7 +506,7 @@ sub applySqlChange {
     ~;
     $self->executeSQL($log_query);
 
-    $log->debug( "In ASC_old, result was $result" );
+    $log->info( "In ASC_old, result was $result" );
 
 # DEBUG testing block
     if ( %asc_new ) {
@@ -599,7 +598,7 @@ sub applySQLChange {
     }
     $tPriv = $self->calculateTablePermission( %args );
 
-    $log->debug( "In ASC_new, pPriv is $pPriv, tPriv is $tPriv" );
+    $log->info( "In ASC_new, pPriv is $pPriv, tPriv is $tPriv" );
 
     # Default to 
     my $status = 'DENIED';
@@ -616,7 +615,7 @@ sub applySQLChange {
       }
     }
 
-    $log->debug( "In ASC_new, result was $status" );
+    $log->info( "In ASC_new, result was $status" );
     # Still in testing mode, don't want to execute/log these twice...
     return( result => $status, tPriv => $tPriv, pPriv => $pPriv );
     
@@ -690,7 +689,13 @@ sub selectOneColumn {
     $sql = $self->translateSQL(sql=>$sql);
 
     my $sth = $dbh->prepare($sql) or croak $dbh->errstr;
-    my $rv  = $sth->execute or croak $dbh->errstr;
+
+    my $rv  = $sth->execute; # or croak $dbh->errstr;
+    unless( $rv ) {
+      $log->error( "Error executing SQL:\n $sql" );
+      $log->printStack( 'error' );
+      croak $dbh->errstr;
+    }
 
     while (@row = $sth->fetchrow_array) {
         push(@rows,$row[0]);
@@ -3985,7 +3990,7 @@ sub display_input_form {
   }
 
   # Add CSS and javascript for popup column_text info (if configured).
-  print getPopupDHTML();
+  print $self->getPopupDHTML();
 
   #### Now loop through again and write the HTML
   foreach $row (@columns_data) {
@@ -5449,6 +5454,10 @@ sub linkToColumnText {
 # 
 ###############################################################################
 sub getPopupDHTML {
+  my $this = shift;
+  my %args = ( height => 400, 
+               width => 300,
+               @_ );
 
   # add CSS class for popup menu
   my $dhtml =<<"  END_CLASS";
@@ -5468,7 +5477,7 @@ sub getPopupDHTML {
   <!--
   function popitup(url)
   {
-    newwindow=window.open( url ,'name','height=200,width=150,dependent=yes,screenX=5000,screenY=50,scrollbars=1');
+    newwindow=window.open( url ,'helpwin','height=$args{height},width=$args{width},dependent=yes,screenX=5000,screenY=50,scrollbars=yes,resizable=yes');
     if (window.focus) {newwindow.focus()}
     return false;
   }
