@@ -645,7 +645,7 @@ sub print_chooser {
 sub get_best_permission{
   my $self = shift || croak("parameter self not passed");
   my %args = @_;
-  my $SUB_NAME = "find_best_permission";
+  my $SUB_NAME = "get_best_permission";
 
   ## Decode argument list
   my $current_contact_id = $args{'contact_id'}
@@ -654,6 +654,11 @@ sub get_best_permission{
   || $self->getCurrent_project_id;
   my $current_group_id = $args{'group_id'}
   || $self->getCurrent_work_group_id;
+  
+  # The default behavior of this subroutine is (and was) to return admin (10)
+  # automatically if the current work group is admin.  This flag allows users
+  # to override this behavior while maintaining backwards compatibility. 
+  my $admin_override = ( defined $args{admin_override} ) ? $args{admin_override} : 1;
 
   ## Define standard variables
   my ($sql, @rows);
@@ -693,7 +698,7 @@ sub get_best_permission{
   }
 
   ## If work group is set to Admin, automatically return 'administrator' privileges
-  if ($admin_work_group_id == $current_group_id){
+  if ($admin_work_group_id == $current_group_id && $admin_override ){
       return $administrator_privilege_id;
   }
 
@@ -1131,7 +1136,8 @@ sub calculateProjectPermission {
   my $privilege = $self->get_best_permission (
                                           work_group_id => $args{work_group_id},
                                           contact_id => $args{contact_id}, 
-                                          project_id => $parent_project_id 
+                                          project_id => $parent_project_id, 
+                                          admin_override => 0
                                               );
 
   $log->debug( "Priv is $privilege in calcProjPerm" );
@@ -1519,6 +1525,22 @@ sub getAdminWorkGroupId {
 
   return $admin_gid;
 }
+
+#+
+# Returns best permission afforded by any of the groups, *excluding* Admin.
+#
+#-
+sub getBestGroupPermission {
+  my $self = shift;
+  my $groupref = shift;
+  my $min = 9999;
+  foreach my $group ( @{$groupref} ) {
+    next if $$group[0] =~ /^Admin$/i;
+    $min = ( $$group[2] > $min ) ? $min : $$group[2];
+  }
+  return $min;
+}
+
 
 ###############################################################################
 ###############################################################################
