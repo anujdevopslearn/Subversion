@@ -73,7 +73,7 @@ sub returnTableInfo {
         if ($info_key eq "BASICQuery") {
             return qq~
 		SELECT O.organization_id,O.organization,
-		       PO.organization AS 'parent_organization',
+		       PO.organization AS "parent_organization",
 		       O.city,O.province_state,O.uri
                   FROM $TB_ORGANIZATION O
                   LEFT JOIN $TB_ORGANIZATION PO
@@ -100,7 +100,7 @@ sub returnTableInfo {
         if ($info_key eq "BASICQuery") {
             return qq~
 		SELECT P.project_id,P.project_tag,P.name,UL.username,
-		       SUBSTRING(P.description,1,100) AS 'description'
+		       SUBSTRING(P.description,1,100) AS "description"
 		  FROM $TB_PROJECT P
 		  LEFT JOIN $TB_USER_LOGIN UL
 		       ON (P.PI_contact_id=UL.contact_id)
@@ -114,9 +114,9 @@ sub returnTableInfo {
         if ($info_key eq "FULLQuery") {
             return qq~
 		SELECT P.project_id,P.project_tag,P.name,UL.username,
-		       SUBSTRING(P.description,1,100) AS 'description',
+		       SUBSTRING(P.description,1,100) AS "description",
 		       P.budget,P.project_status,P.uri,
-		       SUBSTRING(P.comment,1,100) AS 'comment',
+		       SUBSTRING(P.comment,1,100) AS "comment",
 		       P.date_created,P.created_by_id,P.date_modified,
 		       P.modified_by_id,P.owner_group_id,P.record_status
 		  FROM $TB_PROJECT P
@@ -137,26 +137,26 @@ sub returnTableInfo {
         if ($info_key eq "BASICQuery") {
             return qq~
 		SELECT C.contact_id,
-			C.last_name AS 'Last_Name',
-			C.first_name AS 'First_Name',
-			C.middle_name AS 'MI',
-                       	C.location AS 'Location',
-                       	C.phone AS 'Phone',
-			C.email AS 'Email',
-		       	DpO.organization AS 'Deparment',
-		       	GrO.organization AS 'Group',
-		       	LbO.organization AS 'Lab',
-		       	O.organization AS 'Organization',
-			CT.contact_type_name AS 'Contact_Type',
-			C.job_title AS 'Job_Title',
-			SV.first_name+' '+SV.last_name AS 'Supervisor',
-			C.is_at_local_facility AS 'is_local',
-                       	C.alternate_location AS 'Alt_Location',
-                       	C.phone_extension AS 'Phone_Ext',
-                       	C.cell_phone AS 'Cell_Phone',
-                       	C.pager AS 'Pager',
-			C.alternate_email AS 'Alt_Email',
-			C.uri AS 'uri'
+			C.last_name AS "Last_Name",
+			C.first_name AS "First_Name",
+			C.middle_name AS "MI",
+                       	C.location AS "Location",
+                       	C.phone AS "Phone",
+			C.email AS "Email",
+		       	DpO.organization AS "Deparment",
+		       	GrO.organization AS "Group",
+		       	LbO.organization AS "Lab",
+		       	O.organization AS "Organization",
+			CT.contact_type_name AS "Contact_Type",
+			C.job_title AS "Job_Title",
+			SV.first_name+' '+SV.last_name AS "Supervisor",
+			C.is_at_local_facility AS "is_local",
+                       	C.alternate_location AS "Alt_Location",
+                       	C.phone_extension AS "Phone_Ext",
+                       	C.cell_phone AS "Cell_Phone",
+                       	C.pager AS "Pager",
+			C.alternate_email AS "Alt_Email",
+			C.uri AS "uri"
                   FROM $TB_CONTACT C
                   LEFT JOIN $TB_CONTACT_TYPE CT
                        ON (C.contact_type_id=CT.contact_type_id)
@@ -218,7 +218,7 @@ sub returnTableInfo {
         if ($info_key eq "BASICQuery") {
             return qq~
 		SELECT GPP.group_project_permission_id,WG.work_group_name,
-                       UL.username+' - '+PROJ.name AS 'Project',PRIV.name,GPP.comment
+                       UL.username+' - '+PROJ.name AS "Project",PRIV.name,GPP.comment
                   FROM $TB_GROUP_PROJECT_PERMISSION GPP
                   LEFT JOIN $TB_PROJECT PROJ ON ( GPP.project_id=PROJ.project_id )
                   LEFT JOIN $TB_USER_LOGIN UL ON ( PROJ.PI_contact_id=UL.contact_id )
