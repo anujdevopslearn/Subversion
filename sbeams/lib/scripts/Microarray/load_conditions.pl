@@ -213,8 +213,8 @@ sub handleRequest {
   if ($set_tag) {
       $sql = qq~
 	  SELECT BS.biosequence_id, BS.biosequence_name, BS.biosequence_gene_name
-	  FROM biosequence BS
-	  LEFT JOIN biosequence_set BSS ON (BSS.biosequence_set_id = BS.biosequence_set_id)
+	  FROM $TBMA_BIOSEQUENCE BS
+	  LEFT JOIN $TBMA_BIOSEQUENCE_SET BSS ON (BSS.biosequence_set_id = BS.biosequence_set_id)
 	  WHERE BSS.set_tag = '$set_tag'
 	  and BS.record_status != 'D'
 	  ~;
@@ -367,7 +367,7 @@ sub insertGeneExpression {
 ## See if there are gene_expression entries with the specified id. DELETE, if so.
     $sql = qq~
 	SELECT gene_expression_id
-	FROM gene_expression
+	FROM $TBMA_GENE_EXPRESSION
 	WHERE condition_id = '$condition_id'
 	~;
     @rows = $sbeams->selectOneColumn($sql);
@@ -413,7 +413,7 @@ sub insertGeneExpression {
 	my %id_hash = %{$id_hash_ref};
 	$sql = qq~
 	    SELECT GE.gene_name, GE.second_name, GE.gene_expression_id
-	    FROM gene_expression GE
+	    FROM $TBMA_GENE_EXPRESSION GE
 	    WHERE GE.condition_id = '$condition_id'
 	    ~;
 	@rows = $sbeams->selectHashArray($sql);
@@ -730,7 +730,7 @@ sub getConditionID {
 
     my $sql = qq~
 	SELECT condition_id
-	FROM condition
+	FROM $TBMA_CONDITION
 	WHERE condition_name = '$condition'
 	AND record_status != 'D'
 	~;
