@@ -1,6 +1,8 @@
-"table_name"	"Category"	"table_group"	"manage_table_allowed"	"db_table_name"	"PK_column_name"	"multi_insert_column"	"table_url"	"manage_tables"	"next_step"
-"CY_fcs_run"	"FCS Run"	"Cytometry_infrastructure"	"YES"	"$TBCY_FCS_RUN"	"fcs_run_id"		"ManageTable.cgi?TABLE_NAME=CY_fcs_run"	"CY_fcs_run"	
-"CY_fcs_run_parameter"	"FCS Run Parameter"	"Cytometry_infrastructure"	"NO"	"$TBCY_FCS_RUN_PARAMETER"	"fcs_run_parameter_id"				
-"CY_query_option"	"Query Option"	"Cytometry_infrastructure"	"YES"	"$TBCY_QUERY_OPTION"	"query_option_id"		"ManageTable.cgi?TABLE_NAME=CY_query_option"	"CY_query_option"	
-"CY_BrowseFCSRuns"	"Browse FCS Runs"	"QUERY"	"NO"				"BrowseFCSRun"		
-"CY_AddFCSRuns"	"Add FCS Runs"	"Cytometry_infrastructure"	"NO"				"AddFCSRuns"		
+table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
+CY_fcs_run	FCS Run	Cytometry_infrastructure	YES	$TBCY_FCS_RUN	fcs_run_id		ManageTable.cgi?TABLE_NAME=CY_fcs_run	CY_fcs_run	
+CY_fcs_run_parameters	FCS Run Parameters	Cytometry_infrastructure	NO	$TBCY_FCS_RUN_PARAMETERS	fcs_run_parameters_id				
+CY_query_option	Query Option	Cytometry_infrastructure	YES	$TBCY_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=CY_query_option	CY_query_option	
+CY_BrowseFCSRuns	Browse FCS Runs	QUERY	NO				BrowseFCSRun		
+CY_AddFCSRuns	Add FCS Runs	Cytometry_infrastructure	NO				AddFCSRuns		
+CY_measured_parameters	Measured Parameters	Cytometry_infrastructure	YES	$TBCY_MEASURED_PARAMETERS	measured_parameters_id		ManageTable.cgi?TABLE_NAME=CY_measured_parameters	CY_measured_parameters	CY_fcs_run
+CY_fcs_data_point	FCS DataPoints	Cytometry_infrastructure	NO	$TBCY_FCS_DATA_POINT	fcs_data_point_id				
