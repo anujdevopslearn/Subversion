@@ -44,6 +44,7 @@ use vars qw(@ISA @EXPORT
     $TBIJ_ARRAY_SCAN
     $TBIJ_ARRAY_QUANTITATION
 
+    $TBIJ_QUERY_OPTION
 );
 
 require Exporter;
@@ -81,6 +82,7 @@ require Exporter;
     $TBIJ_ARRAY_SCAN
     $TBIJ_ARRAY_QUANTITATION
 
+    $TBIJ_QUERY_OPTION
 );
 
 
@@ -114,5 +116,7 @@ $TBIJ_LABELING               = 'inkjet.dbo.labeling';
 $TBIJ_HYBRIDIZATION          = 'inkjet.dbo.hybridization';
 $TBIJ_ARRAY_SCAN             = 'inkjet.dbo.array_scan';
 $TBIJ_ARRAY_QUANTITATION     = 'inkjet.dbo.array_quantitation';
+
+$TBIJ_QUERY_OPTION           = 'inkjet.dbo.query_option';
 
 
