@@ -659,9 +659,9 @@ sub getExperimentNames {
   #### Get the data for all the specified search_batch_ids
   $sql = qq~
       SELECT search_batch_id,experiment_tag,set_tag
-        FROM proteomics.dbo.proteomics_experiment PE
-        JOIN proteomics.dbo.search_batch SB ON ( PE.experiment_id = SB.experiment_id )
-        JOIN proteomics.dbo.biosequence_set BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
+        FROM $TBPR_PROTEOMICS_EXPERIEMNT PE
+        JOIN $TBPR_SEARCHBATCH SB ON ( PE.experiment_id = SB.experiment_id )
+        JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
        WHERE search_batch_id IN ( $search_batch_ids )
   ~;
   my @rows = $sbeams->selectSeveralColumns($sql);
