@@ -19,7 +19,7 @@ The following software programs are required to run SBEAMS:
 - Apache or similar web server software
 - PHP (There are a few PHP pages, but nothing elaborate.  As long as basic
        PHP works with the web server, this should be fine)
-- Perl (probably anything greater than version 5 will work)
+- Perl (probably anything greater than version 5.0 will work)
 - A relational database engine.  This software was delveloped with SQL
   Server.  Products from either Microsoft or Sybase should work right away.
   Attempts has been made to make this software operable with other 
@@ -27,7 +27,8 @@ The following software programs are required to run SBEAMS:
   is required to acheive this fully.
 
 The following Perl Modules often not found on a standard UNIX/Linux
-setup are required before installation can begin:
+setup are required before installation can begin.  Version numbers are
+for what is used for development; older or newer versions may work:
 
 DBI
 Data-ShowTable-3.3a  (specially modified version by Deutsch and included)
@@ -36,6 +37,11 @@ DBD-????             (if you are using a different type of back end RDBMS)
 Crypt-CBC-1.25
 Crypt-IDEA-1.01
 Authen-Smb-0.91      (For Windows Domain Authentication instead of UNIX auth)
+XML-Parser-2.29
+GD-1.33              (GD-1.41 not yet tested but may work)
+GDGraph-1.33a        (Modified to add the histogram subclass)
+GDGraph-XY-0.92
+GDTextUtil-0.82      (GDTextUtil-0.83 not yet tested but may work)
 
 
 Additional common Perl modules are needed, but may not be on your system.
@@ -45,6 +51,7 @@ Should really write a little dependency checker program.  FIXME.
 The following non-Perl software is required:
 
 FreeTDS 0.60         (required by DBD-Sybase. Allows UNIX -> MSSQL/Sybase)
+libgd                (required by GD Perl modules)
 
 ---------------
 Certain modules (Proteomics) also require the following Perl modules:
