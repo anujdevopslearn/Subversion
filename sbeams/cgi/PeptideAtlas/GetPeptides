@@ -156,7 +156,7 @@ sub handle_request {
     $PROG_NAME .= $tabs;
 
 
-    print <<"    END";
+    print <<"    END" if ($sbeams->output_mode() eq 'html');
         <BR>
     END
     # Create new tabmenu item.  This may be a $sbeams object method in the future.
@@ -207,7 +207,7 @@ sub handle_request {
 
     $tabmenu->addContent( $content );
 
-    print "$tabmenu";
+    print "$tabmenu" if ($sbeams->output_mode() eq 'html');
 
   }
 
