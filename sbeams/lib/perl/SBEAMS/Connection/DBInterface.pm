@@ -78,6 +78,7 @@ sub applySqlChange {
     my %level_names = $self->SelectTwoColumnHash("
 	SELECT privilege_id,name FROM $TB_PRIVILEGE");
 
+    my ($DB_TABLE_NAME) = $self->returnTableInfo($table_name,"DB_TABLE_NAME");
 
     # Extract the first word, hopefully INSERT, UPDATE, or DELETE
     $sql_query =~ /\s*(\w*)/;
@@ -182,7 +183,7 @@ sub applySqlChange {
       # Get modified by, group_owner, status of record to be affected
       my $check_permission_query = qq!
         SELECT T.modified_by_id,T.owner_group_id,T.record_status
-          FROM $table_name T
+          FROM $DB_TABLE_NAME T
 --          LEFT JOIN $TB_USER_CONTEXT UC ON (T.owner_group_id.UC.work_group_id)
          WHERE T.$record_identifier!;
       $sth = $dbh->prepare("$check_permission_query") or croak $dbh->errstr;
