@@ -564,12 +564,19 @@ sub loadBiosequenceSet {
     #### Strip CRs of all flavors
     $line =~ s/[\n\r]//g;
 
-    #### If the line begins with ">" and it's not the first, write the
+    #### If the line has a ">" and it's not the first, write the
     #### previous sequence to the database
-    if (($line =~ /^>/) && ($information ne "####")) {
+    if (($line =~ />/) && ($information ne "####")) {
       my %rowdata;
-      $information =~ /^>(\S+)/;
-      $rowdata{biosequence_name} = $1;
+      $information =~ /^(.*)>(\S+)/;
+      $rowdata{biosequence_name} = $2;
+
+      #### Print a warning if malformed
+      if ($1) {
+	print "\nWARNING: Header line possibly malformed:\n$information\n".
+	  "Ignoring all characters before >\n";
+      }
+
       $information =~ /^>(\S+)\s(.+)/;
       $rowdata{biosequence_desc} = $2 || '';
       $rowdata{biosequence_set_id} = $biosequence_set_id;
@@ -632,8 +639,8 @@ sub loadBiosequenceSet {
     }
 
 
-    #### If the line begins with ">" then parse it
-    if ($line =~ /^>/) {
+    #### If the line has a ">" then parse it
+    if ($line =~ />/) {
       $information = $line;
       $sequence = "";
     #### Otherwise, it must be sequence data
@@ -1392,7 +1399,21 @@ sub specialParsing {
 	  delete($rowdata_ref->{biosequence_name}); #delete old name
 	  $rowdata_ref->{biosequence_name} = $temp_gene_name; #add new name
       }
+
   }
+
+
+  #### Special conversion rules for Halobacterium
+  #### >VNG1667G_cdc48c CDCH_HALN1 (Q9HPF0) CdcH protein
+  if ($biosequence_set_name eq "halo092602_pA") {
+    $rowdata_ref->{biosequence_gene_name} = $rowdata_ref->{biosequence_name};
+    $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
+    if ($rowdata_ref->{biosequence_desc} =~ /([\w_]+_HALN1)/) {
+      $rowdata_ref->{biosequence_gene_name} = $1;
+    }
+    $rowdata_ref->{dbxref_id} = '17';
+  }
+
 
   #### Special conversion rules for Drosophila genome R2, e.g.:
   #### >Scr|FBgn0003339|CT1096|FBan0001030 "transcription factor" mol_weight=44264  located on: 3R 84A6-84B1; 
