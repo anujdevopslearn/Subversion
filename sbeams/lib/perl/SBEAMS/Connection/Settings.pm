@@ -65,6 +65,13 @@ if ( $ENV{SCRIPT_NAME} =~ /dev1/ ) {
   $PHYSICAL_BASE_DIR      = "/local/www/html/dev2/sbeams";
   $UPLOAD_DIR             = "/local/data/dev2/sbeams";
 
+} elsif ( $ENV{SCRIPT_NAME} =~ /ext/ ) {
+  $DBVERSION              = 'External Access';
+  $BGCOLOR                = '#FF9999';
+  $HTML_BASE_DIR          = '/ext/sbeams';
+  $PHYSICAL_BASE_DIR      = "/local/www/html/ext/sbeams";
+  $UPLOAD_DIR             = "/local/data/ext/sbeams";
+
 } else {
   $DBVERSION              = '<FONT COLOR=red>Full Production</FONT>';
   $BGCOLOR                = '#BFD8D8';
