@@ -133,6 +133,7 @@ sub display_page_header {
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;BioSequences</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/StrainFinder.cgi"><nobr>&nbsp;&nbsp;&nbsp;StrainFinder</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Enter Data:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/PhenoLoad.cgi"><nobr>&nbsp;&nbsp;&nbsp;Phenotype Loader</nobr></a></td></tr>

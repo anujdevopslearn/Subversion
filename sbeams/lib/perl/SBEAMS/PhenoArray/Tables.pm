@@ -34,7 +34,8 @@ use vars qw(@ISA @EXPORT
     $TBPH_CONDITION
     $TBPH_CONDITION_REPEAT
     $TBPH_STRAIN_BEHAVIOR
-
+    $TBPH_ALLELE  
+    
     $TBPH_COLI_MARKER
     $TBPH_YEAST_SELECTION_MARKER
     $TBPH_YEAST_ORIGIN
@@ -71,6 +72,7 @@ require Exporter;
     $TBPH_CONDITION
     $TBPH_CONDITION_REPEAT
     $TBPH_STRAIN_BEHAVIOR
+    $TBPH_ALLELE  
 
     $TBPH_COLI_MARKER
     $TBPH_YEAST_SELECTION_MARKER
@@ -105,6 +107,7 @@ $TBPH_PLATE_LAYOUT                = 'PhenoArray.dbo.plate_layout';
 $TBPH_CONDITION                   = 'PhenoArray.dbo.condition';
 $TBPH_CONDITION_REPEAT            = 'PhenoArray.dbo.condition_repeat';
 $TBPH_STRAIN_BEHAVIOR             = 'PhenoArray.dbo.strain_behavior';
+$TBPH_ALLELE                      = 'PhenoArray.dbo.allele';
 
 $TBPH_COLI_MARKER                 = 'PhenoArray.dbo.coli_marker';
 $TBPH_YEAST_SELECTION_MARKER      = 'PhenoArray.dbo.yeast_selection_marker';
@@ -115,5 +118,4 @@ $TBPH_STRAIN_BACKGROUND           = 'PhenoArray.dbo.strain_background';
 $TBPH_STRAIN_STATUS               = 'PhenoArray.dbo.strain_status';
 
 $TBPH_QUERY_OPTION                = 'PhenoArray.dbo.query_option';
-
 
