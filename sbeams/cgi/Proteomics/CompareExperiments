@@ -707,7 +707,7 @@ sub handle_request {
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
     );
 
-    $group_by_clause = " GROUP BY SB.search_batch_id,SH.reference,$colname";
+    $group_by_clause = " GROUP BY SB.search_batch_id,SH.reference,BS.biosequence_accession,$colname";
     $final_group_by_clause = " GROUP BY BS.biosequence_gene_name,BS.biosequence_accession,BS.biosequence_name,$colname,BS.biosequence_desc,DBX.accessor,DBX.accessor_suffix$additional_grouping_columns";
     $count_column = "COUNT(*) AS 'row_count'";
     $peptide_column = "$colname,";
@@ -737,7 +737,7 @@ sub handle_request {
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
     );
 
-    $group_by_clause = " GROUP BY SB.search_batch_id,SH.reference";
+    $group_by_clause = " GROUP BY SB.search_batch_id,SH.reference,BS.biosequence_accession";
     $final_group_by_clause = " GROUP BY BS.biosequence_gene_name,BS.biosequence_accession,BS.biosequence_name,BS.biosequence_desc,DBX.accessor,DBX.accessor_suffix$additional_grouping_columns";
     $count_column = "COUNT(*) AS 'row_count'";
 
@@ -796,7 +796,7 @@ sub handle_request {
 
   #### Define the SQL statement
   $sql = qq~
-	SELECT BS.biosequence_name,
+	SELECT BS.biosequence_accession,
 	       MIN(BS.biosequence_id) AS 'min_biosequence_id'
 	  INTO #tmpBSids
 	  FROM $TBPR_BIOSEQUENCE BS
@@ -816,11 +816,12 @@ sub handle_request {
         $n_transmembrane_regions_clause
         $fav_codon_frequency_clause
 --        $protein_length_clause
-	 GROUP BY BS.biosequence_name
+	 GROUP BY BS.biosequence_accession
 
 	--
 
-	SELECT SB.search_batch_id,SH.reference,$peptide_column$count_column
+	SELECT SB.search_batch_id,SH.reference,BS.biosequence_accession,
+               $peptide_column$count_column
 	  INTO #tmpAnnBSids
 	  FROM $TBPR_SEARCH_HIT SH
 	 INNER JOIN $TBPR_SEARCH S ON ( SH.search_id = S.search_id )
@@ -864,7 +865,7 @@ sub handle_request {
 	SELECT $limit_clause->{top_clause} $columns_clause
 	  FROM #tmpBSids tBS
 	  LEFT JOIN #tmpAnnBSids tABS
-               ON ( tBS.biosequence_name = tABS.reference )
+               ON ( tBS.biosequence_accession = tABS.biosequence_accession )
 	 INNER JOIN $TBPR_BIOSEQUENCE BS
                ON ( tBS.min_biosequence_id = BS.biosequence_id )
           LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
@@ -945,7 +946,7 @@ sub handle_request {
   #### Add entries for each experiment
   for ($i=0;$i<scalar(@experiment_names_and_ids);$i+=2) {
     my $j = $i+1;
-    $url_cols{$experiment_names_and_ids[$i]} = "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&reference_constraint=\%$colnameidx{reference}V&peptide_constraint=\%$colnameidx{peptide}V&peptide_string_constraint=\%$colnameidx{peptide_string}V&search_batch_id=$experiment_names_and_ids[$j]&${parameters_list}&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action";
+    $url_cols{$experiment_names_and_ids[$i]} = "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&biosequence_accession_constraint=\%$colnameidx{biosequence_accession}V&peptide_constraint=\%$colnameidx{peptide}V&peptide_string_constraint=\%$colnameidx{peptide_string}V&search_batch_id=$experiment_names_and_ids[$j]&${parameters_list}&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action";
     $url_cols{$experiment_names_and_ids[$i]."_ATAG"} = 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show just this many that match all above criteria for this experiment\'; return true"';
   }
 
