@@ -23,6 +23,12 @@ DROP TABLE msms_spectrum_peak
 DROP TABLE msms_spectrum
 DROP TABLE fraction
 
+DROP TABLE proteomics_experiment_request
+DROP TABLE funding_status
+DROP TABLE request_status
+DROP TABLE experiment_type
+DROP TABLE instrument
+DROP TABLE instrument_type
 
 DONT DROP THESE TABLES!!
 DROP TABLE query_option
@@ -140,6 +146,122 @@ ALTER TABLE dbo.biosequence ADD CONSTRAINT biosequence_set_name_uk UNIQUE (biose
 GO
 
 
+CREATE TABLE dbo.instrument_type (
+	instrument_type_id		int IDENTITY NOT NULL,
+	instrument_type_name		varchar(255) NOT NULL,
+	instrument_type_description	varchar(255) NOT NULL,
+	comment			text NULL,
+	sort_order			int NOT NULL DEFAULT 10,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) NOT NULL DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (instrument_type_id)
+)
+GO
+
+
+CREATE TABLE dbo.instrument (
+	instrument_id		int IDENTITY NOT NULL,
+	instrument_type_id	int NOT NULL REFERENCES instrument_type(instrument_type_id),
+	instrument_name		varchar(255) NOT NULL,
+	instrument_description	varchar(255) NOT NULL,
+	comment			text NULL,
+	sort_order			int NOT NULL DEFAULT 10,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) NOT NULL DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (instrument_id)
+)
+GO
+
+
+CREATE TABLE dbo.experiment_type (
+	experiment_type_id		int IDENTITY NOT NULL,
+	experiment_type_name		varchar(255) NOT NULL,
+	experiment_type_description	varchar(255) NOT NULL,
+	comment			text NULL,
+	sort_order			int NOT NULL DEFAULT 10,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) NOT NULL DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (experiment_type_id)
+)
+GO
+
+
+CREATE TABLE dbo.request_status (
+	request_status_id	int IDENTITY NOT NULL,
+	request_status_name	varchar(255) NOT NULL,
+	request_status_description	varchar(255) NOT NULL,
+	comment			text NULL,
+	sort_order			int NOT NULL DEFAULT 10,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) NOT NULL DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (request_status_id)
+)
+GO
+
+
+CREATE TABLE dbo.funding_status (
+	funding_status_id	int IDENTITY NOT NULL,
+	funding_status_name	varchar(255) NOT NULL,
+	funding_status_description	varchar(255) NOT NULL,
+	comment			text NULL,
+	sort_order			int NOT NULL DEFAULT 10,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) NOT NULL DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (funding_status_id)
+)
+GO
+
+
+CREATE TABLE dbo.proteomics_experiment_request (
+	experiment_request_id	int IDENTITY NOT NULL,
+	contact_id		int NOT NULL /* REFERENCES contact(contact_id) */,
+	PI_contact_id		int NOT NULL /* REFERENCES contact(contact_id) */,
+	project_id		int NOT NULL /* REFERENCES project (project_id) */,
+	funding_status_id	int NOT NULL REFERENCES funding_status(funding_status_id),
+	budget_number		varchar(50) NOT NULL,
+	experiment_name		varchar(255) NOT NULL,
+	experiment_tag		varchar(50) NOT NULL,
+	experiment_description	varchar(255) NOT NULL,
+	organism_id		int NOT NULL /* REFERENCES organism(organism_id) */,
+	experiment_type_id	int NOT NULL REFERENCES experiment_type(experiment_type_id),
+	instrument_type_id	int NOT NULL REFERENCES instrument_type(instrument_type_id),
+	initial_search_set_id	int NULL REFERENCES biosequence_set(biosequence_set_id),
+	number_of_runs		varchar(50) NOT NULL,
+	other1_contact_id	int NULL /* REFERENCES contact(contact_id) */,
+	other2_contact_id	int NULL /* REFERENCES contact(contact_id) */,
+	request_status_id	int NOT NULL REFERENCES request_status(request_status_id),
+	comment			text NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) NOT NULL DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (experiment_request_id)
+)
+GO
+
+
 CREATE TABLE dbo.proteomics_experiment (
 	experiment_id		int IDENTITY NOT NULL,
 	contact_id		int NOT NULL  REFERENCES contact(contact_id) ,
@@ -148,7 +270,7 @@ CREATE TABLE dbo.proteomics_experiment (
 	experiment_tag		varchar(20) NOT NULL,
 	experiment_description	varchar(255) NOT NULL,
 	experiment_path		varchar(255) NOT NULL,
-	sample_id		int NOT NULL,
+	organism_id		int NOT NULL /* REFERENCES organism(organism_id) */,
 	quant_normalization	real NULL,
 	uri			varchar(255) NOT NULL,
 	comment			text NULL,
@@ -250,6 +372,10 @@ VALUES ( 'BSH_quant_format','decimal','decimal ratio',40 )
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BSH_quant_format','decimalplain','decimal ratio without *',50 )
 
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_quant_values','d0d8','d0 / d8 (default)',10 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_quant_values','d8d0','d8 / d0',20 )
 
 
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
