@@ -822,8 +822,8 @@ sub loadBiosequence {
       my %rowdata;
       $rowdata{biosequence_id} = $result;
 
-      $rowdata{bit_score} = $match->{bit_score}
-        if (defined($match->{bit_score}));
+      $rowdata{score} = $match->{score}
+        if (defined($match->{score}));
 
       $rowdata{e_value} = $match->{e_value}
         if (defined($match->{e_value}));
@@ -907,8 +907,11 @@ sub loadBiosequence {
       $rowdata{match_name} = $match->{match_name}
         if (defined($match->{match_name}));
 
-      $rowdata{confidence_z_score} = $match->{confidence_z_score}
-        if (defined($match->{confidence_z_score}));
+      $rowdata{z_score} = $match->{z_score}
+        if (defined($match->{z_score}));
+
+      $rowdata{e_value} = 10**(-1*$match->{z_score})
+        if (defined($match->{z_score}));
 
       if (defined($match->{match_source})) {
         if (defined($domain_match_sources{$match->{match_source}})) {
@@ -1356,14 +1359,19 @@ sub readNTransmembraneRegionsFile {
 
   #### Skip the header
   print "Reading n_transmembrane_regions file...\n";
-  print "  Parsing header...\n";
-  while ($line = <TMRFILE>) {
-    last if ($line =~ /^\#\# name/);
+  if (1 == 1) {
+    print "  Assuming no header...\n";
+  } else {
+    print "  Parsing header...\n";
+    while ($line = <TMRFILE>) {
+      last if ($line =~ /^\#\# name/);
+    }
+    unless (defined($line)) {
+      print "ERROR Reading TM file: No end of header!";
+      return;
+    }
   }
-  unless (defined($line)) {
-    print "ERROR Reading TM file: No end of header!";
-    return;
-  }
+
 
   #### Read in all the data putting it into the hash
   print "  Parsing data...\n";
@@ -1434,7 +1442,8 @@ sub readRosettaLookupFile {
   while ($line = <LOOKUPFILE>) {
     $line =~ s/[\r\n]//g;
     my @columns = split("\t",$line);
-    $rosetta_lookup->{$columns[0]} = $columns[1];
+#    $rosetta_lookup->{$columns[0]} = $columns[1];
+    $rosetta_lookup->{$columns[1]} = $columns[0];
   }
 
   close(LOOKUPFILE);
@@ -1491,7 +1500,7 @@ sub readPFAMSearchSummaryFile {
     $biosequence_name = $columns[1];
     my %properties;
     if ($columns[2]) {
-      $properties{bit_score} = $columns[2];
+      $properties{score} = $columns[2];
     }
     if ($columns[3]) {
       $properties{e_value} = $columns[3];
@@ -1704,7 +1713,7 @@ sub readDomainsFile {
     $parameters{'match_start'} = $columns[3];
     $parameters{'match_end'} = $columns[4];
     $parameters{'match_name'} = $columns[5];
-    $parameters{'confidence_z_score'} = $columns[6];
+    $parameters{'z_score'} = $columns[6];
     $parameters{'match_source'} = $columns[7];
 
     #### Put the hash on the list
