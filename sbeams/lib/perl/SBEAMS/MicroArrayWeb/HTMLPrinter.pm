@@ -284,6 +284,9 @@ sub printJavascriptFunctions {
 
 	    array_name = document.forms[0].array_name.value=document.forms[0].slide_id.options[document.forms[0].slide_id.selectedIndex].text;
             array_name = array_name.toString();
+	    if (array_name.substr(array_name.length-9,99) == " - *DONE*") {
+	      array_name = array_name.substr(0,array_name.length-9);
+	    }
             while (array_name.length < 5) { array_name = "0" + array_name; }
 
 	    document.forms[0].array_name.value = array_name;
