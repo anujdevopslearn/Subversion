@@ -166,6 +166,7 @@ sub handle_request {
     my $CATEGORY="Get Peptide";
     my $PROGRAM_FILE_NAME="GetPeptide";
     my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+    my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
 
 
     #### create columns and input_types?
@@ -205,6 +206,7 @@ sub handle_request {
     my $sql = qq~
         SELECT atlas_build_id,atlas_build_name
         FROM PeptideAtlas.dbo.atlas_build
+        where project_id = '475'
     ~;
 
     my @rows = $sbeams->selectSeveralColumns($sql) or
@@ -262,6 +264,8 @@ sub handle_request {
 
     if ($sbeams->output_mode() eq 'html') {
 
+        print "<BR>";
+
         print $q->start_form(-method=>"POST",
                               -action=>"$base_url",
                              );
@@ -276,8 +280,11 @@ sub handle_request {
                          -value => 'QUERY',
                          -label => 'QUERY');
         print $q->endform;
-        print "</nobr></p>";
+        print "</nobr>";
 
+        ## xxxx $help_url
+
+        print "</p>";
     } 
 
 
@@ -556,7 +563,7 @@ sub handle_request {
 
         } else {
 
-            print "ERROR:  no matches to query <br>";
+            print "ERROR:  no matches to query.  Use exact name or sequence here, or use . <br>";
 
         }
 

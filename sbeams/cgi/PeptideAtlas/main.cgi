@@ -29,6 +29,8 @@ use CGI::Carp qw(fatalsToBrowser croak);
 
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
 
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
@@ -59,7 +61,9 @@ sub main {
 
     #### Print the header, do what the program does, and print footer
     $sbeamsPeptideAtlas->printPageHeader();
+
     showMainPage();
+
     $sbeamsPeptideAtlas->printPageFooter();
 
 } # end main
@@ -70,35 +74,67 @@ sub main {
 ###############################################################################
 sub showMainPage {
 
-  $sbeams->printUserContext();
+    $sbeams->printUserContext();
 
-  if ( $sbeams->isGuestUser ) {
-    print <<"    END";
-	  <BR>
-  	You are logged into the $DBTITLE - $SBEAMS_PART system as a guest user.
-  	<BR>
-    END
-  } else {
-    print qq!
-	  <BR>
-  	You are successfully logged into the $DBTITLE - $SBEAMS_PART system.
-  	Please choose your tasks from the menu bar on the left.<P>
-  	<BR>
-  	This system is still under active development.  Please be
-  	patient and report bugs, problems, difficulties, suggestions to
-  	<B>edeutsch\@systemsbiology.org</B>.<P>
-  	<BR>
-    !;
-  }
-  print <<"  END";
-  <UL>
-  <LI> <A Href="http://www.peptideatlas.org/">About PeptideAtlas</A>
- 	<LI> <A Href="GetPeptides">Browse PeptideAtlas </A>
- 	<LI> <A Href="GetPeptide">Browse Peptide View [in progress]</A>
-	 </UL>
+#   if ( $sbeams->isGuestUser ) {
 
-  <BR>
-  <BR>
-  END
+#       print <<"    END";
+#       <BR>
+#   END
+
+#   } else {
+
+#       print qq!
+#       <BR>
+# 	You are successfully logged into the $DBTITLE - $SBEAMS_PART system.
+# 	Please choose your tasks from the menu bar on the left.<P>
+# 	<BR>
+# 	This system is still under active development.  Please be
+# 	patient and report bugs, problems, difficulties, suggestions to
+# 	<B>edeutsch\@systemsbiology.org</B>.<P>
+# 	<BR>
+#       !;
+#   }
+
+    # Create new tabmenu item.  This may be a $sbeams object method in the future.
+    my $tabmenu = 
+        SBEAMS::Connection::TabMenu->new( cgi => $q,
+                                          inactiveColor => 'ffcc99',
+                                          activeColor   => 'aaaaff',
+                                          atextColor => '000000', # black
+                                          itextColor => 'ff0000', # black
+                                          # paramName => 'mytabname', # uses this as cgi param
+                                          # maSkin => 1,   # If true, use MA look/feel
+                                          # isSticky => 0, # If true, pass thru cgi params 
+                                          # boxContent => 0, # If true draw line around content
+                                          # labels => \@labels # Will make one tab per $lab (@labels)
+    );
+
+    #Preferred way to add tabs.  label is required, helptext optional
+    $tabmenu->addTab( label => 'Browse Peptides', helptext => 'Multi-constraint browsing of PeptideAtlas' );
+
+    $tabmenu->addTab( label => 'Get Peptide', helptext => 'Look-up info on a peptide by sequence or name' );
+
+    $tabmenu->addTab( label => 'Browse Proteins', helptext => 'Not implemented yet' );
+
+    $tabmenu->addTab( label => 'Get Protein', helptext => 'Not implemented yet' );
+
+    my $content;
+
+
+    if ( $tabmenu->getActiveTabName() eq 'Browse Peptides' ){
+
+        
+    } elsif ( $tabmenu->getActiveTabName() eq 'Get Peptide' ) {
+
+    } elsif ( $tabmenu->getActiveTabName() eq 'Browse Proteins' ) {
+
+    } elsif ( $tabmenu->getActiveTabName() eq 'Get Protein' ) {
+
+    }
+
+    #print $tabmenu->asCSSHTML();
+    #print $tabmenu->asHTML();
+    print $tabmenu->asSimpleHTML();
 
 } # end showMainPage
