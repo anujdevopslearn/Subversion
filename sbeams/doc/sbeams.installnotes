@@ -428,6 +428,16 @@ cd $SBEAMS/lib/refdata/Core
 
 If this doesn't work.  Do not proceed, debug first.
 
+
+Enable the "Tools" module, which is not really a module, but an extension
+to the Core:
+
+cd $SBEAMS/lib/conf/Core
+grep '^#' Modules.conf > AvailableModules.conf
+echo "Tools" >> AvailableModules.conf
+
+
+
 -------------------------------------------------------------------------------
 9) Build the POD docs
 
