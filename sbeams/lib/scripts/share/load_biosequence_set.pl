@@ -1583,6 +1583,14 @@ sub specialParsing {
   }
 
 
+  #### Special conversion rules for Halobacterium HALOprot_clean.fasta
+  #### >VNG1023c chp-1013_1023-1023
+  if ($biosequence_set_name eq "Halobacterium Proteins") {
+    $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
+  }
+
+
+
   #### Special conversion rules for Halobacterium
   #### >gabT   , from VNG6210g 
   if ($biosequence_set_name eq "Halo Biosequences") {
