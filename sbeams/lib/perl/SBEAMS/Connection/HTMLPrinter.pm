@@ -627,6 +627,27 @@ sub printDebuggingInfo {
 
 } # end printDebuggingInfo
 
+sub printCGIParams {
+  my $self = shift;
+  my $q = shift;
+
+  my $element;
+
+  #### Write out a HTTP header
+  print "Content-type: text/html\n\n<BR><BR><PRE>\n";
+
+  #### Write out all the supplied parameters
+  print "\nCGI parameters:\n";
+  foreach $element ( $q->param ) {
+    my $liststr = join(",",$q->param($element));
+    print "$element = '$liststr'\n";
+  }
+
+  print "</PRE><BR>\n";
+
+} # end printCGIParams
+
+
 
 
 ###############################################################################
