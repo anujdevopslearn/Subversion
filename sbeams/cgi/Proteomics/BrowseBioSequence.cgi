@@ -324,6 +324,15 @@ sub handle_request {
   return if ($protein_length_clause eq '-1');
 
 
+  #### Build TRANSMEMBRANE CLASS constraint
+  my $transmembrane_class_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BPS.transmembrane_class",
+    constraint_type=>"text_list",
+    constraint_name=>"Transmembrane Class",
+    constraint_value=>$parameters{transmembrane_class_constraint} );
+  return if ($transmembrane_class_clause eq '-1');
+
+
   #### Build NUMBER OF TRANSMEMBRANE REGIONS constraint
   my $n_transmembrane_regions_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"BS.n_transmembrane_regions",
@@ -468,6 +477,7 @@ sub handle_request {
       $molecular_function_clause
       $biological_process_clause
       $cellular_component_clause
+      $transmembrane_class_clause
       $n_transmembrane_regions_clause
       $fav_codon_frequency_clause
       $protein_length_clause
@@ -749,6 +759,8 @@ sub displaySequenceView {
     $resultset_ref->{column_hash_ref}->{accessor};
   my $accession_column =
     $resultset_ref->{column_hash_ref}->{biosequence_accession};
+  my $tmr_class_column =
+    $resultset_ref->{column_hash_ref}->{transmembrane_class};
   my $tmr_topology_column =
     $resultset_ref->{column_hash_ref}->{transmembrane_topology};
 
@@ -760,15 +772,18 @@ sub displaySequenceView {
 
   #### Define some variables
   my ($row,$pos);
-  my ($biosequence_name,$description,$sequence,$seq_length,$tmr_topology);
+  my ($biosequence_name,$description,$sequence,$seq_length,$tmr_topology,$tmr_class);
   my ($accessor,$accession);
 
 
   #### Display each row in FASTA format
   print "<BR>Click on the gene name below to follow the link to the source ".
     "database.<BR>\n";
-  print "Transmembrane regions are highlighted in blue.<BR>\n"
+  print "Referenced peptides are highlighted in <font color=\"green\">GREEN</font>.<BR>\n";
+  print "Transmembrane regions are highlighted in <font color=\"orange\">ORANGE</font>.<BR>\n"
     if ($tmr_topology_column);
+  print "Signal peptides are highlighted in <font color=\"yellow\">YELLOW</font>.<BR>\n";
+  print "Collisions in highlighting are shown in <font color=\"red\">RED</font>.<BR>\n";
   print "<BR><PRE>\n";
   foreach $row (@{$data_ref}) {
 
@@ -777,6 +792,7 @@ sub displaySequenceView {
     $description = $row->[$description_column];
     $accessor = $row->[$accessor_column];
     $accession = $row->[$accession_column];
+    $tmr_class = $row->[$tmr_class_column];
     $tmr_topology = $row->[$tmr_topology_column];
 
 
@@ -804,6 +820,7 @@ sub displaySequenceView {
     #### If transmembrane regions topoloy has been supplied, find the TMRs
     my %tmr_start_positions;
     my %tmr_end_positions;
+    my $tmr_color = "orange";
     if ($tmr_topology) {
       $page_width = 100;
       my @regions = split(/[io]/,$tmr_topology);
@@ -812,11 +829,12 @@ sub displaySequenceView {
         $tmr_start_positions{$start} = 1;
         $tmr_end_positions{$end} = 1;
       }
+      $tmr_color = "yellow" if ($tmr_class eq 'A' || $tmr_class eq 'S');
     }
 
 
     #### Write out the gene name and description
-    print "><font color=\"green\">";
+    print "><font color=\"blue\">";
     if ($accessor && $accession) {
       print "<A HREF=\"$accessor$accession\">$biosequence_name</A>";
     } else {
@@ -833,20 +851,47 @@ sub displaySequenceView {
       my $width_counter = 0;
       $seq_length = length($sequence);
       $i = 0;
+      my $color_state = '';
       while ($i < $seq_length) {
 
 	if ($end_positions{$i}) {
-	  print "</B></font>";
+	  if ($color_state eq 'T+P') {
+            print "</B></font><font color=\"$tmr_color\"><B>";
+            $color_state = 'T';
+          } else {
+	    print "</B></font>";
+            $color_state = '';
+          }
 	}
+
 	if ($start_positions{$i}) {
-	  print "<font color=\"red\"><B>";
+	  if ($color_state eq 'T') {
+            print "</B></font><font color=\"red\"><B>";
+            $color_state = 'T+P';
+          } else {
+            print "<font color=\"green\"><B>";
+            $color_state = 'P';
+          }
 	}
 
 	if ($tmr_end_positions{$i}) {
-	  print "</B></font>";
+	  if ($color_state eq 'T+P') {
+            print "</B></font><font color=\"green\"><B>";
+            $color_state = 'P';
+          } else {
+	    print "</B></font>";
+            $color_state = '';
+          }
 	}
+
 	if ($tmr_start_positions{$i}) {
-	  print "<font color=\"blue\"><B>";
+	  if ($color_state eq 'P') {
+            print "</B></font><font color=\"red\"><B>";
+            $color_state = 'T+P';
+          } else {
+	    print "<font color=\"$tmr_color\"><B>";
+            $color_state = 'T';
+          }
 	}
 
 
@@ -894,20 +939,22 @@ sub displaySequenceView {
 
 
   if (1 == 1) {
-    print "<font color=\"red\">THIS IS RED</font>\n";
-    print "<font color=\"DeepPink\">THIS IS HOTPINK</font>\n";
-    print "<font color=\"magenta\">THIS IS MAGENTA</font>\n";
-    print "<font color=\"purple\">THIS IS PURPLE</font>\n";
-    print "<font color=\"green\">THIS IS GREEN</font>\n";
-    print "<font color=\"yellow\">THIS IS YELLOW</font>\n";
-    print "<font color=\"orange\">THIS IS ORANGE</font>\n";
-    print "<font color=\"sienna\">THIS IS SIENNA</font>\n";
-    print "<font color=\"black\">THIS IS BLACK</font>\n";
-    print "<font color=\"blue\">THIS IS BLUE</font>\n";
-    print "<font color=\"navy\">THIS IS NAVY</font>\n";
-    print "<font color=\"turquoise\">THIS IS TURQUOISE</font>\n";
-    print "<font color=\"cyan\">THIS IS CYAN</font>\n";
-    print "<font color=\"gray\">THIS IS GRAY</font>\n";
+    print "\n\nCOLOR CHECK:\n";
+    print "  BLACK <font color=\"red\">AND RED</font> AND BLACK\n";
+    print "  BLACK <font color=\"DeepPink\">AND HOTPINK</font> AND BLACK\n";
+    print "  BLACK <font color=\"magenta\">AND MAGENTA</font> AND BLACK\n";
+    print "  BLACK <font color=\"purple\">AND PURPLE</font> AND BLACK\n";
+    print "  BLACK <font color=\"green\">AND GREEN</font> AND BLACK\n";
+    print "  BLACK <font color=\"SpringGreen\">AND SPRINGGREEN</font> AND BLACK\n";
+    print "  BLACK <font color=\"yellow\">AND YELLOW</font> AND BLACK\n";
+    print "  BLACK <font color=\"orange\">AND ORANGE</font> AND BLACK\n";
+    print "  BLACK <font color=\"sienna\">AND SIENNA</font> AND BLACK\n";
+    print "  BLACK <font color=\"black\">AND BLACK</font> AND BLACK\n";
+    print "  BLACK <font color=\"blue\">AND BLUE</font> AND BLACK\n";
+    print "  BLACK <font color=\"navy\">AND NAVY</font> AND BLACK\n";
+    print "  BLACK <font color=\"turquoise\">AND TURQUOISE</font> AND BLACK\n";
+    print "  BLACK <font color=\"cyan\">AND CYAN</font> AND BLACK\n";
+    print "  BLACK <font color=\"gray\">AND GRAY</font> AND BLACK\n";
   }
 
 
