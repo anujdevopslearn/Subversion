@@ -578,12 +578,13 @@ sub handle_request {
       ["average_quant","tABS.average_quant","Average Quant"],
       ["stdev_quant","tABS.stdev_quant","StdDev Quant"],
       ["n_quant","tABS.n_quant","N Quant"],
+      ["isoelectric_point","STR(isoelectric_point,8,3)","Calc pI"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
     );
-    $group_by_clause = " GROUP BY SH.biosequence_id,$colname";
+    $group_by_clause = " GROUP BY SH.biosequence_id,$colname,isoelectric_point";
     $peptide_column = "$colname,";
-    $count_column = "COUNT(*) AS 'row_count',STR(AVG(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0)),10,2) AS 'average_quant',STR(STDEV(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0)),10,2) AS 'stdev_quant',SUM(CASE WHEN (NULLIF(d0_intensity,0.0) IS NULL OR NULLIF(d8_intensity,0.0) IS NULL) THEN 0 ELSE 1 END) AS 'n_quant'";
+    $count_column = "COUNT(*) AS 'row_count',STR(AVG(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0)),10,2) AS 'average_quant',STR(STDEV(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0)),10,2) AS 'stdev_quant',SUM(CASE WHEN (NULLIF(d0_intensity,0.0) IS NULL OR NULLIF(d8_intensity,0.0) IS NULL) THEN 0 ELSE 1 END) AS 'n_quant',isoelectric_point";
 
   #### If grouping by reference
   } elsif ( $parameters{display_options} =~ /GroupReference/ ) {
@@ -790,12 +791,12 @@ sub handle_request {
   #### If QUERY or VIEWRESULTSET was selected, display the data
   if ($apply_action =~ /QUERY/i || $apply_action eq "VIEWRESULTSET") {
 
-    #### Show the SQL that will be or was executed
-    $sbeams->display_sql(sql=>$sql) if ($show_sql);
-
     #### If the action contained QUERY, then fetch the results from
     #### the database
     if ($apply_action =~ /QUERY/i) {
+
+      #### Show the SQL that will be or was executed
+      $sbeams->display_sql(sql=>$sql) if ($show_sql);
 
       #### Fetch the results from the database server
       $sbeams->fetchResultSet(sql_query=>$sql,
