@@ -222,7 +222,7 @@ sub handle_request {
 print qq~
 <TABLE BORDER=1>
   <tr>
-<th align=left><font color="green">- Experiement Name</font> : Description</th>
+<th align=left><font color="green">- Experement Name</font> : Description</th>
 <th nowrap>View/Edit<br/>Data</th>
 <th>Fraction<br/>Data</th>
 <th colspan=4 nowrap><font color="green">Search Batch</font><br/>(SBEAMS number: <font color="blue">High-Probability Peptides</font>&nbsp;--<font color="blue">Annotation</font>)<th>
