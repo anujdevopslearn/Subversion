@@ -118,6 +118,10 @@ sub display_page_header {
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr>
+	<tr><TD>&nbsp;</td>,</TR>
+	<tr><td>Useful Oligo Links:</td></tr>
+	<tr><td><a href="http://www.genosys.co.uk/ordering/frameset.html" target="_blank">Characterize Oligos</a></td></tr>
+	<tr><td><a href="http://www.idtdna.com/Home/Home.aspx" target="_blank">Order Oligos</a></td></tr>
 	</table>
 	</td>
 
