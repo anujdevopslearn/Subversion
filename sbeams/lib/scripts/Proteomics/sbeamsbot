@@ -1,3 +1,4 @@
+
 #!/usr/local/bin/perl
 
 ###############################################################################
@@ -626,7 +627,9 @@ sub moveDataFile {
       processing_status_id => $processing_status_ids{UnableToFindExperiment},
       file_status_message => "An experiment called ".
         "'$file_name_components{experiment_tag}' does exist for user ".
-        "'$file_name_components{client}'.  It must before we can continue.",
+        "'$file_name_components{client}'.  It must before we can continue. ",
+        "Perhaps you need to register the experiment or perhaps the file ",
+        "name is misspelled.";
       date_modified => 'CURRENT_TIMESTAMP',
       modified_by_id => $current_contact_id,
     );
