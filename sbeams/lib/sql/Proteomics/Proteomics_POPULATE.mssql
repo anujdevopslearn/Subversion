@@ -222,11 +222,3 @@ INSERT INTO annotation_source ( source_desc,sort_order ) VALUES ( 'By hand in SB
 INSERT INTO annotation_source ( source_desc,sort_order ) VALUES ( 'Historical load from Interact file',20 );
 INSERT INTO annotation_source ( source_desc,sort_order ) VALUES ( 'Unknown',30 );
 
-/*
-INSERT INTO quality_label ( quality_desc,sort_order ) VALUES ( 'Very High',10 );
-INSERT INTO quality_label ( quality_desc,sort_order ) VALUES ( 'High',20 );
-INSERT INTO quality_label ( quality_desc,sort_order ) VALUES ( 'Medium',30 );
-INSERT INTO quality_label ( quality_desc,sort_order ) VALUES ( 'Low',40 );
-INSERT INTO quality_label ( quality_desc,sort_order ) VALUES ( 'Junk',50 );
-INSERT INTO quality_label ( quality_desc,sort_order ) VALUES ( 'Unknown',60 );
-*/
