@@ -701,8 +701,8 @@ sub specialParsing {
       $biosequence_set_name eq "Drosophila na_gadfly Nucleotide Database R3") {
 
     if ($rowdata_ref->{biosequence_desc} =~
-                      /gene_info:\[gene symbol:(\S+) .*?(FBgn\d+) /) {
-       print "******\ndesc: $rowdata_ref->{biosequence_desc}\n1: $1\n2: $2\n*****\n";
+                      /gene_info:\[.*gene symbol:(\S+) .*?(FBgn\d+) /) {
+       #print "******\ndesc: $rowdata_ref->{biosequence_desc}\n1: $1\n2: $2\n*****\n";
        $rowdata_ref->{biosequence_gene_name} = $1;
        $rowdata_ref->{biosequence_accession} = $2;
        $rowdata_ref->{dbxref_id} = '2';
