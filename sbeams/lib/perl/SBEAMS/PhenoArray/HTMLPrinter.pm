@@ -126,9 +126,10 @@ sub display_page_header {
 	<tr><td>Manage Tables:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequences</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_construction_method"><nobr>&nbsp;&nbsp;&nbsp;Construct Method</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_plasmid"><nobr>&nbsp;&nbsp;&nbsp;Plasmids</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_cell_type"><nobr>&nbsp;&nbsp;&nbsp;Cell Type</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_ploidy"><nobr>&nbsp;&nbsp;&nbsp;(Ploidy)</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_mating_type"><nobr>&nbsp;&nbsp;&nbsp;(Mating Type)</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_plasmid"><nobr>&nbsp;&nbsp;&nbsp;Plasmids</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_condition"><nobr>&nbsp;&nbsp;&nbsp;Conditions</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_plate"><nobr>&nbsp;&nbsp;&nbsp;Plates</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_strain"><nobr>&nbsp;&nbsp;&nbsp;Strains</nobr></a></td></tr>
