@@ -385,6 +385,27 @@ sub handle_request {
   #### Add the desired display columns to the assitional_columns array
   my @tmp = split(",",$display_columns);
 
+  #### If the coaelsce over reporters is chosen, then define some things special
+  my $aggregate_type = "MAX";
+  my $reporter_column = "GE.reporter_name";
+  my $reporter_group_by = "$reporter_column,";
+  my $extid_column = "GE.external_identifier";
+  my $extid_group_by = "$extid_column,";
+  my $gene_column = "GE.gene_name";
+  my $gene_group_by = "$gene_column,";
+  if ($parameters{display_options} =~ /CoalesceReporters/) {
+    $aggregate_type = "AVG";
+    $reporter_column = "MAX(GE.reporter_name)";
+    $reporter_group_by = "";
+    $extid_column = "MAX(GE.external_identifier)";
+    $extid_group_by = "";
+    $gene_column = "MAX(GE.gene_name)";
+    $gene_group_by = "";
+  }
+
+
+
+
   #### If this is a pivot query, design the aggregate data columns
   if ($parameters{display_options} =~ /PivotConditions/) {
     my @condition_ids = split(/,/,$parameters{condition_id});
@@ -394,7 +415,7 @@ sub handle_request {
   	if (defined($available_columns{$option})) {
           my @elements = @{$available_columns{$option}};
           $elements[0] = $condition_names{$id}.'__'.$elements[0];
-          $elements[1] = "MAX(CASE WHEN GE.condition_id = $id ".
+          $elements[1] = "$aggregate_type(CASE WHEN GE.condition_id = $id ".
             "THEN $elements[1] ELSE NULL END)";
           $elements[2] = $condition_names{$id}.' '.$elements[2];
   	  push(@additional_columns,\@elements);
@@ -404,9 +425,9 @@ sub handle_request {
     }
 
     $group_by_clause = "   GROUP BY BS.biosequence_name,".
-      "GE.reporter_name,GE.common_name,GE.canonical_name,".
-      "GE.external_identifier,".
-      "GE.gene_name,GE.second_name,GE.full_name";
+      "${reporter_group_by}GE.common_name,GE.canonical_name,".
+      "${extid_group_by}".
+      "${gene_group_by}GE.second_name,GE.full_name";
 
 
   #### Else, no pivot, just use the columns as is
@@ -424,11 +445,11 @@ sub handle_request {
   my @column_array = (
     ["condition_name","C.condition_name","Condition"],
     ["biosequence_name","BS.biosequence_name","Biosequence Name"],
-    ["reporter_name","GE.reporter_name","Reporter Name"],
+    ["reporter_name",$reporter_column,"Reporter Name"],
     ["common_name","GE.common_name","Common Name"],
     ["canonical_name","GE.canonical_name","Canonical Name"],
-    ["external_identifier","GE.external_identifier","External Identifier"],
-    ["gene_name","GE.gene_name","Gene Name"],
+    ["external_identifier",$extid_column,"External Identifier"],
+    ["gene_name",$gene_column,"Gene Name"],
     ["second_name","GE.second_name","Other Name"],
     @additional_columns,
     ["full_name","GE.full_name","Full Name"],
