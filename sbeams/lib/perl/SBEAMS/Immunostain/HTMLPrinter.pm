@@ -100,9 +100,7 @@ sub displayGuestPageHeader
     last if $_ =~ / End of main content/;
     $skin .= $_;
   }
-  print STDERR "SKINNNNN $skin";
   $skin =~ s/\/images\//\/sbeams\/images\//gm;
-  print STDERR "SKIONNNN$skin";
  
   print "$http_header\n\n";
   print <<"  END_PAGE";
