@@ -7,6 +7,8 @@
   include("../includes/style.inc.php");
 
   include("../includes/header.inc.php");
+
+  include("../includes/navbar.inc.php");
 ?>
 
 
@@ -25,7 +27,7 @@
 <TR>
   <TD>
 
-  <TABLE>
+  <TABLE WIDTH=500>
   <TR VALIGN="top">
 
     <TD>

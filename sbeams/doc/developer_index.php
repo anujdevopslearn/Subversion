@@ -7,12 +7,14 @@
   include("../includes/style.inc.php");
 
   include("../includes/header.inc.php");
+
+  include("../includes/navbar.inc.php");
 ?>
 
 
 <!-- ------------------------ Start Main Page Content ------------------------ -->
 
-<TABLE BORDER=0 WIDTH="680" BGCOLOR="#ffffff" CELLPADDING="10">
+<TABLE BORDER=0 WIDTH="500" BGCOLOR="#ffffff" CELLPADDING="5">
 
 <TR>
   <TD ALIGN="top">
