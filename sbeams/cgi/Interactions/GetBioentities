@@ -300,6 +300,7 @@ sub handle_request {
     ["bioentity_id","BE.bioentity_id","Bioentity ID"],
     ["organism", "O.full_name", "BioEntity 1 Organism"],
     ["bioentity_type", "BET.bioentity_type_name", "BioEntity 1 Type"],
+    ["geneID", "BE.geneID", "Bioentity GeneID"],
     ["bioentity_common_name","BE.bioentity_common_name","BioEntity 1 Common Name"],
     ["bioentity_canonical_name","BE.bioentity_canonical_name","BioEntity 1 Canonical Name"],
     ["bioentity_full_name","BE.bioentity_full_name","BioEntity 1 Full Name"],
@@ -371,10 +372,14 @@ sub handle_request {
   %url_cols = (
     	       'Bioentity ID' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IN_bioentity&bioentity_id=\%V",
     	       'Bioentity ID_ATAG' => 'TARGET="Win1"',
-
+               
+    	       'Bioentity GeneID' => "http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?db=gene&cmd=retrieve&dopt=grahics&list_uids=\%V",
+    	       'Bioentity Gene ID_ATAG' => 'TARGET="Win1"',
+               
+             
   );
-
-
+#http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?DB=gene&cmd=retrieve&dopt=graphics&list_uids=12111
+#http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?db=gene&cmd=Display&dopt=gene_cdd&from_uid=11122
   #### Define columns that should be hidden in the output table
   %hidden_cols = ('BioEntity 1 ID' => 1,
 		  'BioEntity 2 ID' => 1,
