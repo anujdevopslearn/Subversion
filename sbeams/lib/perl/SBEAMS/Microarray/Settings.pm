@@ -26,6 +26,7 @@ use vars qw(@ISA @EXPORT
     $AFFY_R_CHP_ANALYSIS_PROTOCOL
 	$BIOCONDUCTOR_DELIVERY_PATH
 	$ADD_ANNOTATION_OUT_FOLDER
+    $AFFY_TMP_DIR
 );
 
 require Exporter;
@@ -44,6 +45,10 @@ $AFFY_DEFAULT_DIR	= '/net/arrays/Affymetrix/core/probe_data';
 $BIOCONDUCTOR_DELIVERY_PATH = '/net/arrays/Affymetrix/core/data_analysis/delivery';
 $ADD_ANNOTATION_OUT_FOLDER = "$PHYSICAL_BASE_DIR/tmp/Microarray/Add_affy_annotation";
 
+$AFFY_TMP_DIR		= "$PHYSICAL_BASE_DIR/tmp/Microarray";
+
+
+
 @AFFY_DEFAULT_FILES	= qw(CHP CEL XML INFO RPT R_CHP JPEG EGRAM_PF.jpg EGRAM_T.jpg EGRAM_F.jpg);		#files that will be used to determine if a group of files, all sharing the same basename, are all present when uploading Affy arrays 
 
 $AFFY_ZIP_REQUEST_DIR 	= '/net/arrays/Affy_Zip_Request';
@@ -51,13 +56,22 @@ $AFFY_ZIP_REQUEST_DIR 	= '/net/arrays/Affy_Zip_Request';
 $AFFY_R_CHP_ANALYSIS_PROTOCOL = 'R Mas5.0 CHP';				#Current protocol that describes the R script to produce the CHP like file
 
 $BIOCONDUCTOR_DELIVERY_PATH = '/net/arrays/Affymetrix/core/data_analysis/delivery';
-$ADD_ANNOTATION_OUT_FOLDER = "$PHYSICAL_BASE_DIR/tmp/Microarray/Add_affy_annotation";
+
 #### Override variables from main Settings.pm
 $SBEAMS_SUBDIR          = 'Microarray';
 
 
 
 ### Methods to access data
+#######################################################
+# get_affy_temp_dir_path
+# get the path to the top level temp directory
+#######################################################
+sub get_affy_temp_dir_path {
+	my $self = shift;
+   
+    	return $AFFY_TMP_DIR;
+}
 
 #######################################################
 # affy_bioconductor_devlivery_path
