@@ -31,6 +31,10 @@ INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'GE_data_columns','GE.quality_flag','Quality Flag',160 );
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'GE_data_columns','GE.mean_intensity_uncertainty','Mean Intensity Uncertainty',170 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'GE_data_columns','GE.false_discovery_rate','False Discovery Rate',180 );
+
+
 
 INSERT INTO gene_ontology_type ( gene_ontology_name_type )
 VALUES ( 'Gene Ontology Biological Process' );
@@ -63,3 +67,15 @@ INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'GI_display_options','GO_Cellular','Gene Ontology Cellular Component',60 );
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'GI_display_options','Show_Genome_position','Show Genome Position',70 );  
+
+
+INSERT INTO affy_analysis_type ( affy_analysis_name,affy_analysis_description )
+VALUES ( 'file_groups','Shows all the files selected for analysis' );  
+INSERT INTO affy_analysis_type ( affy_analysis_name,affy_analysis_description )
+VALUES ( 'normalization','Type of normalization applied to a group of arrays' );  
+INSERT INTO affy_analysis_type ( affy_analysis_name,affy_analysis_description )
+VALUES ( 'differential_expression','Analysis done to detect differential expression' );
+INSERT INTO affy_analysis_type ( affy_analysis_name,affy_analysis_description )
+VALUES ( 'cytoscape_files','Files that are ready for display in cytoscape' );
+
+    
