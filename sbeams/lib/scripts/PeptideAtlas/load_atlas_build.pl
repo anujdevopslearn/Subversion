@@ -21,6 +21,7 @@ use FindBin;
 use lib "$FindBin::Bin/../../perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
+             $sbeamsProteomicsMOD
             );
 
 
@@ -33,6 +34,7 @@ $sbeams = SBEAMS::Connection->new();
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
+use SBEAMS::Proteomics::Tables;
 
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
@@ -371,15 +373,45 @@ sub buildAltas {
      for (my $ii = 0; $ii <= $#tmp_search_batch_id; $ii++) {
 
         ### given search_batch_id, need sample_id
+        #my $sql;
+        #$sql = qq~
+        #   SELECT sample_id
+        #      FROM $TBAT_SAMPLE
+        #   WHERE search_batch_id = '$tmp_search_batch_id[$ii]'
+        #      AND record_status != 'D'
+        #~;
+        #my @rows = $sbeams->selectOneColumn($sql); # should return a single entry
+        #my $tmp_sample_id = @rows[0];
+ 
+        ## method above doesn't work for obsolete APD builds as the search_batch_ids have
+        ## been updated in the sample record...so, need to use Proteomics records:
+        ## get experiment_id, then experiment_tag, then sample_id
         my $sql;
+        my @rows;
         $sql = qq~
-           SELECT sample_id
-              FROM $TBAT_SAMPLE
-           WHERE search_batch_id = '$tmp_search_batch_id[$ii]'
-              AND record_status != 'D'
+            SELECT experiment_id
+                FROM $TBPR_SEARCH_BATCH
+            WHERE search_batch_id = '$tmp_search_batch_id[$ii]'
         ~;
-        my @rows = $sbeams->selectOneColumn($sql); # should return a single entry
+        @rows = $sbeams->selectOneColumn($sql); # should return a single entry
+        my $tmp_experiment_id = @rows[0];
+
+        $sql = qq~
+            SELECT experiment_tag
+                FROM $TBPR_PROTEOMICS_EXPERIMENT
+            WHERE experiment_id = '$tmp_experiment_id'
+        ~;
+        @rows = $sbeams->selectOneColumn($sql); # should return a single entry
+        my $tmp_experiment_tag = @rows[0];
+
+        $sql = qq~
+            SELECT sample_id
+                FROM $TBAT_SAMPLE
+            WHERE sample_tag = '$tmp_experiment_tag'
+        ~;
+        @rows = $sbeams->selectOneColumn($sql); # should return a single entry
         my $tmp_sample_id = @rows[0];
+
  
         ## create string of sample ids:
         if ($ii == 0) {
@@ -422,6 +454,10 @@ sub buildAltas {
      } # end unless
  
      $counter++;
+
+   ##xxxxx
+     die "sample_ids is null?? search_batch_ids= $APD_search_batch_ids{$tmp_pep_id} \n" 
+         if (!$APD_sample_ids{$tmp_pep_id});
  
    } # end while INFILE
    close(INFILE);
@@ -596,7 +632,8 @@ sub buildAltas {
    ## ---> n_protein_mappings = 2 for both
    ## ---> is_exon_spanning   = y for all
 
-   if ($TESTONLY) {  ## the above cases have P=1.0, and tested for Ens build 22
+   ## testing match to above rules:
+   if ($TESTONLY && ($organism_abbrev eq 'Hs') ) {  ## the above cases have P=1.0, and tested for Ens build 22
        for (my $ii = 0; $ii <= $ensembl_hits_last_ind; $ii++) {
            my @test_pep = ("APDpep00011291", "APDpep00004221", "APDpep00004290");
            my @test_n_genome_locations = ("1", "1", "2");
@@ -605,20 +642,14 @@ sub buildAltas {
 
            for (my $jj = 0; $jj < 3; $jj++) {
                if ($peptide_accession[$ii] == $test_pep[$jj]) {
-                   print "Testing counts for $test_pep[$jj] \n";
-                   if ($n_genome_locations[$ii] == $test_n_genome_locations[$jj]) {
-                       print "   n_genome_locations is correct \n";
-                   } else {
-                       print "   !! $n_genome_locations[$ii] not equal to $test_n_genome_locations[$jj]!! \n";
+                   if ($n_genome_locations[$ii] != $test_n_genome_locations[$jj]) {
+                       print "!!  $test_pep[$jj] ";
+                       print " $n_genome_locations[$ii] not equal to $test_n_genome_locations[$jj]!! \n";
                    }
-                   if ($n_protein_mappings[$ii] == $test_n_protein_mappings[$jj]) {
-                       print "   n_protein_mappings is correct \n";
-                   } else {
+                   if ($n_protein_mappings[$ii] != $test_n_protein_mappings[$jj]) {
                        print "   !! $n_protein_mappings[$ii] not equal to $test_n_protein_mappings[$jj]!! \n";
                    }
-                   if ($is_exon_spanning[$ii] == $test_is_exon_spanning[$jj]) {
-                       print "   is_exon_spanning is correct \n";
-                   } else {
+                   if ($is_exon_spanning[$ii] != $test_is_exon_spanning[$jj]) {
                        print "   !! $is_exon_spanning[$ii] not equal to $test_is_exon_spanning[$jj]!! \n";
                    }
                }
