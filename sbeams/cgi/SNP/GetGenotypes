@@ -230,7 +230,7 @@ sub handle_request {
   #### Build ASSAY ID constraint
   my $assay_id_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"ERV.assay_id",
-    constraint_type=>"text_list",
+    constraint_type=>"plain_text",
     constraint_name=>"Assay ID",
     constraint_value=>$parameters{assay_id_constraint} );
   return if ($assay_id_clause == -1);
@@ -321,7 +321,7 @@ sub handle_request {
 
 
   #### Define columns that should be hidden in the output table
-  %hidden_cols = ('manual_genotype_call_id' => 1,'sample_description' => 1,
+  %hidden_cols = ('full_assay_id' => 1, 'manual_genotype_call_id' => 1,'sample_description' => 1,
   );
 
 
@@ -757,8 +757,6 @@ sub postProcessResultset {
           my %temp_hash;
           $temp_hash{n_calls}=$ncalls;
 
-	  my %unique_locations;
-
           my %genohash;
 	  my $call_index = 1;
 	  my $best_quality = 'Z';
@@ -770,8 +768,6 @@ sub postProcessResultset {
             $temp_hash{$call_index}->{call_exp_no} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWellAndDate}->{experiment};
             $temp_hash{$call_index}->{call_well} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWellAndDate}->{well};
             $temp_hash{$call_index}->{call_date} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWellAndDate}->{call_date};
-
-	    $unique_locations{$temp_hash{$call_index}->{call_plate_ID}.'__'.$temp_hash{$call_index}->{call_well}} = 1;
 
 	    $best_quality = $temp_hash{$call_index}->{call_quality}
 	      if ($best_quality gt $temp_hash{$call_index}->{call_quality});
@@ -787,7 +783,6 @@ sub postProcessResultset {
 	  $temp_hash{manual_call_quality} = $data->{$project_name}->{$assay}->{$sample_name}->{manual_call_quality};
 	  $temp_hash{call_final_quality} = $data->{$project_name}->{$assay}->{$sample_name}->{manual_call_quality};
 	  $temp_hash{manual_genotype_call_id} = $data->{$project_name}->{$assay}->{$sample_name}->{manual_genotype_call_id};
-	  $temp_hash{n_unique_locations} = scalar(keys(%unique_locations));
 
 	  #### Add in the final information
           my $n_distinct_calls = 0;
@@ -824,8 +819,8 @@ sub postProcessResultset {
       push(@column_types, qw(varchar varchar));
     } else {
       #### Define the headers for all the columns
-      push(@columnheaders, qw(final_call final_call_quality manual_genotype_call_id manual_call n_calls n_unique_locations call_consistency));
-      push(@column_types, qw(varchar varchar int varchar int int varchar));
+      push(@columnheaders, qw(final_call final_call_quality manual_genotype_call_id manual_call n_calls call_consistency));
+      push(@column_types, qw(varchar varchar int varchar int varchar));
     }
     my @expanding_column_names = qw(call call_quality call_exp_no call_well call_date call_plate_ID);
     my @expanding_column_types = qw(varchar varchar int varchar date varchar);
@@ -856,7 +851,7 @@ sub postProcessResultset {
         my $shortAssay = $assay;
 	$shortAssay =~ s/gi//;
         foreach my $sample_name (@samples) {
-          my @newrow = ( $project_name,$shortAssay,$sample_name);
+          my @newrow = ( $project_name,$assay,$shortAssay,$sample_name);
 	  my $all_calls_final = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls_final};
 	  push(@newrow,$all_calls_final->{call_final});
 	  push(@newrow,$all_calls_final->{call_final_quality});
@@ -864,7 +859,6 @@ sub postProcessResultset {
 	    push(@newrow,$data->{$project_name}->{$assay}->{$sample_name}->{manual_genotype_call_id});
 	    push(@newrow,$all_calls_final->{manual_genotype_call});
 	    push(@newrow,$all_calls_final->{n_calls});
-	    push(@newrow,$all_calls_final->{n_unique_locations});
 	    push(@newrow,$all_calls_final->{call_consistency});
 
 	    foreach my $header_name (@expanding_column_names) {
@@ -891,9 +885,9 @@ sub postProcessResultset {
     }
 
     #### Replace existing resultset attributes with reformulated ones
-    $resultset_ref->{column_list_ref} = ['project_id','assay_id','sample_id',@columnheaders];
-    $resultset_ref->{precisions_list_ref} = [ (50) x (scalar(@columnheaders)+3) ];
-    $resultset_ref->{types_list_ref} = [ 'varchar','varchar','varchar',@column_types ];
+    $resultset_ref->{column_list_ref} = ['project_id','full_assay_id','assay_id','sample_id',@columnheaders];
+    $resultset_ref->{precisions_list_ref} = [ (50) x (scalar(@columnheaders)+4) ];
+    $resultset_ref->{types_list_ref} = [ 'varchar','varchar','varchar','varchar',@column_types ];
 
   } #endif SampleVsRepeat
 
@@ -1257,7 +1251,7 @@ sub getURLColumns {
 
 
   #### Define the hypertext links for columns that need them
-  %url_cols = ('manual_call' => "$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=SN_manual_genotype_call&manual_genotype_call_id=\%$colnameidx{manual_genotype_call_id}V&project_id=\%$colnameidx{project_id}V&sample_id=\%$colnameidx{sample_id}V&assay_id=\%$colnameidx{assay_id}V&ShowEntryForm=1",
+  %url_cols = ('manual_call' => "$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=SN_manual_genotype_call&manual_genotype_call_id=\%$colnameidx{manual_genotype_call_id}V&project_id=\%$colnameidx{project_id}V&sample_id=\%$colnameidx{sample_id}V&assay_id=\%$colnameidx{full_assay_id}V&ShowEntryForm=1",
 	       'manual_call_ATAG' => 'TARGET="Win1"',
 	       'manual_call_ISNULL' => ' [Add] ',
   );
