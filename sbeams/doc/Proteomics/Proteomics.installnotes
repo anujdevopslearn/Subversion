@@ -5,10 +5,12 @@ $Id$
 
 
 -------------------------------------------------------------------------------
-1) Software Dependencies
+1) Software and module Dependencies
 
 You must first install the SBEAMS Core.  See the separate installation
-notes (sbeams.installnotes) on how to accomplish that.
+notes (sbeams.installnotes) on how to accomplish that. You must also
+install the BioLink module. Instructions are provided in the Troubleshooting
+section at the end of this document.
 
 The following Perl Modules often not found on a standard UNIX/Linux
 setup are required to successfully use SBEAMS - Proteomics (in addition
@@ -38,9 +40,9 @@ specific setup:
   servername: db
   DocumentRoot: /local/www/html
   Primary location: directly located in DocumentRoot,
-                   /local/www/html/sbeams  --> http:/db/sbeams/
+                   /local/www/html/sbeams  --> http://db/sbeams/
   Development location: In a dev1 tree starting in the DocumentRoot,
-                   /local/www/html/dev1/sbeams  -> http:/db/dev1/sbeams/
+                   /local/www/html/dev1/sbeams  -> http://db/dev1/sbeams/
 
 All modules live in the same area and should be unpacked into the
 main SBEAMS area.
@@ -198,13 +200,14 @@ Add a Project as follows:
 
 - Switch to the Proteomics_user group by using the drop-down box at top
 - Click on [Proteomics]
-- Under "Projects You Own", click [Add A New Project].  Required
-  fields are in red.  If you don't have a budget number, enter NA.
+- Under "My Projects" tab, "Projects You Own", click [Add A New Project].
+  Required fields are in red.  If you don't have a budget number, enter NA.
 - Fill in the appropriate information and [INSERT]
 
 
 Add an Instrument as follows:
 
+- Switch to the Proteomics_admin group by using the drop-down box at top
 - Click on [Proteomics Home]
 - Click on [Request Management] (under Core Management)
 - Click on [Manage Instrument Types]
@@ -225,6 +228,7 @@ Add an Experiment Type as follows:
 
 Add an Experiment as follows:
 
+- Switch back to the Proteomics_user group by using the drop-down box at top
 - Click on [Proteomics Home]
 - Click on the Project you just created
 - Click [Register another Experiment]
@@ -299,7 +303,7 @@ RAW_DATA_DIR{Proteomics}/$PROJECT_TAG/$EXPERIMENT_TAG/$SEARCH_BATCH_TAG/
 
 for which:
 RAW_DATA_DIR{Proteomics} = Some absolute location as defined in step 4
-$PROJECT_TAG = Tag (i.e. short name) defined for th propject in step 7
+$PROJECT_TAG = Tag (i.e. short name) defined for the project in step 7
 $EXPERIMENT_TAG = Tag (i.e. short name) for the experimet defined in step 7
 $SEARCH_BATCH_TAG = Unique tag for a search_batch (i.e. a running of SEQUEST)
   It is possible to run SEQUEST multiple times on the same experiment,
@@ -373,11 +377,11 @@ Troubleshooting
   e.g. look in Core_POPULATE.mssql
 
 
-2) To add the BioLink module tables:
+2) To install the BioLink module:
 
 - Create directory:
 cd $SBEAMS/lib/
-mkdir sql/Biolink
+mkdir sql/BioLink
 
 - Generate sql:
 cd scripts/Core/
@@ -385,5 +389,17 @@ cd scripts/Core/
 
 - Create all tables described within $SBEAMS/lib/sql/Biolink/BioLink_CREATETABLES.mssql
   **except** first 4: dbo.biosequence_set, dbo.dbxref, dbo.biosequence, and dbo.query_option)
+
+- Update the driver tables:
+cd $SBEAMS/lib/scripts/Core
+set CONFDIR = "../../conf"
+./update_driver_tables.pl $CONFDIR/BioLink/BioLink_table_property.txt
+./update_driver_tables.pl $CONFDIR/BioLink/BioLink_table_column.txt
+
+- Load data onto polymer_type table:
+cd $SBEAMS/lib/scripts/Core
+
+./DataImport.pl --source_file ../../refdata/BioLink/polymer_type.xml
+
 
 
