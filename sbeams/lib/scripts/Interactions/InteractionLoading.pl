@@ -77,7 +77,7 @@ my (%INFOPROTEIN1,
 	%INFOPROTEIN2,
 	%INTERACTION, @columnOrder, %columnHashProtein1, %columnHashProtein2, %interactionHash,$bioentityState,$bioentityType,$organismName,$interactionTypes,
 	$organismType, $interactionGroups,$confidenceScores,$assayTypes,$pubMed, $interactionGroupsOrganism, $fhError, $fhLog, $regTypes, %locusIDProteinHash,  %locusIDmRNAHash);
-
+  my (%locusProteinArray, %locusmRNAArray);
 main();
 exit;
 
@@ -197,14 +197,21 @@ organismName1 => $indexHash{Organism_bioentity1_name},
 	$regTypes = \%regTypes; 
 	my %pubMed = $sbeams->selectTwoColumnHash (qq /Select pubmed_ID, publication_id from $TBIN_PUBLICATION/);
 	$pubMed = \%pubMed;
-	%locusIDProteinHash = $sbeams->selectTwoColumnHash( qq/Select locus_id, protein from locuslink.dbo.refseq/); 
-	%locusIDmRNAHash = $sbeams->selectTwoColumnHash( qq/Select locus_id,mRNA from locuslink.dbo.refseq/); 
+	%locusIDProteinHash = $sbeams->selectTwoColumnHash( qq/Select protein, locus_id from locuslink.dbo.refseq/); 
+	%locusIDmRNAHash = $sbeams->selectTwoColumnHash( qq/Select mRNA, locus_id from locuslink.dbo.refseq/); 
+     
+   
+        
+      foreach my $key (keys %locusIDProteinHash)
+      {
+        push @{$locusProteinArray{$locusIDProteinHash{$key}}} ,$key
+      }
     
- 
-      
-    
-    
-	
+	 foreach my $key (keys %locusIDmRNAHash)
+     {
+        push @{$locusmRNAArray{$locusIDmRNAHash{$key}}} ,$key
+     }
+     
 	$sbeams->printPageHeader() unless ($QUIET);
 	processFile();
 #at this point we have either 
@@ -346,7 +353,8 @@ sub processFile
 			next;
 		}
 		
-		if($INFOPROTEIN1{$count-2}->{bioentityCanName1} =~/(xm)|(nm)(xp)/i and $INFOPROTEIN1{$count-2}->{bioentityType1} =~ /protein/i){
+		if($INFOPROTEIN1{$count-2}->{bioentityCanName1} =~/(xm)|(nm)(xp)/i and $INFOPROTEIN1{$count-2}->{bioentityType1} =~ /protein/i)
+        {
 				$INFOPROTEIN1{$count-2}->{bioentityCanGeneName1} = $INFOPROTEIN1{$count-2}->{bioentityCanName1};
 				undef($INFOPROTEIN1{$count-2}->{bioentityCanName1});
 		}
@@ -355,6 +363,16 @@ sub processFile
 				$INFOPROTEIN1{$count-2}->{bioentityCanGeneName1} = $INFOPROTEIN1{$count-2}->{bioentityFullName1};
 				undef($INFOPROTEIN1{$count-2}->{bioentityFullName1});
 		}
+        
+          if ($INFOPROTEIN1{$count-2}->{bioentityCanName1}  !~ /^\d+$/)
+         {
+              my $canName = $INFOPROTEIN1{$count-2}->{bioentityCanName1};
+              delete$INFOPROTEIN1{$count-2}->{bioentityCanName1};
+              push @{$INFOPROTEIN1{$count-2}->{bioentityCanName1}},$canName;
+          }     
+        
+        
+        
 # Not implemented 		
 #		if($INFOPROTEIN1{$count-2}->{bioentityReg1} and !($regTypes->{$INFOPROTEIN1{$count-2}->{bioentityReg1}}))
 #		{
@@ -389,32 +407,52 @@ sub processFile
 		
 		
 		
-		if ($INFOPROTEIN1{$count-2}->{bioentityCanName1} =~ /^\d+$/ and $INFOPROTEIN1{$count-2}->{bioentityType1} =~ /protein/i )
+		if ($INFOPROTEIN1{$count-2}->{bioentityCanName1} =~ /^\d+$/ and ($INFOPROTEIN1{$count-2}->{bioentityType1} =~ /protein/i  or  $INFOPROTEIN1{$count-2}->{bioentityType1} =~ /molecul/i))
 		{
 			my $locusID = 	$INFOPROTEIN1{$count-2}->{bioentityCanName1};
+            print "1locusid:  $locusID\n";
+         
 			delete$INFOPROTEIN1{$count-2}->{bioentityCanName1};
-			$INFOPROTEIN1{$count-2}->{bioentityCanName1} = $locusIDProteinHash{	$locusID};
-			if ( ! $INFOPROTEIN1{$count-2}->{bioentityCanName1})
+            if (defined ($locusProteinArray{$locusID}))
+            {
+                push @{$INFOPROTEIN1{$count-2}->{bioentityCanName1}}, @{$locusProteinArray{$locusID}};
+               # foreach my $key (@{$INFOPROTEIN1{$count-2}->{bioentityCanName1}})
+               # {
+                #     print "this is iiii $key\n";
+               # }
+               
+             }
+              else
 			{
-				$INFOPROTEIN1{$count-2}->{bioentityCanName1} = $locusID;
-				Error (\@infoArray, "$INFOPROTEIN1{$count-2}->{bioentityCanName1}: could not find PROTEIN for this locusID");
+                 push @{$INFOPROTEIN1{$count-2}->{bioentityCanName1}},$locusID;                 
+				 Error (\@infoArray, "$locusID  could not find PROTEIN for this locusID");
 				
 			}
 		}
-		
+      
+        
 		if ($INFOPROTEIN1{$count-2}->{bioentityCanName1} =~ /^\d+$/ and $INFOPROTEIN1{$count-2}->{bioentityType1} =~ /dna/i )
 		{
 			my $locusID = 	$INFOPROTEIN1{$count-2}->{bioentityCanName1};
 			delete$INFOPROTEIN1{$count-2}->{bioentityCanName1};
-			$INFOPROTEIN1{$count-2}->{bioentityCanName1} = $locusIDmRNAHash{$locusID};
-			if ( ! $INFOPROTEIN1{$count-2}->{bioentityCanName1})
+             if (defined ($locusmRNAArray{$locusID}))
+             {
+               push @{$INFOPROTEIN1{$count-2}->{bioentityCanName1}}, @{$locusmRNAArray{$locusID}};
+             }
+             else
 			{
-				$INFOPROTEIN1{$count-2}->{bioentityCanName1} = $locusID;
-				Error (\@infoArray,"$INFOPROTEIN1{$count-2}->{bioentityCanName1}: could not find RNA for this locusID");
+			     push @{$INFOPROTEIN1{$count-2}->{bioentityCanName1}},$locusID;     
+				Error (\@infoArray," $locusID: could not find RNA for this locusID");
 			}
 			
 		}
-		
+         if (ref($INFOPROTEIN1{$count-2}->{bioentityCanName1}) eq "SCALAR")
+        {
+            my $scalar = $INFOPROTEIN1{$count-2}->{bioentityCanName1}; 
+            delete$INFOPROTEIN1{$count-2}->{bioentityCanName1};
+            push @{$INFOPROTEIN1{$count-2}->{bioentityCanName1}},$scalar;
+        }
+        
 #bioentity2				
 		print "checking bioentity2 requirements\n";
 		foreach my $column (sort keys %columnHashProtein2)
@@ -433,6 +471,10 @@ sub processFile
 		$INFOPROTEIN2{$count-2}->{bioentityType2} = uc($INFOPROTEIN2{$count-2}->{bioentityType2});
 		$INFOPROTEIN2{$count-2}->{bioentityReg2} = uc($INFOPROTEIN2{$count-2}->{bioentityReg2});
 		$INFOPROTEIN2{$count-2}->{organismName2} = uc($INFOPROTEIN2{$count-2}->{organismName2});
+       $INFOPROTEIN2{$count-2}->{bioentityCanName2} =~ s/^\s*(\d+)\s*$/$1/;
+        print "aa$INFOPROTEIN2{$count-2}->{bioentityCanName2} aa\n";
+        print "tt$INFOPROTEIN2{$count-2}->{bioentityType2} tt\n";
+        ;
 			
 		if (!($INFOPROTEIN2{$count-2}->{'bioentityComName2'})	and (!($INFOPROTEIN2{$count-2}->{'bioentityCanName2'})))
 		{
@@ -465,6 +507,13 @@ sub processFile
 				undef($INFOPROTEIN2{$count-2}->{bioentityCanName2});
 				
 		}
+         if ($INFOPROTEIN2{$count-2}->{bioentityCanName2} !~ /^\d+$/)
+         {
+              my $canName = $INFOPROTEIN2{$count-2}->{bioentityCanName2};
+              delete$INFOPROTEIN2{$count-2}->{bioentityCanName2};
+              push @{$INFOPROTEIN2{$count-2}->{bioentityCanName2}},$canName;
+          }        
+        
 		if($INFOPROTEIN2{$count-2}->{bioentityFullName2} =~/(xm_\d)|(nm_\d)/i and $INFOPROTEIN2{$count-2}->{bioentityType2} =~ /protein/i){
 				print "this is a gene_name_identifier\n";
 				$INFOPROTEIN2{$count-2}->{bioentityCanGeneName1} = $INFOPROTEIN2{$count-2}->{bioentityFullName2};
@@ -488,39 +537,61 @@ sub processFile
 			$INFOPROTEIN2{$count-2}->{group} =  $rows[0];
 		}
 		
-		if ($INFOPROTEIN2{$count-2}->{bioentityCanName2} =~ /^\d+$/ and $INFOPROTEIN2{$count-2}->{bioentityType2} =~ /protein/i )
+		if ($INFOPROTEIN2{$count-2}->{bioentityCanName2} =~ /^\d+$/ and 
+        ($INFOPROTEIN2{$count-2}->{bioentityType2} =~ /protein/i  or  $INFOPROTEIN2{$count-2}->{bioentityType1} =~ / molecul/i))
 		{
 			my $locusID = $INFOPROTEIN2{$count-2}->{bioentityCanName2};
+             print "locus2 $locusID\n";
+              
+            if( $locusID =~ /3958/){
+              print "lsocus: $locusID\n";
+              
+            }
 			delete$INFOPROTEIN2{$count-2}->{bioentityCanName2};
-			$INFOPROTEIN2{$count-2}->{bioentityCanName2} = $locusIDProteinHash{$locusID};
-			if ( ! $INFOPROTEIN2{$count-2}->{bioentityCanName2})
+             if (defined ($locusProteinArray{$locusID}))
+             {
+               push @{$INFOPROTEIN2{$count-2}->{bioentityCanName2}}, @{$locusProteinArray{$locusID}};
+             }
+             
+			else
+            #( ! $INFOPROTEIN2{$count-2}->{bioentityCanName2})
 			{
-				$INFOPROTEIN2{$count-2}->{bioentityCanName2} = $locusID;
-				Error  (\@infoArray,"$INFOPROTEIN2{$count-2}->{bioentityCanName2}: could not find PROTEIN for this locsuID");
+                 push @{$INFOPROTEIN2{$count-2}->{bioentityCanName2}},$locusID;           
+			#	$INFOPROTEIN2{$count-2}->{bioentityCanName2} = $locusID;
+				Error  (\@infoArray, "$locusID could not find PROTEIN for this locsuID");
 				#delete $INFOPROTEIN2{$count-2};
 				#next;
 			}
-			
-		
 		}
-		
+    				
 		if ($INFOPROTEIN2{$count-2}->{bioentityCanName2} =~ /^\d+$/ and $INFOPROTEIN2{$count-2}->{bioentityType2} =~ /dna/i )
 		{
+          
+        
 			my $locusID = $INFOPROTEIN2{$count-2}->{bioentityCanName2};
 			delete$INFOPROTEIN2{$count-2}->{bioentityCanName2};
-			$INFOPROTEIN2{$count-2}->{bioentityCanName2} = $locusIDmRNAHash{$locusID};
-			if ( ! $INFOPROTEIN2{$count-2}->{bioentityCanName2})
+            if (defined ($locusmRNAArray{$locusID}))
+            {
+              push @{$INFOPROTEIN2{$count-2}->{bioentityCanName2}} , @{$locusmRNAArray{$locusID}};
+            }
+            else
+            #if ( ! $INFOPROTEIN2{$count-2}->{bioentityCanName2})
 			{
-				$INFOPROTEIN2{$count-2}->{bioentityCanName2} = $locusID;
-				Error  (\@infoArray,"$INFOPROTEIN2{$count-2}->{bioentityCanName2}: could not find  RNA for this locsuID");
+                 push @{$INFOPROTEIN2{$count-2}->{bioentityCanName2}},$locusID;     
+			#	$INFOPROTEIN2{$count-2}->{bioentityCanName2} = $locusID;
+				Error  (\@infoArray,"$locusID: could not find  RNA for this locsuID");
 				#delete $INFOPROTEIN2{$count-2};
 				#next;
 			}
 		}
-		
-		
-		
-		
+	
+        if (! ref($INFOPROTEIN2{$count-2}->{bioentityCanName2}))
+        {
+          
+          my $scalar = $INFOPROTEIN2{$count-2}->{bioentityCanName2}; 
+          delete$INFOPROTEIN2{$count-2}->{bioentityCanName2};
+           push @{$INFOPROTEIN2{$count-2}->{bioentityCanName2}},$scalar;
+        }	 
 #		
 #		if($INFOPROTEIN2{$count-2}->{bioentityReg2} and !($regTypes->{$INFOPROTEIN2{$count-2}->{bioentityReg2}}))
 #		{
@@ -604,7 +675,7 @@ print "checking interaction requirements\n";
 #				next;
 #		}
 #		$INTERACTION{$count-2}->{bioentityReg2} = ucfirst ($INTERACTION{$count-2}->{bioentityReg2});
-#		if ($INTERACTION{$count-2}->{bioentityReg2} and !($regTypes->{$INTERACTION{$count-2}->{bioentityReg2}}))
+#		if 7($INTERACTION{$count-2}->{bioentityReg2} and !($regTypes->{$INTERACTION{$count-2}->{bioentityReg2}}))
 #		{
 #				Error (\@infoArray," $INTERACTION{$count-2}->{bioentityReg2}:  bioentityReg2 is not in the database");
 #				delete $INTERACTION{$count-2};
@@ -679,6 +750,12 @@ print "checking interaction requirements\n";
 					 
 					 	 print "$insert ----- $update   ----------$pubMed->{$INTERACTION{$count-2}->{pubMedID}} ";
 					 
+        #             foreach my $key (keys %pubRowData)
+        #             {
+        #               print "$key === $pubRowData{$key}\n";
+        #            }
+        #             getc;
+                     
 							my $returned_PK = $sbeams->updateOrInsertRow(
 							insert => $insert,
 							update => $update,
@@ -757,19 +834,19 @@ sub checkPopulateBioentity
 			and IG.interaction_group_id = \'$hashRef->{$record}->{'group'}\'";
 
 			my $commonClause =  qq / and BE.bioentity_common_name = /;
-			my $canonicalClause = qq / and bioentity_canonical_name =  /;
+			my $canonicalClause = qq / and bioentity_canonical_name in (  /;
 			my $groupByClause = qq / group by BE.bioentity_id/;
 			my $bioentityQueryCommon; 
 			my $bioentityQueryCanonical;
 			my ($commonName,$canName);
-			$commonName = escapeString ($hashRef->{$record}->{'bioentityComName'.$num}) if ($hashRef->{$record}->{'bioentityComName'.$num});
-			$canName = escapeString($hashRef->{$record}->{"bioentityCanName".$num})if($hashRef->{$record}->{'bioentityCanName'.$num});
-			
-	
-			
-			
-			
-			if (!($hashRef->{$record}->{'bioentityComName'.$num}))
+            
+             print "this is the canName before: @{$hashRef->{$record}->{'bioentityCanName'.$num}}\n";;
+            
+            $commonName =$hashRef->{$record}->{'bioentityComName'.$num} if ($hashRef->{$record}->{'bioentityComName'.$num});
+           $commonName = escapeString ($hashRef->{$record}->{'bioentityComName'.$num}) if ($hashRef->{$record}->{'bioentityComName'.$num});
+           $canName = join ', ' ,(map{escapeString($_)} @{$hashRef->{$record}->{'bioentityCanName'.$num}}) if($hashRef->{$record}->{'bioentityCanName'.$num});
+             print "this is the canName after:  $canName\n";
+           if (!($hashRef->{$record}->{'bioentityComName'.$num}))
 			{
 #4,5
 
@@ -778,11 +855,13 @@ sub checkPopulateBioentity
 			else 
 			{
 
-				$commonClause .= "\'". $commonName ."\'";
+				$commonClause .= $commonName;
 #1,2
 				$bioentityQueryCommon = $bioentityQuery.$commonClause.$groupByClause;
 				
 			}
+
+
 			if (!($hashRef->{$record}->{'bioentityCanName'.$num}))
 			{
 #1,2
@@ -791,7 +870,7 @@ sub checkPopulateBioentity
 			}
 			else 
 			{
-					$canonicalClause .= "\'". $canName ."\'";
+					$canonicalClause .= $canName .")";
 #4,5
 
 					$bioentityQueryCanonical = $bioentityQuery.$canonicalClause.$groupByClause;
@@ -800,8 +879,18 @@ sub checkPopulateBioentity
 			if ($commonClause and $canonicalClause)
 			{
 			
+#the canonicalClause may  have an array canonicalNames
+#check how many records came back
+#if number of records > 1 
+#do the common query , 
+#check if the bioentitycaname is also in the array of canonicalNames, +ose ids are matching 
+#if no ids are matching
+ 
+            
 				
 #need to make sure we are pulling the same record
+                    
+
 					my @rows = $sbeams->selectOneColumn($bioentityQueryCommon);	
 				
 					my $nrows = scalar(@rows);
@@ -809,113 +898,132 @@ sub checkPopulateBioentity
 					$bioentityIDCommon = 0 if $nrows == 0; 
 					if ($nrows >1)
 					{
-					ErrorLog ("$SUB_NAME:\nQuery: bioentityCommonQuery returned $nrows of data!\n",
+                      
+					ErrorLog ("<br>Query: bioentityCommonQuery (commonName: $commonName)<br> returned $nrows rows of data! These are possible duplicates.\n<br> No records were updated",
 					$hashRef->{$record});
 					delete $INTERACTION{$record};
-					next;
-					}
-					
-					
+                    }
+#now we know the bioentityID from the common query					
+ 
+                				
+                   print "$bioentityQueryCanonical\n";
+                  
 					@rows = $sbeams->selectOneColumn($bioentityQueryCanonical);	
 					$nrows = scalar(@rows);
-					my $bioentityIDCanonical = $rows[0] if $nrows == 1;
-					$bioentityIDCanonical = 0 if $nrows == 0; 
-					if ($nrows >1)
-					{
-							ErrorLog ("$SUB_NAME:\nQuery: bioentityCanonicalQuery returned $nrows of data!\n",
-							$hashRef->{$record});
-							delete $INTERACTION{$record};
-							next;
-					}
-					
-					if ($bioentityIDCommon and !$bioentityIDCanonical)
-					{  
-							my $subCommonQuery = "Select bioentity_canonical_name from $TBIN_BIOENTITY
-							where bioentity_common_name =\'$commonName\'";
-						
-							 my @returnedRow = $sbeams->selectOneColumn($subCommonQuery);
-							 if ($returnedRow[0])
-							 {
-									 ErrorLog ("$SUB_NAME:<br>Database Query: subCommonQuery returned bioentity_canonical_Name:<br><b>$returnedRow[0]</b> for bioenity_common_Name: <b>$hashRef->{$record}->{'bioentityComName'.$num}</b>.<br>The upload canonical name is:<b>$hashRef->{$record}->{'bioentityCanName'.$num}</b>",
-									 $hashRef->{$record});
-									 delete $INTERACTION{$record};
-									 next;
-							 }
-					}
-					elsif (!$bioentityIDCommon and $bioentityIDCanonical)
-					{
-							my $subCanonicalQuery = "Select bioentity_common_name from $TBIN_BIOENTITY
-							where bioentity_common_name = \'$canName\'"; 
-					
-							my @returnedRow = $sbeams->selectOneColumn($subCanonicalQuery);
-							if ($returnedRow[0])
-							{
-									ErrorLog ("$SUB_NAME:<br>Database Query: subCanonicalQuery returned bioentity_common_Name:<br><b>$returnedRow[0]</b> for bioentity_canonical_Name: <b>$hashRef->{$record}->{'bioentityCanName'.$num}<b>. The upload common name is: <b>$hashRef->{$record}->{'bioentityComName'.$num}</b><br><br>",
-									$hashRef->{$record});
-									delete $INTERACTION{$record};
-									next;
-							}
-					}
-					
-					if (($bioentityIDCommon eq $bioentityIDCanonical)
-							or ($bioentityIDCanonical and $bioentityIDCommon ==0) or ($bioentityIDCommon and $bioentityIDCanonical ==0))
-					{
-#need to use bioentity_id = 0 unless one of them is defined and set $insert and $update
-							$bioentityIDCommon=$bioentityIDCanonical unless ($bioentityIDCommon);	
-							$insert = 1 unless ($bioentityIDCommon);
+                    my %hashID;
+                    my $haveID = 0;
+                    print "number of rows $nrows\n";
+                    if ($nrows > 0)
+                    {
+                      $haveID = 1;
+                      for(my $count = 0; $count < $nrows; $count ++)
+                      {
+                        
+                        $hashID{$rows[$count]} = 1;
+                      }
+                    }
+                    
+#now we know all the possible bioentityIDs from the canonical query
+
+#test the combinations 
+#no records for canonical, one record from the commom
+#if the canonical name from the common record is null or a common name then update it with the frist np or nm number of the locusid
+#if is an np number try to find the match  i n the possible uploadable canonical names
+#not, somehow the canonical names are do not match, write an error                       
+                    print "this is haveID $haveID\n";
+                   
+                   if ($bioentityIDCommon  and	scalar(keys %hashID) < 1)
+                    {
+                      
+                      my $query = "select bioentity_canonical_name from $TBIN_BIOENTITY where bioentity_id = $bioentityIDCommon";
+                     @rows = $sbeams->selectOneColumn($query);
+                      print "name: $rows[0]\n";
+                        if ($rows[0] !~ /^n[pmu]/i)
+                        {
+                          print "here\n";
+                          
+# update the record with the first canonicalName of the array                 
+                            $insert = 1 unless ($bioentityIDCommon);
 							$update = 0 unless (!$insert);
-							 
-								
-#If one or no row was fetched, do a update or insert based on the presence of bioentityID
-							
-							
-							my $bioentityPK = insertOrUpdateBioentity($hashRef->{$record},$num,$bioentityIDCommon,$insert,$update); 
-########do an insert or update for bioentity reg features##############
-#							if $bioentityPK
-#							{
-#							}
-################							
+                            
+                            $hashRef->{$record}->{'bioentityCanName'.$num} = ${$hashRef->{$record}->{'bioentityCanName'.$num}}[0];
+                            my $bioentityPK = insertOrUpdateBioentity($hashRef->{$record},$num,$bioentityIDCommon,$insert,$update); 
+		
 							if($INTERACTION{$record} and $bioentityPK)
 							{	
 								$INTERACTION{$record}->{'bioentityID'.$num} = $bioentityPK;
 							}
-							next;
-					}
-#ids returned are different from each other, something is seriously wrong, write to the errorlog
-					else
-					{
-							ErrorLog("$SUB_NAME:\n Query:  bioentityQueryCommon and bioentityQueryCanonical returned bioentity_id:\n Common:  $bioentityIDCommon and Canonical: $bioentityIDCanonical !\n\n",
-							$hashRef->{$record});
-							delete $INTERACTION{$record};
-							next;
-					}
-			}
-			elsif ($commonClause and !$canonicalClause)
-			{
-				
-				
-					my @rows = $sbeams->selectOneColumn($bioentityQueryCommon);	
-					my $nrows = scalar(@rows);
-					my $bioentityIDCommon = $rows[0] if $nrows == 1;
-					$bioentityIDCommon = 0 if $nrows == 0; 
-					if ($nrows >1)
-					{
-							ErrorLog ("$SUB_NAME:\nQuery: bioentityCommonQuery returned $nrows of data!\n",
-							$hashRef->{$record});
-							delete $INTERACTION{$record};
-							next;
-					}
-					$insert = 1 unless ($bioentityIDCommon);
-					$update = 0 unless (!$insert);
-					
-					my $bioentityPK = insertOrUpdateBioentity($hashRef->{$record},$num,$bioentityIDCommon,$insert,$update); 
-					if($INTERACTION{$record} and $bioentityPK)
-					{	
-							$INTERACTION{$record}->{'bioentityID'.$num} = $bioentityPK;
-					}
-					next;
-  				
-			}
+                  
+                        }
+                        
+                         else
+                        {
+                          
+                          
+                          
+                          
+                          
+                          	ErrorLog ("<br>Query: bioentityCommonQuery (commonName: $commonName).<br>  $bioentityIDCommon: the bioentity_Canonical_Name ( $rows[0] ) for this organism ($hashRef->{$record}->{'organismName'.$num})
+                            is not contained within the possible  upload CanonicalNames. <br> $canName<br> No records were updated<br>"  ,$hashRef->{$record} );
+                           delete $INTERACTION{$record};
+                        }
+             
+                    }
+# no common ID but 1 or more canonical ID                       
+                        elsif (!$bioentityIDCommon and scalar(keys %hashID) > 0)
+                        {
+ # update the first record encountered                         
+                          $bioentityIDCommon = (sort keys(%hashID))[0];
+                          $insert = 1 unless ($bioentityIDCommon);
+						  $update = 0 unless (!$insert);
+                            
+                          $hashRef->{$record}->{'bioentityCanName'.$num} = ${$hashRef->{$record}->{'bioentityCanName'.$num}}[0];
+                          my $bioentityPK = insertOrUpdateBioentity($hashRef->{$record},$num,$bioentityIDCommon,$insert,$update); 
+		
+						    if($INTERACTION{$record} and $bioentityPK)
+							{	
+								$INTERACTION{$record}->{'bioentityID'.$num} = $bioentityPK;
+							}
+                       
+						}
+# 1 common ID and one or more canonical  ID                        
+                        elsif ($bioentityIDCommon and scalar(keys %hashID) >0)
+                        {
+                          my $found = 0;
+                          MATCH:
+                          foreach my $key (keys %hashID)
+                          {  
+                            if ($key == $bioentityIDCommon)
+                            {
+                                my $query = "select bioentity_canonical_name from $TBIN_BIOENTITY where bioentity_id = $key";
+                                @rows = $sbeams->selectOneColumn($query);
+                                $insert = 1 unless ($bioentityIDCommon);
+                                $update = 0 unless (!$insert);
+                                $hashRef->{$record}->{'bioentityCanName'.$num} = $rows[0];
+                                 my $bioentityPK = insertOrUpdateBioentity($hashRef->{$record},$num,$bioentityIDCommon,$insert,$update); 
+		
+						        if($INTERACTION{$record} and $bioentityPK)
+                                {	
+                                  $INTERACTION{$record}->{'bioentityID'.$num} = $bioentityPK;
+                                }
+                         
+                                 $found = 1;
+                                 last MATCH if $found;; 
+                            }
+                          }
+                          if (! $found)
+                          {
+                               
+                                 my $idString =  join ', ', keys(%hashID);                               
+                                 ErrorLog ("<br>Query: bioentityCommonQuery (commonName: $commonName).<br>  $bioentityIDCommon: this  bioentity_id  for this organism ($hashRef->{$record}->{'organismName'.$num})
+                                is not contained within the possible  bioentity_ids ( $idString ) generated by the canonical query ( $canName )<br> No records were updated<br>"  ,$hashRef->{$record} );
+                         
+                                 delete $INTERACTION{$record};  
+                          }
+                        }
+            }
+                          
+                          
 			else 
 			{
 								
@@ -930,6 +1038,7 @@ sub checkPopulateBioentity
 							delete $INTERACTION{$record};
 							next;
 					}
+                    $hashRef->{$record}->{'bioentityCanName'.$num} = $rows[0];
 					$insert = 1 unless ($bioentityIDCanonical);
 					$update = 0 unless (!$insert);
 					
@@ -962,12 +1071,13 @@ sub insertOrUpdateBioentity
 		
 		
 		my %rowData;
-		$rowData{bioentity_common_name} = escapeString($record->{'bioentityComName'.$num}) if ($record->{"bioentityComName".$num});	
-		$rowData{bioentity_canonical_name} = escapeString($record->{'bioentityCanName'.$num}) if ($record->{"bioentityCanName".$num});	
-		$rowData{bioentity_Full_Name} = escapeString($record->{'bioentityFullName'.$num}) if ($record->{"bioentityFullName".$num});
-		$rowData{bioentity_canonical_gene_name} = escapeString($record->{'bioentityCanGeneName'.$num}) if ($record->{"bioentityCanGeneName".$num});
-		$rowData{bioentity_Aliases} = escapeString($record->{'bioentityAliasName'.$num}) if ($record->{"bioentityAliases".$num});
-		$rowData{bioentity_location}= escapeString($record->{'bioentityLoc'.$num}) if ($record->{"bioentityLoc".$num});
+;
+		$rowData{bioentity_common_name} = ($record->{'bioentityComName'.$num}) if ($record->{"bioentityComName".$num});	
+		$rowData{bioentity_canonical_name} =$record->{'bioentityCanName'.$num} if ($record->{'bioentityCanName'.$num});	
+		$rowData{bioentity_Full_Name} = ($record->{'bioentityFullName'.$num}) if ($record->{"bioentityFullName".$num});
+		$rowData{bioentity_canonical_gene_name} = ($record->{'bioentityCanGeneName'.$num}) if ($record->{"bioentityCanGeneName".$num});
+		$rowData{bioentity_Aliases} = ($record->{'bioentityAliasName'.$num}) if ($record->{"bioentityAliases".$num});
+		$rowData{bioentity_location}= ($record->{'bioentityLoc'.$num}) if ($record->{"bioentityLoc".$num});
 		
 		if ($insert)
 		{					 
@@ -975,37 +1085,7 @@ sub insertOrUpdateBioentity
 				$rowData{organism_id} = $organismName->{$record->{'organismName'.$num}};
 ##############################################################
 ##############################################################
-=comment
-#need to insert a group - organism association
-#only need to check this if there was an insert of an bioentity
-#FOR THIS TO TAKE EFFECT WE NEED TO CHANGE SOME CONSTRAINS ON THE INTERACTION_GROUP TABLE
-#FOR NOW WE STOP PROCESSING THE RECORD IF WE ENCOUNTER A MISSING INTERACTION_GROUP_ID	
-			my $interactionGroupQuery = qq /select interaction_group_id from $TBIN_INTERACTION_GROUP
-				where interaction_group_name = '$record->{group}' 
-				and organism_id = $organismName->{$record->{'organismName2'.$num}}/;		
-				my %groupRowData;
-				$groupRowData{organism_id} = $organismName->{$record->{'organismName2'.$num}};
-				$groupRowData{interaction_group_name} =  $record->{group};
-				if(!scalar($sbeams->selectOneColumn($interactionGroupQuery)))
-				{
-						my $groupUpdate = 0; 
-						my $groupInsert = 1;
-						my $interactionGroupID = 0;
-						
-						my $groupReturned_PK = $sbeams->updateOrInsertRow(
-							insert => $groupInsert,
-							update => $groupUpdate,
-							table_name => "$TBIN_INTERACTION_GROUP",
-							rowdata_ref => \%rowData,
-							PK => "interaction_group_id",
-							PK_value => $interactionGroupID,
-							return_PK => 1,
-							verbose=>$VERBOSE,
-							testonly=>$TESTONLY,
-							add_audit_parameters => 1
-							);
-				}
-=cut
+
 #############################################################
 #############################################################
 	}
@@ -1135,8 +1215,8 @@ sub  Error
 				
 #	}
 #	print $fhError "$error\n";
-		print $fhError join "\t", (@$arrayRef);
-	  print $fhError "\t$error\n";
+		print $fhError join "\t", (@$arrayRef) if defined($arrayRef); ;
+	    print $fhError "\t$error\n";
 
 }
 #specifies Database errors
@@ -1145,7 +1225,16 @@ sub ErrorLog
 		my ($error,$record) = @_;
 		foreach my $key (keys %{$record})
 		{
-				print $fhLog "\n$key  ===  $record->{$key}<br>\n";
+                if ($key =~/bioentityCanName/i)
+               {
+                    print $fhLog "\n$key ====  ";
+                    my $name = join ', ' ,@{$record->{$key}};
+                    print $fhLog "$name<br>\n";
+               }
+               else
+               {
+                 print $fhLog "\n$key  ===  $record->{$key}<br>\n";
+               }
 		}
 		print $fhLog "\n\n$error<br><br>\n\n";
 		
@@ -1159,8 +1248,12 @@ sub escapeString {
       $word =~ s/\'/\'\'/g;
       $word =~ s/\"/\'\"/g;
       $word =~ s/%/\'%/g;  
-			$word =~ s/\./\'\./g;
-      return $word;
+      $word =~ s/\./\'\./g;
+      $word =~ s/^\s+//;
+      $word =~ s/\s+$//;
+      my $escapedWord = "'".$word."'";
+      return $escapedWord;
+    # return $word; 
     }
 	
 
