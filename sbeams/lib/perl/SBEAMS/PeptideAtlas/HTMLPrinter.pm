@@ -40,44 +40,93 @@ sub printPageHeader {
 # display_page_header
 ###############################################################################
 sub display_page_header {
-    my $self = shift;
-    my %args = @_;
+  my $self = shift;
+  my %args = @_;
 
-    my $navigation_bar = $args{'navigation_bar'} || "YES";
+  my $navigation_bar = $args{'navigation_bar'} || "YES";
 
-    #### If the output mode is interactive text, display text header
-    my $sbeams = $self->getSBEAMS();
-    if ($sbeams->output_mode() eq 'interactive') {
-      $sbeams->printTextHeader();
-      return;
+  #### If the output mode is interactive text, display text header
+  my $sbeams = $self->getSBEAMS();
+  my $http_header = $sbeams->get_http_header();
+  if ($sbeams->output_mode() eq 'interactive') {
+    $sbeams->printTextHeader();
+    return;
+  }
+
+
+  #### If the output mode is not html, then we don't want a header here
+  if ($sbeams->output_mode() ne 'html') {
+    return;
+  }
+
+  #### Obtain main SBEAMS object and use its http_header
+  $sbeams = $self->getSBEAMS();
+
+    if( $sbeams->isGuestUser() ) {
+      $self->displayGuestPageHeader();
+    } else {
+      $self->displayStandardPageHeader();
     }
+  }
+
+sub displayGuestPageHeader {
+ 	my $self = shift;
+  my %args = @_;
+
+  my $navigation_bar = $args{'navigation_bar'} || "YES";
+
+  #### Obtain main SBEAMS object and use its http_header
+  my $sbeams = $self->getSBEAMS();
+  my $http_header = $sbeams->get_http_header();
+  use LWP::UserAgent;
+  use HTTP::Request;
+  my $ua = LWP::UserAgent->new();
+  my $skinLink = 'http://www.peptideatlas.org';
+  my $response = $ua->request( HTTP::Request->new( GET => "$skinLink/index.php" ) );
+  my @page = split( "\r", $response->content() );
+  my $skin = '';
+  for ( @page ) {
+    last if $_ =~ /--- Main Page Content ---/;
+    $skin .= $_;
+  }
+  $skin =~ s/\/images\//\/sbeams\/images\//gm;
+ 
+  print "$http_header\n\n";
+  print <<"  END_PAGE";
+  <HTML>
+    $skin
+  END_PAGE
+
+  $self->printJavascriptFunctions();
+  }
 
 
-    #### If the output mode is not html, then we don't want a header here
-    if ($sbeams->output_mode() ne 'html') {
-      return;
-    }
 
+sub displayStandardPageHeader {
+  my $self = shift;
+  my %args = @_;
 
-    #### Obtain main SBEAMS object and use its http_header
-    $sbeams = $self->getSBEAMS();
-    my $http_header = $sbeams->get_http_header();
+  my $navigation_bar = $args{'navigation_bar'} || "YES";
 
-    print qq~$http_header
+  #### Obtain main SBEAMS object and use its http_header
+  my $sbeams = $self->getSBEAMS();
+  my $http_header = $sbeams->get_http_header();
+
+  print qq~$http_header
 	<HTML><HEAD>
 	<TITLE>$DBTITLE - $SBEAMS_PART</TITLE>
-    ~;
+  ~;
 
 
-    $self->printJavascriptFunctions();
-    $self->printStyleSheet();
+  $self->printJavascriptFunctions();
+  $self->printStyleSheet();
 
 
-    #### Determine the Title bar background decoration
-    my $header_bkg = "bgcolor=\"$BGCOLOR\"";
-    $header_bkg = "background=\"$HTML_BASE_DIR//images/plaintop.jpg\"" if ($DBVERSION =~ /Primary/);
+  #### Determine the Title bar background decoration
+  my $header_bkg = "bgcolor=\"$BGCOLOR\"";
+  $header_bkg = "background=\"$HTML_BASE_DIR//images/plaintop.jpg\"" if ($DBVERSION =~ /Primary/);
 
-    print qq~
+  print qq~
 	<!--META HTTP-EQUIV="Expires" CONTENT="Fri, Jun 12 1981 08:20:00 GMT"-->
 	<!--META HTTP-EQUIV="Pragma" CONTENT="no-cache"-->
 	<!--META HTTP-EQUIV="Cache-Control" CONTENT="no-cache"-->
@@ -94,12 +143,12 @@ sub display_page_header {
 	  <td align="left" $header_bkg><H1>$DBTITLE - $SBEAMS_PART<BR>$DBVERSION</H1></td>
 	</tr>
 
-    ~;
+  ~;
 
-    #print ">>>http_header=$http_header<BR>\n";
+  #print ">>>http_header=$http_header<BR>\n";
 
-    if ($navigation_bar eq "YES") {
-      print qq~
+  if ($navigation_bar eq "YES") {
+    print qq~
 	<!------- Button Bar -------------------------------------------->
 	<tr><td bgcolor="$BARCOLOR" align="left" valign="top">
 	<table border=0 width="120" cellpadding=2 cellspacing=0>
@@ -127,11 +176,11 @@ sub display_page_header {
 	<tr><td>
 
     ~;
-    } else {
+  } else {
       print qq~
-	</TABLE>
+	  </TABLE>
       ~;
-    }
+  }
 
 }
 
