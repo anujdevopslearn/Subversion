@@ -233,9 +233,11 @@ sub checkLoggedIn {
 
     my $username = "";
 
-    if ($main::q->cookie('SBEAMSName')){
+    my $cookie = $main::q->cookie('SBEAMSName');
+    if ($cookie){
         my $cipher = new Crypt::CBC($self->getCryptKey(), 'IDEA');
-        $username = $cipher->decrypt($main::q->cookie('SBEAMSName'));
+        $username = $cipher->decrypt($cookie);
+        #print "Content-type: text/plain\n\nGot cookie: raw:$cookie; decoded:$username\n";
         $username = $self->convertSingletoTwoQuotes($username);
 
         #### Verify that the deciphered result is still an active username
@@ -247,7 +249,10 @@ sub checkLoggedIn {
         );
         $username = "" if ($result ne $username);
     } elsif ($allow_anonymous_access) {
+      #print "Content-type: text/plain\n\nReceived no cookie; runs as guest\n";
       $username = 'guest';
+    } else {
+      #print "Content-type: text/plain\n\nReceived no cookie\n";
     }
 
 
