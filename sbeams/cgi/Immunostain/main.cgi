@@ -425,7 +425,7 @@ my %organismHash = $sbeams->selectTwoColumnHash($organismSql);
     foreach my $key (sort keys %tissueTypeHash) { # Loop through tissue types 
 
 		  foreach my $org (sort keys %hash) {
-        my $help = 'Display expression summary for $org $key samples for each CD';
+        my $help = "Display expression summary for $org $key samples for each CD";
 
         # undef is not a number!
         for ( qw( specimenID stainedSlideID slideImageID ) ) {
