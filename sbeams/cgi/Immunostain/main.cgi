@@ -245,7 +245,6 @@ sub displayIntro
 #### get the project id
   my $project_id = $args{'project_id'} || die "project_id not passed";
 #load the javascript functions
-	
 #get the tissue and the organisms for this project and display them as check boxes				
 my $organismSql = qq~ select s.organism_id,organism_name from $TBIS_SPECIMEN s
 		join sbeams.dbo.organism sdo on s.organism_id = sdo.organism_id	WHERE s.project_id = '$project_id'
@@ -361,7 +360,7 @@ my %tissueHash = $sbeams->selectTwoColumnHash($tissueSql);
 	print "</tr><tr></tr><tr></tr>";
 
 #creating the checkboxes
-		print qq~ <tr></tr><tr><td><b>Select one or more of the following</B><td></tr><tr></tr>~;
+		print qq~ <tr></tr><tr><td><b><font color="red">Select one or more of the following Options to view Stain, Antibody, Celltype Characterization and Image data related to your selection</font></B><td></tr><tr></tr>~;
 		print $q->start_form (-onSubmit=>"return checkForm()");
 	
 			foreach my $key (keys %organismHash)
@@ -378,7 +377,7 @@ my %tissueHash = $sbeams->selectTwoColumnHash($tissueSql);
 				}
 				print qq~ <tr><td><input type="checkbox" name="$tissueHash{$key}" value="$key">$tissueHash{$key}</td></tr>~;
 			}
-			print q~<tr></tr><tr></td><td><td><input type ="submit" name= "SUBMIT" value = "QUERY"></td></tr> ~;
+			print q~<tr></tr><tr><td><input type ="submit" name= "SUBMIT" value = "QUERY"></td></tr> ~;
 			print "<input type= hidden name=\"action\" value = \"$START\">";
 			print $q->end_form;
 		}#end of if data was found for this project
@@ -388,16 +387,21 @@ my %tissueHash = $sbeams->selectTwoColumnHash($tissueSql);
 		{
 			 print "	<TR><TD WIDTH=\"100%\"><B><NOWRAP>This project contains no IHC Data</NOWRAP></B></TD></TR>\n";
 		}
+		
+		 #### Finish the table
+  print qq~
+	</TABLE></TD></TR>
+	</TABLE>~;
 
   ##########################################################################
   #### Print out all projects owned by the user
-  $sbeams->printProjectsYouOwn();
+#  $sbeams->printProjectsYouOwn();
 
 
 
   ##########################################################################
   #### Print out all projects user has access to
-  $sbeams->printProjectsYouHaveAccessTo();
+#  $sbeams->printProjectsYouHaveAccessTo();
 
 
   ##########################################################################
@@ -1005,8 +1009,8 @@ sub processCells
 
 
 #cubersome routine to build the sqlClause
-#always get the organism_id from sbo (sbeam.dbo.organism)
-#always get the tissue_type_id from tt (tissue_type)
+#always get the organism_id from sbo since it is the pk(sbeam.dbo.organism)
+#always get the tissue_type_id from tt since it is the pk(tissue_type)
 sub buildSqlClause
 {
 	my %args = @_;
@@ -1062,7 +1066,7 @@ CHECK
 	
 	function disableQuery()
 	{
-			document.forms[5].SUBMIT3.disabled= true;
+			document.forms[5].SUBMIT3.disabled = true;
 	}
 QUERY
 print "<\/script>";
