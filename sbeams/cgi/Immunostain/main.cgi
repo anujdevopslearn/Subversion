@@ -529,10 +529,7 @@ my %organismHash = $sbeams->selectTwoColumnHash($organismSql);
     $summaryHTML
     $cprojHTML<BR>
     END
-#  $ctitle<BR>
-#   $content .= $cb unless $cprojHTML =~ /This project contains no IHC data/;
   } 
- $log->debug( $pad ); 
 
   # Add content to tabmenu (if desired). 
   $tabmenu->addContent( $content );

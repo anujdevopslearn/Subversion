@@ -242,6 +242,11 @@ foreach my $p (keys %parameters)
 
 
 
+  if ( $apply_action eq 'QUERYHIDE' ) {
+    # Kluge McDuck
+    print "<FONT SIZE=+1>Show <INPUT TYPE='submit' NAME='action' VALUE='QUERY'> options.</FONT></FORM>";
+  } else {
+
   #### Display the form action buttons
   $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
 
@@ -249,7 +254,8 @@ foreach my $p (keys %parameters)
   #### Finish the upper part of the page and go begin the full-width
   #### data portion of the page
   $sbeams->display_page_footer(close_tables=>'YES',
-    separator_bar=>'YES',display_footer=>'NO');
+  separator_bar=>'YES',display_footer=>'NO')
+  }
 
 
 
@@ -401,7 +407,7 @@ foreach my $p (keys %parameters)
     column_titles_ref=>\@column_titles
   );
   
-  # This particular abomination results from how tissue types and structural
+  # This particular abomination results from how tissue types and structural units
   # are related within the schema.  Struct units have no intrinsic tissue type,
   # and in the cases delineated below the struct_units are represented in more
   # than one tissue type (via specimen->sp_block->assay->assay_channel->auexp)
@@ -559,6 +565,11 @@ foreach my $p (keys %parameters)
       cytoscape=>$cytoscape,
     ) if (defined($parameters{display_options}) &&
 	  $parameters{display_options} =~ /pivot/i);
+
+  #### Finish the upper part of the page and go begin the full-width
+  #### data portion of the page
+  $sbeams->display_page_footer(close_tables=>'YES',
+  separator_bar=>'YES',display_footer=>'NO') if $apply_action eq 'QUERYHIDE';
 
 
     #### Display the resultset
@@ -811,7 +822,7 @@ sub postProcessResultset {
     ( my $cellType = $skey ) =~ s/---\d//;
 
     # Add the table headings;
-    push @trow, ( $exprTabMode eq 'HTML' ) ? "<B>$cellType</B>" : $cellType;
+    push @trow, ( $exprTabMode eq 'HTML' ) ? makeGlossaryLink($cellType) : $cellType;
     push @trow, ( $exprTabMode eq 'HTML' ) ? "<B># Exp</B>" : 
                                             '# Exp' if $pivot;
     
@@ -971,6 +982,39 @@ sub postProcessResultset {
   return 1;
 } # end postProcessResult
 
+sub makeGlossaryLink {
+  my $celltype = shift;
+  my %linkage = ( 'Luminal Epithelial Cells' => 'LepithCells',
+                  'Basal Epithelial Cells' => 'BepithCells',
+                  'Stromal Fibromuscular Cells' =>'FibormCells',
+                  'Stromal Endothelial Cells' =>'EndoCells',
+                  'Stromal Perineural Cells' =>'NeuroCells',
+                  'Stromal Nerve Sheath Cells' =>'NerveCells',
+                  'Stromal Leukocytes' =>'Leuko',
+                  'Cancerous Cells' =>'',
+                  'Normal Cells' =>'',
+                  'Atrophic glands' => 'Aglands',
+                  'Normal glands' => '',
+                  'Hyperplastic glands' =>'Hglands',
+                  'Gleason Pattern 3' =>'Gleason3',
+                  'Gleason Pattern 4' =>'Gleason4',
+                  'Gleason Pattern 5' =>'Gleason5',
+                  'Cap Cells' =>'CapCells',
+                  'Intermediate Cells' => 'Intermediate_cells',
+                  'Lamina propria - superficial' => 'Lamina_propria_superficial',
+                  'Lamina propria - deep' =>'Lamina_propria_deep',
+                  'Submucosa' =>'Submucosa',
+                  'Muscularis propria' =>'Muscularis_propria',
+                  'Transitional Cell Carcinoma' =>'Transitional_cell_carcinoma',
+                  'Superficial Epithelial Cells' =>'' );
+  unless ( $linkage{$celltype} ) {
+    return "<B>$celltype</B>";
+  }
+  return <<"  END";
+  <A HREF=http://scgap.systemsbiology.net/ontology/Glossary.php#$linkage{$celltype}><B>$celltype</B></A>
+  END
+                  
+}
 
 
 ###############################################################################
