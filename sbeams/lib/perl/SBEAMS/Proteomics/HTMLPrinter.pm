@@ -124,28 +124,23 @@ sub display_page_header {
       if (uc($navigation_bar) eq 'YES') {
         print qq~
 	<tr><td>&nbsp;</td></tr>
-	<tr><td>Manage Tables:</td></tr>
+	<tr><td>Manage Experiments:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project"<nobr>&nbsp;&nbsp;&nbsp;Projects</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=proteomics_experiment"><nobr>&nbsp;&nbsp;&nbsp;Experiments</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
+	<tr><td>Browse Data:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeExperiment.cgi"><nobr>&nbsp;&nbsp;&nbsp;Summarize Fractions</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetSearchHits"><nobr>&nbsp;&nbsp;&nbsp;Browse Search Hits</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizePeptides"><nobr>&nbsp;&nbsp;&nbsp;Summarize over</nobr><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Proteins/Peptides</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/CompareExperiments"><nobr>&nbsp;&nbsp;&nbsp;Compare Exp's</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>
+	<tr><td>Core Management:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=dbxref"><nobr>&nbsp;&nbsp;&nbsp;DB XRefs</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_gradient_program"><nobr>&nbsp;&nbsp;&nbsp;Gradient Program</nobr></a></td></tr>
-	<tr><td>&nbsp;</td></tr>
-	<tr><td>Browse Data:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeExperiment.cgi"><nobr>&nbsp;&nbsp;&nbsp;Summarize Exp's</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetSearchHits"><nobr>&nbsp;&nbsp;&nbsp;Browse Search Hits</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseAnnotatedPeptides.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse Annotated</nobr><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Peptides</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/CompareExperiments"><nobr>&nbsp;&nbsp;&nbsp;Compare Exp's</nobr></a></td></tr>
-	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr>
-	<tr><td>&nbsp;</td></tr>
-	<tr><td>Special Interfaces:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/flycat.cgi"><nobr>&nbsp;&nbsp;&nbsp;FLYCAT</nobr></a></td></tr>
-	<tr><td>&nbsp;</td></tr>
 	<tr><td>Documentation:</td></tr>
 	<tr><td><a href="$HTML_BASE_DIR/doc/$SBEAMS_SUBDIR/$SBEAMS_PART.gif"><nobr>&nbsp;&nbsp;&nbsp;Schema (GIF)</nobr></a></td></tr>
-	<tr><td>&nbsp;</td></tr>
 	<tr><td>Other Tools:</td></tr>
 	<tr><td><a href="http://db.systemsbiology.net:8080/proteomicsToolkit/"><nobr>&nbsp;&nbsp;&nbsp;Proteomics Toolkit</nobr></a></td></tr>
         ~;
