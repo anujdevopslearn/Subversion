@@ -17,7 +17,8 @@ package SBEAMS::BEDB::HTMLPrinter;
 use strict;
 use vars qw($sbeams $current_contact_id $current_username
              $current_work_group_id $current_work_group_name
-             $current_project_id $current_project_name $current_user_context_id);
+             $current_project_id $current_project_name $current_user_context_id
+             $DISPLAY_STYLE);
 use CGI::Carp qw(fatalsToBrowser croak);
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Settings;
@@ -47,6 +48,8 @@ sub printPageHeader {
     my %args = @_;
 
     my $navigation_bar = $args{'navigation_bar'} || "YES";
+    my $display_style = $args{'display_style'} || "External";
+    $DISPLAY_STYLE = $display_style;
 
     #### Obtain main SBEAMS object and use its http_header
     $sbeams = $self->getSBEAMS();
@@ -54,26 +57,35 @@ sub printPageHeader {
 
     print qq~$http_header
 	<HTML><HEAD>
-	<TITLE>$DBTITLE - $SBEAMS_PART</TITLE>
+	<TITLE>Brain Expression Database</TITLE>
     ~;
 
 
-    $self->printJavascriptFunctions();
-    $self->printStyleSheet();
+    #### If External, adjust some settings
+    if ($display_style eq "External") {
+      $BARCOLOR = "#eeeeee";
+      $navigation_bar="YES";
+    }
 
 
-    #### Determine the Title bar background decoration
-    my $header_bkg = "bgcolor=\"$BGCOLOR\"";
-    $header_bkg = "background=\"/images/plaintop.jpg\"" if ($DBVERSION =~ /Primary/);
+    #### If we want to use internal style
+    if ($display_style ne "External") {
 
-    print qq~
+      $self->printJavascriptFunctions();
+      $self->printStyleSheet();
+
+      #### Determine the Title bar background decoration
+      my $header_bkg = "bgcolor=\"$BGCOLOR\"";
+      $header_bkg = "background=\"/images/plaintop.jpg\"" if ($DBVERSION =~ /Primary/);
+
+      print qq~
 	<!--META HTTP-EQUIV="Expires" CONTENT="Fri, Jun 12 1981 08:20:00 GMT"-->
 	<!--META HTTP-EQUIV="Pragma" CONTENT="no-cache"-->
 	<!--META HTTP-EQUIV="Cache-Control" CONTENT="no-cache"-->
 	</HEAD>
 
 	<!-- Background white, links blue (unvisited), navy (visited), red (active) -->
-	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" >
+	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" OnLoad="self.focus();">
 	<table border=0 width="100%" cellspacing=0 cellpadding=1>
 
 	<!------- Header ------------------------------------------------>
@@ -83,9 +95,51 @@ sub printPageHeader {
 	  <td align="left" $header_bkg><H1>$DBTITLE - $SBEAMS_PART<BR>$DBVERSION</H1></td>
 	</tr>
 
-    ~;
+      ~;
 
-    #print ">>>http_header=$http_header<BR>\n";
+    #### If we want to use fancy External style
+    } else {
+      print qq~
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<meta name="author" content="FutureVision Web Agency - web site development, design, database development, corporate image &amp; multimedia presentations, Internet marketing &amp; promotion.">
+<meta Author="Developed by FutureVision.com.ua, full-service software development, design, application, database development, corporate image & multimedia presentations, Internet marketing">
+<link rel="stylesheet" href="/includes/BEDB/styles.css" type="text/css">
+</head>
+<body bgcolor="#FFFFFF" text="#000000" leftmargin="0" topmargin="0" marginwidth="0" marginheight="0" OnLoad="self.focus();">
+<table width="100%" border="0" cellspacing="0" cellpadding="0">
+  <tr>
+    <td valign="top">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0">
+        <tr>
+          <td class="color1"><img src="/images/BEDB/logo.gif" width="507" height="35" vspace="21" hspace="0" alt="Brain Expression Database"><br>
+            <div class="topMenu"><a href="index.htm">&nbsp;HOME </a>|<a href="overview.htm">
+              OVERVIEW </a>|<span class="sel"> LIBRARY &amp; EST ARCHIVE </span>|<a href="blast.htm">
+              BLAST </a>|<a href="expression.htm"> EXPRESSION </a>|<a href="proteome.htm">
+              PROTEOME </a>|<a href="transcriptome.htm"> TRANSCRIPTOME </a>|<a href="links.htm">
+              LINKS&nbsp;</a></div>
+          </td>
+        </tr>
+        <tr>
+          <td class="color2"><img src="/images/BEDB/1x1t.gif" width="1" height="1"></td>
+        </tr>
+        <tr>
+          <td class="color3">
+            <table width="750" border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                <td><img src="/images/BEDB/header03.jpg" width="367" height="75"></td>
+                <td valign="bottom" align="right"><img src="/images/BEDB/_plibrary.gif" width="258" height="16" vspace="7" hspace="0" alt="Library &amp; EST archive"></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<table width="730" border="0" cellspacing="0" cellpadding="0">
+      ~;
+    }
+
 
     if ($navigation_bar eq "YES") {
       print qq~
@@ -97,12 +151,18 @@ sub printPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/main.cgi">$SBEAMS_PART Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td>Manage Tables:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/BEDB/ManageTable.cgi?TABLE_NAME=BE_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
+	<tr><td>Summarize:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/BEDB/ShowESTLibrary.cgi"><nobr>&nbsp;&nbsp;&nbsp;EST Libraries</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/BEDB/BrowseESTLibrary.cgi"><nobr>&nbsp;&nbsp;&nbsp;EST Libraries</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/BEDB/getAnnotation"><nobr>&nbsp;&nbsp;&nbsp;Genes</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/BEDB/BrowseEST.cgi"><nobr>&nbsp;&nbsp;&nbsp;ESTs</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/BEDB/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;BioSequences</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>
+	<tr><td>Manage Tables:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/BEDB/ManageTable.cgi?TABLE_NAME=BE_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	</table>
 	</td>
@@ -181,6 +241,22 @@ sub printJavascriptFunctions {
 
 
 
+###############################################################################
+# getTableColorScheme
+###############################################################################
+sub getTableColorScheme {
+  my $self = shift;
+
+  my %row_color_scheme;
+  $row_color_scheme{header_background} = '#008ba3';
+  $row_color_scheme{change_n_rows} = 3;
+  my @row_color_list = ("#F0F0F0","#ceeff0");
+  $row_color_scheme{color_list} = \@row_color_list;
+  my $row_color_scheme_ref = \%row_color_scheme;
+
+  return $row_color_scheme_ref;
+}
+
 
 
 ###############################################################################
@@ -198,11 +274,33 @@ sub printPageFooter {
   }
 
   if ($flag =~ /Footer/) {
-    print qq~
+    if ($DISPLAY_STYLE ne "External") {
+      print qq~
 	<BR><HR SIZE="2" NOSHADE WIDTH="30%" ALIGN="LEFT">
 	SBEAMS - $SBEAMS_PART [Under Development]<BR><BR><BR>
 	</BODY></HTML>\n\n
-    ~;
+      ~;
+    } else {
+      print qq~
+      <table width="750" border="0" cellspacing="0" cellpadding="0">
+        <tr>
+          <td>
+            <div class="bottomMenu"><a href="index.htm">&nbsp;Home </a>|<a href="overview.htm">
+              Overview </a>|<span class="sel"> Library &amp; EST archive </span>|<a href="blast.htm">
+              Blast </a>|<a href="expression.htm"> Expression </a>|<a href="proteome.htm">
+              Proteome </a>|<a href="transcriptome.htm"> Transcriptome </a>|<a href="links.htm">
+              Links&nbsp;</a></div>
+            <div class="copyright">Copyright &copy; Institute for Systems Biology,
+              2002. Design by <a href="http://www.futurevision.com.ua" target="_blank">FutureVision</a></div>
+          </td>
+        </tr>
+      </table>
+      <BR><BR><BR>
+      </BODY></HTML>
+      ~;
+
+    }
+
   }
 
 }
