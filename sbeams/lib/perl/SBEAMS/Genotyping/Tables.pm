@@ -27,6 +27,9 @@ use vars qw(@ISA @EXPORT
     $TBGT_EXPERIMENT
     $TBGT_SAMPLE
     $TBGT_POOLING_SET
+    $TBGT_DNA_TYPE
+    $TBGT_REQUESTED_GENOTYPING_ASSAY
+    $TBGT_COST_SCHEME
 
     $TBGT_QUERY_OPTION
 
@@ -47,6 +50,9 @@ require Exporter;
     $TBGT_EXPERIMENT
     $TBGT_SAMPLE
     $TBGT_POOLING_SET
+    $TBGT_DNA_TYPE
+    $TBGT_REQUESTED_GENOTYPING_ASSAY
+    $TBGT_COST_SCHEME
 
     $TBGT_QUERY_OPTION
 
@@ -66,6 +72,9 @@ $TBGT_BIOSEQUENCE_PROPERTY_SET   = "${mod}biosequence_property_set";
 $TBGT_EXPERIMENT            = "${mod}experiment";
 $TBGT_SAMPLE                = "${mod}sample";
 $TBGT_POOLING_SET           = "${mod}pooling_set";
+$TBGT_DNA_TYPE              = "${mod}dna_type";
+$TBGT_REQUESTED_GENOTYPING_ASSAY = "${mod}requested_genotyping_assay";
+$TBGT_COST_SCHEME           = "${mod}cost_scheme";
 $TBGT_QUERY_OPTION          = "${mod}query_option";
 
 

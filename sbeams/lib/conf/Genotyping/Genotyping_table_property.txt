@@ -7,4 +7,7 @@ GT_query_option	Query Option	Genotyping_infrastructure	YES	$TBGT_QUERY_OPTION	qu
 GT_BrowseBioSequence	Browse BioSequence	QUERY	NO				BrowseBioSequence.cgi		
 GT_experiment	Experiment	Genotyping_infrastructure	YES	$TBGT_EXPERIMENT	experiment_id		ManageTable.cgi?TABLE_NAME=GT_experiment	GT_experiment	
 GT_sample	Sample	Genotyping_infrastructure	YES	$TBGT_SAMPLE	sample_id		ManageTable.cgi?TABLE_NAME=GT_sample	GT_sample	
+GT_dna_type	DNA Type	Genotyping_infrastructure	YES	$TBGT_DNA_TYPE	dna_type_id		ManageTable.cgi?TABLE_NAME=GT_dna_type	GT_dna_type	
 GT_pooling_set	Pooling Set	Genotyping_infrastructure	YES	$TBGT_POOLING_SET	pooling_set_id		ManageTable.cgi?TABLE_NAME=GT_pooling_set	GT_pooling_set	
+GT_requested_genotyping_assay	Requested Genotyping Assay	Genotyping_infrastructure	YES	$TBGT_REQUESTED_GENOTYPING_ASSAY	requested_assay_id		ManageTable.cgi?TABLE_NAME=GT_requested_genotyping_assay	GT_requested_genotyping_assay	
+GT_cost_scheme	Cost Scheme	Genotyping_infrastructure	YES	$TBGT_COST_SCHEME	cost_scheme_id		ManageTable.cgi?TABLE_NAME=GT_cost_scheme	GT_cost_scheme	

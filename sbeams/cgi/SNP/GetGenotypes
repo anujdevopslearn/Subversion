@@ -24,6 +24,10 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
 
+use vars qw ($t0 $t1 $t2 $t3 $t4 $t5 $t6 $t7 $t8 $t8_1 $t9);
+use Time::HiRes qw( usleep ualarm gettimeofday tv_interval );
+$t0 = [gettimeofday()];
+
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
@@ -78,6 +82,7 @@ if ($DEBUG) {
 ###############################################################################
 # Set Global Variables and execute main()
 ###############################################################################
+#$DEBUG = 1;
 main();
 exit(0);
 
@@ -189,10 +194,13 @@ sub handle_request {
 
   #### Display the user-interaction input form
   $sbeams->display_input_form(
-    TABLE_NAME=>$TABLE_NAME,CATEGORY=>$CATEGORY,apply_action=>$apply_action,
+    TABLE_NAME=>$TABLE_NAME,
+    CATEGORY=>$CATEGORY,
+    apply_action=>$apply_action,
     PROGRAM_FILE_NAME=>$PROGRAM_FILE_NAME,
     parameters_ref=>\%parameters,
     input_types_ref=>\%input_types,
+    #allow_NOT_flags => 1,
   );
 
 
@@ -338,10 +346,20 @@ sub handle_request {
       $sbeams->display_sql(sql=>$sql) if ($show_sql);
 
 
+      $t1 = [gettimeofday()];
+      if ($DEBUG) {
+	printf("\nt0 - t1: %4f (Start - Pre-query)<BR>\n",tv_interval($t0,$t1));
+      }
+
       #### Fetch the results from the database server
       $sbeams->fetchResultSet(sql_query=>$sql,
         resultset_ref=>$resultset_ref);
 
+
+      $t2 = [gettimeofday()];
+      if ($DEBUG) {
+	printf("\nt1 - t2: %4f (Query time and fetch)<BR>\n",tv_interval($t1,$t2));
+      }
 
       #### Post process the resultset unless plain view
       postProcessResultset(rs_params_ref=>\%rs_params,
@@ -349,10 +367,33 @@ sub handle_request {
       ) unless ($parameters{view_style} =~ /PlainView/) ||
         (($parameters{view_style} !~ /Sample/) && ($parameters{view_style} !~ /Summary/));
 
+      $t8 = [gettimeofday()];
+      if ($DEBUG) {
+	printf("\nt7 - t8: %4f (Freeing postProcess data)<BR>\n",tv_interval($t7,$t8));
+	printf("\nt2 - t8: %4f (Total: Query finish - postProcess)<BR>\n",tv_interval($t2,$t8));
+      }
+
       #### Store the resultset and parameters to disk resultset cache
       $rs_params{set_name} = "SETME";
-      $sbeams->writeResultSet(resultset_file_ref=>\$rs_params{set_name},
-        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters);
+      $sbeams->writeResultSet(
+        resultset_file_ref=>\$rs_params{set_name},
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters,
+        resultset_params_ref=>\%rs_params,
+        query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+      );
+
+      #### Write the gap file to a cache file if there is one
+      writeGapFile(
+        rs_params_ref=>\%rs_params,
+        resultset_ref=>$resultset_ref,
+      );
+
+    }
+
+    $t8_1 = [gettimeofday()];
+    if ($DEBUG) {
+      printf("\nt8 - t8_1: %4f (Caching resultset)<BR>\n",tv_interval($t8,$t8_1));
     }
 
 
@@ -381,6 +422,13 @@ sub handle_request {
         base_url=>$base_url);
 
 
+    #### If there's a gapfile, then give the user access to it
+    showGapFileLink(
+      rs_params_ref=>\%rs_params,
+      resultset_ref=>$resultset_ref,
+    );
+
+
     #### Display a plot of data from the resultset
     $sbeams->displayResultSetPlot(
       rs_params_ref=>\%rs_params,
@@ -398,6 +446,12 @@ sub handle_request {
     } else {
       print "You need to supply some parameters to contrain the query\n";
     }
+  }
+
+
+  $t9 = [gettimeofday()];
+  if ($DEBUG) {
+    printf("\nt8 - t9: %4f (postProcess finish - cache and done.)<BR>\n",tv_interval($t8,$t9));
   }
 
 
@@ -440,19 +494,25 @@ sub postProcessResultset {
 
 
   #### Get the predicted locations of the rank list file
-  my $order_file = "/users/kdeutsch/examples/oracle/picked-sorted.tsv:chr10zzz";
+  my $assay_order_list = "SN_assay_order_list/".
+    "$query_parameters_ref->{assay_order_list_id}".
+    "_assay_order_list_file.dat";
 
 
   #### Read in order file and create hash out of its contents
   my %snphash;
-  if (open(ASSAYFILE,"$order_file")) {
-    while (<ASSAYFILE>) {
+  if (open(ASSAYORDERFILE,"$UPLOAD_DIR/$assay_order_list")) {
+    while (<ASSAYORDERFILE>) {
       chomp;
       next if ($_ =~ /pos/);
       my ($snp_id,$snp_pos) = split("\t",$_);
       $snp_id =~ s/\s+//g;
       $snphash{$snp_pos}=$snp_id;
     }
+    close(ASSAYORDERFILE);
+
+  } else {
+    #die "Cannot open $UPLOAD_DIR/$assay_order_list";
   }
 
 
@@ -491,6 +551,12 @@ sub postProcessResultset {
   for (my $row=0;$row<$n_rows; $row++) {
 
     $project_id = $resultset_ref->{data_ref}->[$row]->[$project_id_index];
+    #### If user asked for Concannon reordering, then combine projects
+    if ($parameters{display_options} =~ /ConcannonReorder/ &&
+        $parameters{view_style} =~ /SampleVsAssay/) {
+      $project_id = 'Combined';
+    }
+
     $plate_id = $resultset_ref->{data_ref}->[$row]->[$plate_id_index];
     $exp_no = $resultset_ref->{data_ref}->[$row]->[$exp_no_index];
     $well_position = $resultset_ref->{data_ref}->[$row]->[$well_position_index];
@@ -574,7 +640,16 @@ sub postProcessResultset {
     #### Add this assay to the list of assays if we don't have it yet
     $query_assays{$assay_id} = 1;
 
+    #### Free memory as we go along
+    shift(@{$resultset_ref->{data_ref}->[$row]});
+
   }
+
+  $t3 = [gettimeofday()];
+  if ($DEBUG) {
+    printf("\nt2 - t3: %4f (postProcess: building data hash)<BR>\n",tv_interval($t2,$t3));
+  }
+
 
 
 #  #### Print out some stats from the collation
@@ -583,8 +658,8 @@ sub postProcessResultset {
 #  }
 
 
-  #### Write out a gap file
-  open(GAPFILE,">/users/kdeutsch/examples/oracle/SBEAMS.gapfile");
+  #### Create a gap file (in memory for the moment)
+  my $gapfile_text = '';
   my $ppos = 0;
   my $position;
   my @assays;
@@ -595,26 +670,29 @@ sub postProcessResultset {
   if (defined(%snphash)) {
     foreach $position (sort keys %snphash) {
       my $assay = $snphash{$position};
-      if (defined($data->{$project_id}->{$assay})) {
-  	print GAPFILE "\t",($position-$ppos),"\n" if ($ppos);
-  	push (@assays,$assay);
-  	print GAPFILE "$assay\t$position";
-  	$ppos = $position;
-        #print "INFO: Assay $assay IS in data<BR>\n";
-      } else {
-        #print "WARNING: Assay $assay not in data<BR>\n";
+      foreach my $proj_key (keys %{$data}) {
+	if (defined($data->{$proj_key}->{$assay})) {
+	  $gapfile_text .= "\t".($position-$ppos)."\n" if ($ppos);
+	  push (@assays,$assay);
+	  $gapfile_text .= "$assay\t$position";
+	  $ppos = $position;
+	  #print "INFO: Assay $assay IS in data<BR>\n";
+	} else {
+	  #print "WARNING: Assay $assay not in data<BR>\n";
+	}
       }
     }
-    print GAPFILE "\t0\n";
+    $gapfile_text .= "\t0\n";
 
   #### Else write out just the observed snps
   } else {
     foreach my $assay (@query_assays) {
       push(@assays,$assay);
-      print GAPFILE "$assay\t0\t0\n";
+      $gapfile_text .= "$assay\t0\t0\n";
     }
   }
-  close(GAPFILE);
+  $resultset_ref->{gapfile_text} = $gapfile_text;
+
 
   #### Fudge the assays by removing 'gi' if it exists within
   my @fudged_assays;
@@ -640,65 +718,75 @@ sub postProcessResultset {
   my @column_types = ();
 
 
-  #### If the user asked for Concannon reordering, build that way
-  if ($parameters{display_options} =~ /ConcannonReorder/) {
-    foreach my $project_name (@projects) {
-      foreach my $letter ( 'A','B','C','D','E','F','G' ) {
-        for (my $num1 = 1; $num1 <=12; $num1++) {
-  	  for (my $num2 = 0; $num2 <= 84; $num2+=12) {
-  	    my $fac = ($num1 + $num2);
-    	    my $sample_name = "$letter$fac";
-  	    my @row = ($sample_name);
-  	    foreach my $assay (@assays) {
-  	      if (defined($data->{$project_name}->{$assay}->{$sample_name}->{single_call})) {
-  	        push(@row,$data->{$project_name}->{$assay}->{$sample_name}->{single_call});
-
-  	        #### Add to the allele counters
-  	        my @alleles = split("/",$data->{$project_name}->{$assay}->{$sample_name}->{single_call});
-  	        foreach my $allele (@alleles) {
-  		  $allele_frequencies{$assay}->{$allele}++;
-  		  $allele_frequencies{$assay}->{total}++;
-  	        }
-
-  	      } else {
-  	        #push(@row,'0/0');
-  	        push(@row,'');
-  	      }
-  	    } # end foreach assay
-  	    push(@new_data_array,\@row);
-  	  }
-        }
-      } # end foreach letter
-    } # end foreach project
-  } # end Concannon Reorder
-
+  #############################################################################
   #### If the user asked for Sample vs Assay, build that way
   if ($parameters{view_style} =~ /SampleVsAssay/) {
-    foreach my $project_name (@projects) {
-      foreach my $sample_name (@samples) {
-        my @row = ($sample_name);
-        push(@columnheaders,$sample_name);
-        push(@column_types, qw(varchar));
-        foreach my $assay (@assays) {
-          if (defined($data->{$project_name}->{$assay}->{$sample_name}->{single_call})) {
-            push(@row,$data->{$project_name}->{$assay}->{$sample_name}->{single_call});
 
-            #### Add to the allele counters
-            my @alleles = split("/",$data->{$project_name}->{$assay}->{$sample_name}->{single_call});
-            foreach my $allele (@alleles) {
-      	      $allele_frequencies{$assay}->{$allele}++;
-      	      $allele_frequencies{$assay}->{total}++;
-      	    }
-          } else {
-      	  push(@row,'');
-          }
-          push(@columnheaders, qw(call));
+    #### If the user asked for Concannon reordering, build that way
+    if ($parameters{display_options} =~ /ConcannonReorder/) {
+      my %assay_call_number_map = ();
+      print "Total number of samples in dataset: ".scalar(@samples)."<BR>\n";
+      print join(' ',@samples)."<BR>\n";
+      my $counter = 0;
+      foreach my $project_name (@projects) {
+        foreach my $letter ( 'A','B','C','D','E','F','G' ) {
+          for (my $num1 = 1; $num1 <= 12; $num1++) {
+	    for (my $num2 = 0; $num2 <= 84; $num2+=12) {
+	      my $fac = ($num1 + $num2);
+	      my $sample_name = "$letter$fac";
+	      my @row = ($sample_name);
+	      foreach my $assay (@assays) {
+		my $call;
+		#### Is there a manual genotype for this assay & sample?
+		if (defined($data->{$project_name}->{$assay}->{$sample_name}->{manual_genotype_call})) {
+		  $call = $data->{$project_name}->{$assay}->{$sample_name}->{manual_genotype_call};
+		}
+		#### Otherwise, just use the single call
+		elsif (defined($data->{$project_name}->{$assay}->{$sample_name}->{single_call})) {
+		  $call = $data->{$project_name}->{$assay}->{$sample_name}->{single_call};
+		} else {
+		  $call = '0/0';
+		}
+		$call = mapCalls2Numbers(
+		  call => $call,
+                  assay => $assay,
+                  map_store => \%assay_call_number_map,
+                );
+		push(@row,$call);
+	      } # end foreach assay
+	      push(@new_data_array,\@row);
+	      $counter++;
+	    } # endfor num2
+          } # endfor num1
+        } # end foreach letter
+      } # end foreach project
+      print "Number of Concannon samples displayed: $counter<BR>\n";
+    } # end if Concannon Reorder
+
+    else {
+      foreach my $project_name (@projects) {
+        foreach my $sample_name (@samples) {
+          my @row = ($sample_name);
+          push(@columnheaders,$sample_name);
           push(@column_types, qw(varchar));
-        } # end foreach assay
-        push(@new_data_array,\@row);
-      } # end foreach sample
-    } # end foreach project
-
+          foreach my $assay (@assays) {
+            #### Is there a manual genotype for this assay & sample?
+            if (defined($data->{$project_name}->{$assay}->{$sample_name}->{manual_genotype_call})) {
+              push(@row,$data->{$project_name}->{$assay}->{$sample_name}->{manual_genotype_call});
+            }
+            elsif (defined($data->{$project_name}->{$assay}->{$sample_name}->{single_call})) {
+              push(@row,$data->{$project_name}->{$assay}->{$sample_name}->{single_call});
+            } else {
+#             push(@row,'');
+       	      push(@row,'0/0');
+            }
+            push(@columnheaders, qw(call));
+            push(@column_types, qw(varchar));
+          } # end foreach assay
+          push(@new_data_array,\@row);
+        } # end foreach sample
+      } # end foreach project
+    }
 
     #### Replace existing resultset attributes with reformulated ones
     $resultset_ref->{column_list_ref} = ['Sample',@fudged_assays];
@@ -707,6 +795,9 @@ sub postProcessResultset {
 
   } # end Sample Vs Assay
 
+
+
+  #############################################################################
   #### If the user asked for Assay vs Sample, build that way
   if ($parameters{view_style} =~ /AssayVsSample/) {
     foreach my $project_name (@projects) {
@@ -743,6 +834,9 @@ sub postProcessResultset {
 
   } # end Assay vs. Sample
 
+
+
+  #############################################################################
   #### If the user asked for Sample vs Repeats, build that way
   if ($parameters{view_style} =~ /SampleVsRepeat/) {
 
@@ -803,9 +897,16 @@ sub postProcessResultset {
 	  }
 
           $data->{$project_name}->{$assay}->{$sample_name}->{all_calls_final} = \%temp_hash;
+
+	  #### Free data as we go along
+          delete($data->{$project_name}->{$assay}->{$sample_name}->{all_calls});
+
         }
+
       }
+
     }
+
 
     #### Put a cap on n_max_calls
     if ($n_max_calls > 10) {
@@ -876,7 +977,12 @@ sub postProcessResultset {
 	    $empty_rows++;
 	  }
         } # end foreach sample_name
+
+	#### Free memory as we go along
+	delete($data->{$project_name}->{$assay});
+
       } # end foreach assay
+
     } # end foreach project
 
     #### Print some stats
@@ -891,6 +997,8 @@ sub postProcessResultset {
 
   } #endif SampleVsRepeat
 
+
+  #############################################################################
   #### If the user asked for Statistical Summary, build that way
   if ($parameters{view_style} =~ /StatisticalSummary/) {
 
@@ -1035,7 +1143,7 @@ sub postProcessResultset {
 	#### Create the rows for the final resultset
         $num_keys = scalar keys %found_genos;
 	my @newrow_template = @newrow;
-	foreach my $sample_type ( 'Overall','Control','Sample' ) {
+	foreach my $sample_type ( 'Overall','Control','Sample','Founder' ) {
           if ($counts->{$sample_type} > 0) {
   	    my @newrowtmp = ( @newrow_template,$sample_type );
   	    my $i_genos = 0;
@@ -1192,12 +1300,26 @@ sub postProcessResultset {
     $resultset_ref->{precisions_list_ref} = [ (50) x (scalar(@columnheaders)+3) ];
     $resultset_ref->{types_list_ref} = [ 'varchar','varchar','varchar',@column_types ];
 
-  } #endif StatisticalSummary
+  } # endif StatisticalSummary
+
 
   #### Replace existing resultset attributes with reformulated ones
-  print "About to replace old data with new...<BR>\n";
+  $t6 = [gettimeofday()];
+  if ($DEBUG) {
+    printf("\nt3 - t6: %4f (postProcess: through end of processing)<BR>\n",tv_interval($t3,$t6));
+    print "About to replace old data with new...<BR>\n";
+  }
+
+
   $resultset_ref->{data_ref} = \@new_data_array;
   print "Done.<BR>\n";
+
+
+  $t7 = [gettimeofday()];
+  if ($DEBUG) {
+    printf("\nt6 - t7: %4f (postProcess: replacing old data with new)<BR>\n",tv_interval($t6,$t7));
+    print "About to free all memory from postProcessing...<BR>\n";
+  }
 
   return 1;
 
@@ -1262,3 +1384,110 @@ sub getURLColumns {
 }
 
 
+
+###############################################################################
+# showGapFileLink
+#
+# Show a link to a gap file if there is one
+###############################################################################
+sub showGapFileLink {
+  my %args = @_;
+
+  #### Process the arguments list
+  my $resultset_ref = $args{'resultset_ref'};
+  my $rs_params_ref = $args{'rs_params_ref'};
+
+  my $set_name = $rs_params_ref->{set_name};
+
+  if (-e "$PHYSICAL_BASE_DIR/tmp/queries/$set_name.gapfile") {
+    if ($sbeams->output_mode() eq 'html') {
+      print "<BR><A HREF=\"$HTML_BASE_DIR/tmp/queries/$set_name.gapfile\">[View corresponding gap file]</A><BR>";
+    }
+  }
+
+  return;
+
+}
+
+
+
+###############################################################################
+# writeGapFile
+#
+# Write a gap file if its content is provided
+###############################################################################
+sub writeGapFile {
+  my %args = @_;
+
+  #### Process the arguments list
+  my $resultset_ref = $args{'resultset_ref'};
+  my $rs_params_ref = $args{'rs_params_ref'};
+
+  my $set_name = $rs_params_ref->{set_name};
+
+  return unless ($resultset_ref->{gapfile_text});
+
+  open(GAPFILE,">$PHYSICAL_BASE_DIR/tmp/queries/$set_name.gapfile")
+    || die("[showGapFileLink] ERROR: Unable to open gapfile ".
+	   "'$PHYSICAL_BASE_DIR/tmp/queries/$set_name.gapfile' for write.");
+
+  print GAPFILE $resultset_ref->{gapfile_text};
+
+  close(GAPFILE);
+
+  delete($resultset_ref->{gapfile_text});
+
+  return;
+
+}
+
+
+
+###############################################################################
+# mapCalls2Numbers
+#
+# Map call allele genotype base letters to numbers 1,2,3,etc.
+###############################################################################
+sub mapCalls2Numbers {
+  my %args = @_;
+
+  #### Process the arguments list
+  my $call = $args{'call'} || die("[mapCalls2Numbers] ERROR: Must pass parameter call");
+  my $assay = $args{'assay'} || die("[mapCalls2Numbers] ERROR: Must pass parameter assay");
+  my $map_store = $args{'map_store'} || die("[mapCalls2Numbers] ERROR: Must pass parameter map_store");
+
+  my @alleles = split('/',$call);
+  my @new_values = ();
+
+  foreach my $allele ( @alleles ) {
+
+    #### 0's just stay as is
+    if ($allele eq '0') {
+      push(@new_values,$allele);
+      next;
+    }
+
+    #### If there already a map for this letter, transform it
+    if ($map_store->{$assay}->{$allele}) {
+      push(@new_values,$map_store->{$assay}->{$allele});
+      next;
+    }
+
+    #### There is not yet a mapping, so create it
+
+    #### Check the counter for this assay
+    unless ($map_store->{$assay}->{counter}) {
+      $map_store->{$assay}->{counter} = 1;
+    }
+
+    $map_store->{$assay}->{$allele} = $map_store->{$assay}->{counter}++;
+
+    push(@new_values,$map_store->{$assay}->{$allele});
+
+  }
+
+  my $final = join(' ',@new_values);
+
+  return($final);
+
+}

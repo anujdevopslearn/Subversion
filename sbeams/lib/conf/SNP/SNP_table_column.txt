@@ -154,35 +154,9 @@ SN_GetGenotypes	3	assay_id_constraint	Assay ID									N	text	40		Y	Y	N	Constrai
 SN_GetGenotypes	4	sample_id_constraint	Sample ID									N	text	40		Y	Y	N	Constraint for sample name.  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
 SN_GetGenotypes	5	minor_allele_limit	Minor Allele Limit					0.1				N	text	40		Y	Y	N	Set cutoff value for flagging low minor allele frequencies.  Acceptable range is [0,1].		
 SN_GetGenotypes	6	description	Call Quality									N	multioptionlist	4		Y	Y	N	Select desired genotype quality level.  Multiple items may be selected.	"SELECT distinct description,description FROM SNP.dbo.export_results_view ORDER BY description"	
-SN_GetGenotypes	7	view_style	View Style									N	optionlist			Y	Y	N	Select desired data view.	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'GG_view_style' ORDER BY sort_order,option_value"	
-SN_GetGenotypes	8	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options.  Multiple items may be selected.	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'GG_display_options' ORDER BY sort_order,option_value"	
-SN_assay_request	1	assay_request_id	SNP Assay Request ID	int	4	0	N		Y							N	N				pkDEFAULT
-SN_assay_request	2	contact_id	Contact	int	4	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	N	Requestor of this SNP job		
-SN_assay_request	3	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which these SNPs are requested	"SELECT project_id, name + ' ['+budget+']' FROM $TB_PROJECT WHERE PI_contact_id='$contact_id' ORDER BY name"	
-SN_assay_request	4	cost_scheme_id	Cost Structure	varchar	50	0	N		N			N	optionlist			Y	Y	N	Cost Structure from which pricing is calculated	"SELECT cost_scheme_id,cost_scheme_name FROM $TBSN_COST_SCHEME ORDER BY sort_order,cost_scheme_name"	
-SN_assay_request	5	n_snps	Number of SNPs	int	4	0	N		N			Y	text			Y	Y	N	Number of SNPs in this request		
-SN_assay_request	6	n_samples	Number of Samples	int	4	0	N		N			Y	text	10		Y	Y	N	Number of samples to be run		
-SN_assay_request	7	snp_list_file	SNP List File	varchar	255	0	N		N			N	file	30		Y	Y	N	"Hit [Browse] and specify the 2-column tab-delimited text file containing the SNP id and sequence.  Please use the rs identifier if possible, include 100-200bp on either side of the SNP, and indicate the SNP in brackets (e.g. [A/G])."		
-SN_assay_request	8	sample_list_file	Sample List File	varchar	255	0	N		N			N	file	30		Y	Y	N	Hit [Browse] and specify the 2-column tab-delimited text file containing the sample id and description.   Description is optional.		
-SN_assay_request	9	request_status	Request Status	varchar	50	0	N		N			Y	fixed			Y	Y	N	Status of this request	"SELECT option_key,option_value FROM $TBSN_MISC_OPTION WHERE option_type='job_status' ORDER BY sort_order,option_value"	
-SN_assay_request	10	price	Price	int	4	0	Y		N			N	fixed			N	Y	N	Total price for this request		
-SN_assay_request	11	comment	Comment	text	0	0	Y		N			N	textarea	4		Y	Y	N	Additional comments about this request		
-SN_assay_request	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N				fixed			N	Y				
-SN_assay_request	13	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
-SN_assay_request	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N				fixed			N	Y				
-SN_assay_request	15	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
-SN_assay_request	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-SN_assay_request	17	record_status	Record Status	char	1	0	N	N	N				fixed			N	Y				
-SN_cost_scheme	1	cost_scheme_id	Cost Scheme ID	int	4	0	N		Y							N	N				pkDEFAULT
-SN_cost_scheme	2	cost_scheme_name	Scheme Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Short name of this cost scheme		
-SN_cost_scheme	3	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-SN_cost_scheme	4	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
-SN_cost_scheme	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-SN_cost_scheme	6	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
-SN_cost_scheme	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-SN_cost_scheme	8	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
-SN_cost_scheme	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-SN_cost_scheme	10	record_status	Record Status	char	1	0	N	N	N							N	N				
+SN_GetGenotypes	7	assay_order_list_id	Assay Order List									N	multioptionlist	4		Y	Y	N	"Select an Assay Order List to sort result listing (useful in Sample vs. Assay).  If no item is selected, no ranking is done."	"SELECT assay_order_list_id,username+' - '+assay_order_list_name FROM $TBSN_ASSAY_ORDER_LIST AOL LEFT JOIN $TB_USER_LOGIN UL ON (AOL.created_by_id = UL.contact_id) WHERE AOL.record_status != 'D' ORDER BY username,assay_order_list_name"	
+SN_GetGenotypes	8	view_style	View Style									N	optionlist			Y	Y	N	Select desired data view.	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'GG_view_style' ORDER BY sort_order,option_value"	
+SN_GetGenotypes	9	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options.  Multiple items may be selected.	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'GG_display_options' ORDER BY sort_order,option_value"	
 SN_snp_selection_run	1	snp_selection_run_id	SNP Selection Run ID	int	4	0	N		Y			Y									
 SN_snp_selection_run	2	snp_selection_run_name	SNP Selection Run Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of this SNP selection run		
 SN_snp_selection_run	3	snp_selection_run_description	SNP Selection Run Description	text	16	0	N		N			Y	textarea	4		Y	Y	N	"Description of this SNP selection run (e.g., 'Primary Selection for JDRF Chr. 10', 'Extra SNPs for JDRF Chr. 10')"		
@@ -236,3 +210,14 @@ SN_manual_genotype_call	10	date_modified	Date Record Modified	datetime	8	0	N	CUR
 SN_manual_genotype_call	11	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
 SN_manual_genotype_call	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 SN_manual_genotype_call	13	record_status	Record Status	char	1	0	N	N	N							N	N	N			
+SN_assay_order_list	1	assay_order_list_id	Assay Order List	int	4	0	N		Y							N	N				pkDEFAULT
+SN_assay_order_list	2	assay_order_list_name	Assay Order List Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of the list of ordered assays (as it will appear in a drop-down list)		
+SN_assay_order_list	3	assay_order_list_file	Assay Order List File	varchar	255	0	N		N			N	file	30		Y	Y	N	Hit [Browse] and specify the tab-delimited text file which contains the assay position information.  This must be in the correct format.		
+SN_assay_order_list	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments about this assay order list		
+SN_assay_order_list	5	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
+SN_assay_order_list	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+SN_assay_order_list	7	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
+SN_assay_order_list	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+SN_assay_order_list	9	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
+SN_assay_order_list	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+SN_assay_order_list	11	record_status	Record Status	char	1	0	N	N	N							N	N				

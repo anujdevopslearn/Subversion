@@ -12,10 +12,9 @@ SN_instrument_type	Instrument Type	SNP	YES	$TBSN_INSTRUMENT_TYPE	instrument_type
 SN_instrument	Instrument	SNP	YES	$TBSN_INSTRUMENT	instrument_id		ManageTable.cgi?TABLE_NAME=SN_instrument	SN_instrument	
 SN_plate_type	Plate Type	SNP	YES	$TBSN_PLATE_TYPE	plate_type_id		ManageTable.cgi?TABLE_NAME=SN_plate_type	SN_plate_type	
 SN_GetGenotypes	Get Genotypes	QUERY		NA	NA		GetGenotypes		
-SN_assay_request	Assay Request	SNP	YES	$TBSN_ASSAY_REQUEST	assay_request_id		ManageTable.cgi?TABLE_NAME=SN_assay_request	SN_assay_request	
-SN_cost_scheme	Cost Scheme	SNP	YES	$TBSN_COST_SCHEME	cost_scheme_id		ManageTable.cgi?TABLE_NAME=SN_cost_scheme	SN_cost_scheme	
-SN_selected_snp	Selected SNP	SNP	YES	$TBSN_SELECTED_SNP	selected_snp_id		ManageTable.cgi?TABLE_NAME=SN_selected_snp	SN_selected_snp
-SN_replaced_snp	Replaced SNP	SNP	NO	$TBSN_REPLACED_SNP	NA		ManageTable.cgi?TABLE_NAME=SN_replaced_snp	SN_replaced_snp
-SN_snp_selection_run	SNP Selection Run	SNP	YES	$TBSN_SNP_SELECTION_RUN	snp_selection_run_id		ManageTable.cgi?TABLE_NAME=SN_snp_selection_run	SN_snp_selection_run
-SN_status	SNP Status	SNP	NO	$TBSN_SNP_STATUS	snp_status_id			
-SN_manual_genotype_call	Manual Genotype Call	SNP	YES	$TBSN_MANUAL_GENOTYPE_CALL	manual_genotype_call_id		ManageTable.cgi?TABLE_NAME=SN_manual_genotype_call	SN_manual_genotype_call
+SN_selected_snp	Selected SNP	SNP	YES	$TBSN_SELECTED_SNP	selected_snp_id		ManageTable.cgi?TABLE_NAME=SN_selected_snp	SN_selected_snp	
+SN_replaced_snp	Replaced SNP	SNP	NO	$TBSN_REPLACED_SNP	NA		ManageTable.cgi?TABLE_NAME=SN_replaced_snp	SN_replaced_snp	
+SN_snp_selection_run	SNP Selection Run	SNP	YES	$TBSN_SNP_SELECTION_RUN	snp_selection_run_id		ManageTable.cgi?TABLE_NAME=SN_snp_selection_run	SN_snp_selection_run	
+SN_status	SNP Status	SNP	NO	$TBSN_SNP_STATUS	snp_status_id				
+SN_manual_genotype_call	Manual Genotype Call	SNP	YES	$TBSN_MANUAL_GENOTYPE_CALL	manual_genotype_call_id		ManageTable.cgi?TABLE_NAME=SN_manual_genotype_call	SN_manual_genotype_call	
+SN_assay_order_list	Assay Order List	SNP	YES	$TBSN_ASSAY_ORDER_LIST	assay_order_list_id		ManageTable.cgi?TABLE_NAME=SN_assay_order_list		

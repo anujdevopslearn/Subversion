@@ -126,7 +126,7 @@ sub main {
 
 
   $TABLE_NAME = $parameters{'TABLE_NAME'}
-    || croak "TABLE_NAME not specified."; 
+    || croak "TABLE_NAME not specified.";
 
   croak "This TABLE_NAME=$TABLE_NAME cannot be managed by this program."
     unless ($sbeamsMOD->returnTableInfo($TABLE_NAME,
@@ -188,6 +188,19 @@ sub preFormHook {
       unless ($query_parameters_ref->{YYYY});
   }
 
+  #### If table GT_experiment
+  if ($TABLE_NAME eq "GT_experiment") {
+    $query_parameters_ref->{want_validation} = 'Y'
+      unless ($query_parameters_ref->{want_validation});
+    $query_parameters_ref->{want_pooling} = 'N'
+      unless ($query_parameters_ref->{want_pooling});
+    $query_parameters_ref->{want_typing} = 'Y'
+      unless ($query_parameters_ref->{want_typing});
+    $query_parameters_ref->{is_multiplexing_allowed} = 'Y'
+      unless ($query_parameters_ref->{is_multiplexing_allowed});
+    $query_parameters_ref->{dna_type} = 'Genomic'
+     unless ($query_parameters_ref->{dna_type});
+    }
 
   #### Otherwise, no special processing, so just return undef
   return;
@@ -267,6 +280,115 @@ sub postUpdateOrInsertHook {
     return "An error of some sort $parameters{something} invalid";
   }
 
+
+  #### If table GT_experiment
+  if ($TABLE_NAME eq "GT_experiment") {
+
+    #### Get the predicted location of the samples file
+    my $samples_file = "GT_experiment/".
+      "$query_parameters_ref->{experiment_id}".
+      "_samples_file.dat";
+
+
+    #### Read in the samples file and create hash out of its contents
+    open (SAMPLESFILE,"$UPLOAD_DIR/$samples_file") ||
+      die "Cannot open $UPLOAD_DIR/$samples_file";
+
+    my $row_index = 1;
+    my @data_rows = ();
+    my @columns = ();
+    while (<SAMPLESFILE>) {
+      #### Ignore if it's the column header line
+      next if ($_ =~ /olvent/);
+
+      #### Strip leading and trailing space
+      $_ =~ s/^\s+//;
+      $_ =~ s/\s+$//;
+
+
+      #### Separate the columns
+      @columns = split(/\t/,$_);
+      #### If there are 7 columns, save the values
+      if (scalar(@columns) == 7) {
+        push(@data_rows,\@columns);
+      #### Else complain about a bad number of columns
+      } else {
+        print "Skipping samples file row $row_index with ".
+          "incorrect number of columns: '$_'<BR>\n";
+      }
+
+      #### Increment the row counter
+      $row_index++;
+
+    } # end while <SAMPLESFILE>
+
+    #### Store the results to the sample table
+    my @child_data_columns = qw(plate_id well_position sample_name
+      dna_concentration initial_well_volume stock_dna_solvent dna_dilution_solvent);
+    updateChildTable(
+      parent_table_name => $TABLE_NAME,
+      parent_pk_column_name => $PK_COLUMN_NAME,
+      parent_pk_value => $parameters{$PK_COLUMN_NAME},
+      child_table_name => 'GT_sample',
+      child_pk_column_name => 'sample_id',
+      child_data_columns => \@child_data_columns,
+      child_data_values => \@data_rows,
+    );
+
+    #### Get the predicted location of the assays file
+    my $assay_file = "GT_experiment/".
+      "$query_parameters_ref->{experiment_id}".
+      "_assays_file.dat";
+
+    #### Read in the requested assay file and create hash out of its contents
+    open (ASSAYFILE,"$UPLOAD_DIR/$assay_file") ||
+      die "Cannot open $UPLOAD_DIR/$assay_file";
+
+    $row_index = 1;
+    @data_rows = ();
+    my @columns = ();
+    while (<ASSAYFILE>) {
+      #### Ignore if it's the column header line
+      next if $_ =~ /^Name/;
+
+      #### Strip leading and trailing space
+      $_ =~ s/^\s+//;
+      $_ =~ s/\s+$//;
+
+
+      #### Separate the columns
+      @columns = split(/\t/,$_);
+
+      #### If there are 2 columns, save the values
+      if (scalar(@columns) == 2) {
+        push(@data_rows,\@columns);
+
+      #### Else complain about a bad number of columns
+      } else {
+        print "Skipping assays file row $row_index with ".
+          "incorrect number of columns: '$_'<BR>\n";
+      }
+
+      #### Increment the row counter
+      $row_index++;
+
+    } # end while <ASSAYFILE>
+
+    #### Store the results to the requested_genotyping_assay table
+    my @child_data_columns = qw(requested_assay_name requested_assay_sequence);
+    updateChildTable(
+      parent_table_name => $TABLE_NAME,
+      parent_pk_column_name => $PK_COLUMN_NAME,
+      parent_pk_value => $parameters{$PK_COLUMN_NAME},
+      child_table_name => 'GT_requested_genotyping_assay',
+      child_pk_column_name => 'requested_genotyping_assay_id',
+      child_data_columns => \@child_data_columns,
+      child_data_values => \@data_rows,
+    );
+
+    return;
+
+  } # end if $TABLE_NAME='GT_experiment'
 
   #### Otherwise, no special processing, so just return undef
   return;
