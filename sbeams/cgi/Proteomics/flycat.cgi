@@ -93,14 +93,14 @@ sub showMainPage {
     my $element;
     foreach $element (@columns) {
       $element = uc($element);
-      print "<a href=\"$CGI_BASE_DIR/Proteomics/BrowseAnnotatedPeptides.cgi?search_batch_id=10,11,12&display_options=GroupReference,BSDesc&reference_constraint=$element\%25&sort_order=reference&row_limit=1000&annotation_status_id=Annot&apply_action=QUERYHIDE\">&nbsp;$element&nbsp;</a> "
+      print "<a href=\"$CGI_BASE_DIR/Proteomics/SummarizePeptides?search_batch_id=10,11,12&display_options=GroupReference,BSDesc&reference_constraint=$element\%25&sort_order=reference&row_limit=1000&annotation_status_id=Annot&apply_action=QUERYHIDE\">&nbsp;$element&nbsp;</a> "
     }
 
     print qq~
 	<BR>
 	<BR>
 	<H2>OR:</H2>
-	<FORM ACTION="$CGI_BASE_DIR/Proteomics/BrowseAnnotatedPeptides.cgi" METHOD="post">
+	<FORM ACTION="$CGI_BASE_DIR/Proteomics/SummarizePeptides" METHOD="post">
 	Enter the gene search string (% is a wildcard):<BR>
 	Gene Name <INPUT TYPE="text" NAME="gene_name_constraint" VALUE="" SIZE=20><BR>
 	Accession <INPUT TYPE="text" NAME="accession_constraint" VALUE="" SIZE=20> (FBgnxxxxxxx)<BR>
