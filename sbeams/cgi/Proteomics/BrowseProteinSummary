@@ -888,8 +888,7 @@ sub postProcessResultset {
     int varchar varchar);
 
   #### Then the data points
-  my @data_columns = qw(protein_probability n_peptides average_quant
-    stdev_quant n_quant);
+  my @data_columns = qw(protein_probability n_peptides average_quant stdev_quant n_quant);
   my @data_column_types = qw(real int real real int);
   if ($resultset_ref->{column_hash_ref}->{pulldown_protein_name}) {
     unshift(@data_columns,'pulldown_protein_name');
@@ -1008,18 +1007,25 @@ sub postProcessResultset {
 	  }
 
 	  #### Combine the average quantitation
-	  #### Not finished!!!!
-	  if ($data_column =~ /(average_quantxx|stdev_quantxx)/) {
-	    my $n_averages = scalar(@{$summaries{average_quant}});
-	    my $n_stdevs = scalar(@{$summaries{stdev_quant}});
+	  if ( $data_column =~ /(average_quant|stdev_quant)/) {
+	    if ($data_column eq 'average_quant') {
+	      #### Store pointer to what will be updated later
+	      $summaries{average_quant_pointer} = scalar(@row);
 
-	    $combined_value = 0.0;
-	    my $n = 0;
-	    for (my $i=0; $i<$n_averages; $i++) {
-	      $combined_value += 1;
-	      $n++;
-	    }
-	    $combined_value /= $n;
+	    } elsif ($data_column eq 'stdev_quant' &&
+		     defined($summaries{average_quant}) &&
+		     defined($summaries{stdev_quant})
+		    ) {
+  	      my ($mean,$uncertainty) = $sbeams->average(
+                values => $summaries{average_quant},
+                uncertainties => $summaries{stdev_quant},
+              );
+	      $combined_value = sprintf('%.3f',$uncertainty);
+	      if (defined($summaries{average_quant_pointer})) {
+		$row[$summaries{average_quant_pointer}] = sprintf('%.3f',$mean);
+	      }
+            }
+
 	  }
 
 	  push(@row,$combined_value);
