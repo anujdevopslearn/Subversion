@@ -38,6 +38,9 @@ Options:
                        a summary of what should be done is printed
 
  e.g.:  $PROG_NAME --check_status --tissue_type prostate --source_file 45277084.htm
+./ImmunoLoader.pl --check_status verbose 
+--tissue_type prostate
+ --source_file /users/mkorb/Immunostain/inputData/upload_010804/ProstateLoading.txt
 
 EOU
 
@@ -234,7 +237,7 @@ sub processFile
 			print "$lineCount\n";
 		
 #this happens to the 2nd and subsequent rows
-  		$line =~ s/[\n\r]//g;
+  			$line =~ s/[\n\r]//g;
 			my $blockUpdate = 0; 
 			my $blockInsert = 1;
 			my @dataArray = split	/\t/, $line ;
@@ -255,8 +258,11 @@ sub processFile
 							next;						
 					}
 					$infoHash{$columnHeaderHash{$keys}} = $dataArray[$keys];
-					
+					$infoHash{gender} =~ s/^([a-z]){1}.*$/$1/ if $infoHash{gender};
+					print "gender: $infoHash{gender}\n";
 			}
+			
+#			$infoHash{'antibody'} = "CD".$infoHash{'antibody'} unless ($infoHash{'antibody'}=~/^cd/i);
 #now fill serveral %rowdata to insert or update
 #first create a rowdata for the specimenblock group
 #this is the first line of a 3 line record
@@ -279,7 +285,9 @@ sub processFile
 						$blockUpdate = 1;
 						$blockInsert = 0;
 				}
-				$stainName = $infoHash{'antibody'} .' '. $infoHash{'specimen block'} .' '. '1';
+				$stainName = $infoHash{'antibody'} .' '. $infoHash{'specimen block'};
+				$stainName  = $stainName . " 1" unless( $TISSUETYPE =~ /bladder/i);
+				print "Stain: $stainName\n";
 				$infoHash{'block antibody section index'}?$sectionIndex=$infoHash{'block antibody section index'}:$sectionIndex=1;
 				$lastName = $infoHash{person};
 				$abundanceLevelLeuk = $infoHash{'Leukocyte abundance (none, rare, moderate, high, most)'};
@@ -289,12 +297,8 @@ sub processFile
 		}
 #make sure that the other specimen column are empty
 		else 
-		{
+		{      
 				$selectFlag = 0;
-				if(defined($dataArray[1]))
-				{
-						Error (\@dataArray,"expected empty antibody Record for $blockID\n");
-				}
 		}
 #need to do the Select query and update query for the specimen block only once				
 		if($selectFlag)
@@ -359,8 +363,8 @@ sub processFile
 		if ($nrows > 1)
 		{	
 				Error (\@dataArray, "$blockID returned $nrows rows\n");
-				die;
 				next;
+				
 		}
 				
 	 $slideID = $slides[0]->[0] if $nrows == 1;
