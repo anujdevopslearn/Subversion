@@ -455,6 +455,7 @@ $LINESEPARATOR
 ####  Project Status Section ####
 	$sql = qq~
 SELECT	A.array_id,A.array_name,
+	ARSM1.name AS 'Sample1Name',ARSM2.name AS 'Sample2Name',
 	AR.array_request_id,ARSL.array_request_slide_id,
 	AR.date_created AS 'date_requested',
 	PB.printing_batch_id,PB.date_started AS 'date_printed',
@@ -462,7 +463,9 @@ SELECT	A.array_id,A.array_name,
 	ASCAN.array_scan_id,ASCAN.date_scanned,ASCAN.data_flag AS 'scan_flag',
 	AQ.array_quantitation_id,AQ.date_quantitated,AQ.data_flag AS 'quan_flag'
   FROM $TB_ARRAY_REQUEST AR
-  LEFT JOIN $TB_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )
+  LEFT JOIN $TB_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )  
+  LEFT JOIN array_request_sample ARSM1 ON ( ARSL.array_request_slide_id = ARSM1.array_request_slide_id AND ARSM1.sample_index=0)  
+  LEFT JOIN array_request_sample ARSM2 ON ( ARSL.array_request_slide_id = ARSM2.array_request_slide_id AND ARSM2.sample_index=1)
   LEFT JOIN $TB_ARRAY A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
   LEFT JOIN $TB_PRINTING_BATCH PB ON ( A.printing_batch_id = PB.printing_batch_id )
   LEFT JOIN $TB_HYBRIDIZATION H ON ( A.array_id = H.array_id )
