@@ -197,8 +197,11 @@ sub printEntryForm {
 
     #### Extract the value of cost_scheme_id or default to 1.
     #### FIX ME!! Do we have to hard-code the default value here??
-    $parameters{cost_scheme_id} = $DEFAULT_COST_SCHEME unless ( $parameters{cost_scheme_id} => 1 );
+    #print "cost_scheme_id=",$parameters{cost_scheme_id},"=<BR>\n";
+    #print "DEFAULT_COST_SCHEME=",$DEFAULT_COST_SCHEME,"=<BR>\n";
+    $parameters{cost_scheme_id} = $DEFAULT_COST_SCHEME unless ( $parameters{cost_scheme_id} >= 1 );
     my $cost_scheme_id = $parameters{cost_scheme_id};
+    #print "cost_scheme_id=",$parameters{cost_scheme_id},"=<BR>\n";
 
 
     my $record_status_options =
@@ -289,9 +292,9 @@ sub printEntryForm {
           if ($input_types{$element} eq "multioptionlist");
 
         # Build the option list
+        #print $optionlist_queries{$element},"<BR>\n",$parameters{$element},"<BR>\n";
         $optionlists{$element}=$sbeams->buildOptionList(
            $optionlist_queries{$element},$parameters{$element},$method_options);
-        #print $optionlist_queries{$element},"<BR>\n",$parameters{$element},"<BR>\n";
     }
 
 
@@ -736,7 +739,7 @@ sub processEntryForm {
 
     #### Extract the value of cost_scheme_id or default to 1.
     #### FIX ME!! Do we have to hard-code the default value here??
-    $parameters{cost_scheme_id} = $DEFAULT_COST_SCHEME unless ( $parameters{cost_scheme_id} => 1 );
+    $parameters{cost_scheme_id} = $DEFAULT_COST_SCHEME unless ( $parameters{cost_scheme_id} >= 1 );
     my $cost_scheme_id = $parameters{cost_scheme_id};
 
 
@@ -1412,7 +1415,7 @@ sub printCompletedEntry {
 
     #### Extract the value of cost_scheme_id or default to 1.
     #### FIX ME!! Do we have to hard-code the default value here??
-    $parameters{cost_scheme_id} = $DEFAULT_COST_SCHEME unless ( $parameters{cost_scheme_id} => 1 );
+    $parameters{cost_scheme_id} = $DEFAULT_COST_SCHEME unless ( $parameters{cost_scheme_id} >= 1 );
     my $cost_scheme_id = $parameters{cost_scheme_id};
 
 
