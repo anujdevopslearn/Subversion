@@ -130,10 +130,10 @@ function viewRequest(status){
     var site;
     if (status == 'old') {
 	var id = document.requests.chooser.options[document.requests.chooser.selectedIndex].value;
-	site = "$uri/SubmitArrayRequest.cgi?TABLE_NAME=array_request&array_request_id="+id;
+	site = "$uri/SubmitArrayRequest.cgi?TABLE_NAME=MA_array_request&array_request_id="+id;
     }
     else {
-	site = "$uri/SubmitArrayRequest.cgi?TABLE_NAME=array_request&ShowEntryForm=1";
+	site = "$uri/SubmitArrayRequest.cgi?TABLE_NAME=MA_array_request&ShowEntryForm=1";
     }
     var newWindow = window.open(site);
 }
@@ -143,11 +143,11 @@ function viewImage(status){
     if (status == 'old') {
 	//alert ("scan images not available to be viewed.  Will be developed later");
     var id = document.images.chooser.options[document.images.chooser.selectedIndex].value
-    var site = "$uri/ManageTable.cgi?TABLE_NAME=array_scan&array_scan_id="+id
+    var site = "$uri/ManageTable.cgi?TABLE_NAME=MA_array_scan&array_scan_id="+id
     }
     else {
 	//alert ("scan images not on a network share.");
-        var site = "$uri/ManageTable.cgi?TABLE_NAME=$TB_ARRAY_SCAN&ShowEntryForm=1";
+        var site = "$uri/ManageTable.cgi?TABLE_NAME=$TBMA_ARRAY_SCAN&ShowEntryForm=1";
     }
     var newWindow = window.open(site);
 }
@@ -156,10 +156,10 @@ function viewQuantitation(status){
     var site;
     if (status == 'old') {
 	var id = document.quantitations.chooser.options[document.quantitations.chooser.selectedIndex].value;
-	site = "$uri/ManageTable.cgi?TABLE_NAME=array_quantitation&array_quantitation_id="+id;
+	site = "$uri/ManageTable.cgi?TABLE_NAME=MA_array_quantitation&array_quantitation_id="+id;
     }
     else {
-	site = "$uri/ManageTable.cgi?TABLE_NAME=array_quantitation&ShowEntryForm=1";
+	site = "$uri/ManageTable.cgi?TABLE_NAME=MA_array_quantitation&ShowEntryForm=1";
     }
     var newWindow = window.open(site);
 }
@@ -397,7 +397,7 @@ sub print_summary_tab {
 
       $sql = qq~
 	  SELECT array_request_id, n_slides, date_created 
-	  FROM $TB_ARRAY_REQUEST
+	  FROM $TBMA_ARRAY_REQUEST
 	  WHERE project_id = '$project_id'
 	  AND record_status != 'D'
       ~;
@@ -412,9 +412,9 @@ sub print_summary_tab {
       $sql = qq~
 	  SELECT COUNT (ASCAN.array_scan_id) AS 'Scans', 
 	         COUNT (AQ.array_quantitation_id) AS 'Quantitations'
-            FROM $TB_ARRAY A
-            LEFT JOIN $TB_ARRAY_SCAN ASCAN ON (A.array_id = ASCAN.array_id)
-	    LEFT JOIN $TB_ARRAY_QUANTITATION AQ ON ( AQ.array_scan_id = ASCAN.array_scan_id )
+            FROM $TBMA_ARRAY A
+            LEFT JOIN $TBMA_ARRAY_SCAN ASCAN ON (A.array_id = ASCAN.array_id)
+	    LEFT JOIN $TBMA_ARRAY_QUANTITATION AQ ON ( AQ.array_scan_id = ASCAN.array_scan_id )
            WHERE A.project_id = '$project_id'
              AND A.record_status != 'D'
 	     ~;
@@ -444,15 +444,15 @@ SELECT	A.array_id,A.array_name,
 	AQ.array_quantitation_id,AQ.date_quantitated,AQ.data_flag AS "quan_flag",
 	ARSM1.array_request_sample_id AS "array_request_sample_id1",
 	ARSM2.array_request_sample_id AS "array_request_sample_id2"
-  FROM $TB_ARRAY_REQUEST AR
-  LEFT JOIN $TB_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )  
-  LEFT JOIN $TB_ARRAY_REQUEST_SAMPLE ARSM1 ON ( ARSL.array_request_slide_id = ARSM1.array_request_slide_id AND ARSM1.sample_index=0)
-  LEFT JOIN $TB_ARRAY_REQUEST_SAMPLE ARSM2 ON ( ARSL.array_request_slide_id = ARSM2.array_request_slide_id AND ARSM2.sample_index=1)
-  LEFT JOIN $TB_ARRAY A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
-  LEFT JOIN $TB_PRINTING_BATCH PB ON ( A.printing_batch_id = PB.printing_batch_id )
-  LEFT JOIN $TB_HYBRIDIZATION H ON ( A.array_id = H.array_id )
-  LEFT JOIN $TB_ARRAY_SCAN ASCAN ON ( A.array_id = ASCAN.array_id )
-  LEFT JOIN $TB_ARRAY_QUANTITATION AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
+  FROM $TBMA_ARRAY_REQUEST AR
+  LEFT JOIN $TBMA_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )  
+  LEFT JOIN $TBMA_ARRAY_REQUEST_SAMPLE ARSM1 ON ( ARSL.array_request_slide_id = ARSM1.array_request_slide_id AND ARSM1.sample_index=0)
+  LEFT JOIN $TBMA_ARRAY_REQUEST_SAMPLE ARSM2 ON ( ARSL.array_request_slide_id = ARSM2.array_request_slide_id AND ARSM2.sample_index=1)
+  LEFT JOIN $TBMA_ARRAY A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
+  LEFT JOIN $TBMA_PRINTING_BATCH PB ON ( A.printing_batch_id = PB.printing_batch_id )
+  LEFT JOIN $TBMA_HYBRIDIZATION H ON ( A.array_id = H.array_id )
+  LEFT JOIN $TBMA_ARRAY_SCAN ASCAN ON ( A.array_id = ASCAN.array_id )
+  LEFT JOIN $TBMA_ARRAY_QUANTITATION AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
  WHERE AR.project_id=$project_id
    AND ARSL.array_request_slide_id IS NOT NULL
    AND ( AR.record_status != 'D' OR AR.record_status IS NULL )
@@ -464,11 +464,11 @@ SELECT	A.array_id,A.array_name,
  ORDER BY A.array_name,AR.array_request_id,ARSL.array_request_slide_id
         ~;
 
-  my $base_url = "$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=";
+  my $base_url = "$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_";
   my %url_cols = ('array_name' => "${base_url}array&array_id=%0V",
 		  'Sample1Name' => "${base_url}array_request_sample&array_request_sample_id=%17V",
 		  'Sample2Name' => "${base_url}array_request_sample&array_request_sample_id=%18V",
-		  'date_requested' => "$CGI_BASE_DIR/Microarray/SubmitArrayRequest.cgi?TABLE_NAME=array_request&array_request_id=%4V",
+		  'date_requested' => "$CGI_BASE_DIR/Microarray/SubmitArrayRequest.cgi?TABLE_NAME=MA_array_request&array_request_id=%4V",
 		  'date_printed' => "${base_url}printing_batch&printing_batch_id=%7V", 
 		  'date_hybridized' => "${base_url}hybridization&hybridization_id=%9V", 
 		  'date_scanned' => "${base_url}array_scan&array_scan_id=%11V", 
@@ -560,7 +560,7 @@ sub print_management_tab {
 
   $sql = qq~
       SELECT array_request_id, n_slides, date_created 
-      FROM $TB_ARRAY_REQUEST
+      FROM $TBMA_ARRAY_REQUEST
       WHERE project_id = '$project_id'
       AND record_status != 'D'
       ~;
@@ -573,9 +573,9 @@ sub print_management_tab {
   
   $sql = qq~
       SELECT ASCAN.array_scan_id, ASCAN.stage_location
-      FROM $TB_ARRAY_SCAN ASCAN
-      JOIN $TB_ARRAY A ON ( A.array_id = ASCAN.array_id )
-      JOIN $TB_ARRAY_QUANTITATION AQ ON ( AQ.array_scan_id = ASCAN.array_scan_id )
+      FROM $TBMA_ARRAY_SCAN ASCAN
+      JOIN $TBMA_ARRAY A ON ( A.array_id = ASCAN.array_id )
+      JOIN $TBMA_ARRAY_QUANTITATION AQ ON ( AQ.array_scan_id = ASCAN.array_scan_id )
       WHERE A.project_id = '$project_id'
       AND ASCAN.record_status != 'D'
       AND A.record_status != 'D'
@@ -585,9 +585,9 @@ sub print_management_tab {
   
   $sql = qq~
       SELECT AQ.array_quantitation_id, AQ.stage_location
-      FROM $TB_ARRAY_SCAN ASCAN
-      JOIN $TB_ARRAY A ON ( A.array_id = ASCAN.array_id )
-      JOIN $TB_ARRAY_QUANTITATION AQ ON ( AQ.array_scan_id = ASCAN.array_scan_id )
+      FROM $TBMA_ARRAY_SCAN ASCAN
+      JOIN $TBMA_ARRAY A ON ( A.array_id = ASCAN.array_id )
+      JOIN $TBMA_ARRAY_QUANTITATION AQ ON ( AQ.array_scan_id = ASCAN.array_scan_id )
       WHERE A.project_id = '$project_id'
       AND ASCAN.record_status != 'D'
       AND A.record_status != 'D'

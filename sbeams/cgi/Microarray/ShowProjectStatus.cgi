@@ -140,13 +140,13 @@ SELECT	A.array_id,A.array_name,
 	H.hybridization_id,H.date_hybridized,
 	ASCAN.array_scan_id,ASCAN.date_scanned,ASCAN.data_flag AS 'scan_flag',
 	AQ.array_quantitation_id,AQ.date_quantitated,AQ.data_flag AS 'quan_flag'
-  FROM $TB_ARRAY_REQUEST AR
-  LEFT JOIN $TB_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )
-  LEFT JOIN $TB_ARRAY A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
-  LEFT JOIN $TB_PRINTING_BATCH PB ON ( A.printing_batch_id = PB.printing_batch_id )
-  LEFT JOIN $TB_HYBRIDIZATION H ON ( A.array_id = H.array_id )
-  LEFT JOIN $TB_ARRAY_SCAN ASCAN ON ( A.array_id = ASCAN.array_id )
-  LEFT JOIN $TB_ARRAY_QUANTITATION AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
+  FROM $TBMA_ARRAY_REQUEST AR
+  LEFT JOIN $TBMA_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )
+  LEFT JOIN $TBMA_ARRAY A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
+  LEFT JOIN $TBMA_PRINTING_BATCH PB ON ( A.printing_batch_id = PB.printing_batch_id )
+  LEFT JOIN $TBMA_HYBRIDIZATION H ON ( A.array_id = H.array_id )
+  LEFT JOIN $TBMA_ARRAY_SCAN ASCAN ON ( A.array_id = ASCAN.array_id )
+  LEFT JOIN $TBMA_ARRAY_QUANTITATION AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
  WHERE AR.project_id=$current_project_id
    AND ARSL.array_request_slide_id IS NOT NULL
    AND ( AR.record_status != 'D' OR AR.record_status IS NULL )
@@ -158,9 +158,9 @@ SELECT	A.array_id,A.array_name,
  ORDER BY A.array_name,AR.array_request_id,ARSL.array_request_slide_id
         ~;
 
-      my $base_url = "$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=";
+      my $base_url = "$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_";
       %url_cols = ('array_name' => "${base_url}array&array_id=%0V",
-                   'date_requested' => "$CGI_BASE_DIR/Microarray/SubmitArrayRequest.cgi?TABLE_NAME=array_request&array_request_id=%2V",
+                   'date_requested' => "$CGI_BASE_DIR/Microarray/SubmitArrayRequest.cgi?TABLE_NAME=MA_array_request&array_request_id=%2V",
                    'date_printed' => "${base_url}printing_batch&printing_batch_id=%5V", 
                    'date_hybridized' => "${base_url}hybridization&hybridization_id=%7V", 
                    'date_scanned' => "${base_url}array_scan&array_scan_id=%9V", 

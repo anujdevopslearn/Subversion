@@ -224,9 +224,9 @@ SELECT
  ORDER BY A.array_name
      ~;
 
-      my $base_url = "$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=";
+      my $base_url = "$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=MA_";
       %url_cols = ('array_name' => "${base_url}array&array_id=%0V",
-                   'array_request_slide_id' => "$CGI_BASE_DIR/SubmitArrayRequest.cgi?TABLE_NAME=array_request&array_request_id=%2V",
+                   'array_request_slide_id' => "$CGI_BASE_DIR/SubmitArrayRequest.cgi?TABLE_NAME=MA_array_request&array_request_id=%2V",
                    'date_quantitated' => "${base_url}array_quantitation&array_quantitation_id=%4V", 
       );
 

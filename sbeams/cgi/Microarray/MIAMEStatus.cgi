@@ -706,17 +706,17 @@ sub printArrayDesignSection {
     $sql = qq~
 	SELECT	A.array_id,A.array_name,PB.number_of_spots,
 	PR.name AS 'protocol_name', PR.protocol_id, AL.source_filename AS 'key_file', SM.comment
-	FROM $TB_ARRAY_REQUEST AR
-	LEFT JOIN $TB_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )
-	LEFT JOIN $TB_ARRAY A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
-	LEFT JOIN $TB_ARRAY_LAYOUT AL ON ( A.layout_id = AL.layout_id )
-	LEFT JOIN $TB_ARRAY_SCAN ASCAN ON ( A.array_id = ASCAN.array_id )
-	LEFT JOIN $TB_ARRAY_QUANTITATION AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
-	LEFT JOIN $TB_PRINTING_BATCH PB ON ( PB.printing_batch_id = A.printing_batch_id)
+	FROM $TBMA_ARRAY_REQUEST AR
+	LEFT JOIN $TBMA_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )
+	LEFT JOIN $TBMA_ARRAY A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
+	LEFT JOIN $TBMA_ARRAY_LAYOUT AL ON ( A.layout_id = AL.layout_id )
+	LEFT JOIN $TBMA_ARRAY_SCAN ASCAN ON ( A.array_id = ASCAN.array_id )
+	LEFT JOIN $TBMA_ARRAY_QUANTITATION AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
+	LEFT JOIN $TBMA_PRINTING_BATCH PB ON ( PB.printing_batch_id = A.printing_batch_id)
 	LEFT JOIN $TB_PROTOCOL PR ON (PR.protocol_id = PB.protocol_id)
-	LEFT JOIN $TB_SLIDE S ON (S.slide_id = A.slide_id)
-	LEFT JOIN $TB_SLIDE_LOT SL ON (SL.slide_lot_id = S.slide_lot_id)
-	LEFT JOIN $TB_SLIDE_MODEL SM ON (SM.slide_model_id = SL.slide_model_id)
+	LEFT JOIN $TBMA_SLIDE S ON (S.slide_id = A.slide_id)
+	LEFT JOIN $TBMA_SLIDE_LOT SL ON (SL.slide_lot_id = S.slide_lot_id)
+	LEFT JOIN $TBMA_SLIDE_MODEL SM ON (SM.slide_model_id = SL.slide_model_id)
 	WHERE AR.project_id='$project_id'
 	AND AR.record_status != 'D'
 	AND A.record_status != 'D'
@@ -787,8 +787,8 @@ sub printArrayDesignSection {
 	    my $dim = $1;
 	    print qq~
 		<TR>
-		<TD><A HREF="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=array&array_id=$array_id" TARGET="_blank">$array_name</A></TD>
-		<TD><A HREF="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=protocol&protocol_id=$protocol_id" TARGET="_blank">$protocol_name</A></TD>
+		<TD><A HREF="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_array&array_id=$array_id" TARGET="_blank">$array_name</A></TD>
+		<TD><A HREF="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_protocol&protocol_id=$protocol_id" TARGET="_blank">$protocol_name</A></TD>
 		<TD>$spec</TD>
 		<TD>$dim</TD>
 		<TD>$spot_count</TD>
@@ -899,13 +899,13 @@ $LINESEPARATOR
       LPR.name,LPR.protocol_id,L.labeling_id,
       HPR.name,HPR.protocol_id,H.hybridization_id,
       ARSMPL.name,ARSMPL.array_request_sample_id
-      FROM $TB_ARRAY_REQUEST AR
-      LEFT JOIN $TB_ARRAY_REQUEST_SLIDE ARSL ON (ARSL.array_request_id = AR.array_request_id)
-      LEFT JOIN $TB_ARRAY_REQUEST_SAMPLE ARSMPL ON (ARSMPL.array_request_slide_id = ARSL.array_request_slide_id)
-      LEFT JOIN $TB_LABELING L ON (L.array_request_sample_id = ARSMPL.array_request_sample_id)
+      FROM $TBMA_ARRAY_REQUEST AR
+      LEFT JOIN $TBMA_ARRAY_REQUEST_SLIDE ARSL ON (ARSL.array_request_id = AR.array_request_id)
+      LEFT JOIN $TBMA_ARRAY_REQUEST_SAMPLE ARSMPL ON (ARSMPL.array_request_slide_id = ARSL.array_request_slide_id)
+      LEFT JOIN $TBMA_LABELING L ON (L.array_request_sample_id = ARSMPL.array_request_sample_id)
       LEFT JOIN $TB_PROTOCOL LPR ON (LPR.protocol_id = L.protocol_id)
-      LEFT JOIN $TB_ARRAY A ON (A.array_request_slide_id = ARSL.array_request_slide_id)
-      LEFT JOIN $TB_HYBRIDIZATION H ON (H.array_id = A.array_id)
+      LEFT JOIN $TBMA_ARRAY A ON (A.array_request_slide_id = ARSL.array_request_slide_id)
+      LEFT JOIN $TBMA_HYBRIDIZATION H ON (H.array_id = A.array_id)
       LEFT JOIN $TB_PROTOCOL HPR ON (HPR.protocol_id = H.protocol_id)
       WHERE 1=1
       AND AR.project_id = '$project_id'
@@ -960,7 +960,7 @@ $LINESEPARATOR
       print qq~
 <TR>
   <TD>
-  <A HREF="ManageTable.cgi?TABLE_NAME=array&array_id=$array_id" TARGET="_blank">$array_name</A>
+  <A HREF="ManageTable.cgi?TABLE_NAME=MA_array&array_id=$array_id" TARGET="_blank">$array_name</A>
   </TD>
   <TD>$arsmpl_name ($arsmpl_id)</TD>
       ~;
@@ -970,14 +970,14 @@ $LINESEPARATOR
 	print qq~
   <TD>$lab_prot_name <BR>
   <A HREF="ManageTable.cgi?TABLE_NAME=protocol&protocol_id=$lab_prot_id" TARGET="_blank">[Protocol]</A>
-  <A HREF="ManageTable.cgi?TABLE_NAME=labeling&labeling_id=$lab_id" TARGET="_blank">[Record]</A>
+  <A HREF="ManageTable.cgi?TABLE_NAME=MA_labeling&labeling_id=$lab_id" TARGET="_blank">[Record]</A>
   </TD>
         ~;
       }else {
         print qq~
   <TD>
   <FONT COLOR="red">No Labeling Record</FONT><BR>
-  <A HREF="ManageTable.cgi?TABLE_NAME=labeling&ShowEntryForm=1&array_request_sample_id=$arsmpl_id" TARGET="_blank">[Insert Record]
+  <A HREF="ManageTable.cgi?TABLE_NAME=MA_labeling&ShowEntryForm=1&array_request_sample_id=$arsmpl_id" TARGET="_blank">[Insert Record]
   </TD>
 		    ~;
       }
@@ -987,14 +987,14 @@ $LINESEPARATOR
 	print qq~
    <TD>$hyb_prot_name <BR>
    <A HREF="ManageTable.cgi?TABLE_NAME=protocol&protocol_id=$hyb_prot_id"TARGET="_blank">[Protocol]</A>
-   <A HREF="ManageTable.cgi?TABLE_NAME=hybridization&hybridization_id=$hyb_id"TARGET="_blank">[Record]</A>
+   <A HREF="ManageTable.cgi?TABLE_NAME=MA_hybridization&hybridization_id=$hyb_id"TARGET="_blank">[Record]</A>
    </TD>
        ~;
       }else {
 	print qq~
    <TD>
    <FONT COLOR="red">No Hybridization Record</FONT><BR>
-   <A HREF="ManageTable.cgi?TABLE_NAME=hybridization&ShowEntryForm=1&array_id=$array_id" TARGET="_blank">[Insert Record]</A>
+   <A HREF="ManageTable.cgi?TABLE_NAME=MA_hybridization&ShowEntryForm=1&array_id=$array_id" TARGET="_blank">[Insert Record]</A>
    </TD>
         ~;
       }
@@ -1047,11 +1047,11 @@ $LINESEPARATOR
 
   $sql = qq~
     SELECT A.array_name,A.array_id,ASPR.name, ASPR.protocol_id,ASCAN.array_scan_id,AQPR.name, AQPR.protocol_id,AQUANT.array_quantitation_id,AQUANT.stage_location
-    FROM $TB_ARRAY A
+    FROM $TBMA_ARRAY A
     LEFT JOIN $TB_PROJECT PR ON (PR.project_id = A.project_id)
-    LEFT JOIN $TB_ARRAY_SCAN ASCAN ON (ASCAN.array_id = A.array_id)
+    LEFT JOIN $TBMA_ARRAY_SCAN ASCAN ON (ASCAN.array_id = A.array_id)
     LEFT JOIN $TB_PROTOCOL ASPR ON (ASPR.protocol_id = ASCAN.protocol_id)
-    LEFT JOIN $TB_ARRAY_QUANTITATION AQUANT ON (AQUANT.arraY_scan_id = ASCAN.array_scan_id)
+    LEFT JOIN $TBMA_ARRAY_QUANTITATION AQUANT ON (AQUANT.arraY_scan_id = ASCAN.array_scan_id)
     LEFT JOIN $TB_PROTOCOL AQPR ON (AQPR.protocol_id = AQUANT.protocol_id)
     WHERE 1=1
     AND PR.project_id = '$project_id'
@@ -1104,7 +1104,7 @@ $LINESEPARATOR
       my ($array_name,$array_id,$scan_protocol_name,$scan_protocol_id,$array_scan_id,$quant_protocol_name,$quant_protocol_id,$array_quant_id,$array_quant_location) = @{$row_ref};
       print qq~
 <TR>
-  <TD><A HREF="ManageTable.cgi?TABLE_NAME=array&array_id=$array_id"TARGET="_blank">$array_name</A></TD>
+  <TD><A HREF="ManageTable.cgi?TABLE_NAME=MA_array&array_id=$array_id"TARGET="_blank">$array_name</A></TD>
       ~;
 
       ## Array Scan Protocol
@@ -1113,14 +1113,14 @@ $LINESEPARATOR
   <TD>
   $scan_protocol_name<BR>
   <A HREF="ManageTable.cgi?TABLE_NAME=protocol&protocol_id=$scan_protocol_id" TARGET="_blank">[View Protocol]</A> 
-  <A HREF="ManageTable.cgi?TABLE_NAME=array_scan&array_scan_id=$array_scan_id" TARGET="_blank">[View Record]</A>
+  <A HREF="ManageTable.cgi?TABLE_NAME=MA_array_scan&array_scan_id=$array_scan_id" TARGET="_blank">[View Record]</A>
   </TD>
       ~;
       }else {
 	  print qq~
   <TD>
   <FONT COLOR="red">No Record</FONT><BR>
-  <A HREF="ManageTable.cgi?TABLE_NAME=array_scan&ShowEntryForm=1" TARGET="_blank">[Insert Record]</A>
+  <A HREF="ManageTable.cgi?TABLE_NAME=MA_array_scan&ShowEntryForm=1" TARGET="_blank">[Insert Record]</A>
   </TD>
           ~;
       }
@@ -1131,13 +1131,13 @@ $LINESEPARATOR
   <TD>
   $quant_protocol_name<BR>
   <A HREF="ManageTable.cgi?TABLE_NAME=protocol&protocol_id=$quant_protocol_id" TARGET="_blank">[View Protocol]</A> 
-  <A HREF="ManageTable.cgi?TABLE_NAME=array_quantitation&array_quantitation_id=$array_quant_id" TARGET="_blank">[View Record]</A>
+  <A HREF="ManageTable.cgi?TABLE_NAME=MA_array_quantitation&array_quantitation_id=$array_quant_id" TARGET="_blank">[View Record]</A>
   </TD>
         ~;
       }else {
 	  print qq~
   <TD>
-  <A HREF="ManageTable.cgi?TABLE_NAME=array_scan&ShowEntryForm=1" TARGET="_blank">[Insert Record]</A>
+  <A HREF="ManageTable.cgi?TABLE_NAME=MA_array_scan&ShowEntryForm=1" TARGET="_blank">[Insert Record]</A>
   </TD>
           ~;
       }

@@ -172,7 +172,7 @@ SELECT	A.array_id,A.array_name,
  ORDER BY A.array_name
      ~;
 
-      my $base_url = "$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=";
+      my $base_url = "$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_";
       %url_cols = ('array_name' => "${base_url}array&array_id=%0V",
                    'quan_flag' => "${base_url}array_quantitation&array_quantitation_id=%6V", 
       );

@@ -342,7 +342,7 @@ sub print_current_project_tab {
 
       $sql = qq~
 	  SELECT array_request_id, n_slides, date_created 
-	  FROM $TB_ARRAY_REQUEST
+	  FROM $TBMA_ARRAY_REQUEST
 	  WHERE project_id = '$project_id'
 	  AND record_status != 'D'
       ~;
@@ -355,9 +355,9 @@ sub print_current_project_tab {
 
       $sql = qq~
 	  SELECT ASCAN.array_scan_id, ASCAN.stage_location
-	  FROM $TB_ARRAY_SCAN ASCAN
-	  JOIN $TB_ARRAY A ON ( A.array_id = ASCAN.array_id )
-	  JOIN $TB_ARRAY_QUANTITATION AQ ON ( AQ.array_scan_id = ASCAN.array_scan_id )
+	  FROM $TBMA_ARRAY_SCAN ASCAN
+	  JOIN $TBMA_ARRAY A ON ( A.array_id = ASCAN.array_id )
+	  JOIN $TBMA_ARRAY_QUANTITATION AQ ON ( AQ.array_scan_id = ASCAN.array_scan_id )
 	  WHERE A.project_id = '$project_id'
 	  AND ASCAN.record_status != 'D'
 	  AND A.record_status != 'D'
@@ -367,9 +367,9 @@ sub print_current_project_tab {
 
       $sql = qq~
 	  SELECT AQ.array_quantitation_id, AQ.stage_location
-	  FROM $TB_ARRAY_SCAN ASCAN
-	  JOIN $TB_ARRAY A ON ( A.array_id = ASCAN.array_id )
-	  JOIN $TB_ARRAY_QUANTITATION AQ ON ( AQ.array_scan_id = ASCAN.array_scan_id )
+	  FROM $TBMA_ARRAY_SCAN ASCAN
+	  JOIN $TBMA_ARRAY A ON ( A.array_id = ASCAN.array_id )
+	  JOIN $TBMA_ARRAY_QUANTITATION AQ ON ( AQ.array_scan_id = ASCAN.array_scan_id )
 	  WHERE A.project_id = '$project_id'
 	  AND ASCAN.record_status != 'D'
 	  AND A.record_status != 'D'
@@ -441,16 +441,16 @@ sub print_graphical_overview_tab {
   <img src="$HTML_BASE_DIR/images/maimagemap.gif" usemap="#map" border=0>
   <map name="map">
   <area shape=rect coords="6,6,106,56" href="ManageTable.cgi?TABLE_NAME=project&ShowEntryForm=1">
-  <area shape=rect coords="99,65,199,115" href="SubmitArrayRequest.cgi?TABLE_NAME=array_request&ShowEntryForm=1">
-  <area shape=rect coords="190,124,290,174" href="ManageTable.cgi?TABLE_NAME=array&ShowEntryForm=1">
-  <area shape=rect coords="281,183,381,233" href="ManageTable.cgi?TABLE_NAME=array_scan&ShowEntryForm=1">
-  <area shape=rect coords="371,241,471,291" href="ManageTable.cgi?TABLE_NAME=array_quantitation&ShowEntryForm=1">
+  <area shape=rect coords="99,65,199,115" href="SubmitArrayRequest.cgi?TABLE_NAME=MA_array_request&ShowEntryForm=1">
+  <area shape=rect coords="190,124,290,174" href="ManageTable.cgi?TABLE_NAME=MA_array&ShowEntryForm=1">
+  <area shape=rect coords="281,183,381,233" href="ManageTable.cgi?TABLE_NAME=MA_array_scan&ShowEntryForm=1">
+  <area shape=rect coords="371,241,471,291" href="ManageTable.cgi?TABLE_NAME=MA_array_quantitation&ShowEntryForm=1">
   <area shape=rect coords="432,301,562,351" href="ProcessProject.cgi">
-  <area shape=rect coords="59,178,159,228" href="ManageTable.cgi?TABLE_NAME=hybridization&ShowEntryForm=1">
-  <area shape=rect coords="59,254,159,304" href="ManageTable.cgi?TABLE_NAME=labeling&ShowEntryForm=1">
-  <area shape=rect coords="324,11,424,61" href="ManageTable.cgi?TABLE_NAME=slide_lot&ShowEntryForm=1">
-  <area shape=rect coords="451,11,551,61" href="ManageTable.cgi?TABLE_NAME=slide_model&ShowEntryForm=1">
-  <area shape=rect coords="395,75,495,125" href="ManageTable.cgi?TABLE_NAME=printing_batch&ShowEntryForm=1">
+  <area shape=rect coords="59,178,159,228" href="ManageTable.cgi?TABLE_NAME=MA_hybridization&ShowEntryForm=1">
+  <area shape=rect coords="59,254,159,304" href="ManageTable.cgi?TABLE_NAME=MA_labeling&ShowEntryForm=1">
+  <area shape=rect coords="324,11,424,61" href="ManageTable.cgi?TABLE_NAME=MA_slide_lot&ShowEntryForm=1">
+  <area shape=rect coords="451,11,551,61" href="ManageTable.cgi?TABLE_NAME=MA_slide_model&ShowEntryForm=1">
+  <area shape=rect coords="395,75,495,125" href="ManageTable.cgi?TABLE_NAME=MA_printing_batch&ShowEntryForm=1">
   <area shape=rect coords="469,137,569,187" href="ManageTable.cgi?TABLE_NAME=protocol&ShowEntryForm=1">
   !;
 

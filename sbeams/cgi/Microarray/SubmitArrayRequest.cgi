@@ -47,7 +47,7 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 ###############################################################################
 # Global Variables
 ###############################################################################
-$TABLE_NAME = "array_request";
+$TABLE_NAME = "MA_array_request";
 $DEFAULT_COST_SCHEME = 1;
 main();
 
@@ -473,8 +473,8 @@ sub printEntryForm {
         SELECT array_request_id,slide_index,sample_index,name,
                labeling_method_id,SLI.array_request_slide_id,
                array_request_sample_id
-          FROM $TB_ARRAY_REQUEST_SAMPLE SAM
-          FULL JOIN $TB_ARRAY_REQUEST_SLIDE SLI ON (
+          FROM $TBMA_ARRAY_REQUEST_SAMPLE SAM
+          FULL JOIN $TBMA_ARRAY_REQUEST_SLIDE SLI ON (
                SAM.array_request_slide_id = SLI.array_request_slide_id )
          WHERE $PK_COLUMN_NAME='$parameters{$PK_COLUMN_NAME}'!;
       my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
@@ -494,7 +494,7 @@ sub printEntryForm {
 
       $sql_query = qq~
 	SELECT labeling_method_id,name
-	  FROM $TB_LABELING_METHOD
+	  FROM $TBMA_LABELING_METHOD
 	 ORDER BY sort_order,name
       ~;
       my $optionlist=$sbeams->buildOptionList($sql_query);
@@ -595,7 +595,7 @@ sub printEntryForm {
           if ($table_parameters{"sample${col}labmeth_$row"}) {
             $sql_query = qq!
 		SELECT price
-		  FROM $TB_LABELING_METHOD
+		  FROM $TBMA_LABELING_METHOD
 		 WHERE labeling_method_id='$table_parameters{"sample${col}labmeth_$row"}'
             !;
             @row_result = $sbeams->selectOneColumn($sql_query);
@@ -611,8 +611,8 @@ sub printEntryForm {
       if ($parameters{"slide_type_id"}) {
         $sql_query = qq!
 		SELECT $n_slides * STC.price
-		  FROM $TB_SLIDE_TYPE ST
-		  JOIN $TB_SLIDE_TYPE_COST STC ON ( ST.slide_type_id = STC.slide_type_id )
+		  FROM $TBMA_SLIDE_TYPE ST
+		  JOIN $TBMA_SLIDE_TYPE_COST STC ON ( ST.slide_type_id = STC.slide_type_id )
 		 WHERE ST.slide_type_id='$parameters{"slide_type_id"}'
 		   AND STC.cost_scheme_id = $cost_scheme_id
         !;
@@ -648,7 +648,7 @@ sub printEntryForm {
       if ($parameters{"scanning_request"}) {
         $sql_query = qq!
 		SELECT $n_slides * price
-		  FROM $TB_ARRAY_REQUEST_OPTION
+		  FROM $TBMA_ARRAY_REQUEST_OPTION
 		 WHERE option_key='$parameters{"scanning_request"}'
 		   AND option_type='scanning_request'
         !;
@@ -1130,7 +1130,7 @@ sub processEntryForm {
 
           # UPDATE array_request_sample record
           $sql_query = qq~
-		UPDATE $TB_ARRAY_REQUEST_SLIDE SET
+		UPDATE $TBMA_ARRAY_REQUEST_SLIDE SET
                  date_modified=CURRENT_TIMESTAMP,
                  modified_by_id=$current_contact_id,
                  record_status='$parameters{record_status}'
@@ -1158,7 +1158,7 @@ sub processEntryForm {
           # But double-check with a query that there isnt already a record
           $sql_query = qq~
 		SELECT array_request_slide_id
-		  FROM $TB_ARRAY_REQUEST_SLIDE
+		  FROM $TBMA_ARRAY_REQUEST_SLIDE
 		 WHERE array_request_id='$parameters{$PK_COLUMN_NAME}'
 		   AND slide_index = '$element'
           ~;
@@ -1175,7 +1175,7 @@ sub processEntryForm {
           } else {
             # INSERT a new array_request_slide record
             $sql_query = qq~
-		INSERT INTO $TB_ARRAY_REQUEST_SLIDE
+		INSERT INTO $TBMA_ARRAY_REQUEST_SLIDE
 		 (array_request_id,slide_index,
 		 created_by_id,modified_by_id,owner_group_id)
 		VALUES
@@ -1216,7 +1216,7 @@ sub processEntryForm {
 
               # UPDATE array_request_sample record
               $sql_query = qq~
-			UPDATE $TB_ARRAY_REQUEST_SAMPLE SET
+			UPDATE $TBMA_ARRAY_REQUEST_SAMPLE SET
 			 array_request_slide_id=
 			     '$table_parameters{"slide${element}id"}',
 			 sample_index='$isample',
@@ -1256,7 +1256,7 @@ sub processEntryForm {
               # But double-check with a query that there isn't already a record
               $sql_query = qq~
 		SELECT array_request_sample_id
-		  FROM $TB_ARRAY_REQUEST_SAMPLE
+		  FROM $TBMA_ARRAY_REQUEST_SAMPLE
 		 WHERE array_request_slide_id=
 		       '$table_parameters{"slide${element}id"}'
 		   AND sample_index = '$isample'
@@ -1281,7 +1281,7 @@ sub processEntryForm {
 
                 # INSERT a new array_request_slide record
                 $sql_query = qq~
-			INSERT INTO $TB_ARRAY_REQUEST_SAMPLE
+			INSERT INTO $TBMA_ARRAY_REQUEST_SAMPLE
 			 (array_request_slide_id,sample_index,name,labeling_method_id,
 			 created_by_id,modified_by_id,owner_group_id)
 			VALUES
@@ -1313,7 +1313,7 @@ sub processEntryForm {
             # Calculate the print of each sample
             $sql_query = qq!
 		SELECT price
-		  FROM $TB_LABELING_METHOD
+		  FROM $TBMA_LABELING_METHOD
 		 WHERE labeling_method_id='$table_parameters{"sample${isample}labmeth_$element"}'
             !;
             @row_result = $sbeams->selectOneColumn($sql_query);
@@ -1345,8 +1345,8 @@ sub processEntryForm {
       if ($parameters{"slide_type_id"}) {
         $sql_query = qq!
 		SELECT $n_slides * STC.price
-		  FROM $TB_SLIDE_TYPE ST
-		  JOIN $TB_SLIDE_TYPE_COST STC ON ( ST.slide_type_id = STC.slide_type_id )
+		  FROM $TBMA_SLIDE_TYPE ST
+		  JOIN $TBMA_SLIDE_TYPE_COST STC ON ( ST.slide_type_id = STC.slide_type_id )
 		 WHERE ST.slide_type_id='$parameters{"slide_type_id"}'
 		   AND STC.cost_scheme_id = $cost_scheme_id
         !;
@@ -1383,7 +1383,7 @@ sub processEntryForm {
       if ($parameters{"scanning_request"}) {
         $sql_query = qq!
 		SELECT $n_slides * price
-		  FROM $TB_ARRAY_REQUEST_OPTION
+		  FROM $TBMA_ARRAY_REQUEST_OPTION
 		 WHERE option_key='$parameters{"scanning_request"}'
 		   AND option_type='scanning_request'
         !;
@@ -1608,7 +1608,7 @@ sub printCompletedEntry {
     }
 
 
-    $parameters{request_status}="Not Yet Submitted"
+    $parameters{request_sMA_tatus}="Not Yet Submitted"
       if ( ! ($parameters{request_status}));
 
 
@@ -1800,8 +1800,8 @@ sub printCompletedEntry {
         SELECT array_request_id,slide_index,sample_index,name,
                labeling_method_id,SLI.array_request_slide_id,
                array_request_sample_id
-          FROM $TB_ARRAY_REQUEST_SAMPLE SAM
-          FULL JOIN $TB_ARRAY_REQUEST_SLIDE SLI ON (
+          FROM $TBMA_ARRAY_REQUEST_SAMPLE SAM
+          FULL JOIN $TBMA_ARRAY_REQUEST_SLIDE SLI ON (
                SAM.array_request_slide_id = SLI.array_request_slide_id )
          WHERE $PK_COLUMN_NAME='$parameters{$PK_COLUMN_NAME}'!;
       my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
@@ -1821,7 +1821,7 @@ sub printCompletedEntry {
 
       $sql_query = qq~
 	SELECT labeling_method_id,name
-	  FROM $TB_LABELING_METHOD
+	  FROM $TBMA_LABELING_METHOD
 	 ORDER BY sort_order,name
       ~;
       my %optionlist=$sbeams->selectTwoColumnHash($sql_query);
@@ -1881,7 +1881,7 @@ sub printCompletedEntry {
           if ($table_parameters{"sample${col}labmeth_$row"}) {
             $sql_query = qq!
 		SELECT price
-		  FROM $TB_LABELING_METHOD
+		  FROM $TBMA_LABELING_METHOD
 		 WHERE labeling_method_id='$table_parameters{"sample${col}labmeth_$row"}'
             !;
             @row_result = $sbeams->selectOneColumn($sql_query);
@@ -1897,8 +1897,8 @@ sub printCompletedEntry {
       if ($parameters{"slide_type_id"}) {
         $sql_query = qq!
 		SELECT $n_slides * STC.price
-		  FROM $TB_SLIDE_TYPE ST
-		  JOIN $TB_SLIDE_TYPE_COST STC ON ( ST.slide_type_id = STC.slide_type_id )
+		  FROM $TBMA_SLIDE_TYPE ST
+		  JOIN $TBMA_SLIDE_TYPE_COST STC ON ( ST.slide_type_id = STC.slide_type_id )
 		 WHERE ST.slide_type_id='$parameters{"slide_type_id"}'
 		   AND STC.cost_scheme_id = $cost_scheme_id
         !;
@@ -1934,7 +1934,7 @@ sub printCompletedEntry {
       if ($parameters{"scanning_request"}) {
         $sql_query = qq!
 		SELECT $n_slides * price
-		  FROM $TB_ARRAY_REQUEST_OPTION
+		  FROM $TBMA_ARRAY_REQUEST_OPTION
 		 WHERE option_key='$parameters{"scanning_request"}'
 		   AND option_type='scanning_request'
         !;

@@ -216,15 +216,15 @@ sub postFormHook {
   }
 
 
-  if ($TABLE_NAME eq "labeling" && 
+  if ($TABLE_NAME eq "MA_labeling" && 
       $parameters{array_request_sample_id} gt "") {
 
     my $sql_query = qq~
        SELECT DISTINCT extinction_coeff_at_max,correction_260,
               Ebase,MWbase
-         FROM $TB_DYE D
-         LEFT JOIN $TB_LABELING_METHOD LM ON ( D.dye_id = LM.dye_id )
-         LEFT JOIN $TB_ARRAY_REQUEST_SAMPLE ARS ON
+         FROM $TBMA_DYE D
+         LEFT JOIN $TBMA_LABELING_METHOD LM ON ( D.dye_id = LM.dye_id )
+         LEFT JOIN $TBMA_ARRAY_REQUEST_SAMPLE ARS ON
               ( LM.labeling_method_id = ARS.labeling_method_id )
         WHERE array_request_sample_id IN ($parameters{array_request_sample_id})
     ~;
@@ -302,7 +302,7 @@ sub postFormHook {
   }
 
 
-  if ($TABLE_NAME eq "array_scan") {
+  if ($TABLE_NAME eq "MA_array_scan") {
   
     if ($parameters{stage_location} gt "") {
       if ( -d "$parameters{stage_location}/Images" ) {
@@ -317,7 +317,7 @@ sub postFormHook {
   }
 
 
-  if ($TABLE_NAME eq "array_quantitation") {
+  if ($TABLE_NAME eq "MA_array_quantitation") {
   
     if ($parameters{stage_location} gt "") {
       if ( -e "$parameters{stage_location}" ) {
@@ -332,7 +332,7 @@ sub postFormHook {
   }
 
 
-  if ($TABLE_NAME eq "array_layout") {
+  if ($TABLE_NAME eq "MA_array_layout") {
   
     if ($parameters{source_filename} gt "") {
       if ( -e "$parameters{source_filename}" ) {
@@ -373,7 +373,7 @@ sub preUpdateDataCheck {
   }
 
 
-  if ($TABLE_NAME eq "array_scanDISABLED") {
+  if ($TABLE_NAME eq "MA_array_scanDISABLED") {
       unless ( ($parameters{stage_location} gt "") &&
              ( -d "$parameters{stage_location}/Images" ) ) {
       return "The specified scanned data location does not exist (looking ".
@@ -382,7 +382,7 @@ sub preUpdateDataCheck {
   }
 
 
-  if ($TABLE_NAME eq "array_quantitation") {
+  if ($TABLE_NAME eq "MA_array_quantitation") {
       unless ( ($parameters{stage_location} gt "") &&
              ( -e "$parameters{stage_location}" ) ) {
       return "The specified quantitation data file does not exist (looking ".
@@ -391,7 +391,7 @@ sub preUpdateDataCheck {
   }
 
 
-  if ($TABLE_NAME eq "array_layout") {
+  if ($TABLE_NAME eq "MA_array_layout") {
       unless ( ($parameters{source_filename} gt "") &&
              ( -e "$parameters{source_filename}" ) ) {
       return "The specified layout key file does not exist (looking for ".
