@@ -253,25 +253,23 @@ sub handleEmail {
         }
     }
 
+    my @recipients;
     if ($sendto) {
-        ## email specified contacts and include url_list in message
-        my @receipients = split(" ", $sendto); 
-        for (my $i = 0; $i <= $#receipients; $i++ ) {
-            ##search for receipient in contact hash to get full address:
-            foreach (sort keys %contact_hash) {
-               if ($_ =~ $receipients[$i]) {
-                   $receipients[$i] = $_;
-               }
+        @recipients = split(" ", $sendto); 
+    }
+
+    foreach (sort keys %contact_hash) {
+        if ($sendto) { ## email only specified contacts:
+            for (my $i=0; $i<$#recipients;$i++){
+                if ($_ =~ $recipients[$i]) { ##parse for match to spec. contacts
+                    emailContact(contact => $_,
+                        list_urls => $url_list{$_},
+                        testprint => $testprint,
+                        testsend => $testsend,
+                    );
+                }
             }
-            emailContact(contact => $receipients[$i],
-                list_urls => $url_list{$receipients[$i]},
-                testprint => $testprint,
-                testsend => $testsend,
-            );
-        }
-    } else {
-        ## email entire contact hash and include url_list in message
-        foreach (sort keys %contact_hash) {
+        } else { ## email entire contact hash:
             emailContact(contact => $_,
                 list_urls => $url_list{$_},
                 testprint => $testprint,
@@ -279,6 +277,7 @@ sub handleEmail {
             );
         }
     }
+
     
 }  #end handleEmail
 
@@ -311,7 +310,6 @@ Thank you for participating,
     Cheers,
         Nichole
 
-
     Use [UPDATE] button after making changes, and please let me know if 
 there are problems.
 
@@ -326,7 +324,6 @@ Here are the links for $contact: \n
     } else {
         sendmail (%mail) or die $Mail::Sendmail::error;
     }
-
 
     ##NOTE: should wrap it in HTML/MIME for email...MAC email not handling 1st url?
 }
