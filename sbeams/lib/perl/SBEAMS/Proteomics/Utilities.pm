@@ -760,7 +760,7 @@ sub readNfoFile {
 
 
   #### Define some standard variables
-  my $line;
+  my $line = '';
 
 
   #### Define a hash to hold parameters from the file
