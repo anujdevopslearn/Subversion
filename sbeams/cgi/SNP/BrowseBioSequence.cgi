@@ -16,7 +16,7 @@
 ###############################################################################
 use strict;
 use lib qw (../../lib/perl);
-use vars qw ($q $sbeams $sbeamsSN $dbh $current_contact_id $current_username
+use vars qw ($q $sbeams $sbeamsMOD $dbh $current_contact_id $current_username
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
 use CGI;
@@ -32,8 +32,8 @@ use SBEAMS::SNP::Tables;
 
 $q = new CGI;
 $sbeams = new SBEAMS::Connection;
-$sbeamsSN = new SBEAMS::SNP;
-$sbeamsSN->setSBEAMS($sbeams);
+$sbeamsMOD = new SBEAMS::SNP;
+$sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 
@@ -55,9 +55,9 @@ sub main {
     exit unless ($current_username = $sbeams->Authenticate());
 
     #### Print the header, do what the program does, and print footer
-    $sbeamsSN->printPageHeader();
+    $sbeamsMOD->printPageHeader();
     processRequests();
-    $sbeamsSN->printPageFooter();
+    $sbeamsMOD->printPageFooter();
 
 } # end main
 
@@ -107,14 +107,14 @@ sub printEntryForm {
     my $CATEGORY="BioSequence Search";
     $TABLE_NAME="SN_BrowseBioSequence" unless ($TABLE_NAME);
     ($PROGRAM_FILE_NAME) =
-      $sbeamsSN->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+      $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
     my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
 
 
     #### Get the columns and input types for this table/query
-    my @columns = $sbeamsSN->returnTableInfo($TABLE_NAME,"ordered_columns");
+    my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
     my %input_types = 
-      $sbeamsSN->returnTableInfo($TABLE_NAME,"input_types");
+      $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
 
 
     #### Read the form values for each column
