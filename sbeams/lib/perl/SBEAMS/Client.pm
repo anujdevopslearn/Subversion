@@ -66,7 +66,7 @@ sub authenticate {
 
   #### Determine the name of the SBEAMSAuth cache file
   my $HOME = $ENV{'HOME'};
-  unless ($home) {
+  unless ($HOME) {
     die("ERROR: $SUB_NAME: Unable to determine home directory");
   }
   my $SBEAMSAuth_file = "$HOME/.SBEAMSAuth";
@@ -79,6 +79,7 @@ sub authenticate {
   #### See if the file exists and read it if it does
   if (-e $SBEAMSAuth_file ) {
     if ($cookie_jar->load($SBEAMSAuth_file)) {
+      $self->{_is_authenticated} = 1;
       return $cookie_jar;
     }
   }
@@ -99,7 +100,7 @@ sub authenticate {
   #### See if we can get a cookie for this
   my $SBEAMS_auth;
   unless ($SBEAMS_auth = _fetchSBEAMSAuth(
-					  server_url=>$server_url,
+					  server_uri=>$server_uri,
 					  username=>$username,
 					  password=>$password,
 					 )
@@ -113,6 +114,7 @@ sub authenticate {
   #### And make sure only the user can read the file
   chmod(0600,$SBEAMSAuth_file);
 
+  $self->{_is_authenticated} = 1;
   return $SBEAMS_auth;
 
 } # end authenticate
@@ -131,7 +133,7 @@ sub fetch_data {
   my $server_uri = $args{'server_uri'};
   my $server_command = $args{'server_command'}
     || die("ERROR: $SUB_NAME: parameter server_command missing");
-  my $command_parameters = $args{'command_parameters'} || '';
+  my $command_parameters = $args{'command_parameters'};
 
 
   #### If authentication hasn't happened yet, do it now if possible
@@ -139,15 +141,15 @@ sub fetch_data {
     unless ($server_uri) {
       print "ERROR: $SUB_NAME: Parameter server_uri missing";
       return '';
-    };
-    unless ($sbeams->authenticate(server_uri => $server_uri) {
+    }
+    unless ($self->authenticate(server_uri => $server_uri)) {
       print "ERROR: $SUB_NAME: Unable to authenticate";
     }
   }
 
 
   #### Create the URL for getting the result
-  my $url = "$server_uri/cgi/$command_parameters";
+  my $url = "$server_uri/cgi/$server_command";
 
 
   #### Obtain the authentication cookie
@@ -160,22 +162,47 @@ sub fetch_data {
   $ua->cookie_jar($SBEAMS_auth);
 
 
+  #### Take the command_parameters hashref and build the URL
+  my $command_parameters_str = '';
+  if (defined($command_parameters) && ref($command_parameters) =~ /HASH/) {
+
+    #### If output_mode and apply_action aren't set, set them
+    $command_parameters->{output_mode} = 'tsv'
+      unless ($command_parameters->{output_mode});
+    $command_parameters->{apply_action} = 'QUERY'
+      unless (defined($command_parameters->{apply_action}));
+
+    #### Build the parameter list
+    while ( my ($key,$value) = each %{$command_parameters} ) {
+      $command_parameters_str .= "$key=$value&";
+    }
+    chop($command_parameters_str);
+  }
+
+
   #### Create a request object with the supplied URL and parameters
   my $request = HTTP::Request->new(POST=>$url);
   $request->content_type('application/x-www-form-urlencoded');
-  $request->content($parameters);
+  $request->content($command_parameters_str);
 
 
   #### Pass request to the user agent and get a response back
   my $response = $ua->request($request);
 
 
-  #### Return the data
-  if ($response->is_success) {
-    return $response->content;
-  } else {
-    return '';
-  }
+  #### Create the returned structure
+  my $resultset;
+  $resultset->{is_success} = $response->is_success;
+  $resultset->{raw_response} = $response->content;
+
+
+  #### Decode the raw result into a real resultset
+  $self->decode_response(resultset_ref => $resultset);
+
+
+  #### Return the result
+  return $resultset;
+
 
 } # end fetch_data
 
@@ -216,6 +243,24 @@ sub get_server_uri {
   return $self->{_server_uri};
 
 } # end get_server_uri
+
+
+
+###############################################################################
+# is_authenticated
+###############################################################################
+sub is_authenticated {
+  my $self = shift || croak("parameter self not passed");
+  my $SUB_NAME = "is_authenticated";
+
+  #### Decode the argument list
+  my $dummy = shift;
+  die("ERROR: $SUB_NAME: no parameters allowed") if ($dummy);
+
+  #### Return the data
+  return $self->{_is_authenticated};
+
+} # end is_authenticated
 
 
 
@@ -328,43 +373,79 @@ sub _fetchSBEAMSAuth {
 
 
 ###############################################################################
-# Process Data into something more convenient
+# decode_response
 ###############################################################################
-sub processSBEAMSData {
+sub decode_response {
+  my $self = shift || croak("parameter self not passed");
   my %args = @_;
-  my $SUB_NAME = "processSBEAMSData";
+  my $SUB_NAME = "decode_response";
 
   #### Decode the argument list
-  my $data = $args{'data'} || die("ERROR: $SUB_NAME: parameter data missing");;
-  my $format = $args{'format'} || die("ERROR: $SUB_NAME: parameter format missing");
+  my $resultset = $args{'resultset_ref'}
+    || die("ERROR: $SUB_NAME: resultset_ref data missing");;
 
-  my @fdata = ();
-  my @data_tmp = split("\n",$data);
-  my $header = shift @data_tmp;
-  my @header_a = split("\t",$header);
 
-  if($format eq "matrix"){
-    for(my $row=0;$row<@data_tmp;$row++){
-      @{$fdata[$row]} = split("\t",$data_tmp[$row]);
-
-### if you feel like doing it the long way ###
-#      my @row_tmp_a = split("\t",$data_tmp[$row]);
-#      for(my $col=0;$col<@row_tmp_a;$col++){
-#	$fdata[$row][$col] = $row_tmp_a[$col];
-#      }
-###
-    }
+  #### Try to figure out what type of resultset we have
+  my $rawtype = '';
+  if ($resultset->{raw_response} =~ /^\s*<HTML>/) {
+    $rawtype = 'html'
+  } elsif ($resultset->{raw_response} =~ /^\s*<\?xml/) {
+    $rawtype = 'xml'
+  } elsif ($resultset->{raw_response} =~ /\t/) {
+    $rawtype = 'tsv'
   }
-  elsif($format eq "array_hash"){
-    for(my $row=0;$row<@data_tmp;$row++){
-      my @row_tmp_a = split("\t",$data_tmp[$row]);
-      for(my $col=0;$col<@row_tmp_a;$col++){
-	$fdata[$row]{$header_a[$col]} = $row_tmp_a[$col];
-      }
-    }
+
+  #### If we did not figure out the resultset type, squawk and return
+  unless ($rawtype) {
+    print "ERROR: $SUB_NAME: Unable to determine response type.\n";
+    return 0;
   }
-  return \@fdata;
-}
+
+
+  #### If the type is xml or html, we don't yet know what to do
+  if ($rawtype eq 'xml' || $rawtype eq 'html') {
+    print "ERROR: $SUB_NAME: Cannot decode $rawtype into a resultset yet.\n";
+    return 0;
+  }
+
+
+
+  #### If data is tsv, decode it
+  if ($rawtype eq 'tsv') {
+
+    #### Decode into rows
+    my @rows = split("\n",$resultset->{raw_response});
+
+    #### Pull off the first row as the header and make an array
+    my $header = shift(@rows);
+    my @column_list = split("\t",$header);
+    $resultset->{column_list_ref} = \@column_list;
+
+    #### Convert the array into a hash of names to column numbers
+    my $i = 0;
+    my %column_hash;
+    foreach my $element (@column_list) {
+      $column_hash{$element} = $i;
+      $i++;
+    }
+    $resultset->{column_hash_ref} = \%column_hash;
+
+    #### Convert each row from string to array ref
+    for ($i=0;$i<scalar(@rows);$i++) {
+      $rows[$i] = [ split("\t",$rows[$i]) ];
+    }
+    $resultset->{data_ref} = \@rows;
+
+    #### Return success
+    return 1;
+  }
+
+
+  #### Return error if we got this far
+  print "ERROR: $SUB_NAME: Unknown type '$rawtype'\n";
+  return 0;
+
+} # end decode_response
 
 
 
