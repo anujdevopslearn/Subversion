@@ -871,7 +871,8 @@ sub getHeaderHash {
 
   if ($organism eq "yeast") {
     %hash = ('external_ID'=>['reporter_name','canonical_name','external_identifier'],
-			 'GENE_NAME'=>['full_name','common_name','gene_name']
+			 'GENE_NAME'=>['full_name','gene_name']
+			 'DESCRIPT.'=>'common_name'
 	     );
   }elsif ($organism eq "mouse") {
     %hash = ('GENE_NAME'=>'gene_name',
