@@ -123,8 +123,12 @@ sub start_element {
 
   #### If this is the peptideprophet_result, store the probability
   if ($localname eq 'peptideprophet_result') {
-    my $probability = $attrs{probability}
-      || die("ERROR: No probability attribute for this peptideprophet_result");
+    my $probability = $attrs{probability};
+    unless (defined($probability)) {
+      die("ERROR: No probability attribute for peptideprophet_result: ".
+          join(",",%attrs));
+    }
+
     my $current_search_result = $self->{current_search_result}
       || die("ERROR: Found a peptideprophet_result without knowing the ".
 	     "current_search_result.");
@@ -132,12 +136,11 @@ sub start_element {
     $self->{files}->{$current_search_result}->{probability} =
       $attrs{probability};
     $self->{current_search_result} = undef;
+
+    #### Increase the counters and print some progress info
+    $self->{counter}++;
+    print $self->{counter}."..." if ($self->{counter} % 100 == 0);
   }
-
-
-  #### Increase the counters and print some progress info
-  $self->{counter}++;
-  print $self->{counter}."..." if ($self->{counter} % 100 == 0);
 
 }
 
