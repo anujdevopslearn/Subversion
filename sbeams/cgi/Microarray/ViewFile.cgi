@@ -105,8 +105,14 @@ sub main {
   my $file_name = $parameters{'FILE_NAME'}
   || die "ERROR: file not passed";
 	my $action =$parameters{'action'} || "download";
+	my $project_id = $sbeams->getCurrent_project_id;
 
-  my $project_id = $sbeams->getCurrent_project_id;
+	my $output_dir;
+	if ($file_name =~ /\.map$/ || $file_name=~/\.key$/) {
+			$output_dir = "/net/arrays/Slide_Templates";
+	}else {
+			my $output_dir = "$FILE_BASE_DIR/$project_id";
+	}
 
 	if ($action eq 'download') {
 			#### Verify user has permission to access the file
@@ -114,7 +120,7 @@ sub main {
 					print "Content-type: application/force-download \n";
 					print "Content-Disposition: filename=$file_name\n\n";
 					my $buffer;
-					open (DATA, "$FILE_BASE_DIR/$project_id/$file_name")
+					open (DATA, "$output_dir/$file_name")
 							|| die "Couldn't open $file_name";
 					while(read(DATA, $buffer, 1024)) {
 							print $buffer;
@@ -134,7 +140,7 @@ sub main {
 
 			#### Verify user has permission to access the file
 			if ($sbeams->get_best_permission <= $DATA_READER_ID){
-					my $file = "$FILE_BASE_DIR/$project_id/$file_name";
+					my $file = "$output_dir/$file_name";
 					printFile(file=>$file);
 			}
 			else{
