@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 ##################################################
-# Boone.pl version: 1/30/02
+# Boone.pl version: 1/30/02 a
 #             Rowan Christmas
 #
 # This program reads in Charlie Boone's Data set and creates substrains and
