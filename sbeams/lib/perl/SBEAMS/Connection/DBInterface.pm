@@ -2196,14 +2196,42 @@ sub displayResultSet {
       system("/bin/cp -p $PHYSICAL_BASE_DIR/lib/cytoscape/$SBEAMS_SUBDIR/$template/* $PHYSICAL_BASE_DIR/tmp/cytoscape/$identifier/");
 
       foreach my $file (keys %{$cytoscape->{files}}) {
-print "$file\n";
-	open(OUTFILE,">$PHYSICAL_BASE_DIR/lib/cytoscape/$SBEAMS_SUBDIR/$template/$file") || die("ERROR: Unable to open file $PHYSICAL_BASE_DIR/lib/cytoscape/$SBEAMS_SUBDIR/$template/$file");
-	foreach my $line (@{$cytoscape->{files}->{$file}}) {
-	  print OUTFILE "$line\n";
+	my $outfile = "$PHYSICAL_BASE_DIR/tmp/cytoscape/$identifier/$file";
+	open(OUTFILE,">$outfile") || die("ERROR: Unable to open file $outfile");
+	foreach my $line ( @{$cytoscape->{files}->{$file}} ) {
+	  print OUTFILE "$line\n" if (defined($line));
 	}
 	close(OUTFILE);
 
       }
+
+      #### Update the jnlp file with the latest information
+      my $infile = "$PHYSICAL_BASE_DIR/tmp/cytoscape/$identifier/cytoscape.jnlp";
+      open(INFILE,$infile) || die("ERROR: Unable to open $infile");
+      my $buffer = '';
+      while (my $line = <INFILE>) {
+	if ($line =~ /codebase=/) {
+	  $line =~ s~codebase=\".+\"~codebase="$SERVER_BASE_DIR/$HTML_BASE_DIR/tmp/cytoscape/$identifier"~;
+	}
+	$buffer .= $line;
+      }
+      close(INFILE);
+      open(OUTFILE,">$infile") || die("ERROR: Unable to open $infile for writing");
+      print OUTFILE $buffer;
+      close(OUTFILE);
+
+
+      #### Make the data.jar
+      system("( cd $PHYSICAL_BASE_DIR/tmp/cytoscape/$identifier/ ; /usr/bin/make >& make.out )");
+
+      #### If the invocation_mode is http, provide a header
+      if ($self->invocation_mode() eq 'http') {
+        print "Content-type: application/x-java-jnlp-file\n\n";
+      }
+
+      #### Send the jnlp xml
+      print $buffer;
+
 
       return;
     }
@@ -2358,6 +2386,7 @@ sub displayResultSetControls {
     $rs_params_ref = $args{'rs_params_ref'};
     my $query_parameters_ref = $args{'query_parameters_ref'};
     my $base_url = $args{'base_url'};
+    my $cytoscape = $args{'cytoscape'} || undef;
 
     my %rs_params = %{$rs_params_ref};
     my %parameters = %{$query_parameters_ref};
@@ -2453,6 +2482,15 @@ sub displayResultSetControls {
       ['tsv','tsv','TSV'],
       ['csv','csv','CSV'],
     );
+
+    #### If we have Cytoscape information, add that
+    if (defined($cytoscape)) {
+      push(@output_modes,
+	   ['cytoscape','jnlp','Cytoscape'],
+	  );
+    }
+
+
     print "<BR>Download ResultSet in Format: \n";
     my $first_flag = 1;
 
