@@ -2976,6 +2976,7 @@ sub display_form_buttons {
   #### Show the QUERY, REFRESH, and Reset buttons
   print qq~
       <INPUT TYPE="hidden" NAME="QUERY_NAME" VALUE="$TABLE_NAME">
+      <INPUT TYPE="hidden" NAME="apply_action_hidden" VALUE="">
       <TR><TD COLSPAN=2>
       &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       <INPUT TYPE="submit" NAME="action" VALUE="QUERY">
