@@ -1561,6 +1561,8 @@ sub specialParsing {
 	  } else {
 	    print "WARNING: Unable to parse gene_tag '$gene_tag'\n";
 	  }
+	  $rowdata_ref->{biosequence_accession} = $gene_tag;
+          $rowdata_ref->{dbxref_id} = '24';
 
       } else {
 	print "WARNING: The following description cannot be parsed:\n  ==".
