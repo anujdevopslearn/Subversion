@@ -1250,12 +1250,12 @@ sub loadBiosequence {
 	  if (defined($match->{evalue}));
 
 
-        $rowdata{match_start} = $match->{match_start}
-	  if (defined($match->{match_start}));
-        $rowdata{match_end} = $match->{match_end}
-	  if (defined($match->{match_end}));
-	$rowdata{match_length} = $match->{match_length}
-	  if (defined($match->{match_length}));
+        $rowdata{query_start} = $match->{query_start}
+	  if (defined($match->{query_start}));
+        $rowdata{query_end} = $match->{query_end}
+	  if (defined($match->{query_end}));
+	$rowdata{query_length} = $match->{query_length}
+	  if (defined($match->{query_length}));
 
 	$rowdata{match_annotation} = $match->{match_annotation}
 	  if (defined($match->{match_annotation}));
@@ -1266,7 +1266,7 @@ sub loadBiosequence {
 	  table_name=>"${DATABASE}domain_match",
 	  rowdata_ref=>\%rowdata,
 	  PK=>"domain_match_id",
-	  verbose=>2,
+	  verbose=>$VERBOSE,
 	  testonly=>$TESTONLY,
 	);
 
@@ -2351,9 +2351,9 @@ sub readInterProScanFile {
     $parameters{'EC_number'} = $columns[3];
     $parameters{'match_annotation'} = $columns[4].': '.$columns[5];
     $parameters{'evalue'} = $columns[6];
-    $parameters{'match_start'} = $columns[7];
-    $parameters{'match_end'} = $columns[8];
-    $parameters{'match_length'} = $columns[9];
+    $parameters{'query_start'} = $columns[7];
+    $parameters{'query_end'} = $columns[8];
+    $parameters{'query_length'} = $columns[9];
 
     #### Store this new data on the array for this biosequence_name
     my @matches = ();
