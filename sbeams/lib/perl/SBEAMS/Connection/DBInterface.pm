@@ -1456,7 +1456,9 @@ sub displayResultSetControls {
 
 
     #### Start form
+    my $BR = "\n";
     if ($self->output_mode() eq 'html') {
+      $BR = "<BR>\n";
       print qq~
       <TABLE WIDTH="800" BORDER=0><TR><TD>
       <FORM METHOD="POST">
@@ -1485,8 +1487,10 @@ sub displayResultSetControls {
     }
 
 
+
     #### If the output mode is not html, then finish here
     if ($self->output_mode() ne 'html') {
+      $self->displayTimingInfo();
       return;
     }
 
@@ -1583,29 +1587,7 @@ sub displayResultSetControls {
     ~;
 
 
-    #### Print out some timing information
-    if (1) {
-
-      if (defined($timing_info->{send_query}) &&
-          defined($timing_info->{begin_resultset})) {
-        printf("Process Query: %8.2f s<BR>\n",tv_interval(
-          $timing_info->{send_query},$timing_info->{begin_resultset}));
-      }
-
-      if (defined($timing_info->{begin_resultset}) &&
-          defined($timing_info->{finished_resultset})) {
-        printf("Fetch Resultset: %8.2f s<BR>\n",tv_interval(
-          $timing_info->{begin_resultset},$timing_info->{finished_resultset}));
-      }
-
-      if (defined($timing_info->{begin_write_resultset}) &&
-          defined($timing_info->{finished_write_resultset})) {
-        printf("Cache Resultset: %8.2f s<BR>\n",tv_interval(
-          $timing_info->{begin_write_resultset},
-          $timing_info->{finished_write_resultset}));
-      }
-
-    }
+    $self->displayTimingInfo();
 
 
     #### Finish the form
@@ -1632,6 +1614,51 @@ sub displayResultSetControls {
 
 
 } # end displayResultSetControls
+
+
+
+###############################################################################
+# displayTimingInfo
+#
+# Display some statistics related to query times
+###############################################################################
+sub displayTimingInfo {
+  my $self = shift;
+  my %args = @_;
+
+  #### Process the arguments list
+
+
+  #### Determine the type of line break to use
+  my $BR = "\n";
+  if ($self->output_mode() eq 'html') {
+    $BR = "<BR>\n";
+  }
+
+
+  if (defined($timing_info->{send_query}) &&
+      defined($timing_info->{begin_resultset})) {
+    printf("Process Query: %8.2f s$BR",tv_interval(
+      $timing_info->{send_query},$timing_info->{begin_resultset}));
+  }
+
+  if (defined($timing_info->{begin_resultset}) &&
+      defined($timing_info->{finished_resultset})) {
+    printf("Fetch Resultset: %8.2f s$BR",tv_interval(
+      $timing_info->{begin_resultset},$timing_info->{finished_resultset}));
+  }
+
+  if (defined($timing_info->{begin_write_resultset}) &&
+      defined($timing_info->{finished_write_resultset})) {
+    printf("Cache Resultset: %8.2f s$BR",tv_interval(
+      $timing_info->{begin_write_resultset},
+      $timing_info->{finished_write_resultset}));
+  }
+
+  return
+
+} # end displayTimingInfo
+
 
 
 ###############################################################################
