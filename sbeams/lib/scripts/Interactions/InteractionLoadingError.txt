@@ -1,0 +1,333 @@
+Organism_bioentity1_name	Bioentity1_type	Bioentity1_common_name	Bioentity1_canonical_name	Bioentity1_full_name	Bioentity1_aliases	Bioentity1_location	Bioentity1_state	Bioentity1_regulatory_feature	Interaction_type	Organism_bioentity2_name	Bioentity2_common_name	Bioentity2_canonical_name	Bioentity2_full_name	Bioentity2_aliases	Bioentity2_type	Bioentity2_regulatory_feature	Bioentity2_location	Interaction_group	Confidence_score	Interaction_description	Assay_name	Assay_type	Publication_ids		
+Mouse	Protein	TLR1	NM_030682			"membrane, plasma"			interacts with	bacteria	triacyl-lipopeptide				small molecule		extracellular	TIR Module				"Biological, KO"	12524386
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	TLR2	NM_011905			"membrane, plasma"			interacts with	bacteria	triacyl-lipopeptide				small molecule		extracellular	TIR Module				"Biological, KO"	12524386
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	TLR2	NM_011905			"membrane, plasma"			interacts with	bacteria	diacyl-lipopeptide				small molecule		extracellular	TIR Module				"Biological, KO"	12524386
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	TLR3	NM_126166			membrane			interacts with	viridae	dsRNA				RNA		extracellular	TIR Module				"Biological, KO"	12524386
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	TLR4	NM_021297			membrane			interacts with	bacteria	LPS				small molecule		extracellular	TIR Module				"Biological, KO, genetic"	12524386
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	TLR5	NM_016928			membrane			interacts with	bacteria	flagellin	D13689			protein		extracellular	TIR Module				"Biological, KO, IP"	12524386
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	TLR6	NM_011604			"membrane, plasma"			interacts with	eubacteria	diacyl-lipopeptide				small molecule		extracellular	TIR Module				"Biological, KO"	12524386
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	TLR7	NM_133211			membrane			interacts with	synthetic	R-848				small molecule		extracellular	TIR Module				"Biological, KO"	12524386
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	TLR8	NM_133212			membrane			interacts with	synthetic	R-848				small molecule		extracellular	TIR Module				"Biological, KO"	12524386
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	TLR9	NM_031178			membrane			interacts with	"bacteria, viridae"	CpG DNA				DNA		extracellular	TIR Module				"Biological, KO, genetic"	12524386
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	TLR4	NM_021297			membrane			interacts with		CD14	NM_021297			Protein		"membrane, plasma"	TIR Module				"Biological, KO"	12524386
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	TLR4	NM_021297			membrane			interacts with		MD-2	NM_009841			Protein		"membrane, plasma"	TIR Module				"Biological, KO, IP"	12524386
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	CD14	NM_009841			membrane			interacts with	bacteria	LPS				small molecule		extracellular	TIR Module				"Biological, KO, genetic"	12524386
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	MD-2	NM_016923			membrane			interacts with	bacteria	LPS				small molecule		extracellular	TIR Module				"Biological, KO, genetic"	12524386
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	LBP	NM_008489			membrane			interacts with	bacteria	LPS				small molecule		extracellular	TIR Module				"Biological, KO, genetic"	12524386
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	AOAH	NM_012054			secreted			inhibits	bacteria	LPS				small molecule		extracellular	TIR Module				"Biological, KO, genetic"	2549069
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	IRAK4	NM_029926			cytosol			"interacts with, ligand-induced"	Mouse	IRAK1	NM_008363			Protein		cytosol	TIR Module				IP	11960013
+		interaction is not specified	
+Mouse	Protein	IRAK4	NM_029926			cytosol			"interacts with, ligand-induced"	Mouse	MyD88	NM_010851			Protein		cytosol	TIR Module				IP	11960013
+		interaction is not specified	
+Mouse	Protein	IRAK4	NM_029926			cytosol			"interacts with, ligand-induced"	Mouse	TRAF6	NM_009424			Protein		cytosol	TIR Module				"IP, structure"	11960013
+		interaction is not specified	
+Mouse	Protein	TRAF6	NM_009424			cytosol			interacts with	Mouse	RANK	NM_009399			Protein		"membrane, plasma"	TIR Module				"IP, structure"	10635328
+		 "IP, structure":  assayType is not in the database	
+Mouse	Protein	TRAF6	NM_009424			cytosol			interacts with	Mouse	CD40	NM_011611    			Protein		"membrane, plasma"	TIR Module				structure	12140561
+		 Structure:  assayType is not in the database	
+Mouse	Protein	TRAF6	NM_009424			cytosol			interacts with	Mouse	IRAKM	NM_028679			Protein		cytosol	TIR Module				structure	12140561
+		 Structure:  assayType is not in the database	
+Mouse	Protein	TRAF6	NM_009424			cytosol			interacts with	Mouse	IRAK1	NM_008363			Protein		cytosol	TIR Module				structure	12140561
+		 Structure:  assayType is not in the database	
+Mouse	Protein	TIFA	NM_145133			cytosol			interacts with	Mouse	TRAF6	NM_009424			Protein		cytosol	TIR Module				IP	12566447
+		 IP:  assayType is not in the database	
+Mouse	Protein	TIFA	NM_145133			cytosol			interacts with	Mouse	IRAK1	NM_008363			Protein		cytosol	TIR Module				IP	12566447
+		 IP:  assayType is not in the database	
+Mouse	Protein	TAK1	NM_172688			cytosol			"phosphorylates, S177/S181"	Mouse	IKKB	AF088910			Protein		cytosol	TIR Module					11460167
+		interaction is not specified	
+Mouse	Protein	TAK1	NM_172688			cytosol			"phosphorylates, S207/T211"	Mouse	MKK6 	XM_126577			Protein		cytosol	TIR Module					11460167
+		interaction is not specified	
+Mouse	Protein	UBIQUITIN	NM_019639						"conjugated to, K63 polyubiquitin"	Mouse	TRAF6	NM_009424			Protein		cytosol	TIR Module					11460167
+		interaction is not specified	
+Mouse	Protein	A20	NM_009397			cytosol			interacts with	Mouse	TRAF6	NM_009424			Protein		cytosol	TIR Module				IP	9928991
+		 IP:  assayType is not in the database	
+Mouse	Protein	A20	NM_009397			cytosol			interacts with	Mouse	TRAF1	NM_009421			Protein		cytosol	TIR Module				IP	8692885
+		 IP:  assayType is not in the database	
+Mouse	Protein	A20	NM_009397			cytosol			interacts with	Mouse	TRAF2	XM_130119			Protein		cytosol	TIR Module				IP	8692885
+		 IP:  assayType is not in the database	
+Mouse	Protein	FADD	NM_010175			cytosol				Mouse	I-FLICE	NM_009805			Protein		cytosol	TIR Module					
+		interactionType is not specified	
+Mouse	Protein	FADD	NM_010175			cytosol				Mouse	FAS	NM_007987			Protein		"membrane, plasma"	TIR Module					
+		interactionType is not specified	
+Mouse	Protein	FADD	NM_010175			cytosol				Mouse	DR3				Protein		"membrane, plasma"	TIR Module					
+		interactionType is not specified	
+Mouse	Protein	FADD	NM_010175			cytosol				Mouse	TNFR1				Protein		"membrane, plasma"	TIR Module					
+		interactionType is not specified	
+		DR3									TRADD							TIR Module				Y2H	8934525
+		bioentity1_type or organism1 is not defined	
+		TNFR1									TRADD							TIR Module				Y2H	7758105
+		bioentity1_type or organism1 is not defined	
+		TRADD									TRAF2							TIR Module				Structure	10892748
+		bioentity1_type or organism1 is not defined	
+		TRADD									TRAF1							TIR Module				Structure	10892748
+		bioentity1_type or organism1 is not defined	
+		c-IAP1							interacts with		TRAF1							TIR Module					8548810
+		bioentity1_type or organism1 is not defined	
+		c-IAP2							interacts with		TRAF1							TIR Module					8548810
+		bioentity1_type or organism1 is not defined	
+		c-IAP1							interacts with		TRAF2							TIR Module					8548810
+		bioentity1_type or organism1 is not defined	
+		c-IAP2							interacts with		TRAF2							TIR Module					8548810
+		bioentity1_type or organism1 is not defined	
+Mouse	Protein	TNFR1				"membrane, plasma"			"interacts with, PLAD domain"	Mouse	TNFR1				Protein		"membrane, plasma"	TIR Module					10875917
+		interaction is not specified	
+Mouse	Protein	TNFR2				"membrane, plasma"			"interacts with, PLAD domain"	Mouse	TNFR2				Protein		"membrane, plasma"	TIR Module					10875917
+		interaction is not specified	
+Mouse	Protein	TNFR1				"membrane, plasma"			interacts with		PIP5K							TIR Module					9038203
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+		PIP5K							"interacts with, substrate"		PIP1(4)				small molecule			TIR Module					
+		bioentity1_type or organism1 is not defined	
+		PIP5K							"interacts with, product"		"PIP2(4,5)"				small molecule			TIR Module					
+		bioentity1_type or organism1 is not defined	
+		c-IAP1							ubiquitnates		TRAF2							TIR Module					11907583
+		bioentity1_type or organism1 is not defined	
+		UBIQUITIN							conjugated to 		TRAF2							TIR Module					11907583
+		bioentity1_type or organism1 is not defined	
+		UBCH7							ubiquitnates		TRAF2							TIR Module					11907583
+		bioentity1_type or organism1 is not defined	
+		UBCH7							interacts with		UBIQUITIN							TIR Module					11907583
+		bioentity1_type or organism1 is not defined	
+		c-IAP1							interacts with		UBIQUITIN							TIR Module					11907583
+		bioentity1_type or organism1 is not defined	
+Mouse	"Protein, ubiquitinated"	TRAF2				cytosol			degraded by	Mouse	26S Proteasome				complex			TIR Module					11907583
+		bioentity1_type or organism1 is not defined	
+																		TIR Module					
+		bioentity1_common_name and bioentiy_canonical_name are not defined	
+																		TIR Module					
+		bioentity1_common_name and bioentiy_canonical_name are not defined	
+																		TIR Module					
+		bioentity1_common_name and bioentiy_canonical_name are not defined	
+																		TIR Module					
+		bioentity1_common_name and bioentiy_canonical_name are not defined	
+Mouse	Protein	AKT1	NM_009652			cytosol			"phosphoryales, S23"	Mouse	IKKA	NM_007700			Protein		cytosol	TIR Module					10485710
+		interaction is not specified	
+Mouse	Protein	NIK				cytosol			"phosphoryales, S176"	Mouse	IKKA	NM_007700			Protein		cytosol	TIR Module					10485710
+		interaction is not specified	
+Mouse	Protein	IKKB	AF088910			cytosol			"phosphorylates, S32/S36"	Mouse	NFIKBA	NM_010907			Protein		"cytosol, nucleus"	TIR Module					9346485
+		interaction is not specified	
+	small molecule	salicylate							inhibits	Mouse	IKKB	AF088910			Protein		cytosol	TIR Module					9817203
+		bioentity1_type or organism1 is not defined	
+Mouse	Protein	IKKB	AF088910			cytosol			"autophosphorylates, C-terminal Ser cluster"	Mouse	IKKB	AF088910			Protein		cytosol	TIR Module					10195894
+		interaction is not specified	
+Mouse	Protein	Caspase-3				cytosol			"inhibits, proteolyzes D78/D242/D373/D546 "	Mouse	IKKB	AF088910			Protein		cytosol	TIR Module					11741536
+		interaction is not specified	
+	small molecule	PGE							inhibits	Mouse	IKKB	AF088910			Protein		cytosol	TIR Module					10638762
+		bioentity1_type or organism1 is not defined	
+Mouse	Protein	NFIKBA	NM_010907			"cytosol, nucleus"			inhibits	Mouse	NFKB1p50				Protein		"cytosol, nucleus"	TIR Module				"Structure, IP"	
+		 "Structure, IP":  assayType is not in the database	
+Mouse	Protein	NFIKBA	NM_010907			"cytosol, nucleus"			inhibits	Mouse	RELA	NM_009045			Protein		"cytosol, nucleus"	TIR Module				"Structure, IP"	
+		 "Structure, IP":  assayType is not in the database	
+Mouse	Protein	NFIKBA	NM_010907			"cytosol, nucleus"												TIR Module					
+		bioentity2 is not specified, bioentity1 has been added to the database	
+Mouse	Protein	NFIKBA	NM_010907			"cytosol, nucleus"												TIR Module					
+		bioentity2 is not specified, bioentity1 has been added to the database	
+Mouse	Protein	NFKB1p50	NM_008689			"cytosol, nucleus"			interacts with	Mouse	RELA	NM_009045			Protein		"cytosol, nucleus"	TIR Module				"Structure, IP"	
+		 "Structure, IP":  assayType is not in the database	
+Mouse	Protein	NFIKBL1	NM_010909			nucleus					?							TIR Module					
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	NFKB1p105	NM_008689			cytosol			inhibits		TPL2	NM_007746						TIR Module					
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+		PKA	NM_008854						"phosphorylates, S276"	Mouse	RELA	NM_009045			Protein		"cytosol, nucleus"	TIR Module					9660950
+		bioentity1_type or organism1 is not defined	
+Mouse	Protein	NFIKBA	NM_010907			"cytosol, nucleus"			not interact with	Mouse	RELA	NM_009045			"Protein, acetylated"		nucleus	TIR Module					
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	HDAC3	NM_010411			nucleus			deacetylates	Mouse	RELA	NM_009045			"Protein, acetylated"		nucleus	TIR Module					
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	CRM1	NM_134014			"nucleus, cytosol"			interacts with		RAN				"Protein, GTP"		nucleus	TIR Module					9323133
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+																		TIR Module					
+		bioentity1_common_name and bioentiy_canonical_name are not defined	
+Mouse	"Protein, phosphorylated S133"	CREB				nucleus			interacts with	Mouse	CBP				Protein		nucleus	TIR Module					7913207
+		bioentity1_type or organism1 is not defined	
+Mouse	Protein	PKA	NM_008854						"phosphorylates, S133"	Mouse	CREB				Protein		nucleus	TIR Module					7913207
+		interaction is not specified	
+Mouse	small molecule	cAMP							activates	Mouse	PKA				Protein			TIR Module					
+		bioentity1_type or organism1 is not defined	
+Mouse	"Protein, phosphorylated S73/S63"	JUN				nucleus			interacts with	Mouse	CBP				Protein		nucleus	TIR Module					8028671
+		bioentity1_type or organism1 is not defined	
+		IKKE									IRF3							TIR Module					
+		bioentity1_type or organism1 is not defined	
+		TBK1									IRF3							TIR Module					
+		bioentity1_type or organism1 is not defined	
+																		TIR Module					
+		bioentity1_common_name and bioentiy_canonical_name are not defined	
+																		TIR Module					
+		bioentity1_common_name and bioentiy_canonical_name are not defined	
+Mouse	Protein	NFKB1p105	NM_008689			cytosol			"stabilizes, inhibits"	Mouse	TPL2	NM_007746			Protein		cytosol	TIR Module				KO	12667451
+		interaction is not specified	
+Mouse	Protein	TPL2	NM_007746			cytosol			phosphorylates	Mouse	MEK1				Protein		cytosol	TIR Module				KO	11163183
+		 KO:  assayType is not in the database	
+Mouse	Protein	TPL2	NM_007746						"interacts with, indirect, nucleocytoplasmic transport"	Mouse	TNF				"RNA, ARE"		nucleus	TIR Module					11163183
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	"Protein, phosphorylated"	ERK2				nucleus			interacts with	Mouse	ERK2				"Protein, phosphorylated"		nucleus	TIR Module					9604935
+		bioentity1_type or organism1 is not defined	
+Mouse	"Protein, phosphorylated"	ERK1				nucleus			interacts with	Mouse	ERK1				"Protein, phosphorylated"		nucleus	TIR Module					9604935
+		bioentity1_type or organism1 is not defined	
+Mouse	"Protein, phosphorylated"	ERK2				nucleus			phosphorylates	Mouse	MNK1				Protein			TIR Module					9155017
+		bioentity1_type or organism1 is not defined	
+Mouse	"Protein, phosphorylated"	ERK1				nucleus			phosphorylates	Mouse	MNK1				Protein			TIR Module					9155017
+		bioentity1_type or organism1 is not defined	
+Mouse	"Protein, phosphorylated"	ERK2				nucleus			phosphorylates	Mouse	MNK2				Protein			TIR Module					9155017
+		bioentity1_type or organism1 is not defined	
+Mouse	"Protein, phosphorylated"	ERK1				nucleus			phosphorylates	Mouse	MNK2				Protein			TIR Module					9155017
+		bioentity1_type or organism1 is not defined	
+Mouse	"Protein, phosphorylated"	ERK2				nucleus			phosphorylates	Mouse	MSK1				Protein		nucleus	TIR Module					9687510
+		bioentity1_type or organism1 is not defined	
+Mouse	"Protein, phosphorylated"	JNK2				nucleus			phosphorylates	Mouse	MSK1				Protein		nucleus	TIR Module					9687510
+		bioentity1_type or organism1 is not defined	
+Mouse	"Protein, phosphorylated"	MSK1				nucleus			"phosphorylates, S133"	Mouse	CREB				Protein		nucleus	TIR Module					9687510
+		bioentity1_type or organism1 is not defined	
+Mouse	"Protein, phosphorylated"	p38alpha				nucleus			"phosphorylates, S78/S81"	Mouse	CHOP				Protein		nucleus	TIR Module					8650547
+		bioentity1_type or organism1 is not defined	
+Mouse	"Protein, phosphorylated"	p38alpha				nucleus			"phosphorylates, S78/S81"	Mouse	MEF2C				Protein		nucleus	TIR Module					9069290
+		bioentity1_type or organism1 is not defined	
+Mouse	Protein	TAB1	NM_025609			cytosol			"interacts with, activates"	Mouse	p38alpha				Protein			TIR Module					11847341
+		interaction is not specified	
+Mouse	"Protein, phosphorylated"	MK2				nucleus			"phsophorylates, S86"	Mouse	HSP25				Protein			TIR Module					1332886
+		bioentity1_type or organism1 is not defined	
+Mouse	"Protein, phosphorylated"	p38alpha				nucleus			"phosphorylates, S78/S81"	Mouse	MK2				Protein			TIR Module					1327754
+		bioentity1_type or organism1 is not defined	
+Mouse	"Protein, phosphorylated"	MK2				nucleus			phosphorylates	Mouse	PABP1				Protein			TIR Module					12565831
+		bioentity1_type or organism1 is not defined	
+Mouse	Protein	PABP1							interacts with	Mouse	TNF				"RNA, ARE"			TIR Module					12565831
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	eIF-4E							interacts with	Mouse	5'mRNA-Cap				ubiqutious biological structure			TIR Module					
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+		MNK1							"phosphorylates, S209"		eIF-4E							TIR Module					9878069
+		bioentity1_type or organism1 is not defined	
+		AUF1							interacts with		TNF				"RNA, ARE"			TIR Module					
+		bioentity1_type or organism1 is not defined	
+		AUF1							interacts with		MYC				"RNA, ARE"			TIR Module					
+		bioentity1_type or organism1 is not defined	
+		AUF1							interacts with		FOS				"RNA, ARE"			TIR Module					
+		bioentity1_type or organism1 is not defined	
+		AUF1							interacts with		GMCSF				"RNA, ARE"			TIR Module					
+		bioentity1_type or organism1 is not defined	
+		AUF1							interacts with		HSC70							TIR Module					10205060
+		bioentity1_type or organism1 is not defined	
+		AUF1							interacts with		HSP70							TIR Module					10205060
+		bioentity1_type or organism1 is not defined	
+		AUF1							interacts with		eIF-4G							TIR Module					10205060
+		bioentity1_type or organism1 is not defined	
+		AUF1							interacts with	Mouse	UBIQUITIN	NM_019639			Protein			TIR Module					10205060
+		bioentity1_type or organism1 is not defined	
+																		TIR Module					
+		bioentity1_common_name and bioentiy_canonical_name are not defined	
+			  															TIR Module					
+		bioentity1_type or organism1 is not defined	
+Mouse	Protein	BTRC							ubiquitinates		CTNNB1				"Protein, phosphorylated "			TIR Module					9990852
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	BTRC							ubiquitinates		NFKBIA				"Protein, phosphorylated S32/S36"			TIR Module					9990852
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+																		TIR Module					
+		bioentity1_common_name and bioentiy_canonical_name are not defined	
+Mouse	Protein	NEMO	NM_178590			cytosol			interacts with		RIP							TIR Module					9927690
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	NEMO	NM_178590			cytosol			interacts with		NIK							TIR Module					9927690
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	NEMO	NM_178590			cytosol			interacts with	Adenovirus	E3-14.7K 				Protein		cytosol	TIR Module					9927690
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+																		TIR Module					
+		bioentity1_common_name and bioentiy_canonical_name are not defined	
+		IKKE							"phosphorylates, S36"		NFIKBA							TIR Module					10882136
+		bioentity1_type or organism1 is not defined	
+																		TIR Module					
+		bioentity1_common_name and bioentiy_canonical_name are not defined	
+Mouse	Protein	AKT1	NM_009652			cytosol			phosphorylates		BAD							TIR Module					
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	AKT1	NM_009652			cytosol			phosphorylates		Caspase-9							TIR Module					
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	AKT1	NM_009652			cytosol			phosphorylates		FKHRL1 							TIR Module					
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	AKT1	NM_009652			cytosol			"phosphorylates, S58"		14-3-3-zeta							TIR Module					11956222
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	AKT1	NM_009652			cytosol			interacts with		PIP3							TIR Module					
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	AKT1	NM_009652			cytosol			"phosphorylates, S1177"		eNOS							TIR Module					10376603
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	AKT1	NM_009652			cytosol			"phosphorylates, T236"		EDG1							TIR Module					11583630
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	AKT1	NM_009652			cytosol			phosphorylates		GSK3B							TIR Module					
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	AKT1	NM_009652			cytosol			"inhibits, phosphorylates"		TSC2							TIR Module					12172554
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+Mouse	Protein	AKT1	NM_009652			cytosol			"inhibits, phosphorylates T157"		p27(KIP1) 							TIR Module					12244301
+		bioentity2_type or organism2 is not defined, bioentity1 has been added to the database	
+																		TIR Module					
+		bioentity1_common_name and bioentiy_canonical_name are not defined	
+		TSC2	NM_011647						interacts with		TSC1	NM_022887						TIR Module					12172554
+		bioentity1_type or organism1 is not defined	
+		TSC1	NM_022887						interacts with		mTOR	NM_020009						TIR Module					
+		bioentity1_type or organism1 is not defined	
+		TSC2	NM_011647						interacts with		mTOR	NM_020009						TIR Module					
+		bioentity1_type or organism1 is not defined	
+		CTMP							inhibits	Mouse	AKT1	NM_009652			Protein		cytosol	TIR Module					11598301
+		bioentity1_type or organism1 is not defined	
+		PDK1	NM_011062						"phosphorylates, S308"	Mouse	AKT1	NM_009652			Protein		cytosol	TIR Module					
+		bioentity1_type or organism1 is not defined	
+																		TIR Module
+							bioentity1_common_name and bioentiy_canonical_name are not defined	
+																		TIR Module
+							bioentity1_common_name and bioentiy_canonical_name are not defined	
+		PI3KG							"phosphorylates, substrate"		PIP2				small molecule			TIR Module
+							bioentity1_type or organism1 is not defined	
+		PI3KG							"phosphorylates, product"		PIP3				small molecule			TIR Module
+							bioentity1_type or organism1 is not defined	
+		PI3KA							"phosphorylates, substrate"		PIP2				small molecule			TIR Module
+							bioentity1_type or organism1 is not defined	
+		PI3KA							"phosphorylates, product"		PIP3				small molecule			TIR Module
+							bioentity1_type or organism1 is not defined	
+		PIK3R1							interacts with		PI3KG							TIR Module
+							bioentity1_type or organism1 is not defined	
+		PIK3R1							interacts with		PI3KA							TIR Module
+							bioentity1_type or organism1 is not defined	
+																		TIR Module
+							bioentity1_common_name and bioentiy_canonical_name are not defined	
+		SHIP							"dephosphorylates, substrate"		PIP3							TIR Module
+							bioentity1_type or organism1 is not defined	
+		PTEN							"dephosphorylates, substrate"		PIP3							TIR Module
+							bioentity1_type or organism1 is not defined	
+									"dephosphorylates, product"									TIR Module
+							bioentity1_common_name and bioentiy_canonical_name are not defined	
+									"dephosphorylates, product"									TIR Module
+							bioentity1_common_name and bioentiy_canonical_name are not defined	
+																		TIR Module
+							bioentity1_common_name and bioentiy_canonical_name are not defined	
+Mouse	Protein	TRAM	NM_173394			cytosol												TIR Module
+							bioentity2 is not specified, bioentity1 has been added to the database	
+																		TIR Module
+							bioentity1_common_name and bioentiy_canonical_name are not defined	
+																		TIR Module
+							bioentity1_common_name and bioentiy_canonical_name are not defined	
+																		TIR Module
+							bioentity1_common_name and bioentiy_canonical_name are not defined	
+																		TIR Module
+							bioentity1_common_name and bioentiy_canonical_name are not defined	
+																		TIR Module
+							bioentity1_common_name and bioentiy_canonical_name are not defined	
+Mouse	Protein	TRIF				cytosol				Mouse	TBK1				Protein		cytosol	TIR Module
+							interactionType is not specified	
+Mouse	Protein	TRIF				cytosol				Mouse	IKKE				Protein		cytosol	TIR Module
+							interactionType is not specified	
+Mouse	Protein	TANK				cytosol				Mouse	NEMO				Protein		cytosol	TIR Module
+							interactionType is not specified	
+Mouse	Protein	NEMO				cytosol				Mouse	TBK1				Protein		cytosol	TIR Module
+							interactionType is not specified	
+Mouse	Protein	NEMO				cytosol				Mouse	IKKE				Protein		cytosol	TIR Module
+							interactionType is not specified	

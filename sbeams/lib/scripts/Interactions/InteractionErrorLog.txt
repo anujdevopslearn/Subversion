@@ -1,0 +1,304 @@
+bioentityFullName1  ===  
+group  ===  TIR Module
+bioentityComName1  ===  TRAF6
+bioentityLoc1  ===  cytosol
+bioentityType1  ===  Protein
+bioentityCanName1  ===  NM_009424
+organismName1  ===  Mouse
+bioentityAliasName1  ===  
+./InteractionLoading.pl::checkPopulateBioentity:
+Query: subCommonQuery returned a bioentity_canonical_Name from the database:
+P70196 for bioenity_common_Name: TRAF6
+
+									 The upload canonical name is: NM_009424
+
+
+
+bioentityFullName1  ===  
+group  ===  TIR Module
+bioentityComName1  ===  TRAF6
+bioentityLoc1  ===  cytosol
+bioentityType1  ===  Protein
+bioentityCanName1  ===  NM_009424
+organismName1  ===  Mouse
+bioentityAliasName1  ===  
+./InteractionLoading.pl::checkPopulateBioentity:
+Query: subCommonQuery returned a bioentity_canonical_Name from the database:
+P70196 for bioenity_common_Name: TRAF6
+
+									 The upload canonical name is: NM_009424
+
+
+
+bioentityFullName1  ===  
+group  ===  TIR Module
+bioentityComName1  ===  TRAF6
+bioentityLoc1  ===  cytosol
+bioentityType1  ===  Protein
+bioentityCanName1  ===  NM_009424
+organismName1  ===  Mouse
+bioentityAliasName1  ===  
+./InteractionLoading.pl::checkPopulateBioentity:
+Query: subCommonQuery returned a bioentity_canonical_Name from the database:
+P70196 for bioenity_common_Name: TRAF6
+
+									 The upload canonical name is: NM_009424
+
+
+
+bioentityFullName1  ===  
+group  ===  TIR Module
+bioentityComName1  ===  TRAF6
+bioentityLoc1  ===  cytosol
+bioentityType1  ===  Protein
+bioentityCanName1  ===  NM_009424
+organismName1  ===  Mouse
+bioentityAliasName1  ===  
+./InteractionLoading.pl::checkPopulateBioentity:
+Query: subCommonQuery returned a bioentity_canonical_Name from the database:
+P70196 for bioenity_common_Name: TRAF6
+
+									 The upload canonical name is: NM_009424
+
+
+
+bioentityFullName1  ===  
+group  ===  TIR Module
+bioentityComName1  ===  TRAF6
+bioentityLoc1  ===  cytosol
+bioentityType1  ===  Protein
+bioentityCanName1  ===  NM_009424
+organismName1  ===  Mouse
+bioentityAliasName1  ===  
+./InteractionLoading.pl::checkPopulateBioentity:
+Query: subCommonQuery returned a bioentity_canonical_Name from the database:
+P70196 for bioenity_common_Name: TRAF6
+
+									 The upload canonical name is: NM_009424
+
+
+
+bioentityFullName1  ===  
+group  ===  TIR Module
+bioentityComName1  ===  TRAF6
+bioentityLoc1  ===  cytosol
+bioentityType1  ===  Protein
+bioentityCanName1  ===  NM_009424
+organismName1  ===  Mouse
+bioentityAliasName1  ===  
+./InteractionLoading.pl::checkPopulateBioentity:
+Query: subCommonQuery returned a bioentity_canonical_Name from the database:
+P70196 for bioenity_common_Name: TRAF6
+
+									 The upload canonical name is: NM_009424
+
+
+
+bioentityFullName1  ===  
+group  ===  TIR Module
+bioentityComName1  ===  TRAF6
+bioentityLoc1  ===  cytosol
+bioentityType1  ===  Protein
+bioentityCanName1  ===  NM_009424
+organismName1  ===  Mouse
+bioentityAliasName1  ===  
+./InteractionLoading.pl::checkPopulateBioentity:
+Query: subCommonQuery returned a bioentity_canonical_Name from the database:
+P70196 for bioenity_common_Name: TRAF6
+
+									 The upload canonical name is: NM_009424
+
+
+
+bioentityFullName1  ===  
+group  ===  TIR Module
+bioentityComName1  ===  TRAF6
+bioentityLoc1  ===  cytosol
+bioentityType1  ===  Protein
+bioentityCanName1  ===  NM_009424
+organismName1  ===  Mouse
+bioentityAliasName1  ===  
+./InteractionLoading.pl::checkPopulateBioentity:
+Query: subCommonQuery returned a bioentity_canonical_Name from the database:
+P70196 for bioenity_common_Name: TRAF6
+
+									 The upload canonical name is: NM_009424
+
+
+
+bioentityFullName1  ===  
+group  ===  TIR Module
+bioentityComName1  ===  TAK1
+bioentityLoc1  ===  cytosol
+bioentityType1  ===  Protein
+bioentityCanName1  ===  NM_172688
+organismName1  ===  Mouse
+bioentityAliasName1  ===  
+./InteractionLoading.pl::checkPopulateBioentity:
+Query: subCommonQuery returned a bioentity_canonical_Name from the database:
+P49117 for bioenity_common_Name: TAK1
+
+									 The upload canonical name is: NM_172688
+
+
+
+bioentityFullName1  ===  
+group  ===  TIR Module
+bioentityComName1  ===  TLR1
+bioentityLoc1  ===  "membrane, plasma"
+bioentityType1  ===  Protein
+bioentityCanName1  ===  NM_030682
+organismName1  ===  Mouse
+bioentityAliasName1  ===  
+./InteractionLoading.pl::checkPopulateBioentity:
+Query: subCommonQuery returned a bioentity_canonical_Name from the database:
+Q9EpQ1 for bioenity_common_Name: TLR1
+
+									 The upload canonical name is: NM_030682
+
+
+
+bioentityFullName1  ===  
+group  ===  TIR Module
+bioentityComName1  ===  TLR2
+bioentityLoc1  ===  "membrane, plasma"
+bioentityType1  ===  Protein
+bioentityCanName1  ===  NM_011905
+organismName1  ===  Mouse
+bioentityAliasName1  ===  
+./InteractionLoading.pl::checkPopulateBioentity:
+Query: subCommonQuery returned a bioentity_canonical_Name from the database:
+Q9QUN7 for bioenity_common_Name: TLR2
+
+									 The upload canonical name is: NM_011905
+
+
+
+bioentityFullName1  ===  
+group  ===  TIR Module
+bioentityComName1  ===  TLR4
+bioentityLoc1  ===  membrane
+bioentityType1  ===  Protein
+bioentityCanName1  ===  NM_021297
+organismName1  ===  Mouse
+bioentityAliasName1  ===  
+./InteractionLoading.pl::checkPopulateBioentity:
+Query: subCommonQuery returned a bioentity_canonical_Name from the database:
+Q9QUK6 for bioenity_common_Name: TLR4
+
+									 The upload canonical name is: NM_021297
+
+
+
+bioentityFullName1  ===  
+group  ===  TIR Module
+bioentityComName1  ===  TLR6
+bioentityLoc1  ===  "membrane, plasma"
+bioentityType1  ===  Protein
+bioentityCanName1  ===  NM_011604
+organismName1  ===  Mouse
+bioentityAliasName1  ===  
+./InteractionLoading.pl::checkPopulateBioentity:
+Query: subCommonQuery returned a bioentity_canonical_Name from the database:
+Q9EPW9 for bioenity_common_Name: TLR6
+
+									 The upload canonical name is: NM_011604
+
+
+
+bioentityFullName1  ===  
+group  ===  TIR Module
+bioentityComName1  ===  TLR1
+bioentityLoc1  ===  "membrane, plasma"
+bioentityType1  ===  Protein
+bioentityCanName1  ===  NM_030682
+organismName1  ===  Mouse
+bioentityAliasName1  ===  
+./InteractionLoading.pl::checkPopulateBioentity:
+Query: subCommonQuery returned a bioentity_canonical_Name from the database:
+Q9EpQ1 for bioenity_common_Name: TLR1
+
+									 The upload canonical name is: NM_030682
+
+
+
+bioentityFullName1  ===  
+group  ===  TIR Module
+bioentityComName1  ===  TAK1
+bioentityLoc1  ===  cytosol
+bioentityType1  ===  Protein
+bioentityCanName1  ===  NM_172688
+organismName1  ===  Mouse
+bioentityAliasName1  ===  
+./InteractionLoading.pl::checkPopulateBioentity:
+Query: subCommonQuery returned a bioentity_canonical_Name from the database:
+P49117 for bioenity_common_Name: TAK1
+
+									 The upload canonical name is: NM_172688
+
+
+
+bioentityFullName1  ===  
+group  ===  TIR Module
+bioentityComName1  ===  TAK1
+bioentityLoc1  ===  cytosol
+bioentityType1  ===  Protein
+bioentityCanName1  ===  NM_172688
+organismName1  ===  Mouse
+bioentityAliasName1  ===  
+./InteractionLoading.pl::checkPopulateBioentity:
+Query: subCommonQuery returned a bioentity_canonical_Name from the database:
+P49117 for bioenity_common_Name: TAK1
+
+									 The upload canonical name is: NM_172688
+
+
+
+bioentityFullName1  ===  
+group  ===  TIR Module
+bioentityComName1  ===  TAK1
+bioentityLoc1  ===  cytosol
+bioentityType1  ===  Protein
+bioentityCanName1  ===  NM_172688
+organismName1  ===  Mouse
+bioentityAliasName1  ===  
+./InteractionLoading.pl::checkPopulateBioentity:
+Query: subCommonQuery returned a bioentity_canonical_Name from the database:
+P49117 for bioenity_common_Name: TAK1
+
+									 The upload canonical name is: NM_172688
+
+
+
+bioentityFullName1  ===  
+group  ===  TIR Module
+bioentityComName1  ===  TAK1
+bioentityLoc1  ===  cytosol
+bioentityType1  ===  Protein
+bioentityCanName1  ===  NM_172688
+organismName1  ===  Mouse
+bioentityAliasName1  ===  
+./InteractionLoading.pl::checkPopulateBioentity:
+Query: subCommonQuery returned a bioentity_canonical_Name from the database:
+P49117 for bioenity_common_Name: TAK1
+
+									 The upload canonical name is: NM_172688
+
+
+
+bioentityFullName1  ===  
+group  ===  TIR Module
+bioentityComName1  ===  TAK1
+bioentityLoc1  ===  cytosol
+bioentityType1  ===  Protein
+bioentityCanName1  ===  NM_172688
+organismName1  ===  Mouse
+bioentityAliasName1  ===  
+./InteractionLoading.pl::checkPopulateBioentity:
+Query: subCommonQuery returned a bioentity_canonical_Name from the database:
+P49117 for bioenity_common_Name: TAK1
+
+									 The upload canonical name is: NM_172688
+
+
+
