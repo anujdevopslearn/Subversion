@@ -418,6 +418,15 @@ sub handle_request {
   return if ($protein_length_clause eq '-1');
 
 
+  #### Build BIOSEQUENCE CATEGORY constraint
+  my $biosequence_category_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BPS.category",
+    constraint_type=>"text_list",
+    constraint_name=>"Biosequence Category",
+    constraint_value=>$parameters{biosequence_category_constraint} );
+  return if ($biosequence_category_clause eq '-1');
+
+
   #### Build TRANSMEMBRANE CLASS constraint
   my $transmembrane_class_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"BPS.transmembrane_class",
@@ -516,6 +525,7 @@ sub handle_request {
       ["signal_peptide_length","BPS.signal_peptide_length","Signal Peptide Length"],
       ["signal_peptide_is_cleaved","BPS.signal_peptide_is_cleaved","Signal Peptide Is Cleaved"],
       ["protein_length","DATALENGTH(BS.biosequence_seq)","Protein Length"],
+      ["category","BPS.category","Category"],
       ["transmembrane_topology","BPS.transmembrane_topology","Transmembrane Regions Topology"],
       ["chromosome","BPS.chromosome","Chromosome"],
       ["start_in_chromosome","BPS.start_in_chromosome","Start"],
@@ -594,6 +604,7 @@ sub handle_request {
       $transmembrane_class_clause
       $n_transmembrane_regions_clause
       $protein_length_clause
+      $biosequence_category_clause
       $order_by_clause
    ~;
 

@@ -406,6 +406,15 @@ sub handle_request {
   return if ($protein_length_clause eq '-1');
 
 
+  #### Build BIOSEQUENCE CATEGORY constraint
+  my $biosequence_category_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BPS.category",
+    constraint_type=>"text_list",
+    constraint_name=>"Biosequence Category",
+    constraint_value=>$parameters{biosequence_category_constraint} );
+  return if ($biosequence_category_clause eq '-1');
+
+
   #### Build DOMAIN MATCH SOURCE constraint
   my $domain_match_source_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"DM.domain_match_source_id",
@@ -661,6 +670,7 @@ sub handle_request {
         $biological_process_clause
         $cellular_component_clause
 	$protein_domain_clause
+        $biosequence_category_clause
         $transmembrane_class_clause
         $n_transmembrane_regions_clause
         ORDER BY BS.biosequence_name,DM.domain_match_index,DN.cluster_name,DM.query_start
