@@ -1150,9 +1150,13 @@ $log->warn( "We are outta there" );
 
   $sbeamsMOD->printPageFooter(close_tables=>'YES',display_footer=>'NO');
 
-  showTable(with_options=>'',parameters_ref=>\%parameters);
+  if ($current_username ne 'guest') {
+    showTable(with_options=>'',parameters_ref=>\%parameters);
+  }
 
 } # end printEntryForm
+
+
 
 #+
 # Pushes error onto passed array ref
