@@ -916,7 +916,8 @@ sub createAuthHeader {
 
     my $cookie = $q->cookie(-name    => 'SBEAMSName',
                             -path    => "$cookie_path",
-                            -value   => "$encrypted_user");
+                            -value   => "$encrypted_user",
+			    -expires => "+24h");
     my $head = $q->header(-cookie => $cookie);
 
     return $head;
