@@ -1453,7 +1453,7 @@ for (class.numb in unique.classes){
 	sam.output<-sam(Matrix,current.classlabel,rand=123)
 
 #make a small matrix to hold the FDR cuttoffs and the ratio data
-	numb.loops <- 1000
+	numb.loops <- 2500
 	delta.list <- seq(numb.loops)/50
 	
 	matrix.column.names <- c(
