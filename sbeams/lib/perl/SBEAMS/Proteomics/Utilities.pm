@@ -212,6 +212,38 @@ sub readOutFile {
     $line =~ s/[\r\n]//g;
     last unless $line;
 
+
+    #### If the line begins with 6 spaces and then stuff, assume it's a
+    #### multiple protein match (special sequest format option)
+    if ($line =~ /^      (\S+)/) {
+
+      #### Extract the name of the protein as the first item after 6 spaces
+      my $additional_protein = $1;
+      #print "Found additional protein '$additional_protein'\n";
+
+      #### If there hasn't already been at least one search_hit, die horribly
+      die "ERROR: Found what was thought to be an 'additional_protein' ".
+        "line before finding any search_hits!  This is fatal."
+        unless (@best_matches);
+
+      #### Get the handle of the previous best match
+      my $previous_hit = $best_matches[-1];
+
+      #### If there hasn't yet been an additional protein, create a container
+      #### for all additional proteins
+      unless ($previous_hit->{search_hit_proteins}) {
+        my @search_hit_proteins;
+        #### Put the in-line, top hit as the first item
+        push(@search_hit_proteins,$previous_hit->{reference});
+        $previous_hit->{search_hit_proteins} = \@search_hit_proteins;
+      }
+
+      #### Add this additional protein and skip to the next line
+      push(@{$previous_hit->{search_hit_proteins}},$additional_protein);
+      next;
+    }
+
+
     #### Do a basic test of the line: skip if less than 8 columns
     @values = split(/\s+/,$line);
     if ($#values < 8) {
