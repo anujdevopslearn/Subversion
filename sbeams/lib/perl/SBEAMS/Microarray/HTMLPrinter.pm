@@ -312,7 +312,7 @@ sub printJavascriptFunctions {
 	} // end setDefaultQALocation
 
 
-	function setArrayName() {
+        function setArrayName() {
 
 	    array_name = document.forms[0].array_name.value=document.forms[0].slide_id.options[document.forms[0].slide_id.selectedIndex].text;
             array_name = array_name.toString();
@@ -333,8 +333,6 @@ sub printJavascriptFunctions {
               document.forms[0].name.value + ".key"
 	    return;
 	} // end setLayoutFileName
-
-
 
         // -->
         </SCRIPT>
