@@ -1608,7 +1608,8 @@ sub parseConstraint2SQL {
     chop($constraint_string);  # Remove last comma
 
     my $tmp = $constraint_NOT_flag;
-    $constraint_NOT_flag .= ' ' if ($constraint_NOT_flag);
+    #$constraint_NOT_flag .= ' ' if ($constraint_NOT_flag);
+    $tmp .= ' ' if ($constraint_NOT_flag);
     return "   AND $constraint_column ${tmp}IN ( $constraint_string )";
   }
 
@@ -3979,7 +3980,7 @@ sub display_input_form {
 
     if ($input_type eq "multioptionlist") {
       print qq!
-        <TD><SELECT NAME="$column_name" MULTIPLE SIZE=$input_length $onChange>
+        <TD>$NOT_clause<SELECT NAME="$column_name" MULTIPLE SIZE=$input_length $onChange>
         $optionlists{$column_name}
         <OPTION VALUE=""></OPTION>
         </SELECT></TD>
