@@ -1,0 +1,648 @@
+#!/usr/local/bin/perl -w
+
+###############################################################################
+# Program     : SummarizeStains
+# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
+# $Id$
+#
+# Description : This program that allows users to
+#               browse through a summary of immunostain results.
+#
+# SBEAMS is Copyright (C) 2000-2003 by Eric Deutsch
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+
+use SBEAMS::Connection;
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+
+use SBEAMS::Immunostain;
+use SBEAMS::Immunostain::Settings;
+use SBEAMS::Immunostain::Tables;
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::Immunostain;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+
+use CGI;
+$q = new CGI;
+
+
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main();
+exit(0);
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    permitted_work_groups_ref=>['Immunostain_user','Immunostain_admin',
+      'Immunostain_readonly'],
+    #connect_read_only=>1,
+    #allow_anonymous_access=>1,
+  ));
+
+
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters);
+  #$sbeams->printDebuggingInfo($q);
+
+
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+
+  #### Decide what action to take based on information so far
+  if (defined($parameters{action}) && $parameters{action} eq "???") {
+    # Some action
+  } else {
+    $sbeamsMOD->display_page_header();
+    handle_request(ref_parameters=>\%parameters);
+    $sbeamsMOD->display_page_footer();
+  }
+
+
+} # end main
+
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request {
+  my %args = @_;
+
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+
+
+  #### Define some generic varibles
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+  #### Define some variables for a query and resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+
+  #### Read in the standard form values
+  my $apply_action=$parameters{'action'} || $parameters{'apply_action'} || '';
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+
+  #### Set some specific settings for this program
+  #my $CATEGORY="Browse Protein Summary";
+  my $CATEGORY="Summarize Staining Results";
+  $TABLE_NAME="IS_SummarizeStains" unless ($TABLE_NAME);
+  ($PROGRAM_FILE_NAME) =
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+
+
+  #### Get the columns and input types for this table/query
+  my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
+  my %input_types = 
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
+
+
+  #### Read the input parameters for each column
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters,
+    columns_ref=>\@columns,input_types_ref=>\%input_types);
+
+
+  #### If the apply action was to recall a previous resultset, do it
+  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+  my @resultset_column_titles = ();
+  if ($apply_action eq "VIEWRESULTSET") {
+    $sbeams->readResultSet(
+      resultset_file=>$rs_params{set_name},
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      resultset_params_ref=>\%rs_params,
+      column_titles_ref=>\@resultset_column_titles,
+    );
+    $n_params_found = 99;
+  }
+
+
+  #### Set some reasonable defaults if no parameters supplied
+  unless ($n_params_found) {
+    $parameters{input_form_format} = "minimum_detail";
+  }
+
+
+  #### Apply any parameter adjustment logic
+  #none
+
+
+  #### Display the user-interaction input form
+  $sbeams->display_input_form(
+    TABLE_NAME=>$TABLE_NAME,CATEGORY=>$CATEGORY,apply_action=>$apply_action,
+    PROGRAM_FILE_NAME=>$PROGRAM_FILE_NAME,
+    parameters_ref=>\%parameters,
+    input_types_ref=>\%input_types,
+  );
+
+
+  #### Display the form action buttons
+  $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
+
+
+  #### Finish the upper part of the page and go begin the full-width
+  #### data portion of the page
+  $sbeams->display_page_footer(close_tables=>'YES',
+    separator_bar=>'YES',display_footer=>'NO');
+
+
+
+  #########################################################################
+  #### Process all the constraints
+
+  #### Build PROJECT constraint
+  my $project_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SS.project_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Projects",
+    constraint_value=>$parameters{project_id} );
+  return if ($project_clause eq '-1');
+
+
+  #### Build SPECIMEN_BLOCK constraint
+  my $specimen_block_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SS.specimen_block_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Specimen Blocks",
+    constraint_value=>$parameters{specimen_block_id} );
+  return if ($specimen_block_clause eq '-1');
+
+
+  #### Build ANTIBODY constraint
+  my $antibody_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SS.antibody_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Antibodies",
+    constraint_value=>$parameters{antibody_id} );
+  return if ($antibody_clause eq '-1');
+
+
+  #### Build CELL TYPE constraint
+  my $cell_type_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"CT.cell_type_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Cell Types",
+    constraint_value=>$parameters{cell_type_id} );
+  return if ($cell_type_clause eq '-1');
+
+
+
+  #### Build SORT ORDER
+  my $order_by_clause = "";
+  if ($parameters{sort_order}) {
+    if ($parameters{sort_order} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
+      print "<H4>Cannot parse Sort Order!  Check syntax.</H4>\n\n";
+      return;
+    } else {
+      $order_by_clause = " ORDER BY $parameters{sort_order}";
+    }
+  }
+
+
+  #### Build ROWCOUNT constraint
+  $parameters{row_limit} = 50000
+    unless (defined($parameters{row_limit}) &&
+            $parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
+  my $limit_clause = $sbeams->buildLimitClause(
+   row_limit=>$parameters{row_limit});
+
+
+  #### Define some variables needed to build the query
+  my $group_by_clause = "";
+  my $final_group_by_clause = "";
+  my @column_array;
+  my $peptide_column = "";
+  my $count_column = "";
+
+
+  #### Define the desired columns in the query
+  #### [friendly name used in url_cols,SQL,displayed column title]
+
+  #### If grouping by ?
+  if ( 0 ) {
+    # Not supported yet
+
+  #### If no grouping
+  } else {
+    @column_array = (
+      ["stained_slide_id","SS.stained_slide_id","stained_slide_id"],
+      ["stain_name","SS.stain_name","Stain Name"],
+      ["antibody_name","A.antibody_name","Antibody"],
+      ["cell_type_name","CT.cell_type_name","Cell Type"],
+      ["intense_percent","SCP1.at_level_percent","Percent Intense"],
+      ["equivocal_percent","SCP2.at_level_percent","Percent Equivocal"],
+      ["none_percent","SCP3.at_level_percent","Percent None"],
+    );
+  }
+
+
+  #### Set flag to display SQL statement if user selected
+  if ( defined($parameters{display_options}) &&
+       $parameters{display_options} =~ /ShowSQL/ ) {
+    $show_sql = 1;
+  }
+
+
+  #### Build the columns part of the SQL statement
+  my %colnameidx = ();
+  my @column_titles = ();
+  my $columns_clause = $sbeams->build_SQL_columns_list(
+    column_array_ref=>\@column_array,
+    colnameidx_ref=>\%colnameidx,
+    column_titles_ref=>\@column_titles
+  );
+
+
+  #### Define the SQL statement
+  $sql = qq~
+	SELECT $limit_clause->{top_clause} $columns_clause
+	  FROM $TBIS_STAINED_SLIDE SS
+	  LEFT JOIN $TBIS_STAIN_CELL_PRESENCE SCP1
+	       ON ( SS.stained_slide_id = SCP1.stained_slide_id AND SCP1.cell_presence_level_id = 1 )
+	  LEFT JOIN $TBIS_CELL_TYPE CT ON ( SCP1.cell_type_id = CT.cell_type_id )
+	  LEFT JOIN $TBIS_STAIN_CELL_PRESENCE SCP2
+	       ON ( SS.stained_slide_id = SCP2.stained_slide_id
+                    AND SCP2.cell_presence_level_id = 2
+                    AND SCP2.cell_type_id = SCP1.cell_type_id )
+	  LEFT JOIN $TBIS_STAIN_CELL_PRESENCE SCP3
+	       ON ( SS.stained_slide_id = SCP3.stained_slide_id
+                    AND SCP3.cell_presence_level_id = 3
+                    AND SCP3.cell_type_id = SCP1.cell_type_id )
+	 INNER JOIN $TBIS_ANTIBODY A ON ( SS.antibody_id = A.antibody_id )
+	 WHERE 1 = 1
+	$project_clause
+	$specimen_block_clause
+	$antibody_clause
+	$cell_type_clause
+	$group_by_clause
+	 ORDER BY SS.stain_name,cell_type_name
+	$limit_clause->{trailing_limit_clause}
+
+  ~;
+
+
+  #### Certain types of actions should be passed to links
+  my $pass_action = "QUERY";
+  $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
+
+
+  #### Pass nearly all of the constraints down to a child query
+  my @parameters_to_pass;
+  my $parameters_list = '';
+  while ( ($key,$value) = each %input_types ) {
+    if ($key ne 'sort_order' && $key ne 'display_options' &&
+        $key ne 'reference_constraint') {
+      if ($parameters{$key}) {
+        push(@parameters_to_pass,"$key=$parameters{$key}");
+      }
+    }
+  }
+  if (@parameters_to_pass) {
+    $parameters_list = join('&',@parameters_to_pass);
+  }
+
+
+  #### Define the hypertext links for columns that need them
+  %url_cols = ('Stain Name' => "$CGI_BASE_DIR/Immunostain/ManageTable.cgi?TABLE_NAME=IS_stained_slide&stained_slide_id=\%$colnameidx{stained_slide_id}V",
+    	       'Stain Name_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show more information about this slide\'; return true"',
+
+  );
+
+
+
+  #### Define columns that should be hidden in the output table
+  %hidden_cols = ('stained_slide_id' => 1,
+  );
+
+
+  #### If there are titles from the resultset, use those
+  if (@resultset_column_titles) {
+    @column_titles = @resultset_column_titles;
+  }
+
+
+  #########################################################################
+  #### If QUERY or VIEWRESULTSET was selected, display the data
+  if ($apply_action =~ /QUERY/i || $apply_action eq "VIEWRESULTSET") {
+
+    #### If the action contained QUERY, then fetch the results from
+    #### the database
+    if ($apply_action =~ /QUERY/i) {
+
+      #### Show the SQL that will be or was executed
+      $sbeams->display_sql(sql=>$sql) if ($show_sql);
+
+      #### Fetch the results from the database server
+      $sbeams->fetchResultSet(
+        sql_query=>$sql,
+        resultset_ref=>$resultset_ref,
+      );
+
+      #### Post process the resultset
+      postProcessResultset(
+        rs_params_ref=>\%rs_params,
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters,
+        column_titles_ref=>\@column_titles,
+      ) if ($parameters{display_options} =~ /pivot/i);
+
+      #### Store the resultset and parameters to disk resultset cache
+      $rs_params{set_name} = "SETME";
+      $sbeams->writeResultSet(
+        resultset_file_ref=>\$rs_params{set_name},
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters,
+        resultset_params_ref=>\%rs_params,
+        query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+        column_titles_ref=>\@column_titles,
+      );
+    }
+
+    #### Display the resultset
+    $sbeams->displayResultSet(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      url_cols_ref=>\%url_cols,
+      hidden_cols_ref=>\%hidden_cols,
+      max_widths=>\%max_widths,
+      column_titles_ref=>\@column_titles,
+      base_url=>$base_url,
+    );
+
+
+    #### Display the resultset controls
+    $sbeams->displayResultSetControls(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      base_url=>$base_url,
+    );
+
+
+    #### Display a plot of data from the resultset
+    $sbeams->displayResultSetPlot(
+      rs_params_ref=>\%rs_params,
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      column_titles_ref=>\@column_titles,
+      base_url=>$base_url,
+    );
+
+
+  #### If QUERY was not selected, then tell the user to enter some parameters
+  } else {
+    if ($sbeams->invocation_mode() eq 'http') {
+      print "<H4>Select parameters above and press QUERY</H4>\n";
+    } else {
+      print "You need to supply some parameters to contrain the query\n";
+    }
+  }
+
+
+} # end handle_request
+
+
+
+###############################################################################
+# evalSQL
+#
+# Callback for translating Perl variables into their values,
+# especially the global table variables to table names
+###############################################################################
+sub evalSQL {
+  my $sql = shift;
+
+  return eval "\"$sql\"";
+
+} # end evalSQL
+
+
+
+###############################################################################
+# postProcessResultset
+#
+# Perform some additional processing on the resultset that would otherwise
+# be very awkward to do in SQL.
+###############################################################################
+sub postProcessResultset {
+  my %args = @_;
+
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+  #### Process the arguments list
+  my $resultset_ref = $args{'resultset_ref'};
+  my $rs_params_ref = $args{'rs_params_ref'};
+  my $query_parameters_ref = $args{'query_parameters_ref'};
+  my $column_titles_ref = $args{'column_titles_ref'};
+
+  my %rs_params = %{$rs_params_ref};
+  my %parameters = %{$query_parameters_ref};
+
+
+  #### Get a list of conditions to work with
+  my %conditions = ();
+  my @conditions = sort(values(%conditions));
+
+  #### Get some column number indexes
+  my $search_batch_id_column_index = $resultset_ref->{column_hash_ref}->{search_batch_id};
+  my $biosequence_name_column_index = $resultset_ref->{column_hash_ref}->{biosequence_name};
+
+
+  #### Loop over each row in the resultset, coalescing into a data hash
+  my %data;
+  my $n_rows = scalar(@{$resultset_ref->{data_ref}});
+  for (my $row=0;$row<$n_rows-1; $row++) {
+    #### Determine the search_batch_id and biosequence_name
+    my $search_batch_id = $resultset_ref->{data_ref}->[$row]->[$search_batch_id_column_index];
+    my $biosequence_name = $resultset_ref->{data_ref}->[$row]->[$biosequence_name_column_index];
+    #### Store it in the new hash
+    $data{$biosequence_name}->{$conditions{$search_batch_id}} = $resultset_ref->{data_ref}->[$row];
+  }
+
+
+  #### Define the columns that are to be in the new resultset
+  my @prefix_columns = qw(biosequence_name accessor accessor_suffix
+    search_batch_id biosequence_accession canonical_name);
+  my @data_columns = qw(protein_probability n_peptides average_quant n_quant);
+  my @suffix_columns = qw(fav_codon_frequency transmembrane_class
+    n_transmembrane_regions protein_length
+    molecular_function molecular_function_GO
+    biological_process biological_process_GO
+    cellular_component cellular_component_GO
+    interpro_protein_domain interpro_protein_domain_GO
+     biosequence_desc organism
+  );
+
+
+  my @new_column_names;
+  my @new_column_titles;
+  my @new_precisions;
+  #### Push the pre-data columns onto the row array
+  foreach my $element (@prefix_columns) {
+    my $column_index = $resultset_ref->{column_hash_ref}->{$element};
+    if (defined($column_index)) {
+      push(@new_column_names,$element);
+      push(@new_column_titles,$column_titles_ref->[$column_index]);
+      push(@new_precisions,$resultset_ref->{precisions_list_ref}->[$column_index]);
+      #print "$element ($column_titles_ref->[$column_index]) prec=".$resultset_ref->{precisions_list_ref}->[$column_index]."<BR>\n";
+    }
+  }
+
+
+  #### Push the data columns onto the array
+  foreach my $data_column (@data_columns) {
+    foreach my $condition (@conditions) {
+      my $column_index = $resultset_ref->{column_hash_ref}->{$data_column};
+      push(@new_column_names,$condition.'__'.$data_column);
+      push(@new_column_titles,$condition.' '.$column_titles_ref->[$column_index]);
+      push(@new_precisions,$resultset_ref->{precisions_list_ref}->[$column_index]);
+      #print $condition.'__'.$data_column." (".$condition.' '.$column_titles_ref->[$column_index].") prec=$resultset_ref->{precisions_list_ref}->[$column_index]<BR>\n";
+    }
+  }
+
+  #### Push the post-data columns onto the row array
+  foreach my $element (@suffix_columns) {
+    my $column_index = $resultset_ref->{column_hash_ref}->{$element};
+    if (defined($column_index)) {
+      push(@new_column_names,$element);
+      push(@new_column_titles,$column_titles_ref->[$column_index]);
+      push(@new_precisions,$resultset_ref->{precisions_list_ref}->[$column_index]);
+      #print "$element ($column_titles_ref->[$column_index]) prec=".$resultset_ref->{precisions_list_ref}->[$column_index]."<BR>\n";
+    }
+  }
+
+
+  #### Loop over each biosequence_name and print the pivoted summary
+  my @new_data_array;
+  foreach my $biosequence_name (keys(%data)) {
+    my @row;
+
+    my ($first_condition) = keys(%{$data{$biosequence_name}});
+
+    #### Push the pre-data columns onto the row array
+    foreach my $element (@prefix_columns) {
+      my $column_index = $resultset_ref->{column_hash_ref}->{$element};
+      if (defined($column_index)) {
+        push(@row,$data{$biosequence_name}->{$first_condition}->[$column_index]);
+      }
+    }
+
+
+    #### Push the data columns onto the array
+    foreach my $data_column (@data_columns) {
+      foreach my $condition (@conditions) {
+        my $column_index = $resultset_ref->{column_hash_ref}->{$data_column};
+        if (defined($data{$biosequence_name}->{$condition}->[$column_index])) {
+          push(@row,$data{$biosequence_name}->{$condition}->[$column_index]);
+        } else {
+          push(@row,'');
+        }
+      }
+    }
+
+
+    #### Push the post-data columns onto the row array
+    foreach my $element (@suffix_columns) {
+      my $column_index = $resultset_ref->{column_hash_ref}->{$element};
+      if (defined($column_index)) {
+        push(@row,$data{$biosequence_name}->{$first_condition}->[$column_index]);
+      }
+    }
+
+
+    push(@new_data_array,\@row);
+  }
+
+
+  $resultset_ref->{data_ref} = \@new_data_array;
+  $resultset_ref->{column_list_ref} = \@new_column_names;
+  my $n_new_columns = scalar(@new_column_names);
+  $resultset_ref->{precisions_list_ref} = \@new_precisions;
+
+  @{$column_titles_ref} = @new_column_titles;
+
+
+  return 1;
+
+
+
+} # end postProcessResult
+
+
+
