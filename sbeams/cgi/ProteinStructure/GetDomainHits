@@ -601,8 +601,7 @@ sub handle_request {
 
 
   #### If we want to show all data where there is a match, then do funky stuff
-  #if ($parameters{display_options} =~ /ShowAllMatches/) {
-  if (1) {
+  if ($parameters{display_options} =~ /ShowAllMatches/) {
     my $sub_sql = $sql;
     my $new_sql = $sql;
     $sub_sql =~ s/SELECT.+FROM/SELECT DISTINCT DM.biosequence_id\n          FROM/s;
