@@ -4743,7 +4743,7 @@ sub printUserChooser {
   my $subdir = $self->getSBEAMS_SUBDIR();
   $subdir .= "/" if ($subdir);
 
-  #### Get all relevant user information 
+  #### Get all relevant user information
   my $current_username = $self->getCurrent_username;
   my $current_contact_id = $self->getCurrent_contact_id;
   my $current_work_group_id = $self->getCurrent_work_group_id;
@@ -4751,6 +4751,13 @@ sub printUserChooser {
   my $current_project_id = $self->getCurrent_project_id;
   my $current_project_name = $self->getCurrent_project_name;
   my $current_user_context_id = $self->getCurrent_user_context_id;
+
+
+  #### The guest user should never be presented with this
+  if ($current_username eq 'guest') {
+    return;
+  }
+
 
   #### Find out the current URI
   my $submit_string = $ENV{'SCRIPT_URI'."?"};
