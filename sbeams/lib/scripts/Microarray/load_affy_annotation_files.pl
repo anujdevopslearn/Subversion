@@ -92,6 +92,7 @@ use SBEAMS::Microarray::Tables;
 use SBEAMS::Microarray::Affy;
 use SBEAMS::Microarray::Affy_file_groups;
 use SBEAMS::Microarray::Affy_Annotation;
+use SBEAMS::Microarray::Settings;
 
 $sbeams = new SBEAMS::Connection;
 
@@ -133,8 +134,7 @@ Run Mode Notes:
 
 EOU
 
-		
-		
+	
 #### Process options
 unless (GetOptions(\%OPTIONS,
 		   "run_mode:s",
@@ -322,8 +322,8 @@ sub write_error_log{
 	my($file_base_name, undef, undef) = fileparse($FILE_NAME);
 	my $SUB_NAME = 'write_error_log';
 	
-	
-	open ERROR_LOG, ">../../../tmp/Microarray/AFFY_ANNO_LOGS/AFFY_ANNO_ERROR_LOG_$file_base_name.txt" or 
+	my $tmp_dir = $sbeams_affy->get_affy_temp_dir_path();
+	open ERROR_LOG, ">$tmp_dir/AFFY_ANNO_LOGS/AFFY_ANNO_ERROR_LOG_$file_base_name.txt" or 
 		die "CANNOT OPEN AFFY ERROR LOG $!\n";
 	
 	my $date = `date`;
