@@ -67,7 +67,6 @@ sub new {
   # Cache abs and abs_query urls
   my @urlparams = ( -absolute => 1 );
   $this->{_absURL} = $cgi->url( @urlparams );
-  $log->debug( "Absolute URL is $this->{_absURL}" );
 
   # Do we want to include current params?
   push @urlparams, -query => 1;
@@ -75,7 +74,6 @@ sub new {
 
   #### If there's a password in here, strip it out!
   $this->{_absQueryURL} =~ s/password=.*?;/password=xxx;/;
-  $log->debug( "Query URL is $this->{_absQueryURL}" );
 
 
   if ( $this->{maSkin} ) {
