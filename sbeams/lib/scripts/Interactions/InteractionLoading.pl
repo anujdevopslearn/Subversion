@@ -198,7 +198,7 @@ qw / Organism_bioentity1_name
 		checkPopulateBioentity(\%INFOPROTEIN2,2);
 		print "checking, populating the database for current Interactions entries\n";	
 		checkPopulateInteraction(\%INTERACTION);
-
+		print $fhLog "</body></html>";
 #		$recordCon->printPageFooter() unless ($QUIET);
 }
 
@@ -227,10 +227,11 @@ sub processFile
 #make them global
 	(my $fileID) = $source_file =~ /.*\/(.*)\./;
 	my $errorFile = "InteractionLoadingError_".$fileID.".txt";
-	my $errorLog = "InteractionErrorLog_".$fileID.".txt";
+	my $errorLog = "InteractionErrorLog_".$fileID.".htm";
 	$fhError = new FileHandle (">/../users/mkorb/GLUE/inputData/$errorFile") or die "can not open $!";
-	print Error(\@columnOrder);
+	Error(\@columnOrder);
 	$fhLog = new FileHandle (">/../users/mkorb/GLUE/inputData/$errorLog") or die "can not open $!";
+	print $fhLog "<html><body><br>"; 
 
 	open (INFILE, $source_file) or die "$!";
 	while (my $line = <INFILE>) 
@@ -566,7 +567,7 @@ sub checkPopulateBioentity
 							 my @returnedRow = $recordCon->selectOneColumn($subCommonQuery);
 							 if ($returnedRow[0])
 							 {
-									 ErrorLog ("$SUB_NAME:\nQuery: subCommonQuery returned a bioentity_canonical_Name from the database:\n$returnedRow[0] for bioenity_common_Name: $hashRef->{$record}->{'bioentityComName'.$num}. The upload canonical name is: $hashRef->{$record}->{'bioentityCanName'.$num}\n\n",
+									 ErrorLog ("$SUB_NAME:<br>Database Query: subCommonQuery returned bioentity_canonical_Name:<br><b>$returnedRow[0]</b> for bioenity_common_Name: <b>$hashRef->{$record}->{'bioentityComName'.$num}</b>.<br>The upload canonical name is:<b>$hashRef->{$record}->{'bioentityCanName'.$num}</b>",
 									 $hashRef->{$record});
 									 delete $INTERACTION{$record};
 									 next;
@@ -579,7 +580,7 @@ sub checkPopulateBioentity
 							my @returnedRow = $recordCon->selectOneColumn($subCanonicalQuery);
 							if ($returnedRow[0])
 							{
-									ErrorLog ("$SUB_NAME:\nQuery: subCanonicalQuery returned a bioentity_common_Name from the database:\n$returnedRow[0] for bioentity_canonical_Name: $hashRef->{$record}->{'bioentityCanName'.$num}. The upload common name is: $hashRef->{$record}->{'bioentityComName'.$num}\n\n",
+									ErrorLog ("$SUB_NAME:<br>Database Query: subCanonicalQuery returned bioentity_common_Name:<br><b>$returnedRow[0]</b> for bioentity_canonical_Name: <b>$hashRef->{$record}->{'bioentityCanName'.$num}<b>. The upload common name is: <b>$hashRef->{$record}->{'bioentityComName'.$num}</b><br><br>",
 									$hashRef->{$record});
 									delete $INTERACTION{$record};
 									next;
@@ -841,9 +842,9 @@ sub ErrorLog
 		my ($error,$record) = @_;
 		foreach my $key (keys %{$record})
 		{
-				print $fhLog "$key  ===  $record->{$key}\n";
+				print $fhLog "$key  ===  $record->{$key}<br>";
 		}
-		print $fhLog "$error\n\n";
+		print $fhLog "$error<br><br>";
 		
 }		
 
