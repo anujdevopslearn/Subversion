@@ -229,7 +229,7 @@ sub handle_request {
 
   #### Build PLATE_ID constraint
   my $plate_id_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"ERV.plate_id",
+    constraint_column=>"ERV.plate_pk",
     constraint_type=>"text_list",
     constraint_name=>"Plate ID",
     constraint_value=>$parameters{plate_id_constraint} );
