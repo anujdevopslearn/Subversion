@@ -631,7 +631,6 @@ sub loadColumnMapFile {
 			   source_file=>"$mapped_file",
 			   if_hash=>$bs_hash_ref,
 			   delimiter=>$delimiter);
-    my @stats = stat($file);
 
       push (@condition_files, $map_file);
     }else{
