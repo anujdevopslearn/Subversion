@@ -152,19 +152,19 @@ print $q->start_form;
 
 # print the form elements
 print
-    "Gene: ",$q->textfield(-name=>'gene'),
+    "Genes: ",$q->textarea(-name=>'genes'),
     $q->p,
     "Organism: ",
     $q->popup_menu(-name=>'organism',
 	               -values=>['halobacterium-nrc1','haloarcula marismortui']),
     $q->p,
-    "Select all oligo set type to search: ",
+    "Select oligo set type to search: ",
     $q->p,
     $q->popup_menu(-name=>'set_type',
                    -values=>['Gene Expression', 'Gene Knockout']),
     
     $q->p,
-    $q->submit(-name=>"Search");
+  $q->submit(-name=>"Search");
 
 # end of the form
 print $q->end_form,
@@ -182,8 +182,13 @@ if ($q->request_method() eq "POST" ) {
     if ($organism eq 'haloarcula marismortui' && $set_type eq 'Gene Knockout') { 
         print "No data available for haloarcula marismortui knockout oligos" . "\n";
     }else{
-	    my $gene = $parameters{gene};
-		
+
+        ####Stuff gene names from text area into array
+	    my $genes = $parameters{genes};
+        my @gene_array = split(/\s\n/,$genes);   
+        #$gene =~ /\w*(\d*)\w*/;   Need to fix these two lines.
+        #my $gene_number = $1;  
+    
         ####Decide whether to search knockouts or expression
         my $set_type_search;    #The part of the sql query below that depends on set type value
         if ($set_type eq 'Gene Expression') {
@@ -194,24 +199,96 @@ if ($q->request_method() eq "POST" ) {
           print "Error: Invalid oligo type selected. ";
         }
 
-      
-       ####SQL query command
-  	    my $sql = qq~ SELECT BS.biosequence_name AS 'Gene', OT.oligo_type_name AS 'Oligo type', OG.feature_sequence AS 'Oligo Sequence'
-                      FROM $TBOG_SELECTED_OLIGO SO
-                      LEFT JOIN $TBOG_BIOSEQUENCE BS ON (BS.biosequence_id=SO.biosequence_id)
-                      LEFT JOIN $TBOG_OLIGO_TYPE OT ON (SO.oligo_type_id=OT.oligo_type_id)
-                      LEFT JOIN $TBOG_OLIGO OG ON (OG.oligo_id=SO.oligo_id)
-                      WHERE BS.biosequence_name='$gene' AND $set_type_search
+        ####Find the biosequence set_tag
+        my $set_tag;
+        if ($organism eq 'haloarcula marismortui') {
+          $set_tag = "'haloarcula_orfs'";
+        }elsif($organism eq 'halobacterium-nrc1'){
+          $set_tag = "'halobacterium_orfs'";
+        }else{
+          print "ERROR: No organism type selected.\n";
+        }
+
+        ####process for each individual gene in array
+        foreach my $gene (@gene_array) {
+
+          ####strip gene name of letters and get just the gene number (in case of partial entry)
+          $gene =~ /[a-z,A-Z]*(\d*)[a-z,A-Z]*/;
+          my $gene_number = $1; 
+            
+
+          ####Define the desired columns in the query
+          my @column_array = (
+		    ["Gene","BS.biosequence_name","Gene"],
+            ["Oligo_type","OT.oligo_type_name","Oligo Type"],
+            ["Oligo_Sequence","OG.feature_sequence","Oligo Sequence"],
+            ["Length","OG.sequence_length","Length"],
+            ["In_Stock","OA.in_stock","In Stock"],
+							  );
+
+          ####Build the columns part of the SQL statement
+          my %colnameidx = ();
+          my @column_titles = ();
+          my $columns_clause = $sbeams->build_SQL_columns_list(
+            column_array_ref=>\@column_array,
+            colnameidx_ref=>\%colnameidx,
+            column_titles_ref=>\@column_titles
+															   );
+  
+        
+          ####SQL query command
+  	      my $sql = qq~ SELECT $columns_clause
+                        FROM $TBOG_SELECTED_OLIGO SO
+                        LEFT JOIN $TBOG_BIOSEQUENCE BS ON (BS.biosequence_id=SO.biosequence_id)
+                        LEFT JOIN $TBOG_OLIGO_TYPE OT ON (SO.oligo_type_id=OT.oligo_type_id)
+                        LEFT JOIN $TBOG_OLIGO OG ON (OG.oligo_id=SO.oligo_id)
+                        LEFT JOIN $TBOG_OLIGO_ANNOTATION OA ON (OA.oligo_id=OG.oligo_id)
+                        LEFT JOIN $TBOG_BIOSEQUENCE_SET BSS ON (BSS.biosequence_set_id=BS.biosequence_set_id)
+                        WHERE BS.biosequence_name LIKE '%$gene_number%' AND $set_type_search AND BSS.set_tag=$set_tag
 					  ~;
        
-       ####Print results of search if at least one oligo record was found, otherwise, notify user
+          ####Print results of search if at least one oligo record was found, otherwise, notify user
 
-		my @rows = $sbeams->selectSeveralColumns($sql);
-        if ( scalar(@rows) >= 1 ) {
-	        print $sbeams->displayQueryResult(sql_query=>$sql);
-        }else{
-	       print "Sorry.  No $set_type oligos were found for $gene";
-        }
+		  my @rows = $sbeams->selectSeveralColumns($sql);
+          if ( scalar(@rows) >= 1 ) {
+            ##############################################################################
+            #below will work##############################################################
+	        ####$sbeams->displayQueryResult(sql_query=>$sql);
+            ##############################################################################
+            ##############################################################################
+            #display(sql_query=>$sql,
+            #        col_name_hash=>%colnameidx
+			#		);
+
+
+              print "Gene: " .$colnameidx{Oligo_type} . "\n";               
+
+              ####Define the hypertext links for columns that need them
+              my %url_cols = ('Oligo_Sequence' => "Display_Oligo_Detailed.cgi?TABLE_NAME=TBOG_SELECTED_OLIGO&Gene=$colnameidx{Gene}V&Oligo_type=$colnameidx{Oligo_type}V&Oligo_Sequence=$colnameidx{Oligo_Sequence}V&=In_Stock$colnameidx{In_Stock}");
+
+
+              ####Result Set
+              my %resultset = ();
+              my $resultset_ref = \%resultset;
+              $sbeams->fetchResultSet(sql_query=>$sql, 
+                          resultset_ref=>$resultset_ref);
+
+              ####Display query results
+              $sbeams -> displayResultSet(url_cols_ref=>\%url_cols,
+                              resultset_ref=>$resultset_ref);
+
+          }else{
+	        print "Sorry.  No $set_type oligos were found for $gene";
+          }
+
+	    }
+ 
+        
+        ####Links to important sites
+        print qq~ <a href="http://www.genosys.co.uk/ordering/frameset.html" target="_blank">Characterize Oligos Here</a> 
+                  <br>
+                  <a href="http://www.idtdna.com/Home/Home.aspx" target="_blank">Order Oligos Here</a>
+                ~;
 
 
     
@@ -223,6 +300,35 @@ if ($q->request_method() eq "POST" ) {
   return;
 
 } # end handle_request
+
+
+sub display {
+  my %args=@_;
+  my $SUB="display";
+  my $sql_query = $args{sql_query} ||
+	die "[BUG-$SUB]: sql query not passed\n";
+  my %colnameidx = $args{col_name_hash} ||
+    die "[BUG-$SUB]: colnameidx not passed in\n";
+  
+  #print "Gene: " .\%$colnameidx{Gene} . "\n";
+
+  ####Define the hypertext links for columns that need them
+  my %url_cols = ('Oligo_Sequence' => "Display_Oligo_Detailed.cgi?Gene=\%$colnameidx{Gene}V&Oligo_type=\%$colnameidx{Oligo_type}V&Oligo_Sequence=\%$colnameidx{Oligo_Sequence}V&=In_Stock\%$colnameidx{In_Stock}");
+
+
+  ####Result Set
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  $sbeams->fetchResultSet(sql_query=>$sql_query, 
+                          resultset_ref=>$resultset_ref);
+
+  ####Display query results
+  $sbeams -> displayResultSet(url_cols_ref=>\%url_cols,
+                              resultset_ref=>$resultset_ref);
+
+
+  return;
+}
 
 
 
