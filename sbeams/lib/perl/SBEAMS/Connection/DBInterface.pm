@@ -2208,6 +2208,9 @@ sub transferTable {
   my $update = $args{'update'} || 0;
   my $update_keys_ref = $args{'update_keys_ref'};
 
+  my $verbose = $args{'verbose'} || 0;
+  my $testonly = $args{'testonly'} || 0;
+
 
   #### Define standard variables
   my ($i,$element,$key,$value,$line,$result);
@@ -2291,8 +2294,8 @@ sub transferTable {
             rowdata_ref=>\%rowdata,
             PK=>$dest_PK_name,PK_value=>$results[0],
             return_PK=>$return_PK,
-            #verbose=>1,
-            #testonly=>1,
+            verbose=>$verbose,
+            testonly=>$testonly,
           );
           $did_update = 1;
 
@@ -2315,8 +2318,8 @@ sub transferTable {
   	table_name=>$table_name,
   	rowdata_ref=>\%rowdata,
   	PK=>$dest_PK_name,return_PK=>$return_PK,
- 	#verbose=>1,
-  	#testonly=>1,
+        verbose=>$verbose,
+        testonly=>$testonly,
       );
     }
 
