@@ -12,13 +12,6 @@
 ###############################################################################
 
 
-##NEED:
-##   -- query to specified APD table (= Peptide_summary_table?) to get search_batch_id_list
-##   -- parse those
-##   -- foreach, need to query peptideatlas.dbo.sample
-##      to get sample_id,sample_tag,data_contributors,contact
-##      --then store all that in info as below...everything else should
-##        remain the same 
 
 ###############################################################################
    # Generic SBEAMS setup for all the needed modules and objects
@@ -136,7 +129,7 @@ sub handleRequest {
 
     unless ($send || $testsend || $testprint) {
         print "$USAGE";
-        print "ERROR: select --send or  --testprint or --testsend for action\n";
+        print "ERROR: select --send  or  --testprint  or --testsend  for action\n";
         exit;
     }
 
@@ -222,9 +215,6 @@ sub handleEmail {
         $sample_tag[$i] = @rows->[0]->[1];
         $contact[$i] = @rows->[0]->[2];
 
-        #printf "%3.0f  %70s \n", $sample_id[$i], $url[$i];
-        #printf "%3.0f  %20s   %20s \n", $sample_id[$i], $sample_tag[$i], $contact[$i];
-
         $i++;
     }  ## end of foreach in search_batch_array
 
@@ -302,10 +292,12 @@ sub emailContact {
     $list_urls \n \n";
 
     if ($testprint) {
-        print "%mail \n";
+        foreach (keys %mail) {
+           print "$mail{$_} \n";
+        }
     } else {
         sendmail (%mail) or die $Mail::Sendmail::error;
     }
 
-    ##NOTE: should wrap it in HTML/MIME for email...MAC email not reading
+    ##NOTE: should wrap it in HTML/MIME for email...MAC email not handling 1st url?
 }
