@@ -308,9 +308,22 @@ sub returnTableInfo {
             ~;
 
         }
+  } elsif ($table_name eq "PR_proteomics_sample") {
 
+    if ( $info_key eq "projPermSQL" ) { 
+        my %projectSQL;
 
-    }
+        $projectSQL{fsql} = '';		#proteomics_sample table has a project_id column
+
+        $projectSQL{dbsql} =<<"        END";
+        SELECT project_id 
+        FROM $TBPR_PROTEOMICS_SAMPLE 
+        WHERE proteomics_sample_id  = KEYVAL 
+        END
+	$log->debug("SQL '$projectSQL{dbsql}'");
+        return \%projectSQL
+      }
+  }
 
 
 
@@ -391,7 +404,7 @@ sub getParentProject {
 
   # Value may be cached/defined in input parameters... for reasons unknown!
   # return $parameters_ref->{project_id} if $parameters_ref->{project_id};
-  # $log->debug( 'Got past the short-circuits with ' . $table_name );
+   $log->debug( 'Got past the short-circuits with ' . $table_name );
 
   # Fetch SQL to retrieve project_id from table_name, if it is available.
   my $sqlref = $self->returnTableInfo( $table_name, 'projPermSQL' );
@@ -490,8 +503,28 @@ sub getParentProject {
     }
     return ( $project_id ) ? $project_id : undef;
 
-  } elsif ($table_name eq "zzzz") {
+  }elsif ( uc($table_name) eq 'PR_PROTEOMICS_SAMPLE') { # Proteomics Sample table
+	
+	
+    #### If the user wants to INSERT, determine how it fits into project
+    if ($action eq 'INSERT') {
+      # No parent project yet, for object doesn't exist.
+      return undef;
 
+    #### Else for an UPDATE or DELETE, determine how it fits into project
+    } elsif ($action eq 'UPDATE' || $action eq 'DELETE') {
+
+      if ( $parameters_ref->{proteomics_sample_id} ) {
+         $log->debug( $sqlref->{dbsql});
+        $sqlref->{dbsql} =~ s/KEYVAL/$parameters_ref->{proteomics_sample_id}/;
+       
+	( $project_id ) = $sbeams->selectOneColumn( $sqlref->{dbsql} );
+      }
+    }
+    return ( $project_id ) ? $project_id : undef;
+   
+  } elsif ($table_name eq "zzzz") {
+	
     #### If the user wants to INSERT, determine how it fits into project
     if ($action eq 'INSERT') {
 
@@ -502,7 +535,7 @@ sub getParentProject {
 
     return($project_id) if ($project_id);
   }
-
+	$log->debug("*****TABLE NAME $table_name *******");
 
   #### No information for this table so return undef
   return;
