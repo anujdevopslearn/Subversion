@@ -84,7 +84,7 @@ sub showMainPage {
 	<BR>
 
 	<UL>
-	<LI> Here is the stub for the Tools area.  We need tools!
+	<LI> Currently generally available tools allow you to maintain the ISB / SBEAMS list of <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=contact">contacts (i.e. persons known in the database)</a>.
 	</UL>
 
 	<BR>
