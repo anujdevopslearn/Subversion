@@ -28,6 +28,7 @@ use Data::Dumper;
 
 
 use lib "$FindBin::Bin/../../perl";
+use lib "$FindBin::Bin";
 use vars qw ($sbeams
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
              $current_contact_id $current_username
