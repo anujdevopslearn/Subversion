@@ -1056,9 +1056,14 @@ sub checkForPreexistingRecord {
   foreach $element (keys %unique_values) {
     my $value = $unique_values{$element};
     $value =~ s/\'/\'\'/g;
-    $sql_query .= "
-         AND $element='$value'";
-    $error_message .= "<B>$element</B> = $unique_values{$element}<BR>\n";
+    if ($value eq '') {
+      $sql_query .= "
+         AND ( $element = '$value' OR $element IS NULL )";
+    } else {
+      $sql_query .= "
+         AND $element = '$value'";
+    }
+    $error_message .= "<B>$element</B> = '$unique_values{$element}'<BR>\n";
   }
 
   my @rows = $sbeams->selectOneColumn($sql_query);
@@ -1364,8 +1369,7 @@ sub updateLinkingTable {
     || die("Parameter parent_pk_value not passed");
   my $child_pk_column_name = $args{'child_pk_column_name'}
     || die("Parameter child_pk_column_name not passed");
-  my $child_pk_values = $args{'child_pk_values'}
-    || die("Parameter child_pk_values not passed");
+  my $child_pk_values = $args{'child_pk_values'} || '';  #might be none
   my $linking_table_name = $args{'linking_table_name'}
     || die("Parameter linking_table_name not passed");
 
