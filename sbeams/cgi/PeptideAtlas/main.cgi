@@ -84,8 +84,8 @@ sub showMainPage {
     my $tabmenu = 
         SBEAMS::Connection::TabMenu->new( cgi => $q,
                                           activeColor => 'ffcc99',
-                                          inactiveColor   => 'aaaacc',
-                                          hoverColor => 'ffcc99', 
+                                          inactiveColor   => 'cccccc',
+                                          hoverColor => 'ffff99',
                                           atextColor => '000000', # black
                                           itextColor => 'ff0000', # black
                                           # paramName => 'mytabname', # uses this as cgi param
