@@ -162,9 +162,30 @@ sub printEntryForm {
     my @rows = $sbeams->selectSeveralColumns($sql);
 
     # Found cases where this throws an error, next stmt throws perl error.
-    print STDERR "SQL stmt yeilds no rows: \n $sql \n" if !scalar @rows;
+    if ( !scalar @rows ) { 
+
+    print STDERR "SQL stmt yeilds no rows: \n $sql \n";
+
+    # Print page with error message
+    my $err = 'The record specified in the url was not found in the database.'; 
+
+    # Add fields group/project choosers need
+    print qq!
+    <INPUT TYPE="hidden" NAME="set_current_work_group" VALUE="">
+    <INPUT TYPE="hidden" NAME="set_current_project_id" VALUE="">
+    <INPUT TYPE=hidden NAME=TABLE_NAME VALUE=$TABLE_NAME>
+    </TR></TABLE></FORM>
+    !;
+    print qq!
+    <INPUT TYPE=hidden NAME=$PK_COLUMN_NAME VALUE=$parameters{$PK_COLUMN_NAME}>
+    ! if $parameters{$PK_COLUMN_NAME};
+
+    $sbeams->displaySBEAMSError( [$err], 1 );
+    return;
+    }
 
     my @row = @{$rows[0]};
+    
 
     #### See if the submitter specified how to resolve conflicts
     my $merge_params = $parameters{merge_params} || 'retain';
@@ -446,7 +467,7 @@ sub printEntryForm {
     # User can add/modify/delete data
     $viewStates{add_mod_del} = 1;
 
-  } elsif ( !defined $parameters{$PK_COLUMN_NAME} 
+  } elsif ( !$parameters{$PK_COLUMN_NAME} 
              && $tableAuthLevel <= DATA_WRITER ) { 
     # Form with insert
     $viewStates{insert_new} = 1;
@@ -458,6 +479,33 @@ sub printEntryForm {
   } elsif ( $tableAuthLevel <= DATA_WRITER ) {
     # read only mode with link to second-pass INSERT
     $viewStates{read_insert} = 1;
+
+  } elsif ( $tableAuthLevel <= DATA_READER && 
+            !$parameters{$PK_COLUMN_NAME} ) {
+    # Trying to add a new thingy, but lack permissions to
+    $viewStates{no_access} = 1;
+    push @errors, <<"    END_ERR";
+    Your current privileges do not permit you to add records
+    to the $parameters{TABLE_NAME} table.
+    END_ERR
+
+    push @errors, <<"    END_ERR";
+    If you feel you have received this message in error, please email this message
+    <BR>to your SBEAMS administrator and request appropriate permissions.
+    END_ERR
+
+    my %priv = ( 10 => 'Administrator',
+                 20 => 'Modifier',
+                 30 => 'Writer',
+                 40 => 'Reader',
+                 50 => 'None' );
+
+    push @errors, <<"    END_ERR";
+    Your current permission level is $tableAuthLevel, 
+    which is Data $priv{$tableAuthLevel}.
+    <BR>
+    END_ERR
+
 
   } elsif ( ( $projectAuthLevel && $projectAuthLevel == DATA_READER ) ||
             ( $tableAuthLevel == DATA_READER  )    ) {
@@ -479,7 +527,7 @@ sub printEntryForm {
   use constant DEBUG => 0;
 
   my $rec = ( defined $projectAuthLevel ) ? $projectAuthLevel : 'undefined';
-  my $pk = ( defined $parameters{$PK_COLUMN_NAME} ) ? $parameters{$PK_COLUMN_NAME} : 'undefined';
+  my $pk = ( $parameters{$PK_COLUMN_NAME} ) ? $parameters{$PK_COLUMN_NAME} : 'undefined';
 
   print STDERR <<"  END_ERR" if DEBUG;
   Current Group: $current_work_group_id
@@ -498,7 +546,7 @@ sub printEntryForm {
   if ( $viewStates{no_access} ) { 
 
     # Print page with error message
-    unshift @errors,  <<"    END_ERR";
+    unshift @errors,  <<"    END_ERR" if $parameters{$PK_COLUMN_NAME};
     You lack permission to view the requested resource.  Please<BR>
     contact Eric Deutsch or submit a bug report to the sbeams bug database<BR>
     you feel that this denial was in error.<BR><BR>
