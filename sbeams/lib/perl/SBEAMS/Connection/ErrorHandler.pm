@@ -65,8 +65,8 @@ sub error {
   my $suffix = '';
 
   if ($sbeams->output_mode eq 'html') {
-    $prefix = '<BR>\nSBEAMS Error:<BR><PRE>';
-    $suffix = '</PRE><BR>';
+    $prefix = "<BR>\nSBEAMS Error:<BR><PRE>";
+    $suffix = "</PRE><BR>";
   }
 
 
