@@ -2769,6 +2769,7 @@ sub update_sql_fragment {
 			'hg16' => 'July 2003 (NCBI 34)',
 			'hg17' => 'May 2004 (NCBI 35)',
 			'mm4'  => 'October 2003 (NCBI 32)',
+			'mm5'  => 'May 2004 (NCBI 33)',
 		);
 
 		#### Loop over each one and try the conversion
