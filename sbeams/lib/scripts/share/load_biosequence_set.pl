@@ -110,6 +110,10 @@ sub main {
     $work_group = "Biosap";
     $DATABASE = $DBPREFIX{$module};
   }
+  if ($module eq 'SNP') {
+    $work_group = "SNP";
+    $DATABASE = $DBPREFIX{$module};
+  }
 
 
   #### Do the SBEAMS authentication and exit if a username is not returned
