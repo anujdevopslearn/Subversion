@@ -598,7 +598,7 @@ sub readDtaFile {
 ###############################################################################
 # readSummaryFile
 ###############################################################################
-sub readSummaryFile { 
+sub readSummaryFile {
   my $self = shift;
   my %args = @_;
 
@@ -615,9 +615,12 @@ sub readSummaryFile {
   my %files;
 
 
-  #### Open the specified file
+  #### Open the specified file or return
   if ( open(INFILE, "$inputfile") == 0 ) {
-    die "\nCannot open input file $inputfile\n\n";
+    print "\nCannot open input file $inputfile\n\n";
+    my %finalhash;
+    $finalhash{files} = \%files;
+    return \%finalhash;
   }
 
 
