@@ -1138,7 +1138,7 @@ sub postFormHook {
 sub preUpdateDataCheck {
   my %parameters = @_;
 
-  if ($TABLE_NAME eq "array_scan") {
+  if ($TABLE_NAME eq "array_scanDISABLED") {
       unless ( ($parameters{stage_location} gt "") &&
              ( -d "$parameters{stage_location}/Images" ) ) {
       return "The specified scanned data location does not exist (looking for an 'Images/' subdirectory in '$parameters{stage_location}')";
