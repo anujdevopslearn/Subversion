@@ -1117,7 +1117,9 @@ sub parseConstraint2SQL {
     #### quoted, so there shouldn't be a way to put in dangerous SQL...
     #if ($constraint_value =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {}
 
-    return "   AND $constraint_column $constraint_NOT_flag LIKE '$constraint_value'";
+    my $tmp = $constraint_NOT_flag;
+    $constraint_NOT_flag .= ' ' if ($constraint_NOT_flag);
+    return "   AND $constraint_column ${tmp}LIKE '$constraint_value'";
   }
 
 
