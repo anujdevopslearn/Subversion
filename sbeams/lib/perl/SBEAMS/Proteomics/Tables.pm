@@ -26,6 +26,7 @@ use vars qw(@ISA @EXPORT
     $TB_ORGANISM
 
     $TBPR_BIOSEQUENCE_SET
+    $TBPR_BIOSEQUENCE_ANNOTATION
     $TBPR_BIOSEQUENCE
     $TBPR_BIOSEQUENCE_PROPERTY_SET
 
@@ -105,6 +106,7 @@ require Exporter;
     $TB_ORGANISM
 
     $TBPR_BIOSEQUENCE_SET
+    $TBPR_BIOSEQUENCE_ANNOTATION
     $TBPR_BIOSEQUENCE
     $TBPR_BIOSEQUENCE_PROPERTY_SET
 
@@ -186,6 +188,7 @@ my $BioLink = $DBPREFIX{BioLink};
 $TB_ORGANISM                      = "${core}organism";
 
 $TBPR_BIOSEQUENCE_SET             = "${mod}biosequence_set";
+$TBPR_BIOSEQUENCE_ANNOTATION      = "${mod}biosequence_annotation";
 $TBPR_BIOSEQUENCE                 = "${mod}biosequence";
 $TBPR_BIOSEQUENCE_PROPERTY_SET    = "${mod}biosequence_property_set";
 
