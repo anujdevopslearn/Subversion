@@ -291,7 +291,7 @@ sub returnTableInfo {
           JOIN $TBMA_ARRAY_REQUEST_SLIDE arsl
             ON arq.array_request_id = arsl.array_request_id
           JOIN $TBMA_ARRAY_REQUEST_SAMPLE ars
-            ON arq.array_request_slide_id = ars.array_request_slide_id
+            ON arsl.array_request_slide_id = ars.array_request_slide_id
         WHERE array_request_sample_id = KEYVAL
         END
 
