@@ -20,7 +20,7 @@ use DBI;
 use CGI::Carp qw(fatalsToBrowser croak);
 use POSIX;
 
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -329,7 +329,7 @@ sub handle_request {
 
   #### print_tabs
 #  my @tab_titles = ("Summary","Management","Data Analysis", "Permissions");
-  my @tab_titles = ("Summary","MIAME Status","Management","Data Analysis", "Data Download", "Permissions");
+  my @tab_titles = ("Summary","MIAME Status","Management","Data Pipeline", "Data Download", "Permissions");
   my $tab_titles_ref = \@tab_titles;
   my $page_link = 'ProjectHome.cgi';
 
@@ -352,12 +352,12 @@ sub handle_request {
 			     selected_tab=>2);
       print_management_tab();
   }
-  elsif($parameters{'tab'} eq "data_analysis") {
+  elsif($parameters{'tab'} eq "data_pipeline") {
       $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
 			     page_link=>$page_link,
 			     selected_tab=>3);
-      print_data_analysis_tab()
-  }elsif($parameters{'tab'} eq "data_download") {
+      print_data_pipeline_tab(parameters_ref=>\%parameters)
+  }elsif($parameters{'tab'} =~ "data_download") {
       $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
 			     page_link=>$page_link,
 			     selected_tab=>4);
@@ -380,21 +380,16 @@ sub handle_request {
 
 }# end handle_request
 
-
-
 ###############################################################################
-# print_summary_tab
+# print_project_info
 ###############################################################################
-sub print_summary_tab {
+sub print_project_info {
   my %args = @_;
-  my $SUB_NAME = "print_summary_tab";
+  my $SUB_NAME = "print_project_info";
   
 	my $parameters_ref = $args{'parameters_ref'} || die "ERROR[$SUB_NAME] No parameters passed\n";
 	my %parameters = %{$parameters_ref};
-  my $apply_action=$parameters{'action'} || $parameters{'apply_action'} || 'QUERY';
-
-	## HACK: If set_current_project_id is a parameter, we do a 'QUERY' instead of a 'VIEWRESULTSET'
-	if ($parameters{set_current_project_id}) {$apply_action = 'QUERY';}
+ 
 
   ## Define standard variables
   my ($sql, @rows);
@@ -529,8 +524,35 @@ print qq~
 $LINESEPARATOR 
 <br/>
 
-~;
+~;	
+	
+ return ($n_condition_count, $n_array_scans, $n_affy_chips);
+}
 
+###############################################################################
+# print_summary_tab
+###############################################################################
+sub print_summary_tab {
+  my %args = @_;
+  my $SUB_NAME = "print_summary_tab";
+  
+	my $parameters_ref = $args{'parameters_ref'} || die "ERROR[$SUB_NAME] No parameters passed\n";
+	my %parameters = %{$parameters_ref};
+  my $apply_action=$parameters{'action'} || $parameters{'apply_action'} || 'QUERY';
+
+	## HACK: If set_current_project_id is a parameter, we do a 'QUERY' instead of a 'VIEWRESULTSET'
+	if ($parameters{set_current_project_id}) {$apply_action = 'QUERY';}
+
+  ## Define standard variables
+  my ($sql, @rows);
+ # my $current_contact_id = $sbeams->getCurrent_contact_id();
+  #my (%array_requests, %array_scans, %quantitation_files);
+  my $project_id = $sbeams->getCurrent_project_id();
+  my ($project_name, $project_tag, $project_status, $project_desc);
+ # my ($pi_first_name, $pi_last_name, $pi_contact_id, $username);
+
+#print out some project info and return the number of hits for the following data types
+ my ($n_condition_count, $n_array_scans, $n_affy_chips) = print_project_info(parameters_ref =>$parameters_ref);
 ########################################################################################
 ### Set some of the usful vars
 my %resultset = ();
@@ -782,15 +804,19 @@ sub display_sub_tabs {
 	my @tabs_names	 	= @ {$args{tab_titles_ref} };
 	my $page_link 		= $args{page_link};
 	my $selected_tab_numb 	= $args{selected_tab};
+	my $parent_tab 		= $args{parent_tab};
 	
+	$log->debug("SUB TAB INFO ".  Dumper(\%args));
 	my $count = 0;
 	foreach my $tab_name (@tabs_names){
-		
-		if ($display_type eq $tab_name){			#loop through the tabs to display.  When we get to the one that is the "selected" one use it's array position number ast the selected_tab count
+		#loop through the tabs to display.  When we get to the one that is the 
+		# "selected" one use it's array position number as the selected_tab count
+		if ($display_type eq $tab_name){			
 			#print "TAB NAME '$tab_name' '$selected_tab_numb' '$count'<br>";
 			$sbeamsMOD->print_tabs(tab_titles_ref	=>\@tabs_names,
 			     			page_link	=>$page_link,
-			     			selected_tab	=>$count);
+			     			selected_tab	=>$count,
+			     			parent_tab	=>$parent_tab,);
 			return 1;		
 		}
 		$count ++;
@@ -832,15 +858,17 @@ sub pick_data_to_show {
 	
 	#Need to choose what type of data summary to display  
 	
-	my $cgi_tab_val = '';
+	my $all_cgi_tab_val = '';
 	
-	if ($cgi_tab_val = $parameters{tab} ){				#if there is a cgi parm with the 'tab' key use it for the data type to display
-		$cgi_tab_val = uc $cgi_tab_val;
-		
-		if (grep { $cgi_tab_val eq $_} keys %data_types_h){	#need to make sure the tab param is not coming from other parts of the program. this will unsure it's one of the tabs we are interested in
-		 
-			if ($data_types_h{$cgi_tab_val}{COUNT} > 0){	#make sure the tab has data, a user might have switched projects to one without this type of data
-				return (uc $cgi_tab_val, 0);		#need to return the upper case value since the print tabs method will make it lower case
+	if ($all_cgi_tab_val = $parameters{tab} ){				#if there is a cgi parm with the 'tab' key use it for the data type to display
+		foreach my $cgi_tab_val (split /,/,$all_cgi_tab_val ){
+			$cgi_tab_val = uc $cgi_tab_val;
+			
+			if (grep { $cgi_tab_val eq $_} keys %data_types_h){	#need to make sure the tab param is not coming from other parts of the program. this will unsure it's one of the tabs we are interested in
+			 
+				if ($data_types_h{$cgi_tab_val}{COUNT} > 0){	#make sure the tab has data, a user might have switched projects to one without this type of data
+					return (uc $cgi_tab_val, 0);		#need to return the upper case value since the print tabs method will make it lower case
+				}
 			}
 		}
 	}
@@ -1056,15 +1084,73 @@ $LINESEPARATOR
   ~;
   return;
 }
-
-  
-
 ###############################################################################
-# print_data_analysis_tab
+# print_data_pipeline_tab
 ###############################################################################
-sub print_data_analysis_tab {
+sub print_data_pipeline_tab {
   my %args = @_;
-  my $SUB_NAME = "print_data_analysis_tab";
+  my $SUB_NAME = "print_data_pipeline_tab";
+  
+	my $parameters_ref = $args{'parameters_ref'} || die "ERROR[$SUB_NAME] No parameters passed\n";
+	
+  	my ($n_condition_count, $n_array_scans, $n_affy_chips) = print_project_info(parameters_ref =>$parameters_ref);
+
+	my $html  = '';
+
+##Print out the different analysis types that could be ran for this project	
+	if(($n_condition_count + $n_array_scans + $n_affy_chips) > 0){
+		$html = <<END;
+<table>
+ <tr class="grey_header" border=1>
+  <td>Analysis Type</td>
+  <td>Description</td>
+ </tr>
+END
+
+		if ($n_affy_chips > 0){
+			$html .= <<END;
+ <tr>
+  <td><a href="$CGI_BASE_DIR/Microarray/bioconductor/upload.cgi">Affy Analysis Pipeline</a></td>
+  <td>Analyze Affymetrix CEL files and view the data in a variety of ways.....</td>
+ </tr>
+END
+		}
+		
+		if($n_array_scans > 0){
+$html .= <<END;
+ <tr>
+  <td><A HREF="ProcessProject.cgi">Submit a New Job to the Two Color Analysis Pipeline</A></td>
+  <td>Process Two Color Arrays.  
+  	<A HREF="http://db.systemsbiology.net/software/ArrayProcess/" TARGET="_blank">What is the Two Color Data Processing Pipeline?</A> 
+  </td>
+ </tr>
+END
+
+		}
+		
+		if($n_condition_count){
+$html .= <<END;
+ <tr>
+  <td><a href="$CGI_BASE_DIR/Microarray/GetExpression">Get Expression</a></td>
+  <td>Retrieve data from the Get Expression table.....</td>
+ </tr>
+END
+
+		}
+		
+		$html .= "</table>";
+	}else{#end of if clause to print any data 	
+		$html = "<b>Sorry there is no data to analyze for this project</b>";
+	}
+	print $html;
+}
+
+###############################################################################
+# print_two_color_analysis_download_info
+###############################################################################
+sub print_two_color_analysis_download_info {
+  my %args = @_;
+  my $SUB_NAME = "print_two_color_analysis_download_info";
   
   ## Decode argument list
   my $project_id = $sbeams->getCurrent_project_id();
@@ -1073,6 +1159,17 @@ sub print_data_analysis_tab {
   my $output_dir = "/net/arrays/Pipeline/output/project_id/".$project_id;
   opendir (PROJECTDIR, $output_dir);
   my @dir_contents = readdir PROJECTDIR;
+
+
+ print qq~
+<H1>Data Analysis:</H1>
+<UL>
+  <LI><A HREF="ProcessProject.cgi">Submit a New Job to the Two Color Analysis Pipeline</A>
+  <LI><A HREF="http://db.systemsbiology.net/software/ArrayProcess/" TARGET="_blank">What is the Two Color Data Processing Pipeline?</A>
+</UL>
+$LINESEPARATOR
+      ~;
+
 
 	print  qq~ 
 <BR><BR>
@@ -1114,22 +1211,13 @@ sub print_data_analysis_tab {
   my @zip_file = glob ("$output_dir/*.zip");
   my @tav_list = glob ("$output_dir/*.tav");
 
-  print qq~
-<H1>Data Analysis:</H1>
-<UL>
-  <LI><A HREF="ProcessProject.cgi">Submit a New Job to the Pipeline</A>
-  <LI><A HREF="http://db.systemsbiology.net/software/ArrayProcess/" TARGET="_blank">What is the Data Processing Pipeline?</A>
-</UL>
-$LINESEPARATOR
-      ~;
-
-	## Display TAV Options if there are such files
+ 	## Display TAV Options if there are such files
 	if ($tav_list[0]) {
 	print qq~
 <FORM NAME="tavForm" METHOD="GET" ACTION="http://db.systemsbiology.net:8080/microarray/sbeams">
 <INPUT TYPE="hidden" NAME="project_id" VALUE="">
 <INPUT TYPE="hidden" NAME="selectedFiles" VALUE="">
-<INPUT TYPE="hidden" NAME="tab" VALUE="data_analysis">
+<INPUT TYPE="hidden" NAME="tab" VALUE="data_pipeline">
 <TABLE>
 <TR VALIGN="center"><TD><B>MeV Files</B></TD></TR>
 <TR>
@@ -1414,6 +1502,8 @@ sub print_data_download_tab {
     		
 			exit;
 			
+		}elsif($parameters{Get_Data} eq 'SHOW_TWO_COLOR_DATA'){
+			print "DO SOMETHING COOL";	
 		}
 	
   ###############################################################################
@@ -1428,10 +1518,11 @@ sub print_data_download_tab {
 		    <TD><h2>Please select data to download</h2></TD></TR>
 		~;
 	
-	
+###Get some summary data for all the data types that can be downloaded	
 	#### Count the number of affy chips for this project
 		my $n_affy_chips = 0;
-
+		my $n_two_color_runs = 0;
+		
 		if ($project_id > 0) {
 			my $sql = qq~ 	SELECT count (afa.affy_array_id)
 		   			FROM $TBMA_AFFY_ARRAY afa, $TBMA_AFFY_ARRAY_SAMPLE afs 
@@ -1441,11 +1532,20 @@ sub print_data_download_tab {
 				~;
 			($n_affy_chips) = $sbeams->selectOneColumn($sql);	
  		}
-
+ ##Check to see if there is some TWO_COLOR analysis data
+ 
+ 	my $output_dir = "/net/arrays/Pipeline/output/project_id/".$project_id;
+  	opendir (PROJECTDIR, $output_dir);
+  	my @dir_contents = readdir PROJECTDIR;
+	$n_two_color_runs = scalar @dir_contents;
+	
 	
 		print qq~
 		  <TR>
 		    <TD COLSPAN="2"><B>Number Affy Chips:  $n_affy_chips</B></TD>
+		  </TR>
+		  <TR>
+		    <TD COLSPAN="2"><B>Number Two Color Analysis Files:  $n_two_color_runs</B></TD>
 		  </TR>
 		</TABLE>
 		<p>
@@ -1458,13 +1558,13 @@ sub print_data_download_tab {
 	
 		my $default_data_type = "AFFY";
 
-		my %count_types = ( 	AFFY		=> {	COUNT => $n_affy_chips,
-		   						POSITION => 0,
-		   		   		   	   },	
-					#CONDITION 	=> { 	COUNT => 3,  #$n_condition_count  ##HARD CODE FOR TESTING ONLY
-		   			#			POSITION => 1,
-					#   		   },
-		   	   	   );
+		my %count_types = ( AFFY	=> {	COUNT => $n_affy_chips,
+		   									POSITION => 0,
+		   		   		   	   			},	
+							TWO_COLOR 	=> { 	COUNT => $n_two_color_runs,  #$n_condition_count  ##HARD CODE FOR TESTING ONLY
+		   										POSITION => 1,
+					   		   				},
+		   	   	   		);
 
 
 		my @tabs_names = make_tab_names(%count_types);
@@ -1472,14 +1572,15 @@ sub print_data_download_tab {
 	
 		
 		($display_type, $selected_tab_numb) =	pick_data_to_show (default_data_type    => $default_data_type, 
-							    		   tab_types_hash 	=> \%count_types,
-							    		   param_hash		=> \%parameters,
+							    		   		tab_types_hash 	=> \%count_types,
+							    		   		param_hash		=> \%parameters,
 							   		   );
 
 		my $tabs_exists = display_sub_tabs(	display_type 	=> $display_type,
 				       			tab_titles_ref	=>\@tabs_names,
-							page_link	=>"ProjectHome.cgi",
-							selected_tab	=>$selected_tab_numb
+								page_link		=>"ProjectHome.cgi",
+								selected_tab	=> $selected_tab_numb,
+	     					    parent_tab  	=> $parameters{'tab'},
 	     					   );
 	
   #####################################################################################
@@ -1511,6 +1612,9 @@ sub print_data_download_tab {
 					);
 	
 	
+		}elsif($display_type eq 'TWO_COLOR'){
+			print_two_color_analysis_download_info();
+			return;
 		}else{
 			print "<h2>Sorry No Data to download for this project</h2>" ;
 			return;
