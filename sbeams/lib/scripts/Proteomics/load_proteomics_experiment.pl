@@ -814,7 +814,7 @@ sub addMsmsSpectrumEntry {
   #### Now insert all the mass,intensity pairs
   my ($i,$mass,$intensity);
   my $create_bcp_file = "YES";
-  #$create_bcp_file = 0;
+  $create_bcp_file = 0;
 
   if ($create_bcp_file) {
     return $msms_spectrum_id if (defined($spectra_written{$msms_spectrum_id}));
