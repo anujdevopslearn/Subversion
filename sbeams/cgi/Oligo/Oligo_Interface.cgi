@@ -107,10 +107,10 @@ sub main {
   if ($parameters{action} eq "???") {
     # Some action
   }else {
-    $sbeamsMOD->printPageHeader();
+    $sbeamsMOD->printPageHeader('display_mode'=>$parameters{'display_mode'});
     print_javascript();
     handle_request(ref_parameters=>\%parameters);
-    $sbeamsMOD->printPageFooter();
+    $sbeamsMOD->printPageFooter('display_mode'=>$parameters{'display_mode'});
   }
 
 
@@ -147,16 +147,20 @@ sub handle_request {
 
   print "<H1> Oligo Interface</H1>";
   
-  print qq~ <br>
-            <a href="http://db.systemsbiology.net/dev5/sbeams/cgi/Oligo/Add_Oligo.cgi">Add New</a>
-            <br>
-            <a href="http://db.systemsbiology.net/dev5/sbeams/cgi/Oligo/Search_Oligo.cgi">Search Existing</a>
-            <br>
-		    ~;
-             
-
-
-
+  print qq~ 
+<TABLE>
+<TR>
+  <TD ALIGN="LEFT">
+   <a href="http://db.systemsbiology.net/sbeams/cgi/Oligo/Add_Oligo.cgi">Add New Oligo</a>
+  </TD>
+</TR>
+<TR>
+  <TD ALIGN="LEFT">
+   <a href="http://db.systemsbiology.net/sbeams/cgi/Oligo/Search_Oligo.cgi">Search Existing Oligos</a>
+  </TD>
+</TR>
+</TABLE>
+~;
   return;
 
 } # end handle_request
