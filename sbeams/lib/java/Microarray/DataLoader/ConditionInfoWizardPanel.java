@@ -1,4 +1,5 @@
 package DataLoader;
+//-----------------------------------------------------------------------------------------------
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
@@ -143,13 +144,13 @@ public class ConditionInfoWizardPanel extends WizardPanel
 	conditionPanel.add(allButtonsPanel, BorderLayout.NORTH);
 	conditionPanel.add(splitPane, BorderLayout.CENTER);
 	add(conditionPanel, BorderLayout.CENTER);
-  }
+  }// constructor
 //-----------------------------------------------------------------------------------------------
   public void keyPressed(KeyEvent e){
 	if (e.getKeyCode() == KeyEvent.VK_ENTER){
 	  registerNewVariable();
 	}
-  }
+  }// keyPressed
 //-----------------------------------------------------------------------------------------------
   public void keyTyped(KeyEvent e){}
 //-----------------------------------------------------------------------------------------------
@@ -177,7 +178,7 @@ public class ConditionInfoWizardPanel extends WizardPanel
 	}else if (RENAME.equals(command)) {
 	  intelligentlySetAliases();
 	}
-  }
+  }// actionPerformed
 //-----------------------------------------------------------------------------------------------
   private void intelligentlySetAliases() {
 	String exptName = "unknownExperiment";
@@ -211,8 +212,7 @@ public class ConditionInfoWizardPanel extends WizardPanel
 	  registerAlias(m,vars[m].toString());
 	}
 	this.repaint();
-
-  }
+  }// intelligentlySetAliases
 //-----------------------------------------------------------------------------------------------
   private String translate(String units) {
 	units.toLowerCase();
@@ -228,21 +228,20 @@ public class ConditionInfoWizardPanel extends WizardPanel
 	  return ("pct");
 	else
 	  return units;		 
-  }
-
+  }// translate
 //-----------------------------------------------------------------------------------------------
   private void registerNewVariable() {
 	String columnTitle = new String(variableNames.getSelectedItem()+
 									" ( "+variableUnitsField.getText()+" ) ");
 	variableTable.addDataColumn(columnTitle);
-  }
+  }// registerNewVariable
 //-----------------------------------------------------------------------------------------------
   private void registerAlias(int index, String alias) {
 	ConditionListModel clm = (ConditionListModel)(conditionList.getModel());
 	ExperimentCondition ec =(ExperimentCondition)clm.getElementDataAt(index);
 	ec.setAlias(alias);
 	this.repaint();
-  }
+  }// registerAlias
 //-----------------------------------------------------------------------------------------------
   private void registerAlias() {
 	int[] indices = conditionList.getSelectedIndices();
@@ -284,146 +283,6 @@ public class ConditionInfoWizardPanel extends WizardPanel
 
   }// getConditionName
 //-----------------------------------------------------------------------------------------------
-  private void writeFiles(String baseName) {
-	Calendar calendar = new GregorianCalendar();
-	Date trialTime = new Date();
-	calendar.setTime(trialTime);
-	String date = new String(calendar.get(Calendar.YEAR)+"-"+
-							 twoDigits.format( (calendar.get(calendar.MONTH)+1) )+"-"+
-							 twoDigits.format( (calendar.get(calendar.DATE)) ) );
-
-	Hashtable aliases = new Hashtable();
-    String lambdaFile = baseName+".lambda";
-	String ratioFile = baseName+".ratio";
-	String xmlFile = baseName+".xml";
-	String[] conditions = (String[])wizardContext.getAttribute(WIZARD_CONDITIONS);
-	int conds = conditions.length;
-
-	TextWriter lambdaWriter = new TextWriter(lambdaFile);
-	TextWriter ratioWriter = new TextWriter(ratioFile);
-	StringBuffer lambdaBuffer = new StringBuffer();
-	StringBuffer ratioBuffer = new StringBuffer();
-
-	ExperimentCondition ec = (ExperimentCondition)condData.get(conditions[0]);
-	String[] gene = ec.getGenes();
-	float[] individualRatios = ec.getRatioData();
-	float[] individualLambdas = ec.getLambdaData();
-
-	float[][] ratioData = new float[conds][individualRatios.length];
-	float[][] lambdaData = new float[conds][individualLambdas.length];
-	ratioData[0] = individualRatios;
-	lambdaData[0] = individualLambdas;
-	for (int m=0;m<conds;m++) {
-	  ec = (ExperimentCondition)condData.get(conditions[m]);
-	  aliases.put(conditions[m], ec.getConditionAlias());
-	  individualRatios = ec.getRatioData();
-	  individualLambdas = ec.getLambdaData();
-	  ratioData[m] = individualRatios;
-	  lambdaData[m] = individualLambdas;
-	}
-
-	//Print header
-	lambdaBuffer.append("GENE");
-	ratioBuffer.append("GENE");
-	for (int m=0;m<conds;m++) {
-	  lambdaBuffer.append("\t"+(String)aliases.get(conditions[m]));
-	  ratioBuffer.append("\t"+(String)aliases.get(conditions[m]));
-	}
-	lambdaBuffer.append("\n");
-	ratioBuffer.append("\n");
-
-	for (int m=0;m<ratioData[0].length;m++) {
-	  lambdaBuffer.append(gene[m]);
-	  ratioBuffer.append(gene[m]);
-	  for (int h=0;h<ratioData.length;h++) {
-		ratioBuffer.append("\t"+ratioData[h][m]);
-		lambdaBuffer.append("\t"+lambdaData[h][m]);
-	  }
-	  lambdaBuffer.append("\n");
-	  ratioBuffer.append("\n");
-	}
-
-	lambdaWriter.write(lambdaBuffer.toString());
-	ratioWriter.write(ratioBuffer.toString());
-	lambdaWriter.close();
-	ratioWriter.close();
-
-	TextWriter xmlWriter = new TextWriter(xmlFile);
-	StringBuffer xmlbuf = new StringBuffer();
-	String exptName =(String)wizardContext.getAttribute(WIZARD_EXPERIMENT); 
-	xmlbuf.append("<?xml version=\"1.0\" ?>"+"\n");
-	xmlbuf.append("<experiment name=\"");
-	xmlbuf.append(exptName);
-	xmlbuf.append("\" date=\""+date+"\">"+"\n");
-	xmlbuf.append ("\t");
-	xmlbuf.append("<predicate category='species' value='");
-	xmlbuf.append((String)wizardContext.getAttribute(WIZARD_ORGANISM));
-	xmlbuf.append("'/>"+"\n");
-
-	xmlbuf.append ("\t");
-	xmlbuf.append("<predicate category='perturbation' value='");
-	xmlbuf.append((String)wizardContext.getAttribute(WIZARD_PERTURBATION));
-	xmlbuf.append("'/>\n");
-
-	xmlbuf.append ("\t");
-	xmlbuf.append("<predicate category='strain' value='");
-	xmlbuf.append((String)wizardContext.getAttribute(WIZARD_STRAIN));
-	xmlbuf.append("'/>"+"\n");
-
-	String manipulationType = (String)wizardContext.getAttribute(WIZARD_MANIPULATION_TYPE);
-	if (manipulationType != null) {
-	  xmlbuf.append ("\t");
-	  xmlbuf.append("<predicate category='manipulationType' value='");
-	  xmlbuf.append(manipulationType);
-	  xmlbuf.append("'/>"+"\n");
-	}
-
-	String manipulatedVariable = (String)wizardContext.getAttribute(WIZARD_MANIPULATED_VARIABLE);
-	if (manipulatedVariable != null) {
-	  xmlbuf.append("\t");
-	  xmlbuf.append("<predicate category='manipulatedVariable' value='");
-	  xmlbuf.append(manipulatedVariable);
-	  xmlbuf.append("'/>"+"\n");
-	}
-
-	xmlbuf.append("\t");
-	xmlbuf.append("<dataset status='primary' type='log10 ratios'>"+"\n");
-	xmlbuf.append("\t\t"+"<uri>");
-	xmlbuf.append("httpIndirect://db.systemsbiology.net:8080/halo/DataFetcher.py/");
-	xmlbuf.append(exptName);
-	xmlbuf.append(".ratio</uri>"+"\n");
-	xmlbuf.append("\t</dataset>"+"\n");
-
-	xmlbuf.append("\t");
-	xmlbuf.append("<dataset status='derived' type='lambdas'>"+"\n");
-	xmlbuf.append("\t\t"+"<uri>");
-	xmlbuf.append("httpIndirect://db.systemsbiology.net:8080/halo/DataFetcher.py/");
-	xmlbuf.append(exptName);
-	xmlbuf.append(".lambda</uri>"+"\n");
-	xmlbuf.append("\t</dataset>"+"\n");
-
-	for (int m=0;m<conds;m++){
-	  String conditionName = conditions[m];
-	  ec = (ExperimentCondition)condData.get(conditionName);
-	  Vector varVector = ec.getVariables();
-	  xmlbuf.append("\t");
-	  xmlbuf.append("<condition alias='");
-	  xmlbuf.append(ec.getConditionAlias());
-	  xmlbuf.append("'>"+"\n");
-	  for (int h=0;h<varVector.size();h++){
-		ConditionVariable cv = (ConditionVariable)varVector.elementAt(h);
-		String var = cv.getVariableTag();
-		xmlbuf.append("\t\t");
-		xmlbuf.append(var+"\n");
-	  }
-	  xmlbuf.append("\t"+"</condition>"+"\n");
-	}
-	xmlbuf.append("</experiment>"+"\n");
-	xmlWriter.write(xmlbuf.toString());
-	xmlWriter.close();
-
-  }
-//-----------------------------------------------------------------------------------------------
   public void mouseClicked(MouseEvent e) {}
 //-----------------------------------------------------------------------------------------------
   public void mousePressed(MouseEvent e) {}
@@ -443,7 +302,7 @@ public class ConditionInfoWizardPanel extends WizardPanel
 	  menu.setLightWeightPopupEnabled(false);
 	  menu.show(variableList, (int)p.getX(), (int)p.getY());
 	}
-  }
+  }// mouseReleased
 //-----------------------------------------------------------------------------------------------
 class ConditionListModel extends AbstractListModel {
   ExperimentCondition[] ec;
@@ -457,42 +316,37 @@ class ConditionListModel extends AbstractListModel {
 	return ec[m];
   }
   public int getSize(){return ec.length;}
-}
+}// class ConditionListModel
 //-----------------------------------------------------------------------------------------------
  public void display() {
-  }
+ }// display
 //-----------------------------------------------------------------------------------------------
   public boolean hasNext() {
-	return false;
-  }
+	return true;
+  }// hasNext
 //-----------------------------------------------------------------------------------------------
   public boolean validateNext(List list) {
 	boolean valid = true;
 	return valid;
-  }
+  }// validateNext
 //-----------------------------------------------------------------------------------------------
   public WizardPanel next() {
-	return new NullWizardPanel();
-  }
+	return new DataSaverPanel(getWizardContext());
+  }// next
 //-----------------------------------------------------------------------------------------------
   public boolean canFinish() {
+	return false;
+  }// canFinish
+//-----------------------------------------------------------------------------------------------
+  public boolean canCancel() {
 	return true;
-  }
+  }// canCancel
 //-----------------------------------------------------------------------------------------------
   public boolean validateFinish(List list) {
- 	JFileChooser fc = new JFileChooser(new File((String)wizardContext.getAttribute(WIZARD_FILE)));
- 	int returnVal = fc.showSaveDialog(this);
- 	if (returnVal ==JFileChooser.APPROVE_OPTION) {
- 	  String baseName = (fc.getSelectedFile()).toString();
- 	  setVariables();
- 	  writeFiles(baseName);
- 	}else {	  list.add("Need to specify output file name");
- 	  return false;
- 	}
 	return true;
   }
 //-----------------------------------------------------------------------------------------------
   public void finish() {
-  }
+  }// finish
 //-----------------------------------------------------------------------------------------------
 }
