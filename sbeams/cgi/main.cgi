@@ -63,8 +63,9 @@ sub showMainPage {
 
     print qq!
 	<BR>
-	You are successfully logged into the $DBTITLE system.  Please
-	choose your tasks from the menu bar on the left.<P>
+	You are successfully logged into the $DBTITLE system.<P>
+	Note your current user group above, and click [CHANGE] to change it.<P> 
+	Please choose a section/task from the menu bar on the left.<P>
 	<BR>
 	This system is still under active development.  Please be
 	patient and report bugs, problems, difficulties, suggestions to
@@ -74,9 +75,13 @@ sub showMainPage {
 
 	<UL>
 	<LI><A HREF="MicroArrayMain.cgi">SBEAMS - MicroArray</A>
+	<BR><BR>
 	<LI><A HREF="Proteomics/main.cgi">SBEAMS - Proteomics</A>
+	<BR><BR>
 	<LI><A HREF="Inkjet/main.cgi">SBEAMS - Inkjet</A>
+	<BR><BR>
 	<LI><A HREF="GEAP/main.cgi">SBEAMS - GEAP</A>
+	<BR><BR>
 	<LI><A HREF="tools/main.cgi">SBEAMS - Tools</A>
 	</UL>
 
