@@ -266,10 +266,10 @@ sub readOutFile {
 
     #### Switched from A-Z to \w due to a SEQUEST bug
     #$last_part =~ /(.+) [A-Z-\@]\..+\.[A-Z-\@]$/;
-    $last_part =~ /(.+) [\w-\@]\..+\.[\w\-\@]$/;
+    $last_part =~ /(.+) [\w\-\@]\..+\.[\w\-\@]$/;
     push(@result,$1);
     #$last_part =~ /.+ ([A-Z-\@]\..+\.[A-Z-\@])$/;
-    $last_part =~ /.+ ([\w-\@]\..+\.[\w\-\@])$/;
+    $last_part =~ /.+ ([\w\-\@]\..+\.[\w\-\@])$/;
     push(@result,$1);
 
 
