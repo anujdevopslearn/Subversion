@@ -491,7 +491,7 @@ $optionlist
                'Gene Symbol' => "$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=PS_biosequence_annotation&biosequence_annotation_id=\%$colnameidx{biosequence_annotation_id}V",
 	       'Gene Symbol_ATAG' => 'TARGET="Win1"',
 
-	       'Links' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetDomainHits?project_id=\%$colnameidx{project_id}V&biosequence_set_id=\%$colnameidx{biosequence_set_id}V&biosequence_name_constraint=\%$colnameidx{biosequence_accession}V&action=QUERYHIDE&display_options=ApplyChilliFilter,ShowExtraProteinProps",
+	       'Links' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetDomainHits?project_id=\%$colnameidx{project_id}V&biosequence_set_id=\%$colnameidx{biosequence_set_id}V&biosequence_accession_constraint=\%$colnameidx{biosequence_accession}V&action=QUERYHIDE&display_options=ApplyChilliFilter,ShowExtraProteinProps",
 	       'Links_ATAG' => 'TARGET="Win1"',
                'Links_ISNULL' => ' [View Domain Hits] ',
 
