@@ -387,19 +387,12 @@ sub handle_request {
 
 
   #### Build QUANTITATION constraint
-  my $quantitation_clause = "";
-  if ($parameters{quantitation_constraint}) {
-    if ($parameters{quantitation_constraint} =~ /^[\d\.]+$/) {
-      $quantitation_clause = "   AND d0_intensity/ISNULL(NULLIF(d8_intensity,0),0.01) = $parameters{quantitation_constraint}";
-    } elsif ($parameters{quantitation_constraint} =~ /^between\s+[\d\.]+\s+and\s+[\d\.]+$/i) {
-      $quantitation_clause = "   AND d0_intensity/ISNULL(NULLIF(d8_intensity,0),0.01) $parameters{quantitation_constraint}";
-    } elsif ($parameters{quantitation_constraint} =~ /^[><=][=]*\s*[\d\.]+$/) {
-      $quantitation_clause = "   AND d0_intensity/ISNULL(NULLIF(d8_intensity,0),0.01) $parameters{quantitation_constraint}";
-    } else {
-      print "<H4>Cannot parse Quantitation Constraint!  Check syntax.</H4>\n\n";
-      return;
-    }
-  }
+  my $quantitation_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SQ.ratio_mean",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Quantitation Constraint",
+    constraint_value=>$parameters{quantitation_constraint} );
+  return if ($quantitation_clause eq '-1');
 
 
   #### Build SORT ORDER
@@ -488,20 +481,10 @@ sub handle_request {
   #### If grouping by reference
   if ( $parameters{display_options} =~ /GroupReference/ ) {
     @column_array = (
-      ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
-      ["accessor","DBX.accessor","accessor"],
-      ["accessor_suffix","DBX.accessor_suffix","accessor_suffix"],
-      ["biosequence_accession","BS.biosequence_accession","Accession"],
-      ["reference","BS.biosequence_name","Reference"],
-      ["count","tABS.row_count","Count"],
-      ["average_quant","tABS.average_quant","Quant Avg"],
-      ["stdev_quant","tABS.stdev_quant","Quant StDev"],
-      ["n_quant","tABS.n_quant","Quant N"],
       @additional_columns,
-      ["biosequence_desc","BS.biosequence_desc","Reference Description"],
     );
-    $group_by_clause = " GROUP BY SH.reference";
-    $count_column = "COUNT(*) AS 'row_count',STR(AVG(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0)),10,2) AS 'average_quant',STR(STDEV(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0)),10,2) AS 'stdev_quant',SUM(CASE WHEN (NULLIF(d0_intensity,0.0) IS NULL OR NULLIF(d8_intensity,0.0) IS NULL) THEN 0 ELSE 1 END) AS 'n_quant'";
+    $group_by_clause = "";
+    $count_column = "";
 
   #### If no grouping
   } else {
@@ -516,6 +499,10 @@ sub handle_request {
       ["accessor_suffix","DBX.accessor_suffix","accessor_suffix"],
       ["biosequence_accession","BS.biosequence_accession","Accession"],
       ["protein_probability","STR(PROT.probability,7,3)","Protein Prob"],
+      ["n_peptides","PROT.n_peptides","Total Peptides"],
+      ["average_quant","STR(SQ.ratio_mean,7,3)","Quant Avg"],
+      ["stdev_quant","STR(SQ.ratio_standard_dev,7,3)","Quant StDev"],
+      ["n_quant","SQ.ratio_number_peptides","Quant N"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
     );
@@ -552,13 +539,19 @@ sub handle_request {
 	  FROM $TBPR_PROTEIN PROT
           JOIN $TBPR_PROTEIN_GROUP PG
                ON ( PROT.protein_group_id = PG.protein_group_id )
+          LEFT JOIN $TBPR_SUMMARY_QUANTITATION SQ
+               ON ( PROT.summary_quantitation_id = SQ.summary_quantitation_id )
 	  JOIN $TBPR_BIOSEQUENCE BS
                ON ( PROT.biosequence_id = BS.biosequence_id )
+          LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
+	  JOIN $TBPR_PROTEIN_SUMMARY PS
+	       ON ( PG.protein_summary_id = PS.protein_summary_id )
+	  JOIN $TBPR_SEARCH_BATCH_PROTEIN_SUMMARY SBPS
+	       ON ( PS.protein_summary_id = SBPS.protein_summary_id )
 	  JOIN $TBPR_SEARCH_BATCH SB
-	       ON ( BS.biosequence_set_id = SB.biosequence_set_id )
+	       ON ( SBPS.search_batch_id = SB.search_batch_id )
 	  JOIN $TBPR_PROTEOMICS_EXPERIMENT PE
                ON ( SB.experiment_id = PE.experiment_id )
-          LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
           $GO_join
 	 WHERE 1 = 1
 	$search_batch_clause
