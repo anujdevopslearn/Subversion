@@ -19,7 +19,7 @@ group_project_permission	Group Project Permission	admin	YES	$TB_GROUP_PROJECT_PE
 help_text	Help Text	admin	YES	$TB_HELP_TEXT	help_text_id		ManageTable.cgi?TABLE_NAME=help_text	"organization,organization_type,contact,contact_type,user_login,work_group,user_work_group,table_group_security,user_context,help_text"	
 table_property	Table Property	admin	NO	$TB_TABLE_PROPERTY	table_property_id				
 table_column	Table Column	admin	NO	$TB_TABLE_COLUMN	table_column_id				
-organism	Organism	admin	NO	$TB_ORGANISM	organism_id				
+organism	Organism	infrastructure	YES	$TB_ORGANISM	organism_id				
 hardware_type	Hardware Type	infrastructure	YES	$TB_HARDWARE_TYPE	hardware_type_id		ManageTable.cgi?TABLE_NAME=hardware_type	"protocol,hardware,software,protocol_type,hardware_type,software_type"	
 software_type	Software Type	infrastructure	YES	$TB_SOFTWARE_TYPE	software_type_id		ManageTable.cgi?TABLE_NAME=software_type	"protocol,hardware,software,protocol_type,hardware_type,software_type"	
 protocol_type	Protocol Type	infrastructure	YES	$TB_PROTOCOL_TYPE	protocol_type_id		ManageTable.cgi?TABLE_NAME=protocol_type	"protocol,hardware,software,protocol_type,hardware_type,software_type"	
