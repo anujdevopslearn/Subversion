@@ -169,7 +169,7 @@ sub printFile {
   my $file = $args{'file'};
   my $error = 0;
 
-  open(INFILE, "< $file") || $error = -1;
+  open(INFILE, "< $file") || sub{$error = -1;};
 
   if ($error == 0) {
       print qq~ <PRE> ~;
