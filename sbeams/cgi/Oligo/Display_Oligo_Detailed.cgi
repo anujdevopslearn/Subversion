@@ -118,14 +118,10 @@ sub main {
   }
 
 
+
+
 } # end main
 
-
-
-#my $gene = $q->param{Gene};
-
-#print "gene: " . $gene . "\n";
-#print "testtesttest";
 
 ###############################################################################
 # Handle Request
@@ -140,13 +136,34 @@ sub handle_request {
   my %parameters = %{$ref_parameters};
 
 
+
+
+
+
  
 # start the form
 # the statement shown defaults to POST method, and action equal to this script
 print $q->start_form;  
 
 # print the form elements
-  print "testtesttest";
+
+  my $gene = $parameters{Gene};
+
+  print "gene: " . $gene . "\n";
+  print "Oligo_type: " . $parameters{Oligo_type} . "\n";
+  print "Oligo_Sequence: " . $parameters{Oligo_Sequence} . "\n";
+  print "In_Stock: " . $parameters{In_Stock} . "\n";
+
+  
+
+  my $gc_percent = calc_gc(sequence=>$Oligo_Sequence);
+  print "GC PERCENT: " . $gc_percent;
+
+  my $sql = qq~
+            SELECT OA.in_stock, SO.comments, O.melting_temp, SO.start_coordinate, 
+	        ~;
+  
+  
 # end of the form
 print $q->end_form,
       $q->hr; 
@@ -166,3 +183,27 @@ print $q->end_form,
   return;
 
 } # end handle_request
+
+
+sub calc_gc {
+
+  my %args = @_;
+  my $SUB_NAME = "calc_gc";
+
+  my $seq = $args{'sequence'} || die "[$SUB_NAME]: sequence not passed";
+  my @array = split(//,$seq);
+
+  my $total = 0;
+  my $gc = 0;
+
+  $seq = lc $seq;
+  
+  foreach my $character (@array) {
+	if($character eq "g" || $character eq "c") {
+	  $gc = $gc + 1;
+    }
+    $total = $total + 1;
+  }
+
+  return $gc / $total;
+}
