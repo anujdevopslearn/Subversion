@@ -301,6 +301,71 @@ sub returnTableInfo {
 
 
 ###############################################################################
+    if ($table_name eq "MA_affy_array") {
+
+    	if ($info_key eq "BASICQuery") {
+            return qq~
+			SELECT afa.affy_array_id, 
+			afa.file_root, 
+			f.file_path, 
+			s.name AS "Array_Type", 
+			afa.processed_date,
+			afa.affy_array_sample_id,
+			u.username
+			FROM $TBMA_AFFY_ARRAY afa 
+			JOIN $TBMA_FILE_PATH f ON (afa.file_path_id=f.file_path_id)
+			JOIN $TBMA_SLIDE_TYPE s ON (afa.array_type_id = s.slide_type_id)
+			JOIN $TB_USER_LOGIN u ON (afa.user_id = u.user_login_id) 
+			WHERE afa.record_status !='D'
+			AND f.record_status!='D'
+			AND s.record_status!='D'
+			AND u.record_status!='D'  
+            ~;
+        }
+    
+    }
+
+###############################################################################
+    if ($table_name eq "MA_affy_array_sample") {
+	
+	if ($info_key eq "BASICQuery") {
+            return qq~
+    			SELECT afs.affy_array_sample_id,
+			p.name                   AS "Project_Name", 
+			afs.sample_tag,
+			afs.full_sample_name, 
+			afs.sample_group_name,
+			organ.organization, 
+			o.organism_name          AS "Organism",
+			afs.strain_or_line, 
+			afs.individual, 
+			MOT2.name                AS "Sex",
+			afs.age, 
+			afs.organism_part        AS "Organism_Part", 
+			afs.cell_line, 
+			afs.cell_type, 
+			afs.disease_state, 
+			afs.rna_template_mass    AS "RNA_template_mass__ng",
+			afs.affy_sample_protocol_ids,  
+			afs.protocol_deviations, 
+			afs.sample_description,
+			afs.sample_preparation_date, 
+			afs.treatment_description,
+			afs.comment
+			FROM $TBMA_AFFY_ARRAY_SAMPLE afs 
+			JOIN $TB_ORGANISM o ON (afs.organism_id = o.organism_id)
+			LEFT JOIN $TB_PROJECT p ON ( afs.project_id = p.project_id)
+			LEFT JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOT2.MGED_ontology_term_id = afs.sex_ontology_term_id ) 
+			LEFT JOIN $TB_ORGANIZATION organ ON (afs.sample_provider_organization_id = organ.organization_id)
+			WHERE
+			afs.record_status!='D'
+			AND o.record_status!='D' 
+			AND p.record_status != 'D'
+     		    ~;
+   	}
+   }
+ 
+###############################################################################
 
     #### Obtain main SBEAMS object and fall back to its TableInfo handler
     my $sbeams = $self->getSBEAMS();
