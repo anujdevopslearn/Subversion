@@ -338,10 +338,20 @@ sub buildOptionList {
     my $self = shift;
     my $sql_query = shift;
     my $selected_option = shift;
+    my $method_options = shift;
     my $selected_flag;
 
     my %selected_options;
-    my @tmp = split(",",$selected_option);
+
+    #### If we explicitly were called with an MULITOPIONLIST, separate
+    #### a comma-delimited list into several elements
+    my @tmp;
+    if ($method_options =~ /MULITOPIONLIST/) {
+      @tmp = split(",",$selected_option);
+    } else {
+      @tmp = ($selected_option);
+    }
+
     my $element;
     foreach $element (@tmp) {
       $selected_options{$element}=1;
@@ -405,10 +415,12 @@ sub displayQueryResult {
     #print join ("|",@{ $sth->{TYPE} }),"<BR>\n";
     my @TDformats=('BGCOLOR=#E0E0E0 NOWRAP');
 
+    my $types_ref = $self->decodeDataType($sth->{TYPE});
+
     if ( $flag eq "printable") {
 
       ShowHTMLTable { titles=>$sth->{NAME},
-	types=>$sth->{TYPE},
+	types=>$types_ref,
 	widths=>$sth->{PRECISION},
 	row_sub=>\&fetchNextRow,
         table_attrs=>'WIDTH=675 BORDER=1 CELLPADDING=2 CELLSPACING=2',
@@ -422,7 +434,7 @@ sub displayQueryResult {
     } else {
 
       ShowHTMLTable { titles=>$sth->{NAME},
-	types=>$sth->{TYPE},
+	types=>$types_ref,
 	widths=>$sth->{PRECISION},
 	row_sub=>\&fetchNextRow,
         table_attrs=>'BORDER=0 CELLPADDING=2 CELLSPACING=2',
@@ -450,6 +462,30 @@ sub fetchNextRow {
     my $flag = shift @_;
     if ($flag) {return $sth->execute;}  # do a "rewind"
     return $sth->fetchrow_array;
+}
+
+
+###############################################################################
+# decodeDataType
+###############################################################################
+sub decodeDataType {
+    my $self = shift;
+    my $types_ref = shift || die "decodeDataType: insufficient paramaters\n";
+
+    my %typelist = ( 1=>"varchar", 4=>"int", 2=>"numeric", 6=>"float",
+      11=>"date",-1=>"text" );
+    my ($i,$type,$newtype);
+    my @types = @{$types_ref};
+    my @newtypes;
+
+    for ($i = 0; $i <= $#types; $i++) {
+      $type = $types[$i];
+      $newtype = $typelist{$type} || $type;
+      push(@newtypes,$newtype);
+      #print "$i: $type --> $newtype\n";
+    }
+
+    return \@newtypes;
 }
 
 

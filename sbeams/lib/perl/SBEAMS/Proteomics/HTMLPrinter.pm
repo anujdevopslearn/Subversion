@@ -93,9 +93,11 @@ sub printPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/Proteomics/main.cgi">>Proteomics Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">>Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=protein_database">- Protein DB</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=project">- Project</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=proteomics_experiment">- Experiment</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=protein_database">- Protein DBs</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=project">- Projects</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=proteomics_experiment">- Experiments</a></td></tr>
+	<tr><td>&nbsp;</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi">- Browse Search Hits</a></td></tr>
 	</table>
 	</td>
 
