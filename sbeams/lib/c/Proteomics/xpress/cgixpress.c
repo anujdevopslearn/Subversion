@@ -538,7 +538,7 @@ void GET_PARAMETERS(struct QuanStruct *pQuan,
    int offset;
    void *ptr_value;
 
-   char sql_query[1024];
+   char sql_query[1024],tmp1[1024];
 
 
 #ifdef MACROGENICS
@@ -552,7 +552,7 @@ void GET_PARAMETERS(struct QuanStruct *pQuan,
    sprintf(sql_query,"
      USE %s
      SELECT d0_first_scan,d0_last_scan,d0_mass,d8_first_scan,d8_last_scan,d8_mass,
-            norm_flag,mass_tolerance,'/local/data/proteomics/'+SB.data_location+'/../'+
+            norm_flag,mass_tolerance,SB.data_location+'/../'+
             F.fraction_tag AS 'dat_file',S.assumed_charge
        FROM dbo.quantitation Q
        JOIN dbo.search_hit SH ON ( Q.search_hit_id = SH.search_hit_id )
@@ -645,6 +645,11 @@ void GET_PARAMETERS(struct QuanStruct *pQuan,
 	       if (iStrLength > SIZE_FILE) iStrLength = SIZE_FILE;
                strncpy(szDatFile, (char *)ptr_value, iStrLength);
                szDatFile[iStrLength] = '\0';
+	       if (szDatFile[0] != '/') {
+	         strcpy(tmp1,"/data3/sbeams/archive/");
+	         strcat(tmp1,szDatFile);
+	         strcpy(szDatFile,tmp1);
+               }
                if (DEBUG) printf("  %s = %s<BR>\n",column_name,szDatFile);
 	    }
 
