@@ -82,7 +82,6 @@ sub getProjectData {
   WHERE project_id IN ( $projects )
   GROUP BY project_id
   END_SQL
-  $log->debug( $sql );
 
 #  my $cgi_dir = "${CGI_BASE_DIR}/${subdir}/";
   my $cgi_dir = $CGI_BASE_DIR . '/Cytometry/';
@@ -96,7 +95,6 @@ sub getProjectData {
     </DIV></A>
     END_LINK
   }
-  $log->debug ( $project_data{397} );
   return ( \%project_data );
 }
 
