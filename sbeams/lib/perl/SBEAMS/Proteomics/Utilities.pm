@@ -288,7 +288,7 @@ sub readOutFile {
           print "$errstr Rank is out of range: $tmp\n";
         }
 
-        my $tmp = $tmparr[1];
+        $tmp = $tmparr[1];
         if ($tmp > 0 && $tmp <= 500) {
           $tmp =~ s/ //g;
           $tmp_hash{'prelim_score_rank'} = $tmp;
@@ -329,7 +329,7 @@ sub readOutFile {
           print "$errstr identified_ions is out of range: $tmp\n";
         }
 
-        my $tmp = $tmparr[1];
+        $tmp = $tmparr[1];
         if ($tmp > 0 && $tmp <= 1000) {
           $tmp =~ s/ //g;
           $tmp_hash{'total_ions'} = $tmp;
@@ -353,7 +353,7 @@ sub readOutFile {
           print "$errstr Reference is out of range: $tmp\n";
         }
 
-        my $tmp = $tmparr[1];
+        $tmp = $tmparr[1];
         if ($tmp > 0 && $tmp <= 1000) {
           $tmp =~ s/[ \+]//g;
           $tmp_hash{'additional_proteins'} = $tmp;
