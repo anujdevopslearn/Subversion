@@ -98,6 +98,11 @@ DBPREFIX{UESC}          = UESC.dbo.
 #### Set the raw data directory location as a function of module.
 RAW_DATA_DIR{Proteomics} = /raw/datasets/root/location
 
+#### Period of time in hours before login sessions expire
+LOGIN_DURATION         = 24
+
+#### If true (1), must reauthenticate upon quitting and restarting browser
+SESSION_REAUTH         = 0
 
 [main]
 DBVERSION              = <FONT COLOR=red>Primary</FONT>
