@@ -11,3 +11,6 @@ GT_dna_type	DNA Type	Genotyping_infrastructure	YES	$TBGT_DNA_TYPE	dna_type_id		M
 GT_pooling_set	Pooling Set	Genotyping_infrastructure	YES	$TBGT_POOLING_SET	pooling_set_id		ManageTable.cgi?TABLE_NAME=GT_pooling_set	GT_pooling_set	
 GT_requested_genotyping_assay	Requested Genotyping Assay	Genotyping_infrastructure	YES	$TBGT_REQUESTED_GENOTYPING_ASSAY	requested_assay_id		ManageTable.cgi?TABLE_NAME=GT_requested_genotyping_assay	GT_requested_genotyping_assay	
 GT_cost_scheme	Cost Scheme	Genotyping_infrastructure	YES	$TBGT_COST_SCHEME	cost_scheme_id		ManageTable.cgi?TABLE_NAME=GT_cost_scheme	GT_cost_scheme	
+GT_GetGenotypesMS	Get Genotypes	QUERY		NA	NA		GetGenotypesMS		
+GT_microsatellite_genotype_call	Microsatellite Genotype Call	Genotyping_infrastructure	NO	$TBGT_MICROSATELLITE_GENOTYPE_CALL	microsatellite_genotype_call_id		ManageTable.cgi?TABLE_NAME=GT_microsatellite_genotype_call		
+GT_manual_genotype_call	Manual Genotype Call	Genotyping_infrastructure	YES	$TBGT_MANUAL_GENOTYPE_CALL	manual_genotype_call_id		ManageTable.cgi?TABLE_NAME=GT_manual_genotype_call	GT_manual_genotype_call	
