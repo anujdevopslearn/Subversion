@@ -859,6 +859,10 @@ sub postProcessResultset {
   my %conditions = getExperimentNames($parameters{search_batch_id});
   my @conditions = sort(values(%conditions));
 
+  #### Add a combined pseudo-condition
+  push(@conditions,'combined');
+
+
   #### Get some column number indexes
   my $search_batch_id_column_index = $resultset_ref->{column_hash_ref}->{search_batch_id};
   my $biosequence_name_column_index = $resultset_ref->{column_hash_ref}->{biosequence_name};
@@ -968,6 +972,7 @@ sub postProcessResultset {
   my @new_data_array;
   foreach my $biosequence_name (keys(%data)) {
     my @row;
+    my %summaries;
 
     my ($first_condition) = keys(%{$data{$biosequence_name}});
 
@@ -983,12 +988,57 @@ sub postProcessResultset {
     #### Push the data columns onto the array
     foreach my $data_column (@data_columns) {
       foreach my $condition (@conditions) {
-        my $column_index = $resultset_ref->{column_hash_ref}->{$data_column};
-        if (defined($data{$biosequence_name}->{$condition}->[$column_index])) {
-          push(@row,$data{$biosequence_name}->{$condition}->[$column_index]);
-        } else {
-          push(@row,'');
-        }
+	if ($condition eq 'combined') {
+	  my $combined_value = '';
+
+	  #### Sum the total number of peptides
+	  if ($data_column eq 'n_peptides') {
+	    $combined_value = 0;
+	    foreach my $el (@{$summaries{$data_column}}) {
+	      $combined_value += $el;
+	    }
+	  }
+
+	  #### Sum the total number of quantitated peptides
+	  if ($data_column eq 'n_quant') {
+	    $combined_value = 0;
+	    foreach my $el (@{$summaries{$data_column}}) {
+	      $combined_value += $el;
+	    }
+	  }
+
+	  #### Combine the average quantitation
+	  #### Not finished!!!!
+	  if ($data_column =~ /(average_quantxx|stdev_quantxx)/) {
+	    my $n_averages = scalar(@{$summaries{average_quant}});
+	    my $n_stdevs = scalar(@{$summaries{stdev_quant}});
+
+	    $combined_value = 0.0;
+	    my $n = 0;
+	    for (my $i=0; $i<$n_averages; $i++) {
+	      $combined_value += 1;
+	      $n++;
+	    }
+	    $combined_value /= $n;
+	  }
+
+	  push(@row,$combined_value);
+
+	} else {
+	  my $column_index = $resultset_ref->{column_hash_ref}->{$data_column};
+	  my $this_value = $data{$biosequence_name}->{$condition}->[$column_index];
+	  if (defined($this_value)) {
+	    push(@row,$this_value);
+	    unless (defined($summaries{$data_column})) {
+	      my @tmp = ();
+	      $summaries{$column_index} = \@tmp;
+	    }
+	    push(@{$summaries{$data_column}},$this_value);
+
+	  } else {
+	    push(@row,'');
+	  }
+	}
       }
     }
 
