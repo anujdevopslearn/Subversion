@@ -204,7 +204,7 @@ sub handle_request {
   #### Print out project detail stuff, if current or default project exists
 
   my $project_id = $sbeams->getCurrent_project_id();
-  $project_id ||= $sbeams->getDefault_project_id();
+  # $project_id ||= $sbeams->getDefault_project_id();
   if ( $project_id ) {
     print $sbeams->getProjectDetailsTable( project_id => $project_id ); 
   }
