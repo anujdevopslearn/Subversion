@@ -297,8 +297,7 @@ sub displayIntro
      if (@rows)
      {
        
-       print qq~ <BR><BR><font size ="2">Looking for a specific <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=_specifyRun"><font size =" 4 "> Cytometry Sort</a>?</font><br>~;
-       print qq ~You can search based on Sample Name (like), Date or Sort Entity<br>~;       
+       print qq~ <BR><BR><font size ="2">Search for a  <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=_specifyRun"><font size =" 4 "> Cytometry Run</a>?</font><br>~;
        print "<br><center><h4> Current Cytometry data for this project</h4></center><br>";
        print "<center><table border=2>"; 
        foreach my $row(@rows)
