@@ -2,6 +2,12 @@
 #-------------------------------------------------------------------------------
 plugin.0.load=csplugins.isb.pshannon.gaggle.cy.CyGagglePlugin
 plugin.2.load=csplugins.isb.dtenenbaum.jython.PyConsolePlugin
-#plugin.layout.load=csplugins.trial.pshannon.Y2Layouters
+plugin.layout.load=csplugins.trial.pshannon.Y2Layouters
+plugin.int.load=csplugins.isb.dreiss.getInteractions.GetInteractions
+plugin.seq.load=csplugins.isb.dreiss.sequence.SequencePlugin
+plugin.hom.load=csplugins.isb.dreiss.sequence.HomologPlugin
+plugin.syn.load=csplugins.isb.dreiss.sequence.SynonymPlugin
+
+
 #----------------------------------- vizmapper
 visualStyle=Affy_Expression
