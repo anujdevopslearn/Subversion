@@ -785,7 +785,7 @@ sub loadBiosequence {
   #### working.  This will  need to populate biosequence_external_xref in the
   #### future, using an INSERT, INSERT, UPDATE triplet for new sequences.
   #### FIX ME!!!
-  if ($module eq 'Microarray') {
+  if ($module eq 'Microarray' || $module eq 'Biosap') {
       #print "$rowdata_ref->{dbxref_id}\t";
       delete ($rowdata_ref->{biosequence_accession});
       delete ($rowdata_ref->{dbxref_id});
