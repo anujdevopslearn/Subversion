@@ -1196,6 +1196,7 @@ sub deleteRecordsAndChildren {
   my $DATABASE = $args{'database'} || '';
   my $QUIET = $args{'quiet'} || 0;
   my $TESTONLY = $args{'testonly'} || 0;
+  my $keep_parent_record = $args{'keep_parent_record'} || 0;
 
   print "  Entering deleteRecordsAndChildren\n\n" if ($VERBOSE > 1);
 
@@ -1349,40 +1350,42 @@ sub deleteRecordsAndChildren {
 
 
   #### All children should be gone we hope, so finally delete these records
+  unless ($keep_parent_record) {
 
-  #### Get the number of records to delete and set the first and last
-  my $n_ids = scalar(@{$delete_PKs});
-  my $first_element = 0;
-  my $last_element = $n_ids - 1;
+     #### Get the number of records to delete and set the first and last
+     my $n_ids = scalar(@{$delete_PKs});
+     my $first_element = 0;
+     my $last_element = $n_ids - 1;
 
-  #### If the user requested to delete in batches, possibly reduce the last
-  if ($delete_batch && $n_ids > $delete_batch) {
-    $last_element = $delete_batch - 1;
-  }
+     #### If the user requested to delete in batches, possibly reduce the last
+     if ($delete_batch && $n_ids > $delete_batch) {
+       $last_element = $delete_batch - 1;
+     }
 
-  #### While there are still records to delete, do it
-  while ($first_element < $n_ids) {
-    #### Get the records to delete in this batch
-    my @ids = @{$delete_PKs};
-    @ids = @ids[$first_element..$last_element];
+     #### While there are still records to delete, do it
+     while ($first_element < $n_ids) {
+       #### Get the records to delete in this batch
+       my @ids = @{$delete_PKs};
+       @ids = @ids[$first_element..$last_element];
 
-    #### Create the SQL and do the DELETE
-    my $parent_PK = $table_PK_column_names{$table_name} ||
-      "${table_name}_id";
-    my $sql = "DELETE FROM ${DATABASE}$table_name WHERE $parent_PK IN (".
-      join(",",@ids).")";
-    print "$sql\n\n" if ($VERBOSE > 1);
-    print "  DELETING FROM $table_name (batch $first_element / $n_ids)\n"
-      if ($VERBOSE);
-    print "." unless ($QUIET || $VERBOSE);
-    $self->executeSQL($sql) unless ($TESTONLY);
+       #### Create the SQL and do the DELETE
+       my $parent_PK = $table_PK_column_names{$table_name} ||
+         "${table_name}_id";
+       my $sql = "DELETE FROM ${DATABASE}$table_name WHERE $parent_PK IN (".
+         join(",",@ids).")";
+       print "$sql\n\n" if ($VERBOSE > 1);
+       print "  DELETING FROM $table_name (batch $first_element / $n_ids)\n"
+         if ($VERBOSE);
+       print "." unless ($QUIET || $VERBOSE);
+       $self->executeSQL($sql) unless ($TESTONLY);
 
-    #### Update the first and last batch block pointers if relevant
-    last unless ($delete_batch);
-    $first_element += $delete_batch;
-    $last_element += $delete_batch;
-    $last_element = $n_ids - 1 if ($last_element > $n_ids - 1);
-  }
+       #### Update the first and last batch block pointers if relevant
+       last unless ($delete_batch);
+       $first_element += $delete_batch;
+       $last_element += $delete_batch;
+       $last_element = $n_ids - 1 if ($last_element > $n_ids - 1);
+     }
+  } #end delete Parent Record and PKs
 
   return 1;
 
