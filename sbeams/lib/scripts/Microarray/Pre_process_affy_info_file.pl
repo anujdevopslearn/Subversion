@@ -257,7 +257,9 @@ sub rename_cel_files {
 		next unless ($orginal_file_name);
 		my $new_file_name = "${prefix}_$orginal_file_name";
 		if ($RUN_MODE eq 'make_new'){	
+			print "ORGINAL NAME '$orginal_file_name' NEW '$new_file_name'\n";
 			if ($orginal_file_name && -e "$BASE_DIRECTORY/$orginal_file_name"){
+				print "ORGINAL NAME '$orginal_file_name' NEW '$new_file_name'\n";
 				move("$BASE_DIRECTORY/$orginal_file_name", "$BASE_DIRECTORY/$new_file_name") or
 					die "Cannot Move file '$BASE_DIRECTORY/$orginal_file_name'\n";
 			
@@ -312,6 +314,11 @@ sub check_for_minimal_amount_of_data {
 	my %args = @_;
 	my $record_href = $args{record};
 	#print Dumper($record_href);
+	
+	#Check to make sure the file name contains no strange characters
+	if($record_href->{'CEL FILE NAME'} =~ /([^a-zA-Z0-9._-])/g){
+	   die "FILE NAMES CANNOT CONTAIN '$1' CHARACTERS in FILE NAME '$record_href->{'CEL FILE NAME'}'\n";
+	}
 	
 	#check for the array_type
 	my $array_type_header = 'Array Type';
