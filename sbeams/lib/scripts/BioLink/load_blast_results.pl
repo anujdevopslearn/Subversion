@@ -197,13 +197,23 @@ sub handleRequest {
 
     #### Define a hash to hold the row data
     my %rowdata_template;
+    my $cnt = 0;
 
     #### Get biosequence_id of this query
     my ($query_biosequence_name) = split(/\(/,$blast->query);
     $query_biosequence_name =~ s/\s//g;
     if ($query_biosequence_ids{$query_biosequence_name}) {
-      $rowdata_template{query_biosequence_id} =
-        $query_biosequence_ids{$query_biosequence_name};
+      if ($query_biosequence_ids{$query_biosequence_name} > 0) {
+        $rowdata_template{query_biosequence_id} =
+          $query_biosequence_ids{$query_biosequence_name};
+      } else {
+        print "WARNING: Duplicate query_biosequence_name!! Skipping!\n";
+        $cnt = 999;
+      }
+
+      #### Mark this one as done
+      $query_biosequence_ids{$query_biosequence_name} = -1;
+
     } else {
       die("ERROR: Unable to get a biosequence_id in query for ".
           "'$query_biosequence_name'");
@@ -215,7 +225,6 @@ sub handleRequest {
 
 
     #### Loop over all the matches for this query
-    my $cnt = 0;
     while ($hit = $blast->nextSbjct) {
 
       #### Only load the first 20 hits regardless of score (?)
