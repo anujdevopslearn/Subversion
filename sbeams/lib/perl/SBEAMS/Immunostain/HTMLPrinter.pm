@@ -86,6 +86,16 @@ sub displayGuestPageHeader
 
   my $navigation_bar = $args{'navigation_bar'} || "YES";
 
+  my $LOGIN_URI = "$SERVER_BASE_DIR$ENV{REQUEST_URI}";
+  if ($LOGIN_URI =~ /\?/) {
+    $LOGIN_URI .= "&force_login=yes";
+  } else {
+    $LOGIN_URI .= "?force_login=yes";
+  }
+
+  my $pad = '&nbsp;' x 5;
+  my $LOGIN_LINK = qq~$pad<A HREF="$LOGIN_URI" class="Nav_link">Login to database</A><BR>~;
+
   #### Obtain main SBEAMS object and use its http_header
   my $sbeams = $self->getSBEAMS();
   my $http_header = $sbeams->get_http_header();
@@ -97,6 +107,7 @@ sub displayGuestPageHeader
   my @page = split( "\r", $response->content() );
   my $skin = '';
   for ( @page ) {
+    $_ =~ s/\<\!-- LOGIN_LINK --\>/$LOGIN_LINK/;
     last if $_ =~ / End of main content/;
     $skin .= $_;
   }
