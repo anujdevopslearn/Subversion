@@ -1718,7 +1718,8 @@ sub parse_input_parameters {
 
     #### If the type is a multioptionlist, extract as an array but
     #### turn into a comma separated list
-    if ($ref_input_types->{$element}.'' eq "multioptionlist") {
+    my $input_type = $ref_input_types->{$element} || '';
+    if ($input_type eq "multioptionlist") {
       my @tmparray = $q->param($element);
 
       #### Remove any leading or trailing blank items
