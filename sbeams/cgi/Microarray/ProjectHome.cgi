@@ -240,9 +240,7 @@ var is_opera = (agt.indexOf("opera") != -1);
 var is_mac    = (agt.indexOf("mac")!=-1);
 var is_sun   = (agt.indexOf("sunos")!=-1);
 var is_linux = (agt.indexOf("inux")!=-1);
-var is_unix  = ((agt.indexOf("x11")!=-1) || is_sun || is_irix || is_hpux || 
-		is_sco ||is_unixware || is_mpras || is_reliant || 
-		is_dec || is_sinix || is_aix || is_linux || is_bsd || is_freebsd);
+var is_unix  = ((agt.indexOf("x11")!=-1) || is_linux);
 
 //-->
 </SCRIPT>
