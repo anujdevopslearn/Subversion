@@ -599,9 +599,17 @@ sub loadBiosequence {
   }
 
 
-  #### If the biosequence_desc bloats beyond 1024, limit it
+  #### If the biosequence_name bloats beyond 255, truncate it
+  if (length($rowdata_ref->{biosequence_name}) > 255) {
+    print "\nWARNING: truncating name for ".
+      $rowdata_ref->{biosequence_name}." to 255 characters\n";
+    $rowdata_ref->{biosequence_name} = substr($rowdata_ref->{biosequence_name},
+      0,255);
+  }
+
+  #### If the biosequence_desc bloats beyond 1024, truncate it
   if (length($rowdata_ref->{biosequence_desc}) > 1024) {
-    print "\nWARNING: truncanting description for ".
+    print "\nWARNING: truncating description for ".
       $rowdata_ref->{biosequence_name}." to 1024 characters\n";
     $rowdata_ref->{biosequence_desc} = substr($rowdata_ref->{biosequence_desc},
       0,1024);
