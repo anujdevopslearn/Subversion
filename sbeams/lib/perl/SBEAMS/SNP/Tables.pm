@@ -25,6 +25,7 @@ use vars qw(@ISA @EXPORT
     $TBSN_ALLELE
     $TBSN_ALLELE_FREQUENCY
     $TBSN_ALLELE_BLAST_STATS
+    $TBSN_QUERY_SEQUENCE
 
     $TBSN_QUERY_OPTION
 
@@ -46,7 +47,7 @@ require Exporter;
     $TBSN_ALLELE
     $TBSN_ALLELE_FREQUENCY
     $TBSN_ALLELE_BLAST_STATS
-
+    $TBSN_QUERY_SEQUENCE
 
     $TBSN_QUERY_OPTION
 
@@ -65,6 +66,7 @@ $TBSN_SNP_INSTANCE          = 'SNP.dbo.snp_instance';
 $TBSN_ALLELE                = 'SNP.dbo.allele';
 $TBSN_ALLELE_FREQUENCY      = 'SNP.dbo.allele_frequency';
 $TBSN_ALLELE_BLAST_STATS    = 'SNP.dbo.allele_blast_stats';
+$TBSN_QUERY_SEQUENCE        = 'SNP.dbo.query_sequence';
 
 $TBSN_QUERY_OPTION          = 'SNP.dbo.query_option';
 
