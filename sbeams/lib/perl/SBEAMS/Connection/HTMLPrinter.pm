@@ -27,10 +27,12 @@ use vars qw($current_contact_id $current_username
              $current_project_id $current_project_name $current_user_context_id);
 use CGI::Carp qw(fatalsToBrowser croak);
 use SBEAMS::Connection::DBConnector;
+use SBEAMS::Connection::Log;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
-use SBEAMS::Connection::Log;
+use SBEAMS::Connection::TabMenu;
+
 use Env qw (HTTP_USER_AGENT);
 
 my $log = SBEAMS::Connection::Log->new();
@@ -753,6 +755,62 @@ sub printCGIParams {
 
 } # end printCGIParams
 
+sub getMainPageTabMenu {
+  my $self = shift;
+  my %args = @_;
+
+  # Create new tabmenu item.
+  my $tabmenu = SBEAMS::Connection::TabMenu->new( cgi => $args{cgi} );
+
+  # Add tabs
+  $tabmenu->addTab( label    => 'Current Project', 
+                    helptext => 'View details of current Project' );
+  $tabmenu->addTab( label    => 'My Projects', 
+                    helptext => 'View all projects owned by me' );
+  $tabmenu->addTab( label    => 'Accessible Projects',
+                    helptext => 'View projects I have access to' );
+  $tabmenu->addTab( label    => 'Recent Resultsets',
+                    helptext => 'View recent SBEAMS resultsets' );
+
+  my $content = ''; # Scalar to hold content.
+
+  # conditional block to exec code based on selected tab.
+
+  if (  $tabmenu->getActiveTabName() eq 'Current Project' )  { 
+
+    my $project_id = $self->getCurrent_project_id();
+    if ( $project_id ) {
+      $content = $self->getProjectDetailsTable( project_id => $project_id ); 
+    } else {
+      my $pad = '&nbsp;' x 5;
+      $content = $pad . $self->makeInfoText('No current project selected');
+    }
+
+  } elsif ( $tabmenu->getActiveTabName() eq 'My Projects' ){
+
+    $content = $self->getProjectsYouOwn();
+
+  } elsif ( $tabmenu->getActiveTabName() eq 'Accessible Projects' ){
+
+    $content = $self->getProjectsYouHaveAccessTo();
+
+  } elsif ( $tabmenu->getActiveTabName() eq 'Recent Resultsets' ){
+
+    $content = $self->getRecentResultsets();
+
+  } else {
+
+    my $pad = '&nbsp;' x 5;
+    $content = $pad . $self->makeInfoText('Unknown tab selected');
+    return \$content;
+
+  }
+
+  $tabmenu->addContent( $content );
+  my $HTML = "$tabmenu";
+  return \$HTML;
+
+}
 
 
 
@@ -800,6 +858,15 @@ sub makeInactiveText {
   my $self = shift;
   my $text = shift;
   return( "<FONT COLOR=#AAAAAA>$text</FONT>" );
+}
+
+#+ 
+# Utility method, returns text formatted for INFO messages
+#-
+sub makeInfoText {
+  my $self = shift;
+  my $text = shift;
+  return( "<I><FONT COLOR=#666666>$text</FONT></I>" );
 }
 
 sub getModuleButton {
