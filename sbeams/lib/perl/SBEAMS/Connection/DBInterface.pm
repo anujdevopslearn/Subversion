@@ -5257,7 +5257,7 @@ sub getProjectsYouHaveAccessTo {
 
   # Get list of accessible projects from approved sbeams routine.
   my @accessible = $self->getAccessibleProjects( privilege_level => DATA_READER );
-  my $accessible_projects = join ',', @accessible;
+  my $accessible_projects = join(',', @accessible) || 0;
 
   # Build SQL to fetch other data
   my $sql =<<"  END_SQL";
