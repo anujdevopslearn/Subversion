@@ -156,7 +156,7 @@ if ( $SBEAMS_INSTANCE =~ /\/dev1\// ) {
   $UPLOAD_DIR             = "/net/dblocal/data/mysqldev1/sbeams";
 
 } elsif ( $SBEAMS_INSTANCE =~ /\/macrogenics\// ) {
-  $DBVERSION              = '<FONT COLOR=red>Macrogenics</FONT>';
+  $DBVERSION              = 'Macrogenics';
   $BGCOLOR                = '#BFD8D8';
   $HTML_BASE_DIR          = '/macrogenics/sbeams';
   $PHYSICAL_BASE_DIR      = "/net/dblocal/www/html/macrogenics/sbeams";
