@@ -78,7 +78,8 @@ PS_domain_match	20	score	Score	real	4	0	Y		N			Y	text	20		Y	Y	N	Score for the ma
 PS_domain_match	21	z_score	Z Score	real	4	0	Y		N			Y	text	20		Y	Y	N	Z score indicating likelihood of a false match
 PS_domain_match	22	second_match_name	Second Match Name	varchar	255	0	Y		N			Y	text	20		Y	Y	N	Name of the matched sequence
 PS_domain_match	23	second_match_accession	Second Match Accession	varchar	50	0	Y		N			Y	text	20		Y	Y	N	Accession number for this match in some external database designated above
-PS_domain_match	24	match_annotation	Match Annotation	varchar	255	0	Y		N			Y	text	20		Y	Y	N	Name of the matched sequence		
+PS_domain_match	24	second_match_type_id	Second Match Type	int	4	0	Y		N	PS_domain_match_type	domain_match_type_id	Y	optionlist			Y	Y	N	Type of hit against which this second match was identified		
+PS_domain_match	25	match_annotation	Match Annotation	varchar	255	0	Y		N			Y	text	20		Y	Y	N	Name of the matched sequence		
 PS_domain_match_type	1	domain_match_type_id	Domain Match Type	int	4	0	N		Y							N	N				pkDEFAULT
 PS_domain_match_type	2	domain_match_type_name	Domain Match Type Name	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Name of the type of the match		
 PS_domain_match_type	3	description	Domain Match Type Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this match type		
@@ -141,7 +142,7 @@ PS_test_table	6	EC_numbers	EC Numbers	varchar	255	0	Y		N			N	text	50		Y	Y	N	EC N
 PS_test_table	7	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 PS_test_table	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 PS_test_table	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-PS_test_table	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PS_test_table	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
 PS_test_table	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
 PS_test_table	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
 PS_test_table	13	record_status	Record Status	char	1	0	N	N	N							N	N			
@@ -174,4 +175,4 @@ PS_GetDomainHit	12	e_value_constraint	Expectation Value Constraint									N	tex
 PS_GetDomainHit	13	transmembrane_class_constraint	Transmembrane Class Constraint									N	multioptionlist	3		Y	Y	N	Constraint for the transmembrane class as annotated by TMHMM and SignalP	"SELECT DISTINCT transmembrane_class,transmembrane_class FROM $TBPS_BIOSEQUENCE_PROPERTY_SET ORDER BY transmembrane_class"
 PS_GetDomainHit	14	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	Y	N	"Constraint for the number of transmembrane regions (based on a 19-residue wide sliding window of hydropathy indexes above 1.58).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
 PS_GetDomainHit	15	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBPS_QUERY_OPTION WHERE option_type = 'GDH_display_options' ORDER BY sort_order,option_value"
-PS_GetDomainHit	16	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."
+PS_GetDomainHit	16	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."	
