@@ -1098,22 +1098,37 @@ sub processEntryForm {
     }
 
 
+    #### Check to see if there is project permission control over this table
+    my $parent_project_id = $sbeamsMOD->getParentProject(
+      table_name => $TABLE_NAME,
+      action => $apply_action,
+      parameters_ref => \%parameters,
+    );
+
+
     # Execute the SQL statement extract status and PK from result
     @returned_information = $sbeams->applySqlChange(
-      $sql_query,
-      $current_contact_id,
-      $TABLE_NAME,
-      "$PK_COLUMN_NAME=$parameters{$PK_COLUMN_NAME}",
-      $PK_COLUMN_NAME
+      SQL_statement => $sql_query,
+      current_contact_id => $current_contact_id,
+      table_name => $TABLE_NAME,
+      record_identifier => "$PK_COLUMN_NAME=$parameters{$PK_COLUMN_NAME}",
+      PK_column_name => $PK_COLUMN_NAME,
+      parent_project_id => $parent_project_id,
     );
+
+
+    #### Extract the returned status and relevant PK value from result
     my $returned_request_status = shift @returned_information;
     my $returned_request_PK = shift @returned_information;
 
+
+    #### Put the returned PK into parameters.  Why not always do this?
     if ($apply_action eq "INSERT") {
       $parameters{$PK_COLUMN_NAME}=$returned_request_PK;
     }
 
 
+    #### Display/return the result of the attempted change
     printAttemptedChangeResult($apply_action,$returned_request_status,
       @returned_information);
 
@@ -1311,9 +1326,19 @@ sub printAttemptedChangeResult {
         </TD></TR></TABLE>
         $LINESEPARATOR
         <P>
+    !;
+
+    #### If the change was not successful, just show a simple [GO BACK]
+    if ($result ne 'SUCCESSFUL') {
+      print "$back_button<BR>";
+      return;
+    }
+
+    #### If it was successful, suggest some things the user might do next
+    print qq!
         <CENTER><B>
-        You can click on BACK to INSERT/UPDATE another record with similar
-        values $back_button
+        You can click [Go Back] to see the form again, make a few changes,
+        and INSERT another similar record $back_button
         <BR><BR><BR>
         [ <A HREF="$CGI_BASE_DIR/${subdir}$PROGRAM_FILE_NAME">View $CATEGORY Table</A>]
         </B></CENTER><BR><BR><BR><BR>
