@@ -1,27 +1,15 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
 <HTML>
-
-<HEAD>
-  <TITLE>SBEAMS Home Page</TITLE>
-
 <?php
+  /* $Id$ */
+  $TITLE="SBEAMS Home Page";
+
   include("$DOCUMENT_ROOT/includes/style.inc.php");
-?>
 
-
-<?php
   include("$DOCUMENT_ROOT/includes/header.inc.php");
-?>
 
-
-<td align="center"><H1>SBEAMS Home Page</H1></td>
-</tr>
-
-
-<?php
   include("$DOCUMENT_ROOT/includes/navbar.inc.php");
 ?>
-
 
 
 
