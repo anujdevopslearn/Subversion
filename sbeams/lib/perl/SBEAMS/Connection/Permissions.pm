@@ -1168,27 +1168,34 @@ sub getProjectGroups {
     die ( "Missing required parameter $param" ) unless $args{$param};
   }
 
+  my @allgroups;
   # Get list of groups to which user belongs
+  my @group_ids = $self->selectSeveralColumns( <<"  END_SQL" );
+  SELECT work_group_name, wg.work_group_id
+  FROM $TB_USER_WORK_GROUP uwg
+  JOIN $TB_WORK_GROUP wg
+  ON wg.work_group_id = uwg.work_group_id
+  WHERE uwg.contact_id = $args{contact_id}
+  AND wg.record_status != 'D'
+  AND uwg.record_status != 'D'
+  END_SQL
+
+  foreach my $grp ( @group_ids ) {
   # where group has <= specified permissions on parent project
   my $sql =<<"  END_SQL";
-  SELECT wg.work_group_name
-  FROM $TB_GROUP_PROJECT_PERMISSION gpp
-       JOIN $TB_USER_WORK_GROUP uwg
-       ON gpp.work_group_id = uwg.work_group_id
-       JOIN $TB_WORK_GROUP wg
-       ON gpp.work_group_id = wg.work_group_id
-       WHERE gpp.project_id = $args{parent_project_id}
-       AND uwg.contact_id = $args{contact_id}
-       AND gpp.privilege_id >= $args{privilege}
-       AND gpp.record_status != 'D'
-       AND uwg.record_status != 'D'
+  SELECT privilege_id
+  FROM $TB_GROUP_PROJECT_PERMISSION
+  WHERE work_group_id = $grp->[1]
+  AND project_id = $args{parent_project_id}
+  AND record_status != 'D'
   END_SQL
-  $log->debug( $sql );
-
-  my @row = $self->selectOneColumn( $sql );
+  my ( $priv ) = $self->selectOneColumn( $sql );
+  $priv ||= 9999;
+  push( @allgroups, [ @{$grp}, $priv ]  )
+  }
 
   # return reference to group array
-  return \@row;
+  return \@allgroups;
   
 }
 
@@ -1206,45 +1213,70 @@ sub getTableGroups {
   my $self = shift;
   my %args = @_;
   
-  # Need to know what user, group, project and privilege we're looking for.
+  # Need to know what user, table and privilege we're looking for.
   # These must be passed (rather than determined) to avoid mismatches
-  foreach my $param ( qw( contact_id
-                          privilege
-                          table_name
-                          work_group_id )
-                    ) {
-
+  foreach my $param ( qw( contact_id privilege table_name ) ) {
     die ( "Missing required parameter $param" ) unless $args{$param};
   }
 
   # Get list of groups to which user belongs
   # where group has <= specified permissions table in question
   my $sql =<<"  END_SQL";
-  SELECT wg.work_group_name
-  FROM $TB_WORK_GROUP wg 
-    JOIN $TB_USER_WORK_GROUP uwg
-      ON wg.work_group_id = uwg.work_group_id
-    JOIN $TB_TABLE_GROUP_SECURITY tgs
-      ON wg.work_group_id = tgs.work_group_id
-    JOIN $TB_TABLE_PROPERTY tp
-      ON tgs.table_group = tp.table_group
+  SELECT wg.sort_order,
+         wg.work_group_name,
+         wg.work_group_id,
+         CASE WHEN tgs.privilege_id IS NULL 
+              THEN 9999 
+              ELSE tgs.privilege_id 
+         END AS tgs_priv,
+         ul.privilege_id AS ul_priv,
+         uwg.privilege_id AS uwg_priv,
+         uc.privilege_id AS uc_priv
+  FROM $TB_USER_LOGIN ul
+  LEFT OUTER JOIN $TB_USER_CONTEXT uc
+    ON ul.contact_id = uc.contact_id
+  INNER JOIN $TB_USER_WORK_GROUP uwg
+    ON uwg.contact_id = ul.contact_id
+    JOIN $TB_WORK_GROUP wg
+    ON wg.work_group_id = uwg.work_group_id
+    LEFT OUTER JOIN $TB_TABLE_GROUP_SECURITY tgs
+    ON wg.work_group_id = tgs.work_group_id
+    LEFT OUTER JOIN $TB_TABLE_PROPERTY tp
+    ON tgs.table_group = tp.table_group
   WHERE tp.table_name = '$args{table_name}'
     AND uwg.contact_id = $args{contact_id}
+    AND ul.privilege_id <= $args{privilege}
     AND uwg.privilege_id <= $args{privilege}
     AND tgs.privilege_id <= $args{privilege}
     AND tgs.record_status != 'D'
     AND uwg.record_status != 'D'
     AND wg.record_status != 'D'
+    AND ul.record_status != 'D'
   END_SQL
 
 # Removed this 2004-12-7; no longer switch to group, thus using admin perms OK.
 # To keep from coercing into ADMIN group:
 # $sql .= " AND wg.work_group_name <> 'Admin' ";
 
-  my @row = $self->selectOneColumn( $sql );
+  my @groups;
+  my @rows = $self->selectSeveralColumns( $sql );
 
+# Go through the rows, calculating the worst defined privilege...
+  foreach my $row ( @rows ) {
+    my $priv = getMax( @$row[3..6] );
+    push @groups, [ $$row[0], $$row[1], $$row[2], $priv ];
+  }
+
+# Sort first by auth level, then by group name.
+  @groups = sort { ( $a->[3] <=> $b->[3] )  || ( $a->[0] <=> $b->[0] ) || ( $a->[1] cmp $b->[1] ) } @groups;
+
+  my $b = '';
+  foreach my $g ( @groups ){
+    shift @$g;
+    $b .= join( "___", @$g ) . "\n";
+  }
   # return reference to group array
-  return \@row;
+  return \@groups;
   
 }
 
@@ -1425,6 +1457,20 @@ sub isGuestUser {
   }
 }
 
+#+
+#
+# Returns hash of privilege names keyed by numeric values
+#-
+sub getPrivilegeNames {
+  my %priv = ( 10 => 'data admin',
+               20 => 'data modifier',
+               25 => 'data group modifier',
+               30 => 'data writer',
+               40 => 'data reader',
+               50 => 'none',
+               999 => 'none',
+               9999 => 'none' );
+}
 
 ###############################################################################
 ###############################################################################
@@ -1432,4 +1478,5 @@ sub isGuestUser {
 1;
 
 ###############################################################################
+
 
