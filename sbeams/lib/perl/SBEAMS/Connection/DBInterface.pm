@@ -1797,13 +1797,13 @@ sub fetchNextRow {
   #print "Entering fetchNextRow (flag = $flag)...<BR>\n";
 
   #### If flag == 1, just testing to see if this is rewindable
-  if ($flag == 1) {
+  if (defined($flag) && $flag == 1) {
     #print "Test if rewindable: yes<BR>\n";
     return 1;
   }
 
-  #### If flag > 1, then really do the rewind  
-  if ($flag > 1) {
+  #### If flag > 1, then really do the rewind
+  if (defined($flag) && $flag > 1) {
     #print "rewind...<BR>";
     $sth->execute;
     #print "and return.<BR>\n";
@@ -1963,6 +1963,7 @@ sub displayResultSet {
     my $column_titles_ref = $args{'column_titles_ref'};
     my $base_url = $args{'base_url'} || '';
     my $query_parameters_ref = $args{'query_parameters_ref'};
+    my $cytoscape = $args{'cytoscape'} || undef;
 
     my $resort_url = '';
     if ($base_url) {
@@ -1999,7 +2000,8 @@ sub displayResultSet {
       unless ($column_titles_ref);
 
     #### If the command to re-sort was passed, do it now
-    if ($rs_params_ref->{rs_resort_column} gt '') {
+    if (defined($rs_params_ref->{rs_resort_column}) &&
+	$rs_params_ref->{rs_resort_column} gt '') {
 
       #### Put the column number and type into global variables to be
       #### used by the sort-decision subroutines
@@ -2172,6 +2174,37 @@ sub displayResultSet {
         print "  />\n";
       }
       print "</resultset>\n";
+      return;
+    }
+
+
+    #### If the desired output format is Cytoscape, prepare a temp directory
+    #### for the files and return the jnlp xml
+    if ($self->output_mode() eq 'cytoscape' && defined($cytoscape)) {
+      if ( ! -d "$PHYSICAL_BASE_DIR/tmp/cytoscape/") {
+	mkdir("$PHYSICAL_BASE_DIR/tmp/cytoscape/") ||
+	  die("ERROR: Unable to mkdir $PHYSICAL_BASE_DIR/tmp/cytoscape/");
+      }
+
+      my $identifier = $rs_params_ref->{'set_name'} || 'unknown';
+      if ( ! -d "$PHYSICAL_BASE_DIR/tmp/cytoscape/$identifier") {
+	mkdir("$PHYSICAL_BASE_DIR/tmp/cytoscape/$identifier") ||
+	  die("ERROR: Unable to mkdir $PHYSICAL_BASE_DIR/tmp/cytoscape/$identifier");
+      }
+
+      my $template = $cytoscape->{template};
+      system("/bin/cp -p $PHYSICAL_BASE_DIR/lib/cytoscape/$SBEAMS_SUBDIR/$template/* $PHYSICAL_BASE_DIR/tmp/cytoscape/$identifier/");
+
+      foreach my $file (keys %{$cytoscape->{files}}) {
+print "$file\n";
+	open(OUTFILE,">$PHYSICAL_BASE_DIR/lib/cytoscape/$SBEAMS_SUBDIR/$template/$file") || die("ERROR: Unable to open file $PHYSICAL_BASE_DIR/lib/cytoscape/$SBEAMS_SUBDIR/$template/$file");
+	foreach my $line (@{$cytoscape->{files}->{$file}}) {
+	  print OUTFILE "$line\n";
+	}
+	close(OUTFILE);
+
+      }
+
       return;
     }
 
