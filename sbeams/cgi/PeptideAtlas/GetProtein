@@ -110,6 +110,11 @@ sub main {
       parameters_ref=>\%parameters);
   #$sbeams->printDebuggingInfo($q);
 
+  ##xxxx  hard coding tab menu info here until moved into sep. module
+  $q->param( -name=> "_tab",
+              -value=> "4");
+  $parameters{'_tab'} = 4;
+
 
   #### Process generic "state" parameters before we start
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
@@ -119,7 +124,10 @@ sub main {
       # Some action
 
   } else {
-      $sbeamsMOD->display_page_header();
+      my $project_id = $sbeamsMOD->getProjectID(
+          atlas_build_id => $parameters{atlas_build_id}
+          );
+      $sbeamsMOD->display_page_header(project_id => $project_id);
       handle_request(ref_parameters=>\%parameters);
       $sbeamsMOD->display_page_footer();
   }
@@ -141,6 +149,75 @@ sub handle_request {
       || die "ref_parameters not passed";
 
   my %parameters = %{$ref_parameters};
+
+ ## xxxx hard coding tab menu here... should be moved into separate module
+  my $tabs = "";
+
+  if ($parameters{'_tab'}) {
+
+    #$sbeams->printUserContext();
+
+    $tabs = "?_tab=" . $parameters{'_tab'};
+
+    $PROG_NAME .= $tabs;
+
+
+    print <<"    END" if ($sbeams->output_mode() eq 'html');
+        <BR>
+    END
+    # Create new tabmenu item.  This may be a $sbeams object method in the future.
+    my $tabmenu =
+        SBEAMS::Connection::TabMenu->new( cgi => $q,
+                                          activeColor => 'ffcc99',
+                                          inactiveColor   => 'cccccc',
+                                          hoverColor => 'ffff99',
+                                          atextColor => '000000', # black
+                                          itextColor => 'ff0000', # black
+                 # paramName => 'mytabname', # uses this as cgi param
+                 #maSkin => 1,   # If true, use MA look/feel
+                 #isSticky => 0, # If true, pass thru cgi params
+                 # boxContent => 0, # If true draw line around content
+                 # labels => \@labels # Will make one tab per $lab (@labels)
+    );
+
+    #Preferred way to add tabs.  label is required, helptext optional
+    $tabmenu->addTab( label => 'Browse Peptides',
+                      helptext => 'Multi-constraint browsing of PeptideAtlas',
+                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides" );
+
+    $tabmenu->addTab( label => 'Get Peptide',
+                      helptext => 'Look-up info on a peptide by sequence or name',
+                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide"
+                      );
+
+    $tabmenu->addTab( label => 'Browse Proteins',
+                      helptext => 'Not implemented yet',
+                      URL => "$CGI_BASE_DIR/PeptideAtlas/main.cgi"
+                      );
+
+    $tabmenu->addTab( label => 'Get Protein',
+                      helptext => 'Not implemented yet',
+                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetProtein"
+                      );
+
+    $tabmenu->setCurrentTab( currtab => '4' );
+
+    my $content;
+
+    if ( $tabmenu->getActiveTabName() eq 'Browse Proteins' ){
+
+        $content = "<BR><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>[coming soon, not implemented yet]<B><BR><BR>";
+
+    }
+
+    $tabmenu->addHRule();
+
+    $tabmenu->addContent( $content );
+
+    print "$tabmenu" if ($sbeams->output_mode() eq 'html');
+
+  }
+
 
 
   #### Define some generic varibles
@@ -366,7 +443,7 @@ sub handle_request {
         <TR><TD colspan="2" background="$HTML_BASE_DIR/images/fade_orange_header_2.png" width="600"><font color="white">$biosequence->{biosequence_name}</font></TD></TR>
         <TR><TD NOWRAP bgcolor="lightgray">Protein Name</TD><TD bgcolor="lightgray">$biosequence->{biosequence_name}</TD></TR>
         <TR><TD NOWRAP bgcolor="lightgray">Gene Name</TD><TD bgcolor="lightgray">$biosequence->{biosequence_gene_name}</TD></TR>
-        <TR><TD bgcolor="lightgray">Accession</TD><TD bgcolor="lightgray"><A HREF="$biosequence->{accessor}$biosequence->{biosequence_accession}$biosequence->{accessor_suffix}">$biosequence->{biosequence_accession}</A></TD></TR>
+        <TR><TD bgcolor="lightgray">Accession</TD><TD bgcolor="lightgray"><A HREF="$biosequence->{accessor}$biosequence->{biosequence_accession}$biosequence->{accessor_suffix}" target="_blank">$biosequence->{biosequence_accession}</A></TD></TR>
         <TR><TD bgcolor="lightgray">Description</TD><TD bgcolor="lightgray">$biosequence->{biosequence_desc}</TD></TR>
       </TABLE>
       <BR>

@@ -221,15 +221,14 @@ sub handle_request {
 
     $tabmenu->addTab( label => 'Get Protein',
                       helptext => 'Not implemented yet',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/main.cgi"
+                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetProtein"
                       );
 
     $tabmenu->setCurrentTab( currtab => '2' );
 
     my $content;
 
-    if ( $tabmenu->getActiveTabName() eq 'Browse Proteins' ||
-         $tabmenu->getActiveTabName() eq 'Get Protein' ) {
+    if ( $tabmenu->getActiveTabName() eq 'Browse Proteins' ){
 
         $content = "<BR><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>[coming soon, not implemented yet]<B><BR><BR>";
 

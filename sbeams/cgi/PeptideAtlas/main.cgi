@@ -24,7 +24,6 @@ use strict;
 use vars qw ($q $sbeams $sbeamsPeptideAtlas $PROGRAM_FILE_NAME
              $current_contact_id $current_username);
 use lib qw (../../lib/perl);
-#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
 use SBEAMS::Connection qw($q);
@@ -35,7 +34,6 @@ use SBEAMS::Connection::TabMenu;
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 
-#$q   = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsPeptideAtlas = new SBEAMS::PeptideAtlas;
 $sbeamsPeptideAtlas->setSBEAMS($sbeams);
@@ -57,7 +55,8 @@ main();
 sub main { 
 
     #### Do the SBEAMS authentication and exit if a username is not returned
-    exit unless ($current_username = $sbeams->Authenticate( allow_anonymous_access => 1 ) );
+    exit unless ($current_username = $sbeams->Authenticate( 
+    allow_anonymous_access => 1 ) );
 
     #### Print the header, do what the program does, and print footer
     $sbeamsPeptideAtlas->printPageHeader();
@@ -74,13 +73,11 @@ sub main {
 ###############################################################################
 sub showMainPage {
 
-    $sbeams->printUserContext();
-
     print <<"    END";
         <BR>
     END
 
-    # Create new tabmenu item.  This may be a $sbeams object method in the future.
+    #Create new tabmenu item.  This may be a $sbeams object method in the future.
     my $tabmenu = 
         SBEAMS::Connection::TabMenu->new( cgi => $q,
                                           activeColor => 'ffcc99',
@@ -88,17 +85,18 @@ sub showMainPage {
                                           hoverColor => 'ffff99',
                                           atextColor => '000000', # black
                                           itextColor => 'ff0000', # black
-                                          # paramName => 'mytabname', # uses this as cgi param
-                                          #maSkin => 1,   # If true, use MA look/feel
-                                          #isSticky => 0, # If true, pass thru cgi params 
-                                          # boxContent => 0, # If true draw line around content
-                                          # labels => \@labels # Will make one tab per $lab (@labels)
+               # paramName => 'mytabname', # uses this as cgi param
+               #maSkin => 1,   # If true, use MA look/feel
+               #isSticky => 0, # If true, pass thru cgi params 
+               # boxContent => 0, # If true draw line around content
+               # labels => \@labels # Will make one tab per $lab (@labels)
     );
 
     #Preferred way to add tabs.  label is required, helptext optional
     $tabmenu->addTab( label => 'Browse Peptides', 
                       helptext => 'Multi-constraint browsing of PeptideAtlas',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides" );
+                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides" 
+                      );
 
     $tabmenu->addTab( label => 'Get Peptide', 
                       helptext => 'Look-up info on a peptide by sequence or name',
@@ -112,13 +110,13 @@ sub showMainPage {
 
     $tabmenu->addTab( label => 'Get Protein',
                       helptext => 'Not implemented yet',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/main.cgi"
+                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetProtein"
                       );
 
     my $content; 
 
-    if ( $tabmenu->getActiveTabName() eq 'Browse Proteins' ||
-         $tabmenu->getActiveTabName() eq 'Get Protein' ) {
+    if ( $tabmenu->getActiveTabName() eq 'Browse Proteins' )
+    {
 
         $content = "<BR><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>[coming soon, not implemented yet]<B><BR><BR>";
 
@@ -129,6 +127,10 @@ sub showMainPage {
     $tabmenu->addContent( $content );
 
     print "$tabmenu";
+
+    print "<BR>";
+    ## print Login and Project pull-down selection menus:
+    #$sbeams->printUserContext();
 
 
 #   print "$SERVER_BASE_DIR <BR>  $CGI_BASE_DIR <BR>";
