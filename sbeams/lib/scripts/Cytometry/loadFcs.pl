@@ -3,7 +3,7 @@ use strict;
 use File::Find;
 use FindBin;
 use lib qw (../perl ../../perl);
-#use lib qw (/net/dblocal/www/html/sbeams/lib/perl);
+
 
 use vars qw ($sbeams $sbeamsMOD $VERBOSE $TESTONLY $current_username);
 
