@@ -319,6 +319,8 @@ sub start_element {
       predicted_num_incorrect => 1,
       total_number_peptides => 1,
       index => 1,
+      organism => 1,
+      alt_pos_to_neg_ratio => 1,
     );
     foreach my $attr (keys(%attrs_to_drop)) {
       if (exists($attrs{$attr})) {
