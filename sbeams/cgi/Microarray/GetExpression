@@ -37,7 +37,7 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::Microarray;
 use SBEAMS::Microarray::Settings;
 use SBEAMS::Microarray::Tables;
-
+use Data::Dumper;
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::Microarray;
 $sbeamsMOD->setSBEAMS($sbeams);
@@ -77,6 +77,8 @@ if ($DEBUG) {
   print "  VERBOSE = $VERBOSE\n";
   print "  QUIET = $QUIET\n";
   print "  DEBUG = $DEBUG\n";
+print "OBJECT TYPES 'sbeamMOD' = " .ref($sbeams). "\n";
+print Dumper($sbeams);
 }
 
 
@@ -199,6 +201,7 @@ sub handle_request {
     $parameters{project_id} = $sbeams->getCurrent_project_id();
   }
 
+
   #### Display the user-interaction input form
   $sbeams->display_input_form(
     TABLE_NAME=>$TABLE_NAME,CATEGORY=>$CATEGORY,apply_action=>$apply_action,
@@ -279,9 +282,17 @@ sub handle_request {
   my $canonical_name_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"GE.canonical_name",
     constraint_type=>"plain_text",
-    constraint_name=>"Canonical Name",
+    constraint_name=>"Canonical Name FOOOOO",
     constraint_value=>$parameters{canonical_name_constraint} );
   return if ($canonical_name_clause eq '-1');
+  
+   #### Build REPORTER NAME constraint
+  my $reporter_name_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"GE.reporter_name",
+    constraint_type=>"plain_text",
+    constraint_name=>"Reporter Name",
+    constraint_value=>$parameters{reporter_name_constraint} );
+  return if ($reporter_name_clause eq '-1');
 
 
   #### Build BIOSEQUENCE DESCRIPTION constraint
@@ -535,7 +546,7 @@ sub handle_request {
 	$log10_ratio_clause
         $p_value_clause
 	$lambda_clause
-
+	$reporter_name_clause
         $subselect_clause
 
 	$group_by_clause
