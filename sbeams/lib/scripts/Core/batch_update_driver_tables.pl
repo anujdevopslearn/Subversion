@@ -71,5 +71,7 @@
   ./update_driver_tables.pl $CONFDIR/ProteinStructure/ProteinStructure_table_property.txt
   ./update_driver_tables.pl $CONFDIR/ProteinStructure/ProteinStructure_table_column.txt
 
+  ./update_driver_tables.pl $CONFDIR/PeptideAtlas/PeptideAtlas_table_property.txt
+  ./update_driver_tables.pl $CONFDIR/PeptideAtlas/PeptideAtlas_table_column.txt
 
 

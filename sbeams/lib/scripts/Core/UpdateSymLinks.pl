@@ -145,7 +145,8 @@ sub handleRequest {
     {entity=>'lib/scripts/Microarray/load_biosequence_set.pl',ref_location=>'../share/load_biosequence_set.pl',flags=>{sym_to_main=>0,real_ok=>0}},
     {entity=>'lib/scripts/Proteomics/load_biosequence_set.pl',ref_location=>'../share/load_biosequence_set.pl',flags=>{sym_to_main=>0,real_ok=>0}},
     {entity=>'lib/scripts/SNP/load_biosequence_set.pl',ref_location=>'../share/load_biosequence_set.pl',flags=>{sym_to_main=>0,real_ok=>0}},
-     {entity=>'lib/scripts/ProteinStructure/load_biosequence_set.pl',ref_location=>'../share/load_biosequence_set.pl',flags=>{sym_to_main=>0,real_ok=>0}},
+    {entity=>'lib/scripts/ProteinStructure/load_biosequence_set.pl',ref_location=>'../share/load_biosequence_set.pl',flags=>{sym_to_main=>0,real_ok=>0}},
+    {entity=>'lib/scripts/PeptideAtlas/load_biosequence_set.pl',ref_location=>'../share/load_biosequence_set.pl',flags=>{sym_to_main=>0,real_ok=>0}},
  );
 
 
