@@ -1442,14 +1442,15 @@ sub displayResultSetControls {
     print "Displayed rows $start_row - $resultset_ref->{row_pointer} of ".
       "$nrows\n\n";
 
-    if ( $parameters{row_limit} == scalar(@{$resultset_ref->{data_ref}}) ) {
+    my $row_limit = $parameters{row_limit} || 1000000;
+    if ( $row_limit == scalar(@{$resultset_ref->{data_ref}}) ) {
       if ($self->output_mode() eq 'html') {
         print "&nbsp;&nbsp;(<font color=red>WARNING: </font>Resultset ".
-	  "truncated at $parameters{row_limit} rows. ".
+	  "truncated at $row_limit rows. ".
 	  "Increase row limit to see more.)\n";
       } else {
         print "WARNING: Resultset ".
-	  "truncated at $parameters{row_limit} rows. ".
+	  "truncated at $row_limit rows. ".
 	  "Increase row limit to see more.)\n";
       }
     }
