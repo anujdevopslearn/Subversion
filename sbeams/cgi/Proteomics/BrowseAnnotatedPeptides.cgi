@@ -463,6 +463,15 @@ sub printEntryForm {
       }
 
 
+      #### Build PROTEIN DESCRIPTION constraint
+      my $description_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"BS.biosequence_desc",
+        constraint_type=>"plain_text",
+        constraint_name=>"Protein Description",
+        constraint_value=>$parameters{description_constraint} );
+      return if ($description_clause == -1);
+
+
       #### Build ACCESSION NUMBER constraint
       my $accession_clause = "";
       if ($parameters{accession_constraint}) {
@@ -647,6 +656,7 @@ sub printEntryForm {
 	$search_batch_clause
 	$reference_clause
 	$gene_name_clause
+        $description_clause
 	$accession_clause
 	$peptide_clause
 	$charge_clause
