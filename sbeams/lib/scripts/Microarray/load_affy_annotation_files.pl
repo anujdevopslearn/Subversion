@@ -97,10 +97,12 @@ $sbeams = new SBEAMS::Connection;
 
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
-#$sbeams_affy 	    = new SBEAMS::Microarray::Affy;
+$sbeams_affy 	    = new SBEAMS::Microarray::Affy;
 #$sbeams_affy_groups = new SBEAMS::Microarray::Affy_file_groups;
+
 $sbeams_affy_anno   = new SBEAMS::Microarray::Affy_Annotation;
 $sbeams_affy_anno->setSBEAMS($sbeams);
+$sbeams_affy->setSBEAMS($sbeams);
 $|++;
 
 ###############################################################################
