@@ -437,6 +437,128 @@ sub average {
 
 
 ###############################################################################
+# stdev
+#
+# Given an input array of data, calculate the standard deviation
+###############################################################################
+sub stdev {
+  my $self = shift || croak("parameter self not passed");
+  my %args = @_;
+  my $SUB_NAME = 'stdev';
+  my $VERBOSE = 0;
+
+  #### Decode the argument list
+  my $values_ref = $args{'values'};
+
+  #### Determine nature of the input array
+  return(undef) unless (defined($values_ref) && @{$values_ref});
+  my @values = @{$values_ref};
+  my $n_values = scalar(@values);
+
+  #### Return undef for just one value
+  return(undef) if ($n_values < 2);
+
+  #### Calculate the average
+  my ($mean) = $self->average(values => $values_ref);
+  return(undef) unless (defined($mean));
+
+  #### Calculate the standard deviation now that we know the mean
+  my $stdev = 0;
+  my $n_elements = 0;
+  for (my $i=0; $i<$n_values; $i++) {
+    if (defined($values[$i])) {
+      $stdev += ($values[$i]-$mean) * ($values[$i]-$mean);
+      $n_elements++;
+    }
+  }
+
+  my $divisor = $n_elements - 1;
+  $divisor = 1 if ($divisor < 1);
+  $stdev = sqrt($stdev / $divisor);
+
+  return($stdev);
+
+}
+
+
+###############################################################################
+# min
+#
+# Given an input array of data, return the minimum value
+###############################################################################
+sub min {
+  my $self = shift || croak("parameter self not passed");
+  my %args = @_;
+  my $SUB_NAME = 'min';
+
+  #### Decode the argument list
+  my $values_ref = $args{'values'};
+
+  #### Determine nature of the input array
+  return(undef) unless (defined($values_ref) && @{$values_ref});
+  my @values = @{$values_ref};
+  my $n_values = scalar(@values);
+
+  #### Find the minimum
+  my $minimum = undef;
+  for (my $i=0; $i<$n_values; $i++) {
+    if (defined($values[$i])) {
+      if (defined($minimum)) {
+	if ($values[$i] < $minimum) {
+	  $minimum = $values[$i];
+	}
+      } else {
+	$minimum = $values[$i];
+      }
+
+    }
+  }
+
+  return($minimum);
+
+}
+
+
+###############################################################################
+# max
+#
+# Given an input array of data, return the maximum value
+###############################################################################
+sub max {
+  my $self = shift || croak("parameter self not passed");
+  my %args = @_;
+  my $SUB_NAME = 'max';
+
+  #### Decode the argument list
+  my $values_ref = $args{'values'};
+
+  #### Determine nature of the input array
+  return(undef) unless (defined($values_ref) && @{$values_ref});
+  my @values = @{$values_ref};
+  my $n_values = scalar(@values);
+
+  #### Find the minimum
+  my $maximum = undef;
+  for (my $i=0; $i<$n_values; $i++) {
+    if (defined($values[$i])) {
+      if (defined($maximum)) {
+	if ($values[$i] > $maximum) {
+	  $maximum = $values[$i];
+	}
+      } else {
+	$maximum = $values[$i];
+      }
+
+    }
+  }
+
+  return($maximum);
+
+}
+
+
+
+###############################################################################
 
 1;
 
