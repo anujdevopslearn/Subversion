@@ -647,7 +647,7 @@ sub handle_request {
   while ( ($key,$value) = each %input_types ) {
     if ($key ne 'sort_order' && $key ne 'display_options' &&
         $key ne 'reference_constraint' && $key ne 'peptide_string_constraint' &&
-        $key ne 'charge_constraint' && $key ne 'xx_constraint'
+        $key ne 'charge_constraint' && $key ne 'APD_accession_constraint' && $key ne 'xx_constraint'
       ) {
       if ($parameters{$key}) {
         #### HACK! FIXME
