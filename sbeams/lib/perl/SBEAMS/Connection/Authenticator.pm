@@ -19,7 +19,7 @@ package SBEAMS::Connection::Authenticator;
 
 
 use strict;
-use vars qw( $q $http_header @ISA @ERRORS
+use vars qw( $q $http_header $log @ISA @ERRORS
              $current_contact_id $current_username
              $current_work_group_id $current_work_group_name 
              $current_project_id $current_project_name
@@ -37,8 +37,10 @@ use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
+use SBEAMS::Connection::Log;
 
 $q       = new CGI;
+$log = SBEAMS::Connection::Log->new();
 
 
 ###############################################################################
@@ -65,6 +67,7 @@ sub new {
 ###############################################################################
 sub Authenticate {
     my $self = shift;
+    my $SUBNAME = "Authenticate";
     my %args = @_;
 
     my $set_to_work_group = $args{'work_group'} || "";
@@ -109,16 +112,20 @@ sub Authenticate {
     my $www_uid = $self->getWWWUID();
     if ( $uid == $www_uid ) {
 
-        #### If the force_login flag is set, make the user login
-        if ($q->param('force_login')) {
-	  $self->processLogin();
-	  return;
-	}
+        #### If the force_login flag is defined, make the user login
+        #### by showing login screen or process the result if coming
+        #### from a login screen, but there's no anonymous possibility
+        if (defined($q->param('force_login'))) {
+	  $current_username = $self->processLogin();
 
-        # If the user is not logged in, make them log in
-        unless ($current_username = $self->checkLoggedIn(
-                allow_anonymous_access=>$allow_anonymous_access)) {
-            $current_username = $self->processLogin();
+        #### Check to see if the user is logged in, and if not, usher
+	#### them in as anonymous if permitted or else show login screen
+        } else {
+           $log->debug("$SUBNAME: calling checkLoggedIn");
+           unless ($current_username = $self->checkLoggedIn(
+                   allow_anonymous_access=>$allow_anonymous_access)) {
+             $current_username = $self->processLogin();
+          }
         }
 
     #### Otherwise, try a command-line authentication
@@ -129,6 +136,7 @@ sub Authenticate {
             $self->dbDisconnect();
 	  }
     }
+
 
     #### If we've obtained a valid user, get additional information
     #### about the user
@@ -152,7 +160,7 @@ sub Authenticate {
 
     return $current_username;
 
-} # end InterfaceEntry
+} # end Authenticate
 
 
 ###############################################################################
@@ -803,10 +811,13 @@ sub printLoginForm {
     #### authentication succeeds, they are passed to the called program.
     my ($key,$value);
     foreach $key ( $q->param ) {
+      next if ($key eq 'force_login');
       $value = $q->param($key);
       print qq~<INPUT TYPE="hidden" NAME="$key" VALUE="$value">\n~;
     }
 
+
+    #### Close the table
     print qq!
         </TD>
         </TR></TABLE>
