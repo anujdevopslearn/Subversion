@@ -136,12 +136,27 @@ sub returnTableInfo {
 
         if ($info_key eq "BASICQuery") {
             return qq~
-		SELECT C.contact_id,last_name,first_name,middle_name AS 'MI',
-		       CT.contact_type_name,O.organization,
-		       DpO.organization AS 'deparment',
-		       GrO.organization AS 'group',
-		       LbO.organization AS 'lab',
-                       C.phone,C.email,C.uri
+		SELECT C.contact_id,
+			C.last_name AS 'Last_Name',
+			C.first_name AS 'First_Name',
+			C.middle_name AS 'MI',
+                       	C.location AS 'Location',
+                       	C.phone AS 'Phone',
+			C.email AS 'Email',
+		       	DpO.organization AS 'Deparment',
+		       	GrO.organization AS 'Group',
+		       	LbO.organization AS 'Lab',
+		       	O.organization AS 'Organization',
+			CT.contact_type_name AS 'Contact_Type',
+			C.job_title AS 'Job_Title',
+			SV.first_name+' '+SV.last_name AS 'Supervisor',
+			C.is_at_local_facility AS 'is_local',
+                       	C.alternate_location AS 'Alt_Location',
+                       	C.phone_extension AS 'Phone_Ext',
+                       	C.cell_phone AS 'Cell_Phone',
+                       	C.pager AS 'Pager',
+			C.alternate_email AS 'Alt_Email',
+			C.uri AS 'uri'
                   FROM $TB_CONTACT C
                   LEFT JOIN $TB_CONTACT_TYPE CT
                        ON (C.contact_type_id=CT.contact_type_id)
@@ -153,6 +168,8 @@ sub returnTableInfo {
                        ON (C.group_id=GrO.organization_id)
                   LEFT JOIN $TB_ORGANIZATION LbO
                        ON (C.lab_id=LbO.organization_id)
+                  LEFT JOIN $TB_CONTACT SV
+                       ON (C.supervisor_contact_id=SV.contact_id)
                  WHERE C.record_status!='D'
             ~;
         }
