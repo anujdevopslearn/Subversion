@@ -707,7 +707,9 @@ sub specialParsing {
 
 
   #### If the calc_n_transmembrane_regions flag is set, do the calculation
-  if (defined($OPTIONS{"calc_n_transmembrane_regions"})) {
+  if (defined($OPTIONS{"calc_n_transmembrane_regions"}) &&
+      defined($rowdata_ref->{biosequence_seq}) &&
+      $rowdata_ref->{biosequence_seq} ) {
     $rowdata_ref->{n_transmembrane_regions} = 
       SBEAMS::Proteomics::Utilities::calcNTransmembraneRegions(
         peptide=>$rowdata_ref->{biosequence_seq});
