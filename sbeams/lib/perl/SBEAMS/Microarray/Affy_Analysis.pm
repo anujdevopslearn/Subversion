@@ -59,9 +59,12 @@ use Data::Dumper;
 use Carp;
 use FindBin;
 
+use SBEAMS::Connection qw($log);
+
 use base qw(SBEAMS::Microarray::Affy);		
 use SBEAMS::Connection::Tables;
 use SBEAMS::Microarray::Tables;
+use SBEAMS::Microarray::Analysis_Data;
 
 
 my $R_program = '/tools/bin/R';
@@ -109,7 +112,7 @@ sub make_R_CHP_file {
     
    	
 	
-	my $R_temp_dir = "../../../tmp/Microarray/R_CHP_RUNS/${file_name}_R_CHP";	#temp out dir for storing R and shell scripts	
+	my $R_temp_dir = "/net/dblocal/www/html/sbeams/tmp/Microarray/R_CHP_RUNS/${file_name}_R_CHP";	#temp out dir for storing R and shell scripts	
 	my $out_shell_script = "${file_name}_shell.sh";
 	my $out_R_script = "${file_name}_R_script.R";					#these paths will be relative to where the shell script will be running, they all should be in the same directory
 	my $out_error_log = "${file_name}_error.txt";
@@ -137,10 +140,13 @@ headings <- c("Probesets","MAS5_Signal","MAS5_Detection_calls", "MAS5_Detection_
 write.table(output,file=output.file.name,sep="\\t",col.names = headings,row.names=FALSE)
 
 
-
-jpeg("$out_chip_image", width=1000, height=1000)
-image( data[,1] )
+bitmap(file="$out_chip_image",  res=72*4, pointsize = 12 )
+	image( data[,1] )
 dev.off()
+
+#jpeg("$out_chip_image", width=1000, height=1000)
+#image( data[,1] )
+#dev.off()
 END
 
 
@@ -411,7 +417,7 @@ sub log_R_run {
 	my $info = shift;
 	
 	
-	open OUT, ">>../../../tmp/Microarray/AFFY_R_CHP_RUNS.log" or
+	open OUT, ">>/net/dblocal/www/html/sbeams/tmp/Microarray/AFFY_R_CHP_RUNS.log" or
 		die "CANNOT OPEN R_CHP RUN LOG $!\n";
 		
 	my $date = `date`;
@@ -424,49 +430,6 @@ sub log_R_run {
 } 
 
 
-
-###############################################################################
-# get_annotation_set_id
-#Given a string of comma seperarted affy_array_ids find the most recent annotation set ids
-#Return the most resent annotation_set_id as a comma delimited string. 
-###############################################################################
-sub get_annotation_set_id_OLD {
-	my $method = 'get_annotation_set_id';
-	my $self = shift;
-	
-	my %args = @_;
-	
-	my $arrays = $args{affy_array_ids};
-
-	
-	my $sql = qq~ SELECT DISTINCT anno_set.slide_type_id , anno_set.affy_annotation_set_id
-			FROM $TBMA_AFFY_ANNOTATION_SET anno_set
-			JOIN $TBMA_AFFY_ARRAY afa  ON (anno_set.slide_type_id =  afa.array_type_id)
-			WHERE afa.affy_array_id IN ($arrays)
-		    ~;	 
-	print "ANNO SET SQL '$sql'<br>";
-	my @rows = $sbeams->selectSeveralColumns($sql);
-	
-							#Need to pull out the greatest annotation set id for each of the different slide types
-	my %all_slide_types = ();
-	foreach my $record (@rows){
-		my ($slide_type_id, $anno_set_id) = @{$record};
-		if ( exists $all_slide_types{$slide_type_id}){
-			if ($all_slide_types{$slide_type_id} > $anno_set_id){
-				$all_slide_types{$slide_type_id} = $anno_set_id;
-			}
-		}else{
-			$all_slide_types{$slide_type_id} = $anno_set_id;
-		}
-	}
-	
-	my $all_annotation_set_ids = join ",", values  %all_slide_types ;
-	
-	
-	
-	print "ANNO ID '$all_annotation_set_ids<br>";
-	return $all_annotation_set_ids;	#CHANGED 9.8.04 from "$rows[0]"
-}
 
 
 ###############################################################################
@@ -539,13 +502,52 @@ sub get_r_chp_protocol {
 	return $rows[0];
 }
 
+##############################################################################
+# find_slide_type_name
+#Given an array ref of file names
+#Method will strip the .CEL suffix, and make a comma seperated list of values
+#Return only ONE slide_type.name or confess there is a problem
 ###############################################################################
-# find_chips_with_data
+sub find_slide_type_name {
+	my $method = 'find_slide_type_name';
+	my $self = shift;
+	my %args = @_;
+	my @file_names  = @{ $args{file_names} };
+	unless ( @file_names ){
+		confess(__PACKAGE__ . "::$method No affy CEL file Names were provided\n") 
+    }
+	
+	
+##Clean up the file names and make a comma seperated string
+	my @clean_file_names = ();
+	foreach (@file_names){
+		s/\.CEL$//;
+		push @clean_file_names, "'$_'";
+	}
+	my $search_term = join ",", @clean_file_names;
+		
+	my $sql = qq~   SELECT distinct st.name 
+					FROM $TBMA_AFFY_ARRAY afa 
+					JOIN $TBMA_SLIDE_TYPE st ON (afa.array_type_id = st.slide_type_id)
+					WHERE afa.file_root IN ( $search_term)
+		~;
+		
+	 my @rows = $sbeams->selectOneColumn($sql);
+	unless ( @rows == 1){
+		confess(__PACKAGE__ . "::$method Found incorrect number of array type names '@rows' Should only be one\n") 
+    }
+	
+	return $rows[0];
+}
+
+
+###############################################################################
+# find_chips_with_R_CHP_data
 #given a project_id find all the affy_array ids that have data
 #return array of affy_array_ids
 ###############################################################################
-sub find_chips_with_data {
-	my $method = 'find_chips_with_data';
+sub find_chips_with_R_CHP_data {
+	my $method = 'find_chips_with_R_CHP_data';
 	my $slef= shift;
 	my %args = @_;
 	
@@ -566,7 +568,32 @@ sub find_chips_with_data {
 	return my @rows = $sbeams->selectOneColumn($sql);
 
 }
+###############################################################################
+# find_chips_with_data
+#given a project_id return all affy array ids
+#return array of affy_array_ids
+###############################################################################
+sub find_chips_with_data {
+	my $method = 'find_chips_with_data';
+	my $slef= shift;
+	my %args = @_;
+	
+	my $project_id = $args{project_id};
+	
+	confess(__PACKAGE__ . "::$method Need to provide arugments 'project_id'\n") unless ($project_id =~ /^\d/);
+    
 
+	my $sql = qq~ 	SELECT afa.affy_array_id 
+			FROM $TBMA_AFFY_ARRAY afa
+			JOIN $TBMA_AFFY_ARRAY_SAMPLE afs ON (afs.affy_array_sample_id = afa.affy_array_sample_id)
+			WHERE afs.project_id IN ($project_id) 
+		
+		   ~;
+	
+#$sbeams->display_sql(sql=>$sql);
+	return my @rows = $sbeams->selectOneColumn($sql);
+
+}
 
 ###############################################################################
 # get_affy_intensity_data_sql
@@ -609,7 +636,14 @@ sub get_affy_intensity_data_sql {
 	
 	my $constriants = join " ", @all_constriants;
 	
-	my $sql = qq~ SELECT top 10000( gi.probe_set_id), afa.file_root, gi.affy_array_id, gi.signal, gi.detection_call, anno.gene_symbol, anno.gene_title, gi.protocol_id
+	my $sql = qq~ SELECT top 10000( gi.probe_set_id), 
+			afa.file_root, 
+			gi.affy_array_id, 
+			gi.signal, 
+			gi.detection_call, 
+			anno.gene_symbol, 
+			anno.gene_title, 
+			gi.protocol_id
 			FROM $TBMA_AFFY_GENE_INTENSITY gi 
 			JOIN $TBMA_AFFY_ARRAY afa ON (gi.affy_array_id = afa.affy_array_id)
 			JOIN $TBMA_AFFY_ANNOTATION anno ON (anno.probe_set_id = gi.probe_set_id)
@@ -626,8 +660,401 @@ sub get_affy_intensity_data_sql {
 
 }
 
+###############################################################################
+# get_user_id_from_user_name
+# Give user_name
+#Return user_id
+###############################################################################
+sub get_user_id_from_user_name {
+	my $method = 'get_user_id_from_user_name';
+	my $self = shift;
+	my $user_name = shift;
+	
+	unless ($user_name =~ /^\w/ ) {
+		confess( __PACKAGE__ . "::$method Need to provide a user name \n");
+	}
+	my $sql = qq~SELECT user_login_id
+				 FROM $TB_USER_LOGIN
+				 WHERE username like '$user_name'
+				~;
+			
+	my @user_id = $sbeams->selectOneColumn($sql);
+	
+	if (@user_id) {
+		return $user_id[0];
+	}else{
+		return 0;
+	}
+}
 
 
+###############################################################################
+# add_analysis_session
+# Add information to SBEAMS to register a type of analysis session
+#Retrun affy_analysis_id for success 0 if it did not work
+###############################################################################
+sub add_analysis_session {
+	my $method = 'add_analysis_session';
+	my $self = shift;
+	my %args = @_;
+	
+	my $rowdata_ref = $args{rowdata_ref};
+
+	my $inserted_pk = $sbeams->updateOrInsertRow(		# insert the data 			
+							table_name=>$TBMA_AFFY_ANALYSIS,
+				   			rowdata_ref=>$rowdata_ref,
+				   			return_PK=>1,
+				   			verbose=>'',
+				   			testonly=>'',
+				   			insert=>1,
+				   			PK=>'affy_analysis_id',
+				   	  		);
+
+	if ($inserted_pk){
+		return $inserted_pk;
+	}else{
+		return 0;
+	}
+}
+
+
+###############################################################################
+# find_analysis_type_id
+# Find the analysis type id from the analysis type name
+#Give Analysis type name
+#Return analysis type id or 0 if nothing is found
+###############################################################################
+sub find_analysis_type_id {
+	my $method = 'find_analysis_type_id';
+	my $self = shift;
+	my $analysis_name_type = shift;
+	
+	unless ($analysis_name_type =~ /^\w/ ) {
+		confess( __PACKAGE__ . "::$method Need to provide a analysis name type \n");
+	}
+	my $sql = qq~ SELECT affy_analysis_type_id
+				  FROM $TBMA_AFFY_ANALYSIS_TYPE
+				  WHERE affy_analysis_name like '$analysis_name_type'
+				~;
+	
+	#$sbeams->display_sql(sql=>$sql);
+				
+	my @affy_analysis_ids = $sbeams->selectOneColumn($sql);
+	
+	
+	if (@affy_analysis_ids) {
+		return $affy_analysis_ids[0];
+	}else{
+		return 0;
+	}
+}
+
+###############################################################################
+# find_analysis_project_id
+# Find the project_id given a token name (folder name containing some analysis files)
+#Give token
+#Return project id or 0 if name is not in the database
+###############################################################################
+sub find_analysis_project_id {
+	my $method = 'find_analysis_project_id';
+	my $self = shift;
+	my $token = shift;
+	
+	unless ($token =~ /^\w/ ) {
+		confess( __PACKAGE__ . "::$method Need to provide a token\n");
+	}
+	my $sql = qq~ SELECT project_id
+				  FROM $TBMA_AFFY_ANALYSIS
+				  WHERE folder_name like '$token'
+				~;
+	
+	#$sbeams->display_sql(sql=>$sql);
+				
+	my @affy_project_id = $sbeams->selectOneColumn($sql);
+	
+	
+	if (@affy_project_id) {
+		return $affy_project_id[0];
+	}else{
+		return 0;
+	}
+}
+
+
+
+###############################################################################
+# check_for_analysis_data
+# Find if an project has any analysis data
+#Give Project Id
+#Return new instance of the Analysis_Data class or 0 if no data exists
+###############################################################################
+sub check_for_analysis_data {
+	my $method = 'check_for_analysis_data';
+	my $self = shift;
+	my %args = @_;
+	
+	my $project_id = $args{project_id};
+	#my $analysis_name_type = $args{analysis_name_type};
+	
+	unless ($project_id =~ /^\d/ ) {
+		confess( __PACKAGE__ . "::$method Need to provide a project_id\n");
+	}
+		
+	my $sql = qq~ SELECT aa.affy_analysis_id, 
+				 aa.folder_name,
+				 aa.user_description, 
+				 aa.analysis_description,
+				 aa.parent_analysis_id, 
+				 aat.affy_analysis_name, 
+				 aa.date_created,
+				 ul.username
+				 FROM $TBMA_AFFY_ANALYSIS aa
+				 JOIN 	$TBMA_AFFY_ANALYSIS_TYPE aat ON (aa.affy_analysis_type_id = aat.affy_analysis_type_id)
+      			 JOIN $TB_USER_LOGIN ul ON (aa.user_id = ul.user_login_id)
+      			 WHERE aa.project_id = $project_id
+      			 AND aa.record_status NOT LIKE 'D'
+      			 
+				~;
+				
+	#$sbeams->display_sql(sql=>$sql);
+	my @data = $sbeams->selectHashArray($sql);
+	
+	if ($data[0]){
+		
+		my $analysis_data_o = new SBEAMS::Microarray::Analysis_Data(data=>\@data);
+		#print Dumper ($analysis_data_o);
+		return $analysis_data_o;
+	}else{
+		return 0;
+	}
+
+}
+###############################################################################
+# return_analysis_description
+# Give a folder name
+#return the analysis_field info or 0 if not found or no data exists
+###############################################################################
+sub return_analysis_description {
+	my $method = 'return_analysis_description';
+	
+	my $self = shift;
+	my %args = @_;
+	my $folder_name = $args{folder_name};
+	unless ($folder_name =~ /^\w/ ) {
+		confess( __PACKAGE__ . "::$method Need to provide a folder $folder_name does not look good\n");
+	}
+	my $sql = qq~
+				SELECT analysis_description 
+				FROM $TBMA_AFFY_ANALYSIS 
+				WHERE folder_name = '$folder_name'
+			  ~;
+	my ($info) = $sbeams->selectOneColumn($sql);
+#The automated inforamtion collection should return a string with the name File Names at the start
+#unless you have changed it.......
+	
+	if ($info =~ /File Names/){
+
+		return $info;
+	}else{
+		$log->debug("REG EXP MISSED FINDING THE FILE INFO IN THE ANALYSIS INFO METHOD => $method");		
+		return 0;
+	}
+}
+
+###############################################################################
+# parse_file_names_from_analysis_description
+# Give a string containing a comma delimited string of cel file names
+#File Names =>20041213_07_1_SJL.CEL, 20041213_08_2_SJL_2.CEL
+#Return a list of clean file names or 0 if nothing is found
+###############################################################################
+sub parse_file_names_from_analysis_description {
+	my $method = 'parse_file_names_from_analysis_description';
+	
+	my $self = shift;
+	my %args = @_;
+	my $info = $args{analysis_description};
+	
+	unless ($info){
+		return 0;
+	}
+	my @file_names = ();
+	if ($info =~ /File Names =>(.+?)\/\//){
+		
+		my $file_info_string = $1;
+		$log->debug("FOUND FILE NAMES '$file_info_string'");
+	#first split on the commas in the string then remove the .CEL file extensions
+		@file_names = grep {s/\.CEL//} split /,/,$file_info_string;
+		$log->debug("CLEAN FILE NAME '@file_names'");
+		return @file_names;
+	}else{
+		$log->debug("MISSED THE FILE NAMES METHOD '$method'");
+		return 0;
+	}
+	
+}
+
+###############################################################################
+# find_organism_id_from_file_root
+# Give a list of cel file names
+# Return a list of unique species id's or UNDEF if no data exists, don't return 0 since it might 
+#be an organisim ID
+###############################################################################
+sub find_organism_id_from_file_root {
+	my $method = 'find_organism_id_from_file_root';
+	
+	my $self = shift;
+	my %args = @_;
+	my @file_names = @{ $args{file_names_aref} };
+	
+	unless (@file_names){
+		return 0;	
+	}
+#join together all the file names and make sure the
+#quotes are correct for the sql query
+	my $search_string = join "' , '", @file_names;
+	$search_string = "'$search_string'";
+	$log->debug("SEARCH STRING '$search_string'");
+	
+	
+	my %unique_org_ids = ();
+	
+	my $sql = qq~
+		SELECT afs.organism_id 
+		FROM $TBMA_AFFY_ARRAY afa 
+		JOIN $TBMA_AFFY_ARRAY_SAMPLE afs ON (afa.affy_array_sample_id = afs.affy_array_sample_id) 
+		WHERE afa.file_root IN ($search_string)
+		~;
+			
+	
+	my @all_org_ids = $sbeams->selectOneColumn($sql);
+	foreach my $org_id (@all_org_ids){
+		$unique_org_ids{$org_id} = 1;
+	}
+	if( scalar (keys %unique_org_ids) > 0){
+		$log->debug("FOUND ORG IDS keys '" . keys %unique_org_ids );
+		return keys %unique_org_ids;
+		
+	}else{
+		$log->debug("MISSED FINDING ORG IDS ");
+		return undef;
+	}
+}
+
+
+###############################################################################
+# find_organism_name_form_ids
+# Give a list of organism_name_id(s)
+# Return the common name for example Human or Mouse 
+#Return 0 for no hits
+###############################################################################
+sub find_organism_name_form_ids {
+	my $method = 'find_organism_name_form_ids';
+	
+	my $self = shift;
+	my %args = @_;
+	my @org_ids= @{ $args{organism_id_aref} };
+	
+	unless ($org_ids[0] =~ /^\d$/ ) {
+		confess( __PACKAGE__ . "::$method Need to provide a Integer for the Organism ID you gave '$org_ids[0]'\n");
+	}
+	
+	#join together all the file names and make sure the
+	#quotes are correct for the sql query
+	
+	my $search_string = join "' , '", @org_ids;
+ 	$search_string = "'$search_string'";
+	$log->debug("SEARCH STRING '$search_string'");
+	
+	
+	my $sql = qq~ 
+					SELECT organism_name 
+					FROM $TB_ORGANISM
+					WHERE  organism_id IN ($search_string)
+				~;
+	my @organism_names = $sbeams->selectOneColumn($sql);		
+	if (@organism_names){
+		return @organism_names;
+	}else{
+		return 0;
+	}
+	
+				
+}
+
+
+###############################################################################
+# find_sample_group_names
+# Give a list of cel file names
+# Return a list of sample group names
+###############################################################################
+sub find_sample_group_names {
+	my $method = 'find_sample_group_names';
+	
+	my $self = shift;
+	my %args = @_;
+	my @file_names = @ {$args{cel_file_names} };
+	my @all_sample_group_names  = ();
+	foreach my $file_name (@file_names){
+		unless ($file_name =~ /\.CEL$/){
+			print "<h2>WARNING File Name '$file_name' DOES NOT APPEAR TO BE A CEL FILE AND WILL NOT BE USED FOR ANALYSIS <h2>";
+			next;
+		}
+		my $clean_file_name = $file_name;
+		$clean_file_name =~ s/.CEL$//;
+		
+		my $sql = qq~ SELECT sample_group_name
+					  FROM $TBMA_AFFY_ARRAY_SAMPLE afs
+					  JOIN $TBMA_AFFY_ARRAY afa ON (afa.affy_array_sample_id = afs.affy_array_sample_id)
+					  WHERE afa.file_root = '$clean_file_name'
+					~;
+		my @sample_group_names = $sbeams->selectOneColumn($sql);
+	
+	 	if ($sample_group_names[0] =~ /^\w/){
+		
+	 		push @all_sample_group_names, $sample_group_names[0];
+	 		
+	 	}else{
+	 		print "ERROR:Cannot Find Sample group name for FILE '$file_name'<br>";
+	 	}
+		
+	}
+	return @all_sample_group_names;
+}
+	
+###############################################################################
+# conditions_organism_info
+# Give a list of condition_names
+# Return an array of hashes of the distinct organism info
+###############################################################################
+sub conditions_organism_info {
+	my $method = 'conditions_organism_info';
+	
+	my $self = shift;
+	my %args = @_;
+	my @condition_names  = @ {$args{condition_names_aref} };
+	
+	#join together all the condition names and make sure the
+	#quotes are correct for the sql query
+	
+	my $search_string = join "' , '", @condition_names;
+ 	$search_string = "'$search_string'";
+	$log->debug("SEARCH STRING '$search_string'");
+	
+	my $sql = qq~
+		SELECT DISTINCT O.organism_name, O.genus, O.species
+		FROM $TBMA_CONDITION C 
+		JOIN $TB_ORGANISM O ON (C.organism_id = O.organism_id)
+		WHERE C.condition_name IN ($search_string)
+	~;
+	
+	#$log->debug("SQL '$sql'");
+	my @organism_info = $sbeams->selectHashArray($sql);
+	
+	return @organism_info;
+	
+	
+}
+	
 }#closing bracket for the package
 
 1;
