@@ -771,7 +771,7 @@ sub printEntryForm {
 		   'Annot_ISNULL' => ' [Add] ',
                    'bh' => "$CGI_BASE_DIR/Proteomics/SetBestHit.cgi?search_id=\%$colnameidx{search_id}V&search_hit_id=\%$colnameidx{search_hit_id}V",
 		   'bh_ATAG' => 'TARGET="Win1"',
-                   'Quant' => "$CGI_BASE_DIR/Proteomics/cgixpress?quantitation_id=\%$colnameidx{quantitation_id}V",
+                   'Quant' => "$CGI_BASE_DIR/Proteomics/Xpress.cgi?quantitation_id=\%$colnameidx{quantitation_id}V",
 		   'Quant_ATAG' => 'TARGET="Win1"',
       );
 
