@@ -29,13 +29,7 @@ SELECT DISTINCT SB.search_batch_id,username + '' - '' + experiment_tag + '' -> '
   JOIN $TBPR_SEARCH_BATCH_PROTEIN_SUMMARY SBPS ON ( SB.search_batch_id = SBPS.search_batch_id )
   JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
   JOIN $TB_USER_LOGIN UL ON ( PE.contact_id = UL.contact_id )
-  LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
-       ON ( PE.project_id = UPP.project_id AND UPP.contact_id=''$contact_id'' )
-  LEFT JOIN $TB_GROUP_PROJECT_PERMISSION GPP
-       ON ( PE.project_id = GPP.project_id )
-  LEFT JOIN $TB_USER_WORK_GROUP UWG ON ( GPP.work_group_id = UWG.work_group_id AND UWG.contact_id=''$contact_id'' )
- WHERE PE.record_status != ''D''
-   AND ( UPP.privilege_id<=40 OR GPP.privilege_id<=40 OR PE.contact_id=''$contact_id'' )
+ WHERE PE.project_id IN ( $accessible_project_ids )
  ORDER BY username,experiment_tag,set_tag'
  WHERE (   table_name = 'PR_BrowseProteinSummary'
        )
