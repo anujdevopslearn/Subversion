@@ -42,6 +42,7 @@ use SBEAMS::Connection::Authenticator qw( $q );
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::DataTable;
 use SBEAMS::Connection::Log;
 use SBEAMS::Connection::TableInfo;
 use SBEAMS::Connection::Utilities;
@@ -523,12 +524,13 @@ sub applySQLChange {
     my %args = @_;
 
     my $subname = 'applySQLChange';
-    $log->debug( "In $subname" );
-    $log->printStack();
+    $log->debug( "In $subname, SQL is $args{SQL_statement}" );
 
     # FIXME temporarily running both old and new versions of applySqlChange to
     # ensure a smooth transition.  New version is definitive as of 01-25-2005.
     my %asc_old = $self->applySqlChange ( %args );
+
+    $log->debug( "Went old school, did it fork us?" );
 
 
     # Check for required parameters.
@@ -1047,6 +1049,7 @@ sub insert_update_row {
 sub updateOrInsertRow {
   my $self = shift || croak("parameter self not passed");
   my %args = @_;
+  $log->printStack( 'debug' );
 
   #### Decode the argument list
   my $table_name = $args{'table_name'} || die "ERROR: table_name not passed";
@@ -3828,7 +3831,6 @@ sub processStandardParameters {
   #### Define some generic varibles
   my ($i,$element,$key,$value,$line,$result,$sql);
 
-
   #### If there's a parameter to set the current default project
   if (defined($ref_parameters->{set_current_project_id}) &&
       $ref_parameters->{set_current_project_id} gt '') {
@@ -5006,7 +5008,73 @@ sub getRecentResultsets {
 
 } #end printRecentResultsets
 
+#+
+# GetDataFromModules
+#
+# named arg projects required arrayref of project_ids
+# named arg modules required arrayref of module names
+# returns hashref keyed by project_id to hashref of module->link information.
+sub getDataFromModules {
+  my $this = shift;
+  my %args = @_;
+  for ( qw( projects modules ) ) {
+    unless( $args{$_} ) {
+      $log->warn( "Missing or empty parameter $_" );
+      return undef;
+    }
+  }
+  my $subdir = $this->getSBEAMS_SUBDIR();
+  
+  # Prune list of modules to the ones we know support this functionality 
+  my %supported_modules = ( Microarray  => 1,
+                            Proteomics  => 1,
+                            Immunostain => 1
+                           );
 
+  my @supp = qw( Microarray Proteomics Immunostain );
+
+  my @valid_mods;
+  for my $mod ( @{$args{modules}} ) {
+    $mod = ucfirst( $mod );
+    push @valid_mods, $mod if grep /$mod/, @supp;
+  }
+
+  my %sbeams;
+  
+  # Loop through remaining modules, instantiate those
+  # that we can
+  my $mod_index = $#valid_mods;
+  for my $mod ( @valid_mods ) {
+    my $class = 'SBEAMS::' . $mod;
+    $log->debug( $class );
+    eval "require $class";
+    if ( $@ ) { # We got an eval error
+      $log->debug( $@ );
+      splice( @valid_mods, $mod_index, 1 );
+    } else {
+      $sbeams{$mod} = eval "$class->new()"; 
+    }
+    $mod_index--;
+  }
+  # Reset the subdir to cached value.
+  $this->setSBEAMS_SUBDIR( $subdir );
+  
+
+  my %mod_data;
+
+  # loop through sbeams objects, 
+  for my $mod ( @valid_mods ) {
+    next unless $sbeams{$mod};
+    $log->debug( "Got a $mod?" );
+    $sbeams{$mod}->setSBEAMS($this) || die "Doh";
+    $mod_data{$mod} = $sbeams{$mod}->getProjectData( projects => $args{projects} );
+  }
+
+  # Return reference to data structure
+  return ( \@valid_mods, \%mod_data );
+
+  
+}
 
 ###############################################################################
 # printProjectsYouOwn- prints HTML TABLE that contains all projects you own
@@ -5025,65 +5093,134 @@ sub getProjectsYouOwn {
   #### Decode the argument list
   my $verbose = $args{'verbose'} || 0;
   my $current_contact_id = $self->getCurrent_contact_id();
-
-  #### Define standard variables
-  my ($sql, @rows);
-
-  my $html;
   
-  ####Print Table
-  $html .= qq~
-	<H1>Projects You Own:</H1>
-	<TABLE WIDTH="50%" BORDER=0>
-	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
-  ~;
-
-
   #### Get all the projects owned by the user
-  $sql = qq~
-	SELECT project_id,project_tag,P.name
+  my $sql =<<"  END_SQL";
+	SELECT project_id,project_tag,P.name, P.description
 	  FROM $TB_PROJECT P
 	 WHERE PI_contact_id = '$current_contact_id'
 	   AND record_status != 'D'
-	 ORDER BY project_tag
-  ~;
-  @rows = $self->selectSeveralColumns($sql);
-
-  if (@rows) {
-    my $firstflag = 1;
-    foreach my $row (@rows) {
-      my ($project_id,$project_tag,$project_name) = @{$row};
-      $html .= "	<TR><TD></TD>" unless ($firstflag);
-      $html .= "	<TD WIDTH=\"100%\">- <A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?set_current_project_id=$project_id\">$project_tag:</A> $project_name</TD></TR>\n";
-      $firstflag=0;
-    }
-  } else {
-    $html .= "	<TD WIDTH=\"100%\">NONE</TD></TR>\n";
+	 ORDER BY name ASC
+  END_SQL
+  
+  my @rows = $self->selectSeveralColumns($sql);
+  my @projects;
+  for my $row ( @rows ) {
+    push @projects, $row->[0];
   }
 
-  my $addLink = '[Add a new project]';
+  # From this point on, need to know if we're fetching module data
+  # currently this is an all or none decision
+  my $getmods = ( $args{mod_data} ) ? 1 : 0;
+
+  my @modules = $self->getModules();
+  my $modules = [];
+  my $mdata = {};
+
+  if ( $getmods ) {
+    ( $modules, $mdata ) = $self->getDataFromModules( projects => \@projects,
+                                                      modules => \@modules );
+  }
+  my $mod_data_css = '';
+
+  my @mods_with_data = @$modules;
+  my %project_mod_data; # Holds data for each project
+  my %project_mod_count; # Holds max number of mods with data for any projectID
+  # For each module that has some data, add CSS link and set project_mod value
+  for my $mod ( @mods_with_data ) {
+    $mod_data_css .= $self->getModuleButton( $mod );
+    for my $proj ( keys(%{$mdata->{$mod}}) ) {
+      $project_mod_data{$proj} ||= [];
+      push @{$project_mod_data{$proj}}, $mdata->{$mod}->{$proj};
+      $project_mod_count{$proj}++;
+    }
+  }
+
+  # Calculate the highest number of modules that any one project has data in.
+  my $max_mods = getMax( values( %project_mod_count ) );
+
+  # Really only matters if that number is > 1.
+  my $extra_mods = $max_mods - 1;
+
+  # Create table for data display 
+  my $ptable = SBEAMS::Connection::DataTable->new(BORDER => 0 , WIDTH => '40%');
+
+  my @headings = qw( ID Name Description );
+
+  if ( $getmods ) {
+    my $pad = '&nbsp;' x (20 * ( $max_mods - 1) );
+    push @headings, "Available Data $pad";
+  }
+
+  $ptable->addRow( \@headings );
+  $ptable->setHeaderAttr( BOLD => 1, UNDERLINE => 1 );
+
+  my $num_data_mods = scalar(@mods_with_data); 
+
+  my $numcols = 3 + $num_data_mods;
+  $ptable->setColAttr( COLS => [4], ROWS => [1],
+                       COLSPAN => $max_mods ) if $getmods && $extra_mods;
+
+  $ptable->addRow( ['None'] ) unless scalar( @rows );
+
+  foreach my $row ( @rows ) {
+    $row->[3] =~ s/\s+/ /gm;  # Condense multi-line descriptions
+    my $trunc = substr( $row->[3], 0, 40 );
+    my $changed = ( $trunc eq $row->[3] ) ? 0 : 1;
+    $trunc .= '...' if $changed;
+
+    $row->[3] = "<SPAN TITLE='$row->[3]'> $trunc </SPAN>";
+    $row->[2] =<<"    END_LINK";
+    <SPAN TITLE='Switch to the $row->[2] ($row->[1]) project' class=popup>
+    <A HREF=main.cgi?set_current_project_id=$row->[0] >$row->[2]
+    </A></SPAN>
+    END_LINK
+    my @display_row = ( "$row->[0] &nbsp;", $row->[2], $row->[3] );
+    push @display_row, @{$project_mod_data{$row->[0]}} if $getmods && $project_mod_data{$row->[0]};
+    
+    $ptable->addRow( \@display_row );
+  }
+  $ptable->setColAttr( COLS => [1..$numcols], ROWS => [ 1.. $ptable->getRowNum() ], 
+                       NOWRAP => 1, NOBR => 1, VALIGN => 'CENTER' );
+
+  my $addLink = 'Add a new project';
   if ( $self->isTableWritable( table_name => 'project' ) ) {
     $addLink =<<"    END";
-        <A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&ShowEntryForm=1">
+    <BR>
+        [<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&ShowEntryForm=1">
           $addLink
-        </A>
+        </A>]
     END
   } else {
     $addLink = $self->makeInactiveText( $addLink );
   }
 
-  #### Finish the table
-  $html .= qq~
-     <TR>
-       <TD></TD>
-       <TD>$addLink</TD>
-     </TR>
-	  </TABLE>
-  ~;
+  my $popup_css =<<"  END";
+  <STYLE TYPE=text/css>
+  .popup
+  {
+  COLOR: #9F141A;
+  CURSOR: help;
+  TEXT-DECORATION: none
+  }
+  </STYLE>
+  END
 
-  return $html;
+  #### Finish the table
+  return( <<"  END_HTML" );
+  $popup_css
+  $mod_data_css
+  <H1>Projects You Own:</H1>
+  $ptable
+  $addLink
+  END_HTML
+
 } #end printProjectsYouOwn
 
+sub getMax {
+  my @sorted = sort { $b <=> $a } @_;
+  return $sorted[0];
+}
 
 
 ###############################################################################
@@ -5091,7 +5228,197 @@ sub getProjectsYouOwn {
 ###############################################################################
 sub printProjectsYouHaveAccessTo {
   my $self = shift || croak("parameter self not passed");
-  print $self->getProjectsYouHaveAccessTo( @_ );
+  #print $self->getProjectsYouHaveAccessTo( @_ );
+  print $self->getAccessibleProjectInfo( @_ );
+}
+
+sub getAccessibleProjectInfo {
+  my $self = shift || croak("parameter self not passed");
+  my %args = @_;
+  my $SUB_NAME = "getAccessibleProjectInfo";
+  my $current_contact_id = $self->getCurrent_contact_id();
+
+
+  # Fetch the privilege level names and format them
+  my %privileges = $self->selectTwoColumnHash(
+    "SELECT privilege_id,name FROM $TB_PRIVILEGE WHERE record_status != 'D'"
+  );
+  $privileges{9999} = "<SPAN TITLE='Viewing info due to Admin workgroup'>&lt;undef&gt;</SPAN>";
+  @privileges{keys(%privileges)} = map { "<FONT COLOR=RED>$_</FONT>" } values( %privileges );
+
+  # Get list of accessible projects from approved sbeams routine.
+  my @accessible = $self->getAccessibleProjects( privilege_level => DATA_READER );
+  my $accessible_projects = join ',', @accessible;
+
+  # Build SQL to fetch other data
+  my $sql =<<"  END_SQL";
+  SELECT P.project_id, P.project_tag, P.name, 'desc_placeholder',
+         CASE WHEN UL.username IS NULL THEN C.first_name + '_' + C.last_name
+              ELSE UL.username END AS username,
+         MIN( CASE WHEN UWG.contact_id IS NULL THEN 9999
+              ELSE GPP.privilege_id END ) AS "best_group_privilege_id",
+         MIN( CASE WHEN P.PI_contact_id = $current_contact_id THEN 10
+                   WHEN UPP.privilege_id IS NULL THEN 9999 
+                   ELSE UPP.privilege_id END ) AS "best_user_privilege_id"
+	  FROM $TB_PROJECT P JOIN $TB_CONTACT C ON ( P.PI_contact_id = C.contact_id )
+	  LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
+	  LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
+	       ON ( P.project_id = UPP.project_id
+	            AND UPP.contact_id='$current_contact_id' )
+	  LEFT JOIN $TB_GROUP_PROJECT_PERMISSION GPP
+	       ON ( P.project_id = GPP.project_id )
+	  LEFT JOIN $TB_PRIVILEGE PRIV
+	       ON ( GPP.privilege_id = PRIV.privilege_id )
+	  LEFT JOIN $TB_USER_WORK_GROUP UWG
+	       ON ( GPP.work_group_id = UWG.work_group_id
+	            AND UWG.contact_id='$current_contact_id' )
+	  LEFT JOIN $TB_WORK_GROUP WG
+	       ON ( UWG.work_group_id = WG.work_group_id )
+	 WHERE P.project_id IN ( $accessible_projects )
+   GROUP BY P.project_id,P.project_tag,P.name, username, first_name,
+            last_name
+	 ORDER BY UL.username,P.name
+  END_SQL
+
+  my @rows = $self->selectSeveralColumns($sql);
+
+  # Stupid MSSQL can't group by description, awww.  May go away if we don't use desc.
+  my $descSQL =<<"  END";
+  SELECT description, project_id FROM $TB_PROJECT 
+  WHERE project_id IN ( $accessible_projects ) 
+  END
+  my @desc = $self->selectSeveralColumns( $descSQL );
+  my %desc;
+  foreach my $desc ( @desc ) {
+    $desc{$desc->[1]} = $desc->[0];
+  }
+  
+  # From this point on, need to know if we're fetching module data
+  # currently this is an all or none decision
+  my $getmods = ( $args{mod_data} ) ? 1 : 0;
+
+  my @modules = $self->getModules();
+  my $modules = [];
+  my $mdata = {};
+
+  if ( $getmods ) {
+     ($modules, $mdata) = $self->getDataFromModules( projects => \@accessible, 
+                                                     modules => \@modules );
+  }
+  my $mod_data_css = '';
+
+  my @mods_with_data = @$modules;
+  my %project_mod_data; # Holds data for each project
+  my %project_mod_count; # Holds max number of mods with data for any projectID
+
+  # For each module that has some data, add CSS link and set project_mod value
+  for my $mod ( @mods_with_data ) {
+    $mod_data_css .= $self->getModuleButton( $mod );
+    for my $proj ( keys(%{$mdata->{$mod}}) ) {
+      $project_mod_data{$proj} ||= [];
+      push @{$project_mod_data{$proj}}, $mdata->{$mod}->{$proj};
+      $project_mod_count{$proj}++;
+    }
+  }
+
+  
+  # Calculate the highest number of modules that any one project has data in.
+  my $max_mods = getMax( values( %project_mod_count ) );
+
+  # Really only matters if that number is > 1.
+  my $extra_mods = $max_mods - 1;
+
+#  my $num_data_mods = scalar(@mods_with_data); 
+  my $numcols = 4 + $getmods;
+
+  my $ptable = SBEAMS::Connection::DataTable->new(BORDER => 0, WIDTH => '40%');
+
+  my @headings = qw( ID Owner Name Privilege );
+
+  if ( $getmods ) {
+    my $pad = '&nbsp;' x (20 * ( $max_mods - 1) );
+    push @headings, "Available Data $pad";
+  }
+
+  $ptable->addRow( \@headings );
+  $ptable->setHeaderAttr( BOLD => 1, UNDERLINE => 1 );
+  $ptable->addRow( ['None'] ) unless scalar( @rows );
+
+  $ptable->setColAttr( COLS => [5], ROWS => [1],
+                       COLSPAN => $max_mods ) if $getmods && $extra_mods;
+
+  # Now loop through and build table
+  foreach my $row (@rows) {
+
+    # Format descriptions
+    $row->[3] = $desc{$row->[0]};
+    $row->[3] =~ s/\s+/ /gm;
+    my $trunc = substr( $row->[3], 0, 35 );
+    $row->[3] = substr( $trunc, 0, 32 ) . '...' unless $trunc eq $row->[3];
+
+    # Build link from project name
+    $trunc = substr( $row->[2], 0, 30 );
+    $trunc .= '...' unless $trunc eq $row->[2];
+
+    $row->[2] =<<"    END_LINK";
+    <SPAN TITLE='Switch to the $row->[2] ($row->[1]) project' class=popup>
+    <A HREF=main.cgi?set_current_project_id=$row->[0] >$trunc
+    </A></SPAN>
+    END_LINK
+
+    # Calculate the best permission
+    my $priv = ( $row->[5] < $row->[6] ) ? $row->[5] : $row->[6];
+
+    $project_mod_data{$row->[0]} ||= '';
+    my @display_row = ("$row->[0] &nbsp;", @$row[4,2], "$privileges{$priv} &nbsp;" );
+    if ( $getmods && $project_mod_data{$row->[0]} ) {
+      push @display_row, @{$project_mod_data{$row->[0]}};
+    }
+    $ptable->addRow( \@display_row );
+  }
+  $ptable->setColAttr( COLS => [1..$numcols], ROWS => [ 1.. $ptable->getRowNum() ], 
+                       NOWRAP => 1, VALIGN => 'CENTER' );
+
+  my $addLink = 'Add a new project';
+  if ( $self->isTableWritable( table_name => 'project' ) ) {
+    $addLink =<<"    END";
+    <BR>
+        [<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&ShowEntryForm=1">
+          $addLink
+        </A>]
+    END
+  } else {
+    $addLink = $self->makeInactiveText( $addLink );
+  }
+
+  my $popup_css =<<"  END";
+  <STYLE TYPE=text/css>
+  .fixwidth
+  {
+    font-family: Verdana, Courier, Arial, sans serif;
+  }
+  .popup
+  {
+  COLOR: #9F141A;
+  CURSOR: help;
+  TEXT-DECORATION: none
+  }
+  </STYLE>
+  END
+
+  #### Finish the table
+  return( <<"  END_HTML" );
+  <DIV id=fixwidth>
+    <FONT type=Courier>
+  $popup_css
+  $mod_data_css
+  <H1>Projects You Own:</H1>
+  $ptable
+  $addLink
+    </FONT>
+  </DIV>
+  END_HTML
+
 }
 
 sub getProjectsYouHaveAccessTo {
@@ -5121,13 +5448,14 @@ sub getProjectsYouHaveAccessTo {
   my %privilege_names = $self->selectTwoColumnHash(
     "SELECT privilege_id,name FROM $TB_PRIVILEGE WHERE record_status != 'D'"
   );
+  $privilege_names{9999} = "<SPAN TITLE='Viewing info due to Admin workgroup'>&lt;undef&gt;</SPAN>";
 
   my @accessible = $self->getAccessibleProjects( privilege_level => DATA_READER );
   my $accessible_projects = join ',', @accessible;
 
   #### Get all the projects user has access to
   $sql = qq~
-	SELECT P.project_id,P.project_tag,P.name,
+  SELECT P.project_id,P.project_tag,P.name,
          CASE WHEN UL.username IS NULL THEN C.first_name + '_' + C.last_name
               ELSE UL.username END AS username,
          MIN( CASE WHEN UWG.contact_id IS NULL THEN 9999
