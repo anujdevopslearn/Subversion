@@ -36,13 +36,15 @@ sub new {
 # Return the required information about the specified Table
 ###############################################################################
 sub returnTableInfo {
-    my $self = shift;
-    my $table_name = shift || croak("parameter table_name not specified");
-    my $info_key = shift || croak("parameter info_key not specified");
+  my $self = shift;
+  my $table_name = shift || croak("parameter table_name not specified");
+  my $info_key = shift || croak("parameter info_key not specified");
 
-    my @row;
-    my $sql_query;
-    my $result;
+  my @row;
+  my $sql_query;
+  my $result;
+  my @ids = $self->getSBEAMS()->getAccessibleProjects();
+  my $project_string = join( ",", @ids );
 
 
 ###############################################################################
@@ -54,41 +56,118 @@ sub returnTableInfo {
 #
 ###############################################################################
 ###############################################################################
-    if ($table_name eq "blxxxxxx") {
+  if ($table_name eq "blxxxxxx") {
 
-        if ($info_key eq "BASICQuery") {
-            return qq~
-		SELECT hardware_id,HT.name,make,model,serial_number,uri
-		  FROM xxxxxxxx H
-		  JOIN xxxxxxxxx HT
-		       ON (H.hardware_type_id=HT.hardware_type_id)
-		 WHERE H.record_status!='D'
-            ~;
-        }
-
-        if ($info_key eq "FULLQuery") {
-            return qq~
-		SELECT H.*
-		  FROM xxxxxxx H
-		  JOIN xxxxxx HT
-		       ON (H.hardware_type_id=HT.hardware_type_id)
-		 WHERE H.record_status!='D'
-            ~;
-        }
-
-
+    if ($info_key eq "BASICQuery") {
+      return qq~
+     	SELECT hardware_id,HT.name,make,model,serial_number,uri
+      FROM xxxxxxxx H
+      JOIN xxxxxxxxx HT
+      ON (H.hardware_type_id=HT.hardware_type_id)
+      WHERE H.record_status!='D'
+    ~;
+    } elsif ($info_key eq "FULLQuery") {
+      return qq~
+  		SELECT H.*
+      FROM xxxxxxx H
+      JOIN xxxxxx HT
+      ON (H.hardware_type_id=HT.hardware_type_id)
+      WHERE H.record_status!='D'
+      ~;
     }
 
+  } elsif ( uc($table_name) eq 'AT_SAMPLE' ) {
+      
+    if ($info_key eq "BASICQuery") {
+      return( <<"      END_QUERY" ); 
+     	SELECT *
+      FROM $TBAT_SAMPLE 
+      WHERE project_id IN ( $project_string )
+      AND record_status!='D'
+      END_QUERY
 
+    } elsif ($info_key eq "FULLQuery") {
+      return( <<"      END_QUERY" ); 
+     	SELECT *
+      FROM $TBAT_SAMPLE 
+      WHERE project_id IN ( $project_string )
+      AND record_status!='D'
+      END_QUERY
 
-###############################################################################
+    } elsif ( $info_key eq 'projPermSQL' ) { 
+      my %projectSQL;
+      $projectSQL{fsql} = '';
+      $projectSQL{dbsql} =<<"      END";
+      SELECT project_id FROM $TBAT_SAMPLE 
+      WHERE sample_id = KEYVAL
+      END
+      return \%projectSQL
+      }
+      
+  } elsif ( uc($table_name) eq 'AT_BIOSEQUENCE_SET' ) {
+      
+    if ($info_key eq "BASICQuery") {
+      return( <<"      END_QUERY" ); 
+     	SELECT *
+      FROM $TBAT_BIOSEQUENCE_SET 
+      WHERE project_id IN ( $project_string )
+      AND record_status!='D'
+      END_QUERY
 
-    #### Obtain main SBEAMS object and fall back to its TableInfo handler
-    my $sbeams = $self->getSBEAMS();
-    my @temp_result = $sbeams->returnTableInfo($table_name,$info_key);
-    return @temp_result;
+    } elsif ($info_key eq "FULLQuery") {
+      return( <<"      END_QUERY" ); 
+     	SELECT *
+      FROM $TBAT_BIOSEQUENCE_SET 
+      WHERE project_id IN ( $project_string )
+      AND record_status!='D'
+      END_QUERY
 
-}
+    } elsif ( $info_key eq 'projPermSQL' ) { 
+      my %projectSQL;
+      $projectSQL{fsql} = '';
+      $projectSQL{dbsql} =<<"      END";
+      SELECT project_id FROM $TBAT_BIOSEQUENCE_SET 
+      WHERE biosequence_set_id = KEYVAL
+      END
+      return \%projectSQL
+    }
+
+  } elsif ( uc($table_name) eq 'AT_ATLAS_BUILD' ) {
+      
+    if ($info_key eq "BASICQuery") {
+      return( <<"      END_QUERY" ); 
+     	SELECT *
+      FROM $TBAT_ATLAS_BUILD
+      WHERE project_id IN ( $project_string )
+      AND record_status!='D'
+      END_QUERY
+
+    } elsif ($info_key eq "FULLQuery") {
+      return( <<"      END_QUERY" ); 
+     	SELECT *
+      FROM $TBAT_ATLAS_BUILD 
+      WHERE project_id IN ( $project_string )
+      AND record_status!='D'
+      END_QUERY
+
+    } elsif ( $info_key eq 'projPermSQL' ) { 
+      
+      my %projectSQL;
+      $projectSQL{fsql} = '';
+      $projectSQL{dbsql} =<<"      END";
+      SELECT project_id FROM $TBAT_ATLAS_BUILD 
+      WHERE atlas_build_id = KEYVAL
+      END
+      return \%projectSQL
+    } 
+  }
+
+  #### Obtain main SBEAMS object and fall back to its TableInfo handler
+  my $sbeams = $self->getSBEAMS();
+  my @temp_result = $sbeams->returnTableInfo($table_name,$info_key);
+  return @temp_result;
+
+} # End returnTableInfo
 
 
 
@@ -131,12 +210,78 @@ sub getParentProject {
   );
   return($project_id) if ($project_id);
 
+  # We may well have this cached
+  return $parameters_ref->{project_id} if $parameters_ref->{project_id};
+
+  # Fetch SQL to retrieve project_id from table_name, if it is available.
+  my $sqlref = $self->returnTableInfo( $table_name, 'projPermSQL' );
+
+  # If we don't have it 
+  unless ( ref( $sqlref ) && $sqlref->{dbsql} ) {
+    print STDERR "dbsql not defined for $table_name\n";
+    return undef;
+  }
+
 
   #############################################################################
   #### Process actions for individual tables
 
   #### If table is xxxx
-  if ($table_name eq "xxxx") {
+  if ( uc($table_name) eq 'AT_SAMPLE') {
+
+    # If the user wants to INSERT, determine how it fits into project
+    if ($action eq 'INSERT') {
+      # No parent project yet, for object doesn't exist.
+      return undef;
+
+    # Else for an UPDATE or DELETE, determine how it fits into project
+    } elsif ($action eq 'UPDATE' || $action eq 'DELETE') {
+
+      # The sample table has project_id in it
+      if ( $parameters_ref->{sample_id} ) {
+        $sqlref->{dbsql} =~ s/KEYVAL/$parameters_ref->{sample_id}/;
+        ( $project_id ) = $sbeams->selectOneColumn( $sqlref->{dbsql} );
+      }
+    }
+    return ( $project_id ) ? $project_id : undef;
+
+  } elsif ( uc($table_name) eq 'AT_BIOSEQUENCE_SET') {
+
+    # If the user wants to INSERT, determine how it fits into project
+    if ($action eq 'INSERT') {
+      # No parent project yet, for object doesn't exist.
+      return undef;
+
+    # Else for an UPDATE or DELETE, determine how it fits into project
+    } elsif ($action eq 'UPDATE' || $action eq 'DELETE') {
+
+      # The biosequence_set table has project_id in it
+      if ( $parameters_ref->{biosequence_set_id} ) {
+        $sqlref->{dbsql} =~ s/KEYVAL/$parameters_ref->{biosequence_set_id}/;
+        ( $project_id ) = $sbeams->selectOneColumn( $sqlref->{dbsql} );
+      }
+    }
+    return ( $project_id ) ? $project_id : undef;
+
+  } elsif ( uc($table_name) eq 'AT_ATLAS_BUILD') {
+
+    # If the user wants to INSERT, determine how it fits into project
+    if ($action eq 'INSERT') {
+      # No parent project yet, for object doesn't exist.
+      return undef;
+
+    # Else for an UPDATE or DELETE, determine how it fits into project
+    } elsif ($action eq 'UPDATE' || $action eq 'DELETE') {
+
+      # The atlas_build table has project_id in it
+      if ( $parameters_ref->{atlas_build_id} ) {
+        $sqlref->{dbsql} =~ s/KEYVAL/$parameters_ref->{atlas_build_id}/;
+        ( $project_id ) = $sbeams->selectOneColumn( $sqlref->{dbsql} );
+      }
+    }
+    return ( $project_id ) ? $project_id : undef;
+
+  } elsif ($table_name eq "xxxx") {
 
     #### If the user wants to INSERT, determine how it fits into project
     if ($action eq 'INSERT') {
