@@ -105,9 +105,39 @@ sub printEntryForm {
   if ($apply_action_hidden gt "") { $apply_action = $apply_action_hidden; }
 
 
-  #### If a specific PK row was referenced and this is not a REFRESH of an
+  #### If the action was to SET FIELDS TO THIS TEMPLATE, then try
+  if ($apply_action eq "SET FIELDS TO THIS TEMPLATE") {
+    if (defined($parameters{selected_template}) &&
+        $parameters{selected_template}) {
+      my %new_parameters = getTemplateParameters(
+        template_name => $parameters{selected_template},
+        program_file_name => $PROGRAM_FILE_NAME,
+      );
+      $parameters{save_template_as_name} = $parameters{selected_template};
+
+      #### Loop over all the parameters in the template
+      while (my ($key,$value) = each %new_parameters) {
+        #### Never override record_status or the PK
+        next if ($key eq 'record_status' || $key eq $PK_COLUMN_NAME);
+        #### If there's already a value for this parameter
+        if (defined($parameters{$key}) && $parameters{$key} gt '') {
+          #### If the user allowed overrides, then set to the new value
+          if ($parameters{template_overrides_existing_data}) {
+            $parameters{$key} = $value;
+          }
+        #### If it's currently empty, then set it
+        } else {
+          $parameters{$key} = $value;
+        }
+
+      }
+
+    }
+
+
+  #### Else if a specific PK row was referenced and this is not a REFRESH of an
   #### existing form, then load data from it into hash
-  if ($parameters{$PK_COLUMN_NAME} gt "" && $apply_action ne "REFRESH") {
+  } elsif ($parameters{$PK_COLUMN_NAME} gt "" && $apply_action ne "REFRESH") {
     my $column_list = join(",",@columns);
     $sql = qq~
       SELECT $column_list
@@ -538,13 +568,40 @@ sub printEntryForm {
   #### Finish the form
   print qq!
        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-       <INPUT TYPE="reset" VALUE="CLEAR"> fields
+       <INPUT TYPE="reset" VALUE="RESET"> fields to their original values
        <INPUT TYPE="hidden" NAME="apply_action_hidden" VALUE="">
        <INPUT TYPE="hidden" NAME="set_current_work_group" VALUE="">
        <INPUT TYPE="hidden" NAME="set_current_project_id" VALUE="">
+  !;
+
+
+  #### Finish the form
+  my $sql = qq~
+    SELECT template_name,template_name
+      FROM $TB_FORM_TEMPLATE
+     WHERE contact_id = '$current_contact_id'
+       AND program_file_name = '$PROGRAM_FILE_NAME'
+       AND record_status != 'D'
+  ~;
+
+  my $available_template_options = $sbeams->buildOptionList($sql,$parameters{selected_template});
+  print qq!
+       <BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+       Store current state of fields as template: <INPUT TYPE="text" WIDTH=30 NAME="save_template_as_name" VALUE="$parameters{save_template_as_name}">
+       <INPUT TYPE="submit" NAME="apply_action" VALUE="SAVE TEMPLATE">
+       <BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+       Existing templates: <SELECT NAME="selected_template"><OPTION VALUE=""></OPTION>$available_template_options</SELECT>
+       &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<INPUT TYPE="submit" NAME="apply_action" VALUE="DELETE THIS TEMPLATE">
+       <BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<INPUT TYPE="submit" NAME="apply_action" VALUE="SET FIELDS TO THIS TEMPLATE">
+       &nbsp;&nbsp;&nbsp;<INPUT TYPE="checkbox" NAME="template_overrides_existing_data"> including non-blank fields
     </TR></TABLE>
     </FORM>
   !;
+
+
+
+
+
 
 
   $sbeamsMOD->printPageFooter(close_tables=>'YES',display_footer=>'NO');
@@ -1550,6 +1607,278 @@ sub updateLinkingTable {
   return 1;
 
 } # end updateLinkingTable
+
+
+
+###############################################################################
+# saveTemplate
+#
+###############################################################################
+sub saveTemplate {
+
+  $sbeams->printUserContext();
+
+  #### Get the columns for this table
+  my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
+  my %input_types = $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
+
+
+  #### Read the form values for each column
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,
+    parameters_ref=>\%parameters,
+    columns_ref=>\@columns,
+    input_types_ref=>\%input_types
+  );
+
+
+  #### Make sure a template name was provided
+  my $save_template_as_name = $parameters{save_template_as_name};
+  unless (defined($save_template_as_name) &&
+          $save_template_as_name gt '') {
+    my $back_button = $sbeams->getGoBackButton();
+    print qq~
+        <P>
+        <H2>Template Save Error</H2>
+        $LINESEPARATOR
+        <P>
+        <TABLE WIDTH=$MESSAGE_WIDTH><TR><TD>
+        Unable to save your template because no name was provided.
+	Please go back and provide a template name.
+        <P>
+        $back_button
+    ~;
+    return;
+  }
+
+
+  #### Obtain information about the current user
+  $current_contact_id = $sbeams->getCurrent_contact_id;
+
+
+  #### See if this template already exists
+  my $insert_flag = 1;
+  my $update_flag = 0;
+  my $PK_value = 0;
+  my $sql = qq~
+    SELECT form_template_id
+      FROM $TB_FORM_TEMPLATE
+     WHERE contact_id = '$current_contact_id'
+       AND program_file_name = '$PROGRAM_FILE_NAME'
+       AND template_name = '$save_template_as_name'
+       AND record_status != 'D'
+  ~;
+  my @form_template_ids = $sbeams-> selectOneColumn($sql);
+  if (scalar(@form_template_ids) == 1) {
+    $insert_flag = 0;
+    $update_flag = 1;
+    $PK_value = $form_template_ids[0];
+  }
+  if (scalar(@form_template_ids) > 1) {
+    die("ERROR: More than one template returned for $sql.".
+        "Please report this error.  It should never happen.");
+  }
+
+
+  #### Prepare the data to store
+  my %rowdata;
+  $rowdata{contact_id} = $current_contact_id;
+  $rowdata{program_file_name} = $PROGRAM_FILE_NAME;
+  $rowdata{template_name} = $parameters{save_template_as_name};
+
+  #### Prepare the parameters to store
+  my $temp_hash_ref;
+  foreach my $column (@columns) {
+    if (defined($parameters{$column}) && $parameters{$column} gt '') {
+      $temp_hash_ref->{$column} = $parameters{$column};
+    }
+  }
+  $rowdata{parameters} = Data::Dumper->Dump( [$temp_hash_ref] );
+
+
+  #### Write the record
+  my $returned_PK = $sbeams->updateOrInsertRow(
+    insert => $insert_flag,
+    update => $update_flag,
+    table_name => "$TB_FORM_TEMPLATE",
+    rowdata_ref => \%rowdata,
+    PK => "form_template_id",
+    PK_value => $PK_value,
+    return_PK => 1,
+    add_audit_parameters => 1,
+    verbose=>0,
+    testonly=>0,
+  );
+
+
+  if ($returned_PK) {
+    my $back_button = $sbeams->getGoBackButton();
+    print qq~
+        <P>
+        <H2>Template Saved</H2>
+        $LINESEPARATOR
+        <P>
+        <TABLE WIDTH=$MESSAGE_WIDTH><TR><TD>
+        The values in the form have been saved.
+        <P>
+        $back_button
+    ~;
+    return;
+  }
+
+
+  print "ERROR: Failed to write template!!!";
+
+
+  return;
+
+} # end saveTemplate
+
+
+###############################################################################
+# deleteTemplate
+#
+###############################################################################
+sub deleteTemplate {
+  #my $self = shift;
+  my %args = @_;
+
+  #### Process the arguments list
+  my $selected_template = $args{'selected_template'} || '';
+  my $program_file_name = $args{'program_file_name'} || '';
+
+  $sbeams->printUserContext();
+
+  #### Make sure a template name was provided
+  unless (defined($selected_template) &&
+          $selected_template gt '') {
+    my $back_button = $sbeams->getGoBackButton();
+    print qq~
+        <P>
+        <H2>Template Delete Error</H2>
+        $LINESEPARATOR
+        <P>
+        <TABLE WIDTH=$MESSAGE_WIDTH><TR><TD>
+        Unable to delete a template because none was selected.
+	Please go back and selecte the template to delete from the list.
+        <P>
+        $back_button
+    ~;
+    return;
+  }
+
+
+  #### Obtain information about the current user
+  $current_contact_id = $sbeams->getCurrent_contact_id;
+
+
+  #### See if this template really exists
+  my $sql = qq~
+    SELECT form_template_id
+      FROM $TB_FORM_TEMPLATE
+     WHERE contact_id = '$current_contact_id'
+       AND program_file_name = '$program_file_name'
+       AND template_name = '$selected_template'
+       AND record_status != 'D'
+  ~;
+  my @form_template_ids = $sbeams-> selectOneColumn($sql);
+  if (scalar(@form_template_ids) == 0) {
+    die("ERROR: No templats found with $sql.".
+        "Please report this error.  It should never happen.");
+  }
+  if (scalar(@form_template_ids) > 1) {
+    die("ERROR: More than one template returned for $sql.".
+        "Please report this error.  It should never happen.");
+  }
+  $sql = "DELETE FROM $TB_FORM_TEMPLATE WHERE form_template_id = '$form_template_ids[0]'";
+  $sbeams->executeSQL($sql);
+
+
+  print qq~
+      <P>
+      <H2>Template Deleted</H2>
+      $LINESEPARATOR
+      <P>
+      <TABLE WIDTH=$MESSAGE_WIDTH><TR><TD>
+      This template has been deleted.  It may still appear in stale
+      Web pages.  REFRESH such pages to make it disappear.
+      <P>
+  ~;
+
+  return;
+
+} # end deleteTemplate
+
+
+
+###############################################################################
+# getTemplateParameters
+#
+###############################################################################
+sub getTemplateParameters {
+  #my $self = shift;
+  my %args = @_;
+
+  #### Process the arguments list
+  my $form_template_id = $args{'form_template_id'} || 0;
+  my $template_name = $args{'template_name'} || '';
+  my $program_file_name = $args{'program_file_name'} || '';
+
+
+  #### Set up a hash for the new parameters
+  my %new_parameters;
+
+  $current_contact_id = $sbeams->getCurrent_contact_id;
+
+
+  #### Try to find this template
+  my $sql;
+
+  #### If a form_template_id was supplied
+  if ($form_template_id) {
+    $sql = qq~
+      SELECT parameters
+        FROM $TB_FORM_TEMPLATE
+       WHERE form_template_id = '$form_template_id'
+         AND record_status != 'D'
+    ~;
+
+  } elsif ($template_name && $program_file_name) {
+    $sql = qq~
+      SELECT parameters
+        FROM $TB_FORM_TEMPLATE
+       WHERE contact_id = '$current_contact_id'
+         AND program_file_name = '$program_file_name'
+         AND template_name = '$template_name'
+         AND record_status != 'D'
+    ~;
+  } else {
+    print "ERROR: Insufficient options specified to getTemplateParameters<BR>";
+    return %new_parameters;
+  }
+
+
+  my @rows = $sbeams-> selectOneColumn($sql);
+  if (scalar(@rows) == 0) {
+    print "ERROR: Unable to find template '$template_name'<BR>";
+    return %new_parameters;
+  }
+  if (scalar(@rows) > 1) {
+    print "ERROR: Too many rows returned for '$sql'<BR>";
+    return %new_parameters;
+  }
+
+  #### eval the result.  This is potentially nasty.
+  my $VAR1;
+  eval $rows[0];
+  my $new_parameters_ref;
+  %{$new_parameters_ref} = %{$VAR1};
+
+  return %{$new_parameters_ref};
+
+}
+
 
 
 

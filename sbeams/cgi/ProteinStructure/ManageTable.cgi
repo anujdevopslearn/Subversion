@@ -148,6 +148,14 @@ sub main {
   $sbeamsMOD->printPageHeader();
   if      ($parameters{action} eq 'VIEWRESULTSET') { printOptions();
   } elsif ($parameters{action} eq 'REFRESH') { printEntryForm();
+  } elsif ($parameters{action} eq 'SAVE TEMPLATE') { saveTemplate();
+  } elsif ($parameters{action} eq 'SET FIELDS TO THIS TEMPLATE') {
+    printEntryForm();
+  } elsif ($parameters{action} eq 'DELETE THIS TEMPLATE') {
+    deleteTemplate(
+      selected_template => $parameters{selected_template},
+      program_file_name => $PROGRAM_FILE_NAME,
+    );
   } elsif ($parameters{action}) { processEntryForm();
   } elsif ($q->param('apply_action_hidden')) { printEntryForm();
   } elsif ($q->param('ShowEntryForm')) { printEntryForm();

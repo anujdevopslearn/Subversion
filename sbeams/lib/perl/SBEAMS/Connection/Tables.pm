@@ -45,6 +45,7 @@ use vars qw(@ISA @EXPORT
     $TB_HELP_TEXT
     $TB_MISC_OPTION
     $TB_CACHED_RESULTSET
+    $TB_FORM_TEMPLATE
 
     $TB_MGED_ONTOLOGY_RELATIONSHIP
     $TB_MGED_ONTOLOGY_TERM
@@ -80,6 +81,7 @@ require Exporter;
     $TB_HELP_TEXT
     $TB_MISC_OPTION
     $TB_CACHED_RESULTSET
+    $TB_FORM_TEMPLATE
 
     $TB_MGED_ONTOLOGY_RELATIONSHIP
     $TB_MGED_ONTOLOGY_TERM
@@ -118,6 +120,7 @@ $TB_USAGE_LOG           = "${core}usage_log";
 $TB_HELP_TEXT           = "${core}help_text";
 $TB_MISC_OPTION         = "${core}misc_option";
 $TB_CACHED_RESULTSET    = "${core}cached_resultset";
+$TB_FORM_TEMPLATE       = "${core}form_template";
 
 $TB_MGED_ONTOLOGY_RELATIONSHIP    = "BioLink.dbo.MGEDOntologyRelationship";
 $TB_MGED_ONTOLOGY_TERM            = "BioLink.dbo.MGEDOntologyTerm";
