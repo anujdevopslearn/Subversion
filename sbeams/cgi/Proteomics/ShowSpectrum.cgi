@@ -550,15 +550,30 @@ sub get_msms_spectrum {
            "  FROM $TBPR_MSMS_SPECTRUM_PEAK ".
            " WHERE msms_spectrum_id = '$msms_spectrum_id'";
     my @mass_intensities = $sbeams->selectSeveralColumns($sql);
+
+
+    #### If nothing returned from the database, try to read peaks from dta file
     unless (@mass_intensities) {
-      print "\nERROR: Unable to find msms_spectrum_id '$msms_spectrum_id'.\n\n";
+      #print "\nWARNING: Spectrum peaks not in database, trying file.\n\n";
+      @mass_intensities = get_msms_spectrum_from_file(
+        msms_spectrum_id => $msms_spectrum_id,
+      );
+    }
+
+
+    #### If we still have no spectrum data, then bail out
+    unless (@mass_intensities) {
+      print "\nERROR: Unable to get m/z,intensity pairs for ".
+	"msms_spectrum_id '$msms_spectrum_id'.\n\n";
       return;
     }
 
 
     #### Verify that n_peaks is correct
     unless (scalar(@mass_intensities) == $spectrum{n_peaks}) {
-      print "\nWARNING: Number of data points returned does not match n_peaks.\n\n";
+      print "\nWARNING: Number of data points returned, ".
+	scalar(@mass_intensities).", does not match n_peaks, ".
+	$spectrum{n_peaks}.".\n\n";
       return;
     }
 
@@ -584,6 +599,90 @@ sub get_msms_spectrum {
   }
 
 }
+
+
+
+###############################################################################
+# get_msms_spectrum_from_file
+###############################################################################
+sub get_msms_spectrum_from_file {
+  my %args = @_;
+
+  my $inputfile = $args{'inputfile'} || "";
+  my $verbose = $args{'verbose'} || "";
+  my $msms_spectrum_id = $args{'msms_spectrum_id'} || "";
+
+  #### Find the corresponding information for this msms_spectrum_id
+  my $sql = qq~
+	SELECT SB.data_location+'/'+F.fraction_tag AS 'location',
+	       F.fraction_tag+'/'+S.file_root+'.out' AS 'name',
+               S.file_root,SB.data_location,F.fraction_tag
+	  FROM $TBPR_SEARCH S
+	 INNER JOIN $TBPR_SEARCH_BATCH SB
+               ON ( S.search_batch_id = SB.search_batch_id )
+	 INNER JOIN $TBPR_MSMS_SPECTRUM MS
+               ON ( S.msms_spectrum_id = MS.msms_spectrum_id )
+	 INNER JOIN $TBPR_FRACTION F ON ( MS.fraction_id = F.fraction_id )
+	 WHERE MS.msms_spectrum_id = '$msms_spectrum_id'
+  ~;
+  #print "<PRE>$sql\n";
+  my @rows = $sbeams->selectSeveralColumns($sql);
+  #print "nrows=",scalar(@rows),"\n";
+  unless (@rows) {
+    print "ERROR: Unable to find any location for msms_spectrum_id".
+      " = '$msms_spectrum_id'.  This really should never ".
+      "happen!  Please report the problem.<BR>\n";
+    return;
+  }
+
+  my $location = $rows[0]->[0];
+  my $name = $rows[0]->[1];
+  my $file_root = $rows[0]->[2];
+  my $data_location = $rows[0]->[3];
+  my $fraction_tag = $rows[0]->[4];
+
+  my @mass_intensities;
+
+  #### Set the file name as a dta file
+  my $filename = "$location/$file_root.dta";
+  unless ($filename =~ /^\//) {
+    $filename = $RAW_DATA_DIR{Proteomics}."/$filename";
+  }
+
+
+  #### Instead of accessing the .dta file directly, pull it out of the .tgz
+  my $use_tgz_file = 1;
+  if ($use_tgz_file) {
+    my $prefix = "$RAW_DATA_DIR{Proteomics}/";
+    $prefix = '' if ($location =~ /^\//);
+    $filename = "/bin/tar -xzOf $prefix$data_location/".
+      "$fraction_tag.tgz ./$file_root.dta|";
+  }
+
+  if ( $use_tgz_file || -e $filename ) {
+    my $line;
+    unless (open(INFILE,$filename)) {
+      print "Cannot open file $filename!!<BR>\n";
+    }
+
+    #### Read in but ignore header line
+    my $headerline = <INFILE>;
+
+    while ($line = <INFILE>) {
+      chomp $line;
+      my @values = split(/\s+/,$line);
+      push(@mass_intensities,\@values);
+    }
+    close(INFILE);
+
+  } else {
+    print "Cannot find filename '$filename'<BR>\n";
+  }
+
+  return @mass_intensities;
+
+} # end get_msms_spectrum_from_file
+
 
 
 ###############################################################################
