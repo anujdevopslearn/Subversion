@@ -23,6 +23,7 @@
 use strict;
 use Getopt::Long;
 use FindBin;
+use CGI;
 
 use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username %hash_to_sort
@@ -40,15 +41,11 @@ use SBEAMS::Immunostain;
 use SBEAMS::Immunostain::Settings;
 use SBEAMS::Immunostain::Tables;
 
-
 $q   = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::Immunostain;
 $sbeamsMOD->setSBEAMS($sbeams);
 
-
-use CGI;
-$q = new CGI;
 
 ###############################################################################
 # Set program name and usage banner for command like use
@@ -219,7 +216,6 @@ my $sub = $actionHash{$action} || $actionHash{$INTRO};
 if ($sub )  {
 		#print some info about this project
 		#only on the main page
-		
 		print qq~
 				<H1>Current Project: <A class="h1" HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=$project_id">$project_name</A></H1>
 				<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
@@ -230,7 +226,7 @@ if ($sub )  {
 				<TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
 	      <TD WIDTH="100%"><TABLE BORDER=0>
 		  ~ if ($action eq '_displayIntro' || !$action) ;
-		checkGO();
+#checkGO();
 #### If the project_id wasn't reverted to -99, display information about it
 		if ($project_id == -99) 
 		{
@@ -319,11 +315,11 @@ my $organismSql = qq~ select s.organism_id,organism_name from $TBIS_SPECIMEN s
 		group by organism_name,s.organism_id ~;
 my %organismHash = $sbeams->selectTwoColumnHash($organismSql);
 		
-my $tissueSql = qq~ select s.tissue_type_id,tissue_type_name from $TBIS_SPECIMEN s
-		join $TBIS_TISSUE_TYPE tt on s.tissue_type_id = tt.tissue_type_id 	WHERE s.project_id = '$project_id'  
-		group by tissue_type_name,s.tissue_type_id ~;	
-#get all the data (specimen, stains, slides) for this project and display the data 		
-my %tissueHash = $sbeams->selectTwoColumnHash($tissueSql);
+  #get all the data (specimen, stains, slides) for this project and display the data 		
+  my %tissueHash = getTissueHash( $project_id );
+
+  checkGO( \%tissueHash );
+
     my $sql = qq~
 		select sp.specimen_id, ss.assay_id ,si.assay_image_id,sbo.organism_name,tt.tissue_type_name,sb.specimen_block_id,
                        sbo.organism_id,tt.tissue_type_id
@@ -391,10 +387,10 @@ my %tissueHash = $sbeams->selectTwoColumnHash($tissueSql);
 #Grand Summary		
 print qq *	<tr><td><b><font color =red>Project Grand Summary :</b></font></td></tr><tr></tr><tr></tr><tr>
 			<td colspan = 2><UL>
-			<li>Total Number of Stains: $totalStains
+			<li>Total Number of Immunohistochemical Stains: $totalStains
 				<ul>
-				<li>Number of characterized Stains: $charStains
-				<li>Number of Stains with Images: $imagedStains
+				<li>Number of characterized Immunohistochemical Stains: $charStains
+				<li>Number of Immunohistochemical Stains with Images: $imagedStains
 				</ul>
 			<li>Total Number of Antibodies: $totalAntibody
 				<ul>
@@ -412,12 +408,27 @@ print qq *	<tr><td><b><font color =red>Project Grand Summary :</b></font></td></
 		print "<tr><td><b><font color=red>Project Summary by Organism:</b></font></td></tr><tr></tr><tr></tr><tr>";
 		foreach my $key (sort keys %hash)
 		{
-			print "<td colspan=2><B>$key </B><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERYHIDE&organism_id=$organism_ids{$key}&display_options=MergeLevelsAndPivotCellTypes\"><b>[Full CD Specificity Summary]</A></b></td>";
-		}
+    my $helptext = 'Display expression summary from all XXX tissue samples for each CD';
+    $helptext =~ s/XXX/$key/g;
+
+	  print <<"    END";
+      <td colspan=2>
+        <B>$key </B><SPAN title="$helptext" CLASS='popup'>
+        <A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERYHIDE&organism_id=$organism_ids{$key}&display_options=MergeLevelsAndPivotCellTypes\">
+        <B>[Full CD Specificity Summary]</B>
+        </A></SPAN>
+      </td>
+    END
+	  	}
 		
-		print "</tr><tr>";
+		print "</tr>";
 		foreach my $key (sort keys %hash)
 		{
+    # undef is not a number!
+    $hash{$key}->{specimenID}->{count} ||= 0;
+    $hash{$key}->{stainedSlideID}->{count} ||= 0;
+    $hash{$key}->{slideImageID}->{count} ||= 0;
+    
 		print qq~
 			<td colspan = 2><UL>
       <LI>Total Number of Specimens: $hash{$key}->{specimenID}->{count}
@@ -426,25 +437,49 @@ print qq *	<tr><td><b><font color =red>Project Grand Summary :</b></font></td></
       </UL>
       </td>~;
 		}
-		print "</tr>
-			<tr></tr><tr></tr>";
-    
+		print <<"    END";
+    <TR></TR>
+    <tr></tr>
+    <tr></tr>
+    <tr>
+      <td><b><font color =red>Project Summary by TissueType:</b></font>
+      </td>
+    </tr>
+    <tr></tr>
+    <tr></tr>
+    <tr>
+    END
+
 #summary  by tissuetype
-	print "<tr><td><b><font color =red>Project Summary by TissueType:</b></font></td></tr><tr></tr><tr></tr><tr>";
 	foreach my $key (sort keys %tissueTypeHash)
 		{
-				print "<tr><td colspan=2><b>$key</B><td></tr><tr>";
-				foreach my $organism (sort keys %hash)
-				{
-						print "<td colspan = 2 nowrap><UL>";
-						print "<LI> Organism: <b>$organism </b><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERYHIDE&tissue_type_id=$tissue_type_ids{$key}&organism_id=$organism_ids{$organism}&display_options=MergeLevelsAndPivotCellTypes\"><b>[Full CD Specificity Summary]</A></b>";
-					print qq~
-			<LI>Total Number of Specimens: $tissueTypeHash{$key}->{$organism}->{specimenID}->{count}
-			<LI>Total Number of Stains: $tissueTypeHash{$key}->{$organism}->{stainedSlideID}->{count}
-			<LI>Total Number of Images: $tissueTypeHash{$key}->{$organism}->{slideImageID}->{count}
-      </UL>
-      </td>~;
-				}
+		print "<tr><td colspan=2><B>$key:</B><td></tr><tr>";
+		foreach my $organism (sort keys %hash)
+			{
+      my $helptext = 'Display expression summary from all XXX tissue samples for each CD';
+      $helptext =~ s/XXX/$organism $key/g;
+
+      # undef is not a number!
+     $tissueTypeHash{$key}->{$organism}->{specimenID}->{count} ||= 0 ;
+     $tissueTypeHash{$key}->{$organism}->{stainedSlideID}->{count} ||= 0;
+     $tissueTypeHash{$key}->{$organism}->{slideImageID}->{count} ||= 0;
+            
+     
+	  	print <<"      END";
+      <td colspan = 2 nowrap><UL>
+		  	<LI> Organism: <B>$organism </B>
+          <SPAN title="$helptext" CLASS='popup'>
+            <A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERYHIDE&tissue_type_id=$tissue_type_ids{$key}&organism_id=$organism_ids{$organism}&display_options=MergeLevelsAndPivotCellTypes\">
+             <B>[Full CD Specificity Summary]</B>
+            </A>
+          </SPAN>
+		  	<LI>Total Number of Specimens: $tissueTypeHash{$key}->{$organism}->{specimenID}->{count}
+			  <LI>Total Number of Stains: $tissueTypeHash{$key}->{$organism}->{stainedSlideID}->{count}
+			  <LI>Total Number of Images: $tissueTypeHash{$key}->{$organism}->{slideImageID}->{count}
+        </UL>
+      </td>
+      END
+      }
 				print "</tr><tr></tr>";
 			}
 	print "</tr><tr></tr><tr></tr>";
@@ -460,15 +495,7 @@ print qq *	<tr><td><b><font color =red>Project Grand Summary :</b></font></td></
 #display the check boxes
 			foreach my $key (keys %tissueHash)
 			{
-				if($tissueHash{$key} eq 'Normal Prostate')
-				{
-						print qq~ <tr><td><input type="checkbox" name="NProstate" value="$key">$tissueHash{$key}</td></tr>~;
-						next;
-				} elsif ( $tissueHash{$key} eq 'Prostate adenocarcinoma' ) {
-						print qq~ <tr><td><input type="checkbox" name="ProstateCarcinoma" value="$key">$tissueHash{$key}</td></tr>~;
-						next;
-        }   
-				print qq~ <tr><td><input type="checkbox" name="$tissueHash{$key}" value="$key">$tissueHash{$key}</td></tr>~;
+				print qq~ <tr><td><input type="checkbox" name="cbox_${key}" value="$key">$tissueHash{$key}</td></tr>~;
 			}
 			print q~<tr></tr><tr><td><input type ="submit" name= "SUBMIT" value = "QUERY"></td></tr> ~;
 			print "<input type= hidden name=\"action\" value = \"$START\">";
@@ -1165,6 +1192,18 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Stain Summary</font
 	
 }
 
+sub getTissueHash {
+  my $project_id = shift;
+  my $tissueSql =<<"  END";
+  select s.tissue_type_id,tissue_type_name from $TBIS_SPECIMEN s
+  join $TBIS_TISSUE_TYPE tt on s.tissue_type_id = tt.tissue_type_id 	WHERE s.project_id = '$project_id'  
+	group by tissue_type_name,s.tissue_type_id 
+  END
+  return ( $sbeams->selectTwoColumnHash($tissueSql) );
+}
+
+
+
 #when processing the cell type, the user is redirected to SummarizeStains
 sub processCells
 {
@@ -1206,6 +1245,7 @@ sub buildSqlClause
   my $ref_parameters = $args{'ref_parameters'}
     || die "ref_parameters not passed";
   my %parameters = %{$ref_parameters};
+  my $project_id = $args{project_id};
 	my %resultset = ();
   my $resultset_ref = \%resultset;
 
@@ -1215,9 +1255,10 @@ sub buildSqlClause
 	$oString =~ s/\,$//;
 	$oString = qq~ sbo.organism_id in (~.$oString.")" if ($oString);
 	
+  my %tissues = getTissueHash( $project_id );
   my $tString = '';
   my $sep = '';
-  for ( 'Bladder', 'NProstate','ProstateCarcinoma' ) {
+  for ( keys( %tissues ) ) {
     $tString .= "$sep $parameters{$_} " if $parameters{$_};
     $sep = ',' if $tString;
     }
@@ -1232,35 +1273,41 @@ sub buildSqlClause
 }
 	
 #javascript stuff	
-sub checkGO
-{
-#making sure an option is checked	
+sub checkGO {
+  my $thashref = shift;
+  my $conditional = '';
+  my $separator = '';
+  foreach my $key ( keys( %$thashref ) ) {
+    $conditional .= "$separator(documents.form[3].cbox_${key}.checked)";
+    $separator = '||' if $conditional;
+  }
+
+  #making sure an option is checked	
 	print q~ <script language=javascript type="text/javascript"> ~;
-	print <<CHECK;
+	print <<"  CHECK";
 	function checkForm()
 	{
 			
-			if ((document.forms[3].Human.checked)||(document.forms[3].Mouse.checked)||(document.forms[3].NProstate.checked)||(document.forms[3].Bladder.checked)||(document.forms[3].ProstateCarcinoma.checked))
+			if ($conditional)
 			{
-					return true;
+ 				return true;
 			}
 			alert ("ERROR: You need to specify at least one Option" );
 			return false;
-			
 		
 	}
-CHECK
+  CHECK
+
 #disbaling query button
-	print <<QUERY;
+	print <<"  QUERY";
 	
 	function disableQuery()
 	{
-			document.forms[5].SUBMIT3.disabled = true;
+  	document.forms[5].SUBMIT3.disabled = true;
 	}
-QUERY
-print "<\/script>";
-	
-}		
+  <\/script>
+  QUERY
+  }		
 
 #sorting the Hashes
 sub bySortOrder {
@@ -1276,4 +1323,18 @@ sub bySortOrder {
 	{
     return $a cmp $b;
   }
+}
+
+sub getHelpTextDHTML {
+  my $ht =<<"  END";
+  <STYLE>
+  .popup
+  {
+  COLOR: #0090D0;
+  CURSOR: help;
+  TEXT-DECORATION: none
+  }
+  </STYLE>
+  END
+  return $ht;
 }
