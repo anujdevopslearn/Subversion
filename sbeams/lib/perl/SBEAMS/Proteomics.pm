@@ -72,10 +72,8 @@ sub getProjectData {
   my $self = shift;
   my %args = @_;
   my %project_data;
-  $log->debug( join '::', keys( %args ) );
 
 #  my $subdir = $SBEAMS::Proteomics::Settings::SBEAMS_SUBDIR;
-#  $log->debug( "Subdir is $subdir, SUBDIR is $SBEAMS_SUBDIR" );
   unless ( scalar(@{$args{projects}}) ) {
     $log->warn( 'No project list provided to getProjectData' );
     return ( \%project_data);
@@ -91,7 +89,6 @@ sub getProjectData {
 	WHERE project_id IN ( $projects )
   GROUP BY project_id
   END_SQL
-$log->debug($sql);
 
 #  my $cgi_dir = "${CGI_BASE_DIR}/${subdir}/";
   my $cgi_dir = $CGI_BASE_DIR . '/Proteomics/';

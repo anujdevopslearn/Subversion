@@ -67,7 +67,6 @@ sub getProjectData {
   my $self = shift;
   my %args = @_;
   my %project_data;
-  $log->debug( join '::', keys( %args ) );
 
   unless ( scalar(@{$args{projects}}) ) {
     $log->warn( 'No project list provided to getProjectData' );
