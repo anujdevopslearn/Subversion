@@ -135,8 +135,8 @@ LOGGING_LEVEL = warn
 # is assumed that the path is absolute from the base of the filesystem.
 # If the leading slash is ommitted, the path will be appended to the 
 # PHYSICAL_BASE_DIR as configured.
-UPLOAD_DIR             = /net/dblocal/www/html/SBEAMSTest1/sbeams/tmp
-QUERY_DIR              = var/resultsets
+UPLOAD_DIR             = var/upload
+RESULTSET_DIR          = var/resultsets
 
 
 [main]
