@@ -196,6 +196,7 @@ sub printEntryForm {
           $sbeams->selectTwoColumnHash($optionlist_queries{$element});
         $optionlists{$element} = $templist{$parameters{$element}};
       } else {
+        #print "$optionlist_queries{$element}<BR><BR>\n";
         $optionlists{$element}=$sbeams->buildOptionList(
            $optionlist_queries{$element},$parameters{$element},
            $method_options);
