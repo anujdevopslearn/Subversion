@@ -1,0 +1,84 @@
+# $Id$
+#
+# SBEAMS.conf.template  - Template for configuration settings
+# SBEAMS.conf           - Local configuration settings file
+#
+# Do not edit the template file.  Make a copy and edit the copy:
+#   cp SBEAMS.conf.template SBEAMS.conf
+#   vi SBEAMS.conf
+#     (edit to reflect local installation)
+#
+
+# Default settings pass through to individual instances unless overridden
+[default]
+DBTITLE = SBEAMS
+WWW_UID = 48
+CRYPT_KEY = ChangeThis!
+BARCOLOR = #cdd1e7
+HOSTNAME = host.domain.org
+
+
+DB_SERVER   = sqlhostname
+DB_DATABASE = sbeams
+DB_USER     = sbeams
+DB_PASS     = sbeamspassword
+DB_RO_USER  = sbeamsro
+DB_RO_PASS  = sbeamsropassword
+DB_DRIVER   = DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE
+DB_TYPE     = MS SQL Server
+
+
+# Set some default database prefixes to be prepended before the actual
+# table names.  For databases that don't support cross-database queries
+# (e.g. PostgreSQL 7.2), the entries should all be empty strings.
+DBPREFIX{Core}          = sbeams.dbo.
+DBPREFIX{Proteomics}    = proteomics.dbo.
+DBPREFIX{Microarray}    = microarray.dbo.
+DBPREFIX{PhenoArray}    = PhenoArray.dbo.
+DBPREFIX{Biosap}        = Biosap.dbo.
+DBPREFIX{BEDB}          = BEDB.dbo.
+DBPREFIX{SNP}           = SNP.dbo.
+
+RAW_DATA_DIR{Proteomics} = /raw/datasets/root/location
+
+
+[main]
+DBVERSION              = <FONT COLOR=red>Primary</FONT>
+BGCOLOR                = #BFD8D8
+BARCOLOR               = #cdd1e7
+HTML_BASE_DIR          = /sbeams
+PHYSICAL_BASE_DIR      = /local/www/html/sbeams
+UPLOAD_DIR             = /local/data/sbeams
+
+
+[dev1]
+DBVERSION              = Dev Branch 1
+BGCOLOR                = #FF9999
+HTML_BASE_DIR          = /dev1/sbeams
+PHYSICAL_BASE_DIR      = /local/www/html/dev1/sbeams
+UPLOAD_DIR             = /local/data/dev1/sbeams
+
+
+[dev2]
+DBVERSION              = Dev Branch 2
+BGCOLOR                = #FFFF99
+HTML_BASE_DIR          = /dev2/sbeams
+PHYSICAL_BASE_DIR      = /local/www/html/dev2/sbeams
+UPLOAD_DIR             = /local/data/dev2/sbeams
+
+
+[mysqldev1]
+DB_SERVER              = mysql
+DB_DATABASE            = sbeams
+DB_USER                = sbeams
+DB_PASS                = sbeamspassword
+DB_DRIVER              = DBI:mysql:$DB_DATABASE:$DB_SERVER
+DB_TYPE                = MySQL
+DBVERSION              = MySQL Dev Branch 1
+BGCOLOR                = #FFFF99
+HTML_BASE_DIR          = /mysqldev1/sbeams
+PHYSICAL_BASE_DIR      = /local/www/html/mysqldev1/sbeams
+UPLOAD_DIR             = /local/data/mysqldev1/sbeams
+DBPREFIX{Biosap}       = biosap.
+
+
