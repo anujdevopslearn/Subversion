@@ -649,6 +649,8 @@ sub printEntryForm {
         ["set_path","BSS.set_path","set_path"],
         ["isoelectric_point","STR(isoelectric_point,8,3)","pI"],
         ["quantitation","STR(d0_intensity,5,2) + ':' + STR(d8_intensity,5,2)","Quant"],
+        ["quantitation_id","QUAN.quantitation_id","quantitation_id"],
+#        ["assumed_charge","S.assumed_charge","assumed_charge"],
         ["search_hit_annotation_id","SHA.search_hit_annotation_id","search_hit_annotation_id"],
         ["annotation_label","label_desc","Annot"],
       );
@@ -736,6 +738,8 @@ sub printEntryForm {
 		   'Annot_ISNULL' => ' [Add] ',
                    'bh' => "$CGI_BASE_DIR/Proteomics/SetBestHit.cgi?search_id=\%$colnameidx{search_id}V&search_hit_id=\%$colnameidx{search_hit_id}V",
 		   'bh_ATAG' => 'TARGET="Win1"',
+                   'Quant' => "$CGI_BASE_DIR/Proteomics/cgixpress?quantitation_id=\%$colnameidx{quantitation_id}V",
+		   'Quant_ATAG' => 'TARGET="Win1"',
       );
 
       %hidden_cols = ('data_location' => 1,
@@ -748,6 +752,8 @@ sub printEntryForm {
                       'set_path' => 1,
                       'biosequence_set_id' => 1,
                       'search_hit_annotation_id' => 1,
+                      'quantitation_id' => 1,
+#                      'assumed_charge' => 1,
       );
 
 		   #######'Reference_ATAG' => "TARGET=\"Win1\" ONMOUSEOVER=\"window.status='%V'; return true\"",
