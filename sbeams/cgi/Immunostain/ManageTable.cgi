@@ -44,10 +44,14 @@ use SBEAMS::Connection::TableInfo;
 $q = new CGI;
 $sbeams = new SBEAMS::Connection;
 
+use SBEAMS::Ontology::Tables;
+use SBEAMS::Ontology::TableInfo;
+
 use SBEAMS::Immunostain;
 use SBEAMS::Immunostain::Settings;
 use SBEAMS::Immunostain::Tables;
 use SBEAMS::Immunostain::TableInfo;
+
 $sbeamsMOD = new SBEAMS::Immunostain;
 
 $sbeamsMOD->setSBEAMS($sbeams);
@@ -163,7 +167,7 @@ sub main {
   } elsif ($parameters{"$PK_COLUMN_NAME"}) { printEntryForm();
   } else { printOptions(); }
 
-  $sbeamsMOD->printPageFooter();
+#  $sbeamsMOD->printPageFooter();
 
 
 } # end main
@@ -236,12 +240,57 @@ sub preUpdateDataCheck {
   my $query_parameters_ref = $args{'parameters_ref'};
   my %parameters = %{$query_parameters_ref};
 
-
+		
   #### If table XXXX
   if ($TABLE_NAME eq "XXXX") {
     return "An error of some sort $parameters{something} invalid";
   }
+	if ($TABLE_NAME  eq  "IS_assay_unit_expression")
+	{
+		 	 my $count = 0;
+			my @requiredArray = qq ~ $parameters{assay_channel_id} $parameters{assay_image_subfield_id} $parameters{assay_image_id} ~; 
+			my $requiredCount = 0;
+			while ($count < scalar(@requiredArray))
+			{
+				if (defined($requiredArray[$count]))
+				{
+					$requiredCount++;
+				}
+				$count++;
+			}
+			if (!$requiredCount)
+			{
+	  			return "You need to specify either:<br><b>an Assay_channel or an Assay_Image or an Assay_Image_Subfield</B>";
+			}
+			elsif ($requiredCount > 1)
+			{
+				return "You can only specify one of the following attributes:<br><b> Assay_channel, Assay_Image, Assay_Image_Subfield</B> for a given Assay Unit Expression";
+			}
+	}
 
+	if ($TABLE_NAME eq "IS_assay_channel")
+	{
+		my $count=0;
+		my @requiredArray = qq ~ $parameters{probe_id} $parameters{antibody_id}  ~; 
+		my $requiredCount = 0;
+		while ($count < scalar(@requiredArray))
+		{
+			if (defined($requiredArray[$count]))
+			{
+				$requiredCount++;
+			}
+			$count++;
+		}
+		
+		if (!$requiredCount)
+		{
+	  		return "You need to specify either:<br><b>a Probe or  an Antibody</B>";
+		}
+		elsif ($requiredCount > 1)
+		{
+			return "You can only specify one of the following attributes:<br><b>Probe, Antibody</B> for a given Assay Channel";
+		}
+	}
 
   #### Otherwise, no special processing, so just return empty string
   return '';

@@ -34,10 +34,12 @@ use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
-
+use SBEAMS::Ontology::Tables;
+use SBEAMS::Ontology::TableInfo;
 use SBEAMS::Immunostain;
 use SBEAMS::Immunostain::Settings;
 use SBEAMS::Immunostain::Tables;
+
 
 $q   = new CGI;
 $sbeams = new SBEAMS::Connection;
@@ -145,7 +147,7 @@ sub main
 	$sbeamsMOD->display_page_header();
 	}
     handle_request(ref_parameters=>\%parameters);  
-   $sbeamsMOD->display_page_footer();
+   $sbeamsMOD->printPageFooter();
   
 
 
@@ -258,31 +260,43 @@ sub displayIntro
 #data for the grand summary	 
 
 #/*total number of stains*/
-my $totalStainsSql = qq /select count(*) from $TBIS_STAINED_SLIDE/;
+my $totalStainsSql = qq /select count(*) from $TBIS_ASSAY/;
 
 #/*number of imaged stains*/
-my $imagedStainsSql = qq/ select stain_name from $TBIS_STAINED_SLIDE ss
-join $TBIS_SLIDE_IMAGE si on ss.stained_slide_id = si.stained_slide_id
-group by stain_name/;
+my $imagedStainsSql = qq/ select assay_name from $TBIS_ASSAY ss
+join $TBIS_ASSAY_CHANNEL ac on ss.assay_id = ac.assay_id
+join $TBIS_ASSAY_IMAGE si on ac.assay_channel_id  = si.assay_channel_id
+group by assay_name/;
 
 #/*number of char. stains*/
-my $charStainsSql = qq/ select stain_name from $TBIS_STAINED_SLIDE ss
-join $TBIS_STAIN_CELL_PRESENCE scp on ss.stained_slide_id = scp.stained_slide_id
-group by stain_name/;
+my $charStainsSql = qq/ select assay_name from $TBIS_ASSAY ss
+join $TBIS_ASSAY_CHANNEL	 ac on ss.assay_id = ac.assay_id
+join $TBIS_ASSAY_UNIT_EXPRESSION scp on ac.assay_channel_id = scp.assay_channel_id
+group by assay_name/;
 
 #/*total number of antibodies*/
 my $totalAntibodySql = qq / select count(*) from $TBIS_ANTIBODY/;
 
 #/*number of characterized anitbodies*/
-my $charAntibodySql = qq / select antibody_name from $TBIS_STAINED_SLIDE ss
-join $TBIS_STAIN_CELL_PRESENCE scp on ss.stained_slide_id = scp.stained_slide_id
-join $TBIS_ANTIBODY ab on ss.antibody_id = ab.antibody_id group by antibody_name/;
+my $charAntibodySql = qq / select antibody_name from $TBIS_ASSAY ss
+join $TBIS_ASSAY_CHANNEL ac on ss.assay_id = ac.assay_id
+join $TBIS_ASSAY_UNIT_EXPRESSION  scp on ac.assay_channel_id = scp.assay_channel_id
+join $TBIS_ANTIBODY ab on ac.antibody_id = ab.antibody_id group by antibody_name/;
+
+#/*total number of antibodies*/
+my $totalProbeSql = qq / select count(*) from $TBIS_PROBE/;
+
+#number of characterized probes
+my $charProbeSql = qq / select probe_name from $TBIS_ASSAY ss
+join $TBIS_ASSAY_CHANNEL ac on ss.assay_id = ac.assay_id
+join $TBIS_ASSAY_UNIT_EXPRESSION  scp on ac.assay_channel_id = scp.assay_channel_id
+join $TBIS_PROBE p on ac.antibody_id = p.probe_id group by probe_name/;
 
 #/*total number of images*/
-my $totalImagesSql = qq / select count(*) from $TBIS_SLIDE_IMAGE/;
+my $totalImagesSql = qq / select count(*) from $TBIS_ASSAY_IMAGE/;
 
 #/*number of unique images */
-my $uniqueImagesSql = qq / select stained_slide_id from $TBIS_SLIDE_IMAGE where patindex('%- %', image_name) != 0/; 
+my $uniqueImagesSql = qq / select assay_image_id  from $TBIS_ASSAY_IMAGE where patindex('%- %', image_name) != 0/; 
 
 	 
 my $totalStains =($sbeams->selectOneColumn($totalStainsSql))[0];	 
@@ -292,14 +306,16 @@ my $totalAntibody  = ($sbeams->selectOneColumn($totalAntibodySql))[0];
 my $charAntibody  = scalar($sbeams->selectOneColumn($charAntibodySql));
 my $totalImages  = ($sbeams->selectOneColumn($totalImagesSql))[0];
 my $uniqueImages  = scalar($sbeams->selectOneColumn($uniqueImagesSql));
-
+#not used
+my $totalProbe = ($sbeams->selectOneColumn($totalProbeSql))[0];
+my $charProbe = scalar($sbeams->selectOneColumn($charProbeSql));
 	 
 #### get the project id
   my $project_id = $args{'project_id'} || die "project_id not passed";
 #load the javascript functions
 #get the tissue and the organisms for this project and display them as check boxes				
 my $organismSql = qq~ select s.organism_id,organism_name from $TBIS_SPECIMEN s
-		join sbeams.dbo.organism sdo on s.organism_id = sdo.organism_id	WHERE s.project_id = '$project_id'
+		join $TB_ORGANISM sdo on s.organism_id = sdo.organism_id	 WHERE s.project_id = '$project_id'
 		group by organism_name,s.organism_id ~;
 my %organismHash = $sbeams->selectTwoColumnHash($organismSql);
 		
@@ -309,14 +325,15 @@ my $tissueSql = qq~ select s.tissue_type_id,tissue_type_name from $TBIS_SPECIMEN
 #get all the data (specimen, stains, slides) for this project and display the data 		
 my %tissueHash = $sbeams->selectTwoColumnHash($tissueSql);
     my $sql = qq~
-		select sp.specimen_id, ss.stained_slide_id ,si.slide_image_id,sbo.organism_name,tt.tissue_type_name,sb.specimen_block_id,
+		select sp.specimen_id, ss.assay_id ,si.assay_image_id,sbo.organism_name,tt.tissue_type_name,sb.specimen_block_id,
                        sbo.organism_id,tt.tissue_type_id
-		from $TBIS_STAINED_SLIDE ss
+		from $TBIS_ASSAY ss
 		left join $TBIS_SPECIMEN_BLOCK sb on ss.specimen_block_id = sb.specimen_block_id
 		left join $TBIS_SPECIMEN sp on sb.specimen_id = sp.specimen_id
 		left join $TBIS_TISSUE_TYPE tt on sp.tissue_type_id = tt.tissue_type_id
 		left join $TB_ORGANISM sbo on sp.organism_id = sbo.organism_id
-		left join $TBIS_SLIDE_IMAGE si on ss.stained_slide_id = si.stained_slide_id
+		LEFT JOIN $TBIS_ASSAY_CHANNEL ac ON ss.assay_id = ac.assay_id
+		left join $TBIS_ASSAY_IMAGE si on ac.assay_channel_id = si.assay_channel_id
 		WHERE SP.project_id = '$project_id'
 		order by Organism_Name 
 		~;	
@@ -383,9 +400,9 @@ print qq *	<tr><td><b><font color =red>Project Grand Summary :</b></font></td></
 				<ul>
 				<li>Number of  Antibodies with Tissue Characterization: $charAntibody
 				</ul>
-			<li>Total Number of Images: $totalImages
+			<li>Total Number of Images (includes magnified views of identical Samples) : $totalImages
 				<ul>
-				<li>Number of unique Images: $uniqueImages
+				<li>Total Number of distinct Images (distinct Images of different Samples)  : $uniqueImages
 				</ul>
 			</ul>
 			<td>
@@ -395,7 +412,7 @@ print qq *	<tr><td><b><font color =red>Project Grand Summary :</b></font></td></
 		print "<tr><td><b><font color=red>Project Summary by Organism:</b></font></td></tr><tr></tr><tr></tr><tr>";
 		foreach my $key (sort keys %hash)
 		{
-			print "<td colspan=2><B>$key </B><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&organism_id=$organism_ids{$key}&display_options=MergeLevelsAndPivotCellTypes\"><b>[Full CD Specificity Summary]</A></b></td>";
+			print "<td colspan=2><B>$key </B><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERYHIDE&organism_id=$organism_ids{$key}&display_options=MergeLevelsAndPivotCellTypes\"><b>[Full CD Specificity Summary]</A></b></td>";
 		}
 		
 		print "</tr><tr>";
@@ -420,7 +437,7 @@ print qq *	<tr><td><b><font color =red>Project Grand Summary :</b></font></td></
 				foreach my $organism (sort keys %hash)
 				{
 						print "<td colspan = 2 nowrap><UL>";
-						print "<LI> Organism: <b>$organism </b><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&tissue_type_id=$tissue_type_ids{$key}&organism_id=$organism_ids{$organism}&display_options=MergeLevelsAndPivotCellTypes\"><b>[Full CD Specificity Summary]</A></b>";
+						print "<LI> Organism: <b>$organism </b><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERYHIDE&tissue_type_id=$tissue_type_ids{$key}&organism_id=$organism_ids{$organism}&display_options=MergeLevelsAndPivotCellTypes\"><b>[Full CD Specificity Summary]</A></b>";
 					print qq~
 			<LI>Total Number of Specimens: $tissueTypeHash{$key}->{$organism}->{specimenID}->{count}
 			<LI>Total Number of Stains: $tissueTypeHash{$key}->{$organism}->{stainedSlideID}->{count}
@@ -517,28 +534,32 @@ sub displayMain
 	
 #populate tbe option list based on what the user checked on the intro page		
 my $antibodySql = "select ab.antibody_id, ab.antibody_name from $TBIS_ANTIBODY ab
-join $TBIS_STAINED_SLIDE ss on ab.antibody_id = ss.antibody_id 
+join $TBIS_ASSAY_CHANNEL ac on ab.antibody_id = ac.antibody_id
+join $TBIS_ASSAY ss on ac.assay_id = ss.assay_id 
 join $TBIS_SPECIMEN_BLOCK sb on ss.specimen_block_id = sb.specimen_block_id 
 join $TBIS_SPECIMEN s on sb.specimen_id = s.specimen_id 
 join $TBIS_TISSUE_TYPE tt on s.tissue_type_id = tt.tissue_type_id
-join sbeams.dbo.organism sbo on s.organism_id = sbo.organism_id 
+join $TB_ORGANISM sbo on s.organism_id = sbo.organism_id 
 where ".buildSqlClause(ref_parameters=>\%parameters) . "group by ab.antibody_id,ab.antibody_name,ab.sort_order order by ab.sort_order"; 
-		
-my $stainSql = "select ss.stained_slide_id, stain_name from $TBIS_STAINED_SLIDE ss
-join $TBIS_SPECIMEN_BLOCK sb on ss.specimen_block_id = sb.specimen_block_id 
-join $TBIS_SPECIMEN s on sb.specimen_id = s.specimen_id 
-join $TBIS_TISSUE_TYPE tt on s.tissue_type_id = tt.tissue_type_id
-join sbeams.dbo.organism sbo on s.organism_id = sbo.organism_id 
-where ".buildSqlClause(ref_parameters=>\%parameters) . " group by ss.stained_slide_id,ss.stain_name order by ss.stain_name"; 
 
-my $cellSql = "select ct.cell_type_id, cell_type_name from $TBIS_CELL_TYPE ct
-join $TBIS_STAIN_CELL_PRESENCE scp on ct.cell_type_id = scp.cell_type_id
-join $TBIS_STAINED_SLIDE ss on scp.stained_slide_id = ss.stained_slide_id
+my $stainSql = "select ss.assay_id, assay_name from $TBIS_ASSAY ss
 join $TBIS_SPECIMEN_BLOCK sb on ss.specimen_block_id = sb.specimen_block_id 
 join $TBIS_SPECIMEN s on sb.specimen_id = s.specimen_id 
 join $TBIS_TISSUE_TYPE tt on s.tissue_type_id = tt.tissue_type_id
-join sbeams.dbo.organism sbo on s.organism_id = sbo.organism_id 
-where ".buildSqlClause(ref_parameters=>\%parameters) .  "group by ct.cell_type_id,ct.cell_type_name, ct.sort_order order by ct.sort_order";
+join $TB_ORGANISM sbo on s.organism_id = sbo.organism_id 
+where ".buildSqlClause(ref_parameters=>\%parameters) . " group by ss.assay_id,ss.assay_name order by ss.assay_name"; 
+
+my $cellSql = "select ct.structural_unit_id, structural_unit_name from $TBIS_STRUCTURAL_UNIT ct
+join $TBIS_ASSAY_UNIT_EXPRESSION scp on ct.structural_unit_id = scp.structural_unit_id
+join $TBIS_ASSAY_CHANNEL ac on scp.assay_channel_id = ac.assay_channel_id
+join $TBIS_ASSAY ss on ac.assay_id = ss.assay_id
+join $TBIS_SPECIMEN_BLOCK sb on ss.specimen_block_id = sb.specimen_block_id 
+join $TBIS_SPECIMEN s on sb.specimen_id = s.specimen_id 
+join $TBIS_TISSUE_TYPE tt on s.tissue_type_id = tt.tissue_type_id
+join $TB_ORGANISM sbo on s.organism_id = sbo.organism_id 
+where ".buildSqlClause(ref_parameters=>\%parameters) .  "group by ct.structural_unit_id,ct.structural_unit_name, ct.sort_order order by ct.sort_order";
+ 
+	
 		my $buildClause = buildSqlClause(ref_parameters=>\%parameters);
 		my $antibodyOption;
 		my $stainOption;
@@ -658,26 +679,25 @@ sub processAntibody
 	}		
 
 	my $query = "select ab.antibody_name,ab.antibody_id,
-	ss.stain_name,
-	ss.stained_slide_id,
-	cell_type_name, ct.cell_type_id,ct.sort_order,
+	ss.assay_name,	ss.assay_id,
+	structural_unit_name, ct.structural_unit_id,ct.sort_order,
 	level_name,
 	at_level_percent,
-	si.slide_image_id,
-	si.raw_image_file,
-	si.processed_image_file,
-	si.image_magnification,
-	sbo.organism_name
-	from $TBIS_STAINED_SLIDE ss
-	left join $TBIS_ANTIBODY ab on ss.antibody_id = ab.antibody_id
-	left join $TBIS_STAIN_CELL_PRESENCE scp on ss.stained_slide_id = scp.stained_slide_id
-	left join $TBIS_CELL_PRESENCE_LEVEL cpl on scp.cell_presence_level_id = cpl.cell_presence_level_id 
-	left join $TBIS_CELL_TYPE ct on scp.cell_type_id = ct.cell_type_id
-	left join $TBIS_SLIDE_IMAGE si on ss.stained_slide_id = si.stained_slide_id
+	si.assay_image_id,	si.raw_image_file,	si.processed_image_file,	si.image_magnification,
+	sbo.organism_name,
+	ISNULL(ac.assay_channel_name, ss.assay_name + ' - chan ' + cast(ac.channel_index as varchar)) as assay_channel_name, ac.assay_channel_id,
+	cpl.level_name
+	from $TBIS_ASSAY ss
+	left join $TBIS_ASSAY_CHANNEL ac on ss.assay_id = ac.assay_id
+	left join $TBIS_ANTIBODY ab on ac.antibody_id = ab.antibody_id
+	left join $TBIS_ASSAY_UNIT_EXPRESSION  scp on ac.assay_channel_id = scp.assay_channel_id
+	left join $TBIS_EXPRESSION_LEVEL cpl on scp.expression_level_id = cpl.expression_level_id 
+	left join $TBIS_STRUCTURAL_UNIT ct on scp.structural_unit_id = ct.structural_unit_id
+	left join $TBIS_ASSAY_IMAGE si on ac.assay_channel_id =  si.assay_channel_id
 	left join $TBIS_SPECIMEN_BLOCK sb on ss.specimen_block_id = sb.specimen_block_id
 	left join $TBIS_SPECIMEN s on sb.specimen_id = s.specimen_id 
 	left join $TBIS_TISSUE_TYPE tt on s.tissue_type_id = tt.tissue_type_id
-	left join sbeams.dbo.organism sbo on s.organism_id = sbo.organism_id
+	left join $TB_ORGANISM sbo on s.organism_id = sbo.organism_id
 	where ab.antibody_id  in ( $includeClause ) $limitClause order by ab.sort_order, ct.sort_order";
 
 	$sbeams->fetchResultSet(sql_query=>$query,resultset_ref=>$resultset_ref,);
@@ -686,7 +706,7 @@ sub processAntibody
   my $dataArrayRef = $resultset_ref->{data_ref};
   my ($count, $prevStainedSlideId,$indexCounter) = 0;
 	my (%stainHash,%cellHash,%stainIdHash,%stainCellHash,%stainLevelHash,%imageIdHash, %imageProcessedHash,%percentHash,%countHash,,%antibodyHash, %cellTypeHash);
-	my ($prevStain,$prevAntibody);
+	my ($prevStain,$prevAntibody, %stainChannelHash, %channelHash, %antibodyHash);
 #arrange the data in a result set we can easily use
 	my $rowCount = scalar(@{$resultset_ref->{data_ref}});
 	
@@ -701,22 +721,27 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Antibody Summary</f
 	{
 		my $antibodyIndex = 	$resultset_ref->{column_hash_ref}->{antibody_name};
 		my $antibodyIdIndex = 	$resultset_ref->{column_hash_ref}->{antibody_id};
-		my $stainNameIndex = 	$resultset_ref->{column_hash_ref}->{stain_name};
-		my $stainedSlideIdIndex = 	$resultset_ref->{column_hash_ref}->{stained_slide_id};
-		my $cellNameIndex = 	$resultset_ref->{column_hash_ref}->{cell_type_name};
-		my $cellNameIdIndex = 	$resultset_ref->{column_hash_ref}->{cell_type_id};
+		my $stainNameIndex = 	$resultset_ref->{column_hash_ref}->{assay_name};
+		my $stainedSlideIdIndex = 	$resultset_ref->{column_hash_ref}->{assay_id};
+		my $cellNameIndex = 	$resultset_ref->{column_hash_ref}->{structural_unit_name};
+		my $cellNameIdIndex = 	$resultset_ref->{column_hash_ref}->{structural_unit_id};
 		my $levelIndex = 	$resultset_ref->{column_hash_ref}->{level_name};
 		my $levelPercentIndex = 	$resultset_ref->{column_hash_ref}->{at_level_percent};
-		my $slideImageIdIndex = $resultset_ref->{column_hash_ref}->{slide_image_id};
+		my $slideImageIdIndex = $resultset_ref->{column_hash_ref}->{assay_image_id};
 		my $rawImageFileIndex = $resultset_ref->{column_hash_ref}->{raw_image_file};
 		my $processedImageFileIndex  =  $resultset_ref->{column_hash_ref}->{processed_image_file};
 		my $magnificationIndex = $resultset_ref->{column_hash_ref}->{image_magnification};
+#### channel		
+		my $channelNameIndex =  $resultset_ref->{column_hash_ref}->{assay_channel_name};
+		my $chanIdIndex =  $resultset_ref->{column_hash_ref}->{assay_channel_id};
+#######
 		my $organismNameIndex =  $resultset_ref->{column_hash_ref}->{organism_name};
 		my $stainCount = 0;
 		for (@{$resultset_ref->{data_ref}})
 		{
 	  		my @row = @{$resultset_ref->{data_ref}[$indexCounter]};
 				my $antibody = $row[$antibodyIndex];
+				my $antibodyNameID = $row[$antibodyIdIndex];
 				my $stainName = $row[$stainNameIndex];
 				my $stainedSlideId = $row[$stainedSlideIdIndex];
 				my $cellType = $row[$cellNameIndex];
@@ -724,6 +749,10 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Antibody Summary</f
 				my $atLevelPercent = $row[$levelPercentIndex];
 				my $organismName = $row[$organismNameIndex];
 				my $cellTypeId = $row[$cellNameIdIndex];
+######### channel
+				my $channelName = $row[$channelNameIndex];
+				my $channelID = $row[$chanIdIndex];
+#################			
 #count number of Stains for an antibody
 				$stainCount++ if $prevStain ne $stainName and $prevAntibody eq $antibody;
 #get all the images for a Stain
@@ -731,12 +760,17 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Antibody Summary</f
 				my $imageName = $row[$rawImageFileIndex];
 				$imageName = $row[$processedImageFileIndex] if $row[$processedImageFileIndex];
 				$imageProcessedFlag = 'processed_image_file' if  $row[$processedImageFileIndex];
-				$stainHash{$antibody}->{$organismName}->{$stainName}->{$imageName} = $row[$magnificationIndex];		
+########## channel
+#				$stainHash{$antibody}->{$organismName}->{$stainName}->{$imageName} = $row[$magnificationIndex];
+				$stainHash{$antibody}->{$organismName}->{$stainName}->{$channelName}->{$imageName} = $row[$magnificationIndex];
+				$stainChannelHash{$stainName} = $channelName; 
+				$channelHash{$channelName} = $channelID;
+############				
 				$countHash{$antibody}++ if !$stainIdHash{$stainName};
 				$stainIdHash{$stainName} = $stainedSlideId;
 				$imageIdHash{$imageName} = $row[$slideImageIdIndex] if $imageName;
 				$imageProcessedHash{$imageName} = $imageProcessedFlag;
-				
+				$antibodyHash{$antibody} = $antibodyNameID;
 				
 				
 #get all the cell types and the number of the stains available per intensity level per celltype per antibody
@@ -766,17 +800,14 @@ $percentHash{$antibody}->{$cellType}->{none} += $atLevelPercent if $row[$levelIn
 #antibody
 		foreach my $antibodyKey (sort bySortOrder keys %stainHash)
 		{
-
-			print "<tr></tr><tr></tr><tr></tr><tr><td align=left><font color =\"#D60000\"><h5>$antibodyKey</h5></font></TD></tr>";
+			my $antibodyID = $antibodyHash{$antibodyKey};
+			print "<tr></tr><tr></tr><tr></tr><tr><td align=left><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERYHIDE&antibody_id=$antibodyID&display_options=MergeLevelsAndPivotCellTypes\"><h4><font color =\"#D60000\">$antibodyKey</h4></font></a></TD></tr>";
+			print "<tr></tr>";
 			print "<tr><td align=left><b>Alternate names:</b>&nbsp;&nbsp;$genomeHash{$antibodyKey}->{attributes}->{alternateName}</td></tr>";
 			print "<tr><td align=left><b>Locuslink ID:</b><a href =$genomeHash{$antibodyKey}->{attributes}->{locusLinkUrl}>&nbsp;&nbsp;  $genomeHash{$antibodyKey}->{attributes}->{locusLinkID}</a></td></tr>";
 			print "<tr><td align=left><b>Genome Coordinates:</b><a href =$genomeHash{$antibodyKey}->{attributes}->{genomeLocationUrl}>&nbsp;&nbsp;  $genomeHash{$antibodyKey}->{attributes}->{genomeLocation}</a></td></tr>";
-
-			
-			print "<tr><td><b>Total Number of Stains:</b> </td>";
 		
-	
-			
+			print "<tr><td><b>Total Number of Stains:</b> </td>";
 		
 		
 			print "<td align=center>$countHash{$antibodyKey}</td></tr><tr></tr>";
@@ -795,40 +826,64 @@ $percentHash{$antibody}->{$cellType}->{none} += $atLevelPercent if $row[$levelIn
 					$percentEquivocal =~ s/^(.*\.\d{3}).*$/$1/;
 					$percentNone =~ s/^(.*\.\d{3}).*$/$1/;
 					
-					print "<tr><td align=left><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&antibody_id=$antibodyHash{$antibodyKey}&cell_type_id=$cellTypeHash{$cell}&display_options=MergeLevelsAndPivotCellTypes\">$cell</A></td>";
+					print "<tr><td align=left><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&antibody_id=$antibodyHash{$antibodyKey}&structural_unit_id=$cellTypeHash{$cell}&display_options=MergeLevelsAndPivotCellTypes\">$cell</A></td>";
 					print "<td align=center>$percentIntense</td><td align=center>$percentEquivocal</td><td align=center>$percentNone</td>";
 					print "<td align=center>$cellHash{$antibodyKey}->{$cell}->{'count'}</td></tr>";
 					#<td align=center>$cellHash{$antibodyKey}->{$cell}->{'equivocal'}</td><td align=center>$cellHash{$antibodyKey}->{$cell}->{'none'}</td>";
 					 
 			}	
 			
-			print "<tr></tr><tr></tr><tr><td><b>Individual Stains</b></td><td align=center><b>Available Images</b></td></tr><tr></tr>";
+#			print "<tr></tr><tr></tr><tr><td><b>Individual Stains</b></td><td align=center><b>Available Images</b></td></tr><tr></tr>";
+
 #all about the stains			
 			foreach my $species (keys %{$stainHash{$antibodyKey}})
 			{
 					print "<tr><td align=left><b>$species :</b></td></tr><tr></tr>";
-					
+					print qq~  <tr><td align=let>
+						<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_assay&ShowEntryForm=1">Add a Stain</A></td></tr>~;
+#stain
 					foreach my $stain (keys %{$stainHash{$antibodyKey}->{$species}})
 					{
 							my $stainID = $stainIdHash{$stain};
-							print qq~ <tr><TD NOWRAP>- <A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=_processStain&stained_slide_id=$stainID">$stain</A></TD>~;
-							
-							%hash_to_sort = %{$stainHash{$antibodyKey}->{$species}->{$stain}};
-							my $imageString = '';
-							foreach my $image (sort bySortOrder keys %{$stainHash{$antibodyKey}->{$species}->{$stain}})
+							print "<tr><ul><td align=left><b><li>Stain</b></td></tr>";
+							print qq~ <tr><TD NOWRAP align=left>- <A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=_processStain&stained_slide_id=$stainID">$stain</A></TD></tr>~;
+							print "</li>";
+#channel							
+							if ($stainHash{$antibodyKey}->{$species}->{$stain})
 							{
-									my $magnification = $stainHash{$antibodyKey}->{$species}->{$stain}->{$image};
-									my $imageID = $imageIdHash{$image};
-									my $flag = $imageProcessedHash{$image};
-									$imageString .=  "&nbsp\;&nbsp\;  - <A HREF= \"$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_slide_image&slide_image_id=$imageID&GetFile=$flag\" TARGET=image> $magnification x<\/A>" if $imageID;
-									
+								
+								my $number = scalar (keys(%{$stainHash{$antibodyKey}->{$species}->{$stain}}));
+								$number ++;
+								print "<tr><td align=center><b><li>Channel</b></td></tr>";
+								print qq~<tr><td align=center><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_assay_channel&assay_id=$stainID&channel_index=$number&antibody_id=$antibodyID&ShowEntryForm=1"> Add a Channel</A></td></tr>~;
+							    %hash_to_sort = %{$stainHash{$antibodyKey}->{$species}->{$stain}};
+								my $channelString ='';
+								my $imageString = '';
+								foreach my $channel (sort bySortOrder keys %{$stainHash{$antibodyKey}->{$species}->{$stain}})			
+								{
+									my $channelId = $channelHash{$channel};
+									print qq~ <tr><TD NOWRAP align=center>- <A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_assay_channel&assay_channel_id=$channelId&ShowEntryForm=1">$channel</A></TD>~;
+									print "</li>";
+#images									
+									if ($stainHash{$antibodyKey}->{$species}->{$stain}->{$channel})
+									{
+										print  "<tr><td align=right><b><li>Images</b></td></tr>";
+										print qq~ <tr><td align=right><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_assay_image&assay_channel_id=$channelId&ShowEntryForm=1"> Add an Image</A></td></tr>~;
+							 			foreach my $image (sort bySortOrder keys %{$stainHash{$antibodyKey}->{$species}->{$stain}->{$channel}})
+										{
+											my $magnification = $stainHash{$antibodyKey}->{$species}->{$stain}->{$channel}->{$image};
+											my $imageID = $imageIdHash{$image};
+											my $flag = $imageProcessedHash{$image};
+											$imageString .=  "  - <A HREF= \"$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_assay_image&assay_image_id=$imageID&GetFile=$flag\" TARGET=image> $magnification x&nbsp\;&nbsp\<\/A>" if $imageID;
+										}
+										print "<TD align =right colspan=2>$imageString</td>";
+										print "</tr></li></ul>";
+									}
+								}
 							}
-							print "<TD colspan=4>$imageString</td>";
-							print "</tr><tr></tr>";
-					}
-					
-			}
-		}		
+						}
+				}
+		}
 	print "</table>";
 	}
 }
@@ -846,12 +901,12 @@ sub processStain
   my $resultset_ref = \%resultset;
 	
 	my (%cellHash,%stainHash,%percentHash);
-
-#	foreach my $key (keys %parameters)
-#	{
-#			print " $key lll $parameters{$key}<br>";
-#	}
-
+=comment
+	foreach my $key (keys %parameters)
+	{
+			print " $key ---- $parameters{$key}<br>";
+	}
+=cut
 
 #which stains to display
 	my $includeClause = $parameters{stained_slide_id};
@@ -868,29 +923,29 @@ sub processStain
 	cd.clinical_diagnosis_name, clinical_diagnosis_description,
 	s.specimen_name, s.specimen_id, 
 	sb.specimen_block_name, sb.specimen_block_level,sb.anterior_posterior,sb.specimen_block_side,sb.specimen_block_id,
-	ss.stain_name,ss.stained_slide_id,ss.cancer_amount_cc,ss.preparation_date,
-	si.image_name,si.slide_image_id,si.image_magnification,si.raw_image_file, si.processed_image_file,
+	ss.assay_name,ss.assay_id,ss.cancer_amount_cc,ss.preparation_date,
+	si.image_name,si.assay_image_id,si.image_magnification,si.raw_image_file, si.processed_image_file,
 	a.antibody_name, a.antibody_id, 
 	an.antigen_name, an.alternate_names,
 	scp.at_level_percent,
-	ct.cell_type_name,ct.cell_type_id, 
+	ct.structural_unit_name,ct.structural_unit_id,
 	cpl.level_name
-	from $TBIS_STAINED_SLIDE ss
+	from $TBIS_ASSAY ss
 	left join $TBIS_SPECIMEN_BLOCK sb on ss.specimen_block_id = sb.specimen_block_id
 	left join $TBIS_SPECIMEN s on sb.specimen_id = s.specimen_id
 	left join $TBIS_TISSUE_TYPE tt on s.tissue_type_id = tt.tissue_type_id
-	left join $TBIS_SURGICAL_PROCEDURE sp on s.surgical_procedure_id = sp.surgical_procedure_id
-	left join $TBIS_CLINICAL_DIAGNOSIS cd on s.clinical_diagnosis_id = cd.clinical_diagnosis_id
-	left join $TBIS_SLIDE_IMAGE si on ss.stained_slide_id = si.stained_slide_id 
-	left join $TBIS_ANTIBODY a on ss.antibody_id = a.antibody_id
-	left join $TBIS_STAIN_CELL_PRESENCE scp on ss.stained_slide_id = scp.stained_slide_id
-	left join $TBIS_CELL_TYPE ct on scp.cell_type_id = ct.cell_type_id
-	left join $TBIS_CELL_PRESENCE_LEVEL cpl on scp.cell_presence_level_id = cpl.cell_presence_level_id
+	left join $TBIS_SURGICAL_PROCEDURE sp on s.surgical_procedure_term_id = sp.surgical_procedure_id
+	left join $TBIS_CLINICAL_DIAGNOSIS cd on s.clinical_diagnosis_term_id = cd.clinical_diagnosis_id
+	left join $TBIS_ASSAY_CHANNEL ac on ss.assay_id = ac.assay_id
+	left join $TBIS_ASSAY_IMAGE si on ac.assay_channel_id  = si.assay_channel_id 
+	left join $TBIS_ANTIBODY a on ac.antibody_id = a.antibody_id
+	left join $TBIS_ASSAY_UNIT_EXPRESSION  scp on ac.assay_channel_id = scp.assay_channel_id
+	left join $TBIS_STRUCTURAL_UNIT ct on scp.structural_unit_id = ct.structural_unit_id
+	left join $TBIS_EXPRESSION_LEVEL cpl on scp.expression_level_id = cpl.expression_level_id
 	left join $TBIS_ANTIGEN an on a.antigen_id = an.antigen_id
-	left join sbeams.dbo.organism sbo on s.organism_id = sbo.organism_id 
-	where ss.stained_slide_id in ($includeClause) order by sbo.sort_order, ct.sort_order,a.sort_order";
+	left join $TB_ORGANISM sbo on s.organism_id = sbo.organism_id 
+	where ss.assay_id in ($includeClause) order by sbo.sort_order, ct.sort_order,a.sort_order";
 
-	
 	my @rows = $sbeams->selectSeveralColumns($query);
   
 print "<tr><td></td><td align=center><H4><font color=\"red\">Stain Summary</font></center></H4></td></tr><tr><td></td><td align=center><A Href=\"$CGI_BASE_DIR\/$SBEAMS_SUBDIR\/main.cgi\">Back to Main Page <\/A></td></tr>"; 
@@ -1079,7 +1134,7 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Stain Summary</font
 								my $flag = $imageFlagHash{$imageKey};
 								my $imageID = $imageHash{$imageKey};
 								print "<tr><td></td>" if $line != 1;
-								print qq~ <td width=200>&nbsp;&nbsp;&nbsp;$imageKey</td><td>&nbsp;&nbsp;&nbsp;<A HREF ="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_slide_image&slide_image_id=$imageID&GetFile=$flag"TARGET=image>$magnification x </A></td></tr>~;
+								print qq~ <td width=200>&nbsp;&nbsp;&nbsp;$imageKey</td><td>&nbsp;&nbsp;&nbsp;<A HREF ="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_assay_image&assay_image_id=$imageID&GetFile=$flag"TARGET=image>$magnification x </A></td></tr>~;
 								$line ++;
 						}
 						
@@ -1091,7 +1146,7 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Stain Summary</font
 						{
 							my $cellId = $cellTypeHash{$cellKey};
 							my $antiId = $antibodyHash{$antibodyName};
-							my $redirectURL = qq~$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&cell_type_id=~;
+							my $redirectURL = qq~$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&structural_unit_id=~;
 							my $queryString = "$cellId&antibody_id=$antiId&display_options=MergeLevelsAndPivotCellTypes";
 							my $record = $stainCellHash{$keyStain}->{$cellKey};	
 							print "<tr><td></td><td align=left><A HREF=$redirectURL$queryString>
@@ -1130,7 +1185,7 @@ sub processCells
 	}
 
 	my $celltypeId = $parameters{cell_type_id};
-	my $redirectURL = qq~$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&cell_type_id=~;
+	my $redirectURL = qq~$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&structural_unit_id=~;
 	my $queryString = "$celltypeId&display_options=MergeLevelsAndPivotCellTypes";
 	
   print $q->redirect($redirectURL.$queryString);

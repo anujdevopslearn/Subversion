@@ -31,17 +31,25 @@ use vars qw(@ISA @EXPORT
     $TBIS_TISSUE_TYPE
     $TBIS_SPECIMEN
     $TBIS_SPECIMEN_BLOCK
-    $TBIS_STAINED_SLIDE
-    $TBIS_SLIDE_IMAGE
-
-    $TBIS_STAIN_CELL_PRESENCE
-    $TBIS_CELL_TYPE
-    $TBIS_CELL_PRESENCE_LEVEL
-		$TBIS_ABUNDANCE_LEVEL
-			
-		$TBIS_SURGICAL_PROCEDURE
-		$TBIS_CLINICAL_DIAGNOSIS
-
+    $TBIS_ASSAY    
+    $TBIS_ASSAY_IMAGE 
+	
+    $TBIS_ASSAY_UNIT_EXPRESSION 
+    $TBIS_STRUCTURAL_UNIT 
+    $TBIS_EXPRESSION_LEVEL
+	
+	$TBIS_ABUNDANCE_LEVEL
+	$TBIS_SURGICAL_PROCEDURE
+	$TBIS_CLINICAL_DIAGNOSIS
+	$TBIS_GENOME_COORDINATES
+	
+	$TBIS_ASSAY_IMAGE_SUBFIELD 
+	$TBIS_DETECTION_METHOD
+	$TBIS_ASSAY_CHANNEL
+	$TBIS_PROBE 
+	$TBIS_ONTOTLOGY 
+	$TBIS_ONTOLOGY_TERM  
+	$TBIS_ONTOLOGY_TERM_RELATIONSHIP
 );
 
 
@@ -63,16 +71,25 @@ require Exporter;
     $TBIS_TISSUE_TYPE
     $TBIS_SPECIMEN
     $TBIS_SPECIMEN_BLOCK
-    $TBIS_STAINED_SLIDE
-    $TBIS_SLIDE_IMAGE
-
-    $TBIS_STAIN_CELL_PRESENCE
-    $TBIS_CELL_TYPE
-    $TBIS_CELL_PRESENCE_LEVEL
-		$TBIS_ABUNDANCE_LEVEL
-			
-		$TBIS_SURGICAL_PROCEDURE
-		$TBIS_CLINICAL_DIAGNOSIS
+     $TBIS_ASSAY     
+    $TBIS_ASSAY_IMAGE 
+	
+    $TBIS_ASSAY_UNIT_EXPRESSION  
+    $TBIS_STRUCTURAL_UNIT
+    $TBIS_EXPRESSION_LEVEL
+	
+	$TBIS_ABUNDANCE_LEVEL
+	$TBIS_SURGICAL_PROCEDURE
+	$TBIS_CLINICAL_DIAGNOSIS
+	$TBIS_GENOME_COORDINATES
+	
+	$TBIS_ASSAY_IMAGE_SUBFIELD 
+	$TBIS_DETECTION_METHOD
+	$TBIS_ASSAY_CHANNEL  
+	$TBIS_PROBE
+	$TBIS_ONTOTLOGY 
+	$TBIS_ONTOLOGY_TERM  
+	$TBIS_ONTOLOGY_TERM_RELATIONSHIP
 
 );
 
@@ -95,14 +112,23 @@ $TBIS_ANTIGEN               = "${mod}antigen";
 $TBIS_TISSUE_TYPE           = "${mod}tissue_type";
 $TBIS_SPECIMEN              = "${mod}specimen";
 $TBIS_SPECIMEN_BLOCK        = "${mod}specimen_block";
-$TBIS_STAINED_SLIDE         = "${mod}stained_slide";
-$TBIS_SLIDE_IMAGE           = "${mod}slide_image";
-
-$TBIS_STAIN_CELL_PRESENCE   = "${mod}stain_cell_presence";
-$TBIS_CELL_TYPE             = "${mod}cell_type";
-$TBIS_CELL_PRESENCE_LEVEL   = "${mod}cell_presence_level";
-$TBIS_ABUNDANCE_LEVEL				= "${mod}abundance_level";
-
-$TBIS_SURGICAL_PROCEDURE		= "${mod}surgical_procedure";
-$TBIS_CLINICAL_DIAGNOSIS		= "${mod}clinical_diagnosis";
+$TBIS_ASSAY    = "${mod}assay";
+ $TBIS_ASSAY_IMAGE   = "${mod}assay_image";
+	
+    $TBIS_ASSAY_UNIT_EXPRESSION   = "${mod}assay_unit_expression";
+    $TBIS_STRUCTURAL_UNIT   = "${mod}structural_unit";
+    $TBIS_EXPRESSION_LEVEL   = "${mod}expression_level";
+	
+	$TBIS_ABUNDANCE_LEVEL   = "${mod}abundance_level"; 
+	$TBIS_SURGICAL_PROCEDURE   = "${mod}surgical_procedure"; 
+	$TBIS_CLINICAL_DIAGNOSIS   = "${mod}clinical_diagnosis"; 
+	$TBIS_GENOME_COORDINATES   = "${mod}genome_coordinates"; 
+	
+	$TBIS_ASSAY_IMAGE_SUBFIELD     = "${mod}assay_image_subfield";
+	$TBIS_DETECTION_METHOD    = "${mod}detection_method";
+	$TBIS_ASSAY_CHANNEL    = "${mod}assay_channel";
+	$TBIS_PROBE    = "${mod}probe";
+	$TBIS_ONTOTLOGY   = "${mod}ontology";
+	$TBIS_ONTOLOGY_TERM    = "${mod}ontology_term"; 
+	$TBIS_ONTOLOGY_TERM_RELATIONSHIP    = "${mod}ontology_term_relationship";
 

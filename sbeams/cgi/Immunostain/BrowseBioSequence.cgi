@@ -37,7 +37,8 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::Immunostain;
 use SBEAMS::Immunostain::Settings;
 use SBEAMS::Immunostain::Tables;
-
+use SBEAMS::Ontology::Tables;
+use SBEAMS::Ontology::TableInfo;
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::Immunostain;
 $sbeamsMOD->setSBEAMS($sbeams);

@@ -38,6 +38,8 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::Immunostain;
 use SBEAMS::Immunostain::Settings;
 use SBEAMS::Immunostain::Tables;
+use SBEAMS::Ontology::Tables;
+use SBEAMS::Ontology::TableInfo;
 
 $q   = new CGI;
 $sbeams = new SBEAMS::Connection;

@@ -400,19 +400,25 @@ sub displayRegularPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_specimen"><nobr>&nbsp;&nbsp;&nbsp;Specimens</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_specimen_block"><nobr>&nbsp;&nbsp;&nbsp;Specimen Blocks</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_stained_slide"><nobr>&nbsp;&nbsp;&nbsp;Stained Slide</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_slide_image"><nobr>&nbsp;&nbsp;&nbsp;Slide Images</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_assay"><nobr>&nbsp;&nbsp;&nbsp;Stains<br>&nbsp;&nbsp;&nbsp;(Assays)</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_assay_channel"><nobr>&nbsp;&nbsp;&nbsp;Channels <br>&nbsp;&nbsp;&nbsp;(Probe/Antibody Detection)</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_stain_cell_presence"><nobr>&nbsp;&nbsp;&nbsp;Characterization</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_assay_image"><nobr>&nbsp;&nbsp;&nbsp;Slide Images<br>&nbsp;&nbsp;&nbsp;(Assay Slide Images)</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_assay_image_subfield"><nobr>&nbsp;&nbsp;&nbsp;Assay Image Subfields</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_assay_unit_expression"><nobr>&nbsp;&nbsp;&nbsp;Characterization</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_antigen"><nobr>&nbsp;&nbsp;&nbsp;Antigens</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_antibody"><nobr>&nbsp;&nbsp;&nbsp;Antibodies</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_cell_type"><nobr>&nbsp;&nbsp;&nbsp;Cell Types</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_probe"><nobr>&nbsp;&nbsp;&nbsp;Probes</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_structural_unit"><nobr>&nbsp;&nbsp;&nbsp;Cell Types<br>&nbsp;&nbsp;&nbsp;(Structural Unit)</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_detection_method"><nobr>&nbsp;&nbsp;&nbsp;Detection Methods</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_expression_level"><nobr>&nbsp;&nbsp;&nbsp;Expression Level</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_abundance_level"><nobr>&nbsp;&nbsp;&nbsp;Abundance</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>	
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_tissue_type"><nobr>&nbsp;&nbsp;&nbsp;Tissue Types</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_surgical_procedure"><nobr>&nbsp;&nbsp;&nbsp;Surgical Procs</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_clinical_diagnosis"><nobr>&nbsp;&nbsp;&nbsp;Clinical Diags</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_cell_presence_level"><nobr>&nbsp;&nbsp;&nbsp;Presence</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_abundance_level"><nobr>&nbsp;&nbsp;&nbsp;Abundance</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=protocol"><nobr>&nbsp;&nbsp;&nbsp;Protocols</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>~;
 	  
@@ -541,7 +547,7 @@ my $self = shift;
   my %args = @_;
 
 
-  #### If the output mode is interactive text, display text header
+#### If the output mode is interactive text, display text header
   my $sbeams = $self->getSBEAMS();
   if ($sbeams->output_mode() eq 'interactive') {
     $sbeams->printTextHeader(%args);

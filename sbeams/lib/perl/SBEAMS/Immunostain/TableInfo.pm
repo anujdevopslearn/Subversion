@@ -79,42 +79,45 @@ sub returnTableInfo {
 
     }
 
-
-    if ($table_name eq "IS_stained_slide") {
+	
+  if ($table_name eq "IS_assay") {
         if ($info_key eq "BASICQuery") {
-            return qq~
-		SELECT stained_slide_id,project_tag,tissue_type_name,
-                       specimen_block_name,antibody_name,stain_name,
-                       stain_description
-		  FROM $TBIS_STAINED_SLIDE SS
-		  LEFT JOIN $TB_PROJECT P ON ( SS.project_id = P.project_id )
-		  LEFT JOIN $TBIS_SPECIMEN_BLOCK SB
-		       ON ( SS.specimen_block_id = SB.specimen_block_id )
-		  LEFT JOIN $TBIS_SPECIMEN S
-		       ON ( SB.specimen_id = S.specimen_id )
-		  LEFT JOIN $TBIS_TISSUE_TYPE TT
-		       ON ( S.tissue_type_id = TT.tissue_type_id )
-		  LEFT JOIN $TBIS_ANTIBODY A
-		       ON ( SS.antibody_id = A.antibody_id )
-		 WHERE SS.record_status!='D'
-		 ORDER BY project_tag,tissue_type_name,specimen_block_name,
-                       A.sort_order,A.antibody_name,SS.stain_name
-            ~;
+            return qq~	
+		SELECT assay_id,project_tag,tissue_type_name,
+			specimen_block_name,antibody_name,assay_name,
+			assay_description
+			FROM $TBIS_ASSAY SS
+			LEFT JOIN $TB_PROJECT P ON ( SS.project_id = P.project_id )
+			LEFT JOIN $TBIS_SPECIMEN_BLOCK SB
+			ON ( SS.specimen_block_id = SB.specimen_block_id )
+			LEFT JOIN $TBIS_SPECIMEN S
+			ON ( SB.specimen_id = S.specimen_id )
+			LEFT JOIN $TBIS_TISSUE_TYPE TT
+			ON ( S.tissue_type_id = TT.tissue_type_id )
+			LEFT JOIN $TBIS_ANTIBODY A
+			ON ( SS.antibody_id = A.antibody_id )	
+			WHERE SS.record_status!='D'	
+			ORDER BY SS.assay_id,project_tag,tissue_type_name,specimen_block_name,		
+			A.sort_order,A.antibody_name,SS.assay_name
+      ~;
         }
 
     }
-
-
-    if ($table_name eq "IS_slide_image") {
+	
+	if ($table_name eq "IS_assay_image") {
         if ($info_key eq "BASICQuery") {
             return qq~
-		SELECT slide_image_id,project_tag,
-                       specimen_block_name,antibody_name,stain_name,image_name,
+		SELECT si.assay_image_id,assay_image_subfield_id, subfield_name,project_tag,
+                       specimen_block_name,antibody_name,assay_name,image_name,
                        image_magnification,raw_image_file,processed_image_file,
                        annotated_image_file
-		  FROM $TBIS_SLIDE_IMAGE SI
-		  LEFT JOIN $TBIS_STAINED_SLIDE SS
-                       ON ( SI.stained_slide_id = SS.stained_slide_id )
+		  FROM $TBIS_ASSAY_IMAGE SI
+		  LEFT JOIN $TBIS_ASSAY_IMAGE_SUBFIELD AIS
+			ON (SI.ASSAY_IMAGE_ID = AIS.ASSAY_IMAGE_ID) 	
+		  LEFT JOIN $TBIS_ASSAY_CHANNEL AC 
+			ON (SI.ASSAY_CHANNEL_ID = AC.ASSAY_CHANNEL_ID)
+		  LEFT JOIN $TBIS_ASSAY SS
+                       ON ( AC.ASSAY_ID = SS.ASSAY_ID )
 		  LEFT JOIN $TB_PROJECT P ON ( SS.project_id = P.project_id )
 		  LEFT JOIN $TBIS_SPECIMEN_BLOCK SB
 		       ON ( SS.specimen_block_id = SB.specimen_block_id )
@@ -127,7 +130,7 @@ sub returnTableInfo {
 		 WHERE SS.record_status!='D'
                    AND SI.record_status!='D'
 		 ORDER BY project_tag,tissue_type_name,specimen_block_name,
-                       A.sort_order,A.antibody_name,SS.stain_name,
+                       A.sort_order,A.antibody_name,SS.assay_name,
                        SI.image_magnification,SI.image_name
             ~;
         }
@@ -147,31 +150,45 @@ sub returnTableInfo {
 
     }
 
-
-
-    if ($table_name eq "IS_stain_cell_presence") {
+  
+    if ($table_name eq "IS_assay_unit_expression") {
         if ($info_key eq "BASICQuery") {
             return qq~
-		SELECT SCP.stain_cell_presence_id,stain_name,cell_type_name,
+		SELECT SCP.assay_unit_expression_id,assay_name,structural_unit_name,
                        level_name,abundance_level_name, SCP.comment
-                  FROM $TBIS_STAIN_CELL_PRESENCE SCP
-		  LEFT JOIN $TBIS_STAINED_SLIDE SS
-                       ON ( SCP.stained_slide_id = SS.stained_slide_id )
-		  LEFT JOIN $TBIS_CELL_TYPE CT
-		       ON ( SCP.cell_type_id = CT.cell_type_id )
-		  LEFT JOIN $TBIS_CELL_PRESENCE_LEVEL CPL
-		       ON ( SCP.cell_presence_level_id = CPL.cell_presence_level_id )
+                  FROM $TBIS_ASSAY_UNIT_EXPRESSION  SCP
+				  LEFT JOIN $TBIS_ASSAY_CHANNEL AC
+				  		ON (SCP.ASSAY_CHANNEL_ID = AC.ASSAY_CHANNEL_ID) 
+				  LEFT JOIN $TBIS_ASSAY SS
+                       ON ( AC.assay_id  = SS.assay_id )
+		  LEFT JOIN $TBIS_STRUCTURAL_UNIT CT
+		       ON ( SCP.structural_unit_id = CT.structural_unit_id )
+		  LEFT JOIN $TBIS_EXPRESSION_LEVEL CPL
+		       ON ( SCP.expression_level_id = CPL.expression_level_id )
 			LEFT JOIN $TBIS_ABUNDANCE_LEVEL AL
 						ON (SCP.abundance_level_id = AL.abundance_level_id) 
 		 WHERE SCP.record_status!='D'
-		 ORDER BY stain_name,cell_type_name,level_name
+		 ORDER BY assay_name,structural_unit_name,level_name
             ~;
+			
         }
 
     }
-
-
-
+	
+ if ($table_name eq "IS_assay_channel") {
+        if ($info_key eq "BASICQuery") {
+            return qq~
+		SELECT  assay_channel_id, assay_channel_name, assay_name, antibody_name, probe_name, detection_method_name	
+		FROM $TBIS_ASSAY_CHANNEL AC 
+		LEFT JOIN $TBIS_ASSAY AY ON (AC.assay_id = AY.assay_id)
+		LEFT JOIN $TBIS_ANTIBODY AB ON (AC.antibody_id = AB.antibody_id)
+		LEFT JOIN $TBIS_PROBE P ON (AC.probe_id = P.probe_id)
+		LEFT JOIN $TBIS_DETECTION_METHOD DM ON (AC.detection_method_id = DM.detection_method_id)
+		WHERE AC.record_status!='D'
+		ORDER BY  AC.assay_channel_name,assay_name
+		~;
+		}
+ 	}
 ###############################################################################
 
     #### Obtain main SBEAMS object and fall back to its TableInfo handler

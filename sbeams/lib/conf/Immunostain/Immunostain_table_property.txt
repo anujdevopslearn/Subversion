@@ -5,20 +5,20 @@ IS_dbxref	Biosequence Database Cross Reference	Immunostain_infrastructure	YES	$T
 IS_biosequence	BioSequence	Immunostain_infrastructure	NO	$TBIS_BIOSEQUENCE	biosequence_id				
 IS_query_option	Query Option	Immunostain_infrastructure	YES	$TBIS_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=IS_query_option	IS_query_option	
 IS_BrowseBioSequence	Browse BioSequence	QUERY	NO				BrowseBioSequence.cgi		
-IS_antibody	Antibody	Immunostain_infrastructure	YES	$TBIS_ANTIBODY	antibody_id		ManageTable.cgi?TABLE_NAME=IS_antibody	"IS_antigen,IS_antibody,IS_probe"	IS_assay
-IS_antigen	Antigen	Immunostain_infrastructure	YES	$TBIS_ANTIGEN	antigen_id		ManageTable.cgi?TABLE_NAME=IS_antigen	"IS_antigen,IS_antibody,IS_probe"	IS_antibody
-IS_probe	Probe	Immunostain_infrastructure	YES	$TBIS_PROBE	probe_id		ManageTable.cgi?TABLE_NAME=IS_probe	"IS_antigen,IS_antibody,IS_probe"	IS_probe
-IS_structural_unit	Structural Unit	Immunostain_infrastructure	YES	$TBIS_STRUCTURAL_UNIT	structural_unit_id		ManageTable.cgi?TABLE_NAME=IS_structural_unit	"IS_structural_unit,IS_tissue_type,IS_expression_level,IS_dection_method"	
-IS_expression_level	Expression Level	Immunostain_infrastructure	YES	$TBIS_EXPRESSION_LEVEL	expression_level_id		ManageTable.cgi?TABLE_NAME=IS_expression_level	"IS_structural_unit,IS_tissue_type,IS_expression_level,IS_dection_method"	
+IS_antibody	Antibody	Immunostain_infrastructure	YES	$TBIS_ANTIBODY	antibody_id		ManageTable.cgi?TABLE_NAME=IS_antibody	"IS_antibody,IS_antigen,IS_probe,IS_assay_channel"	IS_assay
+IS_antigen	Antigen	Immunostain_infrastructure	YES	$TBIS_ANTIGEN	antigen_id		ManageTable.cgi?TABLE_NAME=IS_antigen	"IS_antigen,IS_antibody,IS_probe,IS_assay_channel"	IS_antibody
+IS_probe	Probe	Immunostain_infrastructure	YES	$TBIS_PROBE	probe_id		ManageTable.cgi?TABLE_NAME=IS_probe	"IS_probe,IS_antigen,IS_antibody,IS_Assay_channel"	IS_probe
+IS_structural_unit	Structural Unit	Immunostain_infrastructure	YES	$TBIS_STRUCTURAL_UNIT	structural_unit_id		ManageTable.cgi?TABLE_NAME=IS_structural_unit	"IS_structural_unit,IS_tissue_type,IS_expression_level,IS_detection_method"	
+IS_expression_level	Expression Level	Immunostain_infrastructure	YES	$TBIS_EXPRESSION_LEVEL	expression_level_id		ManageTable.cgi?TABLE_NAME=IS_expression_level	"IS_expression_level,IS_structural_unit,IS_tissue_type,IS_detection_method"	
 IS_assay_unit_expression	Assay Unit Expression	Immunostain_infrastructure	YES	$TBIS_ASSAY_UNIT_EXPRESSION	assay_unit_expression_id		ManageTable.cgi?TABLE_NAME=IS_assay_unit_expression	IS_assay_unit_expression	
-IS_assay	Assay	Immunostain_infrastructure	YES	$TBIS_ASSAY	assay_id		ManageTable.cgi?TABLE_NAME=IS_assay	"IS_assay,IS_assay_channel,IS_slide_image"	
-IS_assay_channel	Assay Channel	Immunostain_infrastructure	YES	$TBIS_ASSAY_CHANNEL	assay_channel_id		ManageTable.cgi?TABLE_NAME=IS_assay_channel	"IS_assay,IS_assay_channel,IS_slide_image"	
-IS_detection_method	Detection Method	Immunostain_infrastructure	YES	$TBIS_DETECTION_METHOD	detection_method_id		ManageTable.cgi?TABLE_NAME=IS_detection_method	"IS_structural_unit,IS_tissue_type,IS_expression_level,IS_dection_method"	
-IS_assay_image	Assay Image	Immunostain_infrastructure	YES	$TBIS_ASSAY_IMAGE	assay_image_id		ManageTable.cgi?TABLE_NAME=IS_assay_image	"IS_assay,IS_assay_channel,IS_assay_image"	IS_assay_image
-IS_assay_image_subfield	Assay Image Subfield	Immunostain_infrastructure	YES	$TBIS_ASSAY_IMAGE_SUBFIELD	assay_image_subfield_id		ManageTable.cgi?TABLE_NAME=IS_assay_subfield_image	"IS_assay,IS_assay_channel,IS_assay_image,IS_assay_image_subfield"	IS_assay_image
-IS_tissue_type	Tissue Type	Immunostain_infrastructure	YES	$TBIS_TISSUE_TYPE	tissue_type_id		ManageTable.cgi?TABLE_NAME=IS_tissue_type	"IS_structural_unit,IS_tissue_type,IS_expression_level,IS_dection_method"	
+IS_assay	Assay	Immunostain_infrastructure	YES	$TBIS_ASSAY	assay_id		ManageTable.cgi?TABLE_NAME=IS_assay	"IS_assay,IS_assay_channel,IS_assay_image,IS_assay_image_subfield"	
+IS_assay_channel	Assay Channel	Immunostain_infrastructure	YES	$TBIS_ASSAY_CHANNEL	assay_channel_id		ManageTable.cgi?TABLE_NAME=IS_assay_channel	"IS_assay_channel,IS_assay,IS_assay_image,IS_assay_image_subfield"	
+IS_detection_method	Detection Method	Immunostain_infrastructure	YES	$TBIS_DETECTION_METHOD	detection_method_id		ManageTable.cgi?TABLE_NAME=IS_detection_method	"IS_detection_method,IS_structural_unit,IS_tissue_type,IS_expression_level"	
+IS_assay_image	Assay Image	Immunostain_infrastructure	YES	$TBIS_ASSAY_IMAGE	assay_image_id		ManageTable.cgi?TABLE_NAME=IS_assay_image	"IS_assay_image,IS_assay,IS_assay_channel,IS_assay_image_subfield"	IS_assay_image
+IS_assay_image_subfield	Assay Image Subfield	Immunostain_infrastructure	YES	$TBIS_ASSAY_IMAGE_SUBFIELD	assay_image_subfield_id		ManageTable.cgi?TABLE_NAME=IS_assay_image_subfield	"IS_assay_image_subfield,IS_assay_image,IS_assay_channel,IS_assay"	IS_assay_image
+IS_tissue_type	Tissue Type	Immunostain_infrastructure	YES	$TBIS_TISSUE_TYPE	tissue_type_id		ManageTable.cgi?TABLE_NAME=IS_tissue_type	"IS_tissue_type,IS_structural_unit,IS_expression_level,IS_detection_method"	
 IS_specimen	Specimen	Immunostain_infrastructure	YES	$TBIS_SPECIMEN	specimen_id		ManageTable.cgi?TABLE_NAME=IS_specimen	"IS_specimen,IS_specimen_block"	IS_specimen_block
-IS_specimen_block	Specimen Block	Immunostain_infrastructure	YES	$TBIS_SPECIMEN_BLOCK	specimen_block_id		ManageTable.cgi?TABLE_NAME=IS_specimen_block	"IS_specimen,IS_specimen_block"	IS_assay
+IS_specimen_block	Specimen Block	Immunostain_infrastructure	YES	$TBIS_SPECIMEN_BLOCK	specimen_block_id		ManageTable.cgi?TABLE_NAME=IS_specimen_block	"IS_specimen_block,IS_specimen"	IS_assay
 IS_SummarizeStains	Summarize Stains	QUERY	NO				SummarizeStains		
 IS_surgical_procedure	Surgical_procedure	Immunostain_infrastructure	YES	$TBIS_SURGICAL_PROCEDURE	surgical_procedure_id		ManageTable.cgi?TABLE_NAME=IS_surgical_procedure	IS_surgical_procedure	
 IS_clinical_diagnosis	Clinical_diagnosis	Immunostain_infrastructure	YES	$TBIS_CLINICAL_DIAGNOSIS	clinical_diagnosis_id		ManageTable.cgi?TABLE_NAME=IS_clinical_diagnosis	IS_clinical_diagnosis	
