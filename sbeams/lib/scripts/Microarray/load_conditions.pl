@@ -68,6 +68,7 @@ Options:
     --project_id <num> Set project_id. This is required.
     --set_tag <name>   Determines which biosequence set to use when populating
                        the gene_expression table
+    --directory <dir>  Specify if directory is other than the project directory
     --map              Looks for column_map files
     --clone            Looks/loafd clone files
     --sig              Looks/loads sig files 
@@ -107,7 +108,7 @@ if ($DEBUG) {
   print "  QUIET = $OPTIONS{quiet}\n";
   print "  DEBUG = $OPTIONS{debug}\n";
   print "  PROJECT_ID = $OPTIONS{project_id}\n";
-#  print "  DIRECTORY = $OPTIONS{directory}\n";
+  print "  DIRECTORY = $OPTIONS{directory}\n";
 #  print "  FILE_NAME = $OPTIONS{file_name}\n";
   print "  SIG = $OPTIONS{sig}\n";
   print "  MERGE = $OPTIONS{merge}\n";
@@ -560,13 +561,24 @@ sub loadColumnMapFile {
     if (open (MAP_FILE, "$map_file")){
       while (<MAP_FILE>) {
 	next if (/^\#/ || /^\s$/);
-	if (/mapped.file\s*\=\s*(.*)/) {
+
+	# If file path starts with '/' it's the full path
+	# If file is just a name, it's in the current dir.
+	if (/mapped.file\s*\=\s*\/(.*)/) {
+	  $mapped_file = "/$1";
+	  print "file path is $mapped_file\n";
+        }elsif (/mapped.file\s*\=\s*(.*)/) {
 	  $mapped_file = "$directory/$1";
-        }elsif (/delimiter\s*\=\s*(.*)/) {
+	  print "file path is $mapped_file\n";
+	}elsif (/delimiter\s*\=\s*(.*)/) {
 	  $delimiter = $1;
+
 	  # Quick hack to resolve tab interpolation
-	  if ($delimiter eq '\t') {$delimiter = "\t";}
-	  if ($delimiter eq '\s') {$delimiter = "\s";}
+	  my $tab = '\t';
+	  my $space = '\s';
+	  if ($delimiter eq $tab) {$delimiter = "\t";}
+	  if ($delimiter eq $space) {$delimiter = "\s";}
+
 	}elsif (/condition\s*\=\s*(.*)/) {
 	  $condition = $1;
         }elsif (/(\w+)\s*\=\s*(\d+)/) {
@@ -619,6 +631,7 @@ sub loadColumnMapFile {
 			   source_file=>"$mapped_file",
 			   if_hash=>$bs_hash_ref,
 			   delimiter=>$delimiter);
+    my @stats = stat($file);
 
       push (@condition_files, $map_file);
     }else{
