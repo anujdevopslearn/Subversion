@@ -150,7 +150,7 @@ sub printPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/main.cgi">$DBTITLE Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td>Installed Modules:</td></tr>
+	<tr><td>Available&nbsp;Modules:</td></tr>
       ~;
 
       #### Get the list of Modules available to us
@@ -164,10 +164,20 @@ sub printPageHeader {
         ~;
       }
 
+
       print qq~
 	<tr><td>&nbsp;</td></tr>
-	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=user_login">Admin</a></td></tr>
+      ~;
+
+      my $current_work_group_name = $self->getCurrent_work_group_name();
+      if ($current_work_group_name eq 'Admin') {
+        print qq~
+	  <tr><td>&nbsp;</td></tr>
+	  <tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=user_login">Admin</a></td></tr>
+        ~;
+      }
+
+      print qq~
 	<tr><td>&nbsp;</td></tr>
 	<tr><td><a href="$HTML_BASE_DIR/doc/">Documentation</a></td></tr>
 	</table>
