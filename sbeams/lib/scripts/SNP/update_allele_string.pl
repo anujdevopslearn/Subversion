@@ -93,12 +93,6 @@ exit 0;
 ###############################################################################
 sub main {
 
-  #### If there aren't any parameters, print usage
-  unless ($ARGV[0]){
-    print "$USAGE";
-    exit;
-  }
-
   #### Define standard variables
   my ($sql,$result,$junk,$cnt);
 
