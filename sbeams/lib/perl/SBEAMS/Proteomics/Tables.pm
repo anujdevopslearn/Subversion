@@ -162,6 +162,7 @@ require Exporter;
 #### Get the appropriate database prefixes for the SBEAMS core and this module
 my $core = $DBPREFIX{Core};
 my $mod = $DBPREFIX{Proteomics};
+my $APD = $DBPREFIX{APD};
 
 
 $TB_ORGANISM                      = "${core}organism";
@@ -201,13 +202,13 @@ $TBPR_FUNDING_STATUS              = "${mod}funding_status";
 $TBPR_PROCESSING_STATUS           = "${mod}processing_status";
 $TBPR_RAW_DATA_FILE               = "${mod}raw_data_file";
 
-$TBAPD_PEPTIDE_SUMMARY            = "APD.dbo.peptide_summary";
-$TBAPD_PEPTIDE_SUMMARY_EXPERIMENT = "APD.dbo.peptide_summary_experiment";
-$TBAPD_PEPTIDE_IDENTIFIER         = "APD.dbo.peptide_identifier";
-$TBAPD_PEPTIDE                    = "APD.dbo.peptide";
-$TBAPD_MODIFIED_PEPTIDE           = "APD.dbo.modified_peptide";
-$TBAPD_MODIFIED_PEPTIDE_PROPERTY  = "APD.dbo.modified_peptide_property";
-$TBAPD_PEPTIDE_PROPERTY_TYPE      = "APD.dbo.peptide_property_type";
+$TBAPD_PEPTIDE_SUMMARY            = "${APD}peptide_summary";
+$TBAPD_PEPTIDE_SUMMARY_EXPERIMENT = "${APD}peptide_summary_experiment";
+$TBAPD_PEPTIDE_IDENTIFIER         = "${APD}peptide_identifier";
+$TBAPD_PEPTIDE                    = "${APD}peptide";
+$TBAPD_MODIFIED_PEPTIDE           = "${APD}modified_peptide";
+$TBAPD_MODIFIED_PEPTIDE_PROPERTY  = "${APD}modified_peptide_property";
+$TBAPD_PEPTIDE_PROPERTY_TYPE      = "${APD}peptide_property_type";
 
 $TBPR_POSSIBLE_PEPTIDE            = "${mod}possible_peptide";
 
