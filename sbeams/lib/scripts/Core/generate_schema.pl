@@ -445,6 +445,7 @@ sub writeSchema {
   #### Initialize some buffers
   my $create_tables_buffer = "";
   my $add_constraints_buffer = "";
+  my $add_audit_constraints_buffer = "";
   my $drop_constraints_buffer = "";
   my $drop_tables_buffer = "";
   my $drop_sequences_buffer = "";
@@ -496,8 +497,18 @@ sub writeSchema {
 
         #### Add generated constraints to corresponding buffers
         if ($result->{add_reference_constraint}) {
-          $add_constraints_buffer .=
-            $result->{add_reference_constraint}."$SB";
+
+          #### If this is an audit column, then keep it separate
+          if ($column_name eq 'created_by_id' ||
+              $column_name eq 'modified_by_id' ||
+              $column_name eq 'owner_group_id') {
+            $add_audit_constraints_buffer .=
+              $result->{add_reference_constraint}."$SB";
+          } else {
+            $add_constraints_buffer .=
+              $result->{add_reference_constraint}."$SB";
+          }
+
         }
         if ($result->{drop_reference_constraint}) {
           $drop_constraints_buffer .=
@@ -616,6 +627,8 @@ sub writeSchema {
   }
 
   print OUTFILE "$LB$LB$add_constraints_buffer$LB";
+  print OUTFILE "$LB$LB$LB/**** Audit trail FOREIGN KEYS ****/";
+  print OUTFILE "$LB$LB$add_audit_constraints_buffer$LB";
   close(OUTFILE);
 
 
@@ -731,12 +744,14 @@ sub generateColumnDefinition {
 
   #### Set a REFERENCES clause if appropriate
   my $add_reference_constraint;
+  my $add_audit_reference_constraint;
   my $drop_reference_constraint;
   if ($fk_table && $fk_column) {
-    $line .= " /* REFERENCES $fk_table($fk_column) */";
+    #$line .= " /* REFERENCES $fk_table($fk_column) */";
     $add_reference_constraint = "ALTER TABLE $table_name ADD CONSTRAINT ".
       "fk_${table_name}_${column_name} FOREIGN KEY ($column_name) ".
       "REFERENCES $fk_table($fk_column)";
+
     $drop_reference_constraint = "ALTER TABLE $table_name DROP CONSTRAINT ".
       "fk_${table_name}_${column_name}";
 
