@@ -27,6 +27,9 @@ AT_sample	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP
 AT_sample	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 AT_sample	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 AT_sample	16	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_sample	17	search_batch_id	Search Batch ID	int	4	0	N		N							N	N		Search Batch ID		
+AT_sample	18	publication_id	Publication ID	int	4	0	N		N							N	N		Publication ID		
+AT_sample	19	data_contributors	Data Contributors	text	16	0	Y		N			Y	textarea	10		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)		
 AT_atlas_build_sample	1	atlas_build_sample_id	Atlas Build Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_atlas_build_sample	2	atlas_build_id	Atlas Build ID	int	4	0	N		N	AT_atlas_build	atlas_build_id					N	N		Associated Atlas Build		
 AT_atlas_build_sample	3	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id					N	N		Associated Sample		
@@ -180,3 +183,26 @@ AT_query_option	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIME
 AT_query_option	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 AT_query_option	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N
 AT_query_option	11	record_status	Record Status	char	1	0	N	N	N							N	N
+AT_publication	1	publication_id	Publication ID	int	8	0	N		Y							N	N				pkDEFAULT
+AT_publication	2	pubmed_ID	PubMed ID	varchar	50	0	Y		N			N	text	30	refreshDocument()	Y	Y	N	"PubMed ID for this publication.  When this field is changed, the interface fetch the title,author,etc. information for you if the field below this (Publication Name) is empty"		
+AT_publication	3	publication_name	Publication Name	varchar	100	0	N		N			Y	text	50		Y	Y	Y	"Friendly name of the citation, e.g. Dewey, Cheetham & Howe (1998)"		
+AT_publication	4	keywords	Keywords	varchar	255	0	Y		N			N	text	50		Y	Y	N	A comma-separated list of keywords appropriate when searching for papers of this sort		
+AT_publication	9	title	Title	varchar	255	0	Y		N			N	textarea	2		Y	Y	N	Title of the article		
+AT_publication	10	author_list	Author List	varchar	255	0	Y		N			N	textarea	2		Y	Y	N	"Author list in 'Lastname, FIMI' format"		
+AT_publication	11	journal_name	Journal Name	varchar	100	0	Y		N			N	text	50		Y	Y	N	Name of the Journal in which the article appears		
+AT_publication	12	published_year	Published Year	varchar	10	0	Y		N			N	text	20		Y	Y	N	Year the article was published		
+AT_publication	13	volume_number	Volume Number	varchar	50	0	Y		N			N	text	20		Y	Y	N	Volume number of the article		
+AT_publication	14	issue_number	Issue Number	varchar	50	0	Y		N			N	text	20		Y	Y	N	Issue number of the article		
+AT_publication	15	page_numbers	Page Numbers	varchar	50	0	Y		N			N	text	30		Y	Y	N	Page numbers of the article		
+AT_publication	16	publisher_name	Publisher Name	varchar	255	0	Y		N			N	text	40		Y	Y	N	Name of the publisher		
+AT_publication	17	editor_name	Editor Name	varchar	255	0	Y		N			N	text	40		Y	Y	N	"Name of the editor, if any"		
+AT_publication	18	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	"URL of other locator for the article, either out on the Internet or in the location Publications repository"		SELF
+AT_publication	19	abstract	Abstract	text	16	0	Y		N			N	textarea	4		Y	Y	N	Plain text abstract of the article		
+AT_publication	20	full_manuscript_file	Manuscript File Upload	varchar	255	0	Y		N			N	file	40		Y	Y	N	Actual file containing the manuscript (e.g. in PDF format)		uploaded_file
+AT_publication	21	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_publication	22	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_publication	23	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+AT_publication	24	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_publication	25	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+AT_publication	26	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+AT_publication	27	record_status	Record Status	char	1	0	N	N	N							N	N				
