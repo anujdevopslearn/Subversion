@@ -20,16 +20,23 @@ public class GeneExpressionFileReader {
   private String[] conditionNames;
   private Hashtable rosetta;
 //-----------------------------------------------------------------------------------------------
-  public GeneExpressionFileReader(String dataFileURI, String translatorFile){
+  public GeneExpressionFileReader(String dataFileURI, String translatorFile, SBEAMSClient sc){
+	this.sc = sc;
 	rosetta = readTranslator(translatorFile);
 	this.dataFileURI = dataFileURI;
 	data = new Hashtable();
   }// FileReader
 //-----------------------------------------------------------------------------------------------
+  public GeneExpressionFileReader(String dataFileURI, String translatorFile){
+ 	rosetta = readTranslator(translatorFile);
+ 	this.dataFileURI = dataFileURI;
+ 	data = new Hashtable();
+  }// FileReader
+//-----------------------------------------------------------------------------------------------
   public GeneExpressionFileReader(String dataFileURI){
-	rosetta = new Hashtable();
-	this.dataFileURI = dataFileURI;
-	data = new Hashtable();
+ 	rosetta = new Hashtable();
+ 	this.dataFileURI = dataFileURI;
+ 	data = new Hashtable();
   }// FileReader
 //-----------------------------------------------------------------------------------------------
   public boolean read() {
@@ -50,7 +57,8 @@ public class GeneExpressionFileReader {
 	if (file.startsWith("sbeamsIndirect://")) {
 	  try {
 		String[] pieces = file.split("://");
-		sc = new SBEAMSClient(true);
+		if (sc != null)
+		  sc = new SBEAMSClient(true);
 		String bigLine = sc.fetchSbeamsPage("http://"+pieces[1]);
 		return bigLine.split("\\n");
 	  }catch (IOException e) {
