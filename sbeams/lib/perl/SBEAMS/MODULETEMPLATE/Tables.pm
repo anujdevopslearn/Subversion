@@ -22,6 +22,7 @@ use vars qw(@ISA @EXPORT
     $TBModTmpTAG_BIOSEQUENCE_SET
     $TBModTmpTAG_DBXREF
     $TBModTmpTAG_BIOSEQUENCE
+    $TBModTmpTAG_BIOSEQUENCE_PROPERTY_SET
     $TBModTmpTAG_QUERY_OPTION
 
 );
@@ -36,6 +37,7 @@ require Exporter;
     $TBModTmpTAG_BIOSEQUENCE_SET
     $TBModTmpTAG_DBXREF
     $TBModTmpTAG_BIOSEQUENCE
+    $TBModTmpTAG_BIOSEQUENCE_PROPERTY_SET
     $TBModTmpTAG_QUERY_OPTION
 
 );
@@ -50,6 +52,7 @@ $TB_ORGANISM                      = "${core}organism";
 $TBModTmpTAG_BIOSEQUENCE_SET       = "${mod}biosequence_set";
 $TBModTmpTAG_DBXREF                = "${mod}dbxref";
 $TBModTmpTAG_BIOSEQUENCE           = "${mod}biosequence";
+$TBModTmpTAG_BIOSEQUENCE_PROPERTY_SET   = "${mod}biosequence_property_set";
 $TBModTmpTAG_QUERY_OPTION          = "${mod}query_option";
 
 
