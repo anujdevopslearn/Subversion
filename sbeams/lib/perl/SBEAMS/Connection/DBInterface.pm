@@ -1049,7 +1049,6 @@ sub insert_update_row {
 sub updateOrInsertRow {
   my $self = shift || croak("parameter self not passed");
   my %args = @_;
-  $log->printStack( 'debug' );
 
   #### Decode the argument list
   my $table_name = $args{'table_name'} || die "ERROR: table_name not passed";
