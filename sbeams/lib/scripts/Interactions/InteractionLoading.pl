@@ -92,7 +92,7 @@ sub main
 {
 		 #### Do the SBEAMS authentication and exit if a username is not returned
 		 exit unless ($current_username = $recordCon->Authenticate(
-		 work_group=>'Developer',
+		 work_group=>'Interactions_user',
   ));
 
 	
@@ -224,9 +224,9 @@ sub processFile
 	(my $fileID) = $source_file =~ /.*\/(.*)\./;
 	my $errorFile = "InteractionLoadingError_".$fileID.".txt";
 	my $errorLog = "InteractionErrorLog_".$fileID.".htm";
-	$fhError = new FileHandle (">/../users/mkorb/GLUE/inputData/$errorFile") or die "can not open $!";
+	$fhError = new FileHandle (">/../users/mkorb/Interaction/inputData/$errorFile") or die "can not open $!";
 	Error(\@columnOrder);
-	$fhLog = new FileHandle (">/../users/mkorb/GLUE/inputData/$errorLog") or die "can not open $!";
+	$fhLog = new FileHandle (">/../users/mkorb/Interaction/inputData/$errorLog") or die "can not open $!";
 	print $fhLog "<html><body><br>"; 
 
 	open (INFILE, $source_file) or die "$!";
