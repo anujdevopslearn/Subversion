@@ -50,7 +50,8 @@ require Exporter;
 
 
 $DBTITLE                = 'SBEAMS';
-$SERVER_BASE_DIR        = 'http://db';
+#$SERVER_BASE_DIR        = 'http://db';
+$SERVER_BASE_DIR        = '';
 
 
 if ( $ENV{SCRIPT_NAME} =~ /dev1/ ) {

@@ -1,12 +1,12 @@
 #!/usr/local/bin/perl
 
 ###############################################################################
-# Program     : BrowseSearchHits.cgi
+# Program     : BrowseAnnotatedPeptides.cgi
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
 # $Id$
 #
 # Description : This CGI program that allows users to
-#               browse through Proteomics output search hits.
+#               browse through Annotated search hits.
 #
 ###############################################################################
 
@@ -89,8 +89,8 @@ sub processRequests {
         print "$ee =$ENV{$ee}=<BR>\n";
       }
       foreach $ee ( $q->param ) {
-        $ff = $q->param($ee);
-        print "$ee =$ff=<BR>\n";
+        $ff = join(",",$q->param($ee));
+        print "$ee=$ff<BR>\n";
       }
     }
 
@@ -113,8 +113,8 @@ sub printEntryForm {
     my (%url_cols,%hidden_cols,%max_widths);
     my $username;
 
-    my $CATEGORY="Proteomics Data Test Query";
-    my $TABLE_NAME="BrowseSearchHits";
+    my $CATEGORY="Browse Annotated Peptides";
+    my $TABLE_NAME="BrowseAnnotatedPeptides";
     $TABLE_NAME = $q->param("QUERY_NAME") if $q->param("QUERY_NAME");
 
 
@@ -124,14 +124,12 @@ sub printEntryForm {
       $sbeamsPROT->returnTableInfo($TABLE_NAME,"input_types");
 
     # Read the form values for each column
-    my $no_params_flag = 1;
     foreach $element (@columns) {
         if ($input_types{$element} eq "multioptionlist") {
           $parameters{$element}=join(",",$q->param($element));
         } else {
           $parameters{$element}=$q->param($element);
         }
-        $no_params_flag = 0 if ($parameters{$element});
     }
 
     my $apply_action  = $q->param('apply_action');
@@ -139,11 +137,11 @@ sub printEntryForm {
 
     #### If xcorr_charge is undefined (not just "") then set to a high limit
     #### So that a naive query is quick
-    if ( ($TABLE_NAME eq "BrowseSearchHits") && $no_params_flag ) {
+    if (($TABLE_NAME eq "BrowseSearchHits") && (!defined($parameters{xcorr_charge1})) ) {
       $parameters{xcorr_charge1} = ">4.0";
       $parameters{xcorr_charge2} = ">4.5";
       $parameters{xcorr_charge3} = ">5.0";
-      $parameters{sort_order} = "experiment_tag,set_tag,S.file_root,SH.cross_corr_rank";
+      $parameters{sort_order} = "reference";
     }
 
 
@@ -406,60 +404,6 @@ sub printEntryForm {
       }
 
 
-      #### Build XCORR constraint
-      my $xcorr_clause = "";
-      my ($icharge,$xcorr);
-      for ($icharge=1;$icharge<4;$icharge++) {
-        $xcorr = $parameters{"xcorr_charge$icharge"};
-        if ($xcorr) {
-          if ($xcorr =~ /^[\d\.]+$/) {
-            $xcorr_clause = "   AND ( S.assumed_charge = $icharge AND SH.cross_corr = $xcorr )\n";
-          } elsif ($xcorr =~ /^between\s+[\d\.]+\s+and\s+[\d\.]+$/i) {
-            $xcorr_clause = "   AND ( S.assumed_charge = $icharge AND SH.cross_corr $xcorr )\n";
-          } elsif ($xcorr =~ /^[><=][=]*\s*[\d\.]+$/) {
-            $xcorr_clause = "   AND ( S.assumed_charge = $icharge AND SH.cross_corr $xcorr )\n";
-          } else {
-            print "<H4>Cannot parse XCorr Constraint $icharge!  Check syntax.</H4>\n\n";
-            return;
-          }
-        }
-      }
-
-
-      #### Build FILE_ROOT constraint
-      my $file_root_clause = "";
-      if ($parameters{file_root_constraint}) {
-        if ($parameters{file_root_constraint} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
-          print "<H4>Cannot parse file_root Constraint!  Check syntax.</H4>\n\n";
-          return;
-        } else {
-          $file_root_clause = "   AND S.file_root LIKE '$parameters{file_root_constraint}'";
-        }
-      }
-
-
-      #### Build XCORR_RANK constraint
-      my $xcorr_rank_clause = "";
-      if ($parameters{xcorr_rank_constraint}) {
-        if ($parameters{xcorr_rank_constraint} =~ /^[\d]+$/) {
-          $xcorr_clause = "   AND SH.cross_corr_rank = $parameters{xcorr_rank_constraint}";
-        } elsif ($parameters{xcorr_rank_constraint} =~ /^between\s+[\d]+\s+and\s+[\d]+$/i) {
-          $xcorr_clause = "   AND SH.cross_corr_rank $parameters{xcorr_rank_constraint}";
-        } elsif ($parameters{xcorr_rank_constraint} =~ /^[><=][=]*\s*[\d]+$/) {
-          $xcorr_clause = "   AND SH.cross_corr_rank $parameters{xcorr_rank_constraint}";
-        } else {
-          print "<H4>Cannot parse XCorr Rank Constraint!  Check syntax.</H4>\n\n";
-          return;
-        }
-      }
-
-
-      #### Build CHARGE constraint
-      my $charge_clause = "";
-      if ($parameters{charge_constraint} =~ /[\d,]+/) {
-        $charge_clause = "   AND S.assumed_charge IN ( $parameters{charge_constraint} )";
-      }
-
 
       #### Build REFERENCE PROTEIN constraint
       my $reference_clause = "";
@@ -480,36 +424,16 @@ sub printEntryForm {
           print "<H4>Cannot parse Peptide Constraint!  Check syntax.</H4>\n\n";
           return;
         } else {
-          $peptide_clause = "   AND SH.peptide LIKE '$parameters{peptide_constraint}'";
+          $peptide_clause = "   AND SH.peptide_string LIKE '$parameters{peptide_constraint}'";
         }
       }
 
 
-      #### Build PEPTIDE STRING constraint
-      my $peptide_string_clause = "";
-      if ($parameters{peptide_string_constraint}) {
-        if ($parameters{peptide_string_constraint} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
-          print "<H4>Cannot parse Peptide String Constraint!  Check syntax.</H4>\n\n";
-          return;
-        } else {
-          $peptide_clause = "   AND SH.peptide_string LIKE '$parameters{peptide_string_constraint}'";
-        }
-      }
 
-
-      #### Build ICAT RATIO constraint
-      my $ICAT_ratio_clause = "";
-      if ($parameters{ICAT_constraint}) {
-        if ($parameters{ICAT_constraint} =~ /^[\d\.]+$/) {
-          $ICAT_ratio_clause = "   AND ICAT_light/ISNULL(NULLIF(ICAT_heavy,0),0.01) = $parameters{ICAT_constraint}";
-        } elsif ($parameters{ICAT_constraint} =~ /^between\s+[\d\.]+\s+and\s+[\d\.]+$/i) {
-          $ICAT_ratio_clause = "   AND ICAT_light/ISNULL(NULLIF(ICAT_heavy,0),0.01) $parameters{ICAT_constraint}";
-        } elsif ($parameters{ICAT_constraint} =~ /^[><=][=]*\s*[\d\.]+$/) {
-          $ICAT_ratio_clause = "   AND ICAT_light/ISNULL(NULLIF(ICAT_heavy,0),0.01) $parameters{ICAT_constraint}";
-        } else {
-          print "<H4>Cannot parse ICAT Ratio Constraint!  Check syntax.</H4>\n\n";
-          return;
-        }
+      #### Build ANNOTATION_LABELS constraint
+      my $annotation_label_clause = "";
+      if ($parameters{annotation_label_id}) {
+        $annotation_label_clause = "   AND SHA.annotation_label_id IN ( $parameters{annotation_label_id} )";
       }
 
 
@@ -524,6 +448,7 @@ sub printEntryForm {
         }
       }
 
+
       #### Build ROWCOUNT constraint
       my $limit_clause = "TOP 100";
       if ($parameters{row_limit} > 0 && $parameters{row_limit}<=99999) {
@@ -532,37 +457,39 @@ sub printEntryForm {
 
 
       #### Define the desired columns
-      my @column_array = (
-        ["search_batch_id","SB.search_batch_id","search_batch_id"],
-        ["search_id","S.search_id","search_id"],
-        ["search_hit_id","SH.search_hit_id","search_hit_id"],
-        ["experiment_tag","experiment_tag","Exp"],
-        ["set_tag","set_tag","DB"],
-        ["data_location","SB.data_location","data_location"],
-        ["fraction_tag","F.fraction_tag","fraction_tag"],
-        ["file_root","S.file_root","file_root"],
-        ["cross_corr_rank","SH.cross_corr_rank","Rxc"],
-        ["prelim_score_rank","SH.prelim_score_rank","RSp"],
-        ["hit_mass_plus_H","CONVERT(varchar(20),SH.hit_mass_plus_H) + ' (' + STR(SH.mass_delta,5,2) + ')'","(M+H)+"],
-        ["cross_corr","STR(SH.cross_corr,5,4)","XCorr"],
-        ["next_dCn","STR(SH.next_dCn,5,3)","dCn"],
-        ["prelim_score","STR(SH.prelim_score,8,1)","Sp"],
-        ["ions","STR(SH.identified_ions,2,0) + '/' + STR(SH.total_ions,3,0)","Ions"],
-        ["reference","reference","Reference"],
-        ["additional_proteins","additional_proteins","N+"],
-        ["peptide_string","peptide_string","Peptide"],
-        ["peptide","peptide","actual_peptide"],
-        ["set_path","BSS.set_path","set_path"],
-        ["ICAT","STR(ICAT_light,5,2) + ':' + STR(ICAT_heavy,5,2)","ICAT"],
-        ["search_hit_annotation_id","SHA.search_hit_annotation_id","search_hit_annotation_id"],
-        ["annotation_label","label_desc","Annot"],
-      );
-
-
-      #### Adjust the columns definition based on user-selected options
-      if ( $parameters{display_options} =~ /BSDesc/ ) {
-        push(@column_array,["biosequence_desc","biosequence_desc","Reference Description"]);
+      my $group_by_clause = "";
+      my @column_array;
+      if ( $parameters{display_options} =~ /GroupReference/ ) {
+        @column_array = (
+          ["reference","reference","Reference"],
+          ["count","COUNT(*)","Count"],
+        );
+        $group_by_clause = " GROUP BY reference";
+      } elsif ( $parameters{display_options} =~ /GroupPeptide/ ) {
+        @column_array = (
+          ["reference","reference","Reference"],
+          ["peptide","peptide","Peptide"],
+          ["count","COUNT(*)","Count"],
+        );
+        $group_by_clause = " GROUP BY reference,peptide";
+      } else {
+        @column_array = (
+          ["reference","reference","Reference"],
+          ["peptide","peptide","Peptide"],
+        );
       }
+
+
+      #### Add the protein descriptions at the end if user selected
+      if ( $parameters{display_options} =~ /BSDesc/ ) {
+        unshift(@column_array,["biosequence_accession","biosequence_accession","Accession"]);
+        unshift(@column_array,["biosequence_gene_name","biosequence_gene_name","Gene Name"]);
+        push(@column_array,["biosequence_desc","biosequence_desc","Reference Description"]);
+        $group_by_clause .= ",biosequence_desc,biosequence_gene_name,biosequence_accession" if ($group_by_clause);
+      }
+
+
+      #### Limit the width of the Reference column if user selected
       if ( $parameters{display_options} =~ /MaxRefWidth/ ) {
         $max_widths{'Reference'} = 20;
       }
@@ -583,45 +510,29 @@ sub printEntryForm {
 	SELECT $limit_clause $columns_clause
 	  FROM proteomics.dbo.search_hit SH
 	  JOIN proteomics.dbo.search S ON ( SH.search_id = S.search_id )
+	  JOIN $TB_SEARCH_HIT_ANNOTATION SHA ON ( SH.search_hit_id = SHA.search_hit_id )
 	  JOIN proteomics.dbo.search_batch SB ON ( S.search_batch_id = SB.search_batch_id )
-	  JOIN proteomics.dbo.msms_scan MSS ON ( S.msms_scan_id = MSS.msms_scan_id )
-	  JOIN proteomics.dbo.fraction F ON ( MSS.fraction_id = F.fraction_id )
 	  JOIN proteomics.dbo.biosequence_set BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
-	  JOIN proteomics.dbo.proteomics_experiment PE ON ( F.experiment_id = PE.experiment_id )
-	  LEFT JOIN $TB_ICAT_QUANTITATION ICAT ON ( SH.search_hit_id = ICAT.search_hit_id )
 	  LEFT JOIN $TB_BIOSEQUENCE BS ON ( SB.biosequence_set_id = BS.biosequence_set_id AND SH.reference = BS.biosequence_name )
-	  LEFT JOIN $TB_SEARCH_HIT_ANNOTATION SHA ON ( SH.search_hit_id = SHA.search_hit_id )
-	  LEFT JOIN $TBPR_ANNOTATION_LABEL AL ON ( SHA.annotation_label_id = AL.annotation_label_id )
 	 WHERE 1 = 1
 	$search_batch_clause
-	$xcorr_clause
-	$charge_clause
 	$reference_clause
 	$peptide_clause
-	$peptide_string_clause
-	$file_root_clause
-	$ICAT_ratio_clause
+	$annotation_label_clause
+	$group_by_clause
 	$order_by_clause
        ~;
 
       #print "<PRE>\n$sql_query\n</PRE>\n";
 
-      my $base_url = "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi";
-      %url_cols = ('file_root' => "http://regis/cgi-bin/showout_html5?OutFile=/data/search/\%$colnameidx{data_location}V/\%$colnameidx{fraction_tag}V/\%$colnameidx{file_root}V.out",
-		   'file_root_ATAG' => 'TARGET="Win1"',
-      		   'Rxc' => "$base_url?QUERY_NAME=ShowSearch&search_batch_id=\%$colnameidx{search_batch_id}V&file_root_constraint=\%$colnameidx{file_root}V&apply_action=QUERY",
-		   'Rxc_ATAG' => 'TARGET="Win1"',
-                   'Reference' => "http://regis/cgi-bin/consensus_html4?Ref=%V&Db=\%$colnameidx{set_path}V&Pep=\%$colnameidx{peptide}V&MassType=0",
-		   'Reference_ATAG' => 'TARGET="Win1"',
-                   'Ions' => "http://regis/cgi-bin/displayions_html5?Dta=/data/search/\%$colnameidx{data_location}V/\%$colnameidx{fraction_tag}V/\%$colnameidx{file_root}V.dta&MassType=0&NumAxis=1&Pep=\%$colnameidx{peptide}V",
-		   'Ions_ATAG' => 'TARGET="Win1"',
-                   'Nmore' => "http://regis/cgi-bin/blast_html4?Db=\%$colnameidx{set_path}V&Pep=\%$colnameidx{peptide}V&MassType=0",
-		   'Nmore_ATAG' => 'TARGET="Win1"',
-                   'Peptide' => "http://www.ncbi.nlm.nih.gov/blast/Blast.cgi?PROGRAM=blastp&DATABASE=nr&OVERVIEW=TRUE&EXPECT=1000&FILTER=L&QUERY=\%$colnameidx{peptide}V",
+      my $base_url = "$CGI_BASE_DIR/Proteomics/BrowseAnnotatedPeptides.cgi";
+      %url_cols = ('Gene Name' => "http://flybase.bio.indiana.edu/.bin/fbidq.html?\%$colnameidx{biosequence_accession}V",
+		   'Gene Name_ATAG' => 'TARGET="Win1"',
+                   'Accession' => "http://flybase.bio.indiana.edu/.bin/fbidq.html?\%$colnameidx{biosequence_accession}V",
+		   'Accession_ATAG' => 'TARGET="Win1"',
+                   'Reference' => "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi?QUERY_NAME=BrowseSearchHits&reference_constraint=\%$colnameidx{reference}V&search_batch_id=$parameters{search_batch_id}&xcorr_rank_constraint=1&apply_action=QUERY",
+		   'Reference_ATAG' => 'TARGET="Win1"','Peptide' => "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi?QUERY_NAME=BrowseSearchHits&peptide_constraint=\%$colnameidx{peptide}V&search_batch_id=$parameters{search_batch_id}&xcorr_rank_constraint=1&apply_action=QUERY",
 		   'Peptide_ATAG' => 'TARGET="Win1"',
-                   'Annot' => "$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=search_hit_annotation&search_hit_annotation_id=\%$colnameidx{search_hit_annotation_id}V&search_hit_id=\%$colnameidx{search_hit_id}V&ShowEntryForm=1",
-		   'Annot_ATAG' => 'TARGET="Win1"',
-		   'Annot_ISNULL' => ' [Add] ',
       );
 
       %hidden_cols = ('data_location' => 1,
@@ -629,13 +540,13 @@ sub printEntryForm {
                       'search_id' => 1,
                       'search_hit_id' => 1,
                       'fraction_tag' => 1,
-                      'actual_peptide' => 1,
                       'set_path' => 1,
-                      'search_hit_annotation_id' => 1,
       );
 
 		   #######'Reference_ATAG' => "TARGET=\"Win1\" ONMOUSEOVER=\"window.status='%V'; return true\"",
 
+
+      #print "<PRE>$sql_query\n</PRE><BR>\n";
 
     } else {
       $apply_action="BAD SELECTION";

@@ -39,6 +39,7 @@ sub returnTableInfo {
     my $self = shift;
     my $table_name = shift || croak("parameter table_name not specified");
     my $info_key = shift || croak("parameter info_key not specified");
+    my $parameters_ref = shift;
 
     my @row;
     my $sql_query;
@@ -73,6 +74,28 @@ sub returnTableInfo {
 		  JOIN xxxxxx HT
 		       ON (H.hardware_type_id=HT.hardware_type_id)
 		 WHERE H.record_status!='D'
+            ~;
+        }
+
+
+    }
+
+
+    if ($table_name eq "search_hit_annotation") {
+
+        if ($info_key eq "BASICQuery") {
+            return qq~
+		SELECT *
+		  FROM $TB_SEARCH_HIT SH
+		 WHERE SH.search_hit_id = '$parameters_ref->{search_hit_id}'
+            ~;
+        }
+
+        if ($info_key eq "FULLQuery") {
+            return qq~
+		SELECT *
+		  FROM $TB_SEARCH_HIT SH
+		 WHERE SH.search_hit_id = '$parameters_ref->{search_hit_id}'
             ~;
         }
 

@@ -28,6 +28,12 @@ use vars qw(@ISA @EXPORT
     $TB_MSMS_SCAN
     $TB_MSMS_SPECTRUM_PEAK
 
+    $TB_SEARCH_HIT_ANNOTATION
+    $TBPR_ANNOTATION_LABEL
+    $TBPR_ANNOTATION_CONFIDENCE
+    $TBPR_ANNOTATION_SOURCE
+    $TBPR_QUERY_OPTION
+
 );
 
 require Exporter;
@@ -49,6 +55,12 @@ require Exporter;
     $TB_MSMS_SCAN
     $TB_MSMS_SPECTRUM_PEAK
 
+    $TB_SEARCH_HIT_ANNOTATION
+    $TBPR_ANNOTATION_LABEL
+    $TBPR_ANNOTATION_CONFIDENCE
+    $TBPR_ANNOTATION_SOURCE
+    $TBPR_QUERY_OPTION
+
 );
 
 
@@ -66,6 +78,12 @@ $TB_SEARCH_HIT              = 'proteomics.dbo.search_hit';
 $TB_ICAT_QUANTITATION       = 'proteomics.dbo.ICAT_quantitation';
 $TB_MSMS_SCAN               = 'proteomics.dbo.msms_scan';
 $TB_MSMS_SPECTRUM_PEAK      = 'proteomics.dbo.msms_spectrum_peak';
+
+$TB_SEARCH_HIT_ANNOTATION  = 'proteomics.dbo.search_hit_annotation';
+$TBPR_ANNOTATION_LABEL     = 'proteomics.dbo.annotation_label';
+$TBPR_ANNOTATION_CONFIDENCE= 'proteomics.dbo.annotation_confidence';
+$TBPR_ANNOTATION_SOURCE    = 'proteomics.dbo.annotation_source';
+$TBPR_QUERY_OPTION         = 'proteomics.dbo.query_option';
 
 
 

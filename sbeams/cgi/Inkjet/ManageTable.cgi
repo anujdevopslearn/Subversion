@@ -282,8 +282,16 @@ sub printEntryForm {
           if ($input_types{$element} eq "multioptionlist");
 
         # Build the option list
-        $optionlists{$element}=$sbeams->buildOptionList(
-           $optionlist_queries{$element},$parameters{$element},$method_options);
+        if ($input_types{$element} eq "fixedfromlist") {
+          my %templist =
+            $sbeams->SelectTwoColumnHash($optionlist_queries{$element});
+          $optionlists{$element} = $templist{$parameters{$element}};
+        } else {
+          $optionlists{$element}=$sbeams->buildOptionList(
+             $optionlist_queries{$element},$parameters{$element},
+             $method_options);
+        }
+
     }
 
 
@@ -393,8 +401,15 @@ sub printEntryForm {
       if ($input_type eq "multioptionlist") {
         print qq!
           <TD><SELECT NAME="$column_name" MULTIPLE SIZE=$input_length $onChange>
-          <OPTION VALUE=""></OPTION>
           $optionlists{$column_name}</SELECT></TR>
+        !;
+      }
+
+      if ($input_type eq "fixedfromlist") {
+        print qq!
+          <TD><INPUT TYPE="hidden" NAME="$column_name"
+           VALUE="$parameters{$column_name}">
+           $optionlists{$column_name}</TD></TD>
         !;
       }
 
@@ -476,7 +491,7 @@ sub printEntryForm {
 
 
     $sbeamsIJ->printPageFooter("CloseTables");
-    showTable();
+    showTable('',\%parameters);
 
 } # end printEntryForm
 
@@ -488,11 +503,13 @@ sub printEntryForm {
 ###############################################################################
 sub showTable {
     my $with_options = shift;
+    my $parameters_ref = shift;
 
     my $detail_level = $q->param('detail_level') || "BASIC";
 
     my ($main_query_part) =
-      $sbeamsIJ->returnTableInfo($TABLE_NAME,$detail_level."Query");
+      $sbeamsIJ->returnTableInfo($TABLE_NAME,$detail_level."Query",
+      $parameters_ref);
 
     my ($full_where_clause,$full_orderby_clause) = 
       $sbeams->processTableDisplayControls($TABLE_NAME);
