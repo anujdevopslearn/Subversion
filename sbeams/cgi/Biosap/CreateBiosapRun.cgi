@@ -173,8 +173,8 @@ sub process_request {
 
 	Well, theres no link yet, but paste this into a unix window:<BR><BR>
 
-	cd /net/techdev/biosap/data/$output_dir<BR>
-	if ( -e $ ) tail -f blast.out<BR>
+	cd $output_dir<BR>
+	if ( -e $output_dir ) tail -f blast.out<BR>
 
 	<BR><BR><BR>
     ~;
@@ -303,10 +303,9 @@ salt_concentration_mMol=$parameters{'saltConc'}~;
        WHERE biosequence_set_id = '$blast_lib'
          AND record_status != 'D'
 	 ~;
-  my $blast_lib_id = $sbeams->selectOneColumn($sql);
+  my @blast_lib_id = $sbeams->selectOneColumn($sql);
 
-  print BLAST qq~
-blast_library=$blast_lib
+  print BLAST qq~blast_library=$blast_lib_id[0]
 expect_value=1
 ~;
   close (BLAST) || print "<FONT COLOR=\"red\">WARNING[$SUB_NAME]: blast params file did not close nicely!</FONT><BR>";
