@@ -31,6 +31,7 @@ use vars qw(@ISA @EXPORT
     $TBBL_EVIDENCE_SOURCE
 
     $TBBL_BLAST_RESULTS
+    $TBBL_CBIL_GENOME_COORDINATES
 );
 
 
@@ -52,6 +53,7 @@ require Exporter;
     $TBBL_EVIDENCE_SOURCE
 
     $TBBL_BLAST_RESULTS
+    $TBBL_CBIL_GENOME_COORDINATES
 );
 
 
@@ -73,3 +75,4 @@ $TBBL_EVIDENCE              = "${mod}evidence";
 $TBBL_EVIDENCE_SOURCE       = "${mod}evidence_source";
 
 $TBBL_BLAST_RESULTS         = "${mod}blast_results";
+$TBBL_CBIL_GENOME_COORDINATES  = "${mod}CBIL_GENOME_COORDINATES";
