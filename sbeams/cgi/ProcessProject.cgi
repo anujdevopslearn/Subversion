@@ -433,6 +433,7 @@ sub submitJob {
 
     my $plan_filename = "job$timestr.plan";
     my $control_filename = "job$timestr.control";
+    my $log_filename = "job$timestr.log";
 
     my $queue_dir = "/net/arrays/Pipeline/queue";
 
@@ -472,6 +473,10 @@ sub submitJob {
 	The plan and job control files have been successfully written to the
 	queue.  Your job will be processed in the order received.  You can
 	see the log file of your job by clicking on the link below:<BR><BR>
+
+	tail -f /net/arrays/Pipeline/output/project_id/$project_id/$log_filename
+
+	<BR><BR><BR>
     ~;
 
 
