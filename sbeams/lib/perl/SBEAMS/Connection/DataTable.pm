@@ -317,7 +317,6 @@ sub _getTD {
 sub _getColor {
   my $this = shift;
   my $row = shift;
-  $log->debug( "here we are, $this->{_altc_bgcolor}" );
   return '' if $row < $this->{_altc_first};
   my $s = POSIX::ceil( ($row + 1 - $this->{_altc_first})/$this->{_altc_period} );
   my $color = ( $s % 2 ) ? $this->{_altc_bgcolor} : $this->{_altc_defcolor};
