@@ -43,6 +43,7 @@ UPDATE table_column
 	  FROM $TBPR_PROTEOMICS_EXPERIMENT PE
 	  LEFT JOIN $TB_USER_LOGIN UL ON ( PE.contact_id = UL.contact_id )
 	 WHERE PE.record_status != ''D''
+           AND PE.project_id IN ( $accessible_project_ids )
 	 ORDER BY username,experiment_tag,experiment_name
   '
  WHERE table_name = 'PR_SummarizeFractions'
@@ -61,6 +62,7 @@ UPDATE table_column
 	       ON ( UWG.work_group_id = WG.work_group_id )
 	 WHERE P.record_status != ''D''
 	   AND WG.work_group_name = ''Proteomics_user''
+           AND P.project_id IN ( $accessible_project_ids )
 	 ORDER BY username,P.name
   '
  WHERE table_name = 'PR_SummarizeFractions'

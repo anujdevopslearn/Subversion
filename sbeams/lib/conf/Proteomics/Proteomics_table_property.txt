@@ -3,7 +3,7 @@ PR_proteomics_experiment	Proteomics Experiment	Proteomics_user	YES	$TBPR_PROTEOM
 PR_gradient_program	Gradient Program	Proteomics_user	YES	$TBPR_GRADIENT_PROGRAM	gradient_program_id		ManageTable.cgi?TABLE_NAME=PR_gradient_program	PR_gradient_program	
 PR_gradient_delta	Gradient Delta	Proteomics_infrastructure	NO	$TBPR_GRADIENT_DELTA	gradient_delta_id				
 PR_fractionation_type	Fractionation Type	Proteomics_infrastructure	YES	$TBPR_FRACTIONATION_TYPE	fractionation_type_id		ManageTable.cgi?TABLE_NAME=PR_fractionation_type		
-PR_fraction	MS Run	Proteomics_infrastructure	YES	$TBPR_FRACTION	fraction_id		ManageTable.cgi?TABLE_NAME=PR_fraction		
+PR_fraction	MS Run	Proteomics_user	YES	$TBPR_FRACTION	fraction_id		ManageTable.cgi?TABLE_NAME=PR_fraction		
 PR_msms_spectrum	MS/MS Spectrum	Proteomics_infrastructure	NO	$TBPR_MSMS_SPECTRUM	msms_spectrum_id				
 PR_msms_spectrum_annotation	MS/MS Spectrum Annotation	Proteomics_infrastructure	NO	$TBPR_MSMS_SPECTRUM_ANNOTATION	msms_spectrum_annotation				
 PR_quality_label	Quality Label	Proteomics_infrastructure	YES	$TBPR_QUALITY_LABEL	quality_label_id		ManageTable.cgi?TABLE_NAME=PR_quality_label	PR_quality_label	
