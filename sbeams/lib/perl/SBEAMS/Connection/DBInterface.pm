@@ -5152,6 +5152,7 @@ sub linkToColumnText {
   my $text = shift;
   my $col = shift;
   my $tab = shift;
+  my $text = $q->escapeHTML( $text );
   my $url = "'$HTML_BASE_DIR/cgi/help_popup.cgi?column_name=$col&table_name=$tab'";
   my $link =<<"  END_LINK";
   <SPAN title="$text" class="popup">

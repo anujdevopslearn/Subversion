@@ -145,6 +145,9 @@ sub displayColumnText {
 	AND	column_name = '$column_name'
   END
 
+  $text = $q->escapeHTML( $text );
+  $title = $q->escapeHTML( $title );
+
 my $FONT_SIZE=12;
 $FONT_SIZE=10 if ( $HTTP_USER_AGENT =~ /Win/ );
 
