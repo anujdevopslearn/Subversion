@@ -699,7 +699,7 @@ sub executeSQL {
     my $sql = $args{'sql'} || die("parameter sql not passed");
     my $return_error = $args{'return_error'} || '';
 
-
+    #print "Content-type: text/html\n\n$sql\n\n";
     #### Get the database handle
     $dbh = $self->getDBHandle();
 
