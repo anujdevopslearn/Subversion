@@ -511,6 +511,31 @@ sub handle_request {
   return if ($n_annotations_clause eq '-1');
 
 
+  #### Build NUMBER OF HITS IN INDIVIDUAL EXPERIMENTS constraint
+  my @search_batch_ids = split(/,/,$parameters{search_batch_id});
+  my $specific_counts_clause = '';
+  my $i_exp = 1;
+  foreach my $id (@search_batch_ids) {
+    my $tmp_constraint = $sbeams->parseConstraint2SQL(
+      constraint_column=>"SUM(CASE WHEN tABS.search_batch_id = $id ".
+        "THEN tABS.row_count ELSE 0 END)",
+      constraint_type=>"flexible_int",
+      constraint_name=>"Number of Matches",
+      constraint_value=>$parameters{"n_in_column_${i_exp}_constraint"} );
+    return if ($tmp_constraint eq '-1');
+
+    if ($tmp_constraint) {
+      unless ($specific_counts_clause) {
+        $tmp_constraint =~ s/^\s*AND/HAVING/;
+      }
+      $specific_counts_clause .= "$tmp_constraint\n";
+    }
+
+    $i_exp++;
+
+  }
+
+
   #### Build QUANTITATION constraint
   my $quantitation_clause = "";
   if ($parameters{quantitation_constraint}) {
@@ -776,7 +801,7 @@ sub handle_request {
 	$protein_domain_clause
         $n_transmembrane_regions_clause
         $fav_codon_frequency_clause
-        $protein_length_clause
+--        $protein_length_clause
 	 GROUP BY BS.biosequence_name
 
 	--
@@ -833,7 +858,9 @@ sub handle_request {
 	 WHERE 1 = 1
 	$n_annotations_clause
         $description_clause
+        $protein_length_clause
         $final_group_by_clause
+	$specific_counts_clause
 	$order_by_clause
 	$limit_clause->{trailing_limit_clause}
 
@@ -1093,7 +1120,7 @@ sub summarizeExperimentComparison {
   #### Define non-data columns that should be ignored
   my %non_data_columns = ( 'Gene Name'=>1, 'Accession'=>1,
     'Reference'=>1, 'Reference Description'=>1, 'Peptide'=>1,
-    'accessor'=>1,'Peptide String'=>1,
+    'accessor'=>1,'Peptide String'=>1,'Protein Length'=>1,
     'Molecular Function' => 1,
     'Biological Process' => 1,
     'Cellular Component' => 1,
