@@ -33,7 +33,7 @@ use IO;
 
 use lib "$FindBin::Bin/../../perl";
 use vars qw ($sbeams
-             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
+             $PROG_NAME %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
              $current_contact_id $current_username
             );
 use vars qw ($content_handler);
@@ -53,33 +53,8 @@ use SBEAMS::Microarray::Tables;
 use SBEAMS::Proteomics::Tables;
 use SBEAMS::Immunostain::Tables;
 
-#### Set program name and usage banner
-$PROG_NAME = $FindBin::Script;
-$USAGE = <<EOU;
-Usage: $PROG_NAME [OPTIONS] parameters
-Options:
-  --verbose n         Set verbosity level.  default is 0
-  --quiet             Set flag to print nothing at all except errors
-  --debug n           Set debug flag
-  --testonly          Set to not actually write to database
-  --output_file xxxx  Output file to which data information are dumped
-  --command_file xxxx Input file containing the instructions on what data
-                      are to be dumped
-  --cascade           Set flag to cascade, writing all dependent records
+processOptions();
 
- e.g.:  $PROG_NAME --command_file test.exportcmd --output_file SBEAMSdata.xml
-
-EOU
-
-
-#### Process options
-unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
-  "output_file:s","command_file:s","cascade","map_audit_user_to:i",
-  "map_audit_group_to:i",
-)) {
-  print "$USAGE";
-  exit;
-}
 $VERBOSE = $OPTIONS{"verbose"} || 0;
 $QUIET = $OPTIONS{"quiet"} || 0;
 $DEBUG = $OPTIONS{"debug"} || 0;
@@ -145,8 +120,7 @@ sub handleRequest {
   #### If there are any parameters left, complain and print usage
   if ($ARGV[0]){
     print "ERROR: Unresolved parameter '$ARGV[0]'.\n";
-    print "$USAGE";
-    exit;
+    printUsage();
   }
 
 
@@ -522,7 +496,6 @@ sub readCommandFile {
   }
   close(INFILE);
 
-
   #### Define an array for commands and put in the content_handler
   my @command_list;
   $content_handler->{command_list} = \@command_list;
@@ -546,7 +519,7 @@ sub start_element {
   my %attrs = @_;
 
   die("Unrecognized element '$element'")
-    unless ($element eq 'export' || $element eq 'export_command_list');
+    unless ($element eq 'export_data' || $element eq 'export_command_list');
   return if ($element eq 'export_command_list');
 
   #### Define a hash ref holder for this command
@@ -586,4 +559,50 @@ sub evalSQL {
 } # end evalSQL
 
 
+sub processOptions {
 
+  GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
+              "output_file:s","command_file:s","recursive", 
+              "map_audit_user_to:i", "map_audit_group_to:i", 'help' );
+
+  # Pleas for help get precedence
+  printUsage() if $OPTIONS{help};
+
+  for my $cmd ( 'command_file' ) {
+    printUsage( "Missing required parameter: $cmd" ) unless $OPTIONS{$cmd};
+  }
+  
+  $OPTIONS{cascade} = $OPTIONS{recursive};
+}
+
+sub printUsage {
+
+  my $msg = shift || '';
+
+  print <<"  EOU";
+
+  $msg
+
+  Usage: $0 -c cmd_file [ -o out_file -v -q -d -r ]
+  Options:
+  -v,  --verbose n         Set verbosity level.  default is 0
+  -q,  --quiet             Set flag to print nothing at all except errors
+  -d,  --debug n           Set debug flag
+  -o,  --output_file       Output file to which to write XML
+  -c,  --command_file      File of instructions as to what data to export.
+  -r,  --recursive         Recursive export (cascade), get dependent records.
+  -h,  --help              Print this usage info and quit.
+
+  e.g.:  $PROG_NAME --command_file test.exportcmd --output_file SBEAMSdata.xml
+
+  Command file format is XMLish, e.g.:
+  <export_data table_name="mytable" qualifiers="some_attr=some_value"/>
+
+  or:
+  <export_data table_name="work_group" qualifiers="work_group_id IN (1,2,3)"/>
+
+  EOU
+
+  # Hasta la vista!
+  exit();
+}
