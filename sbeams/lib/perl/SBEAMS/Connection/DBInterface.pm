@@ -594,7 +594,7 @@ sub applySQLChange {
     my $tPriv = 50;
 
     # Assumes (as does original) that this has already been determined and cached.
-    if ( $args{parent_project_id} ) {
+    if ( $args{parent_project_id} && $args{action} !~ /^INSERT?/i ) {
       $pPriv = $self->calculateProjectPermission( %args );
     }
     $tPriv = $self->calculateTablePermission( %args );
@@ -608,7 +608,7 @@ sub applySQLChange {
     if ( $args{action} =~ /^INSERT$/i && $tPriv <= DATA_READER ) {
       $status = 'SUCCESSFUL';
     # Update/Delete use project permission if possible, else use table
-    } elsif ( $args{action} =~ /^UPDATE$|^DELETE$/ ) {
+    } elsif ( $args{action} =~ /^UPDATE$|^DELETE$/i ) {
       if ( $pPriv ) {
         $status = 'SUCCESSFUL' if $pPriv <= DATA_WRITER;
       } else {
