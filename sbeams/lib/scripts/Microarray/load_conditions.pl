@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl -w
 
 ###############################################################################
-# Program     : load_array_elements.pl
+# Program     : load_conditions.pl
 # Author      : Michael Johnson <mjohnson@systemsbiology.org>
 #
 # Description : This script goes to the appropriate directory to search for
@@ -178,7 +178,7 @@ sub handleRequest {
 
 #### Define standard variables
   my ($sql);
-  my (@rows, @condition_files);
+  my (@rows, $condition_files);
   my (%final_hash);
 	
 #### Set the command-line options
@@ -215,99 +215,42 @@ sub handleRequest {
   
 
 ## Search for '.column_map' files
-  my @map_files = glob <$directory/*\.column_map>;
+  my @map_files = glob ("$directory/*\.column_map");
   my $map_count = @map_files;
   if ($map_count >= 1) {
+
+    if ($VERBOSE > 0) {
+      print "The following column_map files were found:\n";
+      foreach my $temp_name (@map_files){
+	print "$temp_name\n";
+      }
+    }
 
 ## Each column_map file should contain the name of the mapped file on the first line,
 ## followed by a list of the mapping, separated by returns.  If the condition is not
 ## specified in the file, then set the condition to be the column_map file's name.
 
-      foreach my $map_file (@map_files) {
-
-## Local Variables
-	  my ($mapped_file,$condition,$condition_id,$processed_date,%column_mapping);
-
-	  if ($VERBOSE > 0) {
-	      print "\nAttempting to open \'$map_file\'\n";
-	  }
-
-## Read in column_map file
-	  open (MAP_FILE, "$map_file") || die "could not open column map file: $map_file\n";
-	  push (@condition_files, $map_file);
-
-	  while (<MAP_FILE>) {
-	      next if (/^\#/);
-	      if (/mapped.file\s*=?\s*(.*)/) {
-		  $mapped_file = $1;
-	      }elsif (/condition\s*=?\s+(.*)/) {
-		  $condition = $1;
-	      }elsif (/(\w+)\s*=?\s*(\d+)/) {
-		  $column_mapping{$1} = $2;
-	      }else {
-		  #print "nothing on this line\n";
-	      }
-	  }
-
-## For debugging purposes, we can print out the column mapping
-	  if ($VERBOSE > 0) {
-	      print "\n HASH Mapping for $map_file:\n";
-	      print "\n file : $mapped_file\n";
-	      while ( (my $k,my $v) = each %column_mapping ) {
-		  print "$k => $v\n";
-	      }
-	  }
-
-	  if (!defined($condition)) {
-	      $map_file =~ s(^.*/)();
-	      $map_file =~/(.*)\.column_map$/;
-	      $condition = $1;
-	  }
-
-	  $processed_date = getProcessedDate(file=>"$mapped_file");
-	  $condition_id = getConditionID(condition=>$condition);
-
-## INSERT/UPDATE the condition
-	  if (!defined($condition_id)) {
-	      print "\n->INSERTing condition $condition\n";
-	  }else {
-	      print "\n->UPDATEing condition $condition\n";
-	  }
-
-	  $condition_id = insertCondition(processed_date=>$processed_date,
-					  condition=>$condition,
-					  condition_id=>$condition_id);
-	  
-##  Insert the gene_expression data!
-	  insertGeneExpression(condition_id=>$condition_id,
-				   source_file=>"$mapped_file",
-				   if_hash=>\%final_hash);
-      }
-      
-## Report status to the user
-      print "# $#condition_files condition files were found and loaded.\n";
-      if ($VERBOSE >0 ) {
-	  print "The conditions are:\n";
-	  foreach my $condition_to_print (@condition_files) {
-	      print "Condtion -- $condition_to_print\n";
-	  }
-	  print "\n\n";
-      }
+    foreach my $map_file (@map_files) {
+      $condition_files = loadColumnMapFile(map_file=>$map_file,
+					   loaded_files=>$condition_files,
+					   bs_hash_ref=>\%final_hash);
+    }
   }
-
 ## Search for '.sig' files if requested
   if ($search_for_sig ne "false") {
-      loadSigFiles(directory=>$directory,
-		   condition_ref=>\@condition_files,
-		   bs_hash_ref=>\%final_hash);
+      print "loading sig files\n";
+      $condition_files = loadSigFiles(directory=>$directory,
+				      condition_ref=>$condition_files,
+				      bs_hash_ref=>\%final_hash);
   }
   
 ## Search for '.merge' files if requested
   if ($search_for_merge ne "false") {
-      loadMergeFiles(directory=>$directory,
-		     condition_ref=>\@condition_files,
-		     bs_hash_ref=>\%final_hash);
+      $condition_files = loadMergeFiles(directory=>$directory,
+					condition_ref=>$condition_files,
+					bs_hash_ref=>\%final_hash);
   }
+
   return;
 }
 
@@ -410,7 +353,7 @@ sub insertGeneExpression {
     my $source_file = $args{'source_file'};
     my $id_hash_ref = $args{'id_hash'};
     my $set_tag = $OPTIONS{'set_tag'};
-
+    my %column_map = %{$args{'column_map'}};
 ## Define standard variables
     my $CURRENT_CONTACT_ID = $sbeams->getCurrent_contact_id();
     my ($sql, @rows);
@@ -432,7 +375,9 @@ sub insertGeneExpression {
     }
     
 ## Define Column Map
-    my ($gene_name_column,$second_name_column,%column_map)= findColumnMap(source_file=>$source_file);
+    if (!defined (%column_map)) {
+      my ($gene_name_column,$second_name_column,%column_map)= findColumnMap(source_file=>$source_file);
+    }
     my %transform_map = ('1000'=>sub{return $condition_id;});
 
 ## Execute $sbeams->transferTable() to update contact table
@@ -440,9 +385,9 @@ sub insertGeneExpression {
     if ($TESTONLY) {
 	print "\n$TESTONLY- TEST ONLY MODE\n";
     }
-    print "\nTransferring $source_file -> array_element";
+    print "\nTransferring $source_file -> gene_expression";
     $sbeams->transferTable(source_file=>$source_file,
-			   delimiter=>'\s+',
+			   delimiter=>'\t',
 			   skip_lines=>'2',
 			   dest_PK_name=>'gene_expression_id',
 			   dest_conn=>$sbeams,
@@ -531,6 +476,103 @@ sub conditionAlreadyLoaded {
 }
 
 
+###############################################################################
+# loadColumnMapFile
+#
+# Loads data via the column_map file
+###############################################################################
+sub loadColumnMapFile {
+  my %args = @_;
+  my $SUB_NAME = "loadColumnMapFile";
+  my $condition_ref = $args{'loaded_files'};
+  my $map_file = $args{'map_file'};
+  if (!defined($map_file)){
+    print "WARNING[$SUB_NAME]:Column Map file not passed\n";
+    return $condition_ref;
+  }
+  my $bs_hash_ref = $args{'bs_hash_ref'};
+
+  my @condition_files;
+  my %column_mapping;
+  my ($mapped_file, $condition, $condition_id, $processed_date);
+
+  if ($condition_ref) {
+      @condition_files = @{$condition_ref};
+  }
+
+  if ($VERBOSE > 0) {
+    print "\nAttempting to open \'$map_file\'\n";
+  }
+
+## Read in column_map file
+  if (open (MAP_FILE, "$map_file")){
+    while (<MAP_FILE>) {
+      next if (/^\#/);
+      if (/mapped.file\s*=?\s*(.*)/) {
+	$mapped_file = $1;
+      }elsif (/condition\s*=?\s+(.*)/) {
+	$condition = $1;
+      }elsif (/(\w+)\s*=?\s*(\d+)/) {
+        $column_mapping{$1} = $2;
+      }else {
+        #print "nothing on this line\n";
+      }
+    }
+## invert the hash
+    %column_mapping = reverse %column_mapping;
+    $column_mapping{'1000'} = 'condition_id';
+
+## For debugging purposes, we can print out the column mapping
+    if ($VERBOSE >= 0) {
+      print "\n HASH Mapping for $map_file:\n";
+      print "\n file : $mapped_file\n";
+      while ( (my $k,my $v) = each %column_mapping ) {
+        print "$k => $v\n";
+      }
+    }
+
+    if (!defined($condition)) {
+      $map_file =~ s(^.*/)();
+      $map_file =~/(.*)\.column_map$/;
+      $condition = $1;
+    }
+
+    if (!defined($mapped_file)) {
+      print "No file found indicated for mapping.\n";
+      $mapped_file = $map_file;
+      $mapped_file =~ s/\.column_map/\.sig/;
+      print "Will try to use $mapped_file\n";
+    }
+
+    $processed_date = getProcessedDate(file=>"$mapped_file");
+    $condition_id = getConditionID(condition=>$condition);
+
+## INSERT/UPDATE the condition
+    if (!defined($condition_id)) {
+      print "\n->INSERTing condition $condition\n";
+    }else {
+      print "\n->UPDATEing condition $condition\n";
+    }
+ 
+    $condition_id = insertCondition(processed_date=>$processed_date,
+				    condition=>$condition,
+				    condition_id=>$condition_id);
+
+##  Insert the gene_expression data!
+    insertGeneExpression(condition_id=>$condition_id,
+			 column_map=>\%column_mapping,
+			 source_file=>"$mapped_file",
+			 if_hash=>$bs_hash_ref);
+
+    push (@condition_files, $map_file);
+  }else{
+    print "could not open $map_file\n";
+  }
+  
+  return \@condition_files;
+}
+
+
 
 ###############################################################################
 # loadSigFiles
@@ -541,10 +583,10 @@ sub loadSigFiles {
     my %args = @_;
     my $SUB_NAME = "loadSigFiles";
 
-    loadAlternativeType(search_string=>'sig',
-			directory=>$args{'directory'},
-			condition_ref=>$args{'condition_ref'},
-			bs_hash_ref=>$args{'bs_hash_ref'});
+    return loadAlternativeType(search_string=>'sig',
+			       directory=>$args{'directory'},
+			       condition_ref=>$args{'condition_ref'},
+			       bs_hash_ref=>$args{'bs_hash_ref'});
 }
 
 ###############################################################################
@@ -556,10 +598,10 @@ sub loadMergeFiles {
     my %args = @_;
     my $SUB_NAME = "loadMergeFiles";
 
-    loadAlternativeType(search_string=>'merge',
-			directory=>$args{'directory'},
-			condition_ref=>$args{'condition_ref'},
-			bs_hash_ref=>$args{'bs_hash_ref'});
+    return loadAlternativeType(search_string=>'merge',
+			       directory=>$args{'directory'},
+			       condition_ref=>$args{'condition_ref'},
+			       bs_hash_ref=>$args{'bs_hash_ref'});
 }
 
 ###############################################################################
@@ -581,6 +623,7 @@ sub loadAlternativeType {
     my $directory = $args{'directory'}
     || die "\nERROR[$SUB_NAME]: need directory\n";
     my $bs_hash_ref = $args{'bs_hash_ref'};
+    $search_string = "clone";
 
 ## Local Variables
     my (@search_files);
@@ -588,7 +631,7 @@ sub loadAlternativeType {
     my $new_conditions = 0;
 
 ## Search for files ending with $search_string
-    my @search_files = glob<$directory/*\.$search_string>;
+    my @search_files = glob("$directory/*\.$search_string");
     foreach my $search_file (@search_files) {
 
 ## Determine condition    
@@ -598,7 +641,7 @@ sub loadAlternativeType {
 
 ## See if condition has already been loaded during the running of this script
 ## If it hasn't been loaded, fire it up.
-	if (conditionAlreadyLoaded(file=>$search_file, 
+	if (conditionAlreadyLoaded(file=>$search_file,
 				   file_ref=>$condition_ref) eq "true") {
 	    print "Condtion \'$condition\' has already been loaded.\n";
 	    print "\t# If you don't think this is correct contact mjohnson\n";
@@ -623,11 +666,13 @@ sub loadAlternativeType {
 	    
 ##  Insert the gene_expression data!
 	    insertGeneExpression(condition_id=>$condition_id,
-				 source_file=>"$search_file",
+				 source_file=>"$directory/$search_file",
 				 if_hash=>$bs_hash_ref);
 	}
     }
     print "# $new_conditions loaded using search string: $search_string\n";
+
+    return $condition_ref;
 }
 
 
@@ -646,7 +691,6 @@ sub getConditionID {
 ## Define local variables
     my $condition = $args{'condition'}
     || die "\nERROR[$SUB_NAME]:condition_id needs to be specified\n";
-
 
     my $sql = qq~
 	SELECT condition_id
@@ -672,7 +716,7 @@ sub findColumnMap {
   #### Decode the argument list
   my $source_file = $args{'source_file'} 
   || die "no source file passed in find_column_hash";
-  
+ 
   #### Open file and  make sure file exists
   open(INFILE,"$source_file") || die "Unable to open $source_file";
 
