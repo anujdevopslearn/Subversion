@@ -2406,8 +2406,8 @@ sub displayResultSet {
 		}
 
 		if ($self->output_mode() eq 'tsvfull') {
-		  if (%{$url_cols_ref}->{@{$column_titles_ref}->[$column]}) {
-			my $link = %{$url_cols_ref}->{@{$column_titles_ref}->[$column]};
+		  if ($url_cols_ref->{$column_titles_ref->[$column]}) {
+			my $link = $url_cols_ref->{$column_titles_ref->[$column]};
 			$tsvfull_url_column_number{$link} = $column;
 			push (@tsvfull_urls, $link);
 			my $url_column_title = $datum."_URL";
