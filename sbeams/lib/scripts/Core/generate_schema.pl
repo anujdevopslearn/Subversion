@@ -341,9 +341,15 @@ sub readTableProperty {
   while ($line = <INFILE>) {
     my @columns = split("\t",$line);
     next if (scalar(@columns) < 4);
-    my ($table_name,$category) = @columns[0..1];
-    #print "$table_name\t$category\n";
+    my ($table_name,$category,$table_group) = @columns[0..2];
+
+    #### If the table begins with a two capital letter prefix, remove it
+    my $real_name = $table_name;
+    $real_name =~ s/^[A-Z]{2,3}\_//;
+
     $table_properties->{$table_name}->{category} = $category;
+    $table_properties->{$table_name}->{table_group} = $table_group;
+    $table_properties->{$table_name}->{real_name} = $real_name;
     push(@ordered_list,$table_name);
   }
 
@@ -463,11 +469,18 @@ sub writeSchema {
   #### Loop over all tables forward to create the CREATE TABLE statements
   foreach $table_name (@table_list) {
 
+    #### If this is a query definition, don't try to CREATE and TABLE
+    next if ($table_properties->{$table_name}->{table_group} eq 'QUERY');
+
+    my $real_table_name = $table_properties->{$table_name}->{real_name};
+
     #### If we have column informnation
     if (defined($table_columns->{$table_name})) {
 
+      print "  CREATE TABLE: $table_name\n" if ($VERBOSE);
+
       my $line_buffer = "";
-      $line_buffer .= "CREATE TABLE $table_name ($LB";
+      $line_buffer .= "CREATE TABLE $real_table_name ($LB";
       my $primary_key_constraint = "";
       my $create_sequence_statement;
       my $drop_sequence_statement;
@@ -482,8 +495,14 @@ sub writeSchema {
         my ($datatype,$scale,$precision,$nullable,$default_value,
             $is_auto_inc,$fk_table,$fk_column) =
           @{$table_ref->{$column_name}}[4..11];
+
+        #### Look up the fk_table name if any
+        if ($fk_table && $table_properties->{$fk_table}->{real_name}) {
+          $fk_table = $table_properties->{$fk_table}->{real_name};
+        }
+
         my $result = generateColumnDefinition(
-          table_name => $table_name,
+          table_name => $real_table_name,
           column_name => $column_name,
           datatype => $datatype,
           scale => $scale,
@@ -583,7 +602,8 @@ sub writeSchema {
 
   #### Generate the DROP TABLE list
   foreach $table_name (reverse @processed_table_list) {
-    $drop_tables_buffer .= "DROP TABLE $table_name$SB";
+    my $real_table_name = $table_properties->{$table_name}->{real_name};
+    $drop_tables_buffer .= "DROP TABLE $real_table_name$SB";
   }
   $drop_tables_buffer .= "$LB$LB";
 
