@@ -37,13 +37,13 @@ sub main
   ));
 
 
-my $sql = "select filename, original_filepath from cytometry.dbo.fcs_run_test";
+my $sql = "select filename, original_filepath from $TBCY_FCS_RUN";
  %fileHash = $sbeams->selectTwoColumnHash($sql);
- my $idSql =  "select original_filepath + \'/\' + filename, fcs_run_id  from cytometry.dbo.fcs_run_test";
+ my $idSql =  "select original_filepath + \'/\' + filename, fcs_run_id  from $TBCY_FCS_RUN";
 %fileIDHash = $sbeams->selectTwoColumnHash($idSql);
 
 #selects all the parameters to be measured  and which have been seen before 
-my $attributeSql = "select measured_parameters_name, measured_parameters_id from cytometry.dbo.measured_parameters";
+my $attributeSql = "select measured_parameters_name, measured_parameters_id from $TBCY_MEASURED_PARAMETERS";
  %attributeHash = $sbeams->selectTwoColumnHash($attributeSql);
  
  
@@ -126,7 +126,7 @@ sub loadHash
      {
        
        my %insertRecord;
-       my $tableName = "cytometry.dbo.fcs_run_test";
+       my $tableName = "$TBCY_FCS_RUN";
        my $pkName = "fcs_run_id";
        print LOG "inserting record:  $hashRef->{File}\n";     
        $insertRecord{fcs_run_Description} =  $hashRef->{'$SMNO'}." ". $hashRef->{'$CYT'}." ". $hashRef->{'$P4N'}." " . $hashRef->{'$P5N'};
@@ -147,8 +147,8 @@ sub loadHash
 #file in fcs_run, do we have data in data_points?    
     else 
     {
-       my $query = "Select  frp.fcs_run_id   from cytometry.dbo.fcs_run_parameters  frp
-       join cytometry.dbo.fcs_run_test fr on frp.fcs_run_id = fr.fcs_run_id 
+       my $query = "Select  frp.fcs_run_id   from $TBCY_FCS_RUN_PARAMETERS  frp
+       join $TBCY_FCS_RUN fr on frp.fcs_run_id = fr.fcs_run_id 
 	    where fr.fcs_run_id = $fileIDHash{$hashRef->{File}} group by frp.fcs_run_id";
        my @rows = $sbeams->selectOneColumn($query);
        my $fileID = $rows[0] if scalar(@rows == 1);
@@ -207,7 +207,7 @@ sub loadHash
        if (! $attributeHash{$values{$key}})
        {
            my %dataHash; 
-           my $tableName = "cytometry.dbo.measured_parameters";
+           my $tableName = "$TBCY_MEASURED_PARAMETERS";
            my $pkName = "measured_parameters_id";
            $dataHash{measured_parameters_name} = $values{$key};
            my $record = insertRecord (\%dataHash , $tableName, $pkName);
@@ -226,7 +226,7 @@ sub loadHash
     my $num_par =  $values{'$PAR'};
     
    # insert fcs_run_id and measured_parameters_id into fcs_run_parameters
-      my $tableName = "cytometry.dbo.fcs_run_parameters";
+      my $tableName = "$TBCY_FCS_RUN_PARAMETERS";
       my $pkName = " fcs_run_parameters_id";
       foreach my $position (keys %parsPosPk)
       {
@@ -310,7 +310,7 @@ sub recordDataPoints
 		my $pK = 0;
 
 		  my %dataHash;
-      my $tableName = "cytometry.dbo.fcs_data_point";
+      my $tableName = "$TBCY_FCS_DATA_POINT";
       my $pkName = "fcs_data_point_id";
       foreach my  $point (keys %event)
       {
