@@ -27,6 +27,7 @@ use vars qw ($sbeams $sbeamsMOD $q
 	     $fav_codon_frequency $n_transmembrane_regions
 	     $rosetta_lookup $pfam_search_results $ginzu_search_results
              $mamSum_search_results $InterProScan_search_results
+	     $COG_search_results
              %domain_match_types %domain_match_sources
             );
 
@@ -85,6 +86,8 @@ Options:
                        to load the mamSum search results
   --InterProScan_search_results_summary_file   Full path name of a file
                        from which to load the InterProScan search results
+  --COG_search_results_summary_file   Full path name of a file
+                       from which to load the COG search results
 
  e.g.:  $PROG_NAME --check_status
 
@@ -99,6 +102,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
     "rosetta_lookup_file:s","pfam_search_results_summary_file:s",
     "ginzu_search_results_dir:s","mamSum_search_results_summary_file:s",
     "InterProScan_search_results_summary_file:s",
+    "COG_search_results_summary_file:s",
   )) {
   print "$USAGE";
   exit;
@@ -210,6 +214,8 @@ sub handleRequest {
     $OPTIONS{"mamSum_search_results_summary_file"} || '';
   my $InterProScan_search_results_summary_file =
     $OPTIONS{"InterProScan_search_results_summary_file"} || '';
+  my $COG_search_results_summary_file =
+    $OPTIONS{"COG_search_results_summary_file"} || '';
 
 
   #### Get the file_prefix if it was specified, and otherwise guess
@@ -288,7 +294,9 @@ sub handleRequest {
   if ($pfam_search_results_summary_file ||
       $ginzu_search_results_dir ||
       $mamSum_search_results_summary_file ||
-      $InterProScan_search_results_summary_file) {
+      $InterProScan_search_results_summary_file ||
+      $COG_search_results_summary_file
+     ) {
     %domain_match_types = $sbeams->selectTwoColumnHash(
       "SELECT domain_match_type_name,domain_match_type_id ".
       "  FROM ${DATABASE}domain_match_type WHERE record_status != 'D'");
@@ -333,6 +341,15 @@ sub handleRequest {
   if ($InterProScan_search_results_summary_file) {
     $InterProScan_search_results = readInterProScanFile(
       source_file => $InterProScan_search_results_summary_file,
+    );
+  }
+
+
+  #### If a COG_search_results_summary_file was specified,
+  #### load it for later processing
+  if ($COG_search_results_summary_file) {
+    $COG_search_results = readCOGFile(
+      source_file => $COG_search_results_summary_file,
     );
   }
 
@@ -1286,9 +1303,98 @@ sub loadBiosequence {
   } # if have InterProScan
 
 
+  #### See if we have COG data to add
+  my $have_COG_data = 0;
+  if (defined($COG_search_results) && $biosequence_id) {
+    if (defined($COG_search_results->{$biosequence_name})) {
+      $have_COG_data = 1;
+    }
+  }
+
+
+  #### If we have COG data, INSERT or UPDATE domain_match
+  if ($have_COG_data) {
+
+    #### Get the domain_match_source_id
+    my $domain_match_source_id = $domain_match_sources{'COGs'} ||
+      die("Unable to find domain match source COGs in ".
+	  Data::Dumper->Dump([\%domain_match_sources]));
+
+    #### See if there's already a record there
+    my $sql =
+      "SELECT domain_match_id
+         FROM ${DATABASE}domain_match
+        WHERE biosequence_id = '$biosequence_id'
+          AND domain_match_source_id = '$domain_match_source_id'
+      ";
+    my @domain_match_ids = $sbeams->selectOneColumn($sql);
+
+    #### If there are any of these, DELETE them
+    if (scalar(@domain_match_ids) > 0) {
+      $sql =
+        "DELETE
+           FROM ${DATABASE}domain_match
+          WHERE biosequence_id = '$biosequence_id'
+            AND domain_match_source_id = '$domain_match_source_id'
+        ";
+      $sbeams->executeSQL($sql);
+    }
+
+
+
+    #### Loop over all the domain matches for this biosequence
+    my @matches = @{$COG_search_results->{$biosequence_name}};
+    foreach my $match (@matches) {
+
+	#### Fill the row data hash with information we have
+	my %rowdata;
+	$rowdata{biosequence_id} = $biosequence_id;
+
+        $rowdata{domain_match_source_id} = $domain_match_source_id;
+
+	$rowdata{match_name} = $match->{match_name}
+	  if (defined($match->{match_name}));
+	$rowdata{match_accession} = $match->{match_accession}
+	  if (defined($match->{match_accession}));
+	$rowdata{domain_match_type_id} = $match->{match_type_id}
+	  if (defined($match->{match_type_id}));
+
+	$rowdata{second_match_name} = $match->{second_match_name}
+	  if (defined($match->{second_match_name}));
+	$rowdata{second_match_accession} = $match->{second_match_accession}
+	  if (defined($match->{second_match_accession}));
+	$rowdata{second_match_type_id} = $match->{second_match_type_id}
+	  if (defined($match->{second_match_type_id}));
+
+        $rowdata{score} = $match->{score}
+	  if (defined($match->{evalue}));
+
+	$rowdata{query_length} = $match->{query_length}
+	  if (defined($match->{query_length}));
+	$rowdata{match_length} = $match->{match_length}
+	  if (defined($match->{match_length}));
+
+	$rowdata{match_annotation} = $match->{match_annotation}
+	  if (defined($match->{match_annotation}));
+
+	#### Insert or update the row
+	my $result = $sbeams->insert_update_row(
+	  insert=>1,
+	  table_name=>"${DATABASE}domain_match",
+	  rowdata_ref=>\%rowdata,
+	  PK=>"domain_match_id",
+	  verbose=>$VERBOSE,
+	  testonly=>$TESTONLY,
+	);
+
+    } # end foreach match
+
+  } # if have COG
+
+
+
   return;
 }
-
 
 
 
@@ -2414,6 +2520,132 @@ sub readInterProScanFile {
   return \%data;
 
 } # end readInterProScanFile
+
+
+###############################################################################
+# readCOGFile
+###############################################################################
+sub readCOGFile {
+  #my $self = shift;
+  my %args = @_;
+
+
+  #### Decode the argument list
+  my $source_file = $args{'source_file'} ||
+    die ("ERROR: Must supply source_file");
+  my $verbose = $args{'verbose'} || '';
+
+  #### Define some variables
+  my ($line);
+
+  #### Define a hash to hold the contents of the file
+  my %data;
+  $data{SUCCESS} = 0;
+
+
+  #### Open the specified file
+  unless ( open(INFILE, "$source_file") ) {
+    die("Cannot open input file $source_file\n");
+  }
+
+
+  #### Verify the header
+  $line = <INFILE>;
+  $line =~ s/[\r\n]//g;
+  my @header_columns = split(/\t/,$line);
+  print "Number of columns: ".scalar(@header_columns)."\n  ".
+    join("==\n  ",@header_columns)."\n";
+  unless ($line =~ /^sequenceName\trank\tmatch/
+	  && scalar(@header_columns) == 10) {
+    die "ERROR: File '$source_file' does not begin as expected\n";
+    return \%data;
+  }
+
+  #### Extract the array indexes of the column names
+  my $i = 0;
+  my %idx;
+  foreach my $element (@header_columns) {
+    #### Strip of leading and trailing spaces, too
+    $element =~ s/^\s+//;
+    $element =~ s/\s+$//;
+    $idx{$element} = $i;
+    $i++;
+  }
+
+
+  #### Read in all the domain matches
+  while ($line = <INFILE>) {
+    $line =~ s/[\r\n]//g;
+    next if ($line =~ /^\s*$/);
+
+    #### Split the line into columns and insist we get the right number
+    my @columns = split(/\t/,$line);
+    unless (scalar(@columns) == 11 ||
+	    (scalar(@columns) == 7 && $columns[6] eq 'None')
+	   ) {
+      print "ERROR: Error parsing line '$line' of '$source_file'.  ".
+        "Expected 10 columns of information but got ".scalar(@columns)."\n";
+      return \%data;
+    }
+
+    my $biosequence_name = $columns[$idx{sequenceName}];
+
+    #### Create a temporary hash and fill it with these data
+    my %parameters;
+    $parameters{'full_line'} = $line;
+    $parameters{'biosequence_name'} = $biosequence_name;
+
+    #### Strip trailing and leading spaces
+    $columns[$idx{match}] =~ s/^\s+//;
+    $columns[$idx{match}] =~ s/\s+$//;
+    $parameters{'second_match_name'} = $columns[$idx{match}];
+    $parameters{'second_match_accession'} = $columns[$idx{match}];
+    $parameters{'second_match_type_id'} = $domain_match_types{'COGsProtein'};
+
+    if ($columns[$idx{cogs}] ne 'None') {
+      $parameters{'match_name'} = $columns[$idx{cogs}];
+      $parameters{'match_accession'} = $columns[$idx{cogs}];
+      $parameters{'match_type_id'} = $domain_match_types{'COGs'};
+
+      $parameters{'score'} = $columns[$idx{score}];
+      $parameters{'query_length'} = $columns[$idx{length}];
+      $parameters{'match_length'} = $columns[$idx{overlap}];
+
+      $parameters{'match_annotation'} = $columns[$idx{'major group'}].' - '.
+        $columns[$idx{'minor group'}].'; '.$columns[$idx{'cog definition'}].
+	'; '.$columns[10];
+
+      #$parameters{'match_annotation'} = '';
+      #print "$biosequence_name: ";
+      #for (my $icol=7; $icol<11; $icol++) {
+      #	 if (defined($columns[$icol])) {
+      #	   print "$icol ";
+      #	   $parameters{'match_annotation'} .= $columns[$icol].'; ';
+      #	 }
+      #}
+      #print "\n";
+      #chop($parameters{'match_annotation'});
+      #chop($parameters{'match_annotation'});
+
+    }
+
+    #### Store this new data on the array for this biosequence_name
+    my @matches = ();
+    $data{$biosequence_name} = \@matches
+      unless (defined($data{$biosequence_name}));
+    push(@{$data{$biosequence_name}},\%parameters);
+  }
+
+
+  #### Close the input file
+  close(INFILE);
+
+
+  #### Set SUCCESS flag and return
+  $data{SUCCESS} = 1;
+  return \%data;
+
+} # end readCOGFile
 
 
 
