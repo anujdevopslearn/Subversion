@@ -880,7 +880,8 @@ sub handle_request {
     if ($key ne 'sort_order' && $key ne 'display_options' &&
         $key ne 'reference_constraint') {
       if ($parameters{$key}) {
-        push(@parameters_to_pass,"$key=$parameters{$key}");
+	use CGI::Util qw(escape unescape);
+        push(@parameters_to_pass,"$key=".escape($parameters{$key}));
       }
     }
   }
