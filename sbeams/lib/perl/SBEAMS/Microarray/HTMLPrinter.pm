@@ -182,162 +182,144 @@ sub printStyleSheet {
 # Not sure how to design that yet.
 ###############################################################################
 sub printJavascriptFunctions {
-    my $self = shift;
-    my $javascript_includes = shift;
+  my $self = shift;
+  my $javascript_includes = shift;
 
+  print qq~
 
-    print qq~
-	<SCRIPT LANGUAGE="JavaScript">
-	<!--
+<SCRIPT LANGUAGE="JavaScript">
+<!--
 
-	function refreshDocument() {
-            //confirm( "apply_action ="+document.MainForm.apply_action.options[0].selected+"=");
-            document.MainForm.apply_action_hidden.value = "REFRESH";
-	    document.MainForm.submit();
-	} // end refresh
+function refreshDocument() {
+  document.MainForm.apply_action_hidden.value = "REFRESH";
+  document.MainForm.submit();
+}
 
+function showPassed(input_field) {
+  confirm( "selected option ="+document.MainForm.slide_id.options[document.MainForm.slide_id.selectedIndex].text+"=");
+  return;
+}
 
-	function showPassed(input_field) {
-            //confirm( "input_field ="+input_field+"=");
-            confirm( "selected option ="+document.MainForm.slide_id.options[document.MainForm.slide_id.selectedIndex].text+"=");
-	    return;
-	} // end showPassed
+function confirmPasswdChange() {
+  if (confirm( "The old password for this user will no longer be "+"valid.")) {
+    return true;
+  }else {
+    return false;
+  }
+}
 
+function ClickedNowButton(input_field) {
+  field_name = input_field.name;
+  today = new Date();
+  date_value =
+      today.getFullYear() + "-" + (today.getMonth()+1) + "-" +
+      today.getDate() + " " +
+      today.getHours() + ":" +today.getMinutes();
+  
+  if (field_name == "date_labeled") {
+      document.MainForm.date_labeled.value = date_value;
+  }else if (field_name == "date_hybridized") {
+      document.MainForm.date_hybridized.value = date_value;
+  }else if (field_name == "date_received") {
+      document.MainForm.date_received.value = date_value;
+  }else if (field_name == "date_scanned") {
+      document.MainForm.date_scanned.value = date_value;
+  }else if (field_name == "date_quantitated") {
+      document.MainForm.date_quantitated.value = date_value;
+  }
 
-	function confirmPasswdChange() {
-	    if (confirm( "The old password for this user will no longer be "
-	               + "valid.")) {
-	        return true;
-	    } else {
-	        return false;
-	    } // end if
-	} // end confirmPasswdChange
+  return;
+}
 
+function setDefaultImagesLocation() {
+    array_name = document.MainForm.array_id.options[document.MainForm.array_id.selectedIndex].text;
+    if (array_name.substr(array_name.length-9,99) == " - *DONE*") {
+      array_name = array_name.substr(0,array_name.length-9);
+    }
 
-	function ClickedNowButton(input_field) {
-	    //confirm( "input_field ="+input_field+"=");
-	    field_name = input_field.name
-	    today = new Date();
-	    date_value =
-	      today.getFullYear() + "-" + (today.getMonth()+1) + "-" +
-	      today.getDate() + " " +
-	      today.getHours() + ":" +today.getMinutes();
+    serial_number = array_name;
+    if (serial_number.substr(serial_number.length-1,99) >= "A") {
+      serial_number = serial_number.substr(0,array_name.length-1);
+    }
 
-	    if (field_name == "date_labeled") {
-	      document.MainForm.date_labeled.value = date_value;
-	    } else if (field_name == "date_hybridized") {
-	      document.MainForm.date_hybridized.value = date_value;
-	    } else if (field_name == "date_received") {
-	      document.MainForm.date_received.value = date_value;
-	    } else if (field_name == "date_scanned") {
-	      document.MainForm.date_scanned.value = date_value;
-	    } else if (field_name == "date_quantitated") {
-	      document.MainForm.date_quantitated.value = date_value;
-	    }
+    today = new Date();
+    date_value =
+	"" + today.getFullYear() +
+	addLeadingZeros((today.getMonth()+1),2) +
+	addLeadingZeros(today.getDate(),2)
+	date_value = date_value.substr(2,6);
 
-	    return;
-	} // end ClickedNowButton
+    start_group = Math.round(serial_number/100-0.5)*100+1;
+    start_group = addLeadingZeros(start_group.toString(),5);
 
+    end_group = Math.round(serial_number/100+0.5)*100;
+    end_group = addLeadingZeros(end_group.toString(),5);
 
-	function setDefaultImagesLocation() {
-	    // /net/arrays/ScanArray_Images/00001-00100/00012_A1_MMDDYY/Images/
-	    array_name = document.MainForm.array_id.options[document.MainForm.array_id.selectedIndex].text
-	    if (array_name.substr(array_name.length-9,99) == " - *DONE*") {
-	      array_name = array_name.substr(0,array_name.length-9);
-	    }
+    array_name = addLeadingZeros(array_name.toString(),5);
 
-	    serial_number = array_name;
-	    if (serial_number.substr(serial_number.length-1,99) >= "A") {
-	      serial_number = serial_number.substr(0,array_name.length-1);
-	    }
+    document.MainForm.stage_location.value =
+	"/net/arrays/ScanArray_Images/" +
+	start_group + "-"+ end_group + "/" +
+	array_name + "_" + date_value;
+    return;
+}
 
-	    today = new Date();
-	    date_value =
-	      "" + today.getFullYear() +
-	      addLeadingZeros((today.getMonth()+1),2) +
-	      addLeadingZeros(today.getDate(),2)
-	    date_value = date_value.substr(2,6);
+function addLeadingZeros(instring,ndigits) {
+  instring = instring.toString();
+  while (instring.length < ndigits) { instring = "0" + instring; }
+  return instring;
+}
 
-            start_group = Math.round(serial_number/100-0.5)*100+1;
-            start_group = addLeadingZeros(start_group.toString(),5);
+function setDefaultQALocation() {
+  array_name = document.MainForm.array_scan_id.options[document.MainForm.array_scan_id.selectedIndex].text;
+  array_name = array_name.toString();
+  if (array_name.substr(array_name.length-9,99) == " - *DONE*") {
+    array_name = array_name.substr(0,array_name.length-9);
+  }
 
-            end_group = Math.round(serial_number/100+0.5)*100;
-            end_group = addLeadingZeros(end_group.toString(),5);
+  start_group = Math.round(array_name/100-0.5)*100+1;
+  start_group = addLeadingZeros(start_group.toString(),5);
 
-            array_name = addLeadingZeros(array_name.toString(),5);
+  end_group = Math.round(array_name/100+0.5)*100;
+  end_group = addLeadingZeros(end_group.toString(),5);
 
-	    document.MainForm.stage_location.value =
-	      "/net/arrays/ScanArray_Images/" +
-	      start_group + "-"+ end_group + "/" +
-	      array_name + "_" + date_value;
+  protocol_name = document.MainForm.protocol_id.options[document.MainForm.protocol_id.selectedIndex].text;
+  protocol_name = protocol_name.toString();
+  extension = ".?";
+  
+  if (protocol_name.search(/QuantArray/i)>-1) { extension = ".qa"; }
+  if (protocol_name.search(/Dapple/i)>-1) { extension = ".dapple"; }
 
-	    return;
-	} // end setDefaultImagesLocation
+  document.MainForm.stage_location.value =
+      "/net/arrays/Quantitation/" +
+      start_group + "-"+ end_group + "/" +
+      array_name + extension;
 
+  return;
+}
 
-	function addLeadingZeros(instring,ndigits) {
-	    instring = instring.toString();
-	    while (instring.length < ndigits) { instring = "0" + instring; }
-	    return instring;
-	}
+  function setArrayName() {
+    array_name = document.MainForm.array_name.value=document.MainForm.slide_id.options[document.MainForm.slide_id.selectedIndex].text;
+    array_name = array_name.toString();
+    if (array_name.substr(array_name.length-9,99) == " - *DONE*") {
+      array_name = array_name.substr(0,array_name.length-9);
+    }
+    while (array_name.length < 5) { array_name = "0" + array_name; }
 
+    document.MainForm.array_name.value = array_name;
+    return;
+}
 
-	function setDefaultQALocation() {
+function setLayoutFileName() {
+  document.MainForm.source_filename.value =
+      "/net/arrays/Slide_Templates/" +
+      document.MainForm.name.value + ".key"
+      return;
+}
 
-	    array_name = document.MainForm.array_scan_id.options[document.MainForm.array_scan_id.selectedIndex].text;
-            array_name = array_name.toString();
-	    if (array_name.substr(array_name.length-9,99) == " - *DONE*") {
-	      array_name = array_name.substr(0,array_name.length-9);
-	    }
-
-            start_group = Math.round(array_name/100-0.5)*100+1;
-            start_group = addLeadingZeros(start_group.toString(),5);
-
-            end_group = Math.round(array_name/100+0.5)*100;
-            end_group = addLeadingZeros(end_group.toString(),5);
-
-	    protocol_name = document.MainForm.protocol_id.options[document.MainForm.protocol_id.selectedIndex].text;
-            protocol_name = protocol_name.toString();
-	    extension = ".?";
-	    //confirm( "result ="+protocol_name.search(/QuantArray/i)+"=");
-	    if (protocol_name.search(/QuantArray/i)>-1) { extension = ".qa"; }
-	    //confirm( "result ="+protocol_name.search(/Dapple/i)+"=");
-	    if (protocol_name.search(/Dapple/i)>-1) { extension = ".dapple"; }
-
-	    document.MainForm.stage_location.value =
-	      "/net/arrays/Quantitation/" +
-	      start_group + "-"+ end_group + "/" +
-	      array_name + extension;
-
-	    return;
-	} // end setDefaultQALocation
-
-
-        function setArrayName() {
-
-	    array_name = document.MainForm.array_name.value=document.MainForm.slide_id.options[document.MainForm.slide_id.selectedIndex].text;
-            array_name = array_name.toString();
-	    if (array_name.substr(array_name.length-9,99) == " - *DONE*") {
-	      array_name = array_name.substr(0,array_name.length-9);
-	    }
-            while (array_name.length < 5) { array_name = "0" + array_name; }
-
-	    document.MainForm.array_name.value = array_name;
-
-	    return;
-	} // end setArrayName
-
-
-	function setLayoutFileName() {
-            document.MainForm.source_filename.value =
-              "/net/arrays/Slide_Templates/" +
-              document.MainForm.name.value + ".key"
-	    return;
-	} // end setLayoutFileName
-
-        // -->
-        </SCRIPT>
-    ~;
+// -->
+</SCRIPT>
+~;
 
 }
 
