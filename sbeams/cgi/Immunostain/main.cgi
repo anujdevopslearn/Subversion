@@ -210,16 +210,18 @@ sub handle_request {
 
   }
 
-  my $cytoSql  = "select sample_name, fcs_run_id from Cytometry2.dbo.FCS_RUN";
+  my $cytoSql  = "select fcs_run_id, substring(sample_name,0,7) from Cytometry2.dbo.FCS_RUN";
   my $immunoSql = "select specimen_name, specimen_id from $TBIS_SPECIMEN";
   
  %CYTSAMPLEHASH = $sbeams->selectTwoColumnHash($cytoSql); 
  %IMMUNOSPECHASH = $sbeams->selectTwoColumnHash($immunoSql);
 
+
+ 
+ 
  foreach my $key (keys %IMMUNOSPECHASH)
  {
-   my @array = grep /$key/i , keys %CYTSAMPLEHASH; 
-   if (scalar (@array))
+   if ($CYTSAMPLEHASH{$key})
    {
      $IMMUNOSPECHASH{$key} = 1
    }
@@ -902,9 +904,9 @@ $percentHash{$antibody}->{$cellType}->{none} += $atLevelPercent if $row[$levelIn
 							print "<tr><ul><td align=left><b><li>Stain</b></td></tr>";
 							print qq~ <tr><TD NOWRAP align=left>- <A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=_processStain&stained_slide_id=$stainID">$stain</A></TD></tr>~;
                             my ($stainName) = $stain =~ /^.*?\s([\d-]+)/;
-                             if ($IMMUNOSPECHASH{$stainName})
+                            if ($IMMUNOSPECHASH{$stainName})
                             {
-                              print qq~<tr><td>View Cytometry Data related to this Stain  <A HREF="$CGI_BASE_DIR/$SBEAMS_CY_SUBDIR/main.cgi?TableName=CY_FCS_RUN&SampleName=$stainName">$stainName</A></TD></tr>~;
+                                  print qq~<tr><td>View Cytometry Data related to this Stain  <A HREF="$CGI_BASE_DIR/$SBEAMS_CY_SUBDIR/main.cgi?loadImmuno=1&immunoSampleName=$stainName">$stainName</A></TD></tr>~;
                             }
                             print "</li>";
 #channel							
@@ -1120,9 +1122,9 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Stain Summary</font
 						next if $stainOrganismHash{$keyStain} eq $what;
 						print "</td><tr></tr><tr></tr><tr></tr><tr><td align=left><font color =\"D60000\">&nbsp;&nbsp;&nbsp;<h5>$keyStain</h5></font></td></tr>";
                          my ($stainName) = $keyStain =~ /^.*?\s([\d-]+)/;
-                          if ($IMMUNOSPECHASH{$stainName})
-                          {
-                            print qq~<tr><td>View Cytometry Data related to this Stain  <A HREF="$CGI_BASE_DIR/$SBEAMS_CY_SUBDIR/main.cgi?TableName=CY_FCS_RUN&SampleName=$stainName">$stainName</A></TD></tr>~;
+                           if ($IMMUNOSPECHASH{$stainName})
+                          {                            
+                            print qq~<tr><td>View Cytometry Data related to this Stain  <A HREF="$CGI_BASE_DIR/$SBEAMS_CY_SUBDIR/main.cgi?loadImmuno=1&immunoSampleName=$stainName">$stainName</A></TD></tr>~;
                           }
 						print "<tr><td align=left><b>Species:</b></td><td align=left>&nbsp;&nbsp;&nbsp;$stainOrganismHash{$keyStain}</td></tr>";
 						print "<tr><td align=left><b>Tissue Type:</b></td><td align=left>&nbsp;&nbsp;&nbsp; $stainTissueHash{$keyStain}</td></tr>";
