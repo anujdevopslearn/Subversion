@@ -180,7 +180,7 @@ sub handleRequest {
 
   #### Generate a dummy set of data to load
   $sql = qq~
-    SELECT TOP 10 symbol,extref_name,accession
+    SELECT symbol,extref_name,accession
       FROM bioalias.dbo.genelynx_entry GE
      INNER JOIN bioalias.dbo.genelynx_association GA
            ON ( GE.genelynx_entry_id = GA.genelynx_entry_id )
@@ -194,6 +194,7 @@ sub handleRequest {
 
 
   #### Loop over all the input data, updating the BioLink database
+  my $counter = 0;
   foreach my $row (@rows) {
 
     #### Extract the data from the row
@@ -211,6 +212,11 @@ sub handleRequest {
       relationship_type_id => 1,
       evidence_source_id => $load_evidence_source_id,
     );
+
+    $counter++;
+    print "$counter..." if ($counter % 100 == 0);
+
+
 
   } # end foreach
 
