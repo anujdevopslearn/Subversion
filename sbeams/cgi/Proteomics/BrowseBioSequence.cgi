@@ -120,7 +120,7 @@ sub printEntryForm {
 
 
     #### Read the form values for each column
-    my $n_params_found = $sbeams->parseCGIParameters(
+    my $n_params_found = $sbeams->parse_input_parameters(
       q=>$q,parameters_ref=>\%parameters,
       columns_ref=>\@columns,input_types_ref=>\%input_types);
 
@@ -140,7 +140,7 @@ sub printEntryForm {
 
 
     #### Display the user-interaction input form
-    $sbeams->printInputForm(
+    $sbeams->display_input_form(
       TABLE_NAME=>$TABLE_NAME,CATEGORY=>$CATEGORY,apply_action=>$apply_action,
       PROGRAM_FILE_NAME=>$PROGRAM_FILE_NAME,
       parameters_ref=>\%parameters,
