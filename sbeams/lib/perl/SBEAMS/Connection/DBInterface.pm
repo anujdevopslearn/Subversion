@@ -4902,7 +4902,7 @@ function switchProject(){
   my @project_ids = $self->getAccessibleProjects(module=>"$module");
   my $project_ids_list = join(',',@project_ids) || '-1';
   $project_sql = qq~
-    SELECT P.project_id, UL.username+' - '+P.name+' ('+CONVERT(varchar(50),P.project_id)+')'
+    SELECT P.project_id, UL.username+' - '+P.name
       FROM $TB_PROJECT P 
       LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
      WHERE P.project_id IN ( $project_ids_list )
@@ -4922,11 +4922,11 @@ function switchProject(){
       my ($project_id, $project_name) = @{$row_ref};
       if ($project_id == $current_project_id) {
 	$project_chooser .= qq~
-<OPTION SELECTED VALUE="$project_id">$project_name
+<OPTION SELECTED VALUE="$project_id">$project_name ($project_id)
         ~;
       }else {
 	$project_chooser .= qq~
-<OPTION VALUE="$project_id">$project_name
+<OPTION VALUE="$project_id">$project_name ($project_id)
         ~;
       }
     }
