@@ -1027,7 +1027,8 @@ sub postProcessResultset {
   $buf.="\n\n";
 
   $buf =~ s/\n/<BR>\n/g;
-  print "$buf";
+  print "$buf" if ($sbeams->output_mode() eq 'interactive' ||
+    $sbeams->output_mode() eq 'html');
 
 
   #### Replace the old rowset with the new, modified rowset
