@@ -48,6 +48,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS
     $LOGIN_DURATION
     $SESSION_REAUTH
     $SMBAUTH
+    %CONFIG_SETTING
     );
 
 require Exporter;
@@ -77,6 +78,7 @@ require Exporter;
     $PHYSICAL_BASE_DIR
     $UPLOAD_DIR
     $SBEAMS_SUBDIR
+    %CONFIG_SETTING
     );
 my @default = @EXPORT;
 #push @EXPORT, 'default';
@@ -147,6 +149,8 @@ $LOG_BASE_DIR = $DBCONFIG->{$DBINSTANCE}->{LOG_BASE_DIR};
 $LOGIN_DURATION = $DBCONFIG->{$DBINSTANCE}->{LOGIN_DURATION};
 $SESSION_REAUTH = $DBCONFIG->{$DBINSTANCE}->{SESSION_REAUTH};
 $SMBAUTH = \%{$DBCONFIG->{$DBINSTANCE}->{SMBAUTH}};
+%CONFIG_SETTING = %{$DBCONFIG->{$DBINSTANCE}->{CONFIG_SETTING}};
+
 
 #### Determine what the BASE URL is: first pull out some environment variables
 my $_server_port = $ENV{SERVER_PORT} || "";
