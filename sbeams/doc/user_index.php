@@ -35,6 +35,7 @@
      <LI><A HREF="/projects/sbeams/">Longer Concept Overview of SBEAMS</A>
      <LI><A HREF="SecurityLayout.php">Description of Security Layout</A>
      <LI><A HREF="Microarray/keymapfiles.notes">Misc notes about .key and .map files</A>
+     <LI><A HREF="Microarray/FileDescriptions.php">Descriptions of Pipeline-Generated Files</A>
     </UL>
     </TD>
 
