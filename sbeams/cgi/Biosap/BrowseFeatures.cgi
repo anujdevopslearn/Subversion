@@ -541,7 +541,7 @@ sub printEntryForm {
       #### Limit the width of the Reference column if user selected
       if ( $parameters{display_options} =~ /AdditionalColumns/ ) {
         @column_array = (
-          ["biosequence_name","biosequence_name","biosequence_name"],
+          ["biosequence_name","biosequence_name+' threeprime_distance='+CONVERT(varchar(50),threeprime_distance)","biosequence_name"],
           ["melting_temp","melting_temp","melting_temp"],
           ["threeprime_distance","threeprime_distance","threeprime_distance"],
           ["feature_sequence","feature_sequence","feature_sequence"],
