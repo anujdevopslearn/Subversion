@@ -2,8 +2,7 @@
 use strict;
 use File::Find;
 use FindBin;
-use lib qw (../perl ../../perl);
-
+use lib "$FindBin::Bin/../../perl";
 
 use vars qw ($sbeams $sbeamsMOD $VERBOSE $TESTONLY $current_username);
 
