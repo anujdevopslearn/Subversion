@@ -319,15 +319,15 @@ sub processFile
 			#	print "Stain: $stainName\n";
 				if ($TISSUETYPE =~/prostate/i)
 				{
-				print "section" $infoHash{'block antibody section index'};
+				print "section: $infoHash{'block antibody section index'}";
 				$infoHash{'block antibody section index'}?$sectionIndex=$infoHash{'block antibody section index'}:$sectionIndex=1; 
 				$stainName  = $stainName . " ".$sectionIndex; 
-				print "Stain: $stainName\n"
+				print "Stain: $stainName\n";
 				getc;
 				}
 				if ($TISSUETYPE =~/bladder/i)
 				{
-					if (defined($infoHash{'section'})
+					if (defined($infoHash{'section'}))
 					{
 						$stainName = $stainName. " ".$infoHash{'section'};
 						print "Stain: $stainName\n";
