@@ -256,6 +256,8 @@ sub handle_request {
   my @column_array = (
     ["project_id","ERV.project_id","Project ID"],
     ["plate_id","ERV.plate_id","Plate Name"],
+    ["exp_no","ERV.exp_no","Experiment Number"],
+    ["well_position","ERV.well_position","Well Position"],
     ["assay_id","ERV.assay_id","Assay Name"],
     ["sample_id","ERV.sample_id","Sample Name"],
     ["genotype_id","ERV.genotype_id","Genotype"],
@@ -297,7 +299,7 @@ sub handle_request {
       $assay_id_clause
       $call_quality_clause
       AND genotype_id IS NOT NULL
- ORDER BY project_id,plate_id,assay_id,sample_id,call_date
+ ORDER BY project_id,plate_id,exp_no,well_position,assay_id,sample_id,call_date
   ~;
 
 
@@ -445,6 +447,8 @@ sub postProcessResultset {
   #### Get the column indices
   my $project_id_index = $resultset_ref->{column_hash_ref}->{project_id};
   my $plate_id_index = $resultset_ref->{column_hash_ref}->{plate_id};
+  my $exp_no_index = $resultset_ref->{column_hash_ref}->{exp_no};
+  my $well_position_index = $resultset_ref->{column_hash_ref}->{well_position};
   my $sample_id_index = $resultset_ref->{column_hash_ref}->{sample_id};
   my $assay_id_index = $resultset_ref->{column_hash_ref}->{assay_id};
   my $genotype_id_index = $resultset_ref->{column_hash_ref}->{genotype_id};
@@ -457,7 +461,7 @@ sub postProcessResultset {
 
 
   #### Create a data structure for all values
-  my ($project_id,$sample_id,$assay_id,$genotype_id,$plate_id);
+  my ($project_id,$sample_id,$assay_id,$genotype_id,$plate_id,$exp_no,$well_position);
   my ($call_quality,$call_date,$manual_genotype_call,$manual_call_quality,$manual_genotype_call_id);
   my $data;
   my %query_assays;
@@ -471,10 +475,12 @@ sub postProcessResultset {
   #### Loop over each row in the resultset
   my $n_rows = scalar(@{$resultset_ref->{data_ref}});
   print "Total number of input rows: $n_rows<BR>\n";
-  for (my $row=0;$row<$n_rows-1; $row++) {
+  for (my $row=0;$row<$n_rows; $row++) {
 
     $project_id = $resultset_ref->{data_ref}->[$row]->[$project_id_index];
     $plate_id = $resultset_ref->{data_ref}->[$row]->[$plate_id_index];
+    $exp_no = $resultset_ref->{data_ref}->[$row]->[$exp_no_index];
+    $well_position = $resultset_ref->{data_ref}->[$row]->[$well_position_index];
     $sample_id = $resultset_ref->{data_ref}->[$row]->[$sample_id_index];
     $assay_id = $resultset_ref->{data_ref}->[$row]->[$assay_id_index];
 
@@ -484,7 +490,8 @@ sub postProcessResultset {
     $call_date = $resultset_ref->{data_ref}->[$row]->[$call_date_index];
     $samples{$sample_id} = 1;
     $projects{$project_id} = 1;
-    $plate_ids{$plate_id} = $call_date;
+#    $plate_ids{$plate_id} = $call_date;
+    $plate_ids{$plate_id} = "${exp_no}_$well_position";
     $manual_genotype_call = $resultset_ref->{data_ref}->[$row]->[$manual_genotype_call_index];
     $manual_call_quality = $resultset_ref->{data_ref}->[$row]->[$manual_call_quality_index];
     $manual_genotype_call_id = $resultset_ref->{data_ref}->[$row]->[$manual_genotype_call_id_index];
@@ -495,6 +502,7 @@ sub postProcessResultset {
     $genotype_id="G/G" if ($genotype_id eq "G");
     $genotype_id="T/T" if ($genotype_id eq "T");
     $genotype_id="$1/$2" if ($genotype_id =~ /^(\w)(\w)$/);
+
 
     #### Store the genotype with great care about collisions
     #### Does this one exist already?
@@ -538,11 +546,16 @@ sub postProcessResultset {
       $data->{$project_id}->{$assay_id}->{$sample_id}->{single_call} = $genotype_id;
     }
 
+
     #### In any case, keep all calls in the hash as well
-    if (defined($call_date) && $call_date gt '') {
-      $data->{$project_id}->{$assay_id}->{$sample_id}->{all_calls}->{$call_date}->{genotype} = $genotype_id;
-      $data->{$project_id}->{$assay_id}->{$sample_id}->{all_calls}->{$call_date}->{quality} = $call_quality;
-      $data->{$project_id}->{$assay_id}->{$sample_id}->{all_calls}->{$call_date}->{plate} = $plate_id;
+    if (defined($exp_no) && $call_date gt '') {
+      my $newkey = "${exp_no}_$well_position";
+      $data->{$project_id}->{$assay_id}->{$sample_id}->{all_calls}->{$newkey}->{genotype} = $genotype_id;
+      $data->{$project_id}->{$assay_id}->{$sample_id}->{all_calls}->{$newkey}->{quality} = $call_quality;
+      $data->{$project_id}->{$assay_id}->{$sample_id}->{all_calls}->{$newkey}->{plate} = $plate_id;
+      $data->{$project_id}->{$assay_id}->{$sample_id}->{all_calls}->{$newkey}->{call_date} = $call_date;
+      $data->{$project_id}->{$assay_id}->{$sample_id}->{all_calls}->{$newkey}->{experiment} = $exp_no;
+      $data->{$project_id}->{$assay_id}->{$sample_id}->{all_calls}->{$newkey}->{well} = $well_position;
       $data->{$project_id}->{$assay_id}->{$sample_id}->{manual_genotype_call} = $manual_genotype_call;
       $data->{$project_id}->{$assay_id}->{$sample_id}->{manual_call_quality} = $manual_call_quality;
       $data->{$project_id}->{$assay_id}->{$sample_id}->{manual_genotype_call_id} = $manual_genotype_call_id;
@@ -607,8 +620,8 @@ sub postProcessResultset {
 
   my @samples = sort(keys(%samples));
   my @projects= sort(keys(%projects));
-  my @columnheaders;
-  my @column_types;
+  my @columnheaders = ();
+  my @column_types = ();
 
 
   #### If the user asked for Concannon reordering, build that way
@@ -648,6 +661,8 @@ sub postProcessResultset {
     foreach my $project_name (@projects) {
       foreach my $sample_name (@samples) {
         my @row = ($sample_name);
+        push(@columnheaders,$sample_name);
+        push(@column_types, qw(varchar));
         foreach my $assay (@assays) {
           if (defined($data->{$project_name}->{$assay}->{$sample_name}->{single_call})) {
             push(@row,$data->{$project_name}->{$assay}->{$sample_name}->{single_call});
@@ -661,6 +676,8 @@ sub postProcessResultset {
           } else {
       	  push(@row,'');
           }
+          push(@columnheaders, qw(call));
+          push(@column_types, qw(varchar));
         } # end foreach assay
         push(@new_data_array,\@row);
       } # end foreach sample
@@ -695,6 +712,8 @@ sub postProcessResultset {
     foreach my $project_name (@projects) {
       foreach my $assay (@assays) {
         my @row = ($assay);
+        push(@columnheaders,$assay);
+        push(@column_types, qw(varchar));
         foreach my $sample_name (@samples) {
           if (defined($data->{$project_name}->{$assay}->{$sample_name}->{single_call})) {
             push(@row,$data->{$project_name}->{$assay}->{$sample_name}->{single_call});
@@ -708,10 +727,13 @@ sub postProcessResultset {
         	} else {
         	  push(@row,'');
         	}
+                push(@columnheaders, qw(call));
+                push(@column_types, qw(varchar));
         } # end foreach sample
         push(@new_data_array,\@row);
       } # end foreach assay
     } # end project
+
   } # end Assay vs. Sample
 
   #### If the user asked for Sample vs Repeats, build that way
@@ -733,11 +755,13 @@ sub postProcessResultset {
 	  my $call_index = 1;
 	  my $best_quality = 'Z';
 
-          foreach my $date (sort keys %{ $data->{$project_name}->{$assay}->{$sample_name}->{all_calls} }) {
-            $temp_hash{$call_index}->{call} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$date}->{genotype};
-            $temp_hash{$call_index}->{call_quality} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$date}->{quality};
-            $temp_hash{$call_index}->{call_plate_ID} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$date}->{plate};
-            $temp_hash{$call_index}->{call_date} = $date;
+          foreach my $expAndWell (sort keys %{ $data->{$project_name}->{$assay}->{$sample_name}->{all_calls} }) {
+            $temp_hash{$call_index}->{call} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWell}->{genotype};
+            $temp_hash{$call_index}->{call_quality} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWell}->{quality};
+            $temp_hash{$call_index}->{call_plate_ID} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWell}->{plate};
+            $temp_hash{$call_index}->{call_exp_no} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWell}->{experiment};
+            $temp_hash{$call_index}->{call_well} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWell}->{well};
+            $temp_hash{$call_index}->{call_date} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWell}->{call_date};
 
 	    $best_quality = $temp_hash{$call_index}->{call_quality}
 	      if ($best_quality gt $temp_hash{$call_index}->{call_quality});
@@ -787,8 +811,8 @@ sub postProcessResultset {
     #### Define the headers for all the columns
     push(@columnheaders, qw(final_call final_call_quality manual_genotype_call_id manual_call n_calls call_consistency));
     push(@column_types, qw(varchar varchar int varchar int varchar));
-    my @expanding_column_names = qw(call call_quality call_date call_plate_ID);
-    my @expanding_column_types = qw(varchar varchar date varchar);
+    my @expanding_column_names = qw(call call_quality call_exp_no call_well call_date call_plate_ID);
+    my @expanding_column_types = qw(varchar varchar int varchar date varchar);
     for (my $iheader = 0; $iheader<scalar(@expanding_column_names); $iheader++) {
       for (my $i=1; $i<=$n_max_calls; $i++) {
 	my $tmp = $expanding_column_names[$iheader];
@@ -857,14 +881,16 @@ sub postProcessResultset {
   if ($parameters{display_options} =~ /SampleVsAssay/) {
     $resultset_ref->{column_list_ref} = ['Sample',@fudged_assays];
     $resultset_ref->{precisions_list_ref} = [ (50) x (scalar(@assays)+1) ];
+    $resultset_ref->{types_list_ref} = [ 'varchar',@column_types ];
   } elsif ($parameters{display_options} =~ /AssayVsSample/) {
     $resultset_ref->{column_list_ref} = ['Assay',@samples];
     $resultset_ref->{precisions_list_ref} = [ (50) x (scalar(@samples)+1) ];
-  } elsif ($parameters{display_options} =~ /SampleVsRepeat/) {
+    $resultset_ref->{types_list_ref} = [ 'varchar',@column_types ];
+ } elsif ($parameters{display_options} =~ /SampleVsRepeat/) {
     $resultset_ref->{column_list_ref} = ['project_id','assay_id','sample_id',@columnheaders];
     $resultset_ref->{precisions_list_ref} = [ (50) x (scalar(@columnheaders)+3) ];
     $resultset_ref->{types_list_ref} = [ 'varchar','varchar','varchar',@column_types ];
-  }
+ }
 
   return 1;
 
