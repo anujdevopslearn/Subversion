@@ -72,6 +72,8 @@ Options:
                        possible peptides in the format listed above
   --check_status       Is set, nothing is actually done, but rather the
                        biosequence_set and number of existing peptide is shown
+  --halt_at xxxx       Is set, stop processing with the regexp matches
+                       the biosequence_name
 
  e.g.:  $PROG_NAME --check_status
  e.g.:  $PROG_NAME --set_tag Dros_aaR2 --source_file floyd-pep.txt
@@ -82,7 +84,7 @@ EOU
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
   "delete_existing","update_existing","source_file:s",
-  "set_tag:s","check_status",
+  "set_tag:s","check_status","halt_at:s",
   )) {
   print "$USAGE";
   exit;
@@ -156,6 +158,7 @@ sub handleRequest {
   my $source_file = $OPTIONS{"source_file"} || '';
   my $check_status = $OPTIONS{"check_status"} || '';
   my $set_tag = $OPTIONS{"set_tag"} || '';
+  my $halt_at = $OPTIONS{"halt_at"} || '';
 
 
   #### Print out the header
@@ -225,6 +228,7 @@ sub handleRequest {
       $result = loadPossiblePeptides(
         set_name=>$status->{set_name},
         source_file=>$source_file,
+        halt_at=>$halt_at,
       );
     }
 
@@ -321,6 +325,7 @@ sub loadPossiblePeptides {
    || die "ERROR[$SUB_NAME]: biosequence_set_id not passed";
   my $source_file = $args{'source_file'}
    || die "ERROR[$SUB_NAME]: source_file not passed";
+  my $halt_at = $args{'halt_at'};
 
 
   #### Define standard variables
@@ -446,6 +451,14 @@ sub loadPossiblePeptides {
     ($biosequence_name,$mass,$preceding_residue,$peptide,
       $following_residue,$peptide_offset) = @columns;
     $peptide_offset = 0 unless ($peptide_offset);
+
+
+    #### If a halt_at specifier was listed, check it and finish when
+    if ($halt_at && $biosequence_name =~ /$halt_at/) {
+      print "WARNING: Premature stop at $biosequence_name due to ".
+        "match with halt_at parameter '$halt_at'\n";
+      last;
+    }
 
 
     #### Calculate some properties of the peptide
