@@ -5,7 +5,7 @@ our $VERSION = '1.00';
 
 ##############################################################
 use strict;
-use vars qw($sbeams $self);		#HACK within the read_dir method had to set self to global since read below for more info
+use vars qw($sbeams $self);		#HACK within the read_dir method had to set self to global: read below for more info
 
 use File::Basename;
 use File::Find;
@@ -177,7 +177,7 @@ sub set_annotation_set_id {
 	
 	confess(__PACKAGE__ . "::$method Need to provide key value pair 'anno_date', 'genome_version', 'file_name'") unless (%args);
 	
-  	my $slide_type_id = $self->find_slide_type_id(file_name => $file_name);
+  	my $slide_type_id = $self->find_slide_type_id(slide_name => $file_name);
 	
 	my $id = $self->check_previous_annotation_set(	slide_type_id   => $slide_type_id,
 							genome_version  => $genome_version,
@@ -1436,39 +1436,12 @@ sub get_db_acc_numbers {
 				           );
 }
 	
-###############################################################################
-#find_slide_type_id
-#Given the name of a Affy Array Slide get the Slide_type_id
-#return slide_type_id
-###############################################################################
-sub find_slide_type_id {
-    	my $method = 'find_slide_type_id';
-    	my $self = shift;
-	
-	my %args = @_;
-	my $file_name = $args{file_name};
-	
-	
-	confess(__PACKAGE__ . "::$method Need to provide key value pair 'error'") unless ($file_name);
-	
-	my $sql =  qq~ 	SELECT slide_type_id
-			FROM $TBMA_SLIDE_TYPE
-			WHERE name = '$file_name'
-		    ~;
 
-	my @rows = $sbeams->selectOneColumn($sql);
-	
-	unless($rows[0] =~ /^\d/){
-		die "FILE NAME '$file_name' DOES NOT MATCH ANY NAME in MA_SLIDE_TYPE, PLEASE GO ADD IT\n";
-	}
-	return $rows[0];
-	
-}
 ###############################################################################
 # anno_error
 ###############################################################################
 sub  anno_error {
-	my $method = 'group_error';
+	my $method = 'anno_error';
 	my $self = shift;
 	
 	my %args = @_;
