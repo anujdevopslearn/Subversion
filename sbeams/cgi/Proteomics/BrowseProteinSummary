@@ -525,6 +525,7 @@ sub handle_request {
       ["accessor","DBX.accessor","accessor"],
       ["accessor_suffix","DBX.accessor_suffix","accessor_suffix"],
       ["biosequence_accession","BS.biosequence_accession","Accession"],
+      ["canonical_name","BSCAN.biosequence_name","Canonical Name"],
       ["protein_probability","STR(PROT.probability,7,3)","Protein Prob"],
       ["n_peptides","PROT.n_peptides","Total Peptides"],
       ["average_quant","STR(SQ.ratio_mean,7,3)","Quant Avg"],
@@ -562,6 +563,7 @@ sub handle_request {
 
 
   #### Define the SQL statement
+  my $BIOLINK = "BioLink.dbo.";
   $sql = qq~
 	SELECT $limit_clause->{top_clause} $columns_clause
 	  FROM $TBPR_PROTEIN PROT
@@ -586,6 +588,15 @@ sub handle_request {
                ON ( SB.experiment_id = PE.experiment_id )
           LEFT JOIN $TBPR_BIOSEQUENCE_PROPERTY_SET BPS
                ON ( BS.biosequence_id = BPS.biosequence_id )
+
+         LEFT JOIN ${BIOLINK}biosequence BSLINK
+               ON ( BS.biosequence_gene_name = BSLINK.biosequence_name )
+         LEFT JOIN ${BIOLINK}relationship R
+               ON ( BSLINK.biosequence_id = R.biosequence2_id
+                    AND R.relationship_type_id = 1)
+         LEFT JOIN ${BIOLINK}biosequence BSCAN
+               ON ( R.biosequence1_id = BSCAN.biosequence_id )
+
           $GO_join
 	 WHERE 1 = 1
 	$search_batch_clause
