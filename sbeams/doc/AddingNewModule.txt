@@ -1,0 +1,39 @@
+$Id$
+
+If you wish to begin development for a new database and module for
+SBEAMS, begin by following the script in
+
+sbeams/lib/admin/AddingNewModule.txt
+
+Then create the table definitions in
+
+sbeams/lib/conf/NewModule/
+
+and then begin development in:
+
+CGIs:
+
+sbeams/cgi/NewModule/
+
+Modules and libraries:
+
+sbeams/lib/perl/SBEAMS/NewModule/
+
+data load/maintenence scripts:
+
+sbeams/lib/scripts/NewModule/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
