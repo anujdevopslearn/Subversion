@@ -20,6 +20,7 @@ package SBEAMS::Connection::DBConnector;
 use strict;
 use DBI;
 use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Encrypt;
 
 use vars qw($dbh);
 
@@ -81,19 +82,55 @@ sub dbConnect {
     my $DB_RO_USER = $self->getDBROUser();
     my $DB_RO_PASS = _getDBROPass();
     my $DB_DRIVER = $self->getDBDriver();
+    my $ENC_KEY = $self->_getEncryptionKey();
     $DB_DRIVER = eval "\"$DB_DRIVER\"";
 
+    $DBADMIN = _getDBAdmin();
+
+    if ( !$ENC_KEY ) { # Couldn't get key.  Set bogus value so decrypt won't die
+      print STDERR "WARNING: Failed to find encryption key in SBEAMS.conf\n"; 
+      $ENC_KEY = 1;
+    }
+    
+    # Attempt to decrypt passwords
+    my $db_ro_pass = decryptPassword( pass => $DB_RO_PASS, key => $ENC_KEY );
+    my $db_pass = decryptPassword(  pass => $DB_PASS , key => $ENC_KEY);
+
+    if ( $db_pass ) { # Decryption succeeded, use decrypted passwd.
+      $DB_PASS = $db_pass;
+    } elsif ( !$connect_read_only ) { 
+      # Decryption failed, log warning.
+      print STDERR <<"      END_WARN";
+WARNING: Decryption failed for main sbeams password. Reverting to insecure
+connection mode. Please contact $DBADMIN
+KEY: $ENC_KEY
+      END_WARN
+    }
+    if ( $db_ro_pass ) { # Decryption succeeded, use decrypted passwd.
+      $DB_RO_PASS = $db_ro_pass;
+    } elsif ( $connect_read_only ) { # Decryption failed, log warning.
+      print STDERR <<"      END_WARN";
+WARNING: Decryption failed for read-only sbeams password. Reverting to insecure
+connection mode. Please contact $DBADMIN
+KEY: $ENC_KEY
+      END_WARN
+    }
 
     #### Try to connect to database
     my $this_dbh;
     if ($connect_read_only) {
-      $this_dbh = DBI->connect($DB_DRIVER,$DB_RO_USER,$DB_RO_PASS,\%error_attr)
-        or die "$DBI::errstr";
+      $this_dbh = DBI->connect($DB_DRIVER,$DB_RO_USER,$DB_RO_PASS,\%error_attr);
     } else {
-      $this_dbh = DBI->connect($DB_DRIVER,$DB_USER,$DB_PASS,\%error_attr)
-        or die "$DBI::errstr";
+      $this_dbh = DBI->connect($DB_DRIVER,$DB_USER,$DB_PASS,\%error_attr);
     }
-
+    if ( !$this_dbh ) {
+      my $err =<<"      END_ERR";
+WARNING: Unable to connect to database, please contact $DBADMIN:
+$DBI::errstr
+      END_ERR
+    print STDERR $err;
+    die ( $err );
+    }
 
     #### This should only be used if the database cannot be specified in
     #### the DSN string.  In fact, it can sometimes have a nasty side effect
@@ -210,6 +247,44 @@ sub getDBUser {
   return $DBCONFIG->{$DBINSTANCE}->{DB_USER};
 }
 
+###############################################################################
+# decryptPassword  Passed an encrypted password and an encryption key, routine
+# will return decrypted password.
+# 
+# narg pass       encrypted password (required)
+# narg key        encryption key (required)
+#
+# ret             decrypted password
+###############################################################################
+sub decryptPassword {
+  my %args = @_;
+  for( qw( pass key ) ) {
+    die "Missing arguement $_" if !$_;
+  }
+
+  my $cryptor = SBEAMS::Connection::Encrypt->new( key => $args{key},
+                                                  encrypted => $args{pass} );
+  return $cryptor->decrypt();
+} # End decryptPassword
+
+
+###############################################################################
+# _getEncryptionKey
+#
+# Return the password used to open the connection to the RDBMS.
+###############################################################################
+sub _getEncryptionKey {
+  # We are using the value for INSTALL_DATE in sbeams.conf for crypt key
+  my $key = $DBCONFIG->{$DBINSTANCE}->{INSTALL_DATE};
+
+  # Older versions of IDEA can only handle 16-bit keys; we'll get rid of 
+  # spaces and :s, as they don't add much to the randomness anyway
+  $key =~ s/[\s\:]//g;
+
+  # Should we do a substring here?
+  $key = substr( $key, 0, 16 ); 
+  return $key;
+}
 
 ###############################################################################
 # _getDBPass
@@ -240,7 +315,14 @@ sub _getDBROPass {
   return $DBCONFIG->{$DBINSTANCE}->{DB_RO_PASS};
 }
 
-
+###############################################################################
+# _getDBAdmin
+#
+# Return the site administrator contact info.
+###############################################################################
+sub _getDBAdmin {
+  return $DBCONFIG->{$DBINSTANCE}->{DBADMIN};
+}
 
 
 ###############################################################################
