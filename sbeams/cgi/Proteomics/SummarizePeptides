@@ -894,6 +894,14 @@ sub handle_request {
   #### If QUERY or VIEWRESULTSET was selected, display the data
   if ($apply_action =~ /QUERY/i || $apply_action eq "VIEWRESULTSET") {
 
+    #### Print out a message at the top of the resultset
+    if ($sbeams->invocation_mode() eq 'http') {
+      print "<font color=red>WARNING</font>: The average quantitation values ".
+        "are from XPRESS, not ASAPRatio, and these values are just a plain, ".
+        "unweighted average (weight information not available).  Use with ".
+        "caution.<BR><BR>\n";
+    }
+
     #### If the action contained QUERY, then fetch the results from
     #### the database
     if ($apply_action =~ /QUERY/i) {
