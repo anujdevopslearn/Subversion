@@ -24,6 +24,7 @@ use Exporter;
 our @ISA = qw( Exporter );
 
 use SBEAMS::Connection::Log;
+use SBEAMS::Connection::Authenticator qw( $q );
 use SBEAMS::Connection::Settings;
 use SBEAMS::Microarray::Tables;
 use SBEAMS::Inkjet::Tables;
@@ -38,7 +39,6 @@ use constant DATA_GROUP_MOD => 25;
 use constant DATA_MODIFIER => 20;
 use constant DATA_ADMIN => 10;
 
-$q       = new CGI;
 my $log = SBEAMS::Connection::Log->new();
 
 ###############################################################################

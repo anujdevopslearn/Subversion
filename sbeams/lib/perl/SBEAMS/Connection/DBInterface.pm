@@ -38,6 +38,7 @@ use GD::Graph::xypoints;
 #use Data::ShowTableTest;
 use Data::ShowTable;
 
+use SBEAMS::Connection::Authenticator qw( $q );
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Tables;
@@ -45,7 +46,6 @@ use SBEAMS::Connection::Log;
 use SBEAMS::Connection::TableInfo;
 use SBEAMS::Connection::Utilities;
 
-$q       = new CGI;
 my $log = SBEAMS::Connection::Log->new();
 
 use constant DATA_READER => 40;
@@ -1873,7 +1873,12 @@ sub buildOptionList {
     ##$self->display_sql(sql=>$sql_query);
     my $options="";
     my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
-    my $rv  = $sth->execute or croak $dbh->errstr;  
+    my $rv  = $sth->execute;
+    unless( $rv ) {
+      $log->printStack();
+      $log->error( "DBI ERR:\n" . $dbh->errstr . "\nSQL: $sql_query" );
+      croak $dbh->errstr;  
+    }
 
     while (my @row = $sth->fetchrow_array) {
         $selected_flag="";
@@ -3646,7 +3651,6 @@ sub parse_input_parameters {
 
 
   #### Process the arguments list
-  my $q = $args{'q'};
   my $ref_parameters = $args{'parameters_ref'};
   my $ref_columns = $args{'columns_ref'} || [];
   my $ref_input_types = $args{'input_types_ref'} || {};
@@ -3667,7 +3671,7 @@ sub parse_input_parameters {
   my %cmdln_parameters;
   foreach $element (@ARGV) {
     if ( ($key,$value) = split("=",$element) ) {
-      #print "$key = '$value'<BR>\n";
+      print "$key = '$value'<BR>\n";
       $cmdln_parameters{$key} = $value;
       $ref_parameters->{$key} = $value;
       $n_cmdln_params_found++;

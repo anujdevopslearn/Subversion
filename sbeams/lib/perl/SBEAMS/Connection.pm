@@ -12,17 +12,21 @@ package SBEAMS::Connection;
 
 
 use strict;
-use vars qw($VERSION @EXPORT_OK $invocation_mode $output_mode 
+use vars qw($VERSION @EXPORT @EXPORT_OK $invocation_mode $output_mode 
             $output_stage $table_nest_level);
 
 require Exporter;
 use SBEAMS::Connection::Log;
 
+# We import the $q object created in Authenticator
+use SBEAMS::Connection::Authenticator qw( $q );
+
 our @ISA =  qw( Exporter );
 our $log = SBEAMS::Connection::Log->new();
-@EXPORT_OK = qw( $log );
 
-use SBEAMS::Connection::Authenticator;
+# Export the log object we created, reexport $q from Authenticator.
+@EXPORT_OK = qw( $log $q );
+
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::DBInterface;
 use SBEAMS::Connection::HTMLPrinter;

@@ -23,7 +23,7 @@ use vars qw( $q $http_header $log @ISA @ERRORS
              $current_contact_id $current_username
              $current_work_group_id $current_work_group_name 
              $current_project_id $current_project_name
-             $current_user_context_id );
+             $current_user_context_id @EXPORT_OK );
 
 use CGI::Carp qw(fatalsToBrowser croak);
 use CGI qw(-no_debug);
@@ -32,15 +32,23 @@ use Crypt::CBC;
 use Authen::Smb;
 #use Data::Dumper;
 
-
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
 use SBEAMS::Connection::Log;
-
-$q       = new CGI;
 $log = SBEAMS::Connection::Log->new();
+
+# We will export a CGI object ($q) upon request.
+use Exporter;
+
+our @ISA = qw( Exporter );
+
+# Set size of permissible uploads to 30 MB.
+$CGI::POST_MAX = 1024 * 30000;
+$q = new CGI;
+
+@EXPORT_OK = qw( $q );
 
 
 ###############################################################################
@@ -120,7 +128,6 @@ sub Authenticate {
         #### Check to see if the user is logged in, and if not, usher
 	#### them in as anonymous if permitted or else show login screen
         } else {
-           $log->debug("$SUBNAME: calling checkLoggedIn");
            unless ($current_username = $self->checkLoggedIn(
                    allow_anonymous_access=>$allow_anonymous_access)) {
              $current_username = $self->processLogin();
