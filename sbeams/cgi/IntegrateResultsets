@@ -297,11 +297,19 @@ sub display_form_buttons {
       <INPUT TYPE="submit" NAME="action" VALUE="Cytoscape">
       &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       <INPUT TYPE="submit" NAME="action" VALUE="Cytoscape test">
+      <INPUT TYPE="hidden" NAME="username" VALUE="$current_username">
        </TR></TABLE>
        </FORM>
   ~;
 
 } # end display_form_buttons
+
+
+
+
+
+
+
 
 
 
