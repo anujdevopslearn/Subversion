@@ -1005,6 +1005,14 @@ sub loadBiosequence {
       $rowdata{domain_match_source_id} =
         $domain_match_sources{'Ginzu'};
 
+      #### For PDB hits that are 6 chars long, chop off last underscore
+      if (defined($match->{match_name}) && defined($match->{match_source}) &&
+	  $match->{match_source} eq 'pdbblast') {
+	if (length($match->{match_name}) == 6) {
+	  $rowdata{match_name} = substr($match->{match_name},0,5);
+	}
+      }
+
 
       #### Insert or update the row
       my $result = $sbeams->insert_update_row(
