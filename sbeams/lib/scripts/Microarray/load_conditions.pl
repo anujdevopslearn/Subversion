@@ -380,7 +380,7 @@ sub insertGeneExpression {
   ## Define standard variables
   my $CURRENT_CONTACT_ID = $sbeams->getCurrent_contact_id();
   my ($sql, @rows);
-    
+
   ## See if there are gene_expression entries with the specified id. DELETE, if so.
   $sql = qq~
       SELECT gene_expression_id
@@ -389,13 +389,14 @@ sub insertGeneExpression {
       ~;
   @rows = $sbeams->selectOneColumn($sql);
 
-  if ($VERBOSE > 0) {
-    print "\nRecords exist for this condition.  Will DELETE them, then re-INSERT\n";
-  }
-  foreach my $gene_expression_id (@rows){
-    $sql = "DELETE FROM $TBMA_GENE_EXPRESSION WHERE gene_expression_id='$gene_expression_id'";
+  if (@rows) {
+    if ($VERBOSE > 0) {
+      print "\nRecords exist for this condition.  Will DELETE them, then re-INSERT\n";
+    }
+    $sql = "DELETE FROM $TBMA_GENE_EXPRESSION WHERE condition_id = '$condition_id'";
     $sbeams->executeSQL($sql);
   }
+
 
   ## Define Transform Map
   my $full_name_column;
