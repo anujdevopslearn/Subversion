@@ -268,7 +268,7 @@ sub printJavascriptFunctions {
 	    document.forms[0].stage_location.value =
 	      "/net/arrays/ScanArray_Images/" +
 	      start_group + "-"+ end_group + "/" +
-	      array_name + "_A1_" + date_value;
+	      array_name + "_" + date_value;
 
 	    return;
 	} // end setDefaultImagesLocation
