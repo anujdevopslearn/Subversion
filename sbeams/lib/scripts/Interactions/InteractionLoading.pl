@@ -164,11 +164,11 @@ qw / Organism_bioentity1_name
 #		my %bioentityState = ($recordCon->selectTwoColumnHash(qq /Select bioentity_state_id, bioentity_state_name from $TBIN_BIOENTITY_STATE/));  
 	my %bioentityState = $recordCon->selectTwoColumnHash(qq /Select bioentity_state_name, bioentity_state_id from $TBIN_BIOENTITY_STATE/);  
 	$bioentityState = \%bioentityState;
-	my %bioentityType = $recordCon->selectTwoColumnHash(qq /Select bioentity_type_name,bioentity_type_id from $TBIN_BIOENTITY_TYPE/);
+	my %bioentityType = $recordCon->selectTwoColumnHash(qq /Select Upper(bioentity_type_name),bioentity_type_id from $TBIN_BIOENTITY_TYPE/);
 	$bioentityType = \%bioentityType;
 	my %organismName = $recordCon->selectTwoColumnHash(qq /Select organism_name,organism_id from $TB_ORGANISM /);
 	$organismName = \%organismName;
-	my %interactionTypes = $recordCon->selectTwoColumnHash(qq /Select interaction_type_name, interaction_type_id from $TBIN_INTERACTION_TYPE/);
+	my %interactionTypes = $recordCon->selectTwoColumnHash(qq /Select Upper(interaction_type_name), interaction_type_id from $TBIN_INTERACTION_TYPE/);
 	$interactionTypes = \%interactionTypes;
 	my %interactionGroups = $recordCon->selectTwoColumnHash(qq /Select interaction_group_name, interaction_group_id from $TBIN_INTERACTION_GROUP/);
 	$interactionGroups = \%interactionGroups;
@@ -280,7 +280,7 @@ sub processFile
 		$INFOPROTEIN1{$count-2}->{group} = $infoArray[$columnHashProtein1{group}];
 		$INFOPROTEIN1{$count-2}->{group} =~ s/[\s+\n+]$//g;
 		$INFOPROTEIN1{$count-2}->{group} =~ s/^([a-z]+)\s+([a-z]+)$/$1 $2/i;
-		$INFOPROTEIN1{$count-2}->{bioentityType1} = ucfirst($INFOPROTEIN1{$count-2}->{bioentityType1});
+		$INFOPROTEIN1{$count-2}->{bioentityType1} = uc($INFOPROTEIN1{$count-2}->{bioentityType1});
 		if (!($INFOPROTEIN1{$count-2}->{bioentityComName1}) and !($INFOPROTEIN1{$count-2}->{bioentityCanName1}))
 		{
 			print "Detected error1: bioentity1_common_name and bioentiy1_canonical_name\n";
@@ -341,7 +341,7 @@ sub processFile
 		$INFOPROTEIN2{$count-2}->{'group'} = $infoArray[$columnHashProtein2{'group'}];
 		$INFOPROTEIN2{$count-2}->{'group'} =~ s/[\s+\n+]$//g;
 		$INFOPROTEIN2{$count-2}->{group} =~ s/^([a-z]+)\s+([a-z]+)$/$1 $2/i;
-		$INFOPROTEIN2{$count-2}->{bioentityType2} = ucfirst($INFOPROTEIN2{$count-2}->{bioentityType2});
+		$INFOPROTEIN2{$count-2}->{bioentityType2} = uc($INFOPROTEIN2{$count-2}->{bioentityType2});
 		
 		if (!($INFOPROTEIN2{$count-2}->{'bioentityComName2'})	and (!($INFOPROTEIN2{$count-2}->{'bioentityCanName2'})))
 		{
@@ -362,7 +362,7 @@ sub processFile
 		unless ($bioentityType->{$INFOPROTEIN2{$count-2}->{bioentityType2}} and 
  			$organismName->{$INFOPROTEIN2{$count-2}->{organismName2}}) 
 		{
-			print "Detected error2b: type2 or organism2 is not defined, bioentity1 has been added to the database\n";
+		
 			Error(\@infoArray, "bioentity2_type or organism2 is not defined, bioentity1 has been added to the database");
 			delete $INFOPROTEIN2{$count-2};
 			next;
@@ -413,7 +413,7 @@ print "checking interaction requirements\n";
 #assay type, reg type, confidence score, state
 #may not be defined, however if they are then they need to 
 #have a match in the lookup tables
-		$INTERACTION{$count-2}->{'interType'} = ucfirst($INTERACTION{$count-2}->{'interType'});
+		$INTERACTION{$count-2}->{'interType'} = uc($INTERACTION{$count-2}->{'interType'});
 		if (!$INTERACTION{$count-2}->{'interType'}) 
 		{
 				print "Detected error: Interactiontype is not specified\n";
