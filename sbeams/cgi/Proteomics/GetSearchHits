@@ -353,6 +353,15 @@ sub handle_request {
   return if ($mass_clause == -1);
 
 
+  #### Build START_SCAN constraint
+  my $start_scan_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"MSS.start_scan",
+    constraint_type=>"flexible_int",
+    constraint_name=>"Start Scan",
+    constraint_value=>$parameters{start_scan_constraint} );
+  return if ($start_scan_clause == -1);
+
+
   #### Build PERCENT BUFFER B constraint
   my $percent_buffer_b_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"MSS.calc_buffer_percent",
@@ -505,7 +514,7 @@ sub handle_request {
     ["file_root","S.file_root","file_root"],
     ["out_file","'.out'",".out"],
 
-    #["start_scan","MSS.start_scan","Scan Num"],
+    ["start_scan","MSS.start_scan","Scan Num"],
     #["scan_time","STR(MSS.scan_time/60.0,7,2)","Scan Time"],
     ["retention_time","STR((MSS.scan_time-F.column_delay)/60.0,7,2)","EstRT (min)"],
     ["calc_buffer_precent","STR(MSS.calc_buffer_percent,7,1)","% ACN"],
@@ -596,6 +605,7 @@ sub handle_request {
 	$second_peptide_clause
 	$precursor_mass_clause
 	$mass_clause
+	$start_scan_clause
         $percent_buffer_b_clause
 	$isoelectric_point_clause
 	$file_root_clause
