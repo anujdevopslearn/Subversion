@@ -446,7 +446,8 @@ sub printEntryForm {
     $viewStates{$_} = 0;
   }
 
-  if ( $tableAuthLevel > DATA_READER ) {
+  if ( $tableAuthLevel > DATA_READER &&
+       !( $projectAuthLevel && $projectAuthLevel > DATA_READER ) ) {
     # This overrides all else 
     $viewStates{no_access} = 1;
     push @errors, <<"    END";
@@ -536,16 +537,18 @@ sub printEntryForm {
   } else {
     # If you're not part of the solution, you are part of the problem!
     $viewStates{no_access} = 1;
-    push @errors, <<"    END_ERR";
+
+    my $admin = $sbeams->_getDBAdmin();
+    unshift @errors, <<"    END_ERR";
     Unknown permissions mode, unable to proceed.  Please<BR>
-    contact Eric Deutsch or submit a bug report to the sbeams bug database<BR>
+    contact your site administrator, $admin, <BR>
     you feel that this denial was in error.<BR><BR>
     END_ERR
 
   }
 
   #### FIXME debug block ####
-  use constant DEBUG => 1;
+  use constant DEBUG => 0;
 
   my $rec = ( defined $projectAuthLevel ) ? $projectAuthLevel : 'undefined';
   my $pk = ( $parameters{$PK_COLUMN_NAME} ) ? $parameters{$PK_COLUMN_NAME} : 'undefined';
@@ -567,10 +570,10 @@ sub printEntryForm {
   if ( $viewStates{no_access} ) { 
 
     # Print page with error message
-    unshift @errors,  <<"    END_ERR" if $parameters{$PK_COLUMN_NAME};
-    You lack permission to view the requested resource.  Please<BR>
-    contact Eric Deutsch or submit a bug report to the sbeams bug database<BR>
-    you feel that this denial was in error.<BR><BR>
+    my $admin = $sbeams->_getDBAdmin();
+    push @errors, <<"    END_ERR";
+    Please contact your site 
+    administrator, $admin, if you feel that this denial was in error.
     END_ERR
 
     # Add fields group/project choosers need
@@ -578,12 +581,12 @@ sub printEntryForm {
     <INPUT TYPE="hidden" NAME="set_current_work_group" VALUE="">
     <INPUT TYPE="hidden" NAME="set_current_project_id" VALUE="">
     <INPUT TYPE=hidden NAME=TABLE_NAME VALUE=$TABLE_NAME>
-    </TR></TABLE></FORM>
+    </TR></TABLE>
     !;
     print qq!
     <INPUT TYPE=hidden NAME=$PK_COLUMN_NAME VALUE=$parameters{$PK_COLUMN_NAME}>
     ! if $parameters{$PK_COLUMN_NAME};
-
+    print "</FORM>";
     $sbeams->displayPermissionToPageDenied( \@errors, 1 );
     return;
   }
@@ -1289,6 +1292,7 @@ sub linkToColumnText {
   my $text = shift;
   my $col = shift;
   my $tab = shift;
+  $text = $q->escapeHTML( $text );
   my $url = "'$HTML_BASE_DIR/cgi/help_popup.cgi?column_name=$col&table_name=$tab'";
   my $link =<<"  END_LINK";
   <SPAN title="$text" class="popup">
