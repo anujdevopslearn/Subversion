@@ -35,7 +35,7 @@ sub main {
   #### Create SBEAMS client object and define SBEAMS server URI
   my $sbeams = new SBEAMS::Client;
   #my $server_uri = "http://localhost:10080/sbeams";
-  my $server_uri = "http://db.systemsbiology.net/sbeams";
+  my $server_uri = "https://db.systemsbiology.net/sbeams";
 
 
   #### Define the desired command and parameters
@@ -90,7 +90,7 @@ sub main {
   print "resultset:\n";
   while ( my ($key,$value) = each %{$resultset}) {
     if ($key eq 'raw_response') {
-      print "  key = <FULL DATA RESPONSE>\n";
+      print "  $key = <FULL DATA RESPONSE>\n";
     } else {
       print "  $key = $value\n";
     }
