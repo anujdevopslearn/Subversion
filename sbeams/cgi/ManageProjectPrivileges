@@ -469,7 +469,6 @@ sub find_best_permission{
       AND ( PRIV.record_status != 'D' OR PRIV.record_status IS NULL )
       AND ( UWG.record_status != 'D' OR UWG.record_status IS NULL )
       AND ( WG.record_status != 'D' OR WG.record_status IS NULL )
-      AND WG.work_group_id = '$current_group_id'
       AND P.project_id = '$current_project_id'
       AND ( UPP.privilege_id<=40 OR GPP.privilege_id<=40 )
       AND ( WG.work_group_name IS NOT NULL OR UPP.privilege_id IS NOT NULL )
@@ -594,7 +593,7 @@ sub print_user_permissions {
       SELECT UL.username, UL.contact_id
       FROM user_login UL
       WHERE record_status != 'D'
-      AND UL.contact_id != '$current_contact_id'
+      AND UL.contact_id != '$proj_pi_id'
       ORDER BY UL.username
       ~;
 
