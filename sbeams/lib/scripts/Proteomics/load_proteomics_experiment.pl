@@ -1552,7 +1552,7 @@ sub updateProbabilities {
     );
 
   #### Second, guess an HTML Interact file with probabilities
-  } else {
+  } elsif (-f "$source_dir/interact-prob-data.htm") {
     $source_file = "$source_dir/interact-prob-data.htm";
     print "Reading probabilities from source file '$source_file'...\n";
     $data_ref = $sbeamsPROT->readSummaryFile(
