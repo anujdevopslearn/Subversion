@@ -17,6 +17,7 @@ use strict;
 use SBEAMS::Connection qw( $log );
 use SBEAMS::Connection::DataTable;
 use overload ( '""', \&asHTML );
+use SBEAMS::Connection::Settings;
 
 ##### Public Methods ###########################################################
 #
@@ -397,7 +398,7 @@ sub asCSSHTML {
 
 sub setRule {
   my $this = shift;
-  my $hbase = '/devDC/sbeams';
+  my $hbase = $HTML_BASE_DIR;
   my $cnt = ( $this->getNumTabs() ) * 2 + 5 ;
   $this->{_table}->addRow ( [ "<IMG SRC='$hbase/images/transparent.gif' HEIGHT='2' WIDTH='1' BORDER='0'>" ] );
   $this->{_table}->setCellAttr ( COL => 1, ROW => 2, COLSPAN => $cnt, BGCOLOR => $this->{activeColor} );
@@ -441,7 +442,7 @@ sub asSimpleHTML {
   my $cnt = ( $this->getNumTabs() ) * 2 + 5 ;
   push @row,  '&nbsp;' x 50;
   $this->{_table}->addRow ( \@row );
-  my $hbase = '/devDC/sbeams';
+  my $hbase = $HTML_BASE_DIR;
 
 # Add horizontal rule...
   $this->{_table}->addRow ( [ "<IMG SRC='$hbase/images/transparent.gif' HEIGHT='2' WIDTH='1' BORDER='0'>" ] );
@@ -496,7 +497,7 @@ sub asMA_HTML {
 
   my $cnt = ( $this->getNumTabs() ) * 2;
   $this->{_table}->addRow ( \@row );
-  my $hbase = '/devDC/sbeams';
+  my $hbase = $HTML_BASE_DIR;
 
 # Add horizontal rule...
   $this->{_table}->addRow ( [ "<IMG SRC='$hbase/images/transparent.gif' HEIGHT='2' WIDTH='1' BORDER='0'>" ] );
