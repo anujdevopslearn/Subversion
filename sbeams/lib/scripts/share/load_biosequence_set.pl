@@ -170,7 +170,7 @@ sub handleRequest {
   #### Get the file_prefix if it was specified, and otherwise guess
   unless ($file_prefix) {
     my $module = $sbeams->getSBEAMS_SUBDIR();
-    $file_prefix = '/net/dblocal/data/proteomics' if ($module eq 'Proteomics');
+    $file_prefix = '/regis' if ($module eq 'Proteomics');
   }
 
 
@@ -439,9 +439,8 @@ sub loadBiosequenceSet {
         if (defined($biosequence_id) && $biosequence_id > 0) {
           $insert = 0; $update = 1;
         } else {
-          print "WARNING: biosequence_name = '$rowdata{biosequence_name}' ".
-            "was not found in the database, so I'm INSERTing it instead of ".
-            "UPDATing as one might have expected\n";
+          print "WARNING: INSERTing instead of UPDATing ".
+            "'$rowdata{biosequence_name}'\n";
         }
       }
 
@@ -522,15 +521,24 @@ sub loadBiosequence {
 
   #### Microarray uses the new schema and this is just a quick hack to get it
   #### working.  This will  need to populate biosequence_external_xref in the
-  #### future, using an INSERT, INSERT, UPDATE triplet for new sequences. 
+  #### future, using an INSERT, INSERT, UPDATE triplet for new sequences.
   #### FIX ME!!!
-
   if ($module eq 'Microarray') {
       #print "$rowdata_ref->{dbxref_id}\t";
       delete ($rowdata_ref->{biosequence_accession});
       delete ($rowdata_ref->{dbxref_id});
   }
 
+
+  #### If the biosequence_desc bloats beyond 1024, limit it
+  if (length($rowdata_ref->{biosequence_desc}) > 1024) {
+    print "\nWARNING: truncanting description for ".
+      $rowdata_ref->{biosequence_name}." to 1024 characters\n";
+    $rowdata_ref->{biosequence_desc} = substr($rowdata_ref->{biosequence_desc},
+      0,1024);
+  }
+
+  #### INSERT/UPDATE the row
   my $result = $sbeams->insert_update_row(insert=>$insert,
 					  update=>$update,
 					  table_name=>$table_name,
@@ -542,6 +550,7 @@ sub loadBiosequence {
 
   return;
 }
+
 
 ###############################################################################
 # additionalParsing: fill in the gene_name and accession fields based on
