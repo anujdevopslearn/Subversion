@@ -1018,7 +1018,8 @@ sub processEntryForm {
 
           #### If there's a Windows path as part of the parameter,
           #### update the table for the name without the path
-          if ($parameters{$element} =~ /:\\/) {
+          if ($parameters{$element} =~ /:\\/ ||
+              $parameters{$element} =~ /^\\\\/) {
             my $file_name = $parameters{$element};
             $file_name =~ s/^.*\\//;
             $file_name =~ s/\'/''/g;
