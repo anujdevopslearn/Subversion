@@ -568,7 +568,7 @@ sub processAntibody
 	left join $TBIS_DBXREF dbx on bs.dbxref_id = dbx.dbxref_id 
 	where ab.antibody_id in ($includeClause) and set_Name ='LocusLink' and 
 	dbxref_name = 'LocusLink' ~;
-print" $sqlCoord\n";
+
 	
 	my @genenomeCoord = $sbeams->selectSeveralColumns($sqlCoord);
 	my %genenomeHash;
