@@ -67,6 +67,9 @@ use vars qw(@ISA @EXPORT
     $TBAPD_PEPTIDE_PROPERTY_TYPE
 
     $TBPR_POSSIBLE_PEPTIDE
+    $TBPR_PUBLICATION_CATEGORY
+    $TBPR_PUBLICATION_RATING
+    $TBPR_PUBLICATION
 
 );
 
@@ -119,6 +122,9 @@ require Exporter;
     $TBAPD_PEPTIDE_PROPERTY_TYPE
 
     $TBPR_POSSIBLE_PEPTIDE
+    $TBPR_PUBLICATION_CATEGORY
+    $TBPR_PUBLICATION_RATING
+    $TBPR_PUBLICATION
 
 );
 
@@ -172,6 +178,9 @@ $TBAPD_MODIFIED_PEPTIDE_PROPERTY  = "APD.dbo.modified_peptide_property";
 $TBAPD_PEPTIDE_PROPERTY_TYPE      = "APD.dbo.peptide_property_type";
 
 $TBPR_POSSIBLE_PEPTIDE            = "${mod}possible_peptide";
+$TBPR_PUBLICATION_CATEGORY        = "${mod}publication_category";
+$TBPR_PUBLICATION_RATING          = "${mod}publication_rating";
+$TBPR_PUBLICATION                 = "${mod}publication";
 
 
 
