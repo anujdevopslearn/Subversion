@@ -74,11 +74,7 @@ sub display_page_header {
     #### If the current user is the virtual ext_halo user, then show that
     #### a different template
     if ($sbeams->getCurrent_username() eq 'ext_halo') {
-      # Get current skin from halo site, create header/footer
-      my ( $header, $footer ) = $self->get_halo_skin();
-      print "$header";
-# Original call, has HTML hard-coded (hard to keep up 2 date.
-#      $self->display_ext_halo_template();
+      $self->display_ext_halo_template();
       return;
     }
 
@@ -234,57 +230,7 @@ sub printPageFooter {
   $self->display_page_footer(@_);
 }
 
-sub get_halo_skin {
-  my $self = shift;
-  if ( $self->{halo_footer} && $self->{halo_header} ) { # is it already cached?
-    return ( $self->{halo_header}, $self->{halo_footer} );
-  }
 
-  #### Obtain main SBEAMS object and use its http_header
-  my $sbeams = $self->getSBEAMS();
-  my $http_header = $sbeams->get_http_header();
-
-  use LWP::UserAgent;
-  use HTTP::Request;
-  my $ua = LWP::UserAgent->new();
-  my $scgapLink = 'http://halo.systemsbiology.net';
-  my $response = $ua->request( HTTP::Request->new( GET => "$scgapLink/index.php" ) );
-  my @page = split( "\r", $response->content() );
-
-  my $header = '';
-  my $footer = '';
-  my $head_seen = 0;
-
-# FIXME need a stable tag in halo includes for this link.
-  my $login_uri = "$SERVER_BASE_DIR$ENV{REQUEST_URI}";
-  if ($login_uri =~ /\?/) {
-    $login_uri .= "&force_login=yes";
-  } else {
-    $login_uri .= "?force_login=yes";
-  }
-
-  for ( @page ) {
-    $_ =~ s/(<a href="http:\/\/www.sbeams.org\/" class="Nav_link">SBEAMS<\/a><br>)/$1 <A class=Nav_link HREF=$login_uri>LOGIN<\/A> <BR>/g;
-# END FIXME need a stable tag in halo includes for this link.
-
-    $_ =~ s/\/images\//\/sbeams\/images\//gm;
-
-    if ( $_ =~ /----------- Main Page Content -----------/ ) {
-      $head_seen++;
-    }
-    last if $_ =~ /----------- End of main content --------/;
-    if ( $head_seen ) {
-      $footer .= $_;
-    } else {
-      $header .= $_;
-    }
-  }
-  $self->{halo_footer} = $footer;
-  $self->{halo_header} = $header;
- 
-  return( $header, $footer );
-
-}
 ###############################################################################
 # display_page_footer
 ###############################################################################
@@ -334,11 +280,7 @@ sub display_page_footer {
     #### If the current user is the virtual ext_halo user, then show
     #### a different template
     if ($sbeams->getCurrent_username() eq 'ext_halo') {
-      # Get current skin from halo site, create header/footer
-      my ( $header, $footer ) = $self->get_halo_skin();
-      print "$footer";
-# Original call, has HTML hard-coded (hard to keep up 2 date.
-      #$self->display_ext_halo_footer();
+      $self->display_ext_halo_footer();
       return;
     }
 
@@ -369,6 +311,7 @@ sub display_ext_halo_template {
   } else {
     $LOGIN_URI .= "?force_login=yes";
   }
+
 
   my $buf = qq~
 <!-- Begin body: background white, text black -------------------------------->
