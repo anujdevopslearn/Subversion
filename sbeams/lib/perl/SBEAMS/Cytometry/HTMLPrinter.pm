@@ -58,7 +58,7 @@ sub display_page_header
 	
 	my $sbeams = $self->getSBEAMS();
 	$current_contact_id = $sbeams->getCurrent_contact_id();
-	print "this is $current_contact_id";
+#print "this is $current_contact_id";
 	
 	
 	if ($sbeams->getCurrent_contact_id() ne 107)
