@@ -346,7 +346,7 @@ sub check_for_token {
 		
 		$USER_ID = $affy_o->get_user_id_from_user_name($current_username);
 		my $project_id	= $sbeams->getCurrent_project_id();
-		print "PROJECT ID '$project_id' ABOUT TO ENTER NEW FOLDER ANALYSIS<br>";
+		#print "PROJECT ID '$project_id' ABOUT TO ENTER NEW FOLDER ANALYSIS<br>";
 		$fm->create($Site::BC_UPLOAD_DIR) || error("Couldn't create new session");
 		
 		my $rowdata_ref = {folder_name => $fm->token(),
@@ -1616,7 +1616,7 @@ sub make_table {
 								  canonical_difftxt_full =>  
 								 		{REG_EXP => '(mt-.+?_(.+?))\.(full_txt_canonical)',
 										  DESC	  => 'All genes from R analysis run, updated canonical names',
-										  SHOW	 => 0,
+										  SHOW	 => 1,
 										},
 								  anno_norm =>
 								  	 	{REG_EXP => '(.*annotated)\.(txt)',
