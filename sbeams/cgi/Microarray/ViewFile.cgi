@@ -105,63 +105,86 @@ sub main {
   #### Define standard variables
   my $file_name = $parameters{'FILE_NAME'}
   || die "ERROR: file not passed";
-	my $action =$parameters{'action'} || "download";
-	my $project_id = $sbeams->getCurrent_project_id;
+  my $action =$parameters{'action'} || "download";
+  my $project_id = $sbeams->getCurrent_project_id;
 
-	my $output_dir;
-	if ($file_name =~ /\.map$/ || $file_name=~/\.key$/) {
-	    $output_dir = "/net/arrays/Slide_Templates";
-	}elsif ($file_name =~/\.doc/){
-	  $output_dir = "/net/";
+
+  ## Output Directory depends on what file type
+  my $output_dir;
+  if ($file_name =~ /\.map$/ || $file_name=~/\.key$/) {
+	$output_dir = "/net/arrays/Slide_Templates";
+  }elsif ($file_name =~/\.doc/){
+	$output_dir = "/net/";
+  }elsif ($file_name =~/\.matrix/) {
+	$output_dir = "$FILE_BASE_DIR/$project_id";
+  }else {
+	$output_dir = "$FILE_BASE_DIR/$project_id";
+  }
+
+  ## Get other helpful variables
+  my $subdir = $parameters{SUBDIR};
+
+
+  ## Process File Path
+  my $file_path = "$output_dir/$subdir/$file_name";
+
+  if ($action eq 'download') {
+	if ($sbeams->get_best_permission <= $DATA_READER_ID){
+	  print "Content-type: application/force-download \n";
+	  print "Content-Disposition: filename=$file_name\n\n";
+	  my $buffer;
+	  open (DATA, "$file_path")
+		|| die "Couldn't open $file_name";
+	  while(read(DATA, $buffer, 1024)) {
+		print $buffer;
+	  }
+	  close (DATA);
 	}else {
-	    $output_dir = "$FILE_BASE_DIR/$project_id";
+	  $sbeams->printPageHeader();
+	  print qq~
+		<BR><BR><BR>
+		<H1><FONT COLOR="red">You Do Not Have Access To View This File</FONT></H1>
+		<H2><FONT COLOR="red">Contact PI or another administrator for permission</FONT></H2>
+		~;
+	  $sbeamsMOD->printPageFooter();
+	}
+  }
+
+  elsif ($action eq 'view_image'){
+	linkImage(file=>$file_path);
+	$sbeamsMOD->printPageFooter();
+  }
+
+  elsif($action eq 'read' && $sbeams->get_best_permission <= $DATA_READER_ID){
+	  print "Content-type: text/html\n\n";
+	  if (!printFile(file=>$file_path)){
+		print qq~
+	  $file_path COULD NOT BE OPENED FOR VIEWING
+      ~;
+	  }
+  }
+
+  else {
+
+	$sbeamsMOD->printPageHeader();	
+	
+	#### Verify user has permission to access the file
+	my $success = 0;
+	if ($sbeams->get_best_permission <= $DATA_READER_ID){
+	  my $file = "$output_dir/$file_name";
+	  $success = printFile(file=>$file);
+	}
+	if (!$success) {
+	  print qq~
+		<BR><BR><BR>
+		<H1><FONT COLOR="red">You Do Not Have Access To View This File</FONT></H1>
+		<H2><FONT COLOR="red">Contact PI or another administrator for permission</FONT></H2>
+		~;
 	}
 
-	if ($action eq 'download') {
-	    #### Verify user has permission to access the file
-	    if ($sbeams->get_best_permission <= $DATA_READER_ID){
-		print "Content-type: application/force-download \n";
-		print "Content-Disposition: filename=$file_name\n\n";
-		my $buffer;
-		open (DATA, "$output_dir/$file_name")
-		    || die "Couldn't open $file_name";
-		while(read(DATA, $buffer, 1024)) {
-		    print $buffer;
-		}
-		close (DATA);
-	    }else {
-		$sbeams->printPageHeader();
-		print qq~
-		    <BR><BR><BR>
-		    <H1><FONT COLOR="red">You Do Not Have Access To View This File</FONT></H1>
-		    <H2><FONT COLOR="red">Contact PI or another administrator for permission</FONT></H2>
-		    ~;
-		$sbeamsMOD->printPageFooter();
-	    }
-	}elsif ($action eq 'view_image'){
-		my $file;
-		my $subdir = $parameters{'SUBDIR'};
-		if ($subdir){$file = "$output_dir/$subdir/$file_name";}
-		else{$file = "$output_dir/$file_name";}
-		linkImage(file=>$file);
-	}else {
-	    #### Start printing the page
-	    $sbeamsMOD->printPageHeader();	
-	    
-	    #### Verify user has permission to access the file
-	    if ($sbeams->get_best_permission <= $DATA_READER_ID){
-		my $file = "$output_dir/$file_name";
-		printFile(file=>$file);
-	    }
-	    else{
-		print qq~
-		    <BR><BR><BR>
-		    <H1><FONT COLOR="red">You Do Not Have Access To View This File</FONT></H1>
-		    <H2><FONT COLOR="red">Contact PI or another administrator for permission</FONT></H2>
-		    ~;
-	    }
-	    $sbeamsMOD->printPageFooter();
-	}
+	$sbeamsMOD->printPageFooter();
+  }
+
 } # end main
 
 
@@ -199,7 +222,7 @@ sub linkImage {
       ~;
   }
 	  
-} # end printFile
+} # end linkImage
 
 ###############################################################################
 # printFile
@@ -216,21 +239,12 @@ sub printFile {
   open(INFILE, "< $file") || sub{$error = -1;};
 
   if ($error == 0) {
-      print qq~ <PRE> ~;
-      while (<INFILE>) {
+	while (<INFILE>) {
 	  print qq~ $_ ~;
-      }
-      print qq~ </PRE>~;
+	}
+	return 1;
   }
-  else{
-      print qq~
-	  $file
-	  <CENTER><FONT COLOR="red"><h1><B>FILE COULD NOT BE OPENED FOR VIEWING</B></h1>
-	  Please report this to <a href="mailto:mailto:mjohnson\@systemsbiology.org">Michael Johnson</a>
-	  </FONT></CENTER>
-      ~;
-  }
-	  
+  return 0;
 } # end printFile
 
 
