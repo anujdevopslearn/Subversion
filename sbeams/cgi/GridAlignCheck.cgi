@@ -20,10 +20,14 @@ use vars qw ($q $sbeams $sbeamsMAW $dbh $current_contact_id $current_username
              $current_work_group_id $current_work_group_name
              $current_project_id $current_project_name
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             $t0 $t1 $t2 $t3 $hrt0 $hrt1 $hrt2 $hrt3
              $PK_COLUMN_NAME @MENU_OPTIONS);
 use DBI;
 use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
+use Time::HiRes qw( usleep ualarm gettimeofday tv_interval );
+$t0 = (times)[0];
+$hrt0 = [gettimeofday()];
 
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
@@ -54,12 +58,24 @@ main();
 sub main { 
 
     #### Do the SBEAMS authentication and exit if a username is not returned
+    $t1 = (times)[0];
+    $hrt1 = [gettimeofday()];
     exit unless ($current_username = $sbeams->Authenticate());
 
     #### Print the header, do what the program does, and print footer
+    $t2 = (times)[0];
+    $hrt2 = [gettimeofday()];
     $sbeamsMAW->printPageHeader();
     processRequests();
     $sbeamsMAW->printPageFooter();
+
+    $t3 = (times)[0];
+    $hrt3 = [gettimeofday()];
+
+    printf("\nt0 - t1: %4f<BR>\n",tv_interval($hrt0,$hrt1));
+    printf("t1 - t2: %4f<BR>\n",tv_interval($hrt1,$hrt2));
+    printf("t2 - t3: %4f<BR>\n",tv_interval($hrt2,$hrt3));
+    printf("User Tm: %4f <BR>\n",$t3);
 
 } # end main
 
