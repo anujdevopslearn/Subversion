@@ -8,7 +8,7 @@ use FindBin;
 use File::Copy;
 #use FreezeThaw qw( freeze thaw );
 use lib qw (../perl ../../perl);
-use vars qw ($q $immunoCon %columnHeaderHash @columnIndex %easyHash $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY $TISSUETYPE
+use vars qw ($q $sbeams $sbeamsMOD  %columnHeaderHash @columnIndex %easyHash $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY $TISSUETYPE
              $current_contact_id $current_username );
 
 use SBEAMS::Immunostain;
@@ -19,8 +19,15 @@ use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
-$immunoCon = new SBEAMS::Connection;
+$sbeams = new SBEAMS::Connection;
 
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::Immunostain;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+use CGI;
+$q = CGI->new();
 
 
 my $PROG_NAME = $FindBin::Script;
@@ -34,20 +41,20 @@ Options:
   --testonly           If set, rows in the database are not changed or added
   --tissue_type				 Tissue type to be processed (bladder, prostate)
   --source_file XXX    Source file name from which data are to be updated
+  									It needs to be a tab delimited .txt file
+ --error_file	  Error file name to which loading errors are printed 
+ 							This will be a tab delimited .txt file
   --check_status       Is set, nothing is actually done, but rather
                        a summary of what should be done is printed
 
- e.g.:  $PROG_NAME --check_status --tissue_type prostate --source_file 45277084.htm
-./ImmunoLoader.pl --check_status verbose 
---tissue_type prostate
- --source_file /users/mkorb/Immunostain/inputData/upload_010804/ProstateLoading.txt
-
+ e.g.:  $PROG_NAME --check_status --tissue_type prostate --source_file  /users/bob/Loading.txt
+--error_file /users/bob/Error.txt
 EOU
 
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly","tissue_type=s",
-		   "source_file=s","check_status",
+		   "source_file=s","check_status","error_file=s",
 		  ))
 {
   print "$USAGE";
@@ -78,7 +85,7 @@ my (%tissueType,%surgProc,%clinDiag,%cellType,%cellPresenceLevel,%confHash,$fhEr
 sub main
 {
 		 #### Do the SBEAMS authentication and exit if a username is not returned
-		 exit unless ($current_username = $immunoCon->Authenticate(
+		 exit unless ($current_username = $sbeams->Authenticate(
 		 work_group=>'Developer',
   ));
 
@@ -168,27 +175,15 @@ ann	=>	'annontated'
 				$count++;
 		}
 #getting some lookUp values		
-		%tissueType = $immunoCon->selectTwoColumnHash (qq /Select tissue_type_name, tissue_type_id from $TBIS_TISSUE_TYPE/);
-		%surgProc = $immunoCon->selectTwoColumnHash	(qq /Select surgical_procedure_tag, surgical_procedure_id from $TBIS_SURGICAL_PROCEDURE/);
-		%clinDiag = $immunoCon->selectTwoColumnHash (qq /Select clinical_diagnosis_tag, clinical_diagnosis_id from $TBIS_CLINICAL_DIAGNOSIS/);
-		%cellType = $immunoCon->selectTwoColumnHash (qq / Select cell_type_name, cell_type_id from $TBIS_CELL_TYPE/);
-		%cellPresenceLevel = $immunoCon->selectTwoColumnHash (qq / Select level_name, cell_presence_level_id from $TBIS_CELL_PRESENCE_LEVEL/);
-		%antiBody = $immunoCon->selectTwoColumnHash (qq / Select antibody_name, antibody_id from $TBIS_ANTIBODY/);
-		%abundanceLevel = $immunoCon->selectTwoColumnHash (qq /Select abundance_level_name, abundance_level_id from $TBIS_ABUNDANCE_LEVEL/);	
+		%tissueType = $sbeams->selectTwoColumnHash (qq /Select tissue_type_name, tissue_type_id from $TBIS_TISSUE_TYPE/);
+		%surgProc = $sbeams->selectTwoColumnHash	(qq /Select surgical_procedure_tag, surgical_procedure_id from $TBIS_SURGICAL_PROCEDURE/);
+		%clinDiag = $sbeams->selectTwoColumnHash (qq /Select clinical_diagnosis_tag, clinical_diagnosis_id from $TBIS_CLINICAL_DIAGNOSIS/);
+		%cellType = $sbeams->selectTwoColumnHash (qq / Select cell_type_name, cell_type_id from $TBIS_CELL_TYPE/);
+		%cellPresenceLevel = $sbeams->selectTwoColumnHash (qq / Select level_name, cell_presence_level_id from $TBIS_CELL_PRESENCE_LEVEL/);
+		%antiBody = $sbeams->selectTwoColumnHash (qq / Select antibody_name, antibody_id from $TBIS_ANTIBODY/);
+		%abundanceLevel = $sbeams->selectTwoColumnHash (qq /Select abundance_level_name, abundance_level_id from $TBIS_ABUNDANCE_LEVEL/);	
 #getting some default config values
 	$TISSUETYPE = ucfirst($TISSUETYPE);
-	print "$TISSUETYPE\n";
-	open (CONF, "Immuno".$TISSUETYPE."Conf.conf") or die "can not find ./ImmunoConf.conf file:\n$!";
-	while (my $line = <CONF>) 
-	{ 	
-			next if $line =~ /^#/;
-			$line =~ s/[\n\r]//g;
-			next if $line =~ /^\s*$/;
-			my ($key,$value) = split /==/, $line;
-			$confHash{$key} = $value;
-	}
-	close CONF;
-	
 	processFile();
 #	loadImages() if %loadImageHash;	
 	
@@ -200,9 +195,42 @@ sub processFile
 
 		my $sourceFile = $OPTIONS{"source_file"} || '';
 		my $check_status = $OPTIONS{"check_status"} || '';
-		(my $errorFile) = $sourceFile =~ /.*\/(.*)$/;
-		$errorFile = "ImmunostainError_".$errorFile;
-	  $fhError = new FileHandle (">/users/mkorb/Immunostain/inputData/$errorFile") or die " $errorFile  can not open $!";
+	 	my $errorFile =$OPTIONS{"error_file"} || '';
+		unless ($QUIET)
+		{
+			$sbeams->printUserContext();
+			print "\n";
+		}
+
+  #### Verify that source_file was passed and exists
+  	unless ($sourceFile) 
+	{
+		print "ERROR: You must supply a --source_file parameter\n$USAGE\n";
+		exit;
+	}
+	unless (-e $sourceFile)
+	{
+	  print "ERROR: Supplied source_file '$sourceFile' not found\n";
+	  exit;
+	}
+	unless ( $errorFile)
+   {
+	  print "ERROR: You must supply a  --error_file parameter\n$USAGE\n";
+	  exit;
+   }
+	
+	open (CONF, "Immuno".$TISSUETYPE."Conf.conf") or die "can not find ./ImmunoConf.conf file:\n$!";
+	while (my $line = <CONF>) 
+	{ 	
+			next if $line =~ /^#/;
+			$line =~ s/[\n\r]//g;
+			next if $line =~ /^\s*$/;
+			my ($key,$value) = split /==/, $line;
+			$confHash{$key} = $value;
+	}
+	close CONF;
+	
+	$fhError = new FileHandle (">$errorFile") or die " $errorFile  can not open $!";
 
  	open (FH,"$sourceFile") or die "$sourceFile  $!";
 	my $lineCount = 0;
@@ -276,7 +304,7 @@ sub processFile
 #this data is the same for all 3 rows and changes only for a new antibody 
 				($specimenName) = $infoHash{'specimen block'} =~ /^(.*\d)/;
 				my $blockQuery = qq/Select specimen_block_id from $TBIS_SPECIMEN_BLOCK where specimen_block_name = \'$infoHash{'specimen block'}\'/;
-				my @block  = $immunoCon->selectOneColumn($blockQuery);
+				my @block  = $sbeams->selectOneColumn($blockQuery);
 				my $nrows = scalar(@block);
 				$blockID = $block[0] if $nrows == 1;
 				$blockID = 0 if $nrows == 0;
@@ -314,7 +342,7 @@ sub processFile
 				from $TBIS_SPECIMEN s				
 			 	where s.specimen_name = \'$specimenName\'/;
 
-				my @specRow = $immunoCon->selectSeveralColumns($specQuery);	
+				my @specRow = $sbeams->selectSeveralColumns($specQuery);	
 				my $nrows = scalar(@specRow);
 				if ($nrows > 1)
 				{		
@@ -337,7 +365,7 @@ sub processFile
 				my $specimenReturnedPK = updateInsert(\%specRowData,$specRow[0]->[0],"specimen_id",$specimenInsert,$specimenUpdate,$TBIS_SPECIMEN);
 
 #update the specimen_block table
-				my @block = $immunoCon->selectSeveralColumns(qq /select protocol_id	from $TBIS_SPECIMEN_BLOCK sb 
+				my @block = $sbeams->selectSeveralColumns(qq /select protocol_id	from $TBIS_SPECIMEN_BLOCK sb 
 				where sb.specimen_block_id = $blockID/ );	
 						
 				my %blockRowData; 
@@ -358,7 +386,7 @@ sub processFile
 		join $TBIS_SPECIMEN_BLOCK  sb on sb.specimen_block_id = st.specimen_block_id 
 		where ab.antibody_name = \'$infoHash{antibody}\' and sb.specimen_block_id = $blockID/; 
 		
-		my @slides  = $immunoCon->selectSeveralColumns($slideQuery);  
+		my @slides  = $sbeams->selectSeveralColumns($slideQuery);  
 		$nrows = scalar(@slides);
 		if ($nrows > 1)
 		{	
@@ -406,7 +434,7 @@ sub processFile
 						print "$imageName---  $fileName\n";
 						my $query = "Select slide_image_id from $TBIS_SLIDE_IMAGE where ";
 						my $line = buildSql($query,$fileType).$fileName.'\'';
-						my @slideImages = $immunoCon->selectOneColumn($line);
+						my @slideImages = $sbeams->selectOneColumn($line);
 						if(scalar(@slideImages))
 						{								 
 								$imageUpdate = 1;
@@ -478,7 +506,7 @@ sub processFile
 #			print "$cellQuery\n";
 #			print "$infoHash{$cellLine}\n";
 #			getc;
-				my @cellPresence = $immunoCon->selectSeveralColumns($cellQuery); 
+				my @cellPresence = $sbeams->selectSeveralColumns($cellQuery); 
 				if(scalar(@cellPresence) == 0)
 				{
 							$cellUpdate = $cellInsert;
@@ -529,7 +557,7 @@ sub updateInsert
 		my ($hashRef, $pK, $pkName,$insert,$update,$table) = @_;
 		
 			
-		my $PK = $immunoCon->updateOrInsertRow(
+		my $PK = $sbeams->updateOrInsertRow(
 						insert => $insert,
 						update => $update,
 						table_name => "$table",
@@ -553,7 +581,7 @@ sub loadImage
 		my $serverCommand = "Immunostain/ManageTable.cgi";
 
 #### Fetch the desired data from the SBEAMS server
-		my $resultset = $immunoCon->fetch_data(
+		my $resultset = $sbeams->fetch_data(
     server_uri => $server,
     server_command => $serverCommand,
     command_parameters => $imageHashRef,
