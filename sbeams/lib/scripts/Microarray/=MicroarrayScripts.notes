@@ -79,3 +79,17 @@ Run the script for a more detailed list of options
 Typical usage 
 ./load_affy_array_files.pl  --run_mode add_new
 Writes out a new error log every time the script is ran called 'AFFY_ERROR_LOG.txt' 
+
+  ################################
+    ## load_affy_R_CHP_files.pl ##
+#####################################################################
+Purpose: Convert Affymetrix CEL files into R_CHP files and load the data into the database.  An R_CHP file is produced by running
+R/Bioconductor and utilizing the R library "affy" algorithms mas5.  
+
+The script can be run in two different modes with a few options
+add_new ./load_affy_R_CHP_files.pl --run_mode add_new 			 # typical mode, adds any new files
+update  ./load_affy_R_CHP_files.pl --run_mode update --redo_R yes or no	 # Re upload the data and or re-compute the R run
+update  ./load_affy_R_CHP_files.pl --run_mode update --redo_R yes or no --files 123,124,134 
+
+Typical usage.  Looks for any arrays that do not have an R_CHP file, Runs R and then parses the output and puts into SBEAMS 
+./load_affy_R_CHP_files.pl --run_mode add_new 
