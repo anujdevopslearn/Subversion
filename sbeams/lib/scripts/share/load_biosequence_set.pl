@@ -493,9 +493,8 @@ sub handleRequest {
                       source_file=>$file_prefix.$status->{set_path},
                       organism_id=>$status->{organism_id});
               } else {
-                print "there are records in biosequence_set_id $biosequence_set_id".
+                print "There are records in biosequence_set_id $biosequence_set_id".
                     " so need to delete them first\n";
-                return;
               }
           }
       }
