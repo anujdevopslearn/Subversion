@@ -60,48 +60,82 @@ protocol	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	
 protocol	12	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
 protocol	13	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 protocol	14	record_status	Record Status	char	1	0	N	N	N							N	N				
+organization_type	1	organization_type_id	Organization Type ID	int	8	0	N		Y							N	N				pkDEFAULT
+organization_type	2	organization_type_name	Organization Type Name	varchar	100	0	N		N			Y	text	50		Y	Y	Y	"Name of organization type (e.g. non-profit organization, company, department, lab, group, etc.)"		
+organization_type	3	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
+organization_type	4	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Number to control the default sort order		
+organization_type	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+organization_type	6	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+organization_type	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+organization_type	8	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+organization_type	9	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+organization_type	10	record_status	Record Status	char	1	0	N	N	N							N	N				
 organization	1	organization_id	Organization ID	int	8	0	N		Y							N	N				pkDEFAULT
 organization	2	organization	Organization Name	varchar	100	0	N		N			Y	text	50		Y	Y	Y	Name of Organization		
-organization	3	street	Street	varchar	100	0	Y		N			N	text	75		Y	Y	N	Street address		
-organization	4	city	City	varchar	50	0	Y		N			N	text	25		Y	Y	N	City		
-organization	5	province_state	Province/State	varchar	50	0	Y		N			N	text	15		Y	Y	N	Province or State		
-organization	6	country	Country	varchar	50	0	Y		N			N	text	25		Y	Y	N	Country or origin		
-organization	7	postal_code	Postal Code	varchar	25	0	Y		N			N	text	15		Y	Y	N	Postal code		
-organization	8	phone	Phone	varchar	25	0	Y		N			N	text	25		Y	Y	N	General phone number of organization		
-organization	9	fax	Fax	varchar	25	0	Y		N			N	text	25		Y	Y	N	General fax number		
-organization	10	email	email	varchar	100	0	Y		N			N	text	50		Y	Y	N	General email contact for organization		
-organization	11	uri	URI	varchar	255	0	Y		N			N	text	75		Y	Y	N	URL of organization		SELF
-organization	12	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
-organization	13	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
-organization	14	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-organization	15	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-organization	16	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-organization	17	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-organization	18	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-organization	19	record_status	Record Status	char	1	0	N	N	N							N	N				
+organization	3	organization_type_id	Organization Type	int	4	0	N		N	organization_type	organization_type_id	Y	optionlist			Y	Y	N	Classification of this organization	"SELECT organization_type_id,organization_type_name FROM $TB_ORGANIZATION_TYPE ORDER BY sort_order,organization_type_name"	
+organization	4	parent_organization_id	Parent Organization	int	4	0	N		N	organization	organization_type_id	N	optionlist			Y	Y	N	"Organization to which this organization belongs, if appropriate"	"SELECT organization_id, organization FROM $TB_ORGANIZATION ORDER BY organization"	
+organization	5	street	Street	varchar	100	0	Y		N			N	text	75		Y	Y	N	Street address		
+organization	6	city	City	varchar	50	0	Y		N			N	text	25		Y	Y	N	City		
+organization	7	province_state	Province/State	varchar	50	0	Y		N			N	text	15		Y	Y	N	Province or State		
+organization	8	country	Country	varchar	50	0	Y		N			N	text	25		Y	Y	N	Country or origin		
+organization	9	postal_code	Postal Code	varchar	25	0	Y		N			N	text	15		Y	Y	N	Postal code		
+organization	10	phone	Phone	varchar	25	0	Y		N			N	text	25		Y	Y	N	General phone number of organization		
+organization	11	fax	Fax	varchar	25	0	Y		N			N	text	25		Y	Y	N	General fax number		
+organization	12	email	email	varchar	100	0	Y		N			N	text	50		Y	Y	N	General email contact for organization		
+organization	13	uri	URI	varchar	255	0	Y		N			N	text	75		Y	Y	N	URL of organization		SELF
+organization	14	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
+organization	15	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
+organization	16	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+organization	17	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+organization	18	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+organization	19	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+organization	20	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+organization	21	record_status	Record Status	char	1	0	N	N	N							N	N				
+contact_type	1	contact_type_id	Contact Type ID	int	4	0	N		Y							N	N				pkDEFAULT
+contact_type	2	contact_type_name	Contact Type Name	varchar	100	0	N		N			Y	text	50		Y	Y	Y	"Name of contact type (e.g. investigator, lab_tech, IT administrator, etc.)"		
+contact_type	3	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
+contact_type	4	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Number to control the default sort order		
+contact_type	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+contact_type	6	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+contact_type	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+contact_type	8	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+contact_type	9	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+contact_type	10	record_status	Record Status	char	1	0	N	N	N							N	N				
 contact	1	contact_id	Contact ID	int	8	0	N		Y							N	N				pkDEFAULT
 contact	2	last_name	Last Name	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Last Name		
 contact	3	first_name	First Name	varchar	50	0	Y		N			N	text	25		Y	Y	Y	First Name		
 contact	4	middle_name	Middle Name	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Middle Name		
-contact	5	contact_type_id	Contact Type	int	8	0	N		N		contact_type_id	Y	optionlist			Y	Y	Y	Classification of this contact	"SELECT contact_type_id, name FROM $TB_CONTACT_TYPE ORDER BY name"	
-contact	6	other_type	Other Contact Type	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Only fill in if Type is Other		
-contact	7	lab	Lab	varchar	50	0	Y		N			N	text	25		Y	Y	N	Lab in which this contact works		
-contact	8	department	Department	varchar	50	0	Y		N			N	text	25		Y	Y	N	Department for which contact works		
-contact	9	organization_id	Organization	int	8	0	N		N	organization	organization_type_id	Y	optionlist			Y	Y	Y	Organization for which contact works	"SELECT organization_id, organization FROM $TB_ORGANIZATION ORDER BY organization"	
-contact	10	phone	Phone	varchar	25	0	Y		N			N	text	25		Y	Y	N	Phone number for this contact		
-contact	11	fax	Fax	varchar	25	0	Y		N			N	text	25		Y	Y	N	Fax number		
-contact	12	email	email	varchar	100	0	Y		N			N	text	50		Y	Y	N	Email address of this contact		
-contact	13	uri	URI	varchar	255	0	Y		N			N	text	75		Y	Y	N	URL for this contact		SELF
-contact	14	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
-contact	15	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-contact	16	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-contact	17	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-contact	18	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-contact	19	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-contact	20	record_status	Record Status	char	1	0	N	N	N							N	N				
+contact	5	contact_type_id	Contact Type	int	8	0	N		N		contact_type_id	Y	optionlist			Y	Y	N	Classification of this contact	"SELECT contact_type_id,contact_type_name FROM $TB_CONTACT_TYPE ORDER BY sort_order,contact_type_name"	
+contact	6	job_title	Job Title	varchar	100	0	Y		N			N	text	50		Y	Y	N	Job title or function of this contact if appropriate		
+contact	7	supervisor_contact_id	Supervisor	int	8	0	N		N	contact	contact_id	N	optionlist			Y	Y	N	Supervisor of this person if applicable	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+contact	8	is_at_local_facility	At Local Facility	char	1	0	Y		N			N	optionlist			Y	Y	N	Is this contact to be considered a local person at this institution (ISB) ?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+contact	9	photo_filename	Photograph filename	varchar	255	0	Y		N			N	text	50		Y	Y	N	Filename of the photograph/mug shot of this contact		
+contact	10	organization_id	Organization	int	4	0	N		N	organization	organization_type_id	Y	optionlist			Y	Y	N	Organization for which contact works	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE OT.organization_type_name NOT IN ('Lab','Department','Group') ORDER BY organization"	
+contact	11	department_id	Department	int	4	0	N		N	organization	organization_type_id	N	optionlist			Y	Y	N	Department in which this contact works	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE OT.organization_type_name IN ('Department') ORDER BY organization"	
+contact	12	group_id	Group	int	4	0	N		N	organization	organization_type_id	N	optionlist			Y	Y	N	Group to which this contact belongs	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE OT.organization_type_name IN ('Group') ORDER BY organization"	
+contact	13	lab_id	Lab	int	4	0	N		N	organization	organization_type_id	N	optionlist			Y	Y	N	Lab in which this contact works	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE OT.organization_type_name IN ('Lab') ORDER BY organization"	
+contact	14	location	Primary Location	varchar	100	0	Y		N			N	text	25		Y	Y	N	Primary location (e.g. the room number)		
+contact	15	alternate_location	Secondary Location	varchar	100	0	Y		N			N	text	25		Y	Y	N	Alternate/secondary location (e.g. the lab bench area designation)		
+contact	16	phone	Phone	varchar	50	0	Y		N			N	text	25		Y	Y	N	Phone number for this contact		
+contact	17	phone_extension	Phone Extension	varchar	50	0	Y		N			N	text	25		Y	Y	N	Extension/voice mail number		
+contact	18	cell_phone	Cell Phone	varchar	50	0	Y		N			N	text	25		Y	Y	N	Cell phone number for this contact		
+contact	19	pager	Pager	varchar	50	0	Y		N			N	text	25		Y	Y	N	Pager number for this contact		
+contact	20	is_messenging_pager	Is Messenging Pager	char	1	0	Y		N			N	optionlist			Y	Y	N	Is the pager a messaging/NexTel pager?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+contact	21	home_phone	Home Phone	varchar	50	0	Y		N			N	text	25		Y	Y	N	Home phone number for this contact		
+contact	22	fax	Fax	varchar	50	0	Y		N			N	text	25		Y	Y	N	Fax number		
+contact	23	email	Email address	varchar	100	0	Y		N			N	text	50		Y	Y	N	Email address of this contact		
+contact	24	alternate_email	Alternate Email address	varchar	100	0	Y		N			N	text	50		Y	Y	N	Alternate/secondary email address of this contact		
+contact	25	uri	URI	varchar	255	0	Y		N			N	text	75		Y	Y	N	URL for this contact		SELF
+contact	26	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
+contact	27	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+contact	28	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+contact	29	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+contact	30	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+contact	31	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+contact	32	record_status	Record Status	char	1	0	N	N	N							N	N				
 work_group	1	work_group_id	Work Group ID	int	8	0	N		Y							N	N				pkDEFAULT
 work_group	2	work_group_name	Work Group Name	varchar	50	0	N		N			Y	text	25		Y	Y	Y	Short name of the work group		
-work_group	3	primary_contact_id	Primary Contact	int	8	0	Y		N	contact	contact_id	N	optionlist			Y	Y	N	Primary contact for this group	"SELECT contact_id, first_name+' '+last_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY organization,last_name,first_name"	
+work_group	3	primary_contact_id	Primary Contact	int	8	0	Y		N	contact	contact_id	N	optionlist			Y	Y	N	Primary contact for this group	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
 work_group	4	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
 work_group	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 work_group	6	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
@@ -110,7 +144,7 @@ work_group	8	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id		
 work_group	9	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 work_group	10	record_status	Record Status	char	1	0	N	N	N							N	N				
 user_login	1	user_login_id	User Login ID	int	8	0	N		Y							N	N				pkDEFAULT
-user_login	2	contact_id	Contact	int	8	0	N		N	contact	contact_id	Y	optionlist			Y	Y	N	Contact entry for this user	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY organization,last_name,first_name"	
+user_login	2	contact_id	Contact	int	8	0	N		N	contact	contact_id	Y	optionlist			Y	Y	N	Contact entry for this user	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
 user_login	3	username	Username	varchar	50	0	N		N			Y	text	25		Y	Y	Y	user login alias (preferably same as unix user alias)		
 user_login	4	password	password	varchar	50	0	N		N			N	password	25		Y	Y	N	password (leave blank to use unix password of this username)		
 user_login	5	privilege_id	Privilege	int	8	0	N		N		privilege_id	Y	optionlist			Y	Y	N	General privilege of this user (different privileges may also be set by group)	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
@@ -156,11 +190,11 @@ table_group_security	9	modified_by_id	Record Modified By	int	8	0	N		N	contact	co
 table_group_security	10	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 table_group_security	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 help_text	1	help_text_id	Help Text ID	int	8	0	N		Y							N	N				pkDEFAULT
-help_text	2	title	Title	varchar	255	0	Y		N			Y	text	40		Y	Y	Y	Title for the help popup		
-help_text	3	help_text	Text	text	 	0	Y		N			Y	textarea	20		Y	Y	N	HTML text for the help popup		
-help_text	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N
-help_text	5	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N
-help_text	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N
-help_text	7	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N
-help_text	8	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N
-help_text	9	record_status	Record Status	char	1	0	N	N	N							N	N
+help_text	2	title	Title	varchar	255	0	Y		N			Y	text	40		Y	Y	Y	Title for the help popup
+help_text	3	help_text	Text	text	 	0	Y		N			Y	textarea	20		Y	Y	N	HTML text for the help popup
+help_text	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
+help_text	5	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N		
+help_text	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
+help_text	7	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N		
+help_text	8	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N		
+help_text	9	record_status	Record Status	char	1	0	N	N	N							N	N		
