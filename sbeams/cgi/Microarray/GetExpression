@@ -255,6 +255,14 @@ sub handle_request {
     constraint_value=>$parameters{log10_ratio_constraint} );
   return if ($log10_ratio_clause eq '-1');
 
+  #### Build Lambda constraint
+  my $lambda_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"GE.lambda",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Lambda",
+    constraint_value=>$parameters{lambda_constraint} );
+  return if ($lambda_clause eq '-1');
+
 
   #### Build SORT ORDER
   my $order_by_clause = "";
@@ -327,9 +335,11 @@ sub handle_request {
 	$gene_name_clause
 	$second_name_clause
 	$log10_ratio_clause
+	$lambda_clause
 	$order_by_clause
 	$limit_clause->{trailing_limit_clause}
        ~;
+#  print "Query is:<BR>---------------------<BR>$sql<BR>---------------------<BR>";
 
 
   #### Certain types of actions should be passed to links
