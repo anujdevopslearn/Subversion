@@ -826,6 +826,11 @@ sub printEntryForm {
 	  base_url=>$base_url);
 
 
+     #### Display some statistics for the result set
+     summarizeExperimentComparison(rs_params_ref=>\%rs_params,
+          resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters,
+	  base_url=>$base_url);
+
 
     #### If QUERY was not selected, then tell the user to enter some parameters
     } else {
@@ -887,3 +892,134 @@ sub getExperimentNames {
   return %exp_tag_hash;
 
 } # end getExperimentNames
+
+
+###############################################################################
+# summarizeExperimentComparison
+#
+# Print out some statistics from the resultset
+###############################################################################
+sub summarizeExperimentComparison {
+    my %args = @_;
+
+    my ($i,$element,$key,$value,$line,$result,$sql);
+
+    #### Process the arguments list
+    my $resultset_ref = $args{'resultset_ref'};
+    my $rs_params_ref = $args{'rs_params_ref'};
+    my $query_parameters_ref = $args{'query_parameters_ref'};
+    my $base_url = $args{'base_url'};
+
+    my %rs_params = %{$rs_params_ref};
+    my %parameters = %{$query_parameters_ref};
+
+
+    #### Start a new section
+    print "<HR SIZE=3 WIDTH=\"30%\" NOSHADE ALIGN=LEFT>";
+    print "<B>Summary of resultset:</B><BR>\n";
+
+
+    #### Print a warning if the resultset is truncated
+    if ( $query_parameters_ref->{row_limit} == scalar(@{$resultset_ref->{data_ref}}) ) {
+      print "<font color=red>WARNING: Resultset ".
+	"truncated at $parameters{row_limit} rows. ".
+	"Statistics only valid for the rows returned!</font><BR>\n";
+    }
+
+
+    #### Define non-data columns that should be ignored
+    my %non_data_columns = ( 'Gene Name'=>1, 'Accession'=>1,
+      'Reference'=>1, 'Reference Description'=>1, 'Peptide'=>1);
+
+
+    #### Figure out what the data columns are and create two
+    #### arrays, one of column names and one of data column indices
+    my $column;
+    my $rowtype = "Protein";
+    my @data_column_names;
+    my @data_columns;
+    for ($i=0; $i<scalar(@{$resultset_ref->{column_list_ref}}); $i++) {
+      $column = $resultset_ref->{column_list_ref}->[$i];
+      $rowtype = "Peptide" if ($column eq 'Peptide');
+      unless ($non_data_columns{$column}) {
+	push(@data_column_names,$column);
+	push(@data_columns,$i);
+      }
+    }
+
+
+    #### Create a matrix for compiling overlap statistics.  Put
+    #### blank values in each of the cells
+    my ($summary_rows,$j);
+    for ($i=0; $i<scalar(@data_columns); $i++) {
+      $summary_rows->[$i]->[0] = $data_column_names[$i];
+      for ($j=0; $j<scalar(@data_columns); $j++) {
+        $summary_rows->[$i]->[$j+1] = '';
+      }
+      #print "$i: $data_column_names[$i] = $data_columns[$i]<BR>\n";
+    }
+    #print "<BR><BR>\n";
+
+
+    #### Set up variables for statistics collection
+    my $row;
+    my $n_rows = scalar(@{$resultset_ref->{data_ref}});
+    my $n_columns = scalar(@data_columns);
+    my %stats = ( 'nonzero_in_all'=>0, 'more_than_one_in_all'=>0 );
+    my %rowstats;
+
+    #### Loop over each row in the resultset, compiling statistics
+    for ($row=0; $row<$n_rows; $row++) {
+      %rowstats = ( 'nonzero'=>0, 'more_than_one' => 0);
+
+      #### Loop of each column and keep statistics
+      for ($column=0; $column<$n_columns; $column++) {
+        $rowstats{nonzero}++ if ($resultset_ref->{data_ref}->[$row]->[$data_columns[$column]]);
+        $rowstats{more_than_one}++ if ($resultset_ref->{data_ref}->[$row]->[$data_columns[$column]] > 1);
+
+        #### Loop over the rest of the columns to build the matrix
+        for ($i=$column; $i<$n_columns; $i++) {
+          $summary_rows->[$column]->[$i+1]++
+            if ( ($resultset_ref->{data_ref}->[$row]->[$data_columns[$column]]) &&
+                 ($resultset_ref->{data_ref}->[$row]->[$data_columns[$i]]) );
+	}
+      }
+      $stats{nonzero_in_all}++ if ($rowstats{nonzero} == $n_columns);
+      $stats{more_than_one_in_all}++ if ($rowstats{more_than_one} == $n_columns);
+    }
+
+
+    #### Print the statistics
+    print "Total number of ${rowtype}s: $n_rows<BR>\n";
+    print "Number of ${rowtype}s seen in every experiment: $stats{nonzero_in_all}<BR>\n";
+    print "Number of ${rowtype}s seen more than once in every experiment: $stats{more_than_one_in_all}<BR>\n";
+
+
+    #### Display the matrix as a HTML table resultset
+    print "<BR>Intersection of observed ${rowtype}s in experiments:<BR>\n";
+    my %dataset;
+    $dataset{data_ref} = $summary_rows;
+    $dataset{column_list_ref} = ['-',@data_column_names];
+    $dataset{precisions_list_ref} = [ (50) x ($n_columns+1) ];
+    $sbeams->displayResultSet(page_size=>100,page_number=>0,
+      #url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols,
+      resultset_ref=>\%dataset);
+
+
+    #### Print out some debugging information about the returned resultset:
+    if (0 == 1) {
+      print "<BR><BR>resultset_ref = $resultset_ref<BR>\n";
+      while ( ($key,$value) = each %{$resultset_ref} ) {
+        printf("%s = %s<BR>\n",$key,$value);
+      }
+      #print "columnlist = ",
+      #  join(" , ",@{$resultset_ref->{column_list_ref}}),"<BR>\n";
+      print "nrows = ",scalar(@{$resultset_ref->{data_ref}}),"<BR>\n";
+      print "rs_set_name=",$rs_params{set_name},"<BR>\n";
+    }
+
+
+    return 1;
+
+
+} # end summarizeExperimentComparison
