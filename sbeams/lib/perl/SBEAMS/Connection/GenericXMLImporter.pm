@@ -185,7 +185,7 @@ sub createDataModel {
         scalar(keys %{$value->{has_parents}}) > 1) {
       print "ERROR: There multiple parents for '$key'  I cannot handle ".
         "this condition yet.  Need more programmers.\n\n";
-      exit;
+      #exit;
     }
 
 
@@ -207,11 +207,14 @@ sub createDataModel {
 
     #### If it has a parent, add a fk column
     if (defined($value->{has_parents})) {
+      my $n_parents = scalar(keys(%{$value->{has_parents}}));
       while (my ($key2,$value2) = each %{$value->{has_parents}}) {
         my $FKcolumn = "${key2}_fk";
+        my $nullable = 'N';
+        $nullable = 'Y' if ($n_parents > 1);
     	push(@{$table_column->{$table_name}->{__ordered_list}},$FKcolumn);
     	my @data2 = ( $table_name,$index,$FKcolumn,$FKcolumn,
-    	  "int","4","0","N","","N",$key2,"${key2}_pk","","",
+    	  "int","4","0",$nullable,"","N",$key2,"${key2}_pk","","",
     	  "","","Y","Y","N","Foreign Key to $key2","","" );
     	$table_column->{$table_name}->{$FKcolumn} = \@data2;
       }
@@ -222,6 +225,7 @@ sub createDataModel {
     #### Loop over all its attributes, creating columns
     while (my ($key2,$value2) = each %{$value->{attributes}}) {
       my $column_name = $key2;
+      #$column_name =~ s/\W//g;
       push(@{$table_column->{$table_name}->{__ordered_list}},$column_name);
 
       #### Set default type and length
@@ -426,6 +430,20 @@ sub start_element {
   #print "start_element<$element>\n";
   #print ".";
 
+  #### Strip out and funky characters
+  $element =~ s/\W//g;
+  $context =~ s/\W//g;
+  foreach my $key (keys(%attrs)) {
+    my $newkey = $key;
+    $newkey =~ s/\W//g;
+    $newkey = "goes_from" if ($newkey eq "from");
+    $newkey = "goes_to" if ($newkey eq "to");
+    if ($key ne $newkey) {
+      $attrs{$newkey} = $attrs{$key};
+      delete($attrs{$key});
+    }
+  }
+
   #### Push this element name onto a stack for later possible use
   push(@stack,$element);
 
@@ -558,6 +576,9 @@ sub end_element {
   my $handler = shift;
   my $element = shift;
 
+  #### Strip out and funky characters
+  $element =~ s/\W//g;
+
   #### Just pop the top item off the stack.  It should be the current
   #### element, but we lazily don't check
   pop(@stack);
@@ -611,6 +632,9 @@ sub characters {
   my $string = shift;
 
   my $context = $handler->{Context}->[-1];
+
+  #### Strip out and funky characters
+  $context =~ s/\W//g;
 
   #### If we're in Learn mode, just collect information about the XML
   if ($PARSEMODE eq 'LEARN') {
