@@ -503,10 +503,7 @@ sub start_element {
 
   foreach my $key (keys(%attrs)) {
     my $newkey = $key;
-    $newkey =~ s/\W//g;
-    $newkey = "goes_from" if ($newkey eq "from");
-    $newkey = "goes_to" if ($newkey eq "to");
-    $newkey = "alter_value" if ($newkey eq "alter");
+    $newkey = fix_tag($newkey);
     if ($key ne $newkey) {
       $attrs{$newkey} = $attrs{$key};
       delete($attrs{$key});
@@ -844,6 +841,10 @@ sub fix_tag {
   $tag = "begin_loc" if ($tag eq "begin");
   $tag = "end_loc" if ($tag eq "end");
   $tag = "ENTRY_A" if ($tag eq "ENTRY");
+
+  $tag = "goes_from" if ($tag eq "from");
+  $tag = "goes_to" if ($tag eq "to");
+  $tag = "alter_value" if ($tag eq "alter");
 
   return $tag;
 
