@@ -102,6 +102,8 @@ sub printEntryForm {
     my $apply_action  = $q->param('apply_action');
     my $TABLE_NAME = $q->param("QUERY_NAME");
 
+    my $search_hit_id  = $q->param('search_hit_id');
+
 
     #### Set some specific settings for this program
     my $CATEGORY="BioSequence Search";
@@ -318,6 +320,39 @@ sub printEntryForm {
 	  page_number=>$rs_params{page_number},
           url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols,
           max_widths=>\%max_widths,resultset_ref=>$resultset_ref);
+
+
+      #### If a search_hit_id was supplied, give the user the option of
+      #### updating the search_hit with a new protein
+      my $nrows = @{$resultset_ref->{data_ref}};
+      if ($search_hit_id && $nrows > 1) {
+        print qq~
+		<FORM METHOD="post" ACTION="$PROGRAM_FILE_NAME"><BR><BR>
+		There are multiple proteins that contain this peptide.  If you
+		want to set a different protein as the preferred one, select it
+		from the list box below and click [UPDATE]<BR><BR>
+		<SELECT NAME="biosequence_id" SIZE=5>
+        ~;
+
+        my $biosequence_id_colindex =
+          $resultset_ref->{column_hash_ref}->{biosequence_id};
+        my $biosequence_name_colindex =
+          $resultset_ref->{column_hash_ref}->{biosequence_name};
+        foreach $element (@{$resultset_ref->{data_ref}}) {
+          print "<OPTION VALUE=\"",$element->[$biosequence_id_colindex],"\">",
+            $element->[$biosequence_name_colindex],"</OPTION>\n";
+        }
+
+        print qq~
+		</SELECT><BR><BR>
+		<INPUT TYPE="hidden" NAME="search_hit_id"
+		  VALUE="$search_hit_id">
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+		<INPUT TYPE="submit" NAME="apply_action" VALUE="UPDATE">
+		</FORM><BR><BR>
+        ~;
+
+      }
 
 
       #### Display the resultset controls
