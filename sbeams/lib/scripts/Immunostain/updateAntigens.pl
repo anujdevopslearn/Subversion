@@ -395,7 +395,8 @@ sub update_antigen {
     PK_value => $antigen_id,
     return_PK => 1,
     verbose=>$VERBOSE,
-    testonly=>$TESTONLY
+    testonly=>$TESTONLY,
+    add_audit_parameters=>1,
   );
 
   #### Verify we got the PK back
