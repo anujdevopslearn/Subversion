@@ -1729,11 +1729,14 @@ sub displayResultSetControls {
       my $url_prefix = "$CYTOSCAPE_URL/sbeams";
       print "<BR>\n";
       print "<A HREF=\"${url_prefix}?m=immunology&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
-    }
-    if ($resultset_ref->{column_list_ref}->[0] eq 'Bait') {
+    } elsif ($resultset_ref->{column_list_ref}->[0] eq 'Bait') {
       my $url_prefix = "$CYTOSCAPE_URL/sbeams";
       print "<BR>\n";
       print "<A HREF=\"${url_prefix}?m=agingras&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
+    } elsif ($resultset_ref->{column_hash_ref}->{biosequence_accession}) {
+      my $url_prefix = "$CYTOSCAPE_URL/sbeams";
+      print "<BR>\n";
+      print "<A HREF=\"${url_prefix}?m=generic&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
     }
 
 
