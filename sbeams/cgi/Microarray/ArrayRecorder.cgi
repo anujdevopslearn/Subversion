@@ -1285,13 +1285,22 @@ sub finalize {
 	$rowdata{'array_name'} = $array;
 	$rowdata{'array_request_slide_id'} = $array_request_slide_id;
 	$rowdata_ref = \%rowdata;
+
 	my $array_id;
 	$array_id = $sbeams->updateOrInsertRow(table_name=>$TBMA_ARRAY,
 										   rowdata_ref=>$rowdata_ref,
 										   insert=>1,
 										   return_PK=>1,
 										   add_audit_parameters=>1);
+
+	## Format array_id so that it's a five digit number (e.g. '2886' --> '02886')
+	while ($array_id =~ /\d{5}/){
+	  $array_id = "0".$array_id;
+	}
+
 	$array_info{$array,'array_id'} = $array_id;
+
+
 	undef %rowdata;
 
 	## INSERT Hybridization Record
