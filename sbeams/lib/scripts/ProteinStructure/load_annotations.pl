@@ -197,9 +197,11 @@ sub handleRequest {
       my ($biosequence_name,$chromosome,$biosequence_length,
 	  $start_position,$end_position,$gene_symbol,$annotation) =
 	@columns;
+      $gene_symbol = '' if ($gene_symbol eq '-');
+      $annotation = '' if ($annotation eq '-');
 
       #### Verify ORF name
-      if (length($biosequence_name) != 9) {
+      if (0 ==1 && length($biosequence_name) != 9) {
   	print "  ERROR: biosequence_name '$biosequence_name' out of bounds.\n";
 	next;
       }
@@ -245,7 +247,7 @@ sub handleRequest {
 	$full_gene_name = $1;
 	$EC_number = $2;
 	my $tmp = $3;
-	$comment = "VNg Comment: $tmp" if ($tmp =~ /\S/);
+	$comment = "Previous Comment: $tmp" if ($tmp =~ /\S/);
       }
 
       #### NULL the -'s
@@ -272,12 +274,12 @@ sub handleRequest {
 
   #### Get all the biosequence_id's
   my $sql = qq~
-    SELECT biosequence_name,biosequence_id
+    SELECT UPPER(biosequence_name),biosequence_id
       FROM $TBPS_BIOSEQUENCE
      WHERE biosequence_set_id = '$biosequence_set_id'
   ~;
   my %biosequence_ids = $sbeams->selectTwoColumnHash($sql);
-
+  #print join(",",keys(%biosequence_ids))."\n";
 
   #### Get all the biosequence_annotation_id's
   $sql = qq~
@@ -292,6 +294,7 @@ sub handleRequest {
   #### Store the information
   my $counter = 0;
   foreach my $element (keys %data) {
+    $element = uc($element);
 
     #### Verify that we can get a biosequence_id
     unless (exists($biosequence_ids{$element})) {
@@ -303,6 +306,22 @@ sub handleRequest {
     #### Check to see if there's already an annotation record
     if (exists($biosequence_annotation_ids{$biosequence_ids{$element}})) {
       print "WARNING: There already exists an annotation for '$element'\n";
+      print "    Would have annotated $element:\n";
+      my %rowdata;
+      $rowdata{biosequence_id} = $biosequence_ids{$element};
+      $rowdata{gene_symbol} = $data{$element}->{gene_symbol}
+  	if (defined($data{$element}->{gene_symbol}));
+      $rowdata{full_gene_name} = $data{$element}->{full_gene_name}
+  	if (defined($data{$element}->{full_gene_name}));
+      $rowdata{EC_numbers} = $data{$element}->{EC_number}
+  	if (defined($data{$element}->{EC_number}));
+      $rowdata{comment} = $data{$element}->{comment}
+  	if (defined($data{$element}->{comment}));
+
+      foreach my $key (keys (%rowdata)) {
+	print "        $key = $rowdata{$key}\n";
+      }
+
 
     } else {
       #### INSERT the annotation record
@@ -317,6 +336,8 @@ sub handleRequest {
       $rowdata{comment} = $data{$element}->{comment}
   	if (defined($data{$element}->{comment}));
 
+      next unless ($rowdata{gene_symbol} || $rowdata{full_gene_name});
+
       my $result = $sbeams->updateOrInsertRow(
   	insert=>1,
   	table_name=>$TBPS_BIOSEQUENCE_ANNOTATION,
@@ -327,6 +348,8 @@ sub handleRequest {
       );
     }
 
+    #### Don't do this this time
+    next;
 
     #### See if there's a domain match record
     $sql = qq~
