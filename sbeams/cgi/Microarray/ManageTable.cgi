@@ -366,37 +366,98 @@ sub preUpdateDataCheck {
   my $query_parameters_ref = $args{'parameters_ref'};
   my %parameters = %{$query_parameters_ref};
 
+  if ( $TABLE_NAME eq "MA_array" ) {
 
-  #### If table XXXX
-  if ($TABLE_NAME eq "XXXX") {
-    return "An error of some sort $parameters{something} invalid";
-  }
+    # Must have an project_id
+    return "Error: project_id not defined" if !$parameters{project_id};
 
+    my $errstr = checkPermission( fkey => 'project_id',
+                                  fval => $parameters{project_id},
+                                  pval => $parameters{array_id},
+                                  action => $parameters{action},
+                                  tname => $TABLE_NAME );
 
-  if ($TABLE_NAME eq "MA_array_scanDISABLED") {
-      unless ( ($parameters{stage_location} gt "") &&
-             ( -d "$parameters{stage_location}/Images" ) ) {
-      return "The specified scanned data location does not exist (looking ".
-        "for an 'Images/' subdirectory in '$parameters{stage_location}')";
-    }
-  }
+    return ( $errstr ) if $errstr;
 
+  } elsif ( $TABLE_NAME eq "MA_array_scan" ) {
 
-  if ($TABLE_NAME eq "MA_array_quantitation") {
-      unless ( ($parameters{stage_location} gt "") &&
+    # Must have an array_id
+    return "Error: array_id not defined" if !$parameters{array_id};
+
+    my $errstr = checkPermission( fkey => 'array_id',
+                                  fval => $parameters{array_id},
+                                  pval => $parameters{array_scan_id},
+                                  action => $parameters{action},
+                                  tname => $TABLE_NAME );
+
+    return ( $errstr ) if $errstr;
+
+  } elsif ( $TABLE_NAME eq "MA_labeling" ) {
+
+    # Must have an array_id
+    return "Error: array_id not defined" if !$parameters{array_request_sample_id};
+
+    my $errstr = checkPermission( fkey => 'array_request_sample_id',
+                                  fval => $parameters{array_request_sample_id},
+                                  pval => $parameters{labeling_id},
+                                  action => $parameters{action},
+                                  tname => $TABLE_NAME );
+
+    return ( $errstr ) if $errstr;
+
+  } elsif ( $TABLE_NAME eq "MA_hybridization" ) {
+
+    # Must have an array_id
+    return "Error: array_id not defined" if !$parameters{array_id};
+
+    my $errstr = checkPermission( fkey => 'array_id',
+                                  fval => $parameters{array_id},
+                                  pval => $parameters{hybridization_id},
+                                  action => $parameters{action},
+                                  tname => $TABLE_NAME );
+
+    return ( $errstr ) if $errstr;
+
+  } elsif ($TABLE_NAME eq "MA_array_quantitation") {
+    
+    # Must have an array_scan_id
+    return "Error: array_id not defined" if !$parameters{array_scan_id};
+
+    my $errstr = checkPermission( fkey => 'array_scan_id',
+                                  fval => $parameters{array_scan_id},
+                                  pval => $parameters{array_quantification_id},
+                                  action => $parameters{action},
+                                  tname => $TABLE_NAME );
+
+    return ( $errstr ) if $errstr;
+
+    unless ( ($parameters{stage_location} gt "") &&
              ( -e "$parameters{stage_location}" ) ) {
       return "The specified quantitation data file does not exist (looking ".
         "for file '$parameters{stage_location}')";
     }
-  }
 
+  } elsif ( $TABLE_NAME eq "MA_array_scan" ) {
 
-  if ($TABLE_NAME eq "MA_array_layout") {
+    # Must have an array_id
+    return "Error: array_id not defined" if !$parameters{array_id};
+
+    my $errstr = checkPermission( fkey => 'array_id',
+                                  fval => $parameters{array_id},
+                                  pval => $parameters{array_scan_id},
+                                  action => $parameters{action},
+                                  tname => $TABLE_NAME );
+
+    return ( $errstr ) if $errstr;
+
+  } elsif ($TABLE_NAME eq "MA_array_layout") {
       unless ( ($parameters{source_filename} gt "") &&
              ( -e "$parameters{source_filename}" ) ) {
       return "The specified layout key file does not exist (looking for ".
         "file '$parameters{source_filename}')";
     }
+  } elsif ($TABLE_NAME eq "XXXX") {# If table XXXX
+    return "An error of some sort $parameters{something} invalid";
   }
 
 
