@@ -154,7 +154,7 @@ sub printStyleSheet {
 
     my $FONT_SIZE=12;
     my $FONT_SIZE_LG=14;
-    my $FONT_SIZE_HG=16;
+    my $FONT_SIZE_HG=20;
     if ( $HTTP_USER_AGENT =~ /Win/ ) {
       $FONT_SIZE=10;
       $FONT_SIZE_LG=12;
@@ -164,10 +164,11 @@ sub printStyleSheet {
     print qq~
 	<style type="text/css">
 	//<!--
-	body {  font-family: Arial Helvetica, sans-serif; font-size: ${FONT_SIZE}pt}
+	body {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt}
 	th   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt; font-weight: bold; background-color: #A0A0A0;}
 	td   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt;}
 	form   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt}
+	pre    {  font-family: Courier; font-size: ${FONT_SIZE}pt}
 	h1   {  font-family: Verdana, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_HG}pt; font-weight: bold}
 	h2   {  font-family: Verdana, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
 	h3   {  font-family: Verdana, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_LG}pt}
