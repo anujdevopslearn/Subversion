@@ -473,14 +473,14 @@ sub calcRowDiff {
     #### If this attribute exists in the new data
     if (exists($new_row{$key})) {
       my $value2 = $new_row{$key};
-      if ($value eq $value2) {
 
-	#### Special handling for NULLs
-	my $mvalue = $value;
-	$mvalue = '<NULL>' unless (defined($mvalue));
-	my $mvalue2 = $value2;
-	$mvalue2 = '<NULL>' unless (defined($mvalue2));
+      ### Special handling for NULLs
+      my $mvalue = $value;
+      $mvalue = '<NULL>' unless (defined($mvalue));
+      my $mvalue2 = $value2;
+      $mvalue2 = '<NULL>' unless (defined($mvalue2));
 
+      if ($mvalue eq $mvalue2) {
         print "  Column $key: equal ($mvalue=$mvalue2)\n" if ($VERBOSE > 1);
         if ($creation_columns{$key}) {
           $score += 10;
@@ -492,12 +492,6 @@ sub calcRowDiff {
         }
 
       } else {
-
-	#### Special handling for NULLs
-	my $mvalue = $value;
-	$mvalue = '<NULL>' unless (defined($mvalue));
-	my $mvalue2 = $value2;
-	$mvalue2 = '<NULL>' unless (defined($mvalue2));
 
         print "  Column $key: UNEQUAL ($mvalue=/=$mvalue2)\n" if ($VERBOSE > 1);
         if ($creation_columns{$key}) {
