@@ -627,15 +627,15 @@ PR_publication_rating	10	modified_by_id	Record Modified By	int	2	0	N	1	N	contact
 PR_publication_rating	11	owner_group_id	Owner Group ID	int	2	0	N	1	N	work_group	work_group_id					N	N				
 PR_publication_rating	12	record_status	Record Status	char	1	0	N	N	N							N	N				
 PR_publication	1	publication_id	Publication ID	int	8	0	N		Y							N	N				pkDEFAULT
-PR_publication	2	publication_name	Publication Name	varchar	100	0	N		N			Y	text	50		Y	Y	Y	"Friendly name of the citation, e.g. Dewey, Cheetham and Howe (1998)"		
-PR_publication	3	pubmed_ID	PubMed ID	varchar	50	0	Y		N			N	text	30		Y	Y	N	"PubMed ID for this citation.  When this implementation is finished, you ought to be able to just fill this in and have the interface fetch the title,author,etc. information for you"		
+PR_publication	2	pubmed_ID	PubMed ID	varchar	50	0	Y		N			N	text	30	refreshDocument()	Y	Y	N	"PubMed ID for this publication.  When this field is changed, the interface fetch the title,author,etc. information for you if the field below this (Publication Name) is empty"		
+PR_publication	3	publication_name	Publication Name	varchar	100	0	N		N			Y	text	50		Y	Y	Y	"Friendly name of the citation, e.g. Dewey, Cheetham & Howe (1998)"		
 PR_publication	4	keywords	Keywords	varchar	255	0	Y		N			N	text	50		Y	Y	N	A comma-separated list of keywords appropriate when searching for papers of this sort		
 PR_publication	5	publication_category_id	Publication Category	int	4	0	Y		N	PR_publication_category	publication_category_id	N	optionlist			Y	Y	N	Broad category within which this publication is classified	"SELECT publication_category_id,publication_category_name FROM $TBPR_PUBLICATION_CATEGORY WHERE record_status != 'D' ORDER BY sort_order,publication_category_name"	
 PR_publication	6	publication_rating_id	Publication Rating	int	4	0	Y		N	PR_publication_rating	publication_rating_id	N	optionlist			Y	Y	N	Rating of this paper (typically within the category) given by the person entering this record.  This should be an indication of how worthwhile a read this paper is within the category	"SELECT publication_rating_id,STR(publication_rating_number,5,0)+' - '+publication_rating_name FROM $TBPR_PUBLICATION_RATING WHERE record_status != 'D' ORDER BY sort_order,publication_rating_number DESC,publication_rating_name"	
 PR_publication	7	presented_on_date	Presented Date	datetime	8	0	Y		N			N	text	20		Y	Y	N	Date that the publication was presented in a journal club		
 PR_publication	8	presented_by_contact_id	Presented By Contact	int	4	0	Y		N	contact	contact_id	N	scrolloptionlist	4		Y	Y	N	Person who presented this paper in a journal club	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
-PR_publication	9	title	Title	varchar	255	0	Y		N			N	text	50		Y	Y	N	Title of the article		
-PR_publication	10	author_list	Author List	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Author list in 'Lastname, FIMI' format"		
+PR_publication	9	title	Title	varchar	255	0	Y		N			N	textarea	2		Y	Y	N	Title of the article		
+PR_publication	10	author_list	Author List	varchar	255	0	Y		N			N	textarea	2		Y	Y	N	"Author list in 'Lastname, FIMI' format"		
 PR_publication	11	journal_name	Journal Name	varchar	100	0	Y		N			N	text	50		Y	Y	N	Name of the Journal in which the article appears		
 PR_publication	12	published_year	Published Year	varchar	10	0	Y		N			N	text	20		Y	Y	N	Year the article was published		
 PR_publication	13	volume_number	Volume Number	varchar	50	0	Y		N			N	text	20		Y	Y	N	Volume number of the article		
