@@ -115,8 +115,8 @@ UESC_stain	3	antibody_id	Antibody	int	4	0	N		N	UESC_antibody	antibody_id	Y	optio
 UESC_stain	4	stain_name	Stain Name	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Unique name for this stain		
 UESC_stain	5	stain_description	Stain Description	varchar	255	0	N		N			Y	textarea	4		Y	Y	N	Longer description of this stain		
 UESC_stain	6	image_file_date	Image Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	text	20		Y	Y	N	Date this stain image was taken		
-UESC_stain	7	raw_image_file	Raw Image File	varchar	255	0	Y		N			N	file	40		Y	Y	N	Click BROWSE and select the raw image file to be uploaded via the web interface		
-UESC_stain	8	annotated_image_file	Annotated Image File	varchar	255	0	Y		N			N	file	40		Y	Y	N	Click BROWSE and select the processed/annotated image file to be uploaded via the web interface		
+UESC_stain	7	raw_image_file	Raw Image File	varchar	255	0	Y		N			N	file	40		Y	Y	N	Click BROWSE and select the raw image file to be uploaded via the web interface		uploaded_file
+UESC_stain	8	annotated_image_file	Annotated Image File	varchar	255	0	Y		N			N	file	40		Y	Y	N	Click BROWSE and select the processed/annotated image file to be uploaded via the web interface		uploaded_file
 UESC_stain	9	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 UESC_stain	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 UESC_stain	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
