@@ -204,6 +204,11 @@ sub processFile
 		}
 
   #### Verify that source_file was passed and exists
+   	unless ($TISSUETYPE) 
+	{
+		print "ERROR: You must supply a --tissue_type parameter\n$USAGE\n";
+		exit;
+	}
   	unless ($sourceFile) 
 	{
 		print "ERROR: You must supply a --source_file parameter\n$USAGE\n";
@@ -327,7 +332,9 @@ sub processFile
 				}
 				if ($TISSUETYPE =~/bladder/i)
 				{
-					if (defined($infoHash{'section'}))
+					print "($infoHash{'section'}\n";
+					getc;
+					if ($infoHash{'section'})
 					{
 						$stainName = $stainName. " ".$infoHash{'section'};
 						print "Stain: $stainName\n";
