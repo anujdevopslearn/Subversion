@@ -1051,9 +1051,8 @@ SELECT ARSM1.name,ARSM2.name
   foreach my $result_id (@selected_arrays){
 	my $id = $result_id->[0];
 	my $name = "$result_id->[0]_vs_$result_id->[1]";
-	my $reverse_name = $name;
-	$reverse_name =~ s/(.*)(_vs_)(.*)/$3$2$1/;
-	unless ($conditions{$name} && !$conditions{$reverse_name}){
+	my $reverse_name = "$result_id->[1]_vs_$result_id->[0]";
+	unless ($conditions{$name} || $conditions{$reverse_name}){
 	  $conditions{$name} = 1;
 	}
   }
