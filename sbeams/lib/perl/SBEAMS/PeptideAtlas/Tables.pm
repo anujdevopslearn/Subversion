@@ -32,6 +32,7 @@ use vars qw(@ISA @EXPORT
     $TBAT_PEPTIDE_INSTANCE
     $TBAT_PEPTIDE_INSTANCE_SAMPLE
     $TBAT_PEPTIDE_MAPPING
+    $TBAT_PUBLICATION
 
 );
 
@@ -56,6 +57,7 @@ require Exporter;
     $TBAT_PEPTIDE_INSTANCE_SAMPLE
     $TBAT_PEPTIDE_MAPPING
 
+    $TBAT_PUBLICATION
 );
 
 
@@ -78,5 +80,6 @@ $TBAT_PEPTIDE               = "${mod}peptide";
 $TBAT_PEPTIDE_INSTANCE      = "${mod}peptide_instance";
 $TBAT_PEPTIDE_INSTANCE_SAMPLE  = "${mod}peptide_instance_sample";
 $TBAT_PEPTIDE_MAPPING       = "${mod}peptide_mapping";
+$TBAT_PUBLICATION           = "${mod}publication";
 
 
