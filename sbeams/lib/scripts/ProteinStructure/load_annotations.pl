@@ -323,6 +323,7 @@ sub handleRequest {
   	rowdata_ref=>\%rowdata,
   	verbose=>$VERBOSE,
   	testonly=>$TESTONLY,
+        add_audit_parameters=>1,
       );
     }
 
