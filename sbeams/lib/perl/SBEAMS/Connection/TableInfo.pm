@@ -742,14 +742,32 @@ sub getParentProject {
   #### Get sbeams object, we'll need it for queries
   #my $sbeams = $self->getSBEAMS();
 
+  #### Define the project_id, starting as undef, it gets filled if there is one
+  my $project_id;
+
 
   #############################################################################
   #### Process actions for individual tables
 
-  #### If table is PS_biosequence_annotation
-  if ($table_name eq "xxxx") {
+  #### If table is project
+  if ($table_name eq "project") {
 
-    my $project_id;
+    #### If the user wants to INSERT, determine how it fits into project
+    if ($action eq 'INSERT') {
+      #### There is none yet!
+
+    #### Else for an UPDATE or DELETE, determine how it fits into project
+    } elsif ($action eq 'UPDATE' || $action eq 'DELETE') {
+      #### The parent is me!
+      $project_id = $parameters_ref->{project_id};
+    }
+
+    return($project_id);
+  }
+
+
+  #### If table is xxxx
+  if ($table_name eq "xxxx") {
 
     #### If the user wants to INSERT, determine how it fits into project
     if ($action eq 'INSERT') {
@@ -759,11 +777,11 @@ sub getParentProject {
 
     }
 
-    return($project_id) if ($project_id);
-
+    return($project_id);
   }
 
 
+  #### No information for this table so return undef
   return;
 
 }
