@@ -24,7 +24,7 @@ use vars qw ($sbeams $sbeamsMOD $q
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
 	     $TESTONLY
              $current_contact_id $current_username
-	     $fav_codon_frequency
+	     $fav_codon_frequency $n_transmembrane_regions
             );
 
 
@@ -67,6 +67,8 @@ Options:
                        biosequence_sets are verified
   --fav_codon_frequency_file   Full path name of a file from which to load
                        favored codon frequency values
+  --n_transmembrane_regions_file   Full path name of a file from which to load
+                       number of transmembrane regions values
   --calc_n_transmembrane_regions
                        Set flag to add in n_transmembrane_regions calculations
 
@@ -79,7 +81,7 @@ EOU
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
   "delete_existing","update_existing","skip_sequence",
   "set_tag:s","file_prefix:s","check_status","fav_codon_frequency_file:s",
-  "calc_n_transmembrane_regions")) {
+  "calc_n_transmembrane_regions","n_transmembrane_regions_file:s")) {
   print "$USAGE";
   exit;
 }
@@ -166,6 +168,8 @@ sub handleRequest {
   my $set_tag = $OPTIONS{"set_tag"} || '';
   my $file_prefix = $OPTIONS{"file_prefix"} || '';
   my $fav_codon_frequency_file = $OPTIONS{"fav_codon_frequency_file"} || '';
+  my $n_transmembrane_regions_file =
+    $OPTIONS{"n_transmembrane_regions_file"} || '';
 
   #### Get the file_prefix if it was specified, and otherwise guess
   unless ($file_prefix) {
@@ -228,6 +232,18 @@ sub handleRequest {
       source_file => $fav_codon_frequency_file,
       fav_codon_frequency => $fav_codon_frequency);
   }
+
+
+  #### If a n_transmembrane_regions_file was specified,
+  #### load it for later processing
+  if ($n_transmembrane_regions_file) {
+    $n_transmembrane_regions->{zzzHASH} = -1;
+    readNTransmembraneRegionsFile(
+      source_file => $n_transmembrane_regions_file,
+      n_transmembrane_regions => $n_transmembrane_regions);
+  }
+
+
   #### Loop over each biosequence_set, determining its status and processing
   #### it if desired
   print "        set_tag      n_rows  set_path\n";
@@ -263,7 +279,7 @@ sub handleRequest {
 ###############################################################################
 # getBiosequenceSetStatus
 ###############################################################################
-sub getBiosequenceSetStatus { 
+sub getBiosequenceSetStatus {
   my %args = @_;
   my $SUB_NAME = 'getBiosequenceSetStatus';
 
@@ -318,7 +334,7 @@ sub getBiosequenceSetStatus {
 ###############################################################################
 # loadBiosequenceSet
 ###############################################################################
-sub loadBiosequenceSet { 
+sub loadBiosequenceSet {
   my %args = @_;
   my $SUB_NAME = 'loadBiosequenceSet';
 
@@ -845,6 +861,15 @@ sub specialParsing {
   }
 
 
+  #### If there's n_transmembrane_regions lookup information, set it
+  if (defined($n_transmembrane_regions)) {
+    if ($n_transmembrane_regions->{$rowdata_ref->{biosequence_name}}) {
+      $rowdata_ref->{n_transmembrane_regions} =
+        $n_transmembrane_regions->{$rowdata_ref->{biosequence_name}};
+    }
+  }
+
+
   #### If the calc_n_transmembrane_regions flag is set, do the calculation
   if (defined($OPTIONS{"calc_n_transmembrane_regions"}) &&
       defined($rowdata_ref->{biosequence_seq}) &&
@@ -948,6 +973,73 @@ sub readFavCodonFrequencyFile {
   close(CODONFILE);
 
   $fav_codon_frequency->{return_status} = 'SUCCESS';
+  return;
+
+}
+
+
+###############################################################################
+# readNTransmembraneFile
+###############################################################################
+sub readNTransmembraneFile {
+  my %args = @_;
+  my $SUB_NAME = "readNTransmembraneFile";
+
+
+  #### Decode the argument list
+  my $source_file = $args{'source_file'}
+   || die "ERROR[$SUB_NAME]: source_file not passed";
+  # Don't bother getting the output data struct since it's a global
+
+
+  unless ( -f $source_file ) {
+    $n_transmembrane_regions->{return_status} = 'FAIL';
+    die("Unable to find n_transmembrane_regions file '$source_file'");
+  }
+
+
+  open(CODONFILE,"$source_file") ||
+    die("Unable to n_transmembrane_regions file '$source_file'");
+
+
+  #### Define some variables
+  my $line;
+  my $tmp;
+  my $biosequence_name;
+  my @columns;
+  my @words;
+
+
+  #### Skip the header
+  print "Reading n_transmembrane_regions file...\n";
+  print "  Parsing header...\n";
+  while ($line = <CODONFILE>) {
+    last if ($line =~ /^\#\# name/);
+  }
+
+
+  #### Read in all the data putting it into the hash
+  print "  Parsing data...\n";
+  while ($line = <CODONFILE>) {
+    @columns = split("\t",$line);
+    $biosequence_name = $columns[0];
+    my %properties;
+    if ($line =~/tm: (\d+)/) {
+      $properties{n_tmm} = $1;
+    }
+    if ($line =~/sec\/mem-class: (.)/) {
+      $properties{sec_mem_class} = $1;
+    }
+    if ($columns[5]) {
+      $properties{topology} = $columns[5];
+    }
+
+    $n_transmembrane_regions->{$biosequence_name} = \%properties;
+  }
+
+  close(CODONFILE);
+
+  $n_transmembrane_regions->{return_status} = 'SUCCESS';
   return;
 
 }
