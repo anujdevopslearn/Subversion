@@ -88,6 +88,9 @@ sub Authenticate {
   #### Guess at the current invocation mode
   $self->guessMode();
 
+  #### Obtain the database handle $dbh, thereby opening the DB connection
+  my $dbh = $self->getDBHandle(connect_read_only=>$connect_read_only);
+
   #### If there's a DISABLED file in the main HTML directory, do not allow
   #### entry past here.  Same goes for DISABLE.modulename
   my $module_name = $self->getSBEAMS_SUBDIR() || '';
