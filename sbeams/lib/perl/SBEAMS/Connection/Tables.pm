@@ -128,10 +128,10 @@ $TB_CACHED_RESULTSET    = "${core}cached_resultset";
 $TB_FORM_TEMPLATE       = "${core}form_template";
 $TB_SOFTWARE_HARDWARE_PROTOCOL = "${core}software_hardware_protocol";
 
-$TB_MGED_ONTOLOGY_RELATIONSHIP    = "BioLink.dbo.MGEDOntologyRelationship";
-$TB_MGED_ONTOLOGY_TERM            = "BioLink.dbo.MGEDOntologyTerm";
-$TB_ONTOLOGY_RELATIONSHIP_TYPE    = "BioLink.dbo.OntologyRelationshipType";
-$TB_ONTOLOGY_TERM_TYPE            = "BioLink.dbo.OntologyTermType";
+$TB_MGED_ONTOLOGY_RELATIONSHIP    = $DBPREFIX{BioLink}."MGEDOntologyRelationship";
+$TB_MGED_ONTOLOGY_TERM            = $DBPREFIX{BioLink}."MGEDOntologyTerm";
+$TB_ONTOLOGY_RELATIONSHIP_TYPE    = $DBPREFIX{BioLink}."OntologyRelationshipType";
+$TB_ONTOLOGY_TERM_TYPE            = $DBPREFIX{BioLink}."OntologyTermType";
 
 
 ###############################################################################
