@@ -13,7 +13,7 @@
 
 
 ###############################################################################
-# Generic SBEAMS setup
+# Generic SBEAMS setup for all the needed modules and objects
 ###############################################################################
 use strict;
 use Getopt::Long;
@@ -26,7 +26,7 @@ use vars qw ($sbeams $sbeamsMOD $q
             );
 
 
-#### Set up SBEAMS package
+#### Set up SBEAMS core module
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
@@ -67,6 +67,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
   print "$USAGE";
   exit;
 }
+
 $VERBOSE = $OPTIONS{"verbose"} || 0;
 $QUIET = $OPTIONS{"quiet"} || 0;
 $DEBUG = $OPTIONS{"debug"} || 0;
@@ -120,6 +121,8 @@ sub main {
 # handleRequest
 ###############################################################################
 sub handleRequest { 
+  my %args = @_;
+
 
   #### Define standard variables
   my ($i,$element,$key,$value,$line,$result,$sql);
@@ -442,12 +445,6 @@ sub loadBiosequenceSet {
   print "\n$counter rows INSERT/UPDATed\n";
 
 }
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-###############################################################################
 
 
 

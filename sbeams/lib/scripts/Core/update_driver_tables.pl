@@ -12,31 +12,33 @@
 
 
 ###############################################################################
-# Set up all needed modules and objects
+# Generic SBEAMS setup for all the needed modules and objects
 ###############################################################################
 use strict;
 use Getopt::Long;
+use FindBin;
 
-use lib qw (../../perl);
-use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+use lib qw (../perl ../../perl);
+use vars qw ($sbeams $sbeamsMOD $q
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG
+             $current_contact_id $current_username
             );
 
+
+#### Set up SBEAMS core module
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
-
 $sbeams = new SBEAMS::Connection;
 
 use CGI;
-use CGI::Carp qw(fatalsToBrowser croak);
 $q = new CGI;
 
 
 ###############################################################################
 # Set program name and usage banner for command like use
 ###############################################################################
-$PROG_NAME = "update_driver_tables.pl";
+$PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
 Usage: $PROG_NAME [OPTIONS] input_filename
 Options:
@@ -44,9 +46,10 @@ Options:
   --quiet             Set flag to print nothing at all except errors
   --debug n           Set debug flag
 
- e.g.:  $PROG_NAME SNP_table_property.tsv
+ e.g.:  $PROG_NAME \$CONFDIR/Core/Core_table_property.txt
 
 EOU
+
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
@@ -92,13 +95,13 @@ sub main {
   #$sbeams->printDebuggingInfo($q);
 
 
-  #### Decide what action to take based on information so far
+  #### Decide what action to take based on calling information
   if ($parameters{action} eq "???") {
     # Some action
   } else {
-    $sbeams->printPageHeader();
+    $sbeams->printPageHeader() unless ($QUIET);
     updateDriverTable(ref_parameters=>\%parameters);
-    $sbeams->printPageFooter();
+    $sbeams->printPageFooter() unless ($QUIET);
   }
 
 
@@ -226,13 +229,6 @@ sub updateDriverTable {
 
 
 } # end updateDriverTable
-
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-###############################################################################
 
 
 
@@ -387,6 +383,8 @@ sub update_table_column {
 
 
 } # end update_table_column
+
+
 
 ###############################################################################
 # executeManualCommands
