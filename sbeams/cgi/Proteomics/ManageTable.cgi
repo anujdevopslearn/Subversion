@@ -106,7 +106,8 @@ sub main {
   exit unless ($current_username = $sbeams->Authenticate(
     #connect_read_only=>1,
     #allow_anonymous_access=>1,
-    permitted_work_groups_ref=>['Proteomics_user','Proteomics_admin'],
+    permitted_work_groups_ref=>['Proteomics_user','Proteomics_admin',
+      'Admin'],
   ));
 
   #### Read in the default input parameters
