@@ -2146,6 +2146,96 @@ sub build_SQL_columns_list {
 } # end build_SQL_columns_list
 
 
+###############################################################################
+# transferTable
+#
+# Given a SQL query and how to map the data from one table to another,
+# copy data from one table to another
+###############################################################################
+sub transferTable {
+  my $self = shift || croak("parameter self not passed");
+  my %args = @_;
+
+  #### Decode the argument list
+  my $src_conn = $args{'src_conn'} || die "ERROR: src_conn not passed";
+  my $sql = $args{'sql'} || die("parameter sql not passed");
+  my $src_PK_name = $args{'src_PK_name'} || die("parameter src_PK_name not passed");
+  my $src_PK_column = $args{'src_PK_column'};
+  die("parameter src_PK_column not passed") unless ($src_PK_column>=0);
+
+  my $dest_conn = $args{'dest_conn'} || die "ERROR: dest_conn not passed";
+  my $column_map_ref = $args{'column_map_ref'} || die "ERROR: column_map_ref not passed";
+  my $transform_map_ref = $args{'transform_map_ref'} || die "ERROR: transform_map_ref not passed";
+  my $newkey_map_ref = $args{'newkey_map_ref'};
+
+  my $table_name = $args{'table_name'} || die "ERROR: table_name not passed";
+  my $dest_PK = $args{'dest_PK'};
+
+
+  #### Define standard variables
+  my ($i,$element,$key,$value,$line,$result);
+
+
+  #### Execute source query
+  print "\n  Getting data from source...";
+  my @rows = $src_conn->selectSeveralColumns($sql);
+
+  my %rowdata;
+  my $row;
+  my %newkays;
+
+
+  print "\n  Loading data into destination";
+  foreach $row (@rows) {
+    %rowdata = ();
+
+    while ( ($key,$value) = each %{$column_map_ref} ) {
+      if (defined($row->[$key])) {
+  	if ($transform_map_ref->{$key}) {
+  	  my $current_value = $row->[$key];
+  	  my $mapped_value = $transform_map_ref->{$key}->{$current_value};
+  	  if (defined($mapped_value)) {
+  	    $rowdata{$value} = $mapped_value;
+  	  } else {
+  	    print "Unable to transform column $key having value '$current_value'\n";
+  	  }
+  	} else {
+  	  $rowdata{$value} = $row->[$key];
+  	}
+
+      }
+
+    }
+
+
+    #### Logic to control whether we want returned PKs or not
+    my $return_PK = 0;
+    $return_PK = 1 if ($dest_PK);
+
+
+    $result = $dest_conn->insert_update_row(insert=>1,
+      table_name=>$table_name,
+      rowdata_ref=>\%rowdata,
+      PK=>$src_PK_name,return_PK=>$return_PK,
+      #verbose=>1,testonly=>1
+      );
+    print "."; 
+
+    if ($dest_PK && $result) {
+      $newkey_map_ref->{$row->[$src_PK_column]} = $result;
+    }
+
+  }
+
+  return 1;
+
+} # end transferTable
+
+
+
+
+
+
 
 ###############################################################################
 
