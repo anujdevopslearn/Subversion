@@ -330,6 +330,7 @@ sub print_user_permissions {
       WHERE UPP.project_id = '$current_project_id'
 			AND UPP.record_status != 'D'
 			AND PRIV.record_status != 'D'
+			AND UL.record_status != 'D'
       AND UL.contact_id != P.PI_contact_id
 			ORDER BY UL.username
       ~;
