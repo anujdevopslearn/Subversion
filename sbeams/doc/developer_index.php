@@ -90,6 +90,7 @@
     <UL>
      <LI><A HREF="Core/Core_Schema.gif">Core database schema</A>
      <LI><A HREF="Microarray/Microarray_Schema.gif">Microarray database schema</A>
+     <LI><A HREF="Microarray/Microarray_Affy_Schema.gif">Microarray Affy Schema</A>
      <LI><A HREF="PhenoArray/PhenoArray_Schema.gif">PhenoArray database schema</A>
      <LI><A HREF="Proteomics/Proteomics_Schema.gif">Proteomics database schema</A>
      <LI><A HREF="SNP/SNP_Schema.gif">SNP database schema</A>
