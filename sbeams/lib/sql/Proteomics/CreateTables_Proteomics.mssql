@@ -408,6 +408,8 @@ VALUES ( 'BAP_display_options','MaxRefWidth','Limit Reference Width',60 )
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BAP_display_options','ShowGOColumns','Show GO Columns',70 )
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAP_display_options','ShowExtraProteinProps','Show Extra Protein Properties',80 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BAP_display_options','ShowSQL','Show SQL Query',90 )
 
 
@@ -419,6 +421,8 @@ INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BBS_display_options','SequenceFormat','Display in Sequence Format',70 )
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BBS_display_options','ShowGOColumns','Show GO Columns',80 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BBS_display_options','ShowExtraProteinProps','Show Extra Protein Properties',90 )
 
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BBS_sort_options','biosequence_name','biosequence_name',10 )
@@ -643,6 +647,7 @@ GO
 CREATE TABLE dbo.annotation_label (
 	annotation_label_id	int IDENTITY NOT NULL,
 	label_desc		varchar(100) NULL,
+	annotation_probability	real NULL,
 	comment			text NULL,
 	sort_order		int NOT NULL DEFAULT 10,
 	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -656,18 +661,18 @@ CREATE TABLE dbo.annotation_label (
 GO
 
 
-INSERT INTO annotation_label ( label_desc,sort_order ) VALUES ( '100% - certain',10 )
-INSERT INTO annotation_label ( label_desc,sort_order ) VALUES ( '90%',20 )
-INSERT INTO annotation_label ( label_desc,sort_order ) VALUES ( '80% - Likely',30 )
-INSERT INTO annotation_label ( label_desc,sort_order ) VALUES ( '70%',40 )
-INSERT INTO annotation_label ( label_desc,sort_order ) VALUES ( '60%',50 )
-INSERT INTO annotation_label ( label_desc,sort_order ) VALUES ( '50% - Possible',60 )
-INSERT INTO annotation_label ( label_desc,sort_order ) VALUES ( '40%',70 )
-INSERT INTO annotation_label ( label_desc,sort_order ) VALUES ( '30%',80 )
-INSERT INTO annotation_label ( label_desc,sort_order ) VALUES ( '20% - Unlikely',90 )
-INSERT INTO annotation_label ( label_desc,sort_order ) VALUES ( '10%',100 )
-INSERT INTO annotation_label ( label_desc,sort_order ) VALUES ( '0% - Rejected',110 )
-INSERT INTO annotation_label ( label_desc,sort_order ) VALUES ( 'Unknown',120 )
+INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( '100% - certain',1.0,10 )
+INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( '90%',0.9001,20 )
+INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( '80% - Likely',0.8001,30 )
+INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( '70%',0.7001,40 )
+INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( '60%',0.6001,50 )
+INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( '50% - Possible',0.5001,60 )
+INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( '40%',0.4001,70 )
+INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( '30%',0.3001,80 )
+INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( '20% - Unlikely',0.2001,90 )
+INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( '10%',0.1001,100 )
+INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( '0% - Rejected',0.0,110 )
+INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( 'Unknown',NULL,120 )
 GO
 
 
