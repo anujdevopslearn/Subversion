@@ -12,7 +12,9 @@ package SBEAMS::Connection::DBInterface;
 
 
 use strict;
-use vars qw(@ERRORS $dbh $sth $q $resultset_ref $rs_params_ref);
+use vars qw(@ERRORS $dbh $sth $q $resultset_ref $rs_params_ref
+            $SORT_COLUMN $SORT_TYPE
+           );
 use CGI::Carp qw(fatalsToBrowser croak);
 use DBI;
 use POSIX;
@@ -1128,6 +1130,14 @@ sub displayResultSet {
     $resultset_ref = $args{'resultset_ref'};
     $rs_params_ref = $args{'rs_params_ref'};
     my $column_titles_ref = $args{'column_titles_ref'};
+    my $base_url = $args{'base_url'} || '';
+    my $query_parameters_ref = $args{'query_parameters_ref'};
+
+    my $resort_url = '';
+    if ($base_url) {
+      $resort_url="$base_url?apply_action=VIEWRESULTSET&".
+          "rs_set_name=$rs_params_ref->{set_name}";
+    }
 
 
     #### Set the display window of rows
@@ -1156,6 +1166,38 @@ sub displayResultSet {
       unless ($column_titles_ref);
 
 
+    #### If the command to re-sort was passed, do it now
+    if ($rs_params_ref->{rs_resort_column}) {
+
+      #### Put the column number and type into global variables to be
+      #### used by the sort-decision subroutines
+      $SORT_COLUMN = $rs_params_ref->{rs_resort_column};
+      $SORT_TYPE = $rs_params_ref->{rs_resort_type} || 'ASC';
+
+      #### Define the datatypes that get sorted numerically and sort
+      my @sorted_rows;
+      my %numerical_types = ('int'=>1,'float'=>1);
+      if ($numerical_types{$types_ref->[$SORT_COLUMN]}) {
+        @sorted_rows = sort resultsetNumerically
+          @{$resultset_ref->{data_ref}};
+
+      #### Otherwise, sort them alphabetically
+      } else {
+        @sorted_rows = sort resultsetByCharacter
+          @{$resultset_ref->{data_ref}};
+      }
+
+      #### Put the re-sorted rows into the resultset
+      $resultset_ref->{data_ref} = \@sorted_rows;
+
+      #### Write the resultset back out to the same file.  Need to do
+      #### this so that the user can page through the re-sorted resultset
+      $self->writeResultSet(resultset_file_ref=>\$rs_params_ref->{set_name},
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>$query_parameters_ref);
+    }
+
+
     #### Make some adjustments to the default column width settings
     my @precisions = @{$resultset_ref->{precisions_list_ref}};
     my $i;
@@ -1171,7 +1213,7 @@ sub displayResultSet {
       $precisions[$i] = 20 if ($types_ref->[$i] =~ /date/i);
 
       #### Print for debugging
-      #print $sth->{NAME}->[$i],"(",$types_ref->[$i],"): ",
+      #print $column_titles_ref->[$i],"(",$types_ref->[$i],"): ",
       #  $precisions[$i],"<BR>\n";
     }
 
@@ -1301,7 +1343,10 @@ sub displayResultSet {
         hidden_cols=>$hidden_cols_ref,
         THformats=>["BGCOLOR=".$row_color_scheme_ref->{header_background}],
         TDformats=>\@TDformats,
-        row_color_scheme=>$row_color_scheme_ref
+        row_color_scheme=>$row_color_scheme_ref,
+        base_url=>$base_url,
+        image_dir=>"$HTML_BASE_DIR/images",
+        resort_url=>$resort_url,
       };
 
     }
@@ -1314,6 +1359,39 @@ sub displayResultSet {
 
 
 } # end displayResultSet
+
+
+###############################################################################
+# resultsetByCharacter
+#
+# Sorting function to sort resultsets
+###############################################################################
+sub resultsetByCharacter {
+
+  if ($SORT_TYPE eq 'ASC') {
+    return $a->[$SORT_COLUMN] cmp $b->[$SORT_COLUMN];
+  } else {
+    return $b->[$SORT_COLUMN] cmp $a->[$SORT_COLUMN];
+  }
+
+}
+
+
+
+###############################################################################
+# resultsetNumerically
+#
+# Sorting function to sort resultsets
+###############################################################################
+sub resultsetNumerically {
+
+  if ($SORT_TYPE eq 'ASC') {
+    return $a->[$SORT_COLUMN] <=> $b->[$SORT_COLUMN];
+  } else {
+    return $b->[$SORT_COLUMN] <=> $a->[$SORT_COLUMN];
+  }
+
+}
 
 
 
@@ -1489,7 +1567,8 @@ sub parseResultSetParams {
 
 
   #### Define the keywords we're looking for
-  my @desired_params = ('rs_set_name','rs_page_size','rs_page_number');
+  my @desired_params = ('rs_set_name','rs_page_size','rs_page_number',
+    'rs_resort_column','rs_resort_type');
 
 
   #### Parse the resultset parameters into a hash
@@ -1529,6 +1608,7 @@ sub parseResultSetParams {
   return %rs_params;
 
 } # end parseResultSetParams
+
 
 
 ###############################################################################
