@@ -60,15 +60,20 @@ main();
 # Call $sbeams->InterfaceEntry with pointer to the subroutine to execute if
 # the authentication succeeds.
 ###############################################################################
-sub main { 
+sub main {
 
-    #### Do the SBEAMS authentication and exit if a username is not returned
-    exit unless ($current_username = $sbeams->Authenticate());
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    permitted_work_groups_ref=>['Proteomics_user','Proteomics_admin',
+      'Proteomics_readonly'],
+    #connect_read_only=>1,
+    #allow_anonymous_access=>1,
+  ));
 
-    #### Print the header, do what the program does, and print footer
-    $sbeamsPROT->printPageHeader();
-    processRequests();
-    $sbeamsPROT->printPageFooter();
+  #### Print the header, do what the program does, and print footer
+  $sbeamsPROT->printPageHeader();
+  processRequests();
+  $sbeamsPROT->printPageFooter();
 
 } # end main
 

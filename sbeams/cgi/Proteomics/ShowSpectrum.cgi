@@ -66,12 +66,17 @@ main();
 ###############################################################################
 sub main {
 
-    #### Do the SBEAMS authentication and exit if a username is not returned
-    exit unless ($current_username = $sbeams->Authenticate());
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    permitted_work_groups_ref=>['Proteomics_user','Proteomics_admin',
+      'Proteomics_readonly'],
+    #connect_read_only=>1,
+    #allow_anonymous_access=>1,
+  ));
 
-    #### Print the header, figure and do what the user want, and print footer
-    processRequests();
-    $sbeamsPROT->printPageFooter();
+  #### Print the header, figure and do what the user want, and print footer
+  processRequests();
+  $sbeamsPROT->printPageFooter();
 
 } # end main
 
