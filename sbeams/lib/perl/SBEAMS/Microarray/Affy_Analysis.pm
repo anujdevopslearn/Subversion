@@ -552,12 +552,14 @@ sub find_chips_with_data {
     
 
 	my $sql = qq~ 	SELECT distinct (gi.affy_array_id) 
-			FROM $TBMA_AFFY_GENE_INTENSITY gi, $TBMA_AFFY_ARRAY_SAMPLE afs
+			FROM $TBMA_AFFY_GENE_INTENSITY gi
+			JOIN $TBMA_AFFY_ARRAY afa ON (afa.affy_array_id = gi.affy_array_id)
+			JOIN $TBMA_AFFY_ARRAY_SAMPLE afs ON (afs.affy_array_sample_id = afa.affy_array_sample_id)
 			WHERE afs.project_id = $project_id 
-			AND afs.affy_array_sample_id = gi.affy_array_id
+		
 		   ~;
 	
-	
+#	print "SQL '$sql'";	
 	return my @rows = $sbeams->selectOneColumn($sql);
 
 }
