@@ -280,7 +280,7 @@ sub processFile
 		$INFOPROTEIN1{$count-2}->{group} = $infoArray[$columnHashProtein1{group}];
 		$INFOPROTEIN1{$count-2}->{group} =~ s/[\s+\n+]$//g;
 		$INFOPROTEIN1{$count-2}->{group} =~ s/^([a-z]+)\s+([a-z]+)$/$1 $2/i;
-		
+		$INFOPROTEIN1{$count-2}->{bioentityType1} = ucfirst($INFOPROTEIN2{$count-2}->{bioentityType1});
 		if (!($INFOPROTEIN1{$count-2}->{bioentityComName1}) and !($INFOPROTEIN1{$count-2}->{bioentityCanName1}))
 		{
 			print "Detected error1: bioentity1_common_name and bioentiy1_canonical_name\n";
@@ -341,6 +341,8 @@ sub processFile
 		$INFOPROTEIN2{$count-2}->{'group'} = $infoArray[$columnHashProtein2{'group'}];
 		$INFOPROTEIN2{$count-2}->{'group'} =~ s/[\s+\n+]$//g;
 		$INFOPROTEIN2{$count-2}->{group} =~ s/^([a-z]+)\s+([a-z]+)$/$1 $2/i;
+		$INFOPROTEIN2{$count-2}->{bioentityType2} = ucfirst($INFOPROTEIN2{$count-2}->{bioentityType2});
+		
 		if (!($INFOPROTEIN2{$count-2}->{'bioentityComName2'})	and (!($INFOPROTEIN2{$count-2}->{'bioentityCanName2'})))
 		{
 						print "Detected error2a: bioentity2 is not specified, bioentity1 has been added to the database\n";
@@ -356,6 +358,7 @@ sub processFile
 			delete $INFOPROTEIN2{$count-2};
 			next;	
 		}
+		
 		unless ($bioentityType->{$INFOPROTEIN2{$count-2}->{bioentityType2}} and 
  			$organismName->{$INFOPROTEIN2{$count-2}->{organismName2}}) 
 		{
