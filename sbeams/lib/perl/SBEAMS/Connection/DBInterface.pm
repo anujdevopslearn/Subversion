@@ -338,7 +338,7 @@ sub applySqlChange {
 
       #### Else if the record is Modifiable, then ALLOW to any data_writer
       } elsif ($record_status eq 'M') {
-	$permission="ALLOW";
+	$permission="ALLOWED";
 
 
       #### Else if not the owner and has Normal record_status, then more logic
