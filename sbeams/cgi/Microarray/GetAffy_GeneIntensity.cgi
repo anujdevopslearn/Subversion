@@ -2232,16 +2232,17 @@ example view of pivot hash
 				my $end_pos         = $4;
 				my $strand          = $5;
 
-				my $anno_set_id = $build2_annoset_genome{$genome_build_id};
-				unless ($anno_set_id) {
+				my $anno_set_genome_name = $build2_annoset_genome{$genome_build_id};
+				unless ($anno_set_genome_name) {
 					print
 					  "ERROR: Invalid genome_build_id '$genome_build_id'<BR>\n";
-					next;
+					return (-1);
 				}
 
 				$sql_constraint = qq~  
      				AND align.match_chromosome = 'chr$chromosome'
-     				AND  ( align.gene_start BETWEEN $start_pos AND $end_pos OR
+     				AND anno_set.genome_version = '$anno_set_genome_name'
+				AND  ( align.gene_start BETWEEN $start_pos AND $end_pos OR
                  			align.gene_stop BETWEEN $start_pos AND $end_pos OR
                  			$start_pos BETWEEN align.gene_start AND align.gene_stop ) 
       			    ~;
