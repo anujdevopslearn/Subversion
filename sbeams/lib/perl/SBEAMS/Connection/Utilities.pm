@@ -30,7 +30,7 @@ sub histogram {
   my $self = shift || croak("parameter self not passed");
   my %args = @_;
   my $SUB_NAME = "histogram";
-  my $VERBOSE = 0;
+  my $VERBOSE = 1;
 
   #### Decode the argument list
   my $data_array_ref = $args{'data_array_ref'};
@@ -71,11 +71,11 @@ sub histogram {
     #### Determine the desired data range and a rounded range
     my $range = $max - $min;
     my $round_range = find_nearest([1000,500,100,50,20,10,
-      5,2,1,0.5,0.25,0.1,0.005,0.002,0.001],$range);
+      5,2,1,0.5,0.25,0.1,0.05,0.02,0.01,0.005,0.002,0.001],$range);
     print "n_elements=$n_elements, min=$min, max=$max, range=$range, ".
       "round_range=$round_range<BR>\n" if ($VERBOSE);
     if ($round_range == 0) {
-      print "Histogram error: round_range = 0\n";
+      print "Histogram error: round_range = 0<BR>\n";
       return $result;
     }
 
@@ -92,29 +92,33 @@ sub histogram {
       $desired_bins = 40 if ($n_elements > 1000);
       $bin_size = ( $max - $min ) / $desired_bins;
       $bin_size = find_nearest([1000,500,100,50,20,10,5,2,1,0.5,0.25,0.1,
-        0.005,0.002,0.001],$bin_size);
-      print "Setting bin_size to $bin_size\n" if ($VERBOSE);
+        0.05,0.02,0.01,0.005,0.002,0.001],$bin_size);
+      print "Setting bin_size to $bin_size<BR>\n" if ($VERBOSE);
     }
 
     #### If the user didn't supply a min, then round off the min
     unless ($user_min) {
       print "range = $range,  round_range = $round_range,  ".
-        "original min = $min\n" if ($VERBOSE);
+        "original min = $min<BR>\n" if ($VERBOSE);
       my $increment = ( $round_range / 10.0 );
-      $increment = 1 if ($increment < 1);
+      $increment = find_nearest([1000,500,100,50,20,10,5,2,1,0.5,0.25,0.1,
+        0.05,0.02,0.01,0.005,0.002,0.001],$increment);
+      $increment = 0.001 if ($increment < 0.001);
       $min = int( $min / $increment - 0.5 ) * $increment;
-      print "Setting min to $min\n" if ($VERBOSE);
+      print "Setting min to $min<BR>\n" if ($VERBOSE);
     }
 
 
     #### If the user didn't supply a max, then round off the max
     unless ($user_max) {
       print "range = $range,  round_range = $round_range,  ".
-        "original max = $max\n" if ($VERBOSE);
+        "original max = $max<BR>\n" if ($VERBOSE);
       my $increment = ( $round_range / 10.0 );
-      $increment = 1 if ($increment < 1);
+      $increment = find_nearest([1000,500,100,50,20,10,5,2,1,0.5,0.25,0.1,
+        0.05,0.02,0.01,0.005,0.002,0.001],$increment);
+      $increment = 0.001 if ($increment < 0.001);
       $max = int( $max / $increment + 1.5 ) * $increment;
-      print "Setting max to $max\n" if ($VERBOSE);
+      print "Setting max to $max<BR>\n" if ($VERBOSE);
     }
 
   }
@@ -155,7 +159,7 @@ sub histogram {
   #### Override with some special, common cases
   $x_label_skip = 4
     if ($bin_size eq 0.25 && $x_label_skip >=3 && $x_label_skip <=5);
-  print "x_label_skip=$x_label_skip, bin_size=$bin_size\n" if ($VERBOSE);
+  print "x_label_skip=$x_label_skip, bin_size=$bin_size<BR>\n" if ($VERBOSE);
 
   #### Start off by keeping the first point
   my $skip_ctr = $x_label_skip;
