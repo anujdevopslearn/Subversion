@@ -1,0 +1,25 @@
+
+Notes running load_blast_results.pl
+
+cd /net/dblocal/www/html/dev2/sbeams/lib/scripts/BioLink
+
+./load_blast_results.pl \
+  --query_set_tag mouseOperon \
+  --match_set_tag cDNAmouse \
+  --source_file /net/dblocal/data/blast_results/operon_v_mouse.blast_output
+
+./load_blast_results.pl \
+  --query_set_tag mouseAgilent \
+  --match_set_tag cDNAmouse \
+  --source_file /net/dblocal/data/blast_results/agilent_v_mouse.blast_output
+
+
+
+
+
+
+
+
+
+
+
