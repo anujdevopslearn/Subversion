@@ -26,7 +26,7 @@ use FindBin;
 
 use lib qw (../perl ../../perl);
 use vars qw ($sbeams $sbeamsMOD $q
-             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
              $current_contact_id $current_username
             );
 
@@ -51,6 +51,7 @@ Options:
   --verbose n         Set verbosity level.  default is 0
   --quiet             Set flag to print nothing at all except errors
   --debug n           Set debug flag
+  --testonly          Do not actually execute the SQL
 
  e.g.:  $PROG_NAME \$CONFDIR/Core/Core_table_property.txt
 
@@ -58,7 +59,7 @@ EOU
 
 
 #### Process options
-unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
   "delete_existing")) {
   print "$USAGE";
   exit;
@@ -67,11 +68,13 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
 $VERBOSE = $OPTIONS{"verbose"} || 0;
 $QUIET = $OPTIONS{"quiet"} || 0;
 $DEBUG = $OPTIONS{"debug"} || 0;
+$TESTONLY = $OPTIONS{"testonly"} || 0;
 if ($DEBUG) {
   print "Options settings:\n";
   print "  VERBOSE = $VERBOSE\n";
   print "  QUIET = $QUIET\n";
   print "  DEBUG = $DEBUG\n";
+  print "  TESTONLY = $TESTONLY\n";
 }
 
 
@@ -148,8 +151,10 @@ sub updateDriverTable {
   #### If delete_existing is set, the TRUNCATE the tables and exit
   if ($delete_existing) {
     print "DELETing existing data in driver tables...\n";
-    $sbeams->executeSQL('DELETE FROM table_property');
-    $sbeams->executeSQL('DELETE FROM table_column');
+    unless ($TESTONLY) {
+      $sbeams->executeSQL('DELETE FROM table_property');
+      $sbeams->executeSQL('DELETE FROM table_column');
+    }
     print "Driver tables DELETEd.  Start reloading data.\n";
     return;
   }
@@ -315,13 +320,15 @@ sub update_table_property {
     table_name=>"table_property",
     update=>1,
     update_keys_ref=>\%update_keys,
+    verbose => $VERBOSE,
+    testonly => $TESTONLY,
   );
 
 
   print "\n";
 
   #### Insure that the file is in DOS carriage return format
-  $sbeams->unix2dosFile(file=>$source_file);
+  $sbeams->unix2dosFile(file=>$source_file) unless ($TESTONLY);
 
   return;
 
@@ -398,6 +405,8 @@ sub update_table_column {
     table_name=>"table_column",
     update=>1,
     update_keys_ref=>\%update_keys,
+    verbose => $VERBOSE,
+    testonly => $TESTONLY,
   );
 
 
@@ -405,7 +414,7 @@ sub update_table_column {
 
 
   #### Insure that the file is in DOS carriage return format
-  $sbeams->unix2dosFile(file=>$source_file);
+  $sbeams->unix2dosFile(file=>$source_file) unless ($TESTONLY);
 
   return;
 
@@ -449,7 +458,7 @@ sub executeManualCommands {
     next if ($line =~ /^\s*$/);
     if ($line =~ /^GO$/) {
       print "-------------\n$sql\n\n" if ($VERBOSE);
-      $sbeams->executeSQL($sql);
+      $sbeams->executeSQL($sql) unless ($TESTONLY);
       $sql = '';
 
     } else {
@@ -462,7 +471,7 @@ sub executeManualCommands {
   #### If there's anything left in the buffer, run that too
   if ($sql gt '') {
     print "-------------\n$sql\n\n" if ($VERBOSE);
-    $sbeams->executeSQL($sql);
+    $sbeams->executeSQL($sql) unless ($TESTONLY);
   }
 
 
@@ -471,7 +480,7 @@ sub executeManualCommands {
 
 
   #### Insure that the file is in DOS carriage return format
-  $sbeams->unix2dosFile(file=>$source_file);
+  $sbeams->unix2dosFile(file=>$source_file) unless ($TESTONLY);
 
   return;
 
