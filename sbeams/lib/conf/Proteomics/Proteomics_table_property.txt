@@ -1,6 +1,6 @@
 table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
 PR_proteomics_experiment	Proteomics Experiment	Proteomics_user	YES	$TBPR_PROTEOMICS_EXPERIMENT	experiment_id		ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment	PR_proteomics_experiment	
-PR_gradient_program	Gradient Program	Proteomics_infrastructure	YES	$TBPR_GRADIENT_PROGRAM	gradient_program_id		ManageTable.cgi?TABLE_NAME=PR_gradient_program	PR_gradient_program	
+PR_gradient_program	Gradient Program	Proteomics_user	YES	$TBPR_GRADIENT_PROGRAM	gradient_program_id		ManageTable.cgi?TABLE_NAME=PR_gradient_program	PR_gradient_program	
 PR_gradient_delta	Gradient Delta	Proteomics_infrastructure	NO	$TBPR_GRADIENT_DELTA	gradient_delta_id				
 PR_fraction	MS Run	Proteomics_infrastructure	NO	$TBPR_FRACTION	fraction_id				
 PR_msms_spectrum	MS/MS Spectrum	Proteomics_infrastructure	NO	$TBPR_MSMS_SPECTRUM	msms_spectrum_id				
@@ -30,6 +30,7 @@ PR_funding_status	Funding Status	Proteomics_infrastructure	YES	$TBPR_FUNDING_STA
 PR_proteomics_experiment_request	Proteomics Experiment Request	Proteomics_user	YES	$TBPR_PROTEOMICS_EXPERIMENT_REQUEST	experiment_request_id		ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment_request	PR_proteomics_experiment_request
 PR_processing_status	Processing Status	Proteomics_infrastructure	YES	$TBPR_PROCESSING_STATUS	processing_status_id		ManageTable.cgi?TABLE_NAME=PR_processing_status	"PR_processing_status,PR_raw_data_file"
 PR_raw_data_file	Raw Data File	Proteomics_infrastructure	YES	$TBPR_RAW_DATA_FILE	raw_data_file_id		ManageTable.cgi?TABLE_NAME=PR_raw_data_file	"PR_processing_status,PR_raw_data_file"
+PR_query_option	Query Option	Proteomics_infrastructure	YES	$TBPR_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=PR_query_option	PR_query_option
 APD_peptide_summary	Peptide Summary	Proteomics_infrastructure	YES	$TBAPD_PEPTIDE_SUMMARY	peptide_summary_id		ManageTable.cgi?TABLE_NAME=APD_peptide_summary	APD_peptide_summary
 PR_GetSearchHits	Browse Search Hits	QUERY	NO				GetSearchHits	
 PR_GetSearch	Browse Search	QUERY	NO				GetSearchHits	
