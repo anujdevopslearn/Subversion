@@ -75,7 +75,7 @@ sub printPageHeader {
 	<!------- Header ------------------------------------------------>
 	<a name="TOP"></a>
 	<tr>
-	  <td bgcolor="$BGCOLOR"><img height=50 width=50 border=0 alt="$DBTITLE Logo" src="$HTML_BASE_DIR/images/logo.gif"></td>
+	  <td bgcolor="$BARCOLOR"><img height=50 width=50 border=0 alt="$DBTITLE Logo" src="$HTML_BASE_DIR/images/logo.gif"></td>
 	  <td align="left" bgcolor="$BGCOLOR"><H1>$DBTITLE - $SBEAMS_PART<BR>$DBVERSION</H1></td>
 	</tr>
 
@@ -86,7 +86,7 @@ sub printPageHeader {
     if ($navigation_bar eq "YES") {
       print qq~
 	<!------- Button Bar -------------------------------------------->
-	<tr><td bgcolor="$BGCOLOR" align="left" valign="top">
+	<tr><td bgcolor="$BARCOLOR" align="left" valign="top">
 	<table border=0 width="120" cellpadding=2 cellspacing=0>
 
 	<tr><td><a href="$CGI_BASE_DIR/main.cgi">>$DBTITLE Home</a></td></tr>

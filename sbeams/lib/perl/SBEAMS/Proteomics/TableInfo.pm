@@ -13,9 +13,10 @@ package SBEAMS::Proteomics::TableInfo;
 use strict;
 use CGI::Carp qw(fatalsToBrowser croak);
 
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
 use SBEAMS::Proteomics::Settings;
 use SBEAMS::Proteomics::Tables;
-use SBEAMS::Connection::Tables;
 
 
 ###############################################################################
@@ -44,6 +45,9 @@ sub returnTableInfo {
     my @row;
     my $sql_query;
     my $result;
+
+    #### Obtain main SBEAMS object for later use
+    my $sbeams = $self->getSBEAMS();
 
 
 ###############################################################################
@@ -101,6 +105,52 @@ sub returnTableInfo {
 
 
     }
+
+
+    if ($table_name eq "proteomics_experiment") {
+
+        if ($info_key eq "BASICQuery") {
+            return qq~
+		SELECT experiment_id,username,P.project_id AS 'proj',
+		       name AS 'project_name',PE.experiment_id AS 'exp',
+		       experiment_tag,experiment_name,experiment_description
+		  FROM $TB_PROTEOMICS_EXPERIMENT PE
+		  JOIN $TB_USER_LOGIN UL ON (PE.contact_id=UL.contact_id)
+		  JOIN $TB_PROJECT P ON (PE.project_id=P.project_id)
+		 WHERE P.record_status!='D'
+		   AND UL.record_status!='D'
+		   AND P.record_status!='D'
+		 ORDER BY username,experiment_tag
+            ~;
+
+        }
+
+
+    }
+
+
+###############################################################################
+  if ($info_key eq "url_cols") {
+
+    my $subdir = $sbeams->getSBEAMS_SUBDIR();
+    $subdir .= "/" if ($subdir);
+    my $PROGRAM_FILE_NAME =
+      $sbeams->returnTableInfo($table_name,"PROGRAM_FILE_NAME");
+    my $PK_COLUMN_NAME =
+      $sbeams->returnTableInfo($table_name,"PK_COLUMN_NAME");
+
+    if ($table_name eq "proteomics_experiment") {
+      my %url_cols;
+      $url_cols{experiment_id} =
+        "$CGI_BASE_DIR/$subdir$PROGRAM_FILE_NAME&$PK_COLUMN_NAME=%V";
+      $url_cols{proj} =
+        "$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=project&project_id=%V";
+      $url_cols{exp} =
+        "$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=proteomics_experiment&experiment_id=%V";
+      return %url_cols;
+    }
+
+  }
 
 
 
