@@ -76,7 +76,7 @@ if ($DEBUG) {
 my (%INFOPROTEIN1,
 	%INFOPROTEIN2,
 	%INTERACTION, @columnOrder, %columnHashProtein1, %columnHashProtein2, %interactionHash,$bioentityState,$bioentityType,$organismName,$interactionTypes,
-	$interactionGroups,$confidenceScores,$assayTypes,$pubMed, $interactionGroupsOrganism, $fhError, $fhLog, $regTypes, %locusIDProteinHash,  %locusIDmRNAHash);
+	$organismType, $interactionGroups,$confidenceScores,$assayTypes,$pubMed, $interactionGroupsOrganism, $fhError, $fhLog, $regTypes, %locusIDProteinHash,  %locusIDmRNAHash);
 
 main();
 exit;
@@ -181,7 +181,8 @@ organismName1 => $indexHash{Organism_bioentity1_name},
 	$bioentityType = \%bioentityType;
 	my %organismName = $sbeams->selectTwoColumnHash(qq /Select Upper(organism_name),organism_id from $TB_ORGANISM /);
 	$organismName = \%organismName;
-
+    my %organismType = $sbeams->selectTwoColumnHash(qq /Select Upper(full_name),organism_id from $TB_ORGANISM /);
+    $organismType =\%organismType;
 	my %interactionTypes = $sbeams->selectTwoColumnHash(qq /Select Upper(interaction_type_name), interaction_type_id from $TBIN_INTERACTION_TYPE/);
 	$interactionTypes = \%interactionTypes;
 	
@@ -198,6 +199,11 @@ organismName1 => $indexHash{Organism_bioentity1_name},
 	$pubMed = \%pubMed;
 	%locusIDProteinHash = $sbeams->selectTwoColumnHash( qq/Select locus_id, protein from locuslink.dbo.refseq/); 
 	%locusIDmRNAHash = $sbeams->selectTwoColumnHash( qq/Select locus_id,mRNA from locuslink.dbo.refseq/); 
+    
+ 
+      
+    
+    
 	
 	$sbeams->printPageHeader() unless ($QUIET);
 	processFile();
@@ -540,7 +546,7 @@ print "checking interaction requirements\n";
 		$INTERACTION{$count-2}->{'group'} =~ s/[\s+\n+\t+\r+]$//g;
 		$INTERACTION{$count-2}->{'group'} =~ s/^[\s+\n+\t+\r+]//g;
 #      $NTERACTION{$count-2}->{group} =~ s/^([a-z]+)\s+([a-z]+)$/$1 $2/i;
-		$INTERACTION{$count-2}->{confidence_score} =~ s/\s*//g;
+	#	$INTERACTION{$count-2}->{confidence_score} =~ s/\s*//g;
 		$INTERACTION{$count-2}->{group}= uc($INTERACTION{$count-2}->{group});
 		
 		my @row = $sbeams->selectOneColumn ("select interaction_group_id from $TBIN_INTERACTION_GROUP i 
@@ -613,7 +619,7 @@ print "checking interaction requirements\n";
 		if ($INTERACTION{$count-2}->{confidence_score} and !($confidenceScores->{$INTERACTION{$count-2}->{confidence_score}}))
 		{
 			print " $INTERACTION{$count-2}->{confidence_score}\n";
-			
+;
 				Error (\@infoArray," $INTERACTION{$count-2}->{confidence_score}:  confidenceScore is not in the database");
 				delete $INTERACTION{$count-2};
 				next;
