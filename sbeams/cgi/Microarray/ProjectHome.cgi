@@ -93,7 +93,7 @@ sub main {
   my %parameters;
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters);
-  $sbeams->printDebuggingInfo($q);
+  #$sbeams->printDebuggingInfo($q);
 
 
   #### Process generic "state" parameters before we start
