@@ -763,6 +763,7 @@ sub printEntryForm {
 	  LEFT JOIN #tmpAnnBSids tABS ON ( tBS.biosequence_id = tABS.biosequence_id )
 	  JOIN $TBPR_BIOSEQUENCE BS ON ( tBS.biosequence_id = BS.biosequence_id )
           LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
+	 WHERE 1 = 1
 	$n_annotations_clause
         $description_clause
         $final_group_by_clause
