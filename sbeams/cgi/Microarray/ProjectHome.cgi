@@ -711,7 +711,7 @@ sub print_data_analysis_tab {
       <H1>Data Analysis:</H1>
       <UL>
         <LI><A HREF="ProcessProject.cgi">Submit a New Job to the Pipeline</A>
-				<LI><A HREF="http://db.systemsbiology.net/software/ArrayProcess/" TARGET="_blank">What is the Data Processing Pipeline?</A>
+	<LI><A HREF="http://db.systemsbiology.net/software/ArrayProcess/" TARGET="_blank">What is the Data Processing Pipeline?</A>
       </UL>
 			$LINESEPARATOR
       ~;
@@ -725,19 +725,28 @@ sub print_data_analysis_tab {
 		<INPUT TYPE="hidden" NAME="tab" VALUE="data_analysis">
      <TABLE>
 		 <TR VALIGN="center"><TD><B>MeV Files</B></TD></TR>
-		 <TR><TD><SELECT NAME="tavChooser" MULTIPLE SIZE="10">
+		 <TR>
+		   <TD>
+		   <SELECT NAME="tavChooser" MULTIPLE SIZE="10">
 		 ~;
 	foreach my $tav(@tav_list) {
-			my $temp = $tav;
-			$temp=~s(^.*/)();
-			print qq~<OPTION value="$temp">$temp~;
+	    my $temp = $tav;
+	    $temp=~s(^.*/)();
+	    print qq~<OPTION value="$temp">$temp~;
 	}
 	print qq~
-			</SELECT></TD></TR>
-			<TR>
-			 <TD><INPUT TYPE="button" name="mevButton" value="View Selected Files in MeV" onClick="Javascript:startMev($project_id)"></TD>
-			</TR>
-			<TR><TD></TD></TR>
+	           </SELECT>
+		   </TD>
+		   <TD>
+		   <A HREF="http://www.tigr.org/software/tm4/mev.html" TARGET="_blank"><IMG SRC="../../images/mev_logo.gif"></A>
+		   </TD>
+		 </TR>
+		 <TR>
+		   <TD>
+		   <INPUT TYPE="button" name="mevButton" value="View Selected Files in MeV" onClick="Javascript:startMev($project_id)">
+		   </TD>
+		 </TR>
+		 <TR><TD></TD></TR>
 		</TABLE>
 		</FORM>
 		 ~;
