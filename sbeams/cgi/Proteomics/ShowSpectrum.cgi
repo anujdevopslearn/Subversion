@@ -148,10 +148,10 @@ sub printEntryForm {
     #### If no list of charges was supplied, set a default based on
     #### the assumed_charge of the search
     unless ($parameters{'charge'}) {
-      if ($parameters{'assumed_charge'} == 1) {
-        $parameters{'charge'} = "1";
+      if ($parameters{'assumed_charge'} == 3) {
+        $parameters{'charge'} = "1,2";
       } else {
-        $parameters{'charge'} = "1,2"
+        $parameters{'charge'} = "1"
       }
     }
 
@@ -809,14 +809,13 @@ sub PlotPeaks {
     pgscr 3,0.13,0.55,0.13;
 
     if ($charge == 1) {
-      $redcol = 6;
-      $bluecol = 11;
-      $grcol = 10;
-    }
-    elsif ($charge == 2) {
       $redcol = 2;
       $bluecol = 4;
       $grcol = 3;
+    } else {
+      $redcol = 6;
+      $bluecol = 11;
+      $grcol = 10;
     }
 
 
@@ -983,14 +982,13 @@ sub LabelResidues {
     pgscr 3,0.13,0.55,0.13;
 
     if ($charge == 1) {
-      $redcol = 6;
-      $bluecol = 11;
-      $grcol = 10;
-    }
-    elsif ($charge == 2) {
       $redcol = 2;
       $bluecol = 4;
       $grcol = 3;
+    } else {
+      $redcol = 6;
+      $bluecol = 11;
+      $grcol = 10;
     }
 
     for ($i=0; $i < $length; $i++) {
