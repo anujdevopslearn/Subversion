@@ -181,6 +181,16 @@ sub getPROTEOMICS_DB {
 
 
 ###############################################################################
+# getPHENOARRAY_DB
+#
+# Return the PHENOARRAY_DB of the database connection.
+###############################################################################
+sub getPHENOARRAY_DB {
+    return $PHENOARRAY_DB;
+}
+
+
+###############################################################################
 # get DB Database
 #
 # Return the database name of the connection.
