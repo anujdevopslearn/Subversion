@@ -13,3 +13,4 @@ AT_dbxref	Biosequence Database Cross Reference	PeptideAtlas_infrastructure	YES	$
 organism	Organism	PeptideAtlas_infrastructure	YES	$TB_ORGANISM	organism_id		ManageTable.cgi?TABLE_NAME=organism		
 AT_query_option	Query Option	PeptideAtlas_infrastructure	YES	$TBAT_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=AT_query_option	AT_query_option	
 AT_BrowseBiosequence	Browse Biosequence	QUERY					BrowseBioSequence.cgi		
+AT_GetPeptides	Get Peptides	QUERY					GetPeptides		
