@@ -980,6 +980,14 @@ sub postProcessResultset {
     $stats{rosetta_success_domains} += $rosetta_success_domains;
     $stats{rosetta_best_domains} += $rosetta_best_domains;
 
+    if ($pdbblast_domains + $pfam_best_domains + $rosetta_best_domains > 0) {
+      $stats{proteins_with_an_id}++;
+      if ($pdbblast_domains + $pfam_best_domains + $rosetta_best_domains ==
+	  $n_domains) {
+	$stats{proteins_with_all_id}++;
+      }
+    }
+
 
     #### Set new start and continue
     $startrow = $endrow + 1;
@@ -998,6 +1006,8 @@ sub postProcessResultset {
   $buf.="Total number of domains: ".($stats{single_domain_proteins_domains}+$stats{multiple_domain_proteins_domains})."\n";
 
   $buf.="\n<font color=\"red\">Filtering statistics:</font>\n";
+  $buf.="Number of proteins with at least one identified domain: $stats{proteins_with_an_id}\n";
+  $buf.="Number of proteins with all domains identified: $stats{proteins_with_all_id}\n";
   $buf.="Number of good PDB hit domains: $stats{pbdblast_domains}\n";
   $buf.="Number of good PFAM hit but not PDB hit domains: $stats{pfam_best_domains}\n";
   $buf.="Number of good Rosetta hit domains without PDB or PFAM hits: $stats{rosetta_best_domains}\n";
