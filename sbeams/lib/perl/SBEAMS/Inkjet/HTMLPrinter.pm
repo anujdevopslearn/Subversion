@@ -68,7 +68,7 @@ sub printPageHeader {
 
     print qq~$http_header
 	<HTML><HEAD>
-	<TITLE>$DBTITLE - MicroArray</TITLE>
+	<TITLE>$DBTITLE - Inkjet</TITLE>
     ~;
 
 
@@ -96,7 +96,7 @@ sub printPageHeader {
 		<td colspan=3>
 			<table border=0 width=100% cellspacing=0 cellpadding=0>
 				<tr>
-				  <td bgcolor="#000000" align=left><img alt="MICROARRAY" src="$HTML_BASE_DIR/images/microarray.gif"></td>
+				  <td bgcolor="#000000" align=left><img alt="MICROARRAY" src="$HTML_BASE_DIR/images/inkjet.gif"></td>
 				  <td bgcolor="#000000" align=right valign=center><font color="#ffffff"><a href="$CGI_BASE_DIR/logout.cgi"><img src="$HTML_BASE_DIR/images/logout.gif" border=0 alt="LOGOUT"></a><img src="$HTML_BASE_DIR/images/space.gif" height=1 width=25></td>
 				</tr>
 			</table>
