@@ -205,11 +205,11 @@ sub handle_request {
 
         $tabmenu->addTab( label => 'Browse Peptides',
                       helptext => 'Multi-constraint browsing of PeptideAtlas',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides?_tab=1" );
+                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides" );
 
         $tabmenu->addTab( label => 'Get Peptide',
                       helptext => 'Look-up info on a peptide by sequence or name',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=2"
+                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide"
                       );
 
         $tabmenu->addTab( label => 'Browse Proteins',
