@@ -8,3 +8,4 @@ PS_domain_match	Domain Match	ProteinStructure_infrastructure	NO	$TBPS_DOMAIN_MAT
 PS_domain_match_source	Domain Match Source	ProteinStructure_infrastructure	YES	$TBPS_DOMAIN_MATCH_SOURCE	domain_match_source_id		ManageTable.cgi?TABLE_NAME=PS_domain_match_source	PS_domain_match_source	
 PS_query_option	Query Option	ProteinStructure_infrastructure	YES	$TBPS_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=PS_query_option	PS_query_option	
 PS_BrowseBioSequence	Browse BioSequence	QUERY	NO				BrowseBioSequence.cgi		
+PS_GetDomainHit	Get Domain Hit	QUERY	NO				GetDomainHits		
