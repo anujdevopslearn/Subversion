@@ -325,7 +325,7 @@ sub loadBiosequenceSet {
 
   #### Decode the argument list
   my $set_name = $args{'set_name'}
-   || die "ERROR[$SUB_NAME]: biosequence_set_id not passed";
+   || die "ERROR[$SUB_NAME]: set_name not passed";
   my $source_file = $args{'source_file'}
    || die "ERROR[$SUB_NAME]: source_file not passed";
 
@@ -495,7 +495,76 @@ sub loadBiosequenceSet {
   close(INFILE);
   print "\n$counter rows INSERT/UPDATed\n";
 
+
+  updateSourceFileDate(
+    biosequence_set_id => $biosequence_set_id,
+    source_file => $source_file,
+  );
+
 }
+
+
+
+###############################################################################
+# updateSourceFileDate
+###############################################################################
+sub updateSourceFileDate {
+  my %args = @_;
+  my $SUB_NAME = "updateSourceFileDate";
+
+
+  #### Decode the argument list
+  my $biosequence_set_id = $args{'biosequence_set_id'}
+   || die "ERROR[$SUB_NAME]: biosequence_set_id not passed";
+  my $source_file = $args{'source_file'}
+   || die "ERROR[$SUB_NAME]: source_file not passed";
+
+
+  #### Check if there's a source_file_date column (some older versions
+  #### may not have this)
+  print "Looking for source_file_date column\n" if ($VERBOSE);
+  my $sql = "SELECT * FROM ${DATABASE}biosequence_set";
+  my @rows = $sbeams->selectHashArray($sql);
+  return unless exists($rows[0]->{source_file_date});
+
+
+  #### Get the last modification date from this file
+  my @stats = stat($source_file);
+  my $mtime = $stats[9];
+  my $source_file_date;
+  if ($mtime) {
+    my ($sec,$min,$hour,$mday,$mon,$year) = localtime($mtime);
+    $source_file_date = sprintf("%d-%d-%d %d:%d:%d",
+      1900+$year,$mon+1,$mday,$hour,$min,$sec);
+    print "INFO: Updating source_file_date to '$source_file_date'\n";
+  } else {
+    $source_file_date = "CURRENT_TIMESTAMP";
+    print "WARNING: Unable to determine the source_file_date for ".
+     "'$source_file'.\n";
+  }
+
+
+  #### UPDATE the record with the current datetime
+  print "Updating source_file_date column\n" if ($VERBOSE);
+  my %rowdata = (
+    source_file_date => $source_file_date,
+  );
+
+  my $result = $sbeams->updateOrInsertRow(
+    update => 1,
+    table_name => "${DATABASE}biosequence_set",
+    rowdata_ref => \%rowdata,
+    PK => "biosequence_set_id",
+    PK_value => $biosequence_set_id,
+    verbose=>$VERBOSE,
+    testonly=>$TESTONLY,
+ );
+
+
+
+} # end updateSourceFileDate
+
+
 
 ###############################################################################
 # loadBiosequence
