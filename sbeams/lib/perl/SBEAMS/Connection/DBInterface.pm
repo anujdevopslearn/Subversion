@@ -2119,7 +2119,8 @@ sub displayResultSet {
         if ($rs_params_ref->{default_values} eq 'YES');
 
 	  #### Get the hidden column hash
-	  my %hidden_cols = %{$hidden_cols_ref};
+	  my %hidden_cols;
+          %hidden_cols = %{$hidden_cols_ref} if ($hidden_cols_ref);
 
 	  #### Make tools for finding unacceptable columns to output
       #### The following are removed:
