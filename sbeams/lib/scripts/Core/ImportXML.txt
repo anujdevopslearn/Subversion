@@ -11,9 +11,19 @@ mkdir zztmp
 
 
 
+set source_file=/net/snp/projects/celera/data/celera_chr10_12.85-16.45.xml.fixed
 
-./ImportXML.pl --schema_file zztmp/celera --destination_type mssql --source_file /net/snp/projects/celera/data/celera_chr10_14.4-16.5.xml.fixed --create
+./ImportXML.pl --schema_file zztmp/celera --destination_type mssql --database_prefix CeleraTemp.dbo. --drop_tables
 
-./ImportXML.pl --schema_file zztmp/celera --destination_type mssql --source_file /net/snp/projects/celera/data/celera_chr10_14.4-16.5.xml.fixed --load --database_prefix Userspace.dbo. --testonly --verbose 2 | more
+rm zztmp/celera*
+
+./ImportXML.pl --schema_file zztmp/celera --destination_type mssql --source_file $source_file --create_data_model --database_prefix CeleraTemp.dbo.
+
+./ImportXML.pl --schema_file zztmp/celera --destination_type mssql --database_prefix CeleraTemp.dbo. --create_tables
+
+./ImportXML.pl --schema_file zztmp/celera --destination_type mssql --source_file $source_file --load --database_prefix CeleraTemp.dbo.
+
+
+
 
 

@@ -73,6 +73,7 @@ EOU
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
   "source_file:s","schema_file:s","destination_type:s",
   "create_data_model","load_data","database_prefix:s",
+  "drop_tables","create_tables",
   )) {
   print "$USAGE";
   exit;
@@ -138,6 +139,8 @@ sub handleRequest {
   my $destination_type = $OPTIONS{"destination_type"};
   my $load_data = $OPTIONS{"load_data"};
   my $database_prefix = $OPTIONS{"database_prefix"};
+  my $drop_tables = $OPTIONS{"drop_tables"} || '';
+  my $create_tables = $OPTIONS{"create_tables"} || '';
 
 
   #### If there are any parameters left, complain and print usage
@@ -162,6 +165,7 @@ sub handleRequest {
 
   #### Create the data model if requested
   if ($create_data_model) {
+    print "Reading XML file and generating a data model...";
     my $result = $importer->createDataModel(
       source_file => $source_file,
       verbose => 1,
@@ -171,12 +175,29 @@ sub handleRequest {
   }
 
 
-  #### There probably should be a mechanism to executing the
-  #### contents of the CREATE TABLE statements here
+  #### DROP the TABLES if requested
+  if ($drop_tables) {
+    my $result = dropTables(
+      schema_file => $schema_file,
+      database_prefix => $database_prefix,
+      destination_type => $destination_type,
+    );
+  }
+
+
+  #### CREATE the TABLES if requested
+  if ($create_tables) {
+    my $result = createTables(
+      schema_file => $schema_file,
+      database_prefix => $database_prefix,
+      destination_type => $destination_type,
+    );
+  }
 
 
   #### INSERT the data if requested
   if ($load_data) {
+    print "Reading XML file and inserting the data...";
     my $result = $importer->insertData(
       source_file => $source_file,
       schema_file => $schema_file,
@@ -194,6 +215,99 @@ sub handleRequest {
   return;
 
 } # end handleRequest
+
+
+
+###############################################################################
+# dropTables
+###############################################################################
+sub dropTables {
+  my $SUB_NAME = 'dropTables';
+  #my $self = shift || die("$SUB_NAME: Parameter self not passed");
+  my %args = @_;
+
+  my $schema_file = $args{'schema_file'}
+    || die "schema_file not passed";
+  my $destination_type = $args{'destination_type'}
+    || die "destination_type not passed";
+  my $database_prefix = $args{'database_prefix'} || '';
+
+
+  #### Open the file containing the DROP TABLE commands
+  my $input_file = "${schema_file}_DROPTABLES.$destination_type";
+  unless (open(INFILE,$input_file)) {
+    print "ERROR: Unable to open DROPTABLES source file '$input_file'\n";
+    exit;
+  }
+
+
+  #### Read the file
+  my $sql = '';
+  my $line;
+  while ($line = <INFILE>) {
+    $line =~ s/[\r\n]+//g;
+    $line =~ s/DROP TABLE /DROP TABLE ${database_prefix}/;
+    next if ($line =~ /^GO$/);
+    $sql .= "$line\n";
+  }
+
+  close(INFILE);
+
+  #print $sql;
+  print "DROPping tables...\n";
+  $sbeams->executeSQL($sql);
+
+  return 1;
+
+
+} # end dropTables
+
+
+
+###############################################################################
+# createTables
+###############################################################################
+sub createTables {
+  my $SUB_NAME = 'createTables';
+  #my $self = shift || die("$SUB_NAME: Parameter self not passed");
+  my %args = @_;
+
+  my $schema_file = $args{'schema_file'}
+    || die "schema_file not passed";
+  my $destination_type = $args{'destination_type'}
+    || die "destination_type not passed";
+  my $database_prefix = $args{'database_prefix'} || '';
+
+
+  #### Open the file containing the CREATE TABLE commands
+  my $input_file = "${schema_file}_CREATETABLES.$destination_type";
+  unless (open(INFILE,$input_file)) {
+    print "ERROR: Unable to open CREATETABLES source file '$input_file'\n";
+    exit;
+  }
+
+
+  #### Read the file
+  my $sql = '';
+  my $line;
+  while ($line = <INFILE>) {
+    $line =~ s/[\r\n]+//g;
+    $line =~ s/CREATE TABLE /CREATE TABLE ${database_prefix}/;
+    next if ($line =~ /^GO$/);
+    $sql .= "$line\n";
+  }
+
+  close(INFILE);
+
+  #print $sql;
+  print "CREATing tables...\n";
+  $sbeams->executeSQL($sql);
+
+  return 1;
+
+
+} # end createTables
+
 
 
 
