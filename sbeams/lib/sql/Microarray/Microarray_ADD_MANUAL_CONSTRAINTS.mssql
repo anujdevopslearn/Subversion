@@ -1,0 +1,1 @@
+ALTER TABLE dbo.affy_array_sample ADD CONSTRAINT Unique_sample_tag__project_id UNIQUE (sample_tag,project_id)
