@@ -49,8 +49,13 @@ main();
 ###############################################################################
 sub main {
 
-    #### Do the SBEAMS authentication and exit if a username is not returned
-    exit unless ($current_username = $sbeams->Authenticate());
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    #connect_read_only=>1,
+    #### This allows automated,passwordless access to resultsets
+    allow_anonymous_access=>1
+  ));
+
 
     #### Don't print the headers, and provide the data
     #$sbeamsPROT->printPageHeader();
