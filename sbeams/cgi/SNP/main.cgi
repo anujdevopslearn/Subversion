@@ -15,17 +15,22 @@
 # Get the script set up with everything it will need
 ###############################################################################
 use strict;
-use vars qw ($q $sbeams $PROGRAM_FILE_NAME
+use vars qw ($q $sbeams $sbeamsSN $PROGRAM_FILE_NAME
              $current_contact_id $current_username);
-use lib qw (../lib/perl);
+use lib qw (../../lib/perl);
 use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 
+use SBEAMS::SNP;
+use SBEAMS::SNP::Settings;
+
 $q   = new CGI;
 $sbeams = new SBEAMS::Connection;
+$sbeamsSN = new SBEAMS::SNP;
+$sbeamsSN->setSBEAMS($sbeams);
 
 
 ###############################################################################
@@ -47,9 +52,9 @@ sub main {
     exit unless ($current_username = $sbeams->Authenticate());
 
     #### Print the header, do what the program does, and print footer
-    $sbeams->printPageHeader();
+    $sbeamsSN->printPageHeader();
     showMainPage();
-    $sbeams->printPageFooter();
+    $sbeamsSN->printPageFooter();
 
 } # end main
 
@@ -63,33 +68,17 @@ sub showMainPage {
 
     print qq!
 	<BR>
-	You have successfully logged into the $DBTITLE interface.<BR>
-	Note your current user group above, and click [CHANGE] to change it.<P> 
-
-	Please choose a section/subsection/task from the menu bar on the
-	left to continue.<P>
-
-	This system is still under active development.  Please
-	report bugs, problems, difficulties, and suggestions to
+	You are successfully logged into the $DBTITLE - $SBEAMS_PART system.
+	Please choose your tasks from the menu bar on the left.<P>
+	<BR>
+	This system is still under active development.  Please be
+	patient and report bugs, problems, difficulties, suggestions to
 	<B>edeutsch\@systemsbiology.org</B>.<P>
+	<BR>
 	<BR>
 
 	<UL>
-	<LI><A HREF="Microarray/main.cgi">SBEAMS - Microarray</A>
-	<BR><BR>
-	<LI><A HREF="Proteomics/main.cgi">SBEAMS - Proteomics</A>
-	<BR><BR>
-	<LI><A HREF="Inkjet/main.cgi">SBEAMS - Inkjet</A>
-	<BR><BR>
-	<LI><A HREF="Biosap/main.cgi">SBEAMS - BioSap</A>
-	<BR><BR>
-	<LI><A HREF="PhenoArray/main.cgi">SBEAMS - Phenotype Array</A>
-	<BR><BR>
-	<LI><A HREF="GEAP/main.cgi">SBEAMS - SNP</A>
-	<BR><BR>
-	<LI><A HREF="GEAP/main.cgi">SBEAMS - GEAP</A>
-	<BR><BR>
-	<LI><A HREF="tools/main.cgi">SBEAMS - Tools</A>
+	<LI> Here is the starter stub for the SNP area.
 	</UL>
 
 	<BR>

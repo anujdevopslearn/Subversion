@@ -2,11 +2,11 @@
 Notes add a new module:
 
 set TEMPLATE = Biosap
-set DEST = PhenoArray
+set DEST = SNP
 set TMPLTAG = BS
-set TAG = PH
+set TAG = SN
 
-cd /host/db/local/www/html/dev2/sbeams/lib/perl/SBEAMS
+cd /net/dblocal/www/html/dev2/sbeams/lib/perl/SBEAMS
 cp -p $TEMPLATE.pm $DEST.pm
 cp -p -r $TEMPLATE $DEST
 replaceall.pl $TEMPLATE $DEST $DEST.pm
@@ -15,7 +15,7 @@ replaceall.pl $TEMPLATE $DEST *.pm
 rm -r CVS
 
 
-cd /host/db/local/www/html/dev2/sbeams/cgi
+cd /net/dblocal/www/html/dev2/sbeams/cgi
 cp -p -r $TEMPLATE $DEST
 cd $DEST
 replaceall.pl $TEMPLATE $DEST *.cgi
@@ -23,27 +23,30 @@ rm -r CVS
 replaceall.pl sbeams$TMPLTAG sbeams$TAG *.cgi
 chmod a+x *.cgi
 
-cd /host/db/local/www/html/dev2/sbeams/cgi
+cd /net/dblocal/www/html/dev2/sbeams/cgi
 ed main.cgi to include new plugin
 
-cd /host/db/local/www/html/dev2/sbeams/lib/perl/SBEAMS/Connection
+cd /net/dblocal/www/html/dev2/sbeams/lib/perl/SBEAMS/Connection
 ed HTMLPrinter.pm to include new plugin
 ed TableInfo.pm to add Tables for new plugin
 
+cd /net/dblocal/www/html/dev2/sbeams/lib/perl/SBEAMS/$DEST
+ed TableInfo.pm
 
-cd /host/db/local/www/html/dev2/sbeams/cgi
+
+cd /net/dblocal/www/html/dev2/sbeams/cgi
 cvs add $DEST
 cvs add $DEST/*
 
-cd /host/db/local/www/html/dev2/sbeams/lib/perl/SBEAMS
+cd /net/dblocal/www/html/dev2/sbeams/lib/perl/SBEAMS
 cvs add $DEST.pm
 cvs add $DEST
 cvs add $DEST/*
 
-#cd /host/db/local/www/html/dev2/sbeams/images
+#cd /net/dblocal/www/html/dev2/sbeams/images
 #cvs add -kb biosap_logo.png
 
-cd /host/db/local/www/html/dev2/sbeams
+cd /net/dblocal/www/html/dev2/sbeams
 cvs commit
 
 

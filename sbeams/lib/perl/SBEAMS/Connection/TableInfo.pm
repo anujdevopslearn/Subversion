@@ -24,6 +24,7 @@ use SBEAMS::Proteomics::Tables;
 use SBEAMS::Inkjet::Tables;
 use SBEAMS::Biosap::Tables;
 use SBEAMS::PhenoArray::Tables;
+use SBEAMS::SNP::Tables;
 
 
 ###############################################################################
