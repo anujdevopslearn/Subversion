@@ -747,7 +747,7 @@ sub parseConstraint2SQL {
   #### Parse type int_list: a list of integers like "+1, 2,-3"
   if ($constraint_type eq "int_list") {
     print "Parsing int_list $constraint_name<BR>\n" if ($verbose);
-    if ($constraint_value =~ /^[\d,\s]+$/ ) {
+    if ($constraint_value =~ /^[\+\-\d,\s]+$/ ) {
       return "   AND $constraint_column IN ( $constraint_value )";
     } else {
       print "<H4>Cannot parse $constraint_name constraint ".
