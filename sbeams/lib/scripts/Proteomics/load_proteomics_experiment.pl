@@ -2115,9 +2115,21 @@ sub updateTimingInfo {
     my @prog_deltas = @{$gradient_program->{buffer_B_setting_percents}};
 
 
-    #### Read the nfo file for this fraction
+    #### Read the .nfo file for this fraction
     my %msrun_data = $sbeamsPROT->readNfoFile(source_file=>$source_file,
       verbose=>$VERBOSE);
+
+
+    #### Read the .precur file for this fraction if it exists
+    my $precur_data;
+    my $precur_file = $source_file;
+    $precur_file =~ s/\.nfo/.precur/;
+    if ( -e $precur_file ) {
+      $precur_data = $sbeamsPROT->readPrecurFile(
+        source_file=>$precur_file,
+	verbose=>$VERBOSE
+      );
+    }
 
 
     #### If we got back data, UPDATE some fraction-specific pieces of data
@@ -2192,6 +2204,14 @@ sub updateTimingInfo {
         } else {
           print "ERROR: Unable to calculate buffer B percent\n";
         }
+
+
+	#### If we have precursor_intensity information, add that
+	if (defined($precur_data) && defined($precur_data->{$scan_number})) {
+	  my $idx = $precur_data->{column_names_hash}->{precursor_intensity};
+	  my $precursor_intensity = $precur_data->{$scan_number}->[$idx];
+	  $rowdata{precursor_intensity} = $precursor_intensity;
+	}
 
 
         #### UPDATE the information
