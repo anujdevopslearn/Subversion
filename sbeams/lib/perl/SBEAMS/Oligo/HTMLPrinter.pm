@@ -69,6 +69,13 @@ sub display_page_header {
     ~;
 
 
+    #### If the current user is the virtual ext_halo user, then show that
+    #### a different template
+    if ($sbeams->getCurrent_work_group_name() eq 'Oligo_user') {
+      $self->display_ext_halo_template();
+      return;
+    }
+
     $self->printJavascriptFunctions();
     $self->printStyleSheet();
 
@@ -238,6 +245,14 @@ sub display_page_footer {
 
   #### If closing the content tables is desired
   if ($close_tables eq 'YES') {
+
+    #### If the current user is the virtual ext_halo user, then show
+    #### a different template
+    if ($sbeams->getCurrent_work_group_name() eq 'Oligo_user') {
+      $self->display_ext_halo_footer();
+      return;
+    }
+
     print qq~
 	</TD></TR></TABLE>
 	</TD></TR></TABLE>
@@ -261,6 +276,284 @@ sub display_page_footer {
   }
 
 }
+
+
+###############################################################################
+# display_ext_halo_template
+###############################################################################
+sub display_ext_halo_template {
+  my $self = shift;
+  my %args = @_;
+
+  $self->printJavascriptFunctions();
+  $self->display_ext_halo_style_sheet();
+
+  my $LOGIN_URI = "$SERVER_BASE_DIR$ENV{REQUEST_URI}";
+#  if ($LOGIN_URI =~ /\?/) {
+#    $LOGIN_URI .= "&force_login=yes";
+#  } else {
+#    $LOGIN_URI .= "?force_login=yes";
+#  }
+
+
+  my $buf = qq~
+<!-- Begin body: background white, text black -------------------------------->
+<body TOPMARGIN=0 LEFTMARGIN=0 background="/images/bg.gif" bgcolor="#FBFCFE">
+
+<!-- Begin the whole-page table -->
+<a name="TOP"></a>
+<table border="0" width="680" cellspacing="0" cellpadding="0">
+
+<!-- -------------- Top Line Header: logo and big title ------------------- -->
+<tr valign="baseline">
+<td width="150" bgcolor="#0E207F">
+<a href="http://www.systemsbiology.org/" target="_blank"><img src="/images/Logo_left.jpg" width="150" height="85" border="0" align="bottom"></a>
+</td>
+<td width="12"><img src="/images/clear.gif" width="12" height="85" border="0"></td>
+
+<td width="518" align="left" valign="bottom">
+<span class="page_header">$DBTITLE - $SBEAMS_PART<BR>$DBVERSION<BR>&nbsp;<BR></span>
+</td>
+
+</tr>
+<tr valign="bottom">
+<td colspan="3"><img src="/images/nav_orange_bar.gif" width="680" height="18" border="0"></td>
+</tr>
+  ~;
+
+  my $HALO_HOME = 'http://halo.systemsbiology.net';
+
+  $buf .= qq~
+<!-- --------------- Navigation Bar: List of links ------------------------ -->
+<tr>
+<td align="left" valign="top" background="/images/bg_Nav.gif">
+
+<table border="0" width="150" cellpadding="0" cellspacing="0">
+
+<tr>
+<td><img src="/images/clear.gif" width="2" height="10" border="0"></td>
+<td><img src="/images/clear.gif" width="5" height="10" border="0"></td>
+<td><img src="/images/clear.gif" width="132" height="10" border="0"></td>
+<td><img src="/images/clear.gif" width="11" height="10" border="0"></td>
+</tr>
+
+
+
+<tr>
+<td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
+<td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
+<td colspan="2">
+<a href="http://www.systemsbiology.org/" class="Nav_link">ISB Main</a><br>
+<a href="http://halo.systemsbiology.net/" class="Nav_link">Halo Research at ISB</a><br>
+</tr>
+<tr>
+<td colspan="4"><img src="/images/clear.gif" width="1" height="10" border="0"></td>
+</tr>
+
+
+
+<tr>
+<td background="/images/nav_subTitles.gif"><img src="/images/clear.gif" width="1" height="18" border="0"></td>
+<td background="/images/nav_subTitles.gif" colspan="2"><span class="nav_Sub">Project Information</span></td>
+<td><img src="/images/nav_subTitles_cr.gif" width="11" height="18" border="0"></td>
+</tr>
+
+<tr>
+<td colspan="4"><img src="/images/clear.gif" width="1" height="10" border="0"></td>
+</tr>
+<tr>
+<td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
+<td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
+<td colspan="2">
+<a href="$HALO_HOME/" class="Nav_link">Project Home</a><br>
+<a href="$HALO_HOME/background.php" class="Nav_link">Background</a><br>
+<a href="$HALO_HOME/systems.php" class="Nav_link">Systems Approach</a><br>
+<a href="$HALO_HOME/data.php" class="Nav_link">Data Integration</a><br>
+<a href="$HALO_HOME/publications.php" class="Nav_link">Publications</a><br>
+<a href="$HALO_HOME/contacts.php" class="Nav_link">Contacts</a><br>
+</td>
+</tr>
+<tr>
+<td colspan="4"><img src="/images/clear.gif" width="1" height="10" border="0"></td>
+</tr>
+
+
+
+<tr>
+<td background="/images/nav_subTitles.gif"><img src="/images/clear.gif" width="1" height="18" border="0"></td>
+<td background="/images/nav_subTitles.gif" colspan="2"><span class="nav_Sub">Organisms</span></td>
+
+<td><img src="/images/nav_subTitles_cr.gif" width="11" height="18" border="0"></td>
+</tr>
+<tr>
+<td colspan="4"><img src="/images/clear.gif" width="1" height="10" border="0"></td>
+</tr>
+<tr>
+<td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
+<td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
+<td colspan="2">
+<a href="$HALO_HOME/halobacterium/" class="Nav_link">Halobacterium sp. NRC-1</a><br>
+<a href="$HALO_HOME/haloarcula/" class="Nav_link">Haloarcula marismortui</a><br>
+</tr>
+<tr>
+<td colspan="4"><img src="/images/clear.gif" width="1" height="10" border="0"></td>
+</tr>
+
+
+
+<tr>
+<td background="/images/nav_subTitles.gif"><img src="/images/clear.gif" width="1" height="18" border="0"></td>
+<td background="/images/nav_subTitles.gif" colspan="2"><span class="nav_Sub">Software Links</span></td>
+
+<td><img src="/images/nav_subTitles_cr.gif" width="11" height="18" border="0"></td>
+</tr>
+<tr>
+<td colspan="4"><img src="/images/clear.gif" width="1" height="10" border="0"></td>
+</tr>
+<tr>
+<td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
+<td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
+<td colspan="2">
+<a href="http://www.cytoscape.org/" class="Nav_link">Cytoscape</a><br>
+<a href="http://www.sbeams.org/" class="Nav_link">SBEAMS</a><br>
+<BR>
+<BR>
+<a href="$LOGIN_URI" class="Nav_link">LOGIN</a><br>
+</td>
+</tr>
+<tr>
+<td colspan="4"><img src="/images/clear.gif" width="1" height="10" border="0"></td>
+</tr>
+
+
+
+</table>
+
+</td>
+<td width="12"><img src="/images/clear.gif" alt="" width="12" height="1" border="0"></td>
+<!-- -------------------------- End Navigation Bar ------------------------ -->
+
+<td valign="top">
+
+  ~;
+
+
+  $buf .= qq~
+<!-- --------------------------- Main Page Content ------------------------ -->
+
+<table border="0" width="100%" cellpadding="0" cellspacing="0">
+<tr>
+<td>
+<img src="/images/clear.gif" width="1" height="15" border="0">
+</td>
+</tr>
+
+  ~;
+
+
+  $buf =~ s/=\"\/images/=\"$HTML_BASE_DIR\/images/g;
+  #$buf =~ s/href=\"\//href=\"$HTML_BASE_DIR\//g;
+  $buf =~ s/href=\"\//href=\"http:\/\/halo.systemsbiology.net\//g;
+  print $buf;
+  return;
+
+}
+
+
+
+###############################################################################
+# display_ext_halo_template
+###############################################################################
+sub display_ext_halo_style_sheet {
+  my $self = shift;
+  my %args = @_;
+
+  my $FONT_SIZE=9;
+  my $FONT_SIZE_SM=8;
+  my $FONT_SIZE_LG=12;
+  my $FONT_SIZE_HG=14;
+
+  if ( $ENV{HTTP_USER_AGENT} =~ /Mozilla\/4.+X11/ ) {
+    $FONT_SIZE=12;
+    $FONT_SIZE_SM=11;
+    $FONT_SIZE_LG=14;
+    $FONT_SIZE_HG=19;
+  }
+
+    print qq~
+<!-- Style sheet definition --------------------------------------------------->
+	<style type="text/css">	<!--
+
+	//
+	body  	{font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; color:#33333; line-height:1.8}
+
+
+	th    	{font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; font-weight: bold;}
+	td    	{font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; color:#333333;}
+	form  	{font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt}
+	pre   	{font-family: Courier New, Courier; font-size: ${FONT_SIZE_SM}pt}
+	h1   	{font-family: Helvetica, Arial, Verdana, sans-serif; font-size: ${FONT_SIZE_HG}px; font-weight:bold; color:#0E207F;line-height:20px;}
+	h2   	{font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
+	h3   	{font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_LG}pt; color:#FF8700}
+	h4   	{font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_LG}pt;}
+	.text_link  {font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration:none; color:blue}
+	.text_linkstate {font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration:none; color:#0E207F}
+	.text_link:hover   {font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration:none; color:#DC842F}
+
+	.page_header {font-family: Helvetica, Arial, sans-serif; font-size:18px; font-weight:bold; color:#0E207F; line-height:1.2}
+	.sub_header {font-family: Helvetica, Arial, sans-serif; font-size:12px; font-weight:bold; color:#FF8700; line-height:1.8}
+	.Nav_link {font-family: Helvetica, Arial, sans-serif; font-size:${FONT_SIZE}pt; line-height:1.3; color:#DC842F; text-decoration:none;}
+	.Nav_link:hover {color: #FFFFFF; text-decoration: none;}
+	.Nav_linkstate {cursor:hand; font-family:Helvetica, Arial, sans-serif; font-size:11px; color:#DC842F; text-decoration:none;}
+	.nav_Sub {font-family: Helvetica, Arial, sans-serif; font-size:12px; font-weight:bold; color:#ffffff; line-height:1.3;}
+
+	//
+	-->
+</style>
+  ~;
+
+  return;
+
+}
+
+
+
+###############################################################################
+# display_ext_halo_footer
+###############################################################################
+sub display_ext_halo_footer {
+  my $self = shift;
+  my %args = @_;
+
+  my $buf = qq~
+<!-- ------------------------ End of main content ----------------------- -->
+
+</td></tr>
+</table>
+
+
+</td></tr>
+</table>
+
+<BR>
+<hr size=1 noshade width="55%" align="left" color="#FF8700">
+<TABLE border="0">
+<TR><TD><IMG SRC="/images/ISB_symbol_tiny.jpg"></TD>
+<TD><nowrap>ISB Halo Group</nowrap></A></TD></TR>
+</TABLE>
+<BR>
+<BR>
+
+</body>
+</html>
+  ~;
+
+  $buf =~ s/=\"\/images/=\"$HTML_BASE_DIR\/images/g;
+  print $buf;
+  return;
+
+}
+
 
 
 
