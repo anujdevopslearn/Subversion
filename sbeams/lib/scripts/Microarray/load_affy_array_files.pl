@@ -158,11 +158,11 @@ Run Mode Notes:
 	--delete_all YES
 	  Removes all the samples and array information
 Examples;
-1) ./$PROG_NAME --runmode add_new 			        # typical mode, adds any new files
-2) ./$PROG_NAME --runmode update --method set_afs_sample_tag    # will parse the sample tag information and stomp the data in the database 	  
-3) ./$PROG_NAME --runmode delete --array 20040609_02_LPS1-50	# Delete the array with the file root given but LEAVES the sample
-4) ./$PROG_NAME --runmode delete --both 20040609_02_LPS1-40 20040609_02_LPS1-50	# removes both the array and sample records for the two root_file names
-5) ./$PROG_NAME --runmode delete --delete_all YES			#REMOVES ALL ARRAYS AND SAMPLES....Becareful
+1) ./$PROG_NAME --run_mode add_new 			        # typical mode, adds any new files
+2) ./$PROG_NAME --run_mode update --method set_afs_sample_tag    # will parse the sample tag information and stomp the data in the database 	  
+3) ./$PROG_NAME --run_mode delete --array 20040609_02_LPS1-50	# Delete the array with the file root given but LEAVES the sample
+4) ./$PROG_NAME --run_mode delete --both 20040609_02_LPS1-40 20040609_02_LPS1-50	# removes both the array and sample records for the two root_file names
+5) ./$PROG_NAME --run_mode delete --delete_all YES			#REMOVES ALL ARRAYS AND SAMPLES....Becareful
 
 EOU
 
@@ -749,6 +749,14 @@ sub parse_affy_data {
 	foreach my $file_name ( $sbeams_affy_groups->sorted_root_names() ) {				
 		
 		next unless ($sbeams_affy_groups->check_file_group(root_file_name => $file_name) eq 'YES');
+		
+		my $return = $sbeams_affy_groups->check_previous_arrays(root_name => $file_name);	#return the affy_array_id if the array is already in the db
+		if ($return != 0 && $RUN_MODE eq 'add_new'){
+			if ($VERBOSE > 0){
+				print "FILE ROOT IS ALREADY IN DATABASE AND WE ARE NOT IN UPDATE MODE SKIP PARSING '$file_name'\n";
+			}
+			next;
+		}
 		
 		my $sample_tag	= '';
 		if ($file_name =~ /^\d+_\d+_(.*)/){				#Parse the Sample tag from the root_file name example 20040707_05_PAM2B-80
