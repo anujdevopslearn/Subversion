@@ -14,10 +14,12 @@
 package SBEAMS::Connection::TabMenu;
 
 use strict;
-use SBEAMS::Connection qw( $log );
 use SBEAMS::Connection::DataTable;
+use SBEAMS::Connection::Log;
+use SBEAMS::Connection::Settings qw($HTML_BASE_DIR);
 use overload ( '""', \&asHTML );
-use SBEAMS::Connection::Settings;
+
+my $log = SBEAMS::Connection::Log->new();
 
 ##### Public Methods ###########################################################
 #
@@ -398,9 +400,8 @@ sub asCSSHTML {
 
 sub setRule {
   my $this = shift;
-  my $hbase = $HTML_BASE_DIR;
   my $cnt = ( $this->getNumTabs() ) * 2 + 5 ;
-  $this->{_table}->addRow ( [ "<IMG SRC='$hbase/images/transparent.gif' HEIGHT='2' WIDTH='1' BORDER='0'>" ] );
+  $this->{_table}->addRow ( [ "<IMG SRC='$HTML_BASE_DIR/images/transparent.gif' HEIGHT='2' WIDTH='1' BORDER='0'>" ] );
   $this->{_table}->setCellAttr ( COL => 1, ROW => 2, COLSPAN => $cnt, BGCOLOR => $this->{activeColor} );
 }
 
