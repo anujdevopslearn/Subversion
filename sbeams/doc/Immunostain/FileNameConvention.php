@@ -23,26 +23,34 @@
 <H2>Immunostain Image Filename Convention</H2>
 
 Immunostain image files will be named according to the following convention
-for consistency:
+for consistency, with 6 items separated by spaces:
 
 <PRE>
 CD90 02-002A 1 b a 100.jpg
  |      |  | | | |  |
- |      |  | | | |  +--------- Total image magnification (20,40,100,200,400,...)
+ |      |  | | | |  +--------- <font color=red>Total image magnification</font> (20,40,100,200,400,...)
  |      |  | | | |
- |      |  | | | +------------ Parent image designator (-,a-b,c,d,...)
+ |      |  | | | +------------ <font color=red>Parent image designator</font> (-,a,b,c,d,...)
  |      |  | | |
- |      |  | | +-------------- Image index (a,b,c,d,e,...)
+ |      |  | | +-------------- <font color=red>Image index</font> (a,b,c,d,e,...)
  |      |  | |
- |      |  | +---------------- Section index (1,2,3,4,...)
+ |      |  | +---------------- <font color=red>Section index</font> (1,2,3,4,...)
  |      |  |
- |      |  +------------------ Specimen block index (A,B,C,D,....)
+ |      |  +------------------ <font color=red>Specimen block index</font> (A,B,C,D,....)
  |      |
- |      +--------------------- Case designtor YR-NNN
+ |      +--------------------- <font color=red>Case designtor</font> (YR-NNN)
  |
- +---------------------------- Staining Antibody
+ +---------------------------- <font color=red>Staining Antibody</font> (no space after CD)
 </PRE>
 
+<P>The <font color=red>Image index</font> is just a sequential
+index of letter for the image.  After
+z, continue with aa,ab,ac if that ever occurs.</P>
+
+<P>The <font color=red>Parent image designator</font> is the
+<font color=red>Image index</font> of the image of next
+lower magnification that contains the current image.
+Use a - if there is no suitable parent.</P>
 
 <BR>
 <BR>
