@@ -59,9 +59,33 @@ sub Authenticate {
     my %args = @_;
 
     my $set_to_work_group = $args{'work_group'} || "";
+    my $connect_read_only = $args{'connect_read_only'} || "";
+    my $allow_anonymous_access = $args{'allow_anonymous_access'} || "";
 
-    #### Obtain the database handle $dbh, thereby option the DB connection
-    $dbh = $self->getDBHandle();
+
+    #### Always disable the output buffering
+    $| = 1;
+
+
+    #### Determine whether we've been invoked by HTTP request or on the
+    #### command line by testing for env variable REMOTE_ADDR.  If a
+    #### command-line user sets this variable, he can pretend to be coming
+    #### from the web interface
+    if ($ENV{REMOTE_ADDR}) {
+      $self->invocation_mode('http');
+      $self->output_mode('html');
+    } else {
+      $self->invocation_mode('user');
+      $self->output_mode('interactive');
+      #### Add in a fake reference to MOD_PERL to trick CGI::Carp into
+      #### not printing the "Content: text/html\n\n" header
+      $ENV{'MOD_PERL'} = 'FAKE'
+    }
+
+
+    #### Obtain the database handle $dbh, thereby opening the DB connection
+    $dbh = $self->getDBHandle(connect_read_only=>$connect_read_only);
+
 
     #### If there's a DISABLED file in the main HTML directory, do not allow
     #### entry past here
@@ -77,13 +101,15 @@ sub Authenticate {
       exit;
     }
 
+
     #### If the effective UID is the apache user, then go through the
     #### cookie authentication mechanism
     my $uid = "$>" || "$<";
     if ( $uid == 48 ) {
 
         # If the user is not logged in, make them log in
-        unless ($current_username = $self->checkLoggedIn()) {
+        unless ($current_username = $self->checkLoggedIn(
+                allow_anonymous_access=>$allow_anonymous_access)) {
             $current_username = $self->processLogin();
         }
 
@@ -170,6 +196,10 @@ sub get_http_header {
 ###############################################################################
 sub checkLoggedIn {
     my $self = shift;
+    my %args = @_;
+
+    my $allow_anonymous_access = $args{'allow_anonymous_access'} || "";
+
     my $username = "";
 
     if ($main::q->cookie('SBEAMSName')){
@@ -184,7 +214,10 @@ sub checkLoggedIn {
                 AND record_status != 'D'"
         );
         $username = "" if ($result ne $username);
+    } elsif ($allow_anonymous_access) {
+      $username = 'guest';
     }
+
 
     return $username;
 }
@@ -571,7 +604,10 @@ sub destroyAuthHeader {
 	VALUES ('$current_username','logout','SUCCESS')";
     $self->executeSQL($logging_query);
 
-    my $cookie_path = $q->url(-absolute=>1);
+    #### Fixed to set cookie path to tree root instead of possibly middle
+    #### which then requires reauthentication when moving below entry point
+    #my $cookie_path = $q->url(-absolute=>1);
+    my $cookie_path = $HTML_BASE_DIR;
     $cookie_path =~ s'/[^/]+$'/';
 
     my $cookie = $q->cookie(-name    => 'SBEAMSName',
@@ -591,9 +627,12 @@ sub createAuthHeader {
     my $self = shift;
     my $username = shift;
 
-    my $cookie_path = $q->url(-absolute=>1);
+    #### Fixed to set cookie path to tree root instead of possibly middle
+    #### which then requires reauthentication when moving below entry point
+    #my $cookie_path = $q->url(-absolute=>1);
+    my $cookie_path = $HTML_BASE_DIR;
     $cookie_path =~ s'/[^/]+$'/';
-    
+
     my $cipher = new Crypt::CBC($SECRET_KEY, 'IDEA'); 
     my $encrypted_user = $cipher->encrypt("$username");
 

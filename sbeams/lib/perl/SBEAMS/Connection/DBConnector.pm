@@ -12,8 +12,8 @@ package SBEAMS::Connection::DBConnector;
 
 
 use strict;
-use vars qw($DB_SERVER $DB_DATABASE $DB_USER $DB_PASS $DB_DRIVER
-            $DB_DSN $DB_TYPE $dbh
+use vars qw($DB_SERVER $DB_DATABASE $DB_USER $DB_PASS $DB_RO_USER $DB_RO_PASS
+            $DB_DRIVER $DB_DSN $DB_TYPE $dbh
             $BIOSAP_DB $PROTEOMICS_DB $PHENOARRAY_DB $SNP_DB);
 use DBI;
 use SBEAMS::Connection::Settings;
@@ -39,6 +39,8 @@ if ( $DBVERSION eq "Dev Branch 1" ) {
   $DB_DATABASE = 'sbeams';
   $DB_USER     = 'sbeams';
   $DB_PASS     = 'SB444';
+  $DB_RO_USER  = 'sbeamsro';
+  $DB_RO_PASS  = 'guest';
   $DB_DRIVER   = "DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE";
   $DB_TYPE     = "MS SQL Server";
   $BIOSAP_DB   = "BioSap.dbo.";
@@ -109,6 +111,8 @@ if ( $DBVERSION eq "Dev Branch 1" ) {
   $DB_DATABASE = 'sbeams';
   $DB_USER     = 'sbeams';
   $DB_PASS     = 'SB444';
+  $DB_RO_USER  = 'sbeamsro';
+  $DB_RO_PASS  = 'guest';
   $DB_DRIVER   = "DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE";
   $DB_TYPE     = "MS SQL Server";
   $BIOSAP_DB   = "BioSap.dbo.";
@@ -147,9 +151,30 @@ sub new {
 ###############################################################################
 sub dbConnect {
     my $self = shift;
-    my $dbh = DBI->connect("$DB_DRIVER", "$DB_USER", "$DB_PASS")
-      or die "$DBI::errstr";
-#    $dbh->do("use $DB_DATABASE") if $DB_DATABASE;
+    my %args = @_;
+
+    my $connect_read_only = $args{'connect_read_only'} || "";
+
+    #### Set error handling attributes
+    my (%error_attr) = (
+      PrintError => 0,
+      RaiseError => 0
+    );
+
+    #### Try to connect to database
+    my $dbh;
+    if ($connect_read_only) {
+      $dbh = DBI->connect("$DB_DRIVER","$DB_RO_USER","$DB_RO_PASS",\%error_attr)
+        or die "$DBI::errstr";
+    } else {
+      $dbh = DBI->connect("$DB_DRIVER","$DB_USER","$DB_PASS",\%error_attr)
+        or die "$DBI::errstr";
+    }
+
+    #### This should only be used if the database cannot be specified in
+    #### the DSN string
+    #$dbh->do("use $DB_DATABASE") if $DB_DATABASE;
+
     return $dbh;
 }
 
@@ -177,7 +202,7 @@ sub dbDisconnect {
 sub getDBHandle {
     my $self = shift;
 
-    $dbh = dbConnect() unless defined($dbh);
+    $dbh = $self->dbConnect(@_) unless defined($dbh);
 
     return $dbh;
 }

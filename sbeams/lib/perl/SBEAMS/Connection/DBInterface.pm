@@ -12,7 +12,7 @@ package SBEAMS::Connection::DBInterface;
 
 
 use strict;
-use vars qw(@ERRORS $dbh $sth $q $resultset_ref);
+use vars qw(@ERRORS $dbh $sth $q $resultset_ref $rs_params_ref);
 use CGI::Carp qw(fatalsToBrowser croak);
 use DBI;
 use POSIX;
@@ -975,8 +975,10 @@ sub fetchResultSet {
     $dbh = $self->getDBHandle();
 
     #### Execute the query
-    $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
-    my $rv  = $sth->execute or croak $dbh->errstr;
+    $sth = $dbh->prepare("$sql_query") ||
+      croak("Unable to prepare query:\n".$dbh->errstr);
+    my $rv  = $sth->execute ||
+      croak("Unable to execute query:\n".$dbh->errstr);
 
 
     #### Decode the type numbers into type strings
@@ -1009,7 +1011,6 @@ sub fetchResultSet {
 
 
     #### finish up
-    print "\n";
     $sth->finish;
 
     return 1;
@@ -1033,13 +1034,15 @@ sub displayResultSet {
     my $row_color_scheme_ref = $args{'row_color_scheme_ref'};
     my $printable_table = $args{'printable_table'};
     my $max_widths_ref = $args{'max_widths'};
-    $resultset_ref = $args{'resultset_ref'};
-    my $page_size = $args{'page_size'} || 100;
-    my $page_number = $args{'page_number'} || 0;
     my $table_width = $args{'table_width'} || "";
+    $resultset_ref = $args{'resultset_ref'};
+    $rs_params_ref = $args{'rs_params_ref'};
+    my $column_titles_ref = $args{'column_titles_ref'};
 
 
     #### Set the display window of rows
+    my $page_size = $rs_params_ref->{'page_size'} || 100;
+    my $page_number = $rs_params_ref->{'page_number'} || 0;
     $resultset_ref->{row_pointer} = $page_size * $page_number;
     $resultset_ref->{row_counter} = 0;
     $resultset_ref->{page_size} = $page_size;
@@ -1059,6 +1062,8 @@ sub displayResultSet {
 
 
     my $types_ref = $resultset_ref->{types_list_ref};
+    $column_titles_ref = $resultset_ref->{column_list_ref}
+      unless ($column_titles_ref);
 
 
     #### Make some adjustments to the default column width settings
@@ -1081,10 +1086,91 @@ sub displayResultSet {
     }
 
 
+    #### If the desired output format is TSV, dump out the data that way
+    if ($self->output_mode() eq 'tsv' || $self->output_mode() eq 'excel') {
+      my @row;
+
+      #### Set a very high page size if using defaults
+      $resultset_ref->{page_size} = 1000000
+        if ($resultset_ref->{default_values} eq 'YES');
+
+      #### If the invocation_mode is http, provide a header
+      if ($self->invocation_mode() eq 'http') {
+        print "Content-type: text/tab-separated-values\n\n"
+          if ($self->output_mode() eq 'tsv');
+        print "Content-type: application/excel\n\n"
+          if ($self->output_mode() eq 'excel');
+      }
+
+      #### Print all the rows with TABs.
+      #### FIXME: Verify that there are no TABs in the data iteself!
+      print join("\t",@{$resultset_ref->{column_list_ref}}),"\n";
+      while (@row = returnNextRow()) {
+        print join("\t",@row),"\n";
+      }
+      return;
+    }
+
+
+    #### If the desired output format is 'interactive' or 'boxtable',
+    #### dump out the data that way
+    if ($self->output_mode() eq 'interactive' ||
+        $self->output_mode() eq 'boxtable') {
+
+      #### Set a very high page size if not interactive and using defaults
+      $resultset_ref->{page_size} = 1000000
+        if ($rs_params_ref->{default_values} eq 'YES' &&
+            $self->output_mode() ne 'interactive');
+
+      #### Display the BoxTable
+      ShowBoxTable{
+        titles=>$column_titles_ref,
+	types=>$types_ref,
+	widths=>\@precisions,
+	row_sub=>\&returnNextRow,
+      };
+      return;
+    }
+
+
+    #### If the desired output format is XML, dump out the data that way
+    if ($self->output_mode() eq 'xml') {
+
+      #### If the invocation_mode is http, provide a header
+      if ($self->invocation_mode() eq 'http') {
+        print "Content-type: text/xml\n\n";
+      }
+
+      my $identifier = $rs_params_ref->{'set_name'} || 'unknown';
+      print "<?xml version=\"1.0\" standalone=\"yes\"?>\n";
+      print "<resultset identifier=\"$identifier\">\n";
+      my @row;
+      my $irow;
+      my ($value,$element);
+      my $nrows = scalar(@{$resultset_ref->{data_ref}});
+
+      for ($irow=0;$irow<$nrows;$irow++) {
+        print "  <row identifier=\"$irow\"\n";
+        $i=0;
+        @row = @{$resultset_ref->{data_ref}->[$irow]};
+
+        foreach $element (@{$resultset_ref->{column_list_ref}}) {
+          $value = $row[$i];
+          print "    $element=\"$value\"\n";
+          $i++;
+        }
+        print "  />\n";
+      }
+      print "</resultset>\n";
+      return;
+    }
+
+
     #### If a printable table was desired, use one format
     if ( $printable_table ) {
 
-      ShowHTMLTable { titles=>$resultset_ref->{column_list_ref},
+      ShowHTMLTable{
+        titles=>$column_titles_ref,
 	types=>$types_ref,
 	widths=>\@precisions,
 	row_sub=>\&returnNextRow,
@@ -1113,7 +1199,8 @@ sub displayResultSet {
       }
 
 
-      ShowHTMLTable { titles=>$resultset_ref->{column_list_ref},
+      ShowHTMLTable{
+        titles=>$column_titles_ref,
 	types=>$types_ref,
 	widths=>\@precisions,
 	row_sub=>\&returnNextRow,
@@ -1148,11 +1235,19 @@ sub displayResultSetControls {
     my $self = shift;
     my %args = @_;
 
+
+    #### If the output mode is not html or interactive, do not display controls
+    if ($self->output_mode() ne 'html' && 
+        $self->output_mode() ne 'interactive' ) {
+      return;
+    }
+
+
     my ($i,$element,$key,$value,$line,$result,$sql);
 
     #### Process the arguments list
     my $resultset_ref = $args{'resultset_ref'};
-    my $rs_params_ref = $args{'rs_params_ref'};
+    $rs_params_ref = $args{'rs_params_ref'};
     my $query_parameters_ref = $args{'query_parameters_ref'};
     my $base_url = $args{'base_url'};
 
@@ -1161,10 +1256,12 @@ sub displayResultSetControls {
 
 
     #### Start form
-    print qq~
+    if ($self->output_mode() eq 'html') {
+      print qq~
       <TABLE WIDTH="800" BORDER=0><TR><TD>
       <FORM METHOD="POST">
-    ~;
+      ~;
+    }
 
 
     #### Display the row statistics and warn the user
@@ -1172,12 +1269,24 @@ sub displayResultSetControls {
     my $start_row = $rs_params{page_size} * $rs_params{page_number} + 1;
     my $nrows = scalar(@{$resultset_ref->{data_ref}});
     print "Displayed rows $start_row - $resultset_ref->{row_pointer} of ".
-      "$nrows\n";
+      "$nrows\n\n";
 
     if ( $parameters{row_limit} == scalar(@{$resultset_ref->{data_ref}}) ) {
-      print "&nbsp;&nbsp;(<font color=red>WARNING: </font>Resultset ".
-	"truncated at $parameters{row_limit} rows. ".
-	"Increase row limit to see more.)\n";
+      if ($self->output_mode() eq 'html') {
+        print "&nbsp;&nbsp;(<font color=red>WARNING: </font>Resultset ".
+	  "truncated at $parameters{row_limit} rows. ".
+	  "Increase row limit to see more.)\n";
+      } else {
+        print "WARNING: Resultset ".
+	  "truncated at $parameters{row_limit} rows. ".
+	  "Increase row limit to see more.)\n";
+      }
+    }
+
+
+    #### If the output mode is not html, then finish here
+    if ($self->output_mode() ne 'html') {
+      return;
     }
 
 
@@ -1290,9 +1399,24 @@ sub parseResultSetParams {
 
   #### Parse the resultset parameters into a hash
   my %rs_params;
-  $rs_params{set_name} = $q->param("rs_set_name");
-  $rs_params{page_size} = $q->param("rs_page_size") || 50;
-  $rs_params{page_number} = $q->param("rs_page_number") || 1;
+  my $n_params_found = $self->parse_input_parameters(
+    q=>$q,parameters_ref=>\%rs_params,
+    add_standard_params=>'NO');
+
+
+  #### Add some defaults if nothing was provided
+  unless ($rs_params{page_size} > 0) {
+    $rs_params{page_size} = 50;
+    $rs_params{default_values} = 'YES';
+  }
+
+  unless ($rs_params{page_number} > 0) {
+    $rs_params{page_number} = 1;
+    $rs_params{default_values} = 'YES';
+  }
+
+
+  #### The user will use a 1-based scheme, but internally switch to 0-based
   $rs_params{page_number} -= 1 if ($rs_params{page_number});
 
 
@@ -1411,7 +1535,9 @@ sub returnNextRow {
   #### If flag > 1, then really do the rewind  
   if ($flag > 1) {
     #print "rewind...<BR>";
-    $resultset_ref->{row_pointer} = 0;
+    $resultset_ref->{row_counter} = 0;
+    $resultset_ref->{row_pointer} = $rs_params_ref->{page_size} * 
+      $rs_params_ref->{page_number};
     #print "and return.<BR>\n";
     return 1;
   }
@@ -1437,7 +1563,7 @@ sub returnNextRow {
 # processTableDisplayControls
 #
 # Displays and processes a set of crude table display controls
-###############################################################################
+##############################################################################
 sub processTableDisplayControls {
     my $self = shift;
     my $TABLE_NAME = shift;
@@ -1516,54 +1642,148 @@ sub convertSingletoTwoQuotes {
 
 
 ###############################################################################
-# parseCGIParameters
+# parse_input_parameters
 #
-# Parse the available CGI parameters into the %parameters hash
+# Parse the available input parameters (which may come via CGI or via
+# the command line) into the %parameters hash
 ###############################################################################
-sub parseCGIParameters {
+sub parse_input_parameters {
   my $self = shift;
   my %args = @_;
 
+
   #### Process the arguments list
   my $q = $args{'q'};
-  my $parameters_ref = $args{'parameters_ref'};
-  my $columns_ref = $args{'columns_ref'};
-  my $input_types_ref = $args{'input_types_ref'};
+  my $ref_parameters = $args{'parameters_ref'};
+  my $ref_columns = $args{'columns_ref'} || [];
+  my $ref_input_types = $args{'input_types_ref'} || {};
+  my $add_standard_params = $args{'add_standard_params'} || 'YES';
 
-  my $element;
+
+  #### Define some generic varibles
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
 
   #### Set a counter for the number of paramters found
   my $n_params_found = 0;
+  my $n_CGI_params_found = 0;
+  my $n_cmdln_params_found = 0;
 
-  #### Read the form values for each column
-  foreach $element (@{$columns_ref}) {
-    if ($input_types_ref->{$element} eq "multioptionlist") {
+
+  #### Resolve the keys from the command line if any
+  my %cmdln_parameters;
+  foreach $element (@ARGV) {
+    if ( ($key,$value) = split("=",$element) ) {
+      #print "$key = $value\n";
+      $cmdln_parameters{$key} = $value;
+    } else {
+      print "ERROR: Unable to parse '$element'\n";
+      return;
+    }
+  }
+
+
+  #### Add a set of standard set of input options
+  my @columns = @{$ref_columns};
+  if ($add_standard_params eq 'YES') {
+    push(@columns,'apply_action','action','output_mode','TABLE_NAME',
+      'QUERY_NAME');
+  }
+
+
+  #### Read the form values for each of the desired parameters
+  foreach $element (@columns) {
+
+    my $value;
+
+    #### If the type is a multioptionlist, extract as an array but
+    #### turn into a comma separated list
+    if ($ref_input_types->{$element} eq "multioptionlist") {
       my @tmparray = $q->param($element);
+
+      #### Remove any leading or trailing blank items
       if (scalar(@tmparray) > 1) {
         pop @tmparray unless ($tmparray[$#tmparray]);
         shift @tmparray unless ($tmparray[0]);
       }
-      $parameters_ref->{$element}=join(",",@tmparray);
+
+      #### Convert to a comma separated list
+      $value = join(",",@tmparray);
+
+
+    #### Otherwise just extract as is
     } else {
-      $parameters_ref->{$element}=$q->param($element);
+      $value = $q->param($element);
     }
-    $n_params_found++ if ($parameters_ref->{$element});
+
+
+    #### If something was recovered, note it
+    if ($value) {
+      $n_CGI_params_found++;
+      $ref_parameters->{$element} = $value;
+
+    #### See if we can pull it out of %OPTIONS
+    } elsif ($cmdln_parameters{$element}) {
+      $value = $cmdln_parameters{$element};
+      if ($value) {
+        $n_cmdln_params_found++;
+        $ref_parameters->{$element} = $value;
+      }
+
+    #### Otherwise we didn't find this parameter
+    } else {
+    }
+
   }
+
+
+  #### Sum the total parameters found
+  $n_params_found = $n_CGI_params_found + $n_cmdln_params_found;
+
+
+  #### If some CGI parameters were found, assume we're doing a web interface
+  if ($n_CGI_params_found) {
+    $self->invocation_mode('http');
+    print "ERROR: Dual mode parameters?\n" if ($n_cmdln_params_found);
+  }
+
+
+  #### If some command line parameters were found, assume we were invoked
+  #### from the command line unless we already have a mode.  Do not
+  #### override an existing mode, because we will allow a faked web
+  #### mode from the command line
+  if ($n_cmdln_params_found) {
+    unless ($self->invocation_mode()) {
+      $self->invocation_mode('user');
+    }
+  }
+
+
+  if ($ref_parameters->{output_mode}) {
+    $self->output_mode($ref_parameters->{output_mode});
+  }
+
 
   return $n_params_found;
 
-} # end parseCGIParameters
+} # end parse_input_parameters
 
 
 
 ###############################################################################
-# printInputForm
+# display_input_form
 #
 # Print the parameter input form for this particular table or query
 ###############################################################################
-sub printInputForm {
+sub display_input_form {
   my $self = shift;
   my %args = @_;
+
+
+  #### If the output mode is not html, then we don't want a form
+  if ($self->output_mode() ne 'html') {
+    return;
+  }
 
 
   #### Process the arguments list
@@ -1811,12 +2031,118 @@ sub printInputForm {
   }
 
 
-} # end printInputForm
+} # end display_input_form
 
 
 
+###############################################################################
+# display_form_buttons
+#
+# Display the parameter form buttons for this particular table or query
+###############################################################################
+sub display_form_buttons {
+  my $self = shift;
+  my %args = @_;
 
 
+  #### Process the arguments list
+  my $TABLE_NAME = $args{'TABLE_NAME'};
+
+
+  #### If the output mode is not html, then we don't want anything
+  if ($self->output_mode() ne 'html') {
+    return;
+  }
+
+
+  #### Show the QUERY, REFRESH, and Reset buttons
+  print qq~
+      <INPUT TYPE="hidden" NAME="QUERY_NAME" VALUE="$TABLE_NAME">
+      <TR><TD COLSPAN=2>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      <INPUT TYPE="submit" NAME="action" VALUE="QUERY">
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      <INPUT TYPE="submit" NAME="action" VALUE="REFRESH">
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      <INPUT TYPE="reset"  VALUE="Reset">
+       </TR></TABLE>
+       </FORM>
+  ~;
+
+} # end display_form_buttons
+
+
+
+###############################################################################
+# display_sql
+#
+# Display the actual SQL used (if desired and permitted)
+###############################################################################
+sub display_sql {
+  my $self = shift;
+  my %args = @_;
+
+
+  #### Process the arguments list
+  my $sql = $args{'sql'} || '';
+
+
+  #### Strip out blank lines
+  while ($sql =~ s/\n[ ]+\n/\n/g) {};
+
+
+  #### Define prefix and suffix based on output format
+  my $prefix = '';
+  my $suffix = '';
+  if ($self->output_mode eq 'html') {
+    $prefix = '<PRE>';
+    $suffix = '</PRE><BR>';
+  }
+
+
+  #### Display the SQL used
+  print "$prefix$sql$suffix\n";
+
+
+} # end display_sql
+
+
+###############################################################################
+# build_SQL_columns_list
+#
+# Build the columns list for a SQL statement
+###############################################################################
+sub build_SQL_columns_list {
+  my $self = shift;
+  my %args = @_;
+  my $METHOD = 'build_SQL_columns_list';
+
+
+  #### Process the arguments list
+  my $column_array_ref = $args{'column_array_ref'} ||
+    die "$METHOD: column_array_ref not passed!";
+  my $colnameidx_ref = $args{'colnameidx_ref'} ||
+    die "$METHOD: colnameidx_ref not passed!";
+  my $column_titles_ref = $args{'column_titles_ref'} ||
+    die "$METHOD: column_titles_ref not passed!";
+
+  my $columns_clause = "";
+  my $element;
+  my $i = 0;
+  foreach $element (@{$column_array_ref}) {
+    $columns_clause .= "," if ($columns_clause);
+    $columns_clause .= qq ~
+           $element->[1] AS '$element->[0]'~;
+    $colnameidx_ref->{$element->[0]} = $i;
+    push(@{$column_titles_ref},$element->[2]);
+    $i++;
+  }
+
+
+  #### Return result
+  return $columns_clause;
+
+} # end build_SQL_columns_list
 
 
 

@@ -70,64 +70,64 @@ if ( $SBEAMS_INSTANCE =~ /\/dev1\// ) {
   $DBVERSION              = 'Dev Branch 1';
   $BGCOLOR                = '#FF9999';
   $HTML_BASE_DIR          = '/dev1/sbeams';
-  $PHYSICAL_BASE_DIR      = "/local/www/html/dev1/sbeams";
-  $UPLOAD_DIR             = "/local/data/dev1/sbeams";
+  $PHYSICAL_BASE_DIR      = "/net/dblocal/www/html/dev1/sbeams";
+  $UPLOAD_DIR             = "/net/dblocal/data/dev1/sbeams";
 
 } elsif ( $SBEAMS_INSTANCE =~ /\/dev2\// ) {
   $DBVERSION              = 'Dev Branch 2';
   $BGCOLOR                = '#FFFF99';
   $HTML_BASE_DIR          = '/dev2/sbeams';
-  $PHYSICAL_BASE_DIR      = "/local/www/html/dev2/sbeams";
-  $UPLOAD_DIR             = "/local/data/dev2/sbeams";
+  $PHYSICAL_BASE_DIR      = "/net/dblocal/www/html/dev2/sbeams";
+  $UPLOAD_DIR             = "/net/dblocal/data/dev2/sbeams";
 
 } elsif ( $SBEAMS_INSTANCE =~ /\/dev5\// ) {
   $DBVERSION              = 'Dev Branch 5';
   $BGCOLOR                = '#336699';
   $HTML_BASE_DIR          = '/dev5/sbeams';
-  $PHYSICAL_BASE_DIR      = "/local/www/html/dev5/sbeams";
-  $UPLOAD_DIR             = "/local/data/dev5/sbeams";
+  $PHYSICAL_BASE_DIR      = "/net/dblocal/www/html/dev5/sbeams";
+  $UPLOAD_DIR             = "/net/dblocal/data/dev5/sbeams";
 
 } elsif ( $SBEAMS_INSTANCE =~ /\/dev6\// ) {
   $DBVERSION              = 'Dev Branch 6';
   $BGCOLOR                = '#008b45';
   $HTML_BASE_DIR          = '/dev6/sbeams';
-  $PHYSICAL_BASE_DIR      = "/local/www/html/dev6/sbeams";
-  $UPLOAD_DIR             = "/local/data/dev6/sbeams";
+  $PHYSICAL_BASE_DIR      = "/net/dblocal/www/html/dev6/sbeams";
+  $UPLOAD_DIR             = "/net/dblocal/data/dev6/sbeams";
 
 } elsif ( $SBEAMS_INSTANCE =~ /\/dev7\// ) {
   $DBVERSION              = 'Dev Branch 7';
   $BGCOLOR                = '#cc00cc';
   $HTML_BASE_DIR          = '/dev7/sbeams';
-  $PHYSICAL_BASE_DIR      = "/local/www/html/dev7/sbeams";
-  $UPLOAD_DIR             = "/local/data/dev7/sbeams";
+  $PHYSICAL_BASE_DIR      = "/net/dblocal/www/html/dev7/sbeams";
+  $UPLOAD_DIR             = "/net/dblocal/data/dev7/sbeams";
 
 } elsif ( $SBEAMS_INSTANCE =~ /\/dev8\// ) {
   $DBVERSION              = 'Dev Branch 8';
   $BGCOLOR                = '#ff702f';
   $HTML_BASE_DIR          = '/dev8/sbeams';
-  $PHYSICAL_BASE_DIR      = "/local/www/html/dev8/sbeams";
-  $UPLOAD_DIR             = "/local/data/dev8/sbeams";
+  $PHYSICAL_BASE_DIR      = "/net/dblocal/www/html/dev8/sbeams";
+  $UPLOAD_DIR             = "/net/dblocal/data/dev8/sbeams";
 
 } elsif ( $SBEAMS_INSTANCE =~ /\/ext\// ) {
   $DBVERSION              = 'External Access';
   $BGCOLOR                = '#99DD99';
   $HTML_BASE_DIR          = '/ext/sbeams';
-  $PHYSICAL_BASE_DIR      = "/local/www/html/ext/sbeams";
-  $UPLOAD_DIR             = "/local/data/ext/sbeams";
+  $PHYSICAL_BASE_DIR      = "/net/dblocal/www/html/ext/sbeams";
+  $UPLOAD_DIR             = "/net/dblocal/data/ext/sbeams";
 
 } elsif ( $SBEAMS_INSTANCE =~ /\/mysqldev1\// ) {
   $DBVERSION              = 'MySQL Dev Branch 1';
   $BGCOLOR                = '#FFFF99';
   $HTML_BASE_DIR          = '/mysqldev1/sbeams';
-  $PHYSICAL_BASE_DIR      = "/local/www/html/mysqldev1/sbeams";
-  $UPLOAD_DIR             = "/local/data/mysqldev1/sbeams";
+  $PHYSICAL_BASE_DIR      = "/net/dblocal/www/html/mysqldev1/sbeams";
+  $UPLOAD_DIR             = "/net/dblocal/data/mysqldev1/sbeams";
 
 } else {
   $DBVERSION              = '<FONT COLOR=red>Primary</FONT>';
   $BGCOLOR                = '#BFD8D8';
   $HTML_BASE_DIR          = '/sbeams';
-  $PHYSICAL_BASE_DIR      = "/local/www/html/sbeams";
-  $UPLOAD_DIR             = "/local/data/sbeams";
+  $PHYSICAL_BASE_DIR      = "/net/dblocal/www/html/sbeams";
+  $UPLOAD_DIR             = "/net/dblocal/data/sbeams";
 }
 
 

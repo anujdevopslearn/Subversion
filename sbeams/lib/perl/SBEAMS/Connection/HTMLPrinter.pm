@@ -39,6 +39,15 @@ sub new {
 
 
 ###############################################################################
+# display_page_header
+###############################################################################
+sub display_page_header {
+  my $self = shift;
+  $self->printPageHeader(@_);
+}
+
+
+###############################################################################
 # printPageHeader
 ###############################################################################
 sub printPageHeader {
@@ -47,6 +56,20 @@ sub printPageHeader {
 
     my $navigation_bar = $args{'navigation_bar'} || "YES";
     my $minimal_header = $args{'minimal_header'} || "NO";
+
+
+    #### If the output mode is interactive text, display text header
+    if ($self->output_mode() eq 'interactive') {
+      $self->printTextHeader();
+      return;
+    }
+
+
+    #### If the output mode is not html, then we don't want a header here
+    if ($self->output_mode() ne 'html') {
+      return;
+    }
+
 
     my $http_header = $self->get_http_header();
 
@@ -294,7 +317,23 @@ sub printUserContext {
     my $self = shift;
     my %args = @_;
 
+    #### This is now obsoleted and ignored
     my $style = $args{'style'} || "HTML";
+
+
+    #### If the output mode is interactive text, switch to text mode
+    if ($self->output_mode() eq 'interactive') {
+      $style = 'TEXT';
+
+    #### If the output mode is html, then switch to html mode
+    } elsif ($self->output_mode() eq 'html') {
+      $style = 'HTML';
+
+    #### Otherwise, we're in some data mode and don't want to see this
+    } else {
+      return;
+    }
+
 
     my $subdir = $self->getSBEAMS_SUBDIR();
     $subdir .= "/" if ($subdir);
@@ -333,21 +372,66 @@ Current Project: $current_project_name ($current_project_id)
 
 }
 
+
 ###############################################################################
 # printPageFooter
 ###############################################################################
 sub printPageFooter {
   my $self = shift;
-  my $flag = shift || "CloseTablesAndPrintFooter";
+  $self->display_page_footer(@_);
+}
 
-  if ($flag =~ /CloseTables/) {
+
+###############################################################################
+# display_page_footer
+###############################################################################
+sub display_page_footer {
+  my $self = shift;
+  my %args = @_;
+
+
+  #### Process the arguments list
+  my $close_tables = $args{'close_tables'} || 'YES';
+  my $display_footer = $args{'display_footer'} || 'YES';
+  my $separator_bar = $args{'separator_bar'} || 'NO';
+
+
+  #### Hack to support previous, lame API.  Get rid of this eventually
+  if (exists($args{'CloseTables'})) {
+    $display_footer = 'NO';
+  }
+
+
+  #### If the output mode is interactive text, display text header
+  if ($self->output_mode() eq 'interactive' && $display_footer eq 'YES') {
+    $self->printTextHeader(%args);
+    return;
+  }
+
+
+  #### If the output mode is not html, then we don't want a header here
+  if ($self->output_mode() ne 'html') {
+    return;
+  }
+
+
+  #### If closing the content tables is desired
+  if ($close_tables eq 'YES') {
     print qq~
 	</TD></TR></TABLE>
 	</TD></TR></TABLE>
     ~;
   }
 
-  if ($flag =~ /Footer/) {
+
+  #### If displaying a fat bar separtor is desired
+  if ($separator_bar eq 'YES') {
+    print "<BR><HR SIZE=5 NOSHADE><BR>\n";
+  }
+
+
+  #### If finishing up the page completely is desired
+  if ($display_footer eq 'YES') {
     print qq~
 	<BR><HR SIZE="2" NOSHADE WIDTH="30%" ALIGN="LEFT">
 	SBEAMS @ ISB [Under Development]<BR><BR><BR>
@@ -356,6 +440,7 @@ sub printPageFooter {
   }
 
 }
+
 
 
 ###############################################################################
