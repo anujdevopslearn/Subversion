@@ -61,7 +61,6 @@ sub new {
     return($self);
 }
 
-
 ###############################################################################
 # Authenticate the user making the request.
 #
@@ -598,15 +597,18 @@ sub setCurrent_work_group {
 # Return the work_group_id of the user currently logged in
 ###############################################################################
 sub getCurrent_work_group_id {
-    my $self = shift;
+  my $self = shift;
 
-    #### If the current_work_group_id is already known, return it
-    return $current_work_group_id
-      if (defined($current_work_group_id) && $current_work_group_id > 0);
-    if ($current_contact_id < 1) {
-      print STDERR "current_contact_id undefined!!  Authentication must ".
-        "have failed!\n\n";
-      exit 1;
+  #### If the current_work_group_id is already known, return it
+  return $current_work_group_id
+    if (defined($current_work_group_id) && $current_work_group_id > 0);
+
+  if ($current_contact_id < 1) {
+    my $msg =<<"    MSG";
+    current_contact_id undefined, Authentication must have failed!
+    MSG
+    print STDERR $msg;
+    die( $msg );
     }
 
     #### Otherwise, see if it's in the user_context table
