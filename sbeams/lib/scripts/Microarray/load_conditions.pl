@@ -375,6 +375,7 @@ sub insertGeneExpression {
   || die "ERROR[$SUB_NAME]:column mapping reference needs to be set\n";
   my %column_map = %{$column_map_ref};
   my $delimiter = $args{'delimiter'} || "\t";
+  my $skip_lines = $args{'skip_lines'} || 1;
 
   ## Define standard variables
   my $CURRENT_CONTACT_ID = $sbeams->getCurrent_contact_id();
@@ -398,15 +399,19 @@ sub insertGeneExpression {
 
   ## Define Transform Map
   my $full_name_column;
+  my $common_name_column;
   foreach my $key (keys %column_map) {
     if ($column_map{$key} eq "full_name") {
       $full_name_column = $key;
+    }elsif($column_map{$key} eq "common_name") {
+      $common_name_column = $key;
     }
   }
 
   my %transform_map = (
 		       '1000'=>sub{return $condition_id;},
-		       $full_name_column=>sub{return substr shift @_ ,0,1024;} 
+		       $full_name_column=>sub{return substr shift @_ ,0,1024;}, 
+		       $common_name_column=>sub{return substr shift @_,0,255;},
 		       );
 
   ## For debugging purposes, we can print out the column mapping
@@ -429,7 +434,7 @@ sub insertGeneExpression {
   print "\nTransferring $source_file -> gene_expression";
   $sbeams->transferTable(source_file=>$source_file,
 			 delimiter=>$delimiter,
-			 skip_lines=>'1',
+			 skip_lines=>$skip_lines,
 			 dest_PK_name=>'gene_expression_id',
 			 dest_conn=>$sbeams,
 			 column_map_ref=>\%column_map,
@@ -531,7 +536,6 @@ sub loadColumnMapFile {
   my $bs_hash_ref = $args{'bs_hash_ref'};
   my $delimiter = "\t";
   my @condition_files;
-  my %column_mapping;
   my ($mapped_file, $condition, $condition_id, $processed_date);
 
 
@@ -552,6 +556,7 @@ sub loadColumnMapFile {
     }
 
     ## Read in column_map file
+    my %column_mapping;
     if (open (MAP_FILE, "$map_file")){
       while (<MAP_FILE>) {
 	next if (/^\#/ || /^\s$/);
@@ -560,7 +565,7 @@ sub loadColumnMapFile {
         }elsif (/delimiter\s*\=\s*(.*)/) {
 	  $delimiter = $1;
 	  # Quick hack to resolve tab interpolation
-	  if ($delimiter eq '\t') {$delimiter = "\t";print "interpolated\n";}
+	  if ($delimiter eq '\t') {$delimiter = "\t";}
 	  if ($delimiter eq '\s') {$delimiter = "\s";}
 	}elsif (/condition\s*\=\s*(.*)/) {
 	  $condition = $1;
@@ -645,7 +650,6 @@ sub loadFiles {
   }
 
   ## Local Variables
-  my (@search_files);
   my ($search_file, $condition, $condition_id, $processed_date);
   my $new_conditions = 0;
 
@@ -780,7 +784,6 @@ sub getColumnMapping {
       $header_hash_ref = getHeaderHash (organism=>"generic");
   }
   my %header_hash = %{$header_hash_ref};
-  my %column_hash;
 
   ## Move through column headings and map headers to column numbers
   my $counter = 0;
