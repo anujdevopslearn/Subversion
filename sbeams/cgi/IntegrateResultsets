@@ -205,7 +205,8 @@ sub handle_request {
 
 
   #### Display the form action buttons
-  $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
+  #$sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
+  display_form_buttons(TABLE_NAME=>$TABLE_NAME);
 
 
   #### Finish the upper part of the page and go begin the full-width
@@ -265,4 +266,40 @@ sub evalSQL {
   return eval "\"$sql\"";
 
 } # end evalSQL
+
+
+###############################################################################
+# display_form_buttons
+#
+# Display the parameter form buttons for this particular table or query
+###############################################################################
+sub display_form_buttons {
+  #my $self = shift;
+  my %args = @_;
+
+
+  #### Process the arguments list
+  my $TABLE_NAME = $args{'TABLE_NAME'};
+
+
+  #### If the output mode is not html, then we don't want anything
+  if ($sbeams->output_mode() ne 'html') {
+    return;
+  }
+
+
+  #### Show the QUERY, REFRESH, and Reset buttons
+  print qq~
+      <TR><TD COLSPAN=2>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      <INPUT TYPE="submit" NAME="action" VALUE="Cytoscape">
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      <INPUT TYPE="submit" NAME="action" VALUE="Cytoscape test">
+       </TR></TABLE>
+       </FORM>
+  ~;
+
+} # end display_form_buttons
+
+
 
