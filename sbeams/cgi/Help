@@ -1,0 +1,274 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : Help
+# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
+# $Id$
+#
+# Description : This script authenticates the user, and then
+#               displays the specified help information.
+#
+# SBEAMS is Copyright (C) 2000-2003 by Eric Deutsch
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+use FindBin;
+
+use lib "$FindBin::Bin/../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
+	     $SBEAMS_PART
+            );
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = $sbeams;
+
+
+
+###############################################################################
+# Set program name and usage banner for command line use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag to level n
+  --testonly          Set testonly flag which simulates INSERTs/UPDATEs only
+
+ e.g.:  $PROG_NAME --verbose 2 keyword=value
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","quiet")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+$TESTONLY = $OPTIONS{"testonly"} || 0;
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "   VERBOSE = $VERBOSE\n";
+  print "     QUIET = $QUIET\n";
+  print "     DEBUG = $DEBUG\n";
+  print "  TESTONLY = $TESTONLY\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main();
+exit(0);
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    #permitted_work_groups_ref=>['Proteomics_user','Proteomics_admin',
+    #  'Proteomics_readonly'],
+    connect_read_only=>1,
+    allow_anonymous_access=>1,
+  ));
+
+
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters);
+  #$sbeams->printDebuggingInfo($q);
+
+
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+
+  #### Decide what action to take based on information so far
+  if ($parameters{action} eq "???") {
+    # Some action
+  } else {
+    $sbeamsMOD->display_page_header();
+    handle_request(ref_parameters=>\%parameters);
+    $sbeamsMOD->display_page_footer();
+  }
+
+
+} # end main
+
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request {
+  my %args = @_;
+
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+
+
+  #### Show current user context information
+  $sbeams->printUserContext();
+  $current_contact_id = $sbeams->getCurrent_contact_id();
+
+
+  #### Get the passed document name
+  my $document_name = $parameters{document};
+  my $module_name = $parameters{module};
+
+
+  #### If no document was specified, complain (ideally list all)
+  unless ($document_name) {
+    print "ERROR: Document unspecified<BR>\n";
+    return;
+  }
+
+
+  #### Check to see if the specified document has funny characters in it
+  if ($document_name =~ /\W/) {
+    print "ERROR: Illegal characters in document name '$document_name'<BR>\n";
+    return;
+  }
+
+
+  #### Check to see if the module_name was specified and is legal
+  my $subdir = '';
+  if ($module_name) {
+    if ($module_name =~ /\W/) {
+      print "ERROR: Illegal characters in module name '$module_name'<BR>\n";
+      return;
+    } else {
+      $subdir = $module_name;
+    }
+  }
+
+
+  #### Check to see if the specified document exists
+  #my $subdir = $SBEAMS_PART;
+  $subdir .= '/' if ($subdir);
+  my $document_file = "$PHYSICAL_BASE_DIR/doc/$subdir$document_name.php";
+  if ( ! -e $document_file ) {
+    print "ERROR: Unable to find a document with name '$document_name'<BR>\n";
+    return;
+  }
+
+
+  #### Open up the file and see if it's the right format
+  open(INFILE,$document_file)
+    || die("ERROR: Unable to read $document_file");
+
+  my $is_content = 0;
+  my $found_content = 0;
+  my $content = '';
+  my $buffer = '';
+
+  while (my $line = <INFILE>) {
+
+    #### Add the current line to the full buffer
+    $buffer .= $line;
+
+    #### If the we're in the main part of the content
+    if ($is_content) {
+
+      #### Finish if we see the END_CONTENT flag
+      if ($line =~ /-- END_CONTENT --/) {
+	last;
+      }
+
+      #### Try to rewrite hyperlinks properly
+
+      #### If it's just a plain relative link to a php, rewrite it to use Help
+      while ($line =~ /HREF\s*=\s*\"(\w+)\.php/) {
+	my $name = $1;
+	my $suffix = '';
+	if ($module_name) {
+	  $suffix = "&module=$module_name";
+	}
+	$line =~ s/HREF\s*=\s*\"(\w+)\.php/HREF=\"$CGI_BASE_DIR\/Help?document=$name$suffix/;
+      }
+
+      #### If it's just a relative link in a subdirectory to a php, rewrite
+      #### it to use Help
+      while ($line =~ /HREF\s*=\s*\"(\w+)\/(\w+)\.php/) {
+	my $module = $1;
+	my $name = $2;
+	if ( -e "$PHYSICAL_BASE_DIR/cgi/$module/Helpxx" ) {
+	  $line =~ s/HREF\s*=\s*\"(\w+)\/(\w+)\.php/HREF=\"$CGI_BASE_DIR\/$module\/Help?document=$name/;
+        } else {
+	  $line =~ s/HREF\s*=\s*\"(\w+)\/(\w+)\.php/HREF=\"$CGI_BASE_DIR\/Help?document=$name&module=$module/;
+        }
+      }
+
+      #### if it's a relative link (i.e. not beginning with / or http:// then
+      #### rewrite it to use the doc/ directory explicitly
+      if ($line =~ /HREF\s*=\s*\"(?!(\/|http:\/\/))/) {
+	$line =~ s/HREF\s*=\s*\"(?!\/)/HREF=\"$HTML_BASE_DIR\/doc\//;
+      }
+
+
+      #### Add line of main content to the content buffer
+      $content .= $line;
+
+
+    #### If the we're not in the main part of the content
+    } else {
+      #### Begin the main part if we see the BEGIN CONTENT flag
+      if ($line =~ /-- BEGIN_CONTENT --/) {
+	$is_content = 1;
+	$found_content = 1;
+      }
+    }
+
+
+  }
+
+  close(INFILE);
+
+  #### If we found real content, print it out
+  if ($content) {
+    print $content;
+
+  #### Else print and error message and dump the entire file
+  } else {
+    print "<H1>ERROR: Unable to find content flags</H2>\n";
+    $log->error( "ERROR: Unable to find content flags in '$document_file'" );
+    print $buffer;
+  }
+
+  $log->debug( $content );
+
+
+  return;
+
+
+} # end handleRequest
+
+
