@@ -36,8 +36,7 @@ use Getopt::Long;
 use FindBin;
 use XML::Writer;
 use IO;
-$Data::Dumper::Pad = "<br>";
-$Data::Dumper::Pair = "<br><br>";
+
 
 use lib "$FindBin::Bin/../../../lib/perl";
 use vars qw ($sbeams $sbeamsMOD $affy_o $data_analysis_o $cgi $current_username $USER_ID
@@ -147,12 +146,15 @@ sub main {
 	my %parameters;
 	my $submit = $cgi->param('Submit');
 	my $token = $cgi->param('token');
+	my $delete_sub = $cgi->param('delete_sub');
+	
+	
 	my $n_params_found = $sbeams->parse_input_parameters(
 		q              => $cgi,
 		parameters_ref => \%parameters
 	);
 
-	# $sbeams->printDebuggingInfo($cgi);
+	 #$sbeams->printDebuggingInfo($cgi);
 #print Dumper ($sbeams);
 	#### Process generic "state" parameters before we start
 	$sbeams->processStandardParameters( parameters_ref => \%parameters );
@@ -169,8 +171,14 @@ sub main {
 		multtest($token);
 	} elsif (defined($submit) && $submit eq "annaffy") {
 		annaffy($token);
+##Delete setup
+	}elsif(defined($delete_sub) 
+			&& $delete_sub eq "GO"){
+		$sbeamsMOD->printPageHeader();
+		delete_data_setup(ref_parameters => \%parameters);
+		$sbeamsMOD->printPageFooter();
+##Default print page
 	}else {
-#$sbeams->printDebuggingInfo($cgi);
 
 		$sbeamsMOD->printPageHeader();
 		handle_request( ref_parameters => \%parameters );
@@ -1034,9 +1042,11 @@ END
 		
 		for(my $i; $i<=$#ordered_files; $i++){
 			my $file = $ordered_files[$i];
+			my $escaped_file_name = $file;
+			$escaped_file_name =~ s/\+/%2B/g; #users wanted to use + in file names it needs to be escaped for the cgi page to work correctly
 			print Tr(
 						td({class=>'grey_bg'}, "$file"),
-						td( $cgi->radio_group(-name=>"SG_$file",
+						td( $cgi->radio_group(-name=>"SG_$escaped_file_name",
 	                             -values=>\@sample_group_names,
 	                             -default=>$ordered_all_sample_groups[$i],
 	                             )),
@@ -1206,8 +1216,8 @@ sub show_previous_analysis_groups{
 	my $html = qq~  
 				<table>
 				<tr class="grey_bg">
-				 <th>Analysis Id</th>
-				 <th>Normalization Group Id</th>
+				 <th>Analysis Info</th>
+				 <th>Normalization Group Info</th>
 				 <th>User Name</th>
 				 <th>Analysis Date</th>
 				 <th>Show Analysis Page</th>
@@ -1249,8 +1259,8 @@ sub show_previous_analysis_groups{
 	
 		$html .= qq~
 					   <tr>
-						<td><a href="${manage_table_url}affy_analysis&affy_analysis_id=$analysis_id">$analysis_id</a></td>
-						<td><a href="${manage_table_url}affy_analysis&affy_analysis_id=$parent_analysis_id">$parent_analysis_id</a></td>
+						<td><a class='edit_menuButton' href="${manage_table_url}affy_analysis&affy_analysis_id=$analysis_id">Edit Info</a></td>
+						<td><a class='edit_menuButton' href="${manage_table_url}affy_analysis&affy_analysis_id=$parent_analysis_id">Edit Norm. Info</a></td>
 						<td>$username</td>
 						<td>$analysis_date</td>
 						<td><a href="?show_analysis_files=1&token=$folder&_tab=3">Show files</a></td>
@@ -1306,7 +1316,7 @@ sub show_previous_file_groups{
 	my $html = qq~  
 				<table>
 				<tr class="grey_bg">
-				 <th>Analysis Id</th>
+				 <th>Analysis Info</th>
 				 <th>User Name</th>
 				 <th>Analysis Date</th>
 				 <th>Show Files</th>
@@ -1342,7 +1352,7 @@ sub show_previous_file_groups{
 	
 		$html .= qq~
 					   <tr>
-						<td><a href="${manage_table_url}affy_analysis&affy_analysis_id=$analysis_id">$analysis_id</a></td>
+						<td><a class='edit_menuButton' href="${manage_table_url}affy_analysis&affy_analysis_id=$analysis_id">Edit</a></td>
 						<td>$username</td>
 						<td>$analysis_date</td>
 						<td><a href="?token=$folder&analysis_id=$analysis_id">Show files</a></td>
@@ -1380,8 +1390,8 @@ sub show_previous_normalization_groups{
 	my $html = qq~  
 				<table>
 				<tr class="grey_bg">
-				 <th>Analysis Id</th>
-				 <th>File Group Id</th>
+				 <th>Analysis Info</th>
+				 <th>File Group&nbsp;Info</th>
 				 <th>User Name</th>
 				 <th>Analysis Date</th>
 				 <th>Show Normalization Page</th>
@@ -1423,8 +1433,8 @@ sub show_previous_normalization_groups{
 	
 		$html .= qq~
 					   <tr>
-						<td><a href="${manage_table_url}affy_analysis&affy_analysis_id=$analysis_id">$analysis_id</a></td>
-						<td><a href="${manage_table_url}affy_analysis&affy_analysis_id=$parent_analysis_id">$parent_analysis_id</a></td>
+						<td><a class='edit_menuButton' href="${manage_table_url}affy_analysis&affy_analysis_id=$analysis_id">Edit</a></td>
+						<td><a class='edit_menuButton' href="${manage_table_url}affy_analysis&affy_analysis_id=$parent_analysis_id">Edit Group</a></td>
 						<td>$username</td>
 						<td>$analysis_date</td>
 						<td><a href="?show_norm_files=1&token=$folder&_tab=2">Show files</a></td>
@@ -1533,11 +1543,21 @@ sub display_files {
 			),
 			Tr(
 			  td({class=>'grey_bg'}, "Edit Data"),
-			  td("<a target='Win1' href='${manage_table_url}affy_analysis&affy_analysis_id=$analysis_id'>Edit Analysis Description</a>"),
+			  td("<a target='Win1' class='edit_menuButton' href='${manage_table_url}affy_analysis&affy_analysis_id=$analysis_id'>Edit Analysis Description</a>"),
 			),
 			Tr(
 			  td({class=>'grey_bg'}, "Parent Analysis Data"),
-			  td( ($parent_analysis_id =~ /^\d/)? "<a href='${manage_table_url}affy_analysis&affy_analysis_id=$parent_analysis_id'>Edit Parent Analysis Description</a>" : "No Data"),
+			  td( ($parent_analysis_id =~ /^\d/)? "<a class='edit_menuButton' href='${manage_table_url}affy_analysis&affy_analysis_id=$parent_analysis_id'>Edit Parent Analysis Description</a>" : "No Data"),
+			),
+			#make delete button
+			Tr(
+			  td({class=>'grey_bg'}, "Delete Analysis Run"),			
+			  td($cgi->start_form(-name => 'delete_run'),
+			     hidden('delete_sub', 'GO'),
+			     hidden('analysis_id',$analysis_id),
+			     hidden('parent_analysis_id', $parent_analysis_id),
+			     submit(-name=>"delete_analysis_run_setup", -value=>"Delete Analysis Run", -class=>'red_bg')
+			  )
 			),
 			Tr(
 			  td({class=>'grey_bg'}, "User Description"),
@@ -1729,10 +1749,257 @@ sub make_table {
 	return $html;					
 						
 }					
-						
-						
-						
-						
-						
+##############################################################################
+# delete_data_setup
+#
+# Check to make sure user has correct permissions to delete data and if so delete the 
+#analysis info and mark the records in the data base as 'D'eleted...
+#user can only delete data if no other data uses it as a parent.
+###############################################################################					
+sub delete_data_setup {
+	my %args = @_;
+	my $ref_parameters = $args{ref_parameters};
+$log->debug("I'm about to delete some data ");
+
+	my $best_permission = $sbeams->get_best_permission();
+$log->debug("BEST PERMISSION '$best_permission'\n");
+$log->debug(Dumper($ref_parameters));
+
+#make sure this user has permission to edit this data
+	if ($best_permission <= SBEAMS::Connection::Permissions::DATA_ADMIN ||
+		$best_permission <= SBEAMS::Connection::Permissions::DATA_MODIFIER ||
+		$best_permission <= SBEAMS::Connection::Permissions::DATA_GROUP_MOD ){
+		#print  "Permissions are good for this user";
+	}else{
+		error("Sorry You do do not have the proper group permissions to delete this data.  
+		Please talked to the Project PI to be added to the correct modifier group")
+	}
+##
+	my $analysis_id = $ref_parameters->{analysis_id};
+	my $previous_analysis_id = $ref_parameters->{orginal_analysis_id_to_delete};
+	my $delete_action = $ref_parameters->{delete_anlaysis_action};
+	
+	my $analysis_o = $affy_o->find_child_analysis_runs($analysis_id);
+	
+	$log->debug(Dumper($analysis_o));
+	
+##If the analysis has child analysis runs make a form for the user to delete them first
+	if (ref $analysis_o && $delete_action ne 'delete_run'){
+	
+		print_delete_child_data_form(analysis_obj => $analysis_o,
+									 analysis_id  => $analysis_id,  );
+	
+	}elsif($delete_action eq 'confirmed_delete'){
+		$log->debug("ABOUT TO DELETE DB ROW FOR '$analysis_id'");
+		delete_data(ref_parameters => $ref_parameters);
+		
+		my $analysis_o = $affy_o->find_child_analysis_runs($previous_analysis_id);
+		if (ref $analysis_o){
+			print_delete_child_data_form(analysis_obj => $analysis_o,
+								 analysis_id  => $previous_analysis_id,  );
+		}else{
+			print_return_to_main_analysis_form_link();
+		}
+		
+	}else{
+		print table(
+					Tr(
+					  td(
+					    h3({class=>"orange_bg"},
+					    "Are you sure you wish to delete this data"
+					    )
+					  )
+					),
+					Tr(
+					   	td($cgi->start_form(-name => 'delete_run'),
+		     			hidden('delete_sub', 'GO'),
+		     			hidden('delete_anlaysis_action', "confirmed_delete"),
+		     			hidden('analysis_id',$analysis_id),
+		     			hidden(-name=>'orginal_analysis_id_to_delete',
+						     		-value=>[$previous_analysis_id],
+						     		),
+		     			submit("delete_analysis_run_confirmed", "YES"),
+			     		submit("delete_analysis_run_confirmed", "NO")
+			     		)
+					  
+					)
+			 );#end_table
+	}
+}				
+
+#############################################################################
+# print_return_to_main_analysis_form_link
+#
+# If user has no more data to delete present a link to go back to the tab they 
+#were on before deleting data
+###############################################################################	
+
+sub print_return_to_main_analysis_form_link {
+
+	my $from_url = $cgi->referer();
+	$from_url =~ s/show.+?token.+?&//; #want to remove remove everything upto the tab setting
+	
+	print p(b("Done Deleting data, click 
+	<a href='$from_url'>here </a>
+	to go back to the overview."));
+	return;
+}
+					
+#############################################################################
+# delete_data
+#
+# Delete the analysis info and mark the records in the database as 'D'eleted...
+#user can only delete data if no other data uses it as a parent.
+###############################################################################						
+	
+sub delete_data{
+	my %args = @_;
+	my $ref_parameters = $args{ref_parameters};
+	my $analysis_id = $ref_parameters->{analysis_id};
+	my $confirm_status = $ref_parameters->{delete_analysis_run_confirmed};
+	my $folder_name = $affy_o->find_analysis_folder_name($analysis_id);
+	die "Analysis Id '$analysis_id' does not look good" unless ($analysis_id =~ /^\d+$/);
+	$log->debug("DELETE DATA: Analysis ID '$analysis_id' FOLDER NAME '$folder_name'");
+	my $return_info = '';
+	
+##Change the database from N to 'D'
+	if($confirm_status eq 'YES'){
+		$return_info = $affy_o->delete_analysis_session(analysis_id =>$analysis_id);
+		$return_info = "Database Deleted analysis_id $return_info<br>";
+##Now delete the folder holding the data
+		print "<h3>Starting to delete old files</h3><br>";
+		$affy_o->delete_analysis_folder(analysis_folder=>"$folder_name");
+		print "<hr>";
+	
+	}else{
+		$return_info = 'Analysis Run Was Not Deleted';
+		
+	}
+	die "Could not change database to delete Affy Analysis id '$analysis_id' " unless $return_info;
+		
+		print "<p>Delete Info:$return_info</p><br/>"
+
+	
+	
 	
 
+}
+
+#############################################################################
+# print_delete_child_data_form
+#
+# 
+###############################################################################
+sub print_delete_child_data_form{
+	my %args = @_;
+	
+	my $analysis_o = $args{analysis_obj};
+	my $analysis_id = $args{analysis_id};
+	
+	my @analysis_types = $analysis_o->get_analysis_types();
+	$log->debug("ANALYSIS TYPES '@analysis_types'");
+	
+	print $cgi->start_table(),
+					Tr(
+					  td({colspan=>2},
+					    h2({class=>"orange_bg"},
+					    "Warning the data to be deleted has child analysis runs which must be deleted first"
+					    )
+					  )
+					),
+					Tr(
+					  td({colspan=>2,  class=>'grey_bg'}, 
+					  	"Look Below to see the data that needs to be delted first"
+					  )
+					);
+		
+		
+			  
+		foreach my $analysis_type (@analysis_types){
+			print Tr(
+				  	td({class=>'grey_header', colspan=>2}, "Analysis Type: $analysis_type")
+				  	
+				  );
+			
+			my $folder_names_aref = $analysis_o->check_for_analysis_data_type(analysis_name_type => $analysis_type);  
+			
+			$log->debug("FOLDER NAMES ", Dumper($folder_names_aref));
+			
+			foreach my $folder (@$folder_names_aref){
+			
+				my ($child_analysis_id, 
+				$child_user_desc, 
+				$child_analysis_desc, 
+				$child_parent_analysis_id,
+				$child_analysis_date,
+				$child_username) =   $analysis_o->get_analysis_info(
+											analysis_name_type => $analysis_type,
+											folder_name => $folder,
+											info_types	=> ["analysis_id",
+															"user_desc", 
+															"analysis_desc", 
+															"parent_analysis_id",
+															"analysis_date",
+															"user_login_name"],
+											truncate_data => 1,
+											);         
+				
+				my $user_background_color = ($current_username eq $child_username )? 'grey_bg': 'orange_bg';
+				
+				$log->debug("$child_analysis_id, 
+				$child_user_desc, 
+				$child_analysis_desc, 
+				$child_parent_analysis_id,
+				$child_analysis_date,
+				$child_username");
+				
+				
+				print Tr(
+						td({colspan=>2, class=>'grey_header', align=>'center'}, "Analysis Info")
+					   ),
+					   Tr(
+						td({class=>'grey_bg'}, "Delete Analysis Run"),			
+						td($cgi->start_form(-name => 'delete_run'),
+						     hidden(-name=>"delete_sub", -value=>['GO']),
+						     hidden(-name=>'orginal_analysis_id_to_delete',
+						     		-value=>[$analysis_id],  
+						     		-override => 1),
+						     hidden(-name=>'analysis_id',
+						     		-value=>[$child_analysis_id],
+						     		-override => 1),
+						     hidden(-name=>'parent_analysis_id', 
+						     		-value=>[$child_parent_analysis_id], 
+						     		-override => 1),
+						     submit(-name=>"delete_analysis_run_setup", -value=>"Delete Analysis Run",-class=>'red_bg'),
+						     $cgi->endform(),
+						  )
+						), 
+					  
+					  Tr(
+						td({class=>'grey_bg'},  "Run ID"),
+						td("<a  href='${manage_table_url}affy_analysis&affy_analysis_id=$child_analysis_id'>$folder</a></td>")
+					  ),
+					  Tr(
+						td({class=>'grey_bg'},  "Date"),
+						td("$child_analysis_date")
+					  ),
+					  Tr(
+						td({class=>$user_background_color},  "User Name"),
+						td("$child_username")
+					  ),
+					  
+					  Tr(
+						td({class=>'grey_bg'},  "User Description"),
+						td("$child_user_desc")
+					  ),
+					  Tr(
+						td({class=>'grey_bg'},  "Analysis Description"),
+						td("$child_analysis_desc")
+					  ),
+			}
+		}
+		$cgi->end_table();
+
+
+
+}
