@@ -22,7 +22,7 @@ use strict;
 use vars qw( $q $http_header $log @ISA $DBTITLE $SESSION_REAUTH @ERRORS
              $current_contact_id $current_username $LOGIN_DURATION
              $current_work_group_id $current_work_group_name $LOGGING_LEVEL 
-             $current_project_id $current_project_name
+             $current_project_id $current_project_name $SMBAUTH
              $current_user_context_id @EXPORT_OK  );
 
 use CGI::Carp qw(fatalsToBrowser croak);
@@ -33,7 +33,7 @@ use Authen::Smb;
 #use Data::Dumper;
 
 use SBEAMS::Connection::DBConnector;
-use SBEAMS::Connection::Settings qw( :default $SESSION_REAUTH $LOGIN_DURATION);
+use SBEAMS::Connection::Settings qw(:default $SESSION_REAUTH $LOGIN_DURATION $SMBAUTH);
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
 use SBEAMS::Connection::Log;
@@ -171,6 +171,9 @@ sub Authenticate {
     $self->printPageFooter();
 
   # Else if we've have a valid user, get additional information
+  } elsif ( requestingNoAuthPage() ) { 
+
+    return $current_username;
   } else { 
 
       $current_contact_id = $self->getContact_id($current_username);
@@ -193,6 +196,13 @@ sub Authenticate {
   return $current_username;
 
 } # end Authenticate
+
+sub requestingNoAuthPage {
+  my $url = $q->url( -absolute => 1 );
+  return 1 if $url eq 'logout.cgi';
+  $log->debug( $url );
+  return 0;
+}
 
 #+
 # Checks validity of various passed parameters
@@ -603,6 +613,7 @@ sub getCurrent_work_group_id {
   return $current_work_group_id
     if (defined($current_work_group_id) && $current_work_group_id > 0);
 
+  $log->printStack( 'debug' );
   if ($current_contact_id < 1) {
     my $msg =<<"    MSG";
     current_contact_id undefined, Authentication must have failed!
@@ -1188,9 +1199,9 @@ sub checkLogin {
 
 
     #### If success is still 0 but we haven't failed, try SMB Authentication
-    if ($success == 0 && $failed == 0) {
-      my $authResult = Authen::Smb::authen($user,$pass,
-        'ISB-DC1','PRINT','ISB');
+    if ($success == 0 && $failed == 0 && $SMBAUTH ) {
+      my $authResult = Authen::Smb::authen($user,$pass, 
+                                           @$SMBAUTH{qw(PDC BDC Domain)});
       if ( $authResult == 0 ) {
         $success = 1;
         $error_code = 'SUCCESS (SMB)';
