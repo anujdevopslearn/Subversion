@@ -162,7 +162,7 @@ PR_biosequence_annotation	5	aliases	BioSequence Aliases	varchar	255	0	Y		N			N	t
 PR_biosequence_annotation	6	former_names	Former BioSequence Names	varchar	255	0	Y		N			N	text	50		Y	Y	N	Former Aliases of this BioSequence.  These are stored as a colon-delimited string		
 PR_biosequence_annotation	7	functional_description	Functional Description	text	16	0	Y		N			N	textarea	3		Y	Y	N	Functional description of the protein		
 PR_biosequence_annotation	8	EC_numbers	EC Numbers	varchar	255	0	Y		N			N	text	50		Y	Y	N	EC Number(s) that corresponds to this domain.  Separate multiple numbers with a semicolon		
-PR_biosequence_annotation	9	biosequence_type	Biosequence Type	varchar	255	0	Y		N				text	50		Y	Y	N	Further annotation of biosequence type		
+PR_biosequence_annotation	9	biosequence_type	Biosequence Type	varchar	255	0	N		N			N	text	50		Y	Y	N	Further annotation of biosequence type		
 PR_biosequence_annotation	10	category	Category	varchar	255	0	Y		N			N	text	50		Y	Y	N	Category		
 PR_biosequence_annotation	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 PR_biosequence_annotation	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				

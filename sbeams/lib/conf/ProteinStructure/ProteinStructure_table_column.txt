@@ -141,15 +141,15 @@ PS_biosequence_annotation	5	aliases	BioSequence Aliases	varchar	255	0	Y		N			N	t
 PS_biosequence_annotation	6	former_names	Former BioSequence Names	varchar	255	0	Y		N			N	text	50		Y	Y	N	Former Aliases of this BioSequence.  These are stored as a colon-delimited string		
 PS_biosequence_annotation	7	functional_description	Functional Description	text	16	0	Y		N			N	textarea	3		Y	Y	N	Functional description of the protein		
 PS_biosequence_annotation	8	EC_numbers	EC Numbers	varchar	255	0	Y		N			N	text	50		Y	Y	N	EC Number(s) that corresponds to this domain.  Separate multiple numbers with a semicolon		
-PS_biosequence_annotation	9	biosequence_type	Biosequence Type	varchar	255	0	Y		N				text	50		Y	Y	N	Further annotation of biosequence type		
-PS_biosequence_annotation	10	category	Category	varchar	255	0	Y		N			N	text	50		Y	Y	N	Category		
-PS_biosequence_annotation	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-PS_biosequence_annotation	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PS_biosequence_annotation	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-PS_biosequence_annotation	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PS_biosequence_annotation	15	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-PS_biosequence_annotation	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-PS_biosequence_annotation	17	record_status	Record Status	char	1	0	N	N	N							N	N				
+PS_biosequence_annotation	9	biosequence_type	Biosequence Type	varchar	255	0	N		N			N	text	50		Y	Y	N	Further annotation of biosequence type		
+PS_biosequence_annotation	10	category	Category	varchar	255	0	Y		N			N	text	50		Y	Y	N	Category	
+PS_biosequence_annotation	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments	
+PS_biosequence_annotation	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+PS_biosequence_annotation	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N			
+PS_biosequence_annotation	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+PS_biosequence_annotation	15	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
+PS_biosequence_annotation	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
+PS_biosequence_annotation	17	record_status	Record Status	char	1	0	N	N	N							N	N			
 PS_BrowseBioSequence	1	project_id	Project									N	multioptionlist	4	refreshDocument()	Y	Y	Y	Projects to show Biosequence Sets for	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) INNER JOIN $TBPS_BIOSEQUENCE_SET BSS ON (P.project_id = BSS.project_id) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id"
 PS_BrowseBioSequence	2	biosequence_set_id	Biosequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT BSS.biosequence_set_id,BSS.set_name FROM $TBPS_BIOSEQUENCE_SET BSS WHERE BSS.project_id IN ($accessible_project_ids) AND BSS.project_id IN ($parameters{project_id}) AND BSS.record_status != 'D' ORDER BY sort_order,set_name"
 PS_BrowseBioSequence	3	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	

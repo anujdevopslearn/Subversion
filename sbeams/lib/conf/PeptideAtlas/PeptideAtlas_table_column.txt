@@ -126,12 +126,12 @@ AT_biosequence_property_set	8	signal_peptide_length	Length of the Signal Peptide
 AT_biosequence_property_set	9	signal_peptide_is_cleaved	Signal Peptide gets Cleaved	char	1	0	Y		N			N	text	50		Y	Y	N	Does the signal peptide get cleaved off Y/N?		
 AT_biosequence_property_set	10	genome_build	Genome Build	varchar	50	0	Y		N			N	text	50		Y	Y	N	Genome build name for which the following mapping parameters are valid		
 AT_biosequence_property_set	11	chromosome	Chromosome	varchar	50	0	Y		N			N	text	50		Y	Y	N	Chromosome in which this mapping occurs		
-AT_biosequence_property_set	12	start_in_chromosome	Start Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	Start position of the biosequence in the chromosome		
-AT_biosequence_property_set	13	end_in_chromosome	End Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	End position of the biosequence in the chromosome		
-AT_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	"Strand (+,-) of the biosequence in the chromosome"		
-AT_biosequence_property_set	15	isoelectric_point	Isoelectric Point	real	4	0	Y		N			N	text	10		Y	Y	N	Isoelectric Point (pI) of the protein		
-AT_biosequence_property_set	16	fav_codon_frequency	Favorite Codon Frequency	real	4	0	Y		N			N	text	10		Y	Y	N	Favorite Codon Frequency		
-AT_biosequence_property_set	17	duplicate_biosequences	Duplicate Biosequences	varchar	255	0	Y		N			N	text	50		Y	Y	N	Semicolon delimited list of duplicate sequences within the same set		
+AT_biosequence_property_set	12	start_in_chromosome	Start Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	Start position of the biosequence in the chromosome	
+AT_biosequence_property_set	13	end_in_chromosome	End Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	End position of the biosequence in the chromosome	
+AT_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	"Strand (+,-) of the biosequence in the chromosome"	
+AT_biosequence_property_set	15	isoelectric_point	Isoelectric Point	real	4	0	Y		N			N	text	10		Y	Y	N	Isoelectric Point (pI) of the protein	
+AT_biosequence_property_set	16	fav_codon_frequency	Favorite Codon Frequency	real	4	0	Y		N			N	text	10		Y	Y	N	Favorite Codon Frequency	
+AT_biosequence_property_set	17	duplicate_biosequences	Duplicate Biosequences	varchar	255	0	Y		N			N	text	50		Y	Y	N	Semicolon delimited list of duplicate sequences within the same set	
 AT_BrowseBiosequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBAT_BIOSEQUENCE_SET WHERE project_id IN (  $accessible_project_ids ) ORDER BY sort_order,set_name"
 AT_BrowseBiosequence	2	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 AT_BrowseBiosequence	3	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
@@ -155,9 +155,9 @@ AT_GetPeptides	5	peptide_sequence_constraint	Peptide Sequence Constraint								
 AT_GetPeptides	6	best_probability_constraint	Best Probability Constraint									N	text	15		Y	Y	N	"Constraint for the best observed probability for a peptide.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
 AT_GetPeptides	7	n_observations_constraint	Number of Observations Constraint									N	text	10		Y	Y	N	"Constraint for the number of observations for a peptide.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
 AT_GetPeptides	8	chromosome_constraint	Chromosome Constraint									N	text	10		Y	Y	N	Constraint for the Chromosome onto which the peptide was mapped. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.	
-AT_GetPeptides	9	start_in_chromosome_constraint	Start in Chromosome Constraint									N	text	20		Y	Y	N	"Constraint for the start position of the peptide in nucleotides along the chromosome.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
-AT_GetPeptides	10	end_in_chromosome_constraint	End in Chromosome Constraint									N	text	20		Y	Y	N	"Constraint for the end position of the peptide in nucleotides along the chromosome.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
-AT_GetPeptides	11	strand_constraint	Strand									N	text	5		Y	Y	N	Constraint for the strand (orientiation) of the chromosome mapping (must be either + or -)		
+AT_GetPeptides	9	start_in_chromosome_constraint	Start in Chromosome Constraint									N	text	20		Y	Y	N	"Constraint for the start position of the peptide in nucleotides along the chromosome.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
+AT_GetPeptides	10	end_in_chromosome_constraint	End in Chromosome Constraint									N	text	20		Y	Y	N	"Constraint for the end position of the peptide in nucleotides along the chromosome.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
+AT_GetPeptides	11	strand_constraint	Strand									N	text	5		Y	Y	N	Constraint for the strand (orientiation) of the chromosome mapping (must be either + or -)	
 AT_GetPeptides	12	n_protein_mappings_constraint	Number of Proteins Mapped Constraint									N	text	5		Y	Y	N	Constraint for number of distinct proteins for this peptide ( >=0 )		
 AT_GetPeptides	13	n_genome_locations_constraint	Number of Genome Locations Mapped Constraint									N	text	5		Y	Y	N	Constraint for number of genome locations for this peptide ( >=0 )		
 AT_GetPeptides	14	is_exon_spanning_constraint	Does Mapping Span Exons Constraint									N	text	5		Y	Y	N	Constraint for whether the peptide spans more than one exon (y or n)		
@@ -222,13 +222,13 @@ AT_biosequence_annotation	4	full_gene_name	Full Gene Name	varchar	255	0	Y		N			N
 AT_biosequence_annotation	5	aliases	BioSequence Aliases	varchar	255	0	Y		N			N	text	50		Y	Y	N	Aliases of this BioSequence.  These are stored as a semi-colon delimited string		
 AT_biosequence_annotation	6	former_names	Former BioSequence Names	varchar	255	0	Y		N			N	text	50		Y	Y	N	Former Aliases of this BioSequence.  These are stored as a colon-delimited string		
 AT_biosequence_annotation	7	functional_description	Functional Description	text	16	0	Y		N			N	textarea	3		Y	Y	N	Functional description of the protein		
-AT_biosequence_annotation	8	EC_numbers	EC Numbers	varchar	255	0	Y		N			N	text	50		Y	Y	N	EC Number(s) that corresponds to this domain.  Separate multiple numbers with a semicolon		
-AT_biosequence_annotation	9	biosequence_type	Biosequence Type	varchar	255	0	Y		N				text	50		Y	Y	N	Further annotation of biosequence type		
-AT_biosequence_annotation	10	category	Category	varchar	255	0	Y		N			N	text	50		Y	Y	N	Category		
-AT_biosequence_annotation	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-AT_biosequence_annotation	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_biosequence_annotation	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_biosequence_annotation	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_biosequence_annotation	15	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_biosequence_annotation	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_biosequence_annotation	17	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_biosequence_annotation	8	EC_numbers	EC Numbers	varchar	255	0	Y		N			N	text	50		Y	Y	N	EC Number(s) that corresponds to this domain.  Separate multiple numbers with a semicolon
+AT_biosequence_annotation	9	biosequence_type	Biosequence Type	varchar	255	0	N		N			N	text	50		Y	Y	N	Further annotation of biosequence type
+AT_biosequence_annotation	10	category	Category	varchar	255	0	Y		N			N	text	50		Y	Y	N	Category
+AT_biosequence_annotation	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments
+AT_biosequence_annotation	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
+AT_biosequence_annotation	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N		
+AT_biosequence_annotation	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
+AT_biosequence_annotation	15	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N		
+AT_biosequence_annotation	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N		
+AT_biosequence_annotation	17	record_status	Record Status	char	1	0	N	N	N							N	N		
