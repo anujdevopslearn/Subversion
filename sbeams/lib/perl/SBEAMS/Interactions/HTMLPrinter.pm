@@ -166,33 +166,13 @@ sub printStyleSheet {
 # Not sure how to design that yet.
 ###############################################################################
 sub printJavascriptFunctions {
-    my $self = shift;
-    my $javascript_includes = shift;
+  my $self = shift;
+  my $javascript_includes = shift;
 
-
-    print qq~
-	<SCRIPT LANGUAGE="JavaScript">
-	<!--
-
-	function refreshDocument() {
-            //confirm( "apply_action ="+document.forms[0].apply_action.options[0].selected+"=");
-            document.forms[0].apply_action_hidden.value = "REFRESH";
-	    document.forms[0].submit();
-	} // end refresh
-
-
-	function showPassed(input_field) {
-            //confirm( "input_field ="+input_field+"=");
-            confirm( "selected option ="+document.forms[0].slide_id.options[document.forms[0].slide_id.selectedIndex].text+"=");
-	    return;
-	} // end showPassed
-
-
-
-        // -->
-        </SCRIPT>
-    ~;
-
+  #### Just print the default ones
+  my $sbeams = $self->getSBEAMS();
+  $sbeams->printJavascriptFunctions();
+    
 }
 
 
