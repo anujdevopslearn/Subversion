@@ -107,6 +107,8 @@ Options:
                       experiment itself for the specified experiment.
   --delete_fraction   Perform a delete of the specified fraction,
                       its spectra, searches, and search_hits.
+  --force_search_batch  Forces adding a search_batch even if there are no
+                      fractions to load
 
  e.g.:  $PROG_NAME --list_all
         $PROG_NAME --check --experiment_tag=rafapr
@@ -127,7 +129,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
   "update_from_summary_files","update_search","update_probabilities",
   "update_timing_info","gradient_program_id:i","column_delay:i",
   "cleanup_archive","delete_search_batch","delete_experiment",
-  "delete_fraction:s",
+  "delete_fraction:s","force_search_batch",
   )) {
   print "$USAGE";
   exit;
@@ -581,10 +583,45 @@ sub loadProteomicsExperiment {
   } ## end foreach
 
 
+  #### If there are no fractions, and force_search_batch was specified,
+  #### then add a search_batch records but nothing else to do
+  unless (@fractions) {
+    if ($OPTIONS{force_search_batch}) {
+      my $search_database;
+      if (-e "$source_dir/sequest.params") {
+	my $line;
+	open(INF,"$source_dir/sequest.params");
+	while ($line = <INF>) {
+	  $line =~ s/[\r\n]//g;
+	  if ($line =~ /^\s*database_name\s*=\s*(\S+)\s*$/) {
+	    $search_database = $1;
+	  }
+	}
+	close(INF);
+      }
+
+      if ($search_database) {
+	my $search_batch_id = addSearchBatchEntry(
+            experiment_id=>$experiment_id,
+            search_database=>$search_database,
+            search_directory=>$source_dir,
+            fraction_directory=>"$source_dir"
+        );
+	print "Added search_batch_id $search_batch_id\n";
+      } else {
+	print "ERROR: Unable to determine search_database from sequest.params\n";
+      }
+
+    } else {
+      print "ERROR: There do not appear to be any fractions to load\n";
+    }
+  }
+
+
   #### Define a hash to hold the fraction_id's
   my %fraction_ids;
 
-  #### Create a has to hold the lower case versions of fraction_tags
+  #### Create a hash to hold the lower case versions of fraction_tags
   my %lower_case_fractions;
 
 
