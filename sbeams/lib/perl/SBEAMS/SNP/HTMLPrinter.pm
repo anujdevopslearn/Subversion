@@ -121,15 +121,17 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/main.cgi">$SBEAMS_PART Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td>Manage Tables:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/SNP/ManageTable.cgi?TABLE_NAME=SN_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/SNP/ManageTable.cgi?TABLE_NAME=SN_biosequence_rank_list"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceRankLists</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/SNP/ManageTable.cgi?TABLE_NAME=SN_snp_source"><nobr>&nbsp;&nbsp;&nbsp;SNPSource</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/SNP/ManageTable.cgi?TABLE_NAME=SN_source_version"><nobr>&nbsp;&nbsp;&nbsp;SNPSource Version</nobr></a></td></tr>
+	<tr><td>Manage Data:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project"<nobr>&nbsp;&nbsp;&nbsp;Projects</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SN_snp_experiment"<nobr>&nbsp;&nbsp;&nbsp;Experiments</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SN_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SN_biosequence_rank_list"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceRankLists</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SN_snp_source"><nobr>&nbsp;&nbsp;&nbsp;SNPSource</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SN_source_version"><nobr>&nbsp;&nbsp;&nbsp;SNPSource Version</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/SNP/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;BioSequences</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/SNP/BrowseSNPHit.cgi"><nobr>&nbsp;&nbsp;&nbsp;SNP Hits</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;BioSequences</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseSNPHit.cgi"><nobr>&nbsp;&nbsp;&nbsp;SNP Hits</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Documentation:</td></tr>
 	<tr><td><a href="$HTML_BASE_DIR/doc/$SBEAMS_SUBDIR/${SBEAMS_PART}_Schema.gif"><nobr>&nbsp;&nbsp;&nbsp;Schema (GIF)</nobr></a></td></tr>
