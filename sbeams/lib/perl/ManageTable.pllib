@@ -1705,10 +1705,12 @@ sub processEntryForm {
         print "Processing record for $multi_insert...<BR>\n";
       }
 
-    # Get rid of newlines in text fields
+    # Get rid of newlines and flanking spaces in text fields
     foreach my $field ( keys( %input_types ) ){ 
       if ( $input_types{$field} eq 'text' ) {
-        $parameters{$field} =~ s/[\r\n]+/ /gm;
+        $parameters{$field} =~ s/[\s]+/ /gm;
+        $parameters{$field} =~ s/^[\s]+//;
+        $parameters{$field} =~ s/[\s]+$//;
       }
     }
 
