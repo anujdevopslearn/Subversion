@@ -13,6 +13,7 @@ SELECT DISTINCT search_batch_id,username + '' - '' + experiment_tag + '' -> '' +
         OR table_name = 'PR_GetSearch'
         OR table_name = 'BrowseAnnotatedPeptides'
         OR table_name = 'PR_CompareExperiments'
+        OR table_name = 'PR_CompareMSRuns'
         OR table_name = 'PR_SummarizePeptides'
        )
    AND column_name = 'search_batch_id'
@@ -72,6 +73,18 @@ UPDATE table_column
 
 
 
+UPDATE table_column
+  SET optionlist_query = '
+SELECT DISTINCT fraction_id,username + '' - '' + experiment_tag + '' -> '' + set_tag + '' -> '' + fraction_tag,username,experiment_tag,set_tag,fraction_tag
+  FROM $TBPR_PROTEOMICS_EXPERIMENT PE
+  JOIN $TBPR_SEARCH_BATCH SB ON ( PE.experiment_id = SB.experiment_id )
+  JOIN $TBPR_FRACTION F ON ( PE.experiment_id = F.experiment_id )
+  JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
+  JOIN $TB_USER_LOGIN UL ON ( PE.contact_id = UL.contact_id )
+ WHERE SB.search_batch_id IN ( $parameters{search_batch_id} )
+ ORDER BY username,experiment_tag,set_tag,fraction_tag'
+ WHERE table_name = 'PR_CompareMSRuns'
+   AND column_name = 'fraction_id'
 
 
 

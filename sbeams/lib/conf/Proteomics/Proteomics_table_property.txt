@@ -54,6 +54,7 @@ PR_GetSearchHits	Browse Search Hits	QUERY	NO				GetSearchHits
 PR_GetSearch	Browse Search	QUERY	NO				GetSearchHits	
 PR_BrowseBioSequence	Browse BioSequence	QUERY	NO				BrowseBioSequence.cgi	
 PR_CompareExperiments	Compare Experiments	QUERY	NO				CompareExperiments	
+PR_CompareMSRuns	Compare MSRuns	QUERY	NO				CompareMSRuns	
 PR_SummarizePeptides	Summarize Peptides	QUERY	NO				SummarizePeptides	
 PR_SummarizeFractions	Summarize Fractions	QUERY	NO				SummarizeFractions	
 APD_BrowseAPD	Browse Annotated Peptide Database	QUERY	NO				BrowseAPD	
