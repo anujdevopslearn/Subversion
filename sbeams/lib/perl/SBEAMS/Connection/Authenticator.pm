@@ -229,6 +229,7 @@ sub checkLoggedIn {
     if ($main::q->cookie('SBEAMSName')){
         my $cipher = new Crypt::CBC($self->getCryptKey(), 'IDEA');
         $username = $cipher->decrypt($main::q->cookie('SBEAMSName'));
+        $username = $self->convertSingletoTwoQuotes($username);
 
         #### Verify that the deciphered result is still an active username
         my ($result) = $self->selectOneColumn(
