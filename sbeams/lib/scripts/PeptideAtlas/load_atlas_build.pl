@@ -1236,13 +1236,13 @@ sub updateSampleTables {
     ## get the list of search batch ID's from the APD record:
     my $sql = qq~
        SELECT experiment_list
-       FROM APD.dbo.peptide_summary
+       FROM $TBAPD_PEPTIDE_SUMMARY
        WHERE peptide_summary_id = '$APD_id'
     ~;
 
     my ($search_batch_id_list) = $sbeams->selectOneColumn($sql)
        or die "could not find search_batch_id list for APD_id = ".
-       "$APD_id ? in APD.dbo.peptide_summary ($!)";
+       "$APD_id ? in APD's peptide_summary ($!)";
 
     if ($TEST) {
 
@@ -1261,10 +1261,10 @@ sub updateSampleTables {
 
         $sql = qq~
             SELECT S.sample_id
-            FROM PeptideAtlas.dbo.sample S
-            JOIN Proteomics.dbo.proteomics_experiment PE
+            FROM $TBAT_SAMPLE S
+            JOIN $TBPR_PROTEOMICS_EXPERIMENT PE
             ON ( PE.experiment_tag = S.sample_tag )
-            JOIN Proteomics.dbo.search_batch SB
+            JOIN $TBPR_SEARCH_BATCH SB
             ON ( PE.experiment_id = SB.experiment_id)
             WHERE SB.search_batch_id = '$search_batch_id[$i]'
             AND S.record_status != 'D'
