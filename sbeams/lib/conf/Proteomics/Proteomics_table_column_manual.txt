@@ -4,8 +4,8 @@ UPDATE table_column
   SET optionlist_query = '
 SELECT DISTINCT search_batch_id,username + '' - '' + experiment_tag + '' -> '' + set_tag,username,experiment_tag,set_tag
   FROM $TBPR_PROTEOMICS_EXPERIMENT PE
-  JOIN $TBPR_SEARCH_BATCH SB ON ( PE.experiment_id = SB.experiment_id )
-  JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
+  INNER JOIN $TBPR_SEARCH_BATCH SB ON ( PE.experiment_id = SB.experiment_id )
+  INNER JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
   JOIN $TB_USER_LOGIN UL ON ( PE.contact_id = UL.contact_id )
  WHERE PE.project_id IN ( $accessible_project_ids )
  ORDER BY username,experiment_tag,set_tag'
@@ -25,10 +25,10 @@ UPDATE table_column
   SET optionlist_query = '
 SELECT DISTINCT SB.search_batch_id,username + '' - '' + experiment_tag + '' -> '' + set_tag,username,experiment_tag,set_tag
   FROM $TBPR_PROTEOMICS_EXPERIMENT PE
-  JOIN $TBPR_SEARCH_BATCH SB ON ( PE.experiment_id = SB.experiment_id )
-  JOIN $TBPR_SEARCH_BATCH_PROTEIN_SUMMARY SBPS ON ( SB.search_batch_id = SBPS.search_batch_id )
-  JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
-  JOIN $TB_USER_LOGIN UL ON ( PE.contact_id = UL.contact_id )
+  INNER JOIN $TBPR_SEARCH_BATCH SB ON ( PE.experiment_id = SB.experiment_id )
+  INNER JOIN $TBPR_SEARCH_BATCH_PROTEIN_SUMMARY SBPS ON ( SB.search_batch_id = SBPS.search_batch_id )
+  INNER JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
+  INNER JOIN $TB_USER_LOGIN UL ON ( PE.contact_id = UL.contact_id )
  WHERE PE.project_id IN ( $accessible_project_ids )
  ORDER BY username,experiment_tag,set_tag'
  WHERE (   table_name = 'PR_BrowseProteinSummary'
@@ -72,10 +72,10 @@ UPDATE table_column
   SET optionlist_query = '
 SELECT DISTINCT fraction_id,username + '' - '' + experiment_tag + '' -> '' + set_tag + '' -> '' + fraction_tag,username,experiment_tag,set_tag,fraction_tag
   FROM $TBPR_PROTEOMICS_EXPERIMENT PE
-  JOIN $TBPR_SEARCH_BATCH SB ON ( PE.experiment_id = SB.experiment_id )
-  JOIN $TBPR_FRACTION F ON ( PE.experiment_id = F.experiment_id )
-  JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
-  JOIN $TB_USER_LOGIN UL ON ( PE.contact_id = UL.contact_id )
+  INNER JOIN $TBPR_SEARCH_BATCH SB ON ( PE.experiment_id = SB.experiment_id )
+  INNER JOIN $TBPR_FRACTION F ON ( PE.experiment_id = F.experiment_id )
+  INNER JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
+  INNER JOIN $TB_USER_LOGIN UL ON ( PE.contact_id = UL.contact_id )
  WHERE SB.search_batch_id IN ( $parameters{search_batch_id} )
  ORDER BY username,experiment_tag,set_tag,fraction_tag'
  WHERE table_name = 'PR_CompareMSRuns'
