@@ -760,6 +760,26 @@ sub getUsername {
 }
 
 
+###############################################################################
+# get_work_group_id
+###############################################################################
+sub get_work_group_id {
+    my $self = shift;
+    my $work_group_name = shift;
+
+    return unless ($work_group_name);
+
+    my $sql_query = qq!
+	SELECT work_group_id
+	  FROM $TB_WORK_GROUP
+	 WHERE work_group_name = '$work_group_name'!;
+
+    my ($work_group_id) = $self->selectOneColumn($sql_query);
+
+    return $work_group_id;
+}
+
+
 
 
 ###############################################################################
