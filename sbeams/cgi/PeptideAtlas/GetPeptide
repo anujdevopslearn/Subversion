@@ -1,0 +1,360 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : GetPeptide
+# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
+# $Id$
+#
+# Description : This program that allows users to
+#               view all the information for a given peptide in the context
+#               of a certain build.
+#
+# SBEAMS is Copyright (C) 2000-2003 by Eric Deutsch
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+##use CGI::Carp qw(fatalsToBrowser croak);
+
+use SBEAMS::Connection;
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+
+use SBEAMS::PeptideAtlas;
+use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+
+use CGI;
+$q = new CGI;
+
+
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main();
+exit(0);
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
+      'PeptideAtlas_readonly'],
+    connect_read_only=>1,
+    #allow_anonymous_access=>1,
+  ));
+
+
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters);
+# $sbeams->printDebuggingInfo($q);
+
+
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+
+  #### Decide what action to take based on information so far
+  if ($parameters{action} eq "???") {
+    # Some action
+  } else {
+    $sbeamsMOD->display_page_header();
+    handle_request(ref_parameters=>\%parameters);
+    $sbeamsMOD->display_page_footer();
+  }
+
+
+} # end main
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request {
+  my %args = @_;
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+
+
+  #### Define some generic varibles
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+  #### Define some variables for a query and resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+
+  #### Read in the standard form values
+  my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+
+  #### Set some specific settings for this program
+  my $PROGRAM_FILE_NAME="GetPeptide";
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+
+
+  #### Get the columns and input types for this table/query
+  my @columns = ( 'search_scope','search_key' );
+  my %input_types = ( 'optionlist','text' );
+
+
+  #### Read the input parameters for each column
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters,
+    columns_ref=>\@columns,input_types_ref=>\%input_types);
+
+
+  #### If the apply action was to recall a previous resultset, do it
+  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+  if ($apply_action eq "VIEWRESULTSET") {
+    $sbeams->readResultSet(resultset_file=>$rs_params{set_name},
+        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters);
+    $n_params_found = 99;
+  }
+
+
+  #### Set some reasonable defaults if no parameters supplied
+  unless ($n_params_found) {
+  }
+
+
+  #### Apply any parameter adjustment logic
+  #$parameters{display_options} = 'ShowSQL';
+
+
+  #### Display the user-interaction input form
+  if ($sbeams->output_mode() eq 'html') {
+    my @options = ( 'GeneSymbol','ORFName','FullGeneName','ECNumbers','All' );
+    my %options = ( 'GeneSymbol' => 'Gene Symbol',
+		    'ORFName' => 'ORF Name',
+		    'FullGeneName' => 'Full Gene Name',
+		    'ECNumbers' => 'EC Number',
+		    'All' => 'All Attributes',
+		  );
+
+    #### Build the option list
+    my $optionlist = '';
+    foreach my $key ( @options ) {
+      my $flag = '';
+      $flag = 'SELECTED' if ($parameters{search_scope} eq $key);
+      $optionlist .= "<OPTION VALUE=\"$key\" $flag>$options{$key}</OPTION>\n";
+    };
+
+    print qq~
+<tr><td><span class="sub_header">BROWSE THE PROTEOME</span></td></tr>
+
+<tr><td height="1"><img src="$HTML_BASE_DIR/images/bg_Nav.gif" width="518" height="1" border="0"></td></tr>
+<tr><td height="5"><img src="$HTML_BASE_DIR/images/clear.gif" width="1" height="1" border="0"></td></tr>
+
+<tr><td>
+<P><FORM ACTION="$base_url" METHOD="POST">
+Search
+<SELECT NAME="search_scope">
+$optionlist
+</SELECT> for
+<INPUT NAME="search_key" TYPE="text" SIZE="35" VALUE="$parameters{search_key}">
+<INPUT NAME="biosequence_set_id" TYPE="hidden" VALUE="$parameters{biosequence_set_id}">
+<INPUT TYPE="submit" NAME="action" VALUE="GO">
+</FORM></P>
+    ~;
+  }
+
+
+  #### Finish the upper part of the page and go begin the full-width
+  #### data portion of the page
+#  $sbeams->display_page_footer(close_tables=>'YES',
+#    separator_bar=>'YES',display_footer=>'NO')
+#    unless ( $parameters{display_options} =~ /SequenceFormat/ &&
+#      $apply_action =~ /HIDE/ );
+
+
+
+  #########################################################################
+  #### Process all the constraints
+
+  #### Build BIOSEQUENCE_SET constraint
+  my $form_test = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.biosequence_set_id",
+    constraint_type=>"int_list",
+    constraint_name=>"BioSequence Set",
+    constraint_value=>$parameters{biosequence_set_id} );
+  return if ($form_test eq '-1');
+
+  #### Verify that the selected biosequence_sets are permitted
+  if ($parameters{biosequence_set_id}) {
+    my $sql = qq~
+      SELECT biosequence_set_id,project_id
+	FROM $TBAT_BIOSEQUENCE_SET
+       WHERE biosequence_set_id IN ( $parameters{biosequence_set_id} )
+	 AND record_status != 'D'
+    ~;
+    my %project_ids = $sbeams->selectTwoColumnHash($sql);
+    my @accessible_project_ids = $sbeams->getAccessibleProjects();
+    my %accessible_project_ids;
+    foreach my $id ( @accessible_project_ids ) {
+      $accessible_project_ids{$id} = 1;
+    }
+
+    my @input_ids = split(',',$parameters{biosequence_set_id});
+    my @verified_ids;
+    foreach my $id ( @input_ids ) {
+
+      #### If the requested biosequence_set_id doesn't exist
+      if (! defined($project_ids{$id})) {
+	$sbeams->reportException(
+          state => 'ERROR',
+          type => 'BAD CONSTRAINT',
+          message => "Non-existent biosequence_set_id = $id specified",
+        );
+
+      #### If the project for this biosequence_set is not accessible
+      } elsif (! defined($accessible_project_ids{$project_ids{$id}})) {
+	$sbeams->reportException(
+          state => 'ERROR',
+          type => 'PERMISSION DENIED',
+          message => "Your current privilege settings do not allow you to access biosequence_set_id = $id.  See project owner to gain permission.",
+        );
+
+      #### Else, let it through
+      } else {
+	push(@verified_ids,$id);
+      }
+
+    }
+
+    #### Set the input constraint to only allow that which is valid
+    $parameters{biosequence_set_id} = join(',',@verified_ids);
+
+  }
+
+  #### If no valid biosequence_set_id was selected, stop here
+  unless ($parameters{biosequence_set_id}) {
+    $sbeams->reportException(
+      state => 'ERROR',
+      type => 'INSUFFICIENT CONSTRAINTS',
+      message => "You must select at least one valid Biosequence Set",
+    );
+    return;
+  }
+
+  #### Build BIOSEQUENCE_SET constraint
+  my $biosequence_set_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.biosequence_set_id",
+    constraint_type=>"int_list",
+    constraint_name=>"BioSequence Set",
+    constraint_value=>$parameters{biosequence_set_id} );
+  return if ($biosequence_set_clause eq '-1');
+
+
+  #### Build SEARCH SCOPE constraint
+  my $search_scope_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.search_scope",
+    constraint_type=>"plain_text",
+    constraint_name=>"Search Scope",
+    constraint_value=>$parameters{search_scope},
+  );
+  return if ($search_scope_clause eq '-1');
+
+
+  #### Build SEARCH KEY constraint
+  my $search_key_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.search_key",
+    constraint_type=>"plain_text",
+    constraint_name=>"Search Key",
+    constraint_value=>$parameters{search_key},
+  );
+  return if ($search_scope_clause eq '-1');
+
+
+
+
+  #### Put full peptide display here or in a subroutine.
+
+
+
+
+} # end handle_request
+
+
+
+###############################################################################
+# evalSQL
+#
+# Callback for translating Perl variables into their values,
+# especially the global table variables to table names
+###############################################################################
+sub evalSQL {
+  my $sql = shift;
+
+  return eval "\"$sql\"";
+
+} # end evalSQL
+
