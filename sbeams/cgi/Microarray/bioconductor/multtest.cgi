@@ -459,8 +459,8 @@ sub step4 {
 ##Setup little loop to make condition names which will be used to make unique file names and nice human readable names
 		for (my $i=0; $i <= $#class_a ; $i++){
 			next if $i == 0;
-			my $condition_id = "$class_a[0]_vs_$class_a[$i]";
-			my $condition_name = "$sample_names_a[0]_vs_$sample_names_a[$i]";
+			my $condition_id = "$class_a[$i]_vs_$class_a[0]";
+			my $condition_name = "$sample_names_a[$i]_vs_$sample_names_a[0]";
 			$log->debug( "CONDITION ID '$condition_id' CONDITION SAMPLE '$condition_name'");
 			
 			$condition_name =~ s/\W//g;		#Clean up the name remove any non word characters
@@ -603,7 +603,7 @@ END
 	my $condition_count = scalar @condition_names;
 	my $cpu_time = '';
 	unless ($condition_count < $chips_per_hour){
-		$cpu_time = ceil($condition_count/5);
+		$cpu_time = ceil($condition_count/4);
 		#format cpu time in HH:MM:SS
 		$cpu_time = "$cpu_time:00:00";
 	}
