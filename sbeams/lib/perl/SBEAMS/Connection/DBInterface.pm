@@ -515,6 +515,7 @@ sub updateOrInsertRow {
   my $PK_value = $args{'PK_value'} || '';
   my $quoted_identifiers = $args{'quoted_identifiers'} || '';
   my $return_error = $args{'return_error'} || '';
+  my $add_audit_parameters = $args{'add_audit_parameters'} || 0;
 
 
   #### Make sure either INSERT or UPDATE was selected
@@ -540,6 +541,20 @@ sub updateOrInsertRow {
   if ($verbose) {
     print "---- updateOrInsertRow --------------------------------\n";
     print "  Key,value pairs:\n";
+  }
+
+
+  #### If add_audit_parameters is enabled, add those columns 
+  if ($add_audit_parameters) {
+    if ($insert) {
+      $rowdata_ref->{date_created}='CURRENT_TIMESTAMP';
+      $rowdata_ref->{created_by_id}=$self->getCurrent_contact_id();
+      $rowdata_ref->{owner_group_id}=$self->getCurrent_work_group_id();
+      $rowdata_ref->{record_status}='N';
+    }
+
+    $rowdata_ref->{date_modified}='CURRENT_TIMESTAMP';
+    $rowdata_ref->{modified_by_id}=$self->getCurrent_contact_id();
   }
 
 
@@ -2875,12 +2890,6 @@ sub transferTable {
         #### If there is one matching record
         if (scalar(@results) == 1) {
 
-          #### Add audit parameters if requested
-          if ($add_audit_parameters) {
-	    $rowdata{date_modified}='CURRENT_TIMESTAMP';
-	    $rowdata{modified_by_id}=$self->getCurrent_contact_id();
-          }
-
           $result = $dest_conn->updateOrInsertRow(update=>1,
             table_name=>$table_name,
             rowdata_ref=>\%rowdata,
@@ -2888,6 +2897,7 @@ sub transferTable {
             return_PK=>$return_PK,
             verbose=>$verbose,
             testonly=>$testonly,
+            add_audit_parameters=>$add_audit_parameters,
           );
           $did_update = 1;
 
@@ -2907,22 +2917,13 @@ sub transferTable {
     #### If we didn't do an update operation, do an INSERT
     if ($did_update == 0) {
 
-      #### Add audit parameters if requested
-      if ($add_audit_parameters) {
-        $rowdata{date_created}='CURRENT_TIMESTAMP';
-        $rowdata{date_modified}='CURRENT_TIMESTAMP';
-        $rowdata{created_by_id}=$self->getCurrent_contact_id();
-        $rowdata{modified_by_id}=$self->getCurrent_contact_id();
-        $rowdata{owner_group_id}=$self->getCurrent_work_group_id();
-        $rowdata{record_status}='N';
-      }
-
       $result = $dest_conn->updateOrInsertRow(insert=>1,
   	table_name=>$table_name,
   	rowdata_ref=>\%rowdata,
   	PK=>$dest_PK_name,return_PK=>$return_PK,
         verbose=>$verbose,
         testonly=>$testonly,
+        add_audit_parameters=>$add_audit_parameters,
       );
     }
 
