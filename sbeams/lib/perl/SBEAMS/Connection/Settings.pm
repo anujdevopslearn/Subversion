@@ -52,8 +52,32 @@ require Exporter;
 
 
 #### Set some initial parameter settings
-$DBTITLE                = 'SBEAMS';
-$SERVER_BASE_DIR        = 'http://db';
+$DBTITLE = 'SBEAMS';
+
+
+#### Determine what the BASE URL is: first pull out some environment variables
+my $_server_port = $ENV{SERVER_PORT} || "";
+my $_http_host = $ENV{HTTP_HOST} || "";
+my $_script_name = $ENV{SCRIPT_NAME} || "";
+
+### If a SERVER_PORT was defined, then build the BASE URL
+if ($_server_port) {
+  if ($_server_port eq '443') {
+    $SERVER_BASE_DIR = "https://";
+  } else {
+    $SERVER_BASE_DIR = "http://";
+  }
+
+  if ($_http_host) {
+    $SERVER_BASE_DIR .= $_http_host;
+  } else {
+    $SERVER_BASE_DIR .= 'db.systemsbiology.net';
+  }
+
+#### Otherwise, we're probably not coming through HTTP, so just set it
+} else {
+  $SERVER_BASE_DIR        = 'http://db.systemsbiology.net';
+}
 
 
 #### Decide which version settings to use based on $ENV{SCRIPT_NAME} or
