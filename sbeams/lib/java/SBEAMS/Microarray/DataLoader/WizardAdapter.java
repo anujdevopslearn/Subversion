@@ -1,4 +1,5 @@
 package DataLoader;
+//-----------------------------------------------------------------------------------------------
 public abstract class WizardAdapter implements WizardListener {
   public WizardAdapter() {}
   public void wizardCancelled(Wizard wizard) {}
