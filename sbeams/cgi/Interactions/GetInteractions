@@ -482,28 +482,42 @@ sub handle_request {
       $sbeams->display_sql(sql=>$sql) if ($show_sql);
 
       #### Fetch the results from the database server
-      $sbeams->fetchResultSet(sql_query=>$sql,
-        resultset_ref=>$resultset_ref);
+      $sbeams->fetchResultSet(
+        sql_query=>$sql,
+        resultset_ref=>$resultset_ref,
+      );
 
       #### Store the resultset and parameters to disk resultset cache
       $rs_params{set_name} = "SETME";
-      $sbeams->writeResultSet(resultset_file_ref=>\$rs_params{set_name},
-        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters);
+      $sbeams->writeResultSet(
+        resultset_file_ref=>\$rs_params{set_name},
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters,
+        resultset_params_ref=>\%rs_params,
+        query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+      );
     }
 
     #### Display the resultset
-    $sbeams->displayResultSet(rs_params_ref=>\%rs_params,
-        url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols,
-        max_widths=>\%max_widths,resultset_ref=>$resultset_ref,
-        column_titles_ref=>\@column_titles,
-        base_url=>$base_url,query_parameters_ref=>\%parameters,
+    $sbeams->displayResultSet(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      url_cols_ref=>\%url_cols,
+      hidden_cols_ref=>\%hidden_cols,
+      max_widths=>\%max_widths,
+      column_titles_ref=>\@column_titles,
+      base_url=>$base_url,
     );
 
 
     #### Display the resultset controls
-    $sbeams->displayResultSetControls(rs_params_ref=>\%rs_params,
-        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters,
-        base_url=>$base_url);
+    $sbeams->displayResultSetControls(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      base_url=>$base_url,
+    );
 
 
   #### If QUERY was not selected, then tell the user to enter some parameters
