@@ -2,5 +2,11 @@ table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_nam
 UESC_biosequence_set	BioSequence Set	UESC_infrastructure	YES	$TBUESC_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=UESC_biosequence_set	UESC_biosequence_set	
 UESC_dbxref	Biosequence Database Cross Reference	UESC_infrastructure	YES	$TB_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=UESC_dbxref	UESC_biosequence_dbxref	
 UESC_biosequence	BioSequence	UESC_infrastructure	NO	$TBUESC_BIOSEQUENCE	biosequence_id				
-UESC_query_option	Query Option	UESC_infrastructure	YES	$TBUESC_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=TBUESC_query_option	UESC_query_option	
+UESC_query_option	Query Option	UESC_infrastructure	YES	$TBUESC_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=UESC_query_option	UESC_query_option	
 UESC_BrowseBioSequence	Browse BioSequence	QUERY	NO				BrowseBioSequence.cgi		
+UESC_antibody	Antibody	UESC_infrastructure	YES	$TBUESC_ANTIBODY	antibody_id		ManageTable.cgi?TABLE_NAME=UESC_antibody	UESC_antibody	
+UESC_cell_type	Cell Type	UESC_infrastructure	YES	$TBUESC_CELL_TYPE	cell_type_id		ManageTable.cgi?TABLE_NAME=UESC_cell_type	UESC_cell_type	
+UESC_tissue_type	Tissue Type	UESC_infrastructure	YES	$TBUESC_TISSUE_TYPE	tissue_type_id		ManageTable.cgi?TABLE_NAME=UESC_tissue_type	UESC_tissue_type	
+UESC_cell_presence_level	Cell Presence Level	UESC_infrastructure	YES	$TBUESC_CELL_PRESENCE_LEVEL	cell_presence_level_id		ManageTable.cgi?TABLE_NAME=UESC_cell_presence_level	UESC_cell_presence_level	
+UESC_stain_cell_presence	Stain Cell Presence	UESC_infrastructure	YES	$TBUESC_STAIN_CELL_PRESENCE	stain_cell_presence_id				
+UESC_stain	Stain	UESC_infrastructure	YES	$TBUESC_STAIN	stain_id		ManageTable.cgi?TABLE_NAME=UESC_stain	UESC_stain	
