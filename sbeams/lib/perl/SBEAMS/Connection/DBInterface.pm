@@ -311,6 +311,22 @@ sub executeSQL {
 
 
 ###############################################################################
+# getLastInsertedPK
+#
+# Execute the supplied SQL statement with no return value.
+###############################################################################
+sub getLastInsertedPK {
+    my $self = shift || croak("parameter self not passed");
+
+    my $sql_query = "SELECT SCOPE_IDENTITY()";
+    my ($returned_PK) = $self->selectOneColumn($sql_query);
+    return $returned_PK;
+
+}
+
+
+
+###############################################################################
 # build Option List
 #
 # Given an SQL query which returns exactly two columns (option value and
