@@ -205,7 +205,7 @@ sub handle_request {
 	                 <TD WIDTH="100%"><TABLE BORDER=0>
   ~;
 
-	
+				
   #### If the current user is not the owner, the check that the
   #### user has privilege to access this project
   if ($project_id > 0) {
@@ -220,7 +220,7 @@ sub handle_request {
 	my $stainOption;
 	my $cellOption;
   #### Get all the experiments for this project
-  if ($project_id > 0)
+  if ($project_id == 274)
 	{
 			my $action = $parameters{'action'};
 #loading the default page (start)
@@ -235,13 +235,18 @@ sub handle_request {
 			}
 	}
 	
-	 else {
-    if ($project_id == -99) {
-      print "	<TR><TD WIDTH=\"100%\">You do not have access to this project.  Contact the owner of this project if you want to have access.</TD></TR>\n";
-    } else {
-      print "	<TR><TD WIDTH=\"100%\">NONE</TD></TR>\n";
-    }
+	else {
+			if ($project_id == -99)
+			{
+			      print "	<TR><TD WIDTH=\"100%\">You do not have access to this project.  Contact the owner of this project if you want to have access.</TD></TR>\n";
+			} 
+			else 
+			{
+					print "	<TR><TD WIDTH=\"100%\">NONE - This project contains no IHC Data</TD></TR>\n";
+			}
+			print "</table>";
   }
+	
 }
 
   #### Finish the table
@@ -291,7 +296,6 @@ sub displayMain
 
 		print qq *
 		<tr></tr><tr></tr>
-		<td><H4>Project Name: UESC </H4></td></tr><tr>
 		*; 
 		foreach my $key (sort keys %hash)
 		{
