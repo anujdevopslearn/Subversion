@@ -132,6 +132,7 @@ sub display_page_header {
 	<tr><td>Browse Data:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;BioSequences</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseSNPHit.cgi"><nobr>&nbsp;&nbsp;&nbsp;SNP Hits</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetGenotypes"><nobr>&nbsp;&nbsp;&nbsp;Genotypes</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Core Management:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SN_instrument"<nobr>&nbsp;&nbsp;&nbsp;Instruments</a></td></tr>
