@@ -372,6 +372,7 @@ sub handle_request {
     "GE.mu_x"=>["mu_x","GE.mu_x","mu_x"],
     "GE.mu_y"=>["mu_y","GE.mu_y","mu_y"],
     "GE.mean_intensity"=>["mean_intensity","GE.mean_intensity","Mean Level"],
+    "GE.mean_intensity_uncertainty"=>["mean_intensity_uncertainty", "GE.mean_intensity_uncertainty", "Mean intensity Uncertainty"],
     "GE.quality_flag"=>["quality_flag","GE.quality_flag","Quality Flag"],
   );
 
@@ -388,7 +389,7 @@ sub handle_request {
     } else {
       $display_columns = "GE.log10_ratio,GE.log10_uncertainty,".
         "GE.log10_std_deviation,GE.p_value,".
-        "GE.lambda,GE.mu_x,GE.mu_y,GE.mean_intensity,GE.quality_flag";
+        "GE.lambda,GE.mu_x,GE.mu_y,GE.mean_intensity,GE.mean_intensity_uncertainty,GE.quality_flag";
     }
   }
 
