@@ -222,8 +222,8 @@ SBEAMS::Connection::Log, sbeams logging object
 
 =head1 SYNOPSIS
 
-The sbeams logger is a simple object that prints information to a file (log)
-during program execution.  
+The sbeams logger is a simple object that prints information
+to a file (log) during program execution.  
 
 =head1 DESCRIPTION
 
@@ -233,12 +233,14 @@ my $logbase = '/var/log/sbeams/';
 
 my $loglevel = $LOG_LEVEL || 'warn';
 
-my $log = SBEAMS::Connection::Log->new( base => $logbase,
-                                        debug_log => '$logbase/debug.log',
-                                        error_log => '$logbase/error.log',
-                                        info_log => '$logbase/info.log',
-                                        warn_log => '$logbase/warn.log',
-                                        log_level => $loglevel );
+my $log = SBEAMS::Connection::Log->new(
+                              base      => $logbase,
+                              debug_log => '$logbase/debug.log',
+                              error_log => '$logbase/error.log',
+                              info_logi => '$logbase/info.log',
+                              warn_log  => '$logbase/warn.log',
+                              log_level => $loglevel
+                                       );
 
 $log->debug( "VAR is $var on the $cnt time through the loop" );
 
@@ -252,14 +254,31 @@ $log->printStack();
 
 =head2 Logging files:
 
-These file can be specified at object creation, otherwise default to $sbeams_base/logs/xxx.log, where xxx is one of error or info.
+These file can be specified at object creation, otherwise default to
+$sbeams_base/logs/xxx.log, where xxx is one of error or info.
 
 =head2 Logging levels:
 
-At any given time, the logger has a logging level set, and it will print any messages for states that meet or exceed that level.  For example, if the level is set to warn, only warn and error messages will print.  If it is set to debug, all four types will print.  The heirarchy is debug < info < warn < error.  The logging level should be set to one of debug/info/warn/error via the SBEAMS.conf file.  If this is not set, it defaults to error in the logging object.  If the specified file does not exist and can't be created, messages are directed to STDERR.  These levels allow programmers to leave debugging statements in the code, knowing that they will not be printed under normal operation.  If it becomes necessary to debug a problem, debugging can be turned on to gather information, then easily turned off again.
+At any given time, the logger has a logging level set, and it will
+print any messages for states that meet or exceed that level.  For
+example, if the level is set to warn, only warn and error messages
+will print.  If it is set to debug, all four types will print.  The
+hierarchy is debug < info < warn < error.  The logging level should
+be set to one of debug/info/warn/error via the SBEAMS.conf file. 
+If this is not set, it defaults to error in the logging object.  If
+the specified file does not exist and can't be created, messages are
+directed to STDERR.  These levels allow programmers to leave 
+debugging statements in the code, knowing that they will not be 
+printed under normal operation.  If it becomes necessary to debug a 
+problem, debugging can be turned on to gather information, then 
+easily turned off again.
 
 =head2 Default logging object
 
-The module Connection.pm exports a log object that can be easily imported by other packages and scripts, to avoid the overhead of creating the object.
+The module Connection.pm exports a log object that can be easily 
+imported by other packages and scripts, to avoid the overhead of 
+creating the object.
+
+use SBEAMS::Connection qw($log);
 
 =cut
