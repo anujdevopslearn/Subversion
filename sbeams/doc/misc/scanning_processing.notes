@@ -1,0 +1,47 @@
+
+$SBDB_ARRAY_DATA = "/net/db/sbeams/microarray"
+
+
+- verify that PK was passed
+- read PK record
+- examine default destination:
+  $SBDB_ARRAY_DATA/scandata/PK/
+  directory exist?
+- is source same as dest?  If so stop,
+- source exist?
+- Does it have Images/ subdir, are there TIF files?
+- Does ls -R have less than 10 files?
+- Do file by file existence check / comparison / copy
+- Extract Voltage information from file
+- Update DB record: voltages, URI, data_scanned, scan_status = "stored"
+- Write a text output file in the directory of the record data
+
+- Look for array_channel entries
+- If exist, UPDATE, else INSERT
+- filenames
+- dates
+- sizes
+- MD5sums
+- array_request_sample_id
+
+
+data_status:
+ - staged
+ - stored
+
+data_flag
+ - OK
+ - BAD
+
+
+------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+

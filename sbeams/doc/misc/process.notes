@@ -1,0 +1,61 @@
+
+Goal:
+
+The initial goal of the microarray component of the Systems Biology
+Experiment Analysis Management System (SBEAMS) is
+to streamline the process of organizing the information
+associated with requesting, producing, and processing microarray
+experiments, so that MIAME/MAML compliant datasets are produced for
+subsequent analysis.  These datasets may then be exported to be used with
+analysis packages that (will) work with MAML data, or exported into any of
+several external formats to expression analysis. In phase 2 of the
+project, expression analysis software will be integrated with the database
+and interface itself.
+
+------
+
+Overview of the process:
+
+Requestor:
+ 1 - Fill out a Project entry unless continuation of existing project
+ 2 - Fill out array request form and submit
+
+Data producer performs the following for each slide in the project:
+ 3 - Insure all required information is up-to-date:
+     - slide model, slide lot, slide
+     - protocols -> hardware, software
+     - array layout information
+ 4 - Perform and enter information about the printing
+ 5 - Perform and enter information about
+   - receipt of samples
+   - labeling
+ 6 - Perform and enter information about hybridization batch
+ 7 - Associate (project, layout, printing, slide #, hyb) -> "array"
+
+ 8 - Perform and enter information about the scan
+     Data products are staged in:
+       /net/arrays/data/$array_number/scan01/   (TIFFs, etc.)
+ 9 - Perform and enter information about the quantitation
+     Data products are staged in:
+       /net/arrays/data/$array_number/scan01/quant01/ (dapple or QA files)
+
+When some (and/or all) slides in a given project are quantitated:
+10 - Database produces best guess processing plan (for mergeReps, etc.)
+       Requestor or Producer reviews processing plan and submits
+11 - Batch job is queued to run preprocess, mergeReps, SAM, VERA, mergeConds
+     Input staged data is archived to:
+       /net/db/sbeams/microarray/project/$project_id/arraydata/$array_number/etc.
+     Pipeline data products are stored:
+       /net/db/sbeams/microarray/project/$project_id/proc01/proc.log & data
+     Requestor receives processing errors/confirmation
+
+
+Comments:
+
+- Data processing pipeline steps can be readjusted and rerun
+- Resulting data products are maintained in native format
+- Meta-data for production and processing steps are stored in the database
+- Certain data products are ingested into database for further processing:
+  - Layout (key) data
+  - Raw spot measurements for each slide
+  - Expression ratio measures for each "merged condition-element"

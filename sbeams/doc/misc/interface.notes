@@ -1,0 +1,46 @@
+
++ Manage slide_model (std)
++ Manage slide_lot (std)
+
+- Manage slides (non-std)
+  - enter in a batch of slides as they are marked with serial number
+
++ Manage printing_batch (std)
+  + enter in some information about a printing batch
+
+Manage array_layout (std)
+  - do need to have a loading mechanism or maybe just a referencing mechanism
+
+Manage array (std?)
+  - should support multi-assign feature?
+    i.e. add arrays for slides 3488-3495 from batch X, layout Y, project Z
+
+Manage labeling (std)
+
+Manage hybridization (std)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

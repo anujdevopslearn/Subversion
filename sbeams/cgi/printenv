@@ -1,0 +1,18 @@
+#!/bin/sh
+
+echo Content-type: text/html
+echo
+
+cat << EOM
+<HTML><HEAD><TITLE>Environment Variable List</TITLE></HEAD><BODY>
+<H1>Environment Variable List</H1>
+EOM
+
+set | /usr/bin/awk ' { print $ 0 "<BR>"  } '
+
+cat << EOM
+</BODY></HTML>
+EOM
+
+
+

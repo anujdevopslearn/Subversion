@@ -1,0 +1,45 @@
+
+Goals of the design:
+
+- build a basic, flexible user interface and RDBMS interface code on which
+  we can build LIMS, analysis tools, and basic data management tools
+
+- Initially used at ISB for:
+  - Sequencing LIMS
+  - Microarray LIMS + data processing pipeline
+
+- Expandable by design for subsequent use:
+  - Microarray analysis interface
+  - Proteomics LIMS + data processing
+  - Proteomics analysis interface
+  -
+
+- Does not appear to be anything similar in the public domain.
+  - Design to be an exportable Open Source Project
+
+
+
+Requirements:
+
+
+- Similar interface from all platforms (Linux, Windows, Mac, etc.)
+  - Java GUI
+  - Web Interface tools:
+    - Perl CGI (any CGI programs easily integratable)
+    - PHP
+    - mod_perl
+    - Java servlets
+    - Java applets
+
+- Command line/interactive/programmatic interface
+  - Perl
+  - ROOT
+
+- Interchangeable RDBMS back ends
+  - Perl DBI
+  - Java JDBC / ODBC
+
+- easy to extend and add
+  - for novice programmers?
+
+

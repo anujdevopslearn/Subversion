@@ -1,0 +1,46 @@
+
+Design for process which verifies and loads raw microarray quantitation data
+
+$SBDB_ARRAY_DATA = "/net/db/sbeams/microarray"
+
+
+- verify that PK (array_quantitation_id) was passed
+- read PK record to determine staged_file
+
+- examine default destination:
+  $SBDB_ARRAY_DATA/array_quantitation/PK/
+  Does directory exist?  If not, create.
+
+- Does the destination_file already exist?
+- Does staged_file exist?
+
+- If staged_file and destination_file do not exist, complain and die
+- If staged_file does not but destination_file does exist, move on to processing
+- If staged_file exists and destination_file exists are identical, move on
+- If staged_file exists and destination_file does not or is different, then
+  archive staged_file (and possible auxiliaries) to destination_file.
+  - copy file
+  - If also a Data.exp file, then copy that too.
+  - Update DB record with URI location and date information, size, MD5sum
+
+
+- Ready to move on with processing now that file is archived
+- Write a text output file in the directory of the record data for safety
+
+- Test to see if file is a QuantArray file
+  If so, call loadQuantArray.pl with PK
+- Test to see if file is a Dapple file
+  If so, call loadDapple.pl with PK
+
+
+------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,68 @@
+
+CGI routines:
+
+cgi/main.cgi                              Main welcome screen
+cgi/logout.cgi                            Logs out a user
+cgi/password.cgi                          Allows a user to change password
+cgi/ManageTable.cgi                       Generic Information Table Editor
+cgi/ManageTableFileUpload.cgi             Fork of MT.cgi which supports upload
+cgi/SubmitArrayRequest.cgi                Special complex form to submit reqs
+cgi/administrator.cgi                     Somewhat dated Administrator function
+
+
+SBDB::WebInterface module:
+
+Authenticator.pm:sub new {
+Authenticator.pm:sub InterfaceEntry {     Verifies user has authenticated
+Authenticator.pm:sub processLogin {       Process a login to authenticate
+Authenticator.pm:sub getCurrent_contact_id { Return authenticated contact_id
+Authenticator.pm:sub getCurrent_username {   Return authenticated username
+Authenticator.pm:sub printLoginForm {     Print username/password request page
+Authenticator.pm:sub printAuthErrors {    Print "Login failed because..."
+Authenticator.pm:sub destroyAuthHeader {  Create an invalid auth header
+Authenticator.pm:sub createAuthHeader {   Create cookie header for valid user
+Authenticator.pm:sub checkLoggedIn {      Return deciphered username
+Authenticator.pm:sub fetchErrors {        Return @ERRORS array (??)
+Authenticator.pm:sub checkLogin {         Check password with SQL query
+Authenticator.pm:sub checkIfAdmin {       Check if Admin priv w/ SQL query
+Authenticator.pm:sub getContact_id {      Return contact_id given username
+Authenticator.pm:sub getUsername {        Return username for given conact_id
+
+CommonQuery.pm:sub new {
+CommonQuery.pm:sub buildOptionList {      Build an HTML optionlist from query
+CommonQuery.pm:sub getRecordStatusOptions {  Build record_status optionlist
+CommonQuery.pm:sub displayQueryResult {   Generic HTML ret recordset display
+CommonQuery.pm:sub fetchNextRow {         helper for displayQueryResult
+CommonQuery.pm:sub processTableDisplayControls { Crude controls for table disply
+
+DBConnector.pm:sub new {
+DBConnector.pm:sub dbConnect {            Open DBI connection w/ DSN, user, pwd
+DBConnector.pm:sub getDBHandle {          Returns active DB handle or creates
+DBConnector.pm:sub getDBServer {          Return SQL servername
+DBConnector.pm:sub getDBDriver {          Return DBI Driver DSN
+DBConnector.pm:sub getDBDatabase {        Return database name
+DBConnector.pm:sub getDBUser {            Return username used to access DB
+
+DBControl.pm:sub new {
+DBControl.pm:sub applySqlChange {         Funnel for all INSERT, UPDATE, DELETE;
+                                          Checks perms and logs the event
+DBControl.pm:sub selectOneColumn {        Return array for 1-col SQL query
+DBControl.pm:sub SelectTwoColumnHash {    Return hash for 2-col SQL query
+
+HTMLPrinter.pm:sub new {
+HTMLPrinter.pm:sub printPageHeader {        Send HTML header, page top, buttbar
+HTMLPrinter.pm:sub printStyleSheet {        Send HTML style sheey
+HTMLPrinter.pm:sub printJavascriptFunctions { Send Javascript functions
+HTMLPrinter.pm:sub printMinimalPageHeader { Send HTML header for not auth user
+HTMLPrinter.pm:sub printPageFooter {        Send HTML footer
+HTMLPrinter.pm:sub getGoBackButton {        Return HTML Go Back button
+HTMLPrinter.pm:sub printIncompleteForm {    Incomplete Form template
+
+Settings.pm:                              General global variable settings
+Tables.pm:                                Database tables definitions
+TableInfo.pm:                             Feeble start at encapsulating table
+                                            information in one place.  Should
+                                            be data table.
+
+
+
