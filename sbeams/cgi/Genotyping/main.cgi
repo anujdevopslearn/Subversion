@@ -24,16 +24,16 @@ use strict;
 use vars qw ($q $sbeams $sbeamsGenotyping $PROGRAM_FILE_NAME
              $current_contact_id $current_username);
 use lib qw (../../lib/perl);
-use CGI;
+#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 
 use SBEAMS::Genotyping;
 use SBEAMS::Genotyping::Settings;
 
-$q   = new CGI;
+#$q   = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsGenotyping = new SBEAMS::Genotyping;
 $sbeamsGenotyping->setSBEAMS($sbeams);

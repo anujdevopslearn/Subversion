@@ -23,7 +23,7 @@
 use strict;
 use Getopt::Long;
 use FindBin;
-use CGI;
+#use CGI;
 
 use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username %hash_to_sort
@@ -31,7 +31,7 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username %hash_t
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS );
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -41,7 +41,7 @@ use SBEAMS::Immunostain;
 use SBEAMS::Immunostain::Settings;
 use SBEAMS::Immunostain::Tables;
 
-$q   = new CGI;
+#$q   = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::Immunostain;
 $sbeamsMOD->setSBEAMS($sbeams);

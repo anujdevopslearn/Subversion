@@ -24,10 +24,10 @@ use vars qw ($q $sbeams $sbeamsMOD $dbh $current_contact_id $current_username
              $PK_COLUMN_NAME @MENU_OPTIONS
              $DEFAULT_COST_SCHEME);
 use DBI;
-use CGI;
+#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
@@ -37,7 +37,7 @@ use SBEAMS::Inkjet::Settings;
 use SBEAMS::Inkjet::Tables;
 use SBEAMS::Inkjet::TableInfo;
 
-$q = new CGI;
+#$q = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::Inkjet;
 $sbeamsMOD->setSBEAMS($sbeams);

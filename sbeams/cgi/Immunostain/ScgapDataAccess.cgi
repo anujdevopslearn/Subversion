@@ -30,7 +30,7 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username %hash_t
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -41,14 +41,14 @@ use SBEAMS::Immunostain::Tables;
 use SBEAMS::Ontology::Tables;
 use SBEAMS::Ontology::TableInfo;
 
-$q   = new CGI;
+#$q   = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::Immunostain;
 $sbeamsMOD->setSBEAMS($sbeams);
 
 
-use CGI;
-$q = new CGI;
+#use CGI;
+#$q = new CGI;
 
 ###############################################################################
 # Set program name and usage banner for command like use

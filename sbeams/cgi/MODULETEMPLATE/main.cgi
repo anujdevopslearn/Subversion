@@ -24,16 +24,16 @@ use strict;
 use vars qw ($q $sbeams $sbeamsMODULETEMPLATE $PROGRAM_FILE_NAME
              $current_contact_id $current_username);
 use lib qw (../../lib/perl);
-use CGI;
+#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 
 use SBEAMS::MODULETEMPLATE;
 use SBEAMS::MODULETEMPLATE::Settings;
 
-$q   = new CGI;
+#$q   = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsMODULETEMPLATE = new SBEAMS::MODULETEMPLATE;
 $sbeamsMODULETEMPLATE->setSBEAMS($sbeams);

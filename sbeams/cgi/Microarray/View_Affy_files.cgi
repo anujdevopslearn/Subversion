@@ -12,14 +12,14 @@ use lib qw (../lib/perl ../../lib/perl);
 use vars qw ($sbeams $sbeamsMOD $q $dbh $current_contact_id $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
              $sbeams_affy_groups);
-use CGI;
+#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
-$q = new CGI;
+#$q = new CGI;
 $sbeams = new SBEAMS::Connection;
 
 use SBEAMS::Microarray;

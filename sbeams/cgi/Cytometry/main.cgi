@@ -29,10 +29,10 @@ use GD::Graph::xypoints;
 use vars qw ($q $sbeams $sbeamsMOD $PROGRAM_FILE_NAME
              $current_contact_id $current_username);
 use lib qw (../../lib/perl);
-use CGI;
+#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Cytometry::Alcyt;
 use SBEAMS::Cytometry;
 use SBEAMS::Cytometry::Settings;
@@ -44,7 +44,7 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
 use SBEAMS::Connection::Utilities;
 
-$q   = new CGI;
+#$q   = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::Cytometry;
 $sbeamsMOD->setSBEAMS($sbeams);

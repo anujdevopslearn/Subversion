@@ -15,14 +15,14 @@ use vars qw ($sbeams $sbeamsMOD $q $dbh $current_contact_id $current_username
              $current_project_id $current_project_name
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              $PK_COLUMN_NAME @MENU_OPTIONS);
-use CGI;
+#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
-$q = new CGI;
+#$q = new CGI;
 $sbeams = new SBEAMS::Connection;
 
 use SBEAMS::Microarray;

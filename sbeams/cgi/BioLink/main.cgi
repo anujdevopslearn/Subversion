@@ -31,7 +31,7 @@ use vars qw ($sbeams $sbeamsBioLink $q $current_contact_id $current_username
              @MENU_OPTIONS);
 
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -44,8 +44,8 @@ $sbeamsBioLink = new SBEAMS::BioLink;
 $sbeamsBioLink->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
-use CGI;
-$q = new CGI;
+#use CGI;
+#$q = new CGI;
 
 
 

@@ -24,16 +24,16 @@ use strict;
 use vars qw ($q $sbeams $sbeamsOligo $PROGRAM_FILE_NAME
              $current_contact_id $current_username);
 use lib qw (../../lib/perl);
-use CGI;
+#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 
 use SBEAMS::Oligo;
 use SBEAMS::Oligo::Settings;
 
-$q   = new CGI;
+#$q   = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsOligo = new SBEAMS::Oligo;
 $sbeamsOligo->setSBEAMS($sbeams);

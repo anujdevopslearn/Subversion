@@ -400,6 +400,12 @@ foreach my $p (keys %parameters)
     colnameidx_ref=>\%colnameidx,
     column_titles_ref=>\@column_titles
   );
+  
+  # This particular abomination results from how tissue types and structural
+  # are related within the schema.  Struct units have no intrinsic tissue type,
+  # and in the cases delineated below the struct_units are represented in more
+  # than one tissue type (via specimen->sp_block->assay->assay_channel->auexp)
+  # This code allows them to separate and be sorted correctly. 
   my $struct_unit_case =<<"  END_CASE";
   CASE WHEN tissue_type_name LIKE '%Bladder%' AND CT.structural_unit_name = 'Stromal endothelial cells'
             THEN CT.sort_order - 75
@@ -706,8 +712,7 @@ sub postProcessResultset {
 
   # Hash to key cell types for making struct_units seqregate (temporary).
   my %struct_unit = ( 'Bladder' => 1,
-                      'Prostate adenocarcinoma' => 2,
-                      'Normal Prostate' => 2 );
+                      'Prostate' => 2 );
   
   for (@{$resultset_ref->{data_ref}}) {
     

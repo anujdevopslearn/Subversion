@@ -27,12 +27,12 @@ use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($q $sbeams $sbeamsPROT $BKGCOLOR
              $t0 $t1 $t2 $t3 $t4 $t5 $t6 $t7 $t8 $t9
              $current_contact_id $current_username );
-use CGI;
+#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 use Time::HiRes qw( usleep ualarm gettimeofday tv_interval );
 $t0 = [gettimeofday()];
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -46,7 +46,7 @@ use PDL::Graphics::PGPLOT;
 
 use File::Basename;
 
-$q = new CGI;
+#$q = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsPROT = new SBEAMS::Proteomics;
 $sbeamsPROT->setSBEAMS($sbeams);

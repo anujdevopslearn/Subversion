@@ -30,7 +30,7 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS $HTMLFILE $BIOENTITY_URL $INTERACTION_URL $BASEDIR);
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 
 use SBEAMS::Interactions;
@@ -42,9 +42,9 @@ $sbeamsMOD = new SBEAMS::Interactions;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
-use CGI;
+#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
-$q = new CGI;
+#$q = new CGI;
 
 my $DISPLAY = '_display';
 my $ERROR = '_error';

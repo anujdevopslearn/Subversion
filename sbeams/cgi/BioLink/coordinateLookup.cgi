@@ -38,7 +38,7 @@ my $sbeamsMOD = new SBEAMS::BioLink;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
-use CGI;
+#use CGI;
 my $cgi = new CGI;
 my %params;
 use constant TNAME => 'BL_coordinate_lookup';

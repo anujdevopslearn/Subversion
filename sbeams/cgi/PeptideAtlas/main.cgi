@@ -24,10 +24,10 @@ use strict;
 use vars qw ($q $sbeams $sbeamsPeptideAtlas $PROGRAM_FILE_NAME
              $current_contact_id $current_username);
 use lib qw (../../lib/perl);
-use CGI;
+#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TabMenu;
@@ -35,7 +35,7 @@ use SBEAMS::Connection::TabMenu;
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
 
-$q   = new CGI;
+#$q   = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsPeptideAtlas = new SBEAMS::PeptideAtlas;
 $sbeamsPeptideAtlas->setSBEAMS($sbeams);

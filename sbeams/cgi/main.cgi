@@ -31,7 +31,7 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TabMenu;
@@ -39,8 +39,8 @@ use SBEAMS::Connection::TabMenu;
 
 $sbeams = new SBEAMS::Connection;
 
-use CGI;
-$q = new CGI;
+# use CGI;
+#$q = new CGI;
 
 
 ###############################################################################

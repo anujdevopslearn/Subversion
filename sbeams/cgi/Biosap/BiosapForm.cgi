@@ -31,11 +31,11 @@ use vars qw ($q $tm $tm_rng $o_conc $s_conc $blast_lib $same_as_lib
 	     $win_at $win_gc $action $comments $PROGRAM_FILE_NAME $dbh 
 	     $sbeams $sbeamsBS $current_username);
 use DBI;
-use CGI;
+#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
@@ -49,7 +49,7 @@ $sbeams = new SBEAMS::Connection;
 $sbeamsBS = new SBEAMS::Biosap;
 $sbeamsBS->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
-$q = new CGI;
+#$q = new CGI;
 $o_conc=0.00025;
 $s_conc=50;
 #

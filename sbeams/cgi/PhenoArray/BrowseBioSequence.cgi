@@ -31,10 +31,10 @@ use vars qw ($q $sbeams $sbeamsPH $dbh $current_contact_id $current_username
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              $PK_COLUMN_NAME @MENU_OPTIONS);
 use DBI;
-use CGI;
+#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -42,7 +42,7 @@ use SBEAMS::PhenoArray;
 use SBEAMS::PhenoArray::Settings;
 use SBEAMS::PhenoArray::Tables;
 
-$q = new CGI;
+#$q = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsPH = new SBEAMS::PhenoArray;
 $sbeamsPH->setSBEAMS($sbeams);

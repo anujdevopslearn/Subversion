@@ -32,7 +32,7 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
 
 use vars qw (%ontology_ids %term_type_ids %relationship_type_ids);
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -46,9 +46,9 @@ $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 
-use CGI;
+#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
-$q = new CGI;
+#$q = new CGI;
 
 
 ###############################################################################

@@ -23,13 +23,13 @@ use vars qw ($q $sbeams $sbeamsMA $dbh $current_contact_id $current_username
              $t0 $t1 $t2 $t3 $hrt0 $hrt1 $hrt2 $hrt3
              $PK_COLUMN_NAME @MENU_OPTIONS);
 use DBI;
-use CGI;
+#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 use Time::HiRes qw( usleep ualarm gettimeofday tv_interval );
 $t0 = (times)[0];
 $hrt0 = [gettimeofday()];
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -37,7 +37,7 @@ use SBEAMS::Inkjet;
 use SBEAMS::Inkjet::Settings;
 use SBEAMS::Inkjet::Tables;
 
-$q = new CGI;
+#$q = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsMA = new SBEAMS::Inkjet;
 $sbeamsMA->setSBEAMS($sbeams);

@@ -26,16 +26,16 @@ use FindBin;
 use vars qw ($q $sbeams $sbeamsPH $PROGRAM_FILE_NAME
              $current_contact_id $current_username);
 use lib "$FindBin::Bin/../../lib/perl";
-use CGI;
+#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 
 use SBEAMS::PhenoArray;
 use SBEAMS::PhenoArray::Settings;
 
-$q   = new CGI;
+#$q   = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsPH = new SBEAMS::PhenoArray;
 $sbeamsPH->setSBEAMS($sbeams);

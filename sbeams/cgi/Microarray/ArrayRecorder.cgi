@@ -23,11 +23,11 @@ use vars qw ($q $sbeams $sbeamsMA $dbh $current_contact_id $current_username
              $PK_COLUMN_NAME @MENU_OPTIONS $DEFAULT_COST_SCHEME);
 
 use DBI;
-use CGI;
+#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 use POSIX;
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -37,7 +37,7 @@ use SBEAMS::Microarray::Tables;
 
 use lib "/net/arrays/Pipeline/tools/lib";
 
-$q = new CGI;
+#$q = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsMA = new SBEAMS::Microarray;
 $sbeamsMA->setSBEAMS($sbeams);

@@ -24,16 +24,16 @@ use strict;
 use vars qw ($q $sbeams $sbeamsOntology $PROGRAM_FILE_NAME
              $current_contact_id $current_username);
 use lib qw (../../lib/perl);
-use CGI;
+#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 
 use SBEAMS::Ontology;
 use SBEAMS::Ontology::Settings;
 
-$q   = new CGI;
+#$q   = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsOntology = new SBEAMS::Ontology;
 $sbeamsOntology->setSBEAMS($sbeams);

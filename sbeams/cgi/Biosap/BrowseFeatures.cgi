@@ -28,10 +28,10 @@ use vars qw ($q $sbeams $sbeamsBS $dbh $current_contact_id $current_username
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              $PK_COLUMN_NAME @MENU_OPTIONS);
 use DBI;
-use CGI;
+#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -39,7 +39,7 @@ use SBEAMS::Biosap;
 use SBEAMS::Biosap::Settings;
 use SBEAMS::Biosap::Tables;
 
-$q = new CGI;
+#$q = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsBS = new SBEAMS::Biosap;
 $sbeamsBS->setSBEAMS($sbeams);

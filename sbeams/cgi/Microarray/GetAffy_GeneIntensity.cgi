@@ -29,7 +29,7 @@ use vars qw ($sbeams $sbeamsMOD $affy_o $q $current_contact_id $current_username
   $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
   @MENU_OPTIONS %CONVERSION_H *sym);
 
-use SBEAMS::Connection  ;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -51,7 +51,7 @@ $affy_o->setSBEAMS($sbeams);
 
 use POSIX qw(log10 pow);
 use CGI qw(:standard);
-$q = new CGI;
+#$q = new CGI;
 
 my $max_data_spread = 5;    #working with log10
 my $conversion_f    =

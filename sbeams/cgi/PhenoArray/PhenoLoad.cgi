@@ -33,7 +33,7 @@ use vars qw ($q $sbeams $sbeamsPH $dbh $current_contact_id $current_username
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              $PK_COLUMN_NAME @MENU_OPTIONS $DATABASE);
 use DBI;
-use CGI;
+#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
 ###########################################
@@ -48,7 +48,7 @@ $CGI::DISABLE_UPLOADS = 0;
 $CGI::POST_MAX = MAX_FILE_SIZE;
 
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
@@ -58,7 +58,7 @@ use SBEAMS::PhenoArray::Settings;
 use SBEAMS::PhenoArray::Tables;
 use SBEAMS::PhenoArray::TableInfo;
 
-$q = new CGI;
+#$q = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsPH = new SBEAMS::PhenoArray;
 $sbeamsPH->setSBEAMS($sbeams);

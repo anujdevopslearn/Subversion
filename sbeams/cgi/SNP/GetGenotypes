@@ -28,7 +28,7 @@ use vars qw ($t0 $t1 $t2 $t3 $t4 $t5 $t6 $t7 $t8 $t8_1 $t9);
 use Time::HiRes qw( usleep ualarm gettimeofday tv_interval );
 $t0 = [gettimeofday()];
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -42,9 +42,9 @@ $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 
-use CGI;
+#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
-$q = new CGI;
+#$q = new CGI;
 
 
 ###############################################################################

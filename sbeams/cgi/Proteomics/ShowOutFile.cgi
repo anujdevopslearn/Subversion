@@ -25,10 +25,10 @@ use FindBin;
 use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($q $sbeams $sbeamsPROT
              $current_contact_id $current_username );
-use CGI;
+#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -36,7 +36,7 @@ use SBEAMS::Proteomics;
 use SBEAMS::Proteomics::Settings;
 use SBEAMS::Proteomics::Tables;
 
-$q = new CGI;
+#$q = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsPROT = new SBEAMS::Proteomics;
 $sbeamsPROT->setSBEAMS($sbeams);

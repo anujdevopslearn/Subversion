@@ -36,10 +36,10 @@ use vars qw ($q $tm $tm_rng $o_conc $s_conc $blast_lib $same_as_lib
 	     $sbeams $sbeamsMOD $current_username $USAGE %OPTIONS $VERBOSE
 	     $QUIET $DEBUG);
 use DBI;
-use CGI;
+#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -52,7 +52,7 @@ $sbeamsMOD = new SBEAMS::Biosap;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
-$q = new CGI;
+#$q = new CGI;
 
 ###############################################################################
 # Set program name and usage banner for command like use
