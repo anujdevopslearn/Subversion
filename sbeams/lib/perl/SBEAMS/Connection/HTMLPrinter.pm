@@ -279,14 +279,17 @@ sub printJavascriptFunctions {
 
 	function refreshDocument() {
             //confirm( "apply_action ="+document.forms[0].apply_action.options[0].selected+"=");
-            document.forms[0].apply_action_hidden.value = "REFRESH";
-	    document.forms[0].submit();
+            document.MainForm.apply_action_hidden.value = "REFRESH";
+            document.MainForm.action.value = "REFRESH";
+	    document.MainForm.submit();
+            //document.forms[0].apply_action_hidden.value = "REFRESH";
+	    //document.forms[0].submit();
 	} // end refresh
 
 
 	function showPassed(input_field) {
             //confirm( "input_field ="+input_field+"=");
-            confirm( "selected option ="+document.forms[0].slide_id.options[document.forms[0].slide_id.selectedIndex].text+"=");
+            confirm( "selected option ="+document.MainForm.slide_id.options[document.MainForm.slide_id.selectedIndex].text+"=");
 	    return;
 	} // end showPassed
 
