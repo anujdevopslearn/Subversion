@@ -493,16 +493,16 @@ sub handle_request {
     ["file_root","S.file_root","file_root"],
     ["out_file","'.out'",".out"],
 
-    ["start_scan","MSS.start_scan","Scan Num"],
-    ["scan_time","STR(MSS.scan_time/60.0,7,2)","Scan Time"],
-    ["retention_time","STR((MSS.scan_time-F.column_delay)/60.0,7,2)","Est. RT"],
+    #["start_scan","MSS.start_scan","Scan Num"],
+    #["scan_time","STR(MSS.scan_time/60.0,7,2)","Scan Time"],
+    ["retention_time","STR((MSS.scan_time-F.column_delay)/60.0,7,2)","Est RT (min)"],
     ["calc_buffer_precent","STR(MSS.calc_buffer_percent,7,1)","% ACN"],
 
     ["best_hit_flag","best_hit_flag","bh"],
     ["probability","STR(SH.probability,7,3)","Prob"],
     ["cross_corr_rank","SH.cross_corr_rank","Rxc"],
     ["prelim_score_rank","SH.prelim_score_rank","RSp"],
-    ["precursor_mass","LTRIM(STR((S.sample_mass_plus_H+(S.assumed_charge-1)*1.008)/S.assumed_charge,7,2))","Precursor Mass"],
+    ["precursor_mass","LTRIM(STR((S.sample_mass_plus_H+(S.assumed_charge-1)*1.008)/S.assumed_charge,7,2))","Precursor m/z"],
     ["hit_mass_plus_H","CONVERT(varchar(20),SH.hit_mass_plus_H) + ' (' + STR(SH.mass_delta,5,2) + ')'","(M+H)+"],
     ["cross_corr","STR(SH.cross_corr,5,4)","XCorr"],
     ["next_dCn","STR(SH.next_dCn,5,3)","dCn"],
@@ -513,7 +513,7 @@ sub handle_request {
     ["additional_proteins","additional_proteins","N+"],
     ["additional_proteins_old","additional_proteins","!N+"],
     ["peptide_string","peptide_string","Peptide"],
-    ["isoelectric_point","STR(isoelectric_point,8,3)","pI"],
+    ["isoelectric_point","STR(isoelectric_point,8,3)","Calc pI"],
     ["quantitation","$quant_format_clause","Quant"],
     #["assumed_charge","S.assumed_charge","assumed_charge"],
     ["annotation_label","label_desc","Annot"],
@@ -622,6 +622,14 @@ sub handle_request {
                'Quant' => "$CGI_BASE_DIR/Proteomics/Xpress.cgi?quantitation_id=\%$colnameidx{quantitation_id}V",
 	       'Quant_ATAG' => 'TARGET="Win1"',
   );
+
+
+  #### Only allow best_hit changes from the PR_GetSearch mode
+  unless ($TABLE_NAME eq "PR_GetSearch") {
+   delete($url_cols{bh});
+   delete($url_cols{bh_TAG});
+  }
+
 
   #### Define columns that should be hidden in the output table
   %hidden_cols = ('data_location' => 1,
