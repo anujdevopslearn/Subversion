@@ -174,6 +174,63 @@ sub returnTableInfo {
       }
 
 
+    if ($table_name eq "GL_assay") {
+
+        if ($info_key eq "BASICQuery") {
+            return qq~
+		SELECT A.assay_id,
+		        assay_name, AT.assay_type_name, ST.sample_type_name,
+			P.publication_name
+		  FROM $TBGL_ASSAY A
+		  LEFT JOIN $TBGL_ASSAY_TYPE AT ON ( A.assay_type_id = AT.assay_type_id )
+		  LEFT JOIN $TBGL_SAMPLE_TYPE ST ON ( A.sample_type_id = ST.sample_type_id )
+		  LEFT JOIN $TBGL_PUBLICATION P ON ( A.publication_id = P.publication_id )
+		 WHERE A.record_status != 'D'
+		   AND ( AT.record_status != 'D' OR AT.record_status IS NULL )
+		   AND ( ST.record_status != 'D' OR ST.record_status IS NULL )
+		   AND ( P.record_status != 'D' OR P.record_status IS NULL )
+            ~;
+        }
+
+        if ($info_key eq "FULLQuery") {
+            return qq~
+		SELECT A.*
+		  FROM $TBGL_ASSAY A
+		 --WHERE A.record_status!='D'
+            ~;
+        }
+
+
+      }
+
+
+    if ($table_name eq "GL_sample_type") {
+
+        if ($info_key eq "BASICQuery") {
+            return qq~
+		SELECT sample_type_id,
+		       sample_type_name, sample_type_description, O.organism_name, ST.comment
+		  FROM $TBGL_SAMPLE_TYPE ST
+		  LEFT JOIN $TB_ORGANISM O ON ( ST.organism_id = O.organism_id )
+		WHERE ST.record_status != 'D'
+		   AND ( O.record_status != 'D' OR O.record_status IS NULL )
+            ~;
+        }
+
+        if ($info_key eq "FULLQuery") {
+            return qq~
+		SELECT ST.*
+		  FROM $TBGL_SAMPLE_TYPE ST
+		 --WHERE ST.record_status!='D'
+            ~;
+        }
+
+
+      }
+
+
+
+
 
 ###############################################################################
 
