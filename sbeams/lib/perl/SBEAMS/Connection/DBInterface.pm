@@ -3218,7 +3218,6 @@ sub returnNextRow {
     $resultset_ref->{row_pointer}++;
     $resultset_ref->{row_counter}++;
   }
-print STDERR "row ".\@row;
 
   return @row;
 }
