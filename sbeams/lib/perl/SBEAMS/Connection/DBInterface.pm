@@ -1857,7 +1857,7 @@ sub convertSingletoTwoQuotes {
 # parse_input_parameters
 #
 # Parse the available input parameters (which may come via CGI or via
-# the command line) into the %parameters hash
+# the command line or ...?) into the %parameters hash
 ###############################################################################
 sub parse_input_parameters {
   my $self = shift;
@@ -1882,16 +1882,38 @@ sub parse_input_parameters {
   my $n_cmdln_params_found = 0;
 
 
-  #### Resolve the keys from the command line if any
+  #### Resolve all the parameters from the command line if any
   my %cmdln_parameters;
   foreach $element (@ARGV) {
     if ( ($key,$value) = split("=",$element) ) {
-      #print "$key = $value\n";
+      #print "$key = '$value'<BR>\n";
       $cmdln_parameters{$key} = $value;
+      $ref_parameters->{$key} = $value;
+      $n_cmdln_params_found++;
     } else {
       print "ERROR: Unable to parse '$element'\n";
       return;
     }
+  }
+
+
+  #### Resolve all the parameters from the CGI interface if any
+  my %CGI_parameters;
+  foreach $element ($q->param()) {
+
+    #### Extract as an array and remove any leading or trailing blank items
+    my @tmparray = $q->param($element);
+    if (scalar(@tmparray) > 1) {
+      pop @tmparray unless ($tmparray[$#tmparray] gt '');
+      shift @tmparray unless ($tmparray[0] gt '');
+    }
+    #### Convert to a comma separated list
+    $value = join(",",@tmparray);
+
+    #print "$element = '$value'<BR>\n";
+    $CGI_parameters{$element} = $value;
+    $ref_parameters->{$element} = $value;
+    $n_CGI_params_found++;
   }
 
 
@@ -1906,46 +1928,11 @@ sub parse_input_parameters {
   #### Read the form values for each of the desired parameters
   foreach $element (@columns) {
 
-    my $value;
-
-    #### If the type is a multioptionlist, extract as an array but
-    #### turn into a comma separated list
-    my $input_type = $ref_input_types->{$element} || '';
-    if ($input_type eq "multioptionlist") {
-      my @tmparray = $q->param($element);
-
-      #### Remove any leading or trailing blank items
-      if (scalar(@tmparray) > 1) {
-        pop @tmparray unless ($tmparray[$#tmparray]);
-        shift @tmparray unless ($tmparray[0]);
-      }
-
-      #### Convert to a comma separated list
-      $value = join(",",@tmparray);
-
-
-    #### Otherwise just extract as is
-    } else {
-      $value = $q->param($element);
-    }
-
-
-    #### If something was recovered, note it
-    if (defined($value) && $value gt '') {
-      $n_CGI_params_found++;
-      $ref_parameters->{$element} = $value;
-
-    #### See if we can pull it out of %OPTIONS
-    } elsif ($cmdln_parameters{$element}) {
-      $value = $cmdln_parameters{$element};
-      if ($value) {
-        $n_cmdln_params_found++;
-        $ref_parameters->{$element} = $value;
-      }
-
-    #### Otherwise we didn't find this parameter
-    } else {
-    }
+    #### If a desired parameter was not found, perhaps we should set it to
+    #### a blank?
+    #my $value = $parameters_ref->{$element};
+    #$parameters_ref->{$element} = ''
+    #  unless (defined($value) && $value gt '');
 
   }
 
@@ -1974,6 +1961,16 @@ sub parse_input_parameters {
 
   if ($ref_parameters->{output_mode}) {
     $self->output_mode($ref_parameters->{output_mode});
+  }
+
+
+  #### Due to ambiguity between action and apply_action, map the latter
+  #print "Content-type: text/html\n\n";
+  #print "action = ",$ref_parameters->{action},"<BR>\n";
+  #print "apply_action = ",$ref_parameters->{apply_action},"<BR>\n";
+  if ($ref_parameters->{apply_action} gt '' &&
+      (!($ref_parameters->{action} gt ''))) {
+    $ref_parameters->{action} = $ref_parameters->{apply_action};
   }
 
 
