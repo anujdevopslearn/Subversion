@@ -367,7 +367,7 @@ APD_peptide_summary	1	peptide_summary_id	Peptide Summary ID	int	8	0	N		Y							N
 APD_peptide_summary	2	peptide_summary_name	Peptide Summary Title	varchar	100	0	N		N			Y	text	50		Y	Y	Y	Title of this peptide summary		
 APD_peptide_summary	3	description	Peptide Summary Description	text	16	0	N		N			Y	textarea	4		Y	Y	N	"Description of this APD peptide summary, from where it is derived, etc."		
 APD_peptide_summary	4	minimum_probability	Minimum Probability	real	4	0	Y		N			N	text	10		Y	Y	N	Minimum P value for selecting good peptides	
-APD_peptide_summary	5	experiment_list	Experiment ID List	varchar	100	0	N		N			Y	text	50		Y	Y	N	List of experiment_ids	
+APD_peptide_summary	5	experiment_list	Experiment ID List	varchar	255	0	N		N			Y	text	50		Y	Y	N	List of experiment_ids	
 APD_peptide_summary	6	n_experiments	Number of Experiments	int	4	0	N		N			Y	text	10		Y	Y	N	Total number of experiments used for this summary	
 APD_peptide_summary	7	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments	
 APD_peptide_summary	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
