@@ -106,6 +106,17 @@ if ( $DBVERSION eq "Dev Branch 1" ) {
   $BIOSAP_DB   = "biosap.";
   $PROTEOMICS_DB = "proteomics.";
 
+} elsif ( $DBVERSION eq "Macrogenics" ) {
+  $DB_SERVER   = 'mssql';
+  $DB_DATABASE = 'MGProteomics';
+  $DB_USER     = 'macrog_rw';
+  $DB_PASS     = 'Rock1441';
+  $DB_RO_USER  = 'macrog_ro';
+  $DB_RO_PASS  = 'RockMD';
+  $DB_DRIVER   = "DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE";
+  $DB_TYPE     = "MS SQL Server";
+  $PROTEOMICS_DB = "MGProteomics.dbo.";
+
 } else {
   $DB_SERVER   = 'mssql';
   $DB_DATABASE = 'sbeams';
