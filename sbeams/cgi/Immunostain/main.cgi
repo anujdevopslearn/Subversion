@@ -464,7 +464,10 @@ print qq *	<tr><td><b><font color =red>Project Grand Summary :</b></font></td></
 				{
 						print qq~ <tr><td><input type="checkbox" name="NProstate" value="$key">$tissueHash{$key}</td></tr>~;
 						next;
-				}
+				} elsif ( $tissueHash{$key} eq 'Prostate adenocarcinoma' ) {
+						print qq~ <tr><td><input type="checkbox" name="ProstateCarcinoma" value="$key">$tissueHash{$key}</td></tr>~;
+						next;
+        }   
 				print qq~ <tr><td><input type="checkbox" name="$tissueHash{$key}" value="$key">$tissueHash{$key}</td></tr>~;
 			}
 			print q~<tr></tr><tr><td><input type ="submit" name= "SUBMIT" value = "QUERY"></td></tr> ~;
@@ -1214,7 +1217,7 @@ sub buildSqlClause
 	
   my $tString = '';
   my $sep = '';
-  for ( 'Bladder', 'NProstate','Prostate adenocarcinoma' ) {
+  for ( 'Bladder', 'NProstate','ProstateCarcinoma' ) {
     $tString .= "$sep $parameters{$_} " if $parameters{$_};
     $sep = ',' if $tString;
     }
@@ -1236,9 +1239,8 @@ sub checkGO
 	print <<CHECK;
 	function checkForm()
 	{
-			var Prostate = "Normal Prostate";
 			
-			if ((document.forms[3].Human.checked)||(document.forms[3].Mouse.checked)||(document.forms[3].NProstate.checked)||(document.forms[3].Bladder.checked))
+			if ((document.forms[3].Human.checked)||(document.forms[3].Mouse.checked)||(document.forms[3].NProstate.checked)||(document.forms[3].Bladder.checked)||(document.forms[3].ProstateCarcinoma.checked))
 			{
 					return true;
 			}
