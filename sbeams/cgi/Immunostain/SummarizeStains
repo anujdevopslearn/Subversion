@@ -907,6 +907,7 @@ sub postProcessResultset {
       </TD>
     </TR>
   </TABLE>
+  farts
   <BR><BR>
   END
   } 
@@ -935,7 +936,7 @@ sub bySortOrder {
 
 
 sub getWFJavascript {
-  print <<"  END";
+  return( <<"  END" );
   <SCRIPT language="javascript">
 
   // Script to validate numeric input in weighting factor.
