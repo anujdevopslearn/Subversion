@@ -804,7 +804,7 @@ sub displaySequenceView {
   my ($row,$pos);
   my ($biosequence_name,$description,$sequence,$seq_length,$tmr_topology,$tmr_class);
   my ($has_signal_peptide,$has_signal_peptide_probability,$signal_peptide_length,$signal_peptide_is_cleaved);
-  my ($accessor,$accession);
+  my ($accessor,$accessor_suffix,$accession);
 
 
   #### Display each row in the resultset
@@ -816,6 +816,7 @@ sub displaySequenceView {
     $sequence = $row->[$col{biosequence_seq}];
 
     $accessor = $row->[$col{accessor}];
+    $accessor_suffix = $row->[$col{accessor_suffix}];
     $accession = $row->[$col{biosequence_accession}];
     $tmr_class = $row->[$col{transmembrane_class}];
     $tmr_topology = $row->[$col{transmembrane_topology}];
@@ -926,7 +927,7 @@ sub displaySequenceView {
     }
 
     if ($accessor && $accession && $mode ne 'FASTA') {
-      print "<A HREF=\"$accessor$accession\">$biosequence_name</A>";
+      print "<A HREF=\"$accessor$accession$accessor_suffix\">$biosequence_name</A>";
     } else {
       print "$biosequence_name";
     }
