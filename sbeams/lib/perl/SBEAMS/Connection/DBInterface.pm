@@ -3475,8 +3475,8 @@ sub getModules {
 
 
   #### Check to see whether this person is at the local facility
-  #### If not, then restrict to Proteomics.  This needs much better
-  #### permissions control.  FIXME.
+  #### If not, then restrict to groups to which they belong.
+  #### This needs much better permissions control.  FIXME.
   my $current_contact_id = $self->getCurrent_contact_id();
   my $sql = qq ~
     SELECT is_at_local_facility
@@ -3485,8 +3485,38 @@ sub getModules {
        AND record_status != 'D'
   ~;
   my (@rows) = $self->selectOneColumn($sql);
-  unless (scalar(@rows) > 0 && $rows[0] eq 'Y') {
-    @modules = ('Proteomics','Tools');
+
+  #### If the user is not a local user, then restrict the modules
+  unless (scalar(@rows) == 1 && $rows[0] eq 'Y') {
+
+    #### Get the groups that this user belongs to
+    my $sql = qq ~
+      SELECT WG.work_group_name,WG.work_group_id
+        FROM $TB_WORK_GROUP WG
+       INNER JOIN $TB_USER_WORK_GROUP UWG
+             ON ( WG.work_group_id = UWG.work_group_id )
+       WHERE UWG.contact_id = '$current_contact_id'
+         AND WG.record_status != 'D'
+         AND UWG.record_status != 'D'
+    ~;
+    my %work_groups = $self->selectTwoColumnHash($sql);
+
+    #### Make a copy of all the modules and clear real @modules
+    my @all_modules = ( @modules );
+    @modules = ();
+
+    #### Loop over all the modules, only keeping the ones for which the
+    #### current user has access (i.e. belongs to one of the groups
+    #### associated with the module)
+    foreach my $module (@all_modules) {
+      if (exists($work_groups{"${module}_user"}) ||
+          exists($work_groups{"${module}_admin"}) ||
+          exists($work_groups{"${module}_readonly"})) {
+        push(@modules,$module);
+      }
+    }
+    push(@modules,'Tools');
+
   }
 
 
