@@ -1137,9 +1137,6 @@ sub getArrayNames {
 
 		my $sbeams_affy_groups = new SBEAMS::Microarray::Affy_file_groups;
 
-#@downloadable_file_types = $sbeamsMOD->get_AFFY_FILES;
-#@default_file_types = qw(CEL);							  #default file type to turn on the checkbox
-#@diplay_files	    = qw(XML RPT JPEG);						  #files that should have urls constructed to open the file in the browser
 
 		$sbeams_affy_groups->setSBEAMS($sbeams);    #set the sbeams object into the affy_groups_object
 
@@ -1441,7 +1438,7 @@ sub getArrayNames {
 			r_chp_protocol => $R_CHP_protocol_id,
 			annotation_id  => $annotation_set_id,
 		);
-
+print STDERR "$sql\n";
 		#$sbeams->display_sql(sql=>$sql);
 		#### Fetch the results from the database server
 		$sbeams->fetchResultSet(
@@ -1703,46 +1700,6 @@ example view of pivot hash
 
 		#rearange the data to make a new results set
 
-=head 1 # DO THIS IF WE WAN TO TRY AND MERGE BACK INTO RESULTS SET  
-     my @data_rows = ();
-     my @new_column_names = ();
-     my @new_percision_column = (10, 10, -10,);
-     
-	push @new_column_names, "Affy Probe Set ID";
-	push @new_column_names, "Gene Symbol";
-	push @new_column_names, "Gene Title";
-	
-	my $count = 1;
-	foreach my $probe_set_id (keys %pivot_h){
-		my @column_of_data = ();
-		push @column_of_data, $probe_set_id;		#add the probe_set_id
-		push @column_of_data, $pivot_h{$probe_set_id}{ANNOTATION}{GENE_SYMBOL};	#Added the Annotation
-		push @column_of_data, $pivot_h{$probe_set_id}{ANNOTATION}{GENE_TITLE};
-		foreach my $r_protocol_href (keys %{$pivot_h{$probe_set_id}{R_PROTOCOL}}){
-			foreach my $arrays_href (keys %{ $pivot_h{$probe_set_id}{R_PROTOCOL}{$r_protocol_href}{ARRAYS} } ){
-				
-				push @column_of_data, $pivot_h{$probe_set_id}{R_PROTOCOL}{$r_protocol_href}{ARRAYS}{$arrays_href}{SIGNAL};						#collect the signal intensity
-				push @column_of_data, $pivot_h{$probe_set_id}{R_PROTOCOL}{$r_protocol_href}{ARRAYS}{$arrays_href}{DETECTION_CALL};
-				push @new_column_names, "${arrays_href}_P_${r_protocol_href}_SIGNAL" if $count == 1;		#collect the array file_root names
-				push @new_column_names, "${arrays_href}_P_${r_protocol_href}_CALL" if $count == 1;
-				push @new_percision_column, "2" if $count == 1;				#add the percision for each new column added
-				push @new_percision_column, "1" if $count == 1;
-			}
-			
-		}
-		push @data_rows,  [@column_of_data];
-		$count ++;
-	}
-     	
-	#print Dumper (\@new_column_names);
-	#print Dumper (@data_rows);	
-    
-
-     $$resultset_ref{data_ref} = \@data_rows;		#data is stored as an array of arrays from the $sth->fetchrow_array each row a row from the database holding an aref to all the values
-	
-     $$resultset_ref{column_list_ref} = \@new_column_names;
-     $$resultset_ref{'precisions_list_ref'} = \@new_percision_column;
-=cut
 
 		my @data_rows            = ();
 		my @new_column_names     = ();
@@ -1775,7 +1732,7 @@ example view of pivot hash
 					push @numerical_data,
 					  $pivot_h{$probe_set_id}{R_PROTOCOL}{$r_protocol_href}
 					  {ARRAYS}{$arrays_href}
-					  {SIGNAL}; #collect the numerical data to color the cells						#collect the signal intensity
+					  {SIGNAL}; #collect the numerical data to color the cells	#collect the signal intensity
 					push @detection_call,
 					  $pivot_h{$probe_set_id}{R_PROTOCOL}{$r_protocol_href}
 					  {ARRAYS}{$arrays_href}{DETECTION_CALL};
