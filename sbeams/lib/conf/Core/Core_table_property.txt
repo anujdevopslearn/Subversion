@@ -31,3 +31,4 @@ cached_resultset	Cached Resultset	rowprivate	YES	$TB_CACHED_RESULTSET	cached_res
 form_template	Form Template	rowprivate	YES	$TB_FORM_TEMPLATE	form_template_id		ManageTable.cgi?TABLE_NAME=form_template		
 AdHocQuery	Ad Hoc Query	QUERY					AdHocQuery		
 GetDataSource	Get Data Source	QUERY					GetDataSource
+IntegrateResultsets	Integrate Resultsets	QUERY					IntegrateResultsets
