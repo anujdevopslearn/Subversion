@@ -23,20 +23,22 @@
 ###############################################################################
 use strict;
 use Getopt::Long;
-use FindBin;
 
-use lib qw (../perl ../../perl);
+use FindBin qw($Bin);
+use lib "$Bin/../../perl/";
+use lib "$Bin";
+
 use vars qw ($sbeams $sbeamsMOD $q
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG
              $current_contact_id $current_username
             );
 
-require "./generate_schema.pllib";
+require "generate_schema.pllib";
 
 #### Set up SBEAMS core module
 use SBEAMS::Connection;
-use SBEAMS::Connection::Settings;
-use SBEAMS::Connection::Tables;
+#use SBEAMS::Connection::Settings;
+#use SBEAMS::Connection::Tables;
 $sbeams = new SBEAMS::Connection;
 
 use CGI;
@@ -306,5 +308,4 @@ sub generateSchema {
 
 
 } # end generateSchema
-
 
