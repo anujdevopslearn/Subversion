@@ -76,7 +76,7 @@ BL_biosequence_annotation	5	aliases	BioSequence Aliases	varchar	255	0	Y		N			N	t
 BL_biosequence_annotation	6	former_names	Former BioSequence Names	varchar	255	0	Y		N			N	text	50		Y	Y	N	Former Aliases of this BioSequence.  These are stored as a colon-delimited string		
 BL_biosequence_annotation	7	functional_description	Functional Description	text	16	0	Y		N			N	textarea	3		Y	Y	N	Functional description of the protein		
 BL_biosequence_annotation	8	EC_numbers	EC Numbers	varchar	255	0	Y		N			N	text	50		Y	Y	N	EC Number(s) that corresponds to this domain.  Separate multiple numbers with a semicolon		
-BL_biosequence_annotation	9	biosequence_type	Biosequence Type	varchar	255	0	Y		N				text	50		Y	Y	N	Further annotation of biosequence type		
+BL_biosequence_annotation	9	biosequence_type	Biosequence Type	varchar	255	0	N		N			N	text	50		Y	Y	N	Further annotation of biosequence type		
 BL_biosequence_annotation	10	category	Category	varchar	255	0	Y		N			N	text	50		Y	Y	N	Category		
 BL_biosequence_annotation	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 BL_biosequence_annotation	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -142,10 +142,10 @@ BL_relationship	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contac
 BL_relationship	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 BL_relationship	10	record_status	Record Status	char	1	0	N	N	N							N	N				
 BL_evidence	1	evidence_id	Evidence ID	int	4	0	N		Y							N	N				pkDEFAULT
-BL_evidence	2	relationship_id	Relationship ID	int	4	0	N		N	BL_relationship	relationship_id	Y	optionlist			Y	Y	N	Relationship ID this line of evidence presents	"SELECT relationship_id, relationship_name FROM $TB_RELATIONSHIP ORDER BY sort_order,relationship_name"	
-BL_evidence	3	evidence_source_id	Evidence Source ID	int	4	0	N		N	BL_evidence_source	evidence_source_id	Y	optionlist			Y	Y	N	Evidence Source that produced this line of evidence	"SELECT evidence_source_id, evidence_source_name FROM $TB_EVIDENCE_SOURCE ORDER BY sort_order,evidence_source_name"	
-BL_evidence	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-BL_evidence	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+BL_evidence	2	relationship_id	Relationship ID	int	4	0	N		N	BL_relationship	relationship_id	Y	optionlist			Y	Y	N	Relationship ID this line of evidence presents	"SELECT relationship_id, relationship_name FROM $TB_RELATIONSHIP ORDER BY sort_order,relationship_name"
+BL_evidence	3	evidence_source_id	Evidence Source ID	int	4	0	N		N	BL_evidence_source	evidence_source_id	Y	optionlist			Y	Y	N	Evidence Source that produced this line of evidence	"SELECT evidence_source_id, evidence_source_name FROM $TB_EVIDENCE_SOURCE ORDER BY sort_order,evidence_source_name"
+BL_evidence	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments	
+BL_evidence	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
 BL_evidence	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N			
 BL_evidence	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
 BL_evidence	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
@@ -165,15 +165,15 @@ BL_BrowseBioSequence	11	biosequence_desc_constraint	Description Constraint						
 BL_BrowseBioSequence	12	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBBL_QUERY_OPTION WHERE option_type = 'BBS_sort_options' ORDER BY sort_order,option_value"
 BL_BrowseBioSequence	13	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBBL_QUERY_OPTION WHERE option_type = 'BBS_display_options' ORDER BY sort_order,option_value"
 BL_BrowseBioSequence	14	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."	
-BL_CBIL_genome_coordinates	1	Coordinate_id	Primary key	int	4	0	N		Y			Y									
-BL_CBIL_genome_coordinates	2	Probe_Set_Name	Affymetrix probe set name	varchar	255	0	Y		N			N									
-BL_CBIL_genome_coordinates	3	Genome_Build	Genome build version number	varchar	255	0	Y		N			N									
-BL_CBIL_genome_coordinates	4	Chromosome	Chromosome defined by coordinates	varchar	255	0	Y		N			N									
-BL_CBIL_genome_coordinates	5	Gene_start	Transcription start coordinate	int	4	0	Y		N			N									
-BL_CBIL_genome_coordinates	6	gene_end	Transcription end coordinate	int	4	0	Y		N			N									
-BL_CBIL_genome_coordinates	7	Strand	Coding strand orientation	char	1	0	Y		N			N									
-BL_CBIL_genome_coordinates	8	DoTS	DoTS accession	varchar	255	0	Y		N			N									
-BL_CBIL_genome_coordinates	9	GenBank	GenBank accession	varchar	255	0	Y		N			N									
-BL_CBIL_genome_coordinates	10	Gene_Symbol	Official Gene Symbol	varchar	255	0	Y		N			N									
-BL_CBIL_genome_coordinates	11	Gene_Synonyms	Gene Synonyms	varchar	255	0	Y		N			N									
-BL_CBIL_genome_coordinates	12	organism_id	Organism identifier	int	4	0	N		N			N									
+BL_CBIL_genome_coordinates	1	Coordinate_id	Primary key	int	4	0	N		Y			Y								
+BL_CBIL_genome_coordinates	2	Probe_Set_Name	Affymetrix probe set name	varchar	255	0	Y		N			N								
+BL_CBIL_genome_coordinates	3	Genome_Build	Genome build version number	varchar	255	0	Y		N			N								
+BL_CBIL_genome_coordinates	4	Chromosome	Chromosome defined by coordinates	varchar	255	0	Y		N			N								
+BL_CBIL_genome_coordinates	5	Gene_start	Transcription start coordinate	int	4	0	Y		N			N								
+BL_CBIL_genome_coordinates	6	gene_end	Transcription end coordinate	int	4	0	Y		N			N								
+BL_CBIL_genome_coordinates	7	Strand	Coding strand orientation	char	1	0	Y		N			N								
+BL_CBIL_genome_coordinates	8	DoTS	DoTS accession	varchar	255	0	Y		N			N								
+BL_CBIL_genome_coordinates	9	GenBank	GenBank accession	varchar	255	0	Y		N			N								
+BL_CBIL_genome_coordinates	10	Gene_Symbol	Official Gene Symbol	varchar	255	0	Y		N			N
+BL_CBIL_genome_coordinates	11	Gene_Synonyms	Gene Synonyms	varchar	255	0	Y		N			N
+BL_CBIL_genome_coordinates	12	organism_id	Organism identifier	int	4	0	N		N			N
