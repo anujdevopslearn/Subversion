@@ -120,7 +120,7 @@ sub setXpressValues {
 
 
   #### Define the possible passed parameters
-  my @columns = ("LightFirstScan","LightLastScan","LightMass","HeavyFirstScan","HeavyLastScan","HeavyMass","DatFile","ChargeState","OutFile","MassTol","bIcatLight1","quantitation_id","LightQuanValue","HeavyQuanValue","NewLink","NewQuan","InteractDir","OutputFile");
+  my @columns = ("LightFirstScan","LightLastScan","LightMass","HeavyFirstScan","HeavyLastScan","HeavyMass","DatFile","ChargeState","OutFile","MassTol","bXpressLight1","quantitation_id","LightQuanValue","HeavyQuanValue","NewLink","NewQuan","InteractDir","OutputFile");
 
 
   #### Provide the mapping between database columns and parameter names
@@ -133,7 +133,7 @@ sub setXpressValues {
     "d8_first_scan" => "HeavyFirstScan",
     "d8_last_scan" => "HeavyLastScan",
     "d8_mass" => "HeavyMass",
-    "norm_flag" => "bIcatLight1",
+    "norm_flag" => "bXpressLight1",
     "mass_tolerance" => "MassTol",
   );
 
