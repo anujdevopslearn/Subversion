@@ -5,9 +5,9 @@ software	Software	infrastructure	YES	$TB_SOFTWARE	software_id		ManageTable.cgi?T
 protocol	Protocol	infrastructure	YES	$TB_PROTOCOL	protocol_id		ManageTable.cgi?TABLE_NAME=protocol	"protocol,hardware,software"	
 organization	Organization	infrastructure	YES	$TB_ORGANIZATION	organization_id		ManageTable.cgi?TABLE_NAME=organization	"contact,organization"	contact
 contact	Contact	infrastructure	YES	$TB_CONTACT	contact_id		ManageTable.cgi?TABLE_NAME=contact	"contact,organization"	user_login
-work_group	Work Group	admin	YES	$TB_WORK_GROUP	work_group_id		ManageTable.cgi?TABLE_NAME=work_group	"user_login,work_group,user_work_group,table_group_security,user_context,help_text"	user_work_group
-user_login	User Login	admin	YES	$TB_USER_LOGIN	user_login_id		ManageTable.cgi?TABLE_NAME=user_login	"user_login,work_group,user_work_group,table_group_security,user_context,help_text"	user_work_group
-user_work_group	User-Group Association	admin	YES	$TB_USER_WORK_GROUP	user_work_group_id		ManageTable.cgi?TABLE_NAME=user_work_group	"user_login,work_group,user_work_group,table_group_security,user_context,help_text"	contact
-user_context	User Context	rowprivate	YES	$TB_USER_CONTEXT	user_context_id		ManageTable.cgi?TABLE_NAME=user_context	"user_login,work_group,user_work_group,table_group_security,user_context,help_text"	
-table_group_security	Table Group Security	admin	YES	$TB_TABLE_GROUP_SECURITY	table_group_security_id		ManageTable.cgi?TABLE_NAME=table_group_security	"user_login,work_group,user_work_group,table_group_security,user_context,help_text"	
-help_text	Help Text	admin	YES	$TB_HELP_TEXT	help_text_id		ManageTable.cgi?TABLE_NAME=help_text	"user_login,work_group,user_work_group,table_group_security,user_context,help_text"	
+work_group	Work Group	admin	YES	$TB_WORK_GROUP	work_group_id		ManageTable.cgi?TABLE_NAME=work_group	"organization,contact,user_login,work_group,user_work_group,table_group_security,user_context,help_text"	user_work_group
+user_login	User Login	admin	YES	$TB_USER_LOGIN	user_login_id		ManageTable.cgi?TABLE_NAME=user_login	"organization,contact,user_login,work_group,user_work_group,table_group_security,user_context,help_text"	user_work_group
+user_work_group	User-Group Association	admin	YES	$TB_USER_WORK_GROUP	user_work_group_id		ManageTable.cgi?TABLE_NAME=user_work_group	"organization,contact,user_login,work_group,user_work_group,table_group_security,user_context,help_text"	contact
+user_context	User Context	rowprivate	YES	$TB_USER_CONTEXT	user_context_id		ManageTable.cgi?TABLE_NAME=user_context	"organization,contact,user_login,work_group,user_work_group,table_group_security,user_context,help_text"	
+table_group_security	Table Group Security	admin	YES	$TB_TABLE_GROUP_SECURITY	table_group_security_id		ManageTable.cgi?TABLE_NAME=table_group_security	"organization,contact,user_login,work_group,user_work_group,table_group_security,user_context,help_text"	
+help_text	Help Text	admin	YES	$TB_HELP_TEXT	help_text_id		ManageTable.cgi?TABLE_NAME=help_text	"organization,contact,user_login,work_group,user_work_group,table_group_security,user_context,help_text"	
