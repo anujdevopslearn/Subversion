@@ -32,38 +32,36 @@ PH_biosequence	13	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact
 PH_biosequence	14	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 PH_biosequence	15	record_status	Record Status	char	1	0	N	N	N							N	N				
 PH_sequence_modification	1	sequence_modification_id	BioSequence Modification ID	int	8	0	N		Y							N	N				pkDEFAULT
-PH_sequence_modification	2	strain_id	Strain ID	int	8	0	N		N	PH_strain	strain_id	N	optionlist			Y	Y	Y	"If the modification occurred to a strain, select which one"	"SELECT strain_id, strain_name FROM $TBPH_STRAIN WHERE record_status != 'D' ORDER BY strain_name"	
-PH_sequence_modification	3	plasmid_id	Plasmid ID	int 	8	0	N		N	PH_plasmid 	plasmid_id	N	optionlist			Y	Y	Y	"If the modification occurred to a Plasmid, select which one"	"SELECT plasmid_id, plasmid_name FROM $TBPH_PLASMID WHERE record_status != 'D' ORDER BY plasmid_name"	
-PH_sequence_modification	4	affected_biosequence_id	Affected BioSequence ID	int	8	0	N		N		biosequence_id	Y	optionlist			Y	Y	Y	"Choose which biosequnce was affected, (i.e. removed, or spliced into)"	"SELECT biosequence_id, biosequence_name FROM $TBPH_BIOSEQUENCE WHERE record_status != 'D' ORDER BY biosequence_name"	
-PH_sequence_modification	5	deletion_start	Insertion Start	int	255	0	N		N			Y	text			Y	Y	N	"The start of the change relative to the start base-pair of the affected gene( the space between the first base and the ""-1"" base is zero)"		
-PH_sequence_modification	6	deletion_length	Insertion Length	int 	255	0	N		N			Y	text			Y	Y	N	The length of the change in base-pairs		
-PH_sequence_modification	7	inserted_biosequence_id	Inserted BioSequence ID	int 	8	0	N		N		biosequence_id	N	optionlist			Y	Y	Y	Choose the inserted biosequence	"SELECT biosequnce_id, biosequence_name FROM $TBPH_BIOSEQUENCE WHERE record_status != 'D' ORDER BY biosequence_name"	
-PH_sequence_modification	8	modification_index	Modification Index	int	8	0	N		Y			Y	text			N	N		A zero-based index of numbers to differentiate multiple modifications to a strain		
-PH_sequence_modification	9	allele_index	Allele Index	int	8	0	N		Y			Y	text			N	N		A zero-based index of numbers to differentiate modifications made to different alleles		
-PH_sequence_modification	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-PH_sequence_modification	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PH_sequence_modification	12	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-PH_sequence_modification	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PH_sequence_modification	14	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-PH_sequence_modification	15	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-PH_sequence_modification	16	record_status	Record Status	char	1	0	N	N	N							N	N				
+PH_sequence_modification	2	plasmid_id	Plasmid ID	int 	8	0	N		N	PH_plasmid 	plasmid_id	N	optionlist			Y	Y	Y	"If the modification occurred to a Plasmid, select which one"	"SELECT plasmid_id, plasmid_name FROM $TBPH_PLASMID WHERE record_status != 'D' ORDER BY plasmid_name"	
+PH_sequence_modification	3	affected_biosequence_id	Affected BioSequence ID	int	8	0	N		N		biosequence_id	Y	optionlist			Y	Y	Y	"Choose which biosequnce was affected, (i.e. removed, or spliced into)"	"SELECT biosequence_id, biosequence_name FROM $TBPH_BIOSEQUENCE WHERE record_status != 'D' ORDER BY biosequence_name"	
+PH_sequence_modification	4	deletion_start	Insertion Start	int	255	0	N		N			Y	text			Y	Y	N	"The start of the change relative to the start base-pair of the affected gene( the space between the first base and the ""-1"" base is zero)"		
+PH_sequence_modification	5	deletion_length	Insertion Length	int 	255	0	N		N			Y	text			Y	Y	N	The length of the change in base-pairs		
+PH_sequence_modification	6	inserted_biosequence_id	Inserted BioSequence ID	int 	8	0	N		N		biosequence_id	N	optionlist			Y	Y	Y	Choose the inserted biosequence	"SELECT biosequnce_id, biosequence_name FROM $TBPH_BIOSEQUENCE WHERE record_status != 'D' ORDER BY biosequence_name"	
+PH_sequence_modification	7	modification_index	Modification Index	int	8	0	N		Y			Y	text			N	N		A zero-based index of numbers to differentiate multiple modifications to a strain		
+PH_sequence_modification	8	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PH_sequence_modification	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PH_sequence_modification	10	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+PH_sequence_modification	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PH_sequence_modification	12	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+PH_sequence_modification	13	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+PH_sequence_modification	14	record_status	Record Status	char	1	0	N	N	N							N	N				
 PH_plasmid	1	plasmid_id	Plasmid ID	int	8	0	N		Y							N	N				pkDEFAULT
-PH_plasmid	2	plasmid_strainID	Plasmid Strain ID	varchar	50	0	N		N			Y	text	10		Y	Y	Y	FileMaker database Strain ID		
-PH_plasmid	3	plasmid_name	Plasmid Name	varchar	255	0	N		N			Y	text	40		Y	Y	N	Common name of the plasmid		
-PH_plasmid	4	plasmid_type_id	Plasmid Type	int	8	0	N		N	PH_plasmid_type	plasmid_type_id	Y	optionlist			Y	Y	N	Type of Plasmid from list	"SELECT plasmid_type_id, plasmid_type_name FROM $TBPH_PLASMID_TYPE WHERE record_status != 'D' ORDER BY sort_order,plasmid_type_name"	
-PH_plasmid	5	vector	Vector	varchar	50	0	N		N			N	text	40		Y	Y	N	Vector		
-PH_plasmid	6	coli_strain	Coli Strain	varchar	50	0	N		N			N	text	20		Y	Y	N	?		
-PH_plasmid	7	coli_marker_id	Coli Marker	int	8	0	N		N	PH_coli_marker	coli_marker_id	Y	optionlist			Y	Y	N	Coli Marker	"SELECT coli_marker_id, coli_marker_tag FROM $TBPH_COLI_MARKER WHERE record_status != 'D' ORDER BY sort_order,coli_marker_tag"	
-PH_plasmid	8	yeast_selection_marker_id	Yeast Selection Marker	int	8	0	N		N	PH_yeast_selection_marker	yeast_selection_marker_id	N	optionlist			Y	Y	N	Yeast Selection Marker	"SELECT yeast_selection_marker_id, yeast_selection_marker_tag FROM $TBPH_YEAST_SELECTION_MARKER WHERE record_status != 'D' ORDER BY sort_order,yeast_selection_marker_tag"	
-PH_plasmid	9	yeast_origin_id	Yeast Origin	int	8	0	N		N	PH_yeast_origin	yeast_origin_id	Y	optionlist			Y	Y	N	Yeast Origin	"SELECT yeast_origin_id, yeast_origin_tag FROM $TBPH_YEAST_ORIGIN WHERE record_status != 'D' ORDER BY sort_order,yeast_origin_tag"	
-PH_plasmid	10	plasmid_insert	Plasmid Insert	varchar	150	0	N		N			N	text	40		Y	Y	N	?		
-PH_plasmid	11	cloned_by	Cloned By	varchar	50	0	N		N			N	text	40		Y	Y	N	?		
-PH_plasmid	12	cloned_date	Cloned Date	datetime	8	0	N		N			N	text	20		Y	Y	N	?		
-PH_plasmid	13	source_contact_id	Source Contact	int	8	0	N		N	contact	contact_id	N	scrolloptionlist	4		Y	Y	N	Contact for the source of this plasmid	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY organization,last_name,first_name"	
-PH_plasmid	14	source	Source (plaintext)	varchar	255	0	N		N			N	textarea	4		Y	Y	N	A plaintext version of a source for this plasmid.  Don't use this field.  Add an official contact and use the previous field		
-PH_plasmid	15	reference_citation_id	Reference Citation	int	8	0	N		N	PH_citation	citation_id	N	optionlist			Y	Y	N	Citation to a reference containing information about this plasmid	"SELECT citation_id, citation_name FROM $TBPH_CITATION WHERE record_status != 'D' ORDER BY citation_name"	
-PH_plasmid	16	reference	Reference (plaintext)	varchar	255	0	N		N			N	textarea	4		Y	Y	N	A plaintext version of a reference for this plasmid.  Don't use this field.  Add an official citation and use the previous field		
-PH_plasmid	17	biosequence_id	Biosequence ID	int	8	0	N		N			N	fixed	20		Y	Y	N	Biosequence identifier for this plasmid from biosequence table	"SELECT biosequence_id, biosequence_name FROM $TBPH_BIOSEQUENCE WHERE record_status != 'D' ORDER BY biosequence_name"	
+PH_plasmid	2	plasmid_strainID	Plasmid Strain ID	varchar	50	0	N		N			Y	text	10		Y	Y	Y	FileMaker database Strain ID	
+PH_plasmid	3	plasmid_name	Plasmid Name	varchar	255	0	N		N			Y	text	40		Y	Y	N	Common name of the plasmid	
+PH_plasmid	4	plasmid_type_id	Plasmid Type	int	8	0	N		N	PH_plasmid_type	plasmid_type_id	Y	optionlist			Y	Y	N	Type of Plasmid from list	"SELECT plasmid_type_id, plasmid_type_name FROM $TBPH_PLASMID_TYPE WHERE record_status != 'D' ORDER BY sort_order,plasmid_type_name"
+PH_plasmid	5	vector	Vector	varchar	50	0	N		N			N	text	40		Y	Y	N	Vector	
+PH_plasmid	6	coli_strain	Coli Strain	varchar	50	0	N		N			N	text	20		Y	Y	N	?	
+PH_plasmid	7	coli_marker_id	Coli Marker	int	8	0	N		N	PH_coli_marker	coli_marker_id	Y	optionlist			Y	Y	N	Coli Marker	"SELECT coli_marker_id, coli_marker_tag FROM $TBPH_COLI_MARKER WHERE record_status != 'D' ORDER BY sort_order,coli_marker_tag"
+PH_plasmid	8	yeast_selection_marker_id	Yeast Selection Marker	int	8	0	N		N	PH_yeast_selection_marker	yeast_selection_marker_id	N	optionlist			Y	Y	N	Yeast Selection Marker	"SELECT yeast_selection_marker_id, yeast_selection_marker_tag FROM $TBPH_YEAST_SELECTION_MARKER WHERE record_status != 'D' ORDER BY sort_order,yeast_selection_marker_tag"
+PH_plasmid	9	yeast_origin_id	Yeast Origin	int	8	0	N		N	PH_yeast_origin	yeast_origin_id	Y	optionlist			Y	Y	N	Yeast Origin	"SELECT yeast_origin_id, yeast_origin_tag FROM $TBPH_YEAST_ORIGIN WHERE record_status != 'D' ORDER BY sort_order,yeast_origin_tag"
+PH_plasmid	10	plasmid_insert	Plasmid Insert	varchar	150	0	N		N			N	text	40		Y	Y	N	?	
+PH_plasmid	11	cloned_by	Cloned By	varchar	50	0	N		N			N	text	40		Y	Y	N	?	
+PH_plasmid	12	cloned_date	Cloned Date	datetime	8	0	N		N			N	text	20		Y	Y	N	?	
+PH_plasmid	13	source_contact_id	Source Contact	int	8	0	N		N	contact	contact_id	N	scrolloptionlist	4		Y	Y	N	Contact for the source of this plasmid	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY organization,last_name,first_name"
+PH_plasmid	14	source	Source (plaintext)	varchar	255	0	N		N			N	textarea	4		Y	Y	N	A plaintext version of a source for this plasmid.  Don't use this field.  Add an official contact and use the previous field	
+PH_plasmid	15	reference_citation_id	Reference Citation	int	8	0	N		N	PH_citation	citation_id	N	optionlist			Y	Y	N	Citation to a reference containing information about this plasmid	"SELECT citation_id, citation_name FROM $TBPH_CITATION WHERE record_status != 'D' ORDER BY citation_name"
+PH_plasmid	16	reference	Reference (plaintext)	varchar	255	0	N		N			N	textarea	4		Y	Y	N	A plaintext version of a reference for this plasmid.  Don't use this field.  Add an official citation and use the previous field	
+PH_plasmid	17	biosequence_id	Biosequence ID	int	8	0	N		N			N	fixed	20		Y	Y	N	Biosequence identifier for this plasmid from biosequence table	"SELECT biosequence_id, biosequence_name FROM $TBPH_BIOSEQUENCE WHERE record_status != 'D' ORDER BY biosequence_name"
 PH_plasmid	18	comment	Comment	text	4000	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 PH_plasmid	19	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 PH_plasmid	20	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
@@ -286,5 +284,5 @@ PH_citation	17	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP
 PH_citation	18	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
 PH_citation	19	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 PH_citation	20	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-PH_citation	21	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N
-PH_citation	22	record_status	Record Status	char	1	0	N	N	N							N	N
+PH_citation	21	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+PH_citation	22	record_status	Record Status	char	1	0	N	N	N							N	N				
