@@ -28,6 +28,7 @@ rm zztmp/celera*
 
 
 set source_file=/net/db/src/DIP/DIP.ALL.xml
+set source_file=/net/db/src/DIP/dip.xin
 
 ./ImportXML.pl --schema_file zztmp/DIP --destination_type mssql --database_prefix DIP.dbo. --drop_tables
 
