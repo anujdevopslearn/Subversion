@@ -114,6 +114,7 @@ sub printEntryForm {
 
     my $CATEGORY="Proteomics Data Test Query";
     my $TABLE_NAME="BrowseSearchHits";
+    $TABLE_NAME = $q->param("QUERY_NAME") if $q->param("QUERY_NAME");
 
 
     # Get the columns for this table
@@ -135,7 +136,7 @@ sub printEntryForm {
 
     #### If xcorr_charge is undefined (not just "") then set to a high limit
     #### So that a naive query is quick
-    unless (defined($parameters{xcorr_charge1})) {
+    if (($TABLE_NAME eq "BrowseSearchHits") && (!defined($parameters{xcorr_charge1})) ) {
       $parameters{xcorr_charge1} = ">4.0";
       $parameters{xcorr_charge2} = ">4.5";
       $parameters{xcorr_charge3} = ">5.0";
@@ -352,6 +353,7 @@ sub printEntryForm {
     # ---------------------------
     # Show the QUERY, REFRESH, and Reset buttons
     print qq!
+	<INPUT TYPE="hidden" NAME="QUERY_NAME" VALUE="$TABLE_NAME">
 	<TR><TD COLSPAN=2>
 	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 	<INPUT TYPE="submit" NAME="apply_action" VALUE="QUERY">
@@ -462,6 +464,22 @@ sub printEntryForm {
       }
 
 
+      #### Build ICAT RATIO constraint
+      my $ICAT_ratio_clause = "";
+      if ($parameters{ICAT_constraint}) {
+        if ($parameters{ICAT_constraint} =~ /^[\d\.]+$/) {
+          $ICAT_ratio_clause = "   AND ICAT_light/ISNULL(NULLIF(ICAT_heavy,0),0.01) = $parameters{ICAT_constraint}";
+        } elsif ($parameters{ICAT_constraint} =~ /^between\s+[\d\.]+\s+and\s+[\d\.]+$/i) {
+          $ICAT_ratio_clause = "   AND ICAT_light/ISNULL(NULLIF(ICAT_heavy,0),0.01) $parameters{ICAT_constraint}";
+        } elsif ($parameters{ICAT_constraint} =~ /^[><=][=]*\s*[\d\.]+$/) {
+          $ICAT_ratio_clause = "   AND ICAT_light/ISNULL(NULLIF(ICAT_heavy,0),0.01) $parameters{ICAT_constraint}";
+        } else {
+          print "<H4>Cannot parse ICAT Ratio Constraint!  Check syntax.</H4>\n\n";
+          return;
+        }
+      }
+
+
       #### Build SORT ORDER
       my $order_by_clause = "";
       if ($parameters{sort_order}) {
@@ -480,22 +498,44 @@ sub printEntryForm {
       }
 
 
+      #### Define the desired columns
+      my @column_array = (
+        ["search_batch_id","SB.search_batch_id","search_batch_id"],
+        ["search_id","S.search_id","search_id"],
+        ["search_hit_id","SH.search_hit_id","search_hit_id"],
+        ["experiment_tag","experiment_tag","Exp"],
+        ["database_tag","database_tag","DB"],
+        ["data_location","SB.data_location","data_location"],
+        ["fraction_tag","F.fraction_tag","fraction_tag"],
+        ["file_root","S.file_root","file_root"],
+        ["cross_corr_rank","SH.cross_corr_rank","Rxc"],
+        ["prelim_score_rank","SH.prelim_score_rank","RSp"],
+        ["mass_plus_H","CONVERT(varchar(20),SH.mass_plus_H) + ' (' + STR(SH.mass_delta,5,2) + ')'","(M+H)+"],
+        ["cross_corr","STR(SH.cross_corr,5,4)","XCorr"],
+        ["next_dCn","STR(SH.next_dCn,5,3)","dCn"],
+        ["prelim_score","STR(SH.prelim_score,8,1)","Sp"],
+        ["ions","STR(SH.identified_ions,2,0) + '/' + STR(SH.total_ions,3,0)","Ions"],
+        ["reference","reference","Reference"],
+        ["additional_proteins","additional_proteins","Nmore"],
+        ["peptide_string","peptide_string","Peptide"],
+        ["peptide","peptide","actual_peptide"],
+        ["database_path","PD.database_path","database_path"],
+        ["ICAT","STR(ICAT_light,5,2) + ':' + STR(ICAT_heavy,5,2)","ICAT"],
+      );
+
+      my $columns_clause = "";
+      my $i = 0;
+      my %colnameidx;
+      foreach $element (@column_array) {
+	$columns_clause .= "," if ($columns_clause);
+        $columns_clause .= qq ~
+		$element->[1] AS '$element->[2]'~;
+        $colnameidx{$element->[0]} = $i;
+        $i++;
+      }
+
       $sql_query = qq~
-	SELECT $limit_clause experiment_tag AS 'Exp',database_tag AS 'DB',
-		SB.data_location,F.fraction_tag,S.file_root,
-		SH.cross_corr_rank AS 'Rxc',
-		SH.prelim_score_rank AS 'RSp',
-		CONVERT(varchar(20),SH.mass_plus_H) + ' (' + STR(SH.mass_delta,5,2) + ')' AS '(M+H)+',
-		STR(SH.cross_corr,5,4) AS 'XCorr',
-		STR(SH.next_dCn,5,3) AS 'dCn',
-		STR(SH.prelim_score,8,1) AS 'Sp',
-		STR(SH.identified_ions,2,0) + '/' + STR(SH.total_ions,3,0) AS 'Ions',
-		reference AS 'Reference',
-		additional_proteins AS 'Nmore',
-		peptide_string AS 'Peptide',
-		peptide AS 'actual_peptide',
-		PD.database_path,
-		STR(ICAT_light,5,2) + ':' + STR(ICAT_heavy,5,2) AS 'ICAT'
+	SELECT $limit_clause $columns_clause
 	  FROM proteomics.dbo.search_hit SH
 	  JOIN proteomics.dbo.search S ON ( SH.search_id = S.search_id )
 	  JOIN proteomics.dbo.search_batch SB ON ( S.search_batch_id = SB.search_batch_id )
@@ -511,20 +551,31 @@ sub printEntryForm {
 	$reference_clause
 	$peptide_clause
 	$file_root_clause
+	$ICAT_ratio_clause
 	$order_by_clause
        ~;
 
       #print "<PRE>\n$sql_query\n</PRE>\n";
 
-      my $base_url = "$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=";
-      %url_cols = ('file_root' => "http://regis/cgi-bin/showout_html5?OutFile=/data/search/%2V/%3V/%4V.out",
-                   'Reference' => "http://regis/cgi-bin/consensus_html4?Ref=%V&Db=%16V&Pep=%15V&MassType=0",
-                   'Ions' => "http://regis/cgi-bin/displayions_html5?Dta=/data/search/%2V/%3V/%4V.dta&MassType=0&NumAxis=1&Pep=%15V",
-                   'Nmore' => "http://regis/cgi-bin/blast_html4?Db=%16V&Pep=%15V&MassType=0",
-                   'Peptide' => "http://www.ncbi.nlm.nih.gov/blast/Blast.cgi?PROGRAM=blastp&DATABASE=nr&OVERVIEW=TRUE&EXPECT=1000&FILTER=L&QUERY=%15V",
+      my $base_url = "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi";
+      %url_cols = ('file_root' => "http://regis/cgi-bin/showout_html5?OutFile=/data/search/\%$colnameidx{data_location}V/\%$colnameidx{fraction_tag}V/\%$colnameidx{file_root}V.out",
+		   'file_root_ATAG' => 'TARGET="Win1"',
+      		   'Rxc' => "$base_url?QUERY_NAME=ShowSearch&search_batch_id=\%$colnameidx{search_batch_id}V&file_root_constraint=\%$colnameidx{file_root}V&apply_action=QUERY",
+		   'Rxc_ATAG' => 'TARGET="Win1"',
+                   'Reference' => "http://regis/cgi-bin/consensus_html4?Ref=%V&Db=\%$colnameidx{database_path}V&Pep=\%$colnameidx{peptide}V&MassType=0",
+		   'Reference_ATAG' => 'TARGET="Win1"',
+                   'Ions' => "http://regis/cgi-bin/displayions_html5?Dta=/data/search/\%$colnameidx{data_location}V/\%$colnameidx{fraction_tag}V/\%$colnameidx{file_root}V.dta&MassType=0&NumAxis=1&Pep=\%$colnameidx{peptide}V",
+		   'Ions_ATAG' => 'TARGET="Win1"',
+                   'Nmore' => "http://regis/cgi-bin/blast_html4?Db=\%$colnameidx{database_path}V&Pep=\%$colnameidx{peptide}V&MassType=0",
+		   'Nmore_ATAG' => 'TARGET="Win1"',
+                   'Peptide' => "http://www.ncbi.nlm.nih.gov/blast/Blast.cgi?PROGRAM=blastp&DATABASE=nr&OVERVIEW=TRUE&EXPECT=1000&FILTER=L&QUERY=\%$colnameidx{peptide}V",
+		   'Peptide_ATAG' => 'TARGET="Win1"',
       );
 
       %hidden_cols = ('data_location' => 1,
+                      'search_batch_id' => 1,
+                      'search_id' => 1,
+                      'search_hit_id' => 1,
                       'fraction_tag' => 1,
                       'actual_peptide' => 1,
                       'database_path' => 1,
@@ -545,6 +596,5 @@ sub printEntryForm {
 
 
 } # end printEntryForm
-
 
 
