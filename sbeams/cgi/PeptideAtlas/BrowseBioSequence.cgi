@@ -459,8 +459,9 @@ sub handle_request {
   $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
 
   #### Define the hypertext links for columns that need them
-  %url_cols = ('set_tag' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=biosequence_set&biosequence_set_id=\%$colnameidx{biosequence_set_id}V",
-               'accession' => "\%$colnameidx{accessor}V\%$colnameidx{accesssion}V",
+  %url_cols = ('set_tag' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=AT_BIOSEQUENCE_SET&biosequence_set_id=\%$colnameidx{biosequence_set_id}V",
+               'accession' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi?biosequence_name_constraint=\%$colnameidx{biosequence_accession}V&apply_action=$pass_action",
+               'gene_name' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi?biosequence_gene_name_constraint=\%$colnameidx{biosequence_gene_name}V&apply_action=$pass_action",
                'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
                'Molecular Function_ATAG' => 'TARGET="WinExt"',
                'Molecular Function_OPTIONS' => {semicolon_separated_list=>1},
