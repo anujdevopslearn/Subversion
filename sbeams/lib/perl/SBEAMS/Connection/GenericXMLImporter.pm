@@ -114,11 +114,25 @@ sub createDataModel {
   #### For all entities that have no children, turn them into attributes
   while (my ($key,$value) = each %{$datamodel{entities}}) {
 
-    #### If the entity as no children
-    unless (defined($value->{has_children})) {
+    #### If the entity as no children or attributes of its own
+    unless ( (defined($value->{has_children}) && %{$value->{has_children}}) ||
+             (defined($value->{attributes}) && %{$value->{attributes}}) ) {
 
       #### Loop over all its parents
       while (my ($key2,$value2) = each %{$value->{has_parents}}) {
+
+  	#### If this entity appears multiple times, this cannot be turned
+  	#### into an attribute and, in fact, some fanciness needs to be
+  	#### written here and elsewhere to handle this case
+  	if (defined($datamodel{entities}->{$key2}->{has_children}->
+                    {$key}->{max_count}) &&
+  	    $datamodel{entities}->{$key2}->{has_children}->
+              {$key}->{max_count} > 1) {
+  	  print "WARNING: entity $key2 has child $key which itself has no ".
+            "children, but yet appears multiple times so cannot be an ".
+            "attribute.  Need special code to turn this into a table! ".
+            "For now, duplicate entries will be overwritten!!!!!\n\n";
+        }
 
         #### Create this element as an attribute and record its maximum
         #### length
@@ -156,7 +170,10 @@ sub createDataModel {
       #### Unless it's xml_import itself
       unless ($key eq 'xml_import') {
         $datamodel{entities}->{$key}->{has_parents}->{xml_import} = 1;
-        $datamodel{entities}->{xml_import}->{has_children}->{$key} = 1;
+        #### FIXME The following might be a lie!  I'm not certain if
+        #### well-formed xml can have > 1, but it could happen
+        $datamodel{entities}->{xml_import}->{has_children}->{$key}->
+          {max_count} = 1;
       }
 
     }
@@ -281,7 +298,15 @@ sub createDataModel {
 
       #### Print out children information:
       if (defined($value->{has_children}) && %{$value->{has_children}}) {
-        print "  Children: ".join(",",keys(%{$value->{has_children}}))."\n";
+        my @children = ();
+        while ( my ($childname,$childhash) = each %{$value->{has_children}}) {
+          my $tmp = $childname;
+          if (defined($childhash->{max_count})) {
+            $tmp .= "(".$childhash->{max_count}."x)";
+          }
+          push(@children,$tmp);
+        }
+        print "  Children: ".join(",",@children)."\n";
       } else {
         print "  NO CHILDREN!\n";
       }
@@ -467,11 +492,23 @@ sub start_element {
     }
 
 
-    #### Store parental information
+    #### Store parental and child information information
     if ($context) {
       $datamodel{entities}->{$element}->{has_parents}->{$context} = 1;
-      $datamodel{entities}->{$context}->{has_children}->{$element} = 1;
+
+      if (defined($datamodel{entities}->{$context}->{has_children}->
+          {$element}->{current_count})) {
+        $datamodel{entities}->{$context}->{has_children}->{$element}->
+          {current_count}++;
+      } else {
+        $datamodel{entities}->{$context}->{has_children}->{$element}->
+          {current_count} = 1;
+      }
     }
+
+
+    #### Initialize a string storage area to put a CDATA string
+    $datamodel{entities}->{$element}->{CDATA} = '';
 
 
     #### Store attribute information
@@ -479,7 +516,8 @@ sub start_element {
       while (my ($key,$value) = each %attrs) {
         if (defined($datamodel{entities}->{$element}->{attributes}->{$key})) {
           if (length($value) >
-              $datamodel{entities}->{$element}->{attributes}->{$key}->{length}) {
+              $datamodel{entities}->{$element}->{attributes}->{$key}->
+                {length}) {
             $datamodel{entities}->{$element}->{attributes}->{$key}->{length} =
               length($value);
           }
@@ -550,7 +588,7 @@ sub start_element {
       #### Add this entity as an attribute of its parent
       #### Although unfortunately we don't know the value yet
       $element_state{$context}->{needs_update} = 1;
-      $element_state{$context}->{attributes}->{$element} = '?';
+      $element_state{$context}->{attributes}->{$element} = '';
 
 
     #### Otherwise the data model and the file don't match
@@ -576,8 +614,10 @@ sub end_element {
   my $handler = shift;
   my $element = shift;
 
+  my $context = $handler->{Context}->[-1];
   #### Strip out and funky characters
   $element =~ s/\W//g;
+  $context =~ s/\W//g;
 
   #### Just pop the top item off the stack.  It should be the current
   #### element, but we lazily don't check
@@ -586,7 +626,34 @@ sub end_element {
   #### If we're in Learn mode, just collect information about the XML
   if ($PARSEMODE eq 'LEARN') {
 
-    #### Don't need to do anything in this mode
+    #### Make the total length of the CDATA for this entity the maxlength
+    my $len = length($datamodel{entities}->{$element}->{CDATA});
+    delete($datamodel{entities}->{$element}->{CDATA});
+    if (defined($datamodel{entities}->{$element}->{length})) {
+      if ($len > $datamodel{entities}->{$element}->{length}) {
+        $datamodel{entities}->{$element}->{length} = $len;
+      }
+    } else {
+      $datamodel{entities}->{$element}->{length} = $len;
+    }
+
+    #### Update the information about the number of times each child appears
+    while ( my ($child,$childhash) = each %{$datamodel{entities}->{$element}->
+                                       {has_children}} ) {
+      if (defined($childhash->{current_count})) {
+  	my $this_count = $childhash->{current_count};
+  	if (defined($childhash->{max_count})) {
+  	  if ($this_count > $childhash->{max_count}) {
+  	    $childhash->{max_count} = $this_count;
+  	  }
+  	} else {
+  	  $childhash->{max_count} = $this_count;
+  	}
+
+        delete($childhash->{current_count});
+      }
+
+    }
 
   }
 
@@ -636,17 +703,14 @@ sub characters {
   #### Strip out and funky characters
   $context =~ s/\W//g;
 
+
   #### If we're in Learn mode, just collect information about the XML
   if ($PARSEMODE eq 'LEARN') {
 
-    if (defined($datamodel{entities}->{$context}->{length})) {
-      if (length($string) > $datamodel{entities}->{$context}->{length}) {
-  	$datamodel{entities}->{$context}->{length} = length($string);
-      }
-
-    } else {
-      $datamodel{entities}->{$context}->{length} = length($string);
-    }
+    #### Add the current string to the bin
+    #### Note that some XML parsers return the CDATA line by line instead
+    #### of one huge chunk
+    $datamodel{entities}->{$context}->{CDATA} .= $string;
 
   }
 
@@ -659,6 +723,12 @@ sub characters {
 
       #### Do nothing, I guess.  If this is an element, it must have
       #### children and thus no CDATA???
+      unless ($string =~ /^\s*$/) {
+        print "ERROR: Expected empty space but got CDATA '$string' ".
+          "instead!!\n";
+        die("  Rats!");
+      }
+
 
     #### Otherwise this is attribute data and must be stored as attribute
     } else {
@@ -671,9 +741,13 @@ sub characters {
             "an assumption.");
       }
 
+      #### Strip off leading and trailing whitespace. FIXME Thi should be Opt
+      $string =~ s/^\s+//;
+      $string =~ s/\s+$//;
+
       #### Store this information for later inserting
       $element_state{$parent_context}->{needs_update} = 1;
-      $element_state{$parent_context}->{attributes}->{$context} = $string;
+      $element_state{$parent_context}->{attributes}->{$context} .= $string;
 
     }
 
