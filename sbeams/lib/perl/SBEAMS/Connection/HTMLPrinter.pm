@@ -184,7 +184,7 @@ sub printPageHeader {
 
       print qq~
 	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$HTML_BASE_DIR/doc/">Documentation</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Help?document=index">Documentation</a></td></tr>
 	</table>
 	</td>
 
