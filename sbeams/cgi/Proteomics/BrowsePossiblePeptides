@@ -330,9 +330,9 @@ sub handle_request {
 
   #### Build PEPTIDE constraint
   my $peptide_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"PP.peptide",
+    constraint_column=>"PP.peptide_sequence",
     constraint_type=>"plain_text",
-    constraint_name=>"Peptide",
+    constraint_name=>"Peptide Sequence",
     constraint_value=>$parameters{peptide_constraint} );
   return if ($peptide_clause eq '-1');
 
@@ -353,6 +353,21 @@ sub handle_request {
     constraint_name=>"Mass Constraint",
     constraint_value=>$parameters{mass_constraint} );
   return if ($mass_clause eq '-1');
+
+
+  #### Build N OCCURRENCES constraint
+  my $n_occurrences_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"COUNT(*)",
+    constraint_type=>"flexible_int",
+    constraint_name=>"Number of Occurrences Constraint",
+    constraint_value=>$parameters{n_occurrences} );
+  return if ($n_occurrences_clause eq '-1');
+  if ($n_occurrences_clause) {
+    $n_occurrences_clause =~ s/AND/HAVING/;
+    $n_occurrences_clause = '' 
+      unless ($parameters{display_options} =~ /Group/);
+  }
+
 
 
   #### Build Additional peptide constraints
@@ -409,6 +424,7 @@ sub handle_request {
   my @column_array;
   my $peptide_column = "";
   my $count_column = "";
+  my $into_clause = "";
 
 
   #### If the user opted to see the GO columns, add them in
@@ -467,7 +483,13 @@ sub handle_request {
   #### [friendly name used in url_cols,SQL,displayed column title]
 
   #### If grouping by protein
-  if ( $parameters{display_options} =~ /GroupProtein/ ) {
+  if ( $parameters{display_options} =~ /Group/ ) {
+
+    if ( $parameters{display_options} =~ /GroupCount/ ) {
+      $order_by_clause = 'ORDER BY COUNT(*)';
+      $into_clause = 'INTO #tmp';
+      $limit_clause = '';
+    }
 
     @column_array = (
       ["biosequence_name","BS.biosequence_name","Name"],
@@ -491,8 +513,14 @@ sub handle_request {
       ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
       ["accessor","DBX.accessor","accessor"],
       ["biosequence_accession","BS.biosequence_accession","Accession"],
-      ["peptide","PP.peptide","Peptide"],
+      ["preceding_residue","PP.preceding_residue","LHS"],
+      ["peptide_sequence","PP.peptide_sequence","Peptide Sequence"],
+      ["following_residue","PP.following_residue","RHS"],
       ["mass","STR(PP.mass,7,2)","Mass"],
+      ["peptide_offset","PP.peptide_offset","Start Pos"],
+      ["n_tryptic_terminii","PP.n_tryptic_terminii","N Tryp Term"],
+      ["is_cysteine_containing","PP.is_cysteine_containing","Cys Cont"],
+      ["is_unique","PP.is_unique","Unique"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
     );
@@ -526,17 +554,19 @@ sub handle_request {
   #### Define the SQL statement
   $sql = qq~
 	SELECT $limit_clause $columns_clause
+          $into_clause
           FROM $TBPR_POSSIBLE_PEPTIDE PP
 	  JOIN $TBPR_BIOSEQUENCE BS
-	       ON ( P.biosequence_id = BS.biosequence_id )
+	       ON ( PP.biosequence_id = BS.biosequence_id )
           LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
           $GO_join
 	 WHERE 1 = 1
-	$peptide_summary_clause
+	$biosequence_set_clause
 	$biosequence_name_clause
-        $description_clause
-	$gene_name_clause
+	$biosequence_gene_name_clause
 	$accession_clause
+        $biosequence_desc_clause
+        $biosequence_seq_clause
 
 	$peptide_clause
 	$second_peptide_clause
@@ -548,24 +578,37 @@ sub handle_request {
 	$protein_domain_clause
         $n_transmembrane_regions_clause
         $fav_codon_frequency_clause
+        $protein_length_clause
 	$group_by_clause
+        $n_occurrences_clause
 	$order_by_clause
 
   ~;
 
 
+  #### If we're doing a grand summary, tack on the second query to summarize
+  if ( $parameters{display_options} =~ /GroupCount/ ) {
+    $sql .= "
+	SELECT n_peptides,COUNT(*) AS 'protein_count'
+          FROM #tmp
+         GROUP BY n_peptides
+         ORDER BY n_peptides
+    ";
+    @column_titles = ( 'Number of Peptides','Protein Count' );
+  }
+
+
   #### Certain types of actions should be passed to links
   my $pass_action = "QUERY";
-  $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
+  $pass_action = $apply_action if ($apply_action =~ /QUERY/i);
 
 
   #### Pass nearly all of the constraints down to a child query
   my @parameters_to_pass;
   my $parameters_list = '';
   while ( ($key,$value) = each %input_types ) {
-    if ($key ne 'sort_order' && $key ne 'display_options' &&
-        $key ne 'reference_constraint' && $key ne 'peptide_string_constraint' &&
-        $key ne 'charge_constraint' && $key ne 'xx_constraint'
+    if ($key ne 'display_options' &&
+        $key ne 'xx_constraint'
       ) {
       if ($parameters{$key}) {
         push(@parameters_to_pass,"$key=$parameters{$key}");
@@ -580,21 +623,6 @@ sub handle_request {
   #### Define the hypertext links for columns that need them
   %url_cols = ('Accession' => "\%$colnameidx{accessor}V\%$colnameidx{biosequence_accession}V",
     	       'Accession_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information about this protein in source database\'; return true"',
-
-               'Reference' => "$CGI_BASE_DIR/Proteomics/BrowseAPD?QUERY_NAME=APD_BrowseAPD&peptide_summary_id=$parameters{peptide_summary_id}&reference_constraint=\%$colnameidx{reference}V&display_options=$parameters{display_options}&input_form_format=minimum_detail&apply_action=$pass_action",
-    	       'Reference_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show all APD peptides for this protein\'; return true"',
-
-    	       'Peptide' => "$CGI_BASE_DIR/Proteomics/BrowseAPD?QUERY_NAME=APD_BrowseAPD&peptide_summary_id=$parameters{peptide_summary_id}&peptide_constraint=\%$colnameidx{peptide}V&display_options=ShowModifications&input_form_format=minimum_detail&apply_action=$pass_action",
-    	       'Peptide_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show all occurrences of this peptide in these experiments\'; return true"',
-
-	       'Modified Peptide' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=\%$colnameidx{experiment_list}V&peptide_string_constraint=\%$colnameidx{peptide_string}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
-	       'Modified Peptide_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show all occurrences of this exact peptide instance in these experiments\'; return true"',
-
-	       'Number of Peptides' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=\%$colnameidx{experiment_list}V&peptide_constraint=\%$colnameidx{peptide}V&${parameters_list}&probability_constraint=>\%$colnameidx{minimum_probability}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
-	       'Number of Peptides_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show just this many that match all above criteria\'; return true"',
-
-	       'Number of Modified Peptides' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=\%$colnameidx{experiment_list}V&peptide_string_constraint=\%$colnameidx{peptide_string}V&charge_constraint=\%$colnameidx{charge_state}V&${parameters_list}&probability_constraint=>\%$colnameidx{minimum_probability}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
-	       'Number of Modified Peptides_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show just this many that match all above criteria\'; return true"',
 
                'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
                'Molecular Function_ATAG' => 'TARGET="WinExt"',
@@ -617,8 +645,6 @@ sub handle_request {
                   'biological_process_GO' => 1,
                   'cellular_component_GO' => 1,
                   'interpro_protein_domain_GO' => 1,
-                  'experiment_list' => 1,
-                  'minimum_probability' => 1,
   );
 
 
