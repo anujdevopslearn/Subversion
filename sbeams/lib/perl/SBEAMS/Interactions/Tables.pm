@@ -12,6 +12,10 @@ package SBEAMS::Interactions::Tables;
 
 
 use strict;
+
+use SBEAMS::Connection::Settings;
+
+
 use vars qw(@ISA @EXPORT 
     $TB_ORGANISM
     $TBIN_QUERY_OPTION
@@ -72,29 +76,34 @@ require Exporter;
 );
 
 
-$TB_ORGANISM                = 'sbeams.dbo.organism';
-$TBIN_QUERY_OPTION          = 'glue.dbo.query_option';
-
-$TBIN_BIOENTITY             = 'glue.dbo.bioentity';
-$TBIN_BIOENTITY_TYPE        = 'glue.dbo.bioentity_type';
-$TBIN_BIOENTITY_ATTRIBUTE   = 'glue.dbo.bioentity_attribute';
-$TBIN_BIOENTITY_ATTRIBUTE_TYPE        = 'glue.dbo.bioentity_attribute_type';
-$TBIN_REGULATORY_FEATURE    = 'glue.dbo.regulatory_feature';
-$TBIN_REGULATORY_FEATURE_TYPE   = 'glue.dbo.regulatory_feature_type';
-$TBIN_INTERACTION           = 'glue.dbo.interaction';
-$TBIN_INTERACTION_GROUP     = 'glue.dbo.interaction_group';
-$TBIN_INTERACTION_TYPE      = 'glue.dbo.interaction_type';
-$TBIN_BIOENTITY_STATE       = 'glue.dbo.bioentity_state';
-$TBIN_CONFIDENCE_SCORE      = 'glue.dbo.confidence_score';
-
-$TBIN_ASSAY                 = 'glue.dbo.assay';
-$TBIN_ASSAY_TYPE            = 'glue.dbo.assay_type';
-$TBIN_SAMPLE_TYPE           = 'glue.dbo.sample_type';
-$TBIN_PUBLICATION           = 'glue.dbo.publication';
-$TBIN_PUBLICATION_CATEGORY  = 'glue.dbo.publication_category';
+#### Get the appropriate database prefixes for the SBEAMS core and this module
+my $core = $DBPREFIX{Core};
+my $mod = $DBPREFIX{glue};
 
 
-$TBIN_BIOSEQUENCE_SET       = 'glue.dbo.biosequence_set';
-$TBIN_BIOSEQUENCE           = 'glue.dbo.biosequence';
-$TBIN_BIOSEQUENCE_DBXREF    = 'glue.dbo.dbxref';
+$TB_ORGANISM                      = "${core}organism";
+$TBIN_QUERY_OPTION                = "${mod}query_option";
+
+$TBIN_BIOENTITY                   = "${mod}bioentity";
+$TBIN_BIOENTITY_TYPE              = "${mod}bioentity_type";
+$TBIN_BIOENTITY_ATTRIBUTE         = "${mod}bioentity_attribute";
+$TBIN_BIOENTITY_ATTRIBUTE_TYPE    = "${mod}bioentity_attribute_type";
+$TBIN_REGULATORY_FEATURE          = "${mod}regulatory_feature";
+$TBIN_REGULATORY_FEATURE_TYPE     = "${mod}regulatory_feature_type";
+$TBIN_INTERACTION                 = "${mod}interaction";
+$TBIN_INTERACTION_GROUP           = "${mod}interaction_group";
+$TBIN_INTERACTION_TYPE            = "${mod}interaction_type";
+$TBIN_BIOENTITY_STATE             = "${mod}bioentity_state";
+$TBIN_CONFIDENCE_SCORE            = "${mod}confidence_score";
+
+$TBIN_ASSAY                       = "${mod}assay";
+$TBIN_ASSAY_TYPE                  = "${mod}assay_type";
+$TBIN_SAMPLE_TYPE                 = "${mod}sample_type";
+$TBIN_PUBLICATION                 = "${mod}publication";
+$TBIN_PUBLICATION_CATEGORY        = "${mod}publication_category";
+
+
+$TBIN_BIOSEQUENCE_SET             = "${mod}biosequence_set";
+$TBIN_BIOSEQUENCE                 = "${mod}biosequence";
+$TBIN_BIOSEQUENCE_DBXREF          = "${mod}dbxref";
 
