@@ -78,5 +78,15 @@ go
 -- affy_gene_intensity_   affy_array_id,probe_set_id, protocol_id
 CREATE NONCLUSTERED INDEX idx_condition_id
    ON dbo.gene_expression ( condition_id )    
+  WITH DROP_EXISTING
+go
 
+CREATE NONCLUSTERED INDEX idx_gene_name
+   ON dbo.gene_expression ( gene_name )    
+  WITH DROP_EXISTING
+go
+
+CREATE NONCLUSTERED INDEX idx_biosequence_id
+   ON dbo.gene_expression ( biosequence_id )    
+  WITH DROP_EXISTING
 go
