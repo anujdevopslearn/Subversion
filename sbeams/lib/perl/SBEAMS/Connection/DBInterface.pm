@@ -2481,6 +2481,7 @@ sub display_input_form {
   #### Now loop through again and write the HTML
   foreach $row (@columns_data) {
     my @row = @{$row};
+    my $mask_description = 0;
     my ($column_name,$column_title,$is_required,$input_type,$input_length,
         $is_data_column,$is_display_column,$column_text,
         $optionlist_query,$onChange) = @row;
@@ -2581,9 +2582,13 @@ sub display_input_form {
     }
 
     if ($input_type eq "textarea") {
-      print qq!
-        <TD><TEXTAREA NAME="$column_name" rows=$input_length cols=40>$parameters{$column_name}</TEXTAREA></TD>
-      !;
+      print qq~
+        <TD COLSPAN=2 BGCOLOR="E0E0E0">$column_text</TD></TR>
+        <TR><TD> </TD>
+        <TD COLSPAN=2><TEXTAREA NAME="$column_name" rows=$input_length
+          cols=80>$parameters{$column_name}</TEXTAREA></TD>
+      ~;
+      $mask_description = 1;
     }
 
     if ($input_type eq "textdate") {
@@ -2647,10 +2652,13 @@ sub display_input_form {
       !;
     }
 
-  print qq!
-    <TD BGCOLOR="E0E0E0">$column_text</TD></TR>
-  !;
+    unless ($mask_description) {
+      print qq~
+        <TD BGCOLOR="E0E0E0">$column_text</TD>
+      ~;
+    }
 
+    print "</TR>\n";
 
   }
 
