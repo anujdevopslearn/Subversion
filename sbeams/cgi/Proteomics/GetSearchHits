@@ -557,6 +557,7 @@ sub handle_request {
     ["set_tag","set_tag","DB"],
     ["file_root","S.file_root","file_root"],
     ["out_file","'.out'",".out"],
+    ["fraction_number","F.fraction_number","Frac #"],
 
     ["start_scan","MSS.start_scan","Scan Num"],
     #["scan_time","STR(MSS.scan_time/60.0,7,2)","Scan Time"],
