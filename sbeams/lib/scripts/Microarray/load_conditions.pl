@@ -466,7 +466,7 @@ sub insertGeneExpression {
     foreach my $temp_row (@rows) {
       my %temp_hash = %{$temp_row};
       $ge_hash{$temp_hash{'gene_name'}} = $temp_hash{'gene_expression_id'};
-      $ge_hash{$temp_hash{'second_name'}} = $temp_hash{'gene_expression_id'};
+      $ge_hash{$temp_hash{'canonical_name'}} = $temp_hash{'gene_expression_id'};
     }
 
     ## For each gene_expression record, try to find a corresponding biosequence
