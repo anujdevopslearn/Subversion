@@ -762,12 +762,41 @@ sub isTableWritable {
   my $self = shift;
   my %args = @_;
   die( "Missing required parameter table_name" ) unless $args{table_name}; 
+
   $args{dbtable} = $self->returnTableInfo( $args{table_name}, 'DB_TABLE_NAME' );
   $args{contact_id} = $self->getCurrent_contact_id;
-  $args{work_group_id} = $self->getCurrent_work_group_id;
-  my $perm = $self->calculateTablePermission( %args );
-  $log->debug( "User has table perms of $perm" );
-  return ( $perm <= DATA_WRITER ) ? 1 : 0;
+  $args{privilege} = DATA_WRITER;
+  my $current_wg = $self->getCurrent_work_group_id();
+  
+  # Get list of groups user can access, with privilege level.
+  my $groups = $self->getTableGroups( %args  );
+
+  my $admin_gid = $self->getAdminWorkGroupId();
+  
+  if ( !scalar(@$groups) ) {
+
+    # There weren't any groups that would suffice.
+    return 0;
+
+  } else {
+
+    # These are sorted by privilege
+    my $best = $$groups[0];
+
+    # If the top group is admin and we are not in that group, retry.
+    if ( $$best[1] == $admin_gid && $current_wg != $admin_gid ) {
+
+      # Admin was the only choice, bail
+      return 0 if scalar(@$groups) == 1; 
+
+      # Get next best thing
+      $best = $$groups[1];
+    }
+    
+    # Is the best non-admin group sufficienti (Admin OK iff current group)?
+    return ( $$best[2] > DATA_WRITER ) ? 0 : 1; 
+
+  }
 }
 
 
@@ -1268,12 +1297,12 @@ sub getTableGroups {
   }
 
 # Sort first by auth level, then by group name.
-  @groups = sort { ( $a->[3] <=> $b->[3] )  || ( $a->[0] <=> $b->[0] ) || ( $a->[1] cmp $b->[1] ) } @groups;
+  @groups = sort { ( $a->[3] <=> $b->[3] )  # First sort by privilege ASC
+                || ( $a->[0] <=> $b->[0] )  # Then by sort order ASC
+                || ( $a->[1] cmp $b->[1] ) } @groups; # Then by name ASC
 
-  my $b = '';
   foreach my $g ( @groups ){
-    shift @$g;
-    $b .= join( "___", @$g ) . "\n";
+    shift @$g;             # shift of the sort order, no longer needed.
   }
   # return reference to group array
   return \@groups;
@@ -1470,6 +1499,25 @@ sub getPrivilegeNames {
                50 => 'none',
                999 => 'none',
                9999 => 'none' );
+}
+
+#+
+# Utility method to fetch id of work group 'Admin' from the database.  There 
+# is a fair amount of code that assumes that this will always be 1, this hopes
+# to safeguard against cases where it isn't!
+#
+#-
+sub getAdminWorkGroupId {
+  my $self = shift;
+
+  # fetch admin_work_group_id
+  my ( $admin_gid ) = $self->selectOneColumn( <<"  END_SQL" );
+  SELECT WG.work_group_id
+  FROM $TB_WORK_GROUP WG
+  WHERE WG.work_group_name = 'Admin'
+  END_SQL
+
+  return $admin_gid;
 }
 
 ###############################################################################
