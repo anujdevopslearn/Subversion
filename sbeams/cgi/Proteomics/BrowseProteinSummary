@@ -193,7 +193,7 @@ sub handle_request {
   #### Set some reasonable defaults if no parameters supplied
   unless ($n_params_found) {
     $parameters{input_form_format} = "minimum_detail";
-    $parameters{probability_constraint} = '>0.9';
+    $parameters{protein_group_probability_constraint} = '>0.7';
   }
 
 
