@@ -577,7 +577,7 @@ sub handle_request {
     ["match_EC_numbers","D.EC_numbers","Domain EC Numbers"],
 
     ["probability","STR(DM.probability,7,3)","Prob"],
-    ["e_value","DM.e_value","E value"],
+    ["e_value","CONVERT(varchar(50),DM.e_value)","E value"],
     ["score","DM.score","Score"],
     ["z_score","DM.z_score","Z Score"],
 
@@ -912,7 +912,8 @@ sub postProcessResultset {
 
   #### Loop over (groups of) rows in the resultset
   my @rows = @{$resultset_ref->{data_ref}};
-  while ( $startrow < $n_rows-1) {
+  #while ( $startrow < $n_rows-1) { Deutsch changed 2004-03-10 !!!
+  while ( $startrow < $n_rows) {
 
     #### Get this biosequence_name
     my $biosequence_name = $rows[$startrow]->[$biosequence_name_column_index];
