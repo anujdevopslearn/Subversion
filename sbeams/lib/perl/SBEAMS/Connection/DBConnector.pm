@@ -22,8 +22,10 @@ use SBEAMS::Connection::Settings;
 # DBI Connection Variables
 ###############################################################################
 if ( $DBVERSION eq "Dev Branch 2" ) {
-  $DB_SERVER   = 'tj-db2ks-01';
-  $DB_DATABASE = 'sbeams3';
+#  $DB_SERVER   = 'tj-db2ks-01';
+  $DB_SERVER   = 'mssql';
+#  $DB_DATABASE = 'sbeams3';
+  $DB_DATABASE = 'sbeams';
   $DB_USER     = 'sbeams';
   $DB_PASS     = 'SB444';
   $DB_DRIVER   = "DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE";

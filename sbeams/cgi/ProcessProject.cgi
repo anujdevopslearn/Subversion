@@ -292,6 +292,7 @@ SELECT	A.array_id,A.array_name,
       foreach $group (@group_names) {
         my $row_counter=0;
         my $first_flag=1;
+        my $channel_direction = "";
         foreach $element (@slide_group_names) {
 
           if ($element eq $group) {
@@ -322,6 +323,8 @@ SELECT	A.array_id,A.array_name,
                 $qf_status = "&nbsp;&nbsp;&nbsp;&nbsp;--- ".
                              "<FONT COLOR=red>$results[0]</FONT>";
               } else {
+                print "According to sample names, direction should ".
+                      "be $slide_directions[$row_counter]<BR>\n";
                 foreach $element (@results) {
                   @parts = split("=",$element);
                   #print "$parts[0] = $parts[1]<BR>\n";
@@ -329,27 +332,30 @@ SELECT	A.array_id,A.array_name,
                   my $number_part = $1;
                   my $match_flag = 0;
 
+
                   if ($sample1_dye =~ /$number_part/) {
-                    #print "channel $element matches sample 1<BR>\n";
                     $match_flag = 1;
                     if ($parts[0] eq "ch1") {
-                      $slide_directions[$row_counter] = "f";
+                      $channel_direction = "f";
                     }
                     if ($parts[0] eq "ch2") {
-                      $slide_directions[$row_counter] = "r";
+                      $channel_direction = "r";
                     }
+                    print "channel $element matches sample 1 dye, ".
+                          "implying direction $channel_direction<BR>\n";
                   }
 
                   if ($sample2_dye =~ /$number_part/) {
                     if ($match_flag) { print "Whoah!  Double match!<BR>\n"; }
-                    #print "channel $element matches sample 2<BR>\n";
                     $match_flag = 2;
                     if ($parts[0] eq "ch1") {
-                      $slide_directions[$row_counter] = "r";
+                      $channel_direction = "r";
                     }
                     if ($parts[0] eq "ch2") {
-                      $slide_directions[$row_counter] = "f";
+                      $channel_direction = "f";
                     }
+                    print "channel $element matches sample 2 dye, ".
+                          "implying direction $channel_direction<BR>\n";
                   }
 
                   #print "deciding on direction $slide_directions[$row_counter]<BR>\n";
@@ -360,6 +366,15 @@ SELECT	A.array_id,A.array_name,
                   }
 
                 } # endforeach
+
+
+                if ($channel_direction eq "r") {
+                  print "So, flip the initially thought direction.<BR>\n";
+                  $slide_directions[$row_counter] =~ tr/fr/rf/;
+                } else {
+                  #keep direction the same
+                }
+
 
                 $qf_status = "&nbsp;&nbsp;&nbsp;&nbsp;--- ".
                              "<FONT COLOR=green>File verified</FONT>";
