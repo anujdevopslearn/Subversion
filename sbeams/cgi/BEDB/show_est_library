@@ -228,7 +228,7 @@ sub handle_request {
 
   %url_cols = ('Library Name' => "http://www.ncbi.nlm.nih.gov/cgi-bin/UniGene/lib?ORG=Hs&LID=\%$colnameidx{unigene_library_id}V",
                'Library Name_ATAG' => 'TARGET="Win2"',
-               'Distinct Genes' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/get_annotation?est_library_id=\%$colnameidx{est_library_id}V&sort_order=COUNT(*)%20DESC&apply_action=HIDEQUERY",
+               'Distinct Genes' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/get_annotation?est_library_id=\%$colnameidx{est_library_id}V&sort_order=8&apply_action=HIDEQUERY",
                'Distinct Genes_ATAG' => 'TARGET="Win2"',
                'Available Chromats' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/get_est?est_library_id=\%$colnameidx{est_library_id}V&apply_action=HIDEQUERY",
                'Available Chromats_ATAG' => 'TARGET="Win2"',

@@ -106,7 +106,7 @@ sub main {
   if ($parameters{action} eq "???") {
     # Some action
   } else {
-    $sbeamsMOD->display_page_header();
+    $sbeamsMOD->display_page_header(navigation_bar=>'YES');
     handle_request(ref_parameters=>\%parameters);
     $sbeamsMOD->display_page_footer();
   }
@@ -140,6 +140,8 @@ sub handle_request {
       You are successfully logged into the $DBTITLE - $SBEAMS_PART system.
       Please choose your tasks from the menu bar on the left.<P>
       <BR>
+      <B><A HREF="/projects/bedb/">Click here to enter the External-style interface</A></B>
+      <BR><BR>
       This system is still under active development.  Please be
       patient and report bugs, problems, difficulties, suggestions to
       <B>edeutsch\@systemsbiology.org</B>.<P>
