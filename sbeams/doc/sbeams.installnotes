@@ -1,0 +1,201 @@
+
+Notes installing a new SBEAMS site
+$Id$
+
+This document describes how to install a new SBEAMS site.
+
+
+Terms:
+ - SBEAMS: Systems Biology Extensible Analysis Management System)
+ - SBEAMS site: an independant installation of SBEAMS with its own core tables
+ - SBEAMS instance: a version of source code, often for development, sharing
+   the core tables with other instances
+
+
+-------------------------------------------------------------------------------
+1) Software Dependencies
+
+The following Perl Modules often not found on a standard UNIX/Linux
+setup are required before installation can begin:
+
+DBI-1.15
+Data-ShowTable-3.3a  (specially modified version by Deutsch)
+DBD-Sybase-0.91      (assuming MS SQL or Sybase is back end)
+DBD-????             (if you are using a different type of back end RDBMS)
+Crypt-CBC-1.25
+Crypt-IDEA-1.01
+
+Additional common Perl modules are needed, but may not be on your system.
+Should really write a little dependency checker program.  FIXME.
+
+---------------
+The following non-Perl software is required:
+
+FreeTDS 0.53         (required by DBD-Sybase. Allows UNIX -> MSSQL/Sybase)
+
+---------------
+Certain modules (Proteomics) also require the following Perl modules:
+
+Proteomics:
+  PDL
+  PDL::Graphics::PGPLOT
+
+
+-------------------------------------------------------------------------------
+2) Installation Location
+
+SBEAMS is designed to live entirely in the "htdocs" area of your Apache
+web server.  For the remainder of this installation, it will be assumed
+that your installation is configured like this:
+  servername: db
+  DocumentRoot: /local/www/html
+  sbeams location: directly located in DocumentRoot
+
+
+-------------------------------------------------------------------------------
+3) Upack files
+
+cd /local/www/html
+tar -zxvf ~/sbeams-0.40.tar.gz
+
+
+-------------------------------------------------------------------------------
+4) Configure Apache
+
+Include in Apache's http.conf file the following execution permissions:
+
+#------
+<Location /sbeams/cgi>
+    Options ExecCGI
+    SetHandler cgi-script
+</Location>
+
+<Location /sbeams/lib>
+    deny from all
+</Location>
+#------
+
+
+Retart the Apache server perhaps with something like:
+  /etc/rc.d/init.d/httpd restart
+
+
+-------------------------------------------------------------------------------
+5) Create and populate the database
+
+SBEAMS is being developed on SQL Server and should work quite easily
+with either the Sybase or Microsoft versions.  Attempts are being made
+to make it work equally well with DB2, Oracle, PostgreSQL, and MySQL;
+this is not finished so please contribute to this effort if you can.
+
+- First create a database called 'sbeams' or 'sbeamsdev' or similar
+
+- Within it, create users "sbeams" and "sbeamsro" as a read/write
+  account and a read-only account, respectively.
+
+- Generate the appropriate schema for your type(s) of database:
+
+setenv SBEAMS /local/html/sbeams
+cd $SBEAMS/lib/scripts/Core
+
+foreach dbtype ( mssql mysql pgsql )
+  ./generate_schema.pl --table_prop ../../conf/Core/Core_table_property.txt \
+  --table_col ../../conf/Core/Core_table_column.txt --schema_file \
+  ../../sql/Core/Core --destination_type $dbtype
+end
+
+
+- Verify that the SQL CREATE and DROP statements have been correctly
+  generated.
+
+- Edit the bottom of the POPULATE file to include your UNIX username
+  edit $SBEAMS/lib/sql/Core/Core_POPULATE.mssql
+
+- Execute the statements to create and populate the database with some
+  bare bones data:
+
+SQL Server Example:
+
+sqsh -i 
+To CREATE and POPLULATE:
+sqsh -i $SBEAMS/lib/sql/Core/Core_CREATETABLES.pgsql -D sbeamsdev
+sqsh -i $SBEAMS/lib/sql/Core/Core_POPULATE.mssql -D sbeamsdev
+sqsh -i $SBEAMS/lib/sql/Core/Core_CREATECONSTRAINTS.pgsql -D sbeamsdev
+
+To DROP:
+sqsh -i $SBEAMS/lib/sql/Core/Core_DROPCONSTRAINTS.pgsql -D sbeamsdev
+sqsh -i $SBEAMS/lib/sql/Core/Core_DROPTABLES.pgsql -D sbeamsdev
+
+
+-----------------------
+PostgreSQL Example:
+
+setenv SBEAMS /net/dblocal/www/html/dev2/sbeams
+
+To CREATE and POPLULATE:
+psql -f $SBEAMS/lib/sql/Core/Core_CREATETABLES.pgsql sbeamsdev
+psql -f $SBEAMS/lib/sql/Core/Core_POPULATE.mssql sbeamsdev
+psql -f $SBEAMS/lib/sql/Core/Core_CREATECONSTRAINTS.pgsql sbeamsdev
+
+To DROP:
+psql -f $SBEAMS/lib/sql/Core/Core_DROPCONSTRAINTS.pgsql sbeamsdev
+psql -f $SBEAMS/lib/sql/Core/Core_DROPTABLES.pgsql sbeamsdev
+
+
+-------------------
+MySQL Example:
+
+setenv SBEAMS /net/dblocal/www/html/dev2/sbeams
+
+To CREATE:
+mysql -u sbeams -p -h mysql sbeamsdev < $SBEAMS/lib/sql/Core/Core_CREATETABLES.mysql
+
+To POPULATE:
+mysql -u sbeams -p -h mysql sbeamsdev < $SBEAMS/lib/sql/Core/Core_POPULATE.mssql
+
+To DROP:
+mysql -u sbeams -p -h mysql sbeamsdev < $SBEAMS/lib/sql/Core/Core_DROPTABLES.mysql
+ or
+mysql -u sbeams -p -h mysql -f sbeamsdev < $SBEAMS/lib/sql/Core/Core_DROP.mysql
+
+
+-------------------------------------------------------------------------------
+6) Edit the SBEAMS Configuration files
+
+cd $SBEAMS/lib/conf
+cp SBEAMS.conf.template SBEAMS.conf
+edit SBEAMS.conf to taste
+
+You should now be able to log in via the web interface.  Test it by
+pointing a browser to the proper location like:
+
+http://db.localdomain.org/sbeams/
+
+and going to login.  Don't try to run any of the modules yet.
+
+If this doesn't work.  Do not proceed, debug first.
+
+
+-------------------------------------------------------------------------------
+7) Populate the driver tables
+
+cd $SBEAMS/lib/scripts/Core
+set CONFDIR = "../../conf"
+./update_driver_tables.pl $CONFDIR/Core/Core_table_property.txt
+./update_driver_tables.pl $CONFDIR/Core/Core_table_column.txt
+
+If this doesn't work.  Do not proceed, debug first.
+
+Now that the Core driver tables are loaded, you should be able to
+go to the web site again and click on "Admin" and explore the
+tables.
+
+
+
+
+
+
+
+
+
+
