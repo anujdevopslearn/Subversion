@@ -138,7 +138,17 @@ ln -s dev1/sbeams sbeams
 
 
 -------------------------------------------------------------------------------
-5) Create and populate the database
+5) Edit the SBEAMS Configuration files
+
+setenv SBEAMS /local/html/dev1/sbeams
+
+cd $SBEAMS/lib/conf
+cp SBEAMS.conf.template SBEAMS.conf
+edit SBEAMS.conf to taste
+
+
+-------------------------------------------------------------------------------
+6) Create and populate the database
 
 SBEAMS is being developed on SQL Server and should work quite easily
 with either the Sybase or Microsoft versions.  Attempts are being made
@@ -210,15 +220,6 @@ mysql -u sbeams -p -h mysql sbeamsdev < $SBEAMS/lib/sql/Core/Core_DROPTABLES.mys
  or
 mysql -u sbeams -p -h mysql -f sbeamsdev < $SBEAMS/lib/sql/Core/Core_DROP.mysql
 
-
--------------------------------------------------------------------------------
-6) Edit the SBEAMS Configuration files
-
-setenv SBEAMS /local/html/dev1/sbeams
-
-cd $SBEAMS/lib/conf
-cp SBEAMS.conf.template SBEAMS.conf
-edit SBEAMS.conf to taste
 
 You should now be able to log in via the web interface, either as the
 "admin" account (password SBEAMSadm) or with the user account you added to
