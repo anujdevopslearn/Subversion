@@ -44,6 +44,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK
     $UPLOAD_DIR
     $SBEAMS_SUBDIR
     $LOGGING_LEVEL
+    $LOG_BASE_DIR
     );
 
 require Exporter;
@@ -73,7 +74,7 @@ require Exporter;
     $SBEAMS_SUBDIR
     );
 
-@EXPORT_OK = qw( $LOGGING_LEVEL );
+@EXPORT_OK = qw( $LOGGING_LEVEL $LOG_BASE_DIR );
 
 
 #### Decide which version settings to use based the script location
@@ -135,6 +136,7 @@ $CYTOSCAPE_URL = $DBCONFIG->{$DBINSTANCE}->{CYTOSCAPE_URL};
 %DBPREFIX = %{$DBCONFIG->{$DBINSTANCE}->{DBPREFIX}};
 %RAW_DATA_DIR = %{$DBCONFIG->{$DBINSTANCE}->{RAW_DATA_DIR}};
 $LOGGING_LEVEL = $DBCONFIG->{$DBINSTANCE}->{LOGGING_LEVEL};
+$LOG_BASE_DIR = $DBCONFIG->{$DBINSTANCE}->{LOG_BASE_DIR};
 
 
 #### Determine what the BASE URL is: first pull out some environment variables
