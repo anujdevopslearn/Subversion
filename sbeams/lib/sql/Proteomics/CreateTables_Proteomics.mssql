@@ -3,6 +3,10 @@
 SELECT * FROM sysobjects WHERE type='U'
 SELECT 'DROP TABLE '+name FROM sysobjects WHERE type='U' ORDER BY crdate DESC
 
+DROP TABLE raw_data_file
+DROP TABLE processing_status
+
+
 DROP TABLE msms_spectrum_annotation
 DROP TABLE quality_label
 
@@ -781,6 +785,45 @@ CREATE TABLE dbo.msms_spectrum_annotation (
 	PRIMARY KEY CLUSTERED (msms_spectrum_annotation_id)
 )
 GO
+
+----------------------------------------------------------------------
+
+CREATE TABLE dbo.processing_status (
+	processing_status_id  	int IDENTITY NOT NULL,
+	status_tag		varchar(50) NOT NULL,
+	status_description	varchar(255) NOT NULL,
+	comment			text NULL,
+	sort_order		int NOT NULL DEFAULT 10,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (processing_status_id)
+)
+GO
+
+
+CREATE TABLE dbo.raw_data_file (
+	raw_data_file_id  	int IDENTITY NOT NULL,
+	file_name		varchar(255) NOT NULL,
+	file_path		varchar(255) NOT NULL,
+	processing_status_id	int NOT NULL REFERENCES processing_status(processing_status_id),
+	file_status_message	varchar(255) NULL,
+	file_written_date	datetime NULL,
+	file_size		int NULL,
+	comment			text NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (raw_data_file_id)
+)
+GO
+
 
 
 
