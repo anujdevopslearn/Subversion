@@ -203,8 +203,8 @@ sub handleRequest {
       my $n_columns = @column_names;
       close(INFILE);
       if ($n_columns == 26){
-	  my @ref_columns = ('username', 'last_name', 'first_name', 'middle_name', 'gender',
-			     'contact_type_name','job_title','supervisor_name',
+	  my @ref_columns = ('username', 'last_name', 'first_name', 'middle_name',
+			     'contact_type_name','job_title','supervisor_name', 'gender',
 			     'is_at_local_facility','photo_filename','organization',
 			     'department','lab','group','location','alternate_location',
 			     'phone','phone_extension','cell_phone','pager',
