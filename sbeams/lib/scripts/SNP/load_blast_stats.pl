@@ -121,7 +121,7 @@ sub main {
   #### Set the name file
   my $source_file = $ARGV[0];
   unless ( -e "$source_file" ) {
-    bail_out("Cannot find file $source_file");
+    die("Cannot find file $source_file");
   }
 
   my $blast = new Bio::Tools::BPlite(-file=>$source_file);
@@ -239,7 +239,7 @@ sub get_biosequence_ids {
        LEFT JOIN ${TBSN_BIOSEQUENCE_SET}
               ON ${TBSN_BIOSEQUENCE_SET}.biosequence_set_id =
                  ${TBSN_BIOSEQUENCE}.biosequence_set_id
-           WHERE ${TBSN_BIOSEQUENCE_SET}.set_tag like '%$dbtitle%'
+           WHERE ${TBSN_BIOSEQUENCE_SET}.set_path like '%$dbtitle%'
     ~;
   my %biosequence_ids = $sbeams->selectTwoColumnHash($sql);
 
