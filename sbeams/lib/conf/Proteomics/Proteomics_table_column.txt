@@ -15,7 +15,7 @@ PR_proteomics_experiment	13	column_length	Column Length (cm)	real	4	0	Y		N			N	t
 PR_proteomics_experiment	14	go_public_date	Go Public Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	text	20		Y	Y	N	Date that this experiment data will go public.  Please use the form 2002-12-31.  Do not enter a date higher than 2030-01-01.		
 PR_proteomics_experiment	15	quant_normalization	D0 / D8 Normalization Factor	real	4	0	Y		N			N	text	10		Y	Y	N	Optional Normalization factor for d0/d8 quantitation ratio.  This will not be known until some data analysis has already been performed.  If ratios that should be calibrated to 1:1 appear as 1.2:1, enter 1.2 here to adjust.		
 PR_proteomics_experiment	16	pulldown_protein_name	Pulldown Protein Name	varchar	255	0	Y		N			N	text	50		Y	Y	N	If this is a pulldown experiment, write in the bait protein here.  This will permit one or more experiments to be properly visualized as a network.		
-PR_proteomics_experiment	17	experiment_samples_ids	Experiment Sample IDS	varchar	255	0	Y		N	PR_experiment_samples	experiment_sample_id	N	multilink	4		Y	Y	N	Select all the Samples that were used in this experiment.	SELECT proteomics_sample_id,  sample_tag FROM $TBPR_PROTEOMICS_SAMPLE  WHERE record_status != 'D' ORDER BY sample_tag	
+PR_proteomics_experiment	17	experiment_samples_ids	Experiment Sample IDS	varchar	255	0	Y		N	PR_experiments_samples	experiments_samples_id	N	multilink	4		Y	Y	N	Select all the Samples that were used in this experiment.	SELECT proteomics_sample_id,  sample_tag FROM $TBPR_PROTEOMICS_SAMPLE  WHERE record_status != 'D' ORDER BY sample_tag	
 PR_proteomics_experiment	18	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
 PR_proteomics_experiment	19	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 PR_proteomics_experiment	20	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -835,7 +835,7 @@ PR_BrowseProteinSummary	18	quantitation_constraint	Quantitation constraint						
 PR_BrowseProteinSummary	19	display_options	Display Options									N	multioptionlist	5		Y	Y	N	Various selectable table display options	SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BPS_display_options' ORDER BY sort_order,option_value	
 PR_BrowseProteinSummary	20	row_limit	Maximum Rows									N	text	10		Y	2	N	Limit the numbers of rows displayed.  If not provided, default is 5000 rows.		
 PR_proteomics_sample	1	proteomics_sample_id	Proteomics Sample ID	int	4	0	N		Y			Y				N	N	Y	Proteomics Sample ID		pkDEFAULT
-PR_proteomics_sample	2	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	FK to project.project_id	SELECT project_id, UL.username + ' - ' + proj.name + ' ( ' + RTRIM(CAST(proj.project_id AS CHAR)) + ' )'   AS name FROM $TB_PROJECT proj JOIN $TB_USER_LOGIN UL ON (proj.PI_contact_id = UL.contact_id)  WHERE proj.project_tag IS NOT NULL AND proj.record_status != 'D' ORDER BY UL.username	
+PR_proteomics_sample	2	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	FK to project.project_id	SELECT project_id, UL.username + ' - ' + proj.name + ' ( ' + RTRIM(CAST(proj.project_id AS CHAR)) + ' )'   AS name FROM $TB_PROJECT proj JOIN $TB_USER_LOGIN UL ON (proj.PI_contact_id = UL.contact_id)  WHERE proj.project_tag IS NOT NULL AND proj.record_status != 'D' ORDER BY UL.username	
 PR_proteomics_sample	3	sample_tag	Sample Tag	varchar	50	0	N		N			Y	text	50		Y	Y	N	Sample Name.  Keep it short.  Do not use any strange characters like /\*&$() (e.g. NP Epi 03-123)		
 PR_proteomics_sample	4	full_sample_name	Full Sample Name	varchar	255	0	Y		N			Y	textarea	3		Y	Y	N	Full Sample Name.  A longer, less cryptic name should be placed here.  It should be long enough so that someone else can understand quickly the general idea of the sample. (e.g. Epithelial cells FACS sorted from "normal" prostate tissue from specimen 03-123)		
 PR_proteomics_sample	5	sample_group_name	Sample Group Name	varchar	50	0	Y		N			N	text	50		Y	Y	N	Sample Group Name.  Name used to group together biological replicates		
@@ -849,11 +849,11 @@ PR_proteomics_sample	12	organism_part	Organism Part	varchar	255	0	Y		N			N	text	
 PR_proteomics_sample	13	cell_line	Cell Line	varchar	255	0	Y		N			N	text	50		Y	Y	N	Identifier for the cell line if one was used as a biomaterial		
 PR_proteomics_sample	14	cell_type	Cell Type	varchar	255	0	Y		N			N	text	50		Y	Y	N	Type of cell used as the biomaterial (e.g., epithelial, glial, etc.)		
 PR_proteomics_sample	15	disease_state	Disease State	varchar	255	0	Y		N			N	text	50		Y	Y	N	Name of the pathology diagnosed in the organism from which the biomaterial was derived.  The disease state is "normal" if no disease state has been diagnosed.		
-PR_proteomics_sample	16	rna_template_mass	Starting Amount of RNA (ng)	float	8	0	Y		N			N	text	50		Y	Y	N	Amount of RNA used as input into the labeling reaction.  Measured in nanograms		
+PR_proteomics_sample	16	sample_amount	Amount of Sample	varchar	50	0	Y		N			N	text	50		Y	Y	N	Amount of sample initally supplied.  Example 1ml, 2kg		
 PR_proteomics_sample	17	proteomics_sample_protocol_ids	Proteomics Sample Protocols	varchar	255	0	Y		N	PR_proteomics_sample_protocol	proteomics_sample_protocol_id	N	multilink	4		Y	Y	N	Select all protocols that apply to this biomaterial.  Describe sequence of protocols in the Treatment Description below	SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE P.record_status != 'D' ORDER BY P.name	
 PR_proteomics_sample	18	protocol_deviations	Protocol Deviations	text	16	0	Y		N			N	textarea	4		Y	Y	N	Describe any deviations from the selected protocols		
 PR_proteomics_sample	19	sample_description	Sample Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Describe the biomaterial briefly		
-PR_proteomics_sample	20	sample_preparation_date	Sample Preparation Date	datetime	8	0	Y		N			N	text	30		Y	Y	Y	Date/time the biomaterial was prepared with the described protocols		
+PR_proteomics_sample	20	sample_preparation_date	Sample Preparation Date	datetime	8	0	Y		N			N	text	30		Y	Y	Y	Date/time the biomaterial was prepared with the described protocols YYYYMMDD time format		
 PR_proteomics_sample	21	treatment_description	Treatment Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Describe the treatment of the biomaterials, including mention of the selected protocols		
 PR_proteomics_sample	22	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
 PR_proteomics_sample	23	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	Y	N			
@@ -871,12 +871,12 @@ PR_proteomics_sample_protocol	6	date_modified	Date Record Modified	datetime	8	0	
 PR_proteomics_sample_protocol	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 PR_proteomics_sample_protocol	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 PR_proteomics_sample_protocol	9	record_status	Record Status	char	1	0	N	N	N							N	N				
-PR_experiment_samples	1	experiment_sample_id	Experiment Samples ID	int	4	0	N		Y			Y				N	N		Linking table for experiments and proteomic samples		pkDEFAULT
-PR_experiment_samples	2	proteomics_sample_id	Proteomics Sample ID	int	4	0	N		N	PR_proteomics_sample	proteomics_sample_id	Y				Y	N		Proteomics Sample ID		
-PR_experiment_samples	3	experiment_id	Experiment ID	int	4	0	N		N	PR_proteomics_experiment	experiment_id	Y				N	N		Experiment ID		
-PR_experiment_samples	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PR_experiment_samples	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-PR_experiment_samples	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PR_experiment_samples	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-PR_experiment_samples	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-PR_experiment_samples	9	record_status	Record Status	char	1	0	N	N	N							N	N				
+PR_experiments_samples	1	experiments_samples_id	Experiments Samples ID	int	4	0	N		Y			Y				N	N	Y	Linking table for experiments and proteomic samples		pkDEFAULT
+PR_experiments_samples	2	experiment_id	Proteomic Experiment Name	int	4	0	N		N	PR_proteomics_experiment	experiment_id	Y	optionlist			Y	Y	Y	Proteomics Experiment Name tag	MANUAL	
+PR_experiments_samples	3	proteomics_sample_id	Proteomics Sample Name	int	4	0	N		N	PR_proteomics_sample	proteomics_sample_id	Y	optionlist			Y	Y	Y	Proteomics Sample Name tag	MANUAL	
+PR_experiments_samples	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	Y	N			
+PR_experiments_samples	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
+PR_experiments_samples	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+PR_experiments_samples	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
+PR_experiments_samples	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
+PR_experiments_samples	9	record_status	Record Status	char	1	0	N	N	N							N	N	N			
