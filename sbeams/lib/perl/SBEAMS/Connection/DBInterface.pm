@@ -2567,7 +2567,7 @@ sub transferTable {
 
           #### Else complain and leave as NULL
   	  } else {
-  	    print "Unable to transform column $key having value ".
+  	    print "\nWARNING: Unable to transform column $key having value ".
               "'$current_value'\n";
   	  }
 
@@ -2578,6 +2578,13 @@ sub transferTable {
 
       }
 
+    }
+
+
+    #### If there's no data, squawk and move on
+    unless (%rowdata) {
+      print "\nWARNING: row contains no data.   Nothing to do.\n";
+      next;
     }
 
 
