@@ -148,8 +148,8 @@ IS_stained_slide	7	section_index	Section Index	varchar	50	0	Y		N			Y	text	4		Y	Y
 IS_stained_slide	8	preparation_date	Preparation Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	textdate	20		Y	Y	N	Date this stained slide was prepared		
 IS_stained_slide	9	protocol_id	Preparation Protocol	int	4	0	N		N	protocol	protocol_id	Y	optionlist			Y	Y	Y	Protocol used to prepare and stain this slide	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='Immunostain Slide Preparation' AND P.record_status != 'D' ORDER BY P.name"	
 IS_stained_slide	10	protocol_deviations	Protocol Deviations	text	16	0	Y		N			N	textarea	6		Y	Y	N	Describe any deviations from the intented above protocol to the way this preparation was actually executed		
-IS_stained_slide	11	cancer_amount_cc	Amount of Cancer	real	4	0	Y		N			Y	text	20		Y	Y	N	Amount of cancer (in cc) present in the section		
-IS_stained_slide	12	contact_id	Contact ID	int	4	0	Y		N	contact	contact_id	Y	text	40		Y	N	N	Person analyzing this slide		
+IS_stained_slide	11	cancer_amount_cc	Amount of Cancer	real	4	0	Y		N			N	text	20		Y	Y	N	Amount of cancer (in cc) present in the section		
+IS_stained_slide	12	contact_id	Contact ID	int	4	0	Y		N	contact	contact_id	N	text	40		Y	N	N	Person analyzing this slide		
 IS_stained_slide	13	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 IS_stained_slide	14	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 IS_stained_slide	15	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
@@ -207,9 +207,9 @@ IS_specimen_block	3	specimen_id	Specimen	int	4	0	N		N	IS_specimen	specimen_id	Y	
 IS_specimen_block	4	protocol_id	Preparation Protocol	int	4	0	N		N	protocol	protocol_id	Y	optionlist			Y	Y	N	Protocol used to prepare this specimen block	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='Immunostain Specimen Preparation' AND P.record_status != 'D' ORDER BY P.name"	
 IS_specimen_block	5	acquisition_time	Acquisition Time	real	4	0	Y		N			N	text	20		Y	Y	N	Time in minutes between harvesting specimen and fixing specimen block		
 IS_specimen_block	6	protocol_deviations	Protocol Deviations	text	16	0	Y		N			N	textarea	6		Y	Y	N	Describe any deviations from the intented above protocol to the way this preparation was actually executed	
-IS_specimen_block	7	specimen_block_level	Specimen Block Level	varchar	50	0	Y		N			Y	optionlist			Y	Y	N	Level designator for the specimen block	"SELECT specimen_id, specimen_id FROM $TBIS_SPECIMEN where specimen_id < 11 ORDER BY specimen_id"
-IS_specimen_block	8	anterior_posterior	Anterior or Posterior	varchar	50	0	Y		N			Y	text	40		Y	Y	N	Anterior or Posterior designation for the specimen block	
-IS_specimen_block	9	specimen_block_side	Specimen Block Side	varchar	50	0	Y		N			Y	text	40		Y	Y	N	Left/right side of the individual from this specimen block	
+IS_specimen_block	7	specimen_block_level	Specimen Block Level	varchar	50	0	Y		N			N	text	20		Y	Y	N	Level designator for the specimen block	
+IS_specimen_block	8	anterior_posterior	Anterior or Posterior	varchar	50	0	Y		N			N	text	40		Y	Y	N	Anterior or Posterior designation for the specimen block	
+IS_specimen_block	9	specimen_block_side	Specimen Block Side	varchar	50	0	Y		N			N	text	40		Y	Y	N	Left/right side of the individual from this specimen block	
 IS_specimen_block	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments	
 IS_specimen_block	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
 IS_specimen_block	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N			
