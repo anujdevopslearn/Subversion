@@ -19,8 +19,6 @@
 ?>
 <td background="<?php echo $SBEAMS ?>/images/plaintop.jpg">
 <center><H1><?php echo $TITLE ?></H1></center>
-&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;<a href="/projects/">PROJECTS</a>&nbsp;]
-&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;<a href="<?php echo $SBEAMS ?>/">SBEAMS</a>&nbsp;]
 </td></tr>
 <?php
   }
