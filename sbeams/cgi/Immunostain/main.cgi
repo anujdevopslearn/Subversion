@@ -551,7 +551,8 @@ sub processAntibody
 	{ 			
 			$includeClause = $parameters{selection};
 	}
-	my $limitClause  = $parameters{buildClause};
+	my $limitClause;
+	$limitClause  = " and " .$parameters{buildClause} if $parameters{buildClause};
 	
 	my $query = "select ab.antibody_name,ab.antibody_id,
 	ss.stain_name,
@@ -574,8 +575,8 @@ sub processAntibody
 	left join $TBIS_SPECIMEN s on sb.specimen_id = s.specimen_id 
 	left join $TBIS_TISSUE_TYPE tt on s.tissue_type_id = tt.tissue_type_id
 	left join sbeams.dbo.organism sbo on s.organism_id = sbo.organism_id
-	where ab.antibody_id  in ( $includeClause ) and $limitClause order by ab.sort_order, ct.sort_order";
-	
+	where ab.antibody_id  in ( $includeClause ) $limitClause order by ab.sort_order, ct.sort_order";
+	print "$query<br>";
 	$sbeams->fetchResultSet(sql_query=>$query,resultset_ref=>$resultset_ref,);
     
 	my $columHashRef = $resultset_ref->{column_hash_ref};
