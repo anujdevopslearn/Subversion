@@ -321,6 +321,7 @@ sub start_element {
       index => 1,
       organism => 1,
       alt_pos_to_neg_ratio => 1,
+      pound_subst_peptide_sequence => 1,
     );
     foreach my $attr (keys(%attrs_to_drop)) {
       if (exists($attrs{$attr})) {
