@@ -2489,15 +2489,34 @@ sub transferTable {
 
     while ( ($key,$value) = each %{$column_map_ref} ) {
       if (defined($row->[$key])) {
-  	if ($transform_map_ref->{$key}) {
+
+        #### If there's a mapping for this column
+  	if (defined($transform_map_ref->{$key})) {
   	  my $current_value = $row->[$key];
-  	  my $mapped_value = $transform_map_ref->{$key}->{$current_value};
+
+          #### Determine if we need to remap this column and if so, do it
+          my $map_ref = $transform_map_ref->{$key};
+          my $mapped_value;
+          #### If the mapping is a simple hash
+          if ($map_ref =~ /HASH/) {
+            $mapped_value = $map_ref->{$current_value};
+          } elsif ($map_ref =~ /CODE/) {
+            $mapped_value = &$map_ref($current_value);
+          } else {
+            print "Unknown mapping type ",$map_ref,"\n";
+          }
+
+          #### If the mapping produced a result
   	  if (defined($mapped_value)) {
   	    $rowdata{$value} = $mapped_value;
+
+          #### Else complain and leave as NULL
   	  } else {
   	    print "Unable to transform column $key having value ".
               "'$current_value'\n";
   	  }
+
+        #### Otherwise use as is
   	} else {
   	  $rowdata{$value} = $row->[$key];
   	}
