@@ -1994,7 +1994,7 @@ sub displayResultSetControls {
 
     #### For certain types of resultsets, we'll allow a cytoscape trigger
     my $cytoscape_url_prefix = "$CYTOSCAPE_URL/sbeams";
-    my $cytotest_url_prefix = "$CYTOSCAPE_URL/sbeamsTest";
+    my $cytotest_url_prefix = "http://hazel.systemsbiology.net:8080/cytoscape/sbeamsTest";
     if ($resultset_ref->{column_list_ref}->[0] eq 'interaction_id') {
       print "<BR>\n<A HREF=\"${cytoscape_url_prefix}?m=interactions&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
       print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<A HREF=\"${cytoscape_url_prefix}?m=NIDA&rs=$rs_params{set_name}\">[NIDA]</A>";
