@@ -154,7 +154,7 @@ if ($_server_port) {
 
 #### Otherwise, we're probably not coming through HTTP, so just set it
 } else {
-  $SERVER_BASE_DIR = 'http://$HOSTNAME';
+  $SERVER_BASE_DIR = "http://$HOSTNAME";
 }
 
 
