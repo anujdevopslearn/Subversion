@@ -111,7 +111,7 @@ sub returnTableInfo {
             return qq~
 		SELECT I.*
 		  FROM $TBIN_INTERACTION I
-		 --WHERE I.record_status!='D'
+		 WHERE I.record_status!='D'
             ~;
         }
 
