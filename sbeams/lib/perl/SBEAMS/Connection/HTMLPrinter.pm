@@ -56,10 +56,14 @@ sub printPageHeader {
     ~;
 
 
+    #### Only send Javascript functions if the full header desired
     unless ($minimal_header eq "YES") {
         $self->printJavascriptFunctions();
-        $self->printStyleSheet();
     }
+
+
+    #### Send the style sheet
+    $self->printStyleSheet();
 
 
     #### Determine the Title bar background decoration
