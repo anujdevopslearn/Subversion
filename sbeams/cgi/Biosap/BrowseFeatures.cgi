@@ -504,9 +504,9 @@ sub printEntryForm {
       if ($parameters{biosequence_name_constraint}) {
         my @tmparray = split(/[\n\r]+/,$parameters{biosequence_name_constraint});
         foreach $element (@tmparray) {
-          $element =~ s/'/''/g;
+          $element =~ s/\'/\'\'/g;
           $gene_constraints .= "OR biosequence_name LIKE '$element'\n"
-            if ($element);
+	      if ($element);
         }
         $gene_constraints =~ s/OR/WHERE/;
       }
@@ -558,7 +558,7 @@ sub printEntryForm {
       }
 
       #### Set flag to display in tab separated value format
-      if ( $parameters{display_options} =~ /TSV/ ) {
+      if ( $parameters{display_options} =~ /TSV/i ) {
         $tsv_output = 1;
       }
 
