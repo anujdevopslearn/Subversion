@@ -83,8 +83,8 @@ Options:
                        there are a bunch of .domains files to load
   --mamSum_search_results_summary_file   Full path name of a file from which
                        to load the mamSum search results
-  --InterProScan_search_results_summary_file   Full path name of a file from which
-                       to load the InterProScan search results
+  --InterProScan_search_results_summary_file   Full path name of a file
+                       from which to load the InterProScan search results
 
  e.g.:  $PROG_NAME --check_status
 
@@ -828,6 +828,18 @@ sub loadBiosequence {
       {$rowdata_ref->{biosequence_name}}->{sec_mem_class}
       if (defined($n_transmembrane_regions->
         {$rowdata_ref->{biosequence_name}}->{sec_mem_class}));
+
+    if (defined($n_transmembrane_regions->
+		{$rowdata_ref->{biosequence_name}}->{has_signal_peptide})) {
+      $rowdata{has_signal_peptide} = $n_transmembrane_regions->
+        {$rowdata_ref->{biosequence_name}}->{has_signal_peptide};
+      $rowdata{has_signal_peptide_probability} = $n_transmembrane_regions->
+        {$rowdata_ref->{biosequence_name}}->{has_signal_peptide_probability};
+      $rowdata{signal_peptide_length} = $n_transmembrane_regions->
+        {$rowdata_ref->{biosequence_name}}->{signal_peptide_length};
+      $rowdata{signal_peptide_is_cleaved} = $n_transmembrane_regions->
+        {$rowdata_ref->{biosequence_name}}->{signal_peptide_is_cleaved};
+    }
 
 
     #### Insert or update the row
@@ -1737,15 +1749,33 @@ sub readNTransmembraneRegionsFile {
     @columns = split("\t",$line);
     $biosequence_name = $columns[0];
     my %properties;
+
+    #### Extract the number of transmembrane regions
     if ($line =~/tm: (\d+)/) {
       $properties{n_tmm} = $1;
     }
+    #### Extract the protein class
     if ($line =~/sec\/mem-class: (.+?)\s/) {
       $properties{sec_mem_class} = $1;
     }
+    #### Extract the topology string
     if ($columns[5]) {
       $properties{topology} = $columns[5];
     }
+
+    #### Extract the signal peptide information
+    if ($line =~ /sigP:/) {
+      if ($line =~ /sigP:\s*(\d+)\s([YN])\s([\d\.]+)\s([YN])/) {
+	$properties{signal_peptide_length} = $1;
+	$properties{signal_peptide_is_cleaved} = $2;
+	$properties{has_signal_peptide_probability} = $3;
+	$properties{has_signal_peptide} = $4;
+      } else {
+	print "ERROR: Unable to parse signal pepetide data ".
+	  $columns[3]."\n";
+      }
+    }
+
 
     #### If we're also currently have a rosetta lookup, then try to do
     #### a rosetta name lookup
