@@ -449,6 +449,7 @@ sub writeSchema {
   my $drop_constraints_buffer = "";
   my $drop_tables_buffer = "";
   my $drop_sequences_buffer = "";
+  my $drop_triggers_buffer = "";
   my $grants_buffer = "";
   my $error_buffer = "";
 
@@ -470,6 +471,8 @@ sub writeSchema {
       my $primary_key_constraint = "";
       my $create_sequence_statement;
       my $drop_sequence_statement;
+      my $create_trigger_statement;
+      my $drop_trigger_statement;
 
       #### Loop over all columns
       my @column_list = @{$table_columns->{$table_name}->{__ordered_list}};
@@ -519,11 +522,20 @@ sub writeSchema {
         if ($result->{primary_key_constraint}) {
           $primary_key_constraint .= $result->{primary_key_constraint};
         }
+
         #### Remember the SEQUENCE statements if one shows up
         if ($result->{create_sequence_statement}) {
           $create_sequence_statement .= $result->{create_sequence_statement}.
             "$SB";
           $drop_sequences_buffer .= $result->{drop_sequence_statement}.
+            "$SB";
+        }
+
+        #### Remember the TRIGGER statements if one shows up
+        if ($result->{create_trigger_statement}) {
+          $create_trigger_statement .= $result->{create_trigger_statement}.
+            "$LB";
+          $drop_triggers_buffer .= $result->{drop_trigger_statement}.
             "$SB";
         }
 
@@ -546,6 +558,8 @@ sub writeSchema {
       $create_tables_buffer .= $create_sequence_statement
         if ($create_sequence_statement);
       $create_tables_buffer .= $line_buffer;
+      $create_tables_buffer .= $create_trigger_statement
+        if ($create_trigger_statement);
 
       if ($destination_type eq 'pgsql') {
         $grants_buffer .= "GRANT ALL ON $table_name TO sbeams$SB";
@@ -603,6 +617,8 @@ sub writeSchema {
     die("File '$filename' cannot be opened");
   }
 
+  print OUTFILE "$LB$LB$drop_triggers_buffer$LB"
+    if ($drop_triggers_buffer);
   print OUTFILE "$LB$LB$drop_tables_buffer$LB";
   print OUTFILE "$LB$LB$drop_sequences_buffer$LB"
     if ($drop_sequences_buffer);
@@ -660,6 +676,20 @@ sub generateColumnDefinition {
     || die "destination_type not passed";
 
 
+  #### Do some adjustment of the datatype names.  This should be done better
+  if ($destination_type eq 'oracle') {
+    if ($datatype eq 'text') {
+      $datatype = 'varchar2(4000)'
+    } elsif ($datatype eq 'datetime') {
+      $datatype = 'date'
+    }
+    #### I guess "comment" is a reserved word in Oracle???
+    if ($column_name eq 'comment') {
+       $column_name = 'comments'
+    }
+  }
+
+
   #### Define the columns that need to be qualified with $scale
   my %is_single_paren = (varchar=>1,char=>1);
 
@@ -681,15 +711,20 @@ sub generateColumnDefinition {
   my $primary_key_constraint;
   my $create_sequence_statement;
   my $drop_sequence_statement;
+  my $create_trigger_statement;
+  my $drop_trigger_statement;
   if (uc($is_auto_inc) =~ /Y/) {
+
     if ($destination_type eq 'mssql') {
       $line .= "$datatype IDENTITY";
+
     } elsif ($destination_type eq 'mysql') {
       $line .= "$datatype AUTO_INCREMENT";
+
     } elsif ($destination_type eq 'pgsql') {
       my $sequence_name = "seq_${table_name}_${column_name}";
-      #### PostgreSQL *#&%$ingly truncates SEQUENCES to 31 characters
-      #### at this writing
+      #### PostgreSQL truncates SEQUENCES to 31 characters
+      #### at this writing so truncate the name here too
       $sequence_name = substr($sequence_name,0,31);
       $line .= "$datatype DEFAULT NEXTVAL('$sequence_name')";
       $create_sequence_statement =
@@ -697,6 +732,29 @@ sub generateColumnDefinition {
         "GRANT ALL ON $sequence_name TO sbeams";
       $drop_sequence_statement =
         "DROP SEQUENCE $sequence_name";
+
+    } elsif ($destination_type eq 'oracle') {
+      my $sequence_name = "seq_${table_name}_${column_name}";
+      #### Maximum length for Oracle sequence name is 30
+      $sequence_name = substr($sequence_name,0,30);
+      $line .= "int";
+      $create_sequence_statement =
+        "CREATE SEQUENCE $sequence_name \n".
+        "   minvalue 1  maxvalue 999999999999 nocycle;\n".
+        "GRANT ALL ON $sequence_name TO sbeams";
+      $drop_sequence_statement =
+        "DROP SEQUENCE $sequence_name";
+      $create_trigger_statement =
+        "CREATE TRIGGER ${table_name}_BI\n".
+        "   BEFORE INSERT ON ${table_name}\n". 
+        "   FOR EACH ROW BEGIN\n".
+        "      select $sequence_name.nextval\n".
+        "      into :new.${column_name} from dual;\n".
+        "   END;\n".
+        "/\n";
+      $drop_trigger_statement =
+        "DROP TRIGGER ${table_name}_BI\n";
+
     } else {
       $line .= "SERIAL";
     }
@@ -709,7 +767,7 @@ sub generateColumnDefinition {
     $primary_key_constraint = "PRIMARY KEY ($column_name)";
     $line .= "$datatype";
 
-  #### Otherwise just pump it out (Needs a function to xlate FIXME)
+  #### Otherwise just write it out
   } else {
     $line .= "$datatype";
   }
@@ -720,24 +778,46 @@ sub generateColumnDefinition {
     $line .= "($scale)";
   }
 
-  #### Set NULLability
-  if (uc($nullable) =~ /Y/) {
-    $line .= " NULL";
-  } else {
-    $line .= " NOT NULL";
+  ####  Oracle requires default value before NULLability so
+  ####  reoder following to section for oracle
+  if ($destination_type eq 'oracle') {
+    #### Set a DEFAULT value if any
+    if ($default_value) {
+      if ($default_value eq 'CURRENT_TIMESTAMP') {
+          $line .= " DEFAULT sysdate";
+      } else {
+        $line .= " DEFAULT '$default_value'";
+      }
+    }
+
+    #### Set NULLability
+    if (uc($nullable) =~ /Y/) {
+      $line .= " NULL";
+    } else {
+      $line .= " NOT NULL";
+    }
   }
 
-
-  #### Set a DEFAULT value if any
-  if ($default_value) {
-    if ($default_value eq 'CURRENT_TIMESTAMP') {
-      if ($destination_type eq 'mysql') {
-        $line .= " /* DEFAULT $default_value (not supported) */";
-      } else {
-        $line .= " DEFAULT $default_value";
-      }
+  #### For other databases NULL before DEFAULT. Maybe others allow Oracle way?
+  else {
+    #### Set NULLability
+    if (uc($nullable) =~ /Y/) {
+      $line .= " NULL";
     } else {
-      $line .= " DEFAULT '$default_value'";
+      $line .= " NOT NULL";
+    }
+
+    #### Set a DEFAULT value if any
+    if ($default_value) {
+      if ($default_value eq 'CURRENT_TIMESTAMP') {
+        if ($destination_type eq 'mysql') {
+          $line .= " /* DEFAULT $default_value (not supported) */";
+        } else {
+          $line .= " DEFAULT $default_value";
+        }
+      } else {
+        $line .= " DEFAULT '$default_value'";
+      }
     }
   }
 
@@ -748,12 +828,17 @@ sub generateColumnDefinition {
   my $drop_reference_constraint;
   if ($fk_table && $fk_column) {
     #$line .= " /* REFERENCES $fk_table($fk_column) */";
+    my $constraint_name =  "fk_${table_name}_${column_name}"; 
+    #### Oracle has constraint name maximum length of 30
+    $constraint_name = 'fk_'.substr(${table_name},1,13).
+                         '_'.substr(${column_name},1,13)
+          if ($destination_type eq 'oracle') ;
     $add_reference_constraint = "ALTER TABLE $table_name ADD CONSTRAINT ".
-      "fk_${table_name}_${column_name} FOREIGN KEY ($column_name) ".
-      "REFERENCES $fk_table($fk_column)";
+        "$constraint_name FOREIGN KEY ($column_name) ".
+        "REFERENCES $fk_table($fk_column)";
 
     $drop_reference_constraint = "ALTER TABLE $table_name DROP CONSTRAINT ".
-      "fk_${table_name}_${column_name}";
+      "$constraint_name";
 
     #### MySQL 3.23.x doesn't support references yet
     $drop_reference_constraint = "" if ($destination_type eq 'mysql');
@@ -766,6 +851,8 @@ sub generateColumnDefinition {
   $result->{primary_key_constraint} = $primary_key_constraint;
   $result->{create_sequence_statement} = $create_sequence_statement;
   $result->{drop_sequence_statement} = $drop_sequence_statement;
+  $result->{create_trigger_statement} = $create_trigger_statement;
+  $result->{drop_trigger_statement} = $drop_trigger_statement;
   $result->{success} = 'Y';
 
 
