@@ -67,9 +67,21 @@ use vars qw(@ISA @EXPORT
     $TBAPD_PEPTIDE_PROPERTY_TYPE
 
     $TBPR_POSSIBLE_PEPTIDE
+
     $TBPR_PUBLICATION_CATEGORY
     $TBPR_PUBLICATION_RATING
     $TBPR_PUBLICATION
+
+    $TBPR_PROTEIN_SUMMARY
+    $TBPR_PROTEIN_SUMMARY_HEADER
+    $TBPR_PROTEIN_SUMMARY_DATA_FILTER
+    $TBPR_PROTEIN_GROUP
+    $TBPR_PROTEIN
+    $TBPR_INDISTINGUISHABLE_PROTEIN
+    $TBPR_PEPTIDE
+    $TBPR_PEPTIDE_PARENT_PROTEIN
+    $TBPR_INDISTINGUISHABLE_PEPTIDE
+    $TBPR_SUMMARY_QUANTITIATION
 
 );
 
@@ -122,9 +134,21 @@ require Exporter;
     $TBAPD_PEPTIDE_PROPERTY_TYPE
 
     $TBPR_POSSIBLE_PEPTIDE
+
     $TBPR_PUBLICATION_CATEGORY
     $TBPR_PUBLICATION_RATING
     $TBPR_PUBLICATION
+
+    $TBPR_PROTEIN_SUMMARY
+    $TBPR_PROTEIN_SUMMARY_HEADER
+    $TBPR_PROTEIN_SUMMARY_DATA_FILTER
+    $TBPR_PROTEIN_GROUP
+    $TBPR_PROTEIN
+    $TBPR_INDISTINGUISHABLE_PROTEIN
+    $TBPR_PEPTIDE
+    $TBPR_PEPTIDE_PARENT_PROTEIN
+    $TBPR_INDISTINGUISHABLE_PEPTIDE
+    $TBPR_SUMMARY_QUANTITIATION
 
 );
 
@@ -178,9 +202,22 @@ $TBAPD_MODIFIED_PEPTIDE_PROPERTY  = "APD.dbo.modified_peptide_property";
 $TBAPD_PEPTIDE_PROPERTY_TYPE      = "APD.dbo.peptide_property_type";
 
 $TBPR_POSSIBLE_PEPTIDE            = "${mod}possible_peptide";
+
 $TBPR_PUBLICATION_CATEGORY        = "${mod}publication_category";
 $TBPR_PUBLICATION_RATING          = "${mod}publication_rating";
 $TBPR_PUBLICATION                 = "${mod}publication";
+
+$TBPR_PROTEIN_SUMMARY             = "${mod}protein_summary";
+$TBPR_PROTEIN_SUMMARY_HEADER      = "${mod}protein_summary_header";
+$TBPR_PROTEIN_SUMMARY_DATA_FILTER = "${mod}protein_summary_data_filter";
+$TBPR_PROTEIN_GROUP               = "${mod}protein_group";
+$TBPR_PROTEIN                     = "${mod}protein";
+$TBPR_INDISTINGUISHABLE_PROTEIN   = "${mod}indistinguishable_protein";
+$TBPR_PEPTIDE                     = "${mod}peptide";
+$TBPR_PEPTIDE_PARENT_PROTEIN      = "${mod}peptide_parent_protein";
+$TBPR_INDISTINGUISHABLE_PEPTIDE   = "${mod}indistinguishable_peptide";
+$TBPR_SUMMARY_QUANTITIATION       = "${mod}summary_quantitation";
+
 
 
 
