@@ -1747,6 +1747,7 @@ sub specialParsing {
       $biosequence_set_name eq "Yeast ORFs Database" ||
       $biosequence_set_name eq "Yeast ORFs Common Name Database" ||
       $biosequence_set_name eq "Yeast ORF Proteins" ||
+      $biosequence_set_name eq "Yeast ORFs Database 2003-12-17" ||
       $biosequence_set_name eq "Yeast ORFs Database 200210") {
     if ($rowdata_ref->{biosequence_desc} =~ /([\w\-\:]+)\s([\w\-\:]+), .+/ ) {
       if ($biosequence_set_name eq "Yeast ORFs Common Name Database" ||
