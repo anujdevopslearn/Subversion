@@ -105,6 +105,8 @@ Options:
                       or fractions.  Use --delete_experiment for that
   --delete_experiment   Perform a delete of fractions, spectra, and the
                       experiment itself for the specified experiment.
+  --delete_fraction   Perform a delete of the specified fraction,
+                      its spectra, searches, and search_hits.
 
  e.g.:  $PROG_NAME --list_all
         $PROG_NAME --check --experiment_tag=rafapr
@@ -125,6 +127,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
   "update_from_summary_files","update_search","update_probabilities",
   "update_timing_info","gradient_program_id:i","column_delay:i",
   "cleanup_archive","delete_search_batch","delete_experiment",
+  "delete_fraction:s",
   )) {
   print "$USAGE";
   exit;
@@ -192,6 +195,7 @@ sub handleRequest {
   my $cleanup_archive = $OPTIONS{"cleanup_archive"} || '';
   my $delete_search_batch = $OPTIONS{"delete_search_batch"} || '';
   my $delete_experiment = $OPTIONS{"delete_experiment"} || '';
+  my $delete_fraction = $OPTIONS{"delete_fraction"} || '';
   my $experiment_tag = $OPTIONS{"experiment_tag"} || '';
   my $search_subdir = $OPTIONS{"search_subdir"} || '';
   my $file_prefix = $OPTIONS{"file_prefix"} || '';
@@ -402,6 +406,18 @@ sub handleRequest {
     }
 
 
+    #### If user asked for delete_fraction, do it
+    if ($delete_fraction) {
+    print "Deleting fraction '$delete_fraction' in experiment ".
+      "'$experiment_tag' in the database ".
+      "(but not the files)...\n\n";
+      $result = deleteFraction(
+        experiment_tag=>$experiment_tag,
+        fraction_tag=>$delete_fraction,
+      );
+      print "\n";
+    }
+
   } # endforeach experiment
 
 
@@ -568,12 +584,23 @@ sub loadProteomicsExperiment {
   #### Define a hash to hold the fraction_id's
   my %fraction_ids;
 
+  #### Create a has to hold the lower case versions of fraction_tags
+  my %lower_case_fractions;
+
 
   #### For each @fraction, check to see if it's already in the database
   #### and if not, INSERT it
   my $fraction_id;
   my @returned_fraction_ids;
   foreach $element (@fractions) {
+
+    #### Check to make sure there isn't some different-case version
+    if (exists($lower_case_fractions{lc($element)})) {
+        print "ERROR: There is already another fraction with this same name ".
+	  "but with different capitalization in this experiment.  Since ".
+	  "most RDBMS's are case-insensitive, this cannot be.\n";
+        next;
+      }
 
     #### Determine how many fractions respond to this name
     $sql="SELECT fraction_id\n".
@@ -584,6 +611,7 @@ sub loadProteomicsExperiment {
 
     #### If none, then we need to add this fraction
     if (! @returned_fraction_ids) {
+      $lower_case_fractions{lc($element)} = 1;
       if ($check_status) {
         print "Entry for faction '$element' needs to be added\n";
         next;
@@ -2595,6 +2623,60 @@ sub deleteExperiment {
     table_child_relationship => \%table_child_relationship,
     table_PK_column_names => \%table_PK_column_names,
     delete_PKs => [ $proteomics_experiment_id ],
+    delete_batch => 10000,
+    database => $DBPREFIX{Proteomics},
+    verbose => $VERBOSE,
+    testonly => $TESTONLY,
+  );
+
+
+}
+###############################################################################
+# deleteFraction
+###############################################################################
+sub deleteFraction {
+  my %args = @_;
+  my $SUB_NAME = 'deleteFraction';
+
+  #### Decode the argument list
+  my $experiment_tag = $args{'experiment_tag'}
+   || die "ERROR[$SUB_NAME]: experiment_tag not passed";
+  my $fraction_tag = $args{'fraction_tag'}
+   || die "ERROR[$SUB_NAME]: fraction_tag not passed";
+
+
+  #### Try to find this fraction in database
+  my $sql = qq~
+     SELECT fraction_id
+       FROM $TBPR_PROTEOMICS_EXPERIMENT PE
+       JOIN $TBPR_FRACTION F ON ( PE.experiment_id = F.experiment_id )
+      WHERE experiment_tag = '$experiment_tag'
+        AND fraction_tag = '$fraction_tag'
+  ~;
+  my ($fraction_id) = $sbeams->selectOneColumn($sql);
+  unless ($fraction_id) {
+    print "\nERROR: Unable to find fraction tag '$fraction_tag'.\n".
+          "       This fraction must already exist in the database\n\n";
+    return;
+  }
+
+
+  #### Define the inheritance path:
+  ####  (C) means Child that directly links to the parent
+  ####  (PKLC) means a PKeyLess Child that should be deleted by it parental key
+  ####  (A) means Association from parent to this table and requires delete
+  ####  (L) means Linking table from child to parent
+  my %table_child_relationship = (
+    fraction => 'msms_spectrum(C)',
+    msms_spectrum => 'msms_spectrum_peak(PKLC),search(C)',
+    search => 'search_hit(C)',
+    search_hit => 'quantitation(C),search_hit_protein(C)',
+  );
+
+  my $result = $sbeams->deleteRecordsAndChildren(
+    table_name => 'fraction',
+    table_child_relationship => \%table_child_relationship,
+    delete_PKs => [ $fraction_id ],
     delete_batch => 10000,
     database => $DBPREFIX{Proteomics},
     verbose => $VERBOSE,
