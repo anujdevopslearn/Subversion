@@ -791,7 +791,6 @@ sub postProcessResultset {
     for (my $i=$startrow; $i<=$endrow; $i++) {
       if ($rows[$i]->[$match_type_column_index] eq 'pfam' &&
 	  $rows[$i]->[$e_value_column_index] <= .1) {
-
         #### Get the domain_match_index
         my $domain_match_index = $rows[$i]->[$domain_match_index_column_index];
         #### If it's empty, then, assign it a temporary one
@@ -808,12 +807,12 @@ sub postProcessResultset {
 
         #### If we already have a pfam result for this domain, squawk
         if (exists($pfam_domains{$domain_match_index})) {
-          print "WARNING: duplicate pfam hits for $biosequence_name".
+          print "WARNING: duplicate pfam hits for $biosequence_name ".
             "($domain_match_index)<BR>\n";
 
         #### If we already have a pdbblast result for this domain, drop this
         } elsif (exists($pdbblast_domains{$domain_match_index})) {
-          print "INFO: We have pfam hit where pdbblast already exists".
+          print "INFO: We have pfam hit where pdbblast already exists ".
             "for $biosequence_name($domain_match_index)<BR>\n" if ($VERBOSE);
           $attrs{new_row} = scalar(@new_data_array);
           push(@new_data_array,$rows[$i]);
@@ -822,44 +821,49 @@ sub postProcessResultset {
 
         #### Else we probably have a new one, but a couple more checks apply
         } else {
-
           #### If this is a PFAM Search entry with no index, then see if
           #### there is a pdbblast entry in the same region of sequence
+          my $found_a_match = 0;
           if ($domain_match_index =~ /\?/) {
             foreach my $index ( keys(%pdbblast_domains) ) {
-
               #### See if they overlap at all
               if ( ( $rows[$i]->[$query_start_column_index] >= $pdbblast_domains{$index}->{query_start} &&
                      $rows[$i]->[$query_start_column_index] < $pdbblast_domains{$index}->{query_end} ) ||
                    ( $rows[$i]->[$query_end_column_index] <= $pdbblast_domains{$index}->{query_end} &&
-                     $rows[$i]->[$query_end_column_index] > $pdbblast_domains{$index}->{query_start} ) ) {
-                print "INFO: We have a pfam hit where pdbblast already exists".
+                     $rows[$i]->[$query_end_column_index] > $pdbblast_domains{$index}->{query_start} ) &&
+                   $found_a_match == 0 ) {
+                print "INFO: We have a pfam hit where pdbblast already exists ".
                   "for $biosequence_name($domain_match_index)<BR>\n" if ($VERBOSE);
                 $attrs{new_row} = scalar(@new_data_array);
                 push(@new_data_array,$rows[$i]);
                 $pfam_domains{$domain_match_index} = \%attrs;
 		$pfam_domains++;
-
-              } else {
-                $attrs{new_row} = scalar(@new_data_array);
-                push(@new_data_array,$rows[$i]);
-                $pfam_domains{$domain_match_index} = \%attrs;
-		$pfam_domains++;
-		$pfam_best_domains++;
+		$found_a_match = 1;
               }
+
             }
+
+	    if ($found_a_match == 0) {
+	      $attrs{new_row} = scalar(@new_data_array);
+	      push(@new_data_array,$rows[$i]);
+	      $pfam_domains{$domain_match_index} = \%attrs;
+	      $pfam_domains++;
+	      $pfam_best_domains++;
+	    }
 
 
           #### Otherwise, this must be a Ginzu pfam hit.  Make sure there isn't
           #### already a PFAM Search pfam hit.  If so, replace that with this.
           } else {
+	    my $found_a_match = 0;
             foreach my $index ( keys(%pfam_domains) ) {
 
               #### See if they overlap at all
               if ( ( $rows[$i]->[$query_start_column_index] >= $pfam_domains{$index}->{query_start} &&
                      $rows[$i]->[$query_start_column_index] < $pfam_domains{$index}->{query_end} ) ||
                    ( $rows[$i]->[$query_end_column_index] <= $pfam_domains{$index}->{query_end} &&
-                     $rows[$i]->[$query_end_column_index] > $pfam_domains{$index}->{query_start} ) ) {
+                     $rows[$i]->[$query_end_column_index] > $pfam_domains{$index}->{query_start} ) &&
+		     $found_a_match == 0 ) {
                 print "INFO: Overlapping Ginzu pfam and PFAM Search pfam hit".
                   "for $biosequence_name($domain_match_index).  Keeping only Ginzu result.<BR>\n" if ($VERBOSE);
 		#### Replace the previous row
@@ -867,15 +871,20 @@ sub postProcessResultset {
                 #### Delete the previous entry in the hash and add this one
                 delete($pfam_domains{$index});
                 $pfam_domains{$domain_match_index} = \%attrs;
+		$found_a_match = 1;
 
-              } else {
-                push(@new_data_array,$rows[$i]);
-                $pfam_domains{$domain_match_index} = \%attrs;
-		$pfam_domains++;
-		$pfam_best_domains++;
               }
 
             }
+
+
+	    if ($found_a_match == 0) {
+	      push(@new_data_array,$rows[$i]);
+	      $pfam_domains{$domain_match_index} = \%attrs;
+	      $pfam_domains++;
+	      $pfam_best_domains++;
+	    }
+
 
           }
 
@@ -1013,7 +1022,7 @@ sub postProcessResultset {
   $buf.="Number of good Rosetta hit domains without PDB or PFAM hits: $stats{rosetta_best_domains}\n";
   $buf.="Total number of well identified domains: ".($stats{pbdblast_domains}+$stats{pfam_best_domains}+$stats{rosetta_best_domains})."\n";
 
-  $buf.="Number of good PFAM hits regardless of PDB hits: $stats{pfam_domains} (often more than one match per domain!)\n";
+  $buf.="Number of good PFAM hits regardless of PDB hits: $stats{pfam_domains} (sometimes more than one match per domain!)\n";
   $buf.="Number of good Rosetta hits regardless of PDB or PFAM hits: $stats{rosetta_success_domains}\n";
   $buf.="\n\n";
 
