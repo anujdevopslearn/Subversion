@@ -796,7 +796,7 @@ sub handle_request {
 	       MIN(BS.biosequence_id) AS 'min_biosequence_id'
 	  INTO #tmpBSids
 	  FROM $TBPR_BIOSEQUENCE BS
-	  JOIN $TBPR_SEARCH_BATCH SB
+	 INNER JOIN $TBPR_SEARCH_BATCH SB
 	       ON ( BS.biosequence_set_id = SB.biosequence_set_id )
           $GO_join
 	 WHERE 1 = 1
@@ -819,16 +819,16 @@ sub handle_request {
 	SELECT SB.search_batch_id,SH.reference,$peptide_column$count_column
 	  INTO #tmpAnnBSids
 	  FROM $TBPR_SEARCH_HIT SH
-	  JOIN $TBPR_SEARCH S ON ( SH.search_id = S.search_id )
-	  JOIN $TBPR_MSMS_SPECTRUM MSS
+	 INNER JOIN $TBPR_SEARCH S ON ( SH.search_id = S.search_id )
+	 INNER JOIN $TBPR_MSMS_SPECTRUM MSS
                ON ( S.msms_spectrum_id = MSS.msms_spectrum_id )
 	  LEFT JOIN $TBPR_SEARCH_HIT_ANNOTATION SHA
 	       ON ( SH.search_hit_id = SHA.search_hit_id )
 	  LEFT JOIN $TBPR_QUANTITATION QUAN 
                ON ( SH.search_hit_id = QUAN.search_hit_id )
-	  JOIN $TBPR_SEARCH_BATCH SB
+	 INNER JOIN $TBPR_SEARCH_BATCH SB
 	       ON ( S.search_batch_id = SB.search_batch_id )
-	  JOIN $TBPR_BIOSEQUENCE BS
+	 INNER JOIN $TBPR_BIOSEQUENCE BS
 	       ON ( SB.biosequence_set_id = BS.biosequence_set_id
 	       AND SH.reference = BS.biosequence_name )
 	 WHERE 1 = 1
@@ -861,7 +861,7 @@ sub handle_request {
 	  FROM #tmpBSids tBS
 	  LEFT JOIN #tmpAnnBSids tABS
                ON ( tBS.biosequence_name = tABS.reference )
-	  JOIN $TBPR_BIOSEQUENCE BS
+	 INNER JOIN $TBPR_BIOSEQUENCE BS
                ON ( tBS.min_biosequence_id = BS.biosequence_id )
           LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
           $GO_join
@@ -1070,8 +1070,8 @@ sub getExperimentNames {
   $sql = qq~
       SELECT search_batch_id,experiment_tag,set_tag
         FROM $TBPR_PROTEOMICS_EXPERIMENT PE
-        JOIN $TBPR_SEARCH_BATCH SB ON ( PE.experiment_id = SB.experiment_id )
-        JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
+       INNER JOIN $TBPR_SEARCH_BATCH SB ON ( PE.experiment_id = SB.experiment_id )
+       INNER JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
        WHERE search_batch_id IN ( $search_batch_ids )
   ~;
   my @rows = $sbeams->selectSeveralColumns($sql);

@@ -157,7 +157,7 @@ sub handle_request {
 	SELECT UC.project_id,P.name,P.project_tag,P.project_status,
                P.PI_contact_id
 	  FROM $TB_USER_CONTEXT UC
-	  JOIN $TB_PROJECT P ON ( UC.project_id = P.project_id )
+	 INNER JOIN $TB_PROJECT P ON ( UC.project_id = P.project_id )
 	 WHERE UC.contact_id = '$current_contact_id'
   ~;
   @rows = $sbeams->selectSeveralColumns($sql);
@@ -195,7 +195,7 @@ sub handle_request {
                MIN(CASE WHEN UWG.contact_id IS NULL THEN NULL ELSE GPP.privilege_id END) AS "best_group_privilege_id",
                MIN(UPP.privilege_id) AS "best_user_privilege_id"
 	  FROM $TB_PROJECT P
-	  JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
+	 INNER JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
 	  LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
 	       ON ( P.project_id = UPP.project_id
 	            AND UPP.contact_id='$current_contact_id' )
@@ -253,7 +253,7 @@ sub handle_request {
       $sql = qq~
 	SELECT SB.search_batch_id,SB.search_batch_subdir,BSS.set_tag
 	  FROM $TBPR_SEARCH_BATCH SB
-	  JOIN $TBPR_BIOSEQUENCE_SET BSS
+	 INNER JOIN $TBPR_BIOSEQUENCE_SET BSS
 	       ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
 	 WHERE SB.experiment_id = '$experiment_id'
 	 ORDER BY BSS.set_tag,SB.search_batch_subdir
@@ -354,7 +354,7 @@ sub handle_request {
                MIN(CASE WHEN UWG.contact_id IS NULL THEN NULL ELSE GPP.privilege_id END) AS "best_group_privilege_id",
                MIN(UPP.privilege_id) AS "best_user_privilege_id"
 	  FROM $TB_PROJECT P
-	  JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
+	 INNER JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
 	  LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
 	       ON ( P.project_id = UPP.project_id
 	            AND UPP.contact_id='$current_contact_id' )

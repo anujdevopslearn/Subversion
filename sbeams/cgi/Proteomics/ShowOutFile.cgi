@@ -153,9 +153,11 @@ sub printEntryForm {
 	SELECT SB.data_location+'/'+F.fraction_tag+'/'+S.file_root+'.out' AS 'location',
 	       F.fraction_tag+'/'+S.file_root+'.out' AS 'name'
 	  FROM $TBPR_SEARCH S
-	  JOIN $TBPR_SEARCH_BATCH SB ON ( S.search_batch_id = SB.search_batch_id )
-	  JOIN $TBPR_MSMS_SPECTRUM MS ON ( S.msms_spectrum_id = MS.msms_spectrum_id )
-	  JOIN $TBPR_FRACTION F ON ( MS.fraction_id = F.fraction_id )
+	 INNER JOIN $TBPR_SEARCH_BATCH SB
+               ON ( S.search_batch_id = SB.search_batch_id )
+	 INNER JOIN $TBPR_MSMS_SPECTRUM MS
+               ON ( S.msms_spectrum_id = MS.msms_spectrum_id )
+	 INNER JOIN $TBPR_FRACTION F ON ( MS.fraction_id = F.fraction_id )
 	 WHERE search_id = '$parameters{search_id}'
   ~;
 

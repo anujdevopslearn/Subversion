@@ -592,16 +592,25 @@ sub handle_request {
   $sql = qq~
 	SELECT $limit_clause->{top_clause} $columns_clause
 	  FROM $TBPR_SEARCH_HIT SH
-	  JOIN $TBPR_SEARCH S ON ( SH.search_id = S.search_id )
-	  JOIN $TBPR_SEARCH_BATCH SB ON ( S.search_batch_id = SB.search_batch_id )
-	  JOIN $TBPR_MSMS_SPECTRUM MSS ON ( S.msms_spectrum_id = MSS.msms_spectrum_id )
-	  JOIN $TBPR_FRACTION F ON ( MSS.fraction_id = F.fraction_id )
-	  JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
-	  JOIN $TBPR_PROTEOMICS_EXPERIMENT PE ON ( F.experiment_id = PE.experiment_id )
-	  LEFT JOIN $TBPR_QUANTITATION QUAN ON ( SH.search_hit_id = QUAN.search_hit_id )
-	  LEFT JOIN $TBPR_BIOSEQUENCE BS ON ( SB.biosequence_set_id = BS.biosequence_set_id AND SH.reference = BS.biosequence_name )
-	  LEFT JOIN $TBPR_SEARCH_HIT_ANNOTATION SHA ON ( SH.search_hit_id = SHA.search_hit_id )
-	  LEFT JOIN $TBPR_ANNOTATION_LABEL AL ON ( SHA.annotation_label_id = AL.annotation_label_id )
+	 INNER JOIN $TBPR_SEARCH S ON ( SH.search_id = S.search_id )
+	 INNER JOIN $TBPR_SEARCH_BATCH SB
+               ON ( S.search_batch_id = SB.search_batch_id )
+	 INNER JOIN $TBPR_MSMS_SPECTRUM MSS
+               ON ( S.msms_spectrum_id = MSS.msms_spectrum_id )
+	 INNER JOIN $TBPR_FRACTION F ON ( MSS.fraction_id = F.fraction_id )
+	 INNER JOIN $TBPR_BIOSEQUENCE_SET BSS
+               ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
+	 INNER JOIN $TBPR_PROTEOMICS_EXPERIMENT PE
+               ON ( F.experiment_id = PE.experiment_id )
+	  LEFT JOIN $TBPR_QUANTITATION QUAN
+               ON ( SH.search_hit_id = QUAN.search_hit_id )
+	  LEFT JOIN $TBPR_BIOSEQUENCE BS
+               ON ( SB.biosequence_set_id = BS.biosequence_set_id
+                    AND SH.reference = BS.biosequence_name )
+	  LEFT JOIN $TBPR_SEARCH_HIT_ANNOTATION SHA
+               ON ( SH.search_hit_id = SHA.search_hit_id )
+	  LEFT JOIN $TBPR_ANNOTATION_LABEL AL
+               ON ( SHA.annotation_label_id = AL.annotation_label_id )
 	 WHERE 1 = 1
 	$search_batch_clause
 	$probability_clause

@@ -540,20 +540,20 @@ sub handle_request {
   $sql = qq~
 	SELECT $limit_clause->{top_clause} $columns_clause
 	  FROM $TBPR_PROTEIN PROT
-          JOIN $TBPR_PROTEIN_GROUP PG
+         INNER JOIN $TBPR_PROTEIN_GROUP PG
                ON ( PROT.protein_group_id = PG.protein_group_id )
           LEFT JOIN $TBPR_SUMMARY_QUANTITATION SQ
                ON ( PROT.summary_quantitation_id = SQ.summary_quantitation_id )
-	  JOIN $TBPR_BIOSEQUENCE BS
+	 INNER JOIN $TBPR_BIOSEQUENCE BS
                ON ( PROT.biosequence_id = BS.biosequence_id )
           LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
-	  JOIN $TBPR_PROTEIN_SUMMARY PS
+	 INNER JOIN $TBPR_PROTEIN_SUMMARY PS
 	       ON ( PG.protein_summary_id = PS.protein_summary_id )
-	  JOIN $TBPR_SEARCH_BATCH_PROTEIN_SUMMARY SBPS
+	 INNER JOIN $TBPR_SEARCH_BATCH_PROTEIN_SUMMARY SBPS
 	       ON ( PS.protein_summary_id = SBPS.protein_summary_id )
-	  JOIN $TBPR_SEARCH_BATCH SB
+	 INNER JOIN $TBPR_SEARCH_BATCH SB
 	       ON ( SBPS.search_batch_id = SB.search_batch_id )
-	  JOIN $TBPR_PROTEOMICS_EXPERIMENT PE
+	 INNER JOIN $TBPR_PROTEOMICS_EXPERIMENT PE
                ON ( SB.experiment_id = PE.experiment_id )
           $GO_join
 	 WHERE 1 = 1

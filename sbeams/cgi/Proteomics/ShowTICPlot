@@ -158,7 +158,8 @@ sub printEntryForm {
 	SELECT fraction_tag,data_location,SB.search_batch_id,
                search_batch_subdir
 	  FROM $TBPR_FRACTION F
-	  JOIN $TBPR_SEARCH_BATCH SB ON ( F.experiment_id = SB.experiment_id )
+	 INNER JOIN $TBPR_SEARCH_BATCH SB
+               ON ( F.experiment_id = SB.experiment_id )
 	 WHERE fraction_id IN ($parameters{fraction_id})
   ~;
 

@@ -561,11 +561,11 @@ sub handle_request {
   $sql = qq~
 	SELECT $limit_clause $columns_clause
           FROM $TBAPD_PEPTIDE P
-          JOIN $TBAPD_MODIFIED_PEPTIDE MP
+         INNER JOIN $TBAPD_MODIFIED_PEPTIDE MP
 	       ON ( P.peptide_id = MP.peptide_id )
-          JOIN $TBAPD_PEPTIDE_SUMMARY PS
+         INNER JOIN $TBAPD_PEPTIDE_SUMMARY PS
 	       ON ( P.peptide_summary_id = PS.peptide_summary_id )
-	  JOIN $TBPR_BIOSEQUENCE BS
+	 INNER JOIN $TBPR_BIOSEQUENCE BS
 	       ON ( P.biosequence_id = BS.biosequence_id )
           LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
           $GO_join

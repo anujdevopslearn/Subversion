@@ -152,7 +152,8 @@ sub handle_request {
   $sql = qq~
 	SELECT fraction_tag,data_location
 	  FROM $TBPR_FRACTION F
-	  JOIN $TBPR_SEARCH_BATCH SB ON ( F.experiment_id = SB.experiment_id )
+	 INNER JOIN $TBPR_SEARCH_BATCH SB
+               ON ( F.experiment_id = SB.experiment_id )
 	 WHERE fraction_id = '$parameters{fraction_id}'
            AND SB.search_batch_id = '$parameters{search_batch_id}'
   ~;

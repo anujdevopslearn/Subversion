@@ -282,10 +282,10 @@ sub handle_request {
   $sql = qq~
 	SELECT $limit_clause->{top_clause} $columns_clause
 	  FROM $TBPR_PROTEOMICS_EXPERIMENT PE
-	  JOIN $TB_USER_LOGIN UL ON (PE.contact_id=UL.contact_id)
-	  JOIN $TB_PROJECT P ON (PE.project_id=P.project_id)
-	  JOIN $TBPR_FRACTION F ON (PE.experiment_id=F.experiment_id)
-	  JOIN $TBPR_MSMS_SPECTRUM S ON (F.fraction_id=S.fraction_id)
+	 INNER JOIN $TB_USER_LOGIN UL ON (PE.contact_id=UL.contact_id)
+	 INNER JOIN $TB_PROJECT P ON (PE.project_id=P.project_id)
+	 INNER JOIN $TBPR_FRACTION F ON (PE.experiment_id=F.experiment_id)
+	 INNER JOIN $TBPR_MSMS_SPECTRUM S ON (F.fraction_id=S.fraction_id)
 	 WHERE P.record_status!='D'
 	   AND UL.record_status!='D'
 	   AND PE.record_status!='D'
