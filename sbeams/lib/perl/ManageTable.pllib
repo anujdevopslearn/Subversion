@@ -136,8 +136,12 @@ sub printEntryForm {
 
 
   #### Else if a specific PK row was referenced and this is not a REFRESH of an
-  #### existing form, then load data from it into hash
+  #### existing form, then load data from it into the parameters hash,
+  #### being careful about parameters that may also have been submitted to
+  #### override the default values, suitable for an UPDATE if the user chooses
   } elsif ($parameters{$PK_COLUMN_NAME} gt "" && $apply_action ne "REFRESH") {
+
+    #### Get the list of relevant columns and get the current values in table
     my $column_list = join(",",@columns);
     $sql = qq~
       SELECT $column_list
@@ -146,8 +150,55 @@ sub printEntryForm {
     ~;
     my @rows = $sbeams->selectSeveralColumns($sql);
     my @row = @{$rows[0]};
+
+    #### See if the submitter specified how to resolve conflicts
+    my $merge_params = $parameters{merge_params} || 'retain';
+
+    #### Loop over each of the columns, possibly using these values
     for ($element=0; $element<scalar(@row); $element++) {
-      $parameters{@columns[$element]}=@row[$element];
+      my $table_value = @row[$element];
+      my $submitted_value = $parameters{@columns[$element]};
+
+      #### If there's a value that was submitted to this program
+      if (defined($submitted_value)) {
+
+	#### If both the same, fine
+	if ($submitted_value eq $table_value) {
+	  #print "$columns[$element]: table and submitted value same<BR>\n";
+
+	#### But if they're different,then do something clever
+	} else {
+	  print "parameter $columns[$element]: table_value='$table_value' ".
+	    "and submitted value '$submitted_value'<BR>\n";
+
+	  #### If replace, then just leave the submitted value
+	  if ($merge_params =~ /replace/i) {
+	    # no action, leave submitted
+
+	  #### If keep, then use the table value
+	  } elsif ($merge_params =~ /keep/i) {
+	    $parameters{$columns[$element]} = $table_value;
+
+	  #### If append, then append submitted value with the supplied
+	  #### delimiter or just use the submitted value if table has nothing
+	  } elsif ($merge_params =~ /append(.*)/i) {
+	    my $delim = $1 || '';
+	    if (defined($table_value) && $table_value gt '') {
+	      $parameters{$columns[$element]} =
+		"$table_value$delim$submitted_value";
+	    } else {
+	      $parameters{$columns[$element]} = $submitted_value;
+	    }
+
+	  }
+
+	}
+
+      #### Otherwise just go ahead and set the parameters to the table value
+      } elsif (defined($table_value)) {
+        $parameters{$columns[$element]} = $table_value;
+      }
+
     }
 
   }
