@@ -247,14 +247,17 @@ sub handle_request {
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
   my @column_array = (
-    ["experiment_id","PE.experiment_id","experiment_id"],
-    ["username","username","username"],
-    ["project_id","P.project_id","project_id"],
-    ["project_name","name","project_name"],
-    ["experiment_tag","experiment_tag","experiment_tag"],
-    ["experiment_name","experiment_name","experiment_name"],
     ["fraction_id","F.fraction_id","fraction_id"],
-    ["fraction_tag","F.fraction_tag","fraction_tag"],
+    ["experiment_id","PE.experiment_id","experiment_id"],
+    ["contact_id","UL.contact_id","contact_id"],
+    ["username","username","Username"],
+    ["project_id","P.project_id","project_id"],
+    ["project_tag","P.project_tag","Project Tag"],
+    ["experiment_tag","experiment_tag","Exp Tag"],
+    ["fraction_tag","F.fraction_tag","Fraction Tag"],
+    ["fractionation_type_name","FT.fractionation_type_name","Frac Type"],
+    ["fraction_centroid","F.fraction_centroid","Frac Centroid"],
+    ["fraction_full_width","F.fraction_full_width","Frac Full Width"],
     ["gradient_program_id","GP.gradient_program_id","gradient_program_id"],
     ["gradient_program_name","GP.gradient_program_name","LC Gradient Program"],
     ["TIC_plot","'TIC Plot'","TIC_plot"],
@@ -291,6 +294,7 @@ sub handle_request {
 	 INNER JOIN $TB_USER_LOGIN UL ON (PE.contact_id=UL.contact_id)
 	 INNER JOIN $TB_PROJECT P ON (PE.project_id=P.project_id)
 	 INNER JOIN $TBPR_FRACTION F ON (PE.experiment_id=F.experiment_id)
+	  LEFT JOIN $TBPR_FRACTIONATION_TYPE FT ON ( F.fractionation_type_id = FT.fractionation_type_id )
 	  LEFT JOIN $TBPR_MSMS_SPECTRUM S ON (F.fraction_id=S.fraction_id)
 	  LEFT JOIN $TBPR_GRADIENT_PROGRAM GP
                ON ( F.gradient_program_id = GP.gradient_program_id )
@@ -310,10 +314,18 @@ sub handle_request {
   $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
 
   #### Define the hypertext links for columns that need them
-  %url_cols = ('project_name' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=\%$colnameidx{project_id}V",
-               'experiment_name' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&experiment_id=\%$colnameidx{experiment_id}V",
+  %url_cols = ('Username' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=contact&contact_id=\%$colnameidx{contact_id}V",
+
+               'Project Tag' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=\%$colnameidx{project_id}V",
+
+               'Exp Tag' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&experiment_id=\%$colnameidx{experiment_id}V",
+
+               'Fraction Tag' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_fraction&fraction_id=\%$colnameidx{fraction_id}V",
+
                'TIC_plot' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ShowTICPlot?fraction_id=\%$colnameidx{fraction_id}V",
+
                'MS Run Summary' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ShowMSRunSummary?fraction_id=\%$colnameidx{fraction_id}V",
+
                'LC Gradient Program' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_gradient_program&gradient_program_id=\%$colnameidx{gradient_program_id}V",
   );
 
@@ -322,6 +334,7 @@ sub handle_request {
   %hidden_cols = ('experiment_id' => 1,
                   'project_id' => 1,
                   'fraction_id' => 1,
+                  'contact_id' => 1,
                   'gradient_program_id' => 1,
   );
 
