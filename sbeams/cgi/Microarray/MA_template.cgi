@@ -136,6 +136,7 @@ return 1;
 ###############################################################################
 sub handle_request {
   my %args = @_;
+  my $SUB_NAME = "handle_request";
 
   #### Process the arguments list
   my $ref_parameters = $args{'ref_parameters'}
