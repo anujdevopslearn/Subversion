@@ -261,9 +261,17 @@ sub handle_request {
     constraint_value=>$parameters{bioentity_common_name} );
   return if ($bioentity_common_name_clause eq '-1');
   #### Translate to look in both sides
-  if ($bioentity_common_name_clause =~ /(\s+AND )(bioentity_common_name LIKE .+)$/) {
-    $bioentity_common_name_clause = $1."( BE1.$2 OR BE2.$2 )";
+  #if ($bioentity_common_name_clause =~ /(\s+AND )(bioentity_common_name LIKE .+)$/) {
+  #  $bioentity_common_name_clause = $1."( BE1.$2 OR BE2.$2 )";
+  #}
+  #### Need more advanced replacer because of multi-param functionality
+  while ($bioentity_common_name_clause =~ /(bioentity_common_name LIKE '.+?')/) {
+    my $orig = $1;
+    my $new = $orig;
+    $new =~ s/common/xxyyzz/;
+    $bioentity_common_name_clause =~ s/$orig/( BE1.$new OR BE2.$new )/;
   }
+  $bioentity_common_name_clause =~ s/xxyyzz/common/g;
 
 
   #### Build INTERACTION_TYPE_ID constraint
