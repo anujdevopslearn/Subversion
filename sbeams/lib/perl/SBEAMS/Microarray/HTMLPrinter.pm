@@ -204,15 +204,15 @@ sub printJavascriptFunctions {
 	<!--
 
 	function refreshDocument() {
-            //confirm( "apply_action ="+document.forms[0].apply_action.options[0].selected+"=");
-            document.forms[0].apply_action_hidden.value = "REFRESH";
-	    document.forms[0].submit();
+            //confirm( "apply_action ="+document.MainForm.apply_action.options[0].selected+"=");
+            document.MainForm.apply_action_hidden.value = "REFRESH";
+	    document.MainForm.submit();
 	} // end refresh
 
 
 	function showPassed(input_field) {
             //confirm( "input_field ="+input_field+"=");
-            confirm( "selected option ="+document.forms[0].slide_id.options[document.forms[0].slide_id.selectedIndex].text+"=");
+            confirm( "selected option ="+document.MainForm.slide_id.options[document.MainForm.slide_id.selectedIndex].text+"=");
 	    return;
 	} // end showPassed
 
@@ -237,15 +237,15 @@ sub printJavascriptFunctions {
 	      today.getHours() + ":" +today.getMinutes();
 
 	    if (field_name == "date_labeled") {
-	      document.forms[0].date_labeled.value = date_value;
+	      document.MainForm.date_labeled.value = date_value;
 	    } else if (field_name == "date_hybridized") {
-	      document.forms[0].date_hybridized.value = date_value;
+	      document.MainForm.date_hybridized.value = date_value;
 	    } else if (field_name == "date_received") {
-	      document.forms[0].date_received.value = date_value;
+	      document.MainForm.date_received.value = date_value;
 	    } else if (field_name == "date_scanned") {
-	      document.forms[0].date_scanned.value = date_value;
+	      document.MainForm.date_scanned.value = date_value;
 	    } else if (field_name == "date_quantitated") {
-	      document.forms[0].date_quantitated.value = date_value;
+	      document.MainForm.date_quantitated.value = date_value;
 	    }
 
 	    return;
@@ -254,7 +254,7 @@ sub printJavascriptFunctions {
 
 	function setDefaultImagesLocation() {
 	    // /net/arrays/ScanArray_Images/00001-00100/00012_A1_MMDDYY/Images/
-	    array_name = document.forms[0].array_id.options[document.forms[0].array_id.selectedIndex].text
+	    array_name = document.MainForm.array_id.options[document.MainForm.array_id.selectedIndex].text
 	    if (array_name.substr(array_name.length-9,99) == " - *DONE*") {
 	      array_name = array_name.substr(0,array_name.length-9);
 	    }
@@ -279,7 +279,7 @@ sub printJavascriptFunctions {
 
             array_name = addLeadingZeros(array_name.toString(),5);
 
-	    document.forms[0].stage_location.value =
+	    document.MainForm.stage_location.value =
 	      "/net/arrays/ScanArray_Images/" +
 	      start_group + "-"+ end_group + "/" +
 	      array_name + "_" + date_value;
@@ -297,7 +297,7 @@ sub printJavascriptFunctions {
 
 	function setDefaultQALocation() {
 
-	    array_name = document.forms[0].array_scan_id.options[document.forms[0].array_scan_id.selectedIndex].text;
+	    array_name = document.MainForm.array_scan_id.options[document.MainForm.array_scan_id.selectedIndex].text;
             array_name = array_name.toString();
 	    if (array_name.substr(array_name.length-9,99) == " - *DONE*") {
 	      array_name = array_name.substr(0,array_name.length-9);
@@ -309,7 +309,7 @@ sub printJavascriptFunctions {
             end_group = Math.round(array_name/100+0.5)*100;
             end_group = addLeadingZeros(end_group.toString(),5);
 
-	    protocol_name = document.forms[0].protocol_id.options[document.forms[0].protocol_id.selectedIndex].text;
+	    protocol_name = document.MainForm.protocol_id.options[document.MainForm.protocol_id.selectedIndex].text;
             protocol_name = protocol_name.toString();
 	    extension = ".?";
 	    //confirm( "result ="+protocol_name.search(/QuantArray/i)+"=");
@@ -317,7 +317,7 @@ sub printJavascriptFunctions {
 	    //confirm( "result ="+protocol_name.search(/Dapple/i)+"=");
 	    if (protocol_name.search(/Dapple/i)>-1) { extension = ".dapple"; }
 
-	    document.forms[0].stage_location.value =
+	    document.MainForm.stage_location.value =
 	      "/net/arrays/Quantitation/" +
 	      start_group + "-"+ end_group + "/" +
 	      array_name + extension;
@@ -328,23 +328,23 @@ sub printJavascriptFunctions {
 
         function setArrayName() {
 
-	    array_name = document.forms[0].array_name.value=document.forms[0].slide_id.options[document.forms[0].slide_id.selectedIndex].text;
+	    array_name = document.MainForm.array_name.value=document.MainForm.slide_id.options[document.MainForm.slide_id.selectedIndex].text;
             array_name = array_name.toString();
 	    if (array_name.substr(array_name.length-9,99) == " - *DONE*") {
 	      array_name = array_name.substr(0,array_name.length-9);
 	    }
             while (array_name.length < 5) { array_name = "0" + array_name; }
 
-	    document.forms[0].array_name.value = array_name;
+	    document.MainForm.array_name.value = array_name;
 
 	    return;
 	} // end setArrayName
 
 
 	function setLayoutFileName() {
-            document.forms[0].source_filename.value =
+            document.MainForm.source_filename.value =
               "/net/arrays/Slide_Templates/" +
-              document.forms[0].name.value + ".key"
+              document.MainForm.name.value + ".key"
 	    return;
 	} // end setLayoutFileName
 
