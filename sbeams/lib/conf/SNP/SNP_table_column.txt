@@ -61,6 +61,7 @@
 "SN_BrowseSNPHit"	8	"sort_order"	"Sort Order"									"N"	"optionlist"	" "		"Y"	"Y"	"N"	"Desired display sorting order (DESC means descending: highest to lowest)"	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'BSH_sort_options' ORDER BY sort_order,option_value"	
 "SN_BrowseSNPHit"	9	"display_options"	"Display Options"									"N"	"multioptionlist"	3		"Y"	"Y"	"N"	"Various selectable table display options"	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'BSH_display_options' ORDER BY sort_order,option_value"	
 "SN_BrowseSNPHit"	10	"row_limit"	"Maximum Rows"									"N"	"text"	10		"Y"	"Y"	"N"	"Limit the numbers of rows displayed.  If not provided, default is 1000 rows."		
+"SN_BrowseSNPHit"	11	"biosequence_rank_list_constraint"	"BioSequence Rank List"									"N"	"multioptionlist"	4		"Y"	"Y"	"N"	"Select a BioSequence Rank List to prioritize result listing.  If no item is selected, no ranking is done."	"SELECT distinct(rank_list_name) INTO #tmpval FROM $TBSN_BIOSEQUENCE_RANK_LIST ORDER BY rank_list_name SELECT biosequence_rank_list_id,rank_list_file FROM #tmpval"	
 "SN_source_version"	1	"source_version_id"	"Source Version ID"	"int"	8	0	"N"		"Y"							"N"	"N"				"pkDEFAULT"
 "SN_source_version"	2	"source_version_name"	"Source Version Name"	"varchar"	255	0	"N"		"N"			"Y"	"text"	50		"Y"	"Y"	"Y"	"Name of the version of the source dataset (e.g. Celera MHC 2002-04-01)"		
 "SN_source_version"	3	"uri"	"URI"	"varchar"	255	0	"Y"		"N"			"N"	"text"	50		"Y"	"Y"	"N"	"External web page, file, or other URI"		"SELF"
