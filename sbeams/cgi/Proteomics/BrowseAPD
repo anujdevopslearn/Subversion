@@ -241,6 +241,15 @@ sub handle_request {
   return if ($probability_clause eq '-1');
 
 
+  #### Build APD PEPTIDE ACCESSION constraint
+  my $APD_accession_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"PI.peptide_identifier_str",
+    constraint_type=>"plain_text",
+    constraint_name=>"APD Accession",
+    constraint_value=>$parameters{APD_accession_constraint} );
+  return if ($APD_accession_clause eq '-1');
+
+
   #### Build REFERENCE PROTEIN constraint
   my $reference_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"P.biosequence_name",
@@ -342,7 +351,7 @@ sub handle_request {
   my $accession_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"BS.biosequence_accession",
     constraint_type=>"plain_text",
-    constraint_name=>"Accession",
+    constraint_name=>"Biosequence Accession",
     constraint_value=>$parameters{accession_constraint} );
   return if ($accession_clause eq '-1');
 
@@ -602,6 +611,7 @@ sub handle_request {
         $description_clause
 	$gene_name_clause
 	$accession_clause
+	$APD_accession_clause
 
 	$probability_clause
 	$charge_clause
