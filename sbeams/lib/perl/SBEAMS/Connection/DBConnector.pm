@@ -31,6 +31,7 @@ if ( $DBVERSION eq "Dev Branch 1" ) {
   $DB_TYPE     = "MS SQL Server";
   $BIOSAP_DB   = "BioSap.dbo.";
   $PROTEOMICS_DB = "Proteomics.dbo.";
+  $PHENOARRAY_DB = "PhenoArray.dbo.";
 
 } elsif ( $DBVERSION eq "Dev Branch 2" ) {
   $DB_SERVER   = 'mssql';
@@ -41,6 +42,7 @@ if ( $DBVERSION eq "Dev Branch 1" ) {
   $DB_TYPE     = "MS SQL Server";
   $BIOSAP_DB   = "BioSap.dbo.";
   $PROTEOMICS_DB = "Proteomics.dbo.";
+  $PHENOARRAY_DB = "PhenoArray.dbo.";
 
 } elsif ( $DBVERSION eq "Dev Branch 5" ) {
   $DB_SERVER   = 'mssql';
@@ -51,6 +53,7 @@ if ( $DBVERSION eq "Dev Branch 1" ) {
   $DB_TYPE     = "MS SQL Server";
   $BIOSAP_DB   = "BioSap.dbo.";
   $PROTEOMICS_DB = "Proteomics.dbo.";
+  $PHENOARRAY_DB = "PhenoArray.dbo.";
 
 } elsif ( $DBVERSION eq "MySQL Dev Branch 1" ) {
   $DB_SERVER   = 'mysql';
@@ -71,6 +74,7 @@ if ( $DBVERSION eq "Dev Branch 1" ) {
   $DB_TYPE     = "MS SQL Server";
   $BIOSAP_DB   = "BioSap.dbo.";
   $PROTEOMICS_DB = "Proteomics.dbo.";
+  $PHENOARRAY_DB = "PhenoArray.dbo.";
 }
 
 
