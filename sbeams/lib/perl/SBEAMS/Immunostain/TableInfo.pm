@@ -152,7 +152,7 @@ sub returnTableInfo {
         if ($info_key eq "BASICQuery") {
             return qq~
 		SELECT SCP.stain_cell_presence_id,stain_name,cell_type_name,
-                       level_name,SCP.at_level_percent,SCP.comment
+                       level_name,abundance_level_name, SCP.comment
                   FROM $TBIS_STAIN_CELL_PRESENCE SCP
 		  LEFT JOIN $TBIS_STAINED_SLIDE SS
                        ON ( SCP.stained_slide_id = SS.stained_slide_id )
@@ -160,8 +160,10 @@ sub returnTableInfo {
 		       ON ( SCP.cell_type_id = CT.cell_type_id )
 		  LEFT JOIN $TBIS_CELL_PRESENCE_LEVEL CPL
 		       ON ( SCP.cell_presence_level_id = CPL.cell_presence_level_id )
+			LEFT JOIN $TBIS_ABUNDANCE_LEVEL AL
+						ON (SCP.abundance_level_id = AL.abundance_level_id) 
 		 WHERE SCP.record_status!='D'
-		 ORDER BY stain_name,cell_type_name,CPL.sort_order,level_name
+		 ORDER BY stain_name,cell_type_name,level_name
             ~;
         }
 
