@@ -304,10 +304,10 @@ sub executeSQL {
     my $self = shift || croak("parameter self not passed");
     my $sql_query = shift || croak("parameter sql_query not passed");
 
-    my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
-    my $rv  = $sth->execute or croak $dbh->errstr;
+#    my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
+#    my $rv  = $sth->execute or croak $dbh->errstr;
 
-    $sth->finish;
+    my $rows = $dbh->do("$sql_query") or croak $dbh->errstr;
 
     return 0;
 
