@@ -400,28 +400,28 @@ sub handleRequest {
       #### If it's determined that we need to do a load, do it
       if ($do_load) {
         $result = loadBiosequenceSet(set_name=>$status->{set_name},
-					     source_file=>$file_prefix.$status->{set_path},
-					     organism_id=>$status->{organism_id});
-	      }
-	    }
-	  }
+				     source_file=>$file_prefix.$status->{set_path},
+				     organism_id=>$status->{organism_id});
+      }
+    }
+  }
 
 
-	  return;
+  return;
 
-	}
-
-
-
-	###############################################################################
-	# getBiosequenceSetStatus
-	###############################################################################
-	sub getBiosequenceSetStatus {
-	  my %args = @_;
-	  my $SUB_NAME = 'getBiosequenceSetStatus';
+}
 
 
-	  #### Decode the argument list
+
+###############################################################################
+# getBiosequenceSetStatus
+###############################################################################
+sub getBiosequenceSetStatus {
+  my %args = @_;
+  my $SUB_NAME = 'getBiosequenceSetStatus';
+
+
+  #### Decode the argument list
   my $biosequence_set_id = $args{'biosequence_set_id'}
    || die "ERROR[$SUB_NAME]: biosequence_set_id not passed";
 
@@ -1516,13 +1516,21 @@ sub specialParsing {
   }
 
 
-  #### Conversion rules for the ENSEMBL Human Protein database
+  #### Conversion rules for the older ENSEMBL Human Protein database
   if ($rowdata_ref->{biosequence_name} =~ /^Translation:(ENSP\d+)$/ ) {
      $rowdata_ref->{biosequence_name} = $1;
      $rowdata_ref->{biosequence_accession} = $1;
      if ($rowdata_ref->{biosequence_desc} =~ /(ENSG\d+)/ ) {
        $rowdata_ref->{biosequence_gene_name} = $1;
      }
+     $rowdata_ref->{dbxref_id} = '20';
+  }
+
+  #### Conversion rules for the  ENSEMBL Human Protein database v 26 - 28
+  if ($rowdata_ref->{biosequence_name} =~ /^(ENSP\d+)\s.*(ENSG\d+)\s.*$/) {
+     $rowdata_ref->{biosequence_name} = $1; 
+     $rowdata_ref->{biosequence_accession} = $1;
+     $rowdata_ref->{biosequence_gene_name} = $2;
      $rowdata_ref->{dbxref_id} = '20';
   }
 
@@ -1541,6 +1549,14 @@ sub specialParsing {
        $rowdata_ref->{biosequence_gene_name} = $1;
      }
      $rowdata_ref->{dbxref_id} = '25';
+  }
+
+  #### Conversion rules for the SGD yeast orf fasta
+  if ($rowdata_ref->{biosequence_name} =~ /^(\S+)\s(\S+)\s(SGDID:.*)$/ ) {
+     $rowdata_ref->{biosequence_name} = $1;
+     $rowdata_ref->{biosequence_accession} = $1;
+     $rowdata_ref->{biosequence_gene_name} = $2;
+     $rowdata_ref->{dbxref_id} = '5';
   }
 
 
