@@ -97,9 +97,10 @@ sub printPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=project">- Projects</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=proteomics_experiment"><nobr>- Experiments</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/SummarizeExperiment.cgi"><nobr>- Summarize Experiment</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Proteomics/SummarizeExperiment.cgi"><nobr>- Summarize Exp'ment</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi"><nobr>- Browse Search Hits</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/Proteomics/BrowseAnnotatedPeptides.cgi"><nobr>- Browse Annotated</nobr><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Peptides</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Proteomics/BrowseBioSequence.cgi"><nobr>- Browse BioSeqs</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/Proteomics/flycat.cgi"><nobr>- FLYCAT</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>

@@ -109,12 +109,6 @@ sub printPageHeader {
 	<table border=0 width="120" cellpadding=2 cellspacing=0>
 
 	<tr><td><a href="$CGI_BASE_DIR/main.cgi">>$DBTITLE Home</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/MicroArrayMain.cgi">>MicroArray Home</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/main.cgi">>Proteomics Home</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Inkjet/main.cgi">>Inkjet Home</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Biosap/main.cgi">>Biosap Home</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/tools/main.cgi">>Tools Home</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/GEAP/main.cgi">>GEAP Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">>Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/MicroArrayMain.cgi">- MicroArray</a></td></tr>
@@ -132,7 +126,7 @@ sub printPageHeader {
 	<!-------- Main Page ------------------------------------------->
 	<td valign=top>
 	<table border=0 bgcolor="#ffffff" cellpadding=4>
-	<tr><td>
+	<tr><td align="top">
 
       ~;
     } else {
@@ -157,17 +151,31 @@ sub printPageHeader {
 sub printStyleSheet {
     my $self = shift;
 
-    my $FONT_SIZE=12;
-    my $FONT_SIZE_LG=14;
-    my $FONT_SIZE_HG=20;
+    my $FONT_SIZE=9;
+    my $FONT_SIZE_SM=8;
+    my $FONT_SIZE_LG=12;
+    my $FONT_SIZE_HG=14;
+
+    if ( $HTTP_USER_AGENT =~ /Mozilla\/4.+X11/ ) {
+      $FONT_SIZE=12;
+      $FONT_SIZE_SM=10;
+      $FONT_SIZE_LG=14;
+      $FONT_SIZE_HG=20;
+    }
     if ( $HTTP_USER_AGENT =~ /Win/ ) {
-      $FONT_SIZE=10;
+      $FONT_SIZE=9;
+      $FONT_SIZE_SM=8;
+      $FONT_SIZE_LG=12;
+      $FONT_SIZE_HG=14;
+    }
+    if ( $HTTP_USER_AGENT =~ /Mozilla\/5/ ) {
+      $FONT_SIZE=9;
+      $FONT_SIZE_SM=8;
       $FONT_SIZE_LG=12;
       $FONT_SIZE_HG=14;
     }
 
 
-	#th   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt; font-weight: bold; background-color: #A0A0A0;}
     print qq~
 	<style type="text/css">
 	//<!--
@@ -175,7 +183,7 @@ sub printStyleSheet {
 	th   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt; font-weight: bold;}
 	td   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt;}
 	form   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt}
-	pre    {  font-family: Courier; font-size: ${FONT_SIZE}pt}
+	pre    {  font-family: MS Mincho, Courier; font-size: ${FONT_SIZE_SM}pt}
 	h1   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_HG}pt; font-weight: bold}
 	h2   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
 	h3   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_LG}pt}
@@ -190,6 +198,12 @@ sub printStyleSheet {
 	//-->
 	</style>
     ~;
+
+    #### Boneyard:
+    #	th   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt; font-weight: bold; background-color: #A0A0A0;}
+    #	pre    {  font-family: Courier; font-size: ${FONT_SIZE}pt}
+
+
 
 }
 

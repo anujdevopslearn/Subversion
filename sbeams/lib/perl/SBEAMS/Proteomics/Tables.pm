@@ -17,6 +17,9 @@ use vars qw(@ISA @EXPORT
 
     $TB_BIOSEQUENCE_SET
     $TB_BIOSEQUENCE
+    $TBPR_BIOSEQUENCE_SET
+    $TBPR_BIOSEQUENCE
+
     $TB_PROTEOMICS_EXPERIMENT
     $TB_FRACTION
     $TB_SEARCH_BATCH
@@ -45,6 +48,9 @@ require Exporter;
 
     $TB_BIOSEQUENCE_SET
     $TB_BIOSEQUENCE
+    $TBPR_BIOSEQUENCE_SET
+    $TBPR_BIOSEQUENCE
+
     $TB_PROTEOMICS_EXPERIMENT
     $TB_FRACTION
     $TB_SEARCH_BATCH
@@ -70,6 +76,9 @@ $TB_ORGANISM                = 'sbeams.dbo.organism';
 
 $TB_BIOSEQUENCE_SET         = 'proteomics.dbo.biosequence_set';
 $TB_BIOSEQUENCE             = 'proteomics.dbo.biosequence';
+$TBPR_BIOSEQUENCE_SET       = 'proteomics.dbo.biosequence_set';
+$TBPR_BIOSEQUENCE           = 'proteomics.dbo.biosequence';
+
 $TB_PROTEOMICS_EXPERIMENT   = 'proteomics.dbo.proteomics_experiment';
 $TB_FRACTION                = 'proteomics.dbo.fraction';
 $TB_SEARCH_BATCH            = 'proteomics.dbo.search_batch';

@@ -12,7 +12,7 @@ package SBEAMS::Connection::DBInterface;
 
 
 use strict;
-use vars qw(@ERRORS $dbh $sth $q);
+use vars qw(@ERRORS $dbh $sth $q $resultset_ref);
 use CGI::Carp qw(fatalsToBrowser croak);
 use DBI;
 
@@ -83,6 +83,9 @@ sub applySqlChange {
 	SELECT privilege_id,name FROM $TB_PRIVILEGE");
 
     my ($DB_TABLE_NAME) = $self->returnTableInfo($table_name,"DB_TABLE_NAME");
+    #print "DB_TABLE_NAME = $DB_TABLE_NAME<BR>\n";
+    #print "table_name = $table_name<BR>\n";
+
 
     # Extract the first word, hopefully INSERT, UPDATE, or DELETE
     $sql_query =~ /\s*(\w*)/;
@@ -612,6 +615,7 @@ sub displayQueryResult {
     my $row_color_scheme_ref = $args{'row_color_scheme_ref'};
     my $printable_table = $args{'printable_table'};
     my $max_widths_ref = $args{'max_widths'};
+    $resultset_ref = $args{'resultset_ref'};
 
 
     #### Execute the query
@@ -660,6 +664,20 @@ sub displayQueryResult {
     }
 
 
+    #### Prepare returned resultset
+    my @resultsetdata;
+    my %column_hash;
+    my $element;
+    $resultset_ref->{column_list_ref} = $sth->{NAME};
+    $i = 0;
+    foreach $element (@{$sth->{NAME}}) {
+      $column_hash{$element} = $i;
+      $i++;
+    }
+    $resultset_ref->{column_hash_ref} = \%column_hash;
+    $resultset_ref->{data_ref} = \@resultsetdata;
+
+
     #### If a printable table was desired, use one format
     if ( $printable_table ) {
 
@@ -705,11 +723,43 @@ sub displayQueryResult {
 
 
 ###############################################################################
-# fetchNextRow called by ShowHTMLTable
+# fetchNextRow called by ShowTable
 ###############################################################################
 sub fetchNextRow {
+  my $flag = shift @_;
+  #print "Entering fetchNextRow (flag = $flag)...<BR>\n";
+
+  #### If flag == 1, just testing to see if this is rewindable
+  if ($flag == 1) {
+    #print "Test if rewindable: yes<BR>\n";
+    return 1;
+  }
+
+  #### If flag > 1, then really do the rewind  
+  if ($flag > 1) {
+    #print "rewind...<BR>";
+    $sth->execute;
+    #print "and return.<BR>\n";
+    return 1;
+  }
+
+  #### Else return the next row
+  my @row = $sth->fetchrow_array;
+  push(@{$resultset_ref->{data_ref}},\@row) if (@row);
+
+  return @row;
+}
+
+
+###############################################################################
+# fetchNextRow called by ShowHTMLTable
+###############################################################################
+sub fetchNextRowOld {
     my $flag = shift @_;
-    if ($flag) {return $sth->execute;}  # do a "rewind"
+    if ($flag) {
+      print "fetchNextRow: flag = $flag<BR>\n";
+      return $sth->execute;
+    }
     return $sth->fetchrow_array;
 }
 

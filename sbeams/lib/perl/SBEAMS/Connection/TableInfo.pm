@@ -135,6 +135,7 @@ sub returnTableInfo {
                   JOIN $TB_ORGANIZATION O
                        ON (C.organization_id=O.organization_id)
                  WHERE C.record_status!='D'
+		   AND O.record_status!='D'
             ~;
         }
 
@@ -145,6 +146,7 @@ sub returnTableInfo {
                   JOIN $TB_ORGANIZATION O
                        ON (C.organization_id=O.organization_id)
                  WHERE C.record_status!='D'
+		   AND O.record_status!='D'
             ~;
         }
 
@@ -164,6 +166,7 @@ sub returnTableInfo {
                   LEFT JOIN $TB_PRIVILEGE P ON ( UWG.privilege_id=P.privilege_id )
                  WHERE UWG.record_status!='D'
                    AND UL.record_status!='D'
+                   AND WG.record_status!='D'
                    AND P.record_status!='D'
                  ORDER BY UL.username,WG.work_group_name
             ~;
