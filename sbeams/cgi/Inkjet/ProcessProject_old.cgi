@@ -16,7 +16,7 @@
 ###############################################################################
 use strict;
 use lib qw (../../lib/perl);
-use vars qw ($q $sbeams $sbeamsIJ $dbh $current_contact_id $current_username
+use vars qw ($q $sbeams $sbeamsMA $dbh $current_contact_id $current_username
              $current_work_group_id $current_work_group_name
              $current_project_id $current_project_name
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
@@ -39,8 +39,8 @@ require "QuantitationFile.pl";
 
 $q = new CGI;
 $sbeams = new SBEAMS::Connection;
-$sbeamsIJ = new SBEAMS::Inkjet;
-$sbeamsIJ->setSBEAMS($sbeams);
+$sbeamsMA = new SBEAMS::Inkjet;
+$sbeamsMA->setSBEAMS($sbeams);
 
 
 ###############################################################################
@@ -60,10 +60,20 @@ sub main {
     #### Do the SBEAMS authentication and exit if a username is not returned
     exit unless ($current_username = $sbeams->Authenticate());
 
+		#### Read in the default input parameters
+		my %parameters;
+		my $n_params_found = $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
+		#$sbeams->printDebuggingInfo($q);
+		
+		
+		#### Process generic "state" parameters before we start
+		$sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+
     #### Print the header, do what the program does, and print footer
-    $sbeamsIJ->printPageHeader();
+    $sbeamsMA->printPageHeader();
     processRequests();
-    $sbeamsIJ->printPageFooter();
+    $sbeamsMA->printPageFooter();
 
 
 } # end main
@@ -122,24 +132,21 @@ sub printEntryForm {
     my $CATEGORY="Process Experiments";
 
 
-    my $apply_action  = $q->param('apply_action');
-    $parameters{project_id} = $q->param('project_id');
+#    my $apply_action  = $q->param('apply_action');
+#    $parameters{project_id} = $q->param('project_id');
+		$parameters{project_id} = $sbeams->getCurrent_project_id();
 
-
-    # If we're coming to this page for the first time, and there is a
-    # default project set, then automatically select that one and GO!
-    if ( ($parameters{project_id} eq "") && ($current_project_id > 0) ) {
-      $parameters{project_id} = $current_project_id;
-      $apply_action = "QUERY";
-    }
+#    # If we're coming to this page for the first time, and there is a
+#    # default project set, then automatically select that one and GO!
+#    if ( ($parameters{project_id} eq "") && ($current_project_id > 0) ) {
+#      $parameters{project_id} = $current_project_id;
+#      $apply_action = "QUERY";
+#    }
 
 
     $sbeams->printUserContext();
     print qq!
         <H2>$CATEGORY</H2>
-        $LINESEPARATOR
-        <FORM METHOD="post">
-        <TABLE>
     !;
 
 
@@ -149,43 +156,39 @@ sub printEntryForm {
 	SELECT project_id,username+' - '+name
 	  FROM $TB_PROJECT P
 	  LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id )
-	  LEFT JOIN $TB_USER_WORK_GROUP UWG
-	       ON ( P.PI_contact_id=UWG.contact_id )
-	 WHERE P.record_status != 'D'
-	   AND UWG.work_group_id = 13
 	 ORDER BY username,name
     ~;
     my $optionlist = $sbeams->buildOptionList(
            $sql_query,$parameters{project_id});
 
 
-    print qq!
-          <TR><TD><B>Project:</B></TD>
-          <TD><SELECT NAME="project_id">
-          <OPTION VALUE=""></OPTION>
-          $optionlist</SELECT></TD>
-          <TD BGCOLOR="E0E0E0">Select the Project Name</TD>
-          </TD></TR>
-    !;
-
-
-    # ---------------------------
-    # Show the QUERY, REFRESH, and Reset buttons
-    print qq!
-	<TR><TD COLSPAN=2>
-	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-	<INPUT TYPE="submit" NAME="apply_action" VALUE="QUERY">
-	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-	<INPUT TYPE="submit" NAME="apply_action" VALUE="REFRESH">
-	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-	<INPUT TYPE="reset"  VALUE="Reset">
-         </TR></TABLE>
-         </FORM>
-    !;
-
-
-    $sbeams->printPageFooter("CloseTables");
-    print "<BR><HR SIZE=5 NOSHADE><BR>\n";
+#    print qq!
+#          <TR><TD><B>Project:</B></TD>
+#          <TD><SELECT NAME="project_id">
+#          <OPTION VALUE=""></OPTION>
+#          $optionlist</SELECT></TD>
+#          <TD BGCOLOR="E0E0E0">Select the Project Name</TD>
+#          </TD></TR>
+#    !;
+#
+#
+#    # ---------------------------
+#    # Show the QUERY, REFRESH, and Reset buttons
+#    print qq!
+#	<TR><TD COLSPAN=2>
+#	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+#	<INPUT TYPE="submit" NAME="apply_action" VALUE="QUERY">
+#	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+#	<INPUT TYPE="submit" NAME="apply_action" VALUE="REFRESH">
+#	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+#	<INPUT TYPE="reset"  VALUE="Reset">
+#         </TR></TABLE>
+#         </FORM>
+#    !;
+#
+#
+#    $sbeams->printPageFooter("CloseTables");
+#    print "<BR><HR SIZE=5 NOSHADE><BR>\n";
 
     # --------------------------------------------------
     if ($parameters{project_id} > 0) {
@@ -195,28 +198,29 @@ SELECT	A.array_id,A.array_name,
 	ARSM2.name AS 'Sample2Name',D2.dye_name AS 'sample2_dye',
 	AQ.array_quantitation_id,AQ.data_flag AS 'quan_flag',
 	AQ.stage_location,AL.source_filename AS 'key_file'
-  FROM $TBIJ_ARRAY_REQUEST AR
-  LEFT JOIN $TBIJ_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )
-  LEFT JOIN $TBIJ_ARRAY_REQUEST_SAMPLE ARSM1 ON ( ARSL.array_request_slide_id = ARSM1.array_request_slide_id AND ARSM1.sample_index=0)
-  LEFT JOIN $TBIJ_LABELING_METHOD LM1 ON ( ARSM1.labeling_method_id = LM1.labeling_method_id )
-  LEFT JOIN $TBIJ_DYE D1 ON ( LM1.dye_id = D1.dye_id )
-  LEFT JOIN $TBIJ_ARRAY_REQUEST_SAMPLE ARSM2 ON ( ARSL.array_request_slide_id = ARSM2.array_request_slide_id AND ARSM2.sample_index=1)
-  LEFT JOIN $TBIJ_LABELING_METHOD LM2 ON ( ARSM2.labeling_method_id = LM2.labeling_method_id )
-  LEFT JOIN $TBIJ_DYE D2 ON ( LM2.dye_id = D2.dye_id )
-  LEFT JOIN $TBIJ_ARRAY A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
-  LEFT JOIN $TBIJ_ARRAY_LAYOUT AL ON ( A.layout_id = AL.layout_id )
-  LEFT JOIN $TBIJ_ARRAY_SCAN ASCAN ON ( A.array_id = ASCAN.array_id )
-  LEFT JOIN $TBIJ_ARRAY_QUANTITATION AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
+  FROM array_request AR
+  LEFT JOIN array_request_slide ARSL ON ( AR.array_request_id = ARSL.array_request_id )
+  LEFT JOIN array_request_sample ARSM1 ON ( ARSL.array_request_slide_id = ARSM1.array_request_slide_id AND ARSM1.sample_index=0)
+  LEFT JOIN labeling_method LM1 ON ( ARSM1.labeling_method_id = LM1.labeling_method_id )
+  LEFT JOIN arrays.dbo.dye D1 ON ( LM1.dye_id = D1.dye_id )
+  LEFT JOIN array_request_sample ARSM2 ON ( ARSL.array_request_slide_id = ARSM2.array_request_slide_id AND ARSM2.sample_index=1)
+  LEFT JOIN labeling_method LM2 ON ( ARSM2.labeling_method_id = LM2.labeling_method_id )
+  LEFT JOIN arrays.dbo.dye D2 ON ( LM2.dye_id = D2.dye_id )
+  LEFT JOIN array A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
+  LEFT JOIN array_layout AL ON ( A.layout_id = AL.layout_id )
+  LEFT JOIN array_scan ASCAN ON ( A.array_id = ASCAN.array_id )
+  LEFT JOIN array_quantitation AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
  WHERE AR.project_id=$parameters{project_id}
    AND AQ.array_quantitation_id IS NOT NULL
    AND AR.record_status != 'D'
    AND A.record_status != 'D'
    AND ASCAN.record_status != 'D'
    AND AQ.record_status != 'D'
+   AND AQ.data_flag != 'BAD'
  ORDER BY A.array_name
      ~;
 
-      my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=";
+      my $base_url = "$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=IJ_=";
       %url_cols = ('array_name' => "${base_url}array&array_id=%0V",
                    'quan_flag' => "${base_url}array_quantitation&array_quantitation_id=%6V", 
       );
@@ -226,14 +230,14 @@ SELECT	A.array_id,A.array_name,
       );
 
 
-    } else {
-      $apply_action="BAD SELECTION";
-    }
-
-
-    if ($apply_action eq "QUERY") {
-      $sbeams->displayQueryResult(sql_query=>$sql_query,
-          url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols);
+    }# else {
+#      $apply_action="BAD SELECTION";
+#    }
+#
+#
+#    if ($apply_action eq "QUERY") {
+#      $sbeams->displayQueryResult(sql_query=>$sql_query,
+#          url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols);
 
 
       print qq~
@@ -264,9 +268,7 @@ SELECT	A.array_id,A.array_name,
 
       foreach $element (@rows) {
         my $sample1name = $$element[2];
-	$sample1name =~ s/ /_/g;
         my $sample2name = $$element[4];
-	$sample2name =~ s/ /_/g;
         my $forcondition = "${sample1name}_vs_${sample2name}";
         my $revcondition = "${sample2name}_vs_${sample1name}";
         my $thiscondition;
@@ -344,21 +346,6 @@ SELECT	A.array_id,A.array_name,
                 #### Pull out the channel information
                 my @channels = @{$quantitation_data{channels}};
                 my $channel;
-
-		#### If we have no channel information, brazenly assume that
-		#### channel 1 contains the shorter number_part dye
-		#print "channels = ",join(",",@channels),"<BR>\n";
-		unless (@channels) {
-		  print "WARNING: Quantitation file has no channel information! (typical of Dapple) ".
-		    "Guessing that channel 0 is the lower numbered bye!<BR>";
-		  if ($sample1_dye lt $sample2_dye) {
-                    $channel_direction = "f";
-		    print "<font color=red>WARNING: Guessing channel direction should be forward.  Verify!!</font><BR>\n";
-		  } else {
-                    $channel_direction = "r";
-		    print "<font color=red>WARNING: Guessing channel direction should be reverse.  Verify!!</font><BR>\n";
-		  }
-		}
 
                 #### Loop over each channel
                 foreach $channel (@channels) {
@@ -463,9 +450,9 @@ SELECT	A.array_id,A.array_name,
       ~;
 
 
-    } else {
-      print "<H4>Select parameters above and press QUERY\n";
-    }
+#    } else {
+#      print "<H4>Select parameters above and press QUERY\n";
+#    }
 
 
 } # end printEntryForm
