@@ -193,6 +193,12 @@ sub printEntryForm {
       if ( ! ($parameters{request_status}));
 
 
+    #### Extract the value of cost_scheme_id or default to 1.
+    #### FIX ME!! Do we have to hard-code the default value here??
+    $parameters{cost_scheme_id} = 1 unless ( $parameters{cost_scheme_id} > 1 );
+    my $cost_scheme_id = $parameters{cost_scheme_id};
+
+
     my $record_status_options =
       $sbeams->getRecordStatusOptions($parameters{"record_status"});
 
@@ -259,6 +265,19 @@ sub printEntryForm {
           }
         }
 
+        # If "$cost_scheme_id" appears in the SQL optionlist query, then substitute
+        # that with the value of the current variable of the same name
+        if ( $optionlist_queries{$element} =~ /\$cost_scheme_id/ ) {
+          $optionlist_queries{$element} =~
+              s/\$cost_scheme_id/$cost_scheme_id/;
+        }
+
+
+        # If $element is cost_scheme, restrict the list to the current option
+        if ( $element eq "cost_scheme_id" && $current_work_group_name ne "Arrays" ) {
+          $optionlist_queries{$element} =~ s/ORDER BY/WHERE cost_scheme_id = $cost_scheme_id ORDER BY/;
+        }
+
 
         #### Set the MULTIOPTIONLIST flag if this is a multi-select list
         my $method_options;
@@ -268,6 +287,7 @@ sub printEntryForm {
         # Build the option list
         $optionlists{$element}=$sbeams->buildOptionList(
            $optionlist_queries{$element},$parameters{$element},$method_options);
+        #print $optionlist_queries{$element},"<BR>\n",$parameters{$element},"<BR>\n";
     }
 
 
@@ -488,9 +508,11 @@ sub printEntryForm {
 
       if ($parameters{"slide_type_id"}) {
         $sql_query = qq!
-		SELECT $n_slides * price
-		  FROM $TB_SLIDE_TYPE
-		 WHERE slide_type_id='$parameters{"slide_type_id"}'
+		SELECT $n_slides * STC.price
+		  FROM $TB_SLIDE_TYPE ST
+		  JOIN $TB_SLIDE_TYPE_COST STC ON ( ST.slide_type_id = STC.slide_type_id )
+		 WHERE ST.slide_type_id='$parameters{"slide_type_id"}'
+		   AND STC.cost_scheme_id = $cost_scheme_id
         !;
         @row_result = $sbeams->selectOneColumn($sql_query);
         my ($slide_cost) = @row_result;
@@ -1377,6 +1399,12 @@ sub printCompletedEntry {
       if ( ! ($parameters{request_status}));
 
 
+    #### Extract the value of cost_scheme_id or default to 1.
+    #### FIX ME!! Do we have to hard-code the default value here??
+    $parameters{cost_scheme_id} = 1 unless ( $parameters{cost_scheme_id} > 1 );
+    my $cost_scheme_id = $parameters{cost_scheme_id};
+
+
     my $record_status_options =
       $sbeams->getRecordStatusOptions($parameters{"record_status"});
 
@@ -1437,6 +1465,14 @@ sub printCompletedEntry {
                 s/\$contact_id/$parameters{contact_id}/;
           }
         }
+
+        # If "$cost_scheme_id" appears in the SQL optionlist query, then substitute
+        # that with the value of the current variable of the same name
+        if ( $optionlist_queries{$element} =~ /\$cost_scheme_id/ ) {
+          $optionlist_queries{$element} =~
+              s/\$cost_scheme_id/$cost_scheme_id/;
+        }
+
 
         # Build the option list
         #$optionlists{$element}=$sbeams->buildOptionList(
@@ -1715,7 +1751,7 @@ sub printCompletedEntry {
     ~;
     my %url_cols;
     $sql_query = "SELECT * FROM arrays.dbo.xna_info";
-    return $sbeams->displayQueryResult(sql_query=>$sql_query,
+    $sbeams->displayQueryResult(sql_query=>$sql_query,
         url_cols_ref=>\%url_cols,printable_table=>1);
 
     print qq~
@@ -1724,7 +1760,7 @@ sub printCompletedEntry {
 	follows:</B><BR><BR>
     ~;
     $sql_query = "SELECT * FROM arrays.dbo.arabadopsis";
-    return $sbeams->displayQueryResult(sql_query=>$sql_query,
+    $sbeams->displayQueryResult(sql_query=>$sql_query,
         url_cols_ref=>\%url_cols,printable_table=>1);
 
     print qq~

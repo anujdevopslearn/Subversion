@@ -455,9 +455,9 @@ sub displayQueryResult {
         url_keys=>$url_cols_ref,
         hidden_cols=>$hidden_cols_ref,
         THformats=>['BGCOLOR=#C0C0C0'],
-        TDformats=>['NOWRAP']
-	};
-
+        TDformats=>['NOWRAP'],
+        row_color_scheme=>$row_color_scheme_ref
+      };
 
     #### Otherwise, use the standard viewable format which doesn't print well
     } else {

@@ -20,6 +20,8 @@ use vars qw(@ISA @EXPORT
     $TB_SOFTWARE
     $TB_SOFTWARE_TYPE
     $TB_SLIDE_TYPE
+    $TB_COST_SCHEME
+    $TB_SLIDE_TYPE_COST
     $TB_ORGANISM
     $TB_LABELING_METHOD
     $TB_DYE
@@ -52,6 +54,8 @@ require Exporter;
     $TB_SOFTWARE
     $TB_SOFTWARE_TYPE
     $TB_SLIDE_TYPE
+    $TB_COST_SCHEME
+    $TB_SLIDE_TYPE_COST
     $TB_ORGANISM
     $TB_LABELING_METHOD
     $TB_DYE
@@ -81,6 +85,8 @@ $TB_HARDWARE_TYPE       = 'hardware_type';
 $TB_SOFTWARE            = 'software';
 $TB_SOFTWARE_TYPE       = 'software_type';
 $TB_SLIDE_TYPE          = 'slide_type';
+$TB_COST_SCHEME         = 'cost_scheme';
+$TB_SLIDE_TYPE_COST     = 'slide_type_cost';
 $TB_ORGANISM            = 'organism';
 $TB_LABELING_METHOD     = 'labeling_method';
 $TB_DYE                 = 'arrays.dbo.dye';

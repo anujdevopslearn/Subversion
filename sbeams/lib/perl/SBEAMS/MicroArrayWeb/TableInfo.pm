@@ -155,13 +155,31 @@ sub returnTableInfo {
 
         if ($info_key eq "FULLQuery") {
             return qq~
-		SELECT slide_type_id,ST.name,O.name,price,ST.sort_order,
+		SELECT slide_type_id,ST.name,O.organism_name,price,ST.sort_order,
 		       ST.date_created,ST.created_by_id,ST.date_modified,
 		       ST.modified_by_id,ST.record_status
 		  FROM $TB_SLIDE_TYPE ST
 		  JOIN $TB_ORGANISM O
 		       ON (ST.organism_id=O.organism_id)
 		 WHERE ST.record_status!='D'
+            ~;
+        }
+
+    }
+
+
+###############################################################################
+    if ($table_name eq "slide_type_cost") {
+
+        if ($info_key eq "BASICQuery") {
+            return qq~
+		SELECT slide_type_cost_id,name,cost_scheme_name,STC.price
+		  FROM $TB_SLIDE_TYPE_COST STC
+		  JOIN $TB_SLIDE_TYPE ST
+		       ON (STC.slide_type_id=ST.slide_type_id)
+		  JOIN $TB_COST_SCHEME CS
+		       ON (STC.cost_scheme_id=CS.cost_scheme_id)
+		 WHERE STC.record_status!='D'
             ~;
         }
 
