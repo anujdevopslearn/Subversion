@@ -511,6 +511,7 @@ $optionlist
 
   #########################################################################
   #### If QUERY or VIEWRESULTSET was selected, display the data
+  $apply_action = 'GO' unless ($apply_action);
   if ($apply_action =~ /(QUERY|GO|VIEWRESULTSET)/) {
 
     #### Show the SQL that will be or was executed
