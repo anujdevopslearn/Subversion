@@ -99,6 +99,9 @@ Options:
   --cleanup_archive   Perform cleanup maintenance on the directory which can
                       include many functions including compressing and
                       verifying the layout
+  --delete_search_batch   Perform a delete of all the components of the
+                      specified search_batch.  This does not delete spectra
+                      or fractions.  Use --delete_fractions for that
 
  e.g.:  $PROG_NAME --list_all
         $PROG_NAME --check --experiment_tag=rafapr
@@ -118,7 +121,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
   "list_all","search_subdir:s","load","testonly",
   "update_from_summary_files","update_search","update_probabilities",
   "update_timing_info","gradient_program_id:i","column_delay:i",
-  "cleanup_archive",
+  "cleanup_archive","delete_search_batch",
   )) {
   print "$USAGE";
   exit;
@@ -184,6 +187,7 @@ sub handleRequest {
   my $update_probabilities = $OPTIONS{"update_probabilities"} || '';
   my $update_timing_info = $OPTIONS{"update_timing_info"} || '';
   my $cleanup_archive = $OPTIONS{"cleanup_archive"} || '';
+  my $delete_search_batch = $OPTIONS{"delete_search_batch"} || '';
   my $experiment_tag = $OPTIONS{"experiment_tag"} || '';
   my $search_subdir = $OPTIONS{"search_subdir"} || '';
   my $file_prefix = $OPTIONS{"file_prefix"} || '';
@@ -291,9 +295,9 @@ sub handleRequest {
 
     #### Except if there are none, go to the next item
     } else {
+      printf("                                          No search_batch\n");
       next;
     }
-
 
     my $search_batch_subdir;
     foreach $search_batch_subdir (@search_batches) {
@@ -309,6 +313,7 @@ sub handleRequest {
 
   	#### If user asked for a load, do it
   	if ($load) {
+          print "Loading data in $source_dir\n";
   	  $result = loadProteomicsExperiment(
   	    experiment_tag=>$status->{experiment_tag},
   	    source_dir=>$source_dir);
@@ -361,6 +366,17 @@ sub handleRequest {
   	if ($cleanup_archive) {
           print "Performing general cleanup on the file archive...\n";
   	  $result = cleanupArchive(
+  	    experiment_tag=>$status->{experiment_tag},
+  	    search_batch_subdir=>$search_batch_subdir,
+  	    source_dir=>$source_dir);
+  	  print "\n";
+  	}
+
+  	#### If user asked for delete_search_batch, do it
+  	if ($delete_search_batch) {
+          print "Deleting search batch $search_batch_subdir in the database ".
+            "(but not the files)...\n\n";
+  	  $result = deleteSearchBatch(
   	    experiment_tag=>$status->{experiment_tag},
   	    search_batch_subdir=>$search_batch_subdir,
   	    source_dir=>$source_dir);
@@ -795,7 +811,7 @@ sub addMsmsSpectrumEntry {
   #### Now insert all the mass,intensity pairs
   my ($i,$mass,$intensity);
   my $create_bcp_file = "YES";
-  #my $create_bcp_file = 0;
+  $create_bcp_file = 0;
 
   if ($create_bcp_file) {
     open(SPECFILE,">>/net/dblocal/data/proteomics/bcp/msms_spectrum_peak.txt");
@@ -2409,6 +2425,87 @@ sub cleanupArchive {
 
 
     print "\n------------------------------------------------------------\n";
+
+  }
+
+}
+
+
+
+###############################################################################
+# deleteSearchBatch
+###############################################################################
+sub deleteSearchBatch {
+  my %args = @_;
+  my $SUB_NAME = 'deleteSearchBatch';
+
+  #### Decode the argument list
+  my $experiment_tag = $args{'experiment_tag'}
+   || die "ERROR[$SUB_NAME]: experiment_tag not passed";
+  my $search_batch_subdir = $args{'search_batch_subdir'}
+   || die "ERROR[$SUB_NAME]: search_batch_subdir not passed";
+  my $source_dir = $args{'source_dir'}
+   || die "ERROR[$SUB_NAME]: source_dir not passed";
+
+
+  #### Define standard variables
+  my ($i,$element,$key,$value,$line,$result,$sql,$file);
+
+
+  #### Try to find this experiment in database
+  $sql="SELECT experiment_id ".
+      "FROM $TBPR_PROTEOMICS_EXPERIMENT ".
+      "WHERE experiment_tag = '$experiment_tag'";
+  my ($proteomics_experiment_id) = $sbeams->selectOneColumn($sql);
+  unless ($proteomics_experiment_id) {
+    print "\nERROR: Unable to find experiment tag '$experiment_tag'.\n".
+          "       This experiment must already exist in the database\n\n";
+    return;
+  }
+
+
+  #### Try to find this search_batch in database
+  $sql = qq~
+      SELECT search_batch_id
+        FROM $TBPR_SEARCH_BATCH
+       WHERE experiment_id = '$proteomics_experiment_id'
+         AND search_batch_subdir = '$search_batch_subdir'
+  ~;
+  my @search_batch_ids = $sbeams->selectOneColumn($sql);
+  my $search_batch_id;
+
+  if (scalar(@search_batch_ids) < 1) {
+    print "\nERROR: Unable to find this search batch\n";
+    return;
+  }
+  if (scalar(@search_batch_ids) > 1) {
+    print "\nERROR: Too many search_batches returned from $sql\n";
+    return;
+  }
+
+
+  #### Define the inheritance path:
+  ####  (C) means Child that directly links to the parent
+  ####  (PKLC) means a PKeyLess Child that should be deleted by it parental key
+  ####  (A) means Association from parent to this table and requires delete
+  ####  (L) means Linking table from child to parent
+  my %table_child_relationship = (
+    search_batch => 'search(C),search_batch_parameter(PKLC)',
+    search => 'search_hit(C)',
+    search_hit => 'quantitation(C),search_hit_protein(C)',
+  );
+
+
+  foreach my $element (@search_batch_ids) {
+    my $result = $sbeams->deleteRecordsAndChildren(
+      table_name => 'search_batch',
+      table_child_relationship => \%table_child_relationship,
+      delete_PKs => [ $element ],
+      delete_batch => 10000,
+      database => $DBPREFIX{Proteomics},
+      verbose => $VERBOSE,
+      testonly => $TESTONLY,
+    );
 
   }
 
