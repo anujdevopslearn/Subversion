@@ -178,6 +178,8 @@ sub handle_request {
 
   #### Set some reasonable defaults if no parameters supplied
   unless ($n_params_found) {
+    $parameters{view_style} = 'StatisticalSummary',
+    $parameters{minor_allele_limit} = '0.1'
   }
 
 
