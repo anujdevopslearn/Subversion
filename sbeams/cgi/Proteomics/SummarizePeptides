@@ -385,34 +385,26 @@ sub handle_request {
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
 
-  #### If grouping by peptide string
-  if ( $parameters{display_options} =~ /GroupPeptideString/ ) {
-    @column_array = (
-      ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
-      ["accessor","DBX.accessor","accessor"],
-      ["biosequence_accession","BS.biosequence_accession","Accession"],
-      ["reference","BS.biosequence_name","Reference"],
-      ["peptide_string","peptide_string","Peptide String"],
-      ["count","tABS.row_count","Count"],
-      ["biosequence_desc","BS.biosequence_desc","Reference Description"],
-    );
-    $group_by_clause = " GROUP BY SH.biosequence_id,peptide_string";
-    $peptide_column = "peptide_string,";
-    $count_column = "COUNT(*) AS 'row_count'";
+  #### If grouping by peptide or peptide_string and reference
+  if ( $parameters{display_options} =~ /GroupPeptide/ ) {
+    my $colname = "peptide";
+    my $dispname = "Peptide";
+    if ( $parameters{display_options} =~ /GroupPeptideString/ ) {
+      $colname = "peptide_string";
+      $dispname = "Peptide String";
+    }
 
-  #### If grouping by peptide,reference
-  } elsif ( $parameters{display_options} =~ /GroupPeptide/ ) {
     @column_array = (
       ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
       ["accessor","DBX.accessor","accessor"],
       ["biosequence_accession","BS.biosequence_accession","Accession"],
       ["reference","BS.biosequence_name","Reference"],
-      ["peptide","peptide","Peptide"],
+      ["$colname","$colname","$dispname"],
       ["count","tABS.row_count","Count"],
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
     );
-    $group_by_clause = " GROUP BY SH.biosequence_id,peptide";
-    $peptide_column = "peptide,";
+    $group_by_clause = " GROUP BY SH.biosequence_id,$colname";
+    $peptide_column = "$colname,";
     $count_column = "COUNT(*) AS 'row_count'";
 
   #### If grouping by reference
@@ -552,13 +544,13 @@ sub handle_request {
                'Reference' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=$parameters{search_batch_id}&reference_constraint=\%$colnameidx{reference}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
     	       'Reference_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show all occurrences of this protein in these experiments\'; return true"',
 
-    	       'Peptide' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&peptide_constraint=\%$colnameidx{peptide}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
+    	       'Peptide' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=$parameters{search_batch_id}&peptide_constraint=\%$colnameidx{peptide}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
     	       'Peptide_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show all occurrences of this peptide in these experiments\'; return true"',
 
-	       'Peptide String' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&peptide_string_constraint=\%$colnameidx{peptide_string}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
+	       'Peptide String' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=$parameters{search_batch_id}&peptide_string_constraint=\%$colnameidx{peptide_string}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
 	       'Peptide String_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show all occurrences of this exact peptide instance in these experiments\'; return true"',
 
-	       'Count' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&reference_constraint=\%$colnameidx{reference}V&peptide_constraint=\%$colnameidx{peptide}V&peptide_string_constraint=\%$colnameidx{peptide_string}V&${parameters_list}&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
+	       'Count' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=$parameters{search_batch_id}&reference_constraint=\%$colnameidx{reference}V&peptide_constraint=\%$colnameidx{peptide}V&peptide_string_constraint=\%$colnameidx{peptide_string}V&${parameters_list}&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
 	       'Count_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show just this many that match all above criteria\'; return true"',
   );
 
