@@ -13,17 +13,18 @@
 
   use strict;
 
-  use lib qw (../perl ../../perl);
+  use lib qw (../perl ../../perl ../../../perl);
   use SBEAMS::Proteomics::Utilities;
   my $sbeamsPR = SBEAMS::Proteomics::Utilities->new();
 
 
-  my ($i,$element,$key,$value);
-
-
+  #### Define standard variables
+  my ($i,$element,$key,$value,$line,$result,$sql);
   my $verbose = 0;
-  my $inputfile = shift;
 
+
+  #### Get the input file as the first input parameter or otherwise a default
+  my $inputfile = shift;
   unless ($inputfile) {
     if (1 == 1) {
       $inputfile =
@@ -37,24 +38,27 @@
   }
 
 
+  #### Read the out file
   my %search_data = $sbeamsPR->readOutFile(inputfile => "$inputfile",
     verbose => "$verbose");
 
 
+  #### Print out all the keys and values for the returned hash
   print "\n\nsearch_data:\n";
-
   while ( ($key,$value) = each %search_data ) {
     printf("%22s = %s\n",$key,$value);
   }
 
 
+  #### Print out all the paramters
   print "\nparameters:\n";
   while ( ($key,$value) = each %{$search_data{parameters}} ) {
     printf("%22s = %s\n",$key,$value);
   }
 
 
-  print "\nmatches:\n";
+  #### Print out all the search_hits
+  print "\nsearch_hits:\n";
   foreach $element ( @{$search_data{matches}} ) {
     print "  $element -> {reference}: $element->{reference}\n";
     if ($element->{search_hit_proteins}) {
