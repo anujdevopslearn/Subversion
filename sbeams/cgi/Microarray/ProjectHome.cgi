@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -T
+#!/usr/local/bin/perl 
 
 
 ###############################################################################
@@ -93,7 +93,7 @@ sub main {
   my %parameters;
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters);
-  #$sbeams->printDebuggingInfo($q);
+  $sbeams->printDebuggingInfo($q);
 
 
   #### Process generic "state" parameters before we start
@@ -103,7 +103,6 @@ sub main {
 
   #### Decide what action to take based on information so far
   if ($parameters{action} eq "???") {
-    # Some action
   } else {
     $sbeamsMOD->printPageHeader();
     print_javascript();
@@ -119,18 +118,23 @@ sub main {
 ##############################################################################
 sub print_javascript {
 
+    my $uri = $ENV{SCRIPT_URI};
+    $uri =~ /(^.*\/).*/;
+    $uri = $1;
+
 print qq~
 <SCRIPT LANGUAGE="Javascript">
 <!--
 
 function viewRequest(status){
     var site;
+    alert("$uri");
     if (status == 'old') {
 	var id = document.requests.chooser.options[document.requests.chooser.selectedIndex].value;
-	site = "http://db.systemsbiology.net/dev7/sbeams/cgi/Microarray/SubmitArrayRequest.cgi?TABLE_NAME=array_request&array_request_id="+id;
+	site = "$uri/SubmitArrayRequest.cgi?TABLE_NAME=array_request&array_request_id="+id;
     }
     else {
-	site = "http://db.systemsbiology.net/dev7/sbeams/cgi/Microarray/SubmitArrayRequest.cgi?TABLE_NAME=array_request&ShowEntryForm=1";
+	site = "$uri/SubmitArrayRequest.cgi?TABLE_NAME=array_request&ShowEntryForm=1";
     }
     var newWindow = window.open(site);
 }
@@ -140,11 +144,11 @@ function viewImage(status){
     if (status == 'old') {
 	//alert ("scan images not available to be viewed.  Will be developed later");
     var id = document.images.chooser.options[document.images.chooser.selectedIndex].value
-    var site = "http://db.systemsbiology.net/dev7/sbeams/cgi/Microarray/ManageTable.cgi?TABLE_NAME=array_scan&array_scan_id="+id
+    var site = "$uri/ManageTable.cgi?TABLE_NAME=array_scan&array_scan_id="+id
     }
     else {
 	//alert ("scan images not on a network share.");
-        var site = "http://db.systemsbiology.net/dev7/sbeams/cgi/Microarray/ManageTable.cgi?TABLE_NAME=array_scan&ShowEntryForm=1";
+        var site = "$uri/ManageTable.cgi?TABLE_NAME=array_scan&ShowEntryForm=1";
     }
     var newWindow = window.open(site);
 }
@@ -153,10 +157,10 @@ function viewQuantitation(status){
     var site;
     if (status == 'old') {
 	var id = document.quantitations.chooser.options[document.quantitations.chooser.selectedIndex].value;
-	site = "http://db.systemsbiology.net/dev7/sbeams/cgi/Microarray/ManageTable.cgi?TABLE_NAME=array_quantitation&array_quantitation_id="+id;
+	site = "$uri/ManageTable.cgi?TABLE_NAME=array_quantitation&array_quantitation_id="+id;
     }
     else {
-	site = "http://db.systemsbiology.net/dev7/sbeams/cgi/Microarray/ManageTable.cgi?TABLE_NAME=array_quantitation&ShowEntryForm=1";
+	site = "$uri/ManageTable.cgi?TABLE_NAME=array_quantitation&ShowEntryForm=1";
     }
     var newWindow = window.open(site);
 }
@@ -171,32 +175,75 @@ function actionLogFile(action){
 }		
 
 function actionRepFile(){
-		var id = document.outputFiles.repChooser.options[document.outputFiles.repChooser.selectedIndex].value;
-		getFile(id);
+  var id = document.outputFiles.repChooser.options[document.outputFiles.repChooser.selectedIndex].value;
+  getFile(id);
 }
 function actionMergeFile(){
-		var id = document.outputFiles.mergeChooser.options[document.outputFiles.mergeChooser.selectedIndex].value;
-		getFile(id);
+  var id = document.outputFiles.mergeChooser.options[document.outputFiles.mergeChooser.selectedIndex].value;
+  getFile(id);
 }
 function actionSigFile(){
-		var id = document.outputFiles.sigChooser.options[document.outputFiles.sigChooser.selectedIndex].value;
-		getFile(id);
+  var id = document.outputFiles.sigChooser.options[document.outputFiles.sigChooser.selectedIndex].value;
+  getFile(id);
 }
 function actionCloneFile(){
-		var id = document.outputFiles.cloneChooser.options[document.outputFiles.cloneChooser.selectedIndex].value;
-		getFile(id);
+  var id = document.outputFiles.cloneChooser.options[document.outputFiles.cloneChooser.selectedIndex].value;
+  getFile(id);
 }
 
 
 function getFile(id){
-    var site = "http://db.systemsbiology.net/dev7/sbeams/cgi/Microarray/ViewFile.cgi?action=download&FILE_NAME="+id;
+    var site = "$uri/ViewFile.cgi?action=download&FILE_NAME="+id;
     window.location = site;
 }
 		
 function viewFile(id){
-    var site = "http://db.systemsbiology.net/dev7/sbeams/cgi/Microarray/ViewFile.cgi?action=view&FILE_NAME="+id;
+    var site = "$uri/ViewFile.cgi?action=view&FILE_NAME="+id;
     var newWindow = window.open(site);
 }
+
+function startMev(project_id){
+    document.tavForm.project_id.value=project_id;
+    
+    var tavList = document.tavForm.tavChooser;
+    var tavArray;
+    var isFirst = 1;
+    for (var i=0;i<tavList.length;i++){
+	if (tavList.options[i].selected) {
+	    if (isFirst == 1){
+		isFirst = 0;
+		tavArray = tavList.options[i].value;
+	    }else {
+		tavArray += "," + tavList.options[i].value;
+	    }
+	}
+    }
+    
+    document.tavForm.selectedFiles.value = tavArray;
+    document.tavForm.submit();
+    
+}
+    
+    
+    //Determines what browser is being used and what OS is being used.
+    // convert all characters to lowercase to simplify testing
+    var agt=navigator.userAgent.toLowerCase();
+    
+// *** BROWSER VERSION ***
+    var is_nav  = ((agt.indexOf('mozilla')!=-1) && (agt.indexOf('spoofer')==-1)
+                && (agt.indexOf('compatible') == -1) && (agt.indexOf('opera')==-1)
+									 && (agt.indexOf('webtv')==-1));
+var is_ie   = (agt.indexOf("msie") != -1);
+var is_opera = (agt.indexOf("opera") != -1);
+
+// *** PLATFORM ***
+    var is_win   = ( (agt.indexOf("win")!=-1) || (agt.indexOf("16bit")!=-1) );
+var is_mac    = (agt.indexOf("mac")!=-1);
+var is_sun   = (agt.indexOf("sunos")!=-1);
+var is_linux = (agt.indexOf("inux")!=-1);
+var is_unix  = ((agt.indexOf("x11")!=-1) || is_sun || is_irix || is_hpux || 
+		is_sco ||is_unixware || is_mpras || is_reliant || 
+		is_dec || is_sinix || is_aix || is_linux || is_bsd || is_freebsd);
 
 //-->
 </SCRIPT>
@@ -252,8 +299,8 @@ sub handle_request {
   }
 
   #### print_tabs
-  my @tab_titles = ("Summary","Management","Data Analysis", "Permissions");
-#  my @tab_titles = ("Summary","MIAME Status","Management","Data Analysis","Permissions");
+#  my @tab_titles = ("Summary","Management","Data Analysis", "Permissions");
+  my @tab_titles = ("Summary","MIAME Status","Management","Data Analysis","Permissions");
   my $tab_titles_ref = \@tab_titles;
   my $page_link = 'ProjectHome.cgi';
 
@@ -273,19 +320,19 @@ sub handle_request {
   elsif($parameters{'tab'} eq "management") { 
       $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
 			     page_link=>$page_link,
-			     selected_tab=>1);
+			     selected_tab=>2);
       print_management_tab();
   }
   elsif($parameters{'tab'} eq "data_analysis") {
       $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
 			     page_link=>$page_link,
-			     selected_tab=>2);
+			     selected_tab=>3);
       print_data_analysis_tab()
   }
   elsif($parameters{'tab'} eq "permissions") {
       $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
 			     page_link=>$page_link,
-			     selected_tab=>3);
+			     selected_tab=>4);
       print_permissions_tab(ref_parameters=>$ref_parameters); 
   }
   else{
@@ -493,7 +540,7 @@ sub print_miame_status_tab {
       </TABLE><BR>
 			<B>Links</B><BR>
       <A HREF="http://www.mged.org/Workgroups/MIAME/miame.html" target="_blank">-MIAME Website</A><BR>
-      <A HREF="MIAME_checklist.doc">-Download MIAME Checklist</A>
+      <A HREF="../../doc/Microarray/MIAME_checklist.doc">-Download MIAME Checklist</A>
 			$LINESEPARATOR
       !;
   return;
@@ -659,18 +706,50 @@ sub print_data_analysis_tab {
 	my @rep_list = glob("$output_dir/*.rep");
 	my @matrix_list = glob("$output_dir/matrix_output");
 	my @zip_file = glob ("$output_dir/*.zip");
+	my @tav_list = glob ("$output_dir/*.tav");
 
   print qq~
       <H1>Data Analysis:</H1>
       <UL>
         <LI><A HREF="ProcessProject.cgi">Submit a New Job to the Pipeline</A>
-	<LI><A HREF="http://db.systemsbiology.net/software/ArrayProcess/" TARGET="_blank">What is the Data Processing Pipeline?</A>
+				<LI><A HREF="http://db.systemsbiology.net/software/ArrayProcess/" TARGET="_blank">What is the Data Processing Pipeline?</A>
       </UL>
+			$LINESEPARATOR
       ~;
+
+	## Display TAV Options if there are such files
+	if ($tav_list[0]) {
+	print qq~
+		<FORM NAME="tavForm" METHOD="GET" ACTION="http://db.systemsbiology.net:8080/microarray/sbeams">
+		<INPUT TYPE="hidden" NAME="project_id" VALUE="">
+		<INPUT TYPE="hidden" NAME="selectedFiles" VALUE="">
+		<INPUT TYPE="hidden" NAME="tab" VALUE="data_analysis">
+     <TABLE>
+		 <TR VALIGN="center"><TD><B>MeV Files</B></TD></TR>
+		 <TR><TD><SELECT NAME="tavChooser" MULTIPLE SIZE="10">
+		 ~;
+	foreach my $tav(@tav_list) {
+			my $temp = $tav;
+			$temp=~s(^.*/)();
+			print qq~<OPTION value="$temp">$temp~;
+	}
+	print qq~
+			</SELECT></TD></TR>
+			<TR>
+			 <TD><INPUT TYPE="button" name="mevButton" value="View Selected Files in MeV" onClick="Javascript:startMev($project_id)"></TD>
+			</TR>
+			<TR><TD></TD></TR>
+		</TABLE>
+		</FORM>
+		 ~;
+  }
+
   print qq~
-     <FORM NAME="outputFiles">
+	  <FORM NAME="outputFiles" METHOD="POST">
      <TABLE>
 		 ~;
+
+	## Display ZIP file Options if there are such files
 	if ($zip_file[0]){
 			$zip_file[0]=~ s(^.*/)();
 			print qq~
@@ -678,6 +757,9 @@ sub print_data_analysis_tab {
 		 <TR><TD></TD></TR>
 		 ~;
 	}
+
+	## Display Rep File Options if there are such files
+	if ($rep_list[0]){
 	print qq~
 		   <TR VALIGN="center"><TD><B>Rep Files</B></TD></TR>
 		   <TR><TD><SELECT NAME="repChooser">
@@ -690,9 +772,15 @@ sub print_data_analysis_tab {
 	print qq~
 	 		 </SELECT></TD></TR>
 			 <TR>
-			  <TD><INPUT TYPE="button" name="repButton" value="download" onClick="actionRepFile()"</TD>
+			  <TD><INPUT TYPE="button" name="repButton" value="download" onClick="Javascript:actionRepFile()"></TD>
 			 </TR>
 		   <TR><TD></TD></TR>
+			 ~;
+  }
+
+	## Display Merge File  Options if there are such files
+	if ($merge_list[0]) {
+	print qq~
 		   <TR><TD><B>Merge Files</B></TD></TR>
 			 <TR><TD><SELECT NAME="mergeChooser">
 			 ~;
@@ -704,9 +792,15 @@ sub print_data_analysis_tab {
 	print qq~
 			 </SELECT></TD></TR>
 			 <TR>
-			  <TD><INPUT TYPE="button" name="repButton" value="download" onClick="actionMergeFile()"</TD>
+			  <TD><INPUT TYPE="button" name="repButton" value="download" onClick="Javascript:actionMergeFile()"></TD>
 			 </TR>
 		   <TR><TD></TD></TR>
+			 ~;
+  }
+	
+	## Display Clone File Options if there are such files
+	if ($clone_list[0]) {
+	print qq~
 		   <TR><TD><B>Clone Files</B></TD></TR>
 			 <TR><TD><SELECT NAME="cloneChooser">
 			 ~;
@@ -718,9 +812,15 @@ sub print_data_analysis_tab {
 	print qq~
 			 </SELECT></TD></TR>
 			 <TR>
-			  <TD><INPUT TYPE="button" name="repButton" value="download" onClick="actionCloneFile()"</TD>
+			  <TD><INPUT TYPE="button" name="repButton" value="download" onClick="Javascript:actionCloneFile()"></TD>
 			 </TR>
 		   <TR><TD></TD></TR>
+			 ~;
+  }
+
+	## Display Sig File Options if there are such files
+	if ($sig_list[0]) {
+	print qq~
 		   <TR><TD><B>Sig Files</B></TD></TR>
 			 <TR><TD><SELECT NAME="sigChooser">
 			 ~;
@@ -732,9 +832,15 @@ sub print_data_analysis_tab {
 	print qq~
 			</SELECT></TD></TR>
 			 <TR>
-			  <TD><INPUT TYPE="button" name="repButton" value="download" onClick="actionSigFile()"</TD>
+			  <TD><INPUT TYPE="button" name="repButton" value="download" onClick="Javascript:actionSigFile()"></TD>
 			 </TR>
 		   <TR><TD></TD></TR>
+			 ~;
+  }
+
+	## Display Log Fil Options if there are such files
+	if ($log_list[0]) {
+	print qq~
        <TR><TD><B>Log Files</B></TD></TR>
        <TR><TD><SELECT NAME="logChooser">
   ~;
@@ -748,9 +854,14 @@ sub print_data_analysis_tab {
   print qq~
        </SELECT></TD></TR>
        <TR>
-         <TD><INPUT TYPE="button" name="logButtonView" value="view" onClick="actionLogFile('view')">
-				 <INPUT TYPE="button" name="logButtonGet" value="download" onClick="actionLogFile('get')"></TD>
+         <TD><INPUT TYPE="button" name="logButtonView" value="view" onClick="Javascript:actionLogFile('view')">
+				 <INPUT TYPE="button" name="logButtonGet" value="download" onClick="Javascript:actionLogFile('get')"></TD>
        </TR>
+			 ~;
+	}
+
+	## Finish up table
+	print qq~
      </TABLE>
      </FORM>
      $LINESEPARATOR
@@ -772,4 +883,3 @@ sub print_permissions_tab {
   $sbeams->print_permissions_table(ref_parameters=>$ref_parameters,
 																	 no_permissions=>1);
 }
-
