@@ -98,8 +98,10 @@ sub printPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=GL_bioentity"><nobr>&nbsp;&nbsp;&nbsp;BioEntity</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=GL_interaction"><nobr>&nbsp;&nbsp;&nbsp;Interaction</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=GL_bioentity"><nobr>&nbsp;&nbsp;&nbsp;BioEntities</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=GL_interaction"><nobr>&nbsp;&nbsp;&nbsp;Interactions</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=GL_assay"><nobr>&nbsp;&nbsp;&nbsp;Assays</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=GL_publication"><nobr>&nbsp;&nbsp;&nbsp;Publications</nobr></a></td></tr>
 	</table>
 	</td>
 

@@ -17,13 +17,21 @@ use vars qw(@ISA @EXPORT
 
     $TBGL_BIOENTITY
     $TBGL_BIOENTITY_TYPE
+    $TBGL_BIOENTITY_ATTRIBUTE
+    $TBGL_BIOENTITY_ATTRIBUTE_TYPE
     $TBGL_REGULATORY_FEATURE
     $TBGL_REGULATORY_FEATURE_TYPE
-    $TBGL_ASSAY
     $TBGL_INTERACTION
-    $TBGL_BIOENTITY_STATE
+    $TBGL_INTERACTION_GROUP
     $TBGL_INTERACTION_TYPE
+    $TBGL_BIOENTITY_STATE
     $TBGL_CONFIDENCE_SCORE
+
+    $TBGL_ASSAY
+    $TBGL_ASSAY_TYPE
+    $TBGL_SAMPLE_TYPE
+    $TBGL_PUBLICATION
+    $TBGL_PUBLICATION_CATEGORY
 
 );
 
@@ -35,13 +43,21 @@ require Exporter;
 
     $TBGL_BIOENTITY
     $TBGL_BIOENTITY_TYPE
+    $TBGL_BIOENTITY_ATTRIBUTE
+    $TBGL_BIOENTITY_ATTRIBUTE_TYPE
     $TBGL_REGULATORY_FEATURE
     $TBGL_REGULATORY_FEATURE_TYPE
-    $TBGL_ASSAY
     $TBGL_INTERACTION
-    $TBGL_BIOENTITY_STATE
+    $TBGL_INTERACTION_GROUP
     $TBGL_INTERACTION_TYPE
+    $TBGL_BIOENTITY_STATE
     $TBGL_CONFIDENCE_SCORE
+
+    $TBGL_ASSAY
+    $TBGL_ASSAY_TYPE
+    $TBGL_SAMPLE_TYPE
+    $TBGL_PUBLICATION
+    $TBGL_PUBLICATION_CATEGORY
 
 );
 
@@ -50,11 +66,22 @@ $TB_ORGANISM                = 'sbeams.dbo.organism';
 
 $TBGL_BIOENTITY             = 'glue.dbo.bioentity';
 $TBGL_BIOENTITY_TYPE        = 'glue.dbo.bioentity_type';
+$TBGL_BIOENTITY_ATTRIBUTE   = 'glue.dbo.bioentity_attribute';
+$TBGL_BIOENTITY_ATTRIBUTE_TYPE        = 'glue.dbo.bioentity_attribute_type';
 $TBGL_REGULATORY_FEATURE    = 'glue.dbo.regulatory_feature';
 $TBGL_REGULATORY_FEATURE_TYPE   = 'glue.dbo.regulatory_feature_type';
-$TBGL_ASSAY                 = 'glue.dbo.assay';
 $TBGL_INTERACTION           = 'glue.dbo.interaction';
-$TBGL_BIOENTITY_STATE       = 'glue.dbo.bioentity_state';
+$TBGL_INTERACTION_GROUP     = 'glue.dbo.interaction_group';
 $TBGL_INTERACTION_TYPE      = 'glue.dbo.interaction_type';
+$TBGL_BIOENTITY_STATE       = 'glue.dbo.bioentity_state';
 $TBGL_CONFIDENCE_SCORE      = 'glue.dbo.confidence_score';
+
+$TBGL_ASSAY                 = 'glue.dbo.assay';
+$TBGL_ASSAY_TYPE            = 'glue.dbo.assay_type';
+$TBGL_SAMPLE_TYPE           = 'glue.dbo.sample_type';
+$TBGL_PUBLICATION           = 'glue.dbo.publication';
+$TBGL_PUBLICATION_CATEGORY  = 'glue.dbo.publication_category';
+
+
+
 
