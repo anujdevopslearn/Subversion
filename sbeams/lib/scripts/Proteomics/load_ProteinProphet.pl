@@ -852,7 +852,9 @@ sub deleteProteinSummary {
   my %table_child_relationship = (
     protein_summary => 'protein_summary_header(C),protein_group(C),'.
       'search_batch_protein_summary(C)',
-    protein_summary_header => 'protein_summary_data_filter(C),nsp_information(C)',
+    protein_summary_header => 'protein_summary_data_filter(C),'.
+      'nsp_information(C)',
+    nsp_information => 'nsp_distribution(C)',
     protein_group => 'protein(C)',
     protein => 'peptide(C),indistinguishable_protein(C),'.
       'summary_quantitation(A)',
