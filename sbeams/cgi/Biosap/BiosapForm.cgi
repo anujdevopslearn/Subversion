@@ -363,8 +363,8 @@ sub processParams {
     }
 
     $ftrs=$q->param('maxFeatures');
-    if ($ftrs > 1000 || $ftrs < 1 || !($ftrs =~ /^[+-]?\d+$/)) {
-	print "<font color=red>ERROR: Maximum features to find is not valid</font> (must be 1-1000)<br>";
+    if ($ftrs > 100000 || $ftrs < 1 || !($ftrs =~ /^[+-]?\d+$/)) {
+	print "<font color=red>ERROR: Maximum features to find is not valid</font> (must be 1-100000)<br>";
 	$ftrs="";
 	$ok=0;
     }
@@ -496,7 +496,7 @@ sub printForm {
         "<tr>",
 	"<td><b>Max. 3' Distance</b> (2-100,000):</td>",
 	"<td> <input type=text size=5 name=max3PrimeDist value=$dist></td>",
-	"<td align=right><b> Max. Features per Gene</b> (1-30):</td>",
+	"<td align=right><b> Max. Features per Gene</b> (1-100,000):</td>",
 	"<td> <input type=text size=5 name=maxFeatures value=$ftrs></td></tr>",
         "<tr>",
 	"<td><b>Initial 3' Offset</b> (0-100,000):</td>",
