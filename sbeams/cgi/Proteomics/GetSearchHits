@@ -569,6 +569,7 @@ sub handle_request {
     ["cross_corr_rank","SH.cross_corr_rank","Rxc"],
     ["prelim_score_rank","SH.prelim_score_rank","RSp"],
     ["precursor_mass","LTRIM(STR((S.sample_mass_plus_H+(S.assumed_charge-1)*1.008)/S.assumed_charge,7,2))","Precursor m/z"],
+    ["precursor_intensity","MSS.precursor_intensity","Precursor Intensity"],
     ["hit_mass_plus_H","STR(SH.hit_mass_plus_H,9,2)","(M+H)+"],
     ["hit_mass_diff","STR(SH.mass_delta,5,2)","Mass Diff"],
     ["cross_corr","STR(SH.cross_corr,5,4)","XCorr"],
