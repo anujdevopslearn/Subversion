@@ -2472,14 +2472,14 @@ sub transferTable {
   #### Decode the argument list
   my $src_conn = $args{'src_conn'};
   my $sql = $args{'sql'};
+
+  my $source_array_ref = $args{'source_array_ref'};
+
   my $source_file = $args{'source_file'};
   my $delimiter = $args{'delimiter'} || "\t";
   my $comment_char = $args{'comment_char'};
   my $skip_lines = $args{'skip_lines'} || 0;
-  die ("either sql or source_file must be passed")
-    unless ($sql || $source_file);
-  die ("parameters sql and source_file cannot both be passed")
-    if ($sql && $source_file);
+
   my $src_PK_name = $args{'src_PK_name'} || '';
   my $src_PK_column = $args{'src_PK_column'};
   $src_PK_column = -1 unless (defined($src_PK_column));
@@ -2508,9 +2508,20 @@ sub transferTable {
   my $add_audit_parameters = $args{'add_audit_parameters'} || 0;
 
 
+  #### Verify that we only go one input source
+  my $n_defined_sources = 0;
+  foreach my $test_parameter ($sql,$source_array_ref,$source_file) {
+    $n_defined_sources += (defined($test_parameter) and $test_parameter gt '');
+  }
+  unless ($n_defined_sources == 1) {
+    die ("Exactly one of sql, source_file, source_array_ref must be passed");
+  }
+
+
   #### Define standard variables
   my ($i,$element,$key,$value,$line,$result);
   my @rows;
+
 
   #### Get data from source
   #### Execute source query if sql is set
@@ -2520,7 +2531,7 @@ sub transferTable {
   }
 
 
-  #### Read from file if src_file is set
+  #### Read from file if source_file is set
   if ($source_file) {
     print "\n  Loading data from file...";
     @rows = $self->importTSVFile(source_file=>$source_file,
@@ -2530,11 +2541,18 @@ sub transferTable {
   }
 
 
+  #### Use the $source_array_ref if it is set
+  if ($source_array_ref) {
+    @rows = @{$source_array_ref};
+  }
+
+
+  #### Define some stuff
   my %rowdata;
   my $row;
-  my %newkays;
 
 
+  #### Loop over each row of input data
   print "\n  Loading data into destination";
   foreach $row (@rows) {
     %rowdata = ();
@@ -2677,6 +2695,7 @@ sub transferTable {
 
     if ($dest_PK_name && $result) {
       $newkey_map_ref->{$row->[$src_PK_column]} = $result;
+      #print $row->[$src_PK_column],"=",$result," ";
     }
 
   }
