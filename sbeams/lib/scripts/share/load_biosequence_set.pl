@@ -1132,7 +1132,7 @@ sub loadBiosequence {
 
   #### Hack for yucky halo mamSum
   my $adj_biosequence_name = $biosequence_name;
-  chop($adj_biosequence_name);
+  #chop($adj_biosequence_name);
 
 
   #### See if we have mamSum data to add
@@ -1140,6 +1140,7 @@ sub loadBiosequence {
   if (defined($mamSum_search_results) && $biosequence_id) {
     if (defined($mamSum_search_results->{$adj_biosequence_name})) {
       $have_mamSum_data = 1;
+      print "+";
     }
   }
 
@@ -2389,9 +2390,11 @@ sub readMamSumFile {
   #### Set up some data
   my $line;
   my @possible_hits = ();
+  my $counter = 0;
 
 
   #### Read in all the search results
+  print "Reading mamSum file...\n";
   while ($line = <INFILE>) {
     $line =~ s/[\r\n]//g;
     next if ($line =~ /^\s*$/);
@@ -2408,7 +2411,7 @@ sub readMamSumFile {
       $data{$biosequence_name}->{$domain_char}->{best_cluster} = $best_cluster;
       my @tmp;
       $data{$biosequence_name}->{$domain_char}->{clusters} = \@tmp;
-
+      #print "($biosequence_name)";
 
     #### Or it's one of the hit lines, process that
     } elsif ($line =~ /conP:/) {
@@ -2477,6 +2480,7 @@ sub readMamSumFile {
     } elsif ($line eq '--end--') {
 
       # Do nothing
+      $counter++;
 
 
     #### And if nothing has been triggered yet, complain and die
@@ -2499,6 +2503,7 @@ sub readMamSumFile {
 
   #### Set SUCCESS flag and return
   print "INFO: mamSum file successfully parsed!\n" if ($VERBOSE);
+  print "Loaded $counter proteins from mamSum file\n";
   $data{SUCCESS} = 1;
   return \%data;
 
