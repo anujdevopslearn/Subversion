@@ -146,6 +146,7 @@ CREATE TABLE dbo.allele_frequency (
     allele_id                 int NOT NULL REFERENCES dbo.allele(allele_id),
     population_tag            varchar(100),
     frequency                 real,
+    chromosome_count          int,
     idx                       int
 )
 GO
