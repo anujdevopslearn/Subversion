@@ -130,8 +130,7 @@ sub main {
 
   #### Do the SBEAMS authentication and exit if a username is not returned
   exit unless (
-      $current_username = $sbeams->Authenticate(
-          work_group=>'PeptideAtlas_admin')
+      $current_username = $sbeams->Authenticate(work_group=>'PeptideAtlas_admin')
   );
 
 
@@ -196,13 +195,14 @@ sub handleRequest {
   }
 
 
+
   ## get ATLAS_BUILD_ID:
   my $sql = qq~
-    SELECT atlas_build_id,biosequence_set_id
+      SELECT atlas_build_id,biosequence_set_id
       FROM $TBAT_ATLAS_BUILD
-     WHERE atlas_build_name = '$atlas_build_name'
-       AND record_status != 'D'
-  ~;
+      WHERE atlas_build_name = '$atlas_build_name'
+      AND record_status != 'D'
+      ~;
 
   my ($atlas_build_id) = $sbeams->selectOneColumn($sql) or
       die "\nERROR: Unable to find the atlas_build_name". 
@@ -211,16 +211,21 @@ sub handleRequest {
   $ATLAS_BUILD_ID = $atlas_build_id; ## global variable needed for last test
 
 
+
   ## handle --purge:
   if ($purge) {
+
      print "Removing child records in $atlas_build_name ($atlas_build_id): \n";
+
      removeAtlas(atlas_build_id => $atlas_build_id,
                  keep_parent_record => 1);
+
   }#end --purge
 
 
 
-  ## HANDLE requirements and calls for load:
+
+  ## handle --load:
   if ($load) {
 
       ## check if atlas has peptide_instance entries (checking for 1 entry):
@@ -228,7 +233,7 @@ sub handleRequest {
           SELECT top 1 *
           FROM $TBAT_PEPTIDE_INSTANCE
           WHERE atlas_build_id = '$atlas_build_id'
-      ~;
+          ~;
 
       my @peptide_instance_array = $sbeams->selectOneColumn($sql);
 
@@ -319,17 +324,19 @@ sub handleRequest {
 
   ## handle --delete:
   if ($del) {
+
      print "Removing atlas $atlas_build_name ($atlas_build_id) \n";
+
      removeAtlas(atlas_build_id => $atlas_build_id);
+
   }#end --delete
-
-
 
 
 
   if ($TESTONLY || $purge) {
       print "\a done\n";
   }
+
 
 
 } # end handleRequest
@@ -401,12 +408,15 @@ sub buildAtlas {
     my %sample_id_hash; #key = search_batch_id, value = sample_id
 
     ## update sample records and create atlas_build_sample records:
-    updateSampleTables(
-        atlas_build_id => $atlas_build_id,
-        APD_id => $APD_id,
-        sample_ids_ref => \%sample_id_hash,
-        test => $TESTONLY,
-    );
+    unless ($TESTONLY)
+    {
+        updateSampleTables(
+            atlas_build_id => $atlas_build_id,
+            APD_id => $APD_id,
+            sample_ids_ref => \%sample_id_hash,
+            test => $TESTONLY,
+        );
+    }
 
 
     #### Get the current list of peptides in the peptide table
@@ -414,15 +424,15 @@ sub buildAtlas {
     $sql = qq~
         SELECT peptide_accession,peptide_id
         FROM $TBAT_PEPTIDE
-    ~;
+        ~;
 
+    ## creates hash with key=peptide_accession, value=peptide_id
     my %peptides = $sbeams->selectTwoColumnHash($sql) or
         die "Unable to get peptide_accession and peptide_id from table".
         " peptide ($!)";
-    ## creates hash with key=peptide_accession, value=peptide_id
  
  
-    #### Get the current list of biosequences in this set
+    #### Get the current biosequences in this set
     $sql = qq~
         SELECT biosequence_name,biosequence_id
         FROM $TBAT_BIOSEQUENCE
@@ -1218,7 +1228,11 @@ sub buildAtlas {
 
 ###############################################################################
 # updateSamples - updates sample and atlas_build_sample tables
-#                by nabbing search_batch_id list from APD
+# located with search_batch_id list from APD.
+#
+# Look for a sample table, if it doesn't exist, create it
+# with minimal info from proteomics experiment while
+# printing a warning to screen.
 ###############################################################################
 sub updateSampleTables {
 
@@ -1234,6 +1248,7 @@ sub updateSampleTables {
 
 
     ## get the list of search batch ID's from the APD record:
+    ## (experiment_list is actually search batch id's)
     my $sql = qq~
        SELECT experiment_list
        FROM $TBAPD_PEPTIDE_SUMMARY
@@ -1255,103 +1270,152 @@ sub updateSampleTables {
 
     my @sample_id;
 
+    my (@sample_tag, @sample_title, @sample_description, @dc, @cbi, @dm, @mbi, @ogi, @rs);
     
-    ## get sample_id from PeptideAtlas.dbo.sample
+    ## Get sample_id from PeptideAtlas.dbo.sample.
+    ## For each search_batch_id, see if there's a sample record,
+    ## and if not, create one with minimal proteomics experiment info
+    ## while printing a warning to screen.
+    ## If there is a sample record, update it with sample_id
     for (my $i=0; $i<= $#search_batch_id; $i++) {
 
+        ## FOR insearts and updates:
+        ## Get date_created, created_by_id, date_modified, modified_by_id,
+        ## and owner_group_id, record_status from atlas_build
         $sql = qq~
-            SELECT S.sample_id
-            FROM $TBAT_SAMPLE S
-            JOIN $TBPR_PROTEOMICS_EXPERIMENT PE
-            ON ( PE.experiment_tag = S.sample_tag )
-            JOIN $TBPR_SEARCH_BATCH SB
-            ON ( PE.experiment_id = SB.experiment_id)
-            WHERE SB.search_batch_id = '$search_batch_id[$i]'
-            AND S.record_status != 'D'
-            AND PE.record_status != 'D'
+             SELECT date_created, created_by_id, date_modified, modified_by_id,
+             owner_group_id, record_status
+             FROM $TBAT_ATLAS_BUILD
+             WHERE atlas_build_id = '$atlas_build_id'
+             AND record_status != 'D'
         ~;
 
-        my ($tmp) = $sbeams->selectOneColumn($sql)
-            or die "could not find sample_id given search_batch_id = ".
-            "$search_batch_id[$i]";
+        my @rows = $sbeams->selectSeveralColumns($sql)
+            or die "Couldn't find record for atlas_build_id = ".
+            "$atlas_build_id \n$sql\n($!)";
 
-        $sample_id[$i] = $tmp;
+        foreach my $row (@rows) 
+        {
+            my ($tdc, $tcbi, $tdm, $tmbi, $togi, $trs) = @{$row};
 
-        ## fill sample_ids hash:
-        $$sample_ids_ref{$search_batch_id[$i]} = $sample_id[$i];
+            $dc[$i] = $tdc;
 
+            $cbi[$i] = $tcbi;
 
-        ## update sample:
-        my %rowdata = ( ##   sample      some of the table attributes:
-            search_batch_id => , $search_batch_id[$i],
-        );  
+            $dm[$i] = $tdm;
 
+            $mbi[$i] = $tmbi;
 
+            $ogi[$i] = $togi;
 
-        if ($TEST){
-
-            print "\$search_batch_id = $search_batch_id[$i] -- \$sample_id=$sample_id[$i]\n";
-
-        } else {
-
-            my $result = $sbeams->updateOrInsertRow(
-                update=>1,
-                table_name=>$TBAT_SAMPLE,
-                rowdata_ref=>\%rowdata,
-                PK => 'sample_id',
-                PK_value=>$sample_id[$i],
-                verbose=>$VERBOSE,
-                testonly=>$TESTONLY,
-            );
+            $rs[$i] = $trs;
 
         }
 
 
-
-        ## get sample table info to help populate atlas_build_sample table
+        ## get sample record if it exists
         $sql = qq~
-               SELECT date_created, created_by_id, date_modified, modified_by_id,
-               owner_group_id, record_status
-               FROM $TBAT_SAMPLE
-               WHERE sample_id = '$sample_id[$i]'
-               AND record_status != 'D'
+            SELECT S.sample_id
+            FROM $TBAT_SAMPLE S
+            WHERE SB.search_batch_id = '$search_batch_id[$i]'
+            AND S.record_status != 'D'
         ~;
 
-        my @rows = $sbeams->selectSeveralColumns($sql)
-            or die "Couldn't find record for sample_id = ".
-            "$sample_id[$i] in PeptideAtlas.dbo.sample ".
-            "[search_batch_id = $search_batch_id[$i]".
-            "] \n$sql\n($!)";
 
-        unless ($TEST) {
-            foreach my $row (@rows) {
+        my ($tmp) = $sbeams->selectOneColumn($sql)
+            or warn "Could not find sample record for search_batch_id = ".
+            "$search_batch_id[$i] ==> Creating a sample record now";
 
-                my ($dc, $cbi, $dm, $mbi, $ogi, $rs) = @{$row};
 
-                ## Populate atlas_build_sample table
-                my %rowdata = (   ##   atlas_build_sample    table attributes
-                    atlas_build_id => $ATLAS_BUILD_ID,
-                    sample_id => $sample_id[$i],
-                    date_created => $dc,
-                    created_by_id  => $cbi,
-                    date_modified  => $dm,
-                    modified_by_id  => $mbi,
-                    owner_group_id  => $ogi,
-                    record_status  => $rs,
-                );
+        if ($tmp) ## sample record exists for search_batch:
+        {
 
-               my $atlas_build_sample_id = $sbeams->updateOrInsertRow(
-                   insert=>1,
-                   table_name=>$TBAT_ATLAS_BUILD_SAMPLE,
-                   rowdata_ref=>\%rowdata,
-                   PK => 'atlas_build_sample_id',
-                   return_PK => 1,
-                   verbose=>$VERBOSE,
-                   testonly=>$TEST,
-               );
+            $sample_id[$i] = $tmp;
+
+        } else ## If no sample record, create one
+        {
+
+            ## get experiment_tag, experiment_name, $TB_ORGANISM.organism_name
+            $sql = qq~
+                SELECT PE.experiment_tag, PE.experiment_name, O.organism_name
+                FROM $TBPR_PROTEOMICS_EXPERIMENT PE
+                JOIN $TB_ORGANISM O
+                ON ( PE.organism_id = O.organism_id )
+                JOIN $TBPR_SEARCH_BATCH SB
+                ON ( PE.experiment_id = SB.experiment_id)
+                WHERE SB.search_batch_id = '$search_batch_id[$i]'
+                AND PE.record_status != 'D'
+            ~;
+        
+            my @rows = $sbeams->selectSeveralColumns($sql)
+                or die "Couldn't find proteomics experiment record for ".
+                " search batch id $search_batch_id[$i] " .
+                "\n$sql\n($!)";
+
+            foreach my $row (@rows) 
+            {
+                my ($tmp_experiment_tag, $tmp_experiment_name, $tmp_organism_name) = @{$row};
+
+                $sample_tag[$i] = $tmp_experiment_tag;
+
+                $sample_title[$i] = $tmp_experiment_name;
+
+                $sample_description[$i] = $tmp_organism_name;
 
             }
-        } 
+
+
+            my %rowdata = ( ##   sample      some of the table attributes:
+                search_batch_id => $search_batch_id[$i],
+                sample_tag => $sample_tag[$i],
+                sample_title => $sample_title[$i],
+                sample_description => $sample_description[$i],
+                date_created => $dc[$i],
+                created_by_id => $cbi[$i],
+                date_modified => $dm[$i],
+                modified_by_id => $mbi[$i],
+                owner_group_id => $ogi[$i],
+                record_status => $rs[$i],
+            );
+
+
+            ## create a sample record:
+            my $tmp_sample_id = $sbeams->updateOrInsertRow(
+                table_name=>$TBAT_SAMPLE,
+                insert=>1,
+                rowdata_ref=>\%rowdata,
+                PK => 'sample_id',
+                return_PK=>1,
+                verbose=>$VERBOSE,
+                testonly=>$TESTONLY,
+            );
+
+            $sample_id[$i] = $tmp_sample_id;
+
+        }  ## end create sample record
+
+
+        ## Populate atlas_build_sample table
+        my %rowdata = (   ##   atlas_build_sample    table attributes
+            atlas_build_id => $ATLAS_BUILD_ID,
+            sample_id => $sample_id[$i],
+            date_created => $dc[$i],
+            created_by_id  => $cbi[$i],
+            date_modified  => $dm[$i],
+            modified_by_id  => $mbi[$i],
+            owner_group_id  => $ogi[$i],
+            record_status  => $rs[$i],
+        );
+
+       my $atlas_build_sample_id = $sbeams->updateOrInsertRow(
+           insert=>1,
+           table_name=>$TBAT_ATLAS_BUILD_SAMPLE,
+           rowdata_ref=>\%rowdata,
+           PK => 'atlas_build_sample_id',
+           return_PK => 1,
+           verbose=>$VERBOSE,
+           testonly=>$TEST,
+       );
 
     }
 
