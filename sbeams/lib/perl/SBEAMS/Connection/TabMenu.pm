@@ -258,6 +258,11 @@ sub addTab {
   return $this->{_tabIndex};
 }
 
+sub addHRule {
+  my $this = shift;
+  $this->{hrule} = 1;
+}
+
 #+
 #  returns numeric index of active tab
 #-
@@ -330,6 +335,8 @@ sub asCSSHTML {
     $this->{_table}->setCellAttr ( COL => 1, ROW => 2, BGCOLOR => $color );
   }
 
+  $this->setRule() if $this->{hrule};
+  
   return ( <<"  END" );
   <!-- Begin TabMenu --> 
     <!-- CSS definitions -->
@@ -386,6 +393,14 @@ sub asCSSHTML {
   <!-- End TabMenu -->
   END
 #return "$this->{_table}";
+}
+
+sub setRule {
+  my $this = shift;
+  my $hbase = '/devDC/sbeams';
+  my $cnt = ( $this->getNumTabs() ) * 2 + 5 ;
+  $this->{_table}->addRow ( [ "<IMG SRC='$hbase/images/transparent.gif' HEIGHT='2' WIDTH='1' BORDER='0'>" ] );
+  $this->{_table}->setCellAttr ( COL => 1, ROW => 2, COLSPAN => $cnt, BGCOLOR => $this->{activeColor} );
 }
 
 
