@@ -48,8 +48,8 @@ require Exporter;
 
 $TB_ORGANISM                = 'sbeams.dbo.organism';
 
-$TBSN_BIOSEQUENCE_SET       = 'geap.dbo.biosequence_set';
-$TBSN_BIOSEQUENCE           = 'geap.dbo.biosequence';
+$TBSN_BIOSEQUENCE_SET       = 'biosap.dbo.biosequence_set';
+$TBSN_BIOSEQUENCE           = 'biosap.dbo.biosequence';
 
 $TBSN_SNP                   = 'geap.dbo.snp';
 $TBSN_SNP_SOURCE            = 'geap.dbo.snp_source';
@@ -58,6 +58,6 @@ $TBSN_QUERY_OPTION          = 'geap.dbo.query_option';
 
 #### BIG UGLY FUDGE
 $TBPR_QUERY_OPTION          = 'proteomics.dbo.query_option';
-$TBPR_BIOSEQUENCE_SET       = 'proteomics.dbo.biosequence_set';
+$TBPR_BIOSEQUENCE_SET       = 'biosap.dbo.biosequence_set';
 
 
