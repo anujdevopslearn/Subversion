@@ -355,6 +355,15 @@ sub handle_request {
   return if ($mass_clause eq '-1');
 
 
+  #### Build ISOELECTRIC_POINT constraint
+  my $isoelectric_point_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"isoelectric_point",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Isoelectric Point",
+    constraint_value=>$parameters{isoelectric_point_constraint} );
+  return if ($isoelectric_point_clause eq '-1');
+
+
   #### Build N OCCURRENCES constraint
   my $n_occurrences_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"COUNT(*)",
@@ -382,12 +391,12 @@ sub handle_request {
       }
 
       if ( $parameters{peptide_options} =~ /DoublyTryptic/ ) {
-        $second_peptide_clause .= "   AND PP.peptide LIKE '%[RK]'".
+        $second_peptide_clause .= "   AND PP.peptide_sequence LIKE '%[RK]'".
                         "            AND PP.preceding_residue LIKE '[RK]'";
       }
 
       if ( $parameters{peptide_options} =~ /SinglyTryptic/ ) {
-        $second_peptide_clause .= "   AND ( PP.peptide LIKE '%[RK]'".
+        $second_peptide_clause .= "   AND ( PP.peptide_sequence LIKE '%[RK]'".
                         "                  OR PP.preceding_residue LIKE '[RK]' )";
       }
 
@@ -470,10 +479,12 @@ sub handle_request {
 
 
   #### Add in some extra columns if the user wants to see them
-  if ( $parameters{display_options} =~ /ShowExtraProteinProps/ ) {
+  if ( $parameters{display_options} =~ /ShowExtraProteinProps/ ||
+       $parameters{display_options} =~ /GroupCount/ ) {
     @additional_columns = (
       ["fav_codon_frequency","STR(BS.fav_codon_frequency,10,3)","Favored Codon Frequency"],
       ["n_transmembrane_regions","BS.n_transmembrane_regions","Number of Transmembrane Regions"],
+      ["protein_length","DATALENGTH(BS.biosequence_seq)","Protein Length"],
       @additional_columns,
     );
   }
@@ -492,11 +503,13 @@ sub handle_request {
     }
 
     @column_array = (
-      ["biosequence_name","BS.biosequence_name","Name"],
+      ["biosequence_name","BS.biosequence_name","Protein Name"],
       ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
       ["accessor","DBX.accessor","accessor"],
       ["biosequence_accession","BS.biosequence_accession","Accession"],
       ["n_peptides","COUNT(*)","Peptide Count"],
+      ["avg_mass","AVG(PP.mass)","Average Peptide Mass"],
+      ["avg_pI","AVG(PP.isoelectric_point)","Average pI"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
     );
@@ -517,6 +530,7 @@ sub handle_request {
       ["peptide_sequence","PP.peptide_sequence","Peptide Sequence"],
       ["following_residue","PP.following_residue","RHS"],
       ["mass","STR(PP.mass,7,2)","Mass"],
+      ["isoelectric_point","STR(PP.isoelectric_point,7,2)","pI"],
       ["peptide_offset","PP.peptide_offset","Start Pos"],
       ["n_tryptic_terminii","PP.n_tryptic_terminii","N Tryp Term"],
       ["is_cysteine_containing","PP.is_cysteine_containing","Cys Cont"],
@@ -589,12 +603,13 @@ sub handle_request {
   #### If we're doing a grand summary, tack on the second query to summarize
   if ( $parameters{display_options} =~ /GroupCount/ ) {
     $sql .= "
-	SELECT n_peptides,COUNT(*) AS 'protein_count'
+	SELECT n_peptides,COUNT(*) AS 'protein_count',
+               AVG(protein_length) AS 'avg_protein_length'
           FROM #tmp
          GROUP BY n_peptides
          ORDER BY n_peptides
     ";
-    @column_titles = ( 'Number of Peptides','Protein Count' );
+    @column_titles = ( 'Number of Peptides','Protein Count','Mean Protein Length' );
   }
 
 
@@ -608,6 +623,8 @@ sub handle_request {
   my $parameters_list = '';
   while ( ($key,$value) = each %input_types ) {
     if ($key ne 'display_options' &&
+        $key ne 'n_occurrences' &&
+        $key ne 'biosequence_name_constraint' &&
         $key ne 'xx_constraint'
       ) {
       if ($parameters{$key}) {
@@ -631,6 +648,9 @@ sub handle_request {
 
     	       'Peptide Sequence' => "$CGI_BASE_DIR/Proteomics/BrowsePossiblePeptides?QUERY_NAME=PR_BrowsePossiblePeptides&biosequence_set_id=$parameters{biosequence_set_id}&peptide_constraint=\%$colnameidx{peptide_sequence}V&apply_action=$pass_action",
     	       'Peptide Count_ATAG' => 'TARGET="Win1"',
+
+    	       'Protein Name' => "$CGI_BASE_DIR/Proteomics/BrowseBioSequence.cgi?QUERY_NAME=PR_BrowseBioSequence&biosequence_set_id=$parameters{biosequence_set_id}&biosequence_name_constraint=\%$colnameidx{biosequence_name}V&label_peptide=\%$colnameidx{peptide_sequence}V&display_options=SequenceFormat&apply_action=HIDEQUERY",
+    	       'Protein Name_ATAG' => 'TARGET="Win1"',
 
                'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
                'Molecular Function_ATAG' => 'TARGET="WinExt"',
