@@ -256,11 +256,19 @@ If this doesn't work.  Do not proceed, debug first.
 
 
 -------------------------------------------------------------------------------
-8) Install Individual Modules
+8) Build the POD docs
+
+cd $SBEAMS/doc/POD
+./createPOD.csh
+
+
+-------------------------------------------------------------------------------
+9) Install Individual Modules
 
 Now follow the individual module install notes, e.g.:
 
 $SBEAMS/doc/Proteomics/Proteomics.installnotes
+
 
 
 
