@@ -42,6 +42,14 @@ use vars qw(@ISA @EXPORT
     $TBIN_BIOSEQUENCE_SET
     $TBIN_BIOSEQUENCE
     $TBIN_BIOSEQUENCE_DBXREF
+		
+		
+		$TBIN_BIOENTITY_RECORDS
+		$TBIN_BIOENTITY_LOCUSLINK
+		$TBIN_ALIASPROTEINS	
+		$TBIN_ALIASSYMBOLS	
+		$TBIN_REFSEQ
+		$TBIN_OTHER
 
 );
 
@@ -74,7 +82,14 @@ require Exporter;
     $TBIN_BIOSEQUENCE_SET
     $TBIN_BIOSEQUENCE
     $TBIN_BIOSEQUENCE_DBXREF
-
+		
+		
+		$TBIN_BIOENTITY_RECORDS
+		$TBIN_BIOENTITY_LOCUSLINK
+		$TBIN_ALIASPROTEINS	
+		$TBIN_ALIASSYMBOLS	
+		$TBIN_REFSEQ
+		$TBIN_OTHER
 );
 
 
@@ -110,3 +125,11 @@ $TBIN_BIOSEQUENCE_SET             = "${mod}biosequence_set";
 $TBIN_BIOSEQUENCE                 = "${mod}biosequence";
 $TBIN_BIOSEQUENCE_DBXREF          = "${mod}dbxref";
 
+
+
+$TBIN_BIOENTITY_RECORDS						= "${mod}bioentity_records";
+$TBIN_BIOENTITY_LOCUSLINK					= "${mod}bioentity_locuslink";
+$TBIN_ALIASPROTEINS								= "${mod}aliasproteins";
+$TBIN_ALIASSYMBOLS								= "${mod}aliassymbols";
+$TBIN_REFSEQ											= "${mod}refseq";
+$TBIN_OTHER			= "${mod}other";
