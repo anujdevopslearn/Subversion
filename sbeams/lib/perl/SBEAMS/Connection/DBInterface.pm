@@ -386,15 +386,18 @@ sub insert_update_row {
 
   #### Decode the argument list
   my $table_name = $args{'table_name'} || die "ERROR: table_name not passed";
-  my $rowdata_ref = $args{'rowdata_ref'} || die "ERROR: rowdata_ref not passed";
-  my $database_name = $args{'database_name'} || "";
+  my $rowdata_ref = $args{'rowdata_ref'}
+    || die "ERROR: rowdata_ref not passed";
+  my $database_name = $args{'database_name'} || '';
   my $return_PK = $args{'return_PK'} || 0;
   my $verbose = $args{'verbose'} || 0;
+  my $print_SQL = $args{'print_SQL'} || 0;
   my $testonly = $args{'testonly'} || 0;
   my $insert = $args{'insert'} || 0;
   my $update = $args{'update'} || 0;
-  my $PK = $args{'PK'} || "";
-  my $PK_value = $args{'PK_value'} || "";
+  my $PK = $args{'PK_name'} || $args{'PK'} || '';
+  my $PK_value = $args{'PK_value'} || '';
+  my $quoted_identifiers = $args{'quoted_identifiers'} || '';
 
 
   #### Make sure either INSERT or UPDATE was selected
@@ -416,8 +419,18 @@ sub insert_update_row {
   my ($key,$value,$value_ref);
 
 
+  #### If verbose, prepare this section
+  if ($verbose) {
+    print "---- updateOrInsertRow --------------------------------\n";
+    print "  Key,value pairs:\n";
+  }
+
+
   #### Loops over each passed rowdata element, building the query
   while ( ($key,$value) = each %{$rowdata_ref} ) {
+
+    #### If quoted identifiers is set, then quote the key
+    $key = '"'.$key.'"' if ($quoted_identifiers);
 
     #### If $value is a reference, assume it's a reference to a hash and
     #### extract the {value} key value.  This is because of Xerces.
@@ -454,18 +467,40 @@ sub insert_update_row {
   chop $columnvalue_list;  # Then the comma
 
 
+  #### Create the final table name
+  my $full_table_name = "$database_name$table_name";
+  $full_table_name = '"'.$full_table_name.'"' if ($quoted_identifiers);
+
+
   #### Build the SQL statement
   my $sql;
   if ($update) {
-    $sql = "UPDATE $database_name$table_name SET $columnvalue_list WHERE $PK = '$PK_value'";
+    my $PK_tag = $PK;
+    $PK_tag = '"'.$PK.'"' if ($quoted_identifiers);
+    $sql = "UPDATE $full_table_name SET $columnvalue_list WHERE $PK_tag = '$PK_value'";
   } else {
-    $sql = "INSERT INTO $database_name$table_name ( $column_list ) VALUES ( $value_list )";
+    $sql = "INSERT INTO $full_table_name ( $column_list ) VALUES ( $value_list )";
   }
-  print "$sql\n" if ($verbose > 0);
+
+  #### Print out the SQL if desired
+  if ($verbose > 0 || $print_SQL > 0) {
+    print "  SQL statement:\n";
+    print "    $sql\n\n";
+  }
 
 
-  #### Return if just testing
-  return "1" if ($testonly);
+  #### If we're just testing
+  if ($testonly) {
+
+    #### If the user asked for the PK to be returned, make a random one up
+    if ($return_PK) {
+      return int(rand()*10000);
+
+    #### Otherwise, just return a 1
+    } else {
+      return 1;
+    }
+  }
 
 
   #### Execute the SQL
