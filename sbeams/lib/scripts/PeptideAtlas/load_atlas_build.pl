@@ -928,6 +928,9 @@ sub buildAtlas {
 
                $is_exon_spanning_hash{$protein} = 'y';
 
+               ## update larger scope variable too:
+               $is_exon_spanning[$i_ind] = 'y';
+
            }
 
        } 
@@ -949,8 +952,6 @@ sub buildAtlas {
 
 
            $n_protein_mappings[$tmpind] = $pep_n_protein_mappings;
-
-           $is_exon_spanning[$tmpind] = $is_exon_spanning_hash{$protein};
 
            $n_genome_locations[$tmpind] = $pep_n_genome_locations;
 
@@ -1352,23 +1353,33 @@ sub buildAtlas {
    } ## end peptide_instance entries for unmapped peptides
 
 
+   #### Need peptide_instance_id's to update peptide_instance record:
+   my $sql;
+   $sql = qq~
+      SELECT peptide_id,peptide_instance_id
+      FROM $TBAT_PEPTIDE_INSTANCE
+   ~;
+   my %peptide_instances = $sbeams->selectTwoColumnHash($sql);
+   ## creates hash with key=peptide_id, value=peptide_instance_id
+ 
+
    ##  calculate is_subpeptide_of, and enter into table peptide
-   ##
+
    foreach my $sub_pep_acc (keys %APD_peptide_accession) {
 
        for my $super_pep_acc ( keys %APD_peptide_accession) {
 
-           if ( index($super_pep_acc, $sub_pep_acc) && ($super_pep_acc ne $sub_pep_acc) ) {
+           if ( ( index($APD_peptide_sequence{$super_pep_acc}, $APD_peptide_sequence{$sub_pep_acc}) >= 0) 
+               && ($super_pep_acc ne $sub_pep_acc) ) {
        
-
                if ( $APD_is_subpeptide_of{$sub_pep_acc} ) {
 
                    $APD_is_subpeptide_of{$sub_pep_acc} = 
-                       join ",", $APD_is_subpeptide_of{$sub_pep_acc}, $super_pep_acc;
+                       join ",", $APD_is_subpeptide_of{$sub_pep_acc}, $APD_peptide_id{$super_pep_acc};
 
                } else { 
 
-                   $APD_is_subpeptide_of{$sub_pep_acc} = $super_pep_acc;
+                   $APD_is_subpeptide_of{$sub_pep_acc} = $APD_peptide_id{$super_pep_acc};
 
                }
 
@@ -1376,27 +1387,28 @@ sub buildAtlas {
        }
 
  
-       ## surround string with quotes:
+       ## surround string with quotes: ?
        $APD_is_subpeptide_of{$sub_pep_acc} = '"'.$APD_is_subpeptide_of{$sub_pep_acc}.'"';
 
-
-       ## update table peptide:
-       my %rowdata = ( ##   peptide           some of the table attributes:
+       ## update table peptide_instance
+       my %rowdata = ( ##   peptide instance       some of the table attributes:
            is_subpeptide_of => , $APD_is_subpeptide_of{$sub_pep_acc},
        );  
  
+       my $peptide_instance_id = $peptide_instances { $APD_peptide_id{$sub_pep_acc} };
 
        my $result = $sbeams->updateOrInsertRow(
            update=>1,
-           table_name=>$TBAT_PEPTIDE,
+           table_name=>$TBAT_PEPTIDE_INSTANCE,
            rowdata_ref=>\%rowdata,
-           PK => 'peptide_id',
-           PK_value=>$APD_peptide_id{$sub_pep_acc},
+           PK => 'peptide_instance_id',
+           PK_value=>$peptide_instance_id,
            verbose=>$VERBOSE,
            testonly=>$TESTONLY,
        );
          
    }
+
 
    ## LAST TEST to assert that all peptides of an atlas in
    ## peptide_instance  are associated with a peptide_instance_sample record
