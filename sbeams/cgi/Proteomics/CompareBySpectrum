@@ -626,8 +626,11 @@ sub getExperimentNames {
   foreach $row (@rows) {
     my $search_batch_id = $row->[0];
     my $experiment_tag = $row->[1];
+    $experiment_tag =~ s/\W/_/g;
     my $set_tag = $row->[2];
+    $set_tag =~ s/\W/_/g;
     my $search_batch_subdir = $row->[3];
+    $search_batch_subdir =~ s/\W/_/g;
 
     $need_subdirs = 1 if (exists($used_set_tags_hash{$set_tag}));
 
