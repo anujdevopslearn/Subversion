@@ -1731,7 +1731,7 @@ sub updateSearchResults {
       my $n_U_hits = 0;
       my $n_other_hits = 0;
       while ($i<$nrows) {
-        print "  - $i: ",$data[$i]->{best_hit_flag},"\n" if ($VERBOSE > 1);
+        print "  - $i: =",$data[$i]->{best_hit_flag},"=\n" if ($VERBOSE > 1);
         if ($data[$i]->{best_hit_flag} eq 'D') {
           $n_D_hits++;
         } elsif ($data[$i]->{best_hit_flag} eq 'U') {
@@ -1745,6 +1745,7 @@ sub updateSearchResults {
       #### If there's more than one best hit, complain bitterly
       if ($n_D_hits + $n_U_hits + $n_other_hits > 1) {
         print "ERROR: search_id '$search_id' has more than one best hit!!\n";
+        print "       D: $n_D_hits  U: $n_U_hits  other: $n_other_hits\n";
         print "       Going to rewrite with best guess...\n";
         $make_best_hit_guess = 1;
 
