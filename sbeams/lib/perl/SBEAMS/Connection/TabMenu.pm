@@ -247,7 +247,16 @@ sub getActiveTabName {
 #-
 sub asHTML {
   my $this = shift;
+  return $this->asCSSHTML();
+}
 
+
+
+#+
+# Rendering method, returns HTML rendition of tabmenu
+#-
+sub asSimpleHTML {
+  my $this = shift;
   # Get table for rendering stuff...
   $this->getTable();
 
@@ -434,4 +443,92 @@ SELF:   $this->{_self_url};
 
 }
 
+
+sub asCSSHTML {
+  my $this = shift;
+
+  # Get table for rendering stuff...
+  $this->getTable();
+
+  my @tabs = @{$this->{_tabs}};
+  my @row;
+  my $dtab ||= $this->getActiveTab();
+
+  my $list = "<DIV id=menuset>\n";
+
+  for( my $i = 1; $i <= $#tabs; $i++ ) {
+    my $spc = "&nbsp;";
+    my $color = ( $dtab == $i ) ? $this->{activeColor} : $this->{inactiveColor};
+    my $htext = '';# ( $tabs[$i]->{helptext} ) ? "TITLE='$tabs[$i]->{helptext}'" : '';
+    my $class = (  $dtab == $i ) ? 'class=here' : '';
+    $list .=<<"    END";
+    <A $class HREF='$tabs[$i]->{url}' $htext> $tabs[$i]->{label} </A> 
+    END
+
+  }
+  $list .= "</DIV>\n";
+
+  $this->{_table}->addRow ( [ $list] );
+  $this->{_table}->setCellAttr( ROW => 1, COL => 1, ALIGN => 'CENTER' );
+  
+  if ( $this->{_content} ) {
+    $this->{_table}->addRow ( [ "<TABLE WIDTH='100%'><TR><TD BGCOLOR='WHITE'>$this->{_content}</TD></TR></TABLE>" ] );
+    my $color = ( $this->{boxContent} ) ? $this->{activeColor} : 'WHITE';
+    $this->{_table}->setCellAttr ( COL => 1, ROW => 2, BGCOLOR => $color );
+  }
+
+  
+
+
+  return ( <<"  END" );
+  <!-- Begin TabMenu --> 
+    <!-- CSS definitions -->
+    <style type="text/css">
+    #menuset {
+             position:relative;
+	           float:left;
+	           width:100%;
+	           padding:0 0 0 0
+	           margin:0;
+	           list-style:none;
+	           line-height:2em;  
+             }
+   
+    #menuset LI {
+                float:left;
+	              margin:0;
+	              padding:0;
+                }
+
+    #menuset A {
+	              padding:0;
+                float:left;
+                display:block;
+              	color:#444444;
+              	text-decoration:none;
+                padding:0.25em 1em;
+              	font-weight:bold;
+              	background:#DDDDDD;
+              	margin:0;
+              	border-left:1px solid #fff;
+              	border-top:1px solid #fff;
+              	border-right:1px solid #aaa;
+                }
+
+    #menuset A:hover,
+    #menuset A:active,
+    #menuset A.here:link,
+    #menuset A.here:visited {
+	    background:#bbb;
+    }
+    </style>
+
+  $this->{_table}
+    
+  <!-- End TabMenu -->
+  END
+#return "$this->{_table}";
+}
+
 1;
+
