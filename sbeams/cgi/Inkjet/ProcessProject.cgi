@@ -811,8 +811,22 @@ function prepareForSubmission(){
     if (confirm("You have entered a delta value at which VERA stops , but you haven't check the box.  Click OK to use the value.  Click Cancel to refrain from using it."))
       {document.choiceList.veraCrit.checked = true;}
     else
-      {docuemnt.choiceList.veraCritValue.value = "";}
+      {document.choiceList.veraCritValue.value = "";}
   }
+
+  if (document.choiceList.notify.checked == true && document.choiceList.addresses.value=="")
+    if(!confirm("you haven't specified contact email addresses.  Click OK if you're not using them.  Click Cancel to provide a value."))
+      {return false;}
+    else
+      {document.choiceList.notify.checked = false;}
+
+  if (document.choiceList.notify.checked == false && document.choiceList.addresses.value != ""){
+    if (confirm("You have entered an email address, but you haven't checked the box.  Click OK to use the value.  Click Cancel to refrain from using it."))
+      {document.choiceList.notify.checked = true;}
+    else
+      {document.choiceList.addresses.value = "";}
+  }
+
 }
 //-->
 </SCRIPT>
