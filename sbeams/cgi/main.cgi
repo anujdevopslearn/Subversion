@@ -163,28 +163,6 @@ sub handle_request {
   ~;
 
 
-  my $comment =<<'  END';
-  #### Show the list of Modules available to this user
-  print qq~
-	<H1>Available SBEAMS Modules:</H1>
-	<UL>
-  ~;
-
-
-  #### Get the list of Modules available to us
-  my @modules = $sbeams->getModules();
-
-  #### Print out entries for each module
-  my $module;
-  foreach $module (@modules) {
-    print qq~
-	<LI><A HREF="$module/main.cgi">SBEAMS - $module</A>
-    ~;
-  }
-	</UL>
-
-  END
-
   print qq~
 
 	<P>To integrate resultsets from queries in multiple modules
