@@ -110,11 +110,13 @@ sub printPageHeader {
 
 	<tr><td><a href="$CGI_BASE_DIR/main.cgi">>$DBTITLE Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/MicroArrayMain.cgi">>MicroArray Home</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Proteomics/main.cgi">>Proteomics Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/tools/main.cgi">>Tools Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/GEAP/main.cgi">>GEAP Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">>Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/MicroArrayMain.cgi">- MicroArray</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Proteomics/main.cgi">- Proteomics</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/tools/main.cgi">- Tools</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/GEAP/main.cgi">- GEAP</a></td></tr>
 	<tr><td>&nbsp;</td></tr>

@@ -17,8 +17,8 @@
 # Get the script set up with everything it will need
 ###############################################################################
 use strict;
-use lib qw (../lib/perl);
-use vars qw ($q $sbeams $sbeamsMAW $dbh $current_contact_id $current_username
+use lib qw (../../lib/perl);
+use vars qw ($q $sbeams $sbeamsPROT $dbh $current_contact_id $current_username
              $current_work_group_id $current_work_group_name
              $current_project_id $current_project_name
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
@@ -32,15 +32,15 @@ use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
 
-use SBEAMS::MicroArrayWeb;
-use SBEAMS::MicroArrayWeb::Settings;
-use SBEAMS::MicroArrayWeb::Tables;
-use SBEAMS::MicroArrayWeb::TableInfo;
+use SBEAMS::Proteomics;
+use SBEAMS::Proteomics::Settings;
+use SBEAMS::Proteomics::Tables;
+use SBEAMS::Proteomics::TableInfo;
 
 $q = new CGI;
 $sbeams = new SBEAMS::Connection;
-$sbeamsMAW = new SBEAMS::MicroArrayWeb;
-$sbeamsMAW->setSBEAMS($sbeams);
+$sbeamsPROT = new SBEAMS::Proteomics;
+$sbeamsPROT->setSBEAMS($sbeams);
 
 
 ###############################################################################
@@ -62,21 +62,21 @@ sub main {
     $TABLE_NAME = $q->param('TABLE_NAME') || croak "TABLE_NAME not specified."; 
 
     croak "This TABLE_NAME=$TABLE_NAME cannot be managed by this program."
-      unless ($sbeamsMAW->returnTableInfo($TABLE_NAME,"ManageTableAllowed"))[0] eq "YES";
+      unless ($sbeamsPROT->returnTableInfo($TABLE_NAME,"ManageTableAllowed"))[0] eq "YES";
 
-    ($CATEGORY) = $sbeamsMAW->returnTableInfo($TABLE_NAME,"CATEGORY");
-    ($PROGRAM_FILE_NAME) = $sbeamsMAW->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
-    ($DB_TABLE_NAME) = $sbeamsMAW->returnTableInfo($TABLE_NAME,"DB_TABLE_NAME");
-    ($PK_COLUMN_NAME) = $sbeamsMAW->returnTableInfo($TABLE_NAME,"PK_COLUMN_NAME");
-    @MENU_OPTIONS = $sbeamsMAW->returnTableInfo($TABLE_NAME,"MENU_OPTIONS");
+    ($CATEGORY) = $sbeamsPROT->returnTableInfo($TABLE_NAME,"CATEGORY");
+    ($PROGRAM_FILE_NAME) = $sbeamsPROT->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+    ($DB_TABLE_NAME) = $sbeamsPROT->returnTableInfo($TABLE_NAME,"DB_TABLE_NAME");
+    ($PK_COLUMN_NAME) = $sbeamsPROT->returnTableInfo($TABLE_NAME,"PK_COLUMN_NAME");
+    @MENU_OPTIONS = $sbeamsPROT->returnTableInfo($TABLE_NAME,"MENU_OPTIONS");
 
     #### Do the SBEAMS authentication and exit if a username is not returned
     exit unless ($current_username = $sbeams->Authenticate());
 
     #### Print the header, do what the program does, and print footer
-    $sbeamsMAW->printPageHeader();
+    $sbeamsPROT->printPageHeader();
     processRequests();
-    $sbeamsMAW->printPageFooter();
+    $sbeamsPROT->printPageFooter();
 
 } # end main
 
@@ -143,7 +143,7 @@ sub printOptions {
     }
 
     print "$LINESEPARATOR<P>";
-    $sbeamsMAW->printPageFooter("CloseTables");
+    $sbeamsPROT->printPageFooter("CloseTables");
     showTable("WithOptions");
 
 } # end printOptions
@@ -162,9 +162,9 @@ sub printEntryForm {
     my $username;
 
     # Get the columns for this table
-    my @columns = $sbeamsMAW->returnTableInfo($TABLE_NAME,"ordered_columns");
+    my @columns = $sbeamsPROT->returnTableInfo($TABLE_NAME,"ordered_columns");
     my %input_types = 
-      $sbeamsMAW->returnTableInfo($TABLE_NAME,"input_types");
+      $sbeamsPROT->returnTableInfo($TABLE_NAME,"input_types");
 
     # Read the form values for each column
     foreach $element (@columns) {
@@ -463,7 +463,7 @@ sub printEntryForm {
        !;
 
 
-    $sbeamsMAW->printPageFooter("CloseTables");
+    $sbeamsPROT->printPageFooter("CloseTables");
     showTable();
 
 } # end printEntryForm
@@ -480,7 +480,7 @@ sub showTable {
     my $detail_level = $q->param('detail_level') || "BASIC";
 
     my ($main_query_part) =
-      $sbeamsMAW->returnTableInfo($TABLE_NAME,$detail_level."Query");
+      $sbeamsPROT->returnTableInfo($TABLE_NAME,$detail_level."Query");
 
     my ($full_where_clause,$full_orderby_clause) = 
       $sbeams->processTableDisplayControls($TABLE_NAME);
@@ -500,7 +500,7 @@ sub showTable {
     #print "<PRE>$sql_query\n\n</PRE>";
 
     my ($element,$value);
-    my %url_cols = $sbeamsMAW->returnTableInfo($TABLE_NAME,"url_cols");
+    my %url_cols = $sbeamsPROT->returnTableInfo($TABLE_NAME,"url_cols");
 
     return $sbeams->displayQueryResult($sql_query,\%url_cols);
 
@@ -520,13 +520,13 @@ sub processEntryForm {
     my $tmp;
 
     # Get the columns for this table
-    my @columns = $sbeamsMAW->returnTableInfo($TABLE_NAME,"ordered_columns");
+    my @columns = $sbeamsPROT->returnTableInfo($TABLE_NAME,"ordered_columns");
 
 
     # Check to see if there is a column which will allow a range of numbers
     # over which a multi-insert could be performed
     my ($multi_insert_column) = 
-      $sbeamsMAW->returnTableInfo($TABLE_NAME,"MULTI_INSERT_COLUMN");
+      $sbeamsPROT->returnTableInfo($TABLE_NAME,"MULTI_INSERT_COLUMN");
 
 
     # Read the form values for each column
@@ -551,7 +551,7 @@ sub processEntryForm {
 
     # Check for missing required information
     my @required_columns = 
-      $sbeamsMAW->returnTableInfo($TABLE_NAME,"required_columns");
+      $sbeamsPROT->returnTableInfo($TABLE_NAME,"required_columns");
     if (@required_columns) {
       my $error_message;
       foreach $element (@required_columns) {
@@ -569,9 +569,9 @@ sub processEntryForm {
 
 
     my @data_columns = 
-      $sbeamsMAW->returnTableInfo($TABLE_NAME,"data_columns");
+      $sbeamsPROT->returnTableInfo($TABLE_NAME,"data_columns");
     my %input_types = 
-      $sbeamsMAW->returnTableInfo($TABLE_NAME,"input_types");
+      $sbeamsPROT->returnTableInfo($TABLE_NAME,"input_types");
 
 
     # Multi-Insert logic.  In certain cases, we'll allow the user to specify
@@ -687,7 +687,7 @@ sub processEntryForm {
 
         # Check for an existing record that this would duplicate
         my @key_columns = 
-          $sbeamsMAW->returnTableInfo($TABLE_NAME,"key_columns");
+          $sbeamsPROT->returnTableInfo($TABLE_NAME,"key_columns");
         my %unique_values;
         if (@key_columns) {
           foreach $element (@key_columns) {
@@ -951,93 +951,6 @@ sub writeDataFile {
 ###############################################################################
 sub postFormHook {
   my %parameters = @_;
-
-  if ($TABLE_NAME eq "labeling" && $parameters{array_request_sample_id} gt "") {
-
-    my $sql_query = qq~
-       SELECT DISTINCT extinction_coeff_at_max,correction_260,
-              Ebase,MWbase
-         FROM $TB_DYE D
-         LEFT JOIN $TB_LABELING_METHOD LM ON ( D.dye_id = LM.dye_id )
-         LEFT JOIN $TB_ARRAY_REQUEST_SAMPLE ARS ON
-              ( LM.labeling_method_id = ARS.labeling_method_id )
-        WHERE array_request_sample_id IN ($parameters{array_request_sample_id})
-    ~;
-
-    my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
-    my $rv  = $sth->execute or croak $dbh->errstr;
-
-    my @row = $sth->fetchrow_array();
-    my ($Edye,$CFdye,$Ebase,$MWbase) = 0;
-    if (@row) { ($Edye,$CFdye,$Ebase,$MWbase) = @row; }
-
-    my @row = $sth->fetchrow_array();
-    if (@row) {
-      print "<TR><TD><B><font color=red><BLINK>WARNING</BLINK>:</font></B></TD>";
-      print "    <TD><B><font color=red>SAMPLES USING MORE THAN ONE TYPE of DYE SELECTED????<BR>CALCULATION BELOW MAY BE WRONG!</font></B></TD></TR>\n";
-    }
-
-
-    $sth->finish;
-
-
-    my $A260 = $parameters{absorbance_260}*$parameters{dilution_factor};
-    my $Adye = $parameters{absorbance_lambda};
-    my $volume = $parameters{volume};
-    my $Abase = $A260 - ($Adye * $CFdye);
-
-    print "<TR><TD><B><font color=green>Edye:</font></B></TD>";
-    print "    <TD>$Edye</TD>\n";
-    print "    <TD BGCOLOR=\"E0E0E0\">Extinction coefficient for dye</TD></TR>\n";
-
-    print "<TR><TD><B><font color=green>CFdye:</font></B></TD>";
-    print "    <TD>$CFdye</TD>\n";
-    print "    <TD BGCOLOR=\"E0E0E0\">Absorbance at 260 nm correction factor for dye</TD></TR>\n";
-
-    print "<TR><TD><B><font color=green>Ebase:</font></B></TD>";
-    print "    <TD>$Ebase</TD>\n";
-    print "    <TD BGCOLOR=\"E0E0E0\">Extinction coefficient for a base</TD></TR>\n";
-
-    print "<TR><TD><B><font color=green>MWbase:</font></B></TD>";
-    print "    <TD>$MWbase</TD>\n";
-    print "    <TD BGCOLOR=\"E0E0E0\">Molecular weight for a base in g/mol</TD></TR>\n";
-
-    if ($Adye==0 || $Ebase==0 || $Edye==0) {
-      print qq~
-        <TR><TD></TD><TD><font color=green><B>
-        Insufficient data to calculate values.  Please enter measurements
-        above and press
-        <INPUT TYPE="submit" NAME="apply_action" VALUE="REFRESH"></font></TD></TR>\n
-      ~;
-      return;
-    }
-
-    my $NucAcid = ($Abase * $MWbase) / $Ebase;
-    my $basedye = ($Abase * $Edye) / ($Adye * $Ebase);
-    my $TotNucAcid = $NucAcid * $volume;
-    my $pmoldyeul = $Adye/($Edye*1e-6);
-    my $totpmoldye = $pmoldyeul * $volume;
-
-
-    print "<TR><TD><B><font color=green>Abase:</font></B></TD>";
-    print "    <TD>",sprintf("%10.4f",$Abase),"</TD>\n";
-    print "    <TD BGCOLOR=\"E0E0E0\">Absorbance at 260 after using CFdye</TD></TR>\n";
-
-    print "<TR><TD><B><font color=green>[nucleic acid](ug/ul):</font></B></TD>";
-    print "    <TD>",sprintf("%10.6f",$NucAcid),"</TD></TR>\n";
-    print "<TR><TD><B><font color=green>base:dye:</font></B></TD>";
-    print "    <TD>",sprintf("%10.1f",$basedye),"</TD></TR>\n";
-    print "<TR><TD><B><font color=green>total nucleic acid (ug):</font></B></TD>";
-    print "    <TD>",sprintf("%10.2f",$TotNucAcid),"</TD>\n";
-    print "    <TD BGCOLOR=\"E0E0E0\">in units of micrograms (ug)</TD></TR>\n";
-
-    print "<TR><TD><B><font color=green>pmol dye/ul:</font></B></TD>";
-    print "    <TD>",sprintf("%10.2f",$pmoldyeul),"</TD></TR>\n";
-    print "<TR><TD><B><font color=green>total pmol dye:</font></B></TD>";
-    print "    <TD>",sprintf("%10.1f",$totpmoldye),"</TD></TR>\n";
-
-  }
-
 
   if ($TABLE_NAME eq "array_scan") {
   

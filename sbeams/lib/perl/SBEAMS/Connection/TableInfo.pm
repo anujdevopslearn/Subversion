@@ -20,6 +20,7 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::MicroArrayWeb::Tables;
 use SBEAMS::Tools::Tables;
 use SBEAMS::GEAP::Tables;
+use SBEAMS::Proteomics::Tables;
 
 
 ###############################################################################
@@ -236,6 +237,8 @@ sub returnTableInfo {
         WHERE table_name='$table_name'
       ");
 
+    #print "Content-type: text/html\n\n==$result==<BR>\n";
+
     # Evaluate (via interpolation) any variables within this result
     $result = eval "\"$result\"";
 
@@ -314,6 +317,7 @@ sub returnTableInfo {
   if ($info_key eq "BASICQuery") {
 
     my $DB_TABLE_NAME = $self->returnTableInfo($table_name,"DB_TABLE_NAME");
+    #print "Content-type: text/html\n\n==$table_name==$DB_TABLE_NAME==<BR>\n";
 
     return qq~
 	SELECT *
@@ -383,7 +387,7 @@ sub returnTableInfo {
 
       $url = $url_cols{$element};
       if ($url eq "pkDEFAULT") {
-        $url_cols{$element} = "$PROGRAM_FILE_NAME&$PK_COLUMN_NAME=%V";
+        $url_cols{$element} = "$CGI_BASE_DIR/$PROGRAM_FILE_NAME&$PK_COLUMN_NAME=%V";
       } elsif ($url eq "SELF") {
         $url_cols{$element} = "%V";
       }

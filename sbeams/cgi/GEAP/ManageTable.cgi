@@ -891,7 +891,7 @@ sub printAttemptedChangeResult {
         You can click on BACK to INSERT/UPDATE another record with similar
         values $back_button
         <BR><BR><BR>
-        [ <A HREF="$PROGRAM_FILE_NAME">View $CATEGORY Table</A>]
+        [ <A HREF="$CGI_BASE_DIR/$PROGRAM_FILE_NAME">View $CATEGORY Table</A>]
         </B></CENTER><BR><BR><BR><BR>
     !;
 

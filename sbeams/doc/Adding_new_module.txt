@@ -1,0 +1,42 @@
+
+Notes add a new module:
+
+set TEMPLATE = GEAP
+set DEST = Proteomics
+
+cd /host/db/local/www/html/dev2/sbeams/lib/perl/SBEAMS
+cp -p $TEMPLATE.pm $DEST.pm
+cp -p -r $TEMPLATE $DEST
+replaceall.pl $TEMPLATE $DEST $DEST.pm
+cd $DEST
+replaceall.pl $TEMPLATE $DEST *.pm
+rm -r CVS
+
+
+cd /host/db/local/www/html/dev2/sbeams/cgi
+cp -p -r $TEMPLATE $DEST
+cd $DEST
+replaceall.pl $TEMPLATE $DEST *.cgi
+rm -r CVS
+replaceall.pl sbeams$DEST sbeamsPROT *.cgi
+chmod a+x *.cgi
+
+cd /host/db/local/www/html/dev2/sbeams/cgi
+ed main.cgi to include new plugin
+
+cd /host/db/local/www/html/dev2/sbeams/lib/perl/SBEAMS/Connection
+ed HTMLPrinter.pm to include new plugin
+ed TableInfo.pm to add Tables for new plugin
+
+
+cd /host/db/local/www/html/dev2/sbeams/cgi
+cvs add $DEST
+cvs add $DEST/*
+
+cd /host/db/local/www/html/dev2/sbeams/lib/perl/SBEAMS
+cvs add $DEST
+cvs add $DEST/*
+
+cvs commit
+
+
