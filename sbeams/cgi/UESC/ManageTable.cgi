@@ -10,6 +10,12 @@
 #               This means viewing, inserting, updating,
 #               and deleting records.
 #
+# SBEAMS is Copyright (C) 2000-2003 by Eric Deutsch
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
 ###############################################################################
 
 
@@ -20,7 +26,7 @@ use strict;
 use Getopt::Long;
 use FindBin;
 
-use lib qw (../lib/perl ../../lib/perl);
+use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($sbeams $sbeamsMOD $q $dbh $current_contact_id $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
              $current_work_group_id $current_work_group_name
@@ -87,8 +93,8 @@ if ($DEBUG) {
 ###############################################################################
 # Set Global Variables and execute main()
 ###############################################################################
-# Set maximum post (file upload) to 10 MB
-$CGI::POST_MAX = 1024 * 10000;
+# Set maximum post (file upload) to 30 MB
+$CGI::POST_MAX = 1024 * 30000;
 main();
 exit(0);
 
@@ -104,9 +110,9 @@ sub main {
 
   #### Do the SBEAMS authentication and exit if a username is not returned
   exit unless ($current_username = $sbeams->Authenticate(
+    permitted_work_groups_ref=>['UESC_user','UESC_admin','Admin'],
     #connect_read_only=>1,
     #allow_anonymous_access=>1,
-    permitted_work_groups_ref=>['UESC_user','UESC_admin','Admin'],
   ));
 
   #### Read in the default input parameters
@@ -114,6 +120,10 @@ sub main {
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters);
   #$sbeams->printDebuggingInfo($q);
+
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
 
   $TABLE_NAME = $parameters{'TABLE_NAME'}
     || croak "TABLE_NAME not specified."; 

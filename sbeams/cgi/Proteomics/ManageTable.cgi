@@ -10,7 +10,7 @@
 #               This means viewing, inserting, updating,
 #               and deleting records.
 #
-# SBEAMS is Copyright (C) 2000-2002 by Eric Deutsch
+# SBEAMS is Copyright (C) 2000-2003 by Eric Deutsch
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -93,8 +93,8 @@ if ($DEBUG) {
 ###############################################################################
 # Set Global Variables and execute main()
 ###############################################################################
-# Set maximum post (file upload) to 10 MB
-$CGI::POST_MAX = 1024 * 10000;
+# Set maximum post (file upload) to 30 MB
+$CGI::POST_MAX = 1024 * 30000;
 main();
 exit(0);
 
@@ -143,8 +143,10 @@ sub main {
 
 
   #### Decide what action to take based on information so far
+  if ($parameters{"GetFile"} && $parameters{"$PK_COLUMN_NAME"}) {
+    getFile(); return;
+  }
   $sbeamsMOD->printPageHeader();
-
   if      ($parameters{action} eq 'VIEWRESULTSET') { printOptions();
   } elsif ($parameters{action} eq 'REFRESH') { printEntryForm();
   } elsif ($parameters{action}) { processEntryForm();

@@ -5,6 +5,12 @@
 # Author      : Rowan
 # This finds strains.
 #
+# SBEAMS is Copyright (C) 2000-2003 by Eric Deutsch
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
 ###############################################################################
 
 
