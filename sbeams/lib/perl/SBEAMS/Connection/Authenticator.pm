@@ -891,17 +891,20 @@ sub destroyAuthHeader {
 
     my $current_username = $self->getCurrent_username;
 
-    my $remote_host = $ENV{REMOTE_HOST} || $ENV{REMOTE_ADDR} || '?';
-    my $logging_query="INSERT INTO $TB_USAGE_LOG
+    #### If there's a curernt username, then record that this user is
+    #### logging out.  If there's no username, this call is not a logout
+    #### but rather just a safety force logout
+    if ($current_username) {
+      my $remote_host = $ENV{REMOTE_HOST} || $ENV{REMOTE_ADDR} || '?';
+      my $logging_query="INSERT INTO $TB_USAGE_LOG
 	(username,usage_action,result,remote_host)
 	VALUES ('$current_username','logout','SUCCESS','$remote_host')";
-    $self->executeSQL($logging_query);
+      $self->executeSQL($logging_query);
+    }
 
     #### Fixed to set cookie path to tree root instead of possibly middle
     #### which then requires reauthentication when moving below entry point
-    #my $cookie_path = $q->url(-absolute=>1);
     my $cookie_path = $HTML_BASE_DIR;
-    #$cookie_path =~ s'/[^/]+$'/'; Removed 6/7/2002 Deutsch
 
     my $cookie = $q->cookie(-name    => 'SBEAMSName',
                             -path    => "$cookie_path",
