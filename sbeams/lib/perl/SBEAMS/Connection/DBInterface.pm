@@ -3723,7 +3723,7 @@ sub printUserChooser {
     my $current_username = $self->getCurrent_username;
     my $current_contact_id = $self->getCurrent_contact_id;
     my $current_work_group_id = $self->getCurrent_work_group_id;
-    my $current_work_group_devname = $self->getCurrent_work_group_name;
+    my $current_work_group_name = $self->getCurrent_work_group_name;
     my $current_project_id = $self->getCurrent_project_id;
     my $current_project_name = $self->getCurrent_project_name;
     my $current_user_context_id = $self->getCurrent_user_context_id;
