@@ -4,9 +4,9 @@
   /* $Id$ */
   $TITLE="SBEAMS Documentation";
 
-  include("share/style.inc.php");
+  include("../includes/style.inc.php");
 
-  include("share/header.inc.php");
+  include("../includes/header.inc.php");
 ?>
 
 
@@ -58,7 +58,7 @@
 
 <!-- ------------------------ End Main Page Content ------------------------ -->
 <?php
-  include("share/footer.inc.php");
+  include("../includes/footer.inc.php");
 ?>
 
 

@@ -4,11 +4,11 @@
   /* $Id$ */
   $TITLE="SBEAMS Documentation";
 
-  include("share/style.inc.php");
+  include("../includes/style.inc.php");
 
-  include("share/header.inc.php");
+  include("../includes/header.inc.php");
 
-  include("share/navbar.inc.php");
+  include("../includes/navbar.inc.php");
 ?>
 
 
@@ -125,6 +125,6 @@ always available.</P>
 
 
 <?php
-  include("share/footer.inc.php");
+  include("../includes/footer.inc.php");
 ?>
 
