@@ -142,6 +142,7 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_gradient_program"><nobr>&nbsp;&nbsp;&nbsp;Gradient Program</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_user_annotation_label"><nobr>&nbsp;&nbsp;&nbsp;User Annot Label</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_experiment_type"><nobr>&nbsp;&nbsp;&nbsp;Request Management</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_raw_data_file"><nobr>&nbsp;&nbsp;&nbsp;Data Processing</nobr></a></td></tr>
 	<tr><td>Documentation:</td></tr>
 	<tr><td><a href="$HTML_BASE_DIR/doc/$SBEAMS_SUBDIR/$SBEAMS_PART.gif"><nobr>&nbsp;&nbsp;&nbsp;Schema (GIF)</nobr></a></td></tr>
 	<tr><td>Other Tools:</td></tr>

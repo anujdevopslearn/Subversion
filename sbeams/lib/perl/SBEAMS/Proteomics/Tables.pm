@@ -50,6 +50,8 @@ use vars qw(@ISA @EXPORT
     $TBPR_REQUEST_STATUS
     $TBPR_FUNDING_STATUS
 
+    $TBPR_PROCESSING_STATUS
+    $TBPR_RAW_DATA_FILE
 );
 
 
@@ -90,6 +92,8 @@ require Exporter;
     $TBPR_REQUEST_STATUS
     $TBPR_FUNDING_STATUS
 
+    $TBPR_PROCESSING_STATUS
+    $TBPR_RAW_DATA_FILE
 );
 
 
@@ -131,6 +135,8 @@ $TBPR_INSTRUMENT                  = "${mod}instrument";
 $TBPR_REQUEST_STATUS              = "${mod}request_status";
 $TBPR_FUNDING_STATUS              = "${mod}funding_status";
 
+$TBPR_PROCESSING_STATUS           = "${mod}processing_status";
+$TBPR_RAW_DATA_FILE               = "${mod}raw_data_file";
 
 
 
