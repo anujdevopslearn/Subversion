@@ -65,6 +65,9 @@ Options:
   --update_timing_info
                       If set, an update of the timing and percent buffer
                       B information will be triggered
+  --gradient_program_id=nnn
+                      If there is no gradient_program_id already set for
+                      this fraction, then set it to this value instead of 1
   --experiment_tag    The experiment_tag of a proteomics_experiment
                       that is to be worked on; all are checked if
                       none is provided
@@ -103,7 +106,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
   "experiment_tag:s","file_prefix:s","check_status","force_ref_db:s",
   "list_all","search_subdir:s","load","testonly",
   "update_from_summary_files","update_search","update_probabilities",
-  "update_timing_info"
+  "update_timing_info","gradient_program_id:i"
   )) {
   print "$USAGE";
   exit;
@@ -1817,6 +1820,7 @@ sub updateTimingInfo {
 
   #### Set the command-line options
   my $file_prefix = $OPTIONS{"file_prefix"} || '';
+  my $set_gradient_program_id = $OPTIONS{"gradient_program_id"} || 1;
 
 
   #### Try to find this experiment in database
@@ -1869,6 +1873,11 @@ sub updateTimingInfo {
     my $gradient_program_id = $fraction_info[4];
     my $source_file = "$experiment_path/$fraction_tag.nfo";
 
+    #### If the file is a relative path, prefix with $prefix or $RAW_DATA_DIR
+    unless ($source_file =~ /^\//) {
+      $source_file = "$RAW_DATA_DIR{Proteomics}/$source_file";
+    }
+
     print "\nProcessing fraction '$fraction_tag'\n";
 
 
@@ -1883,7 +1892,7 @@ sub updateTimingInfo {
     #### If there's no gradient_program_id, set it to a default
     #### and warn the user
     unless ($gradient_program_id) {
-      $gradient_program_id = 1;
+      $gradient_program_id = $set_gradient_program_id;
       print "No gradient_program_id has been defined for this fraction yet.\n";
       print "  Setting it to default value $gradient_program_id.\n";
     }
