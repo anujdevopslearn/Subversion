@@ -546,6 +546,13 @@ function updateCheckBoxButtons(input_obj){
 	
  }
  
+ if (all_checkboxes.length == null){					//If there is only one element we will not get back an array and file_types will not exists
+	var hold = form.click_all_files.value;
+	file_types[hold] = form.click_all_files.checked;
+}
+
+ 
+ 
  if (all_files ){
 
  }else{
