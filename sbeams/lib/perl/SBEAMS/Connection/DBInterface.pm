@@ -1320,19 +1320,43 @@ sub deleteRecordsAndChildren {
 
         #### If the relationship is a KeyLess Child, just delete by parent key
 	} elsif ($child_type eq 'PKLC') {
+	  
+	   #### Get the number of records to delete and set the first and last
+  	  my $n_ids = scalar(@{$delete_PKs});
+  	  my $first_element = 0;
+  	  my $last_element = $n_ids - 1;
 
+  	  #### If the user requested to delete in batches, possibly
+          #### reduce the last
+  	  if ($delete_batch && $n_ids > $delete_batch) {
+  	    $last_element = $delete_batch - 1;
+  	  }
+
+  	  #### While there are still records to delete, do it
+  	  while ($first_element < $n_ids) {
+  	    #### Get the records to delete in this batch
+  	    my @ids = @{$delete_PKs};
+  	    @ids = @ids[$first_element..$last_element];
+	  
+	  
       	  #### Create the SQL and do the DELETE
           my $parent_PK = $table_PK_column_names{$table_name} ||
             "${table_name}_id";
       	  my $sql = "DELETE FROM ${DATABASE}$child_table_name ".
-            "WHERE $parent_PK IN (".join(",",@{$delete_PKs}).")";
+            "WHERE $parent_PK IN (".join(",",@ids).")";
       	  print "$sql\n\n" if ($VERBOSE > 1);
-      	  print "  DELETING FROM $child_table_name by $parent_PK\n"
+      	  print "  DELETING FROM PKLC_2 $child_table_name by $parent_PK NUMBER OF RECORDS:" .scalar(@ids) ."\n"
       	    if ($VERBOSE);
       	  print "." unless ($QUIET || $VERBOSE);
       	  $self->executeSQL($sql) unless ($TESTONLY);
 
-
+	  #### Update the first and last batch block pointers if relevant
+  	    last unless ($delete_batch);
+  	    $first_element += $delete_batch;
+  	    $last_element += $delete_batch;
+  	    $last_element = $n_ids - 1 if ($last_element > $n_ids - 1);
+	  
+	  }
         #### Otherwise there was a parsing error or an unimplemented type
         } else {
           die("ERROR: Unrecognized child type '$child_type'");
@@ -3343,6 +3367,7 @@ sub returnNextRow {
 sub processTableDisplayControls {
     my $self = shift;
     my $TABLE_NAME = shift;
+    
 
     my $detail_level  = $q->param('detail_level') || "BASIC";
     my $where_clause  = $q->param('where_clause');
@@ -3353,6 +3378,7 @@ sub processTableDisplayControls {
     if ( $orderby_clause =~ /delete|insert|update/i ) {
       croak "Syntax error in ORDER BY clause"; }
 
+    
     my $full_orderby_clause;
     my $full_where_clause;
     $full_where_clause = "AND $where_clause" if ($where_clause);
@@ -3651,7 +3677,7 @@ sub display_input_form {
         $is_data_column,$is_display_column,$column_text,
         $optionlist_query,$onChange) = @row;
     if (defined($optionlist_query) && $optionlist_query gt '') {
-     # print "<font color=\"red\">$column_name</font><BR><PRE>$optionlist_query</PRE><BR>\n";
+      #print "<font color=\"red\">$column_name</font><BR><PRE>$optionlist_query</PRE><BR>\n";
       $optionlist_queries{$column_name}=$optionlist_query;
     }
     if ($input_type eq "file") {
@@ -4134,6 +4160,7 @@ sub transferTable {
   my $dest_PK_name = $args{'dest_PK_name'} || $args{'dest_PK'} || '';
 
   my $update = $args{'update'} || 0;
+
   my $update_keys_ref = $args{'update_keys_ref'};
 
   my $verbose = $args{'verbose'} || 0;
@@ -4184,9 +4211,15 @@ sub transferTable {
   my %rowdata;
   my $row;
 
-
+  my $total_row_count = scalar @rows;		#setup counter to watch the inserts or updates proceed
+  my $number_inserts_per_dot = int($total_row_count/100);
+  my $load_info = "v-- 0 %".  (" " x 23) . "Number of inserts per dot = " . (sprintf("% 4d", $number_inserts_per_dot)) . (" " x 24) . "100 % done --v\n";
+  my $load_gauge = "|" . ("." x 98) . "|\n";
+  my $row_count = 0;
+    
   #### Loop over each row of input data
   print "\n  Loading data into destination\n";
+  print "$load_info$load_gauge" if $total_row_count > 100;
   foreach $row (@rows) {
     %rowdata = ();
 
@@ -4232,7 +4265,7 @@ sub transferTable {
 	    if (defined($mapped_value)) {
 	      $rowdata{$value} = $mapped_value;
 	      $row->[$key] = $mapped_value;
-
+		
 	      #### Else complain and leave as NULL
 	    } else {
 	      print "\nWARNING: Unable to transform column ".$key.
@@ -4291,7 +4324,7 @@ sub transferTable {
           print "Finding PK with: $sql";
         }
         my @results = $self->selectOneColumn($sql);
-
+	
         #### If there is one matching record
         if (scalar(@results) == 1) {
 
@@ -4332,7 +4365,14 @@ sub transferTable {
       );
     }
 
-    print ".";
+    if ( $row_count == $number_inserts_per_dot){			#change the print style of the dots.  Should print out 100 dots for the whole run
+    	print "." ;
+       $row_count = 0;
+    }elsif ($total_row_count < 100){
+    	print ".";
+    }
+    
+    $row_count ++;
 
     if ($dest_PK_name && $result) {
       $newkey_map_ref->{$row->[$src_PK_column]} = $result;
