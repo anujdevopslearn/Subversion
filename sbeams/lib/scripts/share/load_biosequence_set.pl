@@ -864,6 +864,8 @@ sub loadBiosequence {
   #### Define a hash to hold data that goes into biosequence_property_set
   my %property_set;
 
+  #### Define a hash to hold data that goes into biosequence_annotation
+  my %annotation;
 
   #### Microarray uses the new schema and this is just a quick hack to get it
   #### working.  This will  need to populate biosequence_external_xref in the
@@ -907,7 +909,41 @@ sub loadBiosequence {
     $property_set{end_in_chromosome} = $rowdata_ref->{end_in_chromosome};
     delete($rowdata_ref->{end_in_chromosome});
   }
+  if (defined($rowdata_ref->{duplicate_biosequences})) {
+	$property_set{duplicate_biosequences} = $rowdata_ref->{duplicate_biosequences};
+	delete($rowdata_ref->{duplicate_biosequences});
+  }
   
+
+  #### Remove any attributes that go in annotation
+  if (defined($rowdata_ref->{gene_symbol})){
+	$annotation{gene_symbol} = $rowdata_ref->{gene_symbol};
+	delete($rowdata_ref->{gene_symbol});
+  }
+  if (defined($rowdata_ref->{full_gene_name})) {
+	$annotation{full_gene_name} = $rowdata_ref->{full_gene_name};
+	delete($rowdata_ref->{full_gene_name});
+  }
+  if (defined($rowdata_ref->{aliases})) {
+	$annotation{aliases} = $rowdata_ref->{aliases};
+	delete($rowdata_ref->{aliases});
+  }
+  if (defined($rowdata_ref->{former_names})) {
+	$annotation{former_names} = $rowdata_ref->{former_names};
+	delete($rowdata_ref->{former_names});
+  }
+  if (defined($rowdata_ref->{functional_description})) {
+	$annotation{functional_description} = $rowdata_ref->{functional_description};
+	delete($rowdata_ref->{functional_description});
+  }
+  if (defined($rowdata_ref->{EC_numbers})) {
+	$annotation{EC_numbers} = $rowdata_ref->{EC_numbers};
+	delete($rowdata_ref->{EC_numbers});
+  }
+  if (defined($rowdata_ref->{comment})) {
+	$annotation{comment} = $rowdata_ref->{comment};
+	delete($rowdata_ref->{comment});
+  }
 
   #### Oligo/Biosequence Property Set-enabled specific ####
   if ($module eq 'Oligo') {
@@ -1031,6 +1067,44 @@ sub loadBiosequence {
 
   }
 
+  #### If we have data for the biosequence_annotation table
+  if (%annotation) {
+
+    #### See if there's already a record there
+    my $sql =
+      "SELECT biosequence_annotation_id
+         FROM ${DATABASE}biosequence_annotation
+        WHERE biosequence_id = '$biosequence_id'
+      ";
+    my @biosequence_annotation_ids = $sbeams->selectOneColumn($sql);
+
+    #### Determine INSERT or UPDATE based on the result
+    $insert = 0;
+    $update = 0;
+    $insert = 1 if (scalar(@biosequence_annotation_ids) eq 0);
+    $update = 1 if (scalar(@biosequence_annotation_ids) eq 1);
+    if (scalar(@biosequence_annotation_ids) > 1) {
+      die("ERROR: Unexpected result from query:\n$sql\n");
+    }
+    my $biosequence_annotation_id = $biosequence_annotation_ids[0] || 0;
+
+    #### Fill the row data hash with information we have
+    my %rowdata = %annotation;
+    $rowdata{biosequence_id} = $biosequence_id;
+
+    #### Insert or update the row
+    my $result = $sbeams->insert_update_row(
+      insert=>$insert,
+      update=>$update,
+      table_name=>"${DATABASE}biosequence_annotation",
+      rowdata_ref=>\%rowdata,
+      PK=>"biosequence_annotation_id",
+      PK_value => $biosequence_annotation_id,
+      verbose=>$VERBOSE,
+      testonly=>$TESTONLY,
+    );
+
+  }
 
 
   #### See if we have PFAM data to add
@@ -1737,6 +1811,72 @@ sub specialParsing {
 	      $rowdata_ref->{biosequence_desc}."==\n";
       }
   }
+
+  #### Special conversion rules for Halobacterium halo_ORFs.fasta
+  #### >VNG0021H common_name="VNG0021H" Genbank_ID="15789357" COG_ID="COG3436" location="Chromosome 16342 17706";VNG5087H common_name="VNG5087H" aliases="H0698,H1655,VNG7063,VNG7146" location="pNRC100 63303 64667";VNG5210H common_name="VNG5210H" location="pNRC100 160086 158722";VNG6084H common_name="VNG6084H" Genbank_ID="16120048" COG_ID="COG3436" location="pNRC200 63303 64667";VNG6442H common_name="VNG6442H" Genbank_ID="16120314" COG_ID="COG3436" location="pNRC200 334165 332801";
+  if ($biosequence_set_name eq "Halobacterium ORFs" ||
+	  $biosequence_set_name eq "Halobacterium Proteins") {
+	my @redundant_orfs = split ";", $rowdata_ref->{biosequence_desc};
+
+	$rowdata_ref->{biosequence_desc} = $redundant_orfs[0];
+
+	# get ORF name
+	$rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
+	$rowdata_ref->{full_gene_name} = $rowdata_ref->{biosequence_name};
+	
+	# get common name
+	if ($redundant_orfs[0] =~ /common_name=\"(.*?)\"/) {
+	  my $common_name = $1;
+	  $rowdata_ref->{biosequence_gene_name} = $common_name;
+	  $rowdata_ref->{gene_symbol} = $common_name; 
+	}
+
+	# get function
+	if ($redundant_orfs[0] =~ /function=\"(.*?)\"/){
+	  $rowdata_ref->{functional_description}= $1;
+	}
+
+	# get comment
+	if ($redundant_orfs[0] =~ /comments=\"(.*?)\"/){
+	  $rowdata_ref->{comment}= $1;
+	}
+
+	# get location
+	$redundant_orfs[0] =~ /location=\"(\w+)\s(\d+)\s(\d+)\"/;
+	$rowdata_ref->{chromosome} = $1;
+	$rowdata_ref->{start_in_chromosome} = $2;
+	$rowdata_ref->{end_in_chromosome} = $3;
+
+	# get aliases
+	my @aliases;
+	if ($redundant_orfs[0] =~ /common_name=\"(.*?)\"/) {
+	  push @aliases, $1;
+	}
+	if ($redundant_orfs[0] =~ /Genbank_ID=\"(.*?)\"/) {
+	  push @aliases, $1;
+	}
+	if ($redundant_orfs[0] =~ /COG_ID=\"(.*?)\"/) {
+	  push @aliases, $1;
+	}
+	if ($redundant_orfs[0] =~ /aliases=\"(.*?)\"/) {
+	  push @aliases, $1;
+	}
+	if (@aliases) {
+	  $rowdata_ref->{aliases} = join ",", @aliases;
+	}
+
+	# identify redundant VNG names
+	my @red_orf_names;
+	foreach my $red_orf (@redundant_orfs) {
+	  if ($red_orf =~ /^(VNG\d{4}\w\w?)/) {
+		push @red_orf_names, $1;
+	  }
+	}
+	if (@red_orf_names) {
+	  $rowdata_ref->{duplicate_biosequences} = join ",", @red_orf_names;
+	}
+  }
+
 
   #### Special conversion rules for Halobacterium HALOprot_clean.fasta
   #### >VNG1023c chp-1013_1023-1023
