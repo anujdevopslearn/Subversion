@@ -320,6 +320,10 @@ To DROP:
 sqsh -i $SBEAMS/lib/sql/Core/Core_DROPCONSTRAINTS.mssql -D $SBEAMSDB
 sqsh -i $SBEAMS/lib/sql/Core/Core_DROPTABLES.mssql -D $SBEAMSDB
 
+(Note that if you use the FreeTDS isql utility to run these scripts, it
+requires that the GO statements be lower case!  Do a global search and
+replace to ^GO$ to ^go$ before using FreeTDS isql command-line utility)
+
 
 -----------------------
 PostgreSQL Example:
