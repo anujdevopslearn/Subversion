@@ -110,12 +110,6 @@ sub main {
       parameters_ref=>\%parameters);
   #$sbeams->printDebuggingInfo($q);
 
-  ##xxxx  hard coding tab menu info here until moved into sep. module
-  $q->param( -name=> "_tab",
-              -value=> "4");
-  $parameters{'_tab'} = 4;
-
-
   #### Process generic "state" parameters before we start
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
@@ -150,74 +144,24 @@ sub handle_request {
 
   my %parameters = %{$ref_parameters};
 
- ## xxxx hard coding tab menu here... should be moved into separate module
-  my $tabs = "";
 
-  if ($parameters{'_tab'}) {
-
-    #$sbeams->printUserContext();
-
-    $tabs = "?_tab=" . $parameters{'_tab'};
-
-    $PROG_NAME .= $tabs;
-
-
-    print <<"    END" if ($sbeams->output_mode() eq 'html');
+    print <<"    END";
         <BR>
     END
-    # Create new tabmenu item.  This may be a $sbeams object method in the future.
-    my $tabmenu =
-        SBEAMS::Connection::TabMenu->new( cgi => $q,
-                                          activeColor => 'ffcc99',
-                                          inactiveColor   => 'cccccc',
-                                          hoverColor => 'ffff99',
-                                          atextColor => '000000', # black
-                                          itextColor => 'ff0000', # black
-                 # paramName => 'mytabname', # uses this as cgi param
-                 #maSkin => 1,   # If true, use MA look/feel
-                 #isSticky => 0, # If true, pass thru cgi params
-                 # boxContent => 0, # If true draw line around content
-                 # labels => \@labels # Will make one tab per $lab (@labels)
-    );
 
-    #Preferred way to add tabs.  label is required, helptext optional
-    $tabmenu->addTab( label => 'Browse Peptides',
-                      helptext => 'Multi-constraint browsing of PeptideAtlas',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides" );
 
-    $tabmenu->addTab( label => 'Get Peptide',
-                      helptext => 'Look-up info on a peptide by sequence or name',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide"
-                      );
+  ## if tab menu is requested, display tabs and append parameters to PROG_NAME
+  if ( $parameters{_tab} )
+  {
+      my $parameters_string = $sbeamsMOD->printTabMenu(
+          parameters_ref => \%parameters,
+          program_name => $PROG_NAME,
+          );
 
-    $tabmenu->addTab( label => 'Browse Proteins',
-                      helptext => 'Not implemented yet',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/main.cgi"
-                      );
+      ##print "<BR>params:$parameters_string<BR>";
 
-    $tabmenu->addTab( label => 'Get Protein',
-                      helptext => 'Not implemented yet',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetProtein"
-                      );
-
-    $tabmenu->setCurrentTab( currtab => '4' );
-
-    my $content;
-
-    if ( $tabmenu->getActiveTabName() eq 'Browse Proteins' ){
-
-        $content = "<BR><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>[coming soon, not implemented yet]<B><BR><BR>";
-
-    }
-
-    $tabmenu->addHRule();
-
-    $tabmenu->addContent( $content );
-
-    print "$tabmenu" if ($sbeams->output_mode() eq 'html');
-
+      $PROG_NAME = $PROG_NAME.$parameters_string;
   }
-
 
 
   #### Define some generic varibles
@@ -285,26 +229,38 @@ sub handle_request {
 
   #### If the output_mode is HTML, then display the form
   if ($sbeams->output_mode() eq 'html') {
+
       print "<P>";
+
+      print "<nobr>";
+
       print $q->start_form(-method=>"POST",
                            -action=>"$base_url",
                           );
 
       print "PeptideAtlas Build: ";
+
       print $q->popup_menu(-name => "atlas_build_id",
                            -values => [ keys(%atlas_build_names) ],
                            -labels => \%atlas_build_names,
                            -default => $atlas_build_id,
 			  );
 
-      print "<BR>Protein Name: ";
+      print "&nbsp;&nbsp;&nbsp;";
+
+      print "Protein Name: ";
+
       print $q->textfield( "protein_name", $protein_name);
 
-      print "<BR>";
+      print "&nbsp;&nbsp;&nbsp;";
+
       print $q->submit(-name => "query",
                        -value => 'QUERY',
                        -label => 'GO');
       print $q->endform;
+
+      print "</nobr>";
+
       print "</P>";
   }
 
@@ -490,7 +446,7 @@ sub handle_request {
 
   #### Define the hypertext links for columns that need them
   %url_cols = (
-    	       'peptide_accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=2&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY",
+    	       'peptide_accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY",
     	       #'Peptide_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show summary for this peptide\'; return true"',
   );
 

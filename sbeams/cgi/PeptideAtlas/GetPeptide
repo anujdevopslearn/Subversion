@@ -102,42 +102,32 @@ sub main {
         allow_anonymous_access=>1,
     ));
 
-
     #### Read in the default input parameters
     my %parameters;
     my $n_params_found = $sbeams->parse_input_parameters(
         q=>$q,
-        parameters_ref=>\%parameters);
-
-
-    ##xxxxx tab menu info here until moved into sep. module
-    $parameters{'_tab'} = 2;
-
-    if ( $parameters{'atlasBuildID'} ) {
-
-        $parameters{'atlas_build_id'} = $parameters{'atlasBuildID'};
-
-    };
+        parameters_ref=>\%parameters
+        );
 
 
     ## If no parameters are defined, set up some defaults to help with browsing
     ## until I get a help menu set-up
-    if ( !$parameters{'searchWithinThis'}  && !$parameters{searchForThis}
-         && (  !$parameters{'atlasName'}  || !$parameters{'atlas_build_id'} ) ) {
+    if ( !$parameters{searchWithinThis}  && !$parameters{searchForThis}
+         && (  !$parameters{atlas_build_name}  || !$parameters{atlas_build_id} ) ) {
 
-        $parameters{'atlasName'} = "Human_P0.9_Ens26_NCBI35";
+        $parameters{atlas_build_name} = "Human_P0.9_Ens26_NCBI35";
 
-        $parameters{'searchWithinThis'} = "Peptide Name";
+        $parameters{searchWithinThis} = "Peptide Name";
 
-        $parameters{'searchForThis'} = "PAp00000001";
+        $parameters{searchForThis} = "PAp00000001";
 
     }
 
 
     ## get project_id to send to HTMLPrinter display
     my $project_id = $sbeamsMOD->getProjectID(
-        atlas_build_name => $parameters{atlasName},
-        atlas_build_id => $parameters{atlasbuild_id}
+        atlas_build_name => $parameters{atlas_build_name},
+        atlas_build_id => $parameters{atlas_build_id}
         );
 
 
@@ -177,72 +167,52 @@ sub handle_request {
 
     my %parameters = %{$ref_parameters};
 
-
-
-    ## hard coding tab menu here...someday should be moved into separate module in this directory
-
-    $PROG_NAME .= "?_tab=2";
-
     print <<"    END";
         <BR>
     END
 
-    # Create new tabmenu item.  This may be a $sbeams object method in the future.
-    my $tabmenu =
-            SBEAMS::Connection::TabMenu->new( cgi => $q,
-                                          activeColor => 'ffcc99',
-                                          inactiveColor   => 'cccccc',
-                                          hoverColor => 'ffff99',
-                                          atextColor => '000000', # black
-                                          itextColor => 'ff0000', # black
-                                          # paramName => 'mytabname', # uses this as cgi param
-                                          #maSkin => 1,   # If true, use MA look/feel
-                                          #isSticky => 0, # If true, pass thru cgi params 
-                                          # boxContent => 0, # If true draw line around content
-                                          # labels => \@labels # Will make one tab per $lab (@labels)
-                                          # _tabIndex => 0,
-                                          #_tabs => [ 'placeholder' ]
+    ## only have atlas_build_name, get atlas_build_id too to pass on to neighboring cgi's
+    if ( $parameters{atlas_build_name} && (!$parameters{atlas_build_id}) )
+    {
 
-    );
+        my $atlas_build_name = $parameters{atlas_build_name};
 
-    $tabmenu->addTab( label => 'Browse Peptides',
-                      helptext => 'Multi-constraint browsing of PeptideAtlas',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides" );
+        my $sql = qq~
+            SELECT atlas_build_id
+            FROM $TBAT_ATLAS_BUILD
+            WHERE atlas_build_name = '$atlas_build_name'
+            AND record_status != 'D'
+            ~;
 
-    $tabmenu->addTab( label => 'Get Peptide',
-                      helptext => 'Look-up info on a peptide by sequence or name',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide"
-                      );
+        #$sbeams->display_sql(sql=>$sql);
 
-    $tabmenu->addTab( label => 'Browse Proteins',
-                      helptext => 'Not implemented yet',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/main.cgi"
-                      );
+        my ($tmp) = $sbeams->selectOneColumn($sql) or
+            die "Cannot complete $sql ($!)";
 
-    $tabmenu->addTab( label => 'Get Protein',
-                      helptext => 'Not implemented yet',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetProtein"
-                      );
+        if ($tmp)
+        {
 
-    $tabmenu->setCurrentTab( currtab => '2' );
+            $parameters{atlas_build_id} = $tmp;
 
-    my $content;
-
-    if ( $tabmenu->getActiveTabName() eq 'Browse Proteins' ){
-
-        $content = "<BR><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>[coming soon, not implemented yet]<B><BR><BR>";
+        }
 
     }
 
-    $tabmenu->addHRule();
 
-    $tabmenu->addContent( $content );
+    ## if tab menu is requested, display tabs and append parameters to PROG_NAME
+    if ( $parameters{_tab} )  
+    {
+        my $parameters_string = $sbeamsMOD->printTabMenu( 
+            parameters_ref => \%parameters, 
+            program_name => $PROG_NAME,
+            );
+        ##print "<BR>params:$parameters_string<BR>";
 
-    print "$tabmenu";
+        $PROG_NAME = $PROG_NAME.$parameters_string;
+    }
 
 
-
-    #### Define some generic varibles
+    #### Define some generic variables
     my ($i,$element,$key,$value,$line,$result,$sql);
 
     #### Define some variables for a query and resultset
@@ -309,7 +279,7 @@ sub handle_request {
 
 
     ## Display HTML FORM to select Atlas and Search constraints:
-    my $atlasBuildName = $parameters{"atlasName"};
+    my $atlas_build_name = $parameters{"atlas_build_name"};
 
     my $searchKey = $parameters{"searchWithinThis"};
 
@@ -325,7 +295,7 @@ sub handle_request {
     if ( $parameters{atlas_build_id} ) {
         for (my $i=0; $i<=$#atlas_option_id_array; $i++) {
             if ( $parameters{atlas_build_id} eq $atlas_option_id_array[$i] ) {
-                $atlasBuildName = $atlas_option_name_array[$i]
+                $atlas_build_name = $atlas_option_name_array[$i]
             }
         }
     }
@@ -335,14 +305,15 @@ sub handle_request {
     if ($sbeams->output_mode() eq 'html') {
 
 
-        print "<BR>";
+        print "<p>";
 
+        print "<nobr>";
         print $q->start_form(-method=>"POST",
                               -action=>"$base_url",
                              );
-        print $q->popup_menu(-name=> "atlasName",
+        print $q->popup_menu(-name=> "atlas_build_name",
                               -values=> [@atlas_option_name_array],
-                              -default=>$atlasBuildName,
+                              -default=>$atlas_build_name,
             );
         print "&nbsp;&nbsp;Search&nbsp;";
         print $q->popup_menu(-name=> "searchWithinThis",
@@ -366,9 +337,9 @@ sub handle_request {
     ## store form values in %parameters:
     for (my $i=0; $i<=$#atlas_option_name_array; $i++){
 
-        if ( $atlasBuildName eq $atlas_option_name_array[$i]) {
+        if ( $atlas_build_name eq $atlas_option_name_array[$i]) {
 
-             $parameters{atlasName} = $atlasBuildName;
+             $parameters{atlas_build_name} = $atlas_build_name;
 
              $parameters{atlas_build_id} = $atlas_option_id_array[$i];
 
@@ -389,8 +360,8 @@ sub handle_request {
     #########################################################################
     #### Process all the constraints
 
-    #### If atlasBuildID was not selected, stop here
-    unless ($parameters{atlasName}) {
+    #### If atlas_build_id was not selected, stop here
+    unless ($parameters{atlas_build_name}) {
         $sbeams->reportException(
             state => 'ERROR',
             type => 'INSUFFICIENT CONSTRAINTS',
@@ -481,6 +452,7 @@ sub handle_request {
         ORDER BY P.peptide_accession
     ~;
     #$sbeams->display_sql(sql=>$sql);
+
 
 
     #########################################################################

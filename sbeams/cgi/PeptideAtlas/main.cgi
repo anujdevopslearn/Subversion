@@ -21,7 +21,7 @@
 # Get the script set up with everything it will need
 ###############################################################################
 use strict;
-use vars qw ($q $sbeams $sbeamsPeptideAtlas $PROGRAM_FILE_NAME
+use vars qw ($q $sbeams $sbeamsMOD $PROG_NAME
              $current_contact_id $current_username);
 use lib qw (../../lib/perl);
 use CGI::Carp qw(fatalsToBrowser croak);
@@ -33,16 +33,17 @@ use SBEAMS::Connection::TabMenu;
 
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Tables;
 
 $sbeams = new SBEAMS::Connection;
-$sbeamsPeptideAtlas = new SBEAMS::PeptideAtlas;
-$sbeamsPeptideAtlas->setSBEAMS($sbeams);
+$sbeamsMOD = new SBEAMS::PeptideAtlas;
+$sbeamsMOD->setSBEAMS($sbeams);
 
 
 ###############################################################################
 # Global Variables
 ###############################################################################
-$PROGRAM_FILE_NAME = 'main.cgi';
+$PROG_NAME = 'main.cgi';
 main();
 
 
@@ -52,18 +53,53 @@ main();
 # Call $sbeams->Authentication and stop immediately if authentication
 # fails else continue.
 ###############################################################################
-sub main { 
-
+sub main 
+{ 
     #### Do the SBEAMS authentication and exit if a username is not returned
-    exit unless ($current_username = $sbeams->Authenticate( 
-    allow_anonymous_access => 1 ) );
+    exit unless ($current_username = $sbeams->Authenticate(
+        permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
+        'PeptideAtlas_readonly'],
+        #connect_read_only=>1,
+        allow_anonymous_access=>1,
+    ));
 
-    #### Print the header, do what the program does, and print footer
-    $sbeamsPeptideAtlas->printPageHeader();
 
-    showMainPage();
+    #### Read in the default input parameters
+    my %parameters;
+    my $n_params_found = $sbeams->parse_input_parameters(
+        q=>$q,
+        parameters_ref=>\%parameters
+        );
 
-    $sbeamsPeptideAtlas->printPageFooter();
+
+    ## get project_id to send to HTMLPrinter display
+    my $project_id = $sbeamsMOD->getProjectID(
+        atlas_build_name => $parameters{atlas_build_name},
+        atlas_build_id => $parameters{atlas_build_id}
+        );
+
+
+    #### Process generic "state" parameters before we start
+    $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+    #$sbeams->printDebuggingInfo($q);
+
+    #### Decide what action to take based on information so far
+    if ($parameters{action} eq "???") {
+
+        # Some action
+ 
+    } else {
+
+        $sbeamsMOD->display_page_header(project_id => $project_id);
+
+        handle_request(ref_parameters=>\%parameters);
+
+        $sbeamsMOD->display_page_footer();
+
+    }
+
+
+
 
 } # end main
 
@@ -71,68 +107,135 @@ sub main {
 ###############################################################################
 # Show the main welcome page
 ###############################################################################
-sub showMainPage {
+sub handle_request {
+
+    my %args = @_;
+
+    #### Process the arguments list
+    my $ref_parameters = $args{'ref_parameters'}
+        || die "ref_parameters not passed";
+
+    my %parameters = %{$ref_parameters};
 
     print <<"    END";
         <BR>
     END
 
-    #Create new tabmenu item.  This may be a $sbeams object method in the future.
-    my $tabmenu = 
-        SBEAMS::Connection::TabMenu->new( cgi => $q,
-                                          activeColor => 'ffcc99',
-                                          inactiveColor   => 'cccccc',
-                                          hoverColor => 'ffff99',
-                                          atextColor => '000000', # black
-                                          itextColor => 'ff0000', # black
-               # paramName => 'mytabname', # uses this as cgi param
-               #maSkin => 1,   # If true, use MA look/feel
-               #isSticky => 0, # If true, pass thru cgi params 
-               # boxContent => 0, # If true draw line around content
-               # labels => \@labels # Will make one tab per $lab (@labels)
-    );
+    my $atlas_build_id = $parameters{atlas_build_id} || '';
 
-    #Preferred way to add tabs.  label is required, helptext optional
-    $tabmenu->addTab( label => 'Browse Peptides', 
-                      helptext => 'Multi-constraint browsing of PeptideAtlas',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides" 
-                      );
+    my $atlas_build_name = $parameters{atlas_build_name} || '';
 
-    $tabmenu->addTab( label => 'Get Peptide', 
-                      helptext => 'Look-up info on a peptide by sequence or name',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide" 
-                      );
-
-    $tabmenu->addTab( label => 'Browse Proteins',
-                      helptext => 'Not implemented yet',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/main.cgi"
-                      );
-
-    $tabmenu->addTab( label => 'Get Protein',
-                      helptext => 'Not implemented yet',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetProtein"
-                      );
-
-    my $content; 
-
-    if ( $tabmenu->getActiveTabName() eq 'Browse Proteins' )
+    ## only have atlas_build_name, get atlas_build_id too to pass on to neighboring cgi's
+    if ( $atlas_build_id )
     {
 
-        $content = "<BR><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>[coming soon, not implemented yet]<B><BR><BR>";
+        my $sql = qq~
+            SELECT atlas_build_name
+            FROM $TBAT_ATLAS_BUILD
+            WHERE atlas_build_id = '$atlas_build_id'
+            AND record_status != 'D'
+            ~;
+
+        #$sbeams->display_sql(sql=>$sql);
+
+        my ($tmp) = $sbeams->selectOneColumn($sql) or
+            die "Cannot complete $sql ($!)";
+
+        if ($tmp)
+        {
+
+            $parameters{atlas_build_name} = $tmp;
+
+        }
 
     }
 
-    $tabmenu->addHRule();
 
-    $tabmenu->addContent( $content );
+    ## if tab menu is requested, display tabs and append parameters to PROG_NAME
+#   if ( $parameters{_tab} )
+#   {
+        my $parameters_string = $sbeamsMOD->printTabMenu(
+            parameters_ref => \%parameters,
+            program_name => $PROG_NAME,
+            );
 
-    print "$tabmenu";
+        ##print "<BR>params:$parameters_string<BR>";
+
+        $PROG_NAME = $PROG_NAME.$parameters_string;
+#   }
 
     print "<BR>";
-    ## print Login and Project pull-down selection menus:
-    #$sbeams->printUserContext();
+
+    #### Read in the standard form values
+    my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+    my $TABLE_NAME = $parameters{'QUERY_NAME'};
 
 
-#   print "$SERVER_BASE_DIR <BR>  $CGI_BASE_DIR <BR>";
+    #### Set some specific settings for this program
+    my $PROGRAM_FILE_NAME = $PROG_NAME;
+    my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+    my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
+
+
+    #### Get a list of accessible project_ids
+    my @accessible_project_ids = $sbeams->getAccessibleProjects();
+    my $accessible_project_ids = join( ",", @accessible_project_ids ) || '0';
+
+    #### Get a hash of available atlas builds
+    my $sql = qq~
+        SELECT atlas_build_id,atlas_build_name
+        FROM $TBAT_ATLAS_BUILD
+        WHERE project_id IN ( $accessible_project_ids )
+        AND record_status!='D'
+    ~;
+    my %atlas_build_names = $sbeams->selectTwoColumnHash($sql);
+
+    #### Get the passed parameters
+    my $protein_name = $parameters{"protein_name"} || $parameters{"biosequence_name"};
+
+    #### If no atlas_build_id has been set, choose the latest human one.
+    #### FIXME. Come up with a better way of doing this.
+    unless ($atlas_build_id) {
+        $atlas_build_id = 48;
+    }
+
+
+    #### If the output_mode is HTML, then display the form
+    if ($sbeams->output_mode() eq 'html') {
+
+        print "<P>";
+
+        print "<nobr>";
+
+
+        print $q->start_form(-method=>"POST",
+                             -action=>"$base_url",
+                            );
+
+        print "PeptideAtlas Build: ";
+
+        print $q->popup_menu(-name => "atlas_build_id",
+                             -values => [ keys(%atlas_build_names) ],
+                             -labels => \%atlas_build_names,
+                             -default => $atlas_build_id,
+                            );
+
+        print "&nbsp;&nbsp;";
+
+        print $q->submit(-name => "query",
+                         -value => 'QUERY',
+                         -label => 'SELECT');
+
+        print $q->endform;
+
+        print "</nobr>";
+
+        print "</P>";
+
+    }
+
+    $parameters{atlas_build_id} = $atlas_build_id;
+
+
 
 } # end showMainPage
