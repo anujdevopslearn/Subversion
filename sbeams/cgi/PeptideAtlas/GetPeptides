@@ -493,6 +493,8 @@ sub handle_request {
       ["n_genome_locations","PI.n_genome_locations","N Unique Locations on Genome"],
       ["is_exon_spanning","PI.is_exon_spanning","Spans exons? (Y,N)"],
 
+      ["is_subpeptide_of","PI.is_subpeptide_of","Peptides that include this sequence"],
+
       ["organism_full_name","O.full_name","Organism"],
     );
   }
