@@ -263,6 +263,26 @@ sub start_element {
   }
 
 
+  #### Transform any internal references
+  while (my ($key,$value) = each %attrs) {
+    #print "Checking if remap $key=$value?\n";
+    if (defined($content_handler->{$key}->{PK_map}->{$value})) {
+      my $newvalue = $content_handler->{$key}->{PK_map}->{$value};
+      print "INFO: Remapping $key value from $value to $newvalue\n"
+        if ($VERBOSE);
+      $attrs{$key} = $newvalue;
+    }
+  }
+
+
+  #### If there's no audit parameters, but the table has them, add
+  my $add_audit_parameters = 0;
+  if (defined($table_info->{$element}->{columns}->{created_by_id}) &&
+      !defined($attrs{created_by_id})) {
+    $add_audit_parameters = 1;
+  }
+
+
   #### If deemed necessary, UPDATE or INSERT the data
   my $returned_PK;
   if ($insert + $update > 0) {
@@ -274,6 +294,7 @@ sub start_element {
       PK_name=>$PK_column_name,
       PK_value=>$PK_value,
       return_PK=>$return_PK,
+      add_audit_parameters=>$add_audit_parameters,
       verbose=>$VERBOSE,
       testonly=>$TESTONLY,
     );
@@ -298,8 +319,10 @@ sub start_element {
 
 
   #### Set the map of PK's in the input file to the database
-  print "INFO: PK in file is $returned_PK in database\n";
-  $content_handler->{$element}->{PK_map}->{orig_PK_value} = $returned_PK;
+  print "INFO: PK for $element.$orig_PK_value in file is mapped to ".
+    "$returned_PK in database\n";
+  $content_handler->{$PK_column_name}->{PK_map}->{$orig_PK_value} =
+    $returned_PK;
 
 
 }
