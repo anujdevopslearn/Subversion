@@ -416,6 +416,9 @@ sub handle_request {
   if ( $parameters{display_options} =~ /ShowSQL/ ) {
     $show_sql = 1;
   }
+  if ( $parameters{display_options} =~ /ShowSetAndName/ ) {
+    @column_array=@column_array[2..3];
+  }
 
 
   #### Build the columns part of the SQL statement
