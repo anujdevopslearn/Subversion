@@ -50,5 +50,8 @@ sbeams: jar
 jar: objs
 	(cd ..;jar cmf DataLoader/MANIFEST.MF DataLoader/DataLoader.jar DataLoader/*.class)
 
+update_jar: jar
+	(mv DataLoader.jar ../../../../usr/java/Microarray)
+
 sign: jar
 	-jarsigner -keystore /users/mjohnson/.keystore -storepass cytokey DataLoader.jar cytoscape
