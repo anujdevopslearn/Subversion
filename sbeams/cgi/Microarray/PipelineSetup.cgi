@@ -1841,11 +1841,13 @@ sub send_to_pipeline {
 	$project_title =~ s/\s+/_/g;
 
 	# Command Line Arguments
-	my @a = ("-t", $project_title,"-m", "sbeamsIndirect://db/sbeams/cgi/Microarray/ViewFile.cgi?".
-	"action=read".
-	"&FILE_NAME=matrix_output".
-	"&project_id=$project".
-	"&SUBDIR=$proc_subdir");
+	my @a = ("-t", $project_title,
+			 "-m", "sbeamsIndirect://db/sbeams/cgi/Microarray/ViewFile.cgi?".
+			 "action=read".
+			 "&FILE_NAME=matrix_output".
+			 "&project_id=$project".
+			 "&SUBDIR=$proc_subdir",
+			 "-r", "sbeamsIndirect://db/sbeams/tmp/Microarray/dataLoader/translator.tsv");
 	my $arguments = "";
 	foreach my $argument (@a) {
 	  $arguments .= qq~
@@ -1872,11 +1874,17 @@ sub send_to_pipeline {
   <resources>
     <j2se version="1.4+" max-heap-size="1024M"/>
     <jar href="$JAR_DIRECTORY/Microarray/DataLoader.jar"/>
-    <jar href="$JAR_DIRECTORY/share/util/experiment.jar"/>
-    <jar href="$JAR_DIRECTORY/share/util/jdom.jar"/>
-    <jar href="$JAR_DIRECTORY/share/util/visad.jar"/>
-    <jar href="$JAR_DIRECTORY/share/util/java-getopt-1.0.10.jar"/>
     <jar href="$JAR_DIRECTORY/share/util/SBEAMS.jar"/>
+    <jar href="$JAR_DIRECTORY/share/util/experiment.jar"/>
+    <jar href="$JAR_DIRECTORY/share/util/isorelax.jar"/>
+    <jar href="$JAR_DIRECTORY/share/util/java-getopt-1.0.10.jar"/>
+    <jar href="$JAR_DIRECTORY/share/util/jdom.jar"/>
+    <jar href="$JAR_DIRECTORY/share/util/msv.jar"/>
+    <jar href="$JAR_DIRECTORY/share/util/relaxngDatatype.jar"/>
+    <jar href="$JAR_DIRECTORY/share/util/visad.jar"/>
+    <jar href="$JAR_DIRECTORY/share/util/xercesImpl.jar"/>
+    <jar href="$JAR_DIRECTORY/share/util/xmlParserAPIs.jar"/>
+    <jar href="$JAR_DIRECTORY/share/util/xsdlib.jar"/>
   </resources>
   <application-desc>
 $arguments
