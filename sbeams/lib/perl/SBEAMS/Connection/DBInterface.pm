@@ -20,8 +20,8 @@ use Data::Dumper;
 use URI::Escape;
 
 
-#use lib "/net/db/src/CPAN/Data-ShowTable-3.3a";
-#use Data::ShowTableEWD;
+#use lib "/net/db/src/CPAN/Data-ShowTable-3.3a/blib/lib";
+#use Data::ShowTableTest;
 use Data::ShowTable;
 
 use SBEAMS::Connection::Settings;
