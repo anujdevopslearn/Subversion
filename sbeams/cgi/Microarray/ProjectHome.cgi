@@ -467,6 +467,7 @@ SELECT	A.array_id,A.array_name,
    AND ( H.record_status != 'D' OR H.record_status IS NULL )
    AND ( ASCAN.record_status != 'D' OR ASCAN.record_status IS NULL )
    AND ( AQ.record_status != 'D' OR AQ.record_status IS NULL )
+   AND ( ASCAN.data_flag != 'BAD' )
    AND ( AQ.data_flaga != 'BAD' )
  ORDER BY A.array_name,AR.array_request_id,ARSL.array_request_slide_id
         ~;
