@@ -265,7 +265,7 @@ CREATE TABLE dbo.usage_log (
 	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	username		varchar(50) NULL,
 	usage_action		varchar(50) NOT NULL,
-	result			varchar(25) NOT NULL
+	result			varchar(25) NOT NULL,
 	PRIMARY KEY CLUSTERED (usage_id)
 )
 GO
