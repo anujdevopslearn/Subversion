@@ -1706,6 +1706,11 @@ sub updateSearchResults {
       $pI = Proteomics::COMPUTE_PI($peptide,length($peptide),0);
       $coldata{isoelectric_point} = $pI;
 
+      #### Calculate Gravy Score
+      my $gravy_score = SBEAMS::Proteomics::Utilities::calcGravyScore(
+        peptide=>$peptide);
+      $coldata{gravy_score} = $gravy_score;
+
 
       #### Find additional proteins
       #### This is extremely computationally expensive
