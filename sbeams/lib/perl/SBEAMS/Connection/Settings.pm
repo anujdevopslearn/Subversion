@@ -49,6 +49,8 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS
     $SESSION_REAUTH
     $SMBAUTH
     %CONFIG_SETTING
+    $SBEAMS_VERSION
+
     );
 
 require Exporter;
@@ -78,7 +80,11 @@ require Exporter;
     $PHYSICAL_BASE_DIR
     $UPLOAD_DIR
     $SBEAMS_SUBDIR
+
     %CONFIG_SETTING
+   
+    $SBEAMS_VERSION
+
     );
 my @default = @EXPORT;
 #push @EXPORT, 'default';
@@ -93,6 +99,8 @@ $subdir =~ s/^.*\///;
 $subdir = '' if ($subdir eq 'cgi');  # Clear it if it's the top cgi directory
 setSBEAMS_SUBDIR('dummy',$subdir);
 
+###Set the current version of SBEAMS ##
+$SBEAMS_VERSION = "0.10";
 
 #### Read in local configuration information from SBEAMS.conf file
 $DBCONFIG = readMainConfFile();
@@ -256,6 +264,16 @@ sub getWWWUID {
 ###############################################################################
 sub getCryptKey {
   return $DBCONFIG->{$DBINSTANCE}->{CRYPT_KEY};
+}
+
+###############################################################################
+# get_version	
+#
+# Return the current version of sbeams.  Hard coded !!!
+###############################################################################
+sub get_sbeams_version {
+  
+  return $SBEAMS_VERSION;
 }
 
 
