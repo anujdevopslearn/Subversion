@@ -44,6 +44,7 @@ sub display_page_header {
     my %args = @_;
 
     my $navigation_bar = $args{'navigation_bar'} || "YES";
+	my $display_mode = $args{'display_mode'};
 
     #### If the output mode is interactive text, display text header
     my $sbeams = $self->getSBEAMS();
@@ -71,7 +72,7 @@ sub display_page_header {
 
     #### If the current user is the virtual ext_halo user, then show that
     #### a different template
-    if ($sbeams->getCurrent_work_group_name() eq 'Oligo_user') {
+    if ($display_mode eq 'ext_halo') {
       $self->display_ext_halo_template();
       return;
     }
@@ -222,6 +223,7 @@ sub display_page_footer {
   my $self = shift;
   my %args = @_;
 
+  my $display_mode = $args{'display_mode'};
 
   #### If the output mode is interactive text, display text header
   my $sbeams = $self->getSBEAMS();
@@ -243,22 +245,20 @@ sub display_page_footer {
   my $separator_bar = $args{'separator_bar'} || 'NO';
 
 
+  #### If the current user is the virtual ext_halo user, then show
+  #### a different template
+  if ($display_mode eq 'ext_halo') {
+	$self->display_ext_halo_footer();
+	return;
+  }
+
   #### If closing the content tables is desired
   if ($close_tables eq 'YES') {
-
-    #### If the current user is the virtual ext_halo user, then show
-    #### a different template
-    if ($sbeams->getCurrent_work_group_name() eq 'Oligo_user') {
-      $self->display_ext_halo_footer();
-      return;
-    }
-
-    print qq~
+	print qq~
 	</TD></TR></TABLE>
 	</TD></TR></TABLE>
     ~;
   }
-
 
   #### If displaying a fat bar separtor is desired
   if ($separator_bar eq 'YES') {
