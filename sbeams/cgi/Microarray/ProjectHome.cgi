@@ -347,6 +347,14 @@ sub handle_request {
   my $pi_contact_id;
   my (%array_requests, %array_scans, %quantitation_files);
 
+  ## Need to add a MainForm in order to facilitate proper movement between projects.  Otherwise some cgi params that we don't want might come through.
+  print qq~ <FORM METHOD="post" NAME="MainForm" action="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi">
+       <INPUT TYPE="hidden" NAME="apply_action_hidden" VALUE="">
+       <INPUT TYPE="hidden" NAME="set_current_work_group" VALUE="">
+       <INPUT TYPE="hidden" NAME="set_current_project_id" VALUE="">
+  </form>
+  ~;
+
   #### Show current user context information
   $sbeams->printUserContext();
   $current_contact_id = $sbeams->getCurrent_contact_id();
@@ -567,6 +575,32 @@ $LINESEPARATOR
 
 ~;
 
+########################################################################################
+### Set some of the usful vars
+my %resultset = ();
+my $resultset_ref = \%resultset;
+my %max_widths;
+my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+my $base_url = "$CGI_BASE_DIR/Microarray/ProjectHome.cgi";
+my $manage_table_url = "$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_";
+
+my %url_cols = ();
+my %hidden_cols  =();
+my $limit_clause = '';
+my @column_titles = ();
+
+
+#### If the apply action was to recall a previous resultset, do it
+  if ($apply_action eq "VIEWRESULTSET"  && $apply_action ne 'QUERY') {
+   	print "PRINTING RECALL<br>";
+	$sbeams->readResultSet(
+     	 resultset_file=>$rs_params{set_name},
+     	 resultset_ref=>$resultset_ref,
+     	 query_parameters_ref=>\%parameters,
+    	  resultset_params_ref=>\%rs_params,
+   	 );
+	 
+  }
 
 ########################################################################################
 #### Check to see what data should be displayed on the summary section of the page.  
@@ -592,36 +626,24 @@ my %count_types = ( CONDITION 	=> { 	COUNT => $n_condition_count,
 my @tabs_names = make_tab_names(%count_types);
 
 
-my ($display_type, $selected_tab_numb) = pick_data_to_show ($default_data_type, %count_types);
-
-
+my ($display_type, $selected_tab_numb) = pick_data_to_show (default_data_type   => $default_data_type, 
+							    tab_types_hash 	=> \%count_types,
+							    param_hash		=> \%parameters,
+							   );
+							
+							
 display_sub_tabs(	display_type 	=> $display_type,
-		tab_titles_ref	=>\@tabs_names,
-		page_link	=>"ProjectHome.cgi",
-		selected_tab	=>$selected_tab_numb
-	     );
+			tab_titles_ref	=> \@tabs_names,
+			page_link	=> "ProjectHome.cgi",
+			selected_tab	=> $selected_tab_numb
+	        );
 		
 		
-	
-#print "DATA TO SHOW '$display_type'<p>";
-
 
 
 #########################################################################################	
 #### Print the SUMMARY DATA OUT
 
-
-my %resultset = ();
-my $resultset_ref = \%resultset;
-my %max_widths;
-my %rs_params = $sbeams->parseResultSetParams(q=>$q);
-my $base_url = "$CGI_BASE_DIR/Microarray/ProjectHome.cgi";
-my $manage_table_url = "$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_";
-
-my %url_cols = ();
-my %hidden_cols  =();
-my $limit_clause = '';
-my @column_titles = ();
 
 
 if ($display_type eq 'TWO_COLOR' ) {
@@ -733,65 +755,57 @@ if ($display_type eq 'TWO_COLOR' ) {
 #########################################################################
 ####  Actually print the data 	
 
- 	 #### If the apply action was to recall a previous resultset, do it
- 	 if ($apply_action eq "VIEWRESULTSET") {
-   		$sbeams->readResultSet(
-     	 	resultset_file=>$rs_params{set_name},
-     	 	resultset_ref=>$resultset_ref,
-     	 	query_parameters_ref=>\%parameters,
-    	  	resultset_params_ref=>\%rs_params,
-   	 	);
-	  }
-
+ 	 
  	 #### Build ROWCOUNT constraint
 	  $parameters{row_limit} = 5000
    	 unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
   	   $limit_clause = $sbeams->buildLimitClause(row_limit=>$parameters{row_limit});
 
 
-		#### If the action contained QUERY, then fetch the results from
-		#### the database
-		if ($apply_action =~ /QUERY/i) {
-
+	#### If the action contained QUERY, then fetch the results from
+	#### the database
+	if ($apply_action =~ /QUERY/i) {
+		
     		
-			#### Fetch the results from the database server
-    			$sbeams->fetchResultSet(sql_query=>$sql,
-						resultset_ref=>$resultset_ref,
-						);
-
-			#### Store the resultset and parameters to disk resultset cache
-			$rs_params{set_name} = "SETME";
-			$sbeams->writeResultSet(resultset_file_ref=>\$rs_params{set_name},
-						resultset_ref=>$resultset_ref,
-						query_parameters_ref=>\%parameters,
-						resultset_params_ref=>\%rs_params,
-						query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
-						);
- 		 }
-
-		#### Set the column_titles to just the column_names
-		@column_titles = @{$resultset_ref->{column_list_ref}};
-	
-	
-	
-	
-		#### Display the resultset
-		$sbeams->displayResultSet(	resultset_ref=>$resultset_ref,
-					query_parameters_ref=>\%parameters,
-					rs_params_ref=>\%rs_params,
-					url_cols_ref=>\%url_cols,
-					hidden_cols_ref=>\%hidden_cols,
-					max_widths=>\%max_widths,
-					column_titles_ref=>\@column_titles,
-					base_url=>$base_url,
+	#### Fetch the results from the database server
+    		$sbeams->fetchResultSet(sql_query=>$sql,
+					resultset_ref=>$resultset_ref,
 					);
 
-		#### Display the resultset controls
-		$sbeams->displayResultSetControls(resultset_ref=>$resultset_ref,
+	#### Store the resultset and parameters to disk resultset cache
+		$rs_params{set_name} = "SETME";
+		$sbeams->writeResultSet(resultset_file_ref=>\$rs_params{set_name},
+					resultset_ref=>$resultset_ref,
 					query_parameters_ref=>\%parameters,
-					rs_params_ref=>\%rs_params,
-					base_url=>$base_url,
+					resultset_params_ref=>\%rs_params,
+					query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
 					);
+ 	}
+	
+	
+	#### Set the column_titles to just the column_names
+	@column_titles = @{$resultset_ref->{column_list_ref}};
+	
+	
+	
+	
+	#### Display the resultset
+	$sbeams->displayResultSet(resultset_ref=>$resultset_ref,
+				  query_parameters_ref=>\%parameters,
+				  rs_params_ref=>\%rs_params,
+				  url_cols_ref=>\%url_cols,
+				  hidden_cols_ref=>\%hidden_cols,
+				  max_widths=>\%max_widths,
+				  column_titles_ref=>\@column_titles,
+				  base_url=>$base_url,
+				 );
+
+	#### Display the resultset controls
+	$sbeams->displayResultSetControls(resultset_ref=>$resultset_ref,
+					  query_parameters_ref=>\%parameters,
+					  rs_params_ref=>\%rs_params,
+					  base_url=>$base_url,
+					  );
 	
 
 	
@@ -813,13 +827,17 @@ sub display_sub_tabs {
 	my $page_link 		= $args{page_link};
 	my $selected_tab_numb 	= $args{selected_tab};
 	
+	my $count = 0;
 	foreach my $tab_name (@tabs_names){
-		if ($display_type eq $tab_name){
+		
+		if ($display_type eq $tab_name){			#loop through the tabs to display.  When we get to the one that is the "selected" one use it's array position number ast the selected_tab count
+			#print "TAB NAME '$tab_name' '$selected_tab_numb' '$count'<br>";
 			$sbeamsMOD->print_tabs(tab_titles_ref	=>\@tabs_names,
 			     			page_link	=>$page_link,
-			     			selected_tab	=>$selected_tab_numb);
-			return 1;
+			     			selected_tab	=>$count);
+			return 1;		
 		}
+		$count ++;
 	}
 	#if there is nothing to show.  Make sure to have a backstop to print out a message when chooseing the data to print 
 }
@@ -847,17 +865,20 @@ sub make_tab_names {
 #Order of making a decision.  CGI param, default data type(if it has data), any data type that has data
 ###############################################################################
 sub pick_data_to_show {
-	my $default_data_type = shift;
 	
-	my %data_types_h = @_;
-  	
+	my %args = @_;
+	
+	my $default_data_type 	=    $args{default_data_type};
+	my %data_types_h 	= % {$args{tab_types_hash} };
+  	my %parameters	 	= % { $args{param_hash} };		#parameters may be produce when using readResults sets method, instead of reading directly from the cgi param method
+	
 	my $SUB_NAME = "pick_data_to_show";
 	
 	#Need to choose what type of data summary to display  
 	
 	my $cgi_tab_val = '';
 	
-	if ($cgi_tab_val = $q->param('tab') ){				#if there is a cgi parm with the 'tab' key use it for the data type to display
+	if ($cgi_tab_val = $parameters{tab} ){				#if there is a cgi parm with the 'tab' key use it for the data type to display
 		$cgi_tab_val = uc $cgi_tab_val;
 		
 		if (grep { $cgi_tab_val eq $_} keys %data_types_h){	#need to make sure the tab param is not coming from other parts of the program. this will unsure it's one of the tabs we are interested in
@@ -1493,8 +1514,11 @@ sub print_data_download_tab {
 		my @tabs_names = make_tab_names(%count_types);
 
 	
-		($display_type, $selected_tab_numb) = pick_data_to_show ($default_data_type, %count_types);
-
+		
+		($display_type, $selected_tab_numb) =	pick_data_to_show (default_data_type    => $default_data_type, 
+							    		   tab_types_hash 	=> \%count_types,
+							    		   param_hash		=> \%parameters,
+							   		   );
 
 		my $tabs_exists = display_sub_tabs(	display_type 	=> $display_type,
 				       			tab_titles_ref	=>\@tabs_names,
