@@ -208,6 +208,8 @@ INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BBS_display_options','MaxSeqWidth','Limit Sequence Width',50 )
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BBS_display_options','ShowSQL','Show SQL Query',60 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BBS_display_options','ShowSetAndName','Show Set and Name Only',70 )
 
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BBS_sort_options','biosequence_name','biosequence_name',10 )
