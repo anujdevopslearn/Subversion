@@ -718,6 +718,14 @@ sub handle_request {
         resultset_ref=>$resultset_ref,
       );
 
+      #### Post process the resultset
+      postProcessResultset(
+        rs_params_ref=>\%rs_params,
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters,
+        column_titles_ref=>\@column_titles,
+      ) if ($parameters{display_options} =~ /pivot/i);
+
       #### Store the resultset and parameters to disk resultset cache
       $rs_params{set_name} = "SETME";
       $sbeams->writeResultSet(
@@ -788,3 +796,145 @@ sub evalSQL {
 
 } # end evalSQL
 
+
+
+###############################################################################
+# postProcessResultset
+#
+# Perform some additional processing on the resultset that would otherwise
+# be very awkward to do in SQL.
+###############################################################################
+sub postProcessResultset {
+  my %args = @_;
+
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+  #### Process the arguments list
+  my $resultset_ref = $args{'resultset_ref'};
+  my $rs_params_ref = $args{'rs_params_ref'};
+  my $query_parameters_ref = $args{'query_parameters_ref'};
+  my $column_titles_ref = $args{'column_titles_ref'};
+
+  my %rs_params = %{$rs_params_ref};
+  my %parameters = %{$query_parameters_ref};
+
+
+  my $n_rows = scalar(@{$resultset_ref->{data_ref}});
+
+  my @new_data_array;
+  my %data;
+  my %conditions;
+
+
+  my $experiment_tag_column_index = $resultset_ref->{column_hash_ref}->{experiment_tag};
+  my $biosequence_name_column_index = $resultset_ref->{column_hash_ref}->{biosequence_name};
+
+
+  #### Loop over each row in the resultset, coalescing into a hash
+  for (my $row=0;$row<$n_rows-1; $row++) {
+
+    my $experiment_tag = $resultset_ref->{data_ref}->[$row]->[$experiment_tag_column_index];
+    my $biosequence_name = $resultset_ref->{data_ref}->[$row]->[$biosequence_name_column_index];
+    $conditions{$experiment_tag} = 1;
+
+    $data{$biosequence_name}->{$experiment_tag} = $resultset_ref->{data_ref}->[$row];
+
+  }
+
+
+  my @conditions = sort(keys(%conditions));
+
+
+  my @prefix_columns = qw(biosequence_name accessor accessor_suffix biosequence_accession canonical_name);
+  my @data_columns = qw(protein_probability n_peptides average_quant n_quant);
+  my @suffix_columns = qw(fav_codon_frequency transmembrane_class n_transmembrane_regions protein_length molecular_function molecular_function_GO biological_process biological_process_GO cellular_component cellular_component_GO interpro_protein_domain interpro_protein_domain_GO biosequence_desc organism);
+
+
+  my @new_column_names;
+  my @new_column_titles;
+  my @new_precisions;
+  #### Push the pre-data columns onto the row array
+  foreach my $element (@prefix_columns) {
+    my $column_index = $resultset_ref->{column_hash_ref}->{$element};
+    if (defined($column_index)) {
+      push(@new_column_names,$element);
+      push(@new_column_titles,$column_titles_ref->[$column_index]);
+      push(@new_precisions,$resultset_ref->{precisions_list_ref}->[$column_index]);
+    }
+  }
+
+  #### Push the data columns onto the array
+  foreach my $data_column (@data_columns) {
+    foreach my $condition (@conditions) {
+      my $column_index = $resultset_ref->{column_hash_ref}->{$data_column};
+      push(@new_column_names,$condition.'__'.$data_column);
+      push(@new_column_titles,$condition.' '.$column_titles_ref->[$column_index]);
+      push(@new_precisions,$resultset_ref->{precisions_list_ref}->[$column_index]);
+    }
+  }
+
+  #### Push the post-data columns onto the row array
+  foreach my $element (@suffix_columns) {
+    my $column_index = $resultset_ref->{column_hash_ref}->{$element};
+    if (defined($column_index)) {
+      push(@new_column_names,$element);
+      push(@new_column_titles,$column_titles_ref->[$column_index]);
+      push(@new_precisions,$resultset_ref->{precisions_list_ref}->[$column_index]);
+    }
+  }
+
+
+  #### Loop over each biosequence_name and print the pivoted summary
+  foreach my $biosequence_name (keys(%data)) {
+    my @row;
+
+    my ($first_condition) = keys(%{$data{$biosequence_name}});
+
+    #### Push the pre-data columns onto the row array
+    foreach my $element (@prefix_columns) {
+      my $column_index = $resultset_ref->{column_hash_ref}->{$element};
+      if (defined($column_index)) {
+        push(@row,$data{$biosequence_name}->{$first_condition}->[$column_index]);
+      }
+    }
+
+
+    #### Push the data columns onto the array
+    foreach my $data_column (@data_columns) {
+      foreach my $condition (@conditions) {
+        my $column_index = $resultset_ref->{column_hash_ref}->{$data_column};
+        if (defined($data{$biosequence_name}->{$condition}->[$column_index])) {
+          push(@row,$data{$biosequence_name}->{$condition}->[$column_index]);
+        } else {
+          push(@row,'');
+        }
+      }
+    }
+
+
+    #### Push the post-data columns onto the row array
+    foreach my $element (@suffix_columns) {
+      my $column_index = $resultset_ref->{column_hash_ref}->{$element};
+      if (defined($column_index)) {
+        push(@row,$data{$biosequence_name}->{$first_condition}->[$column_index]);
+      }
+    }
+
+
+    push(@new_data_array,\@row);
+  }
+
+
+  $resultset_ref->{data_ref} = \@new_data_array;
+  $resultset_ref->{column_list_ref} = \@new_column_names;
+  my $n_new_columns = scalar(@new_column_names);
+  $resultset_ref->{precisions_list_ref} = \@new_precisions;
+
+  @{$column_titles_ref} = @new_column_titles;
+
+
+  return 1;
+
+
+
+} # end postProcessResult
