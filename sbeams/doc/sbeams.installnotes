@@ -151,7 +151,7 @@ Do as much of this as possible as a regular user account, i.e. yours.
 cd /local/www/html
 mkdir dev1   (this may need to be done as root. then do: chown user1 dev1)
 cd dev1
-tar -zxvf ~/sbeams-0.18.0.tar.gz
+tar -zxvf ~/sbeams-0.19.0.tar.gz
 
 Create tmp directories and symlinks:
 cd sbeams
