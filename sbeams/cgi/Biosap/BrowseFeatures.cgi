@@ -568,15 +568,23 @@ $biosap_search_clause
 $mismatch_rejection_clause
 
 
--- Create a second table of features which have matches to a different gene
+-- Create a second table of unique feature,hit_biosequence_id rows
+-- since we'll ignore multiple hits to the same gene (won't we?)
+SELECT feature_id,hit_biosequence_id,COUNT(*) AS 'Count'
+  INTO #tmpUniqueMatches
+  FROM #tmpAllCloseMatches
+ GROUP BY feature_id,hit_biosequence_id
+
+
+-- Create a third table of features which have multiple matches
 SELECT feature_id,COUNT(*) AS 'Count'
   INTO #tmpBadMatches
-  FROM #tmpAllCloseMatches
- WHERE main_biosequence_id != hit_biosequence_id
+  FROM #tmpUniqueMatches
  GROUP BY feature_id
+HAVING COUNT(*) > 1
 
 
--- Delete features from first table where there are matches in second table
+-- Delete features from first table where there are matches in third table
 DELETE FROM #tmpAllCloseMatches
  WHERE feature_id IN ( SELECT feature_id FROM #tmpBadMatches )
 
