@@ -4,10 +4,11 @@ SBEAMS Security Model
 There are 6 levels of security:
 
 privilege_id name               comment
------------- ------------------ ---------------------------------------------------------------- 
+------------ ------------------ ---------------------------------------------- 
 10           administrator      Has full rights to nearly everything
 20           data_modifier      Is allowed to modify anyone else's records
-25           data_groupmodifier Is allowed to modify records written with the current work group
+25           data_groupmodifier Is allowed to modify records written with
+                                the current work group
 30           data_writer        Is only allowed to insert new records
 40           data_reader        Is only allowed to read records
 50           none               Has no privilege over a given object
@@ -58,7 +59,7 @@ current group at the top:
 Current groups:
 
 work_group_name    comment
------------------- --------------------------------------------------------------------------- 
+------------------ ----------------------------------------------------------- 
 Admin              Administrators with nearly full privilege
 Other              Default group with almost no privilege
 ISB                Unused
