@@ -337,6 +337,17 @@ sub print_full_form {
 			genome_coordinates => $parameters{genome_coordinates_constraint}, );
 		return if ( $genome_coordinates_clause eq '-1' );
 	}
+	#### If there is no genome_coordiante_constriant check to see if there is a request to show genomic data
+	#### If so set the $parameters{genome_coordinates_constraint} to a true val, which will then 
+	#### add the columns to the output
+	our $show_genome_2nd_query = '';
+	unless($parameters{genome_coordinates_constraint}){
+		#print STDERR "NO CONSTRIANT\n";
+		if ($parameters{display_options} =~ /Show_Genome_position/){
+				#print STDERR "I SEE CONSTRIANT\n";
+				$show_genome_2nd_query = 'Y';
+		}
+	}
 
 	#### Build PROBE SET ID constraint
 	my $probe_set_clause = $sbeams->parseConstraint2SQL(
@@ -594,7 +605,7 @@ sub print_full_form {
 	my $gene_stop_group_by     = '';
 	my $percent_match_group_by = '';
 
-	if ($genome_coordinates_clause) {
+	if ($genome_coordinates_clause ) {
 		 $match_chrom_group_by   = "align.match_chromosome";
 		 $gene_start_group_by    = "align.gene_start";
 		 $gene_stop_group_by     = "align.gene_stop";
@@ -886,6 +897,20 @@ sub print_full_form {
 															    $trans_membrane_clause_2nd_query
 															  ~;
 			}
+			
+			if($show_genome_2nd_query){								
+				#print STDERR "ABOUT TO ADD 2 QUERY\n";
+				$second_sql_statements{Alignments} = qq~SELECT
+																align.affy_annotation_id,
+															    align.match_chromosome AS "Chromosome",
+															    align.gene_start AS "Gene Start",
+															    align.gene_stop AS "Gene End",
+															    align.percent_identity AS "Precent Identity"
+															    FROM  $TBMA_ALIGNMENT align
+															    WHERE align.affy_annotation_id IN ($all_pk)
+															  ~;
+			}
+			
 
 	####################################################################
 	###Run The sql queires		
@@ -2021,7 +2046,9 @@ example view of pivot hash
 														accessor_urls =>\%links_h,
 														);
 			#Grab the number of Transmembrane domains
-			my $number_of_tm_domains = $affy_anno->get_transmembrane_info($annotation_id);
+			my @tm_domain_info = $affy_anno->get_transmembrane_info($annotation_id);
+			
+			my $tm_domain_html = format_trans_membrane_info(\@tm_domain_info);
 			
 			#Grab the alignment info get_alignment_info
 			my @alignment_info = $affy_anno->get_alignment_info($annotation_id);
@@ -2039,6 +2066,11 @@ example view of pivot hash
 							accessor_urls => \%links_h,
 							db_acc_numbs  => \%external_db_acc_numbs,
 							);
+							
+			#format the Annotation notes info
+			my $annotation_html = format_annotation_info(record_href => \%record_h);
+						
+			
 	#print "AFFY anno id '$annotation_id'<br>";
 			$html = qq~ 
 				<tr>
@@ -2122,7 +2154,7 @@ example view of pivot hash
 			    </tr>
 			  	<tr>
 			       <td class='grey_bg'>Number of Transmembrane Domains</td>
-			       <td>$number_of_tm_domains</td>
+			       <td>$tm_domain_html</td>
 			    </tr>
 			  	
 			  	<tr>
@@ -2170,6 +2202,11 @@ example view of pivot hash
 			       <td>$record_h{representative_public_id}</td>
 			    </tr>
 			 
+			 	
+			 	<tr>
+			       <td class='blue_bg' colspan=2>Affy Annotation Information</td>
+			    </tr>
+			 	$annotation_html
 			 
 			  ~;
 			print $html;
@@ -2224,7 +2261,65 @@ example view of pivot hash
 		$html .= "</table>";
 	}
 
-
+###############################################################################
+# format_annotation_info
+#
+#Format the affy Annotation information into a nice little table
+###############################################################################
+sub format_annotation_info {
+	my %args = @_;
+	my $record_href = $args{record_href};
+	
+	
+	my $html = '';
+	my @annotation_keys = qw(annotation_description
+							 transcript_assignment
+							 annotation_transcript_cluster
+							 annotation_notes
+							);
+	foreach my $key (@annotation_keys){
+			
+			my $anno_info_chunk = $record_href->{$key};
+			my $formated_info = nice_format($anno_info_chunk);
+			#print "KEY '$key'   FORMATED '$anno_info_chunk<br/>";
+			 $html .= qq~<tr>
+		       				<td class='grey_bg'>$key</td>
+		       				<td>$formated_info</td>
+		    			</tr>
+		    		 	~;
+				
+	}
+	return $html;
+}
+		
+###############################################################################
+# format_trans_membrane_info
+#Format the tm predictions as a nice little table
+###############################################################################
+sub format_trans_membrane_info {
+	my $array_of_hrefs = shift;	#data returned from sql query as array of hash refs
+	
+	my $html = qq~<table border='0'>
+				 		<tr>
+				 		  <td class='grey_bg'>Protein Accession Number</td>
+				 		  <td class='grey_bg'>Number of TM domains</td>
+				 		</tr>
+				 ~;
+				 
+	foreach my $href (@{$array_of_hrefs}) {
+		my $numb_tm_domains = $href->{number_of_domains};
+		my $protein_id = $href->{protein_accession_numb};
+			$html .= qq~<tr>
+						  <td>$protein_id</td>
+						  <td>$numb_tm_domains</td>
+						 </tr>
+						~;
+	}
+	
+	$html .= "</table>";
+	return $html;
+}
+	
 ###############################################################################
 # format_go_info
 #Format the protein info or protein domain into a nice html table
@@ -2472,11 +2567,11 @@ sub format_protein_info {
 		foreach my $key ( keys %main:: ){
 		 #look throught the main symbol hash for any globals that end with _2nd_query These should be coming from the build constrinat cluases
 			next unless ($key =~ /2nd_query$/ || $key =~ /_2nd_query_aref/);
-			#print "SECOND QUERY NAME '$key'<br>";
+			#print STDERR "SECOND QUERY NAME '$key'<br>\n";
 			local *sym = $main::{$key};
 			
 			next unless $sym =~ /\w/;		#make sure there is a value
-			#print "VALUE '$sym'<br>";
+			#print STDERR "VALUE '$sym'<br>\n";
 			return 1;				#if a var is found retrun a true val
 		}
 		return 0;
@@ -2671,6 +2766,7 @@ sub update_sql_fragment {
 		#### Define the genome_build to affy_annotation set genome version
 		my %build2_annoset_genome = (
 			'hg16' => 'July 2003 (NCBI 34)',
+			'hg17' => 'May 2004 (NCBI 35)',
 			'mm4'  => 'October 2003 (NCBI 32)',
 		);
 
