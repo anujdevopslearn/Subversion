@@ -107,6 +107,15 @@ PR_biosequence_property_set	2	biosequence_id	BioSequence ID	int	4	0	N		N	PR_bios
 PR_biosequence_property_set	3	n_transmembrane_regions	Number of Transmembrane Regions	int	4	0	Y		N							Y	Y	N	Number of transmembrane regions		pkDEFAULT
 PR_biosequence_property_set	4	transmembrane_class	Transmembrane Region Class	varchar	10	0	Y		N			Y	text	50		Y	Y	N	"Class of the transmembrane region.  May be 0, TM, A, S, TM_xS based on output from TMHMM and signalP"		
 PR_biosequence_property_set	5	transmembrane_topology	Transmembrane Region Topology	varchar	1024	0	Y		N			Y	text	20		Y	Y	N	Coding of which residues belong in the transmembrane regions		
+PR_biosequence_property_set	6	has_signal_peptide	Has a Signal Peptide	char	1	0	Y		N			N	text	50		Y	Y	N	"Does this protein have a signal peptide on the end Y/N? (Note that Y means that there is some non-zero probability that it does, not that is necessarily does)"		
+PR_biosequence_property_set	7	has_signal_peptide_probability	Probability that it has a Signal Peptide	real	4	0	Y		N			N	text	50		Y	Y	N	Probability that there is a signal peptide on the end as calculated by SignalP		
+PR_biosequence_property_set	8	signal_peptide_length	Length of the Signal Peptide	int	4	0	Y		N			N	text	50		Y	Y	N	Length in residues of the signal peptide		
+PR_biosequence_property_set	9	signal_peptide_is_cleaved	Signal Peptide gets Cleaved	char	1	0	Y		N			N	text	50		Y	Y	N	Does the signal peptide get cleaved off Y/N?		
+PR_biosequence_property_set	10	genome_build	Genome Build	varchar	50	0	Y		N			N	text	50		Y	Y	N	Genome build name for which the following mapping parameters are valid		
+PR_biosequence_property_set	11	chromosome	Chromosome	varchar	50	0	Y		N			N	text	50		Y	Y	N	Chromosome in which this mapping occurs		
+PR_biosequence_property_set	12	start_in_chromosome	Start Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	Start position of the biosequence in the chromosome		
+PR_biosequence_property_set	13	end_in_chromosome	End Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	End position of the biosequence in the chromosome		
+PR_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	"Strand (+,-) of the biosequence in the chromosome"		
 PR_search_batch	1	search_batch_id	Search Batch ID	int	4	0	N		Y							N	N				pkDEFAULT
 PR_search_batch	2	experiment_id	Experiment ID	int	4	0	N		N	PR_proteomics_experiment	experiment_id	Y				Y	Y	Y	Experiment to which this search batch belongs		
 PR_search_batch	3	biosequence_set_id	BioSequence Set	int	4	0	N		N	PR_biosequence_set	biosequence_set_id	Y				Y	Y	Y	BioSequence Set against which this batch was searched		pkDEFAULT
@@ -165,22 +174,22 @@ PR_quantitation	1	quantitation_id	Quantitation ID	int	4	0	N		Y							N	N		Quanti
 PR_quantitation	2	search_hit_id	Search Hit ID	int	4	0	N		N	PR_search_hit	search_hit_id					Y	Y	Y	Search Hit ID		
 PR_quantitation	3	d0_intensity	d0 Intensity	real	4	0	Y		N							Y	Y	N	d0 Intensity		
 PR_quantitation	4	d8_intensity	d8 Intensity	real	4	0	Y		N							Y	Y	N	d8 Intensity		
-PR_quantitation	5	d0_first_scan	d0 First Scan	int	4	0	N		N							Y	Y	N	d0 First Scan		
-PR_quantitation	6	d0_last_scan	d0 Last Scan	int	4	0	N		N							Y	Y	N	d0 Last Scan		
-PR_quantitation	7	d0_mass	d0 Mass	real	4	0	Y		N							Y	Y	N	d0 Mass		
-PR_quantitation	8	d8_first_scan	d8 First Scan	int	4	0	N		N							Y	Y	N	d8 First Scan		
-PR_quantitation	9	d8_last_scan	d8 Last Scan	int	4	0	N		N							Y	Y	N	d8 Last Scan		
-PR_quantitation	10	d8_mass	d8 Mass	real	4	0	Y		N							Y	Y	N	d8 Mass		
-PR_quantitation	11	norm_flag	Normalization Flag	int	4	0	N		N							Y	Y	N	Normalization Flag		
-PR_quantitation	12	mass_tolerance	Mass Tolerance	real	4	0	Y		N							Y	Y	N	Mass Tolerance		
-PR_quantitation	13	quality_score	Quality Score	real	4	0	Y		N							Y	Y	N	Quality Score		
-PR_quantitation	14	manually_changed	Is Manually Changed?	varchar	5	0	Y		N							Y	Y	N	Is Manually Changed?		
-PR_quantitation	15	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		Date Record Created		
-PR_quantitation	16	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N		Record Created By		
-PR_quantitation	17	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		Date Record Modified		
-PR_quantitation	18	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N		Record Modified By		
-PR_quantitation	19	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N		Owner Group ID		
-PR_quantitation	20	record_status	Record Status	char	1	0	N	N	N							N	N		Record Status		
+PR_quantitation	5	d0_first_scan	d0 First Scan	int	4	0	N		N							Y	Y	N	d0 First Scan
+PR_quantitation	6	d0_last_scan	d0 Last Scan	int	4	0	N		N							Y	Y	N	d0 Last Scan
+PR_quantitation	7	d0_mass	d0 Mass	real	4	0	Y		N							Y	Y	N	d0 Mass
+PR_quantitation	8	d8_first_scan	d8 First Scan	int	4	0	N		N							Y	Y	N	d8 First Scan
+PR_quantitation	9	d8_last_scan	d8 Last Scan	int	4	0	N		N							Y	Y	N	d8 Last Scan
+PR_quantitation	10	d8_mass	d8 Mass	real	4	0	Y		N							Y	Y	N	d8 Mass
+PR_quantitation	11	norm_flag	Normalization Flag	int	4	0	N		N							Y	Y	N	Normalization Flag
+PR_quantitation	12	mass_tolerance	Mass Tolerance	real	4	0	Y		N							Y	Y	N	Mass Tolerance
+PR_quantitation	13	quality_score	Quality Score	real	4	0	Y		N							Y	Y	N	Quality Score
+PR_quantitation	14	manually_changed	Is Manually Changed?	varchar	5	0	Y		N							Y	Y	N	Is Manually Changed?
+PR_quantitation	15	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		Date Record Created
+PR_quantitation	16	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N		Record Created By
+PR_quantitation	17	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		Date Record Modified
+PR_quantitation	18	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N		Record Modified By
+PR_quantitation	19	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N		Owner Group ID
+PR_quantitation	20	record_status	Record Status	char	1	0	N	N	N							N	N		Record Status
 PR_search_hit_annotation	1	search_hit_annotation_id	Search Hit Annotation	int	4	0	N		Y							N	N				pkDEFAULT
 PR_search_hit_annotation	2	search_hit_id	Search Hit ID	int	4	0	N		N			Y	fixed			Y	Y	Y	Database ID for the Search Hit to be annotated		
 PR_search_hit_annotation	3	annotation_label_id	Annotation Label	int	4	0	N		N			Y	scrolloptionlist	6		Y	Y	N	Annotation label to associate with this Search Hit.  A description of how sure the annotater is that this is a correct peptide identification	"SELECT annotation_label_id,label_desc FROM $TBPR_ANNOTATION_LABEL ORDER BY sort_order,label_desc"	
@@ -357,15 +366,15 @@ APD_peptide_summary	1	peptide_summary_id	Peptide Summary ID	int	8	0	N		Y							N
 APD_peptide_summary	2	peptide_summary_name	Peptide Summary Title	varchar	100	0	N		N			Y	text	50		Y	Y	Y	Title of this peptide summary		
 APD_peptide_summary	3	description	Peptide Summary Description	text	16	0	N		N			Y	textarea	4		Y	Y	N	"Description of this APD peptide summary, from where it is derived, etc."		
 APD_peptide_summary	4	minimum_probability	Minimum Probability	real	4	0	Y		N			N	text	10		Y	Y	N	Minimum P value for selecting good peptides		
-APD_peptide_summary	5	experiment_list	Experiment ID List	varchar	100	0	N		N			Y	text	50		Y	Y	N	List of experiment_ids		
-APD_peptide_summary	6	n_experiments	Number of Experiments	int	4	0	N		N			Y	text	10		Y	Y	N	Total number of experiments used for this summary		
-APD_peptide_summary	7	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-APD_peptide_summary	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-APD_peptide_summary	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-APD_peptide_summary	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-APD_peptide_summary	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-APD_peptide_summary	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-APD_peptide_summary	13	record_status	Record Status	char	1	0	N	N	N							N	N				
+APD_peptide_summary	5	experiment_list	Experiment ID List	varchar	100	0	N		N			Y	text	50		Y	Y	N	List of experiment_ids	
+APD_peptide_summary	6	n_experiments	Number of Experiments	int	4	0	N		N			Y	text	10		Y	Y	N	Total number of experiments used for this summary	
+APD_peptide_summary	7	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments	
+APD_peptide_summary	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+APD_peptide_summary	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N			
+APD_peptide_summary	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+APD_peptide_summary	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
+APD_peptide_summary	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
+APD_peptide_summary	13	record_status	Record Status	char	1	0	N	N	N							N	N			
 PR_GetSearchHits	1	input_form_format	Input Form Format									N	optionlist		refreshDocument()	Y	Y	N	Options for level of detail and layout for this input form	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'input_form_options' ORDER BY sort_order,option_value"
 PR_GetSearchHits	2	search_batch_id	Search Batches									N	multioptionlist	4		Y	Y	N	"Select desired Experiments and Search Batches to include in query.  Multiple items may be selected.  If no items are selected, ALL experiments are searched."	MANUAL
 PR_GetSearchHits	3	probability_constraint	Probability Constraint									N	text	20		Y	Y	N	"Constraint for the probability of being the correct hit.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
@@ -574,13 +583,13 @@ APD_BrowseAPD	11	protein_domain_constraint	Protein Domain Constraint									N	t
 APD_BrowseAPD	12	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	2	N	"Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
 APD_BrowseAPD	13	transmembrane_class_constraint	Transmembrane Class Constraint									N	multioptionlist	3		Y	2	N	Constraint for the transmembrane class as annotated by TMHMM and SignalP	"SELECT DISTINCT transmembrane_class,transmembrane_class FROM $TBPR_BIOSEQUENCE_PROPERTY_SET ORDER BY transmembrane_class"
 APD_BrowseAPD	14	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	2	N	"Constraint for the number of transmembrane regions (based on TMHMM and SignalP calculation by rbonneau).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
-APD_BrowseAPD	15	accession_constraint	Accesssion Number									N	text	40		Y	2	N	Constraint for the Accession Number. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-APD_BrowseAPD	16	peptide_constraint	Peptide									N	text	40		Y	2	N	Constraint for the peptide (regardless of modifications). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-APD_BrowseAPD	17	peptide_string_constraint	Peptide String Constraint									N	text	40		Y	2	N	Constraint for the peptide string (including modifications and neighboring AAs). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-APD_BrowseAPD	18	peptide_options	Peptide Options									N	multioptionlist	3		Y	1	N	Various selectable options to further contrain the peptides displayed	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_peptide_options' ORDER BY sort_order,option_value"	
-APD_BrowseAPD	19	precursor_mass_constraint	Precursor Mass constraint									N	text	40		Y	1	N	"Constraint for the measured precursor mass (as a single decimal value).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""		
-APD_BrowseAPD	20	percent_buffer_b_constraint	% Buffer B (ACN) constraint									N	text	40		Y	2	N	"Constraint for the calculated Percent Buffer B (acetonitrile) (value between 0 and 100).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""		
-APD_BrowseAPD	21	isoelectric_point_constraint	pI constraint									N	text	40		Y	2	N	"Constraint for the theoretical isoelectric point (pI).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""		
+APD_BrowseAPD	15	accession_constraint	Accesssion Number									N	text	40		Y	2	N	Constraint for the Accession Number. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+APD_BrowseAPD	16	peptide_constraint	Peptide									N	text	40		Y	2	N	Constraint for the peptide (regardless of modifications). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+APD_BrowseAPD	17	peptide_string_constraint	Peptide String Constraint									N	text	40		Y	2	N	Constraint for the peptide string (including modifications and neighboring AAs). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+APD_BrowseAPD	18	peptide_options	Peptide Options									N	multioptionlist	3		Y	1	N	Various selectable options to further contrain the peptides displayed	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_peptide_options' ORDER BY sort_order,option_value"
+APD_BrowseAPD	19	precursor_mass_constraint	Precursor Mass constraint									N	text	40		Y	1	N	"Constraint for the measured precursor mass (as a single decimal value).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""	
+APD_BrowseAPD	20	percent_buffer_b_constraint	% Buffer B (ACN) constraint									N	text	40		Y	2	N	"Constraint for the calculated Percent Buffer B (acetonitrile) (value between 0 and 100).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""	
+APD_BrowseAPD	21	isoelectric_point_constraint	pI constraint									N	text	40		Y	2	N	"Constraint for the theoretical isoelectric point (pI).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""	
 APD_BrowseAPD	22	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BAPD_sort_options' ORDER BY sort_order,option_value"	
 APD_BrowseAPD	23	display_options	Display Options									N	multioptionlist	5		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BAPD_display_options' ORDER BY sort_order,option_value"	
 APD_BrowseAPD	24	row_limit	Maximum Rows									N	text	10		Y	2	N	"Limit the numbers of rows displayed.  If not provided, default is 5000 rows."		
@@ -670,13 +679,13 @@ PR_possible_peptide	5	peptide_offset	Peptide Offset	int	4	0	N		N
 PR_possible_peptide	6	preceding_residue	Preceding Residue	char	1	0	N		N												
 PR_possible_peptide	7	following_residue	Following Residue	char	1	0	N		N												
 PR_possible_peptide	8	n_tryptic_terminii	Number of Tryptic Termini	int	4	0	N		N												
-PR_possible_peptide	9	is_cysteine_containing	Is Cytsteine Containing	char	1	0	N		N											
-PR_possible_peptide	10	is_unique	Is Unique	char	1	0	N		N											
-PR_possible_peptide	11	isoelectric_point	Isoelectric Point	real	4	0	N		N											
-PR_BrowsePossiblePeptides	1	input_form_format	Input Form Format									N	optionlist		refreshDocument()	Y	Y	N	Options for level of detail and layout for this input form	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'input_form_options' ORDER BY sort_order,option_value"
-PR_BrowsePossiblePeptides	2	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBPR_BIOSEQUENCE_SET ORDER BY sort_order,set_name"
-PR_BrowsePossiblePeptides	3	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-PR_BrowsePossiblePeptides	4	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+PR_possible_peptide	9	is_cysteine_containing	Is Cytsteine Containing	char	1	0	N		N												
+PR_possible_peptide	10	is_unique	Is Unique	char	1	0	N		N												
+PR_possible_peptide	11	isoelectric_point	Isoelectric Point	real	4	0	N		N												
+PR_BrowsePossiblePeptides	1	input_form_format	Input Form Format									N	optionlist		refreshDocument()	Y	Y	N	Options for level of detail and layout for this input form	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'input_form_options' ORDER BY sort_order,option_value"	
+PR_BrowsePossiblePeptides	2	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBPR_BIOSEQUENCE_SET ORDER BY sort_order,set_name"	
+PR_BrowsePossiblePeptides	3	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+PR_BrowsePossiblePeptides	4	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
 PR_BrowsePossiblePeptides	5	accession_constraint	Accesssion Number									N	text	40		Y	2	N	Constraint for the Accession Number. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 PR_BrowsePossiblePeptides	6	biosequence_seq_constraint	Sequence Constraint									N	text	40		Y	Y	N	Constraint for the actual sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 PR_BrowsePossiblePeptides	7	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
@@ -686,13 +695,13 @@ PR_BrowsePossiblePeptides	10	cellular_component_constraint	Cellular Component Co
 PR_BrowsePossiblePeptides	11	protein_domain_constraint	Protein Domain Constraint									N	text	40		Y	2	N	Constraint for the InterPro Protein Domain. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 PR_BrowsePossiblePeptides	12	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	2	N	"Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
 PR_BrowsePossiblePeptides	13	transmembrane_class_constraint	Transmembrane Class Constraint									N	multioptionlist	3		Y	2	N	Constraint for the transmembrane class as annotated by TMHMM and SignalP	"SELECT DISTINCT transmembrane_class,transmembrane_class FROM $TBPR_BIOSEQUENCE_PROPERTY_SET ORDER BY transmembrane_class"
-PR_BrowsePossiblePeptides	14	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	2	N	"Constraint for the number of transmembrane regions (based on TMHMM and SignalP calculation by rbonneau).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
-PR_BrowsePossiblePeptides	15	protein_length_constraint	Protein Length Constraint									N	text	40		Y	2	N	"Constraint for the protein length.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
-PR_BrowsePossiblePeptides	16	peptide_constraint	Peptide Constraint									N	text	40		Y	1	N	Constraint for the peptide (regardless of modifications). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-PR_BrowsePossiblePeptides	17	mass_constraint	Mass Constraint									N	text	40		Y	2	N	"Constraint for the theoretical peptide mass (as a single decimal value).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""		
-PR_BrowsePossiblePeptides	18	isoelectric_point_constraint	Isoelectric Point Constraint									N	text	40		Y	2	N	"Constraint for the theoretical peptide pI (isoelectric point).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""		
-PR_BrowsePossiblePeptides	19	n_occurrences	Number of Occurrences									N	text	15		Y	1	N	"Constraint for the number of entries per row (only applicable for one of the two Grouping options)  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"""		
-PR_BrowsePossiblePeptides	20	peptide_options	Peptide Options									N	multioptionlist	3		Y	Y	N	Various selectable options to further contrain the peptides displayed	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BPP_peptide_options' ORDER BY sort_order,option_value"	
+PR_BrowsePossiblePeptides	14	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	2	N	"Constraint for the number of transmembrane regions (based on TMHMM and SignalP calculation by rbonneau).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
+PR_BrowsePossiblePeptides	15	protein_length_constraint	Protein Length Constraint									N	text	40		Y	2	N	"Constraint for the protein length.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
+PR_BrowsePossiblePeptides	16	peptide_constraint	Peptide Constraint									N	text	40		Y	1	N	Constraint for the peptide (regardless of modifications). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+PR_BrowsePossiblePeptides	17	mass_constraint	Mass Constraint									N	text	40		Y	2	N	"Constraint for the theoretical peptide mass (as a single decimal value).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""	
+PR_BrowsePossiblePeptides	18	isoelectric_point_constraint	Isoelectric Point Constraint									N	text	40		Y	2	N	"Constraint for the theoretical peptide pI (isoelectric point).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""	
+PR_BrowsePossiblePeptides	19	n_occurrences	Number of Occurrences									N	text	15		Y	1	N	"Constraint for the number of entries per row (only applicable for one of the two Grouping options)  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"""	
+PR_BrowsePossiblePeptides	20	peptide_options	Peptide Options									N	multioptionlist	3		Y	Y	N	Various selectable options to further contrain the peptides displayed	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BPP_peptide_options' ORDER BY sort_order,option_value"
 PR_BrowsePossiblePeptides	21	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BPP_display_options' ORDER BY sort_order,option_value"	
 PR_BrowsePossiblePeptides	22	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."		
 PR_publication_category	1	publication_category_id	Publication Category ID	int	4	0	N		Y							N	N				pkDEFAULT
@@ -741,15 +750,15 @@ PR_publication	20	full_manuscript_file	Manuscript File Upload	varchar	255	0	Y		N
 PR_publication	21	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 PR_publication	22	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 PR_publication	23	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-PR_publication	24	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PR_publication	25	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-PR_publication	26	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-PR_publication	27	record_status	Record Status	char	1	0	N	N	N							N	N				
-PR_BrowseProteinSummary	1	input_form_format	Input Form Format									N	optionlist		refreshDocument()	Y	Y	N	Options for level of detail and layout for this input form	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'input_form_options' ORDER BY sort_order,option_value"	
-PR_BrowseProteinSummary	2	search_batch_id	Search Batches									N	multioptionlist	4		Y	Y	N	Select desired Experiments and Search Batches to include in query.  Multiple items may be selected.  At least one must be selected	MANUAL	
-PR_BrowseProteinSummary	3	protein_group_probability_constraint	Protein Group Probability Constraint									N	text	20		Y	Y	N	"Constraint for the probability of the protein group being present in the sample.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""		
-PR_BrowseProteinSummary	4	protein_probability_constraint	Protein Probability Constraint									N	text	20		Y	Y	N	"Constraint for the probability of the protein being present in the sample.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""		
-PR_BrowseProteinSummary	5	annotation_status_id	Annotation status Constraint									N	optionlist	 		Y	Y	N	Select desired status of annotations to include in result (I.e. display only peptides that have been annotated or have not been annotated at all; set to blank to be insensitive to annotations)	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_annotation_status' ORDER BY sort_order,option_value"	
+PR_publication	24	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+PR_publication	25	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N			
+PR_publication	26	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N			
+PR_publication	27	record_status	Record Status	char	1	0	N	N	N							N	N			
+PR_BrowseProteinSummary	1	input_form_format	Input Form Format									N	optionlist		refreshDocument()	Y	Y	N	Options for level of detail and layout for this input form	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'input_form_options' ORDER BY sort_order,option_value"
+PR_BrowseProteinSummary	2	search_batch_id	Search Batches									N	multioptionlist	4		Y	Y	N	Select desired Experiments and Search Batches to include in query.  Multiple items may be selected.  At least one must be selected	MANUAL
+PR_BrowseProteinSummary	3	protein_group_probability_constraint	Protein Group Probability Constraint									N	text	20		Y	Y	N	"Constraint for the probability of the protein group being present in the sample.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
+PR_BrowseProteinSummary	4	protein_probability_constraint	Protein Probability Constraint									N	text	20		Y	Y	N	"Constraint for the probability of the protein being present in the sample.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
+PR_BrowseProteinSummary	5	annotation_status_id	Annotation status Constraint									N	optionlist	 		Y	Y	N	Select desired status of annotations to include in result (I.e. display only peptides that have been annotated or have not been annotated at all; set to blank to be insensitive to annotations)	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_annotation_status' ORDER BY sort_order,option_value"
 PR_BrowseProteinSummary	6	annotation_label_id	Annotation Labels Constraint									N	multioptionlist	5		Y	Y	N	Select desired annotation labels to include (applies only to records that have annotations)	"SELECT annotation_label_id,label_desc FROM $TBPR_ANNOTATION_LABEL ORDER BY sort_order,label_desc"
 PR_BrowseProteinSummary	7	reference_constraint	Protein Name Constraint									N	text	40		Y	1	N	Constraint for the Protein Reference. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 PR_BrowseProteinSummary	8	description_constraint	Protein Description Constraint									N	text	40		Y	2	N	Constraint for the Protein Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	

@@ -1,0 +1,15 @@
+table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
+AT_atlas_build	Atlas Build	PeptideAtlas_infrastructure	YES	$TBAT_ATLAS_BUILD	atlas_build_id		ManageTable.cgi?TABLE_NAME=AT_atlas_build	AT_atlas_build	
+AT_sample	Sample	PeptideAtlas_user	YES	$TBAT_SAMPLE	sample_id		ManageTable.cgi?TABLE_NAME=AT_sample	AT_sample	
+AT_atlas_build_sample	Atlas Build Sample Link	PeptideAtlas_infrastructure	NO	$TBAT_ATLAS_BUILD_SAMPLE	atlas_build_sample_id				
+AT_peptide	Peptide	PeptideAtlas_infrastructure	NO	$TBAT_PEPTIDE	peptide_id				
+AT_peptide_instance	Peptide Instance	PeptideAtlas_infrastructure	NO	$TBAT_PEPTIDE_INSTANCE	peptide_instance_id				
+AT_peptide_instance_sample	Peptide Instance Sample Link	PeptideAtlas_infrastructure	NO	$TBAT_PEPTIDE_INSTANCE_SAMPLE	peptide_instance_sample_id				
+AT_peptide_mapping	Peptide Mapping	PeptideAtlas_infrastructure	NO	$TBAT_PEPTIDE_MAPPING	peptide_mapping_id				
+AT_biosequence_set	Biosequence Set	PeptideAtlas_infrastructure	YES	$TBAT_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=AT_biosequence_set	AT_biosequence_set	
+AT_biosequence	Biosequence	PeptideAtlas_infrastructure	NO	$TBAT_BIOSEQUENCE	biosequence_id				
+AT_biosequence_property_set	Biosequence Property Set	PeptideAtlas_infrastructure	NO	$TBAT_BIOSEQUENCE_PROPERTY_SET	biosequence_property_set_id				
+AT_dbxref	Biosequence Database Cross Reference	PeptideAtlas_infrastructure	YES	$TB_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=AT_dbxref	AT_biosequence_dbxref	
+organism	Organism	PeptideAtlas_infrastructure	YES	$TB_ORGANISM	organism_id		ManageTable.cgi?TABLE_NAME=organism		
+AT_query_option	Query Option	PeptideAtlas_infrastructure	YES	$TBAT_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=AT_query_option	AT_query_option	
+AT_BrowseBiosequence	Browse Biosequence	QUERY					BrowseBioSequence.cgi		

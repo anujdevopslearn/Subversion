@@ -2,5 +2,6 @@ table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_nam
 ModTmpTAG_biosequence_set	BioSequence Set	MODULETEMPLATE_infrastructure	YES	$TBModTmpTAG_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=ModTmpTAG_biosequence_set	ModTmpTAG_biosequence_set	
 ModTmpTAG_dbxref	Biosequence Database Cross Reference	MODULETEMPLATE_infrastructure	YES	$TB_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=ModTmpTAG_dbxref	ModTmpTAG_biosequence_dbxref	
 ModTmpTAG_biosequence	BioSequence	MODULETEMPLATE_infrastructure	NO	$TBModTmpTAG_BIOSEQUENCE	biosequence_id				
+ModTmpTAG_biosequence_property_set	Biosequence Property Set	MODULETEMPLATE_infrastructure	NO	$TBModTmpTAG_BIOSEQUENCE_PROPERTY_SET	biosequence_property_set_id				
 ModTmpTAG_query_option	Query Option	MODULETEMPLATE_infrastructure	YES	$TBModTmpTAG_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=ModTmpTAG_query_option	ModTmpTAG_query_option	
 ModTmpTAG_BrowseBioSequence	Browse BioSequence	QUERY	NO				BrowseBioSequence.cgi		

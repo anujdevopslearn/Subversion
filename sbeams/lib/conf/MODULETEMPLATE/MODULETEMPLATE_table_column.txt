@@ -39,6 +39,20 @@ ModTmpTAG_biosequence	5	dbxref_id	Database Cross Reference	int	4	0	Y		N	ModTmpTA
 ModTmpTAG_biosequence	6	biosequence_accession	BioSequence Accession	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Accession number for this BioSequence in some external database designated above		
 ModTmpTAG_biosequence	7	biosequence_desc	Biosequence Description	varchar	1024	0	N		N			Y	text	40		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)		
 ModTmpTAG_biosequence	8	biosequence_seq	Sequence	text	16	0	Y		N			N	file	40		Y	Y	N	Actual sequence of the BioSequence if known		
+ModTmpTAG_biosequence_property_set	1	biosequence_property_set_id	BioSequence Property Set ID	int	4	0	N		Y							N	N				pkDEFAULT
+ModTmpTAG_biosequence_property_set	2	biosequence_id	BioSequence ID	int	4	0	N		N	AT_biosequence	biosequence_id					N	N	Y	Biosequence to which this Biosequence property set belongs		pkDEFAULT
+ModTmpTAG_biosequence_property_set	3	n_transmembrane_regions	Number of Transmembrane Regions	int	4	0	Y		N							Y	Y	N	Number of transmembrane regions		pkDEFAULT
+ModTmpTAG_biosequence_property_set	4	transmembrane_class	Transmembrane Region Class	varchar	10	0	Y		N			Y	text	50		Y	Y	N	"Class of the transmembrane region.  May be 0, TM, A, S, TM_xS based on output from TMHMM and signalP"		
+ModTmpTAG_biosequence_property_set	5	transmembrane_topology	Transmembrane Region Topology	varchar	1024	0	Y		N			Y	text	20		Y	Y	N	Coding of which residues belong in the transmembrane regions		
+ModTmpTAG_biosequence_property_set	6	has_signal_peptide	Has a Signal Peptide	char	1	0	Y		N			N	text	50		Y	Y	N	"Does this protein have a signal peptide on the end Y/N? (Note that Y means that there is some non-zero probability that it does, not that is necessarily does)"		
+ModTmpTAG_biosequence_property_set	7	has_signal_peptide_probability	Probability that it has a Signal Peptide	real	4	0	Y		N			N	text	50		Y	Y	N	Probability that there is a signal peptide on the end as calculated by SignalP		
+ModTmpTAG_biosequence_property_set	8	signal_peptide_length	Length of the Signal Peptide	int	4	0	Y		N			N	text	50		Y	Y	N	Length in residues of the signal peptide		
+ModTmpTAG_biosequence_property_set	9	signal_peptide_is_cleaved	Signal Peptide gets Cleaved	char	1	0	Y		N			N	text	50		Y	Y	N	Does the signal peptide get cleaved off Y/N?		
+ModTmpTAG_biosequence_property_set	10	genome_build	Genome Build	varchar	50	0	Y		N			N	text	50		Y	Y	N	Genome build name for which the following mapping parameters are valid		
+ModTmpTAG_biosequence_property_set	11	chromosome	Chromosome	varchar	50	0	Y		N			N	text	50		Y	Y	N	Chromosome in which this mapping occurs		
+ModTmpTAG_biosequence_property_set	12	start_in_chromosome	Start Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	Start position of the biosequence in the chromosome		
+ModTmpTAG_biosequence_property_set	13	end_in_chromosome	End Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	End position of the biosequence in the chromosome		
+ModTmpTAG_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	"Strand (+,-) of the biosequence in the chromosome"		
 ModTmpTAG_query_option	1	query_option_id	Query Option ID	int	4	0	N		Y							N	N				pkDEFAULT
 ModTmpTAG_query_option	2	option_type	Option Type	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Type or category of this option		
 ModTmpTAG_query_option	3	option_key	Option Key	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Key for this key/value pair option		
@@ -46,8 +60,8 @@ ModTmpTAG_query_option	4	option_value	Option Value	varchar	255	0	Y		N			Y	text	5
 ModTmpTAG_query_option	5	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
 ModTmpTAG_query_option	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 ModTmpTAG_query_option	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-ModTmpTAG_query_option	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-ModTmpTAG_query_option	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
+ModTmpTAG_query_option	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+ModTmpTAG_query_option	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 ModTmpTAG_query_option	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
 ModTmpTAG_query_option	11	record_status	Record Status	char	1	0	N	N	N							N	N			
 ModTmpTAG_BrowseBioSequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBModTmpTAG_BIOSEQUENCE_SET ORDER BY sort_order,set_name"
