@@ -23,7 +23,7 @@ proteomics_experiment	4	experiment_name	Experiment Title	varchar	100	0	N		N			Y	
 proteomics_experiment	5	experiment_tag	Experiment Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this experiment		
 proteomics_experiment	6	experiment_description	Experiment Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	One-line description of this experiment		
 proteomics_experiment	7	experiment_path	Experiment Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	Data path for this experiment (e.g. /data/search/edeutsch/TCells/T_000/human_nci)		
-proteomics_experiment	8	sample_id	Sample	int	8	0	N		N	proteomics_sample	sample_id	Y	optionlist			Y	Y	N	Sample used for this experiment	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+proteomics_experiment	8	sample_id	Sample	int	8	0	N		N			Y	optionlist			Y	Y	N	Sample used for this experiment	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 proteomics_experiment	9	quant_normalization	D0 / D8 Normalization Factor	real	4	0	Y		N			N	text	10		Y	Y	N	"Optional Normalization factor for d0/d8 quantitation ratio.  This will not be known until some data analysis has already been performed.  If ratios that should be calibrated to 1:1 appear as 1.2:1, enter 1.2 here to adjust."		
 proteomics_experiment	10	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
 proteomics_experiment	11	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
@@ -65,10 +65,10 @@ PR_GetSearch	3	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired displ
 PR_GetSearch	4	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."		
 search_hit_annotation	1	search_hit_annotation_id	Search Hit Annotation	int	8	0	N		Y							N	N				pkDEFAULT
 search_hit_annotation	2	search_hit_id	Search Hit ID	int	8	0	N		N			Y	fixed			Y	Y	Y	Database ID for the Search Hit to be annotated		
-search_hit_annotation	3	annotation_label_id	Annotation Label	int	8	0	N		N	annotation_label	annotation_label_id	Y	scrolloptionlist	6		Y	Y	N	Annotation label to associate with this Search Hit.  A description of how sure the annotater is that this is a correct peptide identification	"SELECT annotation_label_id,label_desc FROM $TBPR_ANNOTATION_LABEL ORDER BY sort_order,label_desc"	
-search_hit_annotation	4	annotation_confidence_id	Annotation Confidence	int	8	0	N		N	annotation_confidence	annotation_confidence_id	Y	scrolloptionlist	5		Y	Y	N	Confidence in the above labeling	"SELECT annotation_confidence_id,confidence_desc FROM $TBPR_ANNOTATION_CONFIDENCE ORDER BY sort_order,confidence_desc"	
-search_hit_annotation	5	annotation_source_id	Annotation Source	int	8	0	N		N	annotation_source	annotation_source_id	Y	fixedfromlist			Y	Y	N	Source from which this annotation came	"SELECT annotation_source_id,source_desc FROM $TBPR_ANNOTATION_SOURCE ORDER BY sort_order,source_desc"	
-search_hit_annotation	6	user_annotation_label_id	User-defined Annotation Label	int	8	0	Y		N	user_annotation_label	user_annotation_label_id	N	scrolloptionlist	6		Y	Y	N	User-defined annotation label to associate with this Search Hit.  This is project-specific	"SELECT user_annotation_label_id,user_annotation_tag FROM $TBPR_USER_ANNOTATION_LABEL WHERE project_id='$project_id' AND record_status !='D' ORDER BY sort_order,user_annotation_tag"	
+search_hit_annotation	3	annotation_label_id	Annotation Label	int	8	0	N		N			Y	scrolloptionlist	6		Y	Y	N	Annotation label to associate with this Search Hit.  A description of how sure the annotater is that this is a correct peptide identification	"SELECT annotation_label_id,label_desc FROM $TBPR_ANNOTATION_LABEL ORDER BY sort_order,label_desc"	
+search_hit_annotation	4	annotation_confidence_id	Annotation Confidence	int	8	0	N		N			Y	scrolloptionlist	5		Y	Y	N	Confidence in the above labeling	"SELECT annotation_confidence_id,confidence_desc FROM $TBPR_ANNOTATION_CONFIDENCE ORDER BY sort_order,confidence_desc"	
+search_hit_annotation	5	annotation_source_id	Annotation Source	int	8	0	N		N			Y	fixedfromlist			Y	Y	N	Source from which this annotation came	"SELECT annotation_source_id,source_desc FROM $TBPR_ANNOTATION_SOURCE ORDER BY sort_order,source_desc"	
+search_hit_annotation	6	user_annotation_label_id	User-defined Annotation Label	int	8	0	Y		N	PR_user_annotation_label	user_annotation_label_id	N	scrolloptionlist	6		Y	Y	N	User-defined annotation label to associate with this Search Hit.  This is project-specific	"SELECT user_annotation_label_id,user_annotation_tag FROM $TBPR_USER_ANNOTATION_LABEL WHERE project_id='$project_id' AND record_status !='D' ORDER BY sort_order,user_annotation_tag"	
 search_hit_annotation	7	comment	Comment	varchar	1024	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 search_hit_annotation	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 search_hit_annotation	9	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
@@ -185,3 +185,7 @@ PR_user_annotation_label	9	date_modified	Date Record Modified	datetime	8	0	N	CUR
 PR_user_annotation_label	10	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N			
 PR_user_annotation_label	11	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N			
 PR_user_annotation_label	12	record_status	Record Status	char	1	0	N	N	N							N	N			
+PR_SummarizeFractions	1	input_form_format	Input Form Format									N	optionlist		refreshDocument()	Y	Y	N	Options for level of detail and layout for this input form	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'input_form_options' ORDER BY sort_order,option_value"
+PR_SummarizeFractions	2	experiment_id	Experiments									N	multioptionlist	4		Y	Y	N	Select desired Experiments to include in query.  Multiple items may be selected.  At least one must be selected	MANUAL
+PR_SummarizeFractions	3	project_id	Project									N	multioptionlist	4		Y	Y	N	Project in which to search for experiments	"SELECT project_id, name FROM $TB_PROJECT WHERE record_status != 'D' ORDER BY name"
+PR_SummarizeFractions	4	row_limit	Maximum Rows									N	text	10		Y	2	N	"Limit the numbers of rows displayed.  If not provided, default is 1000 rows."	

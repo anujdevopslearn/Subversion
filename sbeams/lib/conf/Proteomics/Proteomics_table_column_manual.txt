@@ -17,3 +17,40 @@ SELECT search_batch_id,username + '' - '' + experiment_tag + '' -> '' + set_tag
        )
    AND column_name = 'search_batch_id'
 
+
+
+UPDATE table_column
+  SET optionlist_query = '
+	SELECT experiment_id,username + '' - '' + experiment_tag + '' ('' + experiment_name + '')''
+	  FROM $TBPR_PROTEOMICS_EXPERIMENT PE
+	  LEFT JOIN $TB_USER_LOGIN UL ON ( PE.contact_id = UL.contact_id )
+	 WHERE PE.record_status != ''D''
+	 ORDER BY username,experiment_tag,experiment_name
+  '
+ WHERE table_name = 'PR_SummarizeFractions'
+   AND column_name = 'experiment_id'
+
+
+
+UPDATE table_column
+  SET optionlist_query = '
+	SELECT project_id,username + '' - '' + P.name
+	  FROM $TB_PROJECT P
+	  LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id )
+	  LEFT JOIN $TB_USER_WORK_GROUP UWG
+	       ON ( P.PI_contact_id = UWG.contact_id )
+	  LEFT JOIN $TB_WORK_GROUP WG
+	       ON ( UWG.work_group_id = WG.work_group_id )
+	 WHERE P.record_status != ''D''
+	   AND WG.work_group_name = ''Proteomics_user''
+	 ORDER BY username,P.name
+  '
+ WHERE table_name = 'PR_SummarizeFractions'
+   AND column_name = 'project_id'
+
+
+
+
+
+
+
