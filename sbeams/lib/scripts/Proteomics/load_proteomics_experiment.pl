@@ -183,7 +183,7 @@ sub handleRequest {
   #### Get the file_prefix if it was specified, and otherwise guess
   unless ($file_prefix) {
     my $module = $sbeams->getSBEAMS_SUBDIR();
-    $file_prefix = '/net/dblocal/data/proteomics' if ($module eq 'Proteomics');
+    $file_prefix = $RAW_DATA_DIR{Proteomics} if ($module eq 'Proteomics');
   }
 
 
@@ -290,7 +290,7 @@ sub handleRequest {
     
         my $prefix = $file_prefix;
         $prefix = '' if ($status->{experiment_path} =~ /\/dblocal/);
-        my $source_dir = $prefix.$status->{experiment_path}."/".
+        my $source_dir = $prefix."/".$status->{experiment_path}."/".
           $search_batch_subdir;
 
 
@@ -639,8 +639,12 @@ sub loadProteomicsExperiment {
               "supplied forced '$force_ref_db'\n";
             $search_database = $force_ref_db;
           }
-          $search_batch_id = addSearchBatchEntry($experiment_id,
-            $search_database,"$source_dir/$element");
+          $search_batch_id = addSearchBatchEntry(
+            experiment_id=>$experiment_id,
+            search_database=>$search_database,
+            search_directory=>$source_dir,
+            fraction_directory=>"$source_dir/$element"
+          );
         }
 
         #### If $search_database is different from the {search_database}
@@ -805,17 +809,25 @@ sub addMsmsSpectrumEntry {
 # addSearchBatchEntry: find or make a new entry in search_batch table
 ###############################################################################
 sub addSearchBatchEntry {
-  my ($experiment_id) = shift
-    || die "ERROR addSearchBatch: missing parameter 1: experiment_id\n";
-  my ($search_database) = shift
-    || die "ERROR addSearchBatch: missing parameter 2: search_database\n";
-  my ($directory) = shift
-    || die "ERROR addSearchBatch: missing parameter 3: directory\n";
+  my %args = @_;
+  my $SUB_NAME = 'addSearchBatchEntry';
+
+
+  #### Decode the argument list
+  my $experiment_id = $args{'experiment_id'}
+   || die "ERROR[$SUB_NAME]: experiment_id not passed";
+  my $search_database = $args{'search_database'}
+   || die "ERROR[$SUB_NAME]: search_database not passed";
+  my $search_directory = $args{'search_directory'}
+   || die "ERROR[$SUB_NAME]: search_directory not passed";
+  my $fraction_directory = $args{'fraction_directory'}
+   || die "ERROR[$SUB_NAME]: fraction_directory not passed";
+
 
   my $sql_query;
 
   #### Determinte the search_batch_subdir as the last item on the directory
-  $directory =~ /.+\/(.+)/;
+  $search_directory =~ /.+\/(.+)/;
   my $search_batch_subdir = $1;
 
 
@@ -849,7 +861,7 @@ sub addSearchBatchEntry {
     my %rowdata;
     $rowdata{experiment_id} = $experiment_id;
     $rowdata{biosequence_set_id} = $biosequence_set_id;
-    $rowdata{data_location} = $directory;
+    $rowdata{data_location} = $search_directory;
     $rowdata{search_batch_subdir} = $search_batch_subdir;
     $search_batch_id = $sbeams->insert_update_row(
   	insert=>1,
@@ -868,7 +880,7 @@ sub addSearchBatchEntry {
 
     #### Read in the sequest.params file in the same subdirectory
     #### and store its contents
-    unless (addParamsEntries($search_batch_id,$directory)) {
+    unless (addParamsEntries($search_batch_id,$fraction_directory)) {
       die "ERROR: addParamsEntries failed.\n";
     }
 
@@ -906,12 +918,14 @@ sub addSearchEntry {
   #### Verify that this search isn't already in the database
   #### This is a lot of work for the server, so could be disabled
   #### If a UNIQUE key is put in place to insure a crash here
+  my $file_root = $parameters_ref->{file_root};
   if (1 == 1) {
     my $sql = qq~
       SELECT search_id
         FROM $TBPR_SEARCH
        WHERE search_batch_id = '$search_batch_id'
          AND msms_spectrum_id = '$msms_spectrum_id'
+         AND file_root = '$file_root'
     ~;
     my ($result) = $sbeams->selectOneColumn($sql);
     if ($result) {
