@@ -301,12 +301,10 @@ sub processFile
 			delete $INFOPROTEIN1{$count-2};
 			next;
 		}
-		if($INFOPROTEIN1{$count-2}->{bioentityCanName1} =~/^((xm)|(nm))/i and $INFOPROTEIN1{$count-2}->{bioentityType1} =~ /protein/i){
+		if($INFOPROTEIN1{$count-2}->{bioentityCanName1} =~/(xm)|(nm)/i and $INFOPROTEIN1{$count-2}->{bioentityType1} =~ /protein/i){
 				print "this is a gene_name_identifier\n";
 				$INFOPROTEIN1{$count-2}->{bioentityCanGeneName1} = $INFOPROTEIN1{$count-2}->{bioentityCanName1};
 				undef($INFOPROTEIN1{$count-2}->{bioentityCanName1});
-		
-				
 		}
 		
 		if ($INFOPROTEIN1{$count-2}->{group} and !$interactionGroups->{$INFOPROTEIN1{$count-2}->{group}})
@@ -328,10 +326,6 @@ sub processFile
 				delete $INFOPROTEIN1{$count-2};
 				next;
 		}
-
-
-
-
 #bioentity2				
 		print "checking bioentity2 requirements\n";
 		foreach my $column (sort keys %columnHashProtein2)
@@ -367,10 +361,11 @@ sub processFile
 			next;
 		}
 		
-		if($INFOPROTEIN2{$count-2}->{bioentityCanName2} =~ /^((nm)|(xm))/i and $INFOPROTEIN2{$count-2}->{bioentityType2} =~ /protein/i)
+		if($INFOPROTEIN2{$count-2}->{bioentityCanName2} =~ /(nm)|(xm)/i and $INFOPROTEIN2{$count-2}->{bioentityType2} =~ /protein/i)
 		{
-				$INFOPROTEIN1{$count-2}->{bioentityCanGeneName2} = $INFOPROTEIN1{$count-2}->{bioentityCanName2};
-				undef($INFOPROTEIN1{$count-2}->{bioentityCanName2});
+				$INFOPROTEIN2{$count-2}->{bioentityCanGeneName2} = $INFOPROTEIN2{$count-2}->{bioentityCanName2};
+				undef($INFOPROTEIN2{$count-2}->{bioentityCanName2});
+				
 		}
 	
 #need to make sure that a group is associated with this organism
@@ -751,6 +746,16 @@ sub insertOrUpdateBioentity
 #############################################################
 #############################################################
 	}
+	
+########testing	
+#	if ($rowData{bioentity_common_name} eq 'MD-2'){
+#			foreach my $key (keys %rowData)
+#			{
+#					print "$key --- $rowData{$key}\n";
+#			getc;}
+#	}
+#########	
+			
 
 		my $returned_PK = $recordCon->updateOrInsertRow(
 				insert => $insert,
