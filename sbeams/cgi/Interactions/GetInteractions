@@ -342,6 +342,7 @@ sub handle_request {
 
     ["bioentity_id1","BE1.bioentity_id","BioEntity 1 ID"],
     ["bioentity_id2","BE2.bioentity_id","BioEntity 2 ID"],
+		["Publication_id","PUB.pubmed_id", "PubMed ID"],
     @additional_columns,
   );
 
@@ -394,6 +395,8 @@ sub handle_request {
            ON ( I.regulatory_feature1_id = RF1.regulatory_feature_id )
       LEFT JOIN $TBIN_REGULATORY_FEATURE RF2
            ON ( I.regulatory_feature2_id = RF2.regulatory_feature_id )
+			LEFT JOIN $TBIN_PUBLICTION PUB
+					 ON (I.publication_id = PUB.publication_id) 
      WHERE 1 = 1
        AND I.record_status != 'D'
        AND ( BE1.record_status != 'D' OR BE1.record_status IS NULL )
