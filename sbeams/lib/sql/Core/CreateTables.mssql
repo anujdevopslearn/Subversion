@@ -7,6 +7,9 @@ and use this script to create the tables
 SELECT * FROM sysobjects WHERE type='U'
 SELECT 'DROP TABLE '+name FROM sysobjects WHERE type='U' ORDER BY crdate DESC
 
+DROP TABLE table_column
+DROP TABLE table_property
+
 DROP TABLE misc_option
 DROP TABLE table_group_security
 DROP TABLE usage_log
@@ -218,7 +221,7 @@ CREATE TABLE dbo.sql_command_log (
 	command_id		int IDENTITY NOT NULL,
 	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
-	result			varchar(25) NOT NULL ,
+	result			varchar(25) NOT NULL,
 	sql_command		varchar(7000) NOT NULL
 )
 GO
@@ -280,6 +283,47 @@ CREATE TABLE dbo.help_text (
 )
 GO
 
+
+CREATE TABLE dbo.table_property (
+	table_name		varchar(50) NOT NULL,
+	category		varchar(50) NOT NULL,
+	table_group		varchar(50) NOT NULL,
+	manage_table_allowed	varchar(50) NULL,
+	db_table_name		varchar(50) NULL,
+	PK_column_name		varchar(50) NULL,
+	multi_insert_column	varchar(50) NULL,
+	table_url		varchar(255) NULL,
+	manage_tables		varchar(100) NULL,
+	next_step		varchar(100) NULL,
+	PRIMARY KEY CLUSTERED (table_name)
+)
+GO
+
+CREATE TABLE dbo.table_column (
+	table_name		varchar(50) NOT NULL,
+	column_index		int NOT NULL,
+	column_name		varchar(50) NOT NULL,
+	column_title		varchar(50) NOT NULL,
+	datatype		varchar(50) NULL,
+	scale			int NULL,
+	[precision]		int NULL,
+	nullable		char(1) NULL,
+	default_value		varchar(50) NULL,
+	is_auto_inc		char(1) NULL,
+	fk_table		varchar(50) NULL,
+	fk_column_name		varchar(50) NULL,
+	is_required		char(1) NULL,
+	input_type		varchar(50) NULL,
+	input_length		varchar(25) NULL,
+	onChange		varchar(255) NULL,
+	is_data_column		char(1) NULL,
+	is_display_column	char(1) NULL,
+	is_key_field		char(1) NULL,
+	column_text		varchar(1000) NULL,
+	optionlist_query	varchar(5000) NULL,
+	url			varchar(255) NULL 
+)
+GO
 
 
 
