@@ -445,6 +445,8 @@ sub handle_request {
         FROM $TBAT_BIOSEQUENCE BS
         LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
              ON ( BS.biosequence_set_id = BSS.biosequence_set_id )
+        LEFT JOIN $TBAT_BIOSEQUENCE_PROPERTY_SET BPS
+             ON ( BS.biosequence_id = BPS.biosequence_id )
 --        LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
         $GO_join
        WHERE 1 = 1
@@ -478,11 +480,11 @@ sub handle_request {
           SELECT BPS.category
           FROM $TBAT_BIOSEQUENCE_PROPERTY_SET BPS
           JOIN $TBAT_BIOSEQUENCE B
-          ON ( BPS.biosequence_id = BS.biosequence_id)
-          WHERE BS.biosequence_name = '$parameters{biosequence_name_constraint}'
+          ON ( BPS.biosequence_id = B.biosequence_id)
+          WHERE B.biosequence_name = '$parameters{biosequence_name_constraint}'
           ~;
 
-      ($category_html_ref) = $sbeams->selectOneColumn($sql) || "";
+      ($category_html_ref) = $sbeams->selectOneColumn($tsql);
       
       if ($category_html_ref =~ /^(verified orf)$/i )
       {
@@ -505,7 +507,7 @@ sub handle_request {
       %url_cols = ('set_tag' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=AT_BIOSEQUENCE_SET&biosequence_set_id=\%$colnameidx{biosequence_set_id}V",
                'accession' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi?biosequence_name_constraint=\%$colnameidx{biosequence_accession}V&apply_action=$pass_action",
                'gene_name' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi?biosequence_gene_name_constraint=\%$colnameidx{biosequence_gene_name}V&apply_action=$pass_action",
-               'category'  => "http://www.yeastgenome.org/help/glossary.html#$category_html_ref",
+               'Category'  => "http://www.yeastgenome.org/help/glossary.html#$category_html_ref",
                'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
                'Molecular Function_ATAG' => 'TARGET="WinExt"',
                'Molecular Function_OPTIONS' => {semicolon_separated_list=>1},
