@@ -92,6 +92,7 @@ use vars qw ($sbeams $q $sbeams_affy $sbeams_affy_groups
 			 %data_to_find
 			 $METHOD
 			 $RECOMPUTE_R
+	    	 $FILES_TO_UPDATE
 	    );
 
 
@@ -145,7 +146,9 @@ Run Mode Notes:
  delete  : NOT FUNCTIONAL DELETE FROM THE DATABASE
 Examples;
 1) ./$PROG_NAME --run_mode add_new 	 # typical mode, adds any new files
-2) ./$PROG_NAME --run_mode update --redo_R yes or no	 # Re upload the data and or re-compute the R run
+2) ./$PROG_NAME --run_mode update --redo_R yes or no	 # Re upload the data and or re-compute the R run 
+	UPDATES ARE VERY SLOW IT DOES A LOOK UP FOR EVERY ROW
+3) ./$PROG_NAME --run_mode update --redo_R yes or no -files 123,124,134  #give the affy_array_ids to update
 EOU
 
 		
@@ -163,9 +166,10 @@ unless (GetOptions(\%OPTIONS,
 		   "base_directory:s",
 		   "file_types:s",
 		   "redo_R:s",
-		   "testonly")) {
+		   "testonly",
+		   "files:s")) {
   print "$USAGE";
-  exit;
+ 
 }
 
 
@@ -176,8 +180,7 @@ $DEBUG      = $OPTIONS{debug};
 $TESTONLY   = $OPTIONS{testonly};
 $RUN_MODE   = $OPTIONS{run_mode};
 $RECOMPUTE_R = $OPTIONS{redo_R};
-
-
+$FILES_TO_UPDATE = $OPTIONS{files};
 
 
 my $val = grep {$RUN_MODE eq $_} @run_modes;
@@ -297,7 +300,7 @@ sub handleRequest {
 	
 	
 		write_error_log(object => $sbeams_affy_groups);
-		print "ERROR: PROJECT WITH NO PROJECT ID's\n";
+		
 		
 	
 	}elsif( $RUN_MODE eq 'delete') {
@@ -329,8 +332,16 @@ sub add_R_CHP_data {
 			next;
 		}
 		$update_flag = 1 if $RUN_MODE eq 'update';	
-			
-		next unless (($id >= 173 && $id < 178) || ($id >= 225 && $id <= 249) );			#testing only to constrain to certain array ids
+		next if (($id >= 55 && $id < 64) || ($id >= 110 && $id <= 113) || ($id >= 144 && $id <= 147) ||($id >= 163 && $id <= 207) );
+		if ($update_flag){
+			if ($FILES_TO_UPDATE){									#if there are specific files to update only update these files
+					my @files_to_update_a = split /,/,$FILES_TO_UPDATE;
+					next unless (grep {$id == $_} @files_to_update_a);
+			}
+		}	
+		
+		
+		#next unless (($id >= 173 && $id < 178) || ($id >= 225 && $id <= 249) );			#testing only to constrain to certain array ids
 		my $file_name = $affy_o->get_afa_file_root;
 		print "ARRAY ID '$id'\n";
 		
