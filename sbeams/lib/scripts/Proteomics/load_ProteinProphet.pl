@@ -296,6 +296,16 @@ sub start_element {
     }
 
 
+    #### Since someone changes the XML format regularly without telling
+    #### anyone else, provide a facility to kill some attributes while trying
+    #### to load
+    print "!";
+    delete $attrs{group_sibling_id} if (exists($attrs{group_sibling_id}));
+    delete $attrs{unique_stripped_peptides} if (exists($attrs{unique_stripped_peptides}));
+    delete $attrs{is_contributing_evidence} if (exists($attrs{is_contributing_evidence}));
+
+
+
     #### If there's a execution_date attribute, then convert format
     if ($attrs{execution_date}) {
       my $date0 = ParseDate($attrs{execution_date});
