@@ -1,0 +1,99 @@
+Documentation for the SBEAMS schema driver tables:
+$Id$
+
+
+Column definitions for columns A,B,C,....
+
+
+table_property:
+
+A) table_name: a unique name among all SBEAMS modules.  Use a module
+prefix (e.g., PR_, PS_, SN_, IS_, etc.) before database table name
+
+B) Category: Friendly title of the table
+
+C) table_group: a table group for which access security is defined
+
+D) manage_table_allowed: Set to YES if the ManageTable.cgi program is
+allowed to drive modifications to this table (it must have a autogen PK
+and the standard audit columns)
+
+E) db_table_name: a Perl variable for the physical table name.  Should
+be $TB{module prefix}_TABLE_NAME
+
+F) PK_column_name: column name of the primary autogen key
+
+G) multi_insert_column: If this table supports multi-insert logic, set
+to column name
+
+H) table_url: actual URL used to manage this table.
+
+I) manage_tables: a comma-separated list of tables that should be
+listed as manageable as a group
+
+J) next_step: comma-separated list of tables that might be managed next
+after a record inserted here
+
+
+
+table_column:
+
+A) table_name: a unique name among all SBEAMS modules.  Use a module
+prefix (e.g., PR_, PS_, SN_, IS_, etc.) before database table name.
+Must match entry in table_property
+
+B) column_number: numerical ordered index of columns so order is
+preserved
+
+C) column_name: column name in the table
+
+D) column_title: a friendly title that appears in the form
+
+E) datatype: datatype of column
+
+F) scale: scale (e.g. length for VARCHAR) of column
+
+G) precision: precision (e.g. number of decimal places for NUMERIC) of
+column
+
+H) nullable: if column is defined as NULL or NOT NULL
+
+I) default_value: column default value for database
+
+J) is_auto_inc: Y if this is an autogen columns (IDENTITY, SERIAL,
+AUTO_GEN, etc.)
+
+K) fk_table: If column is a foreign key, what table does it refer to
+
+L) fk_column_name: If column is a foreign key, what column in the
+remote table does it refer to
+
+M) is_required: Does the ManageTable form require that this have some
+value. This does not have to follow column H, although usually does
+
+N) input_type: What type of HTML form widget type for entry (text,
+textarea, textdate, optionlist, multioptionlist, scrolloptionlist,
+file, fixed)
+
+O) input_length: Size of the HTML form widget if appropriate
+
+P) onChange: text for JavaScript onChange code for this widget
+
+Q) is_data: Y if this is a column that should appear on the form (as
+opposed to housekeeping column)
+
+R) is_displayed: Y if this column should be displayed in a VIEW mode
+
+S) is_key_field: combination of Y columns will be checked for
+uniqueness before insertion
+
+T) column text: Friendly descriptive text that appears on the form for
+this field
+
+U) optionlist_query: SQL query which populates an optionlist
+
+V) url: when this field is displayed in a table, what type of HREF is
+attached to the data (pkDEFAULT means that this column is the
+referencing PK, SELF means column is URL itself)
+
+
