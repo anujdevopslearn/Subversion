@@ -969,7 +969,7 @@ sub printLabelingAndHybridizationSection {
 		    ~;
 	    }else {
 		print qq~
-		    <TD><FONT COLOR="red">No Labeling Record</FONT><BR><A HREF="ManageTable.cgi?TABLE_NAME=labeling&ShowEntryForm=1" TARGET="_blank">[Insert Record]</TD></TD>
+		    <TD><FONT COLOR="red">No Labeling Record</FONT><BR><A HREF="ManageTable.cgi?TABLE_NAME=labeling&ShowEntryForm=1&array_request_sample_id=$arsmpl_id" TARGET="_blank">[Insert Record]</TD></TD>
 		    ~;
 	    }
 	    
