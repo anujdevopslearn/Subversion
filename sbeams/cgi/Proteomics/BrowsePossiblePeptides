@@ -225,6 +225,11 @@ sub handle_request {
     constraint_name=>"BioSequence Set",
     constraint_value=>$parameters{biosequence_set_id} );
   return if ($biosequence_set_clause eq '-1');
+  unless (defined($parameters{biosequence_set_id}) &&
+          $parameters{biosequence_set_id}) {
+    print "<H4>You must select at least one search batch to browse!</H4>\n\n";
+    return;
+  }
 
 
   #### Build BIOSEQUENCE_NAME constraint
