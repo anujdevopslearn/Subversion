@@ -11,6 +11,13 @@ package SBEAMS::Connection::HTMLPrinter;
 #		This really begs to get a lot more object oriented such that
 #		there are several different contexts under which the a user
 #		can be in, and the header, button bar, etc. vary by context
+#
+# SBEAMS is Copyright (C) 2000-2002 by Eric Deutsch
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
 ###############################################################################
 
 
