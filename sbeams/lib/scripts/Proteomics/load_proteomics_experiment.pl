@@ -582,6 +582,8 @@ sub loadProteomicsExperiment {
       my $fraction_number;
       if ($tmp =~ /^.*?(\d+).*?$/) {
         $fraction_number = $1;
+        # Guard against numbers too big
+        $fraction_number = substr($fraction_number,0,8);
       }
 
       my %rowdata;
