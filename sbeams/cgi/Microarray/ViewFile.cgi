@@ -112,7 +112,7 @@ sub main {
 	if ($file_name =~ /\.map$/ || $file_name=~/\.key$/) {
 	    $output_dir = "/net/arrays/Slide_Templates";
 	}elsif ($file_name =~/\.doc/){
-	    $output_dir = "/net/"
+	  $output_dir = "/net/";
 	}else {
 	    $output_dir = "$FILE_BASE_DIR/$project_id";
 	}
