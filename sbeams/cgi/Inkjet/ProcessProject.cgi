@@ -345,13 +345,14 @@ SELECT	A.array_id,A.array_name,
 		#### channel 1 contains the shorter number_part dye
 		#print "channels = ",join(",",@channels),"<BR>\n";
 		unless (@channels) {
-		  print "WARNING: Quantitation file has no channel information! (typical of Dapple)<BR>\n";
+		  print "WARNING: Quantitation file has no channel information! (typical of Dapple) ".
+		    "Guessing that channel 0 is the lower numbered bye!<BR>";
 		  if ($sample1_dye lt $sample2_dye) {
                     $channel_direction = "f";
-		    print "WARNING: Guessing channel direction should be forward.  Verify!!<BR>\n";
+		    print "<font color=red>WARNING: Guessing channel direction should be forward.  Verify!!</font><BR>\n";
 		  } else {
                     $channel_direction = "r";
-		    print "WARNING: Guessing channel direction should be reverse.  Verify!!<BR>\n";
+		    print "<font color=red>WARNING: Guessing channel direction should be reverse.  Verify!!</font><BR>\n";
 		  }
 		}
 
