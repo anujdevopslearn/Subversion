@@ -20,6 +20,8 @@ my $dbhSbeams;
 my ($sbeams, $sbeamsMOD);
 my %typeErrorHash; 
 my %nameErrorHash;
+my ($day, $month, $year)  =(localtime)[3,4,5]; 
+my $time = $day.$month.$year;
 
     $sbeams = new SBEAMS::Connection;
     $sbeamsMOD = new SBEAMS::Interactions;
@@ -261,7 +263,8 @@ foreach my $type (keys %dupeHash)
 
 sub recordInfo
 { 
-  open (FileEx, '> /users/mkorb/Interaction/Dupe.txt');
+  my $outFile = '/users/mkorb/Interaction/dupeCheck'.$time.'_Dupe.txt';
+  open (FileEx," > $outFile");
  
   print FileEx "bioentity_id\tbioentity_common_name\tbioentity_canonical_name\t bioentity_full_name\t bioentity_canonical_gene_name\t bioentity_type_name\torganism_id\n";
  
