@@ -155,7 +155,8 @@ sub processRequests {
     $dbh = $sbeams->getDBHandle();
 
     # Decide where to go based on form values
-    if      ($q->param('apply_action')) { processEntryForm();
+    if      ($q->param('apply_action') eq 'VIEWRESULTSET') { printOptions();
+    } elsif ($q->param('apply_action')) { printEntryForm();
     } elsif ($q->param('apply_action_hidden')) { printEntryForm();
     } elsif ($q->param('ShowEntryForm')) { printEntryForm();
     } elsif ($q->param("$PK_COLUMN_NAME")) { printEntryForm();
