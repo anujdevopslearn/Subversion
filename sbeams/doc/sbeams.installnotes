@@ -117,7 +117,7 @@ Retart the Apache server perhaps with something like:
 cd /local/www/html
 mkdir dev1
 cd dev1
-tar -zxvf ~/sbeams-0.11.tar.gz
+tar -zxvf ~/sbeams-0.13.tar.gz
 
 Create tmp directories and symlinks:
 cd sbeams
