@@ -1488,9 +1488,21 @@ sub readFavCodonFrequencyFile {
 
 
   #### Define the column number from which data are loaded
-  my $column_number;
-  $column_number = 2 if ($source_file =~ /bias_gadfly.dros.RELASE2/);
-  $column_number = 29 if ($source_file =~ /protein_properties.tab/);
+  my $fcf_column_index;
+  my $bs_name_column_index;
+
+  if ($source_file =~ /bias_gadfly.dros.RELASE2/) {
+    $bs_name_column_index = 0;
+    $fcf_column_index = 2;
+  } elsif ($source_file =~ /protein_properties.tab/) {
+    $bs_name_column_index = 0;
+    $fcf_column_index = 29;
+  } elsif ($source_file =~ /bias.txt/) {
+    $bs_name_column_index = 3;
+    $fcf_column_index = 2;
+  } else {
+   die("Sorry, unknown filetype for favored codon frequency file");
+  }
 
   open(CODONFILE,"$source_file") ||
     die("Unable to favored codon frequency file '$source_file'");
@@ -1509,14 +1521,15 @@ sub readFavCodonFrequencyFile {
   print "Reading favored codon frequency file...\n";
   while ($line = <CODONFILE>) {
     @columns = split("\t",$line);
-    if ($source_file =~ /bias_gadfly.dros.RELASE2/) {
-      $tmp = $columns[3];
-      @words = split(/\s/,$tmp);
-      $biosequence_name = $words[0];
-    } else {
-      $biosequence_name = $columns[0];
-    }
-    $fav_codon_frequency->{$biosequence_name} = $columns[$column_number];
+    $biosequence_name = $columns[$bs_name_column_index];
+    $biosequence_name =~ s/[\r\n]//g;
+    $biosequence_name =~ s/^\s+//;
+    @words = split(/\s/,$biosequence_name);
+    $biosequence_name = $words[0];
+    my $fcf = $columns[$fcf_column_index];
+    $fcf =~ s/\s//g;
+
+    $fav_codon_frequency->{$biosequence_name} = $fcf;
   }
 
   close(CODONFILE);
