@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -wT
+#!/usr/local/bin/perl -w
 
 ###############################################################################
 # Program     : help_popup.cgi
