@@ -1929,6 +1929,21 @@ sub display_input_form {
       }
 
 
+      # If "$project_id" appears in the SQL optionlist query, then substitute
+      # that with either a value of $parameters{project_id} if it is not
+      # empty, or otherwise replace with the $current_project_id
+      if ( $optionlist_queries{$element} =~ /\$project_id/ ) {
+        if ( $parameters{"project_id"} eq "" ) {
+          my $current_project_id = $self->getCurrent_project_id();
+          $optionlist_queries{$element} =~
+              s/\$project_id/$current_project_id/;
+        } else {
+          $optionlist_queries{$element} =~
+              s/\$project_id/$parameters{project_id}/;
+        }
+      }
+
+
       #### Evaluate the $TBxxxxx table name variables if in the query
       if ( $optionlist_queries{$element} =~ /\$TB/ ) {
         $optionlist_queries{$element} = 
@@ -1954,9 +1969,12 @@ sub display_input_form {
         $is_data_column,$is_display_column,$column_text,
         $optionlist_query,$onChange) = @row;
 
+
+    #### Set the JavaScript onChange string if supplied
     if ($onChange gt "") {
       $onChange = " onChange=\"$onChange\"";
     }
+
 
     #### If the action included the phrase HIDE, don't print all the options
     if ($apply_action =~ /HIDE/i) {
@@ -1991,6 +2009,7 @@ sub display_input_form {
     }
 
 
+    #### Write the parameter name, in red if required
     if ($is_required eq "N") {
       print "<TR><TD><B>$column_title:</B></TD>\n";
     } else {
@@ -2070,7 +2089,8 @@ sub display_input_form {
 
     if ($input_type eq "optionlist") {
       print qq~
-        <TD><SELECT NAME="$column_name" $onChange> <!-- $parameters{$column_name} -->
+        <TD><SELECT NAME="$column_name" $onChange>
+          <!-- $parameters{$column_name} -->
         <OPTION VALUE=""></OPTION>
         $optionlists{$column_name}</SELECT></TD>
       ~;
