@@ -2210,7 +2210,7 @@ sub updateTimingInfo {
 	if (defined($precur_data) && defined($precur_data->{$scan_number})) {
 	  my $idx = $precur_data->{column_names_hash}->{precursor_intensity};
 	  my $precursor_intensity = $precur_data->{$scan_number}->[$idx];
-	  $rowdata{precursor_intensity} = $precursor_intensity;
+	  $rowdata{precursor_intensity} = $precursor_intensity/1e6;
 	}
 
 
