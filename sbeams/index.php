@@ -58,13 +58,9 @@ or <B>bmarzolf</B>.
 <UL>
 <LI><A HREF="cgi/main.cgi">Login to SBEAMS</A>
 <P>
-<LI><A HREF="cgi/MicroArrayMain.cgi">Login to SBEAMS - Microarray</A>
 <LI><A HREF="http://www.systemsbiology.org/forum/microarrays">Microarray Discussion Forum</A>
 <LI><A HREF="doc/array_request_instructions.txt">Instructions for Submitting a Microarray Request</A>
 <P>
-<LI><A HREF="cgi/Proteomics/main.cgi">Login to SBEAMS - Proteomics</A>
-<P>
-<LI><A HREF="cgi/Inkjet/main.cgi">Login to SBEAMS - Inkjet</A>
 </UL>
 
 <BR>
