@@ -103,7 +103,6 @@ my %actionHash = (
 	$ERROR	=>	\&processError
 	);
 
-	
 main();
 exit(0);
 
@@ -118,13 +117,14 @@ sub main
 {
 		
 #### Do the SBEAMS authentication and exit if a username is not returned
+#this will allows guest witout password and username
   exit unless ($current_username = $sbeams->Authenticate(
     permitted_work_groups_ref=>['Immunostain_user','Immunostain_admin',
       'Immunostain_readonly','Admin'],
-    #connect_read_only=>1,
-    #allow_anonymous_access=>1,
-  ));
-
+	  allow_anonymous_access=>1, 
+   connect_read_only=>1,
+  ) );
+  
 
 #### Read in the default input parameters
   my %parameters;
@@ -142,10 +142,11 @@ sub main
 	else
 	{
 # normal handling for anything else			
-    $sbeamsMOD->display_page_header();
+	$sbeamsMOD->display_page_header();
+	}
     handle_request(ref_parameters=>\%parameters);  
-    $sbeamsMOD->display_page_footer();
-  }
+   $sbeamsMOD->display_page_footer();
+  
 
 
 } # end main
@@ -165,11 +166,14 @@ sub handle_request {
   my %parameters = %{$ref_parameters};
 #### Define some generic varibles
   my ($i,$element,$key,$value,$line,$result,$sql);
-	my @rows;
+  my @rows;
+	
+  $current_contact_id = $sbeams->getCurrent_contact_id();
 
+	 
 #### Show current user context information
   $sbeams->printUserContext();
-  $current_contact_id = $sbeams->getCurrent_contact_id();
+ 
 
 #### Get information about the current project from the database
   $sql = qq~
@@ -190,7 +194,7 @@ sub handle_request {
     ($project_id,$project_name,$project_tag,$project_status,$PI_contact_id) = @{$rows[0]};
   }
   my $PI_name = $sbeams->getUsername($PI_contact_id);
-
+  
 
 #### If the current user is not the owner, the check that the
 #### user has privilege to access this project
@@ -208,9 +212,12 @@ sub handle_request {
 	print qq~	<TABLE WIDTH="100%" BORDER=0> ~;
 #loading the default page (Intro)
 my $sub = $actionHash{$action} || $actionHash{$INTRO};
-if ($sub) {
+
+
+if ($sub )  {
 		#print some info about this project
 		#only on the main page
+		
 		print qq~
 				<H1>Current Project: <A class="h1" HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=$project_id">$project_name</A></H1>
 				<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
@@ -220,19 +227,24 @@ if ($sub) {
 				<TR><TD></TD><TD COLSPAN="2"><B>Access Privileges:</B> <A HREF="$CGI_BASE_DIR/ManageProjectPrivileges">[View/Edit]</A></TD></TR>
 				<TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
 	      <TD WIDTH="100%"><TABLE BORDER=0>
-		~ if $action eq '_displayIntro' || !$action;
+		  ~ if ($action eq '_displayIntro' || !$action) ;
 		checkGO();
 #### If the project_id wasn't reverted to -99, display information about it
-		if ($project_id == -99) {
+		if ($project_id == -99) 
+		{
 			print "	<TR><TD WIDTH=\"100%\">You do not have access to this project.  Contact the owner of this project if you want to have access.</TD></TR>\n";
-		} else {
+		}
+		else
+		{
 			&$sub(ref_parameters=>\%parameters,project_id=>$project_id);
 		}
+		
 #could not find a sub
-	} else {
-		print_fatal_error("Could not find the specified routine: $sub");
 	}
-
+	else {
+		print_fatal_error("Could not find the specified routine: $sub");
+	
+	}
 	print "</table>";
 	
 }
@@ -395,18 +407,18 @@ my %tissueHash = $sbeams->selectTwoColumnHash($tissueSql);
 
   ##########################################################################
   #### Print out all projects owned by the user
-	$sbeams->printProjectsYouOwn();
+	$sbeams->printProjectsYouOwn() if $sbeams->getCurrent_contact_id() ne 107;
 
 
 
   ##########################################################################
   #### Print out all projects user has access to
-  $sbeams->printProjectsYouHaveAccessTo();
+  $sbeams->printProjectsYouHaveAccessTo()  if $sbeams->getCurrent_contact_id() ne 107;
 
 
   ##########################################################################
   #### Print out some recent resultsets
-  $sbeams->printRecentResultsets();
+  $sbeams->printRecentResultsets()  if $sbeams->getCurrent_contact_id() ne 107;
 
 
 
@@ -437,10 +449,10 @@ sub displayMain
 	my %parameters = %{$ref_parameters};
 #### Process the arguments list
   	my $project_id = $args{'project_id'} || die "project_id not passed";
-#		foreach my $k (keys %parameters)
-#		{
-#				print "$k  ==== $parameters{$k}<br>";
-#		}
+	#		foreach my $k (keys %parameters)
+	#	{
+	#			print "$k  ==== $parameters{$k} <br>";
+	#	}
 	
 #populate tbe option list based on what the user checked on the intro page		
 my $antibodySql = "select ab.antibody_id, ab.antibody_name from $TBIS_ANTIBODY ab
@@ -489,9 +501,9 @@ where ".buildSqlClause(ref_parameters=>\%parameters) .  "group by ct.cell_type_i
 		my $cellString = join ',', keys %cellOptionHash; 
 #displaying the individual option boxes			
 		print $q->start_form;
-		print qq~ <TR><TD NOWRAP>Summarized Data keyed on  Antibody: </TD><td align=center><Select Name="antibody_id" Size=6 Multiple> <OPTION VALUE = "all">ALL ~;
+		print qq~ <TR><TD NOWRAP width = 300>Summarized Data keyed on  Antibody: </TD><td align=center width = 200><Select Name="antibody_id" Size=6 Multiple> <OPTION VALUE = "all">ALL ~;
 		print "$antibodyOption";
-		print q~</td><td><td><input type ="submit" name= "SUBMIT1" value = "QUERY"></td>~;
+		print q~</td><td><td width = 150><input type ="submit" name= "SUBMIT1" value = "QUERY"></td>~;
 		print "<input type= hidden name=\"action\" value = \"$ANTIBODY\">";
 		print "<input type = hidden name =\"selection\" value = \"$antibodyString\">";
 		print "<input type = hidden name =\"buildClause\" value = \"$buildClause\">";
@@ -923,7 +935,7 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Stain Summary</font
 					
 			}
 #"<tr></tr><tr></tr><tr></tr><tr><td align=left><font color =\"#D60000\"><h5>$antibodyKey
-#				print "<table><tr>\n";
+				
 				my $what = "Mouse";
 				my $loopCount = 0;
 				LOOP:						
@@ -931,7 +943,7 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Stain Summary</font
 				foreach my $keyStain (sort bySortOrder keys %stainSpecimenHash)
 				{
 						next if $stainOrganismHash{$keyStain} eq $what;
-						print "<tr></tr><tr></tr><tr></tr><tr><td align=left><font color =\"D60000\">&nbsp;&nbsp;&nbsp;<h5>$keyStain</h5></font></td></tr>";
+						print "</td><tr></tr><tr></tr><tr></tr><tr><td align=left><font color =\"D60000\">&nbsp;&nbsp;&nbsp;<h5>$keyStain</h5></font></td></tr>";
 						print "<tr><td align=left><b>Species:</b></td><td align=left>&nbsp;&nbsp;&nbsp;$stainOrganismHash{$keyStain}</td></tr>";
 						print "<tr><td align=left><b>Tissue Type:</b></td><td align=left>&nbsp;&nbsp;&nbsp; $stainTissueHash{$keyStain}</td></tr>";
 						print "<tr><td align=left><b>PreparationDate:</b></td><td align=left>&nbsp;&nbsp;&nbsp;$stainDateHash{$keyStain}</td></tr>";
@@ -952,21 +964,30 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Stain Summary</font
 								
 								foreach my $tissueKey(keys %{$stainSpecimenHash{$keyStain}->{$specimenKey}})
 								{
-									my $record = $stainSpecimenHash{$keyStain}->{$specimenKey}->{$tissueKey};	
-									print "<tr><td align=left><b>Tissue Name:</b></td><td>&nbsp;&nbsp;&nbsp;$tissueKey</td><td><b>Tissue Desc:</b></td><td align=center>&nbsp;&nbsp;&nbsp;$record->{tissueDesc}</td></tr>";
-									print "<tr><td align=left><b>Clinical Diagnosis:</b></td><td>&nbsp;&nbsp;&nbsp;$record->{diagnosis}</td>";
-									print "<td><b>Diagnosis Desc</b></td><td align=center>&nbsp;&nbsp;&nbsp;$record->{diagnosisDesc}</td>" unless ($record->{diagnosisDesc}=~/please describe/i or !($record->{diagnosisDesc}));;
-									print "</tr>";
-									print "<tr><td align=left><b>Surgical Procedure:</b></td><td>&nbsp;&nbsp;&nbsp;$record->{surgical}</td>";
-									print "<td><b>Surgical Desc:</b></td><td align=center>&nbsp;&nbsp;&nbsp;$record->{surgicalDesc}</td>" unless ($record->{surgicalDesc} =~/please describe/i or !($record->{surgicalDesc}));		
-									print "</tr>";
-									print "<tr><td align=left><b>Amount of Cancer:</b></td><td>&nbsp;&nbsp;&nbsp;$record->{cancerCC} cc</td> </tr>" if $record->{cancerCC};
+									if ($stainTissueHash{$keyStain} =~ /prostate/i)
+									{
+										my $record = $stainSpecimenHash{$keyStain}->{$specimenKey}->{$tissueKey};	
+										print "<tr><td align=left><b>Tissue Name:</b></td><td>&nbsp;&nbsp;&nbsp;$tissueKey</td><td><b>Tissue Desc:</b></td><td align=center>&nbsp;&nbsp;&nbsp;$record->{tissueDesc}</td></tr>";
+										print "<tr><td align=left><b>Clinical Diagnosis:</b></td><td>&nbsp;&nbsp;&nbsp;$record->{diagnosis}</td>";
+										print "<td><b>Diagnosis Desc</b></td><td align=center>&nbsp;&nbsp;&nbsp;$record->{diagnosisDesc}</td>" unless ($record->{diagnosisDesc}=~/please describe/i or !($record->{diagnosisDesc}));;
+										print "</tr>";
+										print "<tr><td align=left><b>Surgical Procedure:</b></td><td>&nbsp;&nbsp;&nbsp;$record->{surgical}</td>";
+										print "<td><b>Surgical Desc:</b></td><td align=center>&nbsp;&nbsp;&nbsp;$record->{surgicalDesc}</td>" unless ($record->{surgicalDesc} =~/please describe/i or !($record->{surgicalDesc}));		
+										print "</tr>";
+										print "<tr><td align=left><b>Amount of Cancer:</b></td><td>&nbsp;&nbsp;&nbsp;$record->{cancerCC} cc</td> </tr>" if $record->{cancerCC};
+									}
+									else 
+									{
+										print "<tr><td></td></tr>";
+									}
 								}
 						}	
 						
 			
 				if ( $stainSpecimenBlockHash{$keyStain})
 				{
+					if ($stainTissueHash{$keyStain}=~ /prostate/i)
+					{
 							print qq~ <tr><td align=left><b>SpecimenBlock:</B></td>
 						<td align=left><b>Name</b></td>~;
 						print q~ <td align=center><B>Level</B></td><td align=center><b>Laterality</b></td>
@@ -980,7 +1001,12 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Stain Summary</font
 											   <td align=center>$stainSpecimenBlockHash{$keyStain}->{$specimenBlockKey}->{laterality}</td>
 												 <td align=center>$stainSpecimenBlockHash{$keyStain}->{$specimenBlockKey}->{side}</td></tr>~;
 						}
-						
+					}
+					else 
+					{
+						print "<tr><td width =350> </td></tr>";
+					}
+					
 				}	
 				
 				print "<tr><td align=left><b>Available Images:</b></td>" if $stainImageHash{$keyStain};
@@ -992,7 +1018,7 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Stain Summary</font
 								my $flag = $imageFlagHash{$imageKey};
 								my $imageID = $imageHash{$imageKey};
 								print "<tr><td></td>" if $line != 1;
-								print qq~ <td>&nbsp;&nbsp;&nbsp;$imageKey</td><td>&nbsp;&nbsp;&nbsp;<A HREF ="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_slide_image&slide_image_id=$imageID&GetFile=$flag"TARGET=image>$magnification x </A></td></tr>~;
+								print qq~ <td width=200>&nbsp;&nbsp;&nbsp;$imageKey</td><td>&nbsp;&nbsp;&nbsp;<A HREF ="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_slide_image&slide_image_id=$imageID&GetFile=$flag"TARGET=image>$magnification x </A></td></tr>~;
 								$line ++;
 						}
 						
@@ -1017,6 +1043,7 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Stain Summary</font
 				$what = "Human";
 				goto LOOP if $loopCount ==1;
 		}		
+	
 }
 
 #when processing the cell type, the user is redirected to SummarizeStains
