@@ -894,8 +894,8 @@ sub processEntryForm {
         }
 
         #### If the column name ends in _tag, insist upon alphanumeric
-        #### characters only
-        if ($element =~ /\_tag$/ && $parameters{$element} =~ /\W/) {
+        #### characters only or period okay
+        if ($element =~ /\_tag$/ && $parameters{$element} !~ /^[\w\.\-]+$/) {
           $error_message .= "<LI> The field <B>$element</B> is required ".
             "to be a short name that might be used for a file or directory ".
             "and may not have any non-alphanumeric characters.  Please ".
