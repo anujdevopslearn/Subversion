@@ -30,8 +30,9 @@ production databases.  You can work on this code without fear of
 affecting other users.  When it is debugged and ready, it can be
 checked into CVS and rolled out to the production instance.</P>
 
-<P>You will typically been assigned a devN number like dev4 as your
-SBEAMS development instance.  Assuming dev4, here's how to use your
+<P>You will typically been assigned a DevXX area where XX are your
+first and last initials or a devN number like dev4 as your SBEAMS
+development instance.  Assuming dev4, here's how to use your
 instance.</P>
 
 
@@ -51,10 +52,10 @@ files in:</P>
 <PRE>
 /net/dblocal/www/html/dev4/sbeams/cgi/MODULE/
 /net/dblocal/www/html/dev4/sbeams/doc/MODULE/
-/net/dblocal/www/html/dev4/sbeams/lib/perl/conf/MODULE/
+/net/dblocal/www/html/dev4/sbeams/lib/conf/MODULE/
 /net/dblocal/www/html/dev4/sbeams/lib/perl/SBEAMS/MODULE/
-/net/dblocal/www/html/dev4/sbeams/lib/perl/scripts/MODULE/
-/net/dblocal/www/html/dev4/sbeams/lib/perl/sql/MODULE/
+/net/dblocal/www/html/dev4/sbeams/lib/scripts/MODULE/
+/net/dblocal/www/html/dev4/sbeams/lib/sql/MODULE/
 </PRE>
 
 
@@ -90,7 +91,7 @@ cvs commit newfilename.ext
 <P>The cgi/MODULE directory contains the actual web programs that the user
 executes.</P>
 
-<P>The lib/perl/SBEAMS/SNP directory contains perl modules that contain:</P>
+<P>The lib/perl/SBEAMS/MODULE directory contains perl modules that contain:</P>
 <PRE>
   HTMLPrinter - Methods that controls the HTML style and interface
   Tables      - Definition of table names
