@@ -1654,6 +1654,28 @@ sub updateSearchResults {
 		   AND biosequence_name = '$prot'
             ~;
 
+          #### Otherwise if it's an old IPI, do a temporary fix.  REMOVE ME
+          } elsif ($prot =~ /IPI:(IPI\d+)\.\d+/) {
+            $prot = $1;
+            $sql = qq~
+		SELECT biosequence_id,biosequence_name
+		  FROM $TBPR_BIOSEQUENCE BS
+		 WHERE biosequence_set_id = '$data[$i]->{biosequence_set_id}'
+		   AND biosequence_name = '$prot'
+            ~;
+
+
+          #### Otherwise if it's an IPI, do a temporary fix.  REMOVE ME
+          } elsif ($prot =~ /IPI\d/) {
+            #$prot = "IPI:$prot";
+            $sql = qq~
+		SELECT biosequence_id,biosequence_name
+		  FROM $TBPR_BIOSEQUENCE BS
+		 WHERE biosequence_set_id = '$data[$i]->{biosequence_set_id}'
+		   AND biosequence_gene_name = '$prot'
+            ~;
+
+
           #### Otherwise guess that it might be a truncated Reference?
           } else {
             $sql = qq~
@@ -1946,7 +1968,7 @@ sub updateTimingInfo {
     my $source_file = "$experiment_path/$fraction_tag.nfo";
 
     #### If the file is a relative path, prefix with $prefix or $RAW_DATA_DIR
-    unless ($source_file =~ /^\//) {
+    unless (-e $source_file) {
       $source_file = "$RAW_DATA_DIR{Proteomics}/$source_file";
     }
 
