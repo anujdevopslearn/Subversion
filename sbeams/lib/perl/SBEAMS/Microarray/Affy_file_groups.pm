@@ -479,7 +479,7 @@ sub get_all_affy_info_sql{
 	my %args = @_;
 	
 	unless ($args{affy_array_ids} ){
-		confess(__PACKAGE__ . "::$method Need to provide key value pairs 'affy_array_ids' => 'a_ref' ");
+		confess(__PACKAGE__ . "::$method Need to provide key value pairs 'affy_array_ids' => 'string of csv affy_array_id(s)' ");
 	}
 
  	my $array_ids =  $args{affy_array_ids}; #pass in a string of comma delimited affy array ids
