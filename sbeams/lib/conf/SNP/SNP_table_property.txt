@@ -5,3 +5,4 @@ SN_BrowseBioSequence	Browse BioSequence	QUERY		NA	NA		BrowseBioSequence.cgi
 SN_snp_source	SNP Source	SNP	YES	$TBSN_SNP_SOURCE	snp_source_id		ManageTable.cgi?TABLE_NAME=SN_snp_source	SN_snp_source	
 SN_BrowseSNPHit	Browse SNP Hits	QUERY		NA	NA		BrowseSNPHit.cgi		
 SN_source_version	Source Version	SNP	YES	$TBSN_SOURCE_VERSION	source_version_id		ManageTable.cgi?TABLE_NAME=SN_source_version	SN_source_version	
+SN_biosequence_rank_list	Biosequence Rank List	SNP	YES	$TBSN_BIOSEQUENCE_RANK_LIST	biosequence_rank_list_id		ManageTable.cgi?TABLE_NAME=SN_biosequence_rank_list		
