@@ -341,17 +341,16 @@ sub printEntryForm {
   my $workGroupsRef = $sbeams->getTableGroups( %subargs, privilege => 10000 );
   print getWorkGroupJavascript( $workGroupsRef, $parameters{TABLE_NAME} );
 
-  # FIXME When a user has no project, they end up with project_id = 0!
-  if ( defined $parent_project_id ) { # Project security has priority
+  if ( $parent_project_id ) { # Project security has priority
     $log->debug ( "Found parent project ID = $parent_project_id" );
 
     $projectAuthLevel = $sbeams->calculateProjectPermission( %subargs );
-    $log->error( $projectAuthLevel );
     # check group associations 
+    $log->warn( "got permission $projectAuthLevel" );
 
-    my $bestpriv = getBestGroupPermission( $workGroupsRef );
+    my $bestpriv = $sbeams->getBestGroupPermission( $workGroupsRef );
     if ( $bestpriv <= $projectAuthLevel ) {
-      $projectAuthLevel = $bestpriv;
+       # $projectAuthLevel = $bestpriv;
     }
 
   } else { # Table (Mode 1) Permissions are king
@@ -361,11 +360,12 @@ sub printEntryForm {
 
     $tableAuthLevel = $sbeams->calculateTablePermission( %subargs );
 
-    my $bestpriv = getBestGroupPermission( $workGroupsRef );
+    my $bestpriv = $sbeams->getBestGroupPermission( $workGroupsRef );
     if ( $bestpriv <= $tableAuthLevel ) {
       $tableAuthLevel = $bestpriv;
     }
   }
+$log->warn( "We are outta there" );
 
 # Prints the group/project selection widgets.
   $sbeams->printUserContext();
@@ -1851,13 +1851,14 @@ sub processEntryForm {
     );
 
     # Execute the SQL statement extract status and PK from result
-    @returned_information = $sbeams->applySqlChange(
+    # @returned_information = $sbeams->applySqlChange(
+    @returned_information = $sbeams->applySQLChange(
       SQL_statement => $sql_query,
       current_contact_id => $current_contact_id,
       table_name => $TABLE_NAME,
       record_identifier => "$PK_COLUMN_NAME=$parameters{$PK_COLUMN_NAME}",
       PK_column_name => $PK_COLUMN_NAME,
-      parent_project_id => $parent_project_id,
+      parent_project_id => $parent_project_id
     );
 
 
@@ -3015,6 +3016,7 @@ sub getBestGroupPermission {
   my $groupref = shift;
   my $min = 999;
   foreach my $group ( @{$groupref} ) {
+#$log->warn( "Group is $$group[0], best is $min");
     next if $$group[0] =~ /^Admin$/i;
     $min = ( $$group[2] > $min ) ? $min : $$group[2];
   }
