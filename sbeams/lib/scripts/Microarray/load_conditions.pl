@@ -395,10 +395,19 @@ sub insertGeneExpression {
     $sql = "DELETE FROM $TBMA_GENE_EXPRESSION WHERE gene_expression_id='$gene_expression_id'";
     $sbeams->executeSQL($sql);
   }
-    
-  ## Define Transform Map
-  my %transform_map = ('1000'=>sub{return $condition_id;});
 
+  ## Define Transform Map
+  my $full_name_column;
+  foreach my $key (keys %column_map) {
+    if ($column_map{$key} eq "full_name") {
+      $full_name_column = $key;
+    }
+  }
+
+  my %transform_map = (
+		       '1000'=>sub{return $condition_id;},
+		       $full_name_column=>sub{return substr shift @_ ,0,255;} 
+		       );
 
   ## For debugging purposes, we can print out the column mapping
   if ($VERBOSE >= 0) {
@@ -810,9 +819,9 @@ sub getHeaderHash {
     %hash = ('GENE_NAME'=>'gene_name',
 	     'gene_name'=>'full_name',
 	     'gene_symbol'=>'common_name',
-	     'external_id'=>'canonical_name',
-	     'operon_oligo_ID'=>'reporter_name'
+	     'operon_oligo_ID'=>['reporter_name','canonical_name']
 	     );
+#	     'external_id'=>'canonical_name',
   }elsif ($organism eq "human") {
     %hash = ('GENE_NAME'=>['reporter_name','gene_name'],
 	     'gene_name'=>'full_name',
