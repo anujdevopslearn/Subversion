@@ -194,9 +194,11 @@ sub handle_request {
 
   #### Display the user-interaction input form
   $sbeams->display_input_form(
-    TABLE_NAME=>$TABLE_NAME,CATEGORY=>$CATEGORY,apply_action=>$apply_action,
+    TABLE_NAME=>$TABLE_NAME,
+    CATEGORY=>$CATEGORY,
+    apply_action=>$apply_action,
     #PROGRAM_FILE_NAME=>$PROGRAM_FILE_NAME,
-    PROGRAM_FILE_NAME=>"http://db.systemsbiology.net:8080/cytoscape/sbeamsTest",
+    PROGRAM_FILE_NAME=>"http://db.systemsbiology.net/cytoscape/sbeamsTest",
     #PROGRAM_FILE_NAME=>"http://hazel.systemsbiology.net:8080/cytoscape/sbeamsTest",
     #PROGRAM_FILE_NAME=>"$SERVER_BASE_DIR/cgi-bin/printenv",
     parameters_ref=>\%parameters,
