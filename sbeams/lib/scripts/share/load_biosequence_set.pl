@@ -211,7 +211,7 @@ sub handleRequest {
   #### Get the file_prefix if it was specified, and otherwise guess
   unless ($file_prefix) {
     my $module = $sbeams->getSBEAMS_SUBDIR();
-    $file_prefix = '/regis' if ($module eq 'Proteomics');
+    #$file_prefix = '/regis' if ($module eq 'Proteomics');
   }
 
 
