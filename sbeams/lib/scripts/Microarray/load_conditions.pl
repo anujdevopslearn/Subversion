@@ -11,17 +11,29 @@
 #
 # Notes       : A sample column_map file is:
 #
-# mapped_file = NULL_vs_CONTROL.clone
-# delimiter = \t
-# condition = NULL_VS_CONTROL
-# gene_name = 30
-# second_name = 0
-# log10_ratio = 4
-# log10_std_deviation = 5
-# lambda = 20
-# mu_x = 18
-# mu_y = 19
+# #### SBEAMS gene_expression bulk loader column mapping file
 #
+# #### File name of the source data.  Either absolute or relative to the
+# ####   location of the mapfile
+# mapped_file=prostate_vs_bladder.clone
+#
+# condition=prostate_vs_bladder
+#
+# delimiter = \t
+#
+# #### List of <database_column_name>=<file_column_number>, 0 indexed.  e.g.:
+# #### reporter_name=0
+# reporter_name=0
+# full_name=45
+# canonical_name=40
+# common_name=46
+# gene_name=0
+# external_identifier=40
+# log10_ratio=4
+# log10_std_deviation = 5
+# lambda = 26
+# mu_X = 24
+# mu_Y = 25
 ###############################################################################
 
 
@@ -36,9 +48,9 @@ use FindBin;
 use lib qw (../perl ../../perl);
 use vars qw ($sbeams $sbeamsMOD $q
              $PROG_NAME $USAGE %OPTIONS 
-	     $VERBOSE $QUIET $DEBUG 
-	     $DATABASE $TESTONLY $PROJECT_ID 
-	     $CURRENT_CONTACT_ID $CURRENT_USERNAME 
+						 $VERBOSE $QUIET $DEBUG 
+						 $DATABASE $TESTONLY $PROJECT_ID 
+						 $CURRENT_CONTACT_ID $CURRENT_USERNAME 
             );
 
 
