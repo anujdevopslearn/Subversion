@@ -105,9 +105,9 @@ sub main {
   if ($parameters{action} eq "???") {
     # Some action
   } else {
-    $sbeamsMOD->display_page_header();
+    $sbeamsMOD->printPageHeader();
     handle_request(ref_parameters=>\%parameters);
-    $sbeamsMOD->display_page_footer();
+    $sbeamsMOD->printPageFooter();
   }
 
 
