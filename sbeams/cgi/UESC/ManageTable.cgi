@@ -110,7 +110,7 @@ sub main {
 
   #### Do the SBEAMS authentication and exit if a username is not returned
   exit unless ($current_username = $sbeams->Authenticate(
-    permitted_work_groups_ref=>['UESC_user','UESC_admin','Admin'],
+    permitted_work_groups_ref=>['UESC_user','UESC_admin','Admin','UESC_readonly'],
     #connect_read_only=>1,
     #allow_anonymous_access=>1,
   ));

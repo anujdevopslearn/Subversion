@@ -58,7 +58,7 @@ sub main {
     exit unless ($current_username = $sbeams->Authenticate(
       #connect_read_only=>1,
       #allow_anonymous_access=>1,
-      permitted_work_groups_ref=>['UESC_user','UESC_admin','Admin'],
+      permitted_work_groups_ref=>['UESC_user','UESC_admin','Admin','UESC_readonly'],
     ));
 
     #### Print the header, do what the program does, and print footer
