@@ -583,7 +583,7 @@ sub writePeptide {
   }
 
 
-  print "\n\n";
+  print "\n\n" if ($VERBOSE);
 
 }
 
