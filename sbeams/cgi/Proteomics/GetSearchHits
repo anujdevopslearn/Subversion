@@ -1,0 +1,811 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : GetSearchHits
+# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
+# $Id$
+#
+# Description : This program that allows users to
+#               access search hits in the Proteomics database.
+#
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+
+use lib qw (../../lib/perl);
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+
+use SBEAMS::Connection;
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+
+use SBEAMS::Proteomics;
+use SBEAMS::Proteomics::Settings;
+use SBEAMS::Proteomics::Tables;
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::Proteomics;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+
+use CGI;
+use CGI::Carp qw(fatalsToBrowser croak);
+$q = new CGI;
+
+
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = "get_annotation";
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value kay=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main();
+exit(0);
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    #connect_read_only=>1,allow_anonymous_access=>1
+  ));
+
+
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters);
+  #$sbeams->printDebuggingInfo($q);
+
+
+  #### Decide what action to take based on information so far
+  if ($parameters{action} eq "???") {
+    # Some action
+  } else {
+    $sbeamsMOD->display_page_header();
+    handle_request(ref_parameters=>\%parameters);
+    $sbeamsMOD->display_page_footer();
+  }
+
+
+} # end main
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request {
+  my %args = @_;
+
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+
+
+  #### Define some generic varibles
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+  #### Define some variables for a query and resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+
+  #### Read in the standard form values
+  my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+
+  #### Set some specific settings for this program
+  my $CATEGORY="Browse Search Hits";
+  $TABLE_NAME="PR_GetSearchHits" unless ($TABLE_NAME);
+  ($PROGRAM_FILE_NAME) =
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+
+
+  #### Get the columns and input types for this table/query
+  my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
+  my %input_types = 
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
+
+
+  #### Read the input parameters for each column
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters,
+    columns_ref=>\@columns,input_types_ref=>\%input_types);
+
+
+  #### If the apply action was to recall a previous resultset, do it
+  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+  if ($apply_action eq "VIEWRESULTSET") {
+    $sbeams->readResultSet(resultset_file=>$rs_params{set_name},
+        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters);
+    $n_params_found = 99;
+  }
+
+
+  #### Set some reasonable defaults if no parameters supplied
+  unless ($n_params_found) {
+    if ($TABLE_NAME eq "PR_GetSearchHits") {
+      $parameters{xcorr_charge1} = ">4.0";
+      $parameters{xcorr_charge2} = ">4.5";
+      $parameters{xcorr_charge3} = ">5.0";
+      $parameters{sort_order} = "experiment_tag,set_tag,S.file_root,SH.cross_corr_rank,SH.hit_index";
+    }
+  }
+
+
+  #### Apply any parameter adjustment logic
+  #### If this is a PR_GetSearch query and sort_order is undefined (not just ""),
+  #### then set to a likely default
+  if (($TABLE_NAME eq "PR_GetSearch") && (!defined($parameters{sort_order})) ) {
+    $parameters{sort_order} =
+      "S.file_root,experiment_tag,set_tag,SH.cross_corr_rank,SH.hit_index";
+  }
+
+
+  #### Display the user-interaction input form
+  $sbeams->display_input_form(
+    TABLE_NAME=>$TABLE_NAME,CATEGORY=>$CATEGORY,apply_action=>$apply_action,
+    PROGRAM_FILE_NAME=>$PROGRAM_FILE_NAME,
+    parameters_ref=>\%parameters,
+    input_types_ref=>\%input_types,
+    mask_user_context => 1,
+  );
+
+
+  #### Display the form action buttons
+  $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
+
+
+  #### Finish the upper part of the page and go begin the full-width
+  #### data portion of the page
+  $sbeams->display_page_footer(close_tables=>'YES',
+    separator_bar=>'YES',display_footer=>'NO');
+
+
+
+  #########################################################################
+  #### Process all the constraints
+
+  #### Build SEARCH BATCH / EXPERIMENT constraint
+  my $search_batch_clause = "";
+  if ($parameters{search_batch_id}) {
+    $search_batch_clause = "   AND SB.search_batch_id IN ( $parameters{search_batch_id} )";
+  }
+
+
+  #### Build PROBABILITY constraint
+  my $probability_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SH.probability",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Probability Constraint",
+    constraint_value=>$parameters{probability_constraint} );
+  return if ($probability_clause == -1);
+
+
+  #### Build XCORR constraint
+  my $xcorr_clause = "";
+  my ($icharge,$xcorr);
+  for ($icharge=1;$icharge<4;$icharge++) {
+    $xcorr = $parameters{"xcorr_charge$icharge"};
+    if ($xcorr) {
+      if ($xcorr =~ /^[\d\.]+$/) {
+        $xcorr_clause .= "	    OR ( S.assumed_charge = $icharge AND SH.cross_corr = $xcorr )\n";
+      } elsif ($xcorr =~ /^between\s+[\d\.]+\s+and\s+[\d\.]+$/i) {
+        $xcorr_clause .= "	    OR ( S.assumed_charge = $icharge AND SH.cross_corr $xcorr )\n";
+      } elsif ($xcorr =~ /^[><=][=]*\s*[\d\.]+$/) {
+        $xcorr_clause .= "	    OR ( S.assumed_charge = $icharge AND SH.cross_corr $xcorr )\n";
+      } else {
+        print "<H4>Cannot parse XCorr Constraint $icharge!  Check syntax.</H4>\n\n";
+        return;
+      }
+    }
+  }
+  if ($xcorr_clause) {
+    $xcorr_clause =~ s/^\s+OR/ AND \(/;
+    $xcorr_clause .= "	     )\n";
+  }
+
+
+  #### Build FILE_ROOT constraint
+  my $file_root_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"S.file_root",
+    constraint_type=>"plain_text",
+    constraint_name=>"file_root",
+    constraint_value=>$parameters{file_root_constraint} );
+  return if ($file_root_clause == -1);
+
+
+  #### Build BEST_HIT constraint
+  my $best_hit_clause = "";
+  if ($parameters{best_hit_constraint}) {
+    if ($parameters{best_hit_constraint} =~ /Any/i) {
+      $best_hit_clause = "   AND best_hit_flag > ''";
+    } elsif ($parameters{best_hit_constraint} =~ /User/i) {
+      $best_hit_clause = "   AND best_hit_flag = 'U'";
+    } elsif ($parameters{best_hit_constraint} =~ /Default/i) {
+      $best_hit_clause = "   AND best_hit_flag = 'D'";
+    }
+  }
+
+
+  #### Build XCORR_RANK constraint
+  my $xcorr_rank_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SH.cross_corr_rank",
+    constraint_type=>"flexible_int",
+    constraint_name=>"XCorr Rank",
+    constraint_value=>$parameters{xcorr_rank_constraint} );
+  return if ($xcorr_rank_clause == -1);
+
+
+  #### Build CHARGE constraint
+  my $charge_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"S.assumed_charge",
+    constraint_type=>"int_list",
+    constraint_name=>"Charge",
+    constraint_value=>$parameters{charge_constraint} );
+  return if ($charge_clause == -1);
+
+
+  #### Build REFERENCE PROTEIN constraint
+  my $reference_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SH.reference",
+    constraint_type=>"plain_text",
+    constraint_name=>"Reference",
+    constraint_value=>$parameters{reference_constraint} );
+  return if ($reference_clause == -1);
+
+
+  #### Build PROTEIN DESCRIPTION constraint
+  my $description_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.biosequence_desc",
+    constraint_type=>"plain_text",
+    constraint_name=>"Protein Description",
+    constraint_value=>$parameters{description_constraint} );
+  return if ($description_clause == -1);
+
+
+  #### Build PEPTIDE constraint
+  my $peptide_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SH.peptide",
+    constraint_type=>"plain_text",
+    constraint_name=>"Peptide",
+    constraint_value=>$parameters{peptide_constraint} );
+  return if ($peptide_clause == -1);
+
+
+  #### Build PEPTIDE STRING constraint
+  my $peptide_string_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SH.peptide_string",
+    constraint_type=>"plain_text",
+    constraint_name=>"Peptide String",
+    constraint_value=>$parameters{peptide_string_constraint} );
+  return if ($peptide_string_clause == -1);
+
+
+  #### Build PRECURSOR MASS constraint
+  my $precursor_mass_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"(S.sample_mass_plus_H+(S.assumed_charge-1)*1.008)/S.assumed_charge",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Precursor_Mass Constraint",
+    constraint_value=>$parameters{precursor_mass_constraint} );
+  return if ($precursor_mass_clause == -1);
+
+
+  #### Build MASS constraint
+  my $mass_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SH.hit_mass_plus_H",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Mass Constraint",
+    constraint_value=>$parameters{mass_constraint} );
+  return if ($mass_clause == -1);
+
+
+  #### Build ISOELECTRIC_POINT constraint
+  my $isoelectric_point_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"isoelectric_point",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Isoelectric Point",
+    constraint_value=>$parameters{isoelectric_point_constraint} );
+  return if ($isoelectric_point_clause == -1);
+
+
+
+  #### Build ANNOTATION_STATUS and ANNOTATION_LABELS constraint
+  my $annotation_status_clause = "";
+  my $annotation_label_clause = "";
+
+  if ($parameters{annotation_label_id}) {
+    if ($parameters{annotation_status_id} eq 'Annot') {
+      $annotation_label_clause = "   AND SHA.annotation_label_id IN ( $parameters{annotation_label_id} )";
+    } elsif ($parameters{annotation_status_id} eq 'UNAnnot') {
+      $annotation_status_clause = "   AND SHA.annotation_label_id IS NULL";
+      $annotation_label_clause = "";
+      print "WARNING: Annotation status and Annotation label constraints conflict!<BR>\n";
+    } else {
+      $annotation_label_clause = "   AND ( SHA.annotation_label_id IN ( $parameters{annotation_label_id} ) ".
+        "OR SHA.annotation_label_id IS NULL )";
+    }
+
+
+  } else {
+    if ($parameters{annotation_status_id} eq 'Annot') {
+      $annotation_status_clause = "   AND SHA.annotation_label_id IS NOT NULL";
+    } elsif ($parameters{annotation_status_id} eq 'UNAnnot') {
+      $annotation_status_clause = "   AND SHA.annotation_label_id IS NULL";
+    } else {
+      #### Nothing
+    }
+
+  }
+
+
+  #### Build QUANTITATION constraint
+  my $quantitation_clause = "";
+  if ($parameters{quantitation_constraint}) {
+    if ($parameters{quantitation_constraint} =~ /^[\d\.]+$/) {
+      $quantitation_clause = "   AND d0_intensity/ISNULL(NULLIF(d8_intensity,0),0.01) = $parameters{quantitation_constraint}";
+    } elsif ($parameters{quantitation_constraint} =~ /^between\s+[\d\.]+\s+and\s+[\d\.]+$/i) {
+      $quantitation_clause = "   AND d0_intensity/ISNULL(NULLIF(d8_intensity,0),0.01) $parameters{quantitation_constraint}";
+    } elsif ($parameters{quantitation_constraint} =~ /^[><=][=]*\s*[\d\.]+$/) {
+      $quantitation_clause = "   AND d0_intensity/ISNULL(NULLIF(d8_intensity,0),0.01) $parameters{quantitation_constraint}";
+    } else {
+      print "<H4>Cannot parse Quantitation Constraint!  Check syntax.</H4>\n\n";
+      return;
+    }
+  }
+
+
+  #### Build QUANTITATION FORMAT
+  my $quant_format_clause = "";
+  $parameters{quantitation_format} = "d81" unless $parameters{quantitation_format};
+  if ($parameters{quantitation_format}) {
+    if ($parameters{quantitation_format} eq "raw") {
+      $quant_format_clause = "STR(d0_intensity,5,2) + ':' + STR(d8_intensity,5,2) + ".
+        "(CASE WHEN QUAN.date_modified != QUAN.date_created THEN ' *' ELSE '' END)";
+    } elsif ($parameters{quantitation_format} eq "High1") {
+      $quant_format_clause = "(CASE WHEN d0_intensity > d8_intensity ".
+        "THEN '1 : ' + STR(d8_intensity/ISNULL(NULLIF(d0_intensity,0.0),0.001),5,2) ".
+        "ELSE STR(d0_intensity/ISNULL(NULLIF(d8_intensity,0.0),0.001),4,2) + ' : 1' ".
+        "END) + ".
+        "ISNULL(manually_changed,'')";
+    } elsif ($parameters{quantitation_format} eq "d01") {
+      $quant_format_clause = "'1 :' + STR(d8_intensity/ISNULL(NULLIF(d0_intensity,0.0),0.001),5,2) + ".
+        "ISNULL(manually_changed,'')";
+    } elsif ($parameters{quantitation_format} eq "d81") {
+      $quant_format_clause = "STR(d0_intensity/ISNULL(NULLIF(d8_intensity,0.0),0.001),5,2) + ': 1' + ".
+        "ISNULL(manually_changed,'')";
+    } elsif ($parameters{quantitation_format} eq "decimal") {
+      $quant_format_clause = "STR(d0_intensity/ISNULL(NULLIF(d8_intensity,0.0),0.001),10,4) + ".
+        "ISNULL(manually_changed,'')";
+    } elsif ($parameters{quantitation_format} eq "decimalplain") {
+      $quant_format_clause = "STR(d0_intensity/ISNULL(NULLIF(d8_intensity,0.0),0.001),10,4)";
+    } else {
+      print "<H4>Cannot parse Quantitation Format!  Check syntax.</H4>\n\n";
+      return;
+    }
+  }
+
+
+
+
+  #### Build SORT ORDER
+  my $order_by_clause = "";
+  if ($parameters{sort_order}) {
+    if ($parameters{sort_order} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
+      print "<H4>Cannot parse Sort Order!  Check syntax.</H4>\n\n";
+      return;
+    } else {
+      $order_by_clause = " ORDER BY $parameters{sort_order}";
+    }
+  }
+
+
+  #### Build Additional peptide constraints
+  my $second_peptide_clause = "";
+  if ($parameters{peptide_options}) {
+    if ($parameters{peptide_options} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
+      print "<H4>Cannot parse Peptide Options!  Check syntax.</H4>\n\n";
+      return;
+    } else {
+      my $C = "";
+      $C = "C" if ( $parameters{peptide_options} =~ /C_containing/ );
+      if ( $parameters{peptide_options} =~ /DoublyTryptic/ ) {
+        $second_peptide_clause = "   AND SH.peptide_string LIKE '[RK].%${C}%[RK]._'";
+      } elsif ( $parameters{peptide_options} =~ /SinglyTryptic/ ) {
+        $second_peptide_clause = "   AND ( SH.peptide_string LIKE '[RK].%${C}%._' OR ".
+                                          "SH.peptide_string LIKE '_.%${C}%[RK]._' )";
+      } else {
+        $second_peptide_clause = "   AND SH.peptide_string LIKE '_.%${C}%._'";
+      }
+    }
+  }
+
+
+  #### Build ROWCOUNT constraint
+  $parameters{row_limit} = 5000;
+    ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
+  my $limit_clause = "TOP $parameters{row_limit}";
+
+
+  #### Define some variables needed to build the query
+  my $group_by_clause = "";
+  my $final_group_by_clause = "";
+  my @column_array;
+  my $peptide_column = "";
+  my $count_column = "";
+
+
+  #### Define the desired columns in the query
+  #### [friendly name used in url_cols,SQL,displayed column title]
+  my @column_array = (
+    ["experiment_tag","experiment_tag","Exp"],
+    ["set_tag","set_tag","DB"],
+    ["file_root","S.file_root","file_root"],
+    ["out_file","'.out'",".out"],
+    ["start_scan","MSS.start_scan","scan"],
+    ["best_hit_flag","best_hit_flag","bh"],
+    ["probability","STR(SH.probability,7,3)","Prob"],
+    ["cross_corr_rank","SH.cross_corr_rank","Rxc"],
+    ["prelim_score_rank","SH.prelim_score_rank","RSp"],
+    ["precursor_mass","STR((S.sample_mass_plus_H+(S.assumed_charge-1)*1.008)/S.assumed_charge,7,2) ","Precursor Mass"],
+    ["hit_mass_plus_H","CONVERT(varchar(20),SH.hit_mass_plus_H) + ' (' + STR(SH.mass_delta,5,2) + ')'","(M+H)+"],
+    ["cross_corr","STR(SH.cross_corr,5,4)","XCorr"],
+    ["next_dCn","STR(SH.next_dCn,5,3)","dCn"],
+    ["prelim_score","STR(SH.prelim_score,8,1)","Sp"],
+    ["ions","STR(SH.identified_ions,2,0) + '/' + STR(SH.total_ions,3,0)","Ions"],
+    #["ions_old","STR(SH.identified_ions,2,0) + '/' + STR(SH.total_ions,3,0)","!Ions"],
+    ["reference","reference","Reference"],
+    ["additional_proteins","additional_proteins","N+"],
+    ["additional_proteins_old","additional_proteins","!N+"],
+    ["peptide_string","peptide_string","Peptide"],
+    ["isoelectric_point","STR(isoelectric_point,8,3)","pI"],
+    ["quantitation","$quant_format_clause","Quant"],
+    #["assumed_charge","S.assumed_charge","assumed_charge"],
+    ["annotation_label","label_desc","Annot"],
+    ["search_batch_id","SB.search_batch_id","search_batch_id"],
+    ["msms_spectrum_id","S.msms_spectrum_id","msms_spectrum_id"],
+    ["search_id","S.search_id","search_id"],
+    ["search_hit_id","SH.search_hit_id","search_hit_id"],
+    ["fraction_tag","F.fraction_tag","fraction_tag"],
+    ["data_location","SB.data_location","data_location"],
+    ["peptide","peptide","actual_peptide"],
+    ["biosequence_set_id","BSS.biosequence_set_id","biosequence_set_id"],
+    ["set_path","BSS.set_path","set_path"],
+    ["quantitation_id","QUAN.quantitation_id","quantitation_id"],
+    ["search_hit_annotation_id","SHA.search_hit_annotation_id","search_hit_annotation_id"],
+  );
+
+
+  #### Adjust the columns definition based on user-selected options
+  if ( $parameters{display_options} =~ /BSDesc/ ) {
+    push(@column_array,["biosequence_desc","biosequence_desc","Reference Description"]);
+  }
+  if ( $parameters{display_options} =~ /MaxRefWidth/ ) {
+    $max_widths{'Reference'} = 20;
+  }
+  if ( $parameters{display_options} =~ /ShowSQL/ ) {
+    $show_sql = 1;
+  }
+
+
+  #### Build the columns part of the SQL statement
+  my %colnameidx = ();
+  my @column_titles = ();
+  my $columns_clause = $sbeams->build_SQL_columns_list(
+    column_array_ref=>\@column_array,
+    colnameidx_ref=>\%colnameidx,
+    column_titles_ref=>\@column_titles
+  );
+
+
+  #### Define the SQL statement
+  $sql = qq~
+	SELECT $limit_clause $columns_clause
+	  FROM $TBPR_SEARCH_HIT SH
+	  JOIN $TBPR_SEARCH S ON ( SH.search_id = S.search_id )
+	  JOIN $TBPR_SEARCH_BATCH SB ON ( S.search_batch_id = SB.search_batch_id )
+	  JOIN $TBPR_MSMS_SPECTRUM MSS ON ( S.msms_spectrum_id = MSS.msms_spectrum_id )
+	  JOIN $TBPR_FRACTION F ON ( MSS.fraction_id = F.fraction_id )
+	  JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
+	  JOIN $TBPR_PROTEOMICS_EXPERIMENT PE ON ( F.experiment_id = PE.experiment_id )
+	  LEFT JOIN $TBPR_QUANTITATION QUAN ON ( SH.search_hit_id = QUAN.search_hit_id )
+	  LEFT JOIN $TBPR_BIOSEQUENCE BS ON ( SB.biosequence_set_id = BS.biosequence_set_id AND SH.reference = BS.biosequence_name )
+	  LEFT JOIN $TBPR_SEARCH_HIT_ANNOTATION SHA ON ( SH.search_hit_id = SHA.search_hit_id )
+	  LEFT JOIN $TBPR_ANNOTATION_LABEL AL ON ( SHA.annotation_label_id = AL.annotation_label_id )
+	 WHERE 1 = 1
+	$search_batch_clause
+	$probability_clause
+	$best_hit_clause
+	$xcorr_clause
+	$xcorr_rank_clause
+	$charge_clause
+	$reference_clause
+        $description_clause
+	$peptide_clause
+	$peptide_string_clause
+	$second_peptide_clause
+	$precursor_mass_clause
+	$mass_clause
+	$isoelectric_point_clause
+	$file_root_clause
+	$quantitation_clause
+	$annotation_label_clause
+	$annotation_status_clause
+	$order_by_clause
+       ~;
+
+
+  #### Certain types of actions should be passed to links
+  my $pass_action = "QUERY";
+  $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
+
+  #### Define the hypertext links for columns that need them
+  %url_cols = ('.out' => "$CGI_BASE_DIR/Proteomics/ShowOutFile.cgi?search_id=\%$colnameidx{search_id}V",
+	       '.out_ATAG' => 'TARGET="Win1"',
+      	       'file_root' => "$base_url?QUERY_NAME=PR_GetSearch&search_batch_id=\%$colnameidx{search_batch_id}V&file_root_constraint=\%$colnameidx{file_root}V&apply_action=QUERY",
+	       'file_root_ATAG' => 'TARGET="Win1"',
+               'Reference' => "http://regis/cgi-bin/consensus_html4?Ref=%V&Db=\%$colnameidx{set_path}V&Pep=\%$colnameidx{peptide}V&MassType=0",
+	       'Reference_ATAG' => 'TARGET="Win1"',
+               '!Ions' => "http://regis/cgi-bin/displayions_html5?Dta=/data/search/\%$colnameidx{data_location}V/\%$colnameidx{fraction_tag}V/\%$colnameidx{file_root}V.dta&MassType=0&NumAxis=1&Pep=\%$colnameidx{peptide}V",
+	       '!Ions_ATAG' => 'TARGET="Win1"',
+               'Ions' => "$CGI_BASE_DIR/Proteomics/ShowSpectrum.cgi?msms_spectrum_id=\%$colnameidx{msms_spectrum_id}V&search_batch_id=\%$colnameidx{search_batch_id}V&peptide=\%$colnameidx{peptide_string}V",
+	       'Ions_ATAG' => 'TARGET="Win1"',
+               '!N+' => "http://regis/cgi-bin/blast_html4?Db=\%$colnameidx{set_path}V&Pep=\%$colnameidx{peptide}V&MassType=0",
+	       '!N+_ATAG' => 'TARGET="Win1"',
+               'N+' => "$CGI_BASE_DIR/Proteomics/BrowseBioSequence.cgi?biosequence_set_id=\%$colnameidx{biosequence_set_id}V&biosequence_seq_constraint=*\%$colnameidx{peptide}V*&display_options=MaxSeqWidth&search_hit_id=\%$colnameidx{search_hit_id}V&apply_action=HIDEQUERY",
+	       'N+_ATAG' => 'TARGET="Win1"',
+               'Peptide' => "http://www.ncbi.nlm.nih.gov/blast/Blast.cgi?PROGRAM=blastp&DATABASE=nr&OVERVIEW=TRUE&EXPECT=1000&FILTER=L&QUERY=\%$colnameidx{peptide}V",
+	       'Peptide_ATAG' => 'TARGET="Win1"',
+               'Annot' => "$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=search_hit_annotation&search_hit_annotation_id=\%$colnameidx{search_hit_annotation_id}V&search_hit_id=\%$colnameidx{search_hit_id}V&ShowEntryForm=1",
+	       'Annot_ATAG' => 'TARGET="Win1"',
+	       'Annot_ISNULL' => ' [Add] ',
+               'bh' => "$CGI_BASE_DIR/Proteomics/SetBestHit.cgi?search_id=\%$colnameidx{search_id}V&search_hit_id=\%$colnameidx{search_hit_id}V",
+	       'bh_ATAG' => 'TARGET="Win1"',
+               'Quant' => "$CGI_BASE_DIR/Proteomics/Xpress.cgi?quantitation_id=\%$colnameidx{quantitation_id}V",
+	       'Quant_ATAG' => 'TARGET="Win1"',
+  );
+
+  #### Define columns that should be hidden in the output table
+  %hidden_cols = ('data_location' => 1,
+                  'search_batch_id' => 1,
+                  'msms_spectrum_id' => 1,
+                  'search_id' => 1,
+                  'search_hit_id' => 1,
+                  'fraction_tag' => 1,
+                  'actual_peptide' => 1,
+                  'set_path' => 1,
+                  'biosequence_set_id' => 1,
+                  'search_hit_annotation_id' => 1,
+                  'quantitation_id' => 1,
+                  #'assumed_charge' => 1,
+  );
+
+
+  #########################################################################
+  #### If QUERY or VIEWRESULTSET was selected, display the data
+  if ($apply_action =~ /QUERY/i || $apply_action eq "VIEWRESULTSET") {
+
+    #### Show the SQL that will be or was executed
+    $sbeams->display_sql(sql=>$sql) if ($show_sql);
+
+    #### If the action contained QUERY, then fetch the results from
+    #### the database
+    if ($apply_action =~ /QUERY/i) {
+
+      #### Fetch the results from the database server
+      $sbeams->fetchResultSet(sql_query=>$sql,
+        resultset_ref=>$resultset_ref);
+
+      #### Store the resultset and parameters to disk resultset cache
+      $rs_params{set_name} = "SETME";
+      $sbeams->writeResultSet(resultset_file_ref=>\$rs_params{set_name},
+        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters);
+    }
+
+    #### Display the resultset
+    $sbeams->displayResultSet(rs_params_ref=>\%rs_params,
+        url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols,
+        max_widths=>\%max_widths,resultset_ref=>$resultset_ref,
+        column_titles_ref=>\@column_titles,
+    );
+
+
+    #### Display the resultset controls
+    $sbeams->displayResultSetControls(rs_params_ref=>\%rs_params,
+        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters,
+        base_url=>$base_url);
+
+
+    #### Prepare a resultset of spectra
+      prepare_msms_spectra_resultset(rs_params_ref=>\%rs_params,
+        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters,
+        base_url=>$base_url);
+
+
+  #### If QUERY was not selected, then tell the user to enter some parameters
+  } else {
+    if ($sbeams->invocation_mode() eq 'http') {
+      print "<H4>Select parameters above and press QUERY</H4>\n";
+    } else {
+      print "You need to supply some parameters to contrain the query\n";
+    }
+  }
+
+
+} # end handle_request
+
+
+
+###############################################################################
+# evalSQL
+#
+# Callback for translating Perl variables into their values,
+# especially the global table variables to table names
+###############################################################################
+sub evalSQL {
+  my $sql = shift;
+
+  return eval "\"$sql\"";
+
+} # end evalSQL
+
+
+
+###############################################################################
+# prepare_msms_spectra_resultset
+#
+# Prepare a resultset of spectra if all the peptides that came back from
+# the query are identical
+###############################################################################
+sub prepare_msms_spectra_resultset {
+  my %args = @_;
+
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+  #### Process the arguments list
+  my $resultset_ref = $args{'resultset_ref'};
+  my $rs_params_ref = $args{'rs_params_ref'};
+  my $query_parameters_ref = $args{'query_parameters_ref'};
+  my $base_url = $args{'base_url'};
+
+  #my %rs_params = %{$rs_params_ref};
+  my %rs_params = ();
+  my %parameters = %{$query_parameters_ref};
+
+
+  #### Find out what column the msms_spectrum_id is or just return
+  my $msms_spectrum_id_column =
+    $resultset_ref->{column_hash_ref}->{msms_spectrum_id};
+  return unless ($msms_spectrum_id_column);
+
+
+  #### Find out what column the peptide_string is or just return
+  my $peptide_string_column =
+    $resultset_ref->{column_hash_ref}->{peptide_string};
+  return unless ($msms_spectrum_id_column);
+
+
+  #### Set up variables for statistics collection
+  my $row;
+  my $n_rows = scalar(@{$resultset_ref->{data_ref}});
+  return unless ($n_rows);
+  my $first_peptide_string;
+  my @msms_spectrum_ids = ();
+
+
+  #### Loop over each row in the resultset, compiling statistics
+  for ($row=0; $row<$n_rows; $row++) {
+
+    #### Check the peptide_string
+    if ($row == 0) {
+      $first_peptide_string =
+        $resultset_ref->{data_ref}->[$row]->[$peptide_string_column];
+    } else {
+      return unless ($first_peptide_string eq
+        $resultset_ref->{data_ref}->[$row]->[$peptide_string_column]);
+    }
+
+    #### Add the msms_spectrum_id to the list
+    push(@msms_spectrum_ids,
+      $resultset_ref->{data_ref}->[$row]->[$msms_spectrum_id_column]);
+
+  }
+
+
+  #### Start a new section
+  print qq~
+    <HR SIZE=3 WIDTH=\"30%\" NOSHADE ALIGN=LEFT>
+    <TABLE WIDTH="800" BORDER=0><TR><TD>
+    <B>All peptides are exactly the same
+    in the above resultset.</B><BR>\n
+  ~;
+
+
+  #### Create the list of msms_spectrum_id's
+  my $msms_spectrum_id_list = join(',',@msms_spectrum_ids);
+
+
+  #### Get the spectra
+  $sql = qq~
+    SELECT msms_spectrum_id,mass,intensity
+      FROM $TBPR_MSMS_SPECTRUM_PEAK
+     WHERE msms_spectrum_id IN ( $msms_spectrum_id_list )
+  ~;
+
+
+  #### Fetch the results from the database
+  my %spectra_resultset = ();
+  $sbeams->fetchResultSet(sql_query=>$sql,
+    resultset_ref=>\%spectra_resultset);
+
+  #### Store the resultset and parameters to disk
+  $rs_params{set_name} = "SETME";
+  $sbeams->writeResultSet(resultset_file_ref=>\$rs_params{set_name},
+    resultset_ref=>\%spectra_resultset,
+    query_parameters_ref=>\%parameters,
+    file_prefix=>'spectra_');
+
+
+  #### Supply some additional links to the Result Set
+  print qq~
+    <BR>Click to download all these MS/MS spectra in format:
+    <a href="$CGI_BASE_DIR/GetResultSet.cgi/$rs_params{set_name}.tsv?rs_set_name=$rs_params{set_name}&format=tsv">TSV</a>,
+    <a href="$CGI_BASE_DIR/GetResultSet.cgi/$rs_params{set_name}.xls?rs_set_name=$rs_params{set_name}&format=excel">Excel</a>
+    <BR>
+    </TD></TR></TABLE>
+  ~;
+
+
+  return;
+
+
+} # end prepare_msms_spectra_resultset
