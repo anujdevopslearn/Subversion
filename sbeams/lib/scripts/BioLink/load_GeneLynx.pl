@@ -474,14 +474,15 @@ sub setRelationship {
           $canonical_biosequence_id == $biosequence_id1) {
       }
 
-      #### If it is itself, then we're all set
+      #### If not, then the situation is complicated and fixing needs to
+      #### be done.  FIX ME
       if ($canonical_biosequence_id &&
           $canonical_biosequence_id != $biosequence_id1) {
         die("OH NO: The canonical name I want to have already has a ".
             "different canonical name.  This condition not yet handled.");
       }
 
-      #### If it has no canonical name, then add it
+      #### If it has no canonical name, then make itself its canonical name
       unless ($canonical_biosequence_id) {
         $result = addRelationship(
           biosequence_id1 => $biosequence_id1,
