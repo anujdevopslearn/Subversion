@@ -167,6 +167,9 @@ sub printEntryForm {
     #### If no parameters are supplied, set some sensible defaults
     if (($TABLE_NAME eq "BrowseAnnotatedPeptides") && $no_params_flag ) {
       $parameters{annotation_status_id} = 'Annot';
+      $parameters{n_annotations_constraint} = '>0';
+      $parameters{display_options} = 'GroupPeptide';
+      $parameters{sort_order} = 'tABS.row_count DESC';
     }
 
 
