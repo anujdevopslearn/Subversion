@@ -1,5 +1,6 @@
 package DataLoader;
 //-----------------------------------------------------------------------------------------------
+import SBEAMS.*;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
@@ -28,7 +29,7 @@ public class ConditionInfoWizardPanel extends WizardPanel
   private static DecimalFormat twoDigits = new DecimalFormat("00");
   private JComboBox variableNames;
   private JComboBox unitsNames;
-  //  private JTextField variableUnitsField = new JTextField(7);
+  private SBEAMSClient sc;
   private JList conditionList;
   private JScrollPane variableList;
   private JScrollPane variableSummary;
@@ -43,6 +44,7 @@ public class ConditionInfoWizardPanel extends WizardPanel
   private static String REMOVE = "Remove Last";
   private static String RENAME = "Rename Conditions";
   private int currentVariableIndex;
+  private static String schemaFile = "sbeamsIndirect://db/sbeams/tmp/Microarray/dataLoader/experiment.xsd";
 //-----------------------------------------------------------------------------------------------
   public ConditionInfoWizardPanel(WizardContext wc) {
 	setWizardContext(wc);
@@ -72,7 +74,7 @@ public class ConditionInfoWizardPanel extends WizardPanel
 	removeButton.addActionListener(this);
 
 	// Get variables/units defined in the XML document.
-	Vector[] varData = getVariableDataFromExperimentXSD("./experiment.xsd");
+	Vector[] varData = getVariableDataFromExperimentXSD(schemaFile);
 
 	// Get variables/units that were chosen in the constants file
 	Vector wizConstants = (Vector)wizardContext.getAttribute(WIZARD_CONSTANTS);
@@ -87,11 +89,13 @@ public class ConditionInfoWizardPanel extends WizardPanel
 
 	Vector stdVariables = varData[0];
  	stdVariables.add(0,"");
- 	stdVariables.addElement(OTHER);
+	// Un-comment when strict/loos schema is in place.
+	// 	stdVariables.addElement(OTHER);
 
 	Vector stdUnits = varData[1];
  	stdUnits.add(0,"");
- 	stdUnits.addElement(OTHER);
+	// Un-comment when strict/loos schema is in place.
+	// 	stdUnits.addElement(OTHER);
 
 	variableNames = new JComboBox(stdVariables);
 	variableNames.setActionCommand(VARIABLE_SELECTED);
@@ -158,65 +162,91 @@ public class ConditionInfoWizardPanel extends WizardPanel
 	add(conditionPanel, BorderLayout.CENTER);
   }// constructor
 //-----------------------------------------------------------------------------------------------
-  protected Vector[] getVariableDataFromExperimentXSD(String xsdPath) {
+  protected Vector[] getVariableDataFromExperimentXSD(String schemaPath) {
 	Vector vars = new Vector();
 	Vector units = new Vector();
-	try{
-	  BufferedReader br = new BufferedReader(new FileReader(xsdPath));
-	  //	  sb = new StringBuffer();
-	  String newLineOfText;
-	  Vector v = new Vector();
-	  while ((newLineOfText = br.readLine()) != null)
-		v.add(newLineOfText);
-	  String[] lines = new String[v.size()];
-	  v.toArray(lines);
+	String[] lines = new String[1];
+	if (schemaPath.startsWith("sbeamsIndirect://")) {
 
-	  Pattern varStart = Pattern.compile("<xsd:simpleType name=\"VariableNameType\">");
-	  Pattern varValue = Pattern.compile("<xsd:enumeration value=\"(.*?)\"/>");
-	  Pattern end   = Pattern.compile("</xsd:simpleType>");
-
-	  Pattern unitStart = Pattern.compile("<xsd:simpleType name=\"VariableUnitsType\">");
-	  Pattern unitValue = Pattern.compile("<xsd:enumeration value=\"(.*?)\"/>");
-	  Pattern unitEnd   = Pattern.compile("</xsd:simpleType>");
-
-	  for (int m=0;m<lines.length;) {
-		Matcher varStartMatch = varStart.matcher(lines[m].trim());
-		if (varStartMatch.matches()) {
-		  m++;
-		  Matcher varEndMatch = end.matcher(lines[m].trim());
-		  while (m<lines.length && !varEndMatch.matches()) {
-			Matcher varValueMatch = varValue.matcher(lines[m].trim());
-			if (varValueMatch.matches())
-			  vars.add(varValueMatch.group(1));
-			m++;
-			varEndMatch = end.matcher(lines[m].trim());
-		  }
-		  continue;
+	  // get client
+	  if (wizardContext.getAttribute(SBEAMS_CLIENT) == null) {
+		try{ 
+		  sc = new SBEAMSClient(true);
+		}catch (Exception e) {
+		  e.printStackTrace();
 		}
-
-		Matcher unitStartMatch = unitStart.matcher(lines[m].trim());
-		if (unitStartMatch.matches()) {
-		  m++;
-		  Matcher unitEndMatch = end.matcher(lines[m].trim());
-		  while (m<lines.length && !unitEndMatch.matches()) {
-			Matcher unitValueMatch = unitValue.matcher(lines[m].trim());
-			if (unitValueMatch.matches())
-			  units.add(unitValueMatch.group(1));
-			m++;
-			unitEndMatch = end.matcher(lines[m].trim());
-		  }
-		  continue;
-		}
-
-		m++;
+	  }else {
+		sc = (SBEAMSClient)wizardContext.getAttribute(SBEAMS_CLIENT);
 	  }
 
-	} catch (IOException e) {
-	  e.printStackTrace();
+	  //get schema
+	  try {
+		String[] pieces = schemaPath.split("://");
+		String bigLine = sc.fetchSbeamsPage("http://"+pieces[1]);
+		lines = bigLine.split("\\n");
+	  }catch (IOException e) {
+		System.err.println("Page Not Found");
+	  }catch (Exception t) {
+		t.printStackTrace();
+	  }
+	}else {
+	  try{
+		BufferedReader br = new BufferedReader(new FileReader(schemaPath));
+		//	  sb = new StringBuffer();
+		String newLineOfText;
+		Vector v = new Vector();
+		while ((newLineOfText = br.readLine()) != null)
+		  v.add(newLineOfText);
+		lines = new String[v.size()];
+		v.toArray(lines);
+	  } catch (IOException e) {
+		e.printStackTrace();
+	  }
 	}
 
-	Vector[] v = {vars, units};
-	return v;
+
+	Pattern varStart = Pattern.compile("<xsd:simpleType name=\"VariableNameType\">");
+	Pattern varValue = Pattern.compile("<xsd:enumeration value=\"(.*?)\"/>");
+	Pattern end   = Pattern.compile("</xsd:simpleType>");
+
+	Pattern unitStart = Pattern.compile("<xsd:simpleType name=\"VariableUnitsType\">");
+	Pattern unitValue = Pattern.compile("<xsd:enumeration value=\"(.*?)\"/>");
+	Pattern unitEnd   = Pattern.compile("</xsd:simpleType>");
+
+	for (int m=0;m<lines.length;) {
+	  Matcher varStartMatch = varStart.matcher(lines[m].trim());
+	  if (varStartMatch.matches()) {
+		m++;
+		Matcher varEndMatch = end.matcher(lines[m].trim());
+		while (m<lines.length && !varEndMatch.matches()) {
+		  Matcher varValueMatch = varValue.matcher(lines[m].trim());
+		  if (varValueMatch.matches())
+			vars.add(varValueMatch.group(1));
+		  m++;
+		  varEndMatch = end.matcher(lines[m].trim());
+		}
+		continue;
+	  }
+
+	  Matcher unitStartMatch = unitStart.matcher(lines[m].trim());
+	  if (unitStartMatch.matches()) {
+		m++;
+		Matcher unitEndMatch = end.matcher(lines[m].trim());
+		while (m<lines.length && !unitEndMatch.matches()) {
+		  Matcher unitValueMatch = unitValue.matcher(lines[m].trim());
+		  if (unitValueMatch.matches())
+			units.add(unitValueMatch.group(1));
+		  m++;
+		  unitEndMatch = end.matcher(lines[m].trim());
+		}
+		continue;
+	  }
+
+	  m++;
+	}
+
+	Vector[] ret = {vars, units};
+	return ret;
   }
 
 //-----------------------------------------------------------------------------------------------
