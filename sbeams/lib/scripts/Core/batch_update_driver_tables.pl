@@ -53,8 +53,8 @@
   ./update_driver_tables.pl $CONFDIR/GEAP/GEAP_table_property.txt
   ./update_driver_tables.pl $CONFDIR/GEAP/GEAP_table_column.txt
 
-  ./update_driver_tables.pl $CONFDIR/GLUE/GLUE_table_property.txt
-  ./update_driver_tables.pl $CONFDIR/GLUE/GLUE_table_column.txt
+  ./update_driver_tables.pl $CONFDIR/Interactions/Interactions_table_property.txt
+  ./update_driver_tables.pl $CONFDIR/Interactions/Interactions_table_column.txt
 
   ./update_driver_tables.pl $CONFDIR/UESC/UESC_table_property.txt
   ./update_driver_tables.pl $CONFDIR/UESC/UESC_table_column.txt
