@@ -84,12 +84,16 @@ sub Authenticate {
 
 
     #### If there's a DISABLED file in the main HTML directory, do not allow
-    #### entry past here
-    if ( -e "$PHYSICAL_BASE_DIR/DISABLED" &&
+    #### entry past here.  Same goes for DISABLE.modulename
+    my $module_name = $self->getSBEAMS_SUBDIR() || '';
+    if ( ( -e "$PHYSICAL_BASE_DIR/DISABLED" ||
+           -e "$PHYSICAL_BASE_DIR/DISABLED.$module_name" ) &&
          $ENV{REMOTE_ADDR} ne "10.0.230.11") {
       $self->printMinimalPageHeader();
       print "<H3>";
-      open(INFILE,"$PHYSICAL_BASE_DIR/DISABLED");
+      open(INFILE,"$PHYSICAL_BASE_DIR/DISABLED") ||
+        open(INFILE,"$PHYSICAL_BASE_DIR/DISABLED.$module_name") ||
+        print "ERROR Opening DISABLED file. SBEAMS is currently not available";
       my $line;
       while ($line = <INFILE>) { print $line; }
       close(INFILE);
