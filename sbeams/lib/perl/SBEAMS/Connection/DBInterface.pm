@@ -1721,7 +1721,7 @@ sub displayResultSetControls {
     #### If this resulset has a name, show it and the date is was created
     if (defined($rs_params_ref->{cached_resultset_id})) {
       print qq~
-        <BR><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=cached_resultset&cached_resultset_id=$rs_params_ref->{cached_resultset_id}">[Annotate Resultset]</A>
+        <BR><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=cached_resultset&cached_resultset_id=$rs_params_ref->{cached_resultset_id}">[Annotate this Resultset]</A>
         Name: '$rs_params_ref->{resultset_name}'
         ($rs_params_ref->{date_created})
       ~;
@@ -2144,13 +2144,13 @@ sub processTableDisplayControls {
             </SELECT>
         <B>WHERE</B><INPUT TYPE="text" NAME="where_clause"
                      VALUE="$where_clause" SIZE=25>
-        <B>ORDER BY</B><INPUT TYPE="text" NAME="orderby_clause"
-                     VALUE="$orderby_clause" SIZE=25>
         <INPUT TYPE="hidden" NAME="TABLE_NAME" VALUE="$TABLE_NAME">
         <INPUT TYPE="submit" NAME="redisplay" VALUE="DISPLAY"><P>
       !;
     }
 
+    #### Removed from form Deutsch 2002-11-20
+    #<TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD><TD COLSPAN=4>
 
     return ($full_where_clause,$full_orderby_clause);
 
