@@ -2108,7 +2108,7 @@ sub displayResultSet {
         } elsif ($self->output_mode() eq 'csv') {
           $header = "Content-type: application/excel\n\n";
           $delimiter = "\t";
-	}
+		}
       }
 
       print $header if ($self->invocation_mode() eq 'http');
@@ -2118,9 +2118,46 @@ sub displayResultSet {
       $resultset_ref->{page_size} = 1000000
         if ($rs_params_ref->{default_values} eq 'YES');
 
+	  #### Get the hidden column hash
+	  my %hidden_cols = %{$hidden_cols_ref};
+
+	  #### Make tools for finding unacceptable columns to output
+      #### The following are removed:
+	  #### 1) Hidden Columns unless  output_mode is 'http' or contains 'full'
+	  #### 2) if the data starts with '[' 
+	  ####    NOTE: only the first column is used for thiS!
+	  my @no_print_columns;
+	  my @all_columns = @{$resultset_ref->{column_list_ref}};
+#	  my @first_data_col = @{@{$resultset_ref->{data_ref}}[0]};
+
+	  #### Look at FIRST data column to identify potential links
+#	  for (my $column = 0; $column < $#first_data_col; $column++) {
+#		if ($first_data_col[$column] =~ /^\s*\[/ && 
+#			$self->output_mode() !~ /http|full/) {
+#		  $no_print_columns[$column] = 1;
+#		}
+#	  }
+#	  undef @first_data_col;
+
       #### Convert to a delimiter-safe format
       my @output_row = ();
-      foreach my $datum (@{$resultset_ref->{column_list_ref}}) {
+
+	  for (my $column = 0; $column < $#all_columns; $column++){
+		#### If this column's already been flagged for removal, continue;
+		next if ($no_print_columns[$column] == 1);
+
+		my $datum = $all_columns[$column];
+
+		#### Flag Columns to REMOVAL from printing. 
+		unless ($self->output_mode() =~ /http|full/) {
+		  if ($hidden_cols{$datum}) {
+			$no_print_columns[$column] = 1;
+			next;
+		  }else {
+			$no_print_columns[$column] = 0;
+		  }
+		}
+
         if ($datum =~ /[\t,\"]/) {
           $datum =~ s/\t/ /g if ($self->output_mode() eq 'tsv');
           $datum =~ s/\"/""/g;
@@ -2130,9 +2167,13 @@ sub displayResultSet {
       }
       print join($delimiter,@output_row),"\n";
 
+	  #### Print out individual data rows, removing any flagged columns
       while (@row = returnNextRow()) {
         @output_row = ();
-        foreach my $datum (@row) {
+
+		for (my $column = 0; $column < $#row; $column++){
+		  my $datum = $row[$column];
+		  next if ($no_print_columns[$column] == 1);
           if ($datum =~ /[\t,\"]/) {
             $datum =~ s/\t/ /g if ($self->output_mode() eq 'tsv');
             $datum =~ s/\"/""/g;
