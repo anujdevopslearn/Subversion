@@ -300,7 +300,7 @@ sub update_table_property {
   $sbeams->transferTable(
     src_conn=>$sbeams,
     source_file=>$source_file,
-    delimiter=>'\t',
+    delimiter=>"\t",
     skip_lines=>'1',
     dest_PK_name=>'table_property_id',
     dest_conn=>$sbeams,
@@ -383,7 +383,7 @@ sub update_table_column {
   $sbeams->transferTable(
     src_conn=>$sbeams,
     source_file=>$source_file,
-    delimiter=>'\t',
+    delimiter=>"\t",
     skip_lines=>'1',
     dest_PK_name=>'table_column_id',
     dest_conn=>$sbeams,
