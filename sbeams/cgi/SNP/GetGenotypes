@@ -230,12 +230,12 @@ sub handle_request {
   #### Build ASSAY ID constraint
   my $assay_id_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"ERV.assay_id",
-    constraint_type=>"plain_text",
+    constraint_type=>"text_list",
     constraint_name=>"Assay ID",
     constraint_value=>$parameters{assay_id_constraint} );
   return if ($assay_id_clause == -1);
 
-  #### Build ASSAY ID constraint
+  #### Build SAMPLE ID constraint
   my $sample_id_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"ERV.sample_id",
     constraint_type=>"plain_text",
@@ -814,17 +814,24 @@ sub postProcessResultset {
     }
 
 
-    #### Define the headers for all the columns
-    push(@columnheaders, qw(final_call final_call_quality manual_genotype_call_id manual_call n_calls call_consistency));
-    push(@column_types, qw(varchar varchar int varchar int varchar));
+    if ($parameters{display_options} =~ /FinalReport/) {
+      push(@columnheaders, qw(final_call final_call_quality));
+      push(@column_types, qw(varchar varchar));
+    } else {
+      #### Define the headers for all the columns
+      push(@columnheaders, qw(final_call final_call_quality manual_genotype_call_id manual_call n_calls call_consistency));
+      push(@column_types, qw(varchar varchar int varchar int varchar));
+    }
     my @expanding_column_names = qw(call call_quality call_exp_no call_well call_date call_plate_ID);
     my @expanding_column_types = qw(varchar varchar int varchar date varchar);
-    for (my $iheader = 0; $iheader<scalar(@expanding_column_names); $iheader++) {
-      for (my $i=1; $i<=$n_max_calls; $i++) {
-	my $tmp = $expanding_column_names[$iheader];
-	$tmp =~ s/call/call$i/;
-	push(@columnheaders,$tmp);
-	push(@column_types,$expanding_column_types[$iheader]);
+    if ($parameters{display_options} !~ /FinalReport/) {
+      for (my $iheader = 0; $iheader<scalar(@expanding_column_names); $iheader++) {
+	for (my $i=1; $i<=$n_max_calls; $i++) {
+	  my $tmp = $expanding_column_names[$iheader];
+	  $tmp =~ s/call/call$i/;
+	  push(@columnheaders,$tmp);
+	  push(@column_types,$expanding_column_types[$iheader]);
+	}
       }
     }
 
@@ -848,16 +855,18 @@ sub postProcessResultset {
 	  my $all_calls_final = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls_final};
 	  push(@newrow,$all_calls_final->{call_final});
 	  push(@newrow,$all_calls_final->{call_final_quality});
-	  push(@newrow,$data->{$project_name}->{$assay}->{$sample_name}->{manual_genotype_call_id});
-	  push(@newrow,$all_calls_final->{manual_genotype_call});
-	  push(@newrow,$all_calls_final->{n_calls});
-	  push(@newrow,$all_calls_final->{call_consistency});
+	  if ($parameters{display_options} !~ /FinalReport/) {
+	    push(@newrow,$data->{$project_name}->{$assay}->{$sample_name}->{manual_genotype_call_id});
+	    push(@newrow,$all_calls_final->{manual_genotype_call});
+	    push(@newrow,$all_calls_final->{n_calls});
+	    push(@newrow,$all_calls_final->{call_consistency});
 
-    	  foreach my $header_name (@expanding_column_names) {
-    	    for (my $i=1; $i<=$n_max_calls; $i++) {
-    	      push(@newrow,$all_calls_final->{$i}->{$header_name});
-    	    }
-    	  }
+	    foreach my $header_name (@expanding_column_names) {
+	      for (my $i=1; $i<=$n_max_calls; $i++) {
+		push(@newrow,$all_calls_final->{$i}->{$header_name});
+	      }
+	    }
+	  }
 
 	  if ($all_calls_final->{n_calls} > 0) {
             #print "$all_calls_final->{call_final_quality}\n<BR>";
