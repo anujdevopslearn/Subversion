@@ -4997,7 +4997,7 @@ sub getRecentResultsets {
 
   }
 
-  return $html;
+  return $html || $self->makeInfoText( '&nbsp;&nbsp; No resultsets available' );
 
 } #end printRecentResultsets
 
