@@ -1370,6 +1370,7 @@ sub get_go_info {
 				 go.affy_annotation_id = $anno_id
 				 ORDER BY gt.gene_ontology_type_id
 				~;
+	#print STDERR ($sql);
 	return $sbeams->selectHashArray($sql);
 }
 
