@@ -133,7 +133,7 @@ GL_interaction	6	interaction_type_id	Interaction Type	int	4	0	N		N	GL_interactio
 GL_interaction	7	bioentity2_id	BioEntity2	int	4	0	N		N	GL_bioentity	bioentity_id	Y	optionlist			Y	Y	N	Bioentity2	"SELECT bioentity_id, bioentity_name FROM $TBGL_BIOENTITY ORDER BY bioentity_name"
 GL_interaction	8	bioentity2_state_id	BioEntity2 State	int	4	0	Y		N	GL_bioentity_state	bioentity_state_id	N	optionlist			Y	Y	N	The State of Bioentity2	"SELECT bioentity_state_id, bioentity_state_name FROM $TBGL_BIOENTITY_STATE ORDER BY bioentity_state_name"
 GL_interaction	9	regulatory_feature2_id	Regulatory Feature of Bioentity2	int	4	0	Y		N	GL_regulatory_feature	regulatory_feature_id	N	optionlist			Y	Y	N	The Regulatory Feature of Bioentity2	"SELECT regulatory_feature_id, regulatory_feature_name FROM $TBGL_REGULATORY_FEATURE ORDER BY regulatory_feature_name"
-GL_interaction	10	confidence_score_id	Confidence Score for Interaction	int	4	0	Y		N	GL_confidence_score	confidence_score_id	N	optionlist			Y	Y	N	The Confidence Score for the Interaction	"SELECT 1,2"
+GL_interaction	10	confidence_score_id	Confidence Score for Interaction	int	4	0	Y		N	GL_confidence_score	confidence_score_id	N	optionlist			Y	Y	N	The Confidence Score for the Interaction	"SELECT confidence_score_id, confidence_score_name FROM $TBGL_CONFIDENCE_SCORE ORDER BY sort_order,confidence_score_name"
 GL_interaction	11	interaction_name	Interaction Name	varchar	255	0	Y		N			N	text	50		Y	Y	Y	Common name of this Interaction	
 GL_interaction	12	interaction_description	Description of Interaction	varchar	255	0	Y		N			N	text	50		Y	Y	N	Other Aliases for this Interaction	
 GL_interaction	13	assay_id	Assay	int	4	0	Y		N	GL_assay	assay_id	N	optionlist			Y	Y	N	The Assay from which the Interaction was Determined	"SELECT assay_id, assay_name FROM $TBGL_ASSAY ORDER BY assay_name"
@@ -216,7 +216,7 @@ GL_sample_type	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_gr
 GL_sample_type	12	record_status	Record Status	char	1	0	N	N	N							N	N				
 GL_bioentity_attribute	1	bioentity_attribute_id	BioEntity Attribute ID	int	4	0	N		Y							N	N				pkDEFAULT
 GL_bioentity_attribute	2	bioentity_id	BioEntity	int	4	0	N		N	GL_bioentity	bioentity_id	Y	optionlist			Y	Y	N		"SELECT bioentity_id, bioentity_name FROM $TBGL_BIOENTITY ORDER BY bioentity_name"	
-GL_bioentity_attribute	3	bioentity_attribute_type_id	BioEntity Attribute Type	int	4	0	N		N	GL_bioentity_attribute_type	bioentity_attribute_type_id	Y	optionlist			Y	Y	N		"SELECT bioentity_attribute_type_id, bioentity_attribute_type_name FROM $TBGL_REGULATORY_FEATURE_TYPE ORDER BY sort_order,bioentity_attribute_type_name"	
+GL_bioentity_attribute	3	bioentity_attribute_type_id	BioEntity Attribute Type	int	4	0	N		N	GL_bioentity_attribute_type	bioentity_attribute_type_id	Y	optionlist			Y	Y	N		"SELECT bioentity_attribute_type_id, bioentity_attribute_type_name FROM $TBGL_BIOENTITY_ATTRIBUTE_TYPE ORDER BY sort_order,bioentity_attribute_type_name"	
 GL_bioentity_attribute	4	bioentity_attribute_description	Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioEntity Attribute		
 GL_bioentity_attribute	5	bioentity_attribute_value	BioEntity Attribute Value	varchar	255	0	N		N			Y	text	40		Y	Y	Y	Value of this BioEntity Attribute		
 GL_bioentity_attribute	6	assay_id	Assay	int	4	0	Y		N	GL_assay	assay_id	N	optionlist			Y	Y	N		"SELECT assay_id, assay_name FROM $TBGL_ASSAY ORDER BY assay_name"	
