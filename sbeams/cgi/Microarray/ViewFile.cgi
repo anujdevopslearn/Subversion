@@ -104,29 +104,49 @@ sub main {
   #### Define standard variables
   my $file_name = $parameters{'FILE_NAME'}
   || die "ERROR: file not passed";
+	my $action =$parameters{'action'} || "download";
+
   my $project_id = $sbeams->getCurrent_project_id;
 
-  $sbeamsMOD->printPageHeader();
+	if ($action eq 'download') {
+			#### Verify user has permission to access the file
+			if ($sbeams->get_best_permission <= $DATA_READER_ID){
+					print "Content-type: application/force-download \n";
+					print "Content-Disposition: filename=$file_name\n\n";
+					my $buffer;
+					open (DATA, "$FILE_BASE_DIR/$project_id/$file_name")
+							|| die "Couldn't open $file_name";
+					while(read(DATA, $buffer, 1024)) {
+							print $buffer;
+					}
+			}else {
+					$sbeams->printPageHeader();
+					print qq~
+							<BR><BR><BR>
+							<H1><FONT COLOR="red">You Do Not Have Access To View This File</FONT></H1>
+							<H2><FONT COLOR="red">Contact PI or another administrator for permission</FONT></H2>
+							~;
+					$sbeamsMOD->printPageFooter();
+			}
+	}else {
+			#### Start printing the page
+			$sbeamsMOD->printPageHeader();	
 
-  #### Verify user has permission to access the file
-  if ($sbeams->get_best_permission <= $DATA_READER_ID){
-      my $file = "$FILE_BASE_DIR/$project_id/$file_name";
-      printFile(file=>$file);
-  }
-  else{
-      print qq~
-	  <BR><BR><BR>
-	  <H1><FONT COLOR="red">You Do Not Have Access To View This File</FONT></H1>
-	  <H2><FONT COLOR="red">Contact PI or another administrator for permission</FONT></H2>
-	  ~;
-  }
-
-  $sbeamsMOD->printPageFooter();
-
-
+			#### Verify user has permission to access the file
+			if ($sbeams->get_best_permission <= $DATA_READER_ID){
+					my $file = "$FILE_BASE_DIR/$project_id/$file_name";
+					printFile(file=>$file);
+			}
+			else{
+					print qq~
+							<BR><BR><BR>
+							<H1><FONT COLOR="red">You Do Not Have Access To View This File</FONT></H1>
+							<H2><FONT COLOR="red">Contact PI or another administrator for permission</FONT></H2>
+							~;
+			}
+			$sbeamsMOD->printPageFooter();
+	}
 } # end main
-
-
 
 ###############################################################################
 # printFile
