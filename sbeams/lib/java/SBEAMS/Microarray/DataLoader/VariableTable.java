@@ -17,7 +17,7 @@ public class VariableTable extends JTable
 //-----------------------------------------------------------------------------------------------
   public VariableTable(int row, int rowHeight) {
 	super ();
-	model = new DefaultTableModel();
+	model = new VariableTableModel();
 	this.setModel(model);
 	for (int m=0;m<row;m++)
 	  model.insertRow(0,new Object[this.getColumnCount()]);
@@ -35,6 +35,7 @@ public class VariableTable extends JTable
 	}
 	model.addColumn(header, values);
 	packColumn(this.getColumnCount()-1, 5);
+	doLayout();
 	this.repaint();
   }
 //-----------------------------------------------------------------------------------------------
