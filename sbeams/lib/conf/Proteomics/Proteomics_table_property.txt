@@ -1,5 +1,5 @@
 table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
-proteomics_experiment	Proteomics Experiment	Proteomics_user	YES	$TBPR_PROTEOMICS_EXPERIMENT	experiment_id		ManageTable.cgi?TABLE_NAME=proteomics_experiment	proteomics_experiment	
+PR_proteomics_experiment	Proteomics Experiment	Proteomics_user	YES	$TBPR_PROTEOMICS_EXPERIMENT	experiment_id		ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment	PR_proteomics_experiment	
 PR_gradient_program	Gradient Program	Proteomics_infrastructure	YES	$TBPR_GRADIENT_PROGRAM	gradient_program_id		ManageTable.cgi?TABLE_NAME=PR_gradient_program	PR_gradient_program	
 PR_gradient_delta	Gradient Delta	Proteomics_infrastructure	NO	$TBPR_GRADIENT_DELTA	gradient_delta_id				
 PR_fraction	MS Run	Proteomics_infrastructure	NO	$TBPR_FRACTION	fraction_id				
@@ -7,8 +7,8 @@ PR_msms_spectrum	MS/MS Spectrum	Proteomics_infrastructure	NO	$TBPR_MSMS_SPECTRUM
 PR_msms_spectrum_annotation	MS/MS Spectrum Annotation	Proteomics_infrastructure	NO	$TBPR_MSMS_SPECTRUM_ANNOTATION	msms_spectrum_annotation				
 PR_quality_label	Quality Label	Proteomics_infrastructure	YES	$TBPR_QUALITY_LABEL	quality_label_id		ManageTable.cgi?TABLE_NAME=PR_quality_label		
 PR_msms_spectrum_peak	MS/MS Spectrum Peak	Proteomics_infrastructure	NO	$TBPR_MSMS_SPECTRUM_PEAK					
-biosequence_set	BioSequence Set	Proteomics_infrastructure	YES	$TBPR_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=biosequence_set	biosequence_set	
-dbxref	Database Cross Reference	Proteomics_infrastructure	YES	$TB_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=dbxref	dbxref	
+PR_biosequence_set	BioSequence Set	Proteomics_infrastructure	YES	$TBPR_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=PR_biosequence_set	PR_biosequence_set	
+PR_biosequence_dbxref	Biosequence Database Cross Reference	Proteomics_infrastructure	YES	$TBPR_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=PR_dbxref	PR_biosequence_dbxref	
 PR_biosequence	BioSequence	Proteomics_infrastructure	NO	$TBPR_BIOSEQUENCE	biosequence_id				
 PR_search_batch	Search Batch	Proteomics_infrastructure	NO	$TBPR_SEARCH_BATCH	search_batch_id				
 PR_search_batch_parameter	Search Batch Parameter	Proteomics_infrastructure	NO	$TBPR_SEARCH_BATCH_PARAMETER					

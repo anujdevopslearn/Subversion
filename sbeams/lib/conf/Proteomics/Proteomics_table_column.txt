@@ -1,42 +1,136 @@
 table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
-biosequence_set	1	biosequence_set_id	BioSequence Set ID	int	8	0	N		Y							N	N				pkDEFAULT
-biosequence_set	2	species_id	Species	int	8	0	N		N		organism_id	Y	optionlist			Y	Y	N	Species for this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
-biosequence_set	3	set_name	Set Name	varchar	50	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
-biosequence_set	4	set_tag	Set Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this BioSequence database		
-biosequence_set	5	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Longer description of this BioSequence database		
-biosequence_set	6	set_version	Set Version	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Version of this BioSequence database		
-biosequence_set	7	upload_file	Upload file	varchar	255	0	N		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
-biosequence_set	8	set_path	Set Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	File path of this BioSequence database		
-biosequence_set	9	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
-biosequence_set	10	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-biosequence_set	11	sort_order	Sort Order	int	8	0	N	10	N							N	N	N			
-biosequence_set	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-biosequence_set	13	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-biosequence_set	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-biosequence_set	15	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-biosequence_set	16	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-biosequence_set	17	record_status	Record Status	char	1	0	N	N	N							N	N				
-proteomics_experiment	1	experiment_id	Experiment ID	int	8	0	N		Y							N	N				pkDEFAULT
-proteomics_experiment	2	experiment_request_id	Experiment Request ID	int	8	0	N		N		experiment_request_id					N	N				
-proteomics_experiment	3	contact_id	Contact	int	8	0	N		N	contact	contact_id	Y	current_contact_id	 		Y	Y	N	PI for this experiment		
-proteomics_experiment	4	project_id	Project	int	8	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project to which the experiment belongs	"SELECT project_id, name + ' ['+budget+']' FROM $TB_PROJECT WHERE PI_contact_id='$contact_id' ORDER BY name"	
-proteomics_experiment	5	experiment_name	Experiment Title	varchar	100	0	N		N			Y	text	50		Y	Y	N	Title of this experiment		
-proteomics_experiment	6	experiment_tag	Experiment Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this experiment.  Treat this like a directory/folder name.  Do not use spaces or non-standard characters.		
-proteomics_experiment	7	experiment_description	Experiment Description	text	16	0	N		N			Y	textarea	6		Y	Y	N	"Description of this experiment, the sample or samples used, and any other relevant information not contained in the project description or in list-box elements in this form"		
-proteomics_experiment	8	experiment_path	Experiment Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	Data path for this experiment (e.g. /data/search/edeutsch/TCells/T_000/human_nci)		
-proteomics_experiment	9	organism_id	Organism	int	8	0	N		N			Y	optionlist			Y	Y	N	Organism from which the sample used for this experiment was derived	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
-proteomics_experiment	10	experiment_type_id	Experiment Type	int	8	0	N		N			Y	optionlist			Y	Y	N	"Type/class of experiment (e.g. d0/d8 ICAT, etc.)"	"SELECT experiment_type_id, experiment_type_name FROM $TBPR_EXPERIMENT_TYPE ORDER BY sort_order,experiment_type_name"	
-proteomics_experiment	11	instrument_id	Instrument	int	8	0	N		N			Y	optionlist			Y	Y	N	Instrument on which this experiment was performed	"SELECT instrument_id, instrument_name FROM $TBPR_INSTRUMENT ORDER BY sort_order,instrument_name"	
-proteomics_experiment	12	go_public_date	Go Public Date	datetime	8	0	N	CURRENT_TIMESTAMP	N			N	text	20		Y	Y	N	Date that this experiment data will go public.  Please use the form 2002-12-31.  Do not enter a date higher than 2030-01-01.		
-proteomics_experiment	13	quant_normalization	D0 / D8 Normalization Factor	real	4	0	Y		N			N	text	10		Y	Y	N	"Optional Normalization factor for d0/d8 quantitation ratio.  This will not be known until some data analysis has already been performed.  If ratios that should be calibrated to 1:1 appear as 1.2:1, enter 1.2 here to adjust."		
-proteomics_experiment	14	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
-proteomics_experiment	15	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments	
-proteomics_experiment	16	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-proteomics_experiment	17	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N			
-proteomics_experiment	18	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-proteomics_experiment	19	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N			
-proteomics_experiment	20	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N			
-proteomics_experiment	21	record_status	Record Status	char	1	0	N	N	N							N	N			
+PR_proteomics_experiment	1	experiment_id	Experiment ID	int	4	0	N		Y							N	N				pkDEFAULT
+PR_proteomics_experiment	2	experiment_request_id	Experiment Request ID	int	4	0	N		N		experiment_request_id					N	N				
+PR_proteomics_experiment	3	contact_id	Contact	int	4	0	N		N	contact	contact_id	Y	current_contact_id	 		Y	Y	N	PI for this experiment		
+PR_proteomics_experiment	4	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project to which the experiment belongs	"SELECT project_id, name + ' ['+budget+']' FROM $TB_PROJECT WHERE PI_contact_id='$contact_id' ORDER BY name"	
+PR_proteomics_experiment	5	experiment_name	Experiment Title	varchar	100	0	N		N			Y	text	50		Y	Y	N	Title of this experiment		
+PR_proteomics_experiment	6	experiment_tag	Experiment Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this experiment.  Treat this like a directory/folder name.  Do not use spaces or non-standard characters.		
+PR_proteomics_experiment	7	experiment_description	Experiment Description	text	16	0	N		N			Y	textarea	6		Y	Y	N	"Description of this experiment, the sample or samples used, and any other relevant information not contained in the project description or in list-box elements in this form"		
+PR_proteomics_experiment	8	experiment_path	Experiment Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	Data path for this experiment (e.g. /data/search/edeutsch/TCells/T_000/human_nci)		
+PR_proteomics_experiment	9	organism_id	Organism	int	4	0	N		N			Y	optionlist			Y	Y	N	Organism from which the sample used for this experiment was derived	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+PR_proteomics_experiment	10	experiment_type_id	Experiment Type	int	4	0	N		N			Y	optionlist			Y	Y	N	"Type/class of experiment (e.g. d0/d8 ICAT, etc.)"	"SELECT experiment_type_id, experiment_type_name FROM $TBPR_EXPERIMENT_TYPE ORDER BY sort_order,experiment_type_name"	
+PR_proteomics_experiment	11	instrument_id	Instrument	int	4	0	N		N			Y	optionlist			Y	Y	N	Instrument on which this experiment was performed	"SELECT instrument_id, instrument_name FROM $TBPR_INSTRUMENT ORDER BY sort_order,instrument_name"	
+PR_proteomics_experiment	12	go_public_date	Go Public Date	datetime	8	0	N	CURRENT_TIMESTAMP	N			N	text	20		Y	Y	N	Date that this experiment data will go public.  Please use the form 2002-12-31.  Do not enter a date higher than 2030-01-01.		
+PR_proteomics_experiment	13	quant_normalization	D0 / D8 Normalization Factor	real	4	0	Y		N			N	text	10		Y	Y	N	"Optional Normalization factor for d0/d8 quantitation ratio.  This will not be known until some data analysis has already been performed.  If ratios that should be calibrated to 1:1 appear as 1.2:1, enter 1.2 here to adjust."		
+PR_proteomics_experiment	14	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
+PR_proteomics_experiment	15	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PR_proteomics_experiment	16	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_proteomics_experiment	17	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
+PR_proteomics_experiment	18	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_proteomics_experiment	19	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
+PR_proteomics_experiment	20	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+PR_proteomics_experiment	21	record_status	Record Status	char	1	0	N	N	N							N	N				
+PR_gradient_program	1	gradient_program_id	Gradient Program ID	int	4	0	N		Y							N	N				pkDEFAULT
+PR_gradient_program	2	gradient_program_name	Program Name	varchar	255	0	N		N			Y	text	30		Y	Y	Y	Title of this gradient program		
+PR_gradient_program	3	gradient_program_description	Program Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	One-line description of this gradient program		
+PR_gradient_program	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PR_gradient_program	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_gradient_program	6	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
+PR_gradient_program	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_gradient_program	8	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
+PR_gradient_program	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+PR_gradient_program	10	record_status	Record Status	char	1	0	N	N	N							N	N				
+PR_gradient_delta	1	gradient_delta_id	Gradient Program Delta ID	int	4	0	N		Y							N	N				pkDEFAULT
+PR_gradient_delta	2	gradient_program_id	Gradient Program ID	int	4	0	N		N	PR_gradient_program	gradient_program_id					Y	Y	Y	Gradient Program of which this time point is a part		pkDEFAULT
+PR_gradient_delta	3	gradient_delta_time	Gradient Delta Time Point	real	4	0	N		N							Y	Y	Y	Time point in minutes as the start		
+PR_gradient_delta	4	buffer_A_setting_percent	Buffer A Setting Percent	real	4	0	N		N							Y	Y	N	Desired setting of Buffer A in percent (i.e. 0-100) at this timepoint		
+PR_gradient_delta	5	buffer_B_setting_percent	Buffer B Setting Percent	real	4	0	N		N							Y	Y	N	Desired setting of Buffer B (currently usually acetonitrile) in percent (i.e. 0-100) at this timepoint		
+PR_fraction	1	fraction_id	Fraction ID	int	4	0	N		Y							N	N				pkDEFAULT
+PR_fraction	2	experiment_id	Experiment ID	int	4	0	N		N	PR_proteomics_experiment	experiment_id					Y	Y	Y	Experiment to which this msrun belongs		
+PR_fraction	3	fraction_tag	Fraction Tag	varchar	50	0	N		N							Y	Y	Y	Short tag (name) of this msrun.  This corresponds to the .dat or .raw filename without the extension.  Do not use spaces or non-standard characters.		
+PR_fraction	4	fraction_number	Fraction Number	int	4	0	N		N							Y	Y	N	"This corresponds to serial number of the msrun, sometimes related to the SCX fraction number, but there are no rules yet"		
+PR_fraction	5	fraction_date	Fraction Date	datetime	8	0	N		N							Y	Y	N	Datetime when this msrun was completed		
+PR_fraction	6	gradient_program_id	Gradient Program ID	int	4	0	N		N	PR_gradient_program	gradient_program_id					Y	Y	N	Gradient Program used during this msrun		
+PR_fraction	7	column_delay	Column Delay (s)	int	4	0	N		N							Y	Y	N	Column delay in seconds.  This is the offset between when the pumps claims to be at a given setting and the instrument is seeing the spray at that percentage setting		
+PR_msms_spectrum	1	msms_spectrum_id	MS/MS Spectrum ID	int	4	0	N		Y							N	N				pkDEFAULT
+PR_msms_spectrum	2	fraction_id	Fraction ID	int	4	0	N		N	PR_msrun	msrun_id					Y	Y	Y	MS Run from which this spectrum comes		
+PR_msms_spectrum	3	msms_spectrum_file_root	MS/MS Spectrum File Root	varchar	50	0	N		N							Y	Y	Y	File root of this exactracted spectrum.  This corresponds to the .dta or .out filename without the extension.  Do not use spaces or non-standard characters.		
+PR_msms_spectrum	4	start_scan	Start Scan Number	int	4	0	N		N							Y	Y	N	Starting scan number of the MS/MS Spectrum		
+PR_msms_spectrum	5	end_scan	End Scan Number	int	4	0	N		N							Y	Y	N	"Ending scan number of the MS/MS Spectrum (if only a single scan, this will be the same as start_scan)"		
+PR_msms_spectrum	6	n_peaks	Number of Peaks	int	4	0	N		N							Y	Y	N	Number of peaks in the spectrum		
+PR_msms_spectrum	7	spectrum_score	Spectrum Score	real	4	0	N		N							Y	Y	N	"Spectrum score, a floating point number of arbitrary scale"		
+PR_msms_spectrum	8	score_version	Score Version	varchar	10	0	N		N							Y	Y	N	Version tag of the software used to score this spectrum		
+PR_msms_spectrum	9	scan_time	Scan Time	real	4	0	N		N							Y	Y	N	Time of the start_scan in seconds after the instrument started counting		
+PR_msms_spectrum	10	calc_buffer_percent	Calculated Buffer B Percent	real	4	0	N		N							Y	Y	N	Calculated percent buffer B (acetonitrile) at the time of this MS/MS spectrum		
+PR_msms_spectrum	11	calib_buffer_percent	Calibrated Buffer B Percent	real	4	0	N		N							Y	Y	N	Calibrated percent buffer B (acetonitrile) at the time of this MS/MS spectrum (not used yet)		
+PR_msms_spectrum_peak	1	msms_spectrum_id	MS/MS Spectrum ID	int	4	0	N		N	PR_msms_spectrum	msms_spectrum_id					Y	Y	Y	MS/MS Spectrum to which this peak belongs		
+PR_msms_spectrum_peak	2	mass	Peak Mass	real	4	0	N		N							Y	Y	Y	Average mass of this peak		
+PR_msms_spectrum_peak	3	intensity	Peak Intensity	real	4	0	N		N							Y	Y	N	Intensity of this peak		
+PR_biosequence_set	1	biosequence_set_id	BioSequence Set ID	int	4	0	N		Y							N	N				pkDEFAULT
+PR_biosequence_set	2	species_id	Species	int	4	0	N		N		organism_id	Y	optionlist			Y	Y	N	Species for this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+PR_biosequence_set	3	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
+PR_biosequence_set	4	set_tag	Set Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this BioSequence database		
+PR_biosequence_set	5	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Longer description of this BioSequence database		
+PR_biosequence_set	6	set_version	Set Version	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Version of this BioSequence database		
+PR_biosequence_set	7	upload_file	Upload file	varchar	255	0	N		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
+PR_biosequence_set	8	set_path	Set Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	File path of this BioSequence database		
+PR_biosequence_set	9	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
+PR_biosequence_set	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PR_biosequence_set	11	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
+PR_biosequence_set	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_biosequence_set	13	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
+PR_biosequence_set	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_biosequence_set	15	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
+PR_biosequence_set	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+PR_biosequence_set	17	record_status	Record Status	char	1	0	N	N	N							N	N				
+PR_dbxref	1	dbxref_id	dbxref ID	int	4	0	N		Y							N	N				pkDEFAULT
+PR_dbxref	2	dbxref_name	CrossRef Name	varchar	50	0	N		N			Y	text	40		Y	Y	N	Name of this Database Cross Reference		
+PR_dbxref	3	dbxref_tag	CrossRef Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this Database Cross Reference		
+PR_dbxref	4	dbxref_description	Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this Database Cross Reference		
+PR_dbxref	5	accessor	Accessor	varchar	255	0	N		N			Y	text	50		Y	Y	N	Part of a URL or URI to which an accession number can be appended to get more information about the entity using this cross reference		
+PR_dbxref	6	uri	URI	varchar	255	0	N		N			Y	text	50		Y	Y	N	External web page or other URI of the database		SELF
+PR_dbxref	7	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PR_dbxref	8	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
+PR_dbxref	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_dbxref	10	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
+PR_dbxref	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_dbxref	12	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
+PR_dbxref	13	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+PR_dbxref	14	record_status	Record Status	char	1	0	N	N	N							N	N				
+PR_biosequence	1	biosequence_id	BioSequence ID	int	4	0	N		Y							N	N				pkDEFAULT
+PR_biosequence	2	biosequence_set_id	BioSequence Set	int	4	0	N		N	PR_biosequence_set	biosequence_set_id					N	N	Y	BioSequence Set to which this BioSequence belongs		pkDEFAULT
+PR_biosequence	3	biosequence_name	BioSequence Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of this BioSequence (generally everything before the first space in a FASTA file header line)		
+PR_biosequence	4	biosequence_gene_name	BioSequence Gene Name	varchar	255	0	Y		N			Y	text	20		Y	Y	N	Gene name of this BioSequence if applicable.  Most common gene name if applicable		
+PR_biosequence	5	dbxref_id	Database Cross Reference	int	4	0	Y		N	PR_dbxref	dbxref_id					Y	Y	N	Database cross reference for which the accession number applies		pkDEFAULT
+PR_biosequence	6	biosequence_accession	BioSequence Accession	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Accession number for this BioSequence in some external database designated above		
+PR_biosequence	7	biosequence_desc	Biosequence Description	varchar	1024	0	N		N			Y	text	40		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)		
+PR_biosequence	8	biosequence_seq	Sequence	text	16	0	Y		N			N	file	40		Y	Y	N	Actual sequence of the BioSequence if known		
+PR_search_batch	1	search_batch_id	Search Batch ID	int	4	0	N		Y							N	N				pkDEFAULT
+PR_search_batch	2	experiment_id	Experiment ID	int	4	0	N		N	PR_proteomics_experiment	experiment_id	Y				Y	Y	Y	Experiment to which this search batch belongs		
+PR_search_batch	3	biosequence_set_id	BioSequence Set	int	4	0	N		N	PR_biosequence_set	biosequence_set_id	Y				Y	Y	Y	BioSequence Set against which this batch was searched		pkDEFAULT
+PR_search_batch	4	data_location	Data Location	varchar	255	0	N		N			Y	text	50		Y	Y	N	Absolute or relative location of the raw data for this search batch		
+PR_search_batch	5	search_batch_subdir	Search Batch Subdirectory	varchar	100	0	N		N			Y	text	50		Y	Y	Y	Subdirectory under the experiment where the data for this search resides		
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 PR_GetSearchHits	1	input_form_format	Input Form Format									N	optionlist		refreshDocument()	Y	Y	N	Options for level of detail and layout for this input form	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'input_form_options' ORDER BY sort_order,option_value"
 PR_GetSearchHits	2	search_batch_id	Search Batches									N	multioptionlist	4		Y	Y	N	"Select desired Experiments and Search Batches to include in query.  Multiple items may be selected.  If no items are selected, ALL experiments are searched."	MANUAL
 PR_GetSearchHits	3	probability_constraint	Probability Constraint									N	text	20		Y	Y	N	"Constraint for the probability of being the correct hit.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
@@ -62,8 +156,8 @@ PR_GetSearchHits	22	isoelectric_point_constraint	pI constraint									N	text	40
 PR_GetSearchHits	23	quantitation_constraint	Quantitation constraint									N	text	40		Y	2	N	"Constraint for the Quantitation (ICAT ratio) as a single decimal value.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""	
 PR_GetSearchHits	24	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_sort_options' ORDER BY sort_order,option_value"
 PR_GetSearchHits	25	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_display_options' ORDER BY sort_order,option_value"
-PR_GetSearchHits	26	quantitation_values	Quantitation Values									N	optionlist			Y	1	N	Specify which values to use on which side of the quantitation ratio.  Normally d0/d8.  Use with caution.  This affects both the search constraints as well as display format	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_quant_values' ORDER BY sort_order,option_value"	
-PR_GetSearchHits	27	quantitation_format	Quantitation Format									N	optionlist			Y	1	N	Display format for the quantitation information	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_quant_format' ORDER BY sort_order,option_value"	
+PR_GetSearchHits	26	quantitation_values	Quantitation Values									N	optionlist			Y	1	N	Specify which values to use on which side of the quantitation ratio.  Normally d0/d8.  Use with caution.  This affects both the search constraints as well as display format	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_quant_values' ORDER BY sort_order,option_value"
+PR_GetSearchHits	27	quantitation_format	Quantitation Format									N	optionlist			Y	1	N	Display format for the quantitation information	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_quant_format' ORDER BY sort_order,option_value"
 PR_GetSearchHits	28	row_limit	Maximum Rows									N	text	10		Y	2	N	"Limit the numbers of rows displayed.  If not provided, default is 1000 rows."		
 PR_GetSearch	1	search_batch_id	Search Batches									N	multioptionlist	4		Y	Y	N	"Select desired Experiments and Search Batches to include in query.  Multiple items may be selected.  If no items are selected, ALL experiments are searched."	MANUAL	
 PR_GetSearch	2	file_root_constraint	file_root Constraint									N	text	40		Y	Y	N	Constraint for the file_root. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
@@ -78,8 +172,8 @@ search_hit_annotation	6	user_annotation_label_id	User-defined Annotation Label	i
 search_hit_annotation	7	comment	Comment	varchar	1024	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 search_hit_annotation	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 search_hit_annotation	9	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-search_hit_annotation	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-search_hit_annotation	11	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N			
+search_hit_annotation	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+search_hit_annotation	11	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
 search_hit_annotation	12	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N			
 search_hit_annotation	13	record_status	Record Status	char	1	0	N	N	N							N	N			
 PR_BrowseBioSequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBPR_BIOSEQUENCE_SET ORDER BY sort_order,set_name"
@@ -126,38 +220,38 @@ PR_CompareExperiments	27	mass_constraint	Mass constraint									N	text	40		Y	2	
 PR_CompareExperiments	28	percent_buffer_b_constraint	% Buffer B (ACN) constraint									N	text	40		Y	2	N	"Constraint for the calculated Percent Buffer B (acetonitrile) (value between 0 and 100).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""	
 PR_CompareExperiments	29	isoelectric_point_constraint	pI constraint									N	text	40		Y	2	N	"Constraint for the theoretical isoelectric point (pI).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""	
 PR_CompareExperiments	30	quantitation_values	Quantitation Values									N	optionlist			Y	1	N	Specify which values to use on which side of the quantitation ratio.  Normally d0/d8.  Use with caution.  This affects both the search constraints as well as display format	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_quant_values' ORDER BY sort_order,option_value"
-PR_CompareExperiments	31	quantitation_constraint	Quantitation constraint									N	text	40		Y	2	N	"Constraint for the Quantitation (ICAT ratio) as a single decimal value.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""		
-PR_CompareExperiments	32	n_annotations_constraint	# of matches constraint									N	text	10		Y	2	N	"Constraint for the number of entries per row (e.g. use >0 to show only those rows that have at least one match)  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"""		
-PR_CompareExperiments	33	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'CE_sort_options' ORDER BY sort_order,option_value"	
-PR_CompareExperiments	34	display_options	Display Options									N	multioptionlist	5		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BAP_display_options' ORDER BY sort_order,option_value"	
-PR_CompareExperiments	35	row_limit	Maximum Rows									N	text	10		Y	2	N	"Limit the numbers of rows displayed.  If not provided, default is 1000 rows."		
-dbxref	1	dbxref_id	dbxref ID	int	8	0	N		Y							N	N				pkDEFAULT
-dbxref	2	dbxref_name	CrossRef Name	varchar	50	0	N		N			Y	text	40		Y	Y	N	Name of this Database Cross Reference		
-dbxref	3	dbxref_tag	CrossRef Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this Database Cross Reference		
-dbxref	4	dbxref_description	Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this Database Cross Reference		
-dbxref	5	accessor	Accessor	varchar	255	0	N		N			Y	text	50		Y	Y	N	Part of a URL or URI to which an accession number can be appended to get more information about the entity using this cross reference		
-dbxref	6	uri	URI	varchar	255	0	N		N			Y	text	50		Y	Y	N	External web page or other URI of the database		SELF
-dbxref	7	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-dbxref	8	sort_order	Sort Order	int	8	0	N	10	N							N	N	N			
-dbxref	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-dbxref	10	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-dbxref	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-dbxref	12	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-dbxref	13	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-dbxref	14	record_status	Record Status	char	1	0	N	N	N							N	N				
-PR_gradient_program	1	gradient_program_id	Experiment ID	int	8	0	N		Y							N	N				pkDEFAULT
-PR_gradient_program	2	gradient_program_name	Program Name	varchar	255	0	N		N			Y	text	30		Y	Y	Y	Title of this gradient program		
-PR_gradient_program	3	gradient_program_description	Program Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	One-line description of this gradient program		
-PR_gradient_program	4	comment	Comment	text	4000	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-PR_gradient_program	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PR_gradient_program	6	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-PR_gradient_program	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PR_gradient_program	8	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-PR_gradient_program	9	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-PR_gradient_program	10	record_status	Record Status	char	1	0	N	N	N							N	N				
-PR_SummarizePeptides	1	input_form_format	Input Form Format									N	optionlist		refreshDocument()	Y	Y	N	Options for level of detail and layout for this input form	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'input_form_options' ORDER BY sort_order,option_value"	
-PR_SummarizePeptides	2	search_batch_id	Search Batches									N	multioptionlist	4		Y	Y	N	Select desired Experiments and Search Batches to include in query.  Multiple items may be selected.  At least one must be selected	MANUAL	
-PR_SummarizePeptides	3	probability_constraint	Probability Constraint									N	text	20		Y	Y	N	"Constraint for the probability of being the correct hit.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""		
+PR_CompareExperiments	31	quantitation_constraint	Quantitation constraint									N	text	40		Y	2	N	"Constraint for the Quantitation (ICAT ratio) as a single decimal value.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""	
+PR_CompareExperiments	32	n_annotations_constraint	# of matches constraint									N	text	10		Y	2	N	"Constraint for the number of entries per row (e.g. use >0 to show only those rows that have at least one match)  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"""	
+PR_CompareExperiments	33	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'CE_sort_options' ORDER BY sort_order,option_value"
+PR_CompareExperiments	34	display_options	Display Options									N	multioptionlist	5		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BAP_display_options' ORDER BY sort_order,option_value"
+PR_CompareExperiments	35	row_limit	Maximum Rows									N	text	10		Y	2	N	"Limit the numbers of rows displayed.  If not provided, default is 1000 rows."	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+PR_SummarizePeptides	1	input_form_format	Input Form Format									N	optionlist		refreshDocument()	Y	Y	N	Options for level of detail and layout for this input form	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'input_form_options' ORDER BY sort_order,option_value"
+PR_SummarizePeptides	2	search_batch_id	Search Batches									N	multioptionlist	4		Y	Y	N	Select desired Experiments and Search Batches to include in query.  Multiple items may be selected.  At least one must be selected	MANUAL
+PR_SummarizePeptides	3	probability_constraint	Probability Constraint									N	text	20		Y	Y	N	"Constraint for the probability of being the correct hit.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
 PR_SummarizePeptides	4	annotation_status_id	Annotation status constraint									N	optionlist	 		Y	Y	N	Select desired status of annotations to include in result (I.e. display only peptides that have been annotated or have not been annotated at all; set to blank to be insensitive to annotations)	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_annotation_status' ORDER BY sort_order,option_value"
 PR_SummarizePeptides	5	annotation_label_id	Annotation Labels									N	multioptionlist	5		Y	Y	N	Select desired annotation labels to include (applies only to records that have annotations)	"SELECT annotation_label_id,label_desc FROM $TBPR_ANNOTATION_LABEL ORDER BY sort_order,label_desc"
 PR_SummarizePeptides	6	xcorr_charge1	XCorr for +1									N	text	20		Y	Y	N	"Constraint for the XCorr value for charge state +1.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"""	
@@ -176,20 +270,20 @@ PR_SummarizePeptides	18	cellular_component_constraint	Cellular Component Constra
 PR_SummarizePeptides	19	protein_domain_constraint	Protein Domain Constraint									N	text	40		Y	2	N	Constraint for the InterPro Protein Domain. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 PR_SummarizePeptides	20	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	2	N	"Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
 PR_SummarizePeptides	21	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	2	N	"Constraint for the number of transmembrane regions (based on a 19-residue wide sliding window of hydropathy indexes above 1.58).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
-PR_SummarizePeptides	22	accession_constraint	Accesssion Number									N	text	40		Y	2	N	Constraint for the Accession Number. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-PR_SummarizePeptides	23	peptide_constraint	Peptide									N	text	40		Y	2	N	Constraint for the peptide (regardless of modifications). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-PR_SummarizePeptides	24	peptide_string_constraint	Peptide String Constraint									N	text	40		Y	2	N	Constraint for the peptide string (including modifications and neighboring AAs). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-PR_SummarizePeptides	25	peptide_options	Peptide Options									N	multioptionlist	3		Y	1	N	Various selectable options to further contrain the peptides displayed	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_peptide_options' ORDER BY sort_order,option_value"
-PR_SummarizePeptides	26	precursor_mass_constraint	Precursor Mass constraint									N	text	40		Y	1	N	"Constraint for the measured precursor mass (as a single decimal value).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""	
-PR_SummarizePeptides	27	mass_constraint	Mass constraint									N	text	40		Y	2	N	"Constraint for the theoretical peptide mass (as a single decimal value).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""	
-PR_SummarizePeptides	28	percent_buffer_b_constraint	% Buffer B (ACN) constraint									N	text	40		Y	2	N	"Constraint for the calculated Percent Buffer B (acetonitrile) (value between 0 and 100).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""	
-PR_SummarizePeptides	29	isoelectric_point_constraint	pI constraint									N	text	40		Y	2	N	"Constraint for the theoretical isoelectric point (pI).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""	
-PR_SummarizePeptides	30	quantitation_values	Quantitation Values									N	optionlist			Y	1	N	Specify which values to use on which side of the quantitation ratio.  Normally d0/d8.  Use with caution.  This affects both the search constraints as well as display format	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_quant_values' ORDER BY sort_order,option_value"
-PR_SummarizePeptides	31	quantitation_constraint	Quantitation constraint									N	text	40		Y	2	N	"Constraint for the Quantitation (ICAT ratio) as a single decimal value.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""	
-PR_SummarizePeptides	32	n_annotations_constraint	# of matches constraint									N	text	10		Y	2	N	"Constraint for the number of entries per row (e.g. use >0 to show only those rows that have at least one match)  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"""	
-PR_SummarizePeptides	33	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BAP_sort_options' ORDER BY sort_order,option_value"
-PR_SummarizePeptides	34	display_options	Display Options									N	multioptionlist	5		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BAP_display_options' ORDER BY sort_order,option_value"
-PR_SummarizePeptides	35	row_limit	Maximum Rows									N	text	10		Y	2	N	"Limit the numbers of rows displayed.  If not provided, default is 5000 rows."	
+PR_SummarizePeptides	22	accession_constraint	Accesssion Number									N	text	40		Y	2	N	Constraint for the Accession Number. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+PR_SummarizePeptides	23	peptide_constraint	Peptide									N	text	40		Y	2	N	Constraint for the peptide (regardless of modifications). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+PR_SummarizePeptides	24	peptide_string_constraint	Peptide String Constraint									N	text	40		Y	2	N	Constraint for the peptide string (including modifications and neighboring AAs). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+PR_SummarizePeptides	25	peptide_options	Peptide Options									N	multioptionlist	3		Y	1	N	Various selectable options to further contrain the peptides displayed	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_peptide_options' ORDER BY sort_order,option_value"	
+PR_SummarizePeptides	26	precursor_mass_constraint	Precursor Mass constraint									N	text	40		Y	1	N	"Constraint for the measured precursor mass (as a single decimal value).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""		
+PR_SummarizePeptides	27	mass_constraint	Mass constraint									N	text	40		Y	2	N	"Constraint for the theoretical peptide mass (as a single decimal value).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""		
+PR_SummarizePeptides	28	percent_buffer_b_constraint	% Buffer B (ACN) constraint									N	text	40		Y	2	N	"Constraint for the calculated Percent Buffer B (acetonitrile) (value between 0 and 100).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""		
+PR_SummarizePeptides	29	isoelectric_point_constraint	pI constraint									N	text	40		Y	2	N	"Constraint for the theoretical isoelectric point (pI).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""		
+PR_SummarizePeptides	30	quantitation_values	Quantitation Values									N	optionlist			Y	1	N	Specify which values to use on which side of the quantitation ratio.  Normally d0/d8.  Use with caution.  This affects both the search constraints as well as display format	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_quant_values' ORDER BY sort_order,option_value"	
+PR_SummarizePeptides	31	quantitation_constraint	Quantitation constraint									N	text	40		Y	2	N	"Constraint for the Quantitation (ICAT ratio) as a single decimal value.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""		
+PR_SummarizePeptides	32	n_annotations_constraint	# of matches constraint									N	text	10		Y	2	N	"Constraint for the number of entries per row (e.g. use >0 to show only those rows that have at least one match)  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"""		
+PR_SummarizePeptides	33	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BAP_sort_options' ORDER BY sort_order,option_value"	
+PR_SummarizePeptides	34	display_options	Display Options									N	multioptionlist	5		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BAP_display_options' ORDER BY sort_order,option_value"	
+PR_SummarizePeptides	35	row_limit	Maximum Rows									N	text	10		Y	2	N	"Limit the numbers of rows displayed.  If not provided, default is 5000 rows."		
 PR_user_annotation_label	1	user_annotation_label_id	User Annotation Label ID	int	8	0	N		Y							N	N				pkDEFAULT
 PR_user_annotation_label	2	project_id	Project	int	8	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	Project to which the annotation belongs	"SELECT project_id, name FROM $TB_PROJECT WHERE record_status != 'D' ORDER BY name"	
 PR_user_annotation_label	3	user_annotation_tag	Annotation Tag	varchar	100	0	N		N			Y	text	20		Y	Y	Y	Tag for this user annotation.  A tag should be a short (~10 letter) name that makes this category easily recognizable in a table of data		
@@ -270,22 +364,22 @@ PR_proteomics_experiment_request	5	funding_status_id	Funding Status	int	8	0	N		N
 PR_proteomics_experiment_request	6	budget_number	Budget Number	varchar	20	0	N		N			Y	text	20		Y	Y	N	Budget Number which is funding this experiment.  Enter NA if none.  Unfunded experiments must be cleared with Dave Goodlett prior to submission		
 PR_proteomics_experiment_request	7	experiment_name	Experiment Title	varchar	100	0	N		N			Y	text	50		Y	Y	N	Title of this experiment		
 PR_proteomics_experiment_request	8	experiment_tag	Experiment Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this experiment		
-PR_proteomics_experiment_request	9	experiment_description	Experiment Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	One-line description of this experiment	
-PR_proteomics_experiment_request	10	organism_id	Sample Organism	int	8	0	N		N			Y	optionlist			Y	Y	N	Organism from which the sample used for this experiment was derived	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"
-PR_proteomics_experiment_request	11	experiment_type_id	Experiment Type	int	8	0	N		N			Y	optionlist			Y	Y	N	Type of Experiment	"SELECT experiment_type_id,experiment_type_name FROM $TBPR_EXPERIMENT_TYPE ORDER BY sort_order,experiment_type_name"
-PR_proteomics_experiment_request	12	instrument_type_id	Instrument Type	int	8	0	N		N			Y	optionlist			Y	Y	N	Type of Instrument	"SELECT instrument_type_id,instrument_type_name FROM $TBPR_INSTRUMENT_TYPE ORDER BY sort_order,instrument_type_name"
-PR_proteomics_experiment_request	13	initial_search_set_id	Initial Search Set	int	8	0	N		N			Y	optionlist			Y	Y	N	Select the initial BioSequenceSet ('database') against which SEQUEST should be run	"SELECT biosequence_set_id,set_path FROM $TBPR_BIOSEQUENCE_SET ORDER BY set_path"
-PR_proteomics_experiment_request	14	number_of_runs	Number of LCMS runs	varchar	50	0	N		N			Y	text	20		Y	Y	N	"Number of LC/MS runs for this experiment/sample (e.g., 30-50 SCX fractions is typical)"	
-PR_proteomics_experiment_request	15	other1_contact_id	Other Contact	int	8	0	N		N	contact	contact_id	N	scrolloptionlist	4		Y	Y	N	You may specify another contact for this experiment.  Confirmation/completion emails will be sent to this person	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"
-PR_proteomics_experiment_request	16	other2_contact_id	Other Contact 2	int	8	0	N		N	contact	contact_id	N	scrolloptionlist	4		Y	Y	N	You may specify another contact for this experiment.  Confirmation/completion emails will be sent to this person	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"
-PR_proteomics_experiment_request	17	request_status_id	Request Status	int	8	0	N		N			Y	optionlist			Y	Y	N	Status of this request	"SELECT request_status_id,request_status_name FROM $TBPR_REQUEST_STATUS ORDER BY sort_order,request_status_name"
-PR_proteomics_experiment_request	18	comment	Comment	text	16	0	Y		N			N	textarea	8		Y	Y	N	Additional comments or notes about this submission or how the experiment should be processed	
-PR_proteomics_experiment_request	19	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-PR_proteomics_experiment_request	20	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N			
-PR_proteomics_experiment_request	21	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-PR_proteomics_experiment_request	22	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N			
-PR_proteomics_experiment_request	23	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N			
-PR_proteomics_experiment_request	24	record_status	Record Status	char	1	0	N	N	N							N	N			
+PR_proteomics_experiment_request	9	experiment_description	Experiment Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	One-line description of this experiment		
+PR_proteomics_experiment_request	10	organism_id	Sample Organism	int	8	0	N		N			Y	optionlist			Y	Y	N	Organism from which the sample used for this experiment was derived	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+PR_proteomics_experiment_request	11	experiment_type_id	Experiment Type	int	8	0	N		N			Y	optionlist			Y	Y	N	Type of Experiment	"SELECT experiment_type_id,experiment_type_name FROM $TBPR_EXPERIMENT_TYPE ORDER BY sort_order,experiment_type_name"	
+PR_proteomics_experiment_request	12	instrument_type_id	Instrument Type	int	8	0	N		N			Y	optionlist			Y	Y	N	Type of Instrument	"SELECT instrument_type_id,instrument_type_name FROM $TBPR_INSTRUMENT_TYPE ORDER BY sort_order,instrument_type_name"	
+PR_proteomics_experiment_request	13	initial_search_set_id	Initial Search Set	int	8	0	N		N			Y	optionlist			Y	Y	N	Select the initial BioSequenceSet ('database') against which SEQUEST should be run	"SELECT biosequence_set_id,set_path FROM $TBPR_BIOSEQUENCE_SET ORDER BY set_path"	
+PR_proteomics_experiment_request	14	number_of_runs	Number of LCMS runs	varchar	50	0	N		N			Y	text	20		Y	Y	N	"Number of LC/MS runs for this experiment/sample (e.g., 30-50 SCX fractions is typical)"		
+PR_proteomics_experiment_request	15	other1_contact_id	Other Contact	int	8	0	N		N	contact	contact_id	N	scrolloptionlist	4		Y	Y	N	You may specify another contact for this experiment.  Confirmation/completion emails will be sent to this person	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+PR_proteomics_experiment_request	16	other2_contact_id	Other Contact 2	int	8	0	N		N	contact	contact_id	N	scrolloptionlist	4		Y	Y	N	You may specify another contact for this experiment.  Confirmation/completion emails will be sent to this person	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+PR_proteomics_experiment_request	17	request_status_id	Request Status	int	8	0	N		N			Y	optionlist			Y	Y	N	Status of this request	"SELECT request_status_id,request_status_name FROM $TBPR_REQUEST_STATUS ORDER BY sort_order,request_status_name"	
+PR_proteomics_experiment_request	18	comment	Comment	text	16	0	Y		N			N	textarea	8		Y	Y	N	Additional comments or notes about this submission or how the experiment should be processed		
+PR_proteomics_experiment_request	19	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_proteomics_experiment_request	20	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+PR_proteomics_experiment_request	21	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_proteomics_experiment_request	22	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+PR_proteomics_experiment_request	23	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+PR_proteomics_experiment_request	24	record_status	Record Status	char	1	0	N	N	N							N	N				
 PR_processing_status	1	processing_status_id	Processing Status ID	int	4	0	N		Y							N	N				pkDEFAULT
 PR_processing_status	2	status_tag	Status Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this Status entry		
 PR_processing_status	3	status_description	Status Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this Status entry		
@@ -318,8 +412,8 @@ APD_peptide_summary	4	minimum_probability	Minimum Probability	real	4	0	Y		N			N	
 APD_peptide_summary	5	experiment_list	Experiment ID List	varchar	100	0	N		N			Y	text	50		Y	Y	N	List of experiment_ids		
 APD_peptide_summary	6	n_experiments	Number of Experiments	int	4	0	N		N			Y	text	10		Y	Y	N	Total number of experiments used for this summary		
 APD_peptide_summary	7	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-APD_peptide_summary	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-APD_peptide_summary	9	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N			
+APD_peptide_summary	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+APD_peptide_summary	9	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
 APD_peptide_summary	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
 APD_peptide_summary	11	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N			
 APD_peptide_summary	12	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N			
