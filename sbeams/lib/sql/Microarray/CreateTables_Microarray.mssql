@@ -899,7 +899,7 @@ VALUES ( 'data_flag','BAD','BAD',10 )
 --DROP TABLE condition
 CREATE TABLE dbo.condition (
 	condition_id		int IDENTITY NOT NULL,
-	project_id		int NOT NULL REFERENCES project(project_id),
+	project_id		int NOT NULL,
 	condition_name		varchar(255) NOT NULL,
 	processed_date		datetime NULL,
 	comment			text NULL,
