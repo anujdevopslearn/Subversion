@@ -450,16 +450,27 @@ sub generateColumnDefinition {
     || die "destination_type not passed";
   my $table_prefix = $args{'table_prefix'} || "";
 
+
   #### Do some adjustment of the datatype names.  This should be done better
   if ($destination_type eq 'oracle') {
     if ($datatype eq 'text') {
-      $datatype = 'varchar2(4000)'
+      $datatype = 'varchar2(4000)';
     } elsif ($datatype eq 'datetime') {
-      $datatype = 'date'
+      $datatype = 'date';
     }
     #### I guess "comment" is a reserved word in Oracle???
     if ($column_name eq 'comment') {
        $column_name = 'comments'
+    }
+  }
+
+
+  #### Do some adjustment of the datatype names.  This should be done better
+  if ($destination_type eq 'mysql') {
+    if ($datatype =~ /varchar\((\d+)\)/) {
+      if ($1 > 255) {
+	$datatype = 'text';
+      }
     }
   }
 
