@@ -33,8 +33,8 @@ sub main {
 
   #### Create SBEAMS client object and define SBEAMS server URI
   my $sbeams = new SBEAMS::Client;
-  my $server_uri = "http://localhost:10080/sbeams";
-  #my $server_uri = "http://db.systemsbiology.net/sbeams";
+  #my $server_uri = "http://localhost:10080/sbeams";
+  my $server_uri = "http://db.systemsbiology.net/sbeams";
 
 
   #### Define the desired command and parameters
