@@ -178,7 +178,7 @@ sub preFormHook {
 
   #### For search_hit_annotations, set the source to be "by hand" unless
   #### there's already a value
-  if ($TABLE_NAME eq "search_hit_annotation") {
+  if ($TABLE_NAME eq "PR_search_hit_annotation") {
     $query_parameters_ref->{annotation_source_id} = 1
       unless ($query_parameters_ref->{annotation_source_id});
   }

@@ -215,7 +215,7 @@ sub handle_request {
   #########################################################################
   #### Process all the constraints
 
-  #### Build BIOSEQENCE_SET constraint
+  #### Build BIOSEQUENCE_SET constraint
   my $biosequence_set_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"BS.biosequence_set_id",
     constraint_type=>"int_list",
@@ -466,7 +466,7 @@ sub handle_request {
   $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
 
   #### Define the hypertext links for columns that need them
-  %url_cols = ('set_tag' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=biosequence_set&biosequence_set_id=\%$colnameidx{biosequence_set_id}V",
+  %url_cols = ('set_tag' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_biosequence_set&biosequence_set_id=\%$colnameidx{biosequence_set_id}V",
                'accession' => "\%$colnameidx{accessor}V\%$colnameidx{accesssion}V",
                'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
                'Molecular Function_ATAG' => 'TARGET="WinExt"',

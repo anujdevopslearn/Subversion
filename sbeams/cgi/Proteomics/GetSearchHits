@@ -658,7 +658,7 @@ sub handle_request {
 	       'N+_ATAG' => 'TARGET="Win1"',
                'Peptide' => "http://www.ncbi.nlm.nih.gov/blast/Blast.cgi?PROGRAM=blastp&DATABASE=nr&OVERVIEW=TRUE&EXPECT=1000&FILTER=L&QUERY=\%$colnameidx{peptide}V",
 	       'Peptide_ATAG' => 'TARGET="Win1"',
-               'Annot' => "$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=search_hit_annotation&search_hit_annotation_id=\%$colnameidx{search_hit_annotation_id}V&search_hit_id=\%$colnameidx{search_hit_id}V&project_id=\%$colnameidx{project_id}V&ShowEntryForm=1",
+               'Annot' => "$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=PR_search_hit_annotation&search_hit_annotation_id=\%$colnameidx{search_hit_annotation_id}V&search_hit_id=\%$colnameidx{search_hit_id}V&project_id=\%$colnameidx{project_id}V&ShowEntryForm=1",
 	       'Annot_ATAG' => 'TARGET="Win1"',
 	       'Annot_ISNULL' => ' [Add] ',
                'bh' => "$CGI_BASE_DIR/Proteomics/SetBestHit.cgi?search_id=\%$colnameidx{search_id}V&search_hit_id=\%$colnameidx{search_hit_id}V",
