@@ -302,17 +302,7 @@ sub handle_request {
       printMeasurementsSection(parameters=>\%parameters);
   }
 
-  ## only show the update button if the user has permission
-	# Moving this to experiment design.
-	# Currently, this is the only section using the submit button
-  #my $permission = $sbeams->get_best_permission();
-  #if ($permission <= 10){
-  #print qq~
-  #    $LINESEPARATOR<BR>
-  #    <INPUT TYPE="hidden" NAME="CATEGORY" VALUE="$category">
-  #    <INPUT TYPE="submit" NAME="UPDATEMIAME" VALUE="Update Information">
-  #    </FORM>
-  #~;
+
   #}
 	print "$LINESEPARATOR<BR>";
 
@@ -439,22 +429,58 @@ sub printExperimentDesignSection {
 		## Begin printing Experiment Design Section
     print qq~</H2>
     <H3><FONT COLOR="red">last modified on $mod_date</FONT><H3>
-    <TABLE>
-    <TR>
+    <TABLE CELLSPACING=0 CELLPADDING=0 BORDER="3"BORDERCOLOR="#000000">
+    <TR><TD>
+    <TABLE CELLSPACING=0 CELLPADDIN=0>
+    <TR BGCOLOR="#CCFFFF" BORDERCOLOR="#000000">
       <TD><B>Experiment Description:</B></TD>
-      <TD><TEXTAREA NAME="expDesc" COLS="50" ROWS="3">$exp_desc</TEXTAREA></TD>
+      <TD><TEXTAREA NAME="expDesc" COLS="50" ROWS="10">$exp_desc</TEXTAREA></TD>
     </TR>
-    <TR>
+    <TR BGCOLOR="#FFFFFF" BORDER="0">
       <TD><B>Type of Experiment:</B></TD>
-      <TD>
+      <TD><br>
         <SELECT NAME="expTypeChooser">
     ~;
 
     my $expTypeTemplate = qq~
         <OPTION VALUE="nothing">
-	<OPTION VALUE="normal vs. diseased">Normal vs. Diseased
-	<OPTION VALUE="time course">Time Course
+	<OPTION VALUE="all pairs">All Pairs
+	<OPTION VALUE="amplification labeling">Amplification Labeling
+	<OPTION VALUE="binding site id">Binding Site Identification
+	<OPTION VALUE="cell cycle">Cell Cycle
+	<OPTION VALUE="cell type comparison">Cell Type Comparison
+	<OPTION VALUE="cellular modification">Cellular Modification
+	<OPTION VALUE="circadian rhythm">Circadian Rhythm
+	<OPTION VALUE="development or differentiation">Development or Differentiation
+	<OPTION VALUE="disease state">Disease State
+	<OPTION VALUE="dose response">Dose Response
+	<OPTION VALUE="dye swap">Dye Swap
+	<OPTION VALUE="family history">Family History
+	<OPTION VALUE="genetic modification">Genetic Modification
 	<OPTION VALUE="gene knockout">Gene Knockout Study
+	<OPTION VALUE="genotyping">Genotyping design
+	<OPTION VALUE="growth condition">Growth Condition design
+	<OPTION VALUE="hardware variation">Hardware Variation design
+	<OPTION VALUE="injury">Injury design
+	<OPTION VALUE="loop">Loop design
+	<OPTION VALUE="normal vs. diseased">Normal vs. Diseased
+	<OPTION VALUE="normalization testing">Normalization Testing design
+	<OPTION VALUE="operator variation">Operator Variation design
+	<OPTION VALUE="operon id">Operon Identification design
+	<OPTION VALUE="pathogenicity">Pathogenicity design
+	<OPTION VALUE="quality control testing">Quality Control Testing
+	<OPTION VALUE="reference">Reference 
+	<OPTION VALUE="replciate">Replicate
+	<OPTION VALUE="rna stability">RNA stability
+	<OPTION VALUE="secreted protein identification">Secreted Protein Identification
+	<OPTION VALUE="self vs. self">Self vs. Self
+	<OPTION VALUE="software variation">Software Variation
+	<OPTION VALUE="species">Species
+	<OPTION VALUE="stimulus or stress">Stimulus or Stress
+	<OPTION VALUE="strain or line">Strain or Line
+	<OPTION VALUE="time course">Time Course
+	<OPTION VALUE="transcript identification">Transcript Identification
+	<OPTION VALUE="translational bias">Translational Bias
 	<OPTION VALUE="other">Other
 	~;
 
@@ -484,34 +510,47 @@ sub printExperimentDesignSection {
       </TD>
     </TR>
     <TR><TD></TD></TR>
-    <TR>
+    <TR BGCOLOR="#CCFFFF">
       <TD VALIGN="top"><B>Experimental Factors:</B></TD>
       <TD>
       <TABLE>
         <TR><TD>
     ~;
 
-    my $expFactorsTemplate = qq~
-				<TABLE>
-				<TR>
-				<TD><INPUT TYPE="checkbox" NAME="expFactTime">time</TD>
-				<TD><INPUT TYPE="checkbox" NAME="expFactDose">dose</TD>
-				</TR>
-				<TR>
-				<TD><INPUT TYPE="checkbox" NAME="expFactGenVar">genetic variation</TD>
-				<TD><INPUT TYPE="checkbox" NAME="expFactOther1">Other   <INPUT TYPE="text" NAME="otherExpFact1"></TD>
-				</TR>
-				</TABLE>
-	  ~;
+
+    #NOTE - this array is duplicated in the updateMIAMEInfo subroutine 
+    my @factors = ("age","cell line","cell type",
+		   "compound","developmental stage", "disease state",
+		   "dose","genetic variation","genotype",
+		   "organism part","post-transcriptional gene silencing","protocol",
+		   "sex/mating type","species","strain", 
+		   "temperature","time","tissue type",
+		   "other");
+
+
+    my $expFactorsTemplate ="<TABLE>\n";
+    for (my $i=0;defined($factors[$i]);$i++) {
+	my $val = $i%3;
+	my $factor = $factors[$i];
+
+	if ($val == 0) {
+	    $expFactorsTemplate .= "<TR>\n";
+	}
+	$expFactorsTemplate .= "<TD><INPUT TYPE=\"checkbox\" NAME=\"$factor\">$factor</TD>\n";
+	if ($val == 2) {
+	    $expFactorsTemplate .= "</TR>\n";
+	}
+    }
+    $expFactorsTemplate .= "</TABLE>\n";
 
     my @factors = split ',',$exp_factors;
     foreach my $factor(@factors) {
-				$expFactorsTemplate =~ s(>$factor<\/TD>)(CHECKED>$factor<\/TD>);
-				if ($factor =~ /^other\((.*)\)/) {
-						my $subst = $1;
-						$expFactorsTemplate =~ s(>Other)(CHECKED>Other);
-						$expFactorsTemplate =~ s(\"otherExpFact1\")(\"otherExpFact1\" VALUE=\"$subst\");
-				}
+	$expFactorsTemplate =~ s(>$factor<\/TD>)(CHECKED>$factor<\/TD>);
+	if ($factor =~ /^other\((.*)\)/) {
+	    my $subst = $1;
+	    $expFactorsTemplate =~ s(>Other)(CHECKED>Other);
+	    $expFactorsTemplate =~ s(\"otherExpFact1\")(\"otherExpFact1\" VALUE=\"$subst\");
+	}
     }
 
     print qq~
@@ -521,75 +560,73 @@ sub printExperimentDesignSection {
       </TD>
     </TR>
     <TR><TD></TD></TR>
-    <TR>
+    <TR BGCOLOR="#FFFFFF">
       <TD><B>\# of Hybridizations</B></TD>
       <TD>
         <INPUT="text" NAME="numHyb" SIZE="5" VALUE="$num_hyb" onChange="verifyNumber(this)">
       </TD>
     </TR>
-		<TR><TD></TD></TR>
-		<TR>
-		  <TD><B>Common Reference Used in Hybs?</B></TD>
-			<TD>
-			~;
-		if ($common_ref eq 'yes'){
-				print qq~
-			  <INPUT TYPE="radio" NAME="commonRef" VALUE="yes"CHECKED onClick="Javascript:document.miame.commonRefText.focus()">YES
-				~;
-		}else {
-				print qq~
-				<INPUT TYPE="radio" NAME="commonRef" VALUE="yes" onClick="Javascript:document.miame.commonRefText.focus()">YES
-				~;
-		}
-		if ($common_ref eq 'no') {
-				print qq~
-				<INPUT TYPE="radio" NAME="commonRef" VALUE="no" onClick="eraseText()" CHECKED>NO
-				~;
-		}else {
-				print qq~
-				<INPUT TYPE="radio" NAME="commonRef" VALUE="no" onClick="eraseText()">NO
-						~;
-		}
-		print qq~
-			</TD>
-		</TR>
-		<TR><TD></TD></TR>
-		<TR>
-		  <TD><B>If so, describe reference</B></TD>
-			<TD>
-			~;
-		if ($common_ref_text){
-				print qq~
-			  <INPUT TYPE="text" NAME="commonRefText" VALUE="$common_ref_text" onFocus="Javascript:allowTyping()">
-				~;
-		}else {
-				print qq~
-			  <INPUT TYPE="text" NAME="commonRefText" VALUE="$common_ref_text" onFocus="Javascript:allowTyping()">
-						~;
-		}
-		print qq~
-			</TD>
-		</TR>
     <TR><TD></TD></TR>
-    <TR>
+    <TR BGCOLOR="#CCFFFF">
+      <TD><B>Common Reference Used in Hybs?</B></TD>
+      <TD>
+      ~;
+    if ($common_ref eq 'yes'){
+	print qq~
+	    <INPUT TYPE="radio" NAME="commonRef" VALUE="yes"CHECKED onClick="Javascript:document.miame.commonRefText.focus()">YES
+	    ~;
+    }else {
+	print qq~
+	    <INPUT TYPE="radio" NAME="commonRef" VALUE="yes" onClick="Javascript:document.miame.commonRefText.focus()">YES
+	    ~;
+    }
+    if ($common_ref eq 'no') {
+	print qq~
+	    <INPUT TYPE="radio" NAME="commonRef" VALUE="no" onClick="eraseText()" CHECKED>NO
+	    ~;
+    }else {
+	print qq~
+	    <INPUT TYPE="radio" NAME="commonRef" VALUE="no" onClick="eraseText()">NO
+	    ~;
+    }
+    print qq~
+	</TD>
+      </TR>
+      <TR BGCOLOR="#CCFFFF">
+        <TD><B>If so, describe reference</B></TD>
+        <TD>
+	~;
+    if ($common_ref_text){
+	print qq~
+	    <INPUT TYPE="text" NAME="commonRefText" VALUE="$common_ref_text" onFocus="Javascript:allowTyping()">
+	    ~;
+    }else {
+	print qq~
+	    <INPUT TYPE="text" NAME="commonRefText" VALUE="$common_ref_text" onFocus="Javascript:allowTyping()">
+	    ~;
+    }
+    print qq~
+	</TD>
+      </TR>
+      <TR><TD></TD></TR>
+      <TR BGCOLOR="#FFFFFF">
       <TD VALIGN="top"><B>Quality Control Steps:</B></TD>
     ~;
 
     my $qcTemplate = qq~
       <TD>
-			<TABLE>
-			<TR>
-			<TD><INPUT TYPE="checkbox" NAME="reps">replicates</TD>
-			<TD><INPUT TYPE="checkbox" NAME="dyeSwap">dye swapping</TD>
-			</TR>
-			<TR>
-			<TD><INPUT TYPE="checkbox" NAME="spikeIns">spike-in controls</TD>
-			<TD><INPUT TYPE="checkbox" NAME="qc_other1">Other  <INPUT TYPE="text" NAME="otherQCStep1"</TD>
-			</TR>
-			</TABLE>
-			</TD>
-			<TR><TD></TD></TR>
-			~;
+        <TABLE>
+	<TR>
+	  <TD><INPUT TYPE="checkbox" NAME="reps">replicates</TD>
+	  <TD><INPUT TYPE="checkbox" NAME="dyeSwap">dye swapping</TD>
+	</TR>
+	<TR>
+	  <TD><INPUT TYPE="checkbox" NAME="spikeIns">spike-in controls</TD>
+	  <TD><INPUT TYPE="checkbox" NAME="qc_other1">Other  <INPUT TYPE="text" NAME="otherQCStep1"</TD>
+	</TR>
+	</TABLE>
+      </TD>
+      ~;
 
     @factors = split ',', $qc_steps;
     foreach my $factor(@factors) {
@@ -603,14 +640,16 @@ sub printExperimentDesignSection {
     print qq~
     $qcTemplate
     </TR>
-    <TR>
+    <TR><TD></TD></TR>
+    <TR BGCOLOR="#CCFFFF">
       <TD><B>Supplemental URL</B></TD>
       <TD><INPUT TYPE="text" NAME="url" SIZE="50" VALUE="$uri"></TD>
     </TR>
     </TABLE>
+    </TD></TR>
+    </TABLE>
     <INPUT TYPE="hidden" NAME="expHyb">
-		<BR><BR>
-		~;
+    ~;
 
   my $permission = $sbeams->get_best_permission();
   if ($permission <= 10){
@@ -1153,19 +1192,24 @@ sub updateMIAMEInfo {
 
       ## Experimental Factors
       my $exp_factors;
-      if ($parameters{'expFactTime'} eq 'on') {
-	  $exp_factors .= "time,";
-      }
-      if ($parameters{'expFactDose'} eq 'on') {
-	  $exp_factors .= "dose,";
-      }
-      if ($parameters{'expFactGenVar'} eq 'on') {
-	  $exp_factors .= "genetic variation,";
-      }
-      if ($parameters{'expFactOther1'} eq 'on') {
-	  $exp_factors .= "other($parameters{'otherExpFact1'}),";
-      }
+      my @factors = {"age","cell line","cell type",
+		     "compound","developmental stage", "disease state",
+		     "dose","genetic variation","genotype",
+		     "organism part","post-transcriptional gene silencing","protocol",
+		     "sex/mating type","species","strain", 
+		     "temperature","time","tissue type",
+		     "other"};
 
+      foreach my $factor (@factors){
+	  if ($parameters{$factor} eq 'on') {
+	      if ($factor eq 'other') {
+		  $exp_factors .= "$factor($parameters{'otherExpFact1'}),"
+	      }else {
+		  $exp_factors .= "$factor,";
+	      }
+	  }
+      }
+		    
       if ($exp_factors){ chop($exp_factors); }
 
       if ($exp_factors) {
