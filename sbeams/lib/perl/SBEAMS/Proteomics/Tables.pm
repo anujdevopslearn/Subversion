@@ -27,6 +27,7 @@ use vars qw(@ISA @EXPORT
 
     $TBPR_BIOSEQUENCE_SET
     $TBPR_BIOSEQUENCE
+    $TBPR_BIOSEQUENCE_PROPERTY_SET
 
     $TBPR_PROTEOMICS_EXPERIMENT
     $TBPR_GRADIENT_PROGRAM
@@ -95,6 +96,7 @@ require Exporter;
 
     $TBPR_BIOSEQUENCE_SET
     $TBPR_BIOSEQUENCE
+    $TBPR_BIOSEQUENCE_PROPERTY_SET
 
     $TBPR_PROTEOMICS_EXPERIMENT
     $TBPR_GRADIENT_PROGRAM
@@ -164,6 +166,7 @@ $TB_ORGANISM                      = "${core}organism";
 
 $TBPR_BIOSEQUENCE_SET             = "${mod}biosequence_set";
 $TBPR_BIOSEQUENCE                 = "${mod}biosequence";
+$TBPR_BIOSEQUENCE_PROPERTY_SET    = "${mod}biosequence_property_set";
 
 $TBPR_PROTEOMICS_EXPERIMENT       = "${mod}proteomics_experiment";
 $TBPR_GRADIENT_PROGRAM            = "${mod}gradient_program";
