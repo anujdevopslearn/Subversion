@@ -58,7 +58,10 @@ at your option, any later version of Perl 5 you may have available.
 
 
 use strict;
-use vars qw(%REGISTRY);
+use vars qw(%REGISTRY $sbeams);
+
+use SBEAMS::Connection::Tables;
+use SBEAMS::Microarray::Tables;
 
 use base qw(SBEAMS::Microarray);		#declare superclass
 use Carp;
@@ -80,7 +83,23 @@ sub new {
 	$REGISTRY{$self} = $self;	#also returns $self
 }
 	
+###############################################################################
+# Receive the main SBEAMS object
+###############################################################################
+sub setSBEAMS {
+    my $self = shift;
+    $sbeams = shift;
+    return($sbeams);
+}
 
+
+###############################################################################
+# Provide the main SBEAMS object
+###############################################################################
+sub getSBEAMS {
+    my $self = shift;
+    return($sbeams);
+}
 #######################################################
 # registered
 # Make a list of all the instances made and return a sorted list by the root_name
@@ -274,7 +293,7 @@ sub set_afs_project_id {
 	
 	my $self = shift;
 	my $name = shift;
-	confess(__PACKAGE__ . "::$method No user name provided '$name'\n") unless ($name =~ /^\d/);
+	confess(__PACKAGE__ . "::$method No project id provided '$name'\n") unless ($name =~ /^\d/);
 	
 	return $self->{PROJECT_ID} = $name;
 }
@@ -362,7 +381,7 @@ sub set_afs_organism_id {
 #  return the organism_id for a sample applied to an array 
 #######################################################
 	
-sub get_organism {
+sub get_afs_organism_id {
 	my $self = shift;
 	return $self->{ORGANISM_ID};
 }	
@@ -433,7 +452,7 @@ sub set_afa_file_path_id {
 	my $self = shift;
 	my $name = shift;
 	
-	confess(__PACKAGE__ . "::$method No base path given '$name'\n") unless ($name =~ /^\w/);
+	confess(__PACKAGE__ . "::$method No file path id given '$name'\n") unless ($name =~ /^\w/);
 	
 	return $self->{FILE_BASE_PATH} = $name;
 }
@@ -460,7 +479,7 @@ sub set_afa_hyb_protocol {
 	my $self = shift;
 	my $name = shift;
 	
-	confess(__PACKAGE__ . "::$method No base path given '$name'\n") unless ($name =~ /^\w/);
+	confess(__PACKAGE__ . "::$method No hyb protocol '$name'\n") unless ($name =~ /^\w/);
 	
 	$self->append_protocol_id(value 		=> $name,
 				  append_to_method 	=> 'afa_affy_array_protocol_ids',
@@ -491,7 +510,7 @@ sub set_afa_scan_protocol {
 	my $self = shift;
 	my $name = shift;
 	
-	confess(__PACKAGE__ . "::$method No base path given '$name'\n") unless ($name =~ /^\w/);
+	confess(__PACKAGE__ . "::$method No scan protocol given '$name'\n") unless ($name =~ /^\w/);
 	
 	$self->append_protocol_id(value 		=> $name,
 				  append_to_method 	=> 'afa_affy_array_protocol_ids',
@@ -522,7 +541,7 @@ sub set_afa_feature_extraction_protocol {
 	my $self = shift;
 	my $name = shift;
 	
-	confess(__PACKAGE__ . "::$method No base path given '$name'\n") unless ($name =~ /^\w/);
+	confess(__PACKAGE__ . "::$method feature extraction '$name'\n") unless ($name =~ /^\w/);
 	
 	$self->append_protocol_id(value 		=> $name,
 				  append_to_method 	=> 'afa_affy_array_protocol_ids',
@@ -553,7 +572,7 @@ sub set_afa_chp_generation_protocol {
 	my $self = shift;
 	my $name = shift;
 	
-	confess(__PACKAGE__ . "::$method No base path given '$name'\n") unless ($name =~ /^\w/);
+	confess(__PACKAGE__ . "::$method chp_generation_protocol given '$name'\n") unless ($name =~ /^\w/);
 	
 	$self->append_protocol_id(value 		=> $name,
 				  append_to_method 	=> 'afa_affy_array_protocol_ids',
@@ -584,7 +603,7 @@ sub set_afa_affy_array_protocol_ids {
 	my $self = shift;
 	my $name = shift;
 	
-	confess(__PACKAGE__ . "::$method No base path given '$name'\n") unless ($name =~ /^\w/);
+	confess(__PACKAGE__ . "::$method No base array protocols given '$name'\n") unless ($name =~ /^\w/);
 	
 	return $self->{AFA_AFFY_ARRAY_PROTOCOL_IDS} = $name;
 }
@@ -612,7 +631,7 @@ sub set_afs_affy_sample_protocol_ids {
 	my $self = shift;
 	my $name = shift;
 	
-	confess(__PACKAGE__ . "::$method No base path given '$name'\n") unless ($name =~ /^\w/);
+	confess(__PACKAGE__ . "::$method No protocol ids given '$name'\n") unless ($name =~ /^\w/);
 	
 	return $self->{AFS_AFFY_ARRAY_SAMPLE_PROTOCOL_IDS} = $name;
 }
@@ -627,8 +646,294 @@ sub get_afs_affy_sample_protocol_ids {
 	return $self->{AFS_AFFY_ARRAY_SAMPLE_PROTOCOL_IDS};
 }
 
+##################################################################################################
+#set get pair:afa_comment
+#######################################################
+# set_afa_comment
+# array comment
+#######################################################
+sub set_afa_comment { 
+	my $method = 'set_afa_comment';
+	
+	my $self = shift;
+	my $name = shift;	
+	return $self->{AFA_COMMENT} = $name;
+}
+
+#######################################################
+# get_afa_comment
+# array comment
+#######################################################
+	
+sub get_afa_comment {
+	my $self = shift;
+	return $self->{AFA_COMMENT};
+}
+
+#################################################################################################
+#set get pair:afs_full_sample_name
+#######################################################
+# set_afs_full_sample_name
+#######################################################
+sub set_afs_full_sample_name { 
+	my $self = shift;
+	my $name = shift;
+	return $self->{AFS_FULL_SAMPLE_NAME} = $name;
+}
+#######################################################
+# get_afs_full_sample_name
+#######################################################	
+sub get_afs_full_sample_name {
+	my $self = shift;
+	return $self->{AFS_FULL_SAMPLE_NAME};
+}
+
+##################################################################################################
+#set get pair:strain_or_line
+#######################################################
+# set_strain_or_line
+#######################################################
+sub set_afs_strain_or_line { 
+	my $self = shift;
+	my $name = shift;
+	return $self->{AFA_COMMENT} = $name;
+}
+#######################################################
+# get_strain_or_line
+#######################################################	
+sub get_afs_strain_or_line {
+	my $self = shift;
+	return $self->{AFA_COMMENT};
+}
+
+##################################################################################################
+#set get pair:individual
+#######################################################
+# set_afs_individual
+#######################################################
+sub set_afs_individual { 
+	my $self = shift;
+	my $name = shift;
+	return $self->{AFS_INDIVIDUAL} = $name;
+}
+#######################################################
+# get_afs_individual
+#######################################################	
+sub get_afs_individual {
+	my $self = shift;
+	return $self->{AFS_INDIVIDUAL};
+}
+
+##################################################################################################
+#set get pair:afs_sex_ontology_term_id
+#######################################################
+# set_afs_sex_ontology_term_id
+#######################################################
+sub set_afs_sex_ontology_term_id { 
+	my $self = shift;
+	my $name = shift;
+	return $self->{AFS_SEX} = $name;
+}
+#######################################################
+# get_afs_sex_ontology_term_id
+#######################################################	
+sub get_afs_sex_ontology_term_id {
+	my $self = shift;
+	return $self->{AFS_SEX};
+}
+##################################################################################################
+#set get pair:afs_age
+#######################################################
+# set_afs_age
+#######################################################
+sub set_afs_age { 
+	my $self = shift;
+	my $name = shift;
+	return $self->{AFS_AGE} = $name;
+}
+#######################################################
+# get_afs_age
+#######################################################	
+sub get_afs_age {
+	my $self = shift;
+	return $self->{AFS_AGE};
+}
 
 
+##################################################################################################
+#set get pair:afs_organism_part
+#######################################################
+# set_afs_organism_part
+#######################################################
+sub set_afs_organism_part { 
+	my $self = shift;
+	my $name = shift;
+	return $self->{AFS_ORGANISM_PART} = $name;
+}
+#######################################################
+# get_afs_organism_part
+#######################################################	
+sub get_afs_organism_part {
+	my $self = shift;
+	return $self->{AFS_ORGANISM_PART};
+}
+##################################################################################################
+#set get pair:afs_cell_line
+#######################################################
+# set_afs_cell_line
+#######################################################
+sub set_afs_cell_line { 
+	my $self = shift;
+	my $name = shift;
+	return $self->{AFS_CELL_LINE} = $name;
+}
+#######################################################
+# get_afs_cell_line
+#######################################################	
+sub get_afs_cell_line {
+	my $self = shift;
+	return $self->{AFS_CELL_LINE};
+}
+
+##################################################################################################
+#set get pair:afs_cell_type
+#######################################################
+# set_afs_cell_type
+#######################################################
+sub set_afs_cell_type { 
+	my $self = shift;
+	my $name = shift;
+	return $self->{AFS_CELL_TYPE} = $name;
+}
+#######################################################
+# get_afs_cell_type
+#######################################################	
+sub get_afs_cell_type {
+	my $self = shift;
+	return $self->{AFS_CELL_TYPE};
+}
+##################################################################################################
+#set get pair:afs_disease_state
+#######################################################
+# set_afs_disease_state
+#######################################################
+sub set_afs_disease_state { 
+	my $self = shift;
+	my $name = shift;
+	return $self->{AFS_DISEASE_STATE} = $name;
+}
+#######################################################
+# get_afs_disease_state
+#######################################################	
+sub get_afs_disease_state {
+	my $self = shift;
+	return $self->{AFS_DISEASE_STATE};
+}
+
+##################################################################################################
+#set get pair:afs_rna_template_mass
+#######################################################
+# set_afs_rna_template_mass
+#######################################################
+sub set_afs_rna_template_mass { 
+	my $self = shift;
+	my $name = shift;
+	return $self->{AFS_RNA_TEMPLATE_MASS} = $name;
+}
+#######################################################
+# get_afs_rna_template_mass
+#######################################################	
+sub get_afs_rna_template_mass {
+	my $self = shift;
+	return $self->{AFS_RNA_TEMPLATE_MASS};
+}
+##################################################################################################
+#set get pair:afs_protocol_deviations
+#######################################################
+# set_afs_protocol_deviations
+#######################################################
+sub set_afs_protocol_deviations { 
+	my $self = shift;
+	my $name = shift;
+	return $self->{AFS_SAMPLE_PROTOCOL_DEVIATIONS} = $name;
+}
+#######################################################
+# get_afs_protocol_deviations
+#######################################################	
+sub get_afs_protocol_deviations {
+	my $self = shift;
+	return $self->{AFS_SAMPLE_PROTOCOL_DEVIATIONS};
+}
+
+##################################################################################################
+#set get pair:afs_sample_description
+#######################################################
+# set_afs_sample_description
+#######################################################
+sub set_afs_sample_description { 
+	my $self = shift;
+	my $name = shift;
+	return $self->{AFS_SAMPLE_DESCRIPTION} = $name;
+}
+#######################################################
+# get_afs_sample_description
+#######################################################	
+sub get_afs_sample_description {
+	my $self = shift;
+	return $self->{AFS_SAMPLE_DESCRIPTION};
+}
+##################################################################################################
+#set get pair:afs_treatment_description
+#######################################################
+# set_afs_treatment_description
+#######################################################
+sub set_afs_treatment_description { 
+	my $self = shift;
+	my $name = shift;
+	return $self->{AFS_SAMPLE_TREATMENT_DESCRIPTION} = $name;
+}
+#######################################################
+# get_afs_treatment_description
+#######################################################	
+sub get_afs_treatment_description {
+	my $self = shift;
+	return $self->{AFS_SAMPLE_TREATMENT_DESCRIPTION};
+}
+##################################################################################################
+#set get pair:afs_comment
+#######################################################
+# set_afs_sample_comment
+#######################################################
+sub set_afs_comment { 
+	my $self = shift;
+	my $name = shift;
+	return $self->{AFS_SAMPLE_COMMENT} = $name;
+}
+#######################################################
+# get_afs_comment
+#######################################################	
+sub get_afs_comment {
+	my $self = shift;
+	return $self->{AFS_SAMPLE_COMMENT};
+}
+
+##################################################################################################
+#set get pair:afs_sample_preparation_date
+#######################################################
+# set_afs_sample_preparation_date
+#######################################################
+sub set_afs_sample_preparation_date { 
+	my $self = shift;
+	my $name = shift;
+	return $self->{AFS_SAMPLE_PREP_DATE} = $name;
+}
+#######################################################
+# get_afs_sample_preparation_date
+#######################################################	
+sub get_afs_sample_preparation_date {
+	my $self = shift;
+	return $self->{AFS_SAMPLE_PREP_DATE};
+}
 #######################################################
 # append_protocol_id
 # Append a new protocol id to previous ones all values will be entered in a comma delimited fashion
@@ -664,8 +969,151 @@ sub append_protocol_id {
 }
 
 
+###############################################################################
+#find_slide_type_id
+#Given the name of a Affy Array Slide get the Slide_type_id
+#return slide_type_id
+###############################################################################
+sub find_slide_type_id {
+    my $method = 'find_slide_type_id';
+    my $self = shift;
+	
+	my %args = @_;
+	my $slide_name = $args{slide_name};
+	
+	
+	confess(__PACKAGE__ . "::$method Need to provide key value pair 'slide_name'") unless ($slide_name);
+	
+	my $sql =  qq~ 	SELECT slide_type_id
+			FROM $TBMA_SLIDE_TYPE
+			WHERE name = '$slide_name'
+		    ~;
+
+	my @rows = $sbeams->selectOneColumn($sql);
+	
+	unless($rows[0] =~ /^\d/){
+		die "SLIDE NAME '$slide_name' DOES NOT MATCH ANY NAME in MA_SLIDE_TYPE, PLEASE GO ADD IT\n";
+	}
+	return $rows[0];
+	
+}
+
+###############################################################################
+#find_project_id
+#Given a project_name
+#return project_id
+###############################################################################
+sub find_project_id {
+	my $method = 'find_project_id';
+    my $self = shift;
+	
+	my %args = @_;
+	my $project_name= $args{project_name};
+	my $do_not_die_flag = $args{do_not_die};	#simple flag to use the die statement here or let the caller take care of seeing if the value is good or not
+	
+	confess(__PACKAGE__ . "::$method Need to provide key value pair 'project_name'") unless ($project_name =~ /^\w/);
+	
+	my $sql =  qq~ 	SELECT project_id
+					FROM $TB_PROJECT
+					WHERE name like '$project_name'
+				~;
+	my @rows = $sbeams->selectOneColumn($sql);
+	
+	if ($rows[0] =~ /^\d/ || $do_not_die_flag){
+		return $rows[0];
+	}else{
+		die "PROJECT NAME '$project_name' DOES NOT MATCH ANY PROJECT TAGS, PLEASE GO ADD IT\n";
+	}
+	
+}
+
+###############################################################################
+#find_organism_id
+#Given a organism_name
+#return organism_id
+###############################################################################
+sub find_organism_id {
+	my $method = 'find_organism_id';
+    my $self = shift;
+	
+	my %args = @_;
+	my $organism_name= $args{organism_name};
+	my $do_not_die_flag = $args{do_not_die};	#simple flag to use the die statement here or let the caller take care of seeing if the value is good or not
+	
+	confess(__PACKAGE__ . "::$method Need to provide key value pair 'project_name'") unless ($organism_name =~ /^\w/);
+	
+	my $sql =  qq~ 	SELECT organism_id
+					FROM $TB_ORGANISM
+					WHERE organism_name like '$organism_name'
+				~;
+	my @rows = $sbeams->selectOneColumn($sql);
+	
+	if ($rows[0] =~ /^\d/ || $do_not_die_flag){
+		return $rows[0];
+	}else{
+		die "ORGANISM NAME '$organism_name' DOES NOT MATCH ANY OGANISM NAMES, PLEASE GO ADD IT\n";
+	}
+	
+}
+###############################################################################
+#find_user_login_id
+#Given a username
+#return userid
+###############################################################################
+sub find_user_login_id {
+	my $method = 'find_user_login_id';
+    my $self = shift;
+	
+	my %args = @_;
+	my $user_name= $args{username};
+	my $do_not_die_flag = $args{do_not_die};	#simple flag to use the die statement here or let the caller take care of seeing if the value is good or not
+	
+	confess(__PACKAGE__ . "::$method Need to provide key value pair 'username'") unless ($user_name =~ /^\w/);
+	
+	my $sql =  qq~ 	SELECT user_login_id
+					FROM $TB_USER_LOGIN
+					WHERE username like '$user_name'
+				~;
+	my @rows = $sbeams->selectOneColumn($sql);
+	
+	if ($rows[0] =~ /^\d/ || $do_not_die_flag){
+		return $rows[0];
+	}else{
+		die "USER NAME '$user_name' DOES NOT MATCH ANY USER NAMES, PLEASE GO ADD IT\n";
+	}
+	
+}
 
 
+###############################################################################
+#find_ontology_id
+#Given a term
+#return return ontology_id .. #Currently the database is located in the Biolink database
+###############################################################################
+sub find_ontology_id {
+	my $method = 'find_ontology_id';
+    my $self = shift;
+	
+	my %args = @_;
+	my $ontology_term= $args{ontology_term};
+	my $do_not_die_flag = $args{do_not_die};	#simple flag to use the die statement here or let the caller take care of seeing if the value is good or not
+	
+	return if (!$ontology_term && $do_not_die_flag >0);
+	confess(__PACKAGE__ . "::$method Need to provide key value pair 'ontology_term' VALUE '$ontology_term'") unless ($ontology_term =~ /^\w/);
+	
+	my $sql =  qq~ 	SELECT MGED_ontology_term_id 
+					FROM $TB_MGED_ONTOLOGY_TERM
+					WHERE name like '$ontology_term'
+				~;
+	my @rows = $sbeams->selectOneColumn($sql);
+	
+	if ($rows[0] =~ /^\d/ || $do_not_die_flag){
+		return $rows[0];
+	}else{
+		die "ONTOLOGY NAME '$ontology_term' DOES NOT MATCH ANY ONTOLOGY NAMES, PLEASE GO ADD IT\n";
+	}
+	
+}
 
 }#Close of package bracket 
 1;
