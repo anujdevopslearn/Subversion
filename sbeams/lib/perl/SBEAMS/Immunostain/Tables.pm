@@ -29,8 +29,6 @@ use vars qw(@ISA @EXPORT
     $TBIS_ANTIBODY
     $TBIS_ANTIGEN
     $TBIS_TISSUE_TYPE
-    $TBIS_SURGICAL_PROCEDURE
-    $TBIS_CLINICAL_DIAGNOSIS
     $TBIS_SPECIMEN
     $TBIS_SPECIMEN_BLOCK
     $TBIS_STAINED_SLIDE
@@ -39,6 +37,10 @@ use vars qw(@ISA @EXPORT
     $TBIS_STAIN_CELL_PRESENCE
     $TBIS_CELL_TYPE
     $TBIS_CELL_PRESENCE_LEVEL
+		$TBIS_ABUNDANCE_LEVEL
+			
+		$TBIS_SURGICAL_PROCEDURE
+		$TBIS_CLINICAL_DIAGNOSIS
 
 );
 
@@ -59,8 +61,6 @@ require Exporter;
     $TBIS_ANTIBODY
     $TBIS_ANTIGEN
     $TBIS_TISSUE_TYPE
-    $TBIS_SURGICAL_PROCEDURE
-    $TBIS_CLINICAL_DIAGNOSIS
     $TBIS_SPECIMEN
     $TBIS_SPECIMEN_BLOCK
     $TBIS_STAINED_SLIDE
@@ -69,6 +69,10 @@ require Exporter;
     $TBIS_STAIN_CELL_PRESENCE
     $TBIS_CELL_TYPE
     $TBIS_CELL_PRESENCE_LEVEL
+		$TBIS_ABUNDANCE_LEVEL
+			
+		$TBIS_SURGICAL_PROCEDURE
+		$TBIS_CLINICAL_DIAGNOSIS
 
 );
 
@@ -89,8 +93,6 @@ $TBIS_QUERY_OPTION          = "${mod}query_option";
 $TBIS_ANTIBODY              = "${mod}antibody";
 $TBIS_ANTIGEN               = "${mod}antigen";
 $TBIS_TISSUE_TYPE           = "${mod}tissue_type";
-$TBIS_SURGICAL_PROCEDURE    = "${mod}surgical_procedure";
-$TBIS_CLINICAL_DIAGNOSIS    = "${mod}clinical_diagnosis";
 $TBIS_SPECIMEN              = "${mod}specimen";
 $TBIS_SPECIMEN_BLOCK        = "${mod}specimen_block";
 $TBIS_STAINED_SLIDE         = "${mod}stained_slide";
@@ -99,5 +101,8 @@ $TBIS_SLIDE_IMAGE           = "${mod}slide_image";
 $TBIS_STAIN_CELL_PRESENCE   = "${mod}stain_cell_presence";
 $TBIS_CELL_TYPE             = "${mod}cell_type";
 $TBIS_CELL_PRESENCE_LEVEL   = "${mod}cell_presence_level";
+$TBIS_ABUNDANCE_LEVEL				= "${mod}abundance_level";
 
+$TBIS_SURGICAL_PROCEDURE		= "${mod}surgical_procedure";
+$TBIS_CLINICAL_DIAGNOSIS		= "${mod}clinical_diagnosis";
 
