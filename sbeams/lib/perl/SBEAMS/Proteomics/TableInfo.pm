@@ -119,10 +119,12 @@ sub returnTableInfo {
             return qq~
 		SELECT experiment_id,username,P.project_id AS "proj",
 		       name AS 'project_name',PE.experiment_id AS "exp",
-		       experiment_tag,experiment_name,experiment_description
+		       experiment_tag,experiment_name,O.organism_name,
+                       experiment_description
 		  FROM $TBPR_PROTEOMICS_EXPERIMENT PE
 		 INNER JOIN $TB_USER_LOGIN UL ON (PE.contact_id=UL.contact_id)
 		 INNER JOIN $TB_PROJECT P ON (PE.project_id=P.project_id)
+		  LEFT JOIN $TB_ORGANISM O ON (PE.organism_id=O.organism_id)
 		 WHERE PE.record_status!='D'
 		   AND UL.record_status!='D'
 		   AND P.record_status!='D'
