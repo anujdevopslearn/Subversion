@@ -302,7 +302,7 @@ sub printEntryForm {
 
 
         #### If $element is cost_scheme, restrict the list to the current option
-        #### unless the user is working under the Arrays group
+        #### unless the user is working under the Microarray_admin group
         if ( $element eq "cost_scheme_id" && $current_work_group_name ne "Microarray_admin" ) {
           $optionlist_queries{$element} =~
             s/ORDER BY/WHERE cost_scheme_id = $cost_scheme_id ORDER BY/;
@@ -558,12 +558,12 @@ sub printEntryForm {
       }
 
 
-      #### If the Arrays Group does both Labeling and Hyb
+      #### If the Microarray_admin Group does both Labeling and Hyb
       if ( $parameters{"hybridization_request"} =~ /LH/ ) {
         print "<P>Total Label/Hyb Cost: \$ $proc_cost<P>\n";
         $total_price += $proc_cost;
 
-      #### Else if the user does Labeling and the Arrays Group does Hyb
+      #### Else if the user does Labeling and the Microarray_admin Group does Hyb
       } elsif ( $parameters{"hybridization_request"} eq "L" ) {
         my $hyb_price = 50;
         #### Kludge the Yeast Half Slide price to $25
@@ -654,7 +654,7 @@ sub printEntryForm {
            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
            <INPUT TYPE="submit" NAME="apply_action" VALUE="VIEW"> this request in a PRINTABLE VIEW<BR>
            This job has already been started.  Changes may no longer be made.
-           Contact the Arrays group directly if there are problems.<P>
+           Contact the Microarray_admin group directly if there are problems.<P>
          !;
        }
 
@@ -666,7 +666,7 @@ sub printEntryForm {
    !;
 
 
-    # If this is a not a new entry and the work_group is Arrays, allow
+    # If this is a not a new entry and the work_group is Microarray_admin, allow
     # more options:
     if ($parameters{$PK_COLUMN_NAME} gt ""
         && $current_work_group_name eq "Microarray_admin") {
@@ -1292,12 +1292,12 @@ sub processEntryForm {
       }
 
 
-      #### If the Arrays Group does both Labeling and Hyb
+      #### If the Microarray_admin Group does both Labeling and Hyb
       if ( $parameters{"hybridization_request"} =~ /LH/ ) {
         print "<P>Total Label/Hyb Cost: \$ $proc_cost<P>\n";
         $total_price += $proc_cost;
 
-      #### Else if the user does Labeling and the Arrays Group does Hyb
+      #### Else if the user does Labeling and the Microarray_admin Group does Hyb
       } elsif ( $parameters{"hybridization_request"} eq "L" ) {
         my $hyb_price = 50;
         #### Kludge the Yeast Half Slide price to $25
@@ -1462,7 +1462,7 @@ sub printAttemptedChangeResult {
 
     if ( ($result eq "SUCCESSFUL") && ($apply_action eq "INSERT" || $apply_action eq "UPDATE") ) {
       my $mailprog = "/usr/lib/sendmail";
-      my $recipient_name = "Arrays Contact";
+      my $recipient_name = "Microarray_admin Contact";
       my $recipient = "bmarzolf\@systemsbiology.org";
       my $cc_name = "SBEAMS";
       my $cc = "edeutsch\@systemsbiology.org";
@@ -1485,7 +1485,7 @@ sub printAttemptedChangeResult {
       print MAIL "$SERVER_BASE_DIR$CGI_BASE_DIR/${subdir}$PROGRAM_FILE_NAME&$PK_COLUMN_NAME=$resulting_PK&apply_action=VIEW\n\n";
       close (MAIL);
 
-      print "<BR><BR>An email was just sent to the Arrays Group informing them of your request.<BR>\n";
+      print "<BR><BR>An email was just sent to the Microarray_admin Group informing them of your request.<BR>\n";
     }
 
 
@@ -1844,12 +1844,12 @@ sub printCompletedEntry {
       }
 
 
-      #### If the Arrays Group does both Labeling and Hyb
+      #### If the Microarray_admin Group does both Labeling and Hyb
       if ( $parameters{"hybridization_request"} =~ /LH/ ) {
         print "<P>Total Label/Hyb Cost: \$ $proc_cost<P>\n";
         $total_price += $proc_cost;
 
-      #### Else if the user does Labeling and the Arrays Group does Hyb
+      #### Else if the user does Labeling and the Microarray_admin Group does Hyb
       } elsif ( $parameters{"hybridization_request"} eq "L" ) {
         my $hyb_price = 50;
         #### Kludge the Yeast Half Slide price to $25
