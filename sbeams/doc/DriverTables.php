@@ -36,7 +36,6 @@
    <LI>Which fields are required.
    <LI>Unique constrained columns.
  </UL>
- <LI>Which fields to display as columns in ManageTable resultsets.
  <LI>Association of tables into 'table groups', used to grant user/group access to resources.
  <LI>Store table names as variables of the form $TBPR_SAMPLE for SQL statement construction.  Variables are eval'd at runtime.
  </UL>
@@ -101,7 +100,10 @@ table_column:
  O input_length: Size of the HTML form widget if appropriate
  P onChange: text for JavaScript onChange code for this widget
  Q is_data: Y if this is a column that should appear on the form (as opposed to housekeeping column)
- R is_displayed: Y if this column should be displayed in a VIEW mode
+ R is_displayed: Y column should be displayed in a VIEW mode.
+                 N column should not be displayed.
+                 P Column is private, and should be hidden on forms unless user is owner or admin
+                 2 Column should be displayed if view mode is medium detail.
  S is_key_field: combination of Y columns will be checked for uniqueness before insertion
  T column text: Friendly descriptive text that appears on the form for this field
  U optionlist_query: SQL query which populates an optionlist
@@ -121,7 +123,12 @@ table_column:
 ../../scripts/Core/update_driver_tables.pl MODULE_column_property.txt
 <BR>
 <BR>
-It is not necessary to run the script on the table_property file if you have not made changes there, but if both have changed it is often imperative that the table_property file be run *before* the table_column file.
+It is not necessary to run the script on the table_property file if you have not made changes there, but if both have changed it is often imperative that the table_property file be run *before* the table_column file.  Some modules have an additional driver table file called MODULE_column_property_MANUAL.txt.  If such a file exists in a the module of interest, it must be run after running the table and column property file updates:
+<BR>
+<BR>
+../../scripts/Core/update_driver_tables.pl MODULE_column_property_MANUAL.txt
+<BR>
+<BR>
 
 </P>
 
