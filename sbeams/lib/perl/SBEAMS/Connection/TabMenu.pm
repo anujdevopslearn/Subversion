@@ -38,11 +38,12 @@ use overload ( '""', \&asHTML );
 # narg  isSticky      If true, pass thru cgi params, else delete 
 # narg  boxContent    If true, draw box around content (if any)
 # narg  maSkin        If true, reoverload stringify to point at &asMA_skin
-#
+#-
 sub new {
   my $class = shift;
-  my $this = { activeColor => '999999', # 
-               inactiveColor => '#EEEEEE', # light gray 
+  my $this = { activeColor => 'BBBBBB', # dark grey
+               inactiveColor => 'DEDEDE', # light grey 
+               hoverColor => 'BBCCBB', # greenish
                atextColor => '000000', # black
                itextColor => '000000', # black
                isSticky => 0,
@@ -152,11 +153,24 @@ sub setInactiveColor {
   }
 }
 
+#+
+# Set hover color for mouseover on CSS tabs
+# narg color    Color for hover
+#-
+sub setHoverColor {
+  my $this = shift;
+  my %args = @_;
+  if ( $args{color} ) {
+    $this->{hoverColor} = $args{color};
+  }
+}
+
 
 #+
 # Set active tab text color
 # narg color    Color for text 
 #-
+#
 sub setAtextColor {
   my $this = shift;
   my %args = @_;
@@ -217,6 +231,9 @@ sub setDefaultTab {
 
 #+
 #  Add a new tab to menuset
+#  @narg label  Name to put on tab itself REQ
+#  @narg helptext Optional text to put in 'mouseover' info window. 
+#  @narg URL    Optional URL for this tab, overrides self URL if provided.
 #-
 sub addTab {
   my $this = shift;
@@ -228,7 +245,8 @@ sub addTab {
   $this->{_tabIndex}++;
 
   # Which param behaviour do we want.
-  my $url = ( $this->{isSticky} ) ? $this->{_absQueryURL} : $this->{_absURL};
+  my $url = ( $args{URL} ) ? $args{URL} : # Look for user-defined URL
+            ( $this->{isSticky} ) ? $this->{_absQueryURL} : $this->{_absURL};
   
   $args{url} ||= $url;
   my $del = ( $args{url} =~ /\?/ ) ? '&' : '?';
@@ -312,9 +330,6 @@ sub asCSSHTML {
     $this->{_table}->setCellAttr ( COL => 1, ROW => 2, BGCOLOR => $color );
   }
 
-  
-
-
   return ( <<"  END" );
   <!-- Begin TabMenu --> 
     <!-- CSS definitions -->
@@ -343,7 +358,7 @@ sub asCSSHTML {
               	text-decoration:none;
                 padding:0.25em 1em;
               	font-weight:bold;
-              	background:#DEDEDE;
+              	background:#$this->{inactiveColor};
               	margin:0;
               	border-left:1.25px solid #FFFFFF;
               	border-top:1.25px solid #FFFFFFF;
@@ -351,17 +366,17 @@ sub asCSSHTML {
                 }
 
     #menuset A:hover {
-	    background:#BBCCBB;
+	    background:#$this->{hoverColor};
      	color:#444444;
     }
     #menuset A:active,
     #menuset A.atab:link,
     #menuset A.atab:visited {
-	    background:#BBBBBB;
+	    background:#$this->{activeColor};
      	color:#333333;
     }
     #menuset A.atab:hover {
-	    background:#BBCCBB;
+	    background:#$this->{hoverColor};
      	color:#444444;
     }
     </style>
@@ -551,7 +566,6 @@ sub _getURL {
           my $netloc        = $cgi->url(-base => 1);
 
   # cache invocation url
-  print STDERR <<"  END";
 FULL:   $full_url  
 QUER:   $query_url  
 REL:    $relative_url
