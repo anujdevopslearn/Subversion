@@ -132,7 +132,7 @@ if (! $cgi->param('step')) {
     $sbeamsMOD->printPageHeader();
     step2();
     $sbeamsMOD->printPageFooter();
-} elsif ($cgi->param('step') == 2) {
+} elsif ($cgi->param('step') == 2  ||$cgi->param('pair_wise_only')) {
     step3();
 } elsif ($cgi->param('step') == 3) {
     step4();
@@ -179,11 +179,8 @@ sub step2 {
 <p>
 You have more then 2 sample groups to compare.
 To find differentially expressed genes you can run SAM or a one of t-test statistics
-with some form of Multiple testing procedure.
-Since you have more then two sample groups unless you choose some type of ANOVA test statistic
-all the sample groups will be compared in a pairwise manor producing files of all the possible sample group 
-pairs compared to the reference sample group.
-
+with some form of Multiple testing procedure.  To produce a simple ratio between the different sample groups
+use the Make_ratio options*.
 </p>
 END
 	}else{
@@ -205,23 +202,24 @@ END
 	      p('Select the test statistic'),
 	     $cgi->radio_group(-name	=> 'test_stat',
                            -values  => ['SAM', 
-                           				't_test'
+                           				't_test',
+										'Make_ratios',                   					   
                    					   ],
                            -default => 'SAM',
                            -linebreak=>'true',
-                           ),
+                           -labels => {	'SAM' => 'SAM', 
+			   		't_test' => 't_test', 
+					'Make_ratios' => 'Make_ratios *Only use this if there are no replicates'},
+			   ),
 	      p(submit("Next Step")),
 	      end_form;
 	
 	print <<'END';
 <h2>Quick Help</h2>
 
+
 <p>
-For t-tests and Wilcoxon tests, there must only be 2 experimental
-classes (generally a control and experimental class). However, for
-the ANOVA F-test, you may have more than two classes.
-</p>
-<p>
+<b>SAM</b><br/>
 SAM analysis description from Tusher et al. [1]  "SAM identifies genes with statistically significant changes in expression by assimilating 
 a set of gene-specific <em>t</em> tests.  Each gene is assigned a score on the basis of its change 
 in gene expression relative to the standard deviation of repeated measurements for that gene.  Genes with
@@ -231,7 +229,14 @@ by analyzing permutations of the measurements.  The threshold can be adjusted to
 of genes, and FDRs are calculated for each set."<br>
 1)  Significance analysis of microarrays applied to the ionizing radiation response.
 Proc Natl Acad Sci U S A. 2001 Apr 24;98(9):5116-21. Epub 2001 Apr 17. Erratum in: Proc Natl Acad Sci U S A 2001 Aug 28;98(18):10515. 
+<b>t_test</b>
 
+<p>
+<b>t_test</b><br/>
+For t-tests and Wilcoxon tests, there must only be 2 experimental
+classes (generally a control and experimental class). However, for
+the ANOVA F-test, you may have more than two classes.
+</p>
 <p>
 multtest includes several tests for differences in means (t-test,
 F-test, etc.) as well as a number of procedures for controlling
@@ -244,6 +249,11 @@ diagnostic plots, an MA plot, a quantile-quantile plot, and a
 multiple testing procedure selectivity plot.
 </p>
 
+<p>
+<b>Make_ratios</b><br/>
+Make Ratios is only going to combine the expression values from the normalized data set
+for each of the sample groups.  This option should only be used if the data set does
+not contain any replicates, since no significance values will be produced. 
 END
 
 }
@@ -254,7 +264,7 @@ END
 sub step3 {
 	my $filename = $cgi->param('file');
 	my $sample_groups_href = parse_sample_groups_file( folder => $fm->token() );
-	
+	my $reference_sample_group  = parse_sample_groups_file( folder => $fm->token(), data_type =>'get_reference_sample');
 	my $test_stat = $cgi->param('test_stat');
 	
 	my $numclasses = $cgi->param('numclasses');
@@ -276,18 +286,59 @@ sub step3 {
 	$sbeamsMOD->printPageHeader();
 	$sbeams->printStyleSheet();
 	site_header();
-	
+	#$sbeams->printDebuggingInfo($q);
 	print h1('Multiple Testing: multtest'),
 	      h2('Step 3:'),
-	      start_form, 
+	      start_form(-name=>'MainForm'), 
 	      hidden('token', $fm->token),
 	      hidden(-name=>'step', -default=>3, -override=>1),
 	      hidden('file', $filename),
 	      hidden('name', $name),
 	      hidden('numsamples', scalar @sampleNames),
-	      p("Sample Groups and Files:");
-	 print "<table>";  
+	      hidden('apply_action_hidden', 'not_used'),
+	      hidden('numclasses', $numclasses),  
+	    ;
 	
+	##Ignore Reference Sample And only work with one pair of sample groups
+	if ($q->param('pair_wise_only') eq 'YES'){
+		print table({border=>0},
+				Tr(td({-class=>'med_gray_bg'}, 
+				"Select Two Sample Groups to compared to one another (Sample Group X / Sample Group Y) <br>
+				The rest of the data set will be ignored.  If this not what you want go back now"))
+			   );
+		print hidden("Ignore_reference_sample", 'YES');
+	}else{
+	
+		print table({border=>0},
+				Tr(td({-class=>'med_gray_bg'},
+				       "Reference Sample"
+				      ),
+				    td({-class=>'rev_gray'},
+				      $reference_sample_group
+				      ),
+				   ),	
+				Tr(td(b("Compare ONLY two sample group to one another")),
+				   td(	$q->checkbox_group(-name=>'pair_wise_only',
+	                           -value=>'YES',
+	                           -label=>'Pair Wise Comparision Only',
+	                     	   -onClick=>'refreshPairWiseOnly()',
+	                     					)
+					)			
+				)
+			   ), hr;
+	}	
+	
+	 print "<table>";  
+##Make the Headers
+	 print Tr(
+			  td({-class=>'med_gray_bg'},"Information"),
+			  td({-class=>'med_gray_bg'},"Sample Group Name"),
+			   $q->param('pair_wise_only') eq 'YES' ?
+			td(table(Tr(
+			 	td({-class=>'med_gray_bg'},  
+			  		"Sample Group X or Sample Group Y"),
+			  ))):"",	 	
+			);
 	my @classes = ();
 ### Print out little table showing files for each sample_group
 	foreach my $sample_group (
@@ -300,13 +351,35 @@ sub step3 {
 		my $array_count = scalar keys %{ $sample_groups_href->{$sample_group} };
 		print Tr(
 			  td({-class=>'med_gray_bg'},"Sample Group"),
-			  td({-class=>'rev_gray'},$sample_group)
+		 	  td({-class=>'rev_gray'},$sample_group),
+		 #Getting Crazy, Check for param 'pair_wise_only'.  If so print out a checkbox to allow user
+		#to select a Sample group name.  Need two boxes one for Group 'A' One of Group 'B'
+			#Create a small table within a cell to hold th Checkboxes for each group of the A or B Sample  
+			  $q->param('pair_wise_only') eq 'YES' ?	
+				td(table(Tr(
+					td( 
+			  	 		$q->checkbox_group(	-name=>"sample_group_x_$sample_group",
+                           	 				-value=>"${sample_group}",
+				 							-labels=>{$sample_group=>'X'},
+                 						  ),  
+                	  	 b("--OR--"),
+						),
+                	td(
+					  	 $q->checkbox_group(-name=>"sample_group_y_$sample_group",
+		                           			-value=>"$sample_group",
+		                 					-labels=>{$sample_group=>'Y'},
+											)  
+		               ),
+				))):"",
+			  
 			),
 			Tr(
 			  td($array_count > 1 ? {-class=>'grey_bg'}: {-class=>'orange_bg'}, 
 			     $array_count > 1 ? "$array_count Files":"Warning: Minimum number of arrays for statistical tests is not met. At least two arrays are needed"  
 			     ),
-			  td([sort keys  %{ $sample_groups_href->{$sample_group} } ])
+			  td([sort keys  %{ $sample_groups_href->{$sample_group} } ]),
+		
+                
 			);
 	}
 	print '</table>';
@@ -332,6 +405,8 @@ sub step3 {
 		print_t_test_controls();
 	}elsif($test_stat eq 'SAM'){
 		print_sam_controls();
+	}elsif($test_stat eq 'Make_ratios'){
+		print_ratios_controls();
 	}else{
 		print "<h2>Sorry method '$test_stat' not yet implemented</h2>";
 		return;
@@ -403,10 +478,12 @@ END
 ####
 sub step4 {
 	my $sample_groups_info_href = parse_sample_groups_file( folder => $fm->token(), data_type =>'sample_group_ids' );
+	my $reference_sample_group  = parse_sample_groups_file( folder => $fm->token(), data_type =>'get_reference_sample');
+	
 	my $jobname = "mt-" . rand_token();
 	my $test_stat = $cgi->param('test_stat');
 	my $genenames = $cgi->param('genenames');
-	$genenames =~ s/[,;"']/ /g;
+	$genenames =~ s/[,;"']/ /g; #"remove any junk from the gene names
 	my @genenames = split(' ', $genenames);
 	my ($script, $output, $jobsummary, $limit, @classlabel, $error, $job);
 	
@@ -419,12 +496,14 @@ sub step4 {
 	if (! $fm->file_exists($cgi->param('file'))) {
 		error("File does not exist.");
 	}
-	
+	$log->debug("CGI OBJECT ". $q->param('pair_wise_only'));
+	$log->debug("TEST STAT '$test_stat'");
 	my %count_groups =();
 	for (my $i = 0; $i < $cgi->param('numsamples'); $i++) {
 		my $class_numb = $cgi->param("class$i");
 #need to see if any groups of arrays have a single array, flag error if so since 
-#none of the statistical test will work with a single array
+#none of the statistical test will work with a single array.  Except for Making Ratios.....
+		
 		if (exists $count_groups{$class_numb} ){
 			$count_groups{$class_numb} ++;
 		}else{
@@ -433,67 +512,86 @@ sub step4 {
 		 
 		$classlabel[$i] = $cgi->param("class$i");
 	}
+##skip checking for single arrays if we are just going to make ratios
+	unless($test_stat eq 'Make_ratios'){
+		check_for_single_array_group(%count_groups);
+	}
+###If we are doing a pairwise analysis we might have more then one output file 
+##so we need to be aware of this information ie which condition group we are working with and so on 
 	
-	check_for_single_array_group(%count_groups);
 
-##If we are doing a pairwise analysis we might have more then one output file so we need to be aware of this information
-	
-
-	our @condition_names = ();
-	our @condition_ids = ();
-	my @class_a = ();
-	my @sample_names_a = ();
+	our $condition_names_aref = [];
+	our $condition_ids_aref = []; #make an array of class ids that point that are in the same order as the condition names
+								  #A
+	my $class_aref = [];		  
+	my $sample_names_aref = [];
 	my $out_links = '';
+	my $reference_sample_class_numb = '';
+	my $second_sample_class_numb = '';#will only be used if the user is manually choosing two sample groups	
+	my $clean_group_flag = '';
+	my $sample_group_x  = '';
+	my $sample_group_y  = '';
 	
-	if ($cgi->param('test_stat') =~ /SAM|t_test/ && $cgi->param('test') !~ /f/){
+	if ($cgi->param('Ignore_reference_sample') eq 'YES'){
+#If the choice is to not use the reference sample and just do a single comparision
+#make sure the data only has one pair of sample groups X and Y otherwise Braf and die
+		$log->debug("GOING TO IGNORE REF SAMPLE");
+		  ($clean_group_flag, 
+			$sample_group_x,
+			$sample_group_y,
+			)  = check_sample_group_names(sample_group_href => $sample_groups_info_href);
+		
+		if ($clean_group_flag eq 'BAD_GROUPS'){
+			error("Cannot have more then one sample group for each Group X or Y
+					Sample group '$sample_group_x' '$sample_group_x' does not look good
+				");
+		}
+		
+	}
+##Collect the data needed to make the R script
+	if ($test_stat =~ /SAM|t_test|Make_ratios/ && $cgi->param('test') !~ /f/){
 		
 		##Make some html that will be printed after analysis is complete
-		my $button_html = add_upload_expression_button(token=>$jobname);
+		($reference_sample_class_numb, 
+		 $second_sample_class_numb)  = make_sample_names(sample_group_href => $sample_groups_info_href,
+						  class_aref		=> $class_aref,
+						  sample_names_aref => $sample_names_aref,
+						  reference_sample_group => $reference_sample_group,
+						  sample_group_x_name => $sample_group_x,
+						  sample_group_y_name => $sample_group_y, 
+						 
+						 );	
 		
-		foreach my $class_numb ( sort keys %{ $sample_groups_info_href }){
-			push @class_a,  $class_numb;
-			push @sample_names_a, $sample_groups_info_href->{$class_numb};
-			$log->debug("CLASS NUMB => SAMPLE NAME " . $sample_groups_info_href->{$class_numb});
+		
+##Setup little loop to make condition names which will be used to make unique file names 
+##and nice human readable names
+		for (my $i=0; $i <= $#{$class_aref} ; $i++){
+			next if $i == $reference_sample_class_numb ;
+		my ($condition_name) =	make_condition_names(count => $i,
+							  		condition_names_aref => $condition_names_aref,
+							  		condition_ids_aref => $condition_ids_aref,
+									class_aref		=> $class_aref,
+						  			sample_names_aref => $sample_names_aref,
+									reference_sample_number => $reference_sample_class_numb,
+									);
 			
-		}
-##Setup little loop to make condition names which will be used to make unique file names and nice human readable names
-		for (my $i=0; $i <= $#class_a ; $i++){
-			next if $i == 0;
-			my $condition_id = "$class_a[$i]_vs_$class_a[0]";
-			my $condition_name = "$sample_names_a[$i]_vs_$sample_names_a[0]";
-			$log->debug( "CONDITION ID '$condition_id' CONDITION SAMPLE '$condition_name'");
+			if (defined $second_sample_class_numb && $second_sample_class_numb =~ /^\d/ ){
+				$log->debug("I SEE A SECOND CLASS NUMBER '$second_sample_class_numb'");
+				#if we are only working with two sample groups only make links for 
+				#the piece of analysis that will be ran
+				next unless $second_sample_class_numb == $i;
+				$log->debug("MAKE LINK FOR '$condition_name' SECOND CLASS ID '$second_sample_class_numb'");
+			}
+			$out_links .= make_image_urls(conditon_name => $condition_name,
+										  jobname => $jobname,
+										  test_stat => $test_stat,
+										  );
 			
-			$condition_name =~ s/\W//g;		#Clean up the name remove any non word characters
-			push @condition_names, $condition_name;
-			push @condition_ids, $condition_id;
 			
-#if we are looping through t-test or fdr analysis ouput then we need add links to the graphs 
-			my $parital_url = "$RESULT_URL?action=view_file&analysis_folder=$jobname&analysis_file=${jobname}_$condition_name";
-			my $parital_image_url = "$RESULT_URL?action=view_image&analysis_folder=$jobname&analysis_file=${jobname}_$condition_name";
-			my $maqq = (grep(/^t/, $cgi->param('test'))) ? 
-			"<img src='${parital_image_url}_ma&file_ext=png'>
-			 <img src='${parital_image_url}_qq&file_ext=png'>" 
-			: "";
-			my $rvsa = ($cgi->param('limittype') eq 'fdr_cutoff') ? 
-			"<img src='${parital_image_url}_delta&file_ext=png'>
-			 <img src='${parital_image_url}_samplot&file_ext=png'>": 
-			"<p><img src='${parital_image_url}_rvsa&file_ext=png'></p>";
-			
-#remove link to text version of html out	
-#	<a href="$out_file.txt">$condition_name.txt</a><br>		
-			$out_links .= <<END;
-<h3>Output Files: $condition_name</h3>
-<a href="$parital_url&file_ext=html">$condition_name.html</a><br>
-<a href="$parital_url&file_ext=full_txt">All Genes - $condition_name.txt</a><br>
-<a href="$RESULT_URL?action=download&analysis_folder=$jobname&analysis_file=$jobname&file_ext=aafTable">$condition_name.aafTable</a><br>			
-$maqq
-$rvsa
-$button_html
-
-END
-			
-		}
-	}#End if 
+		}#end for loop
+	}#End elsif loop
+	 
+	 
 ##Either use the out links produced above or default to the simple ones below mainly by ANOVA type tests	
 my $parital_url 	  = "$RESULT_URL?action=view_file&analysis_folder=$jobname&analysis_file=$jobname";
 my $parital_image_url = "$RESULT_URL?action=view_image&analysis_folder=$jobname&analysis_file=$jobname";
@@ -507,7 +605,7 @@ my $parital_image_url = "$RESULT_URL?action=view_image&analysis_folder=$jobname&
 <p><img src='$parital_image_url&file_ext=rvsa.png'></p>";
 			
 
-
+#Finish making the HTML page
 $output = <<END;
 <h3>Show analysis Data:</h3>
 <a href="$CGI_BASE_DIR/Microarray/bioconductor/upload.cgi?_tab=3&token=$jobname&show_analysis_files=1">Show Files</a>
@@ -538,20 +636,36 @@ END
 		$script = generate_sam_r(
 						 jobname 	 => $jobname, 
 						 classlabels => [@classlabel], 
-						 condition_ids  => \@condition_ids,
-						 condition_names=> \@condition_names,
+						 condition_names_aref => $condition_names_aref,
+						 condition_ids_aref => $condition_ids_aref,
 						 genenames   => [@genenames],
-						 slide_type_name  => $slide_type_name
-						 
+						 slide_type_name  => $slide_type_name,
+						 reference_class_id =>$reference_sample_class_numb,
+						 second_class_id =>  $second_sample_class_numb,
+						 );
+	}elsif( $test_stat eq 'Make_ratios'){
+		$log->debug("MAKE MAKE_RATIO R SCRIPT");
+		$script = generate_ratio_r(
+						 jobname 	 => $jobname, 
+						 classlabels => [@classlabel], 
+						 condition_names_aref => $condition_names_aref,
+						 condition_ids_aref => $condition_ids_aref,
+						 genenames   => [@genenames],
+						 slide_type_name  => $slide_type_name,
+						 reference_class_id =>$reference_sample_class_numb,
+						 second_class_id =>  $second_sample_class_numb,
 						 );
 	}else{
+		$log->debug("MAKE MULTTEST R SCRIPT");
 		$script = generate_r(
 						 jobname 	 => $jobname, 
 						 classlabels => [@classlabel], 
-						 condition_ids  => \@condition_ids,
-						 condition_names=> \@condition_names,
+						 condition_names_aref => $condition_names_aref,
+						 condition_ids_aref => $condition_ids_aref,
 						 genenames   => [@genenames],
-						 slide_type_name  => $slide_type_name
+						 slide_type_name  => $slide_type_name,
+						 reference_class_id =>$reference_sample_class_numb,
+						 second_class_id =>  $second_sample_class_numb,
 						 );
 	}
 
@@ -560,11 +674,15 @@ END
 	$limit = $cgi->param('limit') ? $limit_type . " " . 
 	         $cgi->param('limitnum') : "None";
 	
+	$log->debug("LIMIT TYPE '$limit_type' LIMIT NUMBER '$limit'");
+	
 	my @job_summary_info = ('File', scalar($cgi->param('file')),
 	                         'Class&nbsp;labels', join(', ', @classlabel),
 	                         'File Names', join(', ',  @cell_file_names),
-	                         'Class Names', join(', ', @sample_names_a),
-	                         'Class Ids', join(', ', @class_a),
+	                         'Class Names', join(', ', @{$sample_names_aref}),
+	                         'Class Ids', join(', ', @{$class_aref}),
+	                         'Reference Sample Class ID', $reference_sample_class_numb,
+	                         'Second Class ID', $second_sample_class_numb,
 	                         'Test', $tests{$cgi->param('test')}?$tests{$cgi->param('test')}:$cgi->param('test_stat'),
 	                         'Raw&nbsp;p-values', scalar($cgi->param('rawpcalc')),
 	                         'Side', scalar($cgi->param('side')),
@@ -578,8 +696,10 @@ END
 ##Want differnt format in the database to track the job description so make it so....	                         
 	 my @db_jobsummary = (	 'File Names =>'. join(', ',  @cell_file_names),
 	 						 'Class&nbsp;labels =>'.  join(', ', @classlabel),
-	 						 'Class Names =>'. join(', ', @sample_names_a),
-	                         'Class Ids =>'  . join(', ', @class_a),
+	 						 'Class Names =>'. join(', ', @{$sample_names_aref}),
+	                         'Class Ids =>'  . join(', ', @{$class_aref}),
+	                         'Reference Sample Class ID', $reference_sample_class_numb,
+	                         'Second Class ID', $second_sample_class_numb,
 	                         'Test =>' . $tests{$cgi->param('test')}?$tests{$cgi->param('test')}:$cgi->param('test_stat'),
 	                         'File =>' . scalar($cgi->param('file')),
 	                         'Raw&nbsp;p-values =>'. scalar($cgi->param('rawpcalc')),
@@ -600,7 +720,7 @@ END
 	
 	#Calculate the cpu time needed.  Inital test Affy Mouse chips could process < 7 comparisions in a hour
 	my $chips_per_hour = 5;
-	my $condition_count = scalar @condition_names;
+	my $condition_count = scalar @{$condition_names_aref};
 	my $cpu_time = '';
 	unless ($condition_count < $chips_per_hour){
 		$cpu_time = ceil($condition_count/4);
@@ -608,7 +728,7 @@ END
 		$cpu_time = "$cpu_time:00:00";
 	}
 	$log->debug("CPU TIME '$cpu_time'");
-	
+	#error("KILL POINT HIT");
 	$job = new Batch;
     $job->cputime($cpu_time);
     $job->type($BATCH_SYSTEM);
@@ -659,10 +779,10 @@ sub generate_r {
 	my $genenames  = $args{genenames};
 	my $slide_type_name  = $args{slide_type_name};
 	
-	my $conditions_ids_aref  = $args{condition_ids};
-	my $conditions_names_aref  = $args{condition_names};
-	
-	
+	my $condition_ids_aref  = $args{condition_ids_aref};
+	my $condition_names_aref  = $args{condition_names_aref};
+	my $reference_sample_class_numb = $args{reference_class_id};
+	my $second_sample_class_numb = $args{second_class_id};
 	
 	my $fmpath = $fm->path;
 	my $filename = $cgi->param('file');
@@ -697,6 +817,9 @@ jobname <- "$jobname"
 load("$fmpath/$filename")
 exprset <- get("$name")
 classlabel <- c("@{[join('", "', @$classlabel)]}")
+reference.class.id <- as.numeric("$reference_sample_class_numb")
+try(second.class.id <- as.numeric("$second_sample_class_numb"))
+
 proc <- "$proc"
 test <- "$test"
 rawpcalc <- "$rawpcalc"
@@ -711,8 +834,8 @@ if (!nchar(genenames[1]))
 exprs <- @{[$exprs ? "TRUE" : "FALSE"]}
 in.title <- "$title"
 
-condition.ids <- c("@{[join('", "', @$conditions_ids_aref)]}")
-condition.names <- c("@{[join('", "', @$conditions_names_aref)]}")
+condition.ids <- c("@{[join('", "', @$condition_ids_aref)]}")
+condition.names <- c("@{[join('", "', @$condition_names_aref)]}")
 
 
 path.to.annotation <- "$AFFY_ANNO_PATH"
@@ -751,11 +874,19 @@ if (any (grep("f", test)) ) {
 	
 }else{
 	unique.classes <- unique(classlabel)
+
+	#If there is a second class that means the user has selected two classes to compare
+	#so reset the unique classes to just the two samples of interest
+	try (if (second.class.id >= 0){
+		print ("I SEE THE SECOND CLASS")
+		unique.classes <- c(reference.class.id, second.class.id)
+	    }
+	)
 }
 
 for (class.numb in unique.classes){
 	class.numb <- as.numeric(class.numb)
-	if (class.numb == 0) {next}
+	if (identical(class.numb,  reference.class.id)) {next}
 
 ##If this an ANOVA Like test then do not try and loop data
 	if (any(grep("f", test)) ) {
@@ -767,14 +898,17 @@ for (class.numb in unique.classes){
 		  
 	}else{
 ##Grab the cols for this particular loop
-			cols <- c(which(classlabel == 0), which(classlabel == class.numb))
+			cols <- c( which(classlabel == class.numb), which(classlabel == 0))
 			current.classlabel <- as.integer(classlabel[cols])
-##Change in classlabels greater than 1 to 1
-			current.classlabel[which(current.classlabel>1)] <- 1
+##Change in classlabels to 0 for the reference sample and 1 for the other sample class
+	#current.classlabel[which(current.classlabel>1)] <- 1
+	current.classlabel[which(current.classlabel == reference.class.id)] <- 0
+ 	current.classlabel[which(current.classlabel == class.numb)] <- 1
 		
 		if (length(condition.ids)>=1){
-			condition.id <- condition.ids[class.numb] 
-			condition.name <- condition.names[class.numb]
+			#Map the current class to the correct condition name
+		condition.id.key <- which(condition.ids == class.numb) 
+		condition.name <- condition.names[condition.id.key]
 			outFileRoot <- paste(jobname, "_", condition.name, sep="")
 			print (outFileRoot)
 		}
@@ -829,11 +963,11 @@ for (class.numb in unique.classes){
 	#                  aafTableFrame(full.mtdata[2:3]));
 	                  
 	if (max(current.classlabel) == 1) {
-	    x <- as.numeric(mean(as.data.frame(2^t(X[,(current.classlabel == 0)]))))
-	    y <- as.numeric(mean(as.data.frame(2^t(X[,(current.classlabel == 1)]))))
-	    fold <- y/x
-	    foldlog2 <- log2(y/x)
-    	foldlog10 <-log10(y/x)
+	    y <- as.numeric(mean(as.data.frame(2^t(X[,(current.classlabel == 0)]))))
+	    x <- as.numeric(mean(as.data.frame(2^t(X[,(current.classlabel == 1)]))))
+	    fold <- x/y
+	    foldlog2 <- log2(x/y)
+    	foldlog10 <-log10(x/y)
 #attach the log2 and log10 ratios to the output
 
 	    my.colnames <- c("Fold Change", 
@@ -955,17 +1089,21 @@ END
 }
 #####################END generate_r
 
-#### Subroutine: generate_sam_r
-# Generate an R script to process the data using siggene bioconductor to run sam
+
+#### Subroutine: generate_ratio_r
+# Generate an R script to process the data by just making ratios
 ####
-sub generate_sam_r {
+sub generate_ratio_r {
 	my %args = @_;
 	my $jobname    = $args{jobname};
 	my $classlabel = $args{classlabels};
-	my $conditions_ids_aref  = $args{condition_ids};
-	my $conditions_names_aref  = $args{condition_names};
+	my $condition_ids_aref  = $args{condition_ids_aref};
+	my $condition_names_aref  = $args{condition_names_aref};
 	my $slide_type_name  = $args{slide_type_name};
-	
+	my $reference_sample_class_numb = $args{reference_class_id};
+	my $second_sample_class_numb = $args{second_class_id};
+ 	
+	$log->debug("CONDITION NAMES" . Dumper($condition_names_aref));
 	
 	my $fmpath = $fm->path;
 	my $filename = $cgi->param('file');
@@ -1000,9 +1138,10 @@ load("$fmpath/$filename")
 jobname <- "$jobname"
 exprset <- get("$name")
 classlabel <- c("@{[join('", "', @$classlabel)]}")
-
-condition.ids <- c("@{[join('", "', @$conditions_ids_aref)]}")
-condition.names <- c("@{[join('", "', @$conditions_names_aref)]}")
+reference.class.id <- as.numeric("$reference_sample_class_numb")
+try(second.class.id <- as.numeric("$second_sample_class_numb")) 
+condition.ids <- c("@{[join('", "', @{$condition_ids_aref} )]}")
+condition.names <- c("@{[join('", "', @{$condition_names_aref} )]}")
 
 limit <- @{[$limit ? "TRUE" : "FALSE"]}
 limittype <- "$limittype"
@@ -1036,19 +1175,274 @@ library(webbioc)
 
 
 unique.classes <- unique(classlabel)
+#If there is a second class that means the user has selected two classes to compare
+#so reset the unique classes to just the two samples of interest
+try (if (second.class.id >= 0){
+	unique.classes <- c(reference.class.id, second.class.id)
+    }
+)
+for (class.numb in unique.classes){
+	class.numb <- as.numeric(class.numb)
+	if (identical(class.numb,  reference.class.id)) {next}
+##Grab the cols for this particular loop
+	cols <- c(which(classlabel == class.numb), which(classlabel == reference.class.id) )
+	current.classlabel <- as.integer(classlabel[cols])
+##Change in classlabels to 0 for the reference sample and 1 for the other sample class
+	#current.classlabel[which(current.classlabel>1)] <- 1
+	current.classlabel[which(current.classlabel == reference.class.id)] <- 0
+ 	current.classlabel[which(current.classlabel == class.numb)] <- 1
+	
+	if (length(condition.ids)>=1){
+		#Map the current class to the correct condition name
+		condition.id.key <- which(condition.ids == class.numb) 
+		condition.name <- condition.names[condition.id.key]
+		outFileRoot <- paste(jobname, "_", condition.name, sep="")
+		print (outFileRoot)
+	}
+##initilize the title var each loop
+	title <- in.title
+	
+	Matrix <- exprs(exprset)[,cols]
+
+	 
+	matrix.column.names <- c(
+							"Log_2_Expression_Ratio", 
+							"Log_10_Expression_Ratio",
+							"mu_X",
+							"mu_Y"
+							)
+							
+	gatherdataMatrix <- cbind(anno.matrix, matrix(data=1, nrow=length(anno.probesetid),ncol=length(matrix.column.names) ))
+	
+	colnames(gatherdataMatrix) <- c(colnames(anno.matrix), matrix.column.names)
+	rownames(gatherdataMatrix) <- rownames(Matrix)
+	
+##Make the log 2 ratios from the data
+	 y <- as.numeric(mean(as.data.frame(2^t(exprs(exprset)[,which(classlabel == reference.class.id)]))))
+     x <- as.numeric(mean(as.data.frame(2^t(exprs(exprset)[,which(classlabel == class.numb)]))))
+    foldlog2 <- log2(x/y)
+    foldlog10 <-log10(x/y)
+    gatherdataMatrix[,"mu_X"]   <- x
+    gatherdataMatrix[,"mu_Y"]   <- y
+    gatherdataMatrix[,"Log_2_Expression_Ratio"]   <- foldlog2
+    gatherdataMatrix[,"Log_10_Expression_Ratio"]  <- foldlog10
+    
+
+	
+##Convert data to a dataframe
+	output.df <- data.frame(gatherdataMatrix)
+	allData.output.df <- data.frame(gatherdataMatrix)
+	
+#HACK -- Need to cast all the data columns to numeric since they think they are class factor 
+#see ?factor for more info
+	for (n in matrix.column.names){
+		output.df[[n]] <- as.numeric(levels(output.df[[n]] ))[output.df[[n]]]
+		allData.output.df[[n]] <- as.numeric(levels(allData.output.df[[n]]))[allData.output.df[[n]]]
+	}
+
+
+	lim <- ! logical(dim(output.df)[1])
+if (limit) {
+	
+	if (limittype == "ratio_cutoff"){
+	    lim <- (abs(output.df$Log_2_Expression_Ratio) >= limitnum)
+		
+			
+			title = paste(title, 
+						  "Genes Found at greater then or equal to a", 
+						  limitnum, 
+						  "fold cut-off<br>",
+						  "For condition", 
+						  condition.name,
+						  "<br>",
+						  "Number of Differential expressed Genes",
+						  length(which(lim))
+						  )#end of paste
+						  
+			output.df <- output.df[which(lim),]
+	}
+
+###Sort the dataframe on the log 2 ratio column column
+output.df <- sort.data.frame(output.df, ~ -Log_2_Expression_Ratio)
+allData.output.df<- sort.data.frame(allData.output.df, ~ -Log_2_Expression_Ratio)
+
+##HACK: delete out the extra Column Probe_set_url from the allData.output.df since
+##we don't want url's in the text output nor do we want the extra probe column in html output...
+allData.output.df$Probe_set_url <- NULL
+output.df$Probe_set_id <- NULL
+
+###See if expression data should be outputed too
+	if (exprs) {
+		indexExprs.geneNames <- geneNames(exprset) %in% rownames(output.df)   
+		index.allData <- geneNames(exprset) %in% rownames(allData.output.df)
+	##Write a special aaftable that knows about exprssion data.  It will turn the values green in the output
+		exp.aaftable <- aafTableInt(exprset[which(indexExprs.geneNames),cols])
+		#output.df <- cbind(output.df, exprs(exprset)[which(indexExprs.geneNames),cols])
+  	    allData.output.df <- cbind(allData.output.df, exprs(exprset)[which(index.allData),cols])
+	}
+
+END
+
+$script .= <<END;
+###Make aafTable object
+	aaftable <- aafTableFrame(output.df, signed = FALSE)
+	if (exprs){
+		html.aaftable <- merge(aaftable,exp.aaftable)
+	}else{
+		html.aaftable <- aaftable
+	}
+	
+	saveHTML(html.aaftable, paste("$RESULT_DIR/$jobname/", outFileRoot, ".html", sep = ""), title)
+##Want to output the full data set in addition to just  differentially expressed genes.
+	
+	allData.aaftable <- aafTableFrame(allData.output.df, signed = FALSE)
+		
+	saveText(allData.aaftable, paste("$RESULT_DIR/$jobname/", outFileRoot, ".full_txt", sep = ""), colnames = colnames(allData.aaftable))
+##Generate a few plots
+#split the condition name on _vs_ tag 
+name.parts <- unlist(strsplit(condition.name, "_vs_"))
+
+bitmap(paste("$RESULT_DIR/$jobname/", outFileRoot, "_plot.png", sep = ""), res = 72*4, pointsize = 12)
+plot(log2(x), log2(y), 
+	 main = paste("Log 2 expression values for",  condition.name),
+     xlab = paste("Log 2", name.parts[1]), 
+     ylab = paste("Log 2", name.parts[2]) 
+    )
+
+dev.off()
+
+bitmap(paste("$RESULT_DIR/$jobname/", outFileRoot, "_hist.png", sep = ""), res = 72*4, pointsize = 12)
+plot(log2((allData.output.df\$mu_X + allData.output.df\$mu_Y)/2), 
+    allData.output.df\$Log_2_Expression_Ratio,
+	main = paste("Ratio vs Avg Expression Value", condition.name ), 
+	xlab = paste("Log2 Average Expression value", condition.name), 
+	ylab = paste("Log2 Ratio", condition.name)
+
+	)
+
+dev.off()
+
+
+}#end of limit loop
+
+}#end of the for loop to loop conditions 
+save(aaftable, file = "$RESULT_DIR/$jobname/$jobname.aafTable")
+
+END
+} #end generate_ratio_r
+
+
+#### Subroutine: generate_sam_r
+# Generate an R script to process the data using siggene bioconductor to run sam
+####
+sub generate_sam_r {
+	my %args = @_;
+	my $jobname    = $args{jobname};
+	my $classlabel = $args{classlabels};
+	my $condition_ids_aref  = $args{condition_ids_aref};
+	my $condition_names_aref  = $args{condition_names_aref};
+	my $slide_type_name  = $args{slide_type_name};
+	my $reference_sample_class_numb = $args{reference_class_id};
+	my $second_sample_class_numb = $args{second_class_id};
+	
+	my $fmpath = $fm->path;
+	my $filename = $cgi->param('file');
+	my $name = $cgi->param('name');
+	
+	my $limit = $cgi->param('limit');
+	my $limittype = $cgi->param('limittype');
+	my $limitnum = $cgi->param('limitnum');
+	my $gene_limitnum = $cgi->param('gene_limitnum');
+	my $exprs = $cgi->param('exprs');	#provide expression numbers in output
+	my $title = $cgi->param('title');
+	
+	my $annotation_info = add_r_annotation_info();
+	my $sort_data_frame = sortdataframe();
+	my $script;
+	
+	# Escape double quotes to prevent nasty hacking
+	$filename =~ s/\"/\\\"/g;
+	$name =~ s/\"/\\\"/g;
+	for (@$classlabel) { s/\"/\\\"/g }
+	#$proc =~ s/\"/\\\"/g;
+	#$test =~ s/\"/\\\"/g;
+	#$rawpcalc =~ s/\"/\\\"/g;
+	#$side =~ s/\"/\\\"/g;
+	$limittype =~ s/\"/\\\"/g;
+	$limitnum =~ s/\"/\\\"/g;
+	$title =~ s/\"/\\\"/g;
+	
+	# Make R variables out of the perl variables
+	$script = <<END;
+load("$fmpath/$filename")
+jobname <- "$jobname"
+exprset <- get("$name")
+classlabel <- c("@{[join('", "', @$classlabel)]}")
+reference.class.id <- as.numeric("$reference_sample_class_numb")
+try(second.class.id <- as.numeric("$second_sample_class_numb"))
+
+condition.ids <- c("@{[join('", "', @$condition_ids_aref)]}")
+condition.names <- c("@{[join('", "', @$condition_names_aref)]}")
+
+limit <- @{[$limit ? "TRUE" : "FALSE"]}
+limittype <- "$limittype"
+limitnum <- as.numeric("$limitnum")
+gene.limitnum <- as.numeric("$gene_limitnum")
+rlibpath <- "$R_LIBS"
+exprs <- @{[$exprs ? "TRUE" : "FALSE"]}
+in.title <- "$title"
+
+path.to.annotation <- "$AFFY_ANNO_PATH"
+annotation.url <- "$affy_annotation_url"
+chip.name <- "$slide_type_name"
+
+##Add annotation info
+$annotation_info
+##End annotation setup
+
+##Add function to sort data frames
+$sort_data_frame
+##End function to sort data frames
+
+
+END
+
+	# Main data processing, entirely R
+	$script .= <<'END';
+.libPaths(rlibpath)
+library(affy)
+library(siggenes)
+library(webbioc)
+
+
+unique.classes <- unique(classlabel)
+#If there is a second class that means the user has selected two classes to compare
+#so reset the unique classes to just the two samples of interest
+try (if (second.class.id >= 0){
+	unique.classes <- c(reference.class.id, second.class.id)
+    }
+)
+
 
 for (class.numb in unique.classes){
 	class.numb <- as.numeric(class.numb)
-	if (class.numb == 0) {next}
+	if (identical(class.numb,  reference.class.id)) {next}
 ##Grab the cols for this particular loop
-	cols <- c(which(classlabel == 0), which(classlabel == class.numb))
+	cols <- c(which(classlabel == class.numb),which(classlabel == reference.class.id))
 	current.classlabel <- as.integer(classlabel[cols])
-##Change in classlabels greater than 1 to 1
-	current.classlabel[which(current.classlabel>1)] <- 1
+##Change in classlabels to 0 for the reference sample and 1 for the other sample class
+	if (class.numb == 0){
+ 		current.classlabel[which(current.classlabel == class.numb)] <- 1
+ 		current.classlabel[which(current.classlabel == reference.class.id)] <- 0
+ 	}else{
+ 		current.classlabel[which(current.classlabel == reference.class.id)] <- 0
+  		current.classlabel[which(current.classlabel == class.numb)] <- 1
+ 	}
 	
 	if (length(condition.ids)>=1){
-		condition.id <- condition.ids[class.numb] 
-		condition.name <- condition.names[class.numb]
+		#Map the current class to the correct condition name
+		condition.id.key <- which(condition.ids == class.numb) 
+		condition.name <- condition.names[condition.id.key]
 		outFileRoot <- paste(jobname, "_", condition.name, sep="")
 		print (outFileRoot)
 	}
@@ -1076,10 +1470,10 @@ for (class.numb in unique.classes){
 	rownames(gatherdataMatrix) <- rownames(Matrix)
 	
 ##Make the log 2 ratios from the data
-	 x <- as.numeric(mean(as.data.frame(2^t(exprs(exprset)[,which(classlabel == 0)]))))
-     y <- as.numeric(mean(as.data.frame(2^t(exprs(exprset)[,which(classlabel == class.numb)]))))
-    foldlog2 <- log2(y/x)
-    foldlog10 <-log10(y/x)
+	 y <- as.numeric(mean(as.data.frame(2^t(exprs(exprset)[,which(classlabel == reference.class.id)]))))
+     x <- as.numeric(mean(as.data.frame(2^t(exprs(exprset)[,which(classlabel == class.numb)]))))
+    foldlog2 <- log2(x/y)
+    foldlog10 <-log10(x/y)
     gatherdataMatrix[,"mu_X"]   <- x
     gatherdataMatrix[,"mu_Y"]   <- y
     gatherdataMatrix[,"Log_2_Ratio"]   <- foldlog2
@@ -1310,6 +1704,28 @@ sub print_sam_controls{
 			 	
 }	      
 
+#### Subroutine: print_ratios_controls
+# Print out the web form to start ratio only analysis
+####
+sub print_ratios_controls{
+
+
+	print '<br><br>',
+		  '<table><tr><td>',
+		  p("Make Ratios only from the data set"),
+		  p(checkbox('limit', 'checked', 'YES', ''),
+		  "Limit the HTML Results to Absolute Log2 ratio expression ratios", 
+		  hidden(-name=>'limittype', -default=>'ratio_cutoff'),
+		  textfield(-name=>'limitnum',
+                -default	=> 2,
+                -size   	=> 3,
+                -maxlength	=>3,
+			 	-override => 1,
+			 	)
+		  ),;
+			 	
+}	
+
 
 
 #### Subroutine: add_r_annotation_info
@@ -1346,13 +1762,191 @@ END
 return $r_code;
 	
 }
+#### Subroutine: check_for_single_array_group
+# loop thru a hash if a sample group only has one array throw an error
+####
+sub check_for_single_array_group {
+	my %hash = @_;
+	
+	foreach my $k (keys %hash){
+		if ( $hash{$k} == 1){
+			error("Sample Group '$k' only has one Array and this is not allowed for any of the statistical test.  Please fix the problem and try again");
+		}
+	}
+}
+#### Subroutine: make_sample_names 
+# Make the sample names that will be used in the R scripts.  Also filter the data if we need to
+####
+sub make_sample_names {
+	my %args = @_;
+	my $class_aref = $args{class_aref};
+	my $sample_names_aref = $args{sample_names_aref};
+	my $sample_groups_info_href = $args{sample_group_href};
+	my $x_group_name = $args{sample_group_x_name};
+	my $y_group_name = $args{sample_group_y_name};
+	my $reference_sample_group = $args{reference_sample_group};
+	my $reference_class_id = '';
+	my $second_class_id = '';			
+	$log->debug(Dumper($sample_groups_info_href));
+	
+	foreach my $class_numb (sort {$a <=> $b} keys %$sample_groups_info_href){
+			$log->debug("MAKING SAMPLE NAME  $class_numb '$sample_groups_info_href->{$class_numb}'");
+			my $sample_group_name = $sample_groups_info_href->{$class_numb};
+			
+#if the user has selected to work with only one sample pair just collect the data that is needed
+			if ($x_group_name){
+				
+				if ($x_group_name eq $sample_groups_info_href->{$class_numb}){
+					$second_class_id = $class_numb;
+				}
+				if ($y_group_name eq $sample_groups_info_href->{$class_numb}){
+					$reference_class_id = $class_numb;
+				}
+			
+			}
+#Find the class id for the reference sample unless we are only working with two classes
+			if ($reference_sample_group eq $sample_group_name && !$x_group_name){
+				$reference_class_id = $class_numb;
+			}
+			push @{$class_aref},  $class_numb;
+			push @{$sample_names_aref}, $sample_groups_info_href->{$class_numb};
+			$log->debug("CLASS NUMB '$class_numb' => SAMPLE NAME  " . $sample_groups_info_href->{$class_numb});
+			
+		}
+		
+	die "Cannot find the reference class id" unless ($reference_class_id >= 0);
+	$log->debug("CLASS ARRAY". Dumper($class_aref));
+	$log->debug("REFERENCE CLASS ID '$reference_class_id' SECOND CLASS_ID '$second_class_id'");
+	return 	($reference_class_id,$second_class_id);
+}
 
+#### Subroutine: make_condition_names 
+# Make the condition names that will be used in the R scripts.
+####
+sub make_condition_names {
+	my %args = @_;
+	my $count = $args{count};
+	my $condition_ids_aref = $args{condition_ids_aref};
+	my $condition_names_aref = $args{condition_names_aref};
+	my $class_aref = $args{class_aref};
+	my $sample_names_aref = $args{sample_names_aref};
+	my $reference_sample_group_id = $args{reference_sample_number};	
+							
+	
+	#my $condition_id = "$class_aref->[$count]_vs_$class_aref->[$reference_sample_group_id]";
+	my $condition_name = "$sample_names_aref->[$count]_vs_$sample_names_aref->[$reference_sample_group_id]";
+	$log->debug( "CONDITION ID '$count' CONDITION SAMPLE '$condition_name'");
+			
+	$condition_name =~ s/\W//g;		#Clean up the name remove any non word characters
+	
+	push @{$condition_names_aref}, $condition_name;
+	push @{$condition_ids_aref}, $count;	
+	return $condition_name;
+}
+#### Subroutine: make_image_urls
+# Make some html that will display the graphs after an analysis session is done
+####
+sub make_image_urls {
+	my %args = @_;
+	my $condition_name = $args{conditon_name};
+	my $jobname	= $args{jobname};
+	my $test_stat = $args{test_stat};
+	
+	my $button_html = add_upload_expression_button(token=>$jobname);
+	#if we are looping through t-test or fdr analysis ouput then we need add links to the graphs 
+			my $parital_url = "$RESULT_URL?action=view_file&analysis_folder=$jobname&analysis_file=${jobname}_$condition_name";
+			my $parital_image_url = "$RESULT_URL?action=view_image&analysis_folder=$jobname&analysis_file=${jobname}_$condition_name";
+			my $image_1 = '';
+			my $image_2 = '';
+			
+			if ( grep(/^t/, $cgi->param('test')) ){
+				$image_1 = "<img src='${parital_image_url}_ma&file_ext=png'>
+							<img src='${parital_image_url}_qq&file_ext=png'>";
+				$image_2 = "<p><img src='${parital_image_url}_rvsa&file_ext=png'></p>";
+			}
+			if ($cgi->param('limittype') eq 'fdr_cutoff'){
+				$image_1 = "";
+				$image_2 = "<img src='${parital_image_url}_delta&file_ext=png'>
+			 				<img src='${parital_image_url}_samplot&file_ext=png'>";
+				
+			}
+			if ($test_stat eq 'Make_ratios'){
+				$image_1 = "<img src='${parital_image_url}_plot&file_ext=png'>";
+				$image_2 = "<img src='${parital_image_url}_hist&file_ext=png'>";
+				
+			}
+			
+			
+			
+#remove link to text version of html out	
+#	<a href="$out_file.txt">$condition_name.txt</a><br>		
+			my $out_links = <<END;
+<h3>Output Files: $condition_name</h3>
+<a href="$parital_url&file_ext=html">$condition_name.html</a><br>
+<a href="$parital_url&file_ext=full_txt">All Genes - $condition_name.txt</a><br>
+<a href="$RESULT_URL?action=download&analysis_folder=$jobname&analysis_file=$jobname&file_ext=aafTable">$condition_name.aafTable</a><br>			
+$image_1
+$image_2
+$button_html
+END
+
+return $out_links;
+
+}
+#### Subroutine: check_sample_group_names
+# If the choice is to ignore the reference sample group make sure that there is no more then on sample
+# group for each part of the pair of groups to compare.... 
+####
+sub check_sample_group_names {
+	my %args = @_;
+	my $sample_groups_info_href = $args{sample_group_href};
+
+	my @sample_group_x_name = ();
+	my @sample_group_y_name = ();
+	#my @new_classlabels =();
+	foreach my $class_numb ( sort keys %{ $sample_groups_info_href }){
+			my $sample_group_name = $sample_groups_info_href->{$class_numb};
+			my $x_group_name = "sample_group_x_$sample_group_name";
+			my $y_group_name = "sample_group_y_$sample_group_name";
+	
+			if (exists $parameters{$x_group_name}){
+				push @sample_group_x_name, $parameters{$x_group_name};
+				#push @new_classlabels, $class_numb;
+				$log->debug("SAMPLEGROUP HIT '$parameters{$x_group_name}'");
+				next;
+			}
+			if (exists $parameters{$y_group_name}){
+				push @sample_group_y_name, $parameters{$y_group_name};
+				#push @new_classlabels, $class_numb;
+				$log->debug("SAMPLEGROUP HIT '$parameters{$y_group_name}'");
+				next;
+			}
+	}
+	
+	
+	unless (scalar @sample_group_x_name == 1){
+		return('BAD_GROUPS', 
+				join ",", @sample_group_x_name, 
+				undef);
+	}
+	unless (scalar @sample_group_y_name == 1){
+		return ('BAD_GROUPS', 
+				undef, 
+				join ",", @sample_group_x_name,);
+	}
+	$log->debug("SAMPLE GROUPS TO USE '$sample_group_x_name[0]' '$sample_group_y_name[0]'");
+	
+	return ('GOOD_GROUPS', 
+			$sample_group_x_name[0],
+			$sample_group_y_name[0],
+		); 
+}
 
 #### Subroutine: sortdataframe
 # Return a chunk of R code. Function to sort a data frame
 ####
 sub sortdataframe{
-	my $r_code = <<'END';
+	my $r_code = <<'END';#
 	
 sort.data.frame <- function(form,dat){
   # Author: Kevin Wright
@@ -1420,16 +2014,4 @@ END
 
 }#end of sub
 
-#### Subroutine: check_for_single_array_group
-# loop thru a hash if a sample group only has one array throw an error
-####
-sub check_for_single_array_group {
-	my %hash = @_;
-	
-	foreach my $k (keys %hash){
-		if ( $hash{$k} == 1){
-			error("Sample Group '$k' only has one Array and this is not allowed for any of the statistical test.  Please fix the problem and try again");
-		}
-	}
-}
 
