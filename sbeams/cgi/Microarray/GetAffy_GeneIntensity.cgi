@@ -2775,7 +2775,7 @@ sub update_sql_fragment {
 		#### Loop over each one and try the conversion
 		my $sql_constraint = '';
 		foreach my $coordinate_str (@genome_coordinates) {
-			if ( $coordinate_str =~ /(.+)?:chr(.+)?:(\d+)-(\d+)([\-\+])/ ) {
+			if ( $coordinate_str =~ /(.+)?:chr(.+)?:(\d+)-(\d+)([\-\+\?])/ ) {
 
 				my $genome_build_id = $1;
 				my $chromosome      = $2;
