@@ -1367,7 +1367,7 @@ sub loadBiosequence {
 	  if (defined($match->{second_match_type_id}));
 
         $rowdata{score} = $match->{score}
-	  if (defined($match->{evalue}));
+	  if (defined($match->{score}));
 
 	$rowdata{query_length} = $match->{query_length}
 	  if (defined($match->{query_length}));
