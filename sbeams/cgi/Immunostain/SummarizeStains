@@ -306,7 +306,9 @@ sub handle_request {
       ["cell_type_name","CT.cell_type_name","Cell Type"],
       ["intense_percent","SCP1.at_level_percent","Percent Intense"],
       ["equivocal_percent","SCP2.at_level_percent","Percent Equivocal"],
-      ["none_percent","SCP3.at_level_percent","Percent None"],			
+      ["none_percent","SCP3.at_level_percent","Percent None"],
+["sort_order","A.sort_order","A.sort_order"],
+["sort_order","CT.sort_order","CT.sort_order"],			
     );
   }
 
@@ -350,7 +352,7 @@ sub handle_request {
 	$antibody_clause
 	$cell_type_clause
 	$group_by_clause
-	 ORDER BY SS.stain_name,cell_type_name
+	 ORDER BY A.sort_order, SS.stain_name,CT.sort_order
 	$limit_clause->{trailing_limit_clause}
 
   ~;
@@ -387,6 +389,8 @@ sub handle_request {
 
   #### Define columns that should be hidden in the output table
   %hidden_cols = ('stained_slide_id' => 1,
+									'A.sort_order'	=>	1,
+									'CT.sort_order'	=>	1
   );
 
 
@@ -517,96 +521,100 @@ sub postProcessResultset {
   my $rs_params_ref = $args{'rs_params_ref'};
   my $query_parameters_ref = $args{'query_parameters_ref'};
   my $column_titles_ref = $args{'column_titles_ref'};
+	my $option;
 
-
+	
+=comment
+foreach my $key (keys %{$query_parameters_ref})
+{
+		print "$key --- $query_parameters_ref->{$key}<br>";
+}
+=cut
 
 	 #### Process the arguments list
 	 my @row;
    my $irow = 0;
    my ($value,$element);
    my $nrows = scalar(@{$resultset_ref->{data_ref}});
-	 
-#finding the index for the approbriate column
-	my $indexI = 0;
-	foreach my $element (@{$resultset_ref->{column_list_ref}})
-	{			
-			$cellTypeIndex = $indexI if $element  eq 'cell_type_name';
-			$antibodyIndex = $indexI if $element eq 'antibody_name';
-			$intenseIndex = $indexI if $element eq 'intense_percent';
-			$equivocalIndex = $indexI if $element eq 'equivocal_percent';
-#			$noneIndex = $indexI if $element eq 'none_percent';
-			$indexI++;
-	}
-  for (@{$resultset_ref->{data_ref}})
+	 my @antibodyArray;
+	 my $prevAntibodyName;
+#getting the index and populating a datahash with the returned result
+ 	my $biosequence_name_column_index = $resultset_ref->{column_hash_ref};
+
+	for (@{$resultset_ref->{data_ref}})
 	{			 
 			@row = @{$resultset_ref->{data_ref}->[$irow]};
-  	   my $antibodyName =  $row[$antibodyIndex];
-			 my $cellTypeName = $row[$cellTypeIndex];
-			 my $probability = ($row[$intenseIndex] + $row[$equivocalIndex]/2)/100;
-			$dataHash{$antibodyName}->{$cellTypeName}->{probability}+=$probability;
-			$dataHash{$antibodyName}->{$cellTypeName}->{numberOfEx}++;
-			$cellTypeHash{$cellTypeName}=1;
+			my $antibodyName =  $row[$biosequence_name_column_index->{antibody_name}];
+			
+			my $cellTypeName = $row[$biosequence_name_column_index->{cell_type_name}];
+			my $probability = ($row[$biosequence_name_column_index->{intense_percent}] + $row[$biosequence_name_column_index->{equivocal_percent}]/2)/100;
+			$dataHash{$antibodyName}->{$cellTypeName}->{probability}+=$probability if $cellTypeName; 
+			$dataHash{$antibodyName}->{$cellTypeName}->{numberOfEx}++ if $cellTypeName;
+			$cellTypeHash{$cellTypeName}=1 if $cellTypeName;
+			push @antibodyArray, $antibodyName if $prevAntibodyName ne $antibodyName and $cellTypeName; 
+			$prevAntibodyName = $antibodyName;
 			$irow++;
 	}
 		
 		
-my @colorArray = qw /#FFC6A5 #FF6342 #FF0000 #AD0000/;
-my @shadeArray = qw /#E0E0E0 #BFBFBF #A1A1A1 #808080/;
+		my @colorArray = qw /#FFC6A5 #FF6342 #FF0000 #AD0000/;
+		my @shadeArray = qw /#E0E0E0 #BFBFBF #A1A1A1 #808080/;
 
 #generating the table and the cell_type_name row
-print "<table border = 2 borderColor=black align = center>";
-print "<tr><td></td>\n";
+	print "<table border = 2 borderColor=black align = center>";
+	print "<tr><td></td>\n";
 
-foreach my $cellType (sort keys %cellTypeHash)
-{
-	print  "<td><b>$cellType</b></td><td>NumOfExp</td>\n";
-}
-print "</tr>\n";
+	foreach my $cellType (sort keys %cellTypeHash)
+	{
+			print  "<td><b>$cellType</b></td>";
+			print "<td>NumOfExp</td>" if $query_parameters_ref->{display_options} =~ /number of/i;
+	}
+	print "</tr>\n";
 
 #here is the actual data
-foreach my $key (sort keys %dataHash)
-{
-
-	my $averageNumber;
-	my $abundance;
-	my $expNumber;
-	print  "<tr><td><b>$key</b></td>\n"; 
-
-	foreach my $cellKey (sort keys %{$dataHash{$key}})
+	foreach my $antibodyKey (@antibodyArray)
 	{
+
+			my $averageNumber;
+			my $abundance;
+			my $expNumber;
+			print  "<tr><td><b>$antibodyKey</b></td>\n"; 
+
+			foreach my $cellKey (sort keys %{$dataHash{$antibodyKey}})
+			{
+					my $key = $antibodyKey; 
 #		print "anbtibody: $key\n";	
 #		print "cellName: $cellKey\n";
 #		print "probability: $dataHash{$key}->{$cellKey}->{probability}\n" if $cellKey ne 'Stromal Leukocytes';
 #		print "number of Ex: $dataHash{$key}->{$cellKey}->{numberOfEx}\n";
-
-		$abundance = $dataHash{$key}->{$cellKey}->{abundance} if  $cellKey eq 'Stromal Leukocytes';;
-		$averageNumber =($dataHash{$key}->{$cellKey}->{probability})/($dataHash{$key}->{$cellKey}->{numberOfEx}) unless $cellKey eq 'Stromal Leukocytes';
-		$averageNumber =~ s/(.*\.\d{3}).*$/$1/;
-		$expNumber = $dataHash{$key}->{$cellKey}->{numberOfEx};
-		
-		my $colorAverage;
-		my $colorAbundance;
+#   print "$key ---  $cellKey ---  $dataHash{$key}->{$cellKey}->{probability}   --- $dataHash{$key}->{$cellKey}->{numberOfEx}<br><br>";
+				$abundance = $dataHash{$key}->{$cellKey}->{abundance} if  $cellKey eq 'Stromal Leukocytes';;
+				$averageNumber =($dataHash{$key}->{$cellKey}->{probability})/($dataHash{$key}->{$cellKey}->{numberOfEx});
+				$averageNumber =~ s/(.*\.\d{3}).*$/$1/;
+				$expNumber = $dataHash{$key}->{$cellKey}->{numberOfEx};
+					
+				my $colorAverage;
+				my $colorAbundance;
 		
 #various colors for various probability  and abundance levels
-		$colorAverage = '#FFC6A5' if($averageNumber <= 0.25);
-		$colorAverage = '#FF6342' if($averageNumber >0.25 and $averageNumber <= 0.500);
-		$colorAverage = '#FF0000' if($averageNumber >0.5 and $averageNumber <= 0.750);
-		$colorAverage = '#AD0000' if($averageNumber > 0.750); 
-		
-		
-		$colorAbundance = '#E0E0E0' if ($abundance eq 'rare');
-		$colorAbundance = '#BFBFBF 'if ($abundance eq 'moderate');
-		$colorAbundance = '#A1A1A1 'if ($abundance eq 'high');
-		$colorAbundance = '#808080' if ($abundance eq 'most');
+				$colorAverage = '#FFC6A5' if($averageNumber <= 0.25);
+				$colorAverage = '#FF6342' if($averageNumber >0.25 and $averageNumber <= 0.500);
+				$colorAverage = '#FF0000' if($averageNumber >0.5 and $averageNumber <= 0.750);
+				$colorAverage = '#AD0000' if($averageNumber > 0.750); 
 				
-	 
-		print  "<td align = center bgcolor = $colorAverage>$averageNumber</td>\n" if $cellKey ne 'Stromal Leukocytes';
-		print  "<td align = center bgcolor = $colorAbundance>$dataHash{$key}->{$cellKey}->{abundance}</td>\n" if $cellKey eq 'Stromal Leukocytes';
-		print  "<td align = center>$expNumber</td>\n";
+				$colorAbundance = '#E0E0E0' if ($abundance eq 'rare');
+				$colorAbundance = '#BFBFBF 'if ($abundance eq 'moderate');
+				$colorAbundance = '#A1A1A1 'if ($abundance eq 'high');
+				$colorAbundance = '#808080' if ($abundance eq 'most');
+				
+				print "<td align = center bgcolor = $colorAverage>$averageNumber</td>\n";# if (($cellKey ne '') and(scalar(keys %{$dataHash{$key}}) != 1));
+			#	print "<td align = center >Not available</td>\n";# if (($cellKey  eq '')and(scalar(keys %{$dataHash{$key}}) == 1));
+				print "<td align = center bgcolor = $colorAbundance>$dataHash{$key}->{$cellKey}->{abundance}</td>\n" if $cellKey eq 'Stromal Leukocytes';
+				print "<td align = center>$expNumber</td>" if $query_parameters_ref->{display_options} =~/number of/i;
 
+			}	
+			print  "</tr><tr></tr>\n";
 	}
-	print  "</tr><tr></tr>\n";
-}
 
 #print a table legend
 	print  "</table><br><br><table align=center><tr><td align=center><b>Probability Color Scale</b><td>\n";
@@ -637,180 +645,6 @@ foreach my $key (sort keys %dataHash)
 	print  "</tr></table><br>";
 	print "<br><br>";
 
-		
-=comment		
-		my $levelName = $rows[$count]->[2];
-			 my $probability = $rows[$count]->[3];
-			 my $levelPercent = $rows[$count]->[4];
-			 my $abundance = $rows[$count]->[-1];
-
-
-
-
-
-
-
-
-			 $value = $row[$resultset_ref->{column_list_ref}[2]];
-				
-					
-					
-					
-					
-					
-					
-          $value =~ s/\"/\'/g;
-          $value =~ s/&/&amp;/g;
-          print "    $element == $value<br>";
-          print "hell $antibodyName  =====  $cellTypeName<br>";
-					$irow++;
-        }
-#        $irow++;
-    
-	 
-	 
-	 
-	 
-	 
-	 
-	 
-	 
-	 
-	 
-	 
-	 
-	 
-	 
-	 
-	 
-  my %rs_params = %{$rs_params_ref};
-  my %parameters = %{$query_parameters_ref};
-
-
-  #### Get a list of conditions to work with
-  my %conditions = ();
-  my @conditions = sort(values(%conditions));
-
-  #### Get some column number indexes
-  my $search_batch_id_column_index = $resultset_ref->{column_hash_ref}->{search_batch_id};
-  my $biosequence_name_column_index = $resultset_ref->{column_hash_ref}->{biosequence_name};
-
-
-  #### Loop over each row in the resultset, coalescing into a data hash
-  my %data;
-  my $n_rows = scalar(@{$resultset_ref->{data_ref}});
-  for (my $row=0;$row<$n_rows-1; $row++) {
-    #### Determine the search_batch_id and biosequence_name
-    my $search_batch_id = $resultset_ref->{data_ref}->[$row]->[$search_batch_id_column_index];
-    my $biosequence_name = $resultset_ref->{data_ref}->[$row]->[$biosequence_name_column_index];
-    #### Store it in the new hash
-    $data{$biosequence_name}->{$conditions{$search_batch_id}} = $resultset_ref->{data_ref}->[$row];
-  }
-
-
-  #### Define the columns that are to be in the new resultset
-  my @prefix_columns = qw(biosequence_name accessor accessor_suffix
-    search_batch_id biosequence_accession canonical_name);
-  my @data_columns = qw(protein_probability n_peptides average_quant n_quant);
-  my @suffix_columns = qw(fav_codon_frequency transmembrane_class
-    n_transmembrane_regions protein_length
-    molecular_function molecular_function_GO
-    biological_process biological_process_GO
-    cellular_component cellular_component_GO
-    interpro_protein_domain interpro_protein_domain_GO
-     biosequence_desc organism
-  );
-
-
-  my @new_column_names;
-  my @new_column_titles;
-  my @new_precisions;
-  #### Push the pre-data columns onto the row array
-  foreach my $element (@prefix_columns) {
-    my $column_index = $resultset_ref->{column_hash_ref}->{$element};
-    if (defined($column_index)) {
-      push(@new_column_names,$element);
-      push(@new_column_titles,$column_titles_ref->[$column_index]);
-      push(@new_precisions,$resultset_ref->{precisions_list_ref}->[$column_index]);
-      #print "$element ($column_titles_ref->[$column_index]) prec=".$resultset_ref->{precisions_list_ref}->[$column_index]."<BR>\n";
-    }
-  }
-
-
-
-  #### Push the data columns onto the array
-  foreach my $data_column (@data_columns) {
-    foreach my $condition (@conditions) {
-      my $column_index = $resultset_ref->{column_hash_ref}->{$data_column};
-      push(@new_column_names,$condition.'__'.$data_column);
-      push(@new_column_titles,$condition.' '.$column_titles_ref->[$column_index]);
-      push(@new_precisions,$resultset_ref->{precisions_list_ref}->[$column_index]);
-      #print $condition.'__'.$data_column." (".$condition.' '.$column_titles_ref->[$column_index].") prec=$resultset_ref->{precisions_list_ref}->[$column_index]<BR>\n";
-    }
-  }
-
-  #### Push the post-data columns onto the row array
-  foreach my $element (@suffix_columns) {
-    my $column_index = $resultset_ref->{column_hash_ref}->{$element};
-    if (defined($column_index)) {
-      push(@new_column_names,$element);
-      push(@new_column_titles,$column_titles_ref->[$column_index]);
-      push(@new_precisions,$resultset_ref->{precisions_list_ref}->[$column_index]);
-      #print "$element ($column_titles_ref->[$column_index]) prec=".$resultset_ref->{precisions_list_ref}->[$column_index]."<BR>\n";
-    }
-  }
-
-
-  #### Loop over each biosequence_name and print the pivoted summary
-  my @new_data_array;
-  foreach my $biosequence_name (keys(%data)) {
-    my @row;
-
-    my ($first_condition) = keys(%{$data{$biosequence_name}});
-
-    #### Push the pre-data columns onto the row array
-    foreach my $element (@prefix_columns) {
-      my $column_index = $resultset_ref->{column_hash_ref}->{$element};
-      if (defined($column_index)) {
-        push(@row,$data{$biosequence_name}->{$first_condition}->[$column_index]);
-      }
-    }
-
-
-    #### Push the data columns onto the array
-    foreach my $data_column (@data_columns) {
-      foreach my $condition (@conditions) {
-        my $column_index = $resultset_ref->{column_hash_ref}->{$data_column};
-        if (defined($data{$biosequence_name}->{$condition}->[$column_index])) {
-          push(@row,$data{$biosequence_name}->{$condition}->[$column_index]);
-        } else {
-          push(@row,'');
-        }
-      }
-    }
-
-
-    #### Push the post-data columns onto the row array
-    foreach my $element (@suffix_columns) {
-      my $column_index = $resultset_ref->{column_hash_ref}->{$element};
-      if (defined($column_index)) {
-        push(@row,$data{$biosequence_name}->{$first_condition}->[$column_index]);
-      }
-    }
-
-
-    push(@new_data_array,\@row);
-  }
-
-
-  $resultset_ref->{data_ref} = \@new_data_array;
-  $resultset_ref->{column_list_ref} = \@new_column_names;
-  my $n_new_columns = scalar(@new_column_names);
-  $resultset_ref->{precisions_list_ref} = \@new_precisions;
-
-  @{$column_titles_ref} = @new_column_titles;
-
-=cut
   return 1;
 
 
