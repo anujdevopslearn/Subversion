@@ -1,10 +1,10 @@
 
 Notes add a new module:
 
-set TEMPLATE = GEAP
-set DEST = Biosap
-set TMPLTAG = GEAP
-set TAG = BS
+set TEMPLATE = Biosap
+set DEST = PhenoArray
+set TMPLTAG = BS
+set TAG = PH
 
 cd /host/db/local/www/html/dev2/sbeams/lib/perl/SBEAMS
 cp -p $TEMPLATE.pm $DEST.pm
@@ -40,8 +40,8 @@ cvs add $DEST.pm
 cvs add $DEST
 cvs add $DEST/*
 
-cd /host/db/local/www/html/dev2/sbeams/images
-cvs add -kb biosap_logo.png
+#cd /host/db/local/www/html/dev2/sbeams/images
+#cvs add -kb biosap_logo.png
 
 cd /host/db/local/www/html/dev2/sbeams
 cvs commit

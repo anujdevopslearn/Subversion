@@ -121,6 +121,7 @@ sub printPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/Proteomics/main.cgi">- Proteomics</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/Inkjet/main.cgi">- Inket</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/Biosap/main.cgi">- Biosap</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/main.cgi"><nobr>- Phenotype Array</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/tools/main.cgi">- Tools</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/GEAP/main.cgi">- GEAP</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
