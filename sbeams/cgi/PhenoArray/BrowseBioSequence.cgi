@@ -425,7 +425,7 @@ sub printEntryForm {
         constraint_column=>"BS.biosequence_set_id",
         constraint_type=>"int_list",
         constraint_name=>"BioSequence Set",
-        constraint_value=>$parameters{biosequence_set_constraint} );
+        constraint_value=>$parameters{biosequence_set_id} );
       return if ($biosequence_set_clause == -1);
 
 
