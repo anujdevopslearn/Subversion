@@ -893,16 +893,22 @@ sub processEntryForm {
       $parameters{$PK_COLUMN_NAME}=$returned_request_PK;
     }
 
+
     printAttemptedChangeResult($apply_action,$returned_request_status,
       @returned_information);
 
 
-    # If change was successful, then check to see if there are any data
-    # files to be uploaded, and if so, do so.
+    #### If change was successful, then loop through all the columns to
+    #### see if there are post processing steps that need to happen.
+    #### They are: 1) File uploads
+    ####           2) multilink columns
     if ($returned_request_status eq "SUCCESSFUL") {
-      # Check for any file uploads
+
+      #### Check for any file uploads
       my $filename;
       foreach $element (keys %input_types) {
+
+        #### Check for any file uploaded data for columns of type file
         if ($input_types{$element} eq "file") {
           $filename = "$parameters{$PK_COLUMN_NAME}_$element.dat";
           if ($parameters{$element}) {
@@ -913,14 +919,6 @@ sub processEntryForm {
           } else {
             print "Nothing to upload for field '$element'<BR>\n";
           }
-
-          #### Update the table for the relative local location
-          #$sql_query = qq~
-          #    UPDATE $DB_TABLE_NAME SET
-          #      $element='$TABLE_NAME/$filename'
-          #    WHERE $PK_COLUMN_NAME=$parameters{$PK_COLUMN_NAME}
-          #~;
-          #$sbeams->executeSQL($sql_query);
 
           #### If there's a Windows path as part of the parameter,
           #### update the table for the name without the path
@@ -936,17 +934,34 @@ sub processEntryForm {
             $sbeams->executeSQL($sql_query);
           }
 
-        }
-
-      }
-
-    }
+        } # end if file
 
 
+        #### Check for any file uploaded data for columns of type file
+        if ($input_types{$element} eq "multilink") {
+          updateLinkingTable(
+	    parent_table_name => $TABLE_NAME,
+            parent_pk_column_name => $PK_COLUMN_NAME,
+            parent_pk_value => $parameters{$PK_COLUMN_NAME},
+            child_pk_column_name => $element,
+            child_pk_values => $parameters{$element},
+            linking_table_name => '???',
+          );
 
-    } # End multi-insert
+        } # end if multilink
 
-} # end processAddUser
+
+      } # end foreach
+
+    } # end if SUCCESSFUL
+
+
+
+    } # end multi-insert
+
+
+} # end processEntryForm
+
 
 
 ###############################################################################
@@ -1256,6 +1271,121 @@ sub getContentType {
   return '';
 
 } # end getContentType
+
+
+
+###############################################################################
+# updateLinkingTable
+###############################################################################
+sub updateLinkingTable {
+  my %args = @_;
+
+  #### Extract input parameters
+  my $parent_table_name = $args{'parent_table_name'}
+    || die("Parameter parent_table_name not passed");
+  my $parent_pk_column_name = $args{'parent_pk_column_name'}
+    || die("Parameter parent_pk_column_name not passed");
+  my $parent_pk_value = $args{'parent_pk_value'}
+    || die("Parameter parent_pk_value not passed");
+  my $child_pk_column_name = $args{'child_pk_column_name'}
+    || die("Parameter child_pk_column_name not passed");
+  my $child_pk_values = $args{'child_pk_values'}
+    || die("Parameter child_pk_values not passed");
+  my $linking_table_name = $args{'linking_table_name'}
+    || die("Parameter linking_table_name not passed");
+
+
+  #### Still need to get this information
+  my $linking_pk_column_name;
+
+
+  #### Extract the child_pk_values into an array and a hash
+  my @child_pk_values = split(',',$child_pk_values);
+  my %child_pk_values = ();
+  foreach my $element (@child_pk_values) {
+    $child_pk_values{$element} = 1;
+  }
+
+
+  #### Get all existing rows in the linking table for the parent
+  my $sql = qq~
+    SELECT $linking_pk_column_name,$child_pk_column_name
+      FROM $linking_table_name
+     WHERE $parent_pk_column_name = '$parent_pk_value'
+  ~;
+  my @rows = $sbeams->selectSeveralColumns($sql);
+
+
+  #### Loop over each one, deciding what to do with it
+  foreach my $row (@rows) {
+    my $linking_id = $row->[0];
+    my $child_id = $row->[1];
+
+    #### If this row already, exists, UPDATE it and delete in hash
+    if ($child_pk_values{$child_id}) {
+
+      my %rowdata = (
+        record_status => 'N',
+      );
+
+      $sbeams->updateOrInsertRow(
+        update => 1,
+        table_name => $linking_table_name,
+        rowdata_ref => \%rowdata,
+        PK => $linking_pk_column_name,
+        PK_value => $linking_id,
+        add_audit_parameters => 1,
+      );
+
+      delete($child_pk_values{$child_id});
+
+    #### Otherwise, mark it as DELETED
+    } else {
+
+      my %rowdata = (
+        record_status => 'D',
+      );
+
+      $sbeams->updateOrInsertRow(
+        update => 1,
+        table_name => $linking_table_name,
+        rowdata_ref => \%rowdata,
+        PK => $linking_pk_column_name,
+        PK_value => $linking_id,
+        add_audit_parameters => 1,
+      );
+
+    }
+
+  }
+
+
+  #### Loop over each of the remaining new items in the hash
+  #### INSERTing the new rows
+  while (my ($key1,$key2) = each %child_pk_values) {
+
+    my %rowdata = (
+     $parent_pk_column_name => $parent_pk_value,
+     $child_pk_column_name => $key1,
+    );
+
+    $sbeams->updateOrInsertRow(
+      insert => 1,
+      table_name => $linking_table_name,
+      rowdata_ref => \%rowdata,
+      PK => $linking_pk_column_name,
+      add_audit_parameters => 1,
+    );
+
+
+  }
+
+
+  return 1;
+
+} # end updateLinkingTable
+
+
 
 
 
