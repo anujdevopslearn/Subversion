@@ -23,29 +23,29 @@ use vars qw(@ISA @EXPORT
     $TB_HARDWARE_TYPE
     $TB_SOFTWARE
     $TB_SOFTWARE_TYPE
-    $TB_SLIDE_TYPE
-    $TB_COST_SCHEME
-    $TB_SLIDE_TYPE_COST
-    $TB_MISC_OPTION
+    $TBMA_SLIDE_TYPE
+    $TBMA_COST_SCHEME
+    $TBMA_SLIDE_TYPE_COST
+    $TBMA_MISC_OPTION
     $TB_ORGANISM
-    $TB_LABELING_METHOD
-    $TB_DYE
-    $TB_XNA_TYPE
-    $TB_ARRAY_REQUEST
-    $TB_ARRAY_REQUEST_SLIDE
-    $TB_ARRAY_REQUEST_SAMPLE
+    $TBMA_LABELING_METHOD
+    $TBMA_DYE
+    $TBMA_XNA_TYPE
+    $TBMA_ARRAY_REQUEST
+    $TBMA_ARRAY_REQUEST_SLIDE
+    $TBMA_ARRAY_REQUEST_SAMPLE
     $TBMA_SAMPLE_PROTOCOL
-    $TB_ARRAY_REQUEST_OPTION
-    $TB_SLIDE_MODEL
-    $TB_SLIDE_LOT
-    $TB_SLIDE
-    $TB_PRINTING_BATCH
-    $TB_ARRAY_LAYOUT
-    $TB_ARRAY
-    $TB_LABELING
-    $TB_HYBRIDIZATION
-    $TB_ARRAY_SCAN
-    $TB_ARRAY_QUANTITATION
+    $TBMA_ARRAY_REQUEST_OPTION
+    $TBMA_SLIDE_MODEL
+    $TBMA_SLIDE_LOT
+    $TBMA_SLIDE
+    $TBMA_PRINTING_BATCH
+    $TBMA_ARRAY_LAYOUT
+    $TBMA_ARRAY
+    $TBMA_LABELING
+    $TBMA_HYBRIDIZATION
+    $TBMA_ARRAY_SCAN
+    $TBMA_ARRAY_QUANTITATION
     $TBMA_BIOSEQUENCE_SET
     $TBMA_BIOSEQUENCE
     $TBMA_BIOSEQUENCE_EXTERNAL_XREF
@@ -75,29 +75,29 @@ require Exporter;
     $TB_HARDWARE_TYPE
     $TB_SOFTWARE
     $TB_SOFTWARE_TYPE
-    $TB_SLIDE_TYPE
-    $TB_COST_SCHEME
-    $TB_SLIDE_TYPE_COST
-    $TB_MISC_OPTION
+    $TBMA_SLIDE_TYPE
+    $TBMA_COST_SCHEME
+    $TBMA_SLIDE_TYPE_COST
+    $TBMA_MISC_OPTION
     $TB_ORGANISM
-    $TB_LABELING_METHOD
-    $TB_DYE
-    $TB_XNA_TYPE
-    $TB_ARRAY_REQUEST
-    $TB_ARRAY_REQUEST_SLIDE
-    $TB_ARRAY_REQUEST_SAMPLE
+    $TBMA_LABELING_METHOD
+    $TBMA_DYE
+    $TBMA_XNA_TYPE
+    $TBMA_ARRAY_REQUEST
+    $TBMA_ARRAY_REQUEST_SLIDE
+    $TBMA_ARRAY_REQUEST_SAMPLE
     $TBMA_SAMPLE_PROTOCOL
-    $TB_ARRAY_REQUEST_OPTION
-    $TB_SLIDE_MODEL
-    $TB_SLIDE_LOT
-    $TB_SLIDE
-    $TB_PRINTING_BATCH
-    $TB_ARRAY_LAYOUT
-    $TB_ARRAY
-    $TB_LABELING
-    $TB_HYBRIDIZATION
-    $TB_ARRAY_SCAN
-    $TB_ARRAY_QUANTITATION
+    $TBMA_ARRAY_REQUEST_OPTION
+    $TBMA_SLIDE_MODEL
+    $TBMA_SLIDE_LOT
+    $TBMA_SLIDE
+    $TBMA_PRINTING_BATCH
+    $TBMA_ARRAY_LAYOUT
+    $TBMA_ARRAY
+    $TBMA_LABELING
+    $TBMA_HYBRIDIZATION
+    $TBMA_ARRAY_SCAN
+    $TBMA_ARRAY_QUANTITATION
     $TBMA_BIOSEQUENCE_SET
     $TBMA_BIOSEQUENCE
     $TBMA_BIOSEQUENCE_EXTERNAL_XREF
@@ -131,28 +131,28 @@ $TB_HARDWARE            = "${mod}hardware";
 $TB_HARDWARE_TYPE       = "${mod}hardware_type";
 $TB_SOFTWARE            = "${mod}software";
 $TB_SOFTWARE_TYPE       = "${mod}software_type";
-$TB_SLIDE_TYPE          = "${mod}slide_type";
-$TB_COST_SCHEME         = "${mod}cost_scheme";
-$TB_SLIDE_TYPE_COST     = "${mod}slide_type_cost";
-$TB_MISC_OPTION         = "${mod}misc_option";
-$TB_LABELING_METHOD     = "${mod}labeling_method";
-$TB_DYE                 = "arrays.dbo.dye";
-$TB_XNA_TYPE            = "${mod}xna_type";
-$TB_ARRAY_REQUEST       = "${mod}array_request";
-$TB_ARRAY_REQUEST_SLIDE = "${mod}array_request_slide";
-$TB_ARRAY_REQUEST_SAMPLE= "${mod}array_request_sample";
+$TBMA_SLIDE_TYPE          = "${mod}slide_type";
+$TBMA_COST_SCHEME         = "${mod}cost_scheme";
+$TBMA_SLIDE_TYPE_COST     = "${mod}slide_type_cost";
+$TBMA_MISC_OPTION         = "${mod}misc_option";
+$TBMA_LABELING_METHOD     = "${mod}labeling_method";
+$TBMA_DYE                 = "${mod}dye";
+$TBMA_XNA_TYPE            = "${mod}xna_type";
+$TBMA_ARRAY_REQUEST       = "${mod}array_request";
+$TBMA_ARRAY_REQUEST_SLIDE = "${mod}array_request_slide";
+$TBMA_ARRAY_REQUEST_SAMPLE= "${mod}array_request_sample";
 $TBMA_SAMPLE_PROTOCOL   = "${mod}sample_protocol";
-$TB_ARRAY_REQUEST_OPTION= "${mod}array_request_option";
-$TB_SLIDE_MODEL         = "${mod}slide_model";
-$TB_SLIDE_LOT           = "${mod}slide_lot";
-$TB_SLIDE               = "${mod}slide";
-$TB_PRINTING_BATCH      = "${mod}printing_batch";
-$TB_ARRAY_LAYOUT        = "${mod}array_layout";
-$TB_ARRAY               = "${mod}array";
-$TB_LABELING            = "${mod}labeling";
-$TB_HYBRIDIZATION       = "${mod}hybridization";
-$TB_ARRAY_SCAN          = "${mod}array_scan";
-$TB_ARRAY_QUANTITATION  = "${mod}array_quantitation";
+$TBMA_ARRAY_REQUEST_OPTION= "${mod}array_request_option";
+$TBMA_SLIDE_MODEL         = "${mod}slide_model";
+$TBMA_SLIDE_LOT           = "${mod}slide_lot";
+$TBMA_SLIDE               = "${mod}slide";
+$TBMA_PRINTING_BATCH      = "${mod}printing_batch";
+$TBMA_ARRAY_LAYOUT        = "${mod}array_layout";
+$TBMA_ARRAY               = "${mod}array";
+$TBMA_LABELING            = "${mod}labeling";
+$TBMA_HYBRIDIZATION       = "${mod}hybridization";
+$TBMA_ARRAY_SCAN          = "${mod}array_scan";
+$TBMA_ARRAY_QUANTITATION  = "${mod}array_quantitation";
 $TBMA_BIOSEQUENCE_SET   = "${mod}biosequence_set";
 $TBMA_BIOSEQUENCE       = "${mod}biosequence";
 

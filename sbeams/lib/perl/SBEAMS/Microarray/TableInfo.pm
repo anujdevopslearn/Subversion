@@ -112,7 +112,7 @@ sub returnTableInfo {
         if ($info_key eq "BASICQuery") {
             return qq~
 		SELECT slide_type_id,ST.name,organism_name AS 'organism',price
-		  FROM $TB_SLIDE_TYPE ST
+		  FROM $TBMA_SLIDE_TYPE ST
 		  JOIN $TB_ORGANISM O
 		       ON (ST.organism_id=O.organism_id)
 		 WHERE ST.record_status!='D'
@@ -124,7 +124,7 @@ sub returnTableInfo {
 		SELECT slide_type_id,ST.name,O.organism_name,price,ST.sort_order,
 		       ST.date_created,ST.created_by_id,ST.date_modified,
 		       ST.modified_by_id,ST.record_status
-		  FROM $TB_SLIDE_TYPE ST
+		  FROM $TBMA_SLIDE_TYPE ST
 		  JOIN $TB_ORGANISM O
 		       ON (ST.organism_id=O.organism_id)
 		 WHERE ST.record_status!='D'
@@ -140,10 +140,10 @@ sub returnTableInfo {
         if ($info_key eq "BASICQuery") {
             return qq~
 		SELECT slide_type_cost_id,name,cost_scheme_name,STC.price
-		  FROM $TB_SLIDE_TYPE_COST STC
-		  JOIN $TB_SLIDE_TYPE ST
+		  FROM $TBMA_SLIDE_TYPE_COST STC
+		  JOIN $TBMA_SLIDE_TYPE ST
 		       ON (STC.slide_type_id=ST.slide_type_id)
-		  JOIN $TB_COST_SCHEME CS
+		  JOIN $TBMA_COST_SCHEME CS
 		       ON (STC.cost_scheme_id=CS.cost_scheme_id)
 		 WHERE STC.record_status!='D'
             ~;
@@ -159,10 +159,10 @@ sub returnTableInfo {
             return qq~
 		SELECT labeling_method_id,LM.name,xna_type,
 		       dye_name,desired_micrograms,Ebase,MWbase,price
-		  FROM $TB_LABELING_METHOD LM
-		  LEFT JOIN $TB_XNA_TYPE XT
+		  FROM $TBMA_LABELING_METHOD LM
+		  LEFT JOIN $TBMA_XNA_TYPE XT
 		       ON (LM.xna_type_id=XT.xna_type_id)
-		  LEFT JOIN $TB_DYE D
+		  LEFT JOIN $TBMA_DYE D
 		       ON (LM.dye_id=D.dye_id)
 		 WHERE LM.record_status!='D'
             ~;
@@ -171,7 +171,7 @@ sub returnTableInfo {
         if ($info_key eq "FULLQuery") {
             return qq~
 		SELECT LM.*
-		  FROM $TB_LABELING_METHOD LM
+		  FROM $TBMA_LABELING_METHOD LM
 		 WHERE LM.record_status!='D'
             ~;
         }
@@ -186,10 +186,10 @@ sub returnTableInfo {
             return qq~
 		SELECT array_request_id,username,n_slides,ST.name,
 		       request_status
-		  FROM $TB_ARRAY_REQUEST AR
+		  FROM $TBMA_ARRAY_REQUEST AR
 		  LEFT JOIN $TB_USER_LOGIN U
 		       ON (AR.contact_id=U.contact_id)
-		  LEFT JOIN $TB_SLIDE_TYPE ST
+		  LEFT JOIN $TBMA_SLIDE_TYPE ST
 		       ON (AR.slide_type_id=ST.slide_type_id)
 		 WHERE AR.record_status!='D'
             ~;
@@ -205,7 +205,7 @@ sub returnTableInfo {
         if ($info_key eq "BASICQuery") {
             return qq~
 		SELECT slide_model_id,vendor_name,model_name,contact_id,comment
-		  FROM $TB_SLIDE_MODEL
+		  FROM $TBMA_SLIDE_MODEL
 		 WHERE record_status!='D'
             ~;
         }
@@ -222,8 +222,8 @@ sub returnTableInfo {
             return qq~
 		SELECT slide_lot_id,SM.vendor_name,SM.model_name,lot_number,
 		       date_received,SL.comment
-		  FROM $TB_SLIDE_LOT SL
-		  LEFT JOIN $TB_SLIDE_MODEL SM
+		  FROM $TBMA_SLIDE_LOT SL
+		  LEFT JOIN $TBMA_SLIDE_MODEL SM
 		       ON (SL.slide_model_id=SM.slide_model_id)
 		 WHERE SL.record_status!='D'
             ~;
@@ -244,8 +244,8 @@ sub returnTableInfo {
         if ($info_key eq "BASICQuery") {
             return qq~
 		SELECT slide_id,lot_number,slide_number
-		  FROM $TB_SLIDE S
-		  LEFT JOIN $TB_SLIDE_LOT SL
+		  FROM $TBMA_SLIDE S
+		  LEFT JOIN $TBMA_SLIDE_LOT SL
 		       ON (S.slide_lot_id=SL.slide_lot_id)
 		 WHERE S.record_status!='D'
 		   AND SL.record_status!='D'
