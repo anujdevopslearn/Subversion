@@ -55,6 +55,7 @@ use vars qw($sbeams);
 
 use File::Basename;
 use File::Find;
+use File::Path;
 use Data::Dumper;
 use Carp;
 use FindBin;
@@ -65,7 +66,7 @@ use base qw(SBEAMS::Microarray::Affy);
 use SBEAMS::Connection::Tables;
 use SBEAMS::Microarray::Tables;
 use SBEAMS::Microarray::Analysis_Data;
-
+use SBEAMS::Microarray::Settings;
 
 my $R_program = '/tools/bin/R';
 my $R_library = '/net/arrays/Affymetrix/bioconductor/library';
@@ -686,7 +687,79 @@ sub get_user_id_from_user_name {
 		return 0;
 	}
 }
+##############################################################################
+# delete_analysis_session
+# Turn a record from N to D
+# Provide an affy analysis id
+###############################################################################
+sub delete_analysis_session {
+	my $method = 'delete_analysis_session';
+	my $self = shift;
+	my %args = @_;
+	
+	my $analysis_id = $args{analysis_id};
+	my $rowdata_ref = {record_status => 'D'};
+	
+	my $returned_id = $sbeams->updateOrInsertRow(
+							table_name=>$TBMA_AFFY_ANALYSIS,
+				   			rowdata_ref=>$rowdata_ref,
+				   			return_PK=>1,
+				   			verbose=>'',
+				   			testonly=>'',
+				   			update=>1,
+				   			PK_name => 'affy_analysis_id',
+							PK_value=> $analysis_id,
+				   		   	add_audit_parameters=>1,
+						   );
 
+	if ($returned_id){
+		return $returned_id;
+	}else{
+		return 0;
+	}
+}
+
+##############################################################################
+# delete_analysis_folder
+# delete an analysis recorded from disk
+# Provide a full path to the analysis folder
+###############################################################################
+sub delete_analysis_folder {
+	my $method = 'delete_analysis_folder';
+	my $self = shift;
+	my %args = @_;
+	my $analysis_folder = $args{analysis_folder};
+	
+	my $base_folder_path = $self->affy_bioconductor_devlivery_path();
+	$log->debug("OUT MAIN FOLDER '$base_folder_path'");
+	
+	unless ($analysis_folder){
+		die "ANALYSIS FOLDER NOT GIVEN '$method'";
+	}
+	unless ($analysis_folder =~ /[^a-zA-A0-9\-]/){
+		die"STRANGE CHAR SEEN '$analysis_folder' THIS IS NOT GOOD";
+		
+	}
+	my $folder_path = "$base_folder_path/$analysis_folder";
+	$log->debug("METHOD '$method' ABOUT TO DELETE FOLDER '$folder_path'");
+	if (-d $folder_path){
+		
+		rmtree($folder_path,1,1);#folder_path, print msg about each file deleted, print msg about files that cannot be deleted
+		
+		#terrible hack.....
+		#Since the web user apache and arraybot were both writing into the analysis folder the
+		#permissions were set in such a way to prevent the web user from coming back through and
+		#deleting the files.  So this will move the folder which can then be deleted by a admin type user
+		#as a bonus if the folder was accidentally remove it can be recovered....
+		my $command_line = "mv $folder_path $base_folder_path/deleted/";
+		$log->debug("MOVE COMMAND LINE '$command_line'");
+		
+		my $results = system($command_line);
+	}
+	
+	
+	
+}
 
 ###############################################################################
 # add_analysis_session
@@ -744,6 +817,83 @@ sub find_analysis_type_id {
 	
 	if (@affy_analysis_ids) {
 		return $affy_analysis_ids[0];
+	}else{
+		return 0;
+	}
+}
+
+###############################################################################
+# find_analysis_folder_name
+# Find the folder name
+#Give Analysis id
+#Return analysis folder name or 0 if nothing is found
+###############################################################################
+sub find_analysis_folder_name {
+	my $method = 'find_analysis_folder_name';
+	my $self = shift;
+	my $analysis_id = shift;
+	
+	unless ($analysis_id =~ /^\d/ ) {
+		confess( __PACKAGE__ . "::$method Need to provide a analysis id \n");
+	}
+	my $sql = qq~ SELECT folder_name
+				  FROM $TBMA_AFFY_ANALYSIS
+				  WHERE affy_analysis_id = $analysis_id
+				~;
+	
+	#$sbeams->display_sql(sql=>$sql);
+				
+	my @affy_folder_names = $sbeams->selectOneColumn($sql);
+	
+	
+	if (@affy_folder_names) {
+		return $affy_folder_names[0];
+	}else{
+		return 0;
+	}
+}
+
+##############################################################################
+# find_child_analysis_runs
+# Find if a an analysis id has any children. 
+#give an analysis id
+#Return new instance of the Analysis_Data class or 0 if no data exists\
+#return undef if no analysis id was given
+###############################################################################
+sub find_child_analysis_runs {
+	my $method = 'find_child_analysis_runs';
+	my $self = shift;
+	my $parent_analysis_id = shift;
+	
+	return unless $parent_analysis_id;
+	
+	if  ($parent_analysis_id =~ /[a-zA-Z]/ ) {
+		confess( __PACKAGE__ . "::$method Need to provide a parent analysis id\n");
+	}
+	my $sql = qq~ SELECT aa.affy_analysis_id, 
+				 aa.folder_name,
+				 aa.user_description, 
+				 aa.analysis_description,
+				 aa.parent_analysis_id, 
+				 aat.affy_analysis_name, 
+				 aa.date_created,
+				 ul.username
+				 FROM $TBMA_AFFY_ANALYSIS aa
+				 JOIN 	$TBMA_AFFY_ANALYSIS_TYPE aat ON (aa.affy_analysis_type_id = aat.affy_analysis_type_id)
+      			 JOIN $TB_USER_LOGIN ul ON (aa.user_id = ul.user_login_id)
+      			 WHERE aa.parent_analysis_id = $parent_analysis_id
+      			 AND aa.record_status NOT LIKE 'D'
+				~;
+					
+	#$sbeams->display_sql(sql=>$sql);
+				
+	my @data = $sbeams->selectHashArray($sql);
+	
+	if ($data[0]){
+		
+		my $analysis_data_o = new SBEAMS::Microarray::Analysis_Data(data=>\@data);
+		#print Dumper ($analysis_data_o);
+		return $analysis_data_o;
 	}else{
 		return 0;
 	}
