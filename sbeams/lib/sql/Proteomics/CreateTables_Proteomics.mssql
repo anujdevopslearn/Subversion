@@ -1,0 +1,648 @@
+/*
+
+SELECT * FROM sysobjects WHERE type='U'
+SELECT 'DROP TABLE '+name FROM sysobjects WHERE type='U' ORDER BY crdate DESC
+
+DROP TABLE msms_spectrum_annotation
+DROP TABLE quality_label
+
+DROP TABLE search_hit_annotation
+DROP TABLE annotation_source
+DROP TABLE annotation_confidence
+DROP TABLE annotation_label
+
+DROP TABLE quantitation
+DROP TABLE search_hit_protein
+DROP TABLE search_hit
+DROP TABLE search
+DROP TABLE search_batch_parameter
+DROP TABLE search_batch_parameter_set
+DROP TABLE search_batch
+DROP TABLE msms_spectrum_peak
+DROP TABLE msms_spectrum
+DROP TABLE fraction
+
+
+DONT DROP THESE TABLES!!
+DROP TABLE query_option
+DROP TABLE proteomics_experiment
+DROP TABLE biosequence
+DROP TABLE biosequence_set
+
+*/
+
+
+CREATE TABLE dbo.contact (
+	contact_id		int IDENTITY NOT NULL,
+	last_name		varchar(50) NULL,
+	first_name		varchar(50) NULL,
+	middle_name		varchar(50) NULL,
+	contact_type_id		int NOT NULL /*REFERENCES contact_type (contact_type_id)*/,
+	other_type		varchar(50) NULL,
+	lab			varchar(50) NULL,
+	department		varchar(50) NULL,
+	organization_id		int NOT NULL /*REFERENCES organization (organization_id)*/,
+	phone			varchar(25) NULL,
+	fax			varchar(25) NULL,
+	email			varchar(100) NULL,
+	uri			varchar(255) NULL,
+	comment			varchar(255) NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (contact_id)
+)
+GO
+
+
+CREATE TABLE dbo.project (
+	project_id		int IDENTITY(101,1) NOT NULL,
+	name			varchar(100) NOT NULL,
+	PI_contact_id		int NOT NULL REFERENCES contact(contact_id),
+	description		text NULL,
+	budget			varchar(25) NOT NULL,
+	project_status		varchar(100) NOT NULL,
+	uri			varchar(255) NOT NULL,
+	comment			varchar(255) NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) NOT NULL DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (project_id)
+)
+GO
+
+
+
+CREATE TABLE dbxref (
+	dbxref_id			int IDENTITY NOT NULL,
+	dbxref_name			varchar(100) NOT NULL,
+	dbxref_tag			varchar(50) NOT NULL,
+	dbxref_description		varchar(255) NOT NULL,
+	accessor			varchar(255) NULL,
+	uri				varchar(255) NULL,
+	comment				varchar(4000) NULL,
+	sort_order			int NOT NULL DEFAULT 10,
+	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id			int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status			char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (dbxref_id)
+)
+GO
+
+
+
+CREATE TABLE biosequence_set (
+	biosequence_set_id		int IDENTITY NOT NULL,
+	species_id			int NOT NULL /*REFERENCES organism(organism_id)*/,
+	set_name			varchar(100) NOT NULL,
+	set_tag				varchar(20) NOT NULL,
+	set_description			varchar(255) NOT NULL,
+	set_version			varchar(255) NOT NULL,
+	upload_file			varchar(255) NULL,
+	set_path			varchar(255) NULL,
+	uri				varchar(255) NULL,
+	comment				varchar(4000) NULL,
+	sort_order			int NOT NULL DEFAULT 10,
+	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id			int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status			char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (biosequence_set_id)
+)
+GO
+
+
+CREATE TABLE biosequence (
+	biosequence_id			int IDENTITY NOT NULL,
+	biosequence_set_id		int NOT NULL REFERENCES biosequence_set(biosequence_set_id),
+	biosequence_name		varchar(255) NOT NULL,
+	biosequence_gene_name		varchar(255) NULL,
+	dbxref_id			int NULL REFERENCES dbxref(dbxref_id),
+	biosequence_accession		varchar(255) NULL,
+	biosequence_desc		varchar(1024) NOT NULL,
+	biosequence_seq			text NULL,
+	PRIMARY KEY CLUSTERED (biosequence_id)
+)
+GO
+
+
+CREATE TABLE dbo.proteomics_experiment (
+	experiment_id		int IDENTITY NOT NULL,
+	contact_id		int NOT NULL  REFERENCES contact(contact_id) ,
+	project_id		int NOT NULL  REFERENCES project (project_id) ,
+	experiment_name		varchar(255) NOT NULL,
+	experiment_tag		varchar(20) NOT NULL,
+	experiment_description	varchar(255) NOT NULL,
+	sample_id		int NOT NULL,
+	uri			varchar(255) NOT NULL,
+	comment			varchar(255) NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) NOT NULL DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (experiment_id)
+)
+GO
+
+
+--DROP TABLE dbo.query_option
+CREATE TABLE dbo.query_option (
+	query_option_id		int IDENTITY NOT NULL,
+	option_type		varchar(255) NOT NULL,
+	option_key		varchar(255) NOT NULL,
+	option_value		varchar(255) NOT NULL,
+	sort_order		int NOT NULL DEFAULT 10,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (query_option_id)
+)
+GO
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_charge_constraint','1,2,3','+1, +2, +3',10 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_charge_constraint','1,2','+1, +2',20 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_charge_constraint','1','+1',30 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_charge_constraint','2,3','+2, +3',40 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_charge_constraint','2','+2',50 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_charge_constraint','3','+3',60 )
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','experiment_tag,set_tag,S.file_root,SH.cross_corr_rank,SH.hit_index','Exp, DB, file_root, Rxc',10 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','set_tag,experiment_tag,S.file_root,SH.cross_corr_rank,SH.hit_index','DB, Exp, file_root, Rxc',20 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','S.file_root,experiment_tag,set_tag,SH.cross_corr_rank,SH.hit_index','file_root, Exp, DB, Rxc',30 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','SH.cross_corr DESC,S.file_root,experiment_tag,set_tag,SH.cross_corr_rank,SH.hit_index','XCorr DESC, file_root, Exp, DB, Rxc',40 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','reference,S.file_root,experiment_tag,set_tag,SH.cross_corr_rank,SH.hit_index','Reference, file_root, Exp, DB, Rxc',50 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','peptide,S.file_root,experiment_tag,set_tag,SH.cross_corr_rank,SH.hit_index','Peptide, file_root, Exp, DB, Rxc',60 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','peptide_string,S.file_root,experiment_tag,set_tag,SH.cross_corr_rank,SH.hit_index','Full Peptide String, file_root, Exp, DB, Rxc',70 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','SH.next_dCn DESC,S.file_root,experiment_tag,set_tag,SH.cross_corr_rank,SH.hit_index','dCn DESC, file_root, Exp, DB, Rxc',80 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','S.assumed_charge,S.file_root,experiment_tag,set_tag,SH.cross_corr_rank,SH.hit_index','Charge, file_root, Exp, DB, Rxc',90 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','d0_intensity/ISNULL(NULLIF(d8_intensity,0),0.01) DESC,experiment_tag,set_tag,S.file_root,SH.cross_corr_rank,SH.hit_index','Quant DESC,Exp, DB, file_root, Rxc',100 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','d0_intensity/ISNULL(NULLIF(d8_intensity,0),0.01),experiment_tag,set_tag,S.file_root,SH.cross_corr_rank,SH.hit_index','Quant,Exp, DB, file_root, Rxc',110 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','SH.hit_mass_plus_H,experiment_tag,set_tag,S.file_root,SH.cross_corr_rank,SH.hit_index','Mass ,Exp, DB, file_root, Rxc',120 )
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_display_options','BSDesc','Display BioSequence Descriptions',50 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_display_options','MaxRefWidth','Limit Reference Width',60 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_display_options','ShowSQL','Show SQL Query',60 )
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_peptide_options','SinglyTryptic','At least singly tryptic',50 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_peptide_options','DoublyTryptic','Only doubly tryptic',60 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_peptide_options','C_containing','Cysteine containing',70 )
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_annotation_status','Annot','Only annotated',10 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_annotation_status','UNAnnot','Only not annotated',20 )
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_quant_format','High1','Highest value norm to 1',10 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_quant_format','d01','d0 norm to 1',20 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_quant_format','d81','d8 norm to 1',30 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_quant_format','decimal','decimal ratio',40 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_quant_format','decimalplain','decimal ratio without *',50 )
+
+
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAP_sort_options','reference','Reference',50 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAP_sort_options','peptide','Peptide',60 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAP_sort_options','peptide_string','Full Peptide String',70 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAP_sort_options','tABS.row_count DESC','Count',70 )
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAP_display_options','GroupReference','Group by Reference',10 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAP_display_options','GroupPeptide','Group by Peptide',20 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAP_display_options','GroupPeptideString','Group by Peptide String',21 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAP_display_options','BSDesc','Display BioSequence Descriptions',50 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAP_display_options','MaxRefWidth','Limit Reference Width',60 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAP_display_options','ShowSQL','Show SQL Query',90 )
+
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BBS_display_options','MaxSeqWidth','Limit Sequence Width',50 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BBS_display_options','ShowSQL','Show SQL Query',60 )
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BBS_sort_options','biosequence_name','biosequence_name',10 )
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_best_hit_options','Any','Any best hit',10 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_best_hit_options','User','User-set (U) best hits',20 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_best_hit_options','Default','Default (D) best hits',30 )
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'CE_sort_options','reference','Reference',50 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'CE_sort_options','peptide','Peptide',60 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'CE_sort_options','SUM(tABS.row_count) DESC','Count',70 )
+GO
+
+
+---------------------------------------------------------------------------------------------------
+
+
+CREATE TABLE dbo.gradient_program (
+	gradient_program_id		int IDENTITY NOT NULL,
+	gradient_program_name		varchar(255) NOT NULL,
+	gradient_program_description	varchar(255) NOT NULL,
+	comment			varchar(255) NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) NOT NULL DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (gradient_program_id)
+)
+GO
+
+
+CREATE TABLE dbo.gradient_delta (
+	gradient_delta_id		int IDENTITY NOT NULL,
+	gradient_program_id		int NOT NULL REFERENCES gradient_program(gradient_program_id),
+	gradient_delta_time		real NOT NULL,
+	buffer_A_setting_percent	real NOT NULL,
+	buffer_B_setting_percent	real NOT NULL,
+	PRIMARY KEY CLUSTERED (gradient_delta_id)
+)
+GO
+
+
+CREATE TABLE dbo.fraction (
+	fraction_id		int IDENTITY NOT NULL,
+	experiment_id		int NOT NULL REFERENCES proteomics_experiment(experiment_id),
+	fraction_tag		varchar(50) NOT NULL,
+	fraction_number		int NOT NULL,
+	fraction_date		datetime NULL,
+	gradient_program_id	int NOT NULL REFERENCES gradient_program(gradient_program_id),
+	column_delay		real NULL,
+	PRIMARY KEY CLUSTERED (fraction_id)
+)
+GO
+
+
+CREATE TABLE dbo.msms_spectrum (
+	msms_spectrum_id		int IDENTITY NOT NULL,
+	fraction_id		int NOT NULL REFERENCES fraction(fraction_id),
+	msms_spectrum_file_root	varchar(50) NOT NULL,
+	start_scan		int NOT NULL,
+	end_scan		int NOT NULL,
+	n_peaks			int NOT NULL,
+	spectrum_score		real NULL,
+	score_version		varchar(10) NULL,
+	scan_time		real NULL,
+	calc_buffer_percent	real NULL,
+	calib_buffer_percent	real NULL,
+	PRIMARY KEY CLUSTERED (msms_spectrum_id)
+)
+GO
+
+
+CREATE TABLE dbo.msms_spectrum_peak (
+	msms_spectrum_id		int NOT NULL REFERENCES msms_spectrum(msms_spectrum_id),
+	mass			real NOT NULL,
+	intensity		real NOT NULL,
+	PRIMARY KEY CLUSTERED (msms_spectrum_id,mass)
+)
+GO
+
+
+
+CREATE TABLE dbo.search_batch (
+	search_batch_id		int IDENTITY NOT NULL,
+	experiment_id		int NOT NULL REFERENCES proteomics_experiment(experiment_id),
+	biosequence_set_id	int NOT NULL REFERENCES biosequence_set(biosequence_set_id),
+	data_location		varchar(255),
+	PRIMARY KEY CLUSTERED (search_batch_id)
+)
+GO
+
+
+CREATE TABLE dbo.search_batch_parameter (
+	search_batch_id		int NOT NULL REFERENCES search_batch(search_batch_id),
+	key_order		int NOT NULL,
+	parameter_key		varchar(100) NOT NULL,
+	parameter_value		varchar(255) NOT NULL,
+	PRIMARY KEY CLUSTERED (search_batch_id,parameter_key)
+)
+GO
+
+
+CREATE TABLE dbo.search_batch_parameter_set (
+	search_batch_id		int NOT NULL REFERENCES search_batch(search_batch_id),
+	peptide_mass_tolerance	real NULL,
+	peptide_ion_tolerance	real NULL,
+	enzyme_number		int NULL,
+	nucleotide_reading_frame int NULL,
+	PRIMARY KEY CLUSTERED (search_batch_id)
+)
+GO
+
+
+CREATE TABLE dbo.search (
+	search_id		int IDENTITY NOT NULL,
+	search_batch_id		int NOT NULL REFERENCES search_batch(search_batch_id),
+	msms_spectrum_id		int NOT NULL REFERENCES msms_spectrum(msms_spectrum_id),
+	file_root		varchar(50) NOT NULL,
+	start_scan		int NOT NULL,
+	end_scan		int NOT NULL,
+	sample_mass_plus_H	real NOT NULL,
+	assumed_charge		int NOT NULL,
+	total_intensity		real NOT NULL,
+	matched_peptides	int NOT NULL,
+	lowest_prelim_score	real NOT NULL,
+	search_date		datetime NOT NULL,
+	search_elapsed_min	real NOT NULL,
+	search_host		varchar(50) NOT NULL,
+	PRIMARY KEY CLUSTERED (search_id)
+)
+GO
+ALTER TABLE dbo.search ADD CONSTRAINT search_SB_SPEC_uk UNIQUE (search_batch_id,msms_spectrum_id,file_root)
+GO
+
+
+CREATE TABLE dbo.search_hit (
+	search_hit_id		int IDENTITY NOT NULL,
+	search_id		int NOT NULL REFERENCES search(search_id),
+	hit_index		int NOT NULL,
+	cross_corr_rank		int NOT NULL,
+	prelim_score_rank	int NOT NULL,
+	hit_mass_plus_H		real NOT NULL,
+	mass_delta		real NOT NULL,
+	cross_corr		real NOT NULL,
+	norm_corr_delta		real NOT NULL,
+	prelim_score		real NOT NULL,
+	identified_ions		int NOT NULL,
+	total_ions		int NOT NULL,
+	reference		varchar(100) NOT NULL,
+	biosequence_id		int NULL /*REFERENCES biosequence(biosequence_id)*/,
+	best_hit_flag		char(1) NULL,
+	additional_proteins	int NOT NULL,
+	peptide			varchar(100) NULL,
+	peptide_string		varchar(150) NULL,
+	next_dCn		real NULL,
+	isoelectric_point	real NULL,
+	molecular_weight	real NULL,
+	probability		real NULL,
+	f_score			real NULL,
+	PRIMARY KEY CLUSTERED (search_hit_id)
+)
+GO
+
+
+CREATE TABLE dbo.search_hit_protein (
+	search_hit_protein_id	int IDENTITY NOT NULL,
+	search_hit_id		int NOT NULL REFERENCES search_hit(search_hit_id),
+	reference		varchar(100) NOT NULL,
+	biosequence_id		int NULL /*REFERENCES biosequence(biosequence_id)*/,
+	PRIMARY KEY CLUSTERED (search_hit_protein_id)
+)
+GO
+
+
+CREATE TABLE dbo.quantitation (
+	quantitation_id		int IDENTITY NOT NULL,
+	search_hit_id		int NOT NULL REFERENCES search_hit(search_hit_id),
+	d0_intensity		real NULL,
+	d8_intensity		real NULL,
+	d0_first_scan		int NULL,
+	d0_last_scan		int NULL,
+	d0_mass			real NULL,
+	d8_first_scan		int NULL,
+	d8_last_scan		int NULL,
+	d8_mass			real NULL,
+	norm_flag		int NULL,
+	mass_tolerance		real NULL,
+	quality_score		real NULL,
+	manually_changed	varchar(5) NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (quantitation_id)
+)
+GO
+ALTER TABLE dbo.quantitation ADD CONSTRAINT quantitation_search_hit_id_uk UNIQUE (search_hit_id)
+GO
+
+----------------------------------------------------------------------
+-- Annotation Tables:
+
+CREATE TABLE dbo.annotation_label (
+	annotation_label_id	int IDENTITY NOT NULL,
+	label_desc		varchar(100) NULL,
+	comment			varchar(1024) NULL,
+	sort_order		int NOT NULL DEFAULT 10,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (annotation_label_id)
+)
+GO
+
+
+INSERT INTO annotation_label ( label_desc,sort_order ) VALUES ( '100% - certain',10 )
+INSERT INTO annotation_label ( label_desc,sort_order ) VALUES ( '90%',20 )
+INSERT INTO annotation_label ( label_desc,sort_order ) VALUES ( '80% - Likely',30 )
+INSERT INTO annotation_label ( label_desc,sort_order ) VALUES ( '70%',40 )
+INSERT INTO annotation_label ( label_desc,sort_order ) VALUES ( '60%',50 )
+INSERT INTO annotation_label ( label_desc,sort_order ) VALUES ( '50% - Possible',60 )
+INSERT INTO annotation_label ( label_desc,sort_order ) VALUES ( '40%',70 )
+INSERT INTO annotation_label ( label_desc,sort_order ) VALUES ( '30%',80 )
+INSERT INTO annotation_label ( label_desc,sort_order ) VALUES ( '20% - Unlikely',90 )
+INSERT INTO annotation_label ( label_desc,sort_order ) VALUES ( '10%',100 )
+INSERT INTO annotation_label ( label_desc,sort_order ) VALUES ( '0% - Rejected',110 )
+INSERT INTO annotation_label ( label_desc,sort_order ) VALUES ( 'Unknown',120 )
+GO
+
+
+CREATE TABLE dbo.annotation_confidence (
+	annotation_confidence_id  int IDENTITY NOT NULL,
+	confidence_desc		varchar(100) NULL,
+	comment			varchar(1024) NULL,
+	sort_order		int NOT NULL DEFAULT 10,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (annotation_confidence_id)
+)
+GO
+
+INSERT INTO annotation_confidence ( confidence_desc,sort_order ) VALUES ( 'High',10 )
+INSERT INTO annotation_confidence ( confidence_desc,sort_order ) VALUES ( 'Medium',20 )
+INSERT INTO annotation_confidence ( confidence_desc,sort_order ) VALUES ( 'Low',30 )
+INSERT INTO annotation_confidence ( confidence_desc,sort_order ) VALUES ( 'Unknown',40 )
+GO
+
+
+CREATE TABLE dbo.annotation_source (
+	annotation_source_id	int IDENTITY NOT NULL,
+	source_desc		varchar(100) NULL,
+	comment			varchar(1024) NULL,
+	sort_order		int NOT NULL DEFAULT 10,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (annotation_source_id)
+)
+GO
+
+INSERT INTO annotation_source ( source_desc,sort_order ) VALUES ( 'By hand in SBEAMS',10 )
+INSERT INTO annotation_source ( source_desc,sort_order ) VALUES ( 'Historical load from Interact file',20 )
+INSERT INTO annotation_source ( source_desc,sort_order ) VALUES ( 'Unknown',30 )
+GO
+
+
+CREATE TABLE dbo.search_hit_annotation (
+	search_hit_annotation_id  int IDENTITY NOT NULL,
+	search_hit_id		int NOT NULL REFERENCES search_hit(search_hit_id),
+	annotation_label_id	int NOT NULL REFERENCES annotation_label(annotation_label_id),
+	annotation_confidence_id  int NOT NULL REFERENCES annotation_confidence(annotation_confidence_id),
+	annotation_source_id	int NOT NULL REFERENCES annotation_source(annotation_source_id),
+	comment			varchar(1024) NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (search_hit_annotation_id)
+)
+GO
+
+
+CREATE TABLE dbo.quality_label (
+	quality_label_id 	int IDENTITY NOT NULL,
+	quality_desc		varchar(100) NULL,
+	comment			varchar(1024) NULL,
+	sort_order		int NOT NULL DEFAULT 10,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (quality_label_id)
+)
+GO
+
+INSERT INTO quality_label ( quality_desc,sort_order ) VALUES ( 'Very High',10 )
+INSERT INTO quality_label ( quality_desc,sort_order ) VALUES ( 'High',20 )
+INSERT INTO quality_label ( quality_desc,sort_order ) VALUES ( 'Medium',30 )
+INSERT INTO quality_label ( quality_desc,sort_order ) VALUES ( 'Low',40 )
+INSERT INTO quality_label ( quality_desc,sort_order ) VALUES ( 'Junk',50 )
+INSERT INTO quality_label ( quality_desc,sort_order ) VALUES ( 'Unknown',60 )
+GO
+
+
+CREATE TABLE dbo.msms_spectrum_annotation (
+	msms_spectrum_annotation_id  int IDENTITY NOT NULL,
+	msms_spectrum_id	int NOT NULL REFERENCES msms_spectrum(msms_spectrum_id),
+	quality_label_id	int NOT NULL REFERENCES quality_label(quality_label_id),
+	comment			varchar(1024) NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (msms_spectrum_annotation_id)
+)
+GO
+
+
+
+----------------------------------------------------------------------
+
+/*
+DROP INDEX biosequence.idx_biosequence_name
+DROP INDEX search.idx_search_file_root
+DROP INDEX msms_spectrum.idx_msms_spectrum_file_root
+DROP INDEX search_hit.idx_search_hit_search_index
+DROP INDEX search_hit.idx_search_hit_reference
+DROP INDEX search_hit.idx_search_hit_peptide
+DROP INDEX search_hit.idx_search_hit_peptide_string
+DROP INDEX search_hit.idx_search_hit_cross_corr
+DROP INDEX search_hit.idx_search_hit_probability
+*/
+
+/*
+CREATE NONCLUSTERED INDEX idx_biosequence_name ON dbo.biosequence ( biosequence_set_id,biosequence_name ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_search_file_root ON dbo.search ( search_batch_id,file_root ) WITH DROP_EXISTING
+-- This index is needed for load_proteomics_experiment.pl to be fast enough.  It can degrade
+-- the load speed significantly.  Unfortunately, the index fragments during the load.
+CREATE NONCLUSTERED INDEX idx_msms_spectrum_file_root ON dbo.msms_spectrum ( msms_spectrum_file_root ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_search_hit_search_index ON dbo.search_hit ( search_id,hit_index ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_search_hit_reference ON dbo.search_hit ( reference ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_search_hit_peptide ON dbo.search_hit ( peptide ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_search_hit_peptide_string ON dbo.search_hit ( peptide_string ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_search_hit_cross_corr ON dbo.search_hit ( cross_corr ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_search_hit_probability ON dbo.search_hit ( probability ) WITH DROP_EXISTING
+
+*/
+
