@@ -177,6 +177,12 @@ VALUES ( 'BPP_peptide_options','SinglyTryptic','At least singly tryptic',70 );
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BPP_peptide_options','DoublyTryptic','Only doubly tryptic',80 );
 
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BPS_display_options','ShowGOColumns','Show GO Columns',70 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BPS_display_options','ShowExtraProteinProps','Show Extra Protein Properties',80 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BPS_display_options','ShowSQL','Show SQL Query',90 );
 
 
 
