@@ -175,6 +175,7 @@ sub handle_request {
   #### Set some reasonable defaults if no parameters supplied
   unless ($n_params_found) {
     if ($TABLE_NAME eq "PR_GetSearchHits") {
+      $parameters{input_form_format} = "minimum_detail";
       $parameters{xcorr_charge1} = ">4.0";
       $parameters{xcorr_charge2} = ">4.5";
       $parameters{xcorr_charge3} = ">5.0";
