@@ -471,8 +471,11 @@ sub buildAltas {
           SELECT peptide_accession,peptide_id
           FROM $TBAT_PEPTIDE
        ~;
-       %peptides = $sbeams->selectTwoColumnHash($sql);
- 
+       #### This is hideously expensive and not necessary
+       ####%peptides = $sbeams->selectTwoColumnHash($sql);
+       #### Why not just add it directly? Deutsch 2004-12-02
+       $peptides{$APD_peptide_accession{$tmp_pep_id}} = $peptide_id;
+
        ## and enter that in APD_peptide_id hash:
        $APD_peptide_id{$tmp_pep_id} = $peptides{$APD_peptide_accession{$tmp_pep_id}};
      } # end unless
@@ -715,7 +718,12 @@ sub buildAltas {
  	die("ERROR: Wanted to insert data for peptide $peptide_accession[$i] ".
  	    "which is in the BLAST output summary, but not in the input ".
  	    "peptide file??");
- 
+
+       if (!defined($APD_best_probability{$peptides{$peptide_accession[$i]}})) {
+ 	die("ERROR: Wanted to insert data for peptide $peptide_accession[$i] ".
+ 	    "but the best probability is NULL??");
+       }
+
        my %rowdata = (   ##   peptide_instance    table attributes
          atlas_build_id => $atlas_build_id,
          peptide_id => $peptide_id,
