@@ -35,6 +35,14 @@ use vars qw(@ISA @EXPORT
     $TBPH_CONDITION_REPEAT
     $TBPH_STRAIN_BEHAVIOR
 
+    $TBPH_COLI_MARKER
+    $TBPH_YEAST_SELECTION_MARKER
+    $TBPH_YEAST_ORIGIN
+    $TBPH_PLASMID_TYPE
+    $TBPH_CITATION
+    $TBPH_STRAIN_BACKGROUND
+    $TBPH_STRAIN_STATUS
+
     $TBPH_QUERY_OPTION
 );
 
@@ -64,6 +72,14 @@ require Exporter;
     $TBPH_CONDITION_REPEAT
     $TBPH_STRAIN_BEHAVIOR
 
+    $TBPH_COLI_MARKER
+    $TBPH_YEAST_SELECTION_MARKER
+    $TBPH_YEAST_ORIGIN
+    $TBPH_PLASMID_TYPE
+    $TBPH_CITATION
+    $TBPH_STRAIN_BACKGROUND
+    $TBPH_STRAIN_STATUS
+
     $TBPH_QUERY_OPTION
 );
 
@@ -89,6 +105,14 @@ $TBPH_PLATE_LAYOUT                = 'PhenoArray.dbo.plate_layout';
 $TBPH_CONDITION                   = 'PhenoArray.dbo.condition';
 $TBPH_CONDITION_REPEAT            = 'PhenoArray.dbo.condition_repeat';
 $TBPH_STRAIN_BEHAVIOR             = 'PhenoArray.dbo.strain_behavior';
+
+$TBPH_COLI_MARKER                 = 'PhenoArray.dbo.coli_marker';
+$TBPH_YEAST_SELECTION_MARKER      = 'PhenoArray.dbo.yeast_selection_marker';
+$TBPH_YEAST_ORIGIN                = 'PhenoArray.dbo.yeast_origin';
+$TBPH_PLASMID_TYPE                = 'PhenoArray.dbo.plasmid_type';
+$TBPH_CITATION                    = 'PhenoArray.dbo.citation';
+$TBPH_STRAIN_BACKGROUND           = 'PhenoArray.dbo.strain_background';
+$TBPH_STRAIN_STATUS               = 'PhenoArray.dbo.strain_status';
 
 $TBPH_QUERY_OPTION                = 'PhenoArray.dbo.query_option';
 
