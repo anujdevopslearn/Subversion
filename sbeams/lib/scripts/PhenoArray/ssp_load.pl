@@ -10,7 +10,7 @@ use strict;
 use Getopt::Long;
 use vars qw ($sbeams $sbeamsPH
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
-             $current_contact_id $current_username %ref_id $DA $DS);
+             $current_contact_id $current_username %ref_id $DA $DS $DP);
 
 use lib qw (/net/db/lib/sbeams/lib/perl);
 
@@ -31,7 +31,7 @@ $sbeamsPH = new SBEAMS::PhenoArray;
 $sbeamsPH->setSBEAMS($sbeams);
 $QUIET = 0;
 my %plate_id;
-$USAGE = "ssp_load.pl [master_plate_file.txt] [-a -s]\n-a   delete all\n-s delete SM and PL\n";
+$USAGE = "ssp_load.pl [master_plate_file.txt] [-a -s]\n-a   delete all\n-s delete SM\n-p   delete PL";
 print "$#ARGV\n";
 if ( $#ARGV < 0 ) {die $USAGE};
 
@@ -40,6 +40,7 @@ for ( my $i=1; $i <= $#ARGV; $i++) {
 
     if ( $ARGV[$i] =~ /^-a/) {$DA = 1; $i++;}
     if ( $ARGV[$i] =~ /^-s/) {$DS = 1; $i++;}
+    if ( $ARGV[$i] =~ /^-p/) {$DP = 1; $i++;}
 }
 
 
@@ -70,7 +71,7 @@ sub main {
 sub readSheet {
    
     my $DEBUG ;
-    #deleteAll();
+    deleteAll();
     #makePlateTable();
     checkPlate();
     makeSubstrainTable();
@@ -87,19 +88,29 @@ sub getRefStrains {
 
 sub deleteAll {
 
-    my $sql = "DELETE FROM ${DATABASE}plate_layout ".
-	"WHERE plate_layout_id = plate_layout_id";
-    $sbeams->executeSQL($sql);
+    if ($DA == 1 || $DP == 1) {
+	print "Deleting ALL plate layouts\n";
+	<STDIN>;
+	my $sql = "DELETE FROM ${DATABASE}plate_layout ".
+	    "WHERE plate_layout_id = plate_layout_id";
+	$sbeams->executeSQL($sql);
+    }
 
-    my $sql = "DELETE FROM ${DATABASE}sequence_modification ".
-	"WHERE sequence_modification_id =  sequence_modification_id";
-    $sbeams->executeSQL($sql);
+    if ($DA == 1 || $DS == 1) {
+	print "Deleting ALL sequence_modification\n";
+	<STDIN>;
+	my $sql = "DELETE FROM ${DATABASE}sequence_modification ".
+	    "WHERE sequence_modification_id =  sequence_modification_id";
+	$sbeams->executeSQL($sql);
+    }
 
-
-    my $sql = "DELETE FROM ${DATABASE}substrain ".
-	" WHERE substrain_id = substrain_id";
-    $sbeams->executeSQL($sql);
-  
+    if ($DA == 1) {
+	print "Deleting ALL substrains\n";
+	<STDIN>;
+	my $sql = "DELETE FROM ${DATABASE}substrain ".
+	    " WHERE substrain_id = substrain_id";
+	$sbeams->executeSQL($sql);
+    }
     
 
 }
@@ -116,7 +127,7 @@ sub makeSubstrainTable {
     
     while (<IN3>) {
 
-	print ".";
+	#print ".";
 	#Read in the substrain table each time to check for new entries
 	if ($Insert == 0 ) {
 	    my $sql_substrain = "SELECT substrain_name, substrain_id FROM ${DATABASE}substrain";
@@ -147,7 +158,10 @@ sub makeSubstrainTable {
 	    $KO1 = $thing;
 	    # print "Systematic name found\n";# for $KO1 \n";
 	    
-       	} else {
+       	} elsif ($thing =~ /WT/ || $thing =~ /WILDTYPE/   ) {
+	    $KO1 = $parent;
+
+	} else {
 	    #match the common name to the systematic name
 	    $KO1 = $bioSeq{$thing};
 	    #print "Common name matched $KO1 : $thing : $bioSeq{$thing}\n";
@@ -302,7 +316,7 @@ sub makeSMTable_and_makePlateLayoutTable {
 	}
 	
 	next if ( /^\#/ || /num_rows/ || /none/ || /blank/);
-	print ".";
+	#print ".";
 	my @line = split("\t");
 #	next if ( $#line < 10 );
 	my $p96p = $line[0];
@@ -324,7 +338,10 @@ sub makeSMTable_and_makePlateLayoutTable {
 	    $KO1 = $thing;
 	    # print "Systematic name found\n";# for $KO1 \n";
 	    
-       	} else {
+       	} elsif ($thing =~ /WT/ || $thing =~ /WILDTYPE/   ) {
+	    $KO1 = $parent;
+
+	} else {
 	    #match the common name to the systematic name
 	    $KO1 = $bioSeqName{$thing};
 	    #print "Common name matched $KO1 : $thing : $bioSeq{$thing}\n";
@@ -381,21 +398,62 @@ sub makeSMTable_and_makePlateLayoutTable {
 	   
 	    $InsertSM = 0;
 	    if ( $bioSeq_id{$KO1} ) {
-		my %bioMod = (
+		
+		my %bioMod;
+		if ($thing !~ /WT/ || $thing !~ /WILDTYPE/) {
+		#Insert two mods
+		    if ( $line[7] !~ /null/ ) {
+		
+			my %bioMod2 = (
+				   substrain_id => $substrain_id{$name},
+				   affected_biosequence_id => $bioSeq_id{$KO2},
+				   modification_index => 1,
+				   deletion_start => 0,
+				   deletion_length => 100,
+				   inserted_biosequence_id => 19962,
+				   created_by_id => 7,
+				   modified_by_id => 7, 
+				   record_status => 0, 
+				   ); 
+
+			my $result;
+			$SM++;
+			my $result = $sbeams->insert_update_row(
+				      insert => 1,                      
+				      update => 0,                      
+			table_name => "${DATABASE}sequence_modification",
+				    rowdata_ref => \%bioMod2,         
+				     PK => "sequence_modification_id",      
+			       );       
+
+
+		    } 
+
+		     %bioMod = (
+				substrain_id => $substrain_id{$name},
+				affected_biosequence_id => $bioSeq_id{$KO1},
+				modification_index => 0,
+				deletion_start => 0,
+				deletion_length => 100,
+				inserted_biosequence_id => 19962,
+				created_by_id => 7,
+				modified_by_id => 7, 
+				record_status => 0, 
+				); 
+
+		} else {
+		    %bioMod = (
 			  substrain_id => $substrain_id{$name},
-			  affected_biosequence_id => $bioSeq_id{$KO1},
-			  deletion_start => 0,
-			  deletion_length => 100,
-			  inserted_biosequence_id => 19962,
 			  created_by_id => 7,              
 			  modified_by_id => 7,         
 			  record_status => 0,           
 			  ); 
+		} 
 		my $result;
 		$SM++;
 		my $result = $sbeams->insert_update_row(
-					 insert => 1,                      
-					 update => 0,                      
+				      insert => 1,                      
+				      update => 0,                      
 			table_name => "${DATABASE}sequence_modification",
 				    rowdata_ref => \%bioMod,         
 				     PK => "sequence_modification_id",      
@@ -413,7 +471,7 @@ sub makeSMTable_and_makePlateLayoutTable {
 	    }
 	}
 
-	if ($exist2 ==0 && $name != "BY4741.YJL038C" ) {
+	if ($exist2 ==0 ) {#&& $name != "BY4741.YJL038C" ) {
 	    $PL++;
 	    #print "$plate_id{$plate} is the ID for $plate\n";
 	    my %layout = (

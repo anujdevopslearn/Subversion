@@ -1,12 +1,9 @@
 #!/usr/local/bin/perl 
 
 ###############################################################################
-# Program     : SummarizeFractions
-# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
-# $Id$
-#
-# Description : This CGI program that summarizes the fractiosn in one or
-#               more proteomics experiments.
+# Program     : StrainFinder
+# Author      : Rowan
+# This finds strains.
 #
 ###############################################################################
 
@@ -28,17 +25,17 @@ use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
-use SBEAMS::Proteomics;
-use SBEAMS::Proteomics::Settings;
-use SBEAMS::Proteomics::Tables;
+use SBEAMS::PhenoArray;
+use SBEAMS::PhenoArray::Settings;
+use SBEAMS::PhenoArray::Tables;
 
 $sbeams = new SBEAMS::Connection;
-$sbeamsMOD = new SBEAMS::Proteomics;
+$sbeamsMOD = new SBEAMS::PhenoArray;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 
-use CGI;
+use CGI qw( :standard);
 $q = new CGI;
 
 
@@ -145,8 +142,8 @@ sub handle_request {
 
 
   #### Set some specific settings for this program
-  my $CATEGORY="Summarize Fractions";
-  $TABLE_NAME="PR_SummarizeFractions" unless ($TABLE_NAME);
+  my $CATEGORY="StrainFinder";
+  $TABLE_NAME="PH_StrainFinder" unless ($TABLE_NAME);
   ($PROGRAM_FILE_NAME) =
     $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
   my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
@@ -206,44 +203,83 @@ sub handle_request {
   #########################################################################
   #### Process all the constraints
 
-  #### Build EXPERIMENT constraint
-  my $experiment_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"PE.experiment_id",
+  #### Build CellType constraint
+  my $cell_type_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"CT.cell_type_id",
     constraint_type=>"int_list",
-    constraint_name=>"Experiment List",
-    constraint_value=>$parameters{experiment_id} );
-  return if ($experiment_clause == -1);
+    constraint_name=>"Cell Type List",
+    constraint_value=>$parameters{cell_type} );
+  return if ($cell_type_clause == -1);
 
 
-  #### Build PROJECT constraint
-  my $project_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"PE.project_id",
+  #### Build StrainBackground constraint
+  my $strain_bg_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SB.strain_background_id",
     constraint_type=>"int_list",
-    constraint_name=>"Project List MODIFIED",
-    constraint_value=>$parameters{project_id} );
-  return if ($project_clause == -1);
+    constraint_name=>"Strain Background List",
+    constraint_value=>$parameters{strain_background} );
+  return if ($strain_bg_clause == -1);
 
+  ### Build CITATION constraint 
+  my $citation_clause =  $sbeams->parseConstraint2SQL(
+    constraint_column=>"C.citation_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Citation List",
+    constraint_value=>$parameters{citation_id} );
+  return if ( $citation_clause == -1 );
+
+  ### Build ALLELE NAME constraint
+  my $allele_name_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BSA.biosequence_name",
+    constraint_type=>"plain_text",
+    constraint_name=>"Allele Name",
+    constraint_value=>$parameters{allele_name} );
+  return if ($allele_name_clause == -1);
+
+
+  ### Build ALLELE DESC constraint
+  my $allele_desc_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BSA.biosequence_desc",
+    constraint_type=>"plain_text",
+    constraint_name=>"Allele Description",
+    constraint_value=>$parameters{allele_desc} );
+  return if ($allele_desc_clause == -1);
+
+### Build LOCUS NAME constraint
+  my $locus_name_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BSL.biosequence_name",
+    constraint_type=>"plain_text",
+    constraint_name=>"Locus Name",
+    constraint_value=>$parameters{locus_name} );
+  return if ($locus_name_clause == -1);
+
+### Build LOCUS DESC constraint
+  my $locus_desc_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BSL.biosequence_desc",
+    constraint_type=>"plain_text",
+    constraint_name=>"Locus Description",
+    constraint_value=>$parameters{locus_desc} );
+  return if ($locus_desc_clause == -1);
 
   #### Build ROWCOUNT constraint
-  $parameters{row_limit} = 1000
-    unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
-  my $limit_clause = "TOP $parameters{row_limit}";
+  #$parameters{row_limit} = 1000
+  #  unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
+  #my $limit_clause = "TOP $parameters{row_limit}";
 
 
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
   my @column_array = (
-    ["experiment_id","PE.experiment_id","experiment_id"],
-    ["username","username","username"],
-    ["project_id","P.project_id","project_id"],
-    ["project_name","name","project_name"],
-    ["experiment_tag","experiment_tag","experiment_tag"],
-    ["experiment_name","experiment_name","experiment_name"],
-    ["fraction_id","F.fraction_id","fraction_id"],
-    ["fraction_tag","F.fraction_tag","fraction_tag"],
-    ["TIC_plot","'TIC Plot'","TIC_plot"],
-    ["n_scans","COUNT(*)","# CID spectra"],
-  );
+    ["strain_name","S.strain_name","Strain Name"],
+    ["cell_type","CT.cell_type_description","Cell Type"],
+    ["strain_background","SB.strain_background_name","Strain Background"],
+    ["citation_id","C.citation_id","citation_id"],
+    ["allele_name","BSA.biosequence_name","Allele Name"],
+    ["allele_desc","BSA.biosequence_desc","Allele Desc."],
+    ["locus_name","BSL.biosequence_name","Locus Name"],
+    ["locus_desc","BSL.biosequence_desc","Locus Desc."],
+    ["strain_id","S.strain_id","strain_id"],
+                      );
 
 
   #### Build the GROUP BY clause
@@ -265,41 +301,62 @@ sub handle_request {
     column_titles_ref=>\@column_titles
   );
 
-
+  my $TBPH_ALLELE;
   #### Define the SQL statement
   $sql = qq~
-	SELECT $columns_clause
-	  FROM $TBPR_PROTEOMICS_EXPERIMENT PE
-	  JOIN $TB_USER_LOGIN UL ON (PE.contact_id=UL.contact_id)
-	  JOIN $TB_PROJECT P ON (PE.project_id=P.project_id)
-	  JOIN $TBPR_FRACTION F ON (PE.experiment_id=F.experiment_id)
-	  JOIN $TBPR_MSMS_SPECTRUM S ON (F.fraction_id=S.fraction_id)
-	 WHERE P.record_status!='D'
-	   AND UL.record_status!='D'
-	   AND PE.record_status!='D'
-	$experiment_clause
-	$project_clause
-	 GROUP BY $group_by_clause
-	 ORDER BY experiment_tag,fraction_tag
-  ~;
+  SELECT $columns_clause
+      FROM PhenoArray.dbo.allele A
+      LEFT JOIN $TBPH_STRAIN S ON ( A.strain_id = S.strain_id )
+      LEFT JOIN $TBPH_BIOSEQUENCE BSA ON ( A.allele_biosequence_id = BSA.biosequence_id )
+      LEFT JOIN $TBPH_BIOSEQUENCE BSL ON ( A.locus_biosequence_id = BSL.biosequence_id )
+      LEFT JOIN $TBPH_CITATION C ON ( S.reference_citation_id = C.citation_id )
+      LEFT JOIN $TBPH_CELL_TYPE CT ON ( S.cell_type_id = CT.cell_type_id )
+      LEFT JOIN $TBPH_STRAIN_BACKGROUND SB ON ( S.strain_background_id = SB.strain_background_id )
+  WHERE 
+  S.record_status like '%'
+      $cell_type_clause
+      $strain_bg_clause
+      $citation_clause
+      $allele_name_clause
+      $allele_desc_clause
+      $locus_desc_clause
+      $locus_name_clause
+      ~;
 
+  print "<PRE>$sql</PRE><BR>\n";
+  
 
   #### Certain types of actions should be passed to links
   my $pass_action = "QUERY";
   $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
 
   #### Define the hypertext links for columns that need them
-  %url_cols = ('project_name' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=\%$colnameidx{project_id}V",
-               'experiment_name' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=proteomics_experiment&experiment_id=\%$colnameidx{experiment_id}V", 
-               'TIC_plot' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ShowTICPlot.cgi?fraction_id=\%$colnameidx{fraction_id}V", 
-  );
-
+  %url_cols = (
+               'Strain Name' => "$CGI_BASE_DIR/PhenoArray/StrainFinder.cgi?strain_id=\%$colnameidx{strain_id}V",               );
 
   #### Define columns that should be hidden in the output table
-  %hidden_cols = ('experiment_id' => 1,
-                  'project_id' => 1,
-                  'fraction_id' => 1,
-  );
+  %hidden_cols = (strain_id => 1 );
+
+
+  if ( $q->param("strain_id") ) {
+      print "<h2>StrainId Found</h2><br>";
+      my $strain_id = $q->param("strain_id");
+      print "<h3>$strain_id</h3><br>";
+
+#TODO: something cool
+
+      #my @genotype_array = $sbeams->selectHashArray("$sql AND S.strain_id = $strain_id");
+
+      #foreach my $strain (  @genotype_array ) {
+       #   foreach my $allele ( %{$genotype_array[0]} ) {
+          
+        #      print "${genotype_array[0]}{$allele}";
+         # }
+
+      #}
+
+
+  }
 
 
   #########################################################################
@@ -338,6 +395,8 @@ sub handle_request {
         base_url=>$base_url);
 
 
+    
+
   #### If QUERY was not selected, then tell the user to enter some parameters
   } else {
     if ($sbeams->invocation_mode() eq 'http') {
@@ -347,7 +406,7 @@ sub handle_request {
     }
   }
 
-
+  
 } # end handle_request
 
 

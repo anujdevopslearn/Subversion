@@ -207,9 +207,6 @@ PH_StrainFinder	4	allele_name	Allele Name									N	text	40		Y	Y	N	The Name of t
 PH_StrainFinder	5	allele_desc	Locus Description									N	text	40		Y	Y	N	The Description of the ALLELE	
 PH_StrainFinder	5	locus_name	Allele Description									N	text	41		Y	Y	N	The Name of the LOCUS	
 PH_StrainFinder	6	locus_desc	Locus Name									N	text	42		Y	Y	N	The Description of the LOCUS		
-PH_StrainFinder	6	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBPH_QUERY_OPTION WHERE option_type = 'BBS_sort_options' ORDER BY sort_order,option_value"	
-PH_StrainFinder	7	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBPH_QUERY_OPTION WHERE option_type = 'BBS_display_options' ORDER BY sort_order,option_value"	
-PH_StrainFinder	8	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."		
 PH_coli_marker	1	coli_marker_id	Coli Marker ID	int	8	0	N		Y							N	N				pkDEFAULT
 PH_coli_marker	2	coli_marker_tag	Coli Marker Tag	varchar	255	0	N		N			Y	text	20		Y	Y	Y	Tag (short abbreviation) of the Coli Marker		
 PH_coli_marker	3	coli_marker_name	Coli Marker Name	varchar	255	0	N		N			Y	text	50		Y	Y	N	Full Name of the Coli Marker		
@@ -289,10 +286,10 @@ PH_citation	12	editor_name	Editor Name	varchar	255	0	Y		N			N	text	40		Y	Y	N	"Na
 PH_citation	13	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	URL of other locator for the article		SELF
 PH_citation	14	abstract	Abstract	text	16	0	Y		N			N	textarea	4		Y	Y	N	Plain text abstract of the article		
 PH_citation	15	full_manuscript_file	Full Manuscript	varchar	255	0	Y		N			N	file	40		Y	Y	N	Actual file containing the manuscript (e.g. in PDF format)		
-PH_citation	16	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-PH_citation	17	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PH_citation	18	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-PH_citation	19	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PH_citation	20	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-PH_citation	21	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-PH_citation	22	record_status	Record Status	char	1	0	N	N	N							N	N				
+PH_citation	16	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments
+PH_citation	17	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
+PH_citation	18	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N		
+PH_citation	19	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
+PH_citation	20	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N		
+PH_citation	21	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N		
+PH_citation	22	record_status	Record Status	char	1	0	N	N	N							N	N		

@@ -312,6 +312,7 @@ sub insertBehaviour {
 		$KO2 = $bioSeq{$thing2};
 		if (!$KO2 ) {
 		    print "Common name not found $KO2 @line\n";
+
 		    next;
 		}
 	    }
@@ -338,7 +339,7 @@ sub insertBehaviour {
 	   
 	   my  %strain = (
 			  substrain_id => $substrain{$name},
-			  condition_id => $cond_id{"YPD"},
+			  condition_id => $cond_id{"Boone"},
 			  growth => 0,
 			  ); 
 	

@@ -1474,6 +1474,11 @@ sub displayResultSetControls {
     my $npages = int($nrowsminus / $rs_params{page_size}) + 1;
     for ($i=0; $i<$npages; $i++) {
       my $pg = $i+1;
+      
+      if ( ( $i % 50 ) == 0 ) {
+          print "<BR>";
+      }
+
       if ($i == $rs_params{page_number}) {
         print "[<font color=red>$pg</font>] \n";
       } else {
