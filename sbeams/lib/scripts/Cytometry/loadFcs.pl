@@ -128,7 +128,7 @@ sub processFile
     
     
      my @headerInfo = read_fcs_header ($fcsFile);
-    my @karray = get_fcs_keywords($fcsFile, @headerInfo);
+     my @karray = get_fcs_keywords($fcsFile, @headerInfo);
      foreach my $r (@karray) 
      {
        print "$r\n";
@@ -169,7 +169,7 @@ sub loadHash
 #file in fcs_run ?   
      if ($fileHash{$fileName} ne $dirName) 
      {
-       
+       $fileHash{$fileName} = $dirName; 
        my %insertRecord;
        my $tableName = "$TBCY_FCS_RUN";
        my $pkName = "fcs_run_id";
