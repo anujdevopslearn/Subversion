@@ -186,6 +186,7 @@ organismName1 => $indexHash{Organism_bioentity1_name},
 	
 	my %interactionGroups = $sbeams->selectTwoColumnHash(qq /Select Upper(interaction_group_name), interaction_group_id from $TBIN_INTERACTION_GROUP/);
 	$interactionGroups = \%interactionGroups;
+	
 	my %confidenceScores = $sbeams->selectTwoColumnHash(qq /Select (confidence_score_name),confidence_score_id from $TBIN_CONFIDENCE_SCORE/);
 	$confidenceScores = \%confidenceScores;
 	my %assayTypes = $sbeams->selectTwoColumnHash(qq /Select Upper(assay_type_name), assay_type_id from $TBIN_ASSAY_TYPE/);
@@ -531,28 +532,40 @@ print "checking interaction requirements\n";
 #in case there is no interaction defined, one can not add an empty interaction 
 #however keep the count going so the the record numbers are the same across all hashes
 		}
-#			if (!($infoArray[$interactionHash{'interType'}]))
-	#		{	
-		#			print "$INTERACTION{$count-2}->{$column}\n";
-			#		getc;
-		#			print "Detected error: Interactiontype is not specified\n";
-			#		Error(\@infoArray, "interactionType is not specified");
-			#		delete $INTERACTION{$count-2};
-			#		next;
-		#	}
-	#	}
-#assay type, reg type, confidence score, state
-#may not be defined, however if they are then they need to 
-#have a match in the lookup tables
+		$INTERACTION{$count-2}->{organismName} =  $infoArray[$interactionHash{'organismName2'}];
+		print "$INTERACTION{$count-2}->{organismName}\n";
+		
 		$INTERACTION{$count-2}->{'group'} = $infoArray[$interactionHash{'group'}];
 		$INTERACTION{$count-2}->{'group'} =~ s/[\s+\n+\t+\r+]$//g;
 		$INTERACTION{$count-2}->{'group'} =~ s/^[\s+\n+\t+\r+]//g;
-		$INTERACTION{$count-2}->{group} =~ s/^([a-z]+)\s+([a-z]+)$/$1 $2/i;
+#      $NTERACTION{$count-2}->{group} =~ s/^([a-z]+)\s+([a-z]+)$/$1 $2/i;
 		$INTERACTION{$count-2}->{confidence_score} =~ s/\s*//g;
-		$INTERACTION{$count-2}->{group}= uc($INTERACTION{$count-2}->{group});		
+		$INTERACTION{$count-2}->{group}= uc($INTERACTION{$count-2}->{group});
+		
+		my @row = $sbeams->selectOneColumn ("select interaction_group_id from $TBIN_INTERACTION_GROUP i 
+		join $TB_ORGANISM sb on i.organism_id = sb.organism_id 
+		where i.interaction_group_name = \'$INTERACTION{$count-2}->{group}\'
+		and (sb.organism_name = 	\'$INTERACTION{$count-2}->{organismName}\'
+		or common_name = 	\'$INTERACTION{$count-2}->{organismName}\'
+		or full_name =	\'$INTERACTION{$count-2}->{organismName}\' ) ");
+		$INTERACTION{$count-2}->{group}  = $row[0];   
+		print " $INTERACTION{$count-2}->{group}\n";
+		
+		 if (! $INTERACTION{$count-2}->{group})
+		 {
+			 print "Detected error: Interactiongroup is not specified\n";
+			Error(\@infoArray, "interactionType is not specified");
+			delete $INTERACTION{$count-2};
+			next;
+		 }
+	
+		
+		$INTERACTION{$count-2}->{'interType'} = 'Protein-DNA'  if $INTERACTION{$count-2}->{'interType'} eq 'pd';		
 		$INTERACTION{$count-2}->{'interType'} = uc($INTERACTION{$count-2}->{'interType'});
 		$INTERACTION{$count-2}->{bioentityState1} = uc($INTERACTION{$count-2}->{bioentityState1});
 		$INTERACTION{$count-2}->{assay_type} = uc ($INTERACTION{$count-2}->{assay_type});
+		
+			
 	#	$INTERACTION{$count-2}->{confidence_score} =  ($INTERACTION{$count-2}->{confidence_score});
 
 		if (!$INTERACTION{$count-2}->{'interType'}) 
@@ -1025,15 +1038,20 @@ sub checkPopulateInteraction
 {
 	my $hashRef = shift;
 	my $SUB_NAME = "$0::checkPopulateInteraction";
+
 			
 	foreach my $record (keys %{$hashRef}) 
 	{
 			
+#			print "$hashRef->{$record}->{group}\n";
+						
 			my $update = 1; 
 			my $insert = 0;
-			my $interactionQuery = qq / select Interaction_id from $TBIN_INTERACTION I
+			my $interactionQuery = qq / select Interaction_id from $TBIN_INTERACTION 
 			where bioentity1_id = $hashRef->{$record}->{bioentityID1} and 
-			bioentity2_id = $hashRef->{$record}->{bioentityID2}/;
+			bioentity2_id = $hashRef->{$record}->{bioentityID2} /;
+			
+#			print "$interactionQuery\n";
 						
 			my @rows = $sbeams->selectOneColumn($interactionQuery);	
 			my $nrows = scalar(@rows);
@@ -1066,9 +1084,11 @@ sub insertOrUpdateInteraction
 		{
 				print "updating INTERACTION: $interactionID\n";
 		}
-		print "  $record->{pubMedID}";
+		print  "group: $record->{group}\n";
+		print "$interactionTypes->{$record->{interType}}\n";
+		
 		my %rowData; 
-		$rowData{interaction_group_id} = $interactionGroups->{$record->{group}} if ($record->{group});
+		$rowData{interaction_group_id} = $record->{group};
 		$rowData{bioentity1_id} = $record->{bioentityID1};
 		$rowData{bioentity1_state_id} = $bioentityState->{$record->{bioentityState1}} if ($record->{bioentityState1});
 #		$rowData{regulatory_feature1_id} = $regTypes->{$record->{bioentityReg1}} if ($record->{bioentityReg1});
