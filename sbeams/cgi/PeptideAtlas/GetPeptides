@@ -194,25 +194,18 @@ sub handle_request {
                       URL => "$CGI_BASE_DIR/PeptideAtlas/main.cgi"
                       );
 
-#   my $content;# = '&nbsp;';
+    my $content;
 
-    $tabmenu->addHRule();
+    if ( $tabmenu->getActiveTabName() eq 'Browse Proteins' ||
+         $tabmenu->getActiveTabName() eq 'Get Protein' ) {
 
-
-    if ( $tabmenu->getActiveTabName() eq 'Browse Peptides' ){
-
-        ## want to pipe results from call to GetPeptides into $content here...
-        ## $content = $sbeams->getCgiPage(GetPeptides);
-
-    } elsif ( $tabmenu->getActiveTabName() eq 'Get Peptide' ) {
-
-    } elsif ( $tabmenu->getActiveTabName() eq 'Browse Proteins' ) {
-
-    } elsif ( $tabmenu->getActiveTabName() eq 'Get Protein' ) {
+        $content = "<BR><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>[coming soon, not implemented yet]<B><BR><BR>";
 
     }
 
-#   $tabmenu->addContent( $content );
+    $tabmenu->addHRule();
+
+    $tabmenu->addContent( $content );
 
     print "$tabmenu";
 

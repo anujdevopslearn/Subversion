@@ -115,11 +115,21 @@ sub showMainPage {
                       URL => "$CGI_BASE_DIR/PeptideAtlas/main.cgi"
                       );
 
-#   my $content;# = '&nbsp;';
+    my $content; 
+
+    if ( $tabmenu->getActiveTabName() eq 'Browse Proteins' ||
+         $tabmenu->getActiveTabName() eq 'Get Protein' ) {
+
+        $content = "<BR><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>[coming soon, not implemented yet]<B><BR><BR>";
+
+    }
 
     $tabmenu->addHRule();
 
+    $tabmenu->addContent( $content );
+
     print "$tabmenu";
+
 
 #   print "$SERVER_BASE_DIR <BR>  $CGI_BASE_DIR <BR>";
 

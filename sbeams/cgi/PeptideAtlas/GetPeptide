@@ -112,14 +112,24 @@ sub main {
     my $n_params_found = $sbeams->parse_input_parameters(
         q=>$q,
         parameters_ref=>\%parameters);
-
     #$sbeams->printDebuggingInfo($q);
 
-    ##xxxx  hard coding tab menu info here until moved into sep. module
+    ##tab menu info here until moved into sep. module
     $q->param( -name=> "_tab",
                    -value=> "2");
     $parameters{'_tab'} = 2;
-#   $SERVER_BASE_DIR = "https://db.systemsbiology.net";
+
+    ## if no parameters are defined, set up some defaults to help with browsing
+    ## until I get a help menu set-up
+    unless ( ($parameters{'atlasName'}) && ($parameters{'searchWithinThis'}) && 
+             ($parameters{'searchForThis'}) ) {
+        $parameters{'atlasName'} = 'Human_P0.9_Ens22_NCBI34';
+        $parameters{'searchWithinThis'} = 'Peptide Name';
+        $parameters{'searchForThis'} = 'PAp00000001';
+        $q->param( -name=> "atlasName", -value=> "Human_P0.9_Ens22_NCBI34");
+        $q->param( -name=> "searchWithinThis", -value=> "Peptide Name");
+        $q->param( -name=> "searchForThis", -value=> "PAp00000001");
+    }
 
 
     #### Process generic "state" parameters before we start
@@ -218,27 +228,21 @@ sub handle_request {
                       URL => "$CGI_BASE_DIR/PeptideAtlas/main.cgi"
                       );
 
-#       my $content;# = '&nbsp;';
+    my $content;
 
-        $tabmenu->addHRule();
+    if ( $tabmenu->getActiveTabName() eq 'Browse Proteins' ||
+         $tabmenu->getActiveTabName() eq 'Get Protein' ) {
 
+        $content = "<BR><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>[coming soon, not implemented yet]<B><BR><BR>";
 
-        if ( $tabmenu->getActiveTabName() eq 'Browse Peptides' ){
+    }
 
-            ## want to pipe results from call to GetPeptides into $content here...
-            ## $content = $sbeams->getCgiPage(GetPeptides);
+    $tabmenu->addHRule();
 
-        } elsif ( $tabmenu->getActiveTabName() eq 'Get Peptide' ) {
+    $tabmenu->addContent( $content );
 
-        } elsif ( $tabmenu->getActiveTabName() eq 'Browse Proteins' ) {
+    print "$tabmenu";
 
-        } elsif ( $tabmenu->getActiveTabName() eq 'Get Protein' ) {
-
-        }
-
-#       $tabmenu->addContent( $content );
-
-        print "$tabmenu";
 
     }
 
