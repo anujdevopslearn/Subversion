@@ -336,7 +336,7 @@ sub handle_request {
   my $biosequence_name_clause = "";
   if ($reference_clause) {
     $biosequence_name_clause = $reference_clause;
-    $biosequence_name_clause =~ s/SH\.reference/BS\.biosequence_name/;
+    $biosequence_name_clause =~ s/SH\.reference/BS\.biosequence_name/g;
   }
 
 
