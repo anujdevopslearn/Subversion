@@ -1034,7 +1034,7 @@ sub createFile{
   my $replicateValue= $q->param('errorModelValue');
   my $exclude = 0;
   my $excludeFile;
-  my $defaultFile = "/net/arrays/Pipeline/dev7/tools/etc/excluded_gene_names";
+  my $defaultFile = "/net/arrays/Pipeline/tools/etc/excluded_gene_names";
   my $temp = $q->param('excludeGenes');
   if ($temp){
     $exclude = $temp;
@@ -1077,7 +1077,7 @@ sub createFile{
 #File Creating Variables
   my $project_id = $q->param('project_id');
   my $printLine;
-  my $BASE_DIR = "/net/arrays/Pipeline/dev7";
+  my $BASE_DIR = "/net/arrays/Pipeline";
   my $OUTPUT_DIR = "$BASE_DIR/output";
 
 print qq~
@@ -1287,7 +1287,7 @@ sub submitJob {
     my $control_filename = "job$timestr.control";
     my $log_filename = "job$timestr.log";
 
-    my $queue_dir = "/net/arrays/Pipeline/dev7/queue";
+    my $queue_dir = "/net/arrays/Pipeline/queue";
 
 
 
@@ -1329,7 +1329,7 @@ sub submitJob {
 
         Well, theres no link yet, but paste this into a unix window:<BR><BR>
 
-	cd /net/arrays/Pipeline/dev7/output/project_id/$project_id<BR>
+	cd /net/arrays/Pipeline/output/project_id/$project_id<BR>
 	if ( -e $log_filename ) tail -f $log_filename<BR>
 
 	<BR><BR><BR>
