@@ -64,11 +64,55 @@ sub display_page_header {
 
   if( $sbeams->isGuestUser() ) {
     $self->displayGuestPageHeader();
-  } else {
+  } elsif ( $sbeams->isPAyeastUser() )
+  {
+    $self->displayInternalResearcherPageHeader();
+  } else
+  {
     $self->displayStandardPageHeader();
    }
   }
 
+
+###############################################################################
+# displayInternalResearcherPageHeader
+###############################################################################
+sub displayInternalResearcherPageHeader {
+ 	my $self = shift;
+  my %args = @_;
+
+  my $navigation_bar = $args{'navigation_bar'} || "YES";
+
+  my $LOGOUT_URI = "$CGI_BASE_DIR/logout.cgi";
+
+  my $LOGOUT_LINK = qq~<A HREF="$LOGOUT_URI" class="Nav_link">LOGOUT</A>~;
+
+
+  #### Obtain main SBEAMS object and use its http_header
+  my $sbeams = $self->getSBEAMS();
+  my $http_header = $sbeams->get_http_header();
+  use LWP::UserAgent;
+  use HTTP::Request;
+  my $ua = LWP::UserAgent->new();
+  my $skinLink = 'http://www.peptideatlas.org';
+  my $response = $ua->request( HTTP::Request->new( GET => "$skinLink/.index.dbbrowse.php" ) );
+  my @page = split( "\r", $response->content() );
+  my $skin = '';
+  for ( @page ) {
+    $_ =~ s/\<\!-- LOGIN_LINK --\>/$LOGOUT_LINK/;
+    last if $_ =~ /--- Main Page Content ---/;
+    $skin .= $_;
+  }
+  $skin =~ s/\/images\//\/sbeams\/images\//gm;
+ 
+  print "$http_header\n\n";
+  print <<"  END_PAGE";
+  <HTML>
+    $skin
+  END_PAGE
+
+  $self->printJavascriptFunctions();
+  }
 
 
 ###############################################################################
