@@ -459,7 +459,7 @@ sub print_tabs {
 	if ($counter == $selected_tab) {
 	    print qq~
 		<TD WIDTH="15">&nbsp;</TD>
-		<TD BGCOLOR="$selected_bg_color" ALIGN="CENTER" WIDTH="95" NOWRAP><A HREF="$page_link?tab=$link"><FONT COLOR="$selected_font_color" SIZE="-1">$tab_title</FONT></A></TD>
+		<TD BGCOLOR="$selected_bg_color" ALIGN="CENTER" WIDTH="95" NOWRAP><FONT COLOR="$selected_font_color" SIZE="-1">$tab_title</FONT></TD>
 		~;
 	}else {
 	    print qq~
