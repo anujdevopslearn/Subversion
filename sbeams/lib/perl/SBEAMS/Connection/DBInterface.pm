@@ -86,8 +86,6 @@ sub applySqlChange {
     my %args = @_;
     my $SUB_NAME = "applySqlChange";
 
-    my %asc_new = $self->applySQLChange ( %args );
-
     my $sql_query = $args{'SQL_statement'}
       || die("ERROR: $SUB_NAME: Parameter SQL_statement not passed");
     my $current_contact_id = $args{'current_contact_id'}
@@ -180,7 +178,6 @@ sub applySqlChange {
       $user_context_privilege_id = $row[5];
     }
 
-
     #### If no rows came back, the table/work_group relationship is not defined
     if ($n_rows == 0) {
       push(@ERRORS, "The privilege of your current work group ".
@@ -207,7 +204,6 @@ sub applySqlChange {
       );
     }
 
-
     #### Set the privilege_id to none
     my $privilege_id=50;
 
@@ -229,7 +225,6 @@ sub applySqlChange {
         $user_context_privilege_id > $privilege_id) {
       $privilege_id = $user_context_privilege_id;
     }
-    $log->debug( "In ASC_old, pPriv is $project_privilege_id, tPriv is $privilege_id" );
 
 
     my ($privilege_name) = $level_names{$privilege_id}
@@ -496,6 +491,8 @@ sub applySqlChange {
 
     }
 
+    # Still in testing mode, don't want to execute/log these twice...
+    return( result => $result, tPriv => $privilege_id, pPriv => $project_privilege_id );
 
     #### Log the result and the query itself regardless of result
     my $altered_sql_query = $self->convertSingletoTwoQuotes($sql_query);
@@ -506,23 +503,7 @@ sub applySqlChange {
     ~;
     $self->executeSQL($log_query);
 
-    $log->info( "In ASC_old, result was $result" );
 
-# DEBUG testing block
-    if ( %asc_new ) {
-      if ( $asc_new{result} ne $result ||
-        $project_privilege_id != $asc_new{pPriv} ||
-        $privilege_id != $asc_new{tPriv} ) {
-        $log->error( <<"        END" );
-        
-        OLD: result => $result\tpPriv => $project_privilege_id\ttPriv=>$privilege_id
-        NEW: result => $asc_new{result}\tpPriv => $asc_new{pPriv}\ttPriv=>$asc_new{tPriv}
-
-        END
-      }
-    }
-
-    
     #### Return the results
     return ($result,$returned_PK,@ERRORS);
 }
@@ -555,6 +536,11 @@ sub applySQLChange {
 
     my $subname = 'applySQLChange';
 
+    # FIXME temporarily running both old and new versions of applySqlChange to
+    # ensure a smooth transition.  New version is definitive as of 01-25-2005.
+    my %asc_old = $self->applySqlChange ( %args );
+
+
     # Check for required parameters.
     for(qw( SQL_statement current_contact_id table_name record_identifier )){
       die( "Error: $subname: Parameter $_ not passed" ) unless $args{$_};
@@ -564,8 +550,8 @@ sub applySQLChange {
     my %level_names = $self->selectTwoColumnHash(
       "SELECT privilege_id,name FROM $TB_PRIVILEGE WHERE record_status!='D'"
     );
-    # get_best_permission() gives default permission of 9999.  Can't do the right thing
-    # and put this in $TB_PRIV 'cause it would show up in select lists.  Doh!
+    # get_best_permission() gives default permission of 9999.  Can't
+    # put this in $TB_PRIV 'cause it would show up in select lists.  Doh!
     $level_names{9999} ||= 'NONE';
 
 
@@ -582,15 +568,11 @@ sub applySQLChange {
     ( $args{pk_value} = $args{record_identifier} ) =~ s/.*=//;
     $args{project_id} = $self->getCurrent_project_id();
     $args{work_group_id} = $self->getCurrent_work_group_id();
-#    $args{pk_column_name} = $args{pk_value};
 
-#    my $args;
-#    for( keys( %args ) ){ $args .= "B4: $_ => $args{$_}\n"; }
-#    $log->debug( $args );
-   
     # Defaults to restrictive permissions
     my $pPriv = '';
     my $tPriv = 50;
+    my $status = 'DENIED';
 
     # Assumes (as does original) that this has already been determined and cached.
     if ( $args{parent_project_id} && $args{action} !~ /^INSERT?/i ) {
@@ -598,10 +580,12 @@ sub applySQLChange {
     }
     $tPriv = $self->calculateTablePermission( %args );
 
-    $log->info( "In ASC_new, pPriv is $pPriv, tPriv is $tPriv" );
+    # A better privilege may be legitimately afforded via membership in a group
+    # other than the current one.  Check on this.
+    my $work_groups_ref = $self->getTableGroups( %args, privilege => 10000 );
+    my $bestpriv = $self->getBestGroupPermission( $work_groups_ref );
+    $tPriv = ( $bestpriv < $tPriv ) ? $bestpriv : $tPriv;
 
-    # Default to 
-    my $status = 'DENIED';
     
     # At this point, INSERT depends solely on table permission
     if ( $args{action} =~ /^INSERT$/i && $tPriv <= DATA_READER ) {
@@ -615,9 +599,19 @@ sub applySQLChange {
       }
     }
 
-    $log->info( "In ASC_new, result was $status" );
-    # Still in testing mode, don't want to execute/log these twice...
-    return( result => $status, tPriv => $tPriv, pPriv => $pPriv );
+    # DEBUG testing block
+    if ( %asc_old ) {
+      if ( $asc_old{result} ne $status ||
+        $pPriv != $asc_old{pPriv} ||
+        $tPriv != $asc_old{tPriv} ) {
+        $log->error( <<"        END" );
+        
+        NEW: result => $status\tpPriv => $pPriv\t tPriv=>$tPriv
+        OLD: result => $asc_old{result}\tpPriv => $asc_old{pPriv}\ttPriv=>$asc_old{tPriv}
+
+        END
+      }
+    }
     
     # Go ahead and execute the query if it passed muster.
     my $pk = '';
@@ -635,14 +629,18 @@ sub applySQLChange {
     END
     $self->executeSQL($logSQL);
 
-    my @errors = ( "$args{action} into $args{dbtable} failed.", 
-                   "Your table permission on this table is $tPriv"
-                 );
-    push @errors, "Your project permission on this record is $pPriv" if $pPriv;
+    my @errors;
+    if ( $status ne 'SUCCESSFUL' ) {
+      @errors = ( "$args{action} into $args{dbtable} failed.", 
+                  "Your table permission on this table is $tPriv"
+               );
+      push @errors, "Your project permission on this record is $pPriv" if $pPriv;
+    }
 
     #### Return the results
     return ($status,$pk, @errors);
 } # End applySQLChange
+
 
 sub getDbTableName {
   my $self = shift;
