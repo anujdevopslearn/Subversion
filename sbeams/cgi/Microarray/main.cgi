@@ -359,7 +359,6 @@ sub print_current_project_tab {
       <TR><TD></TD><TD COLSPAN="2"><B>Access Privileges:</B><A HREF="$CGI_BASE_DIR/ManageProjectPrivileges">[View/Edit]</A></TD></TR>
       <TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD></TR>
       </TABLE>
-      <IMG SRC="/users/mjohnson/permissions_red.jpg">
       $LINESEPARATOR
   ~;
 
