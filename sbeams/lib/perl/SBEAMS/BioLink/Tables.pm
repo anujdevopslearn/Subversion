@@ -30,6 +30,7 @@ use vars qw(@ISA @EXPORT
     $TBBL_EVIDENCE
     $TBBL_EVIDENCE_SOURCE
 
+    $TBBL_BLAST_RESULTS
 );
 
 
@@ -50,6 +51,7 @@ require Exporter;
     $TBBL_EVIDENCE
     $TBBL_EVIDENCE_SOURCE
 
+    $TBBL_BLAST_RESULTS
 );
 
 
@@ -70,8 +72,4 @@ $TBBL_RELATIONSHIP          = "${mod}relationship";
 $TBBL_EVIDENCE              = "${mod}evidence";
 $TBBL_EVIDENCE_SOURCE       = "${mod}evidence_source";
 
-
-
-
-
-
+$TBBL_BLAST_RESULTS         = "${mod}blast_results";
