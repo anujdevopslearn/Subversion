@@ -15,6 +15,10 @@ use strict;
 use vars qw(@ERRORS $dbh $sth $q);
 use CGI::Carp qw(fatalsToBrowser croak);
 use DBI;
+
+
+#use lib "/net/db/src/CPAN/Data-ShowTable-3.3a";
+#use Data::ShowTableEWD;
 use Data::ShowTable;
 
 use SBEAMS::Connection::DBConnector;
@@ -403,21 +407,44 @@ sub getRecordStatusOptions {
 ###############################################################################
 sub displayQueryResult {
     my $self = shift;
-    my $sql_query = shift or croak "parameter \$sql_query not passed";
-    my $url_cols_ref = shift;
-    my $flag = shift;
-    my $hidden_cols_ref = shift;
+    my %args = @_;
 
+    #### Process the arguments list
+    my $sql_query = $args{'sql_query'} || croak "parameter sql_query missing";
+    my $url_cols_ref = $args{'url_cols_ref'};
+    my $hidden_cols_ref = $args{'hidden_cols_ref'};
+    my $row_color_scheme_ref = $args{'row_color_scheme_ref'};
+    my $printable_table = $args{'printable_table'};
+
+
+    #### Execute the query
     $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
     my $rv  = $sth->execute or croak $dbh->errstr;
 
+
     #print $sth->{NUM_OF_FIELDS},"<BR>\n";
     #print join ("|",@{ $sth->{TYPE} }),"<BR>\n";
-    my @TDformats=('BGCOLOR=#E0E0E0 NOWRAP');
 
+    #### Define <TD> tags
+    my @TDformats=('NOWRAP');
+
+
+    #### If a row_color_scheme was not passed, create one:
+    unless ($row_color_scheme_ref) {
+      my %row_color_scheme;
+      $row_color_scheme{change_n_rows} = 3;
+      my @row_color_list = ("#E0E0E0","#C0D0C0");
+      $row_color_scheme{color_list} = \@row_color_list;
+      $row_color_scheme_ref = \%row_color_scheme;
+    }
+
+
+    #### Decode the type numbers into type strings
     my $types_ref = $self->decodeDataType($sth->{TYPE});
 
-    if ( $flag eq "printable") {
+
+    #### If a printable table was desired, use one format
+    if ( $printable_table ) {
 
       ShowHTMLTable { titles=>$sth->{NAME},
 	types=>$types_ref,
@@ -431,6 +458,8 @@ sub displayQueryResult {
         TDformats=>['NOWRAP']
 	};
 
+
+    #### Otherwise, use the standard viewable format which doesn't print well
     } else {
 
       ShowHTMLTable { titles=>$sth->{NAME},
@@ -442,15 +471,19 @@ sub displayQueryResult {
         url_keys=>$url_cols_ref,
         hidden_cols=>$hidden_cols_ref,
         THformats=>['BGCOLOR=#C0C0C0'],
-        TDformats=>\@TDformats
-	};
+        TDformats=>\@TDformats,
+        row_color_scheme=>$row_color_scheme_ref
+      };
+
     }
 
-    print "\n";
 
+    #### finish up
+    print "\n";
     $sth->finish;
 
     return 1;
+
 
 } # end displayQueryResult
 

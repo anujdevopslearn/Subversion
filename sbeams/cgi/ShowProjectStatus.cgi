@@ -247,7 +247,8 @@ SELECT	A.array_id,A.array_name,
 
 
     if ($apply_action eq "QUERY") {
-      return $sbeams->displayQueryResult($sql_query,\%url_cols,"nooptions",\%hidden_cols);
+      return $sbeams->displayQueryResult(sql_query=>$sql_query,
+          url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols);
     } else {
       print "<H4>Select parameters above and press QUERY</H4>\n";
     }

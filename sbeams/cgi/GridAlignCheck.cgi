@@ -212,7 +212,8 @@ SELECT
 
 
     if ($apply_action eq "QUERY") {
-      $sbeams->displayQueryResult($sql_query,\%url_cols,"nooptions",\%hidden_cols);
+      $sbeams->displayQueryResult(sql_query=>$sql_query,url_cols_ref=>\%url_cols,
+          hidden_cols_ref=>\%hidden_cols);
 
       print qq~
 	<BR><HR SIZE=5 NOSHADE><BR>

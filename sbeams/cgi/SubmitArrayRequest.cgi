@@ -653,7 +653,8 @@ sub showTable {
     my ($element,$value);
     my %url_cols = $sbeamsMAW->returnTableInfo($TABLE_NAME,"url_cols");
 
-    return $sbeams->displayQueryResult($sql_query,\%url_cols);
+    return $sbeams->displayQueryResult(sql_query=>$sql_query,
+        url_cols_ref=>\%url_cols);
 
 } # end showTable
 
@@ -1714,7 +1715,8 @@ sub printCompletedEntry {
     ~;
     my %url_cols;
     $sql_query = "SELECT * FROM arrays.dbo.xna_info";
-    $sbeams->displayQueryResult($sql_query,\%url_cols,"printable");
+    return $sbeams->displayQueryResult(sql_query=>$sql_query,
+        url_cols_ref=>\%url_cols,printable_table=>1);
 
     print qq~
         <BR><BR><BR><B>
@@ -1722,7 +1724,8 @@ sub printCompletedEntry {
 	follows:</B><BR><BR>
     ~;
     $sql_query = "SELECT * FROM arrays.dbo.arabadopsis";
-    $sbeams->displayQueryResult($sql_query,\%url_cols,"printable");
+    return $sbeams->displayQueryResult(sql_query=>$sql_query,
+        url_cols_ref=>\%url_cols,printable_table=>1);
 
     print qq~
         <BR><BR><B><FONT COLOR=RED>

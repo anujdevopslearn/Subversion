@@ -508,7 +508,8 @@ sub showTable {
     my ($element,$value);
     my %url_cols = $sbeamsMAW->returnTableInfo($TABLE_NAME,"url_cols");
 
-    return $sbeams->displayQueryResult($sql_query,\%url_cols);
+    return $sbeams->displayQueryResult(sql_query=>$sql_query,
+        url_cols_ref=>\%url_cols);
 
 } # end showTable
 
