@@ -4,9 +4,9 @@
   /* $Id$ */
   $TITLE="SBEAMS Documentation";
 
-  include("share/style.inc.php");
+  include("../includes/style.inc.php");
 
-  include("share/header.inc.php");
+  include("../includes/header.inc.php");
 ?>
 
 
@@ -36,5 +36,5 @@ to meet the needs of modern systems biology research.</P></FONT></CENTER>
 <BR>
 
 <?php
-  include("share/footer.inc.php");
+  include("../includes/footer.inc.php");
 ?>
