@@ -394,7 +394,7 @@ sub print_summary_tab {
   #### Get all the array information for this project
   my $n_array_requests = 0;
   my $n_array_scans = 0;
-  my $n_quantitation_files = 0;
+  my $n_array_quantitations = 0;
   if ($project_id > 0) {
 
       $sql = qq~
@@ -410,42 +410,24 @@ sub print_summary_tab {
 	  $n_array_requests++;
       }
 
-      $sql = qq~
-	  SELECT ASCAN.array_scan_id, ASCAN.stage_location
-	  FROM $TB_ARRAY_SCAN ASCAN
-	  JOIN $TB_ARRAY A ON ( A.array_id = ASCAN.array_id )
-	  JOIN $TB_ARRAY_QUANTITATION AQ ON ( AQ.array_scan_id = ASCAN.array_scan_id )
-	  WHERE A.project_id = '$project_id'
-	  AND ASCAN.record_status != 'D'
-	  AND A.record_status != 'D'
-	  AND AQ.record_status != 'D'
-      ~;
-      %array_scans = $sbeams->selectTwoColumnHash($sql);
 
       $sql = qq~
-	  SELECT AQ.array_quantitation_id, AQ.stage_location
-	  FROM $TB_ARRAY_SCAN ASCAN
-	  JOIN $TB_ARRAY A ON ( A.array_id = ASCAN.array_id )
-	  JOIN $TB_ARRAY_QUANTITATION AQ ON ( AQ.array_scan_id = ASCAN.array_scan_id )
-	  WHERE A.project_id = '$project_id'
-	  AND ASCAN.record_status != 'D'
-	  AND A.record_status != 'D'
-	  AND AQ.record_status != 'D'
-      ~;
-      %quantitation_files = $sbeams->selectTwoColumnHash($sql);
-
-      foreach my $key (keys %array_scans) {
-	  $n_array_scans++;
-      }
-      foreach my $key (keys %quantitation_files){
-	  $n_quantitation_files++;
-      }
+	  SELECT COUNT (ASCAN.array_scan_id) AS 'Scans', 
+	         COUNT (AQ.array_quantitation_id) AS 'Quantitations'
+            FROM $TB_ARRAY A
+            LEFT JOIN $TB_ARRAY_SCAN ASCAN ON (A.array_id = ASCAN.array_id)
+	    LEFT JOIN $TB_ARRAY_QUANTITATION AQ ON ( AQ.array_scan_id = ASCAN.array_scan_id )
+           WHERE A.project_id = '$project_id'
+             AND A.record_status != 'D'
+	     ~;
+      @rows = $sbeams->selectSeveralColumns($sql);
+     ($n_array_scans, $n_array_quantitations) = @{$rows[0]};
   }
 
   print qq~
 <TR><TD></TD><TD COLSPAN="2"><B>Array Requests: $n_array_requests</B></TD></TR>
 <TR><TD></TD><TD COLSPAN="2"><B>Array Scans: $n_array_scans</B></TD></TR>
-<TR><TD></TD><TD COLSPAN="2"><B>Array Quantitations: $n_quantitation_files</B></TD></TR>
+<TR><TD></TD><TD COLSPAN="2"><B>Array Quantitations: $n_array_quantitations</B></TD></TR>
 <TR><TD></TD><TD COLSPAN="2"><B>Access Privileges:</B><A HREF="$CGI_BASE_DIR/ManageProjectPrivileges">[View/Edit]</A></TD></TR>    
 <TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD></TR>
 </TABLE>
