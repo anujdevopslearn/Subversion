@@ -146,8 +146,7 @@ Run Mode Notes:
  delete  : NOT FUNCTIONAL DELETE FROM THE DATABASE
 Examples;
 1) ./$PROG_NAME --run_mode add_new 	 # typical mode, adds any new files
-2) ./$PROG_NAME --run_mode update --redo_R yes or no	 # Re upload the data and or re-compute the R run 
-	UPDATES ARE VERY SLOW IT DOES A LOOK UP FOR EVERY ROW
+2) ./$PROG_NAME --run_mode update --redo_R yes or no	 # Re upload the data and or re-compute the R run
 3) ./$PROG_NAME --run_mode update --redo_R yes or no -files 123,124,134  #give the affy_array_ids to update
 EOU
 
@@ -332,7 +331,11 @@ sub add_R_CHP_data {
 			next;
 		}
 		$update_flag = 1 if $RUN_MODE eq 'update';	
-		next if (($id >= 55 && $id < 64) || ($id >= 110 && $id <= 113) || ($id >= 144 && $id <= 147) ||($id >= 163 && $id <= 207) );
+		
+		if ($affy_o->get_organism eq 'Yeast'){					#need to skip yeast arrays untill they can be processed in R
+			print "SKIPPING '" . $affy_o->get_afa_file_root() . "' THIS IS A YEAST CHIP\n" if ($VERBOSE >0);
+			next;
+		}
 		if ($update_flag){
 			if ($FILES_TO_UPDATE){									#if there are specific files to update only update these files
 					my @files_to_update_a = split /,/,$FILES_TO_UPDATE;
@@ -434,6 +437,12 @@ sub find_affy_R_CHP {
 		$sbeams_affy->set_afa_file_root($file_name);
 		$sbeams_affy->set_afs_sample_tag($sample_tag);			#set the sample_tag, within a project this should be a unique name
 		
+		my $sql = $sbeams_affy_groups->get_all_affy_info_sql(affy_array_ids => $affy_array_id);
+		my ($array_info_href) = $sbeams->selectHashArray($sql);		#bit dorkey running huge query just to find the organism name
+		my $organisim_name = $$array_info_href{Organism};
+		print "ORGANISIM NAME '$organisim_name'\n" if ($VERBOSE > 0);
+		$sbeams_affy->set_afs_organism_id($organisim_name);		#set the organisim name
+
 #########################################################################
 ### Determine if a R_CHP file exists and set the path to it if it does 
 
