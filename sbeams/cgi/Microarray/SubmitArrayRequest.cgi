@@ -303,7 +303,7 @@ sub printEntryForm {
 
         #### If $element is cost_scheme, restrict the list to the current option
         #### unless the user is working under the Arrays group
-        if ( $element eq "cost_scheme_id" && $current_work_group_name ne "Arrays" ) {
+        if ( $element eq "cost_scheme_id" && $current_work_group_name ne "Microarray_admin" ) {
           $optionlist_queries{$element} =~
             s/ORDER BY/WHERE cost_scheme_id = $cost_scheme_id ORDER BY/;
         }
@@ -669,7 +669,7 @@ sub printEntryForm {
     # If this is a not a new entry and the work_group is Arrays, allow
     # more options:
     if ($parameters{$PK_COLUMN_NAME} gt ""
-        && $current_work_group_name eq "Arrays") {
+        && $current_work_group_name eq "Microarray_admin") {
 
       print qq!
         <TABLE>

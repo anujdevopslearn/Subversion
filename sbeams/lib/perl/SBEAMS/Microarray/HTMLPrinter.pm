@@ -113,7 +113,7 @@ sub printPageHeader {
     ~;
 
       $current_work_group_name = $sbeams->getCurrent_work_group_name();
-      if ($current_work_group_name eq "Arrays" || $current_work_group_name eq "Admin" || 1) {
+      if ($current_work_group_name eq "Microarray_admin" || $current_work_group_name eq "Admin" || 1) {
        print qq~
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=contact"><img src="$HTML_BASE_DIR/images/ma_contacts.jpg"></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=array"><img src="$HTML_BASE_DIR/images/ma_arrays.jpg"></a></td></tr>
@@ -122,7 +122,7 @@ sub printPageHeader {
       }
 
       $current_work_group_name = $sbeams->getCurrent_work_group_name();
-      if ($current_work_group_name eq "Arrays" || $current_work_group_name eq "Admin") {
+      if ($current_work_group_name eq "Microarray_admin" || $current_work_group_name eq "Admin") {
        print qq~
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=slide_lot"><img src="$HTML_BASE_DIR/images/ma_slide_lots.jpg"></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=array_layout"><img src="$HTML_BASE_DIR/images/ma_array_layout.jpg"></a></td></tr>
