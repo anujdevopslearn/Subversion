@@ -43,6 +43,8 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
 $sbeams = new SBEAMS::Connection;
 
+use SBEAMS::Microarray::Tables;
+use SBEAMS::Proteomics::Tables;
 use SBEAMS::UESC::Tables;
 use SBEAMS::Immunostain::Tables;
 
