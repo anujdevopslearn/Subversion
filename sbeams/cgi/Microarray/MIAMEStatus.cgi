@@ -994,7 +994,7 @@ $LINESEPARATOR
 	print qq~
    <TD>
    <FONT COLOR="red">No Hybridization Record</FONT><BR>
-   <A HREF="ManageTable.cgi?TABLE_NAME=hybridization&ShowEntryForm=1" TARGET="_blank">[Insert Record]</A>
+   <A HREF="ManageTable.cgi?TABLE_NAME=hybridization&ShowEntryForm=1&array_id=$array_id" TARGET="_blank">[Insert Record]</A>
    </TD>
         ~;
       }
