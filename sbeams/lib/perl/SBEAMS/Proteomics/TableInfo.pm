@@ -157,7 +157,6 @@ sub returnTableInfo {
 ###############################################################################
 
     #### Obtain main SBEAMS object and fall back to its TableInfo handler
-    my $sbeams = $self->getSBEAMS();
     my @temp_result = $sbeams->returnTableInfo($table_name,$info_key);
     return @temp_result;
 
