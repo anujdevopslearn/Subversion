@@ -507,7 +507,12 @@ sub handle_request {
 
   #### In some cases, we need to have a subselect clause
   my $subselect_clause = '';
-  if ( $parameters{display_options} =~ /AllConditions/ ) {
+  if ( $parameters{display_options} =~ /AllConditions/ &&
+       ( $log10_ratio_clause ||
+         $p_value_clause ||
+         $lambda_clause ||
+         $mean_level_clause )
+     ) {
     $subselect_clause = qq~
           AND GE.gene_name IN (
               SELECT DISTINCT GE.gene_name
