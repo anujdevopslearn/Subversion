@@ -623,6 +623,11 @@ sub handle_request {
   #### Define the hypertext links for columns that need them
   %url_cols = ('Accession' => "\%$colnameidx{accessor}V\%$colnameidx{biosequence_accession}V",
     	       'Accession_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information about this protein in source database\'; return true"',
+    	       'Protein Count' => "$CGI_BASE_DIR/Proteomics/BrowsePossiblePeptides?QUERY_NAME=PR_BrowsePossiblePeptides&display_options=GroupProtein&n_occurrences=\%0V&$parameters_list&apply_action=$pass_action",
+    	       'Protein Count_ATAG' => 'TARGET="Win1"',
+
+    	       'Number of Peptides' => "$CGI_BASE_DIR/Proteomics/BrowsePossiblePeptides?QUERY_NAME=PR_BrowsePossiblePeptides&biosequence_name_constraint=\%$colnameidx{biosequence_name}V&$parameters_list&apply_action=$pass_action",
+    	       'Number of Peptides_ATAG' => 'TARGET="Win1"',
 
                'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
                'Molecular Function_ATAG' => 'TARGET="WinExt"',
