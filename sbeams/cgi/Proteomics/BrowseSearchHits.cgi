@@ -618,7 +618,7 @@ sub printEntryForm {
       #### [friendly name used in url_cols,SQL,displayed column title]
       my @column_array = (
         ["search_batch_id","SB.search_batch_id","search_batch_id"],
-        ["msms_scan_id","S.msms_scan_id","msms_scan_id"],
+        ["msms_spectrum_id","S.msms_spectrum_id","msms_spectrum_id"],
         ["search_id","S.search_id","search_id"],
         ["search_hit_id","SH.search_hit_id","search_hit_id"],
         ["experiment_tag","experiment_tag","Exp"],
@@ -675,13 +675,13 @@ sub printEntryForm {
 
       $sql_query = qq~
 	SELECT $limit_clause $columns_clause
-	  FROM proteomics.dbo.search_hit SH
-	  JOIN proteomics.dbo.search S ON ( SH.search_id = S.search_id )
-	  JOIN proteomics.dbo.search_batch SB ON ( S.search_batch_id = SB.search_batch_id )
-	  JOIN proteomics.dbo.msms_scan MSS ON ( S.msms_scan_id = MSS.msms_scan_id )
-	  JOIN proteomics.dbo.fraction F ON ( MSS.fraction_id = F.fraction_id )
-	  JOIN proteomics.dbo.biosequence_set BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
-	  JOIN proteomics.dbo.proteomics_experiment PE ON ( F.experiment_id = PE.experiment_id )
+	  FROM $TBPR_SEARCH_HIT SH
+	  JOIN $TBPR_SEARCH S ON ( SH.search_id = S.search_id )
+	  JOIN $TBPR_SEARCH_BATCH SB ON ( S.search_batch_id = SB.search_batch_id )
+	  JOIN $TBPR_MSMS_SPECTRUM MSS ON ( S.msms_spectrum_id = MSS.msms_spectrum_id )
+	  JOIN $TBPR_FRACTION F ON ( MSS.fraction_id = F.fraction_id )
+	  JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
+	  JOIN $TBPR_PROTEOMICS_EXPERIMENT PE ON ( F.experiment_id = PE.experiment_id )
 	  LEFT JOIN $TBPR_QUANTITATION QUAN ON ( SH.search_hit_id = QUAN.search_hit_id )
 	  LEFT JOIN $TBPR_BIOSEQUENCE BS ON ( SB.biosequence_set_id = BS.biosequence_set_id AND SH.reference = BS.biosequence_name )
 	  LEFT JOIN $TBPR_SEARCH_HIT_ANNOTATION SHA ON ( SH.search_hit_id = SHA.search_hit_id )
@@ -716,7 +716,7 @@ sub printEntryForm {
 		   'Reference_ATAG' => 'TARGET="Win1"',
                    '!Ions' => "http://regis/cgi-bin/displayions_html5?Dta=/data/search/\%$colnameidx{data_location}V/\%$colnameidx{fraction_tag}V/\%$colnameidx{file_root}V.dta&MassType=0&NumAxis=1&Pep=\%$colnameidx{peptide}V",
 		   '!Ions_ATAG' => 'TARGET="Win1"',
-                   'Ions' => "$CGI_BASE_DIR/Proteomics/ShowSpectrum.cgi?msms_scan_id=\%$colnameidx{msms_scan_id}V&search_batch_id=\%$colnameidx{search_batch_id}V&peptide=\%$colnameidx{peptide_string}V",
+                   'Ions' => "$CGI_BASE_DIR/Proteomics/ShowSpectrum.cgi?msms_spectrum_id=\%$colnameidx{msms_spectrum_id}V&search_batch_id=\%$colnameidx{search_batch_id}V&peptide=\%$colnameidx{peptide_string}V",
 		   'Ions_ATAG' => 'TARGET="Win1"',
                    '!N+' => "http://regis/cgi-bin/blast_html4?Db=\%$colnameidx{set_path}V&Pep=\%$colnameidx{peptide}V&MassType=0",
 		   '!N+_ATAG' => 'TARGET="Win1"',
@@ -733,7 +733,7 @@ sub printEntryForm {
 
       %hidden_cols = ('data_location' => 1,
                       'search_batch_id' => 1,
-                      'msms_scan_id' => 1,
+                      'msms_spectrum_id' => 1,
                       'search_id' => 1,
                       'search_hit_id' => 1,
                       'fraction_tag' => 1,

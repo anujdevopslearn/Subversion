@@ -112,7 +112,7 @@ sub printEntryForm {
 
 
     #### Define the parameters that can be passed by CGI
-    my @possible_parameters = qw ( msms_scan_id search_batch_id peptide
+    my @possible_parameters = qw ( msms_spectrum_id search_batch_id peptide
                                    masstype charge zoom xmin xmax masstol ionlab);
     my %parameters;
 
@@ -202,7 +202,7 @@ sub printEntryForm {
       $AAmasses_ref->{$_} = $AAmasses_ref->{$1} + $mass_modifications{$_} if /^(\w)\W$/;
     }
 
-    my %spectrum = get_msms_spectrum(msms_scan_id=>$parameters{msms_scan_id});
+    my %spectrum = get_msms_spectrum(msms_spectrum_id=>$parameters{msms_spectrum_id});
     unless (%spectrum) {
       print "ERROR: Unable to load spectrum\n";
       return;
@@ -257,7 +257,7 @@ sub printEntryForm {
 
 #    print "Writing GIF to: $PHYSICAL_BASE_DIR/images/tmp/$tmpfile\n";
     my $win = pg_setup(Device=>"$PHYSICAL_BASE_DIR/images/tmp/$tmpfile/gif",
-                       title=>"$spectrum{msms_scan_file_root}",
+                       title=>"$spectrum{msms_spectrum_file_root}",
                        xmin=>$parameters{xmin}, xmax=>$parameters{xmax},
                        ymax=>$intenmax, ydiv=>$ydiv, nyticks=>1,
                        gifwidth=>$parameters{gifwidth},gifheight=>$parameters{gifheight});
@@ -303,7 +303,7 @@ sub printEntryForm {
 
 
     #### Print static input paramters as hidden fields
-    foreach $element ( qw ( msms_scan_id search_batch_id peptide masstype ) ) {
+    foreach $element ( qw ( msms_spectrum_id search_batch_id peptide masstype ) ) {
       if ($parameters{$element}) {
         print qq~<INPUT TYPE="hidden" NAME="$element" VALUE="$parameters{$element}">\n~;
       }
@@ -394,7 +394,7 @@ sub get_msms_spectrum {
 
   my $inputfile = $args{'inputfile'} || "";
   my $verbose = $args{'verbose'} || "";
-  my $msms_scan_id = $args{'msms_scan_id'} || "";
+  my $msms_spectrum_id = $args{'msms_spectrum_id'} || "";
 
 
   #### Define some general variables
@@ -407,28 +407,28 @@ sub get_msms_spectrum {
   my @mass_intensities;
 
 
-  #### If we have a msms_scan_id, get the data from the database
-  if ($msms_scan_id) {
+  #### If we have a msms_spectrum_id, get the data from the database
+  if ($msms_spectrum_id) {
 
     #### Define the columns for
-    my @columns = qw ( msms_scan_id fraction_id msms_scan_file_root
+    my @columns = qw ( msms_spectrum_id fraction_id msms_spectrum_file_root
       start_scan end_scan n_peaks );
 
 
     #### Extract the information about the spectrum from database
     $sql = "SELECT " . join(",",@columns) .
            "  FROM $TBPR_MSMS_SPECTRUM ".
-           " WHERE msms_scan_id = '$msms_scan_id'";
+           " WHERE msms_spectrum_id = '$msms_spectrum_id'";
     @rows = $sbeams->selectSeveralColumns($sql);
     $nrows = scalar(@rows);
 
 
     #### If we didn't get exactly one row, complain and return
     if ($nrows != 1) {
-      print "\nERROR: Unable to find msms_scan_id '$msms_scan_id'.\n\n"
+      print "\nERROR: Unable to find msms_spectrum_id '$msms_spectrum_id'.\n\n"
         unless ($nrows);
       print "\nERROR: Got too may results ($nrows rows) looking for ".
-        "msms_scan_id '$msms_scan_id'.\n\n"
+        "msms_spectrum_id '$msms_spectrum_id'.\n\n"
         if ($nrows > 1);
       return;
     }
@@ -445,10 +445,10 @@ sub get_msms_spectrum {
     #### Extract the actual mass,intensity pairs from database
     $sql = "SELECT mass,intensity ".
            "  FROM $TBPR_MSMS_SPECTRUM_PEAK ".
-           " WHERE msms_scan_id = '$msms_scan_id'";
+           " WHERE msms_spectrum_id = '$msms_spectrum_id'";
     my @mass_intensities = $sbeams->selectSeveralColumns($sql);
     unless (@mass_intensities) {
-      print "\nERROR: Unable to find msms_scan_id '$msms_scan_id'.\n\n";
+      print "\nERROR: Unable to find msms_spectrum_id '$msms_spectrum_id'.\n\n";
       return;
     }
 
@@ -476,7 +476,7 @@ sub get_msms_spectrum {
 
   #### Otherwise complain and return
   } else {
-    print "\nERROR: Unable to determine which msms_scan_id to load.\n\n";
+    print "\nERROR: Unable to determine which msms_spectrum_id to load.\n\n";
     return;
   }
 

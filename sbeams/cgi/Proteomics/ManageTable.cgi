@@ -843,8 +843,10 @@ sub checkForPreexistingRecord {
 	 WHERE $PK_COLUMN_NAME > 0!;
 
     foreach $element (keys %unique_values) {
+      my $value = $unique_values{$element};
+      $value =~ s/'/''/g;
       $sql_query .= "
-	   AND $element='$unique_values{$element}'";
+	   AND $element='$value'";
       $error_message .= "<B>$element</B> = $unique_values{$element}<BR>\n";
     }
 
