@@ -81,7 +81,7 @@ sub getArticleInfo {
     return 0;
   }
 
-	$info = ();
+	%info = ();
   #### Set up the XML parser and parse the returned XML
   my $parser = new XML::Parser(
 			       Handlers => {
