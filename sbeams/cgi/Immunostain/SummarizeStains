@@ -140,7 +140,10 @@ sub handle_request {
   my $ref_parameters = $args{'ref_parameters'}
     || die "ref_parameters not passed";
   my %parameters = %{$ref_parameters};
-
+#foreach my $p (keys %parameters)
+#{
+#		print "$p =====  $parameters{$p}<br>";
+#}
 
   #### Define some generic varibles
   my ($i,$element,$key,$value,$line,$result,$sql);
@@ -304,7 +307,9 @@ sub handle_request {
       ["stained_slide_id","SS.stained_slide_id","stained_slide_id"],
       ["stain_name","SS.stain_name","Stain Name"],
       ["antibody_name","A.antibody_name","Antibody"],
+			["antibody_id", "A.antibody_id", "antibody_id"],
       ["cell_type_name","CT.cell_type_name","Cell Type"],
+			["cell_type_id", "CT.cell_type_id", "cell_type_id"],
       ["intense_percent","SCP1.at_level_percent","Percent Intense"],
       ["equivocal_percent","SCP2.at_level_percent","Percent Equivocal"],
       ["none_percent","SCP3.at_level_percent","Percent None"],
@@ -391,7 +396,9 @@ sub handle_request {
   #### Define columns that should be hidden in the output table
   %hidden_cols = ('stained_slide_id' => 1,
 		  'antibody_sort_order'	=> 1,
-		  'cell_type_sort_order' => 1
+		  'cell_type_sort_order' => 1,
+			'antibody_id'	=> 1,
+			'cell_type_id'	=>	1
   );
 
 
@@ -525,18 +532,23 @@ sub postProcessResultset {
 	my $option;
 
 	
-=comment
-foreach my $key (keys %{$query_parameters_ref})
-{
-		print "$key --- $query_parameters_ref->{$key}<br>";
-}
-=cut
+# testing: what values have been passed
+#foreach my $key (keys %{$query_parameters_ref})
+#{
+#		print "$key --- $query_parameters_ref->{$key}<br>";
+#}
+
 
 	 #### Process the arguments list
 	 my @row;
    my $irow = 0;
    my ($value,$element);
    my $nrows = scalar(@{$resultset_ref->{data_ref}});
+	 if ($nrows < 1)
+	 {
+			 print "<center><table><tr><td align = center><b> Sorry, no data available for this Query </b></td></tr></table></center>";
+	 }
+	 my(%antibodyHash, %cellIdHash);
 	 my @antibodyArray;
 	 my $prevAntibodyName;
 #getting the index and populating a datahash with the returned result
@@ -546,14 +558,17 @@ foreach my $key (keys %{$query_parameters_ref})
 	{			 
 			@row = @{$resultset_ref->{data_ref}->[$irow]};
 			my $antibodyName =  $row[$biosequence_name_column_index->{antibody_name}];
-			
+			my $antibodyId = $row[$biosequence_name_column_index->{antibody_id}];
 			my $cellTypeName = $row[$biosequence_name_column_index->{cell_type_name}];
+			my $cellTypeId = $row[$biosequence_name_column_index->{cell_type_id}];
 			my $probability = ($row[$biosequence_name_column_index->{intense_percent}] + $row[$biosequence_name_column_index->{equivocal_percent}]/2)/100;
 			$dataHash{$antibodyName}->{$cellTypeName}->{probability}+=$probability if $cellTypeName; 
 			$dataHash{$antibodyName}->{$cellTypeName}->{numberOfEx}++ if $cellTypeName;
 			$cellTypeHash{$cellTypeName} = $row[$biosequence_name_column_index->{cell_type_sort_order}] if ($cellTypeName);
 			push @antibodyArray, $antibodyName if $prevAntibodyName ne $antibodyName and $cellTypeName; 
 			$prevAntibodyName = $antibodyName;
+			$antibodyHash{$antibodyName} = $antibodyId;
+			$cellIdHash{$cellTypeName} = $cellTypeId;
 			$irow++;
 	}
 		
@@ -569,7 +584,7 @@ foreach my $key (keys %{$query_parameters_ref})
 	foreach my $cellType (sort bySortOrder keys %cellTypeHash)
 	{
 			print  "<td><b>$cellType</b></td>";
-			print "<td>NumOfExp</td>" if $query_parameters_ref->{display_options} =~ /number of/i;
+			print "<td>NumOfExp</td>" if $query_parameters_ref->{display_options} =~ /numberof/i;
 	}
 	print "</tr>\n";
 
@@ -591,6 +606,7 @@ foreach my $key (keys %{$query_parameters_ref})
 #		print "number of Ex: $dataHash{$key}->{$cellKey}->{numberOfEx}\n";
 #   print "$key ---  $cellKey ---  $dataHash{$key}->{$cellKey}->{probability}   --- $dataHash{$key}->{$cellKey}->{numberOfEx}<br><br>";
 				$abundance = $dataHash{$key}->{$cellKey}->{abundance} if  $cellKey eq 'Stromal Leukocytes';;
+				next if ($dataHash{$key}->{$cellKey}->{numberOfEx}) == 0;
 				$averageNumber =($dataHash{$key}->{$cellKey}->{probability})/($dataHash{$key}->{$cellKey}->{numberOfEx});
 				$averageNumber =~ s/(.*\.\d{3}).*$/$1/;
 				$expNumber = $dataHash{$key}->{$cellKey}->{numberOfEx};
@@ -609,10 +625,10 @@ foreach my $key (keys %{$query_parameters_ref})
 				$colorAbundance = '#A1A1A1 'if ($abundance eq 'high');
 				$colorAbundance = '#808080' if ($abundance eq 'most');
 				
-				print "<td align = center bgcolor = $colorAverage>$averageNumber</td>\n";# if (($cellKey ne '') and(scalar(keys %{$dataHash{$key}}) != 1));
+				print "<td align = center bgcolor = $colorAverage><A HREF =\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&antibody_id=$antibodyHash{$antibodyKey}&cell_type_id=$cellIdHash{$cellKey}&display_options=MergeLevelsAndPivotCellTypes\">$averageNumber</A></td>\n";# if (($cellKey ne '') and(scalar(keys %{$dataHash{$key}}) != 1));
 			#	print "<td align = center >Not available</td>\n";# if (($cellKey  eq '')and(scalar(keys %{$dataHash{$key}}) == 1));
 				print "<td align = center bgcolor = $colorAbundance>$dataHash{$key}->{$cellKey}->{abundance}</td>\n" if $cellKey eq 'Stromal Leukocytes';
-				print "<td align = center>$expNumber</td>" if $query_parameters_ref->{display_options} =~/number of/i;
+				print "<td align = center>$expNumber</td>" if $query_parameters_ref->{display_options} =~/numberof/i;
 
 			}	
 			print  "</tr><tr></tr>\n";
@@ -633,6 +649,8 @@ foreach my $key (keys %{$query_parameters_ref})
 	}
 	print  "</tr><t></tr><tr></tr>\n";
 	$count = 0;
+#this will be used for Leukocyte display	
+=comment
 	print  "<tr><td align=center><b>Abundance Color Scale</b><td>\n";
 	for my $shade(@shadeArray)
 	{	
@@ -644,6 +662,7 @@ foreach my $key (keys %{$query_parameters_ref})
 			$count++;
 		
 	}
+=cut
 	print  "</tr></table><br>";
 	print "<br><br>";
 
