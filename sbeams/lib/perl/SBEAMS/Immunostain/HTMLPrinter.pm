@@ -209,6 +209,21 @@ sub printJavascriptFunctions {
 	} // end showPassed
 
 
+	function ClickedNowButton(input_field) {
+	  field_name = input_field.name;
+	  today = new Date();
+	  date_value =
+	      today.getFullYear() + "-" + (today.getMonth()+1) + "-" +
+	      today.getDate() + " " +
+	      today.getHours() + ":" +today.getMinutes();
+
+	  if (field_name == "preparation_date") {
+	      document.MainForm.preparation_date.value = date_value;
+	  }
+
+	  return;
+	} // end ClickedNowButton
+
 
         // -->
         </SCRIPT>
