@@ -206,6 +206,20 @@ sub printPageFooter {
   my $self = shift;
 
 
+  #### If the output mode is interactive text, display text header
+  my $sbeams = $self->getSBEAMS();
+  if ($sbeams->output_mode() eq 'interactive') {
+    $sbeams->printTextHeader(%args);
+    return;
+  }
+
+
+  #### If the output mode is not html, then we don't want a header here
+  if ($sbeams->output_mode() ne 'html') {
+    return;
+  }
+
+
   #### Allow old-style single argument
   my $n_params = scalar @_;
   my %args;
