@@ -93,10 +93,14 @@ sub printPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/main.cgi">>PhenoArray Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">>Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
+	<tr><td>Manage Tables:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_biosequence_set"><nobr>- BioSequences</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_reference_strain"><nobr>- Ref Strains</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_condition"><nobr>- Conditions</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_plate"><nobr>- Plates</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>
+	<tr><td>Browse Data:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/BrowseBioSequence.cgi"><nobr>- BioSequences</nobr></a></td></tr>
 	</table>
 	</td>
 

@@ -33,6 +33,8 @@ use vars qw(@ISA @EXPORT
     $TBPH_CONDITION
     $TBPH_CONDITION_REPEAT
     $TBPH_SUBSTRAIN_BEHAVIOR
+
+    $TBPH_QUERY_OPTION
 );
 
 require Exporter;
@@ -59,6 +61,8 @@ require Exporter;
     $TBPH_CONDITION
     $TBPH_CONDITION_REPEAT
     $TBPH_SUBSTRAIN_BEHAVIOR
+
+    $TBPH_QUERY_OPTION
 );
 
 
@@ -82,5 +86,7 @@ $TBPH_PLATE_LAYOUT                = 'PhenoArray.dbo.plate_layout';
 $TBPH_CONDITION                   = 'PhenoArray.dbo.condition';
 $TBPH_CONDITION_REPEAT            = 'PhenoArray.dbo.condition_repeat';
 $TBPH_SUBSTRAIN_BEHAVIOR          = 'PhenoArray.dbo.substrain_behavior';
+
+$TBPH_QUERY_OPTION                = 'PhenoArray.dbo.query_option';
 
 
