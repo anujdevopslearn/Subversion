@@ -102,6 +102,11 @@ VALUES ( 'input_form_options','medium_detail','Medium Detail',20 );
 INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'input_form_options','full_detail','Full Detail',30 );
 
+INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'gender','M','Male',10 );
+INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'gender','F','Female',20 );
+
 
 
 /* EDIT BELOW: "LastName", "First", "NISusername" to reflect yourself */
