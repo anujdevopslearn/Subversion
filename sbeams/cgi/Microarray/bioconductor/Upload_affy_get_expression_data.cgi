@@ -159,7 +159,7 @@ sub main {
 
   #### Decide what action to take based on information so far
   if (defined($parameters{'Upload Conditions'}) && $parameters{'Upload Conditions'} eq "Upload Conditions") {
-   $sbeamsMOD->printPageHeader();
+   $sbeamsMOD->printPageHeader(minimal_header=> 'YES', navigation_bar=>'NO');
     	upload_files(ref_parameters=>\%parameters);
     $sbeamsMOD->printPageFooter();
     
@@ -281,14 +281,14 @@ sub handle_request {
 			td($q->textarea(-name=>"file_name",
                             -default=>$file,
                             -override=>1,
-                            -rows=>1,
+                            -rows=>2,
 	             			  -columns=>40,
                             -STYLE=>"background-color:CCCCCC",
                             -onFocus=>"this.blur()" )),
 	             
 	             td(textarea(-name=>'condition_name', 
 	             			  -default=>$condition_name, 
-	             			  -rows=>1,
+	             			  -rows=>2,
 	             			  -columns=>40,
 	             			  -override=>1
 	             			  )
@@ -384,13 +384,19 @@ sub upload_files {
 	my $file_count = scalar @files;
 	my $estimated_wait = 2 * $file_count;
 	
+	#Using the print header methods will make a huge table containg the header, navigation tabs and any
+	#data that we will print out and since this is a long running method IE will not show the page until every thing is
+	#done which is not what we want.  So print a end table tag to stop the "master" table and print out our data so the 
+	#user will get some feed back
+	#print "</table></table>";
 	print "<table>
 			  <tr>
 			    <td class='orange_bg' colspan='2'>
 			    Warning: The upload could take at least 2 minutes per file.<br> 
 			    Estimated wait <font color='red'>$estimated_wait</font> mins.	
 				</td>
-			  </tr>";
+			  </tr>
+		   </table>";
 
 	my $organism_id 	= '';
 	my $ogranism_name 	= '';
@@ -402,10 +408,14 @@ sub upload_files {
 		my $condition_id = $condition_ids[$i];
 		my $condition_name = $condition_names[$i];
 		my $full_file_path = "$file_path/$file";
-		print qq~<tr>
+		print qq~<table>
+				<tr>
 			      <td class='grey_bg'>Starting to upload</td>
 		         <td>$file</td>
 		         </tr>
+		        </table>
+		 		~;
+		 print qq~<table>
 		         <tr>
 		          <!-- Blank Cell to hold any print message output during the upload process -->
 		          <td>
@@ -464,11 +474,15 @@ sub upload_files {
 						   #id_hash=>$bs_hash_ref,
 						   delimiter => "\t");
 		
-		print "</td></tr><br>";	#end the html row for each file
+		print "	</td>
+			   </tr>
+			   <tr>
+			   	<td><b>Upload Done</b></td>
+			   </tr>
+			  </table><br>";	#end the html row for each file
 	}
 	
-	print "</table>",
-		  "<b>Go to Get Expression Page <a href='$CGI_BASE_DIR/Microarray/GetExpression'>here</a></b>";
+	print "<b>Go to Get Expression Page <a href='$CGI_BASE_DIR/Microarray/GetExpression'>here</a></b>";
 	
 	
 	#print Dumper(\%parameters);
