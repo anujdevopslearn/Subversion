@@ -106,7 +106,7 @@ sub main {
   my $file_name = $parameters{'FILE_NAME'}
   || die "ERROR: file not passed";
   my $action =$parameters{'action'} || "download";
-  my $project_id = $sbeams->getCurrent_project_id;
+  my $project_id = $parameters{'project_id'} || $sbeams->getCurrent_project_id;
 
 
   ## Output Directory depends on what file type
@@ -115,7 +115,7 @@ sub main {
 	$output_dir = "/net/arrays/Slide_Templates";
   }elsif ($file_name =~/\.doc/){
 	$output_dir = "/net/";
-  }elsif ($file_name =~/\.matrix/) {
+  }elsif ($file_name eq "matrix_output") {
 	$output_dir = "$FILE_BASE_DIR/$project_id";
   }else {
 	$output_dir = "$FILE_BASE_DIR/$project_id";
