@@ -949,7 +949,7 @@ sub updateOrInsertRow {
     #### If the value is undef, then change it to NULL
     $value = 'NULL' unless (defined($value));
 
-    print "	$key = $value\n" if ($verbose > 0);
+    print "KEY VAL	$key = $value\n" if ($verbose > 0);
 
     #### Add the key as the column name
     $column_list .= "$key,";
@@ -1093,7 +1093,7 @@ sub executeSQL {
         }
         return 0;
       } else {
-        #die("ERROR on SQL execute():\n$sql\n\n".$dbh->errstr);
+        die("ERROR on SQL execute():\n$sql\n\n".$dbh->errstr);
         die("ERROR on SQL execute(): ".$dbh->errstr);
       }
 
@@ -1752,7 +1752,7 @@ sub displayQueryResult {
 
       #### Print for debugging
       #print $sth->{NAME}->[$i],"(",$types_ref->[$i],"): ",
-      #  $precisions[$i],"<BR>\n";
+       # $precisions[$i],"<BR>\n";
     }
 
 
@@ -1773,6 +1773,7 @@ sub displayQueryResult {
     #### If a printable table was desired, use one format
     if ( $printable_table ) {
 
+     
       ShowHTMLTable { titles=>$sth->{NAME},
 	types=>$types_ref,
 	widths=>$sth->{PRECISION},
@@ -1780,21 +1781,24 @@ sub displayQueryResult {
         table_attrs=>'WIDTH=675 BORDER=1 CELLPADDING=2 CELLSPACING=2',
         title_formats=>['BOLD'],
         url_keys=>$url_cols_ref,
-        hidden_cols=>$hidden_cols_ref,
+	hidden_cols=>$hidden_cols_ref,
         THformats=>['BGCOLOR=#C0C0C0'],
         TDformats=>['NOWRAP']
       };
+      
 
     #### Otherwise, use the standard viewable format which doesn't print well
     } else {
 
+      
+      
       ShowHTMLTable { titles=>$sth->{NAME},
 	types=>$types_ref,
 	widths=>\@precisions,
 	row_sub=>\&fetchNextRow,
         table_attrs=>'BORDER=0 CELLPADDING=2 CELLSPACING=2',
         title_formats=>['FONT COLOR=white,BOLD'],
-        url_keys=>$url_cols_ref,
+	url_keys=>$url_cols_ref,
         hidden_cols=>$hidden_cols_ref,
         THformats=>['BGCOLOR=#0000A0'],
         TDformats=>\@TDformats,
@@ -1865,7 +1869,7 @@ sub decodeDataType {
     my $self = shift;
     my $types_ref = shift || die "decodeDataType: insufficient paramaters\n";
 
-    my %typelist = ( 1=>"varchar", 4=>"int", 2=>"numeric", 6=>"float",
+    my %typelist = ( 1=>"varchar", 4=>"int", 2=>"numeric", 6=>"float", #7=>"float",
       11=>"date",-1=>"text" );
     my ($i,$type,$newtype);
     my @types = @{$types_ref};
@@ -1875,7 +1879,7 @@ sub decodeDataType {
       $type = $types[$i];
       $newtype = $typelist{$type} || $type;
       push(@newtypes,$newtype);
-      #print "$i: $type --> $newtype\n";
+     # print "$i: $type --> $newtype<br/>\n";
     }
 
     return \@newtypes;
@@ -2021,9 +2025,11 @@ sub displayResultSet {
 
 
     my $types_ref = $resultset_ref->{types_list_ref};
+    
+  
     $column_titles_ref = $resultset_ref->{column_list_ref}
       unless ($column_titles_ref);
-
+ 
     #### If the command to re-sort was passed, do it now
     if (defined($rs_params_ref->{rs_resort_column}) &&
 	$rs_params_ref->{rs_resort_column} gt '') {
@@ -2074,7 +2080,7 @@ sub displayResultSet {
     my $i;
     for ($i = 0; $i <= $#precisions; $i++) {
       #### Set the width to negative (variable)
-      $precisions[$i] = (-1) * $precisions[$i];
+      $precisions[$i] = (-1) * $precisions[$i] - 10;
 
       #### Override the width if the user specified it
       $precisions[$i] = $max_widths_ref->{$sth->{NAME}->[$i]}
@@ -2084,8 +2090,8 @@ sub displayResultSet {
       $precisions[$i] = 20 if ($types_ref->[$i] =~ /date/i);
 
       #### Print for debugging
-      #print $column_titles_ref->[$i],"(",$types_ref->[$i],"): ",
-      #  $precisions[$i],"<BR>\n";
+    #  print $column_titles_ref->[$i],"(",$types_ref->[$i],"): ",
+   #     $precisions[$i],"<BR>\n";
     }
 
 
@@ -2232,8 +2238,11 @@ sub displayResultSet {
         @row = @{$resultset_ref->{data_ref}->[$irow]};
 
         foreach $element (@{$resultset_ref->{column_list_ref}}) {
-          $value = $row[$i];
-          $value =~ s/\"/\'/g;
+          $element =~ s/\s/_/g;			#added to remove any white space in attributes tags pmoss 7.30.04
+	  $value = $row[$i];
+          $value =~ s/</&lt;/g;			#replace <
+	  $value =~ s/>/&gt;/g;			#replace >
+	  $value =~ s/\"/\'/g;
           $value =~ s/&/&amp;/g;
           print "    $element=\"$value\"\n";
           $i++;
@@ -2307,6 +2316,7 @@ sub displayResultSet {
     #### If a printable table was desired, use one format
     if ( $printable_table ) {
 
+     
       ShowHTMLTable{
         titles=>$column_titles_ref,
 	types=>$types_ref,
@@ -2335,8 +2345,7 @@ sub displayResultSet {
       } else {
         @TDformats=('NOWRAP');
       }
-
-
+		
       ShowHTMLTable{
         titles=>$column_titles_ref,
 	types=>$types_ref,
@@ -3603,7 +3612,7 @@ sub display_input_form {
         $is_data_column,$is_display_column,$column_text,
         $optionlist_query,$onChange) = @row;
     if (defined($optionlist_query) && $optionlist_query gt '') {
-      #print "<font color=\"red\">$column_name</font><BR><PRE>$optionlist_query</PRE><BR>\n";
+     # print "<font color=\"red\">$column_name</font><BR><PRE>$optionlist_query</PRE><BR>\n";
       $optionlist_queries{$column_name}=$optionlist_query;
     }
     if ($input_type eq "file") {
