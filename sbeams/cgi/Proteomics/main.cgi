@@ -32,6 +32,7 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
 
 use SBEAMS::Proteomics;
 use SBEAMS::Proteomics::Settings;
@@ -141,15 +142,114 @@ sub handle_request {
   my %parameters = %{$ref_parameters};
 
 
-  #### Define some generic varibles
-  my ($i,$element,$key,$value,$line,$result,$sql);
-  my @rows;
-
-
   #### Show current user context information
   $sbeams->printUserContext();
   $current_contact_id = $sbeams->getCurrent_contact_id();
 
+
+  #### Write some simple descriptive test
+  print qq~
+	<P>The SBEAMS - Proteomics module provides an interface for you to
+	manage and explore your LC-MS/MS datasets.  Please check your
+	current work group above and change it if desired. Use the tabs
+	below to access information about projects and experiments.
+	Individual queries may be accessed by name to the left.</P>
+  ~;
+
+
+  #### Create new tabmenu item.
+  my $tabmenu = SBEAMS::Connection::TabMenu->new(
+    cgi => $q,
+    # paramName => 'mytabname', # uses this as cgi param
+    # maSkin => 1,   # If true, use MA look/feel
+    # isSticky => 0, # If true, pass thru cgi params 
+    # boxContent => 0, # If true draw line around content
+    # labels => \@labels # Will make one tab per $lab (@labels)
+  );
+
+
+  #### Add the individual tab items
+  $tabmenu->addTab( label => 'Current Project',
+		    helptext => 'View details of current Project' );
+  $tabmenu->addTab( label => 'My Projects',
+		    helptext => 'View all projects owned by me' );
+  $tabmenu->addTab( label => 'Accessible Projects',
+		    helptext => 'View projects I have access to' );
+  $tabmenu->addTab( label => 'Recent Resultsets',
+		    helptext => "View recent $SBEAMS_SUBDIR resultsets" );
+
+
+  ##########################################################################
+  #### Buffer to hold content.
+  my $content;
+
+  #### Conditional block to exec code based on selected tab
+
+
+  #### Print out details on the current default project
+  if ( $tabmenu->getActiveTabName() eq 'Current Project' ){
+    my $project_id = $sbeams->getCurrent_project_id();
+    if ( $project_id ) {
+      $content = $sbeams->getProjectDetailsTable(
+        project_id => $project_id
+      );
+
+      $content .= getCurrentProjectDetails(
+        ref_parameters => \%parameters,
+      );
+
+    }
+
+
+  #### Print out all projects owned by the user
+  } elsif ( $tabmenu->getActiveTabName() eq 'My Projects' ){
+    $content = $sbeams->getProjectsYouOwn();
+
+
+  #### Print out all projects user has access to
+  } elsif ( $tabmenu->getActiveTabName() eq 'Accessible Projects' ){
+    $content = $sbeams->getProjectsYouHaveAccessTo();
+
+
+  #### Print out some recent resultsets
+  } elsif ( $tabmenu->getActiveTabName() eq 'Recent Resultsets' ){
+
+    $content = $sbeams->getRecentResultsets() ;
+
+  }
+
+
+  #### Add content to tabmenu (if desired).
+  $tabmenu->addContent( $content );
+
+  #### Display the result
+  print $tabmenu->asHTML();
+
+
+} # end handle_request
+
+
+
+###############################################################################
+# getCurrentProjectDetails
+#
+# Return a block of a details about the experiments in the current project
+###############################################################################
+sub getCurrentProjectDetails {
+  my %args = @_;
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+
+
+  #### Define some generic varibles
+  my ($i,$element,$key,$value,$line,$result,$sql);
+  my @rows;
+
+  #### Define a buffer for content
+  my $content = '';
 
   #### Get information about the current project from the database
   $sql = qq~
@@ -172,7 +272,7 @@ sub handle_request {
   my $PI_name = $sbeams->getUsername($PI_contact_id);
 
   #### Print out some information about this project
-  print qq~
+  my $obsolete_content = qq~
 	<H1>Current Project: <A class="h1" HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=$project_id">$project_name</A></H1>
 	<TABLE WIDTH="100%" BORDER=0>
 	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
@@ -219,7 +319,7 @@ sub handle_request {
       if ($parameters{expt_format} eq "compact"){
 #print "the condensed table";
 #tag below with colspan=3 would be better suited as colspan=$#search_batch_rows+1, though expts are -not- sorted by number of search batches at this time
-print qq~
+$content .= qq~
 <TABLE BORDER=1>
   <tr>
 <th align=left><font color="green">- Experiment Name</font> : Description</th>
@@ -245,11 +345,11 @@ print qq~
 
       $search_batch_counter++;
       if (($search_batch_counter % 2) == 1){
-	  print qq( <TR BGCOLOR="#efefef"> \n);
+	  $content .= qq( <TR BGCOLOR="#efefef"> \n);
       }else{
-	  print qq( <TR> \n);
+	  $content .= qq( <TR> \n);
       }
-      print qq~
+      $content .= qq~
 	<TD NOWRAP>- <font color="green">$experiment_tag:</font> $experiment_name</TD>
 	<TD NOWRAP ALIGN=CENTER><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&experiment_id=$experiment_id">[View/Edit]</A></TD>
 	<TD NOWRAP ALIGN=CENTER><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeFractions?action=QUERYHIDE&QUERY_NAME=PR_SummarizeFractions&experiment_id=$experiment_id">[View]</A></TD>
@@ -257,13 +357,13 @@ print qq~
 
       foreach my $search_batch_row (@search_batch_rows) {
         my ($search_batch_id,$search_batch_subdir,$set_tag) = @{$search_batch_row};
-        print qq~
+        $content .= qq~
 	  <TD>&nbsp;&nbsp;&nbsp;<font color="green">$set_tag</font> ($search_batch_id:&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizePeptides?action=QUERY&QUERY_NAME=PR_SummarizePeptides&search_batch_id=$search_batch_id&probability_constraint=\%3E.9&n_annotations_constraint=%3E0&sort_order=tABS.row_count%20DESC&display_options=GroupReference&input_form_format=minimum_detail">P&gt;0.9</A>&nbsp;--&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizePeptides?action=QUERY&QUERY_NAME=PR_SummarizePeptides&search_batch_id=$search_batch_id&annotation_status_id=Annot&n_annotations_constraint=%3E0&sort_order=tABS.row_count%20DESC&display_options=GroupReference&input_form_format=minimum_detail">Annot</A>)</TD>
         ~;
       }
 
 
-      print qq~
+      $content .= qq~
 	</TR>
       ~;
     }
@@ -290,7 +390,7 @@ WHERE experiment_id = '$experiment_id'
     ~;
 my @count_ms_runs = $sbeams->selectOneColumn($sql);
 
-      print qq~
+      $content .= qq~
 <TABLE BORDER=0 CELLPADDING=2 CELLSPACING=0>
       <TR BGCOLOR="#efefef">
 	<TD NOWRAP COLSPAN=2 WIDTH=300>- <font color="green">$experiment_tag:</font> $experiment_name</TD>
@@ -312,79 +412,66 @@ my @count_ms_runs = $sbeams->selectOneColumn($sql);
      ~;
       my @protein_summary_status = $sbeams->selectOneColumn($sql);
 
-        print qq~
+        $content .= qq~
      <TR>
     <TD>&nbsp;</TD>
   <TD ALIGN=LEFT>Search batch $search_batch_id against <font color="green">[$set_tag]</font></TD>
 <TD ALIGN=CENTER> <A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizePeptides?action=QUERY&QUERY_NAME=PR_SummarizePeptides&search_batch_id=$search_batch_id&probability_constraint=\%3E.9&n_annotations_constraint=%3E0&sort_order=tABS.row_count%20DESC&display_options=GroupReference&input_form_format=minimum_detail">PeptideProphet Summary<br/>(P &gt; 0.9)</A></TD>
     ~;
 	if (@protein_summary_status){#ProteinProphet annotation is available
-	print qq~ <TD ALIGN=CENTER>ProteinProphet Summary<br/><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseProteinSummary?protein_group_probability_constraint=%3E0.9&QUERY_NAME=PR_BrowseProteinSummary&search_batch_id=$search_batch_id&action=QUERY">View</A>&nbsp; <FONT COLOR="#CCCCCC">[ADD]</FONT></TD> ~;
+	$content .= qq~ <TD ALIGN=CENTER>ProteinProphet Summary<br/><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseProteinSummary?protein_group_probability_constraint=%3E0.9&QUERY_NAME=PR_BrowseProteinSummary&search_batch_id=$search_batch_id&action=QUERY">View</A>&nbsp; <FONT COLOR="#CCCCCC">[ADD]</FONT></TD> ~;
     } else { #allow the user to add ProteinProphet annotation
-	print qq~ <TD ALIGN=CENTER>ProteinProphet Summary<br/><FONT COLOR="#CCCCCC">View</FONT>&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/UploadProteinSummary?search_batch_id=$search_batch_id">[ADD]</A></TD> ~;
+	$content .= qq~ <TD ALIGN=CENTER>ProteinProphet Summary<br/><FONT COLOR="#CCCCCC">View</FONT>&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/UploadProteinSummary?search_batch_id=$search_batch_id">[ADD]</A></TD> ~;
     }
 
-print qq~
+$content .= qq~
 </TR>
     ~;
       }
-      print qq~
+      $content .= qq~
 <TR><TD COLSPAN=3>&nbsp;</TD></TR>
       ~;
   }
 
 }
-  
-  
+
+
   } else {
     if ($project_id == -99) {
-      print qq~	<TR><TD WIDTH="100%">You do not have access to this project.  Contact the owner of this project if you want to have access.</TD></TR>\n ~;
+      $content .= qq~	<TR><TD WIDTH="100%">You do not have access to this project.  Contact the owner of this project if you want to have access.</TD></TR>\n ~;
     } else {
-      print qq~	<TR><TD COLSPAN=2><FONT COLOR=RED>No experiments available, please <A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment">add</A> an experiment.</TD></TR> \n~;
+      $content .= qq~	<TR><TD COLSPAN=2><FONT COLOR=RED>No proteomics experiments registered in this project.</TD></TR> \n~;
     }
   }
 
 
   #### If the current user is the owner of this project, invite the
   #### user to register another experiment
-  if ($current_contact_id == $PI_contact_id) {
-    print qq~
-        <TR><TD COLSPAN=4><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&ShowEntryForm=1">[Register another experiment]</A></TD></TR>
+  if ($sbeams->isProjectWritable()) {
+    $content .= qq~
+        <TR><TD COLSPAN=4><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&ShowEntryForm=1&project_id=$project_id">[Register another experiment]</A></TD></TR>
     ~;
   }
 
 
   #### Finish the table
-  print qq~
+  $content .= qq~
 	</TABLE></TD></TR>
 	</TABLE>
   ~;
 
-
-
-  ##########################################################################
-  #### Print out all projects owned by the user
-
-  $sbeams->printProjectsYouOwn();
+} # getCurrentProjectDetails
 
 
 
-  ##########################################################################
-  #### Print out all projects user has access to
+###############################################################################
+# getMiscLinks
+#
+# Return a block of a bunch of other misc links
+###############################################################################
+sub getMiscLinks {
 
-  $sbeams->printProjectsYouHaveAccessTo();
-
-
-  ##########################################################################
-  #### Print out some recent resultsets
-
-  $sbeams->printRecentResultsets();
-
-
-  ##########################################################################
-  #### Print out a bunch of other misc links
-
-  print qq~
+  return qq~
 	<H1>Other Links:</H1>
 	The navigation bar on the left will take you to the various
 	capabilities available thus far, or choose from this more
@@ -419,10 +506,6 @@ print qq~
 
   ~;
 
-
-
-  return;
-
-} # end handle_request
+} # end getMiscLinks
 
 
