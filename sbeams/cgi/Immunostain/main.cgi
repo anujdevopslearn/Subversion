@@ -31,9 +31,11 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username %hash_t
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS );
 
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+use SBEAMS::Connection::DataTable;
 
 use SBEAMS::Ontology::Tables;
 use SBEAMS::Ontology::TableInfo;
@@ -109,176 +111,106 @@ my %actionHash = (
 main();
 exit(0);
 
-
-
-###############################################################################
-# Main Program:
-#
-# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
-###############################################################################
+###
 sub main 
 {
 		
-#### Do the SBEAMS authentication and exit if a username is not returned
-#this will allows guest witout password and username
+  # run SBEAMS authentication and exit if a username is not returned
   exit unless ($current_username = $sbeams->Authenticate(
-    permitted_work_groups_ref=>['Immunostain_user','Immunostain_admin',
-      'Immunostain_readonly','Admin'],
-    allow_anonymous_access=>1,
-    #connect_read_only=>1,
+    permitted_work_groups_ref => ['Immunostain_user',
+                                  'Immunostain_admin',
+                                  'Immunostain_readonly',
+                                  'Admin'],
+       allow_anonymous_access => 1, # Allows guest without username and password
   ));
 
+# $sbeams->printCGIParams( $q );
 
-#### Read in the default input parameters
+ # Read in the default input parameters
   my %parameters;
-  my $n_params_found = $sbeams->parse_input_parameters(
-    q=>$q,parameters_ref=>\%parameters);
-#$sbeams->printDebuggingInfo($q);
-#### Process generic "state" parameters before we start
+  $sbeams->parse_input_parameters( q => $q, parameters_ref => \%parameters);
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
   #### Decide what action to take based on information so far
-  if ($parameters{action} eq "_processCells") {
-# special handling when cells are processed
+  if ($parameters{action} eq "_processCells") { # special handling 
 		processCells(ref_parameters=>\%parameters);
+	} else { # normal handling for anything else			
+	  $sbeamsMOD->display_page_header();
 	}
-	else
-	{
-# normal handling for anything else			
-	$sbeamsMOD->display_page_header();
-	}
-    handle_request(ref_parameters=>\%parameters);  
-   $sbeamsMOD->printPageFooter();
-  
-
+  handle_request(ref_parameters=>\%parameters);  
+  $sbeamsMOD->printPageFooter();
 
 } # end main
 
 
 
-###############################################################################
-# Handle Request
-###############################################################################
+
 sub handle_request {
   my %args = @_;
 
-
-#### Process the arguments list
+  # Process the arguments list
   my $ref_parameters = $args{'ref_parameters'}
     || die "ref_parameters not passed";
   my %parameters = %{$ref_parameters};
-#### Define some generic varibles
+  # Define some generic varibles
   my ($i,$element,$key,$value,$line,$result,$sql);
   my @rows;
 	
   $current_contact_id = $sbeams->getCurrent_contact_id();
-
 	 
-#### Show current user context information
+  # Show current user context information
   $sbeams->printUserContext();
- 
 
-#### Get information about the current project from the database
-  $sql = qq~
-	SELECT UC.project_id,P.name,P.project_tag,P.project_status,
-               P.PI_contact_id
-	  FROM $TB_USER_CONTEXT UC
-	 INNER JOIN $TB_PROJECT P ON ( UC.project_id = P.project_id )
-	 WHERE UC.contact_id = '$current_contact_id'
-  ~;
-  @rows = $sbeams->selectSeveralColumns($sql);
+  my $project_id = $sbeams->getCurrent_project_id();
 
-  my $project_id = '';
-  my $project_name = 'NONE';
-  my $project_tag = 'NONE';
-  my $project_status = 'N/A';
-  my $PI_contact_id = 0;
-  if (@rows) {
-    ($project_id,$project_name,$project_tag,$project_status,$PI_contact_id) = @{$rows[0]};
-  }
-  my $PI_name = $sbeams->getUsername($PI_contact_id);
-  
-
-#### If the current user is not the owner, the check that the
-#### user has privilege to access this project
+  # If the current user is not the owner, the check that the
+  # user has privilege to access this project
   if ($project_id > 0) {
-
     my $best_permission = $sbeams->get_best_permission();
 
-#### If not at least data_reader, set project_id to a bad value
+    # If not at least data_reader, set project_id to a bad value
     $project_id = -99 unless ($best_permission > 0 && $best_permission <=40);
-
   }
 
   my $cytoSql  = "select fcs_run_id, substring(sample_name,0,7) from Cytometry2.dbo.FCS_RUN";
   my $immunoSql = "select specimen_name, specimen_id from $TBIS_SPECIMEN";
   
- %CYTSAMPLEHASH = $sbeams->selectTwoColumnHash($cytoSql); 
- %IMMUNOSPECHASH = $sbeams->selectTwoColumnHash($immunoSql);
-
-
+  %CYTSAMPLEHASH = $sbeams->selectTwoColumnHash($cytoSql); 
+  %IMMUNOSPECHASH = $sbeams->selectTwoColumnHash($immunoSql);
  
- 
- foreach my $key (keys %IMMUNOSPECHASH)
- {
-   if ($CYTSAMPLEHASH{$key})
-   {
-     $IMMUNOSPECHASH{$key} = 1
-   }
-   else 
-    {
-     $IMMUNOSPECHASH{$key} = 0
-   }
- }
+  foreach my $key (keys %IMMUNOSPECHASH)
+  {
+    if ($CYTSAMPLEHASH{$key}) {
+      $IMMUNOSPECHASH{$key} = 1
+    } else {
+      $IMMUNOSPECHASH{$key} = 0
+    }
+  }
   
-  
-#### Get all the experiments for this project
 	my $action = $parameters{'action'};
-	print qq~	<TABLE WIDTH="100%" BORDER=0> ~;
-#loading the default page (Intro)
-my $sub = $actionHash{$action} || $actionHash{$INTRO};
 
+  my $sub = $actionHash{$action} || $actionHash{$INTRO};
 
-if ($sub )  {
-		#print some info about this project
-		#only on the main page
-		print qq~
-				<H1>Current Project: <A class="h1" HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=$project_id">$project_name</A></H1>
-				<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
-	      <TD COLSPAN="2" WIDTH="100%"><B>Status:</B> $project_status</TD></TR>
-				<TR><TD></TD><TD COLSPAN="2"><B>Project Tag:</B> $project_tag</TD></TR>
-				<TR><TD></TD><TD COLSPAN="2"><B>Owner:</B> $PI_name</TD></TR>
-				<TR><TD></TD><TD COLSPAN="2"><B>Access Privileges:</B> <A HREF="$CGI_BASE_DIR/ManageProjectPrivileges">[View/Edit]</A></TD></TR>
-				<TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
-	      <TD WIDTH="100%"><TABLE BORDER=0>
-		  ~ if ($action eq '_displayIntro' || !$action) ;
-#checkGO();
-#### If the project_id wasn't reverted to -99, display information about it
-		if ($project_id == -99) 
-		{
-			print "	<TR><TD WIDTH=\"100%\">You do not have access to this project.  Contact the owner of this project if you want to have access.</TD></TR>\n";
-		}
-		else
-		{
-			&$sub(ref_parameters=>\%parameters,project_id=>$project_id);
-		}
-		
-#could not find a sub
+  # If the project_id wasn't reverted to -99, display information about it
+  if ($project_id == -99) 
+	{
+ 	print <<"  END_WARNING";
+  You do not have access to this project, please contact the owner,
+  if you want to have access.
+  END_WARNING
 	}
-	else {
-		print_fatal_error("Could not find the specified routine: $sub");
-	
+	else
+	{
+  &$sub(ref_parameters=>\%parameters,project_id=>$project_id);
 	}
-	print "</table>";
-	
 }
 
-#beginning page
+
+
 sub displayIntro
 {
-	 my %args = @_;
+  my %args = @_;
 
-	 
 #data for the grand summary	 
 
 #/*total number of stains*/
@@ -320,7 +252,9 @@ my $totalImagesSql = qq / select count(*) from $TBIS_ASSAY_IMAGE/;
 #/*number of unique images */
 my $uniqueImagesSql = qq / select assay_image_id  from $TBIS_ASSAY_IMAGE where patindex('%- %', image_name) != 0/; 
 
-	 
+my $ctitle = '';
+
+
 my $totalStains =($sbeams->selectOneColumn($totalStainsSql))[0];	 
 my $imagedStains = scalar($sbeams->selectOneColumn($imagedStainsSql));
 my $charStains  = scalar($sbeams->selectOneColumn($charStainsSql));
@@ -331,8 +265,12 @@ my $uniqueImages  = scalar($sbeams->selectOneColumn($uniqueImagesSql));
 #not used
 my $totalProbe = ($sbeams->selectOneColumn($totalProbeSql))[0];
 my $charProbe = scalar($sbeams->selectOneColumn($charProbeSql));
+
+$log->warn( "UNIQ: $uniqueImagesSql => $uniqueImages " );
+$log->warn( "STAI: $imagedStainsSql => $imagedStains" );
 	 
-#### get the project id
+	 
+  # get the project id
   my $project_id = $args{'project_id'} || die "project_id not passed";
 #load the javascript functions
 #get the tissue and the organisms for this project and display them as check boxes				
@@ -360,20 +298,23 @@ my %organismHash = $sbeams->selectTwoColumnHash($organismSql);
 		order by Organism_Name 
 		~;	
     my @rows = $sbeams->selectSeveralColumns($sql);
+    $log->debug ( $sql );
 
-#### If there are experiments, display them
+  # If there are experiments, display them
 
 
  		my (%hash,%stainedSlideHash,%imageHash,%tissueTypeHash);
 	 my %organism_ids;
 	 my %tissue_type_ids;
 
+   my $pad = '&nbsp;&nbsp;';
+   my $cprojHTML = '';
+   my $summaryHTML = '';
 #we got some data for this project		
-		if (@rows)
-		{
-		
-	  foreach my $row (@rows)
-		{
+  if (@rows) {
+
+	  foreach my $row (@rows) {
+
 			my ($specimenID,$stainedSlideID,$slideImageID,$organismName,$tissueName,$specimenBlockID,$organism_id,$tissue_type_id) = @{$row};
 			$organism_ids{$organismName} = $organism_id;
 			$tissue_type_ids{$tissueName} = $tissue_type_id;
@@ -403,174 +344,203 @@ my %organismHash = $sbeams->selectTwoColumnHash($organismSql);
 		my $mouseString = join ', ', keys %{$hash{Mouse}->{specimenBlockID}};
 		my $humanString = join ', ', keys %{$hash{Human}->{specimenBlockID}};
 		my $mouseBladderString = join ', ', keys %{$tissueTypeHash{Bladder}->{Mouse}->{specimenBlockID}};
-		my $mouseNormalProstateString = join ', ', keys %{$tissueTypeHash{'Normal Prostate'}->{Mouse}->{specimenBlockID}};
 		my $humanBladderString = join ', ', keys %{$tissueTypeHash{Bladder}->{Human}->{specimenBlockID}};
-		my $humanNormalProstateString = join ', ', keys %{$tissueTypeHash{'Normal Prostate'}->{Human}->{specimenBlockID}};
-		
-		print qq *
-		<tr></tr><tr></tr>
-		*; 
-#Grand Summary		
-print qq *	<tr><td><b><font color =red>Project Grand Summary :</b></font></td></tr><tr></tr><tr></tr><tr>
-			<td colspan = 2><UL>
-			<li>Total Number of Immunohistochemical Stains: $totalStains
-				<ul>
-				<li>Number of characterized Immunohistochemical Stains: $charStains
-				<li>Number of Immunohistochemical Stains with Images: $imagedStains
-				</ul>
-			<li>Total Number of Antibodies: $totalAntibody
-				<ul>
-				<li>Number of  Antibodies with Tissue Characterization: $charAntibody
-				</ul>
-			<li>Total Number of Images (includes magnified views of identical Samples) : $totalImages
-				<ul>
-				<li>Total Number of distinct Images (distinct Images of different Samples)  : $uniqueImages
-				</ul>
-			</ul>
-			<td>
-			</tr><tr></tr><tr></tr>*;
-			
-#summary by organismtype		
-		print "<tr><td><b><font color=red>Project Summary by Organism:</b></font></td></tr><tr></tr><tr></tr><tr>";
-		foreach my $key (sort keys %hash)
-		{
-    my $helptext = 'Display expression summary from all XXX tissue samples for each CD';
-    $helptext =~ s/XXX/$key/g;
 
-	  print <<"    END";
-      <td colspan=2>
-        <B>$key </B><SPAN title="$helptext" CLASS='popup'>
-        <A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERYHIDE&organism_id=$organism_ids{$key}&display_options=MergeLevelsAndPivotCellTypes\">
-        <B>[Full CD Specificity Summary]</B>
-        </A></SPAN>
-      </td>
-    END
-	  	}
-		
-		print "</tr>";
-		foreach my $key (sort keys %hash)
-		{
-    # undef is not a number!
-    $hash{$key}->{specimenID}->{count} ||= 0;
-    $hash{$key}->{stainedSlideID}->{count} ||= 0;
-    $hash{$key}->{slideImageID}->{count} ||= 0;
+    # New render layer, 12-23-2004
+    my $title_proto = '<B><FONT COLOR=RED>TITLEHERE:</B></FONT>';
+    ( my $stitle = $title_proto ) =~ s/TITLEHERE/Immunostain data in project/;
+    ( my $otitle = $title_proto ) =~ s/TITLEHERE/Summary by Organism/;
+    ( my $ttitle = $title_proto ) =~ s/TITLEHERE/Summary by Tissue Type/;
+    ( $ctitle = $title_proto ) =~ s/TITLEHERE/Custom Summary/;
+
+    $summaryHTML =<<"    END_SUMMARY";
+    $stitle <BR>
+	  <UL>
+    <LI>Total number of immunohistochemical (IHC) stains: $totalStains
+	  <LI>Number of characterized IHC stains: $charStains
+		<LI>Number of IHC stains with images: $imagedStains
+		<LI>Total number of antibodies: $totalAntibody
+		<LI>Number of  sntibodies with tissue vharacterization: $charAntibody
+		<LI>Total number of images (includes magnified views of identical samples) : $totalImages
+		<LI>Total number of distinct images (distinct Images of different samples)  : $uniqueImages
+		</UL>
+    END_SUMMARY
+
+		my $overviewTable = SBEAMS::Connection::DataTable->new( BORDER => 0 );
+    $overviewTable->addRow( [$stitle] );
+    $overviewTable->setCellAttr( ROW => 1, COL => 2, COLSPAN => 2, ALIGN => 'LEFT' );
+    $overviewTable->addRow( ["$pad Total Number of Immunohistochemical (IHC) Stains:</B>", $totalStains] );
+    $overviewTable->addRow( ["$pad Number of characterized IHC Stains:</B>", $charStains] );
+    $overviewTable->addRow( ["$pad Number of IHC Stains with Images:</B>", $imagedStains] );
+    $overviewTable->addRow( ["$pad Total Number of Antibodies:</B>", $totalAntibody] );
+    $overviewTable->addRow( ["$pad Number of  Antibodies with Tissue Characterization:</B>", $charAntibody] );
+    $overviewTable->addRow( ["$pad Total Number of Images (includes magnified views of identical Samples):</B>", $totalImages] );
+    $overviewTable->addRow( ["$pad Total Number of distinct Images (distinct Images of different Samples):</B>", $uniqueImages] );
+    $overviewTable->setColAttr( ROWS => [1..$overviewTable->getRowNum()], COLS => [ 2 ], ALIGN => 'RIGHT', NOWRAP => 1 );
+
+#    print $summaryHTML;
+    $summaryHTML = "<BR>$overviewTable<BR>";
+
+		my $summarytable = SBEAMS::Connection::DataTable->new( BORDER => 0,
+                                                           CELLSPACING => 1,
+                                                           CELLPADDING => 1 );
+
+    $summarytable->addRow( [ '<B>&nbsp;</B>', '<B># Specimens</B>', 
+                             '<B># Stains<B/>', '<B># Images</B>', '&nbsp;' ] );
+
+    # Store rows with titles so we can apply formatting later
+    my @titlerows;
+
+    $summarytable->addRow( [$otitle] );
     
-		print qq~
-			<td colspan = 2><UL>
-      <LI>Total Number of Specimens: $hash{$key}->{specimenID}->{count}
-			<LI>Total Number of Stains: $hash{$key}->{stainedSlideID}->{count}
-			<LI>Total Number of Images: $hash{$key}->{slideImageID}->{count}
-      </UL>
-      </td>~;
-		}
-		print <<"    END";
-    <TR></TR>
-    <tr></tr>
-    <tr></tr>
-    <tr>
-      <td><b><font color =red>Project Summary by TissueType:</b></font>
-      </td>
-    </tr>
-    <tr></tr>
-    <tr></tr>
-    <tr>
-    END
+    my @trow;
+    foreach my $key (sort keys %hash) { # Loop through organism summary
+      my $help = "Show expression summary for $key tissue samples for each CD";
+      my $cgiparams = join( ';', 'action=QUERYHIDE', 
+                            "organism_id=$organism_ids{$key}",
+                            'display_options=MergeLevelsAndPivotCellTypes' );
 
-#summary  by tissuetype
-	foreach my $key (sort keys %tissueTypeHash)
-		{
-		print "<tr><td colspan=2><B>$key:</B><td></tr><tr>";
-		foreach my $organism (sort keys %hash)
-			{
-      my $helptext = 'Display expression summary from all XXX tissue samples for each CD';
-      $helptext =~ s/XXX/$organism $key/g;
-
-      # undef is not a number!
-     $tissueTypeHash{$key}->{$organism}->{specimenID}->{count} ||= 0 ;
-     $tissueTypeHash{$key}->{$organism}->{stainedSlideID}->{count} ||= 0;
-     $tissueTypeHash{$key}->{$organism}->{slideImageID}->{count} ||= 0;
-            
-     
-	  	print <<"      END";
-      <td colspan = 2 nowrap><UL>
-		  	<LI> Organism: <B>$organism </B>
-          <SPAN title="$helptext" CLASS='popup'>
-            <A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERYHIDE&tissue_type_id=$tissue_type_ids{$key}&organism_id=$organism_ids{$organism}&display_options=MergeLevelsAndPivotCellTypes\">
-             <B>[Full CD Specificity Summary]</B>
-            </A>
-          </SPAN>
-		  	<LI>Total Number of Specimens: $tissueTypeHash{$key}->{$organism}->{specimenID}->{count}
-			  <LI>Total Number of Stains: $tissueTypeHash{$key}->{$organism}->{stainedSlideID}->{count}
-			  <LI>Total Number of Images: $tissueTypeHash{$key}->{$organism}->{slideImageID}->{count}
-        </UL>
-      </td>
+  	  my $link = <<"      END";
+      <SPAN title="$help" CLASS='popup'>
+        <A HREF=SummarizeStains?$cgiparams> <B>[Immunostain Summary]</B> </A>
+      </SPAN>
       END
+		
+      # undef is not a number!
+      for ( qw( specimenID stainedSlideID slideImageID ) ) {
+        $hash{$key}->{$_}->{count} ||= 0;
       }
-				print "</tr><tr></tr>";
-			}
-	print "</tr><tr></tr><tr></tr>";
+      @trow = (  "<B>$key &nbsp;</B>",
+                 $hash{$key}->{specimenID}->{count},
+                 $hash{$key}->{stainedSlideID}->{count},
+                 $hash{$key}->{slideImageID}->{count},
+                 $link );
+      $summarytable->addRow( \@trow );
+    } # end organism loop
 
-#creating the checkboxes
-		print qq~ <tr></tr><tr><td><b><font color="red">Select one or more of the following Options to view Stain, Antibody, Celltype Characterization and Image data related to your selection</font></B><td></tr><tr></tr>~;
-		print $q->start_form (-onSubmit=>"return checkForm()");
-	
-			foreach my $key (keys %organismHash)
-			{
-				print qq~ <tr><td><input type="checkbox" name="$organismHash{$key}" value="$key">$organismHash{$key}</td></tr>~;
-			}
-#display the check boxes
-			foreach my $key (keys %tissueHash)
-			{
-				print qq~ <tr><td><input type="checkbox" name="cbox_${key}" value="$key">$tissueHash{$key}</td></tr>~;
-			}
-			print q~<tr></tr><tr><td><input type ="submit" name= "SUBMIT" value = "QUERY"></td></tr> ~;
-			print "<input type= hidden name=\"action\" value = \"$START\">";
-			print $q->end_form;
-		}#end of if data was found for this project
-		
-#no data was found		
-		else
-		{
-			 print "	<TR><TD WIDTH=\"100%\"><B><NOWRAP>This project contains no IHC Data</NOWRAP></B></TD></TR>\n";
+    
+    $summarytable->addRow( [$ttitle] );
+    push @titlerows, $summarytable->getRowNum();
+
+    foreach my $key (sort keys %tissueTypeHash) { # Loop through tissue types 
+
+		  foreach my $org (sort keys %hash) {
+        my $help = 'Display expression summary for $org $key samples for each CD';
+
+        # undef is not a number!
+        for ( qw( specimenID stainedSlideID slideImageID ) ) {
+          $tissueTypeHash{$key}->{$org}->{$_}->{count} ||= 0;
+        }
+
+        my $cgiparams = join( ';', 'action=QUERYHIDE',
+                              "tissue_type_id=$tissue_type_ids{$key}", 
+                              "organism_id=$organism_ids{$org}", 
+                              "display_options=MergeLevelsAndPivotCellTypes" );
+     
+        my $link =<<"        END_LINK";
+        <SPAN title="$help" CLASS='popup'>
+          <A HREF=SummarizeStains?$cgiparams>
+             <B>[Immunostain Summary]</B>
+          </A>
+        </SPAN>
+        END_LINK
+
+      @trow = (  "<B>$org $key &nbsp;</B>",
+                 $tissueTypeHash{$key}->{$org}->{specimenID}->{count},
+                 $tissueTypeHash{$key}->{$org}->{stainedSlideID}->{count},
+                 $tissueTypeHash{$key}->{$org}->{slideImageID}->{count},
+                 $link );
+
+      $summarytable->addRow( \@trow );
+      }
+
+    } # End tissue type loop
+    
+    $summarytable->setColAttr( ROWS => [1..$summarytable->getRowNum()], 
+                             COLS => [ 1 ],
+                             ALIGN => 'RIGHT', NOWRAP => 1 );
+    $summarytable->setColAttr( ROWS => [1..$summarytable->getRowNum()], 
+                             COLS => [ 2..4 ],
+                             ALIGN => 'CENTER' );
+    $summarytable->setColAttr( ROWS => [1..$summarytable->getRowNum()], 
+                             COLS => [ 5 ],
+                             ALIGN => 'LEFT', NOWRAP => 1 );
+    $summarytable->setColAttr( ROWS => \@titlerows, 
+                               COLS => [ 1 ],
+                               COLSPAN => 5,
+                               ALIGN => 'LEFT' );
+
+    $cprojHTML = "$summarytable";
+
+#  $log->debug( "$summarytable" );
+    
+    #end of if data was found for this project
+		} else {
+    #no data was found		
+    $cprojHTML =<<"    END_MESSAGE";
+    <B>
+      <FONT COLOR=RED>
+      $pad This project contains no IHC data
+      </FONT>
+    </B>
+    <BR>
+    END_MESSAGE
 		}
-		
-		 #### Finish the table
-  print qq~
-	</TABLE></TD></TR>
-	</TABLE>~;
+  # Create new tabmenu item.  This may be a $sbeams object method in the future.
+  my $tabmenu = SBEAMS::Connection::TabMenu->new( cgi => $q );
 
+  # Preferred way to add tabs.  label is required, helptext optional
+  $tabmenu->addTab( label => 'Current Project', helptext => 'View details of current Project' );
+  $tabmenu->addTab( label => 'My Projects', helptext => 'View all projects owned by me' );
+  $tabmenu->addTab( label => 'Recent Resultsets', helptext => 'View recent SBEAMS resultsets' );
+  $tabmenu->addTab( label => 'Accessible Projects', helptext => 'View projects I have access to' );
+
+  # conditional block to exec code based on selected tab.  Can define based
+  # on tag label...
+  my $content = '';
+  if ( $tabmenu->getActiveTabName() eq 'Recent Resultsets' ){
+    $content = $sbeams->getRecentResultsets() ;
+  } elsif ( $tabmenu->getActiveTab() == 1 ){
+
+  ##########################################################################
+  #### Print out project detail stuff, if current or default project exists
+
+    my $project_id = $sbeams->getCurrent_project_id();
+    if ( $project_id ) {
+      $content = $sbeams->getProjectDetailsTable( project_id => $project_id ); 
+    }
+
+  # or exec code based on tab index.  Tabs are indexed in the order they are 
+  # added, starting at 1.  
+  } elsif ( $tabmenu->getActiveTab() == 2 ){
   ##########################################################################
   #### Print out all projects owned by the user
-	$sbeams->printProjectsYouOwn() if $sbeams->getCurrent_contact_id() ne 107;
-
-
-
+    $content = $sbeams->getProjectsYouOwn();
+  } elsif ( $tabmenu->getActiveTab() == 4 ){
   ##########################################################################
   #### Print out all projects user has access to
-  $sbeams->printProjectsYouHaveAccessTo()  if $sbeams->getCurrent_contact_id() ne 107;
+    $content = $sbeams->getProjectsYouHaveAccessTo();
+  }
 
+  # The stringify method is overloaded to call the $tabmenu->asHTML method.  
+  # This simplifies printing the object in a print block. 
+  if ( $tabmenu->getActiveTab() == 1 ) {
+    my $cb = getCheckboxes( \%organismHash, \%tissueHash );
+    $content .=<<"    END";
+    $summaryHTML
+    $cprojHTML<BR>
+    $ctitle<BR>
+    END
+    $content .= $cb unless $cprojHTML =~ /This project contains no IHC data/;
+  } 
+ $log->debug( $pad ); 
 
-  ##########################################################################
-  #### Print out some recent resultsets
-  $sbeams->printRecentResultsets()  if $sbeams->getCurrent_contact_id() ne 107;
+  # Add content to tabmenu (if desired). 
+  $tabmenu->addContent( $content );
 
-
-
-  ##########################################################################
-  #### Finish with a disclaimer
-  print qq~
-	<BR>
-	<BR>
-	This system and this module in particular are still under
-	active development.  Please be patient and report bugs,
-	problems, difficulties, as well as suggestions to
-	<B>edeutsch\@systemsbiology.org</B>.<P>
-	<BR>
-	<BR>
-  ~;
+  print "<BR><BR>$tabmenu";
 
   return;
-		
 }
 		
 
@@ -681,6 +651,7 @@ where ".buildSqlClause(ref_parameters=>\%parameters) .  "group by ct.structural_
 sub processAntibody
 {
 
+  print "Error, this page is depricated!";
 	my %args = @_;
 #### Process the arguments list
   my $ref_parameters = $args{'ref_parameters'}
@@ -885,11 +856,9 @@ $percentHash{$antibody}->{$cellType}->{none} += $atLevelPercent if $row[$levelIn
 					print "<tr><td align=left><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&antibody_id=$antibodyHash{$antibodyKey}&structural_unit_id=$cellTypeHash{$cell}&display_options=MergeLevelsAndPivotCellTypes\">$cell</A></td>";
 					print "<td align=center>$percentIntense</td><td align=center>$percentEquivocal</td><td align=center>$percentNone</td>";
 					print "<td align=center>$cellHash{$antibodyKey}->{$cell}->{'count'}</td></tr>";
-					#<td align=center>$cellHash{$antibodyKey}->{$cell}->{'equivocal'}</td><td align=center>$cellHash{$antibodyKey}->{$cell}->{'none'}</td>";
 					 
 			}	
 			
-#			print "<tr></tr><tr></tr><tr><td><b>Individual Stains</b></td><td align=center><b>Available Images</b></td></tr><tr></tr>";
 
 #all about the stains			
 			foreach my $species (keys %{$stainHash{$antibodyKey}})
@@ -948,6 +917,7 @@ $percentHash{$antibody}->{$cellType}->{none} += $atLevelPercent if $row[$levelIn
 	print "</table>";
 	}
 }
+
 
 
 sub processStain
@@ -1009,7 +979,7 @@ sub processStain
 
 	my @rows = $sbeams->selectSeveralColumns($query);
   
-print "<tr><td></td><td align=center><H4><font color=\"red\">Stain Summary</font></center></H4></td></tr><tr><td></td><td align=center><A Href=\"$CGI_BASE_DIR\/$SBEAMS_SUBDIR\/main.cgi\">Back to Main Page <\/A></td></tr>"; 
+print "<TABLE BORDER=0 WIDTH='60%'><tr><td COLSPAN=2 align=center><H4><font color=\"red\">Stain Summary</font></center></H4></td></tr><tr><td COLSPAN=2 align=center><A Href=\"$CGI_BASE_DIR\/$SBEAMS_SUBDIR\/main.cgi\">Back to Main Page <\/A></td></tr>"; 
 #	arrange the data in a result set we can easily use
 	if (scalar(@rows) < 1)
 	{
@@ -1111,38 +1081,38 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Stain Summary</font
 					}
 					
 			}
-#"<tr></tr><tr></tr><tr></tr><tr><td align=left><font color =\"#D60000\"><h5>$antibodyKey
 				
 				my $what = "Mouse";
 				my $loopCount = 0;
 				LOOP:						
 				%hash_to_sort = %stainSpecimenHash;
+        my $pad = '&nbsp;&nbsp;';
 				foreach my $keyStain (sort bySortOrder keys %stainSpecimenHash)
 				{
 						next if $stainOrganismHash{$keyStain} eq $what;
-						print "</td><tr></tr><tr></tr><tr></tr><tr><td align=left><font color =\"D60000\">&nbsp;&nbsp;&nbsp;<h5>$keyStain</h5></font></td></tr>";
+		print "<tr><td COLSPAN=2 align=left><font color =\"D60000\">&nbsp;<h3>$keyStain</h3></font></td></tr>";
                          my ($stainName) = $keyStain =~ /^.*?\s([\d-]+)/;
                            if ($IMMUNOSPECHASH{$stainName})
                           {                            
                             print qq~<tr><td>View Cytometry Data related to this Stain  <A HREF="$CGI_BASE_DIR/$SBEAMS_CY_SUBDIR/main.cgi?loadImmuno=1&immunoSampleName=$stainName">$stainName</A></TD></tr>~;
                           }
-						print "<tr><td align=left><b>Species:</b></td><td align=left>&nbsp;&nbsp;&nbsp;$stainOrganismHash{$keyStain}</td></tr>";
-						print "<tr><td align=left><b>Tissue Type:</b></td><td align=left>&nbsp;&nbsp;&nbsp; $stainTissueHash{$keyStain}</td></tr>";
-						print "<tr><td align=left><b>PreparationDate:</b></td><td align=left>&nbsp;&nbsp;&nbsp;$stainDateHash{$keyStain}</td></tr>";
+						print "<tr><td align=left><b>Species:</b></td><td align=left>$pad $stainOrganismHash{$keyStain}</td></tr>";
+						print "<tr><td align=left><b>Tissue Type:</b></td><td align=left>$pad $stainTissueHash{$keyStain}</td></tr>";
+						print "<tr><td align=left><b>PreparationDate:</b></td><td align=left>$pad $stainDateHash{$keyStain}</td></tr>";
 						print "<tr><td align=left><b>Antibody:</b></td>";
 						my $antibodyName;
 						%hash_to_sort =  %{$stainAntibodyHash{$keyStain}} if $stainAntibodyHash{$keyStain};
 						foreach my $antibodyKey (sort bySortOrder keys %{$stainAntibodyHash{$keyStain}})
 						{
 								$antibodyName = $antibodyKey;
-								print qq~ <td align=left>&nbsp;&nbsp;&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=_processAntibody&antibody_id=$antibodyHash{$antibodyKey}">$antibodyKey</A></td><tr>
-								<td align=left><b>Antigen Alternate Names:</b></td><td>&nbsp;&nbsp;&nbsp;
+								print qq~ <td align=left>&nbsp;&nbsp;&nbsp;<A HREF="processAntibody.cgi?action=ab_details&antibody_id=$antibodyHash{$antibodyKey}">$antibodyKey</A></td><tr>
+								<td align=left><b>Antigen Alternate Names:</b></td><td>&nbsp;&nbsp;
 								$stainAntibodyHash{$keyStain}->{$antibodyKey}->{$antibodyAntigenHash{$antibodyKey}}</td></tr> ~;
 						
 						}
 						foreach my $specimenKey (keys %{$stainSpecimenHash{$keyStain}})
 						{
-								print qq~ <tr><td align=left><b>Specimen Name:</b></td><td>&nbsp;&nbsp;&nbsp;<A HREF= "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_specimen&specimen_id=$specimenHash{$specimenKey}"</A>$specimenKey</td></tr>~;
+								print qq~ <tr><td align=left><b>Specimen Name:</b></td><td>$pad <A HREF= "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_specimen&specimen_id=$specimenHash{$specimenKey}"</A>$specimenKey</td></tr>~;
 								
 								foreach my $tissueKey(keys %{$stainSpecimenHash{$keyStain}->{$specimenKey}})
 								{
@@ -1191,7 +1161,7 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Stain Summary</font
 					
 				}	
 				
-				print "<tr><td align=left><b>Available Images:</b></td>" if $stainImageHash{$keyStain};
+				print "<tr><td align=left VALIGN=TOP><b>Available Images:</b></td><TD><TABLE WIDTH='100%'>" if $stainImageHash{$keyStain};
 				my $line = 1;
 				%hash_to_sort = %{$stainImageHash{$keyStain}} if $stainImageHash{$keyStain};
 						foreach my $imageKey (sort bySortOrder keys %{$stainImageHash{$keyStain}})
@@ -1199,13 +1169,16 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Stain Summary</font
 								my $magnification = $stainImageHash{$keyStain}->{$imageKey};
 								my $flag = $imageFlagHash{$imageKey};
 								my $imageID = $imageHash{$imageKey};
-								print "<tr><td></td>" if $line != 1;
-								print qq~ <td width=200>&nbsp;&nbsp;&nbsp;$imageKey</td><td>&nbsp;&nbsp;&nbsp;<A HREF ="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_assay_image&assay_image_id=$imageID&GetFile=$flag"TARGET=image>$magnification x </A></td></tr>~;
+								print qq~<TR><td ALIGN=LEFT>&nbsp;$imageKey</td>
+                             <td ALIGN=RIGHT>&nbsp;<A HREF ="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_assay_image&assay_image_id=$imageID&GetFile=$flag"TARGET=image>$magnification x </A>
+                                     </td>
+                                </TR>~;
 								$line ++;
 						}
+            print "</TD></TR></TABLE>" if $stainImageHash{$keyStain};
 						
-						print qq~  <tr><td align=left><b>Cell Type Characterization:</b></td></tr><tr></tr>
-						<td></td><td align=left><b>Cell Type</b></td><td align=center><b>Intense</b></td><td align=center><b>Equivocal</b></td><td align=center><b>None</b></td></tr><tr></tr>~ if $stainCellHash{$keyStain};
+            my $table = SBEAMS::Connection::DataTable->new( BORDER => 1 );
+            $table->addRow( ['<b>Cell Type</b>', '<b>Intense</b>', '<B>Equivocal</B>', '<b>None</b>' ] ) if $stainCellHash{$keyStain};
 						%hash_to_sort = %{$stainCellHash{$keyStain}} if $stainCellHash{$keyStain};
 
 						foreach my $cellKey (sort bySortOrder keys %{$stainCellHash{$keyStain}})
@@ -1215,10 +1188,18 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Stain Summary</font
 							my $redirectURL = qq~$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&structural_unit_id=~;
 							my $queryString = "$cellId&antibody_id=$antiId&display_options=MergeLevelsAndPivotCellTypes";
 							my $record = $stainCellHash{$keyStain}->{$cellKey};	
-							print "<tr><td></td><td align=left><A HREF=$redirectURL$queryString>
-							$cellKey</A></td><td align=center>$record->{intense}</td><td align=center>$record->{equivocal}</td><td align=center>$record->{none}</td></tr>";	
+              $table->addRow ( [ "<A HREF=$redirectURL$queryString>$cellKey</A>", $record->{intense},
+                               $record->{equivocal}, $record->{none} ] );
 						}		
+            $table->setColAttr( NOWRAP => 1, COLS => [1..4], ROWS => [1..$table->getRowNum()] );
+            $table->setColAttr( ALIGN => 'RIGHT', COLS => [2..4], ROWS => [2..$table->getRowNum()] );
+						print <<"            END";
+            <tr><td align=left VALIGN=TOP><b>Cell Type Characterization:</b></td>
+            <td align=left>$table</td></TR>
+            END
+
 				}
+
 #this is a hack 
 #as number of stains increased I decided to sort by organism without wanting to change much code
 				$loopCount++;
@@ -1373,4 +1354,58 @@ sub getHelpTextDHTML {
   </STYLE>
   END
   return $ht;
+}
+
+sub getCheckboxes {
+  my $oref = shift;  # Ref to hash of organisms
+  my $tref = shift;  # Ref to hash of tissues
+
+  my $pad = '&nbsp; &nbsp;';
+
+  my $tab = SBEAMS::Connection::DataTable->new( BORDER => 0, WIDTH => '60%' );
+
+  my ( @organisms, @tissues );
+  
+  # Loop through orgs, creating checkboxes
+  for my $k ( keys( %$oref ) ) {
+    my $cb =<<"    END";
+    $pad<INPUT TYPE='checkbox' NAME='ocheck_$k' value='$k'> $oref->{$k}</INPUT>
+    END
+    push @organisms, $cb;
+#    $tab->addRow( [ $cb] );
+  }
+
+
+  # Loop through tissues, creating checkboxes
+  for my $k ( keys( %$tref ) ) {
+    my $cb =<<"    END";
+    $pad<INPUT TYPE='checkbox' NAME='tcheck_$k' value='$k'> $tref->{$k}</INPUT>
+    END
+    push @tissues, $cb;
+    # $tab->addRow( [ $cb] );
+  }
+
+  # Add tissues and organisms in separate columns.
+  my $loop = ( $#organisms > $#tissues ) ? $#organisms : $#tissues;
+  for( my $i = 0; $i <= $loop; $i++ ){
+    my $a = $organisms[$i] || '&nbsp;';
+    my $b = $tissues[$i] || '&nbsp;';
+    $log->debug( "A is $a, B is $b " );
+    $tab->addRow( [ $a, $b ] );
+  }
+  
+  $tab->addRow( [ "$pad <INPUT TYPE=submit NAME=SUBMIT VALUE='Get Summary'>" ] );
+
+  $log->debug( "$tab" );
+
+  my $form =<<"  END";
+  $pad <I>Select one or more options to view summary grouped by assay, antibody
+  or cell type.<BR>
+  </FONT>
+  <FORM NAME='mksum' ONSUBMIT='return checkForm();' METHOD='POST'>
+  $tab
+  <INPUT TYPE=HIDDEN NAME=action VALUE=$START>
+  </FORM>
+  END
+  return $form;
 }
