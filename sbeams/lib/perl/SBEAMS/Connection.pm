@@ -26,6 +26,7 @@ use SBEAMS::Connection::TableInfo;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::ErrorHandler;
 use SBEAMS::Connection::Utilities;
+use SBEAMS::Connection::Permissions;
 
 
 @ISA = qw(SBEAMS::Connection::Authenticator 
@@ -36,6 +37,7 @@ use SBEAMS::Connection::Utilities;
           SBEAMS::Connection::Settings
           SBEAMS::Connection::ErrorHandler
           SBEAMS::Connection::Utilities
+          SBEAMS::Connection::Permissions
          );
 
 
