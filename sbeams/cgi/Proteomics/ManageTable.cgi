@@ -302,15 +302,102 @@ sub preUpdateDataCheck {
   my $query_parameters_ref = $args{'parameters_ref'};
   my %parameters = %{$query_parameters_ref};
 
+  # Define a few variables for project permission checking
+  my $errstr = '';  # Error string accumulator
+  my @stdparams = ( action => $parameters{action},
+                     tname => $TABLE_NAME );
 
   #### If table XXXX
-  if ($TABLE_NAME eq "XXXX") {
+  if ( $TABLE_NAME eq "PR_proteomics_experiment" ) {
+
+    if ( !$parameters{project_id} ) { # Must have an project_id
+      $errstr = 'Error: project_id not defined'
+    } else {
+      $errstr = checkPermission( fkey => 'project_id',
+                                 fval => $parameters{project_id},
+                                 pval => $parameters{experiment_id},
+                                 @stdparams );
+    }
+
+  } elsif ( $TABLE_NAME eq 'PR_biosequence_set' ) {
+
+    if ( !$parameters{project_id} ) { # Must have an project_id
+      $errstr = 'Error: project_id not defined'
+    } else {
+      $errstr = checkPermission( fkey => 'project_id',
+                                 fval => $parameters{project_id},
+                                 pval => $parameters{biosequence_set_id},
+                                 @stdparams );
+    }
+
+  } elsif ( $TABLE_NAME eq 'PR_gradient_program' ) {
+
+    if ( !$parameters{project_id} ) { # Must have an project_id
+      $errstr = 'Error: project_id not defined'
+    } else {
+      $errstr = checkPermission( fkey => 'project_id',
+                                 fval => $parameters{project_id},
+                                 pval => $parameters{gradient_program_id},
+                                 @stdparams );
+    }
+
+
+  } elsif ( $TABLE_NAME eq 'APD_peptide_summary' ) {
+
+    if ( !$parameters{project_id} ) { # Must have an project_id
+      $errstr = 'Error: project_id not defined'
+    } else {
+      $errstr = checkPermission( fkey => 'project_id',
+                                 fval => $parameters{project_id},
+                                 pval => $parameters{peptide_summary_id},
+                                 @stdparams );
+    }
+
+  } elsif ( $TABLE_NAME eq 'PR_fraction' ) {
+
+    if ( !$parameters{experiment_id} ) { # Must have an experiment_id
+      $errstr = 'Error: project_id not defined'
+    } else {
+      $errstr = checkPermission( fkey => 'proteomics_experiment_id',
+                                 fval => $parameters{experiment_id},
+                                 pval => $parameters{fraction_id},
+                                 @stdparams );
+    }
+
+
+  } elsif ( $TABLE_NAME eq 'PR_search_batch' ) {
+
+    if ( !$parameters{experiment_id} ) { # Must have an experiment_id
+      $errstr = 'Error: project_id not defined'
+    } else {
+      $errstr = checkPermission( fkey => 'proteomics_experiment_id',
+                                 fval => $parameters{experiment_id},
+                                 pval => $parameters{search_batch_id},
+                                 @stdparams );
+    }
+
+  } elsif ( $TABLE_NAME eq 'PR_search_hit_annotation' ) {
+
+    if ( !$parameters{search_hit_id} ) { # Must have an search hit id
+      $errstr = 'Error: Experiment id not defined';
+    } else {
+      $errstr = checkPermission( fkey => 'search_hit_id',
+                                 fval => $parameters{search_hit_id},
+                                 pval => $parameters{search_hit_annotation_id},
+                                 @stdparams );
+    }
+
+  } elsif ($TABLE_NAME eq "XXXX") {
+    
     return "An error of some sort $parameters{something} invalid";
+
+  } else {
+
+    #### Otherwise, no special processing, so just return empty string
+    return '';
   }
 
-
-  #### Otherwise, no special processing, so just return empty string
-  return '';
+  return $errstr;
 
 } # end preUpdateDataCheck
 
