@@ -27,7 +27,7 @@ use vars qw ($sbeams $sbeamsMOD $q
 	     $fav_codon_frequency $n_transmembrane_regions
 	     $rosetta_lookup $pfam_search_results $ginzu_search_results
              $mamSum_search_results $InterProScan_search_results
-	     $COG_search_results
+	     $COG_search_results $pI_results
              %domain_match_types %domain_match_sources
             );
 
@@ -88,6 +88,8 @@ Options:
                        from which to load the InterProScan search results
   --COG_search_results_summary_file   Full path name of a file
                        from which to load the COG search results
+  --pI_summary_file    Full path name of a file
+                       from which to load pI information
 
  e.g.:  $PROG_NAME --check_status
 
@@ -102,7 +104,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
     "rosetta_lookup_file:s","pfam_search_results_summary_file:s",
     "ginzu_search_results_dir:s","mamSum_search_results_summary_file:s",
     "InterProScan_search_results_summary_file:s",
-    "COG_search_results_summary_file:s",
+    "COG_search_results_summary_file:s","pI_summary_file:s",
   )) {
   print "$USAGE";
   exit;
@@ -216,6 +218,7 @@ sub handleRequest {
     $OPTIONS{"InterProScan_search_results_summary_file"} || '';
   my $COG_search_results_summary_file =
     $OPTIONS{"COG_search_results_summary_file"} || '';
+  my $pI_summary_file = $OPTIONS{"pI_summary_file"} || '';
 
 
   #### Get the file_prefix if it was specified, and otherwise guess
@@ -350,6 +353,15 @@ sub handleRequest {
   if ($COG_search_results_summary_file) {
     $COG_search_results = readCOGFile(
       source_file => $COG_search_results_summary_file,
+    );
+  }
+
+
+  #### If a COG_search_results_summary_file was specified,
+  #### load it for later processing
+  if ($pI_summary_file) {
+    $pI_results = readpIFile(
+      source_file => $pI_summary_file,
     );
   }
 
@@ -765,6 +777,10 @@ sub loadBiosequence {
   #### Get the file_prefix if it was specified, and otherwise guess
   my $module = $sbeams->getSBEAMS_SUBDIR();
 
+  #### Define a hash to hold data that goes into biosequence_property_set
+  my %property_set;
+
+
   #### Microarray uses the new schema and this is just a quick hack to get it
   #### working.  This will  need to populate biosequence_external_xref in the
   #### future, using an INSERT, INSERT, UPDATE triplet for new sequences.
@@ -794,6 +810,21 @@ sub loadBiosequence {
   }
 
 
+  #### Remove any attributes that go in property_set
+  if (defined($rowdata_ref->{chromosome})) {
+    $property_set{chromosome} = $rowdata_ref->{chromosome};
+    delete($rowdata_ref->{chromosome});
+  }
+  if (defined($rowdata_ref->{start_in_chromosome})) {
+    $property_set{start_in_chromosome} = $rowdata_ref->{start_in_chromosome};
+    delete($rowdata_ref->{start_in_chromosome});
+  }
+  if (defined($rowdata_ref->{end_in_chromosome})) {
+    $property_set{end_in_chromosome} = $rowdata_ref->{end_in_chromosome};
+    delete($rowdata_ref->{end_in_chromosome});
+  }
+
+
   #### INSERT/UPDATE the row
   my $biosequence_id = $sbeams->insert_update_row(insert=>$insert,
 		  update=>$update,
@@ -806,6 +837,17 @@ sub loadBiosequence {
 		  return_PK=>1,
 		  );
 
+
+  #### See if we have data from the pI file and extract if so
+  if (defined($pI_results) && $biosequence_id) {
+    if (defined($pI_results->
+	          {$rowdata_ref->{biosequence_name}}->{isoelectric_point})) {
+      $property_set{isoelectric_point} =
+	$pI_results->{$rowdata_ref->{biosequence_name}}->{isoelectric_point};
+    }
+  }
+
+
   #### See if we have TMR data to add
   my $have_tmr_data = 0;
   if (defined($n_transmembrane_regions) && $biosequence_id) {
@@ -817,7 +859,7 @@ sub loadBiosequence {
 
 
   #### If we have TMR data, INSERT or UPDATE extra biosequence properties
-  if ($have_tmr_data) {
+  if ($have_tmr_data || %property_set) {
 
     #### See if there's already a record there
     my $sql =
@@ -839,34 +881,38 @@ sub loadBiosequence {
 
 
     #### Fill the row data hash with information we have
-    my %rowdata;
+    my %rowdata = %property_set;
     $rowdata{biosequence_id} = $biosequence_id;
 
-    $rowdata{n_transmembrane_regions} = $n_transmembrane_regions->
-      {$rowdata_ref->{biosequence_name}}->{n_tmm}
-      if (defined($n_transmembrane_regions->
-        {$rowdata_ref->{biosequence_name}}->{n_tmm}));
+    #### If there's TMR data
+    if ($have_tmr_data) {
 
-    $rowdata{transmembrane_topology} = $n_transmembrane_regions->
-      {$rowdata_ref->{biosequence_name}}->{topology}
-      if (defined($n_transmembrane_regions->
-        {$rowdata_ref->{biosequence_name}}->{topology}));
+      $rowdata{n_transmembrane_regions} = $n_transmembrane_regions->
+        {$rowdata_ref->{biosequence_name}}->{n_tmm}
+        if (defined($n_transmembrane_regions->
+          {$rowdata_ref->{biosequence_name}}->{n_tmm}));
 
-    $rowdata{transmembrane_class} = $n_transmembrane_regions->
-      {$rowdata_ref->{biosequence_name}}->{sec_mem_class}
-      if (defined($n_transmembrane_regions->
-        {$rowdata_ref->{biosequence_name}}->{sec_mem_class}));
+      $rowdata{transmembrane_topology} = $n_transmembrane_regions->
+        {$rowdata_ref->{biosequence_name}}->{topology}
+        if (defined($n_transmembrane_regions->
+          {$rowdata_ref->{biosequence_name}}->{topology}));
 
-    if (defined($n_transmembrane_regions->
-		{$rowdata_ref->{biosequence_name}}->{has_signal_peptide})) {
-      $rowdata{has_signal_peptide} = $n_transmembrane_regions->
-        {$rowdata_ref->{biosequence_name}}->{has_signal_peptide};
-      $rowdata{has_signal_peptide_probability} = $n_transmembrane_regions->
-        {$rowdata_ref->{biosequence_name}}->{has_signal_peptide_probability};
-      $rowdata{signal_peptide_length} = $n_transmembrane_regions->
-        {$rowdata_ref->{biosequence_name}}->{signal_peptide_length};
-      $rowdata{signal_peptide_is_cleaved} = $n_transmembrane_regions->
-        {$rowdata_ref->{biosequence_name}}->{signal_peptide_is_cleaved};
+      $rowdata{transmembrane_class} = $n_transmembrane_regions->
+        {$rowdata_ref->{biosequence_name}}->{sec_mem_class}
+        if (defined($n_transmembrane_regions->
+          {$rowdata_ref->{biosequence_name}}->{sec_mem_class}));
+
+      if (defined($n_transmembrane_regions->
+	  	  {$rowdata_ref->{biosequence_name}}->{has_signal_peptide})) {
+        $rowdata{has_signal_peptide} = $n_transmembrane_regions->
+          {$rowdata_ref->{biosequence_name}}->{has_signal_peptide};
+        $rowdata{has_signal_peptide_probability} = $n_transmembrane_regions->
+          {$rowdata_ref->{biosequence_name}}->{has_signal_peptide_probability};
+        $rowdata{signal_peptide_length} = $n_transmembrane_regions->
+          {$rowdata_ref->{biosequence_name}}->{signal_peptide_length};
+        $rowdata{signal_peptide_is_cleaved} = $n_transmembrane_regions->
+          {$rowdata_ref->{biosequence_name}}->{signal_peptide_is_cleaved};
+      }
     }
 
 
@@ -1493,6 +1539,31 @@ sub specialParsing {
   #### Special Conversion rules for yeast orf names from GB (dreiss)
   if ($rowdata_ref->{biosequence_desc} =~ /\s(\S+)p\s\[Saccharomyces cerevisiae/ ) {
       $rowdata_ref->{biosequence_gene_name} = $1;
+  }
+
+
+  #### Special conversion rules for Haloarcula
+  #### >hmvng0001	rrnAC1199-1066585_1069440
+  if ($biosequence_set_name eq "Haloarcula Proteins") {
+      if ($rowdata_ref->{biosequence_desc} =~ /^(.+)-(\d+)_(\d+)$/) {
+	  my $gene_tag = $1;
+	  $rowdata_ref->{start_in_chromosome} = $2;
+	  $rowdata_ref->{end_in_chromosome} = $3;
+	  if ($gene_tag =~ /^(rrnAC)/) {
+	    $rowdata_ref->{chromosome} = $1;
+	  } elsif ($gene_tag =~ /^(rrnB)/) {
+	    $rowdata_ref->{chromosome} = $1;
+	  } elsif ($gene_tag =~ /^(pNG\d)/) {
+	    $rowdata_ref->{chromosome} = $1.'00';
+	  } else {
+	    print "WARNING: Unable to parse gene_tag '$gene_tag'\n";
+	  }
+
+      } else {
+	print "WARNING: The following description cannot be parsed:\n  ==".
+	  $rowdata_ref->{biosequence_desc}."==\n";
+      }
+
   }
 
 
@@ -2646,6 +2717,102 @@ sub readCOGFile {
   return \%data;
 
 } # end readCOGFile
+
+
+
+###############################################################################
+# readpIFile
+###############################################################################
+sub readpIFile {
+  #my $self = shift;
+  my %args = @_;
+
+
+  #### Decode the argument list
+  my $source_file = $args{'source_file'} ||
+    die ("ERROR: Must supply source_file");
+  my $verbose = $args{'verbose'} || '';
+
+  #### Define some variables
+  my ($line);
+
+  #### Define a hash to hold the contents of the file
+  my %data;
+  $data{SUCCESS} = 0;
+
+
+  #### Open the specified file
+  unless ( open(INFILE, "$source_file") ) {
+    die("Cannot open input file $source_file\n");
+  }
+
+
+  #### Verify the header
+  $line = <INFILE>;
+  $line =~ s/[\r\n]//g;
+  my @header_columns = split(/\t/,$line);
+  print "Number of columns: ".scalar(@header_columns)."\n==".
+    join("==\n==",@header_columns)."==\n";
+  unless ($line eq "Protein\tOrf\tStart\tStop\tpI"
+	  && scalar(@header_columns) == 5) {
+    die "ERROR: File '$source_file' does not begin as expected\n";
+    return \%data;
+  }
+
+  #### Extract the array indexes of the column names
+  my $i = 0;
+  my %idx;
+  foreach my $element (@header_columns) {
+    #### Strip of leading and trailing spaces, too
+    $element =~ s/^\s+//;
+    $element =~ s/\s+$//;
+    $idx{$element} = $i;
+    $i++;
+  }
+
+
+  #### Read in all the domain matches
+  while ($line = <INFILE>) {
+    $line =~ s/[\r\n]//g;
+    next if ($line =~ /^\s*$/);
+
+    #### Split the line into columns and insist we get the right number
+    my @columns = split(/\t/,$line);
+    unless (scalar(@columns) == 5) {
+      print "ERROR: Error parsing line '$line' of '$source_file'.  ".
+        "Expected 5 columns of information but got ".scalar(@columns)."\n";
+      return \%data;
+    }
+
+    my $biosequence_name = $columns[$idx{Protein}];
+
+    #### Create a temporary hash and fill it with these data
+    my %parameters;
+    $parameters{'full_line'} = $line;
+    $parameters{'biosequence_name'} = $biosequence_name;
+
+    #### Strip trailing and leading spaces
+    $parameters{'isoelectric_point'} = $columns[$idx{pI}];
+
+    #### Store this new data on the array for this biosequence_name
+    if (defined($data{$biosequence_name})) {
+      print "WARNING: Duplicate values for $biosequence_name\n";
+    }
+
+    $data{$biosequence_name} = \%parameters;
+  }
+
+
+  #### Close the input file
+  close(INFILE);
+
+
+  #### Set SUCCESS flag and return
+  $data{SUCCESS} = 1;
+  return \%data;
+
+} # end readpIFile
+
 
 
 
