@@ -5027,10 +5027,11 @@ sub getDataFromModules {
   # Prune list of modules to the ones we know support this functionality 
   my %supported_modules = ( Microarray  => 1,
                             Proteomics  => 1,
+                            Cytometry   => 1,
                             Immunostain => 1
                            );
 
-  my @supp = qw( Microarray Proteomics Immunostain );
+  my @supp = qw( Microarray Proteomics Immunostain Cytometry );
 
   my @valid_mods;
   for my $mod ( @{$args{modules}} ) {
@@ -5064,7 +5065,6 @@ sub getDataFromModules {
   # loop through sbeams objects, 
   for my $mod ( @valid_mods ) {
     next unless $sbeams{$mod};
-    $log->debug( "Got a $mod?" );
     $sbeams{$mod}->setSBEAMS($this) || die "Doh";
     $mod_data{$mod} = $sbeams{$mod}->getProjectData( projects => $args{projects} );
   }
@@ -5109,10 +5109,22 @@ sub getProjectsYouOwn {
   }
 
   # From this point on, need to know if we're fetching module data
-  # currently this is an all or none decision
-  my $getmods = ( $args{mod_data} ) ? 1 : 0;
+  # Default is to show data from all modules
+  my $getmods = 1;
+  my @modules;
 
-  my @modules = $self->getModules();
+  if ( $args{mod_data} ) {
+    if ( ref( $args{mod_data} ) eq 'ARRAY' ) {
+      @modules = @{$args{mod_data}};
+    } elsif ( $args{mod_data} eq 'None' ) {
+      $getmods = 0;
+    } else {
+      @modules = $self->getModules();
+    }
+  } else {
+    @modules = $self->getModules();
+  }
+
   my $modules = [];
   my $mdata = {};
 
@@ -5227,11 +5239,11 @@ sub getMax {
 ###############################################################################
 sub printProjectsYouHaveAccessTo {
   my $self = shift || croak("parameter self not passed");
-  #print $self->getProjectsYouHaveAccessTo( @_ );
-  print $self->getAccessibleProjectInfo( @_ );
+  print $self->getProjectsYouHaveAccessTo( @_ );
 }
 
-sub getAccessibleProjectInfo {
+#sub getAccessibleProjectInfo {
+sub getProjectsYouHaveAccessTo {
   my $self = shift || croak("parameter self not passed");
   my %args = @_;
   my $SUB_NAME = "getAccessibleProjectInfo";
@@ -5293,10 +5305,23 @@ sub getAccessibleProjectInfo {
   }
   
   # From this point on, need to know if we're fetching module data
-  # currently this is an all or none decision
-  my $getmods = ( $args{mod_data} ) ? 1 : 0;
 
-  my @modules = $self->getModules();
+  # Default is to show data from all modules
+  my $getmods = 1;
+  my @modules;
+
+  if ( $args{mod_data} ) {
+    if ( ref( $args{mod_data} ) eq 'ARRAY' ) {
+      @modules = @{$args{mod_data}};
+    } elsif ( $args{mod_data} eq 'None' ) {
+      $getmods = 0;
+    } else {
+      @modules = $self->getModules();
+    }
+  } else {
+    @modules = $self->getModules();
+  }
+
   my $modules = [];
   my $mdata = {};
 
@@ -5420,7 +5445,7 @@ sub getAccessibleProjectInfo {
 
 }
 
-sub getProjectsYouHaveAccessTo {
+sub getProjectsYouHaveAccessTo_deprecated {
   my $self = shift || croak("parameter self not passed");
   my %args = @_;
   my $SUB_NAME = "getProjectsYouHaveAccessTo";
