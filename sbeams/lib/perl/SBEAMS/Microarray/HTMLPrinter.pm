@@ -169,8 +169,8 @@ sub displaySBEAMSPageHeader
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi"><img src="$HTML_BASE_DIR/images/ma_array_home.jpg"></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi"><IMG SRC="$HTML_BASE_DIR/images/ma_project_home.jpg"></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GridAlignCheck.cgi"><img src="$HTML_BASE_DIR/images/ma_alignment_check.jpg"></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi?tab=data_analysis"><img src="$HTML_BASE_DIR/images/ma_data_analysis.jpg"></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProcessProject.cgi"><img src="$HTML_BASE_DIR/images/ma_pipeline.jpg"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi?tab=data_pipeline"><img src="$HTML_BASE_DIR/images/ma_pipeline.jpg"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi?tab=data_download"><img src="$HTML_BASE_DIR/images/ma_data_download.jpg"></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetExpression"><img src="$HTML_BASE_DIR/images/ma_get_expression.jpg"></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetAffy_GeneIntensity.cgi"><img src="$HTML_BASE_DIR/images/ma_get_affy_intensity.jpg"></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi?tab=miame_status"><img src="$HTML_BASE_DIR/images/ma_miame_status.jpg"></td></tr>
@@ -385,6 +385,22 @@ function setLayoutFileName() {
       document.MainForm.name.value + ".key"
       return;
 }
+function changetabnumber (){
+    document.Selectedfiles_form._tab.value = 1;
+    if(confirm("Really delete checked files?")){
+
+    }else{
+	var all_files = document.Selectedfiles_form.files;
+ 	var numb_files = all_files.length;
+ 
+ 	for (var i = 0; i < numb_files; i++){
+ 		all_files[i].value = '';
+ 	}
+	alert("Ok none of the current " + numb_files + " files will be deleted"); 
+    } 
+   return;
+}
+
 
 // -->
 </SCRIPT>
@@ -480,6 +496,7 @@ sub print_tabs {
     my $tab_titles_ref = $args{'tab_titles_ref'}
     || die "ERROR[$SUB_NAME]:tab_titles_ref not passed";
     my $selected_tab = $args{'selected_tab'} || 0;
+    my $parent_tab = $args{'parent_tab'};
     my $page_link = $args{'page_link'}
     || die "ERROR[$SUB_NAME]:page_link not passed";
     my $unselected_bg_color   = $args{'unselected_bg_color'}   || "\#224499";
@@ -514,9 +531,10 @@ sub print_tabs {
 		<TD BGCOLOR="$selected_bg_color" ALIGN="CENTER" WIDTH="95" NOWRAP><FONT COLOR="$selected_font_color" SIZE="-1">$tab_title</FONT></TD>
 		~;
 	}else {
+	    my $print_parent_tab =  $parent_tab ? "&tab=$parent_tab": '';
 	    print qq~
 		<TD WIDTH="15">&nbsp;</TD>
-		<TD BGCOLOR="$unselected_bg_color" ALIGN="CENTER" WIDTH="95" NOWRAP><A HREF="$page_link?tab=$link"><FONT COLOR="$unselected_font_color" SIZE="-1">$tab_title</FONT></A></TD>
+		<TD BGCOLOR="$unselected_bg_color" ALIGN="CENTER" WIDTH="95" NOWRAP><A HREF="$page_link?tab=$link$print_parent_tab"><FONT COLOR="$unselected_font_color" SIZE="-1">$tab_title</FONT></A></TD>
 		~;
 	}
 	$counter++;
