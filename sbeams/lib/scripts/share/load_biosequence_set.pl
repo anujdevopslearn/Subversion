@@ -875,9 +875,11 @@ sub specialParsing {
   #### >ORFN:YAL014C YAL014C, Chr I from 128400-129017, reverse complement
   if ($biosequence_set_name eq "yeast_orf_coding" ||
       $biosequence_set_name eq "Yeast ORFs Database" ||
-      $biosequence_set_name eq "Yeast ORFs Common Name Database") {
+      $biosequence_set_name eq "Yeast ORFs Common Name Database" ||
+      $biosequence_set_name eq "Yeast ORFs Database 200210") {
     if ($rowdata_ref->{biosequence_desc} =~ /([\w\-\:]+)\s([\w\-\:]+), .+/ ) {
-      if ($biosequence_set_name eq "Yeast ORFs Common Name Database") {
+      if ($biosequence_set_name eq "Yeast ORFs Common Name Database" ||
+          $biosequence_set_name eq "Yeast ORFs Database 200210" ) {
         $rowdata_ref->{biosequence_gene_name} = $rowdata_ref->{biosequence_name};
         #$rowdata_ref->{biosequence_accession} = $1;
         $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
