@@ -399,6 +399,7 @@ sub insert_update_row {
   my $PK = $args{'PK_name'} || $args{'PK'} || '';
   my $PK_value = $args{'PK_value'} || '';
   my $quoted_identifiers = $args{'quoted_identifiers'} || '';
+  my $return_error = $args{'return_error'} || '';
 
 
   #### Make sure either INSERT or UPDATE was selected
@@ -505,7 +506,11 @@ sub insert_update_row {
 
 
   #### Execute the SQL
-  $self->executeSQL($sql);
+  my $result = $self->executeSQL(sql=>$sql,return_error=>$return_error);
+
+
+  #### If executeSQL() did not report success, return
+  return $result unless ($result);
 
 
   #### If user didn't want PK, return with success
@@ -531,17 +536,62 @@ sub insert_update_row {
 ###############################################################################
 sub executeSQL {
     my $self = shift || croak("parameter self not passed");
-    my $sql = shift || croak("parameter sql not passed");
+    my $SUB_NAME = "executeSQL";
+
+
+    #### Allow old-style single argument
+    my $n_params = scalar @_;
+    my %args;
+    die("parameter sql not passed") unless ($n_params >= 1);
+    #### If the old-style single argument exists, create args hash with it
+    if ($n_params == 1) {
+      $args{sql} = shift;
+    } else {
+      %args = @_;
+    }
+
+
+    #### Decode the argument list
+    my $sql = $args{'sql'} || die("parameter sql not passed");
+    my $return_error = $args{'return_error'} || '';
+
 
     #### Get the database handle
     $dbh = $self->getDBHandle();
 
-    my $sth = $dbh->prepare($sql) or die($dbh->errstr);
-    my $rows  = $sth->execute or die($dbh->errstr);
+    #### Prepare the query
+    my $sth = $dbh->prepare($sql);
+    my $rows;
 
-    #### This doesn't seem to die if the execute fails????
-    #my ($rows) = $dbh->do("$sql") or die($dbh->errstr);
+    #### If the prepare() succeeds, execute
+    if ($sth) {
+      $rows  = $sth->execute();
+      if ($rows) {
+        if (ref($return_error)) {
+          $$return_error = '';
+        }
+        return $rows;
+      } elsif ($return_error) {
+        if (ref($return_error)) {
+          $$return_error = $dbh->errstr;
+        }
+        return 0;
+      } else {
+        die("ERROR on SQL execute(): ".$dbh->errstr);
+      }
 
+    #### If the prepare() fails
+    } elsif ($return_error) {
+      if (ref($return_error)) {
+        $$return_error = $dbh->errstr;
+      }
+      return 0;
+    } else {
+      die("ERROR on SQL prepare(): ".$dbh->errstr);
+    }
+
+
+    #### Return the number of rows affected, or some other non-0 result
     return $rows;
 
 }
