@@ -62,3 +62,20 @@ Typical usage:
 	                 --quantitation_file ~/quantitation_file.csv \
                          --quantitation_protocol_id 12 \
                          --array_id 4363
+
+     ################################
+    ## load_affy_array_files.pl ##
+#####################################################################
+Purpose: load_affy_array_files.pl Inserts data about Affy arrays and samples into the database.  The script will monitor a default
+directory and upload any new files that meet the current minimum for the amount of data needed.
+
+The script can be run in three different modes
+add_new: Will just add new arrays plus the sample information
+update:  Given a method name(s) it will update that piece of data for all Affy arrays or Samples in the database
+delete:  Given a root_file name(s) it will delete that array or the array and sample plus any data in the associated protocol linking
+	 table.  Also can delete the full database if needed....
+	 
+Run the script for a more detailed list of options
+Typical usage 
+./load_affy_array_files.pl  --run_mode add_new
+Writes out a new error log every time the script is ran called 'AFFY_ERROR_LOG.txt' 

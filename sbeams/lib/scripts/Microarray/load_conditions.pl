@@ -125,7 +125,7 @@ $TESTONLY   = $OPTIONS{testonly};
 
 if ($DEBUG) {
   print "Options settings:\n";
-  print "  VERBOSE = $OPTIONS{verbose}\n";
+  print "  VERBOSE = $VERBOSE\n";
   print "  QUIET = $OPTIONS{quiet}\n";
   print "  DEBUG = $OPTIONS{debug}\n";
   print "  PROJECT_ID = $OPTIONS{project_id}\n";
@@ -172,8 +172,8 @@ sub main {
 
 #### Do the SBEAMS authentication and exit if a username is not returned
   exit unless ($CURRENT_USERNAME = $sbeams->Authenticate(
-														 work_group=>$work_group,
-														 ));
+							work_group=>$work_group,
+	 ));
 
 ## Presently, force module to be microarray and work_group to be Microarray_admin
   if ($module ne 'Microarray') {
