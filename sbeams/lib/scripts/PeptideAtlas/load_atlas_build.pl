@@ -1315,6 +1315,7 @@ sub buildAtlas {
 
    ## LAST TEST to assert that all peptides of an atlas in
    ## peptide_instance  are associated with a peptide_instance_sample record
+   ## ALSO checks that atlas_build_sample is filled...uses this as start point
    if ($CHECKTABLES) {
 
        print "\nChecking peptide_instance_sample records\n";
@@ -1333,6 +1334,35 @@ sub buildAtlas {
 
        print "\n$n peptide_instance_ids in atlas build $ATLAS_BUILD_ID\n";
 
+       
+       ## get an array of sample_id for a given atlas_id
+       $sql = qq~
+           SELECT sample_id
+           FROM PeptideAtlas.dbo.atlas_build_sample
+           WHERE atlas_build_id ='$ATLAS_BUILD_ID'
+        ~;
+
+       my @sample_id_array =  $sbeams->selectOneColumn($sql) 
+           or die "could not find sample id's for atlas_build_id= ".
+           "$ATLAS_BUILD_ID ($!)";
+
+       my $sample_id_string = join("\',\'",@sample_id_array);
+       ## add a ' to beginning of string and to end
+       $sample_id_string =~ s/^(\w+)/\'$1/;
+       $sample_id_string =~ s/(\w+)$/$1\'/;
+
+
+       ## grab all records in peptide_instance_sample that contain
+       ## sample_id = one of "sample_id_string"
+       $sql = qq~
+           SELECT peptide_instance_id, sample_id
+           FROM PeptideAtlas.dbo.peptide_instance_sample
+            WHERE sample_id IN ( $sample_id_string )
+       ~;
+       ## returns an array of references to arrays (each of which is a returned row?)
+       my @peptide_instance_id_ref_array = $sbeams->selectSeveralColumns($sql)
+           or die "In last test, unable to complete query:\n$sql\n($!)";
+
 
        foreach my $peptide_instance_id ( keys %peptide_instance_hash) {
 
@@ -1341,29 +1371,34 @@ sub buildAtlas {
            ## split sample_ids into sample_id:
            my @sample_id = split(",", $tmp_sample_ids );
 
-           foreach (my $i; $i <= $#sample_id; $i++) {
+            foreach (my $i; $i <= $#sample_id; $i++) {
+ 
+                ## check that there's an entry in @peptide_instance_id_ref_array
+                ## matching $peptide_instance_id and $sample_id[$i]
+                my $match_flag = 0;
 
-               $sql = qq~
-                   SELECT peptide_instance_sample_id
-                   FROM PeptideAtlas.dbo.peptide_instance_sample
-                   WHERE sample_id = '$sample_id[$i]'
-                   AND peptide_instance_id = '$peptide_instance_id'
-               ~;
+                foreach my $row (@peptide_instance_id_ref_array) {
+             
+                    my ($tmp_peptide_instance_id, $tmp_sample_id) = @{$row};
 
-               ## make hash with key = peptide_instance_id, value = sample_ids
-               my @rows = $sbeams->selectOneColumn($sql) 
-                   or die "In last test, unable to complete query:\n$sql\n($!)";
+                    if ( ($peptide_instance_id == $tmp_peptide_instance_id)
+                    && ($tmp_sample_id == $sample_id[$i]) ) {
 
-               my $check_peptide_instance_id = @rows[0];
+                        $match_flag = 1;
 
-               unless ( $check_peptide_instance_id ) {
+                        last;
+                    }
+                    
+                }
+ 
+                unless ($match_flag == 1) {
 
-                   print "couldn't find peptide_instance_sample record for ".
-                       "peptide_instance_id $peptide_instance_id in sample $sample_id[$i]\n";
+                    print "couldn't find peptide_instance_sample record for ".
+                        "peptide_instance_id $peptide_instance_id in sample $sample_id[$i]\n";
 
-               }
-
-           }
+                }
+ 
+            }
 
        }
 
