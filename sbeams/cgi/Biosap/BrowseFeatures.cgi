@@ -73,9 +73,12 @@ sub main {
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
   #### Print the header, do what the program does, and print footer
-  $sbeamsBS->printPageHeader();
-  processRequests(parameters_ref=>\%parameters);
-  $sbeamsBS->printPageFooter();
+  if (defined($parameters{apply_action}) && $parameters{action} eq "???") {
+  }else {
+    $sbeamsBS->printPageHeader();
+    processRequests(parameters_ref=>\%parameters);
+    $sbeamsBS->printPageFooter();
+  }
 } # end main
 
 
@@ -132,11 +135,10 @@ sub printEntryForm {
     $TABLE_NAME="BrowseBioSapFeature" unless ($TABLE_NAME);
     my $base_url = "$CGI_BASE_DIR/Biosap/BrowseFeatures.cgi";
 
-
     # Get the columns for this table
     my @columns = $sbeamsBS->returnTableInfo($TABLE_NAME,"ordered_columns");
-    my %input_types = 
-      $sbeamsBS->returnTableInfo($TABLE_NAME,"input_types");
+    my %input_types = $sbeamsBS->returnTableInfo($TABLE_NAME,"input_types");
+
 
     # Read the form values for each column
     my $no_params_flag = 1;
@@ -162,9 +164,11 @@ sub printEntryForm {
     $rs_params{page_size} = $q->param("rs_page_size") || 50;
     $rs_params{page_number} = $q->param("rs_page_number") || 1;
     $rs_params{page_number} -= 1 if ($rs_params{page_number});
+
     if ($apply_action eq "VIEWRESULTSET") {
       $sbeams->readResultSet(resultset_file=>$rs_params{set_name},
-          resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters);
+			     resultset_ref=>$resultset_ref,
+			     query_parameters_ref=>\%parameters);
       $no_params_flag = 0;
     }
 
@@ -184,6 +188,8 @@ sub printEntryForm {
     if (($TABLE_NAME eq "ShowSearch") && (!defined($parameters{sort_order})) ) {
       $parameters{sort_order} = "S.file_root,experiment_tag,set_tag,SH.cross_corr_rank";
     }
+
+    
 
 
     # ---------------------------
@@ -222,6 +228,7 @@ sub printEntryForm {
     # There appears to be a Netscape bug in that one cannot [BACK] to a form
     # that had multipart encoding.  So, only include form type multipart if
     # we really have an upload field.  IE users are fine either way.
+    if ($page_parameters{'output_mode'} !~ /(csv|tsv|excel)/) {
     $sbeams->printUserContext();
     print qq!
         <P>
@@ -230,7 +237,6 @@ sub printEntryForm {
         <FORM METHOD="post" $file_upload_flag>
         <TABLE>
     !;
-
 
     # ---------------------------
     # Build option lists for each optionlist query provided for this table
@@ -415,8 +421,6 @@ sub printEntryForm {
     }
     $sth->finish;
 
-
-
     # ---------------------------
     # If this is a HIDE query, then just show a button to reveal constraints
     if ($apply_action =~ /HIDE/i) {
@@ -445,11 +449,10 @@ sub printEntryForm {
       !;
     }
 
-
     $sbeams->printPageFooter("CloseTables");
     print "<BR><HR SIZE=5 NOSHADE><BR>\n";
 
-
+  }
     # --------------------------------------------------
     # --------------------------------------------------
     # --------------------------------------------------
@@ -713,7 +716,6 @@ $order_by_clause
 	  base_url=>$base_url);
 
 
-
     #### If QUERY was not selected, then tell the user to enter some parameters
     } else {
       print "<H4>Select parameters above and press QUERY</H4>\n";
@@ -721,5 +723,4 @@ $order_by_clause
 
 
 } # end printEntryForm
-
 
