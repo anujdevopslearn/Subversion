@@ -941,11 +941,8 @@ sub displaySBEAMSError{
     print qq~
       <CENTER>
       <H2>$DBTITLE Error </H2>
-      The system has encountered an error.  Please report this problem to 
-      <A HREF='mailto:$email'>Eric Deutsch</A><BR>
-      or submit a bug to the SBEAMS 
-      <A HREF='http://bugzilla.systemsbiology.net/index.cgi'
-         TARGET='bugwindow'>bug database</A>
+      The system has encountered an error.  Please report this problem and
+      how it occurred to your local $DBTITLE administrator $DBADMIN
       <BR><BR>
       <BLOCKQUOTE>
     ~;

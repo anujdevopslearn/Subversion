@@ -1001,8 +1001,8 @@ sub calculateTablePermission {
   if ( scalar( @uperms ) > 1 ) { # Should only return one row
     $log->error( $usql );
     die ( <<'    END_ERROR' );
-    More than one row returned from permissions query.  Please report this 
-    error to Eric Deutsch or to submit to sbeams bug database
+    More than one row returned from permissions query.  Please report this
+    error to your local $DBTITLE administrator $DBADMIN
     END_ERROR
   }
 
@@ -1028,7 +1028,7 @@ sub calculateTablePermission {
     $log->error( $gsql );
     die ( <<'    END_ERROR' );
     More than one row returned from permissions query.  Please report this 
-    error to Eric Deutsch or to submit to sbeams bug database
+    error to your local $DBTITLE administrator $DBADMIN
     END_ERROR
   }
 
