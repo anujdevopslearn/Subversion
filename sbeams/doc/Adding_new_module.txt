@@ -2,9 +2,9 @@
 Notes add a new module:
 
 set TEMPLATE = GEAP
-set DEST = Inkjet
+set DEST = Biosap
 set TMPLTAG = GEAP
-set TAG = IJ
+set TAG = BS
 
 cd /host/db/local/www/html/dev2/sbeams/lib/perl/SBEAMS
 cp -p $TEMPLATE.pm $DEST.pm
@@ -39,6 +39,9 @@ cd /host/db/local/www/html/dev2/sbeams/lib/perl/SBEAMS
 cvs add $DEST.pm
 cvs add $DEST
 cvs add $DEST/*
+
+cd /host/db/local/www/html/dev2/sbeams/images
+cvs add -kb biosap_logo.png
 
 cd /host/db/local/www/html/dev2/sbeams
 cvs commit

@@ -18,7 +18,7 @@
 ###############################################################################
 use strict;
 use lib qw (../../lib/perl);
-use vars qw ($q $sbeams $sbeamsGEAP $dbh $current_contact_id $current_username
+use vars qw ($q $sbeams $sbeamsBS $dbh $current_contact_id $current_username
              $current_work_group_id $current_work_group_name
              $current_project_id $current_project_name
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
@@ -32,15 +32,15 @@ use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
 
-use SBEAMS::GEAP;
-use SBEAMS::GEAP::Settings;
-use SBEAMS::GEAP::Tables;
-use SBEAMS::GEAP::TableInfo;
+use SBEAMS::Biosap;
+use SBEAMS::Biosap::Settings;
+use SBEAMS::Biosap::Tables;
+use SBEAMS::Biosap::TableInfo;
 
 $q = new CGI;
 $sbeams = new SBEAMS::Connection;
-$sbeamsGEAP = new SBEAMS::GEAP;
-$sbeamsGEAP->setSBEAMS($sbeams);
+$sbeamsBS = new SBEAMS::Biosap;
+$sbeamsBS->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 
@@ -63,21 +63,21 @@ sub main {
     $TABLE_NAME = $q->param('TABLE_NAME') || croak "TABLE_NAME not specified."; 
 
     croak "This TABLE_NAME=$TABLE_NAME cannot be managed by this program."
-      unless ($sbeamsGEAP->returnTableInfo($TABLE_NAME,"ManageTableAllowed"))[0] eq "YES";
+      unless ($sbeamsBS->returnTableInfo($TABLE_NAME,"ManageTableAllowed"))[0] eq "YES";
 
-    ($CATEGORY) = $sbeamsGEAP->returnTableInfo($TABLE_NAME,"CATEGORY");
-    ($PROGRAM_FILE_NAME) = $sbeamsGEAP->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
-    ($DB_TABLE_NAME) = $sbeamsGEAP->returnTableInfo($TABLE_NAME,"DB_TABLE_NAME");
-    ($PK_COLUMN_NAME) = $sbeamsGEAP->returnTableInfo($TABLE_NAME,"PK_COLUMN_NAME");
-    @MENU_OPTIONS = $sbeamsGEAP->returnTableInfo($TABLE_NAME,"MENU_OPTIONS");
+    ($CATEGORY) = $sbeamsBS->returnTableInfo($TABLE_NAME,"CATEGORY");
+    ($PROGRAM_FILE_NAME) = $sbeamsBS->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+    ($DB_TABLE_NAME) = $sbeamsBS->returnTableInfo($TABLE_NAME,"DB_TABLE_NAME");
+    ($PK_COLUMN_NAME) = $sbeamsBS->returnTableInfo($TABLE_NAME,"PK_COLUMN_NAME");
+    @MENU_OPTIONS = $sbeamsBS->returnTableInfo($TABLE_NAME,"MENU_OPTIONS");
 
     #### Do the SBEAMS authentication and exit if a username is not returned
     exit unless ($current_username = $sbeams->Authenticate());
 
     #### Print the header, do what the program does, and print footer
-    $sbeamsGEAP->printPageHeader();
+    $sbeamsBS->printPageHeader();
     processRequests();
-    $sbeamsGEAP->printPageFooter();
+    $sbeamsBS->printPageFooter();
 
 } # end main
 
@@ -144,7 +144,7 @@ sub printOptions {
     }
 
     print "$LINESEPARATOR<P>";
-    $sbeamsGEAP->printPageFooter("CloseTables");
+    $sbeamsBS->printPageFooter("CloseTables");
     showTable("WithOptions");
 
 } # end printOptions
@@ -163,9 +163,9 @@ sub printEntryForm {
     my $username;
 
     # Get the columns for this table
-    my @columns = $sbeamsGEAP->returnTableInfo($TABLE_NAME,"ordered_columns");
+    my @columns = $sbeamsBS->returnTableInfo($TABLE_NAME,"ordered_columns");
     my %input_types = 
-      $sbeamsGEAP->returnTableInfo($TABLE_NAME,"input_types");
+      $sbeamsBS->returnTableInfo($TABLE_NAME,"input_types");
 
     # Read the form values for each column
     foreach $element (@columns) {
@@ -491,7 +491,7 @@ sub printEntryForm {
        !;
 
 
-    $sbeamsGEAP->printPageFooter("CloseTables");
+    $sbeamsBS->printPageFooter("CloseTables");
     showTable('',\%parameters);
 
 } # end printEntryForm
@@ -509,7 +509,7 @@ sub showTable {
     my $detail_level = $q->param('detail_level') || "BASIC";
 
     my ($main_query_part) =
-      $sbeamsGEAP->returnTableInfo($TABLE_NAME,$detail_level."Query",
+      $sbeamsBS->returnTableInfo($TABLE_NAME,$detail_level."Query",
       $parameters_ref);
 
     my ($full_where_clause,$full_orderby_clause) = 
@@ -530,7 +530,7 @@ sub showTable {
     #print "<PRE>$sql_query\n\n</PRE>";
 
     my ($element,$value);
-    my %url_cols = $sbeamsGEAP->returnTableInfo($TABLE_NAME,"url_cols");
+    my %url_cols = $sbeamsBS->returnTableInfo($TABLE_NAME,"url_cols");
 
     return $sbeams->displayQueryResult(sql_query=>$sql_query,
         url_cols_ref=>\%url_cols);
@@ -551,13 +551,13 @@ sub processEntryForm {
     my $tmp;
 
     # Get the columns for this table
-    my @columns = $sbeamsGEAP->returnTableInfo($TABLE_NAME,"ordered_columns");
+    my @columns = $sbeamsBS->returnTableInfo($TABLE_NAME,"ordered_columns");
 
 
     # Check to see if there is a column which will allow a range of numbers
     # over which a multi-insert could be performed
     my ($multi_insert_column) = 
-      $sbeamsGEAP->returnTableInfo($TABLE_NAME,"MULTI_INSERT_COLUMN");
+      $sbeamsBS->returnTableInfo($TABLE_NAME,"MULTI_INSERT_COLUMN");
 
 
     # Read the form values for each column
@@ -582,7 +582,7 @@ sub processEntryForm {
 
     # Check for missing required information
     my @required_columns = 
-      $sbeamsGEAP->returnTableInfo($TABLE_NAME,"required_columns");
+      $sbeamsBS->returnTableInfo($TABLE_NAME,"required_columns");
     if (@required_columns) {
       my $error_message;
       foreach $element (@required_columns) {
@@ -600,9 +600,9 @@ sub processEntryForm {
 
 
     my @data_columns = 
-      $sbeamsGEAP->returnTableInfo($TABLE_NAME,"data_columns");
+      $sbeamsBS->returnTableInfo($TABLE_NAME,"data_columns");
     my %input_types = 
-      $sbeamsGEAP->returnTableInfo($TABLE_NAME,"input_types");
+      $sbeamsBS->returnTableInfo($TABLE_NAME,"input_types");
 
 
     # Multi-Insert logic.  In certain cases, we'll allow the user to specify
@@ -718,7 +718,7 @@ sub processEntryForm {
 
         # Check for an existing record that this would duplicate
         my @key_columns = 
-          $sbeamsGEAP->returnTableInfo($TABLE_NAME,"key_columns");
+          $sbeamsBS->returnTableInfo($TABLE_NAME,"key_columns");
         my %unique_values;
         if (@key_columns) {
           foreach $element (@key_columns) {

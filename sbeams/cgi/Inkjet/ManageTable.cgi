@@ -232,8 +232,9 @@ sub printEntryForm {
           $is_data_column,$column_text,$optionlist_query,$onChange) = @row;
       if ($optionlist_query gt "") {
         $optionlist_queries{$column_name}=$optionlist_query;
+      }
       if ($input_type eq "file") {
-        $file_upload_flag = "ENCTYPE=\"multipart/form-data\""; }
+        $file_upload_flag = "ENCTYPE=\"multipart/form-data\"";
       }
     }
     $sth->finish;

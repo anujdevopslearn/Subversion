@@ -22,6 +22,7 @@ use SBEAMS::Tools::Tables;
 use SBEAMS::GEAP::Tables;
 use SBEAMS::Proteomics::Tables;
 use SBEAMS::Inkjet::Tables;
+use SBEAMS::Biosap::Tables;
 
 
 ###############################################################################
