@@ -360,7 +360,7 @@ sub printUserContext {
     #### If the output mode is html, then switch to html mode
     } elsif ($self->output_mode() eq 'html') {
       $style = 'HTML';
-      if ($subdir eq 'Proteomics/' || $subdir eq '') {
+      if ($subdir eq 'Proteomics/' || $subdir eq 'Microarray/' || $subdir eq '') {
         $self->printUserChooser();
         return;
       }
