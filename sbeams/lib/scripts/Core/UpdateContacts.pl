@@ -61,7 +61,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
 $VERBOSE = $OPTIONS{"verbose"} || 0;
 $QUIET = $OPTIONS{"quiet"} || 0;
 $DEBUG = $OPTIONS{"debug"} || 0;
-$TESTONLY = $OPTIONS{"testonly"} || 0;
+$TESTONLY = $OPTIONS{"testonly"} || 1;
 if ($DEBUG) {
   print "Options settings:\n";
   print "  VERBOSE = $VERBOSE\n";
@@ -203,13 +203,16 @@ sub handleRequest {
 			     'is_messenging_pager','home_phone','fax','email',
 			     'alternate_email','comment');
 	  for ($i=0; $i<$n_columns;$i++){
-	      if ($ref_columns[$i] ne $column_names[$i]){
-		  print "ERROR: File header verification failed.\n";
-		  print " Expected column $i to be '$ref_columns[$i]' but it appears ".
-		      "to be '$column_names[$i]'.  This is unexpected and we cannot ".
-		      "continue.  Please resolve and retry.\n";
-		  return;
-	      }
+	    if ($column_names[$i] =~ /^\"(.*)\"$/) {
+		$column_names[$i] = $1;
+	    }
+	    if ($ref_columns[$i] ne $column_names[$i]){
+		print "ERROR: File header verification failed.\n";
+		print " Expected column $i to be '$ref_columns[$i]' but it appears ".
+		    "to be '$column_names[$i]'.  This is unexpected and we cannot ".
+		    "continue.  Please resolve and retry.\n";
+		return;
+	    }
 	  }
       } else {
          print "ERROR: File header verification failed (number of column headers).\n";
