@@ -25,6 +25,7 @@ use SBEAMS::Connection::HTMLPrinter;
 use SBEAMS::Connection::TableInfo;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::ErrorHandler;
+use SBEAMS::Connection::Utilities;
 
 
 @ISA = qw(SBEAMS::Connection::Authenticator 
@@ -33,7 +34,9 @@ use SBEAMS::Connection::ErrorHandler;
           SBEAMS::Connection::HTMLPrinter
           SBEAMS::Connection::TableInfo
           SBEAMS::Connection::Settings
-          SBEAMS::Connection::ErrorHandler);
+          SBEAMS::Connection::ErrorHandler
+          SBEAMS::Connection::Utilities
+         );
 
 
 ###############################################################################
