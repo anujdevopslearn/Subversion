@@ -45,3 +45,5 @@ MA_interpro	Affy interpro	arrays	NO	$TBMA_INTERPRO	interpro_id
 MA_protein_domain	Affy protein domain	arrays	NO	$TBMA_PROTEIN_DOMAIN	protein_domain_id				
 MA_alignment	Affy gene alignment	arrays	NO	$TBMA_ALIGNMENT	alignment_id				
 MA_GetAffy_GeneIntensity	Get Affy Gene Intensity	QUERY	NO				GetAffy_GeneIntensity.cgi		
+MA_affy_analysis	Affy Analysis	arrays	YES	$TBMA_AFFY_ANALYSIS	affy_analysis_id		ManageTable.cgi?TABLE_NAME=MA_affy_analysis	MA_affy_analysis	
+MA_affy_analysis_type	Affy Analysis Type	arrays	YES	$TBMA_AFFY_ANALYSIS_TYPE	affy_analysis_type_id		ManageTable.cgi?TABLE_NAME=MA_affy_analysis_type	MA_affy_analysis_type	
