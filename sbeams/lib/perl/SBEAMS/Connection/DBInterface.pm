@@ -4791,7 +4791,7 @@ sub getModules {
   my (@rows) = $self->selectOneColumn($sql);
 
   #### If the user is not a local user, then restrict the modules
-  unless (scalar(@rows) == 1 && $rows[0] eq 'Y') {
+  if (scalar(@rows) != 1 || ( $rows[0] ne 'Y' && $self->getSite() eq 'ISB' ) ) {
 
     #### Get the groups that this user belongs to
     my $sql = qq ~
