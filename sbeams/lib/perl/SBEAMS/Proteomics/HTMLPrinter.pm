@@ -98,9 +98,11 @@ sub printPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=project"<nobr>&nbsp;&nbsp;&nbsp;Projects</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=proteomics_experiment"><nobr>&nbsp;&nbsp;&nbsp;Experiments</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=dbxref"><nobr>&nbsp;&nbsp;&nbsp;DB XRefs</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/Proteomics/SummarizeExperiment.cgi"><nobr>&nbsp;&nbsp;&nbsp;Summarize Exp's</nobr></a></td></tr>
