@@ -9,6 +9,12 @@
 #               and corresponding data into SBEAMS.  Sorry for the horrible use
 #               of global variables!
 #
+# Mappings    : reporter_name - Hs:GENE_NAME, Mm:operon_oligo_id, Sc:ORF
+#               full_name - Hs:gene_name, Mm:gene_name, Sc:SYM
+#               canonical_name - Hs:external_id, Mm:external_id, Sc:ORF
+#               common_name - Hs:gene_symbol, Mm:gene_symbol, Sc:SYM
+#               gene_name - Hs:GENE_NAME, Mm:GENE_NAME, Sc:SYM
+#
 # Notes       : A sample column_map file is:
 #
 # #### SBEAMS gene_expression bulk loader column mapping file
