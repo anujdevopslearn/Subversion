@@ -107,7 +107,7 @@ unless (GetOptions(\%OPTIONS,
 $VERBOSE = $OPTIONS{"verbose"} || 0;
 $QUIET = $OPTIONS{"quiet"} || 0;
 $DEBUG = $OPTIONS{"debug"} || 0;
-$TESTONLY = $OPTIONS{"testonly"} || 1;
+$TESTONLY = $OPTIONS{"testonly"} || 0;
 if($DEBUG) {
   print "Options settings:\n";
   print "  VERBOSE = $VERBOSE\n";
@@ -168,22 +168,22 @@ sub handleRequest {
 
 
   my $oligo_search_id;
-  my $oligo_types_ref;
+  #my $oligo_types_ref;
   $oligo_search_id = add_oligo_search_record(user=>$current_username,
 											 project=>$project_id);
 
 
-  $gene_biosequence_set_id = add_oligo_parameter_set_record(
+  my $gene_biosequence_set_id = add_oligo_parameter_set_record(
      oligo_search_id=>$oligo_search_id,
      gene_set_tag=>$OPTIONS{gene_set_tag},
 	 chromosome_set_tag=>$OPTIONS{chromosome_set_tag}
 															);
   
-  handle_oligo_file{project_id=>$OPTIONS{project_id},
+  handle_oligo_file(project_id=>$OPTIONS{project_id},
 					file=>$OPTIONS{oligo_file},
 					search_tool_id=>$OPTIONS{search_tool_id},
 					oligo_search_id=>$oligo_search_id,
-					biosequence_set_id=>$gene_biosequence_set_id
+					biosequence_set_id=>$gene_biosequence_set_id              
 					);
 
 }
@@ -199,6 +199,7 @@ sub handle_oligo_file {
   ## Variables
   my $sql;
   my @rows;
+  my $counter = 0;
 
   my $SUB="handle_oligo_file";
   my $oligo_file = $args{file} ||
@@ -212,7 +213,7 @@ sub handle_oligo_file {
   my $project_id = $args{project_id} ||
 	die "[BUG-$SUB]: project_id not passed\n";
 
-  my %oligo_types = %{$oligo_types_ref};
+  #my %oligo_types = %{$oligo_types_ref};
   my %selected_oligos;
 
   ## Verify that the oligo file exists
@@ -248,7 +249,7 @@ sub handle_oligo_file {
 	  ## INSERT the selected_oligo record
 	  my %rowdata;
 	  $information =~ /^(.*?)>(.*)/;
-	  my $rowdata{header} = $2;
+	  $rowdata{header} = $2;
 	  my $header = $2;
 
       ## Print a warning if malformed
@@ -265,8 +266,9 @@ sub handle_oligo_file {
 	  $rowdata{biosequence_id} = '';
 	  $rowdata{start_coordinate} = '';
 	  $rowdata{threeprime_distance} = '';
-	  $rowdata{synthetic_start} = '';
-	  $rowdata{synthetic_stop} = '';
+	  #$rowdata{synthetic_start} = '';
+	  #$rowdata{synthetic_stop} = '';
+
 
 
       ## Do special parsing depending on which genome set is being loaded
@@ -282,22 +284,24 @@ sub handle_oligo_file {
 		$rowdata{oligo_type_id}.
 		$rowdata{biosequence_id}.
 		$rowdata{start_coordinate}.
-		$rowdata{threeprime_distance}.
-		$rowdata{synthetic_start}.
-		$rowdata{synthetic_stop};
+		$rowdata{threeprime_distance};
+		#$rowdata{synthetic_start}.
+		#$rowdata{synthetic_stop};
 
 	  if ( $selected_oligos{$key} ) {
 		print "[WARNING]: Potential duplicate oligo \'$header\' loaded\n";
 	  }
-
+            
+  
+	  
 	  ## INSERT the selected_oligo record
-	  $selected_oligo_id = $sbeams->updateOrInsertRow(table_name=>$TBOG_SELECTED_OLIGO,
+	  my $selected_oligo_id = $sbeams->updateOrInsertRow(table_name=>$TBOG_SELECTED_OLIGO,
 													  rowdata_ref=>\%rowdata,
 													  insert=>1,
 													  return_PK=>1,
 													  testonly=>$TESTONLY,
 													  verbose=>$VERBOSE,
-													  add_audit_parameters=>1);
+													  );  ##################took out add_audit_parameters=>1
 
 	  $selected_oligos{$key} = $selected_oligo_id;
 	  $counter++;
@@ -307,7 +311,7 @@ sub handle_oligo_file {
       $sequence = "";
 
       ## Add this one to the list of already seen
-      $biosequence_names{$rowdata{biosequence_name}} = 1;
+      #$biosequence_names{$rowdata{biosequence_name}} = 1;
 
       print "$counter..." if ($counter % 100 == 0);
     }
@@ -356,7 +360,7 @@ sub special_parsing {
   my $sequence = $args{sequence} ||
 	die "[BUG-$SUB]: sequence not passed\n";
 
-  my $header = $rowdata_ref->{header};
+  my $header = $rowdata_ref->{header}; 
 
   ## Get search tool name, which is better than using ID
   my $sql = qq~
@@ -382,9 +386,9 @@ SELECT search_tool_name
 	  $search_tool_name eq "create_halobacterium_expr.pl" ) {
 
 	$header =~ /(\w+)\.(\w+)\s+(\d+)\s(\d+)/;
-	$rowdata_ref->{start_coordinate} = $3;
+	$rowdata_ref->{start_coordinate} = $3;  
 	$rowdata_ref->{biosequence_id} = get_biosequence_id(name=>$1,
-														set_id=>$bs_set_id);
+														bs_set_id=>$bs_set_id);
 
 	## Get Oligo Type
 	my $type = $2;
@@ -398,11 +402,11 @@ SELECT search_tool_name
 	}elsif ($type eq "d") {
 	  $oligo_type_id = "4";
 	}elsif ($type eq "e") {
-	  $oligo_type_di = "5";
+	  $oligo_type_id = "5";
 	}elsif($type eq "for") {
-	  $oligo_type = "6";
+	  $oligo_type_id = "6";
 	}elsif($type eq "rev") {
-	  $oligo_type = "7";
+	  $oligo_type_id = "7";
 	}else{
 	  print "[WARNING]: no oligo_type \'$type\' for oligo \'$header\'.\n";
 	}
@@ -425,17 +429,24 @@ SELECT search_tool_name
 	}
 
 	## Load Synthetic Start/Stop Coordinates
-	print "Synthetic Start = $synth_start\n";
-	print "Synthetic Stop = $synth_stop\n";
-	if ($synth_start && $synth_stop) {
-	  $rowdata_ref->{synthetic_start} = $synth_start;
-	  $rowdata_ref->{synthetic_stop} = $synth_stop;
+	if (defined($synth_start) && ($synth_stop != $synth_start)) {   #if synth_stop was incremented
+	  #$rowdata_ref->{synthetic_start} = $synth_start;
+	  #$rowdata_ref->{synthetic_stop} = $synth_stop;
 	}
 
   }
 
+  #print "\n\n";
+  #print "oligo_search_id: " . $rowdata_ref->{oligo_search_id} . "\n";
+  #print "oligo_id: " . $rowdata_ref->{oligo_id} . "\n";
+  #print "oligo_type_id: " . $rowdata_ref->{oligo_type_id}."\n";
+  #print "biosequence_id: " . $rowdata_ref->{biosequence_id}."\n";
+  #print "start_coordinate: " . $rowdata_ref->{start_coordinate}."\n";
+  #print "threeprime_distance: " . $rowdata_ref->{threeprime_distance}."\n";
+  #print "synthetic_start: " . $rowdata_ref->{synthetic_start}."\n";
+  #print "synthetic_stop: " . $rowdata_ref->{synthetic_stop}."\n";
 
-KEEP FILLING ME IN!!!!
+##KEEP FILLING ME IN!!!!
 
 
   delete($rowdata_ref->{header});
@@ -530,7 +541,7 @@ LEFT JOIN $TBOG_OLIGO_ANNOTATION OA ON (O.oligo_id = OA.oligo_id)
 	$rowdata{oligo_id} = $oligo_id;
 	$rowdata{project_id} = $project_id;
 	$rowdata{in_stock} = 'N'; #default is it's not in stock
-	$sbeams->updateOrInsertRow(table_name=$TBOG_OLIGO_ANNOTATION,
+	$sbeams->updateOrInsertRow(table_name=>$TBOG_OLIGO_ANNOTATION,
 							   rowdata_ref=>\%rowdata,
 							   insert=>1,
 							   testonly=>$TESTONLY,
@@ -555,7 +566,7 @@ sub add_oligo_parameter_set_record{
   my $chrom_tag = $args{chromosome_set_tag} ||
 	die "[BUG-$SUB]: chromosome_set_tag not passed\n";
 
-  my $sql;
+  my $sql;  
   my @rows;
 
   ## Find biosequence_set_ids corresponding to gene tag
@@ -593,17 +604,17 @@ SELECT biosequence_set_id
   my %rowdata =('oligo_search_id' => $oligo_search_id,
 				'gene_library_id'=>$gene_library_id,
 				'chromosome_library_id'=>$chromosome_library_id);
-
+  
  $sbeams->updateOrInsertRow(
 	table_name => "$TBOG_OLIGO_PARAMETER_SET",
 		print_SQL=>1,
         rowdata_ref => \%rowdata,
         insert => 1,
         return_PK => 1,
-        testonly => 1, 
-        verbose => $VERBOSE,
-        add_audit_parameters => 1 );
-
+        testonly => $TESTONLY, 
+        verbose => $VERBOSE 
+        );
+  
   return $gene_library_id;
 }
 
@@ -626,7 +637,7 @@ sub add_oligo_search_record{
   my $search_id_code = get_timestamp();
 
   ## Populate oligo_search table
-  my %rowdata = ('project_id' => $project_id,
+  my %rowdata = ('project_id' => $project_id,                 
 				 'search_tool_id' => $OPTIONS{search_tool_id},
 				 'search_id_code' => $search_id_code,
 				 'search_username' => $current_username,
@@ -641,7 +652,7 @@ sub add_oligo_search_record{
         rowdata_ref => $rowdata_ref,
         insert => 1,
         return_PK => 1,
-        testonly => 1, 
+        testonly => $TESTONLY, 
         verbose => $VERBOSE,
         add_audit_parameters => 1 );
     undef %rowdata;
@@ -679,7 +690,7 @@ sub check_command_line {
   my $chromosome_set_tag = $OPTIONS{"chromosome_set_tag"} || '';
 
   unless ($search_tool_id && 
-		  $oligo_set_type_name && 
+		  #$oligo_set_type_name && 
 		  $gene_set_tag &&
 		  $chromosome_set_tag) {
 	print $USAGE;
@@ -707,7 +718,7 @@ sub check_command_line {
 
   ## Data Loading Time/Date
 #  if ( !defined($OPTIONS{datetime}) ) {
-	$OPTIONS{datetime} = "CURRENT_TIMESTAMP";
+	$OPTIONS{datetime} = 'CURRENT_TIMESTAMP';
 #  } 
   my $datetime = $OPTIONS{datetime};
   print "[STATUS]: Load Date = $datetime\n";
