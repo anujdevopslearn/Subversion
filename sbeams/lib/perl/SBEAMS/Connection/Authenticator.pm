@@ -19,11 +19,11 @@ package SBEAMS::Connection::Authenticator;
 
 
 use strict;
-use vars qw( $q $http_header $log @ISA @ERRORS
-             $current_contact_id $current_username
-             $current_work_group_id $current_work_group_name 
+use vars qw( $q $http_header $log @ISA $DBTITLE $SESSION_REAUTH @ERRORS
+             $current_contact_id $current_username $LOGIN_DURATION
+             $current_work_group_id $current_work_group_name $LOGGING_LEVEL 
              $current_project_id $current_project_name
-             $current_user_context_id @EXPORT_OK );
+             $current_user_context_id @EXPORT_OK  );
 
 use CGI::Carp qw(fatalsToBrowser croak);
 use CGI qw(-no_debug);
@@ -33,7 +33,7 @@ use Authen::Smb;
 #use Data::Dumper;
 
 use SBEAMS::Connection::DBConnector;
-use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Settings qw( :default $SESSION_REAUTH $LOGIN_DURATION);
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
 use SBEAMS::Connection::Log;
@@ -49,7 +49,6 @@ $CGI::POST_MAX = 1024 * 30000;
 $q = new CGI;
 
 @EXPORT_OK = qw( $q );
-
 
 ###############################################################################
 # Constructor
@@ -74,140 +73,220 @@ sub new {
 # frequently for added security.
 ###############################################################################
 sub Authenticate {
-    my $self = shift;
-    my $SUBNAME = "Authenticate";
-    my %args = @_;
+  my $self = shift;
+  my $SUBNAME = "Authenticate";
+  my %args = @_;
 
-    my $set_to_work_group = $args{'work_group'} || "";
-    my $connect_read_only = $args{'connect_read_only'} || "";
-    my $allow_anonymous_access = $args{'allow_anonymous_access'} || "";
-    my $permitted_work_groups_ref = $args{'permitted_work_groups_ref'} || "";
-
-
-    #### Always disable the output buffering
-    $| = 1;
-
-    #### Guess at the current invocation mode
-    $self->guessMode();
-
-    #### Obtain the database handle $dbh, thereby opening the DB connection
-    my $dbh = $self->getDBHandle(connect_read_only=>$connect_read_only);
+  my $set_to_work_group = $args{'work_group'} || "";
+  my $connect_read_only = $args{'connect_read_only'} || "";
+  my $allow_anonymous_access = $args{'allow_anonymous_access'} || "";
+  my $permitted_work_groups_ref = $args{'permitted_work_groups_ref'} || "";
 
 
-    #### If there's a DISABLED file in the main HTML directory, do not allow
-    #### entry past here.  Same goes for DISABLE.modulename
-    my $module_name = $self->getSBEAMS_SUBDIR() || '';
-    if ( ( -e "$PHYSICAL_BASE_DIR/DISABLED" ||
-           -e "$PHYSICAL_BASE_DIR/DISABLED.$module_name" ) &&
-         $ENV{REMOTE_ADDR} ne "10.0.230.11") {
-      $self->printMinimalPageHeader();
-      print "<H3>";
-      open(INFILE,"$PHYSICAL_BASE_DIR/DISABLED") ||
-        open(INFILE,"$PHYSICAL_BASE_DIR/DISABLED.$module_name") ||
-        print "ERROR Opening DISABLED file. SBEAMS is currently not available";
-      my $line;
-      while ($line = <INFILE>) { print $line; }
-      close(INFILE);
-      $self->printPageFooter();
-      exit;
+  #### Always disable the output buffering
+  $| = 1;
+
+  #### Guess at the current invocation mode
+  $self->guessMode();
+
+  #### If there's a DISABLED file in the main HTML directory, do not allow
+  #### entry past here.  Same goes for DISABLE.modulename
+  my $module_name = $self->getSBEAMS_SUBDIR() || '';
+  if ( ( -e "$PHYSICAL_BASE_DIR/DISABLED" ||
+         -e "$PHYSICAL_BASE_DIR/DISABLED.$module_name" ) ) {
+    $self->printMinimalPageHeader();
+    print "<H3>";
+    open(INFILE,"$PHYSICAL_BASE_DIR/DISABLED") ||
+      open(INFILE,"$PHYSICAL_BASE_DIR/DISABLED.$module_name") ||
+      print "ERROR Opening DISABLED file. SBEAMS is currently not available";
+    my $line;
+    while ($line = <INFILE>) { print $line; }
+    close(INFILE);
+    $self->printPageFooter();
+    exit;
+  }
+
+
+  #### If the effective UID is the apache user, then go through the
+  #### cookie authentication mechanism
+  my $uid = "$>" || "$<";
+  my $www_uid = $self->getWWWUID();
+  if ( $uid == $www_uid ) {
+    # We are presumably here due to a cgi request.
+    $log->debug( "WWW request" );
+ 
+    my %cookie = $q->cookie('SBEAMSName');
+
+    # Force login if the force_login flag is defined
+    if ( $q->param('force_login') || !%cookie ) {
+      $current_username = $self->processLogin();
+    
+    } else {
+      # Else honor the cookie...
+      $current_username = $self->processLogin( cookie => \%cookie );
+
     }
 
+     # Has cookie/login processing obtained a valid username?
+    if ( !$current_username ) {
+      $log->debug( "Testing alternate authentication modes" );
 
-    #### If the effective UID is the apache user, then go through the
-    #### cookie authentication mechanism
-    my $uid = "$>" || "$<";
-    my $www_uid = $self->getWWWUID();
-    if ( $uid == $www_uid ) {
-
-        #### If the force_login flag is defined, make the user login
-        #### by showing login screen or process the result if coming
-        #### from a login screen, but there's no anonymous possibility
-        if (defined($q->param('force_login'))) {
-	  $current_username = $self->processLogin();
-
-        #### Check to see if the user is logged in, and if not, usher
-	#### them in as anonymous if permitted or else show login screen
+      # Otherwise use SBEAMSentrycode if defined
+      if ( my $entrycode = $q->param('SBEAMSentrycode') ) {
+        $log->debug( "Using entry code" );
+	      $current_username = $DBCONFIG->{$DBINSTANCE}->{ENTRYCODE}->{$entrycode};
+       if ( $current_username ) { 
+        $log->debug( "Encoded name is $current_username" );
+	      $http_header = $self->createAuthHeader($current_username)
         } else {
-           unless ($current_username = $self->checkLoggedIn(
-                   allow_anonymous_access=>$allow_anonymous_access)) {
-             $current_username = $self->processLogin();
-          }
+          $log->warn( "Entry code was specified but not in config file" );
         }
 
-    #### Otherwise, try a command-line authentication
-    } else {
-        unless ($current_username = $self->checkValidUID()) {
-            print STDERR "You (UID=$uid) are not permitted to connect to ".
-              "$DBTITLE.\nConsult your $DBTITLE Administrator.\n";
-            $self->dbDisconnect();
-	  }
+    # Allow anonymous access?
+      } elsif ( $allow_anonymous_access ) {
+        $log->debug( "allowing guest authentication" );
+        #print "Content-type: text/plain\n\nReceived no cookie; runs as guest\n";
+        $current_username = 'guest';
+      }
     }
 
-
-    #### If we've obtained a valid user, get additional information
-    #### about the user
-    if ($current_username) {
-        $current_contact_id = $self->getContact_id($current_username);
-        $current_work_group_id = $self->getCurrent_work_group_id();
+  } else { # Otherwise, try a command-line authentication
+    unless ($current_username = $self->checkValidUID()) {
+    $log->error( <<"    ERR" );
+    You (UID=$uid) are not permitted to connect to $DBTITLE.
+    Please consult your $DBTITLE Administrator.
+    ERR
+    return;
     }
+  }
+
+  # Haven't been able to authenticate, force login
+  if ( !$current_username ) { 
+
+    # If we have cookie (forced login), destroy it
+    $self->destroyAuthHeader() if $args{cookie};
+
+	  # Draw a login form for the user to fill out
+    $self->printPageHeader(minimal_header=>"YES");
+    $self->printLoginForm();
+    $self->printPageFooter();
+
+  # Else if we've have a valid user, get additional information
+  } else { 
+
+      $current_contact_id = $self->getContact_id($current_username);
+      $current_work_group_id = $self->getCurrent_work_group_id();
+  }
 
 
-    #### If a permitted list of work_groups was provided or a specific
-    #### work_group was provided, verify/switch to that
-    if ( $current_username &&
-         ($set_to_work_group || $permitted_work_groups_ref) ) {
+  #### If a permitted list of work_groups was provided or a specific
+  #### work_group was provided, verify/switch to that
+  if ( $current_username &&
+       ($set_to_work_group || $permitted_work_groups_ref) ) {
         $current_work_group_id = $self->setCurrent_work_group(
             set_to_work_group=>$set_to_work_group,
             permitted_work_groups_ref=>$permitted_work_groups_ref,
         );
         $current_username = '' unless ($current_work_group_id);
-    }
+  }
 
-
-    return $current_username;
+  $log->debug( "Returning username of $current_username" );
+  return $current_username;
 
 } # end Authenticate
 
+#+
+# Checks validity of various passed parameters
+#-
+sub isValidDuration {
+  my $self = shift;
+  my %args = @_;
+  return 0 unless $args{cookie_duration}; 
+
+#    return 1 if $args{cookie_duration} =~ /^[+-]+\d+[hm]+$/i;
+#   opted against fancy time specs  
+  return ( $args{cookie_duration} =~ /^\d+$/i ) ? $args{cookie_duration} : 0;
+}
 
 ###############################################################################
 # Process Login
 ###############################################################################
 sub processLogin {
-    my $self = shift;
+  my $self = shift;
+  my %args = @_;
 
-    my $username  = $q->param('username');
-    my $password  = $q->param('password');
+  # various options
+  my $new_cookie = 1;
+  my $user  = $q->param('username');
+  my $pass  = $q->param('password');
+  my $force = $q->param('force_login');
+  $current_username = '';
 
-    # For security's sake, delete these from the cgi object.
-    $q->delete( 'username', 'password' );
+  # For security's sake, delete these from the cgi object.
+  $q->delete( 'username', 'password' );
 
-    $current_username = "";
-
-    #### If there is a login parameter, see if it's valid
-    if ($q->param('login')) {
-        if ($self->checkLogin($username, $password)) {
-            $http_header = $self->createAuthHeader($username);
-            $current_contact_id = $self->getContact_id($username);
-            $current_username = $username;
-        } else {
-            $self->printPageHeader(minimal_header=>"YES");
-            $self->printAuthErrors();
-            $self->printPageFooter();
-        }
-
-    #### Otherwise give the user a form to login with
+  my $chours = $self->isValidDuration(cookie_duration => $LOGIN_DURATION) || 24;
+  my $csecs = $chours * 3600;
+  $log->debug( "cookies are valid for $chours hours" );
+  
+  if ( $user && $pass ) { #### If username and password were provided, use them
+    $log->debug( "username and password provided" );
+    if ($self->checkLogin($user, $pass)) {
+      $log->debug( "username is valid" );
+      $http_header = $self->createAuthHeader($user);
+      $current_contact_id = $self->getContact_id($user);
+      $current_username = $user;
     } else {
-        #### Since we may have gotten here with a force_login flag even
-        #### though we already have a cookie, be sure to destroy current cookie
-        $self->destroyAuthHeader();
+      $log->debug( "username is *not* valid" );
+      $self->printPageHeader(minimal_header=>"YES");
+      $self->printAuthErrors();
+      $self->printPageFooter();
+    } 
 
-	#### Draw a login form for the user to fill out
-        $self->printPageHeader(minimal_header=>"YES");
-        $self->printLoginForm();
-        $self->printPageFooter();
+  } elsif ( !$force && $args{cookie} ) { # non-forced, cookie exists
+
+    $log->debug( "Authenticating using existing cookie" );
+
+    # SBEAMSName cookie has single key->value pair, time => crypted username
+    ( my $cookie_time ) = keys( %{$args{cookie}} );
+
+    # Check validity of cookie information
+    my $valid_username = $self->checkCachedAuth( name => $args{cookie}{$cookie_time},
+                                                 ctime => $cookie_time );
+
+
+    if ( $valid_username ) {  # Cookie is valid, check for expiration
+
+      $log->debug( "Cookie data is valid" );
+      my $curr_time = time;
+
+      # Calculate difference between current time and cookie creation time.
+      my $time_diff = $curr_time - $cookie_time;
+      my $stale = $csecs - $time_diff;
+
+      $log->debug( "Cookie time is $cookie_time, Current time is $curr_time, diff is $time_diff" );
+      $log->debug( "Stale is $stale, Duration is $csecs seconds ($chours hours), and Reauth for sessions is $SESSION_REAUTH " );
+
+      # Is cookie expired?
+      if ( $stale <= 0 ) { # Cookie is stale (expired)
+        $log->debug( "Expired cookie, forcing reauthentication" );
+
+      } else {
+        if ( $stale < 3600 || $time_diff < 0 ) {
+          # The cookie is in its final 60 minutes of validity, or postdated
+          $http_header = $self->createAuthHeader($valid_username);
+          $log->debug( "Cookie will expire soon or is postdated, reissuing" );
+        }
+        $current_username = $valid_username;
+        $current_contact_id = $self->getContact_id($valid_username);
+      }
+
+    } else {
+      $log->error( "Invalid cookie submitted" ) unless $valid_username;
     }
+  }
 
-    return $current_username;
+  return $current_username;
 
 } # end processLogin
 
@@ -254,60 +333,33 @@ sub get_http_header {
 
 
 ###############################################################################
-# checkLoggedIn
+# checkCachedAuth
 #
 # Return the username if the user's cookie contains a valid username
 ###############################################################################
-sub checkLoggedIn {
-    my $self = shift;
-    my %args = @_;
+sub checkCachedAuth {
+  my $self = shift;
+  my %args = @_;
 
-    my $allow_anonymous_access = $args{'allow_anonymous_access'} || "";
+  # Must have passed both time and username for validation
+  return 0 unless $args{name} && $args{ctime};
+  
+  # Time must be a 10-digit integer 
+  return 0 unless $args{ctime} =~ /^\d{10}$/;
 
-    my $username = "";
+  my $cipher = new Crypt::CBC($self->getCryptKey(), 'IDEA');
+  $args{name} = $cipher->decrypt($args{name});
+  my $sql_name = $self->convertSingletoTwoQuotes($args{name});
 
-    my $cookie = $q->cookie('SBEAMSName');
-    if ($cookie){
-        my $cipher = new Crypt::CBC($self->getCryptKey(), 'IDEA');
-        $username = $cipher->decrypt($cookie);
-        #print "Content-type: text/plain\n\nGot cookie: raw:$cookie; decoded:$username\n";
-        $username = $self->convertSingletoTwoQuotes($username);
+  # Verify that the deciphered result is still an active username
+  my ($result) = $self->selectOneColumn( <<"  END" );
+  SELECT COUNT(contact_id)
+  FROM $TB_USER_LOGIN
+  WHERE username = '$sql_name'
+  AND record_status != 'D'
+  END
 
-        #### Verify that the deciphered result is still an active username
-        my ($result) = $self->selectOneColumn(
-            "SELECT username
-               FROM $TB_USER_LOGIN
-              WHERE username = '$username'
-                AND record_status != 'D'"
-        );
-        $username = "" if ($result ne $username);
-
-
-    #### Otherwise if there is an SBEAMSentrycode
-    #### parameter, then autologin the person as the user specified in the
-    #### SBEAMS.conf file for this SBEAMSentrycode if it's configured.
-    } elsif (defined($q->param('SBEAMSentrycode'))) {
-      my $entrycode = $q->param('SBEAMSentrycode');
-      if ($entrycode) {
-	if (defined($DBCONFIG->{$DBINSTANCE}->{ENTRYCODE}->{$entrycode})) {
-	  $username = $DBCONFIG->{$DBINSTANCE}->{ENTRYCODE}->{$entrycode};
-	  $http_header = $self->createAuthHeader($username);
-        }
-      }
-
-
-    #### Otherwise if the page allows anonymous access, set user to guest
-    } elsif ($allow_anonymous_access) {
-      #print "Content-type: text/plain\n\nReceived no cookie; runs as guest\n";
-      $username = 'guest';
-
-    #### Otherwise, we're out of options, so do nothing
-    } else {
-      #print "Content-type: text/plain\n\nReceived no cookie\n";
-    }
-
-
-    return $username;
+  return ( $result ) ? $args{name} : 0;
 }
 
 
@@ -1010,6 +1062,11 @@ sub destroyAuthHeader {
 sub createAuthHeader {
     my $self = shift;
     my $username = shift;
+    $log->debug( "Creating Auth Header" );
+
+    # Fetch configured cookie timeout, else use 24 hrs.
+    my $chours = $self->isValidDuration(cookie_duration => $LOGIN_DURATION) || 24;
+    $chours = '+' . $chours . 'h';
 
     #### Fixed to set cookie path to tree root instead of possibly middle
     #### which then requires reauthentication when moving below entry point
@@ -1019,11 +1076,26 @@ sub createAuthHeader {
 
     my $cipher = new Crypt::CBC($self->getCryptKey(), 'IDEA');
     my $encrypted_user = $cipher->encrypt("$username");
+    my $ctime = time();
+    my %cookie = (  $ctime => $encrypted_user );
 
-    my $cookie = $q->cookie(-name    => 'SBEAMSName',
+    my $cookie;
+    
+    if ( $SESSION_REAUTH ) {
+      $cookie = $q->cookie( -name    => 'SBEAMSName',
                             -path    => "$cookie_path",
-                            -value   => "$encrypted_user",
-			    -expires => "+24h");
+                            -value   => \%cookie ); 
+      $log->debug( "Session reauthentication is being enforced" );
+
+    } else {
+      $cookie = $q->cookie( -name    => 'SBEAMSName',
+                            -path    => "$cookie_path",
+                            -value   => \%cookie, 
+                            -expires => $chours ); 
+
+      $log->debug( "Session reauthentication is not being used" );
+    }
+
     my $head = $q->header(-cookie => $cookie);
 
     return $head;
@@ -1311,7 +1383,7 @@ limited to trusted machines (not yet implemented.)
 
 =over
 
-=item * B<checkLoggedIn()>
+=item * B<checkCachedAuth()>
 
     Checks to see if the current user is logged in.  This
     is done by searcing for the cookie that SBEAMS places
