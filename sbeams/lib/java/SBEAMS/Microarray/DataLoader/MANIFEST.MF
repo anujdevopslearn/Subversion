@@ -1,0 +1,3 @@
+Main-Class: DataLoader.DataLoader
+Class-Path: java-getopt-1.0.10.jar visad.jar experiment.jar jdom.jar SBEAMS.jar msv.jar isorelax.jar relaxngDatatype.jar xercesImpl.jar xmlParserAPIs.jar xsdlib.jar
+
