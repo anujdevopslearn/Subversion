@@ -5,8 +5,6 @@ PR_gradient_delta	Gradient Delta	Proteomics_infrastructure	NO	$TBPR_GRADIENT_DEL
 PR_fractionation_type	Fractionation Type	Proteomics_infrastructure	YES	$TBPR_FRACTIONATION_TYPE	fractionation_type_id		ManageTable.cgi?TABLE_NAME=PR_fractionation_type		
 PR_fraction	MS Run	Proteomics_user	YES	$TBPR_FRACTION	fraction_id		ManageTable.cgi?TABLE_NAME=PR_fraction		
 PR_msms_spectrum	MS/MS Spectrum	Proteomics_infrastructure	NO	$TBPR_MSMS_SPECTRUM	msms_spectrum_id				
-PR_msms_spectrum_annotation	MS/MS Spectrum Annotation	Proteomics_infrastructure	NO	$TBPR_MSMS_SPECTRUM_ANNOTATION	msms_spectrum_annotation				
-PR_quality_label	Quality Label	Proteomics_infrastructure	YES	$TBPR_QUALITY_LABEL	quality_label_id		ManageTable.cgi?TABLE_NAME=PR_quality_label	PR_quality_label	
 PR_msms_spectrum_peak	MS/MS Spectrum Peak	Proteomics_infrastructure	NO	$TBPR_MSMS_SPECTRUM_PEAK					
 PR_biosequence_set	BioSequence Set	Proteomics_infrastructure	YES	$TBPR_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=PR_biosequence_set	PR_biosequence_set	
 PR_dbxref	Biosequence Database Cross Reference	Proteomics_infrastructure	YES	$TB_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=PR_dbxref	PR_dbxref	
