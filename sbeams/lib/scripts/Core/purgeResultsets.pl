@@ -146,6 +146,13 @@ sub purgeResultsets {
   my $show_statistics = $args{'show_statistics'} || '';
 
 
+  #### If --purge not set, admit we're just testing
+  unless ($purge) {
+    print "INFO:  --purge is not set.  Actions will not actually be performed\n\n";
+  }
+
+
+
   #### Get a dump of all the entries in the cached_resultset table
   print "Fetching all resultsets in database...\n" if ($VERBOSE);
   my $sql = qq~
@@ -153,14 +160,12 @@ sub purgeResultsets {
       FROM $TB_CACHED_RESULTSET
   ~;
   my @resultsets = $sbeams->selectSeveralColumns($sql);
-  print "Got ".scalar(@resultsets)." resultsets from cached_resultset\n"
-    if ($VERBOSE);
+  print "Got ".scalar(@resultsets)." resultsets from cached_resultset\n";
 
   my %resultsets;
   foreach my $resultset (@resultsets) {
     $resultsets{$resultset->[0]} = $resultset;
   }
-
 
   #### Get a listing of all files in the directory
   #my $directory = "zztmp";
@@ -205,13 +210,13 @@ sub purgeResultsets {
 
     #### If this file has a table entry, make a note
     if (exists($resultsets{$file_root})) {
-      $complete_resultsets{$file_root} = '';
+      $complete_resultsets{$file_root} = 1;
 
     #### Else it's temporary resultset that doesn't need a table entry
     #### Purge it after 30 days
     } else {
       if ($age > 30.0) {
-	unlink("$directory/$file");
+	unlink("$directory/$file") if ($purge);
         $size_deleted_orphan += $file_size;
         $n_files_deleted_orphan++;
       }
@@ -224,19 +229,29 @@ sub purgeResultsets {
     if ($file_size > 10000000) {
       #printf("%10d  %10.2f  %s\n",$file_size,$age,$file);
       if ($age > 30.0) {
-        if (defined($resultsets{$file_root}->[2]) &&
+        if (defined($resultsets{$file_root}) &&
+	    defined($resultsets{$file_root}->[2]) &&
             $resultsets{$file_root}->[2] gt '') {
-          print "\nRetaining named resultset:\n";
-          printf("   %10d  %10.2f  %s     ",$file_size,$age,$file);
+          printf("\nRetaining %s (%7.2f MB) (aged %d days) (named '%s')...\n",
+                 $file,$file_size/1024/1024,$age,$resultsets{$file_root}->[2])
+	    if ($VERBOSE);
 	} else {
-	  print "\nPurging $file ($file_size bytes)...";
-	  $sql = qq~
-	    DELETE $TB_CACHED_RESULTSET
-	     WHERE cached_resultset_id = '$resultsets{$file_root}->[1]'
-	  ~;
-	  $sbeams->executeSQL($sql);
-	  unlink("$directory/$file_root.resultsets");
-	  unlink("$directory/$file_root.params");
+	  printf("\nPurging $file (%7.2f MB)...",$file_size/1024/1024);
+	  if (defined($resultsets{$file_root}->[1]) &&
+            $resultsets{$file_root}->[1] gt '') {
+ 	    $sql = qq~
+	      DELETE $TB_CACHED_RESULTSET
+	       WHERE cached_resultset_id = '$resultsets{$file_root}->[1]'
+	    ~;
+	    $sbeams->executeSQL($sql) if ($purge);
+	  } else {
+	    print "\n  Warning no resultset in database by that name!";
+	  }
+	  if ($purge) {
+	    unlink("$directory/$file_root.resultsets");
+	    unlink("$directory/$file_root.params");
+	  }
+	  delete($resultsets{$file_root});
           $size_deleted_large += $file_size;
           $n_files_deleted_large++;
 	}
@@ -246,23 +261,29 @@ sub purgeResultsets {
 
 
     #### Purge special cases if older than 7 days
-    if (defined($resultsets{$file_root}->[3]) &&
+    if (defined($resultsets{$file_root}) &&
+	defined($resultsets{$file_root}->[3]) &&
 	$resultsets{$file_root}->[3] eq 'Proteomics/GetSearchHits' &&
         $file_root =~ /pmallick/) {
       if ($age > 7.0) {
-        if (defined($resultsets{$file_root}->[2]) &&
+        if (defined($resultsets{$file_root}) &&
+	    defined($resultsets{$file_root}->[2]) &&
             $resultsets{$file_root}->[2] gt '') {
-          print "\nRetaining named resultset:\n";
-          printf("   %10d  %10.2f  %s     ",$file_size,$age,$file);
+          printf("\nRetaining %s (%d bytes) (aged %d days) (named '%s')...\n",
+                 $file,$file_size,$age,$resultsets{$file_root}->[2])
+	    if ($VERBOSE);
 	} else {
 	  #print "\nPurging $file ($file_size bytes)...";
 	  $sql = qq~
 	    DELETE $TB_CACHED_RESULTSET
 	     WHERE cached_resultset_id = '$resultsets{$file_root}->[1]'
 	  ~;
-	  $sbeams->executeSQL($sql);
-	  unlink("$directory/$file_root.resultset");
-	  unlink("$directory/$file_root.params");
+	  if ($purge) {
+	    $sbeams->executeSQL($sql);
+	    unlink("$directory/$file_root.resultset");
+	    unlink("$directory/$file_root.params");
+	  }
+	  delete($resultsets{$file_root});
           $size_deleted_special += $file_size;
           $n_files_deleted_special++;
 	}
@@ -292,35 +313,45 @@ sub purgeResultsets {
       print "$n_resultsets_with_no_file..."
         if ($n_resultsets_with_no_file/100 ==
 	    int($n_resultsets_with_no_file/100) && $VERBOSE);
-      $sql = qq~
+
+      if (defined($resultsets{$resultset}->[1]) &&
+          $resultsets{$resultset}->[1] gt '') {
+        $sql = qq~
 	    DELETE $TB_CACHED_RESULTSET
 	     WHERE cached_resultset_id = '$resultsets{$resultset}->[1]'
-      ~;
-      #print "($resultsets{$resultset}->[1])";
-      #$sbeams->executeSQL($sql);
+        ~;
+        #print "($resultsets{$resultset}->[1])";
+        $sbeams->executeSQL($sql) if ($purge);
+      } else {
+	print "\n",$resultsets{$resultset};
+        print "\n",join(',',@{$resultsets{$resultset}}),"\n";
+        exit;
+      }
+
     }
+
   }
 
 
   #### If the user wants to see the stats, show them
   if ($show_statistics) {
-    print "Cache directory contains:\n";
-    print "  Number of resultsets: ".scalar(@resultsets)."\n";
+    print "\n\nCache information:\n";
+    print "  Number of resultsets in database: ".scalar(@resultsets)."\n";
     print "  Number of files: $n_files\n";
     print "  Number of resultsets with no file: $n_resultsets_with_no_file\n";
-    print "  Total size of files: $size_total\n\n";
+    printf("  Total size of files: %.2f MB\n\n",$size_total/1024/1024);
 
     print "  Number of deleted orphan files: $n_files_deleted_orphan\n";
-    print "  Total size of deleted orphan files: $size_deleted_orphan\n";
-    print "  Total size of orphan files: $size_orphan\n\n";
+    printf("  Total size of deleted orphan files: %.2f MB\n",$size_deleted_orphan/1024/1024);
+    printf("  Total size of orphan files: %.2f MB\n\n",$size_orphan/1024/1024);
 
     print "  Number of deleted large files: $n_files_deleted_large\n";
-    print "  Total size of deleted large files: $size_deleted_large\n";
-    print "  Total size of large files: $size_large\n\n";
+    printf("  Total size of deleted large files: %.2f MB\n",$size_deleted_large/1024/1024);
+    printf("  Total size of large files: %.2f MB\n\n",$size_large/1024/1024);
 
     print "  Number of deleted special files: $n_files_deleted_special\n";
     print "  Total size of deleted special files: $size_deleted_special\n";
-    print "  Total size of special files: $size_special\n\n";
+    printf("  Total size of special files: %.2f MB\n\n",$size_special/1024/1024);
 
   }
 
