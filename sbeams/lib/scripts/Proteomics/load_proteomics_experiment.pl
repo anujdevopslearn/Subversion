@@ -23,6 +23,7 @@ use DirHandle;
 use lib qw (../perl ../../perl);
 use vars qw ($sbeams $sbeamsPROT $q
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TESTONLY
              $current_contact_id $current_username
             );
 
@@ -56,6 +57,10 @@ Options:
                       biosequence_set table
   --check_status      Is set, nothing is actually done, but rather the
                       biosequence_sets are verified
+  --list_all          If set, a list of experiments and the status is printed
+  --testonly          If set, nothing is actually inserted into the database,
+                      but we just go through all the motions.  Use --verbose
+                      to see all the SQL statements that would occur
   --force_ref_db      Normally this program expects the database name for
                       all sequest searches to be the same, but some old
                       fusty data has obsolete database information encoded
@@ -64,14 +69,17 @@ Options:
                       the database to be referenced.  Careful, this disables
                       some safety checks!
 
- e.g.:  $PROG_NAME --set_tag=rafapr --check
+ e.g.:  $PROG_NAME --list_all
+        $PROG_NAME --experiment_tag=rafapr --check
 
 EOU
 
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
-  "experiment_tag:s","file_prefix:s","check_status","force_ref_db:s")) {
+  "experiment_tag:s","file_prefix:s","check_status","force_ref_db:s",
+  "list_all"
+  )) {
   print "$USAGE";
   exit;
 }
@@ -128,10 +136,13 @@ sub handleRequest {
 
 
   #### Set the command-line options
-  my $check_status = $OPTIONS{"check_status"};
+  my $check_status = $OPTIONS{"check_status"} || '';
+  my $list_all = $OPTIONS{"list_all"} || '';
   my $experiment_tag = $OPTIONS{"experiment_tag"} || '';
   my $file_prefix = $OPTIONS{"file_prefix"} || '';
-  my $force_ref_db = $OPTIONS{'force_ref_db'};
+  my $force_ref_db = $OPTIONS{'force_ref_db'} || '';
+
+  $TESTONLY = $OPTIONS{'testonly'} || 0;
   $DATABASE = $DBPREFIX{'Proteomics'};
 
 
@@ -193,7 +204,7 @@ sub handleRequest {
 
   #### Loop over each experiment, determining its status and processing
   #### it if desired
-  print "        set_tag  n_fracs  n_srch  n_spec  set_path\n";
+  print "        set_tag  n_fracs  n_srch  n_spec  experiment_path\n";
   print "---------------  -------  ------  ------  -----------------------\n";
   foreach $experiment_id (@experiment_ids) {
     my $status = getExperimentStatus(
@@ -204,17 +215,20 @@ sub handleRequest {
       $status->{experiment_path});
 
     #### If we're not just checking the status
-    unless ($check_status) {
-      my $do_load = 0;
+    if ($list_all eq '' && $status->{experiment_path}) {
+      my $do_load = 1;
       #$do_load = 1 if ($status->{n_rows} == 0);
       #$do_load = 1 if ($update_existing);
       #$do_load = 1 if ($delete_existing);
 
       #### If it's determined that we need to do a load, do it
       if ($do_load) {
+        my $prefix = $file_prefix;
+        $prefix = '' if ($status->{experiment_path} =~ /\/dblocal/);
         $result = loadProteomicsExperiment(
-          experiment_tag=>$status->{experment_tag},
-          source_file=>$file_prefix.$status->{experiment_path});
+          experiment_tag=>$status->{experiment_tag},
+          source_dir=>$prefix.$status->{experiment_path});
+        print "\n";
       }
 
     }
@@ -248,7 +262,7 @@ sub getExperimentStatus {
   #### Get information about this biosequence_set_id from database
   $sql = qq~
           SELECT PE.experiment_id,experiment_name,experiment_tag,
-                 '???' AS 'experiment_path'
+                 experiment_path
 		   FROM $TBPR_PROTEOMICS_EXPERIMENT PE
            WHERE PE.experiment_id = '$experiment_id'
              AND PE.record_status != 'D'
@@ -312,7 +326,7 @@ sub loadProteomicsExperiment {
   #### Decode the argument list
   my $experiment_tag = $args{'experiment_tag'}
    || die "ERROR[$SUB_NAME]: experiment_tag not passed";
-  my $source_file = $args{'source_file'}
+  my $source_dir = $args{'source_dir'}
    || die "ERROR[$SUB_NAME]: source_file not passed";
 
 
@@ -322,23 +336,22 @@ sub loadProteomicsExperiment {
 
   #### Set the command-line options
   my $check_status = $OPTIONS{"check_status"};
-  my $experiment_tag = $OPTIONS{"experiment_tag"} || '';
   my $file_prefix = $OPTIONS{"file_prefix"} || '';
   my $force_ref_db = $OPTIONS{'force_ref_db'};
 
 
 
-  #### Get the source directory and verify that it looks right
-  my $source_dir = $ARGV[1];
+  #### Verify that the source directory looks right
   unless ( -d "$source_dir" ) {
-    bail_out("ERROR: $source_dir is not a directory!\n");
+    die("ERROR: '$source_dir' is not a directory!\n");
   }
 
-
-  unless ( -f "$source_dir/interact.htm" ) {
-    unless ( -f "$source_dir/finalInteract/interact.htm" ) {
-      bail_out("ERROR: Cannot find $source_dir/interact.htm!\n");
-    }
+  unless ( -f "$source_dir/interact.htm" ||
+           -f "$source_dir/finalInteract/interact.htm" ||
+           -f "$source_dir/sequest.params" ||
+           -f "source_dir/interact-prob-data.htm" ) {
+    die("ERROR: '$source_dir' just doesn't look like a sequest search ".
+        "directory");
   }
 
 
@@ -356,60 +369,91 @@ sub loadProteomicsExperiment {
 
   #### Find all the subdirectories and add them to @fractions
   my @fractions;
-  my $dir = new DirHandle "$source_dir";
-  if (defined $dir) {
-    while (defined($element = $dir->read())) {
-
-      #### If it's a directory but not ./ or ../
-      if ( -d "$source_dir/$element" && $element ne "." && $element ne "..") {
-
-        #### Then also verify that there's at least one .out file there
-        my $subdir = new DirHandle "$source_dir/$element";
-        my $OKflag = 0;
-        while ((!$OKflag) && defined($i = $subdir->read())) {
-          $OKflag++ if ($i =~ /\.out$/);
-        }
-
-        #### And if so, add it to out list
-        push(@fractions,$element) if ($OKflag);
-        #print "I hope to find data in $element\n" if ($VERBOSE);
-
-      } ## endif
-
-    } ## endwhile
-
-  } else {
-    die "ERROR: Unable to read directory '$dir'\n";
+  my @dir_contents = getDirListing($source_dir);
+  unless (@dir_contents) {
+    die "ERROR: Unable to read directory '$source_dir'\n";
   }
+
+  foreach $element (@dir_contents) {
+
+    #### If it's a directory but not ./ or ../
+    if ( -d "$source_dir/$element" && $element ne "." && $element ne "..") {
+
+      #### Then also verify that there's at least one .out file there
+      my $subdir = new DirHandle "$source_dir/$element";
+      my $OKflag = 0;
+      while ((!$OKflag) && defined($i = $subdir->read())) {
+        $OKflag++ if ($i =~ /\.out$/);
+      }
+
+      #### And if so, add it to out list
+      push(@fractions,$element) if ($OKflag);
+
+    } ## end if
+
+  } ## end foreach
+
+
+  #### Define a hash to hold the fraction_id's
+  my %fraction_ids;
 
 
   #### For each @fraction, check to see if it's already in the database
   #### and if not, INSERT it
   my $fraction_id;
-  my @fraction_ids;
+  my @returned_fraction_ids;
   foreach $element (@fractions) {
+
+    #### Determine how many fractions respond to this name
     $sql="SELECT fraction_id\n".
-               "  FROM $TBPR_FRACTION\n".
-               " WHERE experiment_id = $experiment_id\n".
-               "   AND fraction_tag = '$element'";
-    @fraction_ids = $sbeams->selectOneColumn($sql);
-    if (! @fraction_ids) {
-      print "Nothing in the database for $element yet.  Adding it...\n";
+         "  FROM $TBPR_FRACTION\n".
+         " WHERE experiment_id = $experiment_id\n".
+         "   AND fraction_tag = '$element'";
+    @returned_fraction_ids = $sbeams->selectOneColumn($sql);
+
+    #### If none, then we need to add this fraction
+    if (! @returned_fraction_ids) {
+      if ($check_status) {
+        print "Entry for faction '$element' needs to be added\n";
+        next;
+      }
+      print "Adding fraction '$element' to database\n";
       my $tmp = $element;
       $tmp =~ s/$experiment_tag//;
       $tmp =~ /^.*?(\d+).*?$/;
       my $fraction_number = $1;
-      $sql="INSERT INTO $TBPR_FRACTION\n".
-                 "       (experiment_id,fraction_tag,fraction_number)\n".
-                 "VALUES ('$experiment_id','$element','$fraction_number')";
-      $sbeams->executeSQL($sql);
-    } elsif ($#fraction_ids == 0) {
-      #print "OK, already a record for $element\n";
+
+      my %rowdata;
+      $rowdata{experiment_id} = $experiment_id;
+      $rowdata{fraction_tag} = $element;
+      $rowdata{fraction_number} = $fraction_number;
+      $fraction_id = $sbeams->insert_update_row(
+        insert=>1,
+        table_name=>$TBPR_FRACTION,
+        rowdata_ref=>\%rowdata,
+        PK_name=>'fraction_id',
+        return_PK=>1,
+        verbose=>$VERBOSE,
+        testonly=>$TESTONLY.$check_status,
+      );
+
+      $fraction_ids{$element} = $fraction_id;
+
+
+    #### Else if there is exactly one, mention that it's already there
+    } elsif (scalar(@returned_fraction_ids) == 1) {
+      print "There is already an entry for fraction '$element'\n";
+      $fraction_ids{$element} = $returned_fraction_ids[0];
+
+
+    #### If we get more than one, this is bad so die horribly
     } else {
-      my $tmp = $#fraction_ids + 1;
-      print "ERROR: Found $tmp records for $element already!\n";
+      my $tmp = scalar(@returned_fraction_ids);
+      die("ERROR: Found $tmp records for $element already!");
     }
+
   }
+
 
 
   #### For each @fraction, descend into the directory and start loading
@@ -421,123 +465,103 @@ sub loadProteomicsExperiment {
   my $msms_spectrum_id;
   my $outfile;
   foreach $element (@fractions) {
-    $sql="SELECT fraction_id\n".
-               "  FROM $TBPR_FRACTION\n".
-               " WHERE experiment_id = $experiment_id\n".
-               "   AND fraction_tag = '$element'";
-    @fraction_ids = $sbeams->selectOneColumn($sql);
 
     #### Die if the fraction does not already exist in database
-    if (!@fraction_ids) {
+    $fraction_id = $fraction_ids{$element};
+    unless ($fraction_id) {
       die "ERROR: Nothing in the database for fraction $element yet!\n";
-
-    #### If exactly one fraction was found, go to work!
-    } elsif ($#fraction_ids == 0) {
-      ($fraction_id) = @fraction_ids;
-
-      #### Get a list of all files in the subdirectory
-      my $subdir = new DirHandle "$source_dir/$element";
-      my $filecounter = 0;
-      my @file_list = ();
+    }
 
 
-      #### Make a sorted list of all files
-      while (defined($file = $subdir->read())) {
-        push(@file_list,$file);
-      }
-      @file_list = sort(@file_list);
+    #### Get a list of all files in the subdirectory
+    my $filecounter = 0;
+    my @file_list = getDirListing("$source_dir/$element");
 
-      print "\nProcessing data in $element\n";
+    print "\nProcessing data in $element\n";
 
-      #### Loop over each file, INSERTing into database if a .dta file
-      foreach $file (@file_list) {
+    #### Loop over each file, INSERTing into database if a .dta file
+    foreach $file (@file_list) {
 
-        if ($file =~ /\.dta$/) {
+      if ($file =~ /\.dta$/) {
 
-          #### Insert the contents of the .dta file into the database and
-          #### return the autogen PK, or if it already exists (from
-          #### another search batch) then just return that PK
-          $msms_spectrum_id = addMsmsSpectrumEntry("$source_dir/$element/$file",
-            $fraction_id);
-          unless ($msms_spectrum_id) {
-            die "ERROR: Did not receive msms_spectrum_id\n";
-          }
-
-
-          #### Set $outfile to the corresponding .out file
-          $outfile = $file;
-          $outfile =~ s/\.dta/.out/;
-
-
-          #### Sometimes there's no corresponding .out file
-          unless ( -e "$source_dir/$element/$outfile" ) {
-            print "\nWARNING: file '$source_dir/$element/$outfile' does not ".
-                  "exist! (but the .dta file does).  oh well. \n";
-            next;
-          }
-
-
-          #### Load the .out file
-          my %data = readOutFile(
-            inputfile => "$source_dir/$element/$outfile");
-          my $file_root = ${$data{parameters}}{file_root};
-          my $mass = ${$data{parameters}}{sample_mass_plus_H};
-
-          #### if $search_database not yet defined (very first .out file)
-          #### then create and entry so we know $search_batch_id
-          unless ($search_database) {
-            $search_database = ${$data{parameters}}{search_database};
-            if ($force_ref_db) {
-              print "Overriding detected database '$search_database' with ".
-                "supplied forced '$force_ref_db'\n";
-              $search_database = $force_ref_db;
-            }
-            $search_batch_id = addSearchBatchEntry($experiment_id,
-              $search_database,"$source_dir/$element");
-          }
-
-          #### If $search_database is different from the {search_database}
-          #### in parameters, we have a violation of assumption (that
-          #### all files to be loaded are from same search_batch) and must die
-          unless ($force_ref_db) {
-            unless ($search_database eq ${$data{parameters}}{search_database}) {
-              die "ERROR: Data appear to come from more than one \n".
-                  "       search_database!  This is totally unexpected\n".
-                  "       '$search_database' != ".
-                  "'${$data{parameters}}{search_database}'\n";
-            }
-          }
-
-
-          #### Insert the entry into table "search"
-          #print "=====================================================\n";
-          $search_id = addSearchEntry($data{parameters},
-            $search_batch_id,$msms_spectrum_id);
-
-
-          #### Insert the entries into table "search_hit"
-          $search_hit_id = addSearchHitEntry($data{matches},$search_id);
-
-
-          #print "Successfully loaded $file_root (mass = $mass)\n";
-          print ".";
-          $filecounter++;
+        #### Insert the contents of the .dta file into the database and
+        #### return the autogen PK, or if it already exists (from
+        #### another search batch) then just return that PK
+        $msms_spectrum_id = addMsmsSpectrumEntry(
+          "$source_dir/$element/$file",$fraction_id);
+        unless ($msms_spectrum_id) {
+          die "ERROR: Did not receive msms_spectrum_id\n";
         }
 
 
-        #exit if ($filecounter > 5);
+        #### Set $outfile to the corresponding .out file
+        $outfile = $file;
+        $outfile =~ s/\.dta/.out/;
 
 
-      } ## endwhile
+        #### Sometimes there's no corresponding .out file
+        unless ( -e "$source_dir/$element/$outfile" ) {
+          print "\nWARNING: file '$source_dir/$element/$outfile' does not ".
+                "exist! (but the .dta file does).  oh well. \n";
+          next;
+        }
 
-      print "\nFound $filecounter .out files to process\n";
+
+        #### Load the .out file
+        my %data = $sbeamsPROT->readOutFile(
+          inputfile => "$source_dir/$element/$outfile");
+        my $file_root = ${$data{parameters}}{file_root};
+        my $mass = ${$data{parameters}}{sample_mass_plus_H};
+
+        #### if $search_database not yet defined (very first .out file)
+        #### then create and entry so we know $search_batch_id
+        unless ($search_database) {
+          $search_database = ${$data{parameters}}{search_database};
+          if ($force_ref_db) {
+            print "Overriding detected database '$search_database' with ".
+              "supplied forced '$force_ref_db'\n";
+            $search_database = $force_ref_db;
+          }
+          $search_batch_id = addSearchBatchEntry($experiment_id,
+            $search_database,"$source_dir/$element");
+        }
+
+        #### If $search_database is different from the {search_database}
+        #### in parameters, we have a violation of assumption (that
+        #### all files to be loaded are from same search_batch) and must die
+        unless ($force_ref_db) {
+          unless ($search_database eq ${$data{parameters}}{search_database}) {
+            die "ERROR: Data appear to come from more than one \n".
+                "       search_database!  This is totally unexpected\n".
+                "       '$search_database' != ".
+                "'${$data{parameters}}{search_database}'\n";
+          }
+        }
 
 
-    #### If more than one fraction is found, die.  This should never happen
-    } else {
-      my $tmp = $#fraction_ids + 1;
-      die "ERROR: Found $tmp records for $element already!\n";
-    }
+        #### Insert the entry into table "search"
+        #print "=====================================================\n";
+        $search_id = addSearchEntry($data{parameters},
+          $search_batch_id,$msms_spectrum_id);
+
+
+        #### Insert the entries into table "search_hit"
+        $search_hit_id = addSearchHitEntry($data{matches},$search_id);
+
+
+        #print "Successfully loaded $file_root (mass = $mass)\n";
+        print ".";
+        $filecounter++;
+      }
+
+
+      #exit if ($filecounter > 2);
+
+
+    } ## endwhile
+
+    print "\nFound $filecounter .out files to process\n";
+
 
   } ## endforeach
 
@@ -551,6 +575,7 @@ sub loadProteomicsExperiment {
 ###############################################################################
 
 
+
 ###############################################################################
 # addMsmsSpectrumEntry: find or make a new entry in msms_spectrum table
 ###############################################################################
@@ -562,7 +587,7 @@ sub addMsmsSpectrumEntry {
 
 
   #### Read in the specified file
-  my $result = readDtaFile(inputfile => "$inputfile");
+  my $result = $sbeamsPROT->readDtaFile(inputfile => "$inputfile");
   unless ($result) {
     die "ERROR: Unable to read dta file '$inputfile'\n";
   }
@@ -591,25 +616,27 @@ sub addMsmsSpectrumEntry {
   my $end_scan = ${$result}{parameters}->{end_scan};
   my $n_peaks = ${$result}{parameters}->{n_peaks};
 
-  $sql_query = qq~
-      INSERT INTO $TBPR_MSMS_SPECTRUM ( fraction_id,msms_spectrum_file_root,
-      	start_scan,end_scan,n_peaks )
-      VALUES ( '$fraction_id','$file_root',
-      	'$start_scan','$end_scan','$n_peaks' )
-  ~;
+  my %rowdata;
+  $rowdata{fraction_id} = $fraction_id;
+  $rowdata{msms_spectrum_file_root} = $file_root;
+  $rowdata{start_scan} = $start_scan;
+  $rowdata{end_scan} = $end_scan;
+  $rowdata{n_peaks} = $n_peaks;
+  $msms_spectrum_id = $sbeams->insert_update_row(
+    insert=>1,
+    table_name=>$TBPR_MSMS_SPECTRUM,
+    rowdata_ref=>\%rowdata,
+    PK=>'msms_spectrum_id',
+    return_PK=>1,
+    verbose=>$VERBOSE,
+    testonly=>$TESTONLY,
+  );
 
-  print "$sql_query\n\n" if $VERBOSE;
-  $sbeams->executeSQL("$sql_query");
 
-
-  #### Now obtain the autogen key that was just INSERTed
-  unless ($msms_spectrum_id = $sbeams->getLastInsertedPK()) {
-    die "ERROR: Failed to retreive PK search_batch_id\n";
+  #### Verify that we got the autogen key that was just INSERTed
+  unless ($msms_spectrum_id) {
+    die "ERROR: Failed to retreive PK msms_spectrum_id\n";
   }
-
-
-  #### Unecomment to avoid inserting the spectral information
-  #return $msms_spectrum_id;
 
 
   #### Now insert all the mass,intensity pairs
@@ -627,13 +654,19 @@ sub addMsmsSpectrumEntry {
     if ($create_bcp_file) {
       print SPECFILE "$msms_spectrum_id\t$mass\t$intensity\r\n";
     } else {
-      $sql_query = qq~
-        INSERT INTO $TBPR_MSMS_SPECTRUM_PEAK ( msms_spectrum_id,mass,intensity )
-        VALUES ( '$msms_spectrum_id','$mass','$intensity' )
-      ~;
 
-      #print "$sql_query\n\n" if $VERBOSE;
-      $sbeams->executeSQL("$sql_query");
+      my %rowdata;
+      $rowdata{msms_spectrum_id} = $msms_spectrum_id;
+      $rowdata{mass} = $mass;
+      $rowdata{intensity} = $intensity;
+      $sbeams->insert_update_row(
+    	insert=>1,
+    	table_name=>$TBPR_MSMS_SPECTRUM_PEAK,
+    	rowdata_ref=>\%rowdata,
+        verbose=>$VERBOSE,
+        testonly=>$TESTONLY,
+      );
+
     }
 
   }
@@ -687,13 +720,21 @@ sub addSearchBatchEntry {
   if (! @search_batch_ids) {
     print "INFO: Need to add a search_batch for these data\n";
 
-    $sql_query = qq~
-      INSERT INTO $TBPR_SEARCH_BATCH (experiment_id,biosequence_set_id)
-      VALUES ( $experiment_id,$biosequence_set_id )
-    ~;
-    print "$sql_query\n\n" if $VERBOSE;
-    $sbeams->executeSQL("$sql_query");
-    unless ($search_batch_id = $sbeams->getLastInsertedPK()) {
+    my %rowdata;
+    $rowdata{experiment_id} = $experiment_id;
+    $rowdata{biosequence_set_id} = $biosequence_set_id;
+    $rowdata{data_location} = $directory;
+    $search_batch_id = $sbeams->insert_update_row(
+  	insert=>1,
+  	table_name=>$TBPR_SEARCH_BATCH,
+  	rowdata_ref=>\%rowdata,
+        PK=>'search_batch_id',
+        return_PK=>1,
+        verbose=>$VERBOSE,
+        testonly=>$TESTONLY,
+    );
+
+    unless ($search_batch_id) {
       die "ERROR: Failed to retreive PK search_batch_id\n";
     }
 
@@ -706,11 +747,11 @@ sub addSearchBatchEntry {
 
 
   #### If there's exactly one, the that's what we want
-  } elsif ($#search_batch_ids == 0) {
+  } elsif (scalar(@search_batch_ids) == 1) {
     $search_batch_id = $search_batch_ids[0];
 
   #### If there's more than one, we have a big problem
-  } elsif ($#search_batch_ids > 0) {
+  } elsif (scalar(@search_batch_ids) > 1) {
     die "ERROR: Found too many records for\n$sql_query\n";
   }
 
@@ -739,36 +780,38 @@ sub addSearchEntry {
     "search_date","search_elapsed_min","search_host" );
 
 
-  #### Build the VALUES part of the SQL statement
+  #### Define the data for this row
   my ($element,$tmp);
-  my @sql_values;
+  my %rowdata;
+  $rowdata{search_batch_id} = $search_batch_id;
+  $rowdata{msms_spectrum_id} = $msms_spectrum_id;
+
+
+  #### Add each of the columns
   foreach $element (@columns) {
-    $tmp = $parameters_ref->{$element};
-    $tmp =~ s/\'/\'\'/g;
-    push(@sql_values,"'$tmp'");
+    $rowdata{$element} = $parameters_ref->{$element};
   }
 
 
-  #### Build the whole SQL statement and execute
-  my $sql_query = "INSERT INTO $TBPR_SEARCH ( search_batch_id,msms_spectrum_id,".
-    join(",",@columns)." )\n".
-    "VALUES ( $search_batch_id,$msms_spectrum_id,".join(",",@sql_values)." )";
+  #### INSERT the search row
+  my $search_id = $sbeams->insert_update_row(
+    insert=>1,
+    table_name=>$TBPR_SEARCH,
+    rowdata_ref=>\%rowdata,
+    PK=>'search_id',
+    return_PK=>1,
+    verbose=>$VERBOSE,
+    testonly=>$TESTONLY,
+  );
 
-  print "$sql_query\n\n" if $VERBOSE;
-  $sbeams->executeSQL("$sql_query");
-
-
-  #### Retrieve the autogen key for the just-inserted row
-  my $search_id;
-  unless ($search_id = $sbeams->getLastInsertedPK()) {
-    die "ERROR: Failed to retreive PK search_id\n";
-  }
-
+  #### Verify successful INSERT
+  die "ERROR: Failed to retreive PK search_id" unless ($search_id);
 
   #### Return that key if successful
   return $search_id;
 
 }
+
 
 
 ###############################################################################
@@ -781,9 +824,10 @@ sub addSearchHitEntry {
     || die "ERROR addSearchBatch: missing parameter 2: search_id\n";
 
 
-  #### Define the data columns for table "search_hit"
+  #### Define the data columns for table search_hit
   my @columns = ( "hit_index","cross_corr_rank","prelim_score_rank",
-    "hit_mass_plus_H","mass_delta","cross_corr","norm_corr_delta","prelim_score",
+    "hit_mass_plus_H","mass_delta","cross_corr","norm_corr_delta",
+    "prelim_score",
     "identified_ions","total_ions","reference","additional_proteins",
     "peptide","peptide_string" );
 
@@ -799,45 +843,72 @@ sub addSearchHitEntry {
   }
 
 
-  #### Loop over each row
+  #### Define some variables
   my ($match,$element,$tmp,$i,$last_cols);
   my $n_matches = $#matches;
+
+  #### Loop over each row
   for ($i=0; $i<=$n_matches; $i++) {
     $match = $matches[$i];
 
-    #### Build the VALUES part of the SQL statement
-    my @sql_values;
+    #### Define the data to be inserted for this row
+    my %rowdata;
+    $rowdata{search_id} = $search_id; 
     foreach $element (@columns) {
-      $tmp = $match->{$element};
-      $tmp =~ s/\'/\'\'/g;
-      push(@sql_values,"'$tmp'");
+      $rowdata{$element} = $match->{$element};
     }
 
-    #### If there are more rows then, add the dCn to next row
+    #### If there are more rows, then add the dCn to next row
     $last_cols = "";
     if ($i<$n_matches) {
-      $last_cols .= ",next_dCn";
-      $tmp = $matches[$i+1]->{norm_corr_delta} - $match->{norm_corr_delta};
-      push(@sql_values,"'$tmp'");
+      $rowdata{next_dCn} = $matches[$i+1]->{norm_corr_delta} - 
+        $match->{norm_corr_delta};
     }
-
 
     #### If this is the first row, then label it with best_hit_flag
-    if ($i==0) {
-      $last_cols .= ",best_hit_flag";
-      push(@sql_values,"'D'");
+    if ($i == 0) {
+      $rowdata{best_hit_flag} = 'D'; 
+    }
+
+    #### If there's a search_hit_proteins element present, then set
+    #### return_PK flag in preparation for adding the additional proteins
+    my $return_PK = 0;
+    $return_PK = 1 if (defined($match->{search_hit_proteins}));
+
+    #### INSERT the search_hit row
+    my $search_hit_id = $sbeams->insert_update_row(
+      insert=>1,
+      table_name=>$TBPR_SEARCH_HIT,
+      rowdata_ref=>\%rowdata,
+      PK=>'search_hit_id',
+      return_PK=>$return_PK,
+      verbose=>$VERBOSE,
+      testonly=>$TESTONLY,
+    );
+
+    #### Verify success
+    die "Unable to insert into $TBPR_SEARCH_HIT" unless ($search_hit_id);
+
+    #### If there are additional proteins, insert those
+    if (defined($match->{search_hit_proteins})) {
+      %rowdata = ();
+      $rowdata{search_hit_id} = $search_hit_id;
+      foreach $element (@{$match->{search_hit_proteins}}) {
+        $rowdata{reference} = $element;
+        $sbeams->insert_update_row(
+  	  insert=>1,
+  	  table_name=>$TBPR_SEARCH_HIT_PROTEIN,
+  	  rowdata_ref=>\%rowdata,
+          verbose=>$VERBOSE,
+          testonly=>$TESTONLY,
+  	);
+
+      }
+
     }
 
 
-    #### Build the whole SQL statement and execute
-    my $sql_query = "INSERT INTO $TBPR_SEARCH_HIT ( search_id,".
-      join(",",@columns)."$last_cols )\n".
-      "VALUES ( $search_id,".join(",",@sql_values)." )";
-
-    print "$sql_query\n\n" if $VERBOSE;
-    $sbeams->executeSQL("$sql_query");
-
-  }
+  } # endfor
 
 
   return 1;
@@ -856,15 +927,18 @@ sub addParamsEntries {
     || die "ERROR addSearchBatch: missing parameter 2: directory\n";
 
 
+  #### Assume the location of the search parameters file
   my $file = "$directory/sequest.params";
 
+  #### Complain and return if the file does not exist
   if ( ! -e "$file" ) {
     print "ERROR: Unable to find sequest parameter file: '$file'\n";
     return;
   }
 
 
-  my $result = readParamsFile(inputfile => "$file");
+  #### Read in the search parameters file
+  my $result = $sbeamsPROT->readParamsFile(inputfile => "$file");
   unless ($result) {
     print "ERROR: Unable to read sequest parameter file: '$file'\n";
     return;
@@ -876,18 +950,21 @@ sub addParamsEntries {
   my $counter = 0;
   foreach $key (@{${$result}{keys_in_order}}) {
 
-    $value = ${$result}{parameters}->{$key};
-    $value =~ s/\'/\'\'/g;
+    #### Define the data for this row
+    my %rowdata;
+    $rowdata{search_batch_id} = $search_batch_id;
+    $rowdata{key_order} = $counter;
+    $rowdata{parameter_key} = $key;
+    $rowdata{parameter_value} = ${$result}{parameters}->{$key};
 
-    #### Build the whole SQL statement and execute
-    my $sql_query = qq~
-      INSERT INTO $TBPR_SEARCH_BATCH_PARAMETER
-      	( search_batch_id,key_order,parameter_key,parameter_value )
-      VALUES  ( '$search_batch_id',$counter,'$key','$value' )
-    ~;
-
-    print "$sql_query\n\n" if $VERBOSE;
-    $sbeams->executeSQL("$sql_query");
+    #### INSERT it
+    $sbeams->insert_update_row(
+	insert=>1,
+	table_name=>$TBPR_SEARCH_BATCH_PARAMETER,
+	rowdata_ref=>\%rowdata,
+        verbose=>$VERBOSE,
+        testonly=>$TESTONLY,
+    );
 
     $counter++;
 
@@ -899,3 +976,18 @@ sub addParamsEntries {
 }
 
 
+
+###############################################################################
+# getDirectoryListing
+###############################################################################
+sub getDirListing {
+  my $dir = shift;
+  my @files;
+
+  opendir(DIR, $dir)
+    || die "[${PROG_NAME}:getDirListing] Cannot open $dir: $!";
+  @files = grep (!/(^\.$)|(^\.\.$)/, readdir(DIR));
+  closedir(DIR);
+
+  return sort(@files);
+}
