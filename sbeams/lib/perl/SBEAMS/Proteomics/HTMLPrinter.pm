@@ -43,10 +43,33 @@ sub new {
 # printPageHeader
 ###############################################################################
 sub printPageHeader {
+  my $self = shift;
+  $self->display_page_header(@_);
+}
+
+
+###############################################################################
+# display_page_header
+###############################################################################
+sub display_page_header {
     my $self = shift;
     my %args = @_;
 
     my $navigation_bar = $args{'navigation_bar'} || "YES";
+
+    #### If the output mode is interactive text, display text header
+    my $sbeams = $self->getSBEAMS();
+    if ($sbeams->output_mode() eq 'interactive') {
+      $sbeams->printTextHeader();
+      return;
+    }
+
+
+    #### If the output mode is not html, then we don't want a header here
+    if ($sbeams->output_mode() ne 'html') {
+      return;
+    }
+
 
     #### Obtain main SBEAMS object and use its http_header
     $sbeams = $self->getSBEAMS();
@@ -94,26 +117,30 @@ sub printPageHeader {
 	<table border=0 width="120" cellpadding=2 cellspacing=0>
 
 	<tr><td><a href="$CGI_BASE_DIR/main.cgi">$DBTITLE Home</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/main.cgi">$SBEAMS_PART Home</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi">$SBEAMS_PART Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=project"<nobr>&nbsp;&nbsp;&nbsp;Projects</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=proteomics_experiment"><nobr>&nbsp;&nbsp;&nbsp;Experiments</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project"<nobr>&nbsp;&nbsp;&nbsp;Projects</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=proteomics_experiment"><nobr>&nbsp;&nbsp;&nbsp;Experiments</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=dbxref"><nobr>&nbsp;&nbsp;&nbsp;DB XRefs</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=dbxref"><nobr>&nbsp;&nbsp;&nbsp;DB XRefs</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_gradient_program"><nobr>&nbsp;&nbsp;&nbsp;Gradient Program</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/SummarizeExperiment.cgi"><nobr>&nbsp;&nbsp;&nbsp;Summarize Exp's</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse Search Hits</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/BrowseAnnotatedPeptides.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse Annotated</nobr><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Peptides</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/CompareExperiments.cgi"><nobr>&nbsp;&nbsp;&nbsp;Compare Exp's</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeExperiment.cgi"><nobr>&nbsp;&nbsp;&nbsp;Summarize Exp's</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetSearchHits"><nobr>&nbsp;&nbsp;&nbsp;Browse Search Hits</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseAnnotatedPeptides.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse Annotated</nobr><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Peptides</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/CompareExperiments"><nobr>&nbsp;&nbsp;&nbsp;Compare Exp's</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Special Interfaces:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/flycat.cgi"><nobr>&nbsp;&nbsp;&nbsp;FLYCAT</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/flycat.cgi"><nobr>&nbsp;&nbsp;&nbsp;FLYCAT</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>
+	<tr><td>Documentation:</td></tr>
+	<tr><td><a href="$HTML_BASE_DIR/doc/$SBEAMS_SUBDIR/$SBEAMS_PART.gif"><nobr>&nbsp;&nbsp;&nbsp;Schema (GIF)</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Other Tools:</td></tr>
 	<tr><td><a href="http://db.systemsbiology.net:8080/proteomicsToolkit/"><nobr>&nbsp;&nbsp;&nbsp;Proteomics Toolkit</nobr></a></td></tr>
@@ -194,23 +221,60 @@ sub printJavascriptFunctions {
 
 
 
-
-
 ###############################################################################
 # printPageFooter
 ###############################################################################
 sub printPageFooter {
   my $self = shift;
-  my $flag = shift || "CloseTablesAndPrintFooter";
+  $self->display_page_footer(@_);
+}
 
-  if ($flag =~ /CloseTables/) {
+
+###############################################################################
+# display_page_footer
+###############################################################################
+sub display_page_footer {
+  my $self = shift;
+  my %args = @_;
+
+
+  #### If the output mode is interactive text, display text header
+  my $sbeams = $self->getSBEAMS();
+  if ($sbeams->output_mode() eq 'interactive') {
+    $sbeams->printTextHeader(%args);
+    return;
+  }
+
+
+  #### If the output mode is not html, then we don't want a header here
+  if ($sbeams->output_mode() ne 'html') {
+    return;
+  }
+
+
+  #### Process the arguments list
+  my $close_tables = $args{'close_tables'} || 'YES';
+  my $display_footer = $args{'display_footer'} || 'YES';
+  my $separator_bar = $args{'separator_bar'} || 'NO';
+
+
+  #### If closing the content tables is desired
+  if ($close_tables eq 'YES') {
     print qq~
 	</TD></TR></TABLE>
 	</TD></TR></TABLE>
     ~;
   }
 
-  if ($flag =~ /Footer/) {
+
+  #### If displaying a fat bar separtor is desired
+  if ($separator_bar eq 'YES') {
+    print "<BR><HR SIZE=5 NOSHADE><BR>\n";
+  }
+
+
+  #### If finishing up the page completely is desired
+  if ($display_footer eq 'YES') {
     print qq~
 	<BR><HR SIZE="2" NOSHADE WIDTH="30%" ALIGN="LEFT">
 	SBEAMS - $SBEAMS_PART [Under Development]<BR><BR><BR>
@@ -218,7 +282,8 @@ sub printPageFooter {
     ~;
   }
 
-}
+} # end display_page_footer
+
 
 
 ###############################################################################
