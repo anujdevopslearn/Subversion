@@ -329,7 +329,7 @@ CREATE TABLE dbo.fraction (
 	fraction_tag		varchar(50) NOT NULL,
 	fraction_number		int NOT NULL,
 	fraction_date		datetime NULL,
-	gradient_program_id	int NOT NULL REFERENCES gradient_program(gradient_program_id),
+	gradient_program_id	int NULL REFERENCES gradient_program(gradient_program_id),
 	column_delay		real NULL,
 	PRIMARY KEY CLUSTERED (fraction_id)
 )
