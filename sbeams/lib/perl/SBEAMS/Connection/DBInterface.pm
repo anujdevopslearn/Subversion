@@ -2453,6 +2453,87 @@ sub unix2dosFile {
 
 
 
+###############################################################################
+# getModules: Get the list of Modules available to us
+###############################################################################
+sub getModules {
+  my $self = shift || croak("parameter self not passed");
+  my %args = @_;
+
+
+  #### Try to read the available modules file
+  my @modules;
+  @modules = $self->readModuleFile(
+    source_file=>"$PHYSICAL_BASE_DIR/lib/conf/Core/AvailableModules.conf");
+
+  #### Try to read the main distributed modules file
+  unless (@modules) {
+    @modules = $self->readModuleFile(
+      source_file=>"$PHYSICAL_BASE_DIR/lib/conf/Core/Modules.conf");
+  }
+
+
+  #### Return whatever we got
+  return @modules;
+
+} # end getModules
+
+
+
+###############################################################################
+# readModuleFile: Get the list of Modules available to us
+###############################################################################
+sub readModuleFile {
+  my $self = shift || croak("parameter self not passed");
+  my %args = @_;
+
+
+  #### Define some basic stuff
+  my $SUB_NAME = 'readModuleFile';
+  my ($i,$line);
+
+
+  #### Decode the argument list
+  my $source_file = $args{'source_file'}
+    || die "$SUB_NAME: Must provide a source_file";
+  my $verbose = $args{'verbose'} || 0;
+
+
+  #### Verify the existence of the file
+  return unless ($source_file);
+  unless ( -e $source_file ) {
+    print "$SUB_NAME: source_file '$source_file' does not exist\n"
+      if ($verbose);
+    return;
+  }
+
+
+  #### Open the file
+  unless (open(INFILE,"$source_file")) {
+    die("$SUB_NAME: Cannot open source_file '$source_file'");
+  }
+
+
+  #### Read in all the modules
+  my @modules = ();
+  while ($line = <INFILE>) {
+    $line =~ s/[\r\n]//g;
+    next if ($line =~ /^\#/);
+    next if ($line =~ /^\s+$/);
+    next unless ($line);
+    push(@modules,$line);
+  }
+  close(INFILE);
+
+
+  #### Return whatever we got
+  return @modules;
+
+} # end readModuleFile
+
+
+
+
 
 ###############################################################################
 
