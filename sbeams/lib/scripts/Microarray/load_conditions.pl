@@ -408,24 +408,28 @@ sub insertGeneExpression {
 		if ($set_tag && $id_hash_ref) {
 				my %id_hash = %{$id_hash_ref};
 				$sql = qq~
-						SELECT GE.gene_name, GE.gene_expression_id
+						SELECT GE.gene_name, GE.second_name, GE.gene_expression_id,
 						FROM gene_expression GE
 						WHERE GE.condition_id = '$condition_id'
 						~;
+				@rows = $sbeams->selectHashArray($sql);
 
-				my %ge_hash = $sbeams->selectTwoColumnHash($sql);
+				## make the final hash
+				foreach my $temp_row (@rows) {
+						my %temp_hash = %{$temp_row};
+						$ge_hash{$temp_hash{'gene_name'}} = $temp_hash{'gene_expression_id'};
+						$ge_hash{$temp_hash{'second_name'}} = $temp_hash{'gene_expression_id'};
+				}
 
-				my @keys = keys %id_hash;#gene names
-				my @values = values %id_hash;#biosequence_ids
-				
-				while (@keys){
-						my $key = pop (@keys);
-						my $value = pop (@values);
-						if ($ge_hash{$key}){
-								print "UPDATEing $value\n";
-								my $ge_id = $ge_hash{$key};
+
+				## For each gene_expression record, try to find a corresponding biosequence
+				while ( my($key,$value) = each %ge_hash ){
+						my $result = %id_hash{$key};
+						if ($result){
+								print "UPDATEing $key\n";
+								my $ge_id = $value;
 								my %rowdata;
-								$rowdata{'biosequence_id'} = $value;
+								$rowdata{'biosequence_id'} = $result;
 								my $rowdata_ref = \%rowdata;
 								$sbeams->updateOrInsertRow(table_name=>'gene_expression',
 																					 rowdata_ref=>$rowdata_ref,
