@@ -91,6 +91,30 @@ sub new {
 }
 
 #######################################################
+# get_analysis_types
+# Give affy analysis object
+# Return return an array of analysis types
+#
+#######################################################
+sub get_analysis_types {
+
+	my $method = 'get_analysis_types';
+	my $self = shift;
+	my @analysis_types = ();
+	unless (ref $self) {
+		confess( __PACKAGE__ . "::$method Must provide an affy analysis object\n");
+	}
+	
+	foreach my $analysis_name_type (sort keys %{$self->{_DATA_TYPES}}){
+		push @analysis_types, $analysis_name_type;
+	}
+	unless (scalar @analysis_types >= 1){
+		die "THERE WAS NO ANALYSIS TYPES IN THIS AFFY ANALYSIS OBJECT. THIS IS NOT GOOD\n"
+	}
+	return @analysis_types;
+}
+
+#######################################################
 # check_for_analysis_data
 # Give affy_analysis_name
 # Return  the folders that exists from previous analysis sessions
