@@ -445,6 +445,15 @@ sub printEntryForm {
       }
 
 
+      #### Build PROBABILITY constraint
+      my $probability_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"SH.probability",
+        constraint_type=>"flexible_float",
+        constraint_name=>"Probability Constraint",
+        constraint_value=>$parameters{probability_constraint} );
+      return if ($probability_clause == -1);
+
+
       #### Build XCORR constraint
       my $xcorr_clause = "";
       my ($icharge,$xcorr);
@@ -697,6 +706,7 @@ sub printEntryForm {
         ["file_root","S.file_root","file_root"],
         ["out_file","'.out'",".out"],
         ["best_hit_flag","best_hit_flag","bh"],
+        ["probability","STR(SH.probability,7,3)","Prob"],
         ["cross_corr_rank","SH.cross_corr_rank","Rxc"],
         ["prelim_score_rank","SH.prelim_score_rank","RSp"],
         ["hit_mass_plus_H","CONVERT(varchar(20),SH.hit_mass_plus_H) + ' (' + STR(SH.mass_delta,5,2) + ')'","(M+H)+"],
@@ -759,6 +769,7 @@ sub printEntryForm {
 	  LEFT JOIN $TBPR_ANNOTATION_LABEL AL ON ( SHA.annotation_label_id = AL.annotation_label_id )
 	 WHERE 1 = 1
 	$search_batch_clause
+	$probability_clause
 	$best_hit_clause
 	$xcorr_clause
 	$xcorr_rank_clause

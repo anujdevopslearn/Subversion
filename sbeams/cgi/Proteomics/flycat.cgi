@@ -93,7 +93,7 @@ sub showMainPage {
     my $element;
     foreach $element (@columns) {
       $element = uc($element);
-      print "<a href=\"$CGI_BASE_DIR/Proteomics/BrowseAnnotatedPeptides.cgi?search_batch_id=10,11,12&display_options=GroupReference,BSDesc&reference_constraint=$element\%25&sort_order=reference&row_limit=500&apply_action=QUERYHIDE\">&nbsp;$element&nbsp;</a> "
+      print "<a href=\"$CGI_BASE_DIR/Proteomics/BrowseAnnotatedPeptides.cgi?search_batch_id=10,11,12&display_options=GroupReference,BSDesc&reference_constraint=$element\%25&sort_order=reference&row_limit=1000&annotation_status_id=Annot&apply_action=QUERYHIDE\">&nbsp;$element&nbsp;</a> "
     }
 
     print qq~
@@ -107,8 +107,9 @@ sub showMainPage {
 
 	<INPUT TYPE="hidden" NAME="search_batch_id" VALUE="10,11,12">
 	<INPUT TYPE="hidden" NAME="display_options" VALUE="GroupReference,BSDesc">
+	<INPUT TYPE="hidden" NAME="annotation_status_id" VALUE="Annot">
 	<INPUT TYPE="hidden" NAME="sort_order" VALUE="reference">
-	<INPUT TYPE="hidden" NAME="row_limit" VALUE="500">
+	<INPUT TYPE="hidden" NAME="row_limit" VALUE="1000">
 	<INPUT TYPE="hidden" NAME="apply_action" VALUE="QUERYHIDE">
 
 	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;

@@ -169,7 +169,7 @@ sub printEntryForm {
     }
     print "</PRE><BR>\n";
   } else {
-    print "Cannot find filename!!<BR>\n";
+    print "Cannot find filename '$filename'<BR>\n";
   }
 
 

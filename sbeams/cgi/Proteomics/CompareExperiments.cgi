@@ -169,6 +169,7 @@ sub printEntryForm {
       $parameters{annotation_status_id} = 'Annot';
       $parameters{display_options} = 'GroupReference';
       $parameters{n_annotations_constraint} = '>0';
+      $parameters{sort_order} = 'SUM(tABS.row_count) DESC';
     }
 
 
@@ -461,6 +462,14 @@ sub printEntryForm {
       }
 
 
+      #### Build PROBABILITY constraint
+      my $probability_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"SH.probability",
+        constraint_type=>"flexible_float",
+        constraint_name=>"Probability Constraint",
+        constraint_value=>$parameters{probability_constraint} );
+      return if ($probability_clause == -1);
+
 
       #### Build REFERENCE PROTEIN constraint
       my $reference_clause = "";
@@ -744,6 +753,7 @@ sub printEntryForm {
 	  JOIN $TBPR_BIOSEQUENCE BS ON ( SB.biosequence_set_id = BS.biosequence_set_id AND SH.biosequence_id = BS.biosequence_id )
 	 WHERE 1 = 1
 	$search_batch_clause
+	$probability_clause
 	$reference_clause
 	$gene_name_clause
         $description_clause
@@ -773,11 +783,14 @@ sub printEntryForm {
 
       #print "<PRE>\n$sql_query\n</PRE>\n";
 
+      my $pass_action = "QUERY";
+      $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
+
       %url_cols = ('Accession' => "\%$colnameidx{accessor}V\%$colnameidx{biosequence_accession}V",
 		   'Accession_ATAG' => 'TARGET="Win1"',
-                   'Reference' => "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi?QUERY_NAME=BrowseSearchHits&reference_constraint=\%$colnameidx{reference}V&search_batch_id=$parameters{search_batch_id}&display_options=BSDesc,MaxRefWidth&apply_action=$apply_action",
+                   'Reference' => "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi?QUERY_NAME=BrowseSearchHits&reference_constraint=\%$colnameidx{reference}V&search_batch_id=$parameters{search_batch_id}&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
 		   'Reference_ATAG' => 'TARGET="Win2"',
-		   'Peptide' => "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi?QUERY_NAME=BrowseSearchHits&peptide_constraint=\%$colnameidx{peptide}V&search_batch_id=$parameters{search_batch_id}&display_options=BSDesc,MaxRefWidth&apply_action=$apply_action",
+		   'Peptide' => "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi?QUERY_NAME=BrowseSearchHits&peptide_constraint=\%$colnameidx{peptide}V&search_batch_id=$parameters{search_batch_id}&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
 		   'Peptide_ATAG' => 'TARGET="Win2"',
       );
 

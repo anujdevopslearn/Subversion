@@ -456,6 +456,14 @@ sub printEntryForm {
       }
 
 
+      #### Build PROBABILITY constraint
+      my $probability_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"SH.probability",
+        constraint_type=>"flexible_float",
+        constraint_name=>"Probability Constraint",
+        constraint_value=>$parameters{probability_constraint} );
+      return if ($probability_clause == -1);
+
 
       #### Build REFERENCE PROTEIN constraint
       my $reference_clause = "";
@@ -700,6 +708,7 @@ sub printEntryForm {
 	  JOIN $TBPR_BIOSEQUENCE BS ON ( SB.biosequence_set_id = BS.biosequence_set_id AND SH.biosequence_id = BS.biosequence_id )
 	 WHERE 1 = 1
 	$search_batch_clause
+	$probability_clause
 	$reference_clause
 	$gene_name_clause
         $description_clause
