@@ -41,12 +41,15 @@ sub main
 		 work_group=>'Cytometry_user',
   ));
 
-  
+;   
+
 my $watchDir = "/users/mkorb/cytometry/";  
 my $startDir = $ARGV[0] or die "no valid startDir\n";; 
 my ($watch) = $startDir =~ /.*\/(.*?)\/$/; 
 my $watchFile = $watchDir.$watch."watch";
-
+my ($tag) = $startDir =~ /^.*\/(.*)\/$/;
+$outFile = "/users/mkorb/cytometry/Load/". $time.$tag."_loadCyt.txt";
+open(LOG,"> $outFile"); 
 my $project_id;
 $project_id = 397; 
 $project_id = 409  if $startDir  =~ /IkB-GFP/i;
@@ -55,10 +58,12 @@ eval
 {
    open( File, "$watchFile") or die "can not $!"; 
 } ;
-close File; 
-print "watch file found\n" and do( exit)  if (! $@);
+close File;
+print "watch file found\n" if (! $@); 
+print LOG "watch file found\n" and do( exit)  if (! $@);
 
 open (File, ">$watchFile") or die "can not open $watchFile $!";
+print LOG "$watchFile\n";
 
 #exit if(-e $watchFile and $startDir =~ /$watch/i); 
 #open $watchFile 
@@ -92,13 +97,11 @@ foreach my $fileID(@rows)
 #my $startDir = "/net/cytometry/IkB-GFP/2004-06-28/";
 #$startDir = "/net/db/projects/StemCell/FCS/072104/";
 
-my ($tag) = $startDir =~ /^.*\/(.*)\/$/;
 
 
+print "$startDir\n";
  
-
-$outFile = "/users/mkorb/cytometry/Load/". $time.$tag."_loadCyt.txt";
-open(LOG,"> $outFile"); 
+ 
 find(\&wanted, $startDir);
 #doTheOtherFiles();
 unlink $watchFile; 
@@ -107,10 +110,9 @@ unlink $watchFile;
 #recursing the dir
 sub wanted
 {
-	my $file = $File::Find::name if -f;
+  	my $file = $File::Find::name if -f;
 	my $dir = $File::Find::dir;
-       
-	processFile($file)
+  	processFile($file)
 	
 }
 
@@ -124,6 +126,8 @@ sub wanted
 sub processFile 
 {
   my $fcsFile = shift;
+  print "this ie the fjile: $fcsFile\n";
+  getc;
   return if ! defined($fcsFile); 
   return  if ($fcsFile !~ /\.fcs$/i);
   return if $fcsFile !~ /\/\d{4}/;
@@ -196,16 +200,16 @@ sub loadDataHash
        $insertRecord{sortedCellType} = $hashRef->{'$CELLS'};
        
        my $sampleName = $hashRef->{'$SMNO'}; 
-    #  11-333p_M_cd138_f_abcg2
+    #  11-333p_M_cd138_abcg2_f_abcg2
     #  11-333p_M_cd138
        my ($sortEntity,$tissueType, $sortType);
        my ($sortPK, $entityPK, $tissuePK) = 0;
       
-       if ($sampleName =~ /^\d+-\d+[a-z]+_[a-z]_/i)
+       if ($sampleName =~ /^\d+-\d+[pb]_[a-z]_/i)
        {
          ($sortEntity) = $sampleName =~/^.*_(.*)$/;
-         ($sortType) = $sampleName =~/^.*_([a-z])_/i;
-         ($tissueType) = $sampleName =~ /^.*?([a-z])_/i;
+         ($sortType) = $sampleName =~/^._([a-z])_/i;
+         ($tissueType) = $sampleName =~ /^.*?([pbt])_/i;
           if (defined ($sortEntity))
           {
             $sortPK = $entityHash{uc $sortEntity} if defined ($entityHash{uc $sortEntity});
