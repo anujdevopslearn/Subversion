@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -T
+#!/usr/local/bin/perl
 
 ###############################################################################
 # Program     : main.cgi
@@ -21,9 +21,11 @@
 # Get the script set up with everything it will need
 ###############################################################################
 use strict;
+use FindBin;
+
 use vars qw ($q $sbeams $sbeamsPH $PROGRAM_FILE_NAME
              $current_contact_id $current_username);
-use lib qw (../../lib/perl);
+use lib "$FindBin::Bin/../../lib/perl";
 use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 

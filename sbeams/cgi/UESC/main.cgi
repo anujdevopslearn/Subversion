@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -T
+#!/usr/local/bin/perl
 
 ###############################################################################
 # Program     : main.cgi
@@ -18,14 +18,17 @@
 
 
 ###############################################################################
-# Get the script set up with everything it will need
+# Set up all needed modules and objects
 ###############################################################################
 use strict;
-use vars qw ($q $sbeams $sbeamsUESC $PROGRAM_FILE_NAME
-             $current_contact_id $current_username);
-use lib qw (../../lib/perl);
-use CGI;
-use CGI::Carp qw(fatalsToBrowser croak);
+use Getopt::Long;
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
 
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
@@ -33,10 +36,13 @@ use SBEAMS::Connection::Settings;
 use SBEAMS::UESC;
 use SBEAMS::UESC::Settings;
 
-$q   = new CGI;
 $sbeams = new SBEAMS::Connection;
-$sbeamsUESC = new SBEAMS::UESC;
-$sbeamsUESC->setSBEAMS($sbeams);
+$sbeamsMOD = new SBEAMS::UESC;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+use CGI;
+$q = new CGI;
 
 
 ###############################################################################
@@ -62,9 +68,9 @@ sub main {
     ));
 
     #### Print the header, do what the program does, and print footer
-    $sbeamsUESC->printPageHeader();
+    $sbeamsMOD->printPageHeader();
     showMainPage();
-    $sbeamsUESC->printPageFooter();
+    $sbeamsMOD->printPageFooter();
 
 } # end main
 

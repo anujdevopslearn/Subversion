@@ -84,7 +84,8 @@ setSBEAMS_SUBDIR('dummy',$subdir);
 #### Read in local configuration information from SBEAMS.conf file
 $DBCONFIG = readMainConfFile();
 #print Dumper($DBCONFIG);
-
+#print "Content-type: text/html\n\nSOURCE_FILE=".
+#      $DBCONFIG->{__SOURCE_FILE}."<BR>\n";
 
 #### Set instance-specific parameters
 $SBEAMS_PATH = $DBCONFIG->{__SOURCE_FILE};
@@ -300,6 +301,13 @@ sub readIniFile {
   #### Set up a hash reference to hold all the configuration data
   my $config;
   $config->{CONFIG_LOADED} = 'NOT YET';
+
+
+  #### If the source_file is a relative path, expand it
+  if ($source_file =~ /^\./) {
+    use Cwd;
+    $source_file = cwd()."/".$source_file;
+  }
   $config->{__SOURCE_FILE} = $source_file;
 
 

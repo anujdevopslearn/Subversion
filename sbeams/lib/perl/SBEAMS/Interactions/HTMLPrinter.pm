@@ -28,21 +28,21 @@ use SBEAMS::Interactions::TableInfo;
 
 
 ###############################################################################
-# Constructor
+# printPageHeader
 ###############################################################################
-sub new {
-    my $this = shift;
-    my $class = ref($this) || $this;
-    my $self = {};
-    bless $self, $class;
-    return($self);
+sub printPageHeader {
+  my $self = shift;
+  $self->display_page_header(@_);
+
+
+
 }
 
 
 ###############################################################################
-# printPageHeader
+# display_page_header
 ###############################################################################
-sub printPageHeader {
+sub display_page_header {
     my $self = shift;
     my %args = @_;
 

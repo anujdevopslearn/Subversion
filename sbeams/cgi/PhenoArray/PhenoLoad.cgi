@@ -23,7 +23,10 @@
 # Get the script set up with everything it will need
 ###############################################################################
 use strict;
-use lib qw (/local/www/html/sbeams/lib/perl);
+use Getopt::Long;
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($q $sbeams $sbeamsPH $dbh $current_contact_id $current_username
              $current_work_group_id $current_work_group_name
              $current_project_id $current_project_name
