@@ -1914,7 +1914,7 @@ sub parse_input_parameters {
 
 
     #### If something was recovered, note it
-    if ($value gt '') {
+    if (defined($value) && $value gt '') {
       $n_CGI_params_found++;
       $ref_parameters->{$element} = $value;
 
