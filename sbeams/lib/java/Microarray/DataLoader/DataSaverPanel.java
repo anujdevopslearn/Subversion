@@ -11,7 +11,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.text.DecimalFormat;
-
+import org.iso_relax.verifier.*;
 //-----------------------------------------------------------------------------------------------
 public class DataSaverPanel extends WizardPanel 
   implements ActionListener{
@@ -84,56 +84,12 @@ public class DataSaverPanel extends WizardPanel
 	String[] conditions = (String[])wizardContext.getAttribute(WIZARD_CONDITIONS);
 	int conds = conditions.length;
 
-	TextWriter lambdaWriter = new TextWriter(lambdaFile);
-	TextWriter ratioWriter = new TextWriter(ratioFile);
-	StringBuffer lambdaBuffer = new StringBuffer();
-	StringBuffer ratioBuffer = new StringBuffer();
-
 	ExperimentCondition ec = (ExperimentCondition)condData.get(conditions[0]);
 	String[] gene = ec.getGenes();
 	float[] individualRatios = ec.getRatioData();
 	float[] individualLambdas = ec.getLambdaData();
 
-	float[][] ratioData = new float[conds][individualRatios.length];
-	float[][] lambdaData = new float[conds][individualLambdas.length];
-	ratioData[0] = individualRatios;
-	lambdaData[0] = individualLambdas;
-	for (int m=0;m<conds;m++) {
-	  ec = (ExperimentCondition)condData.get(conditions[m]);
-	  aliases.put(conditions[m], ec.getConditionAlias());
-	  individualRatios = ec.getRatioData();
-	  individualLambdas = ec.getLambdaData();
-	  ratioData[m] = individualRatios;
-	  lambdaData[m] = individualLambdas;
-	}
 
-	//Print header
-	lambdaBuffer.append("GENE");
-	ratioBuffer.append("GENE");
-	for (int m=0;m<conds;m++) {
-	  lambdaBuffer.append("\t"+(String)aliases.get(conditions[m]));
-	  ratioBuffer.append("\t"+(String)aliases.get(conditions[m]));
-	}
-	lambdaBuffer.append("\n");
-	ratioBuffer.append("\n");
-
-	for (int m=0;m<ratioData[0].length;m++) {
-	  lambdaBuffer.append(gene[m]);
-	  ratioBuffer.append(gene[m]);
-	  for (int h=0;h<ratioData.length;h++) {
-		ratioBuffer.append("\t"+ratioData[h][m]);
-		lambdaBuffer.append("\t"+lambdaData[h][m]);
-	  }
-	  lambdaBuffer.append("\n");
-	  ratioBuffer.append("\n");
-	}
-
-	lambdaWriter.write(lambdaBuffer.toString());
-	ratioWriter.write(ratioBuffer.toString());
-	lambdaWriter.close();
-	ratioWriter.close();
-
-	TextWriter xmlWriter = new TextWriter(xmlFile);
 	StringBuffer xmlbuf = new StringBuffer();
 	String exptName =(String)wizardContext.getAttribute(WIZARD_EXPERIMENT); 
 	xmlbuf.append("<?xml version=\"1.0\" ?>"+"\n");
@@ -204,8 +160,70 @@ public class DataSaverPanel extends WizardPanel
 	  xmlbuf.append("\t"+"</condition>"+"\n");
 	}
 	xmlbuf.append("</experiment>"+"\n");
-	xmlWriter.write(xmlbuf.toString());
-	xmlWriter.close();
+
+	// Validate XML
+	try{
+	  VerifierFactory factory = new com.sun.msv.verifier.jarv.TheFactoryImpl();
+	  Schema schema = factory.compileSchema("experiment.xsd");
+	  Verifier verifier = schema.newVerifier();
+	  if( verifier.verify(xmlbuf.toString()) ) {
+		System.out.println("Document is valid");
+		TextWriter xmlWriter = new TextWriter(xmlFile);
+		xmlWriter.write(xmlbuf.toString());
+		xmlWriter.close();
+		return;
+	  } else {
+		System.out.println("Document is NOT valid");
+	  }
+	}catch (Exception e) {
+	  e.printStackTrace();
+	}
+
+
+	TextWriter lambdaWriter = new TextWriter(lambdaFile);
+	TextWriter ratioWriter = new TextWriter(ratioFile);
+	StringBuffer lambdaBuffer = new StringBuffer();
+	StringBuffer ratioBuffer = new StringBuffer();
+	float[][] ratioData = new float[conds][individualRatios.length];
+	float[][] lambdaData = new float[conds][individualLambdas.length];
+	ratioData[0] = individualRatios;
+	lambdaData[0] = individualLambdas;
+
+	for (int m=0;m<conds;m++) {
+	  ec = (ExperimentCondition)condData.get(conditions[m]);
+	  aliases.put(conditions[m], ec.getConditionAlias());
+	  individualRatios = ec.getRatioData();
+	  individualLambdas = ec.getLambdaData();
+	  ratioData[m] = individualRatios;
+	  lambdaData[m] = individualLambdas;
+	}
+
+	//Print header
+	lambdaBuffer.append("GENE");
+	ratioBuffer.append("GENE");
+	for (int m=0;m<conds;m++) {
+	  lambdaBuffer.append("\t"+(String)aliases.get(conditions[m]));
+	  ratioBuffer.append("\t"+(String)aliases.get(conditions[m]));
+	}
+	lambdaBuffer.append("\n");
+	ratioBuffer.append("\n");
+
+	for (int m=0;m<ratioData[0].length;m++) {
+	  lambdaBuffer.append(gene[m]);
+	  ratioBuffer.append(gene[m]);
+	  for (int h=0;h<ratioData.length;h++) {
+		ratioBuffer.append("\t"+ratioData[h][m]);
+		lambdaBuffer.append("\t"+lambdaData[h][m]);
+	  }
+	  lambdaBuffer.append("\n");
+	  ratioBuffer.append("\n");
+	}
+
+	lambdaWriter.write(lambdaBuffer.toString());
+	ratioWriter.write(ratioBuffer.toString());
+	lambdaWriter.close();
+	ratioWriter.close();
+
   }// writeFiles
 //-----------------------------------------------------------------------------------------------
   public void actionPerformed(ActionEvent e) {

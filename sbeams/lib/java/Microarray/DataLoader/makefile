@@ -1,6 +1,7 @@
 PKG=DataLoader.
 JAR_DIR=/net/dblocal/www/html/dev7/sbeams/usr/java/share/util/
-CP = .:..:$(JAR_DIR)java-getopt-1.0.10.jar:$(JAR_DIR)visad.jar:$(JAR_DIR)experiment.jar:$(JAR_DIR)jdom.jar:$(JAR_DIR)SBEAMS.jar
+CP = .:..:$(JAR_DIR)java-getopt-1.0.10.jar:$(JAR_DIR)visad.jar:$(JAR_DIR)experiment.jar:$(JAR_DIR)jdom.jar:$(JAR_DIR)SBEAMS.jar:$(JAR_DIR)msv.jar:$(JAR_DIR)isorelax.jar:$(JAR_DIR)relaxngDatatype.jar:$(JAR_DIR)xercesImpl.jar:$(JAR_DIR)xmlParserAPIs.jar:$(JAR_DIR)xsdlib.jar
+
 JC = javac
 JC+= -classpath $(CP)
 
