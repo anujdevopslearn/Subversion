@@ -336,7 +336,7 @@ sub add_R_CHP_data {
 		}
 		$update_flag = 1 if $RUN_MODE eq 'update';	
 		
-		print "ORGANISM '". $affy_o->get_organism. "'\n";
+		#print "ORGANISM '". $affy_o->get_organism. "'\n";
 		
 		if ($affy_o->get_organism eq 'Yeast'){					#need to skip yeast arrays untill they can be processed in R
 			print "SKIPPING '" . $affy_o->get_afa_file_root() . "' THIS IS A YEAST CHIP\n" if ($VERBOSE >0);
