@@ -1307,7 +1307,7 @@ preprocess_scale_value         = xxxxx
 preprocess_debug_value         = xxxxx
 
 mergereps_optimization_flag = false
-mergereps_filter_flag      = false
+mergereps_filter_flag      = true
 mergereps_exclude_flag      = false
 
 mergereps_optimization_value = xxxxx
