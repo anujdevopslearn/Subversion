@@ -91,7 +91,7 @@ slide_lot	10	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_i
 slide_lot	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 printing_batch	1	printing_batch_id	Printing Batch ID	int	8	0	N		Y							N	N				pkDEFAULT
 printing_batch	2	slide_type_id	Slide Type	int	8	0	N		N	slide_type	slide_type_id	Y	optionlist			Y	Y	Y	Slide type	"SELECT slide_type_id, name FROM $TB_SLIDE_TYPE ORDER BY sort_order,name"	
-printing_batch	3	protocol_id	Protocol	int	8	0	N		N	protocol	protocol_id	Y	optionlist			Y	Y	Y	Protocol for this printing	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='array_printing' ORDER BY P.name"	
+printing_batch	3	protocol_id	Protocol	int	8	0	N		N	protocol	protocol_id	Y	optionlist			Y	Y	Y	Protocol for this printing	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='array_printing' AND P.record_status != 'D' ORDER BY P.name"	
 printing_batch	4	date_started	Date Started	datetime	8	0	N		N			Y	text	30		Y	Y	Y	Date/time the printing began		
 printing_batch	5	date_finished	Date Finished	datetime	8	0	Y		N			N	text	30		Y	Y	N	Date/time the printing finished		
 printing_batch	6	number_of_spots	Number of Spots	int	4	0	Y		N			N	text	10		Y	Y	N	Number of spots per slide		
