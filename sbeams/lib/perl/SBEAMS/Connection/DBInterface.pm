@@ -4900,7 +4900,7 @@ function switchProject(){
   my @project_ids = $self->getAccessibleProjects(module=>"$module");
   my $project_ids_list = join(',',@project_ids) || '-1';
   $project_sql = qq~
-    SELECT P.project_id, UL.username+' - '+P.name
+    SELECT P.project_id, UL.username+' - '+P.name+' ('+CONVERT(varchar(50),P.project_id)+')'
       FROM $TB_PROJECT P 
       LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
      WHERE P.project_id IN ( $project_ids_list )
