@@ -510,6 +510,7 @@ sub handle_request {
 
   #### If the user wants to see the peptides
   my @peptide_columns = ();
+  my $peptide_join = '';
   if ( $parameters{display_options} =~ /ShowPeptides/ ) {
     @peptide_columns = (
       ["peptide_sequence","PEP.peptide_sequence","Peptide"],
@@ -517,7 +518,11 @@ sub handle_request {
       ["peptide_probability","STR(PEP.nsp_adjusted_probability,7,3)","Peptide Prob"],
       ["peptide_n_instances","PEP.n_instances","Peptide N Instances"],
     );
-    $order_by_clause = ",PEP.nsp_adjusted_probability,PEP.peptide_sequence,PEP.charge"
+    $order_by_clause = ",PEP.nsp_adjusted_probability,PEP.peptide_sequence,PEP.charge";
+    $peptide_join = qq~
+         INNER JOIN $TBPR_PEPTIDE PEP
+               ON ( PROT.protein_id = PEP.protein_id )
+    ~;
   }
 
   if (1) {
@@ -596,10 +601,7 @@ sub handle_request {
                ON ( SB.experiment_id = PE.experiment_id )
           LEFT JOIN $TBPR_BIOSEQUENCE_PROPERTY_SET BPS
                ON ( BS.biosequence_id = BPS.biosequence_id )
-
-         INNER JOIN $TBPR_PEPTIDE PEP
-               ON ( PROT.protein_id = PEP.protein_id )
-
+         $peptide_join
          LEFT JOIN ${BIOLINK}biosequence BSLINK
                ON ( BS.biosequence_gene_name = BSLINK.biosequence_name )
          LEFT JOIN ${BIOLINK}relationship R
