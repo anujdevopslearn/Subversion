@@ -337,7 +337,7 @@ MA_quantitation_type	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT
 MA_quantitation_type	7	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N			
 MA_quantitation_type	8	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N			
 MA_quantitation_type	9	record_status	Record Status	char	1	0	Y	N	N							N	N			
-MA_GetExpression	1	input_form_format	Input Form Format									N	optionlist		refreshDocument()	Y	Y	N	Options for level of detail and layout for this input form	"SELECT option_key,option_value FROM $TBMA_MISC_OPTION WHERE option_type = 'input_form_options' ORDER BY sort_order,option_value"
+MA_GetExpression	1	input_form_format	Input Form Format									N	optionlist		refreshDocument()	Y	Y	N	Options for level of detail and layout for this input form	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type = 'input_form_options' ORDER BY sort_order,option_value"
 MA_GetExpression	2	condition_id	Conditions									N	multioptionlist	6		Y	Y	N	Select desired Conditions to include in query.  Multiple items may be selected.  At least one must be selected	MANUAL
 MA_GetExpression	3	gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the Gene Name as provided in the raw pipeline output. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 MA_GetExpression	4	second_name_constraint	Second Name Constraint									N	text	40		Y	Y	N	Constraint for the Second Name as provided in the raw pipeline output. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
