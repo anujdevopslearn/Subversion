@@ -255,7 +255,7 @@ sub handleRequest {
 ###############################################################################
 # removeAtlas -- removes atlas build records
 #
-#   has option --keep_parent to keep parent record (used with purge)
+#   has option --keep_parent to keep parent record (purge uses this feature)
 ###############################################################################
 sub removeAtlas {
    my %args = @_;
@@ -441,7 +441,7 @@ sub buildAltas {
    ## storage in arrays to later calculate n_mapped_locations and is_exon_spanning
    my (@peptide_accession, @biosequence_name, @start_in_biosequence, 
    @end_in_biosequence, @chromosome, @strand, @start_in_chromosome, 
-   @end_in_chromosome, @n_mapped_locations, @is_exon_spanning);
+   @end_in_chromosome, @n_mappings, @n_mapped_locations, @is_exon_spanning);
  
    #### Load the relevant information in the coordinate mapping file:
    my $ind=0;
@@ -466,6 +466,7 @@ sub buildAltas {
       } else {
          $index_hash{$peptide_accession[$ind]} = $ind;
       }
+      $n_mappings[$ind] = 1; #unless replaced in next section
       $n_mapped_locations[$ind] = 1; #unless replaced in next section
       $is_exon_spanning[$ind]= 'n';  #unless replaced in next section
  
@@ -474,23 +475,28 @@ sub buildAltas {
    close(INFILE);
    my $last_ind = $ind - 1;
  
+   ## n_mappings is a peptide's number of hits
+   ## n_mapped_locations is a peptide's number of hits (where none of the
+   ##    chromosomal coordinates are the same)
+   ## is_exon_spanning is whether a peptide has been identified as the
+   ##    same protein with two sets of chromosomal coordinates
  
    #  print "size of hash = " . keys( %index_hash ) . ".\n";
    ## looping through indices of multiple peptide identifications:
    foreach my $tmp_ind_str (values ( %index_hash ) ) {
       my @tmp_ind_array = split(" ", $tmp_ind_str);
       my $last_ind = $#tmp_ind_array;
-      ## making match_coords_hash with key = protein names which are same 
-      ## in subset of multiple responses...
-      ##    values = string of chromosome coords
-      ## then, size of %match_coords_hash gives n_mapped_locations
-      my %match_coords_hash;
  
+      my %nml=0;  ## xxxx reset nml each loop
       for (my $ii = 0; $ii <= $#tmp_ind_array; $ii++) {
          my $i_ind=$tmp_ind_array[$ii];
-         $n_mapped_locations[$i_ind] = $#tmp_ind_array + 1;
+
+         $n_mappings[$i_ind] = $#tmp_ind_array + 1;
+
          for (my $jj = ($ii + 1); $jj <= $#tmp_ind_array; $jj++) {
             my $j_ind=$tmp_ind_array[$jj];
+
+            ## calculate is_exon_spanning:
             if ($biosequence_name[$i_ind] eq $biosequence_name[$j_ind]) {
                if ($start_in_chromosome[$i_ind] != $start_in_chromosome[$j_ind]) {
                   $is_exon_spanning[$i_ind] = 'y';
@@ -498,14 +504,26 @@ sub buildAltas {
                }     
             }
          }
+         
+         ## calculate n_mapped_locations using a hash with keys=chromosome.start_chromo
+         my $tmp_coord_string=$chromosome[$i_ind] . $start_in_chromosome[$i_ind];
+
+         $nml{$tmp_coord_string} = $nml{$tmp_coord_string} + 1; ## counting redundancies...
       }
+
+      ## all hits of particular peptide get assigned same n_mapped_locations:
+      foreach my $tmpind (@tmp_ind_array) {
+         $n_mapped_locations[$tmpind] = (keys( %nml ) - 1);  ## = size of hash - 1
+
+      }
+
    } ## end calculate n_mapped_locations and is_exon_spanning loop
  
    ### ABOVE modeled following rules:
    ##
    ## APDpep00011291  9       ENSP00000295561 ... 24323279        24323305
    ## APDpep00011291  9       ENSP00000336741 ... 24323279        24323305
-   ## ---> n_mapped_locations = 2 for both
+   ## ---> n_mapped_locations = 1 for both
    ## ---> is_exon_spanning   = n for both
    ##
    ## APDpep00004221  13      ENSP00000317473 ... 75675871        75675882
@@ -517,7 +535,7 @@ sub buildAltas {
    ## APDpep00004290  16      ENSP00000306222 ...   1151067         1151107
    ## APDpep00004290  16      ENSP00000281456 ... 186762937       186762943
    ## APDpep00004290  16      ENSP00000281456 ... 186763858       186763898
-   ## ---> n_mapped_locations = 2 for all
+   ## ---> n_mapped_locations = 4 for all
    ## ---> is_exon_spanning   = y for all
  
  
@@ -552,6 +570,7 @@ sub buildAltas {
          sample_ids => $APD_sample_ids{$peptides{$peptide_accession[$i]}},
          n_mapped_locations => $n_mapped_locations[$i],
          is_exon_spanning => $is_exon_spanning[$i],
+         n_mappings => $n_mappings[$i],
        );
  
        $peptide_instance_id = $sbeams->updateOrInsertRow(
