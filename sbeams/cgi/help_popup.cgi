@@ -39,6 +39,7 @@ use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
 use SBEAMS::Connection;
+use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::Settings;
 
 $q   = new CGI;
@@ -138,12 +139,15 @@ sub displayColumnText {
   my $column_name = shift;
   my $table_name = shift;
 
-  ($title, $text) = $sbeams->getDBHandle()->selectrow_array( <<"  END" );
+  my @text = $sbeams->selectSeveralColumns( <<"  END" );
 	SELECT	column_title, column_text
-	FROM	sbeams.dbo.table_column
+	FROM $TB_TABLE_COLUMN
 	WHERE	table_name = '$table_name'
 	AND	column_name = '$column_name'
   END
+
+  my $row = $text[0];
+  my ( $title, $text ) = @$row;
 
   $text = $q->escapeHTML( $text );
   $title = $q->escapeHTML( $title );
