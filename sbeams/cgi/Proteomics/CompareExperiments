@@ -17,6 +17,7 @@
 ###############################################################################
 use strict;
 use Getopt::Long;
+use FindBin;
 
 use lib qw (../../lib/perl);
 use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
@@ -46,7 +47,7 @@ $q = new CGI;
 ###############################################################################
 # Set program name and usage banner for command like use
 ###############################################################################
-$PROG_NAME = "get_annotation";
+$PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
 Usage: $PROG_NAME [OPTIONS] key=value kay=value ...
 Options:
@@ -191,7 +192,6 @@ sub handle_request {
     PROGRAM_FILE_NAME=>$PROGRAM_FILE_NAME,
     parameters_ref=>\%parameters,
     input_types_ref=>\%input_types,
-    mask_user_context => 1,
   );
 
 
@@ -210,10 +210,13 @@ sub handle_request {
   #### Process all the constraints
 
   #### Build SEARCH BATCH / EXPERIMENT constraint
-  my $search_batch_clause = "";
-  if ($parameters{search_batch_id}) {
-    $search_batch_clause = "   AND SB.search_batch_id IN ( $parameters{search_batch_id} )";
-  } else {
+  my $search_batch_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SB.search_batch_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Search Batch List",
+    constraint_value=>$parameters{search_batch_id} );
+  return if ($search_batch_clause == -1);
+  unless ($parameters{search_batch_id} =~ /\,/) {
     print "<H4>You must select at least two experiments to compare!</H4>\n\n";
     return;
   }
@@ -223,35 +226,34 @@ sub handle_request {
   my $probability_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"SH.probability",
     constraint_type=>"flexible_float",
-    constraint_name=>"Probability Constraint",
+    constraint_name=>"Probability",
     constraint_value=>$parameters{probability_constraint} );
   return if ($probability_clause == -1);
 
 
   #### Build REFERENCE PROTEIN constraint
-  my $reference_clause = "";
+  my $reference_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SH.reference",
+    constraint_type=>"plain_text",
+    constraint_name=>"Reference",
+    constraint_value=>$parameters{reference_constraint} );
+  return if ($reference_clause == -1);
+
+  #### If there is a constraint, also apply it to BS.biosequence_name
   my $biosequence_name_clause = "";
-  if ($parameters{reference_constraint}) {
-    if ($parameters{reference_constraint} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
-      print "<H4>Cannot parse Reference Constraint!  Check syntax.</H4>\n\n";
-      return;
-    } else {
-      $reference_clause = "   AND SH.reference LIKE '$parameters{reference_constraint}'";
-      $biosequence_name_clause = "   AND BS.biosequence_name LIKE '$parameters{reference_constraint}'";
-    }
+  if ($reference_clause) {
+    $biosequence_name_clause = $reference_clause;
+    $biosequence_name_clause =~ s/SH\.reference/BS\.biosequence_name/;
   }
 
 
   #### Build GENE NAME constraint
-  my $gene_name_clause = "";
-  if ($parameters{gene_name_constraint}) {
-    if ($parameters{gene_name_constraint} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
-      print "<H4>Cannot parse Gene Name Constraint!  Check syntax.</H4>\n\n";
-      return;
-    } else {
-      $gene_name_clause = "   AND BS.biosequence_gene_name LIKE '$parameters{gene_name_constraint}'";
-    }
-  }
+  my $gene_name_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.biosequence_gene_name",
+    constraint_type=>"plain_text",
+    constraint_name=>"Gene Name",
+    constraint_value=>$parameters{gene_name_constraint} );
+  return if ($gene_name_clause == -1);
 
 
   #### Build PROTEIN DESCRIPTION constraint
@@ -263,16 +265,13 @@ sub handle_request {
   return if ($description_clause == -1);
 
 
-  #### Build ACCESSION NUMBER constraint
-  my $accession_clause = "";
-  if ($parameters{accession_constraint}) {
-    if ($parameters{accession_constraint} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
-      print "<H4>Cannot parse Accession Number Constraint!  Check syntax.</H4>\n\n";
-      return;
-    } else {
-      $reference_clause = "   AND BS.biosequence_accession LIKE '$parameters{accession_constraint}'";
-    }
-  }
+  #### Build ACCESSION constraint
+  my $accession_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.biosequence_accession",
+    constraint_type=>"plain_text",
+    constraint_name=>"Accession",
+    constraint_value=>$parameters{accession_constraint} );
+  return if ($accession_clause == -1);
 
 
   #### Build PEPTIDE constraint
@@ -282,7 +281,6 @@ sub handle_request {
     constraint_name=>"Peptide",
     constraint_value=>$parameters{peptide_constraint} );
   return if ($peptide_clause == -1);
-
 
 
   #### Build CHARGE constraint
@@ -351,19 +349,12 @@ sub handle_request {
 
 
   #### Build NUMBER OF ANNOTATIONS constraint
-  my $n_annotations_clause = "";
-  if ($parameters{n_annotations_constraint}) {
-    if ($parameters{n_annotations_constraint} =~ /^[\d]+$/) {
-      $n_annotations_clause = "   AND row_count = $parameters{n_annotations_constraint}";
-    } elsif ($parameters{n_annotations_constraint} =~ /^between\s+[\d]+\s+and\s+[\d]+$/i) {
-      $n_annotations_clause = "   AND row_count $parameters{n_annotations_constraint}";
-    } elsif ($parameters{n_annotations_constraint} =~ /^[><=][=]*\s*[\d]+$/) {
-      $n_annotations_clause = "   AND row_count $parameters{n_annotations_constraint}";
-    } else {
-      print "<H4>Cannot parse Number of Annotations Constraint!  Check syntax.</H4>\n\n";
-      return;
-    }
-  }
+  my $n_annotations_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"row_count",
+    constraint_type=>"flexible_int",
+    constraint_name=>"Number of Matches",
+    constraint_value=>$parameters{n_annotations_constraint} );
+  return if ($n_annotations_clause == -1);
 
 
   #### Build SORT ORDER
