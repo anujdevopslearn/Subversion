@@ -31,6 +31,9 @@ go
 -- trans_membrane
 DROP INDEX dbo.trans_membrane.idx_affy_annotation_id
 go
+-- trans_membrane and Number of domains
+DROP INDEX dbo.trans_membrane.idx_numberofdomains__affy_annotation_id
+go
 -- alignment
 DROP INDEX dbo.alignment.idx_affy_annotation_id
 go
@@ -48,4 +51,8 @@ DROP INDEX dbo.affy_gene_intensity.idx_probe_set_id
 go
 -- affy_gene_intensity_ affy_array_id 
 DROP INDEX dbo.affy_gene_intensity.idx_affy_array_id
- 
+go 
+-- affy_gene_intensity_   affy_array_id,probe_set_id, protocol_id
+DROP INDEX dbo.affy_gene_intensity.idx_afa_id_probe_set_id_protocol_id
+
+go 

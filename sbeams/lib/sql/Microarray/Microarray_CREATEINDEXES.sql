@@ -42,6 +42,10 @@ go
 CREATE NONCLUSTERED INDEX idx_affy_annotation_id
    ON dbo.trans_membrane ( affy_annotation_id )
 go
+--trans_membrane and number of Domains
+CREATE NONCLUSTERED INDEX idx_numberofdomains__affy_annotation_id
+   ON dbo.trans_membrane ( number_of_domains, affy_annotation_id   )
+go
 -- alignment
 CREATE NONCLUSTERED INDEX idx_affy_annotation_id
    ON dbo.alignment ( affy_annotation_id )
@@ -57,7 +61,7 @@ go
 -- affy_annotation probe_set_id annotation_set_id
 CREATE NONCLUSTERED INDEX idx_affy_annotation_probe_set_id__annotation_set_id
    ON dbo.affy_annotation ( probe_set_id, affy_annotation_set_id)   
-
+go
 -- affy_gene_intensity 
 CREATE NONCLUSTERED INDEX idx_probe_set_id
    ON dbo.affy_gene_intensity ( probe_set_id )    
@@ -65,3 +69,9 @@ go
 -- affy_gene_intensity_ affy_array_id
 CREATE NONCLUSTERED INDEX idx_affy_array_id
    ON dbo.affy_gene_intensity ( affy_array_id )     
+go
+-- affy_gene_intensity_   affy_array_id,probe_set_id, protocol_id
+CREATE NONCLUSTERED INDEX idx_afa_id_probe_set_id_protocol_id
+   ON dbo.affy_gene_intensity (  affy_array_id,probe_set_id, protocol_id )    
+
+go
