@@ -1500,6 +1500,17 @@ sub specialParsing {
   }
 
 
+  #### Conversion rules for the ENSEMBLE Drosophila Protein database
+  if ($rowdata_ref->{biosequence_name} =~ /^Translation:(.+)$/ ) {
+     $rowdata_ref->{biosequence_name} = $1;
+     $rowdata_ref->{biosequence_accession} = $1;
+     if ($rowdata_ref->{biosequence_desc} =~ /Gene:(\S+)/ ) {
+       $rowdata_ref->{biosequence_gene_name} = $1;
+     }
+     $rowdata_ref->{dbxref_id} = '20';
+  }
+
+
   #### Conversion rules for the IPI database
   if ($rowdata_ref->{biosequence_name} =~ /^IPI:(IPI[\d\.]+)$/ ) {
      $rowdata_ref->{biosequence_accession} = $1;
