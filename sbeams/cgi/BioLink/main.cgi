@@ -34,6 +34,7 @@ use vars qw ($sbeams $sbeamsBioLink $q $current_contact_id $current_username
 use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
 
 use SBEAMS::BioLink;
 use SBEAMS::BioLink::Settings;
@@ -43,10 +44,6 @@ $sbeams = new SBEAMS::Connection;
 $sbeamsBioLink = new SBEAMS::BioLink;
 $sbeamsBioLink->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
-
-#use CGI;
-#$q = new CGI;
-
 
 
 ###############################################################################
@@ -146,16 +143,53 @@ sub handle_request {
 	This system is still under active development.  Please be
 	patient and report bugs, problems, difficulties, suggestions to
 	<B>edeutsch\@systemsbiology.org</B>.<P>
-	<BR>
-	<BR>
-
-	<UL>
-	<LI> Here is the starter stub for the BioLink area.
-	</UL>
-
-	<BR>
-	<BR>
     !;
+
+  # Create new tabmenu item.  This may be a $sbeams object method in the future.
+  my $tabmenu = SBEAMS::Connection::TabMenu->new( cgi => $q );
+
+  # Preferred way to add tabs.  label is required, helptext optional
+  $tabmenu->addTab( label    => 'Current Project', 
+                    helptext => 'View details of current Project' );
+  $tabmenu->addTab( label    => 'My Projects', 
+                    helptext => 'View all projects owned by me' );
+  $tabmenu->addTab( label    => 'Accessible Projects',
+                    helptext => 'View projects I have access to' );
+  $tabmenu->addTab( label    => 'Recent Resultsets',
+                    helptext => 'View recent SBEAMS resultsets' );
+
+  my $content = '&nbsp;'; # Scalar to hold content.
+
+  # conditional block to exec code based on selected tab.
+
+  if (  $tabmenu->getActiveTabName() eq 'Current Project' )  { 
+
+    my $project_id = $sbeams->getCurrent_project_id();
+    if ( $project_id ) {
+      $content = $sbeams->getProjectDetailsTable( project_id => $project_id ); 
+    }
+
+  } elsif ( $tabmenu->getActiveTabName() eq 'My Projects' ){
+
+    $content = $sbeams->getProjectsYouOwn();
+
+  } elsif ( $tabmenu->getActiveTabName() eq 'Accessible Projects' ){
+
+    $content = $sbeams->getProjectsYouHaveAccessTo();
+
+  } elsif ( $tabmenu->getActiveTabName() eq 'Recent Resultsets' ){
+
+    $content = $sbeams->getRecentResultsets();
+
+  } else {
+
+    print 'Unknown tab selected';
+    exit;
+
+  }
+
+  $tabmenu->addContent( $content );
+  print "$tabmenu";
 
 } # end showMainPage
 
