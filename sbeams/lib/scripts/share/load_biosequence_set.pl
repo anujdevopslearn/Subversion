@@ -22,7 +22,7 @@ use FindBin;
 use lib "$FindBin::Bin/../../perl";
 use vars qw ($sbeams $sbeamsMOD $q
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
-	     $TESTONLY
+	     $TESTONLY $module
              $current_contact_id $current_username
 	     $fav_codon_frequency $n_transmembrane_regions
 	     $rosetta_lookup $pfam_search_results $ginzu_search_results
@@ -134,7 +134,7 @@ $OPTIONS{"check_status"} || $OPTIONS{"delete"} || $OPTIONS{"update_existing"})
 }
 
 
-## die if selected delete without a set_tag:
+## die if selected these without a set_tag:
 if ($OPTIONS{"delete"} || $OPTIONS{"load"} || $OPTIONS{"purge"} || $OPTIONS{"update_existing"})
 {
     unless ( $OPTIONS{"set_tag"} )
@@ -144,7 +144,7 @@ if ($OPTIONS{"delete"} || $OPTIONS{"load"} || $OPTIONS{"purge"} || $OPTIONS{"upd
 }
 
 
-## die if selected check_status or load_all and delete
+## die if selectons are (check_status or load_all) and delete
 if ( ($OPTIONS{"load_all"} || $OPTIONS{"check_status"}) && 
 ( $OPTIONS{"delete"} || $OPTIONS{"purge"} ) )
 {
@@ -267,7 +267,7 @@ sub handleRequest {
 
   #### Get the file_prefix if it was specified, and otherwise guess
   unless ($file_prefix) {
-    my $module = $sbeams->getSBEAMS_SUBDIR();
+    $module = $sbeams->getSBEAMS_SUBDIR();
     #$file_prefix = '/regis' if ($module eq 'Proteomics');
   }
 
@@ -431,11 +431,12 @@ sub handleRequest {
 
           my %table_child_relationship;
 
-          if ( $DATABASE eq "PeptideAtlas.dbo." )
+          if ( $module eq 'Proteomics' || $module eq 'PeptideAtlas' || 
+          $module eq 'ProteinStructure' || $module eq 'BioLink')
           {
               %table_child_relationship = (
                   biosequence_set => 'biosequence(C)',
-                  biosequence =>'biosequence_property_set(C)',
+                  biosequence =>'biosequence_property_set(C),biosequence_annotation(C)',
               );
           } else 
           {
@@ -645,7 +646,7 @@ sub loadBiosequenceSet {
           die "There are already biosequence records for this " .
           "biosequence_set.\nPlease delete those records before".
           " trying to load new sequences,\nor specify the ".
-          " --delete --load flags";
+          " --delete --load flags together";
       }
   }
 
@@ -859,7 +860,7 @@ sub loadBiosequence {
 
 
   #### Get the file_prefix if it was specified, and otherwise guess
-  my $module = $sbeams->getSBEAMS_SUBDIR();
+  $module = $sbeams->getSBEAMS_SUBDIR();
 
   #### Define a hash to hold data that goes into biosequence_property_set
   my %property_set;
@@ -960,6 +961,40 @@ sub loadBiosequence {
 	  delete($rowdata_ref->{strand});
 	}
   }
+
+
+  #### If it's an SGD data set, $property_set{category}  = feature type
+  #### from $rowdata_ref->{biosequence_desc}
+  ## >YAL003W EFB1 SGDID:S0000003, Chr I from 142176-142255,142622-143162, Verified ORF
+  if ( ($module eq 'Proteomics' || $module eq 'PeptideAtlas') && 
+  ($rowdata_ref->{biosequence_desc} =~ /^(\S+)\s(SGDID:.*)$/ ))
+  {
+
+      if ( $rowdata_ref->{biosequence_desc} =~ /^(\S+)\s(SGDID:.*)\s(verified orf)$/i )
+      {
+          $property_set{category} = $3;
+      }
+      if ( $rowdata_ref->{biosequence_desc} =~ /^(\S+)\s(SGDID:.*)\s(uncharacterized orf)$/i )
+      {
+          $property_set{category} = $3;
+      }
+      if ( $rowdata_ref->{biosequence_desc} =~ /^(\S+)\s(SGDID:.*)\s(dubious orf)$/i )
+      {
+          $property_set{category} = $3;
+      }
+
+      if ( $rowdata_ref->{biosequence_desc} =~ /^(\S+)\s(SGDID:.*)\s(ty orf)$/i )
+      {
+          $property_set{category} = $3;
+      }
+
+      if ( $rowdata_ref->{biosequence_desc} =~ /^(\S+)\s(SGDID:.*)\s(pseudogene orf)$/i )
+      {
+          $property_set{category} = $3;
+      }
+
+  }
+
 
 
   #### INSERT/UPDATE the row
@@ -1705,6 +1740,7 @@ sub specialParsing {
   }
 
   #### Conversion rules for the SGD yeast orf fasta
+  ## >YAL003W EFB1 SGDID:S0000003, Chr I from 142176-142255,142622-143162, Verified ORF
   if ($rowdata_ref->{biosequence_desc} =~ /^(\S+)\s(SGDID:.*)$/ ) {
      $rowdata_ref->{biosequence_gene_name} = $1;
      $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
@@ -1737,7 +1773,7 @@ sub specialParsing {
   }
 
 
-  #### Conversion rules for some generic GenBank IDs
+  #### Conversion rules for some generic GenBank IDs  
   if ($rowdata_ref->{biosequence_name} =~ /gb\|([A-Z\d\.]+)\|/ ) {
      $rowdata_ref->{biosequence_gene_name} = $1;
      $rowdata_ref->{biosequence_accession} = $1;
@@ -2025,7 +2061,7 @@ sub specialParsing {
         #$rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
         $rowdata_ref->{biosequence_accession} = $1;
       }
-      $rowdata_ref->{dbxref_id} = '7';
+      $rowdata_ref->{dbxref_id} = '5'; 
     }
   }
 
@@ -2035,7 +2071,7 @@ sub specialParsing {
     if ($rowdata_ref->{biosequence_desc} =~ /([\w-]+)\sSGDID\:([\w-]+), .+/ ) {
 	$rowdata_ref->{biosequence_gene_name} = $1;
 	$rowdata_ref->{biosequence_accession} = $2;
-	$rowdata_ref->{dbxref_id} = '7';
+	$rowdata_ref->{dbxref_id} = '5';
     }
   }
 
