@@ -428,6 +428,10 @@ sub handle_request {
     ["biosequence_name","BS.biosequence_name","Biosequence Name"],
     ["biosequence_accessor","DBX.accessor","biosequence_accessor"],
     ["biosequence_accession","BS.biosequence_accession","Biosequence Accession"],
+    ["gene_symbol","BSA.gene_symbol","Gene Symbol"],
+    ["functional_description","BSA.functional_description","Functional Description"],
+    ["protein_EC_numbers","BSA.EC_numbers","Protein EC Numbers"],
+
     @tmhmm_columns,
     ["match_source_name","DMS.domain_match_source_name","Match Source"],
     ["domain_match_index","DM.domain_match_index","Domain Index"],
@@ -447,6 +451,7 @@ sub handle_request {
     ["match_accessor","TDBX.accessor","match_accessor"],
     ["match_accession","DM.match_accession","match_accession"],
     ["match_accessor_suffix","TDBX.accessor_suffix","match_accessor_suffix"],
+    ["match_EC_numbers","D.EC_numbers","Domain EC Numbers"],
 
     ["probability","STR(DM.probability,7,3)","Prob"],
     ["e_value","DM.e_value","E value"],
@@ -461,6 +466,8 @@ sub handle_request {
 
     ["biosequence_desc","BS.biosequence_desc","Reference Description"],
     ["biosequence_set_id","BSS.biosequence_set_id","biosequence_set_id"],
+    ["biosequence_id","BS.biosequence_id","biosequence_id"],
+    ["biosequence_annotation_id","BSA.biosequence_annotation_id","biosequence_annotation_id"],
   );
 
 
@@ -492,8 +499,12 @@ sub handle_request {
 	       ON ( DM.domain_match_source_id = DMS.domain_match_source_id )
           LEFT JOIN $TBPS_DOMAIN_MATCH_TYPE DMT
 	       ON ( DM.domain_match_type_id = DMT.domain_match_type_id )
+          LEFT JOIN $TBPS_DOMAIN D
+	       ON ( DM.match_name = D.domain_name )
           LEFT JOIN $TB_DBXREF TDBX
 	       ON ( DMT.dbxref_id = TDBX.dbxref_id )
+	  LEFT JOIN $TBPS_BIOSEQUENCE_ANNOTATION BSA
+	       ON ( DM.biosequence_id = BSA.biosequence_id )
 	 INNER JOIN $TBPS_BIOSEQUENCE BS
 	       ON ( DM.biosequence_id = BS.biosequence_id )
           LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
@@ -549,6 +560,10 @@ sub handle_request {
   %url_cols = ('Biosequence Accession' => "\%$colnameidx{accessor}V\%$colnameidx{biosequence_accession}V\%$colnameidx{biosequence_accessor_suffix}V",
     	       'Biosequence Accession_ATAG' => 'TARGET="Win1" ',
                'Biosequence Name' => "$CGI_BASE_DIR/ProteinStructure/GetDomainHits?QUERY_NAME=PS_GetDomainHit&biosequence_id=$parameters{biosequence_id}&biosequence_name_constraint=\%V&apply_action=$pass_action",
+               'Functional Description' => "$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=PS_biosequence_annotation&biosequence_annotation_id=\%$colnameidx{biosequence_annotation_id}V&biosequence_id=\%$colnameidx{biosequence_id}V&ShowEntryForm=1",
+	       'Functional Description_ATAG' => 'TARGET="Win1"',
+	       'Functional Description_ISNULL' => ' [Add] ',
+
                'Match Name' => "\%$colnameidx{match_accessor}V\%$colnameidx{match_accession}V\%$colnameidx{match_accessor_suffix}V",
     	       'Match Name_ATAG' => 'TARGET="WinExt" ',
 
