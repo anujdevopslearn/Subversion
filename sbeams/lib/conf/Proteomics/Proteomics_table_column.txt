@@ -546,3 +546,85 @@ PR_peptide_parent_protein	1	peptide_parent_protein_id	Peptide Parent Protein ID	
 PR_peptide_parent_protein	2	peptide_id	Peptide	int	4	0	N		N	PR_peptide	peptide_id										
 PR_peptide_parent_protein	3	protein_name	Protein Name	varchar	255	0	N		N												
 PR_peptide_parent_protein	4	biosequence_id	Biosequence ID	int	4	0	N		N												
+PR_possible_peptide	1	possible_peptide_id	Possible Peptide ID	int	4	0	N		Y												pkDEFAULT
+PR_possible_peptide	2	biosequence_id	BioSequence ID	int	4	0	Y		N	PR_biosequence	biosequence_id					Y	Y	N	BioSequence ID		
+PR_possible_peptide	3	mass	Mass	real	4	0	Y		N												
+PR_possible_peptide	4	peptide_sequence	Peptide Sequence	varchar	255	0	N		N												
+PR_possible_peptide	5	peptide_offset	Peptide Offset	int	4	0	N		N												
+PR_possible_peptide	6	preceding_residue	Preceding Residue	char	1	0	N		N												
+PR_possible_peptide	7	following_residue	Following Residue	char	1	0	N		N												
+PR_possible_peptide	8	n_tryptic_terminii	Number of Tryptic Termini	int	4	0	N		N												
+PR_possible_peptide	9	is_cysteine_containing	Is Cytsteine Containing	char	1	0	N		N												
+PR_possible_peptide	10	is_unique	Is Unique	char	1	0	N		N												
+PR_BrowsePossiblePeptides	1	input_form_format	Input Form Format									N	optionlist		refreshDocument()	Y	Y	N	Options for level of detail and layout for this input form	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'input_form_options' ORDER BY sort_order,option_value"	
+PR_BrowsePossiblePeptides	2	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBPR_BIOSEQUENCE_SET ORDER BY sort_order,set_name"	
+PR_BrowsePossiblePeptides	3	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.
+PR_BrowsePossiblePeptides	4	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.
+PR_BrowsePossiblePeptides	5	accession_constraint	Accesssion Number									N	text	40		Y	2	N	Constraint for the Accession Number. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.
+PR_BrowsePossiblePeptides	6	biosequence_seq_constraint	Sequence Constraint									N	text	40		Y	Y	N	Constraint for the actual sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.
+PR_BrowsePossiblePeptides	7	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.
+PR_BrowsePossiblePeptides	8	molecular_function_constraint	Molecular Function Constraint									N	text	40		Y	2	N	Constraint for the GO Molecular Function. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.
+PR_BrowsePossiblePeptides	9	biological_process_constraint	Biological Process Constraint									N	text	40		Y	2	N	Constraint for the GO Biological Process. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.
+PR_BrowsePossiblePeptides	10	cellular_component_constraint	Cellular Component Constraint									N	text	40		Y	2	N	Constraint for the GO Cellular Component. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.
+PR_BrowsePossiblePeptides	11	protein_domain_constraint	Protein Domain Constraint									N	text	40		Y	2	N	Constraint for the InterPro Protein Domain. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.
+PR_BrowsePossiblePeptides	12	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	2	N	"Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""
+PR_BrowsePossiblePeptides	13	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	2	N	"Constraint for the number of transmembrane regions (based on a 19-residue wide sliding window of hydropathy indexes above 1.58).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""
+PR_BrowsePossiblePeptides	14	protein_length_constraint	Protein Length Constraint									N	text	40		Y	2	N	"Constraint for the protein length.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""
+PR_BrowsePossiblePeptides	15	peptide_constraint	Peptide Constraint									N	text	40		Y	1	N	Constraint for the peptide (regardless of modifications). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.
+PR_BrowsePossiblePeptides	16	peptide_string_constraint	Peptide String Constraint									N	text	40		Y	2	N	Constraint for the peptide string (including modifications and neighboring AAs). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.
+PR_BrowsePossiblePeptides	17	mass_constraint	Mass constraint									N	text	40		Y	2	N	"Constraint for the theoretical peptide mass (as a single decimal value).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""
+PR_BrowsePossiblePeptides	18	n_occurrences	Number of Occurrences									N	text	15		Y	1	N	"Constraint for the number of entries per row (only applicable for one of the two Grouping options)  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"""
+PR_BrowsePossiblePeptides	19	peptide_options	Peptide Options									N	multioptionlist	3		Y	Y	N	Various selectable options to further contrain the peptides displayed	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BPP_peptide_options' ORDER BY sort_order,option_value"	
+PR_BrowsePossiblePeptides	20	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BPP_display_options' ORDER BY sort_order,option_value"	
+PR_BrowsePossiblePeptides	21	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."		
+PR_publication_category	1	publication_category_id	Publication Category ID	int	4	0	N		Y							N	N				pkDEFAULT
+PR_publication_category	2	publication_category_name	Publication Category Name	varchar	100	0	N		N			Y	text	40		Y	Y	Y	Short name of this category as it will appear in list boxes		
+PR_publication_category	3	publication_category_description	Publication Category Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	More complete description of this publication category		
+PR_publication_category	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PR_publication_category	5	sort_order	Sort Order	int	2	0	N	10	N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
+PR_publication_category	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_publication_category	7	created_by_id	Record Created By	int	2	0	N	1	N	contact	contact_id					N	N				
+PR_publication_category	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_publication_category	9	modified_by_id	Record Modified By	int	2	0	N	1	N	contact	contact_id					N	N				
+PR_publication_category	10	owner_group_id	Owner Group ID	int	2	0	N	1	N	work_group	work_group_id					N	N				
+PR_publication_category	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+PR_publication_rating	1	publication_rating_id	Publication Rating ID	int	4	0	N		Y							N	N				pkDEFAULT
+PR_publication_rating	2	publication_rating_number	Publication Rating Number	int	4	0	N		N			Y	text	10		Y	Y	Y	Numerical rating of the paper on a scale of 1-10		
+PR_publication_rating	3	publication_rating_name	Publication Rating Name	varchar	100	0	N		N			Y	text	40		Y	Y	Y	Short name of this rating level as it will appear in list boxes		
+PR_publication_rating	4	publication_rating_description	Publication Rating Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	More complete description of this rating level		
+PR_publication_rating	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PR_publication_rating	6	sort_order	Sort Order	int	2	0	N	10	N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
+PR_publication_rating	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_publication_rating	8	created_by_id	Record Created By	int	2	0	N	1	N	contact	contact_id					N	N				
+PR_publication_rating	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_publication_rating	10	modified_by_id	Record Modified By	int	2	0	N	1	N	contact	contact_id					N	N				
+PR_publication_rating	11	owner_group_id	Owner Group ID	int	2	0	N	1	N	work_group	work_group_id					N	N				
+PR_publication_rating	12	record_status	Record Status	char	1	0	N	N	N							N	N				
+PR_publication	1	publication_id	Publication ID	int	8	0	N		Y							N	N				pkDEFAULT
+PR_publication	2	publication_name	Publication Name	varchar	100	0	N		N			Y	text	50		Y	Y	Y	"Friendly name of the citation, e.g. Dewey, Cheetham and Howe (1998)"		
+PR_publication	3	pubmed_ID	PubMed ID	varchar	50	0	Y		N			N	text	30		Y	Y	N	"PubMed ID for this citation.  When this implementation is finished, you ought to be able to just fill this in and have the interface fetch the title,author,etc. information for you"		
+PR_publication	4	keywords	Keywords	varchar	255	0	Y		N			N	text	50		Y	Y	N	A comma-separated list of keywords appropriate when searching for papers of this sort		
+PR_publication	5	publication_category_id	Publication Category	int	4	0	Y		N	PR_publication_category	publication_category_id	N	optionlist			Y	Y	N	Broad category within which this publication is classified	"SELECT publication_category_id,publication_category_name FROM $TBPR_PUBLICATION_CATEGORY WHERE record_status != 'D' ORDER BY sort_order,publication_category_name"	
+PR_publication	6	publication_rating_id	Publication Rating	int	4	0	Y		N	PR_publication_rating	publication_rating_id	N	optionlist			Y	Y	N	Rating of this paper (typically within the category) given by the person entering this record.  This should be an indication of how worthwhile a read this paper is within the category	"SELECT publication_rating_id,STR(publication_rating_number,5,0)+' - '+publication_rating_name FROM $TBPR_PUBLICATION_RATING WHERE record_status != 'D' ORDER BY sort_order,publication_rating_number DESC,publication_rating_name"	
+PR_publication	7	presented_on_date	Presented Date	datetime	8	0	Y		N			N	text	20		Y	Y	N	Date that the publication was presented in a journal club		
+PR_publication	8	presented_by_contact_id	Presented By Contact	int	4	0	Y		N	contact	contact_id	N	scrolloptionlist	4		Y	Y	N	Person who presented this paper in a journal club	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+PR_publication	9	title	Title	varchar	255	0	Y		N			N	text	50		Y	Y	N	Title of the article		
+PR_publication	10	author_list	Author List	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Author list in 'Lastname, FIMI' format"		
+PR_publication	11	journal_name	Journal Name	varchar	100	0	Y		N			N	text	50		Y	Y	N	Name of the Journal in which the article appears		
+PR_publication	12	published_year	Published Year	varchar	10	0	Y		N			N	text	20		Y	Y	N	Year the article was published		
+PR_publication	13	volume_number	Volume Number	varchar	50	0	Y		N			N	text	20		Y	Y	N	Volume number of the article		
+PR_publication	14	issue_number	Issue Number	varchar	50	0	Y		N			N	text	20		Y	Y	N	Issue number of the article		
+PR_publication	15	page_numbers	Page Numbers	varchar	50	0	Y		N			N	text	30		Y	Y	N	Page numbers of the article		
+PR_publication	16	publisher_name	Publisher Name	varchar	255	0	Y		N			N	text	40		Y	Y	N	Name of the publisher		
+PR_publication	17	editor_name	Editor Name	varchar	255	0	Y		N			N	text	40		Y	Y	N	"Name of the editor, if any"		
+PR_publication	18	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	"URL of other locator for the article, either out on the Internet or in the location Publications repository"		SELF
+PR_publication	19	abstract	Abstract	text	16	0	Y		N			N	textarea	4		Y	Y	N	Plain text abstract of the article		
+PR_publication	20	full_manuscript_file	Manuscript File Upload	varchar	255	0	Y		N			N	file	40		Y	Y	N	Actual file containing the manuscript (e.g. in PDF format)		
+PR_publication	21	manuscript_file_location_id	Full Manuscript File (new)	int	4	0	Y		N			N	fixed			Y	Y	N	"This is a placeholder for an improved file management mechanism, still unimplemented"		
+PR_publication	22	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PR_publication	23	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N
+PR_publication	24	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N
+PR_publication	25	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N
+PR_publication	26	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N
+PR_publication	27	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N
+PR_publication	28	record_status	Record Status	char	1	0	N	N	N							N	N
