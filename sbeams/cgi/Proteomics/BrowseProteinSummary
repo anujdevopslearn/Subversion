@@ -906,7 +906,7 @@ sub postProcessResultset {
   #### Define the columns that are to be in the new resultset
   my @prefix_columns = qw(biosequence_name accessor accessor_suffix
     search_batch_id biosequence_accession canonical_name);
-  my @data_columns = qw(protein_probability n_peptides average_quant n_quant);
+  my @data_columns = qw(protein_probability n_peptides average_quant stdev_quant n_quant);
   my @suffix_columns = qw(fav_codon_frequency transmembrane_class
     n_transmembrane_regions protein_length
     molecular_function molecular_function_GO
