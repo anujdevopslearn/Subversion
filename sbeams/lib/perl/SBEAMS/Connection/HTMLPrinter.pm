@@ -171,7 +171,7 @@ sub printStyleSheet {
 
     if ( $HTTP_USER_AGENT =~ /Mozilla\/4.+X11/ ) {
       $FONT_SIZE=12;
-      $FONT_SIZE_SM=10;
+      $FONT_SIZE_SM=11;
       $FONT_SIZE_LG=14;
       $FONT_SIZE_HG=19;
     }

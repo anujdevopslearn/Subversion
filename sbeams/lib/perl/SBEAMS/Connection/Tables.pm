@@ -23,6 +23,7 @@ use vars qw(@ISA @EXPORT
     $TB_CONTACT_TYPE
     $TB_ORGANIZATION
     $TB_PROJECT
+    $TB_DBXREF
 
     $TB_TABLE_COLUMN
     $TB_TABLE_PROPERTY
@@ -46,6 +47,7 @@ require Exporter;
     $TB_CONTACT_TYPE
     $TB_ORGANIZATION
     $TB_PROJECT
+    $TB_DBXREF
 
     $TB_TABLE_COLUMN
     $TB_TABLE_PROPERTY
@@ -66,6 +68,9 @@ $TB_CONTACT             = 'contact';
 $TB_CONTACT_TYPE        = 'contact_type';
 $TB_ORGANIZATION        = 'organization';
 $TB_PROJECT             = 'project';
+
+$TB_DBXREF              = 'proteomics.dbo.dbxref';
+
 
 $TB_TABLE_COLUMN        = 'table_column';
 $TB_TABLE_PROPERTY      = 'table_property';
