@@ -1302,7 +1302,8 @@ sub updateSampleTables {
     
     ## FOR insearts and updates:
     ## Get date_created, created_by_id, date_modified, modified_by_id,
-    ## and owner_group_id, record_status from atlas_build
+    ## and owner_group_id, record_status from atlas_build.  
+    ## assume is_public = 'N' and project_id='475' for public PA
     $sql = qq~
          SELECT date_created, created_by_id, date_modified, modified_by_id,
          owner_group_id, record_status
@@ -1382,6 +1383,7 @@ sub updateSampleTables {
             }
 
 
+            ## assume is_public = 'N' and project_id='475' for public PA
             my %rowdata = ( ##   sample      some of the table attributes:
                 search_batch_id => $search_batch_id[$i],
                 sample_tag => $sample_tag[$i],
@@ -1393,6 +1395,8 @@ sub updateSampleTables {
                 modified_by_id => $mbi,
                 owner_group_id => $ogi,
                 record_status => $rs,
+                is_public => 'N',
+                project_id => '475',
             );
 
 
