@@ -834,12 +834,16 @@ sub handle_request {
 
                'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
                'Molecular Function_ATAG' => 'TARGET="WinExt"',
+               'Molecular Function_OPTIONS' => {semicolon_separated_list=>1},
                'Biological Process' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{biological_process_GO}V",
                'Biological Process_ATAG' => 'TARGET="WinExt"',
+               'Biological Process_OPTIONS' => {semicolon_separated_list=>1},
                'Cellular Component' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{cellular_component_GO}V",
                'Cellular Component_ATAG' => 'TARGET="WinExt"',
+               'Cellular Component_OPTIONS' => {semicolon_separated_list=>1},
                'InterPro Protein Domain' => "http://www.ebi.ac.uk/interpro/IEntry?ac=\%$colnameidx{interpro_protein_domain_GO}V",
                'InterPro Protein Domain_ATAG' => 'TARGET="WinExt"',
+               'InterPro Protein Domain_OPTIONS' => {semicolon_separated_list=>1},
   );
 
 
