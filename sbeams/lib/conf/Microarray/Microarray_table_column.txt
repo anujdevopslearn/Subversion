@@ -443,6 +443,10 @@ MA_affy_annotation	13	gene_symbol	Gene Symbol	varchar	50	0	Y		N							Y	Y	N
 MA_affy_annotation	14	chromosomal_location	Chromosomal Location	varchar	50	0	Y		N							Y	Y	N	Chromosomal Band		
 MA_affy_annotation	15	pathway	Patway	varchar	255	0	Y		N							Y	Y	N	References to Gene MicroArray Pathway Profiler and KEGG: Kyoto Encyclopedia of Genes and Genomes.		
 MA_affy_annotation	16	qtl	QTL	varchar	100	0	Y		N							Y	Y	N	Quantitative Trait Loci (QTL) are genetic linkage data that provide disease associations for various loci.		
+MA_affy_annotation	17	annotation_description	Annotation Description	varchar	255	0	Y		N							Y	Y	N	Affymetrix annotation information.  Description of the method used to annotate the probe set.		
+MA_affy_annotation	18	transcript_assignment	Transcript Assignment	varchar	255	1	Y		N							Y	Y	N	Affymetrix annotation information. Contains the mRNA to probe set assignments.		
+MA_affy_annotation	19	annotation_transcript_cluster	Annotation Transcript Cluster	varchar	255	2	Y		N							Y	Y	N	Affymetrix annotation information. Contains the IDs of the transcripts used in the transcript to gene annotation mapping.		
+MA_affy_annotation	20	annotation_notes	Annotation Notes	varchar	255	3	Y		N							Y	Y	N	Affymetrix annotation information. Contains assignments cross hyb and negative strand alignments.		
 MA_affy_db_links	1	affy_db_links_id	Affy DB Links ID	int	4	0	N		Y							N	N	Y			
 MA_affy_db_links	2	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_annotation	affy_annotation_id	Y				N	N	N	FK to MA_affy_annotaion		
 MA_affy_db_links	3	dbxref_id	DBXref ID	int	4	0	N		N			Y				N	N	N	FK to proteomic dbxref table		
@@ -516,6 +520,7 @@ MA_trans_membrane	2	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_a
 MA_trans_membrane	3	number_of_domains	Number of Transmembrane Domains	int	4	0	Y		N										number of transmembrane domains		
 MA_trans_membrane	4	nin_prob	Probability that the N-terminus is interior	float	8	0	Y		N										the probability that the N-terminus is interior		
 MA_trans_membrane	5	type	Transmembrane Type	varchar	50	0	Y		N										SIGNAL", "ANCHOR" or empty ""		
+MA_trans_membrane	6	protein_accession_numb	Protein Accession Number	varchar	25	0	Y		N										Accession number for the protein used in the TM prediction program.  New fields as of 10.25.04		
 MA_trans_membrane_domain	1	trans_membrane_domain_id	Transmembrane Type ID	int	4	0	N		Y			Y									
 MA_trans_membrane_domain	2	trans_membrane_id	Transmembrane ID	int	4	0	N		N	MA_trans_membrane	trans_membrane_id	Y									
 MA_trans_membrane_domain	3	tm_protein_start	TM Protein Start	int	4	0	Y		N										Start of the transmembrane prediction		
