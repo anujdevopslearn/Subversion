@@ -1308,7 +1308,7 @@ sub processEntryForm {
                 my @returned_information = $sbeams->applySqlChange(
                   SQL_statement => $sql_query,
                   current_contact_id => $current_contact_id,
-                  'table_name => IJ_array_request_sample',
+                  table_name => 'IJ_array_request_sample',
                   record_identifier => qq~array_request_sample_id=$table_parameters{"sample${isample}id_$element"}~,
                 );
 
