@@ -697,9 +697,9 @@ sub showTable {
   if ($full_orderby_clause) {
     $main_query_part =~ s/\s*ORDER BY.*//i;
   } elsif ($full_where_clause) {
-    if ($main_query_part =~ /\s*(ORDER BY.+)/i) {
+    if ($main_query_part =~ /\s*(ORDER BY.+)/is) {
       $full_orderby_clause = $1;
-      $main_query_part =~ s/\s*ORDER BY.*//i;
+      $main_query_part =~ s/\s*ORDER BY.+//is;
     }
   }
 
@@ -710,7 +710,7 @@ sub showTable {
       $full_where_clause
       $full_orderby_clause
   ~;
-  #print "<PRE>$sql_query\n\n</PRE>";
+  print "<PRE>$sql_query\n\n</PRE>";
 
 
   #### Get the url link data
