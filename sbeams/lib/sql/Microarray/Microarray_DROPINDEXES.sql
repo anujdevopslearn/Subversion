@@ -1,5 +1,5 @@
--- db_links
-DROP INDEX dbo.affy_db_links.idx_affy_annotation_id
+--  affy_db_links db_links
+DROP INDEX dbo.affy_db_links.idx_affy_annotation_id__db_id
 go
 -- affy_db_links affy_db_links_id --
 DROP INDEX dbo.affy_db_links.idx_affy_db_links_id
