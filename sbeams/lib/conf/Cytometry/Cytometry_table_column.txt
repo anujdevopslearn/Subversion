@@ -1,34 +1,37 @@
-table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
-CY_fcs_run	1	fcs_run_id	FCS Run ID	int	4	0	N		Y							N	N				pkDEFAULT
-CY_fcs_run	2	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism from which this sample was acquired	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
-CY_fcs_run	3	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project to which the FCS Run belongs	"SELECT project_id, name + ' ['+budget+']' FROM $TB_PROJECT WHERE PI_contact_id='$contact_id' ORDER BY name"	
-CY_fcs_run	4	project_designator	Project Designator	varchar	255	0	N		N			N	text	50		Y	Y	Y	Project designator for this FCS Run (originally from the run header file but changeable)		
-CY_fcs_run	5	sample_name	Sample Name	varchar	255	0	N		N			Y	text	50		Y	Y	N	Sample name for this FCS Run (originally from the run header file but changeable)		
-CY_fcs_run	6	fcs_run_description	FCS Run Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Detailed description of the sample and/or how the FCS Run was performed		
-CY_fcs_run	7	filename	Filename	varchar	255	0	Y		N			Y	fixed	50		Y	Y	Y	Filename of the original FCS Run file		
-CY_fcs_run	8	original_filepath	Original Filepath	varchar	255	0	N		N			Y	fixed	50		Y	Y	N	Original path to the file when it was loaded into the database		
-CY_fcs_run	9	n_data_points	Number of Data Points	int	4	0	Y		N			N	fixed	20		Y	Y	N	Number of data points in this FCS Run		
-CY_fcs_run	10	run_date	Run Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	text	20		Y	Y	N	Datetime when this FCS Run was performed (originally the system date of the FCS Run file but changeable)		
-CY_fcs_run	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-CY_fcs_run	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-CY_fcs_run	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-CY_fcs_run	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-CY_fcs_run	15	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-CY_fcs_run	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-CY_fcs_run	17	record_status	Record Status	char	1	0	N	N	N							N	N				
-CY_fcs_run_parameter	1	fcs_run_parameter_id	FCS Run Parameter ID	int	4	0	N		Y							N	N	N			pkDEFAULT
-CY_fcs_run_parameter	1	fcs_run_id	FCS Run ID	int	4	0	N		N	CY_fcs_run	fcs_run_id					N	N	Y	FCS Run to which this search parameter belongs		
-CY_fcs_run_parameter	2	key_order	Key Order	int	4	0	N		N			Y				Y	Y	N	Monotonically increasing number to denote key order		
-CY_fcs_run_parameter	3	parameter_key	Parameter Key	varchar	100	0	N		N			Y	text	50		Y	Y	Y	The key of the key/value pair		
-CY_fcs_run_parameter	4	parameter_value	Parameter Value	varchar	255	0	N		N			Y	text	50		Y	Y	N	The value of the key/value pair		
-CY_query_option	1	query_option_id	Query Option ID	int	4	0	N		Y							N	N				pkDEFAULT
-CY_query_option	2	option_type	Option Type	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Type or category of this option		
-CY_query_option	3	option_key	Option Key	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Key for this key/value pair option		
-CY_query_option	4	option_value	Option Value	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Value of this key/value pair option		
-CY_query_option	5	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
-CY_query_option	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-CY_query_option	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-CY_query_option	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-CY_query_option	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-CY_query_option	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N
-CY_query_option	11	record_status	Record Status	char	1	0	N	N	N							N	N
+"table_name"	"column_index"	"column_name"	"column_title"	"datatype"	"scale"	"precision"	"nullable"	"default_value"	"is_auto_inc"	"fk_table"	"fk_column_name"	"is_required"	"input_type"	"input_length"	"onChange"	"is_data_column"	"is_display_column"	"is_key_field"	"column_text"	"optionlist_query"	"url"
+"CY_fcs_run"	1	"fcs_run_id"	"FCS Run ID"	"int"	4	0	"N"		"Y"							"N"	"N"				"pkDEFAULT"
+"CY_fcs_run"	2	"organism_id"	"Organism"	"int"	4	0	"N"		"N"	"organism"	"organism_id"	"Y"	"optionlist"			"Y"	"Y"	"N"	"Organism from which this sample was acquired"	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+"CY_fcs_run"	3	"project_id"	"Project"	"int"	4	0	"N"		"N"	"project"	"project_id"	"Y"	"optionlist"			"Y"	"Y"	"N"	"Project to which the FCS Run belongs"	"SELECT project_id, name + ' ['+budget+']' FROM $TB_PROJECT WHERE PI_contact_id='$contact_id' ORDER BY name"	
+"CY_fcs_run"	4	"project_designator"	"Project Designator"	"varchar"	255	0	"N"		"N"			"N"	"text"	50		"Y"	"Y"	"Y"	"Project designator for this FCS Run (originally from the run header file but changeable)"		
+"CY_fcs_run"	5	"sample_name"	"Sample Name"	"varchar"	255	0	"N"		"N"			"Y"	"text"	50		"Y"	"Y"	"N"	"Sample name for this FCS Run (originally from the run header file but changeable)"		
+"CY_fcs_run"	6	"fcs_run_description"	"FCS Run Description"	"text"	16	0	"Y"		"N"			"N"	"textarea"	4		"Y"	"Y"	"N"	"Detailed description of the sample and/or how the FCS Run was performed"		
+"CY_fcs_run"	7	"filename"	"Filename"	"varchar"	255	0	"Y"		"N"			"Y"	"fixed"	50		"Y"	"Y"	"Y"	"Filename of the original FCS Run file"		
+"CY_fcs_run"	8	"original_filepath"	"Original Filepath"	"varchar"	255	0	"N"		"N"			"Y"	"fixed"	50		"Y"	"Y"	"N"	"Original path to the file when it was loaded into the database"		
+"CY_fcs_run"	9	"n_data_points"	"Number of Data Points"	"int"	4	0	"Y"		"N"			"N"	"fixed"	20		"Y"	"Y"	"N"	"Number of data points in this FCS Run"		
+"CY_fcs_run"	10	"run_date"	"Run Date"	"datetime"	8	0	"Y"	"CURRENT_TIMESTAMP"	"N"			"N"	"text"	20		"Y"	"Y"	"N"	"Datetime when this FCS Run was performed (originally the system date of the FCS Run file but changeable)"		
+"CY_fcs_run"	11	"comment"	"Comment"	"text"	16	0	"Y"		"N"			"N"	"textarea"	4		"Y"	"Y"	"N"	"Additional comments"		
+"CY_fcs_run"	12	"date_created"	"Date Record Created"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"CY_fcs_run"	13	"created_by_id"	"Record Created By"	"int"	4	0	"N"	1	"N"	"contact"	"contact_id"					"N"	"N"				
+"CY_fcs_run"	14	"date_modified"	"Date Record Modified"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"CY_fcs_run"	15	"modified_by_id"	"Record Modified By"	"int"	4	0	"N"	1	"N"	"contact"	"contact_id"					"N"	"N"				
+"CY_fcs_run"	16	"owner_group_id"	"Owner Group ID"	"int"	4	0	"N"	1	"N"	"work_group"	"work_group_id"					"N"	"N"				
+"CY_fcs_run"	17	"record_status"	"Record Status"	"char"	1	0	"N"	"N"	"N"							"N"	"N"				
+"CY_fcs_run_parameter"	1	"fcs_run_parameter_id"	"FCS Run Parameter ID"	"int"	4	0	"N"		"Y"							"N"	"N"	"N"			"pkDEFAULT"
+"CY_fcs_run_parameter"	1	"fcs_run_id"	"FCS Run ID"	"int"	4	0	"N"		"N"	"CY_fcs_run"	"fcs_run_id"					"N"	"N"	"Y"	"FCS Run to which this search parameter belongs"		
+"CY_fcs_run_parameter"	2	"key_order"	"Key Order"	"int"	4	0	"N"		"N"			"Y"				"Y"	"Y"	"N"	"Monotonically increasing number to denote key order"		
+"CY_fcs_run_parameter"	3	"parameter_key"	"Parameter Key"	"varchar"	100	0	"N"		"N"			"Y"	"text"	50		"Y"	"Y"	"Y"	"The key of the key/value pair"		
+"CY_fcs_run_parameter"	4	"parameter_value"	"Parameter Value"	"varchar"	255	0	"N"		"N"			"Y"	"text"	50		"Y"	"Y"	"N"	"The value of the key/value pair"		
+"CY_query_option"	1	"query_option_id"	"Query Option ID"	"int"	4	0	"N"		"Y"							"N"	"N"				"pkDEFAULT"
+"CY_query_option"	2	"option_type"	"Option Type"	"varchar"	255	0	"N"		"N"			"Y"	"text"	50		"Y"	"Y"	"Y"	"Type or category of this option"		
+"CY_query_option"	3	"option_key"	"Option Key"	"varchar"	255	0	"N"		"N"			"Y"	"text"	50		"Y"	"Y"	"Y"	"Key for this key/value pair option"		
+"CY_query_option"	4	"option_value"	"Option Value"	"varchar"	255	0	"Y"		"N"			"Y"	"text"	50		"Y"	"Y"	"N"	"Value of this key/value pair option"		
+"CY_query_option"	5	"sort_order"	"Sort Order"	"int"	4	0	"N"	10	"N"			"N"	"text"	10		"Y"	"Y"	"N"	"Numbers which override alphabetical sorting in a list box"		
+"CY_query_option"	6	"date_created"	"Date Record Created"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"CY_query_option"	7	"created_by_id"	"Record Created By"	"int"	4	0	"N"	1	"N"	"contact"	"contact_id"					"N"	"N"				
+"CY_query_option"	8	"date_modified"	"Date Record Modified"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"CY_query_option"	9	"modified_by_id"	"Record Modified By"	"int"	4	0	"N"	1	"N"	"contact"	"contact_id"					"N"	"N"				
+"CY_query_option"	10	"owner_group_id"	"Owner Group ID"	"int"	4	0	"N"	1	"N"	"work_group"	"work_group_id"					"N"	"N"				
+"CY_query_option"	11	"record_status"	"Record Status"	"char"	1	0	"N"	"N"	"N"							"N"	"N"				
+"CY_AddFCSRuns"	1	"project_id"	"Project"	"int"	4	0	"N"		"N"	"project"	"project_id"	"Y"	"optionlist"			"Y"	"Y"	"N"	"Project to which the FCS Run belongs"	"SELECT project_id, name + ' ['+budget+']' FROM $TB_PROJECT WHERE PI_contact_id='$contact_id' ORDER BY name"	
+"CY_AddFCSRuns"	2	"organism_id"	"Organism"	"int"	4	0	"N"		"N"	"organism"	"organism_id"	"Y"	"optionlist"			"Y"	"Y"	"N"	"Organism from which this sample was acquired"	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+"CY_AddFCSRuns"	3	"filepath"	"Filepath"	"varchar"	255	0	"N"		"N"			"Y"	"text"	50		"Y"	"Y"	"N"	"Path where the FCS file to be added to this project are located (e.g. /users/adiercks/fcs/bugjuice).  This directory must be world readable to the server can read the files in it"		
