@@ -313,6 +313,7 @@ sub print_user_permissions {
       WHERE UPP.project_id = '$current_project_id'
       AND PRIV.privilege_id < '50'
       AND UL.contact_id != P.PI_contact_id
+			ORDER BY UL.username
       ~;
 
   @rows = $self->selectSeveralColumns($sql);
@@ -435,6 +436,7 @@ sub print_group_permissions {
       AND PRIV.privilege_id < '50'
       AND WG.record_status != 'D'
       AND PRIV.record_status != 'D'
+			ORDER BY WG.work_group_name
       ~;
 
   # SQL for all privileges
@@ -450,6 +452,7 @@ sub print_group_permissions {
       FROM $TB_WORK_GROUP WG
       WHERE WG.record_status != 'D'
       AND WG.work_group_name != 'Admin'
+			ORDER BY WG.work_group_name
       ~;
 
 
