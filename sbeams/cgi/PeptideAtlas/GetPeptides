@@ -235,8 +235,11 @@ sub handle_request {
   #### Set some specific settings for this program
   my $CATEGORY="Get Peptides";
   $TABLE_NAME="AT_GetPeptides" unless ($TABLE_NAME);
-  ($PROGRAM_FILE_NAME) =
-    $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+# ($PROGRAM_FILE_NAME) =
+#   $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+
+  $PROGRAM_FILE_NAME = $PROG_NAME;
+
   my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
 
   #### Get the columns and input types for this table/query
