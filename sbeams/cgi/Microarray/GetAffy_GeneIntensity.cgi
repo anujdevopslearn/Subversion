@@ -947,7 +947,7 @@ sub print_full_form {
 
 		unless ($constraint_data) {
 			print
-			  "SORRY NO DATA FOR THIS PROJECT try (aoudes Asa Samples 402)\n";
+			  "SORRY NO DATA FOR THIS PROJECT\n";
 
 			return;
 		}
@@ -959,7 +959,7 @@ sub print_full_form {
 
 			print $q->start_form(
 				-name => 'get_all_files'
-				,    #bug, javascript is hard coded to this form name FIX ME
+				,    
 				-action => "$CGI_BASE_DIR/Microarray/$PROG_NAME",
 			);
 
