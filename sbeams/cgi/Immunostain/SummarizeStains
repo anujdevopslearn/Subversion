@@ -31,7 +31,7 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
 
-use SBEAMS::Connection qw( $log);
+use SBEAMS::Connection qw($log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -400,7 +400,17 @@ foreach my $p (keys %parameters)
     colnameidx_ref=>\%colnameidx,
     column_titles_ref=>\@column_titles
   );
+  my $struct_unit_case =<<"  END_CASE";
+  CASE WHEN tissue_type_name LIKE '%Bladder%' AND CT.structural_unit_name = 'Stromal endothelial cells'
+            THEN CT.sort_order - 75
+       WHEN tissue_type_name LIKE '%Prostate%' AND CT.structural_unit_name = 'Basal epithelial cells'
+            THEN CT.sort_order + 110
+       ELSE CT.sort_order 
+  END AS structural_unit_sort_order
+  END_CASE
 
+  # HACK! Separate Basal Epithelial populations between Prostate and Bladder
+  $columns_clause =~ s/CT.sort_order AS \"structural_unit_sort_order\"/$struct_unit_case/;
 
   #### Define the SQL statement
   $sql = qq~
@@ -414,7 +424,6 @@ foreach my $p (keys %parameters)
 			ON S.organism_id = SDO.organism_id
 		LEFT JOIN $TBIS_TISSUE_TYPE TT
 			ON S.tissue_type_id = TT.tissue_type_id
-
 		LEFT JOIN $TBIS_ASSAY_CHANNEL AC
 			ON SS.assay_id = AC.assay_id
 		LEFT JOIN $TBIS_ASSAY_UNIT_EXPRESSION SCP1
@@ -440,8 +449,6 @@ foreach my $p (keys %parameters)
 	$limit_clause->{trailing_limit_clause}
 
   ~;
-
-  $log->debug( $sql );
 
   #### Certain types of actions should be passed to links
   my $pass_action = "QUERY";
@@ -693,16 +700,34 @@ sub postProcessResultset {
     die ( "Illegal weighting factor $weight" );
   }
 
+  # Hash to hold all struct_units seen for bladder
+  my %bnum;
+  my %pnum;
+
+  # Hash to key cell types for making struct_units seqregate (temporary).
+  my %struct_unit = ( 'Bladder' => 1,
+                      'Prostate adenocarcinoma' => 2,
+                      'Normal Prostate' => 2 );
   
   for (@{$resultset_ref->{data_ref}}) {
     
-    @row = @{$resultset_ref->{data_ref}->[$irow]};
+    @row = @{$resultset_ref->{data_ref}->[$irow++]};
+    next unless $row[$biosequence_name_column_index->{structural_unit_name}];
+
+    if ( $row[$biosequence_name_column_index->{tissue_type_name}] =~ /Bladder/ ) {
+      $bnum{$row[$biosequence_name_column_index->{structural_unit_name}]}++; 
+    } elsif ( $row[$biosequence_name_column_index->{tissue_type_name}] =~ /Prostate/ ) {
+      $pnum{$row[$biosequence_name_column_index->{structural_unit_name}]}++; 
+    }
 
     $organismID =  $row[$biosequence_name_column_index->{organism_id}];
     my $antibodyName =  $row[$biosequence_name_column_index->{antibody_name}];
     my $antibodyId = $row[$biosequence_name_column_index->{antibody_id}];
     my $refseq_accession = $row[$biosequence_name_column_index->{refseq_accession}];
-    my $cellTypeName = $row[$biosequence_name_column_index->{structural_unit_name}]; 
+
+    # Cell types have an intrinsic tissue_type in addition to a structural unit
+    my $cellTypeName = $row[$biosequence_name_column_index->{structural_unit_name}] .
+              '---' . $struct_unit{$row[$biosequence_name_column_index->{tissue_type_name}]};
     my $cellTypeId = $row[$biosequence_name_column_index->{structural_unit_id}];
 
     if ($cellTypeName) {
@@ -712,7 +737,10 @@ sub postProcessResultset {
 			  ($row[$biosequence_name_column_index->{equivocal_percent}]||0) * $weight)/100;
       $dataHash{$antibodyName}->{$cellTypeName}->{probability}+=$probability if $cellTypeName; 
       $dataHash{$antibodyName}->{$cellTypeName}->{numberOfEx}++ if $cellTypeName;
-      $cellTypeHash{$cellTypeName} = $row[$biosequence_name_column_index->{structural_unit_sort_order}] if ($cellTypeName);
+
+      # Get rid of hanging chads - pseudo columns for nameless structural units
+      (my $substantial_name = $cellTypeName ) =~ s/---\d$//;
+      $cellTypeHash{$cellTypeName} = $row[$biosequence_name_column_index->{structural_unit_sort_order}] if ($substantial_name);
 
       if ($prevAntibodyName ne $antibodyName) {
       	push(@antibodyArray, $antibodyName);
@@ -722,8 +750,10 @@ sub postProcessResultset {
       $antibodyHash{$antibodyName} = $antibodyId;
       $cellIdHash{$cellTypeName} = $cellTypeId;
     }
-    $irow++;
   } # End resultset loop
+
+  my %numcols = ( 'Urinary Bladder' => scalar(keys(%bnum)), 
+                  'Prostate'        => scalar(keys(%pnum)) );
 		
   my @colorArray = ( '#FFC6A5','#FF6342','#FF0000','#AD0000' );
   my @shadeArray = ( '#E0E0E0','#BFBFBF','#A1A1A1','#808080' );
@@ -738,8 +768,7 @@ sub postProcessResultset {
   }
 
   # generating expression summary table
-  my $table = SBEAMS::Connection::DataTable->new( BORDER => 2,
-                                                  BORDERCOLOR => 'BLACK',
+  my $table = SBEAMS::Connection::DataTable->new( BORDER => 1,
                                                   ALIGN => 'CENTER' );
 
   # Avoid perilous global hash and redundant sorting! (shudder)
@@ -749,16 +778,35 @@ sub postProcessResultset {
   my @trow;
 
   # Add column heading for antibody name.
-  push @trow, ( $exprTabMode eq 'HTML' ) ? "<B>Antibody</B>" : 'Antibody';
+  push @trow, ( $exprTabMode eq 'HTML' ) ? "<B><BR>Antibody</B>" : 'Antibody';
 
+  # Show number of experiments?
   my $pivot = ( $query_parameters_ref->{display_options} =~ /numberof/i ) ? 1 : 0;
 
-  foreach my $cellType ( @skeys ) {
+  my $cnt = 2;
+  for ( 'Urinary Bladder', 'Prostate' ) {
+    if ( $exprTabMode eq 'HTML' && $numcols{$_} > 0 ) {
+      $numcols{$_} = ($numcols{$_}) * 2  if $pivot;
+      push @trow, "<B>$_</B>";
+      $table->setCellAttr( ROW => 1, COL => $cnt++, COLSPAN => $numcols{$_}, BGCOLOR => '#DDDDDD' )
+    }
+  }
+  push @trow, "<B>$_</B>" if $exprTabMode eq 'HTML';
+  $table->addRow( \@trow );
+  $table->setCellAttr( ROW => 1, COL => 1, ROWSPAN => 2 );
+  $#trow = -1;  
+  
+
+
+  foreach my $skey ( @skeys ) {
+
+    # Remove the tissue_type tags
+    ( my $cellType = $skey ) =~ s/---\d//;
 
     # Add the table headings;
     push @trow, ( $exprTabMode eq 'HTML' ) ? "<B>$cellType</B>" : $cellType;
-    push @trow, ( $exprTabMode eq 'HTML' ) ? "<B># Experiments</B>" : 
-                                            '# Experiments' if $pivot;
+    push @trow, ( $exprTabMode eq 'HTML' ) ? "<B># Exp</B>" : 
+                                            '# Exp' if $pivot;
     
     #### Store information needed for a Cytoscape display
     push(@{$cytoscape->{files}->{'NodeType.noa'}},"$cellType = Structural Unit");
