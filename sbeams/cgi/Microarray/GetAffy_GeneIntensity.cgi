@@ -39,7 +39,7 @@ use SBEAMS::Microarray::Tables;
 use SBEAMS::Microarray::Affy_file_groups;
 use SBEAMS::Microarray::Affy_Analysis;
 use SBEAMS::Microarray::Affy_Annotation;
-
+use SBEAMS::Microarray::Merge_results_sets;
 use Data::Dumper;
 $sbeams    = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::Microarray;
@@ -128,7 +128,7 @@ sub main {
 		parameters_ref => \%parameters
 	);
 
-	 #$sbeams->printDebuggingInfo($q);
+	# $sbeams->printDebuggingInfo($q);
 
 	#### Process generic "state" parameters before we start
 	$sbeams->processStandardParameters( parameters_ref => \%parameters );
@@ -137,8 +137,7 @@ sub main {
 	if ( defined( $parameters{action} ) && $parameters{action} eq "???" ) {
 
 		# Some action
-	}
-	else {
+	}else {
 		$sbeamsMOD->printPageHeader();
 		handle_request( ref_parameters => \%parameters );
 		$sbeamsMOD->printPageFooter();
@@ -179,8 +178,7 @@ sub handle_request {
 	if ( $apply_action eq 'SIMPLE_QUERY' & !$parameters{display_type} ) {
 		show_data( ref_parameters => \%parameters );
 		return;
-	}
-	elsif ( $apply_action eq 'SHOW_ANNO' ) {
+	}elsif ( $apply_action eq 'SHOW_ANNO' ) {
 		show_annotation( ref_parameters => \%parameters );
 		return;
 	}
@@ -190,13 +188,13 @@ sub handle_request {
 
 	if (   $query_type eq 'Advanced'
 		|| $parameters{QUERY_NAME}
-		|| $parameters{apply_action} )
+		|| ($parameters{apply_action} 
+		&& $parameters{display_type} ne 'Simple')  )
 	{  #QUERY_NAME only set if print_full_form sub has been previously activated
 
 		print_full_form( ref_parameters => \%parameters );
 
-	}
-	else {
+	}else {
 		$sbeamsMOD->change_views_javascript();
 		$sbeamsMOD->updateCheckBoxButtons_javascript();
 		print_simple_form();
@@ -222,6 +220,7 @@ sub print_full_form {
 	my %hidden_cols   = ();
 	my $limit_clause  = '';
 	my @column_titles = ();
+	my @previous_column_titles = ();
 	my %max_widths    = ();
 	my $show_sql      = '';
 	#### Define some variables for a query and resultset
@@ -270,6 +269,7 @@ sub print_full_form {
 			resultset_ref        => $resultset_ref,
 			query_parameters_ref => \%parameters,
 			resultset_params_ref => \%rs_params,
+			column_titles_ref => \@previous_column_titles,
 		);
 		$n_params_found = 99;
 	}
@@ -401,6 +401,55 @@ sub print_full_form {
 	);
 	return if ( $detection_p_value_clause eq '-1' );
 
+	#### Build Go Constraint constraint
+	our $go_description_clause_2nd_query = $sbeams->parseConstraint2SQL(
+		constraint_column => "go.gene_ontology_description",
+		constraint_type   => "plain_text",
+		constraint_name   => "Go Description Constriant",
+		constraint_value  => $parameters{go_description_constraint}
+	);
+	return if ( $go_description_clause_2nd_query eq '-1' );
+	
+
+	our $go_sql_2nd_query_aref = '';
+	#### Build Go Column Constraint ##Will build statements later on just set a flag for now
+	if ($parameters{display_options} =~ /GO_/){
+		
+		 $go_sql_2nd_query_aref = 'Y';
+	}
+	return if ( $go_sql_2nd_query_aref eq '-1' );
+
+	#print STDERR "GO CLAUSE '$go_sql_2nd_query_aref\n";
+	#### Build Trans membrane Domain Constraint 
+	our $trans_membrane_clause_2nd_query = $sbeams->parseConstraint2SQL(
+		constraint_column => "tm.number_of_domains",
+		constraint_type   => "flexible_float",
+		constraint_name   => "Trans Membrane Number",
+		constraint_value  => $parameters{trans_membrane_constraint}
+	);
+	return if ( $trans_membrane_clause_2nd_query eq '-1' ); 
+	
+	#### Build Protein Family Constraint  
+	our $protein_family_clause_2nd_query = $sbeams->parseConstraint2SQL(
+		constraint_column => "pf.description",
+		constraint_type   => "plain_text",
+		constraint_name   => "Protein Family",
+		constraint_value  => $parameters{protein_families_constraint}
+	);
+	return if ( $protein_family_clause_2nd_query eq '-1' );
+	
+	#### Build Protein Domain Constraint 
+	our $protein_doamin_clause_2nd_query = $sbeams->parseConstraint2SQL(
+		constraint_column => "pd.protein_domain_description",
+		constraint_type   => "plain_text",
+		constraint_name   => "Protein Family",
+		constraint_value  => $parameters{protein_domain_constraint}
+	);
+	return if ( $protein_doamin_clause_2nd_query eq '-1' );
+	
+
+	
+
 	#### Build Signal constraint
 	our $signal_clause = $sbeams->parseConstraint2SQL(
 		constraint_column => "gi.signal",
@@ -414,8 +463,7 @@ sub print_full_form {
 	my $annotation_set_id = '';
 	if ( $parameters{annotation_set_constraint} ) {
 		$annotation_set_id = $parameters{annotation_set_constraint};
-	}
-	else {
+	}else {
 		$annotation_set_id = $affy_o->get_annotation_set_id(
 			affy_array_ids => $parameters{affy_array_id},
 			project_id     => $parameters{project_id}
@@ -438,7 +486,8 @@ sub print_full_form {
 		constraint_value  => $parameters{protocol_id_constraint}
 	);
 	return if ( $r_chp_protocol_id_clause eq '-1' );
-
+###END BUILD CONSTRIANTS
+##############################################################################
 
 	#### Build SORT ORDER
 	my $order_by_clause = "";
@@ -472,9 +521,9 @@ sub print_full_form {
 
 	my @array_names_and_ids;
 
-	#### Define the available data columns.  Add more columns here that will be optional for the user
+	#### Define the available data columns.  Add more columns here that will be optional for the user #STR(gi.signal,8,2)
 	my %available_columns = (
-		"gi.signal"         => [ "signal", "STR(gi.signal,8,2)", "Affy Signal" ],
+		"gi.signal"         => [ "signal", "gi.signal", "Affy Signal" ],
 		"gi.detection_call" => [
 			"detection_call", "gi.detection_call", "Affy R_CHP Detection Call"
 		],
@@ -496,10 +545,11 @@ sub print_full_form {
 		"dbxref.dbxref_tag" =>
 		  [ "database_name", "dbxref.dbxref_tag", "Database Name" ],
 		"db_links.db_id" => [
-			"database_accession_number", "db_links.db_id",
+			"database_accession_number", 
+			"db_links.db_id",
 			"Database Accession Number"
-		],
-	);
+			],
+		);
 
 	#### If the user does not choose which data columns to show, set defaults
 	my @additional_columns = ();
@@ -509,7 +559,7 @@ sub print_full_form {
 	{
 		#### If this is a pivoted query, just choose two interesting data columns
 		if ( $parameters{display_options} =~ /PivotConditions/ ) {
-			$display_columns = "gi.signal,gi.detection_p_value";
+			$display_columns = "gi.signal,gi.detection_call,gi.detection_p_value";
 			#### Else, select them all
 		}else {
 			$display_columns =
@@ -528,12 +578,13 @@ sub print_full_form {
 		display_options 	   => $parameters{display_options},
 	);
 
-	#### Add the desired display columns to the additional_columns array
+	#### Make array of columns to display
 	my @display_data_columns_a = split( ",", $display_columns );
 
-#### If the coaelsce over reporters or Pivot is chosen, then define some things special
+#### If the Pivot is chosen, then define some things special
 	my $aggregate_type        = "MAX";
 
+	my $annotation_id_group_by 	= "anno.affy_annotation_id";
 	my $probe_set_id_group_by   = "gi.probe_set_id";
 	my $gene_title_group_by     = "anno.gene_title";
 	my $gene_symbol_group_by    = "anno.gene_symbol";
@@ -544,10 +595,10 @@ sub print_full_form {
 	my $percent_match_group_by = '';
 
 	if ($genome_coordinates_clause) {
-		my $match_chrom_group_by   = "align.match_chromosome, ";
-		my $gene_start_group_by    = "align.gene_start";
-		my $gene_stop_group_by     = "align.gene_stop, ";
-		my $percent_match_group_by = "align.percent_identity";
+		 $match_chrom_group_by   = "align.match_chromosome";
+		 $gene_start_group_by    = "align.gene_start";
+		 $gene_stop_group_by     = "align.gene_stop";
+		 $percent_match_group_by = "align.percent_identity";
 	}
 
 #### If this is a pivot query, design the aggregate data columns
@@ -576,6 +627,7 @@ sub print_full_form {
 
 		my $first_group_by = "GROUP BY $probe_set_id_group_by";
 		$group_by_clause = 	join ",",	($first_group_by,
+										$annotation_id_group_by,
 										$gene_title_group_by,
 		  								$gene_symbol_group_by,
 		  								$match_chrom_group_by,
@@ -587,7 +639,7 @@ sub print_full_form {
 		$group_by_clause =~ s/,{2,}/,/g;			#Remove any groups of commas and replace by with one
 		$group_by_clause =~ s/,$//;					#hack to remove any commas at the end of the line
 		 
-		  }else{
+	}else{
 
 		  	foreach my $option (@display_data_columns_a) {				#mix together the default and any additonal columns to display
 		  		
@@ -595,11 +647,12 @@ sub print_full_form {
 		  			push(@additional_columns,$available_columns{$option});
 		  		}
 		  	}
-		  }
+	}
 
 		  #### Define the desired columns in the query
 		  #### [friendly name used in url_cols,SQL,displayed column title]	
 		  my @column_array = (
+		  ["affy_annotation_id", "anno.affy_annotation_id", "Annotation_ID"],
 		  ["sample_id", "afs.affy_array_sample_id", "Sample_ID"],
 		  ["sample_tag", "afs.sample_tag", "Sample Tag"],
 		  ["probe_set_id","gi.probe_set_id","Probe Set ID"],
@@ -612,41 +665,46 @@ sub print_full_form {
 		  
 		  #### Hack to remove columns if GROUPing.  Must remove sample information since we are grouping on the data columns
 		  if ($parameters{display_options} =~ /PivotConditions/){
-		  	my $add_col_element_number = 4;
+		  	my $add_col_element_number = 5;
 		  	my $count_additional_columns = scalar @additional_columns;
 		  	my $end_element = ($add_col_element_number + $count_additional_columns) - 1;
 
-		 	 @column_array = @column_array[2,3,$add_col_element_number..$end_element,-1];	#only take along the stuff we need leave behind the sample info
+		 	 @column_array = @column_array[0,3,4,$add_col_element_number..$end_element,-1];	#only take along the stuff we need leave behind the sample info
 
 		  }
- 
+ #print STDERR "ADDITIONAL COLUMNS";
+ #print STDERR Dumper (\@additional_columns);
 		  #### Set the show_sql flag if the user requested
 		  if ( $parameters{display_options} =~ /ShowSQL/ ) {
 		  	$show_sql = 1;
 		  }
 
-		  #### Build the columns part of the SQL statement			#poluates %colnameidx key =friendly name [0], key = coumn index
-		  my %colnameidx = ();
-		  my @column_titles = ();
+		  #### Build the columns part of the SQL statement			#populates %colnameidx key =friendly name [0], key = coumn index
+		  															#take the column names from the previous results set if this is not a query
+		  
+		  my %colnameidx     = ($apply_action eq 'VIEWRESULTSET') ? %{$resultset_ref->{column_hash_ref}} : ();
+		     @column_titles  = ($apply_action eq 'VIEWRESULTSET') ? @previous_column_titles : ();
+		
 		  my $columns_clause = $sbeams->build_SQL_columns_list(		#makes columns_clause from the @column_array example $columns_clause .= "afa.file_root AS 'file_root'"  $column_array[1] AS $column_array[0]
 		  column_array_ref=>\@column_array,
 		  colnameidx_ref=>\%colnameidx,
 		  column_titles_ref=>\@column_titles
 		  );
-
+#print STDERR Dumper(\%colnameidx);
 		  #additional tables to add joins on only if there is a constraint added
 
-		  my %additional_tables =(db_links => "JOIN $TBMA_AFFY_DB_LINKS db_links ON (anno.affy_annotation_id = db_links.affy_annotation_id)",
-		  align	 => "JOIN $TBMA_ALIGNMENT align ON (anno.affy_annotation_id = align.affy_annotation_id)",
+		  my %additional_tables =(
+		  db_links => "JOIN $TBMA_AFFY_DB_LINKS db_links ON (anno.affy_annotation_id = db_links.affy_annotation_id)",
+		  align	   => "JOIN $TBMA_ALIGNMENT align ON (anno.affy_annotation_id = align.affy_annotation_id)",
 
-		  dbxref	 => "JOIN $TBMA_AFFY_DB_LINKS db_links ON (anno.affy_annotation_id = db_links.affy_annotation_id)". #NEED TO MAKE SURE THE db_link table join is included too
-		  "JOIN $TB_DBXREF dbxref ON (db_links.dbxref_id = dbxref.dbxref_id)",
+		  dbxref   => "JOIN $TBMA_AFFY_DB_LINKS db_links ON (anno.affy_annotation_id = db_links.affy_annotation_id)". #NEED TO MAKE SURE THE db_link table join is included too
+		              "JOIN $TB_DBXREF dbxref ON (db_links.dbxref_id = dbxref.dbxref_id)",
 
-		  );
+		   );
 
 		  my $table_joins = produce_SQL_joins(column_clause 	=> $columns_clause,
-		  										additional_tables   => \%additional_tables,
-		  									  );
+		  								      additional_tables   => \%additional_tables,
+		  									 );
 		  #print "<br>EXTRA TABLE TO ADD '$table_joins'<br>";
 
 		  #### In some cases, we need to have a subselect clause
@@ -683,6 +741,7 @@ sub print_full_form {
 	
 			  $annotation_set_clause
 			  $r_chp_protocol_id_clause
+			 
 			  )
 			  ~;
 			  #### Remove contraints that might limit conditions
@@ -723,9 +782,9 @@ sub print_full_form {
 
 		  $annotation_set_clause
 		  $r_chp_protocol_id_clause
-
+		  
 		  $subselect_clause
-
+		  
 		  $group_by_clause
 		  $limit_clause->{trailing_limit_clause}
 		  ~;
@@ -735,35 +794,129 @@ sub print_full_form {
 		  my $pass_action = "QUERY";
 		  $pass_action = $apply_action if ($apply_action =~ /QUERY/i);
 
-		  #### Define the hypertext links for columns that need them
-		my $anno_base_url     = "$CGI_BASE_DIR/Microarray/$PROG_NAME?action=SHOW_ANNO&annotation_set_id=$annotation_set_id";
-		  %url_cols = (
-		 	'Probe Set ID'=> "$anno_base_url&probe_set_id=\%V",
-		  	'Sample Tag'	=> "${manage_table_url}affy_array_sample&affy_array_sample_id=\%0V",
-		  );
-
+		
 		  #### Define columns that should be hidden in the output table
 		  %hidden_cols = (
 		  	'Sample_ID'  => 1,
+		  	'Annotation_ID' =>1,
+			'GO Biological Process Link' => 1,		  
+		    'GO Cellular Component Link' => 1,
+		    'GO Molecular Function Link' => 1,
+		   
 		  );
 
-		  #########################################################################
-		  #### If QUERY or VIEWRESULTSET was selected, display the data
+#########################################################################
+#### If QUERY or VIEWRESULTSET was selected, display the data
+
 		  if ($apply_action =~ /QUERY/i || $apply_action eq "VIEWRESULTSET") {
 
-		  #### If the action contained QUERY, then fetch the results from
-		  #### the database
-		  if ($apply_action =~ /QUERY/i) {
+			  #### If the action contained QUERY, then fetch the results from
+			  #### the database
+			  if ($apply_action =~ /QUERY/i) {
+	
+				  #### Show the SQL that will be or was executed
+				  $sbeams->display_sql(sql=>$sql) if ($show_sql);
+		    
+				  #### Fetch the results from the database server
+				  $sbeams->fetchResultSet(
+				  sql_query=>$sql,
+				  resultset_ref=>$resultset_ref,
+				  );
+#print STDERR Dumper($resultset_ref);
 
-		  #### Show the SQL that will be or was executed
-		  $sbeams->display_sql(sql=>$sql) if ($show_sql);
+		 
+		  
+		
+#################################################################
+### Look to see if we need to do any 2nd queries which will gather data from any child tables
+		
+		if ( have_2nd_queires() ){
+		 	my $m_sbeams = SBEAMS::Microarray::Merge_results_sets->new();
+			
+			my $all_pk = $m_sbeams ->get_pk_from_results_set(results_set    => $resultset_ref, 
+			  												pk_column_name => "affy_annotation_id",
+			  								 				);
+	
+			##Look to see if we need to make some GO sql statments
+			 my %second_sql_statements = ();
+			 if  ($go_sql_2nd_query_aref eq 'Y'){
+			 
+			 	%second_sql_statements = convert_GO_display_options(display_param => $parameters{display_options},
+		 														  go_desc_clause => $go_description_clause_2nd_query,	
+		 														  all_pk => $all_pk,
+		 														  );
+			 }elsif ($go_description_clause_2nd_query){	#come here if the user only provided a term to constrain the GO data but did not indicate which columns
+			 	%second_sql_statements = convert_GO_display_options(display_param => 'ALL',
+		 														  	go_desc_clause => $go_description_clause_2nd_query,	
+		 													  		all_pk => $all_pk,
+		 														    );
+			 }else{
+			 }
+			 
+			#####Check for other secondary queries to run
+			if ($protein_family_clause_2nd_query){
+					$second_sql_statements{Protein_Family} = qq~SELECT  
+															  pf.affy_annotation_id,
+															  pf.description AS "Protein Family Description", 
+															  pf.e_value AS "Protein Family E-value", 
+															  db.db_id AS "Protein Family DB_ID"
+															  FROM  $TBMA_PROTEIN_FAMILIES pf
+															  JOIN $TBMA_AFFY_DB_LINKS db ON (pf.affy_db_links_id = db.affy_db_links_id)
+															  WHERE pf.affy_annotation_id IN ($all_pk)
+															  $protein_family_clause_2nd_query
+															  ~;
+			}
+			if($protein_doamin_clause_2nd_query){
+				$second_sql_statements{Protein_Domain} = qq~   SELECT
+															  pd.affy_annotation_id,
+															  pd.protein_domain_description AS "Protein Domain Description", 
+															  db.db_id AS "Protein Domain DB_ID"
+															  FROM  $TBMA_PROTEIN_DOMAIN pd
+															  JOIN $TBMA_AFFY_DB_LINKS db ON (pd.affy_db_links_id = db.affy_db_links_id)
+															  WHERE pd.affy_annotation_id IN ($all_pk)
+															  $protein_doamin_clause_2nd_query
+													     ~;
+			}
+			if($trans_membrane_clause_2nd_query	){								
+				$second_sql_statements{Trans_Membrane_Domain} = qq~SELECT
+																tm.affy_annotation_id,
+															    tm.number_of_domains AS "Number of Predicted Trans Membrane Domains"
+															    FROM  $TBMA_TRANS_MEMBRANE tm
+															    WHERE tm.affy_annotation_id IN ($all_pk)
+															    $trans_membrane_clause_2nd_query
+															  ~;
+			}
 
-		  #### Fetch the results from the database server
-		  $sbeams->fetchResultSet(
-		  sql_query=>$sql,
-		  resultset_ref=>$resultset_ref,
-		  );
-
+	####################################################################
+	###Run The sql queires		
+			my $seconds_data_sets_aref = $m_sbeams->run_sql_statments(%second_sql_statements);
+			
+			foreach my $second_resultset_ref (@ {$seconds_data_sets_aref} ){	#loop thru all the secondary results sets appending the data to the main results set
+			
+				$m_sbeams->condense_results_set(results_set => $second_resultset_ref, #first condense down the results sets 
+		  									merge_key => "affy_annotation_id",
+		 							 	   );
+			
+				
+				$m_sbeams->merge_results_sets( main_results_set => $resultset_ref,
+											   column_to_append_after => 'gene_title',
+											   merge_column_name =>	'affy_annotation_id',
+											   second_results_set => $second_resultset_ref,
+											   display_columns => \@column_titles,
+											  );
+											  
+	
+					
+			}					 	   
+		
+			%colnameidx = %{ $resultset_ref->{column_hash_ref} } ;	#since we are adding data to the resultset has we also need to update the %colnameidx which is used in the construction of the URLs
+			#print STDERR Dumper ($resultset_ref);
+		}
+		
+		
+								
+#################################################################
+		  
 		  #### Store the resultset and parameters to disk resultset cache
 		  $rs_params{set_name} = "SETME";
 		  $sbeams->writeResultSet(
@@ -772,8 +925,29 @@ sub print_full_form {
 		  query_parameters_ref=>\%parameters,
 		  resultset_params_ref=>\%rs_params,
 		  query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+		  column_titles_ref=>\@column_titles,
 		  );
-		  }
+	 }#End of the QUERY ONLY IF STATMENT
+	
+	 #### Define the hypertext links for columns that need them
+		my $anno_base_url     = "$CGI_BASE_DIR/Microarray/$PROG_NAME?action=SHOW_ANNO&annotation_set_id=$annotation_set_id";
+		  %url_cols = (
+		 	'Probe Set ID'=> "$anno_base_url&probe_set_id=\%V",
+		  	'Sample Tag'	=> "${manage_table_url}affy_array_sample&affy_array_sample_id=\%0V",
+		  	'GO Biological Process Description' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{'GO Biological Process Link'}V",
+            'GO Biological Process Description_ATAG' => 'TARGET="WinExt"',
+            'GO Biological Process Description_OPTIONS' => {semicolon_separated_list=>1},
+		  
+			'GO Cellular Component Description' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{'GO Cellular Component Link'}V",
+            'GO Cellular Component Description_ATAG' => 'TARGET="WinExt"',
+            'GO Cellular Component Description_OPTIONS' => {semicolon_separated_list=>1},
+            
+            'GO Molecular Function Description' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{'GO Molecular Function Link'}V",
+            'GO Molecular Function Description_ATAG' => 'TARGET="WinExt"',
+            'GO Molecular Function Description_OPTIONS' => {semicolon_separated_list=>1},	  
+		  
+		  
+		  );  	 
 
 		  #### Display the resultset
 		  $sbeams->displayResultSet(
@@ -873,11 +1047,18 @@ sub getArrayNames {
 		  td($q->textfield(-name=>'accession_number',
 		  -size=>25,
 		  -maxlength=>80)),
+		  Tr(
+		  td("'%' is wildcard character")),
+		  Tr(
+		  td("'_' is single character wildcard")),
+		  Tr(
+		  td("character range search '[a-m]'; no other regexps supported")),
 		  )
-
+  
 		  );
 
 		  print "<br/>";
+		  
 		  print $q->submit(-name=>'submit_query',
 		  -value=>'simple_query');
 
@@ -888,60 +1069,58 @@ sub getArrayNames {
 
 		  }
 
-		  ###############################################################################
-		  # show_arrays Show all the arrays that can provide data
-		  ###############################################################################
-		  sub show_arrays {
+	  ###############################################################################
+	  # show_arrays Show all the arrays that can provide data
+	  ###############################################################################
+	sub show_arrays {
 
-		  my %args = @_;
+		my %args = @_;
 
-		  my %parameters = $args{'ref_parameters'};
-		  my $project_id = $sbeams->getCurrent_project_id();
+		my %parameters = $args{'ref_parameters'};
+	  	my $project_id = $sbeams->getCurrent_project_id();
 
-		  my $apply_action=$parameters{'action'} || $parameters{'apply_action'} || '';
+		my $apply_action=$parameters{'action'} || $parameters{'apply_action'} || '';
 
-		  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+		my %rs_params = $sbeams->parseResultSetParams(q=>$q);
 
-		  my %url_cols      = ();
-		  my %hidden_cols   = ();
-		  my $limit_clause  = '';
-		  my @column_titles = ();
-		  my %max_widths 	  = ();
+		my %url_cols      = ();
+	  	my %hidden_cols   = ();
+	  	my $limit_clause  = '';
+	  	my @column_titles = ();
+	  	my %max_widths 	  = ();
 
 		  #### Define some variables for a query and resultset
-		  my %resultset = ();
-		  my $resultset_ref = \%resultset;
+	  	my %resultset = ();
+	  	my $resultset_ref = \%resultset;
 
-		  my @downloadable_file_types = ();
-		  my @default_file_types      = ();
-		  my @diplay_files  = ();
+		my @downloadable_file_types = ();
+	  	my @default_file_types      = ();
+	  	my @diplay_files  = ();
 
-		  my $sql = '';
+		my $sql = '';
 
-		  @default_file_types = qw(R_CHP);
-		  #@display_file_types(R_CHP);
-		  @downloadable_file_types = qw(R_CHP);				#Will use these file extensions
+		@default_file_types = qw(R_CHP);
+	  	#@display_file_types(R_CHP);
+	  	@downloadable_file_types = qw(R_CHP);				#Will use these file extensions
 
 		  ## Print the data
 
-		  my @array_ids = $affy_o->find_chips_with_data(project_id => $project_id);	#find affy_array_ids in the, could be multipule arrays with differnt protocols usedfor quantification
+		my @array_ids = $affy_o->find_chips_with_data(project_id => $project_id);	#find affy_array_ids in the, could be multipule arrays with differnt protocols usedfor quantification
 		  
 
-		  my $constraint_data = join " , ", @array_ids;
+		my $constraint_data = join " , ", @array_ids;
 		my $constraint_column = "afa.affy_array_id";
 		my $constraint        = "AND $constraint_column IN ($constraint_data)";
 
 		unless ($constraint_data) {
 			print
 			  "SORRY NO DATA FOR THIS PROJECT\n";
-
 			return;
 		}
 
 		print "<h2 class='grey_bg'> Choose the arrays to view data from </h2>";
 
-		unless ( exists $parameters{Get_Data} )
-		{    #start the form to select which affy arrays to display data from
+		unless ( exists $parameters{Get_Data} ){    #start the form to select which affy arrays to display data from
 
 			print $q->start_form(
 				-name => 'get_all_files'
@@ -962,8 +1141,7 @@ sub getArrayNames {
 #@default_file_types = qw(CEL);							  #default file type to turn on the checkbox
 #@diplay_files	    = qw(XML RPT JPEG);						  #files that should have urls constructed to open the file in the browser
 
-		$sbeams_affy_groups->setSBEAMS($sbeams)
-		  ;    #set the sbeams object into the affy_groups_object
+		$sbeams_affy_groups->setSBEAMS($sbeams);    #set the sbeams object into the affy_groups_object
 
 		$sql = $sbeams_affy_groups->get_affy_arrays_sql(
 			project_id => $project_id
@@ -972,13 +1150,8 @@ sub getArrayNames {
 		);
 
 		%url_cols = (
-
-#'Array_ID' 	=> "$CGI_BASE_DIR/Microarray/ProjectHome.cgi?tab=data_download&download_type=AFFY&affy_sample_id=\%0V",
-			'Sample_Tag' =>
-			  "${manage_table_url}affy_array_sample&affy_array_sample_id=\%3V",
+			'Sample_Tag' =>"${manage_table_url}affy_array_sample&affy_array_sample_id=\%3V",
 			'File_Root' => "${manage_table_url}affy_array&affy_array_id=\%0V",
-
-			# FIX ME NEED TO ADD URLS TO EXTERNAL SITES
 		);
 
 		%hidden_cols = (
@@ -1046,10 +1219,10 @@ sub getArrayNames {
 			hidden_cols_ref      => \%hidden_cols,
 			max_widths           => \%max_widths,
 			column_titles_ref    => \@column_titles,
-			base_url             => $base_url,
+			base_url             => "$base_url?display_type=Simple",
 		);
 
-		unless ( $parameters{Display_Data} ) {
+		
 
 			print $q->br,
 			  $q->submit(
@@ -1059,18 +1232,12 @@ sub getArrayNames {
 			  ; #will need to change value if other data sets need to be downloaded
 
 			print $q->reset;
+			
 			print $q->endform;
 
 			print "<br><h>";
 
-		}
-
-		#### Display the resultset controls
-		#$sbeams->displayResultSetControls(resultset_ref=>$resultset_ref,
-		#				  query_parameters_ref=>\%parameters,
-		#				  rs_params_ref=>\%rs_params,
-		#				  base_url=>$base_url,
-		#				 );
+		
 
 	}
 
@@ -1084,26 +1251,19 @@ sub getArrayNames {
 		my %args = @_;
 
 		my $resultset_ref = $args{resultset_ref};
-		my @file_types    = @{ $args{file_types} }; #array ref of columns to add
-		my @default_files =
-		  @{ $args{default_files}
-		  };    #array ref of column names that should be checked
-		my @display_files =
-		  @{ $args{display_files}
-		  }; #array ref of columns to make which will have urls to files to open
+		my @file_types    = @{ $args{file_types} }; 	  #array ref of columns to add
+		my @default_files = @{ $args{default_files} };    #array ref of column names that should be checked
+		my @display_files = @{ $args{display_files} }; 	  #array ref of columns to make which will have urls to files to open
 
 		my $aref =
 		  $$resultset_ref{data_ref}; #data is stored as an array of arrays from the $sth->fetchrow_array each row a row from the database holding an aref to all the values
 
 		########################################################################################
-		foreach my $display_file (@display_files)
-		{    #First, add the Columns for the files that can be viewed directly
+		foreach my $display_file (@display_files){    #First, add the Columns for the files that can be viewed directly
 
 			foreach my $row_aref ( @{$aref} ) {
 
-				my $array_id =
-				  $row_aref->[0]
-				  ; #need to make sure the query has the array_id in the first column since we are going directly into the array of arrays and pulling out values
+				my $array_id  = $row_aref->[0] ; #need to make sure the query has the array_id in the first column since we are going directly into the array of arrays and pulling out values
 				my $root_name = $row_aref->[1];
 
 #loop through the files to make sure they exists.  If they do not don't make a check box for the file
@@ -1118,30 +1278,25 @@ sub getArrayNames {
 					$anchor =
 "<a href=View_Affy_files.cgi?action=view_image&affy_array_id=$array_id&file_ext=$display_file>View</a>";
 
-				}
-				elsif ($file_exists) {    #make a url to open this file
+				}elsif ($file_exists) {    			#make a url to open this file
 					$anchor =
 "<a href=View_Affy_files.cgi?action=view_file&affy_array_id=$array_id&file_ext=$display_file>View</a>";
-				}
-				else {
+				}else {
 					$anchor = "No File";
 				}
 
-				push @$row_aref, $anchor;    #append on the new data
+				push @$row_aref, $anchor;    		#append on the new data
 			}
 
-			push @{ $resultset_ref->{column_list_ref} }, "View $display_file"
-			  ;    #add on column header for each of the file types
+			push @{ $resultset_ref->{column_list_ref} }, "View $display_file";    #add on column header for each of the file types
 			 #need to add the column headers into the resultset_ref since DBInterface display results will reference this
 
-			append_precision_data($resultset_ref)
-			  ; #need to append a value for every column added otherwise the column headers will not show
+			append_precision_data($resultset_ref); 	#need to append a value for every column added otherwise the column headers will not show
 		}
 
 		########################################################################################
 
-		foreach my $file_ext (@file_types)
-		{       #loop through the column names to add checkboxes
+		foreach my $file_ext (@file_types){       #loop through the column names to add checkboxes
 			my $checked = '';
 			if ( grep { $file_ext eq $_ } @default_files ) {
 				$checked = "CHECKED";
@@ -1150,9 +1305,7 @@ sub getArrayNames {
 			foreach my $row_aref ( @{$aref} )
 			{ #serious breach of encapsulation,  !!!! De-reference the data array and pushes new values onto the end
 
-				my $array_id =
-				  $row_aref->[0]
-				  ; #need to make sure the query has the array_id in the first column since we are going directly into the array of arrays and pulling out values
+				my $array_id  = $row_aref->[0]; #need to make sure the query has the array_id in the first column since we are going directly into the array of arrays and pulling out values
 				my $root_name = $row_aref->[1];
 
 #loop through the files to make sure they exists.  If they do not don't make a check box for the file
@@ -1280,7 +1433,7 @@ sub getArrayNames {
 		$sql = $affy_o->get_affy_intensity_data_sql(
 			affy_array_ids     => $arrays,
 			annotation_display => 'lite'
-			,    #control if a little or a lot of annotation should be displayed
+			,    #control if a little or a lot of annotation should be displayed nothing implemneted yet
 			constriants => [
 				$probe_set_id_clause, $gene_name_clause,
 				$accession_number_clause,
@@ -1304,20 +1457,7 @@ sub getArrayNames {
 			annotation_set_id => $annotation_set_id,
 		);
 
-		#@column_titles = @{$resultset_ref->{column_list_ref}};
-
-		#print "HERE IS THE SQL '$sql'";
-		#### Display the resultset
-		#$sbeams->displayResultSet(resultset_ref=>$resultset_ref,
-		#			query_parameters_ref=>\%parameters,
-		#			rs_params_ref=>\%rs_params,
-		#			url_cols_ref=>\%url_cols,
-		#			hidden_cols_ref=>\%hidden_cols,
-		#			max_widths=>\%max_widths,
-		#			column_titles_ref=>\@column_titles,
-		#			base_url=>$base_url,
-		#			);
-
+		
 	}
 ##############################################################################
 # convert_numerical_data
@@ -2340,10 +2480,8 @@ sub format_protein_info {
 		my @columns    = split /,/, $column_clause;
 		my $tablejoins = '';
 
-		if ( $column_clause =~ /dbxref\./ )
-		{ #hack to remove this table only if the dbxref table is going to be used since it will include the
-			delete
-			  $additional_tables{db_links}; #join of affy_annotation to affy_db_link we don't want to see it twice
+		if ( $column_clause =~ /dbxref\./ ){ 		#hack to remove this table only if the dbxref table is going to be used since it will include the
+			delete $additional_tables{db_links}; 		#join of affy_annotation to affy_db_link we don't want to see it twice
 		}
 
 		foreach my $column (@columns) {
@@ -2369,6 +2507,24 @@ sub format_protein_info {
 	}
 
 ###############################################################################
+# have_2nd_queires
+#
+# Look to see if any second query constriants exists
+###############################################################################
+	sub have_2nd_queires {
+		foreach my $key ( keys %main:: ){
+		 #look throught the main symbol hash for any globals that end with _2nd_query These should be coming from the build constrinat cluases
+			next unless ($key =~ /2nd_query$/ || $key =~ /_2nd_query_aref/);
+			#print "SECOND QUERY NAME '$key'<br>";
+			local *sym = $main::{$key};
+			
+			next unless $sym =~ /\w/;		#make sure there is a value
+			#print "VALUE '$sym'<br>";
+			return 1;				#if a var is found retrun a true val
+		}
+		return 0;
+	}
+###############################################################################
 # add_constraint_columns
 #
 # Need to look through the constriants the user has supplied if they where activated.  If so we need to make sure we
@@ -2389,9 +2545,10 @@ sub format_protein_info {
 			
 		}
 		
-		my @default_columns = split /;/, $default_columns; #Need to remove the default columns so they do not show up twice in the output
+		my @default_columns = split /,/, $default_columns; #Need to remove the default columns so they do not show up twice in the output
 		  
 		foreach my $table_name (@default_columns) {
+			#print STDERR "DEFAULT '$table_name'\n";
 			delete $avalible_columns{$table_name}
 			  if exists $avalible_columns{$table_name};
 		}
@@ -2400,15 +2557,13 @@ sub format_protein_info {
 		{ #look throught the main symbol hash for any globals that end with _clause These should be coming from the build constrinat cluases
 			next unless $key =~ /_clause$/;
 			local *sym = $main::{$key};
-			if ($sym)
-			{ #example  " AND ( align.match_chromosome LIKE 'chr6') " OR " AND align.gene_start >2000"
+			if ($sym){#example  " AND ( align.match_chromosome LIKE 'chr6') " OR " AND align.gene_start >2000"
+			 
 				    #print "CLAUSE VALUE '$sym'<br>";
-				if ( $sym =~ /AND.+?(\w+\.\w+)/ )
-				{    #grab the table.column info from the SQL constriant
+				if ( $sym =~ /AND.+?(\w+\.\w+)/ ){ #grab the table.column info from the SQL constriant
 					   
-					
-					if ( exists $avalible_columns{$1} ){
-					 	
+						if ( exists $avalible_columns{$1} ){
+					 		
 					 	if ($pivot_query_flag){		#if this is a pivot query there are some things do not want to have in the pivot group by columns
 							if  ($1 eq "gi.signal"){ #anything in this array will not be added to the select columns nor the group by statement
 								
@@ -2436,17 +2591,112 @@ sub format_protein_info {
 			  $avalible_columns{"align.match_chromosome"};
 			push @{$additional_col_aref}, $avalible_columns{"align.gene_start"};
 			push @{$additional_col_aref}, $avalible_columns{"align.gene_stop"};
-			push @{$additional_col_aref},
-			  $avalible_columns{"align.percent_identity"};
+			push @{$additional_col_aref}, $avalible_columns{"align.percent_identity"};
+			  
 		}
+				
+}
+					
+ 		
+###############################################################################
+# convert_GO_display_options
+#If there was a display parameter given to display some GO annotaion figure out which columns they were 
+# and make sql statments to run to return the data
+###############################################################################
+sub convert_GO_display_options {
+ 	my %args = @_;
 
-	}
+		#### Process the arguments list
+	my $display_parameter = $args{'display_param'};
+	my $go_description_clause_2nd_query = $args{go_desc_clause};
+	my $all_pk = $args{all_pk};
+	
+	my @go_sql_statments = ();
+	#my @second_sql_names = ();		#need to a give names for each sql statement.  Will be come the column name in the merged dataset
+	my %all_sql_statments = ();
+	my $constraint = '';
+	my $sql_fragment = qq~
+			 	SELECT  
+			  	go.affy_annotation_id,
+			  	go.gene_ontology_description AS "HOOK_VAL Description", 
+			  	go.gene_ontology_evidence AS "HOOK_VAL Evidence", 
+			  	db.db_id AS "HOOK_VAL Link"
+	 			FROM $TBMA_GENE_ONTOLOGY go
+				JOIN $TBMA_GENE_ONTOLOGY_TYPE gt ON (go.gene_ontology_type_id = gt.gene_ontology_type_id)
+				JOIN  $TBMA_AFFY_DB_LINKS  db ON(go.affy_db_links_id = db.affy_db_links_id) 
+				WHERE
+				go.affy_annotation_id IN ($all_pk)
+				$go_description_clause_2nd_query
+				~;
+	
+	
+	###Produce sql statments if the user selected certain GO columns to dispaly or if the user only entered  
+	###a term to constrian the GO data then build all the queries if no column constriant was given
+	
+	if ((my @go_columns = ($display_parameter =~ /(GO_[BMC]\w*)/g)) || ($display_parameter eq 'ALL')) {
+		
+		foreach my $go_type (@go_columns) {
+			
+			if ($go_type =~ /biological/i || $display_parameter eq 'ALL') {
+				
+				my $updated_sql = update_sql_fragment(sql_fragment => $sql_fragment,
+								    				  hook_val => "GO Biological Process",
+								    			      );
+					$all_sql_statments{GO_Biological_Process} =  qq~ 
+														$updated_sql
+														AND gt.gene_ontology_name_type like 'Gene Ontology Biological Process'\n
+														~;
+				
+				
+			}elsif ($go_type =~ /cellular/i || $display_parameter eq 'ALL'){
+				my $updated_sql = update_sql_fragment(sql_fragment => $sql_fragment,
+								    				  hook_val => "GO Cellular Component",
+								    			      );
+				$all_sql_statments{GO_Cellular_Component} = qq~ 
+							 								$updated_sql
+							 							AND gt.gene_ontology_name_type like 'Gene Ontology Cellular Component'\n
+							 							~;
+				
+			}elsif ($go_type =~ /molecular/i || $display_parameter eq 'ALL'){
+				my $updated_sql = update_sql_fragment(sql_fragment => $sql_fragment,
+								    				  hook_val => "GO Molecular Function",
+								    			      );
+				
+				
+				$all_sql_statments{GO_Molecular_Function} = qq~ 
+							 									$updated_sql
+																AND gt.gene_ontology_name_type like 'Gene Ontology Molecular Function'\n
+							 								~;
+				
+			}else{
+			}
+			
+		}
+		
+		
+	}	
 
+	return %all_sql_statments;
+}
+###############################################################################
+# update_sql_fragment
+#Take a fragement of sql and replace all HOOK_VAL with the value passed in
+###############################################################################
+sub update_sql_fragment {
+ 	my %args = @_;
+ 	my $sql_frag =  $args{sql_fragment};			    
+	my $hook_val = $args{hook_val};
+	
+	$sql_frag =~ s/HOOK_VAL/$hook_val/g;
+	return $sql_frag;
+}
+	
+	
 ###############################################################################
 	# convertGenomeCoordinates
 	#
 	# Convert one or more genome coordinate strings of the form
-	# hg16:chr15:123456-12347+ to the corresponding antibodies
+	# hg16:chr15:123456-12347+ to a constriant for using in the sql query
 ###############################################################################
 	sub convertGenomeCoordinates {
 		my %args = @_;
