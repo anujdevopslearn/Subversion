@@ -256,6 +256,24 @@ sub handle_request {
   return if ($biosequence_name_clause eq '-1');
 
 
+  #### Build COMMON NAME constraint
+  my $common_name_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"GE.common_name",
+    constraint_type=>"plain_text",
+    constraint_name=>"Common Name",
+    constraint_value=>$parameters{common_name_constraint} );
+  return if ($common_name_clause eq '-1');
+
+
+  #### Build CANONICAL NAME constraint
+  my $canonical_name_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"GE.canonical_name",
+    constraint_type=>"plain_text",
+    constraint_name=>"Canonical Name",
+    constraint_value=>$parameters{canonical_name_constraint} );
+  return if ($canonical_name_clause eq '-1');
+
+
   #### Build BIOSEQUENCE DESCRIPTION constraint
   my $description_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"BS.biosequence_desc",
@@ -451,6 +469,8 @@ sub handle_request {
     	      $condition_clause
 	      $gene_name_clause
   	      $biosequence_name_clause
+  	      $common_name_clause
+  	      $canonical_name_clause
               $description_clause
    	      $second_name_clause
 	      $log10_ratio_clause
@@ -478,6 +498,8 @@ sub handle_request {
 	$gene_name_clause
 	$second_name_clause
 	$biosequence_name_clause
+        $common_name_clause
+        $canonical_name_clause
         $description_clause
 	$log10_ratio_clause
         $p_value_clause
