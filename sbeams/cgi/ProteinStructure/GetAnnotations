@@ -560,7 +560,7 @@ $optionlist
       if ($sbeams->output_mode() eq 'html') {
 	print qq~<TABLE WIDTH="500"><TR><TD>
           <font color="red">NOTE</font>:
-          Since you search for "All Attributes",
+          Since you searched "All Attributes",
           some proteins in this resultset may match the search constraint
           in fields not displayed.  To see the complete domain search
           information, click on [View Domain Hits].</TD></TR></TABLE><BR>
@@ -650,6 +650,8 @@ sub searchExternal {
 
   #### Get the search_spec
   my $search_spec = $query_parameters_ref->{search_key};
+  $search_spec =~ s/\./\\./g;
+
   my @specs = split(/\s+/,$search_spec);
 
   #### Search through the file looking for matches
