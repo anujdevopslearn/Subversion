@@ -732,7 +732,7 @@ function prepareForSubmission(){
       {document.choiceList.preprocessBase.checked = false;}
 
   if (document.choiceList.preprocessBase.checked==false && document.choiceList.preprocessBaseValue.value !=""){
-    if(confirm("Preprocess base value set, but checkbox not checked.  Click OK to use the base value.  Click Cancel to refrain from using it."))
+    if(confirm("Preprocess base value set, but checkbox is not checked.  Click OK to use the base value.  Click Cancel to refrain from using it."))
       {document.choiceList.preprocessBase.checked = true;}
     else
       {document.choiceList.preprocessBaseValue.value ="";}
@@ -746,7 +746,7 @@ function prepareForSubmission(){
       {document.choiceList.preprocessSat.checked = false;}
 
   if (document.choiceList.preprocessSat.checked==false && document.choiceList.preprocessSatValue.value !=""){
-    if(confirm("Saturation value set, but checkbox not checked.  Click OK to use the value.  Click Cancel to refrain from using it."))
+    if(confirm("Saturation value set, but checkbox is not checked.  Click OK to use the value.  Click Cancel to refrain from using it."))
       {document.choiceList.preprocessSat.checked = true;}
     else
       {document.choiceList.preprocessSatValue.value ="";}
@@ -790,11 +790,25 @@ function prepareForSubmission(){
       {document.choiceList.veraCrit.checked = false;}
 
   if (document.choiceList.veraCrit.checked == false && document.choiceList.veraCritValue.value != ""){
-    if (confirm("You have entered a delta value at which VERA stops , but you haven't check the box.  Click OK to use the value.  Click Cancel to refrain from using it."))
+    if (confirm("You have entered a delta value at which VERA stops , but you didn't check the box.  Click OK to use the value.  Click Cancel to refrain from using it."))
       {document.choiceList.veraCrit.checked = true;}
     else
-      {docuemnt.choiceList.veraCritValue.value = "";}
+      {document.choiceList.veraCritValue.value = "";}
   }
+
+  if (document.choiceList.notify.checked == true && document.choiceList.addresses.value=="")
+    if(!confirm("you haven't specified contact email addresses.  Click OK if you're not using them.  Click Cancel to provide a value."))
+      {return false;}
+    else
+      {document.choiceList.notify.checked = false;}
+
+  if (document.choiceList.notify.checked == false && document.choiceList.addresses.value != ""){
+    if (confirm("You have entered an email address, but you haven't checked the box.  Click OK to use the value.  Click Cancel to refrain from using it."))
+      {document.choiceList.notify.checked = true;}
+    else
+      {document.choiceList.addresses.value = "";}
+  }
+
 }
 //-->
 </SCRIPT>
@@ -999,7 +1013,7 @@ print qq~
       <INPUT TYPE="checkbox" NAME="postSam" VALUE = "ps">Use postSam (adds info from key file to .sig file)<BR>
       <INPUT TYPE="checkbox" NAME="notify">email notification<BR>
       -Type comma-separated email addresses (\@systemsbiology is implied, unless otherwise specified)<BR> 
-     <INPUT TYPE="text" NAME="addresses" SIZE="50"><BR>
+     <INPUT TYPE="text" NAME="addresses" SIZE="30"><BR>
      $LINESEPARATOR<BR>
      <FONT COLOR="red"><B>Step 3 of 3: Proceed to Final Stage!</B></FONT><BR>
      <INPUT TYPE="hidden" NAME="project_id" VALUE = "$parameters{project_id}">
