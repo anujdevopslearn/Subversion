@@ -233,7 +233,7 @@ sub checkLoggedIn {
 
     my $username = "";
 
-    my $cookie = $main::q->cookie('SBEAMSName');
+    my $cookie = $q->cookie('SBEAMSName');
     if ($cookie){
         my $cipher = new Crypt::CBC($self->getCryptKey(), 'IDEA');
         $username = $cipher->decrypt($cookie);
