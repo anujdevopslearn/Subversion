@@ -59,6 +59,8 @@ main();
 # the authentication succeeds.
 ###############################################################################
 sub main { 
+    #### Do the SBEAMS authentication and exit if a username is not returned
+    exit unless ($current_username = $sbeams->Authenticate());
 
     ($CATEGORY) = $sbeamsMOD->returnTableInfo($TABLE_NAME,"CATEGORY");
     ($PROGRAM_FILE_NAME) = $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
@@ -66,9 +68,6 @@ sub main {
     ($PK_COLUMN_NAME) = $sbeamsMOD->returnTableInfo($TABLE_NAME,"PK_COLUMN_NAME");
     @MENU_OPTIONS = $sbeamsMOD->returnTableInfo($TABLE_NAME,"MENU_OPTIONS");
 
-    #### Do the SBEAMS authentication and exit if a username is not returned
-    exit unless ($current_username = $sbeams->Authenticate());
- 
     #### Read in the default input parameters
     my %parameters;
     my $n_params_found = $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
