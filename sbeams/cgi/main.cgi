@@ -159,21 +159,27 @@ sub handle_request {
 
 	<P>This system is still under active development.  Please
 	report bugs, problems, difficulties, and suggestions to
-	<B>edeutsch\@systemsbiology.org</B>.</P>
+	your local $DBTITLE administrator: <B>$DBADMIN</B>.</P>
   ~;
 
-
-  print qq~
-
+  #### If this is an ISB site, display the in-development IntegrateResultsets
+  #### This is not expected to work at other site yet.
+  if ($sbeams->getSite() eq 'ISB') {
+    print qq~
 	<P>To integrate resultsets from queries in multiple modules
 	(e.g., Interactions, Microarray, and Proteomics) and visualize
 	with Cytoscape, try out the new, experimental <B><A
 	HREF="$CGI_BASE_DIR/IntegrateResultsets">IntegrateResultsets</A></B>
-	interface.
+	interface.</P>
+    ~;
+  }
 
+  print qq~
 	<BR>
 	<BR>
     ~;
+
+
 
   # Create new tabmenu item.  This may be a $sbeams object method in the future.
   my $tabmenu = SBEAMS::Connection::TabMenu->new( cgi => $q );
