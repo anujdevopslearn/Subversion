@@ -38,7 +38,8 @@ use Env qw(HTTP_USER_AGENT);
 use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw( $log );
+use SBEAMS::Connection::DataTable;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::Settings;
 
@@ -56,6 +57,9 @@ my ($title, $text);
 my $help_text_id   = $q->param( 'help_text_id' );
 my $column_name	   = $q->param( 'column_name' );
 my $table_name     = $q->param( 'table_name' );
+my $table_group    = $q->param( 'table_group' );
+my @groups         = $q->param( 'groupinfo' );
+my $project_id     = $q->param( 'project_id' );
 
 if ($help_text_id) {
 ######################################
@@ -76,6 +80,11 @@ if ($help_text_id) {
 }elsif ($column_name && $table_name) { # We're gonna display column_text here, boss
 
   displayColumnText( $column_name, $table_name );
+  exit 0;
+
+}elsif ( scalar @groups ) { # Group info?
+
+  displayGroupInfo( \@groups, $table_name, $table_group );
   exit 0;
 
 }else {
@@ -201,5 +210,71 @@ print $q->header( "text/html" );
   </HTML>
   END_PAGE
  
+
+}
+
+
+sub displayGroupInfo {
+  my $groups = shift;
+  my $table = shift;
+  my $tgroup = shift;
+  my $msg = '';
+
+  my $msg =<<"    END_MSG";
+    <FONT size=1 face="Tahoma, Arial, Helvetica, sans-serif">
+    This shows the permissions you have on the table <I>$table</I>,
+    which is in the table group <I>$tgroup</I>
+    </FONT>
+    END_MSG
+
+  my %perms = $sbeams->getPrivilegeNames();
+              
+  my $table = SBEAMS::Connection::DataTable->new( BORDER => 0, CELLPADDING => 2 );
+  $table->addRow( [ '<B>Group Name</B>', '<B>Group Id&nbsp;&nbsp;</B>', '<B>Privilege</B>' ] );
+  $table->addRow( [ '&nbsp;' ] );
+  $table->setColAttr( COLS => [1], ROWS => [2], COLSPAN => 3, style => 'font-size:1pt', bgcolor => '#BBBBBB' );
+  $table->setColAttr( COLS => [1, 3], ROWS => [1, 3..scalar(@groups) + 2], ALIGN => 'LEFT' );
+  $table->setColAttr( COLS => [2], ROWS => [1, 3..scalar(@groups) + 2], ALIGN => 'CENTER' );
+
+  foreach my $grp ( @groups ) {
+    my @grp = split( ":::", $grp, -1 );
+    $table->addRow( [ $grp[0], $grp[1], ucfirst($perms{$grp[2]}) ] );
+  }
+  
+  $title = $q->escapeHTML( $title );
+
+  my $fontsize = ( $HTTP_USER_AGENT =~ /Win/ ) ? 10 : 10;
+
+  print $q->header( "text/html" );
+
+  print <<"  END_PAGE";
+  <HTML>
+  <HEAD>
+  <TITLE>SBEAMs help - $title</TITLE>
+  <style type="text/css">
+  //<!--
+  body {  font-family: Tahoma, Arial, Helvetica, sans-serif; font-size: ${fontsize}pt;}
+  td   {  font-family: Tahoma, Arial, Helvetica, sans-serif; font-size: ${fontsize}pt;}
+  form   {  font-family: Tahoma, Arial, Helvetica, sans-serif; font-size: ${fontsize}pt;}
+  //-->
+  </style>
+  </HEAD>
+
+  <BODY bgcolor="#ffffff" alink=#ff3399 link=#6600cc text=#000000 vlink=#993366 leftmargin=0 topmargin=0>
+  <CENTER>
+  <BR>
+  $msg
+  <BR>
+  <BR>
+  $table 
+  <BR>
+  <BR>
+  <font size=2 face="Tahoma, Arial, Helvetica, sans-serif">
+  <a href="#" onClick='self.close()'>Close Window</a>
+  </CENTER>
+
+  </BODY>
+  </HTML>
+  END_PAGE
 
 }
