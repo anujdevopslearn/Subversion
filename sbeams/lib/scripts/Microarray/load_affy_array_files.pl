@@ -354,9 +354,9 @@ sub add_affy_arrays {
 		
 		
 		
-		my $return = check_previous_arrays(object => $affy_o);	#return the affy_array_id if the array is already in the db
+		my $return = $sbeams_affy_groups->check_previous_arrays(root_name => $affy_o->get_afa_file_root);	#return the affy_array_id if the array is already in the db
 									#otherwise return the value 'ADD'
-		if ($return eq 'ADD'){					
+		if ($return == 0){					
 			if ($VERBOSE > 0) {
 				print "ADDING OBJECT '". $affy_o->get_afa_file_root. "'\n";
 			}	
@@ -408,50 +408,6 @@ sub add_affy_arrays {
 	}
 }
 
-
-###############################################################################
-# check_previous_arrays
-#
-#Check to see if an affy_array exists with the same root_name
-###############################################################################
-sub check_previous_arrays {
-	my $SUB_NAME = 'check_previous_arrays';
-	
-	my %args = @_;
-	
-	
-	
-	my $affy_o = $args{'object'};
-
-	my $root_name = $affy_o->get_afa_file_root;
-	
-	
-	my $sql = qq~ SELECT affy_array_id
-			FROM $TBMA_AFFY_ARRAY
-			WHERE file_root like '$root_name'
-		   ~;
-		 
-	my @rows = $sbeams->selectOneColumn($sql);
-	
-	if ($VERBOSE > 0){
-		print "SUB '$SUB_NAME' SQL '$sql'\n";
-		print "DATA RESULTS '@rows'\n";
-	}
-	
-	
-	if ($rows[0] =~ /^\d/){
-		if ($VERBOSE > 0){
-			print "RETURN '$rows[0]'\n";
-		}
-		return $rows[0];		#return the affy_array_id if the record is in the database
-	}else{
-		if ($VERBOSE > 0){
-			print "RETURN 'ADD'\n";
-		}
-		return "ADD";
-	}
-
-}
 
 ###############################################################################
 # add_protocl_information
@@ -545,7 +501,7 @@ sub add_protocl_information {
 # If data needs to be update come here
 ###############################################################################
 sub update_data {
-	my $SUB_NAME = 'check_previous_arrays';
+	my $SUB_NAME = 'update_data';
 	
 	if ($VERBOSE > 0) {
 		print "IM GOING TO UPDATE DATA\n";
