@@ -268,6 +268,17 @@ sub insert_update_scan_element {
     @element_ids = $sbeams->selectSeveralColumns($sql);
     $n_element_ids = @element_ids;
 
+    #### Make a hash of row/col information to element id
+    my %id_hash;
+    foreach my $holder (@element_ids) {
+	$id_hash{$element_ids[1],$element_ids[2], $element_ids[3], $element_ids[4]} = $element_ids[0];
+    }
+
+    foreach my $key (%id_hash) {
+	print "key => %id_hash{$key}\n";
+	my $pause = <STDIN>;
+    }
+
     #### Find out if the appropriate scan_element info is already populated
     $sql = qq~
 	SELECT count(*) AS 'count'
@@ -301,7 +312,9 @@ sub insert_update_scan_element {
 						       rowdata_ref=>$rowdata_ref,
 						       PK=>"scan_element_id",
 						       return_PK => 1,
-						       verbose=>2,
+						       verbose=>$VERBOSE,
+						       testonly =>$TESTONLY,
+						       add_audit_parameters=>1
 						       );
 	    push (@scan_element_ids, $return_id);
 	}
@@ -459,8 +472,10 @@ sub insert_update_scan_quantitation {
 						   rowdata_ref=>$rowdata_ref,
 						   PK=>"scan_quantitation_id",
 						   return_PK => 1,
-						   verbose=>2,
-						   testonly=>1);
+						   verbose=>$VERBOSE,
+						   testonly=>$TESTONLY, 
+						   add_audit_parameters=>1
+						   );
 	push (@return_ids, $return_id);
     }
     return @return_ids;
@@ -514,7 +529,6 @@ sub insert_update_array_channel_scan {
     }else {
 	die "ERROR[$SUB_NAME]: channel_scan_ids not equal to channel_count!\n"; 
     }
-
     #### INSERT/UPDATE the array_channel_scan data for each channel
     #### For each channel, get the id, and then fire up the info
     $sql = qq~
@@ -542,8 +556,10 @@ sub insert_update_array_channel_scan {
 						   rowdata_ref=>$rowdata_ref,
 						   PK=>"array_scan_id",
 						   return_PK => 1,
-						   verbose=>2,
-						   testonly=>1);
+						   verbose=>$VERBOSE,
+						   testonly=>$TESTONLY,
+						   add_audit_parameters=>1
+						   );
 	if ($VERBOSE==2) {
 	    print "array_scan_id is $return_id\n";
 	}
@@ -755,7 +771,8 @@ sub insert_update_file_information {
 	$file_path_rowdata{file_path}        = "$file_path";
 	$file_path_rowdata{file_path_name}   = "$file_path";
 	$file_path_rowdata{file_path_desc}   = "$file_path";
-	
+	$file_path_rowdata{server_id}        = "1";
+
 	$file_path_PK = 'file_path_id';
 	$file_path_rowdata_ref = \%file_path_rowdata;
 
@@ -766,8 +783,10 @@ sub insert_update_file_information {
 						   rowdata_ref=>$file_path_rowdata_ref,
 						   PK=>"file_path_id",
 						   return_PK => 1,
-						   verbose=>2,
-						   testonly=>1);	
+						   verbose=>$VERBOSE,
+						   testonly=>$TESTONLY,
+						   add_audit_parameters=>1
+						   );	
     }
 
     #### Address file type information
@@ -804,8 +823,10 @@ sub insert_update_file_information {
 						   rowdata_ref=>$file_type_rowdata_ref,
 						   PK=>"file_type_id",
 						   return_PK=>1,
-						   verbose=>2,
-						   testonly=>1);
+						   verbose=>$VERBOSE,
+						   testonly=>$TESTONLY,
+						   add_audit_parameters=>1
+						   );
     }
 
     #### Address file location information
@@ -846,8 +867,10 @@ sub insert_update_file_information {
 						       rowdata_ref=>$file_location_rowdata_ref,
 						       PK=>"file_location_id",
 						       return_PK=>1,
-						       verbose=>2,
-						       testonly=>1);
+						       verbose=>$VERBOSE,
+						       testonly=>$TESTONLY,
+						       add_audit_paramters=>1
+						       );
     }
     return $file_location_PK;
 } # end insert_update_file_information
