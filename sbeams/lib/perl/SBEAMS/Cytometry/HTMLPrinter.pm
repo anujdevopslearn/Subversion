@@ -116,8 +116,7 @@ sub display_page_header {
   <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=CY_sort_type"><nobr>&nbsp;&nbsp;&nbsp;Sort Technique</nobr></a></td></tr>
 
 	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/AddFCSRuns"><nobr>&nbsp;&nbsp;&nbsp;Add FCS Runs</nobr></a></td></tr>
-  <tr><td>&nbsp;</td></tr>
+
 	</table>
 	</td>
 
@@ -127,6 +126,10 @@ sub display_page_header {
 	<tr><td>
 
     ~;
+   # <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/AddFCSRuns"><nobr>&nbsp;&nbsp;&nbsp;Add FCS Runs</nobr></a></td></tr>
+   # <tr><td>&nbsp;</td></tr>
+    
+    
     } else {
       print qq~
 	</TABLE>
