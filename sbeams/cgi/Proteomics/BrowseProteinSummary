@@ -492,6 +492,15 @@ sub handle_request {
   }
 
 
+  #### Add in the bait protein column if the user wants to see them
+  my @bait_columns = ();
+  if ( $parameters{display_options} =~ /ShowBaitProteins/ ) {
+    @bait_columns = (
+      ["pulldown_protein_name","PE.pulldown_protein_name","Pulldown Protein Name"],
+    );
+  }
+
+
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
 
@@ -508,6 +517,7 @@ sub handle_request {
     @column_array = (
       ["experiment_tag","experiment_tag","Exp"],
       ["search_batch_subdir","search_batch_subdir","DB"],
+      @bait_columns,
       ["group_number","PG.group_number","Group #"],
       ["pseudo_name","PG.pseudo_name","Group Name"],
       ["group_probability","STR(PG.probability,7,3)","Group Prob"],
