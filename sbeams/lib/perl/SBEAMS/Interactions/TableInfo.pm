@@ -88,7 +88,8 @@ sub returnTableInfo {
 		SELECT I.interaction_id,
 			BE1.bioentity_common_name,BES1.bioentity_state_name,RF1.regulatory_feature_name,
 			IT.interaction_type_name,
-			BE2.bioentity_common_name,BES2.bioentity_state_name,RF2.regulatory_feature_name
+			BE2.bioentity_common_name,BES2.bioentity_state_name,RF2.regulatory_feature_name,
+			PUB.pubmed_id,
 		  FROM $TBIN_INTERACTION I
 		  LEFT JOIN $TBIN_INTERACTION_TYPE IT ON ( I.interaction_type_id = IT.interaction_type_id )
 		  LEFT JOIN $TBIN_BIOENTITY BE1 ON ( I.bioentity1_id = BE1.bioentity_id )
@@ -97,6 +98,7 @@ sub returnTableInfo {
 		  LEFT JOIN $TBIN_BIOENTITY_STATE BES2 ON ( I.bioentity2_state_id = BES2.bioentity_state_id )
 		  LEFT JOIN $TBIN_REGULATORY_FEATURE RF1 ON ( I.regulatory_feature1_id = RF1.regulatory_feature_id )
 		  LEFT JOIN $TBIN_REGULATORY_FEATURE RF2 ON ( I.regulatory_feature2_id = RF1.regulatory_feature_id )
+			LEFT JOIN $TBIN_PUBLICATION PUB ON (I.publication_id = PUB.publication_id)
 		 WHERE I.record_status != 'D'
 		   AND ( BE1.record_status != 'D' OR BE1.record_status IS NULL )
 		   AND ( BE2.record_status != 'D' OR BE2.record_status IS NULL )
