@@ -73,6 +73,7 @@ if ($DEBUG) {
 ###############################################################################
 
 my $FILE_BASE_DIR = "/net/arrays/Pipeline/output/project_id";
+my $DOC_BASE_DIR = "";
 my $DATA_READER_ID = 40;
 
 main();
@@ -109,48 +110,50 @@ sub main {
 
 	my $output_dir;
 	if ($file_name =~ /\.map$/ || $file_name=~/\.key$/) {
-			$output_dir = "/net/arrays/Slide_Templates";
+	    $output_dir = "/net/arrays/Slide_Templates";
+	}elsif ($file_name =~/\.doc/){
+	    $output_dir = "/net/"
 	}else {
-			my $output_dir = "$FILE_BASE_DIR/$project_id";
+	    $output_dir = "$FILE_BASE_DIR/$project_id";
 	}
 
 	if ($action eq 'download') {
-			#### Verify user has permission to access the file
-			if ($sbeams->get_best_permission <= $DATA_READER_ID){
-					print "Content-type: application/force-download \n";
-					print "Content-Disposition: filename=$file_name\n\n";
-					my $buffer;
-					open (DATA, "$output_dir/$file_name")
-							|| die "Couldn't open $file_name";
-					while(read(DATA, $buffer, 1024)) {
-							print $buffer;
-					}
-			}else {
-					$sbeams->printPageHeader();
-					print qq~
-							<BR><BR><BR>
-							<H1><FONT COLOR="red">You Do Not Have Access To View This File</FONT></H1>
-							<H2><FONT COLOR="red">Contact PI or another administrator for permission</FONT></H2>
-							~;
-					$sbeamsMOD->printPageFooter();
-			}
+	    #### Verify user has permission to access the file
+	    if ($sbeams->get_best_permission <= $DATA_READER_ID){
+		print "Content-type: application/force-download \n";
+		print "Content-Disposition: filename=$file_name\n\n";
+		my $buffer;
+		open (DATA, "$output_dir/$file_name")
+		    || die "Couldn't open $file_name";
+		while(read(DATA, $buffer, 1024)) {
+		    print $buffer;
+		}
+	    }else {
+		$sbeams->printPageHeader();
+		print qq~
+		    <BR><BR><BR>
+		    <H1><FONT COLOR="red">You Do Not Have Access To View This File</FONT></H1>
+		    <H2><FONT COLOR="red">Contact PI or another administrator for permission</FONT></H2>
+		    ~;
+		$sbeamsMOD->printPageFooter();
+	    }
 	}else {
-			#### Start printing the page
-			$sbeamsMOD->printPageHeader();	
-
-			#### Verify user has permission to access the file
-			if ($sbeams->get_best_permission <= $DATA_READER_ID){
-					my $file = "$output_dir/$file_name";
-					printFile(file=>$file);
-			}
-			else{
-					print qq~
-							<BR><BR><BR>
-							<H1><FONT COLOR="red">You Do Not Have Access To View This File</FONT></H1>
-							<H2><FONT COLOR="red">Contact PI or another administrator for permission</FONT></H2>
-							~;
-			}
-			$sbeamsMOD->printPageFooter();
+	    #### Start printing the page
+	    $sbeamsMOD->printPageHeader();	
+	    
+	    #### Verify user has permission to access the file
+	    if ($sbeams->get_best_permission <= $DATA_READER_ID){
+		my $file = "$output_dir/$file_name";
+		printFile(file=>$file);
+	    }
+	    else{
+		print qq~
+		    <BR><BR><BR>
+		    <H1><FONT COLOR="red">You Do Not Have Access To View This File</FONT></H1>
+		    <H2><FONT COLOR="red">Contact PI or another administrator for permission</FONT></H2>
+		    ~;
+	    }
+	    $sbeamsMOD->printPageFooter();
 	}
 } # end main
 
