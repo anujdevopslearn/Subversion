@@ -597,7 +597,7 @@ sub loadBiosequenceSet {
     #### previous sequence to the database
     if (($line =~ />/) && ($information ne "####")) {
       my %rowdata;
-      $information =~ /^(.*)>(\S+)/;
+      $information =~ /^(.*?)>(\S+)/;
       $rowdata{biosequence_name} = $2;
 
       #### Print a warning if malformed
