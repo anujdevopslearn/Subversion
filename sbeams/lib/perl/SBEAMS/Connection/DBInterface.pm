@@ -2093,8 +2093,9 @@ sub display_input_form {
     if ($optionlist_query gt "") {
       #print "<font color=\"red\">$column_name</font><BR><PRE>$optionlist_query</PRE><BR>\n";
       $optionlist_queries{$column_name}=$optionlist_query;
+    }
     if ($input_type eq "file") {
-      $file_upload_flag = "ENCTYPE=\"multipart/form-data\""; }
+      $file_upload_flag = "ENCTYPE=\"multipart/form-data\"";
     }
   }
 
