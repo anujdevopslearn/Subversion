@@ -250,6 +250,22 @@ sub postFormHook {
   }
 
 
+  #### If table PR_gradient_program
+  if ($TABLE_NAME eq "PR_gradient_program") {
+    my $gradient_program_id = $parameters{gradient_program_id} || return;
+    my $sql = qq~
+	SELECT * FROM $TBPR_GRADIENT_DELTA
+	 WHERE gradient_program_id = '$gradient_program_id'
+	 ORDER BY gradient_delta_time
+    ~;
+    print "<BR><TR><TD COLSPAN=3>\n";
+    $sbeams->displayQueryResult(sql_query=>$sql);
+    print "</TD></TR><BR><BR>\n";
+
+    return;
+  }
+
+
   #### Otherwise, no special processing, so just return undef
   return;
 
