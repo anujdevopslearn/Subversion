@@ -264,9 +264,12 @@ sub readOutFile {
     @result = unpack($format,$line);
     $last_part = substr($line,$start_pos,999);
 
-    $last_part =~ /(.+) [A-Z-\@]\..+\.[A-Z-\@]$/;
+    #### Switched from A-Z to \w due to a SEQUEST bug
+    #$last_part =~ /(.+) [A-Z-\@]\..+\.[A-Z-\@]$/;
+    $last_part =~ /(.+) [\w-\@]\..+\.[\w-\@]$/;
     push(@result,$1);
-    $last_part =~ /.+ ([A-Z-\@]\..+\.[A-Z-\@])$/;
+    #$last_part =~ /.+ ([A-Z-\@]\..+\.[A-Z-\@])$/;
+    $last_part =~ /.+ ([\w-\@]\..+\.[\w-\@])$/;
     push(@result,$1);
 
 
@@ -379,6 +382,10 @@ sub readOutFile {
         my $tmp = $result[$i];
         if ($tmp) {
           $tmp =~ s/ //g;
+
+	  #### Compensate for SEQUEST bug
+	  $tmp =~ s/[0-9]/-/g;
+
           $tmp_hash{'peptide_string'} = $tmp;
           $tmp =~ s/[\*\@\#]//g;
           $tmp =~ /.*\.([A-Z-\@]+)\..*/;
