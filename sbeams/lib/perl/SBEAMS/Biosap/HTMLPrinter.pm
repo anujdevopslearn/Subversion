@@ -75,7 +75,7 @@ sub printPageHeader {
 	<!------- Header ------------------------------------------------>
 	<a name="TOP"></a>
 	<tr>
-	  <td bgcolor="$BGCOLOR"><img border=0 alt="BIOSAP" src="$HTML_BASE_DIR/images/biosap_logo.png"></td>
+	  <td bgcolor="$BGCOLOR"><img border=0 width=175 height=100 alt="BIOSAP" src="$HTML_BASE_DIR/images/bs_logo.jpg"></td>
 	  <td align="left" bgcolor="$BGCOLOR"><H1>Blast Integrated Oligonucleotide Selection Accelerator Package</H1></td>
 	</tr>
 
@@ -95,13 +95,15 @@ sub printPageHeader {
 	<tr><td>&nbsp;</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/Biosap/ManageTable.cgi?TABLE_NAME=bs_biosequence_set"><nobr>- Manage BioSequence</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Biosap/BiosapForm.cgi"><nobr>- New Biosap Run</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/Biosap/SummarizeRuns.cgi"><nobr>- Summarize Runs</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/Biosap/BrowseFeatures.cgi"><nobr>- Browse Features</nobr></a></td></tr>
 	</table>
 	</td>
 
 	<!-------- Main Page ------------------------------------------->
-	<td valign=top>
+	<td valign=top width="100%">
 	<table border=0 bgcolor="#ffffff" cellpadding=4>
 	<tr><td>
 
