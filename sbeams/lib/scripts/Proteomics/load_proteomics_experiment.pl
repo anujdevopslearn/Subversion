@@ -1404,6 +1404,11 @@ sub updateProbabilities {
     $file_root = $key;
     $file_root =~ s/\.out$//;
 
+    #### Hack
+    #$file_root =~ s/raft52\./raft0052\./;
+    #$file_root =~ s/raft20\./raft0020\./;
+
+
     #### Find the corresponding search_hit_id in table search_hit
     if (1 == 1) {
       $search_hit_id = $search_hit_ids{$file_root};
@@ -1421,8 +1426,8 @@ sub updateProbabilities {
 
     unless ($search_hit_id) {
       print "\nERROR: Unable to find search_hit_id with\n".
-            "$sql\n\n";
-      return;
+            "file_root '$file_root' using:$sql\n\n";
+      next;
     }
 
 
