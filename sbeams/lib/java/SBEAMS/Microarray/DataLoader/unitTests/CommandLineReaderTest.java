@@ -30,10 +30,10 @@ public class CommandLineReaderTest extends TestCase {
 //-----------------------------------------------------------------------------------------------
   public void testWithArgs() throws Exception {
 	System.out.println ("testWithArgs");
-	String[] arguments = {"-m", "MatrixFile", "-t", "ExperimentTitle"};
+	String[] arguments = {"-m", "MatrixFile", "-p", "328"};
 	CommandLineReader clr = new CommandLineReader(arguments);
 	assertTrue((clr.getMatrixFile()).equals("MatrixFile"));
-	assertTrue((clr.getExperimentTitle()).equals("ExperimentTitle"));
+	assertTrue((clr.getProjectID().toString()).equals("328"));
   }
 //-----------------------------------------------------------------------------------------------
   public static void main (String[] args) {
