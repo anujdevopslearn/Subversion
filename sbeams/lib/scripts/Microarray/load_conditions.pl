@@ -21,8 +21,10 @@ use FindBin;
 
 use lib qw (../perl ../../perl);
 use vars qw ($sbeams $sbeamsMOD $q
-             $PROG_NAME $USAGE %OPTIONS $VERBOSE $QUIET $DEBUG $DATABASE $TESTONLY
-						 $PROJECT_ID $current_contact_id $current_username 
+             $PROG_NAME $USAGE %OPTIONS 
+	     $VERBOSE $QUIET $DEBUG 
+	     $DATABASE $TESTONLY $PROJECT_ID 
+	     $CURRENT_CONTACT_ID $CURRENT_USERNAME 
             );
 
 
@@ -54,14 +56,25 @@ Options:
                        project directory in: 
                        /net/arrays/Pipeline/output/project_id/
     --file_name <name> Set a single file to be uploaded
-		--set_tag <name>   Determines which biosequence set to use when populating
+    --set_tag <name>   Determines which biosequence set to use when populating
                        the gene_expression table
+    --sig              Looks/loads sig files that do not have column_map files
+    --merge            Looks/loads merge files that do not have column_map files
     --testonly         Information in the database is not altered
 EOU
 
 #### Process options
-unless (GetOptions(\%OPTIONS,"verbose:i","quiet","debug:i",
-  "project_id:s","directory:s","file_name:s","set_tag:s","testonly")) {
+unless (GetOptions(\%OPTIONS,
+		   "verbose:i",
+		   "quiet",
+		   "debug:i",
+		   "project_id:s",
+		   "directory:s",
+		   "file_name:s",
+		   "set_tag:s",
+		   "sig",
+		   "merge",
+		   "testonly")) {
   print "$USAGE";
   exit;
 }
@@ -80,6 +93,8 @@ if ($DEBUG) {
   print "  PROJECT_ID = $OPTIONS{project_id}\n";
   print "  DIRECTORY = $OPTIONS{directory}\n";
   print "  FILE_NAME = $OPTIONS{file_name}\n";
+  print "  SIG = $OPTIONS{sig}\n";
+  print "  MERGE = $OPTIONS{merge}\n";
   print "  TESTONLY = $OPTIONS{testonly}\n";
 }
 
@@ -98,7 +113,7 @@ exit(0);
 ###############################################################################
 sub main {
 
-  #### Try to determine which module we want to affect
+#### Try to determine which module we want to affect
   my $module = $sbeams->getSBEAMS_SUBDIR();
   my $work_group = 'unknown';
   if ($module eq 'Microarray') {
@@ -118,23 +133,25 @@ sub main {
     $DATABASE = $DBPREFIX{$module};
   }
 
-  ## Presently, force module to be microarray
+## Presently, force module to be microarray and work_group to be Microarray_admin
   if ($module ne 'Microarray') {
       print "WARNING: Module was not Microarray.  Resetting module to Microarray\n";
       $work_group = "Microarray_admin";
       $DATABASE = $DBPREFIX{$module};
   }
 
-  #### Do the SBEAMS authentication and exit if a username is not returned
-  exit unless ($current_username = $sbeams->Authenticate(
+#### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($CURRENT_USERNAME = $sbeams->Authenticate(
     work_group=>$work_group,
   ));
 
-
   $sbeams->printPageHeader() unless ($QUIET);
-  # HACK - to load all conditions, for all projects, we simply change PROJECT_ID
+
+## To load all conditions, for all projects, we cycle through PROJECT_IDs
+## I'm not too proud of this hack...
+
   if ($PROJECT_ID eq 'all') {
-      my @directories = glob("/net/arrays/Pipeline/output/project_id/base_directory/*");
+      my @directories = glob</net/arrays/Pipeline/output/project_id/base_directory/*>;
       foreach my $directory (@directories) {
 	  $PROJECT_ID = $directory;
 	  $PROJECT_ID =~ s(^.*/)();
@@ -152,25 +169,32 @@ sub main {
 
 ###############################################################################
 # handleRequest
+#
+# Handles the core functionality of this script
 ###############################################################################
 sub handleRequest { 
   my %args = @_;
+  my $SUB_NAME = "handleRequest";
 
-  #### Define standard variables
-  my ($sql, @rows);
-	my (%final_hash);
+#### Define standard variables
+  my ($sql);
+  my (@rows, @condition_files);
+  my (%final_hash);
 	
-  #### Set the command-line options
+#### Set the command-line options
   my $directory = $OPTIONS{'directory'} || "/net/arrays/Pipeline/output/project_id/$PROJECT_ID";
   my $file_name = $OPTIONS{'file_name'};
   my $set_tag = $OPTIONS{'set_tag'};
-  #### Print out the header
+  my $search_for_sig = $OPTIONS{'sig'} || "false";
+  my $search_for_merge = $OPTIONS{'merge'} || "false";
+
+#### Print out the header
   unless ($QUIET) {
     $sbeams->printUserContext();
     print "\n";
   }
   
-  ## If set_tag is set, get biosequences
+## If set_tag is set, get biosequences
   if ($set_tag) {
       $sql = qq~
 	  SELECT BS.biosequence_id, BS.biosequence_name, BS.biosequence_gene_name
@@ -180,122 +204,125 @@ sub handleRequest {
 	  and BS.record_status != 'D'
 	  ~;
       @rows = $sbeams->selectHashArray($sql);
-      ## make the final hash
+
+## make the final hash
       foreach my $temp_row (@rows) {
 	  my %temp_hash = %{$temp_row};
 	  $final_hash{$temp_hash{'biosequence_gene_name'}} = $temp_hash{'biosequence_id'};
 	  $final_hash{$temp_hash{'biosequence_name'}} = $temp_hash{'biosequence_id'};
-      }
-      
-#		#### Print hash for testing
-#		my @keys = keys %final_hash;
-#		my @values = values %final_hash;
-#		my $counters = 0;
-#		while(@keys && $counters <10) {
-#				print (pop(@keys), '=', pop(@values), "\n");
-#				$counters++;
-#		}
-      
+      }      
   }
   
+
+## Search for '.column_map' files
+  my @map_files = glob <$directory/*\.column_map>;
+  my $map_count = @map_files;
+  if ($map_count >= 1) {
+
+## Each column_map file should contain the name of the mapped file on the first line,
+## followed by a list of the mapping, separated by returns.  If the condition is not
+## specified in the file, then set the condition to be the column_map file's name.
+
+      foreach my $map_file (@map_files) {
+
+## Local Variables
+	  my ($mapped_file,$condition,$condition_id,$processed_date,%column_mapping);
+
+	  if ($VERBOSE > 0) {
+	      print "\nAttempting to open \'$map_file\'\n";
+	  }
+
+## Read in column_map file
+	  open (MAP_FILE, "$map_file") || die "could not open column map file: $map_file\n";
+	  push (@condition_files, $map_file);
+
+	  while (<MAP_FILE>) {
+	      next if (/^\#/);
+	      if (/mapped.file\s*=?\s*(.*)/) {
+		  $mapped_file = $1;
+	      }elsif (/condition\s*=?\s+(.*)/) {
+		  $condition = $1;
+	      }elsif (/(\w+)\s*=?\s*(\d+)/) {
+		  $column_mapping{$1} = $2;
+	      }else {
+		  #print "nothing on this line\n";
+	      }
+	  }
+
+## For debugging purposes, we can print out the column mapping
+	  if ($VERBOSE > 0) {
+	      print "\n HASH Mapping for $map_file:\n";
+	      print "\n file : $mapped_file\n";
+	      while ( (my $k,my $v) = each %column_mapping ) {
+		  print "$k => $v\n";
+	      }
+	  }
+
+	  if (!defined($condition)) {
+	      $map_file =~ s(^.*/)();
+	      $map_file =~/(.*)\.column_map$/;
+	      $condition = $1;
+	  }
+
+	  $processed_date = getProcessedDate(file=>"$mapped_file");
+	  $condition_id = getConditionID(condition=>$condition);
+
+## INSERT/UPDATE the condition
+	  if (!defined($condition_id)) {
+	      print "\n->INSERTing condition $condition\n";
+	  }else {
+	      print "\n->UPDATEing condition $condition\n";
+	  }
+
+	  $condition_id = insertCondition(processed_date=>$processed_date,
+					  condition=>$condition,
+					  condition_id=>$condition_id);
+	  
+##  Insert the gene_expression data!
+	  insertGeneExpression(condition_id=>$condition_id,
+				   source_file=>"$mapped_file",
+				   if_hash=>\%final_hash);
+      }
+      
+## Report status to the user
+      print "# $#condition_files condition files were found and loaded.\n";
+      if ($VERBOSE >0 ) {
+	  print "The conditions are:\n";
+	  foreach my $condition_to_print (@condition_files) {
+	      print "Condtion -- $condition_to_print\n";
+	  }
+	  print "\n\n";
+      }
+  }
+
+## Search for '.sig' files if requested
+  if ($search_for_sig ne "false") {
+      loadSigFiles(directory=>$directory,
+		   condition_ref=>\@condition_files,
+		   bs_hash_ref=>\%final_hash);
+  }
   
-  ## Try to find .sig (SAM output) files first
-  my @sig_files = glob("$directory/*\.sig");
-  if (@sig_files > 0) {
-      foreach my $sig_file (@sig_files) {
-	  $sig_file =~ s(^.*/)();
-	  $sig_file =~ /(.*)\.sig$/;
-	  my $condition = $1;
-	  my $processed_date = getProcessedDate(file=>"$directory/$sig_file");
-	  my $condition_id;
-	  
-	  ##See if condition already exists in the database
-	  $sql = qq~
-	      SELECT condition_id
-	      FROM condition
-	      WHERE condition_name = '$condition'
-	      AND record_status != 'D'
-	      ~;
-	  @rows = $sbeams->selectOneColumn($sql);
-	  my $n_rows = @rows;
-	  
-	  if ($n_rows < 1) {
-	      print "->INSERTing $condition\n";
-	      $condition_id = insertCondition(insert=>1,
-					      processed_date=>$processed_date,
-					      condition=>$condition);
-	  }else {
-	      print "->UPDATEing $condition\n";
-	      $condition_id = insertCondition(update=>1,
-					      processed_date=>$processed_date,
-					      condition=>$condition,
-					      condition_id=>$rows[0]);
-	  }
-	  if ($set_tag){
-	      insertGeneExpression(condition_id=>$condition_id,
-				   source_file=>"$directory/$sig_file",
-				   id_hash=>\%final_hash);
-	  }else {
-	      insertGeneExpression(condition_id=>$condition_id,
-				   source_file=>"$directory/$sig_file");
-	  }
-      }
-  }else {
-      if ($VERBOSE > 0) {
-	  print "\n->No .sig files were found:  now searching for .all.merge files\n";
-      }
-      my @merge_files = glob("$directory/*\.all\.merge");
-      foreach my $merge_file (@merge_files) {
-	  $merge_file =~ s(^.*/)();
-	  $merge_file =~ /(.*)\.all\.merge$/;
-	  my $condition = $1;
-	  my $processed_date = getProcessedDate("$directory/$merge_file");
-	  my $condition_id;
-	  
-	  ##See if condition already exists in the database
-	  $sql = qq~
-	      SELECT condition_id
-	      FROM condition
-	      WHERE condition_name = '$condition'
-	      AND record_status != 'D'
-	      ~;
-	  @rows = $sbeams->selectOneColumn($sql);
-	  my $n_rows = @rows;
-	  
-	  if ($n_rows < 1) {
-	      print "->INSERTing $condition\n";
-	      $condition_id = insertCondition(insert=>1,
-					      processed_date=>$processed_date,
-					      condition=>$condition);							
-	  }else {
-	      print "->UPDATEing $condition\n";
-	      $condition_id = insertCondition(update=>1,
-					      processed_date=>$processed_date,
-					      condition=>$condition,
-					      condition_id=>$rows[0]);
-	  }
-	  
-	  if ($set_tag){
-	      insertGeneExpression(condition_id=>$condition_id,
-				   source_file=>"$directory/$merge_file",
-				   id_hash=>\%final_hash);
-	  }else {
-	      insertGeneExpression(condition_id=>$condition_id,
-				   source_file=>"$directory/$merge_file");
-	  }
-      }
+## Search for '.merge' files if requested
+  if ($search_for_merge ne "false") {
+      loadMergeFiles(directory=>$directory,
+		     condition_ref=>\@condition_files,
+		     bs_hash_ref=>\%final_hash);
   }
   return;
 }
 
 ###############################################################################
 # getProcessedDate
+#
+# Given a file name, the associated timestamp is returned
 ###############################################################################
 sub getProcessedDate {
-    my $SUB_NAME="getProcessedDate";
     my %args= @_;
+    my $SUB_NAME="getProcessedDate";
+
     my $file = $args{'file'};
-    #### Get the last modification date from this file
+
+## Get the last modification date from this file
     my @stats = stat($file);
     my $mtime = $stats[9];
     my $source_file_date;
@@ -315,17 +342,23 @@ sub getProcessedDate {
 
 ###############################################################################
 # insertCondition
+#
+# Given a condition name (and condition_id, if available), a record will be 
+# INSERTed or UPDATEd in the condition table
 ###############################################################################
 sub insertCondition {
-    my $SUB_NAME = "insertCondition";
     my %args = @_;
+    my $SUB_NAME = "insertCondition";
+
+## Define local variables
     my $condition = $args{'condition'};
-    my $insert = $args{'insert'} || 0;
-    my $update = $args{'update'} || 0;
     my $condition_id = $args{'condition_id'};
     my $processed_date = $args{'processed_date'};
     my (%rowdata, $rowdata_ref,$pk);
-    
+    my ($insert, $update) = 0;
+
+    ($condition_id) ? $update = 1 : $insert = 1;
+
     if ($insert + $update != 1){
 	die "ERROR[$SUB_NAME]:You need to set insert OR update to 1\n";
     }
@@ -361,25 +394,28 @@ sub insertCondition {
 					  add_audit_parameters=>1);
     }
     return $pk;
-}		
+}	
 
 
 ###############################################################################
 # insertGeneExpression
 ###############################################################################
 sub insertGeneExpression {
-    my $SUB_NAME = "insertGeneExpression";
     my %args = @_;
+    my $SUB_NAME = "insertGeneExpression";
+
+## Define local variables
     my $condition_id = $args{'condition_id'} 
     || die "ERROR[$SUB_NAME]: condition_id must be set\n";
     my $source_file = $args{'source_file'};
     my $id_hash_ref = $args{'id_hash'};
     my $set_tag = $OPTIONS{'set_tag'};
-    my $current_contact_id = $sbeams->getCurrent_contact_id();
+
+## Define standard variables
+    my $CURRENT_CONTACT_ID = $sbeams->getCurrent_contact_id();
     my ($sql, @rows);
     
-    ## See if there are gene_expression entries with the specified id. DELETE, if so.
-    ## NEEDS WORK
+## See if there are gene_expression entries with the specified id. DELETE, if so.
     $sql = qq~
 	SELECT gene_expression_id
 	FROM gene_expression
@@ -388,19 +424,19 @@ sub insertGeneExpression {
     @rows = $sbeams->selectOneColumn($sql);
     
     if ($VERBOSE > 0) {
-	print "Records exist for this condition.  Will DELETE them, then re-INSERT\n";
+	print "\nRecords exist for this condition.  Will DELETE them, then re-INSERT\n";
     }
     foreach my $gene_expression_id (@rows){
 	$sql = "DELETE FROM gene_expression WHERE gene_expression_id='$gene_expression_id'";
 	$sbeams->executeSQL($sql);
     }
     
-    ## Define Column Map
+## Define Column Map
     my ($gene_name_column,$second_name_column,%column_map)= findColumnMap(source_file=>$source_file);
     my %transform_map = ('1000'=>sub{return $condition_id;});
-    
-    #### Execute $sbeams->transferTable() to update contact table
-    #### See ./update_driver_tables.pl
+
+## Execute $sbeams->transferTable() to update contact table
+## See ./update_driver_tables.pl
     if ($TESTONLY) {
 	print "\n$TESTONLY- TEST ONLY MODE\n";
     }
@@ -418,7 +454,7 @@ sub insertGeneExpression {
 			   testonly=>$TESTONLY,
 			   );
     
-    ## Insert biosequences, if set_tag was specified
+## Insert biosequences, if set_tag was specified
     if ($set_tag && $id_hash_ref) {
 	my %id_hash = %{$id_hash_ref};
 	$sql = qq~
@@ -430,7 +466,7 @@ sub insertGeneExpression {
 	
 	my %ge_hash;
 	
-	## make the final hash
+## make the final hash
 	foreach my $temp_row (@rows) {
 	    my %temp_hash = %{$temp_row};
 	    $ge_hash{$temp_hash{'gene_name'}} = $temp_hash{'gene_expression_id'};
@@ -438,7 +474,7 @@ sub insertGeneExpression {
 	}
 	
 	
-	## For each gene_expression record, try to find a corresponding biosequence
+## For each gene_expression record, try to find a corresponding biosequence
 	while ( my($key,$value) = each %ge_hash ){
 	    my $result =  $id_hash{$key};
 	    if ($result){
@@ -464,8 +500,170 @@ sub insertGeneExpression {
 }
 
 
+
+
+
+
+###############################################################################
+# conditionAlreadyLoaded
+#
+# This sub determines whether a file has already been loaded into the
+# condition/gene_expression tables
+###############################################################################
+sub conditionAlreadyLoaded {
+    my %args = @_;
+    my $SUB_NAME = "conditionAlreadyLoaded";
+
+## Define local variables
+    my $file = $args{'file'}
+    || die "\nERROR[$SUB_NAME]:file needs to be specified\n";
+    my $file_ref = $args{'file_ref'}
+    || die "\nERROR[$SUB_NAME]:file_ref needs to be specified\n";
+    my @files = @{$file_ref};
+
+## See if the file exists in the list of already-loaded files
+    foreach my $test_file (@files) {
+	if ($file eq $test_file) {
+	    return "true";
+	}
+    }
+    return "false";
+}
+
+
+
+###############################################################################
+# loadSigFiles
+#
+# Kicks off the loading of a sig file (or any file ending in 'sig')
+###############################################################################
+sub loadSigFiles {
+    my %args = @_;
+    my $SUB_NAME = "loadSigFiles";
+
+    loadAlternativeType(search_string=>'sig',
+			directory=>$args{'directory'},
+			condition_ref=>$args{'condition_ref'},
+			bs_hash_ref=>$args{'bs_hash_ref'});
+}
+
+###############################################################################
+# loadMergeFiles
+#
+# Kicks off the loading of a merge file (or any file ending in 'merge')
+###############################################################################
+sub loadMergeFiles {
+    my %args = @_;
+    my $SUB_NAME = "loadMergeFiles";
+
+    loadAlternativeType(search_string=>'merge',
+			directory=>$args{'directory'},
+			condition_ref=>$args{'condition_ref'},
+			bs_hash_ref=>$args{'bs_hash_ref'});
+}
+
+###############################################################################
+# loadAlternativeType
+#
+# Code to handle the loading of merge or sig file.  Is not called directly.
+# This sub will open a sig/merge file, find the relevant columns and load the
+# data into the gene_expression table.
+###############################################################################
+sub loadAlternativeType {
+    my %args = @_;
+    my $SUB_NAME =  "loadAlternativeType";
+
+## Define local variables
+    my $search_string = $args{'search_string'}
+    || die "\nERROR[$SUB_NAME]: need search_string\n";
+    my $condition_ref = $args{'condition_ref'}
+    || die "\nERROR[$SUB_NAME]: need condition_ref\n";
+    my $directory = $args{'directory'}
+    || die "\nERROR[$SUB_NAME]: need directory\n";
+    my $bs_hash_ref = $args{'bs_hash_ref'};
+
+## Local Variables
+    my (@search_files);
+    my ($search_file, $condition, $condition_id, $processed_date);
+    my $new_conditions = 0;
+
+## Search for files ending with $search_string
+    my @search_files = glob<$directory/*\.$search_string>;
+    foreach my $search_file (@search_files) {
+
+## Determine condition    
+	$search_file =~ s(^.*/)();
+	$search_file =~ /(.*)\.$search_string$/;
+	$condition = $1;
+
+## See if condition has already been loaded during the running of this script
+## If it hasn't been loaded, fire it up.
+	if (conditionAlreadyLoaded(file=>$search_file, 
+				   file_ref=>$condition_ref) eq "true") {
+	    print "Condtion \'$condition\' has already been loaded.\n";
+	    print "\t# If you don't think this is correct contact mjohnson\n";
+	}else {
+	    push (@{$condition_ref}, $search_file);
+	    $new_conditions++;
+	    $processed_date = getProcessedDate(file=>"$directory/$search_file");
+	    $condition_id = getConditionID(condition=>$condition);
+	    if ($VERBOSE > 0 ) {
+		print "condition_id for condition \'$condition\' is $condition_id.\n";
+	    }
+	    
+## INSERT/UPDATE the condition
+	    if (!defined($condition_id)) {
+		print "\n->INSERTing condition $condition\n";
+	    }else {
+		print "\n->UPDATEing condition $condition\n";
+	    }
+	    $condition_id = insertCondition(processed_date=>$processed_date,
+					    condition=>$condition,
+					    condition_id=>$condition_id);
+	    
+##  Insert the gene_expression data!
+	    insertGeneExpression(condition_id=>$condition_id,
+				 source_file=>"$search_file",
+				 if_hash=>$bs_hash_ref);
+	}
+    }
+    print "# $new_conditions loaded using search string: $search_string\n";
+}
+
+
+
+
+
+###############################################################################
+# getConditionID
+#
+# returns the condition_id given a condition name, if there's a match
+###############################################################################
+sub getConditionID {
+    my %args = @_;
+    my $SUB_NAME = "getConditionID";
+
+## Define local variables
+    my $condition = $args{'condition'}
+    || die "\nERROR[$SUB_NAME]:condition_id needs to be specified\n";
+
+
+    my $sql = qq~
+	SELECT condition_id
+	FROM condition
+	WHERE condition_name = '$condition'
+	AND record_status != 'D'
+	~;
+    my @rows = $sbeams->selectOneColumn($sql);
+    my $n_rows = @rows;
+    ($n_rows > 0 ) ? return $rows[0] : return;
+}
+
 ###############################################################################
 # findColumnMap
+#
+# Determines column mapping for sig/merge files.  This could be augmented
+# extended to handle other types.
 ###############################################################################
 sub findColumnMap {
   my %args = @_;
