@@ -19,6 +19,9 @@
 <tr><td align="top">
 
 
+<!-- BEGIN_CONTENT -->
+
+
 
 <H2>File Type Descriptions</H2>
 
@@ -72,6 +75,9 @@
  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Matrix files are summaries of multiple '.sig files'.  These files contain gene names, average log ratio, and lambda for each condition in a matrix format. <A HREF="MatrixFile.php">[Read More...]</A><BR>&nbsp;
 
 </UL>
+
+
+<!-- END_CONTENT -->
 
 
 <?php

@@ -16,6 +16,10 @@
 
 <TABLE BORDER=0 WIDTH="680" BGCOLOR="#ffffff" CELLPADDING="10">
 
+
+<!-- BEGIN_CONTENT -->
+
+
 <TR>
   <TD ALIGN="top">
    <CENTER><FONT COLOR="red" SIZE="+2"><B>User Documentation</B></FONT></CENTER>
@@ -56,6 +60,9 @@
 
 
 </TABLE>
+
+
+<!-- END_CONTENT -->
 
 
 <!-- ------------------------ End Main Page Content ------------------------ -->
