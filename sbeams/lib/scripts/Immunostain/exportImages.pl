@@ -12,6 +12,8 @@ use SBEAMS::Immunostain::Tables;
 
 use strict;
 
+# $Id$
+
 main();
 exit 0;
 
@@ -36,14 +38,52 @@ sub getImages {
 
   my $export_path = $args->{export_path};
 
-  my $sth = $dbh->prepare( <<"  END_SQL" );
-  SELECT assay_image_id, processed_image_file, raw_image_file
-  FROM $TBIS_ASSAY_IMAGE 
-  END_SQL
-  $sth->execute();
+  my $sql;
 
+  if ( !$args->{organism} ) { # generic
+    $sql =<<"    END_SQL";
+    SELECT assay_image_id, processed_image_file, raw_image_file
+    FROM $TBIS_ASSAY_IMAGE 
+    END_SQL
+  } elsif ( uc( $args->{organism} ) eq 'HUMAN' ) {
+    $sql =<<"    END_SQL";
+    SELECT assay_image_id, processed_image_file, raw_image_file
+    FROM $TBIS_ASSAY_IMAGE i 
+     INNER JOIN $TBIS_ASSAY_CHANNEL c
+      ON i.assay_channel_id = c.assay_channel_id
+     INNER JOIN $TBIS_ASSAY a
+      ON c.assay_id = a.assay_id
+     INNER JOIN $TBIS_SPECIMEN_BLOCK b
+      ON a.specimen_block_id = b.specimen_block_id
+     INNER JOIN $TBIS_SPECIMEN s
+      ON s.specimen_id = b.specimen_id
+    WHERE s.organism_id = 2
+    END_SQL
+  } elsif ( uc( $args->{organism} ) eq 'MOUSE' ) {
+    $sql =<<"    END_SQL";
+    SELECT assay_image_id, processed_image_file, raw_image_file
+    FROM $TBIS_ASSAY_IMAGE i 
+     INNER JOIN $TBIS_ASSAY_CHANNEL c
+      ON i.assay_channel_id = c.assay_channel_id
+     INNER JOIN $TBIS_ASSAY a
+      ON c.assay_id = a.assay_id
+     INNER JOIN $TBIS_SPECIMEN_BLOCK b
+      ON a.specimen_block_id = b.specimen_block_id
+     INNER JOIN $TBIS_SPECIMEN s
+      ON s.specimen_id = b.specimen_id
+    WHERE s.organism_id = 6
+    END_SQL
+  } else {
+    die ( "Organism $args->{organism} not supported" );
+  }
+
+  my $sth = $dbh->prepare( $sql );
+  $sth->execute();
+  
   my $data_path = $PHYSICAL_BASE_DIR . '/data/IS_assay_image/';
   $data_path =~ s/\/dev\w\w\//\//;
+
+  $data_path = ($args->{basedir}) ? $args->{basedir} : $data_path;
 
   while ( my ( $id, $proc, $raw ) = $sth->fetchrow_array() ) {
     my $old;
@@ -52,8 +92,6 @@ sub getImages {
       $old = "$data_path/${id}_processed_image_file.dat";
       $new = "$export_path/$proc";
       unless ( -e $old ) { # Is source file there?
-        print "OLD IS $old\n";
-        exit;
         print STDERR "Unable to find file for $proc ($old)\n";
         next;
       }
@@ -85,7 +123,8 @@ sub getImages {
 
 sub checkOpts {
     my %args;
-    GetOptions( \%args,"verbose", "export_path=s", "use_raw:s" );
+    GetOptions( \%args,"verbose", "export_path=s", "use_raw:s", 'organism:s',
+                 'basedir:s' );
     unless ( $args{export_path} ) {
       print "You must specify an export path\n";
       printUsage();
