@@ -148,6 +148,10 @@ sub main {
     $work_group = "Biosap_admin";
     $DATABASE = $DBPREFIX{$module};
   }
+  if ($module eq 'Oligo') {
+    $work_group = "Oligo_admin";
+    $DATABASE = $DBPREFIX{$module};
+  }
   if ($module eq 'SNP') {
     $work_group = "SNP";
     $DATABASE = $DBPREFIX{$module};
@@ -1582,6 +1586,27 @@ sub specialParsing {
 
   }
 
+  
+  #### Special conversion rules for Haloarcula Genes
+  #### >png1001 pNG100 817 170
+  if ($biosequence_set_name eq "haloarcula open reading frames" || 
+      $biosequence_set_name eq "halobacterium open reading frames") {
+      if ($rowdata_ref->{biosequence_desc} =~ /^(.+)\s(\d+)\s(\d+)$/) {
+	  my $gene_tag = $rowdata_ref->{biosequence_name};
+	  $rowdata_ref->{start_in_chromosome} = $2;
+	  $rowdata_ref->{end_in_chromosome} = $3;
+	  $rowdata_ref->{chromosome} = $1;
+	  unless($1) {
+	    print "Chromosome not found: $1\n";
+	  }
+	  $rowdata_ref->{biosequence_accession} = $gene_tag;
+          #$rowdata_ref->{dbxref_id} = '24';
+
+      } else {
+	      print "WARNING: The following description cannot be parsed:\n  ==".
+	      $rowdata_ref->{biosequence_desc}."==\n";
+      }
+  }
 
   #### Special conversion rules for Halobacterium HALOprot_clean.fasta
   #### >VNG1023c chp-1013_1023-1023
