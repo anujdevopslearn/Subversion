@@ -217,7 +217,7 @@ sub showMainPage {
 		foreach my $key (keys %hash)
 		{
 			print " <tr><td> <b>Project Designator: </b>$key</td></tr>";
-			print "<tr><td><b>Sample Name</b></td><td><b>Organism</b></td><td>>b>File Name</b></td><td><b>Run Date</b></td></tr>";
+			print "<tr><td><b>Sample Name</b></td><td><b>Organism</b></td><td><b>File Name</b></td><td><b>Run Date</b></td></tr>";
 			foreach my $kk (keys %{$hash{$key}})
 			{ 
 				print "<tr>";
