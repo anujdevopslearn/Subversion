@@ -721,12 +721,12 @@ sub get_best_permission{
 
 
 ###############################################################################
-# getAcessibleProjects
+# getAccessibleProjects
 ###############################################################################
-sub getAcessibleProjects{
+sub getAccessibleProjects{
   my $self = shift || croak("parameter self not passed");
   my %args = @_;
-  my $SUB_NAME = "getAcessibleProjects";
+  my $SUB_NAME = "getAccessibleProjects";
 
 
   ## Decode argument list
@@ -781,7 +781,7 @@ sub getAcessibleProjects{
 
   return (@project_ids);
 
-} # end getAcessibleProjects
+} # end getAccessibleProjects
 
 
 ###############################################################################
