@@ -2058,6 +2058,7 @@ sub display_input_form {
         $is_data_column,$is_display_column,$column_text,
         $optionlist_query,$onChange) = @row;
     if ($optionlist_query gt "") {
+      #print "<font color=\"red\">$column_name</font><BR><PRE>$optionlist_query</PRE><BR>\n";
       $optionlist_queries{$column_name}=$optionlist_query;
     if ($input_type eq "file") {
       $file_upload_flag = "ENCTYPE=\"multipart/form-data\""; }
@@ -2090,10 +2091,10 @@ sub display_input_form {
         if ( $parameters{"contact_id"} eq "" ) {
           my $current_contact_id = $self->getCurrent_contact_id();
           $optionlist_queries{$element} =~
-              s/\$contact_id/$current_contact_id/;
+              s/\$contact_id/$current_contact_id/g;
         } else {
           $optionlist_queries{$element} =~
-              s/\$contact_id/$parameters{contact_id}/;
+              s/\$contact_id/$parameters{contact_id}/g;
         }
       }
 
@@ -2105,10 +2106,10 @@ sub display_input_form {
         if ( $parameters{"project_id"} eq "" ) {
           my $current_project_id = $self->getCurrent_project_id();
           $optionlist_queries{$element} =~
-              s/\$project_id/$current_project_id/;
+              s/\$project_id/$current_project_id/g;
         } else {
           $optionlist_queries{$element} =~
-              s/\$project_id/$parameters{project_id}/;
+              s/\$project_id/$parameters{project_id}/g;
         }
       }
 
@@ -2126,6 +2127,7 @@ sub display_input_form {
         if ($input_types{$element} eq "multioptionlist");
 
       # Build the option list
+      #print "<font color=\"red\">$element</font><BR><PRE>$optionlist_queries{$element}</PRE><BR>\n";
       $optionlists{$element}=$self->buildOptionList(
          $optionlist_queries{$element},$parameters{$element},$method_options);
   }
