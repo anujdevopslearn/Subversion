@@ -21,9 +21,9 @@ use vars qw(@ISA @EXPORT
     $TB_SEARCH_BATCH_PARAMETER
     $TB_SEARCH
     $TB_SEARCH_HIT
-    $TB_ICAT_RESULT
+    $TB_ICAT_QUANTITATION
     $TB_MSMS_SCAN
-    $TB_MSMS_SPECTRUM
+    $TB_MSMS_SPECTRUM_PEAK
 
 );
 
@@ -39,9 +39,9 @@ require Exporter;
     $TB_SEARCH_BATCH_PARAMETER
     $TB_SEARCH
     $TB_SEARCH_HIT
-    $TB_ICAT_RESULT
+    $TB_ICAT_QUANTITATION
     $TB_MSMS_SCAN
-    $TB_MSMS_SPECTRUM
+    $TB_MSMS_SPECTRUM_PEAK
 
 );
 
@@ -54,9 +54,9 @@ $TB_SEARCH_BATCH_KEYVALUE   = 'proteomics.dbo.search_batch_keyvalue';
 $TB_SEARCH_BATCH_PARAMETER  = 'proteomics.dbo.search_batch_parameter';
 $TB_SEARCH                  = 'proteomics.dbo.search';
 $TB_SEARCH_HIT              = 'proteomics.dbo.search_hit';
-$TB_ICAT_RESULT             = 'proteomics.dbo.ICAT_result';
+$TB_ICAT_QUANTITATION       = 'proteomics.dbo.ICAT_quantitation';
 $TB_MSMS_SCAN               = 'proteomics.dbo.msms_scan';
-$TB_MSMS_SPECTRUM           = 'proteomics.dbo.msms_spectrum';
+$TB_MSMS_SPECTRUM_PEAK      = 'proteomics.dbo.msms_spectrum_peak';
 
 
 
