@@ -1723,7 +1723,7 @@ sub displayResultSetControls {
     my $pg = $rs_params{page_number};
     my $param_string = "";
     while ( ($key,$value) = each %{$query_parameters_ref} ) {
-      if ($value) {
+      if ($value gt '') {
         $param_string .= "&" if ($param_string);
         $value = uri_escape($value);
 	$value =~ s/\+/\%2b/g;
