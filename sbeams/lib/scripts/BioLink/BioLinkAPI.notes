@@ -1,0 +1,49 @@
+
+foreach relationship {
+
+    $result = setRelationship(
+      biosequence_set_id1 => $load_biosequence_set_id,
+      biosequence_name1 => $biosequence_name1,
+      biosequence_set_id2 => $biosequence_set_ids{$biosequence_namespace},
+      biosequence_name2 => $biosequence_name2,
+      relationship_type_id => 1,
+      evidence_source_id => $load_evidence_source_id,
+    );
+
+}
+
+
+  #### Get the biosequence_set_id for GeneLynx symbols
+  my $load_biosequence_set_id = get_biosequence_set_id(
+    biosequence_set_tag => 'HsGeneLynxSymbol'
+  );
+
+
+
+  #### Get the biosequence_ids
+  my $biosequence_id1 = get_biosequence_id(
+    biosequence_set_id => $biosequence_set_id1,
+    biosequence_name => $biosequence_name1,
+    create_if_not_existing => 1,
+  );
+
+
+
+  #### Get the evidence_source for this load
+  my $load_evidence_source_id = get_evidence_source_id(
+    evidence_source_tag => 'GeneLynx'
+  );
+
+
+  #### There's already a relationship, but not from this evidence_source
+  #### so add a new line of evidence
+  addEvidence(
+    relationship_id => $relationships[0]->[0],
+    evidence_source_id => $evidence_source_id,
+  );
+
+
+
+
+
+

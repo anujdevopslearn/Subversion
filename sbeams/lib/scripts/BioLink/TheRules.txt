@@ -1,0 +1,55 @@
+Notes for BioLink data entry/maintenance: 
+- More important or preferable entity will usually be termed 1
+- The lesser will be 2 
+
+To enter a new relationship: 
+- Determine your evidence_source_id
+- Determine your relationship_type_id
+- Determine the biosequence_set_id for 1 { and its rank }
+- Determine the biosequence_set_id for 2 { and its rank }
+- Know name for 1
+- Know name for 2
+
+- Does biosequence 1 exist?
+  - If so, get biosequence_id 1
+  - If not, INSERT it and get biosequence_id 1 
+
+- Does biosequence 2 exist?
+  - If so, get biosequence_id 2
+  - If not, INSERT it and get biosequence_id 2 
+
+- Does a relationship of this type between these two exist?
+
+  - If yes, is there one from the current evidence_source_id? 
+
+    - If yes, touch the record with today's date. done. 
+    - If no, add a line of evidence as additional support. done. 
+
+  - If no, this is a new relationship.
+    Is this a canonical name relationship?
+
+    - If yes, does entity 1 already have a canonical name?
+
+      - If yes, is it itself?
+
+        - If yes, then we're okay 
+        - If no, we have a bit of a problem here.  Does the previous
+          item 1 have a higher rank than the current 1? 
+
+          - If yes, just remap the current item 1 to the previous 
+          - If no, we have a serious problem to clean up. The existing
+            item 1 needs perhaps to be stripped of canonical status and
+            the new one enthroned. This is a tricky process.
+            Perhaps break the tie via biosequence_set sort_order.
+            Skip for now. 
+
+      - If no, then make entity 1 have a self-referring canonical
+        relationship 
+
+    - If no, proceed
+    - Regardless, add the relationship and then line of evidence. done.
+
+
+
+
+
