@@ -167,6 +167,8 @@ sub printEntryForm {
     #### If no parameters are supplied, set some sensible defaults
     if (($TABLE_NAME eq "CompareExperiments") && $no_params_flag ) {
       $parameters{annotation_status_id} = 'Annot';
+      $parameters{display_options} = 'GroupReference';
+      $parameters{n_annotations_constraint} = '>0';
     }
 
 
@@ -675,10 +677,21 @@ sub printEntryForm {
           ["biosequence_accession","BS.biosequence_accession","Accession"],
           ["reference","BS.biosequence_name","Reference"],
           ["peptide","peptide","Peptide"],
-          ["count","tABS.row_count","Count"],
+        );
+
+	my @search_batch_ids = split(/,/,$parameters{search_batch_id});
+	foreach my $id (@search_batch_ids) {
+          push(@column_array, ["count$id",
+            "SUM(CASE WHEN tABS.search_batch_id = $id THEN tABS.row_count ELSE 0 END)",
+            "$experiment_names{$id}"] );
+        }
+
+        push(@column_array,
           ["biosequence_desc","BS.biosequence_desc","Reference Description"],
         );
+
         $peptide_column = "peptide,";
+        $final_group_by_clause = " GROUP BY BS.biosequence_gene_name,BS.biosequence_accession,BS.biosequence_name,peptide,BS.biosequence_desc";
         $count_column = "1 AS 'row_count'";
       }
 
@@ -749,8 +762,7 @@ sub printEntryForm {
 	$n_annotations_clause
         $description_clause
         $final_group_by_clause
---	$order_by_clause
-        ORDER BY SUM(tABS.row_count) DESC
+	$order_by_clause
 
        ~;
 
