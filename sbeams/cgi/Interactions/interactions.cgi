@@ -208,9 +208,15 @@ if ($DEBUG)
 		print "$key ===  $parameters{$key}<br>";
 	}
 }
+my $devSite;
+$devSite = $parameters{server_name};
+my $site; 
+($site) = $devSite=~ /(dev.*?)\//i; 
+
+ $BASEDIR = "/net/dblocal/www/html/".$site."/sbeams/tmp/Interactions/";
 
 
-	$BASEDIR = "/net/dblocal/www/html/sbeams/tmp/Interactions/";
+#	$BASEDIR = "/net/dblocal/www/html/sbeams/tmp/Interactions/";
 $BIOENTITY_URL =$parameters{server_name}."cgi/Interactions/ManageTable.cgi?TABLE_NAME=IN_bioentity&bioentity_id=";
 $INTERACTION_URL = $parameters{server_name}. "cgi/Interactions/ManageTable.cgi?TABLE_NAME=IN_interaction&interaction_id=";
 	$htmlFile = $parameters{filename} .".html";
@@ -298,10 +304,10 @@ Used BioentityType: Protein as default\n";
 #do we have  bioentity1
 print File "\n\n<b><font size =3 color=red>Searching Sbeams Database for Source Bioentity</font></b>\n\n";
 print File "Used the following parameters: \n
-CanonicalName: $bioentityHash{canSource}\n 
-CommonName: $bioentityHash{comSource}\n";
+CanonicalName: $bioentityHash{canSource}\n"; 
+
 	
-	$bioentityHash{idSource}= checkForBioentity($bioentityHash{canSource}, $bioentityHash{comSource});
+	$bioentityHash{idSource}= checkForBioentity($bioentityHash{canSource});
 	
 #we do not have this bioentity
 	if(! $bioentityHash{idSource}) 
@@ -312,15 +318,14 @@ print File "Could not find Source Bioentity in database\n";
 		if (! $bioentityHash{organismSource})
 		{
 print File "\n<b>Checking for organism of Source Bioentity</b>\n\n"; 
-			$bioentityHash{organismSource} =	$organismHash{getOrganism($bioentityHash{canSource}, $bioentityHash{comSource})};
+			$bioentityHash{organismSource} =	$organismHash{getOrganism($bioentityHash{canSource})};
 			$bioentityHash{organismSource}="Other" unless ($bioentityHash{organismSource});
 print File "Could not identify Organism for Source Bioentity\n
 Used Organism: \"Other\" as default\n" if $bioentityHash{organismSource} eq "Other";
 		}
-		$bioentityHash{idSource} = addToBioentityTable($bioentityHash{canSource}, $bioentityHash{comSource},$bioentityTypeHash{$bioentityHash{typeSource}},$organismHash{$bioentityHash{organismSource}});
+		$bioentityHash{idSource} = addToBioentityTable($bioentityHash{canSource}, $bioentityTypeHash{$bioentityHash{typeSource}},$organismHash{$bioentityHash{organismSource}});
 print File "\n<b>Created a New  bioentity for the Source Node with the following parameters:\n\n</b>
 Canonical Name:  $bioentityHash{canSource}\n
-Common Name: $bioentityHash{comSource}\n 
 Bioentity Type: $bioentityHash{typeSource}\n
 Organism: $bioentityHash{organismSource}\n
 		
@@ -336,10 +341,9 @@ Did not update Source Bioentity Entry\n
 	
 print File "\n\n<b><font size = 3 color = red>Searching Sbeams Database for Target Bioentity</font></b>\n\n";
 print File "Used the following parameters: \n
-CanonicalName: $bioentityHash{canTarget}\n
-CommonName: $bioentityHash{comTarget}\n";	
+CanonicalName: $bioentityHash{canTarget}\n";
 	#do we have  bioentity2
-	$bioentityHash{idTarget}= checkForBioentity($bioentityHash{canTarget}, $bioentityHash{comTarget});
+	$bioentityHash{idTarget}= checkForBioentity($bioentityHash{canTarget});
 	
 
 #we do not have this bioentity
@@ -351,15 +355,14 @@ CommonName: $bioentityHash{comTarget}\n";
 		if (! $bioentityHash{organismTarget})
 		{
 print File "\n<b>Checking for organism of Target Bioentity</b>\n\n";
-			$bioentityHash{organismTarget} =	$organismHash{getOrganism($bioentityHash{canTarget}, $bioentityHash{comTarget})};
+			$bioentityHash{organismTarget} =	$organismHash{getOrganism($bioentityHash{canTarget})};
 			$bioentityHash{organismTarget}="Other" unless ($bioentityHash{organismTarget});
 print File "Could not identify Organism for Target Bioentity\n
 Used Organism: \"Other\" as default\n" if $bioentityHash{organismTarget} eq "Other";
 		}
-		$bioentityHash{idTarget} = addToBioentityTable($bioentityHash{canTarget}, $bioentityHash{comTarget},$bioentityTypeHash{ $bioentityHash{typeTarget}},$organismHash{$bioentityHash{organismTarget}});
+		$bioentityHash{idTarget} = addToBioentityTable($bioentityHash{canTarget},$bioentityTypeHash{ $bioentityHash{typeTarget}},$organismHash{$bioentityHash{organismTarget}});
 print File "\n<b>Created a New  bioentity for the Target Node with the following parameters:</b>\n\n
 Canonical Name:  $bioentityHash{canTarget}\n
-Common Name: $bioentityHash{comTarget}\n 
 Bioentity Type: $bioentityHash{typeTarget}\n
 Organism: $bioentityHash{organismTarget}\n
 		
@@ -479,21 +482,14 @@ WHERE P.record_status != 'D' ORDER BY UL.username+\' -\ '+P.name,P.project_id";
 	
 	sub getOrganism
 	{ 
-		my ($can,$com) = shift; 
-		my $sql;
+		my $can = shift; 
 		my $organism = 0;
-		if($can)
-		{
-			$sql = qq / Select organism from locuslink.dbo.loci l 
+	
+		my $sql = qq / Select organism from locuslink.dbo.loci l 
 			join locuslink.dbo. refseq rs on l.locus_id = rs.locus_id 
 			where (rs.mrna ='$can' or protein = '$can') /;
 		
-		}
-		else
-		{ 
-			$sql = qq / Select organism from locuslink.dbo.loci where symbol = '$com' /;
-		}
-		
+			
 		my @rows = $sbeams->selectOneColumn($sql);
 		my $nrows = scalar(@rows);
 		$organism = $rows[0] if $nrows == 1;
@@ -504,14 +500,11 @@ WHERE P.record_status != 'D' ORDER BY UL.username+\' -\ '+P.name,P.project_id";
  
 	sub checkForBioentity
 	{
-		my ($can,$com) = shift; 
+		my $can = shift; 
 		my $whereClause;
 		my $bioentityID = 0;
-		$whereClause = qq /bioentity_canonical_name ='$can'/ if defined ($can);
-		$whereClause = qq /bioentity_common_name= '$com'/ if !defined ($can);
-		
+		$whereClause = qq /bioentity_canonical_name ='$can'/;
 		my $bioentitySql = qq / select bioentity_id from $TBIN_BIOENTITY where $whereClause/;
-;
 		my @rows = $sbeams->selectOneColumn($bioentitySql);	
 		my $nrows = scalar(@rows);
 		$bioentityID = $rows[0] if $nrows == 1;
@@ -520,17 +513,17 @@ WHERE P.record_status != 'D' ORDER BY UL.username+\' -\ '+P.name,P.project_id";
 
 	sub addToBioentityTable
 	{
-		my ($canName, $comName,$type,$organism) = @_;
+		my ($canName,$type,$organism) = @_;
 		my $insert=1;
 		my $update=0;
 		my $id = 0;
 		my %rowData;
-		$rowData{bioentity_common_name} = $comName if ($comName);	
-		$rowData{bioentity_canonical_name} = $canName if ($canName);	
+	
+		$rowData{bioentity_canonical_name} = $canName;	
 		$rowData{bioentity_type_id}= $type;
 		$rowData{organism_id} = $organism;		
 	
-=comment		
+		
 		my $returned_PK = $sbeams->updateOrInsertRow(
 							insert => $insert,
 							update => $update,
@@ -543,8 +536,7 @@ WHERE P.record_status != 'D' ORDER BY UL.username+\' -\ '+P.name,P.project_id";
 							testonly=>$TESTONLY,
 							add_audit_parameters => 1
 							);  
-=cut
-my $returned_PK = 6;
+
 		return $returned_PK;
 	}
 	
@@ -570,8 +562,8 @@ my $returned_PK = 6;
 		$rowData{bioentity2_id} = $id2;	
 		$rowData{interaction_type_id}= $type;
 		$rowData{interaction_group_id} = $interactionGroupID;
-=comment
-			my $returned_PK = $sbeams->updateOrInsertRow(
+		
+		my $returned_PK = $sbeams->updateOrInsertRow(
 							insert => $insert,
 							update => $update,
 							table_name => "$TBIN_INTERACTION",
@@ -583,8 +575,7 @@ my $returned_PK = 6;
 							testonly=>$TESTONLY,
 							add_audit_parameters => 1
 							);
-=cut
-my $returned_PK = 7;							
+							
 		return $returned_PK;
 	}
 
