@@ -128,7 +128,7 @@ sub main {
 		parameters_ref => \%parameters
 	);
 
-	# $sbeams->printDebuggingInfo($q);
+	 #$sbeams->printDebuggingInfo($q);
 
 	#### Process generic "state" parameters before we start
 	$sbeams->processStandardParameters( parameters_ref => \%parameters );
@@ -171,7 +171,7 @@ sub handle_request {
 	  || '';
 	my $TABLE_NAME = $parameters{'QUERY_NAME'};
 	my $query_type = $parameters{display_type}
-	  || 'simple';    #what type of query display interface to show
+	  || 'Simple';    #what type of query display interface to show
 
 ###############################################
 ### Check to see if we need to display data
@@ -188,7 +188,7 @@ sub handle_request {
 ###############################################
 ### if we made it to here we need to display the query form
 
-	if (   $query_type eq 'full'
+	if (   $query_type eq 'Advanced'
 		|| $parameters{QUERY_NAME}
 		|| $parameters{apply_action} )
 	{  #QUERY_NAME only set if print_full_form sub has been previously activated
@@ -249,7 +249,7 @@ sub print_full_form {
 	($PROGRAM_FILE_NAME) =
 	  $sbeamsMOD->returnTableInfo( $TABLE_NAME, "PROGRAM_FILE_NAME" );
 	my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
-
+    my $manage_table_url = "$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_";
 	#### Get the columns and input types for this table/query
 	my @columns = $sbeamsMOD->returnTableInfo( $TABLE_NAME, "ordered_columns" );
 	my %input_types = $sbeamsMOD->returnTableInfo( $TABLE_NAME, "input_types" );
@@ -284,7 +284,7 @@ sub print_full_form {
 		$parameters{project_id} = $sbeams->getCurrent_project_id();
 	}
 
-	show_other_query_page( type_to_show => 'simple' )
+	show_other_query_page( type_to_show => 'Simple' )
 	  unless $rs_params{output_mode};
 
 	$sbeams->display_input_form(
@@ -318,7 +318,7 @@ sub print_full_form {
 		constraint_value  => $parameters{project_id}
 	);
 	return if ( $project_clause eq '-1' );
-
+	
 	#### Build AFFY_ARRAY constraint
 	my $affy_array_clause = $sbeams->parseConstraint2SQL(
 		constraint_column => "afa.affy_array_id",
@@ -439,22 +439,6 @@ sub print_full_form {
 	);
 	return if ( $r_chp_protocol_id_clause eq '-1' );
 
-	print qq~
-	<h2><font color=red>DONE MAKING CONSTRIANTS</font></h2><br> 
-	PROJECT $project_clause<br>
-	AFFY_ARRAY $affy_array_clause<br>
-	GENE TITLE $gene_title_clause <br>
-	GENE SYMBOL $gene_symbol_clause<br> 
-	DBXREF	$dbxref_tag_clause<br>
-	
-	DB_ID $db_id_clause<br>
-	DETECTION CALL $detection_call_clause<br>
-	DETECTION P-VAL $detection_p_value_clause<br>
-	SIGNAL $signal_clause<br>
-	ANNO SET ID $annotation_set_clause<br>
-	RCHP PROTOCOL $r_chp_protocol_id_clause<br>
-	<br>
-	~ if ( 'turn' eq 'off DEBUG STUFF' );
 
 	#### Build SORT ORDER
 	my $order_by_clause = "";
@@ -490,7 +474,7 @@ sub print_full_form {
 
 	#### Define the available data columns.  Add more columns here that will be optional for the user
 	my %available_columns = (
-		"gi.signal"         => [ "signal", "gi.signal", "Affy Signal" ],
+		"gi.signal"         => [ "signal", "STR(gi.signal,8,2)", "Affy Signal" ],
 		"gi.detection_call" => [
 			"detection_call", "gi.detection_call", "Affy R_CHP Detection Call"
 		],
@@ -523,14 +507,13 @@ sub print_full_form {
 	unless ( defined( $parameters{display_columns} )
 		&& $parameters{display_columns} )
 	{
-		#### If this is a pivoted query, just choose four interesting columns
+		#### If this is a pivoted query, just choose two interesting data columns
 		if ( $parameters{display_options} =~ /PivotConditions/ ) {
 			$display_columns = "gi.signal,gi.detection_p_value";
 			#### Else, select them all
-		}
-		else {
+		}else {
 			$display_columns =
-			  "gi.signal,gi.detection_call," . "gi.detection_p_value";
+			  "gi.signal,gi.detection_call,gi.detection_p_value";
 		}
 	}
 	my $additional_group_by_clauses = '';
@@ -546,11 +529,11 @@ sub print_full_form {
 	);
 
 	#### Add the desired display columns to the additional_columns array
-	my @tmp = split( ",", $display_columns );
+	my @display_data_columns_a = split( ",", $display_columns );
 
 #### If the coaelsce over reporters or Pivot is chosen, then define some things special
 	my $aggregate_type        = "MAX";
-	
+
 	my $probe_set_id_group_by   = "gi.probe_set_id";
 	my $gene_title_group_by     = "anno.gene_title";
 	my $gene_symbol_group_by    = "anno.gene_symbol";
@@ -577,7 +560,7 @@ sub print_full_form {
 		}
 		my $counter = 1;
 		foreach my $id (@affy_array_ids) {
-			foreach my $option (@tmp) {
+			foreach my $option (@display_data_columns_a) {
 				if ( defined( $available_columns{$option} ) ) {
 					my @elements = @{ $available_columns{$option} };
 					$elements[0] = $affy_array_names{$id} . '__' . $elements[0];
@@ -606,37 +589,40 @@ sub print_full_form {
 		 
 		  }else{
 
-		  foreach my $option (@tmp) {				#mix together the default and any additonal columns to display
-		  if (defined($available_columns{$option})) {
-		  push(@additional_columns,$available_columns{$option});
-		  }
-		  }
+		  	foreach my $option (@display_data_columns_a) {				#mix together the default and any additonal columns to display
+		  		
+		  		if (defined($available_columns{$option})) {
+		  			push(@additional_columns,$available_columns{$option});
+		  		}
+		  	}
 		  }
 
 		  #### Define the desired columns in the query
-		  #### [friendly name used in url_cols,SQL,displayed column title]	It appers that most things could go here inseated of having the optional columns????
+		  #### [friendly name used in url_cols,SQL,displayed column title]	
 		  my @column_array = (
-		  ["file_root","afa.file_root","Affy File Root"],
-		  ["probe_set_id","gi.probe_set_id","Probe Set ID"],
+		  ["sample_id", "afs.affy_array_sample_id", "Sample_ID"],
 		  ["sample_tag", "afs.sample_tag", "Sample Tag"],
-		  ["full_sample_name", "afs.full_sample_name", "Sample Name"],
-		  ["gene_title","anno.gene_title","Gene Title"],
+		  ["probe_set_id","gi.probe_set_id","Probe Set ID"],
 		  ["gene_symbol","anno.gene_symbol","Gene Symbol"],
-		  @additional_columns
+		  @additional_columns,
+		  ["file_root","afa.file_root","Affy File Root"],
+		  ["full_sample_name", "afs.full_sample_name", "Sample Name"],
+		  ["gene_title","anno.gene_title","Gene Title"], 	
 		  );
+		  
 		  #### Hack to remove columns if GROUPing.  Must remove sample information since we are grouping on the data columns
 		  if ($parameters{display_options} =~ /PivotConditions/){
-		  my $add_col_element_number = 6;
-		  my $count_additional_columns = scalar @additional_columns;
-		  my $end_element = ($add_col_element_number + $count_additional_columns) - 1;
+		  	my $add_col_element_number = 4;
+		  	my $count_additional_columns = scalar @additional_columns;
+		  	my $end_element = ($add_col_element_number + $count_additional_columns) - 1;
 
-		  @column_array = @column_array[1,4,5,$add_col_element_number..$end_element];	#only take along the stuff we need leave behind the sample info
+		 	 @column_array = @column_array[2,3,$add_col_element_number..$end_element,-1];	#only take along the stuff we need leave behind the sample info
 
 		  }
-
+ 
 		  #### Set the show_sql flag if the user requested
 		  if ( $parameters{display_options} =~ /ShowSQL/ ) {
-		  $show_sql = 1;
+		  	$show_sql = 1;
 		  }
 
 		  #### Build the columns part of the SQL statement			#poluates %colnameidx key =friendly name [0], key = coumn index
@@ -659,50 +645,50 @@ sub print_full_form {
 		  );
 
 		  my $table_joins = produce_SQL_joins(column_clause 	=> $columns_clause,
-		  additional_tables   => \%additional_tables,
-		  );
+		  										additional_tables   => \%additional_tables,
+		  									  );
 		  #print "<br>EXTRA TABLE TO ADD '$table_joins'<br>";
 
 		  #### In some cases, we need to have a subselect clause
 		  my $subselect_clause = '';
 		  if ( $parameters{display_options} =~ /AllConditions/ ) {
-		  $subselect_clause = qq~
-		  AND gi.probe_set_id IN (
-		  SELECT DISTINCT gi.probe_set_id
-		  FROM $TBMA_AFFY_ARRAY afa
-		  INNER JOIN $TBMA_AFFY_ARRAY_SAMPLE afs
-		  ON ( afa.affy_array_sample_id = afs.affy_array_sample_id )
-		  INNER JOIN $TBMA_AFFY_GENE_INTENSITY gi
-		  ON ( afa.affy_array_id = gi.affy_array_id )
-		  INNER JOIN $TBMA_AFFY_ANNOTATION anno
-		  ON (gi.probe_set_id = anno.probe_set_id)
-		  INNER JOIN $TBMA_AFFY_ANNOTATION_SET anno_set
-		  ON (anno_set.affy_annotation_set_id = anno.affy_annotation_set_id)
-		  $table_joins
-		  WHERE 1 = 1
-		  $project_clause
-		  $affy_array_clause
-		  $probe_set_clause
-		  $gene_symbol_clause
-		  $gene_title_clause
-
-		  $dbxref_tag_clause
-		  $db_id_clause
-
-		  $detection_call_clause
-		  $detection_p_value_clause
-		  $signal_clause
-
-		  $genome_coordinates_clause
-
-		  $annotation_set_clause
-		  $r_chp_protocol_id_clause
-		  )
-		  ~;
-		  #### Remove contraints that might limit conditions
-		  $detection_call_clause 	  = '';
-		  $detection_p_value_clause = '';
-		  $signal_clause 		  = '';
+			  $subselect_clause = qq~
+			  AND gi.probe_set_id IN (
+			  SELECT DISTINCT gi.probe_set_id
+			  FROM $TBMA_AFFY_ARRAY afa
+			  INNER JOIN $TBMA_AFFY_ARRAY_SAMPLE afs
+			  ON ( afa.affy_array_sample_id = afs.affy_array_sample_id )
+			  INNER JOIN $TBMA_AFFY_GENE_INTENSITY gi
+			  ON ( afa.affy_array_id = gi.affy_array_id )
+			  INNER JOIN $TBMA_AFFY_ANNOTATION anno
+			  ON (gi.probe_set_id = anno.probe_set_id)
+			  INNER JOIN $TBMA_AFFY_ANNOTATION_SET anno_set
+			  ON (anno_set.affy_annotation_set_id = anno.affy_annotation_set_id)
+			  $table_joins
+			  WHERE 1 = 1
+			  $project_clause
+			  $affy_array_clause
+			  $probe_set_clause
+			  $gene_symbol_clause
+			  $gene_title_clause
+	
+			  $dbxref_tag_clause
+			  $db_id_clause
+	
+			  $detection_call_clause
+			  $detection_p_value_clause
+			  $signal_clause
+	
+			  $genome_coordinates_clause
+	
+			  $annotation_set_clause
+			  $r_chp_protocol_id_clause
+			  )
+			  ~;
+			  #### Remove contraints that might limit conditions
+			  $detection_call_clause 	  = '';
+			  $detection_p_value_clause = '';
+			  $signal_clause 		  = '';
 		  }
 
 		  #### Define the SQL statement
@@ -750,14 +736,15 @@ sub print_full_form {
 		  $pass_action = $apply_action if ($apply_action =~ /QUERY/i);
 
 		  #### Define the hypertext links for columns that need them
-
+		my $anno_base_url     = "$CGI_BASE_DIR/Microarray/$PROG_NAME?action=SHOW_ANNO&annotation_set_id=$annotation_set_id";
 		  %url_cols = (
-		  'file_root' => "${manage_table_url}affy_array&affy_array_id=\%0V",
+		 	'Probe Set ID'=> "$anno_base_url&probe_set_id=\%V",
+		  	'Sample Tag'	=> "${manage_table_url}affy_array_sample&affy_array_sample_id=\%0V",
 		  );
 
 		  #### Define columns that should be hidden in the output table
 		  %hidden_cols = (
-		  'affy_array_id'  => 1,
+		  	'Sample_ID'  => 1,
 		  );
 
 		  #########################################################################
@@ -819,39 +806,38 @@ sub print_full_form {
 
 		  #### If QUERY was not selected, then tell the user to enter some parameters
 		  } else {
-		  if ($sbeams->invocation_mode() eq 'http') {
-		  print "<H4>Select parameters above and press QUERY</H4>\n";
+		  	if ($sbeams->invocation_mode() eq 'http') {
+		  	print "<H4>Select parameters above and press QUERY</H4>\n";
 		  } else {
-		  print "You need to supply some parameters to contrain the query\n";
+		  	print "You need to supply some parameters to contrain the query\n";
 		  }
-		  }
+	}
 
-		  }
+}
 
-		  ###############################################################################
-		  # getArrayNames: return a hash of the arrays
-		  #         names of the supplied list of id's.
-		  #         This might need to be more complicated if condition names
-		  #         are duplicated under different projects or such.
-		  ###############################################################################
-		  sub getArrayNames {
-		  my $array_ids = shift || die "getArrayNames: missing array_ids";
+  ###############################################################################
+  # getArrayNames: return a hash of the arrays
+  #         names of the supplied list of id's.
+  #         This might need to be more complicated if condition names
+  #         are duplicated under different projects or such.
+  ###############################################################################
+sub getArrayNames {
+  my $array_ids = shift || die "getArrayNames: missing array_ids";
 
 		  #my @array_ids = split(/,/,$array_ids);
 
 		  #### Get the data for all the specified affy_array_ids
-		  my $sql = qq~
-		  SELECT affy_array_id,file_root
-		  FROM $TBMA_AFFY_ARRAY
-		  WHERE affy_array_id IN ( $array_ids )
-		  ~;
+  my $sql = qq~
+  			SELECT affy_array_id,file_root
+  			FROM $TBMA_AFFY_ARRAY
+  			WHERE affy_array_id IN ( $array_ids )
+ 		 ~;
 
 		  # print "GET ARRAY NAMES SQL '$sql'<br>";
-		  my %hash = $sbeams->selectTwoColumnHash($sql);
+  my %hash = $sbeams->selectTwoColumnHash($sql);
 
-		  return %hash;
-
-		  } # end getArrayNames
+	return %hash;
+} # end getArrayNames
 
 		  ###############################################################################
 		  # print_simple_form
@@ -862,7 +848,7 @@ sub print_full_form {
 
 		  print "<br><hr>";
 
-		  show_other_query_page(type_to_show=>'full');
+		  show_other_query_page(type_to_show=>'Advanced');
 
 		  print $q->start_form({-name=>'get_all_files'});		#Same form element is used for the array check boxes
 
@@ -938,7 +924,7 @@ sub print_full_form {
 
 		  ## Print the data
 
-		  my @array_ids = $affy_o->find_chips_with_data(project_id => $project_id);	#find affy_array_ids in the FIX ME NEED TO WORRY ABOUT THE ANNOTATION SET TO), could be multipule arrays with differnt protocols usedfor quantification
+		  my @array_ids = $affy_o->find_chips_with_data(project_id => $project_id);	#find affy_array_ids in the, could be multipule arrays with differnt protocols usedfor quantification
 		  
 
 		  my $constraint_data = join " , ", @array_ids;
@@ -1310,7 +1296,7 @@ sub print_full_form {
 			resultset_ref => $resultset_ref,
 		);
 
-		#print Dumper ($resultset_ref);
+		
 		convert_data(
 			resultset_ref => $resultset_ref
 			, #data_display_type html turn values into colors, text show the numbers
@@ -1421,11 +1407,11 @@ sub print_full_form {
 
 		#information about the present absent calls
 		$table_cells .=
-"<tr><td class='present_cell'>Present Call No border</td><td class='present_cell' bg_color=#FFFFFF width=16>&nbsp;</td></tr>";
+"<tr><td class='present_cell'>Present Call No border</td><td class='present_cell' bg_color=#FFFFFF width=7 height=7>&nbsp;</td></tr>";
 		$table_cells .=
-"<tr><td class='marginal_cell'>Marginal Call Blue border</td><td class='marginal_cell' bg_color=#0000FF width=16>&nbsp;</td></tr>";
+"<tr><td class='marginal_cell'>Marginal Call Blue border</td><td class='marginal_cell' bg_color=#0000FF width=7 height=7>&nbsp;</td></tr>";
 		$table_cells .=
-"<tr><td class='absent_cell'>Absent Call Red border</td><td class='absent_cell' bg_color=#FFFFFF width=16>&nbsp;</td></tr>";
+"<tr><td class='absent_cell'>Absent Call Red border</td><td class='absent_cell' bg_color=#FFFFFF width=7 height=7>&nbsp;</td></tr>";
 
 		$table_cells .= "</table>";
 		print $table_cells;
@@ -1520,7 +1506,7 @@ sub print_full_form {
 			return;
 		}
 
-		#print Dumper($aref);
+		
 
 		my @column_titles = @{ $resultset_ref->{column_list_ref} };
 
@@ -1869,7 +1855,10 @@ example view of pivot hash
 		my %rs_params = $sbeams->parseResultSetParams( q => $q );
 		my $base_url  = "$CGI_BASE_DIR/Microarray/$PROG_NAME";
 		my $affy_url  = "https://www.affymetrix.com/LinkServlet?probeset=";
-
+		my $source_url = "http://genome-www5.stanford.edu/cgi-bin/source/sourceResult?option=Number&choice=Gene&criteria="; #Query with GB Acc number
+		
+		
+		
 		my %url_cols      = ();
 		my %hidden_cols   = ();
 		my $limit_clause  = '';
@@ -1890,20 +1879,16 @@ example view of pivot hash
 		#### Build Annotation Set ID constriant
 		my $annotation_set_id_clause = $sbeams->parseConstraint2SQL(
 			constraint_column => "anno.affy_annotation_set_id",
-			constraint_type   => "flexible_float",
+			constraint_type   => "int",
 			constraint_name   => "Annotation Set ID",
 			constraint_value  => $parameters{annotation_set_id}
 		);
 
-		my %links_h =
-		  $affy_anno->get_dbxref_accessor_urls()
-		  ; #return results as a hash example  dbxref_id 16 => LocusLink__http://www.ncbi.nlm.nih.gov/LocusLink/
+		my %links_h = $affy_anno->get_dbxref_accessor_urls(); 	#return results as a hash example  dbxref_id 16 => LocusLink__http://www.ncbi.nlm.nih.gov/LocusLink/
 
-		$sql = $affy_anno->get_annotation_sql();    #returns just the sql text
+		$sql = $affy_anno->get_annotation_sql();    			#returns just the sql text
 
-		$sql =
-		  "$sql $annotation_set_id_clause $probe_set_id_clause"
-		  ;    #append on the constriants to the main sql
+		$sql = "$sql $annotation_set_id_clause $probe_set_id_clause";    #append on the constriants to the main sql
 
 		#$sbeams->display_sql(sql=>$sql);
 
@@ -1916,24 +1901,64 @@ example view of pivot hash
 		foreach my $record_href (@anno_data) {
 			my %record_h = %{$record_href};
 
-			my $annotaion_set_id      = $record_h{affy_annotation_id};
+			my $annotation_id      = $record_h{affy_annotation_id};
+			
+			#Grab all the external Links
 			my %external_db_acc_numbs =
-			  $affy_anno->get_db_acc_numbers($annotaion_set_id);
+			  $affy_anno->get_db_acc_numbers($annotation_id);
 
+			#Grab the protein familiy info then format the data into a small table
+			my @protein_info = $affy_anno->get_protein_family_info($annotation_id);
+			
+			my $protein_family_info = format_protein_info(protein_info =>\@protein_info,
+														accessor_urls =>\%links_h,
+														);
+			#Grab the proetin domain info
+			 @protein_info = $affy_anno->get_protein_domain_info($annotation_id);
+			my $protein_domain_info = format_protein_info(protein_info =>\@protein_info,
+														accessor_urls =>\%links_h,
+														);
+			#Grab the Interpro info
+			my @interpro_info = $affy_anno->get_interpro_info($annotation_id);
+			my $interpro_info = format_protein_info(protein_info =>\@interpro_info,
+														accessor_urls =>\%links_h,
+														);
+			#Grab the number of Transmembrane domains
+			my $number_of_tm_domains = $affy_anno->get_transmembrane_info($annotation_id);
+			
+			#Grab the alignment info get_alignment_info
+			my @alignment_info = $affy_anno->get_alignment_info($annotation_id);
+			my $alignment_table = format_alignment_info(alingment_info => \@alignment_info);
+			
+			#Grab the GO info and format it 
+			my @go_info = $affy_anno->get_go_info($annotation_id);
+			my $go_table = format_go_info(go_info => \@go_info,
+											accessor_urls =>\%links_h,
+										  );
+			
 			my $probe_set_id   = $record_h{probe_set_id};
 			my $pathways_html  = nice_format( $record_h{pathway} );
 			my $external_links = make_links(
-				accessor_urls => \%links_h,
-				db_acc_numbs  => \%external_db_acc_numbs,
-			);
-
-			$html = qq~ <tr>
+							accessor_urls => \%links_h,
+							db_acc_numbs  => \%external_db_acc_numbs,
+							);
+	#print "AFFY anno id '$annotation_id'<br>";
+			$html = qq~ 
+				<tr>
+			       <td class='blue_bg' colspan=2>Affy Info</td>
+			    </tr>
+				<tr>
 			      <td class='grey_bg'>Affy Chip Name</td>
 			      <td>$record_h{Affy_Chip}</td>
 			    </tr>
 			    <tr>
 			      <td class='grey_bg'>Probe Set ID</td>
 			      <td><a href='$affy_url$probe_set_id'>$probe_set_id</a></td>
+			    </tr>
+			    
+			    
+			    <tr>
+			       <td class='blue_bg' colspan=2>Genome Info</td>
 			    </tr>
 			    <tr>
 			       <td class='grey_bg'>Annotaion Date</td>
@@ -1942,6 +1967,11 @@ example view of pivot hash
 			    <tr>
 			       <td class='grey_bg'>Genome Build</td>
 			       <td>$record_h{Genome_Version}</td>
+			    </tr>
+			    
+			    
+			    <tr>
+			       <td class='blue_bg' colspan=2>Gene </td>
 			    </tr>
 			    <tr>
 			       <td class='grey_bg'>Gene Symbol</td>
@@ -1955,19 +1985,95 @@ example view of pivot hash
 			       <td class='grey_bg'>Chromosomal Location</td>
 			       <td>$record_h{chromosomal_location}</td>
 			    </tr>
+			    <tr>
+			       <td class='grey_bg'>Chromosomal Alignments</td>
+			       <td>$alignment_table</td>
+			    </tr>
+			    
 			    
 			    <tr>
+			       <td class='blue_bg' colspan=2>External Links</td>
+			    </tr>
+			    <tr>
+			       <td class='grey_bg'>SOURCE</td>
+			       <td><a href="$source_url$record_h{representative_public_id}">$record_h{representative_public_id}</a></td>
+			    </tr>
+			   <tr>
 			       <td class='grey_bg'>External Links</td>
 			       <td>$external_links</td>
 			    </tr>
 			    
-			    
-			    
-			    
+			 
+				<tr>
+			       <td class='blue_bg' colspan=2>Protein Info</td>
+			    </tr>
+			    <tr>
+			       <td class='grey_bg'>Protein Family Info</td>
+			       <td>$protein_family_info</td>
+			    </tr>
+			    <tr>
+			       <td class='grey_bg'>Protein Domain Info</td>
+			       <td>$protein_domain_info</td>
+			    </tr>
+			    <tr>
+			       <td class='grey_bg'>Interpro</td>
+			       <td>$interpro_info</td>
+			    </tr>
 			    <tr>
 			       <td class='grey_bg'>Pathways</td>
 			       <td>$pathways_html</td>
 			    </tr>
+			  	<tr>
+			       <td class='grey_bg'>Number of Transmembrane Domains</td>
+			       <td>$number_of_tm_domains</td>
+			    </tr>
+			  	
+			  	<tr>
+			       <td class='blue_bg' colspan=2>Go Information</td>
+			    </tr>
+			  	<tr>
+			       <td class='grey_bg'>Go Info</td>
+			       <td>$go_table</td>
+			    </tr>
+			  	
+			  	
+			  	<tr>
+			       <td class='blue_bg' colspan=2>Probe Design Info</td>
+			    </tr>
+			  	<tr>
+			       <td class='grey_bg'>Sequence Type</td>
+			       <td>$record_h{sequence_type}</td>
+			    </tr>
+			    <tr>
+			       <td class='grey_bg'>Sequence Source</td>
+			       <td>$record_h{sequence_source}</td>
+			    </tr>
+			  	<tr>
+			       <td class='grey_bg'>Transcript ID</td>
+			       <td>$record_h{transcript_id}</td>
+			    </tr>
+			    <tr>
+			       <td class='grey_bg'>Target Description Feature</td>
+			       <td>$record_h{target_description_feature}</td>
+			    </tr>
+			    <tr>
+			       <td class='grey_bg'>Target Description</td>
+			       <td>$record_h{target_description}</td>
+			    </tr>
+			    <tr>
+			       <td class='grey_bg'>Target Description Note</td>
+			       <td>$record_h{target_description_note}</td>
+			    </tr>
+			    <tr>
+			       <td class='grey_bg'>Archival Unigene Cluster</td>
+			       <td>$record_h{archival_unigene_cluster}</td>
+			    </tr>
+			    <tr>
+			       <td class='grey_bg'>representative_public_id</td>
+			       <td>$record_h{representative_public_id}</td>
+			    </tr>
+			 
+			 
 			  ~;
 			print $html;
 			print "</table>";
@@ -2021,6 +2127,146 @@ example view of pivot hash
 		$html .= "</table>";
 	}
 
+
+###############################################################################
+# format_go_info
+#Format the protein info or protein domain into a nice html table
+###############################################################################
+sub format_go_info {
+	my %args = @_;
+	
+	my %accessor_urls  =  % {$args{accessor_urls} };
+	my @go_info_a = @{ $args{go_info} };
+	my $html = "<table border=0>";
+	my $biol_flag = 0;
+	my $molfunc_flag = 0;
+	my $compartment_flag = 0;
+	
+	foreach my $go_href (@go_info_a){
+		my $go_type = $$go_href{gene_ontology_name_type};
+		my $go_base_url = $accessor_urls{$$go_href{dbxref_id}};
+		
+		
+		
+		if ($go_type eq "Gene Ontology Biological Process"){		#Gene Ontology Biological Process
+				
+			unless ($biol_flag){					#Make header Rows
+				$html .= make_go_header("Gene Ontology Biological Process");
+				$biol_flag = 1;
+			}
+		}elsif ($go_type eq "Gene Ontology Cellular Component"){
+				unless ($compartment_flag){			#Make header Rows
+					$html .= make_go_header("Gene Ontology Cellular Component");
+					$compartment_flag = 1;
+				}
+		}elsif ($go_type eq "Gene Ontology Molecular Function"){
+				unless ($molfunc_flag){				#Make header Rows
+					$html .= make_go_header("Gene Ontology Molecular Function");
+					$molfunc_flag = 1;
+				}
+		}else{
+		}
+		
+		$html .= make_go_row(go_href 	 =>$go_href,
+				 			 go_base_url => $go_base_url
+				 		    );
+					
+		
+	}
+	$html .= "</table>";
+	return $html;
+}
+###############################################################################
+# Make header lines for go talbe
+###############################################################################
+sub make_go_header {
+		my $go_type = shift;
+		my $html = "";
+		my $html .= qq~
+						<tr>
+						  <td colspan=3 class='blue_bg'>$go_type</td>
+						</tr>
+					   <tr>
+		   				<td class='grey_bg'>Link</td>
+		   				<td class='grey_bg'>Description</td>
+		   				<td class='grey_bg'>Evidence</td>
+		   			   </tr>
+		   			  ~;
+		return $html;
+}
+###############################################################################
+# Make a row for a go annotation table
+###############################################################################
+sub make_go_row{
+		my %args = @_;
+		my $go_href = $args{go_href};
+		my $go_base_url = $args{go_base_url};
+		my ($db_name, $url) = split /__/, $go_base_url;
+		
+		my $html .= qq~ <tr>
+						<td><a href="$url$$go_href{db_id}">$$go_href{db_id}</a></td>
+						<td>$$go_href{gene_ontology_description}</td>
+						<td>$$go_href{gene_ontology_evidence}</td>
+					  </tr>
+				    ~;
+		return $html;
+}
+###############################################################################
+# format_alignment_info
+#Format the alignment info into a nice html table
+###############################################################################
+sub format_alignment_info {
+	my %args = @_;
+	my @alignment_info = @ {$args{alingment_info} };
+	
+	my $html = "<table border=0>";
+	foreach my $align_href (@alignment_info){
+		
+		$html .= qq~<tr>
+					<td>$$align_href{match_chromosome}</td>
+					<td>$$align_href{gene_start} - $$align_href{gene_stop}</td>
+					<td>Strand ($$align_href{gene_orientation})</td>
+					<td>$$align_href{percent_identity} % identity</td>
+				  </tr>
+				~;
+	}	
+	$html .= "</table>";
+	return $html;
+}
+###############################################################################
+# format_protein_info
+#Format the protein info or protein domain into a nice html table
+###############################################################################
+sub format_protein_info {
+	my %args = @_;
+	
+	my %accessor_urls  =  % {$args{accessor_urls} };
+	my @protein_info_a = @{ $args{protein_info} };
+	
+	my $html = "<table border=0>";
+	foreach my $row_href (@protein_info_a){
+			
+			my ($external_db_name, $url) = split /__/, $accessor_urls{$$row_href{dbxref_id}};
+			my $desc = '';
+			if (exists $$row_href{description}){					#desc from protein_families table
+				 $desc = $$row_href{description};
+			}elsif(exists $$row_href{protein_domain_description}){	#desc from protein_domains table
+				$desc = $$row_href{protein_domain_description};
+			}
+				
+			my $db_id = $$row_href{db_id};
+			
+			$html .= qq ~<tr>
+							<td><a href="$url$db_id">$external_db_name $db_id</a></td>
+							<td>$desc</td>
+						 </tr>
+						~;
+	}
+	$html .= "</table>";
+	
+	return $html;
+	 
+}
 ###############################################################################
 	# evalSQL
 	#
