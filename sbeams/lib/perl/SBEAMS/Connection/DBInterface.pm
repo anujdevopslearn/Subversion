@@ -1135,7 +1135,9 @@ sub displayResultSet {
 
     my $resort_url = '';
     if ($base_url) {
-      $resort_url="$base_url?apply_action=VIEWRESULTSET&".
+      my $separator = '?';
+      $separator = '&' if ($base_url =~ /\?/);
+      $resort_url="$base_url${separator}apply_action=VIEWRESULTSET&".
           "rs_set_name=$rs_params_ref->{set_name}";
     }
 
@@ -1165,9 +1167,8 @@ sub displayResultSet {
     $column_titles_ref = $resultset_ref->{column_list_ref}
       unless ($column_titles_ref);
 
-
     #### If the command to re-sort was passed, do it now
-    if ($rs_params_ref->{rs_resort_column}) {
+    if ($rs_params_ref->{rs_resort_column} gt '') {
 
       #### Put the column number and type into global variables to be
       #### used by the sort-decision subroutines
@@ -1459,6 +1460,11 @@ sub displayResultSetControls {
     }
 
 
+    #### Determine the URL separator
+    my $separator = '?';
+    $separator = '&' if ($base_url =~ /\?/);
+
+
     #### Provide links to the other pages of the dataset
     print "<BR>Result Page \n";
     $i=0;
@@ -1469,7 +1475,7 @@ sub displayResultSetControls {
       if ($i == $rs_params{page_number}) {
         print "[<font color=red>$pg</font>] \n";
       } else {
-        print "<A HREF=\"$base_url?apply_action=VIEWRESULTSET&".
+        print "<A HREF=\"$base_url${separator}apply_action=VIEWRESULTSET&".
           "rs_set_name=$rs_params{set_name}&".
           "rs_page_size=$rs_params{page_size}&".
           "rs_page_number=$pg\">$pg</A> \n";
@@ -1908,7 +1914,7 @@ sub parse_input_parameters {
 
 
     #### If something was recovered, note it
-    if ($value) {
+    if ($value gt '') {
       $n_CGI_params_found++;
       $ref_parameters->{$element} = $value;
 
