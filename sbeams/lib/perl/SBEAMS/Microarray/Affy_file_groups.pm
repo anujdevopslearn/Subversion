@@ -239,6 +239,7 @@ sub find_affy_array_id {
 	my $sql = qq~ SELECT affy_array_id
 			FROM $TBMA_AFFY_ARRAY
 			WHERE file_root like '$args{root_file_name}'
+			AND record_status != 'D'
 			
 		  ~;
 		  
@@ -297,6 +298,7 @@ sub get_all_affy_file_root_names {
 	
 	my $sql = qq~ SELECT file_root
 			FROM $TBMA_AFFY_ARRAY
+			AND record_status != 'D'
 		 ~;
 		  
 	my @all_file_names = $sbeams->selectOneColumn($sql);
@@ -389,6 +391,40 @@ sub get_file_path_from_id {
 	}
 	
 }
+
+###############################################################################
+# check_for_file_existance
+#
+#Give the array_id, root_name, file_ext 
+#Pull the file base path from the database then do a file exists on the full file path
+#Return the 1 if it exists or 0 if it does not
+###############################################################################
+sub check_for_file {
+	my $self = shift;
+	my %args = @_;
+
+	my $array_id  = $args{pk_id};
+	my $root_name = $args{file_root_name};
+	my $file_ext  = $args{file_extension}; #Fix me same query is ran to many times, store the data localy
+	  
+
+		my $sql = qq~  SELECT fp.file_path 
+		FROM $TBMA_AFFY_ARRAY afa, $TBMA_FILE_PATH fp 
+		WHERE afa.file_path_id = fp.file_path_id
+		AND afa.affy_array_id = $array_id
+	   ~;
+	my ($path) = $sbeams->selectOneColumn($sql);
+
+		my $file_path = "$path/$root_name.$file_ext";
+
+	if ( -e $file_path ) {
+		return 1;
+	}else {
+		#print "MISSING FILE '$file_path'<br/>";
+		return 0;
+	}
+}
+
 ###############################################################################
 # Get number of groups
 #
@@ -641,8 +677,8 @@ sub read_dirs {
 ###############################################################################
 # _group_files
 #
-#sub used by File::Find to populate the a hash of hashes, contained within the Affy_file_groups object, if files are found that
-#match one of the file extensions in the @FILE_TYPES array
+#sub used by File::Find to populate a hash of hashes, contained within the Affy_file_groups object
+#, if files are found that match one of the file extensions in the @FILE_TYPES array
 ###############################################################################
 
 sub _group_files {
@@ -653,7 +689,7 @@ sub _group_files {
 	foreach my $file_ext ( $self->file_extension_names() ){  		#assuming that all files will end in some extension 
 		
 		if ( $_ =~ /(.*)\.$file_ext/){					#check to see if one of the file extensions matches to a file found within the default data dir
-			print "FILE $1 EXT $file_ext\n";
+			print "FILE $1 EXT $file_ext\n" if $self->verbose() ;
 		
 			#Data into a hash of hashes with {file root name}{file extension} = "Full path to file"
 			
@@ -768,6 +804,8 @@ sub get_projects_with_arrays {
 	my @all_projects_info = $sbeams->selectSeveralColumns($sql);
 	return @all_projects_info;
 }
+
+
 
 
 }#closing bracket for the package
