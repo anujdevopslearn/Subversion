@@ -811,7 +811,7 @@ sub postProcessResultset {
   $stats{single_domain_proteins} = [];
   $stats{multiple_domain_proteins} = [];
   $stats{n_proteins} = 0;
-
+  my %surviving_proteins;  # Proteins that survive the ChilliFilter
 
   #### Determine some column indices in the resultset
   my $column_indices = $resultset_ref->{column_hash_ref};
@@ -1134,6 +1134,7 @@ sub postProcessResultset {
 
     if ($pdbblast_domains + $pfam_best_domains + $rosetta_best_domains + $TIGRFAM_hits + $COGs_hits > 0) {
       $stats{proteins_with_an_id}++;
+      $surviving_proteins{$biosequence_name} = 1;
 
       #### Store the chromosome stats
       if (defined($rows[$startrow]->[$chromosome_column_index])) {
@@ -1182,11 +1183,15 @@ sub postProcessResultset {
 
   #### We we were able to keep per-chromosome stats
   if (defined($stats{chromosome})) {
-    $buf.="<font color=\"red\">Number of proteins by replicon:</font>\n";
+    $buf.="<font color=\"red\">Number of proteins by replicon:</font> (post-filter includes PDB, PFAM, Ginzu, Rosetta, TIGRFAM, COGs, etc. but not NgAnnot)\n";
     foreach my $chromosome (sort(keys(%{$stats{chromosome}}))) {
       $buf .= "$chromosome\t".$stats{chromosome}->{$chromosome}."\n";
     }
-    $buf.="\n";
+    $buf .= "\n";
+
+    $buf .= "<font color=\"red\">Proteins that make the Chilli Filter cut:</font> (can be pasted up in Biosequence Name Constraint)\n".join(';',keys(%surviving_proteins))."\n";
+    $buf .= "\n";
+
   }
 
   $buf.="\n";
