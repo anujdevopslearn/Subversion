@@ -75,10 +75,21 @@ sub Authenticate {
       exit;
     }
 
-    # If the user is not logged in, make them log in
-    unless ($current_username = $self->checkLoggedIn()) {
-        $current_username = $self->processLogin();
+    #### If the effective UID is the apache user, then go through the
+    #### cookie authentication mechanism
+    my $uid = "$>" || "$<";
+    if ( $uid == 48 ) {
+
+        # If the user is not logged in, make them log in
+        unless ($current_username = $self->checkLoggedIn()) {
+            $current_username = $self->processLogin();
+        }
+
+    #### Otherwise, try a command-line authentication
+    } else {
+        $current_username = $self->checkValidUID()
     }
+
 
     # If we've obtained a valid user, get additional information about the user
     if ($current_username) {
@@ -149,6 +160,49 @@ sub checkLoggedIn {
     if ($main::q->cookie('SBEAMSName')){
         my $cipher = new Crypt::CBC($SECRET_KEY, 'IDEA');
         $username = $cipher->decrypt($main::q->cookie('SBEAMSName'));
+
+        # Verify that the deciphered result is still an active username
+        my ($result) = $self->selectOneColumn(
+            "SELECT username
+               FROM $TB_USER_LOGIN
+              WHERE username = '$username'
+                AND record_status != 'D'"
+        );
+        $username = "" if ($result ne $username);
+    }
+
+    return $username;
+}
+
+
+###############################################################################
+# checkValidUID
+#
+# Return the username if the UID belongs to a valid user in the database
+###############################################################################
+sub checkValidUID {
+    my $self = shift;
+    my $username = "";
+
+    my $current_uid = "$>" || "$<";
+
+    #### Fix PATH to keep TaintPerl happy and check yp passwd to see
+    #### if this is a valid user
+    my $savedENV=$ENV{PATH};
+    $ENV{PATH}="";
+    my @results = `/usr/bin/ypcat passwd`;
+    $ENV{PATH}=$savedENV;
+
+    my ($uname,$pword,$uid);
+
+    my $element;
+    foreach $element (@results) {
+      ($uname,$pword,$uid)=split(":",$element);
+      last if ($uid eq $current_uid);
+    }
+
+    if ($uid eq $current_uid) {
+        $username = $uname;
 
         # Verify that the deciphered result is still an active username
         my ($result) = $self->selectOneColumn(
