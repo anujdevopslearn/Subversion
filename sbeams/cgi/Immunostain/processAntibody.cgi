@@ -110,6 +110,7 @@ sub getAbDetails {
   my $sumtable = SBEAMS::Connection::DataTable->new( BORDER => 0 );
 
 	unless ( scalar(@results) ) { # If no results, print message and bail
+    $log->warn( "No data found for antibody $params{antibody_id}: $sumSQL" );
     return "<H3><FONT COLOR=#D60000> Specified antibody (ID: $params{antibody_id}) not found in the database</FONT></H3>";
   }
 
@@ -404,7 +405,7 @@ sub getAbDetails {
 
 sub getSummarySQL {
   my $ab = shift;
-  my $abclause = ( $ab eq 'ALL' ) ? '' : "AND antibody_id IN ( $ab )";
+  my $abclause = ( $ab eq 'ALL' ) ? '' : " antibody_id IN ( $ab )";
   return <<"  END_SQL";
   SELECT antibody_name, alternate_names, biosequence_accession, 
          genome_location + genome_strand, accessor, organism_name
@@ -421,9 +422,10 @@ sub getSummarySQL {
          ON bss.organism_id = sbo.organism_id
   LEFT JOIN $TBIS_DBXREF dbx 
          ON bs.dbxref_id = dbx.dbxref_id 
-  WHERE set_Name LIKE 'LocusLink%'
-  AND dbxref_name = 'LocusLink'
-  $abclause
+  WHERE $abclause
+  -- Removed these constraints Jan-25-2005
+  --set_Name LIKE 'LocusLink%'
+  --AND dbxref_name = 'LocusLink'
   END_SQL
 
 }
