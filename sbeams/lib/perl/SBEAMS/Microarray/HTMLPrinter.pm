@@ -363,16 +363,46 @@ sub printJavascriptFunctions {
 ###############################################################################
 sub printPageFooter {
   my $self = shift;
-  my $flag = shift || "CloseTablesAndPrintFooter";
 
-  if ($flag =~ /CloseTables/) {
+
+  #### Allow old-style single argument
+  my $n_params = scalar @_;
+  my %args;
+  #### If the old-style single argument exists, create args hash with it
+  if ($n_params == 1) {
+    my $flag = shift;
+    $args{close_tables} = 'NO';
+    $args{close_tables} = 'YES' if ($flag =~ /CloseTables/);
+    $args{display_footer} = 'NO';
+    $args{display_footer} = 'YES' if ($flag =~ /Footer/);
+  } else {
+    %args = @_;
+  }
+
+
+  #### Process the arguments list
+  my $close_tables = $args{'close_tables'} || 'YES';
+  my $display_footer = $args{'display_footer'} || 'YES';
+  my $separator_bar = $args{'separator_bar'} || 'NO';
+
+
+  #### If closing the content tables is desired
+  if ($close_tables eq 'YES') {
     print qq~
 	</TD></TR></TABLE>
 	</TD></TR></TABLE>
     ~;
   }
 
-  if ($flag =~ /Footer/) {
+
+  #### If displaying a fat bar separtor is desired
+  if ($separator_bar eq 'YES') {
+    print "<BR><HR SIZE=5 NOSHADE><BR>\n";
+  }
+
+
+  #### If finishing up the page completely is desired
+  if ($display_footer eq 'YES') {
     print qq~
 	<BR><HR SIZE="2" NOSHADE WIDTH="70%" ALIGN="CENTER">
 	<center>
