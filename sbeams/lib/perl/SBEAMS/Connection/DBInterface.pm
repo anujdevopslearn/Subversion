@@ -440,6 +440,10 @@ sub insert_update_row {
     #### extract the {value} key value.  This is because of Xerces.
     $value = $value->{value} if (ref($value));
 
+
+    #### If the value is undef, then change it to NULL
+    $value = 'NULL' unless (defined($value));
+
     print "	$key = $value\n" if ($verbose > 0);
 
     #### Add the key as the column name
