@@ -259,18 +259,19 @@ SELECT	A.array_id,A.array_name,
 
 	  #### If the data file is okay
 	  if ( -e $quantitation_file ) {
-            $qf_status = "&nbsp;&nbsp;&nbsp;&nbsp;--- ".
-		"<FONT COLOR=green>File exists</FONT>";
-	    #### Run a parse program on it to see which channel is which dye
-	    my %quantitation_data = readQuantitationFile(inputfilename=>"$quantitation_file",
-							 headeronly=>1);
-	    unless ($quantitation_data{success}) {
-	      $qf_status = "&nbsp;&nbsp;&nbsp;&nbsp;--- ".
-		  "<FONT COLOR=red>$quantitation_data{error_msg}</FONT>";
-	    } else {
-              #### Pull out the channel information
+		$qf_status = "&nbsp;&nbsp;&nbsp;&nbsp;--- ".
+		  "<FONT COLOR=green>File exists</FONT>";
+		#### Run a parse program on it to see which channel is which dye
+		my %quantitation_data = readQuantitationFile(inputfilename=>"$quantitation_file",
+													 headeronly=>1);
+		unless ($quantitation_data{success}) {
+		  $qf_status = "&nbsp;&nbsp;&nbsp;&nbsp;--- ".
+			"<FONT COLOR=red>$quantitation_data{error_msg}</FONT>";
+		} else {
+		  #### Pull out the channel information
 	      my @channels = @{$quantitation_data{channels}};
 	      my $channel;						
+
 	      ### <Added to deal with hi-lo scans>
 	      my $number_of_channels = scalar(@channels);
 	      my $first_channel = "ch1";
@@ -279,50 +280,50 @@ SELECT	A.array_id,A.array_name,
 
 	      #### Loop over each channel
 	      foreach $channel (@channels) {
-                @parts = ($channel->{channel_label},$channel->{fluorophor});
-		$parts[1] =~ /(\d+)/;
-		my $number_part = $1;
-		my $match_flag = 0;
+            @parts = ($channel->{channel_label},$channel->{fluorophor});
+			$parts[1] =~ /(\d+)/;
+			my $number_part = $1;
+			my $match_flag = 0;
 
-		if ($sample1_dye =~ /$number_part/) {
-                  $match_flag = 1;
-		  if ($parts[0] eq $first_channel) {
-                    $channel_direction = "f";
-		  }
-		  if ($parts[0] eq $other_channel) {
-                    $channel_direction = "r";
-		  }
+			if ($sample1_dye =~ /$number_part/) {
+			  $match_flag = 1;
+			  if ($parts[0] eq $first_channel) {
+				$channel_direction = "f";
+			  }
+			  if ($parts[0] eq $other_channel) {
+				$channel_direction = "r";
+			  }
+			}
+
+			if ($sample2_dye =~ /$number_part/) {
+			  if ($match_flag) { print "Whoah!  Double match!<BR>\n"; }
+			  $match_flag = 2;
+			  if ($parts[0] eq $first_channel) {
+				$channel_direction = "r";
+			  }
+			  if ($parts[0] eq $other_channel) {
+				$channel_direction = "f";
+			  }
 	        }
+			unless ($match_flag) {
+			  print "Unable to match '$parts[1]' with either dye ($sample1_dye and $sample2_dye).<BR>\n";
+			}
+		  } # endforeach
 
-                if ($sample2_dye =~ /$number_part/) {
-                  if ($match_flag) { print "Whoah!  Double match!<BR>\n"; }
-		  $match_flag = 2;
-		  if ($parts[0] eq $first_channel) {
-                    $channel_direction = "r";
+		  if ($channel_direction eq "r") {
+			$slide_directions[$row_counter] =~ tr/fr/rf/;
+		  } else {
+			#keep direction the same
 		  }
-		  if ($parts[0] eq $other_channel) {
-                    $channel_direction = "f";
-		  }
-	        }
-		unless ($match_flag) {
-                  print "Unable to match file name '$parts[1]' with either dye.<BR>\n";
-                  }
-                } # endforeach
-
-                if ($channel_direction eq "r") {
-                  $slide_directions[$row_counter] =~ tr/fr/rf/;
-                } else {
-                  #keep direction the same
-                }
 
 
-                $qf_status = "&nbsp;&nbsp;&nbsp;&nbsp;--- ".
-                             "<FONT COLOR=green>File verified</FONT>";
+		  $qf_status = "&nbsp;&nbsp;&nbsp;&nbsp;--- ".
+			"<FONT COLOR=green>File verified</FONT>";
 
-              } # endelse
-
-            #### If the data file is not found
-            } else {
+		} # endelse
+			
+		  #### If the data file is not found
+		  } else {
               $error_flag++;
               $qf_status = "&nbsp;&nbsp;&nbsp;&nbsp;--- ".
                            "<FONT COLOR=red>FILE MISSING</FONT>";
