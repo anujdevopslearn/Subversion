@@ -410,7 +410,7 @@ sub processFile
 		$TBIS_STAINED_SLIDE st
 		join $TBIS_ANTIBODY ab on st.antibody_Id = ab.antibody_id
 		join $TBIS_SPECIMEN_BLOCK  sb on sb.specimen_block_id = st.specimen_block_id 
-		where ab.antibody_name = \'$infoHash{antibody}\' and sb.specimen_block_id = $blockID/; 
+		where ab.antibody_name = \'$infoHash{antibody}\' and sb.specimen_block_id = $blockID and st.stain_name = \'$stainName\';/; 
 		
 		print "$slideQuery\n";
 		getc;
