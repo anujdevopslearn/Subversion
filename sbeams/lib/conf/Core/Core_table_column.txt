@@ -2,7 +2,7 @@ table_name	column_index	column_name	column_title	datatype	scale	precision	nullab
 project	1	project_id	Project ID	int	4	0	N		Y						showPassed(this)	N	N				pkDEFAULT
 project	2	name	Project Name	varchar	100	0	N		N			Y	text	75		Y	Y	N	Name or Title of the project		
 project	3	project_tag	Project Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	"A short 'tag' or identity of the project.  Treat this like a folder name.  Use only alphanumeric characters, no spaces (e.g., FlyCatalog, HuTCellRaft, YeastShockExpr)"		
-project	4	PI_contact_id	PI Contact	int	4	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	Y	PI or Primary contact for this project		
+project	4	PI_contact_id	PI Contact	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	PI or Primary contact for this project	SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS name FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization	
 project	5	description	Description	text	16	0	Y		N			Y	textarea	8		Y	Y	N	"Describe this project: what are the goals, how are the samples prepared, derived citations, etc."		
 project	6	budget	Budget	varchar	25	0	Y		N			Y	text	25		Y	Y	N	Budget number to be charged for experiments under this project		
 project	7	project_status	Project Status	varchar	100	0	Y		N			N	text	50		Y	Y	N	"For example: Active, Finished"		
