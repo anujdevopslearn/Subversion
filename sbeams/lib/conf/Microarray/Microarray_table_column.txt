@@ -148,7 +148,7 @@ array	13	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id			
 array	14	record_status	Record Status	char	1	0	N	N	N							N	N				
 labeling	1	labeling_id	Labeling ID	int	8	0	N		Y							N	N				pkDEFAULT
 labeling	2	array_request_sample_id	Array Request Sample ID	int	8	0	N		N		array_request_sample_id	Y	multioptionlist	4		Y	Y	Y	"Sample ID number - Sample name (you may select several samples to enter at once, but note all values will be the same)"	MANUAL	
-labeling	3	protocol_id	Protocol	int	8	0	N		N	protocol	protocol_id	Y	optionlist			Y	Y	N	Protocol used for labeling	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='extract_labeling' ORDER BY P.name"	
+labeling	3	protocol_id	Protocol	int	8	0	N		N	protocol	protocol_id	Y	optionlist			Y	Y	N	Protocol used for labeling	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='extract_labeling' OR PT.name='Genicon Labeling' ORDER BY P.name"	
 labeling	4	protocol_deviations	Protocol Deviations	text	16	0	Y		N			N	textarea	4		Y	Y	N	List any deviations from the selected protocol		
 labeling	5	spiking_controls	Spiking Controls	text	16	0	Y		N			N	textarea	4		Y	Y	N	"Describe the external controls added to the extract, including which features are expected to hybridize with control, spike type, and expected values or other parameters."		
 labeling	6	date_labeled	Date Labeled	datetime	8	0	N	CURRENT_TIMESTAMP	N			N	textdate	30		Y	Y	N	Date/time the labeling was performed		
