@@ -147,7 +147,7 @@ function viewImage(status){
     }
     else {
 	//alert ("scan images not on a network share.");
-        var site = "$uri/ManageTable.cgi?TABLE_NAME=array_scan&ShowEntryForm=1";
+        var site = "$uri/ManageTable.cgi?TABLE_NAME=$TB_ARRAY_SCAN&ShowEntryForm=1";
     }
     var newWindow = window.open(site);
 }
@@ -485,10 +485,10 @@ SELECT	A.array_id,A.array_name,
   my $base_url = "$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=";
   my %url_cols = ('array_name' => "${base_url}array&array_id=%0V",
 		  'date_requested' => "$CGI_BASE_DIR/Microarray/SubmitArrayRequest.cgi?TABLE_NAME=array_request&array_request_id=%4V",
-		  'date_printed' => "${base_url}printing_batch&printing_batch_id=%5V", 
-		  'date_hybridized' => "${base_url}hybridization&hybridization_id=%7V", 
-		  'date_scanned' => "${base_url}array_scan&array_scan_id=%9V", 
-		  'date_quantitated' => "${base_url}array_quantitation&array_quantitation_id=%12V", 
+		  'date_printed' => "${base_url}printing_batch&printing_batch_id=%7V", 
+		  'date_hybridized' => "${base_url}hybridization&hybridization_id=%9V", 
+		  'date_scanned' => "${base_url}array_scan&array_scan_id=%11V", 
+		  'date_quantitated' => "${base_url}array_quantitation&array_quantitation_id=%14V", 
 		  );
 
   my %hidden_cols = ('array_id' => 1,
