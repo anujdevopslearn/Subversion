@@ -787,6 +787,9 @@ sub prepare_msms_spectra_resultset {
   my %parameters = %{$query_parameters_ref};
 
 
+  #### If the output_mode isn't html, then don't bother with all this
+  return unless ($sbeams->output_mode() eq 'html');
+
   #### Find out what column the msms_spectrum_id is or just return
   my $msms_spectrum_id_column =
     $resultset_ref->{column_hash_ref}->{msms_spectrum_id};
