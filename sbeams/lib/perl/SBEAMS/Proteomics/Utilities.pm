@@ -730,6 +730,84 @@ sub readSummaryFile {
 
 
 ###############################################################################
+# readNfoFile
+###############################################################################
+sub readNfoFile { 
+  my $self = shift;
+  my %args = @_;
+
+  my $source_file = $args{'source_file'} || "";
+  my $verbose = $args{'verbose'} || "";
+
+
+  #### Define some standard variables
+  my $line;
+
+
+  #### Define a hash to hold parameters from the file
+  #### and an array for the parsed data lines
+  my %parameters;
+  my @spec_data;
+
+
+  #### Parse information from the filename
+  $parameters{'full_name'} = $source_file;
+  my $file_name = $source_file;
+  $file_name =~ s/.*\///;
+  $parameters{'file_name'} = $file_name;
+  my $lcms_run_name = $file_name;
+  $lcms_run_name =~ s/.nfo$//;
+  $parameters{'lcms_run_name'} = $lcms_run_name;
+
+
+  #### Open the specified file
+  unless (open(INFILE,$source_file)) {
+    die "\nCannot open input file $source_file\n\n";
+  }
+
+
+  #### Read the header
+  while (!($line =~ /^\#spect_num/)) {
+    $line = <INFILE>;
+    $line =~ s/[\r\n]//g;
+
+    #### Try to match the key = value format
+    if ($line =~ /^\#(.+?)\s+= (.*)$/) {
+      $parameters{$1} = $2;
+      #print "$1 = $2\n";
+    }
+
+  }
+
+
+  #### Save the column names
+  $line =~ s/^\#//;
+  my @columns = split("\t",$line);
+
+
+  #### Now read the data and store in the array
+  while ($line = <INFILE>) {
+    $line =~ s/[\r\n]//g;
+    my @parsed_line = split("\t",$line);
+    push(@spec_data,\@parsed_line);
+  }
+
+
+  #### Put parameters and data into a single structure and return
+  my %finalhash;
+  $finalhash{parameters} = \%parameters;
+  $finalhash{spec_data} = \@spec_data;
+  $finalhash{columns} = \@columns;
+
+  return %finalhash;
+
+
+} # end readNfoFile
+
+
+
+
+###############################################################################
 
 1;
 
@@ -773,6 +851,10 @@ SBEAMS::Proteomics::Utilities - Module-specific utilities
 =item B<readSummaryFile()>
 
     Read a sequest .html summary file
+
+=item B<readNfoFile()>
+
+    Read a sequest .nfo file
 
 =head1 AUTHOR
 
