@@ -542,8 +542,8 @@ sub handle_request {
       ["protein_probability","STR(PROT.probability,7,3)","Protein Prob"],
       @peptide_columns,
       ["protein_n_peptides","PROT.n_peptides","Total Protein Peptides"],
-      ["protein_average_quant","STR(SQ.ratio_mean,7,3)","Protein Quant Avg"],
-      ["protein_stdev_quant","STR(SQ.ratio_standard_dev,7,3)","Protein Quant StDev"],
+      ["protein_quant_mean","STR(SQ.ratio_mean,7,3)","Protein Quant Average"],
+      ["protein_quant_uncert","STR(SQ.ratio_standard_dev,7,3)","Protein Quant Uncertainty"],
       ["protein_n_quant","SQ.ratio_number_peptides","Protein Quant N"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
@@ -918,7 +918,7 @@ sub postProcessResultset {
 
 
   #### Then the data points
-  my @data_columns = qw(protein_probability protein_n_peptides protein_average_quant protein_stdev_quant protein_n_quant);
+  my @data_columns = qw(protein_probability protein_n_peptides protein_quant_mean protein_quant_uncert protein_n_quant);
   push(@data_columns,qw(peptide_probability peptide_n_instances)) if ($have_peptides);
   my @data_column_types = qw(real int real real int);
   push(@data_column_types,qw(real int)) if ($have_peptides);
@@ -1038,23 +1038,44 @@ sub postProcessResultset {
 	    }
 	  }
 
-	  #### Combine the average quantitation
-	  if ( $data_column =~ /(protein_average_quant|protein_stdev_quant)/) {
-	    if ($data_column eq 'protein_average_quant') {
-	      #### Store pointer to what will be updated later
-	      $summaries{protein_average_quant_pointer} = scalar(@row);
+	  #### Combine the probabilities
+	  if ($data_column eq 'protein_probability') {
+	    #### Convert the probabilities to 1 - P
+	    my @values = ();
+	    foreach my $el (@{$summaries{$data_column}}) {
+	      push(@values,1-$el) if (defined($el));
+	    }
+	    my $n_values = scalar(@values);
+	    if ($n_values == 0) {
+	      $combined_value = undef;
+	    } elsif ($n_values == 1) {
+	      $combined_value = sprintf('%.3f',1 - $values[0]);
+	    } else {
+	      my $product = $values[0];
+	      for (my $i=1; $i<$n_values; $i++) {
+		$product *= $values[$i];
+	      }
+	      $combined_value = sprintf('%.3f',1 - $product);
+	    }
+	  }
 
-	    } elsif ($data_column eq 'protein_stdev_quant' &&
-		     defined($summaries{protein_average_quant}) &&
-		     defined($summaries{protein_stdev_quant})
+	  #### Combine the average quantitation
+	  if ( $data_column =~ /(protein_quant_mean|protein_quant_uncert)/) {
+	    if ($data_column eq 'protein_quant_mean') {
+	      #### Store pointer to what will be updated later
+	      $summaries{protein_quant_mean_pointer} = scalar(@row);
+
+	    } elsif ($data_column eq 'protein_quant_uncert' &&
+		     defined($summaries{protein_quant_mean}) &&
+		     defined($summaries{protein_quant_uncert})
 		    ) {
   	      my ($mean,$uncertainty) = $sbeams->average(
-                values => $summaries{protein_average_quant},
-                uncertainties => $summaries{protein_stdev_quant},
+                values => $summaries{protein_quant_mean},
+                uncertainties => $summaries{protein_quant_uncert},
               );
 	      $combined_value = sprintf('%.3f',$uncertainty);
-	      if (defined($summaries{protein_average_quant_pointer})) {
-		$row[$summaries{protein_average_quant_pointer}] = sprintf('%.3f',$mean);
+	      if (defined($summaries{protein_quant_mean_pointer})) {
+		$row[$summaries{protein_quant_mean_pointer}] = sprintf('%.3f',$mean);
 	      }
             }
 
