@@ -445,7 +445,7 @@ sub handle_request {
     constraint_type=>"flexible_float",
     constraint_name=>"Percent ACN Constraint",
     constraint_value=>$parameters{percent_buffer_b_constraint} );
-  return if (percent_buffer_b_clause == -1);
+  return if ($percent_buffer_b_clause == -1);
 
 
   #### Build ISOELECTRIC_POINT constraint
