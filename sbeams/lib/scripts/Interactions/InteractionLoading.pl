@@ -1039,9 +1039,9 @@ sub ErrorLog
 		my ($error,$record) = @_;
 		foreach my $key (keys %{$record})
 		{
-				print $fhLog "$key  ===  $record->{$key}<br>\n";
+				print $fhLog "\n$key  ===  $record->{$key}<br>\n";
 		}
-		print $fhLog "$error<br><br>\n\n";
+		print $fhLog "\n\n$error<br><br>\n\n";
 		
 }	
 
