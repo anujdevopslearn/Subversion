@@ -1401,11 +1401,25 @@ sub parseResultSetParams {
   my $q = $args{'q'};
 
 
+  #### Define the keywords we're looking for
+  my @desired_params = ('rs_set_name','rs_page_size','rs_page_number');
+
+
   #### Parse the resultset parameters into a hash
   my %rs_params;
   my $n_params_found = $self->parse_input_parameters(
     q=>$q,parameters_ref=>\%rs_params,
+    columns_ref=>\@desired_params,
     add_standard_params=>'NO');
+
+
+  #### Remap them to names without the rs_.  This is crazy.
+  $rs_params{set_name} = $rs_params{rs_set_name}
+    if ($rs_params{rs_set_name});
+  $rs_params{page_size} = $rs_params{rs_page_size}
+    if ($rs_params{rs_page_size});
+  $rs_params{page_number} = $rs_params{rs_page_number}
+    if ($rs_params{rs_page_number});
 
 
   #### Add some defaults if nothing was provided
