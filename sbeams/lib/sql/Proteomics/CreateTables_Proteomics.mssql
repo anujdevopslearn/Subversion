@@ -10,6 +10,7 @@ DROP TABLE search_hit_annotation
 DROP TABLE annotation_source
 DROP TABLE annotation_confidence
 DROP TABLE annotation_label
+DROP TABLE user_annotation_label
 
 DROP TABLE quantitation
 DROP TABLE search_hit_protein
@@ -148,6 +149,7 @@ CREATE TABLE dbo.proteomics_experiment (
 	experiment_description	varchar(255) NOT NULL,
 	experiment_path		varchar(255) NOT NULL,
 	sample_id		int NOT NULL,
+	quant_normalization	real NULL,
 	uri			varchar(255) NOT NULL,
 	comment			text NULL,
 	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -215,6 +217,8 @@ INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BSH_sort_options','d0_intensity/ISNULL(NULLIF(d8_intensity,0),0.01),experiment_tag,set_tag,S.file_root,SH.cross_corr_rank,SH.hit_index','Quant,Exp, DB, file_root, Rxc',110 )
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BSH_sort_options','SH.hit_mass_plus_H,experiment_tag,set_tag,S.file_root,SH.cross_corr_rank,SH.hit_index','Mass ,Exp, DB, file_root, Rxc',120 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','isoelectric_point,reference,S.file_root,experiment_tag,set_tag,SH.cross_corr_rank,SH.hit_index','pI, Reference, file_root, Exp, DB, Rxc',50 )
 
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BSH_display_options','BSDesc','Display BioSequence Descriptions',50 )
@@ -268,6 +272,8 @@ VALUES ( 'BAP_display_options','BSDesc','Display BioSequence Descriptions',50 )
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BAP_display_options','MaxRefWidth','Limit Reference Width',60 )
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAP_display_options','ShowGOColumns','Show GO Columns',70 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BAP_display_options','ShowSQL','Show SQL Query',90 )
 
 
@@ -277,6 +283,8 @@ INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BBS_display_options','ShowSQL','Show SQL Query',60 )
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BBS_display_options','SequenceFormat','Display in Sequence Format',70 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BBS_display_options','ShowGOColumns','Show GO Columns',80 )
 
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BBS_sort_options','biosequence_name','biosequence_name',10 )
@@ -294,6 +302,14 @@ INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'CE_sort_options','peptide','Peptide',60 )
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'CE_sort_options','SUM(tABS.row_count) DESC','Count',70 )
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'input_form_options','minimum_detail','Minimum Detail',10 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'input_form_options','medium_detail','Medium Detail',20 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'input_form_options','full_detail','Full Detail',30 )
+
 GO
 
 
@@ -564,12 +580,31 @@ INSERT INTO annotation_source ( source_desc,sort_order ) VALUES ( 'Unknown',30 )
 GO
 
 
+CREATE TABLE dbo.user_annotation_label (
+	user_annotation_label_id	int IDENTITY NOT NULL,
+	project_id		int NOT NULL /*REFERENCES project(project_id)*/,
+	user_annotation_tag	varchar(100) NOT NULL,
+	user_annotation_desc	varchar(255) NOT NULL,
+	comment			text NULL,
+	sort_order		int NOT NULL DEFAULT 10,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (user_annotation_label_id)
+)
+GO
+
+
 CREATE TABLE dbo.search_hit_annotation (
 	search_hit_annotation_id  int IDENTITY NOT NULL,
 	search_hit_id		int NOT NULL REFERENCES search_hit(search_hit_id),
 	annotation_label_id	int NOT NULL REFERENCES annotation_label(annotation_label_id),
 	annotation_confidence_id  int NOT NULL REFERENCES annotation_confidence(annotation_confidence_id),
 	annotation_source_id	int NOT NULL REFERENCES annotation_source(annotation_source_id),
+	user_annotation_label_id	int NULL REFERENCES user_annotation_label(user_annotation_label_id),
 	comment			text NULL,
 	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
