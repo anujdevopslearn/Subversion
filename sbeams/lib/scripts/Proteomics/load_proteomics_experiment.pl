@@ -1177,17 +1177,22 @@ sub addSearchHitEntry {
 
   #### Define some variables
   my ($match,$element,$tmp,$i,$last_cols);
-  my $n_matches = $#matches;
+  my $n_matches = scalar(@matches);
 
-  #### The top 10 matches is probably plenty.  This should probably be
-  #### a command line option
-  if ($n_matches > 10) {
-    $n_matches = 10;
+  #### Limit the number of top hits to load.  This should probably be
+  #### a command line option rather than hard coded or a conf option
+  my $max_matches = 10;
+  if (defined($CONFIG_SETTING{Proteomics_MAX_TOP_HITS_TO_LOAD})) {
+    $max_matches = $CONFIG_SETTING{Proteomics_MAX_TOP_HITS_TO_LOAD};
+  }
+  if ($n_matches > $max_matches) {
+    $n_matches = $max_matches;
     print "<";
   }
 
+
   #### Loop over each row
-  for ($i=0; $i<=$n_matches; $i++) {
+  for ($i=0; $i<$n_matches; $i++) {
     $match = $matches[$i];
 
     #### Define the data to be inserted for this row
@@ -1211,7 +1216,7 @@ sub addSearchHitEntry {
 
     #### If there are more rows, then add the dCn to next row
     $last_cols = "";
-    if ($i<$n_matches) {
+    if (($i+1) < $n_matches) {
       $rowdata{next_dCn} = $matches[$i+1]->{norm_corr_delta} - 
         $match->{norm_corr_delta};
     }
@@ -1738,9 +1743,9 @@ sub updateSearchResults {
   my $SUB_NAME = 'updateSearchResults';
 
   #### Set up use of some special stuff to calculate pI.  FIXME
-  use lib qw (/net/db/projects/proteomics/src/Proteomics/blib/lib
-    /net/db/projects/proteomics/src/Proteomics/blib/arch/auto/Proteomics);
-  use Proteomics;
+  #use lib qw (/net/db/projects/proteomics/src/Proteomics/blib/lib
+  #  /net/db/projects/proteomics/src/Proteomics/blib/arch/auto/Proteomics);
+  #use Proteomics;
 
 
   #### Decode the argument list
@@ -1858,10 +1863,11 @@ sub updateSearchResults {
       $coldata{best_hit_flag} = "";
 
 
-      #### Calculate pI (Isoelectric point)
       $peptide = $data[$i]->{peptide};
-      $pI = Proteomics::COMPUTE_PI($peptide,length($peptide),0);
-      $coldata{isoelectric_point} = $pI;
+
+      #### Calculate pI (Isoelectric point)
+      #$pI = Proteomics::COMPUTE_PI($peptide,length($peptide),0);
+      #$coldata{isoelectric_point} = $pI;
 
       #### Calculate Gravy Score
       my $gravy_score = SBEAMS::Proteomics::Utilities::calcGravyScore(
@@ -2500,62 +2506,6 @@ sub calcBufferPercent {
 
 
 }
-
-
-
-###############################################################################
-# calcGravyScore: Calculate the gravy_score based on the hydropathy indexes
-#   of each of the residues in the peptide
-###############################################################################
-sub calcGravyScore {
-  my %args = @_;
-
-  #### Parse input parameters
-  my $peptide = $args{'peptide'} || die "Must supply the peptide";
-
-  #### Define the hydropathy index
-  my %hydropathy_index = (
-    I => 4.5,
-    V => 4.2,
-    L => 3.8,
-    F => 2.8,
-    C => 2.5,
-    M => 1.9,
-    A => 1.8,
-    G => -0.4,
-    T => -0.7,
-    W => -0.9,
-    S => -0.8,
-    Y => -1.3,
-    P => -1.6,
-    H => -3.2,
-    E => -3.5,
-    Q => -3.5,
-    D => -3.5,
-    N => -3.5,
-    K => -3.9,
-    R => -4.5,
-  );
-
-
-  #### Split peptide into an array of residues and get number
-  my @residues = split(//,$peptide);
-  my $nresidues = scalar(@residues);
-
-  #### Loop over each residue and add in the hydropathy_index
-  my $gravy_score = 0;
-  foreach my $residue (@residues) {
-    $gravy_score += $hydropathy_index{$residue};
-  }
-
-
-  #### Divide the total score by the number of residues
-  $gravy_score = $gravy_score / $nresidues;
-
-  return $gravy_score;
-
-}
-
 
 
 ###############################################################################
