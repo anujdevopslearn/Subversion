@@ -695,16 +695,11 @@ sub printEntryForm {
       #### Define the desired columns
       #### [friendly name used in url_cols,SQL,displayed column title]
       my @column_array = (
-        ["search_batch_id","SB.search_batch_id","search_batch_id"],
-        ["msms_spectrum_id","S.msms_spectrum_id","msms_spectrum_id"],
-        ["search_id","S.search_id","search_id"],
-        ["search_hit_id","SH.search_hit_id","search_hit_id"],
         ["experiment_tag","experiment_tag","Exp"],
         ["set_tag","set_tag","DB"],
-        ["data_location","SB.data_location","data_location"],
-        ["fraction_tag","F.fraction_tag","fraction_tag"],
         ["file_root","S.file_root","file_root"],
         ["out_file","'.out'",".out"],
+        ["start_scan","MSS.start_scan","scan"],
         ["best_hit_flag","best_hit_flag","bh"],
         ["probability","STR(SH.probability,7,3)","Prob"],
         ["cross_corr_rank","SH.cross_corr_rank","Rxc"],
@@ -719,15 +714,21 @@ sub printEntryForm {
         ["additional_proteins","additional_proteins","N+"],
         ["additional_proteins_old","additional_proteins","!N+"],
         ["peptide_string","peptide_string","Peptide"],
+        ["isoelectric_point","STR(isoelectric_point,8,3)","pI"],
+        ["quantitation","$quant_format_clause","Quant"],
+#        ["assumed_charge","S.assumed_charge","assumed_charge"],
+        ["annotation_label","label_desc","Annot"],
+        ["search_batch_id","SB.search_batch_id","search_batch_id"],
+        ["msms_spectrum_id","S.msms_spectrum_id","msms_spectrum_id"],
+        ["search_id","S.search_id","search_id"],
+        ["search_hit_id","SH.search_hit_id","search_hit_id"],
+        ["fraction_tag","F.fraction_tag","fraction_tag"],
+        ["data_location","SB.data_location","data_location"],
         ["peptide","peptide","actual_peptide"],
         ["biosequence_set_id","BSS.biosequence_set_id","biosequence_set_id"],
         ["set_path","BSS.set_path","set_path"],
-        ["isoelectric_point","STR(isoelectric_point,8,3)","pI"],
-        ["quantitation","$quant_format_clause","Quant"],
         ["quantitation_id","QUAN.quantitation_id","quantitation_id"],
-#        ["assumed_charge","S.assumed_charge","assumed_charge"],
         ["search_hit_annotation_id","SHA.search_hit_annotation_id","search_hit_annotation_id"],
-        ["annotation_label","label_desc","Annot"],
       );
 
 
