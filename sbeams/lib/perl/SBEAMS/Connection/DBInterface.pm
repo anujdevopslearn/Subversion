@@ -1969,8 +1969,10 @@ sub parse_input_parameters {
   #print "Content-type: text/html\n\n";
   #print "action = ",$ref_parameters->{action},"<BR>\n";
   #print "apply_action = ",$ref_parameters->{apply_action},"<BR>\n";
-  if ($ref_parameters->{apply_action} gt '' &&
-      (!($ref_parameters->{action} gt ''))) {
+  if (defined($ref_parameters->{apply_action}) &&
+      $ref_parameters->{apply_action} gt '' &&
+      (!defined($ref_parameters->{action}) || 
+       !($ref_parameters->{action} gt ''))) {
     $ref_parameters->{action} = $ref_parameters->{apply_action};
   }
 

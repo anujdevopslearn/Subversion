@@ -521,7 +521,9 @@ sub getCurrent_project_id {
           WHERE contact_id = $current_contact_id
             AND record_status != 'D'
         ");
-    if ($current_project_id > 0) { return $current_project_id; }
+    if (defined($current_project_id) && $current_project_id > 0) {
+      return $current_project_id;
+    }
 
     #### This user has not selected an active project, so leave it 0
     $current_project_id = 0;
