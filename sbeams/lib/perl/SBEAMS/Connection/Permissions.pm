@@ -912,11 +912,13 @@ sub getTablePermission {
   END
 
   my @uperms = $self->selectSeveralColumns( $usql );
- 
+
   if ( scalar( @uperms ) > 1 ) { # Should only return one row
     die ( <<'    END_ERROR' );
-    More than one row returned from permissions query.  Please report this 
-    error to Eric Deutsch or to submit to sbeams bug database
+    More than one row was returned from permissions query.  Please report this
+    error to your local $DBTITLE administrator. Please include the following
+    query:
+    $usql
     END_ERROR
   }
 
