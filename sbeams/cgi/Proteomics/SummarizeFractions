@@ -233,7 +233,8 @@ sub handle_request {
   #### Build ROWCOUNT constraint
   $parameters{row_limit} = 1000
     unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
-  my $limit_clause = "TOP $parameters{row_limit}";
+  my $limit_clause = $sbeams->buildLimitClause(
+   row_limit=>$parameters{row_limit});
 
 
   #### Define the desired columns in the query
@@ -276,7 +277,7 @@ sub handle_request {
 
   #### Define the SQL statement
   $sql = qq~
-	SELECT $columns_clause
+	SELECT $limit_clause->{top_clause} $columns_clause
 	  FROM $TBPR_PROTEOMICS_EXPERIMENT PE
 	  JOIN $TB_USER_LOGIN UL ON (PE.contact_id=UL.contact_id)
 	  JOIN $TB_PROJECT P ON (PE.project_id=P.project_id)
@@ -289,6 +290,7 @@ sub handle_request {
 	$project_clause
 	 GROUP BY $group_by_clause
 	 ORDER BY experiment_tag,fraction_tag
+	$limit_clause->{trailing_limit_clause}
   ~;
 
 

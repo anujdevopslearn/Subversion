@@ -501,7 +501,8 @@ sub handle_request {
   #### Build ROWCOUNT constraint
   $parameters{row_limit} = 5000
     unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
-  my $limit_clause = "TOP $parameters{row_limit}";
+  my $limit_clause = $sbeams->buildLimitClause(
+   row_limit=>$parameters{row_limit});
 
 
   #### Define some variables needed to build the query
@@ -585,7 +586,7 @@ sub handle_request {
 
   #### Define the SQL statement
   $sql = qq~
-	SELECT $limit_clause $columns_clause
+	SELECT $limit_clause->{top_clause} $columns_clause
 	  FROM $TBPR_SEARCH_HIT SH
 	  JOIN $TBPR_SEARCH S ON ( SH.search_id = S.search_id )
 	  JOIN $TBPR_SEARCH_BATCH SB ON ( S.search_batch_id = SB.search_batch_id )
@@ -619,6 +620,7 @@ sub handle_request {
 	$annotation_label_clause
 	$annotation_status_clause
 	$order_by_clause
+	$limit_clause->{trailing_limit_clause}
        ~;
 
 
