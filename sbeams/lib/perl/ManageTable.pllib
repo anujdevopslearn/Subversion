@@ -252,7 +252,8 @@ sub printEntryForm {
       #### Set the MULTIOPTIONLIST flag if this is a multi-select list
       my $method_options;
       $method_options = "MULTIOPTIONLIST"
-        if ($input_types{$element} eq "multioptionlist");
+        if ($input_types{$element} eq "multioptionlist" ||
+            $input_types{$element} eq "multilink");
 
       # Build the option list
       if ($input_types{$element} eq "fixedfromlist") {
@@ -965,13 +966,15 @@ sub processEntryForm {
 
         #### Check for any file uploaded data for columns of type file
         if ($input_types{$element} eq "multilink") {
+          my %fk_tables =
+            $sbeamsMOD->returnTableInfo($TABLE_NAME,"fk_tables");
           updateLinkingTable(
 	    parent_table_name => $TABLE_NAME,
             parent_pk_column_name => $PK_COLUMN_NAME,
             parent_pk_value => $parameters{$PK_COLUMN_NAME},
             child_pk_column_name => $element,
             child_pk_values => $parameters{$element},
-            linking_table_name => '???',
+            linking_table_name => $fk_tables{$element},
           );
 
         } # end if multilink
@@ -1324,8 +1327,25 @@ sub updateLinkingTable {
     || die("Parameter linking_table_name not passed");
 
 
-  #### Still need to get this information
-  my $linking_pk_column_name;
+  #### Get the PK of the linking table
+  my ($linking_pk_column_name) =
+    $sbeamsMOD->returnTableInfo($linking_table_name,"PK_COLUMN_NAME");
+
+
+  #### We are going to make the reckless assumption that in the linking
+  #### table, column 0 is the PK, column 1 is the parent PK, and column 2
+  #### is the child PK
+  my @columns = $sbeamsMOD->returnTableInfo($linking_table_name,
+    "ordered_columns");
+  my $parent_pk_column_name = $columns[1];
+  my $child_pk_column_name = $columns[2];
+
+
+  #### Get the real database table names
+  my ($parent_table_name) =
+    $sbeamsMOD->returnTableInfo($parent_table_name,"DB_TABLE_NAME");
+  my ($linking_table_name) =
+    $sbeamsMOD->returnTableInfo($linking_table_name,"DB_TABLE_NAME");
 
 
   #### Extract the child_pk_values into an array and a hash
@@ -1336,6 +1356,18 @@ sub updateLinkingTable {
   }
 
 
+  #### Print some diagnostics
+  if (1 == 1) {
+    print "parent_table_name=$parent_table_name<BR>\n";
+    print "parent_pk_column_name=$parent_pk_column_name<BR>\n";
+    print "parent_pk_value=$parent_pk_value<BR>\n";
+    print "child_pk_column_name=$child_pk_column_name<BR>\n";
+    print "child_pk_values=$child_pk_values<BR>\n";
+    print "linking_table_name=$linking_table_name<BR>\n";
+    print "linking_pk_column_name=$linking_pk_column_name<BR>\n";
+  }
+
+
   #### Get all existing rows in the linking table for the parent
   my $sql = qq~
     SELECT $linking_pk_column_name,$child_pk_column_name
@@ -1343,6 +1375,14 @@ sub updateLinkingTable {
      WHERE $parent_pk_column_name = '$parent_pk_value'
   ~;
   my @rows = $sbeams->selectSeveralColumns($sql);
+
+
+  #### Debugging stuff
+  my $verbose = 0;
+  if (1 == 1) {
+    $verbose = 2;
+    print "<PRE>\n";
+  }
 
 
   #### Loop over each one, deciding what to do with it
@@ -1364,6 +1404,7 @@ sub updateLinkingTable {
         PK => $linking_pk_column_name,
         PK_value => $linking_id,
         add_audit_parameters => 1,
+        verbose => $verbose,
       );
 
       delete($child_pk_values{$child_id});
@@ -1382,6 +1423,7 @@ sub updateLinkingTable {
         PK => $linking_pk_column_name,
         PK_value => $linking_id,
         add_audit_parameters => 1,
+        verbose => $verbose,
       );
 
     }
@@ -1404,11 +1446,16 @@ sub updateLinkingTable {
       rowdata_ref => \%rowdata,
       PK => $linking_pk_column_name,
       add_audit_parameters => 1,
+      verbose => $verbose,
     );
 
 
   }
 
+
+  if ($verbose) {
+    print "</PRE><BR>\n";
+  }
 
   return 1;
 
