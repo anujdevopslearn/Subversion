@@ -243,7 +243,7 @@ sub returnTableInfo {
                    AND UL.record_status!='D'
                    AND WG.record_status!='D'
                    AND PRIV.record_status!='D'
-                 ORDER BY UL.username,PROJ.name
+                 ORDER BY Project,PROJ.name
             ~;
         }
 
