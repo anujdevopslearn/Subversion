@@ -200,7 +200,7 @@ sub run_featurama {
   || die "ERROR[$SUB_NAME]: output_dir not passed!\n";
 
   #### Define standard variables
-  my $featurama_location = "/net/techdev/featurama/bin";
+  my $featurama_location = "/net/db/projects/BioSap/src/biosap/featurama/src";
   my $featurama_params = "$output_dir/featurama.params";
   my ($start_hour,$start_min,$start_sec) = ((localtime)[2],(localtime)[1],(localtime)[0]);
 
@@ -280,7 +280,7 @@ maximum_selfcomp=$parameters{'maxSelfComp'}
 step_size=$parameters{'stepSize'}
 maximum_3prime_distance=$parameters{'max3PrimeDist'}
 initial_3prime_offset=$parameters{'initOffset'}
-maximum_features=$parameters{'maxFeatures'}
+maximum_features=$parameters{'maxReporters'}
 maximum_polyAT_length=$parameters{'maxPolyAT'}
 maximum_polyGC_length=$parameters{'maxPolyGC'}
 content_window_size=$parameters{'windowSize'}
@@ -325,7 +325,7 @@ sub make_output_dir {
   #### Process the arguments list
   my $testonly = $args{'testonly'};
   my $unique_dir = 0;
-  my $output_dir = "/net/techdev/biosap/";
+  my $output_dir = "/net/techdev/biosap_ext/";
   ($testonly == 1) ? ($output_dir .= "tmp/") : ($output_dir .= "data/");
 
   #### Create an output directory.  Make sure it's unique
@@ -520,9 +520,9 @@ sub create_request_form {
     <INPUT TYPE="text" SIZE="5" NAME="max3PrimeDist" VALUE="$parameters{'max3PrimeDist'}">
     </TD>
     <TD ALIGN="right">
-    <B> Max. Reporters per Gene</B> (1-100,000):
+    <B> Max. Reporters per Gene</B> (1-1000):
     </TD>
-    <TD> <INPUT TYPE="text" SIZE="5" NAME="maxFeatures" VALUE="$parameters{'maxFeatures'}"
+    <TD> <INPUT TYPE="text" SIZE="5" NAME="maxReporters" VALUE="$parameters{'maxReporters'}"
     </TD>
   </TR>
   <TR>
@@ -729,10 +729,10 @@ sub verify_parameters {
   }
   
   # Maximum Features
-  my $features = $parameters{'maxFeatures'};
-  if ($features > 100000 || $features < 1 || !($features =~ /^[+-]?\d+$/)) {
+  my $features = $parameters{'maxReporters'};
+  if ($features > 1000 || $features < 1 || !($features =~ /^[+-]?\d+$/)) {
     print "<FONT COLOR=\"red\">ERROR: Maximum features is not valid</FONT><BR>\n";
-    $parameters{'maxFeatures'} = "";
+    $parameters{'maxReporters'} = "";
     $ok=0;
   }
 
