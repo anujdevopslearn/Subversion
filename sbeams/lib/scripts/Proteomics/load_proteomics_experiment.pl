@@ -1535,17 +1535,37 @@ sub updateProbabilities {
   }
 
 
-  #### Read the Interact file with probabilities
-  my $source_file = "$source_dir/interact-prob-data.htm";
-  print "Reading source file '$source_file'...\n";
-  my $data_ref = $sbeamsPROT->readSummaryFile(inputfile=>$source_file,
-    verbose=>$VERBOSE);
+  #### Read in the probabilities
+  my $data_ref;
+  my $source_file;
+
+
+  #### First guess an XML Interact file with probabilities
+  $source_file = "$source_dir/interact-prob.xml";
+  if (-f $source_file) {
+    print "Found XML interact file. Reading probabilities from source file '$source_file'\n";
+    use SBEAMS::Proteomics::XMLUtilities;
+    my $XMLreader = new SBEAMS::Proteomics::XMLUtilities;
+    $data_ref = $XMLreader->readXInteractFile(
+      source_file=>$source_file,
+      #verbose=>$VERBOSE,
+    );
+
+  #### Second, guess an HTML Interact file with probabilities
+  } else {
+    $source_file = "$source_dir/interact-prob-data.htm";
+    print "Reading probabilities from source file '$source_file'...\n";
+    $data_ref = $sbeamsPROT->readSummaryFile(
+      inputfile=>$source_file,
+      verbose=>$VERBOSE
+    );
+  }
 
 
   #print $data_ref,"\n";
   #print $data_ref->{files},"\n";
   my @nfiles = keys(%{$data_ref->{files}});
-  print "  nfiles = ".scalar(@nfiles);
+  print "\n  nfiles = ".scalar(@nfiles)."\n";;
 
 
   #### Get all the rank 1 search_hit_id's for this search_batch
