@@ -612,7 +612,7 @@ sub handle_request {
           FROM #tmp1 tt
          INNER JOIN $TBPR_POSSIBLE_PEPTIDE PP
                ON ( tt.biosequence_id = PP.biosequence_id )
-	  JOIN $TBPR_BIOSEQUENCE BS
+	 INNER JOIN $TBPR_BIOSEQUENCE BS
 	       ON ( PP.biosequence_id = BS.biosequence_id )
           LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
           $GO_join
