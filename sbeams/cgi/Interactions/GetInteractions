@@ -323,7 +323,7 @@ sub handle_request {
     ["bioentity1_state_name","BES1.bioentity_state_name","BioEntity 1 State Name"],
 #added by hmk
    ["bioentity1_type", "BET1.bioentity_type_name", "BioEntity 1 Type"],
-	 ["bioentity1_parent", "BE1.bioentity_common_name", "BioEntity 1 Parent"],
+	 ["bioentity1_parent", "BE1P.bioentity_common_name", "BioEntity 1 Parent"],
     ["regulatory_feature_name1","RF1.regulatory_feature_name","Regulatory Feature 1 Name"],
     ["interaction_type_name","IT.interaction_type_name","Interaction Type Name"],
     ["bioentity2_common_name","BE2.bioentity_common_name","BioEntity 2 Common Name"],
@@ -333,7 +333,7 @@ sub handle_request {
     ["bioentity2_state_name","BES2.bioentity_state_name","BioEntity 2 State Name"],
 #added by hmk
     ["bioentity2_type","BET2.bioentity_type_name", "BioEntity 2 Type"],
-		["bioentity2_parent", "BE2.bioentity_common_name", "BioEntity 2 Parent"],  
+		["bioentity2_parent", "BE2P.bioentity_common_name", "BioEntity 2 Parent"],  
   ["regulatory_feature_name2","RF2.regulatory_feature_name","Regulatory Feature 2 Name"],
     ["bioentity_id1","BE1.bioentity_id","BioEntity 1 ID"],
     ["bioentity_id2","BE2.bioentity_id","BioEntity 2 ID"],
@@ -376,9 +376,12 @@ sub handle_request {
       LEFT JOIN $TBIN_BIOENTITY_TYPE BET2 
            ON ( BE2.bioentity_type_id = BET2.bioentity_type_id)  
 			LEFT JOIN $TBIN_BIOENTITY_MEMBER BEM1 
-           ON ( BE1.bioentity_member_ids = BEM1.parent_bioentity_id)
+           ON ( BE1.bioentity_id = BEM1.child_bioentity_id)
+			LEFT JOIN $TBIN_BIOENTITY BE1P ON ( BEM1.parent_bioentity_id = BE1P.bioentity_id )
+			
       LEFT JOIN $TBIN_BIOENTITY_MEMBER BEM2 
-           ON ( BE2.bioentity_member_ids = BEM2.parent_bioentity_id)  		 
+           ON ( BE2.bioentity_id = BEM2.child_bioentity_id)  		 
+		 LEFT JOIN $TBIN_BIOENTITY BE2P ON ( BEM2.parent_bioentity_id = BE2P.bioentity_id )
      LEFT JOIN $TBIN_REGULATORY_FEATURE RF1
            ON ( I.regulatory_feature1_id = RF1.regulatory_feature_id )
       LEFT JOIN $TBIN_REGULATORY_FEATURE RF2
