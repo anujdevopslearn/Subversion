@@ -278,9 +278,16 @@ public class DataSaverPanel extends WizardPanel
 		 fileCheck.isSelected()) ) {
 	  JFileChooser fc = new JFileChooser();
 	  fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-	  int returnVal = fc.showDialog(this, "Select Output Directory");
+	  fc.setDialogType(JFileChooser.SAVE_DIALOG);
+	  fc.setApproveButtonText("Select Output Directory");
+	  int returnVal = fc.showDialog(this, null);
 	  if (returnVal == JFileChooser.APPROVE_OPTION) {
 		String path = (fc.getSelectedFile()).toString();
+		if ((fc.getSelectedFile()).isDirectory() == false) {
+		  JOptionPane.showMessageDialog(this, "Selected Path is not a Directory!\n\n"+
+										"\t-Using Directory Portion of this Path.");
+		  path = (fc.getSelectedFile()).getParent();
+		}
 		directoryPath.setText( path );
 		fileCheck.setSelected(true);
 		repaint();
