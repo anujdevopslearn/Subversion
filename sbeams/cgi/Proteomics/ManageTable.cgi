@@ -25,7 +25,7 @@
 use strict;
 use Getopt::Long;
 use FindBin;
-
+use Data::Dumper;
 use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($sbeams $sbeamsMOD $q $dbh $current_contact_id $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
@@ -37,7 +37,7 @@ use DBI;
 #use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
@@ -188,7 +188,7 @@ sub preFormHook {
     $query_parameters_ref->{YYYY} = 'XXXX'
       unless ($query_parameters_ref->{YYYY});
   }
-
+	
 
   #### For search_hit_annotations, set the source to be "by hand" unless
   #### there's already a value
@@ -387,7 +387,21 @@ sub preUpdateDataCheck {
                                  @stdparams );
     }
 
-  } elsif ($TABLE_NAME eq "XXXX") {
+  }elsif ( $TABLE_NAME eq 'PR_proteomics_sample' ) {
+
+    if ( !$parameters{project_id} ) { # Must have an project_id
+      $errstr = 'Error: project_id not defined'
+    } else {
+    
+      $errstr = checkPermission( fkey => 'project_id',
+                                 fval => $parameters{project_id},
+                                 pval => $parameters{proteomics_sample_id},
+                                 @stdparams );
+       
+    } 
+  
+  
+  }elsif ($TABLE_NAME eq "XXXX") {
     
     return "An error of some sort $parameters{something} invalid";
 
@@ -485,6 +499,7 @@ sub postUpdateOrInsertHook {
     return;
 
   } # end if $TABLE_NAME
+ 
 
 
   #### Otherwise, no special processing, so just return undef
