@@ -45,7 +45,14 @@ sub histogram {
 
 
   #### extract out the data array and sort
-  my @data = @{$data_array_ref};
+  #my @data = @{$data_array_ref};
+  #### Extract on the non-empty elements
+  my @data;
+  foreach my $element (@{$data_array_ref}) {
+    if (defined($element) && $element gt '' && $element !~ /^\s+$/) {
+      push(@data,$element);
+    }
+  }
   my @sorted_data = sort sortNumerically @data;
   my $n_elements = scalar(@data);
   return $result unless ($n_elements >= 1);
@@ -179,7 +186,14 @@ sub histogram {
   my $total = 0;
   my $n_below_histmin = 0;
   my $n_above_histmax = 0;
+  $n_elements = 0; # Reset back to 0 and count only non-empty numbers
   foreach my $element (@data) {
+
+    #### If the value is empty then ignore - ALREADY DONE ABOVE
+    #print "$n_elements: element = $element<BR>\n";
+    #next unless (defined($element));
+    #next unless ($element gt '');
+    #next if ($element =~ /^\s+$/);
 
     #### If the data point is outside the range, don't completely ignore
     if ($element < $min || $element >= $max) {
@@ -198,22 +212,15 @@ sub histogram {
 
     #### Keep some additional statistics for latest calculations
     $total += $element;
+    $n_elements++;
 
   }
 
 
   #### Calculate some statistics of this dataset
-  my $mean = $total / $n_elements;
-
-
-  #### Calculate the standard deviation now that we know the mean
-  my $stdev = 0;
-  foreach my $element (@data) {
-    $stdev += ($element-$mean) * ($element-$mean);
-  }
-  my $divisor = $n_elements - 1;
+  my $divisor = $n_elements;
   $divisor = 1 if ($divisor < 1);
-  $stdev = sqrt($stdev / $divisor);
+  my $mean = $total / $divisor;
 
 
   #### Loop through all the bins and calculate the CDF
@@ -221,8 +228,24 @@ sub histogram {
   my $sum = $n_below_histmin;
   for (my $i=0; $i<$n_bins; $i++) {
     $sum += $yaxis[$i];
-    $cdf[$i] = $sum / $n_elements;
+    $cdf[$i] = $sum / $divisor;
   }
+
+
+  #### Calculate the standard deviation now that we know the mean
+  my $stdev = 0;
+  foreach my $element (@data) {
+
+    #### If the value is empty then ignore - ALREADY DONE ABOVE
+    #next unless (defined($element));
+    #next unless ($element gt '');
+    #next if ($element =~ /^\s+$/);
+
+    $stdev += ($element-$mean) * ($element-$mean);
+  }
+  $divisor = $n_elements - 1;
+  $divisor = 1 if ($divisor < 1);
+  $stdev = sqrt($stdev / $divisor);
 
 
   #### Fill the output data structure with goodies that we've learned
@@ -242,6 +265,7 @@ sub histogram {
   $result->{n_elements} = $n_elements;
   $result->{mean} = $mean;
   $result->{stdev} = $stdev;
+  $n_elements = 1 if ($n_elements < 1);
   $result->{median} = $sorted_data[int($n_elements/2)];
   $result->{quartile1} = $sorted_data[int($n_elements*0.25)];
   $result->{quartile3} = $sorted_data[int($n_elements*0.75)];

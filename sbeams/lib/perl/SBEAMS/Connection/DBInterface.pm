@@ -2170,11 +2170,10 @@ sub displayResultSetPlot {
       if ($rs_params{"rs_column$column_index"} gt "") {
         foreach my $element (@{$resultset_ref->{data_ref}}) {
           my $value = $element->[$rs_params{"rs_column$column_index"}];
-          $value =~ /([\d\.\-\+]+)/;
-          if ($1) {
+          if ($value =~ /([\d\.\-\+]+)/) {
             $value = $1;
           } else {
-            $value = 0;
+            $value = '';
           }
           push(@{$column_info->{$column_index}->{data}},$value);
         }
