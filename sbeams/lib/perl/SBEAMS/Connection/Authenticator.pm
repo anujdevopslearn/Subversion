@@ -301,6 +301,7 @@ sub setCurrent_work_group {
 
   my $set_to_work_group = $args{'set_to_work_group'} || "";
   my $permitted_work_groups_ref = $args{'permitted_work_groups_ref'} || "";
+  my $permanent = $args{'permanent'} || "";
 
 
   #### First see what the current work_group context is
@@ -412,16 +413,23 @@ sub setCurrent_work_group {
   }
 
 
-  #### We need to change groups, so set the group here
-  $self->executeSQL("
+  #### We need to change groups, so set the current context variables
+  $current_work_group_id = $work_group_id;
+  $current_work_group_name = $set_to_work_group;
+
+
+  #### If this is a permanent change (i.e. not transient for this one
+  #### session which is the default) then update the database
+  if ($permanent) {
+    $self->executeSQL("
       UPDATE $TB_USER_CONTEXT
          SET work_group_id = $work_group_id,
          modified_by_id = $current_contact_id,
          date_modified = CURRENT_TIMESTAMP
        WHERE contact_id = $current_contact_id
-  ");
-  $current_work_group_id = $work_group_id;
-  $current_work_group_name = $set_to_work_group;
+    ");
+  }
+
 
   #### If we haven't successfully set the work_group, disconnect!
   $self->dbDisconnect() unless ($current_work_group_id);
