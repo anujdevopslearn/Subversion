@@ -153,7 +153,7 @@ sub handle_request {
 
   #### Get information about the current project from the database
   $sql = qq~
-	SELECT UC.project_id,P.name,P.project_tag,P.project_status
+	SELECT UC.project_id,P.name,P.project_tag,P.project_status,P.PI_contact_id
 	  FROM $TB_USER_CONTEXT UC
 	  JOIN $TB_PROJECT P ON ( UC.project_id = P.project_id )
 	 WHERE UC.contact_id = '$current_contact_id'
@@ -164,9 +164,11 @@ sub handle_request {
   my $project_name = 'NONE';
   my $project_tag = 'NONE';
   my $project_status = 'N/A';
+  my $PI_contact_id = 0;
   if (@rows) {
-    ($project_id,$project_name,$project_tag,$project_status) = @{$rows[0]};
+    ($project_id,$project_name,$project_tag,$project_status,$PI_contact_id) = @{$rows[0]};
   }
+  my $PI_name = $sbeams->getUsername($PI_contact_id);
 
   #### Print out some information about this project
   print qq~
@@ -175,10 +177,54 @@ sub handle_request {
 	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
 	             <TD COLSPAN="2" WIDTH="100%"><B>Status:</B> $project_status</TD></TR>
 	<TR><TD></TD><TD COLSPAN="2"><B>Project Tag:</B> $project_tag</TD></TR>
+	<TR><TD></TD><TD COLSPAN="2"><B>Owner:</B> $PI_name</TD></TR>
 	<TR><TD></TD><TD COLSPAN="2"><B>Experiments:</B></TD></TR>
 	<TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
 	                 <TD WIDTH="100%"><TABLE BORDER=0>
   ~;
+
+
+  #### If the current user is not the owner, the check that the
+  #### user has privilege to access this project
+  if ($project_id > 0 && $current_contact_id != $PI_contact_id) {
+    $sql = qq~
+	SELECT P.project_id,P.project_tag,P.name,UL.username,
+               MIN(CASE WHEN UWG.contact_id IS NULL THEN NULL ELSE GPP.privilege_id END) AS "best_group_privilege_id",
+               MIN(UPP.privilege_id) AS "best_user_privilege_id"
+	  FROM $TB_PROJECT P
+	  JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
+	  LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
+	       ON ( P.project_id = UPP.project_id
+	            AND UPP.contact_id='$current_contact_id' )
+	  LEFT JOIN $TB_GROUP_PROJECT_PERMISSION GPP
+	       ON ( P.project_id = GPP.project_id )
+	  LEFT JOIN $TB_PRIVILEGE PRIV
+	       ON ( GPP.privilege_id = PRIV.privilege_id )
+	  LEFT JOIN $TB_USER_WORK_GROUP UWG
+	       ON ( GPP.work_group_id = UWG.work_group_id
+	            AND UWG.contact_id='$current_contact_id' )
+	  LEFT JOIN $TB_WORK_GROUP WG
+	       ON ( UWG.work_group_id = WG.work_group_id )
+	 WHERE 1=1
+	   AND P.record_status != 'D'
+	   AND UL.record_status != 'D'
+	   AND ( UPP.record_status != 'D' OR UPP.record_status IS NULL )
+	   AND ( GPP.record_status != 'D' OR GPP.record_status IS NULL )
+	   AND ( PRIV.record_status != 'D' OR PRIV.record_status IS NULL )
+	   AND ( UWG.record_status != 'D' OR UWG.record_status IS NULL )
+	   AND ( WG.record_status != 'D' OR WG.record_status IS NULL )
+	   AND P.project_id = '$project_id'
+	   AND ( UPP.privilege_id<=40 OR GPP.privilege_id<=40 )
+           AND ( WG.work_group_name IS NOT NULL OR UPP.privilege_id IS NOT NULL )
+         GROUP BY P.project_id,P.project_tag,P.name,UL.username
+	 ORDER BY UL.username,P.project_tag
+    ~;
+    @rows = $sbeams->selectSeveralColumns($sql);
+
+    #### If nothing was returned, then we don't have access
+    $project_id = -99 unless (@rows);
+
+  }
 
 
   #### Get all the experiments for this project
@@ -230,7 +276,11 @@ sub handle_request {
       ~;
     }
   } else {
-    print "	<TR><TD WIDTH=\"100%\">NONE</TD></TR>\n";
+    if ($project_id = -99) {
+      print "	<TR><TD WIDTH=\"100%\">You do not have access to this project</TD></TR>\n";
+    } else {
+      print "	<TR><TD WIDTH=\"100%\">NONE</TD></TR>\n";
+    }
   }
 
 
@@ -314,7 +364,14 @@ sub handle_request {
 	            AND UWG.contact_id='$current_contact_id' )
 	  LEFT JOIN $TB_WORK_GROUP WG
 	       ON ( UWG.work_group_id = WG.work_group_id )
-	 WHERE P.record_status != 'D'
+	 WHERE 1=1
+	   AND P.record_status != 'D'
+	   AND UL.record_status != 'D'
+	   AND ( UPP.record_status != 'D' OR UPP.record_status IS NULL )
+	   AND ( GPP.record_status != 'D' OR GPP.record_status IS NULL )
+	   AND ( PRIV.record_status != 'D' OR PRIV.record_status IS NULL )
+	   AND ( UWG.record_status != 'D' OR UWG.record_status IS NULL )
+	   AND ( WG.record_status != 'D' OR WG.record_status IS NULL )
 	   AND ( UPP.privilege_id<=40 OR GPP.privilege_id<=40 )
            AND ( WG.work_group_name IS NOT NULL OR UPP.privilege_id IS NOT NULL )
          GROUP BY P.project_id,P.project_tag,P.name,UL.username
