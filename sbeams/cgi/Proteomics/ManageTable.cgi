@@ -493,11 +493,11 @@ sub printEntryForm {
             <INPUT TYPE="hidden" NAME="$PK_COLUMN_NAME"
               VALUE="$parameters{$PK_COLUMN_NAME}">
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-            <INPUT TYPE="submit" NAME="apply_action" VALUE="REFRESH"> this form<BR>
-            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
             <INPUT TYPE="submit" NAME="apply_action" VALUE="UPDATE"> this record with this new data<BR>
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
             <INPUT TYPE="submit" NAME="apply_action" VALUE="INSERT"> new record(s) with this information (uniqueness will be checked)<BR>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <INPUT TYPE="submit" NAME="apply_action" VALUE="REFRESH"> this form<BR>
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
             <INPUT TYPE="submit" NAME="apply_action" VALUE="DELETE"> this record<BR>
          !;
@@ -508,9 +508,9 @@ sub printEntryForm {
             <TR><TD COLSPAN=3 BGCOLOR="#EEEEFF">
             <INPUT TYPE="hidden" NAME="TABLE_NAME" VALUE="$TABLE_NAME">
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-            <INPUT TYPE="submit" NAME="apply_action" VALUE="REFRESH"> this form<BR>
-            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
             <INPUT TYPE="submit" NAME="apply_action" VALUE="INSERT"> new record(s) with this information<BR>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <INPUT TYPE="submit" NAME="apply_action" VALUE="REFRESH"> this form<BR>
          !;
        }
 
