@@ -34,8 +34,8 @@ use GD::Graph::histogram;
 use GD::Graph::xypoints;
 
 
-#use lib "/net/db/src/CPAN/Data-ShowTable-3.3a/blib/lib";
-#use Data::ShowTableTest;
+use lib "/net/db/src/CPAN/Data-ShowTable-3.3a/blib/lib";
+use Data::ShowTableTest;
 use Data::ShowTable;
 
 use SBEAMS::Connection::Settings;
