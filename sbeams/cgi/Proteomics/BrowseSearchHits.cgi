@@ -510,7 +510,7 @@ sub printEntryForm {
         ["file_root","S.file_root","file_root"],
         ["cross_corr_rank","SH.cross_corr_rank","Rxc"],
         ["prelim_score_rank","SH.prelim_score_rank","RSp"],
-        ["mass_plus_H","CONVERT(varchar(20),SH.mass_plus_H) + ' (' + STR(SH.mass_delta,5,2) + ')'","(M+H)+"],
+        ["hit_mass_plus_H","CONVERT(varchar(20),SH.hit_mass_plus_H) + ' (' + STR(SH.mass_delta,5,2) + ')'","(M+H)+"],
         ["cross_corr","STR(SH.cross_corr,5,4)","XCorr"],
         ["next_dCn","STR(SH.next_dCn,5,3)","dCn"],
         ["prelim_score","STR(SH.prelim_score,8,1)","Sp"],
@@ -543,7 +543,7 @@ sub printEntryForm {
 	  JOIN proteomics.dbo.fraction F ON ( MSS.fraction_id = F.fraction_id )
 	  JOIN proteomics.dbo.protein_database PD ON ( SB.protein_database_id = PD.protein_database_id )
 	  JOIN proteomics.dbo.proteomics_experiment PE ON ( F.experiment_id = PE.experiment_id )
-	  LEFT JOIN proteomics.dbo.ICAT_result ICAT ON ( SH.search_hit_id = ICAT.search_hit_id )
+	  LEFT JOIN $TB_ICAT_QUANTITATION ICAT ON ( SH.search_hit_id = ICAT.search_hit_id )
 	 WHERE 1 = 1
 	$search_batch_clause
 	$xcorr_clause
