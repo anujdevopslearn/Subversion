@@ -285,7 +285,7 @@ sub handleRequest {
 	
 		if ($RUN_MODE eq 'update'){
 			unless ($RECOMPUTE_R =~ /YES|NO/i){
-				die "*** update run mode mush have --redo_R command argument ***\n$USAGE\n";
+				die "*** update run mode must have --redo_R command argument ***\n$USAGE\n";
 			}
 		}
 		
@@ -296,8 +296,8 @@ sub handleRequest {
 		add_R_CHP_data(object => $sbeams_affy);			#add all the data to the database
 	
 	
-		#write_error_log(object => $sbeams_affy_groups);
-		#print "ERROR: PROJECT WITH NO PROJECT ID's\n";
+		write_error_log(object => $sbeams_affy_groups);
+		print "ERROR: PROJECT WITH NO PROJECT ID's\n";
 		
 	
 	}elsif( $RUN_MODE eq 'delete') {
@@ -330,9 +330,9 @@ sub add_R_CHP_data {
 		}
 		$update_flag = 1 if $RUN_MODE eq 'update';	
 			
-		#next unless ($id > 259 && $id < 274);			#testing only to constrain to certain array ids
+		next unless (($id >= 173 && $id < 178) || ($id >= 225 && $id <= 249) );			#testing only to constrain to certain array ids
 		my $file_name = $affy_o->get_afa_file_root;
-		
+		print "ARRAY ID '$id'\n";
 		
 		my $cel_file = $sbeams_affy_groups->get_file_path( root_file_name => $file_name,#will have to access the CHP file path from the affy_groups object
 							    	   file_ext 	 => 'CEL',);							
