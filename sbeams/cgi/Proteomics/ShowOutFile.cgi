@@ -137,7 +137,8 @@ sub printEntryForm {
 
   #### Find the corresponding information for this search_id
   $sql = qq~
-	SELECT SB.data_location+'/'+F.fraction_tag+'/'+S.file_root+'.out'
+	SELECT SB.data_location+'/'+F.fraction_tag+'/'+S.file_root+'.out' AS 'location',
+	       F.fraction_tag+'/'+S.file_root+'.out' AS 'name'
 	  FROM $TBPR_SEARCH S
 	  JOIN $TBPR_SEARCH_BATCH SB ON ( S.search_batch_id = SB.search_batch_id )
 	  JOIN $TBPR_MSMS_SPECTRUM MS ON ( S.msms_spectrum_id = MS.msms_spectrum_id )
@@ -145,17 +146,24 @@ sub printEntryForm {
 	 WHERE search_id = '$parameters{search_id}'
   ~;
 
-  my ($result) = $sbeams->selectOneColumn($sql);
-  unless ($result) {
+  my @rows = $sbeams->selectSeveralColumns($sql);
+  unless (@rows) {
     print "ERROR: Unable to find any location for search_id".
       " = '$parameters{search_id}'.  This really should never ".
       "happen!  Please report the problem.<BR>\n";
     return;
   }
 
+  my $location = $rows[0]->[0];
+  my $name = $rows[0]->[1];
 
-  print "<H3>File: ARCHIVE/$result</H3>\n";
-  my $filename = "/local/data/proteomics/$result";
+
+  print "<H3>File: $name</H3>\n";
+
+  my $filename = $location;
+  unless ($filename =~ /^\//) {
+    $filename = $RAW_DATA_DIR{Proteomics}."/$filename";
+  }
 
   if ( -e $filename ) {
     my $line;

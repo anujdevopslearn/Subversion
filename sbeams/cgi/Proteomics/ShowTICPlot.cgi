@@ -155,10 +155,15 @@ sub printEntryForm {
 
   #### Provide links to the plots
   while ( ($key,$value) = each %fractions ) {
-    printf("%22s = %s<BR>\n",$key,$value);
+    #printf("%22s = %s<BR>\n",$key,$value);
     print "<H3>Fraction: $key</H3>\n";
-    my $filename = "/net/db/projects/proteomics/data/$value/../$key.png";
-    print("filename = $filename<BR>\n");
+
+    my $filename = "$value/../$key.png";
+    unless ($filename =~ /^\//) {
+      $filename = $RAW_DATA_DIR{Proteomics}."/$filename";
+    }
+
+    #print("filename = $filename<BR>\n");
     if ( -e $filename ) {
       print "<IMG SRC=\"$CGI_BASE_DIR/Proteomics/SendTICImage.cgi?".
         "fraction_id=$parameters{fraction_id}\"><BR>\n";

@@ -154,7 +154,10 @@ sub printEntryForm {
   #### Send the data
   print "Content-type: image/png\n\n";
   while ( ($key,$value) = each %fractions ) {
-    my $filename = "/net/db/projects/proteomics/data/$value/../$key.png";
+    my $filename = "$value/../$key.png";
+    unless ($filename =~ /^\//) {
+      $filename = $RAW_DATA_DIR{Proteomics}."/$filename";
+    }
     my $buffer;
     open(DATA, $filename)
       || croak "Couldn't open $filename: $!";
