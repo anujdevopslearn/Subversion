@@ -7,6 +7,10 @@
 JC=javac -source 1.4
 PKG=SBEAMS
 
+KEYSTORE=/net/db/etc/.keystore
+KEYPASS=sbeamsDevKey
+KEYALIAS=sbeamsDev
+
 .SUFFIXES: .java .class
 .java.class: 
 	$(JC) $<
@@ -28,7 +32,7 @@ jar: objs
 	cd ..;jar -cf SBEAMS.jar SBEAMS/*.class; mv SBEAMS.jar SBEAMS
 
 signed_jar: jar
-	jarsigner -keystore /net/db/etc/.keystore -storepass sbeamsDevKey SBEAMS.jar sbeamsDev
+	jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) SBEAMS.jar $(KEYALIAS)
 
 update_sbeams: signed_jar
 	mv SBEAMS.jar ../../../usr/java/share/util
