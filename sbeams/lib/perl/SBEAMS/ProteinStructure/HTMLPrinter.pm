@@ -343,89 +343,93 @@ sub display_ext_halo_template {
   $buf .= qq~
 <!-- --------------- Navigation Bar: List of links ------------------------ -->
 <tr>
-<td align="left" valign="top" background="/images/bg_Nav.gif">
+<td align="left" valign="top" background="$HALO_HOME/images/bg_Nav.gif">
 
 <table border="0" width="150" cellpadding="0" cellspacing="0">
 
 <tr>
-<td><img src="/images/clear.gif" width="2" height="10" border="0"></td>
-<td><img src="/images/clear.gif" width="5" height="10" border="0"></td>
-<td><img src="/images/clear.gif" width="132" height="10" border="0"></td>
-<td><img src="/images/clear.gif" width="11" height="10" border="0"></td>
+<td><img src="$HALO_HOME/images/clear.gif" width="2" height="10" border="0"></td>
+<td><img src="$HALO_HOME/images/clear.gif" width="5" height="10" border="0"></td>
+<td><img src="$HALO_HOME/images/clear.gif" width="132" height="10" border="0"></td>
+<td><img src="$HALO_HOME/images/clear.gif" width="11" height="10" border="0"></td>
 </tr>
 
 
 
 <tr>
-<td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
-<td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
+<td><img src="$HALO_HOME/images/clear.gif" width="1" height="10" border="0"></td>
+<td><img src="$HALO_HOME/images/clear.gif" width="1" height="10" border="0"></td>
 <td colspan="2">
 <a href="http://www.systemsbiology.org/" class="Nav_link">ISB Main</a><br>
-<a href="$HALO_HOME/" class="Nav_link">Halo Research at ISB</a><br>
+<a href="http://halo.systemsbiology.net/" class="Nav_link">Halo Research at ISB</a><br>
 </tr>
 <tr>
-<td colspan="4"><img src="/images/clear.gif" width="1" height="10" border="0"></td>
+<td colspan="4"><img src="$HALO_HOME/images/clear.gif" width="1" height="10" border="0"></td>
 </tr>
 
 
 
 <tr>
-<td background="/images/nav_subTitles.gif"><img src="/images/clear.gif" width="1" height="18" border="0"></td>
-<td background="/images/nav_subTitles.gif" colspan="2"><span class="nav_Sub">Project Information</span></td>
+<td background="$HALO_HOME/images/nav_subTitles.gif"><img src="/images/clear.gif" width="1" height="18" border="0"></td>
+<td background="$HALO_HOME/images/nav_subTitles.gif" colspan="2"><span class="nav_Sub">Project Information</span></td>
+<td><img src="$HALO_HOME/images/nav_subTitles_cr.gif" width="11" height="18" border="0"></td>
+</tr>
 
-<td><img src="/images/nav_subTitles_cr.gif" width="11" height="18" border="0"></td>
+<tr>
+<td colspan="4"><img src="$HALO_HOME/images/clear.gif" width="1" height="10" border="0"></td>
 </tr>
 <tr>
-<td colspan="4"><img src="/images/clear.gif" width="1" height="10" border="0"></td>
-</tr>
-<tr>
-<td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
-<td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
+<td><img src="$HALO_HOME/images/clear.gif" width="1" height="10" border="0"></td>
+<td><img src="$HALO_HOME/images/clear.gif" width="1" height="10" border="0"></td>
 <td colspan="2">
-<a href="/" class="Nav_link">Project Home</a><br>
-<a href="http://projects.systemsbiology.net/halobacterium/ISB_halo_group.html" class="Nav_link">Contacts</a><br>
-<a href="$HALO_HOME/project_description.php" class="Nav_link">Project Description</a><br></td>
+<a href="$HALO_HOME/" class="Nav_link">Project Home</a><br>
+<a href="$HALO_HOME/background.php" class="Nav_link">Background</a><br>
+<a href="$HALO_HOME/systems.php" class="Nav_link">Systems Approach</a><br>
+<a href="$HALO_HOME/data.php" class="Nav_link">Data Integration</a><br>
+<a href="$HALO_HOME/publications.php" class="Nav_link">Publications</a><br>
+<a href="$HALO_HOME/contacts.php" class="Nav_link">Contacts</a><br>
+</td>
 </tr>
 <tr>
-<td colspan="4"><img src="/images/clear.gif" width="1" height="10" border="0"></td>
+<td colspan="4"><img src="$HALO_HOME/images/clear.gif" width="1" height="10" border="0"></td>
 </tr>
 
 
 
 <tr>
-<td background="/images/nav_subTitles.gif"><img src="/images/clear.gif" width="1" height="18" border="0"></td>
-<td background="/images/nav_subTitles.gif" colspan="2"><span class="nav_Sub">Organisms</span></td>
+<td background="$HALO_HOME/images/nav_subTitles.gif"><img src="/images/clear.gif" width="1" height="18" border="0"></td>
+<td background="$HALO_HOME/images/nav_subTitles.gif" colspan="2"><span class="nav_Sub">Organisms</span></td>
 
-<td><img src="/images/nav_subTitles_cr.gif" width="11" height="18" border="0"></td>
+<td><img src="$HALO_HOME/images/nav_subTitles_cr.gif" width="11" height="18" border="0"></td>
 </tr>
 <tr>
-<td colspan="4"><img src="/images/clear.gif" width="1" height="10" border="0"></td>
+<td colspan="4"><img src="$HALO_HOME/images/clear.gif" width="1" height="10" border="0"></td>
 </tr>
 <tr>
-<td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
-<td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
+<td><img src="$HALO_HOME/images/clear.gif" width="1" height="10" border="0"></td>
+<td><img src="$HALO_HOME/images/clear.gif" width="1" height="10" border="0"></td>
 <td colspan="2">
 <a href="$HALO_HOME/halobacterium/" class="Nav_link">Halobacterium sp. NRC-1</a><br>
 <a href="$HALO_HOME/haloarcula/" class="Nav_link">Haloarcula marismortui</a><br>
 </tr>
 <tr>
-<td colspan="4"><img src="/images/clear.gif" width="1" height="10" border="0"></td>
+<td colspan="4"><img src="$HALO_HOME/images/clear.gif" width="1" height="10" border="0"></td>
 </tr>
 
 
 
 <tr>
-<td background="/images/nav_subTitles.gif"><img src="/images/clear.gif" width="1" height="18" border="0"></td>
-<td background="/images/nav_subTitles.gif" colspan="2"><span class="nav_Sub">Software Links</span></td>
+<td background="$HALO_HOME/images/nav_subTitles.gif"><img src="/images/clear.gif" width="1" height="18" border="0"></td>
+<td background="$HALO_HOME/images/nav_subTitles.gif" colspan="2"><span class="nav_Sub">Software Links</span></td>
 
-<td><img src="/images/nav_subTitles_cr.gif" width="11" height="18" border="0"></td>
+<td><img src="$HALO_HOME/images/nav_subTitles_cr.gif" width="11" height="18" border="0"></td>
 </tr>
 <tr>
-<td colspan="4"><img src="/images/clear.gif" width="1" height="10" border="0"></td>
+<td colspan="4"><img src="$HALO_HOME/images/clear.gif" width="1" height="10" border="0"></td>
 </tr>
 <tr>
-<td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
-<td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
+<td><img src="$HALO_HOME/images/clear.gif" width="1" height="10" border="0"></td>
+<td><img src="$HALO_HOME/images/clear.gif" width="1" height="10" border="0"></td>
 <td colspan="2">
 <a href="http://www.cytoscape.org/" class="Nav_link">Cytoscape</a><br>
 <a href="http://www.sbeams.org/" class="Nav_link">SBEAMS</a><br>
