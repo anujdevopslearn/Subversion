@@ -88,8 +88,8 @@ sub handle_request {
   my $parameters_ref = $args{'parameters_ref'};
   my %parameters = %{$parameters_ref};
   my $tab = $parameters{'tab'} || "main";
-	$parameters{'project_id'} = $sbeams->getCurrent_project_id();
-	$parameters{'username'} = $sbeams->getCurrent_username();
+  $parameters{'project_id'} = $sbeams->getCurrent_project_id();
+  $parameters{'username'} = $sbeams->getCurrent_username();
 
   ## Establish user settings.  Is this necessary anymore?
   establish_settings();
@@ -99,17 +99,17 @@ sub handle_request {
 
   #### Decide where to go based on form values
   if ($tab eq 'main') {
-      print_start_screen(parameters_ref=>\%parameters);
+	print_start_screen(parameters_ref=>\%parameters);
   }elsif($tab eq 'preprocess') {
-      print_preprocess_screen(parameters_ref=>\%parameters);
+	print_preprocess_screen(parameters_ref=>\%parameters);
   }elsif($tab eq 'mergereps') {
-      print_mergereps_screen(parameters_ref=>\%parameters);
-	}elsif($tab eq 'file_output') {
-      print_file_output_screen(parameters_ref=>\%parameters);
+	print_mergereps_screen(parameters_ref=>\%parameters);
+  }elsif($tab eq 'file_output') {
+	print_file_output_screen(parameters_ref=>\%parameters);
   }elsif($tab eq 'finalize') {
-      print_final_screen(parameters_ref=>\%parameters);
+	print_final_screen(parameters_ref=>\%parameters);
   }elsif($tab eq 'process') {
-      send_to_pipeline(parameters_ref=>\%parameters);
+	send_to_pipeline(parameters_ref=>\%parameters);
   }
 
 
@@ -129,24 +129,21 @@ sub print_start_screen {
   my $sql;
   my @rows;
   my $current_project = $parameters{'project_selector'} || $sbeams->getCurrent_project_id();
+  my $selectedFiles = $parameters{'selectedFiles'} || "";
+
+  ## Processing to remove duplicates and sort the selectedFiles
+  my @unsorted = split /,/,$selectedFiles;
+  my (@temp, @unique);
+  my %seen = ();
 	
+  foreach my $item (@unsorted) {
+	push(@temp, $item) unless $seen{$item}++;
+  }
+  @unique = sort  @temp;
+  shift @unique unless $unique[0] =~ /\w/;
+  $selectedFiles = join (",",@unique);
 
-	my $selectedFiles = $parameters{'selectedFiles'} || "";
-
-	## Processing to remove duplicates and sort the selectedFiles
-	my @unsorted = split /,/,$selectedFiles;
-	my (@temp, @unique);
-	my %seen = ();
-	
-	foreach my $item (@unsorted) {
-		push(@temp, $item) unless $seen{$item}++;
-	}
-	@unique = sort  @temp;
-	shift @unique unless $unique[0] =~ /\w/;
-	$selectedFiles = join (",",@unique);
-
-
-	print_start_screen_javascript();
+  print_start_screen_javascript();
 
   ## Print Introductory Header
   print qq~
@@ -246,11 +243,11 @@ Instructions:<BR>
   ## Print OPTIONs.  Make current project the default SELECTED one.
   foreach my $option(@project_names){
     $option =~ /(.*)\((\d+)\)/;
-		if ($2 == $current_project){
-			print "<OPTION VALUE=\"$2\" SELECTED>$1\n";
-	  }else {
-			print "<OPTION VALUE=\"$2\">$1\n";
-	  }
+	if ($2 == $current_project){
+	  print "<OPTION VALUE=\"$2\" SELECTED>$1\n";
+	}else {
+	  print "<OPTION VALUE=\"$2\">$1\n";
+	}
   }
 
   ## End SELECT
@@ -310,7 +307,7 @@ SELECT	A.array_id,A.array_name,
       ~;
 
   ## Print OPTIONs.  Make current project the default SELECTED one.
-	my %array_location;
+  my %array_location;
   foreach my $option(@project_arrays){
     my $name = "$option->[2]($option->[3]) vs. $option->[4]($option->[5])";
     print qq~
@@ -336,7 +333,7 @@ SELECT	A.array_id,A.array_name,
 
 	## SQL to Track down stage_location information from selected arrays
   if ($selectedFiles) {
-		$sql = qq~
+	$sql = qq~
 SELECT	A.array_id,A.array_name,
 	ARSM1.name AS 'Sample1Name',D1.dye_name AS 'sample1_dye',
 	ARSM2.name AS 'Sample2Name',D2.dye_name AS 'sample2_dye',
@@ -362,24 +359,24 @@ SELECT	A.array_id,A.array_name,
 	ORDER BY A.array_id
 	~; 
 
-		my @selected_arrays = $sbeams->selectSeveralColumns($sql);
-		foreach my $result_id (@selected_arrays){
-			my $id = $result_id->[0];
-			my $name = "$result_id->[2]($result_id->[3]) vs. $result_id->[4]($result_id->[5])";
-			my $quant_file = $result_id->[6];
+	my @selected_arrays = $sbeams->selectSeveralColumns($sql);
+	foreach my $result_id (@selected_arrays){
+	  my $id = $result_id->[0];
+	  my $name = "$result_id->[2]($result_id->[3]) vs. $result_id->[4]($result_id->[5])";
+	  my $quant_file = $result_id->[6];
 
-	#### If the data file is okay
-			if ( -e $quant_file ) {
-				print "<FONT COLOR=\"green\">$quant_file Verified -- Array \#$id</FONT><BR>\n";
-		  } else {
-				print "<FONT COLOR=\"red\">ERROR: $quant_file -- Array \#$id</FONT>".
-						"&nbsp;<A HREF=\"mailto:mjohnson\@systemsbiology.org\"> Notify Array Core</A><BR>\n";
-			}
+	  #### If the data file is okay
+	  if ( -e $quant_file ) {
+		print "<FONT COLOR=\"green\">$quant_file Verified -- Array \#$id</FONT><BR>\n";
+	  } else {
+		print "<FONT COLOR=\"red\">ERROR: $quant_file -- Array \#$id</FONT>".
+		  "&nbsp;<A HREF=\"mailto:mjohnson\@systemsbiology.org\"> Notify Array Core</A><BR>\n";
 	  }
-		print qq~
-			</FORM>
-			~;
-		return;
+	}
+	print qq~
+	  </FORM>
+	  ~;
+	return;
   }
 }
 
@@ -445,23 +442,22 @@ sub print_preprocess_screen {
   my @rows;
   my $current_project = $parameters{'project_selector'} || $sbeams->getCurrent_project_id();
 
-	my $selectedFiles = $parameters{'selectedFiles'} || "";
+  my $selectedFiles = $parameters{'selectedFiles'} || "";
 
-	## Processing to remove duplicates and sort the selectedFiles
-	my @unsorted = split /,/,$selectedFiles;
-	my (@temp, @unique);
-	my %seen = ();
+  ## Processing to remove duplicates and sort the selectedFiles
+  my @unsorted = split /,/,$selectedFiles;
+  my (@temp, @unique);
+  my %seen = ();
 	
-	foreach my $item (@unsorted) {
-		push(@temp, $item) unless $seen{$item}++;
-	}
+  foreach my $item (@unsorted) {
+	push(@temp, $item) unless $seen{$item}++;
+  }
 
-	@unique = sort  @temp;
-	shift @unique unless $unique[0] =~ /\w/;
-	$selectedFiles = join (",",@unique);
+  @unique = sort  @temp;
+  shift @unique unless $unique[0] =~ /\w/;
+  $selectedFiles = join (",",@unique);
 
-
-	print_preprocess_javascript();
+  print_preprocess_javascript();
 
   ## Print Introductory Header
   print qq~
@@ -729,10 +725,10 @@ sub print_mergereps_screen {
   my $sql;
   my @rows;
   my $current_project = $parameters{'project_selector'} || $sbeams->getCurrent_project_id();
-	my $selected_files = $parameters{'selectedFiles'};
-	my $pp_recipe = $parameters{'ppRecipe'};
+  my $selected_files = $parameters{'selectedFiles'};
+  my $pp_recipe = $parameters{'ppRecipe'};
 
-	print_mergereps_javascript();
+  print_mergereps_javascript();
 
   ## Print Introductory Header
   print qq~
@@ -1021,13 +1017,13 @@ sub print_file_output_screen {
   my $sql;
   my @rows;
   my $current_project = $parameters{'project_selector'} || $sbeams->getCurrent_project_id();
-	my $user = $sbeams->getCurrent_username();
-	my $selected_files = $parameters{'selectedFiles'};
-	my $pp_recipe = $parameters{'ppRecipe'};
-	my $merge_recipe = $parameters{'mergeRecipe'};
-	my $vs_recipe = $parameters{'vsRecipe'};
+  my $user = $sbeams->getCurrent_username();
+  my $selected_files = $parameters{'selectedFiles'};
+  my $pp_recipe = $parameters{'ppRecipe'};
+  my $merge_recipe = $parameters{'mergeRecipe'};
+  my $vs_recipe = $parameters{'vsRecipe'};
 
-	print_file_output_javascript();
+  print_file_output_javascript();
 
   ## Print Introductory Header
   print qq~
@@ -1125,16 +1121,16 @@ Instructions:<BR>
 
   ## Print OPTIONs.  Make current project the default SELECTED one.
   foreach my $option(@project_names){
-      $option =~ /(.*)\((\d+)\)/;
-      if ($2 eq $current_project){
+	$option =~ /(.*)\((\d+)\)/;
+	if ($2 eq $current_project){
 	  print qq~
 				 <OPTION VALUE=\"$2\" SELECTED>$1 (\#$2)
-	  ~;
-      }else {
+				 ~;
+	}else {
 	  print qq~
 				 <OPTION VALUE=\"$2\">$1 (\#$2)
-	  ~;
-      }
+				 ~;
+	}
   }
 
 print qq~
@@ -1236,11 +1232,11 @@ sub print_final_screen {
   ## Standard Variables
   my $sql;
   my @rows;
-	my $day = (localtime)[3];
+  my $day = (localtime)[3];
   my $month = (localtime)[4] + 1;
   my $year = (localtime)[5] + 1900;
  
-	print_final_screen_javascript();
+  print_final_screen_javascript();
 
   ## Print Introductory Header
   print qq~
@@ -1307,15 +1303,18 @@ SELECT	A.array_name,
    AND AQ.data_flag != 'BAD'
  ORDER BY A.array_name
      ~;
-	#print "$sql_query\n";
-	my @rows = $sbeams->selectSeveralColumns($sql_query);
+  #print "$sql_query\n";
+  my @rows = $sbeams->selectSeveralColumns($sql_query);
 
-	# Preprocess variables
-	my $preprocess_commands = "";
-	my @preprocess_options = split /,/,$parameters{'ppRecipe'};
+  # Preprocess variables
+  my $preprocess_commands = "";
+  my @preprocess_options = split /,/,$parameters{'ppRecipe'};
 
-	# Mergereps variables
-	my %mergereps_conditions;
+  # Mergereps variables
+  my %mergereps_conditions;
+
+  # Map/Key file for postSam
+  my $postSam_key_file;
 
   foreach my $element (@rows) {
 	my ($array_name, 
@@ -1323,7 +1322,9 @@ SELECT	A.array_name,
 		$sample2_name, $sample2_dye,
 		$quantitation_id, $data_flag,
 		$quantitation_file, $key_file) = @{$element};
-	
+
+	$postSam_key_file = $key_file;
+
 	if (-e $quantitation_file) {
 	  
 	  ## Preprocess command
@@ -1465,6 +1466,7 @@ SELECT	A.array_name,
   }
   
   ## Print VERA and SAM Commands
+  ## Print postSam commands
   my $vs_commands = $parameters{'vsRecipe'};
   if ($vs_commands =~ /^useVS/) {
 	foreach my $vs_cond (@vera_sam_conditions) {
@@ -1492,15 +1494,22 @@ SELECT	A.array_name,
 		  "vera_initial_choice_value= $1\n";
 	  }
 	  print "EXECUTE = vera_and_sam\n\n";
-    }
+
+	  print "\#POSTSAM\n".
+		"file_name = $vs_cond\.sig\n".
+		"key_file = $postSam_key_file\n".
+		"output_file = $vs_cond\.clone\n".
+		"EXECUTE = postSam\n\n";
+	}
   }
-  
+
   ## Print Load Conditions Commands
   if ($parameters{'dataLoad'} eq 'Yes'){
 	print "#LOAD CONDITIONS\n";
-	foreach my $c (@vera_sam_conditions) {
-	  print "CONDITION = $c\n";
-	}
+	print "project = ".$parameters{'outputDirectory'}."\n";
+#	foreach my $c (@vera_sam_conditions) {
+#	  print "CONDITION = $c\n";
+#	}
 	print "EXECUTE = load_conditions\n\n";
   }
 
@@ -1581,62 +1590,62 @@ sub send_to_pipeline {
 
   ## Standard Variables
   my $prog_name = "PipelineSetup.cgi";
-	my $command_file_content = $parameters{'planFileText'};
-	my $project = $parameters{'workingDir'};
-	my $pipeline_comments = $parameters{'projectComments'};
-	my ($sec,$min,$hour,$mday,$mon,$year) = localtime(time);
-	my $timestr = strftime("%Y%m%d.%H%M%S",$sec,$min,$hour,$mday,$mon,$year);
-	my $proc_subdir = $parameters{'proc_name'} || $timestr;
-	
-		## Directories
-	my $queue_dir = "/net/arrays/Pipeline/queue";
+  my $command_file_content = $parameters{'planFileText'};
+  my $project = $parameters{'workingDir'};
+  my $pipeline_comments = $parameters{'projectComments'};
+  my ($sec,$min,$hour,$mday,$mon,$year) = localtime(time);
+  my $timestr = strftime("%Y%m%d.%H%M%S",$sec,$min,$hour,$mday,$mon,$year);
+  my $proc_subdir = $parameters{'proc_name'} || $timestr;
+  
+  ## Directories
+  my $queue_dir = "/net/arrays/Pipeline/queue";
 #	my $queue_dir = "/users/mjohnson/test_site/queue";
-	my $output_dir = "/net/arrays/Pipeline/output";
+  my $output_dir = "/net/arrays/Pipeline/output";
 #	my $output_dir = "/users/mjohnson/test_site/output";
-	my $arraybot_working_dir = "project_id/$project/$proc_subdir";
+  my $arraybot_working_dir = "project_id/$project/$proc_subdir";
 
-	## Plan/Control File
-	my $plan_filename = "job$timestr.testPlan";
-	my $control_filename = "job$timestr.control";
-	my $log_filename = "job$timestr.log";
+  ## Plan/Control File
+  my $plan_filename = "job$timestr.testPlan";
+  my $control_filename = "job$timestr.control";
+  my $log_filename = "job$timestr.log";
 
-	#### Verify that the plan file does not already exist
-	if ( -e $plan_filename ) {
-      print qq~
+  #### Verify that the plan file does not already exist
+  if ( -e $plan_filename ) {
+	print qq~
 	Wow, the job filename '$plan_filename' already exists!<BR>
 	Please go back and click PROCESS again.  If this happens twice
 	in a row, something is very wrong.  Contact edeutsch.<BR>\n
 	~;
-      return;
-	}
+	return;
+  }
 
   ## try to eliminate bug-causing namings
-	$arraybot_working_dir =~ s/\s/_/g;
-	$arraybot_working_dir =~ s/\'/_/g;
-	$arraybot_working_dir =~ s/\"/_/g;
-	$arraybot_working_dir =~ s/\./_/g;
+  $arraybot_working_dir =~ s/\s/_/g;
+  $arraybot_working_dir =~ s/\'/_/g;
+  $arraybot_working_dir =~ s/\"/_/g;
+  $arraybot_working_dir =~ s/\./_/g;
 	
-	## Make Project Directory
-	my $project_dir = "$output_dir/project_id/$project";
-	if ( -d $project_dir ) {
-		print scalar localtime," [$prog_name] Base directory already exists\n<BR>";
+  ## Make Project Directory
+  my $project_dir = "$output_dir/project_id/$project";
+  if ( -d $project_dir ) {
+	print scalar localtime," [$prog_name] Base directory already exists\n<BR>";
   } else {
-		unless (mkdir($project_dir, 0666)) {
-			print scalar localtime," [$prog_name] Cannot create project directory $project_dir\n<BR>";
-	  }
+	unless (mkdir($project_dir, 0666)) {
+	  print scalar localtime," [$prog_name] Cannot create project directory $project_dir\n<BR>";
+	}
   }
 
 
 	## Make Working Directory 
 	my $working_dir = "$output_dir/project_id/$project/$proc_subdir";
 	if ( -d $working_dir ) {
-			print scalar localtime," [$prog_name] working directory exists -- timestamping this one\n<BR>";
-			$working_dir .= $timestr;
-			$arraybot_working_dir .= $timestr;
+	  print scalar localtime," [$prog_name] working directory exists -- timestamping this one\n<BR>";
+	  $working_dir .= $timestr;
+	  $arraybot_working_dir .= $timestr;
 	}
 	else{
-			mkdir($working_dir, 0666);
-  }
+	  mkdir($working_dir, 0666);
+	}
 
 
 
