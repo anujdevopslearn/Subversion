@@ -427,6 +427,58 @@ sub translateSQL {
 
 
 ###############################################################################
+# buildLimitClause
+#
+# Build a LIMIT clause for a SELECT query so that only N number of rows
+# are returned.  The syntax varies wildly between database engines
+###############################################################################
+sub buildLimitClause {
+  my $self = shift || croak("parameter self not passed");
+  my %args = @_;
+  my $SUB_NAME = 'buildLimitClause';
+
+  #### Process the arguments list
+  my $row_limit = $args{'row_limit'};
+
+
+  #### Define a hash to return
+  my $return_hash;
+  $return_hash->{top_clause} = '';
+  $return_hash->{trailing_limit_clause} = '';
+
+
+  #### If no row_limit was provided, just return empty strings in the hash
+  return $return_hash unless (defined($row_limit) && $row_limit gt '');
+
+
+  #### Get the type of database we have
+  my $DBType = $self->getDBType() || "";
+
+
+  #### Populate the hash with whatever is appropriate for this type of engine
+  if ($DBType =~ /MS SQL Server/i) {
+    $return_hash->{top_clause} = "TOP $row_limit";
+
+  } elsif ($DBType =~ /MySQL/i) {
+    $return_hash->{trailing_limit_clause} = "LIMIT $row_limit";
+
+  } elsif ($DBType =~ /PostgreSQL/i) {
+    $return_hash->{trailing_limit_clause} = "LIMIT $row_limit";
+
+  } elsif ($DBType =~ /DB2/i) {
+    $return_hash->{trailing_limit_clause} = "FETCH FIRST $row_limit ROWS ONLY";
+
+  } else {
+    die("ERROR[$SUB_NAME]: Unrecognized database type");
+  }
+
+
+  return $return_hash;
+
+} # end buildLimitClause
+
+
+###############################################################################
 # insert_update_row
 #
 # This method builds either an INSERT or UPDATE SQL statement based on the
