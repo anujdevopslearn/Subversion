@@ -24,7 +24,7 @@ $recordCon->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 my (%INFOPROTEIN1,
 	%INFOPROTEIN2,
 	%INTERACTION, @columnOrder, %columnHashProtein1, %columnHashProtein2, %interactionHash,$bioentityState,$bioentityType,$organismName,$interactionTypes,
-	$interactionGroups,$confidenceScores,$assayTypes,$regTypes,$pubMed, $interactionGroupsOrganism);
+	$interactionGroups,$confidenceScores,$assayTypes,$regTypes,$pubMed, $interactionGroupsOrganism, $fhError, $fhLog);
 
 #hese are the clomumn arrangements for the spreadsheet
 #organisName1[0],bioentityComName1[1], bioentityCanName1[2], bioentityFullName1[3], bioentityAliasesName1[4],bioentityTypeName1[5],
@@ -184,17 +184,8 @@ qw / Organism_bioentity1_name
 	$regTypes = \%regTypes; 
 	my %pubMed = $recordCon->selectTwoColumnHash (qq /Select pubmed_ID, publication_id from $TBIN_PUBLICATION/);
 	$pubMed = \%pubMed;
-#error logs
 
-
-	open (ERRORTEXT, ">/../users/mkorb/GLUE/inputData/InteractionLoadingError.txt") or die "can not open $!";
-	print Error(\@columnOrder);
-	open (ERRORLOG, ">/../users/mkorb/GLUE/inputData/InteractionErrorLog.txt") or die "can not open $!";
-
-	
-	
-	
-	$recordCon->printPageHeader() unless ($QUIET);
+#	$recordCon->printPageHeader() unless ($QUIET);
 	processFile();
 #at this point we have either 
 #records in INFOPROTEIN1 with no matching in INFOPROTEIN2 and INTERACTION
@@ -207,10 +198,8 @@ qw / Organism_bioentity1_name
 		checkPopulateBioentity(\%INFOPROTEIN2,2);
 		print "checking, populating the database for current Interactions entries\n";	
 		checkPopulateInteraction(\%INTERACTION);
-		close ERRORTEXT;
-		close ERRORLOG;
-	
-		$recordCon->printPageFooter() unless ($QUIET);
+
+#		$recordCon->printPageFooter() unless ($QUIET);
 }
 
 
@@ -234,6 +223,14 @@ sub processFile
     $recordCon->printUserContext();
     print "\n";
   }
+#errorLogs
+#make them global
+	(my $fileID) = $source_file =~ /.*\/(.*)\./;
+	my $errorFile = "InteractionLoadingError_".$fileID.".txt";
+	my $errorLog = "InteractionErrorLog_".$fileID.".txt";
+	$fhError = new FileHandle (">/../users/mkorb/GLUE/inputData/$errorFile") or die "can not open $!";
+	print Error(\@columnOrder);
+	$fhLog = new FileHandle (">/../users/mkorb/GLUE/inputData/$errorLog") or die "can not open $!";
 
 	open (INFILE, $source_file) or die "$!";
 	while (my $line = <INFILE>) 
@@ -342,7 +339,7 @@ sub processFile
 #we do not bother looking at the interaction columns (maybe need to write an error to the file)
 					  next;
 		}
-		if (($INFOPROTEIN2{$count-2}->{bioentityComName1} =~ /null/i) or($INFOPROTEIN2{$count-2}->{bioentityCanName1} =~ /null/i))
+		if (($INFOPROTEIN2{$count-2}->{bioentityComName2} =~ /null/i) or($INFOPROTEIN2{$count-2}->{bioentityCanName2} =~ /null/i))
 		{
 			print "Detected error2: null is not allowed\n";
 			Error(\@infoArray, "NULL is not allowed for bioentity2_common_name or bioentiy2_canonical_name");
@@ -569,8 +566,7 @@ sub checkPopulateBioentity
 							 my @returnedRow = $recordCon->selectOneColumn($subCommonQuery);
 							 if ($returnedRow[0])
 							 {
-									 ErrorLog ("$SUB_NAME:\nQuery: subCommonQuery returned a bioentity_canonical_Name from the database:\n$returnedRow[0] for bioenity_common_Name: $hashRef->{$record}->{'bioentityComName'.$num}\n
-									 The upload canonical name is: $hashRef->{$record}->{'bioentityCanName'.$num}\n\n",
+									 ErrorLog ("$SUB_NAME:\nQuery: subCommonQuery returned a bioentity_canonical_Name from the database:\n$returnedRow[0] for bioenity_common_Name: $hashRef->{$record}->{'bioentityComName'.$num}. The upload canonical name is: $hashRef->{$record}->{'bioentityCanName'.$num}\n\n",
 									 $hashRef->{$record});
 									 delete $INTERACTION{$record};
 									 next;
@@ -583,8 +579,7 @@ sub checkPopulateBioentity
 							my @returnedRow = $recordCon->selectOneColumn($subCanonicalQuery);
 							if ($returnedRow[0])
 							{
-									ErrorLog ("$SUB_NAME:\nQuery: subCanonicalQuery returned a bioentity_common_Name from the database:\n$returnedRow[0] for bioentity_canonical_Name: $hashRef->{$record}->{'bioentityCanName'.$num}\n
-									The upload common name is: $hashRef->{$record}->{'bioentityComName'.$num}\n\n",
+									ErrorLog ("$SUB_NAME:\nQuery: subCanonicalQuery returned a bioentity_common_Name from the database:\n$returnedRow[0] for bioentity_canonical_Name: $hashRef->{$record}->{'bioentityCanName'.$num}. The upload common name is: $hashRef->{$record}->{'bioentityComName'.$num}\n\n",
 									$hashRef->{$record});
 									delete $INTERACTION{$record};
 									next;
@@ -836,9 +831,9 @@ sub  Error
 		my($arrayRef,$error) = @_;
 		foreach my $element (@$arrayRef)
 		{
-				print ERRORTEXT "$element\t";
+				print $fhError "$element\t";
 		}
-		print ERRORTEXT "$error\t\n";
+		print $fhError "$error\t\n";
 }
 #specifies Database errors
 sub ErrorLog
@@ -846,11 +841,10 @@ sub ErrorLog
 		my ($error,$record) = @_;
 		foreach my $key (keys %{$record})
 		{
-				print ERRORLOG "$key  ===  $record->{$key}";
-				print ERRORLOG "\n";
+				print $fhLog "$key  ===  $record->{$key}\n";
 		}
-		print ERRORLOG "$error";
-		print ERRORLOG "\n\n";
+		print $fhLog "$error\n\n";
+		
 }		
 
 __END__
