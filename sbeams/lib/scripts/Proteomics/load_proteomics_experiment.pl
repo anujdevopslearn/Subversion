@@ -109,6 +109,8 @@ Options:
                       its spectra, searches, and search_hits.
   --force_search_batch  Forces adding a search_batch even if there are no
                       fractions to load
+  --fix_ipi           If set, then convert long ugly IPI accessions to a
+                      simple IPInnnnnnnnnn
 
  e.g.:  $PROG_NAME --list_all
         $PROG_NAME --check --experiment_tag=rafapr
@@ -129,7 +131,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
   "update_from_summary_files","update_search","update_probabilities",
   "update_timing_info","gradient_program_id:i","column_delay:i",
   "cleanup_archive","delete_search_batch","delete_experiment",
-  "delete_fraction:s","force_search_batch",
+  "delete_fraction:s","force_search_batch","fix_ipi",
   )) {
   print "$USAGE";
   exit;
@@ -1167,6 +1169,18 @@ sub addSearchHitEntry {
     foreach $element (@columns) {
       $rowdata{$element} = $match->{$element};
     }
+
+
+    #### if the fix_ipi option was set, try to fix the IPI numbers
+    #### From something like 'IPI:IPI00173559.1|REFSEQ_XP:XP_210301|EN'
+    #### To just 'IPI00173559'
+    if ($OPTIONS{'fix_ipi'}) {
+      my $tmp = $rowdata{reference};
+      if ($rowdata{reference} =~ /(IPI\d+)/) {
+	$rowdata{reference} = $1;
+      }
+    }
+
 
     #### If there are more rows, then add the dCn to next row
     $last_cols = "";
