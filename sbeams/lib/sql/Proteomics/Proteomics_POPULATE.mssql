@@ -47,11 +47,17 @@ INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BSH_display_options','ShowSQL','Show SQL Query',60 );
 
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
-VALUES ( 'BSH_peptide_options','SinglyTryptic','At least singly tryptic',50 );
+VALUES ( 'BSH_peptide_options','NotAtAllTryptic','Not at all tryptic',50 );
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
-VALUES ( 'BSH_peptide_options','DoublyTryptic','Only doubly tryptic',60 );
+VALUES ( 'BSH_peptide_options','OnlySinglyTryptic','Only singly tryptic',60 );
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
-VALUES ( 'BSH_peptide_options','C_containing','Cysteine containing',70 );
+VALUES ( 'BSH_peptide_options','AtLeastSinglyTryptic','At least singly tryptic',70 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_peptide_options','DoublyTryptic','Doubly tryptic',80 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_peptide_options','C_containing','Cysteine containing',90 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_peptide_options','C_missing','NOT Cysteine containing',100 );
 
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BSH_annotation_status','Annot','Only annotated',10 );
