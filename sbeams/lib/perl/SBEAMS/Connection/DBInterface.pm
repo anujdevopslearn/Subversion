@@ -2622,6 +2622,14 @@ sub processStandardParameters {
     }
   }
 
+  if (defined($ref_parameters->{set_current_work_group})) {
+    my $set_current_work_group = $ref_parameters->{set_current_work_group};
+		$self->setCurrent_work_group(
+      set_to_work_group=>"$set_current_work_group",
+		  permitted_work_groups_ref=>" ",
+			permanent=>1);
+  }
+
 
 } # end processStandardParameters
 
