@@ -404,10 +404,13 @@ sub insert_update_row {
 
     #### Enquote and add the value as the column value
     $value =~ s/'/''/g;
-    $value_list .= "'$value',";
-
-    #### Put the data in key = value format, too, for UPDATE
-    $columnvalue_list .= "$key = '$value',";
+    if (uc($value) eq "CURRENT_TIMESTAMP") {
+      $value_list .= "$value,";
+      $columnvalue_list .= "$key = $value,\n";
+    } else {
+      $value_list .= "'$value',";
+      $columnvalue_list .= "$key = '$value',\n";
+    }
 
   }
 
@@ -421,7 +424,8 @@ sub insert_update_row {
   #### Chop off the final commas
   chop $column_list;
   chop $value_list;
-  chop $columnvalue_list;
+  chop $columnvalue_list;  # First the \n
+  chop $columnvalue_list;  # Then the comma
 
 
   #### Build the SQL statement

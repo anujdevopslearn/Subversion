@@ -183,7 +183,7 @@ sub printStyleSheet {
 	th   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt; font-weight: bold;}
 	td   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt;}
 	form   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt}
-	pre    {  font-family: MS Mincho, Courier; font-size: ${FONT_SIZE_SM}pt}
+	pre    {  font-family: Courier New, Courier; font-size: ${FONT_SIZE_SM}pt}
 	h1   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_HG}pt; font-weight: bold}
 	h2   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
 	h3   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_LG}pt}
