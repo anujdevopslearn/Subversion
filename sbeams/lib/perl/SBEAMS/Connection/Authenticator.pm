@@ -333,7 +333,8 @@ sub getCurrent_work_group_id {
     my $self = shift;
 
     #### If the current_work_group_id is already known, return it
-    if ($current_work_group_id > 0) { return $current_work_group_id; }
+    return $current_work_group_id
+      if (defined($current_work_group_id) && $current_work_group_id > 0);
     if ($current_contact_id < 1) {
       print STDERR "current_contact_id undefined!!  Authentication must ".
         "have failed!\n\n";
@@ -379,7 +380,8 @@ sub getCurrent_work_group_name {
     my $self = shift;
 
     #### If the current_work_group_name is already known, return it
-    if ($current_work_group_name gt "") { return $current_work_group_name; }
+    return $current_work_group_name
+      if (defined($current_work_group_name) && $current_work_group_name gt "");
     if ($current_work_group_id < 1) {
       $current_work_group_id = $self->getCurrent_work_group_id();
     }
@@ -403,7 +405,8 @@ sub getCurrent_project_id {
     my $self = shift;
 
     #### If the current_project_id is already known, return it
-    if ($current_project_id > 0) { return $current_project_id; }
+    return $current_project_id
+      if (defined($current_project_id) && $current_project_id > 0);
     if ($current_contact_id < 1) { die "current_contact_id undefined!!"; }
 
     #### Otherwise, see if it's in the user_context table
@@ -429,7 +432,8 @@ sub getCurrent_user_context_id {
     my $self = shift;
 
     #### If the current_user_context_id is already known, return it
-    if ($current_user_context_id > 0) { return $current_user_context_id; }
+    return $current_user_context_id
+      if (defined($current_user_context_id) && $current_user_context_id > 0);
     if ($current_contact_id < 1) { die "current_contact_id undefined!!"; }
 
     #### Otherwise, see if it's in the user_context table
@@ -451,7 +455,8 @@ sub getCurrent_project_name {
     my $self = shift;
 
     #### If the current_project_name is already known, return it
-    if ($current_project_name gt "") { return $current_project_name; }
+    return $current_project_name
+      if (defined($current_project_name) && $current_project_name gt "");
     if ($current_project_id < 1) {
       $current_project_id = $self->getCurrent_project_id();
     }
