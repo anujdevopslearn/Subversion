@@ -644,17 +644,16 @@ PR_publication	16	publisher_name	Publisher Name	varchar	255	0	Y		N			N	text	40		
 PR_publication	17	editor_name	Editor Name	varchar	255	0	Y		N			N	text	40		Y	Y	N	"Name of the editor, if any"		
 PR_publication	18	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	"URL of other locator for the article, either out on the Internet or in the location Publications repository"		SELF
 PR_publication	19	abstract	Abstract	text	16	0	Y		N			N	textarea	4		Y	Y	N	Plain text abstract of the article		
-PR_publication	20	full_manuscript_file	Manuscript File Upload	varchar	255	0	Y		N			N	file	40		Y	Y	N	Actual file containing the manuscript (e.g. in PDF format)		
-PR_publication	21	manuscript_file_location_id	Full Manuscript File (new)	int	4	0	Y		N			N	fixed			Y	Y	N	"This is a placeholder for an improved file management mechanism, still unimplemented"		
-PR_publication	22	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-PR_publication	23	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PR_publication	24	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-PR_publication	25	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PR_publication	26	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-PR_publication	27	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-PR_publication	28	record_status	Record Status	char	1	0	N	N	N							N	N				
+PR_publication	20	full_manuscript_file	Manuscript File Upload	varchar	255	0	Y		N			N	file	40		Y	Y	N	Actual file containing the manuscript (e.g. in PDF format)		uploaded_file
+PR_publication	21	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PR_publication	22	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_publication	23	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+PR_publication	24	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_publication	25	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+PR_publication	26	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+PR_publication	27	record_status	Record Status	char	1	0	N	N	N							N	N				
 PR_BrowseProteinSummary	1	input_form_format	Input Form Format									N	optionlist		refreshDocument()	Y	Y	N	Options for level of detail and layout for this input form	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'input_form_options' ORDER BY sort_order,option_value"	
-PR_BrowseProteinSummary	2	search_batch_id	Search Batches									N	multioptionlist	4		Y	Y	N	Select desired Experiments and Search Batches to include in query.  Multiple items may be selected.  At least one must be selected	MANUAL
+PR_BrowseProteinSummary	2	search_batch_id	Search Batches									N	multioptionlist	4		Y	Y	N	Select desired Experiments and Search Batches to include in query.  Multiple items may be selected.  At least one must be selected	MANUAL	
 PR_BrowseProteinSummary	3	protein_group_probability_constraint	Protein Group Probability Constraint									N	text	20		Y	Y	N	"Constraint for the probability of the protein group being present in the sample.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
 PR_BrowseProteinSummary	4	protein_probability_constraint	Protein Probability Constraint									N	text	20		Y	Y	N	"Constraint for the probability of the protein being present in the sample.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
 PR_BrowseProteinSummary	5	annotation_status_id	Annotation status Constraint									N	optionlist	 		Y	Y	N	Select desired status of annotations to include in result (I.e. display only peptides that have been annotated or have not been annotated at all; set to blank to be insensitive to annotations)	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_annotation_status' ORDER BY sort_order,option_value"
