@@ -21,8 +21,10 @@ use FindBin;
 
 use lib qw (../perl ../../perl);
 use vars qw ($sbeams $sbeamsMOD $q
-             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $TESTONLY $DEBUG $DATABASE
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+	     $TESTONLY
              $current_contact_id $current_username
+	     $fav_codon_frequency
             );
 
 
@@ -31,6 +33,8 @@ use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 $sbeams = SBEAMS::Connection->new();
+
+use SBEAMS::Proteomics::Utilities;
 
 use CGI;
 $q = CGI->new();
@@ -46,6 +50,7 @@ Options:
   --verbose n         Set verbosity level.  default is 0
   --quiet             Set flag to print nothing at all except errors
   --debug n           Set debug flag
+  --testonly          If set, rows in the database are not changed or added
   --delete_existing   Delete the existing biosequences for this set before
                       loading.  Normally, if there are existing biosequences,
                       the load is blocked.
@@ -60,17 +65,21 @@ Options:
                       biosequence_set table
   --check_status      Is set, nothing is actually done, but rather the
                       biosequence_sets are verified
-  --testonly          If set, information in the db is not altered
+  --codon_bias_file   Full path name of a file from which to load codon
+                      bias values
+  --calc_n_transmembrane_regions
+                      Set flag to add in n_transmembrane_regions calculations
 
- e.g.:  $PROG_NAME 
+ e.g.:  $PROG_NAME --check_status
 
 EOU
 
 
 #### Process options
-unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
   "delete_existing","update_existing","skip_sequence",
-  "set_tag:s","file_prefix:s","check_status","testonly")) {
+  "set_tag:s","file_prefix:s","check_status","codon_bias_file:s",
+  "calc_n_transmembrane_regions")) {
   print "$USAGE";
   exit;
 }
@@ -79,12 +88,12 @@ $VERBOSE = $OPTIONS{"verbose"} || 0;
 $QUIET = $OPTIONS{"quiet"} || 0;
 $DEBUG = $OPTIONS{"debug"} || 0;
 $TESTONLY = $OPTIONS{"testonly"} || 0;
-
 if ($DEBUG) {
   print "Options settings:\n";
   print "  VERBOSE = $VERBOSE\n";
   print "  QUIET = $QUIET\n";
   print "  DEBUG = $DEBUG\n";
+  print "  TESTONLY = $TESTONLY\n";
 }
 
 
@@ -156,6 +165,7 @@ sub handleRequest {
   my $check_status = $OPTIONS{"check_status"} || '';
   my $set_tag = $OPTIONS{"set_tag"} || '';
   my $file_prefix = $OPTIONS{"file_prefix"} || '';
+  my $codon_bias_file = $OPTIONS{"codon_bias_file"} || '';
 
 
   #### Get the file_prefix if it was specified, and otherwise guess
@@ -209,6 +219,15 @@ sub handleRequest {
     die "No biosequence_sets found in this database"
       if ($n_biosequence_sets < 1);
 
+  }
+
+
+  #### If a codon bias file was specified, load it for later processing
+  if ($codon_bias_file) {
+    $fav_codon_frequency->{zzzHASH} = -1;
+    readCodonBiasFile(
+      source_file => $codon_bias_file,
+      fav_codon_frequency => $fav_codon_frequency);
   }
 
 
@@ -298,7 +317,7 @@ sub getBiosequenceSetStatus {
   return \%status;
 
 }
-    
+
 
 ###############################################################################
 # loadBiosequenceSet
@@ -432,7 +451,8 @@ sub loadBiosequenceSet {
         table_name=>"${DATABASE}biosequence",
         rowdata_ref=>\%rowdata,PK=>"biosequence_id",
         PK_value => $biosequence_id,
-        verbose=>1,testonly=>1
+        verbose=>$VERBOSE,
+	testonly=>$TESTONLY,
         );
 
       #### Reset temporary holders
@@ -478,12 +498,12 @@ sub loadBiosequence {
   my $update   = $args{'update'}   || 0;
   my $PK       = $args{'PK_name'}  || $args{'PK'} || '';
   my $PK_value = $args{'PK_value'} || '';
-  
+
   my $rowdata_ref = $args{'rowdata_ref'}
   || die "ERROR[$SUB_NAME]: rowdata not passed!";
   my $table_name = $args{'table_name'} 
   || die "ERROR[$SUB_NAME]:table_name not passed!";
-  
+
 
   #### Get the file_prefix if it was specified, and otherwise guess
   my $module = $sbeams->getSBEAMS_SUBDIR();
@@ -492,7 +512,7 @@ sub loadBiosequence {
   #### working.  This will  need to populate biosequence_external_xref in the
   #### future, using an INSERT, INSERT, UPDATE triplet for new sequences. 
   #### FIX ME!!!
-  
+
   if ($module eq 'Microarray') {
       print "$rowdata_ref->{dbxref_id}\t";
       delete ($rowdata_ref->{biosequence_accession});
@@ -509,7 +529,7 @@ sub loadBiosequence {
 					  );
 
   return;
-} 
+}
 
 ###############################################################################
 # additionalParsing: fill in the gene_name and accession fields based on
@@ -551,7 +571,7 @@ sub specialParsing {
      $rowdata_ref->{biosequence_accession} = $1;
      $rowdata_ref->{dbxref_id} = '8';
   }
-  
+
 
   #### Special conversion rules for Drosophila genome, e.g.:
   #### >Scr|FBgn0003339|CT1096|FBan0001030 "transcription factor" mol_weight=44264  located on: 3R 84A6-84B1; 
@@ -605,7 +625,7 @@ sub specialParsing {
   #### Special conversion rules for Yeast genome, e.g.:
   #### >ORFN:YAL014C YAL014C, Chr I from 128400-129017, reverse complement
   if ($biosequence_set_name eq "yeast_orf_coding" || $biosequence_set_name eq "Yeast ORFs Database") {
-    if ($rowdata_ref->{biosequence_desc} =~ /([\w-]+)\s([\w-\:]+), .+/ ) {
+    if ($rowdata_ref->{biosequence_desc} =~ /([\w\-]+)\s([\w\-\:]+), .+/ ) {
        $rowdata_ref->{biosequence_gene_name} = $1;
        $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
        $rowdata_ref->{dbxref_id} = '7';
@@ -660,6 +680,24 @@ sub specialParsing {
     }
   }
 
+
+  #### If there's codon bias lookup information, set it
+  if (defined($fav_codon_frequency)) {
+    if ($fav_codon_frequency->{$rowdata_ref->{biosequence_name}}) {
+      $rowdata_ref->{fav_codon_frequency} =
+        $fav_codon_frequency->{$rowdata_ref->{biosequence_name}};
+    }
+  }
+
+
+  #### If the calc_n_transmembrane_regions flag is set, do the calculation
+  if (defined($OPTIONS{"calc_n_transmembrane_regions"})) {
+    $rowdata_ref->{n_transmembrane_regions} = 
+      SBEAMS::Proteomics::Utilities::calcNTransmembraneRegions(
+        peptide=>$rowdata_ref->{biosequence_seq});
+  }
+
+
 }
 
 
@@ -693,6 +731,57 @@ sub get_biosequence_id {
   }
 
   return $biosequence_ids[0];
+
+}
+
+
+###############################################################################
+# readCodonBiasFile
+###############################################################################
+sub readCodonBiasFile {
+  my %args = @_;
+  my $SUB_NAME = "readCodonBiasFile";
+
+
+  #### Decode the argument list
+  my $source_file = $args{'source_file'}
+   || die "ERROR[$SUB_NAME]: source_file not passed";
+  # Don't bother getting the output data struct since it's a global
+
+
+  unless ( -f $source_file ) {
+    $fav_codon_frequency->{return_status} = 'FAIL';
+    die("Unable to find codon bias file '$source_file'");
+  }
+
+
+  open(CODONFILE,"$source_file") ||
+    die("Unable to open codon bias file '$source_file'");
+
+
+  #### Read the header column
+  my $line;
+  $line = <CODONFILE>;
+  my $tmp;
+  my $biosequence_name;
+  my @columns;
+  my @words;
+
+
+  #### Read in all the data putting it into the hash
+  print "Reading codon bias file...\n";
+  while ($line = <CODONFILE>) {
+    @columns = split("\t",$line);
+    $tmp = $columns[3];
+    @words = split(/\s/,$tmp);
+    $biosequence_name = $words[0];
+    $fav_codon_frequency->{$biosequence_name} = $columns[2];
+  }
+
+  close(CODONFILE);
+
+  $fav_codon_frequency->{return_status} = 'SUCCESS';
+  return;
 
 }
 
