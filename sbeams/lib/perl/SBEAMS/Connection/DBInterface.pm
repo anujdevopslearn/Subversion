@@ -1595,8 +1595,8 @@ sub parseConstraint2SQL {
 sub buildOptionList {
     my $self = shift;
     my $sql_query = shift;
-    my $selected_option = shift;
-    my $method_options = shift;
+    my $selected_option = shift || '';
+    my $method_options = shift || '';
     my $selected_flag;
 
     my %selected_options;
@@ -2686,7 +2686,8 @@ sub displayResultSetPlot {
     foreach my $column_index ( 'A','B' ) {
       $column_info->{$column_index}->{name} = '';
       $column_info->{$column_index}->{data} = ();
-      if ($rs_params{"rs_column$column_index"} gt "") {
+      if (defined($rs_params{"rs_column$column_index"}) &&
+	  $rs_params{"rs_column$column_index"} gt '') {
         foreach my $element (@{$resultset_ref->{data_ref}}) {
           my $value = $element->[$rs_params{"rs_column$column_index"}];
           if ($value =~ /([\d\.\-\+]+)/) {
@@ -2714,7 +2715,8 @@ sub displayResultSetPlot {
 
 
     #### If the plot_type is histogram, plot it
-    if ($rs_params{rs_plot_type} eq 'histogram') {
+    if (defined($rs_params{rs_plot_type}) &&
+	$rs_params{rs_plot_type} eq 'histogram') {
       $result = $self->histogram(
         data_array_ref=>$column_info->{A}->{data},
       );
@@ -2750,7 +2752,8 @@ sub displayResultSetPlot {
 
 
     #### If the plot_type is xypoints, plot it
-    } elsif ($rs_params{rs_plot_type} eq 'xypoints') {
+    } elsif (defined($rs_params{rs_plot_type}) &&
+	     $rs_params{rs_plot_type} eq 'xypoints') {
 
       #### Populate a data structure to plot
       @data = (
@@ -2813,7 +2816,9 @@ sub displayResultSetPlot {
     foreach $element ('histogram','xypoints') {
       my $selected_flag = '';
       my $option_name = $plot_type_names{$element} || $element;
-      $selected_flag = 'SELECTED' if ($element eq $rs_params{rs_plot_type});
+      $selected_flag = 'SELECTED'
+	if (defined($rs_params{rs_plot_type}) &&
+	    $element eq $rs_params{rs_plot_type});
       print "<option $selected_flag VALUE=\"$element\">$option_name\n";
     }
 
@@ -2830,7 +2835,8 @@ sub displayResultSetPlot {
       foreach $element (@{$column_titles_ref}) {
         my $selected_flag = '';
         $selected_flag = 'SELECTED'
-          if ($i == $rs_params{"rs_column$column_index"});
+          if (defined($rs_params{"rs_column$column_index"}) &&
+	      $i == $rs_params{"rs_column$column_index"});
         print "<option $selected_flag VALUE=\"$i\">$element\n";
         $i++;
       }
@@ -3457,7 +3463,8 @@ sub processStandardParameters {
 
 
   #### If there's a parameter to set the current default project
-  if (defined($ref_parameters->{set_current_project_id})) {
+  if (defined($ref_parameters->{set_current_project_id}) &&
+      $ref_parameters->{set_current_project_id} gt '') {
     my $set_current_project_id = $ref_parameters->{set_current_project_id};
     if ($set_current_project_id > 0) {
       $self->setCurrent_project_id(
@@ -3538,7 +3545,7 @@ sub display_input_form {
     my ($column_name,$column_title,$is_required,$input_type,$input_length,
         $is_data_column,$is_display_column,$column_text,
         $optionlist_query,$onChange) = @row;
-    if ($optionlist_query gt "") {
+    if (defined($optionlist_query) && $optionlist_query gt '') {
       #print "<font color=\"red\">$column_name</font><BR><PRE>$optionlist_query</PRE><BR>\n";
       $optionlist_queries{$column_name}=$optionlist_query;
     }
@@ -3665,10 +3672,11 @@ sub display_input_form {
     my ($column_name,$column_title,$is_required,$input_type,$input_length,
         $is_data_column,$is_display_column,$column_text,
         $optionlist_query,$onChange) = @row;
+    $onChange = '' unless (defined($onChange));
 
 
     #### Set the JavaScript onChange string if supplied
-    if ($onChange gt "") {
+    if ($onChange gt '') {
       $onChange = " onChange=\"$onChange\"";
     }
 
@@ -4787,7 +4795,7 @@ sub printUserChooser {
 
 
   #### Find out the current URI
-  my $submit_string = $ENV{'SCRIPT_URI'."?"};
+  my $submit_string = $ENV{'SCRIPT_URI'."?"} || '';
 
   #### If we're in HTML mode, print javascript
   if ($style eq "HTML") {
