@@ -1731,6 +1731,7 @@ sub updateSearchResults {
       my $n_U_hits = 0;
       my $n_other_hits = 0;
       while ($i<$nrows) {
+        print "  - $i: ",$data[$i]->{best_hit_flag},"\n" if ($VERBOSE > 1);
         if ($data[$i]->{best_hit_flag} eq 'D') {
           $n_D_hits++;
         } elsif ($data[$i]->{best_hit_flag} eq 'U') {
