@@ -257,7 +257,7 @@ sub printStyleSheet {
 	.grey_bg{ background-color: #CCCCCC }
 	.med_gray_bg{ background-color: #CCCCCC; ${FONT_SIZE_LG}pt; font-weight: bold; Padding:2}
 	.grey_header{ font-family: Helvetica, Arial, sans-serif; color: #000000; font-size: ${FONT_SIZE_HG}pt; background-color: #CCCCCC; font-weight: bold; padding:1 2}
-	.rev_gray{background-color: #555555; ${FONT_SIZE_LG}pt; font-weight: bold; color:white}
+	.rev_gray{background-color: #555555; ${FONT_SIZE_LG}pt; font-weight: bold; color:white; line-height: 25px;}
 	.blue_bg{ font-family: Helvetica, Arial, sans-serif; background-color: #4455cc; ${FONT_SIZE_HG}pt; font-weight: bold; color: white}
 	.orange_bg{ background-color: #FFCC66; ${FONT_SIZE_LG}pt; font-weight: bold}
 	.red_bg{ background-color: #882222; ${FONT_SIZE_LG}pt; font-weight: bold; color:white;}
@@ -267,6 +267,8 @@ sub printStyleSheet {
 	.marginal_cell{border: 1px solid #0033CC}
 	.absent_cell{border: 2px solid #660033}
 	.small_text{font-family: Helvetica,Arial,sans-serif; font-size:x-small; color:#aaaaaa}
+	.table_setup{border: 0px ; border-collapse: collapse;   }
+	.pad_cell{padding:5px;  }
 	
 	a.edit_menuButton:link {
 	/* font-size: 12px; */
