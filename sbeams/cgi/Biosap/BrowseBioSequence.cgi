@@ -291,7 +291,7 @@ sub printEntryForm {
      ~;
 
 
-    %url_cols = ('set_tag' => "$CGI_BASE_DIR/SNP/ManageTable.cgi?TABLE_NAME=biosequence_set&biosequence_set_id=\%$colnameidx{biosequence_set_id}V",
+    %url_cols = ('set_tag' => "$CGI_BASE_DIR/Biosap/ManageTable.cgi?TABLE_NAME=bs_biosequence_set&biosequence_set_id=\%$colnameidx{biosequence_set_id}V",
                  'accession' => "\%$colnameidx{uri}V\%$colnameidx{accesssion}V",
     );
 
