@@ -148,150 +148,17 @@ sub handle_request {
 
   #### Show current user context information
   $sbeams->printUserContext();
-  $current_contact_id = $sbeams->getCurrent_contact_id();
 
-
-  #### Get information about the current project from the database
-  $sql = qq~
-        SELECT PR.project_id,PL.name,PL.project_tag,PL.project_status,PL.PI_contact_id
-          FROM project PL
-    INNER JOIN SEQUENOM..SEQUENOM.PROJECT PR
-            ON ( PL.project_tag = PR.project_id)
-  ~;
-  @rows = $sbeams->selectSeveralColumns($sql);
-
-  my $project_id = '';
-  my $project_name = 'NONE';
-  my $project_tag = 'NONE';
-  my $project_status = 'N/A';
-  my $PI_contact_id = 0;
-  if (@rows) {
-    ($project_id,$project_name,$project_tag,$project_status,$PI_contact_id) = @{$rows[0]};
-  }
-  my $PI_name = $sbeams->getUsername($PI_contact_id);
-
-  #### Print out some information about this project
-  print qq~
-	<H1>Current Project: <A class="h1" HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=$project_id">$project_name</A></H1>
-	<TABLE WIDTH="100%" BORDER=0>
-	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
-	             <TD COLSPAN="2" WIDTH="100%"><B>Status:</B> $project_status</TD></TR>
-	<TR><TD></TD><TD COLSPAN="2"><B>Project Tag:</B> $project_tag</TD></TR>
-	<TR><TD></TD><TD COLSPAN="2"><B>Owner:</B> $PI_name</TD></TR>
-	<TR><TD></TD><TD COLSPAN="2"><B>Access Privileges:</B> <A HREF="$CGI_BASE_DIR/ManageProjectPrivileges">[View/Edit]</A></TD></TR>
-	<TR><TD></TD><TD COLSPAN="2"><B>Experiments:</B></TD></TR>
-	<TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
-	                 <TD WIDTH="100%"><TABLE BORDER=0>
-  ~;
-
-
-  #### If the current user is not the owner, the check that the
-  #### user has privilege to access this project
-  if ($project_id > 0) {
-
-    my $best_permission = $sbeams->get_best_permission();
-
-    #### If not at least data_reader, set project_id to a bad value
-    $project_id = -99 unless ($best_permission > 0 && $best_permission <=40);
-
-  }
-
-
-  #### Get all the experiments for this project
-  if ($project_id > 0) {
-    $sql = qq~
-	SELECT snp_source_id,source_name
-	  FROM $TBSN_SNP_SOURCE
-	 WHERE snp_source_id = '9999'
-	 ORDER BY source_name
-    ~;
-    @rows = $sbeams->selectSeveralColumns($sql);
-  } else {
-    @rows = ();
-  }
-
-
-  #### If there are experiments, display them
-  if (@rows) {
-    foreach my $row (@rows) {
-      my ($experiment_id,$experiment_tag,$experiment_name) = @{$row};
-
-      #### Find out what search_batches exist for this experiment
-      $sql = qq~
-	SELECT S.search_batch_id,S.search_batch_subdir,BSS.set_tag
-	  FROM $TBSN_SNP S
-	 INNER JOIN $TBSN_BIOSEQUENCE_SET BSS
-	       ON ( S.biosequence_set_id = BSS.biosequence_set_id )
-	 WHERE S.experiment_id = '$experiment_id'
-	 ORDER BY BSS.set_tag,SB.search_batch_subdir
-      ~;
-      my @search_batch_rows = $sbeams->selectSeveralColumns($sql);
-
-      print qq~
-	<TR><TD NOWRAP>- <font color="green">$experiment_tag:</font> $experiment_name</TD>
-	<TD NOWRAP>&nbsp;&nbsp;&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&experiment_id=$experiment_id">[View/Edit]</A></TD>
-	<TD NOWRAP>&nbsp;&nbsp;&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeFractions?action=QUERYHIDE&QUERY_NAME=PR_SummarizeFractions&experiment_id=$experiment_id">[View Fractions]</A></TD>
-      ~;
-
-      foreach my $search_batch_row (@search_batch_rows) {
-        my ($search_batch_id,$search_batch_subdir,$set_tag) = @{$search_batch_row};
-        print qq~
-	  <TD>&nbsp;&nbsp;&nbsp;<font color="green">$set_tag</font> ($search_batch_id:&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizePeptides?action=QUERY&QUERY_NAME=PR_SummarizePeptides&search_batch_id=$search_batch_id&probability_constraint=\%3E.9&n_annotations_constraint=%3E0&sort_order=tABS.row_count%20DESC&display_options=GroupReference&input_form_format=minimum_detail">P&gt;0.9</A>&nbsp;--&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizePeptides?action=QUERY&QUERY_NAME=PR_SummarizePeptides&search_batch_id=$search_batch_id&annotation_status_id=Annot&n_annotations_constraint=%3E0&sort_order=tABS.row_count%20DESC&display_options=GroupReference&input_form_format=minimum_detail">Annot</A>)</TD>
-        ~;
-      }
-
-
-      print qq~
-	</TR>
-      ~;
-    }
-  } else {
-    if ($project_id = -99) {
-      print "	<TR><TD WIDTH=\"100%\">You do not have access to this project.  Contact the owner of this project if you want to have access.</TD></TR>\n";
-    } else {
-      print "	<TR><TD WIDTH=\"100%\">NONE</TD></TR>\n";
-    }
-  }
-
-
-  #### Finish the table
-  print qq~
-	</TABLE></TD></TR>
-	</TABLE>
-  ~;
-
-
-
-  ##########################################################################
-  #### Print out all projects owned by the user
-
-  $sbeams->printProjectsYouOwn();
-
-
-
-  ##########################################################################
-  #### Print out all projects user has access to
-
-  $sbeams->printProjectsYouHaveAccessTo();
-
-
-  ##########################################################################
-  #### Print out some recent resultsets
-
-  $sbeams->printRecentResultsets();
-
-
-  ##########################################################################
-  #### Print out a bunch of other misc links
+  my $html_ref = $sbeams->getMainPageTabMenu( cgi => $q );
 
   print qq~
-	<BR>
-	This system is still under active development.  Please be
-	patient and report bugs, problems, difficulties, suggestions to
-	<B>kdeutsch\@systemsbiology.org</B>.<P>
-	<BR>
-	<BR>
-
+  <BR>
+  This system is still under active development.  Please be
+  patient and report bugs, problems, difficulties, suggestions to
+  <B>kdeutsch\@systemsbiology.org</B>.<P>
+  <BR>
+   
+  $$html_ref
   ~;
 
 

@@ -72,26 +72,22 @@ sub main {
 ###############################################################################
 sub showMainPage {
 
-    $sbeams->printUserContext();
+  $sbeams->printUserContext();
 
-    print qq!
-	<BR>
-	You are successfully logged into the $DBTITLE - $SBEAMS_PART system.
-	Please choose your tasks from the menu bar on the left.<P>
-	<BR>
-	This system is still under active development.  Please be
-	patient and report bugs, problems, difficulties, suggestions to
-	<B>edeutsch\@systemsbiology.org</B>.<P>
-	<BR>
-	<BR>
+  my $html_ref = $sbeams->getMainPageTabMenu( cgi => $q );
 
-	<UL>
-	<LI> Here is the starter stub for the PhenoArray area.
-	</UL>
+  print qq!
+  <BR>
+  You are successfully logged into the $DBTITLE - $SBEAMS_PART system.
+  Please choose your tasks from the menu bar on the left.<P>
+  <BR>
+  This system is still under active development.  Please be
+  patient and report bugs, problems, difficulties, suggestions to
+  <B>edeutsch\@systemsbiology.org</B>.<P>
+  <BR>
 
-	<BR>
-	<BR>
-    !;
+  $$html_ref
+  !;
 
 } # end showMainPage
 
