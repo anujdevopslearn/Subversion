@@ -122,6 +122,10 @@ sub main {
     q=>$q,parameters_ref=>\%parameters);
   #$sbeams->printDebuggingInfo($q);
 
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+
   $TABLE_NAME = $parameters{'TABLE_NAME'}
     || croak "TABLE_NAME not specified."; 
 

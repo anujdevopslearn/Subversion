@@ -111,8 +111,7 @@ sub main {
 
 
   #### Process generic "state" parameters before we start
-  $sbeams->processStandardParameters(
-    parameters_ref=>\%parameters);
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
 
   #### Decide what action to take based on information so far

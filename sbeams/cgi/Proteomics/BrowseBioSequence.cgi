@@ -111,6 +111,10 @@ sub main {
   #$sbeams->printDebuggingInfo($q);
 
 
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+
   #### Decide what action to take based on information so far
   if ($parameters{action} eq "UPDATE") {
     updatePreferredReference();
