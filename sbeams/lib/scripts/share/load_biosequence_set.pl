@@ -19,7 +19,7 @@ use strict;
 use Getopt::Long;
 use FindBin;
 
-use lib qw (../perl ../../perl);
+use lib "$FindBin::Bin/../../perl";
 use vars qw ($sbeams $sbeamsMOD $q
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
 	     $TESTONLY
@@ -1327,10 +1327,20 @@ sub specialParsing {
   }
 
 
+  #### Conversion rules for the ENSEMBLE Protein database
+  if ($rowdata_ref->{biosequence_name} =~ /^Translation:(ENSP\d+)$/ ) {
+     $rowdata_ref->{biosequence_name} = $1;
+     $rowdata_ref->{biosequence_accession} = $1;
+     if ($rowdata_ref->{biosequence_desc} =~ /(ENSG\d+)/ ) {
+       $rowdata_ref->{biosequence_gene_name} = $1;
+     }
+     $rowdata_ref->{dbxref_id} = '20';
+  }
+
+
   #### Conversion rules for the IPI database
   if ($rowdata_ref->{biosequence_name} =~ /^IPI:(IPI[\d\.]+)$/ ) {
      $rowdata_ref->{biosequence_accession} = $1;
-     $rowdata_ref->{biosequence_gene_name} = $1;
      if ($rowdata_ref->{biosequence_name} =~ /^IPI:(IPI[\d]+)\.\d+$/ ) {
        $rowdata_ref->{biosequence_gene_name} = $1;
      }
