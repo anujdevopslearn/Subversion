@@ -248,9 +248,27 @@ sub checkLoggedIn {
                 AND record_status != 'D'"
         );
         $username = "" if ($result ne $username);
+
+
+    #### Otherwise if there is an SBEAMSentrycode
+    #### parameter, then autologin the person as the user specified in the
+    #### SBEAMS.conf file for this SBEAMSentrycode if it's configured.
+    } elsif (defined($q->param('SBEAMSentrycode'))) {
+      my $entrycode = $q->param('SBEAMSentrycode');
+      if ($entrycode) {
+	if (defined($DBCONFIG->{$DBINSTANCE}->{ENTRYCODE}->{$entrycode})) {
+	  $username = $DBCONFIG->{$DBINSTANCE}->{ENTRYCODE}->{$entrycode};
+	  $http_header = $self->createAuthHeader($username);
+        }
+      }
+
+
+    #### Otherwise if the page allows anonymous access, set user to guest
     } elsif ($allow_anonymous_access) {
       #print "Content-type: text/plain\n\nReceived no cookie; runs as guest\n";
       $username = 'guest';
+
+    #### Otherwise, we're out of options, so do nothing
     } else {
       #print "Content-type: text/plain\n\nReceived no cookie\n";
     }
