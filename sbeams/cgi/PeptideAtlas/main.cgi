@@ -98,21 +98,21 @@ sub showMainPage {
     #Preferred way to add tabs.  label is required, helptext optional
     $tabmenu->addTab( label => 'Browse Peptides', 
                       helptext => 'Multi-constraint browsing of PeptideAtlas',
-                      url => "http://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptides" );
+                      url => "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptides" );
 
     $tabmenu->addTab( label => 'Get Peptide', 
                       helptext => 'Look-up info on a peptide by sequence or name',
-                      url => "http://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptide" 
+                      url => "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptide" 
                       );
 
     $tabmenu->addTab( label => 'Browse Proteins',
                       helptext => 'Not implemented yet',
-                      url => "http://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/main.cgi"
+                      url => "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/main.cgi"
                       );
 
     $tabmenu->addTab( label => 'Get Protein',
                       helptext => 'Not implemented yet',
-                      url => "http://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/main.cgi"
+                      url => "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/main.cgi"
                       );
 
 #   my $content;# = '&nbsp;';
