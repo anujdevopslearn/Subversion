@@ -220,16 +220,18 @@ sub processLogin {
   my $user  = $q->param('username');
   my $pass  = $q->param('password');
   my $force = $q->param('force_login');
+  my $login = $q->param('login');
   $current_username = '';
 
-  # For security's sake, delete these from the cgi object.
-  $q->delete( 'username', 'password' );
+  # For security's sake, delete these from the cgi object upon login.
+  $q->delete( 'username', 'password' ) if $login;
 
   my $chours = $self->isValidDuration(cookie_duration => $LOGIN_DURATION) || 24;
   my $csecs = $chours * 3600;
   $log->debug( "cookies are valid for $chours hours" );
   
-  if ( $user && $pass ) { #### If username and password were provided, use them
+  # If user and pass were given in login context, use the info.
+  if ( $user && $pass && $login ) { 
     $log->debug( "username and password provided" );
     if ($self->checkLogin($user, $pass)) {
       $log->debug( "username is valid" );
@@ -237,10 +239,11 @@ sub processLogin {
       $current_contact_id = $self->getContact_id($user);
       $current_username = $user;
     } else {
-      $log->debug( "username is *not* valid" );
+      $log->debug( "username ($user) is *not* valid" );
       $self->printPageHeader(minimal_header=>"YES");
       $self->printAuthErrors();
       $self->printPageFooter();
+      exit;
     } 
 
   } elsif ( !$force && $args{cookie} ) { # non-forced, cookie exists
@@ -1144,7 +1147,6 @@ sub checkLogin {
           WHERE username = '$user'
             AND record_status != 'D'
         ");
-
 
     #### If this user is not in the user_login table, don't look any further
     unless (exists $query_result{$user}) {
