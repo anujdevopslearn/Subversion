@@ -1,0 +1,401 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : GetAnnotations
+# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
+# $Id$
+#
+# Description : This CGI program that allows users to
+#               browse through annotated proteins very simply
+#
+# SBEAMS is Copyright (C) 2000-2003 by Eric Deutsch
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+
+use vars qw (%ontology_ids %term_type_ids %relationship_type_ids);
+
+use SBEAMS::Connection;
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+
+use SBEAMS::Ontology;
+use SBEAMS::Ontology::Settings;
+use SBEAMS::Ontology::Tables;
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::Ontology;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+
+use CGI;
+use CGI::Carp qw(fatalsToBrowser croak);
+$q = new CGI;
+
+
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main();
+exit(0);
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    #permitted_work_groups_ref=>['ProteinStructure_user',
+    #  'ProteinStructure_admin','ProteinStructure_readonly','Admin'],
+    #connect_read_only=>1,
+    #allow_anonymous_access=>1,
+  ));
+
+
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters);
+  #$sbeams->printDebuggingInfo($q);
+
+
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+
+  #### Decide what action to take based on information so far
+  if ($parameters{action} eq "xxxx") {
+  } else {
+    $sbeamsMOD->display_page_header(
+      navigation_bar=>$parameters{navigation_bar});
+    handle_request(ref_parameters=>\%parameters);
+    $sbeamsMOD->display_page_footer();
+  }
+
+
+} # end main
+
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request {
+  my %args = @_;
+
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+
+
+  #### Define some generic varibles
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+  #### Define some variables for a query and resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+
+  #### Read in the standard form values
+  my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+
+  #### Set some specific settings for this program
+  my $PROGRAM_FILE_NAME="GetAnnotations";
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+
+
+  #### Get the columns and input types for this table/query
+  my @columns = ( 'search_scope','search_key' );
+  my %input_types = ( 'optionlist','text' );
+
+
+  #### Read the input parameters for each column
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters,
+    columns_ref=>\@columns,input_types_ref=>\%input_types);
+
+
+  #### If the apply action was to recall a previous resultset, do it
+  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+  if ($apply_action eq "VIEWRESULTSET") {
+    $sbeams->readResultSet(resultset_file=>$rs_params{set_name},
+        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters);
+    $n_params_found = 99;
+  }
+
+
+  #### Set some reasonable defaults if no parameters supplied
+  unless ($n_params_found) {
+  }
+
+
+  #### Apply any parameter adjustment logic
+  #$parameters{display_options} = 'ShowSQL';
+
+
+  #### Display the user-interaction input form
+  if ($sbeams->output_mode() eq 'html') {
+    my @options = ( 'GeneSymbol','ORFName','FullGeneName','ECNumbers','All' );
+    my %options = ( 'GeneSymbol' => 'Gene Symbol',
+		    'ORFName' => 'ORF Name',
+		    'FullGeneName' => 'Full Gene Name',
+		    'ECNumbers' => 'EC Number',
+		    'All' => 'All Attributes',
+		  );
+
+    #### Build the option list
+    my $optionlist = '';
+    foreach my $key ( @options ) {
+      my $flag = '';
+      $flag = 'SELECTED' if ($parameters{ontology_id} eq $key);
+      $optionlist .= "<OPTION VALUE=\"$key\" $flag>$options{$key}</OPTION>\n";
+    };
+
+    print qq~
+<H2>Browse Ontology</H2>
+
+<P><FORM ACTION="$base_url" METHOD="POST">
+Search
+<SELECT NAME="ontology_id">
+$optionlist
+</SELECT> for
+<INPUT NAME="search_key" TYPE="text" SIZE="35" VALUE="$parameters{search_key}">
+<INPUT TYPE="submit" NAME="action" VALUE="GO">
+</FORM></P>
+    ~;
+  }
+
+
+  #### Finish the upper part of the page and go begin the full-width
+  #### data portion of the page
+#  $sbeams->display_page_footer(close_tables=>'YES',
+#    separator_bar=>'YES',display_footer=>'NO')
+#    unless ( $parameters{display_options} =~ /SequenceFormat/ &&
+#      $apply_action =~ /HIDE/ );
+
+
+
+  #########################################################################
+  #### Process all the constraints
+
+
+  #### First get a hash of the TermTypes
+  $sql = qq~
+        SELECT CT.term_name,CT.ontology_term_id
+          FROM $TBON_ONTOLOGY_TERM PT
+         INNER JOIN $TBON_ONTOLOGY_TERM_RELATIONSHIP R
+               ON ( PT.ontology_term_id = R.subject_term_id )
+         INNER JOIN $TBON_ONTOLOGY_TERM CT
+               ON ( R.object_term_id = CT.ontology_term_id)
+         WHERE PT.ontology_id = 1
+           AND PT.term_name = 'TermType'
+           AND CT.record_status != 'D'
+  ~;
+  %term_type_ids = $sbeams->selectTwoColumnHash($sql);
+
+
+  $sql = qq~
+    SELECT ontology_tag,ontology_description,
+           OT.ontology_term_id,OT.term_name,OT.term_definition
+      FROM $TBON_ONTOLOGY O
+      LEFT JOIN $TBON_ONTOLOGY_TERM OT
+           ON ( O.ontology_id = OT.ontology_id )
+     WHERE OT.term_type_term_id = '$term_type_ids{Root}'
+     ORDER BY O.sort_order,OT.sort_order,OT.term_name
+  ~;
+
+  my @ontologies = $sbeams->selectSeveralColumns($sql);
+
+  print "<BR><BR><TABLE>\n";
+
+
+  foreach my $ontology ( @ontologies ) {
+
+    print qq~
+      <TR><TD><TABLE>
+      <TR><TD ALIGN="LEFT" NOWRAP BGCOLOR="#E0E0E0">$ontology->[0]</TD>
+      <TD ALIGN="LEFT" BGCOLOR="#EEEEEE">$ontology->[1]</TD>
+      </TR></TABLE></TD></TR>
+    ~;
+
+    if (defined($ontology->[2])) {
+
+      expandTree(ontology_term_id => $ontology->[2],
+		 current_depth => 1,
+		);
+
+    }
+
+    print "<TR><TD>&nbsp;</TD></TR>\n";
+
+  }
+
+  print "</TABLE>\n";
+
+
+} # end handle_request
+
+
+
+###############################################################################
+# evalSQL: Callback for translating global table variables to names
+###############################################################################
+sub evalSQL {
+  my $sql = shift;
+
+  return eval "\"$sql\"";
+
+} # end evalSQL
+
+
+
+###############################################################################
+# expandTree
+###############################################################################
+sub expandTree {
+  my %args = @_;
+
+
+  #### Process the arguments list
+  my $ontology_term_id = $args{'ontology_term_id'}
+    || die "ontology_term_id not passed";
+  my $current_depth = $args{'current_depth'}
+    || die "current_depth not passed";
+
+
+  my $sql = qq~
+    SELECT OT.ontology_term_id,OT.term_name,OT.term_definition,TT.term_name
+      FROM $TBON_ONTOLOGY_TERM OT
+      LEFT JOIN $TBON_ONTOLOGY_TERM TT
+           ON ( OT.term_type_term_id = TT.ontology_term_id )
+     WHERE OT.ontology_term_id = '$ontology_term_id'
+  ~;
+
+  my @rows = $sbeams->selectSeveralColumns($sql);
+
+  if (scalar(@rows) == 0) {
+    print "ERROR: ontology_term_id $ontology_term_id not found!<BR>\n";
+
+  } elsif (scalar(@rows) > 1) {
+    print "ERROR: $sql returned too many rows!<BR>\n";
+
+  } else {
+
+    my $term = $rows[0];
+    my $indent = 30 * $current_depth;
+
+    print qq~
+        <TR><TD><TABLE><TR><TD><IMG SRC="$HTML_BASE_DIR/images/clear.gif" WIDTH="$indent" HEIGHT="1"></TD>
+        <TD ALIGN="LEFT" NOWRAP BGCOLOR="#E0E0E0">$term->[3]</TD>
+        <TD ALIGN="LEFT" NOWRAP BGCOLOR="#E0E0E0">$term->[1]</TD>
+        <TD ALIGN="LEFT" BGCOLOR="#EEEEEE">$term->[2]</TD>
+        </TR></TABLE></TD></TR>
+    ~;
+
+    $sql = qq~
+      SELECT OT.ontology_term_id,OT.term_name,OT.term_definition,OTT.term_name,
+             RT.term_name
+        FROM $TBON_ONTOLOGY_TERM ST
+        LEFT JOIN $TBON_ONTOLOGY_TERM_RELATIONSHIP TR
+             ON ( ST.ontology_term_id = TR.subject_term_id )
+        LEFT JOIN $TBON_ONTOLOGY_TERM OT
+             ON ( TR.object_term_id = OT.ontology_term_id )
+        LEFT JOIN $TBON_ONTOLOGY_TERM RT
+             ON ( TR.relationship_type_term_id = RT.ontology_term_id )
+        LEFT JOIN $TBON_ONTOLOGY_TERM OTT
+             ON ( OT.term_type_term_id = OTT.ontology_term_id )
+       WHERE ST.ontology_term_id = '$ontology_term_id'
+       ORDER BY OT.sort_order,OT.term_name
+    ~;
+
+    my @rows = $sbeams->selectSeveralColumns($sql);
+
+    $current_depth++;
+    $indent = 30 * $current_depth;
+
+    foreach my $row ( @rows ) {
+
+#      print qq~
+#        <TR><TD><TABLE><TR><TD><IMG SRC="$HTML_BASE_DIR/images/clear.gif" WIDTH="$indent" HEIGHT="1"></TD>
+#        <TD ALIGN="LEFT" NOWRAP BGCOLOR="#E0E0E0">$row->[3]</TD>
+#        <TD ALIGN="LEFT" NOWRAP BGCOLOR="#E0E0E0">$row->[1]</TD>
+#        <TD ALIGN="LEFT" BGCOLOR="#EEEEEE">$row->[2]</TD>
+#        </TR></TABLE></TD></TR>
+#      ~;
+
+      if (defined($row->[0])) {
+	expandTree(ontology_term_id => $row->[0],
+		   current_depth => $current_depth,
+		  );
+      }
+
+    }
+
+  }
+
+
+} # end expandTree
+
+
+
+
