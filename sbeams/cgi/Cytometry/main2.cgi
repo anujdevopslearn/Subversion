@@ -968,10 +968,10 @@ sub checkGO
    function checkAnotherRadioButton()
    {
     var  isAnotherXChecked = false;
-   alert (isAnotherXChecked);
+   //alert (isAnotherXChecked);
    
    var num = document.forms.length;
-   alert(num);
+   //alert(num);
    
     for (var c =0; c<document.forms[3].xboxAnother.length;c++)
 		{
@@ -1009,8 +1009,8 @@ sub checkGO
     var xx = document.forms[3].xBoxMax.selectedIndex;
     var xmax = document.forms[3].xBoxMax.options[xx].value;
   
-  alert (xmin);
-  alert(xmax)
+ // alert (xmin);
+ // alert(xmax)
   
   
     var yy = document.forms[3].yBoxMin.selectedIndex;
@@ -1018,8 +1018,8 @@ sub checkGO
    
     var yy = document.forms[3].yBoxMax.selectedIndex;
     var ymax = document.forms[3].yBoxMax.options[yy].value;
-alert (ymin);
-alert(ymax)
+//alert (ymin);
+//alert(ymax)
  /*
       if (xmin > xmax)
       {
