@@ -2641,6 +2641,9 @@ sub transferTable {
         ~;
 
         #print $sql;
+        if ($verbose > 1) {
+          print "Finding PK with: $sql";
+        }
         my @results = $self->selectOneColumn($sql);
 
         #### If there is one matching record
