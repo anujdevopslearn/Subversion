@@ -60,4 +60,6 @@ VALUES ( 'GI_display_options','GO_Biological','Gene Ontology Biological Process'
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'GI_display_options','GO_Molecular','Gene Ontology Molecular Function',50 );
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
-VALUES ( 'GI_display_options','GO_Cellular','Gene Ontology Cellular Component',60 );  
+VALUES ( 'GI_display_options','GO_Cellular','Gene Ontology Cellular Component',60 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'GI_display_options','Show_Genome_position','Show Genome Position',70 );  
