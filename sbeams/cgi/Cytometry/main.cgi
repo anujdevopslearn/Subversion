@@ -65,6 +65,7 @@ my $GETGRAPH = '_getGraph';
 my $CELL = '_processCells';
 my $GETANOTHERGRAPH = '_getAnotherGraph';
 my $SPECRUN = '_specifyRun';
+my $IMMUNOLOAD = '_immunoLoad';
 my (%indexHash,%editorHash,%inParsParam);
 
 #possible actions (pages) displayed
@@ -76,7 +77,8 @@ my %actionHash = (
 	$CELL	=>	\&processCells,
 	$ERROR	=>	\&processError,
 	$GETANOTHERGRAPH =>	\&getAnotherGraph,
-    $SPECRUN => \&specifyRun
+    $SPECRUN => \&specifyRun,
+    $IMMUNOLOAD => \&immunoLoad
 	);
 my $attributeSql = "select measured_parameters_id, measured_parameters_name from $TBCY_MEASURED_PARAMETERS";
 my  %attributeHash = $sbeams->selectTwoColumnHash($attributeSql);
@@ -228,6 +230,9 @@ sub handle_request
      print "</table>";
 }
 
+
+
+
 ####----------------------------------------------------------------------------------
 sub displayIntro
 {
@@ -248,6 +253,8 @@ sub displayIntro
 =cut
      my @clauseArray;
      my $queryClause;
+     
+     
      if($parameters{searchCombo})
      {
       
@@ -261,7 +268,8 @@ sub displayIntro
         push @clauseArray, "tissue_type_id in ($tissueID)" if defined ($tissueID);
         $queryClause = join ' and ', @clauseArray;
      }
-      
+    
+    
       
   	 my $organismSql = qq~ select organism_id,organism_name from 
 	 sbeams.dbo.organism ~; 
@@ -273,23 +281,25 @@ sub displayIntro
 	 my $sql = "select  fcs_run_id,Organism_id , project_designator, sample_name, filename, run_date 
     from $TBCY_FCS_RUN  where project_id = $project_id and showFlag = $flag order by project_designator, run_date";
     
-    my $immunoStainName = $parameters{TableName};
-    my $immunoStainFiles = $parameters{SampleName};
+    my $immunoStainName = $parameters{loadImmuno};
+    my $immunoStainFiles = $parameters{immunoSampleName};
      my $immunoStainSql =  "select  fcs_run_id,Organism_id , project_designator, sample_name, filename, run_date 
     from $TBCY_FCS_RUN  where project_id = $project_id and sample_Name like '%$immunoStainFiles%' order by project_designator, run_date";
    
    
    my $wildCardGuess = $parameters{sampleGuess}; 
    my $wildCard = $parameters{wildcardSample};
-   my $wildCardSql =  "select  fcs_run_id,Organism_id , project_designator, sample_name, filename, run_date 
+    my $wildCardSql =  "select  fcs_run_id,Organism_id , project_designator, sample_name, filename, run_date 
     from $TBCY_FCS_RUN  where project_id = $project_id and sample_Name like '%$wildCardGuess%' order by project_designator, run_date";
     
     my $searchComboSql =   "select  fcs_run_id,Organism_id , project_designator, sample_name, filename, run_date 
     from $TBCY_FCS_RUN  where project_id = $project_id and $queryClause  order by project_designator, run_date";
+
+  
    
    my @rows;
     @rows = $sbeams->selectSeveralColumns($sql);
-    @rows = $sbeams->selectSeveralColumns($immunoStainSql) if ( defined ($immunoStainName))and do { $parameters{noShow} = 1}; ;
+    @rows = $sbeams->selectSeveralColumns($immunoStainSql) if ($immunoStainName)and do { $parameters{noShow} = 1}; ;
     @rows = $sbeams->selectSeveralColumns($wildCardSql) if ( $wildCard) and do { $parameters{noShow} = 1};;
     @rows = $sbeams->selectSeveralColumns($searchComboSql) if ($parameters{searchCombo}) and do { $parameters{noShow} = 1};
      my %hashFile;
