@@ -330,6 +330,14 @@ sub handle_request {
     constraint_value=>$parameters{lambda_constraint} );
   return if ($lambda_clause eq '-1');
 
+#### Build Mean Level constraint
+  my $mean_level_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"GE.mean_intensity",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Mean_Intensity",
+    constraint_value=>$parameters{mean_intensity_constraint} );
+  return if ($mean_level_clause eq '-1');
+
 
   #### Build SORT ORDER
   my $order_by_clause = "";
@@ -519,12 +527,14 @@ sub handle_request {
 	      $log10_ratio_clause
 	      $p_value_clause
 	      $lambda_clause
-             )
+              $mean_level_clause
+	     )
     ~;
     #### Remove contraints that might limit conditions
     $log10_ratio_clause = '';
     $p_value_clause = '';
     $lambda_clause = '';
+    $mean_level_clause = '';
   }
 
 
@@ -548,8 +558,9 @@ sub handle_request {
         $p_value_clause
 	$lambda_clause
 	$reporter_name_clause
-        $subselect_clause
-
+        $mean_level_clause
+	
+	$subselect_clause
 	$group_by_clause
 	$order_by_clause
 	$limit_clause->{trailing_limit_clause}
