@@ -344,7 +344,7 @@ sub add_R_CHP_data {
 		}	
 		
 		
-		#next unless (($id >= 173 && $id < 178) || ($id >= 225 && $id <= 249) );			#testing only to constrain to certain array ids
+		#next unless (($id >= 12 && $id < 140) );			#testing only to constrain to certain array ids
 		my $file_name = $affy_o->get_afa_file_root;
 		print "ARRAY ID '$id'\n";
 		
