@@ -434,12 +434,16 @@ sub handle_request {
       #["fav_codon_frequency","STR(BS.fav_codon_frequency,10,3)","Favored Codon Frequency"],
       ["transmembrane_class","BPS.transmembrane_class","Transmembrane Regions Class"],
       ["n_transmembrane_regions","BPS.n_transmembrane_regions","Number of Transmembrane Regions"],
+      ["isoelectric_point","STR(BPS.isoelectric_point,7,3)","pI"],
       ["has_signal_peptide","BPS.has_signal_peptide","Has Signal Peptide"],
       ["has_signal_peptide_probability","BPS.has_signal_peptide_probability","Has Signal Peptide Prob"],
       ["signal_peptide_length","BPS.signal_peptide_length","Signal Peptide Length"],
       ["signal_peptide_is_cleaved","BPS.signal_peptide_is_cleaved","Signal Peptide Is Cleaved"],
       ["protein_length","DATALENGTH(BS.biosequence_seq)","Protein Length"],
       ["transmembrane_topology","BPS.transmembrane_topology","Transmembrane Regions Topology"],
+      ["chromosome","BPS.chromosome","Chromosome"],
+      ["start_in_chromosome","BPS.start_in_chromosome","Start"],
+      ["end_in_chromosome","BPS.end_in_chromosome","End"],
       @additional_columns,
     );
   }
@@ -456,6 +460,13 @@ sub handle_request {
     ["accessor","DBX.accessor","accessor"],
     ["accessor_suffix","DBX.accessor_suffix","accessor_suffix"],
     ["biosequence_accession","BS.biosequence_accession","accession"],
+
+    ["gene_symbol","BSA.gene_symbol","Annotated Gene Symbol"],
+    ["full_gene_name","BSA.full_gene_name","Annotated Full Gene Name"],
+    ["protein_EC_numbers","BSA.EC_numbers","Annotated EC Numbers"],
+    ["biosequence_annotation_id","BSA.biosequence_annotation_id","biosequence_annotation_id"],
+    ["last_annotated_by","BSAUL.username","Last Annotated By"],
+
     @additional_columns,
     ["biosequence_desc","BS.biosequence_desc","description"],
     ["biosequence_seq","BS.biosequence_seq","sequence"],
@@ -489,6 +500,10 @@ sub handle_request {
         LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
         LEFT JOIN $TBPS_BIOSEQUENCE_PROPERTY_SET BPS
              ON ( BS.biosequence_id = BPS.biosequence_id )
+        LEFT JOIN $TBPS_BIOSEQUENCE_ANNOTATION BSA
+	     ON ( BS.biosequence_id = BSA.biosequence_id )
+        LEFT JOIN $TB_USER_LOGIN BSAUL
+	     ON ( BSA.modified_by_id = BSAUL.contact_id )
         $GO_join
        WHERE 1 = 1
       $biosequence_set_clause
@@ -513,6 +528,13 @@ sub handle_request {
   #### Define the hypertext links for columns that need them
   %url_cols = ('set_tag' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PS_biosequence_set&biosequence_set_id=\%$colnameidx{biosequence_set_id}V",
                'accession' => "\%$colnameidx{accessor}V\%$colnameidx{accesssion}V\%$colnameidx{accessor_suffix}V",
+
+               'Annotated Full Gene Name' => "$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=PS_biosequence_annotation&biosequence_annotation_id=\%$colnameidx{biosequence_annotation_id}V&biosequence_id=\%$colnameidx{biosequence_id}V&ShowEntryForm=1",
+	       'Annotated Full Gene Name_ATAG' => 'TARGET="Win1"',
+	       'Annotated Full Gene Name_ISNULL' => ' [Add] ',
+               'Annotated Gene Symbol' => "$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=PS_biosequence_annotation&biosequence_annotation_id=\%$colnameidx{biosequence_annotation_id}V&biosequence_id=\%$colnameidx{biosequence_id}V&ShowEntryForm=1",
+	       'Annotated Gene Symbol_ATAG' => 'TARGET="Win1"',
+
                'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
                'Molecular Function_ATAG' => 'TARGET="WinExt"',
                'Molecular Function_OPTIONS' => {semicolon_separated_list=>1},
@@ -531,6 +553,7 @@ sub handle_request {
   #### Define columns that should be hidden in the output table
   %hidden_cols = ('biosequence_set_id' => 1,
                   'biosequence_id' => 1,
+                  'biosequence_annotation_id' => 1,
                   'accessor' => 1,
                   'accessor_suffix' => 1,
                   'molecular_function_GO' => 1,
