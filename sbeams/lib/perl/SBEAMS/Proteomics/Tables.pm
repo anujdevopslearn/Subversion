@@ -19,6 +19,8 @@ use vars qw(@ISA @EXPORT
     $TBPR_BIOSEQUENCE
 
     $TBPR_PROTEOMICS_EXPERIMENT
+    $TBPR_GRADIENT_PROGRAM
+    $TBPR_GRADIENT_DELTA
     $TBPR_FRACTION
     $TBPR_SEARCH_BATCH
     $TBPR_SEARCH_BATCH_PARAMETER
@@ -48,6 +50,8 @@ require Exporter;
     $TBPR_BIOSEQUENCE
 
     $TBPR_PROTEOMICS_EXPERIMENT
+    $TBPR_GRADIENT_PROGRAM
+    $TBPR_GRADIENT_DELTA
     $TBPR_FRACTION
     $TBPR_SEARCH_BATCH
     $TBPR_SEARCH_BATCH_PARAMETER
@@ -74,6 +78,8 @@ $TBPR_BIOSEQUENCE_SET         = 'proteomics.dbo.biosequence_set';
 $TBPR_BIOSEQUENCE             = 'proteomics.dbo.biosequence';
 
 $TBPR_PROTEOMICS_EXPERIMENT   = 'proteomics.dbo.proteomics_experiment';
+$TBPR_GRADIENT_PROGRAM        = 'proteomics.dbo.gradient_program';
+$TBPR_GRADIENT_DELTA          = 'proteomics.dbo.gradient_delta';
 $TBPR_FRACTION                = 'proteomics.dbo.fraction';
 $TBPR_SEARCH_BATCH            = 'proteomics.dbo.search_batch';
 $TBPR_SEARCH_BATCH_PARAMETER  = 'proteomics.dbo.search_batch_parameter';
