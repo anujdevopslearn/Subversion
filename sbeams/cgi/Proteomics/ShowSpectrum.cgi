@@ -255,7 +255,7 @@ sub printEntryForm {
       $parameters{gifheight} = 384;
     }
 
-    #print "Writing GIF to: $PHYSICAL_BASE_DIR/images/tmp/$tmpfile\n";
+    print "Writing GIF to: $PHYSICAL_BASE_DIR/images/tmp/$tmpfile\n";
     my $win = pg_setup(Device=>"$PHYSICAL_BASE_DIR/images/tmp/$tmpfile/gif",
                        title=>"$spectrum{msms_scan_file_root}",
                        xmin=>$parameters{xmin}, xmax=>$parameters{xmax},
@@ -268,30 +268,29 @@ sub printEntryForm {
 
     my $charge;
     foreach $charge (@charge) {
-      my ($masslist_ref) = CalcIons(Residues=>\@residues,
-                                    MassArray=>$AAmasses_ref,
-                                    Print=>1,Charge=>$charge);
-      my %masslist = %$masslist_ref;
-
-      #### Convert to piddle for easy sub-selecting
-      my $Bion = pdl $masslist{Bion};
-      my $Yion = pdl $masslist{Yion};
-      my $lineclr;
-
+      my ($masslist_ref) = CalcIons(Residues=>\@residues, Charge=>$charge,
+                                    MassArray=>$AAmasses_ref);
       my ($B_ref,$Y_ref);
       $t5 = [gettimeofday()];
 
       #### Make the plot
-      ($win,$B_ref,$Y_ref) = PlotPeaks(SpecData=>\%spectrum, Bion=>$Bion,
-                                       Yion=>$Yion, Charge=>$charge,
+print "Before PlotPeaks\n";
+      ($win,$B_ref,$Y_ref) = PlotPeaks(SpecData=>\%spectrum,
+                                       Masslist=>$masslist_ref, Charge=>$charge,
                                        Win=>$win, Length=>$length,
                                        Window=>$parameters{masstol},
                                        PeakColors=>\@peakcolors);
+print "After PlotPeaks\n";
       $t6 = [gettimeofday()];
-      LabelResidues(Bdata=>$Bion, Ydata=>$Yion, Binten=>$B_ref, Yinten=>$Y_ref,
+      PrintIons(Masslist=>$masslist_ref,Color=>1,Html=>1,Charge=>$charge);
+print "After PrintIons\n";
+
+      LabelResidues(Bdata=>$masslist_ref->{Bion}, Ydata=>$masslist_ref->{Yion}, 
+                    Binten=>$B_ref, Yinten=>$Y_ref,
                     Ionmasses=>$masslist_ref, Charge=>$charge, Win=>$win,
                     Length=>$length, Xmin=>$parameters{xmin}, Xmax=>$parameters{xmax},
                     Ymax=>$intenmax, Angle=>$labangle, Fjust=>$fjust);
+print "After LabelResidues\n";
     }
     $t7 = [gettimeofday()];
 
@@ -486,9 +485,7 @@ sub get_msms_spectrum {
     return;
   }
 
-
 }
-
 
 
 ###############################################################################
@@ -572,6 +569,7 @@ sub InitializeMass {
       }
     }
 
+    close MASSFILE;
     #### Return references to AAmasses
     return (\%AAmasses);
 }
@@ -673,11 +671,8 @@ sub PlotPeaks {
     #### Spectrum data to be plotted
     my $specdata = $args{'SpecData'};
 
-    #### B ions to be plotted
-    my $bdata = $args{'Bion'};
-
-    #### Y ions to be plotted
-    my $ydata = $args{'Yion'};
+    #### Ions to be plotted
+    my $masslist_ref = $args{'Masslist'};
 
     #### Charge
     my $charge = $args{'Charge'};
@@ -690,7 +685,6 @@ sub PlotPeaks {
 
     #### Peak finding window
     my $window = $args{'Window'} || 2;
-
 
     my $length = $args{'Length'};
     my @Binten = (0) x $length;
@@ -732,6 +726,10 @@ sub PlotPeaks {
       $grcol = 3;
     }
 
+    #### Convert to piddle for easy sub-selecting
+    my $bdata = pdl $masslist_ref->{Bion};
+    my $ydata = pdl $masslist_ref->{Yion};
+
     #### Draw peaks
     my $i;
     my $lineclr;
@@ -756,23 +754,30 @@ sub PlotPeaks {
       my $Bind = which($bdata >= ($mass-$window) & $bdata <= ($mass+$window));
       my $Yind = which($ydata >= ($mass-$window) & $ydata <= ($mass+$window));
 
+print "Here now\n";
+
+
       if (($Bind !~ 'Empty') && ($Yind =~ 'Empty')) {
         if ($Binten[$Bind->at(0)] < $intensity) {
           $Binten[$Bind->at(0)] = $intensity;
           $Bmass[$Bind->at(0)] = $mass;
           $lineclr = $redcol;
+          $masslist_ref->{Bcolor}->[$Bind->at(0)] = $lineclr;
         }
       } elsif (($Yind !~ 'Empty') && ($Bind =~ 'Empty')) {
         if ($Yinten[$Yind->at(0)] < $intensity) {
           $Yinten[$Yind->at(0)] = $intensity;
           $Ymass[$Yind->at(0)] = $mass;
           $lineclr = $bluecol;
+          $masslist_ref->{Ycolor}->[$Yind->at(0)] = $lineclr;
         }
       } elsif (($Bind !~ 'Empty') && ($Yind !~ 'Empty')) {
         if ($Yinten[$Yind->at(0)] < $intensity) {
           $BYinten[$Yind->at(0)] = $intensity;
           $BYmass[$Yind->at(0)] = $mass;
           $lineclr = $grcol;
+          $masslist_ref->{Bcolor}->[$Yind->at(0)] = $lineclr;
+          $masslist_ref->{Ycolor}->[$Yind->at(0)] = $lineclr;
         }
       } else {
         if (($peakcolors_ref->[$i] != 2) & ($peakcolors_ref->[$i] != 3) &
@@ -817,7 +822,7 @@ sub PlotPeaks {
     my $byh = {Color => $grcol};
     $win -> line ($byx,$byy,$byh);
 
-    return ($win,\@Binten,\@Yinten);
+    return ($win,\@Binten,\@Yinten,);
 }
 
 
@@ -890,19 +895,15 @@ sub LabelResidues {
         my $matchy = pdl [$y+($interval/3.), $y+4*($interval/3.)];
         my $Yind = which($Ydata >= ($mass-2) & $Ydata <= ($mass+2));
         if ($Yind !~ 'Empty') {
-          #### Green text for label
+          #### Green text and line for both ion match
           pgsci $grcol;
-
-          #### Green line for both ion match
           $lineclr = $grcol;
 
           #### Location of label above tick mark (moved up)
           $labht = $y+6.5*($interval/3.);
         } else {
-          #### Red text for label
+          #### Red text and line for B ion match
           pgsci $redcol;
-
-          #### Red line for B ion match
           $lineclr = $redcol;
 
           #### Location of label above tick mark
@@ -924,19 +925,15 @@ sub LabelResidues {
         my $matchy = pdl [$y+($interval/3.), $y+4*($interval/3.)];
         my $Bind = which($Bdata >= ($mass-2) & $Bdata <= ($mass+2));
         if ($Bind !~ 'Empty') {
-          #### Green text for label
+          #### Green text and line for both ion match
           pgsci $grcol;
-
-          #### Green line for both ion match
           $lineclr = $grcol;
 
           #### Location of label above tick mark
           $labht = $y+5*($interval/3.);
         } else {
-          #### Blue text for label
+          #### Blue text and line for Y ion match
           pgsci $bluecol;
-
-          #### Blue line for Y ion match
           $lineclr = $bluecol;
 
           #### Location of label above tick mark
@@ -985,7 +982,6 @@ sub CalcIons {
 
     my $residues_ref = $args{'Residues'};
     my @residues = @$residues_ref;
-    my $print = $args{'Print'} || 0;
     my $charge = $args{'Charge'} || 1;
     my $massarray_ref = $args{'MassArray'};
     my %massarray = %$massarray_ref;
@@ -994,6 +990,10 @@ sub CalcIons {
     my $Nterm = $massarray{"h"};
     my $Bion = 0;
     my $Yion  = 2 * $Nterm + $massarray{"o"};
+
+    my @Bcolor = (14) x $length;
+    my @Ycolor = (14) x $length;
+
     for ($i=0; $i<$length; $i++) {
       $Yion += $massarray{$residues[$i]};
     }
@@ -1001,54 +1001,59 @@ sub CalcIons {
     my %masslist;
     my (@aminoacids, @indices, @rev_indices, @Bions, @Yions);
 
-    if ($print == 1) {
-      print "\n";
-      print " SEQ  #       B         Y    +$charge\n";
-      print " --- --  --------- --------- --\n";
-    }
     #### Compute the ion masses
     for ($i = 0; $i<$length; $i++) {
       $Bion += $massarray{$residues[$i]};
       $Yion -= $massarray{$residues[$i-1]} if ($i > 0);
 
-      #### B index
+      #### B index & Y index
       $indices[$i] = $i;
-
-      #### Y index
       $rev_indices[$i] = $length-$i;
 
-      #### B ion mass
+      #### B ion mass & Y ion mass
       $Bions[$i] = ($Bion + $charge*$Nterm)/$charge;
-
-      #### Y ion mass
       $Yions[$i] = ($Yion + $charge*$Nterm)/$charge;
     }
 
-    #### Printing stuff
-    for ($i=0; $i < $length; $i++) {
-      if ($print == 1) {
-        if ($i == 0) {
-          printf " %3s %2d %9.1f %9s %3d\n",$residues[$i], $i+1,
-                   $Bions[$i], '--  ', $length-$i
-        }
-        elsif ($i == ($length-1)) {
-          printf " %3s %2d %9s %9.1f %3d\n",$residues[$i], $i+1,
-                   '--  ', $Yions[$i], $length-$i
-        }
-        else {
-          printf " %3s %2d %9.1f %9.1f %3d\n",$residues[$i], $i+1, 
-                   $Bions[$i], $Yions[$i], $length-$i;
-        }
-      }
-    }
+    $masslist{residues} = \@residues;
+    $masslist{indices} = \@indices;
+    $masslist{Bions} = \@Bions;
+    $masslist{Yions} = \@Yions;
+    $masslist{rev_indices} = \@rev_indices;
 
-    $masslist{residue} = \@residues;
-    $masslist{index} = \@indices;
-    $masslist{Bion} = \@Bions;
-    $masslist{Yion} = \@Yions;
-    $masslist{rev_index} = \@rev_indices;
-
-    #### Return ref to hash of array refs
+    #### Return reference to a hash of array references
     return (\%masslist);
 }
 
+###############################################################################
+# PrintIons
+###############################################################################
+sub PrintIons {
+    my %args = @_;
+
+    my $masslist_ref = $args{'Masslist'};
+    my $color = $args{'Color'} || 0;
+    my $html = $args{'Html'} || 0;
+    my $charge = $args{'Charge'};
+    my $length = scalar($masslist_ref->{residues});
+
+    print "\n";
+    print " SEQ  #       B         Y    +$charge\n";
+    print " --- --  --------- --------- --\n";
+
+    #### Printing stuff
+    for (my $i=0; $i < $length; $i++) {
+      if ($i == 0) {
+        printf " %3s %2d %9.1f %9s %3d\n",$masslist_ref->{residues}->[$i], $i+1,
+                 $masslist_ref->{Bions}->[$i], '--  ', $length-$i
+      }
+      elsif ($i == ($length-1)) {
+        printf " %3s %2d %9s %9.1f %3d\n",$masslist_ref->{residues}->[$i], $i+1,
+                 '--  ', $masslist_ref->{Yions}->[$i], $length-$i
+      }
+      else {
+        printf " %3s %2d %9.1f %9.1f %3d\n",$masslist_ref->{residues}->[$i], $i+1,
+                 $masslist_ref->{Bions}->[$i], $masslist_ref->{Yions}->[$i], $length-$i;
+      }
+    }
+}

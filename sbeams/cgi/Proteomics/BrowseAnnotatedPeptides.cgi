@@ -126,7 +126,12 @@ sub printEntryForm {
     # Read the form values for each column
     foreach $element (@columns) {
         if ($input_types{$element} eq "multioptionlist") {
-          $parameters{$element}=join(",",$q->param($element));
+          my @tmparray = $q->param($element);
+          if (scalar(@tmparray) > 1) {
+            pop @tmparray unless ($tmparray[$#tmparray]);
+            shift @tmparray unless ($tmparray[0]);
+          }
+          $parameters{$element}=join(",",@tmparray);
         } else {
           $parameters{$element}=$q->param($element);
         }
@@ -349,7 +354,9 @@ sub printEntryForm {
       if ($input_type eq "multioptionlist") {
         print qq!
           <TD><SELECT NAME="$column_name" MULTIPLE SIZE=$input_length $onChange>
-          $optionlists{$column_name}</SELECT></TD>
+          $optionlists{$column_name}
+          <OPTION VALUE=""></OPTION>
+          </SELECT></TD>
         !;
       }
 

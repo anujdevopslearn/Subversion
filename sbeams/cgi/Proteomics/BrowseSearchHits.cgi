@@ -127,7 +127,12 @@ sub printEntryForm {
     my $no_params_flag = 1;
     foreach $element (@columns) {
         if ($input_types{$element} eq "multioptionlist") {
-          $parameters{$element}=join(",",$q->param($element));
+          my @tmparray = $q->param($element);
+          if (scalar(@tmparray) > 1) {
+            pop @tmparray unless ($tmparray[$#tmparray]);
+            shift @tmparray unless ($tmparray[0]);
+          }
+          $parameters{$element}=join(",",@tmparray);
         } else {
           $parameters{$element}=$q->param($element);
         }
@@ -350,7 +355,9 @@ sub printEntryForm {
       if ($input_type eq "multioptionlist") {
         print qq!
           <TD><SELECT NAME="$column_name" MULTIPLE SIZE=$input_length $onChange>
-          $optionlists{$column_name}</SELECT></TD>
+          $optionlists{$column_name}
+          <OPTION VALUE=""></OPTION>
+          </SELECT></TD>
         !;
       }
 
@@ -442,15 +449,12 @@ sub printEntryForm {
 
 
       #### Build FILE_ROOT constraint
-      my $file_root_clause = "";
-      if ($parameters{file_root_constraint}) {
-        if ($parameters{file_root_constraint} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
-          print "<H4>Cannot parse file_root Constraint!  Check syntax.</H4>\n\n";
-          return;
-        } else {
-          $file_root_clause = "   AND S.file_root LIKE '$parameters{file_root_constraint}'";
-        }
-      }
+      my $file_root_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"S.file_root",
+        constraint_type=>"plain_text",
+        constraint_name=>"file_root",
+        constraint_value=>$parameters{file_root_constraint} );
+      return if ($file_root_clause == -1);
 
 
       #### Build BEST_HIT constraint
@@ -480,79 +484,51 @@ sub printEntryForm {
       return if ($charge_clause == -1);
 
 
-      #### Build CHARGE constraint
-      #my $charge_clause = "";
-      #if ($parameters{charge_constraint} =~ /^\s*[\d,]+\s*$/) {
-      #  $charge_clause = "   AND S.assumed_charge IN ( $parameters{charge_constraint} )";
-      #}
-
-
       #### Build REFERENCE PROTEIN constraint
-      my $reference_clause = "";
-      if ($parameters{reference_constraint}) {
-        if ($parameters{reference_constraint} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
-          print "<H4>Cannot parse Reference Constraint!  Check syntax.</H4>\n\n";
-          return;
-        } else {
-          $reference_clause = "   AND SH.reference LIKE '$parameters{reference_constraint}'";
-        }
-      }
+      my $reference_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"SH.reference",
+        constraint_type=>"plain_text",
+        constraint_name=>"Reference",
+        constraint_value=>$parameters{reference_constraint} );
+      return if ($reference_clause == -1);
 
 
       #### Build PEPTIDE constraint
-      my $peptide_clause = "";
-      if ($parameters{peptide_constraint}) {
-        if ($parameters{peptide_constraint} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
-          print "<H4>Cannot parse Peptide Constraint!  Check syntax.</H4>\n\n";
-          return;
-        } else {
-          $peptide_clause = "   AND SH.peptide LIKE '$parameters{peptide_constraint}'";
-        }
-      }
+      my $peptide_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"SH.peptide",
+        constraint_type=>"plain_text",
+        constraint_name=>"Peptide",
+        constraint_value=>$parameters{peptide_constraint} );
+      return if ($peptide_clause == -1);
 
 
       #### Build PEPTIDE STRING constraint
-      my $peptide_string_clause = "";
-      if ($parameters{peptide_string_constraint}) {
-        if ($parameters{peptide_string_constraint} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
-          print "<H4>Cannot parse Peptide String Constraint!  Check syntax.</H4>\n\n";
-          return;
-        } else {
-          $peptide_clause = "   AND SH.peptide_string LIKE '$parameters{peptide_string_constraint}'";
-        }
-      }
+      my $peptide_string_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"SH.peptide_string",
+        constraint_type=>"plain_text",
+        constraint_name=>"Peptide String",
+        constraint_value=>$parameters{peptide_string_constraint} );
+      return if ($peptide_string_clause == -1);
 
 
       #### Build MASS constraint
-      my $mass_clause = "";
-      if ($parameters{mass_constraint}) {
-        if ($parameters{mass_constraint} =~ /^[\d\.]+$/) {
-          $mass_clause = "   AND SH.hit_mass_plus_H = $parameters{mass_constraint}";
-        } elsif ($parameters{mass_constraint} =~ /^between\s+[\d\.]+\s+and\s+[\d\.]+$/i) {
-          $mass_clause = "   AND SH.hit_mass_plus_H $parameters{mass_constraint}";
-        } elsif ($parameters{mass_constraint} =~ /^[><=][=]*\s*[\d\.]+$/) {
-          $mass_clause = "   AND SH.hit_mass_plus_H $parameters{mass_constraint}";
-        } else {
-          print "<H4>Cannot parse Mass Constraint!  Check syntax.</H4>\n\n";
-          return;
-        }
-      }
+      my $mass_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"SH.hit_mass_plus_H",
+        constraint_type=>"flexible_float",
+        constraint_name=>"Mass Constraint",
+        constraint_value=>$parameters{mass_constraint} );
+      return if ($mass_clause == -1);
+
 
 
       #### Build ISOELECTRIC_POINT constraint
-      my $isoelectric_point_clause = "";
-      if ($parameters{isoelectric_point_constraint}) {
-        if ($parameters{isoelectric_point_constraint} =~ /^[\d\.]+$/) {
-          $mass_clause = "   AND isoelectric_point = $parameters{isoelectric_point_constraint}";
-        } elsif ($parameters{isoelectric_point_constraint} =~ /^between\s+[\d\.]+\s+and\s+[\d\.]+$/i) {
-          $mass_clause = "   AND isoelectric_point $parameters{isoelectric_point_constraint}";
-        } elsif ($parameters{isoelectric_point_constraint} =~ /^[><=][=]*\s*[\d\.]+$/) {
-          $mass_clause = "   AND isoelectric_point $parameters{isoelectric_point_constraint}";
-        } else {
-          print "<H4>Cannot parse pI Constraint!  Check syntax.</H4>\n\n";
-          return;
-        }
-      }
+      my $isoelectric_point_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"isoelectric_point",
+        constraint_type=>"flexible_float",
+        constraint_name=>"Isoelectric Point",
+        constraint_value=>$parameters{isoelectric_point_constraint} );
+      return if ($isoelectric_point_clause == -1);
+
 
 
       #### Build ANNOTATION_STATUS and ANNOTATION_LABELS constraint

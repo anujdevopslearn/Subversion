@@ -134,7 +134,12 @@ sub printEntryForm {
     my $no_params_flag = 1;
     foreach $element (@columns) {
         if ($input_types{$element} eq "multioptionlist") {
-          $parameters{$element}=join(",",$q->param($element));
+          my @tmparray = $q->param($element);
+          if (scalar(@tmparray) > 1) {
+            pop @tmparray unless ($tmparray[$#tmparray]);
+            shift @tmparray unless ($tmparray[0]);
+          }
+          $parameters{$element}=join(",",@tmparray);
         } else {
           $parameters{$element}=$q->param($element);
         }
