@@ -463,26 +463,28 @@ sub printEntryForm {
 
 
       #### Build XCORR_RANK constraint
-      my $xcorr_rank_clause = "";
-      if ($parameters{xcorr_rank_constraint}) {
-        if ($parameters{xcorr_rank_constraint} =~ /^[\d]+$/) {
-          $xcorr_clause = "   AND SH.cross_corr_rank = $parameters{xcorr_rank_constraint}";
-        } elsif ($parameters{xcorr_rank_constraint} =~ /^between\s+[\d]+\s+and\s+[\d]+$/i) {
-          $xcorr_clause = "   AND SH.cross_corr_rank $parameters{xcorr_rank_constraint}";
-        } elsif ($parameters{xcorr_rank_constraint} =~ /^[><=][=]*\s*[\d]+$/) {
-          $xcorr_clause = "   AND SH.cross_corr_rank $parameters{xcorr_rank_constraint}";
-        } else {
-          print "<H4>Cannot parse XCorr Rank Constraint!  Check syntax.</H4>\n\n";
-          return;
-        }
-      }
+      my $xcorr_rank_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"SH.cross_corr_rank",
+        constraint_type=>"flexible_int",
+        constraint_name=>"XCorr Rank",
+        constraint_value=>$parameters{xcorr_rank_constraint} );
+      return if ($xcorr_rank_clause == -1);
 
 
       #### Build CHARGE constraint
-      my $charge_clause = "";
-      if ($parameters{charge_constraint} =~ /[\d,]+/) {
-        $charge_clause = "   AND S.assumed_charge IN ( $parameters{charge_constraint} )";
-      }
+      my $charge_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"S.assumed_charge",
+        constraint_type=>"int_list",
+        constraint_name=>"Charge",
+        constraint_value=>$parameters{charge_constraint} );
+      return if ($charge_clause == -1);
+
+
+      #### Build CHARGE constraint
+      #my $charge_clause = "";
+      #if ($parameters{charge_constraint} =~ /^\s*[\d,]+\s*$/) {
+      #  $charge_clause = "   AND S.assumed_charge IN ( $parameters{charge_constraint} )";
+      #}
 
 
       #### Build REFERENCE PROTEIN constraint
@@ -712,6 +714,7 @@ sub printEntryForm {
 	$search_batch_clause
 	$best_hit_clause
 	$xcorr_clause
+	$xcorr_rank_clause
 	$charge_clause
 	$reference_clause
 	$peptide_clause
