@@ -419,7 +419,7 @@ sub loadBiosequenceSet {
       $information =~ /^>(\S+)/;
       $rowdata{biosequence_name} = $1;
       $information =~ /^>(\S+)\s(.+)/;
-      $rowdata{biosequence_desc} = $2;
+      $rowdata{biosequence_desc} = $2 || '';
       $rowdata{biosequence_set_id} = $biosequence_set_id;
       $rowdata{biosequence_seq} = $sequence unless ($skip_sequence);
 
