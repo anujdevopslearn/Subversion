@@ -456,9 +456,30 @@ sub printEntryForm {
   } elsif ( $projectAuthLevel && $projectAuthLevel > DATA_READER ) {
     # Denied based on project permissions.
     $viewStates{no_access} = 1;
-    push @errors, <<"    END";
+
+    # Need more project info
+    my @rows = $sbeams->selectSeveralColumns( <<"    END_SQL" );
+    SELECT first_name + ' ' + last_name as uname, project_id, name
+    FROM project p JOIN contact c
+    ON p.pi_contact_id = c.contact_id
+    WHERE p.project_id = $parent_project_id
+    END_SQL
+
+    my $contact_info =<<"    END";
     You lack project ($projectAuthLevel) authorization to access this resource.
     END
+
+    # This will almost always override the previous message.
+    if ( scalar( @rows ) ) {
+      $contact_info =<<"      END";
+      You do not have sufficient privileges ($projectAuthLevel) to access data in the current project,
+      $rows[0]->[2] ( $rows[0]->[1] ).  Please contact the the project PI ( $rows[0]->[0] ) about granting you access.
+      
+      END
+      }
+
+    
+    push @errors, $contact_info;
 
   } elsif ( ( $projectAuthLevel && $projectAuthLevel == DATA_ADMIN ) ||
             ( $projectAuthLevel && $projectAuthLevel <= DATA_MODIFIER ) ||
@@ -524,7 +545,7 @@ sub printEntryForm {
   }
 
   #### FIXME debug block ####
-  use constant DEBUG => 0;
+  use constant DEBUG => 1;
 
   my $rec = ( defined $projectAuthLevel ) ? $projectAuthLevel : 'undefined';
   my $pk = ( $parameters{$PK_COLUMN_NAME} ) ? $parameters{$PK_COLUMN_NAME} : 'undefined';
@@ -690,12 +711,15 @@ sub printEntryForm {
     if ($fk_table) {
       my $subdir = $sbeams->getSBEAMS_SUBDIR();
       $subdir .= "/" if ($subdir);
-      $jump_to_list_source = qq~<A TARGET="AddToList" HREF="$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=$fk_table&ShowEntryForm=1"><IMG
-        SRC="$HTML_BASE_DIR/images/greenplus.gif" border=0
-        ALT="Add to or view details about this list box" ></A><A TARGET="ViewProperties" HREF="$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=$fk_table&$fk_column_name=$parameters{$column_name}">~;
-      $jump_to_list_source .= qq~<IMG
-        SRC="$HTML_BASE_DIR/images/xmag_sm.png" border=0
-        ALT="View properties of the selected item (Click REFRESH after selecting new item)" ></A>
+      $jump_to_list_source = qq~
+        <A TARGET="AddToList" HREF="$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=$fk_table&ShowEntryForm=1">
+        <IMG SRC="$HTML_BASE_DIR/images/greenplus.gif" border=0 ALT="Add to or view details about this list box" ></A>
+        ~;
+
+      $jump_to_list_source .= qq~
+        <A TARGET="ViewProperties" HREF="$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=$fk_table&$fk_column_name=$parameters{$column_name}">
+        <IMG SRC="$HTML_BASE_DIR/images/xmag_sm.png" border=0 ALT="View properties of the selected item (Click REFRESH after selecting new item)" >
+        </A>
       ~ if (defined($parameters{$column_name}) && $parameters{$column_name} > '');
     }
 
@@ -738,19 +762,28 @@ sub printEntryForm {
         $text = $parameters{$column_name};
         $text = wrapText( $text ) if length($text) > 60;
         $text = '&nbsp;' if !defined $text || $text eq '';
-      
-        $text .= $jump_to_list_source if ($input_type eq "optionlist");
       }
 
-      # <TD BGCOLOR="E0E0E0">$column_text</TD>
+      my $view_obj_details;
+      if ($fk_table) {
+      my $subdir =  ( $sbeams->getSBEAMS_SUBDIR() ) ? $sbeams->getSBEAMS_SUBDIR() . '/' : ''; 
+      $view_obj_details .= qq~
+        <A TARGET="ViewProperties" HREF="$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=$fk_table&$fk_column_name=$parameters{$column_name}">
+        <IMG SRC="$HTML_BASE_DIR/images/xmag_sm.png" HEIGHT=16 WIDTH=16 border=0 ALT="View properties of the selected item (Click REFRESH after selecting new item)" >
+        </A>
+      ~ if (defined($parameters{$column_name}) && $parameters{$column_name} > '');
+      }
+
       print <<"      END_PRINT";
       <TR>
         <TD VALIGN="top"><B>$column_title:</B></TD>
-        <TD>$text</TD>
+        <TD BGCOLOR="E0E0E0">$column_text</TD>
+        <TD VALIGN="top">$text $view_obj_details</TD>
       <TR>
       END_PRINT
 
       next;
+
     } # End view-only display block
 
     #### Set the JavaScript onChange string if supplied
@@ -929,7 +962,7 @@ sub printEntryForm {
     my $status = getStatusForDisplay( $parameters{'record_status'} );
     print <<"    END_PRINT";
           <TR><TD><B>record_status:</B></TD>
-          <TD>$status</TD>
+          <TD COLSPAN=2>$status</TD>
           </TR>
     END_PRINT
   }
