@@ -141,6 +141,10 @@ sub printEntryForm {
 	SELECT project_id,username+' - '+name
 	  FROM $TB_PROJECT P
 	  LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id )
+	  LEFT JOIN $TB_USER_WORK_GROUP UWG
+	       ON ( P.PI_contact_id=UWG.contact_id )
+	 WHERE P.record_status != 'D'
+	   AND UWG.work_group_id = 13
 	 ORDER BY username,name
     ~;
     my $optionlist = $sbeams->buildOptionList(
