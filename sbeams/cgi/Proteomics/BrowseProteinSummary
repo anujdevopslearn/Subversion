@@ -453,18 +453,18 @@ sub handle_request {
        $molecular_function_clause.$biological_process_clause.
        $cellular_component_clause.$protein_domain_clause ) {
     $GO_join = qq~
-        LEFT JOIN flybase.dbo.annotated_gene AG
+        LEFT JOIN BioLink.dbo.annotated_gene AG
              ON ( BS.biosequence_accession = AG.gene_accession )
-        LEFT JOIN flybase.dbo.gene_annotation MFA
+        LEFT JOIN BioLink.dbo.gene_annotation MFA
              ON ( AG.annotated_gene_id = MFA.annotated_gene_id
                    AND MFA.gene_annotation_type_id = 1 AND MFA.idx = 0 )
-        LEFT JOIN flybase.dbo.gene_annotation BPA
+        LEFT JOIN BioLink.dbo.gene_annotation BPA
              ON ( AG.annotated_gene_id = BPA.annotated_gene_id
                    AND BPA.gene_annotation_type_id = 2 AND BPA.idx = 0 )
-        LEFT JOIN flybase.dbo.gene_annotation CCA
+        LEFT JOIN BioLink.dbo.gene_annotation CCA
              ON ( AG.annotated_gene_id = CCA.annotated_gene_id
                    AND CCA.gene_annotation_type_id = 3 AND CCA.idx = 0 )
-        LEFT JOIN flybase.dbo.gene_annotation IPDA
+        LEFT JOIN BioLink.dbo.gene_annotation IPDA
              ON ( AG.annotated_gene_id = IPDA.annotated_gene_id
                    AND IPDA.gene_annotation_type_id = 4 AND IPDA.idx = 0 )
     ~;
@@ -512,6 +512,7 @@ sub handle_request {
       ["n_quant","SQ.ratio_number_peptides","Quant N"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
+      ["organism","O.genus+' '+O.species","Organism"],
     );
     $peptide_column = "";
     $count_column = "";
@@ -550,6 +551,10 @@ sub handle_request {
                ON ( PROT.summary_quantitation_id = SQ.summary_quantitation_id )
 	 INNER JOIN $TBPR_BIOSEQUENCE BS
                ON ( PROT.biosequence_id = BS.biosequence_id )
+	 INNER JOIN $TBPR_BIOSEQUENCE_SET BSS
+               ON ( BS.biosequence_set_id = BSS.biosequence_set_id )
+	 INNER JOIN $TB_ORGANISM O
+               ON ( BSS.species_id = O.organism_id )
           LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
 	 INNER JOIN $TBPR_PROTEIN_SUMMARY PS
 	       ON ( PG.protein_summary_id = PS.protein_summary_id )
@@ -658,6 +663,7 @@ sub handle_request {
                   'biological_process_GO' => 1,
                   'cellular_component_GO' => 1,
                   'interpro_protein_domain_GO' => 1,
+                  'Organism' => 1,
   );
 
 
