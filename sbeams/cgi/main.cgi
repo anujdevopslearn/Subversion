@@ -150,7 +150,7 @@ sub handle_request {
 	it via the pull down menus if desired, or use the list of
 	projects below.</P>
 
-	<P>The modules available to you are listed below and on the
+	<P>The modules available to you are listed on the
 	navigation bar on the left.  Enter the interface for one of
 	the available modules by clicking on it.</P>
 
@@ -160,7 +160,7 @@ sub handle_request {
   ~;
 
 
-
+  my $comment =<<'  END';
   #### Show the list of Modules available to this user
   print qq~
 	<H1>Available SBEAMS Modules:</H1>
@@ -178,11 +178,11 @@ sub handle_request {
 	<LI><A HREF="$module/main.cgi">SBEAMS - $module</A>
     ~;
   }
-
-
-  #### Finish the list
-  print qq~
 	</UL>
+
+  END
+
+  print qq~
 
 	<P>To integrate resultsets from queries in multiple modules
 	(e.g., Interactions, Microarray, and Proteomics) and visualize
@@ -200,6 +200,14 @@ sub handle_request {
 
   $sbeams->printRecentResultsets();
 
+  ##########################################################################
+  #### Print out project detail stuff, if current or default project exists
+
+  my $project_id = $sbeams->getCurrent_project_id();
+  $project_id ||= $sbeams->getDefault_project_id();
+  if ( $project_id ) {
+    print $sbeams->getProjectDetailsTable( project_id => $project_id ); 
+  }
 
 
   ##########################################################################
