@@ -73,7 +73,7 @@ PH_plasmid	23	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_
 PH_plasmid	24	record_status	Record Status	char	1	0	N	N	N							N	N				
 PH_strain	1	strain_id	Strain ID	int	8	0	N		Y							N	N				pkDEFAULT
 PH_strain	2	strain_status_id	Strain Status	int	8	0	N		N	PH_strain_status	strains_status_id	Y	optionlist			Y	Y	N	Status/viability of this Strain	"SELECT strain_status_id, strain_status_name FROM $TBPH_STRAIN_STATUS WHERE record_status != 'D' ORDER BY sort_order,strain_status_name"	
-PH_strain	3	strain_name	Strain Name	varchar	50	0	N		N			N	text	20		Y	Y	Y	The name of this strain		
+PH_strain	3	strain_name	Strain Name	varchar	50	0	N		N			Y	text	20		Y	Y	Y	The name of this strain		
 PH_strain	4	former_name	Former Name	varchar	50	0	N		N			N	text	20		Y	Y	N	Former name of this strain if it has been renamed		
 PH_strain	5	organism_id	Organism ID	int	8	0	N		N		organism_id	Y	optionlist			Y	Y	N	Organism from which this strain derives	"SELECT organism_id, organism_name FROM $TB_ORGANISM WHERE record_status != 'D' ORDER BY sort_order,organism_name"	
 PH_strain	6	strain_background_id	Strain Background	int	8	0	N		N	PH_strain_background	strain_background_id	Y	optionlist			Y	Y	N	The background of the strain	"SELECT strain_background_id, strain_background_name FROM $TBPH_STRAIN_BACKGROUND WHERE record_status != 'D' ORDER BY sort_order, strain_background_name"	
