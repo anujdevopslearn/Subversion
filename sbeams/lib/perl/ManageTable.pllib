@@ -1043,7 +1043,7 @@ sub writeDataFile {
 
     #### Check that the upload directory is there
     unless (-d "$UPLOAD_DIR") {
-      die("CONFIGURATION ERROR: The upload directory does not exist! ".
+      die("CONFIGURATION ERROR: The upload directory '$UPLOAD_DIR' does not exist! ".
         "Please report this problem to your SBEAMS administrator.<BR>");
     }
 
