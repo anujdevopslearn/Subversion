@@ -35,7 +35,7 @@ $q       = new CGI;
 ###############################################################################
 # Global variables
 ###############################################################################
-$dbh = SBEAMS::Connection::DBConnector::getDBHandle();
+#$dbh = SBEAMS::Connection::DBConnector::getDBHandle();
 #### Can we get rid of this?? This may be creating a connection before
 #### we want it?
 
@@ -69,6 +69,9 @@ sub applySqlChange {
     my $table_name = shift || croak("parameter table_name not passed");
     my $record_identifier = shift
        || croak("parameter record_identifier not passed");
+
+    #### Get the database handle
+    $dbh = $self->getDBHandle();
 
     # Privilege that a certain work_group has over a table_group
     my $table_group_privilege_id;
@@ -266,6 +269,9 @@ sub selectOneColumn {
     my @row;
     my @rows;
 
+    #### Get the database handle
+    $dbh = $self->getDBHandle();
+
     my $sth = $dbh->prepare($sql) or croak $dbh->errstr;
     my $rv  = $sth->execute or croak $dbh->errstr;
 
@@ -291,6 +297,9 @@ sub selectSeveralColumns {
     my $sql = shift || croak("parameter sql not passed");
 
     my @rows;
+
+    #### Get the database handle
+    $dbh = $self->getDBHandle();
 
     #### FIX ME replace with $dbh->selectall_arrayref ?????
     my $sth = $dbh->prepare($sql) or croak $dbh->errstr;
@@ -319,6 +328,9 @@ sub selectHashArray {
 
     my @rows;
 
+    #### Get the database handle
+    $dbh = $self->getDBHandle();
+
     my $sth = $dbh->prepare($sql) or croak $dbh->errstr;
     my $rv  = $sth->execute or croak $dbh->errstr;
 
@@ -344,6 +356,9 @@ sub selectTwoColumnHash {
     my $sql_query = shift || croak("parameter sql_query not passed");
 
     my %hash;
+
+    #### Get the database handle
+    $dbh = $self->getDBHandle();
 
     my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
     my $rv  = $sth->execute or croak $dbh->errstr;
@@ -481,6 +496,9 @@ sub insert_update_row {
 sub executeSQL {
     my $self = shift || croak("parameter self not passed");
     my $sql = shift || croak("parameter sql not passed");
+
+    #### Get the database handle
+    $dbh = $self->getDBHandle();
 
     my ($rows) = $dbh->do("$sql") or croak $dbh->errstr;
 
@@ -696,6 +714,9 @@ sub buildOptionList {
       $selected_options{$element}=1;
     }
 
+    #### Get the database handle
+    $dbh = $self->getDBHandle();
+
     my $options="";
     my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
     my $rv  = $sth->execute or croak $dbh->errstr;
@@ -753,6 +774,9 @@ sub displayQueryResult {
     my $max_widths_ref = $args{'max_widths'};
     $resultset_ref = $args{'resultset_ref'};
 
+
+    #### Get the database handle
+    $dbh = $self->getDBHandle();
 
     #### Execute the query
     $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
@@ -947,6 +971,9 @@ sub fetchResultSet {
     $resultset_ref = $args{'resultset_ref'};
 
 
+    #### Get the database handle
+    $dbh = $self->getDBHandle();
+
     #### Execute the query
     $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
     my $rv  = $sth->execute or croak $dbh->errstr;
@@ -1009,6 +1036,7 @@ sub displayResultSet {
     $resultset_ref = $args{'resultset_ref'};
     my $page_size = $args{'page_size'} || 100;
     my $page_number = $args{'page_number'} || 0;
+    my $table_width = $args{'table_width'} || "";
 
 
     #### Set the display window of rows
@@ -1017,18 +1045,17 @@ sub displayResultSet {
     $resultset_ref->{page_size} = $page_size;
 
 
-    #### Define <TD> tags
-    my @TDformats=('NOWRAP');
-
-
     #### If a row_color_scheme was not passed, create one:
     unless ($row_color_scheme_ref) {
       my %row_color_scheme;
+      $row_color_scheme_ref->{header_background} = '#0000A0';
       $row_color_scheme{change_n_rows} = 3;
       my @row_color_list = ("#E0E0E0","#C0D0C0");
       $row_color_scheme{color_list} = \@row_color_list;
       $row_color_scheme_ref = \%row_color_scheme;
     }
+    $row_color_scheme_ref->{header_background} = '#0000A0'
+      unless ($row_color_scheme_ref->{header_background});
 
 
     my $types_ref = $resultset_ref->{types_list_ref};
@@ -1065,22 +1092,36 @@ sub displayResultSet {
         title_formats=>['BOLD'],
         url_keys=>$url_cols_ref,
         hidden_cols=>$hidden_cols_ref,
-        THformats=>['BGCOLOR=#C0C0C0'],
+        THformats=>["BGCOLOR=".$row_color_scheme_ref->{header_background}],
         TDformats=>['NOWRAP']
       };
 
     #### Otherwise, use the standard viewable format which doesn't print well
     } else {
 
+      my @TDformats;
+      if ($table_width) {
+        if ($table_width eq 'fit_to_page') {
+          @TDformats = ();
+          $table_width = "";
+        } else {
+          $table_width = "WIDTH=$table_width";
+          @TDformats=('');
+        }
+      } else {
+        @TDformats=('NOWRAP');
+      }
+
+
       ShowHTMLTable { titles=>$resultset_ref->{column_list_ref},
 	types=>$types_ref,
 	widths=>\@precisions,
 	row_sub=>\&returnNextRow,
-        table_attrs=>'BORDER=0 CELLPADDING=2 CELLSPACING=2',
+        table_attrs=>"$table_width BORDER=0 CELLPADDING=2 CELLSPACING=2",
         title_formats=>['FONT COLOR=white,BOLD'],
         url_keys=>$url_cols_ref,
         hidden_cols=>$hidden_cols_ref,
-        THformats=>['BGCOLOR=#0000A0'],
+        THformats=>["BGCOLOR=".$row_color_scheme_ref->{header_background}],
         TDformats=>\@TDformats,
         row_color_scheme=>$row_color_scheme_ref
       };
@@ -1532,6 +1573,7 @@ sub printInputForm {
   my %parameters = %{$parameters_ref};
   my $input_types_ref = $args{'input_types_ref'};
   my %input_types = %{$input_types_ref};
+  my $mask_user_context = $args{'mask_user_context'};
 
 
   #### Define popular variables
@@ -1573,7 +1615,7 @@ sub printInputForm {
   # There appears to be a Netscape bug in that one cannot [BACK] to a form
   # that had multipart encoding.  So, only include form type multipart if
   # we really have an upload field.  IE users are fine either way.
-  $self->printUserContext();
+  $self->printUserContext() unless ($mask_user_context);
   print qq!
       <P>
       <H2>$CATEGORY</H2>
@@ -1734,6 +1776,7 @@ sub printInputForm {
     if ($input_type eq "multioptionlist") {
       print qq!
         <TD><SELECT NAME="$column_name" MULTIPLE SIZE=$input_length $onChange>
+        <OPTION VALUE=""></OPTION>
         $optionlists{$column_name}</SELECT></TD>
       !;
     }
