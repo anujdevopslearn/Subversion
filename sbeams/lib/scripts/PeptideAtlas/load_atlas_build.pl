@@ -462,12 +462,12 @@ sub buildAltas {
    my %index_hash; # key   = $peptide_accession[$ind], 
                    # value = string of array indices
  
-   ## storage in arrays to later calculate n_mapped_locations and is_exon_spanning
+   ## storage in arrays to later calculate n_genome_locations and is_exon_spanning
    my (@peptide_accession, @biosequence_name, @start_in_biosequence, 
    @end_in_biosequence, @chromosome, @strand, @start_in_chromosome, 
-   @end_in_chromosome, @n_mappings, @n_mapped_locations, @is_exon_spanning);
+   @end_in_chromosome, @n_protein_mappings, @n_genome_locations, @is_exon_spanning);
  
-   #### Load the relevant information in the coordinate mapping file:
+   #### Load information from the coordinate mapping file:
    my $ind=0;
    while ($line = <INFILE>) {
       $line =~ s/[\r\n]//g;
@@ -477,22 +477,26 @@ sub buildAltas {
       $biosequence_name[$ind] = $columns[2];
       $start_in_biosequence[$ind] = $columns[5];
       $end_in_biosequence[$ind] = $columns[6];
-      $chromosome[$ind] = $columns[8];
+      $chromosome[$ind] = $columns[8]; 
+      ## parsing for chromosome:   this is set for Ens 21 and 22 notation...
+      if ($chromosome[$ind] =~ /^(chromosome:)(NCBI.+:)(.+)(:.+:.+:.+)/ ) {
+          $chromosome[$ind] = $3;
+      }
       $strand[$ind] = $columns[9];
       $start_in_chromosome[$ind] = $columns[10];
       $end_in_chromosome[$ind] = $columns[11];
  
       ## %index_hash has:
       ## keys =  peptide_accession
-      ## values = the array indices (of the arrays above, holding info for the peptide_accession)
+      ## values = the array indices (of the arrays above, holding peptide_accession)
       if ( exists $index_hash{$peptide_accession[$ind]} ) {
          $index_hash{$peptide_accession[$ind]} = 
            join " ", $index_hash{$peptide_accession[$ind]}, $ind;
       } else {
          $index_hash{$peptide_accession[$ind]} = $ind;
       }
-      $n_mappings[$ind] = 1; #unless replaced in next section
-      $n_mapped_locations[$ind] = 1; #unless replaced in next section
+      $n_protein_mappings[$ind] = 1; #unless replaced in next section
+      $n_genome_locations[$ind] = 1; #unless replaced in next section
       $is_exon_spanning[$ind]= 'n';  #unless replaced in next section
  
       $ind++;
@@ -500,67 +504,127 @@ sub buildAltas {
    close(INFILE);
    my $ensembl_hits_last_ind = $ind - 1 ;  #last index of Ensembl hits arrays
  
-   ## n_mappings is a peptide's number of hits
-   ## n_mapped_locations is a peptide's number of hits where none of the
-   ##    chromosomal coordinates are the same
-   ## is_exon_spanning is whether a peptide has been identified as the
-   ##    same protein with two different sets of chromosomal coordinates
+   ## n_protein_mappings -- number of distinct accession numbers (proteins) 
+   ##                       that a peptide maps to
+   ## n_genome_locations -- number of hits to Genome where protein is not the same
+   ##                       (in other words, counts span over exons only once)
+   ## is_exon_spanning  --  whether a peptide has been identified as the
+   ##                       same protein with two or more different sets of 
+   ##                       chromosomal coordinates
  
-   ## print "size of hash = " . keys( %index_hash ) . ".\n";
+
+   # print "size of hash = " . keys( %index_hash ) . ".\n";
+
    ## looping through indices of multiple peptide identifications:
    foreach my $tmp_ind_str (values ( %index_hash ) ) {
       my @tmp_ind_array = split(" ", $tmp_ind_str);
  
-      my %nml=0;  ## reset nml each loop
+      my %unique_protein_hash;
+      my %unique_coord_hash;
       for (my $ii = 0; $ii <= $#tmp_ind_array; $ii++) {
          my $i_ind=$tmp_ind_array[$ii];
 
-         $n_mappings[$i_ind] = $#tmp_ind_array + 1;
+         reset %unique_protein_hash; ## necessary?
+         reset %unique_coord_hash;   ## necessary?
 
-         for (my $jj = ($ii + 1); $jj <= $#tmp_ind_array; $jj++) {
-            my $j_ind=$tmp_ind_array[$jj];
-
-            ## calculate is_exon_spanning:
-            if ($biosequence_name[$i_ind] eq $biosequence_name[$j_ind]) {
-               if ($start_in_chromosome[$i_ind] != $start_in_chromosome[$j_ind]) {
-                  $is_exon_spanning[$i_ind] = 'y';
-                  $is_exon_spanning[$j_ind] = 'y';
-               }     
-            }
+         if ($TESTONLY) { ## make sure peptide_accessions are the same...
+             ##what is key of index_hash where value = $tmp_ind_str  ?
+             ##is that key = $peptide_accession[$i_ind]  ?
+             my %inverse_index_hash = reverse %index_hash;
+             die "check accession numbers in index_hash" 
+                if ($inverse_index_hash{$tmp_ind_str} != $peptide_accession[$i_ind]); 
          }
-         
-         ## calculate n_mapped_locations using a hash with keys=chromosome.start_chromo
-         my $tmp_coord_string=$chromosome[$i_ind] . $start_in_chromosome[$i_ind];
 
-         $nml{$tmp_coord_string} = $nml{$tmp_coord_string} + 1; ## counting redundancies...
-      }
+         ## make unique protein hash (keys = protein, values=coordinate string)
+         my $coord_string=$chromosome[$i_ind] . $start_in_chromosome[$i_ind];
+         $unique_protein_hash{$biosequence_name[$i_ind]} = $coord_string;
 
-      ## all hits of particular peptide get assigned same n_mapped_locations:
+         ## is_exon_spanning...'y' when maps to one protein with more than one coordinate sets
+         ## make unique coord hash (keys=coordinate string, values=protein)
+         $unique_coord_hash{$coord_string} = $biosequence_name[$i_ind];
+
+      } 
+
+      ## n_protein_mappings = final number of elements in %unique_protein_hash 
+      my $pep_n_protein_mappings = keys( %unique_protein_hash);
+
+      ## invert protein hash, making keys = coordinate string.
+      ## n_genome_locations = final number of elements in inverted_protein_hash
+      ## (that is unique protein names further filtered for unique coordinates)
+      my %inverse_protein_hash = reverse %unique_protein_hash;
+      my $pep_n_genome_locations = keys( %inverse_protein_hash);
+
+      ## need to assign values to array members now:
       foreach my $tmpind (@tmp_ind_array) {
-         $n_mapped_locations[$tmpind] = (keys( %nml ) - 1);  ## = size of hash - 1
+          $n_protein_mappings[$tmpind] = $pep_n_protein_mappings;
+          $n_genome_locations[$tmpind] = $pep_n_genome_locations;
 
+          my $array_protein = $biosequence_name[$tmpind];
+          ## if values of unique_coord_hash == $array_protein more than once, is_exon_spanning='y'
+          my $coord_count = 0;
+          foreach my $hash_protein (values ( %unique_coord_hash ) ) {
+              if ($array_protein == $hash_protein) {
+                  $coord_count++;
+              }
+          }
+          if ($coord_count > 1) {
+              $is_exon_spanning[$tmpind]= 'y'; 
+          }
       }
-
-   } ## end calculate n_mapped_locations and is_exon_spanning loop
+     
+   } ## end calculate n_genome_locations, n_protein_mappings and is_exon_spanning loop
  
    ### ABOVE modeled following rules:
    ##
    ## APDpep00011291  9       ENSP00000295561 ... 24323279        24323305
    ## APDpep00011291  9       ENSP00000336741 ... 24323279        24323305
-   ## ---> n_mapped_locations = 1 for both
+   ## ---> n_genome_locations = 1 for both
+   ## ---> n_protein_mappings = 2 for both
    ## ---> is_exon_spanning   = n for both
    ##
    ## APDpep00004221  13      ENSP00000317473 ... 75675871        75675882
    ## APDpep00004221  13      ENSP00000317473 ... 75677437        75677463
-   ## ---> n_mapped_locations = 1 for both
+   ## ---> n_genome_locations = 1 for both
+   ## ---> n_protein_mappings = 1 for both
    ## ---> is_exon_spanning   = y for both
    ## 
    ## APDpep00004290  16      ENSP00000306222 ...   1151627         1151633
    ## APDpep00004290  16      ENSP00000306222 ...   1151067         1151107
    ## APDpep00004290  16      ENSP00000281456 ... 186762937       186762943
    ## APDpep00004290  16      ENSP00000281456 ... 186763858       186763898
-   ## ---> n_mapped_locations = 4 for all
+   ## ---> n_genome_locations = 2 for all
+   ## ---> n_protein_mappings = 2 for both
    ## ---> is_exon_spanning   = y for all
+
+   if ($TESTONLY) {  ## the above cases have P=1.0, and tested for Ens build 22
+       for (my $ii = 0; $ii <= $ensembl_hits_last_ind; $ii++) {
+           my @test_pep = ("APDpep00011291", "APDpep00004221", "APDpep00004290");
+           my @test_n_genome_locations = ("1", "1", "2");
+           my @test_n_protein_mappings = ("2", "1", "2");
+           my @test_is_exon_spanning = ('n', 'y', 'y');
+
+           for (my $jj = 0; $jj < 3; $jj++) {
+               if ($peptide_accession[$ii] == $test_pep[$jj]) {
+                   print "Testing counts for $test_pep[$jj] \n";
+                   if ($n_genome_locations[$ii] == $test_n_genome_locations[$jj]) {
+                       print "   n_genome_locations is correct \n";
+                   } else {
+                       print "   !! $n_genome_locations[$ii] not equal to $test_n_genome_locations[$jj]!! \n";
+                   }
+                   if ($n_protein_mappings[$ii] == $test_n_protein_mappings[$jj]) {
+                       print "   n_protein_mappings is correct \n";
+                   } else {
+                       print "   !! $n_protein_mappings[$ii] not equal to $test_n_protein_mappings[$jj]!! \n";
+                   }
+                   if ($is_exon_spanning[$ii] == $test_is_exon_spanning[$jj]) {
+                       print "   is_exon_spanning is correct \n";
+                   } else {
+                       print "   !! $is_exon_spanning[$ii] not equal to $test_is_exon_spanning[$jj]!! \n";
+                   }
+               }
+           }
+       }
+   }
 
 
 
@@ -596,9 +660,9 @@ sub buildAltas {
          n_observations => $APD_n_observations{$peptides{$peptide_accession[$i]}},
          search_batch_ids => $APD_search_batch_ids{$peptides{$peptide_accession[$i]}},
          sample_ids => $APD_sample_ids{$peptides{$peptide_accession[$i]}},
-         n_mapped_locations => $n_mapped_locations[$i],
+         n_genome_locations => $n_genome_locations[$i],
          is_exon_spanning => $is_exon_spanning[$i],
-         n_mappings => $n_mappings[$i],
+         n_protein_mappings => $n_protein_mappings[$i],
        );
  
        $peptide_instance_id = $sbeams->updateOrInsertRow(
@@ -712,8 +776,9 @@ sub buildAltas {
             n_observations => ,$APD_n_observations{$tmp_pep_id},
             search_batch_ids => ,$APD_search_batch_ids{$tmp_pep_id},
             sample_ids => ,$APD_sample_ids{$tmp_pep_id},
-            n_mapped_locations => '0',
+            n_genome_locations => '0',
             is_exon_spanning => 'n',
+            n_protein_mappings => '0',
          );  
  
          my $peptide_instance_id = -1;
