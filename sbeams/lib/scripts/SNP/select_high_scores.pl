@@ -87,6 +87,12 @@ exit 0;
 ###############################################################################
 sub main {
 
+  #### If there aren't any parameters, print usage
+  unless ($ARGV[0]){
+    print "$USAGE";
+    exit;
+  }
+
   #### Define standard variables
   my ($query,$querylen,$dbtitle,$hit,$hsp,$hspcnt,$bioname,$queryname);
   my ($sql,$result,$junk,$cnt);
