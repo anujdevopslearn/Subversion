@@ -242,6 +242,7 @@ sub handle_request {
     ["fraction_id","F.fraction_id","fraction_id"],
     ["fraction_tag","F.fraction_tag","fraction_tag"],
     ["TIC_plot","'TIC Plot'","TIC_plot"],
+    ["MSRun_summary","'MS Run Summary'","MS Run Summary"],
     ["n_scans","COUNT(*)","# CID spectra"],
   );
 
@@ -249,7 +250,8 @@ sub handle_request {
   #### Build the GROUP BY clause
   my $group_by_clause = "";
   foreach $element (@column_array) {
-    if ($element->[0] ne 'n_scans' && $element->[0] ne 'TIC_plot') {
+    if ($element->[0] ne 'n_scans' && $element->[0] ne 'TIC_plot' &&
+        $element->[0] ne 'MSRun_summary') {
       $group_by_clause .= "," if ($group_by_clause);
       $group_by_clause .= $element->[1];
     }
@@ -290,8 +292,9 @@ sub handle_request {
 
   #### Define the hypertext links for columns that need them
   %url_cols = ('project_name' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=\%$colnameidx{project_id}V",
-               'experiment_name' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=proteomics_experiment&experiment_id=\%$colnameidx{experiment_id}V", 
-               'TIC_plot' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ShowTICPlot.cgi?fraction_id=\%$colnameidx{fraction_id}V", 
+               'experiment_name' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=proteomics_experiment&experiment_id=\%$colnameidx{experiment_id}V",
+               'TIC_plot' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ShowTICPlot?fraction_id=\%$colnameidx{fraction_id}V",
+               'MS Run Summary' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ShowMSRunSummary?fraction_id=\%$colnameidx{fraction_id}V",
   );
 
 
