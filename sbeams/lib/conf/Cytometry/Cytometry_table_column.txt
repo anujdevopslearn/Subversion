@@ -11,9 +11,9 @@ CY_fcs_run	9	sort_type_id	Sort type	int	4	0	Y		N	CY_sort_type	sort_type_id	N	opt
 CY_fcs_run	10	fcs_run_description	FCS Run Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Detailed description of the sample and/or how the FCS Run was performed		
 CY_fcs_run	11	operator	Operator	varchar	255	0	Y	T.Peterson	N			N	text	50		Y	Y	N	Instrument Operator		
 CY_fcs_run	12	institution	Institution	varchar	255	0	Y	ISB	N			N	text	50		Y	Y	N	Institution		
-CY_fcs_run	13	filename	Filename	varchar	255	0	Y		N			Y	fixed	50		Y	Y	N	Filename of the original FCS Run file		
-CY_fcs_run	14	original_filepath	Original Filepath	varchar	255	0	N		N			Y	fixed	50		Y	Y	N	Original path to the file when it was loaded into the database		
-CY_fcs_run	15	n_data_points	Number of Data Points	int	4	0	Y		N			N	fixed	20		Y	Y	N	Number of data points in this FCS Run		
+CY_fcs_run	13	filename	Filename	varchar	255	0	Y		N			N	fixed	50		Y	N	N	Filename of the original FCS Run file		
+CY_fcs_run	14	original_filepath	Original Filepath	varchar	255	0	N		N			Y	file	50		Y	Y	N	Original path to the file when it was loaded into the database		
+CY_fcs_run	15	n_data_points	Number of Data Points	int	4	0	Y		N			N	text	20		Y	Y	N	Number of data points in this FCS Run		
 CY_fcs_run	16	run_date	Run Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	text	20		Y	Y	N	Datetime when this FCS Run was performed (originally the system date of the FCS Run file but changeable)		
 CY_fcs_run	17	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 CY_fcs_run	18	showFlag	Show Status	int 	4	0	Y	1	N			N	text	1		Y	Y	N	Set Show Status to '1' if this is an unique and/or important sort otherwise set it to '0' 		
