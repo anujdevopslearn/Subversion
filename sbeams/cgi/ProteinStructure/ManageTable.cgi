@@ -156,7 +156,9 @@ sub main {
       selected_template => $parameters{selected_template},
       program_file_name => $PROGRAM_FILE_NAME,
     );
-  } elsif ($parameters{action}) { processEntryForm();
+  } elsif ($parameters{action} eq 'INSERT' ||
+	   $parameters{action} eq 'UPDATE' ||
+	   $parameters{action} eq 'DELETE') { processEntryForm();
   } elsif ($q->param('apply_action_hidden')) { printEntryForm();
   } elsif ($q->param('ShowEntryForm')) { printEntryForm();
   } elsif ($parameters{"$PK_COLUMN_NAME"}) { printEntryForm();
