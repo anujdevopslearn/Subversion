@@ -476,6 +476,7 @@ sub handle_request {
     ["biosequence_set_name","BSS.set_name","Biosequence Set Name"],
     ["biosequence_name","BS.biosequence_name","Biosequence Name"],
     ["biosequence_accessor","DBX.accessor","biosequence_accessor"],
+    ["biosequence_accessor_suffix","DBX.accessor_suffix","biosequence_accessor_suffix"],
     ["biosequence_accession","BS.biosequence_accession","Biosequence Accession"],
     ["gene_symbol","BSA.gene_symbol","Gene Symbol"],
     ["full_gene_name","BSA.full_gene_name","Full Gene Name"],
@@ -517,6 +518,7 @@ sub handle_request {
     ["end_in_chromosome","BPS.end_in_chromosome","End"],
     ["biosequence_desc","BS.biosequence_desc","Biosequence Description"],
 
+    ["project_id","BSS.project_id","project_id"],
     ["biosequence_set_id","BSS.biosequence_set_id","biosequence_set_id"],
     ["biosequence_id","BS.biosequence_id","biosequence_id"],
     ["biosequence_annotation_id","BSA.biosequence_annotation_id","biosequence_annotation_id"],
@@ -635,9 +637,9 @@ sub handle_request {
 
 
   #### Define the hypertext links for columns that need them
-  %url_cols = ('Biosequence Accession' => "\%$colnameidx{accessor}V\%$colnameidx{biosequence_accession}V\%$colnameidx{biosequence_accessor_suffix}V",
+  %url_cols = ('Biosequence Accession' => "\%$colnameidx{biosequence_accessor}V\%$colnameidx{biosequence_accession}V\%$colnameidx{biosequence_accessor_suffix}V&project_id=\%$colnameidx{project_id}V&biosequence_set_id=\%$colnameidx{biosequence_set_id}V",
     	       'Biosequence Accession_ATAG' => 'TARGET="Win1" ',
-               'Biosequence Name' => "$CGI_BASE_DIR/ProteinStructure/GetDomainHits?QUERY_NAME=PS_GetDomainHit&biosequence_id=$parameters{biosequence_id}&biosequence_name_constraint=\%V&apply_action=$pass_action",
+               'Biosequence Name' => "$CGI_BASE_DIR/ProteinStructure/GetDomainHits?QUERY_NAME=PS_GetDomainHit&biosequence_id=$parameters{biosequence_id}&biosequence_name_constraint=\%V&project_id=\%$colnameidx{project_id}V&biosequence_set_id=\%$colnameidx{biosequence_set_id}V&display_options=ShowExtraProteinProps&apply_action=$pass_action",
                'Full Gene Name' => "$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=PS_biosequence_annotation&biosequence_annotation_id=\%$colnameidx{biosequence_annotation_id}V&biosequence_id=\%$colnameidx{biosequence_id}V&ShowEntryForm=1",
 	       'Full Gene Name_ATAG' => 'TARGET="Win1"',
 	       'Full Gene Name_ISNULL' => ' [Add] ',
@@ -679,6 +681,7 @@ sub handle_request {
                   'biological_process_GO' => 1,
                   'cellular_component_GO' => 1,
                   'interpro_protein_domain_GO' => 1,
+                  'project_id' => 1,
                   'biosequence_set_id' => 1,
                   'biosequence_id' => 1,
                   'biosequence_annotation_id' => 1,
