@@ -9,7 +9,7 @@ use Getopt::Long;
 use FindBin;
 
 use lib qw (../../lib/perl);
-use vars qw ($sbeams $sbeamsMOD $q $q1 $current_contact_id $current_username
+use vars qw ($sbeams $sbeamsMOD $cg $current_contact_id $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME $project_id
              $search_tool_id $gene_set_tag $chromosome_set_tag @MENU_OPTIONS);
@@ -32,7 +32,7 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 
 use CGI;
-$q = new CGI;
+$cg = new CGI;
 
 
 
@@ -94,8 +94,8 @@ sub main {
   #### Read in the default input parameters
   my %parameters;
   my $n_params_found = $sbeams->parse_input_parameters(
-    q=>$q,parameters_ref=>\%parameters);
-  #$sbeams->printDebuggingInfo($q);
+    q=>$cg,parameters_ref=>\%parameters);
+  #$sbeams->printDebuggingInfo($c);
 
 
   #### Process generic "state" parameters before we start
@@ -156,37 +156,37 @@ sub handle_request {
   
   # start the form
   # the statement shown defaults to POST method, and action equal to this script
-  print $q->start_form;  
+  print $cg->start_form;  
   
   # print the form elements
   print
-    "Enter gene name: ",$q->textfield(-name=>'gene'),
-    $q->p,
-    "Enter sequence: ",$q->textarea(-name=>'sequence'),
-    $q->p,
+    "Enter gene name: ",$cg->textfield(-name=>'gene'),
+    $cg->p,
+    "Enter sequence: ",$cg->textarea(-name=>'sequence'),
+    $cg->p,
     "Select organism: ",
-    $q->popup_menu(-name=>'organism',
+    $cg->popup_menu(-name=>'organism',
 	               -values=>['halobacterium-nrc1','haloarcula marismortui']),
-    $q->p,
+    $cg->p,
     "Select oligo set type: ",
-    $q->p,
-    $q->popup_menu(-name=>'set_type',
+    $cg->p,
+    $cg->popup_menu(-name=>'set_type',
                    -values=>['Gene Expression', 'Gene Knockout']),
-	$q->p,
+	$cg->p,
 	"Select oligo type extension: ",
-	$q->p,
-	$q->popup_menu(-name=>'type_extension',
+	$cg->p,
+	$cg->popup_menu(-name=>'type_extension',
 				   -values=>['a','b','c','d','e','f','g','h','for','rev']),
                                                               
-    $q->p,
-    $q->submit(-name=>"Add Oligo");
+    $cg->p,
+    $cg->submit(-name=>"Add Oligo");
 
   # end of the form
-    print $q->end_form,
-    $q->hr; 
+    print $cg->end_form,
+    $cg->hr; 
         
 
-  if ($q->request_method() eq "POST" ) {
+  if ($cg->request_method() eq "POST" ) {
     my $gene = $parameters{gene};
     my $sequence = $parameters{sequence};
     my $organism = $parameters{organism};
@@ -195,7 +195,7 @@ sub handle_request {
 
     ####error check for haloarcula marismortui and knockouts: invalid choice
 	if($organism eq "haloarcula marismortui" && $set_type eq "Gene Knockout"){
-	  print "No knockouts for haloarcula marismortui available", $q->p;
+	  print "No knockouts for haloarcula marismortui available", $cg->p;
 	}else{
 
 	  ####get project_id, chromosome set_tag, gene set_tag
@@ -211,9 +211,9 @@ sub handle_request {
 
 	  ####more error checking
 	  if($set_type eq "Gene Expression" && ($type_extension ne "for" || $type_extension ne "rev")){
-		print "Invalid type extension selected for Gene Expression.", $q->p;
+		print "Invalid type extension selected for Gene Expression.", $cg->p;
 	  }elsif($set_type eq "Gene Knockout" && ($type_extension eq "for" || $type_extension eq "rev")){
-		print "Invalid type extension selected for Gene Knockout", $q->p;
+		print "Invalid type extension selected for Gene Knockout", $cg->p;
 	  }else{
 	  
 		####search tool id
@@ -245,7 +245,7 @@ sub handle_request {
 	    my $tm_command = "melttemp -OLI=" . $sequence . " -OUT=gene.melt -Default";
         my $ss_command = "primepair -OLIGOSF=" . $sequence . " -OLIGOSR=" . $sequence . " -OUT=gene.primepair -Default";
 
-		$tm_command = "ssh -l gcgbot -i /net/dblocal/www/html/dev5/sbeams/cgi/Oligo/gcg-key2 ouzo \"uptime; cd /local/scratch/pmar; $tm_command; scp gene.melt /net/dblocal/www/html/dev5/sbeams/cgi/Oligo/gene.melt\"";
+		$tm_command = "ssh -l gcgbot -i /net/dblocal/www/html/dev5/sbeams/cgi/Oligo/gcg-key2 ouzo \"uptime; cd /local/scratch/pmar; $tm_command; scp gene.melt $CGI_BASE_DIR/Oligo/gene.melt\"";
 
 		system("$tm_command | /dev/null");
 		open(MELT, "<gene.melt") || die "cannot open gene.melt\n";
@@ -261,7 +261,7 @@ sub handle_request {
 		  $tm = "undefined";
 		}
 
-		$ss_command = "ssh -l gcgbot -i /net/dblocal/www/html/dev5/sbeams/cgi/Oligo/gcg-key2 ouzo \"uptime; cd /local/scratch/pmar; $ss_command; scp gene.primepair /net/dblocal/www/html/dev5/sbeams/cgi/Oligo/gene.primepair\"";
+		$ss_command = "ssh -l gcgbot -i /net/dblocal/www/html/dev5/sbeams/cgi/Oligo/gcg-key2 ouzo \"uptime; cd /local/scratch/pmar; $ss_command; scp gene.primepair $CGI_BASE_DIR/Oligo/gene.primepair\"";
 	
 		system("$ss_command | /dev/null");		
 		open(PRIMEPAIR, "<gene.primepair") || die "cannot open gene.primepair\n";
@@ -293,14 +293,14 @@ sub handle_request {
 		close(OLIGO);
 		
 		####use load_oligo.pl to load the newly created oligo into the db
-		my $command_line = "/net/dblocal/www/html/dev5/sbeams/lib/scripts/Oligo/load_oligo.pl --search_tool_id " . $search_tool_id . " --gene_set_tag " .  $gene_set_tag . " --chromosome_set_tag " . $chromosome_set_tag . " --oligo_file ./temp_oligo_file --project_id 425";
+		my $command_line = "$CGI_BASE_DIR/Oligo/load_oligo.pl --search_tool_id " . $search_tool_id . " --gene_set_tag " .  $gene_set_tag . " --chromosome_set_tag " . $chromosome_set_tag . " --oligo_file ./temp_oligo_file --project_id 425";
 		system("$command_line | /dev/null");
 
 		####Allow user to view if oligo has been added.
 		my @gene_arr = ($gene);
 		print qq~ 
 		  New Oligo Submitted to Database.  Note: Will only be added if valid.  View added Oligo:
-          <A HREF="http://db.systemsbiology.net/dev5/sbeams/cgi/Oligo/Search_Oligo.cgi?apply_action=QUERY&organism=$organism&set_type=$set_type&genes=@gene_arr">Oligo Search</A><BR><BR>  
+          <A HREF="$CGI_BASE_DIR/Oligo/Search_Oligo.cgi?apply_action=QUERY&organism=$organism&set_type=$set_type&genes=@gene_arr">Oligo Search</A><BR><BR>  
         ~;
 	  }
 	}
@@ -309,7 +309,7 @@ sub handle_request {
   
   ####Back button
   print qq~
-	<BR><A HREF="http://db.systemsbiology.net/dev5/sbeams/cgi/Oligo/Oligo_Interface.cgi">Back</A><BR><BR>   ~;
+	<BR><A HREF="$CGI_BASE_DIR/Oligo/Oligo_Interface.cgi">Back</A><BR><BR>   ~;
   return;
 
 } # end handle_request
