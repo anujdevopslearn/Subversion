@@ -127,6 +127,7 @@ sub printPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/Biosap/main.cgi"><nobr>&nbsp;&nbsp;&nbsp;Biosap</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/main.cgi"><nobr>&nbsp;&nbsp;&nbsp;Phenotype Array</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/SNP/main.cgi"><nobr>&nbsp;&nbsp;&nbsp;SNP</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/BEDB/main.cgi"><nobr>&nbsp;&nbsp;&nbsp;BEDB</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/GEAP/main.cgi"><nobr>&nbsp;&nbsp;&nbsp;GEAP</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/tools/main.cgi"><nobr>&nbsp;&nbsp;&nbsp;Tools</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
