@@ -2331,10 +2331,23 @@ sub writeResultSet {
     $timing_info->{begin_write_resultset} = [gettimeofday()];
 
 
+    #### Prepare a special hash to work around a Dumper bug or feature
+    my $temp_hash_ref;
+    while ( my ($key,$value) = each %{$query_parameters_ref} ) {
+      if ( substr($value,0,1) eq '%' ) {
+        $temp_hash_ref->{$key} = '%'.$value;
+      } else {
+        $temp_hash_ref->{$key} = $value;
+      }
+    }
+    #print "<PRE>cellcompconst=".
+    #  $query_parameters_ref->{cellular_component_constraint}."=\n</PRE>";
+
+
     #### Write out the query parameters
     my $outfile = "$PHYSICAL_BASE_DIR/tmp/queries/${resultset_file}.params";
     open(OUTFILE,">$outfile") || die "Cannot open $outfile\n";
-    printf OUTFILE Data::Dumper->Dump( [$query_parameters_ref] );
+    printf OUTFILE Data::Dumper->Dump( [$temp_hash_ref] );
     close(OUTFILE);
 
 
