@@ -600,9 +600,21 @@ sub handle_request {
   ~;
 
 
+  #### If we want to show all data where there is a match, then do funky stuff
+  #if ($parameters{display_options} =~ /ShowAllMatches/) {
+  if (1) {
+    my $sub_sql = $sql;
+    my $new_sql = $sql;
+    $sub_sql =~ s/SELECT.+FROM/SELECT DISTINCT DM.biosequence_id\n          FROM/s;
+    $sub_sql =~ s/ORDER BY .+$//s;
+    $new_sql =~ s/WHERE 1 = 1.+ORDER BY/WHERE DM.biosequence_id IN \(\n\n$sub_sql\n\n\)\n         ORDER BY/s;
+    $sql = $new_sql;
+  }
+
+
   #### Certain types of actions should be passed to links
   my $pass_action = "QUERY";
-  $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
+  $pass_action = $apply_action if ($apply_action =~ /QUERY/i);
 
 
   #### Pass nearly all of the constraints down to a child query
@@ -813,6 +825,7 @@ sub postProcessResultset {
   my $e_value_column_index = $column_indices->{e_value};
   my $probability_column_index = $column_indices->{probability};
   my $overall_probability_column_index = $column_indices->{overall_probability};
+  my $chromosome_column_index = $column_indices->{chromosome};
 
 
   #### We will process in groups of rows where a group is one biosequence
@@ -827,6 +840,11 @@ sub postProcessResultset {
     #### Get this biosequence_name
     my $biosequence_name = $rows[$startrow]->[$biosequence_name_column_index];
     $stats{n_proteins}++;
+
+    #### Store the chromosome stats
+    if (defined($rows[$startrow]->[$chromosome_column_index])) {
+      $stats{chromosome}->{$rows[$startrow]->[$chromosome_column_index]}++;
+    }
 
     #### Set $endrow to the last row for this biosequence
     $endrow = $startrow;
@@ -1144,21 +1162,35 @@ sub postProcessResultset {
   $buf.="Number of multiple-domain proteins: ".scalar(@{$stats{multiple_domain_proteins}})."\n";
   $buf.="Number of multiple-domain protein domains: $stats{multiple_domain_proteins_domains}\n";
   $buf.="Total number of domains: ".($stats{single_domain_proteins_domains}+$stats{multiple_domain_proteins_domains})."\n";
+  $buf.="\n";
 
-  $buf.="\n<font color=\"red\">Filtering statistics:</font>\n";
-  $buf.="Number of proteins with at least one identified domain: $stats{proteins_with_an_id}\n";
-  $buf.="Number of proteins with all domains identified: $stats{proteins_with_all_id}\n";
-  $buf.="Number of good PDB hit domains: $stats{pbdblast_domains}\n";
-  $buf.="Number of good PFAM hit but not PDB hit domains: $stats{pfam_best_domains}\n";
-  $buf.="Number of good Rosetta hit domains without PDB or PFAM hits: $stats{rosetta_best_domains}\n";
-  $buf.="Total number of well identified domains: ".($stats{pbdblast_domains}+$stats{pfam_best_domains}+$stats{rosetta_best_domains})."\n";
+  $buf.="<font color=\"red\">Filtering statistics:</font>\n";
+  $buf.="Number of proteins with at least one matched domain: $stats{proteins_with_an_id}\n";
+  $buf.="Number of proteins with all domains matched: $stats{proteins_with_all_id}\n";
+  $buf.="Number of good PDB match domains: $stats{pbdblast_domains}\n";
+  $buf.="Number of good PFAM match but not PDB match domains: $stats{pfam_best_domains}\n";
+  $buf.="Number of good Rosetta match domains without PDB or PFAM matches: $stats{rosetta_best_domains}\n";
+  $buf.="Total number of matched domains: ".($stats{pbdblast_domains}+$stats{pfam_best_domains}+$stats{rosetta_best_domains})."\n";
+  $buf.="\n";
 
-  $buf.="Number of good PFAM hits regardless of PDB hits: $stats{pfam_domains} (sometimes more than one match per domain!)\n";
-  $buf.="Number of good Rosetta hits regardless of PDB or PFAM hits: $stats{rosetta_success_domains}\n\n";
-  $buf.="Number of good TIGRFAM hits: $stats{TIGRFAM_hits} (sometimes more than one match per protein!)\n";
-  $buf.="Number of good COGs hits: $stats{COGs_hits} (sometimes more than one match per protein!)\n";
+  $buf.="Number of good PFAM matches regardless of PDB matches: $stats{pfam_domains} (sometimes more than one match per domain!)\n";
+  $buf.="Number of good Rosetta matches regardless of PDB or PFAM matches: $stats{rosetta_success_domains}\n";
+  $buf.="Number of good TIGRFAM matches: $stats{TIGRFAM_hits} (sometimes more than one match per protein!)\n";
+  $buf.="Number of good COGs matches: $stats{COGs_hits} (sometimes more than one match per protein!)\n";
   $buf.="Number of NgAnnots: $stats{NgAnnots}\n";
-  $buf.="\n\n";
+  $buf.="\n";
+
+  #### We we were able to keep per-chromosome stats
+  if (defined($stats{chromosome})) {
+    $buf.="<font color=\"red\">Number of proteins by replicon:</font>\n";
+    foreach my $chromosome (sort(keys(%{$stats{chromosome}}))) {
+      $buf .= "$chromosome\t".$stats{chromosome}->{$chromosome}."\n";
+    }
+    $buf.="\n";
+  }
+
+  $buf.="\n";
+
 
   $buf =~ s/\n/<BR>\n/g;
   print "$buf" if ($sbeams->output_mode() eq 'interactive' ||
