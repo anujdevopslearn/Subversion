@@ -13,7 +13,7 @@
 ###############################################################################
 
 package SBEAMS::Connection::Log;
-use SBEAMS::Connection::Settings qw( $PHYSICAL_BASE_DIR $LOGGING_LEVEL );
+use SBEAMS::Connection::Settings qw( $PHYSICAL_BASE_DIR $LOGGING_LEVEL $LOG_BASE_DIR );
 use strict;
 use IO::File;
 use File::Basename;
@@ -27,11 +27,12 @@ use File::Basename;
 #-
 sub new {
   my $class = shift;
-  my $this = { base => $PHYSICAL_BASE_DIR,
-               debug_log => "$PHYSICAL_BASE_DIR/logs/info.log",
-               info_log => "$PHYSICAL_BASE_DIR/logs/info.log",
-               error_log => "$PHYSICAL_BASE_DIR/logs/error.log",
-               warn_log => "$PHYSICAL_BASE_DIR/logs/error.log",
+  my $base = ( $LOG_BASE_DIR ) ? $LOG_BASE_DIR : "$PHYSICAL_BASE_DIR/logs";
+  my $this = { base => $base,
+               debug_log => "$base/debug.log",
+               info_log => "$base/info.log",
+               warn_log => "$base/warn.log",
+               error_log => "$base/error.log",
                log_level => $LOGGING_LEVEL || 'warn',
                @_
              };
@@ -153,7 +154,7 @@ sub _printMessage {
     print STDERR "$msg";
     return undef;
   }
-  my $info = ucfirst( $mode ) . " [$time] ($f) $s at line $l:\n";
+  my $info = ucfirst( $mode ) . " [$time] ($f line $l): ";
   print $lfile "$info" unless $stack;
   print $lfile "$msg";
   $lfile->flush();
