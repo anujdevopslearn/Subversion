@@ -620,9 +620,13 @@ sub setCurrent_project_id {
 	       ON ( GPP.work_group_id = UWG.work_group_id
 	            AND UWG.contact_id = '$current_contact_id' )
 	 WHERE P.record_status != 'D'
+	 ~;
+		unless ($self->getCurrent_work_group_name eq "Admin") {
+		$sql .= qq~
 	   AND ( UPP.privilege_id<=40 OR GPP.privilege_id<=40
 	         OR P.PI_contact_id = '$current_contact_id')
     ~;
+    }
     my %allowed_project_ids = $self->selectTwoColumnHash($sql);
 
 
@@ -631,7 +635,7 @@ sub setCurrent_project_id {
       print "Content-type: text/html\n\n".
         "ERROR: You are not permitted to access ".
         "project_id $set_to_project_id\n\n";
-      return
+      return;
     }
 
 
