@@ -732,10 +732,20 @@ sub printEntryForm {
       ~ if (defined($parameters{$column_name}) && $parameters{$column_name} > '');
     }
 
+    # For now just handle 'P', come back to N/null/1/2
+    if ( defined $is_display_column && $is_display_column eq 'P' ) {
+      if ( $viewStates{read_only} || $viewStates{read_insert} ) {
+        next;
+      } elsif ( $viewStates{insert_template} ) {
+        # Null out val so it isn't passed on.
+        $parameters{$column_name} = '';
+      }
+    }
 
     # Begin display block for read-only data.  Render as a simple HTML <TABLE>
     # instead of as a <FORM>
     if ( $viewStates{read_insert} || $viewStates{read_only} ) {
+
 
       # Value of parameter
       my $text = '';
