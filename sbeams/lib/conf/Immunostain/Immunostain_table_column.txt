@@ -121,7 +121,7 @@ IS_probe	15	record_status	Record Status	char	1	0	N	N	N							N	N
 IS_structural_unit	1	structural_unit_id	Structural Unit ID	int	4	0	N		Y							N	N				pkDEFAULT
 IS_structural_unit	2	structural_unit_name	Structural Unit Name	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Name of this Cell Type		
 IS_structural_unit	3	structural_unit_description	Structural Unit Definition	text	16	0	N		N			Y	text	50		Y	Y	N	Longer description of this Cell Type		
-IS_structural_unit	4	ontology_term_id	Ontology Term	int	4	0	Y		N	IS_ontology_term	ontology_term_id	N	optionlist			Y	Y	N	Ontology from which the term for this structural unit is selected	"SELECT ontology_id, ontology_name FROM $TBIS_ONTOLOGY ORDER BY ontology_name"	
+IS_structural_unit	4	ontology_term_id	Ontology Term	int	4	0	Y		N	ON_ontology_term	ontology_term_id	N	optionlist			Y	Y	N	Ontology from which the term for this structural unit is selected	"SELECT ontology_id, ontology_name FROM $TBON_ontology ORDER BY ontology_name"	
 IS_structural_unit	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 IS_structural_unit	6	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Integer designed to assist in sort records of this type		
 IS_structural_unit	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -149,8 +149,8 @@ IS_assay_unit_expression	4	assay_channel_id	Assay Channel	int	4	0	N		N	IS_assay_
 IS_assay_unit_expression	5	structural_unit_id	Structural Unit	int	4	0	N		N	IS_structural_unit	structural_unit_id	Y	optionlist			Y	Y	Y	Cell type for this which this call is made	"SELECT cell_type_id, cell_type_name FROM $TBIS_CELL_TYPE ORDER BY sort_order,cell_type_name"	
 IS_assay_unit_expression	6	expression_level_id	Expression Level	int	4	0	Y		N	IS_expression_level	expression_level_id	Y	optionlist			Y	Y	N	Level of expression for this structural unit	"SELECT expression_level_id, level_name FROM $TBIS_EXPRESSION_LEVEL ORDER BY sort_order,level_name"	
 IS_assay_unit_expression	7	at_level_percent	Percent Expressing at this Level	real	4	0	Y		N			Y	text	40		Y	Y	N	A value between 0 and 100 that approximates the percentage of cells of of this type that are stained by the antibody at the selected cell staining level		
-IS_assay_unit_expression	8	percent_type_term_id	Percent Type	int	4	0	Y		N	IS_ontology_term	ontology_term_id	Y	optionlist			Y	Y	N	Level of expression for this structural unit	"SELECT expression_level_id, level_name FROM $TBIS_EXPRESSION_LEVEL ORDER BY sort_order,level_name"	
-IS_assay_unit_expression	9	expression_pattern_term_id	Expression Pattern	int	4	0	Y		N	IS_ontology_term	ontology_term_id	N	optionlist			Y	Y	N	Abundance level of cell type	"SELECT abundance_level_id, abundance_level_name FROM $TBIS_ABUNDANCE_LEVEL ORDER BY sort_order, abundance_level_name"	
+IS_assay_unit_expression	8	percent_type_term_id	Percent Type	int	4	0	Y		N	ON_ontology_term	ontology_term_id	Y	optionlist			Y	Y	N	Level of expression for this structural unit	"SELECT expression_level_id, level_name FROM $TBIS_EXPRESSION_LEVEL ORDER BY sort_order,level_name"	
+IS_assay_unit_expression	9	expression_pattern_term_id	Expression Pattern	int	4	0	Y		N	ON_ontology_term	ontology_term_id	N	optionlist			Y	Y	N	Abundance level of cell type	"SELECT abundance_level_id, abundance_level_name FROM $TBIS_ABUNDANCE_LEVEL ORDER BY sort_order, abundance_level_name"	
 IS_assay_unit_expression	10	abundance_level_id	Abundance Level	int	4	0	Y		N	IS_abundance_level	abundance_level_id	N	optionlist			Y	Y	N	Abundance level of cell type	"SELECT abundance_level_id, abundance_level_name FROM $TBIS_ABUNDANCE_LEVEL ORDER BY sort_order, abundance_level_name"	
 IS_assay_unit_expression	11	structural_unit_percent	Percent Abundance of this Unit	real	4	0	Y		N			N	text	40		Y	Y	N	A value between 0 and 100 that approximates the percentage of cells of this type in this section		
 IS_assay_unit_expression	12	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
@@ -163,7 +163,7 @@ IS_assay_unit_expression	18	record_status	Record Status	char	1	0	N	N	N							N	N
 IS_assay	1	assay_id	Assay ID	int	4	0	N		Y							N	N				pkDEFAULT
 IS_assay	2	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	Project under which this specimen is organized	"SELECT project_id,username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.project_id IN ( $accessible_project_ids ) AND P.record_status != 'D' ORDER BY username,name"	
 IS_assay	3	specimen_block_id	Specimen Block	int	4	0	N		N	IS_specimen_block	specimen_block_id	Y	optionlist			Y	Y	N	Specimen block from which the sample on this slide was prepared	"SELECT specimen_block_id, specimen_block_name FROM $TBIS_SPECIMEN_BLOCK ORDER BY specimen_block_name"	
-IS_assay	4	assay_type_term_id	Assay Type	int	4	0	N		N	IS_ontology_term	ontology_term_id	Y	optionlist			Y	Y	N	Specimen block from which the sample on this slide was prepared	"SELECT specimen_block_id, specimen_block_name FROM $TBIS_SPECIMEN_BLOCK ORDER BY specimen_block_name"	
+IS_assay	4	assay_type_term_id	Assay Type	int	4	0	N		N	ON_ontology_term	ontology_term_id	Y	optionlist			Y	Y	N	Specimen block from which the sample on this slide was prepared	"SELECT specimen_block_id, specimen_block_name FROM $TBIS_SPECIMEN_BLOCK ORDER BY specimen_block_name"	
 IS_assay	5	assay_name	Assay Name	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Unique name for this stain. Naming Convention: Antibody [space] specimen_block [space] section (e.g. CD90 03-123D 1). Section number default is 1.		
 IS_assay	6	assay_description	Assay Description	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Longer description of this stain		
 IS_assay	7	section_index	Section Index	varchar	50	0	Y		N			N	text	4		Y	Y	N	"Index of the section used for this stain (1,2,3,?)"		
@@ -208,7 +208,7 @@ IS_detection_method	11	record_status	Record Status	char	1	0	N	N	N							N	N
 IS_assay_image	1	assay_image_id	Assay Image ID	int	4	0	N		Y							N	N				pkDEFAULT
 IS_assay_image	2	assay_channel_id	Assay Channel	int	4	0	Y		N	IS_assay_channel	assay_channel_id	Y	optionlist			Y	Y	N	Stained slide of which this is an image (or of a part of thereof)	"SELECT stained_slide_id, stain_name FROM $TBIS_STAINED_SLIDE ORDER BY stain_name"	
 IS_assay_image	3	parent_assay_image_id	Parent Image	int	4	0	Y		N	IS_assay_image	assay_image_id	Y	optionlist			Y	Y	N	Stained slide of which this is an image (or of a part of thereof)	"SELECT stained_slide_id, stain_name FROM $TBIS_STAINED_SLIDE ORDER BY stain_name"	
-IS_assay_image	4	image_type_term_id	Image Type	int	4	0	Y		N	IS_ontology_term	ontology_term_id	Y	optionlist			Y	Y	N	Stained slide of which this is an image (or of a part of thereof)	"SELECT stained_slide_id, stain_name FROM $TBIS_STAINED_SLIDE ORDER BY stain_name"	
+IS_assay_image	4	image_type_term_id	Image Type	int	4	0	Y		N	ON_ontology_term	ontology_term_id	Y	optionlist			Y	Y	N	Stained slide of which this is an image (or of a part of thereof)	"SELECT stained_slide_id, stain_name FROM $TBIS_STAINED_SLIDE ORDER BY stain_name"	
 IS_assay_image	5	image_name	Image Name	varchar	255	0	N		N			Y	text	20		Y	Y	Y	"<A HREF =""http://db.systemsbiology.net/sbeams/doc/Immunostain/FileNameConvention.php"">Name of Image File </A>"		
 IS_assay_image	6	image_description	Image Description	text	16	0	N		N			Y	text	50		Y	Y	N	Longer description of this Tissue Type		
 IS_assay_image	7	image_magnification	Image Magnification	real	4	0	N		N			Y	text	20		Y	Y	N	Magnification of the instrument for this image (Enter a decimal number with no 'x' or other characters)		
@@ -255,9 +255,9 @@ IS_specimen	3	specimen_name	Specimen Name/Designator	varchar	50	0	N		N			Y	text	
 IS_specimen	4	organism_id	Organism	int	4	0	Y		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism (genus+species) name of the individual from which this specimen was harvested	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 IS_specimen	5	tissue_type_id	Tissue Type	int	4	0	N		N	IS_tissue_type	tissue_type_id	Y	optionlist			Y	Y	N	Tissue type of this specimen	"SELECT tissue_type_id, tissue_type_name FROM $TBIS_TISSUE_TYPE ORDER BY sort_order,tissue_type_name"	
 IS_specimen	6	individual_age	Individual Age	real	4	0	Y		N			N	text	20		Y	Y	N	Age in years of specimen donor		
-IS_specimen	7	individual_sex_term_id	Individual Sex	int	4	0	Y		N	IS_ontology_term	ontology_term_id	N	text	20		Y	Y	N	"Sex of donor (m = male, f = female)"		
-IS_specimen	8	surgical_procedure_term_id	Surgical Procedure	int	4	0	Y		N	IS_ontology_term	ontology_term_id	N	optionlist			Y	Y	N	Surgical Procedure used to obtain this specimen	"Select surgical_procedure_id, surgical_procedure_name from $TBIS_SURGICAL_PROCEDURE order by sort_order, surgical_procedure_name"	
-IS_specimen	9	clinical_diagnosis_term_id	Clinical Diagnosis	int	4	0	Y		N	IS_ontology_term	ontology_term_id	N	optionlist			Y	Y	N	Clinical Diagnosis of donor	"Select clinical_diagnosis_id, clinical_diagnosis_name from $TBIS_CLINICAL_DIAGNOSIS order by sort_order, clinical_diagnosis_name"	
+IS_specimen	7	individual_sex_term_id	Individual Sex	int	4	0	Y		N	ON_ontology_term	ontology_term_id	N	text	20		Y	Y	N	"Sex of donor (m = male, f = female)"		
+IS_specimen	8	surgical_procedure_term_id	Surgical Procedure	int	4	0	Y		N	ON_ontology_term	ontology_term_id	N	optionlist			Y	Y	N	Surgical Procedure used to obtain this specimen	"Select surgical_procedure_id, surgical_procedure_name from $TBIS_SURGICAL_PROCEDURE order by sort_order, surgical_procedure_name"	
+IS_specimen	9	clinical_diagnosis_term_id	Clinical Diagnosis	int	4	0	Y		N	ON_ontology_term	ontology_term_id	N	optionlist			Y	Y	N	Clinical Diagnosis of donor	"Select clinical_diagnosis_id, clinical_diagnosis_name from $TBIS_CLINICAL_DIAGNOSIS order by sort_order, clinical_diagnosis_name"	
 IS_specimen	10	protocol_id	Preparation Protocol	int	4	0	N		N	protocol	protocol_id	Y	optionlist			Y	Y	Y	Protocol used to prepare this specimen	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='Immunostain Slide Preparation' AND P.record_status != 'D' ORDER BY P.name"	
 IS_specimen	11	protocol_deviations	Protocol Deviations	text	16	0	Y		N			N	textarea	6		Y	Y	N	Describe any deviations from the intented above protocol to the way this preparation was actually executed		
 IS_specimen	12	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
@@ -302,54 +302,11 @@ IS_genome_coordinates	7	genome_transcription_end	Gene Transcription End	int	4			
 IS_genome_coordinates	8	genome_coding_region_start	Gene Coding Start	int	4				N							Y	Y				
 IS_genome_coordinates	9	genome_coding_region_end	Gene Coding End	int	4				N							Y	Y				
 IS_genome_coordinates	10	genome_location	Chromosomal Location	varchar	255				N							Y	Y				
-IS_genome_coordinates	11	organism_id	Organism	int	4				N							Y	Y				
-IS_genome_coordinates	12	comment	Comment	text	16				N							N	N				
-IS_genome_coordinates	13	date_created	Date Record Created	datetime	16			CURRENT	N			Y				N	N				
-IS_genome_coordinates	14	created_by_id	Record Created By	int	4			1	N	contact	contact_id	Y				N	N				
-IS_genome_coordinates	15	date_modified	Date Record Modified	datetime	16			CURRENT	N			Y				N	N				
-IS_genome_coordinates	16	modified_by_id	Record Modified By	int	4			1	N	contact	contact_id	Y				N	N				
-IS_genome_coordinates	17	owner_group_id	Owner Group ID	int	4			1	N	work_group	work_group_id	Y				N	N				
-IS_genome_coordinates	18	record_status	Record Status	char	1			N	N							N	N				
-IS_ontology	1	ontology_id	Ontology ID	int	4	0	N		Y							N	N				pkDEFAULT
-IS_ontology	2	ontology_name	Ontology Name	varchar	255	0	N		N			Y	text	40		Y	Y	Y	Name of this Tissue Type		
-IS_ontology	3	ontology_tag	Ontology Tag	varchar	50	0	N		N			Y	text	20		Y	Y	N	Name of this Tissue Type		
-IS_ontology	4	ontology_description	Ontology Description	text	16	0	N		N			Y	textarea	4		Y	Y	N	Longer description of this Tissue Type		
-IS_ontology	5	accessor	Accessor	varchar	255	0	N		N			Y	text	50		Y	Y	N	Part of a URL or URI to which an accession number can be appended to get more information about the entity using this cross reference		
-IS_ontology	6	accessor_suffix	Accessor Suffix	varchar	255	0	Y		N			N	text	50		Y	Y	N	Part of a URL or URI which comes after the accession number to build the full URL to get more information about the entity using this cross reference		
-IS_ontology	7	uri	URI	varchar	255	0	N		N			Y	text	50		Y	Y	N	External web page or other URI of the database		SELF
-IS_ontology	8	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-IS_ontology	9	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Integer designed to assist in sort records of this type		
-IS_ontology	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-IS_ontology	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-IS_ontology	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-IS_ontology	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-IS_ontology	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-IS_ontology	15	record_status	Record Status	char	1	0	N	N	N							N	N				
-IS_ontology_term	1	ontology_term_id	Ontology ID	int	4	0	N		Y							N	N				pkDEFAULT
-IS_ontology_term	2	term_type_term_id	Term Type	int	4	0	N		N	IS_ontology_term	ontology_term_id	Y	optionlist			Y	Y	Y	Name of this Tissue Type		
-IS_ontology_term	3	term_name	Term Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of this Tissue Type		
-IS_ontology_term	4	term_abbreviation	Term Abbreviation	varchar	50	0	Y		N			N	text	30		Y	Y	N	Name of this Tissue Type		
-IS_ontology_term	5	term_definition	Term Definition	text	16	0	N		N			Y	textarea	8		Y	Y	N	Longer description of this Tissue Type		
-IS_ontology_term	6	source_ontology_id	Source Ontology	int	4	0	N		N	IS_ontology	ontology_id	Y	textarea	8		Y	Y	N	Name of this Tissue Type		
-IS_ontology_term	7	source_ontology_accession	Source Ontology Accession	varchar	255	0	N		N			Y	text	40		Y	Y	N	Name of this Tissue Type		
-IS_ontology_term	8	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-IS_ontology_term	9	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Integer designed to assist in sort records of this type		
-IS_ontology_term	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-IS_ontology_term	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-IS_ontology_term	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-IS_ontology_term	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-IS_ontology_term	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-IS_ontology_term	15	record_status	Record Status	char	1	0	N	N	N							N	N				
-IS_ontology_term_relationship	1	ontology_term_relationship_id	Ontology ID	int	4	0	N		Y							N	N				pkDEFAULT
-IS_ontology_term_relationship	2	subject_term_id	Subject Term	int	4	0	N		N	IS_ontology_term	ontology_term_id	Y	optionlist			Y	Y	Y	Name of this Tissue Type		
-IS_ontology_term_relationship	3	predicate_term_id	Predicate Term	int	4	0	N		N	IS_ontology_term	ontology_term_id	Y	optionlist			Y	Y	Y	Name of this Tissue Type		
-IS_ontology_term_relationship	4	object_term_id	Object Term	int	4	0	N		N	IS_ontology_term	ontology_term_id	Y	optionlist			Y	Y	Y	Name of this Tissue Type		
-IS_ontology_term_relationship	5	relationship_type_term_id	Relationship Type	int	4	0	N		N	IS_ontology_term	ontology_term_id	Y	optionlist			Y	Y	N	Name of this Tissue Type		
-IS_ontology_term_relationship	6	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-IS_ontology_term_relationship	7	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Integer designed to assist in sort records of this type		
-IS_ontology_term_relationship	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-IS_ontology_term_relationship	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-IS_ontology_term_relationship	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-IS_ontology_term_relationship	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N
-IS_ontology_term_relationship	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N
-IS_ontology_term_relationship	13	record_status	Record Status	char	1	0	N	N	N							N	N
+IS_genome_coordinates	11	organism_id	Organism	int	4				N							Y	Y
+IS_genome_coordinates	12	comment	Comment	text	16				N							N	N
+IS_genome_coordinates	13	date_created	Date Record Created	datetime	16			CURRENT	N			Y				N	N
+IS_genome_coordinates	14	created_by_id	Record Created By	int	4			1	N	contact	contact_id	Y				N	N
+IS_genome_coordinates	15	date_modified	Date Record Modified	datetime	16			CURRENT	N			Y				N	N
+IS_genome_coordinates	16	modified_by_id	Record Modified By	int	4			1	N	contact	contact_id	Y				N	N
+IS_genome_coordinates	17	owner_group_id	Owner Group ID	int	4			1	N	work_group	work_group_id	Y				N	N
+IS_genome_coordinates	18	record_status	Record Status	char	1			N	N							N	N
