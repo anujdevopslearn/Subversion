@@ -1193,11 +1193,13 @@ print qq~
 		</TR>
 		</TABLE>
 		<BR>
-		Would you like these data loaded into SBEAMS? This will overwrite any condition data you\'ve loaded.<BR>
-		<INPUT TYPE="radio" NAME="dataLoad" VALUE="Yes" CHECKED>Yes, load these data into SBEAMS
-		<INPUT TYPE="radio" NAME="dataLoad" VALUE="No">No, do <FONT COLOR="red">not</FONT> load these
 		</FORM>
-		~;
+~;
+#		Would you like these data loaded into SBEAMS? This will overwrite any condition data you\'ve loaded.<BR>
+#		<INPUT TYPE="radio" NAME="dataLoad" VALUE="Yes" CHECKED>Yes, load these data into SBEAMS
+#		<INPUT TYPE="radio" NAME="dataLoad" VALUE="No">No, do <FONT COLOR="red">not</FONT> load these
+#		</FORM>
+#		~;
 }
 
 
@@ -1312,6 +1314,7 @@ SELECT	A.array_name,
 
   # Mergereps variables
   my %mergereps_conditions;
+  my @mr_info;
 
   # Map/Key file for postSam
   my $postSam_key_file;
@@ -1342,7 +1345,11 @@ SELECT	A.array_name,
 	  }
 	  $preprocess_commands .= "EXECUTE = preprocess\n\n";
 	  ## End Preprocess command
-	  
+
+	  ## Print Preprocess Commands
+	  print $preprocess_commands;
+
+
 	  ## Read into the quantitation file
 	  my %quantitation_data = readQuantitationFile(inputfilename=>"$quantitation_file",
 												   headeronly=>1);
@@ -1353,7 +1360,7 @@ SELECT	A.array_name,
 		my @channels = @{$quantitation_data{channels}};
 		my $number_of_channels = scalar(@channels);
 		my $first_channel = "ch1";
-		my $other_channel = "ch".($number_of_channels/2 + 1);
+		my $other_channel = "ch2";
 		my $channel_direction = "";
 		
 		## Loop over each channel to determine direction
@@ -1362,6 +1369,7 @@ SELECT	A.array_name,
 		  $parts[1] =~ /(\d+)/;
 		  my $number_part = $1;
 		  my $match_flag = 0;
+
 		  if ($sample1_dye =~ /$number_part/) {
 			$match_flag = 1;
 			if ($parts[0] eq $first_channel) {
@@ -1385,86 +1393,88 @@ SELECT	A.array_name,
 			print "\#WARNING[PipelineSetup.cgi]:Unable to match file name '$parts[1]' with either dye.\n";
 		  }
 		} # end foreach $channel (@channels)
-		
+
 		## Each value in the merge hash is a ref to another hash that contains forward and reverse files
-		my $array_condition = "$sample1_name"."_vs_"."$sample2_name";
-		my $opposite_condition = "$sample2_name"."_vs_"."$sample1_name";
-		
-		# In our hash, conditions are indexed by Cy3 vs Cy5.
-		# Check to see if 1_vs_2 or 2_vs_1 has been defined
-		if ( !defined($mergereps_conditions{$array_condition,'forward'}) &&
-			 !defined($mergereps_conditions{$opposite_condition,'forward'}) ) {
-		  my @empty_array1;
-		  my @empty_array2;
-		  $mergereps_conditions{$array_condition,'forward'} = \@empty_array1;
-		  $mergereps_conditions{$array_condition,'reverse'} = \@empty_array2;
+		# Samples names that are identical  (e.g. 'C_vs_C') are temporarily altered to add cardinality
+		# (e.g 'C_vs_C++++')
+
+		my $array_condition;
+		if ($sample1_name eq $sample2_name){
+		  $array_condition = "$sample1_name"."_vs_"."$sample2_name\+\+\+\+";
+		}else {
+		  $array_condition = "$sample1_name"."_vs_"."$sample2_name";
 		}
-		
-		if ($mergereps_conditions{$array_condition,'forward'}) {
-		  if ($channel_direction eq "f") {
-			push @{$mergereps_conditions{$array_condition,'forward'}}, $rep_file;
-		  }else {
-			push @{$mergereps_conditions{$array_condition,'reverse'}}, $rep_file;
-		  }
-		}
-		
-		# If opposite name is used, then flip everything
-		if ($mergereps_conditions{$opposite_condition,'forward'}) {
-		  if ($channel_direction eq "f") {
-			push @{$mergereps_conditions{$opposite_condition,'reverse'}}, $rep_file;
-		  }else {
-			push @{$mergereps_conditions{$opposite_condition,'forward'}}, $rep_file;
-		  }
-		}
-		
-		
+
+		my @temp = ($rep_file, $channel_direction, $array_condition);
+		push @mr_info, \@temp;	
 	  }
 	}
   }
 
-  ## Print Preprocess Commands
-  print $preprocess_commands;
 
-  ## Print Mergereps Commands
+  ##  Mergereps Commands
+
+  # organize & print out conditions
   my $merge_commands = $parameters{'mergeRecipe'};
   my @vera_sam_conditions;
+  my $mergereps_commands="";
+  
+  while (@mr_info){
+	my $first_array_ref = shift @mr_info;
+	$mergereps_commands .=  "\#MERGEREPS\n";
+	$mergereps_commands .=  "condition_name = $first_array_ref->[2]\n";
+	$mergereps_commands .= "file_name = $first_array_ref->[0]\n";
+	$mergereps_commands .= "file_direction = $first_array_ref->[1]\n";
 
-  foreach my $key (keys %mergereps_conditions){
-	next if ($key =~ /reverse$/);
-	$key =~ /(\S+)((forward|reverse))/;
-	my $cond = $1;
-	my $direction = $2;
-	chop ($cond);
-	print "\#MERGEREPS\n".
-	  "condition_name = $cond\n";
+	# Cycle through the remaining arrays and see if they have the same condition
+    my @temp_mr_info;
+	foreach my $t (@mr_info){
 
-	if ($direction eq "forward" ){
-	  my @forward_files = @{$mergereps_conditions{$key}};
-	  $key =~ s/forward/reverse/;
-	  my @reverse_files = @{$mergereps_conditions{$key}};
-	  foreach my $forward_file (@forward_files) {
-		print "file_name = $forward_file\n".
-		  "file_direction = f\n";
-      }
-	  foreach my $reverse_file (@reverse_files) {
-		print "file_name = $reverse_file\n".
-		  "file_direction = r\n";
+	  if ($t->[2] eq $first_array_ref->[2]) {
+
+		$mergereps_commands .= "file_name = $t->[0]\n";
+		$mergereps_commands .= "file_direction = $t->[1]\n";
+
+	  }else {
+
+		my $reversed_condition = $t->[2];
+		$reversed_condition =~ s/(.*)_vs_(.*)/$2_vs_$1/;
+		if ($reversed_condition eq $first_array_ref->[2]) {
+		  $mergereps_commands .= "file_name = $t->[0]\n";
+		  my $reversed_file_direction = $t->[1];
+		  $reversed_file_direction =~ tr/rf/fr/;
+		  $mergereps_commands .= "file_direction* = $reversed_file_direction\n";
+		}else {
+		  push @temp_mr_info, $t;
+		}
+
 	  }
+
+
 	}
+
+	@mr_info = @temp_mr_info;
+ 
+	# Mergereps options
 	if ($merge_commands =~ /opt:(\d+)\,?/){
-	  print "mergereps_optimization_flag = true\n".
-		"mergereps_optimization_value = $1\n";
+	  $mergereps_commands .= "mergereps_optimization_flag = true\n";
+	  $mergereps_commands .= "mergereps_optimization_value = $1\n";
 	}
 	
 	if ($merge_commands =~ /exclude:(.*)\,/){
-	  print "mergereps_exclude_flag = true\n".
-		"mergereps_exclude_value = $1\n";
+	  $mergereps_commands .= "mergereps_exclude_flag = true\n";
+	  $mergereps_commands .= "mergereps_exclude_value = $1\n";
 	}
-	print "output_file = $cond\.merge\n";
-	print "EXECUTE = mergeReps\n\n";
-	push @vera_sam_conditions, $cond;
+	$mergereps_commands .= "output_file = $first_array_ref->[2]\.merge\n";
+	$mergereps_commands .= "EXECUTE = mergeReps\n\n";
+
+	# Earlier, we appended a '++++' to sample2 of conditions that had identical sample names.
+	# Here, we remove them.
+	$mergereps_commands =~ s/\+\+\+\+//g;
+	push @vera_sam_conditions, $first_array_ref->[2];
   }
-  
+  print $mergereps_commands;
+
   ## Print VERA and SAM Commands
   ## Print postSam commands
   my $vs_commands = $parameters{'vsRecipe'};
@@ -1504,14 +1514,14 @@ SELECT	A.array_name,
   }
 
   ## Print Load Conditions Commands
-  if ($parameters{'dataLoad'} eq 'Yes'){
-	print "#LOAD CONDITIONS\n";
-	print "project = ".$parameters{'outputDirectory'}."\n";
+#  if ($parameters{'dataLoad'} eq 'Yes'){
+#	print "#LOAD CONDITIONS\n";
+#	print "project = ".$parameters{'outputDirectory'}."\n";
 #	foreach my $c (@vera_sam_conditions) {
 #	  print "CONDITION = $c\n";
 #	}
-	print "EXECUTE = load_conditions\n\n";
-  }
+#	print "EXECUTE = load_conditions\n\n";
+#  }
 
 
   ## Print which files to keep
