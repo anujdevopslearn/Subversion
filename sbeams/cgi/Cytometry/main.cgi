@@ -92,7 +92,7 @@ sub main {
     exit unless ($current_username = $sbeams->Authenticate(
       #connect_read_only=>1,
       #allow_anonymous_access=>1,
-      permitted_work_groups_ref=>['Cytometry_user','Cytometry_admin','Admin'],
+      permitted_work_groups_ref=>['Cytometry_user','Cytometry_admin','Admin', 'UESC'],
    ));
 
 	#### Read in the default input parameters
