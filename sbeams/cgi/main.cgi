@@ -239,15 +239,15 @@ sub handle_request {
   ##########################################################################
   #### Print out all projects owned by the user
 
-    $content = $sbeams->getProjectsYouOwn( mod_data => 'all' );
+    $content = $sbeams->getProjectsYouOwn();
 
   } elsif ( $tabmenu->getActiveTab() == 4 ){
 
   ##########################################################################
   #### Print out all projects user has access to
 
-#  $content = $sbeams->getProjectsYouHaveAccessTo();
-  $content = $sbeams->getAccessibleProjectInfo( mod_data => 'all' );
+  $content = $sbeams->getProjectsYouHaveAccessTo();
+#  $content = $sbeams->getAccessibleProjectInfo( mod_data => 'all' );
 
   }
 
