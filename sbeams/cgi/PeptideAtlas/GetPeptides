@@ -393,7 +393,8 @@ sub handle_request {
       ["end_in_chromosome","PM.end_in_chromosome","End Position"],
       ["strand","PM.strand","Strand"],
 
-      ["n_mapped_locations","PI.n_mapped_locations","N Mapped Locations"],
+      ["n_mappings","PI.n_mappings","N Mappings"],
+      ["n_mapped_locations","PI.n_mapped_locations","N Unique Mapped Locations"],
       ["is_exon_spanning","PI.is_exon_spanning","Spans exons? (Y,N)"],
 
       ["organism_full_name","O.full_name","Organism"],
