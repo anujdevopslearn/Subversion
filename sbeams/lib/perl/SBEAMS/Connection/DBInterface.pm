@@ -59,7 +59,10 @@ sub new {
 ###############################################################################
 # apply Sql Change
 #
-# This is kind of an old and krusty method that really needs updating
+# This is kind of an old and krusty method that really needs updating.
+# It has fallen in disprepair and doesn't follow the rest of the conventions
+# that have evolved.  Nonetheless, it sort of works, so leave it for now.
+# It is really only used by ManageTable
 #
 # All INSERT, UPDATE, DELETE SQL commands initiated by the user should be
 # delivered here first so that all permission checking and logging of the
@@ -73,6 +76,8 @@ sub applySqlChange {
     my $table_name = shift || croak("parameter table_name not passed");
     my $record_identifier = shift
        || croak("parameter record_identifier not passed");
+    my $PK_COLUMN_NAME = shift || '';
+
 
     #### Get the database handle
     $dbh = $self->getDBHandle();
@@ -183,20 +188,12 @@ sub applySqlChange {
       $rv  = $sth->execute or croak $dbh->errstr;
       $result = "SUCCESSFUL";
 
-      # Find out what the IDENTITY value for this INSERT was so it can
-      # be reported back.
-      # This is current MS SQL SERVER SPECIFIC.  A different command
-      # would be required for a different database.
-      my $check_auto_incr_value_query = qq!
-        SELECT SCOPE_IDENTITY()
-      !;
+      #### Determine what the last inserted autogen key was
+      $returned_PK = $self->getLastInsertedPK(
+        table_name=>$table_name,
+        PK_column_name=>$PK_COLUMN_NAME
+      );
 
-      my $sth = $dbh->prepare("$check_auto_incr_value_query")
-        or croak $dbh->errstr;
-      my $rv  = $sth->execute or croak $dbh->errstr;
-      @row = $sth->fetchrow_array;
-      ($returned_PK) = @row;
-      $sth->finish;
     }
 
 

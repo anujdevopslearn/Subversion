@@ -832,9 +832,13 @@ sub processEntryForm {
 
 
     # Execute the SQL statement extract status and PK from result
-    @returned_information = $sbeams->applySqlChange("$sql_query",
+    @returned_information = $sbeams->applySqlChange(
+      $sql_query,
       $current_contact_id,
-      $TABLE_NAME,"$PK_COLUMN_NAME=$parameters{$PK_COLUMN_NAME}");
+      $TABLE_NAME,
+      "$PK_COLUMN_NAME=$parameters{$PK_COLUMN_NAME}",
+      $PK_COLUMN_NAME
+    );
     my $returned_request_status = shift @returned_information;
     my $returned_request_PK = shift @returned_information;
 
