@@ -78,15 +78,16 @@ PR_dbxref	2	dbxref_name	CrossRef Name	varchar	50	0	N		N			Y	text	40		Y	Y	N	Name 
 PR_dbxref	3	dbxref_tag	CrossRef Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this Database Cross Reference		
 PR_dbxref	4	dbxref_description	Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this Database Cross Reference		
 PR_dbxref	5	accessor	Accessor	varchar	255	0	N		N			Y	text	50		Y	Y	N	Part of a URL or URI to which an accession number can be appended to get more information about the entity using this cross reference		
-PR_dbxref	6	uri	URI	varchar	255	0	N		N			Y	text	50		Y	Y	N	External web page or other URI of the database		SELF
-PR_dbxref	7	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-PR_dbxref	8	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
-PR_dbxref	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PR_dbxref	10	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
-PR_dbxref	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PR_dbxref	12	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
-PR_dbxref	13	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-PR_dbxref	14	record_status	Record Status	char	1	0	N	N	N							N	N				
+PR_dbxref	6	accessor_suffix	Accessor Suffix	varchar	255	0	Y		N			N	text	50		Y	Y	N	Part of a URL or URI which comes after the accession number to build the full URL to get more information about the entity using this cross reference		
+PR_dbxref	7	uri	URI	varchar	255	0	N		N			Y	text	50		Y	Y	N	External web page or other URI of the database		SELF
+PR_dbxref	8	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PR_dbxref	9	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
+PR_dbxref	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_dbxref	11	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
+PR_dbxref	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_dbxref	13	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
+PR_dbxref	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+PR_dbxref	15	record_status	Record Status	char	1	0	N	N	N							N	N				
 PR_biosequence	1	biosequence_id	BioSequence ID	int	4	0	N		Y							N	N				pkDEFAULT
 PR_biosequence	2	biosequence_set_id	BioSequence Set	int	4	0	N		N	PR_biosequence_set	biosequence_set_id					N	N	Y	BioSequence Set to which this BioSequence belongs		pkDEFAULT
 PR_biosequence	3	biosequence_name	BioSequence Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of this BioSequence (generally everything before the first space in a FASTA file header line)		
@@ -109,7 +110,7 @@ PR_GetSearchHits	6	xcorr_charge1	XCorr for +1									N	text	20		Y	Y	N	"Constrai
 PR_GetSearchHits	7	xcorr_charge2	XCorr for +2									N	text	20		Y	Y	N	"Constraint for the XCorr value for charge state +2.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"""		
 PR_GetSearchHits	8	xcorr_charge3	XCorr for +3									N	text	20		Y	Y	N	"Constraint for the XCorr value for charge state +3.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"""		
 PR_GetSearchHits	9	file_root_constraint	file_root Constraint									N	text	40		Y	2	N	Constraint for the file_root. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-PR_GetSearchHits	10	best_hit_constraint	Best Hit Constraint									N	optionlist			Y	1	N	"Constraint for the best hit flag which is set to mark the best hit among the top ones.  The best hit may not be the first one, but can be set or changed"	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_best_hit_options' ORDER BY sort_order,option_value"	
+PR_GetSearchHits	10	best_hit_constraint	Best Hit Constraint									N	optionlist			Y	1	N	"Constraint for the best hit flag which is set to mark the best hit among the top ones.  The best hit may not be the first one, but can be set or changed"	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_best_hit_options' ORDER BY sort_order,option_value"
 PR_GetSearchHits	11	xcorr_rank_constraint	XCorr Rank Constraint									N	text	40		Y	2	N	"Limit for the XCorr Rank value.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"""	
 PR_GetSearchHits	12	charge_constraint	Charge Constraint									N	optionlist	 		Y	1	N	"Constraint for the charge states to include in the query.  If blank, all states are included"	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_charge_constraint' ORDER BY sort_order,option_value"
 PR_GetSearchHits	13	reference_constraint	Reference Constraint									N	text	40		Y	1	N	Constraint for the Protein Reference. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
@@ -125,7 +126,7 @@ PR_GetSearchHits	22	isoelectric_point_constraint	pI constraint									N	text	40
 PR_GetSearchHits	23	quantitation_constraint	Quantitation constraint									N	text	40		Y	2	N	"Constraint for the Quantitation (ICAT ratio) as a single decimal value.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""	
 PR_GetSearchHits	24	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_sort_options' ORDER BY sort_order,option_value"
 PR_GetSearchHits	25	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_display_options' ORDER BY sort_order,option_value"
-PR_GetSearchHits	26	quantitation_values	Quantitation Values									N	optionlist			Y	1	N	Specify which values to use on which side of the quantitation ratio.  Normally d0/d8.  Use with caution.  This affects both the search constraints as well as display format	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_quant_values' ORDER BY sort_order,option_value"
+PR_GetSearchHits	26	quantitation_values	Quantitation Values									N	optionlist			Y	1	N	Specify which values to use on which side of the quantitation ratio.  Normally d0/d8.  Use with caution.  This affects both the search constraints as well as display format	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_quant_values' ORDER BY sort_order,option_value"	
 PR_GetSearchHits	27	quantitation_format	Quantitation Format									N	optionlist			Y	1	N	Display format for the quantitation information	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_quant_format' ORDER BY sort_order,option_value"	
 PR_GetSearchHits	28	row_limit	Maximum Rows									N	text	10		Y	2	N	"Limit the numbers of rows displayed.  If not provided, default is 1000 rows."		
 PR_GetSearch	1	search_batch_id	Search Batches									N	multioptionlist	4		Y	Y	N	"Select desired Experiments and Search Batches to include in query.  Multiple items may be selected.  If no items are selected, ALL experiments are searched."	MANUAL	
@@ -141,7 +142,7 @@ PR_search_hit_annotation	6	user_annotation_label_id	User-defined Annotation Labe
 PR_search_hit_annotation	7	comment	Comment	varchar	1024	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 PR_search_hit_annotation	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 PR_search_hit_annotation	9	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-PR_search_hit_annotation	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_search_hit_annotation	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
 PR_search_hit_annotation	11	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N			
 PR_search_hit_annotation	12	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N			
 PR_search_hit_annotation	13	record_status	Record Status	char	1	0	N	N	N							N	N			
@@ -221,7 +222,7 @@ PR_SummarizePeptides	17	biological_process_constraint	Biological Process Constra
 PR_SummarizePeptides	18	cellular_component_constraint	Cellular Component Constraint									N	text	40		Y	2	N	Constraint for the GO Cellular Component. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 PR_SummarizePeptides	19	protein_domain_constraint	Protein Domain Constraint									N	text	40		Y	2	N	Constraint for the InterPro Protein Domain. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 PR_SummarizePeptides	20	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	2	N	"Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
-PR_SummarizePeptides	21	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	2	N	"Constraint for the number of transmembrane regions (based on a 19-residue wide sliding window of hydropathy indexes above 1.58).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
+PR_SummarizePeptides	21	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	2	N	"Constraint for the number of transmembrane regions (based on a 19-residue wide sliding window of hydropathy indexes above 1.58).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
 PR_SummarizePeptides	22	accession_constraint	Accesssion Number									N	text	40		Y	2	N	Constraint for the Accession Number. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
 PR_SummarizePeptides	23	peptide_constraint	Peptide									N	text	40		Y	2	N	Constraint for the peptide (regardless of modifications). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
 PR_SummarizePeptides	24	peptide_string_constraint	Peptide String Constraint									N	text	40		Y	2	N	Constraint for the peptide string (including modifications and neighboring AAs). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
@@ -365,7 +366,7 @@ APD_peptide_summary	5	experiment_list	Experiment ID List	varchar	100	0	N		N			Y	
 APD_peptide_summary	6	n_experiments	Number of Experiments	int	4	0	N		N			Y	text	10		Y	Y	N	Total number of experiments used for this summary		
 APD_peptide_summary	7	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 APD_peptide_summary	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-APD_peptide_summary	9	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+APD_peptide_summary	9	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N			
 APD_peptide_summary	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
 APD_peptide_summary	11	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N			
 APD_peptide_summary	12	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N			
