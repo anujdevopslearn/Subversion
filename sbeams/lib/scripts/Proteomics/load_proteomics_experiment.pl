@@ -1113,6 +1113,13 @@ sub addSearchHitEntry {
   my ($match,$element,$tmp,$i,$last_cols);
   my $n_matches = $#matches;
 
+  #### The top 10 matches is probably plenty.  This should probably be
+  #### a command line option
+  if ($n_matches > 10) {
+    $n_matches = 10;
+    print "<";
+  }
+
   #### Loop over each row
   for ($i=0; $i<=$n_matches; $i++) {
     $match = $matches[$i];
@@ -1198,8 +1205,15 @@ sub addParamsEntries {
 
   #### Complain and return if the file does not exist
   if ( ! -e "$file" ) {
-    print "ERROR: Unable to find sequest parameter file: '$file'\n";
-    return;
+
+    #### Also try the parent directory
+    $file = "$directory/../sequest.params";
+
+    if ( ! -e "$file" ) {
+      print "ERROR: Unable to find sequest parameter file: '$file'\n";
+      return;
+    }
+
   }
 
 
