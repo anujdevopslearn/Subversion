@@ -271,6 +271,65 @@ sub returnTableInfo {
 
 }
 
+
+
+
+###############################################################################
+# getParentProject
+#
+# Return the parent project of a record in a table which might govern
+# whether the proposed INSERT or UPDATE function may proceed.
+###############################################################################
+sub getParentProject {
+  my $self = shift;
+  my %args = @_;
+  my $SUB_NAME = "getParentProject";
+
+  #### Decode the argument list
+  my $table_name = $args{'table_name'}
+    || die("ERROR: $SUB_NAME: Parameter table_name not passed");
+  my $action = $args{'action'}
+    || die("ERROR: $SUB_NAME: Parameter action not passed");
+  my $parameters_ref = $args{'parameters_ref'}
+    || die("ERROR: $SUB_NAME: Parameter parameters_ref not passed");
+
+  #### Make sure action is one of INSERT,UPDATE,DELETE
+  unless ($action =~ /^INSERT$|^UPDATE$|^DELETE$/) {
+    die("ERROR: $SUB_NAME: action must be one of INSERT,UPDATE,DELETE");
+  }
+
+  #### Get sbeams object, we'll need it for queries
+  #my $sbeams = $self->getSBEAMS();
+
+
+  #############################################################################
+  #### Process actions for individual tables
+
+  #### If table is PS_biosequence_annotation
+  if ($table_name eq "xxxx") {
+
+    my $project_id;
+
+    #### If the user wants to INSERT, determine how it fits into project
+    if ($action eq 'INSERT') {
+
+    #### Else for an UPDATE or DELETE, determine how it fits into project
+    } elsif ($action eq 'UPDATE' || $action eq 'DELETE') {
+
+    }
+
+    return($project_id) if ($project_id);
+
+  }
+
+
+  return;
+
+}
+
+
+
+###############################################################################
 1;
 
 __END__
