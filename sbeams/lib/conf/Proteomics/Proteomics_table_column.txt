@@ -10,9 +10,9 @@ PR_proteomics_experiment	8	experiment_path	Experiment Path	varchar	255	0	N		N			
 PR_proteomics_experiment	9	organism_id	Organism	int	4	0	N		N			Y	optionlist			Y	Y	N	Organism from which the sample used for this experiment was derived	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 PR_proteomics_experiment	10	experiment_type_id	Experiment Type	int	4	0	N		N			Y	optionlist			Y	Y	N	"Type/class of experiment (e.g. d0/d8 ICAT, etc.)"	"SELECT experiment_type_id, experiment_type_name FROM $TBPR_EXPERIMENT_TYPE ORDER BY sort_order,experiment_type_name"	
 PR_proteomics_experiment	11	instrument_id	Instrument	int	4	0	N		N			Y	optionlist			Y	Y	N	Instrument on which this experiment was performed	"SELECT instrument_id, instrument_name FROM $TBPR_INSTRUMENT ORDER BY sort_order,instrument_name"	
-PR_proteomics_experiment	12	gradient_program_id	Gradient Program	int	4	0	N		N	PR_gradient_program	gradient_program_id	Y	optionlist			Y	Y	N	Gradient Program used for this experiment.  Choose MULTIPLE if different programs were used for different msruns within this experiment.	"SELECT gradient_program_id,gradient_program_name FROM $TBPR_GRADIENT_PROGRAM WHERE record_status != 'D'"	
+PR_proteomics_experiment	12	gradient_program_id	Gradient Program	int	4	0	Y		N	PR_gradient_program	gradient_program_id	N	optionlist			Y	Y	N	Gradient Program used for this experiment.  Choose MULTIPLE if different programs were used for different msruns within this experiment.	"SELECT gradient_program_id,gradient_program_name FROM $TBPR_GRADIENT_PROGRAM WHERE record_status != 'D'"	
 PR_proteomics_experiment	13	column_length	Column Length	real	4	0	Y		N			N	text	10		Y	Y	N	Length of the column in cm used for this experiment		
-PR_proteomics_experiment	14	go_public_date	Go Public Date	datetime	8	0	N	CURRENT_TIMESTAMP	N			N	text	20		Y	Y	N	Date that this experiment data will go public.  Please use the form 2002-12-31.  Do not enter a date higher than 2030-01-01.		
+PR_proteomics_experiment	14	go_public_date	Go Public Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	text	20		Y	Y	N	Date that this experiment data will go public.  Please use the form 2002-12-31.  Do not enter a date higher than 2030-01-01.		
 PR_proteomics_experiment	15	quant_normalization	D0 / D8 Normalization Factor	real	4	0	Y		N			N	text	10		Y	Y	N	"Optional Normalization factor for d0/d8 quantitation ratio.  This will not be known until some data analysis has already been performed.  If ratios that should be calibrated to 1:1 appear as 1.2:1, enter 1.2 here to adjust."		
 PR_proteomics_experiment	16	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
 PR_proteomics_experiment	17	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
@@ -64,7 +64,7 @@ PR_biosequence_set	3	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Nam
 PR_biosequence_set	4	set_tag	Set Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this BioSequence database		
 PR_biosequence_set	5	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Longer description of this BioSequence database		
 PR_biosequence_set	6	set_version	Set Version	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Version of this BioSequence database		
-PR_biosequence_set	7	upload_file	Upload file	varchar	255	0	N		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
+PR_biosequence_set	7	upload_file	Upload file	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
 PR_biosequence_set	8	set_path	Set Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	File path of this BioSequence database		
 PR_biosequence_set	9	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
 PR_biosequence_set	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
@@ -494,16 +494,55 @@ APD_BrowseAPD	7	gene_name_constraint	Gene Name Constraint									N	text	40		Y	2
 APD_BrowseAPD	8	molecular_function_constraint	Molecular Function Constraint									N	text	40		Y	2	N	Constraint for the GO Molecular Function. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 APD_BrowseAPD	9	biological_process_constraint	Biological Process Constraint									N	text	40		Y	2	N	Constraint for the GO Biological Process. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 APD_BrowseAPD	10	cellular_component_constraint	Cellular Component Constraint									N	text	40		Y	2	N	Constraint for the GO Cellular Component. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-APD_BrowseAPD	11	protein_domain_constraint	Protein Domain Constraint									N	text	40		Y	2	N	Constraint for the InterPro Protein Domain. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-APD_BrowseAPD	12	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	2	N	"Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
-APD_BrowseAPD	13	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	2	N	"Constraint for the number of transmembrane regions (based on a 19-residue wide sliding window of hydropathy indexes above 1.58).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
-APD_BrowseAPD	14	accession_constraint	Accesssion Number									N	text	40		Y	2	N	Constraint for the Accession Number. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-APD_BrowseAPD	15	peptide_constraint	Peptide									N	text	40		Y	2	N	Constraint for the peptide (regardless of modifications). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-APD_BrowseAPD	16	peptide_string_constraint	Peptide String Constraint									N	text	40		Y	2	N	Constraint for the peptide string (including modifications and neighboring AAs). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-APD_BrowseAPD	17	peptide_options	Peptide Options									N	multioptionlist	3		Y	1	N	Various selectable options to further contrain the peptides displayed	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_peptide_options' ORDER BY sort_order,option_value"
-APD_BrowseAPD	18	precursor_mass_constraint	Precursor Mass constraint									N	text	40		Y	1	N	"Constraint for the measured precursor mass (as a single decimal value).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""	
-APD_BrowseAPD	19	percent_buffer_b_constraint	% Buffer B (ACN) constraint									N	text	40		Y	2	N	"Constraint for the calculated Percent Buffer B (acetonitrile) (value between 0 and 100).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""	
-APD_BrowseAPD	20	isoelectric_point_constraint	pI constraint									N	text	40		Y	2	N	"Constraint for the theoretical isoelectric point (pI).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""	
-APD_BrowseAPD	21	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BAPD_sort_options' ORDER BY sort_order,option_value"
-APD_BrowseAPD	22	display_options	Display Options									N	multioptionlist	5		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BAPD_display_options' ORDER BY sort_order,option_value"
-APD_BrowseAPD	23	row_limit	Maximum Rows									N	text	10		Y	2	N	"Limit the numbers of rows displayed.  If not provided, default is 5000 rows."	
+APD_BrowseAPD	11	protein_domain_constraint	Protein Domain Constraint									N	text	40		Y	2	N	Constraint for the InterPro Protein Domain. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+APD_BrowseAPD	12	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	2	N	"Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""		
+APD_BrowseAPD	13	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	2	N	"Constraint for the number of transmembrane regions (based on a 19-residue wide sliding window of hydropathy indexes above 1.58).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
+APD_BrowseAPD	14	accession_constraint	Accesssion Number									N	text	40		Y	2	N	Constraint for the Accession Number. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+APD_BrowseAPD	15	peptide_constraint	Peptide									N	text	40		Y	2	N	Constraint for the peptide (regardless of modifications). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+APD_BrowseAPD	16	peptide_string_constraint	Peptide String Constraint									N	text	40		Y	2	N	Constraint for the peptide string (including modifications and neighboring AAs). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+APD_BrowseAPD	17	peptide_options	Peptide Options									N	multioptionlist	3		Y	1	N	Various selectable options to further contrain the peptides displayed	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_peptide_options' ORDER BY sort_order,option_value"	
+APD_BrowseAPD	18	precursor_mass_constraint	Precursor Mass constraint									N	text	40		Y	1	N	"Constraint for the measured precursor mass (as a single decimal value).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""		
+APD_BrowseAPD	19	percent_buffer_b_constraint	% Buffer B (ACN) constraint									N	text	40		Y	2	N	"Constraint for the calculated Percent Buffer B (acetonitrile) (value between 0 and 100).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""		
+APD_BrowseAPD	20	isoelectric_point_constraint	pI constraint									N	text	40		Y	2	N	"Constraint for the theoretical isoelectric point (pI).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""		
+APD_BrowseAPD	21	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BAPD_sort_options' ORDER BY sort_order,option_value"	
+APD_BrowseAPD	22	display_options	Display Options									N	multioptionlist	5		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BAPD_display_options' ORDER BY sort_order,option_value"	
+APD_BrowseAPD	23	row_limit	Maximum Rows									N	text	10		Y	2	N	"Limit the numbers of rows displayed.  If not provided, default is 5000 rows."		
+PR_protein_prophet_run	1	protein_prophet_run_id	Protein Prophet Run ID	int	4	0	N		Y												pkDEFAULT
+PR_protein_prophet_run	2	execution_date	Execution Date	datetime	8	0	N		N												
+PR_protein_prophet_run	3	program_version	Program Version Number	varchar	50	0	N		N												
+PR_protein_prophet_run	4	header_text	Header Text	text	16	0	Y		N												
+PR_protein_group	1	protein_group_id	Protein Group ID	int	4	0	N		Y												pkDEFAULT
+PR_protein_group	2	protein_prophet_run_id	Protein Prophet Run	int	4	0	N		N	PR_protein_prophet_run	protein_prophet_run_id										
+PR_protein_group	3	group_number	Group Number	int	4	0	N		N												
+PR_protein_group	4	pseudo_name	Group Pseudoname	varchar	255	0	Y		N												
+PR_protein_group	5	quantitation_ratio	Quantitation Ratio	real	4	0	Y		N												
+PR_protein_group	6	probability	Probability	real	4	0	N		N												
+PR_protein	1	protein_id	Protein ID	int	4	0	N		Y												pkDEFAULT
+PR_protein	2	protein_group_id	Protein Group	int	4	0	N		N	PR_protein_group	protein_group_id										
+PR_protein	3	protein_name	Protein Name	varchar	255	0	N		N												
+PR_protein	4	quantitation_ratio	Quantitation Ratio	real	4	0	Y		N												
+PR_protein	5	probability	Probability	real	4	0	N		N												
+PR_protein	6	n_indistinguishable_proteins	Number of Indistinguishable Proteins	int	4	0	Y		N												
+PR_protein	7	biosequence_id	Biosequence ID	int	4	0	N		N												
+PR_indistinguishable_protein	1	indistinguishable_protein_id	Indistinguishable Protein ID	int	4	0	N		Y												pkDEFAULT
+PR_indistinguishable_protein	2	protein_id	Lead Protein	int	4	0	N		N	PR_protein	protein_id										
+PR_indistinguishable_protein	3	protein_name	Protein Name	varchar	255	0	N		N												
+PR_indistinguishable_protein	4	biosequence_id	Biosequence ID	int	4	0	N		N												
+PR_peptide	1	peptide_id	Peptide ID	int	4	0	N		Y												pkDEFAULT
+PR_peptide	2	protein_id	Protein	int	4	0	N		N	PR_protein	protein_id										
+PR_peptide	3	peptide_sequence	Peptide Sequence	varchar	255	0	N		N												
+PR_peptide	4	charge	Charge	int	4	0	N		N												
+PR_peptide	5	quantitation_ratio	Quantitation Ratio	real	4	0	Y		N												
+PR_peptide	6	initial_probability	Initial Probability	real	4	0	N		N												
+PR_peptide	7	nsp_adjusted_probability	NSP Adjusted Probability	real	4	0	N		N												
+PR_peptide	8	peptide_group_designator	Peptide Twin Designator	varchar	10	0	Y		N												
+PR_peptide	9	weight	Weight	real	4	0	N		N												
+PR_peptide	10	is_independent_evidence	Is Independent Evidence?	char	1	0	N		N												
+PR_peptide	11	n_tryptic_termini	Number of Tryptic Termini	int	4	0	N		N												
+PR_peptide	12	n_sibling_peptides	Number of Sibling Peptides	int	4	0	N		N												
+PR_peptide	13	n_sibling_peptides_bin	Number of Sibling Peptides Bin	int	4	0	N		N												
+PR_peptide	14	n_instances	Number of Observed Instances	int	4	0	N		N												
+PR_peptide_parent_protein	1	peptide_parent_protein_id	Peptide Parent Protein ID	int	4	0	N		Y												pkDEFAULT
+PR_peptide_parent_protein	2	peptide_id	Peptide	int	4	0	N		N	PR_peptide	peptide_id										
+PR_peptide_parent_protein	3	protein_name	Protein Name	varchar	255	0	N		N												
+PR_peptide_parent_protein	4	biosequence_id	Biosequence ID	int	4	0	N		N												

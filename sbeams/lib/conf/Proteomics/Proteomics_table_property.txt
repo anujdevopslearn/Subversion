@@ -32,10 +32,9 @@ PR_processing_status	Processing Status	Proteomics_infrastructure	YES	$TBPR_PROCE
 PR_raw_data_file	Raw Data File	Proteomics_infrastructure	YES	$TBPR_RAW_DATA_FILE	raw_data_file_id		ManageTable.cgi?TABLE_NAME=PR_raw_data_file	"PR_processing_status,PR_raw_data_file"
 PR_query_option	Query Option	Proteomics_infrastructure	YES	$TBPR_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=PR_query_option	PR_query_option
 APD_peptide_summary	Peptide Summary	Proteomics_infrastructure	YES	$TBAPD_PEPTIDE_SUMMARY	peptide_summary_id		ManageTable.cgi?TABLE_NAME=APD_peptide_summary	APD_peptide_summary
-PR_GetSearchHits	Browse Search Hits	QUERY	NO				GetSearchHits	
-PR_GetSearch	Browse Search	QUERY	NO				GetSearchHits	
-PR_BrowseBioSequence	Browse BioSequence	QUERY	NO				BrowseBioSequence.cgi	
-PR_CompareExperiments	Compare Experiments	QUERY	NO				CompareExperiments	
-PR_SummarizePeptides	Summarize Peptides	QUERY	NO				SummarizePeptides	
-PR_SummarizeFractions	Summarize Fractions	QUERY	NO				SummarizeFractions	
-APD_BrowseAPD	Browse Annotated Peptide Database	QUERY	NO				BrowseAPD	
+PR_protein_prophet_run	Protein Prophet Run	Proteomics_infrastructure	NO	$TBPR_PROTEIN_PROPHET_RUN	protein_prophet_run_id			
+PR_protein_group	Protein Group	Proteomics_infrastructure	NO	$TBPR_PROTEIN_GROUP	protein_group_id			
+PR_protein	Protein	Proteomics_infrastructure	NO	$TBPR_PROTEIN	protein_id			
+PR_indistinguishable_protein	Inditinguishable Protein	Proteomics_infrastructure	NO	$TBPR_INDISTINGUISHABLE_PROTEIN	indistinguishable_protein_id			
+PR_peptide	Peptide	Proteomics_infrastructure	NO	$TBPR_PEPTIDE	peptide_id			
+PR_peptide_parent_protein	Peptide Parent Protein	Proteomics_infrastructure	NO	$TBPR_PEPTIDE_PARENT_PROTEIN	peptide_parent_protein_id			
