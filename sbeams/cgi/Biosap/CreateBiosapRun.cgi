@@ -473,7 +473,7 @@ sub create_request_form {
   <TABLE BORDER="0" CELLPADDING="5">
   <TR>
     <TD>
-    <B>Oligo Conc.</B> (mMol):
+    <B>Oligo Concentration</B> (mMol):
     </TD>
     <TD ALIGN="right">
     <INPUT TYPE="text" SIZE="9" NAME="oligoConc" VALUE="$o_conc">
