@@ -87,6 +87,7 @@ if ($_server_port) {
 my $SBEAMS_INSTANCE =  "$FindBin::Bin";
 my $subdir = $SBEAMS_INSTANCE;
 $subdir =~ s/^.*\///;
+$subdir = '' if ($subdir eq 'cgi');  # Clear it if it's the top cgi directory
 setSBEAMS_SUBDIR('dummy',$subdir);
 
 
