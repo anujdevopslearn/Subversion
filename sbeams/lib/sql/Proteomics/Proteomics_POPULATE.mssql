@@ -173,6 +173,8 @@ VALUES ( 'BPP_peptide_options','IsNotUnique','Is NOT unique within set',55 );
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BPP_peptide_options','C_containing','Cysteine containing',60 );
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BPP_peptide_options','C_missing','NOT Cysteine containing',61 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BPP_peptide_options','SinglyTryptic','At least singly tryptic',70 );
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BPP_peptide_options','DoublyTryptic','Only doubly tryptic',80 );
@@ -184,6 +186,8 @@ VALUES ( 'BPS_display_options','ShowExtraProteinProps','Show Extra Protein Prope
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BPS_display_options','ShowSQL','Show SQL Query',90 );
 
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'CBS_display_options','ShowSQL','Show SQL Query',90 );
 
 
 INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( '100% - certain',1.0,10 );
