@@ -26,7 +26,8 @@ use vars qw ($sbeams $sbeamsMOD $q
              $current_contact_id $current_username
 	     $fav_codon_frequency $n_transmembrane_regions
 	     $rosetta_lookup $pfam_search_results $ginzu_search_results
-             %domain_match_sources
+             $mamSum_search_results
+             %domain_match_types %domain_match_sources
             );
 
 
@@ -80,6 +81,8 @@ Options:
                        to load the pfam search results
   --ginzu_search_results_dir   Full path name of a directory in which
                        there are a bunch of .domains files to load
+  --mamSum_search_results_summary_file   Full path name of a file from which
+                       to load the mamSum search results
 
  e.g.:  $PROG_NAME --check_status
 
@@ -92,7 +95,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
     "set_tag:s","file_prefix:s","check_status","fav_codon_frequency_file:s",
     "calc_n_transmembrane_regions","n_transmembrane_regions_file:s",
     "rosetta_lookup_file:s","pfam_search_results_summary_file:s",
-    "ginzu_search_results_dir:s",
+    "ginzu_search_results_dir:s","mamSum_search_results_summary_file:s",
   )) {
   print "$USAGE";
   exit;
@@ -196,6 +199,9 @@ sub handleRequest {
     $OPTIONS{"pfam_search_results_summary_file"} || '';
   my $ginzu_search_results_dir =
     $OPTIONS{"ginzu_search_results_dir"} || '';
+  my $mamSum_search_results_summary_file =
+    $OPTIONS{"mamSum_search_results_summary_file"} || '';
+
 
   #### Get the file_prefix if it was specified, and otherwise guess
   unless ($file_prefix) {
@@ -286,9 +292,21 @@ sub handleRequest {
     readGinzuFiles(
       source_dir => $ginzu_search_results_dir,
       ginzu_search_results => $ginzu_search_results);
+    %domain_match_types = $sbeams->selectTwoColumnHash(
+      "SELECT domain_match_type_name,domain_match_type_id ".
+      "  FROM ${DATABASE}domain_match_type WHERE record_status != 'D'");
     %domain_match_sources = $sbeams->selectTwoColumnHash(
       "SELECT domain_match_source_name,domain_match_source_id ".
       "  FROM ${DATABASE}domain_match_source WHERE record_status != 'D'");
+  }
+
+
+  #### If a mamSum_search_results_summary_file was specified,
+  #### load it for later processing
+  if ($mamSum_search_results_summary_file) {
+    $mamSum_search_results = readMamSumFile(
+      source_file => $mamSum_search_results_summary_file,
+    );
   }
 
 
@@ -823,17 +841,27 @@ sub loadBiosequence {
   #### If we have PFAM data, INSERT or UPDATE domain_match
   if ($have_pfam_data) {
 
+    #### Get the domain_match_source_id
+    my $domain_match_source_id = $domain_match_sources{'PFAM Search'};
+
     #### See if there's already a record there
     my $sql =
       "SELECT domain_match_id
          FROM ${DATABASE}domain_match
         WHERE biosequence_id = '$result'
+          AND domain_match_source_id = '$domain_match_source_id'
       ";
     my @domain_match_ids = $sbeams->selectOneColumn($sql);
 
-    #### Determine INSERT or UPDATE based on the result
+    #### If there are any of these, DELETE them
     if (scalar(@domain_match_ids) > 0) {
-      #### Delete them!  Should just delete PFAM ones!
+      $sql =
+        "DELETE
+           FROM ${DATABASE}domain_match
+          WHERE biosequence_id = '$result'
+            AND domain_match_source_id = '$domain_match_source_id'
+        ";
+      $sbeams->executeSQL($sql);
     }
 
 
@@ -850,8 +878,10 @@ sub loadBiosequence {
       $rowdata{e_value} = $match->{e_value}
         if (defined($match->{e_value}));
 
-      $rowdata{match_name} = $match->{match_name}
-        if (defined($match->{match_name}));
+      if (defined($match->{match_name})) {
+        $rowdata{match_name} = $match->{match_name};
+        $rowdata{match_accession} = $match->{match_name};
+      }
 
       $rowdata{query_start} = $match->{query_start}
         if (defined($match->{query_start}));
@@ -859,8 +889,11 @@ sub loadBiosequence {
       $rowdata{query_end} = $match->{query_end}
         if (defined($match->{query_end}));
 
+      $rowdata{domain_match_type_id} =
+        $domain_match_types{'pfam'};
+
       $rowdata{domain_match_source_id} =
-        $domain_match_sources{'PFAMsearch'};
+        $domain_match_sources{'PFAM Search'};
 
       #### Insert or update the row
       $sbeams->insert_update_row(
@@ -890,17 +923,27 @@ sub loadBiosequence {
   #### If we have Ginzu data, INSERT or UPDATE domain_match
   if ($have_ginzu_data) {
 
+    #### Get the domain_match_source_id
+    my $domain_match_source_id = $domain_match_sources{Ginzu};
+
     #### See if there's already a record there
     my $sql =
       "SELECT domain_match_id
          FROM ${DATABASE}domain_match
         WHERE biosequence_id = '$result'
+          AND domain_match_source_id = '$domain_match_source_id'
       ";
     my @domain_match_ids = $sbeams->selectOneColumn($sql);
 
-    #### Determine INSERT or UPDATE based on the result
+    #### If there are any of these, DELETE them
     if (scalar(@domain_match_ids) > 0) {
-      #### Delete them!  Should just delete PFAM ones!
+      $sql =
+        "DELETE
+           FROM ${DATABASE}domain_match
+          WHERE biosequence_id = '$result'
+            AND domain_match_source_id = '$domain_match_source_id'
+        ";
+      $sbeams->executeSQL($sql);
     }
 
 
@@ -929,6 +972,9 @@ sub loadBiosequence {
       $rowdata{match_name} = $match->{match_name}
         if (defined($match->{match_name}));
 
+      $rowdata{domain_match_index} = $match->{match_index}
+        if (defined($match->{match_index}));
+
       $rowdata{z_score} = $match->{z_score}
         if (defined($match->{z_score}));
 
@@ -936,16 +982,24 @@ sub loadBiosequence {
         if (defined($match->{z_score}));
 
       if (defined($match->{match_source})) {
-        if (defined($domain_match_sources{$match->{match_source}})) {
-          $rowdata{domain_match_source_id} =
-            $domain_match_sources{$match->{match_source}};
+        if (defined($domain_match_types{$match->{match_source}})) {
+          $rowdata{domain_match_type_id} =
+            $domain_match_types{$match->{match_source}};
+          $rowdata{match_accession} = $match->{match_name}
+            if ($match->{match_source} eq 'pfam');
+          $rowdata{match_accession} = substr($match->{match_name},0,4)
+            if ($match->{match_source} eq 'pdbblast');
+
         } else {
-            print "WARNING: Unable to transform match source '",
-              $match->{match_source},"'\n";
+          print "WARNING: Unable to transform match source '",
+            $match->{match_source},"'\n";
         }
       } else {
         print "WARNING: No match_source for '$biosequence_name'\n";
       }
+
+      $rowdata{domain_match_source_id} =
+        $domain_match_sources{'Ginzu'};
 
 
       #### Insert or update the row
@@ -961,6 +1015,132 @@ sub loadBiosequence {
     }
 
   }
+
+
+  #### Hack folr yucky halo mamSumm
+  my $adj_biosequence_name = $biosequence_name;
+  chop($adj_biosequence_name);
+
+
+  #### See if we have mamSum data to add
+  my $have_mamSum_data = 0;
+  if (defined($mamSum_search_results) && $result) {
+    if (defined($mamSum_search_results->{$adj_biosequence_name})) {
+      $have_mamSum_data = 1;
+    }
+  }
+
+
+  #### If we have mamSum data, INSERT or UPDATE domain_match
+  if ($have_mamSum_data) {
+
+    #### Get the domain_match_source_id
+    my $domain_match_source_id = $domain_match_sources{mamSum};
+
+    #### See if there's already a record there
+    my $sql =
+      "SELECT domain_match_id
+         FROM ${DATABASE}domain_match
+        WHERE biosequence_id = '$result'
+          AND domain_match_source_id = '$domain_match_source_id'
+      ";
+    my @domain_match_ids = $sbeams->selectOneColumn($sql);
+
+    #### If there are any of these, DELETE them
+    if (scalar(@domain_match_ids) > 0) {
+      $sql =
+        "DELETE
+           FROM ${DATABASE}domain_match
+          WHERE biosequence_id = '$result'
+            AND domain_match_source_id = '$domain_match_source_id'
+        ";
+      $sbeams->executeSQL($sql);
+    }
+
+
+    #### Loop over all the domain for this biosequence
+    my $domains = $mamSum_search_results->{$adj_biosequence_name};
+    foreach my $domain_tag (keys %{$domains}) {
+
+      #### Loop over all the domain matches for this biosequence
+      foreach my $match (@{$domains->{$domain_tag}->{clusters}}) {
+
+  	#### Fill the row data hash with information we have
+  	my %rowdata;
+  	$rowdata{biosequence_id} = $result;
+
+        if ($domain_tag =~ /\d/) {
+          $rowdata{domain_match_index} = $domain_tag;
+        }
+
+	$rowdata{overall_probability} = $domains->{$domain_tag}->
+            {cluster_probability}
+  	  if (defined($domains->{$domain_tag}->{cluster_probability}));
+
+        if (defined($match->{cluster_name})) {
+	  $rowdata{cluster_name} = $match->{cluster_name};
+	  if ($match->{cluster_name} eq $domains->{$domain_tag}->{best_cluster}) {
+	    $rowdata{best_match_flag} = 'Y';
+          }
+        }
+
+	$rowdata{query_start} = $match->{query_start}
+  	  if (defined($match->{query_start}));
+
+  	$rowdata{query_length} = $match->{query_length}
+  	  if (defined($match->{query_length}));
+
+  	$rowdata{match_length} = $match->{match_length}
+  	  if (defined($match->{match_length}));
+
+	if (defined($match->{match_name})) {
+    	  $rowdata{match_name} = $match->{match_name};
+    	  $rowdata{match_accession} = substr($match->{match_name},0,4);
+	}
+
+	$rowdata{domain_match_type_id} = $domain_match_types{PDB};
+
+  	$rowdata{z_score} = $match->{z_score}
+  	  if (defined($match->{z_score}));
+
+  	$rowdata{probability} = $match->{probability}
+  	  if (defined($match->{probability}));
+
+  	$rowdata{cluster_name} = $match->{cluster_name}
+  	  if (defined($match->{cluster_name}));
+
+  	if (defined($match->{second_match_name})) {
+    	  $rowdata{second_match_name} = $match->{second_match_name};
+    	  $rowdata{second_match_accession} = $match->{second_match_name};
+    	  $rowdata{second_match_accession} =~ s/\./\//g;
+	}
+
+
+  	$rowdata{match_annotation} = $match->{match_annotation}
+  	  if (defined($match->{match_annotation}));
+
+  	$rowdata{e_value} = 10**(-1*$match->{z_score})
+  	  if (defined($match->{z_score}));
+
+	$rowdata{domain_match_source_id} =
+  	  $domain_match_sources{mamSum};
+
+
+  	#### Insert or update the row
+  	my $result = $sbeams->insert_update_row(
+  	  insert=>1,
+  	  table_name=>"${DATABASE}domain_match",
+  	  rowdata_ref=>\%rowdata,
+  	  PK=>"domain_match_id",
+  	  verbose=>$VERBOSE,
+  	  testonly=>$TESTONLY,
+  	);
+
+      } # end foreach match
+
+    } # end foreach domain
+
+  } # if have mamSum
 
 
   return;
@@ -1713,6 +1893,7 @@ sub readDomainsFile {
 
   #### Read in all the domain matches
   my @matches = ();
+  my $match_index = 0;
   while ($line = <INFILE>) {
     $line =~ s/[\r\n]//g;
     last if ($line =~ /^\s*$/);
@@ -1737,9 +1918,11 @@ sub readDomainsFile {
     $parameters{'match_name'} = $columns[5];
     $parameters{'z_score'} = $columns[6];
     $parameters{'match_source'} = $columns[7];
+    $parameters{'match_index'} = $match_index;
 
     #### Put the hash on the list
     push(@matches,\%parameters);
+    $match_index++;
 
   }
 
@@ -1759,4 +1942,156 @@ sub readDomainsFile {
   return \%data;
 
 } # end readDomainsFile
+
+
+
+###############################################################################
+# readMamSumFile
+###############################################################################
+sub readMamSumFile {
+  #my $self = shift || die("ERROR: Parameter self not passed!");
+  my %args = @_;
+  my $SUB_NAME = "readMamSumFile";
+
+
+  #### Decode the argument list
+  my $source_file = $args{'source_file'}
+   || die "ERROR[$SUB_NAME]: source_file not passed";
+
+
+  #### Define a hash to hold the contents of the file
+  my %data;
+  $data{SUCCESS} = 0;
+
+
+  #### Verify that the file exists
+  unless ( -f $source_file ) {
+    print "ERROR: Unable to find file '$source_file'\n";
+    return \%data;
+  }
+
+
+  #### Open the specified file
+  unless ( open(INFILE, "$source_file") ) {
+    print "ERROR: Unable to open file '$source_file'\n";
+    return \%data;
+  }
+
+
+  #### Set up some data
+  my $line;
+  my @possible_hits = ();
+
+
+  #### Read in all the search results
+  while ($line = <INFILE>) {
+    $line =~ s/[\r\n]//g;
+    next if ($line =~ /^\s*$/);
+
+    #### If it's a domain header line, process that
+    if ($line =~ /^(\S+) one\-of\-top\-five\-correct: ([\d\.]+) CThresh: [\d\.]+ \d+ best_is: (cluster\d+)$/ ) {
+      my $tmp = $1;
+      my $domain_char = substr($tmp,length($tmp)-1,1);
+      my $biosequence_name = substr($tmp,0,length($tmp)-1);
+      my $cluster_probability = $2;
+      my $best_cluster = $3;
+      $data{$biosequence_name}->{$domain_char}->{cluster_probability} =
+        $cluster_probability;
+      $data{$biosequence_name}->{$domain_char}->{best_cluster} = $best_cluster;
+      my @tmp;
+      $data{$biosequence_name}->{$domain_char}->{clusters} = \@tmp;
+
+
+    #### Or it's one of the hit lines, process that
+    } elsif ($line =~ /conP:/) {
+
+      #### Split the line into columns
+      my @columns = split(/\t/,$line);
+
+      #### Create a temporary hash and fill it with these data
+      my %parameters;
+      my $biosequence_name;
+      my $domain_char;
+
+      #### Parse the first column into its components
+      if ($columns[0] =~ /^(\S+) (cluster\d+) \-\> (\S+)$/) {
+        my $tmp = $1;
+        $domain_char = substr($tmp,length($tmp)-1,1);
+        $biosequence_name = substr($tmp,0,length($tmp)-1);
+        $parameters{'biosequence_name'} = $biosequence_name;
+        $parameters{'cluster_name'} = $2;
+	$parameters{'match_name'} = $3;
+      } else {
+        print "ERROR: Unable to parse names for line: '$line'\n";
+      }
+
+      $parameters{'z_score'} = $columns[1];
+
+      #### Parse the third column into its components
+      if ($columns[2] =~ /^(\d+) \/ (\d+)$/) {
+        $parameters{'match_length'} = $1;
+        $parameters{'query_length'} = $2;
+      } else {
+        print "ERROR: Unable to parse lengths for line: '$line'\n";
+      }
+
+      #### Parse the fourth column into its components
+      if ($columns[3] =~ /^conP:\s+([\d\.]+)$/) {
+        $parameters{'probability'} = $1;
+      } else {
+        print "ERROR: Unable to parse conP for line: '$line'\n";
+      }
+
+      #### Parse the CATH ID column into its components
+      $columns[4] = '' unless(defined($columns[4]));
+      if ($columns[4] ne '' &&
+          $columns[4] =~ /^CATH-ID:\s+([\d\.]+)$/) {
+        $parameters{'second_match_name'} = $1;
+      } else {
+        print "ERROR: Unable to parse CATH-ID column '$columns[4]' for line: '$line'\n"
+          unless ($columns[4] eq 'NO-CATH' || $columns[4] eq 'CATH-TRUNC' ||
+           $columns[4] eq '' );
+      }
+
+      $columns[5] =~ s/^\s+// if defined($columns[5]);
+      $parameters{'match_annotation'} = $columns[5] if defined($columns[5]);
+
+      #### Push this cluster data onto the list
+      push(@{$data{$biosequence_name}->{$domain_char}->{clusters}},
+        \%parameters);
+
+
+    #### Else if it's an end line
+    } elsif ($line eq '--end--') {
+
+      # Do nothing
+
+
+    #### And if nothing has been triggered yet, complain and die
+    } else {
+      if ($line =~ /CThresh:\s+best_is:/) {
+        # just simply no hits
+      } elsif ($line =~ /best_is: $/) {
+        # just simply no hits
+      } else {
+        die("ERROR: Line '$line' not recognized by parser");
+      }
+    }
+
+  }
+
+
+  #### Close the input file
+  close(INFILE);
+
+
+  #### Set SUCCESS flag and return
+  print "INFO: mamSum file successfully parsed!\n" if ($VERBOSE);
+  $data{SUCCESS} = 1;
+  return \%data;
+
+} # end readMamSumFile
+
+
+
 
