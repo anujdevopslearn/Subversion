@@ -129,10 +129,16 @@ Test in your dev2 area.  Once all is good, check into CVS:
 
 
 cd /net/dblocal/www/html/dev2/sbeams/cgi
+cd $DEST
+pur
+cd ..
 cvs add $DEST
 cvs add $DEST/*
 
 cd /net/dblocal/www/html/dev2/sbeams/lib/perl/SBEAMS
+cd $DEST
+pur
+cd ..
 cvs add $DEST.pm
 cvs add $DEST
 cvs add $DEST/*
@@ -141,6 +147,9 @@ cvs add $DEST/*
 #cvs add -kb biosap_logo.png
 
 cd /net/dblocal/www/html/dev2/sbeams/lib/conf
+cd $DEST
+pur
+cd ..
 cvs add $DEST
 cvs add $DEST/*
 
