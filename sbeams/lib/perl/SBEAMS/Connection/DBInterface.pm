@@ -4863,7 +4863,7 @@ function switchProject(){
        AND P.record_status != 'D'
        AND UL.record_status != 'D'
      GROUP BY P.project_id, P.name, UL.username
-     ORDER BY UL.username, P.name;
+     ORDER BY UL.username, P.name
   ~;
 
   @rows = $self->selectSeveralColumns($project_sql);
