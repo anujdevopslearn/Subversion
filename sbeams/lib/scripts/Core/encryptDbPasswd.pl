@@ -91,7 +91,7 @@ sub printUsage {
   print <<"  END";
   $msg
 
-  USAGE: encryptDbPassword.pl -p password -k key 
+  USAGE: encryptDbPasswd.pl -p password -c conf_file
   OPTIONS: --conf -c   SBEAMS.conf file to use 
            --password -p   password to encrypt
   END
