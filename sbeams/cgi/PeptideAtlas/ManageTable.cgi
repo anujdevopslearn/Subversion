@@ -109,9 +109,9 @@ exit(0);
 sub main {
 
   #### Do the SBEAMS authentication and exit if a username is not returned
-  exit unless ($current_username = $sbeams->Authenticate(
+  exit unless ( $current_username = $sbeams->Authenticate(
     #connect_read_only=>1,
-    #allow_anonymous_access=>1,
+    allow_anonymous_access => 1,
     #permitted_work_groups_ref=>['Proteomics_user','Proteomics_admin'],
   ));
 
@@ -237,7 +237,45 @@ sub preUpdateDataCheck {
 
 
   #### If table XXXX
-  if ($TABLE_NAME eq "XXXX") {
+  if ( uc($TABLE_NAME) eq 'AT_BIOSEQUENCE_SET' ) {
+    # Must have an project_id
+    return "Error: project_id not defined" if !$parameters{project_id};
+
+    my $errstr = checkPermission( fkey => 'project_id',
+                                  fval => $parameters{project_id},
+                                  pval => $parameters{biosequence_set_id},
+                                  action => $parameters{action},
+                                  tname => $TABLE_NAME );
+
+    return  ( $errstr ) if $errstr;
+
+  } elsif ( uc($TABLE_NAME) eq 'AT_SAMPLE' ) {
+
+    # Must have an project_id
+    return "Error: project_id not defined" if !$parameters{project_id};
+
+    my $errstr = checkPermission( fkey => 'project_id',
+                                  fval => $parameters{project_id},
+                                  pval => $parameters{sample_id},
+                                  action => $parameters{action},
+                                  tname => $TABLE_NAME );
+
+    return  ( $errstr ) if $errstr;
+
+  } elsif ( uc($TABLE_NAME) eq 'AT_ATLAS_BUILD' ) {
+
+    # Must have an project_id
+    return "Error: project_id not defined" if !$parameters{project_id};
+
+    my $errstr = checkPermission( fkey => 'project_id',
+                                  fval => $parameters{project_id},
+                                  pval => $parameters{atlas_build_id},
+                                  action => $parameters{action},
+                                  tname => $TABLE_NAME );
+
+    return  ( $errstr ) if $errstr;
+
+  } elsif ($TABLE_NAME eq "XXXX") {
     return "An error of some sort $parameters{something} invalid";
   }
 
