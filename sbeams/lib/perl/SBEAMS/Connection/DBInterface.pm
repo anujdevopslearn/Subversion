@@ -23,6 +23,7 @@ use vars qw(@ERRORS $dbh $sth $q $resultset_ref $rs_params_ref
            );
 use CGI::Carp qw(fatalsToBrowser croak);
 use DBI;
+use File::Basename;
 use POSIX;
 use Data::Dumper;
 use URI::Escape;
@@ -40,10 +41,15 @@ use Data::ShowTable;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::Log;
 use SBEAMS::Connection::TableInfo;
 use SBEAMS::Connection::Utilities;
 
 $q       = new CGI;
+my $log = SBEAMS::Connection::Log->new();
+
+use constant DATA_READER => 40;
+use constant DATA_WRITER => 30;
 
 
 ###############################################################################
@@ -79,6 +85,8 @@ sub applySqlChange {
     my $self = shift || croak("parameter self not passed");
     my %args = @_;
     my $SUB_NAME = "applySqlChange";
+
+    my %asc_new = $self->applySQLChange ( %args );
 
     my $sql_query = $args{'SQL_statement'}
       || die("ERROR: $SUB_NAME: Parameter SQL_statement not passed");
@@ -123,6 +131,7 @@ sub applySqlChange {
 
     #### Translate the table handle to the database table name
     my ($DB_TABLE_NAME) = $self->returnTableInfo($table_name,"DB_TABLE_NAME");
+    $log->debug( "Table name is $DB_TABLE_NAME" );
 
 
     # Extract the first word, hopefully INSERT, UPDATE, or DELETE
@@ -221,6 +230,7 @@ sub applySqlChange {
         $user_context_privilege_id > $privilege_id) {
       $privilege_id = $user_context_privilege_id;
     }
+    $log->debug( "In ASC_old, pPriv is $project_privilege_id, tPriv is $privilege_id" );
 
 
     my ($privilege_name) = $level_names{$privilege_id}
@@ -230,12 +240,19 @@ sub applySqlChange {
     #### Configure a hash for action suggestions
     my %remedies = ();
 
+    # Allow exception for rowprivate
+    my $rprivate =  $self->isRowprivate( $DB_TABLE_NAME );
+    if ( $rprivate ) {
+      $log->debug( "Allowing exception for rowprivate data" );
+      $result = "SUCCESSFUL";
+    }
 
     #### If the user only has data_reader or worse, deny them
-    if ($privilege_id >= 40) {
+    if ( $privilege_id >= DATA_READER && !$rprivate ) {
+
       push(@ERRORS, "As part of the current work group, you only have ".
-	   "privilege '($privilege_name)' for this ".
-	   "table and are not permitted to write to it.");
+       "privilege '($privilege_name)' for this ".
+	     "table and are not permitted to write to it.");
       $remedies{find_another_group} = 1;
       $result = "DENIED";
 
@@ -490,11 +507,167 @@ sub applySqlChange {
     ~;
     $self->executeSQL($log_query);
 
+    $log->debug( "In ASC_old, result was $result" );
 
+# DEBUG testing block
+    if ( %asc_new ) {
+      if ( $asc_new{result} ne $result ||
+        $project_privilege_id != $asc_new{pPriv} ||
+        $privilege_id != $asc_new{tPriv} ) {
+        $log->error( <<"        END" );
+        
+        OLD: result => $result\tpPriv => $project_privilege_id\ttPriv=>$privilege_id
+        NEW: result => $asc_new{result}\tpPriv => $asc_new{pPriv}\ttPriv=>$asc_new{tPriv}
+
+        END
+      }
+    }
+
+    
     #### Return the results
     return ($result,$returned_PK,@ERRORS);
 }
 
+#+
+# Checks through all registered rowprivate tables, returns 1 if 
+# any of them match passed table, else returns 0.
+#-
+sub isRowprivate {
+    my $self = shift || croak("parameter self not passed");
+    my $table = shift;
+    return 0 unless $table;
+    my ( $base ) =  $table =~ /\.([a-zA-Z_]+)$/;
+    my @rows = $self->selectOneColumn( <<"    END" );
+    SELECT table_name FROM $TB_TABLE_PROPERTY 
+    WHERE table_group = 'rowprivate'
+    END
+    for ( @rows ) {
+      return 1 if $_ =~ /$base/i;
+    }
+    return 0;
+}
+
+#+
+#
+#-
+sub applySQLChange {
+    my $self = shift || croak("parameter self not passed");
+    my %args = @_;
+
+    my $subname = 'applySQLChange';
+
+    # Check for required parameters.
+    for(qw( SQL_statement current_contact_id table_name record_identifier )){
+      die( "Error: $subname: Parameter $_ not passed" ) unless $args{$_};
+    }
+
+    # Get the names of all the privilege levels
+    my %level_names = $self->selectTwoColumnHash(
+      "SELECT privilege_id,name FROM $TB_PRIVILEGE WHERE record_status!='D'"
+    );
+    # get_best_permission() gives default permission of 9999.  Can't do the right thing
+    # and put this in $TB_PRIV 'cause it would show up in select lists.  Doh!
+    $level_names{9999} ||= 'NONE';
+
+
+    # Make necessary argument calculations/transforms
+
+    # Grep 'action' from SQL query - Ugh!  Ugh!  Ugh!
+    ( $args{action} ) = $args{SQL_statement} =~ /\s*(\w*)/;
+    unless ($args{action} =~ /^INSERT$|^UPDATE$|^DELETE$|^SELECT$/i) {
+      die("ERROR: $subname: Unrecognized action $args{action}");
+    }
+    $args{dbtable} = $self->returnTableInfo($args{table_name},"DB_TABLE_NAME");
+    $args{contact_id} = $args{current_contact_id} || $self->getCurrent_contact_id();
+    $args{pk_column_name} = $args{PK_column_name};
+    ( $args{pk_value} = $args{record_identifier} ) =~ s/.*=//;
+    $args{project_id} = $self->getCurrent_project_id();
+    $args{work_group_id} = $self->getCurrent_work_group_id();
+#    $args{pk_column_name} = $args{pk_value};
+
+#    my $args;
+#    for( keys( %args ) ){ $args .= "B4: $_ => $args{$_}\n"; }
+#    $log->debug( $args );
+   
+    # Defaults to restrictive permissions
+    my $pPriv = '';
+    my $tPriv = 50;
+
+    # Assumes (as does original) that this has already been determined and cached.
+    if ( $args{parent_project_id} ) {
+      $pPriv = $self->calculateProjectPermission( %args );
+    }
+    $tPriv = $self->calculateTablePermission( %args );
+
+    $log->debug( "In ASC_new, pPriv is $pPriv, tPriv is $tPriv" );
+
+    # Default to 
+    my $status = 'DENIED';
+    
+    # At this point, INSERT depends solely on table permission
+    if ( $args{action} =~ /^INSERT$/i && $tPriv <= DATA_READER ) {
+      $status = 'SUCCESSFUL';
+    # Update/Delete use project permission if possible, else use table
+    } elsif ( $args{action} =~ /^UPDATE$|^DELETE$/ ) {
+      if ( $pPriv ) {
+        $status = 'SUCCESSFUL' if $pPriv <= DATA_WRITER;
+      } else {
+        $status = 'SUCCESSFUL' if $tPriv <= DATA_WRITER;
+      }
+    }
+
+    $log->debug( "In ASC_new, result was $status" );
+    # Still in testing mode, don't want to execute/log these twice...
+    return( result => $status, tPriv => $tPriv, pPriv => $pPriv );
+    
+    # Go ahead and execute the query if it passed muster.
+    my $pk = '';
+    if ( $status eq 'SUCCESSFUL' ) {
+    	$self->executeSQL($args{SQL_statement});
+      $pk = $self->getLastInsertedPK( table_name=>$args{db_table},
+                                      PK_column_name=>$args{PK_column_name} ) if $args{action} =~ /^INSERT$/i;
+    }
+
+    # Log the result and the query itself 
+    my $escQuery = $self->convertSingletoTwoQuotes($args{SQL_statement});
+    my $logSQL =<<"    END";
+    INSERT INTO $TB_SQL_COMMAND_LOG (created_by_id,result,sql_command)
+    VALUES ($args{contact_id},'$status','$escQuery')
+    END
+    $self->executeSQL($logSQL);
+
+    my @errors = ( "$args{action} into $args{dbtable} failed.", 
+                   "Your table permission on this table is $tPriv"
+                 );
+    push @errors, "Your project permission on this record is $pPriv" if $pPriv;
+
+    #### Return the results
+    return ($status,$pk, @errors);
+} # End applySQLChange
+
+sub getDbTableName {
+  my $self = shift;
+  my $name = shift;
+
+  my $dbname = $self->getDBHandle()->selectrow_array( <<"  END" );
+  SELECT db_table_name
+  FROM $TB_TABLE_PROPERTY
+  WHERE table_name = '$name'
+  END
+
+  my $sql =<<"  END";
+  SELECT db_table_name
+  FROM $TB_TABLE_PROPERTY
+  WHERE table_name = '$name'
+  END
+
+  $log->debug( $sql );
+  $log->debug( "Table name is $dbname" );
+  $log->debug( "Evaled is " . eval "\"$dbname\"" );
+  print STDERR "Couldn't find table ( $name ) in table_property" if !$dbname;
+
+  return eval "\"$dbname\"";
+} # End getDbTableName
 
 
 ###############################################################################
@@ -4686,6 +4859,7 @@ sub getRecentResultsets {
   ~;
   @rows = $self->selectSeveralColumns($sql);
 
+  $log->debug( $sql );
 
   #### If there's something interesting to show, show a glimpse
   if (scalar(@rows)) {
@@ -4822,11 +4996,24 @@ sub getProjectsYouOwn {
     $html .= "	<TD WIDTH=\"100%\">NONE</TD></TR>\n";
   }
 
+  my $addLink = '[Add a new project]';
+  if ( $self->isTableWritable( table_name => 'project' ) ) {
+    $addLink =<<"    END";
+        <A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&ShowEntryForm=1">
+          $addLink
+        </A>
+    END
+  } else {
+    $addLink = $self->makeInactiveText( $addLink );
+  }
 
   #### Finish the table
   $html .= qq~
-        <TR><TD></TD><TD><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&ShowEntryForm=1">[Add a new project]</A></TD></TR>
-	</TABLE>
+     <TR>
+       <TD></TD>
+       <TD>$addLink</TD>
+     </TR>
+	  </TABLE>
   ~;
 
   return $html;
