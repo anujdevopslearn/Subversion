@@ -33,6 +33,8 @@ use PGPLOT;
 use PDL;
 use PDL::Graphics::PGPLOT;
 
+use File::Basename;
+
 $q = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsPROT = new SBEAMS::Proteomics;
@@ -107,7 +109,8 @@ sub printEntryForm {
 
 
     #### Define the parameters that can be passed by CGI
-    my @possible_parameters = qw ( msms_scan_id search_batch_id peptide masstype charge );
+    my @possible_parameters = qw ( msms_scan_id search_batch_id peptide
+                                   masstype charge zoom xmin xmax);
     my %parameters;
 
 
@@ -131,7 +134,6 @@ sub printEntryForm {
 
 
     $parameters{'charge'} = "1,2" unless $parameters{'charge'};
-#    $parameters{'charge'} = "1" unless $parameters{'charge'};
     my @charge = split(',',$parameters{'charge'});
 
     #### Begin the page and form
@@ -183,7 +185,8 @@ sub printEntryForm {
 
     my ($i,$mass,$intensity,$massmin,$xticks,$xmin,$xmax);
     my ($massmax,$intenmax)=(0,0);
-    my $zoom = 1;
+    $parameters{zoom} = 1 unless $parameters{zoom};
+
     my $peptide = $parameters{peptide};
     $peptide =~ s/^.\.//;
     $peptide =~ s/\..$//;
@@ -198,13 +201,16 @@ sub printEntryForm {
     }
 
     #### Compute data and plot bounds
-    $xmin = int($massmin/100)*100 unless ($xmin);
-    $xmax = int($massmax/100)*100+100 unless ($xmax);
-    $intenmax *= 1.2 / $zoom;
+    $parameters{xmin} = int($massmin/100)*100 unless $parameters{xmin};
+    $parameters{xmax} = int($massmax/100)*100+100 unless $parameters{xmax};
+
+    my $maxval = $intenmax;
+    $intenmax *= 1.2 / $parameters{zoom};
     my $interval = $intenmax / 20;
     my $interval_power = int( log($interval) / log(10) );
     my $roundval = 10**$interval_power;
     $intenmax = int($intenmax/$roundval)*$roundval;
+    my $ydiv = $intenmax / 2;
 
     #### Calculate fragment ions for the given peptide
     my @residues = Fragment($peptide);
@@ -212,16 +218,19 @@ sub printEntryForm {
 
 
     #### Initialize the plot environment
-    my $win = pg_setup(Device=>"$PHYSICAL_BASE_DIR/images/tmp/$spectrum{msms_scan_file_root}.gif/gif",
+    my($progname)= basename $0;
+    my($tmpfile) = "$progname.$$.@{[time]}.gif";
+
+    my $win = pg_setup(Device=>"$PHYSICAL_BASE_DIR/images/tmp/$tmpfile/gif",
                        title=>"$spectrum{msms_scan_file_root}",
-                       xmin=>$xmin, xmax=>$xmax,
-                       ymax=>$intenmax, ydiv=>1500000,
-                       nyticks=>1);
+                       xmin=>$parameters{xmin}, xmax=>$parameters{xmax},
+                       ymax=>$intenmax, ydiv=>$ydiv, nyticks=>1);
+    pgptext 1.2*$parameters{xmin}, 0.95*$intenmax, 0, 0.5, "$maxval";
+
     my @peakcolors;
 
     my $charge;
     foreach $charge (@charge) {
-print "charge: $charge\n";
       my ($masslist_ref) = CalcIons(Residues=>\@residues,
                                     MassArray=>$AAmasses_ref,
                                     Print=>1,Charge=>$charge);
@@ -241,7 +250,8 @@ print "charge: $charge\n";
                                        PeakColors=>\@peakcolors);
       LabelResidues(Bdata=>$Bion, Ydata=>$Yion, Binten=>$B_ref, Yinten=>$Y_ref,
                     Ionmasses=>$masslist_ref, Charge=>$charge, Win=>$win,
-                    Length=>$length);
+                    Length=>$length, Xmin=>$parameters{xmin}, Xmax=>$parameters{xmax},
+                    Ymax=>$intenmax);
     }
 
 
@@ -253,7 +263,7 @@ print "charge: $charge\n";
     print qq~</PRE>
 	</TD>
 	<TD VALIGN=top>
-	<IMG SRC="$HTML_BASE_DIR/images/tmp/$spectrum{msms_scan_file_root}.gif"><BR>
+	<IMG SRC="$HTML_BASE_DIR/images/tmp/$tmpfile"><BR>
     ~;
 
 
@@ -274,6 +284,21 @@ print "charge: $charge\n";
     print qq~
 	Charge: <SELECT NAME="charge" $onChange>
 	$optionlist</SELECT>
+    ~;
+
+    #### Zoom selector
+    print qq~
+	Zoom: <INPUT NAME="zoom" VALUE="$parameters{zoom}" SIZE="2" $onChange>
+    ~;
+
+    #### Xmin selector
+    print qq~
+	Xmin: <INPUT NAME="xmin" VALUE="$parameters{xmin}" SIZE="5" $onChange>
+    ~;
+
+    #### Xmax selector
+    print qq~
+	Xmax: <INPUT NAME="xmax" VALUE="$parameters{xmax}" SIZE="5" $onChange>
     ~;
 
 
@@ -688,6 +713,9 @@ sub LabelResidues {
     my ($Bcol,$Ycol,$bothcol);
     my $i;
     my ($lineclr,$redcol,$bluecol,$grcol);
+    my $Ymax = $args{'Ymax'};
+    my $Xmin = $args{'Xmin'};
+    my $Xmax = $args{'Xmax'};
     my $interval;
 
     #### Define pink color to be lightcoral
@@ -719,8 +747,6 @@ sub LabelResidues {
       $grcol = 3;
     }
 
-#    #### Select dotted line for ion marker
-#    pgsls 4;
 
     for ($i=0; $i < $length; $i++) {
       if (($Binten[$i] != 0) && ($i != ($length-1))) {
@@ -756,7 +782,8 @@ sub LabelResidues {
         $win -> hold;
 
         #### Add ion label
-        pgptext $mass,$labht,0,0.5,"$index";
+        pgptext $mass,$labht,0,0.5,"$index" if (($labht < $Ymax) && ($mass > $Xmin)
+                                                  && ($mass < $Xmax));
       }
       if (($Yinten[$i] != 0) && ($i != 0)) {
         my $index = "Y$charge\-$Ionmasses{rev_index}->[$i]";
@@ -789,7 +816,8 @@ sub LabelResidues {
         $win -> hold;
 
         #### Add ion label
-        pgptext $mass,$labht,0,0.5,"$index";
+        pgptext $mass,$labht,0,0.5,"$index" if (($labht < $Ymax) && ($mass > $Xmin)
+                                                  && ($mass < $Xmax));
       }
     }
     return $win;
