@@ -1808,7 +1808,8 @@ sub processTableDisplayControls {
     $basic_flag = " SELECTED" if ($detail_level eq "BASIC");
     $full_flag = " SELECTED" if ($detail_level eq "FULL");
 
-    print qq!
+    if ($self->output_mode() eq 'html') {
+      print qq!
         <BR><HR SIZE=5 NOSHADE><BR>
         <FORM METHOD="post">
             <SELECT NAME="detail_level">
@@ -1821,7 +1822,8 @@ sub processTableDisplayControls {
                      VALUE="$orderby_clause" SIZE=25>
         <INPUT TYPE="hidden" NAME="TABLE_NAME" VALUE="$TABLE_NAME">
         <INPUT TYPE="submit" NAME="redisplay" VALUE="DISPLAY"><P>
-    !;
+      !;
+    }
 
 
     return ($full_where_clause,$full_orderby_clause);
