@@ -43,41 +43,94 @@ sub new {
 # printPageHeader
 ###############################################################################
 sub printPageHeader {
-    my $self = shift;
-    my %args = @_;
+  my $self = shift;
+  my %args = @_;
 
-    my $navigation_bar = $args{'navigation_bar'} || "YES";
+  my $navigation_bar = $args{'navigation_bar'} || "YES";
 
-    #### If the output mode is interactive text, display text header
-    my $sbeams = $self->getSBEAMS();
-    if ($sbeams->output_mode() eq 'interactive') {
-      $sbeams->printTextHeader();
-      return;
-    }
-
-
-    #### If the output mode is not html, then we don't want a header here
-    if ($sbeams->output_mode() ne 'html') {
-      return;
-    }
+  #### If the output mode is interactive text, display text header
+  my $sbeams = $self->getSBEAMS();
+  if ($sbeams->output_mode() eq 'interactive') {
+    $sbeams->printTextHeader();
+    return;
+  }
 
 
-    #### Obtain main SBEAMS object and use its http_header
-    $sbeams = $self->getSBEAMS();
-    my $http_header = $sbeams->get_http_header();
+  #### If the output mode is not html, then we don't want a header here
+  if ($sbeams->output_mode() ne 'html') {
+    return;
+  }
 
-    print qq~$http_header
+
+  #### Obtain main SBEAMS object and use its http_header
+  $sbeams = $self->getSBEAMS();
+
+	$current_contact_id = $sbeams->getCurrent_contact_id();
+	
+	if ($sbeams->getCurrent_contact_id() ne 107)
+	{
+    $self->displaySBEAMSPageHeader(@_);
+	}
+	else # Currently only guest mode is SCGAP, will likely change...
+	{
+		$self->displaySCGAPPageHeader(@_);
+	}
+}
+
+
+sub displaySCGAPPageHeader
+{ 
+	my $self = shift;
+  my %args = @_;
+
+  #### Obtain main SBEAMS object and use its http_header
+  my $sbeams = $self->getSBEAMS();
+  my $http_header = $sbeams->get_http_header();
+  use LWP::UserAgent;
+  use HTTP::Request;
+  my $ua = LWP::UserAgent->new();
+  my $scgapLink = 'http://scgap.systemsbiology.net';
+  my $response = $ua->request( HTTP::Request->new( GET => "$scgapLink/skin.php" ) );
+  my @page = split( "\r", $response->content() );
+  my $skin = '';
+  for ( @page ) {
+    last if $_ =~ / End of main content/;
+    $skin .= $_;
+  }
+  $skin =~ s/\/images\//\/sbeams\/images\//gm;
+ 
+  print "$http_header\n\n";
+  print <<"  END_PAGE";
+  <HTML>
+    $skin
+  END_PAGE
+
+  $self->printJavascriptFunctions();
+}
+
+sub displaySBEAMSPageHeader
+{
+	my $self = shift;
+  my %args = @_;
+
+  #### Obtain main SBEAMS object and use its http_header
+  my $sbeams = $self->getSBEAMS();
+  my $http_header = $sbeams->get_http_header();
+
+  my $navigation_bar = $args{'navigation_bar'} || "YES";
+
+  print qq~$http_header
 	<HTML><HEAD>
 	<TITLE>$DBTITLE - Microarray</TITLE>
-    ~;
+  ~;
 
 
-    $self->printJavascriptFunctions();
-    $self->printStyleSheet();
+  $self->printJavascriptFunctions();
+  $self->printStyleSheet();
 
 
-    #### Determine the Title bar background decoration
-    my $header_bkg = "bgcolor=\"$BGCOLOR\"";
+  #### Determine the Title bar background decoration
+  my $header_bkg = "bgcolor=\"$BGCOLOR\"";
     $header_bkg = "background=\"/images/plaintop.jpg\"" if ($DBVERSION =~ /Primary/);
 
     print qq~
