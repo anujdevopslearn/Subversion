@@ -27,7 +27,7 @@ use FindBin;
 use DirHandle;
 use Math::Interpolate;
 
-use lib qw (../perl ../../perl);
+use lib "$FindBin::Bin/../../perl";
 use vars qw ($sbeams $sbeamsPROT $q
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
              $TESTONLY
