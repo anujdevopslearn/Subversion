@@ -12,6 +12,10 @@ package SBEAMS::SNP::Tables;
 
 
 use strict;
+
+use SBEAMS::Connection::Settings;
+
+
 use vars qw(@ISA @EXPORT
     $TB_ORGANISM
 
@@ -80,26 +84,32 @@ require Exporter;
 
     $TBGT_ASSAY_MOUSE_LOCUS_LIST
     $TBGT_ASSAY_PCR_HUMAN_LOCUS_LIST
-)
-;
+
+);
 
 
-$TB_ORGANISM                     = 'sbeams.dbo.organism';
+#### Get the appropriate database prefixes for the SBEAMS core and this module
+my $core = $DBPREFIX{Core};
+my $mod = $DBPREFIX{SNP};
+
+
+$TB_ORGANISM                      = "${core}organism";
 			
-$TBSN_BIOSEQUENCE_SET            = 'SNP.dbo.biosequence_set';
-$TBSN_BIOSEQUENCE                = 'SNP.dbo.biosequence';
+
+$TBSN_BIOSEQUENCE_SET            = "${mod}biosequence_set";
+$TBSN_BIOSEQUENCE                = "${mod}biosequence";
 			
-$TBSN_SNP                        = 'SNP.dbo.snp';
-$TBSN_SNP_SOURCE                 = 'SNP.dbo.snp_source';
-$TBSN_SOURCE_VERSION             = 'SNP.dbo.source_version';
-$TBSN_SNP_INSTANCE               = 'SNP.dbo.snp_instance';
-$TBSN_ALLELE                     = 'SNP.dbo.allele';
-$TBSN_ALLELE_FREQUENCY           = 'SNP.dbo.allele_frequency';
-$TBSN_ALLELE_BLAST_STATS         = 'SNP.dbo.allele_blast_stats';
-$TBSN_QUERY_SEQUENCE             = 'SNP.dbo.query_sequence';
-$TBSN_BIOSEQUENCE_RANK_LIST      = 'SNP.dbo.biosequence_rank_list';
+$TBSN_SNP                        = "${mod}snp";
+$TBSN_SNP_SOURCE                 = "${mod}snp_source";
+$TBSN_SOURCE_VERSION             = "${mod}source_version";
+$TBSN_SNP_INSTANCE               = "${mod}snp_instance";
+$TBSN_ALLELE                     = "${mod}allele";
+$TBSN_ALLELE_FREQUENCY           = "${mod}allele_frequency";
+$TBSN_ALLELE_BLAST_STATS         = "${mod}allele_blast_stats";
+$TBSN_QUERY_SEQUENCE             = "${mod}query_sequence";
+$TBSN_BIOSEQUENCE_RANK_LIST      = "${mod}biosequence_rank_list";
 			
-$TBSN_QUERY_OPTION               = 'SNP.dbo.query_option';
+$TBSN_QUERY_OPTION               = "${mod}query_option";
 			
 $TBGT_HUMAN_STR_LOCI             = 'ACCESSTEMP.dbo.human_str_loci';
 $TBGT_HUMAN_PCR_CONDITIONS       = 'ACCESSTEMP.dbo.human_pcr_conditions';
