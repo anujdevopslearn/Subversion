@@ -123,7 +123,7 @@ CREATE TABLE biosequence_set (
 GO
 
 
-CREATE TABLE biosequence (
+CREATE TABLE dbo.biosequence (
 	biosequence_id			int IDENTITY NOT NULL,
 	biosequence_set_id		int NOT NULL REFERENCES biosequence_set(biosequence_set_id),
 	biosequence_name		varchar(255) NOT NULL,
@@ -134,6 +134,8 @@ CREATE TABLE biosequence (
 	biosequence_seq			text NULL,
 	PRIMARY KEY CLUSTERED (biosequence_id)
 )
+GO
+ALTER TABLE dbo.biosequence ADD CONSTRAINT biosequence_set_name_uk UNIQUE (biosequence_set_id,biosequence_name)
 GO
 
 
