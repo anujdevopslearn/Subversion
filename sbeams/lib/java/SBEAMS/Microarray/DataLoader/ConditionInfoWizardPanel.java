@@ -83,7 +83,6 @@ public class ConditionInfoWizardPanel extends WizardPanel
 		String varUnits = ((ConditionVariable)wizConstants.elementAt(m)).getVariableUnits();
 		varsAndUnits.put(varName, varUnits);
 	  }
-	  wizConstants.clear();
 	}
 
 	Vector stdVariables = varData[0];
