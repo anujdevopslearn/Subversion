@@ -76,7 +76,7 @@ sub printPageHeader {
 	<a name="TOP"></a>
 	<tr>
 	  <td bgcolor="$BGCOLOR"><img border=0 alt="BIOSAP" src="$HTML_BASE_DIR/images/biosap_logo.png"></td>
-	  <td align="left" bgcolor="$BGCOLOR"><H1>Blast Integrated Oligonucleotide Selection Accelerator Package</H1></td>
+	  <td align="left" bgcolor="$BGCOLOR"><H1><font color="#FFFFFF">Blast Integrated Oligonucleotide Selection Accelerator Package</font></H1></td>
 	</tr>
 
     ~;
