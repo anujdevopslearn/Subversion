@@ -341,6 +341,8 @@ sub processFile
 						getc;
 					}
 				}
+				print "$stainName\n";
+				getc;
 				$lastName = $infoHash{person};
 				$abundanceLevelLeuk = $infoHash{'Leukocyte abundance (none, rare, moderate, high, most)'};
 				$comment = $infoHash{'comment'};
