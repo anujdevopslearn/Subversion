@@ -9,3 +9,4 @@ CY_fcs_run_data_point	FCS DataPoints	Cytometry_infrastructure	NO	$TBCY_FCS_DATA_
 CY_sort_entity	Sort Entity	Cytometry_infrastructure	YES	$TBCY_SORT_ENTITY	sort_entity_id		ManageTable.cgi?TABLE_NAME=CY_sort_entity	CY_sort_entity	CY_fcs_run
 CY_tissue_type	Tissue Type	Cytometry_infrastructure	YES	$TBCY_TISSUE_TYPE	tissue_type_id		ManageTable.cgi?TABLE_NAME=CY_tissue_type	CY_tissue_type	CY_fcs_run
 CY_sort_type	Sort Type	Cytometry_infrastructure	YES	$TBCY_SORT_TYPE	sort_type_id		ManageTable.cgi?TABLE_NAME=CY_sort_type	CY_sort_type	CY_fcs_run
+CY_cytometry_sample	Cytometry Sample	Cytometry_infrastructure	YES	$TBCY_CYTOMETRY_SAMPLE	cytometry_sample_id		ManageTable.cgi?TABLE_NAME=CY_cytometry_sample	CY_cytometry_sample	
