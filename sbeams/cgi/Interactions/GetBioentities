@@ -238,9 +238,12 @@ sub handle_request {
     my $orig = $1;
     my $new1 = $orig;
     my $new2 = $orig;
+    my $new3 = $orig;
     $new1 =~ s/common/xxyyzz/;
     $new2 =~ s/common/canonical/;
-    $bioentity_exact_name_clause =~ s/$orig/( BE.$new1 OR BE.$new2 )/;
+    $new3 =~ s/common/aliases/;
+    $new3 =~ s/_name//;
+    $bioentity_exact_name_clause =~ s/$orig/( BE.$new1 OR BE.$new2 OR BE.$new3 )/;
   }
   $bioentity_exact_name_clause =~ s/xxyyzz/common/g;
 
@@ -260,17 +263,20 @@ sub handle_request {
     constraint_name=>"BioEntity Search Fragment",
     constraint_value=>$bioentity_search_fragment );
   return if ($bioentity_search_fragment_clause eq '-1');
-
+ 
   #### Translate to look in several places
   while ($bioentity_search_fragment_clause =~ /(bioentity_common_name LIKE '.+?')/) {
     my $orig = $1;
     my $new1 = $orig;
     my $new2 = $orig;
     my $new3 = $orig;
+    my $new4 = $orig;
     $new1 =~ s/common/xxyyzz/;
     $new2 =~ s/common/canonical/;
     $new3 =~ s/common/full/;
-    $bioentity_search_fragment_clause =~ s/$orig/( BE.$new1 OR BE.$new2 OR BE.$new3 )/;
+    $new4 =~ s/common/aliases/;
+    $new4 =~ s/_name//;
+    $bioentity_search_fragment_clause =~ s/$orig/( BE.$new1 OR BE.$new2 OR BE.$new3 OR BE.$new4 )/;
   }
   $bioentity_search_fragment_clause =~ s/xxyyzz/common/g;
 
@@ -335,7 +341,7 @@ sub handle_request {
      $bioentity_search_fragment_clause
      $limit_clause->{trailing_limit_clause}
     ~;
-
+print "$sql <br>";
 
   #### Certain types of actions should be passed to links
   my $pass_action = "QUERY";
