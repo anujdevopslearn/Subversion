@@ -3710,7 +3710,9 @@ sub parse_input_parameters {
   my %cmdln_parameters;
   foreach $element (@ARGV) {
     if ( ($key,$value) = split("=",$element) ) {
-      print "$key = '$value'<BR>\n";
+      my $tmp = $value;
+      $tmp = '' unless (defined($tmp));
+      print "$key = '$tmp'<BR>\n";
       $cmdln_parameters{$key} = $value;
       $ref_parameters->{$key} = $value;
       $n_cmdln_params_found++;
