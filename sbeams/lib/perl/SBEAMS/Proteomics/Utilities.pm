@@ -568,6 +568,9 @@ sub readDtaFile {
   $parameters{sample_mass_plus_H} =  $parsed_line[0];
   $parameters{assumed_charge} =  $parsed_line[1];
 
+  #### There cannot be repeated m/z values, but this has been observed
+  #### on occasion, so define a hash that will allow us to filter those out
+  my %masses;
 
   #### Read through the rest of the file, extracting mass, intensity pairs
   my $n_peaks = 0;
@@ -587,11 +590,19 @@ sub readDtaFile {
     }
 
 
-    #### Store the mass, intensity pair
-    push(@mass_intensities,[@parsed_line]);
+    #### Check to make sure we haven't seen this m/z yet
+    my $mz = $parsed_line[0];
+    if ($masses{$mz}) {
+      print "WARNING: Duplicate m/z value $mz in '$inputfile'. Ignoring ".
+	"subsequent m/z,intensity pair but beware this may be indicative of ".
+	"a more serious problem in the pipeline.  Investigate!\n";
 
-
-    $n_peaks++;
+    #### Else store the mass, intensity pair
+    } else {
+      push(@mass_intensities,[@parsed_line]);
+      $masses{$mz} = $parsed_line[1];
+      $n_peaks++;
+    }
 
   }
 
