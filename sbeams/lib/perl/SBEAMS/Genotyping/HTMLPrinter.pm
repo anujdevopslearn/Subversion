@@ -115,7 +115,9 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=GT_pooling_set"><nobr>&nbsp;&nbsp;&nbsp;Pooling Sets</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=GT_dna_type"><nobr>&nbsp;&nbsp;&nbsp;DNA Type</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=GT_cost_scheme"><nobr>&nbsp;&nbsp;&nbsp;Cost Scheme</nobr></a></td></tr>
-
+	<tr><td>&nbsp;</td></tr>
+	<tr><td>Browse Data:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetGenotypesMS"><nobr>&nbsp;&nbsp;&nbsp;Genotypes</nobr></a></td></tr>
 
 	</table>
 	</td>

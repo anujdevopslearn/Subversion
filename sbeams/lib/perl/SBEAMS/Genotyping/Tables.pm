@@ -16,7 +16,7 @@ use strict;
 use SBEAMS::Connection::Settings;
 
 
-use vars qw(@ISA @EXPORT 
+use vars qw(@ISA @EXPORT
     $TB_ORGANISM
 
     $TBGT_BIOSEQUENCE_SET
@@ -30,6 +30,9 @@ use vars qw(@ISA @EXPORT
     $TBGT_DNA_TYPE
     $TBGT_REQUESTED_GENOTYPING_ASSAY
     $TBGT_COST_SCHEME
+
+    $TBGT_MICROSATELLITE_GENOTYPE_CALL
+    $TBGT_MANUAL_GENOTYPE_CALL
 
     $TBGT_QUERY_OPTION
 
@@ -54,6 +57,9 @@ require Exporter;
     $TBGT_REQUESTED_GENOTYPING_ASSAY
     $TBGT_COST_SCHEME
 
+    $TBGT_MICROSATELLITE_GENOTYPE_CALL
+    $TBGT_MANUAL_GENOTYPE_CALL
+
     $TBGT_QUERY_OPTION
 
 );
@@ -76,6 +82,8 @@ $TBGT_DNA_TYPE              = "${mod}dna_type";
 $TBGT_REQUESTED_GENOTYPING_ASSAY = "${mod}requested_genotyping_assay";
 $TBGT_COST_SCHEME           = "${mod}cost_scheme";
 $TBGT_QUERY_OPTION          = "${mod}query_option";
+$TBGT_MICROSATELLITE_GENOTYPE_CALL = "${mod}microsatellite_genotype_call";
+$TBGT_MANUAL_GENOTYPE_CALL  = "${mod}manual_genotype_call";
 
 
 
