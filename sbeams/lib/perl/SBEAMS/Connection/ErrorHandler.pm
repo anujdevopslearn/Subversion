@@ -66,7 +66,7 @@ sub error {
 
   if ($sbeams->output_mode eq 'html') {
     $prefix = "<BR>\nSBEAMS Error:<BR><PRE>";
-    $suffix = "</PRE><BR>";
+    $suffix = "</PRE><BR></TABLE></TABLE>";
   }
 
 
@@ -74,9 +74,11 @@ sub error {
   my $message_str = $message;
   $message_str =~ s/Server message /\nServer message /g;
 
-  #### Display the error and exit
+  #### Display the error message
   print "$prefix\n$message_str\n$suffix\n";
 
+
+  #### Goodbye.
   exit;
 
 
