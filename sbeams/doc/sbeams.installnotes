@@ -158,7 +158,7 @@ cd sbeams
   (for now, just create the directories for stuff to live in right here, but
    it may be a good idea to make a sym link to another location or partition
    since there could eventually be large amounts of data here!!!)
-mkdir data images/tmp tmp tmp/../queries
+mkdir data images/tmp tmp tmp/queries
 chmod a+rwx images/tmp tmp/queries
 ln -s includes doc/includes
 
