@@ -726,7 +726,7 @@ sub add_data_child_tables {
 			
 	foreach my $record_key (keys %child_tables){			#start looping through child_tables keys
 	
-		next unless $record_key eq 'Trans Membrane';
+		#next unless $record_key =~ 'Gene Ontology ';		#DEBUG ONLY 
 	
 		my $full_record_value = $record_h{$record_key};		#pull the piece of data from the record hash
 					 
