@@ -102,8 +102,8 @@ contact_type	8	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id
 contact_type	9	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 contact_type	10	record_status	Record Status	char	1	0	N	N	N							N	N				
 contact	1	contact_id	Contact ID	int	8	0	N		Y							N	N				pkDEFAULT
-contact	2	last_name	Last Name	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Last Name		
-contact	3	first_name	First Name	varchar	50	0	Y		N			N	text	25		Y	Y	Y	First Name		
+contact	2	last_name	Last Name	varchar	50	0	Y		N			Y	text	25		Y	Y	Y	Last Name		
+contact	3	first_name	First Name	varchar	50	0	Y		N			Y	text	25		Y	Y	Y	First Name		
 contact	4	middle_name	Middle Name	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Middle Name		
 contact	5	contact_type_id	Contact Type	int	8	0	N		N		contact_type_id	Y	optionlist			Y	Y	N	Classification of this contact	"SELECT contact_type_id,contact_type_name FROM $TB_CONTACT_TYPE ORDER BY sort_order,contact_type_name"	
 contact	6	job_title	Job Title	varchar	100	0	Y		N			N	text	50		Y	Y	N	Job title or function of this contact if appropriate		
