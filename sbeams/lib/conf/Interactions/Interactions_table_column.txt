@@ -155,7 +155,7 @@ IN_interaction	18	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contac
 IN_interaction	19	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 IN_interaction	20	record_status	Record Status	char	1	0	N	N	N							N	N				
 IN_interaction_type	1	interaction_type_id	Interaction Type ID	int	4	0	N		Y							N	N				pkDEFAULT
-IN_interaction_type	2	parent_interaction_type_id	Parent Interaction Type	int	4	0	Y		N			N	optionlist			Y	Y	N	Optional Parent Type	"SELECT interaction_type_id, interaction_type_name FROM $TBIN_INTERACTION_TYPE ORDER BY sort_order,interaction_type_name"	
+IN_interaction_type	2	parent_interaction_type_id	Parent Interaction Type	int	4	0	Y		N	IN_interaction_type	interaction_type_id	N	optionlist			Y	Y	N	Optional Parent Type	"SELECT interaction_type_id, interaction_type_name FROM $TBIN_INTERACTION_TYPE ORDER BY sort_order,interaction_type_name"	
 IN_interaction_type	3	interaction_type_name	Interaction Type Name	varchar	255	0	N		N			Y	text	40		Y	Y	Y	Name of this Interaction Type		
 IN_interaction_type	4	interaction_type_description	Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this Interaction Type		
 IN_interaction_type	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
@@ -238,7 +238,7 @@ IN_bioentity_attribute	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contac
 IN_bioentity_attribute	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 IN_bioentity_attribute	13	record_status	Record Status	char	1	0	N	N	N							N	N				
 IN_bioentity_attribute_type	1	bioentity_attribute_type_id	BioEntity Attribute Type ID	int	4	0	N		Y							N	N				pkDEFAULT
-IN_bioentity_attribute_type	2	parent_bioentity_attribute_type_id	Parent BioEntity Attribute Type	int	4	0	Y		N			N	optionlist			Y	Y	N	Parent Type	"SELECT bioentity_attribute_type_id, bioentity_attribute_type_name FROM $TBIN_BIOENTITY_ATTRIBUTE_TYPE ORDER BY sort_order,bioentity_attribute_type_name"	
+IN_bioentity_attribute_type	2	parent_bioentity_attribute_type_id	Parent BioEntity Attribute Type	int	4	0	Y		N	IN_bioentity_attribute_type	bioentity_attribute_type_id	N	optionlist			Y	Y	N	Parent Type	"SELECT bioentity_attribute_type_id, bioentity_attribute_type_name FROM $TBIN_BIOENTITY_ATTRIBUTE_TYPE ORDER BY sort_order,bioentity_attribute_type_name"	
 IN_bioentity_attribute_type	3	bioentity_attribute_type_name	BioEntity Attribute Type Name	varchar	255	0	N		N			Y	text	40		Y	Y	Y	Name of this BioEntity Attribute Type		
 IN_bioentity_attribute_type	4	bioentity_attribute_type_description	Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioEntity Attribute Type		
 IN_bioentity_attribute_type	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
