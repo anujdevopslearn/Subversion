@@ -63,14 +63,15 @@ sub showMainPage {
 
     print qq!
 	<BR>
-	You are successfully logged into the $DBTITLE system.<P>
+	You have successfully logged into the $DBTITLE interface.<BR>
 	Note your current user group above, and click [CHANGE] to change it.<P> 
-	Please choose a section/task from the menu bar on the left.<P>
-	<BR>
-	This system is still under active development.  Please be
-	patient and report bugs, problems, difficulties, suggestions to
+
+	Please choose a section/subsection/task from the menu bar on the
+	left to continue.<P>
+
+	This system is still under active development.  Please
+	report bugs, problems, difficulties, and suggestions to
 	<B>edeutsch\@systemsbiology.org</B>.<P>
-	<BR>
 	<BR>
 
 	<UL>
