@@ -89,14 +89,27 @@ sub returnTableInfo {
 		  FROM $TBUESC_STAIN S
 		  LEFT JOIN $TBUESC_TISSUE_TYPE TT
 		       ON ( S.tissue_type_id = TT.tissue_type_id )
-		  JOIN $TBUESC_ANTIBODY A
+		  LEFT JOIN $TBUESC_ANTIBODY A
 		       ON ( S.antibody_id = A.antibody_id )
 		 WHERE S.record_status!='D'
+		 ORDER BY A.sort_order,A.antibody_name,S.stain_name
             ~;
         }
 
     }
 
+
+    if ($table_name eq "UESC_antibody") {
+        if ($info_key eq "BASICQuery") {
+            return qq~
+		SELECT antibody_id,antibody_name,antibody_description,comment, sort_order
+		  FROM $TBUESC_ANTIBODY A
+		 WHERE A.record_status!='D'
+		 ORDER BY sort_order,antibody_name
+            ~;
+        }
+
+    }
 
 
 
