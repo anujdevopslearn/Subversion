@@ -76,8 +76,27 @@ sub returnTableInfo {
             ~;
         }
 
+    }
+
+
+
+    if ($table_name eq "UESC_stain") {
+        if ($info_key eq "BASICQuery") {
+            return qq~
+		SELECT stain_id,tissue_type_name,antibody_name,stain_name,
+                       annotated_image_file,raw_image_file,image_file_date,
+                       stain_description
+		  FROM $TBUESC_STAIN S
+		  LEFT JOIN $TBUESC_TISSUE_TYPE TT
+		       ON ( S.tissue_type_id = TT.tissue_type_id )
+		  JOIN $TBUESC_ANTIBODY A
+		       ON ( S.antibody_id = A.antibody_id )
+		 WHERE S.record_status!='D'
+            ~;
+        }
 
     }
+
 
 
 
