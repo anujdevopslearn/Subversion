@@ -65,6 +65,7 @@ PS_biosequence_property_set	11	chromosome	Chromosome	varchar	50	0	Y		N			N	text	
 PS_biosequence_property_set	12	start_in_chromosome	Start Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	Start position of the biosequence in the chromosome		
 PS_biosequence_property_set	13	end_in_chromosome	End Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	End position of the biosequence in the chromosome		
 PS_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	"Strand (+,-) of the biosequence in the chromosome"		
+PS_biosequence_property_set	15	isoelectric_point	Isoelectric Point	real	4	0	Y		N			N	text	10		Y	Y	N	Isoelectric Point (pI) of the protein		
 PS_domain_match	1	domain_match_id	Domain Match ID	int	4	0	N		Y							N	N				pkDEFAULT
 PS_domain_match	2	biosequence_id	BioSequence	int	4	0	N		N	PS_biosequence	biosequence_id					N	N	N	BioSequence to which this Domain Match belongs		
 PS_domain_match	3	domain_match_index	Domain Match Index	int	4	0	Y		N			Y	text	20		Y	Y	N	Consecutive number index used for some domains		
@@ -157,7 +158,7 @@ PS_test_table	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact
 PS_test_table	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 PS_test_table	13	record_status	Record Status	char	1	0	N	N	N							N	N				
 PS_biosequence_set_project	1	biosequence_set_project_id	Test Table ID	int	4	0	N		Y							N	N				pkDEFAULT
-PS_biosequence_set_project	2	biosequence_set_id	BioSequence Set	int	4	0	N		N	PS_biosequence_set	biosequence_set_id	Y	optionlist			Y	Y	Y	Biosequence Set for which this record provides access control	"SELECT biosequence_set_id,set_name FROM $TBPS_BIOSEQUENCE_SET ORDER BY sort_order,set_name"	
+PS_biosequence_set_project	2	biosequence_set_id	BioSequence Set	int	4	0	N		N	PS_biosequence_set	biosequence_set_id	Y	optionlist			Y	Y	Y	Biosequence Set for which this record provides access control	"SELECT biosequence_set_id,set_name FROM $TBPS_BIOSEQUENCE_SET ORDER BY sort_order,set_name"
 PS_biosequence_set_project	3	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	Project for which this record provides access control	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id"
 PS_biosequence_set_project	4	privilege_id	Privilege	int	4	0	N		N	privilege	privilege_id	Y	optionlist			Y	Y	N	Maximum privilege level for members of this project for this combination of Project and Biosequence Set	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"
 PS_biosequence_set_project	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments	
