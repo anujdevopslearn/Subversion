@@ -22,6 +22,8 @@ use vars qw(@ISA @EXPORT
 
     $TBCY_FCS_RUN
     $TBCY_FCS_RUN_PARAMETER
+	$TBCY_DATA_POINTS
+	$TBCY_CONVERSION_DATA
 
 );
 
@@ -35,6 +37,9 @@ require Exporter;
 
     $TBCY_FCS_RUN
     $TBCY_FCS_RUN_PARAMETER
+	
+	$TBCY_DATA_POINTS
+	$TBCY_CONVERSION_DATA
 
 );
 
@@ -48,6 +53,6 @@ $TBCY_QUERY_OPTION          = "${mod}query_option";
 
 $TBCY_FCS_RUN               = "${mod}fcs_run";
 $TBCY_FCS_RUN_PARAMETER     = "${mod}fcs_run_parameter";
-
-
+$TBCY_DATA_POINTS = "${mod}data_points";
+$TBCY_CONVERSION_DATA = "${mod}conversion_data";
 
