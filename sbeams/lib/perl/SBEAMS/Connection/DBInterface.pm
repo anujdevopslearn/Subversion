@@ -236,7 +236,7 @@ sub applySqlChange {
     }
 
 
-    my $altered_sql_query = convertSingletoTwoQuotes($sql_query);
+    my $altered_sql_query = $self->convertSingletoTwoQuotes($sql_query);
     my $log_query = qq!
         INSERT INTO $TB_SQL_COMMAND_LOG
                (created_by_id,result,sql_command)
@@ -413,7 +413,7 @@ sub insert_update_row {
     $column_list .= "$key,";
 
     #### Enquote and add the value as the column value
-    $value = convertSingletoTwoQuotes($value);
+    $value = $self->convertSingletoTwoQuotes($value);
     if (uc($value) eq "CURRENT_TIMESTAMP") {
       $value_list .= "$value,";
       $columnvalue_list .= "$key = $value,\n";
@@ -645,9 +645,10 @@ sub parseConstraint2SQL {
   #### Parse type plain_text: a plain, unquoted bit of text
   if ($constraint_type eq "plain_text") {
     print "Parsing plain_text $constraint_name<BR>\n" if ($verbose);
+    print "constraint_value = $constraint_value<BR>\n" if ($verbose);
 
     #### Convert any ' marks to '' to appear okay within the strings
-    $constraint_value = convertSingletoTwoQuotes($constraint_value);
+    $constraint_value = $self->convertSingletoTwoQuotes($constraint_value);
 
     #### Bad word checking here has been disabled because the string will be
     #### quoted, so there shouldn't be a way to put in dangerous SQL...
@@ -1236,7 +1237,7 @@ sub readResultSet {
 
     #### Read in the resultset
     $indata = "";
-    my $infile = "$PHYSICAL_BASE_DIR/tmp/queries/${resultset_file}.resultset";
+    $infile = "$PHYSICAL_BASE_DIR/tmp/queries/${resultset_file}.resultset";
     open(INFILE,"$infile") || die "Cannot open $infile\n";
     while (<INFILE>) { $indata .= $_; }
     close(INFILE);
@@ -1285,7 +1286,7 @@ sub writeResultSet {
 
 
     #### Write out the resultset
-    my $outfile = "$PHYSICAL_BASE_DIR/tmp/queries/${resultset_file}.resultset";
+    $outfile = "$PHYSICAL_BASE_DIR/tmp/queries/${resultset_file}.resultset";
     open(OUTFILE,">$outfile") || die "Cannot open $outfile\n";
     printf OUTFILE Data::Dumper->Dump( [$resultset_ref] );
     close(OUTFILE);
@@ -1413,7 +1414,7 @@ sub convertSingletoTwoQuotes {
   return 0 unless ($string);
 
   my $resultstring = $string;
-  $resultstring = s/'/''/g;  ####'
+  $resultstring =~ s/'/''/g;  ####'
 
   return $resultstring;
 } # end convertSingletoTwoQuotes

@@ -312,10 +312,12 @@ sub printUserContext {
 
     if ($style eq "HTML") {
       print qq!
+	<TABLE width="100%"><tr><td width="100%">
 	Current Login: <B>$current_username</B> ($current_contact_id) &nbsp;
 	Current Group: <B>$temp_current_work_group_name</B> ($current_work_group_id) &nbsp;
 	Current Project: <B>$current_project_name</B> ($current_project_id)
-	&nbsp; <A HREF="$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=user_context&user_context_id=$current_user_context_id">[CHANGE]</A><BR>
+	&nbsp; <A HREF="$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=user_context&user_context_id=$current_user_context_id">[CHANGE]</A> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;  &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+	</td></tr></TABLE>
       !;
      }
 
