@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<jnlp
+  codebase="http://scgap.systemsbiology.net/cytoscape/test1"
+  href="cytoscape.jnlp">
+  <information>
+    <title>SCGAP UESC Test1</title>
+    <vendor>ISB</vendor>
+    <offline-allowed/>
+  </information>
+  <security>
+      <all-permissions/>
+  </security>
+  <resources>
+    <j2se version="1.4+" max-heap-size="1g"/>
+    <jar href="../cytoscape.jar"/>
+    <jar href="data.jar"/>
+  </resources>
+  <application-desc>
+    <argument>-p</argument>
+    <argument>jar://project-jnlp</argument>
+    <argument>-x</argument>
+  </application-desc>
+</jnlp>
+

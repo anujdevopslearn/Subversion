@@ -1,0 +1,9 @@
+props=jar://cytoscape.props
+dataServer=http://db.systemsbiology.net/cytoscape/annotation/human/manifest
+vprops=jar://vizmap.props
+sif=jar://network.sif
+noa=jar://organism.noa
+noa=jar://NodeType.noa
+eda=jar://ExpressionLevel.eda
+eda=jar://ExpressionLevelLabel.eda
+noa=jar://commonName.noa

@@ -1,0 +1,9 @@
+props=cytoscape.props
+dataServer=http://db.systemsbiology.net/cytoscape/annotation/human/manifest
+vprops=vizmap.props
+sif=network.sif
+noa=organism.noa
+noa=NodeType.noa
+eda=ExpressionLevel.eda
+eda=ExpressionLevelLabel.eda
+noa=commonName.noa
