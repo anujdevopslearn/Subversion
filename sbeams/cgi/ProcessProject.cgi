@@ -489,7 +489,9 @@ sub submitJob {
 	queue.  Your job will be processed in the order received.  You can
 	see the log file of your job by clicking on the link below:<BR><BR>
 
-	tail -f /net/arrays/Pipeline/output/project_id/$project_id/$log_filename
+        Well, there's no link yet, but paste this into a unix window:<BR><BR>
+
+	if ( -e /net/arrays/Pipeline/output/project_id/$project_id/$log_filename ) tail -f /net/arrays/Pipeline/output/project_id/$project_id/$log_filename
 
 	<BR><BR><BR>
     ~;
