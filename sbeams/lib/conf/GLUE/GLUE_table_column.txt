@@ -149,7 +149,7 @@ GL_interaction_type	2	parent_interaction_type_id	Parent Interaction Type	int	4	0
 GL_interaction_type	3	interaction_type_name	Interaction Type Name	varchar	255	0	N		N			Y	text	40		Y	Y	Y	Name of this Interaction Type		
 GL_interaction_type	4	interaction_type_description	Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this Interaction Type		
 GL_interaction_type	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-GL_interaction_type	6	sort_order	Sort Order	int	4	0	N	10	N							Y	Y	N	Integer key by which these entities are usually sorted		
+GL_interaction_type	6	sort_order	Sort Order	int	4	0	N	10	N			N	text	20		Y	Y	N	Integer key by which these entities are usually sorted		
 GL_interaction_type	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 GL_interaction_type	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
 GL_interaction_type	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
