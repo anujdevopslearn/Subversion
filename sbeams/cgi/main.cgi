@@ -174,77 +174,13 @@ sub handle_request {
     ~;
   }
 
+  my $html_ref = $sbeams->getMainPageTabMenu( cgi => $q );
+
   print qq~
-	<BR>
-	<BR>
-    ~;
+  <BR>
+  $$html_ref
+  ~;
 
-
-
-  # Create new tabmenu item.  This may be a $sbeams object method in the future.
-  my $tabmenu = SBEAMS::Connection::TabMenu->new( cgi => $q );
-
-  # Preferred way to add tabs.  label is required, helptext optional
-  $tabmenu->addTab( label => 'Current Project', helptext => 'View details of current Project' );
-  $tabmenu->addTab( label => 'My Projects', helptext => 'View all projects owned by me' );
-  $tabmenu->addTab( label => 'Recent Resultsets', helptext => 'View recent SBEAMS resultsets' );
-  $tabmenu->addTab( label => 'Accessible Projects', helptext => 'View projects I have access to' );
-
-  # This really shouldn't need to be done!
-  $SBEAMS_SUBDIR = '';
-
-  ##########################################################################
-  #### Print out some recent resultsets
-
-  # Scalar to hold content.  In this case we add content to tabmenu, not required
-  my $content;
-
-  # conditional block to exec code based on selected tab.  Can define based
-  # on tag label...
-  if ( $tabmenu->getActiveTabName() eq 'Recent Resultsets' ){
-
-    $content = $sbeams->getRecentResultsets() ;
-
-  } elsif ( $tabmenu->getActiveTabName() eq 'Current Project' ){
-
-  ##########################################################################
-  #### Print out project detail stuff, if current or default project exists
-
-  my $project_id = $sbeams->getCurrent_project_id();
-  # $project_id ||= $sbeams->getDefault_project_id();
-  if ( $project_id ) {
-    $content = $sbeams->getProjectDetailsTable( project_id => $project_id ); 
-  }
-
-  # or exec code based on tab index.  Tabs are indexed in the order they are 
-  # added, starting at 1.  
-  } elsif ( $tabmenu->getActiveTab() == 2 ){
-
-  ##########################################################################
-  #### Print out all projects owned by the user
-
-    $content = $sbeams->getProjectsYouOwn();
-
-  } elsif ( $tabmenu->getActiveTab() == 4 ){
-
-  ##########################################################################
-  #### Print out all projects user has access to
-
-  $content = $sbeams->getProjectsYouHaveAccessTo();
-#  $content = $sbeams->getAccessibleProjectInfo( mod_data => 'all' );
-
-  }
-
-  # Add content to tabmenu (if desired). 
-  $tabmenu->addContent( $content );
-
-  # The stringify method is overloaded to call the $tabmenu->asHTML method.  
-  # This simplifies printing the object in a print block. 
-  print "$tabmenu";
-
-  # This is completely equivalent:
-  # print $tabmenu->asHTML(); 
-   
 
 } # end handle_request
 
