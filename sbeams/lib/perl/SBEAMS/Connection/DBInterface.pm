@@ -102,6 +102,11 @@ sub applySqlChange {
       "SELECT privilege_id,name FROM $TB_PRIVILEGE WHERE record_status!='D'"
     );
 
+    # Got annoyed by non-informative errors.  get_best_permission() gives a 
+    # permission of 9999 if the privilege can't be found.  This is a temporary
+    # patch for that
+    $level_names{9999} ||= 'NONE';
+
 
     #### Privilege that the work_group has over a table_group
     my $table_group_privilege_id;
@@ -5240,6 +5245,24 @@ sub getPopupDHTML {
   END_JS
   return $dhtml;
   } # end getPopupDHTML
+
+#+
+# isTaintedSQL
+# Checks for db altering keywords in SQL (which presumably shouldn't have one)
+#-
+sub isTaintedSQL {
+  my $self = shift;
+  my $sql = shift;
+
+# Can't check vapor
+  return undef if !$sql;
+
+  if ( $sql =~ /CREATE|TRUNCATE|DELETE|ALTER|DROP|INSERT|UPDATE|GRANT/i ) {
+    return 1;
+  }
+  return 0;
+}
+
 
 ###############################################################################
 # addProjectComment
