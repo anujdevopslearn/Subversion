@@ -299,17 +299,26 @@ sub getParentProject {
     die("ERROR: $SUB_NAME: action must be one of INSERT,UPDATE,DELETE");
   }
 
-  #### Get sbeams object, we'll need it for queries
-  #my $sbeams = $self->getSBEAMS();
+  #### Get sbeams object, needed for Core tables and SQL queries
+  my $sbeams = $self->getSBEAMS();
+
+  #### Define the project_id, starting as undef, it gets filled if there is one
+  my $project_id;
+
+  #### Check to see if this is a Core table that has project control
+  $project_id = $sbeams->getParentProject(
+    table_name => $table_name,
+    action => $action,
+    parameters_ref => $parameters_ref,
+  );
+  return($project_id) if ($project_id);
 
 
   #############################################################################
   #### Process actions for individual tables
 
-  #### If table is PS_biosequence_annotation
+  #### If table is xxxx
   if ($table_name eq "xxxx") {
-
-    my $project_id;
 
     #### If the user wants to INSERT, determine how it fits into project
     if ($action eq 'INSERT') {
@@ -320,10 +329,10 @@ sub getParentProject {
     }
 
     return($project_id) if ($project_id);
-
   }
 
 
+  #### No information for this table so return undef
   return;
 
 }
