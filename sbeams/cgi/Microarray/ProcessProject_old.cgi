@@ -34,7 +34,7 @@ use SBEAMS::Microarray;
 use SBEAMS::Microarray::Settings;
 use SBEAMS::Microarray::Tables;
 
-use lib "/net/arrays/Pipeline/dev7/tools/lib";
+use lib "/net/arrays/Pipeline/tools/lib";
 require "QuantitationFile.pl";
 
 $q = new CGI;
@@ -466,7 +466,7 @@ sub submitJob {
     my $control_filename = "job$timestr.control";
     my $log_filename = "job$timestr.log";
 
-    my $queue_dir = "/net/arrays/Pipeline/dev7/queue";
+    my $queue_dir = "/net/arrays/Pipeline/queue";
 
 
     #### Verify that the plan file does not already exist
@@ -507,7 +507,7 @@ sub submitJob {
 
         Well, there's no link yet, but paste this into a unix window:<BR><BR>
 
-	cd /net/arrays/Pipeline/dev7/output/project_id/$project_id<BR>
+	cd /net/arrays/Pipeline/output/project_id/$project_id<BR>
 	if ( -e $log_filename ) tail -f $log_filename<BR>
 
 	<BR><BR><BR>
