@@ -300,7 +300,9 @@ sub printEntryForm {
                        title=>"$spectrum{msms_spectrum_file_root}",
                        xmin=>$parameters{xmin}, xmax=>$parameters{xmax},
                        ymax=>$intenmax, ydiv=>$ydiv, nyticks=>5,
-                       gifwidth=>$parameters{gifwidth},gifheight=>$parameters{gifheight});
+                       gifwidth=>$parameters{gifwidth},
+                       gifheight=>$parameters{gifheight}
+		      );
     pgsch 0.9;
     pgmtext 'T',0.7,.01,0,"Peak value = $maxval";
     pgmtext 'RV',-2,1.02,1,"Assumed charge = $parameters{assumed_charge}";
@@ -704,6 +706,8 @@ sub pg_setup {
     #### Set needed PGPLOT environment variables
     $ENV{"PGPLOT_GIF_WIDTH"} = $gifwidth;
     $ENV{"PGPLOT_GIF_HEIGHT"} = $gifheight;
+    $ENV{"PGPLOT_RGB"} = "/usr/X11R6/lib/X11/rgb.txt";
+    $ENV{"PGPLOT_FONT"} = "/net/dblocal/src/pgplot/grfont.dat";
     $ENV{"PGPLOT_BACKGROUND"} = "white";
 
     #### Create a new graphics device
