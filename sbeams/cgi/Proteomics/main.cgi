@@ -321,7 +321,7 @@ my @count_ms_runs = $sbeams->selectOneColumn($sql);
 	if (@protein_summary_status){#ProteinProphet annotation is available
 	print qq~ <TD ALIGN=CENTER>ProteinProphet Summary<br/><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseProteinSummary?protein_group_probability_constraint=%3E0.9&QUERY_NAME=PR_BrowseProteinSummary&search_batch_id=$search_batch_id&action=QUERY">View</A>&nbsp; <FONT COLOR="#CCCCCC">[ADD]</FONT></TD> ~;
     } else { #allow the user to add ProteinProphet annotation
-	print qq~ <TD ALIGN=CENTER>ProteinProphet Summary<br/><FONT COLOR="#CCCCCC">View</FONT>&nbsp;<!-- not available yet -->[ADD]</TD> ~;
+	print qq~ <TD ALIGN=CENTER>ProteinProphet Summary<br/><FONT COLOR="#CCCCCC">View</FONT>&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/UploadProteinSummary?search_batch_id=$search_batch_id">[ADD]</A></TD> ~;
     }
 
 print qq~
