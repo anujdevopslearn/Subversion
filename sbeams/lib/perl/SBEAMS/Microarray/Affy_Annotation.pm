@@ -119,6 +119,23 @@ sub database {
 }
 
 ###############################################################################
+# Get/Set the run_mode status
+#
+#
+###############################################################################
+sub run_mode {
+	my $self = shift;
+	if (@_){
+		#it's a setter
+		$self->{_RUN_MODE} = $_[0];
+	}else{
+		#it's a getter
+		$self->{_RUN_MODE};
+	}
+}
+
+
+###############################################################################
 #Set Record
 #
 ###############################################################################
@@ -307,8 +324,12 @@ sub add_record_to_annotation_table {
 				gene_symbol		 => $record_h{'Gene Symbol'},
 				chromosomal_location	 => $record_h{'Chromosomal Location'},
 				
-				pathway			 => $record_h{'Pathway'},
-				qtl			 => $record_h{'QTL'},
+				pathway			 		=> $record_h{'Pathway'},
+				qtl			 			=> $record_h{'QTL'},
+				annotation_description  => $record_h{'Annotation Description'},
+				transcript_assignment   => $record_h{'Transcript Assignments'},
+				annotation_transcript_cluster => $record_h{'Annotation Transcript Cluster'},
+				annotation_notes  		=> $record_h{'Annotation Notes'},
 			  
 			  );
 
@@ -585,17 +606,18 @@ sub add_data_child_tables {
 							 	ST_FK		=>'trans_membrane_id',
 							 },
 				
-				"Trans Membrane"      		=>{					#Example 'gi4505467refNP_002517.1 // 2 // --- /// gi4505467refNP_002517.1 // 2 // ---'
-								REG_EXP =>     qr!gi.+?\s//\s(\d+)!x,	#grab the number of predicted domains.  This format just repeats the same information over and over for each predicted TM domain	
+				"Trans Membrane"      		=>{					#Example 'NP_054700.1 // span:417-439 // numtm:1'
+								REG_EXP =>     qr!(\w.+?)\s.*numtm:(\d+)!x,	#grab the number of predicted domains.  This format just repeats the same information over and over for each predicted TM domain	
 										
 								
-								COLUMN_NAMES => { 	1 => 'number_of_domains',
+								COLUMN_NAMES => { 	1 => 'protein_accession_numb',
+													2 => 'number_of_domains',
 											
 										},
 								
 								TABLE_NAME => $TBMA_TRANS_MEMBRANE,
 								PK	   => 'trans_membrane_id',	
-								MULTIPULE_RECORDS => 'NO',
+								#MULTIPULE_RECORDS => 'NO',
 								
 								},
 				"Overlapping Transcripts"      =>{					#Example 'NM_173599 // hypothetical protein FLJ40126 // chr12:38306286-38588369 (+)'
@@ -704,7 +726,7 @@ sub add_data_child_tables {
 			
 	foreach my $record_key (keys %child_tables){			#start looping through child_tables keys
 	
-		#next unless $record_key eq 'Protein Families';
+		next unless $record_key eq 'Trans Membrane';
 	
 		my $full_record_value = $record_h{$record_key};		#pull the piece of data from the record hash
 					 
@@ -968,7 +990,7 @@ sub get_xref_id {
 
 ###############################################################################
 #truncate_data
-#used truncate any long fields.  Will truncate everything in a hash or a single value to 254 char.  Also will
+#used to truncate any long fields.  Will truncate everything in a hash or a single value to 254 char.  Also will
 #write out to the error log if any extra fields are truncated
 ###############################################################################
 sub truncate_data {
@@ -991,6 +1013,18 @@ sub truncate_data {
 	
 		foreach my $key ( keys %record_h){
 		
+			if ($key eq 'gene_symbol' || $key eq 'chromosomal_location'){			#some gene symbol rows were comming in way to big chop them down to size
+				if (length $record_h{$key} > 50){
+					my $big_val = $record_h{$key};
+		
+					my $truncated_val = substr($record_h{$key}, 0, 49);
+			
+					$self->anno_error(error => "Warning HASH Value truncated\n,ORIGINAL VAL SIZE:". length($big_val). "'$big_val'\nNEW VAL SIZE:" . length($truncated_val) . "'$truncated_val'");
+					#print "VAL '$record_h{$key}'\n"
+					$record_h{$key} = $truncated_val;
+				}
+			}
+			
 			if (length $record_h{$key} > 255){
 				my $big_val = $record_h{$key};
 		
@@ -1054,11 +1088,14 @@ sub check_previous_annotation_set {
 	
 	if ($rows[0] =~ /^\d/) { 		#Record exists so ask the user if previous data should be deleted
 	
+		
+		
 		QUESTION:{
 		print "\n\n\n********* WARNING THIS AFFYMETRIX ANNOTATION FILE HAS ALREADY BEEN UPLOADED*****\n",
-		        "RE-DOING THIS WILL DELETE THE PREVIOUS VERSION !!!!\n",
-		 	"ARE YOU SURE YOU WANT TO DELETE ALL ANNOTATION for ",
-		       "'$genome_version - $annotation_date'\n";
+		        "RE-DOING THIS WILL DELETE THE PREVIOUS VERSION !!!!\n".
+		 	($self->run_mode =~ /delete/i) ? "YOU ARE IN RUN_MODE 'DELETE' ALL ANNOTAION IS ABOUT TO BE DELETED FOR\n":
+		 	 "ARE YOU SURE YOU WANT TO DELETE ALL ANNOTATION for ",
+		       "'$genome_version - $annotation_date' ANNOTATION SET_ID '$rows[0]'\n";
 		
 		my $answer = <STDIN>;
 		if ($answer =~ /^[nN]/){
@@ -1080,6 +1117,10 @@ sub check_previous_annotation_set {
 		}
 		}
 		
+		if ($self->run_mode() =~ /delete/i){	#if we are in delete mode return the annotation_set_id
+			print "RETRUN ANNOTAION SET ID FROM '$method' ID = '$rows[0]'\n" if ( $self->verbose() );
+			return $rows[0];
+		}
 		
 		$self->check_previous_annotation_set(	slide_type_id   => $slide_type_id,		#Now that the old date is gone redo the method which will insert a new record
 							genome_version  => $genome_version,
@@ -1121,8 +1162,8 @@ sub check_previous_annotation_set {
 	
 ###############################################################################
 #delete_affy_annotation_data
-#Given the name of a Affy Array Slide get the Slide_type_id
-#return slide_type_id
+#give annotation set id 
+#delete all the annotation from all the annotation tables
 ###############################################################################
 sub delete_affy_annotation_data {
     	
@@ -1235,7 +1276,11 @@ sub get_annotation_sql {
 			anno.archival_unigene_cluster,
 			anno.chromosomal_location,
 			anno.pathway,
-			anno.qtl
+			anno.qtl,
+			anno.annotation_description,
+			anno.transcript_assignment,
+			anno.annotation_transcript_cluster,
+			anno.annotation_notes
            		FROM $TBMA_AFFY_ANNOTATION anno 
             		JOIN $TBMA_AFFY_ANNOTATION_SET anno_set 
                 		ON (anno.affy_annotation_set_id = anno_set.affy_annotation_set_id)	
@@ -1328,11 +1373,13 @@ sub get_interpro_info {
 sub get_transmembrane_info {
 	my $self = shift;
 	my $anno_id = shift;
-	my @rows = $sbeams->selectOneColumn("	SELECT number_of_domains
-											FROM $TBMA_TRANS_MEMBRANE WHERE
-					     					affy_annotation_id = $anno_id"
-				           				);
-	return $rows[0];
+	my $sql = qq~SELECT number_of_domains, protein_accession_numb
+				FROM $TBMA_TRANS_MEMBRANE WHERE
+				affy_annotation_id = $anno_id
+				~;
+	
+	return $sbeams->selectHashArray($sql)
+	
 }
 ###############################################################################
 #get_alignment_info
