@@ -8,7 +8,7 @@ use FindBin;
 use File::Copy;
 #use FreezeThaw qw( freeze thaw );
 use lib qw (../perl ../../perl);
-use vars qw ($q $sbeams $sbeamsMOD  %columnHeaderHash @columnIndex %easyHash $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY $TISSUETYPE
+use vars qw ($q $sbeams $sbeamsMOD  %columnHeaderHash @columnIndex %easyHash $ORGANISM $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY $TISSUETYPE
              $current_contact_id $current_username );
 
 use SBEAMS::Immunostain;
@@ -45,6 +45,7 @@ Options:
   --debug n            Set debug flag
   --testonly           If set, rows in the database are not changed or added
   --tissue_type				 Tissue type to be processed (bladder, prostate)
+  --organism        human or mouse 
   --source_file XXX    Source file name from which data are to be updated
   									It needs to be a tab delimited .txt file
  --error_file	  Error file name to which loading errors are printed 
@@ -52,14 +53,14 @@ Options:
   --check_status       Is set, nothing is actually done, but rather
                        a summary of what should be done is printed
 
- e.g.:  $PROG_NAME --check_status --tissue_type prostate --source_file  /users/bob/Loading.txt
+ e.g.:  $PROG_NAME --check_status --tissue_type prostate --organism human --source_file  /users/bob/Loading.txt
 --error_file /users/bob/Error.txt
 EOU
 
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly","tissue_type=s",
-		   "source_file=s","check_status","error_file=s",
+		   "organism:s" ,"source_file=s","check_status","error_file=s",
 		  ))
 {
   print "$USAGE";
@@ -71,6 +72,7 @@ $QUIET = $OPTIONS{"quiet"} || 0;
 $DEBUG = $OPTIONS{"debug"} || 0;
 $TESTONLY = $OPTIONS{"testonly"} || 0;
 $TISSUETYPE = $OPTIONS{"tissue_type"};
+$ORGANISM = $OPTIONS{"organism"};
 if ($DEBUG)
 {
   print "Options settings:\n";
@@ -113,6 +115,26 @@ my @bladderColumnArray = (
 		'Transitional Cell Carcinoma',
 		'file image',
 		'comment');
+    
+my @bladderMouseColumnArray = (    
+    'specimen block',	
+    'section',	
+    'antibody',
+    'gender	',
+    'stain intensity',
+    'Superficial Epithelial Cells',
+    'Intermediate Cells',
+    'Basal Epithelial Cells',	
+    'stain intensity',
+    'Lamina propria - superficial',	
+    'Submucosa',
+    'Muscularis propria',
+    'Stromal Endothelial Cells',
+    'Leukocyte abundance (none, rare, moderate, high, most)',
+    'comment'
+    );
+    
+       
 my @prostateColumnArray = (
 		'specimen block',
 		'block antibody section index',
@@ -146,6 +168,21 @@ my @prostateColumnArray = (
 		'file image',
 		'comment'
 		);
+    
+ my @prostateMouseColumnArray = (   
+   'specimen block',
+   'block antibody section index',
+   'antibody',
+   'lobe of prostate (central, lobe, other/unknown)',	
+   'stain intensity',
+   '% luminal cells at each staining intensity',
+   '% basal cells at each staining intensity	',
+   '% Stromal Fibromuscular cells at each staining intensity',	
+   '% Endothelial cells at each staining intensity',
+   'Leukocyte abundance (rare, moderate, high, most, 0)',	
+    'comment'
+    );
+    
 %prostateCellHash = (		
 '% basal cells at each staining intensity'	=>	'Basal Epithelial Cells',
 '% Stromal Fibromuscular cells at each staining intensity'	=>	'Stromal Fibromuscular Cells',
@@ -166,12 +203,19 @@ pro => 'processed',
 ann	=>	'annontated'
 );
 		
+    print "$TISSUETYPE\n";
+    print "$ORGANISM\n";
 		
 		my (%permenantHash,%dataHash);
 		my $count = 0;
 		my @columnHeaderArray;
-		@columnHeaderArray = @bladderColumnArray if $TISSUETYPE =~/bladder/i;
-		@columnHeaderArray = @prostateColumnArray if $TISSUETYPE =~/prostate/i;
+		@columnHeaderArray = @bladderColumnArray if ($TISSUETYPE =~/bladder/i and $ORGANISM =~/human/i);
+		@columnHeaderArray = @prostateColumnArray if ($TISSUETYPE =~/prostate/i and $ORGANISM =~ /human/i);
+    @columnHeaderArray = @prostateMouseColumnArray if ($TISSUETYPE =~/prostate/i and $ORGANISM =~ /mouse/i);
+    @columnHeaderArray = @bladderMouseColumnArray if ($TISSUETYPE =~/bladder/i and $ORGANISM =~ /mouse/i);
+      
+    
+    
 		foreach my $entry (@columnHeaderArray)
 		{
 #print "$columnHeaderArray[$count]    $entry\n";
@@ -200,6 +244,7 @@ ann	=>	'annontated'
 		
 		
 	$TISSUETYPE = ucfirst($TISSUETYPE);
+  $ORGANISM = ucfirst($ORGANISM);
 	processFile();
 #	loadImages() if %loadImageHash;	
 	
@@ -224,6 +269,10 @@ sub processFile
 		print "ERROR: You must supply a --tissue_type parameter\n$USAGE\n";
 		exit;
 	}
+   unless ($ORGANISM)
+   {
+     print " ERROR: You must supply --organism parameter\n$USAGE\n";
+   }
   	unless ($sourceFile) 
 	{
 		print "ERROR: You must supply a --source_file parameter\n$USAGE\n";
@@ -240,7 +289,7 @@ sub processFile
 	  exit;
    }
 	
-	open (CONF, "Immuno".$TISSUETYPE."Conf.conf") or die "can not find ./ImmunoConf.conf file:\n$!";
+	open (CONF, "Immuno".$TISSUETYPE.$ORGANISM."Conf.conf") or die "can not find ./ImmunoConf.conf file:\n$!";
 	while (my $line = <CONF>) 
 	{ 	
 			next if $line =~ /^#/;
@@ -260,9 +309,10 @@ sub processFile
 	my $specimenID = 0;
 	my $selectFlag = 1;
 	my $channelID = 0;
-	my ($gleason3,$gleason4,$gleason5,$specimenName,$sectionIndex,$stainName,$lastName, $abundanceLevelLeuk,$comment,$cancer);
+	my ($gleason3,$gleason4,$gleason5,$specimenName,$sectionIndex,$stainName,$lastName, $abundanceLevelLeuk,$comment,$cancer, $specimenBlockSide);
 	while (my $line = <FH>) 
 	{
+      
 			next if $line =~ /^\s*$/;
 #do this for the very first line,
 #check the correct columnOrder	
@@ -285,10 +335,10 @@ sub processFile
 				next;
 			}
 			$lineCount++;
-			print "abc $lineCount\n";
+			print "line: $lineCount\n";
 		
 #this happens to the 2nd and subsequent rows
-  			$line =~ s/[\n\r]//g;
+  		$line =~ s/[\n\r]//g;
 			my $blockUpdate = 0; 
 			my $blockInsert = 1;
 			my @dataArray = split	/\t/, $line ;
@@ -300,13 +350,13 @@ sub processFile
 			my %infoHash;
 			foreach my $keys (keys %columnHeaderHash)
 			{
-									
+						
 					next if ($dataArray[$keys]) eq '';
 					$dataArray[$keys] =~ s/^[\s\t]+//g;
 					$dataArray[$keys] =~ s/[\s\t]+$//g;
 					if ($columnHeaderHash{$keys} =~ /\%.*staining/i)
 					{
-							$infoHash{$prostateCellHash{$columnHeaderHash{$keys}}} = $dataArray[$keys];
+							$infoHash{$prostateCellHash{$columnHeaderHash{$keys}}} = $dataArray[$keys] ;
 							next;						
 					}
 					$infoHash{$columnHeaderHash{$keys}} = $dataArray[$keys];
@@ -319,16 +369,17 @@ sub processFile
 #this is the first line of a 3 line record
 		if ($infoHash{'specimen block'})
 		{
-			print "fsadkfdsafsdf\n";
+      print "block: $infoHash{'specimen block'}\n";
 			if (!$antiBody{$infoHash{'antibody'}})
 				{					
-					print "asfasfsa;fsdfsdafdsfdsfsa\n";
+          
 						Error (\@dataArray,"$infoHash{antibody} is not in the database");
-						next;
+						
 				}	 
 #this data is the same for all 3 rows and changes only for a new antibody 
 				($specimenName) = $infoHash{'specimen block'} =~ /^(.*\d)/;
 				print "name: $specimenName\n";
+       
 				my $blockQuery = qq/Select specimen_block_id from $TBIS_SPECIMEN_BLOCK where specimen_block_name = \'$infoHash{'specimen block'}\'/;
 				my @block  = $sbeams->selectOneColumn($blockQuery);
 				my $nrows = scalar(@block);
@@ -345,6 +396,8 @@ sub processFile
 				if ($TISSUETYPE =~/prostate/i)
 				{
 				print "section: $infoHash{'block antibody section index'}";
+        
+       
 					if ($infoHash{'block antibody section index'})
 					{;
 						$sectionIndex = $infoHash{'block antibody section index'}; 
@@ -356,8 +409,14 @@ sub processFile
 						$stainName  = $stainName . " ".$sectionIndex;
 					}
 				}
-				
-				if ($TISSUETYPE =~/bladder/i)
+				if ($TISSUETYPE =~ /prostate/i and $ORGANISM =~/mouse/i)
+        {
+          if ($infoHash{'lobe of prostate (central, lobe, other/unknown'} !~ /N\/A/i and defined ($infoHash{'lobe of prostate (central, lobe, other/unknown'}))
+          { 
+            $specimenBlockSide =  $infoHash{'lobe of prostate (central, lobe, other/unknown'};
+          }
+        }
+        if ($TISSUETYPE =~/bladder/i)
 				{
 					print "$infoHash{'section'}\n";
 					if ($infoHash{'section'})
@@ -366,8 +425,7 @@ sub processFile
 						print "Stain: $stainName\n";
 					}
 				}
-				print "$stainName\n";
-				
+			
 				$lastName = $infoHash{person};
 				$abundanceLevelLeuk = $infoHash{'Leukocyte abundance (none, rare, moderate, high, most)'};
 				$comment = $infoHash{'comment'};
@@ -382,6 +440,7 @@ sub processFile
 #need to do the Select query and update query for the specimen block only once				
 		if($selectFlag)
 		{
+      
 #update specimen table
 				my $specimenUpdate = 1; 
 				my $specimenInsert = 0;
@@ -422,7 +481,8 @@ sub processFile
 				my %blockRowData; 
 				$blockRowData{protocol_id} = $confHash{protocol_id};
 				$blockRowData{specimen_id} = $specimenReturnedPK;
-				$blockRowData{specimen_block_name} = $infoHash{'specimen block'}; 																	
+				$blockRowData{specimen_block_name} = $infoHash{'specimen block'};
+        $blockRowData{specimen_block_side} = $specimenBlockSide if defined ($specimenBlockSide); 																	
 				my $blockReturnedPK =  updateInsert(\%blockRowData,$blockID,"specimen_block_id",
 				$blockInsert,$blockUpdate,$TBIS_SPECIMEN_BLOCK);
 #this way we can all see it			
@@ -436,8 +496,6 @@ sub processFile
 		$TBIS_ASSAY st
 		join $TBIS_SPECIMEN_BLOCK  sb on sb.specimen_block_id = st.specimen_block_id 
 		where sb.specimen_block_id = $blockID and st.assay_name = \'$stainName\';/;
-		
-	
 		
 		my @slides  = $sbeams->selectSeveralColumns($slideQuery);  
 		$nrows = scalar(@slides);
@@ -457,7 +515,7 @@ sub processFile
 	 }
 	 	
 #update, insert a assay
-print "$stainName\n";
+
 		my %slideRowData; 
 		$slideRowData{project_id} = $confHash{project_id};
 		$slideRowData{protocol_id} = $confHash{protocol_id};
@@ -497,16 +555,19 @@ print "$stainName\n";
 		}
 	
 		my $assay_channel_name = $stainName." - chan 1";
-		next if (! $antiBody{$infoHash{antibody}});
+		print "$assay_channel_name\n";
+    
+    next if (! $antiBody{$infoHash{antibody}});
 		
 			my %channelRowData;
 			$channelRowData{assay_id}  = $slideID;
 			$channelRowData{antibody_id} = $antiBody{$infoHash{antibody}};
 			$channelRowData{channel_index} = 1; 
 			$channelRowData{assay_channel_name} = $assay_channel_name;
-			print "Good\n";
+		
 			my $returnedChannel = updateInsert(\%channelRowData,$channelID, "assay_channel_id",$channelInsert,$channelUpdate,$TBIS_ASSAY_CHANNEL); 
 			$channelID = $returnedChannel;
+     
 #now that we have the stained_slide_id we can handle the images
 #images are in a comma seperated list of $infoHash{'file images'}
 		if ($infoHash{'file images'})
@@ -567,7 +628,6 @@ print "$stainName\n";
 		foreach my $cellLine (keys %cellType)
 		{
 				print  "cellLine: $cellLine\n";
-				print "intensity:  $infoHash{$cellLine}\n";
 				print "staining level: $cellPresenceLevel{$infoHash{'stain intensity'}}\n";
 			
 				next if !exists($infoHash{$cellLine});
@@ -599,8 +659,6 @@ print "$stainName\n";
 					inner join $TBIS_STRUCTURAL_UNIT ct on cp.structural_unit_id = ct.structural_unit_id
 					where cpl.level_name = \'$infoHash{'stain intensity'}\' and ct.structural_unit_name = \'$cellLine\' and assay_channel_id  = $channelID/;
 				}
-#			print "$cellQuery\n";
-#			print "$infoHash{$cellLine}\n";
 
 				my @cellPresence = $sbeams->selectSeveralColumns($cellQuery); 
 				if(scalar(@cellPresence) == 0)
@@ -619,9 +677,9 @@ print "$stainName\n";
 				$cellLineRowData{expression_level_id} = $cellPresenceLevel{$infoHash{'stain intensity'}} if($cellLine ne 'Stromal Leukocytes');
 				$cellLineRowData{at_level_percent} = $infoHash{$cellLine} unless ($cellLine eq 'Stromal Leukocytes');
 				$cellLineRowData{abundance_level_id} = $abundanceLevel{$infoHash{$cellLine}} if $cellLine eq 'Stromal Leukocytes';
-				$cellLineRowData{comment} = $comment; 
-				$cellLineRowData{expression_pattern_term_id} = $ontologyHash{$infoHash{expression_pattern}}; 
-				$cellLineRowData{percent_type_term_id} = $ontologyHash{$infoHash{percent_type}}; 
+				$cellLineRowData{comment} = $comment if ($comment); 
+				$cellLineRowData{expression_pattern_term_id} = $ontologyHash{$infoHash{expression_pattern}}  if ( defined($ontologyHash{$infoHash{expression_pattern}}));
+				$cellLineRowData{percent_type_term_id} = $ontologyHash{$infoHash{percent_type}} if(defined($ontologyHash{$infoHash{percent_type}})); 
 #$abundanceLevel{$abundanceLevelLeuk} if $cellLine eq 'Stromal Leukocytes' and $abundanceLevel{$abundanceLe;
 #figureing out which Gleason cell line we have and what to update or insert
 			if ($cellLine =~ /^Gleason/i)
@@ -656,9 +714,12 @@ sub updateInsert
 {
 		my ($hashRef, $pK, $pkName,$insert,$update,$table) = @_;
 		
-		print " $insert  === $update  == $pK  === $pkName  ==  $table\n";
- 		
-		my $PK = $sbeams->updateOrInsertRow(
+#		print " $insert  ==  $update  == $pK  == $pkName  ==  $table\n";
+#    foreach  my $key (keys %{$hashRef})
+#    {
+#      print "$key == $hashRef->{$key}\n";
+#   }
+	my $PK = $sbeams->updateOrInsertRow(
 						insert => $insert,
 						update => $update,
 						table_name => $table,
@@ -670,7 +731,7 @@ sub updateInsert
 						testonly=>$TESTONLY,
 						add_audit_parameters => 1
 						);
-	print "returning $pK:  $PK\n";	
+	
 			return $PK; 
 }
 
