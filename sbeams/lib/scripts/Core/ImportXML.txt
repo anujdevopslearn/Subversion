@@ -1,0 +1,19 @@
+
+
+setenv SBEAMS /net/dblocal/www/html/dev2/sbeams
+
+cd $SBEAMS/lib/scripts/Core
+
+mkdir zztmp
+./ImportXML.pl --schema_file zztmp/test --destination_type mssql --source_file test.xml --create
+
+./ImportXML.pl --schema_file zztmp/test --destination_type mssql --source_file test.xml --load --verbose 2 --testonly
+
+
+
+
+./ImportXML.pl --schema_file zztmp/celera --destination_type mssql --source_file /net/snp/projects/celera/data/celera_chr10_14.4-16.5.xml.fixed --create
+
+./ImportXML.pl --schema_file zztmp/celera --destination_type mssql --source_file /net/snp/projects/celera/data/celera_chr10_14.4-16.5.xml.fixed --load --database_prefix Userspace.dbo. --testonly --verbose 2 | more
+
+
