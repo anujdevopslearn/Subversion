@@ -1,6 +1,6 @@
 table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
 SN_biosequence_set	1	biosequence_set_id	BioSequence Set ID	int	8	0	N		Y							N	N				pkDEFAULT
-SN_biosequence_set	2	species_id	Species	int	8	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Species for this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM WHERE record_status != 'D' ORDER BY sort_order,organism_name"	
+SN_biosequence_set	2	species_id	Species	int	8	0	N		N		organism_id	Y	optionlist			Y	Y	N	Species for this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM WHERE record_status != 'D' ORDER BY sort_order,organism_name"	
 SN_biosequence_set	3	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
 SN_biosequence_set	4	set_tag	Set Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Very short tag (name) of this BioSequence database		
 SN_biosequence_set	5	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioSequence database		
@@ -25,7 +25,7 @@ SN_biosequence	6	biosequence_desc	BioSequence Description	varchar	255	0	Y		N			N
 SN_biosequence	7	biosequence_start	BioSequence Start	int	25	0	N		N			Y	text	20		Y	Y	N	The start coor		
 SN_biosequence	8	biosequence_length	BioSequence Length	int	25	0	N		N			Y	text	20		Y	Y	N	The length in bp		
 SN_biosequence	9	biosequence_seq	BioSequence Sequence	varchar	4000	0	Y		N			N	textarea	4		Y	Y	N	"The sequence, if present"		
-SN_biosequence	10	inherit_from_biosequence_id	Inherited BioSequence	int	8	0	Y		N	biosequence	biosequence_id	N	optionlist			Y	Y	N	"The Inherited BioSequence (if this has a ""parent"" sequence)"	"SELECT biosequnce_id, biosequence_name FROM $TB_BIOSEQUENCE WHERE record_status != 'D' ORDER BY biosequence_name"	
+SN_biosequence	10	inherit_from_biosequence_id	Inherited BioSequence	int	8	0	Y		N		biosequence_id	N	optionlist			Y	Y	N	"The Inherited BioSequence (if this has a ""parent"" sequence)"	"SELECT biosequnce_id, biosequence_name FROM $TB_BIOSEQUENCE WHERE record_status != 'D' ORDER BY biosequence_name"	
 SN_biosequence	11	comment	Comment	text	4000	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 SN_biosequence	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 SN_biosequence	13	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				

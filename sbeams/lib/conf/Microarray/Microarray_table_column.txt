@@ -1,7 +1,7 @@
 table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
 slide_type	1	slide_type_id	Slide Type ID	int	8	0	N		Y							N	N				pkDEFAULT
 slide_type	2	name	Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Short name of this slide type		
-slide_type	3	organism_id	Organism	int	8	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism for this type	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+slide_type	3	organism_id	Organism	int	8	0	N		N		organism_id	Y	optionlist			Y	Y	N	Organism for this type	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 slide_type	4	price	Price	float	8	0	Y		N			N	text	25		Y	Y	N	Arrays Lab price for this slide_type		
 slide_type	5	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 slide_type	6	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
@@ -34,8 +34,8 @@ slide_type_cost	10	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_g
 slide_type_cost	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 labeling_method	1	labeling_method_id	Labeling Method ID	int	8	0	N		Y							N	N				pkDEFAULT
 labeling_method	2	name	Method Name	varchar	100	0	N		N			Y	text	50		Y	Y	Y	Name of this labeling method		
-labeling_method	3	xna_type_id	xNA Type	int	8	0	N		N	xna_type	xna_type_id	Y	optionlist			Y	Y	Y	xNA type	"SELECT xna_type_id, xna_type FROM $TB_XNA_TYPE ORDER BY sort_order,xna_type"	
-labeling_method	4	dye_id	Dye	int	8	0	N		N	dye	dye_id	Y	optionlist			Y	Y	Y	Dye	"SELECT dye_id, dye_name FROM $TB_DYE ORDER BY dye_name"	
+labeling_method	3	xna_type_id	xNA Type	int	8	0	N		N		xna_type_id	Y	optionlist			Y	Y	Y	xNA type	"SELECT xna_type_id, xna_type FROM $TB_XNA_TYPE ORDER BY sort_order,xna_type"	
+labeling_method	4	dye_id	Dye	int	8	0	N		N		dye_id	Y	optionlist			Y	Y	Y	Dye	"SELECT dye_id, dye_name FROM $TB_DYE ORDER BY dye_name"	
 labeling_method	5	desired_micrograms	Desired Micrograms	float	8	0	Y		N			N	text	25		Y	Y	N	Number of micrograms required to label		
 labeling_method	6	Ebase	Ebase	float	8	0	Y		N			Y	text	25		Y	Y	N	Extinction coefficient for a base		
 labeling_method	7	MWbase	MWbase	float	8	0	Y		N			Y	text	25		Y	Y	N	Molecular weight for a base in g/mol		
@@ -137,7 +137,7 @@ array	3	layout_id	Layout	int	8	0	N		N	layout	layout_id	Y	optionlist			Y	Y	N	Layo
 array	4	printing_batch_id	Printing Batch	int	8	0	N		N	printing_batch	printing_batch_id	Y	optionlist			Y	Y	N	Printing batch in which this microarray was produced	"SELECT printing_batch_id, ST.name+' ('+slide_list+') ('+SUBSTRING(CONVERT(varchar(50),date_started,121),1,16)+')' FROM $TB_PRINTING_BATCH PB LEFT JOIN $TB_SLIDE_TYPE ST ON ( PB.slide_type_id=ST.slide_type_id ) ORDER BY ST.name,date_started"	
 array	5	slide_id	Slide	int	8	0	N		N	slide	slide_id	Y	scrolloptionlist	4	setArrayName()	Y	Y	N	Slide serial number for this microarray (choose only one slide)	"SELECT S.slide_id, convert(varchar(20),slide_number)+CASE WHEN A.slide_id IS NOT NULL THEN ' - *DONE*' ELSE '' END FROM $TB_SLIDE S LEFT JOIN $TB_ARRAY A ON ( S.slide_id=A.slide_id ) ORDER BY slide_number"	
 array	6	array_name	Array Name	varchar	50	0	N		N			Y	text	25		Y	Y	Y	"Official Name of this microarray that it will be subsequently referred to (usually just the serial number of the slide, but can be different)"		
-array	7	array_request_slide_id	Requested Slide ID	int	8	0	N		N	array_request_slide	array_request_slide_id	Y	scrolloptionlist	4		Y	Y	N	ID assigned to this slide during the array request process	MANUAL	
+array	7	array_request_slide_id	Requested Slide ID	int	8	0	N		N		array_request_slide_id	Y	scrolloptionlist	4		Y	Y	N	ID assigned to this slide during the array request process	MANUAL	
 array	8	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Optional comment about this particular microarray		
 array	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 array	10	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
@@ -146,7 +146,7 @@ array	12	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N
 array	13	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 array	14	record_status	Record Status	char	1	0	N	N	N							N	N				
 labeling	1	labeling_id	Labeling ID	int	8	0	N		Y							N	N				pkDEFAULT
-labeling	2	array_request_sample_id	Array Request Sample ID	int	8	0	N		N	array_request_sample	array_request_sample_id	Y	multioptionlist	4		Y	Y	Y	"Sample ID number - Sample name (you may select several samples to enter at once, but note all values will be the same)"	MANUAL	
+labeling	2	array_request_sample_id	Array Request Sample ID	int	8	0	N		N		array_request_sample_id	Y	multioptionlist	4		Y	Y	Y	"Sample ID number - Sample name (you may select several samples to enter at once, but note all values will be the same)"	MANUAL	
 labeling	3	protocol_id	Protocol	int	8	0	N		N	protocol	protocol_id	Y	optionlist			Y	Y	N	Protocol used for labeling	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='extract_labeling' ORDER BY P.name"	
 labeling	4	date_labeled	Date Labeled	datetime	8	0	N	CURRENT_TIMESTAMP	N			N	textdate	30		Y	Y	N	Date/time the labeling was performed		
 labeling	5	dye_lot_number	Dye Lot #	varchar	25	0	Y		N			Y	text	10		Y	Y	N	Lot number of dye used		

@@ -1,6 +1,6 @@
 table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
 PH_biosequence_set	1	biosequence_set_id	BioSequence Set ID	int	8	0	N		Y							N	N				pkDEFAULT
-PH_biosequence_set	2	species_id	Species	int	8	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Species for this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM WHERE record_status != 'D' ORDER BY sort_order,organism_name"	
+PH_biosequence_set	2	species_id	Species	int	8	0	N		N		organism_id	Y	optionlist			Y	Y	N	Species for this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM WHERE record_status != 'D' ORDER BY sort_order,organism_name"	
 PH_biosequence_set	3	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
 PH_biosequence_set	4	set_tag	Set Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Very short tag (name) of this BioSequence database		
 PH_biosequence_set	5	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioSequence database		
@@ -25,7 +25,7 @@ PH_biosequence	6	biosequence_desc	BioSequence Description	varchar	255	0	Y		N			N
 PH_biosequence	7	biosequence_start	BioSequence Start	int	25	0	N		N			Y	text	20		Y	Y	N	The start coor		
 PH_biosequence	8	biosequence_length	BioSequence Length	int	25	0	N		N			Y	text	20		Y	Y	N	The length in bp		
 PH_biosequence	9	biosequence_seq	BioSequence Sequence	varchar	4000	0	Y		N			N	textarea	4		Y	Y	N	"The sequence, if present"		
-PH_biosequence	10	inherit_from_biosequence_id	Inherited BioSequence	int	8	0	Y		N	biosequence	biosequence_id	N	optionlist			Y	Y	N	"The Inherited BioSequence (if this has a ""parent"" sequence)"	"SELECT biosequnce_id, biosequence_name FROM $TB_BIOSEQUENCE WHERE record_status != 'D' ORDER BY biosequence_name"	
+PH_biosequence	10	inherit_from_biosequence_id	Inherited BioSequence	int	8	0	Y		N		biosequence_id	N	optionlist			Y	Y	N	"The Inherited BioSequence (if this has a ""parent"" sequence)"	"SELECT biosequnce_id, biosequence_name FROM $TB_BIOSEQUENCE WHERE record_status != 'D' ORDER BY biosequence_name"	
 PH_biosequence	11	comment	Comment	text	4000	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 PH_biosequence	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 PH_biosequence	13	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
@@ -34,10 +34,10 @@ PH_biosequence	15	record_status	Record Status	char	1	0	N	N	N							N	N
 PH_sequence_modification	1	sequence_modification_id	BioSequence Modification ID	int	8	0	N		Y							N	N				pkDEFAULT
 PH_sequence_modification	2	strain_id	Strain ID	int	8	0	N		N	strain	strain_id	N	optionlist			Y	Y	Y	"If the modification occurred to a strain, select which one"	"SELECT strain_id, strain_name FROM $TBPH_STRAIN WHERE record_status != 'D' ORDER BY strain_name"	
 PH_sequence_modification	3	plasmid_id	Plasmid ID	int 	8	0	N		N	plasmid 	plasmid_id	N	optionlist			Y	Y	Y	"If the modification occurred to a Plasmid, select which one"	"SELECT plasmid_id, plasmid_name FROM $TBPH_PLASMID WHERE record_status != 'D' ORDER BY plasmid_name"	
-PH_sequence_modification	4	affected_biosequence_id	Affected BioSequence ID	int	8	0	N		N	biosequence 	biosequence_id	Y	optionlist			Y	Y	Y	"Choose which biosequnce was affected, (i.e. removed, or spliced into)"	"SELECT biosequence_id, biosequence_name FROM $TB_BIOSEQUENCE WHERE record_status != 'D' ORDER BY biosequence_name"	
+PH_sequence_modification	4	affected_biosequence_id	Affected BioSequence ID	int	8	0	N		N		biosequence_id	Y	optionlist			Y	Y	Y	"Choose which biosequnce was affected, (i.e. removed, or spliced into)"	"SELECT biosequence_id, biosequence_name FROM $TB_BIOSEQUENCE WHERE record_status != 'D' ORDER BY biosequence_name"	
 PH_sequence_modification	5	deletion_start	Insertion Start	int	255	0	N		N			Y	text			Y	Y	N	"The start of the change relative to the start base-pair of the affected gene( the space between the first base and the ""-1"" base is zero)"		
 PH_sequence_modification	6	deletion_length	Insertion Length	int 	255	0	N		N			Y	text			Y	Y	N	The length of the change in base-pairs		
-PH_sequence_modification	7	inserted_biosequence_id	Inserted BioSequence ID	int 	8	0	N		N	biosequence	biosequence_id	N	optionlist			Y	Y	Y	Choose the inserted biosequence	"SELECT biosequnce_id, biosequence_name FROM $TB_BIOSEQUENCE WHERE record_status != 'D' ORDER BY biosequence_name"	
+PH_sequence_modification	7	inserted_biosequence_id	Inserted BioSequence ID	int 	8	0	N		N		biosequence_id	N	optionlist			Y	Y	Y	Choose the inserted biosequence	"SELECT biosequnce_id, biosequence_name FROM $TB_BIOSEQUENCE WHERE record_status != 'D' ORDER BY biosequence_name"	
 PH_sequence_modification	8	modification_index	Modification Index	int	8	0	N		Y			Y	text			N	N				
 PH_sequence_modification	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 PH_sequence_modification	10	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
@@ -67,11 +67,11 @@ PH_plasmid	19	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id	
 PH_plasmid	20	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 PH_plasmid	21	record_status	Record Status	char	1	0	N	N	N							N	N				
 PH_strain	1	strain_id	Strain ID	int	8	0	N		Y							N	N				pkDEFAULT
-PH_strain	2	species_id	Species ID	int	8	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Species of this Strain	"SELECT organism_id, organism_name FROM $TB_ORGANISM WHERE record_status != 'D' ORDER BY sort_order,organism_name"	
+PH_strain	2	species_id	Species ID	int	8	0	N		N		organism_id	Y	optionlist			Y	Y	N	Species of this Strain	"SELECT organism_id, organism_name FROM $TB_ORGANISM WHERE record_status != 'D' ORDER BY sort_order,organism_name"	
 PH_strain	3	strain_name	Strain Name	varchar	50	0	N		N			N	text	20		Y	Y	Y	The name of this strain		
 PH_strain	4	strain_number	Strain Number	varchar	50	0	N		N			Y	text	20		Y	Y	N	"A number for this Strain, mainly bookeeping"		
-PH_strain	5	ploidy_id	Ploidy	int	8	0	N		N	ploidy	ploidy_id	Y	optionlist			Y	Y	N	The Ploidy of this Strain	"SELECT ploidy_id, ploidy_name FROM $TBPH_PLOIDY WHERE record_status != 'D' ORDER BY sort_order, ploidy_name"	
-PH_strain	6	mating_type_id	Mating Type	int	8	0	N		N	mating_type	mating_type_id	Y	optionlist			Y	Y	N	The Mating Type of this Strain	"SELECT mating_type_id, mating_type_name FROM $TBPH_MATING_TYPE WHERE record_status != 'D' ORDER BY sort_order, mating_type_name"	
+PH_strain	5	ploidy_id	Ploidy	int	8	0	N		N		ploidy_id	Y	optionlist			Y	Y	N	The Ploidy of this Strain	"SELECT ploidy_id, ploidy_name FROM $TBPH_PLOIDY WHERE record_status != 'D' ORDER BY sort_order, ploidy_name"	
+PH_strain	6	mating_type_id	Mating Type	int	8	0	N		N		mating_type_id	Y	optionlist			Y	Y	N	The Mating Type of this Strain	"SELECT mating_type_id, mating_type_name FROM $TBPH_MATING_TYPE WHERE record_status != 'D' ORDER BY sort_order, mating_type_name"	
 PH_strain	7	construction_method_id	Construction Method	int	8	0	N		N	construction_method	construction_method_id	Y	optionlist			Y	Y	N	The Construction Method of this Strain	"SELECT construction_method_id, construction_method_name FROM $TBPH_CONSTRUCTION_METHOD WHERE record_status != 'D' ORDER BY sort_order, construction_method_name"	
 PH_strain	8	plasmid1_id	Plasmid 1	int 	8	0	N		N			N	text			Y	Y	N	A plasmid that is in this strain	"SELECT plasmid_id, plasmid_name FROM $TBPH_PLASMID WHERE record_status != 'D' ORDER BY plasmid_name"	
 PH_strain	9	plasmid2_id	Plasmid 2	int 	8	0	N		N			N	text			Y	Y	N	A plasmid that is in this strain	"SELECT plasmid_id, plasmid_name FROM $TBPH_PLASMID WHERE record_status != 'D' ORDER BY plasmid_name"	
@@ -125,7 +125,7 @@ PH_array_quantitation_subset	5	condition_repeat_id	Condition Repeat ID	int	8	0	N
 PH_array_quantitation_subset	6	plate_id	Plate ID	int	8	0	N		N	plate 	plate ID	Y	text	8		Y	Y	N			
 PH_array_quantitation_subset	7	quality_flag	Quality Flag	varchar	255	0	N		N			N	text	20		Y	Y	N			
 PH_spot_quantitation	1	spot_id	Spot ID	int	8	0	N		Y							N	N				pkDEFAULT
-PH_spot_quantitation	2	array_quantitation_subset_id	Array Subset Quantitation ID	int 	8	0	N		N	array_quantitation_subset	array_quantitation_subset_id	Y	text	8		Y	Y				
+PH_spot_quantitation	2	array_quantitation_subset_id	Array Subset Quantitation ID	int 	8	0	N		N		array_quantitation_subset_id	Y	text	8		Y	Y				
 PH_spot_quantitation	3	spot_number	Spot Number	int 	8	0	N		N			Y	text	8		Y	Y				
 PH_spot_quantitation	4	set_row	Set Row	int	8	0	N		N			Y	text	8		Y	Y				
 PH_spot_quantitation	5	set_column	Set Column	int	8	0	N		N			Y	text	8		Y	Y				

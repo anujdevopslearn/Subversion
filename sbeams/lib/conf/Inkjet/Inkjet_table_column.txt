@@ -1,7 +1,7 @@
 table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
 IJ_hardware	1	hardware_id	Hardware ID	int	8	0	N		Y							N	N				pkDEFAULT
 IJ_hardware	2	contact_id	Contact	int	8	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Vendor/creator contact for this hardware	"SELECT contact_id, first_name+' '+last_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY organization,last_name,first_name"	
-IJ_hardware	3	hardware_type_id	Hardware Type	int	8	0	N		N	hardware_type	hardware_type_id	Y	optionlist			Y	Y	Y	Type of hardware	"SELECT hardware_type_id, name FROM $TBIJ_HARDWARE_TYPE ORDER BY name"	
+IJ_hardware	3	hardware_type_id	Hardware Type	int	8	0	N		N		hardware_type_id	Y	optionlist			Y	Y	Y	Type of hardware	"SELECT hardware_type_id, name FROM $TBIJ_HARDWARE_TYPE ORDER BY name"	
 IJ_hardware	4	other_type	Other Hardware Type	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Only fill in if Type is Other		
 IJ_hardware	5	make	Make	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Make or Manufacturer of this hardware		
 IJ_hardware	6	model	Model	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Model number of this hardware		
@@ -17,7 +17,7 @@ IJ_hardware	15	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group
 IJ_hardware	16	record_status	Record Status	char	1	0	N	N	N							N	N				
 IJ_software	1	software_id	Software ID	int	8	0	N		Y							N	N				pkDEFAULT
 IJ_software	2	contact_id	Contact	int	8	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Vendor/creator contact for this software	"SELECT contact_id, first_name+' '+last_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY organization,last_name,first_name"	
-IJ_software	3	software_type_id	Software Type	int	8	0	N		N	software_type	software_type_id	Y	optionlist			Y	Y	Y	Type of software	"SELECT software_type_id, name FROM $TBIJ_SOFTWARE_TYPE ORDER BY name"	
+IJ_software	3	software_type_id	Software Type	int	8	0	N		N		software_type_id	Y	optionlist			Y	Y	Y	Type of software	"SELECT software_type_id, name FROM $TBIJ_SOFTWARE_TYPE ORDER BY name"	
 IJ_software	4	other_type	Other Software Type	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Only fill in if Type is Other		
 IJ_software	5	name	Name	varchar	50	0	Y		N			Y	text	50		Y	Y	Y	Name of software		
 IJ_software	6	version	Version	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Version of software		
@@ -32,7 +32,7 @@ IJ_software	14	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id
 IJ_software	15	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 IJ_software	16	record_status	Record Status	char	1	0	N	N	N							N	N				
 IJ_protocol	1	protocol_id	Protocol ID	int	8	0	N		Y							N	N				pkDEFAULT
-IJ_protocol	2	protocol_type_id	Protocol Type	int	8	0	N		N	protocol_type	protocol_type_id	Y	optionlist			Y	Y	N	Classification of this protocol	"SELECT protocol_type_id, name FROM $TBIJ_PROTOCOL_TYPE ORDER BY name"	
+IJ_protocol	2	protocol_type_id	Protocol Type	int	8	0	N		N		protocol_type_id	Y	optionlist			Y	Y	N	Classification of this protocol	"SELECT protocol_type_id, name FROM $TBIJ_PROTOCOL_TYPE ORDER BY name"	
 IJ_protocol	3	other_type	Other Protocol Type	varchar	50	0	Y		N			N	text	50		Y	Y	N	Only fill in if Type is Other		
 IJ_protocol	4	name	Name	varchar	50	0	Y		N			Y	text	50		Y	Y	Y	Name of the protocol		
 IJ_protocol	5	abstract	Abstract	text	0	0	Y		N			N	textarea	6		Y	Y	N	Abstract of the protocol		
@@ -47,7 +47,7 @@ IJ_protocol	13	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group
 IJ_protocol	14	record_status	Record Status	char	1	0	N	N	N							N	N				
 IJ_slide_type	1	slide_type_id	Slide Type ID	int	8	0	N		Y							N	N				pkDEFAULT
 IJ_slide_type	2	name	Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Short name of this slide type		
-IJ_slide_type	3	organism_id	Organism	int	8	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism for this type	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+IJ_slide_type	3	organism_id	Organism	int	8	0	N		N		organism_id	Y	optionlist			Y	Y	N	Organism for this type	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 IJ_slide_type	4	price	Price	float	8	0	Y		N			N	text	25		Y	Y	N	Arrays Lab price for this slide_type		
 IJ_slide_type	5	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 IJ_slide_type	6	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
@@ -80,8 +80,8 @@ IJ_slide_type_cost	10	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	wor
 IJ_slide_type_cost	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 IJ_labeling_method	1	labeling_method_id	Labeling Method ID	int	8	0	N		Y							N	N				pkDEFAULT
 IJ_labeling_method	2	name	Method Name	varchar	100	0	N		N			Y	text	50		Y	Y	Y	Name of this labeling method		
-IJ_labeling_method	3	xna_type_id	xNA Type	int	8	0	N		N	xna_type	xna_type_id	Y	optionlist			Y	Y	Y	xNA type	"SELECT xna_type_id, xna_type FROM $TBIJ_XNA_TYPE ORDER BY sort_order,xna_type"	
-IJ_labeling_method	4	dye_id	Dye	int	8	0	N		N	dye	dye_id	Y	optionlist			Y	Y	Y	Dye	"SELECT dye_id, dye_name FROM $TBIJ_DYE ORDER BY dye_name"	
+IJ_labeling_method	3	xna_type_id	xNA Type	int	8	0	N		N		xna_type_id	Y	optionlist			Y	Y	Y	xNA type	"SELECT xna_type_id, xna_type FROM $TBIJ_XNA_TYPE ORDER BY sort_order,xna_type"	
+IJ_labeling_method	4	dye_id	Dye	int	8	0	N		N		dye_id	Y	optionlist			Y	Y	Y	Dye	"SELECT dye_id, dye_name FROM $TBIJ_DYE ORDER BY dye_name"	
 IJ_labeling_method	5	desired_micrograms	Desired Micrograms	float	8	0	Y		N			N	text	25		Y	Y	N	Number of micrograms required to label		
 IJ_labeling_method	6	Ebase	Ebase	float	8	0	Y		N			Y	text	25		Y	Y	N	Extinction coefficient for a base		
 IJ_labeling_method	7	MWbase	MWbase	float	8	0	Y		N			Y	text	25		Y	Y	N	Molecular weight for a base in g/mol		
@@ -183,7 +183,7 @@ IJ_array	3	layout_id	Layout	int	8	0	N		N	IJ_array_layout	layout_id	Y	optionlist	
 IJ_array	4	printing_batch_id	Printing Batch	int	8	0	N		N	IJ_printing_batch	printing_batch_id	Y	optionlist			Y	Y	N	Printing batch in which this microarray was produced	"SELECT printing_batch_id, ST.name+' ('+slide_list+') ('+SUBSTRING(CONVERT(varchar(50),date_started,121),1,16)+')' FROM $TBIJ_PRINTING_BATCH PB LEFT JOIN $TBIJ_SLIDE_TYPE ST ON ( PB.slide_type_id=ST.slide_type_id ) ORDER BY ST.name,date_started"	
 IJ_array	5	slide_id	Slide	int	8	0	N		N	IJ_slide	slide_id	Y	scrolloptionlist	4	setArrayName()	Y	Y	N	Slide serial number for this microarray (choose only one slide)	"SELECT S.slide_id, convert(varchar(20),slide_number)+CASE WHEN A.slide_id IS NOT NULL THEN ' - *DONE*' ELSE '' END FROM $TBIJ_SLIDE S LEFT JOIN $TBIJ_ARRAY A ON ( S.slide_id=A.slide_id ) ORDER BY slide_number"	
 IJ_array	6	array_name	Array Name	varchar	50	0	N		N			Y	text	25		Y	Y	Y	"Official Name of this microarray that it will be subsequently referred to (usually just the serial number of the slide, but can be different)"		
-IJ_array	7	array_request_slide_id	Requested Slide ID	int	8	0	N		N	IJ_array_request_slide	array_request_slide_id	Y	scrolloptionlist	4		Y	Y	N	ID assigned to this slide during the array request process	MANUAL	
+IJ_array	7	array_request_slide_id	Requested Slide ID	int	8	0	N		N		array_request_slide_id	Y	scrolloptionlist	4		Y	Y	N	ID assigned to this slide during the array request process	MANUAL	
 IJ_array	8	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Optional comment about this particular microarray		
 IJ_array	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 IJ_array	10	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
@@ -192,7 +192,7 @@ IJ_array	12	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id			
 IJ_array	13	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 IJ_array	14	record_status	Record Status	char	1	0	N	N	N							N	N				
 IJ_labeling	1	labeling_id	Labeling ID	int	8	0	N		Y							N	N				pkDEFAULT
-IJ_labeling	2	array_request_sample_id	Array Request Sample ID	int	8	0	N		N	IJ_array_request_sample	array_request_sample_id	Y	multioptionlist	4		Y	Y	Y	"Sample ID number - Sample name (you may select several samples to enter at once, but note all values will be the same)"	MANUAL	
+IJ_labeling	2	array_request_sample_id	Array Request Sample ID	int	8	0	N		N		array_request_sample_id	Y	multioptionlist	4		Y	Y	Y	"Sample ID number - Sample name (you may select several samples to enter at once, but note all values will be the same)"	MANUAL	
 IJ_labeling	3	protocol_id	Protocol	int	8	0	N		N	IJ_protocol	protocol_id	Y	optionlist			Y	Y	N	Protocol used for labeling	"SELECT protocol_id,P.name FROM $TBIJ_PROTOCOL P LEFT JOIN $TBIJ_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='extract_labeling' ORDER BY P.name"	
 IJ_labeling	4	date_labeled	Date Labeled	datetime	8	0	N	CURRENT_TIMESTAMP	N			N	textdate	30		Y	Y	N	Date/time the labeling was performed		
 IJ_labeling	5	dye_lot_number	Dye Lot #	varchar	25	0	Y		N			Y	text	10		Y	Y	N	Lot number of dye used		

@@ -15,7 +15,7 @@ project	13	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id	
 project	14	record_status	Record Status	char	1	0	N	N	N							N	N				
 hardware	1	hardware_id	Hardware ID	int	8	0	N		Y							N	N				pkDEFAULT
 hardware	2	contact_id	Contact	int	8	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Vendor/creator contact for this hardware	"SELECT contact_id, first_name+' '+last_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY organization,last_name,first_name"	
-hardware	3	hardware_type_id	Hardware Type	int	8	0	N		N	hardware_type	hardware_type_id	Y	optionlist			Y	Y	Y	Type of hardware	"SELECT hardware_type_id, name FROM $TB_HARDWARE_TYPE ORDER BY name"	
+hardware	3	hardware_type_id	Hardware Type	int	8	0	N		N		hardware_type_id	Y	optionlist			Y	Y	Y	Type of hardware	"SELECT hardware_type_id, name FROM $TB_HARDWARE_TYPE ORDER BY name"	
 hardware	4	other_type	Other Hardware Type	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Only fill in if Type is Other		
 hardware	5	make	Make	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Make or Manufacturer of this hardware		
 hardware	6	model	Model	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Model number of this hardware		
@@ -31,7 +31,7 @@ hardware	15	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id
 hardware	16	record_status	Record Status	char	1	0	N	N	N							N	N				
 software	1	software_id	Software ID	int	8	0	N		Y							N	N				pkDEFAULT
 software	2	contact_id	Contact	int	8	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Vendor/creator contact for this software	"SELECT contact_id, first_name+' '+last_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY organization,last_name,first_name"	
-software	3	software_type_id	Software Type	int	8	0	N		N	software_type	software_type_id	Y	optionlist			Y	Y	Y	Type of software	"SELECT software_type_id, name FROM $TB_SOFTWARE_TYPE ORDER BY name"	
+software	3	software_type_id	Software Type	int	8	0	N		N		software_type_id	Y	optionlist			Y	Y	Y	Type of software	"SELECT software_type_id, name FROM $TB_SOFTWARE_TYPE ORDER BY name"	
 software	4	other_type	Other Software Type	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Only fill in if Type is Other		
 software	5	name	Name	varchar	50	0	Y		N			Y	text	50		Y	Y	Y	Name of software		
 software	6	version	Version	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Version of software		
@@ -46,7 +46,7 @@ software	14	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id			
 software	15	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 software	16	record_status	Record Status	char	1	0	N	N	N							N	N				
 protocol	1	protocol_id	Protocol ID	int	8	0	N		Y							N	N				pkDEFAULT
-protocol	2	protocol_type_id	Protocol Type	int	8	0	N		N	protocol_type	protocol_type_id	Y	optionlist			Y	Y	N	Classification of this protocol	"SELECT protocol_type_id, name FROM $TB_PROTOCOL_TYPE ORDER BY name"	
+protocol	2	protocol_type_id	Protocol Type	int	8	0	N		N		protocol_type_id	Y	optionlist			Y	Y	N	Classification of this protocol	"SELECT protocol_type_id, name FROM $TB_PROTOCOL_TYPE ORDER BY name"	
 protocol	3	other_type	Other Protocol Type	varchar	50	0	Y		N			N	text	50		Y	Y	N	Only fill in if Type is Other		
 protocol	4	name	Name	varchar	50	0	Y		N			Y	text	50		Y	Y	Y	Name of the protocol		
 protocol	5	abstract	Abstract	text	0	0	Y		N			N	textarea	6		Y	Y	N	Abstract of the protocol		
@@ -82,7 +82,7 @@ contact	1	contact_id	Contact ID	int	8	0	N		Y							N	N				pkDEFAULT
 contact	2	last_name	Last Name	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Last Name		
 contact	3	first_name	First Name	varchar	50	0	Y		N			N	text	25		Y	Y	Y	First Name		
 contact	4	middle_name	Middle Name	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Middle Name		
-contact	5	contact_type_id	Contact Type	int	8	0	N		N	contact_type	contact_type_id	Y	optionlist			Y	Y	Y	Classification of this contact	"SELECT contact_type_id, name FROM $TB_CONTACT_TYPE ORDER BY name"	
+contact	5	contact_type_id	Contact Type	int	8	0	N		N		contact_type_id	Y	optionlist			Y	Y	Y	Classification of this contact	"SELECT contact_type_id, name FROM $TB_CONTACT_TYPE ORDER BY name"	
 contact	6	other_type	Other Contact Type	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Only fill in if Type is Other		
 contact	7	lab	Lab	varchar	50	0	Y		N			N	text	25		Y	Y	N	Lab in which this contact works		
 contact	8	department	Department	varchar	50	0	Y		N			N	text	25		Y	Y	N	Department for which contact works		
@@ -112,7 +112,7 @@ user_login	1	user_login_id	User Login ID	int	8	0	N		Y							N	N				pkDEFAULT
 user_login	2	contact_id	Contact	int	8	0	N		N	contact	contact_id	Y	optionlist			Y	Y	N	Contact entry for this user	"SELECT contact_id, first_name+' '+last_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY organization,last_name,first_name"	
 user_login	3	username	Username	varchar	50	0	N		N			Y	text	25		Y	Y	Y	user login alias (preferably same as unix user alias)		
 user_login	4	password	password	varchar	50	0	N		N			N	password	25		Y	Y	N	password (leave blank to use unix password of this username)		
-user_login	5	privilege_id	Privilege	int	8	0	N		N	privilege	privilege_id	Y	optionlist			Y	Y	N	General privilege of this user (different privileges may also be set by group)	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
+user_login	5	privilege_id	Privilege	int	8	0	N		N		privilege_id	Y	optionlist			Y	Y	N	General privilege of this user (different privileges may also be set by group)	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
 user_login	6	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 user_login	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 user_login	8	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
@@ -123,7 +123,7 @@ user_login	12	record_status	Record Status	char	1	0	N	N	N							N	N
 user_work_group	1	user_work_group_id	User Login ID	int	8	0	N		Y							N	N				pkDEFAULT
 user_work_group	2	contact_id	Username	int	8	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Username	"SELECT contact_id,username FROM $TB_USER_LOGIN ORDER BY username"	
 user_work_group	3	work_group_id	Work Group	int	8	0	N		N	work_group	contact_id	Y	optionlist			Y	Y	Y	Work Group	"SELECT work_group_id,work_group_name FROM $TB_WORK_GROUP ORDER BY work_group_name"	
-user_work_group	4	privilege_id	Privilege	int	8	0	N		N	privilege	privilege_id	Y	optionlist			Y	Y	Y	Privilege level of this user within this work	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
+user_work_group	4	privilege_id	Privilege	int	8	0	N		N		privilege_id	Y	optionlist			Y	Y	Y	Privilege level of this user within this work	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
 user_work_group	5	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 user_work_group	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 user_work_group	7	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
@@ -135,7 +135,7 @@ user_context	1	user_context_id	User Login ID	int	8	0	N		Y							N	N				pkDEFAULT
 user_context	2	contact_id	Username	int	8	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	Y	Contact/username	"SELECT C.contact_id, username+' ('+first_name+' '+last_name+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_USER_LOGIN UL ON ( C.contact_id = UL.contact_id ) ORDER BY username"	
 user_context	3	project_id	Active Project	int	8	0	N		N	project	project_id	N	optionlist			Y	Y	N	"If an Active Project is selected, only relevant items are displayed in some screens"	"SELECT project_id, username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) ORDER BY username,name"	
 user_context	4	work_group_id	Active Work Group	int	8	0	N		N	work_group	contact_id	N	optionlist			Y	Y	N	New records are written under this work group	"SELECT WG.work_group_id,WG.work_group_name FROM $TB_WORK_GROUP WG JOIN $TB_USER_WORK_GROUP UWG ON ( WG.work_group_id=UWG.work_group_id ) WHERE contact_id=$contact_id ORDER BY WG.work_group_name"	
-user_context	5	privilege_id	Privilege	int	8	0	N		N	privilege	privilege_id	N	optionlist			Y	Y	N	General privilege of this user under this group	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
+user_context	5	privilege_id	Privilege	int	8	0	N		N		privilege_id	N	optionlist			Y	Y	N	General privilege of this user under this group	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
 user_context	6	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 user_context	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 user_context	8	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
@@ -146,7 +146,7 @@ user_context	12	record_status	Record Status	char	1	0	N	N	N							N	N
 table_group_security	1	table_group_security_id	Table Group Security ID	int	8	0	N		Y							N	N				pkDEFAULT
 table_group_security	2	table_group	Table Group	varchar	50	0	N		N			N	optionlist			Y	Y	Y	Table Group	"SELECT DISTINCT table_group,table_group FROM $TB_TABLE_PROPERTY ORDER BY table_group"	
 table_group_security	3	work_group_id	Work Group	int	8	0	N		N	work_group	contact_id	N	optionlist			Y	Y	Y	Associated Work Group	"SELECT work_group_id,work_group_name FROM $TB_WORK_GROUP ORDER BY work_group_name"	
-table_group_security	4	privilege_id	Privilege	int	8	0	N		N	privilege	privilege_id	Y	optionlist			Y	Y	N	Privilege of this work group for this table group	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
+table_group_security	4	privilege_id	Privilege	int	8	0	N		N		privilege_id	Y	optionlist			Y	Y	N	Privilege of this work group for this table group	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
 table_group_security	5	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 table_group_security	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 table_group_security	7	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
