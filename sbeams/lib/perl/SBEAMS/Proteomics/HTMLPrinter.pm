@@ -110,7 +110,7 @@ sub display_page_header {
 
     #print ">>>http_header=$http_header<BR>\n";
 
-    if ($navigation_bar eq "YES") {
+    if (uc($navigation_bar) eq 'YES' || uc($navigation_bar) eq 'SHORT') {
       print qq~
 	<!------- Button Bar -------------------------------------------->
 	<tr><td bgcolor="$BARCOLOR" align="left" valign="top">
@@ -119,6 +119,10 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/main.cgi">$DBTITLE Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi">$SBEAMS_PART Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
+      ~;
+
+      if (uc($navigation_bar) eq 'YES') {
+        print qq~
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project"<nobr>&nbsp;&nbsp;&nbsp;Projects</a></td></tr>
@@ -144,6 +148,10 @@ sub display_page_header {
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Other Tools:</td></tr>
 	<tr><td><a href="http://db.systemsbiology.net:8080/proteomicsToolkit/"><nobr>&nbsp;&nbsp;&nbsp;Proteomics Toolkit</nobr></a></td></tr>
+        ~;
+      }
+
+      print qq~
 	</table>
 	</td>
 
@@ -152,7 +160,8 @@ sub display_page_header {
 	<table border=0 bgcolor="#ffffff" cellpadding=4>
 	<tr><td>
 
-    ~;
+      ~;
+
     } else {
       print qq~
 	</TABLE>
