@@ -381,17 +381,17 @@ print "experiment_list = ",$experiment_list,"\n";
            SH.biosequence_id AS 'biosequence_id',
            S.assumed_charge AS 'assumed_charge',
            AL.annotation_probability AS 'annotation_probability'
-	  FROM proteomics.dbo.search_hit SH
-	  JOIN proteomics.dbo.search S ON ( SH.search_id = S.search_id )
-	  JOIN proteomics.dbo.search_batch SB ON ( S.search_batch_id = SB.search_batch_id )
-	  JOIN proteomics.dbo.msms_spectrum MSS ON ( S.msms_spectrum_id = MSS.msms_spectrum_id )
-	  JOIN proteomics.dbo.fraction F ON ( MSS.fraction_id = F.fraction_id )
-	  JOIN proteomics.dbo.biosequence_set BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
-	  JOIN proteomics.dbo.proteomics_experiment PE ON ( F.experiment_id = PE.experiment_id )
-	  LEFT JOIN proteomics.dbo.quantitation QUAN ON ( SH.search_hit_id = QUAN.search_hit_id )
-	  LEFT JOIN proteomics.dbo.biosequence BS ON ( SB.biosequence_set_id = BS.biosequence_set_id AND SH.reference = BS.biosequence_name )
-	  LEFT JOIN proteomics.dbo.search_hit_annotation SHA ON ( SH.search_hit_id = SHA.search_hit_id )
-	  LEFT JOIN proteomics.dbo.annotation_label AL ON ( SHA.annotation_label_id = AL.annotation_label_id )
+	  FROM $TBPR_SEARCH_HIT SH
+	 INNER JOIN $TBPR_SEARCH S ON ( SH.search_id = S.search_id )
+	 INNER JOIN $TBPR_SEARCH_BATCH SB ON ( S.search_batch_id = SB.search_batch_id )
+	 INNER JOIN $TBPR_MSMS_SPECTRUM MSS ON ( S.msms_spectrum_id = MSS.msms_spectrum_id )
+	 INNER JOIN $TBPR_FRACTION F ON ( MSS.fraction_id = F.fraction_id )
+	 INNER JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
+	 INNER JOIN $TBPR_PROTEOMICS_EXPERIMENT PE ON ( F.experiment_id = PE.experiment_id )
+	  LEFT JOIN $TBPR_QUANTITATION QUAN ON ( SH.search_hit_id = QUAN.search_hit_id )
+	  LEFT JOIN $TBPR_BIOSEQUENCE BS ON ( SB.biosequence_set_id = BS.biosequence_set_id AND SH.reference = BS.biosequence_name )
+	  LEFT JOIN $TBPR_SEARCH_HIT_ANNOTATION SHA ON ( SH.search_hit_id = SHA.search_hit_id )
+	  LEFT JOIN $TBPR_ANNOTATION_LABEL AL ON ( SHA.annotation_label_id = AL.annotation_label_id )
 	 WHERE 1 = 1
 	   AND SB.search_batch_id IN ( $experiment_list )
 	   AND SH.probability >= '$minimum_probability'
