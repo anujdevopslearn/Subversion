@@ -1,0 +1,21 @@
+
+Notes updating antigens and antibodies from PROW
+
+cd $SBEAMS/lib/scripts/Immunostain
+
+wget http://www.ncbi.nlm.nih.gov/prow/guide/45277084.htm
+
+./updateAntigens.pl --source_file 45277084.htm --verbose 2 --testonly
+
+
+
+
+
+
+
+
+
+
+
+
+
