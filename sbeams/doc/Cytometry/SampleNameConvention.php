@@ -25,22 +25,24 @@
 Immunostain image files will be named according to the following convention
 for consistency, with 6 items separated by spaces:
 
-<PRE>
+<Pre>
 02-002p_M_CD44_F_Hoechst 
-  |          |    |       |         |         |
-  |          |    |       |         |         +------ <font color=red>Subsequent Sort Entity</font> 
-  |          |    |       |         |        
-  |          |    |       |         +-------------  <font color=red>Subsequent Sort Type </font> (M = Magnetic Sort, F = Flow Sort)
-  |          |    |       | 
-  |          |    |       +---------------------  <font color=red>First Sort Entity </font>
-  |          |    |    
-  |          |    +---------------------------- <font color=red>First Sort Type </font> (M = Magnetic Sort, F = Flow Sort)
-  |          |   
-  |          +-------------------------------- <font color=red>Tissue Type </font> (p = prostate, b = bladder)
-  +---------------------------------------- <font color=red>Specimen Name as listed in the Immunostain database</font> 
+|     | |  |   |    |     
+|     | |  |   |    +-- <font color=red>Subsequent Sort Entity</font> 
+|     | |  |   |        
+|     | |  |   +----- <font color=red>Subsequent Sort Type </font> (M = Magnetic Sort, F = Flow Sort)
+|     | |  | 
+|     | |  +------------- <font color=red>First Sort Entity </font>
+|     | |
+|     | +----------------- <font color=red>First Sort Type </font> (M = Magnetic Sort, F = Flow Sort)
+|     |   
+|     +--------------------- <font color=red>Tissue Type </font> (p = prostate, b = bladder)
+|
++---------------------------- <font color=red>Specimen Name as listed in the Immunostain database</font> 
 
-</PRE>
-<P> <font color=red>Sort Type</font> and<font colo =red> Sort Entity</font> can be repeated as a unit n-times, depending on the number of sorts.</P>
+</Pre>
+
+<P> <font color=red>Sort Type</font> and<font color =red> Sort Entity</font> can be repeated as a unit n-times, depending on the number of sorts.</P>
 
 <BR>
 <BR>
