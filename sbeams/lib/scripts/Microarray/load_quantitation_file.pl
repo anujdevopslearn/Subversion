@@ -185,10 +185,12 @@ sub handleRequest {
 
   #### Using number of channels, populate array_channel_scan
   my %parameters = %{$data{parameters}};
+
   print map { "$_ => $parameters{$_}\n" } keys %parameters;
   my $channel_count = ${$data{parameters}}{n_channels};
   print "channel count = $channel_count";
   print "--> $array_id\n";
+
   @array_channel_scan_ids = insert_update_array_channel_scan(array=>$array_id,
 							     protocol=>$s_protocol,
 							     channel_count=>$channel_count,
@@ -196,7 +198,6 @@ sub handleRequest {
 
   #### Handle scan_quantitation information
   my $acs_ref = \@array_channel_scan_ids;
-
   @scan_quantitation_ids = insert_update_scan_quantitation(file=>$quant_file,
 							   protocol=>$q_protocol,
 							   scan_ref=>$acs_ref,
@@ -204,7 +205,6 @@ sub handleRequest {
 
   #### Deal with actual quantitation data
   my $data_ref = \%data;;
-
   insert_update_scan_element (array=>$array_id,
 			       data=>$data_ref,
 			       scan_ids=>\@scan_quantitation_ids);
@@ -223,7 +223,7 @@ sub insert_update_scan_element {
     #### Define standard variables
     my ($sql, $array_id, $layout_id, $data_ref, $n_scan_elements);
     my ($scan_ref,@scan_ids, $scan_id, $scan_id_ref);
-    my (%values, @tags);
+    my (@values, @column_tags);
     my (@layout_ids, $n_layout_ids);
     my (@element_ids, $element_id, $n_element_ids);
     my (@scan_element_ids);
@@ -237,9 +237,9 @@ sub insert_update_scan_element {
     $scan_ref = $args{"scan_ids"}
     || die "ERROR[$SUB_NAME]: scan_id_ref not passed!\n";
 
-    %values = %{$data_ref->{"parameters"}};
-    @tags = @{$data_ref->{"column_tags"}};
-    @scan_ids = @$scan_ref;
+    @values = @{$data_ref->{"spots"}};
+    @column_tags = @{$data_ref->{"column_tags"}};
+    @scan_ids = @{$scan_ref};
 
     #### Get layout_id from array table
     $sql = qq~
@@ -248,10 +248,13 @@ sub insert_update_scan_element {
 	WHERE A.array_id = $array_id
 	AND A.record_status != 'D'
     ~;
+
     @layout_ids = $sbeams->selectOneColumn($sql);
     $n_layout_ids = @layout_ids;
+
+    #### Check to see if there's exactly one layout_id
     if ($n_layout_ids  < 1) {
-	die "ERROR[$SUB_NAME]: no layout_id found.  This means array \"$array_id\" probably is not defined!\n\n";
+	die "ERROR[$SUB_NAME]: no layout_id found. \"$array_id\" probably is not defined!\n\n";
     }
     unless( $n_layout_ids == 1) {
 	print "WARNING[$SUB_NAME]: more than one layout_id found!\n";
@@ -268,24 +271,32 @@ sub insert_update_scan_element {
     @element_ids = $sbeams->selectSeveralColumns($sql);
     $n_element_ids = @element_ids;
 
-    #### Make a hash of row/col information to element id
-    my %id_hash;
-    foreach my $holder (@element_ids) {
-	$id_hash{$element_ids[1],$element_ids[2], $element_ids[3], $element_ids[4]} = $element_ids[0];
+    #### Check to see that an array_element exists
+    unless ($n_element_ids  >0) {
+	die "ERROR[$SUB_NAME]: no layout_id found for array \'$array_id\'!\n\n";
     }
 
-    foreach my $key (%id_hash) {
-	print "key => %id_hash{$key}\n";
-	my $pause = <STDIN>;
+    #### Make a hash of row/col information to element id
+    my %id_hash;
+    
+    foreach my $holder (@element_ids) {
+#	print "$holder->[1],$holder->[2],$holder->[3],$holder->[4]=>$holder->[0]\n";
+#	my $pause = <STDIN>;
+	$id_hash{$holder->[1],
+		 $holder->[2], 
+		 $holder->[3], 
+		 $holder->[4]} = $holder->[0];
     }
 
     #### Find out if the appropriate scan_element info is already populated
     $sql = qq~
-	SELECT count(*) AS 'count'
-	FROM ${DATABASE}scan_element 
+	SELECT array_element_id, scan_element_id
+	FROM ${DATABASE}scan_element
 	WHERE scan_quantitation_id = '$scan_id'
 	~;
-    my ($n_scan_elements) = $sbeams->selectOneColumn($sql);
+    
+    my %scan_elements = $sbeams->selectTwoColumnHash($sql);
+    my ($n_scan_elements) = %scan_elements;
 
     if ($n_scan_elements == $n_element_ids  && $n_scan_elements > 0) {
 	$insert = 0;
@@ -296,48 +307,135 @@ sub insert_update_scan_element {
     }
 
     print "scan count = $#scan_ids\n";
-    print "element count = $#element_ids\n";
-    
+    print "element count = $n_element_ids\n";
 
-    foreach $scan_id (@scan_ids) {
-	foreach $element_id(@element_ids) {
-	    my (%rowdata, $rowdata_ref);
-	    $rowdata{scan_quantitation_id} = "$scan_id";
-	    $rowdata{array_element_id} = "$element_id";
+    for(my $i=0;$i<=$#scan_ids;$i++) {
+	for(my $j=0;$j<=$#element_ids;$j++) {
+	    my (%rowdata, $rowdata_ref, $return_id);
+	    $rowdata{scan_quantitation_id} = "$scan_ids[$i]";
+	    $rowdata{array_element_id} = "$element_ids[$j]->[0]";
 	    $rowdata_ref = \%rowdata;
-	    
-	    my $return_id = $sbeams->insert_update_row(insert=>$insert,
-						       update=>$update,
-						       table_name=>"${DATABASE}scan_element",
-						       rowdata_ref=>$rowdata_ref,
-						       PK=>"scan_element_id",
-						       return_PK => 1,
-						       verbose=>$VERBOSE,
-						       testonly =>$TESTONLY,
-						       add_audit_parameters=>1
-						       );
+
+	    if ($update) {
+		my $PK_value = $scan_elements{$element_ids[$j]->[0]}
+		|| die "ERROR[$SUB_NAME]: trying to UPDATE, but no pk_value found\n\n";
+		
+		$return_id = $sbeams->insert_update_row(insert=>$insert,
+							update=>$update,
+							table_name=>"${DATABASE}scan_element",
+							rowdata_ref=>$rowdata_ref,
+							PK=>"scan_element_id",
+							PK_value=>"$PK_value",
+							return_PK=>1,
+							verbose=>$VERBOSE,
+							testonly=>$TESTONLY,
+							add_audit_parameters=>1
+							);
+	    }else {
+		$return_id = $sbeams->insert_update_row(insert=>$insert,
+							update=>$update,
+							table_name=>"${DATABASE}scan_element",
+							rowdata_ref=>$rowdata_ref,
+							PK=>"scan_element_id",
+							return_PK => 1,
+							verbose=>$VERBOSE,
+							testonly =>$TESTONLY,
+							add_audit_parameters=>1
+							);
+	    }
 	    push (@scan_element_ids, $return_id);
 	}
     }
 
 
-    #### Scan_element is done.  Proceed to scan_element_quantitation
-    my %types = define_quantitation_type_ids();
-    my $i;
+    #### Scan_element is populated.  Proceed to scan_element_quantitation
 
-    for ($i=0;$i<=$#scan_ids;$i++){
-	my $prefix = "ch".($i+1)."_";
-	foreach my $temp (keys %types) {
-#	    print $prefix.$temp."\n";
+
+    #### Check if scan_element_quantitation has already been populated
+    #### If it has, add the id to an array of ids to UPDATE instead of INSERT
+    my %update_ids;
+    foreach my $scan_element_id(@scan_element_ids) {
+	$sql = qq!
+	    SELECT scan_element_quantitation_id
+	    FROM ${DATABASE}scan_element_quantitation
+	    WHERE quantitation_type_id = '$quant_type_id'
+	    AND scan_element_id = '$scan_element_id'
+	    !;
+	my ($n_scan_element_ids) = $sbeams->selectOneColumn($sql);
+	if ($n_scan_element_ids == 0) {
+	    $update{$scan_element_id} = $scan_element_quantitation_id; 
 	}
     }
-    if ($VERBOSE == 2){
-	print "----------------------------\n";
-	print map { "$_ => $types{$_}\n" } keys %types;
-	print "----------------------------\n";
+
+    #### Link quantitation_type_id with what we see in the quantitation file
+    my %types = define_quantitation_type_ids();
+   
+    #### Find out coordinate columns
+    my ($mrow, $mcol, $rrow, $rcol);
+    for (my $j=0;$j<=$#column_tags;$j++) {
+	if ($column_tags[$j] =~ /^(metaRow|meta_row)$/i){
+	    $mrow = $j;
+	}elsif($column_tags[$j] =~ /^(metaCol|meta_col)$/i){
+	    $mcol = $j;
+	}elsif($column_tags[$j] =~ /^(relRow|rel_row)$/i){
+	    $rrow = $j;
+	}elsif($column_tags[$j] =~ /^(relCol|rel_col)/i){
+	    $rcol = $j;
+	}
+    }
+    unless ($mrow && $mcol && $rrow && $rcol) {
+	die "ERROR[$SUB_NAME]: coordinates not fully assigned\n";
     }
 
-    
+    #### Go through each spot, extract info to get scan_element_id, INSERT or UPDATE
+    for (my $t=0;defined($values[$t]);$t++) {
+	my $scan_element_id = $id_hash{${values[$t]}[$mrow], 
+				       ${values[$t]}[$mcol],
+				       ${values[$t]}[$rrow],
+				       ${values[$t]}[$rcol]};
+	
+	for (my $counter=0;$counter<=$#column_tags;$counter++) {
+	    my ($rowdata, $rowdata_ref, $quant_type_id);
+	    $column_tags[$counter] =~ /(ch\d+_)(.*)/;
+	    $quant_type_id = $types{$2};
+	    $rowdata{scan_element_id} = '$scan_element_id';
+	    $rowdata{quantitation_type_id} = '$quant_type_id';
+	    $rowdata{scan_quantitation_number} =${values[$t]}[$counter];
+	    $rowdata_ref = \%rowdata;
+	    
+	    if (exists($types{$2})){
+		if (exists($update{$scan_element_id})){
+		    my $PK_value = $update{$can_element_id};
+		    $return_id = $sbeams->insert_update_row(insert=>0,
+							    update=>1,
+							    table_name=>"${DATABASE}scan_element_quantitation",
+							    rowdata_ref=>$rowdata_ref,
+							    PK=>"scan_quantitation_id",
+							    return_PK => 1,
+							    PK_value=>$PK_value,
+							    verbose=>$VERBOSE,
+							    testonly=>$TESTONLY, 
+							    add_audit_parameters=>1
+							    );
+		}else{ 
+		    $return_id = $sbeams->insert_update_row(insert=>1,
+							    update=>0,
+							    table_name=>"${DATABASE}scan_element_quantitation",
+							    rowdata_ref=>$rowdata_ref,
+							    PK=>"scan_quantitation_id",
+							    return_PK => 1,
+							    verbose=>$VERBOSE,
+							    testonly=>$TESTONLY, 
+							    add_audit_parameters=>1
+							    );
+	    }
+	    #### PROGRESS ENDS HERE
+#	    printf ("%25s = %s,%s\n", $column_tags[$counter], ${$values[$t]}[$counter],$quant_type);
+#	    print "Press enter to continue...\n";
+#	    my $pause = <STDIN>;
+	    }
+	}
+    }
 }
     
 
@@ -431,7 +529,6 @@ sub insert_update_scan_quantitation {
     || die "ERROR[$SUB_NAME]: file not passed!\n";
 
     @acs_ids = @$acs_ref;
-
     #### See if the scan_quantitations already exist
     $sql = qq~
 	SELECT scan_quantitation_id
@@ -456,26 +553,41 @@ sub insert_update_scan_quantitation {
     $file_name = $file;
     $file_name =~ s(.*/)();
 
-    foreach $acs_id (@acs_ids){
-	my (%rowdata, $rowdata_ref);
+    for (my $i=0; $i<=$#acs_ids;$i++) {
+	my (%rowdata, $rowdata_ref, $return_id);
 
-	$rowdata{array_scan_id} = "$acs_id";
+	$rowdata{array_scan_id} = "$acs_ids[$i]";
 	$rowdata{scan_quantitation_name} = "$file_name";
 	$rowdata{protocol_id} = "$protocol";
 	$rowdata{include_flag} = "1"; #what does include_flag do?
 	$rowdata{file_location_id} = "$file_id";
 	$rowdata_ref = \%rowdata;
 	
-	my $return_id = $sbeams->insert_update_row(insert=>$insert,
-						   update=>$update,
-						   table_name=>"${DATABASE}scan_quantitation",
-						   rowdata_ref=>$rowdata_ref,
-						   PK=>"scan_quantitation_id",
-						   return_PK => 1,
-						   verbose=>$VERBOSE,
-						   testonly=>$TESTONLY, 
-						   add_audit_parameters=>1
-						   );
+	if ($update) {
+	    my $PK_value = $quant_ids[$i];
+	    $return_id = $sbeams->insert_update_row(insert=>$insert,
+						    update=>$update,
+						    table_name=>"${DATABASE}scan_quantitation",
+						    rowdata_ref=>$rowdata_ref,
+						    PK=>"scan_quantitation_id",
+						    PK_value=>$PK_value,
+						    return_PK => 1,
+						    verbose=>$VERBOSE,
+						    testonly=>$TESTONLY, 
+						    add_audit_parameters=>1
+						    );
+	} else {
+	    $return_id = $sbeams->insert_update_row(insert=>$insert,
+						    update=>$update,
+						    table_name=>"${DATABASE}scan_quantitation",
+						    rowdata_ref=>$rowdata_ref,
+						    PK=>"scan_quantitation_id",
+						    return_PK => 1,
+						    verbose=>$VERBOSE,
+						    testonly=>$TESTONLY, 
+						    add_audit_parameters=>1
+						    );
+	}
 	push (@return_ids, $return_id);
     }
     return @return_ids;
@@ -519,16 +631,17 @@ sub insert_update_array_channel_scan {
     my @array_channel_scan_ids = $sbeams->selectOneColumn($sql) ;
     my $n_array_channel_scan_ids = @array_channel_scan_ids;
 
+    #### Determine whether to INSERT or UPDATE.
     if ($n_array_channel_scan_ids == $channel_count) {
 	$update = 1;
 	$insert = 0;
-	return;
     }elsif($n_array_channel_scan_ids == 0) {
 	$update = 0;
 	$insert = 1;		    
     }else {
 	die "ERROR[$SUB_NAME]: channel_scan_ids not equal to channel_count!\n"; 
     }
+
     #### INSERT/UPDATE the array_channel_scan data for each channel
     #### For each channel, get the id, and then fire up the info
     $sql = qq~
@@ -538,10 +651,11 @@ sub insert_update_array_channel_scan {
     ~;
 
     my @channel_ids = $sbeams->selectOneColumn($sql);
-
+    
     for($i=0;$i<$channel_count;$i++) {
 	my $channel_id = $channel_ids[$i];
-	my $temp = 1;
+	my $temp = 1;	
+	my $return_id;
 	$rowdata{array_id} = "$array_id";
 	$rowdata{protocol_id} = "$protocol";
 	$rowdata{channel_id} ="$channel_id";
@@ -550,23 +664,242 @@ sub insert_update_array_channel_scan {
 
 	$rowdata_ref = \%rowdata;
 	
-	my $return_id = $sbeams->insert_update_row(insert=>$insert,
-						   update=>$update,
-						   table_name=>"${DATABASE}array_channel_scan",
-						   rowdata_ref=>$rowdata_ref,
-						   PK=>"array_scan_id",
-						   return_PK => 1,
-						   verbose=>$VERBOSE,
-						   testonly=>$TESTONLY,
-						   add_audit_parameters=>1
-						   );
-	if ($VERBOSE==2) {
-	    print "array_scan_id is $return_id\n";
+	if ($update) {
+	    my $PK_value = $array_channel_scan_ids[$i];
+	    $return_id = $sbeams->insert_update_row(insert=>$insert,
+						    update=>$update,
+						    table_name=>"${DATABASE}array_channel_scan",
+						    rowdata_ref=>$rowdata_ref,
+						    PK=>"array_scan_id",
+						    PK_value => $PK_value,
+						    return_PK => 1,
+						    verbose=>$VERBOSE,
+						    testonly=>$TESTONLY,
+						    add_audit_parameters=>1
+						    );   				    
+	}else{
+	    $return_id = $sbeams->insert_update_row(insert=>$insert,
+						       update=>$update,
+						       table_name=>"${DATABASE}array_channel_scan",
+						       rowdata_ref=>$rowdata_ref,
+						       PK=>"array_scan_id",
+						       return_PK => 1,
+						       verbose=>$VERBOSE,
+						       testonly=>$TESTONLY,
+						       add_audit_parameters=>1
+						       );
+	    
 	}
 	push (@return_ids, $return_id);
     }
     return @return_ids;
 } # end insert_update_array_channel_scan
+
+
+###############################################################################
+# get_file_information
+###############################################################################
+sub get_file_information {
+    my %args = @_;
+    my $SUB_NAME = "get_file_information";
+    if ($VERBOSE == 2) { print "\n\nEntering $SUB_NAME\n\n"; }
+    
+    #### Define standard variables
+    my ($file_dir, $file_name, $source_file);
+
+    #### Decode argument list
+    $source_file = $args{'source_file'}
+    || die "ERROR[$SUB_NAME]: source file not passed!\n";
+
+    #### Deal with tildes
+    $source_file =~ s{^~([^/]*)}{$1 ? (getpwnam($1))[7]:($ENV{HOME}||(getpwuid($>))[7])}ex;
+
+    #### Separate file name from file's directory
+    $source_file =~ /(.*\/.*\/)(.*)/;
+    $file_dir  = $1;
+    $file_name = $2;
+
+    #### Alter directory if we have a relative path
+    if ($file_dir !~ /^\//) {
+	my $current_dir = cwd();
+	$file_dir = $current_dir."/".$file_dir;
+    }
+    
+    #### Verify that the separation was successful
+    if (!defined($file_dir) || !defined($file_name)) {
+	print "ERROR[$SUB_NAME]: could not extract file name and directory\n";
+	exit 0;
+    }
+
+    #### Verify that the file exists
+    my $test_path = $file_dir.$file_name;
+    unless(-e $test_path) {
+	die "ERROR[$SUB_NAME]: $test_path does not seem to exist!\n";
+    }
+
+    return ($file_dir, $file_name);
+} # end get_file_information
+
+###############################################################################
+# insert_update_file_information
+###############################################################################
+sub insert_update_file_information {
+    my %args = @_;
+    my $SUB_NAME = "insert_update_file_information";
+    if ($VERBOSE == 2) { print "\n\nEntering $SUB_NAME\n\n";}
+    
+    #### Define standard variables
+    my ($sql, $file_name, $file_path, $file_type);
+    my ($file_path_PK, $file_type_PK, $file_location_PK);
+    
+    #### Decode the argument list
+    $file_name = $args{'file_name'}
+    || die "ERROR[$SUB_NAME]: file name not passed!\n";
+    $file_path = $args{'file_path'}
+    || die "ERROR[$SUB_NAME]: file path not passed!\n";
+    $file_type = $args{'file_type'}
+    || die "ERROR[$SUB_NAME]: file type not passed!\n";
+
+    my $module = $sbeams->getSBEAMS_SUBDIR();
+    
+    #### Address file path information
+    $sql = qq~
+	SELECT FP.file_path_id
+	FROM ${DATABASE}file_path FP
+	WHERE FP.file_path = '$file_path'
+	AND FP.record_status != 'D'
+    ~;
+
+    my @file_path_ids = $sbeams->selectOneColumn($sql);
+    my $n_file_paths = @file_path_ids;
+
+    my (%file_path_rowdata, $file_path_rowdata_ref, $file_path_PK);
+
+    print "--->FILE PATH UPDATE<---\n\n";
+
+    if ($n_file_paths > 1) {
+	die "ERROR[$SUB_NAME]: more than one file path!\n";
+    } 
+    elsif ($n_file_paths == 1) {
+	$file_path_PK =  $file_path_ids[0];
+	print "file_path already exists: Aborting INSERT\n\n";
+    }
+    else {
+	#### INSERT the file_path information
+	
+	#FIX ME: Should we use different information for all these fields?
+	$file_path_rowdata{file_path}        = "$file_path";
+	$file_path_rowdata{file_path_name}   = "$file_path";
+	$file_path_rowdata{file_path_desc}   = "$file_path";
+	$file_path_rowdata{server_id}        = "1";
+
+	$file_path_PK = 'file_path_id';
+	$file_path_rowdata_ref = \%file_path_rowdata;
+
+	if ($VERBOSE > 0) {print "INSERTing file path information\n";}
+	$file_path_PK = $sbeams->insert_update_row(insert=>1,
+						   update=>0,
+						   table_name=>"${DATABASE}file_path",
+						   rowdata_ref=>$file_path_rowdata_ref,
+						   PK=>"file_path_id",
+						   return_PK => 1,
+						   verbose=>$VERBOSE,
+						   testonly=>$TESTONLY,
+						   add_audit_parameters=>1
+						   );	
+    }
+
+    #### Address file type information
+    $sql = qq~
+	SELECT FT.file_type_id
+	FROM ${DATABASE}file_type FT
+	WHERE FT.file_type_name = '$file_type'
+	AND FT.record_status != 'D'
+    ~;
+
+    my @file_type_ids = $sbeams->selectOneColumn($sql);
+    my $n_file_types = @file_type_ids;
+
+
+    my (%file_type_rowdata, $file_type_rowdata_ref, $file_type_PK);
+
+    print "--->FILE TYPE UPDATE<---\n\n";
+
+    if ($n_file_types > 1) {
+	die "ERROR[$SUB_NAME]: more than one file type!\n";
+    }
+    elsif ( $n_file_types == 1) {
+	$file_type_PK = $file_type_ids[0];
+	print "file_type already exists: Aborting INSERT\n\n";
+    }
+    else{
+	$file_type_rowdata{file_type_name} = $file_type;
+	$file_type_rowdata_ref = \%file_type_rowdata;
+
+	if ($VERBOSE > 0) {print "INSERTing file_type information\n";}
+	$file_type_PK = $sbeams->insert_update_row(insert=>1,
+						   update=>0,
+						   table_name=>"${DATABASE}file_type",
+						   rowdata_ref=>$file_type_rowdata_ref,
+						   PK=>"file_type_id",
+						   return_PK=>1,
+						   verbose=>$VERBOSE,
+						   testonly=>$TESTONLY,
+						   add_audit_parameters=>1
+						   );
+    }
+
+    #### Address file location information
+    $sql = qq~
+	SELECT FL.file_location_id
+	FROM ${DATABASE}file_location FL
+	WHERE FL.file_name  = '$file_name'
+	AND FL.file_type_id = '$file_type_PK'
+	AND FL.file_path_id = '$file_path_PK'
+	AND FL.record_status != 'D'
+    ~;
+
+    my @file_location_ids = $sbeams->selectOneColumn($sql);
+    my $n_file_locations = @file_location_ids;
+
+
+    my (%file_location_rowdata, $file_location_rowdata_ref, $file_location_PK);
+
+    print "--->FILE LOCATION UPDATE<---\n\n";
+
+    if ($n_file_locations > 1) {
+	die "ERROR[$SUB_NAME]: more than one file location!\n\n";
+    }
+    elsif ($n_file_locations == 1) {
+	print "file \"$file_name\" already exists: Aborting INSERT\n\n";
+	$file_location_PK = $file_location_ids[0];
+    }
+    else {
+	$file_location_rowdata{file_name} = $file_name;
+	$file_location_rowdata{file_type_id} = $file_type_PK;
+	$file_location_rowdata{file_path_id} = $file_path_PK;
+	$file_location_rowdata_ref = \%file_location_rowdata;
+
+	if ($VERBOSE > 0) {print "INSERTing file_location information\n";}
+	$file_location_PK = $sbeams->insert_update_row(insert=>1,
+						       update=>0,
+						       table_name=>"${DATABASE}file_location",
+						       rowdata_ref=>$file_location_rowdata_ref,
+						       PK=>"file_location_id",
+						       return_PK=>1,
+						       verbose=>$VERBOSE,
+						       testonly=>$TESTONLY,
+						       add_audit_paramters=>1
+						       );
+    }
+    return $file_location_PK;
+} # end insert_update_file_information
+
+
+
+
+
+
 
 ###############################################################################
 # get_quantitation_file - NOT USED!?!
@@ -677,205 +1010,6 @@ sub print_protocol_options {
 #} # end load_quantitation_file
 
 ###############################################################################
-# get_file_information
-###############################################################################
-sub get_file_information {
-    my %args = @_;
-    my $SUB_NAME = "get_file_information";
-    if ($VERBOSE == 2) { print "\n\nEntering $SUB_NAME\n\n"; }
-    
-    #### Define standard variables
-    my ($file_dir, $file_name, $source_file);
-
-    #### Decode argument list
-    $source_file = $args{'source_file'}
-    || die "ERROR[$SUB_NAME]: source file not passed!\n";
-
-    #### Deal with tildes
-    $source_file =~ s{^~([^/]*)}{$1 ? (getpwnam($1))[7]:($ENV{HOME}||(getpwuid($>))[7])}ex;
-
-    #### Separate file name from file's directory
-    $source_file =~ /(.*\/.*\/)(.*)/;
-    $file_dir  = $1;
-    $file_name = $2;
-
-    #### Alter directory if we have a relative path
-    if ($file_dir !~ /^\//) {
-	my $current_dir = cwd();
-	$file_dir = $current_dir."/".$file_dir;
-    }
-    
-    #### Verify that the separation was successful
-    if (!defined($file_dir) || !defined($file_name)) {
-	print "ERROR[$SUB_NAME]: could not extract file name and directory\n";
-	exit 0;
-    }
-
-    #### Verify that the file exists
-    my $test_path = $file_dir.$file_name;
-    unless(-e $test_path) {
-	die "ERROR[$SUB_NAME]: $test_path does not seem to exist!\n";
-    }
-
-    return ($file_dir, $file_name);
-} # end get_file_information
-
-###############################################################################
-# insert_update_file_information
-###############################################################################
-sub insert_update_file_information {
-    my %args = @_;
-    my $SUB_NAME = "insert_update_file_information";
-    if ($VERBOSE == 2) { print "\n\nEntering $SUB_NAME\n\n";}
-    
-    #### Define standard variables
-    my ($sql, $file_name, $file_path, $file_type);
-    my ($file_path_PK, $file_type_PK, $file_location_PK);
-    
-    #### Decode the argument list
-    $file_name = $args{'file_name'}
-    || die "ERROR[$SUB_NAME]: file name not passed!\n";
-    $file_path = $args{'file_path'}
-    || die "ERROR[$SUB_NAME]: file path not passed!\n";
-    $file_type = $args{'file_type'}
-    || die "ERROR[$SUB_NAME]: file type not passed!\n";
-
-    my $module = $sbeams->getSBEAMS_SUBDIR();
-    
-    #### Address file path information
-    $sql = qq~
-	SELECT FP.file_path_id
-	FROM ${DATABASE}file_path FP
-	WHERE FP.file_path = '$file_path'
-	AND FP.record_status != 'D'
-    ~;
-
-    my @file_path_ids = $sbeams->selectOneColumn($sql);
-    my $n_file_paths = @file_path_ids;
-
-    my (%file_path_rowdata, $file_path_rowdata_ref, $file_path_PK);
-
-    print "--->FILE PATH UPDATE<---\n\n";
-
-    if ($n_file_paths > 1) {
-	die "ERROR[$SUB_NAME]: more than one file path!\n";
-    } 
-    elsif ($n_file_paths == 1) {
-	$file_path_PK =  $file_path_ids[0];
-	"file_path already exists: Aborting INSERT\n\n";
-    }
-    else {
-	#### INSERT the file_path information
-	
-	#FIX ME: Should we use different information for all these fields?
-	$file_path_rowdata{file_path}        = "$file_path";
-	$file_path_rowdata{file_path_name}   = "$file_path";
-	$file_path_rowdata{file_path_desc}   = "$file_path";
-	$file_path_rowdata{server_id}        = "1";
-
-	$file_path_PK = 'file_path_id';
-	$file_path_rowdata_ref = \%file_path_rowdata;
-
-	if ($VERBOSE > 0) {print "INSERTing file path information\n";}
-	$file_path_PK = $sbeams->insert_update_row(insert=>1,
-						   update=>0,
-						   table_name=>"${DATABASE}file_path",
-						   rowdata_ref=>$file_path_rowdata_ref,
-						   PK=>"file_path_id",
-						   return_PK => 1,
-						   verbose=>$VERBOSE,
-						   testonly=>$TESTONLY,
-						   add_audit_parameters=>1
-						   );	
-    }
-
-    #### Address file type information
-    $sql = qq~
-	SELECT FT.file_type_id
-	FROM ${DATABASE}file_type FT
-	WHERE FT.file_type_name = '$file_type'
-	AND FT.record_status != 'D'
-    ~;
-
-    my @file_type_ids = $sbeams->selectOneColumn($sql);
-    my $n_file_types = @file_type_ids;
-
-
-    my (%file_type_rowdata, $file_type_rowdata_ref, $file_type_PK);
-
-    print "--->FILE TYPE UPDATE<---\n\n";
-
-    if ($n_file_types > 1) {
-	die "ERROR[$SUB_NAME]: more than one file type!\n";
-    }
-    elsif ( $n_file_types == 1) {
-	$file_type_PK = $file_type_ids[0];
-	print "file_type already exists: Aborting INSERT\n\n";
-    }
-    else{
-	$file_type_rowdata{file_type_name} = $file_type;
-	$file_type_rowdata_ref = \%file_type_rowdata;
-
-	if ($VERBOSE > 0) {print "INSERTing file_type information\n";}
-	$file_type_PK = $sbeams->insert_update_row(insert=>1,
-						   update=>0,
-						   table_name=>"${DATABASE}file_type",
-						   rowdata_ref=>$file_type_rowdata_ref,
-						   PK=>"file_type_id",
-						   return_PK=>1,
-						   verbose=>$VERBOSE,
-						   testonly=>$TESTONLY,
-						   add_audit_parameters=>1
-						   );
-    }
-
-    #### Address file location information
-    $sql = qq~
-	SELECT FL.file_location_id
-	FROM ${DATABASE}file_location FL
-	WHERE FL.file_name  = '$file_name'
-	AND FL.file_type_id = '$file_type_PK'
-	AND FL.file_path_id = '$file_path_PK'
-	AND FL.record_status != 'D'
-    ~;
-
-    my @file_location_ids = $sbeams->selectOneColumn($sql);
-    my $n_file_locations = @file_location_ids;
-
-
-    my (%file_location_rowdata, $file_location_rowdata_ref, $file_location_PK);
-
-    print "--->FILE LOCATION UPDATE<---\n\n";
-
-    if ($n_file_locations > 1) {
-	die "ERROR[$SUB_NAME]: more than one file location!\n\n";
-    }
-    elsif ($n_file_locations == 1) {
-	print "WARNING[$SUB_NAME]: File \"$file_name\" appears to already exist! Aborting INSERT!\n\n";
-	$file_location_PK = $file_location_ids[0];
-    }
-    else {
-	$file_location_rowdata{file_name} = $file_name;
-	$file_location_rowdata{file_type_id} = $file_type_PK;
-	$file_location_rowdata{file_path_id} = $file_path_PK;
-	$file_location_rowdata_ref = \%file_location_rowdata;
-
-	if ($VERBOSE > 0) {print "INSERTing file_location information\n";}
-	$file_location_PK = $sbeams->insert_update_row(insert=>1,
-						       update=>0,
-						       table_name=>"${DATABASE}file_location",
-						       rowdata_ref=>$file_location_rowdata_ref,
-						       PK=>"file_location_id",
-						       return_PK=>1,
-						       verbose=>$VERBOSE,
-						       testonly=>$TESTONLY,
-						       add_audit_paramters=>1
-						       );
-    }
-    return $file_location_PK;
-} # end insert_update_file_information
-
-###############################################################################
 # insert_scan_quantitaiton
 ###############################################################################
 #sub insert_scan_quantitation {
@@ -894,7 +1028,7 @@ sub insert_update_file_information {
 #    || die "ERROR[$SUB_NAME]: file path not passed\n";
 #    my $file_location_id = $args{'file_location_id'}
 #    || die "ERROR[$SUB_NAME]: file_location_id not passed.  ".
-	"This is indicative of something wrong in previous steps\n";
+#	"This is indicative of something wrong in previous steps\n";
 
     #### Get db sub-directory
 #    my $module = $sbeams->getSBEAMS_SUBDIR();
@@ -969,95 +1103,3 @@ sub get_quantitation_file_status {
 
 } # end  get_quantitation_file_status
 
-
-  #### Definitions for loop
-#  my ($scan_element_quantitation_id,$biosequence_name,$biosequence_desc,$biosequence_seq);
-#  my $counter = 0;
-#  my ($information,$sequence,$insert,$update);
-#  $information = "####";
-
-
-  #### Loop over all data in the file
-#  my $loopflag = 1;
-#  while ($loopflag) {
-
-    #### At the end of file, set loopflag to 0, but finish this loop, writing
-    #### the last entry to the database
-#    unless (defined($line=<INFILE>)) {
-#      $loopflag = 0;
-#      $line = ">BOGUS DESCRIPTION";
-#    }
-
-    #### Strip CRs of all flavors
-#    $line =~ s/[\n\r]//g;
-
-    #### If the line begins with ">" and it's not the first, write the
-    #### previous sequence to the database
-#    if (($line =~ /^>/) && ($information ne "####")) {
-#      my %rowdata;
-#      $information =~ /^>(\S+)/;
-#      $rowdata{biosequence_name} = $1;
-#      $information =~ /^>(\S+)\s(.+)/;
-#      $rowdata{biosequence_desc} = $2;
-#      $rowdata{biosequence_set_id} = $biosequence_set_id;
-#      $rowdata{biosequence_seq} = $sequence unless ($skip_sequence);
-
-      #### Do special parsing depending on which genome set is being loaded
-#      $result = specialParsing(biosequence_set_name=>$set_name,
-#        rowdata_ref=>\%rowdata);
-
-
-      #### If we're updating, then try to find the appropriate record
-      #### The whole program could be sped up quite a bit by doing a single
-      #### select and returning a single hash at the beginning of the program
-#      $insert = 1; $update = 0;
-#      if ($update_existing) {
-#        $biosequence_id = get_biosequence_id(
-#          biosequence_set_id => $biosequence_set_id,
-#          biosequence_name => $rowdata{biosequence_name});
-#        if ($biosequence_id > 0) {
-#          $insert = 0; $update = 1;
-#        } else {
-#          print "WARNING: biosequence_name = '$rowdata{biosequence_name}' ".
-#            "was not found in the database, so I'm INSERTing it instead of ".
-#            "UPDATing as one might have expected\n";
-#        }
-#      }
-
-
-      #### Insert the data into the database
-#      loadBiosequence(insert=>$insert,update=>$update,
-#        table_name=>"${DATABASE}biosequence",
-#        rowdata_ref=>\%rowdata,PK=>"biosequence_id",
-#        PK_value => $biosequence_id,
-#        verbose=>1,testonly=>1
-#        );
-
-      #### Reset temporary holders
-#      $information = "";
-#      $sequence = "";
-
-
-      #### Print some counters for biosequences INSERTed/UPDATEd
-      #last if ($counter > 5);
-#      $counter++;
-#      print "$counter..." if ($counter % 100 == 0);
-
-#    }
-
-
-    #### If the line begins with ">" then parse it
-#    if ($line =~ /^>/) {
-#      $information = $line;
-#      $sequence = "";
-    #### Otherwise, it must be sequence data
-#    } else {
-#      $sequence .= $line;
-#    }
-
-
-#  }
-#  close(INFILE);
-#  print "\n$counter rows INSERT/UPDATed\n";
-
-#}
