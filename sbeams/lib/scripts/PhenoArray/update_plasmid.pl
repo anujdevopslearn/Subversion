@@ -21,6 +21,7 @@ use lib qw (../../perl);
 use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
              $TESTONLY
+             %yeast_selection_marker_ids
             );
 
 use SBEAMS::Connection;
@@ -159,7 +160,7 @@ sub handle_request {
 
   $sql = "SELECT yeast_selection_marker_tag,yeast_selection_marker_id ".
     "FROM $TBPH_YEAST_SELECTION_MARKER WHERE record_status !='D'";
-  my %yeast_selection_marker_ids = $sbeams->selectTwoColumnHash($sql);
+  %yeast_selection_marker_ids = $sbeams->selectTwoColumnHash($sql);
 
   $sql = "SELECT yeast_origin_tag,yeast_origin_id ".
     "FROM $TBPH_YEAST_ORIGIN WHERE record_status !='D'";
@@ -203,7 +204,8 @@ sub handle_request {
   my %transform_map = (
     '3' => \%yeast_origin_ids,
     '6' => \%coli_marker_ids,
-    '7' => \%yeast_selection_marker_ids,
+    #'7' => \%yeast_selection_marker_ids,
+    '7' => \&transformYeastSelectionMarker,
     #'13' => \%undef_to_1,
   );
 
@@ -249,3 +251,29 @@ sub handle_request {
 ###############################################################################
 ###############################################################################
 
+sub transformYeastSelectionMarker {
+  my $input = shift;
+  my $output;
+
+  return unless (defined($input) && $input gt '');
+
+  my @inputs = split(/\r/,$input);
+  my @outputs = ();
+
+  foreach my $element (@inputs) {
+    my $lookup = $yeast_selection_marker_ids{$element};
+    if (defined($lookup) && $lookup gt '') {
+      #print "\nINFO:Transforming '$element' to '$lookup'\n";
+      push(@outputs,$lookup);
+    } else {
+      print "\nUnable to transform '$element'\n";
+    }
+  }
+
+  #### Database cannot handle multiples yet!
+  #$output = join(',',@outputs);
+  $output = $outputs[0];
+
+  return $output;
+ 
+}
