@@ -265,6 +265,33 @@ sub handle_request {
   return if ($description_clause == -1);
 
 
+  #### Build MOLECULAR FUNCTION constraint
+  my $molecular_function_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"MFA.annotation",
+    constraint_type=>"plain_text",
+    constraint_name=>"Molecular Function",
+    constraint_value=>$parameters{molecular_function_constraint} );
+  return if ($molecular_function_clause == -1);
+
+
+  #### Build BIOLOGICAL PROCESS constraint
+  my $biological_process_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BPA.annotation",
+    constraint_type=>"plain_text",
+    constraint_name=>"Biological Process",
+    constraint_value=>$parameters{biological_process_constraint} );
+  return if ($biological_process_clause == -1);
+
+
+  #### Build CELLULAR COMPONENT constraint
+  my $cellular_component_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"CCA.annotation",
+    constraint_type=>"plain_text",
+    constraint_name=>"Cellular Component",
+    constraint_value=>$parameters{cellular_component_constraint} );
+  return if ($cellular_component_clause == -1);
+
+
   #### Build ACCESSION constraint
   my $accession_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"BS.biosequence_accession",
@@ -382,6 +409,42 @@ sub handle_request {
   my $peptide_column = "";
   my $count_column = "";
 
+
+  #### If the user opted to see the GO columns, add them in
+  my @additional_columns = ();
+  if ( $parameters{display_options} =~ /ShowGOColumns/ ) {
+    @additional_columns = (
+      ["molecular_function","MFA.annotation","Molecular Function"],
+      ["molecular_function_GO","MFA.external_accession","molecular_function_GO"],
+      ["biological_process","BPA.annotation","Biological Process"],
+      ["biological_process_GO","BPA.external_accession","biological_process_GO"],
+      ["cellular_component","CCA.annotation","Cellular Component"],
+      ["cellular_component_GO","CCA.external_accession","cellular_component_GO"],
+    );
+  }
+
+  #### If the user opted to see GO columns or provided some GO constraints,
+  #### then join in the GO tables
+  my $GO_join = "";
+  if ( $parameters{display_options} =~ /ShowGOColumns/ ||
+       $molecular_function_clause.$biological_process_clause.
+       $cellular_component_clause ) {
+    $GO_join = qq~
+        LEFT JOIN flybase.dbo.FBgn FBgn
+             ON ( BS.biosequence_accession = FBgn.accession )
+        LEFT JOIN flybase.dbo.FB_annotation MFA
+             ON ( FBgn.FBgn_id = MFA.FBgn_id AND MFA.fbacode='ENZ'
+                  AND MFA.idx=0)
+        LEFT JOIN flybase.dbo.FB_annotation BPA
+             ON ( FBgn.FBgn_id = BPA.FBgn_id AND BPA.fbacode='FNC'
+                  AND BPA.idx=0)
+        LEFT JOIN flybase.dbo.FB_annotation CCA
+             ON ( FBgn.FBgn_id = CCA.FBgn_id AND CCA.fbacode='CEL'
+                  AND CCA.idx=0)
+    ~;
+  }
+
+
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
 
@@ -401,6 +464,7 @@ sub handle_request {
       ["reference","BS.biosequence_name","Reference"],
       ["$colname","$colname","$dispname"],
       ["count","tABS.row_count","Count"],
+      @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
     );
     $group_by_clause = " GROUP BY SH.biosequence_id,$colname";
@@ -415,6 +479,7 @@ sub handle_request {
       ["biosequence_accession","BS.biosequence_accession","Accession"],
       ["reference","BS.biosequence_name","Reference"],
       ["count","tABS.row_count","Count"],
+      @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
     );
     $group_by_clause = " GROUP BY SH.biosequence_id";
@@ -429,6 +494,7 @@ sub handle_request {
       ["reference","BS.biosequence_name","Reference"],
       ["peptide","peptide","Peptide"],
       ["count","tABS.row_count","Count"],
+      @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
     );
     $peptide_column = "peptide,";
@@ -465,12 +531,16 @@ sub handle_request {
 	  FROM $TBPR_BIOSEQUENCE BS
 	  JOIN $TBPR_SEARCH_BATCH SB
 	       ON ( BS.biosequence_set_id = SB.biosequence_set_id )
+          $GO_join
 	 WHERE 1 = 1
 	$search_batch_clause
 	$biosequence_name_clause
         $description_clause
 	$gene_name_clause
 	$accession_clause
+        $molecular_function_clause
+        $biological_process_clause
+        $cellular_component_clause
 
 	--
 
@@ -510,6 +580,7 @@ sub handle_request {
 	  JOIN $TBPR_BIOSEQUENCE BS
                ON ( tBS.biosequence_id = BS.biosequence_id )
           LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
+          $GO_join
 	 WHERE 1 = 1
 	$n_annotations_clause
         $description_clause
@@ -552,6 +623,13 @@ sub handle_request {
 
 	       'Count' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=$parameters{search_batch_id}&reference_constraint=\%$colnameidx{reference}V&peptide_constraint=\%$colnameidx{peptide}V&peptide_string_constraint=\%$colnameidx{peptide_string}V&${parameters_list}&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
 	       'Count_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show just this many that match all above criteria\'; return true"',
+
+               'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
+               'Molecular Function_ATAG' => 'TARGET="WinExt"',
+               'Biological Process' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{biological_process_GO}V",
+               'Biological Process_ATAG' => 'TARGET="WinExt"',
+               'Cellular Component' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{cellular_component_GO}V",
+               'Cellular Component_ATAG' => 'TARGET="WinExt"',
   );
 
 
@@ -559,6 +637,9 @@ sub handle_request {
 
   #### Define columns that should be hidden in the output table
   %hidden_cols = ('accessor' => 1,
+                  'molecular_function_GO' => 1,
+                  'biological_process_GO' => 1,
+                  'cellular_component_GO' => 1,
   );
 
 
