@@ -1188,6 +1188,7 @@ sub displayResultSetControls {
       if ($value) {
         $param_string .= "&" if ($param_string);
         my $value = uri_escape($value);
+	my $value =~ s/\+/\%2b/g;
         $param_string .= "$key=$value";
       }
     }
