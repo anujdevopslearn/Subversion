@@ -4286,6 +4286,7 @@ sub printProjectsYouOwn {
 	SELECT project_id,project_tag,P.name
 	  FROM $TB_PROJECT P
 	 WHERE PI_contact_id = '$current_contact_id'
+	   AND record_status != 'D'
 	 ORDER BY project_tag
   ~;
   @rows = $self->selectSeveralColumns($sql);
@@ -4505,10 +4506,12 @@ function switchProject(){
 
 #### Get work groups and make <SELECT> if we're HTML mode 
   $work_group_sql = qq~
-      SELECT WG.work_group_id,WG.work_group_name 
-      FROM $TB_WORK_GROUP WG 
+      SELECT WG.work_group_id,WG.work_group_name
+      FROM $TB_WORK_GROUP WG
       INNER JOIN $TB_USER_WORK_GROUP UWG ON ( WG.work_group_id=UWG.work_group_id ) 
-      WHERE contact_id=$current_contact_id 
+      WHERE contact_id = '$current_contact_id'
+        AND WG.record_status != 'D'
+        AND UWG.record_status != 'D'
       ORDER BY WG.work_group_name
       ~;
   @rows = $self->selectSeveralColumns($work_group_sql);
@@ -4543,11 +4546,13 @@ function switchProject(){
   my $project_ids_list = join(',',@project_ids) || '-1';
   $project_sql = qq~
     SELECT P.project_id, UL.username+' - '+P.name
-    FROM $TB_PROJECT P 
-    LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
-    WHERE P.project_id IN ( $project_ids_list )
-    GROUP BY P.project_id, P.name, UL.username
-    ORDER BY UL.username, P.name;
+      FROM $TB_PROJECT P 
+      LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
+     WHERE P.project_id IN ( $project_ids_list )
+       AND P.record_status != 'D'
+       AND UL.record_status != 'D'
+     GROUP BY P.project_id, P.name, UL.username
+     ORDER BY UL.username, P.name;
   ~;
 
   @rows = $self->selectSeveralColumns($project_sql);
