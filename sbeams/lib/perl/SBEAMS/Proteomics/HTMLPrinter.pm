@@ -106,6 +106,8 @@ sub printPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/Proteomics/SummarizeExperiment.cgi"><nobr>&nbsp;&nbsp;&nbsp;Summarize Exp's</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse Search Hits</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/Proteomics/BrowseAnnotatedPeptides.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse Annotated</nobr><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Peptides</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Proteomics/CompareExperiments.cgi"><nobr>&nbsp;&nbsp;&nbsp;Compare Exp's</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/Proteomics/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Special Interfaces:</td></tr>
