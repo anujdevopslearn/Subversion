@@ -9,29 +9,64 @@
 #     (edit to reflect local installation)
 #
 
+
 # Default settings pass through to individual instances unless overridden
 [default]
+
+#### Title of the system is sprinkled throughout
 DBTITLE = SBEAMS
+
+#### User ID (UID) of the web server user (often apache or nobody)
 WWW_UID = 48
+
+#### Crypt key used for cookies.  Change it to something unique for your site.
+#### If a cracker has your key and a valid username, he could generate a cookie
+#### that would permit entry
 CRYPT_KEY = ChangeThis!
+
+#### Color of the navigation bar on the left side
 BARCOLOR = #cdd1e7
-HOSTNAME = host.domain.org
+
+#### Hostname of your web server.  Only used in emergencies.
+HOSTNAME = webhost.domain.org
+
+#### A contact username and email address for SBEAMS issues
 DBADMIN = SBEAMS Administrator <sbeams@localdomain.org>
 
 
+#### Set the RDBMS servername or DSN name and the name of the sbeams database
 DB_SERVER   = sqlhostname
 DB_DATABASE = sbeams
+
+#### Set a read/write user and password
 DB_USER     = sbeams
 DB_PASS     = sbeamspassword
+
+#### set a read only user and password
 DB_RO_USER  = sbeamsro
 DB_RO_PASS  = sbeamsropassword
+
+#### Set the Perl DBI driver string (DSN).  Different RDBMS flavors use
+#### different formats here
 DB_DRIVER   = DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE
+#DB_DRIVER   = DBI:mysql:$DB_DATABASE:$DB_SERVER
+#DB_DRIVER   = DBI:Pg:dbname=$DB_DATABASE;host=$DB_SERVER
+#DB_DRIVER   = DBI:Oracle:SID=$DB_DATABASE;HOST=$DB_SERVER;PORT=1521
+#DB_DRIVER   = DBI:DB2:$DB_DATABASE
+#DB2INSTANCE = db2inst1
+#
+
+#### Set the RDBMS flavor.  This triggers engine-specific code within the
+#### system.  Can be one of "MS SQL Server", "MySQL", "PostgreSQL", "Oracle",
+#### or "DB2" at present. Add your own support for more!
 DB_TYPE     = MS SQL Server
 
 
-# Set some default database prefixes to be prepended before the actual
-# table names.  For databases that don't support cross-database queries
-# (e.g. PostgreSQL 7.2), the entries should all be empty strings.
+#### Set the default database prefix as a function of module to be prepended
+#### before the actual table names.
+#### This is often "DATABASENAME.SCHEMANAME."
+#### For databases that don't support cross-database queries
+#### (e.g. PostgreSQL 7.2), the entries should all be empty strings.
 DBPREFIX{Core}          = sbeams.dbo.
 DBPREFIX{Proteomics}    = proteomics.dbo.
 DBPREFIX{Microarray}    = microarray.dbo.
@@ -40,6 +75,7 @@ DBPREFIX{Biosap}        = Biosap.dbo.
 DBPREFIX{BEDB}          = BEDB.dbo.
 DBPREFIX{SNP}           = SNP.dbo.
 
+#### Set the raw data directory location as a function of module.
 RAW_DATA_DIR{Proteomics} = /raw/datasets/root/location
 
 
