@@ -292,7 +292,7 @@ $identified_percent_clause
 $match_to_query_ratio_clause
 $biosequence_set_clause
 $snp_accession_clause
-$snp_source_accession_clause
+$snp_instance_source_accession_clause
 $snp_source_clause
  GROUP BY SI.snp_instance_id,BSS.biosequence_set_id
 
