@@ -40,6 +40,15 @@ if ( $DBVERSION eq "Dev Branch 1" ) {
   $DB_TYPE     = "MS SQL Server";
   $BIOSAP_DB   = "BioSap.dbo.";
 
+} elsif ( $DBVERSION eq "Dev Branch 5" ) {
+  $DB_SERVER   = 'mssql';
+  $DB_DATABASE = 'sbeams';
+  $DB_USER     = 'sbeams';
+  $DB_PASS     = 'SB444';
+  $DB_DRIVER   = "DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE";
+  $DB_TYPE     = "MS SQL Server";
+  $BIOSAP_DB   = "BioSap.dbo.";
+
 } elsif ( $DBVERSION eq "MySQL Dev Branch 1" ) {
   $DB_SERVER   = 'mysql';
   $DB_DATABASE = 'sbeams';
