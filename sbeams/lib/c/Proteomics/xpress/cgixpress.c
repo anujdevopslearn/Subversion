@@ -35,11 +35,13 @@
   10/19/2000  Modify variable names, clean up analysis
   02/02/2001  Plot out smoothed spectrum
   03/06/2001  Add in button to update quantitation in all interact-data files. 
-  03/15/2001  Add in bIcatLight1 option (set light or heavy quan to 1)
+  03/15/2001  Add in bXpressLight1 option (set light or heavy quan to 1)
   04/01/2001  Remove Peptide= link ... only use filename/scan# to ID summary
               lines to update
   06/22/2001  Add in link to update=bad data
   09/13/2001  Add in random number generator for image filename
+  04/15/2002  Update to receive interact base filename and pass to updatecgixpress
+  07/01/2002  Buttons to swap heavy/light masses for RIC
 *************************************************************/
 
 #include <stdio.h>
@@ -65,8 +67,8 @@
 #include "gdfonts.h"
 
 
-#define szVERSION            "XPRESS v.1"
-#define szAUTHOR             "by Jimmy Eng &copy; Institute for Systems Biology, 2000. All rights reserved."
+#define szVERSION            "XPRESS v.2"
+#define szAUTHOR             "by J.Eng &copy; Institute for Systems Biology, 2000. All rights reserved."
 
 #define SIZE_FILE             256
 #define MAX_MS_SCANS          20000 
@@ -81,15 +83,17 @@
 #define SCALE_V(x,y,z,w)      (int)((x-y)*z/w);
 
 
-int  bIcatLight1;
+int  bXpressLight1;
 char szDatFile[SIZE_FILE],
      szOutputFile[SIZE_FILE],
+     szInteractBaseName[SIZE_FILE],
      szInteractDir[SIZE_FILE];
 
 struct QuanStruct
 {
    int  iquantitation_id;
    int  iChargeState;
+   int  iSwapMass;
    int  iLightFirstScan;
    int  iLightLastScan;
    int  iHeavyFirstScan;
@@ -111,12 +115,13 @@ void EXTRACT_QUERY_STRING(struct QuanStruct *pQuan,
         char *szDatFile,
         char *szOutputFile,
         char *szInteractDir,
-        int  *bIcatLight1);
+        char *szInteractBaseName,
+        int  *bXpressLight1);
 void GET_PARAMETERS(struct QuanStruct *pQuan,
         char *szDatFile,
         char *szOutputFile,
         char *szInteractDir,
-        int  *bIcatLight1);
+        int  *bXpressLight1);
 void GET_QUANTITATION(char *szDatFile,
         struct QuanStruct *pQuan);
 void MAKE_PLOT(int iPlotStartScan,
@@ -162,13 +167,26 @@ int main(int argc, char **argv)
    szDatFile[0]='\0'; 
    szOutputFile[0]='\0'; 
    szInteractDir[0]='\0'; 
-   bIcatLight1=0;
+   szInteractBaseName[0]='\0'; 
+   bXpressLight1=0;
 
-   EXTRACT_QUERY_STRING(&pQuan, szDatFile, szOutputFile, szInteractDir, &bIcatLight1);
+   EXTRACT_QUERY_STRING(&pQuan, szDatFile, szOutputFile, szInteractDir,
+      szInteractBaseName, &bXpressLight1);
 
    if (pQuan.iquantitation_id>0 && strlen(szInteractDir)==0)
    {
-      GET_PARAMETERS(&pQuan, szDatFile, szOutputFile, szInteractDir, &bIcatLight1);
+      GET_PARAMETERS(&pQuan, szDatFile, szOutputFile, szInteractDir, &bXpressLight1);
+   }
+
+   if (pQuan.iSwapMass==1)
+   {
+      pQuan.dHeavyPeptideMass = pQuan.dLightPeptideMass;
+      pQuan.dLightPeptideMass -= 8.0;
+   }
+   else if (pQuan.iSwapMass==2)
+   {
+      pQuan.dLightPeptideMass = pQuan.dHeavyPeptideMass;
+      pQuan.dHeavyPeptideMass += 8.0;
    }
 
    PRINT_FORM(argv[0], &pQuan, szDatFile, szOutputFile);
@@ -203,14 +221,14 @@ int main(int argc, char **argv)
    printf("</TABLE></CENTER>\n");
 
 
-   if (bIcatLight1==1)
+   if (bXpressLight1==1)
    {
       if (pQuan.dLightQuanValue == 0.0)
          sprintf(pQuan.szNewQuan, "1:INF");
       else
          sprintf(pQuan.szNewQuan, "1:%0.2f", pQuan.dHeavyQuanValue / pQuan.dLightQuanValue);
    }
-   else if (bIcatLight1==2)
+   else if (bXpressLight1==2)
    {
       if (pQuan.dHeavyQuanValue == 0.0)
          sprintf(pQuan.szNewQuan, "INF:1");
@@ -250,19 +268,19 @@ void PRINT_FORM(char *szArgv0,
         char *szDatFile,
         char *szOutputFile)
 {
-   printf("<B>%s, %s</B>\n", szVERSION, szAUTHOR);
+   printf("<B><TT>%s, %s</TT></B>\n", szVERSION, szAUTHOR);
 
 #ifdef WIN32
    printf("<FORM METHOD=GET ACTION=\"/cgi-bin/cgixpress.exe\">");
 #else
 /* printf("<FORM METHOD=GET ACTION=\"/cgi-bin/%s\">", szArgv0); */
-/* printf("<FORM METHOD=GET ACTION=\"/dev2/sbeams/cgi/Proteomics/%s\">", szArgv0);*/
    printf("<FORM METHOD=GET ACTION=\"%s\">", szArgv0);
 #endif
 
    printf("<INPUT TYPE=\"hidden\" NAME=\"quantitation_id\" VALUE=\"%d\">\n", pQuan->iquantitation_id);
    printf("<INPUT TYPE=\"hidden\" NAME=\"InteractDir\" VALUE=\"%s\">\n", szInteractDir);
-   printf("<INPUT TYPE=\"hidden\" NAME=\"bIcatLight1\" VALUE=\"%d\">\n", bIcatLight1);
+   printf("<INPUT TYPE=\"hidden\" NAME=\"InteractBaseName\" VALUE=\"%s\">\n", szInteractBaseName);
+   printf("<INPUT TYPE=\"hidden\" NAME=\"bXpressLight1\" VALUE=\"%d\">\n", bXpressLight1);
 
    printf("<CENTER><TABLE BORDER CELLPADDING=5>\n");
 
@@ -270,26 +288,33 @@ void PRINT_FORM(char *szArgv0,
    printf("<TT>Light scans:");
    printf(" <INPUT TYPE=\"textarea\" NAME=\"LightFirstScan\" VALUE=\"%d\" SIZE=8>\n", pQuan->iLightFirstScan);
    printf(" <INPUT TYPE=\"textarea\" NAME=\"LightLastScan\"  VALUE=\"%d\" SIZE=8>\n", pQuan->iLightLastScan);
-   printf(" mass:<INPUT TYPE=\"textarea\" NAME=\"LightMass\" VALUE=\"%0.1f\" SIZE=8>\n", pQuan->dLightPeptideMass);
+   printf(" mass:<INPUT TYPE=\"textarea\" NAME=\"LightMass\" VALUE=\"%0.3f\" SIZE=8>\n", pQuan->dLightPeptideMass);
    printf(" tol: <INPUT TYPE=\"textarea\" NAME=\"MassTol\" VALUE=\"%0.2f\" SIZE=5>", pQuan->dMassTol);
 
    printf("<BR>Heavy scans:");
    printf(" <INPUT TYPE=\"textarea\" NAME=\"HeavyFirstScan\" VALUE=\"%d\" SIZE=8>\n", pQuan->iHeavyFirstScan);
    printf(" <INPUT TYPE=\"textarea\" NAME=\"HeavyLastScan\"  VALUE=\"%d\" SIZE=8>\n", pQuan->iHeavyLastScan);
-   printf(" mass:<INPUT TYPE=\"text\" NAME=\"HeavyMass\" VALUE=\"%0.1f\" SIZE=8>\n", pQuan->dHeavyPeptideMass);
+   printf(" mass:<INPUT TYPE=\"text\" NAME=\"HeavyMass\" VALUE=\"%0.3f\" SIZE=8>\n", pQuan->dHeavyPeptideMass);
 
    printf("<P>&nbsp;Raw file:  <input NAME=\"DatFile\" type=textarea VALUE=\"%s\" SIZE=\"50\">\n", szDatFile);
    printf("<BR>.out file:  <input NAME=\"OutFile\" type=textarea VALUE=\"%s\" SIZE=\"50\">", szOutputFile);
 
    printf("</TD>\n");
-   printf("<td BGCOLOR=\"#FFFFDD\">\n<TT><CENTER>Charge<BR>");
+   printf("<TD BGCOLOR=\"#FFFFDD\">\n<TT><CENTER>Charge<BR>");
    printf("<INPUT TYPE=\"radio\" NAME=\"ChargeState\" VALUE=\"1\" %s>+1<br>\n", ((pQuan->iChargeState)==1?"checked":""));
    printf("<INPUT TYPE=\"radio\" NAME=\"ChargeState\" VALUE=\"2\" %s>+2<br>\n", ((pQuan->iChargeState)==2?"checked":""));
    printf("<INPUT TYPE=\"radio\" NAME=\"ChargeState\" VALUE=\"3\" %s>+3<BR>\n", ((pQuan->iChargeState)==3?"checked":""));
-   printf("<p><INPUT TYPE=\"submit\" NAME=\"Action\" VALUE=\"Quantitate\"></CENTER>");
+   printf("<p><INPUT TYPE=\"submit\" VALUE=\"Quantitate\"></CENTER>");
    printf("</TD>\n");
 
    printf("</TR>\n");
+
+   printf("<TR><TD BGCOLOR=\"#FFFFDD\" COLSPAN=2><CENTER>");
+   printf("no mass swap <INPUT TYPE=\"radio\" NAME=\"SwapMass\" VALUE=\"0\" checked>");
+   printf(" &nbsp; swap light to heavy <INPUT TYPE=\"radio\" NAME=\"SwapMass\" VALUE=\"1\">");
+   printf(" &nbsp; swap heavy to light <INPUT TYPE=\"radio\" NAME=\"SwapMass\" VALUE=\"2\"></CENTER>");
+   printf("</TR>\n");
+
    printf("</TABLE></CENTER>\n");
    printf("</FORM>\n");
 
@@ -300,7 +325,8 @@ void EXTRACT_QUERY_STRING(struct QuanStruct *pQuan,
      char *szDatFile,
      char *szOutputFile,
      char *szInteractDir,
-     int  *bIcatLight1)
+     char *szInteractBaseName,
+     int  *bXpressLight1)
 {
    char *pStr = getenv("REQUEST_METHOD");
 
@@ -370,10 +396,20 @@ void EXTRACT_QUERY_STRING(struct QuanStruct *pQuan,
             getword(szWord, szQuery, '&'); plustospace(szWord); unescape_url(szWord);
             sscanf(szWord, "%s", szInteractDir);
          }
+         else if (!strcmp(szWord, "InteractBaseName") )
+         {
+            getword(szWord, szQuery, '&'); plustospace(szWord); unescape_url(szWord);
+            sscanf(szWord, "%s", szInteractBaseName);
+         }
          else if (!strcmp(szWord, "ChargeState") )
          {
             getword(szWord, szQuery, '&'); plustospace(szWord); unescape_url(szWord);
             sscanf(szWord, "%d", &(pQuan->iChargeState));
+         }
+         else if (!strcmp(szWord, "SwapMass") )
+         {
+            getword(szWord, szQuery, '&'); plustospace(szWord); unescape_url(szWord);
+            sscanf(szWord, "%d", &(pQuan->iSwapMass));
          }
          else if (!strcmp(szWord, "LightMass") )
          {
@@ -390,10 +426,10 @@ void EXTRACT_QUERY_STRING(struct QuanStruct *pQuan,
             getword(szWord, szQuery, '&'); plustospace(szWord); unescape_url(szWord);
             sscanf(szWord, "%lf", &(pQuan->dMassTol));
          }
-         else if (!strcmp(szWord, "bIcatLight1") )
+         else if (!strcmp(szWord, "bXpressLight1") )
          {
             getword(szWord, szQuery, '&'); plustospace(szWord); unescape_url(szWord);
-            sscanf(szWord, "%d", bIcatLight1);
+            sscanf(szWord, "%d", bXpressLight1);
          }
          else if (!strcmp(szWord, "quantitation_id") )
          {
@@ -424,15 +460,16 @@ int try_tds_login(
    char *appname,
    int verbose)
 {
-   //static char SERVER[] = "mssql";
-   //static char DATABASE[] = "MGproteomics";
-   //static char USER[] = "macrog_ro";
-   //static char PASSWORD[] = "RockMD";
 
+#ifdef MACROGENICS
    static char SERVER[] = "mssql";
-   static char DATABASE[] = "proteomics";
+   static char USER[] = "macrog_ro";
+   static char PASSWORD[] = "RockMD";
+#else
+   static char SERVER[] = "mssql";
    static char USER[] = "sbeams";
    static char PASSWORD[] = "SB444";
+#endif
 
    if (verbose)	{ fprintf(stdout, "Entered tds_try_login()<BR>\n"); }
    if (! login) {
@@ -480,7 +517,7 @@ void GET_PARAMETERS(struct QuanStruct *pQuan,
      char *szDatFile,
      char *szOutputFile,
      char *szInteractDir,
-     int  *bIcatLight1)
+     int  *bXpressLight1)
 {
 
    TDSLOGIN *login;
@@ -501,24 +538,32 @@ void GET_PARAMETERS(struct QuanStruct *pQuan,
    char sql_query[1024];
 
 
+#ifdef MACROGENICS
+   static char DATABASE[] = "MGproteomics";
+#else
+   static char DATABASE[] = "proteomics";
+#endif
+
+
    //#### Build the query string
    if (DEBUG) printf("\n\nquantition_id = %d<BR>\n\n\n\n\n",pQuan->iquantitation_id);
    sprintf(sql_query,"
+     USE %s
      SELECT d0_first_scan,d0_last_scan,d0_mass,d8_first_scan,d8_last_scan,d8_mass,
             norm_flag,mass_tolerance,'/local/data/proteomics/'+SB.data_location+'/../'+
             F.fraction_tag AS 'dat_file',S.assumed_charge
-       FROM proteomics.dbo.quantitation Q
-       JOIN proteomics.dbo.search_hit SH ON ( Q.search_hit_id = SH.search_hit_id )
-       JOIN proteomics.dbo.search S ON ( SH.search_id = S.search_id )
-       JOIN proteomics.dbo.search_batch SB ON ( S.search_batch_id = SB.search_batch_id )
-       JOIN proteomics.dbo.msms_spectrum MSS ON ( S.msms_spectrum_id = MSS.msms_spectrum_id )
-       JOIN proteomics.dbo.fraction F ON ( MSS.fraction_id = F.fraction_id )
+       FROM dbo.quantitation Q
+       JOIN dbo.search_hit SH ON ( Q.search_hit_id = SH.search_hit_id )
+       JOIN dbo.search S ON ( SH.search_id = S.search_id )
+       JOIN dbo.search_batch SB ON ( S.search_batch_id = SB.search_batch_id )
+       JOIN dbo.msms_spectrum MSS ON ( S.msms_spectrum_id = MSS.msms_spectrum_id )
+       JOIN dbo.fraction F ON ( MSS.fraction_id = F.fraction_id )
       WHERE quantitation_id = '%d'",
-      pQuan->iquantitation_id);
+      DATABASE,pQuan->iquantitation_id);
 
 
    //#### Connect and login to database
-   rc = try_tds_login(&login, &tds, "cgixpress", verbose);
+   rc = try_tds_login(&login, &tds, "Xpress.cgi", verbose);
    if (rc != TDS_SUCCEED) {
       fprintf(stderr, "try_tds_login() failed\n");
       return;
@@ -580,8 +625,8 @@ void GET_PARAMETERS(struct QuanStruct *pQuan,
 	    }
 
             else if (strcmp(column_name,"norm_flag")==0) {
-	       bIcatLight1 = (int *)ptr_value;
-               if (DEBUG) printf("  %s = %d<BR>\n",column_name,*bIcatLight1);
+	       bXpressLight1 = (int *)ptr_value;
+               if (DEBUG) printf("  %s = %d<BR>\n",column_name,*bXpressLight1);
 	    }
             else if (strcmp(column_name,"mass_tolerance")==0) {
 	       pQuan->dMassTol = *(float *)ptr_value;
@@ -678,6 +723,8 @@ void GET_QUANTITATION(char *szDatFile,
 
    char   szTmpFile[SIZE_FILE];
 
+   int    iSumPeaks=0;
+
    OAP_FILE *pOapFile;
    SPECTRUM *pSpectrum;
    ANALYSIS *pAnalysis;
@@ -768,8 +815,8 @@ void GET_QUANTITATION(char *szDatFile,
    memset(dLightFilteredMS, 0, sizeof(dLightFilteredMS));
    memset(dHeavyFilteredMS, 0, sizeof(dHeavyFilteredMS)); 
 
-   iStart = pQuan->iLightFirstScan - 200;
-   iEnd = pQuan->iLightLastScan + 200;
+   iStart = pQuan->iLightFirstScan - 100;
+   iEnd = pQuan->iLightLastScan + 100;
 
    if (iStart<iAnalysisFirstScan)
       iStart=iAnalysisFirstScan;
@@ -779,6 +826,7 @@ void GET_QUANTITATION(char *szDatFile,
   /*
    * Read all MS scan values
    */
+
    for (ctScan=iStart; ctScan<=iEnd; ctScan++)
    {
      /*
@@ -786,7 +834,7 @@ void GET_QUANTITATION(char *szDatFile,
       */
       if ((pSpectrum=get_spectrum(pOapFile, ctScan, TRUE)) != NULL)
       {
-         if (pSpectrum->spect_flags[5] == 16)
+         if ( (pSpectrum->spect_flags[0]&16) && (pSpectrum->spect_flags[5]&16) )
          {
             DATA_PKT *pDataPt;
 
@@ -796,12 +844,25 @@ void GET_QUANTITATION(char *szDatFile,
             */
             while ((pDataPt=get_packet(pOapFile, 0))!=NULL)
             {                  
-               if ( fabs(dLightMass - pDataPt->mass) <= pQuan->dMassTol)
-                  if (pDataPt->intensity > dLightMS[ctScan])
-                     dLightMS[ctScan]=pDataPt->intensity;
-               if ( fabs(dHeavyMass - pDataPt->mass) <= pQuan->dMassTol)
-                  if (pDataPt->intensity > dHeavyMS[ctScan])
-                     dHeavyMS[ctScan]=pDataPt->intensity;
+
+	       if ( fabs(dLightMass - pDataPt->mass) <= pQuan->dMassTol) {
+		  if (iSumPeaks == 1) {
+                     dLightMS[ctScan]+=pDataPt->intensity;
+                  } else {
+	             if (pDataPt->intensity > dLightMS[ctScan])
+                        dLightMS[ctScan]=pDataPt->intensity;
+                  }
+               }
+
+               if ( fabs(dHeavyMass - pDataPt->mass) <= pQuan->dMassTol) {
+		  if (iSumPeaks == 1) {
+                     dHeavyMS[ctScan]+=pDataPt->intensity;
+                  } else {
+		     if (pDataPt->intensity > dHeavyMS[ctScan])
+                        dHeavyMS[ctScan]=pDataPt->intensity;
+                  }
+               }
+
             }
          }
       }
@@ -851,17 +912,15 @@ void GET_QUANTITATION(char *szDatFile,
          dMaxLightInten=dLightMS[i];
       if (dHeavyMS[i]>dMaxHeavyInten)
          dMaxHeavyInten=dHeavyMS[i];
-
-     /*
-      * Sum up intensity values across each charge state
-      */
-      if (i>=iLightStartScan && i<=iLightEndScan)
-         pQuan->dLightQuanValue += dLightMS[i];
-
-      if (i>=iHeavyStartScan && i<=iHeavyEndScan)
-         pQuan->dHeavyQuanValue += dHeavyMS[i];
-
    }
+
+  /*
+   * Sum up intensity values across each charge state
+   */
+   for (i=iLightStartScan; i<=iLightEndScan; i++)
+      pQuan->dLightQuanValue += dLightMS[i];
+   for (i=iHeavyStartScan; i<=iHeavyEndScan; i++)
+      pQuan->dHeavyQuanValue += dHeavyMS[i];
 
    memset(dTmpMS, 0, sizeof(dTmpMS));
    FILTER_MS(dLightMS, dLightFilteredMS, dTmpMS, dMaxLightInten,
@@ -951,7 +1010,7 @@ void MAKE_PLOT(int iPlotStartScan,
    iRed2   = gdImageColorAllocate(gdImageHeavy, 255, 0, 0),
    iBlue2  = gdImageColorAllocate(gdImageHeavy, 0, 0, 255),
 
-   sprintf(szLabel, "Light %0.1lf %+d",
+   sprintf(szLabel, "Light %0.3lf %+d",
       (pQuan->dLightPeptideMass + H*(pQuan->iChargeState -1)) /(pQuan->iChargeState),
       pQuan->iChargeState);
    gdImageString(gdImageLight, gdFontSmall, 3, 3, szLabel, iBlue);
@@ -960,7 +1019,7 @@ void MAKE_PLOT(int iPlotStartScan,
    sprintf(szLabel, "%0.2E", dMaxLightInten);
    gdImageString(gdImageLight, gdFontSmall, iImageWidth-50, 3, szLabel, iBlue);
  
-   sprintf(szLabel, "Heavy %0.1lf %+d",
+   sprintf(szLabel, "Heavy %0.3lf %+d",
       (pQuan->dHeavyPeptideMass + H*(pQuan->iChargeState -1)) /(pQuan->iChargeState),
       pQuan->iChargeState);
    gdImageString(gdImageHeavy, gdFontSmall, 3, 3, szLabel, iBlue2);
@@ -1204,7 +1263,6 @@ void MAKE_PLOT(int iPlotStartScan,
 #ifdef WIN32
    sprintf(szImageDir, "c:\\website\\htdocs\\");
 #else
-   /*sprintf(szImageDir, "/local/www/html/dev2/sbeams/images/tmp/");*/
    sprintf(szImageDir, "../../images/tmp/");
 #endif
 
@@ -1377,35 +1435,37 @@ void UPDATE_QUAN()
    */
    sprintf(szNewLink                  , "LightFirstScan=%d&amp;", pQuan.iLightFirstScan);
    sprintf(szNewLink+strlen(szNewLink), "LightLastScan=%d&amp;",  pQuan.iLightLastScan);
-   sprintf(szNewLink+strlen(szNewLink), "LightMass=%0.1lf&amp;",  pQuan.dLightPeptideMass);
+   sprintf(szNewLink+strlen(szNewLink), "LightMass=%0.6lf&amp;",  pQuan.dLightPeptideMass);
    sprintf(szNewLink+strlen(szNewLink), "HeavyFirstScan=%d&amp;", pQuan.iHeavyFirstScan);
    sprintf(szNewLink+strlen(szNewLink), "HeavyLastScan=%d&amp;",  pQuan.iHeavyLastScan);
-   sprintf(szNewLink+strlen(szNewLink), "HeavyMass=%0.1f&amp;",   pQuan.dHeavyPeptideMass);
+   sprintf(szNewLink+strlen(szNewLink), "HeavyMass=%0.6f&amp;",   pQuan.dHeavyPeptideMass);
    sprintf(szNewLink+strlen(szNewLink), "DatFile=%s&amp;",        szDatFile);
    sprintf(szNewLink+strlen(szNewLink), "ChargeState=%d&amp;",    pQuan.iChargeState);
    sprintf(szNewLink+strlen(szNewLink), "OutFile=%s&amp;",        szOutputFile);
-   sprintf(szNewLink+strlen(szNewLink), "MassTol=%0.1lf&amp;",    pQuan.dMassTol);
-   sprintf(szNewLink+strlen(szNewLink), "bIcatLight1=%d&amp;",    bIcatLight1);
-   sprintf(szNewLink+strlen(szNewLink), "InteractDir=%s",         szInteractDir);
+   sprintf(szNewLink+strlen(szNewLink), "MassTol=%0.6lf&amp;",    pQuan.dMassTol);
+   sprintf(szNewLink+strlen(szNewLink), "bXpressLight1=%d&amp;",    bXpressLight1);
+   sprintf(szNewLink+strlen(szNewLink), "InteractDir=%s&amp;",    szInteractDir);
+   sprintf(szNewLink+strlen(szNewLink), "InteractBaseName=%s",    szInteractBaseName);
 
    printf("<FORM METHOD=POST ACTION=\"SetXpressValues.cgi\">");
    printf("<INPUT TYPE=\"hidden\" NAME=\"LightFirstScan\" VALUE=\"%d\">\n", pQuan.iLightFirstScan);
    printf("<INPUT TYPE=\"hidden\" NAME=\"LightLastScan\" VALUE=\"%d\">\n", pQuan.iLightLastScan);
-   printf("<INPUT TYPE=\"hidden\" NAME=\"LightMass\" VALUE=\"%0.1lf\">\n",pQuan.dLightPeptideMass );
+   printf("<INPUT TYPE=\"hidden\" NAME=\"LightMass\" VALUE=\"%0.6lf\">\n",pQuan.dLightPeptideMass );
    printf("<INPUT TYPE=\"hidden\" NAME=\"HeavyFirstScan\" VALUE=\"%d\">\n",pQuan.iHeavyFirstScan );
    printf("<INPUT TYPE=\"hidden\" NAME=\"HeavyLastScan\" VALUE=\"%d\">\n", pQuan.iHeavyLastScan);
-   printf("<INPUT TYPE=\"hidden\" NAME=\"HeavyMass\" VALUE=\"%0.1lf\">\n", pQuan.dHeavyPeptideMass);
+   printf("<INPUT TYPE=\"hidden\" NAME=\"HeavyMass\" VALUE=\"%0.6lf\">\n", pQuan.dHeavyPeptideMass);
    printf("<INPUT TYPE=\"hidden\" NAME=\"DatFile\" VALUE=\"%s\">\n", szDatFile);
    printf("<INPUT TYPE=\"hidden\" NAME=\"ChargeState\" VALUE=\"%d\">\n", pQuan.iChargeState);
    printf("<INPUT TYPE=\"hidden\" NAME=\"OutFile\" VALUE=\"%s\">\n", szOutputFile);
-   printf("<INPUT TYPE=\"hidden\" NAME=\"MassTol\" VALUE=\"%0.1lf\">\n", pQuan.dMassTol);
-   printf("<INPUT TYPE=\"hidden\" NAME=\"bIcatLight1\" VALUE=\"%d\">\n", bIcatLight1);
+   printf("<INPUT TYPE=\"hidden\" NAME=\"MassTol\" VALUE=\"%0.6lf\">\n", pQuan.dMassTol);
+   printf("<INPUT TYPE=\"hidden\" NAME=\"bXpressLight1\" VALUE=\"%d\">\n", bXpressLight1);
    printf("<INPUT TYPE=\"hidden\" NAME=\"quantitation_id\" VALUE=\"%d\">\n", pQuan.iquantitation_id);
    printf("<INPUT TYPE=\"hidden\" NAME=\"LightQuanValue\" VALUE=\"%0.1lf\">\n", pQuan.dLightQuanValue);
    printf("<INPUT TYPE=\"hidden\" NAME=\"HeavyQuanValue\" VALUE=\"%0.1lf\">\n", pQuan.dHeavyQuanValue);
    printf("<INPUT TYPE=\"hidden\" NAME=\"NewLink\" VALUE=\"%s\">\n", szNewLink);
    printf("<INPUT TYPE=\"hidden\" NAME=\"NewQuan\" VALUE=\"%s\">\n", pQuan.szNewQuan);
    printf("<INPUT TYPE=\"hidden\" NAME=\"InteractDir\" VALUE=\"%s\">\n", szInteractDir);
+   printf("<INPUT TYPE=\"hidden\" NAME=\"InteractBaseName\" VALUE=\"%s\">\n", szInteractBaseName);
    printf("<INPUT TYPE=\"hidden\" NAME=\"OutputFile\" VALUE=\"%s\">\n", szOutputFile);
    printf("<p><INPUT TYPE=\"submit\" VALUE=\"Update\"></FORM>");
 
@@ -1422,35 +1482,37 @@ void BAD_QUAN()
    */
    sprintf(szBadQuan                  , "LightFirstScan=%d&amp;", pQuan.iLightFirstScan);
    sprintf(szBadQuan+strlen(szBadQuan), "LightLastScan=%d&amp;",  pQuan.iLightFirstScan-1);
-   sprintf(szBadQuan+strlen(szBadQuan), "LightMass=%0.1lf&amp;",  pQuan.dLightPeptideMass);
+   sprintf(szBadQuan+strlen(szBadQuan), "LightMass=%0.6lf&amp;",  pQuan.dLightPeptideMass);
    sprintf(szBadQuan+strlen(szBadQuan), "HeavyFirstScan=%d&amp;", pQuan.iHeavyFirstScan);
    sprintf(szBadQuan+strlen(szBadQuan), "HeavyLastScan=%d&amp;",  pQuan.iHeavyFirstScan-1);
-   sprintf(szBadQuan+strlen(szBadQuan), "HeavyMass=%0.1f&amp;",   pQuan.dHeavyPeptideMass);
+   sprintf(szBadQuan+strlen(szBadQuan), "HeavyMass=%0.6lf&amp;",   pQuan.dHeavyPeptideMass);
    sprintf(szBadQuan+strlen(szBadQuan), "DatFile=%s&amp;",        szDatFile);
    sprintf(szBadQuan+strlen(szBadQuan), "ChargeState=%d&amp;",    pQuan.iChargeState);
    sprintf(szBadQuan+strlen(szBadQuan), "OutFile=%s&amp;",        szOutputFile);
-   sprintf(szBadQuan+strlen(szBadQuan), "MassTol=%0.1lf&amp;",    pQuan.dMassTol);
-   sprintf(szBadQuan+strlen(szBadQuan), "bIcatLight1=%d&amp;",    bIcatLight1);
-   sprintf(szBadQuan+strlen(szBadQuan), "InteractDir=%s",         szInteractDir);
+   sprintf(szBadQuan+strlen(szBadQuan), "MassTol=%0.6lf&amp;",    pQuan.dMassTol);
+   sprintf(szBadQuan+strlen(szBadQuan), "bXpressLight1=%d&amp;",    bXpressLight1);
+   sprintf(szBadQuan+strlen(szBadQuan), "InteractDir=%s&amp;",    szInteractDir);
+   sprintf(szBadQuan+strlen(szBadQuan), "InteractBaseName=%s",    szInteractBaseName);
 
    printf("<FORM METHOD=POST ACTION=\"SetXpressValues.cgi\">");
    printf("<INPUT TYPE=\"hidden\" NAME=\"LightFirstScan\" VALUE=\"%d\">\n", pQuan.iLightFirstScan);
    printf("<INPUT TYPE=\"hidden\" NAME=\"LightLastScan\" VALUE=\"%d\">\n", pQuan.iLightLastScan);
-   printf("<INPUT TYPE=\"hidden\" NAME=\"LightMass\" VALUE=\"%0.1lf\">\n",pQuan.dLightPeptideMass );
+   printf("<INPUT TYPE=\"hidden\" NAME=\"LightMass\" VALUE=\"%0.6lf\">\n",pQuan.dLightPeptideMass );
    printf("<INPUT TYPE=\"hidden\" NAME=\"HeavyFirstScan\" VALUE=\"%d\">\n",pQuan.iHeavyFirstScan );
    printf("<INPUT TYPE=\"hidden\" NAME=\"HeavyLastScan\" VALUE=\"%d\">\n", pQuan.iHeavyLastScan);
-   printf("<INPUT TYPE=\"hidden\" NAME=\"HeavyMass\" VALUE=\"%0.1lf\">\n", pQuan.dHeavyPeptideMass);
+   printf("<INPUT TYPE=\"hidden\" NAME=\"HeavyMass\" VALUE=\"%0.6lf\">\n", pQuan.dHeavyPeptideMass);
    printf("<INPUT TYPE=\"hidden\" NAME=\"DatFile\" VALUE=\"%s\">\n", szDatFile);
    printf("<INPUT TYPE=\"hidden\" NAME=\"ChargeState\" VALUE=\"%d\">\n", pQuan.iChargeState);
    printf("<INPUT TYPE=\"hidden\" NAME=\"OutFile\" VALUE=\"%s\">\n", szOutputFile);
-   printf("<INPUT TYPE=\"hidden\" NAME=\"MassTol\" VALUE=\"%0.1lf\">\n", pQuan.dMassTol);
-   printf("<INPUT TYPE=\"hidden\" NAME=\"bIcatLight1\" VALUE=\"%d\">\n", bIcatLight1);
+   printf("<INPUT TYPE=\"hidden\" NAME=\"MassTol\" VALUE=\"%0.6lf\">\n", pQuan.dMassTol);
+   printf("<INPUT TYPE=\"hidden\" NAME=\"bXpressLight1\" VALUE=\"%d\">\n", bXpressLight1);
    printf("<INPUT TYPE=\"hidden\" NAME=\"quantitation_id\" VALUE=\"%d\">\n", pQuan.iquantitation_id);
    printf("<INPUT TYPE=\"hidden\" NAME=\"LightQuanValue\" VALUE=\"%0.1lf\">\n", 0.0);
    printf("<INPUT TYPE=\"hidden\" NAME=\"HeavyQuanValue\" VALUE=\"%0.1lf\">\n", 0.0);
    printf("<INPUT TYPE=\"hidden\" NAME=\"NewLink\" VALUE=\"%s\">\n", szBadQuan);
    printf("<INPUT TYPE=\"hidden\" NAME=\"NewQuan\" VALUE=\"%s\">\n", "?");
    printf("<INPUT TYPE=\"hidden\" NAME=\"InteractDir\" VALUE=\"%s\">\n", szInteractDir);
+   printf("<INPUT TYPE=\"hidden\" NAME=\"InteractBaseName\" VALUE=\"%s\">\n", szInteractBaseName);
    printf("<INPUT TYPE=\"hidden\" NAME=\"OutputFile\" VALUE=\"%s\">\n", szOutputFile);
    printf("<p><INPUT TYPE=\"submit\" VALUE=\"?*\"></FORM>");
 
@@ -1461,35 +1523,37 @@ void BAD_QUAN()
    */
    sprintf(szBadQuan                  , "LightFirstScan=%d&amp;", pQuan.iLightFirstScan);
    sprintf(szBadQuan+strlen(szBadQuan), "LightLastScan=%d&amp;",  pQuan.iLightLastScan);
-   sprintf(szBadQuan+strlen(szBadQuan), "LightMass=%0.1lf&amp;",  pQuan.dLightPeptideMass);
+   sprintf(szBadQuan+strlen(szBadQuan), "LightMass=%0.6lf&amp;",  pQuan.dLightPeptideMass);
    sprintf(szBadQuan+strlen(szBadQuan), "HeavyFirstScan=%d&amp;", pQuan.iHeavyFirstScan);
    sprintf(szBadQuan+strlen(szBadQuan), "HeavyLastScan=%d&amp;",  0);
-   sprintf(szBadQuan+strlen(szBadQuan), "HeavyMass=%0.1f&amp;",   pQuan.dHeavyPeptideMass);
+   sprintf(szBadQuan+strlen(szBadQuan), "HeavyMass=%0.6lf&amp;",   pQuan.dHeavyPeptideMass);
    sprintf(szBadQuan+strlen(szBadQuan), "DatFile=%s&amp;",        szDatFile);
    sprintf(szBadQuan+strlen(szBadQuan), "ChargeState=%d&amp;",    pQuan.iChargeState);
    sprintf(szBadQuan+strlen(szBadQuan), "OutFile=%s&amp;",        szOutputFile);
-   sprintf(szBadQuan+strlen(szBadQuan), "MassTol=%0.1lf&amp;",    pQuan.dMassTol);
-   sprintf(szBadQuan+strlen(szBadQuan), "bIcatLight1=%d&amp;",    bIcatLight1);
-   sprintf(szBadQuan+strlen(szBadQuan), "InteractDir=%s",         szInteractDir);
+   sprintf(szBadQuan+strlen(szBadQuan), "MassTol=%0.6lf&amp;",    pQuan.dMassTol);
+   sprintf(szBadQuan+strlen(szBadQuan), "bXpressLight1=%d&amp;",    bXpressLight1);
+   sprintf(szBadQuan+strlen(szBadQuan), "InteractDir=%s&amp;",    szInteractDir);
+   sprintf(szBadQuan+strlen(szBadQuan), "InteractBaseName=%s",    szInteractBaseName);
 
    printf("<FORM METHOD=POST ACTION=\"SetXpressValues.cgi\">");
    printf("<INPUT TYPE=\"hidden\" NAME=\"LightFirstScan\" VALUE=\"%d\">\n", pQuan.iLightFirstScan);
    printf("<INPUT TYPE=\"hidden\" NAME=\"LightLastScan\" VALUE=\"%d\">\n", pQuan.iLightLastScan);
-   printf("<INPUT TYPE=\"hidden\" NAME=\"LightMass\" VALUE=\"%0.1lf\">\n",pQuan.dLightPeptideMass );
+   printf("<INPUT TYPE=\"hidden\" NAME=\"LightMass\" VALUE=\"%0.6lf\">\n",pQuan.dLightPeptideMass );
    printf("<INPUT TYPE=\"hidden\" NAME=\"HeavyFirstScan\" VALUE=\"%d\">\n",pQuan.iHeavyFirstScan );
    printf("<INPUT TYPE=\"hidden\" NAME=\"HeavyLastScan\" VALUE=\"%d\">\n", pQuan.iHeavyLastScan);
-   printf("<INPUT TYPE=\"hidden\" NAME=\"HeavyMass\" VALUE=\"%0.1lf\">\n", pQuan.dHeavyPeptideMass);
+   printf("<INPUT TYPE=\"hidden\" NAME=\"HeavyMass\" VALUE=\"%0.6lf\">\n", pQuan.dHeavyPeptideMass);
    printf("<INPUT TYPE=\"hidden\" NAME=\"DatFile\" VALUE=\"%s\">\n", szDatFile);
    printf("<INPUT TYPE=\"hidden\" NAME=\"ChargeState\" VALUE=\"%d\">\n", pQuan.iChargeState);
    printf("<INPUT TYPE=\"hidden\" NAME=\"OutFile\" VALUE=\"%s\">\n", szOutputFile);
-   printf("<INPUT TYPE=\"hidden\" NAME=\"MassTol\" VALUE=\"%0.1lf\">\n", pQuan.dMassTol);
-   printf("<INPUT TYPE=\"hidden\" NAME=\"bIcatLight1\" VALUE=\"%d\">\n", bIcatLight1);
+   printf("<INPUT TYPE=\"hidden\" NAME=\"MassTol\" VALUE=\"%0.6lf\">\n", pQuan.dMassTol);
+   printf("<INPUT TYPE=\"hidden\" NAME=\"bXpressLight1\" VALUE=\"%d\">\n", bXpressLight1);
    printf("<INPUT TYPE=\"hidden\" NAME=\"quantitation_id\" VALUE=\"%d\">\n", pQuan.iquantitation_id);
    printf("<INPUT TYPE=\"hidden\" NAME=\"LightQuanValue\" VALUE=\"%0.1lf\">\n", pQuan.dLightQuanValue);
    printf("<INPUT TYPE=\"hidden\" NAME=\"HeavyQuanValue\" VALUE=\"%0.1lf\">\n", 0.0);
    printf("<INPUT TYPE=\"hidden\" NAME=\"NewLink\" VALUE=\"%s\">\n", szBadQuan);
    printf("<INPUT TYPE=\"hidden\" NAME=\"NewQuan\" VALUE=\"%s\">\n", "1:0.00");
    printf("<INPUT TYPE=\"hidden\" NAME=\"InteractDir\" VALUE=\"%s\">\n", szInteractDir);
+   printf("<INPUT TYPE=\"hidden\" NAME=\"InteractBaseName\" VALUE=\"%s\">\n", szInteractBaseName);
    printf("<INPUT TYPE=\"hidden\" NAME=\"OutputFile\" VALUE=\"%s\">\n", szOutputFile);
    printf("<p><INPUT TYPE=\"submit\" VALUE=\"1:0.00*\"></FORM>");
 
@@ -1500,17 +1564,17 @@ void BAD_QUAN()
    */
    sprintf(szBadQuan                  , "LightFirstScan=%d&amp;", pQuan.iLightFirstScan);
    sprintf(szBadQuan+strlen(szBadQuan), "LightLastScan=%d&amp;",  0);
-   sprintf(szBadQuan+strlen(szBadQuan), "LightMass=%0.1lf&amp;",  pQuan.dLightPeptideMass);
+   sprintf(szBadQuan+strlen(szBadQuan), "LightMass=%0.6lf&amp;",  pQuan.dLightPeptideMass);
    sprintf(szBadQuan+strlen(szBadQuan), "HeavyFirstScan=%d&amp;", pQuan.iHeavyFirstScan);
    sprintf(szBadQuan+strlen(szBadQuan), "HeavyLastScan=%d&amp;",  pQuan.iHeavyLastScan);
-   sprintf(szBadQuan+strlen(szBadQuan), "HeavyMass=%0.1f&amp;",   pQuan.dHeavyPeptideMass);
+   sprintf(szBadQuan+strlen(szBadQuan), "HeavyMass=%0.6lf&amp;",   pQuan.dHeavyPeptideMass);
    sprintf(szBadQuan+strlen(szBadQuan), "DatFile=%s&amp;",        szDatFile);
    sprintf(szBadQuan+strlen(szBadQuan), "ChargeState=%d&amp;",    pQuan.iChargeState);
    sprintf(szBadQuan+strlen(szBadQuan), "OutFile=%s&amp;",        szOutputFile);
-   sprintf(szBadQuan+strlen(szBadQuan), "MassTol=%0.1lf&amp;",    pQuan.dMassTol);
-   sprintf(szBadQuan+strlen(szBadQuan), "bIcatLight1=%d&amp;",    bIcatLight1);
-   sprintf(szBadQuan+strlen(szBadQuan), "InteractDir=%s",         szInteractDir);
-   sprintf(szBadQuan+strlen(szBadQuan), "quantitation_id=%d&amp;",pQuan.iquantitation_id);
+   sprintf(szBadQuan+strlen(szBadQuan), "MassTol=%0.6lf&amp;",    pQuan.dMassTol);
+   sprintf(szBadQuan+strlen(szBadQuan), "bXpressLight1=%d&amp;",    bXpressLight1);
+   sprintf(szBadQuan+strlen(szBadQuan), "InteractDir=%s&amp;",    szInteractDir);
+   sprintf(szBadQuan+strlen(szBadQuan), "InteractBaseName=%s",    szInteractBaseName);
 
    printf("<FORM METHOD=POST ACTION=\"SetXpressValues.cgi\">");
    printf("<INPUT TYPE=\"hidden\" NAME=\"LightFirstScan\" VALUE=\"%d\">\n", pQuan.iLightFirstScan);
@@ -1523,13 +1587,14 @@ void BAD_QUAN()
    printf("<INPUT TYPE=\"hidden\" NAME=\"ChargeState\" VALUE=\"%d\">\n", pQuan.iChargeState);
    printf("<INPUT TYPE=\"hidden\" NAME=\"OutFile\" VALUE=\"%s\">\n", szOutputFile);
    printf("<INPUT TYPE=\"hidden\" NAME=\"MassTol\" VALUE=\"%0.1lf\">\n", pQuan.dMassTol);
-   printf("<INPUT TYPE=\"hidden\" NAME=\"bIcatLight1\" VALUE=\"%d\">\n", bIcatLight1);
+   printf("<INPUT TYPE=\"hidden\" NAME=\"bXpressLight1\" VALUE=\"%d\">\n", bXpressLight1);
    printf("<INPUT TYPE=\"hidden\" NAME=\"quantitation_id\" VALUE=\"%d\">\n", pQuan.iquantitation_id);
    printf("<INPUT TYPE=\"hidden\" NAME=\"LightQuanValue\" VALUE=\"%0.1lf\">\n", 0.0);
    printf("<INPUT TYPE=\"hidden\" NAME=\"HeavyQuanValue\" VALUE=\"%0.1lf\">\n", pQuan.dHeavyQuanValue);
    printf("<INPUT TYPE=\"hidden\" NAME=\"NewLink\" VALUE=\"%s\">\n", szBadQuan);
    printf("<INPUT TYPE=\"hidden\" NAME=\"NewQuan\" VALUE=\"%s\">\n", "0.00:1");
    printf("<INPUT TYPE=\"hidden\" NAME=\"InteractDir\" VALUE=\"%s\">\n", szInteractDir);
+   printf("<INPUT TYPE=\"hidden\" NAME=\"InteractBaseName\" VALUE=\"%s\">\n", szInteractBaseName);
    printf("<INPUT TYPE=\"hidden\" NAME=\"OutputFile\" VALUE=\"%s\">\n", szOutputFile);
    printf("<p><INPUT TYPE=\"submit\" VALUE=\"0.00:1*\"></FORM>");
 
