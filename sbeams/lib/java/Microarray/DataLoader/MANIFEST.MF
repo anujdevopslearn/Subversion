@@ -1,3 +1,3 @@
 Main-Class: DataLoader.DataLoader
-Class-Path: /net/dblocal/www/html/dev7/sbeams/usr/java/share/util/java-getopt-1.0.10.jar /net/dblocal/www/html/dev7/sbeams/usr/java/share/util/visad.jar /net/dblocal/www/html/dev7/sbeams/usr/java/share/util/experiment.jar /net/dblocal/www/html/dev7/sbeams/usr/java/share/util/jdom.jar /net/dblocal/www/html/dev7/sbeams/usr/java/share/util/SBEAMS.jar
+Class-Path: java-getopt-1.0.10.jar visad.jar experiment.jar jdom.jar SBEAMS.jar
 

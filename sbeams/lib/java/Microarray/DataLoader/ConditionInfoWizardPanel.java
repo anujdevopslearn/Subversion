@@ -5,6 +5,7 @@ import javax.swing.*;
 import javax.swing.event.*;
 import javax.swing.border.*;
 import java.util.regex.*;
+import java.text.DecimalFormat;
 import java.util.List;
 import java.util.Hashtable;
 import java.util.Enumeration;
@@ -23,6 +24,7 @@ import javax.swing.table.TableColumnModel;
 public class ConditionInfoWizardPanel extends WizardPanel 
   implements ActionListener, KeyListener, MouseListener{
 //-----------------------------------------------------------------------------------------------
+  private static DecimalFormat twoDigits = new DecimalFormat("00");
   private JComboBox variableNames;
   private JTextField variableUnitsField = new JTextField(7);
   private JList conditionList;
@@ -207,8 +209,9 @@ public class ConditionInfoWizardPanel extends WizardPanel
 	}
 	for (int m=0;m<vars.length;m++) {
 	  registerAlias(m,vars[m].toString());
-	  this.repaint();
 	}
+	this.repaint();
+
   }
 //-----------------------------------------------------------------------------------------------
   private String translate(String units) {
@@ -264,14 +267,11 @@ public class ConditionInfoWizardPanel extends WizardPanel
 	  String variableName = new String();
 	  if (u.matches()) {
 		variableUnits = u.group(2);
-		variableUnits.trim();
 		variableName = u.group(1);
-		variableName.trim();
 	  }
 	  for (int h=0;h<r;h++) {
 		String variableValue = (String)variableTable.getValueAt(h,m);
-		variableValue.trim();
-		ConditionVariable cv = new ConditionVariable(variableName, variableValue, variableUnits);
+		ConditionVariable cv = new ConditionVariable(variableName.trim(), variableValue.trim(), variableUnits.trim());
 		conditionList.setSelectedIndex(h);
 		ExperimentCondition ec = (ExperimentCondition)condData.get(getConditionName(h));
 		ec.addVariable(cv);
@@ -289,8 +289,8 @@ public class ConditionInfoWizardPanel extends WizardPanel
 	Date trialTime = new Date();
 	calendar.setTime(trialTime);
 	String date = new String(calendar.get(Calendar.YEAR)+"-"+
-							 (calendar.get(calendar.MONTH)+1)+"-"+
-							 calendar.get(calendar.DATE));
+							 twoDigits.format( (calendar.get(calendar.MONTH)+1) )+"-"+
+							 twoDigits.format( (calendar.get(calendar.DATE)) ) );
 
 	Hashtable aliases = new Hashtable();
     String lambdaFile = baseName+".lambda";
@@ -313,7 +313,7 @@ public class ConditionInfoWizardPanel extends WizardPanel
 	float[][] lambdaData = new float[conds][individualLambdas.length];
 	ratioData[0] = individualRatios;
 	lambdaData[0] = individualLambdas;
-	for (int m=1;m<conds;m++) {
+	for (int m=0;m<conds;m++) {
 	  ec = (ExperimentCondition)condData.get(conditions[m]);
 	  aliases.put(conditions[m], ec.getConditionAlias());
 	  individualRatios = ec.getRatioData();

@@ -39,7 +39,7 @@ public class GeneExpressionFileReader {
   }// read
 //-----------------------------------------------------------------------------------------------
   private String[] getFile(){
-	if (filename.startsWith("SbeamsIndirect://")) {
+	if (filename.startsWith("sbeamsIndirect://")) {
 	  try {
 		String[] pieces = filename.split("://");
 		sc = new SBEAMSClient(true);
