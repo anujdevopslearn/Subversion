@@ -883,6 +883,13 @@ sub getProjectDetailsTable {
 
 } # End getProjectDetailsTable
 
+sub evalSQL {
+  my $self = shift;
+  my $sql = shift;
+  return eval "\"$sql\"";
+}
+
+
 
 ###############################################################################
 1;
