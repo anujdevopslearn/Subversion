@@ -49,6 +49,10 @@ use vars qw(@ISA @EXPORT
     $TBMA_POLYMER_TYPE
     $TBMA_ARRAY_ELEMENT
     $TBMA_CHANNEL
+    $TBMA_SERVER
+    $TBMA_FILE_PATH
+    $TBMA_FILE_LOCATION
+    $TBMA_FILE_TYPE
 
 );
 
@@ -92,6 +96,10 @@ require Exporter;
     $TBMA_POLYMER_TYPE
     $TBMA_ARRAY_ELEMENT
     $TBMA_CHANNEL
+    $TBMA_SERVER
+    $TBMA_FILE_PATH
+    $TBMA_FILE_LOCATION
+    $TBMA_FILE_TYPE
 
 );
 
@@ -132,3 +140,7 @@ $TBMA_EXTERNAL_REFERENCE_TYPE = 'external_reference_type';
 $TBMA_POLYMER_TYPE      = 'polymer_type';
 $TBMA_ARRAY_ELEMENT     = 'array_element';
 $TBMA_CHANNEL = 'channel';
+$TBMA_SERVER='server';
+$TBMA_FILE_PATH='file_path';
+$TBMA_FILE_LOCATION='file_location';
+$TBMA_FILE_TYPE='file_type';
