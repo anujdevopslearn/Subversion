@@ -198,13 +198,7 @@ sub handle_request {
     ~;
 
   # Create new tabmenu item.  This may be a $sbeams object method in the future.
-  my $tabmenu = SBEAMS::Connection::TabMenu->new( cgi => $q,
-                                                 # paramName => 'mytabname', # uses this as cgi param
-                                                 # maSkin => 1,   # If true, use MA look/feel
-                                                 # isSticky => 0, # If true, pass thru cgi params 
-                                                 # boxContent => 0, # If true draw line around content
-                                                 # labels => \@labels # Will make one tab per $lab (@labels)
-                                                 );
+  my $tabmenu = SBEAMS::Connection::TabMenu->new( cgi => $q );
 
   # Preferred way to add tabs.  label is required, helptext optional
   $tabmenu->addTab( label => 'Current Project', helptext => 'View details of current Project' );
@@ -212,6 +206,8 @@ sub handle_request {
   $tabmenu->addTab( label => 'Recent Resultsets', helptext => 'View recent SBEAMS resultsets' );
   $tabmenu->addTab( label => 'Accessible Projects', helptext => 'View projects I have access to' );
 
+  # This really shouldn't need to be done!
+  $SBEAMS_SUBDIR = '';
 
   ##########################################################################
   #### Print out some recent resultsets
@@ -243,15 +239,15 @@ sub handle_request {
   ##########################################################################
   #### Print out all projects owned by the user
 
-    $content = $sbeams->getProjectsYouOwn();
-
+    $content = $sbeams->getProjectsYouOwn( mod_data => 'all' );
 
   } elsif ( $tabmenu->getActiveTab() == 4 ){
 
   ##########################################################################
   #### Print out all projects user has access to
 
-  $content = $sbeams->getProjectsYouHaveAccessTo();
+#  $content = $sbeams->getProjectsYouHaveAccessTo();
+  $content = $sbeams->getAccessibleProjectInfo( mod_data => 'all' );
 
   }
 
