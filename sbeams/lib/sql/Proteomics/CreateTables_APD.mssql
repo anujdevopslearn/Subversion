@@ -22,12 +22,12 @@ DROP TABLE peptide_summary
 
 
 
-CREATE TABLE dbo.peptide_summary (
+CREATE TABLE peptide_summary (
 	peptide_summary_id	int IDENTITY NOT NULL,
 	peptide_summary_name	varchar(100) NOT NULL,
 	description		text NULL,
 	minimum_probability	real NOT NULL,
-	experiment_list		varchar(100) NOT NULL,
+	experiment_list		varchar(255) NOT NULL,
 	n_experiments		int NOT NULL,
 	comment			text NULL,
 	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -41,7 +41,7 @@ CREATE TABLE dbo.peptide_summary (
 GO
 
 
-CREATE TABLE dbo.peptide_summary_experiment (
+CREATE TABLE peptide_summary_experiment (
 	peptide_summary_id	int NOT NULL REFERENCES peptide_summary(peptide_summary_id),
 	proteomics_experiment_id	int NOT NULL /*REFERENCES proteomics_experiment(proteomics_experiment_id)*/,
 	PRIMARY KEY CLUSTERED (peptide_summary_id)
@@ -49,13 +49,26 @@ CREATE TABLE dbo.peptide_summary_experiment (
 GO
 
 
-CREATE TABLE dbo.peptide (
+CREATE TABLE peptide_identifier (
+	peptide_identifier_id	int IDENTITY NOT NULL,
+	peptide_identifier_str	varchar(50) NOT NULL,
+	peptide			varchar(512) NOT NULL,
+	PRIMARY KEY CLUSTERED (peptide_identifier_id)
+)
+GO
+ALTER TABLE peptide_identifier ADD CONSTRAINT peptide_identifier_str_uk UNIQUE (peptide_identifier_str)
+GO
+
+
+CREATE TABLE peptide (
 	peptide_id		int IDENTITY NOT NULL,
 	peptide_summary_id	int NULL REFERENCES peptide_summary(peptide_summary_id),
+	peptide_identifier_id	int NULL REFERENCES peptide_identifier(peptide_identifier_id),
 	biosequence_id		int NULL /*REFERENCES biosequence(biosequence_id)*/,
 	biosequence_name	varchar(255) NOT NULL,
 	peptide			varchar(512) NOT NULL,
 	n_peptides		int NOT NULL,
+	experiment_list		varchar(255) NOT NULL,
 	n_experiments		int NULL,
 	maximum_probability	real NOT NULL,
 	PRIMARY KEY CLUSTERED (peptide_id)
@@ -63,23 +76,28 @@ CREATE TABLE dbo.peptide (
 GO
 
 
-CREATE TABLE dbo.modified_peptide (
+CREATE TABLE modified_peptide (
 	modified_peptide_id	int IDENTITY NOT NULL,
 	peptide_id		int NULL REFERENCES peptide(peptide_id),
 	peptide_string		varchar(512) NOT NULL,
 	charge_state		int NOT NULL,
 	n_modified_peptides	int NOT NULL,
+	experiment_list		varchar(255) NOT NULL,
 	n_experiments		int NULL,
 	maximum_probability	real NOT NULL,
-	avg_precursor_mass	real NOT NULL,
+	calc_pepetide_mass	real NOT NULL,
+	precursor_mass_avg	real NOT NULL,
+	precursor_mass_stdev	real NULL,
+	percent_ACN_avg		real NOT NULL,
+	percent_ACN_stdev	real NULL,
 	avg_percent_buffer_B	real NULL,
-	avg_pI			real NULL,
-	avg_SCX			real NULL,
+	pI_avg			real NULL,
+	SCX_avg			real NULL,
 	PRIMARY KEY CLUSTERED (modified_peptide_id)
 )
 GO
 
-CREATE TABLE dbo.peptide_property_type (
+CREATE TABLE peptide_property_type (
 	peptide_property_type_id		int IDENTITY NOT NULL,
 	peptide_property_type_name		varchar(100) NOT NULL,
 	peptide_property_type_description	text NULL,
@@ -95,7 +113,7 @@ CREATE TABLE dbo.peptide_property_type (
 GO
 
 
-CREATE TABLE dbo.modified_peptide_property (
+CREATE TABLE modified_peptide_property (
 	modified_peptide_property_id	int IDENTITY NOT NULL,
 	modified_peptide_id		int NOT NULL REFERENCES modified_peptide(modified_peptide_id),
 	peptide_property_type_id	int NOT NULL REFERENCES peptide_property_type(peptide_property_type_id),
