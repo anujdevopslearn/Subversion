@@ -41,11 +41,11 @@ CYTOSCAPE_URL = webhost.domain.org:8080/cytoscape
 DB_SERVER   = sqlhostname
 DB_DATABASE = sbeams
 
-#### Set a read/write user and password
+#### Set a read/write user and password.  Should use encrypted password!
 DB_USER     = sbeams
 DB_PASS     = sbeamspassword
 
-#### set a read only user and password
+#### set a read only user and password.  Should use encrypted password!
 DB_RO_USER  = sbeamsro
 DB_RO_PASS  = sbeamsropassword
 
@@ -82,6 +82,8 @@ DBPREFIX{Biosap}        = Biosap.dbo.
 DBPREFIX{Cytometry}     = Cytometry.dbo.
 DBPREFIX{Genotyping}    = Genotyping.dbo.
 DBPREFIX{Immunostain}   = Immunostain.dbo.
+DBPREFIX{Interactions}   = Immunostain.dbo.
+DBPREFIX{Inkjet}   = Immunostain.dbo.
 DBPREFIX{Microarray}    = sbeams.dbo.
 DBPREFIX{Ontology}      = Ontology.dbo.
 DBPREFIX{Oligo}         = Oligo.dbo.
@@ -90,6 +92,7 @@ DBPREFIX{PeptideAtlas}  = PeptideAtlas.dbo.
 DBPREFIX{ProteinStructure}    = ProteinStructure.dbo.
 DBPREFIX{Proteomics}    = proteomics.dbo.
 DBPREFIX{SNP}           = SNP.dbo.
+DBPREFIX{ADP}           = SNP.dbo.
 DBPREFIX{UESC}          = UESC.dbo.
 
 #### Set the raw data directory location as a function of module.
