@@ -144,7 +144,7 @@ sub printOptions {
     }
 
     print "$LINESEPARATOR<P>";
-    $sbeamsPROT->printPageFooter("CloseTables");
+    $sbeamsPROT->printPageFooter(close_table=>"YES",display_footer=>"NO");
     showTable("WithOptions");
 
 } # end printOptions
