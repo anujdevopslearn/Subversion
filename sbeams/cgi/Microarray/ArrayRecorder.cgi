@@ -1431,7 +1431,7 @@ sub alert_developers{
   print MAIL "Here is a listing of the data that was inserted:\n";
   print MAIL "KEY(array,data type) \t VALUE\n";
   foreach my $key (keys %parameters) {
-	print MAIL "$key\t$parameters{$key}\n";
+	print MAIL "$key  -  $parameters{$key}\n";
   }
   close (MAIL);
   
