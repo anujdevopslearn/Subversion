@@ -19,6 +19,11 @@ use SBEAMS::Connection::Settings;
 use vars qw(@ISA @EXPORT
     $TB_ORGANISM
 
+    $TBSN_SNP_PLATE
+    $TBSN_PLATE_TYPE
+    $TBSN_INSTRUMENT
+    $TBSN_INSTRUMENT_TYPE
+
     $TBSN_BIOSEQUENCE_SET
     $TBSN_BIOSEQUENCE
 
@@ -31,6 +36,8 @@ use vars qw(@ISA @EXPORT
     $TBSN_ALLELE_BLAST_STATS
     $TBSN_QUERY_SEQUENCE
     $TBSN_BIOSEQUENCE_RANK_LIST
+
+    $TBSN_EXPORT_RESULTS
 
     $TBSN_QUERY_OPTION
 
@@ -56,6 +63,11 @@ require Exporter;
 @EXPORT = qw (
     $TB_ORGANISM
 
+    $TBSN_SNP_PLATE
+    $TBSN_PLATE_TYPE
+    $TBSN_INSTRUMENT
+    $TBSN_INSTRUMENT_TYPE
+
     $TBSN_BIOSEQUENCE_SET
     $TBSN_BIOSEQUENCE
 
@@ -68,6 +80,8 @@ require Exporter;
     $TBSN_ALLELE_BLAST_STATS
     $TBSN_QUERY_SEQUENCE
     $TBSN_BIOSEQUENCE_RANK_LIST
+
+    $TBSN_EXPOER_RESULTS
 
     $TBSN_QUERY_OPTION
 
@@ -92,9 +106,15 @@ require Exporter;
 my $core = $DBPREFIX{Core};
 my $mod = $DBPREFIX{SNP};
 
+my $sequenom = 'SEQUENOM..SEQUENOM.';
 
-$TB_ORGANISM                      = "${core}organism";
+
+$TB_ORGANISM                     = "${core}organism";
 			
+$TBSN_SNP_PLATE                  = "${mod}snp_plate";
+$TBSN_PLATE_TYPE                 = "${mod}plate_type";
+$TBSN_INSTRUMENT                 = "${mod}instrument";
+$TBSN_INSTRUMENT_TYPE            = "${mod}instrument_type";
 
 $TBSN_BIOSEQUENCE_SET            = "${mod}biosequence_set";
 $TBSN_BIOSEQUENCE                = "${mod}biosequence";
@@ -108,6 +128,8 @@ $TBSN_ALLELE_FREQUENCY           = "${mod}allele_frequency";
 $TBSN_ALLELE_BLAST_STATS         = "${mod}allele_blast_stats";
 $TBSN_QUERY_SEQUENCE             = "${mod}query_sequence";
 $TBSN_BIOSEQUENCE_RANK_LIST      = "${mod}biosequence_rank_list";
+
+$TBSN_EXPORT_RESULTS             = "${sequenom}EXPORT_RESULTS_VIEW";
 			
 $TBSN_QUERY_OPTION               = "${mod}query_option";
 			
