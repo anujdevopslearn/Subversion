@@ -130,16 +130,12 @@ sub printEntryForm {
     my (%url_cols,%hidden_cols);
 
     my $CATEGORY="Welcome to the Data Processing Pipeline!";
-    my $SECONDARY_MESSAGE="<B><FONT COLOR='red'>In order to create a better data processing tool, I need your help!</FONT></B>";
-    my $TERTIARY_MESSAGE="If you have any questions, suggestions, or just want some help, please contact me!<BR>Thanks!<BR>- <A HREF=\"mailto:mjohnson\@systemsbiology.org\">Michael Johnson</A>";
 
     $parameters{project_id} = $sbeams->getCurrent_project_id();
 
     $sbeams->printUserContext();
     print qq~
   <H2>$CATEGORY</H2>
-      <BR>$SECONDARY_MESSAGE<BR>
-      <BR>$TERTIARY_MESSAGE<BR>
       <BR><BR>
       ~;
 
@@ -363,7 +359,6 @@ print qq~
 
 print qq~
 $LINESEPARATOR<BR>
-<FONT COLOR="#cc0000" SIZE="+0" FACE="Arial,Helvetica,sans-serif"><B>Step 1 of 3: Choose Files</B></FONT>
   <FORM METHOD="post" NAME="MainForm" onSubmit="return prepareForSubmission()">
     <TABLE BORDER=0>
     <TR>
@@ -423,11 +418,7 @@ $LINESEPARATOR<BR>
       </TD>
       <TD VALIGN="top" ALIGN="center">
       <BR><BR>
-      <INPUT NAME="forwardButton" TYPE="button" VALUE="<--Add to Forward" onClick="addItem('forward')">
-      <BR><BR>
       <INPUT NAME="removeButton"  TYPE="button" VALUE="Remove-->" onClick="removeItem()">
-      <BR><BR>
-      <INPUT NAME="reverseButton" TYPE="button" VALUE="<--Add to Reverse" onClick="addItem('reverse')">
       <BR><BR>
       </TD>
       <TD VALIGN="top">
@@ -436,11 +427,20 @@ $LINESEPARATOR<BR>
       </TD>
     </TR>
     </TABLE>
+	~;
 
-    $LINESEPARATOR<BR>
+# Removed buttons- place within above print statement to activate.
+#      <BR><BR>
+#      <INPUT NAME="forwardButton" TYPE="button" VALUE="<--Add to Forward" onClick="addItem('forward')">
+#      <BR><BR>
+#      <INPUT NAME="reverseButton" TYPE="button" VALUE="<--Add to Reverse" onClick="addItem('reverse')">
+#      <BR><BR>
+
+    print qq~
+	  $LINESEPARATOR<BR>
 
     <FONT COLOR="#cc0000" SIZE="+0" FACE="Arial,Helvetica,sans-serif">
-    <B>Step 2 of 3: Optional Pipeline Configurations</B><BR>
+    <B>Optional Pipeline Configurations</B><BR>
     <FONT SIZE="-1" COLOR="#000000">
 
     <img src="$HTML_BASE_DIR/images/space.gif" height=1 width="30">- Default values used if not selected<BR>
@@ -747,9 +747,6 @@ print qq~
     <BR>
     $LINESEPARATOR
     <BR>
-    <FONT COLOR="#cc0000" SIZE="+0" FACE="Arial,Helvetica,sans-serif">
-    <B>Step 3 of 3: Proceed to Final Stage</B>
-    </FONT>
     <p>
     <INPUT TYPE="hidden" NAME="set_current_project_id">
     <INPUT TYPE="hidden" NAME="set_current_work_group">
