@@ -16,3 +16,4 @@ labeling	Labeling	process	YES	$TB_LABELING	labeling_id	array_request_sample_id	M
 hybridization	Hybridization	process	YES	$TB_HYBRIDIZATION	hybridization_id	array_id	ManageTable.cgi?TABLE_NAME=hybridization	"labeling,hybridization"	array_scan
 array_scan	Array Scan	process	YES	$TB_ARRAY_SCAN	array_scan_id		ManageTable.cgi?TABLE_NAME=array_scan	"array_scan,array_quantitation"	array_quantitation
 array_quantitation	Array Quantitation	process	YES	$TB_ARRAY_QUANTITATION	array_quantitation_id		ManageTable.cgi?TABLE_NAME=array_quantitation	"array_scan,array_quantitation"	
+MA_biosequence_set	BioSequence Set	arrays	YES	$TBMA_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=biosequence_set	biosequence_set	

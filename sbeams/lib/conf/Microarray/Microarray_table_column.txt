@@ -206,4 +206,22 @@ array_quantitation	10	created_by_id	Record Created By	int	8	0	N		N	contact	conta
 array_quantitation	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 array_quantitation	12	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
 array_quantitation	13	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-array_quantitation	14	record_status	Record Status	char	1	0	N	N	N							N	N
+array_quantitation	14	record_status	Record Status	char	1	0	N	N	N							N	N				
+MA_biosequence_set	1	biosequence_set_id	BioSequence Set ID	int	8	0	N		Y							N	N				pkDEFAULT
+MA_biosequence_set	2	organism_id	Organism	int	8	0	N		N		organism_id	Y	optionlist			Y	Y	N	Species for this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+MA_biosequence_set	3	set_name	Set Name	varchar	50	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
+MA_biosequence_set	4	set_tag	Set Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this BioSequence database		
+MA_biosequence_set	5	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Longer description of this BioSequence database		
+MA_biosequence_set	6	set_version	Set Version	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Version of this BioSequence database		
+MA_biosequence_set	7	polymer_type_id	Polymer Type	int	8	0	N		N		organism_id	Y	optionlist			Y	Y	N	Species for this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+MA_biosequence_set	8	upload_file	Upload file	varchar	255	0	N		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
+MA_biosequence_set	9	set_path	Set Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	File path of this BioSequence database		
+MA_biosequence_set	10	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
+MA_biosequence_set	11	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+MA_biosequence_set	12	sort_order	Sort Order	int	8	0	N	10	N							N	N	N			
+MA_biosequence_set	13	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+MA_biosequence_set	14	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+MA_biosequence_set	15	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+MA_biosequence_set	16	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N
+MA_biosequence_set	17	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N
+MA_biosequence_set	18	record_status	Record Status	char	1	0	N	N	N							N	N
