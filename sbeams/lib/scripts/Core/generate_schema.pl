@@ -345,7 +345,7 @@ sub readTableProperty {
 
     #### If the table begins with a two capital letter prefix, remove it
     my $real_name = $table_name;
-    $real_name =~ s/^[A-Z]{2,3}\_//;
+    $real_name =~ s/^[A-Z]{2,4}\_//;
 
     $table_properties->{$table_name}->{category} = $category;
     $table_properties->{$table_name}->{table_group} = $table_group;
