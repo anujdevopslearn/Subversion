@@ -52,6 +52,14 @@ use vars qw(@ISA @EXPORT
 
     $TBPR_PROCESSING_STATUS
     $TBPR_RAW_DATA_FILE
+
+    $TBAPD_PEPTIDE_SUMMARY
+    $TBAPD_PEPTIDE_SUMMARY_EXPERIMENT
+    $TBAPD_PEPTIDE
+    $TBAPD_MODIFIED_PEPTIDE
+    $TBAPD_MODIFIED_PEPTIDE_PROPERTY
+    $TBAPD_PEPTIDE_PROPERTY_TYPE
+
 );
 
 
@@ -94,6 +102,14 @@ require Exporter;
 
     $TBPR_PROCESSING_STATUS
     $TBPR_RAW_DATA_FILE
+
+    $TBAPD_PEPTIDE_SUMMARY
+    $TBAPD_PEPTIDE_SUMMARY_EXPERIMENT
+    $TBAPD_PEPTIDE
+    $TBAPD_MODIFIED_PEPTIDE
+    $TBAPD_MODIFIED_PEPTIDE_PROPERTY
+    $TBAPD_PEPTIDE_PROPERTY_TYPE
+
 );
 
 
@@ -138,8 +154,12 @@ $TBPR_FUNDING_STATUS              = "${mod}funding_status";
 $TBPR_PROCESSING_STATUS           = "${mod}processing_status";
 $TBPR_RAW_DATA_FILE               = "${mod}raw_data_file";
 
-
-
+$TBAPD_PEPTIDE_SUMMARY            = "APD.dbo.peptide_summary";
+$TBAPD_PEPTIDE_SUMMARY_EXPERIMENT = "APD.dbo.peptide_summary_experiment";
+$TBAPD_PEPTIDE                    = "APD.dbo.peptide";
+$TBAPD_MODIFIED_PEPTIDE           = "APD.dbo.modified_peptide";
+$TBAPD_MODIFIED_PEPTIDE_PROPERTY  = "APD.dbo.modified_peptide_property";
+$TBAPD_PEPTIDE_PROPERTY_TYPE      = "APD.dbo.peptide_property_type";
 
 
 
