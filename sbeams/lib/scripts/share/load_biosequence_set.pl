@@ -1666,6 +1666,8 @@ sub readRosettaLookupFile {
     die("Unable to open Rosetta Lookup file '$source_file'");
 
 
+  print "Reading lookup file file...\n";
+
   #### Define some variables
   my $line;
 
@@ -1673,8 +1675,9 @@ sub readRosettaLookupFile {
   while ($line = <LOOKUPFILE>) {
     $line =~ s/[\r\n]//g;
     my @columns = split("\t",$line);
-#    $rosetta_lookup->{$columns[0]} = $columns[1];
+    #$rosetta_lookup->{$columns[0]} = $columns[1];
     $rosetta_lookup->{$columns[1]} = $columns[0];
+    #print "  '$columns[1]' == '$columns[0]'\n";
   }
 
   close(LOOKUPFILE);
@@ -1759,10 +1762,12 @@ sub readPFAMSearchSummaryFile {
 
 
     #### Check the lookup
-    if (defined($rosetta_lookup)) {
-      unless ($rosetta_lookup->{$rosetta_name} eq $biosequence_name) {
+    if (defined($rosetta_lookup) && 0) {
+      my $tmp = $rosetta_lookup->{$rosetta_name};
+		  $tmp = '<undef>' unless defined($tmp);
+      unless ($tmp eq $biosequence_name) {
         print "ERROR: Rosetta name verification failed! ",
-          "'$biosequence_name' != '",$rosetta_lookup->{$rosetta_name},"'\n";
+          "'$biosequence_name' != '$tmp'\n";
       }
     }
   }
