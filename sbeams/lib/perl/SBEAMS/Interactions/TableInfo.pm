@@ -235,7 +235,7 @@ sub returnTableInfo {
 
         if ($info_key eq "BASICQuery") {
             return qq~
-		SELECT publication_id,publication_name,
+		SELECT publication_id,pubmed_ID,publication_name,
 		       publication_category_name AS "Category",
 		       title,
 		       full_manuscript_file,
