@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -T
+#!/usr/local/bin/perl
 
 ###############################################################################
 # Program     : main.cgi
@@ -12,49 +12,115 @@
 
 
 ###############################################################################
-# Get the script set up with everything it will need
+# Set up all needed modules and objects
 ###############################################################################
 use strict;
-use vars qw ($q $sbeams $sbeamsBioLink $PROGRAM_FILE_NAME
-             $current_contact_id $current_username);
-use lib qw (../../lib/perl);
-use CGI;
-use CGI::Carp qw(fatalsToBrowser croak);
+use Getopt::Long;
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $sbeamsBioLink $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+
 
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
 
 use SBEAMS::BioLink;
 use SBEAMS::BioLink::Settings;
+use SBEAMS::BioLink::Tables;
 
-$q   = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsBioLink = new SBEAMS::BioLink;
 $sbeamsBioLink->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+use CGI;
+$q = new CGI;
+
 
 
 ###############################################################################
-# Global Variables
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value kay=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET   = $OPTIONS{"quiet"} || 0;
+$DEBUG   = $OPTIONS{"debug"} || 0;
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+
+
+
+###############################################################################
+# Set Global Variables and execute main()
 ###############################################################################
 $PROGRAM_FILE_NAME = 'main.cgi';
 main();
+exit(0);
+
 
 
 ###############################################################################
 # Main Program:
 #
-# Call $sbeams->Authentication and stop immediately if authentication
-# fails else continue.
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
 ###############################################################################
-sub main { 
+sub main {
 
-    #### Do the SBEAMS authentication and exit if a username is not returned
-    exit unless ($current_username = $sbeams->Authenticate());
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    #connect_read_only=>1,
+    #allow_anonymous_access=>1,
+    #permitted_work_groups_ref=>['Proteomics_user','Proteomics_admin'],
+  ));
 
-    #### Print the header, do what the program does, and print footer
+
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters);
+  #$sbeams->printDebuggingInfo($q);
+
+
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(
+    parameters_ref=>\%parameters);
+
+
+  #### Decide what action to take based on information so far
+  if ($parameters{action} eq "???") {
+    # Some action
+  } else {
     $sbeamsBioLink->printPageHeader();
-    showMainPage();
+    handle_request(ref_parameters=>\%parameters);
     $sbeamsBioLink->printPageFooter();
+  }
 
 } # end main
 
@@ -62,7 +128,7 @@ sub main {
 ###############################################################################
 # Show the main welcome page
 ###############################################################################
-sub showMainPage {
+sub handle_request {
 
     $sbeams->printUserContext();
 
