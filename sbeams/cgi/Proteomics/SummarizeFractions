@@ -315,18 +315,25 @@ sub handle_request {
 
   #### Define the hypertext links for columns that need them
   %url_cols = ('Username' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=contact&contact_id=\%$colnameidx{contact_id}V",
+               'Username_ATAG' => 'TARGET="Win2"',
 
                'Project Tag' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=\%$colnameidx{project_id}V",
+               'Project Tag_ATAG' => 'TARGET="Win2"',
 
                'Exp Tag' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&experiment_id=\%$colnameidx{experiment_id}V",
+               'Exp Tag_ATAG' => 'TARGET="Win2"',
 
                'Fraction Tag' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_fraction&fraction_id=\%$colnameidx{fraction_id}V",
+               'Fraction Tag_ATAG' => 'TARGET="Win2"',
 
                'TIC_plot' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ShowTICPlot?fraction_id=\%$colnameidx{fraction_id}V",
+               'TIC_plot_ATAG' => 'TARGET="Win2"',
 
                'MS Run Summary' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ShowMSRunSummary?fraction_id=\%$colnameidx{fraction_id}V",
+               'MS Run Summary_ATAG' => 'TARGET="Win2"',
 
                'LC Gradient Program' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_gradient_program&gradient_program_id=\%$colnameidx{gradient_program_id}V",
+               'LC Gradient Program_ATAG' => 'TARGET="Win2"',
   );
 
 
