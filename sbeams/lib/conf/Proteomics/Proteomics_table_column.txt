@@ -270,5 +270,30 @@ PR_proteomics_experiment_request	19	date_created	Date Record Created	datetime	8	
 PR_proteomics_experiment_request	20	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N			
 PR_proteomics_experiment_request	21	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
 PR_proteomics_experiment_request	22	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N			
-PR_proteomics_experiment_request	23	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N
-PR_proteomics_experiment_request	24	record_status	Record Status	char	1	0	N	N	N							N	N
+PR_proteomics_experiment_request	23	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+PR_proteomics_experiment_request	24	record_status	Record Status	char	1	0	N	N	N							N	N				
+PR_processing_status	1	processing_status_id	Processing Status ID	int	4	0	N		Y							N	N				pkDEFAULT
+PR_processing_status	2	status_tag	Status Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this Status entry		
+PR_processing_status	3	status_description	Status Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this Status entry		
+PR_processing_status	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PR_processing_status	5	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
+PR_processing_status	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_processing_status	7	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
+PR_processing_status	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_processing_status	9	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
+PR_processing_status	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+PR_processing_status	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+PR_raw_data_file	1	raw_data_file_id	Raw Data File ID	int	4	0	N		Y							N	N				pkDEFAULT
+PR_raw_data_file	2	file_name	File Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of the raw data file (no path information)		
+PR_raw_data_file	3	file_path	File Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	Current direcotory/folder path of the raw data file		
+PR_raw_data_file	4	processing_status_id	Processing Status	int	4	0	N		N			Y	optionlist			Y	Y	N	Current status of the file	"SELECT processing_status_id,status_tag FROM $TBPR_PROCESSING_STATUS ORDER BY sort_order,status_tag"
+PR_raw_data_file	5	file_status_message	File Status Message	varchar	255	0	Y		N			N	text	50		Y	Y	N	Additional message regarding the status of the file	
+PR_raw_data_file	6	file_written_date	File Written Date	datetime	8	0	Y		N			N	text	30		Y	Y	N	Date that the file was written	
+PR_raw_data_file	7	file_size	File Size	int	4	0	Y		N			N	text	20		Y	Y	N	Size of the file in bytes	
+PR_raw_data_file	8	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments	
+PR_raw_data_file	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+PR_raw_data_file	10	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N			
+PR_raw_data_file	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+PR_raw_data_file	12	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N			
+PR_raw_data_file	13	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
+PR_raw_data_file	14	record_status	Record Status	char	1	0	N	N	N							N	N			
