@@ -108,8 +108,10 @@ sub main {
   my $affy_array_id = $parameters{'affy_array_id'};
   my $analysis_folder = $parameters{'analysis_folder'};
   my $analysis_file = $parameters{'analysis_file'};
+
+  my $annotated_file = $parameters{'annotated_file'};
   
- unless ( $affy_array_id || ($analysis_folder && $analysis_file)) {
+ unless ( $affy_array_id || ($analysis_folder && $analysis_file) ||$annotated_file) {
  	 die "ERROR: Need to Pass affy_array_id or analysis_folder &  $analysis_file ";
  }
 	my $action = $parameters{'action'} || "download";
@@ -125,6 +127,9 @@ sub main {
 		$output_dir = $sbeamsMOD->affy_bioconductor_devlivery_path();
 		$output_dir .= "/$analysis_folder";
 		$file_name = $analysis_file;
+	}elsif($annotated_file){
+		$output_dir = $sbeamsMOD->get_ANNOTATION_OUT_FOLDER();
+		$file_name = $annotated_file;
 	}
 	
 	#### Verify user has permission to access the file
