@@ -1,20 +1,25 @@
-"table_name"	"Category"	"table_group"	"manage_table_allowed"	"db_table_name"	"PK_column_name"	"multi_insert_column"	"table_url"	"manage_tables"	"next_step"
-"slide_type"	"Slide Type"	"arrays"	"YES"	"$TB_SLIDE_TYPE"	"slide_type_id"		"ManageTable.cgi?TABLE_NAME=slide_type"	"slide_type,labeling_method,cost_scheme,slide_type_cost"	"slide_type_cost"
-"cost_scheme"	"Cost Scheme"	"arrays"	"YES"	"$TB_COST_SCHEME"	"cost_scheme_id"		"ManageTable.cgi?TABLE_NAME=cost_scheme"	"slide_type,labeling_method,cost_scheme,slide_type_cost"	"slide_type_cost"
-"slide_type_cost"	"Slide Type Cost"	"arrays"	"YES"	"$TB_SLIDE_TYPE_COST"	"slide_type_cost_id"		"ManageTable.cgi?TABLE_NAME=slide_type_cost"	"slide_type,labeling_method,cost_scheme,slide_type_cost"	
-"labeling_method"	"Labeling Method"	"arrays"	"YES"	"$TB_LABELING_METHOD"	"labeling_method_id"		"ManageTable.cgi?TABLE_NAME=labeling_method"	"slide_type,labeling_method,cost_scheme,slide_type_cost"	
-"array_request"	"Array Request"	"request"		"$TB_ARRAY_REQUEST"	"array_request_id"		"SubmitArrayRequest.cgi?TABLE_NAME=array_request"	"array_request"	
-"array_request_slide"	"Array Request Slide"	"request"		"$TB_ARRAY_REQUEST_SLIDE"	"array_request_slide_id"				
-"array_request_sample"	"Array Request Sample"	"request"		"$TB_ARRAY_REQUEST_SAMPLE"	"array_request_sample_id"				
-"slide_model"	"Slide Model"	"arrays"	"YES"	"$TB_SLIDE_MODEL"	"slide_model_id"		"ManageTable.cgi?TABLE_NAME=slide_model"	"slide,slide_lot,slide_model"	"slide_lot"
-"slide_lot"	"Slide Lot"	"arrays"	"YES"	"$TB_SLIDE_LOT"	"slide_lot_id"		"ManageTable.cgi?TABLE_NAME=slide_lot"	"slide,slide_lot,slide_model"	"slide"
-"printing_batch"	"Printing Batch"	"arrays"	"YES"	"$TB_PRINTING_BATCH"	"printing_batch_id"		"ManageTable.cgi?TABLE_NAME=printing_batch"	"printing_batch,array_layout"	"array"
-"slide"	"Slide"	"arrays"	"YES"	"$TB_SLIDE"	"slide_id"	"slide_number"	"ManageTable.cgi?TABLE_NAME=slide"	"slide,slide_lot,slide_model"	"array"
-"array_layout"	"Array Layout"	"arrays"	"YES"	"$TB_ARRAY_LAYOUT"	"layout_id"		"ManageTable.cgi?TABLE_NAME=array_layout"	"printing_batch,array_layout"	"printing_batch"
-"array"	"Array"	"process"	"YES"	"$TB_ARRAY"	"array_id"		"ManageTable.cgi?TABLE_NAME=array"	"array"	"hybridization"
-"labeling"	"Labeling"	"process"	"YES"	"$TB_LABELING"	"labeling_id"	"array_request_sample_id"	"ManageTable.cgi?TABLE_NAME=labeling"	"labeling,hybridization"	"array,hybridization"
-"hybridization"	"Hybridization"	"process"	"YES"	"$TB_HYBRIDIZATION"	"hybridization_id"	"array_id"	"ManageTable.cgi?TABLE_NAME=hybridization"	"labeling,hybridization"	"array_scan"
-"array_scan"	"Array Scan"	"process"	"YES"	"$TB_ARRAY_SCAN"	"array_scan_id"		"ManageTable.cgi?TABLE_NAME=array_scan"	"array_scan,array_quantitation"	"array_quantitation"
-"array_quantitation"	"Array Quantitation"	"process"	"YES"	"$TB_ARRAY_QUANTITATION"	"array_quantitation_id"		"ManageTable.cgi?TABLE_NAME=array_quantitation"	"array_scan,array_quantitation"	
-"MA_biosequence_set"	"BioSequence Set"	"arrays"	"YES"	"$TBMA_BIOSEQUENCE_SET"	"biosequence_set_id"		"ManageTable.cgi?TABLE_NAME=ma_biosequence_set"	"biosequence_set"	
-"MA_channel"	"Channel"	"arrays"	"YES"	"$TBMA_CHANNEL"	"channel_id"		"ManageTable.cgi?TABLE_NAME=ma_channel"	"channel"	
+table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
+slide_type	Slide Type	arrays	YES	$TB_SLIDE_TYPE	slide_type_id		ManageTable.cgi?TABLE_NAME=slide_type	"slide_type,labeling_method,cost_scheme,slide_type_cost"	slide_type_cost
+cost_scheme	Cost Scheme	arrays	YES	$TB_COST_SCHEME	cost_scheme_id		ManageTable.cgi?TABLE_NAME=cost_scheme	"slide_type,labeling_method,cost_scheme,slide_type_cost"	slide_type_cost
+slide_type_cost	Slide Type Cost	arrays	YES	$TB_SLIDE_TYPE_COST	slide_type_cost_id		ManageTable.cgi?TABLE_NAME=slide_type_cost	"slide_type,labeling_method,cost_scheme,slide_type_cost"	
+labeling_method	Labeling Method	arrays	YES	$TB_LABELING_METHOD	labeling_method_id		ManageTable.cgi?TABLE_NAME=labeling_method	"slide_type,labeling_method,cost_scheme,slide_type_cost"	
+array_request	Array Request	request		$TB_ARRAY_REQUEST	array_request_id		SubmitArrayRequest.cgi?TABLE_NAME=array_request	array_request	
+array_request_slide	Array Request Slide	request		$TB_ARRAY_REQUEST_SLIDE	array_request_slide_id				
+array_request_sample	Array Request Sample	request		$TB_ARRAY_REQUEST_SAMPLE	array_request_sample_id				
+slide_model	Slide Model	arrays	YES	$TB_SLIDE_MODEL	slide_model_id		ManageTable.cgi?TABLE_NAME=slide_model	"slide,slide_lot,slide_model"	slide_lot
+slide_lot	Slide Lot	arrays	YES	$TB_SLIDE_LOT	slide_lot_id		ManageTable.cgi?TABLE_NAME=slide_lot	"slide,slide_lot,slide_model"	slide
+printing_batch	Printing Batch	arrays	YES	$TB_PRINTING_BATCH	printing_batch_id		ManageTable.cgi?TABLE_NAME=printing_batch	"printing_batch,array_layout"	array
+slide	Slide	arrays	YES	$TB_SLIDE	slide_id	slide_number	ManageTable.cgi?TABLE_NAME=slide	"slide,slide_lot,slide_model"	array
+array_layout	Array Layout	arrays	YES	$TB_ARRAY_LAYOUT	layout_id		ManageTable.cgi?TABLE_NAME=array_layout	"printing_batch,array_layout"	printing_batch
+array	Array	process	YES	$TB_ARRAY	array_id		ManageTable.cgi?TABLE_NAME=array	array	hybridization
+labeling	Labeling	process	YES	$TB_LABELING	labeling_id	array_request_sample_id	ManageTable.cgi?TABLE_NAME=labeling	"labeling,hybridization"	"array,hybridization"
+hybridization	Hybridization	process	YES	$TB_HYBRIDIZATION	hybridization_id	array_id	ManageTable.cgi?TABLE_NAME=hybridization	"labeling,hybridization"	array_scan
+array_scan	Array Scan	process	YES	$TB_ARRAY_SCAN	array_scan_id		ManageTable.cgi?TABLE_NAME=array_scan	"array_scan,array_quantitation"	array_quantitation
+array_quantitation	Array Quantitation	process	YES	$TB_ARRAY_QUANTITATION	array_quantitation_id		ManageTable.cgi?TABLE_NAME=array_quantitation	"array_scan,array_quantitation"	
+MA_biosequence_set	BioSequence Set	arrays	YES	$TBMA_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=ma_biosequence_set	biosequence_set	
+MA_channel	Channel	arrays	YES	$TBMA_CHANNEL	channel_id		ManageTable.cgi?TABLE_NAME=ma_channel	channel	
+MA_server	Server	arrays	YES	$TBMA_SERVER	server_id		ManageTable.cgi?TABLE_NAME=ma_server	server	
+MA_file_path	File Path	arrays	YES	$TBMA_FILE_PATH	file_path_id		ManageTable.cgi?TABLE_NAME=ma_file_path	file_path	
+MA_file_location	File Location	arrays	YES	$TBMA_FILE_LOCATION	file_location_id		ManageTable.cgi?TABLE_NAME=ma_file_location	file_location	
+MA_file_type	File Type	arrays	YES	$TBMA_FILE_TYPE	file_type_id		ManageTable.cgi?TABLE_NAME=ma_file_type	file_type	
+MA_quantitation_type	QuantitationType	arrays	YES	$TBMA_QUANTITATION_TYPE	quantitation_type_id		ManageTable.cgi?TABLE_NAME=ma_quantitation_type	quantitation_type	
