@@ -158,6 +158,10 @@ sub writeSchema {
   my $SB = ";$LB";
   $SB = "${LB}GO${LB}" if ($destination_type eq "mssql");
 
+  #### Set a table prefix
+  my $table_prefix = '';
+  $table_prefix = 'dbo.' if ($destination_type eq "mssql");
+
 
   #### Initialize some buffers
   my $create_tables_buffer = "";
@@ -192,7 +196,7 @@ sub writeSchema {
       print "  CREATE TABLE: $table_name\n" if ($VERBOSE);
 
       my $line_buffer = "";
-      $line_buffer .= "CREATE TABLE $real_table_name ($LB";
+      $line_buffer .= "CREATE TABLE $table_prefix$real_table_name ($LB";
       my $primary_key_constraint = "";
       my $create_sequence_statement;
       my $drop_sequence_statement;
@@ -231,6 +235,7 @@ sub writeSchema {
           fk_table => $fk_table,
           fk_column => $fk_column,
           destination_type => $destination_type,
+          table_prefix => $table_prefix,
         );
 
         $dictionary_buffer .= generateColumnDictionary(
@@ -315,9 +320,9 @@ sub writeSchema {
         if ($create_trigger_statement);
 
       if ($destination_type eq 'pgsql') {
-        $grants_buffer .= "GRANT ALL ON $table_name TO sbeams$SB";
-        $grants_buffer .= "GRANT SELECT ON $table_name TO sbeamsro$SB";
-        $grants_buffer .= "GRANT SELECT ON $table_name TO readonly$SB";
+        $grants_buffer .= "GRANT ALL ON $table_prefix$table_name TO sbeams$SB";
+        $grants_buffer .= "GRANT SELECT ON $table_prefix$table_name TO sbeamsro$SB";
+        $grants_buffer .= "GRANT SELECT ON $table_prefix$table_name TO readonly$SB";
       }
 
       push(@processed_table_list,$table_name);
@@ -342,7 +347,7 @@ sub writeSchema {
   #### Generate the DROP TABLE list
   foreach $table_name (reverse @processed_table_list) {
     my $real_table_name = $table_properties->{$table_name}->{real_name};
-    $drop_tables_buffer .= "DROP TABLE $real_table_name$SB";
+    $drop_tables_buffer .= "DROP TABLE $table_prefix$real_table_name$SB";
   }
   $drop_tables_buffer .= "$LB$LB";
 
@@ -443,7 +448,7 @@ sub generateColumnDefinition {
   my $fk_column = $args{'fk_column'} || "";
   my $destination_type = $args{'destination_type'}
     || die "destination_type not passed";
-
+  my $table_prefix = $args{'table_prefix'} || "";
 
   #### Do some adjustment of the datatype names.  This should be done better
   if ($destination_type eq 'oracle') {
@@ -602,11 +607,11 @@ sub generateColumnDefinition {
     $constraint_name = 'fk_'.substr(${table_name},1,13).
                          '_'.substr(${column_name},1,13)
           if ($destination_type eq 'oracle') ;
-    $add_reference_constraint = "ALTER TABLE $table_name ADD CONSTRAINT ".
+    $add_reference_constraint = "ALTER TABLE $table_prefix$table_name ADD CONSTRAINT ".
         "$constraint_name FOREIGN KEY ($column_name) ".
-        "REFERENCES $fk_table($fk_column)";
+        "REFERENCES $table_prefix$fk_table($fk_column)";
 
-    $drop_reference_constraint = "ALTER TABLE $table_name DROP CONSTRAINT ".
+    $drop_reference_constraint = "ALTER TABLE $table_prefix$table_name DROP CONSTRAINT ".
       "$constraint_name";
 
     #### MySQL 3.23.x doesn't support references yet
