@@ -266,7 +266,7 @@ sub applySqlChange {
 
       #### Else permission okay, so go ahead and execute
       } else {
-	$self->executeSQL($sql_query);
+#	$self->executeSQL($sql_query);
 	$result = "SUCCESSFUL";
 
 	#### Determine what the last inserted autogen key was
@@ -405,7 +405,7 @@ sub applySqlChange {
 
       #### If after all this, we've ALLOWED the change, do it
       if ($permission eq "ALLOWED") {
-        $self->executeSQL($sql_query);
+#$self->executeSQL($sql_query);
         $result = "SUCCESSFUL";
 
       #### Else if it's not allowed, try to determine why not
@@ -494,18 +494,6 @@ sub applySqlChange {
     # Still in testing mode, don't want to execute/log these twice...
     return( result => $result, tPriv => $privilege_id, pPriv => $project_privilege_id );
 
-    #### Log the result and the query itself regardless of result
-    my $altered_sql_query = $self->convertSingletoTwoQuotes($sql_query);
-    my $log_query = qq~
-        INSERT INTO $TB_SQL_COMMAND_LOG
-               (created_by_id,result,sql_command)
-        VALUES ($current_contact_id,'$result','$altered_sql_query')
-    ~;
-    $self->executeSQL($log_query);
-
-
-    #### Return the results
-    return ($result,$returned_PK,@ERRORS);
 }
 
 #+
@@ -535,6 +523,8 @@ sub applySQLChange {
     my %args = @_;
 
     my $subname = 'applySQLChange';
+    $log->debug( "In $subname" );
+    $log->printStack();
 
     # FIXME temporarily running both old and new versions of applySqlChange to
     # ensure a smooth transition.  New version is definitive as of 01-25-2005.
