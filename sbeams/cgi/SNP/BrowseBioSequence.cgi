@@ -313,8 +313,7 @@ sub printEntryForm {
 
 
       #### Display the resultset
-      $sbeams->displayResultSet(page_size=>$rs_params{page_size},
-	  page_number=>$rs_params{page_number},
+      $sbeams->displayResultSet(rs_params_ref=>\%rs_params,
           url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols,
           max_widths=>\%max_widths,resultset_ref=>$resultset_ref);
 
