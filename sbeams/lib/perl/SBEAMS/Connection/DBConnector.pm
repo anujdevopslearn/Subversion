@@ -38,6 +38,18 @@ sub new {
     return($self);
 }
 
+###############################################################################
+# setNewDBHandle
+#
+#  Force refresh of sbeams dbhandle via dbConnect().  Any args for dbConnect
+#  (such as connect_read_only) are passed through.
+###############################################################################
+sub setNewDBHandle {
+    my $self = shift;
+    my %args = @_;
+
+    $dbh = $self->dbConnect(%args);
+}
 
 ###############################################################################
 # getDBHandle
