@@ -96,6 +96,9 @@ Options:
                       database name in the .out files and assumes that this is
                       the database to be referenced.  Careful, this disables
                       some safety checks!
+  --cleanup_archive   Perform cleanup maintenance on the directory which can
+                      include many functions including compressing and
+                      verifying the layout
 
  e.g.:  $PROG_NAME --list_all
         $PROG_NAME --check --experiment_tag=rafapr
@@ -114,7 +117,8 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
   "experiment_tag:s","file_prefix:s","check_status","force_ref_db:s",
   "list_all","search_subdir:s","load","testonly",
   "update_from_summary_files","update_search","update_probabilities",
-  "update_timing_info","gradient_program_id:i","column_delay:i"
+  "update_timing_info","gradient_program_id:i","column_delay:i",
+  "cleanup_archive",
   )) {
   print "$USAGE";
   exit;
@@ -163,7 +167,7 @@ sub main {
 ###############################################################################
 # handleRequest
 ###############################################################################
-sub handleRequest { 
+sub handleRequest {
   my %args = @_;
 
 
@@ -179,6 +183,7 @@ sub handleRequest {
   my $update_search = $OPTIONS{"update_search"} || '';
   my $update_probabilities = $OPTIONS{"update_probabilities"} || '';
   my $update_timing_info = $OPTIONS{"update_timing_info"} || '';
+  my $cleanup_archive = $OPTIONS{"cleanup_archive"} || '';
   my $experiment_tag = $OPTIONS{"experiment_tag"} || '';
   my $search_subdir = $OPTIONS{"search_subdir"} || '';
   my $file_prefix = $OPTIONS{"file_prefix"} || '';
@@ -346,6 +351,16 @@ sub handleRequest {
   	if ($update_timing_info) {
           print "Updating Timing and % ACN information from nfo files\n";
   	  $result = updateTimingInfo(
+  	    experiment_tag=>$status->{experiment_tag},
+  	    search_batch_subdir=>$search_batch_subdir,
+  	    source_dir=>$source_dir);
+  	  print "\n";
+  	}
+
+  	#### If user asked for general maintenance, do it
+  	if ($cleanup_archive) {
+          print "Performing general cleanup on the file archive...\n";
+  	  $result = cleanupArchive(
   	    experiment_tag=>$status->{experiment_tag},
   	    search_batch_subdir=>$search_batch_subdir,
   	    source_dir=>$source_dir);
@@ -780,10 +795,10 @@ sub addMsmsSpectrumEntry {
   #### Now insert all the mass,intensity pairs
   my ($i,$mass,$intensity);
   my $create_bcp_file = "YES";
-  my $create_bcp_file = 0;
+  #my $create_bcp_file = 0;
 
   if ($create_bcp_file) {
-    open(SPECFILE,">>/net/db/projects/proteomics/bcp/msms_spectrum_peak.txt");
+    open(SPECFILE,">>/net/dblocal/data/proteomics/bcp/msms_spectrum_peak.txt");
   }
 
   for ($i=0; $i<${$result}{parameters}->{n_peaks}; $i++) {
@@ -1894,7 +1909,7 @@ sub updateSearchResults {
 ###############################################################################
 # updateTimingInfo
 ###############################################################################
-sub updateTimingInfo { 
+sub updateTimingInfo {
   my %args = @_;
   my $SUB_NAME = 'updateTimingInfo';
 
@@ -2263,6 +2278,139 @@ sub calcGravyScore {
   $gravy_score = $gravy_score / $nresidues;
 
   return $gravy_score;
+
+}
+
+
+
+###############################################################################
+# cleanupArchive
+###############################################################################
+sub cleanupArchive {
+  my %args = @_;
+  my $SUB_NAME = 'cleanupArchive';
+
+  #### Decode the argument list
+  my $experiment_tag = $args{'experiment_tag'}
+   || die "ERROR[$SUB_NAME]: experiment_tag not passed";
+  my $search_batch_subdir = $args{'search_batch_subdir'}
+   || die "ERROR[$SUB_NAME]: search_batch_subdir not passed";
+  my $source_dir = $args{'source_dir'}
+   || die "ERROR[$SUB_NAME]: source_dir not passed";
+
+
+  #### Define standard variables
+  my ($i,$element,$key,$value,$line,$result,$sql,$file);
+
+
+  #### Set the command-line options
+  my $file_prefix = $OPTIONS{"file_prefix"} || '';
+
+
+  #### Try to find this experiment in database
+  $sql="SELECT experiment_id ".
+      "FROM $TBPR_PROTEOMICS_EXPERIMENT ".
+      "WHERE experiment_tag = '$experiment_tag'";
+  my ($proteomics_experiment_id) = $sbeams->selectOneColumn($sql);
+  unless ($proteomics_experiment_id) {
+    print "\nERROR: Unable to find experiment tag '$experiment_tag'.\n".
+          "       This experiment must already exist in the database\n\n";
+    return;
+  }
+
+
+  #### Get all the fraction_ids for this experiment
+  $sql = qq~
+	SELECT fraction_id
+	  FROM $TBPR_FRACTION
+	 WHERE experiment_id = '$proteomics_experiment_id'
+  ~;
+  my @fraction_ids = $sbeams->selectOneColumn($sql);
+
+  #### If no fractions were found, complain
+  unless (@fraction_ids) {
+    die("Unable to find any fractions with: $sql");
+  }
+
+
+  #### Loop over each fraction_id
+  my $fraction_id;
+  foreach $fraction_id (@fraction_ids) {
+
+    #### Get the information about this fraction including location
+    $sql = qq~
+	SELECT fraction_id,fraction_tag,experiment_path
+	  FROM $TBPR_FRACTION F
+          JOIN $TBPR_PROTEOMICS_EXPERIMENT PE
+               ON (F.experiment_id=PE.experiment_id)
+	 WHERE fraction_id = '$fraction_id'
+    ~;
+    my @rows = $sbeams->selectSeveralColumns($sql);
+    my @fraction_info = @{$rows[0]};
+
+
+    #### Extract some information into variables
+    my $fraction_tag = $fraction_info[1];
+    my $experiment_path = $fraction_info[2];
+    my $source_file = "$experiment_path/$fraction_tag.nfo";
+
+    #### If the file is a relative path, prefix with $prefix or $RAW_DATA_DIR
+    unless (-e $source_file) {
+      $source_file = "$RAW_DATA_DIR{Proteomics}/$source_file";
+    }
+
+    print "\nProcessing fraction '$fraction_tag'\n";
+
+
+    #### Determine the Root directory for this experiment/search_batch
+    #### and verify that it exists
+    my $root = "$experiment_path/$search_batch_subdir";
+    if ( -e $root ) {
+      print "  ERROR: Found direct reference; should be relative\n";
+      print "  SKIP!\n";
+      next;
+    } else {
+      print "  Examining $root\n";
+      $root = "$RAW_DATA_DIR{Proteomics}/$root";
+    }
+    unless ( -e $root ) {
+      print "ERROR: Unable to find root '$root'\n";
+      print "  SKIP!\n";
+      next;
+    }
+
+
+    #### Verify that the html summary file is there
+    if ( -e "$root/$fraction_tag.html" ) {
+      print "  HTML summary file OK\n";
+    } else {
+      print "  ERROR: Missing summary file '$root/$fraction_tag.html'\n";
+    }
+
+
+    #### Check the status of the tgz and data search subdirs
+    if ( -e "$root/$fraction_tag.tgz" ) {
+      print "  TGZ file OK\n";
+      if ( -d "$root/$fraction_tag" ) {
+        print "  Data subdir also exists, so purge it\n";
+        system("/bin/rm -r $root/$fraction_tag");
+      } else {
+        print "  Data subdir not present which is OK\n";
+      }
+    } else {
+      print "  TGZ file missing\n";
+      if ( -d "$root/$fraction_tag" ) {
+        print "  Data subdir does exist, so tar it up and purge it\n";
+        system("(cd $root/$fraction_tag && tar -czf ../$fraction_tag.tgz .)");
+      } else {
+        print "  ERROR: Cannot find either TGZ or data subdir!!\n";
+      }
+    }
+
+
+    print "\n------------------------------------------------------------\n";
+
+  }
 
 }
 
