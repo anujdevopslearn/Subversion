@@ -152,7 +152,8 @@ SN_GetGenotypes	1	project_id	Project									N	multioptionlist	4	refreshDocument
 SN_GetGenotypes	2	plate_id_constraint	Plate ID									N	multioptionlist	4		Y	Y	N	Select desired plates to query.  Multiple items may be selected.	"SELECT distinct plate_id,plate_id FROM SNP.dbo.export_results_view WHERE project_id IN ( $parameters{project_id} ) ORDER BY plate_id"	
 SN_GetGenotypes	3	assay_id_constraint	Assay ID									N	text	50		Y	Y	N	Constraint for assay name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
 SN_GetGenotypes	4	description	Call Quality									N	multioptionlist	4		Y	Y	N	Select desired genotype quality level.  Multiple items may be selected.	"SELECT distinct description,description FROM SNP.dbo.export_results_view ORDER BY description"	
-SN_GetGenotypes	5	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'GG_display_options' ORDER BY sort_order,option_value"	
+SN_GetGenotypes	5	view_style	View Style									N	multioptionlist	4		Y	Y	N	Select desired data view.	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'GG_view_style' ORDER BY sort_order,option_value"	
+SN_GetGenotypes	6	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options.  Multiple items may be selected.	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'GG_display_options' ORDER BY sort_order,option_value"	
 SN_assay_request	1	assay_request_id	SNP Assay Request ID	int	4	0	N		Y							N	N				pkDEFAULT
 SN_assay_request	2	contact_id	Contact	int	4	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	N	Requestor of this SNP job		
 SN_assay_request	3	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which these SNPs are requested	"SELECT project_id, name + ' ['+budget+']' FROM $TB_PROJECT WHERE PI_contact_id='$contact_id' ORDER BY name"	
@@ -174,22 +175,22 @@ SN_cost_scheme	1	cost_scheme_id	Cost Scheme ID	int	4	0	N		Y							N	N				pkDEFAU
 SN_cost_scheme	2	cost_scheme_name	Scheme Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Short name of this cost scheme		
 SN_cost_scheme	3	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 SN_cost_scheme	4	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
-SN_cost_scheme	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-SN_cost_scheme	6	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N		
-SN_cost_scheme	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-SN_cost_scheme	8	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N		
-SN_cost_scheme	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N		
-SN_cost_scheme	10	record_status	Record Status	char	1	0	N	N	N							N	N		
-SN_snp_selection_run	1	snp_selection_run_id	SNP Selection Run ID	int	4	0	N		Y			Y							
-SN_snp_selection_run	2	snp_selection_run_name	SNP Selection Run Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of this SNP selection run
-SN_snp_selection_run	3	snp_selection_run_description	SNP Selection Run Description	text	16	0	N		N			Y	textarea	4		Y	Y	N	"Description of this SNP selection run (e.g., 'Primary Selection for JDRF Chr. 10', 'Extra SNPs for JDRF Chr. 10')"
-SN_snp_selection_run	4	run_date	SNP Selection Run Date	datetime	8	0	N	CURRENT_TIMESTAMP	N			Y	textdate	20		Y	Y	N	Date of this SNP selection run
-SN_snp_selection_run	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-SN_snp_selection_run	6	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N		
-SN_snp_selection_run	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-SN_snp_selection_run	8	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N		
-SN_snp_selection_run	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N		
-SN_snp_selection_run	10	record_status	Record Status	char	1	0	N	N	N							N	N	N	
+SN_cost_scheme	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+SN_cost_scheme	6	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
+SN_cost_scheme	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+SN_cost_scheme	8	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
+SN_cost_scheme	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+SN_cost_scheme	10	record_status	Record Status	char	1	0	N	N	N							N	N				
+SN_snp_selection_run	1	snp_selection_run_id	SNP Selection Run ID	int	4	0	N		Y			Y									
+SN_snp_selection_run	2	snp_selection_run_name	SNP Selection Run Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of this SNP selection run		
+SN_snp_selection_run	3	snp_selection_run_description	SNP Selection Run Description	text	16	0	N		N			Y	textarea	4		Y	Y	N	"Description of this SNP selection run (e.g., 'Primary Selection for JDRF Chr. 10', 'Extra SNPs for JDRF Chr. 10')"		
+SN_snp_selection_run	4	run_date	SNP Selection Run Date	datetime	8	0	N	CURRENT_TIMESTAMP	N			Y	textdate	20		Y	Y	N	Date of this SNP selection run		
+SN_snp_selection_run	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+SN_snp_selection_run	6	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
+SN_snp_selection_run	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+SN_snp_selection_run	8	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
+SN_snp_selection_run	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+SN_snp_selection_run	10	record_status	Record Status	char	1	0	N	N	N							N	N	N			
 SN_status	1	status_id	Status ID	int	4	0	N		Y							N	N				pkDEFAULT
 SN_status	2	status_name	Status Name	text	4	0	N		N			Y	text	50		Y	Y	Y	"SNP status name: Library, Picked, Failed Design, Failed Constant"		
 SN_status	3	status_description	Status Description	text	16	0	N		N			Y	textarea	4		Y	Y	N	Longer description of the SNP status		
@@ -206,30 +207,30 @@ SN_selected_snp	2	snp_selection_run_id	SNP Selection Run ID	int	4	0	N		N	SN_snp_
 SN_selected_snp	3	jared_id	Jared Roach ID	varchar	255	0	N		N			N	text	40		Y	Y	N	ID for this SNP from Jared's merging		
 SN_selected_snp	4	snp_id	SNP ID	int	4	0	N		N			Y				Y	Y	N			
 SN_selected_snp	5	position	SNP Position	int	4	0	N		N			Y				Y	Y	N	"Position of this SNP, relative to the biosquence"		
-SN_selected_snp	6	quality_score	Quality Score	int	4	0	N		N			Y	text	40		Y	Y	N	
-SN_selected_snp	7	sequence	SNP Sequence	text	16	0	N		N			Y				Y	Y	N	
-SN_selected_snp	8	sequence_is_modified	Original Sequence Modified?	varchar	1	0	N		N			Y				Y	Y	N	Has the original sequence been mofidied?  Usually from merged nearby SNPs.
-SN_selected_snp	9	status	Status	text	4	0	N		N	SN_status	description	Y	text	40		Y	Y	N	"Current status of this SNP.  Valid codes are 'Library', 'Picked', 'Failed design', 'Failed constant'"
-SN_selected_snp	10	parent_gene_biosequence_id	Parent Gene Biosequence ID	int	4	0	N		N			Y				Y	Y	N	
-SN_selected_snp	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments
-SN_selected_snp	12	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N		
-SN_selected_snp	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-SN_selected_snp	14	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N		
-SN_selected_snp	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N		
-SN_selected_snp	16	record_status	Record Status	char	1	0	N	N	N							N	N		
-SN_replaced_snp	1	snp_id	SNP ID	int	4	0	N		N	SN_snp	snp_id	Y				Y	Y	Y	SNP ID of the chosed replacement SNP
-SN_replaced_snp	2	snp_selection_run_id	SNP Selection Run ID	int	4	0	N		N	SN_snp_selection_run	snp_selection_run_id	Y				Y	Y	Y	SNP Selection Run of the replacement
-SN_replaced_snp	3	replaced_snp_id	Replaced SNP ID	int	4	0	N		N			Y				Y	Y	Y	SNP ID of the SNP that has been replaced
-SN_manual_genotype_call	1	manual_genotype_call_id	Manual Genotype Call ID	int	4	0	N		Y							N	N		
-SN_manual_genotype_call	2	project_id	Project	varchar	255	0	N		N			Y	fixed			Y	Y	Y	Project to which the genotype call belongs
-SN_manual_genotype_call	3	assay_id	Assay ID	varchar	255	0	N		N			Y	fixed			Y	Y	Y	Assay of the genotype call	
-SN_manual_genotype_call	4	sample_id	Sample ID	varchar	255	0	N		N			Y	fixed			Y	Y	Y	Sample ID	
-SN_manual_genotype_call	5	genotype_call	Genotype Call	varchar	20	0	N		N			Y	text	10		Y	Y	N	"Genotype call in a form like T/T or T/C, etc."	
-SN_manual_genotype_call	6	call_quality	Call Quality	varchar	255	0	N		N			Y	optionlist			Y	Y	N	Genotype call quality	"SELECT distinct description,description FROM SNP.dbo.export_results_view ORDER BY description"
-SN_manual_genotype_call	7	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments	
-SN_manual_genotype_call	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-SN_manual_genotype_call	9	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N			
-SN_manual_genotype_call	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-SN_manual_genotype_call	11	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N			
-SN_manual_genotype_call	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
-SN_manual_genotype_call	13	record_status	Record Status	char	1	0	N	N	N							N	N	N		
+SN_selected_snp	6	quality_score	Quality Score	int	4	0	N		N			Y	text	40		Y	Y	N			
+SN_selected_snp	7	sequence	SNP Sequence	text	16	0	N		N			Y				Y	Y	N			
+SN_selected_snp	8	sequence_is_modified	Original Sequence Modified?	varchar	1	0	N		N			Y				Y	Y	N	Has the original sequence been mofidied?  Usually from merged nearby SNPs.		
+SN_selected_snp	9	status	Status	text	4	0	N		N	SN_status	description	Y	text	40		Y	Y	N	"Current status of this SNP.  Valid codes are 'Library', 'Picked', 'Failed design', 'Failed constant'"		
+SN_selected_snp	10	parent_gene_biosequence_id	Parent Gene Biosequence ID	int	4	0	N		N			Y				Y	Y	N			
+SN_selected_snp	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+SN_selected_snp	12	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
+SN_selected_snp	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+SN_selected_snp	14	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
+SN_selected_snp	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+SN_selected_snp	16	record_status	Record Status	char	1	0	N	N	N							N	N				
+SN_replaced_snp	1	snp_id	SNP ID	int	4	0	N		N	SN_snp	snp_id	Y				Y	Y	Y	SNP ID of the chosed replacement SNP		
+SN_replaced_snp	2	snp_selection_run_id	SNP Selection Run ID	int	4	0	N		N	SN_snp_selection_run	snp_selection_run_id	Y				Y	Y	Y	SNP Selection Run of the replacement		
+SN_replaced_snp	3	replaced_snp_id	Replaced SNP ID	int	4	0	N		N			Y				Y	Y	Y	SNP ID of the SNP that has been replaced		
+SN_manual_genotype_call	1	manual_genotype_call_id	Manual Genotype Call ID	int	4	0	N		Y							N	N				
+SN_manual_genotype_call	2	project_id	Project	varchar	255	0	N		N			Y	fixed			Y	Y	Y	Project to which the genotype call belongs		
+SN_manual_genotype_call	3	assay_id	Assay ID	varchar	255	0	N		N			Y	fixed			Y	Y	Y	Assay of the genotype call		
+SN_manual_genotype_call	4	sample_id	Sample ID	varchar	255	0	N		N			Y	fixed			Y	Y	Y	Sample ID		
+SN_manual_genotype_call	5	genotype_call	Genotype Call	varchar	20	0	N		N			Y	text	10		Y	Y	N	"Genotype call in a form like T/T or T/C, etc."		
+SN_manual_genotype_call	6	call_quality	Call Quality	varchar	255	0	N		N			Y	optionlist			Y	Y	N	Genotype call quality	"SELECT distinct description,description FROM SNP.dbo.export_results_view ORDER BY description"	
+SN_manual_genotype_call	7	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+SN_manual_genotype_call	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+SN_manual_genotype_call	9	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
+SN_manual_genotype_call	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+SN_manual_genotype_call	11	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
+SN_manual_genotype_call	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+SN_manual_genotype_call	13	record_status	Record Status	char	1	0	N	N	N							N	N	N			
