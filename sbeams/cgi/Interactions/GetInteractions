@@ -368,8 +368,11 @@ sub handle_request {
 
     ["bioentity_id1","BE1.bioentity_id","BioEntity 1 ID"],
     ["bioentity_id2","BE2.bioentity_id","BioEntity 2 ID"],
-		["Publication_id","PUB.publication_name+ ' (PMID ' + PUB.pubmed_id +')'", "PubMed ID"],
-		["publication_url","PUB.pubmed_id","publication_url"],
+    ["Publication_id","PUB.publication_name+ ' (PMID ' + PUB.pubmed_id +')'", "PubMed ID"],
+    ["publication_url","PUB.pubmed_id","publication_url"],
+    ["interaction_group_id","IG.interaction_group_id","interaction_group_id"],
+    ["interaction_group_name","IG.interaction_group_name","interaction_group_name"],
+    ["project_id","IG.project_id","project_id"],
     @additional_columns,
   );
 #############
@@ -501,9 +504,13 @@ sub handle_request {
                      'Regulatory Feature 2 Name' => 1,
                      'bioentity1_url' => 1,
                      'bioentity2_url' => 1,
-										 'publication_url'=> 1,
+		     'publication_url'=> 1,
+		     'interaction_group_id'=> 1,
+		     'interaction_group_name'=> 1,
+		     'project_id'=> 1,
     );
   }
+
 
 
   #########################################################################
