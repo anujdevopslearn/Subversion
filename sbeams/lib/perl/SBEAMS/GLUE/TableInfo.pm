@@ -230,6 +230,33 @@ sub returnTableInfo {
 
 
 
+    if ($table_name eq "GL_publication") {
+
+        if ($info_key eq "BASICQuery") {
+            return qq~
+		SELECT publication_id,publication_name,
+		       publication_category_name AS "Category",
+		       title,
+		       full_manuscript_file,
+		       uri
+		  FROM $TBGL_PUBLICATION P
+		  LEFT JOIN $TBGL_PUBLICATION_CATEGORY PC
+                       ON (P.publication_category_id = PC.publication_category_id)
+		 WHERE 1 =1
+                   AND P.record_status!='D'
+		   AND ( PC.record_status!='D' OR PC.record_status IS NULL )
+		 ORDER BY publication_id
+            ~;
+
+        }
+
+
+    }
+
+
+
+
+
 
 
 ###############################################################################
