@@ -239,7 +239,7 @@ sub displayIntro
      my $ref_parameters = $args{'ref_parameters'}
     || die "ref_parameters not passed";
     my %parameters = %{$ref_parameters};
-    my ($sampleID, $sortEntityID, $runDate); 
+  #  my ($sampleID, $sortEntityID, $runDate); 
 =comment    
 	foreach my $k (keys %parameters)
 		{
@@ -251,12 +251,14 @@ sub displayIntro
      if($parameters{searchCombo})
      {
       
-       $sampleID = $parameters{sampleID};
-       $sortEntityID = $parameters{sortEntityID};
-       $runDate = $parameters{dates};
+       my $sampleID = $parameters{sampleID};
+       my $sortEntityID = $parameters{sortEntityID};
+       my $runDate = $parameters{dates};
+       my $tissueID = $parameters{tissueTypeIdD};
         push @clauseArray, "fcs_run_id in ($sampleID)" if defined($sampleID);
         push @clauseArray, "sort_entity_id in ($sortEntityID)" if defined($sortEntityID);
-        push @clauseArray, "run_date in ($runDate)" if defined($runDate);
+        push @clauseArray, "fcs_run_id  in ($runDate)" if defined($runDate);
+        push @clauseArray, "tissue_type_id in ($tissueID)" if defined ($tissueID);
         $queryClause = join ' and ', @clauseArray;
      }
       
@@ -457,8 +459,23 @@ sub specifyRun
    my $sampleNameSelect = "select  fcs_run_id, sample_Name  from $TBCY_FCS_RUN where project_id = $project_id order by sample_name";
    my $sampleNameOption  =  $sbeams->buildOptionList($sampleNameSelect, "Selected", "MULTIOPTIONLIST");
 
-   my $dateSelect = "select run_date, run_date from $TBCY_FCS_RUN where project_id = $project_id order by run_date";
-   my %dateHash = $sbeams->selectTwoColumnHash($dateSelect); 
+  my $tissueSelect = "select  tt.tissue_type_id, tissue_type_name  from $TBCY_TISSUE_TYPE tt
+  join $TBCY_FCS_RUN rf on tt.tissue_type_id = rf.tissue_type_id  where project_id = $project_id order by tissue_type_name";
+   my $tissueOption  =  $sbeams->buildOptionList($tissueSelect, "Selected", "MULTIOPTIONLIST");
+      
+   
+   my $dateSelect = "select fcs_run_id, run_date from $TBCY_FCS_RUN where project_id = $project_id order by run_date";
+   my %dateHash = $sbeams->selectTwoColumnHash($dateSelect);
+   my %dateIDHash;
+   foreach my $key (keys %dateHash)
+   {
+     my $date = $dateHash{$key};
+    $date =~ s/^(.*?)00:.*$/$1/;
+    $date =~ s/\s+//g;
+    push @{$dateIDHash{$date}} , $key
+   }
+   
+   
    my %modeDateHash;
    foreach my $keys (keys %dateHash)
    {
@@ -480,15 +497,18 @@ sub specifyRun
 
 	
     print $q->start_form;
-    print qq~ <tr><td nowrap width=300><b>Select none, one or multiple SampleName</b></td><td><Select Name="sampleID" Size=6 Multiple> $sampleNameOption</td></tr>~;
+    print qq~ <tr><td nowrap width=300><b>Select none, one or multiple SampleNames</b></td><td><Select Name="sampleID" Size=6 Multiple> $sampleNameOption</td></tr>~;
    
    print qq~ <tr><td nowrap width=300><b>Select none, one or multiple Sort Entities</b></td><td align=center><Select Name="sortEntityID" Size=6 Multiple> ~;
    print "$entityOption</td></tr>";
-#   print $q->end_form;  
-   print qq~ <tr><td nowrap width=300><b>Select none, one or multiple Run  Dates<b></td><td align=center><Select Name="dates" Size=6 Multiple> ~;
-   foreach my $key (keys %modeDateHash)
-   {
-     print qq~<option value="\'$key\'"> $key\n~;
+;  
+    print qq~ <tr><td nowrap width=300><b>Select none, one or multiple Tissue Types</b></td><td align=center><Select Name="tissueTypeID" Size=6 Multiple> ~;
+   print "$tissueOption</td></tr>";
+  
+    print qq~ <tr><td nowrap width=300><b>Select none, one or multiple Run  Dates<b></td><td align=center><Select Name="dates" Size=6 Multiple> ~;
+   foreach my $key (sort keys  %dateIDHash){
+     my $element = join ', ', @{$dateIDHash{$key}}; 
+     print qq~<option value="$element"> $key\n~;
    }
    print qq~</select></td></tr>~;
    print qq~<input type= hidden name="action" value = "$INTRO">  ~ ;
