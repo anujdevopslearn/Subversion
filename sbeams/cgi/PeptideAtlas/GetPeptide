@@ -159,8 +159,13 @@ sub handle_request {
         $parameters{'searchForThis'} = 'PAp00000001';
     }
 
+    my $tabs = "";
 
     if ($parameters{'_tab'}) {
+
+        $tabs = "?_tab=" . $parameters{'_tab'};
+
+        $PROG_NAME .= $tabs;
 
         $sbeams->printUserContext();
 
@@ -243,7 +248,7 @@ sub handle_request {
 
     #### Set some specific settings for this program
     my $CATEGORY="Get Peptide";
-    my $PROGRAM_FILE_NAME="GetPeptide";
+    my $PROGRAM_FILE_NAME = $PROG_NAME;
     my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
     my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
 
