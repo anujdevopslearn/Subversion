@@ -340,6 +340,12 @@ sub add_R_CHP_data {
 			print "SKIPPING '" . $affy_o->get_afa_file_root() . "' THIS IS A YEAST CHIP\n" if ($VERBOSE >0);
 			next;
 		}
+		
+		if ($affy_o->get_array_slide_type() eq 'Hu6800'){				#need to skip Hu6800 since there is a bug in R
+			print "SKIPPING '" . $affy_o->get_afa_file_root() . " SLIDE TYPE Hu6800 Cannot be processed\n" if ($VERBOSE >0);
+			next;
+		}			
+		
 		if ($update_flag){
 			if ($FILES_TO_UPDATE){									#if there are specific files to update only update these files
 					my @files_to_update_a = split /,/,$FILES_TO_UPDATE;
@@ -363,17 +369,18 @@ sub add_R_CHP_data {
 			my $results=  $affy_o->make_R_CHP_file(cel_file => $cel_file,		#run R to make R_CHP files
 				      file_name => $file_name,
 				     );
+			
 			print "FINISHED RUNNING make_R_CHP_file for $file_name\n";
 		
-			my $tag_result = $affy_o->tag_R_CHP_file();				#add the protocol information to the file
-			print "TAGGED FILE '$tag_result'\n" if ($VERBOSE);
-		
-		
-		
+			
 			unless ($results == 1){							#check for errors running R
+				print "RESULTS OF R_CHP RUN DO NOT LOOK GOOD. Skipping upload\n";
 				print "RESULTS OF MAKING R_CHP FILE '$results\n" if ($VERBOSE);
 				next;
 			}
+			
+			my $tag_result = $affy_o->tag_R_CHP_file();				#add the protocol information to the file
+			print "TAGGED FILE '$tag_result'\n" if ($VERBOSE);
 		
 		}
 		
@@ -446,9 +453,12 @@ sub find_affy_R_CHP {
 		$sbeams->display_sql(sql=>$sql) if ($VERBOSE > 1);
 		my ($array_info_href) = $sbeams->selectHashArray($sql);		#bit dorkey running huge query just to find the organism name
 		my $organisim_name = $$array_info_href{Organism};
-		print "ORGANISIM NAME '$organisim_name'\n" if ($VERBOSE > 0);
-		$sbeams_affy->set_afs_organism_id($organisim_name);		#set the organisim name
-
+		my $slide_type = $$array_info_href{'Slide Type'};
+		
+		print "ORGANISIM NAME '$organisim_name'\nSLIDE TYPE '$slide_type'" if ($VERBOSE > 0);
+		
+		$sbeams_affy->set_afs_organism_id($organisim_name);	#set the organisim name
+		$sbeams_affy->set_array_slide_type($slide_type); 	#set the slide type
 #########################################################################
 ### Determine if a R_CHP file exists and set the path to it if it does 
 
