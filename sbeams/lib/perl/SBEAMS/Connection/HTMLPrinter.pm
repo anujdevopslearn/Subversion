@@ -349,6 +349,10 @@ sub printUserContext {
     my $style = $args{'style'} || "HTML";
 
 
+    my $subdir = $self->getSBEAMS_SUBDIR();
+    $subdir .= "/" if ($subdir);
+
+
     #### If the output mode is interactive text, switch to text mode
     if ($self->output_mode() eq 'interactive') {
       $style = 'TEXT';
@@ -356,17 +360,16 @@ sub printUserContext {
     #### If the output mode is html, then switch to html mode
     } elsif ($self->output_mode() eq 'html') {
       $style = 'HTML';
-      $self->printUserChooser();
-      return;
+      if ($subdir eq 'Proteomics/' || $subdir eq '') {
+        $self->printUserChooser();
+        return;
+      }
 
     #### Otherwise, we're in some data mode and don't want to see this
     } else {
       return;
     }
 
-
-    my $subdir = $self->getSBEAMS_SUBDIR();
-    $subdir .= "/" if ($subdir);
 
     $current_username = $self->getCurrent_username;
     $current_contact_id = $self->getCurrent_contact_id;
