@@ -124,8 +124,8 @@ sub main {
 
     exit unless ($current_username = $sbeams->Authenticate(
       #connect_read_only=>1,
-      #allow_anonymous_access=>1,
- #     permitted_work_groups_ref=>['Cytometry_user','Cytometry_admin','Admin'],
+      allow_anonymous_access=>1,
+#     permitted_work_groups_ref=>['Cytometry_user','Cytometry_admin','Admin'],
    ));
 
 	#### Read in the default input parameters
@@ -256,7 +256,9 @@ sub displayIntro {
 	my %organismHash = $sbeams->selectTwoColumnHash($organismSql);
 	
 	my $sql = "select  fcs_run_id,Organism_id , project_designator, sample_name, filename, run_date 
-	 from $TBCY_FCS_RUN where project_id = '$project_id' order by project_designator";
+	 from $TBCY_FCS_RUN order by project_designator";
+	 
+	 #where project_id = '$project_id' order by project_designator";
 	 
 	 my @rows = $sbeams->selectSeveralColumns($sql);
 	 my %hashFile;
