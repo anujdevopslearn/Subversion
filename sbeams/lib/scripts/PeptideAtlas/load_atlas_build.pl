@@ -54,9 +54,9 @@ Options:
   --quiet                Set flag to print nothing at all except errors
   --debug n              Set debug flag
   --testonly             If set, rows in the database are not changed or added
-  --delete               Delete existing atlas build. Does not build an atlas.
+  --delete               Delete an atlas build (does not build an atlas).
   --purge                Delete child records in atlas build (retains parent atlas record).
-  --load                 build an atlas...can be used in conjunction with --purge
+  --load                 Build an atlas (can be used in conjunction with --purge).
   --atlas_build_name     Name of the atlas build (already entered by hand in
                          the atlas_build table) into which to load the data
   --source_dir           Name of the source file from which data are loaded
