@@ -554,7 +554,7 @@ sub handle_request {
 	 INNER JOIN $TBPR_BIOSEQUENCE_SET BSS
                ON ( BS.biosequence_set_id = BSS.biosequence_set_id )
 	 INNER JOIN $TB_ORGANISM O
-               ON ( BSS.species_id = O.organism_id )
+               ON ( BSS.organism_id = O.organism_id )
           LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
 	 INNER JOIN $TBPR_PROTEIN_SUMMARY PS
 	       ON ( PG.protein_summary_id = PS.protein_summary_id )
