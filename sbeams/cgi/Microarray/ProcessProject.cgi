@@ -136,7 +136,6 @@ sub printEntryForm {
 
     $sbeams->printUserContext();
     print qq!
-        <P>
         <H2>$CATEGORY</H2>
         $LINESEPARATOR
         <FORM METHOD="post">

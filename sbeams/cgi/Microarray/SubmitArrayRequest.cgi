@@ -211,14 +211,14 @@ sub printEntryForm {
 
     print qq!
         <P>
-        <H2>Maintain $CATEGORY</H2>
-        $LINESEPARATOR
-        <P>
-        <TABLE WIDTH=$MESSAGE_WIDTH><TR><TD>
-        Fill out or modify the form to add or update a record.
+        <H2>Manage ${CATEGORY}s</H2>
+        <TABLE><TR><TD>
+        Fill out this form to submit a new array job request, or modify existing
+        fields to change the request.  Once jobs have been Started they cannot be
+        modified unless reverted to Submitted status.  Required fields are labeled
+        in <font color="red">red</font>.
         </TD></TR></TABLE>
         $LINESEPARATOR
-        <P>
         <FORM METHOD="post">
         <TABLE>
     !;
