@@ -598,6 +598,9 @@ sub specialParsing {
     #### Nothing special, uses generic SW, PIR, etc. encodings above
   }
 
+  if ($biosequence_set_name eq "ISB Yeast Database") {
+      $rowdata_ref->{biosequence_gene_name} = $rowdata_ref->{biosequence_name};
+  }
 
   #### Special conversion rules for Yeast genome, e.g.:
   #### >ORFN:YAL014C YAL014C, Chr I from 128400-129017, reverse complement
@@ -614,7 +617,7 @@ sub specialParsing {
   if ($biosequence_set_name eq "SGD Yeast ORF Database"){
     if ($rowdata_ref->{biosequence_desc} =~ /([\w-]+)\sSGDID\:([\w-]+), .+/ ) {
 	$rowdata_ref->{biosequence_gene_name} = $1;
-	$rowdata_ref->{biosequence_accesion} = $2;
+	$rowdata_ref->{biosequence_accession} = $2;
 	$rowdata_ref->{dbxref_id} = '7';
     }
   }
