@@ -43,7 +43,6 @@ sub new {
 
 
 
-
 ###############################################################################
 
 1;
@@ -52,3 +51,39 @@ __END__
 ###############################################################################
 ###############################################################################
 ###############################################################################
+
+=head1 NAME
+
+SBEAMS::Connection::DBControl - Perl extension for providing common database methods
+
+=head1 SYNOPSIS
+
+  Used as part of this system
+
+    use SBEAMS::Connection;
+    $adb = new SBEAMS::Connection;
+
+    $dbh = $adb->getDBHandle();   
+
+    This needs to change!
+
+=head1 DESCRIPTION
+
+    This module is inherited by the SBEAMS::Connection module, 
+    although it can be used on its own. Its main function
+    is to provide a single set of database methods to be used 
+    by all programs included in this application.
+
+=head1 METHODS
+
+=item B<applySqlChange()>
+
+=head1 AUTHOR
+
+Eric Deutsch <edeutsch@systemsbiology.org>
+
+=head1 SEE ALSO
+
+perl(1).
+
+=cut

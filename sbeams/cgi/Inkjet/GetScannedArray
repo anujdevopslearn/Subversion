@@ -1,0 +1,373 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : get_scanned_array
+# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
+# $Id$
+#
+# Description : This program allows users to access
+#               a list of scanned arrays and all realted information
+#
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+
+use lib qw (../../lib/perl);
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+
+use SBEAMS::Connection;
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+
+use SBEAMS::Inkjet;
+use SBEAMS::Inkjet::Settings;
+use SBEAMS::Inkjet::Tables; 
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::Inkjet;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+
+use CGI;
+use CGI::Carp qw(fatalsToBrowser croak);
+$q = new CGI;
+
+
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = "get_scanned_array";
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value kay=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME annotation_id=111 rs_output_format=tsv
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main();
+exit(0);
+
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+  ));
+
+
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters);
+  #$sbeams->printDebuggingInfo($q);
+
+
+  #### Decide what action to take based on information so far
+  if ($parameters{action} eq "???") {
+    # Some action
+  } else {
+    $sbeamsMOD->display_page_header();
+    handle_request(ref_parameters=>\%parameters);
+    $sbeamsMOD->display_page_footer();
+  }
+
+
+} # end main
+
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request {
+  my %args = @_;
+
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+
+
+  #### Define some generic varibles
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+  #### Define some variables for a query and resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+
+  #### Read in the standard form values
+  my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+
+  #### Set some specific settings for this program
+  my $CATEGORY="Scanned Arrays Details";
+  $TABLE_NAME="IJ_get_scanned_array" unless ($TABLE_NAME);
+  ($PROGRAM_FILE_NAME) =
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+
+
+  #### Get the columns and input types for this table/query
+  my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
+  my %input_types = 
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
+
+
+  #### Read the input parameters for each column
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters,
+    columns_ref=>\@columns,input_types_ref=>\%input_types);
+
+
+  #### If the apply action was to recall a previous resultset, do it
+  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+  if ($apply_action eq "VIEWRESULTSET") {
+    $sbeams->readResultSet(resultset_file=>$rs_params{set_name},
+        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters);
+    $n_params_found = 99;
+  }
+
+
+  #### Set some reasonable defaults if no parameters supplied
+  unless ($n_params_found) {
+  }
+
+
+  #### Display the user-interaction input form
+  $sbeams->display_input_form(
+    TABLE_NAME=>$TABLE_NAME,CATEGORY=>$CATEGORY,apply_action=>$apply_action,
+    PROGRAM_FILE_NAME=>$PROGRAM_FILE_NAME,
+    parameters_ref=>\%parameters,
+    input_types_ref=>\%input_types,
+    mask_user_context => 1,
+  );
+
+
+  #### Display the form action buttons
+  $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
+
+
+  #### Finish the upper part of the page and go begin the full-width
+  #### data portion of the page
+  $sbeams->display_page_footer(close_tables=>'YES',
+    separator_bar=>'YES',display_footer=>'NO');
+
+
+
+  #########################################################################
+  #### Process all the constraints
+
+
+  #### Build UNIGENE_ACCESSION constraint
+  my $start_date_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"ASCAN.date_created",
+    constraint_type=>"plain_text",
+    constraint_name=>"Start Date",
+    constraint_value=>$parameters{start_date_constraint} );
+  return if ($start_date_clause == -1);
+  $start_date_clause =~ s/LIKE/>/g;
+
+
+  #### Build SORT ORDER
+  my $order_by_clause = "";
+  if ($parameters{sort_order}) {
+    $sql = "SELECT option_key FROM $TBIJ_QUERY_OPTION ".
+      "WHERE query_option_id = '$parameters{sort_order}'";
+    my ($sort_column) = $sbeams->selectOneColumn($sql);
+    if ($sort_column) {
+      $order_by_clause = " ORDER BY $sort_column";
+    } else {
+      print "<H4>Cannot parse Sort Order!  Check syntax.</H4>\n\n";
+      return;
+    }
+  }
+
+
+  #### Build ROWCOUNT constraint
+  $parameters{row_limit} = 1000;
+    ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
+  my $limit_clause = "TOP $parameters{row_limit}";
+
+
+  #### Define the desired columns [data_name,SQL,Friendly Name]
+  my @column_array = (
+    ["array_id","A.array_id","array_id"],
+    ["array_name","A.array_name","array_name"],
+    ["array_request_id","AR.array_request_id","array_request_id"],
+    ["array_request_slide_id","ARSL.array_request_slide_id","array_request_slide_id"],
+    ["date_requested","AR.date_created","date_requested"],
+    ["project_id","P.project_id","project_id"],
+    ["project_name","P.name","project_name"],
+    ["budget","P.budget","budget"],
+    ["username","U.username","username"],
+    ["array_scan_id","ASCAN.array_scan_id","array_scan_id"],
+    ["date_scanned","ASCAN.date_scanned","date_scanned"],
+    ["data_flag","ASCAN.data_flag","scan_flag"],
+    ["scan_record_created_date","ASCAN.date_created","scan_record_created_date"],
+  );
+
+
+  #### Adjust the columns definition based on user-selected options
+  if ( $parameters{display_options} =~ /ShowSQL/ ) {
+    $show_sql = 1;
+  }
+
+
+  #### Build the columns part of the SQL statement
+  my %colnameidx = ();
+  my @column_titles = ();
+  my $columns_clause = $sbeams->build_SQL_columns_list(
+    column_array_ref=>\@column_array,
+    colnameidx_ref=>\%colnameidx,
+    column_titles_ref=>\@column_titles
+  );
+
+
+  #### Define the SQL statement
+  $sql = qq~
+    SELECT $limit_clause $columns_clause
+      FROM $TBIJ_ARRAY_REQUEST AR
+      LEFT JOIN $TBIJ_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )
+      LEFT JOIN $TBIJ_ARRAY A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
+      LEFT JOIN $TBIJ_PRINTING_BATCH PB ON ( A.printing_batch_id = PB.printing_batch_id )
+      LEFT JOIN $TBIJ_ARRAY_SCAN ASCAN ON ( A.array_id = ASCAN.array_id )
+      LEFT JOIN $TB_PROJECT P ON ( A.project_id = P.project_id )
+      LEFT JOIN $TB_USER_LOGIN U ON ( P.PI_contact_id = U.contact_id )
+     WHERE 1=1
+   $start_date_clause
+       AND ASCAN.date_created IS NOT NULL
+       AND ( AR.record_status != 'D' OR AR.record_status IS NULL )
+       AND ( A.record_status != 'D' OR A.record_status IS NULL )
+       AND ( PB.record_status != 'D' OR PB.record_status IS NULL )
+       AND ( ASCAN.record_status != 'D' OR ASCAN.record_status IS NULL )
+     ORDER BY ASCAN.date_created
+  ~;
+
+
+  #### Define the hypertext links for columns that need them
+  %url_cols = ('array_name' => "${base_url}ManageTable.cgi?TABLE_NAME=IJ_array&array_id=%0V",
+               'array_name_ISNULL' => ' [Add] ',
+               'date_requested' => "$CGI_BASE_DIR/Inkjet/SubmitArrayRequest.cgi?TABLE_NAME=IJ_array_request&array_request_id=%2V",
+               'project_name' => "${base_url}ManageTable.cgi?TABLE_NAME=project&project_id=\%$colnameidx{project_id}V", 
+               'date_scanned' => "${base_url}ManageTable.cgi?TABLE_NAME=IJ_array_scan&array_scan_id=%9V", 
+               'date_quantitated' => "${base_url}ManageTable.cgi?TABLE_NAME=IJ_array_quantitation&array_quantitation_id=%12V", 
+  );
+
+  %hidden_cols = ('array_id' => 1,
+                  'array_request_id' => 1,
+                  'project_id' => 1,
+                  'array_scan_id' => 1,
+                  'array_quantitation_id' => 1,
+  );
+
+
+  $apply_action = "QUERY";
+
+  #########################################################################
+  #### If QUERY or VIEWRESULTSET was selected, display the data
+  if ($apply_action =~ /QUERY/i || $apply_action eq "VIEWRESULTSET") {
+
+    #### Show the SQL that will be or was executed
+    $sbeams->display_sql(sql=>$sql) if ($show_sql);
+
+    #### If the action contained QUERY, then fetch the results from
+    #### the database
+    if ($apply_action =~ /QUERY/i) {
+
+      #### Fetch the results from the database server
+      $sbeams->fetchResultSet(sql_query=>$sql,
+        resultset_ref=>$resultset_ref);
+
+      #### Store the resultset and parameters to disk resultset cache
+      $rs_params{set_name} = "SETME";
+      $sbeams->writeResultSet(resultset_file_ref=>\$rs_params{set_name},
+        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters);
+    }
+
+    #### Display the resultset
+    $sbeams->displayResultSet(rs_params_ref=>\%rs_params,
+        url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols,
+        max_widths=>\%max_widths,resultset_ref=>$resultset_ref,
+        column_titles_ref=>\@column_titles,
+    );
+
+
+    #### Display the resultset controls
+    $sbeams->displayResultSetControls(rs_params_ref=>\%rs_params,
+        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters,
+        base_url=>$base_url);
+
+
+
+  #### If QUERY was not selected, then tell the user to enter some parameters
+  } else {
+    if ($sbeams->invocation_mode() eq 'http') {
+      print "<H4>Select parameters above and press QUERY</H4>\n";
+    } else {
+      print "You need to supply some parameters to contrain the query\n";
+    }
+  }
+
+
+} # end handle_request
+
+
+
+###############################################################################
+# evalSQL
+#
+# Callback for translating Perl variables into their values,
+# especially the global table variables to table names
+###############################################################################
+sub evalSQL {
+  my $sql = shift;
+
+  return eval "\"$sql\"";
+
+} # end evalSQL
+
+

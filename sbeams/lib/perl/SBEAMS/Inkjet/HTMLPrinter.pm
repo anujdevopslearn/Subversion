@@ -5,7 +5,7 @@ package SBEAMS::Inkjet::HTMLPrinter;
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
 # $Id$
 #
-# Description : This is part of the SBEAMS::WebInterface module which handles
+# Description : This is part of the SBEAMS::Inkjet module which handles
 #               standardized parts of generating HTML.
 #
 #		This really begs to get a lot more object oriented such that
@@ -43,15 +43,6 @@ sub new {
 # printPageHeader
 ###############################################################################
 sub printPageHeader {
-  my $self = shift;
-  $self->display_page_header(@_);
-}
-
-
-###############################################################################
-# display_page_header
-###############################################################################
-sub display_page_header {
     my $self = shift;
     my %args = @_;
 
@@ -77,7 +68,7 @@ sub display_page_header {
 
     print qq~$http_header
 	<HTML><HEAD>
-	<TITLE>$DBTITLE - $SBEAMS_PART</TITLE>
+	<TITLE>$DBTITLE - MicroArray</TITLE>
     ~;
 
 
@@ -96,14 +87,20 @@ sub display_page_header {
 	</HEAD>
 
 	<!-- Background white, links blue (unvisited), navy (visited), red (active) -->
-	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" >
-	<table border=0 width="100%" cellspacing=0 cellpadding=1>
+	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" TOPMARGIN=0 LEFTMARGIN=0 >
+	<table border=0 width="100%" cellspacing=0 cellpadding=0>
 
 	<!------- Header ------------------------------------------------>
 	<a name="TOP"></a>
 	<tr>
-	  <td bgcolor="$BARCOLOR"><a href="http://db.systemsbiology.net/"><img height=64 width=64 border=0 alt="ISB DB" src="$HTML_BASE_DIR/images/dbsmltblue.gif"></a><a href="https://db.systemsbiology.net/sbeams/cgi/main.cgi"><img height=64 width=64 border=0 alt="SBEAMS" src="$HTML_BASE_DIR/images/sbeamssmltblue.gif"></a></td>
-	  <td align="left" $header_bkg><H1>$DBTITLE - $SBEAMS_PART<BR>$DBVERSION</H1></td>
+		<td colspan=3>
+			<table border=0 width=100% cellspacing=0 cellpadding=0>
+				<tr>
+				  <td bgcolor="#000000" align=left><img alt="MICROARRAY" src="$HTML_BASE_DIR/images/microarray.gif"></td>
+				  <td bgcolor="#000000" align=right valign=center><font color="#ffffff"><a href="$CGI_BASE_DIR/logout.cgi"><img src="$HTML_BASE_DIR/images/logout.gif" border=0 alt="LOGOUT"></a><img src="$HTML_BASE_DIR/images/space.gif" height=1 width=25></td>
+				</tr>
+			</table>
+		</td>
 	</tr>
 
     ~;
@@ -113,59 +110,48 @@ sub display_page_header {
     if ($navigation_bar eq "YES") {
       print qq~
 	<!------- Button Bar -------------------------------------------->
-	<tr><td bgcolor="$BARCOLOR" align="left" valign="top">
-	<table border=0 width="120" cellpadding=2 cellspacing=0>
-
-	<tr><td><a href="$CGI_BASE_DIR/main.cgi">$DBTITLE Home</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi">$SBEAMS_PART Home</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
-	<tr><td>&nbsp;</td></tr>
-
-	<tr><td>Array Requests:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project"><nobr>&nbsp;&nbsp;&nbsp;Manage Projects</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SubmitArrayRequest.cgi?TABLE_NAME=array_request"><nobr>&nbsp;&nbsp;&nbsp;Array Requests</nobr></a></td></tr>
-	<tr><td>&nbsp;</td></tr>
-
-	<tr><td>Status/Processing:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ShowProjectStatus.cgi"><nobr>&nbsp;&nbsp;&nbsp;Project Status</a></nobr></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GridAlignCheck.cgi"><nobr>&nbsp;&nbsp;&nbsp;Alignment Check</a></nobr></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProcessProject.cgi"><nobr>&nbsp;&nbsp;&nbsp;NEW Data Processing</a></nobr></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProcessProject_old.cgi"><nobr>&nbsp;&nbsp;&nbsp;OLD Data Processing</a></nobr></td></tr>
-	<tr><td>&nbsp;</td></tr>
-
-	<tr><td>Array Information:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IJ_protocol"><nobr>&nbsp;&nbsp;&nbsp;Protocols</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IJ_labeling"><nobr>&nbsp;&nbsp;&nbsp;Labeling</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IJ_hybridization"><nobr>&nbsp;&nbsp;&nbsp;Hybridization</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IJ_array_quantitation"><nobr>&nbsp;&nbsp;&nbsp;Quantitation</nobr></a></td></tr>
-	<tr><td>&nbsp;</td></tr>
+	<tr><td bgcolor="#ffffff" align="left" valign="top" width="150">
+	<table bgcolor="#ffffff" border=0 width="100%" cellpadding=2 cellspacing=0>
+	<tr><td><a href="$CGI_BASE_DIR/main.cgi"><img src="$HTML_BASE_DIR/images/ma_sbeams_home.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi"><img src="$HTML_BASE_DIR/images/ma_array_home.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi"><IMG SRC="$HTML_BASE_DIR/images/ma_project_home.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GridAlignCheck.cgi"><img src="$HTML_BASE_DIR/images/ma_alignment_check.jpg"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi?tab=data_analysis"><img src="$HTML_BASE_DIR/images/ma_data_analysis.jpg"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProcessProject.cgi"><img src="$HTML_BASE_DIR/images/ma_pipeline.jpg"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetExpression"><img src="$HTML_BASE_DIR/images/ma_get_expression.jpg"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi?tab=miame_status"><img src="$HTML_BASE_DIR/images/ma_miame_status.jpg"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SubmitArrayRequest.cgi?TABLE_NAME=IJ_array_request"><img src="$HTML_BASE_DIR/images/ma_array_requests.jpg"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=protocol"><img src="$HTML_BASE_DIR/images/ma_protocols.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IJ_labeling"><img src="$HTML_BASE_DIR/images/ma_labeling.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IJ_hybridization"><img src="$HTML_BASE_DIR/images/ma_hybridization.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IJ_array_quantitation"><img src="$HTML_BASE_DIR/images/ma_quantitation.jpg"></a></td></tr>
     ~;
 
       $current_work_group_name = $sbeams->getCurrent_work_group_name();
       if ($current_work_group_name eq "Inkjet_admin" || $current_work_group_name eq "Admin" || 1) {
        print qq~
-	<tr><td>Arrays Core:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=contact"><nobr>&nbsp;&nbsp;&nbsp;Contacts</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IJ_array"><nobr>&nbsp;&nbsp;&nbsp;Arrays</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IJ_array_scan"><nobr>&nbsp;&nbsp;&nbsp;Scanning</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/get_scanned_array"><nobr>&nbsp;&nbsp;&nbsp;Completed Scans</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=contact"><img src="$HTML_BASE_DIR/images/ma_contacts.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IJ_array"><img src="$HTML_BASE_DIR/images/ma_arrays.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IJ_array_scan"><img src="$HTML_BASE_DIR/images/ma_array_scans.jpg"></a></td></tr>
        ~;
       }
 
       $current_work_group_name = $sbeams->getCurrent_work_group_name();
       if ($current_work_group_name eq "Inkjet_admin" || $current_work_group_name eq "Admin") {
        print qq~
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IJ_slide_lot"><nobr>&nbsp;&nbsp;&nbsp;Physical Slides</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IJ_array_layout"><nobr>&nbsp;&nbsp;&nbsp;Array Layouts</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IJ_printing_batch"><nobr>&nbsp;&nbsp;&nbsp;Printing Batches</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IJ_slide_type"><nobr>&nbsp;&nbsp;&nbsp;Slide Type/Costs</nobr></a></td></tr>
-	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=user_login"><nobr>Admin</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IJ_slide_lot"><img src="$HTML_BASE_DIR/images/ma_slide_lots.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IJ_array_layout"><img src="$HTML_BASE_DIR/images/ma_array_layout.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IJ_printing_batch"><img src="$HTML_BASE_DIR/images/ma_printing_batches.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IJ_slide_type"><img src="$HTML_BASE_DIR/images/ma_slide_types_costs.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=user_login"><img src="$HTML_BASE_DIR/images/ma_admin.jpg"></a></td></tr>
        ~;
       }
 
       print qq~
 	</table>
+	</td>
+	<td width=5 bgcolor="#cc0000">
+		<img src="$HTML_BASE_DIR/images/space.gif" width=5 height=1>
 	</td>
 
 	<!-------- Main Page ------------------------------------------->
@@ -211,153 +197,148 @@ sub printStyleSheet {
 # Not sure how to design that yet.
 ###############################################################################
 sub printJavascriptFunctions {
-    my $self = shift;
-    my $javascript_includes = shift;
+  my $self = shift;
+  my $javascript_includes = shift;
 
+  print qq~
 
-    print qq~
-	<SCRIPT LANGUAGE="JavaScript">
-	<!--
+<SCRIPT LANGUAGE="JavaScript">
+<!--
 
-	function refreshDocument() {
-            //confirm( "apply_action ="+document.MainForm.apply_action.options[0].selected+"=");
-            document.MainForm.apply_action_hidden.value = "REFRESH";
-            document.MainForm.action.value = "REFRESH";
-	    document.MainForm.submit();
-	} // end refreshDocument
+function refreshDocument() {
+  document.MainForm.apply_action_hidden.value = "REFRESH";
+  document.MainForm.submit();
+}
 
+function showPassed(input_field) {
+  confirm( "selected option ="+document.MainForm.slide_id.options[document.MainForm.slide_id.selectedIndex].text+"=");
+  return;
+}
 
-	function showPassed(input_field) {
-            //confirm( "input_field ="+input_field+"=");
-            confirm( "selected option ="+document.forms[0].slide_id.options[document.forms[0].slide_id.selectedIndex].text+"=");
-	    return;
-	} // end showPassed
+function confirmPasswdChange() {
+  if (confirm( "The old password for this user will no longer be "+"valid.")) {
+    return true;
+  }else {
+    return false;
+  }
+}
 
+function ClickedNowButton(input_field) {
+  field_name = input_field.name;
+  today = new Date();
+  date_value =
+      today.getFullYear() + "-" + (today.getMonth()+1) + "-" +
+      today.getDate() + " " +
+      today.getHours() + ":" +today.getMinutes();
+  
+  if (field_name == "date_labeled") {
+      document.MainForm.date_labeled.value = date_value;
+  }else if (field_name == "date_hybridized") {
+      document.MainForm.date_hybridized.value = date_value;
+  }else if (field_name == "date_received") {
+      document.MainForm.date_received.value = date_value;
+  }else if (field_name == "date_scanned") {
+      document.MainForm.date_scanned.value = date_value;
+  }else if (field_name == "date_quantitated") {
+      document.MainForm.date_quantitated.value = date_value;
+  }
 
-	function ClickedNowButton(input_field) {
-	    //confirm( "input_field ="+input_field+"=");
-	    field_name = input_field.name
-	    today = new Date();
-	    date_value =
-	      today.getFullYear() + "-" + (today.getMonth()+1) + "-" +
-	      today.getDate() + " " +
-	      today.getHours() + ":" +today.getMinutes();
+  return;
+}
 
-	    if (field_name == "date_labeled") {
-	      document.forms[0].date_labeled.value = date_value;
-	    } else if (field_name == "date_hybridized") {
-	      document.forms[0].date_hybridized.value = date_value;
-	    } else if (field_name == "date_received") {
-	      document.forms[0].date_received.value = date_value;
-	    } else if (field_name == "date_scanned") {
-	      document.forms[0].date_scanned.value = date_value;
-	    } else if (field_name == "date_quantitated") {
-	      document.forms[0].date_quantitated.value = date_value;
-	    }
+function setDefaultImagesLocation() {
+    array_name = document.MainForm.array_id.options[document.MainForm.array_id.selectedIndex].text;
+    if (array_name.substr(array_name.length-9,99) == " - *DONE*") {
+      array_name = array_name.substr(0,array_name.length-9);
+    }
 
-	    return;
-	} // end ClickedNowButton
+    serial_number = array_name;
+    if (serial_number.substr(serial_number.length-1,99) >= "A") {
+      serial_number = serial_number.substr(0,array_name.length-1);
+    }
 
+    today = new Date();
+    date_value =
+	"" + today.getFullYear() +
+	addLeadingZeros((today.getMonth()+1),2) +
+	addLeadingZeros(today.getDate(),2)
+	date_value = date_value.substr(2,6);
 
-	function setDefaultImagesLocation() {
-	    // /net/arrays/ScanArray_Images/00001-00100/00012_A1_MMDDYY/Images/
-	    array_name = document.forms[0].array_id.options[document.forms[0].array_id.selectedIndex].text
-	    if (array_name.substr(array_name.length-9,99) == " - *DONE*") {
-	      array_name = array_name.substr(0,array_name.length-9);
-	    }
+    start_group = Math.round(serial_number/100-0.5)*100+1;
+    start_group = addLeadingZeros(start_group.toString(),5);
 
-	    today = new Date();
-	    date_value =
-	      "" + today.getFullYear() +
-	      addLeadingZeros((today.getMonth()+1),2) +
-	      addLeadingZeros(today.getDate(),2)
-	    date_value = date_value.substr(2,6);
+    end_group = Math.round(serial_number/100+0.5)*100;
+    end_group = addLeadingZeros(end_group.toString(),5);
 
-            start_group = Math.round(array_name/100-0.5)*100+1;
-            start_group = addLeadingZeros(start_group.toString(),5);
+    array_name = addLeadingZeros(array_name.toString(),5);
 
-            end_group = Math.round(array_name/100+0.5)*100;
-            end_group = addLeadingZeros(end_group.toString(),5);
+    document.MainForm.stage_location.value =
+	"/net/arrays/ScanArray_Images/" +
+	start_group + "-"+ end_group + "/" +
+	array_name + "_" + date_value;
+    return;
+}
 
-            array_name = addLeadingZeros(array_name.toString(),5);
+function addLeadingZeros(instring,ndigits) {
+  instring = instring.toString();
+  while (instring.length < ndigits) { instring = "0" + instring; }
+  return instring;
+}
 
-	    document.forms[0].stage_location.value =
-	      "/net/arrays/ScanArray_Images/" +
-	      start_group + "-"+ end_group + "/" +
-	      array_name + "_A1_" + date_value;
+function setDefaultQALocation() {
+  array_name = document.MainForm.array_scan_id.options[document.MainForm.array_scan_id.selectedIndex].text;
+  array_name = array_name.toString();
+  if (array_name.substr(array_name.length-9,99) == " - *DONE*") {
+    array_name = array_name.substr(0,array_name.length-9);
+  }
 
-	    return;
-	} // end setDefaultImagesLocation
+  start_group = Math.round(array_name/100-0.5)*100+1;
+  start_group = addLeadingZeros(start_group.toString(),5);
 
+  end_group = Math.round(array_name/100+0.5)*100;
+  end_group = addLeadingZeros(end_group.toString(),5);
 
-	function addLeadingZeros(instring,ndigits) {
-	    instring = instring.toString();
-	    while (instring.length < ndigits) { instring = "0" + instring; }
-	    return instring;
-	}
+  protocol_name = document.MainForm.protocol_id.options[document.MainForm.protocol_id.selectedIndex].text;
+  protocol_name = protocol_name.toString();
+  extension = ".csv";
+  
+  if (protocol_name.search(/QuantArray/i)>-1) { extension = ".qa"; }
+  if (protocol_name.search(/Dapple/i)>-1) { extension = ".dapple"; }
 
+  document.MainForm.stage_location.value =
+      "/net/arrays/Quantitation/" +
+      start_group + "-"+ end_group + "/" +
+      array_name + extension;
 
-	function setDefaultQALocation() {
+  return;
+}
 
-	    array_name = document.forms[0].array_scan_id.options[document.forms[0].array_scan_id.selectedIndex].text;
-            array_name = array_name.toString();
-	    if (array_name.substr(array_name.length-9,99) == " - *DONE*") {
-	      array_name = array_name.substr(0,array_name.length-9);
-	    }
+  function setArrayName() {
+    array_name = document.MainForm.array_name.value=document.MainForm.slide_id.options[document.MainForm.slide_id.selectedIndex].text;
+    array_name = array_name.toString();
+    if (array_name.substr(array_name.length-9,99) == " - *DONE*") {
+      array_name = array_name.substr(0,array_name.length-9);
+    }
+    while (array_name.length < 5) { array_name = "0" + array_name; }
 
-            start_group = Math.round(array_name/100-0.5)*100+1;
-            start_group = addLeadingZeros(start_group.toString(),5);
+    document.MainForm.array_name.value = array_name;
+    return;
+}
 
-            end_group = Math.round(array_name/100+0.5)*100;
-            end_group = addLeadingZeros(end_group.toString(),5);
+function setLayoutFileName() {
+  document.MainForm.source_filename.value =
+      "/net/arrays/Slide_Templates/" +
+      document.MainForm.name.value + ".key"
+      return;
+}
 
-	    protocol_name = document.forms[0].protocol_id.options[document.forms[0].protocol_id.selectedIndex].text;
-            protocol_name = protocol_name.toString();
-	    extension = ".?";
-	    //confirm( "result ="+protocol_name.search(/QuantArray/i)+"=");
-	    if (protocol_name.search(/QuantArray/i)>-1) { extension = ".qa"; }
-	    //confirm( "result ="+protocol_name.search(/Dapple/i)+"=");
-	    if (protocol_name.search(/Dapple/i)>-1) { extension = ".dapple"; }
-
-	    document.forms[0].stage_location.value =
-	      "/net/arrays/Quantitation/" +
-	      start_group + "-"+ end_group + "/" +
-	      array_name + extension;
-
-	    return;
-	} // end setDefaultQALocation
-
-
-	function setArrayName() {
-
-	    array_name = document.forms[0].array_name.value=document.forms[0].slide_id.options[document.forms[0].slide_id.selectedIndex].text;
-            array_name = array_name.toString();
-	    if (array_name.substr(array_name.length-9,99) == " - *DONE*") {
-	      array_name = array_name.substr(0,array_name.length-9);
-	    }
-            while (array_name.length < 5) { array_name = "0" + array_name; }
-
-	    document.forms[0].array_name.value = array_name;
-
-	    return;
-	} // end setArrayName
-
-
-	function setLayoutFileName() {
-            document.forms[0].source_filename.value =
-              "/net/arrays/Slide_Templates/" +
-              document.forms[0].name.value + ".key"
-	    return;
-	} // end setLayoutFileName
-
-
-
-
-        // -->
-        </SCRIPT>
-    ~;
+// -->
+</SCRIPT>
+~;
 
 }
+
+
 
 
 
@@ -366,16 +347,21 @@ sub printJavascriptFunctions {
 ###############################################################################
 sub printPageFooter {
   my $self = shift;
-  $self->display_page_footer(@_);
-}
 
 
-###############################################################################
-# display_page_footer
-###############################################################################
-sub display_page_footer {
-  my $self = shift;
-  my %args = @_;
+  #### Allow old-style single argument
+  my $n_params = scalar @_;
+  my %args;
+  #### If the old-style single argument exists, create args hash with it
+  if ($n_params == 1) {
+    my $flag = shift;
+    $args{close_tables} = 'NO';
+    $args{close_tables} = 'YES' if ($flag =~ /CloseTables/);
+    $args{display_footer} = 'NO';
+    $args{display_footer} = 'YES' if ($flag =~ /Footer/);
+  } else {
+    %args = @_;
+  }
 
 
   #### If the output mode is interactive text, display text header
@@ -416,13 +402,99 @@ sub display_page_footer {
   #### If finishing up the page completely is desired
   if ($display_footer eq 'YES') {
     print qq~
-	<BR><HR SIZE="2" NOSHADE WIDTH="30%" ALIGN="LEFT">
-	SBEAMS - $SBEAMS_PART [Under Development]<BR><BR><BR>
+	<BR><HR SIZE="2" NOSHADE WIDTH="70%" ALIGN="CENTER">
+	<center>
+	<font face="Helvetica,Arial,sans-serif" size=-2>
+	SBEAMS - Inkjet [Under Development]<BR>
+	&copy; 2002 Institute for Systems Biology<BR><BR>
 	</BODY></HTML>\n\n
     ~;
   }
 
-} # end display_page_footer
+}
+
+
+###############################################################################
+# print_tabs
+###############################################################################
+sub print_tabs {
+    my $self= shift;
+    my %args = @_;
+    my $SUB_NAME = "print_tabs";
+    
+## Decode argument list
+    my $tab_titles_ref = $args{'tab_titles_ref'}
+    || die "ERROR[$SUB_NAME]:tab_titles_ref not passed";
+    my $selected_tab = $args{'selected_tab'} || 0;
+    my $page_link = $args{'page_link'}
+    || die "ERROR[$SUB_NAME]:page_link not passed";
+    my $unselected_bg_color   = $args{'unselected_bg_color'}   || "\#224499";
+    my $unselected_font_color = $args{'unselected_font_color'} || "\#ffffff";
+    my $selected_bg_color     = $args{'selected_bg_color'}     || "\#ffcc33";
+    my $selected_font_color   = $args{'selected_font_color'}   || "\#000000";
+    my $line_color            = $args{'line_color'}            || "\#3366cc";
+    
+    
+    
+## Define standard variables
+    my @tab_titles = @{$tab_titles_ref};
+    my $counter = 0;
+    
+## Start TABLE
+    print qq~
+	<TABLE BORDER="0" CELLSPACING="0" CELLPADDING="0">
+	<TR>
+	~;
+    
+## for each desired tab, make one
+    while (@tab_titles) {
+	my $tab_title = shift(@tab_titles);
+	my $link = $tab_title;
+	while ($link =~ /\s+/) {
+	    $link =~ s(\s+)(_);
+	}
+	$link =~ tr/A-Z/a-z/;
+	if ($counter == $selected_tab) {
+	    print qq~
+		<TD WIDTH="15">&nbsp;</TD>
+		<TD BGCOLOR="$selected_bg_color" ALIGN="CENTER" WIDTH="95" NOWRAP><FONT COLOR="$selected_font_color" SIZE="-1">$tab_title</FONT></TD>
+		~;
+	}else {
+	    print qq~
+		<TD WIDTH="15">&nbsp;</TD>
+		<TD BGCOLOR="$unselected_bg_color" ALIGN="CENTER" WIDTH="95" NOWRAP><A HREF="$page_link?tab=$link"><FONT COLOR="$unselected_font_color" SIZE="-1">$tab_title</FONT></A></TD>
+		~;
+	}
+	$counter++;
+	
+    }
+    
+## Draw line underneath tabs
+    print qq~
+	<TD WIDTH="15">&nbsp;</TD>
+	</TR>
+	<TR>
+        <TD colspan=12 BGCOLOR="$line_color"><IMG WIDTH=1 height=1 alt=""></TD>
+	~;
+    
+## Finish table
+    print qq~
+	</TR>
+	</TABLE>
+	~;
+    
+    return;
+}
+
+
+###############################################################################
+# Print QuickLinks
+###############################################################################
+sub printQuickLinks {
+	my $self = shift;
+	my $q = shift;
+
+}
 
 
 ###############################################################################

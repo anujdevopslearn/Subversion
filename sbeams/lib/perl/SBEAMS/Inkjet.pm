@@ -3,9 +3,9 @@ package SBEAMS::Inkjet;
 ###############################################################################
 # Program     : SBEAMS::Inkjet
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
-# $$
+# $Id$
 #
-# Description : Perl Module to handle all SBEAMS - Inkjet specific items.
+# Description : Perl Module to handle all SBEAMS-MicroArray specific items.
 #
 ###############################################################################
 

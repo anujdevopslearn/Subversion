@@ -9,9 +9,13 @@ SELECT ARS.array_request_sample_id, convert(varchar(20),ARS.array_request_sample
   FROM $TBIJ_ARRAY_REQUEST_SAMPLE ARS
   LEFT JOIN $TBIJ_LABELING L ON ( ARS.array_request_sample_id = L.array_request_sample_id )
   LEFT JOIN $TBIJ_LABELING_METHOD LM ON ( ARS.labeling_method_id = LM.labeling_method_id )
+  LEFT JOIN $TBIJ_ARRAY_REQUEST_SLIDE ARSL ON ( ARS.array_request_slide_id = ARSL.array_request_slide_id )
+  LEFT JOIN $TBIJ_ARRAY_REQUEST AR ON ( ARSL.array_request_id = AR.array_request_id )
+  WHERE AR.project_id = $project_id
  ORDER BY ARS.array_request_sample_id'
 WHERE table_name = 'IJ_labeling'
    AND column_name = 'array_request_sample_id'
+
 
 UPDATE table_column
   SET optionlist_query = '
@@ -38,5 +42,27 @@ SELECT S.array_scan_id,
    AND column_name = 'array_scan_id'
 
 
+UPDATE table_column
+  SET optionlist_query = '
+SELECT ST.slide_type_id, name+''   ( \$''+CONVERT(varchar(50),STC.price)+'' )''
+  FROM $TBIJ_SLIDE_TYPE ST
+  JOIN $TBIJ_SLIDE_TYPE_COST STC ON ( ST.slide_type_id = STC.slide_type_id )
+ WHERE STC.cost_scheme_id=$cost_scheme_id
+ ORDER BY sort_order,name'
+ WHERE table_name = 'IJ_array_request'
+   AND column_name = 'slide_type_id'
+
+
+UPDATE table_column
+  SET optionlist_query = '
+SELECT DISTINCT condition_id,username + '' - '' + project_tag + '' -> '' + condition_name,username,project_tag,condition_name
+  FROM $TBIJ_CONDITION C
+  JOIN $TB_PROJECT P ON ( C.project_id = P.project_id )
+  JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
+ WHERE P.project_id IN ( $accessible_project_ids )
+ ORDER BY username,project_tag,condition_name'
+ WHERE (   table_name = 'IJ_GetExpression'
+       )
+   AND column_name = 'condition_id'
 
 

@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl 
+#!/usr/local/bin/perl
 
 ###############################################################################
 # Program     : SubmitArrayRequest.cgi
@@ -18,7 +18,7 @@
 ###############################################################################
 use strict;
 use lib qw (../../lib/perl);
-use vars qw ($q $sbeams $sbeamsIJ $dbh $current_contact_id $current_username
+use vars qw ($q $sbeams $sbeamsMOD $dbh $current_contact_id $current_username
              $current_work_group_id $current_work_group_name
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              $PK_COLUMN_NAME @MENU_OPTIONS
@@ -39,8 +39,8 @@ use SBEAMS::Inkjet::TableInfo;
 
 $q = new CGI;
 $sbeams = new SBEAMS::Connection;
-$sbeamsIJ = new SBEAMS::Inkjet;
-$sbeamsIJ->setSBEAMS($sbeams);
+$sbeamsMOD = new SBEAMS::Inkjet;
+$sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 
@@ -60,18 +60,26 @@ main();
 ###############################################################################
 sub main { 
 
-    ($CATEGORY) = $sbeamsIJ->returnTableInfo($TABLE_NAME,"CATEGORY");
-    ($PROGRAM_FILE_NAME) = $sbeamsIJ->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
-    ($DB_TABLE_NAME) = $sbeamsIJ->returnTableInfo($TABLE_NAME,"DB_TABLE_NAME");
-    ($PK_COLUMN_NAME) = $sbeamsIJ->returnTableInfo($TABLE_NAME,"PK_COLUMN_NAME");
-    @MENU_OPTIONS = $sbeamsIJ->returnTableInfo($TABLE_NAME,"MENU_OPTIONS");
+    ($CATEGORY) = $sbeamsMOD->returnTableInfo($TABLE_NAME,"CATEGORY");
+    ($PROGRAM_FILE_NAME) = $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+    ($DB_TABLE_NAME) = $sbeamsMOD->returnTableInfo($TABLE_NAME,"DB_TABLE_NAME");
+    ($PK_COLUMN_NAME) = $sbeamsMOD->returnTableInfo($TABLE_NAME,"PK_COLUMN_NAME");
+    @MENU_OPTIONS = $sbeamsMOD->returnTableInfo($TABLE_NAME,"MENU_OPTIONS");
 
     #### Do the SBEAMS authentication and exit if a username is not returned
     exit unless ($current_username = $sbeams->Authenticate());
+ 
+    #### Read in the default input parameters
+    my %parameters;
+    my $n_params_found = $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
+    #$sbeams->printDebuggingInfo($q);
+
+    #### Process generic "state" parameters before we start
+    $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
     #### Don't print the header, do what the program does, and print footer
     processRequests();
-    $sbeamsIJ->printPageFooter();
+    $sbeamsMOD->printPageFooter();
 
 } # end main
 
@@ -102,8 +110,10 @@ sub processRequests {
       }
     }
 
+    my ($arrays, $samples);
     # Decide where to go based on form values
-    if      ($q->param('apply_action')) { processEntryForm();
+    if      ($q->param('apply_action') eq 'VIEWRESULTSET') {printOptions();
+    } elsif ($q->param('apply_action')) { processEntryForm();
     } elsif ($q->param('ShowEntryForm')) { printEntryForm();
     } elsif ($q->param("$PK_COLUMN_NAME")) { printEntryForm();
     } else { printOptions();
@@ -111,15 +121,61 @@ sub processRequests {
 
 } # end processRequests
 
+###############################################################################
+# print_javascript
+###############################################################################
+sub print_javascript {
+    my $SUB_NAME = "print_javascript";
+    my %args = @_;
+
+    my $array_requests = $args{'arrays'} || 0;
+    my $samples = $args{'samples'} || 0;
+
+    print qq~
+<SCRIPT LANGUAGE="Javascript">
+    ~;
+
+    for (my $m=0;$m<$samples;$m++) {
+	print "var sample".$m."_array = new Array($array_requests);\n";
+    }
+
+    for (my $i=0;$i<$array_requests;$i++) {
+	for (my $j=0;$j<$samples;$j++) {
+	    print "sample".$j."_array[".$i."] = document.MainForm.sample".$j."labmeth_".$i.";\n";
+	}
+    }
+
+   print qq~
+
+function setAllMethods(sample_number){
+  if (sample_number == 0){
+    for (var n=0; n<sample0_array.length;n++){
+	sample0_array[n].options[document.MainForm.sample0labmeth_all.selectedIndex].selected=true;
+    }
+  }
+  if (sample_number == 1){
+    for (var n=0; n<sample1_array.length;n++){
+	sample1_array[n].options[document.MainForm.sample1labmeth_all.selectedIndex].selected=true;
+    }
+  }
+  if (sample_number == 2){
+    for (var n=0; n<sample2_array.length;n++){
+	sample2_array[n].options[document.MainForm.sample2labmeth_all.selectedIndex].selected=true;
+    }
+  }
+}
+</SCRIPT>
+    ~;
+
+}
 
 ###############################################################################
 # Print Options Page
 ###############################################################################
 sub printOptions {
 
-    $sbeamsIJ->printPageHeader();
+    $sbeamsMOD->printPageHeader();
     $sbeams->printUserContext();
-
     print qq!
         <P>
         <H2>$DBTITLE $CATEGORY Maintenance</H2>
@@ -134,8 +190,21 @@ sub printOptions {
     }
 
     print "$LINESEPARATOR<P>";
-    $sbeamsIJ->printPageFooter("CloseTables");
-    showTable("WithOptions");
+
+
+    #### Read in the default input parameters
+    my %parameters;
+    my $n_params_found = $sbeams->parse_input_parameters(
+      q=>$q,parameters_ref=>\%parameters);
+
+    #### Close the upper portion of the page and get ready for data table
+    #$sbeamsMOD->printPageFooter(close_table=>"YES",display_footer=>"NO");
+
+    #### Display the data table
+    showTable(with_options=>'YES',parameters_ref=>\%parameters);
+
+    #### Close the upper portion of the page and get ready for data table
+    $sbeamsMOD->printPageFooter(close_table=>"YES",display_footer=>"NO");
 
 } # end printOptions
 
@@ -147,7 +216,7 @@ sub printOptions {
 ###############################################################################
 sub printEntryForm {
 
-    $sbeamsIJ->printPageHeader();
+    $sbeamsMOD->printPageHeader();
     $sbeams->printUserContext();
 
     my %parameters;
@@ -156,11 +225,10 @@ sub printEntryForm {
     my $username;
     my $proc_cost=0;
     my $total_price=0;
-
     # Get the columns for this table
-    my @columns = $sbeamsIJ->returnTableInfo($TABLE_NAME,"ordered_columns");
+    my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
     my %input_types = 
-      $sbeamsIJ->returnTableInfo($TABLE_NAME,"input_types");
+      $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
 
     # Read the form values for each column
     foreach $element (@columns) {
@@ -211,15 +279,15 @@ sub printEntryForm {
 
     print qq!
         <P>
-        <H2>Maintain $CATEGORY</H2>
-        $LINESEPARATOR
-        <P>
-        <TABLE WIDTH=$MESSAGE_WIDTH><TR><TD>
-        Fill out or modify the form to add or update a record.
+        <H2>Manage ${CATEGORY}s</H2>
+        <TABLE><TR><TD>
+        Fill out this form to submit a new array job request, or modify existing
+        fields to change the request.  Once jobs have been Started they cannot be
+        modified unless reverted to Submitted status.  Required fields are labeled
+        in <font color="red">red</font>.
         </TD></TR></TABLE>
         $LINESEPARATOR
-        <P>
-        <FORM METHOD="post">
+        <FORM NAME="MainForm" METHOD="post">
         <TABLE>
     !;
 
@@ -280,8 +348,8 @@ sub printEntryForm {
 
 
         #### If $element is cost_scheme, restrict the list to the current option
-        #### unless the user is working under the Microarray_admin group
-        if ( $element eq "cost_scheme_id" && $current_work_group_name ne "Microarray_admin" ) {
+        #### unless the user is working under the Inkjet_admin group
+        if ( $element eq "cost_scheme_id" && $current_work_group_name ne "Inkjet_admin" ) {
           $optionlist_queries{$element} =~
             s/ORDER BY/WHERE cost_scheme_id = $cost_scheme_id ORDER BY/;
         }
@@ -459,7 +527,7 @@ sub printEntryForm {
         print qq~
         <INPUT TYPE="checkbox" $checked_flag NAME="ignore_table"
            VALUE="ignore_table">
-           Check here if you don't want to fill out the table below.  You
+           Check here if you don\'t want to fill out the table below.  You
            can skip the table below only if you are just requesting slides
            and intend to do all labeling, hybridization, scanning, etc.
            yourself.
@@ -478,6 +546,27 @@ sub printEntryForm {
         print "<TH>Sample $col Name</TH><TH>Sample $col ID</TH><TH>Sample $col Labeling Method</TH>\n";
       }
       print "</TR>\n";
+
+      # Insert "set all labeling method" drop-down
+      print qq~
+	<TR>
+	<TD></TD>
+	<TD></TD>
+	~;
+
+      for $col (0..($n_samples-1)){
+	my $myoptionlist = $optionlist;
+	print qq~
+	  <TD></TD>
+	  <TD></TD>
+	  <TD>
+	  <SELECT NAME="sample${col}labmeth_all" onChange="Javascript:setAllMethods($col);">
+	  <OPTION VALUE="" SELECTED>SET ALL LABELING METHODS TO:</OPTION>
+	  $myoptionlist
+	  </SELECT></TD>
+	  ~;
+      }
+
 
       my $thisoptionlist;
       for $row (0..($n_slides-1)) {
@@ -536,14 +625,17 @@ sub printEntryForm {
       }
 
 
-      #### If the Arrays Group does both Labeling and Hyb
+      #### If the Inkjet_admin Group does both Labeling and Hyb
       if ( $parameters{"hybridization_request"} =~ /LH/ ) {
         print "<P>Total Label/Hyb Cost: \$ $proc_cost<P>\n";
         $total_price += $proc_cost;
 
-      #### Else if the user does Labeling and the Arrays Group does Hyb
+      #### Else if the user does Labeling and the Inkjet_admin Group does Hyb
       } elsif ( $parameters{"hybridization_request"} eq "L" ) {
-        $proc_cost = $n_slides * 50;
+        my $hyb_price = 50;
+        #### Kludge the Yeast Half Slide price to $25
+        $hyb_price = 25 if ($parameters{"slide_type_id"} == 11);
+        $proc_cost = $n_slides *  $hyb_price;
         print "<P>Total Hyb Cost: \$ $proc_cost<P>\n";
         $total_price += $proc_cost;
 
@@ -629,7 +721,7 @@ sub printEntryForm {
            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
            <INPUT TYPE="submit" NAME="apply_action" VALUE="VIEW"> this request in a PRINTABLE VIEW<BR>
            This job has already been started.  Changes may no longer be made.
-           Contact the Microarray_admin group directly if there are problems.<P>
+           Contact the Inkjet_admin group directly if there are problems.<P>
          !;
        }
 
@@ -641,10 +733,10 @@ sub printEntryForm {
    !;
 
 
-    # If this is a not a new entry and the work_group is Microarray_admin, allow
+    # If this is a not a new entry and the work_group is Inkjet_admin, allow
     # more options:
     if ($parameters{$PK_COLUMN_NAME} gt ""
-        && $current_work_group_name eq "Microarray_admin") {
+        && $current_work_group_name eq "Inkjet_admin") {
 
       print qq!
         <TABLE>
@@ -662,13 +754,15 @@ sub printEntryForm {
 
 
     print qq!
+				 <INPUT TYPE="hidden" NAME="set_current_project_id">
+				 <INPUT TYPE="hidden" NAME="set_current_work_group">
          </FORM>
          <P>
     !;
 
 
-    $sbeamsIJ->printPageFooter("CloseTables");
-
+    $sbeamsMOD->printPageFooter("CloseTables");
+    print_javascript(arrays=>$n_slides, samples=>$n_samples);
 } # end printEntryForm
 
 
@@ -678,29 +772,101 @@ sub printEntryForm {
 # Displays the Table
 ###############################################################################
 sub showTable {
-    my $with_options = shift;
+  my %args = @_;
 
-    my $detail_level  = $q->param('detail_level') || "BASIC";
+  #### Process the arguments list
+  my $query_parameters_ref = $args{'parameters_ref'};
+  my %parameters = %{$query_parameters_ref};
+  my $with_options = $args{'with_options'};
 
-    my ($main_query_part) =
-      $sbeamsIJ->returnTableInfo($TABLE_NAME,$detail_level."Query");
 
-    my ($full_where_clause,$full_orderby_clause) = 
-      $sbeams->processTableDisplayControls($TABLE_NAME);
+  #### Get the specified level of detail or set to BASIC
+  my $detail_level = $q->param('detail_level') || "BASIC";
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+  my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
 
-    my $sql_query = qq~
-        $main_query_part
-        $full_where_clause
-        $full_orderby_clause
-    ~;
 
-    #print "<PRE>$sql_query\n\n</PRE>";
+  #### Get the query to show this table
+  my ($main_query_part) =
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,$detail_level."Query",
+    $query_parameters_ref);
 
-    my ($element,$value);
-    my %url_cols = $sbeamsIJ->returnTableInfo($TABLE_NAME,"url_cols");
+  #### Display the table controls
+  my ($full_where_clause,$full_orderby_clause) = 
+    $sbeams->processTableDisplayControls($TABLE_NAME);
 
-    return $sbeams->displayQueryResult(sql_query=>$sql_query,
-        url_cols_ref=>\%url_cols);
+
+  #### If a new ORDER BY clause is specified, remove the default one
+  if ($full_orderby_clause) {
+    $main_query_part =~ s/\s*ORDER BY.*//i;
+  }
+
+
+  #### Build the final query
+  my $sql_query = qq~
+      $main_query_part
+      $full_where_clause
+      $full_orderby_clause
+  ~;
+  #print "<PRE>$sql_query\n\n</PRE>";
+
+
+  #### Get the url link data
+  my %url_cols = $sbeamsMOD->returnTableInfo($TABLE_NAME,"url_cols");
+
+
+  #### Define some variables for the resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+
+  #### If the apply action was to recall a previous resultset, do it
+  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+  if ($apply_action eq "VIEWRESULTSET") {
+    $sbeams->readResultSet(
+       resultset_file=>$rs_params{set_name},
+       resultset_ref=>$resultset_ref,
+       query_parameters_ref=>\%parameters
+    );
+
+
+  #### Otherwise fetch the results from the database server
+  } else {
+
+    #### Fetch the results from the database server
+    $sbeams->fetchResultSet(sql_query=>$sql_query,
+      resultset_ref=>$resultset_ref);
+  
+    #### Store the resultset and parameters to disk resultset cache
+    $rs_params{set_name} = "SETME";
+    $sbeams->writeResultSet(
+      resultset_file_ref=>\$rs_params{set_name},
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters
+    );
+  }
+
+
+  #### Display the resultset
+  $sbeams->displayResultSet(
+    rs_params_ref=>\%rs_params,
+    url_cols_ref=>\%url_cols,
+    #hidden_cols_ref=>\%hidden_cols,
+    #max_widths=>\%max_widths,
+    resultset_ref=>$resultset_ref,
+    #column_titles_ref=>\@column_titles,
+    base_url=>$base_url,
+    query_parameters_ref=>\%parameters,
+  );
+
+
+  #### Display the resultset controls
+  $sbeams->displayResultSetControls(
+    rs_params_ref=>\%rs_params,
+    resultset_ref=>$resultset_ref,
+    query_parameters_ref=>\%parameters,
+    base_url=>$base_url
+  );
+
 
 } # end showTable
 
@@ -719,7 +885,7 @@ sub processEntryForm {
     my $total_price=0;
 
     # Get the columns for this table
-    my @columns = $sbeamsIJ->returnTableInfo($TABLE_NAME,"ordered_columns");
+    my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
 
     # Read the form values for each column
     foreach $element (@columns) {
@@ -742,7 +908,7 @@ sub processEntryForm {
     }
 
 
-    $sbeamsIJ->printPageHeader();
+    $sbeamsMOD->printPageHeader();
 
     if ($parameters{"request_status"} eq "Not Yet Submitted") {
       $parameters{"request_status"}="Submitted";
@@ -762,7 +928,7 @@ sub processEntryForm {
 
     # Check for missing required information
     my @required_columns = 
-      $sbeamsIJ->returnTableInfo($TABLE_NAME,"required_columns");
+      $sbeamsMOD->returnTableInfo($TABLE_NAME,"required_columns");
     if (@required_columns) {
       my $error_message;
       foreach $element (@required_columns) {
@@ -819,7 +985,7 @@ sub processEntryForm {
     }
 
     my @data_columns = 
-      $sbeamsIJ->returnTableInfo($TABLE_NAME,"data_columns");
+      $sbeamsMOD->returnTableInfo($TABLE_NAME,"data_columns");
 
 
     # If a PK has already been provided and action is /^SET/ then
@@ -877,7 +1043,7 @@ sub processEntryForm {
             foreach $element (@data_columns) {
               $tmp = $parameters{$element};
               # Change all ' to '' so that it can go in the INSERT statement
-              $tmp =~ s/'/''/g;
+              $tmp =~ s/\'/\'\'/g;
               $sql_query .= "$element='$tmp',\n";
             }
             $sql_query .= qq!
@@ -908,8 +1074,8 @@ sub processEntryForm {
           $query_part1 .= "$element,";
 
           $tmp = $parameters{$element};
-          # Change all ' to '' so that it can go in the INSERT statement
-          $tmp =~ s/'/''/g;
+          # Change all \' to '' so that it can go in the INSERT statement
+          $tmp =~ s/\'/\'\'/g;
           $query_part2 .= "'$tmp',";
         }
 
@@ -989,7 +1155,7 @@ sub processEntryForm {
         # If there is not yet an ID for this slide, we need to INSERT
         } else {
 
-          # But double-check with a query that there isn't already a record
+          # But double-check with a query that there isnt already a record
           $sql_query = qq~
 		SELECT array_request_slide_id
 		  FROM $TBIJ_ARRAY_REQUEST_SLIDE
@@ -1193,14 +1359,17 @@ sub processEntryForm {
       }
 
 
-      #### If the Microarray_admin Group does both Labeling and Hyb
+      #### If the Inkjet_admin Group does both Labeling and Hyb
       if ( $parameters{"hybridization_request"} =~ /LH/ ) {
         print "<P>Total Label/Hyb Cost: \$ $proc_cost<P>\n";
         $total_price += $proc_cost;
 
-      #### Else if the user does Labeling and the Microarray_admin Group does Hyb
+      #### Else if the user does Labeling and the Inkjet_admin Group does Hyb
       } elsif ( $parameters{"hybridization_request"} eq "L" ) {
-        $proc_cost = $n_slides * 50;
+        my $hyb_price = 50;
+        #### Kludge the Yeast Half Slide price to $25
+        $hyb_price = 25 if ($parameters{"slide_type_id"} == 11);
+        $proc_cost = $n_slides *  $hyb_price;
         print "<P>Total Hyb Cost: \$ $proc_cost<P>\n";
         $total_price += $proc_cost;
 
@@ -1208,6 +1377,7 @@ sub processEntryForm {
       } else {
         print "<P>Label/Hyb Cost: (you have chosen to do this yourself)<P>\n";
       }
+
 
 
       if ($parameters{"scanning_request"}) {
@@ -1359,8 +1529,8 @@ sub printAttemptedChangeResult {
 
     if ( ($result eq "SUCCESSFUL") && ($apply_action eq "INSERT" || $apply_action eq "UPDATE") ) {
       my $mailprog = "/usr/lib/sendmail";
-      my $recipient_name = "Inkjet Contact";
-      my $recipient = "tdahl\@systemsbiology.org,slasky\@systemsbiology.org";
+      my $recipient_name = "Inkjet_admin Contact";
+      my $recipient = "bmarzolf\@systemsbiology.org";
       my $cc_name = "SBEAMS";
       my $cc = "edeutsch\@systemsbiology.org";
 
@@ -1377,12 +1547,12 @@ sub printAttemptedChangeResult {
       print MAIL "Cc: $cc_name <$cc>\n";
       print MAIL "Reply-to: $current_username <${current_username}\@systemsbiology.org>\n";
       print MAIL "Subject: Inkjet request submission\n\n";
-      print MAIL "An $apply_action of an inkjet array request was just executed in SBEAMS by ${current_username}.\n\n";
+      print MAIL "An $apply_action of a microarray request was just executed in SBEAMS by ${current_username}.\n\n";
       print MAIL "To see the request view this link:\n\n";
       print MAIL "$SERVER_BASE_DIR$CGI_BASE_DIR/${subdir}$PROGRAM_FILE_NAME&$PK_COLUMN_NAME=$resulting_PK&apply_action=VIEW\n\n";
       close (MAIL);
 
-      print "<BR><BR>An email was just sent to the Inkjet Group informing them of your request.<BR>\n";
+      print "<BR><BR>An email was just sent to the Inkjet_admin Group informing them of your request.<BR>\n";
     }
 
 
@@ -1396,7 +1566,7 @@ sub printAttemptedChangeResult {
 ###############################################################################
 sub printCompletedEntry {
 
-    $sbeamsIJ->printPageHeader(navigation_bar=>"NO");
+    $sbeamsMOD->printPageHeader(navigation_bar=>"NO");
 
     my %parameters;
     my $element;
@@ -1406,7 +1576,7 @@ sub printCompletedEntry {
     my $total_price=0;
 
     # Get the columns for this table
-    my @columns = $sbeamsIJ->returnTableInfo($TABLE_NAME,"ordered_columns");
+    my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
 
     # Read the form values for each column
     foreach $element (@columns) {
@@ -1438,7 +1608,7 @@ sub printCompletedEntry {
     }
 
 
-    $parameters{request_status}="Not Yet Submitted"
+    $parameters{request_sIJ_tatus}="Not Yet Submitted"
       if ( ! ($parameters{request_status}));
 
 
@@ -1741,14 +1911,17 @@ sub printCompletedEntry {
       }
 
 
-      #### If the Microarray_admin Group does both Labeling and Hyb
+      #### If the Inkjet_admin Group does both Labeling and Hyb
       if ( $parameters{"hybridization_request"} =~ /LH/ ) {
         print "<P>Total Label/Hyb Cost: \$ $proc_cost<P>\n";
         $total_price += $proc_cost;
 
-      #### Else if the user does Labeling and the Microarray_admin Group does Hyb
+      #### Else if the user does Labeling and the Inkjet_admin Group does Hyb
       } elsif ( $parameters{"hybridization_request"} eq "L" ) {
-        $proc_cost = $n_slides * 50;
+        my $hyb_price = 50;
+        #### Kludge the Yeast Half Slide price to $25
+        $hyb_price = 25 if ($parameters{"slide_type_id"} == 11);
+        $proc_cost = $n_slides *  $hyb_price;
         print "<P>Total Hyb Cost: \$ $proc_cost<P>\n";
         $total_price += $proc_cost;
 
@@ -1829,7 +2002,7 @@ sub printCompletedEntry {
     ~;
 
 
-    $sbeamsIJ->printPageFooter("CloseTables");
+    $sbeamsMOD->printPageFooter("CloseTables");
 
 } # end printEntryForm
 

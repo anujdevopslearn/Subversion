@@ -1,0 +1,64 @@
+Notes on using/development of scripts for SBEAMS::Inkjet
+
+
+    ###########################
+   ##   load_conditions.pl  ##
+#####################################################################
+Purpose: loads .sig file data into the 'condition' and 'gene_expression' tables
+
+You should only need to specificy a project id for this script.  When invoked, it should check the /net/arrays/Pipeline/output/project_id/<id> directory for any .sig files.  Upon finding one, it loads the lambdas, ratios, etc. into the gene_expression table and makes a new 'condition' record.  
+
+Typical usage:
+./load_conditions.pl --project_id 166
+
+    ################################
+   ##   load_biosequence_set.pl  ##
+#####################################################################
+Purpose: load_biosequence_set.pl is a script to populate the biosequence table.  
+
+This script requires that the biosequence_set table is populated with the correct information.  This was done by using ManageTable.cgi and manually adding each biosequence set.  Once the biosequence set is defined, look at the command line usage ("./load_biosequence_set.pl --help") for options.  It is recommended to begin by using the option "--testonly" to ensure that everything is getting assigned correctly.  Once you have verified that everything is working correctly, run it without the "--testonly" flag.
+
+
+Typical usage:
+./load_biosequence_set.pl  --update_existing --verbose 2
+
+
+
+
+    ##############################
+   ##  load_array_elements.pl  ##
+#####################################################################
+Purpose: load_array_elements.pl is a script to populate the array_element table.
+
+This script adds the map/key file information to SBEAMS::Inkjet.  While it doesn't need the corresponding biosequences to exist, it is advantageous to put them in first.  To add the biosequences, see load_biosequence_set.pl.  
+
+Typical usage:
+./load_array_elements.pl --update_existing 
+
+
+
+
+     ################################
+    ## load_quantitation_file.pl  ##
+#####################################################################
+Purpose: load_quantitation_file.pl places the quantitation data in the database.
+
+This script populates many fields related to the quantitation file.  It requires that you know the scan image file, quantitation file, array id, and protocols for scanning and spotfinding.  These are all used on the command line and the options are visible using the "--help" flag.  Future goals will be to trim this list down to only those items that are necessary.  The following tables are populated or used:
+
+-server
+-file_path
+-file_location
+-file_type
+-quantitation_type
+-scan_element_quantitation
+-scan_element
+-scan_quantitation
+-array_channel_scan
+-channel
+
+Typical usage:
+./load_quantitation_file --scan_file ~/scan_test.tif \
+	                 --scan_protocol_id 4
+	                 --quantitation_file ~/quantitation_file.csv \
+                         --quantitation_protocol_id 12 \
+                         --array_id 4363

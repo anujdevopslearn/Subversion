@@ -16,7 +16,7 @@
 ###############################################################################
 use strict;
 use lib qw (../../lib/perl);
-use vars qw ($q $sbeams $sbeamsIJ $dbh $current_contact_id $current_username
+use vars qw ($q $sbeams $sbeamsMA $dbh $current_contact_id $current_username
              $current_work_group_id $current_work_group_name
              $current_project_id $current_project_name
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
@@ -35,8 +35,8 @@ use SBEAMS::Inkjet::Tables;
 
 $q = new CGI;
 $sbeams = new SBEAMS::Connection;
-$sbeamsIJ = new SBEAMS::Inkjet;
-$sbeamsIJ->setSBEAMS($sbeams);
+$sbeamsMA = new SBEAMS::Inkjet;
+$sbeamsMA->setSBEAMS($sbeams);
 
 
 ###############################################################################
@@ -56,10 +56,20 @@ sub main {
     #### Do the SBEAMS authentication and exit if a username is not returned
     exit unless ($current_username = $sbeams->Authenticate());
 
+
+		#### Read in the default input parameters
+		my %parameters;
+		my $n_params_found = $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
+		#$sbeams->printDebuggingInfo($q);
+		
+		
+		#### Process generic "state" parameters before we start
+		$sbeams->processStandardParameters(parameters_ref=>\%parameters);
+		
     #### Print the header, do what the program does, and print footer
-    $sbeamsIJ->printPageHeader();
+    $sbeamsMA->printPageHeader();
     processRequests();
-    $sbeamsIJ->printPageFooter();
+    $sbeamsMA->printPageFooter();
 
 } # end main
 
@@ -113,78 +123,15 @@ sub printEntryForm {
 
     my $CATEGORY="Show Project/Experiment Status";
 
-
-    my $apply_action  = $q->param('apply_action');
-    $parameters{project_id} = $q->param('project_id');
-
-    # If we're coming to this page for the first time, and there is a
-    # default project set, then automatically select that one and GO!
-    if ( ($parameters{project_id} eq "") && ($current_project_id > 0) ) {
-      $parameters{project_id} = $current_project_id;
-      $apply_action = "QUERY";
-    }
-
-
     $sbeams->printUserContext();
     print qq!
         <P>
         <H2>$CATEGORY</H2>
         $LINESEPARATOR
-        <FORM METHOD="post">
         <TABLE>
     !;
 
-
-    # ---------------------------
-    # Query to obtain column information about the table being managed
-    $sql_query = qq~
-	SELECT project_id,username+' - '+name
-	  FROM $TB_PROJECT P
-	  LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id )
-	  LEFT JOIN $TB_USER_WORK_GROUP UWG
-	       ON ( P.PI_contact_id=UWG.contact_id )
-	 WHERE P.record_status != 'D'
-	   AND UWG.work_group_id = 13
-	 ORDER BY username,name
-    ~;
-    my $optionlist = $sbeams->buildOptionList(
-           $sql_query,$parameters{project_id});
-
-
-    my $selected = "SELECTED" if ($parameters{project_id} eq "ALL UNFINISHED") || "";
-    print qq!
-          <TR><TD><B>Project:</B></TD>
-          <TD><SELECT NAME="project_id">
-          <OPTION VALUE=""></OPTION>
-          <OPTION VALUE="ALL UNFINISHED" $selected>ALL UNFINISHED</OPTION>
-          $optionlist</SELECT></TD>
-          <TD BGCOLOR="E0E0E0">Select the Project Name</TD>
-          </TD></TR>
-    !;
-
-
-    # ---------------------------
-    # Show the QUERY, REFRESH, and Reset buttons
-    print qq!
-	<TR><TD COLSPAN=2>
-	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-	<INPUT TYPE="submit" NAME="apply_action" VALUE="QUERY">
-	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-	<INPUT TYPE="submit" NAME="apply_action" VALUE="REFRESH">
-	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-	<INPUT TYPE="reset"  VALUE="Reset">
-         </TR></TABLE>
-         </FORM>
-    !;
-
-
-    $sbeams->printPageFooter("CloseTables");
-    print "<BR><HR SIZE=5 NOSHADE><BR>\n";
-
-    # --------------------------------------------------
-    if ($parameters{project_id} gt "") {
-
-      if ($parameters{project_id} eq "ALL UNFINISHED") {
+    if ($current_project_id gt "") {
         $sql_query = qq~
 SELECT	A.array_id,A.array_name,
 	AR.array_request_id,ARSL.array_request_slide_id,
@@ -200,33 +147,7 @@ SELECT	A.array_id,A.array_name,
   LEFT JOIN $TBIJ_HYBRIDIZATION H ON ( A.array_id = H.array_id )
   LEFT JOIN $TBIJ_ARRAY_SCAN ASCAN ON ( A.array_id = ASCAN.array_id )
   LEFT JOIN $TBIJ_ARRAY_QUANTITATION AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
- WHERE AR.request_status!='Finished'
---   AND ARSL.array_request_slide_id IS NOT NULL
-   AND ( AR.record_status != 'D' OR AR.record_status IS NULL )
-   AND ( A.record_status != 'D' OR A.record_status IS NULL )
-   AND ( PB.record_status != 'D' OR PB.record_status IS NULL )
-   AND ( H.record_status != 'D' OR H.record_status IS NULL )
-   AND ( ASCAN.record_status != 'D' OR ASCAN.record_status IS NULL )
-   AND ( AQ.record_status != 'D' OR AQ.record_status IS NULL )
- ORDER BY A.array_name,AR.array_request_id,ARSL.array_request_slide_id
-        ~;
-      } else {
-        $sql_query = qq~
-SELECT	A.array_id,A.array_name,
-	AR.array_request_id,ARSL.array_request_slide_id,
-	AR.date_created AS 'date_requested',
-	PB.printing_batch_id,PB.date_started AS 'date_printed',
-	H.hybridization_id,H.date_hybridized,
-	ASCAN.array_scan_id,ASCAN.date_scanned,ASCAN.data_flag AS 'scan_flag',
-	AQ.array_quantitation_id,AQ.date_quantitated,AQ.data_flag AS 'quan_flag'
-  FROM $TBIJ_ARRAY_REQUEST AR
-  LEFT JOIN $TBIJ_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )
-  LEFT JOIN $TBIJ_ARRAY A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
-  LEFT JOIN $TBIJ_PRINTING_BATCH PB ON ( A.printing_batch_id = PB.printing_batch_id )
-  LEFT JOIN $TBIJ_HYBRIDIZATION H ON ( A.array_id = H.array_id )
-  LEFT JOIN $TBIJ_ARRAY_SCAN ASCAN ON ( A.array_id = ASCAN.array_id )
-  LEFT JOIN $TBIJ_ARRAY_QUANTITATION AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
- WHERE AR.project_id=$parameters{project_id}
+ WHERE AR.project_id=$current_project_id
    AND ARSL.array_request_slide_id IS NOT NULL
    AND ( AR.record_status != 'D' OR AR.record_status IS NULL )
    AND ( A.record_status != 'D' OR A.record_status IS NULL )
@@ -236,17 +157,14 @@ SELECT	A.array_id,A.array_name,
    AND ( AQ.record_status != 'D' OR AQ.record_status IS NULL )
  ORDER BY A.array_name,AR.array_request_id,ARSL.array_request_slide_id
         ~;
-      }
 
-
-      my $base_url = "$CGI_BASE_DIR/Inkjet/ManageTable.cgi?TABLE_NAME=";
-      %url_cols = ('array_name' => "${base_url}IJ_array&array_id=%0V",
-                   'array_name_ISNULL' => ' [Add] ',
+      my $base_url = "$CGI_BASE_DIR/Inkjet/ManageTable.cgi?TABLE_NAME=IJ_";
+      %url_cols = ('array_name' => "${base_url}array&array_id=%0V",
                    'date_requested' => "$CGI_BASE_DIR/Inkjet/SubmitArrayRequest.cgi?TABLE_NAME=IJ_array_request&array_request_id=%2V",
-                   'date_printed' => "${base_url}IJ_printing_batch&printing_batch_id=%5V", 
-                   'date_hybridized' => "${base_url}IJ_hybridization&hybridization_id=%7V", 
-                   'date_scanned' => "${base_url}IJ_array_scan&array_scan_id=%9V", 
-                   'date_quantitated' => "${base_url}IJ_array_quantitation&array_quantitation_id=%12V", 
+                   'date_printed' => "${base_url}printing_batch&printing_batch_id=%5V", 
+                   'date_hybridized' => "${base_url}hybridization&hybridization_id=%7V", 
+                   'date_scanned' => "${base_url}array_scan&array_scan_id=%9V", 
+                   'date_quantitated' => "${base_url}array_quantitation&array_quantitation_id=%12V", 
       );
 
       %hidden_cols = ('array_id' => 1,
@@ -256,23 +174,10 @@ SELECT	A.array_id,A.array_name,
                       'array_scan_id' => 1,
                       'array_quantitation_id' => 1,
       );
-
-
-    } else {
-      $apply_action="BAD SELECTION";
-    }
-
-
-    if ($apply_action eq "QUERY") {
-      #print "<PRE>$sql_query</PRE><BR>\n";
       return $sbeams->displayQueryResult(sql_query=>$sql_query,
           url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols);
-    } else {
-      print "<H4>Select parameters above and press QUERY</H4>\n";
-    }
-
-
-} # end printEntryForm
+		}
+}# end printEntryForm
 
 
 

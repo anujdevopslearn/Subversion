@@ -16,7 +16,7 @@
 ###############################################################################
 use strict;
 use lib qw (../../lib/perl);
-use vars qw ($q $sbeams $sbeamsIJ $dbh $current_contact_id $current_username
+use vars qw ($q $sbeams $sbeamsMA $dbh $current_contact_id $current_username
              $current_work_group_id $current_work_group_name
              $current_project_id $current_project_name
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
@@ -40,8 +40,8 @@ require "QuantitationFile.pl";
 
 $q = new CGI;
 $sbeams = new SBEAMS::Connection;
-$sbeamsIJ = new SBEAMS::Inkjet;
-$sbeamsIJ->setSBEAMS($sbeams);
+$sbeamsMA = new SBEAMS::Inkjet;
+$sbeamsMA->setSBEAMS($sbeams);
 
 ###############################################################################
 # Global Variables
@@ -71,9 +71,9 @@ sub main {
 
 
   #### Print the header, do what the program does, and print footer
-  $sbeamsIJ->printPageHeader();
+  $sbeamsMA->printPageHeader();
   processRequests();
-  $sbeamsIJ->printPageFooter();
+  $sbeamsMA->printPageFooter();
 
 } # end main
 
@@ -150,18 +150,18 @@ SELECT	A.array_id,A.array_name,
 	ARSM2.name AS 'Sample2Name',D2.dye_name AS 'sample2_dye',
 	AQ.array_quantitation_id,AQ.data_flag AS 'quan_flag',
 	AQ.stage_location,AL.source_filename AS 'key_file'
-  FROM array_request AR
-  LEFT JOIN array_request_slide ARSL ON ( AR.array_request_id = ARSL.array_request_id )
-  LEFT JOIN array_request_sample ARSM1 ON ( ARSL.array_request_slide_id = ARSM1.array_request_slide_id AND ARSM1.sample_index=0)
-  LEFT JOIN labeling_method LM1 ON ( ARSM1.labeling_method_id = LM1.labeling_method_id )
-  LEFT JOIN arrays.dbo.dye D1 ON ( LM1.dye_id = D1.dye_id )
-  LEFT JOIN array_request_sample ARSM2 ON ( ARSL.array_request_slide_id = ARSM2.array_request_slide_id AND ARSM2.sample_index=1)
-  LEFT JOIN labeling_method LM2 ON ( ARSM2.labeling_method_id = LM2.labeling_method_id )
-  LEFT JOIN arrays.dbo.dye D2 ON ( LM2.dye_id = D2.dye_id )
-  LEFT JOIN array A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
-  LEFT JOIN array_layout AL ON ( A.layout_id = AL.layout_id )
-  LEFT JOIN array_scan ASCAN ON ( A.array_id = ASCAN.array_id )
-  LEFT JOIN array_quantitation AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
+  FROM $TBIJ_ARRAY_REQUEST AR
+  LEFT JOIN $TBIJ_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )
+  LEFT JOIN $TBIJ_ARRAY_REQUEST_SAMPLE ARSM1 ON ( ARSL.array_request_slide_id = ARSM1.array_request_slide_id AND ARSM1.sample_index=0)
+  LEFT JOIN $TBIJ_LABELING_METHOD LM1 ON ( ARSM1.labeling_method_id = LM1.labeling_method_id )
+  LEFT JOIN $TBIJ_DYE D1 ON ( LM1.dye_id = D1.dye_id )
+  LEFT JOIN $TBIJ_ARRAY_REQUEST_SAMPLE ARSM2 ON ( ARSL.array_request_slide_id = ARSM2.array_request_slide_id AND ARSM2.sample_index=1)
+  LEFT JOIN $TBIJ_LABELING_METHOD LM2 ON ( ARSM2.labeling_method_id = LM2.labeling_method_id )
+  LEFT JOIN $TBIJ_DYE D2 ON ( LM2.dye_id = D2.dye_id )
+  LEFT JOIN $TBIJ_ARRAY A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
+  LEFT JOIN $TBIJ_ARRAY_LAYOUT AL ON ( A.layout_id = AL.layout_id )
+  LEFT JOIN $TBIJ_ARRAY_SCAN ASCAN ON ( A.array_id = ASCAN.array_id )
+  LEFT JOIN $TBIJ_ARRAY_QUANTITATION AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
  WHERE AR.project_id=$parameters{project_id}
    AND AQ.array_quantitation_id IS NOT NULL
    AND AR.record_status != 'D'
@@ -172,7 +172,7 @@ SELECT	A.array_id,A.array_name,
  ORDER BY A.array_name
      ~;
 
-      my $base_url = "$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=";
+      my $base_url = "$CGI_BASE_DIR/Inkjet/ManageTable.cgi?TABLE_NAME=IJ_";
       %url_cols = ('array_name' => "${base_url}array&array_id=%0V",
                    'quan_flag' => "${base_url}array_quantitation&array_quantitation_id=%6V", 
       );
@@ -720,10 +720,10 @@ print qq~
     <TABLE BORDER=0>
     <TR>
       <TD>
-      <INPUT TYPE="checkbox" NAME="postSam" VALUE = "ps">
+      <INPUT TYPE="checkbox" NAME="postSam" VALUE = "ps" CHECKED>
       </TD>
       <TD>
-	&nbsp;Use postSam (adds info from key file to .sig file)
+	&nbsp;Create clone file (adds info from key file to .sig file)
       </TD>
     </TR>
     <TR>

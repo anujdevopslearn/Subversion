@@ -1,0 +1,956 @@
+
+/*
+
+SELECT * FROM sysobjects WHERE type='U'
+SELECT 'DROP TABLE '+name FROM sysobjects WHERE type='U' ORDER BY crdate DESC
+
+DROP TABLE calibrated_spot
+DROP TABLE spot_quantitation
+DROP TABLE quantitation_calibration
+DROP TABLE array_quantitation
+DROP TABLE scan_channel
+DROP TABLE array_scan
+
+DROP TABLE labeling
+DROP TABLE hybridization
+DROP TABLE array
+DROP TABLE printing_batch
+
+DROP TABLE array_request_option
+DROP TABLE array_request_sample
+DROP TABLE array_request_slide
+DROP TABLE array_request
+DROP TABLE array_element
+DROP TABLE array_layout
+
+DROP TABLE labeling_method
+DROP TABLE xna_type
+DROP TABLE slide_type
+DROP TABLE organism
+
+DROP TABLE slide
+DROP TABLE slide_lot
+DROP TABLE slide_model
+
+DROP TABLE citation
+DROP TABLE db_xref
+DROP TABLE software_hardware_protocol
+DROP TABLE protocol
+DROP TABLE protocol_type
+DROP TABLE software
+DROP TABLE software_type
+DROP TABLE hardware
+DROP TABLE hardware_type
+
+
+*/
+
+
+
+
+
+-----------------------------------------------------------------
+
+
+CREATE TABLE dbo.hardware_type (
+	hardware_type_id	int IDENTITY NOT NULL,
+	name		varchar(50),
+	is_standard		char(1),
+	comment			varchar(255) NULL,
+	sort_order		int NOT NULL DEFAULT 10,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (hardware_type_id)
+)
+GO
+
+
+INSERT INTO hardware_type ( name,is_standard,sort_order ) VALUES ( 'other','Y',100 )
+INSERT INTO hardware_type ( name,is_standard ) VALUES ( 'computer','Y' )
+INSERT INTO hardware_type ( name,is_standard ) VALUES ( 'scanner','Y' )
+INSERT INTO hardware_type ( name,is_standard ) VALUES ( 'robotics','Y' )
+INSERT INTO hardware_type ( name,is_standard ) VALUES ( 'sequencer','Y' )
+INSERT INTO hardware_type ( name,is_standard ) VALUES ( 'pcr_machine','Y' )
+INSERT INTO hardware_type ( name,is_standard ) VALUES ( 'array_printer','Y' )
+GO
+
+
+CREATE TABLE dbo.hardware (
+	hardware_id		int IDENTITY NOT NULL,
+	contact_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	hardware_type_id	int NOT NULL REFERENCES hardware_type (hardware_type_id),
+	other_type		varchar(50) NULL,
+	make			varchar(50) NULL,
+	model			varchar(50) NULL,
+	serial_number		varchar(50) NULL,
+	year			varchar(10) NULL,
+	uri			varchar(255) NULL,
+	comment			varchar(255) NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (hardware_id)
+)
+GO
+
+
+-----------------------------------------------------------------
+
+
+CREATE TABLE dbo.software_type (
+	software_type_id	int IDENTITY NOT NULL,
+	name			varchar(50),
+	is_standard		char(1),
+	comment			varchar(255) NULL,
+	sort_order		int NOT NULL DEFAULT 10,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (software_type_id)
+)
+GO
+
+
+INSERT INTO software_type ( name,is_standard,sort_order ) VALUES ( 'other','Y',100 )
+INSERT INTO software_type ( name,is_standard ) VALUES ( 'image_analysis','Y' )
+INSERT INTO software_type ( name,is_standard ) VALUES ( 'statistics','Y' )
+INSERT INTO software_type ( name,is_standard ) VALUES ( 'spreadsheet','Y' )
+INSERT INTO software_type ( name,is_standard ) VALUES ( 'database','Y' )
+GO
+
+
+CREATE TABLE dbo.software (
+	software_id		int IDENTITY NOT NULL,
+	contact_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	software_type_id	int NOT NULL REFERENCES software_type (software_type_id),
+	other_type		varchar(50) NULL,
+	name			varchar(50) NULL,
+	version			varchar(50) NULL,
+	operating_system	varchar(50) NULL,
+	year			varchar(10) NULL,
+	uri			varchar(255) NULL,
+	comment			varchar(255) NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (software_id)
+)
+GO
+
+
+
+-----------------------------------------------------------------
+
+
+CREATE TABLE dbo.protocol_type (
+	protocol_type_id	int IDENTITY NOT NULL,
+	name			varchar(50),
+	is_standard		char(1),
+	comment			varchar(255) NULL,
+	sort_order		int NOT NULL DEFAULT 10,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (protocol_type_id)
+)
+GO
+
+
+INSERT INTO protocol_type ( name,is_standard,sort_order ) VALUES ( 'other','Y',100 )
+INSERT INTO protocol_type ( name,is_standard ) VALUES ( 'array_printing','Y' )
+INSERT INTO protocol_type ( name,is_standard ) VALUES ( 'sample_prep','Y' )
+INSERT INTO protocol_type ( name,is_standard ) VALUES ( 'extract_labeling','Y' )
+INSERT INTO protocol_type ( name,is_standard ) VALUES ( 'hybridization','Y' )
+INSERT INTO protocol_type ( name,is_standard ) VALUES ( 'image_analysis','Y' )
+INSERT INTO protocol_type ( name,is_standard ) VALUES ( 'sequencing','Y' )
+INSERT INTO protocol_type ( name,is_standard ) VALUES ( 'pcr','Y' )
+INSERT INTO protocol_type ( name,is_standard ) VALUES ( 'array_scanning','N' )
+GO
+
+
+CREATE TABLE dbo.protocol (
+	protocol_id		int IDENTITY NOT NULL,
+	protocol_type_id	int NOT NULL REFERENCES protocol_type(protocol_type_id),
+	other_type		varchar(50) NULL,
+	name			varchar(50) NULL,
+	abstract		text NULL,
+	protocol		text NULL,
+	deviations		text NULL,
+	comment			text NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (protocol_id)
+)
+GO
+
+
+CREATE TABLE dbo.software_hardware_protocol (
+	protocol_id		int NOT NULL REFERENCES protocol(protocol_id),
+	software_id		int NOT NULL REFERENCES software(software_id),
+	hardware_id		int NOT NULL REFERENCES hardware(hardware_id),
+	comment			varchar(255) NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (protocol_id,software_id,hardware_id)
+)
+GO
+
+
+
+CREATE TABLE dbo.db_xref (
+	db_xref_id		int IDENTITY NOT NULL,
+	database_name		varchar(100) NULL,
+	database_version	varchar(50) NULL,
+	xref_date		datetime NULL,
+	accession		varchar(50) NULL,
+	accession_version	varchar(50) NULL,
+	uri			varchar(255) NULL,
+	comment			varchar(255) NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (db_xref_id)
+)
+GO
+
+
+CREATE TABLE dbo.citation (
+	citation_id		int IDENTITY NOT NULL,
+	journal			varchar(100) NULL,
+	year			varchar(50) NULL,
+	volume			varchar(50) NULL,
+	issue			varchar(50) NULL,
+	page			varchar(50) NULL,
+	authors			varchar(255) NULL,
+	title			varchar(255) NULL,
+	publisher		varchar(100) NULL,
+	editor			varchar(255) NULL,
+	uri			varchar(255) NULL,
+	db_xref_id		int NOT NULL REFERENCES db_xref(db_xref_id),
+	abstract		text NULL,
+	comment			varchar(255) NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (citation_id)
+)
+GO
+
+
+
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+
+
+
+-----------------------------------------------------------------
+
+
+CREATE TABLE dbo.slide_model (
+	slide_model_id		int IDENTITY NOT NULL,
+	vendor_name		varchar(50) NULL,
+	model_name		varchar(50) NULL,
+	contact_id		int NOT NULL REFERENCES contact(contact_id),
+	comment			varchar(255) NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) NOT NULL DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (slide_model_id)
+)
+GO
+
+
+CREATE TABLE dbo.slide_lot (
+	slide_lot_id		int IDENTITY NOT NULL,
+	slide_model_id		int NOT NULL REFERENCES slide_model(slide_model_id),
+	lot_number		varchar(50) NULL,
+	date_received		datetime NULL,
+	comment			varchar(255) NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) NOT NULL DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (slide_lot_id)
+)
+GO
+
+
+CREATE TABLE dbo.slide (
+	slide_id		int IDENTITY NOT NULL,
+	slide_lot_id		int NOT NULL REFERENCES slide_lot(slide_lot_id),
+	slide_number		int NOT NULL,
+	barcode			varchar(50) NULL,
+	comment			varchar(255) NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) NOT NULL DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (slide_id)
+)
+GO
+
+
+-----------------------------------------------------------------
+
+
+CREATE TABLE dbo.organism (
+	organism_id		int IDENTITY NOT NULL,
+	organism_name		varchar(50),
+	comment			varchar(255),
+	sort_order		int NOT NULL DEFAULT 10,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (organism_id)
+)
+GO
+
+INSERT INTO organism ( organism_name,sort_order,created_by_id,modified_by_id ) VALUES ( 'Other',100,1,1 )
+INSERT INTO organism ( organism_name,created_by_id,modified_by_id ) VALUES ( 'Human',1,1 )
+INSERT INTO organism ( organism_name,created_by_id,modified_by_id ) VALUES ( 'Yeast',1,1 )
+INSERT INTO organism ( organism_name,created_by_id,modified_by_id ) VALUES ( 'Halobacterium',1,1 )
+INSERT INTO organism ( organism_name,created_by_id,modified_by_id ) VALUES ( 'Hemophilus',1,1 )
+INSERT INTO organism ( organism_name,created_by_id,modified_by_id ) VALUES ( 'Mouse',1,1 )
+INSERT INTO organism ( organism_name,sort_order,created_by_id,modified_by_id ) VALUES ( 'All',110,1,1 )
+INSERT INTO organism ( organism_name,created_by_id,modified_by_id ) VALUES ( 'Drosophila',1,1 )
+
+
+CREATE TABLE dbo.slide_type (
+	slide_type_id		int IDENTITY NOT NULL,
+	name			varchar(50) NULL,
+	organism_id		int NOT NULL REFERENCES organism (organism_id),
+	price			float NULL,
+	comment			varchar(255),
+	sort_order		int NOT NULL DEFAULT 10,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (slide_type_id)
+)
+GO
+
+
+CREATE TABLE dbo.xna_type (
+	xna_type_id		int IDENTITY NOT NULL,
+	xna_type		varchar(25),
+	comment			varchar(255),
+	sort_order		int NOT NULL DEFAULT 10,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (xna_type_id)
+)
+GO
+
+INSERT INTO xna_type ( xna_type,sort_order ) VALUES ( 'mRNA',10 )
+INSERT INTO xna_type ( xna_type,sort_order ) VALUES ( 'cRNA',20 )
+INSERT INTO xna_type ( xna_type,sort_order ) VALUES ( 'total RNA',30 )
+INSERT INTO xna_type ( xna_type,sort_order ) VALUES ( 'cDNA',40 )
+INSERT INTO xna_type ( xna_type,sort_order ) VALUES ( 'gDNA',50 )
+
+
+CREATE TABLE dbo.labeling_method (
+	labeling_method_id	int IDENTITY NOT NULL,
+	name			varchar(50) NULL,
+	xna_type_id		int NOT NULL REFERENCES xna_type (xna_type_id),
+	dye_id			int NOT NULL /* REFERENCES arrays.dbo.dye (dye_id) */,
+	desired_micrograms	float NULL,
+	Ebase			float NULL,
+	MWbase			float NULL,
+	price			float NULL,
+	comment			varchar(255),
+	sort_order		int NULL DEFAULT 10,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (labeling_method_id)
+)
+GO
+
+
+CREATE TABLE dbo.cost_scheme (
+	cost_scheme_id		int IDENTITY NOT NULL,
+	cost_scheme_name	varchar(50) NOT NULL,
+	comment			varchar(255),
+	sort_order		int NOT NULL DEFAULT 10,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (cost_scheme_id)
+)
+GO
+
+
+CREATE TABLE dbo.slide_type_cost (
+	slide_type_cost_id	int IDENTITY NOT NULL,
+	slide_type_id		int NOT NULL REFERENCES slide_type(slide_type_id),
+	cost_scheme_id		int NOT NULL REFERENCES cost_scheme(cost_scheme_id),
+	price			real NULL,
+	comment			varchar(255),
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (slide_type_cost_id)
+)
+GO
+
+
+
+
+
+
+----------------------------------------------------------------------------
+
+CREATE TABLE dbo.array_layout (
+	layout_id		int IDENTITY NOT NULL,
+	slide_type_id		int NOT NULL REFERENCES slide_type(slide_type_id),
+	name			varchar(50) NOT NULL,
+	data_file		varchar(100) NULL,
+	source_filename		varchar(100) NULL,
+	comment			varchar(255) NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) NOT NULL DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (layout_id)
+)
+GO
+
+
+-----------------------------------------------------------------
+
+/*
+this table contains all sorts of information about each array element,
+and must also then be linked to other tables with gene, clone, and
+sequence information.
+*/
+
+--DROP TABLE dbo.array_element
+CREATE TABLE dbo.array_element (
+	element_id		int IDENTITY NOT NULL,
+	layout_id		int NOT NULL REFERENCES array_layout(layout_id) ,
+	spot_number		int NOT NULL ,
+	meta_row		int NOT NULL ,
+	meta_column		int NOT NULL ,
+	rel_row			int NOT NULL ,
+	rel_column		int NOT NULL ,
+	reference		varchar(100) NULL ,
+	reference2		varchar(100) NULL ,
+	reference3		varchar(100) NULL ,
+	orf_name		varchar(100) NULL ,
+        clone_id		varchar(100) NULL ,
+	w384_plate		varchar(25) NULL ,
+	w384_row		varchar(10) NULL ,
+	w384_column		varchar(10) NULL ,
+	w96_plate		varchar(25) NULL ,
+	w96_row			varchar(10) NULL ,
+	w96_column		varchar(10) NULL ,
+	release_number		varchar(25) NULL ,
+	insert_size		varchar(25) NULL ,
+	cluster_id		varchar(25) NULL ,
+	UG_build		varchar(25) NULL ,
+	vector			varchar(100) NULL ,
+	tissue			varchar(100) NULL ,
+	library			varchar(100) NULL ,
+	accession		varchar(25) NULL ,
+	NID			varchar(25) NULL ,
+	gene_name		varchar(255) NULL ,
+	gene_symbol		varchar(25) NULL ,
+	chromosome		varchar(50) NULL ,
+	band			varchar(25) NULL ,
+	marker1			varchar(50) NULL ,
+	marker2			varchar(50) NULL ,
+	barcode			varchar(25) NULL ,
+	antibiotics		varchar(25) NULL ,
+	repeat			varchar(25) NULL ,
+	gene_sequence		varchar(500) NULL ,
+	gene_identity		varchar(50) NULL ,
+	contig_name		varchar(200) NULL ,
+	start_length		varchar(50) NULL ,
+	prod_length		varchar(50) NULL ,
+	tm			varchar(50) NULL ,
+ 	PRIMARY KEY CLUSTERED (element_id)
+)
+GO
+
+
+-----------------------------------------------------------------
+
+CREATE TABLE dbo.array_request (
+	array_request_id	int IDENTITY NOT NULL,
+	contact_id		int NOT NULL REFERENCES contact (contact_id),
+	project_id		int NOT NULL REFERENCES project (project_id),
+	cost_scheme_id		int NOT NULL REFERENCES cost_scheme (cost_scheme_id),
+	slide_type_id		int NOT NULL REFERENCES slide_type (slide_type_id),
+	n_slides		int NOT NULL,
+	n_samples_per_slide	int NOT NULL,
+	hybridization_request	varchar(10) NOT NULL,
+	scanning_request	varchar(10) NOT NULL,
+	request_status		varchar(10) NOT NULL,
+	price			float NOT NULL,
+	comment			text NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (array_request_id)
+)
+GO
+
+
+CREATE TABLE dbo.array_request_slide (
+	array_request_slide_id	int IDENTITY(6001,1) NOT NULL,
+	array_request_id	int NOT NULL REFERENCES array_request (array_request_id),
+	slide_index		int NOT NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (array_request_slide_id)
+)
+GO
+
+
+CREATE TABLE dbo.array_request_sample (
+	array_request_sample_id	int IDENTITY(10001,1) NOT NULL,
+	array_request_slide_id	int NOT NULL REFERENCES array_request_slide (array_request_slide_id),
+	sample_index		int NOT NULL,
+	name			varchar(50) NOT NULL,
+	labeling_method_id	int NOT NULL REFERENCES labeling_method (labeling_method_id),
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (array_request_sample_id)
+)
+GO
+
+--DROP TABLE dbo.array_request_option
+CREATE TABLE dbo.array_request_option (
+	array_request_option_id	int IDENTITY NOT NULL,
+	option_type		varchar(25) NOT NULL,
+	option_key		varchar(25) NOT NULL,
+	option_value		varchar(255) NOT NULL,
+	price			float NOT NULL,
+	sort_order		int NOT NULL DEFAULT 10,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (array_request_option_id)
+)
+GO
+
+INSERT INTO array_request_option ( option_type,option_key,option_value,price,sort_order )
+VALUES ( 'hybridization_request','LH','YES, please Label and Hyb for me',1,10 )
+INSERT INTO array_request_option ( option_type,option_key,option_value,price,sort_order )
+VALUES ( 'hybridization_request','L','I will Label samples, but please Hyb for me',1,15 )
+INSERT INTO array_request_option ( option_type,option_key,option_value,price,sort_order )
+VALUES ( 'hybridization_request','N','NO, I will Label and Hyb myself',0,20 )
+
+INSERT INTO array_request_option ( option_type,option_key,option_value,price,sort_order )
+VALUES ( 'scanning_request','SQ','YES, please Scan and Quant for me',110,10 )
+INSERT INTO array_request_option ( option_type,option_key,option_value,price,sort_order )
+VALUES ( 'scanning_request','S','Just do the Scanning for me',50,20 )
+INSERT INTO array_request_option ( option_type,option_key,option_value,price,sort_order )
+VALUES ( 'scanning_request','Q','Just do the Quantitation for me',65,30 )
+INSERT INTO array_request_option ( option_type,option_key,option_value,price,sort_order )
+VALUES ( 'scanning_request','N','NO, I will do Scan and Quant myself (usage fee applies)',5,40 )
+
+
+
+-----------------------------------------------------------------
+
+
+CREATE TABLE dbo.printing_batch (
+	printing_batch_id	int IDENTITY NOT NULL,
+	slide_type_id		int NOT NULL REFERENCES slide_type (slide_type_id),
+	protocol_id		int NOT NULL REFERENCES protocol (protocol_id),
+	date_started		datetime NULL,
+	date_finished		datetime NULL,
+	number_of_spots		int NULL,
+	spot_spacing		float NULL,
+	solvent			varchar(50) NULL,
+	temperature		float NULL,
+	humidity		float NULL,
+	post_treatment		varchar(50) NULL,
+	slide_list		varchar(255) NULL,
+	comment			varchar(255) NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) NOT NULL DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (printing_batch_id)
+)
+GO
+
+
+
+CREATE TABLE dbo.array (
+	array_id		int IDENTITY(4001,1) NOT NULL,
+	project_id		int NOT NULL REFERENCES project(project_id),
+	layout_id		int NOT NULL REFERENCES array_layout(layout_id),
+	printing_batch_id	int NOT NULL REFERENCES printing_batch(printing_batch_id),
+	slide_id		int NOT NULL REFERENCES slide(slide_id),
+	array_name		varchar(50) NOT NULL,
+	array_request_slide_id	int NOT NULL REFERENCES array_request_slide(array_request_slide_id),
+	comment			varchar(255) NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) NOT NULL DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (array_id)
+)
+GO
+
+
+-----------------------------------------------------------------
+
+
+CREATE TABLE dbo.hybridization (
+	hybridization_id	int IDENTITY NOT NULL,
+	name			varchar(100) NULL,
+	protocol_id		int NOT NULL REFERENCES protocol(protocol_id),
+--	labeled_extract_ids	MAML ?
+--	control_elements_ids MAML ?
+--	array_platform_id MAML.  ? similar to:
+	array_id		int NOT NULL REFERENCES array(array_id),
+	date_hybridized		datetime NULL,
+	prehyb_chamber		varchar(10) NULL,
+	hyb_chamber		varchar(10) NULL,
+	wash_chamber		varchar(10) NULL,
+	comment			varchar(255) NULL,
+	deviations		varchar(255) NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) NOT NULL DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (hybridization_id)
+)
+GO
+
+
+CREATE TABLE dbo.labeling (
+	labeling_id		int IDENTITY NOT NULL,
+	array_request_sample_id	int NOT NULL REFERENCES array_request_sample(array_request_sample_id),
+	protocol_id		int NOT NULL REFERENCES protocol(protocol_id),
+	protocol_deviations	text NULL,
+	spiking_controls	text NULL,
+	date_labeled		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	dye_lot_number		varchar(25) NULL,
+	absorbance_260		float NOT NULL,
+	absorbance_lambda	float NOT NULL,
+	volume			float NOT NULL,
+	dilution_factor		float NOT NULL,
+	comment			text NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) NOT NULL DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (labeling_id)
+)
+GO
+
+
+-----------------------------------------------------------------
+
+CREATE TABLE dbo.array_scan (
+	array_scan_id		int IDENTITY NOT NULL,
+	array_id		int NOT NULL REFERENCES array(array_id),
+	protocol_id		int NOT NULL REFERENCES protocol(protocol_id),
+	resolution		float NULL,
+	stage_location		varchar(255) NULL,
+	uri			varchar(255) NULL,
+	data_flag		varchar(10) NULL,
+	date_scanned		datetime NULL,
+	comment			varchar(255) NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) NOT NULL DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (array_scan_id)
+)
+GO
+
+
+CREATE TABLE dbo.scan_channel (
+	scan_channel_id		int IDENTITY NOT NULL ,
+	array_scan_id		int NOT NULL REFERENCES array_scan(array_scan_id),
+	channel_label		varchar(25) NOT NULL ,
+	image_name		varchar(200) NOT NULL ,
+	file_uri		varchar(255) NOT NULL,
+	file_header		text NULL,
+	microns_per_pixel	float NULL,
+	fluorophor		varchar(25) NOT NULL ,
+	laser_voltage		float NULL,
+	pmt_voltage		float NULL,
+	barcode			varchar(25) NULL ,
+	units			varchar(25) NULL ,
+	x_scale			float NULL ,
+	y_scale			float NULL ,
+	x_offset		float NULL ,
+	y_offset		float NULL ,
+	status			varchar(25) NULL ,
+	comment			varchar(255) NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) NOT NULL DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (scan_channel_id)
+)
+GO
+
+
+-----------------
+
+CREATE TABLE dbo.array_quantitation (
+	array_quantitation_id	int IDENTITY NOT NULL,
+	array_scan_id		int NOT NULL REFERENCES array_scan(array_scan_id),
+	protocol_id		int NOT NULL REFERENCES protocol(protocol_id),
+	stage_location		varchar(255) NULL,
+	uri			varchar(255) NULL,
+	data_flag		varchar(10) NULL,
+	date_quantitated	datetime NULL,
+	comment			varchar(255) NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) NOT NULL DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (array_quantitation_id)
+)
+GO
+
+
+-----------------
+
+
+CREATE TABLE dbo.spot_quantitation (
+	spot_id			int IDENTITY NOT NULL ,
+	array_quantitation_id	int NOT NULL REFERENCES array_quantitation(array_quantitation_id) ,
+	spot_number		int NULL ,
+	meta_row		int NULL ,
+	meta_column		int NULL ,
+	spot_row		int NULL ,
+	spot_column		int NULL ,
+	X_microns		int NULL ,
+	Y_microns		int NULL ,
+	ch1_flag		char(1) NULL ,
+	ch1_intensity		float NULL ,
+	ch1_bkg			float NULL ,
+	ch1_inten_stdev		float NULL ,
+	ch1_bkg_stdev		float NULL ,
+	ch2_flag		char(1) NULL ,
+	ch2_intensity		float NULL ,
+	ch2_bkg			float NULL ,
+	ch2_inten_stdev		float NULL ,
+	ch2_bkg_stdev		float NULL ,
+	PRIMARY KEY CLUSTERED (spot_id)
+)
+GO
+
+
+-------------------------------------------------------
+
+
+CREATE TABLE dbo.quantitation_calibration (
+	calibration_id		int IDENTITY NOT NULL,
+	array_quantitation_id	int NOT NULL REFERENCES array_quantitation(array_quantitation_id),
+	ch1_median		float NULL ,
+	ch2_median		float NULL ,
+	PRIMARY KEY CLUSTERED (calibration_id)
+)
+GO
+
+
+
+CREATE TABLE dbo.calibrated_spot (
+	spot_id			int NOT NULL REFERENCES spot_quantitation(spot_id) ,
+	norm_ratio		float NULL ,
+	log_ratio		float NULL ,
+	ch1_significance	float NULL ,
+	ch2_significance	float NULL ,
+	PRIMARY KEY CLUSTERED (spot_id)
+)
+GO
+
+
+-------------------------------------------------------
+
+
+
+
+INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'job_status','Not Yet Submitted','Not Yet Submitted',8 )
+INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'job_status','Submitted','Submitted',10 )
+INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'job_status','Started','Started',20 )
+INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'job_status','Finished','Finished',30 )
+
+INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'samples_per_slide','1','1',10 )
+INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'samples_per_slide','2','2',10 )
+INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'samples_per_slide','3','3',10 )
+
+INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'solvent','3X SSC','3X SSC',10 )
+INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'solvent','4X SSC','4X SSC',10 )
+INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'solvent','DMSO','DMSO',10 )
+
+INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'post_treatment','Baked 2hr @ 85','Baked 2hr @ 85',5 )
+INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'post_treatment','Baked 2hr @ 80','Baked 2hr @ 80',10 )
+INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'post_treatment','UV Crosslinked','UV Crosslinked',10 )
+
+INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'data_flag','OK','OK',5 )
+INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'data_flag','BAD','BAD',10 )
+
+
+
+--DROP TABLE condition
+CREATE TABLE dbo.condition (
+	condition_id		int IDENTITY NOT NULL,
+	project_id		int NOT NULL REFERENCES project(project_id),
+	condition_name		varchar(255) NOT NULL,
+	processed_date		datetime NULL,
+	comment			text NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) NOT NULL DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (condition_id)
+)
+GO
+
+
+--DROP TABLE gene_expression
+CREATE TABLE dbo.gene_expression (
+	gene_expression_id	int IDENTITY NOT NULL ,
+	condition_id		int NOT NULL REFERENCES condition(condition_id) ,
+	gene_name		varchar(255) NOT NULL ,
+	biosequence_id		int NULL /* REFERENCES biosequence(biosequence_id) */,
+	second_name		varchar(255) NULL ,
+	log10_ratio		float NULL ,
+	log10_uncertainty	float NULL ,
+	log10_std_deviation	float NULL ,
+	lambda			float NULL ,
+	mu_x			float NULL ,
+	mu_y			float NULL ,
+	mean_intensity		float NULL ,
+	quality_flag		varchar(25) NULL ,
+	PRIMARY KEY CLUSTERED (gene_expression_id)
+)
+GO
+
+
+CREATE TABLE query_option (
+  query_option_id            int IDENTITY NOT NULL,
+  option_type                varchar(255) NOT NULL,
+  option_key                 varchar(255) NOT NULL,
+  option_value               varchar(255) NULL,
+  sort_order                 int NOT NULL DEFAULT '10',
+  date_created               datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_by_id              int NOT NULL DEFAULT '1',
+  date_modified              datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  modified_by_id             int NOT NULL DEFAULT '1',
+  owner_group_id             int NOT NULL DEFAULT '1',
+  record_status              char(1) NOT NULL DEFAULT 'N',
+  PRIMARY KEY (query_option_id)
+)
+GO
+
+
+
+
+

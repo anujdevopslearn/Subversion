@@ -31,8 +31,12 @@ require Exporter;
 
 
 #### Define new variables
-$SBEAMS_PART            = 'Inkjet';
+$SBEAMS_PART            = 'MicroArray';
 
 
 #### Override variables from main Settings.pm
 $SBEAMS_SUBDIR          = 'Inkjet';
+
+
+1;
+
