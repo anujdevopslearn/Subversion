@@ -311,6 +311,40 @@ CREATE TABLE dbo.project (
 GO
 
 
+CREATE TABLE dbo.user_project_permission (
+	user_project_permission_id	int IDENTITY NOT NULL,
+	contact_id		int NOT NULL REFERENCES contact(contact_id),
+	project_id		int NOT NULL REFERENCES project(project_id),
+	privilege_id		int NOT NULL REFERENCES privilege(privilege_id),
+	comment			text NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (user_project_permission_id)
+)
+GO
+
+
+CREATE TABLE dbo.group_project_permission (
+	group_project_permission_id	int IDENTITY NOT NULL,
+	work_group_id		int NOT NULL REFERENCES work_group(work_group_id),
+	project_id		int NOT NULL REFERENCES project(project_id),
+	privilege_id		int NOT NULL REFERENCES privilege(privilege_id),
+	comment			text NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (group_project_permission_id)
+)
+GO
+
+
 CREATE TABLE dbo.help_text (
 	help_text_id		int IDENTITY NOT NULL,
 	title			varchar(255) NULL,
