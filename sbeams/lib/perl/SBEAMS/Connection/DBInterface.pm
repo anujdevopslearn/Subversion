@@ -17,9 +17,9 @@ use CGI::Carp qw(fatalsToBrowser croak);
 use DBI;
 
 
-use lib "/net/db/src/CPAN/Data-ShowTable-3.3a";
-use Data::ShowTableEWD;
-#use Data::ShowTable;
+#use lib "/net/db/src/CPAN/Data-ShowTable-3.3a";
+#use Data::ShowTableEWD;
+use Data::ShowTable;
 
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Tables;
