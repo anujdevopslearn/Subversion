@@ -122,11 +122,11 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PS_test_table"><nobr>&nbsp;&nbsp;&nbsp;Test Table</nobr></a></td></tr>
       ~;
 
+      #### Special links to show if the current user is using the admin group
       my $current_work_group_name = $sbeams->getCurrent_work_group_name();
       if ($current_work_group_name eq 'ProteinStructure_admin') {
         print qq~
 	  <tr><td>&nbsp;</td></tr>
-	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PS_biosequence_set_project">Permissions</a></td></tr>
         ~;
       }
 

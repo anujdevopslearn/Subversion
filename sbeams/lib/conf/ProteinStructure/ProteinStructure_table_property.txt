@@ -1,5 +1,5 @@
 table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
-PS_biosequence_set	BioSequence Set	ProteinStructure_infrastructure	YES	$TBPS_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=PS_biosequence_set	PS_biosequence_set	
+PS_biosequence_set	BioSequence Set	ProteinStructure_project	YES	$TBPS_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=PS_biosequence_set	PS_biosequence_set	
 PS_polymer_type	Polymer Type	ProteinStructure_infrastructure	YES	$TBPS_POLYMER_TYPE	polymer_type_id		ManageTable.cgi?TABLE_NAME=PS_polymer_type	PS_polymer_type	
 PS_dbxref	Biosequence Database Cross Reference	ProteinStructure_infrastructure	YES	$TB_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=PS_dbxref	PS_biosequence_dbxref	
 PS_biosequence	BioSequence	ProteinStructure_infrastructure	NO	$TBPS_BIOSEQUENCE	biosequence_id				
@@ -9,7 +9,7 @@ PS_domain_match_type	Domain Match Type	ProteinStructure_infrastructure	YES	$TBPS
 PS_domain_match_source	Domain Match Source	ProteinStructure_infrastructure	YES	$TBPS_DOMAIN_MATCH_SOURCE	domain_match_source_id		ManageTable.cgi?TABLE_NAME=PS_domain_match_source	"PS_domain_match_source,PS_domain_match_type"	
 PS_query_option	Query Option	ProteinStructure_infrastructure	YES	$TBPS_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=PS_query_option	PS_query_option	
 PS_domain	Domain	ProteinStructure_infrastructure	NO	$TBPS_DOMAIN	domain_id				
-PS_biosequence_annotation	Biosequence Annotation	ProteinStructure_infrastructure	YES	$TBPS_BIOSEQUENCE_ANNOTATION	biosequence_annotation_id		ManageTable.cgi?TABLE_NAME=PS_biosequence_annotation		
-PS_test_table	Test Table	ProteinStructure_infrastructure	YES	$TBPS_TEST_TABLE	test_table_id		ManageTable.cgi?TABLE_NAME=PS_test_table		
+PS_biosequence_annotation	Biosequence Annotation	ProteinStructure_project	YES	$TBPS_BIOSEQUENCE_ANNOTATION	biosequence_annotation_id		ManageTable.cgi?TABLE_NAME=PS_biosequence_annotation		
+PS_test_table	Test Table	ProteinStructure_project	YES	$TBPS_TEST_TABLE	test_table_id		ManageTable.cgi?TABLE_NAME=PS_test_table	PS_test_table	
 PS_BrowseBioSequence	Browse BioSequence	QUERY	NO				BrowseBioSequence.cgi		
 PS_GetDomainHit	Get Domain Hit	QUERY	NO				GetDomainHits		

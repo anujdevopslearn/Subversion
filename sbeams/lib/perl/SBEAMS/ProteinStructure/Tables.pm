@@ -66,18 +66,18 @@ my $mod = $DBPREFIX{ProteinStructure};
 
 $TB_ORGANISM                      = "${core}organism";
 
-$TBPS_BIOSEQUENCE_SET       = "${mod}biosequence_set";
-$TBPS_POLYMER_TYPE          = "$DBPREFIX{Microarray}polymer_type";
-$TBPS_DBXREF                = "${mod}dbxref";
-$TBPS_BIOSEQUENCE           = "${mod}biosequence";
-$TBPS_BIOSEQUENCE_PROPERTY_SET  = "${mod}biosequence_property_set";
-$TBPS_QUERY_OPTION          = "${mod}query_option";
+$TBPS_BIOSEQUENCE_SET             = "${mod}biosequence_set";
+$TBPS_POLYMER_TYPE                = "$DBPREFIX{Microarray}polymer_type";
+$TBPS_DBXREF                      = "${mod}dbxref";
+$TBPS_BIOSEQUENCE                 = "${mod}biosequence";
+$TBPS_BIOSEQUENCE_PROPERTY_SET    = "${mod}biosequence_property_set";
+$TBPS_QUERY_OPTION                = "${mod}query_option";
 
-$TBPS_DOMAIN_MATCH          = "${mod}domain_match";
-$TBPS_DOMAIN_MATCH_TYPE     = "${mod}domain_match_type";
-$TBPS_DOMAIN_MATCH_SOURCE   = "${mod}domain_match_source";
+$TBPS_DOMAIN_MATCH                = "${mod}domain_match";
+$TBPS_DOMAIN_MATCH_TYPE           = "${mod}domain_match_type";
+$TBPS_DOMAIN_MATCH_SOURCE         = "${mod}domain_match_source";
 
-$TBPS_DOMAIN                = "${mod}domain";
-$TBPS_BIOSEQUENCE_ANNOTATION   = "${mod}biosequence_annotation";
-$TBPS_TEST_TABLE            = "${mod}test_table";
+$TBPS_DOMAIN                      = "${mod}domain";
+$TBPS_BIOSEQUENCE_ANNOTATION      = "${mod}biosequence_annotation";
+$TBPS_TEST_TABLE                  = "${mod}test_table";
 

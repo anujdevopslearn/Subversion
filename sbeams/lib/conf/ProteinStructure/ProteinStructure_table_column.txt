@@ -1,23 +1,24 @@
 table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
 PS_biosequence_set	1	biosequence_set_id	BioSequence Set ID	int	4	0	N		Y							N	N				pkDEFAULT
-PS_biosequence_set	2	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Species for this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
-PS_biosequence_set	3	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
-PS_biosequence_set	4	set_tag	Set Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this BioSequence database		
-PS_biosequence_set	5	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioSequence database		
-PS_biosequence_set	6	set_version	Set Version	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Version of this BioSequence database		
-PS_biosequence_set	7	polymer_type_id	Polymer Type	int	4	0	N		N	PS_polymer_type	polymer_type_id	Y	optionlist			Y	Y	N	Polymer type of the biosequence in this set	"SELECT polymer_type_id, polymer_type_name FROM $TBPS_POLYMER_TYPE ORDER BY polymer_type_name"	
-PS_biosequence_set	8	upload_file	Upload file	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
-PS_biosequence_set	9	set_path	Set Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	File path of this BioSequence database		
-PR_biosequence_set	10	source_file_date	Source File Date	datetime	8	0	Y		N			N	text	40		N	N	N	Date of the FASTA file at last update		
-PS_biosequence_set	11	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
-PS_biosequence_set	12	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-PS_biosequence_set	13	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
-PS_biosequence_set	14	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PS_biosequence_set	15	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-PS_biosequence_set	16	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PS_biosequence_set	17	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-PS_biosequence_set	18	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-PS_biosequence_set	19	record_status	Record Status	char	1	0	N	N	N							N	N				
+PS_biosequence_set	2	project_id	Owner Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id"	
+PS_biosequence_set	3	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Species for this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+PS_biosequence_set	4	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
+PS_biosequence_set	5	set_tag	Set Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this BioSequence database		
+PS_biosequence_set	6	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioSequence database		
+PS_biosequence_set	7	set_version	Set Version	varchar	50	0	N		N			Y	text	40		Y	Y	N	Version of this BioSequence database		
+PS_biosequence_set	8	polymer_type_id	Polymer Type	int	4	0	N		N	PS_polymer_type	polymer_type_id	Y	optionlist			Y	Y	N	Polymer type of the biosequence in this set	"SELECT polymer_type_id, polymer_type_name FROM $TBPS_POLYMER_TYPE ORDER BY polymer_type_name"	
+PS_biosequence_set	9	upload_file	Upload file	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
+PS_biosequence_set	10	set_path	Set Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	File path of this BioSequence database		
+PR_biosequence_set	11	source_file_date	Source File Date	datetime	8	0	Y		N			N	text	40		N	N	N	Date of the FASTA file at last update		
+PS_biosequence_set	12	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
+PS_biosequence_set	13	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PS_biosequence_set	14	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
+PS_biosequence_set	15	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PS_biosequence_set	16	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+PS_biosequence_set	17	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PS_biosequence_set	18	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+PS_biosequence_set	19	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+PS_biosequence_set	20	record_status	Record Status	char	1	0	N	N	N							N	N				
 PS_polymer_type	1	polymer_type_id	Polymer Type	int	4	0	N		Y							N	N				pkDEFAULT
 PS_polymer_type	2	polymer_type_name	Polymer Type Name	varchar	100	0	N		N			Y	text	40		Y	Y	Y	Name of the polymer type		
 PS_polymer_type	3	polymer_type_desc	Polymer Type Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this polymer type		
@@ -61,7 +62,7 @@ PS_domain_match	3	domain_match_index	Domain Match Index	int	4	0	Y		N			Y	text	20
 PS_domain_match	4	query_start	Query Start	int	4	0	Y		N			Y	text	20		Y	Y	N	Offset of the start of the match in the query sequence		
 PS_domain_match	5	query_end	Query End	int	4	0	Y		N			Y	text	20		Y	Y	N	Offset of the end of the match in the query sequence		
 PS_domain_match	6	query_length	Query Length	int	4	0	Y		N			Y	text	20		Y	Y	N	Length of the match in the query sequence		
-PS_domain_match	7	match_start	Match Start	int	4	0	Y		N			Y	text	20		Y	Y	N	Offset of the start of the match in the matched sequence		
+PS_domain_match	7	match_start	Match Start	int	4	0	Y		N			Y	text	20		Y	Y	N	Offset of the start of the match in the matched sequence
 PS_domain_match	8	match_end	Match End	int	4	0	Y		N			Y	text	20		Y	Y	N	Offset of the start of the match in the matched sequence
 PS_domain_match	9	match_length	Match Length	int	4	0	Y		N			Y	text	20		Y	Y	N	Length of the match in the matched sequence
 PS_domain_match	10	overall_probability	Overall Probability	real	4	0	Y		N			Y	text	20		Y	Y	N	Overall probability that one of the hits to this domain is the correct one
@@ -77,7 +78,7 @@ PS_domain_match	19	e_value	Expectation Value	float	8	0	Y		N			Y	text	20		Y	Y	N	E
 PS_domain_match	20	score	Score	real	4	0	Y		N			Y	text	20		Y	Y	N	Score for the match.  A higher number is better.  Often a bit score like in BLAST
 PS_domain_match	21	z_score	Z Score	real	4	0	Y		N			Y	text	20		Y	Y	N	Z score indicating likelihood of a false match
 PS_domain_match	22	second_match_name	Second Match Name	varchar	255	0	Y		N			Y	text	20		Y	Y	N	Name of the matched sequence
-PS_domain_match	23	second_match_accession	Second Match Accession	varchar	50	0	Y		N			Y	text	20		Y	Y	N	Accession number for this match in some external database designated above
+PS_domain_match	23	second_match_accession	Second Match Accession	varchar	50	0	Y		N			Y	text	20		Y	Y	N	Accession number for this match in some external database designated above		
 PS_domain_match	24	second_match_type_id	Second Match Type	int	4	0	Y		N	PS_domain_match_type	domain_match_type_id	Y	optionlist			Y	Y	N	Type of hit against which this second match was identified		
 PS_domain_match	25	match_annotation	Match Annotation	varchar	255	0	Y		N			Y	text	20		Y	Y	N	Name of the matched sequence		
 PS_domain_match_type	1	domain_match_type_id	Domain Match Type	int	4	0	N		Y							N	N				pkDEFAULT
@@ -142,10 +143,21 @@ PS_test_table	6	EC_numbers	EC Numbers	varchar	255	0	Y		N			N	text	50		Y	Y	N	EC N
 PS_test_table	7	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 PS_test_table	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 PS_test_table	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-PS_test_table	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-PS_test_table	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
-PS_test_table	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
-PS_test_table	13	record_status	Record Status	char	1	0	N	N	N							N	N			
+PS_test_table	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PS_test_table	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+PS_test_table	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+PS_test_table	13	record_status	Record Status	char	1	0	N	N	N							N	N				
+PS_biosequence_set_project	1	biosequence_set_project_id	Test Table ID	int	4	0	N		Y							N	N				pkDEFAULT
+PS_biosequence_set_project	2	biosequence_set_id	BioSequence Set	int	4	0	N		N	PS_biosequence_set	biosequence_set_id	Y	optionlist			Y	Y	Y	Biosequence Set for which this record provides access control	"SELECT biosequence_set_id,set_name FROM $TBPS_BIOSEQUENCE_SET ORDER BY sort_order,set_name"	
+PS_biosequence_set_project	3	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	Project for which this record provides access control	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id"	
+PS_biosequence_set_project	4	privilege_id	Privilege	int	4	0	N		N	privilege	privilege_id	Y	optionlist			Y	Y	N	Maximum privilege level for members of this project for this combination of Project and Biosequence Set	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
+PS_biosequence_set_project	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PS_biosequence_set_project	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PS_biosequence_set_project	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+PS_biosequence_set_project	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PS_biosequence_set_project	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+PS_biosequence_set_project	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+PS_biosequence_set_project	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 PS_BrowseBioSequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBPS_BIOSEQUENCE_SET ORDER BY sort_order,set_name"
 PS_BrowseBioSequence	2	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 PS_BrowseBioSequence	3	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
@@ -160,19 +172,20 @@ PS_BrowseBioSequence	11	biosequence_desc_constraint	Description Constraint						
 PS_BrowseBioSequence	12	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBPS_QUERY_OPTION WHERE option_type = 'BBS_sort_options' ORDER BY sort_order,option_value"
 PS_BrowseBioSequence	13	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBPS_QUERY_OPTION WHERE option_type = 'BBS_display_options' ORDER BY sort_order,option_value"
 PS_BrowseBioSequence	14	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."	
-PS_GetDomainHit	1	biosequence_set_id	Biosequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBPS_BIOSEQUENCE_SET ORDER BY sort_order,set_name"
-PS_GetDomainHit	2	biosequence_name_constraint	Biosequence Name Constraint									N	text	40		Y	Y	N	Constraint for the Biosequence Namel. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-PS_GetDomainHit	3	gene_symbol_constraint	Gene Symbol Constraint									N	text	40		Y	Y	N	Constraint for the Gene Symbol. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-PS_GetDomainHit	4	full_gene_name_constraint	Full Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the Full Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-PS_GetDomainHit	5	EC_number_constraint	EC Number Constraint									N	text	40		Y	Y	N	Constraint for the EC Number (either protein or domain associated). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-PS_GetDomainHit	6	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the Biosequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-PS_GetDomainHit	7	biosequence_seq_constraint	Sequence Constraint									N	text	40		Y	Y	N	Constraint for the actual sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-PS_GetDomainHit	8	domain_match_source_constraint	Domain Match Source Constraint									N	multioptionlist	3		Y	Y	N	Constraint for the domain match sources.  Choose one or more or none for no constraint	"SELECT domain_match_source_id,domain_match_source_name FROM $TBPS_DOMAIN_MATCH_SOURCE ORDER BY domain_match_source_name"
-PS_GetDomainHit	9	domain_match_type_constraint	Domain Match Type Constraint									N	multioptionlist	3		Y	Y	N	Constraint for the domain match typees.  Choose one or more or none for no constraint	"SELECT domain_match_type_id,domain_match_type_name FROM $TBPS_DOMAIN_MATCH_TYPE ORDER BY domain_match_type_name"
-PS_GetDomainHit	10	domain_match_name_constraint	Domain Match Name Constraint									N	text	40		Y	Y	N	Constraint for the Domain Match Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-PS_GetDomainHit	11	match_annotation_constraint	Match Annotation Constraint									N	text	40		Y	Y	N	Constraint for the Match Annotation string. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-PS_GetDomainHit	12	e_value_constraint	Expectation Value Constraint									N	text	20		Y	Y	N	"Constraint for the Expectation Value of the domain match.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
-PS_GetDomainHit	13	transmembrane_class_constraint	Transmembrane Class Constraint									N	multioptionlist	3		Y	Y	N	Constraint for the transmembrane class as annotated by TMHMM and SignalP	"SELECT DISTINCT transmembrane_class,transmembrane_class FROM $TBPS_BIOSEQUENCE_PROPERTY_SET ORDER BY transmembrane_class"
-PS_GetDomainHit	14	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	Y	N	"Constraint for the number of transmembrane regions (based on a 19-residue wide sliding window of hydropathy indexes above 1.58).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
-PS_GetDomainHit	15	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBPS_QUERY_OPTION WHERE option_type = 'GDH_display_options' ORDER BY sort_order,option_value"
-PS_GetDomainHit	16	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."	
+PS_GetDomainHit	1	project_id	Project									N	multioptionlist	4	refreshDocument()	Y	Y	Y	Projects to show Biosequence Sets for	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) INNER JOIN $TBPS_BIOSEQUENCE_SET BSS ON (P.project_id = BSS.project_id) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id"
+PS_GetDomainHit	2	biosequence_set_id	Biosequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT BSS.biosequence_set_id,BSS.set_name FROM $TBPS_BIOSEQUENCE_SET BSS WHERE BSS.project_id IN ($accessible_project_ids) AND BSS.project_id IN ($parameters{project_id}) AND BSS.record_status != 'D' ORDER BY sort_order,set_name"
+PS_GetDomainHit	3	biosequence_name_constraint	Biosequence Name Constraint									N	text	40		Y	Y	N	Constraint for the Biosequence Namel. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+PS_GetDomainHit	4	gene_symbol_constraint	Gene Symbol Constraint									N	text	40		Y	Y	N	Constraint for the Gene Symbol. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+PS_GetDomainHit	5	full_gene_name_constraint	Full Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the Full Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+PS_GetDomainHit	6	EC_number_constraint	EC Number Constraint									N	text	40		Y	Y	N	Constraint for the EC Number (either protein or domain associated). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+PS_GetDomainHit	7	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the Biosequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+PS_GetDomainHit	8	biosequence_seq_constraint	Sequence Constraint									N	text	40		Y	Y	N	Constraint for the actual sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+PS_GetDomainHit	9	domain_match_source_constraint	Domain Match Source Constraint									N	multioptionlist	3		Y	Y	N	Constraint for the domain match sources.  Choose one or more or none for no constraint	"SELECT domain_match_source_id,domain_match_source_name FROM $TBPS_DOMAIN_MATCH_SOURCE ORDER BY domain_match_source_name"
+PS_GetDomainHit	10	domain_match_type_constraint	Domain Match Type Constraint									N	multioptionlist	3		Y	Y	N	Constraint for the domain match typees.  Choose one or more or none for no constraint	"SELECT domain_match_type_id,domain_match_type_name FROM $TBPS_DOMAIN_MATCH_TYPE ORDER BY domain_match_type_name"
+PS_GetDomainHit	11	domain_match_name_constraint	Domain Match Name Constraint									N	text	40		Y	Y	N	Constraint for the Domain Match Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+PS_GetDomainHit	12	match_annotation_constraint	Match Annotation Constraint									N	text	40		Y	Y	N	Constraint for the Match Annotation string. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+PS_GetDomainHit	13	e_value_constraint	Expectation Value Constraint									N	text	20		Y	Y	N	"Constraint for the Expectation Value of the domain match.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
+PS_GetDomainHit	14	transmembrane_class_constraint	Transmembrane Class Constraint									N	multioptionlist	3		Y	Y	N	Constraint for the transmembrane class as annotated by TMHMM and SignalP	"SELECT DISTINCT transmembrane_class,transmembrane_class FROM $TBPS_BIOSEQUENCE_PROPERTY_SET ORDER BY transmembrane_class"
+PS_GetDomainHit	15	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	Y	N	"Constraint for the number of transmembrane regions (based on a 19-residue wide sliding window of hydropathy indexes above 1.58).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
+PS_GetDomainHit	16	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBPS_QUERY_OPTION WHERE option_type = 'GDH_display_options' ORDER BY sort_order,option_value"
+PS_GetDomainHit	17	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."	
