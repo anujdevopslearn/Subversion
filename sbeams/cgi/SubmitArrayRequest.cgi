@@ -257,9 +257,15 @@ sub printEntryForm {
           }
         }
 
+
+        #### Set the MULTIOPTIONLIST flag if this is a multi-select list
+        my $method_options;
+        $method_options = "MULTIOPTIONLIST"
+          if ($input_types{$element} eq "multioptionlist");
+
         # Build the option list
         $optionlists{$element}=$sbeams->buildOptionList(
-           $optionlist_queries{$element},$parameters{$element});
+           $optionlist_queries{$element},$parameters{$element},$method_options);
     }
 
 
@@ -1285,14 +1291,22 @@ sub printAttemptedChangeResult {
 
     if ( ($result eq "SUCCESSFUL") && ($apply_action eq "INSERT" || $apply_action eq "UPDATE") ) {
       my $mailprog = "/usr/lib/sendmail";
+      my $recipient_name = "Arrays Contact";
       my $recipient = "bmarzolf\@systemsbiology.org";
-      my $ccname = "SBEAMS";
+      my $cc_name = "SBEAMS";
       my $cc = "edeutsch\@systemsbiology.org";
+
+      #### But if we're running as a dev version then just mail to administrator
+      if ($DBVERSION =~ /Dev/) {
+        $recipient_name = $cc_name;
+        $recipient = $cc;
+      }
+
 
       open (MAIL, "|$mailprog $recipient,$cc") || croak "Can't open $mailprog!\n";
       print MAIL "From: SBEAMS <edeutsch\@systemsbiology.org>\n";
-      print MAIL "To: Arrays Contact <$recipient>\n";
-      print MAIL "Cc: $ccname <$cc>\n";
+      print MAIL "To: $recipient_name <$recipient>\n";
+      print MAIL "Cc: $cc_name <$cc>\n";
       print MAIL "Reply-to: $current_username <${current_username}\@systemsbiology.org>\n";
       print MAIL "Subject: Microarray request submission\n\n";
       print MAIL "An $apply_action of a microarray request was just executed in SBEAMS by ${current_username}.\n\n";
