@@ -151,7 +151,7 @@ sub setRowAttr {
 # -
 sub getRowNum {
   my $this = shift;
-  return( scalar(@{$this->{__rowvals}}) + 1 );
+  return( scalar(@{$this->{__rowvals}}) );
 }
 
 #+
