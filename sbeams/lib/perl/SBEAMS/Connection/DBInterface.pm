@@ -726,6 +726,7 @@ sub executeSQL {
         }
         return 0;
       } else {
+        #die("ERROR on SQL execute():\n$sql\n\n".$dbh->errstr);
         die("ERROR on SQL execute(): ".$dbh->errstr);
       }
 
