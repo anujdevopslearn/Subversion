@@ -355,7 +355,7 @@ sub handle_request {
   	if (defined($available_columns{$option})) {
           my @elements = @{$available_columns{$option}};
           $elements[0] = $condition_names{$id}.'__'.$elements[0];
-          $elements[1] = "SUM(CASE WHEN GE.condition_id = $id ".
+          $elements[1] = "MAX(CASE WHEN GE.condition_id = $id ".
             "THEN $elements[1] ELSE NULL END)";
           $elements[2] = $condition_names{$id}.' '.$elements[2];
   	  push(@additional_columns,\@elements);
