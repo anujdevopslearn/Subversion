@@ -328,9 +328,18 @@ sub handle_request {
   return if ($fav_codon_frequency_clause eq '-1');
 
 
+  #### Build TRANSMEMBRANE CLASS constraint
+  my $transmembrane_class_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BPS.transmembrane_class",
+    constraint_type=>"text_list",
+    constraint_name=>"Transmembrane Class",
+    constraint_value=>$parameters{transmembrane_class_constraint} );
+  return if ($transmembrane_class_clause eq '-1');
+
+
   #### Build NUMBER OF TRANSMEMBRANE REGIONS constraint
   my $n_transmembrane_regions_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"BS.n_transmembrane_regions",
+    constraint_column=>"BPS.n_transmembrane_regions",
     constraint_type=>"flexible_int",
     constraint_name=>"Number of Transmembrane regions",
     constraint_value=>$parameters{n_transmembrane_regions_constraint} );
@@ -475,7 +484,8 @@ sub handle_request {
   if ( $parameters{display_options} =~ /ShowExtraProteinProps/ ) {
     @additional_columns = (
       ["fav_codon_frequency","STR(BS.fav_codon_frequency,10,3)","Favored Codon Frequency"],
-      ["n_transmembrane_regions","BS.n_transmembrane_regions","Number of Transmembrane Regions"],
+      ["transmembrane_class","BPS.transmembrane_class","Transmembrane Regions Class"],
+      ["n_transmembrane_regions","BPS.n_transmembrane_regions","Number of Transmembrane Regions"],
       ["protein_length","DATALENGTH(BS.biosequence_seq)","Protein Length"],
       @additional_columns,
     );
@@ -564,6 +574,8 @@ sub handle_request {
 	       ON ( SBPS.search_batch_id = SB.search_batch_id )
 	 INNER JOIN $TBPR_PROTEOMICS_EXPERIMENT PE
                ON ( SB.experiment_id = PE.experiment_id )
+          LEFT JOIN $TBPR_BIOSEQUENCE_PROPERTY_SET BPS
+               ON ( BS.biosequence_id = BPS.biosequence_id )
           $GO_join
 	 WHERE 1 = 1
 	$search_batch_clause
@@ -575,6 +587,7 @@ sub handle_request {
         $biological_process_clause
         $cellular_component_clause
 	$protein_domain_clause
+        $transmembrane_class_clause
         $n_transmembrane_regions_clause
         $fav_codon_frequency_clause
         $protein_length_clause

@@ -337,7 +337,7 @@ sub handle_request {
 
   #### Build NUMBER OF TRANSMEMBRANE REGIONS constraint
   my $n_transmembrane_regions_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"BS.n_transmembrane_regions",
+    constraint_column=>"BPS.n_transmembrane_regions",
     constraint_type=>"flexible_int",
     constraint_name=>"Number of Transmembrane regions",
     constraint_value=>$parameters{n_transmembrane_regions_constraint} );

@@ -335,7 +335,7 @@ sub handle_request {
 
   #### Build NUMBER OF TRANSMEMBRANE REGIONS constraint
   my $n_transmembrane_regions_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"BS.n_transmembrane_regions",
+    constraint_column=>"BPS.n_transmembrane_regions",
     constraint_type=>"flexible_int",
     constraint_name=>"Number of Transmembrane regions",
     constraint_value=>$parameters{n_transmembrane_regions_constraint} );
@@ -415,7 +415,7 @@ sub handle_request {
     @additional_columns = (
       ["fav_codon_frequency","STR(BS.fav_codon_frequency,10,3)","Favored Codon Frequency"],
       ["transmembrane_class","BPS.transmembrane_class","Transmembrane Regions Class"],
-      ["n_transmembrane_regions","BS.n_transmembrane_regions","Number of Transmembrane Regions"],
+      ["n_transmembrane_regions","BPS.n_transmembrane_regions","Number of Transmembrane Regions"],
       ["protein_length","DATALENGTH(BS.biosequence_seq)","Protein Length"],
       ["transmembrane_topology","BPS.transmembrane_topology","Transmembrane Regions Topology"],
       @additional_columns,
