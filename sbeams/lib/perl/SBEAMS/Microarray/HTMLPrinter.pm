@@ -509,10 +509,11 @@ print qq~
 function change_views_javascript(input_obj){
  var form = input_obj.form;
  var val = form.display_type.val ;
- onClick="parent.location='?display_type=' + val + "'";
+ onClick="parent.location='?display_type='" + val + "'";
  
 
 document.get_all_files.submit();
+}
 //-->
 </SCRIPT>
 ~;
