@@ -395,13 +395,13 @@ my %tissueHash = $sbeams->selectTwoColumnHash($tissueSql);
 
   ##########################################################################
   #### Print out all projects owned by the user
-#  $sbeams->printProjectsYouOwn();
+	$sbeams->printProjectsYouOwn();
 
 
 
   ##########################################################################
   #### Print out all projects user has access to
-#  $sbeams->printProjectsYouHaveAccessTo();
+  $sbeams->printProjectsYouHaveAccessTo();
 
 
   ##########################################################################
