@@ -583,6 +583,7 @@ sub handle_request {
       ["n_tryptic_terminii","PP.n_tryptic_terminii","N Tryp Term"],
       ["is_cysteine_containing","PP.is_cysteine_containing","Cys Cont"],
       ["is_unique","PP.is_unique","Unique"],
+      ["elution_index","STR(PP.elution_index,7,2)","Elution Index"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
     );
