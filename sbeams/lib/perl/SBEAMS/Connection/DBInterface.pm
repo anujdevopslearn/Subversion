@@ -433,7 +433,7 @@ sub translateSQL {
 
   return $new_statement;
 
-} # end translateSQL
+} # endtranslateSQL
 
 
 ###############################################################################
@@ -3490,55 +3490,68 @@ sub transferTable {
 
 
   #### Loop over each row of input data
-  print "\n  Loading data into destination";
+  print "\n  Loading data into destination\n";
   foreach $row (@rows) {
     %rowdata = ();
 
     while ( ($key,$value) = each %{$column_map_ref} ) {
-      if (defined($row->[$key]) || defined($transform_map_ref->{$key})) {
+      #### See if we have a scalar, turn it into an array
+      my @refs_for_one_column;
+      my $ref_type = ref($value);
+      if ($ref_type eq "ARRAY") {
+	@refs_for_one_column = @{$value};
+      }else {
+	#### treat as scalar by default
+	push @refs_for_one_column, $value;
+      }
+      
+      #### Loop over all fields mapped to this column
+      foreach $value (@refs_for_one_column) {
+      
+        if (defined($row->[$key]) || defined($transform_map_ref->{$key})) {
 
-        #### If there's a mapping for this column
-  	if (defined($transform_map_ref->{$key})) {
-  	  my $current_value = $row->[$key];
+	  #### If there's a mapping for this column
+	  if (defined($transform_map_ref->{$key})) {
+	    my $current_value = $row->[$key];
 
-          #### Only in a special case, If the value is empty, then ignore it
-	  #### FIXME
-          if (0) {
-	    next unless ($current_value gt '');
-          }
+	    #### Only in a special case, If the value is empty, then ignore it
+	    #### FIXME
+	    if (0) {
+	      next unless ($current_value gt '');
+	    }
 
-          #### Determine if we need to remap this column and if so, do it
-          my $map_ref = $transform_map_ref->{$key};
-          my $mapped_value;
-          #### If the mapping is a simple hash
-          if ($map_ref =~ /HASH/) {
-            $mapped_value = $map_ref->{$current_value};
-          } elsif ($map_ref =~ /CODE/) {
-            $mapped_value = &$map_ref($current_value);
-          } else {
-            print "Unknown mapping type ",$map_ref,"\n";
-          }
+	    #### Determine if we need to remap this column and if so, do it
+	    my $map_ref = $transform_map_ref->{$key};
+	    my $mapped_value;
+	    #### If the mapping is a simple hash
+	    if ($map_ref =~ /HASH/) {
+	      $mapped_value = $map_ref->{$current_value};
+	    } elsif ($map_ref =~ /CODE/) {
+	      $mapped_value = &$map_ref($current_value);
+	    } else {
+	      print "Unknown mapping type ",$map_ref,"\n";
+	    }
 
-          #### If the mapping produced a result
-  	  if (defined($mapped_value)) {
-  	    $rowdata{$value} = $mapped_value;
-            $row->[$key] = $mapped_value;
+	    #### If the mapping produced a result
+	    if (defined($mapped_value)) {
+	      $rowdata{$value} = $mapped_value;
+	      $row->[$key] = $mapped_value;
 
-          #### Else complain and leave as NULL
+	      #### Else complain and leave as NULL
+	    } else {
+	      print "\nWARNING: Unable to transform column ".$key.
+		  " having value '".$current_value."'\n";
+	    }
+
+	    #### Otherwise use as is
   	  } else {
-  	    print "\nWARNING: Unable to transform column ".$key.
-              " having value '".$current_value."'\n";
+	    $rowdata{$value} = $row->[$key];
   	  }
 
-        #### Otherwise use as is
-  	} else {
-  	  $rowdata{$value} = $row->[$key];
-  	}
-
-      } else {
-        #print "WARNING: Column $key undefined!\n";
+        } else {
+	    #print "WARNING: Column $key undefined!\n";
+	}
       }
-
     }
 
 
