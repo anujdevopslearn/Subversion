@@ -218,10 +218,12 @@ sub handle_request {
   #### Process all the constraints
 
   #### Build SEARCH BATCH / EXPERIMENT constraint
-  my $search_batch_clause = "";
-  if ($parameters{search_batch_id}) {
-    $search_batch_clause = "   AND SB.search_batch_id IN ( $parameters{search_batch_id} )";
-  }
+  my $search_batch_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SB.search_batch_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Search Batch List",
+    constraint_value=>$parameters{search_batch_id} );
+  return if ($search_batch_clause == -1);
 
 
   #### Build PROBABILITY constraint
