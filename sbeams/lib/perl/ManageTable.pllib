@@ -397,10 +397,15 @@ sub printEntryForm {
     }
 
 
+    #### Escape special characters
+    my $param = $parameters{$column_name};
+    $param =~ s/\"/&quot;/g;
+
+
     if ($input_type eq "text") {
       print qq!
         <TD><INPUT TYPE="$input_type" NAME="$column_name"
-         VALUE="$parameters{$column_name}" SIZE=$input_length $onChange></TD>
+         VALUE="$param" SIZE=$input_length $onChange></TD>
       !;
     }
 
@@ -458,7 +463,7 @@ sub printEntryForm {
     if ($input_type eq "fixed") {
       print qq!
         <TD><INPUT TYPE="hidden" NAME="$column_name"
-         VALUE="$parameters{$column_name}">$parameters{$column_name}</TD>
+         VALUE="$param">$param</TD>
       !;
     }
 
@@ -467,7 +472,7 @@ sub printEntryForm {
         <TD COLSPAN=2 BGCOLOR="E0E0E0">$column_text</TD></TR>
         <TR><TD> </TD>
         <TD COLSPAN=2><TEXTAREA NAME="$column_name" rows=$input_length
-          cols=80>$parameters{$column_name}</TEXTAREA></TD>
+          cols=80>$param</TEXTAREA></TD>
       ~;
       $mask_description = 1;
     }
