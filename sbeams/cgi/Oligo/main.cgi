@@ -70,26 +70,21 @@ sub main {
 ###############################################################################
 sub showMainPage {
 
-    $sbeams->printUserContext();
+  $sbeams->printUserContext();
+  
+  my $html_ref = $sbeams->getMainPageTabMenu( cgi => $q );
 
-    print qq!
-	<BR>
-	You are successfully logged into the $DBTITLE - $SBEAMS_PART system.
-	Please choose your tasks from the menu bar on the left.<P>
-	<BR>
-	This system is still under active development.  Please be
-	patient and report bugs, problems, difficulties, suggestions to
-	<B>edeutsch\@systemsbiology.org</B>.<P>
-	<BR>
-	<BR>
+  print qq!
+  <BR>
+  You are successfully logged into the $DBTITLE - $SBEAMS_PART system.
+  Please choose your tasks from the menu bar on the left.<P>
+  <BR>
+  This system is still under active development.  Please be
+  patient and report bugs, problems, difficulties, suggestions to
+  <B>edeutsch\@systemsbiology.org</B>.<P>
 
-	<UL>
-	<LI> Here is the starter stub for the Oligo area.
-	</UL>
-
-	<BR>
-	<BR>
-    !;
+  $$html_ref
+  !;
 
 } # end showMainPage
 
