@@ -18,7 +18,8 @@
 
 
   use strict;
-  use lib "../perl";
+  use FindBin;
+  use lib "$FindBin::Bin/../perl";
   use SBEAMS::Client;
   use Data::Dumper;
 
