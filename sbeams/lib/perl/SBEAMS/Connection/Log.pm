@@ -140,7 +140,7 @@ sub _printMessage {
   $msg .= "\n" unless $stack  && $stack > 1;
 
   my ( $p, $f, $l, $s ) = caller( 1 );
-  my ( $p, undef, undef, $s ) = caller( 2 );
+  ( $p, undef, undef, $s ) = caller( 2 );
   $f = basename( $f ) if $f;
 
   my $time = $this->_getTimestamp();
