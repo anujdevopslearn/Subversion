@@ -1469,7 +1469,7 @@ sub write_cytoscape_jnlp_file {
     <jar href="$shared_java_html/jars/ouai.jar"/>
     <jar href="$shared_java_html/jars/cytoAux.jar"/>
     <jar href="$shared_java_html/jars/syspatharchivehack.jar"/>
-  	<jar href="$SERVER_BASE_DIR$HTML_BASE_DIR/usr/java/share/Cytoscape/plugins_1.0/csplugins.jar"/>
+  	<!-- <jar href="$SERVER_BASE_DIR$HTML_BASE_DIR/usr/java/share/Cytoscape/plugins_1.0/csplugins.jar"/> -->
   </resources>
   <application-desc>
     <argument>-p</argument>
