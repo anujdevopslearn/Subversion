@@ -167,13 +167,13 @@ function viewQuantitation(status){
 
 function actionLogFile(action){
     var id = document.outputFiles.logChooser.options[document.outputFiles.logChooser.selectedIndex].value;
-		if (action == "get") {
-				getFile(id);
-		} else {
-				viewFile(id);
-		}
+    if (action == "get") {
+	getFile(id);
+    } else {
+	viewFile(id);
+    }
 }		
-
+    
 function actionRepFile(){
   var id = document.outputFiles.repChooser.options[document.outputFiles.repChooser.selectedIndex].value;
   getFile(id);
