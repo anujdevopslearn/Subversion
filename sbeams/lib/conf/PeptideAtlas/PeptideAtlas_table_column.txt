@@ -1,7 +1,7 @@
 table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
 AT_atlas_build	1	atlas_build_id	Atlas Build ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_atlas_build	2	atlas_build_name	Atlas Build Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Title of this PeptideAtlas build		
-AT_atlas_build	3	biosequence_set_id	Biosequence Set	int	4	0	N		N	AT_biosequence_set	biosequence_set_id	Y	optionlist			Y	Y	N	Biosequence set against which this peptide atlas was built	"SELECT biosequence_set_id,set_name FROM $TBSN_BIOSEQUENCE_SET ORDER BY sort_order,set_name"	pkDEFAULT
+AT_atlas_build	3	biosequence_set_id	Biosequence Set	int	4	0	N		N	AT_biosequence_set	biosequence_set_id	Y	optionlist			Y	Y	N	Biosequence set against which this peptide atlas was built	"SELECT biosequence_set_id,set_name FROM $TBAT_BIOSEQUENCE_SET ORDER BY sort_order,set_name"	pkDEFAULT
 AT_atlas_build	4	build_date	Build Date	datetime	8	0	N	CURRENT_TIMESTAMP	N			Y	text	20		Y	Y	N	Date that this PeptideAtlas build was started		
 AT_atlas_build	5	atlas_build_description	Atlas Build Description	text	16	0	Y		N			N	textarea	10		Y	Y	N	Full description of this PeptideAtlas build		
 AT_atlas_build	6	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
