@@ -453,7 +453,7 @@ sub get_affy_arrays_sql{
 				LEFT JOIN $TBMA_AFFY_ARRAY_SAMPLE afs ON (afa.affy_array_sample_id = afs.affy_array_sample_id)
 				LEFT JOIN $TBMA_SLIDE_TYPE st ON (afa.array_type_id = st.slide_type_id) 
 				LEFT JOIN $TB_ORGANISM o ON (afs.organism_id = o.organism_id) 
-				WHERE afs.project_id = $args{project_id} AND
+				WHERE afs.project_id IN ($args{project_id}) AND
 				afs.record_status != 'D' AND 
 				afa.record_status != 'D'
 		    ~;
@@ -742,6 +742,31 @@ sub check_file_group {
 	
 		return "NO";
 	}
+}
+###############################################################################
+# get_projects_with_arrays
+# Give Nothing
+#Return an array of arrays
+###############################################################################
+sub get_projects_with_arrays {
+	my $method = 'get_projects_with_arrays';
+	my $self = shift;
+	
+	my %args = @_;
+	
+	
+	my $sql = qq~ 
+				SELECT DISTINCT P.project_id,UL.username+' - '+P.name 
+				FROM PROJECT P 
+				INNER JOIN $TBMA_AFFY_ARRAY_SAMPLE afs ON ( P.project_id = afs.project_id )
+				INNER JOIN $TBMA_AFFY_ARRAY afa ON (afa.affy_array_sample_id = afs.affy_array_sample_id)  
+				LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) 
+				WHERE P.record_status != 'D'
+				ORDER BY UL.username+' - '+P.name 
+			~;
+	#$sbeams->display_sql(sql=> $sql);
+	my @all_projects_info = $sbeams->selectSeveralColumns($sql);
+	return @all_projects_info;
 }
 
 

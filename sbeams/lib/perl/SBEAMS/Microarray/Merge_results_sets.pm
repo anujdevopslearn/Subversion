@@ -273,7 +273,7 @@ sub update_results_data {
 				next;
 			}
 			if ($row){												#if we have data glue everything together
-				$merged_data_h{$current_key}{DATA}[$row_count] .= "$row;";
+				$merged_data_h{$current_key}{DATA}[$row_count] .= $merged_data_h{$current_key}{DATA}[$row_count] ? "$row;": "$row";
 			}
 			$row_count++;
 		}
