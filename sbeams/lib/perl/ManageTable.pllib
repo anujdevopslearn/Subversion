@@ -783,7 +783,7 @@ sub processEntryForm {
       #### Create a hash of the data columns for lookups
       my %data_columns_hash;
       foreach $element (@data_columns) {
-        $data_columns_hash{$element} => 1;
+        $data_columns_hash{$element} = 1;
       }
 
       #### Loop over each required column and make sure it exists if it's
