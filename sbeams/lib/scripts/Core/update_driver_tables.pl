@@ -152,8 +152,8 @@ sub updateDriverTable {
   if ($delete_existing) {
     print "DELETing existing data in driver tables...\n";
     unless ($TESTONLY) {
-      $sbeams->executeSQL('DELETE FROM $TB_TABLE_PROPERTY');
-      $sbeams->executeSQL('DELETE FROM $TB_TABLE_COLUMN');
+      $sbeams->executeSQL("DELETE FROM $TB_TABLE_PROPERTY");
+      $sbeams->executeSQL("DELETE FROM $TB_TABLE_COLUMN");
     }
     print "Driver tables DELETEd.  Start reloading data.\n";
     return;
