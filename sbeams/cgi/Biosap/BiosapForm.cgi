@@ -189,7 +189,7 @@ sub createRun {
     #TODO: What happens if multiple libs have same name ???
     my $sql_query = qq~
 	SELECT set_path
-	  FROM  biosap.dbo.biosequence_set
+	  FROM  $TBBS_BIOSEQUENCE_SET
 	 WHERE set_name='$featurama_lib'
 	   AND record_status != 'D'~;
     my ($gene_library) = $sbeams->selectOneColumn($sql_query);
@@ -223,7 +223,7 @@ sub createRun {
     open (SINK,  ">".$dirstr."/blast.params") || croak "Couldn't create file blast.params ".$dirstr." " . $!;
     $sql_query = qq~
 	    SELECT set_path
-	      FROM  biosap.dbo.biosequence_set
+	      FROM  $TBBS_BIOSEQUENCE_SET
 	     WHERE set_name='$blast_lib'
 	       AND record_status != 'D'~;
     $sth = $dbh->prepare("$sql_query") || croak $dbh->errstr;
@@ -373,7 +373,7 @@ sub processParams {
 }
 
 sub printForm {
-    my $sql_query = "SELECT set_name FROM biosap.dbo.biosequence_set WHERE record_status != 'D'";
+    my $sql_query = "SELECT set_name FROM $TBBS_BIOSEQUENCE_SET WHERE record_status != 'D'";
     my $sth = $dbh->prepare("$sql_query") || croak $dbh->errstr;
     my $rv  = $sth->execute || croak $dbh->errstr;
     my @libs;
