@@ -930,10 +930,10 @@ sub checkGO
   {
      
    var  isXChecked = false;
-   alert (isXChecked);
+  // alert (isXChecked);
    
    var num = document.forms.length;
-   alert(num);
+   //alert(num);
    
    for (var c =0; c<document.forms[3].xbox.length;c++)
 		{
