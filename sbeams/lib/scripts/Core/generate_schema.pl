@@ -398,7 +398,7 @@ sub readTableColumn {
   while ($line = <INFILE>) {
     my @columns = split("\t",$line);
     next if (scalar(@columns) < 10);
-    my @data = @columns[0..11];
+    my @data = @columns;
     my ($table_name,$column_index,$column_name) = @data[0..2];
     #print "$table_name\t$column_name\t$column_index\n";
     $table_column->{$table_name}->{$column_name} = \@data;
@@ -458,6 +458,7 @@ sub writeSchema {
   my $drop_triggers_buffer = "";
   my $grants_buffer = "";
   my $error_buffer = "";
+  my $dictionary_buffer = "";
 
 
   #### Loop over all tables backwards to create the DROP TABLE statements
@@ -487,14 +488,20 @@ sub writeSchema {
       my $create_trigger_statement;
       my $drop_trigger_statement;
 
+      #### Create the Data Dictionary Preamble
+      $dictionary_buffer .= generateTableDictionaryHeader(
+        table_name => $real_table_name,
+      );
+
+
       #### Loop over all columns
       my @column_list = @{$table_columns->{$table_name}->{__ordered_list}};
       my $column_name;
       my $table_ref = $table_columns->{$table_name};
       foreach $column_name (@column_list) {
-        my ($datatype,$scale,$precision,$nullable,$default_value,
-            $is_auto_inc,$fk_table,$fk_column) =
-          @{$table_ref->{$column_name}}[4..11];
+        my ($column_title,$datatype,$scale,$precision,$nullable,$default_value,
+            $is_auto_inc,$fk_table,$fk_column,$column_description) =
+          @{$table_ref->{$column_name}}[3..11,19];
 
         #### Look up the fk_table name if any
         if ($fk_table && $table_properties->{$fk_table}->{real_name}) {
@@ -513,6 +520,22 @@ sub writeSchema {
           fk_table => $fk_table,
           fk_column => $fk_column,
           destination_type => $destination_type,
+        );
+
+        $dictionary_buffer .= generateColumnDictionary(
+          table_name => $real_table_name,
+          column_name => $column_name,
+          column_title => $column_title,
+          datatype => $datatype,
+          scale => $scale,
+          precision => $precision,
+          nullable => $nullable,
+          default_value => $default_value,
+          is_auto_inc => $is_auto_inc,
+          fk_table => $fk_table,
+          fk_column => $fk_column,
+          column_description => $column_description,
+          destination_type => 'HTML',
         );
 
         $line_buffer .= $result->{line}.",$LB";
@@ -587,6 +610,11 @@ sub writeSchema {
       }
 
       push(@processed_table_list,$table_name);
+
+      #### Create the Data Dictionary End
+      $dictionary_buffer .= generateTableDictionaryFooter(
+        table_name => $table_name,
+      );
 
 
     #### Otherwise, complain that we don't have schema for this table
@@ -665,6 +693,16 @@ sub writeSchema {
   print OUTFILE "$LB$LB$add_constraints_buffer$LB";
   print OUTFILE "$LB$LB$LB/**** Audit trail FOREIGN KEYS ****/";
   print OUTFILE "$LB$LB$add_audit_constraints_buffer$LB";
+  close(OUTFILE);
+
+
+  #### Open the output 'DATADICTIONARY' file
+  $filename = "${schema_file}_DATADICTIONARY.html";
+  unless (open(OUTFILE,">$filename")) {
+    die("File '$filename' cannot be opened");
+  }
+
+  print OUTFILE "$dictionary_buffer";
   close(OUTFILE);
 
 
@@ -879,3 +917,115 @@ sub generateColumnDefinition {
   return $result;
 
 } # end generateColumnDefinition
+
+
+###############################################################################
+# generateColumnDictionary
+###############################################################################
+sub generateColumnDictionary {
+  my %args = @_;
+
+
+  #### Process the arguments list
+  my $table_name = $args{'table_name'} || die "table_name not passed";
+  my $column_name = $args{'column_name'} || die "column_name not passed";
+  my $column_title = $args{'column_title'} || die "column_title not passed";
+  my $datatype = $args{'datatype'} || die "datatype not passed";
+  my $scale = $args{'scale'} || "&nbsp;";
+  my $precision = $args{'precision'} || "&nbsp;";
+  my $nullable = $args{'nullable'} || "&nbsp;";
+  my $default_value = $args{'default_value'} || "&nbsp;";
+  my $is_auto_inc = $args{'is_auto_inc'} || "&nbsp;";
+  my $fk_table = $args{'fk_table'} || "&nbsp;";
+  my $fk_column = $args{'fk_column'} || "&nbsp;";
+  my $column_description = $args{'column_description'} || "&nbsp;";
+  my $destination_type = $args{'destination_type'}
+    || die "destination_type not passed";
+
+
+  #### Do some adjustment of the datatype names.  This should be done better
+  if ($destination_type eq 'oracle') {
+    #### I guess "comment" is a reserved word in Oracle???
+    if ($column_name eq 'comment') {
+       $column_name = 'comments'
+    }
+  }
+
+
+  #### Define the columns that need to be qualified with $scale
+  my %is_single_paren = (varchar=>1,char=>1);
+
+  #### If this requires parenthesized scaling
+  if ($is_single_paren{$datatype}) {
+    $datatype .= "($scale)";
+  }
+
+  my $result = "
+    <TR>
+      <TD>$column_name</TD>
+      <TD>$column_title</TD>
+      <TD>$datatype</TD>
+      <TD>$nullable</TD>
+      <TD>$default_value</TD>
+      <TD>$is_auto_inc</TD>
+      <TD>$fk_table</TD>
+      <TD>$fk_column</TD>
+      <TD>$column_description</TD>
+    </TR>
+  ";
+
+  return $result;
+
+} # end generateColumnDictionary
+
+
+###############################################################################
+# generateTableDictionaryHeader
+###############################################################################
+sub generateTableDictionaryHeader {
+  my %args = @_;
+
+
+  #### Process the arguments list
+  my $table_name = $args{'table_name'} || die "table_name not passed";
+
+
+  my $result = "
+    <H1>$table_name</H1>
+    <TABLE border=1>
+    <TR>
+      <TH>column_name</TH>
+      <TH>column_title</TH>
+      <TH>datatype</TH>
+      <TH>nullable</TH>
+      <TH>default_value</TH>
+      <TH>is_auto_inc</TH>
+      <TH>fk_table</TH>
+      <TH>fk_column</TH>
+      <TH>column_description</TH>
+    </TR>
+  ";
+
+  return $result;
+
+} # end generateTableDictionaryHeader
+
+
+###############################################################################
+# generateTableDictionaryFooter
+###############################################################################
+sub generateTableDictionaryFooter {
+  my %args = @_;
+
+
+  #### Process the arguments list
+  my $table_name = $args{'table_name'} || die "table_name not passed";
+
+
+  my $result = "
+    </TABLE>
+  ";
+
+  return $result;
+
+} # end generateTableDictionaryFooter
