@@ -437,7 +437,7 @@ sub loadPossiblePeptides {
 
   my ($biosequence_name,$mass,$peptide,$peptide_offset,$preceding_residue);
   my ($following_residue,$n_tryptic_terminii,$is_cysteine_containing);
-  my ($isoelectric_point);
+  my ($isoelectric_point,$elution_index);
 
   #### Loop over all data in the file
   while ($line=<INFILE>) {
@@ -469,6 +469,9 @@ sub loadPossiblePeptides {
     $is_cysteine_containing = 'N';
     $is_cysteine_containing = 'Y' if ($peptide =~ /C/);
     $isoelectric_point = Proteomics::COMPUTE_PI($peptide,length($peptide),0);
+    $elution_index = SBEAMS::Proteomics::Utilities::calcElutionTime(
+      peptide=>$peptide,
+    );
 
 
     #### Determine the biosequence_id
@@ -500,6 +503,7 @@ sub loadPossiblePeptides {
       is_cysteine_containing => $is_cysteine_containing,
       is_unique => 'N',
       isoelectric_point => $isoelectric_point,
+      elution_index => $elution_index,
     );
 
 
