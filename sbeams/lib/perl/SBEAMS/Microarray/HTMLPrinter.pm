@@ -104,6 +104,7 @@ sub printPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GridAlignCheck.cgi"><img src="$HTML_BASE_DIR/images/ma_alignment_check.jpg"></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi?tab=data_analysis"><img src="$HTML_BASE_DIR/images/ma_data_analysis.jpg"></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProcessProject.cgi"><img src="$HTML_BASE_DIR/images/ma_pipeline.jpg"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetExpression"><img src="$HTML_BASE_DIR/images/ma_get_expression.jpg"></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi?tab=miame_status"><img src="$HTML_BASE_DIR/images/ma_miame_status.jpg"></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SubmitArrayRequest.cgi?TABLE_NAME=array_request"><img src="$HTML_BASE_DIR/images/ma_array_requests.jpg"></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=protocol"><img src="$HTML_BASE_DIR/images/ma_protocols.jpg"></a></td></tr>
