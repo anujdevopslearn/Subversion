@@ -15,17 +15,17 @@
 #
 ###############################################################################
 
-#################################################################################
-# Usage: create a popup link as follows:								#
-#																#
-#	<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?		#
-#		help_text_id=1','Help','width=500,height=400,resizable=yes');		#
-#		return false">Link</a>										#
-#																#
-# Where the help_text_id is the database Id if the help text you want to be	#
-# displayed. Remember to set the width & height to the size you'd like the		#
-# window to be.													#
-#################################################################################
+###############################################################################
+# Usage: create a popup link as follows:
+#
+#	<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?
+#		help_text_id=1','Help','width=500,height=400,resizable=yes');
+#		return false">Link</a>
+#
+# Where the help_text_id is the database Id if the help text you want to be
+# displayed. Remember to set the width & height to the size you'd like the
+# window to be.
+###############################################################################
 
 ###############################################################################
 # Get the script set up with everything it will need
@@ -33,7 +33,7 @@
 use strict;
 use vars qw ($q $sbeams $PROGRAM_FILE_NAME
              $current_contact_id $current_username);
-use lib qw (../lib/perl);
+use lib "$FindBin::Bin/../lib/perl";
 use Env qw(HTTP_USER_AGENT);
 use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);

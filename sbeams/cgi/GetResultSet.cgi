@@ -18,90 +18,121 @@
 
 
 ###############################################################################
-# Basic SBEAMS setup
+# Set up all needed modules and objects
 ###############################################################################
 use strict;
-use lib qw (../lib/perl);
-use vars qw ($q $sbeams $sbeamsPROT
-             $current_contact_id $current_username );
-use CGI;
-use CGI::Carp qw(fatalsToBrowser croak);
+use Getopt::Long;
+use FindBin;
+
+use lib "$FindBin::Bin/../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
 
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
-$q = new CGI;
 $sbeams = new SBEAMS::Connection;
 
+use CGI;
+$q = new CGI;
+
 
 ###############################################################################
-# Define global variables if any and execute main()
+# Set program name and usage banner for command line use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag to level n
+  --testonly          Set testonly flag which simulates INSERTs/UPDATEs only
+
+ e.g.:  $PROG_NAME --verbose 2 keyword=value
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","quiet")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+$TESTONLY = $OPTIONS{"testonly"} || 0;
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "   VERBOSE = $VERBOSE\n";
+  print "     QUIET = $QUIET\n";
+  print "     DEBUG = $DEBUG\n";
+  print "  TESTONLY = $TESTONLY\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
 ###############################################################################
 main();
+exit(0);
 
 
 ###############################################################################
 # Main Program:
 #
-# If $sbeams->Authenticate() succeeds, print header, process the CGI request,
-# print the footer, and end.
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
 ###############################################################################
 sub main {
 
   #### Do the SBEAMS authentication and exit if a username is not returned
   exit unless ($current_username = $sbeams->Authenticate(
+    #permitted_work_groups_ref=>['xxx','yyy'],
     #connect_read_only=>1,
-    #### This allows automated,passwordless access to resultsets
-    allow_anonymous_access=>1
+    allow_anonymous_access=>1,
   ));
 
 
-    #### Don't print the headers, and provide the data
-    #$sbeamsPROT->printPageHeader();
-    processRequests();
-    #$sbeamsPROT->printPageFooter();
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters);
+  #$sbeams->printDebuggingInfo($q);
+
+
+  #### Process generic "state" parameters before we start
+  #$sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+
+  #### Decide what action to take based on information so far
+  if (defined($parameters{action}) && $parameters{action} eq "???") {
+    # Some action
+  } else {
+    #$sbeams->display_page_header();
+    handle_request(ref_parameters=>\%parameters);
+    #$sbeams->display_page_footer();
+  }
+
 
 } # end main
 
 
-###############################################################################
-# Process Requests
-#
-# Test for specific form variables and process the request
-# based on what the user wants to do.
-###############################################################################
-sub processRequests {
-    $current_username = $sbeams->getCurrent_username;
-    $current_contact_id = $sbeams->getCurrent_contact_id;
-
-
-    # Enable for debugging
-    if (0==1) {
-      print "Content-type: text/html\n\n";
-      my ($ee,$ff);
-      foreach $ee (keys %ENV) {
-        print "$ee =$ENV{$ee}=<BR>\n";
-      }
-      foreach $ee ( $q->param ) {
-        $ff = $q->param($ee);
-        print "$ee =$ff=<BR>\n";
-      }
-    }
-
-
-    #### Only one view available for this program
-    printEntryForm();
-
-
-} # end processRequests
-
-
 
 ###############################################################################
-# Print Entry Form
+# Handle Request
 ###############################################################################
-sub printEntryForm {
+sub handle_request {
+  my %args = @_;
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+
 
   #### Define some general variables
   my ($i,$element,$key,$value,$line,$result,$sql);
@@ -171,14 +202,14 @@ sub printEntryForm {
 
   } else {
 
-    $sbeamsPROT->printPageHeader();
+    $sbeams->printPageHeader();
     print "<BR><BR>ERROR: Unrecognized format '$parameters{format}'<BR>\n";
-    $sbeamsPROT->printPageFooter();
+    $sbeams->printPageFooter();
 
   }
 
 
 
-} # end printEntryForm
+} # end handle_request
 
 

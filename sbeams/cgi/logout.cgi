@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -T
+#!/usr/local/bin/perl
 
 ###############################################################################
 # Program     : logout.cgi
@@ -18,27 +18,69 @@
 
 
 ###############################################################################
-# Get the script set up with everything it will need
+# Set up all needed modules and objects
 ###############################################################################
 use strict;
-use vars qw ($q $sbeams $PROGRAM_FILE_NAME
-             $current_contact_id $current_username);
-use lib qw (../lib/perl);
-use CGI;
-use CGI::Carp qw(fatalsToBrowser croak);
+use Getopt::Long;
+use FindBin;
+
+use lib "$FindBin::Bin/../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
 
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
 
-$q   = new CGI;
 $sbeams = new SBEAMS::Connection;
 
+use CGI;
+$q = new CGI;
+
 
 ###############################################################################
-# Global Variables
+# Set program name and usage banner for command line use
 ###############################################################################
-$PROGRAM_FILE_NAME = 'logout.cgi';
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag to level n
+  --testonly          Set testonly flag which simulates INSERTs/UPDATEs only
+
+ e.g.:  $PROG_NAME --verbose 2 keyword=value
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","quiet")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+$TESTONLY = $OPTIONS{"testonly"} || 0;
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "   VERBOSE = $VERBOSE\n";
+  print "     QUIET = $QUIET\n";
+  print "     DEBUG = $DEBUG\n";
+  print "  TESTONLY = $TESTONLY\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
 main();
+exit(0);
+
 
 
 ###############################################################################

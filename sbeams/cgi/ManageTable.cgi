@@ -26,7 +26,7 @@ use strict;
 use Getopt::Long;
 use FindBin;
 
-use lib qw (../lib/perl ../../lib/perl);
+use lib "$FindBin::Bin/../lib/perl";
 use vars qw ($sbeams $sbeamsMOD $q $dbh $current_contact_id $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
              $current_work_group_id $current_work_group_name
@@ -121,6 +121,9 @@ sub main {
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters);
   #$sbeams->printDebuggingInfo($q);
+
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
   $TABLE_NAME = $parameters{'TABLE_NAME'}
     || croak "TABLE_NAME not specified."; 
