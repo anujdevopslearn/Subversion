@@ -246,7 +246,7 @@ sub printEntryForm {
       ["snp_accession","SI.snp_accession","SNP Accession"],
       ["snp_source_accession","SI.snp_source_accession","SNP Source Accession"],
       ["allele_id","A.allele_id","Allele Id"],
-      ["set_name","BSS.set_name","BioSequence Set"],
+      ["biosequence_name","BS.biosequence_name","BioSequence Name"],
       ["end_fiveprime_position","ABS.end_fiveprime_position","End Fiveprime Position"],
       ["strand","ABS.strand","Strand"],
       ["identified_percent","ABS.identified_percent","Percent"],
