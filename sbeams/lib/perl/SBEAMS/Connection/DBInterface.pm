@@ -270,6 +270,32 @@ sub selectOneColumn {
 
 
 ###############################################################################
+# selectSeveralColumns
+#
+# Given a SQL statement which returns one or more columns, return an array
+# of references to arrays of the results of each row of that query.
+###############################################################################
+sub selectSeveralColumns {
+    my $self = shift || croak("parameter self not passed");
+    my $sql_query = shift || croak("parameter sql_query not passed");
+
+    my @rows;
+
+    my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
+    my $rv  = $sth->execute or croak $dbh->errstr;
+
+    while (my @row = $sth->fetchrow_array) {
+        push(@rows,\@row);
+    }
+
+    $sth->finish;
+
+    return @rows;
+
+}
+
+
+###############################################################################
 # SelectTwoColumnHash
 #
 # Given a SQL statement which returns exactly two columns, return a hash
