@@ -57,26 +57,23 @@ main();
 ###############################################################################
 sub main { 
 
-    #### Do the SBEAMS authentication and exit if a username is not returned
-    exit unless ($current_username = $sbeams->Authenticate());
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate());
 
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
+  #$sbeams->printDebuggingInfo($q);	
 
-		#### Read in the default input parameters
-		my %parameters;
-		my $n_params_found = $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
-		#$sbeams->printDebuggingInfo($q);
-		
-		
-		#### Process generic "state" parameters before we start
-		$sbeams->processStandardParameters(parameters_ref=>\%parameters);
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
 
 
-    #### Print the header, do what the program does, and print footer
-    $sbeamsMA->printPageHeader();
-    processRequests();
-    $sbeamsMA->printPageFooter();
-
+  #### Print the header, do what the program does, and print footer
+  $sbeamsMA->printPageHeader();
+  processRequests();
+  $sbeamsMA->printPageFooter();
 
 } # end main
 
@@ -136,24 +133,15 @@ sub printEntryForm {
     my $SECONDARY_MESSAGE="<B><FONT COLOR='red'>In order to create a better data processing tool, I need your help!</FONT></B>";
     my $TERTIARY_MESSAGE="If you have any questions, suggestions, or just want some help, please contact me!<BR>Thanks!<BR>- <A HREF=\"mailto:mjohnson\@systemsbiology.org\">Michael Johnson</A>";
 
-		$parameters{project_id} = $sbeams->getCurrent_project_id();
-
-
-#    # If we're coming to this page for the first time, and there is a
-#    # default project set, then automatically select that one and GO!
-#    if ( ($parameters{project_id} eq "") && ($current_project_id > 0) ) {
-#      $parameters{project_id} = $current_project_id;
-#      $apply_action = "QUERY";
-#    }
-
+    $parameters{project_id} = $sbeams->getCurrent_project_id();
 
     $sbeams->printUserContext();
     print qq~
   <H2>$CATEGORY</H2>
-	<BR>$SECONDARY_MESSAGE<BR>
-	<BR>$TERTIARY_MESSAGE<BR>
-	<BR><BR>
-		~;
+      <BR>$SECONDARY_MESSAGE<BR>
+      <BR>$TERTIARY_MESSAGE<BR>
+      <BR><BR>
+      ~;
 
     if ($parameters{project_id} > 0) {
       $sql_query = qq~
@@ -194,148 +182,130 @@ SELECT	A.array_id,A.array_name,
       );
 
 
-    }# else {
-    #  $apply_action="BAD SELECTION";
-    #}
+    }
+    my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
+    my $rv  = $sth->execute or croak $dbh->errstr;
+    
+    my @rows;
+    my @row;
+    while (@row = $sth->fetchrow_array) {
+      my @temprow = @row;
+      push(@rows,\@temprow);
+    }
 
-
-#    if ($apply_action eq "QUERY") {
-#      $sbeams->displayQueryResult(sql_query=>$sql_query,
-#          url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols);
-
-
-		my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
-		my $rv  = $sth->execute or croak $dbh->errstr;
-		
-		my @rows;
-		my @row;
-		while (@row = $sth->fetchrow_array) {
-        my @temprow = @row;
-        push(@rows,\@temprow);
-		}
-
-		$sth->finish;
-#      print qq~
-#        <FORM METHOD="post">
-#      ~;
-
-
-		my @group_names;
-		my %group_names_hash;
-		my @slide_group_names;
-		my @slide_rowrefs;
-		my @slide_directions;
-		
-		foreach $element (@rows) {
-        my $sample1name = $$element[2];
-        my $sample2name = $$element[4];
-        my $forcondition = "${sample1name}_vs_${sample2name}";
-        my $revcondition = "${sample2name}_vs_${sample1name}";
-        my $thiscondition;
-        my $direction = "";
-				
-        if (defined($group_names_hash{$forcondition})) {
-						$direction = "f";
-						$thiscondition = $forcondition;
-        }
-
-        if (defined($group_names_hash{$revcondition})) {
-          $direction = "r";
-          $thiscondition = $revcondition;
-        }
-
-        unless ($direction) {
-          $direction = "f";
-          $thiscondition = $forcondition;
-          push(@group_names,$thiscondition);
-          $group_names_hash{$thiscondition}=$thiscondition;
-        }
-
-        push(@slide_group_names,$thiscondition);
-        push(@slide_rowrefs,$element);
-        push(@slide_directions,$direction);
+    $sth->finish;
+    my @group_names;
+    my %group_names_hash;
+    my @slide_group_names;
+    my @slide_rowrefs;
+    my @slide_directions;
+    
+    foreach $element (@rows) {
+      my $sample1name = $$element[2];
+      my $sample2name = $$element[4];
+      my $forcondition = "${sample1name}_vs_${sample2name}";
+      my $revcondition = "${sample2name}_vs_${sample1name}";
+      my $thiscondition;
+      my $direction = "";
+			
+      if (defined($group_names_hash{$forcondition})) {
+	$direction = "f";
+	$thiscondition = $forcondition;
       }
 
+      if (defined($group_names_hash{$revcondition})) {
+        $direction = "r";
+	$thiscondition = $revcondition;
+      }
 
-		my $group;
-		my $error_flag = 0;
-		my ($quantitation_file,$qf_status);
-		my (@ERRORS,@command_file);
-		my (@results,@parts);
-		my @project_outline;
-		
-		foreach $group (@group_names) {
-        my $row_counter=0;
-        my $first_flag=1;
-        my $channel_direction = "";
-        foreach $element (@slide_group_names) {
-          if ($element eq $group) {
-            if ($first_flag) {
-              my $cmd_line = "$group ${$slide_rowrefs[$row_counter]}[9] EXP";
+      unless ($direction) {
+        $direction = "f";
+	$thiscondition = $forcondition;
+	push(@group_names,$thiscondition);
+	$group_names_hash{$thiscondition}=$thiscondition;
+      }
+
+      push(@slide_group_names,$thiscondition);
+      push(@slide_rowrefs,$element);
+      push(@slide_directions,$direction);
+    }
+
+
+    my $group;
+    my $error_flag = 0;
+    my ($quantitation_file,$qf_status);
+    my (@ERRORS,@command_file);
+    my (@results,@parts);
+    my @project_outline;
+    
+    foreach $group (@group_names) {
+      my $row_counter=0;
+      my $first_flag=1;
+      my $channel_direction = "";
+      foreach $element (@slide_group_names) {
+        if ($element eq $group) {
+          if ($first_flag) {
+            my $cmd_line = "$group ${$slide_rowrefs[$row_counter]}[9] EXP";
               push (@command_file,$cmd_line);
               $first_flag=0;
-					}
+	  }
 
-            #### Verify that the data file is okay
-            $quantitation_file = ${slide_rowrefs[$row_counter]}[8];
-						
-            my $sample1_dye = ${slide_rowrefs[$row_counter]}[3];
-            my $sample2_dye = ${slide_rowrefs[$row_counter]}[5];
-            $qf_status = "";
+	  #### Verify that the data file is okay
+	  $quantitation_file = ${slide_rowrefs[$row_counter]}[8];
+				
+	  my $sample1_dye = ${slide_rowrefs[$row_counter]}[3];
+	  my $sample2_dye = ${slide_rowrefs[$row_counter]}[5];
+	  $qf_status = "";
 
-            #### If the data file is okay
-            if ( -e $quantitation_file ) {
+	  #### If the data file is okay
+	  if ( -e $quantitation_file ) {
+            $qf_status = "&nbsp;&nbsp;&nbsp;&nbsp;--- ".
+		"<FONT COLOR=green>File exists</FONT>";
+	    #### Run a parse program on it to see which channel is which dye
+	    my %quantitation_data = readQuantitationFile(inputfilename=>"$quantitation_file",
+							 headeronly=>1);
+	    unless ($quantitation_data{success}) {
+	      $qf_status = "&nbsp;&nbsp;&nbsp;&nbsp;--- ".
+		  "<FONT COLOR=red>$quantitation_data{error_msg}</FONT>";
+	    } else {
+              #### Pull out the channel information
+	      my @channels = @{$quantitation_data{channels}};
+	      my $channel;						
+	      ### <Added 06-18-02 to deal with hi-lo scans>
+	      my $number_of_channels = scalar(@channels);
+	      my $first_channel = "ch1";
+	      my $other_channel = "ch".($number_of_channels/2 + 1);
+	      ### </Added 06-18-02 to deal with hi-lo scans>
 
-              $qf_status = "&nbsp;&nbsp;&nbsp;&nbsp;--- ".
-                           "<FONT COLOR=green>File exists</FONT>";
-              #### Run a parse program on it to see which channel is which dye
-              my %quantitation_data = readQuantitationFile(inputfilename=>"$quantitation_file",
-                headeronly=>1);
+	      #### Loop over each channel
+	      foreach $channel (@channels) {
+                @parts = ($channel->{channel_label},$channel->{fluorophor});
+		$parts[1] =~ /(\d+)/;
+		my $number_part = $1;
+		my $match_flag = 0;
 
-              unless ($quantitation_data{success}) {
-									$qf_status = "&nbsp;&nbsp;&nbsp;&nbsp;--- ".
-                             "<FONT COLOR=red>$quantitation_data{error_msg}</FONT>";
-						} else {
-                #### Pull out the channel information
-                my @channels = @{$quantitation_data{channels}};
-                my $channel;
-								
-		### <Added 06-18-02 to deal with hi-lo scans>
-								my $number_of_channels = scalar(@channels);
-								my $first_channel = "ch1";
-								my $other_channel = "ch".($number_of_channels/2 + 1);
-		### </Added 06-18-02 to deal with hi-lo scans>
+		if ($sample1_dye =~ /$number_part/) {
+                  $match_flag = 1;
+		  if ($parts[0] eq $first_channel) {
+                    $channel_direction = "f";
+		  }
+		  if ($parts[0] eq $other_channel) {
+                    $channel_direction = "r";
+		  }
+	        }
 
-                #### Loop over each channel
-                foreach $channel (@channels) {
-                  @parts = ($channel->{channel_label},$channel->{fluorophor});
-                  $parts[1] =~ /(\d+)/;
-                  my $number_part = $1;
-                  my $match_flag = 0;
-
-                  if ($sample1_dye =~ /$number_part/) {
-                    $match_flag = 1;
-                    if ($parts[0] eq $first_channel) {
-                      $channel_direction = "f";
-                    }
-                    if ($parts[0] eq $other_channel) {
-                      $channel_direction = "r";
-                    }
-                  }
-
-                  if ($sample2_dye =~ /$number_part/) {
-                    if ($match_flag) { print "Whoah!  Double match!<BR>\n"; }
-                    $match_flag = 2;
-                    if ($parts[0] eq $first_channel) {
-                      $channel_direction = "r";
-                    }
-                    if ($parts[0] eq $other_channel) {
-                      $channel_direction = "f";
-                    }
-                  }
-                  unless ($match_flag) {
-                    print "Unable to match file name '$parts[1]' with ".
-                        "either dye.<BR>\n";
+                if ($sample2_dye =~ /$number_part/) {
+                  if ($match_flag) { print "Whoah!  Double match!<BR>\n"; }
+		  $match_flag = 2;
+		  if ($parts[0] eq $first_channel) {
+                    $channel_direction = "r";
+		  }
+		  if ($parts[0] eq $other_channel) {
+                    $channel_direction = "f";
+		  }
+	        }
+		unless ($match_flag) {
+                  print "Unable to match file name '$parts[1]' with either dye.<BR>\n";
                   }
                 } # endforeach
 
@@ -350,7 +320,6 @@ SELECT	A.array_id,A.array_name,
                              "<FONT COLOR=green>File verified</FONT>";
 
               } # endelse
-
 
             #### If the data file is not found
             } else {
@@ -376,23 +345,19 @@ SELECT	A.array_id,A.array_name,
 			}
 
 		}
-#      print qq~
-#	</FORM><BR>
-#      ~;
-
 
 #######################################
  ###  Start Pipeline Customization   ###
   #######################################
 
 ## Print all the javascript!
-		printProjectJavascript();
+    printProjectJavascript();
 
 # Table for entire form to sit in
 print qq~
-	<TABLE BORDER=0 ALIGN=CENTER WIDTH=80%>
-		<TR>
-			<TD>
+<TABLE BORDER=0 ALIGN=CENTER WIDTH=80%>
+<TR>
+  <TD>
 ~;
 
 print qq~
@@ -400,252 +365,271 @@ $LINESEPARATOR<BR>
 <FONT COLOR="#cc0000" SIZE="+0" FACE="Arial,Helvetica,sans-serif"><B>Step 1 of 3: Choose Files</B></FONT>
   <FORM METHOD="post" NAME="MainForm" onSubmit="return prepareForSubmission()">
     <TABLE BORDER=0>
-		<TR>
-		<TD VALIGN="top">
-		Forward Files:<BR>
-		<SELECT NAME="forwardSelectionList" SIZE=4 MULTIPLE onChange="adjust('forward')">
-		~;
-
-		my $testfilename;
-		my $mapfilename;
-		my $shortname;
-		my $testkeyfilename;
-		my $name;
-		my $tempVal;
-		my $direction;
-		for( my $i=0;$i<=$#rows;$i++ ){
-				$direction = $slide_directions[$i];
-				if ($direction eq "f"){
-						$testfilename  = ${$rows[$i]}[8];
-						$mapfilename   = ${$rows[$i]}[9];
-						$shortname   =  $testfilename;
-						$shortname   =~ (s/^.*\///);
-						$name = $slide_group_names[$i];
-						chomp $direction;
-						$tempVal = "$testfilename".":$mapfilename".":$slide_group_names[$i]".":$direction";
-						print qq~
-			<OPTION value="$tempVal">$shortname ($name)
-			~;
-				}
-		}
-
-		print qq~
-			</SELECT>
-			<BR>
-			Reverse Files:<BR>
-			<SELECT NAME="reverseSelectionList" SIZE=4 MULTIPLE onChange="adjust('reverse')">
-			~;
-
-		for( my $i=0;$i<=$#rows;$i++ ){
-				$direction = $slide_directions[$i];
-				if ($direction eq "r"){
-						$testfilename  = ${$rows[$i]}[8];
-						$mapfilename   = ${$rows[$i]}[9];
-						$shortname   =  $testfilename;
-						$shortname   =~ (s/^.*\///);
-						$name = $slide_group_names[$i];
-						chomp $direction;
-						$tempVal = "$testfilename".":$mapfilename".":$slide_group_names[$i]".":$direction";
-			 print qq~
-			 <OPTION value="$tempVal">$shortname ($name)
-			 ~;
-				}
-		}
-
-		print qq~
-			</SELECT>
-		</TD>
-		<TD VALIGN="top" ALIGN="center">
-			<BR><BR>
-			<INPUT NAME="forwardButton" TYPE="button" VALUE="<--Add to Forward" onClick="addItem('forward')">
-			<BR><BR>
-			<INPUT NAME="removeButton"  TYPE="button" VALUE="Remove-->" onClick="removeItem()">
-			<BR><BR>
-			<INPUT NAME="reverseButton" TYPE="button" VALUE="<--Add to Reverse" onClick="addItem('reverse')">
-			<BR><BR>
-		</TD>
-		<TD VALIGN="top">
-			Available Files:<br>
-			<SELECT name="fileList" SIZE=10 MULTIPLE></SELECT>
-		</TD>
-	</TR>
-   </TABLE>
-
-$LINESEPARATOR<BR>
-
-<FONT COLOR="#cc0000" SIZE="+0" FACE="Arial,Helvetica,sans-serif"><B>Step 2 of 3: Optional Pipeline Configurations</B><BR>
-<FONT SIZE="-1" COLOR="#000000">
-<img src="$HTML_BASE_DIR/images/space.gif" height=1 width=30">- Default values used if not selected<BR>
-<img src="$HTML_BASE_DIR/images/space.gif" height=1 width=30">- Click on red question marks for help text</FONT>
-     <p>
-     <FONT SIZE="-1" COLOR="#006600"><B>Pre-process:</B>&nbsp;<A HREF="Javascript:getDirections('http://www.systemsbiology.org/ArrayProcess/readme/preProcess.html')"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
-
-     <TABLE>
-		 <TR VALIGN="baseline">
-			<TD>
-				<INPUT TYPE="checkbox" NAME="preprocessBase" VALUE="-base">
-			</TD>
-			<TD>
-				&nbsp;Use Base Value:&nbsp;
-			</TD>
-			<TD>
-			  <INPUT TYPE="text" NAME="preprocessBaseValue" size="10" onChange="verifyNumber(this.value,'preprocessBaseValue')">&nbsp;
-		    <a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=2','Help','width=400,height=300,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
-			</TD>
-		 </TR>
-		 <TR VALIGN="baseline">
-			<TD>
-			  <INPUT TYPE="checkbox" NAME="preprocessSat" VALUE="-sat" CHECKED>
-			</TD>
-			<TD>
-				&nbsp;Saturating Intensity:&nbsp;
-			</TD>
-			<TD>
-			  <INPUT TYPE="text" NAME="preprocessSatValue" size="10" onChange="verifyNumber(this.value,'preprocessSatValue')" VALUE="65535">&nbsp;
-		    <a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=3','Help','width=400,height=300,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
-			</TD>
-		</TR>
-		<TR VALIGN="baseline">
-			<TD>
-		          <INPUT TYPE="checkbox" NAME="preprocessScale" VALUE="-scale">
-			</TD>
-			<TD>
-				&nbsp;Scale to Value:&nbsp;
-			</TD>
-			<TD>
-			  <INPUT TYPE="text" NAME="preprocessScaleValue" size="10" onChange="verifyNumber(this.value,'preprocessScaleValue')">&nbsp;
-		    <a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=4','Help','width=500,height=400,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
-			</TD>
-		 </TR>
-		</TABLE>
-	<p>
-     <TABLE>
-     	<TR>
-     		<TD>
-				Normalizing Method:&nbsp;<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=5','Help','width=500,height=400,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
-			 </TD>
-			</TR>
-		<TR>
-			<TD>
-				<INPUT TYPE="radio" NAME="normalization" VALUE="median" CHECKED>&nbsp;Median&nbsp;&nbsp;<INPUT TYPE="radio" NAME="normalization" VALUE="none"  >&nbsp;None
-			</TD>
-    </TR>
-		<TR>
-     	<TD>
-			  <INPUT TYPE="checkbox" NAME="preprocessDebug" VALUE="-debug">&nbsp;Generate debug file<BR>
-     	</TD>
-    </TR>
-		</TABLE>
-		<BR>
-		<B><FONT SIZE="-1" COLOR="#006600">Merge Replicates:</B>&nbsp;<A HREF="Javascript:getDirections('http://www.systemsbiology.org/ArrayProcess/readme/mergeReps.html')"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
-		<BR>
-		<TABLE BORDER=0>
-		 <TR>
-			<TD>
-			  <INPUT TYPE="checkbox" NAME="errorModel" VALUE="-opt">
-			</TD>
-			<TD>
-		     	&nbsp;Minimum &lt;num&gt; replicate measurements:&nbsp;
-       			&nbsp;<INPUT TYPE="text"     NAME="errorModelValue" size="10" onChange="verifyNumber(this.value,'errorModel')">
-		          &nbsp;<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=6','Help','width=400,height=300,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
-			</TD>
-		 </TR>
-		 <TR>
-			<TD>
-			  <INPUT TYPE="checkbox" NAME="excludeGenes" VALUE="-exclude" onClick="checkSwitch('general')" CHECKED>
-			</TD>
-			<TD>
-       			&nbsp;Use general list of bad genes
-			</TD>
-		 </TR>
-		 <TR>
-		  <TD>
-			  <INPUT TYPE="checkbox" NAME="excludeLocalGenes" VALUE="-exclude" onClick="checkSwitch('local')">
-			</TD>
-			<TD>
-       			&nbsp;Select local file of bad genes:
-			</TD>
-		 </TR>
-		 <TR>
-			<TD>
-				&nbsp;
-			</TD>
-			<TD>
-       			&nbsp;<INPUT TYPE = "text" NAME = "excludeFile"  SIZE=50>
- 		          &nbsp;<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=7','Help','width=400,height=300,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
-       			<br><FONT SIZE="-2">*must specify full path of bad gene file
-			</TD>
-		</TR>
-		<TR>
-			<TD>
-			 <INPUT TYPE="checkbox" NAME="filterGenes"  VALUE="-filter" CHECKED>
-			</TD>
-			<TD>
-       			&nbsp;Filter Outliers
-       			&nbsp;<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=8','Help','width=400,height=300,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
-			</TD>
-		</TR>
-	</TABLE>
-     <BR>
-     <B><FONT SIZE="-1" COLOR="#006600">VERA/SAM:</B>&nbsp;<A HREF="Javascript:getDirections('http://www.systemsbiology.org/VERAandSAM')"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></A>
-     <BR>
- 	<TABLE BORDER=0>
- 		<TR>
- 			<TD>
-			  <INPUT TYPE="checkbox" NAME="useVERAandSAM"  VALUE="useVS" CHECKED>
-			</TD>
-			<TD>
-        			&nbsp;<FONT COLOR="red">Use VERA and SAM</FONT>
-        			&nbsp;<A HREF="Javascript:getDirections('http://www.systemsbiology.org/VERAandSAM')"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></A>
-			</TD>
-		 </TR>
-		 <TR>
-		  <TD>
-			  <INPUT TYPE="checkbox" NAME="veraCrit" VALUE="critValue">
-			</TD>
-			<TD>
-        			&nbsp;Cease Optimization when changes per step are less than:
-				&nbsp;<INPUT TYPE="text" NAME="veraCritValue" size="10" onChange="verifyNumber(this.value,'veraCritValue')">
-			</TD>
-		 </TR>
-		 <TR>
-			<TD>
-			  <INPUT TYPE="checkbox" NAME="veraEvolFlag" VALUE="-evol">
-			</TD>
-			<TD>
-        			&nbsp;Generate file showing how parameters converge
-			</TD>
-		 </TR>
-		 <TR>
-		  <TD>
-			  <INPUT TYPE="checkbox" NAME="debugFlag" VALUE="-debug">
-			</TD>
-			<TD>
-        			&nbsp;Generate debug file
-			</TD>
-		 </TR>
-		 <TR>
-		  <TD>
-			  <INPUT TYPE="checkbox" NAME="modelFlag" VALUE="-model">
-			</TD>
-			<TD>
-        			&nbsp;Use your own error model
-        			&nbsp;<INPUT TYPE="file"     NAME="modelFile" size=30>
-			</TD>
-		 </TR>
-	</TABLE>
-	<BR>
-     <B><FONT SIZE="-1" COLOR="#006600">Merge Conditions:</A></B>&nbsp;<A HREF="Javascript:getDirections('http://www.systemsbiology.org/ArrayProcess/readme/mergeConds.html')"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></A>
-     <BR>
-     <FONT COLOR="#000000" SIZE="-1">
-	<img src="$HTML_BASE_DIR/images/space.gif" height=1 width="30">-only used with more than one condition</FONT><BR>
-     <TABLE>
-       	<TR>
-       		<TD VALIGN = "top">
-        			Conditions:<BR>
-       			<SELECT NAME= "mergeCondsList" SIZE=10 MULTIPLE>
+    <TR>
+      <TD VALIGN="top">
+      Forward Files:<BR>
+      <SELECT NAME="forwardSelectionList" SIZE=4 MULTIPLE onChange="adjust('forward')">
       ~;
 
+    my $testfilename;
+    my $mapfilename;
+    my $shortname;
+    my $testkeyfilename;
+    my $name;
+    my $tempVal;
+    my $direction;
+    for( my $i=0;$i<=$#rows;$i++ ){
+      $direction = $slide_directions[$i];
+      if ($direction eq "f"){
+	  $testfilename  = ${$rows[$i]}[8];
+	  $mapfilename   = ${$rows[$i]}[9];
+	  $shortname   =  $testfilename;
+	  $shortname   =~ (s/^.*\///);
+	  $name = $slide_group_names[$i];
+	  chomp $direction;
+	  $tempVal = "$testfilename".":$mapfilename".":$slide_group_names[$i]".":$direction";
+	  print qq~
+	      <OPTION value="$tempVal">$shortname ($name)
+	      ~;
+      }
+    }
+
+    print qq~
+      </SELECT>
+      <BR>
+      Reverse Files:<BR>
+      <SELECT NAME="reverseSelectionList" SIZE=4 MULTIPLE onChange="adjust('reverse')">
+	~;
+    
+    for( my $i=0;$i<=$#rows;$i++ ){
+      $direction = $slide_directions[$i];
+      if ($direction eq "r"){
+	$testfilename  = ${$rows[$i]}[8];
+	$mapfilename   = ${$rows[$i]}[9];
+	$shortname   =  $testfilename;
+	$shortname   =~ (s/^.*\///);
+	$name = $slide_group_names[$i];
+	chomp $direction;
+	$tempVal = "$testfilename".":$mapfilename".":$slide_group_names[$i]".":$direction";
+	print qq~
+      <OPTION value="$tempVal">$shortname ($name)
+      ~;
+      }
+    }
+    
+    print qq~
+      </SELECT>
+      </TD>
+      <TD VALIGN="top" ALIGN="center">
+      <BR><BR>
+      <INPUT NAME="forwardButton" TYPE="button" VALUE="<--Add to Forward" onClick="addItem('forward')">
+      <BR><BR>
+      <INPUT NAME="removeButton"  TYPE="button" VALUE="Remove-->" onClick="removeItem()">
+      <BR><BR>
+      <INPUT NAME="reverseButton" TYPE="button" VALUE="<--Add to Reverse" onClick="addItem('reverse')">
+      <BR><BR>
+      </TD>
+      <TD VALIGN="top">
+      Available Files:<br>
+      <SELECT name="fileList" SIZE=10 MULTIPLE></SELECT>
+      </TD>
+    </TR>
+    </TABLE>
+
+    $LINESEPARATOR<BR>
+
+    <FONT COLOR="#cc0000" SIZE="+0" FACE="Arial,Helvetica,sans-serif">
+    <B>Step 2 of 3: Optional Pipeline Configurations</B><BR>
+    <FONT SIZE="-1" COLOR="#000000">
+
+    <img src="$HTML_BASE_DIR/images/space.gif" height=1 width="30">- Default values used if not selected<BR>
+    <img src="$HTML_BASE_DIR/images/space.gif" height=1 width="30">- Click on red question marks for help text
+    </FONT>
+    <P>
+    <FONT SIZE="-1" COLOR="#006600">
+    <B>Pre-process:</B>&nbsp;
+    <A HREF="Javascript:getDirections('http://www.systemsbiology.org/ArrayProcess/readme/preProcess.html')"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
+    <TABLE>
+    <TR VALIGN="baseline">
+      <TD>
+      <INPUT TYPE="checkbox" NAME="preprocessBase" VALUE="-base">
+      </TD>
+      <TD>
+      &nbsp;Use Base Value:&nbsp;
+      </TD>
+      <TD>
+      <INPUT TYPE="text" NAME="preprocessBaseValue" size="10" onChange="verifyNumber(this.value,'preprocessBaseValue')">&nbsp;
+      <a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=2','Help','width=400,height=300,resizable=yes');return false">
+      <img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help">
+      </a>
+      </TD>
+    </TR>
+    <TR VALIGN="baseline">
+      <TD>
+      <INPUT TYPE="checkbox" NAME="preprocessSat" VALUE="-sat" CHECKED>
+      </TD>
+      <TD>
+	&nbsp;Saturating Intensity:&nbsp;
+      </TD>
+      <TD>
+      <INPUT TYPE="text" NAME="preprocessSatValue" size="10" onChange="verifyNumber(this.value,'preprocessSatValue')" VALUE="65535">&nbsp;
+      <a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=3','Help','width=400,height=300,resizable=yes');return false">
+      <img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help">
+      </a>
+      </TD>
+    </TR>
+    <TR VALIGN="baseline">
+      <TD>
+      <INPUT TYPE="checkbox" NAME="preprocessScale" VALUE="-scale">
+      </TD>
+      <TD>
+	&nbsp;Scale to Value:&nbsp;
+      </TD>
+      <TD>
+      <INPUT TYPE="text" NAME="preprocessScaleValue" size="10" onChange="verifyNumber(this.value,'preprocessScaleValue')">&nbsp;
+      <a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=4','Help','width=500,height=400,resizable=yes');return false">
+      <img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help">
+      </a>
+      </TD>
+    </TR>
+    </TABLE>
+    <p>
+    <TABLE>
+    <TR>
+      <TD>
+	Normalizing Method:&nbsp;<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=5','Help','width=500,height=400,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE="radio" NAME="normalization" VALUE="median" CHECKED>&nbsp;Median&nbsp;&nbsp;<INPUT TYPE="radio" NAME="normalization" VALUE="none"  >&nbsp;None
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE="checkbox" NAME="preprocessDebug" VALUE="-debug">&nbsp;Generate debug file<BR>
+      </TD>
+    </TR>
+    </TABLE>
+    <BR>
+    <B><FONT SIZE="-1" COLOR="#006600">Merge Replicates:</B>&nbsp;
+    <A HREF="Javascript:getDirections('http://www.systemsbiology.org/ArrayProcess/readme/mergeReps.html')">
+    <img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help">
+    </A>
+    <BR>
+    <TABLE BORDER=0>
+    <TR>
+      <TD>
+      <INPUT TYPE="checkbox" NAME="errorModel" VALUE="-opt">
+      </TD>
+      <TD>
+      &nbsp;Minimum &lt;num&gt; replicate measurements:&nbsp;
+      &nbsp;<INPUT TYPE="text" NAME="errorModelValue" size="10" onChange="verifyNumber(this.value,'errorModel')">
+      &nbsp;<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=6','Help','width=400,height=300,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE="checkbox" NAME="excludeGenes" VALUE="-exclude" onClick="checkSwitch('general')" CHECKED>
+      </TD>
+      <TD>
+      &nbsp;Use general list of bad genes
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE="checkbox" NAME="excludeLocalGenes" VALUE="-exclude" onClick="checkSwitch('local')">
+      </TD>
+      <TD>
+	&nbsp;Select local file of bad genes:
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+	&nbsp;
+      </TD>
+      <TD>
+	&nbsp;<INPUT TYPE = "text" NAME = "excludeFile"  SIZE=50>
+	&nbsp;<A HREF="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=7','Help','width=400,height=300,resizable=yes');return false">
+	<img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help">
+	</A>
+	<br><FONT SIZE="-2">*must specify full path of bad gene file
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE="checkbox" NAME="filterGenes"  VALUE="-filter" CHECKED>
+      </TD>
+      <TD>
+	&nbsp;Filter Outliers
+	&nbsp;<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=8','Help','width=400,height=300,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
+      </TD>
+    </TR>
+    </TABLE>
+    <BR>
+    <B><FONT SIZE="-1" COLOR="#006600">VERA/SAM:</B>&nbsp;<A HREF="Javascript:getDirections('http://www.systemsbiology.org/VERAandSAM')"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></A>
+    <BR>
+    <TABLE BORDER=0>
+    <TR>
+      <TD>
+      <INPUT TYPE="checkbox" NAME="useVERAandSAM"  VALUE="useVS" CHECKED>
+      </TD>
+      <TD>
+	&nbsp;<FONT COLOR="red">Use VERA and SAM</FONT>
+	&nbsp;<A HREF="Javascript:getDirections('http://www.systemsbiology.org/VERAandSAM')"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></A>
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE="checkbox" NAME="veraCrit" VALUE="critValue">
+      </TD>
+      <TD>
+	&nbsp;Cease Optimization when changes per step are less than:
+	&nbsp;<INPUT TYPE="text" NAME="veraCritValue" size="10" onChange="verifyNumber(this.value,'veraCritValue')">
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE="checkbox" NAME="veraEvolFlag" VALUE="-evol">
+      </TD>
+      <TD>
+	&nbsp;Generate file showing how parameters converge
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE="checkbox" NAME="debugFlag" VALUE="-debug">
+      </TD>
+      <TD>
+	&nbsp;Generate debug file
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE="checkbox" NAME="modelFlag" VALUE="-model">
+      </TD>
+      <TD>
+	&nbsp;Use your own error model
+	&nbsp;<INPUT TYPE="file"     NAME="modelFile" size=30>
+      </TD>
+    </TR>
+    </TABLE>
+    <BR>
+    <B><FONT SIZE="-1" COLOR="#006600">Merge Conditions:</B>&nbsp;
+    <A HREF="Javascript:getDirections('http://www.systemsbiology.org/ArrayProcess/readme/mergeConds.html')">
+    <img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help">
+    </A>
+    <BR>
+    <FONT COLOR="#000000" SIZE="-1">
+    <img src="$HTML_BASE_DIR/images/space.gif" height=1 width="30">-only used with more than one condition
+    </FONT><BR>
+    <TABLE>
+    <TR>
+      <TD VALIGN = "top">
+      Conditions:<BR>
+      <SELECT NAME= "mergeCondsList" SIZE=10 MULTIPLE>
+      ~;
+    
 my %unique_group;
 my $test_item;
 my @unique_groups;
@@ -654,132 +638,130 @@ foreach $test_item(@slide_group_names){
 }
 for (my $i=0;$i<=$#unique_groups;$i++){
   print qq~
-    <OPTION VALUE="$unique_groups[$i]">$unique_groups[$i]
+      <OPTION VALUE="$unique_groups[$i]">$unique_groups[$i]
   ~;
 }
 
 print qq~
-		</SELECT>
-     		</TD>
-     		<TD VALIGN="center" ALIGN="center">
-     			&nbsp;<INPUT TYPE = "button" NAME = "omitFile" VALUE ="Remove-->" OnClick="omitMerge()">&nbsp;<p>
-     			&nbsp;<INPUT TYPE = "button" NAME = "addFILE"  VALUE ="<--Add"    OnClick="addMerge()">&nbsp;
-     		</TD>
-     		<TD VALIGN="top">
-     			Unused Conditions:<BR>
-     			<SELECT NAME = "mergeBufferList" SIZE=10 MULTIPLE></SELECT>
-     			<BR>
-     		</TD>
-     	</TR>
-     	<TR>
-     		<TD ALIGN="center">
-     			<INPUT TYPE = "button" NAME = "upButton" VALUE ="Move Up " OnClick="moveUp()"><br>
-     			<INPUT TYPE = "button" NAME = "downButton" VALUE ="Move Down" OnClick= "moveDown()">
-     		</TD>
-			<TD>
-				&nbsp;
-			</TD>
-			<TD>
-				&nbsp;
-			</TD>
-     	</TR>
-     </TABLE>
-	<p>
-     <TABLE>
-     	<TR>
-     		<TD>
-				  <INPUT TYPE = "checkbox" NAME = "lambdaFlag" VALUE = "-lam">
-       	</TD>
-				<TD>
-       			&nbsp;Lambda &#62;&#61; &#60;num&#62;
-		    </TD>
-				<TD>
-       			&nbsp;<INPUT TYPE = "text" NAME = "lambdaValue" size="10" onChange="verifyNumber(this.value,'lambdaValue')">
-				</TD>
-      </TR>
-			<TR>
-			  <TD>
-				  <INPUT TYPE = "checkbox" NAME = "ratioFlag"  VALUE = "-rat">
-       	</TD>
-				<TD>
-       			&nbsp;Ratio  &#62;&#61; &#60;num&#62;
-		    </TD>
-				<TD>
-       			&nbsp;<INPUT TYPE = "text" NAME = "ratioValue" size="10" onChange="verifyNumber(this.value,'ratioValue')"><BR>
-				</TD>
-			</TR>
-			<TR>
-			  <TD>
-				  <INPUT TYPE = "checkbox" NAME = "stdevFlag"  VALUE = "-std">
-       	</TD>
-				<TD>
-       			&nbsp;Standard Devation &#62;&#61;&#60;num&#62;
-		    </TD>
-			  <TD>
-       			&nbsp;<INPUT TYPE = "text" NAME = "stdevValue" size="10" onChange="verifyNumber(this.value,'stdevValue')"><BR>
-				</TD>
-      </TR>
-			<TR>
-			  <TD>
-				  <INPUT TYPE = "checkbox" NAME = "repFlag"    VALUE = "-n">
-      	</TD>
-				<TD>
-      	 		&nbsp;Gene represented at least &lt;num&gt; times
-				</TD>
-				<TD>
-       			&nbsp;<INPUT TYPE = "text" NAME = "repValue" size="10" onChange="verifyNumber(this.value,'repValue')"><BR>
-				</TD>
-			</TR>
-     </TABLE>
-	<BR>
-     <B><FONT SIZE="-1" COLOR="#006600">Miscellaneous</FONT></B><BR>
-	   <TABLE BORDER=0>
-		  <TR>
-			 <TD>
-			   <INPUT TYPE="checkbox" NAME="postSam" VALUE = "ps">
-			 </TD>
-			 <TD>
-      			&nbsp;Use postSam (adds info from key file to .sig file)
-			 </TD>
-			</TR>
-			<TR>
-			 <TD>
-			   <INPUT TYPE="checkbox" NAME="notify">
-			 </TD>
-			 <TD>
-      			&nbsp;Email notification - Type comma-separated email addresses (\@systemsbiology is implied, unless otherwise specified):
-			 </TD>
-			</TR>
-			<TR>
-			 <TD>
-      			&nbsp;
-		   </TD>
-			 <TD>
-      			&nbsp<INPUT TYPE="text" NAME="addresses" SIZE="50">
-			 </TD>
-			</TR>
-	   </TABLE>
-		 <BR>
-     $LINESEPARATOR
-		 <BR>
-     <FONT COLOR="#cc0000" SIZE="+0" FACE="Arial,Helvetica,sans-serif"><B>Step 3 of 3: Proceed to Final Stage</B></FONT>
-     <p>
-		 <INPUT TYPE="hidden" NAME="set_current_project_id">
-		 <INPUT TYPE="hidden" NAME="set_current_work_group">
-     <INPUT TYPE="hidden" NAME="project_id" VALUE = "$parameters{project_id}">
-     <INPUT TYPE="submit" NAME="PROCESS" VALUE="Proceed to Verification and Submission Page"><BR>
+      </SELECT>
+      </TD>
+      <TD VALIGN="center" ALIGN="center">
+    &nbsp;<INPUT TYPE = "button" NAME = "omitFile" VALUE ="Remove-->" OnClick="omitMerge()">&nbsp;<p>
+    &nbsp;<INPUT TYPE = "button" NAME = "addFILE"  VALUE ="<--Add"    OnClick="addMerge()">&nbsp;
+      </TD>
+      <TD VALIGN="top">
+	Unused Conditions:<BR>
+      <SELECT NAME = "mergeBufferList" SIZE=10 MULTIPLE></SELECT>
+      <BR>
+      </TD>
+    </TR>
+    <TR>
+      <TD ALIGN="center">
+      <INPUT TYPE = "button" NAME = "upButton" VALUE ="Move Up " OnClick="moveUp()"><br>
+      <INPUT TYPE = "button" NAME = "downButton" VALUE ="Move Down" OnClick= "moveDown()">
+      </TD>
+      <TD>
+	&nbsp;
+      </TD>
+	<TD>
+	&nbsp;
+    </TD>
+    </TR>
+    </TABLE>
+    <p>
+    <TABLE>
+    <TR>
+      <TD>
+      <INPUT TYPE = "checkbox" NAME = "lambdaFlag" VALUE = "-lam">
+      </TD>
+      <TD>
+	&nbsp;Lambda &#62;&#61; &#60;num&#62;
+      </TD>
+      <TD>
+	&nbsp;<INPUT TYPE = "text" NAME = "lambdaValue" size="10" onChange="verifyNumber(this.value,'lambdaValue')">
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE = "checkbox" NAME = "ratioFlag"  VALUE = "-rat">
+      </TD>
+      <TD>
+	&nbsp;Ratio  &#62;&#61; &#60;num&#62;
+      </TD>
+      <TD>
+	&nbsp;<INPUT TYPE = "text" NAME = "ratioValue" size="10" onChange="verifyNumber(this.value,'ratioValue')"><BR>
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE = "checkbox" NAME = "stdevFlag"  VALUE = "-std">
+      </TD>
+      <TD>
+	&nbsp;Standard Devation &#62;&#61;&#60;num&#62;
+      </TD>
+      <TD>
+	&nbsp;<INPUT TYPE = "text" NAME = "stdevValue" size="10" onChange="verifyNumber(this.value,'stdevValue')"><BR>
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE = "checkbox" NAME = "repFlag"    VALUE = "-n">
+      </TD>
+      <TD>
+	&nbsp;Gene represented at least &lt;num&gt; times
+      </TD>
+      <TD>
+	&nbsp;<INPUT TYPE = "text" NAME = "repValue" size="10" onChange="verifyNumber(this.value,'repValue')"><BR>
+      </TD>
+    </TR>
+    </TABLE>
+    <BR>
+    <B><FONT SIZE="-1" COLOR="#006600">Miscellaneous</FONT></B><BR>
+    <TABLE BORDER=0>
+    <TR>
+      <TD>
+      <INPUT TYPE="checkbox" NAME="postSam" VALUE = "ps">
+      </TD>
+      <TD>
+	&nbsp;Use postSam (adds info from key file to .sig file)
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE="checkbox" NAME="notify">
+      </TD>
+      <TD>
+	&nbsp;Email notification - Type comma-separated email addresses (\@systemsbiology is implied, unless otherwise specified):
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+	&nbsp;
+      </TD>
+      <TD>
+	&nbsp<INPUT TYPE="text" NAME="addresses" SIZE="50">
+      </TD>
+    </TR>
+    </TABLE>
+    <BR>
+    $LINESEPARATOR
+    <BR>
+    <FONT COLOR="#cc0000" SIZE="+0" FACE="Arial,Helvetica,sans-serif">
+    <B>Step 3 of 3: Proceed to Final Stage</B>
+    </FONT>
+    <p>
+    <INPUT TYPE="hidden" NAME="set_current_project_id">
+    <INPUT TYPE="hidden" NAME="set_current_work_group">
+    <INPUT TYPE="hidden" NAME="project_id" VALUE = "$parameters{project_id}">
+    <INPUT TYPE="submit" NAME="PROCESS" VALUE="Proceed to Verification and Submission Page"><BR>
     </FORM>
-		~;
-}# else {
-#	print "<H4>Select parameters above and press QUERY\n";
-#      }
- # end printEntryForm
-
+	~;
+}
 # End of table form sits in
 print qq~
-			</TD>
-		</TR>
-	</TABLE>
+    </TD>
+    </TR>
+    </TABLE>
 ~;
 
   ####################################
