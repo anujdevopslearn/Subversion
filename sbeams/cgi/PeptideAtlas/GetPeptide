@@ -44,7 +44,6 @@ $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
-#$sbeams->setSBEAMS_BASEDIR($SERVER_BASE_DIR);
 
 
 use CGI qw(param);
@@ -101,7 +100,7 @@ sub main {
     #### Do the SBEAMS authentication and exit if a username is not returned
     exit unless ($current_username = $sbeams->Authenticate(
         permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
-       'PeptideAtlas_readonly'],
+        'PeptideAtlas_readonly'],
         #connect_read_only=>1,
         allow_anonymous_access=>1,
     ));
@@ -114,15 +113,23 @@ sub main {
         parameters_ref=>\%parameters);
     #$sbeams->printDebuggingInfo($q);
 
+
     ##xxxxx tab menu info here until moved into sep. module
     $q->param( -name=> "_tab",
                -value=> "2");
     $parameters{'_tab'} = 2;
 
-    ## if no parameters are defined, set up some defaults to help with browsing
+    if ( $parameters{'atlasBuildID'} ) {
+
+        $parameters{'atlas_build_id'} = $parameters{'atlasBuildID'};
+
+    };
+
+
+    ## If no parameters are defined, set up some defaults to help with browsing
     ## until I get a help menu set-up
     if ( !$parameters{'searchWithinThis'}  && !$parameters{searchForThis}
-         && (  !$parameters{'atlasName'}  || !$parameters{'atlasBuildID'} ) ) {
+         && (  !$parameters{'atlasName'}  || !$parameters{'atlas_build_id'} ) ) {
 
         $parameters{'atlasName'} = "Human_P0.9_Ens26_NCBI35";
 
@@ -154,6 +161,7 @@ sub main {
         handle_request(ref_parameters=>\%parameters);
 
         $sbeamsMOD->display_page_footer();
+
     }
 
 
@@ -177,7 +185,7 @@ sub handle_request {
     ## if no parameters are defined, set up some defaults to help with browsing
     ## until I get a help menu set-up
     unless ( ($parameters{'searchWithinThis'}) && ($parameters{'searchForThis'})  
-           && ( ($parameters{'atlasName'}) || ($parameters{'atlasBuildID'}) ) ) {
+           && ( ($parameters{'atlasName'}) || ($parameters{'atlas_build_id'}) ) ) {
         $parameters{'atlasName'} = 'Human_P0.9_Ens22_NCBI34';
         $parameters{'searchWithinThis'} = "Peptide Name";
         $parameters{'searchForThis'} = 'PAp00000001';
@@ -193,7 +201,7 @@ sub handle_request {
 
         $PROG_NAME .= $tabs;
 
-        $sbeams->printUserContext();
+        #$sbeams->printUserContext();
 
     print <<"    END";
         <BR>
@@ -277,10 +285,15 @@ sub handle_request {
     ## Get and store list of atlases for use with form:  
     my (@atlas_option_id_array, @atlas_option_name_array);  
 
+    my @accessible_project_ids = $sbeams->getAccessibleProjects();
+    my $project_string = join( ",", @accessible_project_ids ) || '0';
+
+
     my $sql = qq~
         SELECT atlas_build_id,atlas_build_name
-        FROM PeptideAtlas.dbo.atlas_build
-        where project_id = '475'
+        FROM $TBAT_ATLAS_BUILD
+        WHERE project_id IN ( $project_string )
+        AND record_status!='D'
     ~;
 
     my @rows = $sbeams->selectSeveralColumns($sql) or
@@ -326,10 +339,10 @@ sub handle_request {
 
     }
 
-    ## if receive $parameters{atlasBuildID} from link, get atlas build name 
-    if ( $parameters{atlasBuildID} ) {
+    ## if receive $parameters{atlas_build_id} from link, get atlas build name 
+    if ( $parameters{atlas_build_id} ) {
         for (my $i=0; $i<=$#atlas_option_id_array; $i++) {
-            if ( $parameters{atlasBuildID} eq $atlas_option_id_array[$i] ) {
+            if ( $parameters{atlas_build_id} eq $atlas_option_id_array[$i] ) {
                 $atlasBuildName = $atlas_option_name_array[$i]
             }
         }
@@ -371,7 +384,7 @@ sub handle_request {
 
              $parameters{atlasName} = $atlasBuildName;
 
-             $parameters{atlasBuildID} = $atlas_option_id_array[$i];
+             $parameters{atlas_build_id} = $atlas_option_id_array[$i];
 
         }
     }
@@ -406,7 +419,7 @@ sub handle_request {
         constraint_column=>"AB.atlas_build_id",
         constraint_type=>"int_list",
         constraint_name=>"Atlas Build",
-        constraint_value=>$parameters{atlasBuildID} );
+        constraint_value=>$parameters{atlas_build_id} );
     return if ($atlas_build_clause eq '-1');
 
 
@@ -482,16 +495,6 @@ sub handle_request {
         ORDER BY P.peptide_accession
     ~;
     #$sbeams->display_sql(sql=>$sql);
-    #print "parameters{action} = $parameters{action} <BR>";
-    #print "parameters{apply_action} = $parameters{apply_action} <BR>";
-    #print "parameters{atlas_build_id} = $parameters{atlas_build_id} <BR>";
-    #print "parameters{peptide_name_constraint} = $parameters{peptide_name_constraint} <BR>";
-    #print "parameters{peptide_sequence_constraint} = $parameters{peptide_sequence_constraint} <BR>";
-    #print "apply action = $apply_action<BR>";
-    #print "parameters{'searchWithinThis'} = $parameters{'searchWithinThis'}<BR>";
-    #print "parameters{'searchForThis'} = $parameters{'searchForThis'}<BR>";
-    #print "parameters{'atlasName'} = $parameters{'atlasName'}<BR>";
-    #print "parameters{'atlasBuildID'} = $parameters{'atlasBuildID'}<BR>";
 
 
     #########################################################################
