@@ -177,20 +177,20 @@ sub preFormHook {
   my %args = @_;
 
   my $query_parameters_ref = $args{'parameters_ref'};
-  my %parameters = %{$query_parameters_ref};
 
 
   #### If table XXXX
   if ($TABLE_NAME eq "XXXX") {
-    $parameters{YYYY} = 'XXXX' unless ($parameters{YYYY});
+    $query_parameters_ref->{YYYY} = 'XXXX'
+      unless ($query_parameters_ref->{YYYY});
   }
 
 
   #### For search_hit_annotations, set the source to be "by hand" unless
   #### there's already a value
   if ($TABLE_NAME eq "search_hit_annotation") {
-    $parameters{annotation_source_id} = 1
-      unless ($parameters{annotation_source_id});
+    $query_parameters_ref->{annotation_source_id} = 1
+      unless ($query_parameters_ref->{annotation_source_id});
   }
 
 
