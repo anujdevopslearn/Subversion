@@ -237,8 +237,8 @@ sub applySqlChange {
         VALUES ($current_contact_id,'$result','$altered_sql_query')
     !;
 
-    my $sth = $dbh->prepare("$log_query") or croak $dbh->errstr;
-    my $rv  = $sth->execute or croak $dbh->errstr;
+    $sth = $dbh->prepare("$log_query") or croak $dbh->errstr;
+    $rv  = $sth->execute or croak $dbh->errstr;
     $sth->finish;
 
 
