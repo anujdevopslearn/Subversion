@@ -298,7 +298,7 @@ sub handle_request {
 	            AND UWG.contact_id='$current_contact_id' )
 	 WHERE P.record_status != 'D'
 	   AND ( UPP.privilege_id<=40 OR GPP.privilege_id<=40 )
-	 ORDER BY P.project_tag
+	 ORDER BY UL.username,P.project_tag
   ~;
   @rows = $sbeams->selectSeveralColumns($sql);
 
