@@ -146,8 +146,8 @@ sub handleRequest {
 
   #### Define standard variables
   my ($i,$element,$key,$value,$line,$result,$sql);
-  my ($scan_file,$scan_file_path, $scan_file_name, $scan_file_location_id);
-  my ($quant_file,$quant_file_path, $quant_file_name, $quant_file_location_id);
+  my ($scan_file,$scan_file_path, $scan_file_type, $scan_file_name, $scan_file_location_id);
+  my ($quant_file,$quant_file_path, $quant_file_type, $quant_file_name, $quant_file_location_id);
   my ($s_protocol, $q_protocol, $array_id);
   my (@array_channel_scan_ids, @scan_quantitation_ids);
 
@@ -166,15 +166,23 @@ sub handleRequest {
 
   #### Input scan quantitation file information
   ($quant_file_path, $quant_file_name) = get_file_information(source_file=>$quant_file);
+  $quant_file_type = get_file_type(file=$quant_file_name);
+  unless ($quant_file_type eq 'Quantitation File') {
+      die "$quant_file_name was not determined to be a quantitation file!";
+  }
   $quant_file_location_id = insert_update_file_information(file_name=>$quant_file_name,
 							    file_path=>$quant_file_path,
-							    file_type=>'Quantitation File');
+							    file_type=>$quant_file_type);
 
   #### Input array channel scan file information
   ($scan_file_path, $scan_file_name) = get_file_information(source_file=>$scan_file);
+  $scan_file_type = get_file_type(file=$scan_file_name);
+  unless($scan_file_type eq 'Quantiation File') {
+      die "$scan_file_name was not determined to be scan image!";
+  }
   $scan_file_location_id = insert_update_file_information(file_name=>$scan_file_name,
-							  file_path=>$quant_file_path,
-							  file_type=>'Scan Image');
+							  file_path=>$scan_file_path,
+							  file_type=>$scan_file_type);
 
   #### Read in quantitation file
   my %data = readQuantitationFile(inputfilename=>"$quant_file",
@@ -218,7 +226,7 @@ sub handleRequest {
 sub insert_update_scan_element {
     my %args = @_;
     my $SUB_NAME = "insert_update_scan_element";
-    if ($VERBOSE == 2) {print "\n\nEntering $SUB_NAME\n\n"; }
+    if ($DEBUG > 0) {print "\n\nEntering $SUB_NAME\n\n"; }
 
     #### Define standard variables
     my ($sql, $array_id, $layout_id, $data_ref, $n_scan_elements);
@@ -445,7 +453,7 @@ sub insert_update_scan_element {
 sub define_quantitation_type_ids {
     my %args = @_;
     my $SUB_NAME = "define_quantitation_type_ids";
-    if ($VERBOSE == 2) {print "\nEntering $SUB_NAME\n";}
+    if ($DEBUG > 0) {print "\nEntering $SUB_NAME\n";}
 
     #### Define standard variables
     my ($sql, $i, $j);
@@ -509,7 +517,7 @@ sub define_quantitation_type_ids {
 sub insert_update_scan_quantitation {
     my %args = @_;
     my $SUB_NAME = "insert_update_scan_quantitation";
-    if ($VERBOSE == 2) { print "\n\nEntering $SUB_NAME\n\n"; }
+    if ($DEBUG > 0) { print "\n\nEntering $SUB_NAME\n\n"; }
 
     #### Define standard variables
 
@@ -601,7 +609,7 @@ sub insert_update_scan_quantitation {
 sub insert_update_array_channel_scan {
     my %args = @_;
     my $SUB_NAME = "insert_update_array_channel_scan";
-    if ($VERBOSE == 2) { print "\n\nEntering $SUB_NAME\n\n"; }
+    if ($DEBUG > 0) { print "\n\nEntering $SUB_NAME\n\n"; }
 
     #### Define standard variables
     my ($sql, $channel_count, $file_id, $i, $protocol,$array_id);
@@ -702,7 +710,7 @@ sub insert_update_array_channel_scan {
 sub get_file_information {
     my %args = @_;
     my $SUB_NAME = "get_file_information";
-    if ($VERBOSE == 2) { print "\n\nEntering $SUB_NAME\n\n"; }
+    if ($DEBUG > 0) { print "\n\nEntering $SUB_NAME\n\n"; }
     
     #### Define standard variables
     my ($file_dir, $file_name, $source_file);
@@ -741,12 +749,43 @@ sub get_file_information {
 } # end get_file_information
 
 ###############################################################################
+# get_file_type
+# IMPROVE ME!: Currently looks at suffix.  This can be augmented significantly
+###############################################################################
+sub get_file_type {
+    my %args = @_;
+    my $SUB_NAME = "get_file_type";
+    if ($DEBUG > 0) { print "\n\nEntering $SUB_NAME\n\n";}
+
+    #### Define standard variables
+    my ($file_type, $file_name);
+
+    #### Decode argument list
+    $file_name = $args{'file'}
+    || die "ERROR[$SUB_NAME]: file name not passed!\n";
+
+    ####Check suffix for file type
+    if ($file_name =~ /\.tif$/) {
+	$file_type = 'Scan Image';
+    }
+    elsif($file_name =~ /\.csv$/) {
+	$file_type = 'Quantitation File';
+    }
+    else {
+	$file_type = 'Unknown';
+    }
+    
+    return $file_type;
+} # end get_file_type
+    
+	
+###############################################################################
 # insert_update_file_information
 ###############################################################################
 sub insert_update_file_information {
     my %args = @_;
     my $SUB_NAME = "insert_update_file_information";
-    if ($VERBOSE == 2) { print "\n\nEntering $SUB_NAME\n\n";}
+    if ($DEBUG > 0) { print "\n\nEntering $SUB_NAME\n\n";}
     
     #### Define standard variables
     my ($sql, $file_name, $file_path, $file_type);
@@ -775,7 +814,7 @@ sub insert_update_file_information {
 
     my (%file_path_rowdata, $file_path_rowdata_ref, $file_path_PK);
 
-    print "--->FILE PATH UPDATE<---\n\n";
+    #print "--->FILE PATH UPDATE<---\n\n";
 
     if ($n_file_paths > 1) {
 	die "ERROR[$SUB_NAME]: more than one file path!\n";
@@ -865,7 +904,7 @@ sub insert_update_file_information {
 
     my (%file_location_rowdata, $file_location_rowdata_ref, $file_location_PK);
 
-    print "--->FILE LOCATION UPDATE<---\n\n";
+    #print "--->FILE LOCATION UPDATE<---\n\n";
 
     if ($n_file_locations > 1) {
 	die "ERROR[$SUB_NAME]: more than one file location!\n\n";
@@ -902,7 +941,7 @@ sub insert_update_file_information {
 
 
 ###############################################################################
-# get_quantitation_file - NOT USED!?!
+# get_quantitation_file - NOT USED
 ###############################################################################
 #sub get_quantitation_file {
 #    my %args = @_;
@@ -956,7 +995,7 @@ sub insert_update_file_information {
 sub print_protocol_options {
     my %args = @_;
     my $SUB_NAME = "print_protocol_options";
-    if ($VERBOSE == 2) { print "\n\nEntering $SUB_NAME\n\n"; }
+    if ($DEBUG > 0) { print "\n\nEntering $SUB_NAME\n\n"; }
     
     #### Define standard variables
     my ($table, $field, $sql, $i);
@@ -993,7 +1032,7 @@ sub print_protocol_options {
 #sub load_quantitation_file {
 #    my %args = @_;
 #    my $SUB_NAME = "load_quantitation_file";
-#    if ($VERBOSE == 2) { print "\n\nEntering $SUB_NAME\n\n"; }
+#    if ($DEBUG > 0) { print "\n\nEntering $SUB_NAME\n\n"; }
 
     #### Define standard variables
 #    my($file_name, $sql);
@@ -1015,7 +1054,7 @@ sub print_protocol_options {
 #sub insert_scan_quantitation {
 #    my %args = @_;
 #    my $SUB_NAME = "insert_scan_quantitation";
-#    if ($VERBOSE == 2) { print "\n\nEntering $SUB_NAME\n\n";}
+#    if ($DEBUG > 0) { print "\n\nEntering $SUB_NAME\n\n";}
 
     #### Define standard variables
 #    my ($sql, $insert, $update, $scan_quantitation_id, $n_scan_quantitations);
@@ -1054,7 +1093,7 @@ sub print_protocol_options {
 sub get_quantitation_file_status { 
   my %args = @_;
   my $SUB_NAME = 'get_quantitation_file_status';
-  if ($VERBOSE == 2) { print "\n\nEntering $SUB_NAME\n\n";}
+  if ($DEBUG > 0) { print "\n\nEntering $SUB_NAME\n\n";}
 
 
   #### Decode the argument list
