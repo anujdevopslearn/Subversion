@@ -104,21 +104,32 @@ my $delete_existing = $OPTIONS{delete_existing} || '';
 my $purge_protein_summary_id = $OPTIONS{purge_protein_summary_id} || '';
 
 
-#### Make sure the file name was supplied or exit
+#### Get the source_file from the command line
 my $source_file = $ARGV[0];
-unless ($source_file || $purge_protein_summary_id) {
-  print "$USAGE";
-  exit 0;
+
+#### If it was not provided
+unless ($source_file) {
+
+  if ($search_batch_id) {
+    $source_file = guess_source_file(
+      search_batch_id => $search_batch_id,
+    );
+  }
+
+  unless ($source_file || $purge_protein_summary_id) {
+    print "$USAGE";
+    exit 0;
+  }
 }
 
 
 #### Process program-specific options
-my $biosequence_set_tag = $OPTIONS{biosequence_set_tag};
-unless ($biosequence_set_tag || $purge_protein_summary_id) {
-  print "ERROR: You must provide a value for the --biosequence_set_tag option";
-  print "$USAGE";
-  exit 0;
-}
+my $biosequence_set_tag = $OPTIONS{biosequence_set_tag} || '';
+#unless ($biosequence_set_tag || $purge_protein_summary_id) {
+#  print "ERROR: You must provide the --biosequence_set_tag option";
+#  print "$USAGE";
+#  exit 0;
+#}
 
 
 #### Check to make sure the file exists
@@ -577,7 +588,8 @@ sub main {
 
   #### Get the biosequence information and put it in the content handler
   my %biosequence_data = get_biosequence_data(
-    biosequence_set_tag => $biosequence_set_tag
+    biosequence_set_tag => $biosequence_set_tag,
+    search_batch_id => $search_batch_id,
   );
   $CONTENT_HANDLER->{biosequence_set_id}=$biosequence_data{biosequence_set_id};
   $CONTENT_HANDLER->{biosequence_ids} = $biosequence_data{biosequence_ids};
@@ -738,30 +750,54 @@ sub update_row {
 sub get_biosequence_data {
   my %args = @_;
   my $biosequence_set_tag = $args{'biosequence_set_tag'};
-  unless ($biosequence_set_tag) {
+  my $search_batch_id = $args{'search_batch_id'};
+
+
+  my ($sql,@biosequence_set_ids);
+
+
+  #### If a search_batch_id was provided
+  if (defined($search_batch_id) && $search_batch_id > 0) {
+
+    #### Query to find the biosequence_set_id for this tag
+    $sql = qq~
+      SELECT biosequence_set_id
+        FROM ${DATABASE}search_batch
+       WHERE search_batch_id = '$search_batch_id'
+    ~;
+    print "$sql\n" if ($VERBOSE);
+
+    @biosequence_set_ids = $sbeams->selectOneColumn($sql);
+
+
+  #### Else if a biosequence_set_tag was provided
+  } elsif ($biosequence_set_tag) {
+
+    #### Query to find the biosequence_set_id for this tag
+    $sql = qq~
+      SELECT biosequence_set_id
+        FROM ${DATABASE}biosequence_set
+       WHERE set_tag = '$biosequence_set_tag'
+         AND record_status != 'D'
+    ~;
+    print "$sql\n" if ($VERBOSE);
+
+    @biosequence_set_ids = $sbeams->selectOneColumn($sql);
+
+  #### Else die
+  } else {
     die("ERROR: biosequence_set_tag not provided!  Cannot load ".
-      "without it!");
+      "without it!  Also no search_batch_id.");
   }
 
 
-  #### Query to find the biosequence_set_id for this tag
-  my $sql = qq~
-    SELECT biosequence_set_id
-      FROM ${DATABASE}biosequence_set
-     WHERE set_tag = '$biosequence_set_tag'
-       AND record_status != 'D'
-  ~;
-  print "$sql\n" if ($VERBOSE);
-
-
-  my @biosequence_set_ids = $sbeams->selectOneColumn($sql);
   my $n_ids = scalar(@biosequence_set_ids);
 
 
   #### If nothing returned, die
   unless ($n_ids) {
     die("ERROR: Unable to find any biosequence_sets in the database\n".
-      "matching '$biosequence_set_tag'.  You must specify a valid\n".
+      "matching '$biosequence_set_tag' with $sql  You must specify a valid\n".
       "biosequence_set_tag.\n");
   }
 
@@ -769,8 +805,8 @@ sub get_biosequence_data {
   #### If more than one row was returned, die also
   if ($n_ids > 1) {
     die("ERROR: Found $n_ids biosequence_sets in the database\n".
-      "that match '$biosequence_set_tag'.  This should not happen and I\n".
-      "don't know which biosequence set is the pertinent one here.\n");
+      "that match '$biosequence_set_tag' with $sql  This should not happen\n".
+      "and I don't know which biosequence set is the pertinent one here.\n");
   }
 
 
@@ -854,5 +890,38 @@ sub deleteProteinSummary {
 
 }
 
+
+###############################################################################
+# guess_source_file
+###############################################################################
+sub guess_source_file {
+  my %args = @_;
+  my $search_batch_id = $args{'search_batch_id'};
+
+  my ($sql,@biosequence_set_ids);
+
+  #### If a search_batch_id was provided
+  unless (defined($search_batch_id) && $search_batch_id > 0) {
+    return;
+  }
+
+
+  #### Query to find the biosequence_set_id for this tag
+  $sql = qq~
+    SELECT data_location
+      FROM ${DATABASE}search_batch
+     WHERE search_batch_id = '$search_batch_id'
+  ~;
+  print "$sql\n" if ($VERBOSE);
+
+  my ($data_location) = $sbeams->selectOneColumn($sql);
+
+  if ($data_location) {
+    return "$data_location/interact-prob-prot.xml";
+  }
+
+  return;
+
+}
 
 
