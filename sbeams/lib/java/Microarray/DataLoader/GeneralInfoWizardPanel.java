@@ -111,14 +111,13 @@ public class GeneralInfoWizardPanel extends WizardPanel
 	constantsScrollPane = new JScrollPane(constantsTable);
 	constantsScrollPane.setPreferredSize(d);
 	add(constantsScrollPane, BorderLayout.SOUTH);
-
-  }
+  }// constructor
 //-----------------------------------------------------------------------------------------------
   class ConstantsTableModel extends DefaultTableModel {
 	public boolean isCellEditable(int row, int col){
 	  return false;
 	}
-  }
+  }// class ConstantsTableModel
 //-----------------------------------------------------------------------------------------------
   public void actionPerformed(ActionEvent e) {
 	String command = e.getActionCommand();
@@ -168,7 +167,7 @@ public class GeneralInfoWizardPanel extends WizardPanel
 		}
 	  }
 	}
-  }
+  }// itemStateChanged
 //-----------------------------------------------------------------------------------------------
   public String[][] readConstants(String filePath) {
 	Vector c = new Vector();
@@ -229,11 +228,11 @@ public class GeneralInfoWizardPanel extends WizardPanel
   }// readConstants
 //-----------------------------------------------------------------------------------------------
   public void display() {
-  }
+  }// display
 //-----------------------------------------------------------------------------------------------
   public boolean hasNext() {
 	return true;
-  }
+  }// hasNext
 //-----------------------------------------------------------------------------------------------
   public boolean validateNext(List list) {
 	boolean valid = true;
@@ -266,21 +265,25 @@ public class GeneralInfoWizardPanel extends WizardPanel
 	  wizardContext.setAttribute(WIZARD_MANIPULATED_VARIABLE, mv);
 	}
 	return valid;
-  }
+  }// validateNext
 //-----------------------------------------------------------------------------------------------
   public WizardPanel next() {
 	return new ConditionInfoWizardPanel(getWizardContext());
-  }
+  }// next
 //-----------------------------------------------------------------------------------------------
   public boolean canFinish() {
 	return false;
-  }
+  }// canFinish
+//-----------------------------------------------------------------------------------------------
+  public boolean canCancel() {
+	return true;
+  }// canCancel
 //-----------------------------------------------------------------------------------------------
   public boolean validateFinish(List list) {
 	return false;
-  }
+  }// validateFinish
 //-----------------------------------------------------------------------------------------------
   public void finish() {
-  }
+  }// finish
 //-----------------------------------------------------------------------------------------------
 }

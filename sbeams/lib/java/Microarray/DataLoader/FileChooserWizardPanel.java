@@ -27,7 +27,7 @@ public class FileChooserWizardPanel extends WizardPanel
 //-----------------------------------------------------------------------------------------------
   public FileChooserWizardPanel() {
 	initialize();
-  }
+  }// constructor
 //-----------------------------------------------------------------------------------------------
   public FileChooserWizardPanel(String dataFile, String expName) {
 	if (expName != null)
@@ -35,7 +35,7 @@ public class FileChooserWizardPanel extends WizardPanel
 	initialize();
 	this.dataFile = dataFile;
 	handleDataFile();
-  }
+  }// constructor
 //-----------------------------------------------------------------------------------------------
   public void initialize(){
 	tempData = new Hashtable();
@@ -61,7 +61,7 @@ public class FileChooserWizardPanel extends WizardPanel
 	chooseFileButton.addActionListener(this);
 	buttonPanel.add(chooseFileButton);
 	add(buttonPanel, BorderLayout.SOUTH);
-  }
+  }// initialize
 //-----------------------------------------------------------------------------------------------
   private boolean readFile(String filePath){
 	try{
@@ -115,7 +115,7 @@ public class FileChooserWizardPanel extends WizardPanel
 	  return false;
 	}
 	return true;
-  }
+  }// readFile
 //-----------------------------------------------------------------------------------------------
   public void actionPerformed(ActionEvent e) {
 	JFileChooser fc = new JFileChooser();
@@ -124,7 +124,7 @@ public class FileChooserWizardPanel extends WizardPanel
 	  dataFile = (fc.getSelectedFile()).toString();
 	  handleDataFile();
  	}
-  }
+  }// actionPerformed
 //-----------------------------------------------------------------------------------------------
   private String getExperimentName() {
 	String newName = JOptionPane.showInputDialog(this, 
@@ -136,7 +136,7 @@ public class FileChooserWizardPanel extends WizardPanel
 	  experimentName = newName;
 
 	return experimentName;
-  }
+  }// getExperimentName
 //-----------------------------------------------------------------------------------------------
   private void handleDataFile() {
 	boolean success = false;
@@ -168,20 +168,20 @@ public class FileChooserWizardPanel extends WizardPanel
 	imagePanel.setVisible(false);
 	imagePanel.add(tempPanel, BorderLayout.CENTER);
 	imagePanel.setVisible(true);
-  }
+  }// paintIcon
 //-----------------------------------------------------------------------------------------------
   public void valueChanged(ListSelectionEvent e){
 	if (e.getValueIsAdjusting()) {
 	  paintIcon();
 	}
-  }
+  }// valueChanged
 //-----------------------------------------------------------------------------------------------
   public void display() {
-  }
+  }// display
 //-----------------------------------------------------------------------------------------------
   public boolean hasNext() {
 	return true;
-  }
+  }// hasNext
 //-----------------------------------------------------------------------------------------------
   public boolean validateNext(List list) {
 	boolean valid = true;
@@ -204,28 +204,32 @@ public class FileChooserWizardPanel extends WizardPanel
 	  wizardContext.setAttribute(WIZARD_CONDITIONS, conditionNames);
 	}
 	return valid;
-  }
+  }// validateNext
 //-----------------------------------------------------------------------------------------------
   public boolean hasHelp() {
 	return false;
-  }
+  }// hasHelp
 //-----------------------------------------------------------------------------------------------
   public void help() {
-  }
+  }// help
 //-----------------------------------------------------------------------------------------------
   public WizardPanel next() {
 	return new ConditionTreeWizardPanel(getWizardContext());
-  }
+  }// next
 //-----------------------------------------------------------------------------------------------
   public boolean canFinish() {
 	return false;
-  }
+  }// canFinish
+//-----------------------------------------------------------------------------------------------
+  public boolean canCancel() {
+	return true;
+  }// canCancel
 //-----------------------------------------------------------------------------------------------
   public boolean validateFinish(List list) {
 	return false;
-  }
+  }// validateFinish
 //-----------------------------------------------------------------------------------------------
   public void finish() {
-  }
+  }// finish
 //-----------------------------------------------------------------------------------------------
 }

@@ -1,4 +1,5 @@
 package DataLoader;
+//-----------------------------------------------------------------------------------------------
 import java.util.List;
 import java.util.Hashtable;
 import java.util.HashMap;
@@ -11,9 +12,10 @@ import javax.swing.border.*;
 import javax.swing.tree.*;
 import java.lang.*;
 import csplugins.isb.pshannon.experiment.metadata.*;
-
+//-----------------------------------------------------------------------------------------------
 public class ConditionTreeWizardPanel extends WizardPanel 
   implements ActionListener {
+//-----------------------------------------------------------------------------------------------
   private static String repository = "httpIndirect://db.systemsbiology.net:8080/halo/DataFetcher.py";
   protected MetaDataNavigator experimentNavigator;
   protected JTree tree;
@@ -23,7 +25,7 @@ public class ConditionTreeWizardPanel extends WizardPanel
   private static String REPLACE_COMMAND = "Replace";
   private JTextField currentPerturbation;
   //  private static String REMOVE_COMMAND = "Remove";
-
+//-----------------------------------------------------------------------------------------------
   protected static class PerturbationNode extends DefaultMutableTreeNode{
 	private boolean isEditable;
 	public PerturbationNode(Object a){
@@ -35,8 +37,8 @@ public class ConditionTreeWizardPanel extends WizardPanel
 	public boolean isEditable() {
 	  return isEditable;
 	}
-  }
-
+  }// class PerturbationNode
+//-----------------------------------------------------------------------------------------------
   public ConditionTreeWizardPanel(WizardContext wc) {
 	setWizardContext(wc);
 	setLayout(new BorderLayout());
@@ -66,9 +68,8 @@ public class ConditionTreeWizardPanel extends WizardPanel
 	treeStatusPanel.add(treeButtonPanel);
 	treeStatusPanel.add(perturbationPanel);
 	add(treeStatusPanel, BorderLayout.SOUTH);
-  }
-
-
+  }// constructor
+//-----------------------------------------------------------------------------------------------
   public JScrollPane initTree (){
 	try{
 	  experimentNavigator = new MetaDataNavigator(repository);
@@ -86,8 +87,8 @@ public class ConditionTreeWizardPanel extends WizardPanel
 	createTree(rootNode, experimentsTree);
 	JScrollPane scrollPane = new JScrollPane(tree);
 	return scrollPane;
-  }
-  
+  }// initTree
+//-----------------------------------------------------------------------------------------------
   private void createTree (PerturbationNode root, HashMap e) {
 	Object[] a = (e.keySet()).toArray();
 	Arrays.sort(a);
@@ -100,8 +101,8 @@ public class ConditionTreeWizardPanel extends WizardPanel
 		createTree(newNode, (HashMap)e.get(a[m]));
 	}
 
-  }
-
+  }// createTree
+//-----------------------------------------------------------------------------------------------
   public void actionPerformed(ActionEvent e) {
 	String event = e.getActionCommand();
 	if (INSERT_COMMAND.equals(event)){
@@ -146,8 +147,8 @@ public class ConditionTreeWizardPanel extends WizardPanel
 	  TreePath currentPath = tree.getSelectionPath();
 	}
 	 */
-  }
-
+  }// actionPerformed
+//-----------------------------------------------------------------------------------------------
   public PerturbationNode addObject(Object child) {
 	PerturbationNode parentNode = null;
 	TreePath parentPath = tree.getSelectionPath();
@@ -157,8 +158,8 @@ public class ConditionTreeWizardPanel extends WizardPanel
 	  parentNode = (PerturbationNode)(parentPath.getLastPathComponent());
 	}
 	return addObject(parentNode, child, true);
-  }
-
+  }// addObject
+//-----------------------------------------------------------------------------------------------
   public PerturbationNode addObject(PerturbationNode parent,
 										  Object child,
 										  boolean visible) {
@@ -170,8 +171,8 @@ public class ConditionTreeWizardPanel extends WizardPanel
 	treeModel.insertNodeInto(childNode, parent, parent.getChildCount());
 	tree.scrollPathToVisible(new TreePath(childNode.getPath()));
 	return childNode;
-  }
-  
+  }// addObject
+//-----------------------------------------------------------------------------------------------
   class ExperimentTreeModelListener implements TreeModelListener {
 	public void treeNodesChanged(TreeModelEvent e) {
 	  PerturbationNode newNode;
@@ -188,13 +189,15 @@ public class ConditionTreeWizardPanel extends WizardPanel
 	}
 	public void treeStructureChanged(TreeModelEvent e){
 	}
-  }
-
+  }// class ExperimentTreeModelListener
+//-----------------------------------------------------------------------------------------------
   public void display() {
-  }
+  }// display
+//-----------------------------------------------------------------------------------------------
   public boolean hasNext() {
 	return true;
-  }
+  }// hasNext
+//-----------------------------------------------------------------------------------------------
   public boolean validateNext(List list) {
 	boolean valid = true;
 	if (wizardContext.getAttribute(WIZARD_PERTURBATION) == null) {
@@ -202,16 +205,25 @@ public class ConditionTreeWizardPanel extends WizardPanel
 	  valid = false;
 	}
 	return valid;
-  }
+  }// validateNext
+//-----------------------------------------------------------------------------------------------
   public WizardPanel next() {
 	return new GeneralInfoWizardPanel(getWizardContext());
-  }
+  }// next
+//-----------------------------------------------------------------------------------------------
   public boolean canFinish() {
 	return false;
-  }
+  }// canFinish
+//-----------------------------------------------------------------------------------------------
+  public boolean canCancel() {
+	return true;
+  }// canCancel
+//-----------------------------------------------------------------------------------------------
   public boolean validateFinish(List list) {
 	return false;
-  }
+  }// validateFinish
+//-----------------------------------------------------------------------------------------------
   public void finish() {
-  }
+  }// finish
+//-----------------------------------------------------------------------------------------------
 }
