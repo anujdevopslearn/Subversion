@@ -600,19 +600,25 @@ sub getExperimentNames {
 
   #### Get the data for all the specified search_batch_ids
   $sql = qq~
-      SELECT search_batch_id,experiment_tag,set_tag
+      SELECT search_batch_id,experiment_tag,set_tag,search_batch_subdir
         FROM $TBPR_PROTEOMICS_EXPERIMENT PE
-       INNER JOIN $TBPR_SEARCH_BATCH SB ON ( PE.experiment_id = SB.experiment_id )
-       INNER JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
+       INNER JOIN $TBPR_SEARCH_BATCH SB
+	  ON ( PE.experiment_id = SB.experiment_id )
+       INNER JOIN $TBPR_BIOSEQUENCE_SET BSS
+	  ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
        WHERE search_batch_id IN ( $search_batch_ids )
   ~;
   my @rows = $sbeams->selectSeveralColumns($sql);
 
   #### Define some variables
   my $row;
-  my %exp_tag_hash;            #### Contains all exp tags in hash
+  my %set_tag_hash;            #### Contains all set tags in hash
   my $allowed_experiment_tag;  #### Can only honor a single experiment tag!
 
+  #### If there are ever searches against the same set, need to use subdirs
+  my %subdir_tag_hash;         #### Contains all search_batch_subdirs tags
+  my %used_set_tags_hash;
+  my $need_subdirs;
 
   #### Build the hash of set_tags.  Insist that only one experiment_tag was
   #### selected
@@ -620,16 +626,24 @@ sub getExperimentNames {
     my $search_batch_id = $row->[0];
     my $experiment_tag = $row->[1];
     my $set_tag = $row->[2];
-    $exp_tag_hash{$search_batch_id} = $set_tag;
+    my $search_batch_subdir = $row->[3];
+
+    $need_subdirs = 1 if (exists($used_set_tags_hash{$set_tag}));
+
+    $set_tag_hash{$search_batch_id} = $set_tag;
+    $used_set_tags_hash{$set_tag} = 1;
+    $subdir_tag_hash{$search_batch_id} = $search_batch_subdir;
 
     $allowed_experiment_tag = $experiment_tag unless ($allowed_experiment_tag);
     if ($experiment_tag ne $allowed_experiment_tag) {
-      $exp_tag_hash{ERROR} = "More than one experiment selected!! You may ".
+      $set_tag_hash{ERROR} = "More than one experiment selected!! You may ".
         "only select multiple searches of the same experiment!";
     }
   }
 
-  return %exp_tag_hash;
+  return %subdir_tag_hash if ($need_subdirs);
+
+  return %set_tag_hash;
 
 } # end getExperimentNames
 
