@@ -29,6 +29,10 @@ use URI::Escape;
 use Storable;
 use Time::HiRes qw( usleep ualarm gettimeofday tv_interval );
 
+use lib "/net/dblocal/src/CPAN/GDGraph-1.33a/blib/lib";
+use GD::Graph::histogram;
+use GD::Graph::xypoints;
+
 
 #use lib "/net/db/src/CPAN/Data-ShowTable-3.3a/blib/lib";
 #use Data::ShowTableTest;
@@ -38,6 +42,7 @@ use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
+use SBEAMS::Connection::Utilities;
 
 $q       = new CGI;
 
@@ -1796,6 +1801,259 @@ sub displayResultSetControls {
 
 
 } # end displayResultSetControls
+
+
+
+###############################################################################
+# displayResultSetPlot
+#
+# Displays a plot of data based on the information in the ResultSet
+###############################################################################
+sub displayResultSetPlot {
+    my $self = shift;
+    my %args = @_;
+
+
+    #### If the output mode is not html, do not make plot
+    if ($self->output_mode() ne 'html') {
+      return;
+    }
+
+
+    my ($i,$element,$key,$value,$line,$result,$sql);
+
+    #### Process the arguments list
+    my $resultset_ref = $args{'resultset_ref'};
+    $rs_params_ref = $args{'rs_params_ref'};
+    my $query_parameters_ref = $args{'query_parameters_ref'};
+    my $column_titles_ref = $args{'column_titles_ref'};
+    my $base_url = $args{'base_url'};
+
+    my %rs_params = %{$rs_params_ref};
+    my %parameters = %{$query_parameters_ref};
+
+    #print "here1<BR>rs_plot_type=$rs_params{rs_plot_type}<BR>rs_columnA=$rs_params{rs_columnA}\n";
+    #### If there is not a specific request to make a plot, then return
+    #unless ($rs_params{rs_plot_type} && $rs_params{rs_columnA} gt "") {
+    #  return;
+    #}
+
+
+    #### Start form
+    my $BR = "\n";
+    if ($self->output_mode() eq 'html') {
+      $BR = "<BR>\n";
+      print qq~<BR><BR>
+      <TABLE WIDTH="680" BORDER=0>
+      <FORM METHOD="POST">
+      ~;
+    }
+
+
+    #### If rs_columnA,B is defined, extract it
+    my $column_info;
+    foreach my $column_index ( 'A','B' ) {
+      $column_info->{$column_index}->{name} = '';
+      $column_info->{$column_index}->{data} = ();
+      if ($rs_params{"rs_column$column_index"} gt "") {
+        foreach my $element (@{$resultset_ref->{data_ref}}) {
+          my $value = $element->[$rs_params{"rs_column$column_index"}];
+          $value =~ /([\d\.]+)/;
+          if ($1) {
+            $value = $1;
+          } else {
+            $value = 0;
+          }
+          push(@{$column_info->{$column_index}->{data}},$value);
+        }
+        $column_info->{$column_index}->{name} = 
+          $column_titles_ref->[$rs_params{"rs_column$column_index"}] ||
+          $resultset_ref->{column_list_ref}->[$rs_params{"rs_column$column_index"}];
+      }
+    }
+
+
+    #### Create a temp file name to write to
+    my $tmpfile = "plot.$$.@{[time]}.png";
+    #print "Writing PNG to: $PHYSICAL_BASE_DIR/images/tmp/$tmpfile\n";
+
+
+    #### Make the plot
+    my $graph;
+    my @data;
+
+
+    #### If the plot_type is histogram, plot it
+    if ($rs_params{rs_plot_type} eq 'histogram') {
+      $result = $self->histogram(
+        data_array_ref=>$column_info->{A}->{data},
+      );
+
+      if ($result->{result} eq 'SUCCESS') {
+
+        #### Populate a data structure to plot
+        @data = (
+          $result->{xaxis_disp},
+          $result->{yaxis},
+        );
+
+        #### Create the histogram canvas
+        $graph = GD::Graph::histogram->new(640, 500);
+
+        #### Set the various plot parameters
+        $graph->set(
+            x_label           => $column_info->{A}->{name},
+            y_label           => 'Count',
+            title             => "Histogram of ".$column_info->{A}->{name},
+            x_tick_length     => -4,
+            axis_space        => 6,
+            x_label_position  => 0.5,
+            y_min_value       => 0,
+        );
+
+      } else {
+        print "ERROR: Unable to calculate histogram for column ".
+          $rs_params{rs_columnA};
+        $result = undef;
+      }
+
+
+    #### If the plot_type is xypoints, plot it
+    } elsif ($rs_params{rs_plot_type} eq 'xypoints') {
+
+      #### Populate a data structure to plot
+      @data = (
+        $column_info->{A}->{data},
+        $column_info->{B}->{data},
+      );
+      #### Create the histogram canvas
+      $graph = GD::Graph::xypoints->new(640, 500);
+
+      #### Set the various plot parameters
+      $graph->set(
+          x_label           => $column_info->{A}->{name},
+          y_label           => $column_info->{B}->{name},
+          title             => "Plot of ".$column_info->{B}->{name}." vs ".
+                               $column_info->{A}->{name},
+          long_ticks        => 0,
+          marker_size       => 2,
+          x_label_position  => 0.5,
+      );
+
+      #### Define result for later
+      $result = { result=>'SUCCESS' } ;
+
+    #### Else we don't know what to do with this one yet
+    }
+
+
+    #### Generate the plot and store to a file
+    if (defined($result)) {
+      my $gd = $graph->plot(\@data);
+      open(IMG, ">$PHYSICAL_BASE_DIR/images/tmp/$tmpfile") or die $!;
+      binmode IMG;
+      print IMG $gd->png;
+      close IMG;
+    }
+
+
+    #### Provide the link to the image
+    my $imgsrcbuffer = '&nbsp;';
+    $imgsrcbuffer = "<IMG SRC=\"$HTML_BASE_DIR/images/tmp/$tmpfile\">"
+      if (defined($result));
+    if ($self->output_mode() eq 'html') {
+      print qq~
+        <TR><TD COLSPAN="2">$imgsrcbuffer
+        </TD></TR>
+        <TD VALIGN="TOP" WIDTH="50%">
+        <INPUT TYPE="hidden" NAME="rs_set_name" VALUE="$rs_params{set_name}">
+        <TABLE>
+        <TR><TD BGCOLOR="#E0E0E0">Plot Type</TD><TD>
+        <SELECT NAME="rs_plot_type">
+      ~;
+
+    }
+
+    my %plot_type_names = (
+      'histogram'=>'Histogram of Column A',
+      'xypoints'=>'Scatterplot B vs A',
+    );
+
+    foreach $element ('histogram','xypoints') {
+      my $selected_flag = '';
+      my $option_name = $plot_type_names{$element} || $element;
+      $selected_flag = 'SELECTED' if ($element eq $rs_params{rs_plot_type});
+      print "<option $selected_flag VALUE=\"$element\">$option_name\n";
+    }
+
+    print "</SELECT></TD></TR>";
+
+    foreach my $column_index ( 'A','B' ) {
+      print qq~
+        <TR><TD BGCOLOR="#E0E0E0">Column $column_index</TD>
+        <TD><SELECT NAME="rs_column$column_index">
+      ~;
+
+      #### Create a list box for selecting columnA
+      $i=0;
+      foreach $element (@{$column_titles_ref}) {
+        my $selected_flag = '';
+        $selected_flag = 'SELECTED'
+          if ($i == $rs_params{"rs_column$column_index"});
+        print "<option $selected_flag VALUE=\"$i\">$element\n";
+        $i++;
+      }
+      print "</SELECT></TD></TR>\n";
+    }
+
+
+    print qq~
+      <TR><TD></TD><TD>
+      <INPUT TYPE="submit" NAME="apply_action" VALUE="VIEWRESULTSET">
+      </TD></TR></TABLE>
+      </TD><TD>
+      <TABLE>
+    ~;
+
+
+    foreach my $element (@{$result->{ordered_statistics}}) {
+      print "<TR><TD BGCOLOR=#E0E0E0>$element</TD><TD>$result->{$element}</TD></TR>\n";
+    }
+
+
+    print qq~
+      </TABLE>
+      </TD></TR>
+      </TABLE>
+    ~;
+
+
+    #### Finish the form
+    if ($self->output_mode() eq 'html') {
+      print qq~
+        </FORM>
+        </TABLE>
+      ~;
+    }
+
+
+    #### Print out some debugging information about the returned resultset:
+    if (0 == 1) {
+      print "<BR><BR>resultset_ref = $resultset_ref<BR>\n";
+      while ( ($key,$value) = each %{$resultset_ref} ) {
+        printf("%s = %s<BR>\n",$key,$value);
+      }
+      #print "columnlist = ",
+      #  join(" , ",@{$resultset_ref->{column_list_ref}}),"<BR>\n";
+      print "nrows = ",scalar(@{$resultset_ref->{data_ref}}),"<BR>\n";
+      print "rs_set_name=",$rs_params{set_name},"<BR>\n";
+    }
+
+
+    return 1;
+
+
+} # end displayResultSetPlot
 
 
 

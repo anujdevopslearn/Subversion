@@ -186,9 +186,7 @@ sub handle_request {
   unless ($n_params_found) {
     if ($TABLE_NAME eq "PR_GetSearchHits") {
       $parameters{input_form_format} = "minimum_detail";
-      $parameters{xcorr_charge1} = ">4.0";
-      $parameters{xcorr_charge2} = ">4.5";
-      $parameters{xcorr_charge3} = ">5.0";
+      $parameters{probability_constraint} = ">0.7";
       $parameters{sort_order} = "experiment_tag,set_tag,S.file_root,SH.cross_corr_rank,SH.hit_index";
     }
   }
@@ -744,6 +742,16 @@ sub handle_request {
       resultset_ref=>$resultset_ref,
       query_parameters_ref=>\%parameters,
       rs_params_ref=>\%rs_params,
+      base_url=>$base_url,
+    );
+
+
+    #### Display a plot of data from the resultset
+    $sbeams->displayResultSetPlot(
+      rs_params_ref=>\%rs_params,
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      column_titles_ref=>\@column_titles,
       base_url=>$base_url,
     );
 

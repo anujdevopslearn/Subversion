@@ -545,6 +545,16 @@ sub handle_request {
         base_url=>$base_url
       );
 
+      #### Display a plot of data from the resultset
+      $sbeams->displayResultSetPlot(
+        rs_params_ref=>\%rs_params,
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters,
+        column_titles_ref=>\@column_titles,
+        base_url=>$base_url,
+      );
+
+
     }
 
 

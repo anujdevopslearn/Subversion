@@ -716,6 +716,29 @@ sub handle_request {
         base_url=>$base_url);
 
 
+    #### Set some default plotting settings based on type
+    if ($parameters{display_options} =~ /GroupCount/) {
+      $rs_params{rs_plot_type} = 'xypoints' unless ($rs_params{rs_plot_type});
+      $rs_params{rs_columnA} = 0 unless (defined($rs_params{rs_columnA}) && $rs_params{rs_columnA} >= 0);
+      $rs_params{rs_columnB} = 1 unless (defined($rs_params{rs_columnB}) && $rs_params{rs_columnB} >= 0);
+    } elsif ($parameters{display_options} =~ /GroupProtein/) {
+      $rs_params{rs_plot_type} = 'histogram' unless ($rs_params{rs_plot_type});
+      $rs_params{rs_columnA} = 4 unless (defined($rs_params{rs_columnA}) && $rs_params{rs_columnA} >= 0);
+    } else {
+      $rs_params{rs_plot_type} = 'histogram' unless ($rs_params{rs_plot_type});
+      $rs_params{rs_columnA} = 7 unless (defined($rs_params{rs_columnA}) && $rs_params{rs_columnA} >= 0);
+    }
+
+    #### Display a plot of data from the resultset
+    $sbeams->displayResultSetPlot(
+      rs_params_ref=>\%rs_params,
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      column_titles_ref=>\@column_titles,
+      base_url=>$base_url,
+    );
+
+
   #### If QUERY was not selected, then tell the user to enter some parameters
   } else {
     if ($sbeams->invocation_mode() eq 'http') {
