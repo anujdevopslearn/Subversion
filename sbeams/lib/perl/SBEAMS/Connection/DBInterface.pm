@@ -2095,9 +2095,8 @@ sub displayResultSet {
     }
 
 
-    #### If the desired output format is TSV, dump out the data that way
-    if ($self->output_mode() eq 'tsv' || $self->output_mode() eq 'excel' ||
-        $self->output_mode() eq 'csv' ) {
+    #### If the desired output format is TSV-like, dump out the data that way
+    if ($self->output_mode() =~ /tsv|csv|excel/) {
       my @row;
 
       #### If the invocation_mode is http, provide a header
@@ -2105,13 +2104,13 @@ sub displayResultSet {
       my $header = "Content-type: text/tab-separated-values\n\n";
 
       if ($self->invocation_mode() eq 'http') {
-        if ($self->output_mode() eq 'tsv') {
+        if ($self->output_mode() =~ /tsv/) {
           $header = "Content-type: text/tab-separated-values\n\n";
           $delimiter = "\t";
-        } elsif ($self->output_mode() eq 'csv') {
+        } elsif ($self->output_mode() =~ /csv/) {
           $header = "Content-type: text/comma-separated-values\n\n";
           $delimiter = ",";
-        } elsif ($self->output_mode() eq 'csv') {
+        } elsif ($self->output_mode() =~ /excel/) {
           $header = "Content-type: application/excel\n\n";
           $delimiter = "\t";
 		}
@@ -2124,19 +2123,19 @@ sub displayResultSet {
       $resultset_ref->{page_size} = 1000000
         if ($rs_params_ref->{default_values} eq 'YES');
 
-	  #### Get the hidden column hash
-	  my %hidden_cols;
-          %hidden_cols = %{$hidden_cols_ref} if ($hidden_cols_ref);
+      #### Get the hidden column hash
+      my %hidden_cols;
+      %hidden_cols = %{$hidden_cols_ref} if ($hidden_cols_ref);
 
-	  #### Make tools for finding unacceptable columns to output
+      #### Make tools for finding unacceptable columns to output
       #### The following are removed:
-	  #### 1) Hidden Columns unless  output_mode is 'http' or contains 'full'
-	  #### 2) if the data starts with '[' 
-	  ####    NOTE: only the first column is used for thiS!
-	  my @no_print_columns;
-	  my @all_columns = @{$resultset_ref->{column_list_ref}};
-#	  my @first_data_col = @{@{$resultset_ref->{data_ref}}[0]};
+      #### 1) Hidden Columns if output_mode is tsv | csv | excel and does not contain 'full'
+      #### 2) if the data starts with '[' 
+      ####    NOTE: only the first column is used for thiS!
+      my @no_print_columns;
+      my @all_columns = @{$resultset_ref->{column_list_ref}};
 
+#         my @first_data_col = @{@{$resultset_ref->{data_ref}}[0]};
 	  #### Look at FIRST data column to identify potential links
 #	  for (my $column = 0; $column < $#first_data_col; $column++) {
 #		if ($first_data_col[$column] =~ /^\s*\[/ && 
@@ -2149,24 +2148,25 @@ sub displayResultSet {
       #### Convert to a delimiter-safe format
       my @output_row = ();
 
-	  for (my $column = 0; $column < scalar(@all_columns); $column++){
-		#### If this column's already been flagged for removal, continue;
-		next if ($no_print_columns[$column] == 1);
+      for (my $column = 0; $column < scalar(@all_columns); $column++){
+	#### If this column's already been flagged for removal, continue;
+	next if ($no_print_columns[$column]);
 
-		my $datum = $all_columns[$column];
+	my $datum = $all_columns[$column];
 
-		#### Flag Columns to REMOVAL from printing. 
-		unless ($self->output_mode() =~ /http|full/) {
-		  if ($hidden_cols{$datum}) {
-			$no_print_columns[$column] = 1;
-			next;
-		  }else {
-			$no_print_columns[$column] = 0;
-		  }
-		}
+	#### Flag Columns to REMOVAL from printing. 
+	if ($self->output_mode() eq 'tsv' || $self->output_mode() eq 'csv' ||
+            $self->output_mode() eq 'excel') {
+	  if ($hidden_cols{$datum}) {
+	    $no_print_columns[$column] = 1;
+	    next;
+	  } else {
+	    $no_print_columns[$column] = 0;
+	  }
+	}
 
         if ($datum =~ /[\t,\"]/) {
-          $datum =~ s/\t/ /g if ($self->output_mode() eq 'tsv');
+          $datum =~ s/\t/ /g if ($self->output_mode() =~ /tsv/);
           $datum =~ s/\"/""/g;
           $datum = "\"$datum\"";
         }
@@ -2174,15 +2174,15 @@ sub displayResultSet {
       }
       print join($delimiter,@output_row),"\n";
 
-	  #### Print out individual data rows, removing any flagged columns
+      #### Print out individual data rows, removing any flagged columns
       while (@row = returnNextRow()) {
         @output_row = ();
 
-		for (my $column = 0; $column < scalar(@row); $column++){
-		  my $datum = $row[$column];
-		  next if ($no_print_columns[$column] == 1);
+	for (my $column = 0; $column < scalar(@row); $column++){
+	  my $datum = $row[$column];
+	  next if ($no_print_columns[$column] == 1);
           if ($datum =~ /[\t,\"]/) {
-            $datum =~ s/\t/ /g if ($self->output_mode() eq 'tsv');
+            $datum =~ s/\t/ /g if ($self->output_mode()  =~ /tsv/);
             $datum =~ s/\"/""/g;
             $datum = "\"$datum\"";
           }
