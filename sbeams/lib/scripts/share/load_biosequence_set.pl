@@ -1509,6 +1509,12 @@ sub specialParsing {
      $rowdata_ref->{dbxref_id} = '8';
   }
 
+  if ($rowdata_ref->{biosequence_name} =~ /^(UPSP|UPTR)\:(.+)$/ ) {
+     $rowdata_ref->{biosequence_gene_name} = $2;
+     $rowdata_ref->{biosequence_accession} = $2;
+     $rowdata_ref->{dbxref_id} = '34';
+  }
+
 
   #### Conversion rules for the ENSEMBL Human Protein database
   if ($rowdata_ref->{biosequence_name} =~ /^Translation:(ENSP\d+)$/ ) {
