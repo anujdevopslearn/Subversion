@@ -222,17 +222,16 @@ sub handle_request {
     constraint_column=>"ERV.plate_id",
     constraint_type=>"text_list",
     constraint_name=>"Plate ID",
-    constraint_value=>$parameters{plate_id} );
+    constraint_value=>$parameters{plate_id_constraint} );
   return if ($plate_id_clause == -1);
 
-  #### Build SNP_ACCESSION constraint
+  #### Build ASSAY ID constraint
   my $assay_id_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"ERV.assay_id",
     constraint_type=>"plain_text",
     constraint_name=>"Assay ID",
     constraint_value=>$parameters{assay_id_constraint} );
   return if ($assay_id_clause == -1);
-
 
   #### Build CALL QUALITY constraint
   my $call_quality_clause = $sbeams->parseConstraint2SQL(
@@ -262,6 +261,9 @@ sub handle_request {
     ["genotype_id","ERV.genotype_id","Genotype"],
     ["call_quality","ERV.description","Call Quality"],
     ["call_date","ERV.call_date","Call Date"],
+    ["manual_genotype_call","MGC.genotype_call","Manual Genotype Call"],
+    ["manual_call_quality","MGC.call_quality","Manual Call Quality"],
+    ["manual_genotype_call_id","MGC.manual_genotype_call_id","Manual Genotype Call ID"],
   );
 
 
@@ -283,14 +285,18 @@ sub handle_request {
 
   #### Define the SQL statement
   $sql = qq~
-SELECT $limit_clause $columns_clause
-  FROM SNP.dbo.export_results_view ERV
- WHERE 1=1
-$project_id_clause
-$plate_id_clause
-$assay_id_clause
-$call_quality_clause
-   AND genotype_id IS NOT NULL
+   SELECT $limit_clause $columns_clause
+     FROM SNP.dbo.export_results_view ERV
+     LEFT JOIN SNP.dbo.manual_genotype_call MGC
+       ON ( ERV.project_id = MGC.project_id AND
+            ERV.assay_id = MGC.assay_id AND
+            ERV.sample_id = MGC.sample_id )
+    WHERE 1=1
+      $project_id_clause
+      $plate_id_clause
+      $assay_id_clause
+      $call_quality_clause
+      AND genotype_id IS NOT NULL
  ORDER BY project_id,plate_id,assay_id,sample_id,call_date
   ~;
 
@@ -300,15 +306,8 @@ $call_quality_clause
   $pass_action = $apply_action if ($apply_action =~ /QUERY/i);
 
 
-  #### Define the hypertext links for columns that need them
-  %url_cols = ('set_tag' => "$CGI_BASE_DIR/SNP/ManageTable.cgi?TABLE_NAME=biosequence_set&biosequence_set_id=\%$colnameidx{biosequence_set_id}V",
-               'accession' => "\%$colnameidx{uri}V\%$colnameidx{accesssion}V",
-  );
-
-
   #### Define columns that should be hidden in the output table
-  %hidden_cols = ('biosequence_set_id' => 1,
-                  'uri' => 1,
+  %hidden_cols = ('manual_genotype_call_id' => 1,
   );
 
 
@@ -342,6 +341,16 @@ $call_quality_clause
         resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters);
     }
 
+
+    #### Redefine the hypertext links for columns that need them
+    %url_cols = getURLColumns(
+ 	  resultset_ref => $resultset_ref,
+ 	  query_parameters_ref => \%parameters,
+  	  input_types_ref => \%input_types,
+ 	  pass_action => $pass_action,
+    );
+
+
     #### Display the resultset
     @column_titles = @{$resultset_ref->{column_list_ref}};
     $sbeams->displayResultSet(rs_params_ref=>\%rs_params,
@@ -356,6 +365,16 @@ $call_quality_clause
     $sbeams->displayResultSetControls(rs_params_ref=>\%rs_params,
         resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters,
         base_url=>$base_url);
+
+
+    #### Display a plot of data from the resultset
+    $sbeams->displayResultSetPlot(
+      rs_params_ref=>\%rs_params,
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      column_titles_ref=>\@column_titles,
+      base_url=>$base_url,
+    );
 
 
   #### If QUERY was not selected, then tell the user to enter some parameters
@@ -432,20 +451,26 @@ sub postProcessResultset {
   my $plate_id_index = $resultset_ref->{column_hash_ref}->{plate_id};
   my $call_quality_index = $resultset_ref->{column_hash_ref}->{call_quality};
   my $call_date_index = $resultset_ref->{column_hash_ref}->{call_date};
+  my $manual_genotype_call_index = $resultset_ref->{column_hash_ref}->{manual_genotype_call};
+  my $manual_call_quality_index = $resultset_ref->{column_hash_ref}->{manual_call_quality};
+  my $manual_genotype_call_id_index = $resultset_ref->{column_hash_ref}->{manual_genotype_call_id};
 
 
   #### Create a data structure for all values
   my ($project_id,$sample_id,$assay_id,$genotype_id,$plate_id);
-  my ($call_quality,$call_date);
+  my ($call_quality,$call_date,$manual_genotype_call,$manual_call_quality,$manual_genotype_call_id);
   my $data;
-  my @query_assays = ();
+  my %query_assays;
+  my @query_assays;
   my %dup_stats;
   my %samples;
+  my %projects;
   my %plate_ids;
 
 
   #### Loop over each row in the resultset
   my $n_rows = scalar(@{$resultset_ref->{data_ref}});
+  print "Total number of input rows: $n_rows<BR>\n";
   for (my $row=0;$row<$n_rows-1; $row++) {
 
     $project_id = $resultset_ref->{data_ref}->[$row]->[$project_id_index];
@@ -458,36 +483,39 @@ sub postProcessResultset {
     $call_quality = $resultset_ref->{data_ref}->[$row]->[$call_quality_index];
     $call_date = $resultset_ref->{data_ref}->[$row]->[$call_date_index];
     $samples{$sample_id} = 1;
+    $projects{$project_id} = 1;
     $plate_ids{$plate_id} = $call_date;
+    $manual_genotype_call = $resultset_ref->{data_ref}->[$row]->[$manual_genotype_call_index];
+    $manual_call_quality = $resultset_ref->{data_ref}->[$row]->[$manual_call_quality_index];
+    $manual_genotype_call_id = $resultset_ref->{data_ref}->[$row]->[$manual_genotype_call_id_index];
 
     $genotype_id =~ s/\./\//;
     $genotype_id="C/C" if ($genotype_id eq "C");
     $genotype_id="A/A" if ($genotype_id eq "A");
     $genotype_id="G/G" if ($genotype_id eq "G");
     $genotype_id="T/T" if ($genotype_id eq "T");
-    #### Implement later?
-    #$genotype_id="$1/$2" if ($genotype_id =~ /^(\w)(\w)$/);
+    $genotype_id="$1/$2" if ($genotype_id =~ /^(\w)(\w)$/);
 
     #### Store the genotype with great care about collisions
     #### Does this one exist already?
-    if (exists($data->{$assay_id}->{$sample_id}->{single_call})) {
+    if (exists($data->{$project_id}->{$assay_id}->{$sample_id}->{single_call})) {
       #### Is it defined?
-      if (defined($data->{$assay_id}->{$sample_id}->{single_call})) {
+      if (defined($data->{$project_id}->{$assay_id}->{$sample_id}->{single_call})) {
 
         #### If is the same, then nothing to do
-        if ($data->{$assay_id}->{$sample_id}->{single_call} eq $genotype_id) {
+        if ($data->{$project_id}->{$assay_id}->{$sample_id}->{single_call} eq $genotype_id) {
           if ($genotype_id eq '') {
 	    $dup_stats{n_replace_empty_with_empty}++;
 	  } else {
   	    $dup_stats{n_replace_with_same}++;
 	    #print "$sample_id: $genotype_id is same as ".
-	    #  "$data->{$assay_id}->{$sample_id}.... ";
+	    #  "$data->{$project_id}->{$assay_id}->{$sample_id}.... ";
 	  }
 
 	#### Else is the previous call empty?
-	} elsif ($data->{$assay_id}->{$sample_id}->{single_call} eq '') {
+	} elsif ($data->{$project_id}->{$assay_id}->{$sample_id}->{single_call} eq '') {
 	  $dup_stats{replace_an_empty}++;
-          $data->{$assay_id}->{$sample_id}->{single_call} = $genotype_id;
+          $data->{$project_id}->{$assay_id}->{$sample_id}->{single_call} = $genotype_id;
 
 	#### Else is the current call empty?
 	} elsif ($genotype_id eq '') {
@@ -496,25 +524,32 @@ sub postProcessResultset {
 	#### Else are they different?
 	} else {
 	  $dup_stats{n_replace_conflict}++;
-	  #print "$genotype_id is not $data->{$assay_id}->{$sample_id}.... ";
+	  #print "$genotype_id is not $data->{$project_id}->{$assay_id}->{$sample_id}.... ";
 	}
 
       #### Else if the previous is undefined, just replace the new value
       } else {
         $dup_stats{replace_an_undef}++;
-        $data->{$assay_id}->{$sample_id}->{single_call} = $genotype_id;
+        $data->{$project_id}->{$assay_id}->{$sample_id}->{single_call} = $genotype_id;
       }
 
     #### Else just add it
     } else {
-      $data->{$assay_id}->{$sample_id}->{single_call} = $genotype_id;
+      $data->{$project_id}->{$assay_id}->{$sample_id}->{single_call} = $genotype_id;
     }
 
     #### In any case, keep all calls in the hash as well
-    $data->{$assay_id}->{$sample_id}->{all_calls}->{$plate_id} = $genotype_id;
+    if (defined($call_date) && $call_date gt '') {
+      $data->{$project_id}->{$assay_id}->{$sample_id}->{all_calls}->{$call_date}->{genotype} = $genotype_id;
+      $data->{$project_id}->{$assay_id}->{$sample_id}->{all_calls}->{$call_date}->{quality} = $call_quality;
+      $data->{$project_id}->{$assay_id}->{$sample_id}->{all_calls}->{$call_date}->{plate} = $plate_id;
+      $data->{$project_id}->{$assay_id}->{$sample_id}->{manual_genotype_call} = $manual_genotype_call;
+      $data->{$project_id}->{$assay_id}->{$sample_id}->{manual_call_quality} = $manual_call_quality;
+      $data->{$project_id}->{$assay_id}->{$sample_id}->{manual_genotype_call_id} = $manual_genotype_call_id;
+    }
 
     #### Add this assay to the list of assays if we don't have it yet
-    push(@query_assays,$assay_id) unless ($query_assays[-1] eq $assay_id);
+    $query_assays{$assay_id} = 1;
 
   }
 
@@ -530,12 +565,14 @@ sub postProcessResultset {
   my $ppos = 0;
   my $position;
   my @assays;
+  @query_assays = sort(keys(%query_assays));
+
 
   #### If there's a snphash
   if (defined(%snphash)) {
     foreach $position (sort keys %snphash) {
       my $assay = $snphash{$position};
-      if (defined($data->{$assay})) {
+      if (defined($data->{$project_id}->{$assay})) {
   	print GAPFILE "\t",($position-$ppos),"\n" if ($ppos);
   	push (@assays,$assay);
   	print GAPFILE "$assay\t$position";
@@ -568,95 +605,246 @@ sub postProcessResultset {
   my %allele_frequencies;
 
 
+  my @samples = sort(keys(%samples));
+  my @projects= sort(keys(%projects));
+  my @columnheaders;
+  my @column_types;
+
+
   #### If the user asked for Concannon reordering, build that way
   if ($parameters{display_options} =~ /ConcannonReorder/) {
-    foreach my $letter ( 'A','B','C','D','E','F','G' ) {
-      for (my $num1 = 1; $num1 <=12; $num1++) {
-  	for (my $num2 = 0; $num2 <= 84; $num2+=12) {
-  	  my $fac = ($num1 + $num2);
-  	  my $sample_name = "$letter$fac";
-  	  my @row = ($sample_name);
-  	  foreach my $assay (@assays) {
-  	    if (defined($data->{$assay}->{$sample_name}->{single_call})) {
-  	      push(@row,$data->{$assay}->{$sample_name}->{single_call});
+    foreach my $project_name (@projects) {
+      foreach my $letter ( 'A','B','C','D','E','F','G' ) {
+        for (my $num1 = 1; $num1 <=12; $num1++) {
+  	  for (my $num2 = 0; $num2 <= 84; $num2+=12) {
+  	    my $fac = ($num1 + $num2);
+    	    my $sample_name = "$letter$fac";
+  	    my @row = ($sample_name);
+  	    foreach my $assay (@assays) {
+  	      if (defined($data->{$project_name}->{$assay}->{$sample_name}->{single_call})) {
+  	        push(@row,$data->{$project_name}->{$assay}->{$sample_name}->{single_call});
 
-  	      #### Add to the allele counters
-  	      my @alleles = split("/",$data->{$assay}->{$sample_name}->{single_call});
-  	      foreach my $allele (@alleles) {
-  		$allele_frequencies{$assay}->{$allele}++;
-  		$allele_frequencies{$assay}->{total}++;
+  	        #### Add to the allele counters
+  	        my @alleles = split("/",$data->{$project_name}->{$assay}->{$sample_name}->{single_call});
+  	        foreach my $allele (@alleles) {
+  		  $allele_frequencies{$assay}->{$allele}++;
+  		  $allele_frequencies{$assay}->{total}++;
+  	        }
+
+  	      } else {
+  	        #push(@row,'0/0');
+  	        push(@row,'');
   	      }
-
-  	    } else {
-  	      #push(@row,'0/0');
-  	      push(@row,'');
-  	    }
-
+  	    } # end foreach assay
+  	    push(@new_data_array,\@row);
   	  }
-
-  	  push(@new_data_array,\@row);
-
-  	}
-
-      }
-
-    }
-
+        }
+      } # end foreach letter
+    } # end foreach project
+  } # end Concannon Reorder
 
   #### If the user asked for Sample vs Assay, build that way
-  } elsif ($parameters{display_options} =~ /SampleVsAssay/) {
-    my @samples = sort(keys(%samples));
-    foreach my $sample_name (@samples) {
-      my @row = ($sample_name);
-      foreach my $assay (@assays) {
-    	if (defined($data->{$assay}->{$sample_name}->{single_call})) {
-    	  push(@row,$data->{$assay}->{$sample_name}->{single_call});
+  if ($parameters{display_options} =~ /SampleVsAssay/) {
+    foreach my $project_name (@projects) {
+      foreach my $sample_name (@samples) {
+        my @row = ($sample_name);
+        foreach my $assay (@assays) {
+          if (defined($data->{$project_name}->{$assay}->{$sample_name}->{single_call})) {
+            push(@row,$data->{$project_name}->{$assay}->{$sample_name}->{single_call});
 
-    	  #### Add to the allele counters
-    	  my @alleles = split("/",$data->{$assay}->{$sample_name}->{single_call});
-    	  foreach my $allele (@alleles) {
-    	    $allele_frequencies{$assay}->{$allele}++;
-    	    $allele_frequencies{$assay}->{total}++;
+            #### Add to the allele counters
+            my @alleles = split("/",$data->{$project_name}->{$assay}->{$sample_name}->{single_call});
+            foreach my $allele (@alleles) {
+      	      $allele_frequencies{$assay}->{$allele}++;
+      	      $allele_frequencies{$assay}->{total}++;
+      	    }
+          } else {
+      	  push(@row,'');
+          }
+        } # end foreach assay
+        push(@new_data_array,\@row);
+      } # end foreach sample
+    } # end foreach project
+
+    #### Add an allele frequency summary at the bottom
+    my $n_failed_assays = 0;
+    foreach my $allele ('A','T','G','C') {
+      my @row = ("$allele frequency");
+      foreach my $assay (@assays) {
+        if (defined($allele_frequencies{$assay}->{$allele})) {
+          my $newval = sprintf("%.2f",$allele_frequencies{$assay}->{$allele} /
+                                $allele_frequencies{$assay}->{total});
+          if ($newval >= 0.90) {
+            #$failed_assay{$assay} = $newval;
+            print "Assay $assay failed? Major frequency >0.90: $newval<BR>\n";
+            $n_failed_assays++;
+          }
+        push(@row,$newval);
+        } else {
+          push(@row,'');
+        }
+      }
+      push(@new_data_array,\@row);
+    }
+    print "$n_failed_assays total failed assays<BR>\n" if ($n_failed_assays);
+    print scalar(@assays)." total assays<BR><BR>\n";
+  } # end Sample Vs Assay
+
+  #### If the user asked for Assay vs Sample, build that way
+  if ($parameters{display_options} =~ /AssayVsSample/) {
+    foreach my $project_name (@projects) {
+      foreach my $assay (@assays) {
+        my @row = ($assay);
+        foreach my $sample_name (@samples) {
+          if (defined($data->{$project_name}->{$assay}->{$sample_name}->{single_call})) {
+            push(@row,$data->{$project_name}->{$assay}->{$sample_name}->{single_call});
+
+        	  #### Add to the allele counters
+        	  my @alleles = split("/",$data->{$project_name}->{$assay}->{$sample_name}->{single_call});
+        	  foreach my $allele (@alleles) {
+        	    $allele_frequencies{$assay}->{$allele}++;
+        	    $allele_frequencies{$assay}->{total}++;
+        	  }
+        	} else {
+        	  push(@row,'');
+        	}
+        } # end foreach sample
+        push(@new_data_array,\@row);
+      } # end foreach assay
+    } # end project
+  } # end Assay vs. Sample
+
+  #### If the user asked for Sample vs Repeats, build that way
+  if ($parameters{display_options} =~ /SampleVsRepeat/) {
+
+    my $n_max_calls=0;
+    my $ncalls;
+
+    foreach my $project_name (@projects) {
+      foreach my $assay (@assays) {
+        foreach my $sample_name (@samples) {
+          $ncalls = scalar(keys(%{$data->{$project_name}->{$assay}->{$sample_name}->{all_calls}}));
+          #print "assay=$assay, sample=$sample_name, ncalls = $ncalls<BR>\n";
+          $n_max_calls = $ncalls if ($ncalls > $n_max_calls);
+          my %temp_hash;
+          $temp_hash{n_calls}=$ncalls;
+
+          my %genohash;
+	  my $call_index = 1;
+	  my $best_quality = 'Z';
+
+          foreach my $date (sort keys %{ $data->{$project_name}->{$assay}->{$sample_name}->{all_calls} }) {
+            $temp_hash{$call_index}->{call} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$date}->{genotype};
+            $temp_hash{$call_index}->{call_quality} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$date}->{quality};
+            $temp_hash{$call_index}->{call_plate_ID} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$date}->{plate};
+            $temp_hash{$call_index}->{call_date} = $date;
+
+	    $best_quality = $temp_hash{$call_index}->{call_quality}
+	      if ($best_quality gt $temp_hash{$call_index}->{call_quality});
+
+            $genohash{$temp_hash{$call_index}->{call}} = 1
+	      if ($temp_hash{$call_index}->{call} ne '');
+	    $call_index++;
+          }
+
+	  #### Add in any information from the manual calls
+	  $temp_hash{manual_genotype_call} = $data->{$project_name}->{$assay}->{$sample_name}->{manual_genotype_call};
+	  $temp_hash{call_final} = $data->{$project_name}->{$assay}->{$sample_name}->{manual_genotype_call};
+	  $temp_hash{manual_call_quality} = $data->{$project_name}->{$assay}->{$sample_name}->{manual_call_quality};
+	  $temp_hash{call_final_quality} = $data->{$project_name}->{$assay}->{$sample_name}->{manual_call_quality};
+	  $temp_hash{manual_genotype_call_id} = $data->{$project_name}->{$assay}->{$sample_name}->{manual_genotype_call_id};
+
+	  #### Add in the final information
+          my $n_distinct_calls = 0;
+          foreach my $genos (keys %genohash) {
+            $n_distinct_calls++;
+          }
+	  if ($n_distinct_calls == 0) {
+	    $temp_hash{call_consistency} = '';
+	  } elsif ($n_distinct_calls == 1) {
+	    $temp_hash{call_consistency} = 'OK';
+	    $temp_hash{call_final} = $temp_hash{1}->{call}
+	      unless ($temp_hash{call_final});
+	    $temp_hash{call_final_quality} = $best_quality
+	      unless ($temp_hash{call_final_quality});
+
+	  } else {
+	    $temp_hash{call_consistency} = 'CONFLICT';
+	  }
+
+          $data->{$project_name}->{$assay}->{$sample_name}->{all_calls_final} = \%temp_hash;
+        }
+      }
+    }
+
+    #### Put a cap on n_max_calls
+    if ($n_max_calls > 10) {
+      print "WARNING: At least one row has $n_max_calls different calls.  Capping at 10<BR>\n";
+      $n_max_calls = 10;
+    }
+
+
+    #### Define the headers for all the columns
+    push(@columnheaders, qw(final_call final_call_quality manual_genotype_call_id manual_call n_calls call_consistency));
+    push(@column_types, qw(varchar varchar int varchar int varchar));
+    my @expanding_column_names = qw(call call_quality call_date call_plate_ID);
+    my @expanding_column_types = qw(varchar varchar date varchar);
+    for (my $iheader = 0; $iheader<scalar(@expanding_column_names); $iheader++) {
+      for (my $i=1; $i<=$n_max_calls; $i++) {
+	my $tmp = $expanding_column_names[$iheader];
+	$tmp =~ s/call/call$i/;
+	push(@columnheaders,$tmp);
+	push(@column_types,$expanding_column_types[$iheader]);
+      }
+    }
+
+
+    #### Print some stats
+    if (0 == 0) {
+      print "Number of assays: ".scalar(@assays)."<BR>\n";
+      print "Number of samples: ".scalar(@samples)."<BR>\n";
+      print "Maximum number of calls: $n_max_calls<BR>\n";
+    }
+
+
+    #### Now fill in all the data rows
+    my $empty_rows = 0;
+    foreach my $project_name (@projects) {
+      foreach my $assay (@assays) {
+        foreach my $sample_name (@samples) {
+          my @newrow = ( $project_name,$assay,$sample_name);
+	  my $all_calls_final = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls_final};
+	  push(@newrow,$all_calls_final->{call_final});
+	  push(@newrow,$all_calls_final->{call_final_quality});
+	  push(@newrow,$data->{$project_name}->{$assay}->{$sample_name}->{manual_genotype_call_id});
+	  push(@newrow,$all_calls_final->{manual_genotype_call});
+	  push(@newrow,$all_calls_final->{n_calls});
+	  push(@newrow,$all_calls_final->{call_consistency});
+
+    	  foreach my $header_name (@expanding_column_names) {
+    	    for (my $i=1; $i<=$n_max_calls; $i++) {
+    	      push(@newrow,$all_calls_final->{$i}->{$header_name});
+    	    }
     	  }
 
-    	} else {
-    	  push(@row,'');
-    	}
+	  if ($all_calls_final->{n_calls} > 0) {
+	    push(@new_data_array,\@newrow);
+	  } else {
+	    $empty_rows++;
+	  }
+        } # end foreach sample_name
+      } # end foreach assay
+    } # end foreach project
 
-      }
-
-      push(@new_data_array,\@row);
-
+    #### Print some stats
+    if (0 == 0) {
+      print "Number of skipped empty rows: $empty_rows<BR>\n";
     }
 
-  }
+  } #endif SampleVsRepeat
 
 
-  #### Add an allele frequency summary at the bottom
-  my $n_failed_assays = 0;
-  foreach my $allele ('A','T','G','C') {
-    my @row = ("$allele frequency");
-    foreach my $assay (@assays) {
-      if (defined($allele_frequencies{$assay}->{$allele})) {
-        my $newval = sprintf("%.2f",$allele_frequencies{$assay}->{$allele} /
-                             $allele_frequencies{$assay}->{total});
-	if ($newval >= 0.90) {
-	  #$failed_assay{$assay} = $newval;
-	  print "Assay $assay failed? Major frequency >0.90: $newval<BR>\n";
-	  $n_failed_assays++;
-	}
-  	push(@row,$newval);
-      } else {
-        push(@row,'');
-      }
-    }
-    push(@new_data_array,\@row);
-  }
-  print "$n_failed_assays total failed assays<BR>\n" if ($n_failed_assays);
-  print scalar(@assays)." total assays<BR><BR>\n";
-
-
-  #### Fudge the assays by remove 'gi' if it exists within
+  #### Fudge the assays by removing 'gi' if it exists within
   my @fudged_assays;
   foreach my $tmp (@assays) {
     $tmp =~ s/gi//;
@@ -666,10 +854,78 @@ sub postProcessResultset {
 
   #### Replace existing resultset attributes with reformulated ones
   $resultset_ref->{data_ref} = \@new_data_array;
-  $resultset_ref->{column_list_ref} = ['Sample',@fudged_assays];
-  $resultset_ref->{precisions_list_ref} = [ (50) x (scalar(@assays)+1) ];
-
+  if ($parameters{display_options} =~ /SampleVsAssay/) {
+    $resultset_ref->{column_list_ref} = ['Sample',@fudged_assays];
+    $resultset_ref->{precisions_list_ref} = [ (50) x (scalar(@assays)+1) ];
+  } elsif ($parameters{display_options} =~ /AssayVsSample/) {
+    $resultset_ref->{column_list_ref} = ['Assay',@samples];
+    $resultset_ref->{precisions_list_ref} = [ (50) x (scalar(@samples)+1) ];
+  } elsif ($parameters{display_options} =~ /SampleVsRepeat/) {
+    $resultset_ref->{column_list_ref} = ['project_id','assay_id','sample_id',@columnheaders];
+    $resultset_ref->{precisions_list_ref} = [ (50) x (scalar(@columnheaders)+3) ];
+    $resultset_ref->{types_list_ref} = [ 'varchar','varchar','varchar',@column_types ];
+  }
 
   return 1;
 
 } # end postProcessResult
+
+
+
+###############################################################################
+# getURLColumns
+#
+# Define the URL columns based on the latest column_list
+###############################################################################
+sub getURLColumns {
+  my %args = @_;
+
+  #### Process the arguments list
+  my $resultset_ref = $args{'resultset_ref'};
+  my $query_parameters_ref = $args{'query_parameters_ref'};
+  my $input_types_ref = $args{'input_types_ref'};
+  my $pass_action = $args{'pass_action'};
+
+  my %parameters = %{$query_parameters_ref};
+  my %input_types = %{$input_types_ref};
+  my %url_cols;
+
+
+  #### Pass nearly all of the constraints down to a child query
+  my @parameters_to_pass;
+  my $parameters_list = '';
+  while ( my ($key,$value) = each %input_types ) {
+    if ($key ne 'sort_order' && $key ne 'display_options' &&
+        $key ne 'reference_constraint') {
+      if ($parameters{$key}) {
+        push(@parameters_to_pass,"$key=$parameters{$key}");
+      }
+    }
+  }
+  if (@parameters_to_pass) {
+    $parameters_list = join('&',@parameters_to_pass);
+  }
+
+
+  #### Define the a new colnameidx based on the latest column names
+  my $column_list_ref = $resultset_ref->{column_list_ref};
+  my $i = 0;
+  my %colnameidx;
+  foreach my $column_name (@{$column_list_ref}) {
+    $colnameidx{$column_name} = $i;
+    $i++;
+  }
+
+
+  #### Define the hypertext links for columns that need them
+  %url_cols = ('manual_call' => "$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=SN_manual_genotype_call&manual_genotype_call_id=\%$colnameidx{manual_genotype_call_id}V&project_id=\%$colnameidx{project_id}V&sample_id=\%$colnameidx{sample_id}V&assay_id=\%$colnameidx{assay_id}V&ShowEntryForm=1",
+	       'manual_call_ATAG' => 'TARGET="Win1"',
+	       'manual_call_ISNULL' => ' [Add] ',
+  );
+
+
+  return %url_cols;
+
+}
+
+
