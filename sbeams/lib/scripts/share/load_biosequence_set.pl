@@ -699,9 +699,10 @@ sub specialParsing {
   #### >Scr|FBgn0003339|CT1096|FBan0001030 "transcription factor" mol_weight=44264  located on: 3R 84A6-84B1; 
   if ($biosequence_set_name eq "Drosophila aa_gadfly Protein Database R3" ||
       $biosequence_set_name eq "Drosophila na_gadfly Nucleotide Database R3") {
-    $rowdata_ref->{biosequence_desc} =~
-      /gene_info:\[gene symbol:(\S+) .*?(FBgn\d+) /;
-    if ($1 && $2) {
+
+    if ($rowdata_ref->{biosequence_desc} =~
+                      /gene_info:\[gene symbol:(\S+) .*?(FBgn\d+) /) {
+       print "******\ndesc: $rowdata_ref->{biosequence_desc}\n1: $1\n2: $2\n*****\n";
        $rowdata_ref->{biosequence_gene_name} = $1;
        $rowdata_ref->{biosequence_accession} = $2;
        $rowdata_ref->{dbxref_id} = '2';
