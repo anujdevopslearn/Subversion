@@ -304,13 +304,13 @@ sub handleRequest {
 
   #### Loop over each biosequence_set, determining its status and processing
   #### it if desired
-  print "        set_tag      n_rows -e set_path\n";
-  print "---------------  ----------  - ---------------------------------\n";
+  print "        set_tag      n_rows -e Dt set_path\n";
+  print "---------------  ----------  - -- -------------------------------\n";
   foreach $biosequence_set_id (@biosequence_set_ids) {
     my $status = getBiosequenceSetStatus(
       biosequence_set_id => $biosequence_set_id);
-    printf("%15s  %10d  %s %s\n",$status->{set_tag},$status->{n_rows},
-      $status->{file_exists},$status->{set_path});
+    printf("%15s  %10d  %s %s %s\n",$status->{set_tag},$status->{n_rows},
+      $status->{file_exists},$status->{is_up_to_date},$status->{set_path});
 
     #### If we're not just checking the status
     unless ($check_status) {
@@ -354,7 +354,8 @@ sub getBiosequenceSetStatus {
 
   #### Get information about this biosequence_set_id from database
   $sql = qq~
-          SELECT BSS.biosequence_set_id,organism_id,set_name,set_tag,set_path,set_version
+          SELECT BSS.biosequence_set_id,organism_id,set_name,set_tag,set_path,
+                 set_version,source_file_date
             FROM ${DATABASE}biosequence_set BSS
            WHERE BSS.biosequence_set_id = '$biosequence_set_id'
              AND BSS.record_status != 'D'
@@ -370,6 +371,7 @@ sub getBiosequenceSetStatus {
   $status{set_tag} = $rows[0]->[3];
   $status{set_path} = $rows[0]->[4];
   $status{set_version} = $rows[0]->[5];
+  $status{source_file_date} = $rows[0]->[6];
 
 
   #### Get the number of rows for this biosequence_set_id from database
@@ -384,6 +386,26 @@ sub getBiosequenceSetStatus {
   #### See if the file exists
   $status{file_exists} = ' ';
   $status{file_exists} = '!' unless ( -e $status{set_path} );
+
+
+  #### See if the file is up to date
+  $status{is_up_to_date} = '  ';
+  my @stats = stat($status{set_path});
+  my $mtime = $stats[9];
+  my $source_file_date;
+  if ($mtime && $status{source_file_date}) {
+    my ($sec,$min,$hour,$mday,$mon,$year) = localtime($mtime);
+    $source_file_date = sprintf("%d-%2d-%2d_%2d:%2d:%2d",
+      1900+$year,$mon+1,$mday,$hour,$min,$sec);
+    $source_file_date =~ s/ /0/g;
+    $source_file_date =~ s/_/ /g;
+    if ($source_file_date eq $status{source_file_date}) {
+      $status{is_up_to_date} = 'OK';
+    } else {
+      $status{is_up_to_date} =
+        "$source_file_date != $status{source_file_date}";
+    }
+  }
 
 
   #### Put the information in a hash
