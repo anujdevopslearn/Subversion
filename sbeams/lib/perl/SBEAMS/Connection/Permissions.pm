@@ -915,6 +915,8 @@ sub getTablePermission {
   AND tgs.record_status != 'D'
   END
 
+  # print STDERR "USQL: $usql \n\n TGSQL: $gsql\n";
+
   my @gperms = $self->selectSeveralColumns( $gsql );
  
   if ( scalar( @gperms ) > 1 ) { # Should only return one row
@@ -1173,6 +1175,8 @@ sub getTableGroups {
     AND uwg.privilege_id <= $args{privilege}
     AND tgs.privilege_id <= $args{privilege}
     AND tgs.record_status != 'D'
+    AND uwg.record_status != 'D'
+    AND wg.record_status != 'D'
   END_SQL
 
   # To keep from coercing into ADMIN group:
@@ -1185,6 +1189,51 @@ sub getTableGroups {
   
 }
 
+
+###############################################################################
+# getUserProjectPermission
+# 
+# narg project_id      Parent project ID
+# narg contact_id      
+# 
+# ret hashref with 3 keys:  privilege  (privilege_id)
+#                           id         (user_project_permission_id)
+#                           status     (record_status)
+#
+# If record does not exist, all three keys are undef
+###############################################################################
+sub getUserProjectPermission {
+  my $self = shift;
+  my %args = @_;
+
+  foreach ( 'project_id', 'contact_id' ) {
+    die ("Required parameter $_ missing") if !defined $args{$_};
+  }
+
+  my @rows = $self->selectSeveralColumns( <<"  END_SQL" );
+  SELECT user_project_permission_id, privilege_id, record_status
+  FROM $TB_USER_PROJECT_PERMISSION
+  WHERE project_id = $args{project_id}
+  AND contact_id = $args{contact_id}
+  END_SQL
+
+  if ( scalar( @rows ) > 1 ) {
+    print STDERR "Error, more than one UPP row for a given user and project";
+  }
+
+  my %vals = ( id => undef, privilege => undef, status => undef );
+
+  return ( \%vals ) if !scalar( @rows );
+
+  my $cnt = 0;
+  for ( 'id', 'privilege', 'status' ) {
+    $vals{$_} = $rows[0]->[$cnt];
+    $cnt++;
+  }
+
+  return ( \%vals ); 
+
+} # End getUserProjectPermission
 
 
 ###############################################################################
