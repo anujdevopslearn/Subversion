@@ -120,7 +120,7 @@ sub showMainPage {
 
           foreach $i (@index_list) {
             $value = ${${$data{genes}}[$igene]}[$i];
-            $value =~ s/'/''/g;
+            $value =~ s/\'/\'\'/g;
             push (@data_list,"'$value'");
           }
           $data_textlist = join(",",@data_list);
@@ -131,8 +131,8 @@ sub showMainPage {
           ~;
 
 
-          #print $sqlquery;
-          $sbeams->executeSQL($sqlquery);
+          print $sqlquery;
+          #$sbeams->executeSQL($sqlquery);
 
           print "$igene.. " if ($igene % 1000 == 0);
 
