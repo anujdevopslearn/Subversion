@@ -68,7 +68,7 @@ sub printPageHeader {
 
     print qq~$http_header
 	<HTML><HEAD>
-	<TITLE>$DBTITLE - MicroArray</TITLE>
+	<TITLE>$DBTITLE - Microarray</TITLE>
     ~;
 
 
