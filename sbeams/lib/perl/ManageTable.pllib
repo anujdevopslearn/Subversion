@@ -18,22 +18,28 @@ use strict;
 ###############################################################################
 sub printOptions {
 
+
   $sbeams->printUserContext();
 
-  print qq!
+  if ($sbeams->output_mode() eq 'html') {
+
+    print qq!
 	<BR>
         <H2>$DBTITLE $CATEGORY Maintenance</H2>
         $LINESEPARATOR
-  !;
-
-  for (my $option=0; $option<$#MENU_OPTIONS; $option+=2) {
-    print qq!
-      $OPTIONARROW
-      <A HREF="@MENU_OPTIONS[$option+1]">@MENU_OPTIONS[$option]</A>
     !;
+
+    for (my $option=0; $option<$#MENU_OPTIONS; $option+=2) {
+      print qq!
+  	$OPTIONARROW
+  	<A HREF="@MENU_OPTIONS[$option+1]">@MENU_OPTIONS[$option]</A>
+      !;
+    }
+
+    print "$LINESEPARATOR<P>";
+
   }
 
-  print "$LINESEPARATOR<P>";
   $sbeamsMOD->printPageFooter(close_table=>"YES",display_footer=>"NO");
 
   #### Read in the default input parameters
