@@ -334,7 +334,7 @@ sub handle_request {
   #### Build EC Numbers constraint
   if (defined($parameters{EC_number_constraint}) &&
       $parameters{EC_number_constraint} &&
-      $parameters{EC_number_constraint} !~ /^%.+%$/) {
+      $parameters{EC_number_constraint} !~ /^(\!)*%.+%$/) {
     $parameters{EC_number_constraint} =
       '%'.$parameters{EC_number_constraint}.'%';
   }
