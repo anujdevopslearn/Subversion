@@ -285,6 +285,7 @@ GO
 
 
 CREATE TABLE dbo.table_property (
+	table_property_id	int IDENTITY NOT NULL,
 	table_name		varchar(50) NOT NULL,
 	category		varchar(50) NOT NULL,
 	table_group		varchar(50) NOT NULL,
@@ -295,18 +296,19 @@ CREATE TABLE dbo.table_property (
 	table_url		varchar(255) NULL,
 	manage_tables		varchar(100) NULL,
 	next_step		varchar(100) NULL,
-	PRIMARY KEY CLUSTERED (table_name)
+	PRIMARY KEY CLUSTERED (table_property_id)
 )
 GO
 
 CREATE TABLE dbo.table_column (
+	table_column_id		int IDENTITY NOT NULL,
 	table_name		varchar(50) NOT NULL,
 	column_index		int NOT NULL,
 	column_name		varchar(50) NOT NULL,
 	column_title		varchar(50) NOT NULL,
-	datatype		varchar(50) NULL,
-	scale			int NULL,
-	[precision]		int NULL,
+	data_type		varchar(50) NULL,
+	data_scale		int NULL,
+	data_precision		int NULL,
 	nullable		char(1) NULL,
 	default_value		varchar(50) NULL,
 	is_auto_inc		char(1) NULL,
@@ -322,6 +324,7 @@ CREATE TABLE dbo.table_column (
 	column_text		varchar(1000) NULL,
 	optionlist_query	varchar(5000) NULL,
 	url			varchar(255) NULL 
+	PRIMARY KEY CLUSTERED (table_column_id)
 )
 GO
 
