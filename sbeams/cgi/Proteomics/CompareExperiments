@@ -40,7 +40,6 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 
 use CGI;
-use CGI::Carp qw(fatalsToBrowser croak);
 $q = new CGI;
 
 
@@ -114,6 +113,7 @@ sub main {
 
 
 } # end main
+
 
 
 ###############################################################################
