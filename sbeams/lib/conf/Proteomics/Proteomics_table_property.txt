@@ -8,7 +8,7 @@ PR_msms_spectrum_annotation	MS/MS Spectrum Annotation	Proteomics_infrastructure	
 PR_quality_label	Quality Label	Proteomics_infrastructure	YES	$TBPR_QUALITY_LABEL	quality_label_id		ManageTable.cgi?TABLE_NAME=PR_quality_label		
 PR_msms_spectrum_peak	MS/MS Spectrum Peak	Proteomics_infrastructure	NO	$TBPR_MSMS_SPECTRUM_PEAK					
 PR_biosequence_set	BioSequence Set	Proteomics_infrastructure	YES	$TBPR_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=PR_biosequence_set	PR_biosequence_set	
-PR_biosequence_dbxref	Biosequence Database Cross Reference	Proteomics_infrastructure	YES	$TBPR_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=PR_dbxref	PR_biosequence_dbxref	
+PR_dbxref	Biosequence Database Cross Reference	Proteomics_infrastructure	YES	$TB_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=PR_dbxref	PR_biosequence_dbxref	
 PR_biosequence	BioSequence	Proteomics_infrastructure	NO	$TBPR_BIOSEQUENCE	biosequence_id				
 PR_search_batch	Search Batch	Proteomics_infrastructure	NO	$TBPR_SEARCH_BATCH	search_batch_id				
 PR_search_batch_parameter	Search Batch Parameter	Proteomics_infrastructure	NO	$TBPR_SEARCH_BATCH_PARAMETER					
@@ -17,7 +17,7 @@ PR_search	Search	Proteomics_infrastructure	NO	$TBPR_SEARCH	search_id
 PR_search_hit	Search Hit	Proteomics_infrastructure	NO	$TBPR_SEARCH_HIT	search_hit_id			
 PR_search_hit_protein	Search Hit Protein	Proteomics_infrastructure	NO	$TBPR_SEARCH_HIT_PROTEIN	search_hit_protein_id			
 PR_quantitation	Quantitation	Proteomics_infrastructure	NO	$TBPR_QUANTITATION	quantitation_id			
-search_hit_annotation	Search Hit Annotation	Proteomics_user	YES	$TBPR_SEARCH_HIT_ANNOTATION	search_hit_annotation_id		ManageTable.cgi?TABLE_NAME=search_hit_annotation	
+PR_search_hit_annotation	Search Hit Annotation	Proteomics_user	YES	$TBPR_SEARCH_HIT_ANNOTATION	search_hit_annotation_id		ManageTable.cgi?TABLE_NAME=search_hit_annotation	
 PR_annotation_source	Annotation Source	Proteomics_infrastructure	YES	$TBPR_ANNOTATION_SOURCE	annotation_source_id		ManageTable.cgi?TABLE_NAME=PR_annotation_source	"PR_annotation_source,PR_annotation_label,PR_annotation_confidence"
 PR_annotation_label	Annotation Label	Proteomics_infrastructure	YES	$TBPR_ANNOTATION_LABEL	annotation_label_id		ManageTable.cgi?TABLE_NAME=PR_annotation_label	"PR_annotation_source,PR_annotation_label,PR_annotation_confidence"
 PR_annotation_confidence	Annotation Confidence	Proteomics_infrastructure	YES	$TBPR_ANNOTATION_CONFIDENCE	annotation_confidence_id		ManageTable.cgi?TABLE_NAME=PR_annotation_confidence	"PR_annotation_source,PR_annotation_label,PR_annotation_confidence"
