@@ -927,6 +927,7 @@ sub postProcessResultset {
       push(@new_column_names,$element);
       push(@new_column_titles,$column_titles_ref->[$column_index]);
       push(@new_precisions,$resultset_ref->{precisions_list_ref}->[$column_index]);
+      #print "$element ($column_titles_ref->[$column_index]) prec=".$resultset_ref->{precisions_list_ref}->[$column_index]."<BR>\n";
     }
   }
 
@@ -938,6 +939,7 @@ sub postProcessResultset {
       push(@new_column_names,$condition.'__'.$data_column);
       push(@new_column_titles,$condition.' '.$column_titles_ref->[$column_index]);
       push(@new_precisions,$resultset_ref->{precisions_list_ref}->[$column_index]);
+      #print $condition.'__'.$data_column." (".$condition.' '.$column_titles_ref->[$column_index].") prec=$resultset_ref->{precisions_list_ref}->[$column_index]<BR>\n";
     }
   }
 
@@ -948,6 +950,7 @@ sub postProcessResultset {
       push(@new_column_names,$element);
       push(@new_column_titles,$column_titles_ref->[$column_index]);
       push(@new_precisions,$resultset_ref->{precisions_list_ref}->[$column_index]);
+      #print "$element ($column_titles_ref->[$column_index]) prec=".$resultset_ref->{precisions_list_ref}->[$column_index]."<BR>\n";
     }
   }
 
