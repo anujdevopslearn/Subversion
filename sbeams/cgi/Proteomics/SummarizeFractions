@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl 
+!/usr/local/bin/perl 
 
 ###############################################################################
 # Program     : SummarizeFractions
@@ -219,7 +219,7 @@ sub handle_request {
   my $project_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"PE.project_id",
     constraint_type=>"int_list",
-    constraint_name=>"Project List MODIFIED",
+    constraint_name=>"Project List",
     constraint_value=>$parameters{project_id} );
   return if ($project_clause == -1);
 
