@@ -787,30 +787,12 @@ sub displaySequenceView {
   my ($i,$element,$key,$value,$line,$result,$sql,$file);
 
 
-  #### Get the indices of the columns
-  my $biosequence_name_column =
-    $resultset_ref->{column_hash_ref}->{biosequence_name};
-  my $description_column =
-    $resultset_ref->{column_hash_ref}->{biosequence_desc};
-  my $sequence_column =
-    $resultset_ref->{column_hash_ref}->{biosequence_seq};
-  my $accessor_column =
-    $resultset_ref->{column_hash_ref}->{accessor};
-  my $accession_column =
-    $resultset_ref->{column_hash_ref}->{biosequence_accession};
-  my $tmr_class_column =
-    $resultset_ref->{column_hash_ref}->{transmembrane_class};
-  my $tmr_topology_column =
-    $resultset_ref->{column_hash_ref}->{transmembrane_topology};
+  #### Define the display mode
+  my $mode = 'x';
 
-  my $has_signal_peptide_column =
-    $resultset_ref->{column_hash_ref}->{has_signal_peptide};
-  my $has_signal_peptide_probability_column =
-    $resultset_ref->{column_hash_ref}->{has_signal_peptide_probability};
-  my $signal_peptide_length_column =
-    $resultset_ref->{column_hash_ref}->{signal_peptide_length};
-  my $signal_peptide_is_cleaved_column =
-    $resultset_ref->{column_hash_ref}->{signal_peptide_is_cleaved};
+
+  #### Get the hash of indices of the columns
+  my %col = %{$resultset_ref->{column_hash_ref}};
 
 
   #### Get some information about the resultset
@@ -825,33 +807,25 @@ sub displaySequenceView {
   my ($accessor,$accession);
 
 
-  #### Display each row in FASTA format
-  print "<BR>Click on the gene name below to follow the link to the source ".
-    "database.<BR>\n";
-  print "- Referenced peptides are highlighted in <font color=\"green\">GREEN</font>.<BR>\n";
-  print "- Transmembrane regions (TMRs) are highlighted in <font color=\"orange\">ORANGE</font>.<BR>\n"
-    if ($tmr_topology_column);
-  print "- Signal peptides are highlighted in <font color=\"blue\">BLUE</font>.<BR>\n";
-  print "- Collisions in highlighting are shown in <font color=\"red\">RED</font>.<BR>\n";
-  print "- Internal ends of TMRs are labeled <font color=\"orange\">(i)</font> and external (outer) ends are labeled <font color=\"orange\">(o)</font>.<BR>\n";
-  print "<BR><PRE>\n";
+  #### Display each row in the resultset
   foreach $row (@{$data_ref}) {
 
     #### Pull out data for this row into names variables
-    $biosequence_name = $row->[$biosequence_name_column];
-    $description = $row->[$description_column];
-    $accessor = $row->[$accessor_column];
-    $accession = $row->[$accession_column];
-    $tmr_class = $row->[$tmr_class_column];
-    $tmr_topology = $row->[$tmr_topology_column];
-    $has_signal_peptide = $row->[$has_signal_peptide_column];
-    $has_signal_peptide_probability = $row->[$has_signal_peptide_probability_column];
-    $signal_peptide_length = $row->[$signal_peptide_length_column];
-    $signal_peptide_is_cleaved = $row->[$signal_peptide_is_cleaved_column];
+    $biosequence_name = $row->[$col{biosequence_name}];
+    $description = $row->[$col{biosequence_desc}];
+    $sequence = $row->[$col{biosequence_seq}];
+
+    $accessor = $row->[$col{accessor}];
+    $accession = $row->[$col{biosequence_accession}];
+    $tmr_class = $row->[$col{transmembrane_class}];
+    $tmr_topology = $row->[$col{transmembrane_topology}];
+    $has_signal_peptide = $row->[$col{has_signal_peptide}];
+    $has_signal_peptide_probability = $row->[$col{has_signal_peptide_probability}];
+    $signal_peptide_length = $row->[$col{signal_peptide_length}];
+    $signal_peptide_is_cleaved = $row->[$col{signal_peptide_is_cleaved}];
 
 
     #### Find all instances of the possibly-supplied peptide in the sequence
-    $sequence = $row->[$sequence_column];
     my %start_positions;
     my %end_positions;
     if ($label_peptide) {
@@ -908,9 +882,8 @@ sub displaySequenceView {
         $tmr_end_positions{$end} = $start_side;
         $tmr_color{$end} = 'orange';
       }
-      $notes_buffer .= "(Used TMR topology string: $tmr_topology)\n";
+      $notes_buffer .= "(Used TMR topology string: $tmr_topology)<BR>\n";
       #print "<A HREF=\"http://www.cbs.dtu.dk/cgi-bin/nph-webface?configfile=/usr/opt/www/pub/CBS/services/TMHMM-2.0/TMHMM2.cf&seqfile=outform=-noshort&SEQ=%3EANON%0D$sequence\">[See full TMHMM result]</A><BR>\n";
-      $notes_buffer .= "<A HREF=\"http://www.cbs.dtu.dk/services/TMHMM/\" TARGET=\"TMHMM\">To see full TMHMM result, click here and paste this:</A><BR>>$biosequence_name Description<BR>$sequence<BR><BR>\n";
     }
 
     #### If there's a signal peptide, mark it as a blue
@@ -925,21 +898,59 @@ sub displaySequenceView {
     }
 
 
+    #### Write out a table of information
+    unless ($mode eq 'FASTA') {
+      print "<TABLE BORDER=0>\n";
+      print "<TR><TD bgcolor=\"\#dddddd\"><BR>\n";
+
+      my @display_columns = (
+	{ 'Biosequence Name' => $biosequence_name },
+	{ 'Biosequence Accession' => $accession },
+        { 'Description' => $description },
+      );
+
+      foreach my $element ( @display_columns) {
+	my ($key) = keys(%{$element});
+	my $value = $element->{$key};
+	print "$key: $value<BR>\n";
+      }
+
+      print "<BR></TD></TR>\n\n";
+    }
+
+
+
     #### Write out the gene name and description
-    print "><font color=\"blue\">";
-    if ($accessor && $accession) {
+    unless ($mode eq 'FASTA') {
+      print "<TR><TD bgcolor=\"\#eeeeee\"><PRE>\n&gt;<font color=\"blue\">";
+    }
+
+    if ($accessor && $accession && $mode ne 'FASTA') {
       print "<A HREF=\"$accessor$accession\">$biosequence_name</A>";
     } else {
       print "$biosequence_name";
     }
-    print "</font> <font color=\"purple\">$description</font>\n";
+
+    if ($mode eq 'FASTA') {
+      print " $description\n";
+    } else {
+      print "</font> <font color=\"purple\">$description</font>\n";
+    }
 
 
     #### Write out the sequence in a pretty format, possibly labeled
     #### with a highlighted string of bases/residues
-    if (0 == 1) {
-      print "$sequence\n";
-    } else {
+    my $offset = 0;
+    while (substr($sequence,$offset,60)) {
+      print substr($sequence,$offset,60)."\n";
+      $offset += 60;
+    }
+
+
+    unless ($mode eq 'FASTA') {
+
+      print "<BR></PRE></TD></TR><TR><TD bgcolor=\"\#dddddd\"><PRE>";
+
       my $width_counter = 0;
       $seq_length = length($sequence);
       $i = 0;
@@ -1035,41 +1046,96 @@ sub displaySequenceView {
       }
 
       print "</B></font>" if ($end_positions{$i});
-      print "\n\n";
-      print "Notes:\n$notes_buffer" if ($notes_buffer);
+      print "</PRE>";
+
+      #### Display the coloration legend
+      print getSequenceColorLegend(have_topology => $col{transmembrane_topology});
+
+      print "<BR><BR>Notes:<BR>\n$notes_buffer" if ($notes_buffer);
+      print "<BR>To see full TMHMM result, copy the FASTA header and sequence above, and then <A HREF=\"http://www.cbs.dtu.dk/services/TMHMM/\" TARGET=\"TMHMM\">click here and paste the sequence</A>\n";
+
+
+      print "</TD></TR>\n";
     }
 
   }
 
 
-  if (1 == 1) {
-    print "\n\nCOLOR CHECK:\n";
-    print "  BLACK <B><font color=\"red\">AND RED</font></B> AND BLACK\n";
-    print "  BLACK <B><font color=\"DeepPink\">AND HOTPINK</font></B> AND BLACK\n";
-    print "  BLACK <B><font color=\"magenta\">AND MAGENTA</font></B> AND BLACK\n";
-    print "  BLACK <B><font color=\"purple\">AND PURPLE</font></B> AND BLACK\n";
-    print "  BLACK <B><font color=\"green\">AND GREEN</font></B> AND BLACK\n";
-    print "  BLACK <B><font color=\"#66DD00\">AND LAWNGREEN</font></B> AND BLACK\n";
-    print "  BLACK <B><font color=\"SpringGreen\">AND SPRINGGREEN</font></B> AND BLACK\n";
-    print "  BLACK <B><font color=\"yellow\">AND YELLOW</font></B> AND BLACK\n";
-    print "  BLACK <B><font color=\"orange\">AND ORANGE</font></B> AND BLACK\n";
-    print "  BLACK <B><font color=\"sienna\">AND SIENNA</font></B> AND BLACK\n";
-    print "  BLACK <B><font color=\"black\">AND BLACK</font></B> AND BLACK\n";
-    print "  BLACK <B><font color=\"blue\">AND BLUE</font></B> AND BLACK\n";
-    print "  BLACK <B><font color=\"navy\">AND NAVY</font></B> AND BLACK\n";
-    print "  BLACK <B><font color=\"turquoise\">AND TURQUOISE</font></B> AND BLACK\n";
-    print "  BLACK <B><font color=\"cyan\">AND CYAN</font></B> AND BLACK\n";
-    print "  BLACK <B><font color=\"gray\">AND GRAY</font></B> AND BLACK\n";
+  if (0 == 1) {
+    print "<TR><TD bgcolor=\"\#dddddd\"><PRE>";
+    print getColorTestText();
+    print "</PRE></TD></TR>\n";
   }
 
 
-
-  print "</PRE>\n";
+  unless ($mode eq 'FASTA') {
+    print "</TABLE>\n";
+  }
 
   return;
 
 }
 
+
+###############################################################################
+# getSequenceColorLegend: Return the sequence coloration legend
+###############################################################################
+sub getSequenceColorLegend {
+  my %args = @_;
+  my $SUB_NAME = 'getSequenceColorLegend';
+
+  #### Decode the argument list
+  my $have_topology = $args{'have_topology'};
+
+
+  my $buf = qq~<BR>
+	- Referenced peptides are highlighted in <font color=\"green\">GREEN</font>.<BR>
+	- Transmembrane regions (TMRs) are highlighted in <font color=\"orange\">ORANGE</font>.<BR>
+  ~;
+
+  if ($have_topology) {
+    $buf .= qq ~<BR>
+	- Signal peptides are highlighted in <font color=\"blue\">BLUE</font>.<BR>
+	- Collisions in highlighting are shown in <font color=\"red\">RED</font>.<BR>
+	- Internal ends of TMRs are labeled <font color=\"orange\">(i)</font> and external (outer) ends are labeled <font color=\"orange\">(o)</font>.<BR>
+    ~;
+  }
+
+  return $buf;
+
+}
+
+
+###############################################################################
+# getColorTestText: Return some text displaying various colors
+###############################################################################
+sub getColorTestText {
+  my %args = @_;
+  my $SUB_NAME = 'getColorTestText';
+
+  my $buf = qq~<BR>
+	COLOR CHECK:
+	BLACK <B><font color=\"red\">AND RED</font></B> AND BLACK
+	BLACK <B><font color=\"DeepPink\">AND HOTPINK</font></B> AND BLACK
+	BLACK <B><font color=\"magenta\">AND MAGENTA</font></B> AND BLACK
+	BLACK <B><font color=\"purple\">AND PURPLE</font></B> AND BLACK
+	BLACK <B><font color=\"green\">AND GREEN</font></B> AND BLACK
+	BLACK <B><font color=\"\#66DD00\">AND LAWNGREEN</font></B> AND BLACK
+	BLACK <B><font color=\"SpringGreen\">AND SPRINGGREEN</font></B> AND BLACK
+	BLACK <B><font color=\"yellow\">AND YELLOW</font></B> AND BLACK
+	BLACK <B><font color=\"orange\">AND ORANGE</font></B> AND BLACK
+	BLACK <B><font color=\"sienna\">AND SIENNA</font></B> AND BLACK
+	BLACK <B><font color=\"black\">AND BLACK</font></B> AND BLACK
+	BLACK <B><font color=\"blue\">AND BLUE</font></B> AND BLACK
+	BLACK <B><font color=\"navy\">AND NAVY</font></B> AND BLACK
+	BLACK <B><font color=\"turquoise\">AND TURQUOISE</font></B> AND BLACK
+	BLACK <B><font color=\"cyan\">AND CYAN</font></B> AND BLACK
+	BLACK <B><font color=\"gray\">AND GRAY</font></B> AND BLACK
+  ~;
+
+  return $buf;
+
+}
 
 
 

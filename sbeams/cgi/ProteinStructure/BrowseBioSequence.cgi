@@ -877,8 +877,6 @@ sub displaySequenceView {
         $tmr_color{$end} = 'orange';
       }
       $notes_buffer .= "(Used TMR topology string: $tmr_topology)<BR>\n";
-      #print "<A HREF=\"http://www.cbs.dtu.dk/cgi-bin/nph-webface?configfile=/usr/opt/www/pub/CBS/services/TMHMM-2.0/TMHMM2.cf&seqfile=outform=-noshort&SEQ=%3EANON%0D$sequence\">[See full TMHMM result]</A><BR>\n";
-      $notes_buffer .= "To see full TMHMM result, copy the FASTA header and sequence above, and then <A HREF=\"http://www.cbs.dtu.dk/services/TMHMM/\" TARGET=\"TMHMM\">click here and paste the sequence</A>\n";
     }
 
     #### If there's a signal peptide, mark it as a blue
@@ -1047,6 +1045,7 @@ sub displaySequenceView {
       print getSequenceColorLegend(have_topology => $col{transmembrane_topology});
 
       print "<BR><BR>Notes:<BR>\n$notes_buffer" if ($notes_buffer);
+      print "<BR>To see full TMHMM result, copy the FASTA header and sequence above, and then <A HREF=\"http://www.cbs.dtu.dk/services/TMHMM/\" TARGET=\"TMHMM\">click here and paste the sequence</A>\n";
 
       print "</TD></TR>\n";
     }
