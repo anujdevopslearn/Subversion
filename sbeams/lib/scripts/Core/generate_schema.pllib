@@ -116,6 +116,14 @@ sub readTableColumn {
     my @columns = split("\t",$line);
     next if (scalar(@columns) < 10);
     my @data = @columns;
+
+    #### Remove enclosing double quotes (common with OO)
+    foreach (my $i=0; $i<scalar(@data); $i++) {
+      if ($data[$i] =~ /^\"(.*)\"$/) {
+	$data[$i] = $1;
+      }
+    }
+
     my ($table_name,$column_index,$column_name) = @data[0..2];
     #print "$table_name\t$column_name\t$column_index\n";
     $table_column->{$table_name}->{$column_name} = \@data;
@@ -194,6 +202,8 @@ sub writeSchema {
     #### If this is a query definition, don't try to CREATE and TABLE
     next if ($table_properties->{$table_name}->{table_group} eq 'QUERY');
 
+    print "  Processing table $table_name\n" if ($VERBOSE);
+
     my $real_table_name = $table_properties->{$table_name}->{real_name};
 
     #### If we have column informnation
@@ -223,6 +233,8 @@ sub writeSchema {
         my ($column_title,$datatype,$scale,$precision,$nullable,$default_value,
             $is_auto_inc,$fk_table,$fk_column,$column_description) =
           @{$table_ref->{$column_name}}[3..11,19];
+
+        print "    Processing column $column_name\n" if ($VERBOSE);
 
         #### Look up the fk_table name if any
         if ($fk_table && $table_properties->{$fk_table}->{real_name}) {
@@ -341,8 +353,10 @@ sub writeSchema {
 
     #### Otherwise, complain that we don't have schema for this table
     } else {
-      $error_buffer .= "There is no column information for table: ".
-        "'$table_name'!$LB";
+      my $error = "There is no column information for table: ".
+        "'$table_name'!";
+      $error_buffer .= "$error$LB";
+      print "$error\n";
     }
 
   $create_tables_buffer .= "$LB$LB";
