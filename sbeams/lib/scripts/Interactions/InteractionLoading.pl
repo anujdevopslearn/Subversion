@@ -24,7 +24,7 @@ $recordCon->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 my (%INFOPROTEIN1,
 	%INFOPROTEIN2,
 	%INTERACTION, @columnOrder, %columnHashProtein1, %columnHashProtein2, %interactionHash,$bioentityState,$bioentityType,$organismName,$interactionTypes,
-	$interactionGroups,$confidenceScores,$assayTypes,$regTypes,$pubMed, $interactionGroupsOrganism, $fhError, $fhLog);
+	$interactionGroups,$confidenceScores,$assayTypes,$pubMed, $interactionGroupsOrganism, $fhError, $fhLog);
 
 #hese are the clomumn arrangements for the spreadsheet
 #organisName1[0],bioentityComName1[1], bioentityCanName1[2], bioentityFullName1[3], bioentityAliasesName1[4],bioentityTypeName1[5],
@@ -108,7 +108,6 @@ qw / Organism_bioentity1_name
 	 Bioentity1_aliases
 	 Bioentity1_location
 	 Bioentity1_state
-	 Bioentity1_regulatory_feature
 	 Interaction_type
 	 Organism_bioentity2_name
 	 Bioentity2_common_name
@@ -116,14 +115,13 @@ qw / Organism_bioentity1_name
 	 Bioentity2_full_name
 	 Bioentity2_aliases
 	 Bioentity2_type
-	 Bioentity2_regulatory_feature
 	 Bioentity2_location
 	 Interaction_group
 	 Confidence_score
 	 Interaction_description
 	 Assay_name
 	 Assay_type
-	 Publication_ids /;
+	 Publication_ids/;
 #this should be read from a conf file
 %columnHashProtein1 = (
  	organismName1 => 0,
@@ -133,35 +131,33 @@ qw / Organism_bioentity1_name
 	bioentityAliasName1 =>	5,
 	bioentityType1 =>	1,
 	bioentityLoc1 =>	6,
-	group => 18);
+	group => 16);
 %columnHashProtein2 = (
-	organismName2	=> 10,
-	bioentityComName2	=>	11,
-	bioentityCanName2 =>	12, 	
-	bioentityFullName2	=>	13,
-	bioentityAliasName2	=>	14,
-	bioentityType2	=>	15,
-	bioentityLoc2	=>	17,
-	group => 18);
+	organismName2	=> 9,
+	bioentityComName2	=>	10,
+	bioentityCanName2 =>	11, 	
+	bioentityFullName2	=>	12,
+	bioentityAliasName2	=>	13,
+	bioentityType2	=>	14,
+	bioentityLoc2	=>	15,
+	group =>	16);
 %interactionHash = (
 	organismName1	=>	0,
 	bioentityComName1	=>	2,	
 	bioentityCanName1	=>	3,
 	bioentityType1	=>	1,
 	bioentityState1	=>	7,
-	bioentityReg1	=>	8,
-	organismName2	=>	10, 
-	bioentityComName2	=>	11,
-	bioentityCanName2	=>	12,
-	bioentityType2	=>	15,
-	bioentityReg2	=>	16,
-	interType	=>	9,
-	group	=>	18,
-	interaction_description => 20,
-	assay_name => 21,
-	assay_type=> 22,
-	publMedID	=>	23,
-	confidence_score => 19);
+	organismName2	=>	9, 
+	bioentityComName2	=>	10,
+	bioentityCanName2	=>	11,
+	bioentityType2	=>	14,
+	interType	=>	8,
+	group	=>	16,
+	interaction_description => 18,
+	assay_name => 19,
+	assay_type=> 20,
+	publMedID	=>	21,
+	confidence_score => 17);
 	
 #getting data from all the lookup tables
 #table, column, column
@@ -180,8 +176,8 @@ qw / Organism_bioentity1_name
 	$confidenceScores = \%confidenceScores;
 	my %assayTypes = $recordCon->selectTwoColumnHash(qq /Select assay_type_name, assay_type_id from $TBIN_ASSAY_TYPE/);
 	$assayTypes = \%assayTypes;
-	my %regTypes = $recordCon->selectTwoColumnHash (qq /Select regulatory_feature_type_name, regulatory_feature_type_id from $TBIN_REGULATORY_FEATURE_TYPE/);
-	$regTypes = \%regTypes; 
+#	my %regTypes = $recordCon->selectTwoColumnHash (qq /Select regulatory_feature_type_name, regulatory_feature_type_id from $TBIN_REGULATORY_FEATURE_TYPE/);
+#	$regTypes = \%regTypes; 
 	my %pubMed = $recordCon->selectTwoColumnHash (qq /Select pubmed_ID, publication_id from $TBIN_PUBLICATION/);
 	$pubMed = \%pubMed;
 
@@ -199,7 +195,7 @@ qw / Organism_bioentity1_name
 		print "checking, populating the database for current Interactions entries\n";	
 		checkPopulateInteraction(\%INTERACTION);
 		print $fhLog "</body></html>";
-#		$recordCon->printPageFooter() unless ($QUIET);
+		$recordCon->printPageFooter() unless ($QUIET);
 }
 
 
@@ -221,7 +217,7 @@ sub processFile
   unless ($QUIET) 
 	{
     $recordCon->printUserContext();
-    print "\n";
+
   }
 #errorLogs
 #make them global
@@ -238,9 +234,12 @@ sub processFile
 	{ 
 #do not take empty lines or the column header line but
 #need to make sure the columns are in the correct order 
-		next if $line =~ /^\n$/;
+#		$line =~ s/[\r\n]//g;
+		next if $line =~ /^\s*$/;
+
 		next if $count == 1 and do
 		{ 
+			$line =~ s/[\r\n]//g;	
 			my @excelColumns;
 			my @colHeadArray = push @excelColumns, split /\t/, $line;
 			
@@ -249,6 +248,7 @@ sub processFile
 					my $a = shift @columnOrder;
 			
 					my $b = ucfirst(shift @excelColumns);
+					
 					if ($a ne $b)
 					{
 							print "Incorrect ColumnOrder!!!\n ColumnName: $a is incorrect\n";
@@ -258,24 +258,27 @@ sub processFile
 			$count++;
 		};
 #getting the lines and putting columnheader specified info into Hashtables
+		$line =~ s/[\r\n]//g;
 		my @infoArray;
 		push @infoArray, split /\t/, $line;
 		@infoArray = @infoArray[0..24];
 		
-		$count++;
+		$count++;	
 #bioentity1
 #as we populate the hash check for valid data entry, if invalid, write an error and go to
 #the next line		
 		print "checking bioentity1 requirements\n";
 		foreach my $column (sort keys %columnHashProtein1)
 		{
+		
 			$INFOPROTEIN1{$count-2}->{$column} = $infoArray[$columnHashProtein1{$column}];
+			
 		}
+
 		$INFOPROTEIN1{$count-2}->{group} = $infoArray[$columnHashProtein1{group}];
 		$INFOPROTEIN1{$count-2}->{group} =~ s/[\s+\n+]$//g;
 		$INFOPROTEIN1{$count-2}->{group} =~ s/^([a-z]+)\s+([a-z]+)$/$1 $2/i;
-	
-
+		
 		if (!($INFOPROTEIN1{$count-2}->{bioentityComName1}) and !($INFOPROTEIN1{$count-2}->{bioentityCanName1}))
 		{
 			print "Detected error1: bioentity1_common_name and bioentiy1_canonical_name\n";
@@ -298,9 +301,17 @@ sub processFile
 			delete $INFOPROTEIN1{$count-2};
 			next;
 		}
+		if($INFOPROTEIN1{$count-2}->{bioentityCanName1} =~/^((xm)|(nm))/i and $INFOPROTEIN1{$count-2}->{bioentityType1} =~ /protein/i){
+				print "this is a gene_name_identifier\n";
+				$INFOPROTEIN1{$count-2}->{bioentityCanGeneName1} = $INFOPROTEIN1{$count-2}->{bioentityCanName1};
+				undef($INFOPROTEIN1{$count-2}->{bioentityCanName1});
+		
+				
+		}
+		
 		if ($INFOPROTEIN1{$count-2}->{group} and !$interactionGroups->{$INFOPROTEIN1{$count-2}->{group}})
 		{
-				print "$INFOPROTEIN1{$count-2}->{group}\n";
+			
 				Error (\@infoArray," $INFOPROTEIN1{$count-2}->{group}: this group is not in $TBIN_INTERACTION_GROUP table");
 				delete $INFOPROTEIN1{$count-2};
 				next;
@@ -355,6 +366,12 @@ sub processFile
 			delete $INFOPROTEIN2{$count-2};
 			next;
 		}
+		
+		if($INFOPROTEIN2{$count-2}->{bioentityCanName2} =~ /^((nm)|(xm))/i and $INFOPROTEIN2{$count-2}->{bioentityType2} =~ /protein/i)
+		{
+				$INFOPROTEIN1{$count-2}->{bioentityCanGeneName2} = $INFOPROTEIN1{$count-2}->{bioentityCanName2};
+				undef($INFOPROTEIN1{$count-2}->{bioentityCanName2});
+		}
 	
 #need to make sure that a group is associated with this organism
 		$interactionGroupQuery = qq /select interaction_group_id from $TBIN_INTERACTION_GROUP
@@ -364,7 +381,7 @@ sub processFile
 		if ($INFOPROTEIN2{$count-2}->{group} and !(scalar($recordCon->selectOneColumn($interactionGroupQuery))))
 		{
 				
-				print "$INFOPROTEIN2{$count-2}->{group}\n ";
+			
 				Error (\@infoArray,"$INFOPROTEIN2{$count-2}->{group}: this group is not associated with the given organism in $TBIN_INTERACTION_GROUP table");
 				delete $INFOPROTEIN2{$count-2};
 				next;
@@ -414,20 +431,20 @@ print "checking interaction requirements\n";
 				delete $INTERACTION{$count-2};
 				next;
 		}
-		$INTERACTION{$count-2}->{bioentityReg1} = ucfirst ($INTERACTION{$count-2}->{bioentityReg1});
-		if ($INTERACTION{$count-2}->{bioentityReg1} and !($regTypes->{$INTERACTION{$count-2}->{bioentityReg1}}))
-		{
-				Error (\@infoArray," $INTERACTION{$count-2}->{bioentityReg1}:  bioentityReg1 is not in the database");
-				delete $INTERACTION{$count-2};
-				next;
-		}
-		$INTERACTION{$count-2}->{bioentityReg2} = ucfirst ($INTERACTION{$count-2}->{bioentityReg2});
-		if ($INTERACTION{$count-2}->{bioentityReg2} and !($regTypes->{$INTERACTION{$count-2}->{bioentityReg2}}))
-		{
-				Error (\@infoArray," $INTERACTION{$count-2}->{bioentityReg2}:  bioentityReg2 is not in the database");
-				delete $INTERACTION{$count-2};
-				next;
-		}
+#		$INTERACTION{$count-2}->{bioentityReg1} = ucfirst ($INTERACTION{$count-2}->{bioentityReg1});
+#		if ($INTERACTION{$count-2}->{bioentityReg1} and !($regTypes->{$INTERACTION{$count-2}->{bioentityReg1}}))
+#		{
+#				Error (\@infoArray," $INTERACTION{$count-2}->{bioentityReg1}:  bioentityReg1 is not in the database");
+#				delete $INTERACTION{$count-2};
+#				next;
+#		}
+#		$INTERACTION{$count-2}->{bioentityReg2} = ucfirst ($INTERACTION{$count-2}->{bioentityReg2});
+#		if ($INTERACTION{$count-2}->{bioentityReg2} and !($regTypes->{$INTERACTION{$count-2}->{bioentityReg2}}))
+#		{
+#				Error (\@infoArray," $INTERACTION{$count-2}->{bioentityReg2}:  bioentityReg2 is not in the database");
+#				delete $INTERACTION{$count-2};
+#				next;
+#		}
 		$INTERACTION{$count-2}->{assay_type} = ucfirst ($INTERACTION{$count-2}->{assay_type});
 		if ($INTERACTION{$count-2}->{assay_type} and !($assayTypes->{$INTERACTION{$count-2}->{assay_type}}))
 		{
@@ -471,6 +488,7 @@ sub checkPopulateBioentity
 	foreach my $record (keys %{$hashRef}) 
 	{
 			print "Record:  $record\n";
+			
 			my $update = 1; 
 			my $insert = 0;
 #possible scenerios:
@@ -507,10 +525,12 @@ sub checkPopulateBioentity
 			if (!($hashRef->{$record}->{'bioentityComName'.$num}))
 			{
 #4,5
+
 					$commonClause = '';
 			}
 			else 
 			{
+
 				$hashRef->{$record}->{'bioentityComName'.$num} =~ s/\'/ /;
 				$commonClause .= 	qq /\'$hashRef->{$record}->{'bioentityComName'.$num}\'/;
 #1,2
@@ -520,6 +540,7 @@ sub checkPopulateBioentity
 			if (!($hashRef->{$record}->{'bioentityCanName'.$num}))
 			{
 #1,2
+
 					$canonicalClause = '';
 			}
 			else 
@@ -527,26 +548,28 @@ sub checkPopulateBioentity
 					$hashRef->{$record}->{'bioentityCanName'.$num} =~ s/\'/ /;
 					$canonicalClause .= 	qq /\'$hashRef->{$record}->{'bioentityCanName'.$num}\'/;
 #4,5
+
 					$bioentityQueryCanonical = $bioentityQuery.$canonicalClause.$groupByClause;
 			}
 			
 			if ($commonClause and $canonicalClause)
 			{
-					print "bioentity_common_name and bioentity_canonical_name are specified\n";
+			
+				
 #need to make sure we are pulling the same record
-					
+		
 					my @rows = $recordCon->selectOneColumn($bioentityQueryCommon);	
 					my $nrows = scalar(@rows);
 					my $bioentityIDCommon = $rows[0] if $nrows == 1;
 					$bioentityIDCommon = 0 if $nrows == 0; 
 					if ($nrows >1)
 					{
+					print "ERROR\n";
 					ErrorLog ("$SUB_NAME:\nQuery: bioentityCommonQuery returned $nrows of data!\n",
 					$hashRef->{$record});
 					delete $INTERACTION{$record};
 					next;
 					}
-					
 					@rows = $recordCon->selectOneColumn($bioentityQueryCanonical);	
 					$nrows = scalar(@rows);
 					my $bioentityIDCanonical = $rows[0] if $nrows == 1;
@@ -597,7 +620,7 @@ sub checkPopulateBioentity
 							$update = 0 unless (!$insert);
 							 							 
 #If one or no row was fetched, do a update or insert based on the presence of bioentityID
-							print "bioid: $bioentityIDCommon insert: $insert  update: $update\n";
+							
 							
 							my $bioentityPK = insertOrUpdateBioentity($hashRef->{$record},$num,$bioentityIDCommon,$insert,$update); 
 							if($INTERACTION{$record} and $bioentityPK)
@@ -680,12 +703,11 @@ sub insertOrUpdateBioentity
 		{
 				print "updating BIOENTITY: $bioentityID\n";
 		}
-		
-		
 		my %rowData;
 		$rowData{bioentity_common_name} = $record->{'bioentityComName'.$num} if ($record->{"bioentityComName".$num});	
-		$rowData{bioentity_canonical_name} = $record->{'bioentityConName'.$num} if ($record->{"bioentityConName".$num});	
+		$rowData{bioentity_canonical_name} = $record->{'bioentityCanName'.$num} if ($record->{"bioentityCanName".$num});	
 		$rowData{bioentity_Full_Name} = $record->{'bioentityFullName'.$num} if ($record->{"bioentityFullName".$num});
+		$rowData{bioentity_canonical_gene_name} = $record->{'bioentityCanGeneName'.$num} if ($record->{"bioentityCanGeneName".$num});
 		$rowData{bioentity_Aliases} = $record->{'bioentityAliasName'.$num} if ($record->{"bioentityAliases".$num});
 		$rowData{bioentity_location}= $record->{'bioentityLoc'.$num} if ($record->{"bioentityLoc".$num});
 		
@@ -729,7 +751,7 @@ sub insertOrUpdateBioentity
 #############################################################
 #############################################################
 	}
-		
+
 		my $returned_PK = $recordCon->updateOrInsertRow(
 				insert => $insert,
 				update => $update,
@@ -742,7 +764,7 @@ sub insertOrUpdateBioentity
 				testonly=>$TESTONLY,
 				add_audit_parameters => 1
 				);
-				
+		
 		return $returned_PK;
 		
 #need to insert a group - organism association
@@ -758,7 +780,7 @@ sub checkPopulateInteraction
 			
 	foreach my $record (keys %{$hashRef}) 
 	{
-			print "interaction record: $record\n";
+			
 			my $update = 1; 
 			my $insert = 0;
 			my $interactionQuery = qq / select Interaction_id from $TBIN_INTERACTION I
@@ -800,11 +822,11 @@ sub insertOrUpdateInteraction
 		$rowData{interaction_group_id} = $interactionGroups->{$record->{group}} if ($record->{group});
 		$rowData{bioentity1_id} = $record->{bioentityID1};
 		$rowData{bioentity1_state_id} = $bioentityState->{$record->{bioentityState1}} if ($record->{bioentityState1});
-		$rowData{regulatory_feature1_id} = $regTypes->{$record->{bioentityReg1}} if ($record->{bioentityReg1});
+#		$rowData{regulatory_feature1_id} = $regTypes->{$record->{bioentityReg1}} if ($record->{bioentityReg1});
 		$rowData{interaction_type_id} = $interactionTypes->{$record->{interType}};
 		$rowData{bioentity2_id} = $record->{bioentityID2};
 		$rowData{bioentity2_state_id} = $bioentityState->{$record->{bioentityState1}} if ($record->{bioentityState1});
-		$rowData{regulatory_feature2_id} = $regTypes->{$record->{bioentityReg1}} if ($record->{bioentityReg1});
+#		$rowData{regulatory_feature2_id} = $regTypes->{$record->{bioentityReg1}} if ($record->{bioentityReg1});
 		$rowData{assay_id} = $assayTypes->{$record->{assay_type}} if ($record->{assay_type}); 
 		$rowData{confidence_score_id} = $confidenceScores->{$record->{confidence_score}} if ($record->{confidence_scores});
 		$rowData{interaction_name} = $record->{interactionName} if ($record->{interactionName});
@@ -830,11 +852,8 @@ sub insertOrUpdateInteraction
 sub  Error
 {
 		my($arrayRef,$error) = @_;
-		foreach my $element (@$arrayRef)
-		{
-				print $fhError "$element\t";
-		}
-		print $fhError "$error\t\n";
+		print $fhError join "\t", (@$arrayRef,$error)."\n"; 
+
 }
 #specifies Database errors
 sub ErrorLog
@@ -865,8 +884,7 @@ foreach my $key (keys %INFOPROTEIN1)
 		print "$key\n";
 		foreach my $ok (keys %{$INFOPROTEIN1{$key}})
 		{
-		print "$ok\n";
-		print "$INFOPROTEIN1{$key}->{$ok}\n";
+				print "$INFOPROTEIN1{$key}->{$ok}\n";
 		}
 	#	print "$INFOPROTEIN1->{$key}->{comName1}\n";
 }
