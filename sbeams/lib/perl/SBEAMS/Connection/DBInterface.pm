@@ -346,7 +346,7 @@ sub buildOptionList {
     #### If we explicitly were called with an MULITOPIONLIST, separate
     #### a comma-delimited list into several elements
     my @tmp;
-    if ($method_options =~ /MULITOPIONLIST/) {
+    if ($method_options =~ /MULTIOPTIONLIST/) {
       @tmp = split(",",$selected_option);
     } else {
       @tmp = ($selected_option);
