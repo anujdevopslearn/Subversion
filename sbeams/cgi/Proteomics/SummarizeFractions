@@ -289,7 +289,7 @@ sub handle_request {
 	 INNER JOIN $TB_USER_LOGIN UL ON (PE.contact_id=UL.contact_id)
 	 INNER JOIN $TB_PROJECT P ON (PE.project_id=P.project_id)
 	 INNER JOIN $TBPR_FRACTION F ON (PE.experiment_id=F.experiment_id)
-	 INNER JOIN $TBPR_MSMS_SPECTRUM S ON (F.fraction_id=S.fraction_id)
+	  LEFT JOIN $TBPR_MSMS_SPECTRUM S ON (F.fraction_id=S.fraction_id)
 	 WHERE P.record_status!='D'
 	   AND UL.record_status!='D'
 	   AND PE.record_status!='D'
