@@ -1,6 +1,6 @@
 table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
 PR_proteomics_experiment	1	experiment_id	Experiment ID	int	4	0	N		Y							N	N				pkDEFAULT
-PR_proteomics_experiment	2	experiment_request_id	Experiment Request ID	int	4	0	N		N		experiment_request_id					N	N				
+PR_proteomics_experiment	2	experiment_request_id	Experiment Request ID	int	4	0	Y		N		experiment_request_id					N	N				
 PR_proteomics_experiment	3	contact_id	Contact	int	4	0	N		N	contact	contact_id	Y	current_contact_id	 		Y	Y	N	PI for this experiment		
 PR_proteomics_experiment	4	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project to which the experiment belongs	"SELECT project_id, name + ' ['+budget+']' FROM $TB_PROJECT WHERE PI_contact_id='$contact_id' ORDER BY name"	
 PR_proteomics_experiment	5	experiment_name	Experiment Title	varchar	100	0	N		N			Y	text	50		Y	Y	N	Title of this experiment		
@@ -73,34 +73,36 @@ PR_msms_spectrum	2	fraction_id	Fraction ID	int	4	0	N		N	PR_fraction	fraction_id	
 PR_msms_spectrum	3	msms_spectrum_file_root	MS/MS Spectrum File Root	varchar	50	0	N		N							Y	Y	Y	File root of this exactracted spectrum.  This corresponds to the .dta or .out filename without the extension.  Do not use spaces or non-standard characters.		
 PR_msms_spectrum	4	start_scan	Start Scan Number	int	4	0	N		N							Y	Y	N	Starting scan number of the MS/MS Spectrum		
 PR_msms_spectrum	5	end_scan	End Scan Number	int	4	0	N		N							Y	Y	N	"Ending scan number of the MS/MS Spectrum (if only a single scan, this will be the same as start_scan)"		
-PR_msms_spectrum	6	precursor_intensity	Precursor Intensity	real	4	0	N		N							Y	Y	N	Mass spec intensity of the precursor peptide that is fragmented		
+PR_msms_spectrum	6	precursor_intensity	Precursor Intensity	real	4	0	Y		N							Y	Y	N	Mass spec intensity of the precursor peptide that is fragmented		
 PR_msms_spectrum	7	n_peaks	Number of Peaks	int	4	0	N		N							Y	Y	N	Number of peaks in the spectrum		
-PR_msms_spectrum	8	spectrum_score	Spectrum Score	real	4	0	N		N							Y	Y	N	"Spectrum score, a floating point number of arbitrary scale"		
-PR_msms_spectrum	9	score_version	Score Version	varchar	10	0	N		N							Y	Y	N	Version tag of the software used to score this spectrum		
-PR_msms_spectrum	10	scan_time	Scan Time	real	4	0	N		N							Y	Y	N	Time of the start_scan in seconds after the instrument started counting		
-PR_msms_spectrum	11	calc_buffer_percent	Calculated Buffer B Percent	real	4	0	N		N							Y	Y	N	Calculated percent buffer B (acetonitrile) at the time of this MS/MS spectrum		
-PR_msms_spectrum	12	calib_buffer_percent	Calibrated Buffer B Percent	real	4	0	N		N							Y	Y	N	Calibrated percent buffer B (acetonitrile) at the time of this MS/MS spectrum (not used yet)		
+PR_msms_spectrum	8	spectrum_score	Spectrum Score	real	4	0	Y		N							Y	Y	N	"Spectrum score, a floating point number of arbitrary scale"		
+PR_msms_spectrum	9	score_version	Score Version	varchar	10	0	Y		N							Y	Y	N	Version tag of the software used to score this spectrum		
+PR_msms_spectrum	10	scan_time	Scan Time	real	4	0	Y		N							Y	Y	N	Time of the start_scan in seconds after the instrument started counting		
+PR_msms_spectrum	11	calc_buffer_percent	Calculated Buffer B Percent	real	4	0	Y		N							Y	Y	N	Calculated percent buffer B (acetonitrile) at the time of this MS/MS spectrum		
+PR_msms_spectrum	12	calib_buffer_percent	Calibrated Buffer B Percent	real	4	0	Y		N							Y	Y	N	Calibrated percent buffer B (acetonitrile) at the time of this MS/MS spectrum (not used yet)		
 PR_msms_spectrum_peak	1	msms_spectrum_id	MS/MS Spectrum ID	int	4	0	N		N	PR_msms_spectrum	msms_spectrum_id					Y	Y	Y	MS/MS Spectrum to which this peak belongs		
-PR_msms_spectrum_peak	2	mass	Peak Mass	real	4	0	N		N							Y	Y	Y	Average mass of this peak		
+PR_msms_spectrum_peak	2	mass	Peak Mass	float	8	0	N		N							Y	Y	Y	Average mass of this peak		
 PR_msms_spectrum_peak	3	intensity	Peak Intensity	real	4	0	N		N							Y	Y	N	Intensity of this peak		
 PR_biosequence_set	1	biosequence_set_id	BioSequence Set ID	int	4	0	N		Y							N	N				pkDEFAULT
-PR_biosequence_set	2	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Species for this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
-PR_biosequence_set	3	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
-PR_biosequence_set	4	set_tag	Set Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this BioSequence database		
-PR_biosequence_set	5	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Longer description of this BioSequence database		
-PR_biosequence_set	6	set_version	Set Version	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Version of this BioSequence database		
-PR_biosequence_set	7	upload_file	Upload file	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
-PR_biosequence_set	8	set_path	Set Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	File path of this BioSequence database		
-PR_biosequence_set	9	source_file_date	Source File Date	datetime	8	0	Y		N			N	text	40		N	N	N	Date of the FASTA file at last update		
-PR_biosequence_set	10	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
-PR_biosequence_set	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-PR_biosequence_set	12	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
-PR_biosequence_set	13	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PR_biosequence_set	14	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-PR_biosequence_set	15	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PR_biosequence_set	16	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-PR_biosequence_set	17	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-PR_biosequence_set	18	record_status	Record Status	char	1	0	N	N	N							N	N				
+PR_biosequence_set	2	project_id	Owner Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id"	
+PR_biosequence_set	3	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Species for this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+PR_biosequence_set	4	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
+PR_biosequence_set	5	set_tag	Set Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this BioSequence database		
+PR_biosequence_set	6	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioSequence database		
+PR_biosequence_set	7	set_version	Set Version	varchar	50	0	N		N			Y	text	40		Y	Y	N	Version of this BioSequence database		
+PR_biosequence_set	8	polymer_type_id	Polymer Type	int	4	0	N		N	BL_polymer_type	polymer_type_id	Y	optionlist			Y	Y	N	Polymer type of the biosequence in this set	"SELECT polymer_type_id, polymer_type_name FROM $TBBL_POLYMER_TYPE ORDER BY polymer_type_name"	
+PR_biosequence_set	9	upload_file	Upload file	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
+PR_biosequence_set	10	set_path	Set Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	File path of this BioSequence database		
+PR_biosequence_set	11	source_file_date	Source File Date	datetime	8	0	Y		N			N	text	40		N	N	N	Date of the FASTA file at last update		
+PR_biosequence_set	12	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
+PR_biosequence_set	13	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PR_biosequence_set	14	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
+PR_biosequence_set	15	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_biosequence_set	16	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+PR_biosequence_set	17	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_biosequence_set	18	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+PR_biosequence_set	19	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+PR_biosequence_set	20	record_status	Record Status	char	1	0	N	N	N							N	N				
 PR_dbxref	1	dbxref_id	dbxref ID	int	4	0	N		Y							N	N				pkDEFAULT
 PR_dbxref	2	dbxref_name	CrossRef Name	varchar	50	0	N		N			Y	text	40		Y	Y	N	Name of this Database Cross Reference		
 PR_dbxref	3	dbxref_tag	CrossRef Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this Database Cross Reference		
@@ -117,12 +119,12 @@ PR_dbxref	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	
 PR_dbxref	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 PR_dbxref	15	record_status	Record Status	char	1	0	N	N	N							N	N				
 PR_biosequence	1	biosequence_id	BioSequence ID	int	4	0	N		Y							N	N				pkDEFAULT
-PR_biosequence	2	biosequence_set_id	BioSequence Set	int	4	0	N		N	PR_biosequence_set	biosequence_set_id					N	N	Y	BioSequence Set to which this BioSequence belongs		pkDEFAULT
+PR_biosequence	2	biosequence_set_id	BioSequence Set	int	4	0	N		N	PR_biosequence_set	biosequence_set_id					N	N	Y	BioSequence Set to which this BioSequence belongs		
 PR_biosequence	3	biosequence_name	BioSequence Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of this BioSequence (generally everything before the first space in a FASTA file header line)		
 PR_biosequence	4	biosequence_gene_name	BioSequence Gene Name	varchar	255	0	Y		N			Y	text	20		Y	Y	N	Gene name of this BioSequence if applicable.  Most common gene name if applicable		
-PR_biosequence	5	dbxref_id	Database Cross Reference	int	4	0	Y		N	PR_dbxref	dbxref_id					Y	Y	N	Database cross reference for which the accession number applies		pkDEFAULT
+PR_biosequence	5	dbxref_id	Database Cross Reference	int	4	0	Y		N	PR_dbxref	dbxref_id					Y	Y	N	Database cross reference for which the accession number applies		
 PR_biosequence	6	biosequence_accession	BioSequence Accession	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Accession number for this BioSequence in some external database designated above		
-PR_biosequence	7	biosequence_desc	Biosequence Description	varchar	1024	0	N		N			Y	textarea	5		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)		
+PR_biosequence	7	biosequence_desc	Biosequence Description	varchar	1024	0	N		N			Y	text	40		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)		
 PR_biosequence	8	biosequence_seq	Sequence	text	16	0	Y		N			N	file	40		Y	Y	N	Actual sequence of the BioSequence if known		
 PR_biosequence_property_set	1	biosequence_property_set_id	BioSequence Property Set ID	int	4	0	N		Y							N	N				pkDEFAULT
 PR_biosequence_property_set	2	biosequence_id	BioSequence ID	int	4	0	N		N	PR_biosequence	biosequence_id					N	N	Y	Biosequence to which this Biosequence property set belongs		pkDEFAULT
@@ -138,12 +140,14 @@ PR_biosequence_property_set	11	chromosome	Chromosome	varchar	50	0	Y		N			N	text	
 PR_biosequence_property_set	12	start_in_chromosome	Start Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	Start position of the biosequence in the chromosome		
 PR_biosequence_property_set	13	end_in_chromosome	End Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	End position of the biosequence in the chromosome		
 PR_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	"Strand (+,-) of the biosequence in the chromosome"		
+PR_biosequence_property_set	15	isoelectric_point	Isoelectric Point	real	4	0	Y		N			N	text	10		Y	Y	N	Isoelectric Point (pI) of the protein		
+PR_biosequence_property_set	16	fav_codon_frequency	Favorite Codon Frequency	real	4	0	Y		N			N	text	10		Y	Y	N	Favorite Codon Frequency		
 PR_search_batch	1	search_batch_id	Search Batch ID	int	4	0	N		Y							N	N				pkDEFAULT
 PR_search_batch	2	experiment_id	Experiment ID	int	4	0	N		N	PR_proteomics_experiment	experiment_id	Y				Y	Y	Y	Experiment to which this search batch belongs		
 PR_search_batch	3	biosequence_set_id	BioSequence Set	int	4	0	N		N	PR_biosequence_set	biosequence_set_id	Y				Y	Y	Y	BioSequence Set against which this batch was searched		pkDEFAULT
 PR_search_batch	4	data_location	Data Location	varchar	255	0	N		N			Y	text	50		Y	Y	N	Absolute or relative location of the raw data for this search batch		
 PR_search_batch	5	search_batch_subdir	Search Batch Subdirectory	varchar	100	0	N		N			Y	text	50		Y	Y	Y	Subdirectory under the experiment where the data for this search resides		
-PR_search_batch_parameter	1	search_batch_id	Search Batch ID	int	4	0	N		Y							N	N	Y	Search batch to which this search parameter belongs		pkDEFAULT
+PR_search_batch_parameter	1	search_batch_id	Search Batch ID	int	4	0	N		N							N	N	Y	Search batch to which this search parameter belongs		pkDEFAULT
 PR_search_batch_parameter	2	key_order	Key Order	int	4	0	N		N			Y				Y	Y	N	Monotonically increasing number to denote key order		
 PR_search_batch_parameter	3	parameter_key	Parameter Key	varchar	100	0	N		N			Y	text	50		Y	Y	Y	The key of the key/value pair		
 PR_search_batch_parameter	4	parameter_value	Parameter Value	varchar	255	0	N		N			Y	text	50		Y	Y	N	The value of the key/value pair		
@@ -157,20 +161,20 @@ PR_search	3	msms_spectrum_id	MS/MS Spectrum ID	int	4	0	N		N	PR_msms_spectrum	msm
 PR_search	4	file_root	File Root	varchar	50	0	N		N			Y	text	50		Y	Y	N	Root of the filename that was searched.  This is usually in the format of basename.startscan.endscan.assumedcharge		
 PR_search	5	start_scan	Start Scan	int	4	0	N		N			Y	text	10		Y	Y	N	Starting scan number		
 PR_search	6	end_scan	End Scan	int	4	0	N		N			Y	text	10		Y	Y	N	Ending scan number		
-PR_search	7	sample_mass_plus_H	Sample (M+H)+	real	4	0	N		N			Y	text	10		Y	Y	N	Observed mass (M+H)+		
+PR_search	7	sample_mass_plus_H	Sample (M+H)+	float	8	0	N		N			Y	text	10		Y	Y	N	Observed mass (M+H)+		
 PR_search	8	assumed_charge	Assumed Charge	int	4	0	N		N			Y	text	10		Y	Y	N	Assumed charged for this search (since charge may be unknown)		
 PR_search	9	total_intensity	Total Spectrum Intensity	real	4	0	N		N			Y	text	10		Y	Y	N	Total intensity of the spectrum		
 PR_search	10	matched_peptides	Number of Matched Peptides	int	4	0	N		N			Y	text	10		Y	Y	N	Number of matched peptides for this search		
 PR_search	11	lowest_prelim_score	Lowest Preliminary Score	real	4	0	N		N			Y	text	10		Y	Y	N	Lowest preliminary score by Sequest		
 PR_search	12	search_date	Search Date	datetime	8	0	N		N			Y	text	20		Y	Y	N	Date the the spectrum was searched		
-PR_search	13	search_elasped_min	Search Time in Minutes	real	4	0	N		N			Y	text	10		Y	Y	N	Length of time in minutes for the search to complete		
+PR_search	13	search_elapsed_min	Search Time in Minutes	real	4	0	N		N			Y	text	10		Y	Y	N	Length of time in minutes for the search to complete		
 PR_search	14	search_host	Search Hostname	varchar	50	0	N		N			Y	text	50		Y	Y	N	Hostname on which the search was performed		
 PR_search_hit	1	search_hit_id	Search Hit ID	int	4	0	N		Y							N	N		Search Hit ID		pkDEFAULT
-PR_search_hit	2	search_id	Search ID	int	4	0	N		N	PR_search_batch	search_batch_id					Y	Y	Y	Search ID to which this hit belongs		
+PR_search_hit	2	search_id	Search ID	int	4	0	N		N	PR_search	search_id					Y	Y	Y	Search ID to which this hit belongs		
 PR_search_hit	3	hit_index	Hit Index	int	4	0	N		N							Y	Y	Y	Index number of this hit to denote the order		
 PR_search_hit	4	cross_corr_rank	Cross Correlation Rank	int	4	0	N		N							Y	Y	N	Cross Correlation Rank		
 PR_search_hit	5	prelim_score_rank	Preliminary Score Rank	int	4	0	N		N							Y	Y	N	Preliminary Score Rank		
-PR_search_hit	6	hit_mass_plus_H	Hit (M+H)+	real	4	0	N		N							Y	Y	N	Hit (M+H)+		
+PR_search_hit	6	hit_mass_plus_H	Hit (M+H)+	float	8	0	N		N							Y	Y	N	Hit (M+H)+		
 PR_search_hit	7	mass_delta	Mass Delta	real	4	0	N		N							Y	Y	N	Mass Delta		
 PR_search_hit	8	cross_corr	Cross Correlation Score	real	4	0	N		N							Y	Y	N	Cross Correlation Score		
 PR_search_hit	9	norm_corr_delta	Normalized Correlation Score Delta	real	4	0	N		N							Y	Y	N	Normalized Correlation Score Delta		
@@ -188,6 +192,7 @@ PR_search_hit	20	isoelectric_point	Calculated Isoelectric Point	real	4	0	Y		N			
 PR_search_hit	21	molecular_weight	Molecular Weight	real	4	0	Y		N							Y	Y	N	Molecular Weight		
 PR_search_hit	22	probability	Probability	real	4	0	Y		N							Y	Y	N	Probability		
 PR_search_hit	23	f_score	F Score	real	4	0	Y		N							Y	Y	N	F Score		
+PR_search_hit	24	gravy_score	Gravy Score	real	4	0	Y		N							Y	Y	N	Gravy Score		
 PR_search_hit_protein	1	search_hit_protein_id	Search Hit Protein ID	int	4	0	N		Y							N	N		Search Hit Protein ID		pkDEFAULT
 PR_search_hit_protein	2	search_hit_id	Search Hit ID	int	4	0	N		N	PR_search_hit	search_hit_id					Y	Y	Y	Search Hit ID to which this duplicate protein belongs		
 PR_search_hit_protein	3	reference	Reference (Protein)	varchar	100	0	N		N							Y	Y	Y	Reference (Protein)		
@@ -284,7 +289,7 @@ PR_instrument	2	instrument_type_id	Instrument Type	int	4	0	N		N			Y	optionlist		
 PR_instrument	3	instrument_name	Instrument Name	varchar	100	0	N		N			Y	text	30		Y	Y	Y	Short name of this instrument as it will appear in list boxes		
 PR_instrument	4	instrument_description	Instrument Description	varchar	255	0	N		N			Y	text	60		Y	Y	N	More complete description of this instrument		
 PR_instrument	5	comment	Comment	text	16	0	Y		N			N	textarea	10		Y	Y	N	Additional comments		
-PR_instrument	6	sort_order	Sort Order	int	4	0	N	10	N			Y	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
+PR_instrument	6	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
 PR_instrument	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 PR_instrument	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
 PR_instrument	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -388,7 +393,7 @@ APD_peptide_summary	1	peptide_summary_id	Peptide Summary ID	int	8	0	N		Y							N
 APD_peptide_summary	2	peptide_summary_name	Peptide Summary Title	varchar	100	0	N		N			Y	text	50		Y	Y	Y	Title of this peptide summary		
 APD_peptide_summary	3	description	Peptide Summary Description	text	16	0	N		N			Y	textarea	4		Y	Y	N	"Description of this APD peptide summary, from where it is derived, etc."		
 APD_peptide_summary	4	minimum_probability	Minimum Probability	real	4	0	Y		N			N	text	10		Y	Y	N	Minimum P value for selecting good peptides		
-APD_peptide_summary	5	experiment_list	Experiment ID List	varchar	255	0	N		N			Y	text	50		Y	Y	N	List of experiment_ids		
+APD_peptide_summary	5	experiment_list	Search Batch ID List	varchar	255	0	N		N			Y	text	50		Y	Y	N	List of search batch ids		
 APD_peptide_summary	6	n_experiments	Number of Experiments	int	4	0	N		N			Y	text	10		Y	Y	N	Total number of experiments used for this summary		
 APD_peptide_summary	7	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 APD_peptide_summary	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -666,6 +671,7 @@ PR_protein	6	percent_coverage	Percent Coverage	real	4	0	Y		N
 PR_protein	7	n_indistinguishable_proteins	Number of Indistinguishable Proteins	int	4	0	Y		N												
 PR_protein	8	biosequence_id	Biosequence ID	int	4	0	N		N												
 PR_protein	9	summary_quantitation_id	Summary Quantitation	int	4	0	Y		N	PR_summary_quantitation	summary_quantitation_id										
+PR_protein	10	n_peptides	Number of Peptides	int	4	0	Y		N												
 PR_indistinguishable_protein	1	indistinguishable_protein_id	Indistinguishable Protein ID	int	4	0	N		Y												pkDEFAULT
 PR_indistinguishable_protein	2	protein_id	Lead Protein	int	4	0	N		N	PR_protein	protein_id										
 PR_indistinguishable_protein	3	protein_name	Protein Name	varchar	255	0	N		N												
@@ -680,7 +686,7 @@ PR_peptide	8	peptide_group_designator	Peptide Twin Designator	varchar	10	0	Y		N
 PR_peptide	9	weight	Weight	real	4	0	N		N												
 PR_peptide	10	is_nondegenerate_evidence	Is Nondegenerate Evidence?	char	1	0	N		N												
 PR_peptide	11	n_tryptic_termini	Number of Tryptic Termini	int	4	0	N		N												
-PR_peptide	12	n_sibling_peptides	Number of Sibling Peptides	int	4	0	Y		N												
+PR_peptide	12	n_sibling_peptides	Number of Sibling Peptides	real	4	0	Y		N												
 PR_peptide	13	n_sibling_peptides_bin	Number of Sibling Peptides Bin	int	4	0	N		N												
 PR_peptide	14	n_instances	Number of Observed Instances	int	4	0	N		N												
 PR_peptide	15	summary_quantitation_id	Summary Quantitation	int	4	0	Y		N	PR_summary_quantitation	summary_quantitation_id										
