@@ -30,7 +30,7 @@ sub histogram {
   my $self = shift || croak("parameter self not passed");
   my %args = @_;
   my $SUB_NAME = "histogram";
-  my $VERBOSE = 1;
+  my $VERBOSE = 0;
 
   #### Decode the argument list
   my $data_array_ref = $args{'data_array_ref'};
