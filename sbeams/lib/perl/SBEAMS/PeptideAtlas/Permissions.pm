@@ -84,20 +84,78 @@ sub isYeastPA
     my $self = shift ;
 
     my $sbeams = $self->getSBEAMS();
+ 
+    my %args = @_;
 
-    my $projID =  $sbeams->getCurrent_project_id();
+    my $project_id = $args{'project_id'} || $sbeams->getCurrent_project_id();
 
-    if ( !defined $projID ) 
+    if ( !defined $project_id ) 
     {
         return undef;
 
-    } elsif ($projID == 491 ) 
+    } elsif ($project_id == 491 ) 
     {
         return 1;
 
     } else {
 
         return 0;
+    }
+
+}
+
+
+
+###############################################################################
+# Utility routine, gets current project id, and checks that it's
+# accessible to user.  If yes, returns project id, else returns 0.
+###############################################################################
+sub getProjectID
+{
+
+    my $self = shift ;
+
+    my $sbeams = $self->getSBEAMS();
+ 
+    my %args = @_;
+
+    my $atlas_build_name = $args{'atlas_build_name'} || '';
+
+    my $atlas_build_id = $args{'atlas_build_id'} || '';
+
+    my $sql;
+
+    if ($atlas_build_name)
+    {
+        $sql = qq~
+            SELECT project_id
+            FROM $TBAT_ATLAS_BUILD
+            WHERE atlas_build_name = '$atlas_build_name'
+            ~;
+    } elsif ( $atlas_build_id )
+    {
+        $sql = qq~
+            SELECT project_id
+            FROM $TBAT_ATLAS_BUILD
+            WHERE atlas_build_id = '$atlas_build_id'
+            ~;
+    }
+
+    my ($project_id) = $sbeams->selectOneColumn($sql) or
+      die "\nERROR: Unable to find the project_id"
+      . " with $sql\n\n";
+
+    ## check that project is accessible:
+    if ( $sbeams->isProjectAccessible( project_id => $project_id ) )
+    {
+
+        return $project_id;
+
+    } else
+    {
+
+        return 0;
+
     }
 
 }
