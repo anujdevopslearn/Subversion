@@ -1862,11 +1862,13 @@ sub buildOptionList {
     $dbh = $self->getDBHandle();
 
     #### Convert the SQL dialect if necessary
-    $sql_query = $self->translateSQL(sql=>$sql_query);
-
+    $sql_query = $self->translateSQL(sql=>$sql_query); 
+      
+    ##for debugging:
+    ##$self->display_sql(sql=>$sql_query);
     my $options="";
     my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
-    my $rv  = $sth->execute or croak $dbh->errstr;
+    my $rv  = $sth->execute or croak $dbh->errstr;  
 
     while (my @row = $sth->fetchrow_array) {
         $selected_flag="";
@@ -5790,7 +5792,7 @@ Print a <SELECT> list of the standard record status options.  Set
 $selected_option to make one the selected option.
 
 
-=item * B<DisplayQueryResult(several key value parameters)>
+=item * B<displayQueryResult(several key value parameters)>
 
 This method executies the supplied SQL query and prints the result as
 an HTML table.  The resultset can also be returned via the reference
@@ -5838,6 +5840,79 @@ resultset_ref = reference to a resultset structure that gets returned
 
 =item * B<convertSingletoTwoQuotes>
 
+=item * B<isRowprivate>
+
+=item * B<applySQLChange>
+
+=item * B<getDbTableName>
+
+=item * B<translateSQL>
+
+=item * B<convert_concatenation>
+
+=item * B<convert_functions>
+
+=item * B<buildLimitClause>
+
+=item * B<insert_update_row>
+
+=item * B<deleteRecordsAndChildren>
+
+=item * B<translateOptionValue>
+
+=item * B<isResultsetColumnNumerical>
+
+=item * B<resultsetByCharacter>
+
+=item * B<resultsetNumerically>
+
+=item * B<displayResultSetPlot>
+
+=item * B<displayTimingInfo>
+
+=item * B<parseResultSetParams>
+
+=item * B<parse_input_parameters>
+
+=item * B<processStandardParameters>
+
+=item * B<display_input_form>
+
+=item * B<display_form_buttons>
+
+=item * B<display_sql>
+
+=item * B<build_SQL_columns_list>
+
+=item * B<transferTable>
+
+=item * B<importTSVFile>
+
+=item * B<unix2dosFile>
+
+=item * B<getModules>
+
+=item * B<readModuleFile>
+
+=item * B<printRecentResultsets>
+
+=item * B<getRecentResultsets>
+
+=item * B<printProjectsYouOwn>
+
+=item * B<getProjectsYouOwn>
+
+=item * B<printProjectsYouHaveAccessTo>
+
+=item * B<getProjectsYouHaveAccessTo>
+
+=item * B<printUserChooser>
+
+=item * B<linkToColumnText>
+
+=item * B<getPopupDHTML>
+
+=item * B<isTaintedSQL>
 
 
 
