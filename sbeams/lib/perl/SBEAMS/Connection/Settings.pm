@@ -49,33 +49,49 @@ require Exporter;
     );
 
 
+#### Set some initial parameter settings
 $DBTITLE                = 'SBEAMS';
 $SERVER_BASE_DIR        = 'http://db';
 
 
-if ( $ENV{SCRIPT_NAME} =~ /dev1/ ) {
+#### Decide which version settings to use based on $ENV{SCRIPT_NAME} or
+#### $ENV{SBEAMS_INSTANCE}
+my $SBEAMS_INSTANCE = "production";
+$SBEAMS_INSTANCE = $ENV{SCRIPT_NAME} if ($ENV{SCRIPT_NAME});
+$SBEAMS_INSTANCE = $ENV{SBEAMS_INSTANCE} if ($ENV{SBEAMS_INSTANCE});
+
+
+#### Set version-specific parameters
+if ( $SBEAMS_INSTANCE =~ /\/dev1\// ) {
   $DBVERSION              = 'Dev Branch 1';
   $BGCOLOR                = '#FF9999';
   $HTML_BASE_DIR          = '/dev1/sbeams';
   $PHYSICAL_BASE_DIR      = "/local/www/html/dev1/sbeams";
   $UPLOAD_DIR             = "/local/data/dev1/sbeams";
 
-} elsif ( $ENV{SCRIPT_NAME} =~ /dev2/ ) {
+} elsif ( $SBEAMS_INSTANCE =~ /\/dev2\// ) {
   $DBVERSION              = 'Dev Branch 2';
   $BGCOLOR                = '#FFFF99';
   $HTML_BASE_DIR          = '/dev2/sbeams';
   $PHYSICAL_BASE_DIR      = "/local/www/html/dev2/sbeams";
   $UPLOAD_DIR             = "/local/data/dev2/sbeams";
 
-} elsif ( $ENV{SCRIPT_NAME} =~ /ext/ ) {
+} elsif ( $SBEAMS_INSTANCE =~ /\/ext\// ) {
   $DBVERSION              = 'External Access';
   $BGCOLOR                = '#99DD99';
   $HTML_BASE_DIR          = '/ext/sbeams';
   $PHYSICAL_BASE_DIR      = "/local/www/html/ext/sbeams";
   $UPLOAD_DIR             = "/local/data/ext/sbeams";
 
+} elsif ( $SBEAMS_INSTANCE =~ /\/mysqldev1\// ) {
+  $DBVERSION              = 'MySQL Dev Branch 1';
+  $BGCOLOR                = '#FFFF99';
+  $HTML_BASE_DIR          = '/mysqldev1/sbeams';
+  $PHYSICAL_BASE_DIR      = "/local/www/html/mysqldev1/sbeams";
+  $UPLOAD_DIR             = "/local/data/mysqldev1/sbeams";
+
 } else {
-  $DBVERSION              = '<FONT COLOR=red>Full Production</FONT>';
+  $DBVERSION              = '<FONT COLOR=red>Primary</FONT>';
   $BGCOLOR                = '#BFD8D8';
   $HTML_BASE_DIR          = '/sbeams';
   $PHYSICAL_BASE_DIR      = "/local/www/html/sbeams";
@@ -83,6 +99,7 @@ if ( $ENV{SCRIPT_NAME} =~ /dev1/ ) {
 }
 
 
+#### Set some additional settings which depend on version-specific parameters
 $DATA_DIR               = "$HTML_BASE_DIR/data";
 $CGI_BASE_DIR           = "$HTML_BASE_DIR/cgi";
 $OPTIONARROW            = "<P><IMG SRC=\"$HTML_BASE_DIR/images/yellow-arrow.gif\">&nbsp;";

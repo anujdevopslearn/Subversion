@@ -13,7 +13,8 @@ package SBEAMS::Connection::DBConnector;
 
 use strict;
 use vars qw($DB_SERVER $DB_DATABASE $DB_USER $DB_PASS $DB_DRIVER
-            $DB_DSN $dbh $dbh2);
+            $DB_DSN $DB_TYPE $dbh
+            $BIOSAP_DB);
 use DBI;
 use SBEAMS::Connection::Settings;
 
@@ -21,33 +22,43 @@ use SBEAMS::Connection::Settings;
 ###############################################################################
 # DBI Connection Variables
 ###############################################################################
-if ( $DBVERSION eq "Dev Branch 2" ) {
-#  $DB_SERVER   = 'tj-db2ks-01';
+if ( $DBVERSION eq "Dev Branch 1" ) {
   $DB_SERVER   = 'mssql';
-#  $DB_DATABASE = 'sbeams3';
+  $DB_DATABASE = 'sbeamsdev';
+  $DB_USER     = 'sbeams';
+  $DB_PASS     = 'SB444';
+  $DB_DRIVER   = "DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE";
+  $DB_TYPE     = "MS SQL Server";
+  $BIOSAP_DB   = "BioSap.dbo.";
+
+} elsif ( $DBVERSION eq "Dev Branch 2" ) {
+  $DB_SERVER   = 'mssql';
   $DB_DATABASE = 'sbeams';
   $DB_USER     = 'sbeams';
   $DB_PASS     = 'SB444';
   $DB_DRIVER   = "DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE";
-} elsif ( $DBVERSION eq "Dev Branch 1" ) {
-  $DB_SERVER   = 'tj-db2ks-01';
-  $DB_DATABASE = 'sbeams3';
+  $DB_TYPE     = "MS SQL Server";
+  $BIOSAP_DB   = "BioSap.dbo.";
+
+} elsif ( $DBVERSION eq "MySQL Dev Branch 1" ) {
+  $DB_SERVER   = 'mysql';
+  $DB_DATABASE = 'sbeams';
   $DB_USER     = 'sbeams';
   $DB_PASS     = 'SB444';
-  $DB_DRIVER   = "DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE";
+  $DB_DRIVER   = "DBI:mysql:$DB_DATABASE:$DB_SERVER";
+  $DB_TYPE     = "MySQL";
+  $BIOSAP_DB   = "biosap.";
+
 } else {
   $DB_SERVER   = 'mssql';
   $DB_DATABASE = 'sbeams';
   $DB_USER     = 'sbeams';
   $DB_PASS     = 'SB444';
   $DB_DRIVER   = "DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE";
+  $DB_TYPE     = "MS SQL Server";
+  $BIOSAP_DB   = "BioSap.dbo.";
 }
 
-#$DB_DSN      = 'SBEAMS';
-#$DB_DATABASE = 'sbdb';
-#$DB_USER     = 'DataLoader';
-#$DB_PASS     = 'DL444';
-#$DB_DRIVER   = "DBI:ODBC:$DB_DSN"; # Set to your server
 
 
 ###############################################################################
@@ -118,6 +129,26 @@ sub getDBServer {
 ###############################################################################
 sub getDBDriver {
     return $DB_DRIVER;
+}
+
+
+###############################################################################
+# get DB Type
+#
+# Return the Server Type of the database connection.
+###############################################################################
+sub getDBType {
+    return $DB_TYPE;
+}
+
+
+###############################################################################
+# getBIOSAP_DB
+#
+# Return the BIOSAP_DB of the database connection.
+###############################################################################
+sub getBIOSAP_DB {
+    return $BIOSAP_DB;
 }
 
 

@@ -322,6 +322,113 @@ sub selectTwoColumnHash {
 
 
 ###############################################################################
+# insert_update_row
+###############################################################################
+sub insert_update_row {
+  my $self = shift || croak("parameter self not passed");
+  my %args = @_;
+
+  #### Decode the argument list
+  my $table_name = $args{'table_name'} || die "ERROR: table_name not passed";
+  my $rowdata_ref = $args{'rowdata_ref'} || die "ERROR: rowdata_ref not passed";
+  my $database_name = $args{'database_name'} || "";
+  my $return_PK = $args{'return_PK'} || 0;
+  my $verbose = $args{'verbose'} || 0;
+  my $testonly = $args{'testonly'} || 0;
+  my $insert = $args{'insert'} || 0;
+  my $update = $args{'update'} || 0;
+  my $PK = $args{'PK'} || "";
+  my $PK_value = $args{'PK_value'} || "";
+
+
+  #### Make sure either INSERT or UPDATE was selected
+  unless ( ($insert or $update) and (!($insert and $update)) ) {
+    croak "ERROR: Need to specify either 'insert' or 'update'\n\n";
+  }
+
+
+  #### If this is an UPDATE operation, make sure that we got the PK and value
+  if ($update) {
+    unless ($PK and $PK_value) {
+      croak "ERROR: Need both PK and PK_value if operation is UPDATE\n\n";
+    }
+  }
+
+
+  #### Initialize some variables
+  my ($column_list,$value_list,$columnvalue_list) = ("","","");
+  my ($key,$value,$value_ref);
+
+
+  #### Loops over each passed rowdata element, building the query
+  while ( ($key,$value) = each %{$rowdata_ref} ) {
+
+    #### If $value is a reference, assume it's a reference to a hash and
+    #### extract the {value} key value.  This is because of Xerces.
+    $value = $value->{value} if (ref($value));
+
+    print "	$key = $value\n" if ($verbose > 0);
+
+    #### Add the key as the column name
+    $column_list .= "$key,";
+
+    #### Enquote and add the value as the column value
+    $value =~ s/'/''/g;
+    $value_list .= "'$value',";
+
+    #### Put the data in key = value format, too, for UPDATE
+    $columnvalue_list .= "$key = '$value',";
+
+  }
+
+
+  unless ($column_list) {
+    print "ERROR: insert_row(): column_list is empty!\n";
+    return;
+  }
+
+
+  #### Chop off the final commas
+  chop $column_list;
+  chop $value_list;
+  chop $columnvalue_list;
+
+
+  #### Build the SQL statement
+  my $sql;
+  if ($update) {
+    $sql = "UPDATE $database_name$table_name SET $columnvalue_list WHERE $PK = '$PK_value'";
+  } else {
+    $sql = "INSERT INTO $database_name$table_name ( $column_list ) VALUES ( $value_list )";
+  }
+  print "$sql\n" if ($verbose > 0);
+
+
+  #### Return if just testing
+  return "1" if ($testonly);
+
+
+  #### Execute the SQL
+  $self->executeSQL($sql);
+
+
+  #### If user didn't want PK, return with success
+  return "1" unless ($return_PK);
+
+
+  #### If user requested the resulting PK, return it
+  if ($update) {
+    return $PK_value;
+  } else {
+    return $self->getLastInsertedPK(table_name=>"$database_name$table_name",
+      PK_column_name=>"$PK");
+  }
+
+
+}
+
+
+###############################################################################
 # executeSQL
 #
 # Execute the supplied SQL statement with no return value.
@@ -344,13 +451,49 @@ sub executeSQL {
 ###############################################################################
 # getLastInsertedPK
 #
-# Execute the supplied SQL statement with no return value.
+# Return the value of the AUTO GEN key for the last INSERTed row
 ###############################################################################
 sub getLastInsertedPK {
     my $self = shift || croak("parameter self not passed");
+    my %args = @_;
+    my $subName = "getLastInsertedPK";
 
-    my $sql_query = "SELECT SCOPE_IDENTITY()";
-    my ($returned_PK) = $self->selectOneColumn($sql_query);
+
+    #### Decode the argument list
+    my $table_name = $args{'table_name'};
+    my $PK_column_name = $args{'PK_column_name'};
+
+
+    my $sql;
+    my $DBType = $self->getDBType() || "";
+
+
+    #### Method to determine last inserted PK depends on database server
+    if ($DBType =~ /MS SQL Server/i) {
+      $sql = "SELECT SCOPE_IDENTITY()";
+
+    } elsif ($DBType =~ /MySQL/i) {
+      $sql = "SELECT LAST_INSERT_ID()";
+
+    } elsif ($DBType =~ /PostgreSQL/i) {
+      croak "ERROR[$subName]: Both table_name and PK_column_name need to be " .
+        "specified here for PostgreSQL since no automatic PK detection is " .
+        "yet possible." unless ($table_name && $PK_column_name);
+
+      #### YUCK! PostgreSQL 7.1 appears to truncate table name and PK name at
+      #### 13 characters to form the automatic SEQUENCE.  Might be fix later?
+      my $table_name_tmp = substr($table_name,0,13);
+      my $PK_column_name_tmp = substr($PK_column_name,0,13);
+ 
+      $sql = "SELECT currval('${table_name_tmp}_${PK_column_name_tmp}_seq')"
+
+    } else {
+      croak "ERROR[$subName]: Unable to determine DBType\n\n";
+    }
+
+
+    #### Get value and return it
+    my ($returned_PK) = $self->selectOneColumn($sql);
     return $returned_PK;
 
 }
