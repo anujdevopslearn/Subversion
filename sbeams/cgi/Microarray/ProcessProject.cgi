@@ -720,10 +720,10 @@ print qq~
     <TABLE BORDER=0>
     <TR>
       <TD>
-      <INPUT TYPE="checkbox" NAME="postSam" VALUE = "ps">
+      <INPUT TYPE="checkbox" NAME="postSam" VALUE = "ps" CHECKED>
       </TD>
       <TD>
-	&nbsp;Use postSam (adds info from key file to .sig file)
+	&nbsp;Create clone file (adds info from key file to .sig file)
       </TD>
     </TR>
     <TR>
