@@ -106,7 +106,8 @@ sub printPageHeader {
 	<tr><td>Status/Processing:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ShowProjectStatus.cgi"><nobr>&nbsp;&nbsp;&nbsp;Project Status</a></nobr></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GridAlignCheck.cgi"><nobr>&nbsp;&nbsp;&nbsp;Alignment Check</a></nobr></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProcessProject.cgi"><nobr>&nbsp;&nbsp;&nbsp;Data Processing</a></nobr></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProcessProject.cgi"><nobr>&nbsp;&nbsp;&nbsp;NEW Data Processing</a></nobr></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProcessProject_old.cgi"><nobr>&nbsp;&nbsp;&nbsp;OLD Data Processing</a></nobr></td></tr>
 	<tr><td>&nbsp;</td></tr>
 
 	<tr><td>Array Information:</td></tr>
