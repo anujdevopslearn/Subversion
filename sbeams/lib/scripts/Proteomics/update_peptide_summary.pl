@@ -50,6 +50,7 @@ Options:
   --verbose n         Set verbosity level.  default is 0
   --quiet             Set flag to print nothing at all except errors
   --debug n           Set debug flag
+  --testonly          Do not actually write to the database
   --delete_existing   Delete the existing peptides for this set before
                       loading.  Normally, if there are existing peptides,
                       the load is blocked.
@@ -349,7 +350,7 @@ print "experiment_list = ",$experiment_list,"\n";
 
   #### Define main query to get data to fill tables with
   $sql = qq~
-	SELECT TOP 100
+	SELECT
            S.file_root AS 'file_root',
            STR(MSS.calc_buffer_percent,7,1) AS 'calc_buffer_percent',
            best_hit_flag AS 'best_hit_flag',
@@ -379,10 +380,10 @@ print "experiment_list = ",$experiment_list,"\n";
 	 WHERE 1 = 1
 	   AND SB.search_batch_id IN ( $experiment_list )
 	   AND ( ( SH.probability >= '$minimum_probability'
-	           AND ( SHA.annotation_label_id IN ( 1,2 ) OR SHA.annotation_label_id IS NULL ) )
-                 OR SHA.annotation_label_id IN ( 1,2 )
+	           AND ( SHA.annotation_label_id IN ( 1 ) OR SHA.annotation_label_id IS NULL ) )
+                 OR SHA.annotation_label_id IN ( 1 )
                )
-	 ORDER BY peptide_string,assumed_charge,S.file_root,experiment_tag,set_tag,SH.cross_corr_rank,SH.hit_index
+	 ORDER BY peptide,peptide_string,assumed_charge,S.file_root,experiment_tag,set_tag,SH.cross_corr_rank,SH.hit_index
   ~;
 
   #print "$sql\n\n" if ($VERBOSE);
@@ -410,7 +411,8 @@ print "experiment_list = ",$experiment_list,"\n";
     #### If the human annotated probability is higher than the natural one,
     #### then substitute it
     $probability = $annotation_probability
-      if ($annotation_probability > $probability);
+      if (defined($annotation_probability) &&
+          $annotation_probability > $probability);
 
 
     #### If this is a new peptide, write out the previous and set up the new
