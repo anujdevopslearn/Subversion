@@ -17,15 +17,20 @@ use CGI::Carp qw(fatalsToBrowser croak);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Log;
 use SBEAMS::PeptideAtlas::DBInterface;
+use SBEAMS::PeptideAtlas::ResultSet;
 use SBEAMS::PeptideAtlas::HTMLPrinter;
 use SBEAMS::PeptideAtlas::TableInfo;
 use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::PeptideAtlas::Settings;
+use SBEAMS::PeptideAtlas::Permissions;
 
 @ISA = qw(SBEAMS::PeptideAtlas::DBInterface
+          SBEAMS::PeptideAtlas::ResultSet
           SBEAMS::PeptideAtlas::HTMLPrinter
           SBEAMS::PeptideAtlas::TableInfo
-          SBEAMS::PeptideAtlas::Settings);
+          SBEAMS::PeptideAtlas::Settings
+          SBEAMS::PeptideAtlas::Permissions
+       );
 
 my $log = SBEAMS::Connection::Log->new();
 
