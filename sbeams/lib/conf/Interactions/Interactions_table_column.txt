@@ -62,8 +62,8 @@ IN_publication_category	9	modified_by_id	Record Modified By	int	2	0	N	1	N	contac
 IN_publication_category	10	owner_group_id	Owner Group ID	int	2	0	N	1	N	work_group	work_group_id					N	N				
 IN_publication_category	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 IN_publication	1	publication_id	Publication ID	int	8	0	N		Y							N	N				pkDEFAULT
-IN_publication	2	pubmed_ID	PubMed ID	varchar	50	0	Y		N			N	text	30	refreshDocument()	Y	Y	N	"PubMed ID for this publication.  When this field is changed, the interface fetch the title,author,etc. information for you if the field below this (Publication Name) is empty"		http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?cmd=Retrieve&db=PubMed&list_uids=%V&dopt=Abstract
-IN_publication	3	publication_name	Publication Name	varchar	100	0	N		N			Y	text	50		Y	Y	Y	"Friendly name of the citation, e.g. Dewey, Cheetham & Howe (1998)"		
+IN_publication	2	pubmed_ID	PubMed ID	varchar	50	0	Y		N			N	text	30	refreshDocument()	Y	Y	Y	"PubMed ID for this publication.  When this field is changed, the interface fetch the title,author,etc. information for you if the field below this (Publication Name) is empty"		http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?cmd=Retrieve&db=PubMed&list_uids=%V&dopt=Abstract
+IN_publication	3	publication_name	Publication Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	"Friendly name of the citation, e.g. Dewey, Cheetham & Howe (1998)"		
 IN_publication	4	keywords	Keywords	varchar	255	0	Y		N			N	text	50		Y	Y	N	A comma-separated list of keywords appropriate when searching for papers of this sort		
 IN_publication	5	publication_category_id	Publication Category	int	4	0	Y		N	IN_publication_category	publication_category_id	N	optionlist			Y	Y	N	Broad category within which this publication is classified	"SELECT publication_category_id,publication_category_name FROM $TBIN_PUBLICATION_CATEGORY WHERE record_status != 'D' ORDER BY sort_order,publication_category_name"	
 IN_publication	6	title	Title	varchar	255	0	Y		N			N	textarea	2		Y	Y	N	Title of the article		
