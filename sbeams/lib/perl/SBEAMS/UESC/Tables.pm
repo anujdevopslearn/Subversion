@@ -24,6 +24,13 @@ use vars qw(@ISA @EXPORT
     $TBUESC_BIOSEQUENCE
     $TBUESC_QUERY_OPTION
 
+    $TBUESC_ANTIBODY
+    $TBUESC_CELL_TYPE
+    $TBUESC_TISSUE_TYPE
+    $TBUESC_CELL_PRESENCE_LEVEL
+    $TBUESC_STAIN
+    $TBUESC_STAIN_CELL_PRESENCE
+
 );
 
 
@@ -38,6 +45,13 @@ require Exporter;
     $TBUESC_BIOSEQUENCE
     $TBUESC_QUERY_OPTION
 
+    $TBUESC_ANTIBODY
+    $TBUESC_CELL_TYPE
+    $TBUESC_TISSUE_TYPE
+    $TBUESC_CELL_PRESENCE_LEVEL
+    $TBUESC_STAIN
+    $TBUESC_STAIN_CELL_PRESENCE
+
 );
 
 
@@ -51,6 +65,16 @@ $TBUESC_BIOSEQUENCE_SET       = "${mod}biosequence_set";
 $TBUESC_DBXREF                = "${mod}dbxref";
 $TBUESC_BIOSEQUENCE           = "${mod}biosequence";
 $TBUESC_QUERY_OPTION          = "${mod}query_option";
+
+$TBUESC_ANTIBODY              = "${mod}antibody";
+$TBUESC_CELL_TYPE             = "${mod}cell_type";
+$TBUESC_TISSUE_TYPE           = "${mod}tissue_type";
+$TBUESC_CELL_PRESENCE_LEVEL   = "${mod}cell_presence_level";
+$TBUESC_STAIN                 = "${mod}stain";
+$TBUESC_STAIN_CELL_PRESENCE   = "${mod}stain_cell_presence";
+
+
+
 
 
 
