@@ -142,7 +142,7 @@ sub printEntryForm {
 	SELECT experiment_id,username+' - '+experiment_name
 	  FROM $TBPR_PROTEOMICS_EXPERIMENT PE
 	  LEFT JOIN $TB_USER_LOGIN UL ON ( PE.contact_id=UL.contact_id )
-	 WHERE PE.record_status ~= 'D'
+	 WHERE PE.record_status != 'D'
 	 ORDER BY username,experiment_name
     ~;
     my $optionlist = $sbeams->buildOptionList(
