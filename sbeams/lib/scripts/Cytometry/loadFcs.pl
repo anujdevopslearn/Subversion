@@ -336,8 +336,11 @@ sub recordDataPoints
     read(FCSFILE,$dummy,$offset); # read over header and text sections.
     my $data;
     print "Creating data value records:\n number of events: $n_events\n number of param: $n_params\n";
-		for (my $event_num = 1 ; $event_num <= $n_events; $event_num++) 
+	;
+        for (my $event_num = 1 ; $event_num <= $n_events; $event_num++) 
 		{
+          
+          
 # %event{measured_parameters_id} = data 
         my %event;
         for (my $param = 1; $param <= $n_params; $param++)
@@ -358,10 +361,13 @@ sub recordDataPoints
       my $pkName = "fcs_data_point_id";
       foreach my  $point (keys %event)
       {
+        my $num = int(rand (5)) + 1;;
         $dataHash{fcs_data_value} = $event{$point}; 
-			  $dataHash{fcs_run_parameters_id} = $point; 
+			  $dataHash{fcs_run_parameters_id} = $point;
+              $dataHash{counter} = $num; 
           my $pk = insertRecord(\%dataHash,$tableName, $pkName,0);
     	}
+         
     }
  
 	close(FCSFILE);
