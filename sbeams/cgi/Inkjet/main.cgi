@@ -73,13 +73,28 @@ sub showMainPage {
 	<BR>
 	This system is still under active development.  Please be
 	patient and report bugs, problems, difficulties, suggestions to
-	<B>edeutsch\@systemsbiology.org</B>.<P>
-	<BR>
-	<BR>
-
-	<UL>
-	<LI> Here is the starter stub for the Inkjet area.
-	</UL>
+	<B>edeutsch\@systemsbiology.org</B>.
+	<P>
+	<center>
+	<img src="$HTML_BASE_DIR/images/maimagemap.gif" usemap="#map" border=0>
+	<map name="map">
+		<area shape=rect coords="6,6,106,56" href="ManageTable.cgi?TABLE_NAME=project&ShowEntryForm=1">
+		<area shape=rect coords="99,65,199,115" href="SubmitArrayRequest.cgi?TABLE_NAME=IJ_array_request&ShowEntryForm=1">
+		<area shape=rect coords="190,124,290,174" href="ManageTable.cgi?TABLE_NAME=IJ_array&ShowEntryForm=1">
+		<area shape=rect coords="281,183,381,233" href="ManageTable.cgi?TABLE_NAME=IJ_array_scan&ShowEntryForm=1">
+		<area shape=rect coords="371,241,471,291" href="ManageTable.cgi?TABLE_NAME=IJ_array_quantitation&ShowEntryForm=1">
+		<area shape=rect coords="432,301,562,351" href="ProcessProject.cgi">
+		<area shape=rect coords="59,178,159,228" href="ManageTable.cgi?TABLE_NAME=IJ_hybridization&ShowEntryForm=1">
+		<area shape=rect coords="59,254,159,304" href="ManageTable.cgi?TABLE_NAME=IJ_labeling&ShowEntryForm=1">
+		<area shape=rect coords="324,11,424,61" href="ManageTable.cgi?TABLE_NAME=IJ_slide_lot&ShowEntryForm=1">
+		<area shape=rect coords="451,11,551,61" href="ManageTable.cgi?TABLE_NAME=IJ_slide_model&ShowEntryForm=1">
+		<area shape=rect coords="395,75,495,125" href="ManageTable.cgi?TABLE_NAME=IJ_printing_batch&ShowEntryForm=1">
+		<area shape=rect coords="469,137,569,187" href="ManageTable.cgi?TABLE_NAME=IJ_protocol&ShowEntryForm=1">
+    !;
+    # Depending on user context, the image map links will be printed?
+    print qq!
+	</map>
+	<p>
 
 	<BR>
 	<BR>
