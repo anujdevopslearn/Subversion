@@ -2479,11 +2479,9 @@ sub display_input_form {
     if ($input_type eq "file") {
       print qq!
         <TD><INPUT TYPE="$input_type" NAME="$column_name"
-         VALUE="$parameters{$column_name}" SIZE=$input_length $onChange>
-      !;
+         VALUE="$parameters{$column_name}" SIZE=$input_length $onChange>!;
       if ($parameters{$column_name}) {
-        print qq!
-          <A HREF="$DATA_DIR/$parameters{$column_name}">view file</A>
+        print qq!<A HREF="$DATA_DIR/$parameters{$column_name}">[view&nbsp;file]</A>
         !;
       }
       print qq!
