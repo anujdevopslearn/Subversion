@@ -1,26 +1,30 @@
-#!/usr/local/bin/perl
+#!/usr/local/bin/perl -w
 use strict;
 use File::Find;
 use FindBin;
-#use lib qw (../perl ../../perl);
-use lib qw (/net/dblocal/www/html/sbeams/lib/perl);
+use lib qw (../perl ../../perl);
+#use lib qw (/net/dblocal/www/html/sbeams/lib/perl);
 
-use vars qw ($sbeams $VERBOSE $TESTONLY $current_username);
+use vars qw ($sbeams $sbeamsMOD $VERBOSE $TESTONLY $current_username);
 
+
+
+
+use SBEAMS::Connection;
+use SBEAMS::Cytometry::Alcyt;
 use SBEAMS::Cytometry;
 use SBEAMS::Cytometry::Settings;
 use SBEAMS::Cytometry::Tables;
-use SBEAMS::Cytometry::Alcyt; 
 
-use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
-use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Tables;
-use SBEAMS::Connection::TableInfo;
-use SBEAMS::Connection::Utilities;
 
 
 $sbeams = new SBEAMS::Connection; 
+$sbeamsMOD = new SBEAMS::Cytometry;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
 my %fileHash; 
 my( %fileIDHash, %attributeHash);
 
@@ -158,7 +162,7 @@ sub loadHash
        $insertRecord{run_date} =  $hashRef->{'$DATE'};
        $insertRecord{organism_id} = 2;
        $insertRecord{project_id} = $project_id;
-        my $record = insertRecord (\%insertRecord , $tableName, $pkName);
+        my $record = insertRecord (\%insertRecord , $tableName, $pkName,1);
         print LOG "PK:   $record\n";
         print "created fcs_run record: $fileName ---- $record\n";
 #load the datapoints (the path to the file, the primary key 
@@ -230,7 +234,7 @@ sub loadHash
            my $tableName = "$TBCY_MEASURED_PARAMETERS";
            my $pkName = "measured_parameters_id";
            $dataHash{measured_parameters_name} = $values{$key};
-           my $record = insertRecord (\%dataHash , $tableName, $pkName);
+           my $record = insertRecord (\%dataHash , $tableName, $pkName,1);
            print " Creating a new measured_parameters record for: $values{$key}  ----- $record\n"; 
            $attributeHash{$values{$key}} = $record
          }
@@ -253,7 +257,7 @@ sub loadHash
          my %dataHash; 
          $dataHash{fcs_run_id} = $filePK;
          $dataHash{measured_parameters_id} = $parsPosPk{$position};
-         $parsPosPk{$position} = insertRecord(\%dataHash,$tableName, $pkName);
+         $parsPosPk{$position} = insertRecord(\%dataHash,$tableName, $pkName,1);
          print "Creating a new fcs_measured_parameters record for: $position ---- $parsPosPk{$position}\n";
        # $parsPosPk{$position} = $fcsRunParamID; 
       }
@@ -337,7 +341,7 @@ sub recordDataPoints
         $dataHash{fcs_data_value} = $event{$point}; 
 			  $dataHash{fcs_run_parameters_id} = $point; 
        # $dataHash{confirmed} = 1;
-         my $pk = insertRecord(\%dataHash,$tableName, $pkName);
+         my $pk = insertRecord(\%dataHash,$tableName, $pkName,0);
     	}
     }
  
@@ -353,7 +357,7 @@ sub insertRecord
   	my $hashRecord  =shift;
    	my $table =shift;;
 		my $pkName = shift;
-    
+    my $add = shift;
     my $pK = 0; 
     my $insert = 1;
     my $update = 0.;
@@ -367,7 +371,7 @@ sub insertRecord
 						return_PK => 1,
 						verbose=>$VERBOSE,
 						testonly=>$TESTONLY,
-						add_audit_parameters => 1
+						add_audit_parameters => $add
 						);
 						
 			return $PK; 
