@@ -497,6 +497,15 @@ sub printEntryForm {
       return if ($reference_clause == -1);
 
 
+      #### Build PROTEIN DESCRIPTION constraint
+      my $description_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"BS.biosequence_desc",
+        constraint_type=>"plain_text",
+        constraint_name=>"Protein Description",
+        constraint_value=>$parameters{description_constraint} );
+      return if ($description_clause == -1);
+
+
       #### Build PEPTIDE constraint
       my $peptide_clause = $sbeams->parseConstraint2SQL(
         constraint_column=>"SH.peptide",
@@ -592,16 +601,16 @@ sub printEntryForm {
 	    "THEN '1 : ' + STR(d8_intensity/ISNULL(NULLIF(d0_intensity,0.0),0.001),5,2) ".
 	    "ELSE STR(d0_intensity/ISNULL(NULLIF(d8_intensity,0.0),0.001),4,2) + ' : 1' ".
 	    "END) + ".
-            "(CASE WHEN QUAN.date_modified != QUAN.date_created THEN ' *' ELSE '' END)";
+            "ISNULL(manually_changed,'')";
         } elsif ($parameters{quantitation_format} eq "d01") {
           $quant_format_clause = "'1 :' + STR(d8_intensity/ISNULL(NULLIF(d0_intensity,0.0),0.001),5,2) + ".
-            "(CASE WHEN QUAN.date_modified != QUAN.date_created THEN ' *' ELSE '' END)";
+            "ISNULL(manually_changed,'')";
         } elsif ($parameters{quantitation_format} eq "d81") {
           $quant_format_clause = "STR(d0_intensity/ISNULL(NULLIF(d8_intensity,0.0),0.001),5,2) + ': 1' + ".
-            "(CASE WHEN QUAN.date_modified != QUAN.date_created THEN ' *' ELSE '' END)";
+            "ISNULL(manually_changed,'')";
         } elsif ($parameters{quantitation_format} eq "decimal") {
           $quant_format_clause = "STR(d0_intensity/ISNULL(NULLIF(d8_intensity,0.0),0.001),10,4) + ".
-            "(CASE WHEN QUAN.date_modified != QUAN.date_created THEN ' *' ELSE '' END)";
+            "ISNULL(manually_changed,'')";
         } elsif ($parameters{quantitation_format} eq "decimalplain") {
           $quant_format_clause = "STR(d0_intensity/ISNULL(NULLIF(d8_intensity,0.0),0.001),10,4)";
         } else {
@@ -628,7 +637,7 @@ sub printEntryForm {
       #### Build Additional peptide constraints
       my $second_peptide_clause = "";
       if ($parameters{peptide_options}) {
-        if ($parameters{sort_order} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
+        if ($parameters{peptide_options} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
           print "<H4>Cannot parse Peptide Options!  Check syntax.</H4>\n\n";
           return;
         } else {
@@ -639,6 +648,8 @@ sub printEntryForm {
           } elsif ( $parameters{peptide_options} =~ /SinglyTryptic/ ) {
             $second_peptide_clause = "   AND ( SH.peptide_string LIKE '[RK].%${C}%._' OR ".
                                               "SH.peptide_string LIKE '_.%${C}%[RK]._' )";
+          } else {
+            $second_peptide_clause = "   AND SH.peptide_string LIKE '_.%${C}%._'";
           }
         }
       }
@@ -732,6 +743,7 @@ sub printEntryForm {
 	$xcorr_rank_clause
 	$charge_clause
 	$reference_clause
+        $description_clause
 	$peptide_clause
 	$peptide_string_clause
 	$second_peptide_clause

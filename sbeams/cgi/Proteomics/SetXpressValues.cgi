@@ -173,6 +173,7 @@ sub setXpressValues {
   }
   $rowdata{date_modified} = "CURRENT_TIMESTAMP";
   $rowdata{modified_by_id} = $current_contact_id;
+  $rowdata{manually_changed} = "*";
 
 
   #### Update the record
