@@ -342,7 +342,7 @@ sub handle_request {
 
     ["bioentity_id1","BE1.bioentity_id","BioEntity 1 ID"],
     ["bioentity_id2","BE2.bioentity_id","BioEntity 2 ID"],
-		["Publication_id","PUB.pubmed_id", "PubMed ID"],
+		["Publication_id","PUB.publication_name+ ' (PMID ' + PUB.pubmed_id +)'", "PubMed ID"],
     @additional_columns,
   );
 
