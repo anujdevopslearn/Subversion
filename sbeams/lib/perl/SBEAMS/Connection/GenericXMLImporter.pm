@@ -82,9 +82,34 @@ sub createDataModel {
   }
 
 
-  #### Set up the data model to be defined
-  $datamodel{first_tag} = '';
-  $datamodel{entities} = {};
+
+  #### If the schema file already exists, try to start from that
+	my $modelfile = "${schema_file}_MODEL.pldump";
+	my $have_previous_model = 0;
+  if (-e $modelfile) {
+    print "Found a previous model file.  Extending that with current file\n";
+	  $have_previous_model = 1;
+
+		#### Open the file
+		unless (open(MODELFILE,$modelfile)) {
+			print "$SUB_NAME: Error: Unable to open file '$modelfile'\n";
+			return 0;
+		}
+
+    my $indata = "";
+    while (<MODELFILE>) { $indata .= $_; }
+    close(MODELFILE);
+    #### eval the dump
+    my $VAR1;
+    eval $indata;
+    %datamodel = %{$VAR1};
+
+	#### Else set up a fresh model
+  } else {
+		$datamodel{first_tag} = '';
+		$datamodel{entities} = {};
+  }
+
   $PARSEMODE = 'LEARN';
 
 
@@ -157,10 +182,12 @@ sub createDataModel {
 
 
   #### Create a single parent table xml_import
-  if (defined($datamodel{entities}->{xml_import})) {
+  if ($have_previous_model == 0 &&
+			defined($datamodel{entities}->{xml_import})) {
     print "ERROR: There is a tag called xml_import and I can't handle that\n";
     exit;
   }
+
   $datamodel{entities}->{xml_import}->{attributes}->{source_file}->
     {length} = 255;
   $datamodel{entities}->{xml_import}->{attributes}->{source_file_date}->
