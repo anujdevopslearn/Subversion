@@ -55,13 +55,13 @@ Options:
   --debug n           Set debug flag
   --table_property_file ccc   Set the name of table_property file
   --table_column_file ccc     Set the name of table_property file
-  --schema_file ccc           Set the name of the output schema file
+  --schema_file ccc           Set the root of the output schema file
   --destination_type ccc      Set the destination database server type
         (one of: mssql, mysql, pgsql, oracle)
 
  e.g.:  $PROG_NAME --table_prop \$CONFDIR/Core/Core_table_property.txt \\
                            --table_col \$CONFDIR/Core/Core_table_column.txt \\
-                           --schema_file Core_CreateTables.mssql \\
+                           --schema_file Core \\
                            --destination_type mssql
 
 EOU
