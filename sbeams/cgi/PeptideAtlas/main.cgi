@@ -123,7 +123,7 @@ sub handle_request {
 
     my $atlas_build_id = $parameters{atlas_build_id} || '';
 
-    my $atlas_build_name = $parameters{atlas_build_name} || '';
+    my $atlas_build_name = '';
 
     ## only have atlas_build_name, get atlas_build_id too to pass on to neighboring cgi's
     if ( $atlas_build_id )
@@ -159,7 +159,7 @@ sub handle_request {
             program_name => $PROG_NAME,
             );
 
-        ##print "<BR>params:$parameters_string<BR>";
+        ##print "<BR>parameters_string:$parameters_string<BR>";
 
         $PROG_NAME = $PROG_NAME.$parameters_string;
 #   }
@@ -236,6 +236,24 @@ sub handle_request {
 
     $parameters{atlas_build_id} = $atlas_build_id;
 
+    my $sql = qq~
+        SELECT atlas_build_name
+        FROM $TBAT_ATLAS_BUILD
+        WHERE atlas_build_id = '$atlas_build_id'
+        AND record_status != 'D'
+        ~;
+
+    #$sbeams->display_sql(sql=>$sql);
+
+    my ($tmp) = $sbeams->selectOneColumn($sql) or
+        die "Cannot complete $sql ($!)";
+
+    if ($tmp)
+    {
+
+        $parameters{atlas_build_name} = $tmp;
+
+    }
 
 
 } # end showMainPage

@@ -173,8 +173,9 @@ sub handle_request {
 
     my ($atlas_build_name, $atlas_build_id);
 
-    ## only have atlas_build_name, get atlas_build_id too to pass on to neighboring cgi's
-    if ( $parameters{'atlas_build_name'} && (!$parameters{'atlas_build_id'}) )
+
+    ## if have atlas_build_name, but no id, get the id:
+    if ( (exists $parameters{'atlas_build_name'}) && (!exists $parameters{'atlas_build_id'}))
     {
         $atlas_build_name = $parameters{'atlas_build_name'};
 
@@ -190,19 +191,15 @@ sub handle_request {
         my ($tmp) = $sbeams->selectOneColumn($sql) or
             die "Cannot complete $sql ($!)";
 
-        if ($tmp)
-        {
+        $parameters{'atlas_build_id'} = $tmp;
 
-            $parameters{'atlas_build_id'} = $tmp;
-
-            $atlas_build_id = $tmp;
-
-        }
+        $atlas_build_id = $tmp;
 
     }
 
-    ## only have atlas_build_id, get atlas_build_name too to pass on to neighboring cgi's
-    if ( $parameters{'atlas_build_id'} && (!$parameters{'atlas_build_name'}) )
+
+    ## if have atlas_build_id, but no name, get the name
+    if ( (exists $parameters{'atlas_build_id'})  && (!exists $parameters{'atlas_build_name'}) )
     {
         $atlas_build_id = $parameters{'atlas_build_id'};
 
@@ -218,32 +215,11 @@ sub handle_request {
         my ($tmp) = $sbeams->selectOneColumn($sql) or
             die "Cannot complete $sql ($!)";
 
-        if ($tmp)
-        {
+        $atlas_build_name = $tmp;
 
-             $atlas_build_name = $tmp;
-
-             $parameters{'atlas_build_name'} = $atlas_build_name;
-
-        }
+        $parameters{'atlas_build_name'} = $atlas_build_name;
 
     }
-
-
-    ## some extra processing to remove keys that are actually values of previous
-    ## key:   xxxxxxx need to fix that someday
-    my %tmp_parameters;
-
-    foreach my $key (%parameters)
-    {
-        unless ($parameters{$key} eq '')
-        {
-            $tmp_parameters{$key} = $parameters{$key};
-
-        }
-    }
-
-    %parameters = %tmp_parameters;
 
 
     ## if tab menu is requested, display tabs and append parameters to PROG_NAME
@@ -254,7 +230,7 @@ sub handle_request {
             program_name => $PROG_NAME,
             );
 
-        ##print "<BR>params:$parameters_string<BR>";
+        #print "<BR>parameters_string:$parameters_string<BR>";
 
         $PROG_NAME = $PROG_NAME.$parameters_string;
 #   }
