@@ -69,13 +69,13 @@ sub main {
     #### Do the SBEAMS authentication and exit if a username is not returned
     exit unless ($current_username = $sbeams->Authenticate());
  
-		#### Read in the default input parameters
-		my %parameters;
-		my $n_params_found = $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
-		#$sbeams->printDebuggingInfo($q);
+    #### Read in the default input parameters
+    my %parameters;
+    my $n_params_found = $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
+    #$sbeams->printDebuggingInfo($q);
 
-		#### Process generic "state" parameters before we start
-		$sbeams->processStandardParameters(parameters_ref=>\%parameters);
+    #### Process generic "state" parameters before we start
+    $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
     #### Don't print the header, do what the program does, and print footer
     processRequests();
@@ -114,12 +114,8 @@ sub processRequests {
     # Decide where to go based on form values
     if      ($q->param('apply_action') eq 'VIEWRESULTSET') {printOptions();
     } elsif ($q->param('apply_action')) { processEntryForm();
-    } elsif ($q->param('ShowEntryForm')) { 
-	($arrays,$samples)=printEntryForm();
-	print_javascript(arrays=>$arrays, samples=>$samples);
-    } elsif ($q->param("$PK_COLUMN_NAME")) { 
-	($arrays,$samples)=printEntryForm();
-	print_javascript(arrays=>$arrays, samples=>$samples);
+    } elsif ($q->param('ShowEntryForm')) { printEntryForm();
+    } elsif ($q->param("$PK_COLUMN_NAME")) { printEntryForm();
     } else { printOptions();
     } # end if
 
@@ -150,6 +146,7 @@ sub print_javascript {
     }
 
    print qq~
+
 function setAllMethods(sample_number){
   if (sample_number == 0){
     for (var n=0; n<sample0_array.length;n++){
@@ -765,7 +762,7 @@ sub printEntryForm {
 
 
     $sbeamsMOD->printPageFooter("CloseTables");
-    return ($n_slides, $n_samples);
+    print_javascript(arrays=>$n_slides, samples=>$n_samples);
 } # end printEntryForm
 
 
