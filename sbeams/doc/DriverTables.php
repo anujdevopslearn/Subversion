@@ -123,7 +123,7 @@ table_column:
 ../../scripts/Core/update_driver_tables.pl MODULE_column_property.txt
 <BR>
 <BR>
-It is not necessary to run the script on the table_property file if you have not made changes there, but if both have changed it is often imperative that the table_property file be run *before* the table_column file.  Some modules have an additional driver table file called MODULE_column_property_MANUAL.txt.  If such a file exists in a the module of interest, it must be run after running the table and column property file updates:
+It is not necessary to run the script on the table_property file if you have not made changes there, but if both have changed it is preferable that the table_property file be run *after* the table_column file, to aviod a slight possiblity of users seeing information about a seemingly columnless table.  Some modules have an additional driver table file called MODULE_column_property_MANUAL.txt.  If such a file exists in a the module of interest, it must be run after running the table and column property file updates:
 <BR>
 <BR>
 ../../scripts/Core/update_driver_tables.pl MODULE_column_property_MANUAL.txt
