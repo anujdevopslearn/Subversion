@@ -1,9 +1,13 @@
-<BR><BR><BR><BR>
-SBEAMS is Unavailable....<BR><BR>
-The SBEAMS server is down due to Cooling System failure in the server room.
-The server is not damaged but is one of several machines shut down to
-reduce heat output until the Cooling System is fixed.
-<BR><BR>
+<!-- System Unavailable file:
+     Place this file under $SBEAMS_HOME/ to temporarily
+     disable user access to sbeams and show the contents
+     of this page instead of the login prompt.
+     Edit contents to taste. -->
+
+<br><br><br><br>
+SBEAMS is Unavailable....<br><br>
+The SBEAMS server is down due to scheduled system maintenance.
+<br><br>
 It is not expected to be up until Monday 9am.
-<BR><BR>
-Contact edeutsch@systemsbiology.org with questions.
+<br><br>
+Contact the SBEAMS administrator with questions.
