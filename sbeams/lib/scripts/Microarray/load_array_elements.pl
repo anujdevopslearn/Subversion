@@ -20,7 +20,7 @@ use FindBin;
 
 use lib qw (../perl ../../perl);
 use vars qw ($sbeams $sbeamsMOD $q
-             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $TESTONLY $DEBUG $DATABASE
+             $PROG_NAME $USAGE $NOTES %OPTIONS $QUIET $VERBOSE $TESTONLY $DEBUG $DATABASE
              $current_contact_id $current_username $LAYOUT_ID $SPOT_NUMBER
             );
 
@@ -64,15 +64,37 @@ Options:
                        biosequence_sets are verified
   --testonly           If set, information in the db is not altered
   --biosequence_set_id Update only specific biosequence_set
+  --notes              View notes on using this code (will exit afterwards)
 EOU
 
+$NOTES = <<EOU;;
+
+
+########## NOTES ON USING load_array_elements.pl ###########
+This script is used to load an array design (and its array elements)
+into SBEAMS.  It is necessary to have biosequence set loaded.  This
+is done through load_biosequence_set.pl. 
+
+Examples:
+For yeast:
+./load_array_elements.pl --biosequence_set_id 3 --update_existing
+
+For an individual array design:
+
+
+EOU
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
   "delete_existing","update_existing","skip_sequence",
-    "layout_tag:s","check_status","testonly", "biosequence_set_id:s")) {
+  "layout_tag:s","check_status","testonly", "biosequence_set_id:s","notes")) {
   print "$USAGE";
   exit;
+}
+
+if ($OPTIONS{"notes"}){
+    print "$NOTES";
+    exit;
 }
 
 $VERBOSE = $OPTIONS{"verbose"} || 0;
@@ -143,10 +165,8 @@ sub main {
 sub handleRequest { 
   my %args = @_;
 
-
   #### Define standard variables
   my ($i,$element,$key,$value,$line,$result,$sql);
-
 
   #### Set the command-line options
   my $delete_existing = $OPTIONS{"delete_existing"} || '';
@@ -172,12 +192,10 @@ sub handleRequest {
 
 
   #### Define a scalar and array of biosequence_set_id's
-#  my ($biosequence_set_id,$n_biosequence_sets);
-#  my @biosequence_set_ids;
   my ($array_layout_id, $n_array_layouts);
   my @array_layout_ids;
 
-  #### If there was a layout_tag specified, identify it
+  #### If there was a layout_tag specified, ensure that it has layouts in the db
   if ($layout_tag) {
     $sql = qq~
           SELECT layout_id
@@ -191,20 +209,20 @@ sub handleRequest {
 
     die "No array_layouts found with layout_tag = '$layout_tag'"
       if ($n_array_layouts < 1);
-    die "Too many array_layouts found with layout_tag = $layout_tag'"
-      if ($n_array_layouts > 1);
+#    push (@array_layout_ids, $layout_tag);
 
-
-  #### If there was NOT a layout_tag specified, scan for all available ones
+  #### If there was NOT a layout_tag specified, scan for all available layouts
   } else {
     $sql = qq~
-          SELECT ALS.layout_id
-            FROM ${DATABASE}array_layout ALS
-           WHERE ALS.record_status != 'D'
+          SELECT layout_id
+            FROM ${DATABASE}array_layout
+           WHERE record_status != 'D'
     ~;
 
     if ($bss_id != 0) {
-	$sql .= "AND ALS.biosequence_set_id = \'$bss_id\'";
+	$sql .= "AND biosequence_set_id = \'$bss_id\'";
+    }else {
+	$sql .= "AND biosequence_set_id != ''";
     }
 
     @array_layout_ids = $sbeams->selectOneColumn($sql);
@@ -320,7 +338,7 @@ sub loadArrayLayout {
 
 
   #### Define standard variables
-  my ($i,$element,$key,$value,$line,$result,$sql);
+  my ($i,$element,$key,$value,$line,$result,$sql, @rows);
 
 
   #### Set the command-line options
@@ -334,26 +352,27 @@ sub loadArrayLayout {
     die("ERROR[$SUB_NAME]: Cannot find file $source_file");
   }
 
-
-  #### Set the set_name
-  $sql = "SELECT name,layout_id" .
-         "  FROM ${DATABASE}array_layout";
+  #### Find out the layout_id and the biosequence_set_id
+  $sql = qq~ 
+      SELECT layout_id, biosequence_set_id
+      FROM ${DATABASE}array_layout
+      WHERE name = '$set_name'
+      ~;
   #print "SQL: $sql\n";
-  my %names = $sbeams->selectTwoColumnHash($sql);
-  my $array_layout_id = $names{$set_name};
+  @rows = $sbeams->selectSeveralColumns($sql);
+  my ($array_layout_id, $biosequence_set_id) = @{$rows[0]};
   
   #### Set the biosequence_set_id
-  $sql = "SELECT name, biosequence_set_id ".
-         " FROM ${DATABASE}array_layout";
-  my %sets = $sbeams->selectTwoColumnHash($sql);
-  my $biosequence_set_id = $sets{$set_name};
+#  $sql = "SELECT name, biosequence_set_id ".
+#         " FROM ${DATABASE}array_layout";
+#  my %sets = $sbeams->selectTwoColumnHash($sql);
+#  my $biosequence_set_id = $sets{$set_name};
   
   unless($biosequence_set_id) {
       print "\n #### WARNING: No update performed for $set_name";
       print "\n #### REASON:  No biosequence_set specified\n";
       return;
   }
-
   #### If we didn't find it then bail
   unless ($array_layout_id) {
     bail_out("Unable to determine a biosequence_set_id for '$set_name'.  " .
@@ -383,8 +402,7 @@ sub loadArrayLayout {
 
   #### Open file and  make sure file exists
   open(INFILE,"$source_file") || die "Unable to open $source_file";
-  
-  
+
   #### Load lookup hashes for biosequence
   $sql = "SELECT biosequence_gene_name, biosequence_id ".
          "FROM $TBMA_BIOSEQUENCE ".
@@ -392,8 +410,6 @@ sub loadArrayLayout {
          "  AND biosequence_set_id = $biosequence_set_id";
  
   #print "\n---biosequence ids---\n$sql\n";
-
-
   my (%biosequence_ids, %transform_map);
 
   %biosequence_ids = $sbeams->selectTwoColumnHash($sql);
@@ -421,7 +437,8 @@ sub loadArrayLayout {
 
 
   #### For tricky mappings, such as layout_id and spot_number
-  #### use an absurdly high column number
+  #### use an absurdly high column number.  This will not work,if
+  #### there are 1000 columns in the file
   %transform_map = (
      $biosequence_id_column => \%biosequence_ids,
      '1000'=> sub{return $LAYOUT_ID;},
@@ -433,12 +450,15 @@ sub loadArrayLayout {
       'meta_column'=>'1',
       'rel_row'    =>'2',
       'rel_column' =>'3',
-      'layout_id'  =>'1000',      
+      'layout_id'  =>'1000',
      );
 
 
   #### Execute $sbeams->transferTable() to update contact table
   #### See ./update_driver_tables.pl
+  if ($TESTONLY) {
+      print "\n$TESTONLY- TEST ONLY MODE\n";
+  }
   print "\nTransferring $source_file -> array_element";
   $sbeams->transferTable(
 		 source_file=>$source_file,
