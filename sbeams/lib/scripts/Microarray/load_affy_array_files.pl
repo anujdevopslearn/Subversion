@@ -320,8 +320,10 @@ sub handleRequest {
 	
 	
 		write_error_log(object => $sbeams_affy_groups);
-		print "ERROR: PROJECT WITH NO PROJECT ID's\n";
-		print @BAD_PROJECTS;
+		if (@BAD_PROJECTS){
+			print "ERROR: PROJECT WITH NO PROJECT ID's\n";
+			print @BAD_PROJECTS;
+		}
 	
 	}elsif( $RUN_MODE eq 'delete') {
 		unless ($DELETE_ARRAY || $DELETE_BOTH || $DELETE_ALL) {
