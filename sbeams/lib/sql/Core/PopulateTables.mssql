@@ -46,11 +46,11 @@ INSERT INTO record_status ( record_status_id,name,sort_order ) VALUES ( 'D','Del
 GO
 
 
-INSERT INTO work_group ( work_group_name,sort_order ) VALUES ( 'Admin',100 )
+INSERT INTO work_group ( work_group_name,sort_order,primary_contact_id,comment ) VALUES ( 'Admin',100,1,'Administrators with nearly full privilege' )
 GO
-INSERT INTO work_group ( work_group_name,sort_order ) VALUES ( 'Other',101 )
+INSERT INTO work_group ( work_group_name,sort_order,primary_contact_id,comment ) VALUES ( 'Other',101,1,'Default group with almost no privilege' )
 GO
-INSERT INTO work_group ( work_group_name,sort_order ) VALUES ( 'Guest',99 )
+INSERT INTO work_group ( work_group_name,sort_order,primary_contact_id,comment ) VALUES ( 'Guest',99,1,'Guest work group with access to only public facilities' )
 GO
 
 
@@ -112,4 +112,33 @@ INSERT INTO user_work_group ( contact_id,work_group_id,privilege_id,created_by_i
 GO
 
 
+INSERT INTO table_group_security ( table_group,work_group_id,privilege_id,created_by_id,modified_by_id )
+  VALUES ( 'admin',1,10,1,1 )
+GO
+INSERT INTO table_group_security ( table_group,work_group_id,privilege_id,created_by_id,modified_by_id )
+  VALUES ( 'infrastructure',1,10,1,1 )
+GO
+INSERT INTO table_group_security ( table_group,work_group_id,privilege_id,created_by_id,modified_by_id )
+  VALUES ( 'project',1,10,1,1 )
+GO
+INSERT INTO table_group_security ( table_group,work_group_id,privilege_id,created_by_id,modified_by_id )
+  VALUES ( 'rowprivate',1,10,1,1 )
+GO
+INSERT INTO table_group_security ( table_group,work_group_id,privilege_id,created_by_id,modified_by_id )
+  VALUES ( 'rowprivate',2,30,1,1 )
+GO
+INSERT INTO table_group_security ( table_group,work_group_id,privilege_id,created_by_id,modified_by_id )
+  VALUES ( 'rowprivate',3,30,1,1 )
+GO
+
+
+INSERT INTO organism ( organism_name,sort_order,created_by_id,modified_by_id ) VALUES ( 'Other',100,1,1 )
+INSERT INTO organism ( organism_name,created_by_id,modified_by_id ) VALUES ( 'Human',1,1 )
+INSERT INTO organism ( organism_name,created_by_id,modified_by_id ) VALUES ( 'Yeast',1,1 )
+INSERT INTO organism ( organism_name,created_by_id,modified_by_id ) VALUES ( 'Halobacterium',1,1 )
+INSERT INTO organism ( organism_name,created_by_id,modified_by_id ) VALUES ( 'Hemophilus',1,1 )
+INSERT INTO organism ( organism_name,created_by_id,modified_by_id ) VALUES ( 'Mouse',1,1 )
+INSERT INTO organism ( organism_name,sort_order,created_by_id,modified_by_id ) VALUES ( 'All',110,1,1 )
+INSERT INTO organism ( organism_name,created_by_id,modified_by_id ) VALUES ( 'Drosophila',1,1 )
+GO
 
