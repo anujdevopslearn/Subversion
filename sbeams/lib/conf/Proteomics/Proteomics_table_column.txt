@@ -24,8 +24,8 @@ PR_proteomics_experiment	22	modified_by_id	Record Modified By	int	4	0	N	1	N	cont
 PR_proteomics_experiment	23	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 PR_proteomics_experiment	24	record_status	Record Status	char	1	0	N	N	N							N	N				
 PR_gradient_program	1	gradient_program_id	Gradient Program ID	int	4	0	N		Y							N	N				pkDEFAULT
-PR_gradient_program	2	gradient_program_name	Program Name	varchar	255	0	N		N			Y	text	30		Y	Y	Y	Title of this gradient program		
-PR_gradient_program	3	gradient_program_description	Program Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	One-line description of this gradient program		
+PR_gradient_program	2	gradient_program_name	Program Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Title of this gradient program		
+PR_gradient_program	3	gradient_program_description	Program Description	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	One-line description of this gradient program		
 PR_gradient_program	4	gradient_program_table	Program Data	text	16	0	Y		N			N	textarea	12		Y	Y	N	"Please enter the full gradient program here in the form of three- or four-column data.  Column 1 is the time point in minutes from the beginning of the program.  Column 2 and 3 are buffer A and B settings in percent.  Column 4 is the flow rate in mL/min.  Write no units, just the numbers.  Separate with spaces."		
 PR_gradient_program	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 PR_gradient_program	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
