@@ -544,6 +544,7 @@ sub printEntryForm {
       #### Define the desired columns
       my @column_array = (
         ["search_batch_id","SB.search_batch_id","search_batch_id"],
+        ["msms_scan_id","S.msms_scan_id","msms_scan_id"],
         ["search_id","S.search_id","search_id"],
         ["search_hit_id","SH.search_hit_id","search_hit_id"],
         ["experiment_tag","experiment_tag","Exp"],
@@ -623,7 +624,10 @@ sub printEntryForm {
 		   'Rxc_ATAG' => 'TARGET="Win1"',
                    'Reference' => "http://regis/cgi-bin/consensus_html4?Ref=%V&Db=\%$colnameidx{set_path}V&Pep=\%$colnameidx{peptide}V&MassType=0",
 		   'Reference_ATAG' => 'TARGET="Win1"',
-                   'Ions' => "http://regis/cgi-bin/displayions_html5?Dta=/data/search/\%$colnameidx{data_location}V/\%$colnameidx{fraction_tag}V/\%$colnameidx{file_root}V.dta&MassType=0&NumAxis=1&Pep=\%$colnameidx{peptide}V",
+####                   'Ions' => "http://regis/cgi-bin/displayions_html5?Dta=/data/search/\%$colnameidx{data_location}V/\%$colnameidx{fraction_tag}V/\%$colnameidx{file_root}V.dta&MassType=0&NumAxis=1&Pep=\%$colnameidx{peptide}V",
+
+                   'Ions' => "$CGI_BASE_DIR/Proteomics/ShowSpectrum.cgi?msms_scan_id=\%$colnameidx{msms_scan_id}V&search_batch_id=\%$colnameidx{search_batch_id}V&peptide=\%$colnameidx{peptide_string}V",
+
 		   'Ions_ATAG' => 'TARGET="Win1"',
                    'Nmore' => "http://regis/cgi-bin/blast_html4?Db=\%$colnameidx{set_path}V&Pep=\%$colnameidx{peptide}V&MassType=0",
 		   'Nmore_ATAG' => 'TARGET="Win1"',
@@ -636,6 +640,7 @@ sub printEntryForm {
 
       %hidden_cols = ('data_location' => 1,
                       'search_batch_id' => 1,
+                      'msms_scan_id' => 1,
                       'search_id' => 1,
                       'search_hit_id' => 1,
                       'fraction_tag' => 1,

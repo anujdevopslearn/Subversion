@@ -86,7 +86,7 @@ sub printThanksForExiting {
         </TD></TR></TABLE>
         $LINESEPARATOR
         <P>
-        [ <a href="${SERVER_BASE_DIR}$CGI_BASE_DIR/main.cgi">Login Again</A> ]
+        [ <a href="$CGI_BASE_DIR/main.cgi">Login Again</A> ]
     ~;
 
 } # end printThanksForExiting

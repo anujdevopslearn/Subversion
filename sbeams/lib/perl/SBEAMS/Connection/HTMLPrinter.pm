@@ -163,18 +163,20 @@ sub printStyleSheet {
       $FONT_SIZE_HG=14;
     }
 
+
+	#th   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt; font-weight: bold; background-color: #A0A0A0;}
     print qq~
 	<style type="text/css">
 	//<!--
 	body {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt}
-	th   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt; font-weight: bold; background-color: #A0A0A0;}
+	th   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt; font-weight: bold;}
 	td   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt;}
 	form   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt}
 	pre    {  font-family: Courier; font-size: ${FONT_SIZE}pt}
-	h1   {  font-family: Verdana, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_HG}pt; font-weight: bold}
-	h2   {  font-family: Verdana, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
-	h3   {  font-family: Verdana, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_LG}pt}
-	h4   {  font-family: Verdana, Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_LG}pt}
+	h1   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_HG}pt; font-weight: bold}
+	h2   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
+	h3   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_LG}pt}
+	h4   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_LG}pt}
 	A:link    {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: none; color: blue}
 	A:visited {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: none; color: blue}
 	A:hover   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: red}

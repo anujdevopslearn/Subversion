@@ -70,7 +70,7 @@ sub showMainPage {
 
     print qq~
 	<BR>
-	Welcome to FLYCAT, a catalog of peptides observed in Drosophila.
+	Welcome to FLYCAT, a catalog of observed peptides in Drosophila.
 	<P>
 	Click on one of the links below to view annotations for genes
 	beginning with the character...<P>
@@ -97,6 +97,19 @@ sub showMainPage {
     print qq~
 	<BR>
 	<BR>
+	<H2>OR:</H2>
+	<FORM ACTION="$CGI_BASE_DIR/Proteomics/BrowseAnnotatedPeptides.cgi" METHOD="post">
+	Enter the gene search string (% is a wildcard):<BR>
+	Gene Name <INPUT TYPE="text" NAME="gene_name_constraint" VALUE="" SIZE=20><BR>
+	Accession <INPUT TYPE="text" NAME="accession_constraint" VALUE="" SIZE=20> (FBgnxxxxxxx)<BR>
+
+	<INPUT TYPE="hidden" NAME="search_batch_id" VALUE="1,4">
+	<INPUT TYPE="hidden" NAME="display_options" VALUE="GroupPeptide,BSDesc">
+	<INPUT TYPE="hidden" NAME="apply_action" VALUE="QUERYHIDE">
+
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	<INPUT TYPE="submit" NAME="apply_action_fake" VALUE="QUERY">
+	</FORM>
     ~;
 
 } # end showMainPage

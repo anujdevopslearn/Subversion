@@ -470,14 +470,23 @@ sub displayQueryResult {
     my $types_ref = $self->decodeDataType($sth->{TYPE});
 
 
-    #### Set all column widths to be auto-adjusting unless they're longer than
-    #### 60 characters in which case, limit at 60
+    #### Make some adjustments to the default column width settings
     my @precisions = @{$sth->{PRECISION}};
     my $i;
     for ($i = 0; $i <= $#precisions; $i++) {
+      #### Set the width to negative (variable)
       $precisions[$i] = (-1) * $precisions[$i];
+
+      #### Override the width if the user specified it
       $precisions[$i] = $max_widths_ref->{$sth->{NAME}->[$i]}
         if ($max_widths_ref->{$sth->{NAME}->[$i]});
+
+      #### Set the precision to 20 for dates (2001-01-01 00:00:01)
+      $precisions[$i] = 20 if ($types_ref->[$i] =~ /date/i);
+
+      #### Print for debugging
+      #print $sth->{NAME}->[$i],"(",$types_ref->[$i],"): ",
+      #  $precisions[$i],"<BR>\n";
     }
 
 
@@ -504,10 +513,10 @@ sub displayQueryResult {
 	widths=>\@precisions,
 	row_sub=>\&fetchNextRow,
         table_attrs=>'BORDER=0 CELLPADDING=2 CELLSPACING=2',
-        title_formats=>['FONT COLOR=red,BOLD'],
+        title_formats=>['FONT COLOR=white,BOLD'],
         url_keys=>$url_cols_ref,
         hidden_cols=>$hidden_cols_ref,
-        THformats=>['BGCOLOR=#C0C0C0'],
+        THformats=>['BGCOLOR=#0000A0'],
         TDformats=>\@TDformats,
         row_color_scheme=>$row_color_scheme_ref
       };

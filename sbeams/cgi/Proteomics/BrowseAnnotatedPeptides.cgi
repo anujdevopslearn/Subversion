@@ -428,6 +428,30 @@ sub printEntryForm {
       }
 
 
+      #### Build GENE NAME constraint
+      my $gene_name_clause = "";
+      if ($parameters{gene_name_constraint}) {
+        if ($parameters{gene_name_constraint} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
+          print "<H4>Cannot parse Gene Name Constraint!  Check syntax.</H4>\n\n";
+          return;
+        } else {
+          $reference_clause = "   AND BS.biosequence_gene_name LIKE '$parameters{gene_name_constraint}'";
+        }
+      }
+
+
+      #### Build ACCESSION NUMBER constraint
+      my $accession_clause = "";
+      if ($parameters{accession_constraint}) {
+        if ($parameters{accession_constraint} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
+          print "<H4>Cannot parse Accession Number Constraint!  Check syntax.</H4>\n\n";
+          return;
+        } else {
+          $reference_clause = "   AND BS.biosequence_accession LIKE '$parameters{accession_constraint}'";
+        }
+      }
+
+
       #### Build PEPTIDE constraint
       my $peptide_clause = "";
       if ($parameters{peptide_constraint}) {
@@ -439,6 +463,22 @@ sub printEntryForm {
         }
       }
 
+
+
+      #### Build MASS constraint
+      my $mass_clause = "";
+      if ($parameters{mass_constraint}) {
+        if ($parameters{mass_constraint} =~ /^[\d\.]+$/) {
+          $mass_clause = "   AND SH.hit_mass_plus_H = $parameters{mass_constraint}";
+        } elsif ($parameters{mass_constraint} =~ /^between\s+[\d\.]+\s+and\s+[\d\.]+$/i) {
+          $mass_clause = "   AND SH.hit_mass_plus_H $parameters{mass_constraint}";
+        } elsif ($parameters{mass_constraint} =~ /^[><=][=]*\s*[\d\.]+$/) {
+          $mass_clause = "   AND SH.hit_mass_plus_H $parameters{mass_constraint}";
+        } else {
+          print "<H4>Cannot parse Mass Constraint!  Check syntax.</H4>\n\n";
+          return;
+        }
+      }
 
 
       #### Build ANNOTATION_LABELS constraint
@@ -470,33 +510,41 @@ sub printEntryForm {
       #### Define the desired columns
       my $group_by_clause = "";
       my @column_array;
+
+      #### If grouping by reference
       if ( $parameters{display_options} =~ /GroupReference/ ) {
         @column_array = (
+          ["biosequence_gene_name","MAX(biosequence_gene_name)","Gene Name"],
+          ["biosequence_accession","MAX(biosequence_accession)","Accession"],
           ["reference","reference","Reference"],
           ["count","COUNT(*)","Count"],
+          ["biosequence_desc","MAX(biosequence_desc)","Reference Description"],
         );
         $group_by_clause = " GROUP BY reference";
+
+      #### If grouping by peptide,reference
       } elsif ( $parameters{display_options} =~ /GroupPeptide/ ) {
         @column_array = (
+          ["biosequence_gene_name","MAX(biosequence_gene_name)","Gene Name"],
+          ["biosequence_accession","MAX(biosequence_accession)","Accession"],
           ["reference","reference","Reference"],
           ["peptide","peptide","Peptide"],
+          ["hit_mass_plus_H","MIN(CONVERT(NUMERIC(10,2),hit_mass_plus_H))","(M+H)+"],
           ["count","COUNT(*)","Count"],
+          ["biosequence_desc","MAX(biosequence_desc)","Reference Description"],
         );
         $group_by_clause = " GROUP BY reference,peptide";
+
+      #### If no grouping
       } else {
         @column_array = (
+          ["biosequence_gene_name","biosequence_gene_name","Gene Name"],
+          ["biosequence_accession","biosequence_accession","Accession"],
           ["reference","reference","Reference"],
           ["peptide","peptide","Peptide"],
+          ["hit_mass_plus_H","CONVERT(NUMERIC(10,2),hit_mass_plus_H))","(M+H)+"],
+          ["biosequence_desc","biosequence_desc","Reference Description"],
         );
-      }
-
-
-      #### Add the protein descriptions at the end if user selected
-      if ( $parameters{display_options} =~ /BSDesc/ ) {
-        unshift(@column_array,["biosequence_accession","MAX(biosequence_accession)","Accession"]);
-        unshift(@column_array,["biosequence_gene_name","biosequence_gene_name","Gene Name"]);
-        push(@column_array,["biosequence_desc","biosequence_desc","Reference Description"]);
-        $group_by_clause .= ",biosequence_desc,biosequence_gene_name,biosequence_accession" if ($group_by_clause);
       }
 
 
@@ -528,7 +576,10 @@ sub printEntryForm {
 	 WHERE 1 = 1
 	$search_batch_clause
 	$reference_clause
+	$gene_name_clause
+	$accession_clause
 	$peptide_clause
+	$mass_clause
 	$annotation_label_clause
 	$group_by_clause
 	$order_by_clause
@@ -547,12 +598,7 @@ sub printEntryForm {
 		   'Peptide_ATAG' => 'TARGET="Win1"',
       );
 
-      %hidden_cols = ('data_location' => 1,
-                      'search_batch_id' => 1,
-                      'search_id' => 1,
-                      'search_hit_id' => 1,
-                      'fraction_tag' => 1,
-                      'set_path' => 1,
+      %hidden_cols = ('none' => 1,
       );
 
 		   #######'Reference_ATAG' => "TARGET=\"Win1\" ONMOUSEOVER=\"window.status='%V'; return true\"",
