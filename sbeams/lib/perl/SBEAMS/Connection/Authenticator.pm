@@ -608,7 +608,7 @@ sub destroyAuthHeader {
     #### which then requires reauthentication when moving below entry point
     #my $cookie_path = $q->url(-absolute=>1);
     my $cookie_path = $HTML_BASE_DIR;
-    $cookie_path =~ s'/[^/]+$'/';
+    #$cookie_path =~ s'/[^/]+$'/'; Removed 6/7/2002 Deutsch
 
     my $cookie = $q->cookie(-name    => 'SBEAMSName',
                             -path    => "$cookie_path",
@@ -631,7 +631,7 @@ sub createAuthHeader {
     #### which then requires reauthentication when moving below entry point
     #my $cookie_path = $q->url(-absolute=>1);
     my $cookie_path = $HTML_BASE_DIR;
-    $cookie_path =~ s'/[^/]+$'/';
+    #$cookie_path =~ s'/[^/]+$'/'; Removed 6/7/2002 Deutsch
 
     my $cipher = new Crypt::CBC($SECRET_KEY, 'IDEA'); 
     my $encrypted_user = $cipher->encrypt("$username");
