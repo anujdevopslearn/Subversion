@@ -1496,6 +1496,28 @@ sub isGuestUser {
   }
 }
 
+
+###############################################################################
+# Utility routine, checks if current user is member of
+# PeptideAtlas yeast researchers
+# FIXME: make id lookup dynamic
+###############################################################################
+sub isPAyeastUser {
+  my $sbeams = shift;
+  my $currID =  $sbeams->getCurrent_contact_id();
+  if ( !defined $currID ) {
+    return undef;
+  } elsif ( ($currID == 215) || ($currID == 52) 
+  || ($currID == 64) || ($currID == 318) || ($currID = 461)
+  || ($currID == 46) || ($currID == 66) 
+  || ($currID == 202) || ($currID == 243)
+  ) {
+    return 1;
+  } else { 
+    return 0;
+  }
+}
+
 #+
 #
 # Returns hash of privilege names keyed by numeric values
