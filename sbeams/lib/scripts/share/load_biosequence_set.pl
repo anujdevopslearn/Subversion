@@ -782,6 +782,17 @@ sub specialParsing {
   }
 
 
+  #### Special conversion rules for Halobacterium
+  #### >gabT   , from VNG6210g 
+  if ($biosequence_set_name eq "Halo Biosequences") {
+      if ($rowdata_ref->{biosequence_desc} =~ /from (\S+)/) {
+	  my $temp_gene_name = $1;
+	  $rowdata_ref->{biosequence_gene_name} = $rowdata_ref->{biosequence_name};
+	  delete($rowdata_ref->{biosequence_name}); #delete old name
+	  $rowdata_ref->{biosequence_name} = $temp_gene_name; #add new name
+      }
+  }
+
   #### Special conversion rules for Drosophila genome R2, e.g.:
   #### >Scr|FBgn0003339|CT1096|FBan0001030 "transcription factor" mol_weight=44264  located on: 3R 84A6-84B1; 
   if ($biosequence_set_name eq "Drosophila aa_gadfly Protein Database R2" ||
