@@ -1958,31 +1958,22 @@ sub displayResultSetControls {
 
 
     #### For certain types of resultsets, we'll allow a cytoscape trigger
+    my $cytoscape_url_prefix = "$CYTOSCAPE_URL/sbeams";
+    my $cytotest_url_prefix = "$CYTOSCAPE_URL/sbeamsTest";
     if ($resultset_ref->{column_list_ref}->[0] eq 'interaction_id') {
-      my $url_prefix = "$CYTOSCAPE_URL/sbeams";
-      print "<BR>\n";
-      print "<A HREF=\"${url_prefix}?m=interactions&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
+      print "<BR>\n<A HREF=\"${cytoscape_url_prefix}?m=interactions&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
+      print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<A HREF=\"${cytotest_url_prefix}?m=interactions&rs=$rs_params{set_name}\">[test]</A>";
     } elsif ($resultset_ref->{column_list_ref}->[0] eq 'Bait' ||
              $resultset_ref->{column_list_ref}->[1] eq 'Bait') {
-      my $url_prefix = "$CYTOSCAPE_URL/sbeams";
-      print "<BR>\n";
-      print "<A HREF=\"${url_prefix}?m=agingras&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
+      print "<BR>\n<A HREF=\"${cytoscape_url_prefix}?m=agingras&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
     } elsif ($resultset_ref->{column_list_ref}->[0] eq 'condition_name') {
-      my $url_prefix = "$CYTOSCAPE_URL/sbeams";
-      print "<BR>\n";
-      print "<A HREF=\"${url_prefix}?m=microarray&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
+      print "<BR>\n<A HREF=\"${cytoscape_url_prefix}?m=microarray&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
     } elsif ($resultset_ref->{column_list_ref}->[0] eq 'prophet number') {
-      my $url_prefix = "$CYTOSCAPE_URL/sbeams";
-      print "<BR>\n";
-      print "<A HREF=\"${url_prefix}?m=rchen&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
+      print "<BR>\n<A HREF=\"${cytoscape_url_prefix}?m=rchen&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
     } elsif ($resultset_ref->{column_list_ref}->[0] eq 'Systematic') {
-      my $url_prefix = "$CYTOSCAPE_URL/sbeams";
-      print "<BR>\n";
-      print "<A HREF=\"${url_prefix}?m=blin&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
-    } elsif ($resultset_ref->{column_hash_ref}->{biosequence_accession}) {
-      my $url_prefix = "$CYTOSCAPE_URL/sbeams";
-      print "<BR>\n";
-      print "<A HREF=\"${url_prefix}?m=generic&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
+      print "<BR>\n<A HREF=\"${cytoscape_url_prefix}?m=blin&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
+    } elsif ($resultset_ref->{column_list_ref}->{biosequence_accession}) {
+      print "<BR>\n<A HREF=\"${cytoscape_url_prefix}?m=generic&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
     }
 
 
