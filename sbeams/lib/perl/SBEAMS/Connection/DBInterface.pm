@@ -1199,7 +1199,7 @@ sub displayResultSetControls {
       recall this result set</A>:
       $SERVER_BASE_DIR$base_url?apply_action=VIEWRESULTSET&rs_set_name=$rs_params{set_name}&rs_page_size=$rs_params{page_size}&rs_page_number=$pg</nobr>
 
-      <BR><nobr>URL to
+      <nobr>URL to
       <A HREF=\"$base_url?apply_action=QUERY&$param_string\">
       re-execute this query</A>:
       $SERVER_BASE_DIR$base_url?apply_action=QUERY&$param_string</nobr>
@@ -1230,6 +1230,33 @@ sub displayResultSetControls {
 
 
 } # end displayResultSetControls
+
+
+###############################################################################
+# parseResultSetParams
+#
+# Parse the parameters that control the resultset navigation
+###############################################################################
+sub parseResultSetParams {
+  my $self = shift;
+  my %args = @_;
+
+  #### Process the arguments list
+  my $q = $args{'q'};
+
+
+  #### Parse the resultset parameters into a hash
+  my %rs_params;
+  $rs_params{set_name} = $q->param("rs_set_name");
+  $rs_params{page_size} = $q->param("rs_page_size") || 50;
+  $rs_params{page_number} = $q->param("rs_page_number") || 1;
+  $rs_params{page_number} -= 1 if ($rs_params{page_number});
+
+
+  #### Return the hash
+  return %rs_params;
+
+} # end parseResultSetParams
 
 
 ###############################################################################
@@ -1363,9 +1390,6 @@ sub returnNextRow {
 
 
 
-
-
-
 ###############################################################################
 # processTableDisplayControls
 #
@@ -1445,6 +1469,309 @@ sub convertSingletoTwoQuotes {
 
   return $resultstring;
 } # end convertSingletoTwoQuotes
+
+
+
+###############################################################################
+# parseCGIParameters
+#
+# Parse the available CGI parameters into the %parameters hash
+###############################################################################
+sub parseCGIParameters {
+  my $self = shift;
+  my %args = @_;
+
+  #### Process the arguments list
+  my $q = $args{'q'};
+  my $parameters_ref = $args{'parameters_ref'};
+  my $columns_ref = $args{'columns_ref'};
+  my $input_types_ref = $args{'input_types_ref'};
+
+  my $element;
+
+  #### Set a counter for the number of paramters found
+  my $n_params_found = 0;
+
+  #### Read the form values for each column
+  foreach $element (@{$columns_ref}) {
+    if ($input_types_ref->{$element} eq "multioptionlist") {
+      my @tmparray = $q->param($element);
+      if (scalar(@tmparray) > 1) {
+        pop @tmparray unless ($tmparray[$#tmparray]);
+        shift @tmparray unless ($tmparray[0]);
+      }
+      $parameters_ref->{$element}=join(",",@tmparray);
+    } else {
+      $parameters_ref->{$element}=$q->param($element);
+    }
+    $n_params_found++ if ($parameters_ref->{$element});
+  }
+
+  return $n_params_found;
+
+} # end parseCGIParameters
+
+
+
+###############################################################################
+# printInputForm
+#
+# Print the parameter input form for this particular table or query
+###############################################################################
+sub printInputForm {
+  my $self = shift;
+  my %args = @_;
+
+
+  #### Process the arguments list
+  my $TABLE_NAME = $args{'TABLE_NAME'};
+  my $CATEGORY = $args{'CATEGORY'};
+  my $PROGRAM_FILE_NAME = $args{'PROGRAM_FILE_NAME'};
+  my $apply_action = $args{'apply_action'};
+  my $parameters_ref = $args{'parameters_ref'};
+  my %parameters = %{$parameters_ref};
+  my $input_types_ref = $args{'input_types_ref'};
+  my %input_types = %{$input_types_ref};
+
+
+  #### Define popular variables
+  my ($i,$element,$key,$value,$line,$result,$sql);
+  my $PK_COLUMN_NAME;
+  my ($row);
+
+
+  #### Query to obtain column information about this table or query
+  $sql = qq~
+      SELECT column_name,column_title,is_required,input_type,input_length,
+             is_data_column,column_text,optionlist_query,onChange
+        FROM $TB_TABLE_COLUMN
+       WHERE table_name='$TABLE_NAME'
+         AND is_data_column='Y'
+       ORDER BY column_index
+  ~;
+  my @columns_data = $self->selectSeveralColumns($sql);
+
+
+  # First just extract any valid optionlist entries.  This is done
+  # first as opposed to within the loop below so that a single DB connection
+  # can be used.
+  # THIS IS LEGACY
+  my %optionlist_queries;
+  my $file_upload_flag = "";
+  foreach $row (@columns_data) {
+    my @row = @{$row};
+    my ($column_name,$column_title,$is_required,$input_type,$input_length,
+        $is_data_column,$column_text,$optionlist_query,$onChange) = @row;
+    if ($optionlist_query gt "") {
+      $optionlist_queries{$column_name}=$optionlist_query;
+    if ($input_type eq "file") {
+      $file_upload_flag = "ENCTYPE=\"multipart/form-data\""; }
+    }
+  }
+
+
+  # There appears to be a Netscape bug in that one cannot [BACK] to a form
+  # that had multipart encoding.  So, only include form type multipart if
+  # we really have an upload field.  IE users are fine either way.
+  $self->printUserContext();
+  print qq!
+      <P>
+      <H2>$CATEGORY</H2>
+      $LINESEPARATOR
+      <FORM METHOD="post" ACTION="$PROGRAM_FILE_NAME" $file_upload_flag>
+      <TABLE>
+  !;
+
+
+  # ---------------------------
+  # Build option lists for each optionlist query provided for this table
+  my %optionlists;
+  foreach $element (keys %optionlist_queries) {
+
+      # If "$contact_id" appears in the SQL optionlist query, then substitute
+      # that with either a value of $parameters{contact_id} if it is not
+      # empty, or otherwise replace with the $current_contact_id
+      if ( $optionlist_queries{$element} =~ /\$contact_id/ ) {
+        if ( $parameters{"contact_id"} eq "" ) {
+          my $current_contact_id = $self->getCurrent_contact_id();
+          $optionlist_queries{$element} =~
+              s/\$contact_id/$current_contact_id/;
+        } else {
+          $optionlist_queries{$element} =~
+              s/\$contact_id/$parameters{contact_id}/;
+        }
+      }
+
+
+      #### Evaluate the $TBxxxxx table name variables if in the query
+      if ( $optionlist_queries{$element} =~ /\$TB/ ) {
+        $optionlist_queries{$element} = 
+          main::evalSQL($optionlist_queries{$element});
+      }
+
+
+      #### Set the MULTIOPTIONLIST flag if this is a multi-select list
+      my $method_options;
+      $method_options = "MULTIOPTIONLIST"
+        if ($input_types{$element} eq "multioptionlist");
+
+      # Build the option list
+      $optionlists{$element}=$self->buildOptionList(
+         $optionlist_queries{$element},$parameters{$element},$method_options);
+  }
+
+
+  #### Now loop through again and write the HTML
+  foreach $row (@columns_data) {
+    my @row = @{$row};
+    my ($column_name,$column_title,$is_required,$input_type,$input_length,
+        $is_data_column,$column_text,$optionlist_query,$onChange) = @row;
+
+    if ($onChange gt "") {
+      $onChange = " onChange=\"$onChange\"";
+    }
+
+    #### If the action included the phrase HIDE, don't print all the options
+    if ($apply_action =~ /HIDE/i) {
+      print qq!
+        <TD><INPUT TYPE="hidden" NAME="$column_name"
+         VALUE="$parameters{$column_name}"></TD>
+      !;
+      next;
+    }
+
+
+    if ($is_required eq "N") { print "<TR><TD><B>$column_title:</B></TD>\n"; }
+    else { print "<TR><TD><B><font color=red>$column_title:</font></B></TD>\n"; }
+
+
+    if ($input_type eq "text") {
+      print qq!
+        <TD><INPUT TYPE="$input_type" NAME="$column_name"
+         VALUE="$parameters{$column_name}" SIZE=$input_length $onChange></TD>
+      !;
+    }
+
+
+    if ($input_type eq "file") {
+      print qq!
+        <TD><INPUT TYPE="$input_type" NAME="$column_name"
+         VALUE="$parameters{$column_name}" SIZE=$input_length $onChange>
+      !;
+      if ($parameters{$column_name}) {
+        print qq!
+          <A HREF="$DATA_DIR/$parameters{$column_name}">view file</A>
+        !;
+      }
+      print qq!
+         </TD>
+      !;
+    }
+
+
+    if ($input_type eq "password") {
+
+      # If we just loaded password data from the database, and it's not
+      # a blank field, the replace it with a special entry that we'll
+      # look for and decode when it comes time to UPDATE.
+      if ($parameters{$PK_COLUMN_NAME} gt "" && $apply_action ne "REFRESH") {
+        if ($parameters{$column_name} gt "") {
+          $parameters{$column_name}="**********".$parameters{$column_name};
+        }
+      }
+
+      print qq!
+        <TD><INPUT TYPE="$input_type" NAME="$column_name"
+         VALUE="$parameters{$column_name}" SIZE=$input_length></TD>
+      !;
+    }
+
+
+    if ($input_type eq "fixed") {
+      print qq!
+        <TD><INPUT TYPE="hidden" NAME="$column_name"
+         VALUE="$parameters{$column_name}">$parameters{$column_name}</TD>
+      !;
+    }
+
+    if ($input_type eq "textarea") {
+      print qq!
+        <TD><TEXTAREA NAME="$column_name" rows=$input_length cols=40>$parameters{$column_name}</TEXTAREA></TD>
+      !;
+    }
+
+    if ($input_type eq "textdate") {
+      if ($parameters{$column_name} eq "") {
+        my ($sec,$min,$hour,$mday,$mon,$year) = localtime(time());
+        $year+=1900; $mon+=1;
+        $parameters{$column_name} = "$year-$mon-$mday $hour:$min";
+      }
+      print qq!
+        <TD><INPUT TYPE="text" NAME="$column_name"
+         VALUE="$parameters{$column_name}" SIZE=$input_length>
+        <INPUT TYPE="button" NAME="${column_name}_button"
+         VALUE="NOW" onClick="ClickedNowButton($column_name)">
+         </TD>
+      !;
+    }
+
+    if ($input_type eq "optionlist") {
+      print qq~
+        <TD><SELECT NAME="$column_name" $onChange> <!-- $parameters{$column_name} -->
+        <OPTION VALUE=""></OPTION>
+        $optionlists{$column_name}</SELECT></TD>
+      ~;
+    }
+
+    if ($input_type eq "scrolloptionlist") {
+      print qq!
+        <TD><SELECT NAME="$column_name" SIZE=$input_length $onChange>
+        <OPTION VALUE=""></OPTION>
+        $optionlists{$column_name}</SELECT></TD>
+      !;
+    }
+
+    if ($input_type eq "multioptionlist") {
+      print qq!
+        <TD><SELECT NAME="$column_name" MULTIPLE SIZE=$input_length $onChange>
+        $optionlists{$column_name}</SELECT></TD>
+      !;
+    }
+
+    if ($input_type eq "current_contact_id") {
+      my $username = "";
+      my $current_username = $self->getCurrent_username();
+      my $current_contact_id = $self->getCurrent_contact_id();
+      if ($parameters{$column_name} eq "") {
+          $parameters{$column_name}=$current_contact_id;
+          $username=$current_username;
+      } else {
+          if ( $parameters{$column_name} == $current_contact_id) {
+            $username=$current_username;
+          } else {
+            $username=$self->getUsername($parameters{$column_name});
+          }
+      }
+      print qq!
+        <TD><INPUT TYPE="hidden" NAME="$column_name"
+         VALUE="$parameters{$column_name}">$username</TD>
+      !;
+    }
+
+  print qq!
+    <TD BGCOLOR="E0E0E0">$column_text</TD></TR>
+  !;
+
+
+  }
+
+
+} # end printInputForm
+
+
+
+
+
 
 
 
