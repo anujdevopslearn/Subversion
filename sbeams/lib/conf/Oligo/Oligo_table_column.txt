@@ -64,6 +64,11 @@ OG_oligo_annotation	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_
 OG_oligo_annotation	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	N			
 OG_oligo_annotation	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	N			
 OG_oligo_annotation	11	record_status	Record Status	char	1	0	N	N	N							N	N	N			
+																					
+OG_oligo_annotation  	12	GC_content	GC Percent	int	4	0	N		N							N	N	N	GC makeup of oligo	The percentage makeup of G and C nucleotides	
+OG_oligo_annotation  	13	primer_dimer	Primer Dimer	char	1	0	N	U	N							N	N	N	Primer Dimer info		
+OG_oligo_annotation  	14	secondary_structure	Secondary Structure	char	1	0	N	U	N							N	N	N	Whether Secondary Structure is present 		
+OG_oligo_annotation  	15	location	Location	varchar	255	0	N	Unknown	N				text			N	N	N	Location oligo is stored		
 OG_oligo_type	1	oligo_type_id	Oligo Annotation ID	int	4	0	N		Y							N	N				pkDEFAULT
 OG_oligo_type	2	oligo_type_name	Oligo Type Name	varchar	255	0	N		N			N	text	30		Y	Y	Y	Use for this oligo		
 OG_oligo_type	3	comments	Comments	text	16	0	Y		N			N	textarea	5		Y	Y	N	Comments for this oligo		
