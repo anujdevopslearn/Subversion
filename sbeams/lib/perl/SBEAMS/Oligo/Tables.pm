@@ -71,6 +71,7 @@ require Exporter;
 my $core = $DBPREFIX{Core};
 my $mod = $DBPREFIX{Oligo};
 
+
 $TB_ORGANISM                      = "${core}organism";
 
 $TBOG_BIOSEQUENCE_SET       = "${mod}biosequence_set";
@@ -87,8 +88,8 @@ $TBOG_FEATURAMA_STATISTIC   = "${mod}featurama_statistic";
 $TBOG_OLIGO_SET             = "${mod}oligo_set";
 $TBOG_OLIGO_SET_TYPE        = "${mod}oligo_set_type";
 $TBOG_OLIGO_OLIGO_SET       = "${mod}oligo_oligo_set";
-$TBOG_POLYMER_TYPE          = "${mod}polymer_type";
-$TBOG_DBXREF                = "${mod}dbxref";
+$TBOG_POLYMER_TYPE          = "$DBPREFIX{Microarray}polymer_type";
+$TBOG_DBXREF                = "$DBPREFIX{ProteinStructure}dbxref";
 
 
 
