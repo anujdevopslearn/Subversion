@@ -9,6 +9,9 @@ SELECT ARS.array_request_sample_id, convert(varchar(20),ARS.array_request_sample
   FROM $TB_ARRAY_REQUEST_SAMPLE ARS
   LEFT JOIN $TB_LABELING L ON ( ARS.array_request_sample_id = L.array_request_sample_id )
   LEFT JOIN $TB_LABELING_METHOD LM ON ( ARS.labeling_method_id = LM.labeling_method_id )
+  LEFT JOIN $TB_ARRAY_REQUEST_SLIDE ARSL ON ( ARS.array_request_slide_id = ARSL.array_request_slide_id )
+  LEFT JOIN $TB_ARRAY_REQUEST AR ON ( ARSL.array_request_id = AR.array_request_id )
+  WHERE AR.project_id = $project_id
  ORDER BY ARS.array_request_sample_id'
 WHERE table_name = 'labeling'
    AND column_name = 'array_request_sample_id'
