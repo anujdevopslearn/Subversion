@@ -1,21 +1,31 @@
 
+SBEAMS - Systems Biology Experiment Analysis Management System
+
 Goals of the design:
 
-- build a basic, flexible user interface and RDBMS interface code on which
-  we can build LIMS, analysis tools, and basic data management tools
+- Build a simple, flexible user interface and RDBMS interface code on which
+  we can build a platform to do:
+  - User authentication and tracking
+  - LIMS (basic data entry to allow users to store information)
+  - Basic reporting
+  - Data processing front end
+  - Interface for analysis tools
+  - Data export in standard formats
+  - Allow users to explore with SQL!
 
 - Initially used at ISB for:
+  - Microarray Requests + LIMS + data processing pipeline
   - Sequencing LIMS
-  - Microarray LIMS + data processing pipeline
 
 - Expandable by design for subsequent use:
   - Microarray analysis interface
-  - Proteomics LIMS + data processing
+  - Proteomics Requests + LIMS + data processing
   - Proteomics analysis interface
-  -
+  - Sample information management
+  - Other tools
 
 - Does not appear to be anything similar in the public domain.
-  - Design to be an exportable Open Source Project
+  - Perhaps design to be an exportable Open Source Project
 
 
 
@@ -41,5 +51,104 @@ Requirements:
 
 - easy to extend and add
   - for novice programmers?
+
+
+
+Tour:
+
+- User management: web login
+- Multiple dev and multiple back end databases
+- User information: contact, user_login, work_group
+- Microarray tables: request form, slide production, status, processing
+- Tools
+- GEAP
+- Behind the scenes: /host/db/local/www/html/dev2/sbeams
+    - cgi/
+    - lib/perl/
+    - table_property
+    - table_column
+- Command-line interface
+    - /host/db/local/www/html/dev2/sbeams/lib/perl/SBEAMS/scripts/
+    - /net/db/projects/geap/
+- Data processed on lemur
+
+
+Problems:
+- Lack of good prior design spec
+- Not modular enough, a few case of duped code
+- Not very tight coding
+- Virtually no documentation, nor much of an API
+
+
+Need some programs to read in various QuantArray, Dapple, DitigalGenome files
+Should improve Dapple to write a proper information header
+
+
+
+
+SBEAMS::Connection
+
+Authenticator.pm:sub new {
+Authenticator.pm:sub Authenticate { 
+Authenticator.pm:sub processLogin {
+Authenticator.pm:sub get_http_header {
+Authenticator.pm:sub checkLoggedIn {
+Authenticator.pm:sub checkValidUID {
+Authenticator.pm:sub getCurrent_contact_id {
+Authenticator.pm:sub getCurrent_username {
+Authenticator.pm:sub setCurrent_work_group {
+Authenticator.pm:sub getCurrent_work_group_id {
+Authenticator.pm:sub getCurrent_work_group_name {
+Authenticator.pm:sub getCurrent_project_id {
+Authenticator.pm:sub getCurrent_user_context_id {
+Authenticator.pm:sub getCurrent_project_name {
+Authenticator.pm:sub printLoginForm {
+Authenticator.pm:sub printAuthErrors {
+Authenticator.pm:sub destroyAuthHeader {
+Authenticator.pm:sub createAuthHeader {
+Authenticator.pm:sub fetchErrors {
+Authenticator.pm:sub checkLogin {
+Authenticator.pm:sub getUnixPassword {
+Authenticator.pm:sub checkIfAdmin {
+Authenticator.pm:sub getContact_id {
+Authenticator.pm:sub getUsername {
+
+DBConnector.pm:sub new {
+DBConnector.pm:sub dbConnect {
+DBConnector.pm:sub getDBHandle {
+DBConnector.pm:sub getDBServer {
+DBConnector.pm:sub getDBDriver {
+DBConnector.pm:sub getDBDatabase {
+DBConnector.pm:sub getDBUser {
+
+DBInterface.pm:sub new {
+DBInterface.pm:sub applySqlChange {
+DBInterface.pm:sub selectOneColumn {
+DBInterface.pm:sub SelectTwoColumnHash {
+DBInterface.pm:sub executeSQL {
+DBInterface.pm:sub getLastInsertedPK {
+DBInterface.pm:sub buildOptionList {
+DBInterface.pm:sub getRecordStatusOptions {
+DBInterface.pm:sub displayQueryResult {
+DBInterface.pm:sub fetchNextRow {
+DBInterface.pm:sub processTableDisplayControls {
+
+HTMLPrinter.pm:sub new {
+HTMLPrinter.pm:sub printPageHeader {
+HTMLPrinter.pm:sub printStyleSheet {
+HTMLPrinter.pm:sub printJavascriptFunctions {
+HTMLPrinter.pm:sub printMinimalPageHeader {
+HTMLPrinter.pm:sub printUserContext {
+HTMLPrinter.pm:sub printPageFooter {
+HTMLPrinter.pm:sub getGoBackButton {
+HTMLPrinter.pm:sub printIncompleteForm {
+HTMLPrinter.pm:sub printTextHeader {
+HTMLPrinter.pm:sub printTextFooter {
+
+TableInfo.pm:sub new {
+TableInfo.pm:sub returnTableInfo {
+
+Tables.pm
+
 
 
