@@ -1,12 +1,12 @@
 table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
 OG_biosequence_set	1	biosequence_set_id	BioSequence Set ID	int	4	0	N		Y							N	N				pkDEFAULT
-OG_biosequence_set	2	project_id	Project ID	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project associated with this oligo set	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id"	
-OG_biosequence_set	3	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Species for this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+OG_biosequence_set	2	project_id	Project ID	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project associated with this oligo set	SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id	
+OG_biosequence_set	3	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Species for this BioSequence database	SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name	
 OG_biosequence_set	4	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
 OG_biosequence_set	5	set_tag	Set Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this BioSequence database		
 OG_biosequence_set	6	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioSequence database		
 OG_biosequence_set	7	set_version	Set Version	varchar	50	0	N		N			Y	text	40		Y	Y	N	Version of this BioSequence database		
-OG_biosequence_set	8	polymer_type_id	Polymer Type	int	4	0	N		N	OG_polymer_type	polymer_type_id	Y	optionlist			Y	Y	N	Polymer type of the biosequence in this set	"SELECT polymer_type_id, polymer_type_name FROM $TBOG_POLYMER_TYPE ORDER BY polymer_type_name"	
+OG_biosequence_set	8	polymer_type_id	Polymer Type	int	4	0	N		N	OG_polymer_type	polymer_type_id	Y	optionlist			Y	Y	N	Polymer type of the biosequence in this set	SELECT polymer_type_id, polymer_type_name FROM $TBOG_POLYMER_TYPE ORDER BY polymer_type_name	
 OG_biosequence_set	9	upload_file	Upload file	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
 OG_biosequence_set	10	set_path	Set Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	File path of this BioSequence database		
 OG_biosequence_set	11	source_file_date	Source File Date	datetime	8	0	Y		N			N	text	40		N	N	N	Date of the FASTA file at last update		
@@ -30,9 +30,9 @@ OG_biosequence	8	biosequence_seq	Sequence	text	16	0	Y		N			N	file	40		Y	Y	N	Actu
 OG_biosequence_property_set	1	biosequence_property_set_id	BioSequence Property Set ID	int	4	0	N		Y							N	N				pkDEFAULT
 OG_biosequence_property_set	2	biosequence_id	BioSequence ID	int	4	0	N		N	OG_biosequence	biosequence_id					N	N	Y	Biosequence to which this Biosequence property set belongs		
 OG_biosequence_property_set	3	n_transmembrane_regions	Number of Transmembrane Regions	int	4	0	Y		N							Y	Y	N	Number of transmembrane regions		
-OG_biosequence_property_set	4	transmembrane_class	Transmembrane Region Class	varchar	10	0	Y		N			Y	text	50		Y	Y	N	"Class of the transmembrane region.  May be 0, TM, A, S, TM_xS based on output from TMHMM and signalP"		
+OG_biosequence_property_set	4	transmembrane_class	Transmembrane Region Class	varchar	10	0	Y		N			Y	text	50		Y	Y	N	Class of the transmembrane region.  May be 0, TM, A, S, TM_xS based on output from TMHMM and signalP		
 OG_biosequence_property_set	5	transmembrane_topology	Transmembrane Region Topology	text	16	0	Y		N			Y	text	20		Y	Y	N	Coding of which residues belong in the transmembrane regions		
-OG_biosequence_property_set	6	has_signal_peptide	Has a Signal Peptide	char	1	0	Y		N			N	text	50		Y	Y	N	"Does this protein have a signal peptide on the end Y/N? (Note that Y means that there is some non-zero probability that it does, not that is necessarily does)"		
+OG_biosequence_property_set	6	has_signal_peptide	Has a Signal Peptide	char	1	0	Y		N			N	text	50		Y	Y	N	Does this protein have a signal peptide on the end Y/N? (Note that Y means that there is some non-zero probability that it does, not that is necessarily does)		
 OG_biosequence_property_set	7	has_signal_peptide_probability	Probability that it has a Signal Peptide	real	4	0	Y		N			N	text	50		Y	Y	N	Probability that there is a signal peptide on the end as calculated by SignalP		
 OG_biosequence_property_set	8	signal_peptide_length	Length of the Signal Peptide	int	4	0	Y		N			N	text	50		Y	Y	N	Length in residues of the signal peptide		
 OG_biosequence_property_set	9	signal_peptide_is_cleaved	Signal Peptide gets Cleaved	char	1	0	Y		N			N	text	50		Y	Y	N	Does the signal peptide get cleaved off Y/N?		
@@ -40,7 +40,7 @@ OG_biosequence_property_set	10	genome_build	Genome Build	varchar	50	0	Y		N			N	t
 OG_biosequence_property_set	11	chromosome	Chromosome	varchar	50	0	Y		N			N	text	50		Y	Y	N	Chromosome in which this mapping occurs		
 OG_biosequence_property_set	12	start_in_chromosome	Start Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	Start position of the biosequence in the chromosome		
 OG_biosequence_property_set	13	end_in_chromosome	End Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	End position of the biosequence in the chromosome		
-OG_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	"Strand (+,-) of the biosequence in the chromosome"		
+OG_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	Strand (+,-) of the biosequence in the chromosome		
 OG_biosequence_property_set	15	isoelectric_point	Isoelectric Point	real	4	0	Y		N			N	text	10		Y	Y	N	Isoelectric Point (pI) of the protein		
 OG_oligo_hit	1	oligo_hit_id	Oligo ID	int	4	0	N		Y							N	N				pkDEFAULT
 OG_oligo_hit	2	biosequence_id	Biosequence ID	int	4	0	N		N	OG_biosequence	biosequence_id					N	N	Y			
@@ -55,8 +55,8 @@ OG_oligo	3	sequence_length	Sequence Length	int	4	0	N		N							Y	Y	N	Length of ol
 OG_oligo	4	feature_sequence	Feature Sequence	varchar	255	0	N		N							Y	Y	Y	Length of oligonucleotide reporter		
 OG_oligo_annotation	1	oligo_annotation_id	Oligo Annotation ID	int	4	0	N		Y							N	N				pkDEFAULT
 OG_oligo_annotation	2	oligo_id	Oligo ID	int	4	0	N		N	OG_oligo	oligo_id		fixed			Y	Y	Y	Biosequence to which this Biosequence property set belongs		
-OG_oligo_annotation	3	project_id	Project ID	int	4	0	N		N	project	project_id		optionlist			Y	Y	N	Project associated with this oligo annotation	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id"	
-OG_oligo_annotation	4	in_stock	In Stock	char	1	0	Y		N				optionlist			Y	Y	N	Denotes an in-stock oligo	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+OG_oligo_annotation	3	project_id	Project ID	int	4	0	N		N	project	project_id		optionlist			Y	Y	N	Project associated with this oligo annotation	SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id	
+OG_oligo_annotation	4	in_stock	In Stock	char	1	0	Y		N				optionlist			Y	Y	N	Denotes an in-stock oligo	SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value	
 OG_oligo_annotation	5	comments	Comments	text	16	0	Y		N			N	textarea	5		Y	Y	N	Comments for this oligo		
 OG_oligo_annotation	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
 OG_oligo_annotation	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	N			
@@ -79,10 +79,20 @@ OG_selected_oligo	3	oligo_id	Oligo ID	int	4	0	N		N	OG_oligo	oligo_id					N	N	Y	O
 OG_selected_oligo	4	oligo_type_id	Oligo Type ID	int	4	0	N		N	OG_oligo_type	oligo_type_id					N	N	Y	Biosequence to which this Biosequence property set belongs		
 OG_selected_oligo	5	biosequence_id	Biosequence ID	int	4	0	N		N	OG_biosequence	biosequence_id					N	N	Y			
 OG_selected_oligo	6	start_coordinate	Start Coordinate	int	4	0	Y		N							Y	Y	N	Distance from the start of the biosequence		
+OG_selected_oligo	6	stop_coordinate	Stop Coordinate	int	4	0	Y		N							Y	Y	N	Distance from the start of the biosequence to end of oligo		
 OG_selected_oligo	7	threeprime_distance	Three Prime Distance	int	4	0	Y		N							Y	Y	N	Distance from the three prime end of the biosequence		
 OG_selected_oligo	8	n_blast_matches	Number of BLAST matches	int	4	0	Y		N							Y	Y	N	Number of BLAST matches for this reporter		
+OG_selected_oligo	6	synthetic_start	Synthetic Start Coordinate	int	4	0	Y		N							Y	Y	N	Start position of synthetic, non biosequence, nucleotides		
+OG_selected_oligo	6	synthetic_stop	Synthetic Stop Coordinate	int	4	0	Y		N							Y	Y	N	Stop position of synthetic, non biosequence, nucleotides		
+OG_selected_oligo	9	comments	Comments	text	16	0	Y		N			N	textarea	5		Y	Y	N	Comments for this oligo		
+OG_selected_oligo	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+OG_selected_oligo	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	N			
+OG_selected_oligo	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+OG_selected_oligo	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	N			
+OG_selected_oligo	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	N			
+OG_selected_oligo	15	record_status	Record Status	char	1	0	N	N	N							N	N	N			
 OG_oligo_search	1	oligo_search_id	Oligo Search ID	int	4	0	N		Y							N	N				pkDEFAULT
-OG_oligo_search	2	project_id	Project ID	int	4	0	N		N	project	project_id		optionlist			Y	Y	N	Project associated with this oligo set	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id"	
+OG_oligo_search	2	project_id	Project ID	int	4	0	N		N	project	project_id		optionlist			Y	Y	N	Project associated with this oligo set	SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id	
 OG_oligo_search	3	search_tool_id	Search Tool ID	int	4	0	N		N	OG_search_tool	search_tool_id		optionlist			Y	Y	N			
 OG_oligo_search	4	search_id_code	Search ID code	varchar	255	0	N		N				text	50		Y	Y	Y			
 OG_oligo_search	5	search_username	Search Username	varchar	255	0	Y		N			Y	text	30		Y	Y	N	Name of User		
@@ -141,10 +151,10 @@ OG_featurama_statistic	13	content_features_rej	Rejected Features- Content	int	4	
 OG_featurama_statistic	14	duplicate_features	Duplicate Features	int	4	0	Y		N							Y	Y	N	Number of duplicate reporters found		
 OG_featurama_statistic	15	filter_blast_version	FilterBlast Version	varchar	50	0	Y		N							N	N	N	Version of FilterBlast		
 OG_oligo_set	1	oligo_set_id	Oligo Set ID	int	4	0	N		Y							N	N				pkDEFAULT
-OG_oligo_set	2	project_id	Project ID	int	4	0	N		N	project	project_id		optionlist			Y	Y	N	Project associated with this oligo set	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id"	
-OG_oligo_set	3	oligo_set_type_id	Oligo Set Type ID	int	4	0	N		N	OG_oligo_set_type	oligo_set_type_id	Y	optionlist			Y	Y	N	Type of Oligo Set	"SELECT oligo_set_type_id, oligo_set_type_name FROM $TBOG_OLIGO_SET_TYPE ORDER BY oligo_set_type_name"	
+OG_oligo_set	2	project_id	Project ID	int	4	0	N		N	project	project_id		optionlist			Y	Y	N	Project associated with this oligo set	SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id	
+OG_oligo_set	3	oligo_set_type_id	Oligo Set Type ID	int	4	0	N		N	OG_oligo_set_type	oligo_set_type_id	Y	optionlist			Y	Y	N	Type of Oligo Set	SELECT oligo_set_type_id, oligo_set_type_name FROM $TBOG_OLIGO_SET_TYPE ORDER BY oligo_set_type_name	
 OG_oligo_set	4	oligo_set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this Oligo Set		
-OG_oligo_set	5	is_successful	Successful	char	1	0	Y		N			N	optionlist	4		Y	Y	N	Additional comments	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+OG_oligo_set	5	is_successful	Successful	char	1	0	Y		N			N	optionlist	4		Y	Y	N	Additional comments	SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value	
 OG_oligo_set	6	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 OG_oligo_set	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
 OG_oligo_set	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	N			
@@ -190,8 +200,8 @@ OG_dbxref	7	uri	URI	varchar	255	0	N		N			Y	text	50		Y	Y	N	External web page or o
 OG_dbxref	8	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 OG_dbxref	9	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
 OG_dbxref	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-OG_dbxref	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N
-OG_dbxref	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N
-OG_dbxref	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N
-OG_dbxref	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N
-OG_dbxref	15	record_status	Record Status	char	1	0	N	N	N							N	N
+OG_dbxref	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+OG_dbxref	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+OG_dbxref	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+OG_dbxref	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+OG_dbxref	15	record_status	Record Status	char	1	0	N	N	N							N	N				
