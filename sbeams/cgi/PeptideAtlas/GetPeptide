@@ -114,20 +114,26 @@ sub main {
         parameters_ref=>\%parameters);
     #$sbeams->printDebuggingInfo($q);
 
-    ##tab menu info here until moved into sep. module
+    ##xxxxx tab menu info here until moved into sep. module
     $q->param( -name=> "_tab",
-                   -value=> "2");
+               -value=> "2");
     $parameters{'_tab'} = 2;
 
     ## if no parameters are defined, set up some defaults to help with browsing
     ## until I get a help menu set-up
-    unless ( ($parameters{'atlasName'}) && ($parameters{'searchWithinThis'}) && 
-             ($parameters{'searchForThis'}) ) {
-        $parameters{'atlasName'} = 'Human_P0.9_Ens22_NCBI34';
-        $parameters{'searchWithinThis'} = 'Peptide Name';
-        $parameters{'searchForThis'} = 'PAp00000001';
-        $q->param( -name=> "atlasName", -value=> "Human_P0.9_Ens22_NCBI34");
+    if ( !$parameters{'searchWithinThis'}  && !$parameters{searchForThis}
+         && (  !$parameters{'atlasName'}  || !$parameters{'atlasBuildID'} ) ) {
+
+        $parameters{'atlasName'} = "Human_P0.9_Ens26_NCBI35";
+
+        $parameters{'searchWithinThis'} = "Peptide Name";
+
+        $parameters{'searchForThis'} = "PAp00000001";
+
+        $q->param( -name=> "atlasName", -value=> "Human_P0.9_Ens26_NCBI35");
+
         $q->param( -name=> "searchWithinThis", -value=> "Peptide Name");
+
         $q->param( -name=> "searchForThis", -value=> "PAp00000001");
     }
 
@@ -170,10 +176,10 @@ sub handle_request {
 
     ## if no parameters are defined, set up some defaults to help with browsing
     ## until I get a help menu set-up
-    unless ( ($parameters{'atlasName'}) && ($parameters{'searchWithinThis'}) && 
-             ($parameters{'searchForThis'}) ) {
+    unless ( ($parameters{'searchWithinThis'}) && ($parameters{'searchForThis'})  
+           && ( ($parameters{'atlasName'}) || ($parameters{'atlasBuildID'}) ) ) {
         $parameters{'atlasName'} = 'Human_P0.9_Ens22_NCBI34';
-        $parameters{'searchWithinThis'} = 'Peptide Name';
+        $parameters{'searchWithinThis'} = "Peptide Name";
         $parameters{'searchForThis'} = 'PAp00000001';
     }
 
@@ -208,10 +214,9 @@ sub handle_request {
                                           # labels => \@labels # Will make one tab per $lab (@labels)
         );
 
-        #Preferred way to add tabs.  label is required, helptext optional
         $tabmenu->addTab( label => 'Browse Peptides',
                       helptext => 'Multi-constraint browsing of PeptideAtlas',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides" );
+                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides?_tab=1" );
 
         $tabmenu->addTab( label => 'Get Peptide',
                       helptext => 'Look-up info on a peptide by sequence or name',
@@ -257,7 +262,9 @@ sub handle_request {
 
     #### Read in the standard form values
     my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+
     my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
 
 
     #### Set some specific settings for this program
@@ -265,37 +272,6 @@ sub handle_request {
     my $PROGRAM_FILE_NAME = $PROG_NAME;
     my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
     my $help_url = "$CGI_BASE_DIR/help_popup.cgi";
-
-
-    #### create columns and input_types?
-    my @columns = ( "atlas_build_name",
-                    "peptide_name_constraint",
-                    "peptide_sequence_constraint" );
-    my %input_types = (
-                    atlas_build_name => "optionlist",
-                    peptide_name_constraint  => "text",
-                    peptide_sequence_constraint  => "text" );
-
-
-    ##  Read the input parameters for each column
-    my $n_params_found = $sbeams->parse_input_parameters(
-        q=>$q,
-        parameters_ref=>\%parameters,
-        columns_ref=>\@columns,
-        input_types_ref=>\%input_types);
-    #$sbeams->printDebuggingInfo($q);
-
-
-#   #### If the apply action was to recall a previous resultset, do it
-#   my %rs_params = $sbeams->parseResultSetParams(q=>$q);
-#
-#   if ($apply_action eq "VIEWRESULTSET") {
-#       $sbeams->readResultSet(resultset_file=>$rs_params{set_name},
-#           resultset_ref=>$resultset_ref,
-#           query_parameters_ref=>\%parameters);
-#       $n_params_found = 99;
-#   }
-
 
 
     ## Get and store list of atlases for use with form:  
@@ -322,12 +298,12 @@ sub handle_request {
 
 
     #### Build search options for textbox:
-    my @peptide_search_constraint = ( 'peptide_name_constraint', 
-                                      'peptide_sequence_constraint'
+    my @peptide_search_constraint = ( "peptide_name_constraint", 
+                                      "peptide_sequence_constraint"
     );
 
-    my @textbox_option_tags = ( 'Peptide Name', 
-                                'Peptide Sequence'
+    my @textbox_option_tags = ( "Peptide Name", 
+                                "Peptide Sequence"
     );
 
 
@@ -338,9 +314,9 @@ sub handle_request {
 
 
     ## Display HTML FORM to select Atlas and Search constraints:
-    my $atlas_build_name = $q->param("atlasName");
+    my $atlasBuildName = $q->param("atlasName");
 
-    my $searchKey = $q->param("searchWithinThis");
+    my $searchKey = $q->param('searchWithinThis');
 
     my $searchValue = $q->param("searchForThis");
 
@@ -350,11 +326,11 @@ sub handle_request {
 
     }
 
-    ## if receive $parameters{atlas_build_id} from link, get atlas_build_name 
-    if ( $parameters{atlas_build_id} ) {
+    ## if receive $parameters{atlasBuildID} from link, get atlas build name 
+    if ( $parameters{atlasBuildID} ) {
         for (my $i=0; $i<=$#atlas_option_id_array; $i++) {
-            if ( $parameters{atlas_build_id} eq $atlas_option_id_array[$i] ) {
-                $atlas_build_name = $atlas_option_name_array[$i]
+            if ( $parameters{atlasBuildID} eq $atlas_option_id_array[$i] ) {
+                $atlasBuildName = $atlas_option_name_array[$i]
             }
         }
     }
@@ -363,7 +339,6 @@ sub handle_request {
 
     if ($sbeams->output_mode() eq 'html') {
 
-#   print "$SERVER_BASE_DIR <BR> $HTML_BASE_DIR <BR> $CGI_BASE_DIR <BR> ";
 
         print "<BR>";
 
@@ -392,11 +367,11 @@ sub handle_request {
     ## store form values in %parameters:
     for (my $i=0; $i<=$#atlas_option_name_array; $i++){
 
-        if ( $atlas_build_name eq $atlas_option_name_array[$i]) {
+        if ( $atlasBuildName eq $atlas_option_name_array[$i]) {
 
-             $parameters{atlas_build_name} = $atlas_build_name;
+             $parameters{atlasName} = $atlasBuildName;
 
-             $parameters{atlas_build_id} = $atlas_option_id_array[$i];
+             $parameters{atlasBuildID} = $atlas_option_id_array[$i];
 
         }
     }
@@ -407,27 +382,16 @@ sub handle_request {
         if ( $searchKey eq $textbox_option_tags[$i]) {
 
              $parameters{$peptide_search_constraint[$i]} = $searchValue;
-
         }
     }
-
-
-
-
-    #### Finish the upper part of the page and go begin the full-width
-    #### data portion of the page
-  #  $sbeams->display_page_footer(close_tables=>'YES',
-  #    separator_bar=>'YES',display_footer=>'NO')
-  #    unless ( $parameters{display_options} =~ /SequenceFormat/ &&
-  #      $apply_action =~ /HIDE/ );
 
 
 
     #########################################################################
     #### Process all the constraints
 
-    #### If no atlas_build_id was selected, stop here
-    unless ($parameters{atlas_build_name}) {
+    #### If atlasBuildID was not selected, stop here
+    unless ($parameters{atlasName}) {
         $sbeams->reportException(
             state => 'ERROR',
             type => 'INSUFFICIENT CONSTRAINTS',
@@ -442,7 +406,7 @@ sub handle_request {
         constraint_column=>"AB.atlas_build_id",
         constraint_type=>"int_list",
         constraint_name=>"Atlas Build",
-        constraint_value=>$parameters{atlas_build_id} );
+        constraint_value=>$parameters{atlasBuildID} );
     return if ($atlas_build_clause eq '-1');
 
 
@@ -465,7 +429,7 @@ sub handle_request {
     return if ($peptide_sequence_clause eq '-1');
 
 
-    ## want to replace LIKE with = , as want single peptide 
+    ## want to replace LIKE with = , as want a single peptide returned
     $peptide_name_clause =~ s/LIKE/=/gi;
     #print "peptide_name_clause: $peptide_name_clause <br>";
 
@@ -517,14 +481,17 @@ sub handle_request {
 
         ORDER BY P.peptide_accession
     ~;
-     #$sbeams->display_sql(sql=>$sql);
-     #print "parameters{action} = $parameters{action} <BR>";
-     #print "parameters{apply_action} = $parameters{apply_action} <BR>";
-     #print "parameters{atlas_build_name} = $parameters{atlas_build_name} <BR>";
-     #print "parameters{atlas_build_id} = $parameters{atlas_build_id} <BR>";
-     #print "parameters{peptide_name_constraint} = $parameters{peptide_name_constraint} <BR>";
-     #print "apply action = $apply_action<BR>";
-
+    #$sbeams->display_sql(sql=>$sql);
+    #print "parameters{action} = $parameters{action} <BR>";
+    #print "parameters{apply_action} = $parameters{apply_action} <BR>";
+    #print "parameters{atlas_build_id} = $parameters{atlas_build_id} <BR>";
+    #print "parameters{peptide_name_constraint} = $parameters{peptide_name_constraint} <BR>";
+    #print "parameters{peptide_sequence_constraint} = $parameters{peptide_sequence_constraint} <BR>";
+    #print "apply action = $apply_action<BR>";
+    #print "parameters{'searchWithinThis'} = $parameters{'searchWithinThis'}<BR>";
+    #print "parameters{'searchForThis'} = $parameters{'searchForThis'}<BR>";
+    #print "parameters{'atlasName'} = $parameters{'atlasName'}<BR>";
+    #print "parameters{'atlasBuildID'} = $parameters{'atlasBuildID'}<BR>";
 
 
     #########################################################################

@@ -144,7 +144,7 @@ sub handle_request {
     || die "ref_parameters not passed";
   my %parameters = %{$ref_parameters};
 
-  ## xxxx hard coding tab menu here...someday should be moved into separate module in this directory
+  ## xxxx hard coding tab menu here... should be moved into separate module 
   my $tabs = "";
 
   if ($parameters{'_tab'}) {
@@ -181,7 +181,7 @@ sub handle_request {
 
     $tabmenu->addTab( label => 'Get Peptide',
                       helptext => 'Look-up info on a peptide by sequence or name',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?"
+                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=2"
                       );
 
     $tabmenu->addTab( label => 'Browse Proteins',
@@ -582,13 +582,13 @@ sub handle_request {
 
   #### Define the hypertext links for columns that need them
   %url_cols = (
-      'Biosequence Name' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides?atlas_build_id=$parameters{atlas_build_id}&biosequence_name_constraint=\%$colnameidx{biosequence_name}V&apply_action=$pass_action",
+      'Biosequence Name' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides?_tab=1&atlas_build_id=$parameters{atlas_build_id}&biosequence_name_constraint=\%$colnameidx{biosequence_name}V&apply_action=$pass_action",
       'Biosequence Name_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information about this protein\'; return true"',
 
-      'Peptide Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?atlas_build_id=$parameters{atlas_build_id}&peptide_name_constraint=\%$colnameidx{peptide_accession}V&action=QUERY",
+      'Peptide Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=2&atlasBuildID=$parameters{atlas_build_id}&searchWithinThis=Peptide+Name&searchForThis=\%$colnameidx{peptide_accession}V&action=QUERY",
       'Peptide Accession_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show summary for this peptide\'; return true"',
 
-      'Peptide Sequence' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?atlas_build_id=$parameters{atlas_build_id}&peptide_sequence_constraint=\%$colnameidx{peptide_sequence}V&action=QUERY",
+      'Peptide Sequence' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=2&atlas_build_id=$parameters{atlas_build_id}&searchWithinThis=Peptide+Sequence&searchForThis=\%$colnameidx{peptide_sequence}V&action=QUERY",
       'Peptide Sequence_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show summary for this peptide\'; return true"',
 
   );
