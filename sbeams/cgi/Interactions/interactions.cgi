@@ -275,8 +275,10 @@ print File "<br><pre>";
 	$bioentityHash{interaction} = uc($parameters{interactionType});
 
 print File "Interaction Type: $parameters{interactionType}\n";
-print File "Bioentity Source Name:  $bioentityHash{canSource}\n";
-print File "Bioentity Target Name:  $bioentityHash{canTarget}\n";
+print File "Bioentity Canonical Source Name:  $bioentityHash{canSource}\n";
+print File "Bioentity Canonical Target Name:  $bioentityHash{canTarget}\n";
+print File "Bioentity Common Source Name:  $bioentityHash{comSource}\n";
+print File "Bioentity Common Target Name:  $bioentityHash{comTarget}\n";
 print File "Bioenity Source Type:  $bioentityHash{typeSource}\n" if $bioentityHash{typeSource};
 print File "Bioenity Target Type:  $bioentityHash{typeTarget}\n" if $bioentityHash{typeTarget};
 print File "Organism Source:  $parameters{species1}\n";
@@ -350,9 +352,10 @@ print File "Could not identify Organism for Source Bioentity\n
 Used Organism: \"Other\" as default\n" if $bioentityHash{organismSource} eq "Other";
 		}
 		
-		$bioentityHash{idSource} = addToBioentityTable($bioentityHash{canSource}, $bioentityTypeHash{$bioentityHash{typeSource}},$species1ID);
+		$bioentityHash{idSource} = addToBioentityTable($bioentityHash{canSource}, $bioentityHash{comSource},$bioentityTypeHash{$bioentityHash{typeSource}},$species1ID);
 print File "\n<b>Created a New  bioentity for the Source Node with the following parameters:\n\n</b>
 Canonical Name:  $bioentityHash{canSource}\n
+Common Name: $bioentityHash{comSource}\n
 Bioentity Type: $bioentityHash{typeSource}\n
 Organism: $organismHash{$species1ID}\n
 		
@@ -388,9 +391,10 @@ print File "Could not identify Organism for Target Bioentity\n
 Used Organism: \"Other\" as default\n" if $bioentityHash{organismTarget} eq "Other";
 		}
 		
-		$bioentityHash{idTarget} = addToBioentityTable($bioentityHash{canTarget},$bioentityTypeHash{ $bioentityHash{typeTarget}},$organismHash{$bioentityHash{organismTarget}});
+		$bioentityHash{idTarget} = addToBioentityTable($bioentityHash{canTarget},$bioentityHash{comTarget},$bioentityTypeHash{ $bioentityHash{typeTarget}},$organismHash{$bioentityHash{organismTarget}});
 print File "\n<b>Created a New  bioentity for the Target Node with the following parameters:</b>\n\n
 Canonical Name:  $bioentityHash{canTarget}\n
+Common Name: $bioentityHash{comTarget}\n;
 Bioentity Type: $bioentityHash{typeTarget}\n
 Organism: $bioentityHash{organismTarget}\n
 		
@@ -542,7 +546,7 @@ WHERE P.record_status != 'D' ORDER BY UL.username+\' -\ '+P.name,P.project_id";
 
 	sub addToBioentityTable
 	{
-		my ($canName,$type,$organism) = @_;
+		my ($canName,$comName,$type,$organism) = @_;
 		my $insert=1;
 		my $update=0;
 		my $id = 0;
@@ -551,7 +555,7 @@ WHERE P.record_status != 'D' ORDER BY UL.username+\' -\ '+P.name,P.project_id";
 		$rowData{bioentity_canonical_name} = $canName;	
 		$rowData{bioentity_type_id}= $type;
 		$rowData{organism_id} = $organism;		
-	
+		$rowData{bioentity_common_name} = $comName if defined($comName);
 		
 		my $returned_PK = $sbeams->updateOrInsertRow(
 							insert => $insert,
