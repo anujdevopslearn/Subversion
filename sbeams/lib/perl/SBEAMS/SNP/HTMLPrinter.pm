@@ -130,6 +130,8 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/SNP/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;BioSequences</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/SNP/BrowseSNPHit.cgi"><nobr>&nbsp;&nbsp;&nbsp;SNP Hits</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
+	<tr><td>Documentation:</td></tr>
+	<tr><td><a href="$HTML_BASE_DIR/doc/$SBEAMS_SUBDIR/${SBEAMS_PART}_Schema.gif"><nobr>&nbsp;&nbsp;&nbsp;Schema (GIF)</nobr></a></td></tr>
 	</table>
 	</td>
 
