@@ -30,7 +30,6 @@ $sbeamsMOD = new SBEAMS::Microarray;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
-
 use CGI;
 $q = new CGI;
 
@@ -111,9 +110,7 @@ sub main {
     $sbeamsMOD->printPageFooter();
   }
 
-
 } # end main
-
 
 
 ###############################################################################
@@ -134,89 +131,197 @@ sub handle_request {
   my @rows;
 
 
+  #### Define variables for Summary Section
+  my $project_id = $parameters{PROJECT_ID} || $sbeams->getCurrent_project_id; 
+  my $current_contact_id = $sbeams->getCurrent_contact_id();
+  my ($first_name, $last_name);
   #### Show current user context information
   $sbeams->printUserContext();
-  $current_contact_id = $sbeams->getCurrent_contact_id();
-
-  #### Title
-  $sql = qq~
-	SELECT first_name, last_name
-	  FROM $TB_CONTACT
-	 WHERE contact_id = '$current_contact_id'
-  ~;
-
-  @rows = $sbeams->selectSeveralColumns($sql);
-
-  my ($fName, $lName);
-  if (@rows) {($fName, $lName) = @{$rows[0]}};
-
-  print qq~
-      <H1><CENTER><B>$fName $lName\'s Homepage</B></CENTER></H1>
-  ~;
 
   #### Get information about the current project from the database
   $sql = qq~
-	SELECT UC.project_id,P.name,P.project_tag,P.project_status, C.first_name, C.last_name
-	  FROM $TB_USER_CONTEXT UC
-	  JOIN $TB_PROJECT P ON ( UC.project_id = P.project_id )
-	  JOIN $TB_CONTACT C ON ( P.PI_contact_id = C.contact_id )
-	 WHERE UC.contact_id = '$current_contact_id'
+	SELECT C.first_name, C.last_name
+	FROM $TB_CONTACT C
+	WHERE C.contact_id = '$current_contact_id'
+	AND C.record_status != 'D'
   ~;
   @rows = $sbeams->selectSeveralColumns($sql);
 
-  my $pi_first_name = '';
-  my $pi_last_name = '';
-  my $project_id = '';
-  my $project_name = 'NONE';
-  my $project_tag = 'NONE';
-  my $project_status = 'N/A';
   if (@rows) {
-    ($project_id,$project_name,$project_tag,$project_status,$pi_first_name,$pi_last_name) = @{$rows[0]};
+    ($first_name, $last_name) = @{$rows[0]};
+  }
+
+  #### Print Project Title
+  print qq~
+      	<H1>$first_name $last_name\'s Homepage</H1><BR>
+	~;
+
+  #### print_tabs
+  my @tab_titles = ("Array News","Current Project","Projects You Own","Accessible Projects","Graphical Overview");
+  my $tab_titles_ref = \@tab_titles;
+  my $page_link = "main.cgi";
+  my $unselected_bg_color = "\#008000";
+  my $unselected_font_color = "\#FFFFFF";
+  my $selected_bg_color = "\#DC143C";
+  my $selected_font_color = "\#FFFFFF";
+
+  #### Summary Section 
+  if($parameters{'tab'} eq "array_news") {
+      $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
+			     page_link=>$page_link,
+			     unselected_bg_color=>$unselected_bg_color,
+			     unselected_font_color=>$unselected_font_color,
+			     selected_bg_color=>$selected_bg_color,
+			     selected_font_color=>$selected_font_color,
+			     selected_tab=>0);
+      print_array_news_tab();
+  }elsif ($parameters{'tab'} eq "current_project"){
+      $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
+			     page_link=>$page_link,
+			     unselected_bg_color=>$unselected_bg_color,
+			     unselected_font_color=>$unselected_font_color,
+			     selected_bg_color=>$selected_bg_color,
+			     selected_font_color=>$selected_font_color,
+			     selected_tab=>1);
+      print_current_project_tab(); 
+  }elsif($parameters{'tab'} eq "projects_you_own") { 
+      $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
+			     page_link=>$page_link,
+			     unselected_bg_color=>$unselected_bg_color,
+			     unselected_font_color=>$unselected_font_color,
+			     selected_bg_color=>$selected_bg_color,
+			     selected_font_color=>$selected_font_color,
+			     selected_tab=>2);
+      print_projects_you_own_tab(); 
+  }elsif($parameters{'tab'} eq "accessible_projects") { 
+      $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
+			     page_link=>$page_link,
+			     unselected_bg_color=>$unselected_bg_color,
+			     unselected_font_color=>$unselected_font_color,
+			     selected_bg_color=>$selected_bg_color,
+			     selected_font_color=>$selected_font_color,
+			     selected_tab=>3);
+      print_accessible_projects_tab(); 
+  }elsif($parameters{'tab'} eq "graphical_overview") {
+      $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
+			     page_link=>$page_link,
+			     unselected_bg_color=>$unselected_bg_color,
+			     unselected_font_color=>$unselected_font_color,
+			     selected_bg_color=>$selected_bg_color,
+			     selected_font_color=>$selected_font_color,
+			     selected_tab=>4);
+      print_graphical_overview_tab();
+  }else{
+      $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
+			     page_link=>$page_link,
+			     unselected_bg_color=>$unselected_bg_color,
+			     unselected_font_color=>$unselected_font_color,
+			     selected_bg_color=>$selected_bg_color,
+			     selected_font_color=>$selected_font_color,
+			     selected_tab=>0);
+      print_array_news_tab();
+  }
+ 
+  return;
+
+} # end handle_request
+
+
+###############################################################################
+# print_array_news_tab
+###############################################################################
+sub print_array_news_tab {
+  my %args = @_;
+  my $SUB_NAME = "print_array_news_tab";
+  my $file_name = "$PHYSICAL_BASE_DIR/lib/etc/$SBEAMS_SUBDIR/news/current_news.txt";
+
+  open(INFILE, $file_name) || die "unable to open news file, $file_name";
+  print qq~
+      <P>
+      ~;
+  while (<INFILE>) {
+      my $textline = $_;
+      if ($textline =~ /^Title:(.*)/){
+         print qq ~
+	   <H3><FONT COLOR="red"><U>$1</U></FONT></H3>
+	  ~;
+      }elsif($textline =~/^Posted:(.*)/){
+	 print qq~
+	     <B>Posted on: $1</B><BR>
+	     ~;
+     }elsif($textline =~/\w/){
+	 print qq~$textline~;
+     }
+  }
+  print qq~
+      </P>
+      ~;    
+  return;
+}
+###############################################################################
+# print_current_project_tab
+###############################################################################
+sub print_current_project_tab {
+    my %args = @_;
+    my $SUB_NAME = "print_current_project_tab";
+
+    #$sbeams->printCurrentProject(page_link=>'ProjectHome.cgi');
+
+
+  ## Define standard variables
+  my ($sql, @rows);
+  my $current_contact_id = $sbeams->getCurrent_contact_id();
+  my (%array_requests, %array_scans, %quantitation_files);
+  my $project_id = $sbeams->getCurrent_project_id();
+  my ($project_name, $project_tag, $project_status, $project_desc);
+  my ($pi_first_name, $pi_last_name, $pi_contact_id, $username);
+
+  #### Get information about the current project from the database
+  $sql = qq~
+	SELECT P.name,P.project_tag,P.project_status,P.description,C.first_name,C.last_name,C.contact_id,UL.username
+	  FROM $TB_PROJECT P
+	  JOIN $TB_CONTACT C ON ( P.PI_contact_id = C.contact_id )
+	  JOIN $TB_USER_LOGIN UL ON ( UL.contact_id = C.contact_id)
+	WHERE P.project_id = '$project_id'
+  ~;
+  @rows = $sbeams->selectSeveralColumns($sql);
+
+  if (@rows) {
+    ($project_name,$project_tag,$project_status,$project_desc,$pi_first_name,$pi_last_name,$pi_contact_id,$username) = @{$rows[0]};
   }
 
   #### Print out some information about this project
   print qq~
-	<H1>Current Project: <A class="h1" HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=$project_id">$project_name</A></H1>
+	<H1>Summary of $project_name: <A HREF="ProjectHome.cgi">[More Information]</A></H1>
 	<TABLE WIDTH="100%" BORDER=0>
 	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
-	             <TD COLSPAN="2" WIDTH="100%"><B>PI</B> $pi_first_name $pi_last_name</TD></TR>
+	             <TD COLSPAN="2" WIDTH="100%"><B>PI: </B>$pi_first_name $pi_last_name</TD></TR>
 	<TR><TD></TD><TD COLSPAN="2" WIDTH="100%"><B>Status:</B> $project_status</TD></TR>
 	<TR><TD></TD><TD COLSPAN="2"><B>Project Tag:</B> $project_tag</TD></TR>
+	<TR><TD></TD><TD COLSPAN="2"><B>Description:</B>$project_desc</TD></TR>
   ~;
 
-  #### Get project description
-  my $description = '';
-  if ($project_id > 0) {
-      $sql = qq~
-	  SELECT description 
-	  FROM $TB_PROJECT 
-	  WHERE project_id = '$project_id'
-	  AND record_status != 'D'
-      ~;
-      my @temp = $sbeams->selectOneColumn($sql);
-      $description = $temp[0];
-
-      print qq~
-	<TR><TD></TD><TD COLSPAN="2" WIDTH="100%"<B>Description: </B>$description</TD></TR>
-      ~;
-  }
-
   #### Get all the array information for this project
-  my $array_requests = 0;
-  my $array_scans = 0;
-  my $quantitation_files = 0;
+  my $n_array_requests = 0;
+  my $n_array_scans = 0;
+  my $n_quantitation_files = 0;
   if ($project_id > 0) {
+
       $sql = qq~
-	  SELECT array_request_id FROM $TB_ARRAY_REQUEST
+	  SELECT array_request_id, n_slides, date_created 
+	  FROM $TB_ARRAY_REQUEST
 	  WHERE project_id = '$project_id'
 	  AND record_status != 'D'
       ~;
-
-      my @temp = $sbeams->selectOneColumn($sql);
-      $array_requests = @temp;
+      @rows = $sbeams->selectSeveralColumns($sql);
+      foreach my $row(@rows){
+	  my @temp_row = @{$row};
+	  $array_requests{$temp_row[0]} = "$temp_row[2] ($temp_row[1] slides)";
+	  $n_array_requests++;
+      }
 
       $sql = qq~
-	  SELECT ASCAN.array_scan_id, AQ.array_quantitation_id
+	  SELECT ASCAN.array_scan_id, ASCAN.stage_location
 	  FROM $TB_ARRAY_SCAN ASCAN
 	  JOIN $TB_ARRAY A ON ( A.array_id = ASCAN.array_id )
 	  JOIN $TB_ARRAY_QUANTITATION AQ ON ( AQ.array_scan_id = ASCAN.array_scan_id )
@@ -225,39 +330,78 @@ sub handle_request {
 	  AND A.record_status != 'D'
 	  AND AQ.record_status != 'D'
       ~;
+      %array_scans = $sbeams->selectTwoColumnHash($sql);
 
-      my %results = $sbeams->selectTwoColumnHash($sql);
-      foreach my $key (keys %results) {
-	  $array_scans++;
-	  if (defined($results{$key})) {
-	      $quantitation_files++;
-	  }
+      $sql = qq~
+	  SELECT AQ.array_quantitation_id, AQ.stage_location
+	  FROM $TB_ARRAY_SCAN ASCAN
+	  JOIN $TB_ARRAY A ON ( A.array_id = ASCAN.array_id )
+	  JOIN $TB_ARRAY_QUANTITATION AQ ON ( AQ.array_scan_id = ASCAN.array_scan_id )
+	  WHERE A.project_id = '$project_id'
+	  AND ASCAN.record_status != 'D'
+	  AND A.record_status != 'D'
+	  AND AQ.record_status != 'D'
+      ~;
+      %quantitation_files = $sbeams->selectTwoColumnHash($sql);
+
+      foreach my $key (keys %array_scans) {
+	  $n_array_scans++;
+      }
+      foreach my $key (keys %quantitation_files){
+	  $n_quantitation_files++;
       }
   }
 
   print qq~
-        <TR><TD></TD><TD COLSPAN="2"><B>Array Requests: $array_requests</B></TD></TR>
-        <TR><TD></TD><TD COLSPAN="2"><B>Array Scans: $array_scans</B></TD></TR>
-        <TR><TD></TD><TD COLSPAN="2"><B>Array Quantitations: $quantitation_files</B></TD></TR>
-        <TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD></TR>
+      <TR><TD></TD><TD COLSPAN="2"><B>Array Requests: $n_array_requests</B></TD></TR>
+      <TR><TD></TD><TD COLSPAN="2"><B>Array Scans: $n_array_scans</B></TD></TR>
+      <TR><TD></TD><TD COLSPAN="2"><B>Array Quantitations: $n_quantitation_files</B></TD></TR>
+      <TR><TD></TD><TD COLSPAN="2"><B>Access Privileges:</B><A HREF="$CGI_BASE_DIR/ManageProjectPrivileges">[View/Edit]</A></TD></TR>
+      <TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD></TR>
+      </TABLE>
+      <IMG SRC="/users/mjohnson/permissions_red.jpg">
+      $LINESEPARATOR
   ~;
 
-  #### Quick Links
-  print qq~
-        <TR><TD></TD><TD COLSPAN="2"><A HREF="ShowProjectStatus.cgi">Project Status</A></TD></TR>
-	<TR><TD></TD><TD COLSPAN="2"><A HREF="ProcessProject.cgi">Data Processing</A></TD></TR>
-	~;
-  #### Finish the table
-  print qq~
-	</TABLE>
-  ~;
+    return;
+}
 
-  ## Print projects user owns
+
+
+###############################################################################
+# print_projects_you_own_tab
+###############################################################################
+sub print_projects_you_own_tab {
+  my %args = @_;
+  my $SUB_NAME = "print_projects_you_own_tab";
+  
   $sbeams->printProjectsYouOwn();
 
-  ## Print projects user has access to
+  return;
+}
+  
+
+###############################################################################
+# print_accessible_projects_tab
+###############################################################################
+sub print_accessible_projects_tab {
+  my %args = @_;
+  my $SUB_NAME = "print_accessible_projects_tab";
+  
   $sbeams->printProjectsYouHaveAccessTo();
 
+  return;
+}
+
+  
+
+###############################################################################
+# print_graphical_overview_tab
+###############################################################################
+sub print_graphical_overview_tab {
+  my %args = @_;
+  my $SUB_NAME = "print_graphical_overview_tab";
+  
   #### Print out graphic
   print qq!
   <P>
@@ -285,7 +429,6 @@ sub handle_request {
   !;
 
   return;
-
-} # end handle_request
+}
 
 
