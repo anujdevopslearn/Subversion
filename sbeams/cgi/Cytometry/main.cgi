@@ -275,7 +275,7 @@ sub displayIntro
           <td>$hashFile{$key}->{$id}->{Organism} </td>
           <td>$hashFile{$key}->{$id}->{'File Name'}</td> 
           <td>$hashFile{$key}->{$id}->{'Run Date'} </td>
-          <td><a href=$CGI_BASE_DIR/$SBEAMS_SUBDIR/mainBench.cgi?action=$PROCESSFILE&fileID=$id > Create Graph</a></td></tr>~;
+          <td><a href=$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=$PROCESSFILE&fileID=$id > Create Graph</a></td></tr>~;
         }
       }	
      }
