@@ -271,11 +271,11 @@ SELECT	A.array_id,A.array_name,
               #### Pull out the channel information
 	      my @channels = @{$quantitation_data{channels}};
 	      my $channel;						
-	      ### <Added 06-18-02 to deal with hi-lo scans>
+	      ### <Added to deal with hi-lo scans>
 	      my $number_of_channels = scalar(@channels);
 	      my $first_channel = "ch1";
 	      my $other_channel = "ch".($number_of_channels/2 + 1);
-	      ### </Added 06-18-02 to deal with hi-lo scans>
+	      ### </Added to deal with hi-lo scans>
 
 	      #### Loop over each channel
 	      foreach $channel (@channels) {
@@ -959,7 +959,7 @@ EXECUTE = default_parameters\n\n
   if ($useVandS){
     foreach $key(keys %conditions){
       $printLine = "#VERA/SAM\nfile_name = $key.all.merge\nvera_output_file = $key.model\nsam_output_file = $key.sig\n";
-      if ($veraFlag){$printLine.="vera_critical_delta_flag = true\nvera_critical_delat_value= $veraValue\n";}
+      if ($veraFlag){$printLine.="vera_critical_delta_flag = true\nvera_critical_delta_value= $veraValue\n";}
       if ($veraEvolFile){$printLine.="vera_evolution_flag = true\nvera_evolution_value = xxxxx\n";}
       if ($veraDebug){$printLine.="vera_debugging_file_flag = true\nvera_debugging_file_value = xxxxx\nsam_debugging_file_flag = true\nsam_debugging_file_value = xxxxx\n";}
       if ($veraModelFlag){$printLine.="vera_initial_choice_flag = true\nvera_initial_choice_value= $veraModelFile\n";}
