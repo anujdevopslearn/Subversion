@@ -1105,6 +1105,7 @@ sub calculateProjectPermission {
                                           project_id => $parent_project_id 
                                               );
 
+  $log->debug( "Priv is $privilege in calcProjPerm" );
   # We have the record information, the parent project, and user's permission on
   # it.   Now determine what permission level all these boil down to.
   if ( $privilege >= DATA_NONE ) { # Deny if overall priv is DATA_NONE or worse?
@@ -1182,6 +1183,7 @@ sub getProjectGroups {
        AND gpp.record_status != 'D'
        AND uwg.record_status != 'D'
   END_SQL
+  $log->debug( $sql );
 
   my @row = $self->selectOneColumn( $sql );
 
@@ -1235,8 +1237,9 @@ sub getTableGroups {
     AND wg.record_status != 'D'
   END_SQL
 
-  # To keep from coercing into ADMIN group:
-  $sql .= " AND wg.work_group_name <> 'Admin' ";
+# Removed this 2004-12-7; no longer switch to group, thus using admin perms OK.
+# To keep from coercing into ADMIN group:
+# $sql .= " AND wg.work_group_name <> 'Admin' ";
 
   my @row = $self->selectOneColumn( $sql );
 
