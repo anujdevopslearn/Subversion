@@ -27,6 +27,8 @@ use vars qw(@ISA @EXPORT
     $TB_ORGANIZATION_TYPE
     $TB_ORGANIZATION
     $TB_PROJECT
+    $TB_USER_PROJECT_PERMISSION
+    $TB_GROUP_PROJECT_PERMISSION
     $TB_DBXREF
 
     $TB_TABLE_COLUMN
@@ -54,6 +56,8 @@ require Exporter;
     $TB_ORGANIZATION_TYPE
     $TB_ORGANIZATION
     $TB_PROJECT
+    $TB_USER_PROJECT_PERMISSION
+    $TB_GROUP_PROJECT_PERMISSION
     $TB_DBXREF
 
     $TB_TABLE_COLUMN
@@ -78,6 +82,8 @@ $TB_CONTACT             = 'contact';
 $TB_ORGANIZATION_TYPE   = 'organization_type';
 $TB_ORGANIZATION        = 'organization';
 $TB_PROJECT             = 'project';
+$TB_USER_PROJECT_PERMISSION     = 'user_project_permission';
+$TB_GROUP_PROJECT_PERMISSION    = 'group_project_permission';
 
 $TB_DBXREF              = $DBPREFIX{Proteomics}.'dbxref';
 
