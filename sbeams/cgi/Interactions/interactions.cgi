@@ -230,11 +230,13 @@ print File "<html><body><h3> Result Summary  For Selected Interaction</h3><br>";
 print File "<center><b>You can edit  your  Sbeams entries by clicking on the links</b></center><br>";
 
 print File "<br><pre>";
-	my $organismSql = "select full_name, organism_id  from sbeams.dbo.organism";
+	my $organismSql = "select upper( full_name), organism_id  from sbeams.dbo.organism";
+	my $organismNameSql = " select upper( organism_Name), organism_id  from sbeams.dbo.organism";
 	my $interactionTypeSql = "select interaction_type_name, interaction_type_id from $TBIN_INTERACTION_TYPE";	
-	my $bioentityTypeSql = "select bioentity_type_name, bioentity_type_id from $TBIN_BIOENTITY_TYPE";
+	my $bioentityTypeSql = "select upper(bioentity_type_name), bioentity_type_id from $TBIN_BIOENTITY_TYPE";
 	
 	my %organismHash = $sbeams->selectTwoColumnHash($organismSql);
+	my %organismNameHash = $sbeams->selectTwoColumnHash($organismNameSql);
 	my %interactionTypeHash = $sbeams->selectTwoColumnHash($interactionTypeSql);
 	my %bioentityTypeHash = $sbeams->selectTwoColumnHash($bioentityTypeSql);
 	
@@ -248,18 +250,28 @@ print File "<br><pre>";
     constraint_value=>$parameters{project_id} );
 	
 	
-	$bioentityHash{canSource} = $parameters{bioentity1CanName};
-	$bioentityHash{comSource} =$parameters{bioentity1ComName};
-	$bioentityHash{typeSource} = 'Protein'	if  $parameters{bioentity1CanName} =~ /^([nx])[pctgrw].*/i;
-	$bioentityHash{typeSource} = 'DNA'  if $parameters{bioentity1CanName} =~ /^(nm_).*/i;
-	$bioentityHash{organismSource} = $parameters{bioentity1Organism} unless  $parameters{bioentity1Organism} =~ /unknown/i ;
+	$bioentityHash{canSource} = $parameters{canonicalName1};
+	$bioentityHash{comSource} =$parameters{commonName1};
+	$bioentityHash{typeSource} = uc ($parameters{moleculeType1});	
+	$bioentityHash{typeSource} = 'Protein'	if ($parameters{canonicalName1} =~ /^([nx])[pctgrw].*/i and ! defined($parameters{moleculeType1}));
+	$bioentityHash{typeSource} = 'DNA'  if ($parameters{canonicalName1} =~ /^(nm_).*/i and ! defined($parameters{moleculeType1}));
+	$bioentityHash{organismSource} = uc($parameters{species1}) unless $parameters{species1} =~ /unknown/i ;
+	my $species1ID;
+	$species1ID = $organismHash{$bioentityHash{organismSource}}; # unless $parameters{species1} =~ /unknown/i ;
+	$species1ID = $organismNameHash{$bioentityHash{organismSource}} unless defined($species1ID);	
 
-	$bioentityHash{canTarget} = $parameters{bioentity2CanName};
-	$bioentityHash{comTarget} =$parameters{bioentity2ComName};
-	$bioentityHash{typeTarget} = 'Protein'  if  $parameters{bioentity2CanName} =~ /^([nx])[pctgrw].*/i;
-	$bioentityHash{typeTarget} = 'DNA'  if $parameters{bioentity2CanName} =~ /^(nm_).*/i;
-	$bioentityHash{organismTarget} = $parameters{bioentity2Organism} unless $parameters{bioentity2Organism} =~ /unknown/i ;
-		
+	
+	
+	$bioentityHash{canTarget} = $parameters{canonicalName2};
+	$bioentityHash{comTarget} =$parameters{commonName2};
+	$bioentityHash{typeTarget} = uc($parameters{moleculeType2});	
+	$bioentityHash{typeTarget} = 'Protein'  if ( $parameters{canonicalName2} =~ /^([nx])[pctgrw].*/i and ! defined($parameters{moleculeType2}));
+	$bioentityHash{typeTarget} = 'DNA'  if ($parameters{canonicalName2} =~ /^(nm_).*/i and ! defined($parameters{moleculeType2}));
+	$bioentityHash{organismTarget} =  uc($parameters{species2}) unless $parameters{species2} =~ /unknown/i ;
+	my $species2ID;
+	$species2ID = $organismHash{$bioentityHash{organismTarget}};
+	$species2ID = $organismNameHash{$bioentityHash{organismTarget}} unless defined($species2ID);
+	
 	$bioentityHash{interaction} = $parameters{interactionType};
 
 	
@@ -271,24 +283,35 @@ print File "Bioenity Target Type:  $bioentityHash{typeTarget}\n" if $bioentityHa
 print File "\n<b> Configuring Source and Target  Bioentity Type</b>\n\n";	
 		if ($parameters{interactionType} =~ /pp/i)
 		{
-			$bioentityHash{typeSource} = 'Protein';
-			$bioentityHash{typeTarget} = 'Protein';
+			$bioentityHash{typeSource} = 'PROTEIN';
+			$bioentityHash{typeTarget} = 'PROTEIN';
 		}
-		elsif ($parameters{interactionType} =~ /dp/i)
+		elsif (($parameters{interactionType} =~ /dp/i) or( $parameters{interactionType} =~/.*dna\s*-\s*protein.*/i))
 		{
 			$bioentityHash{typeSource} = 'DNA';
-			$bioentityHash{typeTarget} = 'Protein';
+			$bioentityHash{typeTarget} = 'PROTEIN';
 		}	
-		elsif ($parameters{interactionType} =~ /pd/i)
+		elsif (($parameters{interactionType} =~ /pd/i) or ( $parameters{interactionType} =~/.*protein\s*-\s*dna.*/i))
 		{
-			$bioentityHash{typeSource} = 'Protein';
+			$bioentityHash{typeSource} = 'PROTEIN';
 			$bioentityHash{typeTarget} = 'DNA';
 		}		
 		else
 		{
+			if  ($bioentityHash{typeSource})
+			{
+				print File "Bioenity Source Type:  $bioentityHash{typeSource}\n";
+				if ($bioentityHash{typeSource})
+				{
+					print File "Bioenity Target Type:  $bioentityHash{typeTarget}\n";
+				}
+			}
+			else
+			{
 			$bioentityHash{typeSource} = 'Protein';
 print File  " Could not determine bioentityType for Source Bioentity\n
 Used BioentityType: Protein as default\n";
+			}
 		}
 	}
 	
@@ -297,8 +320,8 @@ Used BioentityType: Protein as default\n";
 		$bioentityHash{typeTarget} = 'Protein';
 print File "Could not determine  bioentityType for Target Bioentity\n;
 Used BioentityType: Protein as default\n";
-		
 	}
+
 #bioentity flag;	
 	my $isPresent = 1;
 #do we have  bioentity1
@@ -315,19 +338,20 @@ CanonicalName: $bioentityHash{canSource}\n";
 print File "Could not find Source Bioentity in database\n";
 		$isPresent = 0;
 #making sure we have an organism from cytoscape		
-		if (! $bioentityHash{organismSource})
+		if (! defined($species1ID))
 		{
 print File "\n<b>Checking for organism of Source Bioentity</b>\n\n"; 
-			$bioentityHash{organismSource} =	$organismHash{getOrganism($bioentityHash{canSource})};
-			$bioentityHash{organismSource}="Other" unless ($bioentityHash{organismSource});
+			$species1ID =	$organismHash{ uc(getOrganism($bioentityHash{canSource}))};
+			$species1ID = $organismHash{'OTHER'}  unless (defined($species1ID));
 print File "Could not identify Organism for Source Bioentity\n
 Used Organism: \"Other\" as default\n" if $bioentityHash{organismSource} eq "Other";
 		}
-		$bioentityHash{idSource} = addToBioentityTable($bioentityHash{canSource}, $bioentityTypeHash{$bioentityHash{typeSource}},$organismHash{$bioentityHash{organismSource}});
+		
+		$bioentityHash{idSource} = addToBioentityTable($bioentityHash{canSource}, $bioentityTypeHash{$bioentityHash{typeSource}},$species1ID);
 print File "\n<b>Created a New  bioentity for the Source Node with the following parameters:\n\n</b>
 Canonical Name:  $bioentityHash{canSource}\n
 Bioentity Type: $bioentityHash{typeSource}\n
-Organism: $bioentityHash{organismSource}\n
+Organism: $organismHash{$species1ID}\n
 		
 Added NEW  bioenity_id: $bioentityHash{idSource}\n 
 Link::  <a href = $BIOENTITY_URL$bioentityHash{idSource} target = sbeams>$BIOENTITY_URL$bioentityHash{idSource}</a>\n";
@@ -352,14 +376,15 @@ CanonicalName: $bioentityHash{canTarget}\n";
 		$isPresent = 0;
 			print File "Could not find Target Bioentity in database\n";
 #making sure we have an organism from cytoscape		
-		if (! $bioentityHash{organismTarget})
+		if (defined($species2ID))
 		{
 print File "\n<b>Checking for organism of Target Bioentity</b>\n\n";
-			$bioentityHash{organismTarget} =	$organismHash{getOrganism($bioentityHash{canTarget})};
-			$bioentityHash{organismTarget}="Other" unless ($bioentityHash{organismTarget});
+			$species2ID =	$organismHash{ uc(getOrganism($bioentityHash{canTarget}))};
+			$species2ID = $organismHash{'OTHER'}  unless (defined($species2ID));
 print File "Could not identify Organism for Target Bioentity\n
 Used Organism: \"Other\" as default\n" if $bioentityHash{organismTarget} eq "Other";
 		}
+		
 		$bioentityHash{idTarget} = addToBioentityTable($bioentityHash{canTarget},$bioentityTypeHash{ $bioentityHash{typeTarget}},$organismHash{$bioentityHash{organismTarget}});
 print File "\n<b>Created a New  bioentity for the Target Node with the following parameters:</b>\n\n
 Canonical Name:  $bioentityHash{canTarget}\n
@@ -381,7 +406,7 @@ print File "\n\n<b><font size = 3 color = red>Searching Sbeams for Selected Inte
 	{
 		if (!$interactionTypeHash{$bioentityHash{interactionType}})
 		{
-print File "Could not find the specified interaction type in the database:  --   $bioentityHash{interactionType}    --    \n
+print File "Could not find the specified interaction type in the database:  --   $bioentityHash{interaction}    --    \n
 Used interaction type \"Interacts with\" as default\n";
 			$bioentityHash{interactionType} = "Interacts with";
 		}
