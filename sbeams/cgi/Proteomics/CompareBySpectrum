@@ -356,16 +356,31 @@ sub handle_request {
 
   my @search_batch_ids = split(/,/,$parameters{search_batch_id});
   my $pivot_clause = '';
+  my $pivot_clause2 = '';
+  my $pivot_clause3 = '';
+  my @tmp_columns2;
+  my @tmp_columns3;
+
   foreach my $id (@search_batch_ids) {
     push(@column_array, ["$experiment_names{$id}",
       "STR($experiment_names{$id},7,3)",
       "$experiment_names{$id}"] );
+    push(@tmp_columns2, ["$experiment_names{$id}__peptide",
+      "$experiment_names{$id}__peptide",
+      "$experiment_names{$id}__peptide"] );
+    push(@tmp_columns3, ["$experiment_names{$id}__cross_corr",
+      "$experiment_names{$id}__cross_corr",
+      "$experiment_names{$id}__cross_corr"] );
     push(@experiment_names_and_ids,$experiment_names{$id},$id);
-    $pivot_clause .= "	       SUM(CASE WHEN set_tag = '$experiment_names{$id}' THEN NULLIF(probability,0.0) ELSE 0.0 END) AS \"$experiment_names{$id}\",\n"
+    $pivot_clause .= "	       SUM(CASE WHEN set_tag = '$experiment_names{$id}' THEN NULLIF(probability,0.0) ELSE 0.0 END) AS \"$experiment_names{$id}\",\n";
+    $pivot_clause2 .= "	       MAX(CASE WHEN set_tag = '$experiment_names{$id}' THEN peptide ELSE NULL END) AS \"$experiment_names{$id}__peptide\",\n";
+    $pivot_clause3 .= "	       MAX(CASE WHEN set_tag = '$experiment_names{$id}' THEN cross_corr ELSE NULL END) AS \"$experiment_names{$id}__cross_corr\",\n";
   }
-  chop($pivot_clause);
-  chop($pivot_clause);
-  $pivot_clause .= "\n";
+  chop($pivot_clause3);
+  chop($pivot_clause3);
+  $pivot_clause3 .= "\n";
+  push(@column_array,@tmp_columns2,@tmp_columns3);
+
 
   #### Limit the width of the Reference column if user selected
   if ( $parameters{display_options} =~ /MaxRefWidth/ ) {
@@ -395,6 +410,8 @@ sub handle_request {
            S.file_root AS "file_root",
            SH.probability AS "probability",
            reference AS "reference",
+           peptide AS "peptide",
+           cross_corr AS "cross_corr",
            SB.search_batch_id AS "search_batch_id",
            S.msms_spectrum_id AS "msms_spectrum_id"
 	  INTO #tmp1
@@ -421,6 +438,8 @@ sub handle_request {
 
 	SELECT experiment_tag,file_root,
 	       $pivot_clause
+	       $pivot_clause2
+	       $pivot_clause3
 	  INTO #tmp2
 	  FROM #tmp1
 	 GROUP BY experiment_tag,file_root
@@ -459,7 +478,7 @@ sub handle_request {
 
 
   #### Define the hypertext links for columns that need them
-  %url_cols = ('File Root' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&file_root_constraint=\%$colnameidx{file_root}V&search_batch_id=$parameters{search_batch_id}&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
+  %url_cols = ('File Root' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&file_root_constraint=\%$colnameidx{file_root}V&search_batch_id=$parameters{search_batch_id}&sort_order=experiment_tag,set_tag,S.file_root,SH.cross_corr_rank,SH.hit_index&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
     	       'File Root_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show the SEQUEST results for this spectrum for all selected search batches\'; return true"',
 
   );
@@ -468,7 +487,7 @@ sub handle_request {
   #### Add entries for each experiment
   for ($i=0;$i<scalar(@experiment_names_and_ids);$i+=2) {
     my $j = $i+1;
-    $url_cols{$experiment_names_and_ids[$i]} = "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&file_root_constraint=\%$colnameidx{file_root}V&search_batch_id=$experiment_names_and_ids[$j]&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action";
+    $url_cols{$experiment_names_and_ids[$i]} = "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&file_root_constraint=\%$colnameidx{file_root}V&search_batch_id=$experiment_names_and_ids[$j]&sort_order=experiment_tag,set_tag,S.file_root,SH.cross_corr_rank,SH.hit_index&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action";
     $url_cols{$experiment_names_and_ids[$i]."_ATAG"} = 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show the SEQUEST results for this spectrum and search batch\'; return true"';
   }
 
