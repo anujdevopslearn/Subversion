@@ -418,7 +418,7 @@ sub printEntryForm {
       !;
     }
 
-    if ($input_type eq "multioptionlist") {
+    if ($input_type eq "multioptionlist" || $input_type eq "multilink") {
       print qq!
         <TD><SELECT NAME="$column_name" MULTIPLE SIZE=$input_length $onChange>
         $optionlists{$column_name}</SELECT>&nbsp;$jump_to_list_source</TD>
