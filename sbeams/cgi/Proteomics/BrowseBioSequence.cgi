@@ -412,6 +412,7 @@ sub handle_request {
     ["biosequence_name","BS.biosequence_name","biosequence_name"],
     ["biosequence_gene_name","BS.biosequence_gene_name","gene_name"],
     ["accessor","DBX.accessor","accessor"],
+    ["accessor_suffix","DBX.accessor_suffix","accessor_suffix"],
     ["biosequence_accession","BS.biosequence_accession","accession"],
     @additional_columns,
     ["biosequence_desc","BS.biosequence_desc","description"],
@@ -467,7 +468,7 @@ sub handle_request {
 
   #### Define the hypertext links for columns that need them
   %url_cols = ('set_tag' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_biosequence_set&biosequence_set_id=\%$colnameidx{biosequence_set_id}V",
-               'accession' => "\%$colnameidx{accessor}V\%$colnameidx{accesssion}V",
+               'accession' => "\%$colnameidx{accessor}V\%$colnameidx{accesssion}V\%$colnameidx{accessor_suffix}V",
                'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
                'Molecular Function_ATAG' => 'TARGET="WinExt"',
                'Molecular Function_OPTIONS' => {semicolon_separated_list=>1},
@@ -487,6 +488,7 @@ sub handle_request {
   %hidden_cols = ('biosequence_set_id' => 1,
                   'biosequence_id' => 1,
                   'accessor' => 1,
+                  'accessor_suffix' => 1,
                   'molecular_function_GO' => 1,
                   'biological_process_GO' => 1,
                   'cellular_component_GO' => 1,
