@@ -207,7 +207,7 @@ PR_quantitation	7	d0_mass	d0 Mass	real	4	0	Y		N							Y	Y	N	d0 Mass
 PR_quantitation	8	d8_first_scan	d8 First Scan	int	4	0	N		N							Y	Y	N	d8 First Scan		
 PR_quantitation	9	d8_last_scan	d8 Last Scan	int	4	0	N		N							Y	Y	N	d8 Last Scan		
 PR_quantitation	10	d8_mass	d8 Mass	real	4	0	Y		N							Y	Y	N	d8 Mass		
-PR_quantitation	11	norm_flag	Normalization Flag	int	4	0	N		N							Y	Y	N	Normalization Flag		
+PR_quantitation	11	norm_flag	Normalization Flag	int	4	0	Y		N							Y	Y	N	Normalization Flag		
 PR_quantitation	12	mass_tolerance	Mass Tolerance	real	4	0	Y		N							Y	Y	N	Mass Tolerance		
 PR_quantitation	13	quality_score	Quality Score	real	4	0	Y		N							Y	Y	N	Quality Score		
 PR_quantitation	14	manually_changed	Is Manually Changed?	varchar	5	0	Y		N							Y	Y	N	Is Manually Changed?		
