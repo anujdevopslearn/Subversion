@@ -367,7 +367,7 @@ sub handle_request {
 
   #### Build PRECURSOR MASS constraint
   my $precursor_mass_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"MP.avg_precursor_mass",
+    constraint_column=>"MP.precursor_mass_avg",
     constraint_type=>"flexible_float",
     constraint_name=>"Precursor_Mass Constraint",
     constraint_value=>$parameters{precursor_mass_constraint} );
@@ -376,7 +376,7 @@ sub handle_request {
 
   #### Build PERCENT BUFFER B constraint
   my $percent_buffer_b_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"MP.avg_percent_buffer_B",
+    constraint_column=>"MP.percent_ACN_avg",
     constraint_type=>"flexible_float",
     constraint_name=>"Percent ACN Constraint",
     constraint_value=>$parameters{percent_buffer_b_constraint} );
@@ -385,7 +385,7 @@ sub handle_request {
 
   #### Build ISOELECTRIC_POINT constraint
   my $isoelectric_point_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"avg_isoelectric_point",
+    constraint_column=>"pI_avg",
     constraint_type=>"flexible_float",
     constraint_name=>"Isoelectric Point",
     constraint_value=>$parameters{isoelectric_point_constraint} );
