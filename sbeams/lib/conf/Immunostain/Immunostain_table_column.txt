@@ -114,8 +114,8 @@ IS_cell_type	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_grou
 IS_cell_type	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 IS_cell_presence_level	1	cell_presence_level_id	Cell Presence Level ID	int	4	0	N		Y							N	N				pkDEFAULT
 IS_cell_presence_level	2	level_name	Level Name	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Name for the level of presence of a cell type		
-IS_cell_presence_level	3	level_description	Level Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this level		
-IS_cell_presence_level	4	probability	Probability	real	4	0	N		N			Y	text	20		Y	Y	N	A value between 0 and 1 that approximates the probability that this cell type is present in the stain		
+IS_cell_presence_level	3	level_description	Level Description	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Definition of the level of presence		
+IS_cell_presence_level	4	probability	Probability	real	4	0	N		N			Y	text	20		Y	Y	N	A value between 0 and 1 that dictates the weight that levels of this category get when combining data		
 IS_cell_presence_level	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 IS_cell_presence_level	6	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Integer designed to assist in sort records of this type		
 IS_cell_presence_level	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
