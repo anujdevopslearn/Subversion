@@ -289,7 +289,7 @@ sub handleRequest {
 
       #### If we're not just checking the status
       if ($list_all eq '' && $status->{experiment_path}) {
-    
+
         my $prefix = $file_prefix;
         $prefix = '' if ($status->{experiment_path} =~ /\/dblocal/);
         my $source_dir = $prefix."/".$status->{experiment_path}."/".
@@ -1162,7 +1162,7 @@ sub getDirListing {
 ###############################################################################
 # updateFromSummaryFiles
 ###############################################################################
-sub updateFromSummaryFiles { 
+sub updateFromSummaryFiles {
   my %args = @_;
   my $SUB_NAME = 'updateFromSummaryFile';
 
@@ -1320,7 +1320,7 @@ sub updateFromSummaryFiles {
 ###############################################################################
 # updateProbabilities
 ###############################################################################
-sub updateProbabilities { 
+sub updateProbabilities {
   my %args = @_;
   my $SUB_NAME = 'updateProbabilities';
 
@@ -1456,7 +1456,7 @@ sub updateProbabilities {
 ###############################################################################
 # updateSearchResults
 ###############################################################################
-sub updateSearchResults { 
+sub updateSearchResults {
   my %args = @_;
   my $SUB_NAME = 'updateSearchResults';
 
@@ -1641,7 +1641,7 @@ sub updateSearchResults {
           #### Otherwise guess that it might be a truncated Reference?
           } else {
             $sql = qq~
-		SELECT biosequence_id,biosequence_name
+		SELECT biosequence_id,biosequence_name,biosequence_seq
 		  FROM $TBPR_BIOSEQUENCE BS
 		 WHERE biosequence_set_id = '$data[$i]->{biosequence_set_id}'
 		   AND biosequence_name LIKE '$data[$i]->{reference}\%'
@@ -1662,15 +1662,35 @@ sub updateSearchResults {
             }
             $coldata{reference} = $data[$i]->{biosequence_name}
 
-          #### If there is more than one matching row, this is very bad
+          #### If there is more than one matching row, so just pick the first one
+          #### that has the peptide in it or just the first one.
           } elsif ($n_matches > 1) {
-            print "\nERROR: attempt to find match for".
+            print "\nWARNING: attempt to find match for".
               "\n '$data[$i]->{reference}\%' returned more than one row:\n";
+            my $best = -1;
+            my $ctr = 0;
             foreach $element (@matches) {
               print "  $element->[1]\n";
+              if ($element->[2] =~ /$peptide/) {
+                print "  Found the peptide '$peptide' in the above biosequence!\n";
+                unless ($best >= 0) {
+                  $best = $ctr;
+                }
+              }
+              $ctr++;
             }
-            print "  Rather just leave the record NULL than ".
-              "assume something...\n";
+
+            #### If we didn't find one with the peptide in it, just select 0
+            unless ($best >= 0) {
+              $best=0;
+              print "  None of these seem to include the discovered peptide.\n";
+              print "  Maybe that's because this is a nucleotide database.\n";
+            }
+
+            print "  Setting the match to be index $best.\n";
+            $data[$i]->{biosequence_id} = $matches[$best]->[0];
+            $data[$i]->{biosequence_name} = $matches[$best]->[1];
+            $coldata{reference} = $data[$i]->{biosequence_name}
 
 
           #### If there are no rows, this is not good
