@@ -168,7 +168,7 @@ sub printEntryForm {
       $sbeamsPROT->returnTableInfo($TABLE_NAME,"input_types");
 
     # Read the form values for each column
-    foreach $element (@columns) {
+    foreach $element (@columns,'project_id') {
         if ($input_types{$element} eq "multioptionlist") {
           my @tmparray = $q->param($element);
           if (scalar(@tmparray) > 1) {
@@ -279,6 +279,19 @@ sub printEntryForm {
           } else {
             $optionlist_queries{$element} =~
                 s/\$contact_id/$parameters{contact_id}/;
+          }
+        }
+
+        # If "$project_id" appears in the SQL optionlist query, then substitute
+        # that with either a value of $parameters{project_id} if it is not
+        # empty, or otherwise replace with the $current_project_id
+        if ( $optionlist_queries{$element} =~ /\$project_id/ ) {
+          if ( $parameters{"project_id"} eq "" ) {
+            $optionlist_queries{$element} =~
+                s/\$project_id/$current_project_id/;
+          } else {
+            $optionlist_queries{$element} =~
+                s/\$project_id/$parameters{project_id}/;
           }
         }
 
