@@ -1113,6 +1113,10 @@ END
   <td><a href="$CGI_BASE_DIR/Microarray/bioconductor/upload.cgi">Affy Analysis Pipeline</a></td>
   <td>Analyze Affymetrix CEL files and view the data in a variety of ways.....</td>
  </tr>
+ <tr>
+  <td><a href="$CGI_BASE_DIR/Microarray/bioconductor/Add_affy_annotation.cgi">Add Additional Affy Annotation</a></td>
+  <td>Very simple web page to add add additional Affy annotation to a file of interest</td>
+ </tr>
 END
 		}
 		
