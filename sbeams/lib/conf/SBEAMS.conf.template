@@ -117,7 +117,10 @@ LOGIN_DURATION         = 24
 #### If true (1), must reauthenticate upon quitting and restarting browser
 SESSION_REAUTH         = 0
 
-
+# Determines which messages will get logged, anything above stated level will
+# be printed.  Valid levels are error, warn, info, and debug.  For example, if
+# info is selected, all error, warn, and info messages will print.
+LOGGING_LEVEL = warn
 
 [main]
 DBVERSION              = <FONT COLOR=red>Primary</FONT>
