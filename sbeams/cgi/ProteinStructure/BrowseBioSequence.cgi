@@ -158,6 +158,8 @@ sub handle_request {
 
   my $search_hit_id  = $q->param('search_hit_id');
   my $label_peptide  = $q->param('label_peptide') || '';
+  my $label_start  = $q->param('label_start') || '';
+  my $label_end  = $q->param('label_end') || '';
 
 
   #### Set some specific settings for this program
@@ -545,6 +547,8 @@ sub handle_request {
       displaySequenceView(
         resultset_ref=>$resultset_ref,
         label_peptide=>$label_peptide,
+        label_start=>$label_start,
+        label_end=>$label_end,
         url_cols_ref=>\%url_cols
       );
 
@@ -648,6 +652,8 @@ sub displaySequenceView {
   my $resultset_ref = $args{'resultset_ref'}
    || die "ERROR[$SUB_NAME]: resultset_ref not passed";
   my $label_peptide = $args{'label_peptide'} || '';
+  my $label_start = $args{'label_start'} || '';
+  my $label_end = $args{'label_end'} || '';
 
 
   #### Define standard variables
@@ -712,6 +718,19 @@ sub displaySequenceView {
         $start_positions{$pos} = 1;
         $end_positions{$pos+length($label_peptide)} = 1;
         $pos++;
+      }
+    }
+
+
+    #### If the user supplied start and end positions to mark
+    if ($label_start && $label_end) {
+      my @starts = split(",",$label_start);
+      foreach my $pos (@starts) {
+        $start_positions{$pos-1} = 1;
+      }
+      my @ends = split(",",$label_end);
+      foreach my $pos (@ends) {
+        $end_positions{$pos-1} = 1;
       }
     }
 

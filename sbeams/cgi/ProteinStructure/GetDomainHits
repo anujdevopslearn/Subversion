@@ -428,6 +428,7 @@ sub handle_request {
     ["z_score","DM.z_score","Z Score"],
     @additional_columns,
     ["biosequence_desc","BS.biosequence_desc","Reference Description"],
+    ["biosequence_set_id","BSS.biosequence_set_id","Biosequence Set ID"],
   );
 
 
@@ -514,6 +515,9 @@ sub handle_request {
                'Match Name' => "http://www.sanger.ac.uk/cgi-bin/Pfam/getacc?\%V",
     	       'Match Name_ATAG' => 'TARGET="WinExt" ',
 
+               'Query Start' => "$CGI_BASE_DIR/ProteinStructure/BrowseBioSequence.cgi?biosequence_name_constraint=\%$colnameidx{biosequence_name}V&biosequence_set_id=\%$colnameidx{biosequence_set_id}V&label_start=\%$colnameidx{query_start}V&label_end=\%$colnameidx{query_end}V&apply_action=HIDEQUERY&display_options=SequenceFormat,ShowExtraProteinProps",
+    	       'Query Start_ATAG' => 'TARGET="Win1" ',
+
                'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
                'Molecular Function_ATAG' => 'TARGET="WinExt"',
                'Molecular Function_OPTIONS' => {semicolon_separated_list=>1},
@@ -535,8 +539,7 @@ sub handle_request {
                   'biological_process_GO' => 1,
                   'cellular_component_GO' => 1,
                   'interpro_protein_domain_GO' => 1,
-                  'experiment_list' => 1,
-                  'minimum_probability' => 1,
+                  'biosequence_set_id' => 1,
   );
 
 
