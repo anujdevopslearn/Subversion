@@ -90,18 +90,19 @@ IN_bioentity	2	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionli
 IN_bioentity	3	bioentity_common_name	BioEntity Common Name	varchar	255	0	Y		N			N	text	50		Y	Y	Y	"Common name of this BioEntity. Often the gene symbol, eg. TLR2"		
 IN_bioentity	4	bioentity_canonical_name	BioEntity Canonical Name	varchar	255	0	Y		N			N	text	50		Y	Y	Y	Canonical name of this BioEntity. This is the most offical ref. for this entitiy. Use of a RefSeq identifier is recommended (eg. NP_001203)		
 IN_bioentity	5	bioentity_full_name	BioEntity Full Name	varchar	255	0	Y		N			N	text	50		Y	Y	N	Full name of this BioEntity (eg. Toll-like Receptor 2)		
-IN_bioentity	6	bioentity_aliases	BioEntity Aliases	varchar	255	0	Y		N			N	text	50		Y	Y	N	Comma seperated list of other Aliases for this BioEntity		
-IN_bioentity	7	bioentity_location	BioEntity Location	varchar	255	0	Y		N			N	text	50		Y	Y	N	Comma seperated list of locales where this BioEntity is found		
-IN_bioentity	8	bioentity_member_ids	BioEnitity Members	varchar	255	0	Y		N	IN_bioentity_member	bioentity_member_id	N	multilink			Y	Y	N	List of BioEntities known to be members of this BioEntity Complex	"SELECT bioentity_id, bioentity_common_name + ' ' + ISNULL(BT.bioentity_type_name,'BioEntity Type?') + ' (' + ISNULL(O.organism_name,'Organism?') +')' AS ""bioentity_descriptor"" FROM $TBIN_BIOENTITY BE LEFT JOIN $TBIN_BIOENTITY_TYPE BT ON ( BE.bioentity_type_id = BT.bioentity_type_id ) LEFT JOIN $TB_ORGANISM O ON ( BE.organism_id = O.organism_id ) ORDER BY bioentity_common_name"	
-IN_bioentity	9	bioentity_type_id	BioEntity Type	int	4	0	N		N	IN_bioentity_type	bioentity_type_id	Y	optionlist			Y	Y	Y	Type of the BioEntity	"SELECT bioentity_type_id, bioentity_type_name FROM $TBIN_BIOENTITY_TYPE ORDER BY sort_order,bioentity_type_name"	
-IN_bioentity	10	biosequence_id	BioSequence ID	int	4	0	Y		N	IN_biosequence	biosequence_id	N	optionlist			N	N	N	BioSequence identification	"SELECT 1,2"	
-IN_bioentity	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-IN_bioentity	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-IN_bioentity	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-IN_bioentity	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-IN_bioentity	15	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-IN_bioentity	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-IN_bioentity	17	record_status	Record Status	char	1	0	N	N	N							N	N				
+IN_bioentity	6	bioentity_canonical_gene_name	BioEntity Canonical GeneName	varchar	255	0	Y		N			N	text	50		Y	N	N	Canonical GeneName of this BioEntity		
+IN_bioentity	7	bioentity_aliases	BioEntity Aliases	varchar	255	0	Y		N			N	text	50		Y	Y	N	Comma seperated list of other Aliases for this BioEntity		
+IN_bioentity	8	bioentity_location	BioEntity Location	varchar	255	0	Y		N			N	text	50		Y	Y	N	Comma seperated list of locales where this BioEntity is found		
+IN_bioentity	9	bioentity_member_ids	BioEnitity Members	varchar	255	0	Y		N	IN_bioentity_member	bioentity_member_id	N	multilink			Y	Y	N	List of BioEntities known to be members of this BioEntity Complex	"SELECT bioentity_id, bioentity_common_name + ' ' + ISNULL(BT.bioentity_type_name,'BioEntity Type?') + ' (' + ISNULL(O.organism_name,'Organism?') +')' AS ""bioentity_descriptor"" FROM $TBIN_BIOENTITY BE LEFT JOIN $TBIN_BIOENTITY_TYPE BT ON ( BE.bioentity_type_id = BT.bioentity_type_id ) LEFT JOIN $TB_ORGANISM O ON ( BE.organism_id = O.organism_id ) ORDER BY bioentity_common_name"	
+IN_bioentity	10	bioentity_type_id	BioEntity Type	int	4	0	N		N	IN_bioentity_type	bioentity_type_id	Y	optionlist			Y	Y	Y	Type of the BioEntity	"SELECT bioentity_type_id, bioentity_type_name FROM $TBIN_BIOENTITY_TYPE ORDER BY sort_order,bioentity_type_name"	
+IN_bioentity	11	biosequence_id	BioSequence ID	int	4	0	Y		N	IN_biosequence	biosequence_id	N	optionlist			N	N	N	BioSequence identification	"SELECT 1,2"	
+IN_bioentity	12	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IN_bioentity	13	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IN_bioentity	14	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+IN_bioentity	15	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IN_bioentity	16	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+IN_bioentity	17	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+IN_bioentity	18	record_status	Record Status	char	1	0	N	N	N							N	N				
 IN_bioentity_type	1	bioentity_type_id	BioEntity Type ID	int	4	0	N		Y							N	N				pkDEFAULT
 IN_bioentity_type	2	bioentity_type_name	BioEntity Type Name	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Name of this BioEntity Type		
 IN_bioentity_type	3	bioentity_type_description	Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioEntity Type		
@@ -141,7 +142,7 @@ IN_regulatory_feature_type	12	record_status	Record Status	char	1	0	N	N	N							N
 IN_interaction	1	interaction_id	Interaction ID	int	4	0	N		Y							N	N	N			pkDEFAULT
 IN_interaction	2	interaction_group_id	Interaction Group	int	4	0	N		N	IN_interaction_group	interaction_group_id	Y	optionlist			Y	Y	Y	Interaction Group under which this Interaction should be stored.  Note that this classification is somewhat arbitrary and is mainly an organizational and querying aid.	"SELECT interaction_group_id,UL.username+' - '+P.project_tag+' - '+O.organism_name+' - '+IG.interaction_group_name FROM $TBIN_INTERACTION_GROUP IG INNER JOIN $TB_PROJECT P ON ( IG.project_id = P.project_id ) INNER JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id ) INNER JOIN $TB_ORGANISM O ON ( IG.organism_id = O.organism_id ) ORDER BY UL.username,P.project_tag,O.organism_name,IG.interaction_group_name"	
 IN_interaction	3	bioentity1_id	BioEntity1	int	4	0	N		N	IN_bioentity	bioentity_id	Y	optionlist			Y	Y	Y	Bioentity1	"SELECT bioentity_id, bioentity_common_name + ' ' + ISNULL(BT.bioentity_type_name,'BioEntity Type?') + ' (' + ISNULL(O.organism_name,'Organism?') +')' AS ""bioentity_descriptor"" FROM $TBIN_BIOENTITY BE LEFT JOIN $TBIN_BIOENTITY_TYPE BT ON ( BE.bioentity_type_id = BT.bioentity_type_id ) LEFT JOIN $TB_ORGANISM O ON ( BE.organism_id = O.organism_id ) ORDER BY bioentity_common_name"	
-IN_interaction	4	bioentity1_state_id	BioEntity1 State	int	4	0	Y		N	IN_bioentity_state	bioentity_state_id	N	optionlist			Y	Y	Y	The State of Bioentity1	"SELECT bioentity_state_id, bioentity_state_name FROM $TBIN_BIOENTITY_STATE ORDER BY bioentity_state_name"	
+IN_interaction	4	bioentity1_state_id	BioEntity1 State	int	4	0	Y		N	IN_bioentity_state	bioentity_state_id	N	optionlist			Y	Y	Y	The State of Bioentity1	"SELECT bioentity_state_id, bioentity_state_name FROM $TBIN_BIOENTITY_STATE ORDER BY bioentity_state_name"
 IN_interaction	5	regulatory_feature1_id	Regulatory Feature of Bioentity1	int	4	0	Y		N	IN_regulatory_feature	regulatory_feature_id	N	optionlist			Y	Y	Y	The Regulatory Feature of Bioentity1	"SELECT regulatory_feature_id, regulatory_feature_name FROM $TBIN_REGULATORY_FEATURE ORDER BY regulatory_feature_name"
 IN_interaction	6	interaction_type_id	Interaction Type	int	4	0	N		N	IN_interaction_type	interaction_type_id	Y	optionlist			Y	Y	N	The Type of Interaction	"SELECT interaction_type_id, interaction_type_name FROM $TBIN_INTERACTION_TYPE ORDER BY interaction_type_name"
 IN_interaction	7	bioentity2_id	BioEntity2	int	4	0	N		N	IN_bioentity	bioentity_id	Y	optionlist			Y	Y	Y	Bioentity2	"SELECT bioentity_id, bioentity_common_name + ' ' + ISNULL(BT.bioentity_type_name,'BioEntity Type?') + ' (' + ISNULL(O.organism_name,'Organism?') +')' AS ""bioentity_descriptor"" FROM $TBIN_BIOENTITY BE LEFT JOIN $TBIN_BIOENTITY_TYPE BT ON ( BE.bioentity_type_id = BT.bioentity_type_id ) LEFT JOIN $TB_ORGANISM O ON ( BE.organism_id = O.organism_id ) ORDER BY bioentity_common_name"
@@ -157,7 +158,7 @@ IN_interaction	16	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_
 IN_interaction	17	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
 IN_interaction	18	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
 IN_interaction	19	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
-IN_interaction	20	record_status	Record Status	char	1	0	N	N	N							N	N			
+IN_interaction	20	record_status	Record Status	char	1	0	N	N	N							N	N				
 IN_interaction_type	1	interaction_type_id	Interaction Type ID	int	4	0	N		Y							N	N				pkDEFAULT
 IN_interaction_type	2	parent_interaction_type_id	Parent Interaction Type	int	4	0	Y		N	IN_interaction_type	interaction_type_id	N	optionlist			Y	Y	N	Optional Parent Type	"SELECT interaction_type_id, interaction_type_name FROM $TBIN_INTERACTION_TYPE ORDER BY sort_order,interaction_type_name"	
 IN_interaction_type	3	interaction_type_name	Interaction Type Name	varchar	255	0	N		N			Y	text	40		Y	Y	Y	Name of this Interaction Type		
@@ -254,21 +255,21 @@ IN_bioentity_attribute_type	10	modified_by_id	Record Modified By	int	4	0	N	1	N	c
 IN_bioentity_attribute_type	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 IN_bioentity_attribute_type	12	record_status	Record Status	char	1	0	N	N	N							N	N				
 IN_assay	1	assay_id	Assay ID	int	4	0	N		Y							N	N				pkDEFAULT
-IN_assay	2	assay_type_id	Assay Type	int	4	0	N		N	IN_assay_type	assay_type_id	Y	optionlist			Y	Y	N	Assay Type	"SELECT assay_type_id, assay_type_name FROM $TBIN_ASSAY_TYPE ORDER BY sort_order,assay_type_name"
-IN_assay	3	sample_type_id	Sample Type	int	4	0	Y		N	IN_sample_type	sample_type_id	N	optionlist			Y	Y	N	Sample Type	"SELECT sample_type_id, sample_type_name FROM $TBIN_SAMPLE_TYPE ORDER BY sort_order,sample_type_name"
-IN_assay	4	publication_id	Publication	int	4	0	Y		N	IN_publication	publication_id	N	optionlist			Y	Y	N	Publication	"SELECT publication_id, publication_name FROM $TBIN_PUBLICATION ORDER BY publication_name"
-IN_assay	5	assay_name	Assay Name	varchar	255	0	N		N			Y	text	40		Y	Y	Y	Name of this Assay	
-IN_assay	6	assay_description	Description	varchar	255	0	N		N			Y	textarea	4		Y	Y	N	Longer description of this Assay	
-IN_assay	7	assay_date	Date Assay Performed	datetime	8	0	Y		N			N	text	20		Y	Y	N	Date of Assay	
-IN_assay	8	lab_notebook	Lab Notebook	varchar	255	0	Y		N			N	text	40		Y	Y	N	Lab Notebook	
-IN_assay	9	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments	
-IN_assay	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-IN_assay	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N			
-IN_assay	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-IN_assay	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
-IN_assay	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
-IN_assay	15	record_status	Record Status	char	1	0	N	N	N							N	N			
-IN_GetInteractions	1	input_form_format	Input Form Format									N	optionlist		refreshDocument()	Y	Y	N	Options for level of detail and layout for this input form	"SELECT option_key,option_value FROM $TBIN_QUERY_OPTION WHERE option_type = 'input_form_options' ORDER BY sort_order,option_value"
+IN_assay	2	assay_type_id	Assay Type	int	4	0	N		N	IN_assay_type	assay_type_id	Y	optionlist			Y	Y	N	Assay Type	"SELECT assay_type_id, assay_type_name FROM $TBIN_ASSAY_TYPE ORDER BY sort_order,assay_type_name"	
+IN_assay	3	sample_type_id	Sample Type	int	4	0	Y		N	IN_sample_type	sample_type_id	N	optionlist			Y	Y	N	Sample Type	"SELECT sample_type_id, sample_type_name FROM $TBIN_SAMPLE_TYPE ORDER BY sort_order,sample_type_name"	
+IN_assay	4	publication_id	Publication	int	4	0	Y		N	IN_publication	publication_id	N	optionlist			Y	Y	N	Publication	"SELECT publication_id, publication_name FROM $TBIN_PUBLICATION ORDER BY publication_name"	
+IN_assay	5	assay_name	Assay Name	varchar	255	0	N		N			Y	text	40		Y	Y	Y	Name of this Assay		
+IN_assay	6	assay_description	Description	varchar	255	0	N		N			Y	textarea	4		Y	Y	N	Longer description of this Assay		
+IN_assay	7	assay_date	Date Assay Performed	datetime	8	0	Y		N			N	text	20		Y	Y	N	Date of Assay		
+IN_assay	8	lab_notebook	Lab Notebook	varchar	255	0	Y		N			N	text	40		Y	Y	N	Lab Notebook		
+IN_assay	9	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IN_assay	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IN_assay	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+IN_assay	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IN_assay	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+IN_assay	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+IN_assay	15	record_status	Record Status	char	1	0	N	N	N							N	N				
+IN_GetInteractions	1	input_form_format	Input Form Format									N	optionlist		refreshDocument()	Y	Y	N	Options for level of detail and layout for this input form	"SELECT option_key,option_value FROM $TBIN_QUERY_OPTION WHERE option_type = 'input_form_options' ORDER BY sort_order,option_value"	
 IN_GetInteractions	2	project_id	Projects									N	multioptionlist	4		Y	Y	N	"Constrain Interactions to selected Projects.  Multiple Projects may be selected.  If no Projects are selected, ALL Interactions are searched."	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P INNER JOIN $TBIN_INTERACTION_GROUP IG ON ( P.project_id = IG.project_id ) LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' ORDER BY UL.username+' - '+P.name,P.project_id"
 IN_GetInteractions	3	organism_id	Organisms									N	multioptionlist	4		Y	Y	N	"Constrain Interactions to selected Organisms.  Multiple Organisms may be selected.  If no Organisms are selected, ALL Interactions are searched."	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"
 IN_GetInteractions	4	interaction_group_id	Interaction Groups									N	multioptionlist	4		Y	Y	N	"Constrain Interactions to selected Interaction Groups.  Multiple Interaction Groups may be selected.  If no Interaction Groups are selected, ALL Interaction Groups are searched."	"SELECT interaction_group_id,UL.username+' - '+P.project_tag+' - '+O.organism_name+' - '+IG.interaction_group_name FROM $TBIN_INTERACTION_GROUP IG INNER JOIN $TB_PROJECT P ON ( IG.project_id = P.project_id ) INNER JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id ) INNER JOIN $TB_ORGANISM O ON ( IG.organism_id = O.organism_id ) ORDER BY UL.username,P.project_tag,O.organism_name,IG.interaction_group_name"
@@ -285,4 +286,4 @@ IN_bioentity_member	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	cont
 IN_bioentity_member	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
 IN_bioentity_member	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
 IN_bioentity_member	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
-IN_bioentity_member	9	record_status	Record Status	char	1	0	N	N	N							N	N			
+IN_bioentity_member	9	record_status	Record Status	char	1	0	N	N	N							N	N
