@@ -105,26 +105,17 @@ sub Authenticate {
     exit;
   }
 
+  my %cookie = $q->cookie('SBEAMSName');
 
   #### If the effective UID is the apache user, then go through the
   #### cookie authentication mechanism
   my $uid = "$>" || "$<";
   my $www_uid = $self->getWWWUID();
-  if ( $uid == $www_uid ) {
+  if ( $uid == $www_uid && !$q->param('force_login') ) {
     # We are presumably here due to a cgi request.
     $log->debug( "WWW request" );
  
-    my %cookie = $q->cookie('SBEAMSName');
-
-    # Force login if the force_login flag is defined
-    if ( $q->param('force_login') || !%cookie ) {
-      $current_username = $self->processLogin();
-    
-    } else {
-      # Else honor the cookie...
-      $current_username = $self->processLogin( cookie => \%cookie );
-
-    }
+    $current_username = $self->processLogin(cookie_ref => \%cookie);
 
      # Has cookie/login processing obtained a valid username?
     if ( !$current_username ) {
@@ -135,8 +126,8 @@ sub Authenticate {
         $log->debug( "Using entry code" );
 	      $current_username = $DBCONFIG->{$DBINSTANCE}->{ENTRYCODE}->{$entrycode};
        if ( $current_username ) { 
-        $log->debug( "Encoded name is $current_username" );
-	      $http_header = $self->createAuthHeader($current_username)
+          $log->debug( "Encoded name is $current_username" );
+	        $http_header = $self->createAuthHeader($current_username)
         } else {
           $log->warn( "Entry code was specified but not in config file" );
         }
@@ -149,7 +140,7 @@ sub Authenticate {
       }
     }
 
-  } else { # Otherwise, try a command-line authentication
+  } elsif ( !$q->param('force_login') ) { # Otherwise, try a command-line authentication
     unless ($current_username = $self->checkValidUID()) {
     $log->error( <<"    ERR" );
     You (UID=$uid) are not permitted to connect to $DBTITLE.
@@ -163,7 +154,7 @@ sub Authenticate {
   if ( !$current_username ) { 
 
     # If we have cookie (forced login), destroy it
-    $self->destroyAuthHeader() if $args{cookie};
+    $self->destroyAuthHeader() if %cookie;
 
 	  # Draw a login form for the user to fill out
     $self->printPageHeader(minimal_header=>"YES");
@@ -205,7 +196,7 @@ sub requestingNoAuthPage {
 }
 
 #+
-# Checks validity of various passed parameters
+# Checks the format of user configured cookie shelf life.
 #-
 sub isValidDuration {
   my $self = shift;
@@ -217,18 +208,19 @@ sub isValidDuration {
   return ( $args{cookie_duration} =~ /^\d+$/i ) ? $args{cookie_duration} : 0;
 }
 
-###############################################################################
-# Process Login
-###############################################################################
+#+
+# Checks the validity of authentication information, in the form of cookies 
+# or username/password.  Returns a username if successful.
+#-
 sub processLogin {
   my $self = shift;
   my %args = @_;
 
   # various options
+  my %cookie = %{$args{cookie_ref}};
   my $new_cookie = 1;
   my $user  = $q->param('username');
   my $pass  = $q->param('password');
-  my $force = $q->param('force_login');
   my $login = $q->param('login');
   $current_username = '';
 
@@ -255,15 +247,15 @@ sub processLogin {
       exit;
     } 
 
-  } elsif ( !$force && $args{cookie} ) { # non-forced, cookie exists
+  } elsif ( %cookie ) { # cookie exists
 
     $log->debug( "Authenticating using existing cookie" );
 
     # SBEAMSName cookie has single key->value pair, time => crypted username
-    ( my $cookie_time ) = keys( %{$args{cookie}} );
+    ( my $cookie_time ) = keys( %cookie );
 
     # Check validity of cookie information
-    my $valid_username = $self->checkCachedAuth( name => $args{cookie}{$cookie_time},
+    my $valid_username = $self->checkCachedAuth( name => $cookie{$cookie_time},
                                                  ctime => $cookie_time );
 
 
