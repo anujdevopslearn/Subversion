@@ -1042,7 +1042,7 @@ sub convertGenomeCoordinates {
   my @genome_coordinates = split(/;/,$genome_coordinates);
 
   #### Define an aray to bold antibodies
-  my @antibody_ids = ();
+  my @antibody_ids;
 
   #### Loop over each one and try the conversion
   foreach my $coordinate_str (@genome_coordinates) {
@@ -1062,6 +1062,27 @@ sub convertGenomeCoordinates {
 	      next;
       }
 
+      # SQL to perform lookups in CBIL genome coordinates table.
+      my $cSQL =<<"      END";
+	    SELECT AB.antibody_id
+	    FROM Biolink.dbo.CBIL_genome_coordinates GC
+	    JOIN Biolink.dbo.dots_to_locuslink DTL
+        ON dtl.dots_id = GC.dots
+	    JOIN $TBIS_BIOSEQUENCE BS
+	      ON (DTL.locus_link_id = BS.biosequence_accession )
+	    JOIN $TBIS_ANTIGEN AN ON ( BS.biosequence_id = AN.biosequence_id )
+	    JOIN $TBIS_ANTIBODY AB ON ( AN.antigen_id = AB.antigen_id )
+	    WHERE organism_id = $organism_id
+	    AND chromosome = '$chromosome'
+	    AND ( gene_start BETWEEN $start_pos AND $end_pos
+	         OR gene_end BETWEEN $start_pos AND $end_pos
+	         OR $start_pos BETWEEN gene_start
+	                               AND gene_end
+               )
+      ~;
+      
+      END
+
       my $sql = qq~
 	SELECT AB.antibody_id
 	  FROM Immunostain.dbo.genome_coordinates GC
@@ -1077,15 +1098,13 @@ sub convertGenomeCoordinates {
 	                               AND genome_transcription_end
                )
       ~;
-      
+     
       my @rows = $sbeams->selectOneColumn($sql);
       if (scalar(@rows) > 1) {
-	      print STDERR "ERROR: More than one row returned by genome_coordinate lookup\n";
-        # Give em the first one.
-      	push(@antibody_ids,$rows[0]);
-      } elsif (scalar(@rows) == 1) {
-      	push(@antibody_ids,$rows[0]);
+        $log->warn( "Found multiple rows on lookup for $coordinate_str\n" );
       }
+    	@antibody_ids = @rows if scalar(@rows);
+
     } else {
       print "ERROR: Unable to parse coordinate string '$coordinate_str'<BR>\n";
       return(-1);
