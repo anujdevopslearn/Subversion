@@ -245,7 +245,7 @@ sub handle_request {
 
   #### Define variables for Summary Section
   my $project_id = $sbeams->getCurrent_project_id();; 
-  my $category = $parameters{CATEGORY} || "all";
+  my $category = $parameters{tab};
   my $project_name = 'NONE';
   my (%array_requests, %array_scans, %quantitation_files);
 
@@ -257,7 +257,7 @@ sub handle_request {
   $project_name = $sbeams->getCurrent_project_name();
 
 
-  #### Print tabs
+  #### Print ProjectHome tabs
   my @tab_titles = ("Summary","MIAME Status","Management","Data Analysis","Permissions");
   my $tab_titles_ref = \@tab_titles;
   my $page_link = 'ProjectHome.cgi';
@@ -266,40 +266,61 @@ sub handle_request {
 			 page_link=>$page_link,
 			 selected_tab=>1);
 
+	print "<BR><BR>";
+
+	#### Print MIAME Status tabs
+	my @miame_tabs = ("Experiment Design","Array Design","Sample Information","Labeling and Hybridization","Measurements");
+	my $miame_tab_titles_ref = \@miame_tabs;
+	my $miame_page_link = "MIAMEStatus.cgi";
+
   #### Print out some information about this project
   print qq~
-	<H1><CENTER>MIAME Status of $project_name : $category</CENTER></H1>
-	<FONT COLOR="green"><B>This is a work in progress.<BR>Please email <A HREF="mailto:mjohnson\@systemsbiology.org">mjohnson</A> with any suggestions on how to improve this!</B></FONT><BR>
 	<FORM NAME="miame" METHOD="POST" onSubmit ="prepareForSubmission('$category')">
-	<INPUT TYPE="hidden" NAME="CATEGORY" VALUE="$category">
+	<INPUT TYPE="hidden" NAME="tab" VALUE="$category">
   ~;
 
-  #### Experiment Design Section
-  if ($category =~ /experiment_design/ || $category eq "all"){
-      printExperimentDesignSection(parameters=>\%parameters);
+  #### Summary Section 
+  if ($parameters{'tab'} eq "experiment_design"){
+	$sbeamsMOD->print_tabs(tab_titles_ref=>$miame_tab_titles_ref,
+												 page_link=>$miame_page_link,
+												 selected_tab=>0);
+    printExperimentDesignSection(parameters=>\%parameters);
   }
+  elsif($parameters{'tab'} eq "array_design") { 
+	$sbeamsMOD->print_tabs(tab_titles_ref=>$miame_tab_titles_ref,
+												 page_link=>$miame_page_link,
+												 selected_tab=>1);
+    printArrayDesignSection(parameters=>\%parameters);
+  }
+  elsif($parameters{'tab'} eq "sample_information") { 
+	$sbeamsMOD->print_tabs(tab_titles_ref=>$miame_tab_titles_ref,
+												 page_link=>$miame_page_link,
+												 selected_tab=>2);
+    printSampleInformationSection(parameters=>\%parameters);
 
-  #### Array Design Section
-  if ($category =~ /array_design/ || $category eq "all"){
-      printArrayDesignSection(parameters=>\%parameters);
   }
-
-  #### Sample Information Section
-  if ($category =~ /sample_information/ || $category eq "all"){
-      printSampleInformationSection(parameters=>\%parameters);
+  elsif($parameters{'tab'} eq "labeling_and_hybridization") {
+	$sbeamsMOD->print_tabs(tab_titles_ref=>$miame_tab_titles_ref,
+												 page_link=>$miame_page_link,
+												 selected_tab=>3);
+    printLabelingAndHybridizationSection(parameters=>\%parameters);
   }
-
-  #### Labeling Section
-  if ($category =~ /labeling_and_hybridization/ || $category eq "all"){
-      printLabelingAndHybridizationSection(parameters=>\%parameters);
+  elsif($parameters{'tab'} eq "measurements") {
+	$sbeamsMOD->print_tabs(tab_titles_ref=>$miame_tab_titles_ref,
+												 page_link=>$miame_page_link,
+												 selected_tab=>4);
+    printMeasurementsSection(parameters=>\%parameters);
   }
-  
-  #### Measurements Section
-  if ($category =~ /measurements/ || $category eq "all"){
-      printMeasurementsSection(parameters=>\%parameters);
+  else{
+	$sbeamsMOD->print_tabs(tab_titles_ref=>$miame_tab_titles_ref,
+												 page_link=>$miame_page_link,
+												 selected_tab=>0);
+		printExperimentDesignSection(parameters=>\%parameters);
   }
-
-  print "$LINESEPARATOR<BR>";
+  print qq~
+	</FORM>
+	$LINESEPARATOR<BR>
+	~;
 
   return;
 
@@ -657,7 +678,6 @@ sub printExperimentDesignSection {
 	print qq~
 	    <BR>
 	    <INPUT TYPE="submit" NAME="UPDATEMIAME" VALUE="Update Information">
-	    </FORM>
   ~;
   }
     return;
@@ -729,16 +749,16 @@ sub printArrayDesignSection {
 
     ## If we find a 'NULL' in the array, we are not MIAME compliant
     foreach my $row_ref (@rows) {
-	my @temp_row = @{$row_ref};
-	foreach my $value (@temp_row) {
-	    unless ($value) { $miame_compliant = 0; }
-	}
+			my @temp_row = @{$row_ref};
+			foreach my $value (@temp_row) {
+				unless ($value) { $miame_compliant = 0; }
+		  }
     }
     
     ## if no records, no miame compliance
     unless (@rows) {
-	$miame_compliant = 0;
-    }
+			$miame_compliant = 0;
+	  }
 
     #### print HTML
     print qq~
@@ -759,7 +779,6 @@ sub printArrayDesignSection {
 		print qq~
 		<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?text=$text','Help','width=450,height=600,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/info.jpg" border=0 alt="Help"></a></H2>
 		~;
-
 
     if (@rows){
 	## Print of MIAME criteria
@@ -815,19 +834,8 @@ sub printArrayDesignSection {
 ###############################################################################
 # printSampleInformationSection
 #
-# Mappings(12-23-02):
-#
-# Name of Organism            -> sample_desc in sample table
-# Provider of sample          -> sample_desc in sample table
-# Developmental stage         -> sample_desc in sample table
-# Strain                      -> sample_desc in sample table
-# Age                         -> sample_desc in sample table
-# Gender                      -> sample_desc in sample table
-# Disease State               -> sample_desc in sample table
-# Manipulation of Sample      -> sample_desc in sample table
-# Protocol preparing for Hyb. -> sample_desc in sample table
-# Labeling Protocol(s)->
-# External controls (spikes)->
+# Current MIAME satisfaction is ONLY having the organism, until I determine
+# what else is needed for MIAME.
 #
 ###############################################################################
 sub printSampleInformationSection {
@@ -837,22 +845,92 @@ sub printSampleInformationSection {
   #### Decode the argument list
   my $parameters_ref = $args{'parameters'};
   my %parameters = %{$parameters_ref};
+	my $project_id = $sbeams->getCurrent_project_id();
 
   #### Define standard variables
-  my ($sql, @rows, $comment, $expType, );
+  my ($sql, $html, @rows, $comment, $expType, );
 
-  #### print HTML
+
+  #### print Beginnging HTML
   print qq~
 $LINESEPARATOR
 <H2><FONT COLOR="red">Sample Information</FONT> - 
+$sql
     ~;
 
-  ## Determine MIAME compliance
-  if (1==0){
+
+  ## Get Sample Information
+	$sql = qq~
+SELECT	A.array_id,A.array_name,
+	ARSM1.array_request_sample_id,ARSM1.name,ORG1.organism_name, ARSM1.full_name,
+	ARSM2.array_request_sample_id,ARSM2.name,ORG2.organism_name, ARSM2.full_name
+  FROM $TBMA_ARRAY_REQUEST AR
+  LEFT JOIN $TBMA_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )  
+  LEFT JOIN $TBMA_ARRAY_REQUEST_SAMPLE ARSM1 ON ( ARSL.array_request_slide_id = ARSM1.array_request_slide_id AND ARSM1.sample_index=0)
+  LEFT JOIN $TBMA_ARRAY_REQUEST_SAMPLE ARSM2 ON ( ARSL.array_request_slide_id = ARSM2.array_request_slide_id AND ARSM2.sample_index=1)
+  LEFT JOIN $TBMA_ARRAY A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
+	LEFT JOIN $TBMA_SLIDE_TYPE SL ON ( AR.slide_type_id = SL.slide_type_id )
+	LEFT JOIN $TB_ORGANISM ORG1 ON ( SL.organism_id = ORG1.organism_id )
+	LEFT JOIN $TB_ORGANISM ORG2 ON ( SL.organism_id = ORG2.organism_id )
+ WHERE AR.project_id=$project_id
+   AND ARSL.array_request_slide_id IS NOT NULL
+   AND ( AR.record_status != 'D' OR AR.record_status IS NULL )
+   AND ( A.record_status != 'D' OR A.record_status IS NULL)
+   AND A.array_id IS NOT NULL
+ ORDER BY A.array_name,AR.array_request_id,ARSL.array_request_slide_id
+        ~;
+	@rows = $sbeams->selectSeveralColumns($sql);
+
+
+  ## Determine MIAME compliance	
+	$html = "";
+	my $compliant = 1;		
+	my $incomplete =  "<FONT COLOR=\"red\">Incomplete</FONT><BR>[Update Record]";
+
+	foreach my $row_ref(@rows) {
+		my @info_array = @{$row_ref};
+		foreach my $val (@info_array) {
+			if (!defined ($val)) {
+				$val = $incomplete;
+		  }
+		}
+
+	  my ($array_id,$array_name,
+				$smpl_1_id,$smpl_1_name,$smpl_1_org,$smpl_1_full,
+				$smpl_2_id,$smpl_2_name,$smpl_2_org,$smpl_2_full) = @info_array;
+
+		if ($smpl_1_org eq $incomplete || $smpl_1_full eq $incomplete ||
+				$smpl_2_org eq $incomplete || $smpl_2_full eq $incomplete) {
+				$compliant = 0;
+		}
+		
+		$html .= qq~
+		  <TR>
+			  <TD><A HREF="$CGI_BASE_DIR/Microarray/SubmitArrayRequest.cgi?TABLE_NAME=MA_array_request&array_request_slide_id=$array_id" TARGET="_blank">$array_name</A>
+				</TD>
+			  <TD><A HREF="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_array_request_sample&array_request_sample_id=$smpl_1_id">$smpl_1_name</A>
+				</TD>
+			  <TD><A HREF="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_array_request_sample&array_request_sample_id=$smpl_1_id">$smpl_1_full</A>
+				</TD>
+			  <TD><A HREF="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_array_request_sample&array_request_sample_id=$smpl_1_id">$smpl_1_org</A>
+				</TD>
+			  <TD><A HREF="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_array_request_sample&array_request_sample_id=$smpl_1_id">$smpl_2_name</A>
+				</TD>
+			  <TD><A HREF="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_array_request_sample&array_request_sample_id=$smpl_1_id">$smpl_2_full</A>
+				</TD>
+			  <TD><A HREF="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_array_request_sample&array_request_sample_id=$smpl_1_id">$smpl_2_org</A>
+				</TD>
+			</TR>
+			~;
+	}
+
+
+  if ($compliant == 1){
       print qq~<FONT COLOR="green">MIAME Compliant</FONT>~;
   }else {
       print qq~NOT MIAME Compliant~;
   }
+
 
   ## Print "More Info" Button
   my $title = "MIAME Sample Requirements";
@@ -861,11 +939,23 @@ $LINESEPARATOR
 <A HREF="#"onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?text=$text','Help','width=450,height=400,resizable=yes');return false"><IMG SRC="$HTML_BASE_DIR/images/info.jpg" border=0 alt="Help"></A></H2>
   ~;
 
-  print qq~
-<P>
-<B>SBEAMS is under construction to handle sample information effectively.</B>
-</P>
-  ~;
+	## 	Set up HTML
+	print qq~
+	    <TABLE BORDER>
+	    <TR BGCOLOR="\#1C3887">
+	    <TD><FONT COLOR="white">Array</FONT></TD>
+	    <TD><FONT COLOR="white">Sample 1 Name</FONT></TD>
+			<TD><FONT COLOR="white">Full Name</FONT></TD>
+	    <TD><FONT COLOR="white">Organism</FONT></TD>
+	    <TD><FONT COLOR="white">Sample 2 Name</FONT></TD>
+	    <TD><FONT COLOR="white">Full Name</FONT></TD>
+	    <TD><FONT COLOR="white">Organism</FONT></TD>
+	    </TR>
+			$html
+			</TABLE>
+	    ~;
+
+
   return;
 }
 
@@ -1178,7 +1268,7 @@ sub updateMIAMEInfo {
   my (@rows, $sql, $category);
   my ($comment, %rowdata, $rowdata_ref);
   my $additional_information = "";
-  $category = $parameters{'CATEGORY'};
+  $category = $parameters{'tab'};
   my $project_id = $sbeams->getCurrent_project_id();
 
   #######################
