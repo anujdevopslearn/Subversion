@@ -627,22 +627,22 @@ sub buildAltas {
  
    ### ABOVE modeled following rules:
    ##
-   ## APDpep00011291  9       ENSP00000295561 ... 24323279        24323305
-   ## APDpep00011291  9       ENSP00000336741 ... 24323279        24323305
+   ## PAp00011291  9       ENSP00000295561 ... 24323279        24323305
+   ## PAp00011291  9       ENSP00000336741 ... 24323279        24323305
    ## ---> n_genome_locations = 1 for both
    ## ---> n_protein_mappings = 2 for both
    ## ---> is_exon_spanning   = n for both
    ##
-   ## APDpep00004221  13      ENSP00000317473 ... 75675871        75675882
-   ## APDpep00004221  13      ENSP00000317473 ... 75677437        75677463
+   ## PAp00004221  13      ENSP00000317473 ... 75675871        75675882
+   ## PAp00004221  13      ENSP00000317473 ... 75677437        75677463
    ## ---> n_genome_locations = 1 for both
    ## ---> n_protein_mappings = 1 for both
    ## ---> is_exon_spanning   = y for both
    ## 
-   ## APDpep00004290  16      ENSP00000306222 ...   1151627         1151633
-   ## APDpep00004290  16      ENSP00000306222 ...   1151067         1151107
-   ## APDpep00004290  16      ENSP00000281456 ... 186762937       186762943
-   ## APDpep00004290  16      ENSP00000281456 ... 186763858       186763898
+   ## PAp00004290  16      ENSP00000306222 ...   1151627         1151633
+   ## PAp00004290  16      ENSP00000306222 ...   1151067         1151107
+   ## PAp00004290  16      ENSP00000281456 ... 186762937       186762943
+   ## PAp00004290  16      ENSP00000281456 ... 186763858       186763898
    ## ---> n_genome_locations = 2 for all
    ## ---> n_protein_mappings = 2 for both
    ## ---> is_exon_spanning   = y for all
@@ -650,7 +650,7 @@ sub buildAltas {
    ## testing match to above rules:
    if ($TESTONLY && ($organism_abbrev eq 'Hs') ) {  ## the above cases have P=1.0, and tested for Ens build 22
        for (my $ii = 0; $ii <= $ensembl_hits_last_ind; $ii++) {
-           my @test_pep = ("APDpep00011291", "APDpep00004221", "APDpep00004290", "APDpep00005006");
+           my @test_pep = ("PAp00011291", "PAp00004221", "PAp00004290", "PAp00005006");
            my @test_n_protein_mappings = ("2", "1", "2", "5");
            my @test_n_genome_locations = ("1", "1", "2", "5");
            my @test_is_exon_spanning = ('n', 'y', 'y', 'n');
