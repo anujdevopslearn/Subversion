@@ -656,9 +656,18 @@ sub processEntryForm {
                 }
               }
 
+              #### If this is an optionlist or scrolloptionlist, put in
+              #### a NULL if the value is empty
+              if ( ($input_types{$element} eq 'optionlist' ||
+                    $input_types{$element} eq 'scrolloptionlist') &&
+                   $tmp eq '') {
+                $sql_query .= "$element=NULL,\n";
+
               # Change all ' to '' so that it can go in the INSERT statement
-              $tmp =~ s/\'/\'\'/g;
-              $sql_query .= "$element='$tmp',\n"
+              } else {
+                $tmp =~ s/\'/\'\'/g;
+                $sql_query .= "$element='$tmp',\n";
+              }
             }
 
             $sql_query .= qq!
@@ -714,8 +723,18 @@ sub processEntryForm {
              }
           }
 
-          $tmp =~ s/\'/\'\'/g;
-          $query_part2 .= "'$tmp',";
+          #### If this is an optionlist or scrolloptionlist, put in
+          #### a NULL if the value is empty
+          if ( ($input_types{$element} eq 'optionlist' ||
+                $input_types{$element} eq 'scrolloptionlist') &&
+               $tmp eq '') {
+            $query_part2 .= "NULL,";
+
+          # Change all ' to '' so that it can go in the INSERT statement
+          } else {
+            $tmp =~ s/\'/\'\'/g;
+            $query_part2 .= "'$tmp',";
+          }
         }
 
         # Build the SQL statement
