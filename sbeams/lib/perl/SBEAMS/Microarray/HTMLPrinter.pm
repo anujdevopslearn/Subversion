@@ -119,6 +119,7 @@ sub printPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi?tab=data_analysis"><img src="$HTML_BASE_DIR/images/ma_data_analysis.jpg"></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProcessProject.cgi"><img src="$HTML_BASE_DIR/images/ma_pipeline.jpg"></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetExpression"><img src="$HTML_BASE_DIR/images/ma_get_expression.jpg"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetAffy_GeneIntensity.cgi"><img src="$HTML_BASE_DIR/images/ma_get_affy_intensity.jpg"></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi?tab=miame_status"><img src="$HTML_BASE_DIR/images/ma_miame_status.jpg"></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SubmitArrayRequest.cgi?TABLE_NAME=MA_array_request"><img src="$HTML_BASE_DIR/images/ma_array_requests.jpg"></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=protocol"><img src="$HTML_BASE_DIR/images/ma_protocols.jpg"></a></td></tr>
@@ -150,7 +151,7 @@ sub printPageHeader {
       print qq~
 	</table>
 	</td>
-	<td width=5 bgcolor="#cc0000">
+	<td width=2 bgcolor="#cc0000">
 		<img src="$HTML_BASE_DIR/images/space.gif" width=5 height=1>
 	</td>
 
@@ -495,6 +496,125 @@ sub printQuickLinks {
 	my $q = shift;
 
 }
+
+###############################################################################
+# change_views_javascript
+###############################################################################
+sub change_views_javascript {
+	
+	
+print qq~
+<SCRIPT LANGUAGE="Javascript">
+<!--
+function change_views_javascript(input_obj){
+ var form = input_obj.form;
+ var val = form.display_type.val ;
+ onClick="parent.location='?display_type=' + val + "'";
+ 
+
+document.get_all_files.submit();
+//-->
+</SCRIPT>
+~;
+
+}
+###############################################################################
+# updateCheckBoxButtons_javascript
+###############################################################################
+sub updateCheckBoxButtons_javascript {
+	
+	
+print qq~
+<SCRIPT LANGUAGE="Javascript">
+<!--
+function updateCheckBoxButtons(input_obj){
+ var form = input_obj.form;
+ var all_checkboxes = form.click_all_files;
+ var updatedVals;
+ 
+ var regexp = /(.+?)__(.*)/; //Exmple 42__XML
+ 
+ var results = input_obj.value.match(regexp);
+  
+ var file_types = new Object();
+ 
+ for (var i=0; i<all_checkboxes.length; i ++){				//Loop through the all checkbox buttons and store their checked value in an object
+ 	
+  	var hold = form.click_all_files[i].value;			// grab the value of the checkbox
+	file_types[hold] = form.click_all_files[i].checked;		// set for each data type if it is checked or not
+	
+ }
+ 
+ if (all_files ){
+
+ }else{
+	var all_files = form.get_all_files				//Do not re-make the all_files array if it has already been made.  Not sure why this works but it does
+ }
+
+ for (var i = 0; i<all_files.length; i ++) {
+ 	
+ 	var results = form.get_all_files[i].value.match(regexp);	//split apart the checkbox val 
+ 									
+									//grab the file_extension
+	var file_ext = results[2];					//remember that the first javascript regex match returned is the full string then the parenthesized sub expressions
+ 	
+	var click_all_check_val =  file_types[file_ext];		//set the file extension click_all_files checked val
+	 
+	
+	form.get_all_files[i].checked = click_all_check_val ;		//Set the checkbox to what ever the all_checkbox checked value was
+	  
+ 
+ }
+
+  return;
+}
+
+//-->
+</SCRIPT>
+~;
+
+}
+
+###############################################################################
+# make_checkbox_contol_table
+###############################################################################
+sub make_checkbox_contol_table {
+
+	my $self = shift;
+	my %args = @_;
+	
+	my @box_names = @ {$args{box_names}};
+	my @default_file_types = @ {$args{default_file_types}};
+	
+	print qq~<table border=0>
+			  <tr>
+			    <td colspan=2>Click to select or de-select all arrays</td>
+			  </tr>
+			~;
+			  
+		      	
+		foreach my $file_type (@box_names){
+			
+			my $checked = '';
+			
+			if ( grep {$file_type eq $_} @default_file_types) {
+				$checked = "CHECKED";
+			}
+			print qq~  <tr>
+				  	<td>$file_type </td>
+				  	<td><input type='checkbox' name='click_all_files' value='$file_type' $checked onClick="Javascript:updateCheckBoxButtons(this)"></td>
+				  </tr>
+				~;
+		}
+			 
+		print "</table>";
+
+
+}
+
+
+
+
 
 
 ###############################################################################
