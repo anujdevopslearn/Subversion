@@ -320,7 +320,7 @@ sub asCSSHTML {
   for( my $i = 1; $i <= $#tabs; $i++ ) {
     my $spc = "&nbsp;";
     my $color = ( $dtab == $i ) ? $this->{activeColor} : $this->{inactiveColor};
-    my $htext = '';# ( $tabs[$i]->{helptext} ) ? "TITLE='$tabs[$i]->{helptext}'" : '';
+    my $htext =  ( $tabs[$i]->{helptext} ) ? "TITLE='$tabs[$i]->{helptext}'" : '';
     my $class = (  $dtab == $i ) ? 'class=atab' : '';
     $list .=<<"    END";
     <A $class HREF='$tabs[$i]->{url}' $htext> $tabs[$i]->{label} </A> 
