@@ -1375,7 +1375,7 @@ print qq~
 		</TABLE>
 		<BR>
 
-		Would you like to create Cytoscape XML files for these data?<BR>
+		Would you like to create Experiment XML files for these data?<BR>
 		<INPUT TYPE="radio" NAME="loader" VALUE="Yes">Yes, I want to create these files
 		<INPUT TYPE="radio" NAME="loader" VALUE="No" CHECKED> No, I have no idea what this is about.
 		</FORM>
