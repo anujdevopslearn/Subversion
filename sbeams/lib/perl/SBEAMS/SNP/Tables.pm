@@ -38,6 +38,12 @@ use vars qw(@ISA @EXPORT
     $TBSN_BIOSEQUENCE_RANK_LIST
     $TBSN_ASSAY_ORDER_LIST
 
+    $TBSN_BIOSEQUENCE_PROPERTY_SET
+    $TBSN_SELECTED_SNP
+    $TBSN_REPLACED_SNP
+    $TBSN_SNP_SELECTION_RUN
+    $TBSN_SNP_STATUS
+
     $TBSN_EXPORT_RESULTS
     $TBSN_MANUAL_GENOTYPE_CALL
 
@@ -89,6 +95,12 @@ require Exporter;
 
     $TBSN_QUERY_OPTION
 
+    $TBSN_BIOSEQUENCE_PROPERTY_SET
+    $TBSN_SELECTED_SNP
+    $TBSN_REPLACED_SNP
+    $TBSN_SNP_SELECTION_RUN
+    $TBSN_SNP_STATUS
+
     $TBGT_HUMAN_STR_LOCI
     $TBGT_HUMAN_PCR_CONDITIONS
 
@@ -138,6 +150,12 @@ $TBSN_EXPORT_RESULTS             = "${sequenom}EXPORT_RESULTS_VIEW";
 $TBSN_MANUAL_GENOTYPE_CALL       = "${mod}manual_genotype_call";
 			
 $TBSN_QUERY_OPTION               = "${mod}query_option";
+
+$TBSN_BIOSEQUENCE_PROPERTY_SET   = "${mod}biosequence_property_set";
+$TBSN_SELECTED_SNP               = "${mod}selected_snp";
+$TBSN_REPLACED_SNP               = "${mod}replaced_snp";
+$TBSN_SNP_SELECTION_RUN          = "${mod}snp_selection_run";
+$TBSN_SNP_STATUS                 = "${mod}snp_status";
 			
 $TBGT_HUMAN_STR_LOCI             = 'ACCESSTEMP.dbo.human_str_loci';
 $TBGT_HUMAN_PCR_CONDITIONS       = 'ACCESSTEMP.dbo.human_pcr_conditions';
