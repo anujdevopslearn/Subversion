@@ -123,6 +123,7 @@ sub display_page_header {
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Data:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project"<nobr>&nbsp;&nbsp;&nbsp;Projects</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SN_assay_request"<nobr>&nbsp;&nbsp;&nbsp;Assay Request</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SN_snp_plate"<nobr>&nbsp;&nbsp;&nbsp;Plates</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SN_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SN_biosequence_rank_list"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceRankLists</nobr></a></td></tr>
