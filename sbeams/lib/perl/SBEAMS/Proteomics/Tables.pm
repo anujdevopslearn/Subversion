@@ -90,6 +90,8 @@ use vars qw(@ISA @EXPORT
     $TBBL_GENE_ANNOTATION
     $TBPR_BIOSEQUENCE_ANNOTATED_GENE
     
+    $TBBL_POLYMER_TYPE
+
     $TBPR_NSP_INFORMATION
     $TBPR_NSP_DISTRIBUTION
 
@@ -166,6 +168,8 @@ require Exporter;
 
     $TBBL_GENE_ANNOTATION
     $TBPR_BIOSEQUENCE_ANNOTATED_GENE
+    
+    $TBBL_POLYMER_TYPE
 
     $TBPR_NSP_INFORMATION
     $TBPR_NSP_DISTRIBUTION
@@ -245,6 +249,8 @@ $TBPR_SUMMARY_QUANTITATION        = "${mod}summary_quantitation";
 
 $TBBL_GENE_ANNOTATION             = "${BioLink}gene_annotation";
 $TBPR_BIOSEQUENCE_ANNOTATED_GENE  = "${mod}biosequence_annotated_gene";
+
+$TBBL_POLYMER_TYPE                = "${BioLink}polymer_type";
 
 $TBPR_NSP_INFORMATION             = "${mod}nsp_information";
 $TBPR_NSP_DISTRIBUTION            = "${mod}nsp_distribution";
