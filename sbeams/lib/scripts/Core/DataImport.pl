@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/local/bin/perl -w
 
 ###############################################################################
 # Program     : DataImport.pl
@@ -201,6 +201,14 @@ sub start_element {
   return if ($element eq 'SBEAMS_EXPORT');
 
 
+  #### Print some verbose dianogtic information
+  if ($VERBOSE) {
+    print "###############################################################\n";
+    print "# $element\n";
+    print "###############################################################\n";
+  }
+
+
   #### Get information about this table
   unless (defined($table_info->{$element}->{db_table_name})) {
     getTableInfo(table_name=>$element);
@@ -219,6 +227,7 @@ sub start_element {
     #### If there is a primary key provided, let's examine it more closely
     if ($attrs{$PK_column_name}) {
 
+      print "INFO: Checking to see if this record is already in database..\n";
       my $result = determineDataPresence(
         table_name=>$element,
         attributes=>\%attrs,
