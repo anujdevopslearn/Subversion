@@ -121,7 +121,7 @@ sub printEntryForm {
 
     my $CATEGORY="Welcome to the Data Processing Pipeline!";
     my $SECONDARY_MESSAGE="<B><FONT COLOR='red'>In order to create a better data processing tool, I need your help!</FONT></B>";
-    my $TERTIARY_MESSAGE="If you have any questions, suggestions, or just want some help, please contact me!<BR>Thanks!<BR>- <A HREF=\"mailto:mjohnson\@systemsbiology.org\">mjohnson</A>";
+    my $TERTIARY_MESSAGE="If you have any questions, suggestions, or just want some help, please contact me!<BR>Thanks!<BR>- <A HREF=\"mailto:mjohnson\@systemsbiology.org\">Michael Johnson</A>";
 
     my $apply_action  = $q->param('apply_action');
     my $update_action = $q->param('UPDATE_CART');#mj
@@ -217,7 +217,7 @@ SELECT	A.array_id,A.array_name,
  ORDER BY A.array_name
      ~;
 
-      my $base_url = "$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=";
+      my $base_url = "$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=";
       %url_cols = ('array_name' => "${base_url}array&array_id=%0V",
                    'quan_flag' => "${base_url}array_quantitation&array_quantitation_id=%6V", 
       );
