@@ -216,7 +216,7 @@ SELECT
 
       print qq~
 	<BR><HR SIZE=5 NOSHADE><BR>
-	<FORM METHOD="post" ACTION="http://sun01/bmarzolf-bin/grape.cgi">
+	<FORM METHOD="post" ACTION="http://lemur/cgi-bin/bmarzolf/grape.cgi">
       ~;
 
 
