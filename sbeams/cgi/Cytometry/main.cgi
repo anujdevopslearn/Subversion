@@ -629,7 +629,7 @@ sub createGraph
      my (@xArray, @yArray); 
 
 # What file is it? 
-     my $dataFile = $PHYSICAL_BASE_DIR. "/dataPoints/tmp/$fileID"."_".$fileName; 
+     my $dataFile = $PHYSICAL_BASE_DIR. "/data/Cytometry/$fileID"."_".$fileName; 
 
 # Open a filehandle 
      open FILE, $dataFile or print " <br> Cannot read $dataFile  $!  <br> "; 
@@ -644,11 +644,12 @@ sub createGraph
     my ($xMax,$yMax, $xMin, $yMin) = 0;
    $tmpPlot = $xCoorName.$yCoorName.$fileID.$fileName.".png" ;
    $graphFile = escapeFile($tmpPlot);
+  
      
 #time       
     my @data = ([@{$VAR1->{$xCoorName}}],[@{$VAR1->{$yCoorName}}]);
-#      my @data=([@xArray],[@yArray]);
-
+ #     my @data=([@xArray],[@yArray]);
+        
 #get the label  based on the x and y Coor (these are the id of the measured_parameters)
     my $xLabel = $xCoorName;
     my $yLabel = $yCoorName;
@@ -659,8 +660,8 @@ sub createGraph
              x_label           =>$xLabel,
              y_label           => $yLabel,
              title             => $fileName,
-             x_number_format => \&formatNum,
-             y_number_format => \&formatNum,
+           x_number_format => \&formatNum,
+            y_number_format => \&formatNum,
              x_tick_number => 25,
              y_tick_number => 25  ,
               long_ticks        => 0,
@@ -671,7 +672,8 @@ sub createGraph
     
     my $gd = $graph->plot(\@data);
 
-
+       # x_number_format => \&formatNum,
+         #    y_number_format => \&formatNum,
     $end = new Benchmark ;
     $diff = timediff($end, $start);   
 #    print "<br>Time taken to plot ", timestr($diff, 'all'), " seconds <br>";  
@@ -697,6 +699,7 @@ sub formatNum
 {
 	my $value = shift;
 	$value =~ s/^(\d+)\.\d*$/$1/;
+    
 	return $value;
 }
 sub escapeFile 
