@@ -590,6 +590,8 @@ sub handle_request {
                   'cellular_component_GO' => 1,
                   'interpro_protein_domain_GO' => 1,
                   'biosequence_set_id' => 1,
+                  'biosequence_id' => 1,
+                  'biosequence_annotation_id' => 1,
   );
 
 
