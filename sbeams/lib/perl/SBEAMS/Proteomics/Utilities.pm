@@ -313,6 +313,7 @@ sub readOutFile {
         my $tmp = $result[$i];
         if ( ($tmp > 0 && $tmp < 10000) ||
              ($tmp == 0 && $column_titles[$i] eq "deltCn") ||
+             ($tmp == 0 && $column_titles[$i] eq "Sp") ||
              ($tmp == 0 && $column_titles[$i] eq "XCorr") ) {
           $tmp =~ s/ //g;
           $tmp_hash{$simple_columns{$column_titles[$i]}} = $tmp;
