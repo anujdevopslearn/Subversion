@@ -1009,7 +1009,7 @@ sub data2
 
 sub printMessage
 {
-		print "<center><b>This is first time this file has been accessed.<br> Data points need to be loaded into the Database.<br> This may take a few minutes.<br> Please be patient</B><br></center>";
+		print "<center><b>This is the first time this file has been accessed.<br> Data points need to be loaded into the Database.<br> This may take a few minutes.<br> Please be patient</B><br></center>";
 		return; 
 }
 	
