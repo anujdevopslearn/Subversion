@@ -35,6 +35,8 @@ DBD-Sybase-0.94      (assuming Sybase or MS SQL Server is back end)
 DBD-????             (if you are using a different type of back end RDBMS)
 Crypt-CBC-1.25
 Crypt-IDEA-1.01
+Authen-Smb-0.91      (For Windows Domain Authentication instead of UNIX auth)
+
 
 Additional common Perl modules are needed, but may not be on your system.
 Should really write a little dependency checker program.  FIXME.
