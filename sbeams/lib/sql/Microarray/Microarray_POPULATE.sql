@@ -52,6 +52,6 @@ VALUES ( 'GI_data_columns','gi.protocol_id','R_CHP Analysis Protocol',40 );
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'GI_display_options','AllConditions','Show all data if one condition meets criteria',10 );
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
-VALUES ( 'GI_display_options','PivotConditions','Pivot Conditions as columns',20 );
+VALUES ( 'GI_display_options','PivotConditions','Pivot Array Samples as columns',20 );
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'GI_display_options','ShowSQL','Show SQL Query',30 );
