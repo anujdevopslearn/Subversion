@@ -549,7 +549,7 @@ sub printEntryForm {
 
       } else {
         @column_array = (
-          ["biosequence_name","biosequence_name","biosequence_name"],
+          ["biosequence_name","biosequence_name+' threeprime_distance='+CONVERT(varchar(50),threeprime_distance)","biosequence_name"],
           ["feature_sequence","feature_sequence","feature_sequence"],
         );
       }
