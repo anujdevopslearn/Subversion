@@ -93,7 +93,7 @@ sub main {
   my %parameters;
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters);
-  $sbeams->printDebuggingInfo($q);
+  #$sbeams->printDebuggingInfo($q);
 
 
   #### Process generic "state" parameters before we start
@@ -128,7 +128,6 @@ print qq~
 
 function viewRequest(status){
     var site;
-    alert("$uri");
     if (status == 'old') {
 	var id = document.requests.chooser.options[document.requests.chooser.selectedIndex].value;
 	site = "$uri/SubmitArrayRequest.cgi?TABLE_NAME=array_request&array_request_id="+id;
