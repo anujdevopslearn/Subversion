@@ -151,6 +151,10 @@ sub print_start_screen {
   ## Print Introductory Header
   print qq~
   <H2><U>Data Processing Pipeline</U></H2>\n
+  <P>
+  <FONT COLOR="red"><B>If this is not the interface you are looking for, perhaps
+you would like to use the <A HREF="ProcessProject.cgi">[previous two-color pipeline]</A></B></FONT>
+  </P>
   <BR>
 	Step 1: Determine Files to Process
   <FORM METHOD="POST" NAME="fileChooser"><BR>
