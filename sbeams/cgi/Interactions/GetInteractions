@@ -459,7 +459,7 @@ sub handle_request {
 
     	       'BioEntity 1 Common Name' => "$base_url?bioentity_common_name=\%$colnameidx{bioentity_common_name1}V&apply_action=$pass_action",
     	       'BioEntity 2 Common Name' => "$base_url?bioentity_common_name=\%$colnameidx{bioentity_common_name2}V&apply_action=$pass_action",
-						 'PubMed ID' => "http://www.ncbi.nlm.nih.gov/entrez/utils/pmfetch.fcgi?db=PubMed&id=\%$colnameidx{publication_url}V&report=xml&mode=text",
+						 'PubMed ID' => "http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?cmd=Retrieve&db=PubMed&list_uids=\%$colnameidx{publication_url}V&dopt=Abstract",
   );
 
 
