@@ -2,11 +2,12 @@
 
 ###############################################################################
 # Program     : main.cgi
-# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
+# Author      : Martin Korb <mkorb@systemsbiology.org>
 # $Id$
 #
 # Description : This script authenticates the user, and then
 #               displays the opening access page.
+#   and everything else
 #
 # SBEAMS is Copyright (C) 2000-2003 by Eric Deutsch
 # This program is governed by the terms of the GNU General Public License (GPL)
@@ -112,7 +113,7 @@ my %actionHash = (
 		wave	=>	9,
 		spec	=>	10,
 		bl	=>	11,
-		gr	=>	12,
+		gr	=>	12,  
 		re	=>	13);
 		
 		my %columnHash = $sbeams->selectTwoColumnHash("Select upper(file_Column),database_column from $TBCY_CONVERSION_DATA");
@@ -302,7 +303,7 @@ sub displayIntro {
 			<td>$hashFile{$key}->{$id}->{Organism} </td>
 			<td>$hashFile{$key}->{$id}->{'File Name'}</td> 
 			<td>$hashFile{$key}->{$id}->{'Run Date'} </td>
-			<td><a href=$CGI_BASE_DIR/$SBEAMS_SUBDIR/main2.cgi?action=$PROCESSFILE&fileID=$id > Create Graph</a></td></tr>~;
+			<td><a href=$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=$PROCESSFILE&fileID=$id > Create Graph</a></td></tr>~;
 			}
 		}	
 	 }
@@ -903,7 +904,7 @@ sub data2
 	my $fileID = 0;
 	my $query = "Select top 1dp. fcs_run_id  from $TBCY_DATA_POINTS dp 
 	left join $TBCY_FCS_RUN  fcs on dp.fcs_run_id = fcs.fcs_run_id where
-	fcs.filename = \'$fileName\'";
+	fcs.filename = \'$fileName\' and confirmed = 1";
 	my @rows = $sbeams->selectOneColumn($query);
 	$fileID = $rows[0] if scalar(@rows == 1);;
 	if ($fileID) 
@@ -948,7 +949,9 @@ sub data2
 			$dataHash{green} = $event[$incol{green}];
 			$dataHash{red} = $event[$incol{red}]; 
 			$dataHash{fcs_run_id} = $runID; 
-		
+      
+      $dataHash{confirmed} = 0;
+    
 			my $returned_PK = $sbeams->updateOrInsertRow(
 				insert => $insert,
 				update => $update,
@@ -962,6 +965,25 @@ sub data2
 				add_audit_parameters => 1
 				);
 		}
+#adding a confirm flag to the datapoints to make sure the complete data was uploaded
+#and the user did not wander away premeaturely
+       my %confirmHash;
+       my $confirmInsert = 0; 
+       my $confirmUpdate = 1;
+       $confirmHash{confirmed} =1;
+    		my $confirm_PK = $sbeams->updateOrInsertRow(
+				insert => $confirmInsert,
+				update => $confirmUpdate,
+				table_name => "$TBCY_DATA_POINTS",
+				rowdata_ref => \%confirmHash,
+				PK => "fcs_run_id",
+				PK_value => $runID,
+				return_PK => 1,
+				verbose=>$VERBOSE,
+				testonly=>$TESTONLY,
+				add_audit_parameters => 1
+				);
+        
 	}
 	close(FCSFILE);
  }
@@ -980,9 +1002,9 @@ sub checkGO
 	function checkRadioButton( databaseCheck)
   {
      
- //  var  isXChecked = false;
+   var  isXChecked = false;
  // alert (isXChecked );
-   alert (databaseCheck);
+//   alert (databaseCheck);
    var num = document.forms.length;
  //alert(num);
    
