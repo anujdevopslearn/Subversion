@@ -84,5 +84,31 @@ SELECT DISTINCT fraction_id,username + '' - '' + experiment_tag + '' -> '' + set
    AND column_name = 'fraction_id'
 GO
 
+UPDATE table_column
+  SET optionlist_query = '
+	SELECT experiment_id, p.project_tag + '' - '' + experiment_tag + '' ('' + experiment_name + '')''
+	  FROM $TBPR_PROTEOMICS_EXPERIMENT PE
+	  LEFT JOIN $TB_PROJECT p ON ( P.project_id = PE.project_id )
+	 WHERE PE.record_status != ''D''
+          AND PE.project_id IN ( $accessible_project_ids )
+	 ORDER BY project_tag,experiment_tag,experiment_name
+  '
+ WHERE table_name = 'PR_experiments_samples'
 
+   AND column_name = 'experiment_id'
+GO
+
+UPDATE table_column
+  SET optionlist_query = '
+	SELECT PS.proteomics_sample_id,p.project_tag + '' - '' + sample_tag + '' ('' + full_sample_name + '')''
+	  FROM $TBPR_PROTEOMICS_SAMPLE PS
+	  LEFT JOIN $TB_PROJECT P ON ( P.project_id = PS.project_id )
+	 WHERE PS.record_status != ''D''
+         AND PS.project_id IN ( $accessible_project_ids )
+	 ORDER BY project_tag,sample_tag,full_sample_name
+  '
+ WHERE table_name = 'PR_experiments_samples'
+
+   AND column_name = 'proteomics_sample_id'
+GO
 
