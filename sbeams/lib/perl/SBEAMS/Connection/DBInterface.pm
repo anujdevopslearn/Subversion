@@ -414,9 +414,14 @@ sub translateSQL {
   if ($DBType =~ /PostgreSQL/i) {
 
     #### Real naive and stupid so far...
-    $new_statement = s/\+/||/g;
+    #print "Content-type: text/html\n\nLooking at $sql<BR><BR>\n";
+    if ($new_statement =~ /\+/) {
+      $new_statement =~ s/\+/||/g;
+      #print "Content-type: text/html\n\nTranslating...<BR>$sql<BR>$new_statement<BR><BR>\n";
+    }
 
   }
+
 
 
   return $new_statement;
@@ -883,6 +888,9 @@ sub buildOptionList {
     #### Get the database handle
     $dbh = $self->getDBHandle();
 
+    #### Convert the SQL dialect if necessary
+    $sql_query = $self->translateSQL(sql=>$sql_query);
+
     my $options="";
     my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
     my $rv  = $sth->execute or croak $dbh->errstr;
@@ -943,6 +951,9 @@ sub displayQueryResult {
 
     #### Get the database handle
     $dbh = $self->getDBHandle();
+
+    #### Convert the SQL dialect if necessary
+    $sql_query = $self->translateSQL(sql=>$sql_query);
 
     #### Execute the query
     $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
@@ -1144,6 +1155,9 @@ sub fetchResultSet {
     #### Update timing info
     $timing_info->{send_query} = [gettimeofday()];
 
+
+    #### Convert the SQL dialect if necessary
+    $sql_query = $self->translateSQL(sql=>$sql_query);
 
     #### Execute the query
     $sth = $dbh->prepare("$sql_query") ||
@@ -2294,8 +2308,10 @@ sub display_input_form {
 
       #### Evaluate the $TBxxxxx table name variables if in the query
       if ( $optionlist_queries{$element} =~ /\$TB/ ) {
-        $optionlist_queries{$element} = 
-          main::evalSQL($optionlist_queries{$element});
+        my $tmp = $optionlist_queries{$element};
+        #### If there are any double quotes, need to escape them first
+        $tmp =~ s/\"/\\\"/g;
+        $optionlist_queries{$element} = main::evalSQL($tmp);
       }
 
 
@@ -2931,7 +2947,10 @@ sub importTSVFile {
     for ($i=0; $i<$n_columns; $i++) {
       if ($splitline[$i] =~ /^\"(.*)\"$/) {
         $splitline[$i] = $1;
+        #### Then two double quotes in this context means a single one
+        $splitline[$i] =~ s/\"\"/\"/g;
       }
+
     }
 
     #### Add onto the rows array
