@@ -298,11 +298,24 @@ sub display_page_footer {
 
   #### If finishing up the page completely is desired
   if ($display_footer eq 'YES') {
-    print qq~
+
+      if( $sbeams->isGuestUser() ) {
+
+        print qq~
+	<BR><HR SIZE="2" NOSHADE WIDTH="30%" ALIGN="LEFT">
+         You are logged into the $DBTITLE - $SBEAMS_PART
+        system as a guest user. <BR><BR><BR>
+	</BODY></HTML>\n\n
+        ~;
+
+      } else {
+
+        print qq~
 	<BR><HR SIZE="2" NOSHADE WIDTH="30%" ALIGN="LEFT">
 	SBEAMS - $SBEAMS_PART [Under Development]<BR><BR><BR>
 	</BODY></HTML>\n\n
-    ~;
+        ~;
+     }
   }
 
 }
