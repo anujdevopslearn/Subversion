@@ -34,6 +34,7 @@ use vars qw(@ISA @EXPORT
     $TB_ARRAY_REQUEST
     $TB_ARRAY_REQUEST_SLIDE
     $TB_ARRAY_REQUEST_SAMPLE
+    $TBMA_SAMPLE_PROTOCOL
     $TB_ARRAY_REQUEST_OPTION
     $TB_SLIDE_MODEL
     $TB_SLIDE_LOT
@@ -85,6 +86,7 @@ require Exporter;
     $TB_ARRAY_REQUEST
     $TB_ARRAY_REQUEST_SLIDE
     $TB_ARRAY_REQUEST_SAMPLE
+    $TBMA_SAMPLE_PROTOCOL
     $TB_ARRAY_REQUEST_OPTION
     $TB_SLIDE_MODEL
     $TB_SLIDE_LOT
@@ -139,6 +141,7 @@ $TB_XNA_TYPE            = "${mod}xna_type";
 $TB_ARRAY_REQUEST       = "${mod}array_request";
 $TB_ARRAY_REQUEST_SLIDE = "${mod}array_request_slide";
 $TB_ARRAY_REQUEST_SAMPLE= "${mod}array_request_sample";
+$TBMA_SAMPLE_PROTOCOL   = "${mod}sample_protocol";
 $TB_ARRAY_REQUEST_OPTION= "${mod}array_request_option";
 $TB_SLIDE_MODEL         = "${mod}slide_model";
 $TB_SLIDE_LOT           = "${mod}slide_lot";
