@@ -236,6 +236,15 @@ sub handle_request {
   return if ($biosequence_name_clause eq '-1');
 
 
+  #### Build E VALUE constraint
+  my $e_value_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"DM.e_value",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Expectation Value",
+    constraint_value=>$parameters{e_value_constraint} );
+  return if ($e_value_clause eq '-1');
+
+
   #### Build BIOSEQUENCE_SEQ constraint
   my $biosequence_seq_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"BS.biosequence_seq",
@@ -414,9 +423,9 @@ sub handle_request {
     ["match_end","DM.match_end","Match End"],
     ["match_name","DM.match_name","Match Name"],
     ["match_source_name","DMS.domain_match_source_name","Match Source"],
-    ["confidence_z_score","DM.confidence_z_score","Z Score"],
     ["e_value","DM.e_value","E value"],
-    ["bit_score","DM.bit_score","Bit Score"],
+    ["score","DM.score","Score"],
+    ["z_score","DM.z_score","Z Score"],
     @additional_columns,
     ["biosequence_desc","BS.biosequence_desc","Reference Description"],
   );
@@ -459,6 +468,7 @@ sub handle_request {
 	 WHERE 1 = 1
         $biosequence_set_clause
 	$biosequence_name_clause
+	$e_value_clause
         $biosequence_desc_clause
 
         $domain_match_source_clause
