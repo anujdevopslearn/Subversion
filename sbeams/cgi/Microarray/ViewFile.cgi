@@ -137,6 +137,12 @@ sub main {
 		    ~;
 		$sbeamsMOD->printPageFooter();
 	    }
+	}elsif ($action eq 'view_image'){
+		my $file;
+		my $subdir = $parameters{'SUBDIR'};
+		if ($subdir){$file = "$output_dir/$subdir/$file_name";}
+		else{$file = "$output_dir/$file_name";}
+		linkImage(file=>$file);
 	}else {
 	    #### Start printing the page
 	    $sbeamsMOD->printPageHeader();	
@@ -156,6 +162,43 @@ sub main {
 	    $sbeamsMOD->printPageFooter();
 	}
 } # end main
+
+
+
+
+###############################################################################
+# linkImage
+#
+###############################################################################
+sub linkImage {
+  my %args = @_;
+  my $file = $args{'file'};
+  my $error = 0;
+  open(INFILE, "< $file") || sub{$error = -1;};
+
+  if ($error == 0) {
+			print "Content-type: image/jpeg\n\tname=\"file.jpg\"";
+			print "Content-Transfer-Encoding: base64\n";
+			print "Content-Disposition: inline\n";
+			print "\n";
+
+			my $buffer;
+			open (IMAGE, "$file") || die "Couldn't open $file";
+			binmode(IMAGE);
+			while(read(IMAGE,$buffer,1024)){
+				print $buffer;
+			}
+  }
+  else{
+      print qq~
+	  $file
+	  <CENTER><FONT COLOR="red"><h1><B>FILE COULD NOT BE OPENED FOR VIEWING</B></h1>
+	  Please report this to <a href="mailto:mailto:mjohnson\@systemsbiology.org">Michael Johnson</a>
+	  </FONT></CENTER>
+      ~;
+  }
+	  
+} # end printFile
 
 ###############################################################################
 # printFile
