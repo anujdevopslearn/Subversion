@@ -1,17 +1,29 @@
-table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
-project	Project	project	YES	$TB_PROJECT	project_id		ManageTable.cgi?TABLE_NAME=project	"project,user_project_permission,group_project_permission"	
-hardware	Hardware	infrastructure	YES	$TB_HARDWARE	hardware_id		ManageTable.cgi?TABLE_NAME=hardware	"protocol,hardware,software"	software
-software	Software	infrastructure	YES	$TB_SOFTWARE	software_id		ManageTable.cgi?TABLE_NAME=software	"protocol,hardware,software"	protocol
-protocol	Protocol	infrastructure	YES	$TB_PROTOCOL	protocol_id		ManageTable.cgi?TABLE_NAME=protocol	"protocol,hardware,software"	
+table_name	table_title	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
 organization_type	Organization Type	infrastructure	YES	$TB_ORGANIZATION_TYPE	organization_type_id		ManageTable.cgi?TABLE_NAME=organization_type	"contact,organization,contact_type,organization_type"	organization
 organization	Organization	infrastructure	YES	$TB_ORGANIZATION	organization_id		ManageTable.cgi?TABLE_NAME=organization	"contact,organization,contact_type,organization_type"	contact
 contact_type	Contact Type	infrastructure	YES	$TB_CONTACT_TYPE	contact_type_id		ManageTable.cgi?TABLE_NAME=contact_type	"contact,organization,contact_type,organization_type"	contact
 contact	Contact	infrastructure	YES	$TB_CONTACT	contact_id		ManageTable.cgi?TABLE_NAME=contact	"contact,organization,contact_type,organization_type"	user_login
+privilege	Privilege	admin	NO	$TB_PRIVILEGE	privilege_id				
+record_status	Record Status	admin	NO	$TB_RECORD_STATUS	record_status_id				
 work_group	Work Group	admin	YES	$TB_WORK_GROUP	work_group_id		ManageTable.cgi?TABLE_NAME=work_group	"organization,organization_type,contact,contact_type,user_login,work_group,user_work_group,table_group_security,user_context,help_text"	user_work_group
 user_login	User Login	admin	YES	$TB_USER_LOGIN	user_login_id		ManageTable.cgi?TABLE_NAME=user_login	"project,organization,organization_type,contact,contact_type,user_login,work_group,user_work_group,table_group_security,user_context,help_text"	user_work_group
 user_work_group	User-Group Association	admin	YES	$TB_USER_WORK_GROUP	user_work_group_id		ManageTable.cgi?TABLE_NAME=user_work_group	"organization,organization_type,contact,contact_type,user_login,work_group,user_work_group,table_group_security,user_context,help_text"	contact
-user_context	User Context	rowprivate	YES	$TB_USER_CONTEXT	user_context_id		ManageTable.cgi?TABLE_NAME=user_context	"organization,organization_type,contact,contact_type,user_login,work_group,user_work_group,table_group_security,user_context,help_text"	
 table_group_security	Table Group Security	admin	YES	$TB_TABLE_GROUP_SECURITY	table_group_security_id		ManageTable.cgi?TABLE_NAME=table_group_security	"organization,organization_type,contact,contact_type,user_login,work_group,user_work_group,table_group_security,user_context,help_text"	
-help_text	Help Text	admin	YES	$TB_HELP_TEXT	help_text_id		ManageTable.cgi?TABLE_NAME=help_text	"organization,organization_type,contact,contact_type,user_login,work_group,user_work_group,table_group_security,user_context,help_text"	
+user_context	User Context	rowprivate	YES	$TB_USER_CONTEXT	user_context_id		ManageTable.cgi?TABLE_NAME=user_context	"organization,organization_type,contact,contact_type,user_login,work_group,user_work_group,table_group_security,user_context,help_text"	
+sql_command_log	SQL Statement Log	admin	NO	$TB_SQL_COMMAND_LOG	command_id				
+usage_log	Usage Log	admin	NO	$TB_USAGE_LOG	usage_id				
+misc_option	Miscellaneous UI Option	admin	NO	$TB_MISC_OPTION	misc_option_id				
+project	Project	project	YES	$TB_PROJECT	project_id		ManageTable.cgi?TABLE_NAME=project	"project,user_project_permission,group_project_permission"	
 user_project_permission	User Project Permission	admin	YES	$TB_USER_PROJECT_PERMISSION	user_project_permission_id		ManageTable.cgi?TABLE_NAME=user_project_permission	"project,user_project_permission,group_project_permission"	
-group_project_permission	Group Project Permission	admin	YES	$TB_GROUP_PROJECT_PERMISSION	group_project_permission_id		ManageTable.cgi?TABLE_NAME=group_project_permission	"project,user_project_permission,group_project_permission"
+group_project_permission	Group Project Permission	admin	YES	$TB_GROUP_PROJECT_PERMISSION	group_project_permission_id		ManageTable.cgi?TABLE_NAME=group_project_permission	"project,user_project_permission,group_project_permission"	
+help_text	Help Text	admin	YES	$TB_HELP_TEXT	help_text_id		ManageTable.cgi?TABLE_NAME=help_text	"organization,organization_type,contact,contact_type,user_login,work_group,user_work_group,table_group_security,user_context,help_text"	
+table_property	Table Property	admin	NO	$TB_TABLE_PROPERTY	table_property_id				
+table_column	Table Column	admin	NO	$TB_TABLE_COLUMN	table_column_id				
+organism	Organism	admin	NO	$TB_ORGANISM	organism_id				
+hardware_type	Hardware Type	infrastructure	YES	$TB_HARDWARE_TYPE	hardware_type_id		ManageTable.cgi?TABLE_NAME=hardware_type	"protocol,hardware,software,protocol_type,hardware_type,software_type"	
+software_type	Software Type	infrastructure	YES	$TB_SOFTWARE_TYPE	software_type_id		ManageTable.cgi?TABLE_NAME=software_type	"protocol,hardware,software,protocol_type,hardware_type,software_type"	
+protocol_type	Protocol Type	infrastructure	YES	$TB_PROTOCOL_TYPE	protocol_type_id		ManageTable.cgi?TABLE_NAME=protocol_type	"protocol,hardware,software,protocol_type,hardware_type,software_type"	
+hardware	Hardware	infrastructure	YES	$TB_HARDWARE	hardware_id		ManageTable.cgi?TABLE_NAME=hardware	"protocol,hardware,software,protocol_type,hardware_type,software_type"	software
+software	Software	infrastructure	YES	$TB_SOFTWARE	software_id		ManageTable.cgi?TABLE_NAME=software	"protocol,hardware,software,protocol_type,hardware_type,software_type"	protocol
+protocol	Protocol	infrastructure	YES	$TB_PROTOCOL	protocol_id		ManageTable.cgi?TABLE_NAME=protocol	"protocol,hardware,software,protocol_type,hardware_type,software_type"	
+software_hardware_protocol	Software Hardware Protocol Linking	admin	NO	$TB_SOFTWARE_HARDWARE_PROTOCOL	software_hardware_protocol_id				
