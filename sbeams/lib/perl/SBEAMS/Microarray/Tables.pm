@@ -53,7 +53,7 @@ use vars qw(@ISA @EXPORT
     $TBMA_FILE_PATH
     $TBMA_FILE_LOCATION
     $TBMA_FILE_TYPE
-
+    $TBMA_QUANTITATION_TYPE
 );
 
 require Exporter;
@@ -100,7 +100,7 @@ require Exporter;
     $TBMA_FILE_PATH
     $TBMA_FILE_LOCATION
     $TBMA_FILE_TYPE
-
+    $TBMA_QUANTITATION_TYPE
 );
 
 
@@ -144,3 +144,4 @@ $TBMA_SERVER='server';
 $TBMA_FILE_PATH='file_path';
 $TBMA_FILE_LOCATION='file_location';
 $TBMA_FILE_TYPE='file_type';
+$TBMA_QUANTITATION_TYPE='quantitation_type';
