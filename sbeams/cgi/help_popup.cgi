@@ -7,7 +7,7 @@
 #
 # Description : Window to be popped up by JavaScript, with help text.
 #
-# SBEAMS is Copyright (C) 2000-2003 by Eric Deutsch
+# SBEAMS is Copyright (C) 2005 by Eric Deutsch
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -76,7 +76,7 @@ if ($help_text_id) {
 #####################################
 	$title	= $help_text[0][0];
 	$text	= $help_text[0][1];
-}elsif ($column_name && $table_name) { # We're gonna display column_text here, boss
+}elsif ($column_name && $table_name) { # Display column 'help' text.
 
   displayColumnText( $column_name, $table_name );
   exit 0;
@@ -157,7 +157,16 @@ sub displayColumnText {
   my $row = $text[0];
   my ( $title, $text ) = @$row;
 
-  $text = $q->escapeHTML( $text );
+  if ( $text =~ /(<A HREF *=.*<\/A>?)/i ) {
+    # We seem to have a link, save it aside while escaping HTML
+    my $link = $1;
+    $text =~ s/$link/LINKPLACEHOLDER/;
+    $text = $q->escapeHTML( $text );
+    $text =~ s/LINKPLACEHOLDER/$link/;
+  } else {
+    $text = $q->escapeHTML( $text );
+  }
+
   $title = $q->escapeHTML( $title );
 
 my $FONT_SIZE=12;
