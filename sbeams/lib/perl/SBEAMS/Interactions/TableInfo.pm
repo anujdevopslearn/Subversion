@@ -78,16 +78,14 @@ sub returnTableInfo {
 
 
     }
-
-
     if ($table_name eq "IN_interaction") {
 
         if ($info_key eq "BASICQuery") {
             return qq~
 		SELECT I.interaction_id,
-			BE1.bioentity_common_name,BE1.bioentity_canonical_name,BES1.bioentity_state_name,RF1.regulatory_feature_name,
+			BE1.bioentity_common_name,BE1.bioentity_canonical_name,I.while_member_of_bioentity1_id AS member1_of_bioentity ,BES1.bioentity_state_name,RF1.regulatory_feature_name,
 			IT.interaction_type_name,
-			BE2.bioentity_common_name AS bioentity2_common_name ,BE2.bioentity_canonical_name AS bioentity2_canonical_name, BES2.bioentity_state_name bioentity2_state_name, RF2.regulatory_feature_name regulatory_feature2_name,
+			BE2.bioentity_common_name AS bioentity2_common_name ,BE2.bioentity_canonical_name AS bioentity2_canonical_name, BES2.bioentity_state_name bioentity2_state_name,I.while_member_of_bioentity2_id as member2_of_bioentity, RF2.regulatory_feature_name regulatory_feature2_name,
 		PUB.pubmed_id
  		  FROM $TBIN_INTERACTION I
 		  LEFT JOIN $TBIN_INTERACTION_TYPE IT ON ( I.interaction_type_id = IT.interaction_type_id )
@@ -151,13 +149,14 @@ sub returnTableInfo {
         if ($info_key eq "BASICQuery") {
             return qq~
 		SELECT B.bioentity_id,
-		        O.organism_name, BT.bioentity_type_name, bioentity_common_name,
-                        bioentity_canonical_name, bioentity_full_name, bioentity_aliases,
+		        O.organism_name, BT.bioentity_type_name, geneID, bioentity_common_name,
+                        bioentity_canonical_name, bioentity_full_name, bioentity_aliases, P.parent_bioentity_id as Parent_Bioentity,
                         BS.biosequence_name,B.comment
 		  FROM $TBIN_BIOENTITY B
 		  LEFT JOIN $TB_ORGANISM O ON ( B.organism_id = O.organism_id )
 		  LEFT JOIN $TBIN_BIOENTITY_TYPE BT ON ( B.bioentity_type_id = BT.bioentity_type_id )
 		  LEFT JOIN $TBIN_BIOSEQUENCE BS ON (B.biosequence_id = BS.biosequence_id )
+          LEFT JOIN $TBIN_BIOENTITY_MEMBER P ON (B.BIOENTITY_ID = P.PARENT_BIOENTITY_ID)
 		 WHERE B.record_status != 'D'
 		   AND ( O.record_status != 'D' OR O.record_status IS NULL )
 		   AND ( BT.record_status != 'D' OR BT.record_status IS NULL )
