@@ -47,8 +47,8 @@ $TB_ORGANISM                = 'sbeams.dbo.organism';
 $TBSN_BIOSEQUENCE_SET       = 'SNP.dbo.biosequence_set';
 $TBSN_BIOSEQUENCE           = 'SNP.dbo.biosequence';
 
-$TBSN_SNP                   = 'SNP.kdeutsch.snp';
-$TBSN_SNP_SOURCE            = 'SNP.kdeutsch.snp_source';
+$TBSN_SNP                   = 'SNP.dbo.snp';
+$TBSN_SNP_SOURCE            = 'SNP.dbo.snp_source';
 
 $TBSN_QUERY_OPTION          = 'SNP.dbo.query_option';
 
