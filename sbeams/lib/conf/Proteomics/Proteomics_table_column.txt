@@ -8,8 +8,8 @@ PR_proteomics_experiment	6	experiment_tag	Experiment Tag	varchar	20	0	N		N			Y	t
 PR_proteomics_experiment	7	experiment_description	Experiment Description	text	16	0	N		N			Y	textarea	6		Y	Y	N	"Description of this experiment, the sample or samples used, and any other relevant information not contained in the project description or in list-box elements in this form"		
 PR_proteomics_experiment	8	experiment_path	Experiment Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	Data path for this experiment (e.g. /data/search/edeutsch/TCells/T_000/human_nci)		
 PR_proteomics_experiment	9	organism_id	Organism	int	4	0	N		N			Y	optionlist			Y	Y	N	Organism from which the sample used for this experiment was derived	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
-PR_proteomics_experiment	10	experiment_type_id	Experiment Type	int	4	0	N		N			Y	optionlist			Y	Y	N	"Type/class of experiment (e.g. d0/d8 ICAT, etc.)"	"SELECT experiment_type_id, experiment_type_name FROM $TBPR_EXPERIMENT_TYPE ORDER BY sort_order,experiment_type_name"	
-PR_proteomics_experiment	11	instrument_id	Instrument	int	4	0	N		N			Y	optionlist			Y	Y	N	Instrument on which this experiment was performed	"SELECT instrument_id, instrument_name FROM $TBPR_INSTRUMENT ORDER BY sort_order,instrument_name"	
+PR_proteomics_experiment	10	experiment_type_id	Experiment Type	int	4	0	N		N	PR_experiment_type	experiment_type_id	Y	optionlist			Y	Y	N	"Type/class of experiment (e.g. d0/d8 ICAT, etc.)"	"SELECT experiment_type_id, experiment_type_name FROM $TBPR_EXPERIMENT_TYPE ORDER BY sort_order,experiment_type_name"	
+PR_proteomics_experiment	11	instrument_id	Instrument	int	4	0	N		N	PR_instrument	instrument_id	Y	optionlist			Y	Y	N	Instrument on which this experiment was performed	"SELECT instrument_id, instrument_name FROM $TBPR_INSTRUMENT ORDER BY sort_order,instrument_name"	
 PR_proteomics_experiment	12	gradient_program_id	Gradient Program	int	4	0	Y		N	PR_gradient_program	gradient_program_id	N	optionlist			Y	Y	N	Gradient Program used for this experiment.  Choose MULTIPLE if different programs were used for different msruns within this experiment.	"SELECT gradient_program_id,gradient_program_name FROM $TBPR_GRADIENT_PROGRAM WHERE record_status != 'D'"	
 PR_proteomics_experiment	13	column_length	Column Length (cm)	real	4	0	Y		N			N	text	10		Y	Y	N	"Packing length of reverse phase beads column in cm used for this experiment (Do not enter the units in the text box, just the number of cm)"		
 PR_proteomics_experiment	14	go_public_date	Go Public Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	text	20		Y	Y	N	Date that this experiment data will go public.  Please use the form 2002-12-31.  Do not enter a date higher than 2030-01-01.		
@@ -70,7 +70,7 @@ PR_fraction	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group
 PR_fraction	17	record_status	Record Status	char	1	0	N	N	N							N	N				
 PR_msms_spectrum	1	msms_spectrum_id	MS/MS Spectrum ID	int	4	0	N		Y							N	N				pkDEFAULT
 PR_msms_spectrum	2	fraction_id	Fraction ID	int	4	0	N		N	PR_fraction	fraction_id					Y	Y	Y	MS Run from which this spectrum comes		
-PR_msms_spectrum	3	msms_spectrum_file_root	MS/MS Spectrum File Root	varchar	50	0	N		N							Y	Y	Y	File root of this exactracted spectrum.  This corresponds to the .dta or .out filename without the extension.  Do not use spaces or non-standard characters.		
+PR_msms_spectrum	3	msms_spectrum_file_root	MS/MS Spectrum File Root	varchar	255	0	N		N							Y	Y	Y	File root of this exactracted spectrum.  This corresponds to the .dta or .out filename without the extension.  Do not use spaces or non-standard characters.		
 PR_msms_spectrum	4	start_scan	Start Scan Number	int	4	0	N		N							Y	Y	N	Starting scan number of the MS/MS Spectrum		
 PR_msms_spectrum	5	end_scan	End Scan Number	int	4	0	N		N							Y	Y	N	"Ending scan number of the MS/MS Spectrum (if only a single scan, this will be the same as start_scan)"		
 PR_msms_spectrum	6	precursor_intensity	Precursor Intensity	real	4	0	Y		N							Y	Y	N	Mass spec intensity of the precursor peptide that is fragmented		
@@ -85,18 +85,18 @@ PR_msms_spectrum_peak	2	mass	Peak Mass	float	8	0	N		N							Y	Y	Y	Average mass o
 PR_msms_spectrum_peak	3	intensity	Peak Intensity	real	4	0	N		N							Y	Y	N	Intensity of this peak		
 PR_biosequence_set	1	biosequence_set_id	BioSequence Set ID	int	4	0	N		Y							N	N				pkDEFAULT
 PR_biosequence_set	2	project_id	Owner Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id"	
-PR_biosequence_set	3	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Species for this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+PR_biosequence_set	3	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism to which the BioSequences in this database belong	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 PR_biosequence_set	4	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
 PR_biosequence_set	5	set_tag	Set Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this BioSequence database		
 PR_biosequence_set	6	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioSequence database		
 PR_biosequence_set	7	set_version	Set Version	varchar	50	0	N		N			Y	text	40		Y	Y	N	Version of this BioSequence database		
-PR_biosequence_set	8	polymer_type_id	Polymer Type	int	4	0	N		N	BL_polymer_type	polymer_type_id	Y	optionlist			Y	Y	N	Polymer type of the biosequence in this set	"SELECT polymer_type_id, polymer_type_name FROM $TBBL_POLYMER_TYPE ORDER BY polymer_type_name"	
+PR_biosequence_set	8	polymer_type_id	Polymer Type	int	4	0	N		N	BL_polymer_type	polymer_type_id	Y	optionlist			Y	Y	N	"Polymer type (e.g. protein, DNA, RNA) for the BioSequences in this database"	"SELECT polymer_type_id, polymer_type_name FROM $TBBL_POLYMER_TYPE ORDER BY sort_order,polymer_type_name"	
 PR_biosequence_set	9	upload_file	Upload file	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
 PR_biosequence_set	10	set_path	Set Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	File path of this BioSequence database		
 PR_biosequence_set	11	source_file_date	Source File Date	datetime	8	0	Y		N			N	text	40		N	N	N	Date of the FASTA file at last update		
 PR_biosequence_set	12	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
 PR_biosequence_set	13	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-PR_biosequence_set	14	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
+PR_biosequence_set	14	sort_order	Sort Order	int	4	0	N	10	N			Y	text	20		Y	Y	N	Allows the ordering or ranking of Biosequence Sets which is used to break ties for choosing canonical names.  Lower numbers indicate better rank.		
 PR_biosequence_set	15	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 PR_biosequence_set	16	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
 PR_biosequence_set	17	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -119,13 +119,22 @@ PR_dbxref	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	
 PR_dbxref	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 PR_dbxref	15	record_status	Record Status	char	1	0	N	N	N							N	N				
 PR_biosequence	1	biosequence_id	BioSequence ID	int	4	0	N		Y							N	N				pkDEFAULT
-PR_biosequence	2	biosequence_set_id	BioSequence Set	int	4	0	N		N	PR_biosequence_set	biosequence_set_id					N	N	Y	BioSequence Set to which this BioSequence belongs		
+PR_biosequence	2	biosequence_set_id	BioSequence Set	int	4	0	N		N	PR_biosequence_set	biosequence_set_id					N	N	Y	BioSequence Set to which this BioSequence belongs		pkDEFAULT
 PR_biosequence	3	biosequence_name	BioSequence Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of this BioSequence (generally everything before the first space in a FASTA file header line)		
 PR_biosequence	4	biosequence_gene_name	BioSequence Gene Name	varchar	255	0	Y		N			Y	text	20		Y	Y	N	Gene name of this BioSequence if applicable.  Most common gene name if applicable		
-PR_biosequence	5	dbxref_id	Database Cross Reference	int	4	0	Y		N	PR_dbxref	dbxref_id					Y	Y	N	Database cross reference for which the accession number applies		
+PR_biosequence	5	dbxref_id	Database Cross Reference	int	4	0	Y		N	PR_dbxref	dbxref_id					Y	Y	N	Database cross reference for which the accession number applies		pkDEFAULT
 PR_biosequence	6	biosequence_accession	BioSequence Accession	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Accession number for this BioSequence in some external database designated above		
-PR_biosequence	7	biosequence_desc	Biosequence Description	varchar	1024	0	N		N			Y	text	40		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)		
-PR_biosequence	8	biosequence_seq	Sequence	text	16	0	Y		N			N	file	40		Y	Y	N	Actual sequence of the BioSequence if known		
+PR_biosequence	7	organism_id	Organism	int	4	0	Y		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism to which this BioSequence belongs	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+PR_biosequence	8	polymer_type_id	Polymer Type	int	4	0	Y		N	BL_polymer_type	polymer_type_id	Y	optionlist			Y	Y	N	"Polymer type (e.g. protein, DNA, RNA) of this BioSequence"	"SELECT polymer_type_id, polymer_type_name FROM $TBBL_POLYMER_TYPE ORDER BY sort_order,polymer_type_name"	
+PR_biosequence	9	biosequence_desc	Biosequence Description	varchar	1024	0	N		N			Y	text	40		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)		
+PR_biosequence	10	biosequence_seq	Sequence	text	16	0	Y		N			N	file	40		Y	Y	N	Actual sequence of the BioSequence if known		
+PR_biosequence	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PR_biosequence	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_biosequence	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+PR_biosequence	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_biosequence	15	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+PR_biosequence	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+PR_biosequence	17	record_status	Record Status	char	1	0	N	N	N							N	N				
 PR_biosequence_property_set	1	biosequence_property_set_id	BioSequence Property Set ID	int	4	0	N		Y							N	N				pkDEFAULT
 PR_biosequence_property_set	2	biosequence_id	BioSequence ID	int	4	0	N		N	PR_biosequence	biosequence_id					N	N	Y	Biosequence to which this Biosequence property set belongs		pkDEFAULT
 PR_biosequence_property_set	3	n_transmembrane_regions	Number of Transmembrane Regions	int	4	0	Y		N							Y	Y	N	Number of transmembrane regions		pkDEFAULT
@@ -142,6 +151,24 @@ PR_biosequence_property_set	13	end_in_chromosome	End Position in Chromosome	int	
 PR_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	"Strand (+,-) of the biosequence in the chromosome"		
 PR_biosequence_property_set	15	isoelectric_point	Isoelectric Point	real	4	0	Y		N			N	text	10		Y	Y	N	Isoelectric Point (pI) of the protein		
 PR_biosequence_property_set	16	fav_codon_frequency	Favorite Codon Frequency	real	4	0	Y		N			N	text	10		Y	Y	N	Favorite Codon Frequency		
+PR_biosequence_property_set	17	duplicate_biosequences	Duplicate Biosequences	varchar	255	0	Y		N			N	text	50		Y	Y	N	Semicolon delimited list of duplicate sequences within the same set		
+PR_biosequence_annotation	1	biosequence_annotation_id	Domain Match Type	int	4	0	N		Y							N	N				pkDEFAULT
+PR_biosequence_annotation	2	biosequence_id	BioSequence	int	4	0	N		N	PR_biosequence	biosequence_id	Y	fixed			Y	Y	Y	BioSequence to which this annotation belongs		
+PR_biosequence_annotation	3	gene_symbol	Gene Symbol	varchar	255	0	Y		N			N	text	50		Y	Y	N	Gene Symbol to describe this protein (e.g. TLR2)		
+PR_biosequence_annotation	4	full_gene_name	Full Gene Name	varchar	255	0	Y		N			N	text	50		Y	Y	N	Full name of the gene (e.g. Toll-like Receptor 2)		
+PR_biosequence_annotation	5	aliases	BioSequence Aliases	varchar	255	0	Y		N			N	text	50		Y	Y	N	Aliases of this BioSequence.  These are stored as a semi-colon delimited string		
+PR_biosequence_annotation	6	former_names	Former BioSequence Names	varchar	255	0	Y		N			N	text	50		Y	Y	N	Former Aliases of this BioSequence.  These are stored as a colon-delimited string		
+PR_biosequence_annotation	7	functional_description	Functional Description	text	16	0	Y		N			N	textarea	3		Y	Y	N	Functional description of the protein		
+PR_biosequence_annotation	8	EC_numbers	EC Numbers	varchar	255	0	Y		N			N	text	50		Y	Y	N	EC Number(s) that corresponds to this domain.  Separate multiple numbers with a semicolon		
+PR_biosequence_annotation	9	biosequence_type	Biosequence Type	varchar	255	0	Y		N				text	50		Y	Y	N	Further annotation of biosequence type		
+PR_biosequence_annotation	10	category	Category	varchar	255	0	Y		N			N	text	50		Y	Y	N	Category		
+PR_biosequence_annotation	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PR_biosequence_annotation	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_biosequence_annotation	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+PR_biosequence_annotation	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_biosequence_annotation	15	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+PR_biosequence_annotation	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+PR_biosequence_annotation	17	record_status	Record Status	char	1	0	N	N	N							N	N				
 PR_search_batch	1	search_batch_id	Search Batch ID	int	4	0	N		Y							N	N				pkDEFAULT
 PR_search_batch	2	experiment_id	Experiment ID	int	4	0	N		N	PR_proteomics_experiment	experiment_id	Y				Y	Y	Y	Experiment to which this search batch belongs		
 PR_search_batch	3	biosequence_set_id	BioSequence Set	int	4	0	N		N	PR_biosequence_set	biosequence_set_id	Y				Y	Y	Y	BioSequence Set against which this batch was searched		pkDEFAULT
@@ -158,7 +185,7 @@ PR_search_batch_parameter_set	4	etc	and many more	varchar	100	0	N		N			Y	text	50
 PR_search	1	search_id	Search ID	int	4	0	N		Y							N	N				pkDEFAULT
 PR_search	2	search_batch_id	Search Batch ID	int	4	0	N		N	PR_search_batch	search_batch_id	Y	fixed			Y	Y	Y	Search Batch to which this search belongs		
 PR_search	3	msms_spectrum_id	MS/MS Spectrum ID	int	4	0	N		N	PR_msms_spectrum	msms_spectrum_id	Y	fixed			Y	Y	Y	MS/MS Spectrum that was searched		pkDEFAULT
-PR_search	4	file_root	File Root	varchar	50	0	N		N			Y	text	50		Y	Y	N	Root of the filename that was searched.  This is usually in the format of basename.startscan.endscan.assumedcharge		
+PR_search	4	file_root	File Root	varchar	255	0	N		N			Y	text	50		Y	Y	N	Root of the filename that was searched.  This is usually in the format of basename.startscan.endscan.assumedcharge		
 PR_search	5	start_scan	Start Scan	int	4	0	N		N			Y	text	10		Y	Y	N	Starting scan number		
 PR_search	6	end_scan	End Scan	int	4	0	N		N			Y	text	10		Y	Y	N	Ending scan number		
 PR_search	7	sample_mass_plus_H	Sample (M+H)+	float	8	0	N		N			Y	text	10		Y	Y	N	Observed mass (M+H)+		
