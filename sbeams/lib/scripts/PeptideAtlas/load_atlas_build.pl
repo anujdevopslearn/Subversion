@@ -29,7 +29,6 @@ use vars qw ($sbeams $sbeamsMOD $q $current_username
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
-#$sbeams = SBEAMS::Connection->new();
 
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
@@ -40,9 +39,6 @@ $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
-
-use CGI;
-$q = CGI->new();
 
 
 ###############################################################################
@@ -509,7 +505,7 @@ sub buildAtlas {
         
        print "Checking hash values after read of $infile\n";
         
-       foreach my $tmp_pep_acc   (keys %APD_peptide_accession) {
+       foreach my $tmp_pep_acc (keys %APD_peptide_accession) {
 
            my $pep_acc = $APD_peptide_accession{$tmp_pep_acc};
            my $pep_seq = $APD_peptide_sequence{$tmp_pep_acc};
@@ -1139,18 +1135,21 @@ sub buildAtlas {
        WHERE atlas_build_id = '$atlas_build_id'
    ~;
    my %peptide_instances = $sbeams->selectTwoColumnHash($sql);
+   ## makes hash with key = peptide_id, value = atlas_build_id
  
-   foreach my $tmp_pep_id (values %APD_peptide_id ) {
+   foreach my $tmp_pep_acc (keys %APD_peptide_accession) {
  
+       my $tmp_pep_id = $APD_peptide_id{$tmp_pep_acc};
+
        if ( !$peptide_instances{$tmp_pep_id} ) {
  
            my %rowdata = ( ##   peptide_instance    table attributes
                atlas_build_id => $atlas_build_id,
                peptide_id => $tmp_pep_id,
-               best_probability => $APD_best_probability{$tmp_pep_id},
-               n_observations => ,$APD_n_observations{$tmp_pep_id},
-               search_batch_ids => ,$APD_search_batch_ids{$tmp_pep_id},
-               sample_ids => ,$APD_sample_ids{$tmp_pep_id},
+               best_probability => $APD_best_probability{$tmp_pep_acc},
+               n_observations => ,$APD_n_observations{$tmp_pep_acc},
+               search_batch_ids => ,$APD_search_batch_ids{$tmp_pep_acc},
+               sample_ids => ,$APD_sample_ids{$tmp_pep_acc},
                n_genome_locations => '0',
                is_exon_spanning => 'n',
                n_protein_mappings => '0',
@@ -1169,7 +1168,7 @@ sub buildAtlas {
            );
          
            ## for each sample, create peptide_instance_sample record
-           my @tmp_sample_id = split(",", $APD_sample_ids{$tmp_pep_id} );
+           my @tmp_sample_id = split(",", $APD_sample_ids{$tmp_pep_acc} );
 
            for (my $ii = 0; $ii <= $#tmp_sample_id; $ii++) {
 
