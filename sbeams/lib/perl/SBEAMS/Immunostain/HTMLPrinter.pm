@@ -135,6 +135,7 @@ sub display_page_header {
         <tr><td>Documentation:</td></tr>
         <tr><td><a href="$HTML_BASE_DIR/doc/$SBEAMS_SUBDIR/FileNameConvention.php"><nobr>&nbsp;&nbsp;&nbsp;Filename Coding</nobr></a></td></tr>
         <tr><td><a href="$HTML_BASE_DIR/doc/$SBEAMS_SUBDIR/${SBEAMS_PART}_Schema.gif"><nobr>&nbsp;&nbsp;&nbsp;Schema (GIF)</nobr></a></td></tr>
+				<tr><td><a href="http://scgap.systemsbiology.net/dataloading"><nobr>&nbsp;&nbsp;&nbsp;Data Loading</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Other Resources:</td></tr>
 	<tr><td><a href="http://scgap.systemsbiology.net"><nobr>&nbsp;&nbsp;&nbsp;SCGAP Home</nobr></a></td></tr>
