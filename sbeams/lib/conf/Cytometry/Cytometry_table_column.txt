@@ -16,11 +16,15 @@ CY_fcs_run	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAM
 CY_fcs_run	15	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 CY_fcs_run	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 CY_fcs_run	17	record_status	Record Status	char	1	0	N	N	N							N	N				
-CY_fcs_run_parameter	1	fcs_run_parameter_id	FCS Run Parameter ID	int	4	0	N		Y							N	N	N			pkDEFAULT
-CY_fcs_run_parameter	1	fcs_run_id	FCS Run ID	int	4	0	N		N	CY_fcs_run	fcs_run_id					N	N	Y	FCS Run to which this search parameter belongs		
-CY_fcs_run_parameter	2	key_order	Key Order	int	4	0	N		N			Y				Y	Y	N	Monotonically increasing number to denote key order		
-CY_fcs_run_parameter	3	parameter_key	Parameter Key	varchar	100	0	N		N			Y	text	50		Y	Y	Y	The key of the key/value pair		
-CY_fcs_run_parameter	4	parameter_value	Parameter Value	varchar	255	0	N		N			Y	text	50		Y	Y	N	The value of the key/value pair		
+CY_fcs_run_parameters	1	fcs_run_parameters_id	FCS Run Parameter ID	int	4	0	N		Y							N	N	N			pkDEFAULT
+CY_fcs_run_parameters	2	fcs_run_id	FCS Run ID	int	4	0	N		N	CY_fcs_run	fcs_run_id	Y				N	N	Y	FCS Run to which this search parameter belongs		
+CY_fcs_run_parameters	3	measured_parameters_id	Measured Parameters ID	int	4	0	N		N	CY_measured_parameters	measured_parameters_id	Y				N	Y	N	Monotonically increasing number to denote key order		
+CY_fcs_run_parameters	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			 				N	N				
+CY_fcs_run_parameters	5	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
+CY_fcs_run_parameters	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+CY_fcs_run_parameters	7	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
+CY_fcs_run_parameters	8	owner_group_id	Owner Group ID	int	4	0	N		N	work_group	work_group_id					N	N				
+CY_fcs_run_parameters	9	record_status	Record Status	char	1	0	N	N	N							N	N				
 CY_query_option	1	query_option_id	Query Option ID	int	4	0	N		Y							N	N				pkDEFAULT
 CY_query_option	2	option_type	Option Type	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Type or category of this option		
 CY_query_option	3	option_key	Option Key	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Key for this key/value pair option		
@@ -30,8 +34,20 @@ CY_query_option	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMEST
 CY_query_option	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
 CY_query_option	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 CY_query_option	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-CY_query_option	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
-CY_query_option	11	record_status	Record Status	char	1	0	N	N	N							N	N			
-CY_AddFCSRuns	1	project_id	Project	int	4	0	N	Urological Epithelial Stem Cells	N	project	project_id	Y	optionlist	4	refreshDocument()	Y	Y	N	Project to which the FCS Run belongs	"SELECT DISTINCT project_id, name  FROM $TB_PROJECT P left  join $TB_USER_LOGIN UL on P.pi_contact_id = UL.contact_id where P.record_status != 'D' ORDER BY name,project_id"
-CY_AddFCSRuns	2	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism from which this sample was acquired	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"
-CY_AddFCSRuns	3	filepath	Filepath	varchar	255	0	N		N			Y	text	50		Y	Y	N	Path where the FCS file to be added to this project are located (e.g. /users/adiercks/fcs/bugjuice).  This directory must be world readable to the server can read the files in it	
+CY_query_option	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+CY_query_option	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+CY_AddFCSRuns	1	project_id	Project	int	4	0	N	Urological Epithelial Stem Cells	N	project	project_id	Y	optionlist	4	refreshDocument()	Y	Y	N	Project to which the FCS Run belongs	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name + '['+P.budget+']'FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name + '['+P.budget+']',P.project_id"	
+CY_AddFCSRuns	2	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism from which this sample was acquired	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+CY_AddFCSRuns	3	filepath	Filepath	varchar	255	0	N		N			Y	text	50		Y	Y	N	Path where the FCS file to be added to this project are located (e.g. /users/adiercks/fcs/bugjuice).  This directory must be world readable to the server can read the files in it		
+CY_measured_parameters	1	measured_parameters_id	Measured Parameters ID	int	4				Y							N	N				pkDEFAULT
+CY_measured_parameters	2	measured_parameters_name	Measured Parameters Name	varchar	100				N			Y	optionlist	4		Y	Y	Y	Name of a New Measured Parameter	"SELECT measured_parameters_id,measured_parameters_name from $TBCY_MEASURED_PARAMETERS order by measured_parameters_name"	
+CY_measured_parameters	3	measured_parameters_description	Description of Measured Parameter	text	16				N				text	50		Y	Y				
+CY_measured_parameters	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			 				N	N				
+CY_measured_parameters	5	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
+CY_measured_parameters	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+CY_measured_parameters	7	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
+CY_measured_parameters	8	owner_group_id	Owner Group ID	int	4	0	N		N	work_group	work_group_id					N	N				
+CY_measured_parameters	9	record_status	Record Status	char	1	0	N	N	N							N	N				
+CY_fcs_run_data_point	1	fcs_data_point_id	Data Point ID	int	4				Y							N					pkDEFAULT
+CY_fcs_run_data_point	2	fcs_run_parameters_id	Measured Parameter ID	int	4				N	CY_fcs_run_parameters	fcs_measured_parameters_id	Y				N					
+CY_fcs_run_data_point	3	fcs_value	Value	int	4				N			Y				N					
