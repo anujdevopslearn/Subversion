@@ -627,6 +627,8 @@ sub checkLogin {
     my $logging_query = "";
 
     my $success = 0;
+    @ERRORS  = ();
+
 
     my %query_result = $self->selectTwoColumnHash(
         "SELECT username,password
@@ -635,13 +637,14 @@ sub checkLogin {
             AND record_status != 'D'
         ");
 
+
     if (exists $query_result{$user}) {
         unless ($query_result{$user}) {
             $query_result{$user} = $self->getUnixPassword($user);
         }
     }
 
-    @ERRORS  = ();
+
     if ($query_result{$user}) {
 
         if (crypt($pass, $query_result{$user}) eq $query_result{$user}) {
@@ -704,6 +707,9 @@ sub getUnixPassword {
 
     if ($uname eq $username) {
         $password = $pword;
+    } else {
+        push(@ERRORS, "$username is not a valid UNIX username, so ".
+          "database cannot have blank password");
     }
 
     return $password;
