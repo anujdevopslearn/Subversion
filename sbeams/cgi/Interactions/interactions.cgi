@@ -43,6 +43,7 @@ $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 use CGI;
+use CGI::Carp qw(fatalsToBrowser croak);
 $q = new CGI;
 
 my $DISPLAY = '_display';
@@ -240,11 +241,13 @@ print File "<center><b>You can edit  your  Sbeams entries by clicking on the lin
 
 print File "<br><pre>";
 	my $organismSql = "select upper( full_name), organism_id  from sbeams.dbo.organism";
+ 	my $organismIDSql = "select organism_id, upper( full_name)  from sbeams.dbo.organism";
 	my $organismNameSql = " select upper( organism_Name), organism_id  from sbeams.dbo.organism";
 	my $interactionTypeSql = "select upper(interaction_type_name), interaction_type_id from $TBIN_INTERACTION_TYPE";	
 	my $bioentityTypeSql = "select upper(bioentity_type_name), bioentity_type_id from $TBIN_BIOENTITY_TYPE";
 	
 	my %organismHash = $sbeams->selectTwoColumnHash($organismSql);
+  my %organismIDHash = $sbeams->selectTwoColumnHash($organismIDSql);
 	my %organismNameHash = $sbeams->selectTwoColumnHash($organismNameSql);
 	my %interactionTypeHash = $sbeams->selectTwoColumnHash($interactionTypeSql);
 	my %bioentityTypeHash = $sbeams->selectTwoColumnHash($bioentityTypeSql);
@@ -275,7 +278,7 @@ print File "<br><pre>";
 	$bioentityHash{canTarget} = $parameters{canonicalName2};
 	$bioentityHash{comTarget} =$parameters{commonName2};
 	$bioentityHash{typeTarget} = uc($parameters{moleculeType2});	
-	$bioentityHash{typeTarget} = 'Protein'  if ( $parameters{canonicalName2} =~ /^([nx])[pctgrw].*/i and ! defined($parameters{moleculeType2}));
+	$bioentityHash{typeTarget} = 'PROTEIN'  if ( $parameters{canonicalName2} =~ /^([nx])[pctgrw].*/i and ! defined($parameters{moleculeType2}));
 	$bioentityHash{typeTarget} = 'DNA'  if ($parameters{canonicalName2} =~ /^(nm_).*/i and ! defined($parameters{moleculeType2}));
 	$bioentityHash{organismTarget} =  uc($parameters{species2}) unless $parameters{species2} =~ /unknown/i ;
 	my $species2ID;
@@ -323,7 +326,7 @@ print File "\n<b> Configuring Source and Target  Bioentity Type</b>\n\n";
 			}
 			else
 			{
-			$bioentityHash{typeSource} = 'Protein';
+			$bioentityHash{typeSource} = 'PROTEIN';
 print File  " Could not determine bioentityType for Source Bioentity\n
 Used BioentityType: Protein as default\n";
 			}
@@ -332,7 +335,7 @@ Used BioentityType: Protein as default\n";
 	
 	if(!defined( $bioentityHash{typeTarget}))
 	{
-		$bioentityHash{typeTarget} = 'Protein';
+		$bioentityHash{typeTarget} = 'PROTEIN';
 print File "Could not determine  bioentityType for Target Bioentity\n;
 Used BioentityType: Protein as default\n";
 	}
@@ -350,37 +353,37 @@ CanonicalName: $bioentityHash{canSource}\n";
 #we do not have this bioentity
 	if(! $bioentityHash{idSource}) 
 	{
-print File "Could not find Source Bioentity in database\n";
-		$isPresent = 0;
+      print File "Could not find Source Bioentity in database\n";
+      $isPresent = 0;
 #making sure we have an organism from cytoscape		
 		if (! defined($species1ID))
 		{
-print File "\n<b>Checking for organism of Source Bioentity</b>\n\n"; 
+       print File "\n<b>Checking for organism of Source Bioentity</b>\n\n"; 
 			$species1ID =	$organismHash{ uc(getOrganism($bioentityHash{canSource}))};
 			$species1ID = $organismHash{'OTHER'}  unless (defined($species1ID));
-print File "Could not identify Organism for Source Bioentity\n
-Used Organism: \"Other\" as default\n" if $bioentityHash{organismSource} eq "Other";
+      print File "Could not identify Organism for Source Bioentity\n
+      Used Organism: \"Other\" as default\n" if $bioentityHash{organismSource} eq "Other";
 		}
 		
 		$bioentityHash{idSource} = addToBioentityTable($bioentityHash{canSource}, $bioentityHash{comSource},$bioentityTypeHash{$bioentityHash{typeSource}},$species1ID);
-print File "\n<b>Created a New  bioentity for the Source Node with the following parameters:\n\n</b>
-Canonical Name:  $bioentityHash{canSource}\n
-Common Name: $bioentityHash{comSource}\n
-Bioentity Type: $bioentityHash{typeSource}\n
-Organism: $organismHash{$species1ID}\n
+    print File "\n<b>Created a New  bioentity for the Source Node with the following parameters:\n\n</b>
+    Canonical Name:  $bioentityHash{canSource}\n
+    Common Name: $bioentityHash{comSource}\n
+    Bioentity Type: $bioentityHash{typeSource}\n
+    Organism: $organismIDHash{$species1ID}\n
 		
-Added NEW  bioenity_id: $bioentityHash{idSource}\n 
-Link::  <a href = $BIOENTITY_URL$bioentityHash{idSource} target = sbeams>$BIOENTITY_URL$bioentityHash{idSource}</a>\n";
+    Added NEW  bioenity_id: $bioentityHash{idSource}\n 
+    Link::  <a href = $BIOENTITY_URL$bioentityHash{idSource} target = sbeams>$BIOENTITY_URL$bioentityHash{idSource}</a>\n";
 	}
 	else 
 	{
-print File "\n<b>Found Source Bioentity.</b>\n
-Did not update Source Bioentity Entry\n
-<a href  =$BIOENTITY_URL$bioentityHash{idSource } target=sbeams>$BIOENTITY_URL$bioentityHash{idSource}</a>\n";
+    print File "\n<b>Found Source Bioentity.</b>\n
+    Did not update Source Bioentity Entry\n
+    <a href  =$BIOENTITY_URL$bioentityHash{idSource } target=sbeams>$BIOENTITY_URL$bioentityHash{idSource}</a>\n";
 	}
 	
-print File "\n\n<b><font size = 3 color = red>Searching Sbeams Database for Target Bioentity</font></b>\n\n";
-print File "Used the following parameters: \n
+  print File "\n\n<b><font size = 3 color = red>Searching Sbeams Database for Target Bioentity</font></b>\n\n";
+  print File "Used the following parameters: \n
 CanonicalName: $bioentityHash{canTarget}\n";
 	#do we have  bioentity2
 	$bioentityHash{idTarget}= checkForBioentity($bioentityHash{canTarget});
@@ -389,84 +392,88 @@ CanonicalName: $bioentityHash{canTarget}\n";
 #we do not have this bioentity
 	if(! $bioentityHash{idTarget}) 
 	{
-		$isPresent = 0;
-			print File "Could not find Target Bioentity in database\n";
+    $isPresent = 0;
+		print File "Could not find Target Bioentity in database\n";
 #making sure we have an organism from cytoscape		
-		if (defined($species2ID))
+		if (! defined($species2ID))
 		{
-print File "\n<b>Checking for organism of Target Bioentity</b>\n\n";
-			$species2ID =	$organismHash{ uc(getOrganism($bioentityHash{canTarget}))};
-			$species2ID = $organismHash{'OTHER'}  unless (defined($species2ID));
-print File "Could not identify Organism for Target Bioentity\n
-Used Organism: \"Other\" as default\n" if $bioentityHash{organismTarget} eq "Other";
-		}
+        print File "\n<b>Checking for organism of Target Bioentity</b>\n\n";
+        if (defined($species1ID) and ($organismIDHash{$species1ID} !~ /other/i))
+        {
+          print File  "Using the same organism as Source Bioentity\n";
+          $species2ID = $species1ID;
+        }
+        else
+        {
+      			$species2ID =	$organismHash{ uc(getOrganism($bioentityHash{canTarget}))};
+            $species2ID = $organismHash{'OTHER'}  unless (defined($species2ID));
+            print File "Could not identify Organism for Target Bioentity\n
+            Used Organism: \"Other\" as default\n" if $bioentityHash{organismTarget} eq "Other";
+        }
+    }
+		$bioentityHash{idTarget} = addToBioentityTable($bioentityHash{canTarget},$bioentityHash{comTarget},$bioentityTypeHash{ $bioentityHash{typeTarget}},$species2ID);
+    print File "\n<b>Created a New  bioentity for the Target Node with the following parameters:</b>\n\n
+    Canonical Name:  $bioentityHash{canTarget}\n
+    Common Name: $bioentityHash{comTarget}\n
+    Bioentity Type: $bioentityHash{typeTarget}\n
+    Organism: $organismIDHash{$species2ID}\n
 		
-		$bioentityHash{idTarget} = addToBioentityTable($bioentityHash{canTarget},$bioentityHash{comTarget},$bioentityTypeHash{ $bioentityHash{typeTarget}},$organismHash{$bioentityHash{organismTarget}});
-print File "\n<b>Created a New  bioentity for the Target Node with the following parameters:</b>\n\n
-Canonical Name:  $bioentityHash{canTarget}\n
-Common Name: $bioentityHash{comTarget}\n;
-Bioentity Type: $bioentityHash{typeTarget}\n
-Organism: $bioentityHash{organismTarget}\n
-		
-Added NEW  bioenity_id: $bioentityHash{idTarget}\n
-Link:  <a href = $BIOENTITY_URL$bioentityHash{idTarget} target =sbeams>$BIOENTITY_URL$bioentityHash{idTarget}</a>\n";
+    Added NEW  bioenity_id: $bioentityHash{idTarget}\n
+    Link:  <a href = $BIOENTITY_URL$bioentityHash{idTarget} target =sbeams>$BIOENTITY_URL$bioentityHash{idTarget}</a>\n";
 	}
 	else 
 	{ 
-print File "\n<b>Found Target Bioentity.</b>\n
- Did not update Target Bioentity Entry\n
-Link: <a href =  $BIOENTITY_URL$bioentityHash{idTarget} target=sbeams>$BIOENTITY_URL$bioentityHash{idTarget}</a>\n";
+    print File "\n<b>Found Target Bioentity.</b>\n
+    Did not update Target Bioentity Entry\n
+    Link: <a href =  $BIOENTITY_URL$bioentityHash{idTarget} target=sbeams>$BIOENTITY_URL$bioentityHash{idTarget}</a>\n";
 	}
 	
-print File "\n\n<b><font size = 3 color = red>Searching Sbeams for Selected Interaction</font></b>\n\n";;
+  print File "\n\n<b><font size = 3 color = red>Searching Sbeams for Selected Interaction</font></b>\n\n";;
 	if($isPresent)
 	{
 		if (!$interactionTypeHash{$bioentityHash{interaction}})
 		{
-		
-print File "Could not find the specified interaction type in the database:  --   $bioentityHash{interaction}    --    \n
-Used interaction type \"Interacts with\" as default\n";
-			$bioentityHash{interaction} = "Interacts with";
+      print File "Could not find the specified interaction type in the database:  --   $bioentityHash{interaction}    --\n
+      Used interaction type \"Interacts with\" as default\n";
+			$bioentityHash{interaction} = "INTERACTS WITH";
 		}
-		
 		my $interactionID = checkForInteraction($bioentityHash{idSource}, $bioentityHash{idTarget});
-		if(! $interactionID)
+   	if(! $interactionID)
 		{	
-		my $interactionID = addToInteractionTable ($bioentityHash{idSource}, $bioentityHash{idTarget}, $interactionTypeHash{$bioentityHash{interaction}},$parameters{set_interaction_group_id});
-print File " \n<b>Created a NEW Interaction with the following parameters:</b>\n\n
-Bioentity Source ID: $bioentityHash{idSource}\n
-Bioentity Target ID: $bioentityHash{idTarget}\n
-InteractionType:  $bioentityHash{interaction}\n
+      my $interactionID = addToInteractionTable ($bioentityHash{idSource}, $bioentityHash{idTarget}, $interactionTypeHash{$bioentityHash{interaction}},$parameters{set_interaction_group_id});
+      print File " \n<b>Created a NEW Interaction with the following parameters:</b>\n\n
+      Bioentity Source ID: $bioentityHash{idSource}\n
+      Bioentity Target ID: $bioentityHash{idTarget}\n
+      InteractionType:  $bioentityHash{interaction}\n
 
-Added NEW interactionID:  $interactionID\n
-Link: <a href=  $INTERACTION_URL$interactionID target=sbeams> $INTERACTION_URL$interactionID</a>\n";
+      Added NEW interactionID:  $interactionID\n
+      Link: <a href=  $INTERACTION_URL$interactionID target=sbeams> $INTERACTION_URL$interactionID</a>\n";
 		}
 		else 
 		{
-print File "\n<b>Found pre-exsisting Interaction</b>\n
-Link: <a href = $INTERACTION_URL$interactionID target=sbeams> $INTERACTION_URL$interactionID</a>\n";
+      print File "\n<b>Found pre-exsisting Interaction</b>\n
+      Link: <a href = $INTERACTION_URL$interactionID target=sbeams> $INTERACTION_URL$interactionID</a>\n";
 		}
 	}
 	else
 	{	
 		if (!$interactionTypeHash{$bioentityHash{interaction}})
 		{
-print File " Could not find the specified interaction type in the database:  --   $bioentityHash{interaction}    --    \n
-Used interaction type \"Interacts with\" as default\n";
-			$bioentityHash{interaction} = "Interacts with";
+      print File " Could not find the specified interaction type in the database:  --   $bioentityHash{interaction}    -- ffffffff   \n
+      Used interaction type \"Interacts with\" as default\n";
+			$bioentityHash{interaction} = "INTERACTS WITH";
 		}
-
 		my $interactionID = addToInteractionTable ($bioentityHash{idSource}, $bioentityHash{idTarget}, $interactionTypeHash{$bioentityHash{interaction}},$parameters{set_interaction_group_id});                       
-print File " \n<b>Created a NEW Interaction with the following parameters:</b>\n\n
-Bioentity Source ID: $bioentityHash{idSource}\n
-Bioentity Target ID: $bioentityHash{idTarget}\n
-InteractionType:  $bioentityHash{interaction}\n
+    print File " \n<b>Created a NEW Interaction with the following parameters:</b>\n\n
+    Bioentity Source ID: $bioentityHash{idSource}\n
+    Bioentity Target ID: $bioentityHash{idTarget}\n
+    InteractionType:  $bioentityHash{interaction}\n
 
-Added NEW interactionID:  $interactionID\n
-Link: <a href =$INTERACTION_URL$interactionID target=sbeams> $INTERACTION_URL$interactionID</a>\n";
+    Added NEW interactionID:  $interactionID\n
+    Link: <a href =$INTERACTION_URL$interactionID target=sbeams> $INTERACTION_URL$interactionID</a>\n";
 	}
 
-print File "</pre><br><br><hr size =3><br><br></body></html>";
+  print File "</pre><br><br><hr size =3><br><br></body></html>";
 	close File;
 }
 	
@@ -528,7 +535,7 @@ WHERE P.record_status != 'D' ORDER BY UL.username+\' -\ '+P.name,P.project_id";
 		my $can = shift; 
 		my $organism = 0;
 	
-		my $sql = qq / Select organism from locuslink.dbo.loci l 
+		my $sql = qq / Select upper(organism) from locuslink.dbo.loci l 
 			join locuslink.dbo. refseq rs on l.locus_id = rs.locus_id 
 			where (rs.mrna ='$can' or protein = '$can') /;
 		
@@ -548,6 +555,7 @@ WHERE P.record_status != 'D' ORDER BY UL.username+\' -\ '+P.name,P.project_id";
 		my $bioentityID = 0;
 		$whereClause = qq /bioentity_canonical_name ='$can'/;
 		my $bioentitySql = qq / select bioentity_id from $TBIN_BIOENTITY where $whereClause/;
+   
 		my @rows = $sbeams->selectOneColumn($bioentitySql);	
 		my $nrows = scalar(@rows);
 		$bioentityID = $rows[0] if $nrows > 0;
@@ -561,7 +569,7 @@ WHERE P.record_status != 'D' ORDER BY UL.username+\' -\ '+P.name,P.project_id";
 		my $update=0;
 		my $id = 0;
 		my %rowData;
-	
+
 		$rowData{bioentity_canonical_name} = $canName;	
 		$rowData{bioentity_type_id}= $type;
 		$rowData{organism_id} = $organism;		
@@ -605,7 +613,7 @@ WHERE P.record_status != 'D' ORDER BY UL.username+\' -\ '+P.name,P.project_id";
 		$rowData{bioentity2_id} = $id2;	
 		$rowData{interaction_type_id}= $type;
 		$rowData{interaction_group_id} = $interactionGroupID;
-		
+	
 		my $returned_PK = $sbeams->updateOrInsertRow(
 							insert => $insert,
 							update => $update,
