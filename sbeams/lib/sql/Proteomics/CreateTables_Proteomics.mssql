@@ -368,6 +368,7 @@ CREATE TABLE dbo.search_batch (
 	experiment_id		int NOT NULL REFERENCES proteomics_experiment(experiment_id),
 	biosequence_set_id	int NOT NULL REFERENCES biosequence_set(biosequence_set_id),
 	data_location		varchar(255),
+	search_batch_subdir	varchar(100),
 	PRIMARY KEY CLUSTERED (search_batch_id)
 )
 GO
