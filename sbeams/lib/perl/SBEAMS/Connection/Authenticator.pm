@@ -79,7 +79,6 @@ sub Authenticate {
     #### Always disable the output buffering
     $| = 1;
 
-
     #### Guess at the current invocation mode
     $self->guessMode();
 
@@ -171,6 +170,10 @@ sub processLogin {
 
     my $username  = $q->param('username');
     my $password  = $q->param('password');
+
+    # For security's sake, delete these from the cgi object.
+    $q->delete( 'username', 'password' );
+
     $current_username = "";
 
     #### If there is a login parameter, see if it's valid
