@@ -101,8 +101,9 @@ sub printPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/Biosap/ManageTable.cgi?TABLE_NAME=bs_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Biosap/SummarizeRuns.cgi"><nobr>&nbsp;&nbsp;&nbsp;Summarize Runs</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Biosap/BrowseFeatures.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse Features</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeRuns.cgi"><nobr>&nbsp;&nbsp;&nbsp;Summarize Runs</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseFeatures.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse Features</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;BioSequences</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Generate Data:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/Biosap/BiosapForm.cgi"><nobr>&nbsp;&nbsp;&nbsp;New Biosap Run</nobr></a></td></tr>
