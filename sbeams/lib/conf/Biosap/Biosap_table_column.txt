@@ -72,7 +72,7 @@ BS_query_option	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIME
 BS_query_option	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	N			
 BS_query_option	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	N			
 BS_query_option	11	record_status	Record Status	char	1	0	N	N	N							N	N	N			
-BrowseBioSapFeature	1	biosap_search_id	BioSap Run									N	optionlist	4		Y	Y	N	Select BioSap to pull features from	SELECT biosap_search_id,CONVERT(varchar(20),biosap_search_id) + ' - ' + biosap_search_idcode FROM $TBBS_BIOSAP_SEARCH	pkDEFAULT
+BrowseBioSapFeature	1	biosap_search_id	BioSap Run									N	optionlist	4		Y	Y	N	Select BioSap to pull features from	SELECT biosap_search_id, biosap_search_idcode FROM $TBBS_BIOSAP_SEARCH	pkDEFAULT
 BrowseBioSapFeature	2	tm_constraint	Tm Constraint									N	text	40		Y	Y	N	Constraint for the Melting Temperature.  Allowed syntax: "n.n", "> n.n", "< n.n", "between n.n and n.n", "n.n +- n.n"		
 BrowseBioSapFeature	3	threeprime_distance_constraint	3' Distance Constraint									N	text	40		Y	Y	N	Constraint for the 3' Distance.  Allowed syntax: "n", "> n", "< n", "between n and n", "n +- n"		
 BrowseBioSapFeature	4	mismatch_rejection_constraint	Mismatch Rejection Constraint									N	text	40		Y	Y	N	Constraint for the number of maximum number of mismatches to reject (e.g. if 2 is specified, then any feature that matches more than one gene with up to 2 mismatched base pairs will be rejected)		
