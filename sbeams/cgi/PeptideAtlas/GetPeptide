@@ -662,7 +662,7 @@ sub handle_request {
     #### If QUERY was not selected, then tell the user to enter some parameters
     } else {
 
-        if ($sbeams->invocation_mode() eq 'http') {
+        if ($sbeams->invocation_mode() eq 'https') {
 
             print "<H4>Select parameters above and press QUERY</H4>\n";
 
