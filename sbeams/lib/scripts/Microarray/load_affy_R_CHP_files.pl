@@ -336,6 +336,8 @@ sub add_R_CHP_data {
 		}
 		$update_flag = 1 if $RUN_MODE eq 'update';	
 		
+		print "ORGANISM '". $affy_o->get_organism. "'\n";
+		
 		if ($affy_o->get_organism eq 'Yeast'){					#need to skip yeast arrays untill they can be processed in R
 			print "SKIPPING '" . $affy_o->get_afa_file_root() . "' THIS IS A YEAST CHIP\n" if ($VERBOSE >0);
 			next;
@@ -457,7 +459,7 @@ sub find_affy_R_CHP {
 		
 		print "ORGANISIM NAME '$organisim_name'\nSLIDE TYPE '$slide_type'" if ($VERBOSE > 0);
 		
-		$sbeams_affy->set_afs_organism_id($organisim_name);	#set the organisim name
+		$sbeams_affy->set_organism($organisim_name);	#set the organisim name
 		$sbeams_affy->set_array_slide_type($slide_type); 	#set the slide type
 #########################################################################
 ### Determine if a R_CHP file exists and set the path to it if it does 
