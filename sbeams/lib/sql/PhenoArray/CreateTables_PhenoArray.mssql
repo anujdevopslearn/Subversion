@@ -390,8 +390,8 @@ CREATE TABLE strain (
 	plasmid1_id			int NULL REFERENCES plasmid (plasmid_id),
 	plasmid2_id			int NULL REFERENCES plasmid (plasmid_id),
 	construction_method_id		int NOT NULL REFERENCES construction_method (construction_method_id),
-	source_contact_id		int NOT NULL /* REFERENCES contact (contact_id) */,
-	reference_citation_id		int NOT NULL REFERENCES citation (citation_id),
+	source_contact_id		int NULL /* REFERENCES contact (contact_id) */,
+	reference_citation_id		int NULL REFERENCES citation (citation_id),
 	comment				text NULL,
 	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	created_by_id			int NOT NULL /*REFERENCES contact(contact_id)*/,
@@ -409,6 +409,8 @@ CREATE TABLE strain_child (
 	child_strain_id			int NOT NULL REFERENCES strain (strain_id)
 )
 GO
+ALTER TABLE dbo.strain_child ADD CONSTRAINT strain_child_uk UNIQUE (strain_id,child_strain_id)
+GO
 
 
 CREATE TABLE strain_parent (
@@ -416,6 +418,10 @@ CREATE TABLE strain_parent (
 	parent_strain_id		int NOT NULL REFERENCES strain (strain_id)
 )
 GO
+ALTER TABLE dbo.strain_parent ADD CONSTRAINT strain_parent_uk UNIQUE (strain_id,parent_strain_id)
+GO
+
+
 
 
 CREATE TABLE sequence_modification (
