@@ -157,4 +157,4 @@ cd /net/dblocal/www/html/dev2/sbeams
 cvs commit
 
 
-Added new Ontology Module
+Added new Genotyping Module
