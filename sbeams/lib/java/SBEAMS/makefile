@@ -24,5 +24,8 @@ all: objs
 client: objs
 	java $(PKG).SBEAMSClient
 
+jar: objs
+	cd ..;jar -cf SBEAMS.jar SBEAMS/*.class; mv SBEAMS.jar SBEAMS
+
 clean:
 	- rm *.class
