@@ -1416,10 +1416,6 @@ sub displayResultSet {
     if ($self->output_mode() eq 'tsv' || $self->output_mode() eq 'excel') {
       my @row;
 
-      #### Set a very high page size if using defaults
-      $resultset_ref->{page_size} = 1000000
-        if ($resultset_ref->{default_values} eq 'YES');
-
       #### If the invocation_mode is http, provide a header
       if ($self->invocation_mode() eq 'http') {
         print "Content-type: text/tab-separated-values\n\n"
@@ -1427,6 +1423,10 @@ sub displayResultSet {
         print "Content-type: application/excel\n\n"
           if ($self->output_mode() eq 'excel');
       }
+
+      #### Set a very high page size if using defaults
+      $resultset_ref->{page_size} = 1000000
+        if ($rs_params_ref->{default_values} eq 'YES');
 
       #### Print all the rows with TABs.
       #### FIXME: Verify that there are no TABs in the data itself!
