@@ -30,6 +30,9 @@ use vars qw(@ISA @EXPORT
     $TBPS_DOMAIN_MATCH_TYPE
     $TBPS_DOMAIN_MATCH_SOURCE
 
+    $TBPS_DOMAIN
+    $TBPS_BIOSEQUENCE_ANNOTATION
+    $TBPS_TEST_TABLE
 );
 
 
@@ -50,6 +53,10 @@ require Exporter;
     $TBPS_DOMAIN_MATCH_TYPE
     $TBPS_DOMAIN_MATCH_SOURCE
 
+    $TBPS_DOMAIN
+    $TBPS_BIOSEQUENCE_ANNOTATION
+    $TBPS_TEST_TABLE
+
 );
 
 
@@ -69,4 +76,8 @@ $TBPS_QUERY_OPTION          = "${mod}query_option";
 $TBPS_DOMAIN_MATCH          = "${mod}domain_match";
 $TBPS_DOMAIN_MATCH_TYPE     = "${mod}domain_match_type";
 $TBPS_DOMAIN_MATCH_SOURCE   = "${mod}domain_match_source";
+
+$TBPS_DOMAIN                = "${mod}domain";
+$TBPS_BIOSEQUENCE_ANNOTATION   = "${mod}biosequence_annotation";
+$TBPS_TEST_TABLE            = "${mod}test_table";
 

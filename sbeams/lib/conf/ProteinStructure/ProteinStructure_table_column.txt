@@ -110,11 +110,39 @@ PS_query_option	3	option_key	Option Key	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Ke
 PS_query_option	4	option_value	Option Value	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Value of this key/value pair option		
 PS_query_option	5	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
 PS_query_option	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PS_query_option	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N			
-PS_query_option	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-PS_query_option	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
-PS_query_option	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
-PS_query_option	11	record_status	Record Status	char	1	0	N	N	N							N	N			
+PS_query_option	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+PS_query_option	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PS_query_option	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+PS_query_option	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+PS_query_option	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+PS_domain	1	domain_id	Domain ID	int	4	0	N		Y							N	N				pkDEFAULT
+PS_domain	2	domain_match_type_id	Domain Match Type	int	4	0	N		N	PS_domain_match_type	domain_match_type_id	Y	optionlist			Y	Y	Y	"Type of domain (e.g. PDB, PFAM)"		
+PS_domain	3	domain_name	Domain Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name (identifier) of this domain		
+PS_domain	4	EC_numbers	EC Numbers	varchar	255	0	Y		N			Y	text	50		Y	Y	N	EC Number(s) that corresponds to this domain.  Separate multiple numbers with a semicolon		
+PS_biosequence_annotation	1	biosequence_annotation_id	Domain Match Type	int	4	0	N		Y							N	N				pkDEFAULT
+PS_biosequence_annotation	2	biosequence_id	BioSequence	int	4	0	N		N	PS_biosequence	biosequence_id	Y	fixed			Y	Y	Y	BioSequence to which this annotation belongs		
+PS_biosequence_annotation	3	gene_symbol	Gene Symbol	varchar	255	0	Y		N			N	text	50		Y	Y	N	Gene Symbol to describe this protein (e.g. TLR2)		
+PS_biosequence_annotation	4	full_gene_name	Full Gene Name	varchar	255	0	Y		N			N	text	50		Y	Y	N	Full name of the gene (e.g. Toll-like Receptor 2)		
+PS_biosequence_annotation	5	functional_description	Functional Description	varchar	255	0	Y		N			N	textarea	3		Y	Y	N	Functional description of the protein		
+PS_biosequence_annotation	6	EC_numbers	EC Numbers	varchar	255	0	Y		N			N	text	50		Y	Y	N	EC Number(s) that corresponds to this domain.  Separate multiple numbers with a semicolon		
+PS_biosequence_annotation	7	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PS_biosequence_annotation	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PS_biosequence_annotation	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+PS_biosequence_annotation	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PS_biosequence_annotation	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+PS_biosequence_annotation	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+PS_biosequence_annotation	13	record_status	Record Status	char	1	0	N	N	N							N	N				
+PS_test_table	1	test_table_id	Domain Match Type	int	4	0	N		Y							N	N				pkDEFAULT
+PS_test_table	2	test_name	Domain Match Type Name	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Name of the type of the match		
+PS_test_table	3	description	Domain Match Type Description	varchar	255	0	N		N			Y	textarea	3		Y	Y	N	Longer description of this match type		
+PS_test_table	4	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Species for this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+PS_test_table	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PS_test_table	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PS_test_table	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+PS_test_table	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PS_test_table	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+PS_test_table	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+PS_test_table	11	record_status	Record Status	char	1	0	N	N	N							N	N			
 PS_BrowseBioSequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBPS_BIOSEQUENCE_SET ORDER BY sort_order,set_name"
 PS_BrowseBioSequence	2	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 PS_BrowseBioSequence	3	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
