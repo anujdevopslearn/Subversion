@@ -1867,7 +1867,8 @@ sub display_input_form {
   #### Query to obtain column information about this table or query
   $sql = qq~
       SELECT column_name,column_title,is_required,input_type,input_length,
-             is_data_column,column_text,optionlist_query,onChange
+             is_data_column,is_display_column,column_text,
+             optionlist_query,onChange
         FROM $TB_TABLE_COLUMN
        WHERE table_name='$TABLE_NAME'
          AND is_data_column='Y'
@@ -1879,13 +1880,14 @@ sub display_input_form {
   # First just extract any valid optionlist entries.  This is done
   # first as opposed to within the loop below so that a single DB connection
   # can be used.
-  # THIS IS LEGACY
+  # THIS IS LEGACY AND NO LONGER A USEFUL REASON TO DO SEPARATELY
   my %optionlist_queries;
   my $file_upload_flag = "";
   foreach $row (@columns_data) {
     my @row = @{$row};
     my ($column_name,$column_title,$is_required,$input_type,$input_length,
-        $is_data_column,$column_text,$optionlist_query,$onChange) = @row;
+        $is_data_column,$is_display_column,$column_text,
+        $optionlist_query,$onChange) = @row;
     if ($optionlist_query gt "") {
       $optionlist_queries{$column_name}=$optionlist_query;
     if ($input_type eq "file") {
@@ -1949,7 +1951,8 @@ sub display_input_form {
   foreach $row (@columns_data) {
     my @row = @{$row};
     my ($column_name,$column_title,$is_required,$input_type,$input_length,
-        $is_data_column,$column_text,$optionlist_query,$onChange) = @row;
+        $is_data_column,$is_display_column,$column_text,
+        $optionlist_query,$onChange) = @row;
 
     if ($onChange gt "") {
       $onChange = " onChange=\"$onChange\"";
@@ -1965,8 +1968,30 @@ sub display_input_form {
     }
 
 
-    if ($is_required eq "N") { print "<TR><TD><B>$column_title:</B></TD>\n"; }
-    else { print "<TR><TD><B><font color=red>$column_title:</font></B></TD>\n"; }
+    #### If some level of detail is chosen, don't show this constraint if
+    #### it doesn't meet the detail requirements
+    #print "input_form_format = ",$parameters{input_form_format},", - - ",
+    #  "is_display_column = ",$is_display_column,"<BR>\n";
+    if (defined($parameters{input_form_format})) {
+      if ( ($parameters{input_form_format} eq 'minimum_detail'
+                     && $is_display_column ne 'Y') ||
+           ($parameters{input_form_format} eq 'medium_detail'
+                     && $is_display_column eq '2')
+         ) {
+        print qq!
+          <TD><INPUT TYPE="hidden" NAME="$column_name"
+           VALUE="$parameters{$column_name}"></TD>
+        !;
+        next;
+      }
+    }
+
+
+    if ($is_required eq "N") {
+      print "<TR><TD><B>$column_title:</B></TD>\n";
+    } else {
+      print "<TR><TD><B><font color=red>$column_title:</font></B></TD>\n";
+    }
 
 
     if ($input_type eq "text") {
