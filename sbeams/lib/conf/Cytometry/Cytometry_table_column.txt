@@ -46,15 +46,16 @@ CY_query_option	11	record_status	Record Status	char	1	0	N	N	N							N	N
 CY_AddFCSRuns	1	project_id	Project	int	4	0	N	Urological Epithelial Stem Cells	N	project	project_id	Y	optionlist	4	refreshDocument()	Y	Y	N	Project to which the FCS Run belongs	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name + '['+P.budget+']'FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name + '['+P.budget+']',P.project_id"	
 CY_AddFCSRuns	2	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism from which this sample was acquired	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 CY_AddFCSRuns	3	filepath	Filepath	varchar	255	0	N		N			Y	text	50		Y	Y	N	Path where the FCS file to be added to this project are located (e.g. /users/adiercks/fcs/bugjuice).  This directory must be world readable to the server can read the files in it		
-CY_measured_parameters	1	measured_parameters_id	Measured Parameters ID	int	4				Y							N	N				pkDEFAULT
-CY_measured_parameters	2	measured_parameters_name	Measured Parameters Name	varchar	100				N			Y	optionlist	4		Y	Y	Y	Name of a New Measured Parameter	"SELECT measured_parameters_id,measured_parameters_name from $TBCY_MEASURED_PARAMETERS order by measured_parameters_name"	
-CY_measured_parameters	3	measured_parameters_description	Description of Measured Parameter	text	16				N				text	50		Y	Y				
-CY_measured_parameters	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			 				N	N				
-CY_measured_parameters	5	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
-CY_measured_parameters	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-CY_measured_parameters	7	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
-CY_measured_parameters	8	owner_group_id	Owner Group ID	int	4	0	N		N	work_group	work_group_id					N	N				
-CY_measured_parameters	9	record_status	Record Status	char	1	0	N	N	N							N	N				
+CY_measured_parameters	1	measured_parameters_id	Measured Parameters ID	int	4	0	N		Y							N	N				pkDEFAULT
+CY_measured_parameters	2	measured_parameters_name	Measured Parameters Name	varchar	100	0	N		N			Y	text	50		Y	Y	Y	Name of a New Measured Parameter		
+CY_measured_parameters	3	prefered_name	Prefered Name	varchar	255	0	Y		N			N	text	50		Y	Y	N	Prefered Name of this channel		
+CY_measured_parameters	4	measured_parameters_description	Description of Measured Parameter	text	16	0	Y		N			N	text	50		Y	Y				
+CY_measured_parameters	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			 				N	N				
+CY_measured_parameters	6	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
+CY_measured_parameters	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+CY_measured_parameters	8	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
+CY_measured_parameters	9	owner_group_id	Owner Group ID	int	4	0	N		N	work_group	work_group_id					N	N				
+CY_measured_parameters	10	record_status	Record Status	char	1	0	N	N	N							N	N				
 CY_sort_entity	1	sort_entity_id	Sort Entity ID	int	4	0	N		Y							N	N				pkDEFAULT
 CY_sort_entity	2	sort_entity_name	Sort Entity Name 	varchar	255	0	N		N			Y	text	50		Y	Y	Y	"Name of Sort Entity (eg.: Antibody name, Dye name)"		
 CY_sort_entity	3	sort_entity_description	Sort Entity Description	varchar	255	0	N		N			N	text	50		Y	Y		Short Description of Sort Entity		
@@ -85,31 +86,31 @@ CY_sort_type	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTA
 CY_sort_type	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 CY_sort_type	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 CY_sort_type	10	record_status	Record Status	char	1	0	N	N	N							N	N				
-CY_cytometry_sample	1	cytometry_sample_id	Cytometry Sample ID	int	4	0	N		Y							N	N	Y	Cytometry Sample ID		pkDEFAULT
-CY_cytometry_sample	2	project_id	Project	int	4	0	N		N	project	project_id	N				N	N	N	FK to project.project_id		
-CY_cytometry_sample	3	sample_tag	Sample Tag	varchar	50	0	N		N			Y	text	50		Y	Y	N	Sample Name.  Keep it short.  Do not use any strange characters like /\*&$() (e.g. NP Epi 03-123)		
-CY_cytometry_sample	4	full_sample_name	Full Sample Name	varchar	255	0	Y		N			Y	textarea	3		Y	Y	N	"Full Sample Name.  A longer, less cryptic name should be placed here.  It should be long enough so that someone else can understand quickly the general idea of the sample. (e.g. Epithelial cells FACS sorted from ""normal"" prostate tissue from specimen 03-123)"		
-CY_cytometry_sample	5	sample_provider_organization_id	Sample Provider	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	"Provider of this biomaterial (academic department, research lab, vendor, etc.)"	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE O.record_status != 'D' ORDER BY organization"	
-CY_cytometry_sample	6	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	N	Organism from which the biomaterial was derived	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
-CY_cytometry_sample	7	strain_or_line	Strain or Line	varchar	255	0	Y		N			N	text	50		Y	Y	N	Strain or line of the individual		
-CY_cytometry_sample	8	individual	Individual	varchar	255	0	Y		N			N	text	50		Y	Y	N	Identifier or name of the individual organism from which the biomaterial was derived		
-CY_cytometry_sample	9	sex_ontology_term_id	Sex	int	4	0	Y		N			N	optionlist			Y	Y	N	Sex of the individual	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"	
-CY_cytometry_sample	10	age	Age	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Age of the individual at the time of harvest of the biomaterial.  Free form text; include units, developmental stage, and reference point as appropriate (e.g., days since planting, years after birth, minutes after death)"	
-CY_cytometry_sample	11	organism_part	Organism Part	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Part of the organism's anatomy from the biomaterial was derived, excludes cells. (e.g., tissue, organ, system, or body location)"	
-CY_cytometry_sample	12	cell_line	Cell Line	varchar	255	0	Y		N			N	text	50		Y	Y	N	Identifier for the cell line if one was used as a biomaterial	
-CY_cytometry_sample	13	cell_type	Cell Type	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Type of cell used as the biomaterial (e.g., epithelial, glial, etc.)"	
-CY_cytometry_sample	14	disease_state	Disease State	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Name of the pathology diagnosed in the organism from which the biomaterial was derived.  The disease state is ""normal"" if no disease state has been diagnosed."	
-CY_cytometry_sample	15	cytometry_sample_protocol_ids	Cytometry Sample Protocols	varchar	255	0	Y		N	MA_affy_array_sample_protocol	affy_array_sample_id	N	multilink	4		Y	Y	N	Select all protocols that apply to this biomaterial.  Describe sequence of protocols in the Treatment Description below	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE P.record_status != 'D' ORDER BY P.name"
+CY_cytometry_sample	1	cytometry_sample_id	Cytometry Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
+CY_cytometry_sample	2	fcs_run_id	Fcs ID	int	4	0	Y		N	fcs_run	fcs_run_id	Y				N	Y	N	FK to fcs_run.fcs_run_id		
+CY_cytometry_sample	3	project_id	Project	int	4	0	N		N	project	project_id	N				N	N	N	FK to project.project_id		
+CY_cytometry_sample	4	sample_tag	Sample Tag	varchar	50	0	N		N			Y	text	50		Y	Y	N	Sample Name.  Keep it short.  Do not use any strange characters like /\*&$() (e.g. NP Epi 03-123)		
+CY_cytometry_sample	5	full_sample_name	Full Sample Name	varchar	255	0	Y		N			Y	textarea	3		Y	Y	N	"Full Sample Name.  A longer, less cryptic name should be placed here.  It should be long enough so that someone else can understand quickly the general idea of the sample. (e.g. Epithelial cells FACS sorted from ""normal"" prostate tissue from specimen 03-123)"		
+CY_cytometry_sample	6	sample_provider_organization_id	Sample Provider	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	"Provider of this biomaterial (academic department, research lab, vendor, etc.)"	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE O.record_status != 'D' ORDER BY organization"	
+CY_cytometry_sample	7	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	N	Organism from which the biomaterial was derived	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+CY_cytometry_sample	8	strain_or_line	Strain or Line	varchar	255	0	Y		N			N	text	50		Y	Y	N	Strain or line of the individual		
+CY_cytometry_sample	9	individual	Individual	varchar	255	0	Y		N			N	text	50		Y	Y	N	Identifier or name of the individual organism from which the biomaterial was derived	
+CY_cytometry_sample	10	sex_ontology_term_id	Sex	int	4	0	Y		N			N	optionlist			Y	Y	N	Sex of the individual	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"
+CY_cytometry_sample	11	age	Age	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Age of the individual at the time of harvest of the biomaterial.  Free form text; include units, developmental stage, and reference point as appropriate (e.g., days since planting, years after birth, minutes after death)"	
+CY_cytometry_sample	12	organism_part	Organism Part	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Part of the organism's anatomy from the biomaterial was derived, excludes cells. (e.g., tissue, organ, system, or body location)"	
+CY_cytometry_sample	13	cell_line	Cell Line	varchar	255	0	Y		N			N	text	50		Y	Y	N	Identifier for the cell line if one was used as a biomaterial	
+CY_cytometry_sample	14	cell_type	Cell Type	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Type of cell used as the biomaterial (e.g., epithelial, glial, etc.)"	
+CY_cytometry_sample	15	disease_state	Disease State	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Name of the pathology diagnosed in the organism from which the biomaterial was derived.  The disease state is ""normal"" if no disease state has been diagnosed."	
 CY_cytometry_sample	16	protocol_deviations	Protocol Deviations	text	16	0	Y		N			N	textarea	4		Y	Y	N	Describe any deviations from the selected protocols	
 CY_cytometry_sample	17	sample_description	Sample Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Describe the biomaterial briefly	
 CY_cytometry_sample	18	sample_preparation_date	Sample Preparation Date	datetime	8	0	N		N			N	text	30		Y	Y	Y	Date/time the biomaterial was prepared with the described protocols	
 CY_cytometry_sample	19	treatment_description	Treatment Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	"Describe the treatment of the biomaterials, including mention of the selected protocols"	
-CY_cytometry_sample	20	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes	
+CY_cytometry_sample	29	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes	
 CY_cytometry_sample	21	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	Y	N		
 CY_cytometry_sample	22	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N	Y		
 CY_cytometry_sample	23	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N		
 CY_cytometry_sample	24	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N	Y		
-CY_cytometry_sample	25	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y		
+CY_cytometry_sample	25	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
 CY_cytometry_sample	26	record_status	Record Status	char	1	0	N	N	N							N	N	N			
 CY_fcs_run_data_point	1	fcs_data_point_id	Data Point ID	int	4	0	N		Y							N	N	Y	Run Data Point ID		pkDEFAULT
 CY_fcs_run_data_point	2	fcs_run_parameters_id	Run Parameters ID	int	4	0	N		N	fcs_run_parameters	fcs_run_parameters_id	Y				Y	N	N	FK to fcs_run_parameters		
