@@ -43,10 +43,36 @@ sub new {
 # printPageHeader
 ###############################################################################
 sub printPageHeader {
+  my $self = shift;
+  $self->display_page_header(@_);
+}
+
+
+###############################################################################
+# display_page_header
+###############################################################################
+sub display_page_header {
     my $self = shift;
     my %args = @_;
 
+
+    #### Process the arguments list
     my $navigation_bar = $args{'navigation_bar'} || "YES";
+
+
+    #### If the output mode is interactive text, display text header
+    my $sbeams = $self->getSBEAMS();
+    if ($sbeams->output_mode() eq 'interactive') {
+      $sbeams->printTextHeader();
+      return;
+    }
+
+
+    #### If the output mode is not html, then we don't want a header here
+    if ($sbeams->output_mode() ne 'html') {
+      return;
+    }
+
 
     #### Obtain main SBEAMS object and use its http_header
     $sbeams = $self->getSBEAMS();
@@ -99,12 +125,13 @@ sub printPageHeader {
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequences</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_strain"><nobr>&nbsp;&nbsp;&nbsp;Strains</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_ploidy"><nobr>&nbsp;&nbsp;&nbsp;Ploidy</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_mating_type"><nobr>&nbsp;&nbsp;&nbsp;Mating Type</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_construction_method"><nobr>&nbsp;&nbsp;&nbsp;Construct Method</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_ploidy"><nobr>&nbsp;&nbsp;&nbsp;(Ploidy)</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_mating_type"><nobr>&nbsp;&nbsp;&nbsp;(Mating Type)</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_plasmid"><nobr>&nbsp;&nbsp;&nbsp;Plasmids</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_condition"><nobr>&nbsp;&nbsp;&nbsp;Conditions</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_plate"><nobr>&nbsp;&nbsp;&nbsp;Plates</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_strain"><nobr>&nbsp;&nbsp;&nbsp;Strains</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/PhenoLoad.cgi"><nobr>&nbsp;&nbsp;&nbsp;Phenotype Loader</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
@@ -189,23 +216,60 @@ sub printJavascriptFunctions {
 
 
 
-
-
 ###############################################################################
 # printPageFooter
 ###############################################################################
 sub printPageFooter {
   my $self = shift;
-  my $flag = shift || "CloseTablesAndPrintFooter";
+  $self->display_page_footer(@_);
+}
 
-  if ($flag =~ /CloseTables/) {
+
+###############################################################################
+# display_page_footer
+###############################################################################
+sub display_page_footer {
+  my $self = shift;
+  my %args = @_;
+
+
+  #### If the output mode is interactive text, display text header
+  my $sbeams = $self->getSBEAMS();
+  if ($sbeams->output_mode() eq 'interactive') {
+    $sbeams->printTextHeader(%args);
+    return;
+  }
+
+
+  #### If the output mode is not html, then we don't want a header here
+  if ($sbeams->output_mode() ne 'html') {
+    return;
+  }
+
+
+  #### Process the arguments list
+  my $close_tables = $args{'close_tables'} || 'YES';
+  my $display_footer = $args{'display_footer'} || 'YES';
+  my $separator_bar = $args{'separator_bar'} || 'NO';
+
+
+  #### If closing the content tables is desired
+  if ($close_tables eq 'YES') {
     print qq~
 	</TD></TR></TABLE>
 	</TD></TR></TABLE>
     ~;
   }
 
-  if ($flag =~ /Footer/) {
+
+  #### If displaying a fat bar separtor is desired
+  if ($separator_bar eq 'YES') {
+    print "<BR><HR SIZE=5 NOSHADE><BR>\n";
+  }
+
+
+  #### If finishing up the page completely is desired
+  if ($display_footer eq 'YES') {
     print qq~
 	<BR><HR SIZE="2" NOSHADE WIDTH="30%" ALIGN="LEFT">
 	SBEAMS - $SBEAMS_PART [Under Development]<BR><BR><BR>
@@ -213,7 +277,7 @@ sub printPageFooter {
     ~;
   }
 
-}
+} # end display_page_footer
 
 
 ###############################################################################
