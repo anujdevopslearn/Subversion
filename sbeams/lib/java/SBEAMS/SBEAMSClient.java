@@ -14,7 +14,7 @@ public class SBEAMSClient {
   private String userName; 
   private String password;
   private boolean useGui = false;
-
+  private int passwordAttempts = 3;
   private static boolean DEBUG = false;
   private static String COOKIE_URL = "https://db.systemsbiology.net/sbeams/cgi/main.cgi";
   private static String DEFAULT_COOKIE_FILE = "./.sbeamsCookie";
@@ -89,6 +89,10 @@ public class SBEAMSClient {
   public String getCookie() {
 	return cookie;
   }//getCookie
+//-----------------------------------------------------------------------------------------------
+  public void setCookie(String cookie) {
+	this.cookie = cookie;
+  }//setCookie
 //-----------------------------------------------------------------------------------------------
   public boolean goodCookie() {
 	if (cookie == null)
@@ -165,7 +169,6 @@ public class SBEAMSClient {
 //-----------------------------------------------------------------------------------------------
   private Response postRequest (String urlString, String params)
     throws Exception {
-
 	URL url = new URL(urlString);
 	HttpURLConnection uc = (HttpURLConnection)url.openConnection();
 	uc.setDoInput(true);
@@ -191,18 +194,17 @@ public class SBEAMSClient {
 	  sb.append(inputLine + "\n");
 	}
 	in.close();
+
 	Response res = new Response();
 	res.content = sb.toString();
 	res.contentType = uc.getHeaderField("Content-Type");
 	res.cookie = uc.getHeaderField("Set-Cookie");
-
 	return res;
 
   }//postRequest
 //-----------------------------------------------------------------------------------------------
-  public String fetchSbeamsPage (String urlString, String params) throws Exception {
-	if (userName == null || password == null)
-	  promptForUsernamePassword();
+  public String fetchSbeamsPage (String urlString, String params) 
+	throws Exception{
 	if (cookie == null)
 	  fetchCookie();
 	String paramsInUrl = new String();
@@ -224,12 +226,12 @@ public class SBEAMSClient {
 
   }//fetchSbeamsPage
 //-----------------------------------------------------------------------------------------------
-  public String fetchSbeamsPage (String url) throws Exception {
-	if (userName == null || password == null)
-	  promptForUsernamePassword();
+  public String fetchSbeamsPage (String url) 
+	throws Exception{
 	if (cookie == null)
 	  fetchCookie();
    	return fetchSbeamsPage (url, "");
+
   }//fetchSbeamsPage
 //-----------------------------------------------------------------------------------------------
   protected boolean promptForUsernamePassword() {
@@ -282,27 +284,33 @@ public class SBEAMSClient {
 	return success;
   }//promptForUsernamePassword
 //-----------------------------------------------------------------------------------------------
-  private void fetchCookie()
-	throws Exception {
-	StringBuffer params = new StringBuffer();
+  private void fetchCookie() throws Exception{
+	while (passwordAttempts > 0) {
+	  if (userName == null || password== null)
+		promptForUsernamePassword();
 
-	if (userName == null || password== null)
-	  throw new Exception( "Need userName and password to retrieve cookie" );
-
-	//setting the trusted connection			
-	params.append("username");
-	params.append("=");
-	params.append(URLEncoder.encode(userName, "UTF8"));
-	params.append("&");
-	params.append("password");
-	params.append("=");
-	params.append(URLEncoder.encode(password, "UTF8"));
-	params.append("&");
-	params.append("login");
-	params.append("=");
-	params.append(URLEncoder.encode(" Login ", "UTF8"));
-	Response res = postRequest(COOKIE_URL, params.toString());
-	this.cookie = res.cookie;
+	  StringBuffer params = new StringBuffer();
+	  //setting the trusted connection			
+	  params.append("username");
+	  params.append("=");
+	  params.append(URLEncoder.encode(userName, "UTF8"));
+	  params.append("&");
+	  params.append("password");
+	  params.append("=");
+	  params.append(URLEncoder.encode(password, "UTF8"));
+	  params.append("&");
+	  params.append("login");
+	  params.append("=");
+	  params.append(URLEncoder.encode(" Login ", "UTF8"));
+	  Response res = postRequest(COOKIE_URL, params.toString());
+	  this.cookie = res.cookie;
+	  if (res.cookie == null) {
+		password = null;
+		passwordAttempts--;
+	  }else {
+		break;
+	  }
+	}
   }
 //-----------------------------------------------------------------------------------------------
   public static void main (String [] args) {
