@@ -89,6 +89,11 @@ sub decrypt {
   die ( "No string provided for decryption" ) unless $this->{encrypted};
   die ( "No key provided for decryption" ) unless $this->{key};
 
+  if ( $this->{decrypted} !~ /^[a-fA-F0-9]+$/ ) {
+    print STDERR "Rejected attempt to decrypt non-hex value\n";
+    return undef;
+    }
+
   my $cipher = new Crypt::CBC( $this->{key}, 'IDEA');
   $this->{decrypted} = $cipher->decrypt_hex( $this->{encrypted} );
   return $this->{decrypted}
