@@ -126,8 +126,8 @@ sub wanted
 sub processFile 
 {
   my $fcsFile = shift;
-  print "this ie the fjile: $fcsFile\n";
-  getc;
+  print "this ie the file: $fcsFile\n";
+
   return if ! defined($fcsFile); 
   return  if ($fcsFile !~ /\.fcs$/i);
   return if $fcsFile !~ /\/\d{4}/;
