@@ -781,6 +781,14 @@ sub postProcessResultset {
     my $rosetta_best_domains = 0;
 
 
+    #### Look for imported annotations and show those
+    for (my $i=$startrow; $i<=$endrow; $i++) {
+      if ($rows[$i]->[$match_type_column_index] eq 'NgAnnot') {
+        push(@new_data_array,$rows[$i]);
+      }
+    }
+
+
     #### Look for pdbblast hits and store carefully
     my %pdbblast_domains = ();
     for (my $i=$startrow; $i<=$endrow; $i++) {
