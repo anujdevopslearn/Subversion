@@ -21,7 +21,8 @@ use lib qw (../lib/perl);
 use vars qw ($q $sbeams $sbeamsMAW $dbh $current_contact_id $current_username
              $current_work_group_id $current_work_group_name
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
-             $PK_COLUMN_NAME @MENU_OPTIONS);
+             $PK_COLUMN_NAME @MENU_OPTIONS
+             $DEFAULT_COST_SCHEME);
 use DBI;
 use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
@@ -46,6 +47,7 @@ $sbeamsMAW->setSBEAMS($sbeams);
 # Global Variables
 ###############################################################################
 $TABLE_NAME = "array_request";
+$DEFAULT_COST_SCHEME = 1;
 main();
 
 
@@ -195,7 +197,7 @@ sub printEntryForm {
 
     #### Extract the value of cost_scheme_id or default to 1.
     #### FIX ME!! Do we have to hard-code the default value here??
-    $parameters{cost_scheme_id} = 1 unless ( $parameters{cost_scheme_id} > 1 );
+    $parameters{cost_scheme_id} = $DEFAULT_COST_SCHEME unless ( $parameters{cost_scheme_id} => 1 );
     my $cost_scheme_id = $parameters{cost_scheme_id};
 
 
@@ -273,9 +275,11 @@ sub printEntryForm {
         }
 
 
-        # If $element is cost_scheme, restrict the list to the current option
+        #### If $element is cost_scheme, restrict the list to the current option
+        #### unless the user is working under the Arrays group
         if ( $element eq "cost_scheme_id" && $current_work_group_name ne "Arrays" ) {
-          $optionlist_queries{$element} =~ s/ORDER BY/WHERE cost_scheme_id = $cost_scheme_id ORDER BY/;
+          $optionlist_queries{$element} =~
+            s/ORDER BY/WHERE cost_scheme_id = $cost_scheme_id ORDER BY/;
         }
 
 
@@ -730,6 +734,11 @@ sub processEntryForm {
     }
 
 
+    #### Extract the value of cost_scheme_id or default to 1.
+    #### FIX ME!! Do we have to hard-code the default value here??
+    $parameters{cost_scheme_id} = $DEFAULT_COST_SCHEME unless ( $parameters{cost_scheme_id} => 1 );
+    my $cost_scheme_id = $parameters{cost_scheme_id};
+
 
     # Check for missing required information
     my @required_columns = 
@@ -1149,9 +1158,11 @@ sub processEntryForm {
 
       if ($parameters{"slide_type_id"}) {
         $sql_query = qq!
-		SELECT $n_slides * price
-		  FROM $TB_SLIDE_TYPE
-		 WHERE slide_type_id='$parameters{"slide_type_id"}'
+		SELECT $n_slides * STC.price
+		  FROM $TB_SLIDE_TYPE ST
+		  JOIN $TB_SLIDE_TYPE_COST STC ON ( ST.slide_type_id = STC.slide_type_id )
+		 WHERE ST.slide_type_id='$parameters{"slide_type_id"}'
+		   AND STC.cost_scheme_id = $cost_scheme_id
         !;
         @row_result = $sbeams->selectOneColumn($sql_query);
         my ($slide_cost) = @row_result;
@@ -1401,7 +1412,7 @@ sub printCompletedEntry {
 
     #### Extract the value of cost_scheme_id or default to 1.
     #### FIX ME!! Do we have to hard-code the default value here??
-    $parameters{cost_scheme_id} = 1 unless ( $parameters{cost_scheme_id} > 1 );
+    $parameters{cost_scheme_id} = $DEFAULT_COST_SCHEME unless ( $parameters{cost_scheme_id} => 1 );
     my $cost_scheme_id = $parameters{cost_scheme_id};
 
 
@@ -1678,9 +1689,11 @@ sub printCompletedEntry {
 
       if ($parameters{"slide_type_id"}) {
         $sql_query = qq!
-		SELECT $n_slides * price
-		  FROM $TB_SLIDE_TYPE
-		 WHERE slide_type_id='$parameters{"slide_type_id"}'
+		SELECT $n_slides * STC.price
+		  FROM $TB_SLIDE_TYPE ST
+		  JOIN $TB_SLIDE_TYPE_COST STC ON ( ST.slide_type_id = STC.slide_type_id )
+		 WHERE ST.slide_type_id='$parameters{"slide_type_id"}'
+		   AND STC.cost_scheme_id = $cost_scheme_id
         !;
         @row_result = $sbeams->selectOneColumn($sql_query);
         my ($slide_cost) = @row_result;
