@@ -406,7 +406,7 @@ sub insertGeneExpression {
 
   my %transform_map = (
 		       '1000'=>sub{return $condition_id;},
-		       $full_name_column=>sub{return substr shift @_ ,0,255;} 
+		       $full_name_column=>sub{return substr shift @_ ,0,1024;} 
 		       );
 
   ## For debugging purposes, we can print out the column mapping
