@@ -1721,11 +1721,9 @@ sub displayResultSetControls {
     #### If this resulset has a name, show it and the date is was created
     if (defined($rs_params_ref->{cached_resultset_id})) {
       print qq~
-        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-        Query Name: <INPUT TYPE="text" NAME="query_name" SIZE=25
-        VALUE="$rs_params_ref->{resultset_name}">
-        $rs_params_ref->{date_created}
-        <A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=cached_resultset&cached_resultset_id=$rs_params_ref->{cached_resultset_id}">[Annotate Resultset]</A>
+        <BR><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=cached_resultset&cached_resultset_id=$rs_params_ref->{cached_resultset_id}">[Annotate Resultset]</A>
+        Name: '$rs_params_ref->{resultset_name}'
+        ($rs_params_ref->{date_created})
       ~;
     }
 
@@ -1952,11 +1950,10 @@ sub readResultSet {
     my @row = $self->selectSeveralColumns($sql);
 
     if (scalar(@row)) {
-      $resultset_params_ref->{cached_resultset_id} = $row[0];
-      $resultset_params_ref->{resultset_name} = $row[1];
-      $resultset_params_ref->{date_created} = $row[2];
+      $resultset_params_ref->{cached_resultset_id} = $row[0]->[0];
+      $resultset_params_ref->{resultset_name} = $row[0]->[1];
+      $resultset_params_ref->{date_created} = $row[0]->[2];
     }
-
 
     #### Update timing info
     $timing_info->{finished_resultset} = [gettimeofday()];
@@ -1981,6 +1978,7 @@ sub writeResultSet {
     my $resultset_file_ref = $args{'resultset_file_ref'};
     $resultset_ref = $args{'resultset_ref'};
     my $query_parameters_ref = $args{'query_parameters_ref'};
+    my $resultset_params_ref = $args{'resultset_params_ref'};
     my $file_prefix = $args{'file_prefix'} || 'query_';
     my $query_name = $args{'query_name'} || '';
 
@@ -2021,7 +2019,7 @@ sub writeResultSet {
         query_name=>$query_name,
         cache_descriptor=>$resultset_file,
       );
-      $self->updateOrInsertRow(
+      my $cached_resultset_id = $self->updateOrInsertRow(
         insert=>1,
         table_name=>$TB_CACHED_RESULTSET,
         rowdata_ref=>\%rowdata,
@@ -2029,6 +2027,14 @@ sub writeResultSet {
         return_PK=>1,
         add_audit_parameters=>1,
       );
+
+      #### Fill in some information about this resultset
+      $resultset_params_ref->{cached_resultset_id} = $cached_resultset_id;
+      $resultset_params_ref->{resultset_name} = '';
+      my ($sec,$min,$hour,$mday,$mon,$year) = localtime(time);
+      my $timestr = strftime("%Y%m%d-%H%M%S",$sec,$min,$hour,$mday,$mon,$year);
+      $resultset_params_ref->{date_created} = $timestr;
+
     }
 
 

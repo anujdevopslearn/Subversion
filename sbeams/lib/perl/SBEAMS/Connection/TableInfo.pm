@@ -263,6 +263,25 @@ sub returnTableInfo {
     }
 
 
+###############################################################################
+    if ($table_name eq "cached_resultset") {
+        my $current_contact_id = $self->getCurrent_contact_id();
+
+        if ($info_key eq "BASICQuery") {
+            return qq~
+		SELECT CR.cached_resultset_id,username,CR.date_created,
+		       CR.query_name,CR.resultset_name,CR.cache_descriptor
+		  FROM $TB_CACHED_RESULTSET CR
+		  JOIN $TB_USER_LOGIN UL ON ( CR.contact_id = UL.contact_id )
+		 WHERE CR.record_status!='D'
+		   AND UL.record_status!='D'
+		   AND CR.contact_id = '$current_contact_id'
+		 ORDER BY CR.date_created DESC,CR.resultset_name
+            ~;
+        }
+
+    }
+
 
 ###############################################################################
 ###############################################################################
@@ -471,6 +490,12 @@ sub returnTableInfo {
         $url_cols{$element} = "%V";
       }
     }
+
+
+    if ($table_name eq "cached_resultset") {
+      $url_cols{cache_descriptor} = "$CGI_BASE_DIR/%3V?apply_action=VIEWRESULTSET&rs_set_name=%5V";
+    }
+
 
     return %url_cols;
   }
