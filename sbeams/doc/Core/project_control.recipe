@@ -1,0 +1,133 @@
+$Id$
+This is a brief primer on putting tables under project control.  As background,
+there are currently 2 permission modes in sbeams, variously called table-based
+and project-based, or mode 1 and mode 2 permissions [reference].  Table-based
+permissions are derived from user or group permissions granted via the
+table_group_security table; project-based permissions are derived from the
+permissions granted a user or group on a specific project.
+
+A) The first step is to determine which table(s) in the module you are working
+on should be under project control.  In order to be under project control, the
+table must either have a project_id field (e.g.  microarray.dbo.array) or be
+unambiguously related to such a table via a foreign key relationship
+(e.g.  microarray.dbo.array_quantitation).  Details for these two examples is 
+shown below.
+
+B) Since most tables are updated/written via the ManageTable mechanism, this 
+document will use this as an example.   There are two files that must be updated
+in order to put a table under project control.  First you must define SQL that
+is specific for your table in /lib/perl/SBEAMS/$module/TableInfo.pm (C below),
+and second you must add a conditional to an existing logic block in the 
+ManageTable.cgi script (D below).
+
+C) The TableInfo.pm files are used to define table-specific SQL for display and 
+manipulation of various tables within a given module.  There are two specific
+methods that must my modified here.  First, place a block in the subroutine
+returnTableInfo() to return 2 bits of SQL: one is to get the array_id from the
+foreign key related table (if any) given that foreign key.  For instance, in the
+array_quantitation table, the user must specify an array_scan.  The array_scan
+in turn implies an array, which has a project_id.  The second bit of SQL defines
+the relationship of an existing row in that table in question to the project_id.
+The array quantitation code is shown here:
+
+  } elsif ( uc($table_name) eq 'MA_ARRAY_QUANTITATION') { # array_quant table
+
+      if ( $info_key eq "projPermSQL" ) { 
+        my %projectSQL;
+
+        $projectSQL{fsql} =<<"        END";
+        SELECT project_id FROM $TBMA_ARRAY arr
+	       INNER JOIN $TBMA_ARRAY_SCAN ascan
+          ON arr.array_id = ascan.array_id
+	      WHERE array_scan_id = KEYVAL
+        END
+
+        $projectSQL{dbsql} =<<"        END";
+        SELECT project_id 
+        FROM $TBMA_ARRAY_SCAN ascan 
+         INNER JOIN $TBMA_ARRAY arr 
+          ON arr.array_id = ascan.array_id
+         INNER JOIN $TBMA_ARRAY_QUANTITATION aqu 
+          ON ascan.array_scan_id = aqu.array_scan_id
+        WHERE array_quantitation_id = KEYVAL 
+        END
+
+        return \%projectSQL
+      }
+
+  Note:  1> The info_key (second argument to returnTableInfo) is projPermSQL
+         2> The return value is a hashref with two keys, fsql and dbsql, for 
+         the foreign-key and existing db record respectivly.
+         3) The SQL should include the string KEYVAL, which will be interpolated
+         by the caller to specify the appropriate value.
+         4> Most table will have an exiting elsif tablename = block into which
+         you should integrate the new code.
+         5> In the event that the table in question has a project_id field, you
+         may simply define the fsql to be an empty string.
+
+
+The second bit of code is integrated into a similar conditional block inside
+the subroutine getParentProject.  The code for array_quantitation is shown here:
+
+  } elsif ( uc($table_name) eq 'MA_ARRAY_QUANTITATION') { # array_quant table
+
+    #### If the user wants to INSERT, determine how it fits into project
+    if ($action eq 'INSERT') {
+      # No parent project yet, for object doesn't exist.
+      return undef;
+
+    #### Else for an UPDATE or DELETE, determine how it fits into project
+    } elsif ($action eq 'UPDATE' || $action eq 'DELETE') {
+
+      if ( $parameters_ref->{array_quantitation_id} ) {
+        # array_quant table has array_scan_id, array_scan has array_id, 
+      	# array has project_id.
+        $sqlref->{dbsql} =~ s/KEYVAL/$parameters_ref->{array_quantitation_id}/;
+        ( $project_id ) = $sbeams->selectOneColumn( $sqlref->{dbsql} );
+      }
+    }
+    return ( $project_id ) ? $project_id : undef;
+
+  Note: 1> A call to returnTableInfo ( $TABLE_NAME, 'projPermSQL' ) is made at
+  the top of this conditional block.  
+  2> After checking for the existence of the table primary key (must exist for
+  UPDATE/DELETE), substitute for KEYVAL and return project_id if found.
+
+D) Finally, place a block of code in the $module/ManageTable.cgi 
+preUpdateDataCheck() to allow checking before INSERT/UPDATE/DELETE of a row in
+an affected table.  The code for MA_array_quantitation is shown here:
+
+  } elsif ($TABLE_NAME eq "MA_array_quantitation") {
+    
+    # Must have an array_scan_id
+    return "Error: array_id not defined" if !$parameters{array_scan_id};
+
+    my $errstr = checkPermission( fkey => 'array_scan_id',
+                                  fval => $parameters{array_scan_id},
+                                  pval => $parameters{array_quantification_id},
+                                  action => $parameters{action},
+                                  tname => $TABLE_NAME );
+
+    return ( $errstr ) if $errstr;
+
+
+  Note: 1> By design, returning a string will be caught as an error and 
+        displayed on an error page. 
+        2> The checkPermission routine will return undef if the user has 
+        adequate permissions to perform the requested action.
+        3> Should generally return error string if found, else allow 
+        conditional block to continue; there may be other checks being run
+        further down code path.
+        4> The checkPermission arguments are:
+        fkey => name of foreign key for table relating this table to project_id,        should use 'project_id' if table has project_id (e.g. array).
+        fval => value of said foreign key.  May be ommitted if table has 
+        project_id.
+        pval => name of primary key for this table.
+        action => pass through $parameters{action}, UPDATE/INSERT/DELETE.
+        tname => pass through $TABLE_NAME, of the form MA_ARRAY
+        
+
+
+http://db.systemsbiology.net/cgi-bin/viewcvs/viewcvs.cgi/sbeams/cgi/Microarray/ManageTable.cgi.diff?r1=1.13&r2=1.14
+
+
