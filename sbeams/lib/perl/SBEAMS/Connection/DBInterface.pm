@@ -33,7 +33,7 @@ use GD::Graph::bars;
 use GD::Graph::xypoints;
 
 
-#use lib "/net/db/src/CPAN/Data-ShowTable-3.3a/blib/lib";
+#use lib "/net/db/src/CPAN/Data-ShowTable-3.3b/blib/lib";
 #use Data::ShowTableTest;
 use Data::ShowTable;
 
