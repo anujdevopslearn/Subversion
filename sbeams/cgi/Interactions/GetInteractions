@@ -457,12 +457,12 @@ sub handle_request {
 
   #### Define the hypertext links for columns that need them
   %url_cols = (
-    	       'Interaction ID' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IN_Interaction&interaction_id=\%V",
+    	       'Interaction ID' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IN_interaction&interaction_id=\%V",
     	       'Interaction ID_ATAG' => 'TARGET="Win1"',
 
-    	       'BE1 Link' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IN_Bioentity&bioentity_id=\%$colnameidx{bioentity_id1}V",
+    	       'BE1 Link' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IN_bioentity&bioentity_id=\%$colnameidx{bioentity_id1}V",
     	       'BE1 Link_ATAG' => 'TARGET="Win1"',
-    	       'BE2 Link' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IN_Bioentity&bioentity_id=\%$colnameidx{bioentity_id2}V",
+    	       'BE2 Link' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IN_bioentity&bioentity_id=\%$colnameidx{bioentity_id2}V",
     	       'BE2 Link_ATAG' => 'TARGET="Win1"',
 
     	       'BioEntity 1 Common Name' => "$base_url?bioentity_common_name=\%$colnameidx{bioentity_common_name1}V&apply_action=$pass_action",
