@@ -1388,7 +1388,7 @@ sub buildAtlas {
 
  
        ## surround string with quotes: ?
-       $APD_is_subpeptide_of{$sub_pep_acc} = '"'.$APD_is_subpeptide_of{$sub_pep_acc}.'"';
+#      $APD_is_subpeptide_of{$sub_pep_acc} = '"'.$APD_is_subpeptide_of{$sub_pep_acc}.'"';
 
        ## update table peptide_instance
        my %rowdata = ( ##   peptide instance       some of the table attributes:
