@@ -83,7 +83,7 @@ sub returnTableInfo {
   if ($table_name eq "IS_assay") {
         if ($info_key eq "BASICQuery") {
             return qq~	
-		SELECT assay_id,project_tag,tissue_type_name,
+		SELECT SS.assay_id,project_tag,tissue_type_name,
 			specimen_block_name,antibody_name,assay_name,
 			assay_description
 			FROM $TBIS_ASSAY SS
@@ -94,8 +94,10 @@ sub returnTableInfo {
 			ON ( SB.specimen_id = S.specimen_id )
 			LEFT JOIN $TBIS_TISSUE_TYPE TT
 			ON ( S.tissue_type_id = TT.tissue_type_id )
+			Left Join $TBIS_ASSAY_CHANNEL AC 
+			on (SS.assay_id = AC.assay_id)
 			LEFT JOIN $TBIS_ANTIBODY A
-			ON ( SS.antibody_id = A.antibody_id )	
+			ON ( AC.antibody_id = A.antibody_id )	
 			WHERE SS.record_status!='D'	
 			ORDER BY SS.assay_id,project_tag,tissue_type_name,specimen_block_name,		
 			A.sort_order,A.antibody_name,SS.assay_name
@@ -126,7 +128,7 @@ sub returnTableInfo {
 		  LEFT JOIN $TBIS_TISSUE_TYPE TT
 		       ON ( S.tissue_type_id = TT.tissue_type_id )
 		  LEFT JOIN $TBIS_ANTIBODY A
-		       ON ( SS.antibody_id = A.antibody_id )
+		       ON ( AC.antibody_id = A.antibody_id )
 		 WHERE SS.record_status!='D'
                    AND SI.record_status!='D'
 		 ORDER BY project_tag,tissue_type_name,specimen_block_name,
