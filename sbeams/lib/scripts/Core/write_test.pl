@@ -172,10 +172,12 @@ sub showMainPage {
     table_name=>'sbeams.dbo.test',
     rowdata_ref=>\%rowdata,
     PK=>'test_id',
+    #PK_value=>21,
     return_PK=>1,
     return_error=>\$returned_error,
     verbose=>$VERBOSE,
     testonly=>$TESTONLY,
+    #add_audit_parameters=>1,
   );
   print "\nresult = ",$result,"\n";
   print "returned_error = ",$returned_error,"\n";
