@@ -1,6 +1,6 @@
 <?php
   /* $Id$ */
-  $SBEAMS="/sbeams";
+  $SBEAMS="/";
 ?>
 
 <!-- Begin the whole-page table -->
@@ -11,7 +11,7 @@
 <!-- -------------- Top Line Header: logo and big title ------------------- -->
 <tr>
 <td bgcolor="#cdd1e7">
-<a href="http://db.systemsbiology.net/"><img height=64 width=64 border=0 alt="ISB DB" src="/sbeams/images/dbsmltblue.gif"></a><a href="https://db.systemsbiology.net/sbeams/cgi/main.cgi"><img height=64 width=64 border=0 alt="SBEAMS" src="/sbeams/images/sbeamssmltblue.gif"></a>
+<a href="http://db.systemsbiology.net/"><img height=64 width=64 border=0 alt="ISB DB" src="<?php echo $SBEAMS ?>/images/dbsmltblue.gif"></a><a href="<?php echo $SBEAMS ?>/sbeams/cgi/main.cgi"><img height=64 width=64 border=0 alt="SBEAMS" src="<?php echo $SBEAMS ?>/images/sbeamssmltblue.gif"></a>
 </td>
 
 <?php
