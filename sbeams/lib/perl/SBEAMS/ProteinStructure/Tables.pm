@@ -18,6 +18,7 @@ use SBEAMS::Connection::Settings;
 
 use vars qw(@ISA @EXPORT 
     $TB_ORGANISM
+    $TBBL_POLYMER_TYPE
 
     $TBPS_BIOSEQUENCE_SET
     $TBPS_DBXREF
@@ -39,6 +40,7 @@ require Exporter;
 
 @EXPORT = qw (
     $TB_ORGANISM
+    $TBBL_POLYMER_TYPE
 
     $TBPS_BIOSEQUENCE_SET
     $TBPS_DBXREF
@@ -59,8 +61,10 @@ require Exporter;
 #### Get the appropriate database prefixes for the SBEAMS core and this module
 my $core = $DBPREFIX{Core};
 my $mod = $DBPREFIX{ProteinStructure};
+my $BioLink = $DBPREFIX{BioLink};
 
 $TB_ORGANISM                      = "${core}organism";
+$TBBL_POLYMER_TYPE                = "${BioLink}polymer_type";
 
 $TBPS_BIOSEQUENCE_SET             = "${mod}biosequence_set";
 $TBPS_DBXREF                      = "${mod}dbxref";
