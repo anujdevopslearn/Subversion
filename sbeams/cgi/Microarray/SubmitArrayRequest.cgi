@@ -1043,7 +1043,7 @@ sub processEntryForm {
             foreach $element (@data_columns) {
               $tmp = $parameters{$element};
               # Change all ' to '' so that it can go in the INSERT statement
-              $tmp =~ s/'/''/g;
+              $tmp =~ s/\'/\'\'/g;
               $sql_query .= "$element='$tmp',\n";
             }
             $sql_query .= qq!
@@ -1075,7 +1075,7 @@ sub processEntryForm {
 
           $tmp = $parameters{$element};
           # Change all \' to '' so that it can go in the INSERT statement
-          $tmp =~ s/'/''/g;
+          $tmp =~ s/\'/\'\'/g;
           $query_part2 .= "'$tmp',";
         }
 
@@ -1140,7 +1140,7 @@ sub processEntryForm {
 
           # Execute the SQL statement extract status and PK from result
           my @returned_information = $sbeams->applySqlChange("$sql_query",
-              $current_contact_id,'array_request_slide',
+              $current_contact_id,'MA_array_request_slide',
               qq~array_request_slide_id=$table_parameters{"slide${element}id"}~);
           my $returned_slide_status = shift @returned_information;
           #my $returned_slide_PK = shift @returned_information;
@@ -1185,7 +1185,7 @@ sub processEntryForm {
 
             # Execute the SQL statement extract status and PK from result
             my @returned_information = $sbeams->applySqlChange("$sql_query",
-              $current_contact_id,'array_request_slide',
+              $current_contact_id,'MA_array_request_slide',
               qq~array_request_slide_id=$table_parameters{"slide${element}id"}~);
             my $returned_slide_status = shift @returned_information;
             my $returned_slide_PK = shift @returned_information;
@@ -1232,7 +1232,7 @@ sub processEntryForm {
 
               # Execute the SQL statement extract status and PK from result
               my @returned_information = $sbeams->applySqlChange("$sql_query",
-                $current_contact_id,'array_request_sample',
+                $current_contact_id,'MA_array_request_sample',
                 qq~array_request_sample_id=$table_parameters{"sample${isample}id_$element"}~);
 
               my $returned_sample_status = shift @returned_information;
@@ -1293,7 +1293,7 @@ sub processEntryForm {
 
                 # Execute the SQL statement extract status and PK from result
                 my @returned_information = $sbeams->applySqlChange("$sql_query",
-                  $current_contact_id,'array_request_sample',
+                  $current_contact_id,'MA_array_request_sample',
                   qq~array_request_sample_id=$table_parameters{"sample${isample}id_$element"}~);
 
                 my $returned_sample_status = shift @returned_information;
