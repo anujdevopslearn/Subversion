@@ -19,6 +19,7 @@ package SBEAMS::Connection::GenericXMLImporter;
   use strict;
   use XML::Parser;
   use LWP::UserAgent;
+  use FindBin;
 
   use vars qw($VERSION @ISA);
   use vars qw(@stack %datamodel $PARSEMODE %element_state $sbeams $DATABASE
@@ -27,7 +28,7 @@ package SBEAMS::Connection::GenericXMLImporter;
   @ISA = ();
   $VERSION = '0.1';
 
-  require "./generate_schema.pllib";
+  require "$FindBin::Bin/generate_schema.pllib";
 
 
 
