@@ -22,7 +22,7 @@
 # Get the script set up with everything it will need
 ###############################################################################
 use strict;
-
+use Benchmark;
 use Text::Wrap;
 use Data::Dumper;
 use GD::Graph::xypoints;
@@ -76,7 +76,9 @@ my %actionHash = (
 	$ERROR	=>	\&processError,
 	$GETANOTHERGRAPH =>	\&getAnotherGraph
 	);
-
+my $attributeSql = "select measured_parameters_id, measured_parameters_name from $TBCY_MEASURED_PARAMETERS";
+my  %attributeHash = $sbeams->selectTwoColumnHash($attributeSql);
+ 
 main();
 exit(0);
 ###############################################################################
@@ -92,7 +94,7 @@ sub main {
     exit unless ($current_username = $sbeams->Authenticate(
       #connect_read_only=>1,
       #allow_anonymous_access=>1,
-      permitted_work_groups_ref=>['Cytometry_user','Cytometry_admin','Admin', 'UESC'],
+      permitted_work_groups_ref=>['Cytometry_user','Cytometry_admin','Admin'],
    ));
 
 	#### Read in the default input parameters
@@ -102,12 +104,12 @@ sub main {
 #$sbeams->printDebuggingInfo($q);
 #### Process generic "state" parameters before we start
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
-	
+
     #### Print the header, do what the program does, and print footer
 	
 	# normal handling for anything else			
 	$sbeamsMOD->display_page_header();
-	 handle_request(ref_parameters=>\%parameters);  
+    handle_request(ref_parameters=>\%parameters);  
    $sbeamsMOD->display_page_footer();
   
 
@@ -205,7 +207,7 @@ sub handle_request
 	      <TD WIDTH="100%"><TABLE BORDER=0>
         ~ if ($action eq '_displayIntro' || !$action) ;
         checkGO();
-#### If the project_id wasn't reverted to -99, display information about it
+#### If the project_id wasn't reverted to -99, display i`nformation about it
 		      if ($project_id == -99) 
           {
             print "	<TR><TD WIDTH=\"100%\">You do not have access to this project.  Contact the owner of this project if you want to have access.</TD></TR>\n";
@@ -254,7 +256,7 @@ sub displayIntro
 #		print "$count ==  $projectDes  == $organismID == ,$sampleName == $fileName === $runDate <br>";
 			  $projectDes = uc($projectDes);
         push @array,( $sampleName, $organismHash{$organismID},$fileName, $runDate);
-				$hashFile{$projectDes}->{$fcsID}->{'Sample Name'} = $sampleName;
+		$hashFile{$projectDes}->{$fcsID}->{'Sample Name'} = $sampleName;
         $hashFile{$projectDes}->{$fcsID}->{Organism} = $organismHash{$organismID};
         $hashFile{$projectDes}->{$fcsID}->{'File Name'} = $fileName;
         $hashFile{$projectDes}->{$fcsID}->{'Run Date'} = $runDate;
@@ -273,7 +275,7 @@ sub displayIntro
           <td>$hashFile{$key}->{$id}->{Organism} </td>
           <td>$hashFile{$key}->{$id}->{'File Name'}</td> 
           <td>$hashFile{$key}->{$id}->{'Run Date'} </td>
-          <td><a href=$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=$PROCESSFILE&fileID=$id > Create Graph</a></td></tr>~;
+          <td><a href=$CGI_BASE_DIR/$SBEAMS_SUBDIR/mainBench.cgi?action=$PROCESSFILE&fileID=$id > Create Graph</a></td></tr>~;
         }
       }	
      }
@@ -326,191 +328,52 @@ sub processFile
 		{
 				print "$k  ==== $parameters{$k}<br>";
 		}
+
 =cut
 
-  my $fileQuery = "select original_filepath +'/' + filename as completeFile from $TBCY_FCS_RUN  where fcs_run_id = $parameters{fileID}";
-	my $storeFile = "$PHYSICAL_BASE_DIR/images/tmp/$parameters{fileID}"."\.txt";
-	if (-e $storeFile and !$parameters{storeFile})
-	{
-		unlink $storeFile;
-	}
+      my $fileQuery = "select original_filepath +'/' + filename as completeFile from $TBCY_FCS_RUN  where fcs_run_id = $parameters{fileID}";
+ 
 	my @row = $sbeams->selectOneColumn($fileQuery);
 	my $infile = $row[0];  #'/net/db/projects/StemCell/FCS/102403/'.$parameters{fileName};
-  my ($fileName) =$infile =~ /^.*\/(.*)$/;
-	my @header = read_fcs_header($infile);	
-	my @keywords = get_fcs_keywords($infile,@header);
-	my %values = get_fcs_key_value_hash(@keywords);
+    my ($fileName) =$infile =~ /^.*\/(.*)$/;
+#	my @header = read_fcs_header($infile);	
+#	my @keywords = get_fcs_keywords($infile,@header);
+# my %values = get_fcs_key_value_hash(@keywords);
 
-	 if (! $parameters{graphNum})
-	 {
-		 print "<br><center><h4>Assembling the data points.<br></h4></center><br><br>";
-		 print "<center><br>Number of parameters measured: $values{'$PAR'}<br><br>";
+	
 		 print "<b>Measured parameters:</b><br>";
 		 print "Choose the X and Y coordinates<br>";
-   }
+   
 
    my $parameterQuery =  "select measured_parameters_name, mp.measured_parameters_id  from $TBCY_MEASURED_PARAMETERS mp 
    join $TBCY_FCS_RUN_PARAMETERS frp on mp.measured_parameters_id = frp.measured_parameters_id where frp.fcs_run_id = $parameters{fileID}"; 
     my %cytoParameters = $sbeams->selectTwoColumnHash($parameterQuery);
     
     my $databaseUpdate = 0;
-    if ($values{'$PAR'})
-    {
-      print qq~ <center><table><tr>~if (! $parameters{graphNum});
-      print qq ~<td width = 300></td><td><center><table border><tr>~ if ($parameters{graphNum});
-      print qq~ <td >x-axis</td><td>y-axis</td></tr>\n~;
+    
+      print qq~ <center><table><tr>~;
+      print qq~ <td >x-axis</td><td>y- axis</td></tr>\n~;
       print qq~ <tr><td colspan=2><hr size =2></td></tr>~;
-      print $q->start_form (-onSubmit=>"return checkRadioButton($databaseUpdate) ") if  (! $parameters{graphNum});
-      print $q->start_form (-onSubmit=>"return checkAnotherRadioButton()") if  ($parameters{graphNum});
-    	print qq ~ </td><tr><td align=left colspan=2> Create a new graph based on this graph's X and Y  datapoints<br> by specifying the range of the datapoints<td><tr>~ 
-      if( $parameters{graphNum});
-				
-        foreach my $key (keys %cytoParameters)
-        {
-						my $upperKey = uc($key);
-            if ( ! $parameters{graphNum})
-            {  
-              print qq~ <tr><td><input type="radio" name="xbox" value="$cytoParameters{$key}">$upperKey</td\n>~;
-              print qq~ <td><input type="radio" name="ybox" value="$cytoParameters{$key}">$upperKey</td></tr> \n~;
-            }
-            else 
-            {
-              print qq~ <tr><td><input type="radio" name="xboxAnother" value="$cytoParameters{$key}">$upperKey</td>\n ~;
-              print qq~ <td><input type="radio" name="yboxAnother" value="$cytoParameters{$key}">$upperKey</td\n>\n~;
-            }
-        }
-		
-		  print qq~ <input type=hidden name="inFile" value="$infile">
-      <input type =hidden name="fileID" value="$parameters{fileID}">
-      <input type=hidden name="storeFile" value="$storeFile">~;
-	
-		   if ( ! $parameters{graphNum})
-       {
-         print qq~<input type= hidden name="action" value = "$GETGRAPH">  ~ ;
-         print qq ~<input type =hidden name="firstTime"  value = "True">~;
-         print qq~<tr></tr><tr><td><input type ="submit" name= "SUBMIT" value = "SUBMIT PARAMETERS"></td></tr> </table></center> ~;
-			 }
-       else
-       {
-         print qq ~
-         <tr><td> <b>Select min X-coordinates</b></td> <td><b>Select min Y-coordinates</B></td></tr>~ ;  
-         my $staticMinX = $parameters{minX};
-         my $staticMaxX = $parameters{maxX};
-         my $staticMinY = $parameters{minY};
-         my $staticMaxY  = $parameters{maxY};
-         my (@xOptionArray, @yOptionArray);
-# added the data point range for x and y values		
-        while ($parameters{minX} < $parameters{maxX})
-        {
-          push @xOptionArray, $parameters{minX};
-          $parameters{minX} += 200;
-        }
-        while ($parameters{minY} < $parameters{maxY})
-        {
-          push @yOptionArray, $parameters{minY};
-          $parameters{minY} += 200;
-        }
- # displaying the range of numbers in an option box     
-		  	my $count = 0;
-        print qq~<tr><td><Select name="xBoxMin" size =3>~;
-        foreach my $number (@xOptionArray)
-        {
-          if ($count ==0 )
-          {
-            print qq ~ <option selected value=$number>$number~;
-            $count ++;
-          }
-          else
-          {
-            print qq ~ <option value=$number>$number~;
-          }
-        }
-        $count = 0;
-        print qq~</td><td><Select name="yBoxMin" size =3>~;
-        foreach my $number (@yOptionArray)
-        {
-          if ($count ==0 )
-          {
-            print qq ~ <option selected value=$number>$number~;
-            $count ++;
-          }
-          else
-          {
-            print qq ~ <option value=$number>$number~;
-          }
-        }
-        $count = 0;
-        print "</td></tr><tr><tr><td><b>Select max X-coordinates</b></td> <td><b>Select max Y-coordinates</b></td></tr>";
-        print qq~<tr><td><Select name="xBoxMax" size =3>~;
-        for(my $c = scalar(@xOptionArray)-1; $c > -1; $c--)
-        {
-          if ($count == 0)
-          {
-            print qq ~ <option selected value=$xOptionArray[$c]>$xOptionArray[$c]~;
-            $count ++; 
-          }
-          else
-          {
-            print qq ~ <option value=$xOptionArray[$c]>$xOptionArray[$c]~;
-          }
-        }
-        print qq~</td><td><Select name="yBoxMax" size =3>~;
-        $count = 0;
-        for(my $c = scalar(@yOptionArray)-1; $c > -1; $c--)
-        {  
-          if ($count == 0)
-          {
-            print qq ~ <option selected value=$yOptionArray[$c]>$yOptionArray[$c]~;
-            $count ++; 
-          }
-          else
-          {
-            print qq ~ <option value=$yOptionArray[$c]>$yOptionArray[$c]~;
-          }
-        }
-        print qq ~</td></tr>~;			
-        print qq~<input type= hidden name="action" value = "$GETANOTHERGRAPH"> 
-        <input type=hidden name ="graphNum" value=1> 
-        <input type=hidden name="xbox" value="$parameters{xbox}">
-        <input type=hidden name="ybox" value="$parameters{ybox}">
-        <input type=hidden name="maxX" value="$staticMaxX">
-        <input type=hidden name="minX" value="$staticMinX">
-        <input type=hidden name="maxY" value="$staticMaxY">
-        <input type=hidden name="minY" value="$staticMinY">~;
-			  print qq~<tr></tr><tr><td align=center colspan=2><input type ="submit" name= "SUBMIT" value = "SUBMIT PARAMETERS"></td></tr> ~;
-        print "</table></center></tr><tr></tr>";
-       }
-       print $q->end_form; 
+      print $q->start_form (-onSubmit=>"return checkRadioButton($databaseUpdate) ");
+ 
+      foreach my $key (keys %cytoParameters)
+     {
+       my $upperKey = uc($key);
+       print qq~ <tr><td><input type="radio" name="xbox" value="$cytoParameters{$key}">$upperKey</td\n>~;
+       print qq~ <td><input type="radio" name="ybox" value="$cytoParameters{$key}">$upperKey</td></tr> \n~;
     }
-    else
-    {
-      print "<h4><center><br><br>Unable to process file: $infile.<br>$!<br> <br>Please see your Admin<br></center></h4>";
-    }
+	 print qq~ <input type=hidden name="inFile" value="$infile">
+     <input type =hidden name="fileID" value="$parameters{fileID}"> ~;
+      	
+	  print qq~<input type= hidden name="action" value = "$GETGRAPH">  ~ ;
+      print qq ~<input type =hidden name="firstTime"  value = "True">~;
+       print qq ~<input type =hidden name="window"  value = "True">~;
+      print qq~<tr></tr><tr><td><input type ="submit" name= "SUBMIT" value = "SUBMIT PARAMETERS"></td></tr> </table></center> ~;
+      print $q->end_form; 
+    
 }
 #-----------------------------------------------------------------------------
 
-sub getAnotherGraph
-{
-
-	my %args = @_;
-#### Process the arguments list
- 	 my $ref_parameters = $args{'ref_parameters'}
-    || die "ref_parameters not passed";
-   my %parameters = %{$ref_parameters};
-   my %resultset = ();
-   my $resultset_ref = \%resultset;
-   my %parameters = %{$ref_parameters};
- 
-=comment
-	foreach my $k (keys %parameters)
-		{
-				print "$k  ==== $parameters{$k}<br>";
-		}	
-=cut
-  my $parametersRef = createGraph( \%parameters);
-	printGraph ($parametersRef);
-	
-}
 #-----------------------------------------------------------------------------
 
 sub getGraph
@@ -530,23 +393,9 @@ sub getGraph
 				print "$k  ==== $parameters{$k}<br>";
     }
 =cut
-  if ($parameters{firstTime} eq "True")
-  {
-    unlink  $parameters{storeFile};
-  }
-	 my $infile = $parameters{inFile};
-# Strip out all of the keyword-value pairs.
-	 my @header = read_fcs_header($infile);	
-   my @keywords = get_fcs_keywords($infile,@header);
-   my %values = get_fcs_key_value_hash(@keywords);
-
-# Write the header parameters to the output file.
-# Also add the standard column headings.
-
-  	my $num_events = $values{'$TOT'};
-    print "<br><b>Number of events:</b> $num_events\n<br>";
-    my $parametersRef = createGraph( \%parameters);
-    
+ 	 my $infile = $parameters{inFile};
+     my $parametersRef = createGraph( \%parameters);
+   
     if (! $parametersRef->{validData})
     {
       print "<center><b>No valid datapoints for these parameters</b><Br>
@@ -562,44 +411,16 @@ sub getGraph
 sub printGraph 
 {
    my $parameterRef = shift;
-	$parameterRef->{graphNum} =1;
-	
    my $imgsrcbuffer = '&nbsp;';
-   
-    open (TXT, "$parameterRef->{storeFile}") or die $!;
-    my $count =1;
-    my @imageArray;
-    while (my $imageFile = <TXT>)
-    {   
-      chomp $imageFile;
-      push @imageArray,$imageFile;
-    }
-    my $prevImage = "xxxx";
-    foreach my $image (@imageArray)
-    {
-      next if $image  =~ /$prevImage/i and do $count --;
-      if ($count == 1)
-      {
-        my $imgsrcbuffer ='&nbsp;';
-        $imgsrcbuffer = "<IMG SRC=\"$image\">";
-        print qq~<TR ROWSPAN="2">
-        <td >
-        $imgsrcbuffer</td> ~;
-        processFile(ref_parameters=>$parameterRef);
-        print "</tr>";
-      }
-      else 
-      {  		   
-        print qq~<TR rOWSPAN="2">~if (!$count%2);
-        my $imgsrcbuffer ='&nbsp;';
-        $imgsrcbuffer = "<IMG SRC=\"$image\">";
-        print "<td align=left>	$imgsrcbuffer	</TD>";
-        print "</tr>" if ($count%2);
-      }
-      $prevImage = "_orig";
-      $count ++;
-    }
-#    unlink ($parameterRef->{storeFile});
+   my $image = $parameterRef->{imageFile};
+    my $imgsrcbuffer ='&nbsp;';
+    $imgsrcbuffer = "<IMG SRC=\"$image\">";
+     print qq~<TR ROWSPAN="2">
+     <td >
+     $imgsrcbuffer</td> ~;
+      print "</tr>";
+     
+
     print "</table>";
 }
 #-------------------------------------------------------------------------		  
@@ -609,8 +430,9 @@ sub printGraph
 
 sub createGraph 
 {
+  my ($start, $end, $diff); 
   my ($paramRef) = @_;
-
+  $start= new Benchmark ;
 =comment
 	foreach my $key (keys %{$paramRef})
 	{
@@ -618,166 +440,102 @@ sub createGraph
 	}
 =cut
 
-  my $xMinCoor = $paramRef->{xBoxMin} || 0;	
-	my  $xMaxCoor = $paramRef->{xBoxMax} || 1000000;
-	my $yMinCoor = $paramRef->{yBoxMin} || 0;
-	my $yMaxCoor = $paramRef->{yBoxMax} || 1000000;
-	my $xCoorAnother = $paramRef->{xboxAnother};
-	my $yCoorAnother = $paramRef->{yboxAnother};
-
 	my $xCoor = $paramRef->{xbox};
 	my $yCoor = $paramRef->{ybox};
-	
+    my $xCoorName = $attributeHash{$xCoor};
+    my $yCoorName = $attributeHash{$yCoor};
+    
 	my $fileID = $paramRef->{fileID};
-	my $inFile = $paramRef->{inFile};
+  
+ 	my $inFile = $paramRef->{inFile};
 	my ($fileName) = $inFile =~ /^.*\/(.*)$/;
 	
-	my $maxX = $paramRef->{maxX} || 0; 
-	my $maxY =$paramRef->{maxY} || 0; 
-	
-	my $minX =  1000000;
-	$minX = $paramRef->{minX} if defined($paramRef->{minX});
-	my $minY = 1000000;
-	$minY = $paramRef->{minY} if defined($paramRef->{minY});
 
 	my (@xArray,@yArray);
 	my @xRows;;
-  my @yRows;
-
+    my @yRows;
+    my $imageFile;
 #data for all graphs
   my $labelQuery ="select measured_parameters_id, measured_parameters_name from $TBCY_MEASURED_PARAMETERS";
   my %labelHash = $sbeams->selectTwoColumnHash($labelQuery);  
-# data for initial graph	  
-  my $xQuery = "Select fcs_data_value from $TBCY_FCS_DATA_POINT fdp
-  join $TBCY_FCS_RUN_PARAMETERS frp on fdp.fcs_run_parameters_id = frp.fcs_run_parameters_id
-  where frp.measured_parameters_id = $xCoor and frp.fcs_run_id = $fileID order by fcs_data_point_id";
-  
-  my $yQuery = "Select fcs_data_value from $TBCY_FCS_DATA_POINT fdp
-  join $TBCY_FCS_RUN_PARAMETERS frp on fdp.fcs_run_parameters_id = frp.fcs_run_parameters_id
-  where frp.measured_parameters_id = $yCoor and frp.fcs_run_id = $fileID order by fcs_data_point_id";  
-  
-	 @xRows = $sbeams->selectOneColumn($xQuery) if (!$paramRef->{graphNum}); 	
-   @yRows = $sbeams->selectOneColumn($yQuery) if (!$paramRef->{graphNum}); 	
-   
-# data for all subsequent graphs
-  my $anotherXQuery = "Select fcs_data_value from $TBCY_FCS_DATA_POINT fdp
-  join $TBCY_FCS_RUN_PARAMETERS frp on fdp.fcs_run_parameters_id = frp.fcs_run_parameters_id
-  where frp.measured_parameters_id = $xCoor
-  and frp.fcs_run_id = $fileID 
-  and fcs_data_value >= $xMinCoor
-  and fcs_data_value <= $xMaxCoor
-  order by fcs_data_point_id";
+# data for initial graph	
+    my $graphFile;
+      my $tmpPlot;
+     $tmpPlot = $xCoorName.$yCoorName.$fileID.$fileName.".png" ;
+     $graphFile = escapeFile($tmpPlot);
+     if (-e $PHYSICAL_BASE_DIR."/images/tmp/".$tmpPlot)
+     {
+      $imageFile = "$HTML_BASE_DIR/images/tmp/$tmpPlot";
+       
+     }
+     else
+     {
+     
+     my $VAR1; 
+     my (@xArray, @yArray); 
 
-  my $anotherYQuery = "Select fcs_data_value from $TBCY_FCS_DATA_POINT fdp
-  join $TBCY_FCS_RUN_PARAMETERS frp on fdp.fcs_run_parameters_id = frp.fcs_run_parameters_id
-  where frp.measured_parameters_id = $yCoor
-  and frp.fcs_run_id = $fileID 
-  and fcs_data_value >= $yMinCoor
-  and fcs_data_value <= $yMaxCoor
-  order by fcs_data_point_id";
+# What file is it? 
+     my $dataFile = $PHYSICAL_BASE_DIR. "/dataPoints/tmp/$fileID"."_".$fileName; 
 
-	 @xRows = $sbeams->selectOneColumn($anotherXQuery) if ($paramRef->{graphNum}); 	
-   @yRows = $sbeams->selectOneColumn($anotherYQuery) if ($paramRef->{graphNum});
-   
-	$paramRef->{validData} = 1; 
-	my $count = 0;
-	foreach my $row (@xRows)
-	{
-		next if  $count%5 and (!$paramRef->{graphNum}); 	
-		my ($xData) =$row; 
-     if (!defined($xData))
-    {
-      $paramRef->{validData} =0;
-       return ($paramRef); ;
-    }
- 		$maxX = $xData if ($maxX <$xData and (!$paramRef->{graphNum}));
-		$minX = $xData if ($minX > $xData and (!$paramRef->{graphNum}));
-    push @xArray,$xData;
-    }
-    foreach my $row(@yRows)
-    {
-      next if  $count%5 and (!$paramRef->{graphNum}); 	
-      my ($yData) = $row; 
-      if (!defined($yData))
-      {
-        $paramRef->{validData} =0;
-        return ($paramRef);;
-      }
-     $maxY = $yData  if ($maxY <$yData and (!$paramRef->{graphNum})); 	
-     $minY = $yData if ($minY > $yData and  (!$paramRef->{graphNum}));
-     push @yArray,$yData;
-	   }
-     my $tmpfile;
-     $tmpfile = "plot.$$.@{[time]}_orig.png" if (!$paramRef->{graphNum}); 
-     $tmpfile = "plot.$$.@{[time]}.png" if ($paramRef->{graphNum}); 
-     my @data=([@xArray],[@yArray]);
+# Open a filehandle 
+     open FILE, $dataFile or print " <br> Cannot read $dataFile  $!  <br> "; 
+# Grab the whole file at once 
+   local  undef $/; 
+# Read the contents 
+    my $contents = (<FILE>); 
+# Close the filehandle 
+    close FILE; 
+# Evaluate the contents into a new array ref 
+    eval $contents; 
+    my ($xMax,$yMax, $xMin, $yMin) = 0;
+   $tmpPlot = $xCoorName.$yCoorName.$fileID.$fileName.".png" ;
+   $graphFile = escapeFile($tmpPlot);
+     
+#time       
+    my @data = ([@{$VAR1->{$xCoorName}}],[@{$VAR1->{$yCoorName}}]);  
+#      my @data=([@xArray],[@yArray]);
 
 #get the label  based on the x and y Coor (these are the id of the measured_parameters)
-    my $xLabel = $labelHash{$xCoor};
-    $xLabel = $labelHash{$xCoorAnother}. "  ". $xMinCoor. " - " .$xMaxCoor  if ($xCoorAnother); 
-    my $yLabel = $labelHash{$yCoor};
-    $yLabel = $labelHash{$yCoorAnother}. "  " .$yMinCoor. " - " .$yMaxCoor  if ($yCoorAnother);
+    my $xLabel = $xCoorName;
+    my $yLabel = $yCoorName;
+
     my $graph;
-    $graph = GD::Graph::xypoints->new(500,380) if (! $paramRef->{graphNum} );
-    $graph = GD::Graph::xypoints->new(350,230) if ($paramRef->{graphNum} );
-    my ($fileName) = $inFile =~ /^.*\/(.*)$/;
-    if (! $paramRef->{graphNum} )
-    {
-      $graph->set(
+    $graph = GD::Graph::xypoints->new(500,500);
+     $graph->set(
              x_label           =>$xLabel,
              y_label           => $yLabel,
              title             => $fileName,
              x_number_format => \&formatNum,
              y_number_format => \&formatNum,
              x_tick_number => 25,
-             y_tick_number => 25,
-             long_ticks        => 0,
+             y_tick_number => 25  ,
+              long_ticks        => 0,
              markers => 7,
-             show_value => 1,
+              show_value => 1,
              marker_size => .1,
-             x_max_value =>$maxX,
-             y_max_value       => $maxY
-             );
-    }
-    else
-    {		   
-      $graph->set(			   
-		      x_label           =>$xLabel,
-          y_label           => $yLabel,
-          x_number_format => \&formatNum,
-          y_number_format => \&formatNum,
-          x_tick_number => 10,
-          y_tick_number => 10,
-          long_ticks        => 0,
-          markers => 7,
-          show_value => 1,
-          marker_size => .1,
-          );
-    }
-		my $gd = $graph->plot(\@data);
-    open(IMG, ">$PHYSICAL_BASE_DIR/images/tmp/$tmpfile") or die $!;
+            );
+    
+    my $gd = $graph->plot(\@data);
+
+
+    $end = new Benchmark ;
+    $diff = timediff($end, $start);   
+#    print "<br>Time taken to plot ", timestr($diff, 'all'), " seconds <br>";  
+
+#time  
+     $imageFile = "$PHYSICAL_BASE_DIR/images/tmp/$tmpPlot"; 
+     open(IMG, ">$imageFile");
      binmode IMG;
      print IMG $gd->png;
      close IMG;
-#### Provide the link to the image
-  	my $imageFile = "$HTML_BASE_DIR/images/tmp/$tmpfile";
-    open (TXT, ">>$paramRef->{storeFile}") or die $!;
-    print TXT "$imageFile\n";
-    close TXT;
-		
-    $paramRef-> {maxX} = $maxX;
-    $paramRef-> {maxY} = $maxY;
-    $paramRef-> {minX} = $minX;
-    $paramRef-> {minY} = $minY;
-
-=comment	
-		foreach my $key (keys %{$paramRef})
-	{
-		print "this is create Graph $key ===  $paramRef->{$key}<br>";
-	}
-=cut
+    $imageFile = "$HTML_BASE_DIR/images/tmp/$tmpPlot"; 
+     }
+     $paramRef->{imageFile} = $imageFile;
+     $paramRef->{validData} =1;
 	  return ($paramRef);
+
 } 
+
 
 #------------------------------------------------
 # fromats data values
@@ -787,9 +545,16 @@ sub formatNum
 	$value =~ s/^(\d+)\.\d*$/$1/;
 	return $value;
 }
+sub escapeFile 
+{
+  my $file = shift;
+  $file =~ s/\s/\\ /g;
+
+  return $file;
+  }
 #--------------------------------------------------------
 # displays an error message
-sub printMessage
+sub printMessage  #not used
 {
 		print "<center><b>This is the first time this file has been accessed.<br> Data points need to be loaded into the Database.<br> This may take a few minutes.<br> Please be patient</B><br></center>";
 		return; 
