@@ -36,7 +36,7 @@ sub main {
 
   # Fetch and validate parameters.  Print usage if there is an error
   my %args;
-  GetOptions( \%args, 'password=s', 'conf=s', 'decrypt' );
+  GetOptions( \%args, 'password=s', 'conf=s' );
 
   printUsage( msg => "Must specify password" ) unless $args{password};
   printUsage( msg => "Must specify SBEAMS.conf file" ) unless $args{conf};
@@ -81,13 +81,8 @@ sub main {
                                          decrypted => $args{password},
                                          key => $date );
 
-  unless ( $args{decrypt} ) {
   print $sCryptor->encrypt() . "\n";
   exit 0;
-  }
-  # Undocumented feature, will decrypt on demand!
-  $sCryptor->setEncrypted( encrypted => $args{password} );
-  print $sCryptor->decrypt() . "\n";
 }
 
 sub printUsage {
