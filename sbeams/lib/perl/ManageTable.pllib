@@ -140,7 +140,7 @@ sub printEntryForm {
   $sql = qq~
       SELECT column_name,column_title,is_required,input_type,input_length,
              is_data_column,is_display_column,column_text,
-             optionlist_query,onChange,fk_table
+             optionlist_query,onChange,fk_table,fk_column_name
         FROM $TB_TABLE_COLUMN
        WHERE table_name='$TABLE_NAME'
          AND is_data_column='Y'
@@ -159,7 +159,7 @@ sub printEntryForm {
     my @row = @{$row};
     my ($column_name,$column_title,$is_required,$input_type,$input_length,
         $is_data_column,$is_display_column,$column_text,
-        $optionlist_query,$onChange,$fk_table) = @row;
+        $optionlist_query,$onChange,$fk_table,$fk_column_name) = @row;
     if ($optionlist_query gt "") {
       $optionlist_queries{$column_name}=$optionlist_query;
     }
@@ -283,7 +283,7 @@ sub printEntryForm {
     my $mask_description = 0;
     my ($column_name,$column_title,$is_required,$input_type,$input_length,
         $is_data_column,$is_display_column,$column_text,
-        $optionlist_query,$onChange,$fk_table) = @row;
+        $optionlist_query,$onChange,$fk_table,$fk_column_name) = @row;
 
 
     #### If there is a foreign_key table defined, create some HTML
@@ -294,7 +294,9 @@ sub printEntryForm {
       $subdir .= "/" if ($subdir);
       $jump_to_list_source = qq~<A TARGET="AddToList" HREF="$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=$fk_table&ShowEntryForm=1"><IMG
         SRC="$HTML_BASE_DIR/images/greyplus.gif" border=0
-        ALT="Add to or view details about this list box" ></A>
+        ALT="Add to or view details about this list box" ></A><A TARGET="ViewProperties" HREF="$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=$fk_table&$fk_column_name=$parameters{$column_name}"><IMG
+        SRC="$HTML_BASE_DIR/images/redqmark.gif" border=0
+        ALT="View properties of the selected item (Click REFRESH after selecting new item)" ></A>
       ~;
     }
 
