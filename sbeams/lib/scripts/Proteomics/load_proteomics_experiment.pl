@@ -1923,7 +1923,7 @@ sub updateTimingInfo {
     #### Get the information about this fraction including location
     $sql = qq~
 	SELECT fraction_id,fraction_tag,experiment_path,column_delay,
-	       gradient_program_id
+	       ISNULL(F.gradient_program_id,PE.gradient_program_id)
 	  FROM $TBPR_FRACTION F
           JOIN $TBPR_PROTEOMICS_EXPERIMENT PE
                ON (F.experiment_id=PE.experiment_id)
