@@ -457,6 +457,14 @@ sub specifyRun
    my $entityOption = $sbeams->buildOptionList($entitySql, "Selected","MULTIOPTIONLIST");
      
    my $sampleNameSelect = "select  fcs_run_id, sample_Name  from $TBCY_FCS_RUN where project_id = $project_id order by sample_name";
+   my %sampleNameHash = $sbeams->selectTwoColumnHash($sampleNameSelect);
+   my %sampleNameIDHash; 
+   foreach my $key (keys %sampleNameHash)
+   {
+     my $name = $sampleNameHash{$key};
+    
+    push @{$sampleNameIDHash{$name}} , $key
+   }
    my $sampleNameOption  =  $sbeams->buildOptionList($sampleNameSelect, "Selected", "MULTIOPTIONLIST");
 
   my $tissueSelect = "select  tt.tissue_type_id, tissue_type_name  from $TBCY_TISSUE_TYPE tt
@@ -487,7 +495,7 @@ sub specifyRun
    
 #this is one form 
    print $q->start_form;
-   print qq~ <TR></TR><TR></TR><tr><td nowrap width=300><b>Enter part or all of a Sample Name</b></td><td align=center width = 200><input type =" text" name="sampleGuess" size = 10></td>~; 
+   print qq~ <TR><br><br></TR><TR></TR><tr><td nowrap width=300><b>Enter part or all of a Sample Name</b></td><td align=center width = 200><input type =" text" name="sampleGuess" size = 10></td>~; 
   
    print qq~<input type= hidden name="action" value = "$INTRO">  ~ ;
    print qq ~<input type =hidden name="wildcardSample"  value = 1>~;
@@ -496,14 +504,19 @@ sub specifyRun
 
 #this is the second form    
 
-	
+	print qq ~<tr><td colspan = 3> <hr size = 2></td</tr>~;
     print $q->start_form;
-    print qq~ <tr><td nowrap width=300><b>Select none, one or multiple SampleNames</b></td><td><Select Name="sampleID" Size=6 Multiple> $sampleNameOption</td></tr>~;
+    print qq~ <tr><td nowrap width=300><b>Select none, one or multiple SampleNames</b></td><td><Select Name="sampleID" Size=6 Multiple>~;
+    foreach my $key (sort keys  %sampleNameIDHash){
+     my $element = join ', ', @{$sampleNameIDHash{$key}}; 
+     print qq~<option value="$element"> $key\n~;
+   }
+   print qq ~</select></td></tr>~;
    
    print qq~ <tr><td nowrap width=300><b>Select none, one or multiple Sort Entities</b></td><td align=center><Select Name="sortEntityID" Size=6 Multiple> ~;
-   print "$entityOption</td></tr>";
-;  
-    print qq~ <tr><td nowrap width=300><b>Select none, one or multiple Tissue Types</b></td><td align=center><Select Name="tissueTypeID" Size=6 Multiple> ~;
+   print qq~$entityOption</td><td><input type ="submit" name= "SUBMIT" value = "QUERY COMBO"></td></tr>~;
+     
+   print qq~ <tr><td nowrap width=300><b>Select none, one or multiple Tissue Types</b></td><td align=center><Select Name="tissueTypeID" Size=6 Multiple> ~;
    print "$tissueOption</td></tr>";
   
     print qq~ <tr><td nowrap width=300><b>Select none, one or multiple Run  Dates<b></td><td align=center><Select Name="dates" Size=6 Multiple> ~;
@@ -514,8 +527,7 @@ sub specifyRun
    print qq~</select></td></tr>~;
    print qq~<input type= hidden name="action" value = "$INTRO">  ~ ;
    print qq ~<input type =hidden name="searchCombo"  value = 1>~;
-   print qq~<tr><td><input type ="submit" name= "SUBMIT" value = "QUERY COMBO"></td></tr>~;
-   print qq ~</TABLE></TD></TR></TABLE> ~;
+    print qq ~</TABLE></TD></TR></TABLE> ~;
    print $q->end_form;
     
 }
