@@ -498,6 +498,8 @@ sub step4 {
 	}
 	$log->debug("CGI OBJECT ". $q->param('pair_wise_only'));
 	$log->debug("TEST STAT '$test_stat'");
+	
+	
 	my %count_groups =();
 	for (my $i = 0; $i < $cgi->param('numsamples'); $i++) {
 		my $class_numb = $cgi->param("class$i");
@@ -512,8 +514,14 @@ sub step4 {
 		 
 		$classlabel[$i] = $cgi->param("class$i");
 	}
+	
+	
+	#$log->debug(Dumper(\@classlabel));
+	$log->debug("COUNT GROUP HASH", Dumper(\%count_groups));
 ##skip checking for single arrays if we are just going to make ratios
-	unless($test_stat eq 'Make_ratios'){
+	unless($test_stat eq 'Make_ratios' 
+					  ||
+	  $cgi->param('Ignore_reference_sample') eq 'YES'){
 		check_for_single_array_group(%count_groups);
 	}
 ###If we are doing a pairwise analysis we might have more then one output file 
@@ -534,7 +542,7 @@ sub step4 {
 	
 	if ($cgi->param('Ignore_reference_sample') eq 'YES'){
 #If the choice is to not use the reference sample and just do a single comparision
-#make sure the data only has one pair of sample groups X and Y otherwise Braf and die
+#make sure the data only has one pair of sample groups X and Y otherwise Barf and die
 		$log->debug("GOING TO IGNORE REF SAMPLE");
 		  ($clean_group_flag, 
 			$sample_group_x,
@@ -573,6 +581,7 @@ sub step4 {
 									class_aref		=> $class_aref,
 						  			sample_names_aref => $sample_names_aref,
 									reference_sample_number => $reference_sample_class_numb,
+									second_sample_class_numb => $second_sample_class_numb,
 									);
 			
 			if (defined $second_sample_class_numb && $second_sample_class_numb =~ /^\d/ ){
@@ -580,7 +589,13 @@ sub step4 {
 				#if we are only working with two sample groups only make links for 
 				#the piece of analysis that will be ran
 				next unless $second_sample_class_numb == $i;
+				#Remake the condition name, since a bug was found if the reference class happen to have a higher
+				#class number then the second_class number
+				$condition_name = "${sample_group_x}_vs_$sample_group_y"; 
 				$log->debug("MAKE LINK FOR '$condition_name' SECOND CLASS ID '$second_sample_class_numb'");
+				push @$condition_names_aref, $condition_name;
+				push @$condition_ids_aref, $second_sample_class_numb;
+			
 			}
 			$out_links .= make_image_urls(conditon_name => $condition_name,
 										  jobname => $jobname,
@@ -1867,7 +1882,7 @@ sub make_sample_names {
 	my $reference_sample_group = $args{reference_sample_group};
 	my $reference_class_id = '';
 	my $second_class_id = '';			
-	$log->debug(Dumper($sample_groups_info_href));
+	$log->debug("SAMPLE GROUPS HREF", Dumper($sample_groups_info_href));
 	
 	foreach my $class_numb (sort {$a <=> $b} keys %$sample_groups_info_href){
 			$log->debug("MAKING SAMPLE NAME  $class_numb '$sample_groups_info_href->{$class_numb}'");
@@ -1911,17 +1926,19 @@ sub make_condition_names {
 	my $class_aref = $args{class_aref};
 	my $sample_names_aref = $args{sample_names_aref};
 	my $reference_sample_group_id = $args{reference_sample_number};	
-							
-	
+	my $second_sample_class_numb = $args{second_sample_class_numb};
+	 
 	#my $condition_id = "$class_aref->[$count]_vs_$class_aref->[$reference_sample_group_id]";
 	my $condition_name = "$sample_names_aref->[$count]_vs_$sample_names_aref->[$reference_sample_group_id]";
-	$log->debug( "CONDITION ID '$count' CONDITION SAMPLE '$condition_name'");
 			
 	$condition_name =~ s/\W//g;		#Clean up the name remove any non word characters
-	
-	push @{$condition_names_aref}, $condition_name;
-	push @{$condition_ids_aref}, $count;	
-	return $condition_name;
+	#ignore adding the conditoin name if the user has chosen to use just two samples
+	unless ($second_sample_class_numb > 0){
+		$log->debug( "CONDITION ID '$count' CONDITION SAMPLE '$condition_name'");
+		push @{$condition_names_aref}, $condition_name;
+		push @{$condition_ids_aref}, $count;	
+		return $condition_name;
+	}
 }
 #### Subroutine: make_image_urls
 # Make some html that will display the graphs after an analysis session is done
