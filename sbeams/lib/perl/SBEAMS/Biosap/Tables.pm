@@ -12,12 +12,16 @@ package SBEAMS::Biosap::Tables;
 
 
 use strict;
+
+use SBEAMS::Connection::Settings;
+
 use vars qw(@ISA @EXPORT 
     $TB_ORGANISM
 
     $TBBS_BIOSEQUENCE_SET
     $TBBS_BIOSEQUENCE
-
+		$TBBS_BIOSEQUENCE_PROPERTY_SET
+		$TBBS_DBXREF
     $TBBS_BIOSAP_SEARCH
     $TBBS_FEATURAMA_PARAMETER
     $TBBS_FEATURAMA_STATISTIC
@@ -37,7 +41,8 @@ require Exporter;
 
     $TBBS_BIOSEQUENCE_SET
     $TBBS_BIOSEQUENCE
-
+		$TBBS_BIOSEQUENCE_PROPERTY_SET
+		$TBBS_DBXREF
     $TBBS_BIOSAP_SEARCH
     $TBBS_FEATURAMA_PARAMETER
     $TBBS_FEATURAMA_STATISTIC
@@ -50,18 +55,23 @@ require Exporter;
 );
 
 
-$TB_ORGANISM                = 'sbeams.dbo.organism';
+#### Get the appropriate database prefixes for the SBEAMS core and this module
+my $core = $DBPREFIX{Core};
+my $mod = $DBPREFIX{Biosap};
 
-$TBBS_BIOSEQUENCE_SET       = 'biosap.dbo.biosequence_set';
-$TBBS_BIOSEQUENCE           = 'biosap.dbo.biosequence';
+$TB_ORGANISM                = "${core}organism";
 
-$TBBS_BIOSAP_SEARCH         = 'biosap.dbo.biosap_search';
-$TBBS_FEATURAMA_PARAMETER   = 'biosap.dbo.featurama_parameter';
-$TBBS_FEATURAMA_STATISTIC   = 'biosap.dbo.featurama_statistic';
-$TBBS_FILTERBLAST_STATISTIC = 'biosap.dbo.filterblast_statistic';
-$TBBS_FEATURE               = 'biosap.dbo.feature';
-$TBBS_FEATURE_HIT           = 'biosap.dbo.feature_hit';
+$TBBS_BIOSEQUENCE_SET       = "${mod}biosequence_set";
+$TBBS_BIOSEQUENCE           = "${mod}biosequence";
+$TBBS_BIOSEQUENCE_PROPERTY_SET = "${mod}biosequence_property_set";
+$TBBS_DBXREF                = "${mod}dbxref";
+$TBBS_BIOSAP_SEARCH         = "${mod}biosap_search";
+$TBBS_FEATURAMA_PARAMETER   = "${mod}featurama_parameter";
+$TBBS_FEATURAMA_STATISTIC   = "${mod}featurama_statistic";
+$TBBS_FILTERBLAST_STATISTIC = "${mod}filterblast_statistic";
+$TBBS_FEATURE               = "${mod}feature";
+$TBBS_FEATURE_HIT           = "${mod}feature_hit";
 
-$TBBS_QUERY_OPTION          = 'biosap.dbo.query_option';
+$TBBS_QUERY_OPTION          = "${mod}query_option";
 
 
