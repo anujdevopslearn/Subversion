@@ -248,7 +248,7 @@ sub displayIntro {
 
 	 my %args = @_;
 	 #### get the project id
-	 my $project_id = $args{'project_id'} || die "project_id not passed";
+#	 my $project_id = $args{'project_id'} || die "project_id not passed";
 	 
 	 my $organismSql = qq~ select organism_id,organism_name from 
 	 sbeams.dbo.organism ~; 
