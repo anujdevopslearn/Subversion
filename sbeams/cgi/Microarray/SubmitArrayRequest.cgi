@@ -110,16 +110,67 @@ sub processRequests {
       }
     }
 
+    my ($arrays, $samples);
     # Decide where to go based on form values
-    if      ($q->param('apply_action') eq 'VIEWRESULTSET') { printOptions();
+    if      ($q->param('apply_action') eq 'VIEWRESULTSET') {printOptions();
     } elsif ($q->param('apply_action')) { processEntryForm();
-    } elsif ($q->param('ShowEntryForm')) { printEntryForm();
-    } elsif ($q->param("$PK_COLUMN_NAME")) { printEntryForm();
+    } elsif ($q->param('ShowEntryForm')) { 
+	($arrays,$samples)=printEntryForm();
+	print_javascript(arrays=>$arrays, samples=>$samples);
+    } elsif ($q->param("$PK_COLUMN_NAME")) { 
+	($arrays,$samples)=printEntryForm();
+	print_javascript(arrays=>$arrays, samples=>$samples);
     } else { printOptions();
     } # end if
 
 } # end processRequests
 
+###############################################################################
+# print_javascript
+###############################################################################
+sub print_javascript {
+    my $SUB_NAME = "print_javascript";
+    my %args = @_;
+
+    my $array_requests = $args{'arrays'} || 0;
+    my $samples = $args{'samples'} || 0;
+
+    print qq~
+<SCRIPT LANGUAGE="Javascript">
+    ~;
+
+    for (my $m=0;$m<$samples;$m++) {
+	print "var sample".$m."_array = new Array($array_requests);\n";
+    }
+
+    for (my $i=0;$i<$array_requests;$i++) {
+	for (my $j=0;$j<$samples;$j++) {
+	    print "sample".$j."_array[".$i."] = document.MainForm.sample".$j."labmeth_".$i.";\n";
+	}
+    }
+
+   print qq~
+function setAllMethods(sample_number){
+  if (sample_number == 0){
+    for (var n=0; n<sample0_array.length;n++){
+	sample0_array[n].options[document.MainForm.sample0labmeth_all.selectedIndex].selected=true;
+    }
+  }
+  if (sample_number == 1){
+    for (var n=0; n<sample1_array.length;n++){
+	sample1_array[n].options[document.MainForm.sample1labmeth_all.selectedIndex].selected=true;
+    }
+  }
+  if (sample_number == 2){
+    for (var n=0; n<sample2_array.length;n++){
+	sample2_array[n].options[document.MainForm.sample2labmeth_all.selectedIndex].selected=true;
+    }
+  }
+}
+</SCRIPT>
+    ~;
+
+}
 
 ###############################################################################
 # Print Options Page
@@ -128,7 +179,6 @@ sub printOptions {
 
     $sbeamsMOD->printPageHeader();
     $sbeams->printUserContext();
-
     print qq!
         <P>
         <H2>$DBTITLE $CATEGORY Maintenance</H2>
@@ -178,7 +228,6 @@ sub printEntryForm {
     my $username;
     my $proc_cost=0;
     my $total_price=0;
-
     # Get the columns for this table
     my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
     my %input_types = 
@@ -501,6 +550,27 @@ sub printEntryForm {
       }
       print "</TR>\n";
 
+      # Insert "set all labeling method" drop-down
+      print qq~
+	<TR>
+	<TD></TD>
+	<TD></TD>
+	~;
+
+      for $col (0..($n_samples-1)){
+	my $myoptionlist = $optionlist;
+	print qq~
+	  <TD></TD>
+	  <TD></TD>
+	  <TD>
+	  <SELECT NAME="sample${col}labmeth_all" onChange="Javascript:setAllMethods($col);">
+	  <OPTION VALUE="" SELECTED>SET ALL LABELING METHODS TO:</OPTION>
+	  $myoptionlist
+	  </SELECT></TD>
+	  ~;
+      }
+
+
       my $thisoptionlist;
       for $row (0..($n_slides-1)) {
         print qq!
@@ -695,7 +765,7 @@ sub printEntryForm {
 
 
     $sbeamsMOD->printPageFooter("CloseTables");
-
+    return ($n_slides, $n_samples);
 } # end printEntryForm
 
 
@@ -1007,7 +1077,7 @@ sub processEntryForm {
           $query_part1 .= "$element,";
 
           $tmp = $parameters{$element};
-          # Change all ' to '' so that it can go in the INSERT statement
+          # Change all \' to '' so that it can go in the INSERT statement
           $tmp =~ s/'/''/g;
           $query_part2 .= "'$tmp',";
         }
@@ -1088,7 +1158,7 @@ sub processEntryForm {
         # If there is not yet an ID for this slide, we need to INSERT
         } else {
 
-          # But double-check with a query that there isn't already a record
+          # But double-check with a query that there isnt already a record
           $sql_query = qq~
 		SELECT array_request_slide_id
 		  FROM $TB_ARRAY_REQUEST_SLIDE
