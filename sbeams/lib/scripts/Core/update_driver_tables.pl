@@ -52,7 +52,8 @@ EOU
 
 
 #### Process options
-unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
+  "delete_existing")) {
   print "$USAGE";
   exit;
 }
@@ -123,6 +124,10 @@ sub updateDriverTable {
   my %parameters = %{$ref_parameters};
 
 
+  #### Set the command-line options
+  my $delete_existing = $OPTIONS{"delete_existing"};
+
+
   #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql);
 
@@ -131,6 +136,16 @@ sub updateDriverTable {
   unless ($QUIET) {
     $sbeams->printUserContext();
     print "\n";
+  }
+
+
+  #### If delete_existing is set, the TRUNCATE the tables and exit
+  if ($delete_existing) {
+    print "DELETing existing data in driver tables...\n";
+    $sbeams->executeSQL('DELETE FROM table_property');
+    $sbeams->executeSQL('DELETE FROM table_column');
+    print "Driver tables DELETEd.  Start reloading data.\n";
+    return;
   }
 
 
