@@ -3723,7 +3723,7 @@ sub printUserChooser {
     my $current_username = $self->getCurrent_username;
     my $current_contact_id = $self->getCurrent_contact_id;
     my $current_work_group_id = $self->getCurrent_work_group_id;
-    my $current_work_group_name = $self->getCurrent_work_group_name;
+    my $current_work_group_devname = $self->getCurrent_work_group_name;
     my $current_project_id = $self->getCurrent_project_id;
     my $current_project_name = $self->getCurrent_project_name;
     my $current_user_context_id = $self->getCurrent_user_context_id;
@@ -3839,8 +3839,8 @@ sub printUserChooser {
 						<FORM NAME="projectChooser" METHOD="GET" ACTION="$submit_string">
 						~;
 				## PRINT CGI parameters
-				my $query = $ENV{'QUERY_STRING'};
-				my @query_parameters = split  /&/, $query;
+				my $project_query_string = $ENV{'QUERY_STRING'};
+				my @query_parameters = split  /&/, $project_query_string;
 				foreach my $temp_param (@query_parameters) {
 						$temp_param =~ /(.*)\=(.*)/;
 						unless ($1 eq "set_current_project_id" || $1 eq "set_current_work_group"){
@@ -3860,8 +3860,8 @@ sub printUserChooser {
 						<FORM NAME="groupChooser" METHOD="GET" ACTION="$submit_string">
 						~;
 				## PRINT CGI parameters
-				my $query = $ENV{'QUERY_STRING'};
-				my @query_parameters = split  /&/, $query;
+				my $group_query_string = $ENV{'QUERY_STRING'};
+				my @query_parameters = split  /&/, $group_query_string;
 				foreach my $temp_param (@query_parameters) {
 						$temp_param =~ /(.*)\=(.*)/;
 						unless ($1 eq "set_current_project_id" || $1 eq "set_current_work_group"){
