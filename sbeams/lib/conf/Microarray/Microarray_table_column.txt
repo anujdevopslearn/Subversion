@@ -49,16 +49,16 @@ labeling_method	14	modified_by_id	Record Modified By	int	8	0	N		N	contact	contac
 labeling_method	15	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 labeling_method	16	record_status	Record Status	char	1	0	N	N	N							N	N				
 array_request	1	array_request_id	Array Request ID	int	8	0	N		Y							N	N				pkDEFAULT
-array_request	2	contact_id	Contact	int	8	0	N		N	contact	contact_id	Y	current_contact_id	 		Y	Y	N	Requestor of these slides		
+array_request	2	contact_id	Contact	int	8	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	N	Requestor of these slides		
 array_request	3	project_id	Project	int	8	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which these slides are requested	"SELECT project_id, name + ' ['+budget+']' FROM $TB_PROJECT WHERE PI_contact_id='$contact_id' ORDER BY name"	
 array_request	4	cost_scheme_id	Cost Structure	varchar	50	0	N		N			N	optionlist			Y	Y	N	Cost Structure from which pricing is calculated	"SELECT cost_scheme_id,cost_scheme_name FROM $TB_COST_SCHEME ORDER BY sort_order,cost_scheme_name"	
 array_request	5	slide_type_id	Slide Type	int	8	0	N		N	slide_type	slide_type_id	Y	optionlist			Y	Y	N	Slide Type	MANUAL	
 array_request	6	n_slides	Number of Arrays	int	8	0	N		N			Y	text	10		Y	Y	N	"Number of arrays in this request (note that for the Yeast Half Slide option, the number of arrays you specify here is TWICE the number of pieces of glass)"		
-array_request	7	n_samples_per_slide	Samples per Array	int	8	0	N		N			Y	optionlist	 		Y	Y	N	Number of samples per array (usually 2)	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='samples_per_slide' ORDER BY sort_order,option_value"	
-array_request	8	hybridization_request	Prep Request	varchar	50	0	N		N			Y	optionlist	 		Y	Y	N	Whether you want the Arrays Group to perform Labeling and Hybridization (priced by labeling method)	"SELECT option_key,option_value FROM $TB_ARRAY_REQUEST_OPTION array_request_option WHERE option_type='hybridization_request' ORDER BY sort_order,option_value"	
-array_request	9	scanning_request	Analysis Request	varchar	50	0	N		N			Y	optionlist	 		Y	Y	N	Whether you want the Arrays Group to perform Scanning and Quantitation	"SELECT option_key,option_value+' (\$'+CONVERT(varchar(50),price)+')' FROM $TB_ARRAY_REQUEST_OPTION WHERE option_type='scanning_request' ORDER BY sort_order,option_value"	
+array_request	7	n_samples_per_slide	Samples per Array	int	8	0	N		N			Y	optionlist			Y	Y	N	Number of samples per array (usually 2)	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='samples_per_slide' ORDER BY sort_order,option_value"	
+array_request	8	hybridization_request	Prep Request	varchar	50	0	N		N			Y	optionlist			Y	Y	N	Whether you want the Arrays Group to perform Labeling and Hybridization (priced by labeling method)	"SELECT option_key,option_value FROM $TB_ARRAY_REQUEST_OPTION array_request_option WHERE option_type='hybridization_request' ORDER BY sort_order,option_value"	
+array_request	9	scanning_request	Analysis Request	varchar	50	0	N		N			Y	optionlist			Y	Y	N	Whether you want the Arrays Group to perform Scanning and Quantitation	"SELECT option_key,option_value+' (\$'+CONVERT(varchar(50),price)+')' FROM $TB_ARRAY_REQUEST_OPTION WHERE option_type='scanning_request' ORDER BY sort_order,option_value"	
 array_request	10	request_status	Request Status	varchar	50	0	N		N			Y	fixed			Y	Y	N	Status of this request	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='job_status' ORDER BY sort_order,option_value"	
-array_request	11	price	Price	int	8	0	Y		N			N	fixed	 		N	Y	N	Total price for this request		
+array_request	11	price	Price	int	8	0	Y		N			N	fixed			N	Y	N	Total price for this request		
 array_request	12	comment	Comment	text	0	0	Y		N			N	textarea	4		Y	Y	N	Additional comments about this request		
 array_request	13	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N				fixed			N	Y				
 array_request	14	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
@@ -96,10 +96,10 @@ printing_batch	4	date_started	Date Started	datetime	8	0	N		N			Y	text	30		Y	Y	Y	
 printing_batch	5	date_finished	Date Finished	datetime	8	0	Y		N			N	text	30		Y	Y	N	Date/time the printing finished		
 printing_batch	6	number_of_spots	Number of Spots	int	4	0	Y		N			N	text	10		Y	Y	N	Number of spots per slide		
 printing_batch	7	spot_spacing	Spot Spacing (microns)	float	8	0	N		N			Y	text	10		Y	Y	N	Spacing of the spots		
-printing_batch	8	solvent	Solvent	varchar	50	0	N		N			Y	optionlist	 		Y	Y	N	Solvent used	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='solvent' ORDER BY sort_order,option_value"	
+printing_batch	8	solvent	Solvent	varchar	50	0	N		N			Y	optionlist			Y	Y	N	Solvent used	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='solvent' ORDER BY sort_order,option_value"	
 printing_batch	9	temperature	Temperature	float	8	0	Y		N			N	text	10		Y	Y	N	Temperature during printing		
 printing_batch	10	humidity	Humidity	float	8	0	Y		N			N	text	10		Y	Y	N	Humidity during printing		
-printing_batch	11	post_treatment	Post Treatment	varchar	50	0	N		N			Y	optionlist	 		Y	Y	N	Post treatment of slides	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='post_treatment' ORDER BY sort_order,option_value"	
+printing_batch	11	post_treatment	Post Treatment	varchar	50	0	N		N			Y	optionlist			Y	Y	N	Post treatment of slides	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='post_treatment' ORDER BY sort_order,option_value"	
 printing_batch	12	slide_list	Slide List	varchar	255	0	Y		N			N	text	50		Y	Y	N	Serial numbers of slides printed (NOTE: this is a non-binding entry; it does not automatically create slides associated with this printing)		
 printing_batch	13	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 printing_batch	14	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -123,14 +123,15 @@ array_layout	1	layout_id	Layout ID	int	8	0	N		Y							N	N				pkDEFAULT
 array_layout	2	slide_type_id	Slide Type	int	8	0	N		N	slide_type	slide_type_id	Y	optionlist			Y	Y	Y	Slide type	"SELECT slide_type_id, name FROM $TB_SLIDE_TYPE ORDER BY sort_order,name"	
 array_layout	3	name	name	varchar	50	0	N		N			Y	text	25	setLayoutFileName()	Y	Y	Y	Name of this layout		
 array_layout	4	data_file	Data File	varchar	100	0	N		N			N	file	50		N	N	N	Click Browse and select the file to upload to the database		
-array_layout	5	source_filename	Source Filename	varchar	100	0	N		N			Y	text	50		Y	Y	N	Enter the network location of the key file		
-array_layout	6	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-array_layout	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-array_layout	8	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-array_layout	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-array_layout	10	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-array_layout	11	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-array_layout	12	record_status	Record Status	char	1	0	N	N	N							N	N				
+array_layout	5	biosequence_set_id	Biosequence Set	int	8	0	N		N	ma_biosequence_set	biosequence_set_id	Y	optionlist			Y	Y	N	Biosequence Set pertaining to this layout	"SELECT biosequence_set_id, set_name FROM $TBMA_BIOSEQUENCE_SET ORDER BY sort_order,set_name"	
+array_layout	6	source_filename	Source Filename	varchar	100	0	N		N			Y	text	50		Y	Y	N	Enter the network location of the key file		
+array_layout	7	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+array_layout	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+array_layout	9	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+array_layout	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+array_layout	11	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+array_layout	12	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+array_layout	13	record_status	Record Status	char	1	0	N	N	N							N	N				
 array	1	array_id	Layout ID	int	8	0	N		Y						document.forms[0].array_name.value=document.forms[0].slide_id.options[document.forms[0].slide_id.selectedIndex].text	N	N				pkDEFAULT
 array	2	project_id	Project	int	8	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project to which this microarray is to be assigned	"SELECT project_id, username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) ORDER BY name"	
 array	3	layout_id	Layout	int	8	0	N		N	array_layout	layout_id	Y	optionlist			Y	Y	N	Layout name associated with this microarray	"SELECT layout_id, ST.name+' - '+AL.name FROM $TB_ARRAY_LAYOUT AL LEFT JOIN $TB_SLIDE_TYPE ST ON ( AL.slide_type_id=ST.slide_type_id ) ORDER BY ST.name,AL.name"	
@@ -222,6 +223,70 @@ MA_biosequence_set	12	sort_order	Sort Order	int	8	0	N	10	N							N	N	N
 MA_biosequence_set	13	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 MA_biosequence_set	14	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
 MA_biosequence_set	15	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-MA_biosequence_set	16	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N
-MA_biosequence_set	17	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N
-MA_biosequence_set	18	record_status	Record Status	char	1	0	N	N	N							N	N
+MA_biosequence_set	16	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+MA_biosequence_set	17	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+MA_biosequence_set	18	record_status	Record Status	char	1	0	N	N	N							N	N				
+MA_channel	1	channel_id	Channel ID	int	8	0	N		Y							N	N				pkDEFAULT
+MA_channel	2	channel_name	Channel Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Channel Name		
+MA_channel	3	channel_desc	Channel Description	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Channel Descrption		
+MA_channel	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+MA_channel	5	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+MA_channel	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+MA_channel	7	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+MA_channel	8	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+MA_channel	9	record_status	Record Status	char	1	0	N	N	N							N	N				
+MA_server	1	server_id	Server ID	int	8	0	N		Y							N	N				pkDEFAULT
+MA_server	2	server_name	Server Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Server Name		
+MA_server	3	server_desc	Server Description	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Server Description		
+MA_server	4	server_ip	Server IP	varchar	15	0	Y		N			N	text	50		Y	Y	N	Server IP		
+MA_server	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+MA_server	6	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+MA_server	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+MA_server	8	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+MA_server	9	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+MA_server	10	record_status	Record Status	char	1	0	N	N	N							N	N				
+MA_file_path	1	file_path_id	File Path ID	int	8	0	N		Y							N	N				pkDEFAULT
+MA_file_path	2	file_path_name	File Path Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	File Path Name		
+MA_file_path	3	file_path_desc	File Path Description	varchar	255	0	Y		N			N	text	50		Y	Y	N	File Path Description		
+MA_file_path	4	file_path	File Path	varchar	2000	0	N		N			Y	text	50		Y	Y	N	File Path		
+MA_file_path	5	server_id	Server ID	int	8	0	N		N	server	server_id	Y	optionlist			Y	Y	N	Server ID	"SELECT server_id,server_name FROM $TBMA_SERVER WHERE record_status != 'D'"	
+MA_file_path	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+MA_file_path	7	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+MA_file_path	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+MA_file_path	9	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+MA_file_path	10	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+MA_file_path	11	record_status_id	Record Status	char	1	0	N	N	N							N	N				
+MA_file_location	1	file_location_id	File Location	int	8	0	N		Y							N	N	Y	File Location ID		pkDEFAULT
+MA_file_location	2	file_name	File Name	varchar	2000	0	N		N			Y	text	50		Y	Y	N	Name of File		
+MA_file_location	3	file_type_id	File Type ID	int	8	0	N		N	file_type	file_type_id	Y	optionlist			Y	Y	Y	File Type ID	"SELECT file_type_id, file_type_name FROM $TBMA_FILE_TYPE WHERE record_status != 'D'"	
+MA_file_location	4	file_path_id	File Path ID	int	8	0	N		N	file_path	file_path_id	Y	optionlist			Y	Y	Y	File Path ID	"SELECT file_path_id, file_path_name FROM $TBMA_FILE_PATH WHERE record_status != 'D'"	
+MA_file_location	5	file_size	File Size	int	8	0	Y		N							N	N	N	File Size		
+MA_file_location	6	digital_signature	Digital Signature	varchar	2000	0	Y		N							N	N	N	Digital Signature		
+MA_file_location	7	file_zipped_flag	File Zipped Flag	bit	1	0	N		N							N	N	N			
+MA_file_location	8	file_name_zipped	File Name Zipped	varchar	2000	0	Y		N							N	N	N	Zipped File Name		
+MA_file_location	9	file_size_zipped	File Size Zipped	int	8	0	Y		N							N	N	N	Zipped File Size		
+MA_file_location	10	digital_signature_zipped	Digital Signature Zipped	varchar	2000	0	Y		N							N	N	N			
+MA_file_location	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+MA_file_location	12	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N	Y			
+MA_file_location	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+MA_file_location	14	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N	Y			
+MA_file_location	15	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N	Y			
+MA_file_location	16	record_status	Record Status	char	1	0	Y	N	N							N	N	N			
+MA_file_type	1	file_type_id	File Type ID	int	8	0	N		Y							N	N		File Type ID		pkDEFAULT
+MA_file_type	2	file_type_name	File Type Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	File Type Name		
+MA_file_type	3	file_type_desc	File Type Description	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	File Type Description		
+MA_file_type	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+MA_file_type	5	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+MA_file_type	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+MA_file_type	7	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+MA_file_type	8	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+MA_file_type	9	record_status	Record Status	char	1	0	Y	N	N							N	N				
+MA_quantitation_type	1	quantitation_type_id	Quantitation Type ID	int	8	0	N		Y							N	N		Quantitation Type ID		pkDEFAULT
+MA_quantitation_type	2	quantitation_type_name	Quantitation Type Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Quantitation Type Name		
+MA_quantitation_type	3	quantitation_type_desc	Quantitation Type Description	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Quantitation Type Description		
+MA_quantitation_type	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+MA_quantitation_type	5	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+MA_quantitation_type	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N
+MA_quantitation_type	7	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N
+MA_quantitation_type	8	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N
+MA_quantitation_type	9	record_status	Record Status	char	1	0	Y	N	N							N	N
