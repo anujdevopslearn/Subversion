@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/tools/bin/perl
 
 ###############################################################################
 # Set up all needed modules and objects
@@ -105,8 +105,13 @@ sub main {
   #$sbeams->printDebuggingInfo($q);
 
   #### Define standard variables
-  my $affy_array_id = $parameters{'affy_array_id'}
-  || die "ERROR: Affy array id not passed";
+  my $affy_array_id = $parameters{'affy_array_id'};
+  my $analysis_folder = $parameters{'analysis_folder'};
+  my $analysis_file = $parameters{'analysis_file'};
+  
+ unless ( $affy_array_id || ($analysis_folder && $analysis_file)) {
+ 	 die "ERROR: Need to Pass affy_array_id or analysis_folder &  $analysis_file ";
+ }
 	my $action = $parameters{'action'} || "download";
 	
 	my $file_ext      = $parameters{'file_ext'};
@@ -116,30 +121,34 @@ sub main {
 	my $file_name = '';
 	if ($affy_array_id) {
 		($file_name, $output_dir) = $sbeams_affy_groups->get_file_path_from_id(affy_array_id => $affy_array_id);  #return the file_root_name and file_base_path
-	}	
+	}elsif($analysis_folder){
+		$output_dir = $sbeamsMOD->affy_bioconductor_devlivery_path();
+		$output_dir .= "/$analysis_folder";
+		$file_name = $analysis_file;
+	}
+	
+	#### Verify user has permission to access the file
+	error("You do not have sufficent privillages to view data within this project") 
+	unless ($sbeams->get_best_permission <= $DATA_READER_ID);
+	
+	error("You are not allowed to view ANY data from this project") 
+	unless (grep {$project_id == $_} $sbeams->getAccessibleProjects);
+
 	
 	if ($action eq 'download') {
-	    #### Verify user has permission to access the file
-	    die;
-	    if ($sbeams->get_best_permission <= $DATA_READER_ID){
+	   
+	    
+	    
 		print "Content-type: application/force-download \n";
-		print "Content-Disposition: filename=$file_name\n\n";
+		print "Content-Disposition: filename=$file_name.$file_ext\n\n";
 		my $buffer;
-		open (DATA, "$output_dir/$file_name")
-		    || die "Couldn't open $file_name";
+		open (DATA, "$output_dir/$file_name.$file_ext")
+		    || die "Couldn't open $file_name.$file_ext";
 		while(read(DATA, $buffer, 1024)) {
 		    print $buffer;
 		}
 		close (DATA);
-	    }else {
-		$sbeams->printPageHeader();
-		print qq~
-		    <BR><BR><BR>
-		    <H1><FONT COLOR="red">You Do Not Have Access To View This File</FONT></H1>
-		    <H2><FONT COLOR="red">Contact PI or another administrator for permission</FONT></H2>
-		    ~;
-		$sbeamsMOD->printPageFooter();
-	    }
+	    
 	}elsif ($action eq 'view_image'){
 		my $file;
 		my $subdir = $parameters{'SUBDIR'};
@@ -149,18 +158,12 @@ sub main {
 	}else {
 	    #### Start printing the page
 	    $sbeamsMOD->printPageHeader();	
-	    
-	    #### Verify user has permission to access the file
-	    if ($sbeams->get_best_permission <= $DATA_READER_ID){
+	    #print "INFO $output_dir/$file_name.$file_ext'<br>";
+	   
 		my $file = "$output_dir/$file_name.$file_ext";
-		printFile(file=>$file);
-	    }else{
-		print qq~
-		    <BR><BR><BR>
-		    <H1><FONT COLOR="red">You Do Not Have Access To View This File</FONT></H1>
-		    <H2><FONT COLOR="red">Contact PI or another administrator for permission</FONT></H2>
-		    ~;
-	    }
+		printFile(file		=>$file,
+				  file_ext 	=>$file_ext);
+	    
 	    $sbeamsMOD->printPageFooter();
 	}
 } # end main
@@ -212,6 +215,8 @@ sub printFile {
   my %args = @_;
 
   my $file = $args{'file'};
+  my $file_ext = $args{file_ext};
+  
   my $error = 0;
 
   #print "FILE TO OPEN '$file'<br>";
@@ -219,7 +224,12 @@ sub printFile {
   open(INFILE, "< $file") || sub{$error = -1;};
   my $all_data;
   if ($error == 0) {
-     # print qq~ <PRE> ~;
+     if ($file_ext eq 'html'){
+     	while(<INFILE>){
+     		print $_;
+     	}
+     }else{
+      # print qq~ <PRE> ~;
       print "<plaintext>";
       my $count ++;
       while (<INFILE>) {
@@ -229,7 +239,7 @@ sub printFile {
       	$count ++;
       }
       print qq~ </plaintext>~;
-     
+     }
   }
   else{
       print qq~
@@ -242,4 +252,14 @@ sub printFile {
 	  
 } # end printFile
 
-
+sub error{
+	my $error_info = shift;
+	$sbeams->printPageHeader();
+		print qq~
+		    <BR><BR><BR>
+		    <H1><FONT COLOR="red">You Do Not Have Access To View This File</FONT></H1>
+		    <H2><FONT COLOR="red">Reason: $error_info</FONT></H2>
+		    ~;
+		$sbeamsMOD->printPageFooter();
+	exit;
+}
