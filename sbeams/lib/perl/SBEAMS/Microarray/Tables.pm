@@ -159,7 +159,7 @@ $TBMA_ARRAY_REQUEST       = "${mod}array_request";
 $TBMA_ARRAY_REQUEST_SLIDE = "${mod}array_request_slide";
 $TBMA_ARRAY_REQUEST_SAMPLE= "${mod}array_request_sample";
 $TBMA_SAMPLE_PROTOCOL     = "${mod}sample_protocol";
-$TBMA_ARRAY_REQUEST_OPTION= "${mod}array_request_option";
+$TBMA_ARRAY_REQUEST_OPTION= "${modMARR}array_request_option";
 
 $TBMA_SLIDE_MODEL         = "${mod}slide_model";
 $TBMA_SLIDE_LOT           = "${mod}slide_lot";
