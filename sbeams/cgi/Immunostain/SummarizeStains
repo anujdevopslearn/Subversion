@@ -332,6 +332,7 @@ sub handle_request {
       ["stained_slide_id","SS.stained_slide_id","stained_slide_id"],
       ["stain_name","SS.stain_name","Stain Name"],
       ["antibody_name","A.antibody_name","Antibody"],
+      ["refseq_accession","BSRSA.best_RefSeqID","RefSeq Accession"],
 			["antibody_id", "A.antibody_id", "antibody_id"],
       ["cell_type_name","CT.cell_type_name","Cell Type"],
 			["cell_type_id", "CT.cell_type_id", "cell_type_id"],
@@ -387,6 +388,9 @@ sub handle_request {
                     AND SCP3.cell_presence_level_id = 3
                     AND SCP3.cell_type_id = SCP1.cell_type_id )
 	 INNER JOIN $TBIS_ANTIBODY A ON ( SS.antibody_id = A.antibody_id )
+	  LEFT JOIN $TBIS_ANTIGEN AG ON ( A.antigen_id = AG.antigen_id )
+	  LEFT JOIN $TBIS_BIOSEQUENCE BS ON ( AG.biosequence_id = BS.biosequence_id )
+	  LEFT JOIN Immunostain.dbo.biosequence_refseq_association BSRSA ON ( BS.biosequence_accession = BSRSA.LocusLinkID )
 	 WHERE 1 = 1
 	$project_clause
 	$specimen_block_clause
@@ -462,19 +466,8 @@ sub handle_request {
         resultset_ref=>$resultset_ref,
       );
 			
-			
-      #### Post process the resultset
-      postProcessResultset(
-        rs_params_ref=>\%rs_params,
-        resultset_ref=>$resultset_ref,
-        query_parameters_ref=>\%parameters,
-        column_titles_ref=>\@column_titles,
-      ) if ($parameters{display_options} =~ /pivot/i);
-
-   #### Store the resultset and parameters to disk resultset cache
-   #### this always happens
-	 #### creates a file and stores data in file for later call up 
-	   	$rs_params{set_name} = "SETME";
+      #### Store the resultset and parameters to disk resultset cache
+      $rs_params{set_name} = "SETME";
       $sbeams->writeResultSet(
         resultset_file_ref=>\$rs_params{set_name},
         resultset_ref=>$resultset_ref,
@@ -484,9 +477,18 @@ sub handle_request {
         column_titles_ref=>\@column_titles,
       );
 
-		}
+    }
 		
-		#### This is the actual result
+    #### Post process the resultset
+    my $cytoscape = { template => 'SummarizeStains' };
+    postProcessResultset(
+      rs_params_ref=>\%rs_params,
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      column_titles_ref=>\@column_titles,
+      cytoscape=>$cytoscape,
+    ) if ($parameters{display_options} =~ /pivot/i);
+
     #### Display the resultset
     $sbeams->displayResultSet(
       resultset_ref=>$resultset_ref,
@@ -497,9 +499,9 @@ sub handle_request {
       max_widths=>\%max_widths,
       column_titles_ref=>\@column_titles,
       base_url=>$base_url,
+      cytoscape=>$cytoscape,
     );
 
-	 #### this is the query url and download options
    #### Display the resultset controls
     $sbeams->displayResultSetControls(
       resultset_ref=>$resultset_ref,
@@ -556,159 +558,204 @@ sub evalSQL {
 ###############################################################################
 sub postProcessResultset {
 		
-	my %args = @_;
+  my %args = @_;
 
   my ($i,$key,$line,$result,$sql,$cellTypeIndex,$antibodyIndex,
-	$intenseIndex,$equivocalIndex,$nonIndex);
-	my (%dataHash,%cellTypeHash);
+      $intenseIndex,$equivocalIndex,$nonIndex);
+
+  my (%dataHash,%cellTypeHash,%RefSeqIDs);
+
+
   #### Process the arguments list
   my $resultset_ref = $args{'resultset_ref'};
   my $rs_params_ref = $args{'rs_params_ref'};
   my $query_parameters_ref = $args{'query_parameters_ref'};
   my $column_titles_ref = $args{'column_titles_ref'};
-	my $option;
-
-	
-# testing: what values have been passed
-#foreach my $key (keys %{$query_parameters_ref})
-#{
-#		print "$key --- $query_parameters_ref->{$key}<br>";
-#}
+  my $cytoscape = $args{'cytoscape'};
+  my $option;
 
 
-	 #### Process the arguments list
-	 my @row;
-   my $irow = 0;
-   my ($value,$element);
-   my $nrows = scalar(@{$resultset_ref->{data_ref}});
-	 if ($nrows < 1)
-	 {
-			 print "<center><table><tr><td align = center><b> Sorry, no data available for this Query </b></td></tr></table></center>";
-	 }
-	 my(%antibodyHash, %cellIdHash);
-	 my @antibodyArray;
-	 my $prevAntibodyName;
-#getting the index and populating a datahash with the returned result
- 	my $biosequence_name_column_index = $resultset_ref->{column_hash_ref};
+  #### Set up some data data structures to hold Cytoscape data
+  my @cytoscape_files = ( 'network.sif','CommonName.noa','organism.noa',
+    'ExpressionLevel.noa','ExpressionLevelLabel.noa','NodeType.noa' );
+  my %cytoscape_header = ( 'network.sif' => undef,
+			   'CommonName.noa' => 'CommonName',
+			   'organism.noa' => 'species',
+			   'ExpressionLevel.noa' => 'ExpressionLevel',
+			   'ExpressionLevelLabel.noa' => 'ExpressionLevelLabel',
+			   'NodeType.noa' => 'NodeType',
+			 );
+  foreach my $file ( @cytoscape_files ) {
+    my @tmp = ( $cytoscape_header{$file} );
+    $cytoscape->{files}->{$file} = \@tmp;
+  }
 
-	for (@{$resultset_ref->{data_ref}})
-	{			 
-			@row = @{$resultset_ref->{data_ref}->[$irow]};
-			my $antibodyName =  $row[$biosequence_name_column_index->{antibody_name}];
-			my $antibodyId = $row[$biosequence_name_column_index->{antibody_id}];
-			my $cellTypeName = $row[$biosequence_name_column_index->{cell_type_name}];
-			my $cellTypeId = $row[$biosequence_name_column_index->{cell_type_id}];
-			my $probability = ($row[$biosequence_name_column_index->{intense_percent}] + $row[$biosequence_name_column_index->{equivocal_percent}]/2)/100;
-			$dataHash{$antibodyName}->{$cellTypeName}->{probability}+=$probability if $cellTypeName; 
-			$dataHash{$antibodyName}->{$cellTypeName}->{numberOfEx}++ if $cellTypeName;
-			$cellTypeHash{$cellTypeName} = $row[$biosequence_name_column_index->{cell_type_sort_order}] if ($cellTypeName);
 
-			if ($prevAntibodyName ne $antibodyName and $cellTypeName) {
-			  push(@antibodyArray, $antibodyName);
-			  $prevAntibodyName = $antibodyName;
-			}
-			$antibodyHash{$antibodyName} = $antibodyId;
-			$cellIdHash{$cellTypeName} = $cellTypeId;
-			$irow++;
-	}
+  my @row;
+  my $irow = 0;
+  my ($value,$element);
+  my $nrows = scalar(@{$resultset_ref->{data_ref}});
+
+  if ($nrows < 1) {
+    print "<center><table><tr><td align = center><b> Sorry, no data available for this Query </b></td></tr></table></center>";
+  }
+
+  my(%antibodyHash, %cellIdHash);
+  my @antibodyArray;
+  my $prevAntibodyName;
+
+  #getting the index and populating a datahash with the returned result
+  my $biosequence_name_column_index = $resultset_ref->{column_hash_ref};
+
+  for (@{$resultset_ref->{data_ref}}) {
+    @row = @{$resultset_ref->{data_ref}->[$irow]};
+    my $antibodyName =  $row[$biosequence_name_column_index->{antibody_name}];
+    my $antibodyId = $row[$biosequence_name_column_index->{antibody_id}];
+    my $refseq_accession = $row[$biosequence_name_column_index->{refseq_accession}];
+    my $cellTypeName = $row[$biosequence_name_column_index->{cell_type_name}];
+    my $cellTypeId = $row[$biosequence_name_column_index->{cell_type_id}];
+
+    if ($cellTypeName) {
+      #### Calculate the expression coefficient with equivocal weight of 0.1
+      my $probability = ( ($row[$biosequence_name_column_index->{intense_percent}]||0) * 1.0 +
+			  ($row[$biosequence_name_column_index->{equivocal_percent}]||0) * 0.1)/100;
+      $dataHash{$antibodyName}->{$cellTypeName}->{probability}+=$probability if $cellTypeName; 
+      $dataHash{$antibodyName}->{$cellTypeName}->{numberOfEx}++ if $cellTypeName;
+      $cellTypeHash{$cellTypeName} = $row[$biosequence_name_column_index->{cell_type_sort_order}] if ($cellTypeName);
+
+      if ($prevAntibodyName ne $antibodyName and $cellTypeName) {
+	push(@antibodyArray, $antibodyName);
+	$RefSeqIDs{$antibodyName} = $refseq_accession;
+	$prevAntibodyName = $antibodyName;
+      }
+      $antibodyHash{$antibodyName} = $antibodyId;
+      $cellIdHash{$cellTypeName} = $cellTypeId;
+    }
+
+
+    $irow++;
+
+  }
 		
 		
-		my @colorArray = qw /#FFC6A5 #FF6342 #FF0000 #AD0000/;
-		my @shadeArray = qw /#E0E0E0 #BFBFBF #A1A1A1 #808080/;
+  my @colorArray = qw /#FFC6A5 #FF6342 #FF0000 #AD0000/;
+  my @shadeArray = qw /#E0E0E0 #BFBFBF #A1A1A1 #808080/;
 
-#generating the table and the cell_type_name row
-	print "<table border = 2 borderColor=black align = center>";
-	print "<tr><td></td>\n";
 
-        %hash_to_sort = %cellTypeHash;
-	foreach my $cellType (sort bySortOrder keys %cellTypeHash)
-	{
-			print  "<td><b>$cellType</b></td>";
-			print "<td>NumOfExp</td>" if $query_parameters_ref->{display_options} =~ /numberof/i;
-	}
-	print "</tr>\n";
+  # generating the table and the cell_type_name row
+  my $HTML = '';
+  $HTML .= "<table border = 2 borderColor=black align = center>";
+  $HTML .= "<tr><td></td>\n";
 
-#here is the actual data
-	foreach my $antibodyKey (@antibodyArray)
-	{
+  %hash_to_sort = %cellTypeHash;
+  foreach my $cellType (sort bySortOrder keys %cellTypeHash) {
+    $HTML .= "<td><b>$cellType</b></td>";
+    $HTML .= "<td>NumOfExp</td>" if $query_parameters_ref->{display_options} =~ /numberof/i;
 
-			my $averageNumber;
-			my $abundance;
-			my $expNumber;
-			print  "<tr><td><b><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=_processAntibody&antibody_id=$antibodyHash{$antibodyKey}\">$antibodyKey</b></A></td>\n"; 
-	
-			foreach my $cellKey (sort bySortOrder keys %cellTypeHash)
-			{
-					my $key = $antibodyKey; 
-#		print "anbtibody: $key\n";	
-#		print "cellName: $cellKey\n";
-#		print "probability: $dataHash{$key}->{$cellKey}->{probability}\n" if $cellKey ne 'Stromal Leukocytes';
-#		print "number of Ex: $dataHash{$key}->{$cellKey}->{numberOfEx}\n";
-#   print "$key ---  $cellKey ---  $dataHash{$key}->{$cellKey}->{probability}   --- $dataHash{$key}->{$cellKey}->{numberOfEx}<br><br>";
-				$abundance = $dataHash{$key}->{$cellKey}->{abundance} if  $cellKey eq 'Stromal Leukocytes';;
-				next if ($dataHash{$key}->{$cellKey}->{numberOfEx}) == 0;
-				$averageNumber =($dataHash{$key}->{$cellKey}->{probability})/($dataHash{$key}->{$cellKey}->{numberOfEx});
-				$averageNumber =~ s/(.*\.\d{3}).*$/$1/;
-				$expNumber = $dataHash{$key}->{$cellKey}->{numberOfEx};
+    #### Store information needed for a Cytoscape display
+    push(@{$cytoscape->{files}->{'NodeType.noa'}},"$cellType = Structural Unit");
+    push(@{$cytoscape->{files}->{'organism.noa'}},"$cellType = Homo sapiens");
+
+  }
+
+  $HTML .= "</tr>\n";
+
+  #here is the actual data
+  foreach my $antibodyKey (@antibodyArray) {
+
+    my $averageNumber;
+    my $abundance = '';
+    my $expNumber;
+    $HTML .= "<tr><td><b><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=_processAntibody&antibody_id=$antibodyHash{$antibodyKey}\">$antibodyKey</b></A></td>\n";
+
+    #### Store information needed for a Cytoscape display
+    push(@{$cytoscape->{files}->{'NodeType.noa'}},"$RefSeqIDs{$antibodyKey} = Antibody");
+    push(@{$cytoscape->{files}->{'organism.noa'}},"$RefSeqIDs{$antibodyKey} = Homo sapiens");
+    push(@{$cytoscape->{files}->{'CommonName.noa'}},"$RefSeqIDs{$antibodyKey} = $antibodyKey");
+
+    foreach my $cellKey (sort bySortOrder keys %cellTypeHash) {
+      my $key = $antibodyKey; 
+      $abundance = $dataHash{$key}->{$cellKey}->{abundance} if  $cellKey eq 'Stromal Leukocytes';;
+
+      #### If there is no experimental data, show an empty cell
+      if (!defined($dataHash{$key}->{$cellKey}->{numberOfEx}) ||
+	  $dataHash{$key}->{$cellKey}->{numberOfEx} == 0) {
+	$HTML .= "<td>&nbsp;</td>";
+	next;
+      }
+
+
+      $averageNumber =($dataHash{$key}->{$cellKey}->{probability})/($dataHash{$key}->{$cellKey}->{numberOfEx});
+      $averageNumber =~ s/(.*\.\d{3}).*$/$1/;
+      $expNumber = $dataHash{$key}->{$cellKey}->{numberOfEx};
 					
-				my $colorAverage;
-				my $colorAbundance;
-		
-#various colors for various probability  and abundance levels
-				$colorAverage = '#FFC6A5' if($averageNumber <= 0.25);
-				$colorAverage = '#FF6342' if($averageNumber >0.25 and $averageNumber <= 0.500);
-				$colorAverage = '#FF0000' if($averageNumber >0.5 and $averageNumber <= 0.750);
-				$colorAverage = '#AD0000' if($averageNumber > 0.750); 
-				
-				$colorAbundance = '#E0E0E0' if ($abundance eq 'rare');
-				$colorAbundance = '#BFBFBF 'if ($abundance eq 'moderate');
-				$colorAbundance = '#A1A1A1 'if ($abundance eq 'high');
-				$colorAbundance = '#808080' if ($abundance eq 'most');
-				
-				print "<td width=50 height=20 align = center bgcolor = $colorAverage><A HREF =\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&antibody_id=$antibodyHash{$antibodyKey}&cell_type_id=$cellIdHash{$cellKey}&display_options=MergeLevelsAndPivotCellTypes\">$averageNumber</A>";
-#				print  qq~ <br>&nbsp;&nbsp;&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=_processAntibody&antibody_id=$antibodyHash{$antibodyKey}">IMAGES</A></td>~;
-				print "<td  bgcolor = $colorAbundance>$dataHash{$key}->{$cellKey}->{abundance}</td>\n" if $cellKey eq 'Stromal Leukocytes';
-				print "<td align = center>$expNumber</td>" if $query_parameters_ref->{display_options} =~/numberof/i;
+      my $colorAverage;
+      my $colorAbundance;
 
-			}	
-			print  "</tr><tr></tr>\n";
-	}
+      #various colors for various probability  and abundance levels
+      $colorAverage = '#FFC6A5' if($averageNumber <= 0.25);
+      $colorAverage = '#FF6342' if($averageNumber >0.25 and $averageNumber <= 0.500);
+      $colorAverage = '#FF0000' if($averageNumber >0.5 and $averageNumber <= 0.750);
+      $colorAverage = '#AD0000' if($averageNumber > 0.750);
 
-#print a table legend
-	print  "</table><br><br><table align=center><tr><td align=center><b>Probability Color Scale</b><td>\n";
-	my $count = 0;
-	for my $color(@colorArray)
-	{	
-			print  "<td align=center width = 150 bgcolor=$color>";
-			print  "none 0.0 - 0.250</td>\n" if $count == 0;
-			print  "intense 0.751 - 1.0</td>\n" if $count == 3;
-			print  "0.251 - 0.500</td>\n" if $count == 1;
-			print  "0.501 - 0.750</td>\n" if $count == 2;
-			$count++;
+      $colorAbundance = '#E0E0E0' if ($abundance eq 'rare');
+      $colorAbundance = '#BFBFBF 'if ($abundance eq 'moderate');
+      $colorAbundance = '#A1A1A1 'if ($abundance eq 'high');
+      $colorAbundance = '#808080' if ($abundance eq 'most');
+				
+      $HTML .= "<td width=50 height=20 align = center bgcolor = $colorAverage><A HREF =\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&antibody_id=$antibodyHash{$antibodyKey}&cell_type_id=$cellIdHash{$cellKey}&display_options=MergeLevelsAndPivotCellTypes\">$averageNumber</A>";
+      #print  qq~ <br>&nbsp;&nbsp;&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=_processAntibody&antibody_id=$antibodyHash{$antibodyKey}">IMAGES</A></td>~;
+      $HTML .= "<td  bgcolor = $colorAbundance>$dataHash{$key}->{$cellKey}->{abundance}</td>\n" if $cellKey eq 'Stromal Leukocytes';
+      $HTML .= "<td align = center>$expNumber</td>" if $query_parameters_ref->{display_options} =~/numberof/i;
+
+      #### Store information needed for a Cytoscape display
+      if ($averageNumber > 0) {
+	push(@{$cytoscape->{files}->{'network.sif'}},"$RefSeqIDs{$antibodyKey}\tisExpressedIn\t$cellKey");
+	push(@{$cytoscape->{files}->{'ExpressionLevel.eda'}},"$RefSeqIDs{$antibodyKey} (isExpressedIn) $cellKey = $averageNumber");
+	push(@{$cytoscape->{files}->{'ExpressionLevelLabel.eda'}},"$RefSeqIDs{$antibodyKey} (isExpressedIn) $cellKey = $averageNumber ($expNumber)");
+      }
+
+    }	
+    $HTML .= "</tr><tr></tr>\n";
+  }
+
+  #print a table legend
+  $HTML .= "</table><br><br><table align=center><tr><td align=center><b>Expression Level Color Scale</b><td>\n";
+  my $count = 0;
+  for my $color(@colorArray) {	
+    $HTML .= "<td align=center width = 150 bgcolor=$color>";
+    $HTML .= "none 0.0 - 0.250</td>\n" if $count == 0;
+    $HTML .= "intense 0.751 - 1.0</td>\n" if $count == 3;
+    $HTML .= "0.251 - 0.500</td>\n" if $count == 1;
+    $HTML .= "0.501 - 0.750</td>\n" if $count == 2;
+    $count++;
 		
-	}
-	print  "</tr><t></tr><tr></tr>\n";
-	$count = 0;
-#this will be used for Leukocyte display	
+  }
+  $HTML .= "</tr><t></tr><tr></tr>\n";
+  $count = 0;
+
+  #this will be used for Leukocyte display	
 =comment
-	print  "<tr><td align=center><b>Abundance Color Scale</b><td>\n";
-	for my $shade(@shadeArray)
-	{	
-			print  "<td align=center width=150 bgcolor=$shade>";
-			print  "rare</td>\n" if $count == 0;
-			print  "moderate</td>\n" if $count == 1;
-			print  "high</td>\n" if $count == 2;
-			print  "most</td>\n" if $count == 3;
-			$count++;
+  $HTML .= "<tr><td align=center><b>Abundance Color Scale</b><td>\n";
+  for my $shade(@shadeArray) {	
+    $HTML .= "<td align=center width=150 bgcolor=$shade>";
+    $HTML .= "rare</td>\n" if $count == 0;
+    $HTML .= "moderate</td>\n" if $count == 1;
+    $HTML .= "high</td>\n" if $count == 2;
+    $HTML .= "most</td>\n" if $count == 3;
+    $count++;
 		
-	}
+  }
 =cut
-	print  "</tr></table><br>";
-	print "<br><br>";
+  $HTML .= "</tr></table><br>";
+  $HTML .= "<br><br>";
+
+  if ($sbeams->output_mode() eq 'html') {
+    print $HTML;
+  }
+
 
   return 1;
-
-
 
 } # end postProcessResult
 
