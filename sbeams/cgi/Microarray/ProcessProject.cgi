@@ -340,22 +340,27 @@ SELECT	A.array_id,A.array_name,
                 #### Pull out the channel information
                 my @channels = @{$quantitation_data{channels}};
                 my $channel;
+		
+		### <Added 06-18-02 to deal with hi-lo scans>
+		my $number_of_channels = scalar(@channels);
+		my $first_channel = "ch1";
+		my $other_channel = "ch".($number_of_channels/2 + 1);
+		### </Added 06-18-02 to deal with hi-lo scans>
 
                 #### Loop over each channel
                 foreach $channel (@channels) {
                   @parts = ($channel->{channel_label},$channel->{fluorophor});
-                  #print "$parts[0] = $parts[1]<BR>\n";
+#                  print "$parts[0] = $parts[1] : $sample1_dye : $sample2_dye : $other_channel<BR>\n";
                   $parts[1] =~ /(\d+)/;
                   my $number_part = $1;
                   my $match_flag = 0;
 
-
                   if ($sample1_dye =~ /$number_part/) {
                     $match_flag = 1;
-                    if ($parts[0] eq "ch1") {
+                    if ($parts[0] eq $first_channel) {
                       $channel_direction = "f";
                     }
-                    if ($parts[0] eq "ch2") {
+                    if ($parts[0] eq $other_channel) {
                       $channel_direction = "r";
                     }
                   }
@@ -363,10 +368,10 @@ SELECT	A.array_id,A.array_name,
                   if ($sample2_dye =~ /$number_part/) {
                     if ($match_flag) { print "Whoah!  Double match!<BR>\n"; }
                     $match_flag = 2;
-                    if ($parts[0] eq "ch1") {
+                    if ($parts[0] eq $first_channel) {
                       $channel_direction = "r";
                     }
-                    if ($parts[0] eq "ch2") {
+                    if ($parts[0] eq $other_channel) {
                       $channel_direction = "f";
                     }
                   }
@@ -1402,7 +1407,7 @@ EXECUTE = default_parameters\n\n
 #Printing VERA/SAM Options
   if ($useVandS){
     foreach $key(keys %conditions){
-      $printLine = "#VERA/SAM\nfile_name = $key.merge\nvera_output_file = $key.model\nsam_output_file = $key.sig\n";
+      $printLine = "#VERA/SAM\nfile_name = $key.all.merge\nvera_output_file = $key.model\nsam_output_file = $key.sig\n";
       if ($veraFlag){$printLine.="vera_critical_delta_flag = true\nvera_critical_delat_value= $veraValue\n";}
       if ($veraEvolFile){$printLine.="vera_evolution_flag = true\nvera_evolution_value = xxxxx\n";}
       if ($veraDebug){$printLine.="vera_debugging_file_flag = true\nvera_debugging_file_value = xxxxx\nsam_debugging_file_flag = true\nsam_debugging_file_value = xxxxx\n";}
