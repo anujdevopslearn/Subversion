@@ -138,8 +138,8 @@ my $modMARR = $DBPREFIX{'M'.'icroarray'};
 
 
 $TB_ORGANISM              = "${core}organism";
-$TB_PROTOCOL              = "${core}protocol";
-$TB_PROTOCOL_TYPE         = "${core}protocol_type";
+$TB_PROTOCOL              = "${mod}protocol";
+$TB_PROTOCOL_TYPE         = "${mod}protocol_type";
 $TB_HARDWARE              = "${core}hardware";
 $TB_HARDWARE_TYPE         = "${core}hardware_type";
 $TB_SOFTWARE              = "${core}software";
