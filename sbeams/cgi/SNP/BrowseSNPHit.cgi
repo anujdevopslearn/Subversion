@@ -176,6 +176,10 @@ sub handle_request {
 
   #### Set some reasonable defaults if no parameters supplied
   unless ($n_params_found) {
+    $parameters{snp_selection_options} = 'ShowOnlyTrueSNPs';
+    $parameters{display_options} = 'ShowSequence';
+    $parameters{identified_percent_constraint} = '>=99';
+    $parameters{match_to_query_ratio_constraint} = '>=99';
   }
 
 
@@ -242,14 +246,6 @@ sub handle_request {
     constraint_value=>$parameters{biosequence_set_id} );
   return if ($biosequence_set_clause == -1);
 
-  #### Build Validation Status constraint
-  my $validation_status_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"SI.validation_status",
-    constraint_type=>"text_list",
-    constraint_name=>"Validation Status",
-    constraint_value=>$parameters{validation_status_constraint} );
-  return if ($validation_status_clause == -1);
-
   #### Build IDENTIFIED PERCENT constraint
   my $identified_percent_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"ABS.identified_percent",
@@ -265,6 +261,37 @@ sub handle_request {
     constraint_name=>"Match to Query Ratio",
     constraint_value=>$parameters{match_to_query_ratio_constraint} );
   return if ($match_to_query_ratio_clause == -1);
+
+  #### Build Validation Status constraint
+  my $validation_status_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SI.validation_status",
+    constraint_type=>"text_list",
+    constraint_name=>"Validation Status",
+    constraint_value=>$parameters{validation_status_constraint} );
+  return if ($validation_status_clause == -1);
+
+
+  #### Build 3' FLANKING LENGTH constraint
+  my $threeprime_flanking_length_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SI.trimmed_threeprime_length",
+    constraint_type=>"flexible_int",
+    constraint_name=>"3' Flanking Length",
+    constraint_value=>$parameters{threeprime_flanking_length_constraint} );
+  return if ($threeprime_flanking_length_clause == -1);
+
+  #### Build 5' FLANKING LENGTH constraint
+  my $fiveprime_flanking_length_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SI.trimmed_fiveprime_length",
+    constraint_type=>"flexible_int",
+    constraint_name=>"5' Flanking Length",
+    constraint_value=>$parameters{fiveprime_flanking_length_constraint} );
+  return if ($fiveprime_flanking_length_clause == -1);
+
+  #### Apply is_true_snp special option
+  my $show_only_true_snps_clause = '';
+  if ( $parameters{snp_selection_options} =~ /ShowOnlyTrueSNPs/ ) {
+    $show_only_true_snps_clause = "    AND SI.is_true_snp = 'Y'";
+  }
 
   #### Build ROWCOUNT constraint
   $parameters{row_limit} = 50000
@@ -328,6 +355,9 @@ SELECT SI.snp_instance_id,BSS.biosequence_set_id AS ref_id,
  WHERE 1=1
 $identified_percent_clause
 $match_to_query_ratio_clause
+$threeprime_flanking_length_clause
+$fiveprime_flanking_length_clause
+$show_only_true_snps_clause
 $biosequence_set_clause
 $snp_accession_clause
 $snp_instance_source_accession_clause
@@ -350,6 +380,9 @@ SELECT $limit_clause $columns_clause
  WHERE 1=1
 $identified_percent_clause
 $match_to_query_ratio_clause
+$threeprime_flanking_length_clause
+$fiveprime_flanking_length_clause
+$show_only_true_snps_clause
 $biosequence_set_clause
 $validation_status_clause
 ORDER BY SI.snp_instance_id,BSS.set_tag,BS.biosequence_id
@@ -448,8 +481,8 @@ sub evalSQL {
 ###############################################################################
 # postProcessResultset
 #
-# Callback for translating Perl variables into their values,
-# especially the global table variables to table names
+# Perform some additional processing on the resultset that would otherwise
+# be very awkward to do in SQL.
 ###############################################################################
 sub postProcessResultset {
   my %args = @_;
@@ -461,16 +494,14 @@ sub postProcessResultset {
   my $rs_params_ref = $args{'rs_params_ref'};
   my $query_parameters_ref = $args{'query_parameters_ref'};
 
-  #### Changed from using column content to predicted location
-  #my ($bioseq_rank_list) = $sbeams->selectOneColumn("SELECT rank_list_file from $TBSN_BIOSEQUENCE_RANK_LIST
-  #  where biosequence_rank_list_id = '$query_parameters_ref->{biosequence_rank_list_id}'");
+  my %rs_params = %{$rs_params_ref};
+  my %parameters = %{$query_parameters_ref};
+
+
+  #### Get the predicted locations of the rank list file
   my $bioseq_rank_list = "SN_biosequence_rank_list/".
     "$query_parameters_ref->{biosequence_rank_list_id}".
     "_rank_list_file.dat";
-
-
-  my %rs_params = %{$rs_params_ref};
-  my %parameters = %{$query_parameters_ref};
 
 
   #### Read in biosequence rank list file and create hash out of its contents
@@ -488,6 +519,7 @@ sub postProcessResultset {
     $i++;
   }
 
+
   my $n_rows = scalar(@{$resultset_ref->{data_ref}});
 
   my $prevpos=-1;
@@ -496,6 +528,7 @@ sub postProcessResultset {
   my $best_index = 999999;
   my $best_index_row_reference;
   my @new_data_array;
+
   #### Loop over each row in the resultset
   for ($row=0;$row<$n_rows-1; $row++) {
     my $snp_instance_column_index = $resultset_ref->{column_hash_ref}->{snp_instance_id};
@@ -514,7 +547,7 @@ sub postProcessResultset {
     #print "field  = $part1|$part2<br>\n";;
     #print "sii = $snp_instance_id<br>\n";
     #print "test index = $test_index<br>\n";
-        if ($test_index < $best_index) {
+    if ($test_index < $best_index) {
       $best_index_row_reference = $resultset_ref->{data_ref}->[$row];
       $best_index = $test_index;
     }
