@@ -366,17 +366,24 @@ sub processFile
 				next;
 		}
 #need to make sure that a group is associated with this organism
+		my @rows;
 		my $interactionGroupQuery = qq /select interaction_group_id from $TBIN_INTERACTION_GROUP
 		where interaction_group_name ='$INFOPROTEIN1{$count-2}->{group}' 
 		and organism_id = $organismName->{$INFOPROTEIN1{$count-2}->{organismName1}}/;
-								
-		if ($INFOPROTEIN1{$count-2}->{group} and !(scalar($sbeams->selectOneColumn($interactionGroupQuery))))
+		@rows = $sbeams->selectOneColumn($interactionGroupQuery);					
+		if ($INFOPROTEIN1{$count-2}->{group} and !(scalar(@rows))))
 		{
 				
 				Error (\@infoArray," $INFOPROTEIN1{$count-2}->{group}: this group is not associated with the given organism in $TBIN_INTERACTION_GROUP table");
 				delete $INFOPROTEIN1{$count-2};
 				next;
 		}
+		else
+		{
+			$INFOPROTEIN1{$count-2}->{group} =  $rows[0];
+		}
+		
+		
 		
 		if ($INFOPROTEIN1{$count-2}->{bioentityCanName1} =~ /^\d+$/ and $INFOPROTEIN1{$count-2}->{bioentityType1} =~ /protein/i )
 		{
@@ -463,15 +470,20 @@ sub processFile
 		}
 	
 #need to make sure that a group is associated with this organism
+		my @rows;
 		$interactionGroupQuery = qq /select interaction_group_id from $TBIN_INTERACTION_GROUP
 		where interaction_group_name = '$INFOPROTEIN2{$count-2}->{group}' 
 		and organism_id = $organismName->{$INFOPROTEIN2{$count-2}->{organismName2}}/;		
-		
-		if ($INFOPROTEIN2{$count-2}->{group} and !(scalar($sbeams->selectOneColumn($interactionGroupQuery))))
+		@rows = $sbeams->selectOneColumn($interactionGroupQuery);					
+		if ($INFOPROTEIN2{$count-2}->{group} and !(scalar(@rows))))
 		{
 				Error (\@infoArray,"$INFOPROTEIN2{$count-2}->{group}: this group is not associated with the given organism in $TBIN_INTERACTION_GROUP table");
 				delete $INFOPROTEIN2{$count-2};
 				next;
+		}
+		else
+		{
+			$INFOPROTEIN2{$count-2}->{group} =  $rows[0];
 		}
 		
 		if ($INFOPROTEIN2{$count-2}->{bioentityCanName2} =~ /^\d+$/ and $INFOPROTEIN2{$count-2}->{bioentityType2} =~ /protein/i )
