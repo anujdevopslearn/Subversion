@@ -443,10 +443,9 @@ sub asSimpleHTML {
   my $cnt = ( $this->getNumTabs() ) * 2 + 5 ;
   push @row,  '&nbsp;' x 50;
   $this->{_table}->addRow ( \@row );
-  my $hbase = $HTML_BASE_DIR;
 
 # Add horizontal rule...
-  $this->{_table}->addRow ( [ "<IMG SRC='$hbase/images/transparent.gif' HEIGHT='2' WIDTH='1' BORDER='0'>" ] );
+  $this->{_table}->addRow ( [ "<IMG SRC='$HTML_BASE_DIR/images/transparent.gif' HEIGHT='2' WIDTH='1' BORDER='0'>" ] );
   $this->{_table}->setCellAttr ( COL => 1, ROW => 2, COLSPAN => $cnt, BGCOLOR => $this->{activeColor} );
   
   if ( $this->{_content} ) {
@@ -498,10 +497,9 @@ sub asMA_HTML {
 
   my $cnt = ( $this->getNumTabs() ) * 2;
   $this->{_table}->addRow ( \@row );
-  my $hbase = $HTML_BASE_DIR;
 
 # Add horizontal rule...
-  $this->{_table}->addRow ( [ "<IMG SRC='$hbase/images/transparent.gif' HEIGHT='2' WIDTH='1' BORDER='0'>" ] );
+  $this->{_table}->addRow ( [ "<IMG SRC='$HTML_BASE_DIR/images/transparent.gif' HEIGHT='2' WIDTH='1' BORDER='0'>" ] );
   $this->{_table}->setCellAttr ( COL => 1, ROW => 2, COLSPAN => $cnt, BGCOLOR => $this->{activeColor} );
   
   if ( $this->{_content} ) {
