@@ -3655,6 +3655,10 @@ sub display_input_form {
         #### If there are any double quotes, need to escape them first
         $tmp =~ s/\"/\\\"/g;
         $optionlist_queries{$element} = main::evalSQL($tmp);
+	unless ($optionlist_queries{$element}) {
+	  print "<font color=\"red\">ERROR: SQL for field '$element' fails to resolve embedded \$TB table name variable(s)</font><BR><PRE>$tmp</PRE><BR>\n";
+	}
+
       }
 
 
