@@ -1716,6 +1716,19 @@ sub displayResultSetControls {
       $first_flag = 0;
       print "<A HREF=\"${url_prefix}apply_action=VIEWRESULTSET&rs_set_name=$rs_params{set_name}&rs_page_size=1000000&output_mode=$output_mode\">$output_mode_name</A>";
     }
+
+
+    #### If this resulset has a name, show it and the date is was created
+    if (defined($rs_params_ref->{cached_resultset_id})) {
+      print qq~
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        Query Name: <INPUT TYPE="text" NAME="query_name" SIZE=25
+        VALUE="$rs_params_ref->{resultset_name}">
+        $rs_params_ref->{date_created}
+        <A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=cached_resultset&cached_resultset_id=$rs_params_ref->{cached_resultset_id}">[Annotate Resultset]</A>
+      ~;
+    }
+
     print "\n<BR>\n";
 
 
@@ -1796,10 +1809,14 @@ sub displayTimingInfo {
 
   if (defined($timing_info->{send_query}) &&
       defined($timing_info->{begin_resultset})) {
-    printf("Process Query: %8.2f s$BR",tv_interval(
+    printf("Query Time: %8.2f s$BR",tv_interval(
       $timing_info->{send_query},$timing_info->{begin_resultset}));
   }
 
+  return;
+
+  #### The following are almost always near 0 except for very large
+  #### resultsets
   if (defined($timing_info->{begin_resultset}) &&
       defined($timing_info->{finished_resultset})) {
     printf("Fetch Resultset: %8.2f s$BR",tv_interval(
@@ -1890,8 +1907,7 @@ sub readResultSet {
     my $resultset_file = $args{'resultset_file'};
     $resultset_ref = $args{'resultset_ref'};
     my $query_parameters_ref = $args{'query_parameters_ref'};
-
-    my $indata = "";
+    my $resultset_params_ref = $args{'resultset_params_ref'};
 
 
     #### Update timing info
@@ -1901,6 +1917,7 @@ sub readResultSet {
     #### Read in the query parameters
     my $infile = "$PHYSICAL_BASE_DIR/tmp/queries/${resultset_file}.params";
     open(INFILE,"$infile") || die "Cannot open $infile\n";
+    my $indata = "";
     while (<INFILE>) { $indata .= $_; }
     close(INFILE);
 
@@ -1912,16 +1929,33 @@ sub readResultSet {
 
 
     #### Read in the resultset
-    #$indata = "";
     $infile = "$PHYSICAL_BASE_DIR/tmp/queries/${resultset_file}.resultset";
     %{$resultset_ref} = %{retrieve($infile)};
+
+
+    #### This also works but is quite slow
+    #$indata = "";
     #open(INFILE,"$infile") || die "Cannot open $infile\n";
     #while (<INFILE>) { $indata .= $_; }
     #close(INFILE);
-
     #### eval the dump
     #eval $indata;
     #%{$resultset_ref} = %{$VAR1};
+
+
+    #### Read in the various parameters from cached_resultset
+    my $sql = qq~
+      SELECT cached_resultset_id,resultset_name,date_created
+        FROM $TB_CACHED_RESULTSET
+       WHERE cache_descriptor = '$resultset_file'
+    ~;
+    my @row = $self->selectSeveralColumns($sql);
+
+    if (scalar(@row)) {
+      $resultset_params_ref->{cached_resultset_id} = $row[0];
+      $resultset_params_ref->{resultset_name} = $row[1];
+      $resultset_params_ref->{date_created} = $row[2];
+    }
 
 
     #### Update timing info
@@ -1930,8 +1964,8 @@ sub readResultSet {
 
     return 1;
 
-
 } # end readResultSet
+
 
 
 ###############################################################################
@@ -1948,10 +1982,13 @@ sub writeResultSet {
     $resultset_ref = $args{'resultset_ref'};
     my $query_parameters_ref = $args{'query_parameters_ref'};
     my $file_prefix = $args{'file_prefix'} || 'query_';
+    my $query_name = $args{'query_name'} || '';
 
 
-    #### If a filename was not provides, create one
+    #### If a filename was not provided, create one
+    my $is_new_resultset = 0;
     if ($$resultset_file_ref eq "SETME") {
+      $is_new_resultset = 1;
       my ($sec,$min,$hour,$mday,$mon,$year) = localtime(time);
       my $timestr = strftime("%Y%m%d-%H%M%S",$sec,$min,$hour,$mday,$mon,$year);
       $$resultset_file_ref = $file_prefix . $self->getCurrent_username() .
@@ -1974,6 +2011,28 @@ sub writeResultSet {
     #### Write out the resultset
     $outfile = "$PHYSICAL_BASE_DIR/tmp/queries/${resultset_file}.resultset";
     store($resultset_ref,$outfile);
+
+
+    #### If this is a new resultset and we were provided a query_name,
+    #### write a record for it in cached_resultset
+    if ($is_new_resultset && $query_name) {
+      my %rowdata = (
+	contact_id=>$self->getCurrent_contact_id(),
+        query_name=>$query_name,
+        cache_descriptor=>$resultset_file,
+      );
+      $self->updateOrInsertRow(
+        insert=>1,
+        table_name=>$TB_CACHED_RESULTSET,
+        rowdata_ref=>\%rowdata,
+        PK_name=>'cached_resultset_id',
+        return_PK=>1,
+        add_audit_parameters=>1,
+      );
+    }
+
+
+    #### This also works but is dog slow
     #open(OUTFILE,">$outfile") || die "Cannot open $outfile\n";
     #$Data::Dumper::Indent = 0;
     #printf OUTFILE Data::Dumper->Dump( [$resultset_ref] );
