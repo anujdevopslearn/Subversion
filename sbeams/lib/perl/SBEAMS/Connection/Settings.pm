@@ -21,7 +21,7 @@ use FindBin;
 use Data::Dumper;
 
 
-use vars qw($VERSION @ISA @EXPORT 
+use vars qw($VERSION @ISA @EXPORT @EXPORT_OK
     $DBTITLE
     $DBADMIN
     $DBINSTANCE
@@ -43,6 +43,7 @@ use vars qw($VERSION @ISA @EXPORT
     $PHYSICAL_BASE_DIR
     $UPLOAD_DIR
     $SBEAMS_SUBDIR
+    $LOGGING_LEVEL
     );
 
 require Exporter;
@@ -71,6 +72,8 @@ require Exporter;
     $UPLOAD_DIR
     $SBEAMS_SUBDIR
     );
+
+@EXPORT_OK = qw( $LOGGING_LEVEL );
 
 
 #### Decide which version settings to use based the script location
@@ -131,6 +134,7 @@ $HOSTNAME = $DBCONFIG->{$DBINSTANCE}->{HOSTNAME};
 $CYTOSCAPE_URL = $DBCONFIG->{$DBINSTANCE}->{CYTOSCAPE_URL};
 %DBPREFIX = %{$DBCONFIG->{$DBINSTANCE}->{DBPREFIX}};
 %RAW_DATA_DIR = %{$DBCONFIG->{$DBINSTANCE}->{RAW_DATA_DIR}};
+$LOGGING_LEVEL = $DBCONFIG->{$DBINSTANCE}->{LOGGING_LEVEL};
 
 
 #### Determine what the BASE URL is: first pull out some environment variables
