@@ -559,8 +559,8 @@ sub convert_functions {
   #### At the moment only convert the STR function (its the only one used).
   while ( $select_list =~ /(\W)?STR\(([\w\.]+),(\d+),(\d+)\)/ig ){
     my %opt;
-    $opt{start} = @-[0];
-    $opt{end} = @+[0];
+    $opt{start} = $-[0];
+    $opt{end} = $+[0];
     $opt{replace} =  "$1FORMAT($2,$4)";
     push @ops, \%opt;
   }
@@ -3288,7 +3288,19 @@ sub display_input_form {
       # then substitute that with either a value of $parameters{xxx}
       while ( $optionlist_queries{$element} =~ /\$parameters\{(\w+)\}/ ) {
         my $tmp = $parameters{$1};
-        $tmp = "''" unless (defined($tmp) && $tmp gt '');
+        if (defined($tmp) && $tmp gt '') {
+	  unless ($tmp =~ /^[\d,]+$/) {
+	    my @tmp = split(',',$tmp);
+	    $tmp = '';
+	    foreach my $tmp_element (@tmp) {
+	      $tmp .= "'$tmp_element',";
+	    }
+	    chop($tmp);
+	  }
+	} else {
+          $tmp = "''";
+	}
+
         $optionlist_queries{$element} =~
           s/\$parameters{$1}/$tmp/g;
       }
