@@ -12,3 +12,4 @@ SN_instrument_type	Instrument Type	SNP	YES	$TBSN_INSTRUMENT_TYPE	instrument_type
 SN_instrument	Instrument	SNP	YES	$TBSN_INSTRUMENT	instrument_id		ManageTable.cgi?TABLE_NAME=SN_instrument	SN_instrument	
 SN_plate_type	Plate Type	SNP	YES	$TBSN_PLATE_TYPE	plate_type_id		ManageTable.cgi?TABLE_NAME=SN_plate_type	SN_plate_type	
 SN_GetGenotypes	Get Genotypes	QUERY		NA	NA		GetGenotypes		
+SN_job_request	Job Request	SNP	NO	$TBSN_JOB_REQUEST	job_request_id		SubmitJobRequest.cgi?TABLE_NAME=SN_job_request	SN_job_request	
