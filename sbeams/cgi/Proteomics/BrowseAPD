@@ -524,7 +524,7 @@ sub handle_request {
       ["percent_ACN_stdev","STR(MP.percent_ACN_stdev,7,2)","Percent_ACN Stdev"],
       ["charge_state","MP.charge_state","Charge"],
       ["n_experiments","MP.n_experiments","# of Exps"],
-      ["experiment_list","MP.experiment_list","Exp List"],
+      ["observed_experiment_list","MP.experiment_list","Exp List"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
       ["minimum_probability","PS.minimum_probability","minimum_probability"],
