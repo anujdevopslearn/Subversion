@@ -638,12 +638,24 @@ sub getLastInsertedPK {
         "yet possible." unless ($table_name && $PK_column_name);
 
       #### YUCK! PostgreSQL 7.1 appears to truncate table name and PK name at
-      #### 13 characters to form the automatic SEQUENCE.  Might be fix later?
-      my $table_name_tmp = substr($table_name,0,13);
-      my $PK_column_name_tmp = substr($PK_column_name,0,13);
- 
-      $sql = "SELECT currval('${table_name_tmp}_${PK_column_name_tmp}_seq')"
+      #### 13 characters to form the automatic SEQUENCE.  Might be fixed later?
+      my $sequence_name;
+      if (0) {
+        my $table_name_tmp = substr($table_name,0,13);
+        my $PK_column_name_tmp = substr($PK_column_name,0,13);
+        $sequence_name = "${table_name_tmp}_${PK_column_name_tmp}_seq";
 
+      #### To avoid possible complications with this, SBEAMS now just creates
+      #### SEQUENCEs explicitly and simply truncates them at the PostgreSQL
+      #### 7.1 limit of 31 characters.  I hope this will be lifted sometime
+      } else {
+        $sequence_name = "seq_${table_name}_${PK_column_name}";
+        $sequence_name = substr($sequence_name,0,31);
+      }
+
+      $sql = "SELECT currval('$sequence_name')"
+
+    #### Complain bitterly if we don't recognize the RDBMS type
     } else {
       croak "ERROR[$subName]: Unable to determine DBType\n\n";
     }
