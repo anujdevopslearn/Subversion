@@ -13,6 +13,7 @@ DROP TABLE dbo.snp
 DO NOT:
 DROP TABLE dbo.source_version
 DROP TABLE dbo.snp_source
+DROP TABLE dbo.query_sequence
 DROP TABLE dbo.biosequence
 DROP TABLE dbo.biosequence_set
 DROP TABLE dbo.query_option
@@ -57,6 +58,12 @@ CREATE TABLE dbo.biosequence (
 )
 GO
 
+CREATE TABLE dbo.query_sequence (
+    query_sequence_id         int IDENTITY NOT NULL,
+    query_sequence            varchar(900) NOT NULL,
+    PRIMARY KEY (query_sequence_id)
+)
+GO
 
 CREATE TABLE dbo.snp_source (
     snp_source_id             int IDENTITY NOT NULL,
@@ -101,6 +108,7 @@ CREATE TABLE dbo.snp (
     hgmd_accession            varchar(100),
     obsoleted_by_snp_id       int NULL REFERENCES dbo.snp(snp_id),
     is_useful                 int,
+    celera_only               int,
     comment                   text NULL,
     date_created              datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by_id             int NOT NULL DEFAULT 1 /*REFERENCES dbo.contact(contact_id)*/,
@@ -139,6 +147,7 @@ GO
 CREATE TABLE dbo.allele (
     allele_id                 int IDENTITY NOT NULL,
     snp_instance_id           int NOT NULL REFERENCES dbo.snp_instance(snp_instance_id),
+    query_sequence_id         int REFERENCES dbo.query_sequence(query_sequence_id),
     allele                    varchar(25),
     PRIMARY KEY (allele_id)
 )
@@ -154,7 +163,7 @@ CREATE TABLE dbo.allele_frequency (
 GO
 
 CREATE TABLE dbo.allele_blast_stats (
-    allele_id                 int NOT NULL REFERENCES dbo.allele(allele_id),
+    query_sequence_id         int NOT NULL REFERENCES dbo.query_sequence(query_sequence_id),
     matched_biosequence_id    int NOT NULL REFERENCES dbo.biosequence(biosequence_id),
     score                     int,
     identified_percent        float,
