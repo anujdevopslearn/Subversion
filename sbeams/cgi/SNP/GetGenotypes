@@ -473,6 +473,10 @@ sub postProcessResultset {
   my @new_data_array;
 
 
+  #### Create a has to hold allele_frequencies
+  my %allele_frequencies;
+
+
   #### Create new resultset
   foreach my $letter ( 'A','B','C','D','E','F','G' ) {
     for (my $num1 = 1; $num1 <=12; $num1++) {
@@ -483,9 +487,17 @@ sub postProcessResultset {
   	foreach my $assay (@assays) {
   	  if (defined($data->{$assay}->{$sample_name})) {
   	    push(@row,$data->{$assay}->{$sample_name});
+
+            #### Add to the allele counters
+            my @alleles = split("/",$data->{$assay}->{$sample_name});
+            foreach my $allele (@alleles) {
+              $allele_frequencies{$assay}->{$allele}++;
+              $allele_frequencies{$assay}->{total}++;
+            }
+
   	  } else {
-  	    #push(@row,"0/0");
-  	    push(@row,"");
+  	    #push(@row,'0/0');
+  	    push(@row,'');
   	  }
 
   	}
@@ -498,7 +510,24 @@ sub postProcessResultset {
 
   }
 
-  #### Fudeg the assays
+
+  #### Add an allele frequency summary at the bottom
+  foreach my $allele ('A','T','G','C') {
+    my @row = ("$allele frequency");
+    foreach my $assay (@assays) {
+      if (defined($allele_frequencies{$assay}->{$allele})) {
+  	push(@row,$allele_frequencies{$assay}->{$allele} /
+          $allele_frequencies{$assay}->{total});
+      } else {
+        push(@row,'');
+      }
+    }
+    push(@new_data_array,\@row);
+  }
+
+
+
+  #### Fudge the assays
   my @fudged_assays;
   foreach my $tmp (@assays) {
     $tmp =~ s/gi//;
