@@ -16,7 +16,7 @@
 ###############################################################################
 use strict;
 use lib qw (../../lib/perl);
-use vars qw ($q $sbeams $sbeamsPROT
+use vars qw ($q $sbeams $sbeamsPROT $BKGCOLOR
              $t0 $t1 $t2 $t3 $t4 $t5 $t6 $t7 $t8 $t9
              $current_contact_id $current_username );
 use CGI;
@@ -142,6 +142,7 @@ sub printEntryForm {
     }
 
 
+    $BKGCOLOR = "#EEEEEE";
     $parameters{'charge'} = "1,2" unless $parameters{'charge'};
     my @charge = split(',',$parameters{'charge'});
     $parameters{'masstol'} = 2 unless $parameters{'masstol'};
@@ -170,9 +171,9 @@ sub printEntryForm {
 
     #### Set up the table and data column
     print qq!
-	<TABLE BORDER=1 WIDTH="675">
+	<TABLE BORDER=0 CELLPADDING=3 WIDTH="675">
 	<TR VALIGN=top>
-	<TD VALIGN=top BGCOLOR="#FFFFDD">
+	<TD VALIGN=top BGCOLOR="$BKGCOLOR">
 	<PRE>\n!;
 
 
@@ -337,7 +338,7 @@ sub printEntryForm {
 
     #### Window selector
     print qq~
-	Mass Tolerance: <INPUT NAME="masstol" VALUE="$parameters{masstol}" SIZE="2" $onChange>
+	Mass Tolerance: <INPUT NAME="masstol" VALUE="$parameters{masstol}" SIZE="5" $onChange>
     ~;
 
     #### Label orientation
@@ -603,7 +604,7 @@ sub pg_setup {
     #### Set needed PGPLOT environment variables
     $ENV{"PGPLOT_GIF_WIDTH"} = $gifwidth;
     $ENV{"PGPLOT_GIF_HEIGHT"} = $gifheight;
-    $ENV{"PGPLOT_BACKGROUND"} = "lightyellow";
+    $ENV{"PGPLOT_BACKGROUND"} = "white";
 
     #### Create a new graphics device
     my $win = PDL::Graphics::PGPLOT::Window -> new({Device => "$device"});
@@ -682,13 +683,21 @@ sub PlotPeaks {
     my $window = $args{'Window'} || 2;
 
     my $length = $args{'Length'};
-    my @Binten = (0) x $length;
-    my @Yinten = (0) x $length;
-    my @BYinten = (0) x $length;
-    my @Rinten = (0) x $specdata->{n_peaks};
-    my @Bmass = (0) x $length;
-    my @Ymass = (0) x $length;
-    my @BYmass = (0) x $length;
+    my @Bmaxinten = (0) x $length;
+    my @Ymaxinten = (0) x $length;
+    my @BYmaxinten = (0) x $length;
+
+    my @Bmass;
+    my @Ymass;
+    my @BYmass;
+    my @Rmass;
+
+    my @Binten;
+    my @Yinten;
+    my @BYinten;
+    my @Rinten;
+    #my @Rinten = (0) x $specdata->{n_peaks};
+
 
     my ($redcol,$bluecol,$grcol);
 
@@ -750,35 +759,65 @@ sub PlotPeaks {
       my $Bind = which($bdata >= ($mass-$window) & $bdata <= ($mass+$window));
       my $Yind = which($ydata >= ($mass-$window) & $ydata <= ($mass+$window));
 
+      #### If there are just B fragments with mass near enough this peak
       if (($Bind !~ 'Empty') && ($Yind =~ 'Empty')) {
-        if ($Binten[$Bind->at(0)] < $intensity) {
-          $Binten[$Bind->at(0)] = $intensity;
-          $Bmass[$Bind->at(0)] = $mass;
-          $lineclr = $redcol;
+        $lineclr = $redcol;
+        #$masslist_ref->{Bcolor}->[$Bind->at(0)] = $lineclr;
+        push(@Binten,$intensity);
+        push(@Bmass,$mass);
+        if ($Bmaxinten[$Bind->at(0)] < $intensity) {
+          $Bmaxinten[$Bind->at(0)] = $intensity;
           $masslist_ref->{Bcolor}->[$Bind->at(0)] = $lineclr;
+          #$Binten[$Bind->at(0)] = $intensity;
+          #$Bmass[$Bind->at(0)] = $mass;
         }
+
+      #### Else if there are just Y fragments with mass near enough this peak
       } elsif (($Yind !~ 'Empty') && ($Bind =~ 'Empty')) {
-        if ($Yinten[$Yind->at(0)] < $intensity) {
-          $Yinten[$Yind->at(0)] = $intensity;
-          $Ymass[$Yind->at(0)] = $mass;
-          $lineclr = $bluecol;
+        $lineclr = $bluecol;
+        #$masslist_ref->{Ycolor}->[$Yind->at(0)] = $lineclr;
+        #$Yinten[$Yind->at(0)] = $intensity;
+        #$Ymass[$Yind->at(0)] = $mass;
+        push(@Yinten,$intensity);
+        push(@Ymass,$mass);
+        #if ($Yinten[$Yind->at(0)] < $intensity) {
+        if ($Ymaxinten[$Yind->at(0)] < $intensity) {
+          $Ymaxinten[$Yind->at(0)] = $intensity;
           $masslist_ref->{Ycolor}->[$Yind->at(0)] = $lineclr;
         }
+
+      #### Else if there are both B and Y fragments with mass near enough this peak
       } elsif (($Bind !~ 'Empty') && ($Yind !~ 'Empty')) {
-        if ($Yinten[$Yind->at(0)] < $intensity) {
-          $BYinten[$Yind->at(0)] = $intensity;
-          $BYmass[$Yind->at(0)] = $mass;
-          $lineclr = $grcol;
-          $masslist_ref->{Bcolor}->[$Yind->at(0)] = $lineclr;
+        $lineclr = $grcol;
+        #$masslist_ref->{Bcolor}->[$Bind->at(0)] = $lineclr;
+        #$masslist_ref->{Ycolor}->[$Yind->at(0)] = $lineclr;
+        push(@BYinten,$intensity);
+        push(@BYmass,$mass);
+        if ($Ymaxinten[$Yind->at(0)] < $intensity) {
+          $Ymaxinten[$Yind->at(0)] = $intensity;
           $masslist_ref->{Ycolor}->[$Yind->at(0)] = $lineclr;
+          #$BYinten[$Yind->at(0)] = $intensity;
+          #$BYmass[$Yind->at(0)] = $mass;
         }
+        if ($Binten[$Bind->at(0)] < $intensity) {
+          $Bmaxinten[$Bind->at(0)] = $intensity;
+          $masslist_ref->{Bcolor}->[$Bind->at(0)] = $lineclr;
+          #$BYinten[$Bind->at(0)] = $intensity;
+          #$BYmass[$Bind->at(0)] = $mass;
+        }
+
+      #### else if there are no fragments with mass near enough this peak
       } else {
+        $lineclr = 14;
         if (($peakcolors_ref->[$i] != 2) & ($peakcolors_ref->[$i] != 3) &
             ($peakcolors_ref->[$i] != 4) & ($peakcolors_ref->[$i] != 6) &
             ($peakcolors_ref->[$i] != 10) & ($peakcolors_ref->[$i] != 11)) {
-          $Rinten[$i] = $intensity
+          #$Rinten[$i] = $intensity
+          push(@Rinten,$intensity);
+          push(@Rmass,$mass);
         }
-        $lineclr = 14;
+        #$lineclr = 14;
+
       }
 
       $peakcolors_ref->[$i] = $lineclr;
@@ -791,7 +830,8 @@ sub PlotPeaks {
     #### Now we resort to plotting all peaks by "never lifting the pen"
     #### and drawing it all in a continuous line with line() because this
     #### is much faster
-    my $rx = pdl ($mass2,$mass2,$mass2)->xchg(0,1)->clump(2);
+    my $rx = pdl (\@Rmass,\@Rmass,\@Rmass)->xchg(0,1)->clump(2);
+    #my $rx = pdl ($mass2,$mass2,$mass2)->xchg(0,1)->clump(2);
     my $ra = [(0) x scalar(@Rinten)];
     my $ry = pdl ($ra,\@Rinten,$ra)->xchg(0,1)->clump(2);
     my $rh = {Color => 14};
@@ -811,11 +851,11 @@ sub PlotPeaks {
 
     my $byx = pdl (\@BYmass,\@BYmass,\@BYmass)->xchg(0,1)->clump(2);
     my $bya = [(0) x scalar(@BYinten)];
-    my $byy = pdl ($bya,\@BYinten,$ba)->xchg(0,1)->clump(2);
+    my $byy = pdl ($bya,\@BYinten,$bya)->xchg(0,1)->clump(2);
     my $byh = {Color => $grcol};
     $win -> line ($byx,$byy,$byh);
 
-    return ($win,\@Binten,\@Yinten);
+    return ($win,\@Bmaxinten,\@Ymaxinten);
 }
 
 
@@ -844,7 +884,8 @@ sub LabelResidues {
     my $Ymax = $args{'Ymax'};
     my $Xmin = $args{'Xmin'};
     my $Xmax = $args{'Xmax'};
-    my $interval;
+    my $interval = $Ymax / 50.0;
+    my $xshift = ($Xmax - $Xmin) / 200.0;
 
     #### Define pink color to be lightcoral
     pgscr 6,0.94,0.5,0.5;
@@ -905,9 +946,11 @@ sub LabelResidues {
         $win -> hold;
 
         #### Add ion label
-        pgptext $mass,$labht,$angle,$fjust,"$index" if (($labht < $Ymax) && ($mass > $Xmin)
-                                                  && ($mass < $Xmax));
+        pgptext $mass+$xshift,$labht,$angle,$fjust,"$index"
+          if (($labht < $Ymax) && ($mass > $Xmin) && ($mass < $Xmax));
       }
+
+
       if (($Yinten[$i] != 0) && ($i != 0)) {
         my $index = "Y$charge\-$Ionmasses_ref->{rev_indices}->[$i]";
         my $mass = $Ydata->at($i);
@@ -935,8 +978,8 @@ sub LabelResidues {
         $win -> hold;
 
         #### Add ion label
-        pgptext $mass,$labht,$angle,$fjust,"$index" if (($labht < $Ymax) && ($mass > $Xmin)
-                                                  && ($mass < $Xmax));
+        pgptext $mass+$xshift,$labht,$angle,$fjust,"$index"
+          if (($labht < $Ymax) && ($mass > $Xmin) && ($mass < $Xmax));
       }
     }
     return $win;
@@ -1035,44 +1078,59 @@ sub PrintIons {
     my ($bcolbegin, $bcolend, $ycolbegin, $ycolend);
 
     my (%colors);
-    $colors{2} = "FF0000";
-    $colors{4} = "0000FF";
-    $colors{3} = "218D21";
-    $colors{6} = "F18080";
-    $colors{11} = "00080";
-    $colors{10} = "8FBE8F";
+    $colors{2} = "#FF0000";
+    $colors{4} = "#0000FF";
+    $colors{3} = "#218D21";
+    $colors{6} = "#F18080";
+    $colors{11} = "#00088";
+    $colors{10} = "#8FBE8F";
 
 
     #### Printing stuff
     for (my $i=0; $i < $length; $i++) {
       if ($html != 0) {
+
+        #### If a color for this B ion mass, set color tags
         if ($masslist_ref->{Bcolor}->[$i] >= 2) {
           $bcolbegin = "<FONT COLOR = $colors{$masslist_ref->{Bcolor}->[$i]}>";
           $bcolend = "</FONT>";
+        #### else no color (default black)
         } else {
-          $bcolbegin = "<FONT COLOR = black>";
-          $bcolend = "</FONT>";
+          $bcolbegin = "";
+          $bcolend = "";
         }
+
+        #### If a color for this Y ion mass, set color tags
         if ($masslist_ref->{Ycolor}->[$i] >= 2) {
           $ycolbegin = "<FONT COLOR = $colors{$masslist_ref->{Ycolor}->[$i]}>";
           $ycolend = "</FONT>";
+        #### else no color (default black)
         } else {
-          $ycolbegin = "<FONT COLOR = black>";
-          $ycolend = "</FONT>";
+          $ycolbegin = "";
+          $ycolend = "";
         }
+
       }
+
+      #### Special case --'s for first row
       if ($i == 0) {
         printf " %3s %2d $bcolbegin%9.1f$bcolend %9s %3d\n",$masslist_ref->{residues}->[$i],
                  $i+1, $masslist_ref->{Bions}->[$i], '--  ', $length-$i
       }
+
+      #### Special case --'s for last row
       elsif ($i == ($length-1)) {
         printf " %3s %2d %9s $ycolbegin%9.1f$ycolend %3d\n",$masslist_ref->{residues}->[$i], $i+1,
                  '--  ', $masslist_ref->{Yions}->[$i], $length-$i
       }
+
+      #### Else just print the numbers
       else {
         printf " %3s %2d $bcolbegin%9.1f$bcolend $ycolbegin%9.1f$ycolend %3d\n",
                  $masslist_ref->{residues}->[$i], $i+1,
                  $masslist_ref->{Bions}->[$i], $masslist_ref->{Yions}->[$i], $length-$i;
       }
+
     }
+
 }
