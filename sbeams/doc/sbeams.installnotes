@@ -15,11 +15,12 @@ Terms:
 If you find errors in these installation notes, please report them.
 If you have suggestions for making some part of this clearer, please
 send them along.  It is recommended that you read this whole document
-before delving it.  It's not simple.  Database installations rarely
+before delving into it.  It's not simple.  Database installations rarely
 are.  Some of these steps could be automated, but it is probably
 helpful to do them manually to learn how the systems is set up and
 development would proceed.
 
+Typical installation time of this module for an experienced user is 50 minutes.
 
 -------------------------------------------------------------------------------
 1) Software Dependencies
@@ -29,12 +30,12 @@ The following software programs are required to run SBEAMS:
 - PHP (There are a few PHP pages, but nothing elaborate.  As long as basic
        PHP works with the web server, this should be fine)
 - Perl (probably anything greater than version 5.0 will work)
-- A relational database engine.  This software was delveloped with SQL
+- A relational database engine.  This software was developed with SQL
   Server.  Products from either Microsoft or Sybase should work right away.
   Attempts has been made to make this software operable with other 
   engines such as Oracle, MySQL, and PostgreSQL, however some further
-  development is required to acheive this fully.  If you do so, please
-  contibute your changes.
+  development is required to achieve this fully.  If you do so, please
+  contribute your changes.
 
 The following Perl Modules often not found on a standard UNIX/Linux
 setup are required before installation can begin.  Version numbers are
@@ -92,11 +93,13 @@ There is typically significant ongoing development in an SBEAMS environment
 and it is recommended that all development work be done in a devN area
 which is then sync'ed with the primary area when changes are tested.  This
 is so users can continue to use the stable version until new features have
-passed testing.
+passed testing. Please note that directory names for dev areas must
+conform to the following standard: "devN" or "devCC", where N is a digit
+[0-9], and C is a letter [a-z,A-Z].
 
 A Discussion of File Ownerships:
 At a site with several developers, it is recommended that a generic
-software maintenance acount be created, who owns the production code
+software maintenance account be created, who owns the production code
 area and that each individual developer owns his or her development area.
 For example,
   /local/www/html/sbeams/ owned by the sbeams account
@@ -139,19 +142,19 @@ Include in Apache's httpd.conf file the following execution permissions:
 #------
 
 
-Retart the Apache server, perhaps with something like:
+Restart the Apache server, perhaps with something like:
   /etc/rc.d/init.d/httpd restart
 
 
 -------------------------------------------------------------------------------
-4) Upack files and set up misc directories and links
+4) Unpack files and set up misc directories and links
 
 Do as much of this as possible as a regular user account, i.e. yours.
 
 cd /local/www/html
 mkdir dev1   (this may need to be done as root. then do: chown user1 dev1)
 cd dev1
-tar -zxvf ~/sbeams-0.19.0.tar.gz
+tar -zxvf ~/sbeams-0.20.tar.gz
 
 Create tmp directories and symlinks:
 cd sbeams
@@ -214,7 +217,7 @@ Important changes:
   and DB_RO_PASS, use the encrypted versions generated above.
 
 - Uncomment the DB_DRIVER that matches your RDBMS.  MS SQL Server uses the
-  Sybase driver. Do not alter the DB_DRIVER values unles you know what
+  Sybase driver. Do not alter the DB_DRIVER values unless you know what
   you're doing!!  Set the DB_TYPE to reflect your RDBMS.
 
 - Change DBPREFIX{*} to reflect the absolute locations of your tables.  For
@@ -260,7 +263,7 @@ to make it work equally well with DB2, Oracle, PostgreSQL, and MySQL;
 it's pretty close to working well, but this is not finished so please
 contribute to this effort if you try different RDBMS engines.
 
-(You can skip the following 2 steps if you already have a database and login.
+(You can skip the following 3 steps if you already have a database and login.
  No need to create "sbeams" dB. Use existing login/pwd for both accounts.)
 
 - First, create a database called 'sbeams' or 'sbeamsdev' or similar
@@ -268,6 +271,10 @@ contribute to this effort if you try different RDBMS engines.
 
 - Within it, create users "sbeams" and "sbeamsro" as a read/write
   account and a read-only account, respectively.
+
+- You will also need to create an administration account, "sbeamsadmin".
+  This account should be the one used to make changes to the schema, i.e.
+  create, update, and drop tables and constraints.
 
 - Generate the appropriate schema for your type(s) of database as follows:
 
@@ -303,7 +310,7 @@ produce success, then the supplied Windows domain account is tested.
 Although not currently fully coded, it would be possible to use local
 UNIX/Linux account passwords; however, this may be severely hampered
 by the fact that most modern UNIX/Linux systems use /etc/shadow files
-that cannot be read by normal users to hold the encrypted paswords.
+that cannot be read by normal users to hold the encrypted passwords.
 There are possible workarounds, but they are not part of the
 distribution.  The final possibility is to set a password manually in
 the SBEAMS tables.  Only UNIX crypted passwords should be placed in
@@ -320,7 +327,7 @@ changes are tracked as the user who performed them and situations
 where multiple people have "admin" account access and thus changes
 cannot be traced to a person are avoided.  The admin account remains
 as the owner of various records but other Administrators can modify
-thos records if necessary, so logging in as admin is discouraged.
+those records if necessary, so logging in as admin is discouraged.
 
 
 - Execute the statements below to create and populate the database with some
@@ -330,7 +337,7 @@ set SBEAMSDB = sbeamsdev
 
 SQL Server Example:
 
-To CREATE and POPLULATE:
+To CREATE and POPULATE:
 sqsh -i $SBEAMS/lib/sql/Core/Core_CREATETABLES.mssql -D $SBEAMSDB
 sqsh -i $SBEAMS/lib/sql/Core/Core_POPULATE.mssql -D $SBEAMSDB
 sqsh -i $SBEAMS/lib/sql/Core/Core_CREATECONSTRAINTS.mssql -D $SBEAMSDB
@@ -347,7 +354,7 @@ replace to ^GO$ to ^go$ before using FreeTDS isql command-line utility)
 -----------------------
 PostgreSQL Example:
 
-To CREATE and POPLULATE:
+To CREATE and POPULATE:
 psql -f $SBEAMS/lib/sql/Core/Core_CREATETABLES.pgsql $SBEAMSDB
 psql -f $SBEAMS/lib/sql/Core/Core_POPULATE.mssql $SBEAMSDB
 psql -f $SBEAMS/lib/sql/Core/Core_CREATECONSTRAINTS.pgsql $SBEAMSDB
