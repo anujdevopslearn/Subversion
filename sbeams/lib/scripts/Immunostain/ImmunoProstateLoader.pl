@@ -332,7 +332,7 @@ print "$specQuery\n";
 				$specRowData{individual_age} = $infoHash{pa} unless $specRow[0]->[5] eq $infoHash{pa};
 				$specRowData{organism_id} = $confHash{organism_id}; 
 				$specRowData{project_id} = $confHash{project_id};				
-				$specRowData{specimen_name} = $specimenName if $specimenInsert;
+				$specRowData{specimen_name} = $specimenName;
 				my $specimenReturnedPK = updateInsert(\%specRowData,$specRow[0]->[0],"specimen_id",$specimenInsert,$specimenUpdate,$TBIS_SPECIMEN);
 									
 #update the specimen_block table
@@ -344,9 +344,9 @@ print "$specQuery\n";
 				my %blockRowData; 
 				print "sec in $blockInsert up $blockUpdate\n  $infoHash{sb}\n";
 				
-				$blockRowData{specimen_block_level} = $infoHash{bl} unless $block[0]->[0] eq $infoHash{tbl};
-				$blockRowData{anterior_posterior} = $infoHash{blap} unless $block[0]->[1] eq $infoHash{blap};
-				$blockRowData{specimen_block_side} = $infoHash{rl} unless $block[0]->[2] eq $infoHash{rl};
+				$blockRowData{specimen_block_level} = $infoHash{bl};
+				$blockRowData{anterior_posterior} = $infoHash{blap};
+				$blockRowData{specimen_block_side} = $infoHash{rl};
 				$blockRowData{protocol_id} = $confHash{protocol_id};
 				$blockRowData{specimen_id} = $specimenReturnedPK;
 				$blockRowData{specimen_block_name} = $infoHash{sb}; 																	
@@ -389,14 +389,14 @@ print "$specQuery\n";
 		 		
 		my %slideRowData; 
 		print "$infoHash{ab}   ---   $antiBody{$infoHash{ab}}\n";
-		$slideRowData{cancer_amount_cc} = $infoHash{cancer} if ($infoHash{cancer} ne $cc);
-		$slideRowData{project_id} = $confHash{project_id} unless $slides[0]->[2] == $confHash{project_id};
+		$slideRowData{cancer_amount_cc} = $infoHash{cancer};
+		$slideRowData{project_id} = $confHash{project_id};
 		$slideRowData{protocol_id} = $confHash{protocol_id};
 		$slideRowData{specimen_block_id} = $blockID;
-		$slideRowData{antibody_id} = $antiBody{$infoHash{ab}} unless $slides[0]->[-1] == $antiBody{$infoHash{ab}};
+		$slideRowData{antibody_id} = $antiBody{$infoHash{ab}};
 		$slideRowData{stain_name} = $stainName;
 		$slideRowData{section_index} = $sectionIndex;
-		$slideRowData{comment} = $infoHash{person} if ($slides[0]->[6] ne $infoHash{person});
+		$slideRowData{comment} = $infoHash{person};
 		my $returnedSlidePK = updateInsert(\%slideRowData,$slideID, "stained_slide_id",$slideInsert,$slideUpdate,$TBIS_STAINED_SLIDE); 
 		$slideID = $returnedSlidePK;
 			
