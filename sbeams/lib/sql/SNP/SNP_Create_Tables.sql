@@ -222,5 +222,12 @@ VALUES ( 'BBS_sort_options','biosequence_name','biosequence_name',10 )
 DROP INDEX biosequence.idx_biosequence_name
 
 CREATE NONCLUSTERED INDEX idx_biosequence_name ON dbo.biosequence ( biosequence_set_id,biosequence_name )
+CREATE NONCLUSTERED INDEX idx_allele_blast_stats_identified_percent ON dbo.allele_blast_stats ( identified_percent )
+
+-- The following index appears stupid
+CREATE NONCLUSTERED INDEX idx_biosequence_biosequence_set_id ON dbo.biosequence ( biosequence_set_id )
+CREATE NONCLUSTERED INDEX idx_biosequence_set_set_tag ON dbo.biosequence_set ( set_tag )
+
+
 */
 
