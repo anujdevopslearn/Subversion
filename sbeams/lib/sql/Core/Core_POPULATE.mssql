@@ -1,4 +1,4 @@
-
+/* $Id$  */
 INSERT INTO contact_type ( contact_type_name,sort_order ) VALUES ( 'other',100 );
 INSERT INTO contact_type ( contact_type_name ) VALUES ( 'investigator' );
 INSERT INTO contact_type ( contact_type_name ) VALUES ( 'vendor' );
@@ -73,6 +73,7 @@ INSERT INTO user_work_group ( contact_id,work_group_id,privilege_id ) VALUES ( 1
 
 
 INSERT INTO table_group_security ( table_group,work_group_id,privilege_id ) VALUES ( 'admin',1,10 );
+INSERT INTO table_group_security ( table_group,work_group_id,privilege_id ) VALUES ( 'common',1,10 );
 INSERT INTO table_group_security ( table_group,work_group_id,privilege_id ) VALUES ( 'infrastructure',1,10 );
 INSERT INTO table_group_security ( table_group,work_group_id,privilege_id ) VALUES ( 'project',1,10 );
 INSERT INTO table_group_security ( table_group,work_group_id,privilege_id ) VALUES ( 'rowprivate',1,10 );
