@@ -22,6 +22,7 @@ use vars qw(@ISA @EXPORT
     $TBPH_SEQUNCE_MODIFICATION
     $TBPH_PLASMID
     $TBPH_STRAIN
+    $TBPH_CELL_TYPE
     $TBPH_MATING_TYPE
     $TBPH_PLOIDY
     $TBPH_CONSTRUCTION_METHOD
@@ -50,6 +51,7 @@ require Exporter;
     $TBPH_SEQUNCE_MODIFICATION
     $TBPH_PLASMID
     $TBPH_STRAIN
+    $TBPH_CELL_TYPE
     $TBPH_MATING_TYPE
     $TBPH_PLOIDY
     $TBPH_CONSTRUCTION_METHOD
@@ -75,6 +77,7 @@ $TBPH_BIOSEQUENCE                 = 'PhenoArray.dbo.biosequence';
 $TBPH_SEQUNCE_MODIFICATION        = 'PhenoArray.dbo.sequence_modification';
 $TBPH_PLASMID                     = 'PhenoArray.dbo.plasmid';
 $TBPH_STRAIN                      = 'PhenoArray.dbo.strain';
+$TBPH_CELL_TYPE                   = 'PhenoArray.dbo.cell_type';
 $TBPH_MATING_TYPE                 = 'PhenoArray.dbo.mating_type';
 $TBPH_PLOIDY                      = 'PhenoArray.dbo.ploidy';
 $TBPH_CONSTRUCTION_METHOD         = 'PhenoArray.dbo.construction_method';
