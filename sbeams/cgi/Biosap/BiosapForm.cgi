@@ -50,7 +50,6 @@ $sbeamsBS = new SBEAMS::Biosap;
 $sbeamsBS->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 $q = new CGI;
-#$q->use_named_parameters(1);
 $o_conc=0.00025;
 $s_conc=50;
 #
@@ -81,14 +80,6 @@ sub main {
     $blast_lib = $q->param('blastlib') || "";
     $featurama_lib = $q->param('featuramalib') || "";
 
-
-#    print
-#	$q->header(-type=>'text/html'),
-#	$q->start_html(-title=>'BioSap', 
-#		       -bgcolor=>'#336699',
-#		       -text=>'#000000',
-#		       -link=>'#669966',
-#		       -vlink=>'#000000');
 
     $action = $q->param('action');
     $dbh = $sbeams->getDBHandle();
@@ -121,11 +112,7 @@ sub main {
 	    print "</td></tr></table>";
             $sbeams->printPageFooter("CloseTables");
 	    createRun(1); #create a run in a temp folder
-	    #print "</td></tr></table>";
 	    runFeaturama();
-	    #print "<table width=\"750\" border=\"0\" bordercolor=\"#FFFFFF\" cellpadding=\"7\" cellspacing=\"0\" bgcolor=\"#D0DDDA\">",
-	    #      "<tr><td>",
-	    #      "<font face=\"Helvetica\" size=\"3\" color=\"#000000\">";
 	}
 	 
 	printForm();
@@ -139,48 +126,20 @@ sub main {
 }
 
 sub runFeaturama {
-    #print "<table width=\"750\" border=\"0\" bordercolor=\"#FFFFFF\" cellpadding=\"7\" cellspacing=\"0\" bgcolor=\"#D0DDDA\">",
-#	  "<tr><td>",
-#          "<font face=\"Helvetica\" size=\"3\" color=\"#000000\">",
-          print "Please wait for Featurama to finish ...  <br>";
+    print "Please wait for Featurama to finish ...  <br>";
    
     $| = 1;
-    #print "/net/techdev/featurama/bin/featurama $dirstr/featurama.params<br>";
     print "<PRE>\n";
     system "/net/techdev/featurama/bin/featurama $dirstr/featurama.params 2>&1" || croak "Couldn't run featurama: $!";
     print "</PRE>\n";
 
-    #open(FEATURAMA, 
-#	 "/net/techdev/featurama/bin/featurama $dirstr/featurama.params 2>&1|") 
-#	 || croak "Can't run program: $!\n";
-    
-    #print "</font></td></tr></table>";
 
-    #while(<FEATURAMA>) {
-#	print "<table width=\"750\" border=\"0\" bordercolor=\"#FFFFFF\" cellpadding=\"0\" cellspacing=\"0\" bgcolor=\"#D0DDDA\">",
-#	      "<tr><td>",
-##              "<font face=\"Helvetica\" size=\"2\" color=\"#000000\">";
-#	print "$_ <br>";
-#	print "</font></td></tr></table>";
-#    }
-   
-
-   # close(FEATURAMA);
-    
-    #remove the temporary files
     system "/bin/rm", "-r","-f", "$dirstr" || croak "Couldn't formatdb: $!";
     print "<table width=\"750\" border=\"0\" bordercolor=\"#FFFFFF\" cellpadding=\"7\" cellspacing=\"0\" bgcolor=\"#D0DDDA\">",
 	      "<tr><td>",
               "<font face=\"Helvetica\" size=\"3\" color=\"#000000\">";
     print "<br>Featurama Test Run is Done !<br><hr>";
     print "</font></td></tr></table>";
-#    my $i;
-#    my @output;
-#    @output = `/net/techdev/featurama/bin/featurama $dirstr/featurama.params`;
-    
-#    foreach $i (@output) {
-#	print "$i <br>";
-#    }
 
 }
 
@@ -216,27 +175,6 @@ sub createRun {
     
     print "Directory " . $dirstr . " created.<br>";
     
-#THIS script no longer uploads the files    
-# if ($uploaded_file) {
-#     open(TARGET, ">$dirstr/$uploaded_file") || croak "Couldn't create target file $dirstr/$uploaded_file: $!";
-	#while(<$uploaded_file>) {
-	#    print (TARGET $_);
-	#}
-#     while (read($uploaded_file, $buffer, 1024)) {
-#	    print TARGET $buffer;
-#	}
-#
-#
-#	close(TARGET) || croak "Couldn't create target file $!";
-#	print "Target file $dirstr/$uploaded_file uploaded. <br>";
-#
-#
-#
-#	system "/usr/local/genome/blast/formatdb", "-p","F", "-o", "T", 
-#	    "-i", "$dirstr/$uploaded_file" || croak "Couldn't formatdb: $!";
-#	print "Uploaded file has been formatted. <br>";
-#    } 
-    
     if ($comments) {
 	open (SINK, ">$dirstr/comments")  || croak "Couldn't create file $dirstr/comments $!";
 	print (SINK $comments);
@@ -246,7 +184,6 @@ sub createRun {
     open (SINK,  ">$dirstr/featurama.params") || croak "Couldn't create file $dirstr/featurama.params $!";
     
    
-    #print (SINK "user_name=".$ENV{'REMOTE_USER'}."\n");
     print (SINK "user_name=$current_username\n");
 
     #TODO: What happens if multiple libs have same name ???
@@ -262,7 +199,6 @@ sub createRun {
     my $sth;# = $dbh->prepare("$sql_query") || croak $dbh->errstr;
     my $rv;#  = $sth->execute || croak $dbh->errstr;
     my @row;# = $sth->fetchrow_array;
-    #print (SINK "gene_library=$row[0]\n");
     
 
     print (SINK "output_directory=".$dirstr."\n");
@@ -305,8 +241,6 @@ sub processParams {
     $same_as_lib = $q->param('same_as_lib');
     $blast_lib = $q->param('blastlib') || "";
     $featurama_lib = $q->param('featuramalib') || "";
-    #$search_filename =~ m/^.*(\\|\/)(.*)/; # strip the remote path and keep filename
-   # $search_filename = $2;
 
     if (($featurama_lib eq $blast_lib) && ($same_as_lib eq "No")) {
 	print "<font color=red>ERROR: Library files specified are the same. </font><br>";
