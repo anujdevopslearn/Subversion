@@ -610,14 +610,24 @@ sub handle_request {
       return;
     } else {
       my $C = "";
-      $C = "C" if ( $parameters{peptide_options} =~ /C_containing/ );
+      $C = "C%" if ( $parameters{peptide_options} =~ /C_containing/ );
       if ( $parameters{peptide_options} =~ /DoublyTryptic/ ) {
         $second_peptide_clause = "   AND SH.peptide_string LIKE '[RK].%${C}%[RK]._'";
-      } elsif ( $parameters{peptide_options} =~ /SinglyTryptic/ ) {
+      } elsif ( $parameters{peptide_options} =~ /AtLeastSinglyTryptic/ ) {
         $second_peptide_clause = "   AND ( SH.peptide_string LIKE '[RK].%${C}%._' OR ".
                                           "SH.peptide_string LIKE '_.%${C}%[RK]._' )";
-      } else {
+      } elsif ( $parameters{peptide_options} =~ /NotAtAllTryptic/ ) {
+        $second_peptide_clause = "   AND ( SH.peptide_string NOT LIKE '[RK].%${C}%._' AND ".
+                                          "SH.peptide_string NOT LIKE '_.%${C}%[RK]._' )";
+      } elsif ( $parameters{peptide_options} =~ /OnlySinglyTryptic/ ) {
+        $second_peptide_clause = "   AND ( ( SH.peptide_string LIKE '[RK].%${C}%._'\n".
+                                 "           OR SH.peptide_string LIKE '_.%${C}%[RK]._' )\n".
+                                 "         AND SH.peptide_string NOT LIKE '[RK].%${C}%[RK]._' )";
+      } elsif ( $parameters{peptide_options} =~ /C_containing/ ) {
         $second_peptide_clause = "   AND SH.peptide_string LIKE '_.%${C}%._'";
+      }
+      if ( $parameters{peptide_options} =~ /C_missing/ ) {
+        $second_peptide_clause .= "   AND SH.peptide_string NOT LIKE '_.%C%._'";
       }
     }
   }
