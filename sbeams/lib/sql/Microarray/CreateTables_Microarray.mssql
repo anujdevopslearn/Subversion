@@ -934,6 +934,23 @@ CREATE TABLE dbo.gene_expression (
 GO
 
 
+CREATE TABLE query_option (
+  query_option_id            int IDENTITY NOT NULL,
+  option_type                varchar(255) NOT NULL,
+  option_key                 varchar(255) NOT NULL,
+  option_value               varchar(255) NULL,
+  sort_order                 int NOT NULL DEFAULT '10',
+  date_created               datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_by_id              int NOT NULL DEFAULT '1',
+  date_modified              datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  modified_by_id             int NOT NULL DEFAULT '1',
+  owner_group_id             int NOT NULL DEFAULT '1',
+  record_status              char(1) NOT NULL DEFAULT 'N',
+  PRIMARY KEY (query_option_id)
+)
+GO
+
+
 
 
 
