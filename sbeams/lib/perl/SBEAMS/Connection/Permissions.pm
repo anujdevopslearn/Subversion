@@ -747,8 +747,27 @@ sub get_best_permission{
       $best_privilege_id = $best_user_privilege_id if
         ($best_user_privilege_id < $best_privilege_id);
   }
-
+  $log->debug( "Best permission is $best_privilege_id" );
   return $best_privilege_id;
+}
+
+#+
+# Simple method to determine if the current user's mode 1 permissions
+# on a given table are DATA_WRITER or better (i.e. <= 30).
+#
+# @arg table_name Common name of table in question.  REQUIRED
+# @ret 1 if privilege <= 30, else 0.
+# 
+sub isTableWritable {
+  my $self = shift;
+  my %args = @_;
+  die( "Missing required parameter table_name" ) unless $args{table_name}; 
+  $args{dbtable} = $self->returnTableInfo( $args{table_name}, 'DB_TABLE_NAME' );
+  $args{contact_id} = $self->getCurrent_contact_id;
+  $args{work_group_id} = $self->getCurrent_work_group_id;
+  my $perm = $self->calculateTablePermission( %args );
+  $log->debug( "User has table perms of $perm" );
+  return ( $perm <= DATA_WRITER ) ? 1 : 0;
 }
 
 
@@ -963,8 +982,8 @@ sub calculateTablePermission {
   AND tgs.record_status != 'D'
   END
 
-  $log->debug( "USQL: $usql" );
-  $log->debug( "TGSQL: $gsql" );
+#  $log->debug( "USQL: $usql" );
+#  $log->debug( "TGSQL: $gsql" );
 
   my @gperms = $self->selectSeveralColumns( $gsql );
  
@@ -997,7 +1016,6 @@ sub calculateTablePermission {
   } elsif ( scalar( @rec_info ) ) { # Existing record.
 
     if ( $rec_info[2] == $args{contact_id} ) { # last modifier, allow
-      $log->debug( "Letting them get away with it!" );
       return getMin( $privilege, DATA_MODIFIER ); # return MIN
           
     } elsif ( $rec_info[1] eq 'L' ) { # Locked record, deny all others.
@@ -1089,18 +1107,21 @@ sub calculateProjectPermission {
 
   # We have the record information, the parent project, and user's permission on
   # it.   Now determine what permission level all these boil down to.
-  if ( $privilege == DATA_NONE ) { # Deny if overall priv is DATA_NONE ?
-    return DATA_NONE;
+  if ( $privilege >= DATA_NONE ) { # Deny if overall priv is DATA_NONE or worse?
+    return $privilege;
 
   } elsif ( $rec_info[2] == $args{contact_id} ) { # last modifier, allow
+    $log->info( "Promoted last modifier from $privilege to 20" ) if $privilege > DATA_MODIFIER;
     return getMin( $privilege, DATA_MODIFIER ); # return MIN
           
   } elsif ( $rec_info[1] eq 'L' ) { # Locked record, deny all others.
+    $log->info( "Denied access to locked record for privileged user ($privilege)" ) if $privilege <= DATA_MODIFIER;
       return getMax( $privilege, DATA_WRITER ); # return MAX
       
   } elsif ( $rec_info[1] eq 'M' ) { # Modifiable, allow if <= DATA_WRITE.
-      return ( $privilege > DATA_WRITER ) ? $privilege 
-                                          : getMin( $privilege, DATA_MODIFIER );
+    $log->info( "Promoted from $privilege to 20 for Modifiable record" ) if $privilege > DATA_MODIFIER;
+    return ( $privilege > DATA_WRITER ) ? $privilege 
+                                        : getMin( $privilege, DATA_MODIFIER );
 
   } elsif ( $privilege == DATA_GROUP_MOD ) {        # User is group_mod &&
     if ( $rec_info[4] == $args{work_group_id} ) {  # Group data, allow
@@ -1281,7 +1302,6 @@ sub getUserProjectPermission {
 sub checkProjectPermission {
   my $self = shift;
   my %args = @_;
-  my $debug = 1;
 
   # Check requirements
   for ( qw( action fkey fval fsql dbsql tname ) ) {
@@ -1309,10 +1329,6 @@ sub checkProjectPermission {
     ( $pr_id ) = $self->selectOneColumn( $args{fsql} );
   }
 
-  if ( $debug ) {
-    print STDERR "In checkProjectPermission for table $args{tname}.  key is $args{fkey}, value is $args{fval}, proj_id is $pr_id\n";
-  }
-
   if ( !$pr_id ) {
     return "Unable to determine project_id\n";
   }
@@ -1320,7 +1336,6 @@ sub checkProjectPermission {
   my $priv = $self->get_best_permission( project_id => $pr_id );
   
   if ( uc($args{action}) eq 'INSERT' ) {
-    print STDERR "Inserting new record?? privilege on $pr_id is $priv\n" if $debug;
 
     #  Can user write the project? 
     if ( DATA_WRITER < $priv ) {
@@ -1342,7 +1357,6 @@ sub checkProjectPermission {
       my $priv_orig = $self->get_best_permission( project_id => $pr_id_orig );
       my $priv_new = $priv;  # $priv is calculated with cgi passed value
 
-    print STDERR "Updating record?? project changed, privilege on $pr_id_orig is $priv_orig\n" if $debug;
       # can this user change original?
       if ( DATA_WRITER <= $priv_orig ) {
         # Nope, he/she/it ain't allowed
@@ -1356,7 +1370,6 @@ sub checkProjectPermission {
         return "Insufficient permissions ($priv_new) in project (ID: $pr_id)";
       }
     } else { # project association unchanged.
-    print STDERR "Updating record?? privilege on $pr_id is $priv\n" if $debug;
 
       # Since new project = original project, calculated priv is original priv
       # can this user change original?
