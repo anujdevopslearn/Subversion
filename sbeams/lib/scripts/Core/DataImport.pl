@@ -429,7 +429,7 @@ sub determineDataPresence {
 
 
   print "INFO: This record is not in the database and needs to be ".
-    "updated.\n" if ($VERBOSE > 1);
+    "inserted.\n" if ($VERBOSE > 1);
   $return_status->{present} = 'NO';
   return $return_status;
 
