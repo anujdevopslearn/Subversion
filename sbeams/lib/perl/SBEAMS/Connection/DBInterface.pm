@@ -2182,18 +2182,24 @@ sub transferTable {
   my $delimiter = $args{'delimiter'};
   my $comment_char = $args{'comment_char'};
   my $skip_lines = $args{'skip_lines'} || 0;
-  die ("either sql or source_file must be passed") unless ($sql || $source_file);
-  die ("parameters sql and source_file cannot both be passed") if ($sql && $source_file);
+  die ("either sql or source_file must be passed")
+    unless ($sql || $source_file);
+  die ("parameters sql and source_file cannot both be passed")
+    if ($sql && $source_file);
   my $src_PK_name = $args{'src_PK_name'};
   my $src_PK_column = $args{'src_PK_column'};
   if ($sql) {
-    die ("parameter src_PK_name must be passed if sql is passed") unless ($src_PK_name);
-    die("parameter src_PK_column msut be passed if sql is passed") unless ($src_PK_column>=0);
+    die ("parameter src_PK_name must be passed if sql is passed")
+      unless ($src_PK_name);
+    die("parameter src_PK_column msut be passed if sql is passed")
+      unless ($src_PK_column>=0);
   }
 
   my $dest_conn = $args{'dest_conn'} || die "ERROR: dest_conn not passed";
-  my $column_map_ref = $args{'column_map_ref'} || die "ERROR: column_map_ref not passed";
-  my $transform_map_ref = $args{'transform_map_ref'} || die "ERROR: transform_map_ref not passed";
+  my $column_map_ref = $args{'column_map_ref'}
+    || die "ERROR: column_map_ref not passed";
+  my $transform_map_ref = $args{'transform_map_ref'}
+    || die "ERROR: transform_map_ref not passed";
   my $newkey_map_ref = $args{'newkey_map_ref'};
 
   my $table_name = $args{'table_name'} || die "ERROR: table_name not passed";
@@ -2218,7 +2224,10 @@ sub transferTable {
   #### Read from file if src_file is set
   if ($source_file) {
     print "\n  Loading data from file...";
-    @rows = $self->importTSVFile(source_file=>$source_file,delimiter=>$delimiter,comment_char=>$comment_char);
+    @rows = $self->importTSVFile(source_file=>$source_file,
+      delimiter=>$delimiter,
+      skip_lines=>$skip_lines,
+      comment_char=>$comment_char);
   }
 
 
@@ -2272,6 +2281,7 @@ sub transferTable {
            WHERE $constraints_str
         ~;
 
+        #print $sql;
         my @results = $self->selectOneColumn($sql);
 
         #### If there is one matching record
@@ -2281,8 +2291,8 @@ sub transferTable {
             rowdata_ref=>\%rowdata,
             PK=>$dest_PK_name,PK_value=>$results[0],
             return_PK=>$return_PK,
-            verbose=>1,
-#            testonly=>1,
+            #verbose=>1,
+            #testonly=>1,
           );
           $did_update = 1;
 
@@ -2305,8 +2315,8 @@ sub transferTable {
   	table_name=>$table_name,
   	rowdata_ref=>\%rowdata,
   	PK=>$dest_PK_name,return_PK=>$return_PK,
- 	verbose=>1,
-#  	testonly=>1,
+ 	#verbose=>1,
+  	#testonly=>1,
       );
     }
 
@@ -2564,7 +2574,8 @@ return_PK => If TRUE, the Primary Key of the just INSERTed or UPDATEd
   my $contact_id = $sbeams->insert_update_row(insert=>1,
     table_name => "contact", rowdata_ref => \%rowdata,
     PK=>"contact_id", return_PK=>1,
-    #,verbose=>1,testonly=>1
+    #verbose=>1,
+    #testonly=>1
     );
 
   %rowdata = ();
@@ -2573,7 +2584,8 @@ return_PK => If TRUE, the Primary Key of the just INSERTed or UPDATEd
   my $result = $sbeams->insert_update_row(update=>1,
     table_name => "contact", rowdata_ref => \%rowdata,
     PK=>"contact_id", PK_value=>$contact_id,
-    #,verbose=>1,testonly=>1
+    #verbose=>1,
+    #testonly=>1
     );
 
 
