@@ -131,6 +131,8 @@ sub display_page_header {
       if (uc($navigation_bar) eq 'YES') {
         print qq~
 	<tr><td>&nbsp;</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Help?document=all"><nobr>Documentation</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Data:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi"><nobr>&nbsp;&nbsp;&nbsp;My Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project"<nobr>&nbsp;&nbsp;&nbsp;Projects</a></td></tr>
@@ -158,8 +160,7 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_experiment_type"><nobr>&nbsp;&nbsp;&nbsp;Request Management</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_raw_data_file"><nobr>&nbsp;&nbsp;&nbsp;Data Processing</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=APD_peptide_summary"><nobr>&nbsp;&nbsp;&nbsp;APD Tables</nobr></a></td></tr>
-	<tr><td>Documentation:</td></tr>
-	<tr><td><a href="$HTML_BASE_DIR/doc/$SBEAMS_SUBDIR/${SBEAMS_PART}_Schema.gif"><nobr>&nbsp;&nbsp;&nbsp;Schema (GIF)</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>
 	<tr><td>Other Tools:</td></tr>
 	<tr><td><a href="http://db.systemsbiology.net:8080/proteomicsToolkit/"><nobr>&nbsp;&nbsp;&nbsp;Proteomics Toolkit</nobr></a></td></tr>
 	<tr><td><a href="http://mss.systemsbiology.net/"><nobr>&nbsp;&nbsp;&nbsp;MassSpec Schedule</nobr></a></td></tr>
@@ -177,6 +178,7 @@ sub display_page_header {
 
       ~;
 
+
     } else {
       print qq~
 	</TABLE>
@@ -184,6 +186,7 @@ sub display_page_header {
     }
 
 }
+
 
 # 	<table border=0 width="680" bgcolor="#ffffff" cellpadding=4>
 
@@ -240,11 +243,29 @@ sub printJavascriptFunctions {
 
         // -->
         </SCRIPT>
+
     ~;
 
 }
 
 
+###############################################################################
+# documentation_list
+###############################################################################
+sub documentation_list {
+#link for schema needs help
+  my $self = shift;
+print qq~
+<CENTER>
+<H3>Proteomics Documentation</H3>
+</CENTER>
+<UL>
+<LI><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Help?document=ProteomicsTutorial">Tutorial</A>
+<LI><a href="$HTML_BASE_DIR/doc/$SBEAMS_SUBDIR/${SBEAMS_PART}_Schema.gif">Schema</A>
+<LI><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Help?document=RecentNews">Proteomics Module Recent News</A>
+</UL>
+    ~;
+}
 
 ###############################################################################
 # printPageFooter
