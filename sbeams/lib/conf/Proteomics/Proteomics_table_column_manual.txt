@@ -6,7 +6,7 @@ SELECT DISTINCT search_batch_id,username + '' - '' + experiment_tag + '' -> '' +
   FROM $TBPR_PROTEOMICS_EXPERIMENT PE
   INNER JOIN $TBPR_SEARCH_BATCH SB ON ( PE.experiment_id = SB.experiment_id )
   INNER JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
-  JOIN $TB_USER_LOGIN UL ON ( PE.contact_id = UL.contact_id )
+  INNER JOIN $TB_USER_LOGIN UL ON ( PE.contact_id = UL.contact_id )
  WHERE PE.project_id IN ( $accessible_project_ids )
  ORDER BY username,experiment_tag,set_tag'
  WHERE (   table_name = 'PR_GetSearchHits'
