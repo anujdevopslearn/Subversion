@@ -24,6 +24,7 @@ use CGI::Carp qw(fatalsToBrowser croak);
 
 use SBEAMS::Connection::Settings;
 use SBEAMS::Microarray::Tables;
+use SBEAMS::Inkjet::Tables;
 use SBEAMS::Connection::Tables;
 
 $q       = new CGI;
@@ -131,48 +132,62 @@ sub update_user_permissions {
   my $test_string = $priv_chooser.$counter;
 
   while($parameters{$test_string}){
-      my (%rowdata, $rowdata_ref);
-      my $temp_user = $user_chooser.$counter;
-      my $temp_priv = $priv_chooser.$counter;
-      my $user_id = $parameters{$temp_user};
-      my $priv_id = $parameters{$temp_priv};
+    my (%rowdata, $rowdata_ref);
+		my $temp_user = $user_chooser.$counter;
+		my $temp_priv = $priv_chooser.$counter;
+		my $user_id = $parameters{$temp_user};
+		my $priv_id = $parameters{$temp_priv};
 
-      #set up for next go around
-      $counter++;
-      $test_string = $priv_chooser.$counter;
-      next if ($user_id == '-1' || $priv_id == '-1');
+		#set up for next go around
+		$counter++;
+		$test_string = $priv_chooser.$counter;
+		next if ($user_id == '-1');
 
-      #test to see if the user already has assigned privileges
-      $sql = qq~
-	  SELECT UPP.user_project_permission_id
-	  FROM $TB_USER_PROJECT_PERMISSION UPP
-	  LEFT JOIN $TB_PROJECT P ON (P.project_id = UPP.project_id)
-	  WHERE UPP.contact_id = $user_id
-	  AND P.project_id = $current_project_id
-      ~;
-      @rows = $self->selectOneColumn($sql);
-      if (@rows){
-	  $rowdata{'privilege_id'} = $priv_id;
-	  $rowdata_ref= \%rowdata;
-	  $self->updateOrInsertRow(table_name=>$TB_USER_PROJECT_PERMISSION,
-				     rowdata_ref=>$rowdata_ref,
-				     update=>1,
-				     PK_name=>'user_project_permission_id',
-				     PK_value=>$rows[0],
-				     add_audit_parameters=>1);
-      }else {
-	  $rowdata{'contact_id'}   = $user_id;
-	  $rowdata{'project_id'}   = $current_project_id;
-	  $rowdata{'privilege_id'} = $priv_id;
-	  $rowdata_ref = \%rowdata;
-	  $self->updateOrInsertRow(table_name=>$TB_USER_PROJECT_PERMISSION,
-				     rowdata_ref=>$rowdata_ref,
-				     insert=>1,
-				     PK_name=>'user_project_permission_id',
-				     add_audit_parameters=>1);
-      }
+		# Test to see if the user already has assigned privileges
+		# If the permissions are to be updated, then update
+		# If the permissions are to be deleted, then delete
+		$sql = qq~
+				SELECT UPP.user_project_permission_id
+				FROM $TB_USER_PROJECT_PERMISSION UPP
+				LEFT JOIN $TB_PROJECT P ON (P.project_id = UPP.project_id)
+				WHERE UPP.contact_id = $user_id
+				AND P.project_id = $current_project_id
+				~;
+		@rows = $self->selectOneColumn($sql);
+
+		if (@rows){
+			if ($priv_id ne "-1"){
+				$rowdata{'privilege_id'} = $priv_id;
+				$rowdata{'record_status'} = 'N';
+				$rowdata_ref= \%rowdata;
+				$self->updateOrInsertRow(table_name=>$TB_USER_PROJECT_PERMISSION,
+																 rowdata_ref=>$rowdata_ref,
+																 update=>1,
+																 PK_name=>'user_project_permission_id',
+																 PK_value=>$rows[0],
+																 add_audit_parameters=>1);
+		  }else{
+				$rowdata{'record_status'} = 'D';
+				$rowdata_ref = \%rowdata;
+				$self->updateOrInsertRow(table_name=>$TB_USER_PROJECT_PERMISSION,
+																 rowdata_ref=>$rowdata_ref,
+																 update=>1,
+																 PK_name=>'user_project_permission_id',
+																 PK_value=>$rows[0],
+																 add_audit_parameters=>1);
+			}
+	  }else {
+			$rowdata{'contact_id'}   = $user_id;
+			$rowdata{'project_id'}   = $current_project_id;
+			$rowdata{'privilege_id'} = $priv_id;
+			$rowdata_ref = \%rowdata;
+			$self->updateOrInsertRow(table_name=>$TB_USER_PROJECT_PERMISSION,
+															 rowdata_ref=>$rowdata_ref,
+															 insert=>1,
+															 PK_name=>'user_project_permission_id',
+															 add_audit_parameters=>1);
+	  }
   }
-
 }
 
 ###############################################################################
@@ -202,46 +217,58 @@ sub update_group_permissions {
   my $test_string = $priv_chooser.$counter;
 
   while($parameters{$test_string}){
-      my (%rowdata, $rowdata_ref);
-      my $temp_group = $group_chooser.$counter;
-      my $temp_priv = $priv_chooser.$counter;
-      my $group_id = $parameters{$temp_group};
-      my $priv_id = $parameters{$temp_priv};
+    my (%rowdata, $rowdata_ref);
+		my $temp_group = $group_chooser.$counter;
+		my $temp_priv = $priv_chooser.$counter;
+		my $group_id = $parameters{$temp_group};
+		my $priv_id = $parameters{$temp_priv};
 
-      #set up for next go around
-      $counter++;
-      $test_string = $priv_chooser.$counter;
-      next if ($group_id == '-1' || $priv_id == '-1');
+		#set up for next go around
+		$counter++;
+		$test_string = $priv_chooser.$counter;
+		next if ($group_id == '-1');
 
-      #test to see if the user already has assigned privileges
-      $sql = qq~
-	  SELECT GPP.group_project_permission_id
-	  FROM $TB_GROUP_PROJECT_PERMISSION GPP
-	  WHERE GPP.project_id = '$current_project_id'
-	  AND GPP.work_group_id = '$group_id'
-      ~;
-      @rows = $self->selectOneColumn($sql);
+		#test to see if the user already has assigned privileges
+		$sql = qq~
+				SELECT GPP.group_project_permission_id
+				FROM $TB_GROUP_PROJECT_PERMISSION GPP
+				WHERE GPP.project_id = '$current_project_id'
+				AND GPP.work_group_id = '$group_id'
+				~;
+		@rows = $self->selectOneColumn($sql);
 
-      if (@rows){
-	  $rowdata{'privilege_id'} = $priv_id;
-	  $rowdata_ref= \%rowdata;
-	  $self->updateOrInsertRow(table_name=>$TB_GROUP_PROJECT_PERMISSION,
-				     rowdata_ref=>$rowdata_ref,
-				     update=>1,
-				     PK_name=>'group_project_permission_id',
-				     PK_value=>$rows[0],
-				     add_audit_parameters=>1);
-      }else {
-	  $rowdata{'work_group_id'}   = $group_id;
-	  $rowdata{'project_id'}   = $current_project_id;
-	  $rowdata{'privilege_id'} = $priv_id;
-	  $rowdata_ref = \%rowdata;
-	  $self->updateOrInsertRow(table_name=>$TB_GROUP_PROJECT_PERMISSION,
-				     rowdata_ref=>$rowdata_ref,
-				     insert=>1,
-				     PK_name=>'group_project_permission_id',
-				     add_audit_parameters=>1);
-      }
+		if (@rows){
+			if ($priv_id ne "-1"){
+				$rowdata{'privilege_id'} = $priv_id;
+				$rowdata{'record_status'} = 'N';
+				$rowdata_ref= \%rowdata;
+				$self->updateOrInsertRow(table_name=>$TB_GROUP_PROJECT_PERMISSION,
+																 rowdata_ref=>$rowdata_ref,
+																 update=>1,
+																 PK_name=>'group_project_permission_id',
+																 PK_value=>$rows[0],
+																 add_audit_parameters=>1);
+		  }else{
+				$rowdata{'record_status'} = 'D';
+				$rowdata_ref = \%rowdata;
+				$self->updateOrInsertRow(table_name=>$TB_GROUP_PROJECT_PERMISSION,
+																 rowdata_ref=>$rowdata_ref,
+																 update=>1,
+																 PK_name=>'group_project_permission_id',
+																 PK_value=>$rows[0],
+																 add_audit_parameters=>1);
+		  }
+	  }else {
+			$rowdata{'work_group_id'}   = $group_id;
+			$rowdata{'project_id'}   = $current_project_id;
+			$rowdata{'privilege_id'} = $priv_id;
+			$rowdata_ref = \%rowdata;
+			$self->updateOrInsertRow(table_name=>$TB_GROUP_PROJECT_PERMISSION,
+															 rowdata_ref=>$rowdata_ref,
+															 insert=>1,
+															 PK_name=>'group_project_permission_id',
+															 add_audit_parameters=>1);
+	  }
   }
 }
 
@@ -301,10 +328,12 @@ sub print_user_permissions {
       LEFT JOIN $TB_PROJECT P ON (P.project_id = UPP.project_id)
       LEFT JOIN $TB_PRIVILEGE PRIV ON (PRIV.privilege_id = UPP.privilege_id)
       WHERE UPP.project_id = '$current_project_id'
-      AND PRIV.privilege_id < '50'
+			AND UPP.record_status != 'D'
+			AND PRIV.record_status != 'D'
       AND UL.contact_id != P.PI_contact_id
 			ORDER BY UL.username
       ~;
+	#print "\n$sql\n";
 
   @rows = $self->selectSeveralColumns($sql);
 
@@ -321,7 +350,7 @@ sub print_user_permissions {
 	<TD><B>administrator (project PI)</B></TD>
       </TR>
       ~;
-  ##Print known users/privileges
+  ## Print known users/privileges
   ## Also see if current contact has permission to alter
   my ($counter, $chooser_name);
   $counter = 0;
@@ -358,16 +387,16 @@ sub print_user_permissions {
   ~;
   $chooser_name = "userName".$counter;
   $self->print_chooser(sql=>$user_sql,
-		       blank_chooser=>1,
-		       input_name=>$chooser_name);
+											 blank_chooser=>1,
+											 input_name=>$chooser_name);
   print qq~
         </TD>
 	<TD>
   ~;
   $chooser_name = "userPriv".$counter;
   $self->print_chooser(sql=>$priv_sql, 
-		       blank_chooser=>1,
-		       input_name=>$chooser_name);
+											 blank_chooser=>1,
+											 input_name=>$chooser_name);
   print qq~
         </TD>
       </TR>
@@ -423,7 +452,7 @@ sub print_group_permissions {
       LEFT JOIN $TB_PROJECT P ON (P.project_id = GPP.project_id)
       WHERE P.project_id = '$current_project_id'
       AND WG.work_group_name != 'Admin'
-      AND PRIV.privilege_id < '50'
+			AND GPP.record_status != 'D'
       AND WG.record_status != 'D'
       AND PRIV.record_status != 'D'
 			ORDER BY WG.work_group_name
@@ -557,7 +586,7 @@ sub print_chooser {
   }elsif ($row_ref) {
       @rows = @{$row_ref};
   }else{
-      die "ERROR[$SUB_NAME]:Niether SQL nor SQL results not passed\n";
+      die "ERROR[$SUB_NAME]:Neither SQL nor SQL results passed\n";
   }
 
   ## Start SELECT
@@ -733,7 +762,8 @@ sub getAccessibleProjects{
                       ELSE UPP.privilege_id END) AS "best_user_privilege_id"
 			~;
 
-	if ($module eq "microarray"){
+	## Only show microarry/inkjet specific projects
+	if ($module eq "microarray" || $module eq "inkjet"){
 			$sql .= qq~,
 			COUNT (AR.array_request_id) AS 'array_requests'
 					~;
@@ -759,6 +789,13 @@ sub getAccessibleProjects{
 	if ($module eq "microarray") {
 			$sql .= qq~
       LEFT JOIN $TBMA_ARRAY_REQUEST AR
+      ON ( AR.project_id = P.project_id )
+			~;
+	}
+
+	if ($module eq "inkjet") {
+			$sql .= qq~
+      LEFT JOIN $TBIJ_ARRAY_REQUEST AR
       ON ( AR.project_id = P.project_id )
 			~;
 	}
@@ -793,9 +830,9 @@ sub getAccessibleProjects{
 
   foreach my $element (@rows) {
     ## If microarray, check to see if there have been array requests
-    if ($module eq "microarray"){
+    if ($module eq "microarray" || $module eq "inkjet"){
       if($element->[6] > 0 || $element->[5] == 10 || $element->[4] == 10){
-	push(@project_ids,$element->[0]);
+					push(@project_ids,$element->[0]);
       }
     }else {
       push(@project_ids,$element->[0]);
