@@ -523,7 +523,7 @@ sub loadBiosequenceSet {
 
   #### Verify the source_file
   unless ( -e "$source_file" ) {
-    die("ERROR[$SUB_NAME]: Cannot find file $source_file");
+    die("ERROR[$SUB_NAME]: Cannot find file \'$source_file\'");
   }
 
 
@@ -826,6 +826,23 @@ sub loadBiosequence {
   if (defined($rowdata_ref->{end_in_chromosome})) {
     $property_set{end_in_chromosome} = $rowdata_ref->{end_in_chromosome};
     delete($rowdata_ref->{end_in_chromosome});
+  }
+  
+
+  #### Oligo/Biosequence Property Set-enabled specific ####
+  if ($module eq 'Oligo') {
+	if (defined($rowdata_ref->{n_transmembrane_regions})) {
+	  $property_set{n_transmembrane_regions} = $rowdata_ref->{n_transmembrane_regions};
+	  delete($rowdata_ref->{n_transmembrane_regions});
+	}
+	if (defined($rowdata_ref->{transmembrane_class})) {
+	  $property_set{transmembrane_class} = $rowdata_ref->{transmembrane_class};
+	  delete($rowdata_ref->{transmembrane_class});
+	}
+	if (defined($rowdata_ref->{strand})) {
+	  $property_set{strand} = $rowdata_ref->{strand};
+	  delete($rowdata_ref->{strand});
+	}
   }
 
 
@@ -1599,6 +1616,13 @@ sub specialParsing {
       $biosequence_set_name eq "halobacterium open reading frames") {
       if ($rowdata_ref->{biosequence_desc} =~ /^(.+)\s(\d+)\s(\d+)$/) {
 	  my $gene_tag = $rowdata_ref->{biosequence_name};
+
+      if($3 > $2) {
+		$rowdata_ref->{strand} = 'F';
+      }else{
+        $rowdata_ref->{strand} = 'R';
+	  }
+
 	  $rowdata_ref->{start_in_chromosome} = $2;
 	  $rowdata_ref->{end_in_chromosome} = $3;
 	  $rowdata_ref->{chromosome} = $1;
