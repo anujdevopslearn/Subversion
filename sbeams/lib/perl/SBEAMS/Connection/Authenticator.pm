@@ -28,6 +28,8 @@ use CGI::Carp qw(fatalsToBrowser croak);
 use CGI qw(-no_debug);
 use DBI;
 use Crypt::CBC;
+use Authen::Smb;
+
 
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Settings;
@@ -913,9 +915,16 @@ sub checkLogin {
     my $logging_query = "";
 
     my $success = 0;
+    my $failed = 0;
+    my $error_code = '????';
     @ERRORS  = ();
 
+    #### Set this to 1 to get more useful messages like why the login failed.
+    #### Set this to 0 to just get stone-faced "Login Incorrect" messages
+    my $more_helpful_message = 1;
 
+
+    #### Find this user in the user_login table
     my %query_result = $self->selectTwoColumnHash(
         "SELECT username,password
            FROM $TB_USER_LOGIN
@@ -924,41 +933,78 @@ sub checkLogin {
         ");
 
 
-    if (exists $query_result{$user}) {
-        unless ($query_result{$user}) {
-            $query_result{$user} = $self->getUnixPassword($user);
-        }
-    }
+    #### If this user is not in the user_login table, don't look any further
+    unless (exists $query_result{$user}) {
+      if ($more_helpful_message) {
+        push(@ERRORS, "This username is not registered in the system");
+      } else {
+	push(@ERRORS, "Login Incorrect");
+      }
+      $success = 0;
+      $failed = 1;
+      $error_code = 'NON-EXISTENT SBEAMS USERNAME';
 
-
-    if ($query_result{$user}) {
-
-        if (crypt($pass, $query_result{$user}) eq $query_result{$user}) {
-            $success = 1;
-            $logging_query="INSERT INTO $TB_USAGE_LOG
-		(username,usage_action,result)
-		VALUES ('$user','login','SUCCESS')";
-        } else {
-            #### Valid Login, Wrong Password
-            #### More useful message
-            push(@ERRORS, "Incorrect Password for this Username");
-            #### Safer message
-	    #push(@ERRORS, "Login Incorrect");
-            $success = 0;
-            $logging_query="INSERT INTO $TB_USAGE_LOG
-		(username,usage_action,result)
-		VALUES ('$user','login','INCORRECT PASSWORD')";
-        }
+    #### If this user is in the user_login table but has no encrypted
+    #### password, then try to obtain it from /etc/passwd and NIS
     } else {
-        #### More useful message
-        push(@ERRORS, "$user is not a valid Username in this system");
-        #### Safer message
-        #push(@ERRORS, "Login Incorrect");
-        $success = 0;
-        $logging_query="INSERT INTO $TB_USAGE_LOG
-		(username,usage_action,result)
-		VALUES ('$user','login','UNKNOWN USER')";
+      unless ($query_result{$user}) {
+        $query_result{$user} = $self->getUnixPassword($user);
+      }
     }
+
+
+    #### If there is an encrypted password, test it
+    if ($failed == 0 && $query_result{$user}) {
+      if (crypt($pass, $query_result{$user}) eq $query_result{$user}) {
+        $success = 1;
+        $error_code = 'SUCCESS';
+      } else {
+        if ($more_helpful_message) {
+          push(@ERRORS, "Incorrect password for this username");
+        } else {
+          push(@ERRORS, "Login Incorrect");
+        }
+        $success = 0;
+        $error_code = 'INCORRECT PASSWORD';
+      }
+    }
+
+
+    #### If success is still 0 but we haven't failed, try SMB Authentication
+    if ($success == 0 && $failed == 0) {
+      my $authResult = Authen::Smb::authen($user,$pass,
+        'ISB-DC1','PRINT','ISB');
+      if ( $authResult == 0 ) {
+        $success = 1;
+        $error_code = 'SUCCESS (SMB)';
+
+      } elsif ( $authResult == 3 ) {
+        if ($more_helpful_message) {
+          push(@ERRORS, "Incorrect password for this username");
+        } else {
+          push(@ERRORS, "Login Incorrect");
+        }
+        $success = 0;
+        $error_code = 'INCORRECT PASSWORD';
+
+      } else {
+        if ($more_helpful_message) {
+          push(@ERRORS, "ERROR communication with Domain Controller");
+        } else {
+          push(@ERRORS, "Login Incorrect");
+        }
+        $success = 0;
+        $error_code = 'UNABLE TO CONTACT DC';
+      }
+
+    }
+
+
+    #### Register the outcome of this attempt
+    $logging_query = qq~
+	INSERT INTO $TB_USAGE_LOG (username,usage_action,result)
+	VALUES ('$user','login','$error_code')
+    ~;
 
     $self->executeSQL($logging_query);
 
