@@ -9,7 +9,7 @@ use Getopt::Long;
 use FindBin;
 
 use lib qw (../../lib/perl);
-use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+use vars qw ($sbeams $sbeamsMOD $cg $current_contact_id $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
@@ -32,7 +32,7 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 
 use CGI;
-$q = new CGI;
+$cg = new CGI;
 
 
 ###############################################################################
@@ -85,17 +85,14 @@ sub main {
 
   #### Do the SBEAMS authentication and exit if a username is not returned
   exit unless ($current_username = $sbeams->Authenticate(
-    #connect_read_only=>1,
-    #allow_anonymous_access=>1,
-    #permitted_work_groups_ref=>['Proteomics_user','Proteomics_admin'],
   ));
 
 
   #### Read in the default input parameters
   my %parameters;
   my $n_params_found = $sbeams->parse_input_parameters(
-    q=>$q,parameters_ref=>\%parameters);
-  #$sbeams->printDebuggingInfo($q);
+    q=>$cg,parameters_ref=>\%parameters);
+  #$sbeams->printDebuggingInfo($cg);
   my $apply_action = $parameters{'action'} || $parameters{'apply_action'};
 
 
@@ -154,7 +151,7 @@ sub print_entry_form {
   # the statement shown defaults to POST method, and action equal to this script
   print "<H1> Oligo Search</H1>";
   
-  print $q->start_form;  
+  print $cg->start_form;  
   
   ## Print the form elements
   ## TO DO:
@@ -162,23 +159,23 @@ sub print_entry_form {
   #  2) Generalize this form to query SBEAMS for set_type
   #
   print
-    "Genes: ",$q->textarea(-name=>'genes'),
-    $q->p,
+    "Genes: ",$cg->textarea(-name=>'genes'),
+    $cg->p,
     "Organism: ",
-    $q->popup_menu(-name=>'organism',
+    $cg->popup_menu(-name=>'organism',
 	               -values=>['halobacterium-nrc1','haloarcula marismortui']),
-    $q->p,
+    $cg->p,
     "Select oligo set type to search: ",
-    $q->p,
-    $q->popup_menu(-name=>'set_type',
+    $cg->p,
+    $cg->popup_menu(-name=>'set_type',
                    -values=>['Gene Expression', 'Gene Knockout']),
     
-    $q->p,
-	$q->submit(-name=>"action", value=>"QUERY");
+    $cg->p,
+	$cg->submit(-name=>"action", value=>"QUERY");
 
   # end of the form
-  print $q->end_form,
-      $q->hr; 
+  print $cg->end_form,
+      $cg->hr; 
 
   return;
 }
@@ -200,7 +197,7 @@ sub handle_request {
   my %resultset = ();
   my $resultset_ref = \%resultset;
   my %max_widths;
-  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+  my %rs_params = $sbeams->parseResultSetParams(q=>$cg);
   my $base_url = "$CGI_BASE_DIR/Oligo/Search_Oligo.cgi";
 
   my %url_cols;
@@ -391,8 +388,8 @@ sub handle_request {
 
   ####Back button
   print qq~
-	<BR><A HREF="http://db.systemsbiology.net/dev5/sbeams/cgi/Oligo/Search_Oligo.cgi">Search again</A>  
-    <BR><A HREF="http://db.systemsbiology.net/dev5/sbeams/cgi/Oligo/Add_Oligo.cgi">Add New Oligo</A><BR><BR>
+	<BR><A HREF="$CGI_BASE_DIR/Oligo/Search_Oligo.cgi">Search again</A>  
+    <BR><A HREF="$CGI_BASE_DIR/Oligo/Add_Oligo.cgi">Add New Oligo</A><BR><BR>
   ~;
 
   return;

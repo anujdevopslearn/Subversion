@@ -245,7 +245,7 @@ sub handle_request {
 	    my $tm_command = "melttemp -OLI=" . $sequence . " -OUT=gene.melt -Default";
         my $ss_command = "primepair -OLIGOSF=" . $sequence . " -OLIGOSR=" . $sequence . " -OUT=gene.primepair -Default";
 
-		$tm_command = "ssh -l gcgbot -i /net/dblocal/www/html/dev5/sbeams/cgi/Oligo/gcg-key2 ouzo \"uptime; cd /local/scratch/pmar; $tm_command; scp gene.melt $CGI_BASE_DIR/Oligo/gene.melt\"";
+		$tm_command = "ssh -l gcgbot -i /net/dblocal/www/html/dev5/sbeams/cgi/Oligo/gcg-key2 ouzo \"uptime; cd /local/scratch/pmar; $tm_command; scp gene.melt /net/dblocal/www/html/dev5/sbeams/cgi/Oligo/gene.melt\"";
 
 		system("$tm_command | /dev/null");
 		open(MELT, "<gene.melt") || die "cannot open gene.melt\n";
@@ -261,7 +261,7 @@ sub handle_request {
 		  $tm = "undefined";
 		}
 
-		$ss_command = "ssh -l gcgbot -i /net/dblocal/www/html/dev5/sbeams/cgi/Oligo/gcg-key2 ouzo \"uptime; cd /local/scratch/pmar; $ss_command; scp gene.primepair $CGI_BASE_DIR/Oligo/gene.primepair\"";
+		$ss_command = "ssh -l gcgbot -i /net/dblocal/www/html/dev5/sbeams/cgi/Oligo/gcg-key2 ouzo \"uptime; cd /local/scratch/pmar; $ss_command; scp gene.primepair /net/dblocal/www/html/dev5/sbeams/cgi/Oligo/gene.primepair\"";
 	
 		system("$ss_command | /dev/null");		
 		open(PRIMEPAIR, "<gene.primepair") || die "cannot open gene.primepair\n";
@@ -292,8 +292,8 @@ sub handle_request {
 		print OLIGO $outputdata;
 		close(OLIGO);
 		
-		####use load_oligo.pl to load the newly created oligo into the db
-		my $command_line = "$CGI_BASE_DIR/Oligo/load_oligo.pl --search_tool_id " . $search_tool_id . " --gene_set_tag " .  $gene_set_tag . " --chromosome_set_tag " . $chromosome_set_tag . " --oligo_file ./temp_oligo_file --project_id 425";
+		####use load_single_oligo.pl to load the newly created oligo into the db
+		my $command_line = "./load_single_oligo.pl --search_tool_id " . $search_tool_id . " --gene_set_tag " .  $gene_set_tag . " --chromosome_set_tag " . $chromosome_set_tag . " --oligo_file ./temp_oligo_file --project_id 425";
 		system("$command_line | /dev/null");
 
 		####Allow user to view if oligo has been added.

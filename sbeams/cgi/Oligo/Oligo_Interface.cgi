@@ -9,7 +9,7 @@ use Getopt::Long;
 use FindBin;
 
 use lib qw (../../lib/perl);
-use vars qw ($sbeams $sbeamsMOD $c $current_contact_id $current_username
+use vars qw ($sbeams $sbeamsMOD $cg $current_contact_id $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
@@ -32,7 +32,7 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 
 use CGI;
-$c = new CGI;
+$cg = new CGI;
 
 
 
@@ -94,8 +94,8 @@ sub main {
   #### Read in the default input parameters
   my %parameters;
   my $n_params_found = $sbeams->parse_input_parameters(
-    q=>$c,parameters_ref=>\%parameters);
-  #$sbeams->printDebuggingInfo($c);
+    q=>$cg,parameters_ref=>\%parameters);
+  #$sbeams->printDebuggingInfo($cg);
 
 
   #### Process generic "state" parameters before we start

@@ -16,7 +16,7 @@ use Getopt::Long;
 use FindBin;
 
 use lib qw (../../lib/perl);
-use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+use vars qw ($sbeams $sbeamsMOD $cg $current_contact_id $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
@@ -41,7 +41,7 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 
 use CGI;
-$q = new CGI;
+$cg = new CGI;
 
 
 ###############################################################################
@@ -101,8 +101,8 @@ sub main {
   #### Read in the default input parameters
   my %parameters;
   my $n_params_found = $sbeams->parse_input_parameters(
-    q=>$q,parameters_ref=>\%parameters);
-  #$sbeams->printDebuggingInfo($q);     #Undo comment for debug mode
+    q=>$cg,parameters_ref=>\%parameters);
+  #$sbeams->printDebuggingInfo($cg);     #Undo comment for debug mode
   my $apply_action = $parameters{'action'} || $parameters{'apply_action'};
 
   #### Process generic "state" parameters before we start
@@ -145,7 +145,7 @@ sub print_entry_form {
 
   #start the form
   #the statement shown defaults to POST method, and action equal to this script
-  print $q->start_form;  
+  print $cg->start_form;  
 
   #print the form elements
   my $gene = $parameters{Gene};
@@ -235,25 +235,25 @@ sub print_entry_form {
   ####USER INTERFACE section for editing oligo (Commented out for now but don't delete!)
   print
 	"In Stock: ",
-	$q->popup_menu(-name=>'in_stock',
+	$cg->popup_menu(-name=>'in_stock',
 				   -values=>['N','Y'],
 				   -default=>[$in_stock],
 				   -override=>1),
-	$q->p,
-	"Location: ", $q->textfield(-name=>'location'),
-	$q->p, 
-	"Comments: ", $q->textarea(-name=>'comments'),
-	$q->p,
-	$q->submit(-name=>"action", value=>"EDIT");
+	$cg->p,
+	"Location: ", $cg->textfield(-name=>'location'),
+	$cg->p, 
+	"Comments: ", $cg->textarea(-name=>'comments'),
+	$cg->p,
+	$cg->submit(-name=>"action", value=>"EDIT");
 
   ####Back button
   print qq~
-	<BR><A HREF="http://db.systemsbiology.net/dev5/sbeams/cgi/Oligo/Search_Oligo.cgi">Back</A><BR><BR>  
+	<BR><A HREF="$CGI_BASE_DIR/Oligo/Search_Oligo.cgi">Back</A><BR><BR>  
     ~;
   
   # end of the form
-  print $q->end_form,
-      $q->hr; 
+  print $cg->end_form,
+      $cg->hr; 
 
   return;
 
@@ -281,7 +281,7 @@ sub handle_request {
   my %resultset = ();
   my $resultset_ref = \%resultset;
   my %max_widths;
-  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+  my %rs_params = $sbeams->parseResultSetParams(q=>$cg);
   my $base_url = "$CGI_BASE_DIR/Oligo/Search_Oligo.cgi";
 
   ## Edited Variables
@@ -314,7 +314,7 @@ sub handle_request {
     ~;        
     
     $sbeams->executeSQL($sql_stock);
-	print $q->p, "In stock: Set to $in_stock", $q->p;
+	print $cg->p, "In stock: Set to $in_stock", $cg->p;
 	
   }
 
@@ -326,7 +326,7 @@ sub handle_request {
 	  $table_joins
 	  ~;
 	$sbeams->executeSQL($sql_location);
-	print "Location: Set to $location", $q->p;
+	print "Location: Set to $location", $cg->p;
   }
   
   #Update comments
@@ -338,7 +338,7 @@ sub handle_request {
     ~;        
     
     $sbeams->executeSQL($sql_comments);
-	print "Comments:  Added: $comments", $q->p;
+	print "Comments:  Added: $comments", $cg->p;
 	
   }
  
@@ -360,7 +360,7 @@ sub handle_request {
 
   ####Back button
   print qq~
-	<BR><A HREF="http://db.systemsbiology.net/dev5/sbeams/cgi/Oligo/Search_Oligo.cgi">Back</A><BR><BR>  
+	<BR><A HREF="$CGI_BASE_DIR/Oligo/Search_Oligo.cgi">Back</A><BR><BR>  
     ~;
    
 
