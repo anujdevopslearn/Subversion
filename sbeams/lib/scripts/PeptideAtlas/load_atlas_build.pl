@@ -211,6 +211,13 @@ sub handleRequest {
   $ATLAS_BUILD_ID = $atlas_build_id; ## global variable needed for last test
 
 
+  ## handle --purge:
+  if ($purge) {
+     print "Removing child records in $atlas_build_name ($atlas_build_id): \n";
+     removeAtlas(atlas_build_id => $atlas_build_id,
+                 keep_parent_record => 1);
+  }#end --purge
+
 
 
   ## HANDLE requirements and calls for load:
@@ -316,13 +323,6 @@ sub handleRequest {
      removeAtlas(atlas_build_id => $atlas_build_id);
   }#end --delete
 
-
-  ## handle --purge:
-  if ($purge) {
-     print "Removing child records in $atlas_build_name ($atlas_build_id): \n";
-     removeAtlas(atlas_build_id => $atlas_build_id,
-                 keep_parent_record => 1);
-  }#end --purge
 
 
 
