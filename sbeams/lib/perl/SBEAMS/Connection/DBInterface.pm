@@ -2490,6 +2490,7 @@ sub readResultSet {
     $resultset_ref = $args{'resultset_ref'};
     my $query_parameters_ref = $args{'query_parameters_ref'};
     my $resultset_params_ref = $args{'resultset_params_ref'};
+    my $column_titles_ref = $args{'column_titles_ref'};
 
 
     #### Update timing info
@@ -2508,6 +2509,11 @@ sub readResultSet {
     my $VAR1;
     eval $indata;
     %{$query_parameters_ref} = %{$VAR1};
+
+    #### If columns titles are there, extract them
+    if (exists($query_parameters_ref->{'__column_titles'})) {
+      @{$column_titles_ref} = @{$query_parameters_ref->{'__column_titles'}};
+    }
 
 
     #### Read in the resultset
@@ -2565,6 +2571,7 @@ sub writeResultSet {
     my $resultset_params_ref = $args{'resultset_params_ref'};
     my $file_prefix = $args{'file_prefix'} || 'query_';
     my $query_name = $args{'query_name'} || '';
+    my $column_titles_ref = $args{'column_titles_ref'};
 
 
     #### If a filename was not provided, create one
@@ -2596,11 +2603,18 @@ sub writeResultSet {
     #  $query_parameters_ref->{cellular_component_constraint}."=\n</PRE>";
 
 
+    #### Add the column title list to the hash
+    if (defined($column_titles_ref)) {
+      $temp_hash_ref->{'__column_titles'} = $column_titles_ref;
+    }
+
+
     #### Write out the query parameters
     my $outfile = "$PHYSICAL_BASE_DIR/tmp/queries/${resultset_file}.params";
     open(OUTFILE,">$outfile") || die "Cannot open $outfile\n";
     printf OUTFILE Data::Dumper->Dump( [$temp_hash_ref] );
     close(OUTFILE);
+
 
 
     #### Write out the resultset
