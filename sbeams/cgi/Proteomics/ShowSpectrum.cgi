@@ -417,7 +417,7 @@ sub get_msms_spectrum {
 
     #### Extract the information about the spectrum from database
     $sql = "SELECT " . join(",",@columns) .
-           "  FROM $TB_MSMS_SCAN ".
+           "  FROM $TBPR_MSMS_SPECTRUM ".
            " WHERE msms_scan_id = '$msms_scan_id'";
     @rows = $sbeams->selectSeveralColumns($sql);
     $nrows = scalar(@rows);
@@ -444,7 +444,7 @@ sub get_msms_spectrum {
 
     #### Extract the actual mass,intensity pairs from database
     $sql = "SELECT mass,intensity ".
-           "  FROM $TB_MSMS_SPECTRUM_PEAK ".
+           "  FROM $TBPR_MSMS_SPECTRUM_PEAK ".
            " WHERE msms_scan_id = '$msms_scan_id'";
     my @mass_intensities = $sbeams->selectSeveralColumns($sql);
     unless (@mass_intensities) {
@@ -505,7 +505,7 @@ sub get_mass_modifications {
     #### search_batch_id
     $sql_query = qq~
 	  SELECT parameter_key,parameter_value
-	    FROM $TB_SEARCH_BATCH_PARAMETER
+	    FROM $TBPR_SEARCH_BATCH_PARAMETER
 	   WHERE search_batch_id = '$search_batch_id'
 	     AND parameter_key LIKE 'add%'
 	     AND CONVERT(real,parameter_value) != 0
@@ -522,7 +522,7 @@ sub get_mass_modifications {
     ####  search_batch_id
     $sql_query = qq~
 	  SELECT parameter_value
-	    FROM $TB_SEARCH_BATCH_PARAMETER
+	    FROM $TBPR_SEARCH_BATCH_PARAMETER
            WHERE search_batch_id = '$search_batch_id'
 	     AND parameter_key = 'diff_search_options'
     ~;

@@ -564,11 +564,11 @@ sub printEntryForm {
       my $quantitation_clause = "";
       if ($parameters{quantitation_constraint}) {
         if ($parameters{quantitation_constraint} =~ /^[\d\.]+$/) {
-          $quantitation_clause = "   AND ICAT_light/ISNULL(NULLIF(ICAT_heavy,0),0.01) = $parameters{quantitation_constraint}";
+          $quantitation_clause = "   AND d0_intensity/ISNULL(NULLIF(d8_intensity,0),0.01) = $parameters{quantitation_constraint}";
         } elsif ($parameters{quantitation_constraint} =~ /^between\s+[\d\.]+\s+and\s+[\d\.]+$/i) {
-          $quantitation_clause = "   AND ICAT_light/ISNULL(NULLIF(ICAT_heavy,0),0.01) $parameters{quantitation_constraint}";
+          $quantitation_clause = "   AND d0_intensity/ISNULL(NULLIF(d8_intensity,0),0.01) $parameters{quantitation_constraint}";
         } elsif ($parameters{quantitation_constraint} =~ /^[><=][=]*\s*[\d\.]+$/) {
-          $quantitation_clause = "   AND ICAT_light/ISNULL(NULLIF(ICAT_heavy,0),0.01) $parameters{quantitation_constraint}";
+          $quantitation_clause = "   AND d0_intensity/ISNULL(NULLIF(d8_intensity,0),0.01) $parameters{quantitation_constraint}";
         } else {
           print "<H4>Cannot parse Quantitation Constraint!  Check syntax.</H4>\n\n";
           return;
@@ -644,7 +644,7 @@ sub printEntryForm {
         ["biosequence_set_id","BSS.biosequence_set_id","biosequence_set_id"],
         ["set_path","BSS.set_path","set_path"],
         ["isoelectric_point","STR(isoelectric_point,8,3)","pI"],
-        ["quantitation","STR(ICAT_light,5,2) + ':' + STR(ICAT_heavy,5,2)","Quant"],
+        ["quantitation","STR(d0_intensity,5,2) + ':' + STR(d8_intensity,5,2)","Quant"],
         ["search_hit_annotation_id","SHA.search_hit_annotation_id","search_hit_annotation_id"],
         ["annotation_label","label_desc","Annot"],
       );
@@ -682,9 +682,9 @@ sub printEntryForm {
 	  JOIN proteomics.dbo.fraction F ON ( MSS.fraction_id = F.fraction_id )
 	  JOIN proteomics.dbo.biosequence_set BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
 	  JOIN proteomics.dbo.proteomics_experiment PE ON ( F.experiment_id = PE.experiment_id )
-	  LEFT JOIN $TB_ICAT_QUANTITATION ICAT ON ( SH.search_hit_id = ICAT.search_hit_id )
-	  LEFT JOIN $TB_BIOSEQUENCE BS ON ( SB.biosequence_set_id = BS.biosequence_set_id AND SH.reference = BS.biosequence_name )
-	  LEFT JOIN $TB_SEARCH_HIT_ANNOTATION SHA ON ( SH.search_hit_id = SHA.search_hit_id )
+	  LEFT JOIN $TBPR_QUANTITATION QUAN ON ( SH.search_hit_id = QUAN.search_hit_id )
+	  LEFT JOIN $TBPR_BIOSEQUENCE BS ON ( SB.biosequence_set_id = BS.biosequence_set_id AND SH.reference = BS.biosequence_name )
+	  LEFT JOIN $TBPR_SEARCH_HIT_ANNOTATION SHA ON ( SH.search_hit_id = SHA.search_hit_id )
 	  LEFT JOIN $TBPR_ANNOTATION_LABEL AL ON ( SHA.annotation_label_id = AL.annotation_label_id )
 	 WHERE 1 = 1
 	$search_batch_clause

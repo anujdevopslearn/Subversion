@@ -79,7 +79,7 @@ sub showMainPage {
 
     my $sql = qq~
 	SELECT SUBSTRING(biosequence_name,1,1) AS 'first letter',COUNT(*) AS 'Count'
-	  FROM $TB_BIOSEQUENCE
+	  FROM $TBPR_BIOSEQUENCE
 	 WHERE biosequence_set_id = 3
 	 GROUP BY SUBSTRING(biosequence_name,1,1)
 	 ORDER BY 1

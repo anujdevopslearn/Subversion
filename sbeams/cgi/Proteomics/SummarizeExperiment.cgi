@@ -140,7 +140,7 @@ sub printEntryForm {
     # Query to obtain column information about the table being managed
     $sql_query = qq~
 	SELECT experiment_id,username+' - '+experiment_name
-	  FROM $TB_PROTEOMICS_EXPERIMENT PE
+	  FROM $TBPR_PROTEOMICS_EXPERIMENT PE
 	  LEFT JOIN $TB_USER_LOGIN UL ON ( PE.contact_id=UL.contact_id )
 	 ORDER BY username,experiment_name
     ~;
@@ -213,11 +213,11 @@ sub printEntryForm {
 
       $sql_query = qq~
 	SELECT $columns_clause
-	  FROM $TB_PROTEOMICS_EXPERIMENT PE
+	  FROM $TBPR_PROTEOMICS_EXPERIMENT PE
 	  JOIN $TB_USER_LOGIN UL ON (PE.contact_id=UL.contact_id)
 	  JOIN $TB_PROJECT P ON (PE.project_id=P.project_id)
-	  JOIN $TB_FRACTION F ON (PE.experiment_id=F.experiment_id)
-	  JOIN $TB_MSMS_SCAN S ON (F.fraction_id=S.fraction_id)
+	  JOIN $TBPR_FRACTION F ON (PE.experiment_id=F.experiment_id)
+	  JOIN $TBPR_MSMS_SPECTRUM S ON (F.fraction_id=S.fraction_id)
 	 WHERE P.record_status!='D'
 	   AND UL.record_status!='D'
 	   AND PE.record_status!='D'

@@ -140,7 +140,7 @@ sub updateBestHitFlag {
 
 
   #### Find the corresponding search_id for this record
-  $sql = "SELECT search_id FROM $TB_SEARCH_HIT ".
+  $sql = "SELECT search_id FROM $TBPR_SEARCH_HIT ".
          " WHERE search_hit_id = '$parameters{search_hit_id}'";
   my ($search_id) = $sbeams->selectOneColumn($sql);
   unless ($search_id) {
@@ -165,7 +165,7 @@ sub updateBestHitFlag {
   #### some problems later if insert_update_row starts trying to do
   #### security checking
   $result = $sbeams->insert_update_row(update=>1,
-    table_name=>"$TB_SEARCH_HIT",
+    table_name=>"$TBPR_SEARCH_HIT",
     rowdata_ref=>\%rowdata,PK=>"search_id",
     PK_value => $search_id,
     #,verbose=>1,testonly=>1
@@ -175,7 +175,7 @@ sub updateBestHitFlag {
   #### Now set the best_hit_flag for the desired search_hit
   $rowdata{best_hit_flag} = 'Y';
   $result = $sbeams->insert_update_row(update=>1,
-    table_name=>"$TB_SEARCH_HIT",
+    table_name=>"$TBPR_SEARCH_HIT",
     rowdata_ref=>\%rowdata,PK=>"search_hit_id",
     PK_value => $parameters{search_hit_id},
     #,verbose=>1,testonly=>1

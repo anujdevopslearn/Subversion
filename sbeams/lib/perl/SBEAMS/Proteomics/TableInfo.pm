@@ -90,7 +90,7 @@ sub returnTableInfo {
         if ($info_key eq "BASICQuery") {
             return qq~
 		SELECT *
-		  FROM $TB_SEARCH_HIT SH
+		  FROM $TBPR_SEARCH_HIT SH
 		 WHERE SH.search_hit_id = '$parameters_ref->{search_hit_id}'
             ~;
         }
@@ -98,7 +98,7 @@ sub returnTableInfo {
         if ($info_key eq "FULLQuery") {
             return qq~
 		SELECT *
-		  FROM $TB_SEARCH_HIT SH
+		  FROM $TBPR_SEARCH_HIT SH
 		 WHERE SH.search_hit_id = '$parameters_ref->{search_hit_id}'
             ~;
         }
@@ -114,7 +114,7 @@ sub returnTableInfo {
 		SELECT experiment_id,username,P.project_id AS 'proj',
 		       name AS 'project_name',PE.experiment_id AS 'exp',
 		       experiment_tag,experiment_name,experiment_description
-		  FROM $TB_PROTEOMICS_EXPERIMENT PE
+		  FROM $TBPR_PROTEOMICS_EXPERIMENT PE
 		  JOIN $TB_USER_LOGIN UL ON (PE.contact_id=UL.contact_id)
 		  JOIN $TB_PROJECT P ON (PE.project_id=P.project_id)
 		 WHERE P.record_status!='D'

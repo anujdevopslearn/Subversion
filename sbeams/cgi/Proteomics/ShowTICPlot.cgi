@@ -139,8 +139,8 @@ sub printEntryForm {
   #### Find the corresponding information for this fraction_id
   $sql = qq~
 	SELECT fraction_tag,data_location
-	  FROM $TB_FRACTION F
-	  JOIN $TB_SEARCH_BATCH SB ON ( F.experiment_id = SB.experiment_id )
+	  FROM $TBPR_FRACTION F
+	  JOIN $TBPR_SEARCH_BATCH SB ON ( F.experiment_id = SB.experiment_id )
 	 WHERE fraction_id = '$parameters{fraction_id}'
   ~;
 

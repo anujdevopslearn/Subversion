@@ -525,8 +525,8 @@ sub printEntryForm {
 
       $sql_query = qq~
 	SELECT $limit_clause $columns_clause
-	  FROM $TB_BIOSEQUENCE BS
-	  LEFT JOIN $TB_BIOSEQUENCE_SET BSS ON ( BS.biosequence_set_id = BSS.biosequence_set_id )
+	  FROM $TBPR_BIOSEQUENCE BS
+	  LEFT JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( BS.biosequence_set_id = BSS.biosequence_set_id )
 	 WHERE 1 = 1
 	$biosequence_set_clause
 	$biosequence_name_clause
@@ -666,7 +666,7 @@ sub updatePreferredReference {
 
 
   #### Determine what the biosequence_name for this sequence is
-  $sql = "SELECT biosequence_name FROM $TB_BIOSEQUENCE ".
+  $sql = "SELECT biosequence_name FROM $TBPR_BIOSEQUENCE ".
          " WHERE biosequence_id = '$parameters{biosequence_id}'";
   my ($biosequence_name) = $sbeams->selectOneColumn($sql);
   unless ($biosequence_name) {
@@ -688,7 +688,7 @@ sub updatePreferredReference {
 
   #### Insert the data into the database
   $result = $sbeams->insert_update_row(update=>1,
-    table_name=>"$TB_SEARCH_HIT",
+    table_name=>"$TBPR_SEARCH_HIT",
     rowdata_ref=>\%rowdata,PK=>"search_hit_id",
     PK_value => $parameters{search_hit_id},
     #,verbose=>1,testonly=>1

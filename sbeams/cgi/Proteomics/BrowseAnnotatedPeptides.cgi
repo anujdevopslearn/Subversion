@@ -634,7 +634,7 @@ sub printEntryForm {
 	  JOIN proteomics.dbo.search S ON ( SH.search_id = S.search_id )
 	  JOIN proteomics.dbo.search_hit_annotation SHA ON ( SH.search_hit_id = SHA.search_hit_id )
 	  JOIN proteomics.dbo.search_batch SB ON ( S.search_batch_id = SB.search_batch_id )
-	  JOIN $TB_BIOSEQUENCE BS ON ( SB.biosequence_set_id = BS.biosequence_set_id AND SH.biosequence_id = BS.biosequence_id )
+	  JOIN $TBPR_BIOSEQUENCE BS ON ( SB.biosequence_set_id = BS.biosequence_set_id AND SH.biosequence_id = BS.biosequence_id )
 	 WHERE 1 = 1
 	$search_batch_clause
 	$reference_clause
@@ -650,7 +650,7 @@ sub printEntryForm {
 	SELECT $limit_clause $columns_clause
 	  FROM #tmpBSids tBS
 	  LEFT JOIN #tmpAnnBSids tABS ON ( tBS.biosequence_id = tABS.biosequence_id )
-	  JOIN $TB_BIOSEQUENCE BS ON ( tBS.biosequence_id = BS.biosequence_id )
+	  JOIN $TBPR_BIOSEQUENCE BS ON ( tBS.biosequence_id = BS.biosequence_id )
 	$n_annotations_clause
 	$order_by_clause
 
