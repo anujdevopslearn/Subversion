@@ -243,6 +243,10 @@ sub printEntryForm {
       ["biosequence_gene_name","BS.biosequence_gene_name","gene_name"],
       ["accessor","DBX.accessor","accessor"],
       ["biosequence_accession","BS.biosequence_accession","accession"],
+
+#      ["molecular_function","MFA.annotation","Molecular Function"],
+#      ["biological_process","BPA.annotation","Biological Process"],
+
       ["biosequence_desc","BS.biosequence_desc","description"],
       ["biosequence_seq","BS.biosequence_seq","sequence"],
     );
@@ -271,9 +275,16 @@ sub printEntryForm {
     $sql = qq~
       SELECT $limit_clause $columns_clause
         FROM $TBPR_BIOSEQUENCE BS
-        LEFT JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( BS.biosequence_set_id = BSS.biosequence_set_id )
+        LEFT JOIN $TBPR_BIOSEQUENCE_SET BSS
+             ON ( BS.biosequence_set_id = BSS.biosequence_set_id )
         LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
-       WHERE 1 = 1
+--        LEFT JOIN flybase.dbo.FBgn FBgn
+--             ON ( BS.biosequence_accession = FBgn.accession )
+--        LEFT JOIN flybase.dbo.FB_GO_annotation MFA
+--             ON ( FBgn.FBgn_id = MFA.FBgn_id AND MFA.fbacode='ENZ' )
+--        LEFT JOIN flybase.dbo.FB_GO_annotation BPA
+--             ON ( FBgn.FBgn_id = BPA.FBgn_id AND BPA.fbacode='FNC' )
+--       WHERE 1 = 1
       $biosequence_set_clause
       $biosequence_name_clause
       $biosequence_gene_name_clause
