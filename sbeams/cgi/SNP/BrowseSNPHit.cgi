@@ -48,7 +48,7 @@ $q = new CGI;
 ###############################################################################
 $PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
-Usage: $PROG_NAME [OPTIONS] key=value kay=value ...
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
 Options:
   --verbose n         Set verbosity level.  default is 0
   --quiet             Set flag to print nothing at all except errors
@@ -258,7 +258,6 @@ sub handle_request {
     constraint_value=>$parameters{identified_percent_constraint} );
   return if ($identified_percent_clause == -1);
 
-
   #### Build MATCH TO QUERY RATIO constraint
   my $match_to_query_ratio_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"convert(real,ABS.match_length)/ABS.query_length*100",
@@ -267,33 +266,22 @@ sub handle_request {
     constraint_value=>$parameters{match_to_query_ratio_constraint} );
   return if ($match_to_query_ratio_clause == -1);
 
-
-  #### Build SORT ORDER
-  my $order_by_clause = "";
-  if ($parameters{sort_order}) {
-    if ($parameters{sort_order} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
-      print "<H4>Cannot parse Sort Order!  Check syntax.</H4>\n\n";
-      return;
-    } else {
-      $order_by_clause = " ORDER BY $parameters{sort_order}";
-    }
-  }
-
-
   #### Build ROWCOUNT constraint
-  $parameters{row_limit} = 5000
-    unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
+  $parameters{row_limit} = 50000
+    unless ($parameters{row_limit} > 0);
   my $limit_clause = "TOP $parameters{row_limit}";
 
 
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
   my @column_array = (
+    ["snp_instance_id","SI.snp_instance_id","SNP Instance ID"],
     ["dbSNP_accession","S.dbSNP_accession","dbSNP Accession"],
     ["celera_accession","S.celera_accession","Celera Accession"],
     ["snp_accession","SI.snp_accession","SNP Accession"],
     ["snp_instance_source_accession","SI.snp_instance_source_accession","SNP Instance Source Accession"],
     ["allele_id","A.allele_id","Allele Id"],
+    ["set_tag","BSS.set_tag","BioSequence Set Tag"],
     ["biosequence_name","BS.biosequence_name","BioSequence Name"],
     ["end_fiveprime_position","ABS.end_fiveprime_position","End Fiveprime Position"],
     ["strand","ABS.strand","Strand"],
@@ -364,14 +352,13 @@ $identified_percent_clause
 $match_to_query_ratio_clause
 $biosequence_set_clause
 $validation_status_clause
-$order_by_clause
-ORDER BY BSS.biosequence_set_id,ABS.end_fiveprime_position
+ORDER BY SI.snp_instance_id,BSS.set_tag,BS.biosequence_id
   ~;
 
 
   #### Certain types of actions should be passed to links
   my $pass_action = "QUERY";
-  $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
+  $pass_action = $apply_action if ($apply_action =~ /QUERY/i);
 
 
   #### Define the hypertext links for columns that need them
@@ -402,6 +389,12 @@ ORDER BY BSS.biosequence_set_id,ABS.end_fiveprime_position
       #### Fetch the results from the database server
       $sbeams->fetchResultSet(sql_query=>$sql,
         resultset_ref=>$resultset_ref);
+
+
+      #### Post process the resultset
+      postProcessResultset(rs_params_ref=>\%rs_params,
+        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters,
+      ) if defined($parameters{biosequence_rank_list_id});
 
       #### Store the resultset and parameters to disk resultset cache
       $rs_params{set_name} = "SETME";
@@ -451,3 +444,96 @@ sub evalSQL {
 
 } # end evalSQL
 
+
+###############################################################################
+# postProcessResultset
+#
+# Callback for translating Perl variables into their values,
+# especially the global table variables to table names
+###############################################################################
+sub postProcessResultset {
+  my %args = @_;
+
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+  #### Process the arguments list
+  my $resultset_ref = $args{'resultset_ref'};
+  my $rs_params_ref = $args{'rs_params_ref'};
+  my $query_parameters_ref = $args{'query_parameters_ref'};
+
+  my ($bioseq_rank_list) = $sbeams->selectOneColumn("SELECT rank_list_file from $TBSN_BIOSEQUENCE_RANK_LIST
+    where biosequence_rank_list_id = '$query_parameters_ref->{biosequence_rank_list_id}'");
+
+  my %rs_params = %{$rs_params_ref};
+  my %parameters = %{$query_parameters_ref};
+
+
+  #### Read in biosequence rank list file and create hash out of its contents
+  open (RANKLIST,"$UPLOAD_DIR/$bioseq_rank_list") ||
+    die "Cannot open $UPLOAD_DIR/$bioseq_rank_list";
+
+  my %rankhash;
+  my ($set_tag,$seq_name,$row,$snp_instance_id,$prev_snp_instance_id);
+  $i=0;
+  while (<RANKLIST>) {
+    $_ =~ s/[\r\n]//g;
+    next if $_ =~ /^set_tag/;
+    ($set_tag,$seq_name) = split(/\t/,$_);
+    $rankhash{"$set_tag|$seq_name"}=$i;
+    $i++;
+  }
+
+  my $n_rows = scalar(@{$resultset_ref->{data_ref}});
+
+  my $prevpos=-1;
+  my $prev_snp_instance_id = -1;
+  my ($part1,$part2,$test_index);
+  my $best_index = 999999;
+  my $best_index_row_reference;
+  my @new_data_array;
+  #### Loop over each row in the resultset
+  for ($row=0;$row<$n_rows-1; $row++) {
+    my $snp_instance_column_index = $resultset_ref->{column_hash_ref}->{snp_instance_id};
+    my $set_tag_column_index = $resultset_ref->{column_hash_ref}->{set_tag};
+    my $biosequence_name_column_index = $resultset_ref->{column_hash_ref}->{biosequence_name};
+    $snp_instance_id = $resultset_ref->{data_ref}->[$row]->[$snp_instance_column_index];
+    if (($snp_instance_id != $prev_snp_instance_id) && ($row != 0)) {
+      push(@new_data_array,$best_index_row_reference);
+      #print "best index = $best_index<br>\n";
+      $best_index = 999999;
+    }
+    $part1 = $resultset_ref->{data_ref}->[$row]->[$set_tag_column_index];
+    $part2 = $resultset_ref->{data_ref}->[$row]->[$biosequence_name_column_index];
+    $test_index = $rankhash{"$part1|$part2"};
+    $test_index = 999998 unless defined($test_index);
+    #print "field  = $part1|$part2<br>\n";;
+    #print "sii = $snp_instance_id<br>\n";
+    #print "test index = $test_index<br>\n";
+        if ($test_index < $best_index) {
+      $best_index_row_reference = $resultset_ref->{data_ref}->[$row];
+      $best_index = $test_index;
+    }
+    $prev_snp_instance_id = $snp_instance_id;
+  }
+  push(@new_data_array,$best_index_row_reference);
+  #print "final rows = ",scalar(@new_data_array),"<br>\n";
+  $resultset_ref->{data_ref} = \@new_data_array;
+
+  #### Print out some debugging information about the returned resultset:
+  if (0 == 1) {
+    my $HTML = "<br>\n";
+    print "<BR><BR>resultset_ref = $resultset_ref$HTML\n";
+    while ( ($key,$value) = each %{$resultset_ref} ) {
+      printf("%s = %s$HTML\n",$key,$value);
+    }
+    #print "columnlist = ",
+    #  join(" , ",@{$resultset_ref->{column_list_ref}}),"<BR>\n";
+    print "nrows = ",scalar(@{$resultset_ref->{data_ref}}),"$HTML\n";
+    print "rs_set_name=",$rs_params{set_name},"$HTML\n";
+ }
+
+  return 1;
+
+
+
+} # end postProcessResult
