@@ -86,6 +86,10 @@ sub showMainPage {
 	<LI><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=proteomics_experiment">Manage Experiment information</a>
 	<P>
 	<LI><a href="$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi">Simple Interface to browsing the results of SEQUEST searches</a>
+	<P>
+	<LI><a href="$CGI_BASE_DIR/Proteomics/BrowseAnnotatedPeptides.cgi">Simple Interface to browsing Annotated Peptides</a>
+	<P>
+	<LI><a href="$CGI_BASE_DIR/Proteomics/flycat.cgi">Go to the prototype FLYCAT interface</a>
 	</UL>
 
 	<BR>
