@@ -305,7 +305,7 @@ sub printEntryForm {
       if ($parameters{$column_name}) {
         my $file_size = -s "$PHYSICAL_BASE_DIR/data/$data_file";
         my $file_name = $parameters{$column_name};
-        $file_name =~ s/^.+\///;
+        #$file_name =~ s/^.+\///;
         #### Check for legacy names before original names were stored
         if ($file_name eq $data_file) {
           $file_name = 'Original File Name Unknown';
