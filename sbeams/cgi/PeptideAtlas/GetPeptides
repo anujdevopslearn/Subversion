@@ -149,8 +149,8 @@ sub handle_request {
 
 
   ## if tab menu is requested, display tabs and append parameters to PROG_NAME
-  if ( $parameters{_tab} )
-  {
+# if ( $parameters{_tab} )
+# {
       my $parameters_string = $sbeamsMOD->printTabMenu(
           parameters_ref => \%parameters,
           program_name => $PROG_NAME,
@@ -159,7 +159,7 @@ sub handle_request {
       ##print "<BR>params:$parameters_string<BR>";
 
       $PROG_NAME = $PROG_NAME.$parameters_string;
-  }
+# }
 
   
   #### Define some generic variables
