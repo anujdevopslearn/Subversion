@@ -187,7 +187,9 @@ sub handle_request {
 
 
   #### Apply any parameter adjustment logic
-  #none
+  unless ($parameters{project_id}) {
+    $parameters{project_id} = $sbeams->getCurrent_project_id();
+  }
 
 
   #### Display the user-interaction input form
