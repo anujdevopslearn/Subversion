@@ -158,7 +158,7 @@ sub handleRequest {
 	     C.cell_phone,C.pager,C.is_messenging_pager,C.home_phone,
 	     C.fax,C.email,C.alternate_email,C.comment
 	FROM $TB_CONTACT C     
-        LEFT JOIN $TB_USER_LOGIN UL ON (C.contact_id=UL.contact_id)
+        LEFT JOIN $TB_USER_LOGIN UL ON (C.contact_id=UL.contact_id AND UL.record_status != 'D')
         LEFT JOIN $TB_CONTACT_TYPE CT ON (C.contact_type_id=CT.contact_type_id)
         LEFT JOIN $TB_CONTACT SC ON (C.supervisor_contact_id=SC.contact_id)
 	LEFT JOIN $TB_ORGANIZATION OrgO ON (C.organization_id=OrgO.organization_id)
@@ -166,7 +166,6 @@ sub handleRequest {
         LEFT JOIN $TB_ORGANIZATION LabO ON (C.lab_id=LabO.organization_id)
         LEFT JOIN $TB_ORGANIZATION GrpO ON (C.group_id=GrpO.organization_id)
        WHERE C.record_status != 'D'
-         AND UL.record_status != 'D'
        ORDER BY C.last_name,C.first_name
     ~;
 
@@ -374,7 +373,7 @@ sub handleRequest {
      );
 
 
-    #### Execute $sbeams->transferTable() to update contact table
+    #### Execute $sbeams->transferTable() to update user_login table
     #### See ./update_driver_tables.pl
     print "\nTransferring $source_file -> user_login";
     $sbeams->transferTable(
