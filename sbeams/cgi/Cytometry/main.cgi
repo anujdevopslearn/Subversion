@@ -233,15 +233,24 @@ sub displayIntro
 	 #### get the project id
 	 my $project_id = $args{'project_id'} || die "project_id not passed";
 	 
-	 my $organismSql = qq~ select organism_id,organism_name from 
+     my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+    my %parameters = %{$ref_parameters};
+	my %resultset = ();
+    my $resultset_ref = \%resultset;
+         
+  	 my $organismSql = qq~ select organism_id,organism_name from 
 	 sbeams.dbo.organism ~; 
 	
 	  my %organismHash = $sbeams->selectTwoColumnHash($organismSql);
-	
-	  my $sql = "select  fcs_run_id,Organism_id , project_designator, sample_name, filename, run_date 
-    from $TBCY_FCS_RUN  where project_id = $project_id order by project_designator, run_date";
-  
-	   my @rows = $sbeams->selectSeveralColumns($sql);
+      my $flag = 0; 
+      $flag = 1 if  (! $parameters{noShow}); #or (! defined($parameters{noShow}));
+
+	 my $sql = "select  fcs_run_id,Organism_id , project_designator, sample_name, filename, run_date 
+    from $TBCY_FCS_RUN  where project_id = $project_id and showFlag = $flag order by project_designator, run_date";
+
+
+     my @rows = $sbeams->selectSeveralColumns($sql); 
      my %hashFile;
      my $count = 1; 
      if (@rows)
@@ -278,16 +287,23 @@ sub displayIntro
           <td><a href=$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=$PROCESSFILE&fileID=$id > Create Graph</a></td></tr>~;
         }
       }	
-     }
+          print $q->start_form;
+       print qq~<input type= hidden name="action" value = "$INTRO">  ~ ;
+       print qq ~<input type =hidden name="noShow"  value = 1>~ if (! $parameters{noShow});
+       print qq~<tr></tr><tr><td><input type ="submit" name= "SUBMIT" value = "More Cytometry Runs"> ~ if (! $parameters{noShow});
+       print qq~<tr></tr><tr><td><input type ="submit" name= "SUBMIT" value = "Featured Cytometry Runs">~ if $parameters{noShow};
+       print qq ~<input type =hidden name="noShow"  value = 0>~ if ($parameters{noShow});
+       print $q->end_form; 
+        }
      else
      { 
-       print "	<TR><TD WIDTH=\"100%\"><B><font color=red><NOWRAP>This project contains no Cytometry Data</NOWRAP></font></B></TD></TR>\n";
-     }
+       print "<TR><TD WIDTH=\"100%\"><B><font color=red><NOWRAP><h4>This project contains no Cytometry Data</h4></NOWRAP></font></B></TD></TR>\n";
+        }
 #### Finish the table
    print qq~
-   </TABLE> </TD></TR>
-   </TABLE>~;
+   </TABLE> </TD></TR> </TABLE>~;
     	
+        
 	  ##########################################################################
   #### Print out all projects owned by the user
 	$sbeams->printProjectsYouOwn() if $sbeams->getCurrent_contact_id();
