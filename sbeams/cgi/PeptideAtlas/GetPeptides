@@ -611,6 +611,10 @@ sub handle_request {
       'Peptide Sequence_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show summary for this peptide\'; return true"',
 
       'Peptides that include this sequence' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides?_tab=1&atlas_build_id=$parameters{atlas_build_id}&peptide_ids_constraint=\%$colnameidx{is_subpeptide_of}V&action=QUERY",
+      'Peptides that include this sequence_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show peptides with these IDs\'; return true"',
+
+      'Sample IDs'  => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=2&atlasBuildID=$parameters{atlas_build_id}&searchWithinThis=Peptide+Name&searchForThis=\%$colnameidx{peptide_accession}V&action=QUERY",
+      'Sample IDs_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show sample summaries for this peptide\'; return true"',
   );
 
 
