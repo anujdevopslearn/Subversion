@@ -111,7 +111,8 @@ sub display_page_header {
 	<tr><td>Manage Tables:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project"><nobr>&nbsp;&nbsp;&nbsp;Projects</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=CY_fcs_run"><nobr>&nbsp;&nbsp;&nbsp;FCS Runs</nobr></a></td></tr>
- <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=CY_sort_entity"><nobr>&nbsp;&nbsp;&nbsp;Sort Entity</nobr></a></td></tr>
+    <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=CY_sort_entity"><nobr>&nbsp;&nbsp;&nbsp;Sort Entity</nobr></a></td></tr>
+    <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=CY_tissue_type"><nobr>&nbsp;&nbsp;&nbsp;Tissue Type</nobr></a></td></tr>
 
 	<tr><td>&nbsp;</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/AddFCSRuns"><nobr>&nbsp;&nbsp;&nbsp;Add FCS Runs</nobr></a></td></tr>
