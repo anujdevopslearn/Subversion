@@ -72,6 +72,7 @@ use vars qw(@ISA @EXPORT
     $TBPR_PUBLICATION_RATING
     $TBPR_PUBLICATION
 
+    $TBPR_SEARCH_BATCH_PROTEIN_SUMMARY
     $TBPR_PROTEIN_SUMMARY
     $TBPR_PROTEIN_SUMMARY_HEADER
     $TBPR_PROTEIN_SUMMARY_DATA_FILTER
@@ -139,6 +140,7 @@ require Exporter;
     $TBPR_PUBLICATION_RATING
     $TBPR_PUBLICATION
 
+    $TBPR_SEARCH_BATCH_PROTEIN_SUMMARY
     $TBPR_PROTEIN_SUMMARY
     $TBPR_PROTEIN_SUMMARY_HEADER
     $TBPR_PROTEIN_SUMMARY_DATA_FILTER
@@ -207,6 +209,7 @@ $TBPR_PUBLICATION_CATEGORY        = "${mod}publication_category";
 $TBPR_PUBLICATION_RATING          = "${mod}publication_rating";
 $TBPR_PUBLICATION                 = "${mod}publication";
 
+$TBPR_SEARCH_BATCH_PROTEIN_SUMMARY= "${mod}search_batch_protein_summary";
 $TBPR_PROTEIN_SUMMARY             = "${mod}protein_summary";
 $TBPR_PROTEIN_SUMMARY_HEADER      = "${mod}protein_summary_header";
 $TBPR_PROTEIN_SUMMARY_DATA_FILTER = "${mod}protein_summary_data_filter";
