@@ -286,9 +286,6 @@ sub print_summary_tab {
   my %args = @_;
   my $SUB_NAME = "print_summary_tab";
   
-  ## Decode argument list
-  
-
   ## Define standard variables
   my ($sql, @rows);
   my $current_contact_id = $sbeams->getCurrent_contact_id();
@@ -383,6 +380,53 @@ sub print_summary_tab {
       </TABLE>
       $LINESEPARATOR
   ~;
+
+####  Project Status Section ####
+	$sql = qq~
+SELECT	A.array_id,A.array_name,
+	AR.array_request_id,ARSL.array_request_slide_id,
+	AR.date_created AS 'date_requested',
+	PB.printing_batch_id,PB.date_started AS 'date_printed',
+	H.hybridization_id,H.date_hybridized,
+	ASCAN.array_scan_id,ASCAN.date_scanned,ASCAN.data_flag AS 'scan_flag',
+	AQ.array_quantitation_id,AQ.date_quantitated,AQ.data_flag AS 'quan_flag'
+  FROM $TB_ARRAY_REQUEST AR
+  LEFT JOIN $TB_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )
+  LEFT JOIN $TB_ARRAY A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
+  LEFT JOIN $TB_PRINTING_BATCH PB ON ( A.printing_batch_id = PB.printing_batch_id )
+  LEFT JOIN $TB_HYBRIDIZATION H ON ( A.array_id = H.array_id )
+  LEFT JOIN $TB_ARRAY_SCAN ASCAN ON ( A.array_id = ASCAN.array_id )
+  LEFT JOIN $TB_ARRAY_QUANTITATION AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
+ WHERE AR.project_id=$project_id
+   AND ARSL.array_request_slide_id IS NOT NULL
+   AND ( AR.record_status != 'D' OR AR.record_status IS NULL )
+   AND ( A.record_status != 'D' OR A.record_status IS NULL )
+   AND ( PB.record_status != 'D' OR PB.record_status IS NULL )
+   AND ( H.record_status != 'D' OR H.record_status IS NULL )
+   AND ( ASCAN.record_status != 'D' OR ASCAN.record_status IS NULL )
+   AND ( AQ.record_status != 'D' OR AQ.record_status IS NULL )
+ ORDER BY A.array_name,AR.array_request_id,ARSL.array_request_slide_id
+        ~;
+
+	my $base_url = "$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=";
+	my %url_cols = ('array_name' => "${base_url}array&array_id=%0V",
+									'date_requested' => "$CGI_BASE_DIR/Microarray/SubmitArrayRequest.cgi?TABLE_NAME=array_request&array_request_id=%2V",
+									'date_printed' => "${base_url}printing_batch&printing_batch_id=%5V", 
+									'date_hybridized' => "${base_url}hybridization&hybridization_id=%7V", 
+									'date_scanned' => "${base_url}array_scan&array_scan_id=%9V", 
+									'date_quantitated' => "${base_url}array_quantitation&array_quantitation_id=%12V", 
+									);
+
+	my %hidden_cols = ('array_id' => 1,
+										 'array_request_id' => 1,
+										 'printing_batch_id' => 1,
+										 'hybridization_id' => 1,
+										 'array_scan_id' => 1,
+										 'array_quantitation_id' => 1,
+										 );
+
+	return $sbeams->displayQueryResult(sql_query=>$sql,
+          url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols);
 }
 
 
