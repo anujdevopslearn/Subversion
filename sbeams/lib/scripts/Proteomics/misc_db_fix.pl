@@ -59,6 +59,7 @@ Options:
   --fix_search_batch_data_location    Apply various rules to repair
                        data_location in the search_batch table
                        the biosequence_name
+  --show_data_location Show the data locations of the specified search_batches
 
  e.g.:  $PROG_NAME --fix_search_batch_data_location
 
@@ -67,7 +68,7 @@ EOU
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
-  "fix_search_batch_data_location",
+  "fix_search_batch_data_location","show_data_location:s",
   )) {
   print "$USAGE";
   exit;
@@ -129,6 +130,8 @@ sub handleRequest {
   #### Set the command-line options
   my $fix_search_batch_data_location =
     $OPTIONS{"fix_search_batch_data_location"} || '';
+  my $show_data_location =
+    $OPTIONS{"show_data_location"} || '';
 
 
   #### Print out the header
@@ -142,6 +145,9 @@ sub handleRequest {
     fix_search_batch_data_location();
   }
 
+  if ($show_data_location) {
+    show_data_location(search_batch_ids => $show_data_location);
+  }
 
   return;
 
@@ -211,6 +217,48 @@ sub fix_search_batch_data_location {
     } else {
       print "$orig_data_location OK\n";
     }
+
+  }
+
+
+}
+
+
+
+###############################################################################
+# show_data_location
+###############################################################################
+sub show_data_location {
+  my %args = @_;
+  my $SUB_NAME = 'show_data_location';
+
+  my $search_batch_ids = $args{"search_batch_ids"} || 0;
+
+  #### Get information about this biosequence_set_id from database
+  my $sql = "
+          SELECT search_batch_id,data_location
+            FROM $TBPR_SEARCH_BATCH
+           WHERE search_batch_id IN ( $search_batch_ids )
+  ";
+  my %rows = $sbeams->selectTwoColumnHash($sql);
+
+
+  #### Loop over all results
+  while (my ($search_batch_id,$data_location) = each %rows) {
+
+    $data_location = "/data3/sbeams/archive/$data_location"
+      unless ($data_location =~ /^\//);
+
+    my $model_file = "$data_location/interact-prob-data.model";
+
+    if ( -e $model_file) {
+      print "$model_file\n";
+    } elsif ( -e "$model_file.txt" ) {
+      print "$model_file.txt\n";
+    } else {
+      print "Missing $model_file\n";
+    }
+
 
   }
 
