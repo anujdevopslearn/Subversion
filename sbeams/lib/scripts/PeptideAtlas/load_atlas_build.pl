@@ -1356,6 +1356,13 @@ sub buildAtlas {
 
                my $check_peptide_instance_id = @rows[0];
 
+               unless ( $check_peptide_instance_id ) {
+
+                   print "couldn't find peptide_instance_sample record for ".
+                       "peptide_instance_id $peptide_instance_id in sample $sample_id[$i]\n";
+
+               }
+
            }
 
        }
