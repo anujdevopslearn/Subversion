@@ -105,6 +105,7 @@ sub main {
 #### Process generic "state" parameters before we start
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
+  ;
     #### Print the header, do what the program does, and print footer
 	
 	# normal handling for anything else			
@@ -248,9 +249,14 @@ sub displayIntro
 
 	 my $sql = "select  fcs_run_id,Organism_id , project_designator, sample_name, filename, run_date 
     from $TBCY_FCS_RUN  where project_id = $project_id and showFlag = $flag order by project_designator, run_date";
-
-
-     my @rows = $sbeams->selectSeveralColumns($sql); 
+    my $immunoStainName = $parameters{TableName};
+    my $immunoStainFiles = $parameters{SampleName};
+    print "$immunoStainFiles<br> $immunoStainName <br>";
+    my $immunoStainSql =  "select  fcs_run_id,Organism_id , project_designator, sample_name, filename, run_date 
+    from $TBCY_FCS_RUN  where project_id = $project_id and sample_Name like '%$immunoStainFiles%' order by project_designator, run_date";
+    my @rows;
+    @rows = $sbeams->selectSeveralColumns($sql) if (! defined ($immunoStainName)); 
+    @rows = $sbeams->selectSeveralColumns($immunoStainSql) if ( defined ($immunoStainName));  
      my %hashFile;
      my $count = 1; 
      if (@rows)
