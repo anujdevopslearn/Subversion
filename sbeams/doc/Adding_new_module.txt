@@ -2,7 +2,7 @@
 Notes add a new module:
 
 set TEMPLATE = GEAP
-set DEST = Proteomics
+set DEST = Inkjet
 
 cd /host/db/local/www/html/dev2/sbeams/lib/perl/SBEAMS
 cp -p $TEMPLATE.pm $DEST.pm

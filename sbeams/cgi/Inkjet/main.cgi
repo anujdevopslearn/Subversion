@@ -15,17 +15,22 @@
 # Get the script set up with everything it will need
 ###############################################################################
 use strict;
-use vars qw ($q $sbeams $PROGRAM_FILE_NAME
+use vars qw ($q $sbeams $sbeamsIJ $PROGRAM_FILE_NAME
              $current_contact_id $current_username);
-use lib qw (../lib/perl);
+use lib qw (../../lib/perl);
 use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 
+use SBEAMS::Inkjet;
+use SBEAMS::Inkjet::Settings;
+
 $q   = new CGI;
 $sbeams = new SBEAMS::Connection;
+$sbeamsIJ = new SBEAMS::Inkjet;
+$sbeamsIJ->setSBEAMS($sbeams);
 
 
 ###############################################################################
@@ -47,9 +52,9 @@ sub main {
     exit unless ($current_username = $sbeams->Authenticate());
 
     #### Print the header, do what the program does, and print footer
-    $sbeams->printPageHeader();
+    $sbeamsIJ->printPageHeader();
     showMainPage();
-    $sbeams->printPageFooter();
+    $sbeamsIJ->printPageFooter();
 
 } # end main
 
@@ -63,8 +68,8 @@ sub showMainPage {
 
     print qq!
 	<BR>
-	You are successfully logged into the $DBTITLE system.  Please
-	choose your tasks from the menu bar on the left.<P>
+	You are successfully logged into the $DBTITLE - $SBEAMS_PART system.
+	Please choose your tasks from the menu bar on the left.<P>
 	<BR>
 	This system is still under active development.  Please be
 	patient and report bugs, problems, difficulties, suggestions to
@@ -73,11 +78,7 @@ sub showMainPage {
 	<BR>
 
 	<UL>
-	<LI><A HREF="MicroArrayMain.cgi">SBEAMS - MicroArray</A>
-	<LI><A HREF="Proteomics/main.cgi">SBEAMS - Proteomics</A>
-	<LI><A HREF="Inkjet/main.cgi">SBEAMS - Inkjet</A>
-	<LI><A HREF="GEAP/main.cgi">SBEAMS - GEAP</A>
-	<LI><A HREF="tools/main.cgi">SBEAMS - Tools</A>
+	<LI> Here is the starter stub for the Inkjet area.
 	</UL>
 
 	<BR>
