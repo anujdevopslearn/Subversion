@@ -1469,46 +1469,55 @@ SELECT	A.array_name,
 
 	# Earlier, we appended a '++++' to sample2 of conditions that had identical sample names.
 	# Here, we remove them.
-	$mergereps_commands =~ s/\+\+\+\+//g;
+	$mergereps_commands =~ s/\+{4}//g;
 	push @vera_sam_conditions, $first_array_ref->[2];
   }
   print $mergereps_commands;
 
   ## Print VERA and SAM Commands
   ## Print postSam commands
-  my $vs_commands = $parameters{'vsRecipe'};
-  if ($vs_commands =~ /^useVS/) {
+  my $vs_parameters = $parameters{'vsRecipe'};
+
+  if ($vs_parameters =~ /^useVS/) {
 	foreach my $vs_cond (@vera_sam_conditions) {
-	  print "\#VERA/SAM\n".
+	  my $vs_commands = "";
+
+	  # Earlier, we appended a '++++' to sample2 of conditions that had identical sample names.
+	  # Here, we remove them.
+	  $vs_cond =~ s/\+{4}//g;
+
+	  $vs_commands = "\#VERA/SAM\n".
 		"file_name = $vs_cond\.all\.merge\n".
 		"vera_output_file = $vs_cond\.model\n".
 		"sam_output_file = $vs_cond\.sig\n";
 	  
-	  if ($vs_commands =~ /crit:(\d*\.?\d*)\,/) {
-		print "vera_critical_delta_flag = true\n".
+	  if ($vs_parameters =~ /crit:(\d*\.?\d*)\,/) {
+		$vs_commands .= "vera_critical_delta_flag = true\n".
 		  "vera_critical_delat_value= $1\n";
 	  }
-	  if ($vs_commands =~ /evol\,/) {
-		print "vera_evolution_flag = true\n".
+	  if ($vs_parameters =~ /evol\,/) {
+		$vs_commands .= "vera_evolution_flag = true\n".
 		  "vera_evolution_value = xxxxx\n";
 	  }
-	  if ($vs_commands =~ /debug\,/){
-		print "vera_debugging_file_flag = true\n".
+	  if ($vs_parameters =~ /debug\,/){
+		$vs_commands .= "vera_debugging_file_flag = true\n".
 		  "vera_debugging_file_value = xxxxx\n".
 		  "sam_debugging_file_flag = true\n".
 		  "sam_debugging_file_value = xxxxx\n";
 	  }
-	  if ($vs_commands =~ /model:(.*)/){
-		print "vera_initial_choice_flag = true\n".
+	  if ($vs_parameters =~ /model:(.*)/){
+		$vs_commands .= "vera_initial_choice_flag = true\n".
 		  "vera_initial_choice_value= $1\n";
 	  }
-	  print "EXECUTE = vera_and_sam\n\n";
+	  $vs_commands .= "EXECUTE = vera_and_sam\n\n";
 
-	  print "\#POSTSAM\n".
+	  $vs_commands .= "\#POSTSAM\n".
 		"file_name = $vs_cond\.sig\n".
 		"key_file = $postSam_key_file\n".
 		"output_file = $vs_cond\.clone\n".
 		"EXECUTE = postSam\n\n";
+
+	  print $vs_commands;
 	}
   }
 
