@@ -1410,8 +1410,15 @@ sub specialParsing {
     $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
     if ($rowdata_ref->{biosequence_desc} =~ /([\w_]+_HALN1)/) {
       $rowdata_ref->{biosequence_gene_name} = $1;
+      $rowdata_ref->{biosequence_accession} = $1;
+      $rowdata_ref->{dbxref_id} = '1';
+    } elsif ($rowdata_ref->{biosequence_desc} =~ /\((\w+?)\)/) {
+      $rowdata_ref->{biosequence_gene_name} = $1;
+      $rowdata_ref->{biosequence_accession} = $1;
+      $rowdata_ref->{dbxref_id} = '1';
+    } else {
+      $rowdata_ref->{dbxref_id} = '17';
     }
-    $rowdata_ref->{dbxref_id} = '17';
   }
 
 
