@@ -681,6 +681,7 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Stain Summary</font
 #all about the specimen
 					unless (! $specimenName)
 					{	
+						$surgicalProc =~ s/(\?)/: /;	
 						$stainSpecimenHash{$stainName}->{$specimenName}->{$tissueName}->{presence} = 1;	
 						$stainSpecimenHash{$stainName}->{$specimenName}->{$tissueName}->{diagnosis} = $clinicalName  if $clinicalName;
 						$stainSpecimenHash{$stainName}->{$specimenName}->{$tissueName}->{diagnosisDesc} = $clinicalDesc if $clinicalDesc;
