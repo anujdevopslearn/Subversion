@@ -175,7 +175,7 @@ sub debug {
 }
 
 ###############################################################################
-# check_previous_arrays
+# check_previous_arrays  REDUNDANT !!! USE find_affy_array_id
 #
 #Check to see if an affy_array exists in the db with the same root_name
 #Give file_root name 
@@ -438,7 +438,8 @@ sub get_affy_arrays_sql{
 	unless ($args{project_id} ){
 		confess(__PACKAGE__ . "::$method Need to provide key value pairs 'project_id'");
 	}
-
+	
+	my $constraint = $args{constraint};
 
 	my $sql = qq~ SELECT afa.affy_array_id AS "Array_ID", 
 				afa.file_root AS "File_Root", 
@@ -456,6 +457,11 @@ sub get_affy_arrays_sql{
 				afs.record_status != 'D' AND 
 				afa.record_status != 'D'
 		    ~;
+	
+	if ($constraint){
+		$sql .= $constraint;
+	}
+	
 	
 	return $sql;
 }
