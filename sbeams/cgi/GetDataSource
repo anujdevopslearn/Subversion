@@ -241,6 +241,13 @@ sub handle_request {
   }
 
 
+  #### Define parameters for source 'rchen'
+  if ($parameters{source_name} eq 'agingras_combine') {
+    $sql = "SELECT * FROM OPENQUERY (AGINGRAS_COMBINE, ".
+      "'SELECT * FROM [combine\$]')";
+  }
+
+
   #########################################################################
   #### If QUERY or VIEWRESULTSET was selected, display the data
   if ($apply_action =~ /QUERY/i || $apply_action eq "VIEWRESULTSET") {
