@@ -99,7 +99,7 @@ sub printEntryForm {
 
 
   #### Get the action values that triggered this
-  my $apply_action = $q->param('apply_action');
+  my $apply_action = $q->param('apply_action') || $q->param('action');
   my $apply_action_hidden  = $q->param('apply_action_hidden');
   if ($apply_action_hidden gt "") { $apply_action = $apply_action_hidden; }
 
@@ -577,7 +577,7 @@ sub showTable {
     #### Fetch the results from the database server
     $sbeams->fetchResultSet(sql_query=>$sql_query,
       resultset_ref=>$resultset_ref);
-  
+
     #### Store the resultset and parameters to disk resultset cache
     $rs_params{set_name} = "SETME";
     $sbeams->writeResultSet(
