@@ -164,6 +164,8 @@ sub handleRequest {
     $domain_match_type_id = 6;
   } elsif ($source_type eq 'RichPFAM') {
     $domain_match_type_id = 4;
+  } elsif ($source_type eq 'InterProScan') {
+    $domain_match_type_id = 8;
   } else {
     print "ERROR: Unrecognized source type '$source_type'\n\n";
     return;
@@ -239,9 +241,69 @@ sub handleRequest {
   }
 
 
+  #### If this is InterProScan format:
+  if ($source_type eq 'InterProScan') {
+
+    #### Verify the header
+    my $line = <INFILE>;
+    unless ($line =~ /orf\ttigr\tipr\tec/) {
+      die "ERROR: File '$source_file' does not begin as expected";
+    }
+
+    while ($line = <INFILE>) {
+      $line =~ s/[\r\n]//g;
+      next if ($line =~ /^\s*$/);
+
+      #### Split the line into columns and insist we get 10
+      my @columns = split(/\t/,$line);
+      unless (scalar(@columns) == 10) {
+        die "ERROR: Error parsing line '$line' of '$source_file'.  ".
+          "Expected 10 columns of information but got ".scalar(@columns)."\n";
+      }
+
+      my $tigrfam_id = $columns[1];
+      if (length($tigrfam_id) != 9) {
+  	print "  ERROR: TIGRFAM ID '$tigrfam_id' out of bounds.\n";
+      }
+
+      my @EC_numbers = split(",",$columns[3]);
+      foreach my $EC_number (@EC_numbers) {
+  	if ($EC_number =~ /[\d\-]+\.[\d\-]+\.[\d\-]+\.[\d\-]+/) {
+  	  $data{$tigrfam_id}->{EC_numbers}->{$EC_number} = 1;
+  	} else {
+  	  print "ERROR: Unrecognized EC number '$EC_number' for $tigrfam_id\n";
+  	}
+      }
+    }
+  }
+
+
+
   #### Store the information
   my $counter = 0;
   foreach my $domain_name (keys %data) {
+
+    #### See if there's already a record there
+    my $sql =
+      "SELECT domain_id
+         FROM $TBPS_DOMAIN
+        WHERE domain_name = '$domain_name'
+          AND domain_match_type_id = '$domain_match_type_id'
+      ";
+    my @domain_ids = $sbeams->selectOneColumn($sql);
+
+    #### If there are any of these, DELETE them
+    if (scalar(@domain_ids) > 0) {
+      $sql =
+        "DELETE
+           FROM $TBPS_DOMAIN
+          WHERE domain_name = '$domain_name'
+            AND domain_match_type_id = '$domain_match_type_id'
+        ";
+      print "Deleting existing record in domain\n";
+      $sbeams->executeSQL($sql);
+    }
+
     my %rowdata;
     $rowdata{domain_match_type_id} = $domain_match_type_id;
     $rowdata{domain_name} = $domain_name;
