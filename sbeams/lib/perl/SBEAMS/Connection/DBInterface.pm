@@ -1487,13 +1487,14 @@ sub writeResultSet {
     my $resultset_file_ref = $args{'resultset_file_ref'};
     $resultset_ref = $args{'resultset_ref'};
     my $query_parameters_ref = $args{'query_parameters_ref'};
+    my $file_prefix = $args{'file_prefix'} || 'query_';
 
 
     #### If a filename was not provides, create one
     if ($$resultset_file_ref eq "SETME") {
       my ($sec,$min,$hour,$mday,$mon,$year) = localtime(time);
       my $timestr = strftime("%Y%m%d-%H%M%S",$sec,$min,$hour,$mday,$mon,$year);
-      $$resultset_file_ref = "query_" . $self->getCurrent_username() ."_" . 
+      $$resultset_file_ref = $file_prefix . $self->getCurrent_username() ."_" . 
 	$timestr;
     }
     my $resultset_file = $$resultset_file_ref;
