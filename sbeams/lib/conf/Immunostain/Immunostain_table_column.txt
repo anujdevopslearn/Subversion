@@ -250,3 +250,21 @@ IS_clinical_diagnosis	9	date_modified	Date Record Modified	datetime	8	0	N	CURREN
 IS_clinical_diagnosis	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 IS_clinical_diagnosis	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 IS_clinical_diagnosis	12	record_status	Record Status	char	1	0	N	N	N							N	N				
+IS_genome_coordinates	1	genome_coordinates_id	Gene Coordinates ID	int	4				Y							N	N				pkDEFAULT
+IS_genome_coordinates	2	refseq_id	RefSeq ID	varchar	50				N			Y				Y	Y				
+IS_genome_coordinates	3	locus_link_id	LocusLink ID	int	4				N			Y				Y	Y				
+IS_genome_coordinates	4	genome_chromosome	Chromosome	varchar	50				N							Y	Y				
+IS_genome_coordinates	5	genome_strand	DNA Strand	varchar	2				N							Y	Y
+IS_genome_coordinates	6	genome_transcription_start	Gene Transcription Start	int	4				N							Y	Y
+IS_genome_coordinates	7	genome_transcription_end	Gene Transcription End	int	4				N							Y	Y
+IS_genome_coordinates	8	genome_coding_region_start	Gene Coding Start	int	4				N							Y	Y
+IS_genome_coordinates	9	genome_coding_region_end	Gene Coding End	int	4				N							Y	Y
+IS_genome_coordinates	10	genome_location	Chromosomal Location	varchar	255				N							Y	Y
+IS_genome_coordinates	11	organism_id	Organism	int	4				N							Y	Y
+IS_genome_coordinates	12	comment	Comment	text	16				N							N	N
+IS_genome_coordinates	13	date_created	Date Record Created	datetime	16			CURRENT	N			Y				N	N
+IS_genome_coordinates	14	created_by_id	Record Created By	int	4			1	N	contact	contact_id	Y				N	N
+IS_genome_coordinates	15	date_modified	Date Record Modified	datetime	16			CURRENT	N			Y				N	N
+IS_genome_coordinates	16	modified_by_id	Record Modified By	int	4			1	N	contact	contact_id	Y				N	N
+IS_genome_coordinates	17	owner_group_id	Owner Group ID	int	4			1	N	work_group	work_group_id	Y				N	N
+IS_genome_coordinates	18	record_status	Record Status	char	1			N	N							N	N
