@@ -81,11 +81,11 @@ sub returnTableInfo {
 
 	
   if ($table_name eq "IS_assay") {
-        if ($info_key eq "BASICQuery") {
-            return qq~	
-		SELECT SS.assay_id,project_tag,tissue_type_name,
+    if ($info_key eq "BASICQuery") {
+      return qq~	
+		  SELECT SS.assay_id,project_tag,tissue_type_name,
 			specimen_block_name,antibody_name,assay_name,
-			assay_description
+			assay_description, A.sort_order
 			FROM $TBIS_ASSAY SS
 			LEFT JOIN $TB_PROJECT P ON ( SS.project_id = P.project_id )
 			LEFT JOIN $TBIS_SPECIMEN_BLOCK SB
@@ -102,17 +102,19 @@ sub returnTableInfo {
 			ORDER BY SS.assay_id,project_tag,tissue_type_name,specimen_block_name,		
 			A.sort_order,A.antibody_name,SS.assay_name
       ~;
-        }
-
+      } elsif ( $info_key eq 'hidden_cols' ) {
+        return ( sort_order => 1 );
     }
+  }
 	
 	if ($table_name eq "IS_assay_image") {
-        if ($info_key eq "BASICQuery") {
-            return qq~
-		SELECT si.assay_image_id,assay_image_subfield_id, subfield_name,project_tag,
-                       specimen_block_name,antibody_name,assay_name,image_name,
-                       image_magnification,raw_image_file,processed_image_file,
-                       annotated_image_file
+    if ($info_key eq "BASICQuery") {
+      return qq~
+	    SELECT si.assay_image_id, assay_image_subfield_id, subfield_name,
+             project_tag, specimen_block_name, antibody_name, assay_name,
+             image_name, image_magnification, raw_image_file, 
+             processed_image_file, annotated_image_file, A.sort_order,
+             tissue_type_name
 		  FROM $TBIS_ASSAY_IMAGE SI
 		  LEFT JOIN $TBIS_ASSAY_IMAGE_SUBFIELD AIS
 			ON (SI.ASSAY_IMAGE_ID = AIS.ASSAY_IMAGE_ID) 	
@@ -134,10 +136,12 @@ sub returnTableInfo {
 		 ORDER BY project_tag,tissue_type_name,specimen_block_name,
                        A.sort_order,A.antibody_name,SS.assay_name,
                        SI.image_magnification,SI.image_name
-            ~;
-        }
-
+      ~;
+    } elsif ( $info_key eq 'hidden_cols' ) {
+        return ( sort_order => 1, tissue_type_name => 1 );
     }
+
+  }
 
 
     if ($table_name eq "IS_antibody") {
