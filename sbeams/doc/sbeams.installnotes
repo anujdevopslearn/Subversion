@@ -116,7 +116,7 @@ account is what is referred to above as "user1".
 
 (root access probably required)
 
-Include in Apache's http.conf file the following execution permissions:
+Include in Apache's httpd.conf file the following execution permissions:
 
 #------
 <Location /sbeams/cgi>
@@ -151,7 +151,7 @@ Do as much of this as possible as a regular user account, i.e. yours.
 cd /local/www/html
 mkdir dev1   (this may need to be done as root. then do: chown user1 dev1)
 cd dev1
-tar -zxvf ~/sbeams-0.16.tar.gz
+tar -zxvf ~/sbeams-0.18.0.tar.gz
 
 Create tmp directories and symlinks:
 cd sbeams
@@ -160,7 +160,7 @@ cd sbeams
    since there could eventually be large amounts of data here!!!)
 mkdir data images/tmp tmp tmp/queries
 chmod a+rwx images/tmp tmp/queries
-ln -s includes doc/includes
+ln -s ../includes doc/includes
 
 For now, make the main site point to dev1, but eventually when there is
 parallel development and production usage, these should be separate trees
@@ -186,9 +186,10 @@ The passwords needed to connect to the database are stored encrypted in the
 SBEAMS.conf file.  You will need to generate the encrypted versions at this
 point.  Run the encryption script as follows:
 
-$SBEAMS/lib/scripts/Core/encryptPasswd.pl DB_PASSWORD
+$SBEAMS/lib/scripts/Core/encryptDbPasswd.pl -p DB_PASSWORD -c CONF_FILE
 
-Where DB_PASSWORD is the password to encrypt.  The script will print out a 
+Where DB_PASSWORD is the password to encrypt, and CONF_FILE is the location
+of the SBEAMS.conf file that you want to use.  The script will print out a 
 hexadecimal string that you can place in the SBEAMS.conf file as per below.
 You will need passwords for the normal and read_only accounts for this
 installation (by default sbeams and sbeamsro).
@@ -256,8 +257,11 @@ environment.
 SBEAMS is being developed on SQL Server and should work quite easily
 with either the Sybase or Microsoft versions.  Attempts are being made
 to make it work equally well with DB2, Oracle, PostgreSQL, and MySQL;
-it's pretty close to workig well, but this is not finished so please
+it's pretty close to working well, but this is not finished so please
 contribute to this effort if you try different RDBMS engines.
+
+(You can skip the following 2 steps if you already have a database and login.
+ No need to create "sbeams" dB. Use existing login/pwd for both accounts.)
 
 - First, create a database called 'sbeams' or 'sbeamsdev' or similar
   (whatever was referred to in the SBEAMS.conf DBPREFIX{Core} setting)
@@ -408,14 +412,23 @@ If this doesn't work.  Do not proceed, debug first.
 
 
 -------------------------------------------------------------------------------
-8) Build the POD docs
+8) Populate core database tables
+
+- Organism table:
+cd $SBEAMS/lib/refdata/Core
+../../scripts/Core/DataImport.pl --source_file organism.xml
+
+If this doesn't work.  Do not proceed, debug first.
+
+-------------------------------------------------------------------------------
+9) Build the POD docs
 
 cd $SBEAMS/doc/POD
 ./createPOD.csh
 
 
 -------------------------------------------------------------------------------
-9) Install Individual Modules
+10) Install Individual Modules
 
 Now follow the individual module install notes, e.g.:
 
@@ -440,12 +453,4 @@ script is the same as the WWW_UID.  If your system requires this setting,
 is suggested you temporarily set the WWW_UID to another value while running the
 setup scripts; once run, you can restore the WWW_UID setting.  If the UIDs are 
 not the same this is not an issue.  
-
-3) 
-
-
-
-
-
-
 
