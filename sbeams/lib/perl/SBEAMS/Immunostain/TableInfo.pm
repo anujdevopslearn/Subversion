@@ -109,7 +109,7 @@ sub returnTableInfo {
         if ($info_key eq "BASICQuery") {
             return qq~
 		SELECT slide_image_id,project_tag,
-                       specimen_block_name,antibody_name,stain_name,
+                       specimen_block_name,antibody_name,stain_name,image_name,
                        image_magnification,raw_image_file,processed_image_file,
                        annotated_image_file
 		  FROM $TBIS_SLIDE_IMAGE SI
@@ -126,7 +126,8 @@ sub returnTableInfo {
 		       ON ( SS.antibody_id = A.antibody_id )
 		 WHERE SS.record_status!='D'
 		 ORDER BY project_tag,tissue_type_name,specimen_block_name,
-                       A.sort_order,A.antibody_name,SS.stain_name
+                       A.sort_order,A.antibody_name,SS.stain_name,
+                       SI.image_magnification,SI.image_name
             ~;
         }
 
@@ -144,6 +145,34 @@ sub returnTableInfo {
         }
 
     }
+
+
+
+    if ($table_name eq "IS_stain_cell_presence") {
+        if ($info_key eq "BASICQuery") {
+            return qq~
+		SELECT SCP.stain_cell_presence_id,stain_name,cell_type_name,
+                       level_name,SCP.comment
+                  FROM $TBIS_STAIN_CELL_PRESENCE SCP
+		  LEFT JOIN $TBIS_STAINED_SLIDE SS
+                       ON ( SCP.stained_slide_id = SS.stained_slide_id )
+		  LEFT JOIN $TBIS_CELL_TYPE CT
+		       ON ( SCP.cell_type_id = CT.cell_type_id )
+		  LEFT JOIN $TBIS_CELL_PRESENCE_LEVEL CPL
+		       ON ( SCP.cell_presence_level_id = CPL.cell_presence_level_id )
+		 WHERE SCP.record_status!='D'
+		 ORDER BY stain_name,cell_type_name,level_name
+            ~;
+        }
+
+    }
+
+
+
+
+
+
+
 
 
 ###############################################################################
