@@ -488,7 +488,7 @@ sub handle_request {
 
 
   #### Build ROWCOUNT constraint
-  $parameters{row_limit} = 10000
+  $parameters{row_limit} = 30000
     unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
   #### Since the number of rows get changes in postProcess, hack in some
   #### artificial inflation for later deflation
