@@ -205,8 +205,10 @@ sub printEntryForm {
 
       #### Evaluate the $TBxxxxx table name variables if in the query
       if ( $optionlist_queries{$element} =~ /\$TB/ ) {
-        $optionlist_queries{$element} =
-          eval "\"$optionlist_queries{$element}\"";
+        my $tmp = $optionlist_queries{$element};
+        #### If there are any double quotes, need to escape them first
+        $tmp =~ s/\"/\\\"/g;
+        $optionlist_queries{$element} = eval "\"$tmp\"";
       }
 
       #### Set the MULTIOPTIONLIST flag if this is a multi-select list
