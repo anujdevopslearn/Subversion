@@ -4179,10 +4179,18 @@ sub printRecentResultsets {
 
   #### If there's something interesting to show, show a glimpse
   if (scalar(@rows)) {
-    print qq~
+    if ($SBEAMS_SUBDIR) {
+      print qq~
 	<H1>Recent Query Resultsets within the $SBEAMS_SUBDIR Module:</H1>
 	<TABLE BORDER=0>
-    ~;
+      ~;
+    } else {
+      print qq~
+	<H1>Recent SBEAMS Query Resultsets:</H1>
+	<TABLE BORDER=0>
+      ~;
+    }
+
 
     #### Find all the resultsets with names/annotations
     my $html_buffer = '';
