@@ -22,12 +22,14 @@ use SBEAMS::PeptideAtlas::TableInfo;
 use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Permissions;
+use SBEAMS::PeptideAtlas::HTMLTabs;
 
 @ISA = qw(SBEAMS::PeptideAtlas::DBInterface
           SBEAMS::PeptideAtlas::HTMLPrinter
           SBEAMS::PeptideAtlas::TableInfo
           SBEAMS::PeptideAtlas::Settings
           SBEAMS::PeptideAtlas::Permissions
+          SBEAMS::PeptideAtlas::HTMLTabs
        );
 
 my $log = SBEAMS::Connection::Log->new();
