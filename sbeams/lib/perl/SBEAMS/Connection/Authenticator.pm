@@ -113,20 +113,18 @@ sub Authenticate {
   my $www_uid = $self->getWWWUID();
   if ( $uid == $www_uid && !$q->param('force_login') ) {
     # We are presumably here due to a cgi request.
-    $log->debug( "WWW request" );
  
     $current_username = $self->processLogin(cookie_ref => \%cookie);
 
      # Has cookie/login processing obtained a valid username?
     if ( !$current_username ) {
-      $log->debug( "Testing alternate authentication modes" );
+      $log->info( "Testing alternate authentication modes" );
 
       # Otherwise use SBEAMSentrycode if defined
       if ( my $entrycode = $q->param('SBEAMSentrycode') ) {
-        $log->debug( "Using entry code" );
+        $log->info( "Using entry code" );
 	      $current_username = $DBCONFIG->{$DBINSTANCE}->{ENTRYCODE}->{$entrycode};
        if ( $current_username ) { 
-          $log->debug( "Encoded name is $current_username" );
 	        $http_header = $self->createAuthHeader($current_username)
         } else {
           $log->warn( "Entry code was specified but not in config file" );
@@ -134,7 +132,7 @@ sub Authenticate {
 
     # Allow anonymous access?
       } elsif ( $allow_anonymous_access ) {
-        $log->debug( "allowing guest authentication" );
+        $log->info( "allowing guest authentication" );
         #print "Content-type: text/plain\n\nReceived no cookie; runs as guest\n";
         $current_username = 'guest';
       }
@@ -183,7 +181,6 @@ sub Authenticate {
         $current_username = '' unless ($current_work_group_id);
   }
 
-  $log->debug( "Returning username of $current_username" );
   return $current_username;
 
 } # end Authenticate
@@ -191,7 +188,7 @@ sub Authenticate {
 sub requestingNoAuthPage {
   my $url = $q->url( -absolute => 1 );
   return 1 if $url eq 'logout.cgi';
-  $log->debug( $url );
+  $log->info( "Requesting $url, authentication not required" );
   return 0;
 }
 
@@ -229,18 +226,15 @@ sub processLogin {
 
   my $chours = $self->isValidDuration(cookie_duration => $LOGIN_DURATION) || 24;
   my $csecs = $chours * 3600;
-  $log->debug( "cookies are valid for $chours hours" );
   
   # If user and pass were given in login context, use the info.
   if ( $user && $pass && $login ) { 
-    $log->debug( "username and password provided" );
     if ($self->checkLogin($user, $pass)) {
-      $log->debug( "username is valid" );
       $http_header = $self->createAuthHeader($user);
       $current_contact_id = $self->getContact_id($user);
       $current_username = $user;
     } else {
-      $log->debug( "username ($user) is *not* valid" );
+      $log->warn( "username ($user) is *not* valid" );
       $self->printPageHeader(minimal_header=>"YES");
       $self->printAuthErrors();
       $self->printPageFooter();
@@ -248,8 +242,6 @@ sub processLogin {
     } 
 
   } elsif ( %cookie ) { # cookie exists
-
-    $log->debug( "Authenticating using existing cookie" );
 
     # SBEAMSName cookie has single key->value pair, time => crypted username
     ( my $cookie_time ) = keys( %cookie );
@@ -261,25 +253,21 @@ sub processLogin {
 
     if ( $valid_username ) {  # Cookie is valid, check for expiration
 
-      $log->debug( "Cookie data is valid" );
       my $curr_time = time;
 
       # Calculate difference between current time and cookie creation time.
       my $time_diff = $curr_time - $cookie_time;
       my $stale = $csecs - $time_diff;
 
-      $log->debug( "Cookie time is $cookie_time, Current time is $curr_time, diff is $time_diff" );
-      $log->debug( "Stale is $stale, Duration is $csecs seconds ($chours hours), and Reauth for sessions is $SESSION_REAUTH " );
-
       # Is cookie expired?
       if ( $stale <= 0 ) { # Cookie is stale (expired)
-        $log->debug( "Expired cookie, forcing reauthentication" );
+        $log->info( "Expired cookie, forcing reauthentication" );
 
       } else {
         if ( $stale < 3600 || $time_diff < 0 ) {
           # The cookie is in its final 60 minutes of validity, or postdated
           $http_header = $self->createAuthHeader($valid_username);
-          $log->debug( "Cookie will expire soon or is postdated, reissuing" );
+          $log->info( "Cookie will expire soon or is postdated, reissuing" );
         }
         $current_username = $valid_username;
         $current_contact_id = $self->getContact_id($valid_username);
@@ -605,7 +593,6 @@ sub getCurrent_work_group_id {
   return $current_work_group_id
     if (defined($current_work_group_id) && $current_work_group_id > 0);
 
-  $log->printStack( 'debug' );
   if ($current_contact_id < 1) {
     my $msg =<<"    MSG";
     current_contact_id undefined, Authentication must have failed!
@@ -1070,7 +1057,6 @@ sub destroyAuthHeader {
 sub createAuthHeader {
     my $self = shift;
     my $username = shift;
-    $log->debug( "Creating Auth Header" );
 
     # Fetch configured cookie timeout, else use 24 hrs.
     my $chours = $self->isValidDuration(cookie_duration => $LOGIN_DURATION) || 24;
@@ -1093,7 +1079,7 @@ sub createAuthHeader {
       $cookie = $q->cookie( -name    => 'SBEAMSName',
                             -path    => "$cookie_path",
                             -value   => \%cookie ); 
-      $log->debug( "Session reauthentication is being enforced" );
+      $log->info( "Session reauthentication is being enforced" );
 
     } else {
       $cookie = $q->cookie( -name    => 'SBEAMSName',
@@ -1101,7 +1087,6 @@ sub createAuthHeader {
                             -value   => \%cookie, 
                             -expires => $chours ); 
 
-      $log->debug( "Session reauthentication is not being used" );
     }
 
     my $head = $q->header(-cookie => $cookie);
