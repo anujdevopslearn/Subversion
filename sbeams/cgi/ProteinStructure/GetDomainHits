@@ -70,7 +70,8 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
   exit;
 }
 
-$VERBOSE = $OPTIONS{"verbose"} || 0;
+$VERBOSE =
+$OPTIONS{"verbose"} || 0;
 $QUIET = $OPTIONS{"quiet"} || 0;
 $DEBUG = $OPTIONS{"debug"} || 0;
 if ($DEBUG) {
@@ -586,28 +587,51 @@ sub handle_request {
       $sbeams->display_sql(sql=>$sql) if ($show_sql);
 
       #### Fetch the results from the database server
-      $sbeams->fetchResultSet(sql_query=>$sql,
-        resultset_ref=>$resultset_ref);
+      $sbeams->fetchResultSet(
+        sql_query=>$sql,
+        resultset_ref=>$resultset_ref,
+      );
+
+      #### Post process the resultset
+      postProcessResultset(
+        rs_params_ref=>\%rs_params,
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters,
+        column_titles_ref=>\@column_titles,
+      ) if ($parameters{display_options} =~ /ApplyChilliFilter/i || $parameters{display_options} =~ /Sequence/i );
 
       #### Store the resultset and parameters to disk resultset cache
       $rs_params{set_name} = "SETME";
-      $sbeams->writeResultSet(resultset_file_ref=>\$rs_params{set_name},
-        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters);
+      $sbeams->writeResultSet(
+        resultset_file_ref=>\$rs_params{set_name},
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters,
+        resultset_params_ref=>\%rs_params,
+        query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+        column_titles_ref=>\@column_titles,
+      );
     }
 
     #### Display the resultset
-    $sbeams->displayResultSet(rs_params_ref=>\%rs_params,
-        url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols,
-        max_widths=>\%max_widths,resultset_ref=>$resultset_ref,
-        column_titles_ref=>\@column_titles,
-        base_url=>$base_url,query_parameters_ref=>\%parameters,
+    $sbeams->displayResultSet(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      url_cols_ref=>\%url_cols,
+      hidden_cols_ref=>\%hidden_cols,
+      max_widths=>\%max_widths,
+      column_titles_ref=>\@column_titles,
+      base_url=>$base_url,
     );
 
 
     #### Display the resultset controls
-    $sbeams->displayResultSetControls(rs_params_ref=>\%rs_params,
-        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters,
-        base_url=>$base_url);
+    $sbeams->displayResultSetControls(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      base_url=>$base_url,
+    );
 
 
     #### Display a plot of data from the resultset
@@ -618,6 +642,7 @@ sub handle_request {
       column_titles_ref=>\@column_titles,
       base_url=>$base_url,
     );
+
 
   #### If QUERY was not selected, then tell the user to enter some parameters
   } else {
@@ -645,4 +670,320 @@ sub evalSQL {
   return eval "\"$sql\"";
 
 } # end evalSQL
+
+
+###############################################################################
+# postProcessResultset
+#
+# Perform some additional processing on the resultset that would otherwise
+# be very awkward to do in SQL.
+###############################################################################
+sub postProcessResultset {
+  my %args = @_;
+
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+  #### Process the arguments list
+  my $resultset_ref = $args{'resultset_ref'};
+  my $rs_params_ref = $args{'rs_params_ref'};
+  my $query_parameters_ref = $args{'query_parameters_ref'};
+  my $column_titles_ref = $args{'column_titles_ref'};
+
+  my %rs_params = %{$rs_params_ref};
+  my %parameters = %{$query_parameters_ref};
+
+  my $n_rows = scalar(@{$resultset_ref->{data_ref}});
+  my @new_data_array;
+
+  #### Define a structure for some stats
+  my %stats;
+  $stats{single_domain_proteins} = [];
+  $stats{multiple_domain_proteins} = [];
+  $stats{n_proteins} = 0;
+
+
+  #### Determine some column indices in the resultset
+  my $column_indices = $resultset_ref->{column_hash_ref};
+  my $biosequence_name_column_index = $column_indices->{biosequence_name};
+  my $match_source_column_index = $column_indices->{match_source};
+  my $match_type_column_index = $column_indices->{match_type};
+  my $domain_match_index_column_index = $column_indices->{domain_match};
+  my $query_start_column_index = $column_indices->{query_start};
+  my $query_end_column_index = $column_indices->{query_end};
+  my $e_value_column_index = $column_indices->{e_value};
+  my $probability_column_index = $column_indices->{probability};
+
+
+  #### We will process in groups of rows where a group is one biosequence
+  my $startrow = 0;
+  my $endrow = 0;
+
+
+  #### Loop over (groups of) rows in the resultset
+  my @rows = @{$resultset_ref->{data_ref}};
+  while ( $startrow < $n_rows-1) {
+
+    #### Get this biosequence_name
+    my $biosequence_name = $rows[$startrow]->[$biosequence_name_column_index];
+    $stats{n_proteins}++;
+
+    #### Set $endrow to the last row for this biosequence
+    $endrow = $startrow;
+    $endrow++ while ($endrow < $n_rows &&
+      $rows[$endrow]->[$biosequence_name_column_index] eq $biosequence_name);
+    $endrow--;
+
+
+    #### Now examine the details of this group of rows and decide what to do
+
+    #### First count the numbered of domains present
+    my %domain_indices = ();
+    for (my $i=$startrow; $i<=$endrow; $i++) {
+      if ($rows[$i]->[$domain_match_index_column_index] gt '') {
+	$domain_indices{$rows[$i]->[$domain_match_index_column_index]} = 1;
+      }
+    }
+    ## Will this work, or does keys return a list instead of array?
+    my $n_domains = scalar(keys(%domain_indices));
+    my $pdbblast_domains = 0;
+    my $pfam_domains = 0;
+    my $rosetta_success_domains = 0;
+    my $rosetta_best_domains = 0;
+
+
+    #### Look for pdbblast hits and store carefully
+    my %pdbblast_domains = ();
+    for (my $i=$startrow; $i<=$endrow; $i++) {
+      if ($rows[$i]->[$match_type_column_index] eq 'pdbblast') {
+
+        my $domain_match_index = $rows[$i]->[$domain_match_index_column_index];
+        my %attrs = (
+          query_start => $rows[$i]->[$query_start_column_index],
+	  query_end => $rows[$i]->[$query_end_column_index],
+          row_number => $i,
+        );
+
+        #### If we already have a result for this domain, squawk else store
+        if (exists($pdbblast_domains{$domain_match_index})) {
+          print "WARNING: duplicate pdbblast hits for $biosequence_name".
+            "($domain_match_index)<BR>\n";
+        } else {
+          push(@new_data_array,$rows[$i]);
+          $pdbblast_domains{$domain_match_index} = \%attrs;
+	  $pdbblast_domains++;
+        }
+
+      }
+
+    }
+
+
+    #### Look for pfam hits and store carefully
+    my %pfam_domains = ();
+    my $unknown_index_counter = 10;
+    for (my $i=$startrow; $i<=$endrow; $i++) {
+      if ($rows[$i]->[$match_type_column_index] eq 'pfam' &&
+	  $rows[$i]->[$e_value_column_index] <= .1) {
+
+        #### Get the domain_match_index
+        my $domain_match_index = $rows[$i]->[$domain_match_index_column_index];
+        #### If it's empty, then, assign it a temporary one
+        unless ($domain_match_index) {
+          $domain_match_index = "$unknown_index_counter?";
+          $unknown_index_counter++;
+        }
+
+        my %attrs = (
+          query_start => $rows[$i]->[$query_start_column_index],
+	  query_end => $rows[$i]->[$query_end_column_index],
+          row_number => $i,
+        );
+
+        #### If we already have a pfam result for this domain, squawk
+        if (exists($pfam_domains{$domain_match_index})) {
+          print "WARNING: duplicate pfam hits for $biosequence_name".
+            "($domain_match_index)<BR>\n";
+
+        #### If we already have a pdbblast result for this domain, drop this
+        } elsif (exists($pdbblast_domains{$domain_match_index})) {
+          print "INFO: ignoring pfam hit where pdbblast already exists".
+            "for $biosequence_name($domain_match_index)<BR>\n";
+
+        #### Else we probably have a live, one, but a couple more checks apply
+        } else {
+
+          #### If this is a PFAM Search entry with no index, then see if
+          #### there is a pdbblast entry in the same region of sequence
+          if ($domain_match_index =~ /\?/) {
+            foreach my $index ( keys(%pdbblast_domains) ) {
+
+              #### See if they overlap at all
+              if ( ( $rows[$i]->[$query_start_column_index] >= $pdbblast_domains{$index}->{query_start} &&
+                     $rows[$i]->[$query_start_column_index] < $pdbblast_domains{$index}->{query_end} ) ||
+                   ( $rows[$i]->[$query_end_column_index] <= $pdbblast_domains{$index}->{query_end} &&
+                     $rows[$i]->[$query_end_column_index] > $pdbblast_domains{$index}->{query_start} ) ) {
+                print "INFO: ignoring pfam hit where pdbblast already exists".
+                  "for $biosequence_name($domain_match_index)<BR>\n";
+              } else {
+                $attrs{new_row} = scalar(@new_data_array);
+                push(@new_data_array,$rows[$i]);
+                $pfam_domains{$domain_match_index} = \%attrs;
+		$pfam_domains++;
+              }
+            }
+
+
+          #### Otherwise, this must be a Ginzu pfam hit.  Make sure there isn't
+          #### already a PFAM Search pfam hit.  If so, replace that with this.
+          } else {
+            foreach my $index ( keys(%pfam_domains) ) {
+
+              #### See if they overlap at all
+              if ( ( $rows[$i]->[$query_start_column_index] >= $pfam_domains{$index}->{query_start} &&
+                     $rows[$i]->[$query_start_column_index] < $pfam_domains{$index}->{query_end} ) ||
+                   ( $rows[$i]->[$query_end_column_index] <= $pfam_domains{$index}->{query_end} &&
+                     $rows[$i]->[$query_end_column_index] > $pfam_domains{$index}->{query_start} ) ) {
+                print "INFO: Overlapping Ginzu pfam and PFAM Search pfam hit".
+                  "for $biosequence_name($domain_match_index).  Keeping only Ginzu result.<BR>\n";
+		#### Replace the previous row
+                $new_data_array[$pfam_domains{$index}->{new_row}] = $rows[$i];
+                #### Delete the previous entry in the hash and add this one
+                delete($pfam_domains{$index});
+                $pfam_domains{$domain_match_index} = \%attrs;
+
+              } else {
+                push(@new_data_array,$rows[$i]);
+                $pfam_domains{$domain_match_index} = \%attrs;
+		$pfam_domains++;
+              }
+
+            }
+
+          }
+
+        }
+
+      }
+
+    }
+
+
+    #### Examine the Rosetta domains
+    my %rosetta_domains = ();
+    my @rosetta_buffer = ();
+    my $current_domain = -999;
+    my $max_probability = 0;
+    for (my $i=$startrow; $i<=$endrow; $i++) {
+      if ($rows[$i]->[$match_source_column_index] eq 'mamSum') {
+
+        my $domain_match_index = $rows[$i]->[$domain_match_index_column_index];
+
+	#### If this is a new batch of results
+	if ($domain_match_index != $current_domain) {
+
+	  #### But not the beginning of the first batch
+	  unless ($current_domain = -999) {
+
+ 	    PROCESS_LAST_MAMSUM:
+
+            #### If we already have a result for this domain
+            if (exists($rosetta_domains{$domain_match_index})) {
+              print "WARNING: duplicate rosetta domains for $biosequence_name".
+                "($domain_match_index).  This should never happen. Sort err?<BR>\n";
+
+            } elsif (exists($pdbblast_domains{$domain_match_index})) {
+              ## This is fine, just ignore the Rosetta stuff
+
+            } elsif (exists($pfam_domains{$domain_match_index})) {
+              ## This is fine, just ignore the Rosetta stuff
+
+            } elsif ($max_probability >= 0.3) {
+              push(@new_data_array,@rosetta_buffer);
+              $rosetta_domains{$domain_match_index} = 1;
+	      $rosetta_best_domains++;
+	      @rosetta_buffer = ();
+
+            } else {
+	      ## Rosetta tried and failed. No match anywhere. Unknown domain...
+	    }
+
+	    #### If Rosetta succeeded, make a note regardless of other
+	    if ($max_probability >= 0.3) {
+	      $rosetta_success_domains++;
+	    }
+
+	  }
+
+	  $current_domain = $domain_match_index;
+	  $max_probability = 0;
+
+	}
+
+	#### Add this row to the buffer unless we're in the hop-back
+	unless ($i > $endrow) {
+	  push(@rosetta_buffer,$rows[$i]);
+	  my $probability = $rows[$i]->[$probability_column_index];
+	  $max_probability = $probability if ($probability > $max_probability);
+	}
+
+      }
+
+    }
+
+    #### Hop back into the loop to process the last mamSum group
+    goto PROCESS_LAST_MAMSUM if (scalar(@rosetta_buffer));
+
+
+
+    #### Done processing this biosequence.  Store some statistics
+    #push(@proteins,$biosequence_name);
+    $stats{n_proteins}++;
+    if ($n_domains > 1) {
+      push(@{$stats{multiple_domain_proteins}},$biosequence_name);
+      $stats{multiple_domain_proteins_domains} += $n_domains;
+    } else {
+      push(@{$stats{single_domain_proteins}},$biosequence_name);
+      $n_domains = 1;
+      $stats{single_domain_proteins_domains} += $n_domains;
+    }
+    $stats{pbdblast_domains} += $pdbblast_domains;
+    $stats{pfam_domains} += $pfam_domains;
+    $stats{rosetta_success_domains} += $rosetta_success_domains;
+    $stats{rosetta_best_domains} += $rosetta_best_domains;
+
+
+    #### Set new start and continue
+    $startrow = $endrow + 1;
+
+  }
+
+
+  #### Report the statistics
+  my $buf = '\n';
+  $buf.="Total number of proteins: $stats{n_proteins}\n";
+  $buf.="Number of single-domain proteins: ".scalar(@{$stats{single_domain_proteins}})."\n";
+  $buf.="Number of single-domain protein domains: $stats{single_domain_proteins_domains}\n";
+  $buf.="Number of multiple-domain proteins: ".scalar(@{$stats{single_domain_proteins}})."\n";
+  $buf.="Number of multiple-domain protein domains: $stats{multiple_domain_proteins_domains}\n";
+  $buf.="Total number of domains: ".$stats{single_domain_proteins_domains}+$stats{multiple_domain_proteins_domains}."\n";
+  $buf.="Number of good PDB hit domains: $stats{pbdblast_domains}\n";
+  $buf.="Number of good PFAM hit but not PDB hit domains: $stats{pfam_domains}\n";
+  $buf.="Number of good Rosetta hit domains without PDB or PFAM hits: $stats{rosetta_best_domains}\n";
+  $buf.="Total number of identified domains: ".$stats{pbdblast_domains}+$stats{pfam_domains}+$stats{rosetta_best_domains}."\n";
+
+  $buf.="Number of good Rosetta hits regardless of PDB or PFAM hits: $stats{rosetta_success_domains}\n";
+  $buf.="\n\n";
+
+  $buf =~ s/\n/<BR>\n/g;
+  print "$buf";
+
+
+  #### Replace the old rowset with the new, modified rowset
+  $resultset_ref->{data_ref} = \@new_data_array;
+
+
+  return 1;
+
+} # end postProcessResult
+
 
