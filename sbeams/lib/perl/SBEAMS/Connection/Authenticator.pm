@@ -108,6 +108,12 @@ sub Authenticate {
     my $www_uid = $self->getWWWUID();
     if ( $uid == $www_uid ) {
 
+        #### If the force_login flag is set, make the user login
+        if ($q->param('force_login')) {
+	  $self->processLogin();
+	  return;
+	}
+
         # If the user is not logged in, make them log in
         unless ($current_username = $self->checkLoggedIn(
                 allow_anonymous_access=>$allow_anonymous_access)) {
@@ -158,6 +164,7 @@ sub processLogin {
     my $password  = $q->param('password');
     $current_username = "";
 
+    #### If there is a login parameter, see if it's valid
     if ($q->param('login')) {
         if ($self->checkLogin($username, $password)) {
             $http_header = $self->createAuthHeader($username);
@@ -168,7 +175,14 @@ sub processLogin {
             $self->printAuthErrors();
             $self->printPageFooter();
         }
+
+    #### Otherwise give the user a form to login with
     } else {
+        #### Since we may have gotten here with a force_login flag even
+        #### though we already have a cookie, be sure to destroy current cookie
+        $self->destroyAuthHeader();
+
+	#### Draw a login form for the user to fill out
         $self->printPageHeader(minimal_header=>"YES");
         $self->printLoginForm();
         $self->printPageFooter();
@@ -771,6 +785,7 @@ sub printLoginForm {
         </TR><TR>
         <TD COLSPAN=2 ALIGN="center">
         <BR>
+        <INPUT TYPE="hidden" NAME="force_login" VALUE="">
         <INPUT TYPE="submit" NAME="login" VALUE=" Login ">
         <INPUT TYPE="reset" VALUE=" Reset ">
     !;
