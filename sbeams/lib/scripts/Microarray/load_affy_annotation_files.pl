@@ -157,7 +157,6 @@ $RUN_MODE   = $OPTIONS{run_mode};
 
 $FILE_NAME = $OPTIONS{file_name};
 
-
 my $val = grep {$RUN_MODE eq $_} @run_modes;
 
 die "*** RUN_MODE DOES NOT LOOK GOOD '$RUN_MODE' ***\n $USAGE" unless ($val);
@@ -185,6 +184,7 @@ if ($DEBUG) {
 $sbeams_affy_anno->verbose($VERBOSE);
 $sbeams_affy_anno->debug($DEBUG);
 $sbeams_affy_anno->testonly($TESTONLY);
+$sbeams_affy_anno->run_mode($RUN_MODE);
 $START_TIME = `date`;
 main();
 exit(0);
@@ -247,9 +247,13 @@ sub handleRequest {
 		write_error_log(object => $sbeams_affy_anno);
 		
 	}elsif( $RUN_MODE eq 'delete') {
+		if ($VERBOSE){
+			print "IN DELETE MODE ABOUT TO DELETE SOME DATA\n";
+		}
 		
-		
-		delete_affy_annotation();
+		$sbeams_affy_anno->database($DATABASE);
+		$sbeams_affy_anno->parse_data_file($FILE_NAME);	
+		write_error_log(object => $sbeams_affy_anno);
 	}else{
 		die "This is not a valid run mode '$RUN_MODE'\n $USAGE";
 	}
