@@ -31,11 +31,12 @@ public class DataLoader implements WizardListener {
     frame.setLocation (x, y);
 	frame.setVisible(true);
 	String file = clr.getMatrixFile();
+	String translator = clr.getTranslator();
 	String expName = clr.getExperimentTitle();
 	if (file == null) {
 	  wizard.start(new WelcomeWizardPanel());
 	} else {
-	  wizard.start(new FileChooserWizardPanel(file, expName));
+	  wizard.start(new FileChooserWizardPanel(file, translator, expName));
 	}
   }// constructor
 //-----------------------------------------------------------------------------------------------
