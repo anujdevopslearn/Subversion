@@ -554,6 +554,15 @@ sub printEntryForm {
       return if ($peptide_string_clause == -1);
 
 
+      #### Build PRECURSOR MASS constraint
+      my $precursor_mass_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"(S.sample_mass_plus_H+(S.assumed_charge-1)*1.008)/S.assumed_charge",
+        constraint_type=>"flexible_float",
+        constraint_name=>"Precursor_Mass Constraint",
+        constraint_value=>$parameters{precursor_mass_constraint} );
+      return if ($precursor_mass_clause == -1);
+
+
       #### Build MASS constraint
       my $mass_clause = $sbeams->parseConstraint2SQL(
         constraint_column=>"SH.hit_mass_plus_H",
@@ -561,7 +570,6 @@ sub printEntryForm {
         constraint_name=>"Mass Constraint",
         constraint_value=>$parameters{mass_constraint} );
       return if ($mass_clause == -1);
-
 
 
       #### Build ISOELECTRIC_POINT constraint
@@ -704,6 +712,7 @@ sub printEntryForm {
         ["probability","STR(SH.probability,7,3)","Prob"],
         ["cross_corr_rank","SH.cross_corr_rank","Rxc"],
         ["prelim_score_rank","SH.prelim_score_rank","RSp"],
+        ["precursor_mass","STR((S.sample_mass_plus_H+(S.assumed_charge-1)*1.008)/S.assumed_charge,7,2) ","Precursor Mass"],
         ["hit_mass_plus_H","CONVERT(varchar(20),SH.hit_mass_plus_H) + ' (' + STR(SH.mass_delta,5,2) + ')'","(M+H)+"],
         ["cross_corr","STR(SH.cross_corr,5,4)","XCorr"],
         ["next_dCn","STR(SH.next_dCn,5,3)","dCn"],
@@ -780,6 +789,7 @@ sub printEntryForm {
 	$peptide_clause
 	$peptide_string_clause
 	$second_peptide_clause
+	$precursor_mass_clause
 	$mass_clause
 	$isoelectric_point_clause
 	$file_root_clause

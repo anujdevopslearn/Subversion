@@ -537,6 +537,15 @@ sub printEntryForm {
       return if ($charge_clause == -1);
 
 
+      #### Build PRECURSOR MASS constraint
+      my $precursor_mass_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"(S.sample_mass_plus_H+(S.assumed_charge-1)*1.008)/S.assumed_charge",
+        constraint_type=>"flexible_float",
+        constraint_name=>"Precursor_Mass Constraint",
+        constraint_value=>$parameters{precursor_mass_constraint} );
+      return if ($precursor_mass_clause == -1);
+
+
       #### Build MASS constraint
       my $mass_clause = $sbeams->parseConstraint2SQL(
         constraint_column=>"SH.hit_mass_plus_H",
@@ -760,6 +769,7 @@ sub printEntryForm {
 	$accession_clause
 	$peptide_clause
 	$charge_clause
+	$precursor_mass_clause
 	$mass_clause
 	$isoelectric_point_clause
 	$annotation_label_clause
