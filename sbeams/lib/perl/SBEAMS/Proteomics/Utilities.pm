@@ -402,6 +402,7 @@ sub readOutFile {
 # readParamsFile
 ###############################################################################
 sub readParamsFile { 
+  my $self = shift;
   my %args = @_;
 
   #### Decode the argument list
@@ -470,6 +471,7 @@ sub readParamsFile {
 # readDtaFile
 ###############################################################################
 sub readDtaFile { 
+  my $self = shift;
   my %args = @_;
 
   #### Decode the argument list
@@ -565,6 +567,7 @@ sub readDtaFile {
 # readSummaryFile
 ###############################################################################
 sub readSummaryFile { 
+  my $self = shift;
   my %args = @_;
 
   #### Decode the argument list
