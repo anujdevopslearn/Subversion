@@ -371,11 +371,12 @@ $optionlist
 
   #### Build EC NUMBER constraint
   my $ec_number_clause = '';
-  if ($parameters{search_scope} =~ /(ECNumbers|All)/) {
+  if ($parameters{search_scope} =~ /(ECNumbers|ECNumbers_exact|All)/) {
     my $search_key = $parameters{search_key};
     if (defined($search_key) &&
     	$search_key gt '' &&
-    	$search_key !~ /[%_]/) {
+    	$search_key !~ /[%_]/ &&
+        $parameters{search_scope} !~ /ECNumbers_exact/) {
       $search_key = "\%$search_key\%";
     };
     $ec_number_clause = $sbeams->parseConstraint2SQL(
