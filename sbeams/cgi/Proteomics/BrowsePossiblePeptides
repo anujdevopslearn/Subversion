@@ -373,8 +373,8 @@ sub handle_request {
   return if ($n_occurrences_clause eq '-1');
   if ($n_occurrences_clause) {
     $n_occurrences_clause =~ s/AND/HAVING/;
-    $n_occurrences_clause = '' 
-      unless ($parameters{display_options} =~ /Group/);
+    #$n_occurrences_clause = ''
+    #  unless ($parameters{display_options} =~ /Group/);
   }
 
 
@@ -559,8 +559,6 @@ sub handle_request {
 
   #### Build the columns part of the SQL statement
   my %colnameidx = ();
-  $colnameidx{peptide} = 99;
-  $colnameidx{peptide_string} = 99;
   my @column_titles = ();
   my $columns_clause = $sbeams->build_SQL_columns_list(
     column_array_ref=>\@column_array,
@@ -569,8 +567,79 @@ sub handle_request {
   );
 
 
-  #### Define the SQL statement
-  $sql = qq~
+  #### If this is a non-grouped query but n_occurences is specified,
+  #### then a special, two stage query needs to be done
+  if ($n_occurrences_clause &&
+      $parameters{display_options} !~ /Group/ ) {
+    $sql = qq~
+	SELECT BS.biosequence_id
+          INTO #tmp1
+          FROM $TBPR_POSSIBLE_PEPTIDE PP
+	  JOIN $TBPR_BIOSEQUENCE BS
+	       ON ( PP.biosequence_id = BS.biosequence_id )
+          LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
+          $GO_join
+	 WHERE 1 = 1
+	$biosequence_set_clause
+	$biosequence_name_clause
+	$biosequence_gene_name_clause
+	$accession_clause
+        $biosequence_desc_clause
+        $biosequence_seq_clause
+
+	$peptide_clause
+	$second_peptide_clause
+	$mass_clause
+	$isoelectric_point_clause
+
+        $molecular_function_clause
+        $biological_process_clause
+        $cellular_component_clause
+	$protein_domain_clause
+        $n_transmembrane_regions_clause
+        $fav_codon_frequency_clause
+        $protein_length_clause
+	GROUP BY BS.biosequence_id
+        $n_occurrences_clause
+
+--- Second Part
+
+	SELECT $limit_clause $columns_clause
+          $into_clause
+          FROM #tmp1 tt
+         INNER JOIN $TBPR_POSSIBLE_PEPTIDE PP
+               ON ( tt.biosequence_id = PP.biosequence_id )
+	  JOIN $TBPR_BIOSEQUENCE BS
+	       ON ( PP.biosequence_id = BS.biosequence_id )
+          LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
+          $GO_join
+	 WHERE 1 = 1
+	$biosequence_set_clause
+	$biosequence_name_clause
+	$biosequence_gene_name_clause
+	$accession_clause
+        $biosequence_desc_clause
+        $biosequence_seq_clause
+
+	$peptide_clause
+	$second_peptide_clause
+	$mass_clause
+	$isoelectric_point_clause
+
+        $molecular_function_clause
+        $biological_process_clause
+        $cellular_component_clause
+	$protein_domain_clause
+        $n_transmembrane_regions_clause
+        $fav_codon_frequency_clause
+        $protein_length_clause
+	$order_by_clause
+    ~;
+
+
+  #### Else define the regular SQL statement
+  } else {
+    $sql = qq~
 	SELECT $limit_clause $columns_clause
           $into_clause
           FROM $TBPR_POSSIBLE_PEPTIDE PP
@@ -602,7 +671,8 @@ sub handle_request {
         $n_occurrences_clause
 	$order_by_clause
 
-  ~;
+    ~;
+  }
 
 
   #### If we're doing a grand summary, tack on the second query to summarize
