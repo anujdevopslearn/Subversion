@@ -33,6 +33,7 @@ use SBEAMS::PhenoArray::Tables;
 use SBEAMS::SNP::Tables;
 use SBEAMS::BEDB::Tables;
 use SBEAMS::TOES::Tables;
+use SBEAMS::GLUE::Tables;
 
 
 ###############################################################################
