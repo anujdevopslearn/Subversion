@@ -40,6 +40,8 @@
      <LI><A HREF="SecurityLayout.php">Description of Security Layout</A>
      <LI><A HREF="Proteomics/ProcPipeline.doc">General Proposal and Documenation for the Proteomics Data Pipeline (Word .doc)</A>
      <LI><A HREF="Microarray/keymapfiles.notes">Misc notes about .key and .map files</A>
+     <P>
+     <LI><A HREF="/mantis/">Mantis SBEAMS bugs database</A>
     </UL>
     </TD>
 
