@@ -33,6 +33,10 @@ use vars qw(@ISA @EXPORT
     $TBGL_SAMPLE_TYPE
     $TBGL_PUBLICATION
     $TBGL_PUBLICATION_CATEGORY
+    
+    $TBGL_BIOSEQUENCE_SET
+    $TBGL_BIOSEQUENCE
+    $TBGL_BIOSEQUENCE_DBXREF
 
 );
 
@@ -61,6 +65,10 @@ require Exporter;
     $TBGL_PUBLICATION
     $TBGL_PUBLICATION_CATEGORY
 
+    $TBGL_BIOSEQUENCE_SET
+    $TBGL_BIOSEQUENCE
+    $TBGL_BIOSEQUENCE_DBXREF
+
 );
 
 
@@ -86,5 +94,7 @@ $TBGL_PUBLICATION           = 'glue.dbo.publication';
 $TBGL_PUBLICATION_CATEGORY  = 'glue.dbo.publication_category';
 
 
-
+$TBGL_BIOSEQUENCE_SET       = 'glue.dbo.biosequence_set';
+$TBGL_BIOSEQUENCE           = 'glue.dbo.biosequence';
+$TBGL_BIOSEQUENCE_DBXREF    = 'glue.dbo.dbxref';
 
