@@ -208,7 +208,9 @@ sub handle_request {
   #### Finish the upper part of the page and go begin the full-width
   #### data portion of the page
   $sbeams->display_page_footer(close_tables=>'YES',
-    separator_bar=>'YES',display_footer=>'NO');
+    separator_bar=>'YES',display_footer=>'NO')
+    unless ( $parameters{display_options} =~ /SequenceFormat/ &&
+      $apply_action =~ /HIDE/ );
 
 
 
