@@ -57,7 +57,15 @@ DB_DRIVER   = DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE
 #DB_DRIVER   = DBI:Oracle:SID=$DB_DATABASE;HOST=$DB_SERVER;PORT=1521
 #DB_DRIVER   = DBI:DB2:$DB_DATABASE
 #DB2INSTANCE = db2inst1
-#
+
+# Settings to allow SMB authentication, must set each to have SMB auth work.
+# PDC => Primary Domain Controller
+# BDC => Backup Domain Controller
+# Domain => NT Domain
+SMBAUTH{PDC}         = ISB-DC1
+SMBAUTH{BDC}         = PRINT
+SMBAUTH{Domain}      = ISB
+
 
 #### Set the RDBMS flavor.  This triggers engine-specific code within the
 #### system.  Can be one of "MS SQL Server", "MySQL", "PostgreSQL", "Oracle",
