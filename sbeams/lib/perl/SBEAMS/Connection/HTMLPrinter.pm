@@ -505,30 +505,68 @@ sub getGoBackButton {
 
 
 ###############################################################################
+# Print Insufficient Project Permissions Message
+###############################################################################
+sub printInsufficientPermissions {
+  my $self = shift;
+  my $errors = shift;
+  my $back_button = $self->getGoBackButton();
+
+  my $msg =<<"  END_MSG";
+  Unable to execute requested action due to insufficient privileges.  Please
+  see specific errors below for details.
+  END_MSG
+
+  print qq!
+  <P>
+  <H2>Permissions Error</H2>
+  $LINESEPARATOR
+  <P>
+  <TABLE WIDTH=$MESSAGE_WIDTH><TR><TD>
+  $msg
+  <P>
+  $errors 
+  <P>
+  <CENTER>
+  $back_button
+  </CENTER>
+  </TD></TR></TABLE>
+  $LINESEPARATOR
+  <P>!;
+} # end printIncompleteForm
+
+
+###############################################################################
 # Print Incomplete Form Message
 ###############################################################################
 sub printIncompleteForm {
-    my $self = shift;
-    my $errors = shift;
-    my $back_button = $self->getGoBackButton();
-    print qq!
-        <P>
-        <H2>Incomplete Form</H2>
-        $LINESEPARATOR
-        <P>
-        <TABLE WIDTH=$MESSAGE_WIDTH><TR><TD>
-        All required form fields must be filled in. Please see the 
-        errors listed below and click the Back button to return to 
-        the form.
-        <P>
-        $errors 
-        <P>
-        <CENTER>
-        $back_button
-        </CENTER>
-        </TD></TR></TABLE>
-        $LINESEPARATOR
-        <P>!;
+  my $self = shift;
+  my $errors = shift;
+  my $mode = shift || 'Incomplete';
+  my $back_button = $self->getGoBackButton();
+
+  my $msg =<<"  END_MSG";
+  All required form fields must be filled in. Please see the 
+  errors listed below and click the Back button to return to 
+  the form.
+  END_MSG
+
+  print qq!
+  <P>
+  <H2>Incomplete Form</H2>
+  $LINESEPARATOR
+  <P>
+  <TABLE WIDTH=$MESSAGE_WIDTH><TR><TD>
+  $msg
+  <P>
+  $errors 
+  <P>
+  <CENTER>
+  $back_button
+  </CENTER>
+  </TD></TR></TABLE>
+  $LINESEPARATOR
+  <P>!;
 } # end printIncompleteForm
 
 
