@@ -86,9 +86,11 @@ exit 0;
 sub main {
 
   #### Do the SBEAMS authentication and exit if a username is not returned
-  exit unless ($current_username =
-    $sbeams->Authenticate(work_group=>'Developer'
-  ));
+  #exit unless ($current_username =
+  #  $sbeams->Authenticate(work_group=>'Developer'
+  #));
+
+  $sbeams->guessMode();
 
 
   $sbeams->printPageHeader() unless ($QUIET);
@@ -122,10 +124,10 @@ sub handleRequest {
 
 
   #### Print out the header
-  unless ($QUIET) {
-    $sbeams->printUserContext();
-    print "\n";
-  }
+  #unless ($QUIET) {
+  #  $sbeams->printUserContext();
+  #  print "\n";
+  #}
 
 
   #### Define the links or directories to check
