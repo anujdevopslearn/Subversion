@@ -1,19 +1,29 @@
 table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
-biosequence_set	BioSequence Set	Proteomics_infrastructure	YES	$TBPR_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=biosequence_set	biosequence_set	
 proteomics_experiment	Proteomics Experiment	Proteomics_user	YES	$TBPR_PROTEOMICS_EXPERIMENT	experiment_id		ManageTable.cgi?TABLE_NAME=proteomics_experiment	proteomics_experiment	
-PR_GetSearchHits	Browse Search Hits	QUERY		NA	NA		GetSearchHits		
-PR_GetSearch	Browse Search	QUERY		NA	NA		GetSearchHits		
-BrowseAnnotatedPeptides	Browse Annotated Peptides	QUERY		NA	NA		BrowseAnnotatedPeptides.cgi		
-search_hit_annotation	Search Hit Annotation	Proteomics_user	YES	$TBPR_SEARCH_HIT_ANNOTATION	search_hit_annotation_id		ManageTable.cgi?TABLE_NAME=search_hit_annotation		
-PR_BrowseBioSequence	Browse BioSequence	QUERY		NA	NA		BrowseBioSequence.cgi		
-PR_CompareExperiments	Compare Experiments	QUERY		NA	NA		CompareExperiments		
-dbxref	Database Cross Reference	Proteomics_infrastructure	YES	$TB_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=dbxref	dbxref	
 PR_gradient_program	Gradient Program	Proteomics_infrastructure	YES	$TBPR_GRADIENT_PROGRAM	gradient_program_id		ManageTable.cgi?TABLE_NAME=PR_gradient_program	PR_gradient_program	
-PR_SummarizePeptides	Summarize Peptides	QUERY		NA	NA		SummarizePeptides		
-PR_user_annotation_label	User Annotation Label	Proteomics_user	YES	$TBPR_USER_ANNOTATION_LABEL	user_annotation_label_id		ManageTable.cgi?TABLE_NAME=PR_user_annotation_label	PR_user_annotation_label	
-PR_SummarizeFractions	Summarize Fractions	QUERY		NA	NA		SummarizeFractions		
-PR_instrument_type	Instrument Type	Proteomics_infrastructure	YES	$TBPR_INSTRUMENT_TYPE	instrument_type_id		ManageTable.cgi?TABLE_NAME=PR_instrument_type	"PR_instrument_type,PR_instrument,PR_experiment_type,PR_request_status,PR_funding_status"	
-PR_instrument	Instrument	Proteomics_infrastructure	YES	$TBPR_INSTRUMENT	instrument_id		ManageTable.cgi?TABLE_NAME=PR_instrument	"PR_instrument_type,PR_instrument,PR_experiment_type,PR_request_status,PR_funding_status"	
+PR_gradient_delta	Gradient Delta	Proteomics_infrastructure	NO	$TBPR_GRADIENT_DELTA	gradient_delta_id				
+PR_fraction	MS Run	Proteomics_infrastructure	NO	$TBPR_FRACTION	fraction_id				
+PR_msms_spectrum	MS/MS Spectrum	Proteomics_infrastructure	NO	$TBPR_MSMS_SPECTRUM	msms_spectrum_id				
+PR_msms_spectrum_annotation	MS/MS Spectrum Annotation	Proteomics_infrastructure	NO	$TBPR_MSMS_SPECTRUM_ANNOTATION	msms_spectrum_annotation				
+PR_quality_label	Quality Label	Proteomics_infrastructure	YES	$TBPR_QUALITY_LABEL	quality_label_id		ManageTable.cgi?TABLE_NAME=PR_quality_label		
+PR_msms_spectrum_peak	MS/MS Spectrum Peak	Proteomics_infrastructure	NO	$TBPR_MSMS_SPECTRUM_PEAK					
+biosequence_set	BioSequence Set	Proteomics_infrastructure	YES	$TBPR_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=biosequence_set	biosequence_set	
+dbxref	Database Cross Reference	Proteomics_infrastructure	YES	$TB_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=dbxref	dbxref	
+PR_biosequence	BioSequence	Proteomics_infrastructure	NO	$TBPR_BIOSEQUENCE	biosequence_id				
+PR_search_batch	Search Batch	Proteomics_infrastructure	NO	$TBPR_SEARCH_BATCH	search_batch_id				
+PR_search_batch_parameter	Search Batch Parameter	Proteomics_infrastructure	NO	$TBPR_SEARCH_BATCH_PARAMETER					
+PR_search_batch_parameter_set	Search Batch Parameter Set	Proteomics_infrastructure	NO	$TBPR_SEARCH_BATCH_PARAMETER_SET					
+PR_search	Search	Proteomics_infrastructure	NO	$TBPR_SEARCH	search_id				
+PR_search_hit	Search Hit	Proteomics_infrastructure	NO	$TBPR_SEARCH_HIT	search_hit_id			
+PR_search_hit_protein	Search Hit Protein	Proteomics_infrastructure	NO	$TBPR_SEARCH_HIT_PROTEIN	search_hit_protein_id			
+PR_quantitation	Quantitation	Proteomics_infrastructure	NO	$TBPR_QUANTITATION	quantitation_id			
+search_hit_annotation	Search Hit Annotation	Proteomics_user	YES	$TBPR_SEARCH_HIT_ANNOTATION	search_hit_annotation_id		ManageTable.cgi?TABLE_NAME=search_hit_annotation	
+PR_annotation_source	Annotation Source	Proteomics_infrastructure	YES	$TBPR_ANNOTATION_SOURCE	annotation_source_id		ManageTable.cgi?TABLE_NAME=PR_annotation_source	"PR_annotation_source,PR_annotation_label,PR_annotation_confidence"
+PR_annotation_label	Annotation Label	Proteomics_infrastructure	YES	$TBPR_ANNOTATION_LABEL	annotation_label_id		ManageTable.cgi?TABLE_NAME=PR_annotation_label	"PR_annotation_source,PR_annotation_label,PR_annotation_confidence"
+PR_annotation_confidence	Annotation Confidence	Proteomics_infrastructure	YES	$TBPR_ANNOTATION_CONFIDENCE	annotation_confidence_id		ManageTable.cgi?TABLE_NAME=PR_annotation_confidence	"PR_annotation_source,PR_annotation_label,PR_annotation_confidence"
+PR_user_annotation_label	User Annotation Label	Proteomics_user	YES	$TBPR_USER_ANNOTATION_LABEL	user_annotation_label_id		ManageTable.cgi?TABLE_NAME=PR_user_annotation_label	PR_user_annotation_label
+PR_instrument_type	Instrument Type	Proteomics_infrastructure	YES	$TBPR_INSTRUMENT_TYPE	instrument_type_id		ManageTable.cgi?TABLE_NAME=PR_instrument_type	"PR_instrument_type,PR_instrument,PR_experiment_type,PR_request_status,PR_funding_status"
+PR_instrument	Instrument	Proteomics_infrastructure	YES	$TBPR_INSTRUMENT	instrument_id		ManageTable.cgi?TABLE_NAME=PR_instrument	"PR_instrument_type,PR_instrument,PR_experiment_type,PR_request_status,PR_funding_status"
 PR_experiment_type	Experiment Type	Proteomics_infrastructure	YES	$TBPR_EXPERIMENT_TYPE	experiment_type_id		ManageTable.cgi?TABLE_NAME=PR_experiment_type	"PR_instrument_type,PR_instrument,PR_experiment_type,PR_request_status,PR_funding_status"
 PR_request_status	Request Status	Proteomics_infrastructure	YES	$TBPR_REQUEST_STATUS	request_status_id		ManageTable.cgi?TABLE_NAME=PR_request_status	"PR_instrument_type,PR_instrument,PR_experiment_type,PR_request_status,PR_funding_status"
 PR_funding_status	Funding Status	Proteomics_infrastructure	YES	$TBPR_FUNDING_STATUS	funding_status_id		ManageTable.cgi?TABLE_NAME=PR_funding_status	"PR_instrument_type,PR_instrument,PR_experiment_type,PR_request_status,PR_funding_status"
@@ -21,4 +31,10 @@ PR_proteomics_experiment_request	Proteomics Experiment Request	Proteomics_user	Y
 PR_processing_status	Processing Status	Proteomics_infrastructure	YES	$TBPR_PROCESSING_STATUS	processing_status_id		ManageTable.cgi?TABLE_NAME=PR_processing_status	"PR_processing_status,PR_raw_data_file"
 PR_raw_data_file	Raw Data File	Proteomics_infrastructure	YES	$TBPR_RAW_DATA_FILE	raw_data_file_id		ManageTable.cgi?TABLE_NAME=PR_raw_data_file	"PR_processing_status,PR_raw_data_file"
 APD_peptide_summary	Peptide Summary	Proteomics_infrastructure	YES	$TBAPD_PEPTIDE_SUMMARY	peptide_summary_id		ManageTable.cgi?TABLE_NAME=APD_peptide_summary	APD_peptide_summary
-APD_BrowseAPD	Browse Annotated Peptide Database	QUERY		NA	NA		BrowseAPD	
+PR_GetSearchHits	Browse Search Hits	QUERY	NO				GetSearchHits	
+PR_GetSearch	Browse Search	QUERY	NO				GetSearchHits	
+PR_BrowseBioSequence	Browse BioSequence	QUERY	NO				BrowseBioSequence.cgi	
+PR_CompareExperiments	Compare Experiments	QUERY	NO				CompareExperiments	
+PR_SummarizePeptides	Summarize Peptides	QUERY	NO				SummarizePeptides	
+PR_SummarizeFractions	Summarize Fractions	QUERY	NO				SummarizeFractions	
+APD_BrowseAPD	Browse Annotated Peptide Database	QUERY	NO				BrowseAPD	
