@@ -1,0 +1,10 @@
+ALTER TABLE dbo.biosequence ADD CONSTRAINT biosequence_set_name_uk UNIQUE (biosequence_set_id,biosequence_name)
+
+ALTER TABLE dbo.peptide ADD CONSTRAINT peptide_accession_uk UNIQUE (peptide_accession)
+
+ALTER TABLE dbo.peptide ADD CONSTRAINT peptide_sequence_uk UNIQUE (peptide_sequence)
+
+CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.peptide_mapping ( peptide_instance_id ) --WITH DROP_EXISTING
+
+CREATE NONCLUSTERED INDEX idx_atlas_build_id ON dbo.peptide_instance ( atlas_build_id ) --WITH DROP_EXISTING
+
