@@ -3,9 +3,10 @@ slide_type	Slide Type	arrays	YES	$TB_SLIDE_TYPE	slide_type_id		ManageTable.cgi?T
 cost_scheme	Cost Scheme	arrays	YES	$TB_COST_SCHEME	cost_scheme_id		ManageTable.cgi?TABLE_NAME=cost_scheme	"slide_type,labeling_method,cost_scheme,slide_type_cost"	slide_type_cost
 slide_type_cost	Slide Type Cost	arrays	YES	$TB_SLIDE_TYPE_COST	slide_type_cost_id		ManageTable.cgi?TABLE_NAME=slide_type_cost	"slide_type,labeling_method,cost_scheme,slide_type_cost"	
 labeling_method	Labeling Method	arrays	YES	$TB_LABELING_METHOD	labeling_method_id		ManageTable.cgi?TABLE_NAME=labeling_method	"slide_type,labeling_method,cost_scheme,slide_type_cost"	
-array_request	Array Request	request		$TB_ARRAY_REQUEST	array_request_id		SubmitArrayRequest.cgi?TABLE_NAME=array_request	array_request	
-array_request_slide	Array Request Slide	request		$TB_ARRAY_REQUEST_SLIDE	array_request_slide_id				
-array_request_sample	Array Request Sample	request		$TB_ARRAY_REQUEST_SAMPLE	array_request_sample_id				
+array_request	Array Request	request	NO	$TB_ARRAY_REQUEST	array_request_id		SubmitArrayRequest.cgi?TABLE_NAME=array_request	array_request	
+array_request_slide	Array Request Slide	request	NO	$TB_ARRAY_REQUEST_SLIDE	array_request_slide_id				
+array_request_sample	Array Request Sample	request	YES	$TB_ARRAY_REQUEST_SAMPLE	array_request_sample_id		ManageTable.cgi?TABLE_NAME=array_request_sample		
+MA_sample_protocol	Sample Protocol	request	NO	$TBMA_SAMPLE_PROTOCOL	sample_protocol_id				
 slide_model	Slide Model	arrays	YES	$TB_SLIDE_MODEL	slide_model_id		ManageTable.cgi?TABLE_NAME=slide_model	"slide,slide_lot,slide_model"	slide_lot
 slide_lot	Slide Lot	arrays	YES	$TB_SLIDE_LOT	slide_lot_id		ManageTable.cgi?TABLE_NAME=slide_lot	"slide,slide_lot,slide_model"	slide
 printing_batch	Printing Batch	arrays	YES	$TB_PRINTING_BATCH	printing_batch_id		ManageTable.cgi?TABLE_NAME=printing_batch	"printing_batch,array_layout"	array

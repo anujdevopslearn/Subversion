@@ -66,6 +66,51 @@ array_request	15	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMES
 array_request	16	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
 array_request	17	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 array_request	18	record_status	Record Status	char	1	0	N	N	N				fixed			N	Y				
+array_request_slide	1	array_request_slide_id	Array Request Slide ID	int	4	0	N		Y			Y				N	N				pkDEFAULT
+array_request_slide	2	array_request_id	Array Request ID	int	4	0	N		N	array_request	array_request_id	Y	optionlist			Y	Y	Y	Array request to which this requested slide belongs		
+array_request_slide	3	slide_index	Slide Index	int	4	0	N		N			Y	text	10		Y	Y	Y	"Index of this slide within the request (1,2,3,4,…)"		
+array_request_slide	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	Y				
+array_request_slide	5	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
+array_request_slide	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+array_request_slide	7	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
+array_request_slide	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+array_request_slide	9	record_status	Record Status	char	1	0	N	N	N							N	N				
+array_request_sample	1	array_request_sample_id	Array Request Sample ID	int	4	0	N		Y			Y				N	N				pkDEFAULT
+array_request_sample	2	array_request_slide_id	Array Request Slide ID	int	4	0	N		N	array_request_slide	array_request_slide_id	Y	fixed			N	Y	Y	Array request slide to which this sample belongs		pkDEFAULT
+array_request_sample	3	sample_index	Sample Index	int	4	0	N		N			Y	fixed			N	Y	Y	"Index of this sample on the slide (1,2,3,4,…)"		
+array_request_sample	4	name	Sample Name	varchar	255	0	N		N			Y	text	50		Y	Y	N	Sample Name.  Keep it short.  Try not to use too many strange characters	
+array_request_sample	5	labeling_method_id	Labeling Method	int	4	0	N		N	labeling_method	labeling_method_id	Y	fixed			N	N	N	Labeling method requested for this sample.  Not necessarily what was actually done?	
+array_request_sample	6	sample_provider_organization_id	Sample Provider	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	"Provider of this biomaterial (academic department, research lab, vendor, etc.)"	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE O.record_status != 'D' ORDER BY organization"
+array_request_sample	7	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	N	Organism from which the biomaterial was derived	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"
+array_request_sample	8	strain_or_line	Strain or Line	varchar	255	0	Y		N			N	text	50		Y	Y	N	Strain or line of the individual	
+array_request_sample	9	individual	Individual	varchar	255	0	Y		N			N	text	50		Y	Y	N	Identifier or name of the individual organism from which the biomaterial was derived	
+array_request_sample	10	sex_ontology_term_id	Sex	int	4	0	Y		N			N	optionlist			Y	Y	N	Sex of the individual	"SELECT MOT2.MGED_ontology_term_id,MOT2.name FROM $TB_MGED_ONTOLOGY_RELATIONSHIP MOR INNER JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) WHERE MOR.object_term_id = 5497 ORDER BY MOT2.name"
+array_request_sample	11	age	Age	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Age of the individual at the time of harvest of the biomaterial.  Free form text; include units, developmental stage, and reference point as appropriate (e.g., days since planting, years after birth, minutes after death)"	
+array_request_sample	12	organism_part	Organism Part	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Part of the organism's anatomy from the biomaterial was derived, excludes cells. (e.g., tissue, organ, system, or body location)"	
+array_request_sample	13	cell_line	Cell Line	varchar	255	0	Y		N			N	text	50		Y	Y	N	Identifier for the cell line if one was used as a biomaterial	
+array_request_sample	14	cell_type	Cell Type	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Type of cell used as the biomaterial (e.g., epithelial, glial, etc.)"	
+array_request_sample	15	disease_state	Disease State	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Name of the pathology diagnosed in the organism from which the biomaterial was derived.  The disease state is ""normal"" if no disease state has been diagnosed."	
+array_request_sample	16	protocol_ids	Protocols	varchar	255	0	Y		N	MA_sample_protocol	MA_sample_protocol_id	N	multilink	4		Y	Y	N	Select all protocols that apply to this biomaterial.  Describe sequence of protocols in the Treatment Description below	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE P.record_status != 'D' ORDER BY P.name"
+array_request_sample	17	protocol_deviations	Protocol Deviations	text	16	0	Y		N			N	textarea	4		Y	Y	N	Describe any deviations from the selected protocols	
+array_request_sample	18	sample_description	Sample Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Describe the biomaterial briefly	
+array_request_sample	19	sample_preparation_date	Sample Preparation Date	datetime	8	0	N		N			N	text	30		Y	Y	Y	Date/time the biomaterial was prepared with the described protocols	
+array_request_sample	20	treatment_description	Treatment Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	"Describe the treatment of the biomaterials, including mention of the selected protocols"
+array_request_sample	21	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes
+array_request_sample	22	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	Y		
+array_request_sample	23	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N		
+array_request_sample	24	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
+array_request_sample	25	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N		
+array_request_sample	26	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N		
+array_request_sample	27	record_status	Record Status	char	1	0	N	N	N							N	N		
+MA_sample_protocol	1	sample_protocol_id	Sample Protocol	int	4	0	N		Y							N	N	N	
+MA_sample_protocol	2	array_request_sample_id	Array Request Sample ID	int	4	0	N		N	array_request_sample	array_request_sample_id	Y				N	N	Y	Array request sample ID
+MA_sample_protocol	3	protocol_id	Protocol ID	int	4	0	N		N	protocol	protocol_id	Y				N	N	Y	Protocol ID
+MA_sample_protocol	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
+MA_sample_protocol	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N		
+MA_sample_protocol	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
+MA_sample_protocol	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N		
+MA_sample_protocol	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N		
+MA_sample_protocol	9	record_status	Record Status	char	1	0	N	N	N							N	N				
 slide_model	1	slide_model_id	Slide Model ID	int	8	0	N		Y							N	N				pkDEFAULT
 slide_model	2	vendor_name	Vendor Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Vendor for this slide model		
 slide_model	3	model_name	Model Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Model name of these slides		
@@ -286,9 +331,9 @@ MA_quantitation_type	2	quantitation_type_name	Quantitation Type Name	varchar	50	
 MA_quantitation_type	3	quantitation_type_desc	Quantitation Type Description	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Quantitation Type Description		
 MA_quantitation_type	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 MA_quantitation_type	5	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-MA_quantitation_type	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-MA_quantitation_type	7	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N			
-MA_quantitation_type	8	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N			
+MA_quantitation_type	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+MA_quantitation_type	7	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+MA_quantitation_type	8	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 MA_quantitation_type	9	record_status	Record Status	char	1	0	Y	N	N							N	N			
 MA_GetExpression	1	input_form_format	Input Form Format									N	optionlist		refreshDocument()	Y	Y	N	Options for level of detail and layout for this input form	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type = 'input_form_options' ORDER BY sort_order,option_value"
 MA_GetExpression	2	condition_id	Conditions									N	multioptionlist	6		Y	Y	N	Select desired Conditions to include in query.  Multiple items may be selected.  At least one must be selected	MANUAL
