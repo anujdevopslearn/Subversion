@@ -636,17 +636,17 @@ DROP INDEX search_hit.idx_search_hit_probability
 */
 
 /*
-CREATE NONCLUSTERED INDEX idx_biosequence_name ON dbo.biosequence ( biosequence_set_id,biosequence_name ) WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_search_file_root ON dbo.search ( search_batch_id,file_root ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_biosequence_name ON dbo.biosequence ( biosequence_set_id,biosequence_name ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_search_file_root ON dbo.search ( search_batch_id,file_root ) --WITH DROP_EXISTING
 -- This index is needed for load_proteomics_experiment.pl to be fast enough.  It can degrade
 -- the load speed significantly.  Unfortunately, the index fragments during the load.
-CREATE NONCLUSTERED INDEX idx_msms_spectrum_file_root ON dbo.msms_spectrum ( msms_spectrum_file_root ) WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_search_hit_search_index ON dbo.search_hit ( search_id,hit_index ) WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_search_hit_reference ON dbo.search_hit ( reference ) WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_search_hit_peptide ON dbo.search_hit ( peptide ) WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_search_hit_peptide_string ON dbo.search_hit ( peptide_string ) WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_search_hit_cross_corr ON dbo.search_hit ( cross_corr ) WITH DROP_EXISTING
-CREATE NONCLUSTERED INDEX idx_search_hit_probability ON dbo.search_hit ( probability ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_msms_spectrum_file_root ON dbo.msms_spectrum ( msms_spectrum_file_root ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_search_hit_search_index ON dbo.search_hit ( search_id,hit_index ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_search_hit_reference ON dbo.search_hit ( reference ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_search_hit_peptide ON dbo.search_hit ( peptide ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_search_hit_peptide_string ON dbo.search_hit ( peptide_string ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_search_hit_cross_corr ON dbo.search_hit ( cross_corr ) --WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_search_hit_probability ON dbo.search_hit ( probability ) --WITH DROP_EXISTING
 
 */
 
