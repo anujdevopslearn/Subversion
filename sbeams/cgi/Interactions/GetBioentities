@@ -218,7 +218,7 @@ sub handle_request {
 
   #### Build ORGANISM_ID constraint
   my $organism_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"IG.organism_id",
+    constraint_column=>"O.organism_id",
     constraint_type=>"int_list",
     constraint_name=>"Organisms",
     constraint_value=>$parameters{organism_id} );
@@ -401,6 +401,7 @@ sub handle_request {
       #### Show the SQL that will be or was executed
       $sbeams->display_sql(sql=>$sql) if ($show_sql);
 
+      print STDERR "$sql\n";
       #### Fetch the results from the database server
       $sbeams->fetchResultSet(
         sql_query=>$sql,
