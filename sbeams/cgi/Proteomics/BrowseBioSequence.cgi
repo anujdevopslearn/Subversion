@@ -306,6 +306,15 @@ sub handle_request {
   return if ($fav_codon_frequency_clause eq '-1');
 
 
+  #### Build PROTEIN LENGTH constraint
+  my $protein_length_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"DATALENGTH(BS.biosequence_seq)",
+    constraint_type=>"flexible_int",
+    constraint_name=>"Protein Length",
+    constraint_value=>$parameters{protein_length_constraint} );
+  return if ($protein_length_clause eq '-1');
+
+
   #### Build NUMBER OF TRANSMEMBRANE REGIONS constraint
   my $n_transmembrane_regions_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"BS.n_transmembrane_regions",
@@ -388,6 +397,7 @@ sub handle_request {
     @additional_columns = (
       ["fav_codon_frequency","STR(BS.fav_codon_frequency,10,3)","Favored Codon Frequency"],
       ["n_transmembrane_regions","BS.n_transmembrane_regions","Number of Transmembrane Regions"],
+      ["protein_length","MIN(DATALENGTH(BS.biosequence_seq))","Protein Length"],
       @additional_columns,
     );
   }
@@ -446,6 +456,7 @@ sub handle_request {
       $cellular_component_clause
       $n_transmembrane_regions_clause
       $fav_codon_frequency_clause
+      $protein_length_clause
       $order_by_clause
    ~;
 
