@@ -2,12 +2,18 @@
 
 UPDATE table_column
   SET optionlist_query = '
-SELECT search_batch_id,username + '' - '' + experiment_tag + '' -> '' + set_tag
+SELECT DISTINCT search_batch_id,username + '' - '' + experiment_tag + '' -> '' + set_tag,username,experiment_tag,set_tag
   FROM $TBPR_PROTEOMICS_EXPERIMENT PE
   JOIN $TBPR_SEARCH_BATCH SB ON ( PE.experiment_id = SB.experiment_id )
   JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
   JOIN $TB_USER_LOGIN UL ON ( PE.contact_id = UL.contact_id )
+  LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
+       ON ( PE.project_id = UPP.project_id AND UPP.contact_id=''$contact_id'' )
+  LEFT JOIN $TB_GROUP_PROJECT_PERMISSION GPP
+       ON ( PE.project_id = GPP.project_id )
+  LEFT JOIN $TB_USER_WORK_GROUP UWG ON ( GPP.work_group_id = UWG.work_group_id AND UWG.contact_id=''$contact_id'' )
  WHERE PE.record_status != ''D''
+   AND ( UPP.privilege_id<=40 OR GPP.privilege_id<=40 OR PE.contact_id=''$contact_id'' )
  ORDER BY username,experiment_tag,set_tag'
  WHERE (   table_name = 'PR_GetSearchHits'
         OR table_name = 'PR_GetSearch'
