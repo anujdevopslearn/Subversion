@@ -111,7 +111,7 @@ sub returnTableInfo {
             return qq~
 		SELECT I.*
 		  FROM $TBIN_INTERACTION I
-		 WHERE I.record_status!='D'
+		 --WHERE I.record_status!='D'
             ~;
         }
 
@@ -150,8 +150,9 @@ sub returnTableInfo {
         if ($info_key eq "BASICQuery") {
             return qq~
 		SELECT B.bioentity_id,
-		        O.organism_name, bioentity_common_name, bioentity_aliases, BS.biosequence_name,
-			  BT.bioentity_type_name, B.comment
+		        O.organism_name, BT.bioentity_type_name, bioentity_common_name,
+                        bioentity_canonical_name, bioentity_full_name, bioentity_aliases,
+                        BS.biosequence_name,B.comment
 		  FROM $TBIN_BIOENTITY B
 		  LEFT JOIN $TB_ORGANISM O ON ( B.organism_id = O.organism_id )
 		  LEFT JOIN $TBIN_BIOENTITY_TYPE BT ON ( B.bioentity_type_id = BT.bioentity_type_id )
