@@ -254,15 +254,15 @@ sub handle_request {
 
 
   #### Build BIOENTITY_NAME constraint
-  my $bioentity_name_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"bioentity_name",
+  my $bioentity_common_name_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"bioentity_common_name",
     constraint_type=>"plain_text",
     constraint_name=>"BioEntity Name",
-    constraint_value=>$parameters{bioentity_name} );
-  return if ($bioentity_name_clause eq '-1');
+    constraint_value=>$parameters{bioentity_common_name} );
+  return if ($bioentity_common_name_clause eq '-1');
   #### Translate to look in both sides
-  if ($bioentity_name_clause =~ /(\s+AND )(bioentity_name LIKE .+)$/) {
-    $bioentity_name_clause = $1."( BE1.$2 OR BE2.$2 )";
+  if ($bioentity_common_name_clause =~ /(\s+AND )(bioentity_common_name LIKE .+)$/) {
+    $bioentity_common_name_clause = $1."( BE1.$2 OR BE2.$2 )";
   }
 
 
@@ -316,19 +316,19 @@ sub handle_request {
 
   @column_array = (
     ["interaction_id","I.interaction_id","Interaction ID"],
-    ["bioentity_name1","BE1.bioentity_name","BioEntity 1 Name"],
-    ["bioentity_name_link1","'[Edit]'","BE1 Link"],
-#    ["bioentity1_canonical_name","ISNULL(BE1.bioentity_alias,BE1.bioentity_name)","BioEntity 1 Canonical Name"],
-    ["bioentity1_alias","BE1.bioentity_alias","BioEntity 1 Alias"],
+    ["bioentity_common_name1","BE1.bioentity_common_name","BioEntity 1 Name"],
+    ["bioentity_common_name_link1","'[Edit]'","BE1 Link"],
+#    ["bioentity1_canonical_name","ISNULL(BE1.bioentity_aliases,BE1.bioentity_common_name)","BioEntity 1 Canonical Name"],
+    ["bioentity1_alias","BE1.bioentity_aliases","BioEntity 1 Alias"],
     ["bioentity1_state_name","BES1.bioentity_state_name","BioEntity 1 State Name"],
     ["regulatory_feature_name1","RF1.regulatory_feature_name","Regulatory Feature 1 Name"],
     ["interaction_type_name","IT.interaction_type_name","Interaction Type Name"],
-    ["bioentity_name2","BE2.bioentity_name","BioEntity 2 Name"],
+    ["bioentity_common_name2","BE2.bioentity_common_name","BioEntity 2 Name"],
     ["bioentity2_name_link","'[Edit]'","BE2 Link"],
-#    ["bioentity2_canonical_name","ISNULL(BE2.bioentity_alias,BE2.bioentity_name)","BioEntity 2 Canonical Name"],
-    ["bioentity2_alias","BE2.bioentity_alias","BioEntity 2 Alias"],
+#    ["bioentity2_canonical_name","ISNULL(BE2.bioentity_aliases,BE2.bioentity_common_name)","BioEntity 2 Canonical Name"],
+    ["bioentity2_alias","BE2.bioentity_aliases","BioEntity 2 Alias"],
     ["bioentity2_state_name","BES2.bioentity_state_name","BioEntity 2 State Name"],
-    ["bioentity_name_link1","'[Edit]'","BE1 Link"],
+    ["bioentity_common_name_link1","'[Edit]'","BE1 Link"],
     ["regulatory_feature_name2","RF2.regulatory_feature_name","Regulatory Feature 2 Name"],
     ["bioentity_id1","BE1.bioentity_id","BioEntity 1 ID"],
     ["bioentity_id2","BE2.bioentity_id","BioEntity 2 ID"],
@@ -382,7 +382,7 @@ sub handle_request {
      $organism_clause
      $interaction_group_clause
      $bioentity_clause
-     $bioentity_name_clause
+     $bioentity_common_name_clause
      $interaction_type_clause
      $limit_clause->{trailing_limit_clause}
     ~;
@@ -422,8 +422,8 @@ sub handle_request {
     	       'BE2 Link' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IN_Bioentity&bioentity_id=\%$colnameidx{bioentity_id2}V",
     	       'BE2 Link_ATAG' => 'TARGET="Win1"',
 
-    	       'BioEntity 1 Name' => "$base_url?bioentity_name=\%$colnameidx{bioentity_name1}V&apply_action=$pass_action",
-    	       'BioEntity 2 Name' => "$base_url?bioentity_name=\%$colnameidx{bioentity_name2}V&apply_action=$pass_action",
+    	       'BioEntity 1 Name' => "$base_url?bioentity_common_name=\%$colnameidx{bioentity_common_name1}V&apply_action=$pass_action",
+    	       'BioEntity 2 Name' => "$base_url?bioentity_common_name=\%$colnameidx{bioentity_common_name2}V&apply_action=$pass_action",
   );
 
 
