@@ -294,10 +294,10 @@ misc_option	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id
 misc_option	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 misc_option	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 organism	1	organism_id	Organism ID	int	4	0	N		Y							N	N				pkDEFAULT
-organism	2	organism_name	Organism Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Name of the organism		
+organism	2	organism_name	Organism Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Common name of the organism (e.g., Human)		
 organism	3	ncbi_taxonomy_id	NCBI Taxonomy ID	int	10	0	Y		N			N	text	10		Y	Y	N	Official NCBI Taxonomy ID		
-organism	4	genus	Genus	varchar	100	0	Y		N			N	text	50		Y	Y	N	NCBI Taxonomy Genus		
-organism	5	species	Species	varchar	100	0	Y		N			N	text	50		Y	Y	N	NCBI Taxonomy Species		
+organism	4	genus	Genus	varchar	100	0	Y		N			N	text	50		Y	Y	N	NCBI Taxonomy Genus (e.g., Homo)		
+organism	5	species	Species	varchar	100	0	Y		N			N	text	50		Y	Y	N	NCBI Taxonomy Species (e.g., Sapiens)		
 organism	6	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
 organism	7	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Number to control the default sort order		
 organism	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
