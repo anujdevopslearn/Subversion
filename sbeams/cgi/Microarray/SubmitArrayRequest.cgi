@@ -298,7 +298,7 @@ sub printEntryForm {
 	SELECT column_name,column_title,is_required,input_type,input_length,
 	       is_data_column,column_text,optionlist_query
 	  FROM $TB_TABLE_COLUMN
-	 WHERE table_name='$DB_TABLE_NAME'
+	 WHERE table_name='$TABLE_NAME'
 	   AND is_data_column='Y'
 	 ORDER BY column_index
     ~;
@@ -1637,7 +1637,7 @@ sub printCompletedEntry {
 	SELECT column_name,column_title,is_required,input_type,input_length,
 	       is_display_column,column_text,optionlist_query
 	  FROM $TB_TABLE_COLUMN
-	 WHERE table_name='$DB_TABLE_NAME'
+	 WHERE table_name='$TABLE_NAME'
 	   AND is_display_column='Y'
 	 ORDER BY column_index
     ~;
