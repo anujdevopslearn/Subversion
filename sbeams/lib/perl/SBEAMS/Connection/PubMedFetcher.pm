@@ -81,7 +81,7 @@ sub getArticleInfo {
     return 0;
   }
 
-
+	$info = ();
   #### Set up the XML parser and parse the returned XML
   my $parser = new XML::Parser(
 			       Handlers => {
@@ -95,6 +95,7 @@ sub getArticleInfo {
 
   #### Generate a synthetic PublicationName based on AuthorList
   if ($info{AuthorList} && $info{PublishedYear}) {
+		$info{AuthorList} =~ s/^\,//;
     my $publication_name = '';
     my @authors = split(', ',$info{AuthorList});
     my $n_authors = scalar(@authors);
@@ -108,16 +109,16 @@ sub getArticleInfo {
     $publication_name = $authors[0].' et al.' if ($n_authors > 3);
     $publication_name .= ' ('.$info{PublishedYear}.')';
     $info{PublicationName} = $publication_name;
+		
   }
 
 
   #### If verbose mode, print out everything we gathered
   if ($verbose) {
     while (my ($key,$value) = each %info) {
-      print "$key=$value=\n";
+      print "publication: $key=$value=\n";
     }
   }
-
   return \%info;
 
 }
@@ -172,9 +173,8 @@ sub end_element {
 sub characters {
   my $handler = shift;
   my $string = shift;
-
   my $context = $handler->{Context}->[-1];
-
+	
   my %element_type = (
     PMID => 'reg',
     ArticleTitle => 'reg',
@@ -190,8 +190,9 @@ sub characters {
   if ($element_type{$context} eq 'reg') {
     $info{$context} = $string;
   }
-
+   
   if ($element_type{$context} =~ /^append\((.+)\)(.*)$/) {
+				
     my $prepend = $2 || '';
     if (defined($info{$1})) {
       $info{$1} .= $prepend;
@@ -200,7 +201,6 @@ sub characters {
     }
     $info{$1} .= $string;
   }
-
   if ($context eq 'Year' && $handler->{Context}->[-2] eq 'PubDate') {
     $info{PublishedYear} = $string;
   }
