@@ -1,10 +1,10 @@
 
 Notes add a new module:
 
-set TEMPLATE = Biosap
-set DEST = SNP
-set TMPLTAG = BS
-set TAG = SN
+set TEMPLATE = SNP
+set DEST = BEDB
+set TMPLTAG = SN
+set TAG = BE
 
 cd /net/dblocal/www/html/dev2/sbeams/lib/perl/SBEAMS
 cp -p $TEMPLATE.pm $DEST.pm
@@ -12,6 +12,7 @@ cp -p -r $TEMPLATE $DEST
 replaceall.pl $TEMPLATE $DEST $DEST.pm
 cd $DEST
 replaceall.pl $TEMPLATE $DEST *.pm
+replaceall.pl TB${TMPLTAG}_ TB${TAG}_ *.pm
 rm -r CVS
 
 
@@ -21,6 +22,7 @@ cd $DEST
 replaceall.pl $TEMPLATE $DEST *.cgi
 rm -r CVS
 replaceall.pl sbeams$TMPLTAG sbeams$TAG *.cgi
+replaceall.pl TB${TMPLTAG}_ TB${TAG}_ *.cgi
 chmod a+x *.cgi
 
 cd /net/dblocal/www/html/dev2/sbeams/cgi
@@ -32,6 +34,7 @@ ed TableInfo.pm to add Tables for new plugin
 
 cd /net/dblocal/www/html/dev2/sbeams/lib/perl/SBEAMS/$DEST
 ed TableInfo.pm
+ed Tables.pm
 
 
 cd /net/dblocal/www/html/dev2/sbeams/cgi
