@@ -1317,7 +1317,7 @@ sub updateSampleTables {
         $sql = qq~
             SELECT S.sample_id
             FROM $TBAT_SAMPLE S
-            WHERE SB.search_batch_id = '$search_batch_id[$i]'
+            WHERE S.search_batch_id = '$search_batch_id[$i]'
             AND S.record_status != 'D'
         ~;
 
