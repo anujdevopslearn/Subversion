@@ -88,18 +88,19 @@ IN_publication	24	record_status	Record Status	char	1	0	N	N	N							N	N
 IN_bioentity	1	bioentity_id	BioEntity ID	int	4	0	N		Y							N	N				pkDEFAULT
 IN_bioentity	2	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	Y	Organism for this BioEntity	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 IN_bioentity	3	bioentity_common_name	BioEntity Common Name	varchar	255	0	Y		N			N	text	50		Y	Y	Y	"Common name of this BioEntity. Often the gene symbol, eg. TLR2"		
-IN_bioentity	4	bioentity_canonical_name	BioEntity Canonical Name	varchar	255	0	Y		N			N	text	50		Y	Y	N	Canonical name of this BioEntity. This is the most offical ref. for this entitiy. Use of a RefSeq identifier is recommended (eg. NP_001203)		
+IN_bioentity	4	bioentity_canonical_name	BioEntity Canonical Name	varchar	255	0	Y		N			N	text	50		Y	Y	Y	Canonical name of this BioEntity. This is the most offical ref. for this entitiy. Use of a RefSeq identifier is recommended (eg. NP_001203)		
 IN_bioentity	5	bioentity_full_name	BioEntity Full Name	varchar	255	0	Y		N			N	text	50		Y	Y	N	Full name of this BioEntity (eg. Toll-like Receptor 2)		
 IN_bioentity	6	bioentity_aliases	BioEntity Aliases	varchar	255	0	Y		N			N	text	50		Y	Y	N	Comma seperated list of other Aliases for this BioEntity		
-IN_bioentity	7	bioentity_type_id	BioEntity Type	int	4	0	N		N	IN_bioentity_type	bioentity_type_id	Y	optionlist			Y	Y	Y	Type of the BioEntity	"SELECT bioentity_type_id, bioentity_type_name FROM $TBIN_BIOENTITY_TYPE ORDER BY sort_order,bioentity_type_name"	
-IN_bioentity	8	biosequence_id	BioSequence ID	int	4	0	Y		N	IN_biosequence	biosequence_id	N	optionlist			N	N	N	BioSequence identification	"SELECT 1,2"	
-IN_bioentity	9	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-IN_bioentity	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-IN_bioentity	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-IN_bioentity	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-IN_bioentity	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-IN_bioentity	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-IN_bioentity	15	record_status	Record Status	char	1	0	N	N	N							N	N				
+IN_bioentity	7	bioentity_member_ids	BioEnitity Members	varchar	255	0	Y		N	IN_bioentity_member	bioentity_member_id	N	multilink			Y	Y	N	List of BioEntities known to be members of this BioEntity Complex	"SELECT bioentity_id, bioentity_common_name + ' ' + ISNULL(BT.bioentity_type_name,'BioEntity Type?') + ' (' + ISNULL(O.organism_name,'Organism?') +')' AS ""bioentity_descriptor"" FROM $TBIN_BIOENTITY BE LEFT JOIN $TBIN_BIOENTITY_TYPE BT ON ( BE.bioentity_type_id = BT.bioentity_type_id ) LEFT JOIN $TB_ORGANISM O ON ( BE.organism_id = O.organism_id ) ORDER BY bioentity_common_name"	
+IN_bioentity	8	bioentity_type_id	BioEntity Type	int	4	0	N		N	IN_bioentity_type	bioentity_type_id	Y	optionlist			Y	Y	Y	Type of the BioEntity	"SELECT bioentity_type_id, bioentity_type_name FROM $TBIN_BIOENTITY_TYPE ORDER BY sort_order,bioentity_type_name"	
+IN_bioentity	9	biosequence_id	BioSequence ID	int	4	0	Y		N	IN_biosequence	biosequence_id	N	optionlist			N	N	N	BioSequence identification	"SELECT 1,2"	
+IN_bioentity	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IN_bioentity	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IN_bioentity	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+IN_bioentity	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IN_bioentity	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+IN_bioentity	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+IN_bioentity	16	record_status	Record Status	char	1	0	N	N	N							N	N				
 IN_bioentity_type	1	bioentity_type_id	BioEntity Type ID	int	4	0	N		Y							N	N				pkDEFAULT
 IN_bioentity_type	2	bioentity_type_name	BioEntity Type Name	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Name of this BioEntity Type		
 IN_bioentity_type	3	bioentity_type_description	Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioEntity Type		
@@ -253,7 +254,7 @@ IN_bioentity_attribute_type	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_
 IN_bioentity_attribute_type	12	record_status	Record Status	char	1	0	N	N	N							N	N				
 IN_assay	1	assay_id	Assay ID	int	4	0	N		Y							N	N				pkDEFAULT
 IN_assay	2	assay_type_id	Assay Type	int	4	0	N		N	IN_assay_type	assay_type_id	Y	optionlist			Y	Y	N	Assay Type	"SELECT assay_type_id, assay_type_name FROM $TBIN_ASSAY_TYPE ORDER BY sort_order,assay_type_name"	
-IN_assay	3	sample_type_id	Sample Type	int	4	0	Y		N	IN_sample_type	sample_type_id	N	optionlist			Y	Y	N	Sample Type	"SELECT sample_type_id, sample_type_name FROM $TBIN_SAMPLE_TYPE ORDER BY sort_order,sample_type_name"	
+IN_assay	3	sample_type_id	Sample Type	int	4	0	Y		N	IN_sample_type	sample_type_id	N	optionlist			Y	Y	N	Sample Type	"SELECT sample_type_id, sample_type_name FROM $TBIN_SAMPLE_TYPE ORDER BY sort_order,sample_type_name"
 IN_assay	4	publication_id	Publication	int	4	0	Y		N	IN_publication	publication_id	N	optionlist			Y	Y	N	Publication	"SELECT publication_id, publication_name FROM $TBIN_PUBLICATION ORDER BY publication_name"
 IN_assay	5	assay_name	Assay Name	varchar	255	0	N		N			Y	text	40		Y	Y	Y	Name of this Assay	
 IN_assay	6	assay_description	Description	varchar	255	0	N		N			Y	textarea	4		Y	Y	N	Longer description of this Assay	
@@ -275,3 +276,12 @@ IN_GetInteractions	6	bioentity_common_name	BioEntity Common Name Constraint					
 IN_GetInteractions	7	interaction_type_id	Interaction Types									N	multioptionlist	4		Y	Y	N	"Constrain Interactions to selected Interaction Types.  Multiple Interaction Types may be selected.  If no Interaction Types are selected, ALL Interaction Groups are searched."	"SELECT interaction_type_id, interaction_type_name FROM $TBIN_INTERACTION_TYPE ORDER BY interaction_type_name"
 IN_GetInteractions	8	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBIN_QUERY_OPTION WHERE option_type = 'GI_display_options' ORDER BY sort_order,option_value"
 IN_GetInteractions	9	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 5000 rows."	
+IN_bioentity_member	1	bioentity_member_id	BioEntity Member	int	4	0	N		Y			N				N	N	N	BioEntity Member ID	
+IN_bioentity_member	2	parent_bioentity_id	BioEntity Member Parent	int	4	0	Y		N	IN_bioentity	bioentity_id					N	N		BioEntity Member Parent ID	
+IN_bioentity_member	3	child_bioentity_id	BioEntity Member Parent	int	4	0	Y		N	IN_bioentity	bioentity_id					N	N		BioEntity Member Child ID	
+IN_bioentity_member	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+IN_bioentity_member	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N			
+IN_bioentity_member	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+IN_bioentity_member	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
+IN_bioentity_member	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
+IN_bioentity_member	9	record_status	Record Status	char	1	0	N	N	N							N	N			
