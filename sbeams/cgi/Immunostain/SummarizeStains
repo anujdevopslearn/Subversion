@@ -277,7 +277,7 @@ foreach my $p (keys %parameters)
 
   #### Build ANTIBODY constraint
   my $antibody_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"SS.antibody_id",
+    constraint_column=>"AC.antibody_id",
     constraint_type=>"int_list",
     constraint_name=>"Antibodies",
     constraint_value=>$parameters{antibody_id} );
@@ -399,7 +399,7 @@ foreach my $p (keys %parameters)
 	       ON ( AC.assay_channel_id = SCP2.assay_channel_id AND SCP1.expression_level_id = 2 AND SCP2.structural_unit_id = SCP1.structural_unit_id)
 		LEFT JOIN $TBIS_ASSAY_UNIT_EXPRESSION SCP3
 	       ON ( AC.assay_channel_id = SCP3.assay_channel_id AND SCP3.expression_level_id = 3 AND SCP3.structural_unit_id  = SCP1.structural_unit_id)
-	INNER JOIN $TBIS_ANTIBODY A ON ( SS.antibody_id = A.antibody_id )
+	INNER JOIN $TBIS_ANTIBODY A ON ( AC.antibody_id = A.antibody_id )
 	  LEFT JOIN $TBIS_ANTIGEN AG ON ( A.antigen_id = AG.antigen_id )
 	  LEFT JOIN $TBIS_BIOSEQUENCE BS ON ( AG.biosequence_id = BS.biosequence_id )
 	  LEFT JOIN Immunostain.dbo.biosequence_refseq_association BSRSA ON ( BS.biosequence_accession = BSRSA.LocusLinkID )
@@ -487,8 +487,8 @@ foreach my $p (keys %parameters)
     #### If the action contained QUERY, then fetch the results from
     #### the database
     if ($apply_action =~ /QUERY/i) {
-
-      #### Show the SQL that will be or was executed
+		
+	   #### Show the SQL that will be or was executed
       $sbeams->display_sql(sql=>$sql) if ($show_sql);
 			#### this always happens
       #### Fetch the results from the database server
