@@ -594,7 +594,8 @@ sub handle_request {
     ["peptide_string","peptide_string","Peptide"],
     ["isoelectric_point","STR(isoelectric_point,8,3)","Calc pI"],
     ["gravy_score","STR(gravy_score,8,3)","Gravy Score"],
-    ["quantitation","$quant_format_clause","Quant"],
+    ["quantitation_dat","$quant_format_clause","DAT Quant"],
+    ["quantitation_mzXML","$quant_format_clause","mzXML Quant"],
     #["assumed_charge","S.assumed_charge","assumed_charge"],
     ["annotation_label","label_desc","Annot"],
     ["search_batch_id","SB.search_batch_id","search_batch_id"],
@@ -726,8 +727,10 @@ sub handle_request {
 	       'Annot_ISNULL' => ' [Add] ',
                'bh' => "$CGI_BASE_DIR/Proteomics/SetBestHit.cgi?search_id=\%$colnameidx{search_id}V&search_hit_id=\%$colnameidx{search_hit_id}V",
 	       'bh_ATAG' => 'TARGET="Win1"',
-               'Quant' => "$CGI_BASE_DIR/Proteomics/Xpress.cgi?quantitation_id=\%$colnameidx{quantitation_id}V&OutFile=\%$colnameidx{file_root}V",
-	       'Quant_ATAG' => 'TARGET="Win1"',
+               'DAT Quant' => "$CGI_BASE_DIR/Proteomics/Xpress.cgi?quantitation_id=\%$colnameidx{quantitation_id}V&OutFile=\%$colnameidx{file_root}V",
+	       'DAT Quant_ATAG' => 'TARGET="Win1"',
+               'mzXML Quant' => "$CGI_BASE_DIR/Proteomics/Xpress-mzXML.cgi?quantitation_id=\%$colnameidx{quantitation_id}V&OutFile=\%$colnameidx{file_root}V",
+	       'mzXML Quant_ATAG' => 'TARGET="Win1"',
   );
 
 
