@@ -921,7 +921,7 @@ sub processEntryForm {
     # Execute the SQL statement extract status and PK from result
     my @returned_information = $sbeams->applySqlChange("$sql_query",
       $current_contact_id,
-      $DB_TABLE_NAME,"$PK_COLUMN_NAME=$parameters{$PK_COLUMN_NAME}");
+      $TABLE_NAME,"$PK_COLUMN_NAME=$parameters{$PK_COLUMN_NAME}");
     my $returned_request_status = shift @returned_information;
     my $returned_request_PK = shift @returned_information;
 
@@ -965,7 +965,7 @@ sub processEntryForm {
 
           # Execute the SQL statement extract status and PK from result
           my @returned_information = $sbeams->applySqlChange("$sql_query",
-              $current_contact_id,$TBIJ_ARRAY_REQUEST_SLIDE,
+              $current_contact_id,'IJ_array_request_slide',
               qq~array_request_slide_id=$table_parameters{"slide${element}id"}~);
           my $returned_slide_status = shift @returned_information;
           #my $returned_slide_PK = shift @returned_information;
@@ -1010,7 +1010,7 @@ sub processEntryForm {
 
             # Execute the SQL statement extract status and PK from result
             my @returned_information = $sbeams->applySqlChange("$sql_query",
-              $current_contact_id,$TBIJ_ARRAY_REQUEST_SLIDE,
+              $current_contact_id,'IJ_array_request_slide',
               qq~array_request_slide_id=$table_parameters{"slide${element}id"}~);
             my $returned_slide_status = shift @returned_information;
             my $returned_slide_PK = shift @returned_information;
@@ -1057,7 +1057,7 @@ sub processEntryForm {
 
               # Execute the SQL statement extract status and PK from result
               my @returned_information = $sbeams->applySqlChange("$sql_query",
-                $current_contact_id,$TBIJ_ARRAY_REQUEST_SAMPLE,
+                $current_contact_id,'IJ_array_request_sample',
                 qq~array_request_sample_id=$table_parameters{"sample${isample}id_$element"}~);
 
               my $returned_sample_status = shift @returned_information;
@@ -1118,7 +1118,7 @@ sub processEntryForm {
 
                 # Execute the SQL statement extract status and PK from result
                 my @returned_information = $sbeams->applySqlChange("$sql_query",
-                  $current_contact_id,$TBIJ_ARRAY_REQUEST_SAMPLE,
+                  $current_contact_id,'IJ_array_request_sample',
                   qq~array_request_sample_id=$table_parameters{"sample${isample}id_$element"}~);
 
                 my $returned_sample_status = shift @returned_information;

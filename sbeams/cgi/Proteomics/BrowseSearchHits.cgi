@@ -143,14 +143,14 @@ sub printEntryForm {
       $parameters{xcorr_charge1} = ">4.0";
       $parameters{xcorr_charge2} = ">4.5";
       $parameters{xcorr_charge3} = ">5.0";
-      $parameters{sort_order} = "experiment_tag,set_tag,S.file_root,SH.cross_corr_rank";
+      $parameters{sort_order} = "experiment_tag,set_tag,S.file_root,SH.cross_corr_rank,SH.hit_index";
     }
 
 
     #### If this is a ShowSearch query and sort_order is undefined (not just ""),
     #### then set to a likely default
     if (($TABLE_NAME eq "ShowSearch") && (!defined($parameters{sort_order})) ) {
-      $parameters{sort_order} = "S.file_root,experiment_tag,set_tag,SH.cross_corr_rank";
+      $parameters{sort_order} = "S.file_root,experiment_tag,set_tag,SH.cross_corr_rank,SH.hit_index";
     }
 
 
@@ -343,14 +343,14 @@ sub printEntryForm {
         print qq!
           <TD><SELECT NAME="$column_name" SIZE=$input_length $onChange>
           <OPTION VALUE=""></OPTION>
-          $optionlists{$column_name}</SELECT></TR>
+          $optionlists{$column_name}</SELECT></TD>
         !;
       }
 
       if ($input_type eq "multioptionlist") {
         print qq!
           <TD><SELECT NAME="$column_name" MULTIPLE SIZE=$input_length $onChange>
-          $optionlists{$column_name}</SELECT></TR>
+          $optionlists{$column_name}</SELECT></TD>
         !;
       }
 
@@ -637,6 +637,7 @@ sub printEntryForm {
 
 
       #### Define the desired columns
+      #### [friendly name used in url_cols,SQL,displayed column title]
       my @column_array = (
         ["search_batch_id","SB.search_batch_id","search_batch_id"],
         ["msms_scan_id","S.msms_scan_id","msms_scan_id"],
@@ -656,10 +657,13 @@ sub printEntryForm {
         ["next_dCn","STR(SH.next_dCn,5,3)","dCn"],
         ["prelim_score","STR(SH.prelim_score,8,1)","Sp"],
         ["ions","STR(SH.identified_ions,2,0) + '/' + STR(SH.total_ions,3,0)","Ions"],
+        ["ions_old","STR(SH.identified_ions,2,0) + '/' + STR(SH.total_ions,3,0)","!Ions"],
         ["reference","reference","Reference"],
         ["additional_proteins","additional_proteins","N+"],
+        ["additional_proteins_old","additional_proteins","!N+"],
         ["peptide_string","peptide_string","Peptide"],
         ["peptide","peptide","actual_peptide"],
+        ["biosequence_set_id","BSS.biosequence_set_id","biosequence_set_id"],
         ["set_path","BSS.set_path","set_path"],
         ["isoelectric_point","STR(isoelectric_point,8,3)","pI"],
         ["quantitation","STR(ICAT_light,5,2) + ':' + STR(ICAT_heavy,5,2)","Quant"],
@@ -731,18 +735,21 @@ sub printEntryForm {
 		   'file_root_ATAG' => 'TARGET="Win1"',
                    'Reference' => "http://regis/cgi-bin/consensus_html4?Ref=%V&Db=\%$colnameidx{set_path}V&Pep=\%$colnameidx{peptide}V&MassType=0",
 		   'Reference_ATAG' => 'TARGET="Win1"',
-####                   'Ions' => "http://regis/cgi-bin/displayions_html5?Dta=/data/search/\%$colnameidx{data_location}V/\%$colnameidx{fraction_tag}V/\%$colnameidx{file_root}V.dta&MassType=0&NumAxis=1&Pep=\%$colnameidx{peptide}V",
-
+                   '!Ions' => "http://regis/cgi-bin/displayions_html5?Dta=/data/search/\%$colnameidx{data_location}V/\%$colnameidx{fraction_tag}V/\%$colnameidx{file_root}V.dta&MassType=0&NumAxis=1&Pep=\%$colnameidx{peptide}V",
+		   '!Ions_ATAG' => 'TARGET="Win1"',
                    'Ions' => "$CGI_BASE_DIR/Proteomics/ShowSpectrum.cgi?msms_scan_id=\%$colnameidx{msms_scan_id}V&search_batch_id=\%$colnameidx{search_batch_id}V&peptide=\%$colnameidx{peptide_string}V",
-
 		   'Ions_ATAG' => 'TARGET="Win1"',
-                   'N+' => "http://regis/cgi-bin/blast_html4?Db=\%$colnameidx{set_path}V&Pep=\%$colnameidx{peptide}V&MassType=0",
+                   '!N+' => "http://regis/cgi-bin/blast_html4?Db=\%$colnameidx{set_path}V&Pep=\%$colnameidx{peptide}V&MassType=0",
+		   '!N+_ATAG' => 'TARGET="Win1"',
+                   'N+' => "$CGI_BASE_DIR/Proteomics/BrowseBioSequence.cgi?biosequence_set_id=\%$colnameidx{biosequence_set_id}V&biosequence_seq_constraint=*\%$colnameidx{peptide}V*&display_options=MaxSeqWidth&search_hit_id=\%$colnameidx{search_hit_id}V&apply_action=HIDEQUERY",
 		   'N+_ATAG' => 'TARGET="Win1"',
                    'Peptide' => "http://www.ncbi.nlm.nih.gov/blast/Blast.cgi?PROGRAM=blastp&DATABASE=nr&OVERVIEW=TRUE&EXPECT=1000&FILTER=L&QUERY=\%$colnameidx{peptide}V",
 		   'Peptide_ATAG' => 'TARGET="Win1"',
                    'Annot' => "$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=search_hit_annotation&search_hit_annotation_id=\%$colnameidx{search_hit_annotation_id}V&search_hit_id=\%$colnameidx{search_hit_id}V&ShowEntryForm=1",
 		   'Annot_ATAG' => 'TARGET="Win1"',
 		   'Annot_ISNULL' => ' [Add] ',
+                   'bh' => "$CGI_BASE_DIR/Proteomics/SetBestHit.cgi?search_id=\%$colnameidx{search_id}V&search_hit_id=\%$colnameidx{search_hit_id}V",
+		   'bh_ATAG' => 'TARGET="Win1"',
       );
 
       %hidden_cols = ('data_location' => 1,
@@ -753,11 +760,11 @@ sub printEntryForm {
                       'fraction_tag' => 1,
                       'actual_peptide' => 1,
                       'set_path' => 1,
+                      'biosequence_set_id' => 1,
                       'search_hit_annotation_id' => 1,
       );
 
 		   #######'Reference_ATAG' => "TARGET=\"Win1\" ONMOUSEOVER=\"window.status='%V'; return true\"",
-
 
     } else {
       $apply_action="BAD SELECTION";

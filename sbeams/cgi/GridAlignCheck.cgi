@@ -206,8 +206,13 @@ SELECT
   LEFT JOIN array_scan ASCAN ON ( A.array_id = ASCAN.array_id )
   LEFT JOIN array_quantitation AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
  WHERE AR.project_id=$parameters{project_id}
---   AND AQ.data_flag='OK'
- ORDER BY A.array_id
+-- AND AQ.data_flag='OK'
+   AND AQ.array_quantitation_id IS NOT NULL
+   AND AR.record_status != 'D'
+   AND A.record_status != 'D'
+   AND ASCAN.record_status != 'D'
+   AND AQ.record_status != 'D'
+ ORDER BY A.array_name
      ~;
 
       my $base_url = "$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=";
@@ -246,6 +251,11 @@ SELECT
 	  LEFT JOIN array_quantitation AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
 	 WHERE AR.project_id=$parameters{project_id}
 	   AND AQ.data_flag='OK'
+	   AND AQ.array_quantitation_id IS NOT NULL
+	   AND AR.record_status != 'D'
+	   AND A.record_status != 'D'
+	   AND ASCAN.record_status != 'D'
+	   AND AQ.record_status != 'D'
 	 ORDER BY A.array_name
       ~;
 

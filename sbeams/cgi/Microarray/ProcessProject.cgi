@@ -206,7 +206,11 @@ SELECT	A.array_id,A.array_name,
   LEFT JOIN array_quantitation AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
  WHERE AR.project_id=$parameters{project_id}
    AND AQ.array_quantitation_id IS NOT NULL
- ORDER BY AR.array_request_id
+   AND AR.record_status != 'D'
+   AND A.record_status != 'D'
+   AND ASCAN.record_status != 'D'
+   AND AQ.record_status != 'D'
+ ORDER BY A.array_name
      ~;
 
       my $base_url = "$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=";

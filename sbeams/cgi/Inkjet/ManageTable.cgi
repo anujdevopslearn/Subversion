@@ -395,14 +395,14 @@ sub printEntryForm {
         print qq!
           <TD><SELECT NAME="$column_name" SIZE=$input_length $onChange>
           <OPTION VALUE=""></OPTION>
-          $optionlists{$column_name}</SELECT></TR>
+          $optionlists{$column_name}</SELECT></TD>
         !;
       }
 
       if ($input_type eq "multioptionlist") {
         print qq!
           <TD><SELECT NAME="$column_name" MULTIPLE SIZE=$input_length $onChange>
-          $optionlists{$column_name}</SELECT></TR>
+          $optionlists{$column_name}</SELECT></TD>
         !;
       }
 
@@ -986,7 +986,95 @@ sub writeDataFile {
 sub postFormHook {
   my %parameters = @_;
 
-  if ($TABLE_NAME eq "array_scan") {
+
+  if ($TABLE_NAME eq "IJ_labeling" && $parameters{array_request_sample_id} gt "") {
+
+    my $sql_query = qq~
+       SELECT DISTINCT extinction_coeff_at_max,correction_260,
+              Ebase,MWbase
+         FROM $TBIJ_DYE D
+         LEFT JOIN $TBIJ_LABELING_METHOD LM ON ( D.dye_id = LM.dye_id )
+         LEFT JOIN $TBIJ_ARRAY_REQUEST_SAMPLE ARS ON
+              ( LM.labeling_method_id = ARS.labeling_method_id )
+        WHERE array_request_sample_id IN ($parameters{array_request_sample_id})
+    ~;
+
+    my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
+    my $rv  = $sth->execute or croak $dbh->errstr;
+
+    my @row = $sth->fetchrow_array();
+    my ($Edye,$CFdye,$Ebase,$MWbase) = 0;
+    if (@row) { ($Edye,$CFdye,$Ebase,$MWbase) = @row; }
+
+    my @row = $sth->fetchrow_array();
+    if (@row) {
+      print "<TR><TD><B><font color=red><BLINK>WARNING</BLINK>:</font></B></TD>";
+      print "    <TD><B><font color=red>SAMPLES USING MORE THAN ONE TYPE of DYE SELECTED????<BR>CALCULATION BELOW MAY BE WRONG!</font></B></TD></TR>\n";
+    }
+
+
+    $sth->finish;
+
+
+    my $A260 = $parameters{absorbance_260}*$parameters{dilution_factor};
+    my $Adye = $parameters{absorbance_lambda};
+    my $volume = $parameters{volume};
+    my $Abase = $A260 - ($Adye * $CFdye);
+
+    print "<TR><TD><B><font color=green>Edye:</font></B></TD>";
+    print "    <TD>$Edye</TD>\n";
+    print "    <TD BGCOLOR=\"E0E0E0\">Extinction coefficient for dye</TD></TR>\n";
+
+    print "<TR><TD><B><font color=green>CFdye:</font></B></TD>";
+    print "    <TD>$CFdye</TD>\n";
+    print "    <TD BGCOLOR=\"E0E0E0\">Absorbance at 260 nm correction factor for dye</TD></TR>\n";
+
+    print "<TR><TD><B><font color=green>Ebase:</font></B></TD>";
+    print "    <TD>$Ebase</TD>\n";
+    print "    <TD BGCOLOR=\"E0E0E0\">Extinction coefficient for a base</TD></TR>\n";
+
+    print "<TR><TD><B><font color=green>MWbase:</font></B></TD>";
+    print "    <TD>$MWbase</TD>\n";
+    print "    <TD BGCOLOR=\"E0E0E0\">Molecular weight for a base in g/mol</TD></TR>\n";
+
+    if ($Adye==0 || $Ebase==0 || $Edye==0) {
+      print qq~
+        <TR><TD></TD><TD><font color=green><B>
+        Insufficient data to calculate values.  Please enter measurements
+        above and press
+        <INPUT TYPE="submit" NAME="apply_action" VALUE="REFRESH"></font></TD></TR>\n
+      ~;
+      return;
+    }
+
+    my $NucAcid = ($Abase * $MWbase) / $Ebase;
+    my $basedye = ($Abase * $Edye) / ($Adye * $Ebase);
+    my $TotNucAcid = $NucAcid * $volume;
+    my $pmoldyeul = $Adye/($Edye*1e-6);
+    my $totpmoldye = $pmoldyeul * $volume;
+
+
+    print "<TR><TD><B><font color=green>Abase:</font></B></TD>";
+    print "    <TD>",sprintf("%10.4f",$Abase),"</TD>\n";
+    print "    <TD BGCOLOR=\"E0E0E0\">Absorbance at 260 after using CFdye</TD></TR>\n";
+
+    print "<TR><TD><B><font color=green>[nucleic acid](ug/ul):</font></B></TD>";
+    print "    <TD>",sprintf("%10.6f",$NucAcid),"</TD></TR>\n";
+    print "<TR><TD><B><font color=green>base:dye:</font></B></TD>";
+    print "    <TD>",sprintf("%10.1f",$basedye),"</TD></TR>\n";
+    print "<TR><TD><B><font color=green>total nucleic acid (ug):</font></B></TD>";
+    print "    <TD>",sprintf("%10.2f",$TotNucAcid),"</TD>\n";
+    print "    <TD BGCOLOR=\"E0E0E0\">in units of micrograms (ug)</TD></TR>\n";
+
+    print "<TR><TD><B><font color=green>pmol dye/ul:</font></B></TD>";
+    print "    <TD>",sprintf("%10.2f",$pmoldyeul),"</TD></TR>\n";
+    print "<TR><TD><B><font color=green>total pmol dye:</font></B></TD>";
+    print "    <TD>",sprintf("%10.1f",$totpmoldye),"</TD></TR>\n";
+
+  }
+
+
+  if ($TABLE_NAME eq "IJ_array_scan") {
   
     if ($parameters{stage_location} gt "") {
       if ( -d "$parameters{stage_location}/Images" ) {
@@ -1000,7 +1088,7 @@ sub postFormHook {
   }
 
 
-  if ($TABLE_NAME eq "array_quantitation") {
+  if ($TABLE_NAME eq "IJ_array_quantitation") {
   
     if ($parameters{stage_location} gt "") {
       if ( -e "$parameters{stage_location}" ) {
@@ -1014,7 +1102,7 @@ sub postFormHook {
   }
 
 
-  if ($TABLE_NAME eq "array_layout") {
+  if ($TABLE_NAME eq "IJ_array_layout") {
   
     if ($parameters{source_filename} gt "") {
       if ( -e "$parameters{source_filename}" ) {

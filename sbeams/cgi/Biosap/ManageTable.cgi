@@ -395,14 +395,14 @@ sub printEntryForm {
         print qq!
           <TD><SELECT NAME="$column_name" SIZE=$input_length $onChange>
           <OPTION VALUE=""></OPTION>
-          $optionlists{$column_name}</SELECT></TR>
+          $optionlists{$column_name}</SELECT></TD>
         !;
       }
 
       if ($input_type eq "multioptionlist") {
         print qq!
           <TD><SELECT NAME="$column_name" MULTIPLE SIZE=$input_length $onChange>
-          $optionlists{$column_name}</SELECT></TR>
+          $optionlists{$column_name}</SELECT></TD>
         !;
       }
 

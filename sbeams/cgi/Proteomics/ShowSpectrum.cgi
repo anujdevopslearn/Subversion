@@ -113,7 +113,7 @@ sub printEntryForm {
 
     #### Define the parameters that can be passed by CGI
     my @possible_parameters = qw ( msms_scan_id search_batch_id peptide
-                                   masstype charge zoom xmin xmax window);
+                                   masstype charge zoom xmin xmax masstol ionlab);
     my %parameters;
 
 
@@ -130,7 +130,6 @@ sub printEntryForm {
       $sbeamsPROT->printPageHeader();
     }
 
-
     #### Resolve the keys from the command line if any
     my ($key,$value);
     foreach $element (@ARGV) {
@@ -145,11 +144,24 @@ sub printEntryForm {
 
     $parameters{'charge'} = "1,2" unless $parameters{'charge'};
     my @charge = split(',',$parameters{'charge'});
-    $parameters{'window'} = 2 unless $parameters{'window'};
+    $parameters{'masstol'} = 2 unless $parameters{'masstol'};
+
+    $parameters{'ionlab'} = "Horizontal" unless $parameters{'ionlab'};
+    my ($labangle,$fjust);
+    if ($parameters{'ionlab'} eq "Vertical") {
+      $labangle = 90;
+      $fjust = 0;
+    } else {
+      $labangle = 0;
+      $fjust = 0.5;
+    }
+
 
 
     #### Begin the page and form
+    print "<TABLE><TD>\n";
     $sbeams->printUserContext();
+    print "</TD></TABLE>\n";
     print qq!
 	<P>
 	<FORM METHOD="post">
@@ -158,7 +170,7 @@ sub printEntryForm {
 
     #### Set up the table and data column
     print qq!
-	<TABLE BORDER=1>
+	<TABLE BORDER=1 WIDTH="675">
 	<TR VALIGN=top>
 	<TD VALIGN=top BGCOLOR="#FFFFDD">
 	<PRE>\n!;
@@ -219,7 +231,7 @@ sub printEntryForm {
     $parameters{xmax} = int($massmax/100)*100+100 unless $parameters{xmax};
 
     my $maxval = $intenmax;
-    $intenmax *= 1.2 / $parameters{zoom};
+    $intenmax *= 1.1 / $parameters{zoom};
     my $interval = $intenmax / 20;
     my $interval_power = int( log($interval) / log(10) );
     my $roundval = 10**$interval_power;
@@ -249,7 +261,7 @@ sub printEntryForm {
                        xmin=>$parameters{xmin}, xmax=>$parameters{xmax},
                        ymax=>$intenmax, ydiv=>$ydiv, nyticks=>1,
                        gifwidth=>$parameters{gifwidth},gifheight=>$parameters{gifheight});
-    pgptext 1.2*$parameters{xmin}, 0.95*$intenmax, 0, 0.5, "$maxval";
+    pgmtext 'T',-2,.01,0,"Peak value = $maxval";
     $t4 = [gettimeofday()];
 
     my @peakcolors;
@@ -272,13 +284,14 @@ sub printEntryForm {
       #### Make the plot
       ($win,$B_ref,$Y_ref) = PlotPeaks(SpecData=>\%spectrum, Bion=>$Bion,
                                        Yion=>$Yion, Charge=>$charge,
-                                       Win=>$win, Length=>$length, Window=>$parameters{window},
+                                       Win=>$win, Length=>$length,
+                                       Window=>$parameters{masstol},
                                        PeakColors=>\@peakcolors);
       $t6 = [gettimeofday()];
       LabelResidues(Bdata=>$Bion, Ydata=>$Yion, Binten=>$B_ref, Yinten=>$Y_ref,
                     Ionmasses=>$masslist_ref, Charge=>$charge, Win=>$win,
                     Length=>$length, Xmin=>$parameters{xmin}, Xmax=>$parameters{xmax},
-                    Ymax=>$intenmax);
+                    Ymax=>$intenmax, Angle=>$labangle, Fjust=>$fjust);
     }
     $t7 = [gettimeofday()];
 
@@ -302,14 +315,8 @@ sub printEntryForm {
       }
     }
 
-
-    #### Window selector
-    my $onChange = "";
-    print qq~
-	Window: <INPUT NAME="window" VALUE="$parameters{window}" SIZE="2" $onChange>
-    ~;
-
     #### Charge selector
+    my $onChange = "";
     $sql = "SELECT option_key,option_value FROM $TBPR_QUERY_OPTION " .
            " WHERE option_type = 'BSH_charge_constraint' " .
            " ORDER BY sort_order,option_value";
@@ -331,9 +338,33 @@ sub printEntryForm {
 
     #### Xmax selector
     print qq~
-	Xmax: <INPUT NAME="xmax" VALUE="$parameters{xmax}" SIZE="5" $onChange>
+	Xmax: <INPUT NAME="xmax" VALUE="$parameters{xmax}" SIZE="5" $onChange><BR>
     ~;
 
+    #### Window selector
+    print qq~
+	Mass Tolerance: <INPUT NAME="masstol" VALUE="$parameters{masstol}" SIZE="2" $onChange>
+    ~;
+
+    #### Label orientation
+    my @labellist = (qw (Vertical Horizontal));
+    my ($ll, $selflag);
+    print qq~
+        Label orientation: <SELECT NAME="ionlab">
+    ~;
+    foreach $ll (@labellist) {
+      if ($parameters{ionlab} eq $ll) {
+        $selflag = "SELECTED";
+      } else {
+        $selflag = "";
+      }
+      print qq~
+          <OPTION $selflag VALUE="$ll">$ll</OPTION>
+      ~;
+    }
+    print qq~
+        </SELECT>
+    ~;
 
     #### Finish up the table and form
     $t8 = [gettimeofday()];
@@ -347,15 +378,15 @@ sub printEntryForm {
          </FORM>
     ~;
 
-    printf("\nt0 - t1: %4f<BR>\n",tv_interval($t0,$t1));
-    printf("t1 - t2: %4f<BR>\n",tv_interval($t1,$t2));
-    printf("t2 - t3: %4f<BR>\n",tv_interval($t2,$t3));
-    printf("t3 - t4: %4f<BR>\n",tv_interval($t3,$t4));
-    printf("t4 - t5: %4f<BR>\n",tv_interval($t4,$t5));
-    printf("t5 - t6: %4f<BR>\n",tv_interval($t5,$t6));
-    printf("t6 - t7: %4f<BR>\n",tv_interval($t6,$t7));
-    printf("t7 - t8: %4f<BR>\n",tv_interval($t7,$t8));
-    printf("  Total: %4f<BR>\n",tv_interval($t0,$t8));
+#    printf("\nt0 - t1: %4f<BR>\n",tv_interval($t0,$t1));
+#    printf("t1 - t2: %4f<BR>\n",tv_interval($t1,$t2));
+#    printf("t2 - t3: %4f<BR>\n",tv_interval($t2,$t3));
+#    printf("t3 - t4: %4f<BR>\n",tv_interval($t3,$t4));
+#    printf("t4 - t5: %4f<BR>\n",tv_interval($t4,$t5));
+#    printf("t5 - t6: %4f<BR>\n",tv_interval($t5,$t6));
+#    printf("t6 - t7: %4f<BR>\n",tv_interval($t6,$t7));
+#    printf("t7 - t8: %4f<BR>\n",tv_interval($t7,$t8));
+#    printf("  Total: %4f<BR>\n",tv_interval($t0,$t8));
 
 
 } # end printEntryForm
@@ -385,7 +416,7 @@ sub get_msms_spectrum {
   #### If we have a msms_scan_id, get the data from the database
   if ($msms_scan_id) {
 
-    #### Define the columns for 
+    #### Define the columns for
     my @columns = qw ( msms_scan_id fraction_id msms_scan_file_root
       start_scan end_scan n_peaks );
 
@@ -664,6 +695,11 @@ sub PlotPeaks {
     my $length = $args{'Length'};
     my @Binten = (0) x $length;
     my @Yinten = (0) x $length;
+    my @BYinten = (0) x $length;
+    my @Rinten = (0) x $specdata->{n_peaks};
+    my @Bmass = (0) x $length;
+    my @Ymass = (0) x $length;
+    my @BYmass = (0) x $length;
 
     my ($redcol,$bluecol,$grcol);
 
@@ -719,57 +755,67 @@ sub PlotPeaks {
 
       my $Bind = which($bdata >= ($mass-$window) & $bdata <= ($mass+$window));
       my $Yind = which($ydata >= ($mass-$window) & $ydata <= ($mass+$window));
-      if ($Bind !~ 'Empty') {
-        #### Red line for Y ion match
-        $lineclr = $redcol;
-        $Binten[$Bind->at(0)] = $intensity if ($Binten[$Bind->at(0)] < $intensity);
-      }
-      if ($Yind !~ 'Empty') {
-        if ($Bind !~ 'Empty') {
-          #### Greem line for both ion match
-          $lineclr = $grcol;
-        } else {
-          #### Blue line for B ion match
+
+      if (($Bind !~ 'Empty') && ($Yind =~ 'Empty')) {
+        if ($Binten[$Bind->at(0)] < $intensity) {
+          $Binten[$Bind->at(0)] = $intensity;
+          $Bmass[$Bind->at(0)] = $mass;
+          $lineclr = $redcol;
+        }
+      } elsif (($Yind !~ 'Empty') && ($Bind =~ 'Empty')) {
+        if ($Yinten[$Yind->at(0)] < $intensity) {
+          $Yinten[$Yind->at(0)] = $intensity;
+          $Ymass[$Yind->at(0)] = $mass;
           $lineclr = $bluecol;
         }
-        $Yinten[$Yind->at(0)] = $intensity if ($Yinten[$Yind->at(0)] < $intensity);
+      } elsif (($Bind !~ 'Empty') && ($Yind !~ 'Empty')) {
+        if ($Yinten[$Yind->at(0)] < $intensity) {
+          $BYinten[$Yind->at(0)] = $intensity;
+          $BYmass[$Yind->at(0)] = $mass;
+          $lineclr = $grcol;
+        }
+      } else {
+        if (($peakcolors_ref->[$i] != 2) & ($peakcolors_ref->[$i] != 3) &
+            ($peakcolors_ref->[$i] != 4) & ($peakcolors_ref->[$i] != 6) &
+            ($peakcolors_ref->[$i] != 10) & ($peakcolors_ref->[$i] != 11)) {
+          $Rinten[$i] = $intensity
+        }
+        $lineclr = 14;
       }
 
       $peakcolors_ref->[$i] = $lineclr;
-
-
-      #### Plotting lines in a loop like this is just too slow
-      #$win -> line($mainx, $mainy,{Color=>$lineclr});
-      #$win -> hold;
     }
-
 
     my ($mass2, $intensity2);
     $mass2 = $specdata->{masses};
     $intensity2 = $specdata->{intensities};
 
-
-    #### First we tried tline() which seemed like a good way of plotting
-    #### many independent lines.  Slow as a fat dog...
-    if (0 == 1) {
-      my $tx = pdl ($mass2, $mass2)->xchg(0,1);
-      my $aa = [(1) x scalar(@{$mass2})];
-      my $ty = pdl ($aa, $intensity2)->xchg(0,1);
-      my $h = {Color => ['Red'], Linestyle => ['Solid']};
-      print "before tline...\n";
-      $win -> tline($tx,$ty,$h);
-      print "after tline...\n";
-
     #### Now we resort to plotting all peaks by "never lifting the pen"
     #### and drawing it all in a continuous line with line() because this
     #### is much faster
-    } else {
-      my $tx = pdl ($mass2,$mass2,$mass2)->xchg(0,1)->clump(2);
-      my $aa = [(0) x scalar(@{$mass2})];
-      my $ty = pdl ($aa,$intensity2,$aa)->xchg(0,1)->clump(2);
-      my $h = {Color => 14};
-      $win -> line($tx,$ty,$h);
-    }
+    my $rx = pdl ($mass2,$mass2,$mass2)->xchg(0,1)->clump(2);
+    my $ra = [(0) x scalar(@Rinten)];
+    my $ry = pdl ($ra,\@Rinten,$ra)->xchg(0,1)->clump(2);
+    my $rh = {Color => 14};
+    $win -> line ($rx,$ry,$rh);
+
+    my $bx = pdl (\@Bmass,\@Bmass,\@Bmass)->xchg(0,1)->clump(2);
+    my $ba = [(0) x scalar(@Binten)];
+    my $by = pdl ($ba,\@Binten,$ba)->xchg(0,1)->clump(2);
+    my $bh = {Color => $redcol};
+    $win -> line ($bx,$by,$bh);
+
+    my $yx = pdl (\@Ymass,\@Ymass,\@Ymass)->xchg(0,1)->clump(2);
+    my $ya = [(0) x scalar(@Yinten)];
+    my $yy = pdl ($ya,\@Yinten,$ya)->xchg(0,1)->clump(2);
+    my $yh = {Color => $bluecol};
+    $win -> line ($yx,$yy,$yh);
+
+    my $byx = pdl (\@BYmass,\@BYmass,\@BYmass)->xchg(0,1)->clump(2);
+    my $bya = [(0) x scalar(@BYinten)];
+    my $byy = pdl ($bya,\@BYinten,$ba)->xchg(0,1)->clump(2);
+    my $byh = {Color => $grcol};
+    $win -> line ($byx,$byy,$byh);
 
     return ($win,\@Binten,\@Yinten);
 }
@@ -793,6 +839,8 @@ sub LabelResidues {
     my @Yinten = @$Yinten_ref;
     my $length = $args{'Length'};
     my $labht;
+    my $angle = $args{'Angle'} || 0;
+    my $fjust = $args{'Fjust'};
     my ($Bcol,$Ycol,$bothcol);
     my $i;
     my ($lineclr,$redcol,$bluecol,$grcol);
@@ -865,7 +913,7 @@ sub LabelResidues {
         $win -> hold;
 
         #### Add ion label
-        pgptext $mass,$labht,0,0.5,"$index" if (($labht < $Ymax) && ($mass > $Xmin)
+        pgptext $mass,$labht,$angle,$fjust,"$index" if (($labht < $Ymax) && ($mass > $Xmin)
                                                   && ($mass < $Xmax));
       }
       if (($Yinten[$i] != 0) && ($i != 0)) {
@@ -899,7 +947,7 @@ sub LabelResidues {
         $win -> hold;
 
         #### Add ion label
-        pgptext $mass,$labht,0,0.5,"$index" if (($labht < $Ymax) && ($mass > $Xmin)
+        pgptext $mass,$labht,$angle,$fjust,"$index" if (($labht < $Ymax) && ($mass > $Xmin)
                                                   && ($mass < $Xmax));
       }
     }

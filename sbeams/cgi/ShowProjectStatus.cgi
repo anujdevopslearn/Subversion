@@ -189,16 +189,22 @@ SELECT	A.array_id,A.array_name,
 	H.hybridization_id,H.date_hybridized,
 	ASCAN.array_scan_id,ASCAN.date_scanned,ASCAN.data_flag AS 'scan_flag',
 	AQ.array_quantitation_id,AQ.date_quantitated,AQ.data_flag AS 'quan_flag'
-  FROM array_request AR
-  LEFT JOIN array_request_slide ARSL ON ( AR.array_request_id = ARSL.array_request_id )
-  LEFT JOIN array A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
-  LEFT JOIN printing_batch PB ON ( A.printing_batch_id = PB.printing_batch_id )
-  LEFT JOIN hybridization H ON ( A.array_id = H.array_id )
-  LEFT JOIN array_scan ASCAN ON ( A.array_id = ASCAN.array_id )
-  LEFT JOIN array_quantitation AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
+  FROM $TB_ARRAY_REQUEST AR
+  LEFT JOIN $TB_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )
+  LEFT JOIN $TB_ARRAY A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
+  LEFT JOIN $TB_PRINTING_BATCH PB ON ( A.printing_batch_id = PB.printing_batch_id )
+  LEFT JOIN $TB_HYBRIDIZATION H ON ( A.array_id = H.array_id )
+  LEFT JOIN $TB_ARRAY_SCAN ASCAN ON ( A.array_id = ASCAN.array_id )
+  LEFT JOIN $TB_ARRAY_QUANTITATION AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
  WHERE AR.request_status!='Finished'
 --   AND ARSL.array_request_slide_id IS NOT NULL
- ORDER BY AR.array_request_id,ARSL.array_request_slide_id
+   AND ( AR.record_status != 'D' OR AR.record_status IS NULL )
+   AND ( A.record_status != 'D' OR A.record_status IS NULL )
+   AND ( PB.record_status != 'D' OR PB.record_status IS NULL )
+   AND ( H.record_status != 'D' OR H.record_status IS NULL )
+   AND ( ASCAN.record_status != 'D' OR ASCAN.record_status IS NULL )
+   AND ( AQ.record_status != 'D' OR AQ.record_status IS NULL )
+ ORDER BY A.array_name,AR.array_request_id,ARSL.array_request_slide_id
         ~;
       } else {
         $sql_query = qq~
@@ -209,16 +215,22 @@ SELECT	A.array_id,A.array_name,
 	H.hybridization_id,H.date_hybridized,
 	ASCAN.array_scan_id,ASCAN.date_scanned,ASCAN.data_flag AS 'scan_flag',
 	AQ.array_quantitation_id,AQ.date_quantitated,AQ.data_flag AS 'quan_flag'
-  FROM array_request AR
-  LEFT JOIN array_request_slide ARSL ON ( AR.array_request_id = ARSL.array_request_id )
-  LEFT JOIN array A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
-  LEFT JOIN printing_batch PB ON ( A.printing_batch_id = PB.printing_batch_id )
-  LEFT JOIN hybridization H ON ( A.array_id = H.array_id )
-  LEFT JOIN array_scan ASCAN ON ( A.array_id = ASCAN.array_id )
-  LEFT JOIN array_quantitation AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
+  FROM $TB_ARRAY_REQUEST AR
+  LEFT JOIN $TB_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )
+  LEFT JOIN $TB_ARRAY A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
+  LEFT JOIN $TB_PRINTING_BATCH PB ON ( A.printing_batch_id = PB.printing_batch_id )
+  LEFT JOIN $TB_HYBRIDIZATION H ON ( A.array_id = H.array_id )
+  LEFT JOIN $TB_ARRAY_SCAN ASCAN ON ( A.array_id = ASCAN.array_id )
+  LEFT JOIN $TB_ARRAY_QUANTITATION AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
  WHERE AR.project_id=$parameters{project_id}
    AND ARSL.array_request_slide_id IS NOT NULL
- ORDER BY AR.array_request_id,ARSL.array_request_slide_id
+   AND ( AR.record_status != 'D' OR AR.record_status IS NULL )
+   AND ( A.record_status != 'D' OR A.record_status IS NULL )
+   AND ( PB.record_status != 'D' OR PB.record_status IS NULL )
+   AND ( H.record_status != 'D' OR H.record_status IS NULL )
+   AND ( ASCAN.record_status != 'D' OR ASCAN.record_status IS NULL )
+   AND ( AQ.record_status != 'D' OR AQ.record_status IS NULL )
+ ORDER BY A.array_name,AR.array_request_id,ARSL.array_request_slide_id
         ~;
       }
 
