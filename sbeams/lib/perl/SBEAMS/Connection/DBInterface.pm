@@ -2728,6 +2728,18 @@ sub display_input_form {
       }
 
 
+      # If "$accessible_project_ids" appears in the SQL optionlist query,
+      # then substitute it with a call to that function
+      if ( $optionlist_queries{$element} =~ /\$accessible_project_ids/ ) {
+	my @accessible_project_ids = $self->getAcessibleProjects();
+	my $accessible_project_id_list = join(',',@accessible_project_ids);
+	$accessible_project_id_list = '-1'
+          unless ($accessible_project_id_list gt '');
+        $optionlist_queries{$element} =~
+          s/\$accessible_project_ids/$accessible_project_id_list/g;
+      }
+
+
       # If "$project_id" appears in the SQL optionlist query, then substitute
       # that with either a value of $parameters{project_id} if it is not
       # empty, or otherwise replace with the $current_project_id
