@@ -330,7 +330,7 @@ sub handle_request {
     ["bioentity1_canonical_name","BE1.bioentity_canonical_name","BioEntity 1 Canonical Name"],
     ["bioentity1_full_name","BE1.bioentity_full_name","BioEntity 1 Full Name"],
     ["bioentity1_state_name","BES1.bioentity_state_name","BioEntity 1 State Name"],
-    ["bioentity1_organism", "O1.genus+' '+O1.species", "BioEntity 1 Organism"],
+    ["bioentity1_organism", "O1.full_name", "BioEntity 1 Organism"],
     ["bioentity1_type", "BET1.bioentity_type_name", "BioEntity 1 Type"],
     ["bioentity1_parent", "BE1P.bioentity_common_name", "BioEntity 1 Parent"],
 
@@ -343,7 +343,7 @@ sub handle_request {
     ["bioentity2_canonical_name","BE2.bioentity_canonical_name","BioEntity 2 Canonical Name"],
     ["bioentity2_full_name","BE2.bioentity_full_name","BioEntity 2 Full Name"],
     ["bioentity2_state_name","BES2.bioentity_state_name","BioEntity 2 State Name"],
-    ["bioentity2_organism", "O2.genus+' '+O2.species", "BioEntity 2 Organism"],
+    ["bioentity2_organism", "O2.full_name", "BioEntity 2 Organism"],
     ["bioentity2_type","BET2.bioentity_type_name", "BioEntity 2 Type"],
     ["bioentity2_parent", "BE2P.bioentity_common_name", "BioEntity 2 Parent"],  
     ["regulatory_feature_name2","RF2.regulatory_feature_name","Regulatory Feature 2 Name"],
