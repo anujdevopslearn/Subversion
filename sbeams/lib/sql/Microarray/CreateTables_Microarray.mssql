@@ -896,11 +896,12 @@ VALUES ( 'data_flag','BAD','BAD',10 )
 
 
 
-
+--DROP TABLE condition
 CREATE TABLE dbo.condition (
 	condition_id		int IDENTITY NOT NULL,
 	project_id		int NOT NULL REFERENCES project(project_id),
 	condition_name		varchar(255) NOT NULL,
+	processed_date		datetime NULL,
 	comment			text NULL,
 	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
@@ -913,6 +914,24 @@ CREATE TABLE dbo.condition (
 GO
 
 
+--DROP TABLE gene_expression
+CREATE TABLE dbo.gene_expression (
+	gene_expression_id	int IDENTITY NOT NULL ,
+	condition_id		int NOT NULL REFERENCES condition(condition_id) ,
+	gene_name		varchar(255) NOT NULL ,
+	biosequence_id		int NULL /* REFERENCES biosequence(biosequence_id) */,
+	second_name		varchar(255) NULL ,
+	log10_ratio		float NULL ,
+	log10_uncertainty	float NULL ,
+	log10_std_deviation	float NULL ,
+	lambda			float NULL ,
+	mu_x			float NULL ,
+	mu_y			float NULL ,
+	mean_intensity		float NULL ,
+	quality_flag		varchar(25) NULL ,
+	PRIMARY KEY CLUSTERED (gene_expression_id)
+)
+GO
 
 
 
