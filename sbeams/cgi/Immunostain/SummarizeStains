@@ -881,8 +881,6 @@ sub postProcessResultset {
 
     # Remove the tissue_type tags
     ( my $cellType = $cellKey ) =~ s/---\d//;
-      $log->debug( "Cell key is $cellKey" );
-      $log->debug( "Cell type is $cellType" );
 				
       #### Store information needed for a Cytoscape display
       if ($averageNumber && $averageNumber > 0) {
