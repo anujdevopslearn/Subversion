@@ -53,19 +53,20 @@ $PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
 Usage: $PROG_NAME [OPTIONS]
 Options:
-  --verbose n         Set verbosity level.  default is 0
-  --quiet             Set flag to print nothing at all except errors
-  --debug n           Set debug flag
-  --testonly          Do not actually write to the database
-  --delete_existing   Delete the existing peptides for this set before
-                      loading.  Normally, if there are existing peptides,
-                      the load is blocked.
-  --update_existing   Update the existing peptides set with information
-                      from the new query
-  --summary_name      The name of the peptide summary that is to be worked
-                      on; all are checked if none is provided
-  --check_status      Is set, nothing is actually done, but rather the
-                      summaries are verified
+  --verbose n            Set verbosity level.  default is 0
+  --quiet                Set flag to print nothing at all except errors
+  --debug n              Set debug flag
+  --testonly             Do not actually write to the database
+  --delete               Delete the existing peptides for this set
+  --delete_then_update   Delete the existing peptides for this set before
+                         loading.  Normally, if there are existing peptides,
+                         the load is blocked.
+  --update_existing      Update the existing peptides set with information
+                         from the new query
+  --summary_name         The name of the peptide summary that is to be worked
+                         on; all are checked if none is provided
+  --check_status         Is set, nothing is actually done, but rather the
+                         summaries are verified
 
  e.g.:  $PROG_NAME --summary_name "Human Peptide Database"
 
@@ -80,7 +81,7 @@ unless ($ARGV[0]){
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
-  "delete_existing","update_existing","",
+  "delete","delete_then_update","update_existing","",
   "summary_name:s","check_status")) {
   print "$USAGE";
   exit;
@@ -139,7 +140,8 @@ sub handleRequest {
 
 
   #### Set the command-line options
-  my $delete_existing = $OPTIONS{"delete_existing"} || '';
+  my $delete_then_update = $OPTIONS{"delete_then_update"} || '';
+  my $delete = $OPTIONS{"delete"} || '';
   my $update_existing = $OPTIONS{"update_existing"} || '';
   my $check_status = $OPTIONS{"check_status"} || '';
   my $summary_name = $OPTIONS{"summary_name"} || '';
@@ -206,15 +208,19 @@ sub handleRequest {
       my $do_load = 0;
       $do_load = 1 if ($status->{n_rows} == 0);
       $do_load = 1 if ($update_existing);
-      $do_load = 1 if ($delete_existing);
+      $do_load = 1 if ($delete_then_update);
 
       #### If it's determined that we need to do a load, do it
       if ($do_load) {
         $result = updatePeptideSummary(
           peptide_summary_name=>$status->{peptide_summary_name},
         );
+      } elsif ($delete) {
+        print "Deleting peptide_summary record $summary_name and  its children\n";
+        $result = deletePeptideSummary(
+          peptide_summary_name=>$status->{peptide_summary_name},
+        );
       }
-
     }
 
   }
@@ -282,6 +288,72 @@ sub getPeptideSummaryStatus {
 
 
 ###############################################################################
+# deletePeptideSummary
+###############################################################################
+sub deletePeptideSummary {
+  my %args = @_;
+  my $SUB_NAME = 'deletePeptideSummary';
+
+
+  #### Decode the argument list
+  my $peptide_summary_name = $args{'peptide_summary_name'}
+   || die "ERROR[$SUB_NAME]: peptide_summary_name not passed";
+
+
+  #### Define standard variables
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+  #### Set the command-line options
+  my $delete = $OPTIONS{"delete"};
+
+
+  #### Set the set_name
+  $sql = qq~
+          SELECT peptide_summary_name,peptide_summary_id
+            FROM $TBAPD_PEPTIDE_SUMMARY
+           WHERE peptide_summary_name = '$peptide_summary_name'
+             AND record_status != 'D'
+  ~;
+
+  my %summary_names = $sbeams->selectTwoColumnHash($sql);
+  my $peptide_summary_id = $summary_names{$peptide_summary_name};
+
+
+  #### If we didn't find it then bail
+  unless ($peptide_summary_id) {
+    die("Unable to determine a peptide_summary_id for '$peptide_summary_name'. " .
+      "A record for this peptide_summary must already have been entered " .
+      "before the peptides may be loaded.");
+  }
+
+
+  my %table_child_relationship = (
+     peptide_summary => 'peptide(C)',
+     peptide => 'modified_peptide(C),modified_peptide_property(C)',
+     modified_peptide => 'modified_peptide_property(C)',
+  );
+
+  my $TESTONLY = "0";
+  my $VERBOSE = "4";
+
+  my $result = $sbeams->deleteRecordsAndChildren(
+     table_name => 'peptide_summary',
+     table_child_relationship => \%table_child_relationship,
+     delete_PKs => [ $peptide_summary_id ],
+     delete_batch => 10000,
+     database => 'APD.dbo.',
+     verbose => $VERBOSE,
+     testonly => $TESTONLY,
+  );
+
+  #### Obtain some properties about this peptide_summary
+  my $status = getPeptideSummaryStatus(
+    peptide_summary_id => $peptide_summary_id);
+
+}
+
+###############################################################################
 # updatePeptideSummary
 ###############################################################################
 sub updatePeptideSummary {
@@ -299,7 +371,7 @@ sub updatePeptideSummary {
 
 
   #### Set the command-line options
-  my $delete_existing = $OPTIONS{"delete_existing"};
+  my $delete_then_update = $OPTIONS{"delete_then_update"};
   my $update_existing = $OPTIONS{"update_existing"};
 
 
@@ -332,7 +404,7 @@ sub updatePeptideSummary {
   print "$sql\n\n" if ($VERBOSE);
   my ($count) = $sbeams->selectOneColumn($sql);
   if ($count) {
-    if ($delete_existing) {
+    if ($delete_then_update) {
       print "Deleting...\n$sql\n";
       $sql = qq~
         DELETE FROM $TBAPD_MODIFIED_PEPTIDE
@@ -347,7 +419,7 @@ sub updatePeptideSummary {
     } elsif (!($update_existing)) {
       die("There are already peptide records for this " .
         "peptide_summary.\nPlease delete those records before trying to " .
-        "load new peptides,\nor specify the --delete_existing ".
+        "load new peptides,\nor specify the --delete_then_update".
         "or --update_existing flags.");
     }
   }
@@ -404,6 +476,7 @@ print "experiment_list = ",$experiment_list,"\n";
   ~;
 
   print "$sql\n\n" if ($VERBOSE);
+  print "Getting data from SBEAMS proteomics ...\n";
   my @rows = $sbeams->selectSeveralColumns($sql);
 
 
