@@ -858,7 +858,7 @@ sub destroyAuthHeader {
 
     my $current_username = $self->getCurrent_username;
 
-    my $remote_host = $ENV{REMOTE_HOST} || '?';
+    my $remote_host = $ENV{REMOTE_HOST} || $ENV{REMOTE_ADDR} || '?';
     my $logging_query="INSERT INTO $TB_USAGE_LOG
 	(username,usage_action,result,remote_host)
 	VALUES ('$current_username','logout','SUCCESS','$remote_host')";
@@ -1017,7 +1017,7 @@ sub checkLogin {
 
 
     #### Register the outcome of this attempt
-    my $remote_host = $ENV{REMOTE_HOST} || '?';
+    my $remote_host = $ENV{REMOTE_HOST} || $ENV{REMOTE_ADDR} || '?';
     $logging_query = qq~
 	INSERT INTO $TB_USAGE_LOG (username,usage_action,result,remote_host)
 	VALUES ('$user','login','$error_code','$remote_host')
