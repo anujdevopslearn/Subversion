@@ -36,14 +36,17 @@ main();
 exit;
 sub main
 {
+  
 		 #### Do the SBEAMS authentication and exit if a username is not returned
 		 exit unless ($current_username = $sbeams->Authenticate(
 		 work_group=>'Cytometry_user',
   ));
 
+  
+my $watchDir = "/users/mkorb/cytometry/";  
 my $startDir = $ARGV[0] or die "no valid startDir\n";; 
 my ($watch) = $startDir =~ /.*\/(.*?)\/$/; 
-my $watchFile = $watch."watch";
+my $watchFile = $watchDir.$watch."watch";
 my $project_id;
 $project_id = 397; 
 $project_id = 409  if $startDir  =~ /IkB-GFP/i;
