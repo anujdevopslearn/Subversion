@@ -63,7 +63,7 @@ are occupied only when applicable.</P>
     <TD ALIGN="LEFT"        BGCOLOR="#E0E0E0">isoelectric point</TD></TR>
 
 <TR><TD ALIGN="LEFT" NOWRAP BGCOLOR="#E0E0E0">Match Source</TD>
-    <TD ALIGN="LEFT"        BGCOLOR="#E0E0E0">program used to derive/detect match. “Pfam” indicates that HMMER was used to find the match to Pfam. “pdbblast” indicates that PSI-BLAST was used to detect a match to a given PDB sequence. “mamSum” indicates that the match is the result of a Rosetta prediction.</TD></TR>
+<TD ALIGN="LEFT"        BGCOLOR="#E0E0E0">program used to derive/detect match. <B>Pfam</B> indicates that HMMER was used to find the match to Pfam. <B>pdbblast</B> indicates that PSI-BLAST was used to detect a match to a given PDB sequence. <B>mamSum</B> indicates that the match is the result of a Rosetta prediction.</TD></TR>
 
 <TR><TD ALIGN="LEFT" NOWRAP BGCOLOR="#E0E0E0">Domain Index</TD>
     <TD ALIGN="LEFT"        BGCOLOR="#E0E0E0">If protein is a multi-domain protein, as detected by ginzu, domains are labeled as domain 0-domainN.</TD></TR>
@@ -72,7 +72,7 @@ are occupied only when applicable.</P>
     <TD ALIGN="LEFT"        BGCOLOR="#E0E0E0">Probability that one of the top five rosetta predictions is the correct fold</TD></TR>
 
 <TR><TD ALIGN="LEFT" NOWRAP BGCOLOR="#E0E0E0">BH</TD>
-    <TD ALIGN="LEFT"        BGCOLOR="#E0E0E0">Best Hit, “Y” if this is the Rosetta model for this protein with the highest Z-score to match to the PDB.</TD></TR>
+    <TD ALIGN="LEFT"        BGCOLOR="#E0E0E0">Best Hit, <B>Y</B> if this is the Rosetta model for this protein with the highest Z-score to match to the PDB.</TD></TR>
 
 <TR><TD ALIGN="LEFT" NOWRAP BGCOLOR="#E0E0E0">Cluster</TD>
     <TD ALIGN="LEFT"        BGCOLOR="#E0E0E0">Rosetta model number. Cluster00 is the center of the largest cluster and thus the top Rosetta model prior to considering the Z-score of each models best match to the PDB.</TD></TR>
@@ -90,7 +90,7 @@ are occupied only when applicable.</P>
     <TD ALIGN="LEFT"        BGCOLOR="#E0E0E0"></TD></TR>
 
 <TR><TD ALIGN="LEFT" NOWRAP BGCOLOR="#E0E0E0">Match Type</TD>
-    <TD ALIGN="LEFT"        BGCOLOR="#E0E0E0">possible types are “pdbblast”, “pfam” and “PDB”</TD></TR>
+    <TD ALIGN="LEFT"        BGCOLOR="#E0E0E0">possible types are <B>pdbblast</B>, <B>pfam</B> and <B>PDB</B></TD></TR>
 
 <TR><TD ALIGN="LEFT" NOWRAP BGCOLOR="#E0E0E0">Match name</TD>
     <TD ALIGN="LEFT"        BGCOLOR="#E0E0E0">ID in external database (PDB id, Pfam domain)</TD></TR>
