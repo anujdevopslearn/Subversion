@@ -123,6 +123,8 @@ sub display_page_header {
 	<tr><td>&nbsp;</td></tr>
 	<tr><td><a href="http://scgap.systemsbiology.net"><nobr>&nbsp;&nbsp;&nbsp;SCGAP Home</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
+	<tr><td><a href="http://www.ncbi.nlm.nih.gov/prow/guide/45277084.htm"><nobr>&nbsp;&nbsp;&nbsp;NCBI PROW<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CD Index</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>
 	</table>
 	</td>
 
