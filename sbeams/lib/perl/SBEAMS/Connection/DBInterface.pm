@@ -29,8 +29,7 @@ use URI::Escape;
 use Storable;
 use Time::HiRes qw( usleep ualarm gettimeofday tv_interval );
 
-use lib "/net/dblocal/src/CPAN/GDGraph-1.33a/blib/lib";
-use GD::Graph::histogram;
+use GD::Graph::bars;
 use GD::Graph::xypoints;
 
 
@@ -1913,7 +1912,7 @@ sub displayResultSetPlot {
         );
 
         #### Create the histogram canvas
-        $graph = GD::Graph::histogram->new(640, 500);
+        $graph = GD::Graph::bars->new(640, 500);
 
         #### Set the various plot parameters
         $graph->set(
@@ -1924,6 +1923,7 @@ sub displayResultSetPlot {
             axis_space        => 6,
             x_label_position  => 0.5,
             y_min_value       => 0,
+            x_halfstep_shift  => 0,
         );
 
       } else {
