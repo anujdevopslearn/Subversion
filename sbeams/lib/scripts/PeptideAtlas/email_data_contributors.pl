@@ -61,15 +61,18 @@ Usage: $PROG_NAME [OPTIONS]
 Options:
     --testprint            If set, prints all email text to screen
     --testsend             If set, sends all email to me
-    --send                 If set, sends email to primary email contacts
+    --sendtoall            If set, sends email to primary email contacts
+    --sendto               Send email to "name1 name2 name3", for example
     --peptide_summary_name Name of the APD build record
 
 e.g.:  ./email_data_contributors.pl --testprint --peptide_summary_name "Human PeptideAtlas Experiments P>=0.7 (version July 2004)"
+e.g.:  ./email_data_contributors.pl --peptide_summary_name "Human PeptideAtlas Experiments P>=0.7 (version July 2004)" --sendto "wyan phaller jwatts"
 
 EOU
 
 ####### Process options #######################
-unless (GetOptions(\%OPTIONS,"testprint","testsend","send","peptide_summary_name:s",
+unless (GetOptions(\%OPTIONS,"testprint","testsend","sendtoall",
+       "sendto:s","peptide_summary_name:s",
      )) {
     print "$USAGE";
     exit;
@@ -110,7 +113,8 @@ sub handleRequest {
     #### Set the command-line options
     my $testprint = $OPTIONS{"testprint"} || '';
     my $testsend = $OPTIONS{"testsend"} || '';
-    my $send = $OPTIONS{"send"} || '';
+    my $sendtoall = $OPTIONS{"sendtoall"} || '';
+    my $sendto = $OPTIONS{"sendto"} || '';
     my $peptide_summary_name = $OPTIONS{"peptide_summary_name"} || '';
 
     #### Verify required parameters
@@ -120,16 +124,16 @@ sub handleRequest {
         exit;
     }
 
-    ## --send && (--testprint || --testsend)  will not work
-    if ($send  && ($testsend || $testprint)) {
-        print "ERROR: select --send without a --test[option], but not both\n";
+    ## --sendtoall && (--testprint || --testsend)  will not work
+    if ($sendtoall  && ($testsend || $testprint)) {
+        print "ERROR: select --sendtoall without a --test[option], but not both\n";
         print "$USAGE";
         exit;
     }
 
-    unless ($send || $testsend || $testprint) {
+    unless ($sendtoall || $testsend || $testprint || $sendto) {
         print "$USAGE";
-        print "ERROR: select --send  or  --testprint  or --testsend  for action\n";
+        print "ERROR: select --sendtoall  or --sendto  or  --testprint  or --testsend  for action\n";
         exit;
     }
 
@@ -155,6 +159,8 @@ sub handleRequest {
        WHERE peptide_summary_name = '$peptide_summary_name'
          AND record_status != 'D'
     ~;
+    ## note, if sending email on an old build, will have to go through
+    ## Proteomics records to get back to sample_id (through sample_tag)...
 
     
     my @rows = $sbeams->selectOneColumn($sql);  # should return a single entry
@@ -171,6 +177,7 @@ sub handleRequest {
                 search_batch_id_list => $search_batch_id_list,
                 testprint => $testprint,
                 testsend => $testsend,
+                sendto => $sendto,
     );
 } # end handleRequest
 
@@ -187,6 +194,7 @@ sub handleEmail {
     my $peptide_summary_name = $args{'peptide_summary_name'};
     my $testprint = $args{'testprint'} || 0;
     my $testsend = $args{'testsend'} || 0;
+    my $sendto = $args{'sendto'} || 0;
 
     my (@sample_id,  @sample_tag, @contact, @info, @url);
 
@@ -245,17 +253,35 @@ sub handleEmail {
         }
     }
 
-    
-    ## email contact and include url_list in message
-    foreach (sort keys %contact_hash) {
-        emailContact(contact => $_,
-            list_urls => $url_list{$_},
-            testprint => $testprint,
-            testsend => $testsend,
-        );
+    if ($sendto) {
+        ## email specified contacts and include url_list in message
+        my @receipients = split(" ", $sendto); 
+        for (my $i = 0; $i <= $#receipients; $i++ ) {
+            ##search for receipient in contact hash to get full address:
+            foreach (sort keys %contact_hash) {
+               if ($_ =~ $receipients[$i]) {
+                   $receipients[$i] = $_;
+               }
+            }
+            emailContact(contact => $receipients[$i],
+                list_urls => $url_list{$receipients[$i]},
+                testprint => $testprint,
+                testsend => $testsend,
+            );
+        }
+    } else {
+        ## email entire contact hash and include url_list in message
+        foreach (sort keys %contact_hash) {
+            emailContact(contact => $_,
+                list_urls => $url_list{$_},
+                testprint => $testprint,
+                testsend => $testsend,
+            );
+        }
     }
     
 }  #end handleEmail
+
 ############################################################################################
 sub emailContact {
     my %args = @_;
@@ -276,18 +302,20 @@ sub emailContact {
     $mail{From} = "nking\@systemsbiology.org";
     $mail{Cc}   = "$cc_name <$cc>";
     $mail{Subject} = "Your information in PeptideAtlas";
-    $mail{Message} = "Dear PeptideAtlas Data Contributor or Proxy,\n\n
-    Please follow the links below to edit the **publicly available** information about
-    your data in PeptideAtlas. 
+    $mail{Message} = "\nDear PeptideAtlas Data Contributor or Proxy,\n\n
+   Please follow the links below to edit the **publicly available** 
+information about your data in PeptideAtlas.  The new build is finished, 
+so please make changes to your sample record as soon as possible.
 
-    The new build is nearly ready, so please make changes very very **soon** if possible. 
-
-    Thank you for participating,
-        Cheers,
-            Nichole
+Thank you for participating,
+    Cheers,
+        Nichole
 
 
-    Use [UPDATE] button after your edits.  Here are the links for $contact: \n
+    Use [UPDATE] button after making changes, and please let me know if 
+there are problems.
+
+Here are the links for $contact: \n
 
     $list_urls \n \n";
 
@@ -298,6 +326,7 @@ sub emailContact {
     } else {
         sendmail (%mail) or die $Mail::Sendmail::error;
     }
+
 
     ##NOTE: should wrap it in HTML/MIME for email...MAC email not handling 1st url?
 }
