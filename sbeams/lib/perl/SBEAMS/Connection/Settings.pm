@@ -103,7 +103,7 @@ if ( $SBEAMS_INSTANCE =~ /\/dev1\// ) {
 
 } elsif ( $SBEAMS_INSTANCE =~ /\/dev8\// ) {
   $DBVERSION              = 'Dev Branch 8';
-  $BGCOLOR                = '#cccc00';
+  $BGCOLOR                = '#ff702f';
   $HTML_BASE_DIR          = '/dev8/sbeams';
   $PHYSICAL_BASE_DIR      = "/local/www/html/dev8/sbeams";
   $UPLOAD_DIR             = "/local/data/dev8/sbeams";
