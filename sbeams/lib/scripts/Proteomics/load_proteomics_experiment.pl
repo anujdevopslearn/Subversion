@@ -2076,7 +2076,7 @@ sub updateTimingInfo {
       $source_file = "$RAW_DATA_DIR{Proteomics}/$source_file";
     }
     unless (-e $source_file) {
-      print "Unable to find '$source_file', needed for timing info";
+      print "Unable to find '$source_file', needed for timing info.\n";
       next;
     }
 
