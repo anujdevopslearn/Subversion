@@ -49,9 +49,6 @@ $q       = new CGI;
 ###############################################################################
 # Global variables
 ###############################################################################
-#$dbh = SBEAMS::Connection::DBConnector::getDBHandle();
-#### Can we get rid of this?? This may be creating a connection before
-#### we want it?
 
 
 ###############################################################################
@@ -80,191 +77,420 @@ sub new {
 ###############################################################################
 sub applySqlChange {
     my $self = shift || croak("parameter self not passed");
-    my $sql_query = shift || croak("parameter sql_query not passed");
-    my $current_contact_id = shift
-       || croak("parameter current_contact_id not passed");
-    my $table_name = shift || croak("parameter table_name not passed");
-    my $record_identifier = shift
-       || croak("parameter record_identifier not passed");
-    my $PK_COLUMN_NAME = shift || '';
+    my %args = @_;
+    my $SUB_NAME = "applySqlChange";
+
+    my $sql_query = $args{'SQL_statement'}
+      || die("ERROR: $SUB_NAME: Parameter SQL_statement not passed");
+    my $current_contact_id = $args{'current_contact_id'}
+       || die("ERROR: $SUB_NAME: Parameter current_contact_id not passed");
+    my $table_name = $args{'table_name'}
+      || die("ERROR: $SUB_NAME: Parameter table_name not passed");
+    my $record_identifier = $args{'record_identifier'}
+       || die("ERROR: $SUB_NAME: Parameter record_identifier not passed");
+    my $PK_COLUMN_NAME = $args{'PK_column_name'} || '';
+    my $parent_project_id = $args{'parent_project_id'} || '';
 
 
-    #### Get the database handle
-    $dbh = $self->getDBHandle();
-
-    # Privilege that a certain work_group has over a table_group
-    my $table_group_privilege_id;
-    # Privilege that a certain user has within a work_group
-    my $user_work_group_privilege_id;
-    # Privilege that a certain user has given himself within the user_context
-    my $user_context_privilege_id;
-    my $nrows = 0;
-
-    my $current_privilege_id = 999;
-    my $privilege_id;
-    my @row;
+    #### Define variables to hold the final results
     my $result = "CODE ERROR";
     my $returned_PK;
     @ERRORS = ();
 
 
-    # Get the names of all the permission levels
-    my %level_names = $self->selectTwoColumnHash("
-	SELECT privilege_id,name FROM $TB_PRIVILEGE");
+    #### Get the names of all the privilege levels
+    my %level_names = $self->selectTwoColumnHash(
+      "SELECT privilege_id,name FROM $TB_PRIVILEGE WHERE record_status!='D'"
+    );
 
+
+    #### Privilege that the work_group has over a table_group
+    my $table_group_privilege_id;
+
+    #### Privilege that the user has within a work_group
+    my $user_work_group_privilege_id;
+
+    #### Privilege that the user has given himself in the user_context
+    my $user_context_privilege_id;
+
+    #### Privilege that the user has for the relevant project
+    my $project_privilege_id = '';
+
+
+    #### Translate the table handle to the database table name
     my ($DB_TABLE_NAME) = $self->returnTableInfo($table_name,"DB_TABLE_NAME");
-    #print "DB_TABLE_NAME = $DB_TABLE_NAME<BR>\n";
-    #print "table_name = $table_name<BR>\n";
 
 
     # Extract the first word, hopefully INSERT, UPDATE, or DELETE
     $sql_query =~ /\s*(\w*)/;
     my $sql_action = uc($1);
+    unless ($sql_action =~ /^INSERT$|^UPDATE$|^DELETE$/) {
+      die("ERROR: $SUB_NAME: Unrecognized action $sql_action");
+    }
 
 
-    # New method of checking table/group/user level permissions
+    #### Get the current work_group information
     my $current_work_group_id = $self->getCurrent_work_group_id();
     my $current_work_group_name = $self->getCurrent_work_group_name();
-    my $check_privilege_query = qq!
+
+
+    #### Generate a query to check table/group/user level permissions
+    my $check_privilege_query = qq~
 	SELECT UC.contact_id,UC.work_group_id,TGS.table_group,
 		TGS.privilege_id,UWG.privilege_id,UC.privilege_id
-	  FROM table_group_security TGS
-	  LEFT JOIN user_context UC ON ( UC.contact_id = '$current_contact_id' )
-  	  LEFT JOIN table_property TP ON ( TGS.table_group=TP.table_group )
-	  LEFT JOIN user_work_group UWG ON ( TGS.work_group_id=UWG.work_group_id )
+	  FROM $TB_TABLE_GROUP_SECURITY TGS
+	  LEFT JOIN $TB_USER_CONTEXT UC
+	       ON ( UC.contact_id = '$current_contact_id' )
+  	  LEFT JOIN $TB_TABLE_PROPERTY TP
+               ON ( TGS.table_group = TP.table_group )
+	  LEFT JOIN $TB_USER_WORK_GROUP UWG
+	       ON ( TGS.work_group_id = UWG.work_group_id )
 	 WHERE TGS.work_group_id='$current_work_group_id'
-	   AND TP.table_name='$table_name'
-	   AND UWG.contact_id='$current_contact_id'
-    !;
+	   AND TP.table_name = '$table_name'
+	   AND UWG.contact_id = '$current_contact_id'
+	   AND TGS.record_status != 'D'
+	   AND UC.record_status != 'D'
+	   AND UWG.record_status != 'D'
+    ~;
 
-    my $sth = $dbh->prepare("$check_privilege_query") or croak $dbh->errstr;
-    my $rv  = $sth->execute or croak $dbh->errstr;
+    #### Execute the query and gather the results
+    my @rows = $self->selectSeveralColumns($check_privilege_query);
+    my $n_rows = scalar(@rows);
     #push(@ERRORS, "<PRE>$check_privilege_query\n\n</PRE>");
     #push(@ERRORS, "Returned Permissions:");
-    $nrows = 0;
-    while (@row = $sth->fetchrow_array) {
+
+    #### Loop over the returned rows, extracting results, possibly debugging
+    for (my $row=0; $row<$n_rows; $row++) {
+      my @row = @{$rows[$row]};
       #push(@ERRORS, "---> ".join(" | ",@row));
       $table_group_privilege_id = $row[3];
       $user_work_group_privilege_id = $row[4];
       $user_context_privilege_id = $row[5];
-      $nrows++;
     }
-    $sth->finish;
 
 
-    # If no rows came back, the table/work_group relationship is not defined
-    if ($nrows==0) {
-      push(@ERRORS, "The privilege of your current work group
-        ($current_work_group_name) is not defined for this table");
+    #### If no rows came back, the table/work_group relationship is not defined
+    if ($n_rows == 0) {
+      push(@ERRORS, "The privilege of your current work group ".
+	   "($current_work_group_name) is not defined for this table. Try ".
+	   "going back and switching to a more appropriate group."
+	  );
       $result = "DENIED";
     }
 
 
-    # Don't know how to handle multiple rows yet
-    if ($nrows>1) {
+    #### Don't know how to handle multiple rows yet
+    if ($n_rows > 1) {
       push(@ERRORS, "Multiple permissions were found, and I don't know what
         to do.  Please contact <B>edeutsch</B> about this error");
       $result = "DENIED";
     }
 
 
-    $privilege_id=99;
-    if ($table_group_privilege_id > 0) {
-      $privilege_id=$table_group_privilege_id;
-    }
-
-    if (defined($user_work_group_privilege_id) &&
-        $user_work_group_privilege_id>$privilege_id) {
-      $privilege_id=$user_work_group_privilege_id;
-    }
-
-    if (defined($user_context_privilege_id) &&
-        $user_context_privilege_id>$privilege_id) {
-      $privilege_id=$user_context_privilege_id;
-    }
-
-    my ($privilege_name) = $self->selectOneColumn("
-	SELECT name FROM $TB_PRIVILEGE WHERE privilege_id='$privilege_id'");
-
-
-    if ($privilege_id >= 40) {
-      push(@ERRORS, "You do not have privilege to write to this table.");
-      $result = "DENIED";
-    }
-
-
-    elsif ($sql_action eq "INSERT") {
-      $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
-      $rv  = $sth->execute or croak $dbh->errstr;
-      $result = "SUCCESSFUL";
-
-      #### Determine what the last inserted autogen key was
-      $returned_PK = $self->getLastInsertedPK(
-        table_name=>$table_name,
-        PK_column_name=>$PK_COLUMN_NAME
+    #### Also get the best permission this user has for this project_id
+    #### if appropriate/available for this table
+    if ($parent_project_id) {
+      $project_privilege_id = $self->get_best_permission(
+        project_id => $parent_project_id,
       );
-
     }
 
 
-    elsif ( ($sql_action eq "UPDATE") or ($sql_action eq "DELETE") ) {
+    #### Set the privilege_id to an impossibly high value
+    my $privilege_id=99;
 
-      # Get modified by, group_owner, status of record to be affected
-      my $check_permission_query = qq!
-        SELECT T.modified_by_id,T.owner_group_id,T.record_status
-          FROM $DB_TABLE_NAME T
---          LEFT JOIN $TB_USER_CONTEXT UC ON (T.owner_group_id.UC.work_group_id)
-         WHERE T.$record_identifier!;
-      $sth = $dbh->prepare("$check_permission_query") or croak $dbh->errstr;
-      $rv  = $sth->execute or croak $dbh->errstr;
-      @row = $sth->fetchrow_array;
-      my ($modified_by_id,$owner_group_id,$record_status) = @row;
-      $sth->finish;
+    #### If there's a table_group privilege, use that
+    if ($table_group_privilege_id > 0) {
+      $privilege_id = $table_group_privilege_id;
+    }
+
+    #### If there's a user_work_group privilege and it's worse than the
+    #### so-far determined privilege, then drop to that
+    if (defined($user_work_group_privilege_id) &&
+        $user_work_group_privilege_id > $privilege_id) {
+      $privilege_id = $user_work_group_privilege_id;
+    }
+
+    #### If there's a user_context privilege and it's worse than the
+    #### so-far determined privilege, then drop to that
+    if (defined($user_context_privilege_id) &&
+        $user_context_privilege_id > $privilege_id) {
+      $privilege_id = $user_context_privilege_id;
+    }
 
 
-      my $permission="DENIED";
-      $permission="ALLOWED" if ( ($record_status ne "L")
-                             and ($privilege_id <= 20) );
-      $permission="ALLOWED" if ( ($record_status eq "M")
-                             and ($privilege_id <= 30) );
-      $permission="ALLOWED" if ( ($record_status ne "L")
-                             and ($privilege_id <= 25)
-                             and ($owner_group_id == $current_work_group_id) );
-      $permission="ALLOWED" if ( $modified_by_id==$current_contact_id );
+    my ($privilege_name) = $level_names{$privilege_id}
+      || die("ERROR: $SUB_NAME: Unrecognized privilege_id '$privilege_id'");
 
-      if ($permission eq "ALLOWED") {
-        $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
-        $rv  = $sth->execute or croak $dbh->errstr;
-        $result = "SUCCESSFUL";
+
+    #### Configure a hash for action suggestions
+    my %remedies = ();
+
+
+    #### If the user only has data_reader or worse, deny them
+    if ($privilege_id >= 40) {
+      push(@ERRORS, "As part of the current work group, you only have ".
+	   "privilege '($privilege_name)' for this ".
+	   "table and are not permitted to write to it.");
+      $remedies{find_another_group} = 1;
+      $result = "DENIED";
+
+
+    #### Otherwise if this is an INSERT, then go ahead and execute
+    } elsif ($sql_action eq "INSERT") {
+
+      #### If project privileges are relevant and the user doesn't
+      #### even have data_writer privilege in the project, then DENY
+      if ($project_privilege_id && $project_privilege_id > 30) {
+	push(@ERRORS, "This record belongs to a project that you ".
+	     "only have a privilege level '".
+	     $level_names{$project_privilege_id}."' under.  See below."
+	    );
+	$remedies{talk_to_project_admin} = $parent_project_id;
+        $result = "DENIED";
+
+      #### Else permission okay, so go ahead and execute
       } else {
-        push(@ERRORS, "You do not have permission to $sql_action this record.");
-        push(@ERRORS, "Your privilege level is $privilege_name.");
-        push(@ERRORS, "You are not the owner of this record.")
-          if ($current_contact_id!=$modified_by_id);
-        push(@ERRORS, "The group owner of this record ($owner_group_id) is not the same as your current working group ($current_work_group_id = [$current_work_group_name]).")
+	$self->executeSQL($sql_query);
+	$result = "SUCCESSFUL";
+
+	#### Determine what the last inserted autogen key was
+	$returned_PK = $self->getLastInsertedPK(
+          table_name=>$table_name,
+          PK_column_name=>$PK_COLUMN_NAME
+        );
+      }
+
+
+    #### Otherwise if this an UPDATE or DELETE
+    } elsif ($sql_action =~ /^UPDATE$|^DELETE$/) {
+
+      #### Get modified_by, group_owner, status of record to be affected
+      my $check_permission_query = qq~
+        SELECT created_by_id,modified_by_id,owner_group_id,record_status
+          FROM $DB_TABLE_NAME
+         WHERE $record_identifier
+      ~;
+      my @rows = $self->selectSeveralColumns($check_permission_query);
+      my ($created_by_id,$modified_by_id,$owner_group_id,$record_status) =
+	@{$rows[0]};
+
+
+      #### Start with the assumption of DENIED
+      my $permission="DENIED";
+
+
+      #### If the user is an owner (original or latest) of a record
+      if ( $modified_by_id == $current_contact_id
+	   || $created_by_id == $current_contact_id ) {
+
+	#### If project permissions are relevant
+        if ($project_privilege_id) {
+
+	  #### If the user has at least data_writer in the project, then okay
+	  if ($project_privilege_id <= 30) {
+	    $permission = "ALLOWED";
+
+	  #### Else deny them.  Presumably they once had privilege but now
+	  #### have lost it, so even though they own the records, the project
+	  #### administrators have seen fit to disallow them access
+	  } else {
+	    push(@ERRORS,"You do not have write privilege under this ".
+		 "project.  See below.");
+	    $remedies{talk_to_project_admin} = $parent_project_id;
+	    $permission = "DENIED";
+	  }
+
+	#### Else if project permissions not relevant, then ALLOW pending
+	#### some obscure checks for Locking
+	} else {
+
+	  #### Check if Locked
+	  if ($record_status eq "L") {
+
+	    #### If we're the last modifier, okay
+	    if ($modified_by_id == $current_contact_id) {
+	      $permission="ALLOWED";
+
+	    #### Else, even if we created it, we've been Locked out
+	    } else {
+	      push(@ERRORS,"This record is Locked by ".
+		   $self->getUsername($modified_by_id).".  Please see ".
+		   "him or her to allow you access or alter it.");
+	      $permission="DENIED";
+	    }
+
+	  #### Else if not Locked, then ALLOW
+	  } else {
+	    $permission="ALLOWED";
+	  }
+
+	}
+
+
+      #### Else if the record is Locked, then DENY
+      } elsif ($record_status eq 'L') {
+	push(@ERRORS,"This record is Locked by ".
+	     $self->getUsername($modified_by_id).".  Please see ".
+	     "him or her to allow you access or alter it.");
+	$permission="DENIED";
+
+
+      #### Else if the record is Modifiable, then ALLOW to any data_writer
+      } elsif ($record_status eq 'M') {
+	$permission="ALLOW";
+
+
+      #### Else if not the owner and has Normal record_status, then more logic
+      } else {
+
+	#### If project permissions are relevant
+        if ($project_privilege_id) {
+
+	  #### If the user has at least data_modifier in the project, then okay
+	  if ($project_privilege_id <= 20) {
+	    $permission = "ALLOWED";
+
+	  } elsif ($project_privilege_id <= 25
+		   && ($owner_group_id == $current_work_group_id)) {
+	    $permission = "ALLOWED";
+
+	  } else {
+	    push(@ERRORS,"You do not have sufficient privilege to modify ".
+		 "this record.  See the project owner/admin to fix.");
+	    $permission = "DENIED";
+
+	  }
+
+	#### Else project permissions are no relevant, so just use regular
+	} else {
+
+	  #### If the user has at least modifier in the project, then okay
+	  if ($privilege_id <= 20) {
+	    $permission = "ALLOWED";
+
+	  #### Else if group_modifier and the current and record group match
+	  } elsif ($project_privilege_id <= 25
+		   && ($owner_group_id == $current_work_group_id)) {
+	    $permission = "ALLOWED";
+
+	  #### Otherwise the user is out of luck
+	  } else {
+	    push(@ERRORS,"You do not have sufficient under this ".
+		 "project.  See below.");
+	    $remedies{talk_to_project_admin} = $parent_project_id;
+	    $permission = "DENIED";
+
+	  }
+
+	}
+
+      }
+
+
+      #### If after all this, we've ALLOWED the change, do it
+      if ($permission eq "ALLOWED") {
+        $self->executeSQL($sql_query);
+        $result = "SUCCESSFUL";
+
+      #### Else if it's not allowed, try to determine why not
+      } else {
+        unshift(@ERRORS,"You do not have sufficient privilege to ".
+		"$sql_action this record.");
+
+	unshift(@ERRORS,"PLEASE NOTE that SBEAMS has recently suffered an ".
+		"update to its security model.  If you encounter this ".
+		"message in error, please send a polite message to ".
+		"edeutsch and he will try to get it fixed.");
+
+        push(@ERRORS,"Your table-level privilege is $privilege_name.");
+
+        push(@ERRORS,"Your project-level privilege is ".
+	     $level_names{$project_privilege_id})
+	  if ($parent_project_id);
+
+	unless ( $modified_by_id == $current_contact_id
+		 || $created_by_id == $current_contact_id ) {
+	  push(@ERRORS,"You are not an owner of this record.");
+	}
+
+        push(@ERRORS, "The group owner of this record ($owner_group_id) ".
+	     "is not the same as your current working group ".
+	     "($current_work_group_id = [$current_work_group_name]).")
           if ($owner_group_id != $current_work_group_id);
-        push(@ERRORS, "This record is Locked.")
-          if ($record_status eq "L");
+
+        push(@ERRORS, "This record is Locked.") if ($record_status eq 'L');
+
+	if ($remedies{find_another_group}) {
+          push(@ERRORS,"Perhaps you should be ${sql_action}ing this record ".
+	       "under a different group.  To do so, click [BACK] and then ".
+	       "select a different group using the pull-down menu at the ".
+	       "top of the screen."
+	      );
+	}
+
+	if ($remedies{talk_to_project_admin}) {
+	  my $sql = qq~
+	    SELECT project_tag,P.name,username,first_name,last_name
+	      FROM $TB_PROJECT P
+	     INNER JOIN $TB_CONTACT C ON ( P.PI_contact_id = C.contact_id )
+	     INNER JOIN $TB_USER_LOGIN UL
+	           ON ( P.PI_contact_id = UL.contact_id )
+	     WHERE P.project_id = '$parent_project_id'
+	  ~;
+	  my @rows = $self->selectSeveralColumns($sql);
+	  my ($project_tag,$project_name,$username,$first_name,$last_name) =
+	    @{$rows[0]};
+
+	  $sql = qq~
+	    SELECT username,first_name,last_name
+	      FROM $TB_USER_PROJECT_PERMISSION GPP
+	     INNER JOIN $TB_CONTACT C ON ( GPP.contact_id = C.contact_id )
+	     INNER JOIN $TB_USER_LOGIN UL ON ( GPP.contact_id = UL.contact_id )
+	     WHERE GPP.privilege_id = 10
+	       AND GPP.project_id = '$parent_project_id'
+	       AND GPP.record_status != 'D'
+	  ~;
+	  @rows = $self->selectSeveralColumns($sql);
+
+	  my $project_admins = '';
+	  if (@rows) {
+	    $project_admins = "You may also get access from one of those ".
+	      "with administrator privilege for this project: ";
+	    foreach my $row (@rows) {
+	      $project_admins .= "$row->[0] ($row->[1] $row->[2]),";
+	    }
+	    chop($project_admins);
+	  }
+
+          push(@ERRORS,"The record you are trying To ${sql_action} ".
+	       "belongs to the $project_tag ($project_name) project, which ".
+	       "is owned by $username ($first_name $last_name).  Please ".
+	       "contact him or her and request that you be granted access ".
+	       "to this project with greater privilege. $project_admins"
+	      );
+	}
+
         $result = "DENIED";
       }
 
     }
 
 
+    #### Log the result and the query itself regardless of result
     my $altered_sql_query = $self->convertSingletoTwoQuotes($sql_query);
-    my $log_query = qq!
+    my $log_query = qq~
         INSERT INTO $TB_SQL_COMMAND_LOG
                (created_by_id,result,sql_command)
         VALUES ($current_contact_id,'$result','$altered_sql_query')
-    !;
-
-    $sth = $dbh->prepare("$log_query") or croak $dbh->errstr;
-    $rv  = $sth->execute or croak $dbh->errstr;
-    $sth->finish;
+    ~;
+    $self->executeSQL($log_query);
 
 
+    #### Return the results
     return ($result,$returned_PK,@ERRORS);
 }
+
 
 
 ###############################################################################
@@ -319,8 +545,8 @@ sub selectSeveralColumns {
     $sql = $self->translateSQL(sql=>$sql);
 
     #### FIX ME replace with $dbh->selectall_arrayref ?????
-    my $sth = $dbh->prepare($sql) or croak $dbh->errstr;
-    my $rv  = $sth->execute or croak $dbh->errstr;
+    my $sth = $dbh->prepare($sql) or confess($dbh->errstr);
+    my $rv  = $sth->execute or confess($dbh->errstr);
 
     while (my @row = $sth->fetchrow_array) {
         push(@rows,\@row);
