@@ -42,6 +42,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS
     $MESSAGE_WIDTH
     $PHYSICAL_BASE_DIR
     $UPLOAD_DIR
+    $SBEAMS_PART
     $SBEAMS_SUBDIR
     $LOGGING_LEVEL
     $LOG_BASE_DIR
@@ -80,7 +81,7 @@ require Exporter;
     $PHYSICAL_BASE_DIR
     $UPLOAD_DIR
     $SBEAMS_SUBDIR
-
+    $SBEAMS_PART
     %CONFIG_SETTING
    
     $SBEAMS_VERSION
@@ -100,7 +101,7 @@ $subdir = '' if ($subdir eq 'cgi');  # Clear it if it's the top cgi directory
 setSBEAMS_SUBDIR('dummy',$subdir);
 
 ###Set the current version of SBEAMS ##
-$SBEAMS_VERSION = "0.10";
+$SBEAMS_VERSION = "0.20-RC1";
 
 #### Read in local configuration information from SBEAMS.conf file
 $DBCONFIG = readMainConfFile();
