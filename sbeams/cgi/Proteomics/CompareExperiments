@@ -692,7 +692,8 @@ sub handle_request {
 
   #### Define the SQL statement
   $sql = qq~
-	SELECT BS.biosequence_name,MIN(BS.biosequence_id) AS 'min_biosequence_id'
+	SELECT BS.biosequence_name,
+	       MIN(BS.biosequence_id) AS 'min_biosequence_id'
 	  INTO #tmpBSids
 	  FROM $TBPR_BIOSEQUENCE BS
 	  JOIN $TBPR_SEARCH_BATCH SB
@@ -791,7 +792,7 @@ sub handle_request {
   my $parameters_list = '';
   while ( ($key,$value) = each %input_types ) {
     if ($key ne 'sort_order' && $key ne 'display_options' &&
-        $key ne 'search_batch_id' ) {
+        $key ne 'search_batch_id' && $key ne 'reference_constraint') {
       if ($parameters{$key}) {
         push(@parameters_to_pass,"$key=$parameters{$key}");
       }
