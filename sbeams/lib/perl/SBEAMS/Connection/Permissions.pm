@@ -704,11 +704,12 @@ sub get_best_permission{
 
   ## Else find best privilege available
   $sql = qq~
-      SELECT UL.username,
+      SELECT CASE WHEN UL.username IS NULL THEN '-No Login-' ELSE UL.username END AS username,
       MIN(CASE WHEN UWG.contact_id IS NULL THEN NULL ELSE GPP.privilege_id END) AS "best_group_privilege_id",
       MIN(UPP.privilege_id) AS "best_user_privilege_id"
       FROM $TB_PROJECT P
-     INNER JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
+      JOIN $TB_CONTACT C ON ( P.PI_contact_id = C.contact_id )
+      LEFT JOIN $TB_USER_LOGIN UL ON ( C.contact_id = UL.contact_id )
       LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
       ON ( P.project_id = UPP.project_id
 	   AND UPP.contact_id='$current_contact_id' )
@@ -723,7 +724,7 @@ sub get_best_permission{
       ON ( UWG.work_group_id = WG.work_group_id )
       WHERE 1=1
       AND P.record_status != 'D'
-      AND UL.record_status != 'D'
+      AND ( UL.record_status != 'D' OR UL.record_status IS NULL )
       AND ( UPP.record_status != 'D' OR UPP.record_status IS NULL )
       AND ( GPP.record_status != 'D' OR GPP.record_status IS NULL )
       AND ( PRIV.record_status != 'D' OR PRIV.record_status IS NULL )
@@ -736,6 +737,7 @@ sub get_best_permission{
       ORDER BY UL.username,P.project_tag
       ~;
   @rows = $self->selectSeveralColumns($sql);
+  $log->debug( $sql );
 
   my $best_privilege_id = 9999;
 
@@ -876,16 +878,16 @@ sub getAccessibleProjects{
 
   #### Define SQL to get all project to which the current user has access
   my $sql = qq~
-      SELECT P.project_id,P.project_tag,P.name,UL.username,
+  SELECT P.project_id,P.project_tag,P.name,
+    CASE WHEN UL.username IS NULL THEN '-No Login-' 
+         ELSE UL.username END AS username,
              MIN(CASE WHEN UWG.contact_id IS NULL THEN NULL
                       ELSE GPP.privilege_id END) AS "best_group_privilege_id",
              MIN(CASE WHEN P.PI_contact_id = $current_contact_id THEN 10
                       ELSE UPP.privilege_id END) AS "best_user_privilege_id"
-			~;
-
-	$sql .= qq~
       FROM $TB_PROJECT P
-     INNER JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
+      INNER JOIN $TB_CONTACT C ON ( P.PI_contact_id = C.contact_id )
+      LEFT JOIN $TB_USER_LOGIN UL ON ( C.contact_id = UL.contact_id )
       LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
       ON ( P.project_id = UPP.project_id
 	   AND UPP.contact_id='$current_contact_id' )
@@ -898,18 +900,17 @@ sub getAccessibleProjects{
 	   AND UWG.contact_id='$current_contact_id' )
       LEFT JOIN $TB_WORK_GROUP WG
       ON ( UWG.work_group_id = WG.work_group_id )
-			~;
-
-	$sql .= qq~
       WHERE 1=1
       AND P.record_status != 'D'
-      AND UL.record_status != 'D'
+      AND C.record_status != 'D'
+      AND ( UL.record_status != 'D' OR  UL.record_status IS NULL )
       AND ( UPP.record_status != 'D' OR UPP.record_status IS NULL )
       AND ( GPP.record_status != 'D' OR GPP.record_status IS NULL )
       AND ( PRIV.record_status != 'D' OR PRIV.record_status IS NULL )
       AND ( UWG.record_status != 'D' OR UWG.record_status IS NULL )
       AND ( WG.record_status != 'D' OR WG.record_status IS NULL )
-			~;
+  ~;
+
 	if ($work_group_name ne "Admin") {
 			$sql .= qq~
       AND ( UPP.privilege_id<=$privilege_level OR GPP.privilege_id<=$privilege_level
