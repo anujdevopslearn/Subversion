@@ -1360,7 +1360,7 @@ SELECT	A.array_name,
 		my @channels = @{$quantitation_data{channels}};
 		my $number_of_channels = scalar(@channels);
 		my $first_channel = "ch1";
-		my $other_channel = "ch2";
+		my $other_channel = "ch".($number_of_channels/2 + 1);#handles hi-lo scans
 		my $channel_direction = "";
 		
 		## Loop over each channel to determine direction
@@ -1404,7 +1404,6 @@ SELECT	A.array_name,
 		}else {
 		  $array_condition = "$sample1_name"."_vs_"."$sample2_name";
 		}
-
 		my @temp = ($rep_file, $channel_direction, $array_condition);
 		push @mr_info, \@temp;	
 	  }
@@ -1443,7 +1442,7 @@ SELECT	A.array_name,
 		  $mergereps_commands .= "file_name = $t->[0]\n";
 		  my $reversed_file_direction = $t->[1];
 		  $reversed_file_direction =~ tr/rf/fr/;
-		  $mergereps_commands .= "file_direction* = $reversed_file_direction\n";
+		  $mergereps_commands .= "file_direction = $reversed_file_direction\n";
 		}else {
 		  push @temp_mr_info, $t;
 		}
