@@ -433,7 +433,7 @@ sub handle_request {
 	$file_root_clause
 	$charge_clause
 	$precursor_mass_clause
-	   AND SH.cross_corr_rank = 1
+	   --AND SH.cross_corr_rank = 1 Seems to slow things down?
 
 	--
 
@@ -633,6 +633,8 @@ sub getExperimentNames {
     $search_batch_subdir =~ s/\W/_/g;
 
     $need_subdirs = 1 if (exists($used_set_tags_hash{$set_tag}));
+    #### Force used of subdirs for this query
+    $need_subdirs = 1;
 
     $set_tag_hash{$search_batch_id} = $set_tag;
     $used_set_tags_hash{$set_tag} = 1;
