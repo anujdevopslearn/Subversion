@@ -68,6 +68,8 @@ Options:
   --gradient_program_id=nnn
                       If there is no gradient_program_id already set for
                       this fraction, then set it to this value instead of 1
+  --column_delay=nnn  If there is no column_delay already set for
+                      this fraction, then set it to this value instead of 240
   --experiment_tag    The experiment_tag of a proteomics_experiment
                       that is to be worked on; all are checked if
                       none is provided
@@ -106,7 +108,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
   "experiment_tag:s","file_prefix:s","check_status","force_ref_db:s",
   "list_all","search_subdir:s","load","testonly",
   "update_from_summary_files","update_search","update_probabilities",
-  "update_timing_info","gradient_program_id:i"
+  "update_timing_info","gradient_program_id:i","column_delay:i"
   )) {
   print "$USAGE";
   exit;
@@ -1849,7 +1851,8 @@ sub updateTimingInfo {
 
   #### Set the command-line options
   my $file_prefix = $OPTIONS{"file_prefix"} || '';
-  my $set_gradient_program_id = $OPTIONS{"gradient_program_id"} || 1;
+  my $set_gradient_program_id = $OPTIONS{"gradient_program_id"};
+  my $set_column_delay = $OPTIONS{"column_delay"};
 
 
   #### Try to find this experiment in database
@@ -1910,6 +1913,12 @@ sub updateTimingInfo {
     print "\nProcessing fraction '$fraction_tag'\n";
 
 
+    #### If the user supplied a column_delay, set it
+    if (defined($set_column_delay)) {
+      $column_delay = $set_column_delay;
+      print "Setting column_delay to $column_delay\n";
+    }
+
     #### If there's no column delay, set it to a default and warn the user
     unless ($column_delay) {
       $column_delay = 240;
@@ -1918,10 +1927,16 @@ sub updateTimingInfo {
     }
 
 
+    #### If the user supplied a gradient_program_id, set it
+    if (defined($set_gradient_program_id)) {
+      $gradient_program_id = $set_gradient_program_id;
+      print "Setting gradient_program_id to $gradient_program_id\n";
+    }
+
     #### If there's no gradient_program_id, set it to a default
     #### and warn the user
     unless ($gradient_program_id) {
-      $gradient_program_id = $set_gradient_program_id;
+      $gradient_program_id = 1;
       print "No gradient_program_id has been defined for this fraction yet.\n";
       print "  Setting it to default value $gradient_program_id.\n";
     }
@@ -2130,6 +2145,61 @@ sub calcBufferPercent {
 
   return \%finalhash;
 
+
+}
+
+
+
+###############################################################################
+# calcGravyScore: Calculate the gravy_score based on the hydropathy indexes
+#   of each of the residues in the peptide
+###############################################################################
+sub calcGravyScore {
+  my %args = @_;
+
+  #### Parse input parameters
+  my $peptide = $args{'peptide'} || die "Must supply the peptide";
+
+  #### Define the hydropathy index
+  my %hydropathy_index = (
+    I => 4.5,
+    V => 4.2,
+    L => 3.8,
+    F => 2.8,
+    C => 2.5,
+    M => 1.9,
+    A => 1.8,
+    G => -0.4,
+    T => -0.7,
+    W => -0.9,
+    S => -0.8,
+    Y => -1.3,
+    P => -1.6,
+    H => -3.2,
+    E => -3.5,
+    Q => -3.5,
+    D => -3.5,
+    N => -3.5,
+    K => -3.9,
+    R => -4.5,
+  );
+
+
+  #### Split peptide into an array of residues and get number
+  my @residues = split(//,$peptide);
+  my $nresidues = scalar(@residues);
+
+  #### Loop over each residue and add in the hydropathy_index
+  my $gravy_score = 0;
+  foreach my $residue (@residues) {
+    $gravy_score += $hydropathy_index{$residue};
+  }
+
+
+  #### Divide the total score by the number of residues
+  $gravy_score = $gravy_score / $nresidues;
+
+  return $gravy_score;
 
 }
 
