@@ -27,6 +27,7 @@ use vars qw(@ISA @EXPORT
     $TBPS_QUERY_OPTION
 
     $TBPS_DOMAIN_MATCH
+    $TBPS_DOMAIN_MATCH_TYPE
     $TBPS_DOMAIN_MATCH_SOURCE
 
 );
@@ -46,6 +47,7 @@ require Exporter;
     $TBPS_QUERY_OPTION
 
     $TBPS_DOMAIN_MATCH
+    $TBPS_DOMAIN_MATCH_TYPE
     $TBPS_DOMAIN_MATCH_SOURCE
 
 );
@@ -65,5 +67,6 @@ $TBPS_BIOSEQUENCE_PROPERTY_SET  = "${mod}biosequence_property_set";
 $TBPS_QUERY_OPTION          = "${mod}query_option";
 
 $TBPS_DOMAIN_MATCH          = "${mod}domain_match";
+$TBPS_DOMAIN_MATCH_TYPE     = "${mod}domain_match_type";
 $TBPS_DOMAIN_MATCH_SOURCE   = "${mod}domain_match_source";
 
