@@ -89,6 +89,11 @@ use vars qw(@ISA @EXPORT
 
     $TBBL_GENE_ANNOTATION
     $TBPR_BIOSEQUENCE_ANNOTATED_GENE
+    
+    $TBPR_QUALITY_LABEL
+    $TBPR_NSP_INFORMATION
+    $TBPR_NSP_DISTRIBUTION
+    $TBPR_MSMS_SPECTRUM_ANNOTATION
 
 );
 
@@ -164,6 +169,10 @@ require Exporter;
     $TBBL_GENE_ANNOTATION
     $TBPR_BIOSEQUENCE_ANNOTATED_GENE
 
+    $TBPR_QUALITY_LABEL
+    $TBPR_NSP_INFORMATION
+    $TBPR_NSP_DISTRIBUTION
+    $TBPR_MSMS_SPECTRUM_ANNOTATION
 );
 
 
@@ -241,5 +250,9 @@ $TBPR_SUMMARY_QUANTITATION        = "${mod}summary_quantitation";
 $TBBL_GENE_ANNOTATION             = "${BioLink}gene_annotation";
 $TBPR_BIOSEQUENCE_ANNOTATED_GENE  = "${mod}biosequence_annotated_gene";
 
+$TBPR_QUALITY_LABEL               = "${mod}quality_label";
+$TBPR_NSP_INFORMATION             = "${mod}nsp_information";
+$TBPR_NSP_DISTRIBUTION            = "${mod}nsp_distribution";
+$TBPR_MSMS_SPECTRUM_ANNOTATION    = "${mod}msms_spectrum_annotation";
 
 
