@@ -2245,8 +2245,11 @@ sub displayResultSet {
 	for (my $column = 0; $column < scalar(@row); $column++){
 	  my $datum = $row[$column];
 	  next if ( defined $no_print_columns[$column] && $no_print_columns[$column] == 1);
-          if ( defined $datum && $datum =~ /[\t,\"]/) {
+          if ( defined $datum && $datum =~ /[\t,\",\n]/) {
             $datum =~ s/\t/ /g if ($self->output_mode()  =~ /tsv/);
+
+            # Substitute stray \n characters, Mantis bug 0000046
+            $datum =~ s/\n/\\n/g if ($self->output_mode() =~ /tsv|csv/);
             $datum =~ s/\"/""/g;
             $datum = "\"$datum\"";
           }
