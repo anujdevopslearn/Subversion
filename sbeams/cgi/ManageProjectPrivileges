@@ -331,8 +331,18 @@ sub handle_request {
   $current_contact_id = $sbeams->getCurrent_contact_id;
   $current_project_id = $sbeams->getCurrent_project_id;
   $current_group_id   = $sbeams->getCurrent_work_group_id;
+
+
+  #### Translate project_id into name
+  $sql = qq~
+      SELECT P.name
+      FROM project P
+      WHERE P.project_id = '$current_project_id'
+      ~;
+  @rows = $sbeams->selectOneColumn($sql);
+
   print qq~
-      <H1>Privileges for Project $current_project_id</H1>
+      <H1>Privileges for $rows[0]</H1>
       $LINESEPARATOR
       ~;
 
