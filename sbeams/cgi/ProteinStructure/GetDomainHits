@@ -495,9 +495,7 @@ sub handle_request {
 
     ["match_type_name","DMT.domain_match_type_name","Match Type"],
     ["match_name","DM.match_name","Match Name"],
-    ["match_accessor","TDBX.accessor","match_accessor"],
     ["match_accession","DM.match_accession","match_accession"],
-    ["match_accessor_suffix","TDBX.accessor_suffix","match_accessor_suffix"],
     ["match_EC_numbers","D.EC_numbers","Domain EC Numbers"],
 
     ["probability","STR(DM.probability,7,3)","Prob"],
@@ -507,14 +505,18 @@ sub handle_request {
 
     @additional_columns,
 
-    ["second_match_name","DM.second_match_name","Cath ID"],
+    ["second_match_name","DM.second_match_name","Second Reference"],
     ["second_match_accession","DM.second_match_accession","second_match_accession"],
     ["match_annotation","DM.match_annotation","Match Annotation"],
 
-    ["biosequence_desc","BS.biosequence_desc","Reference Description"],
+    ["biosequence_desc","BS.biosequence_desc","Biosequence Description"],
     ["biosequence_set_id","BSS.biosequence_set_id","biosequence_set_id"],
     ["biosequence_id","BS.biosequence_id","biosequence_id"],
     ["biosequence_annotation_id","BSA.biosequence_annotation_id","biosequence_annotation_id"],
+    ["match_accessor","TDBX.accessor","match_accessor"],
+    ["match_accessor_suffix","TDBX.accessor_suffix","match_accessor_suffix"],
+    ["second_match_accessor","TDBX2.accessor","second_match_accessor"],
+    ["second_match_accessor_suffix","TDBX2.accessor_suffix","second_match_accessor_suffix"],
     ["organism_full_name","O.full_name","Organism"],
   );
 
@@ -547,10 +549,14 @@ sub handle_request {
 	       ON ( DM.domain_match_source_id = DMS.domain_match_source_id )
           LEFT JOIN $TBPS_DOMAIN_MATCH_TYPE DMT
 	       ON ( DM.domain_match_type_id = DMT.domain_match_type_id )
-          LEFT JOIN $TBPS_DOMAIN D
-	       ON ( DM.match_name = D.domain_name )
           LEFT JOIN $TB_DBXREF TDBX
 	       ON ( DMT.dbxref_id = TDBX.dbxref_id )
+          LEFT JOIN $TBPS_DOMAIN_MATCH_TYPE DMT2
+	       ON ( DM.second_match_type_id = DMT2.domain_match_type_id )
+          LEFT JOIN $TB_DBXREF TDBX2
+	       ON ( DMT2.dbxref_id = TDBX2.dbxref_id )
+          LEFT JOIN $TBPS_DOMAIN D
+	       ON ( DM.match_name = D.domain_name )
 	  LEFT JOIN $TBPS_BIOSEQUENCE_ANNOTATION BSA
 	       ON ( DM.biosequence_id = BSA.biosequence_id )
 	 INNER JOIN $TBPS_BIOSEQUENCE BS
@@ -634,8 +640,8 @@ sub handle_request {
                'Query Start' => "$CGI_BASE_DIR/ProteinStructure/BrowseBioSequence.cgi?biosequence_name_constraint=\%$colnameidx{biosequence_name}V&biosequence_set_id=\%$colnameidx{biosequence_set_id}V&label_start=\%$colnameidx{query_start}V&label_end=\%$colnameidx{query_end}V&apply_action=HIDEQUERY&display_options=SequenceFormat,ShowExtraProteinProps",
     	       'Query Start_ATAG' => 'TARGET="Win1" ',
 
-               'Cath ID' => "http://www.biochem.ucl.ac.uk/bsm/cath_new/class\%$colnameidx{second_match_accession}V/index.html",
-    	       'Cath ID_ATAG' => 'TARGET="WinExt" ',
+               'Second Reference' => "\%$colnameidx{second_match_accessor}V\%$colnameidx{second_match_accession}V\%$colnameidx{second_match_accessor_suffix}V",
+    	       'Second Reference_ATAG' => 'TARGET="WinExt" ',
 
   );
 
@@ -647,7 +653,9 @@ sub handle_request {
 		  'match_accessor' => 1,
 		  'match_accession' => 1,
 		  'match_accessor_suffix' => 1,
+		  'second_match_accessor' => 1,
                   'second_match_accession' => 1,
+		  'second_match_accessor_suffix' => 1,
                   'molecular_function_GO' => 1,
                   'molecular_function_GO' => 1,
                   'biological_process_GO' => 1,
@@ -843,6 +851,13 @@ sub postProcessResultset {
     #### Look for imported annotations and show those
     for (my $i=$startrow; $i<=$endrow; $i++) {
       if ($rows[$i]->[$match_type_column_index] eq 'NgAnnot') {
+        push(@new_data_array,$rows[$i]);
+      }
+    }
+
+    #### Look for TIGRFAM hits and show those
+    for (my $i=$startrow; $i<=$endrow; $i++) {
+      if ($rows[$i]->[$match_type_column_index] eq 'TIGRFAM') {
         push(@new_data_array,$rows[$i]);
       }
     }
