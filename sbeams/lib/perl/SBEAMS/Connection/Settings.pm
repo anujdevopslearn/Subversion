@@ -94,6 +94,13 @@ if ( $SBEAMS_INSTANCE =~ /\/dev1\// ) {
   $PHYSICAL_BASE_DIR      = "/local/www/html/dev6/sbeams";
   $UPLOAD_DIR             = "/local/data/dev6/sbeams";
 
+} elsif ( $SBEAMS_INSTANCE =~ /\/dev7\// ) {
+  $DBVERSION              = 'Dev Branch 7';
+  $BGCOLOR                = '#8b0045';
+  $HTML_BASE_DIR          = '/dev7/sbeams';
+  $PHYSICAL_BASE_DIR      = "/local/www/html/dev7/sbeams";
+  $UPLOAD_DIR             = "/local/data/dev7/sbeams";
+
 } elsif ( $SBEAMS_INSTANCE =~ /\/ext\// ) {
   $DBVERSION              = 'External Access';
   $BGCOLOR                = '#99DD99';
