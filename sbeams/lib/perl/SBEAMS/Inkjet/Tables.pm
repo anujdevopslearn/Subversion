@@ -12,6 +12,9 @@ package SBEAMS::Inkjet::Tables;
 
 
 use strict;
+
+use SBEAMS::Connection::Settings;
+
 use vars qw(@ISA @EXPORT 
     $TB_MISC_OPTION
     $TB_ORGANISM
@@ -86,37 +89,42 @@ require Exporter;
 );
 
 
-$TB_MISC_OPTION              = 'sbeams.dbo.misc_option';
-$TB_ORGANISM                 = 'sbeams.dbo.organism';
+#### Get the appropriate database prefixes for the SBEAMS core and this module
+my $core = $DBPREFIX{Core};
+my $mod  = $DBPREFIX{Inkjet};
+my $MA   = $DBPREFIX{Microarray};
 
-$TBIJ_PROTOCOL               = 'inkjet.dbo.protocol';
-$TBIJ_PROTOCOL_TYPE          = 'inkjet.dbo.protocol_type';
-$TBIJ_HARDWARE               = 'inkjet.dbo.hardware';
-$TBIJ_HARDWARE_TYPE          = 'inkjet.dbo.hardware_type';
-$TBIJ_SOFTWARE               = 'inkjet.dbo.software';
-$TBIJ_SOFTWARE_TYPE          = 'inkjet.dbo.software_type';
-$TBIJ_SLIDE_TYPE             = 'inkjet.dbo.slide_type';
-$TBIJ_COST_SCHEME            = 'inkjet.dbo.cost_scheme';
-$TBIJ_SLIDE_TYPE_COST        = 'inkjet.dbo.slide_type_cost';
-$TBIJ_LABELING_METHOD        = 'sbeams.dbo.labeling_method';
-$TBIJ_MISC_OPTION            = 'inkjet.dbo.misc_option';
-$TBIJ_DYE                    = 'arrays.dbo.dye';
-$TBIJ_XNA_TYPE               = 'sbeams.dbo.xna_type';
-$TBIJ_ARRAY_REQUEST          = 'inkjet.dbo.array_request';
-$TBIJ_ARRAY_REQUEST_SLIDE    = 'inkjet.dbo.array_request_slide';
-$TBIJ_ARRAY_REQUEST_SAMPLE   = 'inkjet.dbo.array_request_sample';
-$TBIJ_ARRAY_REQUEST_OPTION   = 'inkjet.dbo.array_request_option';
-$TBIJ_SLIDE_MODEL            = 'inkjet.dbo.slide_model';
-$TBIJ_SLIDE_LOT              = 'inkjet.dbo.slide_lot';
-$TBIJ_SLIDE                  = 'inkjet.dbo.slide';
-$TBIJ_PRINTING_BATCH         = 'inkjet.dbo.printing_batch';
-$TBIJ_ARRAY_LAYOUT           = 'inkjet.dbo.array_layout';
-$TBIJ_ARRAY                  = 'inkjet.dbo.array';
-$TBIJ_LABELING               = 'inkjet.dbo.labeling';
-$TBIJ_HYBRIDIZATION          = 'inkjet.dbo.hybridization';
-$TBIJ_ARRAY_SCAN             = 'inkjet.dbo.array_scan';
-$TBIJ_ARRAY_QUANTITATION     = 'inkjet.dbo.array_quantitation';
+$TB_MISC_OPTION              = "sbeams.dbo.misc_option";
+$TB_ORGANISM                 = "sbeams.dbo.organism";
 
-$TBIJ_QUERY_OPTION           = 'inkjet.dbo.query_option';
+$TBIJ_PROTOCOL               = "inkjet.dbo.protocol";
+$TBIJ_PROTOCOL_TYPE          = "inkjet.dbo.protocol_type";
+$TBIJ_HARDWARE               = "inkjet.dbo.hardware";
+$TBIJ_HARDWARE_TYPE          = "inkjet.dbo.hardware_type";
+$TBIJ_SOFTWARE               = "inkjet.dbo.software";
+$TBIJ_SOFTWARE_TYPE          = "inkjet.dbo.software_type";
+$TBIJ_SLIDE_TYPE             = "inkjet.dbo.slide_type";
+$TBIJ_COST_SCHEME            = "inkjet.dbo.cost_scheme";
+$TBIJ_SLIDE_TYPE_COST        = "inkjet.dbo.slide_type_cost";
+$TBIJ_LABELING_METHOD        = "microarray.dbo.labeling_method";
+$TBIJ_MISC_OPTION            = "inkjet.dbo.misc_option";
+$TBIJ_DYE                    = "microarray.dbo.dye";
+$TBIJ_XNA_TYPE               = "microarray.dbo.xna_type";
+$TBIJ_ARRAY_REQUEST          = "inkjet.dbo.array_request";
+$TBIJ_ARRAY_REQUEST_SLIDE    = "inkjet.dbo.array_request_slide";
+$TBIJ_ARRAY_REQUEST_SAMPLE   = "inkjet.dbo.array_request_sample";
+$TBIJ_ARRAY_REQUEST_OPTION   = "inkjet.dbo.array_request_option";
+$TBIJ_SLIDE_MODEL            = "inkjet.dbo.slide_model";
+$TBIJ_SLIDE_LOT              = "inkjet.dbo.slide_lot";
+$TBIJ_SLIDE                  = "inkjet.dbo.slide";
+$TBIJ_PRINTING_BATCH         = "inkjet.dbo.printing_batch";
+$TBIJ_ARRAY_LAYOUT           = "inkjet.dbo.array_layout";
+$TBIJ_ARRAY                  = "inkjet.dbo.array";
+$TBIJ_LABELING               = "inkjet.dbo.labeling";
+$TBIJ_HYBRIDIZATION          = "inkjet.dbo.hybridization";
+$TBIJ_ARRAY_SCAN             = "inkjet.dbo.array_scan";
+$TBIJ_ARRAY_QUANTITATION     = "inkjet.dbo.array_quantitation";
+
+$TBIJ_QUERY_OPTION           = "inkjet.dbo.query_option";
 
 
