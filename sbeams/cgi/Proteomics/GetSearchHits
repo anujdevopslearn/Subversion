@@ -863,6 +863,14 @@ sub prepare_msms_spectra_resultset {
   my %parameters = %{$query_parameters_ref};
 
 
+
+  #### Disable this feature temporarily because it can slow things
+  #### down considerably if the user isn't interested in this stuff.
+  #### Should change the implementation so that this work is only
+  #### if the user wants it.
+  return;
+
+
   #### If the output_mode isn't html, then don't bother with all this
   return unless ($sbeams->output_mode() eq 'html');
 
