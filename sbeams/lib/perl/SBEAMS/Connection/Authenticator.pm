@@ -12,7 +12,7 @@ package SBEAMS::Connection::Authenticator;
 
 
 use strict;
-use vars qw( $q $dbh $http_header @ISA @ERRORS $SECRET_KEY
+use vars qw( $q $http_header @ISA @ERRORS
              $current_contact_id $current_username
              $current_work_group_id $current_work_group_name 
              $current_project_id $current_project_name
@@ -21,13 +21,12 @@ use vars qw( $q $dbh $http_header @ISA @ERRORS $SECRET_KEY
 use CGI::Carp qw(fatalsToBrowser croak);
 use CGI qw(-no_debug);
 use DBI;
+use Crypt::CBC;
+
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
-use Crypt::CBC;
-
-$SECRET_KEY = 'PoIuYtReWq';
 
 $q       = new CGI;
 
@@ -51,10 +50,10 @@ sub new {
 # has a valid cookie indicating previous login.  If so, return the username,
 # else the login process begins.  This is not really terribly secure.
 # Login information is not encrypted during transmission unless an
-# encryption layer is used.  The $SECRET_KEY should be rotated weekly
-# or some such.
+# encryption layer like SSL is used.  The Crypt key should be changed
+# frequently for added security.
 ###############################################################################
-sub Authenticate { 
+sub Authenticate {
     my $self = shift;
     my %args = @_;
 
@@ -68,24 +67,11 @@ sub Authenticate {
     $| = 1;
 
 
-    #### Determine whether we've been invoked by HTTP request or on the
-    #### command line by testing for env variable REMOTE_ADDR.  If a
-    #### command-line user sets this variable, he can pretend to be coming
-    #### from the web interface
-    if ($ENV{REMOTE_ADDR}) {
-      $self->invocation_mode('http');
-      $self->output_mode('html');
-    } else {
-      $self->invocation_mode('user');
-      $self->output_mode('interactive');
-      #### Add in a fake reference to MOD_PERL to trick CGI::Carp into
-      #### not printing the "Content: text/html\n\n" header
-      $ENV{'MOD_PERL'} = 'FAKE'
-    }
-
+    #### Guess at the current invocation mode
+    $self->guessMode();
 
     #### Obtain the database handle $dbh, thereby opening the DB connection
-    $dbh = $self->getDBHandle(connect_read_only=>$connect_read_only);
+    my $dbh = $self->getDBHandle(connect_read_only=>$connect_read_only);
 
 
     #### If there's a DISABLED file in the main HTML directory, do not allow
@@ -106,7 +92,8 @@ sub Authenticate {
     #### If the effective UID is the apache user, then go through the
     #### cookie authentication mechanism
     my $uid = "$>" || "$<";
-    if ( $uid == 48 ) {
+    my $www_uid = $self->getWWWUID();
+    if ( $uid == $www_uid ) {
 
         # If the user is not logged in, make them log in
         unless ($current_username = $self->checkLoggedIn(
@@ -180,6 +167,32 @@ sub processLogin {
 
 
 ###############################################################################
+# guessMode: Guess the current invocation_mode and output_mode
+###############################################################################
+sub guessMode {
+  my $self = shift;
+
+  #### Determine whether we've been invoked by HTTP request or on the
+  #### command line by testing for env variable REMOTE_ADDR.  If a
+  #### command-line user sets this variable, he can pretend to be coming
+  #### from the web interface
+  if ($ENV{REMOTE_ADDR}) {
+    $self->invocation_mode('http');
+    $self->output_mode('html');
+  } else {
+    $self->invocation_mode('user');
+    $self->output_mode('interactive');
+    #### Add in a fake reference to MOD_PERL to trick CGI::Carp into
+    #### not printing the "Content: text/html\n\n" header
+    $ENV{'MOD_PERL'} = 'FAKE'
+  }
+
+  return 1;
+
+} # end guessMode
+
+
+###############################################################################
 # get HTTP Header
 ###############################################################################
 sub get_http_header {
@@ -208,7 +221,7 @@ sub checkLoggedIn {
     my $username = "";
 
     if ($main::q->cookie('SBEAMSName')){
-        my $cipher = new Crypt::CBC($SECRET_KEY, 'IDEA');
+        my $cipher = new Crypt::CBC($self->getCryptKey(), 'IDEA');
         $username = $cipher->decrypt($main::q->cookie('SBEAMSName'));
 
         #### Verify that the deciphered result is still an active username
@@ -838,7 +851,7 @@ sub createAuthHeader {
     my $cookie_path = $HTML_BASE_DIR;
     #$cookie_path =~ s'/[^/]+$'/'; Removed 6/7/2002 Deutsch
 
-    my $cipher = new Crypt::CBC($SECRET_KEY, 'IDEA'); 
+    my $cipher = new Crypt::CBC($self->getCryptKey(), 'IDEA');
     my $encrypted_user = $cipher->encrypt("$username");
 
     my $cookie = $q->cookie(-name    => 'SBEAMSName',
@@ -966,37 +979,6 @@ sub getUnixPassword {
 
 
 ###############################################################################
-# check If Admin
-#
-# Return a TRUE value if the supplied username is an Administrator
-###############################################################################
-sub checkIfAdmin {
-    my $self = shift;
-    my $username = shift;
-
-    my $valid_admin = 0;
-    my $sql_query = qq!
-        SELECT U.privilege_id,P.name
-          FROM $TB_USER_LOGIN U
-          JOIN $TB_PRIVILEGE P ON ( U.privilege_id=P.privilege_id )
-         WHERE username = '$username'!;
-
-    $dbh = $self->getDBHandle();
-    my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
-    my $rv  = $sth->execute or croak $dbh->errstr;
-
-    my @row = $sth->fetchrow_array;
-    $valid_admin = $username if ($row[1] eq "administrator");
-
-    $sth->finish;
-
-    push(@ERRORS, "$username is NOT an Administrator") unless $valid_admin;
-
-    return $valid_admin;
-}
-
-
-###############################################################################
 # 
 ###############################################################################
 sub getContact_id {
@@ -1017,7 +999,7 @@ sub getContact_id {
 
 
 ###############################################################################
-# 
+# getUsername
 ###############################################################################
 sub getUsername {
     my $self = shift;
