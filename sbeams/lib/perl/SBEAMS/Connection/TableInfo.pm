@@ -110,41 +110,39 @@ sub returnTableInfo {
 
 
 ###############################################################################
-    if ($table_name eq "project") {
+    if ($table_name eq "project" && $info_key =~ /FULLQuery|BASICQuery/ ) {
 
       my @accessible = $self->getAccessibleProjects();
       my $accProjects = join( ',', @accessible ) || 0;
 
-      if ($info_key eq "BASICQuery") {
-        return qq~
-	    	SELECT P.project_id,P.project_tag,P.name,UL.username,
-		    SUBSTRING(P.description,1,100) AS "description"
-		    FROM $TB_PROJECT P
-		    LEFT JOIN $TB_USER_LOGIN UL
-		    ON (P.PI_contact_id=UL.contact_id)
-		    WHERE project_id IN ( $accProjects ) 
-        AND P.record_status!='D'
-	  	  AND UL.record_status!='D'
-        ORDER BY UL.username,P.name
-         ~;
+      my $fields = qq~
+	  	P.project_id,P.project_tag,P.name,
+      CASE WHEN UL.username IS NULL 
+           THEN first_name + '_' + last_name + '(No Login)' 
+           ELSE UL.username END AS username,
+		  SUBSTRING(P.description,1,100) AS "description"
+      ~;
 
-      } elsif ($info_key eq "FULLQuery") {
-        return qq~
-	    	SELECT P.project_id,P.project_tag,P.name,UL.username,
-	      SUBSTRING(P.description,1,100) AS "description",
-        P.budget,P.project_status,P.uri,
+      if ($info_key eq "FULLQuery") {
+        $fields .= qq~
+        , P.budget,P.project_status,P.uri,
 		    SUBSTRING(P.comment,1,100) AS "comment",
 	      P.date_created,P.created_by_id,P.date_modified,
         P.modified_by_id,P.owner_group_id,P.record_status
-		    FROM $TB_PROJECT P
-		    LEFT JOIN $TB_USER_LOGIN UL
-		    ON (P.PI_contact_id=UL.contact_id)
-		    WHERE project_id IN ( $accProjects ) 
-		    AND P.record_status!='D'
-		    AND UL.record_status!='D'
-		    ORDER BY UL.username,P.name
         ~;
       }
+
+      return qq~
+	    SELECT $fields
+		  FROM $TB_PROJECT P
+		  INNER JOIN $TB_CONTACT C ON (P.PI_contact_id=C.contact_id)
+		  LEFT JOIN $TB_USER_LOGIN UL ON (C.contact_id=UL.contact_id)
+		  WHERE project_id IN ( $accProjects ) 
+      AND P.record_status!='D'
+	  	AND C.record_status!='D'
+	  	AND ( UL.record_status!='D' OR  UL.record_status IS NULL )
+      ORDER BY username,P.name
+      ~;
     }
 
 
