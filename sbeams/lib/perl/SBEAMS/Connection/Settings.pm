@@ -121,6 +121,15 @@ if ( $SBEAMS_INSTANCE =~ /\/dev1\// ) {
   $PHYSICAL_BASE_DIR      = "/net/dblocal/www/html/dev2/sbeams";
   $UPLOAD_DIR             = "/net/dblocal/data/dev2/sbeams";
 
+} elsif ( $SBEAMS_INSTANCE =~ /\/dev3\// ) {
+  $DBVERSION              = 'Dev Branch 3';
+  $BGCOLOR                = '#FF9999';
+  $HTML_BASE_DIR          = '/dev3/sbeams';
+  $PHYSICAL_BASE_DIR      = "/net/dblocal/www/html/dev3/sbeams";
+  $UPLOAD_DIR             = "/net/dblocal/data/dev3/sbeams";
+  $DBPREFIX{Core}         = 'sbeamsSAN1.dbo.';
+  $DBPREFIX{Proteomics}   = 'ProteomicsSAN1.dbo.';
+
 } elsif ( $SBEAMS_INSTANCE =~ /\/dev5\// ) {
   $DBVERSION              = 'Dev Branch 5';
   $BGCOLOR                = '#336699';
