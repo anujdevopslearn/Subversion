@@ -230,10 +230,13 @@ sub handleRequest {
 
       ## check if atlas has peptide_instance entries (checking for 1 entry):
       my $sql =qq~
-          SELECT top 1 *
+          SELECT *
           FROM $TBAT_PEPTIDE_INSTANCE
           WHERE atlas_build_id = '$atlas_build_id'
           ~;
+
+      print "Checking whether peptide_instance records exist for atlas...\n"
+          if ($TESTONLY);
 
       my @peptide_instance_array = $sbeams->selectOneColumn($sql);
 
@@ -392,6 +395,8 @@ sub removeAtlas {
 ###############################################################################
 sub buildAtlas {  
 
+    print "building atlas...\n" if ($TESTONLY);
+        
     my %args = @_;
 
     my $atlas_build_id = $args{'atlas_build_id'};
@@ -417,7 +422,6 @@ sub buildAtlas {
             test => $TESTONLY,
         );
     }
-
 
     #### Get the current list of peptides in the peptide table
     my $sql;
@@ -449,7 +453,6 @@ sub buildAtlas {
     my (%APD_n_observations, %APD_search_batch_ids, %APD_sample_ids, %APD_peptide_id);
     my (%APD_is_subpeptide_of);
 
-
     #### set infile to APD tsv file
     my $infile = ${source_dir}."/APD_".${organism_abbrev}."_all.tsv";
 
@@ -478,7 +481,7 @@ sub buildAtlas {
 
             my $search_b_i = $sb_array[$ii];
 
-            my $sample_i = $sample_id_hash{ $search_b_i };
+            my $sample_i = $sample_id_hash{$search_b_i};
 
             if( exists $APD_sample_ids{$pep} ) {
 
@@ -699,15 +702,18 @@ sub buildAtlas {
            for (my $jj = 0; $jj <= $#test_pep; $jj++) {
                if ($peptide_accession[$ii] eq $test_pep[$jj]) {
                    if ($n_genome_locations[$ii] != $test_n_genome_locations[$jj]) {
-                       print "!! $test_pep[$jj] : expected n_genome_locations=$test_n_genome_locations[$jj]",
+                       print "!! $test_pep[$jj] : " .
+                       "expected n_genome_locations=$test_n_genome_locations[$jj]" .
                        " but calculated $n_genome_locations[$ii]\n";
                    }
                    if ($n_protein_mappings[$ii] != $test_n_protein_mappings[$jj]) {
-                       print "!! $test_pep[$jj] : expected n_protein_mappings=$test_n_protein_mappings[$jj]",
+                       print "!! $test_pep[$jj] : " .
+                       " expected n_protein_mappings=$test_n_protein_mappings[$jj]",
                        " but calculated $n_protein_mappings[$ii]\n";
                    }
                    if ($is_exon_spanning[$ii] != $test_is_exon_spanning[$jj]) {
-                       print "!! $test_pep[$jj] : expected is_exon_spanning=$test_is_exon_spanning[$jj]",
+                       print "!! $test_pep[$jj] : " .
+                       " expected is_exon_spanning=$test_is_exon_spanning[$jj]",
                        " but calculated $is_exon_spanning[$ii]\n";
                    }
                }
@@ -1227,7 +1233,7 @@ sub buildAtlas {
 
 
 ###############################################################################
-# updateSamples - updates sample and atlas_build_sample tables
+# updateSampleTables - updates sample and atlas_build_sample tables
 # located with search_batch_id list from APD.
 #
 # Look for a sample table, if it doesn't exist, create it
@@ -1246,6 +1252,7 @@ sub updateSampleTables {
 
     my $sample_ids_ref = $args{'sample_ids_ref'};
 
+    print "checking and updating sample table...\n" if ($TESTONLY);
 
     ## get the list of search batch ID's from the APD record:
     ## (experiment_list is actually search batch id's)
@@ -1259,9 +1266,30 @@ sub updateSampleTables {
        or die "could not find search_batch_id list for APD_id = ".
        "$APD_id ? in APD's peptide_summary ($!)";
 
-    if ($TEST) {
+    #### Get 2-column hash with key = search_batch_id, value = sample_id
+    my $sql;
+    $sql = qq~
+        SELECT search_batch_id, sample_id
+        FROM $TBAT_SAMPLE
+        WHERE search_batch_id IN ($search_batch_id_list)
+        AND record_status != 'D'
+        ~;
 
-        print "\$search_batch_id_list = $search_batch_id_list\n";
+    ## create hash with key=peptide_accession, value=peptide_id
+    #my %SBID_SID_hash = $sbeams->selectTwoColumnHash($sql) or
+    #    die "Unable to access sample records for search_batch_ids: ".
+    #    " $search_batch_id_list ($!)";
+    ####  selectTwoColumnHash doesn't seem to work with IN()
+    my @rows = $sbeams->selectSeveralColumns($sql)
+        or die "Couldn't find sample records using \n$sql\n($!)";
+
+    my %SBID_SID_hash;
+
+    foreach my $row (@rows)
+    {
+        my ($tsb, $ts) = @{$row};
+ 
+        $SBID_SID_hash{$tsb} = $ts;
 
     }
 
@@ -1270,69 +1298,58 @@ sub updateSampleTables {
 
     my @sample_id;
 
-    my (@sample_tag, @sample_title, @sample_description, @dc, @cbi, @dm, @mbi, @ogi, @rs);
+    my (@sample_tag, @sample_title, @sample_description, $dc, $cbi, $dm, $mbi, $ogi, $rs);
     
+    ## FOR insearts and updates:
+    ## Get date_created, created_by_id, date_modified, modified_by_id,
+    ## and owner_group_id, record_status from atlas_build
+    $sql = qq~
+         SELECT date_created, created_by_id, date_modified, modified_by_id,
+         owner_group_id, record_status
+         FROM $TBAT_ATLAS_BUILD
+         WHERE atlas_build_id = '$atlas_build_id'
+         AND record_status != 'D'
+    ~;
+
+    my @rows = $sbeams->selectSeveralColumns($sql)
+        or die "Couldn't find record for atlas_build_id = ".
+        "$atlas_build_id \n$sql\n($!)";
+
+
+    foreach my $row (@rows) 
+    {
+        my ($tdc, $tcbi, $tdm, $tmbi, $togi, $trs) = @{$row};
+
+        $dc = $tdc;
+
+        $cbi = $tcbi;
+
+        $dm = $tdm;
+
+        $mbi = $tmbi;
+
+        $ogi = $togi;
+
+        $rs = $trs;
+
+    }
+
+
     ## Get sample_id from PeptideAtlas.dbo.sample.
-    ## For each search_batch_id, see if there's a sample record,
-    ## and if not, create one with minimal proteomics experiment info
-    ## while printing a warning to screen.
-    ## If there is a sample record, update it with sample_id
+    ##    [For each search_batch_id, see if there's a sample record,
+    ##    and if not, create one with minimal proteomics experiment info
+    ##    while printing a warning to screen.
+    ##    If there is a sample record, update it with sample_id]
+
     for (my $i=0; $i<= $#search_batch_id; $i++) {
 
-        ## FOR insearts and updates:
-        ## Get date_created, created_by_id, date_modified, modified_by_id,
-        ## and owner_group_id, record_status from atlas_build
-        $sql = qq~
-             SELECT date_created, created_by_id, date_modified, modified_by_id,
-             owner_group_id, record_status
-             FROM $TBAT_ATLAS_BUILD
-             WHERE atlas_build_id = '$atlas_build_id'
-             AND record_status != 'D'
-        ~;
 
-        my @rows = $sbeams->selectSeveralColumns($sql)
-            or die "Couldn't find record for atlas_build_id = ".
-            "$atlas_build_id \n$sql\n($!)";
-
-        foreach my $row (@rows) 
-        {
-            my ($tdc, $tcbi, $tdm, $tmbi, $togi, $trs) = @{$row};
-
-            $dc[$i] = $tdc;
-
-            $cbi[$i] = $tcbi;
-
-            $dm[$i] = $tdm;
-
-            $mbi[$i] = $tmbi;
-
-            $ogi[$i] = $togi;
-
-            $rs[$i] = $trs;
-
-        }
-
-
-        ## get sample record if it exists
-        $sql = qq~
-            SELECT S.sample_id
-            FROM $TBAT_SAMPLE S
-            WHERE S.search_batch_id = '$search_batch_id[$i]'
-            AND S.record_status != 'D'
-        ~;
-
-
-        my ($tmp) = $sbeams->selectOneColumn($sql)
-            or warn "Could not find sample record for search_batch_id = ".
-            "$search_batch_id[$i] ==> Creating a sample record now";
-
-
-        if ($tmp) ## sample record exists for search_batch:
+        if (exists $SBID_SID_hash{$search_batch_id[$i]}) ## sample record exists for search_batch:
         {
 
-            $sample_id[$i] = $tmp;
+            $sample_id[$i] = $SBID_SID_hash{$search_batch_id[$i]};
 
-        } else ## If no sample record, create one
+        } else ## else, create sample record using tiny bit of info from Proteomics
         {
 
             ## get experiment_tag, experiment_name, $TB_ORGANISM.organism_name
@@ -1370,12 +1387,12 @@ sub updateSampleTables {
                 sample_tag => $sample_tag[$i],
                 sample_title => $sample_title[$i],
                 sample_description => $sample_description[$i],
-                date_created => $dc[$i],
-                created_by_id => $cbi[$i],
-                date_modified => $dm[$i],
-                modified_by_id => $mbi[$i],
-                owner_group_id => $ogi[$i],
-                record_status => $rs[$i],
+                date_created => $dc,
+                created_by_id => $cbi,
+                date_modified => $dm,
+                modified_by_id => $mbi,
+                owner_group_id => $ogi,
+                record_status => $rs,
             );
 
 
@@ -1392,19 +1409,24 @@ sub updateSampleTables {
 
             $sample_id[$i] = $tmp_sample_id;
 
-        }  ## end create sample record
+            ## enter new sample_id into hash:
+            $SBID_SID_hash{$search_batch_id[$i]} = $sample_id[$i];
+
+        }   ## end create sample record
+
+        $sample_ids_ref->{$search_batch_id[$i]} = $sample_id[$i];
 
 
         ## Populate atlas_build_sample table
         my %rowdata = (   ##   atlas_build_sample    table attributes
             atlas_build_id => $ATLAS_BUILD_ID,
             sample_id => $sample_id[$i],
-            date_created => $dc[$i],
-            created_by_id  => $cbi[$i],
-            date_modified  => $dm[$i],
-            modified_by_id  => $mbi[$i],
-            owner_group_id  => $ogi[$i],
-            record_status  => $rs[$i],
+            date_created => $dc,
+            created_by_id  => $cbi,
+            date_modified  => $dm,
+            modified_by_id  => $mbi,
+            owner_group_id  => $ogi,
+            record_status  => $rs,
         );
 
        my $atlas_build_sample_id = $sbeams->updateOrInsertRow(
@@ -1419,7 +1441,11 @@ sub updateSampleTables {
 
     }
 
-} ## end updateSamples
+    ## fill sample_id hash with search_batch_id, sample_id hash:
+    %{$sample_ids_ref} = %SBID_SID_hash;
+
+
+} ## end updateSampleTables
                                                
 
 #######################################################################
@@ -1787,6 +1813,7 @@ sub readCoords {
 
    close(INFILE) or die "Cannot close $infile ($!)";
 
+   print "\nFinished reading .../coordinate_mapping.txt\n";
 
 
    if ($TESTONLY) { 
