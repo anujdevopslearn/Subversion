@@ -1,4 +1,4 @@
-table_name	table_title	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
+table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
 organization_type	Organization Type	infrastructure	YES	$TB_ORGANIZATION_TYPE	organization_type_id		ManageTable.cgi?TABLE_NAME=organization_type	"contact,organization,contact_type,organization_type"	organization
 organization	Organization	infrastructure	YES	$TB_ORGANIZATION	organization_id		ManageTable.cgi?TABLE_NAME=organization	"contact,organization,contact_type,organization_type"	contact
 contact_type	Contact Type	infrastructure	YES	$TB_CONTACT_TYPE	contact_type_id		ManageTable.cgi?TABLE_NAME=contact_type	"contact,organization,contact_type,organization_type"	contact
