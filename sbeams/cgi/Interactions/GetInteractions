@@ -222,6 +222,22 @@ sub handle_request {
   return if ($project_clause eq '-1');
 
 
+  #### If no valid project_id was selected, stop here
+  unless ($parameters{project_id}) {
+    if (!$apply_action && $sbeams->output_mode() eq 'html') {
+      print "<H1> Begin by selecting one or more projects, selecting ".
+	"any additional appropriate constraints, and pressing [QUERY]</H1>\n";
+      return;
+    }
+    $sbeams->reportException(
+      state => 'ERROR',
+      type => 'INSUFFICIENT CONSTRAINTS',
+      message => "You must select at least one valid Project",
+    );
+    return;
+  }
+
+
   #### Build ORGANISM_ID constraint
   my $organism_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"IG.organism_id",
