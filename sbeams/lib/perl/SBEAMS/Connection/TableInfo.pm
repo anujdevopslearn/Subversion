@@ -196,6 +196,32 @@ sub returnTableInfo {
 
 
 ###############################################################################
+    if ($table_name eq "group_project_permission") {
+
+        if ($info_key eq "BASICQuery") {
+            return qq~
+		SELECT GPP.group_project_permission_id,WG.work_group_name,
+                       UL.username+' - '+PROJ.name AS 'Project',PRIV.name,GPP.comment
+                  FROM $TB_GROUP_PROJECT_PERMISSION GPP
+                  LEFT JOIN $TB_PROJECT PROJ ON ( GPP.project_id=PROJ.project_id )
+                  LEFT JOIN $TB_USER_LOGIN UL ON ( PROJ.PI_contact_id=UL.contact_id )
+                  LEFT JOIN $TB_WORK_GROUP WG ON ( GPP.work_group_id=WG.work_group_id )
+                  LEFT JOIN $TB_PRIVILEGE PRIV ON ( GPP.privilege_id=PRIV.privilege_id )
+                 WHERE GPP.record_status!='D'
+                   AND PROJ.record_status!='D'
+                   AND UL.record_status!='D'
+                   AND WG.record_status!='D'
+                   AND PRIV.record_status!='D'
+                 ORDER BY UL.username,PROJ.name
+            ~;
+        }
+
+    }
+
+
+
+
+###############################################################################
     if ($table_name eq "table_group_security") {
 
         if ($info_key eq "BASICQuery") {
