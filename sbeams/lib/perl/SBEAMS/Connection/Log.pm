@@ -49,7 +49,7 @@ sub new {
 #-
 sub debug {
   my $this = shift;
-  return if $this->{_log_val} > 1;
+  return unless $this->_checkLogLevel( 'debug' );
   my $msg = shift;
   $this->_printMessage ( debug => $msg );
 }
@@ -59,7 +59,7 @@ sub debug {
 #-
 sub error {
   my $this = shift;
-  return if $this->{_log_val} > 4;
+  return unless $this->_checkLogLevel( 'error' );
   my $msg = shift;
   $this->_printMessage ( error => $msg );
 }
@@ -69,7 +69,7 @@ sub error {
 #-
 sub info {
   my $this = shift;
-  return if $this->{_log_val} > 2;
+  return unless $this->_checkLogLevel( 'info' );
   my $msg = shift;
   $this->_printMessage ( 'info' => $msg );
 }
@@ -79,7 +79,7 @@ sub info {
 #-
 sub warn {
   my $this = shift;
-  return if $this->{_log_val} > 3;
+  return unless $this->_checkLogLevel( 'warn' );
   my $msg = shift;
   $this->_printMessage ( 'warn' => $msg );
 }
@@ -89,7 +89,7 @@ sub warn {
 #-
 sub pure {
   my $this = shift;
-  my $mode = shift;
+  my $mode = shift || 'error';
   my $msg = shift;
   $this->_printMessage ( $mode => $msg, 2 );
 }
@@ -111,6 +111,7 @@ sub setLogLevel {
 sub printStack {
   my $this = shift;
   my $level = shift || 'error';
+  return unless $this->_checkLogLevel( $level );
   my $cnt =  shift || 10;
 
   my $stack = '';
@@ -162,23 +163,34 @@ sub _printMessage {
 }
 
 #+
-# maps log level to numeric equivalent.
+# Returns hash of text -> numeric log levels
+#-
+sub _getLogLevels {
+  my $this = shift;
+  my %levels = ( debug => 1,
+                 info  => 2,
+                 warn  => 3,
+                 error => 4 );
+  return \%levels;
+}
+
+#+
+#  Sets numeric log level
 #-
 sub _setLogVal {
   my $this = shift;
   my $ll = $this->{log_level} || 'error';
-  if ( $ll eq 'debug' ) {
-    $this->{_log_val} = 1;
-  } elsif ( $ll eq 'info' ) {
-    $this->{_log_val} = 2;
-  } elsif ( $ll eq 'warn' ) {
-    $this->{_log_val} = 3;
-  } elsif ( $ll eq 'error' ) {
-    $this->{_log_val} = 4;
-  } else {
-    die "Illegal log level\n"; 
-  }
+  my $levels = $this->_getLogLevels();
+  $this->{_log_val} = $levels->{$ll};
+  die "Illegal log level" unless $this->{_log_val}; 
   return 1;
+}
+
+sub _checkLogLevel {
+  my $this = shift;
+  my $ll = shift || 'error';
+  my $levels = $this->_getLogLevels();
+  return ( $levels->{$ll} >= $this->{_log_val} ) ? 1 : 0;
 }
 
 #+
