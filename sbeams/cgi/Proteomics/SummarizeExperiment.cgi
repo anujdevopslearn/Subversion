@@ -123,7 +123,7 @@ sub printEntryForm {
 
 
     my $apply_action  = $q->param('apply_action');
-    $parameters{experiment_id} = $q->param('experiment_id');
+    $parameters{experiment_id} = join(",",$q->param('experiment_id'));
 
 
     $sbeams->printUserContext();
@@ -145,12 +145,12 @@ sub printEntryForm {
 	 ORDER BY username,experiment_name
     ~;
     my $optionlist = $sbeams->buildOptionList(
-           $sql_query,$parameters{experiment_id});
+           $sql_query,$parameters{experiment_id},"MULTIOPTIONLIST");
 
 
     print qq!
           <TR><TD><B>Experiment:</B></TD>
-          <TD><SELECT NAME="experiment_id">
+          <TD><SELECT NAME="experiment_id" MULTIPLE SIZE=5 >
           <OPTION VALUE=""></OPTION>
           $optionlist</SELECT></TD>
           <TD BGCOLOR="E0E0E0">Select the Experiment</TD>
@@ -221,7 +221,7 @@ sub printEntryForm {
 	 WHERE P.record_status!='D'
 	   AND UL.record_status!='D'
 	   AND PE.record_status!='D'
-	   AND PE.experiment_id = '$parameters{experiment_id}'
+	   AND PE.experiment_id IN ( $parameters{experiment_id} )
 	 GROUP BY $group_by_clause
 	 ORDER BY experiment_tag,fraction_tag
      ~;

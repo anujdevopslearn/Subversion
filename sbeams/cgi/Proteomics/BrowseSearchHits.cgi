@@ -773,7 +773,7 @@ sub printEntryForm {
 
     if ($apply_action =~ /QUERY/i) {
       print "<PRE>$sql_query</PRE><BR>\n" if ($show_sql);
-      return $sbeams->displayQueryResult(sql_query=>$sql_query,
+      $sbeams->displayQueryResult(sql_query=>$sql_query,
           url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols,
           max_widths=>\%max_widths);
     } else {

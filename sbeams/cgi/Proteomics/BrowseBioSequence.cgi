@@ -531,7 +531,7 @@ sub printEntryForm {
     }
 
 
-    #### If we're ready to go ahead and execute the query, do it!
+    #### If QUERY was selected, go ahead and execute the query!
     if ($apply_action =~ /QUERY/i) {
 
       my ($resultset_ref,$key,$value,$element);

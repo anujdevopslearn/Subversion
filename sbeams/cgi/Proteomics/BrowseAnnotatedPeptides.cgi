@@ -381,8 +381,20 @@ sub printEntryForm {
 
 
     # ---------------------------
-    # Show the QUERY, REFRESH, and Reset buttons
-    print qq!
+    # If this is a HIDE query, then just show a button to reveal constraints
+    if ($apply_action =~ /HIDE/i) {
+      print qq!
+	<INPUT TYPE="hidden" NAME="QUERY_NAME" VALUE="$TABLE_NAME">
+	<TR><TD COLSPAN=2>
+	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	<INPUT TYPE="submit" NAME="apply_action" VALUE="SHOW CONSTRAINTS">
+        </TD></TR></TABLE>
+        </FORM>
+      !;
+
+    # Else show the QUERY, REFRESH, and Reset buttons
+    } else {
+      print qq!
 	<INPUT TYPE="hidden" NAME="QUERY_NAME" VALUE="$TABLE_NAME">
 	<TR><TD COLSPAN=2>
 	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -391,9 +403,10 @@ sub printEntryForm {
 	<INPUT TYPE="submit" NAME="apply_action" VALUE="REFRESH">
 	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 	<INPUT TYPE="reset"  VALUE="Reset">
-         </TR></TABLE>
-         </FORM>
-    !;
+        </TD></TR></TABLE>
+        </FORM>
+      !;
+    }
 
 
     $sbeams->printPageFooter("CloseTables");
@@ -404,6 +417,7 @@ sub printEntryForm {
     # --------------------------------------------------
     # --------------------------------------------------
     # --------------------------------------------------
+    my $show_sql;
 
     if ($apply_action gt "") {
 
@@ -418,12 +432,14 @@ sub printEntryForm {
 
       #### Build REFERENCE PROTEIN constraint
       my $reference_clause = "";
+      my $biosequence_name_clause = "";
       if ($parameters{reference_constraint}) {
         if ($parameters{reference_constraint} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
           print "<H4>Cannot parse Reference Constraint!  Check syntax.</H4>\n\n";
           return;
         } else {
           $reference_clause = "   AND SH.reference LIKE '$parameters{reference_constraint}'";
+          $biosequence_name_clause = "   AND BS.biosequence_name LIKE '$parameters{reference_constraint}'";
         }
       }
 
@@ -435,7 +451,7 @@ sub printEntryForm {
           print "<H4>Cannot parse Gene Name Constraint!  Check syntax.</H4>\n\n";
           return;
         } else {
-          $reference_clause = "   AND BS.biosequence_gene_name LIKE '$parameters{gene_name_constraint}'";
+          $gene_name_clause = "   AND BS.biosequence_gene_name LIKE '$parameters{gene_name_constraint}'";
         }
       }
 
@@ -488,6 +504,22 @@ sub printEntryForm {
       }
 
 
+      #### Build NUMBER OF ANNOTATIONS constraint
+      my $n_annotations_clause = "";
+      if ($parameters{n_annotations_constraint}) {
+        if ($parameters{n_annotations_constraint} =~ /^[\d]+$/) {
+          $n_annotations_clause = "   AND row_count = $parameters{n_annotations_constraint}";
+        } elsif ($parameters{n_annotations_constraint} =~ /^between\s+[\d]+\s+and\s+[\d]+$/i) {
+          $n_annotations_clause = "   AND row_count $parameters{n_annotations_constraint}";
+        } elsif ($parameters{n_annotations_constraint} =~ /^[><=][=]*\s*[\d]+$/) {
+          $n_annotations_clause = "   AND row_count $parameters{n_annotations_constraint}";
+        } else {
+          print "<H4>Cannot parse Number of Annotations Constraint!  Check syntax.</H4>\n\n";
+          return;
+        }
+      }
+
+
       #### Build SORT ORDER
       my $order_by_clause = "";
       if ($parameters{sort_order}) {
@@ -501,56 +533,66 @@ sub printEntryForm {
 
 
       #### Build ROWCOUNT constraint
-      my $limit_clause = "TOP 100";
-      if ($parameters{row_limit} > 0 && $parameters{row_limit}<=99999) {
-        $limit_clause = "TOP $parameters{row_limit}";
+      unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=99999) {
+        $parameters{row_limit} = 100;
       }
+      my $limit_clause = "TOP $parameters{row_limit}";
 
 
       #### Define the desired columns
       my $group_by_clause = "";
       my @column_array;
-
-      #### If grouping by reference
-      if ( $parameters{display_options} =~ /GroupReference/ ) {
-        @column_array = (
-          ["biosequence_gene_name","MAX(biosequence_gene_name)","Gene Name"],
-          ["biosequence_accession","MAX(biosequence_accession)","Accession"],
-          ["reference","reference","Reference"],
-          ["count","COUNT(*)","Count"],
-          ["biosequence_desc","MAX(biosequence_desc)","Reference Description"],
-        );
-        $group_by_clause = " GROUP BY reference";
+      my $peptide_column = "";
+      my $count_column = "";
 
       #### If grouping by peptide,reference
-      } elsif ( $parameters{display_options} =~ /GroupPeptide/ ) {
+      if ( $parameters{display_options} =~ /GroupPeptide/ ) {
         @column_array = (
-          ["biosequence_gene_name","MAX(biosequence_gene_name)","Gene Name"],
-          ["biosequence_accession","MAX(biosequence_accession)","Accession"],
-          ["reference","reference","Reference"],
+          ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
+          ["biosequence_accession","BS.biosequence_accession","Accession"],
+          ["reference","BS.biosequence_name","Reference"],
           ["peptide","peptide","Peptide"],
-          ["hit_mass_plus_H","MIN(CONVERT(NUMERIC(10,2),hit_mass_plus_H))","(M+H)+"],
-          ["count","COUNT(*)","Count"],
-          ["biosequence_desc","MAX(biosequence_desc)","Reference Description"],
+          ["count","tABS.row_count","Count"],
+          ["biosequence_desc","BS.biosequence_desc","Reference Description"],
         );
-        $group_by_clause = " GROUP BY reference,peptide";
+        $group_by_clause = " GROUP BY SH.biosequence_id,peptide";
+        $peptide_column = "peptide,";
+        $count_column = "COUNT(*) AS 'row_count'";
+
+      #### If grouping by reference
+      } elsif ( $parameters{display_options} =~ /GroupReference/ ) {
+        @column_array = (
+          ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
+          ["biosequence_accession","BS.biosequence_accession","Accession"],
+          ["reference","BS.biosequence_name","Reference"],
+          ["count","tABS.row_count","Count"],
+          ["biosequence_desc","BS.biosequence_desc","Reference Description"],
+        );
+        $group_by_clause = " GROUP BY SH.biosequence_id";
+        $count_column = "COUNT(*) AS 'row_count'";
 
       #### If no grouping
       } else {
         @column_array = (
-          ["biosequence_gene_name","biosequence_gene_name","Gene Name"],
-          ["biosequence_accession","biosequence_accession","Accession"],
-          ["reference","reference","Reference"],
+          ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
+          ["biosequence_accession","BS.biosequence_accession","Accession"],
+          ["reference","BS.biosequence_name","Reference"],
           ["peptide","peptide","Peptide"],
-          ["hit_mass_plus_H","CONVERT(NUMERIC(10,2),hit_mass_plus_H))","(M+H)+"],
-          ["biosequence_desc","biosequence_desc","Reference Description"],
+          ["count","tABS.row_count","Count"],
+          ["biosequence_desc","BS.biosequence_desc","Reference Description"],
         );
+        $peptide_column = "peptide,";
+        $count_column = "1 AS 'row_count'";
       }
 
 
       #### Limit the width of the Reference column if user selected
       if ( $parameters{display_options} =~ /MaxRefWidth/ ) {
         $max_widths{'Reference'} = 20;
+      }
+      #### Set flag to display SQL statement if user selected
+      if ( $parameters{display_options} =~ /ShowSQL/ ) {
+        $show_sql = 1;
       }
 
 
@@ -565,14 +607,27 @@ sub printEntryForm {
         $i++;
       }
 
+
       $sql_query = qq~
-	SELECT $limit_clause $columns_clause
+	SELECT DISTINCT BS.biosequence_id
+	  INTO #tmpBSids
+	  FROM proteomics.dbo.biosequence BS
+	  JOIN proteomics.dbo.search_batch SB ON ( BS.biosequence_set_id = SB.biosequence_set_id )
+	 WHERE 1 = 1
+	$search_batch_clause
+	$biosequence_name_clause
+	$gene_name_clause
+	$accession_clause
+
+	--
+
+	SELECT SH.biosequence_id,$peptide_column$count_column
+	  INTO #tmpAnnBSids
 	  FROM proteomics.dbo.search_hit SH
 	  JOIN proteomics.dbo.search S ON ( SH.search_id = S.search_id )
-	  JOIN $TB_SEARCH_HIT_ANNOTATION SHA ON ( SH.search_hit_id = SHA.search_hit_id )
+	  JOIN proteomics.dbo.search_hit_annotation SHA ON ( SH.search_hit_id = SHA.search_hit_id )
 	  JOIN proteomics.dbo.search_batch SB ON ( S.search_batch_id = SB.search_batch_id )
-	  JOIN proteomics.dbo.biosequence_set BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
-	  FULL JOIN $TB_BIOSEQUENCE BS ON ( SB.biosequence_set_id = BS.biosequence_set_id AND SH.reference = BS.biosequence_name )
+	  JOIN $TB_BIOSEQUENCE BS ON ( SB.biosequence_set_id = BS.biosequence_set_id AND SH.biosequence_id = BS.biosequence_id )
 	 WHERE 1 = 1
 	$search_batch_clause
 	$reference_clause
@@ -582,7 +637,16 @@ sub printEntryForm {
 	$mass_clause
 	$annotation_label_clause
 	$group_by_clause
+
+	--
+
+	SELECT $limit_clause $columns_clause
+	  FROM #tmpBSids tBS
+	  LEFT JOIN #tmpAnnBSids tABS ON ( tBS.biosequence_id = tABS.biosequence_id )
+	  JOIN $TB_BIOSEQUENCE BS ON ( tBS.biosequence_id = BS.biosequence_id )
+	$n_annotations_clause
 	$order_by_clause
+
        ~;
 
       #print "<PRE>\n$sql_query\n</PRE>\n";
@@ -592,9 +656,9 @@ sub printEntryForm {
 		   'Gene Name_ATAG' => 'TARGET="Win1"',
                    'Accession' => "http://flybase.bio.indiana.edu/.bin/fbidq.html?\%$colnameidx{biosequence_accession}V",
 		   'Accession_ATAG' => 'TARGET="Win1"',
-                   'Reference' => "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi?QUERY_NAME=BrowseSearchHits&reference_constraint=\%$colnameidx{reference}V&search_batch_id=$parameters{search_batch_id}&best_hit_constraint=best_hit&display_options=BSDesc,MaxRefWidth&apply_action=$apply_action",
+                   'Reference' => "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi?QUERY_NAME=BrowseSearchHits&reference_constraint=\%$colnameidx{reference}V&search_batch_id=$parameters{search_batch_id}&display_options=BSDesc,MaxRefWidth&apply_action=$apply_action",
 		   'Reference_ATAG' => 'TARGET="Win1"',
-		   'Peptide' => "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi?QUERY_NAME=BrowseSearchHits&peptide_constraint=\%$colnameidx{peptide}V&search_batch_id=$parameters{search_batch_id}&best_hit_constraint=best_hit&display_options=BSDesc,MaxRefWidth&apply_action=$apply_action",
+		   'Peptide' => "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi?QUERY_NAME=BrowseSearchHits&peptide_constraint=\%$colnameidx{peptide}V&search_batch_id=$parameters{search_batch_id}&display_options=BSDesc,MaxRefWidth&apply_action=$apply_action",
 		   'Peptide_ATAG' => 'TARGET="Win1"',
       );
 
@@ -611,10 +675,37 @@ sub printEntryForm {
     }
 
 
+
+    #### If QUERY was selected, go ahead and execute the query!
     if ($apply_action =~ /QUERY/i) {
-      return $sbeams->displayQueryResult(sql_query=>$sql_query,
+
+      my ($resultset_ref,$key,$value,$element);
+      my %resultset;
+      $resultset_ref = \%resultset;
+
+      print "<PRE>$sql_query</PRE><BR>\n" if ($show_sql);
+      $sbeams->displayQueryResult(sql_query=>$sql_query,
           url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols,
-          max_widths=>\%max_widths);
+          max_widths=>\%max_widths,resultset_ref=>$resultset_ref);
+
+
+      if ( $parameters{row_limit} == scalar(@{$resultset_ref->{data_ref}}) ) {
+        print "<font color=red>WARNING: </font>Resultset truncated at ".
+          "$parameters{row_limit} rows.  Increase row limit to see more.<BR>\n";
+      }
+
+      #### Print out some information about the returned resultset:
+      if (0 == 1) {
+        print "resultset_ref = $resultset_ref<BR>\n";
+        while ( ($key,$value) = each %{$resultset_ref} ) {
+          printf("%s = %s<BR>\n",$key,$value);
+        }
+        print "columnlist = ",join(" , ",@{$resultset_ref->{column_list_ref}}),"<BR>\n";
+        print "nrows = ",scalar(@{$resultset_ref->{data_ref}}),"<BR>\n";
+      }
+
+
+    #### If QUERY was not selected, then tell the user to enter some parameters
     } else {
       print "<H4>Select parameters above and press QUERY</H4>\n";
     }
