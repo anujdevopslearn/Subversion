@@ -694,7 +694,7 @@ sub handle_request {
       ["isoelectric_point","STR(isoelectric_point,8,3)","Calc pI"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
-      ["organism","O.genus+' '+O.species","Organism"],
+      ["organism","O.full_name","Organism"],
     );
     $group_by_clause = " GROUP BY SH.reference,$colname,isoelectric_point";
     $peptide_column = "$colname,";
@@ -714,7 +714,7 @@ sub handle_request {
       ["n_quant","tABS.n_quant","Quant N"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
-      ["organism","O.genus+' '+O.species","Organism"],
+      ["organism","O.full_name","Organism"],
     );
     $group_by_clause = " GROUP BY SH.reference";
     $count_column = "COUNT(*) AS 'row_count',STR(AVG(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0)),10,2) AS 'average_quant',STR(STDEV(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0)),10,2) AS 'stdev_quant',SUM(CASE WHEN (NULLIF(d0_intensity,0.0) IS NULL OR NULLIF(d8_intensity,0.0) IS NULL) THEN 0 ELSE 1 END) AS 'n_quant'";
@@ -733,7 +733,7 @@ sub handle_request {
       ["isoelectric_point","STR(isoelectric_point,8,3)","Calc pI"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
-      ["organism","O.genus+' '+O.species","Organism"],
+      ["organism","O.full_name","Organism"],
     );
     $peptide_column = "peptide,";
     $count_column = "1 AS 'row_count',STR(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0),10,2) AS 'average_quant',isoelectric_point";

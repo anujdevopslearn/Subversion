@@ -538,7 +538,7 @@ sub handle_request {
       ["n_quant","SQ.ratio_number_peptides","Quant N"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
-      ["organism","O.genus+' '+O.species","Organism"],
+      ["organism","O.full_name","Organism"],
     );
     $peptide_column = "";
     $count_column = "";
