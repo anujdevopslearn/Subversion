@@ -220,8 +220,7 @@ sub printEntryForm {
     if ($fk_table) {
       my $subdir = $sbeams->getSBEAMS_SUBDIR();
       $subdir .= "/" if ($subdir);
-      $jump_to_list_source = qq~
-        <A TARGET="AddToList" HREF="$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=$fk_table&ShowEntryForm=1">
+      $jump_to_list_source = qq~<A TARGET="AddToList" HREF="$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=$fk_table&ShowEntryForm=1">
         <IMG SRC="$HTML_BASE_DIR/images/greyplus.gif" border=0
         alt="Add to or view details about this list box" ></A>
       ~;
@@ -320,7 +319,7 @@ sub printEntryForm {
       print qq!
         <TD><SELECT NAME="$column_name" $onChange>
         <OPTION VALUE=""></OPTION>
-        $optionlists{$column_name}</SELECT> $jump_to_list_source</TD>
+        $optionlists{$column_name}</SELECT>&nbsp;$jump_to_list_source</TD>
       !;
     }
 
@@ -328,14 +327,14 @@ sub printEntryForm {
       print qq!
         <TD><SELECT NAME="$column_name" SIZE=$input_length $onChange>
         <OPTION VALUE=""></OPTION>
-        $optionlists{$column_name}</SELECT> $jump_to_list_source</TD>
+        $optionlists{$column_name}</SELECT>&nbsp;$jump_to_list_source</TD>
       !;
     }
 
     if ($input_type eq "multioptionlist") {
       print qq!
         <TD><SELECT NAME="$column_name" MULTIPLE SIZE=$input_length $onChange>
-        $optionlists{$column_name}</SELECT> $jump_to_list_source</TD>
+        $optionlists{$column_name}</SELECT>&nbsp;$jump_to_list_source</TD>
       !;
     }
 
