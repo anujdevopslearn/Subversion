@@ -403,7 +403,9 @@ sub selectTwoColumnHash {
 # Given an SQL statement in one dialect of SQL, translate to the current
 # dialect of SQL
 ###############################################################################
-sub translateSQL {
+use Regexp::Common qw /delimited balanced/; # needed by translateSQL for mysql
+use re 'eval'; # needed by Regexp::Common::balanced
+sub translateSQL{
   my $self = shift || croak("parameter self not passed");
   my %args = @_;
 
@@ -413,27 +415,165 @@ sub translateSQL {
   my $DBType = $self->getDBType() || "";
   return $sql if ($DBType =~ /MS SQL Server/i);
 
-
   my $new_statement = $sql;
 
-
-  #### Things we do to convert from MS SQL Server to PostgreSQL
+  #### Conversion syntax from MS SQL Server to PostgreSQL
   if ($DBType =~ /PostgreSQL/i) {
 
     #### Real naive and stupid so far...
     #print "Content-type: text/html\n\nLooking at $sql<BR><BR>\n";
     if ($new_statement =~ /\+/) {
       $new_statement =~ s/\+/||/g;
-      #print "Content-type: text/html\n\nTranslating...<BR>$sql<BR>$new_statement<BR><BR>\n";
+    }
+
+
+  #### Conversion syntax from MS SQL Server to MySQL
+  } elsif ($DBType =~ /mysql/i) {
+
+    #### Loop through each of the SELECT statements in the SQL
+    while( $new_statement =~ /(SELECT)+\s+(.+?)\s+(FROM|INTO)+/ig ){
+
+      #### Extract the column list
+      my $list = $2;
+      next if $list eq '*';
+
+      #### Get the start and end of the column list
+      my ($start,$end) = ($-[2],$+[2]);
+
+      #### Perform the necessary conversion for various functions
+      $list = convert_functions($list);
+      #### Perform the necessary conversion for string concatentation syntax
+      $list = convert_concatenation($list);
+
+      #### Update the statement with the new syntax and
+      #### since we are modifying $new_statement in place then we need
+      #### to update its 'pos' for the pattern match to work under /g
+      substr($new_statement,$start,$end-$start) = $list;
+      pos($new_statement) = $start + length $list;
+
     }
 
   }
-
-
-
+	
   return $new_statement;
 
 } # endtranslateSQL
+
+
+
+###############################################################################
+# convert_concatenation
+#
+# Convert any SQL catenation operators into the MySQL CONCAT() function syntax
+###############################################################################
+sub convert_concatenation {
+  my $select_list = shift;
+
+  #### Separate out functions and quoted text segments
+  my @words = split( /(\w+\s*$RE{balanced}{-parens=>'()'}|$RE{delimited}{-delim=>"'"}|RE{delimited}{-delim=>'"'})/, $select_list);
+  print "0-->", @words;
+
+  my @new;
+  for (@words){
+    # split on ',' to get the columns (where not quoted or part of a function)
+    if ( /^[\"\']/ || /^\w+\s?\(/ ){
+      push @new, $_;
+    } else {
+      s/^\s?,//;
+      s/,\s?$//;
+      push @new, split(/,/,$_);
+    }
+  }
+  #print "1-->",join(';',@new);
+
+  #### Join fragments that are a part of a concatenation or aliases
+  for (my $i = 0; $i < @new; $i++){
+
+    if( $new[$i] =~ /^\s?\+/ ){
+      $new[$i-1] .= $new[$i];
+      splice @new, $i, 1;
+      $i -= 2;
+      next;
+    }
+
+    if( $new[$i] =~ /\+\s?$/ ){
+      $new[$i] .= $new[$i+1];
+      splice @new, $i+1, 1;
+      $i--;
+      next;
+    }
+
+    if( $new[$i] =~ /^\s?AS\s+$/i ){
+      $new[$i] .= $new[$i+1];
+      splice @new, $i+1,1;
+      $i--;
+      next;
+    }
+
+    if( $new[$i] =~ /\s+AS\s?$/i ){
+      $new[$i] .= $new[$i+1];
+      splice @new, $i+1, 1;
+      $i--;
+      next;
+
+    }
+
+  }
+  #print "2-->",join(';',@new);
+
+
+  #### Convert concatenation operator to concat function
+  for (@new){
+    if ( /\+/ ) {
+      my @items = split(/\+/,$_);
+      $_ = "CONCAT(" . join(",",@items) . ")";
+    }	
+  }
+  #print "3-->",join(';',@new);
+
+
+  #### Assemble final SQL
+  my $retval;
+  for (my $i = 0; $i < @new; $i++){
+    $retval .= $new[$i];
+    if ( $i < $#new &&  $new[$i+1] !~ /^\s?AS\s+/ ) {
+      $retval .= ",";
+    }
+  }
+
+  return $retval;
+
+} # end convert_concatenation
+
+
+
+###############################################################################
+# convert_functions
+#
+# Convert SQL Server functions to MySQL functions
+###############################################################################
+sub convert_functions {
+  my $select_list = shift;
+  my @ops;
+
+  #### At the moment only convert the STR function (its the only one used).
+  while ( $select_list =~ /(\W)?STR\(([\w\.]+),(\d+),(\d+)\)/ig ){
+    my %opt;
+    $opt{start} = @-[0];
+    $opt{end} = @+[0];
+    $opt{replace} =  "$1FORMAT($2,$4)";
+    push @ops, \%opt;
+  }
+
+  for my $opt (@ops){
+    substr($select_list,$opt->{start},$opt->{end} - $opt->{start}) =
+      $opt->{replace};
+  }
+
+  return $select_list;	
+
+} # end convert_functions
+
 
 
 ###############################################################################
