@@ -280,7 +280,7 @@ sub handle_request {
   #    print " columns[$i] = $columns[$i] <br>";
   #}
   #foreach my $k (keys %input_types){
-  #    print "key = $k    value=$input_types{$k} <br>";
+  #    print "key = $k<BR>&nbsp;&nbsp;&nbsp;value=$input_types{$k} <br>";
   #}
 
   #### Display the form action buttons
@@ -439,6 +439,16 @@ sub handle_request {
   return if ($biosequence_desc_clause eq '-1');
 
 
+  #### Build peptide_ids constraint
+  my $peptide_ids_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"PI.peptide_id",
+    constraint_type=>"int_list",
+    constraint_name=>"is_subpeptide_of",
+    constraint_value=>$parameters{peptide_ids_constraint} );
+  return if ($peptide_ids_clause eq '-1');
+
+
+
   #### Build ROWCOUNT constraint
   $parameters{row_limit} = 5000
     unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
@@ -495,6 +505,8 @@ sub handle_request {
 
       ["is_subpeptide_of","PI.is_subpeptide_of","Peptides that include this sequence"],
 
+      ["atlas build name","AB.atlas_build_name","PeptideAtlas name"],
+
       ["organism_full_name","O.full_name","Organism"],
     );
   }
@@ -509,6 +521,11 @@ sub handle_request {
   #### Build the columns part of the SQL statement
   my %colnameidx = ();
   my @column_titles = ();
+  ## Sends @column_array_ref to build_SQL_columns_list, which
+  ## (1) appends the 2nd element in array to $columns_clause
+  ## (2) fills %colnameidx_ref as a hash with key = 1st element
+  ## and value = 3rd element, and (3) fills @column_titles_ref
+  ## array with the 3rd element
   my $columns_clause = $sbeams->build_SQL_columns_list(
     column_array_ref=>\@column_array,
     colnameidx_ref=>\%colnameidx,
@@ -556,10 +573,10 @@ sub handle_request {
         $n_genome_locations_clause
         $is_exon_spanning_clause
         $biosequence_desc_clause
+        $peptide_ids_clause
 
     ORDER BY P.peptide_accession,PM.chromosome,PM.start_in_chromosome
   ~;
-
 
 
   #### Certain types of actions should be passed to links
@@ -571,8 +588,7 @@ sub handle_request {
   my @parameters_to_pass;
   my $parameters_list = '';
   while ( ($key,$value) = each %input_types ) {
-    if ($key ne 'sort_order' && $key ne 'display_options'
-      ) {
+    if ($key ne 'sort_order' && $key ne 'display_options') {
       if ($parameters{$key}) {
         push(@parameters_to_pass,"$key=$parameters{$key}");
       }
@@ -594,6 +610,7 @@ sub handle_request {
       'Peptide Sequence' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=2&atlas_build_id=$parameters{atlas_build_id}&searchWithinThis=Peptide+Sequence&searchForThis=\%$colnameidx{peptide_sequence}V&action=QUERY",
       'Peptide Sequence_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show summary for this peptide\'; return true"',
 
+      'Peptides that include this sequence' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides?_tab=1&atlas_build_id=$parameters{atlas_build_id}&peptide_ids_constraint=\%$colnameidx{is_subpeptide_of}V&action=QUERY",
   );
 
 
