@@ -56,3 +56,7 @@ go
 DROP INDEX dbo.affy_gene_intensity.idx_afa_id_probe_set_id_protocol_id
 
 go 
+-- gene_expression
+DROP INDEX dbo.gene_expression.idx_condition_id
+
+go 
