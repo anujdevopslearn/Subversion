@@ -2586,6 +2586,7 @@ sub transferTable {
           #### If the mapping produced a result
   	  if (defined($mapped_value)) {
   	    $rowdata{$value} = $mapped_value;
+            $row->[$key] = $mapped_value;
 
           #### Else complain and leave as NULL
   	  } else {
