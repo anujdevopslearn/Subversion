@@ -184,6 +184,7 @@ organismName1 => $indexHash{Organism_bioentity1_name},
 	
 	my %interactionTypes = $sbeams->selectTwoColumnHash(qq /Select Upper(interaction_type_name), interaction_type_id from $TBIN_INTERACTION_TYPE/);
 	$interactionTypes = \%interactionTypes;
+	
 	my %interactionGroups = $sbeams->selectTwoColumnHash(qq /Select Upper(interaction_group_name), interaction_group_id from $TBIN_INTERACTION_GROUP/);
 	$interactionGroups = \%interactionGroups;
 	my %confidenceScores = $sbeams->selectTwoColumnHash(qq /Select (confidence_score_name),confidence_score_id from $TBIN_CONFIDENCE_SCORE/);
@@ -308,7 +309,6 @@ sub processFile
 		}
 		
 		$INFOPROTEIN1{$count-2}->{organismName1} = uc($INFOPROTEIN1{$count-2}->{organismName1});
-		print "aa $INFOPROTEIN1{$count-2}->{organismName1} aa\n";
 		$INFOPROTEIN1{$count-2}->{bioentityReg1} = uc($INFOPROTEIN1{$count-2}->{bioentityReg1});
 		$INFOPROTEIN1{$count-2}->{group} = $infoArray[$columnHashProtein1{group}];
 		$INFOPROTEIN1{$count-2}->{group} =~ s/[\s+\n+\t+\r+]$//g;
@@ -337,21 +337,17 @@ sub processFile
  		$organismName->{$INFOPROTEIN1{$count-2}->{organismName1}}) 
 		{
 			print "Detected error1: type1 or organism1 not defined \n";
-			print "$bioentityType->{$INFOPROTEIN1{$count-2}->{bioentityType1}}   -----   $organismName->{$INFOPROTEIN1{$count-2}->{organismName1}} \n ";
-			
 			Error(\@infoArray, "bioentity1_type or organism1 is not defined");
 			delete $INFOPROTEIN1{$count-2};
 			next;
 		}
 		
 		if($INFOPROTEIN1{$count-2}->{bioentityCanName1} =~/(xm)|(nm)(xp)/i and $INFOPROTEIN1{$count-2}->{bioentityType1} =~ /protein/i){
-				print "this is a gene_name_identifier\n";
 				$INFOPROTEIN1{$count-2}->{bioentityCanGeneName1} = $INFOPROTEIN1{$count-2}->{bioentityCanName1};
 				undef($INFOPROTEIN1{$count-2}->{bioentityCanName1});
 		}
 		
 		if($INFOPROTEIN1{$count-2}->{bioentityFullName1} =~/(xm_\d)|(nm_\d)/i and $INFOPROTEIN1{$count-2}->{bioentityType1} =~ /protein/i){
-				print "this is a gene_name_identifier\n";
 				$INFOPROTEIN1{$count-2}->{bioentityCanGeneName1} = $INFOPROTEIN1{$count-2}->{bioentityFullName1};
 				undef($INFOPROTEIN1{$count-2}->{bioentityFullName1});
 		}
@@ -365,8 +361,6 @@ sub processFile
 #
 		if ($INFOPROTEIN1{$count-2}->{group} and !$interactionGroups->{$INFOPROTEIN1{$count-2}->{group}})
 		{
-				print "$INFOPROTEIN1{$count-2}->{group} not found \n";
-			
 				Error (\@infoArray," $INFOPROTEIN1{$count-2}->{group}: this group is not in $TBIN_INTERACTION_GROUP table");
 				delete $INFOPROTEIN1{$count-2};
 				next;
@@ -674,7 +668,6 @@ print "checking interaction requirements\n";
 						$pubMed->{$INTERACTION{$count-2}->{pubMedID}} = $returned_PK; 
 						
 						
-						print "thus pk $returned_PK\n";
 						print "$pubMed->{$INTERACTION{$count-2}->{pubMedID}}\n";
 						$INTERACTION{$count-2}->{pubMedID} = $returned_PK
 					
@@ -709,8 +702,6 @@ sub checkPopulateBioentity
 
 	foreach my $record (keys %{$hashRef}) 
 	{
-			print "Record:  $record\n";
-			
 			my $update = 1; 
 			my $insert = 0;
 #possible scenerios:
@@ -778,8 +769,6 @@ sub checkPopulateBioentity
 #4,5
 
 					$bioentityQueryCanonical = $bioentityQuery.$canonicalClause.$groupByClause;
-					print "got it";
-					
 			}
 			
 			if ($commonClause and $canonicalClause)
@@ -787,21 +776,17 @@ sub checkPopulateBioentity
 			
 				
 #need to make sure we are pulling the same record
-		print "$bioentityQueryCommon\n";
-		
 					my @rows = $sbeams->selectOneColumn($bioentityQueryCommon);	
 					my $nrows = scalar(@rows);
 					my $bioentityIDCommon = $rows[0] if $nrows == 1;
 					$bioentityIDCommon = 0 if $nrows == 0; 
 					if ($nrows >1)
 					{
-					print "ERROR\n";
 					ErrorLog ("$SUB_NAME:\nQuery: bioentityCommonQuery returned $nrows of data!\n",
 					$hashRef->{$record});
 					delete $INTERACTION{$record};
 					next;
 					}
-					print "$bioentityQueryCanonical\n";
 					@rows = $sbeams->selectOneColumn($bioentityQueryCanonical);	
 					$nrows = scalar(@rows);
 					my $bioentityIDCanonical = $rows[0] if $nrows == 1;
@@ -845,7 +830,6 @@ sub checkPopulateBioentity
 					if (($bioentityIDCommon eq $bioentityIDCanonical)
 							or ($bioentityIDCanonical and $bioentityIDCommon ==0) or ($bioentityIDCommon and $bioentityIDCanonical ==0))
 					{
-							print "Identical bioentity_Id:\n";
 #need to use bioentity_id = 0 unless one of them is defined and set $insert and $update
 							$bioentityIDCommon=$bioentityIDCanonical unless ($bioentityIDCommon);	
 							$insert = 1 unless ($bioentityIDCommon);
@@ -877,8 +861,6 @@ sub checkPopulateBioentity
 			}
 			elsif ($commonClause and !$canonicalClause)
 			{
-					print "only bioentity_common_name is known\n";
-					print "$bioentityQueryCommon\n";
 					my @rows = $sbeams->selectOneColumn($bioentityQueryCommon);	
 					my $nrows = scalar(@rows);
 					my $bioentityIDCommon = $rows[0] if $nrows == 1;
@@ -903,7 +885,6 @@ sub checkPopulateBioentity
 			}
 			else 
 			{
-					print "only bioentity_canonical_name is known\n";
 					my @rows = $sbeams->selectOneColumn($bioentityQueryCanonical);	
 					my $nrows = scalar(@rows);
 					my $bioentityIDCanonical = $rows[0] if $nrows == 1;
