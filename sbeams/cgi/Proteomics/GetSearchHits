@@ -103,7 +103,7 @@ sub main {
 
 
   #### Decide what action to take based on information so far
-  if ($parameters{action} eq "???") {
+  if (defined($parameters{action}) && $parameters{action} eq "???") {
     # Some action
   } else {
     $sbeamsMOD->display_page_header();
@@ -139,7 +139,7 @@ sub handle_request {
 
 
   #### Read in the standard form values
-  my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+  my $apply_action=$parameters{'action'} || $parameters{'apply_action'} || '';
   my $TABLE_NAME = $parameters{'QUERY_NAME'};
 
 
@@ -223,7 +223,7 @@ sub handle_request {
     constraint_type=>"int_list",
     constraint_name=>"Search Batch List",
     constraint_value=>$parameters{search_batch_id} );
-  return if ($search_batch_clause == -1);
+  return if ($search_batch_clause eq '-1');
 
 
   #### Build PROBABILITY constraint
@@ -232,7 +232,7 @@ sub handle_request {
     constraint_type=>"flexible_float",
     constraint_name=>"Probability Constraint",
     constraint_value=>$parameters{probability_constraint} );
-  return if ($probability_clause == -1);
+  return if ($probability_clause eq '-1');
 
 
   #### Build XCORR constraint
@@ -265,7 +265,7 @@ sub handle_request {
     constraint_type=>"plain_text",
     constraint_name=>"file_root",
     constraint_value=>$parameters{file_root_constraint} );
-  return if ($file_root_clause == -1);
+  return if ($file_root_clause eq '-1');
 
 
   #### Build BEST_HIT constraint
@@ -287,7 +287,7 @@ sub handle_request {
     constraint_type=>"flexible_int",
     constraint_name=>"XCorr Rank",
     constraint_value=>$parameters{xcorr_rank_constraint} );
-  return if ($xcorr_rank_clause == -1);
+  return if ($xcorr_rank_clause eq '-1');
 
 
   #### Build CHARGE constraint
@@ -296,7 +296,7 @@ sub handle_request {
     constraint_type=>"int_list",
     constraint_name=>"Charge",
     constraint_value=>$parameters{charge_constraint} );
-  return if ($charge_clause == -1);
+  return if ($charge_clause eq '-1');
 
 
   #### Build REFERENCE PROTEIN constraint
@@ -305,7 +305,7 @@ sub handle_request {
     constraint_type=>"plain_text",
     constraint_name=>"Reference",
     constraint_value=>$parameters{reference_constraint} );
-  return if ($reference_clause == -1);
+  return if ($reference_clause eq '-1');
 
 
   #### Build PROTEIN DESCRIPTION constraint
@@ -314,7 +314,7 @@ sub handle_request {
     constraint_type=>"plain_text",
     constraint_name=>"Protein Description",
     constraint_value=>$parameters{description_constraint} );
-  return if ($description_clause == -1);
+  return if ($description_clause eq '-1');
 
 
   #### Build PEPTIDE constraint
@@ -323,7 +323,7 @@ sub handle_request {
     constraint_type=>"plain_text",
     constraint_name=>"Peptide",
     constraint_value=>$parameters{peptide_constraint} );
-  return if ($peptide_clause == -1);
+  return if ($peptide_clause eq '-1');
 
 
   #### Build PEPTIDE STRING constraint
@@ -332,7 +332,7 @@ sub handle_request {
     constraint_type=>"plain_text",
     constraint_name=>"Peptide String",
     constraint_value=>$parameters{peptide_string_constraint} );
-  return if ($peptide_string_clause == -1);
+  return if ($peptide_string_clause eq '-1');
 
 
   #### Build PRECURSOR MASS constraint
@@ -341,7 +341,7 @@ sub handle_request {
     constraint_type=>"flexible_float",
     constraint_name=>"Precursor_Mass Constraint",
     constraint_value=>$parameters{precursor_mass_constraint} );
-  return if ($precursor_mass_clause == -1);
+  return if ($precursor_mass_clause eq '-1');
 
 
   #### Build MASS constraint
@@ -350,7 +350,7 @@ sub handle_request {
     constraint_type=>"flexible_float",
     constraint_name=>"Mass Constraint",
     constraint_value=>$parameters{mass_constraint} );
-  return if ($mass_clause == -1);
+  return if ($mass_clause eq '-1');
 
 
   #### Build START_SCAN constraint
@@ -359,7 +359,7 @@ sub handle_request {
     constraint_type=>"flexible_int",
     constraint_name=>"Start Scan",
     constraint_value=>$parameters{start_scan_constraint} );
-  return if ($start_scan_clause == -1);
+  return if ($start_scan_clause eq '-1');
 
 
   #### Build PERCENT BUFFER B constraint
@@ -368,7 +368,7 @@ sub handle_request {
     constraint_type=>"flexible_float",
     constraint_name=>"Percent ACN Constraint",
     constraint_value=>$parameters{percent_buffer_b_constraint} );
-  return if ($mass_clause == -1);
+  return if ($mass_clause eq '-1');
 
 
   #### Build ISOELECTRIC_POINT constraint
@@ -377,7 +377,7 @@ sub handle_request {
     constraint_type=>"flexible_float",
     constraint_name=>"Isoelectric Point",
     constraint_value=>$parameters{isoelectric_point_constraint} );
-  return if ($isoelectric_point_clause == -1);
+  return if ($isoelectric_point_clause eq '-1');
 
 
 

@@ -103,7 +103,7 @@ sub main {
 
 
   #### Decide what action to take based on information so far
-  if ($parameters{action} eq "???") {
+  if (defined($parameters{action}) && $parameters{action} eq "???") {
     # Some action
   } else {
     $sbeamsMOD->display_page_header();
@@ -140,7 +140,7 @@ sub handle_request {
 
 
   #### Read in the standard form values
-  my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+  my $apply_action=$parameters{'action'} || $parameters{'apply_action'} || '';
   my $TABLE_NAME = $parameters{'QUERY_NAME'};
 
 
@@ -212,7 +212,7 @@ sub handle_request {
     constraint_type=>"int_list",
     constraint_name=>"Experiment List",
     constraint_value=>$parameters{experiment_id} );
-  return if ($experiment_clause == -1);
+  return if ($experiment_clause eq '-1');
 
 
   #### Build PROJECT constraint
@@ -221,7 +221,7 @@ sub handle_request {
     constraint_type=>"int_list",
     constraint_name=>"Project List",
     constraint_value=>$parameters{project_id} );
-  return if ($project_clause == -1);
+  return if ($project_clause eq '-1');
 
 
   #### Build ROWCOUNT constraint

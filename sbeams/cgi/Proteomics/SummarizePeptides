@@ -103,7 +103,7 @@ sub main {
 
 
   #### Decide what action to take based on information so far
-  if ($parameters{action} eq "???") {
+  if (defined($parameters{action}) && $parameters{action} eq "???") {
     # Some action
   } else {
     $sbeamsMOD->display_page_header();
@@ -139,7 +139,7 @@ sub handle_request {
 
 
   #### Read in the standard form values
-  my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+  my $apply_action=$parameters{'action'} || $parameters{'apply_action'} || '';
   my $TABLE_NAME = $parameters{'QUERY_NAME'};
 
 
@@ -215,8 +215,9 @@ sub handle_request {
     constraint_type=>"int_list",
     constraint_name=>"Search Batch List",
     constraint_value=>$parameters{search_batch_id} );
-  return if ($search_batch_clause == -1);
-  unless ($parameters{search_batch_id}) {
+  return if ($search_batch_clause eq '-1');
+  unless (defined($parameters{search_batch_id}) &&
+          $parameters{search_batch_id}) {
     print "<H4>You must select at least one experiment over which ".
       "to summarize!</H4>\n\n";
     return;
@@ -229,7 +230,7 @@ sub handle_request {
     constraint_type=>"flexible_float",
     constraint_name=>"Probability",
     constraint_value=>$parameters{probability_constraint} );
-  return if ($probability_clause == -1);
+  return if ($probability_clause eq '-1');
 
   #### For much better performance, add in a hit_index constraint if
   #### there is a probability contraint.  This could break if
@@ -272,7 +273,7 @@ sub handle_request {
     constraint_type=>"plain_text",
     constraint_name=>"file_root",
     constraint_value=>$parameters{file_root_constraint} );
-  return if ($file_root_clause == -1);
+  return if ($file_root_clause eq '-1');
 
 
   #### Build BEST_HIT constraint
@@ -294,7 +295,7 @@ sub handle_request {
     constraint_type=>"flexible_int",
     constraint_name=>"XCorr Rank",
     constraint_value=>$parameters{xcorr_rank_constraint} );
-  return if ($xcorr_rank_clause == -1);
+  return if ($xcorr_rank_clause eq '-1');
 
 
   #### Build REFERENCE PROTEIN constraint
@@ -303,7 +304,7 @@ sub handle_request {
     constraint_type=>"plain_text",
     constraint_name=>"Reference",
     constraint_value=>$parameters{reference_constraint} );
-  return if ($reference_clause == -1);
+  return if ($reference_clause eq '-1');
 
   #### If there is a constraint, also apply it to BS.biosequence_name
   my $biosequence_name_clause = "";
@@ -319,7 +320,7 @@ sub handle_request {
     constraint_type=>"plain_text",
     constraint_name=>"Gene Name",
     constraint_value=>$parameters{gene_name_constraint} );
-  return if ($gene_name_clause == -1);
+  return if ($gene_name_clause eq '-1');
 
 
   #### Build PROTEIN DESCRIPTION constraint
@@ -328,7 +329,7 @@ sub handle_request {
     constraint_type=>"plain_text",
     constraint_name=>"Protein Description",
     constraint_value=>$parameters{description_constraint} );
-  return if ($description_clause == -1);
+  return if ($description_clause eq '-1');
 
 
   #### Build MOLECULAR FUNCTION constraint
@@ -337,7 +338,7 @@ sub handle_request {
     constraint_type=>"plain_text",
     constraint_name=>"Molecular Function",
     constraint_value=>$parameters{molecular_function_constraint} );
-  return if ($molecular_function_clause == -1);
+  return if ($molecular_function_clause eq '-1');
 
 
   #### Build BIOLOGICAL PROCESS constraint
@@ -346,7 +347,7 @@ sub handle_request {
     constraint_type=>"plain_text",
     constraint_name=>"Biological Process",
     constraint_value=>$parameters{biological_process_constraint} );
-  return if ($biological_process_clause == -1);
+  return if ($biological_process_clause eq '-1');
 
 
   #### Build CELLULAR COMPONENT constraint
@@ -355,7 +356,7 @@ sub handle_request {
     constraint_type=>"plain_text",
     constraint_name=>"Cellular Component",
     constraint_value=>$parameters{cellular_component_constraint} );
-  return if ($cellular_component_clause == -1);
+  return if ($cellular_component_clause eq '-1');
 
 
   #### Build INTERPRO PROTEIN DOMAIN constraint
@@ -364,7 +365,7 @@ sub handle_request {
     constraint_type=>"plain_text",
     constraint_name=>"InterPro Protein Domain",
     constraint_value=>$parameters{protein_domain_constraint} );
-  return if ($protein_domain_clause == -1);
+  return if ($protein_domain_clause eq '-1');
 
 
   #### Build FAVORED CODON FREQUENCY constraint
@@ -373,7 +374,7 @@ sub handle_request {
     constraint_type=>"flexible_float",
     constraint_name=>"Favored Codon Frequency",
     constraint_value=>$parameters{fav_codon_frequency_constraint} );
-  return if ($fav_codon_frequency_clause == -1);
+  return if ($fav_codon_frequency_clause eq '-1');
 
 
   #### Build NUMBER OF TRANSMEMBRANE REGIONS constraint
@@ -382,7 +383,7 @@ sub handle_request {
     constraint_type=>"flexible_int",
     constraint_name=>"Number of Transmembrane regions",
     constraint_value=>$parameters{n_transmembrane_regions_constraint} );
-  return if ($n_transmembrane_regions_clause == -1);
+  return if ($n_transmembrane_regions_clause eq '-1');
 
 
   #### Build ACCESSION constraint
@@ -391,7 +392,7 @@ sub handle_request {
     constraint_type=>"plain_text",
     constraint_name=>"Accession",
     constraint_value=>$parameters{accession_constraint} );
-  return if ($accession_clause == -1);
+  return if ($accession_clause eq '-1');
 
 
   #### Build PEPTIDE constraint
@@ -400,7 +401,7 @@ sub handle_request {
     constraint_type=>"plain_text",
     constraint_name=>"Peptide",
     constraint_value=>$parameters{peptide_constraint} );
-  return if ($peptide_clause == -1);
+  return if ($peptide_clause eq '-1');
 
 
   #### Build PEPTIDE STRING constraint
@@ -409,7 +410,7 @@ sub handle_request {
     constraint_type=>"plain_text",
     constraint_name=>"Peptide String",
     constraint_value=>$parameters{peptide_string_constraint} );
-  return if ($peptide_string_clause == -1);
+  return if ($peptide_string_clause eq '-1');
 
 
   #### Build CHARGE constraint
@@ -418,7 +419,7 @@ sub handle_request {
     constraint_type=>"int_list",
     constraint_name=>"Charge",
     constraint_value=>$parameters{charge_constraint} );
-  return if ($charge_clause == -1);
+  return if ($charge_clause eq '-1');
 
 
   #### Build PRECURSOR MASS constraint
@@ -427,7 +428,7 @@ sub handle_request {
     constraint_type=>"flexible_float",
     constraint_name=>"Precursor_Mass Constraint",
     constraint_value=>$parameters{precursor_mass_constraint} );
-  return if ($precursor_mass_clause == -1);
+  return if ($precursor_mass_clause eq '-1');
 
 
   #### Build MASS constraint
@@ -436,7 +437,7 @@ sub handle_request {
     constraint_type=>"flexible_float",
     constraint_name=>"Mass Constraint",
     constraint_value=>$parameters{mass_constraint} );
-  return if ($mass_clause == -1);
+  return if ($mass_clause eq '-1');
 
 
   #### Build PERCENT BUFFER B constraint
@@ -445,7 +446,7 @@ sub handle_request {
     constraint_type=>"flexible_float",
     constraint_name=>"Percent ACN Constraint",
     constraint_value=>$parameters{percent_buffer_b_constraint} );
-  return if ($percent_buffer_b_clause == -1);
+  return if ($percent_buffer_b_clause eq '-1');
 
 
   #### Build ISOELECTRIC_POINT constraint
@@ -454,7 +455,7 @@ sub handle_request {
     constraint_type=>"flexible_float",
     constraint_name=>"Isoelectric Point",
     constraint_value=>$parameters{isoelectric_point_constraint} );
-  return if ($isoelectric_point_clause == -1);
+  return if ($isoelectric_point_clause eq '-1');
 
 
   #### Build ANNOTATION_STATUS and ANNOTATION_LABELS constraint
@@ -492,7 +493,7 @@ sub handle_request {
     constraint_type=>"flexible_int",
     constraint_name=>"Number of Matches",
     constraint_value=>$parameters{n_annotations_constraint} );
-  return if ($n_annotations_clause == -1);
+  return if ($n_annotations_clause eq '-1');
 
 
   #### Build QUANTITATION constraint

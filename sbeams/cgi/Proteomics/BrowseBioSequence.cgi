@@ -215,7 +215,7 @@ sub handle_request {
     constraint_type=>"int_list",
     constraint_name=>"BioSequence Set",
     constraint_value=>$parameters{biosequence_set_id} );
-  return if ($biosequence_set_clause == -1);
+  return if ($biosequence_set_clause eq '-1');
 
 
   #### Build BIOSEQUENCE_NAME constraint
@@ -224,7 +224,7 @@ sub handle_request {
     constraint_type=>"plain_text",
     constraint_name=>"BioSequence Name",
     constraint_value=>$parameters{biosequence_name_constraint} );
-  return if ($biosequence_name_clause == -1);
+  return if ($biosequence_name_clause eq '-1');
 
 
   #### Build BIOSEQUENCE_NAME constraint
@@ -233,7 +233,7 @@ sub handle_request {
     constraint_type=>"plain_text",
     constraint_name=>"BioSequence Gene Name",
     constraint_value=>$parameters{biosequence_gene_name_constraint} );
-  return if ($biosequence_gene_name_clause == -1);
+  return if ($biosequence_gene_name_clause eq '-1');
 
 
   #### Build BIOSEQUENCE_SEQ constraint
@@ -242,7 +242,7 @@ sub handle_request {
     constraint_type=>"plain_text",
     constraint_name=>"BioSequence Sequence",
     constraint_value=>$parameters{biosequence_seq_constraint} );
-  return if ($biosequence_seq_clause == -1);
+  return if ($biosequence_seq_clause eq '-1');
   $biosequence_seq_clause =~ s/\*/\%/g;
 
 
@@ -252,7 +252,7 @@ sub handle_request {
     constraint_type=>"plain_text",
     constraint_name=>"BioSequence Description",
     constraint_value=>$parameters{biosequence_desc_constraint} );
-  return if ($biosequence_desc_clause == -1);
+  return if ($biosequence_desc_clause eq '-1');
 
 
   #### Build MOLECULAR FUNCTION constraint
@@ -261,7 +261,7 @@ sub handle_request {
     constraint_type=>"plain_text",
     constraint_name=>"Molecular Function",
     constraint_value=>$parameters{molecular_function_constraint} );
-  return if ($molecular_function_clause == -1);
+  return if ($molecular_function_clause eq '-1');
 
 
   #### Build BIOLOGICAL PROCESS constraint
@@ -270,7 +270,7 @@ sub handle_request {
     constraint_type=>"plain_text",
     constraint_name=>"Biological Process",
     constraint_value=>$parameters{biological_process_constraint} );
-  return if ($biological_process_clause == -1);
+  return if ($biological_process_clause eq '-1');
 
 
   #### Build CELLULAR COMPONENT constraint
@@ -279,7 +279,7 @@ sub handle_request {
     constraint_type=>"plain_text",
     constraint_name=>"Cellular Component",
     constraint_value=>$parameters{cellular_component_constraint} );
-  return if ($cellular_component_clause == -1);
+  return if ($cellular_component_clause eq '-1');
 
 
   #### Build INTERPRO PROTEIN DOMAIN constraint
@@ -288,7 +288,7 @@ sub handle_request {
     constraint_type=>"plain_text",
     constraint_name=>"InterPro Protein Domain",
     constraint_value=>$parameters{protein_domain_constraint} );
-  return if ($protein_domain_clause == -1);
+  return if ($protein_domain_clause eq '-1');
 
 
   #### Build FAVORED CODON FREQUENCY constraint
@@ -297,7 +297,7 @@ sub handle_request {
     constraint_type=>"flexible_float",
     constraint_name=>"Favored Codon Frequency",
     constraint_value=>$parameters{fav_codon_frequency_constraint} );
-  return if ($fav_codon_frequency_clause == -1);
+  return if ($fav_codon_frequency_clause eq '-1');
 
 
   #### Build NUMBER OF TRANSMEMBRANE REGIONS constraint
@@ -306,7 +306,7 @@ sub handle_request {
     constraint_type=>"flexible_int",
     constraint_name=>"Number of Transmembrane regions",
     constraint_value=>$parameters{n_transmembrane_regions_constraint} );
-  return if ($n_transmembrane_regions_clause == -1);
+  return if ($n_transmembrane_regions_clause eq '-1');
 
 
   #### Build SORT ORDER
