@@ -114,7 +114,7 @@ sub main {
 
   #### Do the SBEAMS authentication and exit if a username is not returned
   exit unless ($current_username = $sbeams->Authenticate(
-    work_group=>'Proteomics_admin',
+    work_group=>'Proteomics_user',
   ));
 
 
@@ -333,8 +333,14 @@ sub updatePeptideSummary {
   if ($count) {
     if ($delete_existing) {
       print "Deleting...\n$sql\n";
-      $sql = "DELETE FROM $TBAPD_PEPTIDE ".
-             " WHERE peptide_summary_id = '$peptide_summary_id'";
+      $sql = qq~
+        DELETE FROM $TBAPD_MODIFIED_PEPTIDE
+         WHERE peptide_id IN (
+               SELECT peptide_id FROM $TBAPD_PEPTIDE
+               WHERE peptide_summary_id = '$peptide_summary_id' )
+        DELETE FROM $TBAPD_PEPTIDE
+         WHERE peptide_summary_id = '$peptide_summary_id'
+      ~;
       $sbeams->executeSQL($sql);
     } elsif (!($update_existing)) {
       die("There are already peptide records for this " .
@@ -413,9 +419,13 @@ print "experiment_list = ",$experiment_list,"\n";
        $peptide_string,$isoelectric_point,$peptide,$biosequence_id,
        $assumed_charge,$annotation_probability) = @{$row};
 
+    #### Remove the delta portion of peptide mass
+    $hit_mass_plus_H =~ s/\(.+\)//;
+
 
     #### If the human annotated probability is higher than the natural one,
     #### then substitute it
+    $probability = 0 unless (defined($probability));
     $probability = $annotation_probability
       if (defined($annotation_probability) &&
           $annotation_probability > $probability);
@@ -464,6 +474,8 @@ print "experiment_list = ",$experiment_list,"\n";
       $mod_peptide_data->{n_modified_peptides}++;
 
       #### Just add the additional stats that we keep track of
+      push(@{$mod_peptide_data->{calc_buffer_percents}},$calc_buffer_percent);
+      push(@{$mod_peptide_data->{peptide_masses}},$hit_mass_plus_H);
       push(@{$mod_peptide_data->{precursor_masses}},$precursor_mass);
       push(@{$mod_peptide_data->{probabilities}},$probability);
 
@@ -489,6 +501,12 @@ print "experiment_list = ",$experiment_list,"\n";
 
       my @precursor_masses = ( $precursor_mass );
       $mod_peptide_data->{precursor_masses} = \@precursor_masses;
+
+      my @peptide_masses = ( $hit_mass_plus_H );
+      $mod_peptide_data->{peptide_masses} = \@peptide_masses;
+
+      my @calc_buffer_percents = ( $calc_buffer_percent );
+      $mod_peptide_data->{calc_buffer_percents} = \@calc_buffer_percents;
 
       my @probabilities = ( $probability );
       $mod_peptide_data->{probabilities} = \@probabilities;
@@ -635,9 +653,23 @@ sub writeModifiedPeptide {
     array_ref=>$modified_peptide_data->{probabilities});
   $rowdata{maximum_probability} = $prob_stats->{max};
 
+  #### Calculate avg,stdev precursor mass
   my $mass_stats = calculateMoment(
     array_ref=>$modified_peptide_data->{precursor_masses});
-  $rowdata{avg_precursor_mass} = $mass_stats->{mean};
+  $rowdata{precursor_mass_avg} = $mass_stats->{mean};
+  $rowdata{precursor_mass_stdev} = $mass_stats->{stdev};
+
+  #### Calculate avg,stdev % ACN
+  my $ACN_stats = calculateMoment(
+    array_ref=>$modified_peptide_data->{calc_buffer_percents});
+  $rowdata{percent_ACN_avg} = $ACN_stats->{mean};
+  $rowdata{percent_ACN_stdev} = $ACN_stats->{stdev};
+
+  #### Calculate peptide mass.  This should be necessary since
+  #### they should all be the same.  Are they???
+  my $peptide_mass_stats = calculateMoment(
+    array_ref=>$modified_peptide_data->{peptide_masses});
+  $rowdata{calc_peptide_mass} = $peptide_mass_stats->{mean};
 
 
   #### Insert the data into the database
@@ -698,11 +730,22 @@ sub calculateMoment {
   $mean = $mean / $n_elements;
 
 
+  #### Calculate the standard deviation now that we know the mean
+  my $stdev = 0;
+  foreach $element (@{$array_ref}) {
+    $stdev += ($element-$mean) * ($element-$mean);
+  }
+  my $divisor = $n_elements - 1;
+  $divisor = 1 if ($divisor < 1);
+  $stdev = sqrt($stdev / $divisor);
+
+
   #### Create a final hash of results and return a reference to it
   my %results;
   $results{min} = $min;
   $results{max} = $max;
   $results{mean} = $mean;
+  $results{stdev} = $stdev;
   $results{n_elements} = $n_elements;
 
   return \%results;
