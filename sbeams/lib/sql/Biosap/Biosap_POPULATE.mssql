@@ -1,0 +1,10 @@
+INSERT INTO query_option (option_type,option_key,option_value,sort_order) VALUES ('BBSF_sort_options','biosequence_name,melting_temp,feature_sequence','biosequence_name,melting_temp','10');
+INSERT INTO query_option (option_type,option_key,option_value,sort_order) VALUES ('BBSF_sort_options','biosequence_name,threeprime_distance,feature_sequence','biosequence_name,threeprime_distance','15');
+INSERT INTO query_option (option_type,option_key,option_value,sort_order) VALUES ('BBSF_sort_options','melting_temp,biosequence_name,feature_sequence','melting_temp','20');
+INSERT INTO query_option (option_type,option_key,option_value,sort_order) VALUES ('BBSF_sort_options','threeprime_distance,biosequence_name,feature_sequence','threeprime_distance','30');
+INSERT INTO query_option (option_type,option_key,option_value,sort_order) VALUES ('BBSF_sort_options','feature_sequence','feature_sequence','40');
+INSERT INTO query_option (option_type,option_key,option_value,sort_order) VALUES ('BBSF_display_options','AdditionalColumns','Extended Output Columns','10');
+INSERT INTO query_option (option_type,option_key,option_value,sort_order) VALUES ('BBSF_display_options','ShowSQL','Show SQL Query','20');
+INSERT INTO query_option (option_type,option_key,option_value,sort_order) VALUES ('BBS_display_options','MaxSeqWidth','Limit Sequence Width','50');
+INSERT INTO query_option (option_type,option_key,option_value,sort_order) VALUES ('BBS_display_options','ShowSQL','Show SQL Query','60');
+INSERT INTO query_option (option_type,option_key,option_value,sort_order) VALUES ('BBS_sort_options','biosequence_name','biosequence_name','10');
