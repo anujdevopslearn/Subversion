@@ -188,43 +188,12 @@ sub handle_request {
 
   #### If the current user is not the owner, the check that the
   #### user has privilege to access this project
-  if ($project_id > 0 && $current_contact_id != $PI_contact_id) {
-    $sql = qq~
-	SELECT P.project_id,P.project_tag,P.name,UL.username,
-               MIN(CASE WHEN UWG.contact_id IS NULL THEN NULL ELSE GPP.privilege_id END) AS "best_group_privilege_id",
-               MIN(UPP.privilege_id) AS "best_user_privilege_id"
-	  FROM $TB_PROJECT P
-	 INNER JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
-	  LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
-	       ON ( P.project_id = UPP.project_id
-	            AND UPP.contact_id='$current_contact_id' )
-	  LEFT JOIN $TB_GROUP_PROJECT_PERMISSION GPP
-	       ON ( P.project_id = GPP.project_id )
-	  LEFT JOIN $TB_PRIVILEGE PRIV
-	       ON ( GPP.privilege_id = PRIV.privilege_id )
-	  LEFT JOIN $TB_USER_WORK_GROUP UWG
-	       ON ( GPP.work_group_id = UWG.work_group_id
-	            AND UWG.contact_id='$current_contact_id' )
-	  LEFT JOIN $TB_WORK_GROUP WG
-	       ON ( UWG.work_group_id = WG.work_group_id )
-	 WHERE 1=1
-	   AND P.record_status != 'D'
-	   AND UL.record_status != 'D'
-	   AND ( UPP.record_status != 'D' OR UPP.record_status IS NULL )
-	   AND ( GPP.record_status != 'D' OR GPP.record_status IS NULL )
-	   AND ( PRIV.record_status != 'D' OR PRIV.record_status IS NULL )
-	   AND ( UWG.record_status != 'D' OR UWG.record_status IS NULL )
-	   AND ( WG.record_status != 'D' OR WG.record_status IS NULL )
-	   AND P.project_id = '$project_id'
-	   AND ( UPP.privilege_id<=40 OR GPP.privilege_id<=40 )
-           AND ( WG.work_group_name IS NOT NULL OR UPP.privilege_id IS NOT NULL )
-         GROUP BY P.project_id,P.project_tag,P.name,UL.username
-	 ORDER BY UL.username,P.project_tag
-    ~;
-    @rows = $sbeams->selectSeveralColumns($sql);
+  if ($project_id > 0) {
 
-    #### If nothing was returned, then we don't have access
-    $project_id = -99 unless (@rows);
+    my $best_permission = $sbeams->get_best_permission();
+
+    #### If not at least data_reader, set project_id to a bad value
+    $project_id = -99 unless ($best_permission > 0 && $best_permission <=40);
 
   }
 
@@ -279,7 +248,7 @@ sub handle_request {
     }
   } else {
     if ($project_id = -99) {
-      print "	<TR><TD WIDTH=\"100%\">You do not have access to this project</TD></TR>\n";
+      print "	<TR><TD WIDTH=\"100%\">You do not have access to this project.  Contact the owner of this project if you want to have access.</TD></TR>\n";
     } else {
       print "	<TR><TD WIDTH=\"100%\">NONE</TD></TR>\n";
     }
@@ -296,204 +265,25 @@ sub handle_request {
 
   ##########################################################################
   #### Print out all projects owned by the user
-  print qq~
-	<H1>Projects You Own:</H1>
-	<TABLE WIDTH="50%" BORDER=0>
-	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
-  ~;
 
-
-  #### Get all the projects owned by the user
-  $sql = qq~
-	SELECT project_id,project_tag,P.name
-	  FROM $TB_PROJECT P
-	 WHERE PI_contact_id = '$current_contact_id'
-	 ORDER BY project_tag
-  ~;
-  @rows = $sbeams->selectSeveralColumns($sql);
-
-  if (@rows) {
-    my $firstflag = 1;
-    foreach my $row (@rows) {
-      my ($project_id,$project_tag,$project_name) = @{$row};
-      print "	<TR><TD></TD>" unless ($firstflag);
-      print "	<TD WIDTH=\"100%\">- <A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?set_current_project_id=$project_id\">$project_tag:</A> $project_name</TD></TR>\n";
-      $firstflag=0;
-    }
-  } else {
-    print "	<TD WIDTH=\"100%\">NONE</TD></TR>\n";
-  }
-
-
-  #### Finish the table
-  print qq~
-	</TABLE>
-  ~;
+  $sbeams->printProjectsYouOwn();
 
 
 
   ##########################################################################
   #### Print out all projects user has access to
-  print qq~
-	<H1>Projects You Have Access To:</H1>
-	<TABLE WIDTH="50%" BORDER=0>
-	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
-  ~;
+
+  $sbeams->printProjectsYouHaveAccessTo();
 
 
-  #### Get the privilege level names
-  my %privilege_names = $sbeams->selectTwoColumnHash(
-    "SELECT privilege_id,name FROM $TB_PRIVILEGE WHERE record_status != 'D'"
-  );
+  ##########################################################################
+  #### Print out some recent resultsets
+
+  $sbeams->printRecentResultsets();
 
 
-  #### Get all the projects user has access to
-  $sql = qq~
-	SELECT P.project_id,P.project_tag,P.name,UL.username,
-               MIN(CASE WHEN UWG.contact_id IS NULL THEN NULL ELSE GPP.privilege_id END) AS "best_group_privilege_id",
-               MIN(UPP.privilege_id) AS "best_user_privilege_id"
-	  FROM $TB_PROJECT P
-	 INNER JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
-	  LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
-	       ON ( P.project_id = UPP.project_id
-	            AND UPP.contact_id='$current_contact_id' )
-	  LEFT JOIN $TB_GROUP_PROJECT_PERMISSION GPP
-	       ON ( P.project_id = GPP.project_id )
-	  LEFT JOIN $TB_PRIVILEGE PRIV
-	       ON ( GPP.privilege_id = PRIV.privilege_id )
-	  LEFT JOIN $TB_USER_WORK_GROUP UWG
-	       ON ( GPP.work_group_id = UWG.work_group_id
-	            AND UWG.contact_id='$current_contact_id' )
-	  LEFT JOIN $TB_WORK_GROUP WG
-	       ON ( UWG.work_group_id = WG.work_group_id )
-	 WHERE 1=1
-	   AND P.record_status != 'D'
-	   AND UL.record_status != 'D'
-	   AND ( UPP.record_status != 'D' OR UPP.record_status IS NULL )
-	   AND ( GPP.record_status != 'D' OR GPP.record_status IS NULL )
-	   AND ( PRIV.record_status != 'D' OR PRIV.record_status IS NULL )
-	   AND ( UWG.record_status != 'D' OR UWG.record_status IS NULL )
-	   AND ( WG.record_status != 'D' OR WG.record_status IS NULL )
-	   AND ( UPP.privilege_id<=40 OR GPP.privilege_id<=40 )
-           AND ( WG.work_group_name IS NOT NULL OR UPP.privilege_id IS NOT NULL )
-         GROUP BY P.project_id,P.project_tag,P.name,UL.username
-	 ORDER BY UL.username,P.project_tag
-  ~;
-  @rows = $sbeams->selectSeveralColumns($sql);
-
-  if (@rows) {
-    my $firstflag = 1;
-    foreach my $row (@rows) {
-      my ($project_id,$project_tag,$project_name,$username,
-          $best_group_privilege_id,$best_user_privilege_id) =
-        @{$row};
-      print "	<TR><TD></TD>" unless ($firstflag);
-
-      #### Select the lowest permission and translate to a name
-      $best_group_privilege_id = 9999
-        unless (defined($best_group_privilege_id));
-      $best_user_privilege_id = 9999
-        unless (defined($best_user_privilege_id));
-      my $best_privilege_id = $best_group_privilege_id;
-      $best_privilege_id = $best_user_privilege_id if
-        ($best_user_privilege_id < $best_privilege_id);
-      my $privilege_name = $privilege_names{$best_privilege_id} || '???';
-
-      print "	<TD><NOBR>- <A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?set_current_project_id=$project_id\">$username - $project_tag:</A> $project_name</NOBR></TD><TD><font color=\"red\">$privilege_name</font></TD></TR>\n";
-      $firstflag=0;
-    }
-  } else {
-    print "	<TD WIDTH=\"100%\">NONE</TD></TR>\n";
-  }
-
-
-  #### Finish the table
-  print qq~
-	</TABLE>
-  ~;
-
-
-
-  #### Get information about the most recent resultsets
-  $sql = qq~
-    SELECT cached_resultset_id,resultset_name,query_name,cache_descriptor,
-           date_created
-      FROM $TB_CACHED_RESULTSET
-     WHERE contact_id = '$current_contact_id'
-       AND record_status != 'D'
-       AND query_name LIKE '$SBEAMS_SUBDIR\%'
-     ORDER BY date_created DESC
-  ~;
-  @rows = $sbeams->selectSeveralColumns($sql);
-
-  #### If there's something interesting to show, show a glimpse
-  if (scalar(@rows)) {
-    print qq~
-	<H1>Recent Resultsets from Queries:</H1>
-	<TABLE BORDER=0>
-    ~;
-
-    #### Find all the resultsets with names/annotations
-    my $html_buffer = '';
-    my $output_counter = 0;
-    foreach my $row (@rows) {
-      my $resultset_name = $row->[1];
-      my $query_name = $row->[2];
-      my $cache_descriptor = $row->[3];
-      my $date_created = $row->[4];
-      if (defined($resultset_name) && $output_counter < 5) {
-        $html_buffer .= qq~
-	  <TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD><TD NOWRAP>-&nbsp;<A HREF="$CGI_BASE_DIR/$query_name?action=VIEWRESULTSET&rs_set_name=$cache_descriptor">[View]</A>&nbsp;&nbsp;&nbsp;&nbsp;<font color="green">$resultset_name:</font></TD>
-	  <TD NOWRAP>&nbsp;&nbsp;&nbsp;$query_name</A></TD>
-	  <TD NOWRAP>&nbsp;&nbsp;&nbsp;($date_created)</TD></TR>
-        ~;
-        $output_counter++;
-      }
-    }
-
-    #### If there were any, print them
-    if ($output_counter) {
-      print qq~
-	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD><TD COLSPAN=4>Most recent named resultsets:</TD></TR>
-	$html_buffer
-      ~;
-    }
-
-
-    #### Find all the resultsets without names/annotations
-    $html_buffer = '';
-    $output_counter = 0;
-    foreach my $row (@rows) {
-      my $resultset_name = $row->[1];
-      my $query_name = $row->[2];
-      my $cache_descriptor = $row->[3];
-      my $date_created = $row->[4];
-      if (!defined($resultset_name) && $output_counter < 5) {
-        $html_buffer .= qq~
-	  <TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD><TD NOWRAP>-&nbsp;<A HREF="$CGI_BASE_DIR/$query_name?action=VIEWRESULTSET&rs_set_name=$cache_descriptor">[View]</A>&nbsp;&nbsp;&nbsp;&nbsp;<font color="green">(unnamed)</font></TD>
-	  <TD NOWRAP>&nbsp;&nbsp;&nbsp;$query_name</TD>
-	  <TD NOWRAP>&nbsp;&nbsp;&nbsp;($date_created)</A></TD></TR>
-        ~;
-        $output_counter++;
-      }
-    }
-
-    #### If there were any, print them
-    if ($output_counter) {
-      print qq~
-	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD><TD COLSPAN=4>Most recent unnamed resultsets:</TD></TR>
-	$html_buffer
-      ~;
-    }
-
-    print qq~
-      <TR><TD></TD><TD COLSPAN=4><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=cached_resultset">[View all resultsets]</A></TD></TR>
-      </TABLE>
-    ~;
-
-  }
-
-
+  ##########################################################################
+  #### Print out a bunch of other misc links
 
   print qq~
 	<H1>Other Links:</H1>
