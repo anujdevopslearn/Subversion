@@ -1,7 +1,7 @@
-package SBEAMS::MicroArrayWeb::DBInterface;
+package SBEAMS::Microarray::DBInterface;
 
 ###############################################################################
-# Program     : SBEAMS::MicroArrayWeb::DBInterface
+# Program     : SBEAMS::Microarray::DBInterface
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
 # $Id$
 #

@@ -1,7 +1,7 @@
-package SBEAMS::MicroArrayWeb::HTMLPrinter;
+package SBEAMS::Microarray::HTMLPrinter;
 
 ###############################################################################
-# Program     : SBEAMS::MicroArrayWeb::HTMLPrinter
+# Program     : SBEAMS::Microarray::HTMLPrinter
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
 # $Id$
 #
@@ -23,8 +23,8 @@ use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::TableInfo;
 
-use SBEAMS::MicroArrayWeb::Settings;
-use SBEAMS::MicroArrayWeb::TableInfo;
+use SBEAMS::Microarray::Settings;
+use SBEAMS::Microarray::TableInfo;
 
 
 ###############################################################################

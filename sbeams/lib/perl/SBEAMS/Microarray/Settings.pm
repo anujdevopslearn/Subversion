@@ -1,11 +1,11 @@
-package SBEAMS::MicroArrayWeb::Settings;
+package SBEAMS::Microarray::Settings;
 
 ###############################################################################
-# Program     : SBEAMS::MicroArrayWeb::Settings
+# Program     : SBEAMS::Microarray::Settings
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
 # $Id$
 #
-# Description : This is part of the SBEAMS::MicroArrayWeb module which handles
+# Description : This is part of the SBEAMS::Microarray module which handles
 #               setting location-dependant variables.
 #
 ###############################################################################

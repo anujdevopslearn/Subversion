@@ -1,7 +1,7 @@
-package SBEAMS::MicroArrayWeb;
+package SBEAMS::Microarray;
 
 ###############################################################################
-# Program     : SBEAMS::MicroArrayWeb
+# Program     : SBEAMS::Microarray
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
 # $Id$
 #
@@ -14,15 +14,15 @@ use strict;
 use vars qw($VERSION @ISA $sbeams);
 use CGI::Carp qw(fatalsToBrowser croak);
 
-use SBEAMS::MicroArrayWeb::DBInterface;
-use SBEAMS::MicroArrayWeb::HTMLPrinter;
-use SBEAMS::MicroArrayWeb::TableInfo;
-use SBEAMS::MicroArrayWeb::Settings;
+use SBEAMS::Microarray::DBInterface;
+use SBEAMS::Microarray::HTMLPrinter;
+use SBEAMS::Microarray::TableInfo;
+use SBEAMS::Microarray::Settings;
 
-@ISA = qw(SBEAMS::MicroArrayWeb::DBInterface
-          SBEAMS::MicroArrayWeb::HTMLPrinter
-          SBEAMS::MicroArrayWeb::TableInfo
-          SBEAMS::MicroArrayWeb::Settings);
+@ISA = qw(SBEAMS::Microarray::DBInterface
+          SBEAMS::Microarray::HTMLPrinter
+          SBEAMS::Microarray::TableInfo
+          SBEAMS::Microarray::Settings);
 
 
 ###############################################################################

@@ -1,11 +1,11 @@
-package SBEAMS::MicroArrayWeb::TableInfo;
+package SBEAMS::Microarray::TableInfo;
 
 ###############################################################################
-# Program     : SBEAMS::MicroArrayWeb::TableInfo
+# Program     : SBEAMS::Microarray::TableInfo
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
 # $Id$
 #
-# Description : This is part of the SBEAMS::MicroArrayWeb module which returns
+# Description : This is part of the SBEAMS::Microarray module which returns
 #               information about various tables.
 #
 ###############################################################################
@@ -13,8 +13,8 @@ package SBEAMS::MicroArrayWeb::TableInfo;
 use strict;
 use CGI::Carp qw(fatalsToBrowser croak);
 
-use SBEAMS::MicroArrayWeb::Settings;
-use SBEAMS::MicroArrayWeb::Tables;
+use SBEAMS::Microarray::Settings;
+use SBEAMS::Microarray::Tables;
 use SBEAMS::Connection::Tables;
 
 

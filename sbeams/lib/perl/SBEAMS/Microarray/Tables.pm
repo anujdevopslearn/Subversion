@@ -1,11 +1,11 @@
-package SBEAMS::MicroArrayWeb::Tables;
+package SBEAMS::Microarray::Tables;
 
 ###############################################################################
-# Program     : SBEAMS::MicroArrayWeb::Tables
+# Program     : SBEAMS::Microarray::Tables
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
 # $Id$
 #
-# Description : This is part of the SBEAMS::MicroArrayWeb module which provides
+# Description : This is part of the SBEAMS::Microarray module which provides
 #               a level of abstraction to the database tables.
 #
 ###############################################################################
