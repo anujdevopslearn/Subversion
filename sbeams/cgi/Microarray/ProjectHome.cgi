@@ -435,17 +435,19 @@ $LINESEPARATOR
 ####  Project Status Section ####
 	$sql = qq~
 SELECT	A.array_id,A.array_name,
-	ARSM1.name AS 'Sample1Name',ARSM2.name AS 'Sample2Name',
+	ARSM1.name AS "Sample1Name",ARSM2.name AS "Sample2Name",
 	AR.array_request_id,ARSL.array_request_slide_id,
-	AR.date_created AS 'date_requested',
-	PB.printing_batch_id,PB.date_started AS 'date_printed',
+	AR.date_created AS "date_requested",
+	PB.printing_batch_id,PB.date_started AS "date_printed",
 	H.hybridization_id,H.date_hybridized,
-	ASCAN.array_scan_id,ASCAN.date_scanned,ASCAN.data_flag AS 'scan_flag',
-	AQ.array_quantitation_id,AQ.date_quantitated,AQ.data_flag AS 'quan_flag'
+	ASCAN.array_scan_id,ASCAN.date_scanned,ASCAN.data_flag AS "scan_flag",
+	AQ.array_quantitation_id,AQ.date_quantitated,AQ.data_flag AS "quan_flag",
+	ARSM1.array_request_sample_id AS "array_request_sample_id1",
+	ARSM2.array_request_sample_id AS "array_request_sample_id2"
   FROM $TB_ARRAY_REQUEST AR
   LEFT JOIN $TB_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )  
-  LEFT JOIN array_request_sample ARSM1 ON ( ARSL.array_request_slide_id = ARSM1.array_request_slide_id AND ARSM1.sample_index=0)  
-  LEFT JOIN array_request_sample ARSM2 ON ( ARSL.array_request_slide_id = ARSM2.array_request_slide_id AND ARSM2.sample_index=1)
+  LEFT JOIN $TB_ARRAY_REQUEST_SAMPLE ARSM1 ON ( ARSL.array_request_slide_id = ARSM1.array_request_slide_id AND ARSM1.sample_index=0)
+  LEFT JOIN $TB_ARRAY_REQUEST_SAMPLE ARSM2 ON ( ARSL.array_request_slide_id = ARSM2.array_request_slide_id AND ARSM2.sample_index=1)
   LEFT JOIN $TB_ARRAY A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
   LEFT JOIN $TB_PRINTING_BATCH PB ON ( A.printing_batch_id = PB.printing_batch_id )
   LEFT JOIN $TB_HYBRIDIZATION H ON ( A.array_id = H.array_id )
@@ -464,6 +466,8 @@ SELECT	A.array_id,A.array_name,
 
   my $base_url = "$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=";
   my %url_cols = ('array_name' => "${base_url}array&array_id=%0V",
+		  'Sample1Name' => "${base_url}array_request_sample&array_request_sample_id=%17V",
+		  'Sample2Name' => "${base_url}array_request_sample&array_request_sample_id=%18V",
 		  'date_requested' => "$CGI_BASE_DIR/Microarray/SubmitArrayRequest.cgi?TABLE_NAME=array_request&array_request_id=%4V",
 		  'date_printed' => "${base_url}printing_batch&printing_batch_id=%7V", 
 		  'date_hybridized' => "${base_url}hybridization&hybridization_id=%9V", 
@@ -477,6 +481,8 @@ SELECT	A.array_id,A.array_name,
 		     'hybridization_id' => 1,
 		     'array_scan_id' => 1,
 		     'array_quantitation_id' => 1,
+		     'array_request_sample_id1' => 1,
+		     'array_request_sample_id2' => 1,
 		     );
   return $sbeams->displayQueryResult(sql_query=>$sql,
 				     url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols);
