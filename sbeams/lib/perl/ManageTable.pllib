@@ -723,6 +723,10 @@ sub processEntryForm {
 
     #### Check that the data entered was valid for the datatype
     foreach $element (@data_columns) {
+
+      #### Don't check if this is a multi_insert_column
+      next if ($multi_insert_column && $element eq $multi_insert_column);
+
       if ($parameters{$element} gt '') {
         if ($data_types{$element} eq 'varchar' ||
             $data_types{$element} eq 'char') {
