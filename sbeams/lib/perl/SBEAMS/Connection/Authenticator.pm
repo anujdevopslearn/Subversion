@@ -647,28 +647,19 @@ sub setCurrent_project_id {
   my ($i,$element,$key,$value,$line,$result,$sql);
 
 
-  #### Get a list of project_ids that the user can access
+  #### Get a list of accessible projects
+  my @accessible_projects = $self->getAccessibleProjects();
+  my $accessible_project_list = join(',',@accessible_projects);
+
+
+  #### Get a hash of project_ids that the user can access
   if ($set_to_project_id > 0) {
     $sql = qq~
 	SELECT P.project_id,P.name
 	  FROM $TB_PROJECT P
-	 INNER JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
-	  LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
-	       ON ( P.project_id = UPP.project_id
-	            AND UPP.contact_id = '$current_contact_id' )
-	  LEFT JOIN $TB_GROUP_PROJECT_PERMISSION GPP
-	       ON ( P.project_id = GPP.project_id )
-	  LEFT JOIN $TB_USER_WORK_GROUP UWG
-	       ON ( GPP.work_group_id = UWG.work_group_id
-	            AND UWG.contact_id = '$current_contact_id' )
-	 WHERE P.record_status != 'D'
-	 ~;
-		unless ($self->getCurrent_work_group_name eq "Admin") {
-		$sql .= qq~
-	   AND ( UPP.privilege_id<=40 OR GPP.privilege_id<=40
-	         OR P.PI_contact_id = '$current_contact_id')
+	 WHERE P.project_id IN ( $accessible_project_list )
     ~;
-    }
+
     my %allowed_project_ids = $self->selectTwoColumnHash($sql);
 
 
@@ -676,12 +667,12 @@ sub setCurrent_project_id {
     unless (exists($allowed_project_ids{$set_to_project_id})) {
       print "Content-type: text/html\n\n".
         "ERROR: You are not permitted to access ".
-        "project_id $set_to_project_id\n\n";
+        "project_id $set_to_project_id (only $accessible_project_list)\n\n";
       return;
     }
 
 
-    #### We need to change groups, so set the group here
+    #### Store the change permanently in the user_context table
     $self->executeSQL("
       UPDATE $TB_USER_CONTEXT
          SET project_id = '$set_to_project_id',
