@@ -36,6 +36,7 @@ use vars qw(@ISA @EXPORT
     $TBSN_ALLELE_BLAST_STATS
     $TBSN_QUERY_SEQUENCE
     $TBSN_BIOSEQUENCE_RANK_LIST
+    $TBSN_ASSAY_ORDER_LIST
 
     $TBSN_ASSAY_REQUEST
     $TBSN_COST_SCHEME
@@ -84,6 +85,7 @@ require Exporter;
     $TBSN_ALLELE_BLAST_STATS
     $TBSN_QUERY_SEQUENCE
     $TBSN_BIOSEQUENCE_RANK_LIST
+    $TBSN_ASSAY_ORDER_LIST
 
     $TBSN_ASSAY_REQUEST
     $TBSN_COST_SCHEME
@@ -136,6 +138,7 @@ $TBSN_ALLELE_FREQUENCY           = "${mod}allele_frequency";
 $TBSN_ALLELE_BLAST_STATS         = "${mod}allele_blast_stats";
 $TBSN_QUERY_SEQUENCE             = "${mod}query_sequence";
 $TBSN_BIOSEQUENCE_RANK_LIST      = "${mod}biosequence_rank_list";
+$TBSN_ASSAY_ORDER_LIST           = "${mod}assay_order_list";
 $TBSN_ASSAY_REQUEST              = "${mod}assay_request";
 $TBSN_COST_SCHEME                = "${mod}cost_scheme";
 
