@@ -51,6 +51,7 @@ Options:
                       the load is blocked.
   --update_existing   Update the existing snps with information
                       in the file
+  --testonly          Do not do the final load, just test
 
  e.g.:  $PROG_NAME celera_dbSNP_dqa_exons.blast
 
@@ -131,11 +132,15 @@ sub main {
     $queryname =~ s/ //g;
     my %rowdata;
 
-    #### Get snp_id, 5' length, and 3' length of this allele
-    $sql = "SELECT A.snp_instance_id,SI.trimmed_fiveprime_length,SI.trimmed_threeprime_length" .
-           "  FROM ${TBSN_ALLELE} A " .
-           "LEFT JOIN ${TBSN_SNP_INSTANCE} SI on (A.snp_instance_id = SI.snp_instance_id)" .
-           " WHERE A.query_sequence_id = '$queryname'";
+    #### Get snp_id, 5' length, and 3' length of this query
+    $sql = qq~
+          SELECT A.snp_instance_id,SI.trimmed_fiveprime_length,
+                 SI.trimmed_threeprime_length
+            FROM ${TBSN_ALLELE} A
+       LEFT JOIN ${TBSN_SNP_INSTANCE} SI
+              ON (A.snp_instance_id = SI.snp_instance_id)
+           WHERE A.query_sequence_id = '$queryname'
+    ~;
 
     @snp_data = $sbeams->selectSeveralColumns($sql);
     $allele_hash{$queryname}=$snp_data[0];
@@ -147,17 +152,22 @@ sub main {
     $dbtitle =~ s/bioseqs\///g;
     $dbtitle =~ s/ //g;
 
+    $sql = qq~
+          SELECT biosequence_name,biosequence_id
+            FROM ${TBSN_BIOSEQUENCE}
+       LEFT JOIN ${TBSN_BIOSEQUENCE_SET}
+              ON ${TBSN_BIOSEQUENCE_SET}.biosequence_set_id = ${TBSN_BIOSEQUENCE}.biosequence_set_id
+           WHERE ${TBSN_BIOSEQUENCE_SET}.set_path like '%$dbtitle%'
+    ~;
+    my %biosequence_id = $sbeams->selectTwoColumnHash($sql);
+
     $cnt = 0;
     while ($hit = $blast->nextSbjct) {
       if ($cnt == 0) {
 
         #### Get biosequence_id of this dbtitle
         $bioname = $hit->name;
-        $bioname =~ s/ //g;
-        $sql = "SELECT biosequence_name,biosequence_id" .
-  	       "  FROM ${TBSN_BIOSEQUENCE}" .
-  	       " WHERE biosequence_name = '$bioname'";
-        my %biosequence_id = $sbeams->selectTwoColumnHash($sql);
+        $bioname =~ s/\s.+//;
         $rowdata{matched_biosequence_id} = $biosequence_id{$bioname};
 
         $hspcnt = 0;
