@@ -125,10 +125,9 @@ sub applySqlChange {
 	SELECT UC.contact_id,UC.work_group_id,TGS.table_group,
 		TGS.privilege_id,UWG.privilege_id,UC.privilege_id
 	  FROM table_group_security TGS
-	  LEFT JOIN user_context UC ON ( TGS.work_group_id=UC.work_group_id )
+	  LEFT JOIN user_context UC ON ( UC.contact_id = '$current_contact_id' )
   	  LEFT JOIN table_property TP ON ( TGS.table_group=TP.table_group )
-	  LEFT JOIN user_work_group UWG ON ( TGS.work_group_id=UWG.work_group_id
-	       AND UC.contact_id=UWG.contact_id )
+	  LEFT JOIN user_work_group UWG ON ( TGS.work_group_id=UWG.work_group_id )
 	 WHERE TGS.work_group_id='$current_work_group_id'
 	   AND TP.table_name='$table_name'
 	   AND UWG.contact_id='$current_contact_id'
@@ -136,6 +135,7 @@ sub applySqlChange {
 
     my $sth = $dbh->prepare("$check_privilege_query") or croak $dbh->errstr;
     my $rv  = $sth->execute or croak $dbh->errstr;
+    #push(@ERRORS, "<PRE>$check_privilege_query\n\n</PRE>");
     #push(@ERRORS, "Returned Permissions:");
     $nrows = 0;
     while (@row = $sth->fetchrow_array) {
