@@ -29,6 +29,7 @@ use CGI qw(-no_debug);
 use DBI;
 use Crypt::CBC;
 use Authen::Smb;
+#use Data::Dumper;
 
 
 use SBEAMS::Connection::DBConnector;
@@ -341,7 +342,6 @@ sub setCurrent_work_group {
   my $set_to_work_group = $args{'set_to_work_group'} || "";
   my $permitted_work_groups_ref = $args{'permitted_work_groups_ref'} || "";
   my $permanent = $args{'permanent'} || "";
-
 
   #### First see what the current work_group context is
   $current_work_group_id = $self->getCurrent_work_group_id()

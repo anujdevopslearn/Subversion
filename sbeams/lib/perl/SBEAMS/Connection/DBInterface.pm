@@ -2622,7 +2622,8 @@ sub processStandardParameters {
     }
   }
 
-  if (defined($ref_parameters->{set_current_work_group})) {
+  if (defined($ref_parameters->{set_current_work_group}) &&
+      $ref_parameters->{set_current_work_group}) {
     my $set_current_work_group = $ref_parameters->{set_current_work_group};
 		$self->setCurrent_work_group(
       set_to_work_group=>"$set_current_work_group",
@@ -2711,7 +2712,7 @@ sub display_input_form {
       <P>
       <H2>$CATEGORY</H2>
       $LINESEPARATOR
-      <FORM METHOD="post" ACTION="$PROGRAM_FILE_NAME" $file_upload_flag>
+      <FORM METHOD="post" ACTION="$PROGRAM_FILE_NAME" NAME="MainForm" $file_upload_flag>
       <TABLE>
   !;
 
@@ -2995,6 +2996,8 @@ sub display_form_buttons {
 
   #### Show the QUERY, REFRESH, and Reset buttons
   print qq~
+      <INPUT TYPE="hidden" NAME="set_current_work_group" VALUE="">
+      <INPUT TYPE="hidden" NAME="set_current_project_id" VALUE="">
       <INPUT TYPE="hidden" NAME="QUERY_NAME" VALUE="$TABLE_NAME">
       <INPUT TYPE="hidden" NAME="apply_action_hidden" VALUE="">
       <TR><TD COLSPAN=2>
@@ -3746,15 +3749,29 @@ sub printUserChooser {
 						function switchWorkGroup(){
 								var chooser = document.userChooser.workGroupChooser;
 								var val = chooser.options[chooser.selectedIndex].value;
-								document.groupChooser.set_current_work_group.value = val;
-								document.groupChooser.submit();
+								if (document.MainForm == null) {
+									document.groupChooser.set_current_work_group.value = val;
+									document.groupChooser.submit();
+								} else {
+									document.MainForm.set_current_work_group.value = val;
+									document.MainForm.apply_action_hidden.value = "REFRESH";
+									document.MainForm.action.value = "REFRESH";
+									document.MainForm.submit();
+								}
 						}
 
 				    function switchProject(){
 								var chooser = document.userChooser.projectIDChooser;
 								var val = chooser.options[chooser.selectedIndex].value;
-								document.projectChooser.set_current_project_id.value = val;
-								document.projectChooser.submit();
+								if (document.MainForm == null) {
+									document.projectChooser.set_current_project_id.value = val;
+									document.projectChooser.submit();
+								} else {
+									document.MainForm.set_current_project_id.value = val;
+									document.MainForm.apply_action_hidden.value = "REFRESH";
+									document.MainForm.action.value = "REFRESH";
+									document.MainForm.submit();
+								}
 						}
 
 						</SCRIPT>
