@@ -58,8 +58,8 @@ $sbeamsMOD->setSBEAMS($sbeams);
   
 #  $sbeams->printCGIParams( $q );
 
-  # Process parameters before we start
-  processParams( %params );
+  # Process parameters before we start.  Passed as ref so we may alter.
+  processParams( \%params );
 
   my $content = '';
 
@@ -97,23 +97,11 @@ sub getAbDetails {
   my $pad = '&nbsp;&nbsp;';
   my $lbase = "<A HREF=ManageTable.cgi?ShowEntryForm=1;TABLE_NAME=";
 
-### Summary Block:
+### Summary Block: 
+  
 
   # Build SQL to fetch summary information for antibody.
-	my $sumSQL =<<"  END_SQL";
-  SELECT antibody_name, alternate_names, biosequence_accession, 
-         genome_location + genome_strand, accessor, organism_name
-	FROM $TBIS_ANTIBODY ab
-	LEFT JOIN $TBIS_ANTIGEN an on ab.antigen_id = an.antigen_id
-	LEFT JOIN $TBIS_BIOSEQUENCE bs on an.biosequence_id = bs.biosequence_id
-	LEFT JOIN $TBIS_GENOME_COORDINATES gc on bs.biosequence_accession = gc.locus_link_id
-	LEFT JOIN $TBIS_BIOSEQUENCE_SET bss on bs.biosequence_set_id = bss.biosequence_set_id
-	LEFT JOIN $TB_ORGANISM sbo on bss.organism_id = sbo.organism_id
-	LEFT JOIN $TBIS_DBXREF dbx on bs.dbxref_id = dbx.dbxref_id 
-	WHERE ab.antibody_id = $params{antibody_id}
-  AND set_Name LIKE 'LocusLink%'
-  AND dbxref_name = 'LocusLink'
-  END_SQL
+	my $sumSQL = getSummarySQL( $params{antibody_id} );
 
   # Fetch results from database
 	my @results = $sbeams->selectSeveralColumns($sumSQL);
@@ -281,7 +269,7 @@ sub getAbDetails {
   my $image =<<"  END";
   <SPAN TITLE='View image'>
   ${lbase}IS_assay_image;assay_image_id=IMG_ID;GetFile=IS_PROC>
-  -IMG_MAG x &nbsp;</A>
+  IMG_MAGx &nbsp;</A>
   </SPAN>
   END
   my $channel =<<"  END";
@@ -414,19 +402,51 @@ sub getAbDetails {
   END
 }
 
+sub getSummarySQL {
+  my $ab = shift;
+  my $abclause = ( $ab eq 'ALL' ) ? '' : "AND antibody_id IN ( $ab )";
+  return <<"  END_SQL";
+  SELECT antibody_name, alternate_names, biosequence_accession, 
+         genome_location + genome_strand, accessor, organism_name
+  FROM $TBIS_ANTIBODY ab
+  LEFT JOIN $TBIS_ANTIGEN an 
+         ON ab.antigen_id = an.antigen_id
+  LEFT JOIN $TBIS_BIOSEQUENCE bs 
+         ON an.biosequence_id = bs.biosequence_id
+  LEFT JOIN $TBIS_GENOME_COORDINATES gc 
+         ON bs.biosequence_accession = gc.locus_link_id
+  LEFT JOIN $TBIS_BIOSEQUENCE_SET bss 
+         ON bs.biosequence_set_id = bss.biosequence_set_id
+  LEFT JOIN $TB_ORGANISM sbo 
+         ON bss.organism_id = sbo.organism_id
+  LEFT JOIN $TBIS_DBXREF dbx 
+         ON bs.dbxref_id = dbx.dbxref_id 
+  WHERE set_Name LIKE 'LocusLink%'
+  AND dbxref_name = 'LocusLink'
+  $abclause
+  END_SQL
+
+}
+
 sub getAbSummary {
+  my %params = @_;
+  my $sql = getSummarySQL( $params{antibody_id} );
+
+
   return "Coming soon";
 }
 
 sub processParams {
-  my %params = @_;
-  unless( $params{antibody_id} ) {
+  my $params = shift;
+  unless( $params->{antibody_id} ) {
     die ( "Missing required parameter antibody_id" );
   }
   
   # If more than one ab_id is defined (explicitly or with all) go to list mode.
-  if( $params{antibody_id} =~ /\,/ || $params{antibody_id} =~ /\,/ ) {
-    $params{action} =~ s/AbDetails/AbAction/;
+  if( $params->{antibody_id} =~ /\,/ || $params->{antibody_id} =~ /\,/ ) {
+    $params->{action} =~ s/ab_details/ab_list/;
   }
+  # ab_details is the default action
+  $params->{action} ||= 'ab_details';
 }
 
