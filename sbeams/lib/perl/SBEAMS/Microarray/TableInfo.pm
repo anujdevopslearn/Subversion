@@ -56,7 +56,7 @@ sub returnTableInfo {
 ###############################################################################
     if ($table_name eq "hardware") {
 
-        if ($info_key eq "BASICQuery") {
+      if ($info_key eq "BASICQuery") {
             return qq~
 		SELECT hardware_id,HT.name,make,model,serial_number,uri
 		  FROM $TB_HARDWARE H
@@ -64,19 +64,15 @@ sub returnTableInfo {
 		       ON (H.hardware_type_id=HT.hardware_type_id)
 		 WHERE H.record_status!='D'
             ~;
-        }
-
-        if ($info_key eq "FULLQuery") {
-            return qq~
-		SELECT H.*
-		  FROM $TB_HARDWARE H
-		  JOIN $TB_HARDWARE_TYPE HT
-		       ON (H.hardware_type_id=HT.hardware_type_id)
-		 WHERE H.record_status!='D'
-            ~;
-        }
-
-
+      } elsif ($info_key eq "FULLQuery") {
+          return qq~
+          SELECT H.*
+	  FROM $TB_HARDWARE H
+	  JOIN $TB_HARDWARE_TYPE HT
+	       ON (H.hardware_type_id=HT.hardware_type_id)
+	 WHERE H.record_status!='D'
+          ~;
+      }
     }
 
 
@@ -263,49 +259,135 @@ sub returnTableInfo {
 
 
 ###############################################################################
-    if ($table_name eq "array") {
+    if (uc($table_name) eq 'MA_ARRAY') {
 
+      if ( $info_key eq "projPermSQL" ) { 
+        my %projectSQL;
+
+        $projectSQL{fsql} = '';
+
+        $projectSQL{dbsql} =<<"        END";
+        SELECT project_id FROM $TBMA_ARRAY WHERE array_id = KEYVAL
+        END
+
+        return \%projectSQL
+      }
         # Removed multi-insert capability because individual linking to
         # requested_array_slide_id's and array_name added and that makes
         # things more complicated.  Could still be added with additional
         # code functionality
         #return "slide_id" if ($info_key eq "MULTI_INSERT_COLUMN");
 
-    }
+###############################################################################
 
+    } elsif (uc($table_name) eq "MA_LABELING") {
+
+      if ( $info_key eq "projPermSQL" ) { 
+        my %projectSQL;
+
+        $projectSQL{fsql} =<<"        END";
+        SELECT project_id 
+        FROM $TBMA_ARRAY_REQUEST arq 
+          JOIN $TBMA_ARRAY_REQUEST_SLIDE arsl
+            ON arq.array_request_id = arsl.array_request_id
+          JOIN $TBMA_ARRAY_REQUEST_SAMPLE ars
+            ON arq.array_request_slide_id = ars.array_request_slide_id
+        WHERE array_request_sample_id = KEYVAL
+        END
+
+        $projectSQL{dbsql} =<<"        SQL";
+        SELECT project_id 
+        FROM $TBMA_ARRAY_REQUEST arq 
+          JOIN $TBMA_ARRAY_REQUEST_SLIDE arsl
+            ON arq.array_request_id = arsl.array_request_id
+          JOIN $TBMA_ARRAY_REQUEST_SAMPLE ars
+            ON arsl.array_request_slide_id = ars.array_request_slide_id
+          JOIN $TBMA_LABELING lab
+            ON lab.array_request_sample_id = ars.array_request_sample_id
+        WHERE labeling_id = KEYVAL 
+        SQL
+
+        return \%projectSQL
+      }
 
 ###############################################################################
-    if ($table_name eq "labeling") {
 
-    }
+    } elsif ( uc($table_name) eq "MA_HYBRIDIZATION") {
 
+      if ( $info_key eq "projPermSQL" ) { 
+        my %projectSQL;
 
+        $projectSQL{fsql} =<<"        END";
+        SELECT project_id FROM $TBMA_ARRAY WHERE array_id = KEYVAL
+        END
 
-###############################################################################
-    if ($table_name eq "hybridization") {
+        $projectSQL{dbsql} =<<"        END";
+        SELECT project_id 
+        FROM $TBMA_ARRAY arr 
+         INNER JOIN $TBMA_HYBRIDIZATION hyb
+          ON arr.array_id = hyb.array_id
+        WHERE hybridization_id = KEYVAL 
+        END
 
-    }
-
-
-
-###############################################################################
-    if ($table_name eq "array_scan") {
-
-    }
-
-
-###############################################################################
-    if ($table_name eq "array_quantitation") {
-
-    }
-
+        return \%projectSQL
+      }
 
 ###############################################################################
-    if ($table_name eq "MA_affy_array") {
 
-    	if ($info_key eq "BASICQuery") {
-            return qq~
-			SELECT afa.affy_array_id, 
+    } elsif ( uc($table_name) eq 'MA_ARRAY_SCAN') { # array_scan table
+
+      if ( $info_key eq "projPermSQL" ) { 
+        my %projectSQL;
+
+        $projectSQL{fsql} =<<"        END";
+        SELECT project_id FROM $TBMA_ARRAY WHERE array_id = KEYVAL
+        END
+
+        $projectSQL{dbsql} =<<"        END";
+        SELECT project_id 
+        FROM $TBMA_ARRAY arr 
+         INNER JOIN $TBMA_ARRAY_SCAN ascan
+          ON arr.array_id = ascan.array_id
+        WHERE array_scan_id = KEYVAL
+        END
+
+        return \%projectSQL
+      }
+
+###############################################################################
+
+  } elsif ( uc($table_name) eq 'MA_ARRAY_QUANTITATION') { # array_quant table
+
+      if ( $info_key eq "projPermSQL" ) { 
+        my %projectSQL;
+
+        $projectSQL{fsql} =<<"        END";
+        SELECT project_id FROM $TBMA_ARRAY arr
+	       INNER JOIN $TBMA_ARRAY_SCAN ascan
+          ON arr.array_id = ascan.array_id
+	      WHERE array_scan_id = KEYVAL
+        END
+
+        $projectSQL{dbsql} =<<"        END";
+        SELECT project_id 
+        FROM $TBMA_ARRAY_SCAN ascan 
+         INNER JOIN $TBMA_ARRAY arr 
+          ON arr.array_id = ascan.array_id
+         INNER JOIN $TBMA_ARRAY_QUANTITATION aqu 
+          ON ascan.array_scan_id = aqu.array_scan_id
+        WHERE array_quantitation_id = KEYVAL 
+        END
+
+        return \%projectSQL
+      }
+
+###############################################################################
+
+    } elsif ($table_name eq "MA_affy_array") {
+
+      if ($info_key eq "BASICQuery") {
+         return qq~
+        	SELECT afa.affy_array_id, 
 			afa.file_root, 
 			f.file_path, 
 			s.name AS "Array_Type", 
@@ -322,11 +404,10 @@ sub returnTableInfo {
 			AND u.record_status!='D'  
             ~;
         }
-    
-    }
 
 ###############################################################################
-    if ($table_name eq "MA_affy_array_sample") {
+    
+    } elsif ($table_name eq "MA_affy_array_sample") {
 	
 	if ($info_key eq "BASICQuery") {
             return qq~
@@ -415,12 +496,112 @@ sub getParentProject {
   );
   return($project_id) if ($project_id);
 
+  # We may well have this cached
+  return $parameters_ref->{project_id} if $parameters_ref->{project_id};
+
+  # Fetch SQL to retrieve project_id from table_name, if it is available.
+  my $sqlref = $self->returnTableInfo( $table_name, 'projPermSQL' );
+
+  # If we don't have it 
+  unless ( ref( $sqlref ) && $sqlref->{dbsql} ) {
+    print STDERR "dbsql not defined for $table_name\n";
+    return undef;
+  }
 
   #############################################################################
   #### Process actions for individual tables
 
+  #### If table is array
+  if ( uc($table_name) eq 'MA_ARRAY') {
+
+    #### If the user wants to INSERT, determine how it fits into project
+    if ($action eq 'INSERT') {
+      # No parent project yet, for object doesn't exist.
+      return undef;
+
+    #### Else for an UPDATE or DELETE, determine how it fits into project
+    } elsif ($action eq 'UPDATE' || $action eq 'DELETE') {
+
+      # The array table has project_id in it
+      if ( $parameters_ref->{array_id} ) {
+        $sqlref->{dbsql} =~ s/KEYVAL/$parameters_ref->{array_id}/;
+        ( $project_id ) = $sbeams->selectOneColumn( $sqlref->{dbsql} );
+      }
+    }
+    return ( $project_id ) ? $project_id : undef;
+
+  } elsif ( uc($table_name) eq 'MA_ARRAY_SCAN') { # array_scan table
+
+    #### If the user wants to INSERT, determine how it fits into project
+    if ($action eq 'INSERT') {
+      # No parent project yet, for object doesn't exist.
+      return undef;
+
+    #### Else for an UPDATE or DELETE, determine how it fits into project
+    } elsif ($action eq 'UPDATE' || $action eq 'DELETE') {
+      if ( $parameters_ref->{array_scan_id} ) {
+        # The array_scan table has array_id, array has project_id.
+        $sqlref->{dbsql} =~ s/KEYVAL/$parameters_ref->{array_scan_id}/;
+        ( $project_id ) = $sbeams->selectOneColumn( $sqlref->{dbsql} );
+      }
+    }
+    return ( $project_id ) ? $project_id : undef;
+
+  } elsif ( uc($table_name) eq 'MA_HYBRIDIZATION') { # hybridization table
+
+    #### If the user wants to INSERT, determine how it fits into project
+    if ($action eq 'INSERT') {
+      # No parent project yet, for object doesn't exist.
+      return undef;
+
+    #### Else for an UPDATE or DELETE, determine how it fits into project
+    } elsif ($action eq 'UPDATE' || $action eq 'DELETE') {
+      if ( $parameters_ref->{hybridization_id} ) {
+        # The array_scan table has array_id, array has project_id.
+        $sqlref->{dbsql} =~ s/KEYVAL/$parameters_ref->{hybridization_id}/;
+        ( $project_id ) = $sbeams->selectOneColumn( $sqlref->{dbsql} );
+      }
+    }
+    return ( $project_id ) ? $project_id : undef;
+
+  } elsif ( uc($table_name) eq 'MA_ARRAY_QUANTITATION') { # array_quant table
+
+    #### If the user wants to INSERT, determine how it fits into project
+    if ($action eq 'INSERT') {
+      # No parent project yet, for object doesn't exist.
+      return undef;
+
+    #### Else for an UPDATE or DELETE, determine how it fits into project
+    } elsif ($action eq 'UPDATE' || $action eq 'DELETE') {
+
+      if ( $parameters_ref->{array_quantitation_id} ) {
+        # array_quant table has array_scan_id, array_scan has array_id, 
+	# array has project_id.
+        $sqlref->{dbsql} =~ s/KEYVAL/$parameters_ref->{hybridization_id}/;
+        ( $project_id ) = $sbeams->selectOneColumn( $sqlref->{dbsql} );
+      }
+    }
+    return ( $project_id ) ? $project_id : undef;
+
+  } elsif ( uc($table_name) eq 'MA_LABELING' ) { # labeling table
+
+    #### If the user wants to INSERT, determine how it fits into project
+    if ($action eq 'INSERT') {
+      # No parent project yet, for object doesn't exist.
+      return undef;
+
+    #### Else for an UPDATE or DELETE, determine how it fits into project
+    } elsif ($action eq 'UPDATE' || $action eq 'DELETE') {
+
+      if ( $parameters_ref->{labeling_id} ) {
+        $sqlref->{dbsql} =~ s/KEYVAL/$parameters_ref->{labeling_id}/;
+        ( $project_id ) = $sbeams->selectOneColumn( $sqlref->{dbsql} );
+      }
+    }
+    return ( $project_id ) ? $project_id : undef;
+
   #### If table is xxxx
-  if ($table_name eq "xxxx") {
+  } elsif ($table_name eq "xxxx") {
 
     #### If the user wants to INSERT, determine how it fits into project
     if ($action eq 'INSERT') {
@@ -430,13 +611,11 @@ sub getParentProject {
 
     }
 
-    return($project_id) if ($project_id);
+    return ( $project_id ) ? $project_id : undef;
   }
 
-
-  #### No information for this table so return undef
-  return;
-
+  # No information for this table so return undef
+  return undef;
 }
 
 
