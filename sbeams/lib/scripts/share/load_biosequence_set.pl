@@ -145,7 +145,7 @@ sub main {
     $DATABASE = $DBPREFIX{$module};
   }
   if ($module eq 'Biosap') {
-    $work_group = "Biosap";
+    $work_group = "Biosap_admin";
     $DATABASE = $DBPREFIX{$module};
   }
   if ($module eq 'SNP') {
