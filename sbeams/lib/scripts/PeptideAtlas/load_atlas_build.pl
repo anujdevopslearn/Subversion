@@ -255,7 +255,7 @@ sub handleRequest {
 
      print "Building atlas $atlas_build_name ($atlas_build_id): \n";
   
-     buildAltas(atlas_build_id => $atlas_build_id,
+     buildAtlas(atlas_build_id => $atlas_build_id,
                 biosequence_set_id => $biosequence_set_id,
                 source_dir => $source_dir,
                 organism_abbrev => $organism_abbrev);
@@ -319,7 +319,7 @@ sub removeAtlas {
 ###############################################################################
 # buildAtlas -- populates PeptideAtlas records in requested atlas_build
 ###############################################################################
-sub buildAltas {  
+sub buildAtlas {  
    my %args = @_;
    my $atlas_build_id = $args{'atlas_build_id'};
    my $biosequence_set_id = $args{'biosequence_set_id'};
@@ -354,7 +354,7 @@ sub buildAltas {
  
    #### Read and parse the header line of APD_{organism}_all.tsv
    my $line;
-   $line = <INFILE>;
+   chomp($line = <INFILE>);
    $line =~ s/[\r\n]//g;
    my @column_names = split(/\t/,$line);
    my $i = 0;
@@ -371,15 +371,17 @@ sub buildAltas {
    my (%APD_peptide_accession, %APD_peptide_sequence, %APD_peptide_length, %APD_best_probability);
    my (%APD_n_observations, %APD_search_batch_ids, %APD_sample_ids, %APD_peptide_id);
    while ($line = <INFILE>) {
+     chomp($line);
      $line =~ s/[\r\n]//g;
      my @columns = split(/\t/,$line);
  
-     my $tmp_pep_id = $peptides{$columns[$column_indices{peptide_identifier_str}]};
+     my $tmp_pep_id = $columns[$column_indices{peptide_identifier_str}];
 
      $APD_peptide_accession{$tmp_pep_id} = $columns[$column_indices{peptide_identifier_str}];
      $APD_peptide_sequence{$tmp_pep_id} = $columns[$column_indices{peptide}];
      $APD_peptide_length{$tmp_pep_id} = length($APD_peptide_sequence{$tmp_pep_id});
      $APD_best_probability{$tmp_pep_id} = $columns[$column_indices{maximum_probability}];
+     $APD_best_probability{$tmp_pep_id} =~ s/\s.//g; ## remove empty spaces 
      $APD_n_observations{$tmp_pep_id} = $columns[$column_indices{n_peptides}];
      $APD_search_batch_ids{$tmp_pep_id} = $columns[$column_indices{observed_experiment_list}];
      $APD_search_batch_ids{$tmp_pep_id} =~ s/\"//g;  ## removing quotes " from string
@@ -433,7 +435,7 @@ sub buildAltas {
             AND record_status != 'D'
         ~;
         @rows = $sbeams->selectOneColumn($sql) 
-            or die "could not find sample id for tag $tmp_experiment_tag in PeptideAtlas.dbo.sample ($!)";
+            or die "could not find sample id for experiment_tag = $tmp_experiment_tag, experiment_id = $tmp_experiment_id in PeptideAtlas.dbo.sample ($!)";
         my $tmp_sample_id = @rows[0];
 
  
@@ -471,10 +473,8 @@ sub buildAltas {
           SELECT peptide_accession,peptide_id
           FROM $TBAT_PEPTIDE
        ~;
-       #### This is hideously expensive and not necessary
-       ####%peptides = $sbeams->selectTwoColumnHash($sql);
-       #### Why not just add it directly? Deutsch 2004-12-02
-       $peptides{$APD_peptide_accession{$tmp_pep_id}} = $peptide_id;
+
+       $peptides{$APD_peptide_accession{$tmp_pep_id}} = $tmp_pep_id;
 
        ## and enter that in APD_peptide_id hash:
        $APD_peptide_id{$tmp_pep_id} = $peptides{$APD_peptide_accession{$tmp_pep_id}};
@@ -486,6 +486,7 @@ sub buildAltas {
          if (!$APD_sample_ids{$tmp_pep_id});
  
    } # end while INFILE
+
    close(INFILE);
    my $APD_last_ind = $counter - 1;
 
