@@ -212,6 +212,7 @@ sub printEntryForm {
 
     my ($i,$mass,$intensity,$massmin,$xticks,$xmin,$xmax);
     my ($massmax,$intenmax)=(0,0);
+    my @spectrum_array;
     $parameters{zoom} = 1 unless $parameters{zoom};
 
     my $peptide = $parameters{peptide};
@@ -222,6 +223,7 @@ sub printEntryForm {
     for ($i=0; $i<$spectrum{n_peaks}; $i++) {
       $mass = $spectrum{masses}->[$i];
       $intensity = $spectrum{intensities}->[$i];
+      push(@spectrum_array,[$mass,$intensity]);
       $massmin = $mass if ($i == 0);
       $massmax = $mass if ($mass > $massmax);
       $intenmax = $intensity if ($intensity > $intenmax);
@@ -361,16 +363,30 @@ sub printEntryForm {
         </SELECT>
     ~;
 
+
+    #### Store the spectrum data as a recallable resultset
+    my %dataset;
+    $dataset{data_ref} = \@spectrum_array;
+    $dataset{column_list_ref} = ['m/z','intensity'];
+    my $rs_set_name = "SETME";
+    $sbeams->writeResultSet(resultset_file_ref=>\$rs_set_name,
+      resultset_ref=>\%dataset,query_parameters_ref=>\%parameters);
+
+
     #### Finish up the table and form
     $t8 = [gettimeofday()];
     print qq~<BR>
 	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 	<INPUT TYPE="submit" NAME="apply_action" VALUE="REFRESH">
         <INPUT TYPE="submit" NAME="apply_action" VALUE="PRINTABLE FORMAT">
+        <BR>Download spectrum in Format: 
+        <a href="$CGI_BASE_DIR/GetResultSet.cgi/$rs_set_name.tsv?rs_set_name=$rs_set_name&format=tsv">TSV</a>,
+        <a href="$CGI_BASE_DIR/GetResultSet.cgi/$rs_set_name.xls?rs_set_name=$rs_set_name&format=excel">Excel</a>
+        <BR>
 	</TD>
 	</TR>
 	</TABLE>
-         </FORM>
+        </FORM>
     ~;
 
     printf("\nt0 - t1: %4f<BR>\n",tv_interval($t0,$t1));
