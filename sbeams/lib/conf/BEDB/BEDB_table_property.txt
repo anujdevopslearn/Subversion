@@ -1,0 +1,6 @@
+table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
+BE_biosequence_set	BioSequence Set	BEDB	YES	$TBBE_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=BE_biosequence_set	BE_biosequence_set	
+BE_get_biosequence	Browse BioSequence	QUERY		NA	NA		get_biosequence		
+BE_get_est_library	Browse EST Library	QUERY		NA	NA		get_est_library		
+BE_get_annotation	Browse Annotation	QUERY		NA	NA		get_annotation		
+BE_get_est	Browse EST	QUERY		NA	NA		get_est		

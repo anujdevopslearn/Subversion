@@ -1,0 +1,51 @@
+#MANUAL updates to table_column
+
+
+UPDATE table_column
+  SET optionlist_query = '
+SELECT ARS.array_request_sample_id, convert(varchar(20),ARS.array_request_sample_id) + '' - '' + 
+       CASE WHEN L.array_request_sample_id IS NOT NULL THEN ''*DONE* - '' ELSE '''' END +
+       ARS.name + '' {'' + LM.name + ''}'', L.array_request_sample_id
+  FROM $TB_ARRAY_REQUEST_SAMPLE ARS
+  LEFT JOIN $TB_LABELING L ON ( ARS.array_request_sample_id = L.array_request_sample_id )
+  LEFT JOIN $TB_LABELING_METHOD LM ON ( ARS.labeling_method_id = LM.labeling_method_id )
+ ORDER BY ARS.array_request_sample_id'
+WHERE table_name = 'labeling'
+   AND column_name = 'array_request_sample_id'
+
+
+UPDATE table_column
+  SET optionlist_query = '
+SELECT ARS.array_request_slide_id, convert(varchar(20),ARS.array_request_slide_id)+
+       CASE WHEN A.array_request_slide_id IS NOT NULL THEN '' - *DONE*'' ELSE '''' END
+  FROM $TB_ARRAY_REQUEST_SLIDE ARS
+  LEFT JOIN $TB_ARRAY A ON ( ARS.array_request_slide_id=A.array_request_slide_id )
+ ORDER BY ARS.array_request_slide_id'
+ WHERE table_name = 'array'
+   AND column_name = 'array_request_slide_id'
+
+
+UPDATE table_column
+  SET optionlist_query = '
+SELECT S.array_scan_id,
+       array_name+CASE WHEN Q.array_scan_id IS NOT NULL THEN '' - *DONE*'' ELSE '''' END,
+       Q.array_scan_id
+  FROM $TB_ARRAY A 
+  LEFT JOIN $TB_ARRAY_SCAN S ON ( A.array_id=S.array_id ) 
+  LEFT JOIN $TB_ARRAY_QUANTITATION Q ON ( S.array_scan_id = Q.array_scan_id )
+ WHERE S.array_id IS NOT NULL
+ ORDER BY A.array_name'
+ WHERE table_name = 'array_quantitation'
+   AND column_name = 'array_scan_id'
+
+
+UPDATE table_column
+  SET optionlist_query = '
+SELECT ST.slide_type_id, name+''   ( \$''+CONVERT(varchar(50),STC.price)+'' )''
+  FROM $TB_SLIDE_TYPE ST
+  JOIN $TB_SLIDE_TYPE_COST STC ON ( ST.slide_type_id = STC.slide_type_id )
+ WHERE STC.cost_scheme_id=$cost_scheme_id
+ ORDER BY sort_order,name'
+ WHERE table_name = 'array_request'
+   AND column_name = 'slide_type_id'
+

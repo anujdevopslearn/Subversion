@@ -1,0 +1,4 @@
+table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
+bs_biosequence_set	BioSequence Set	Biosap_user	YES	$TBBS_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=bs_biosequence_set	bs_biosequence_set	
+BrowseBioSapFeature	Browse Biosap Features	QUERY		NA	NA		BrowseFeatures.cgi		
+BS_BrowseBioSequence	Browse BioSequence	QUERY		NA	NA		BrowseBioSequence.cgi		
