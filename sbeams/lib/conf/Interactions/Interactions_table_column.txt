@@ -286,5 +286,8 @@ IN_bioentity_member	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TI
 IN_bioentity_member	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N			
 IN_bioentity_member	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
 IN_bioentity_member	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
-IN_bioentity_member	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N
-IN_bioentity_member	9	record_status	Record Status	char	1	0	N	N	N							N	N
+IN_bioentity_member	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
+IN_bioentity_member	9	record_status	Record Status	char	1	0	N	N	N							N	N			
+IN_GetBioentities	1	organism_id	Organisms									N	multioptionlist	4		Y	Y	N	"Constrain Bioentities to selected Organisms.  Multiple Organisms may be selected.  If no Organisms are selected, ALL Interactions are searched."	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"
+IN_GetBioentities	2	bioentity_exact_name	BioEntity Exact Name Constraint									N	text	40		Y	Y	N	Constraint for an exact Bioentity Name (common or canonical)	
+IN_GetBioentities	3	bioentity_search_fragment	BioEntity Search Fragment									N	text	40		Y	Y	N	Fragment to search for in any of the bioentity names. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	

@@ -21,3 +21,4 @@ IN_assay_type	Assay Type	Interactions_user	YES	$TBIN_ASSAY_TYPE	assay_type_id		M
 IN_sample_type	Sample Type	Interactions_user	YES	$TBIN_SAMPLE_TYPE	sample_type_id		ManageTable.cgi?TABLE_NAME=IN_sample_type	"IN_assay,IN_assay_type,IN_sample_type"
 IN_GetInteractions	Browse Interactions	QUERY	NO				GetInteractions	
 IN_BioEntity_Member	BioEntity Members 	Interactions_admin	NO	$TBIN_BIOENTITY_MEMBER	bioentity_member_id			
+IN_GetBioentities	Browse Bioentities	QUERY	NO				GetBioentities	
