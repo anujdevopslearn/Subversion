@@ -112,7 +112,8 @@ See SBEAMS::Connection for usage synopsis.
 =head2 DESCRIPTION
 
 This module provides a set of methods for handling errors which do
-different things based on the current output_mode and context.
+different things based on the current output_mode and context.  There
+is probably no reason to call any of these methods directly.
 
 
 =head2 METHODS
@@ -121,7 +122,7 @@ different things based on the current output_mode and context.
 
 =item * B<error($message)>
 
-The clean way to error out of SBEAMS no matter what the context is.
+    The clean way to error out of SBEAMS no matter what the context is.
 
 
 =back

@@ -1153,15 +1153,22 @@ See SBEAMS::Connection for usage synopsis.
 
 =head2 DESCRIPTION
 
-This module is inherited by the SBEAMS::Connection module, although it
-can be used on its own.  Its main function is to provide a set of
-authentication methods for this application.
+This module is normally inherited by the SBEAMS::Connection module,
+although it can be used on its own.  Its main function is to provide a
+set of authentication methods for this application.
 
-It uses cookie authentication, where when a user logs in successfully
-through a web form, a cookie is placed in the users web browser.  The
-web interface then knows how to look for and find this cookie, and can
-then tell who the user is, and if they have been authenticated to use
-the interface or not.
+If the user is accessing the application via HTTP, then cookie
+authentication is used, where when a user logs in successfully
+through a web form, a cookie is given to the users web browser.  The
+web browser then offers this cookie at every request, and
+the application provides access for the user or presents a new
+challenge if the cookie expires.
+
+If the user is accessing the application via the command line, then
+authentication is based only upon the UID of the user.  This could
+potentially be forged by untrusted machines so access should be
+limited to trusted machines (not yet implemented.)
+
 
 =head2 METHODS
 
@@ -1177,10 +1184,11 @@ the interface or not.
      with fetchErrors() or printed with printAuthErrors())
 
     Accepts: null
-        
+
     Returns: $scalar
         login_name for success
         0          for failure
+
 
 =item * B<printLoginForm($loginmessage)>
 
@@ -1192,6 +1200,7 @@ the interface or not.
 
     Returns: 
         1 for success
+
 
 =item * B<checkLogin($user_name, $password)>
 
@@ -1208,6 +1217,7 @@ the interface or not.
         1 for success
         0 for failure
 
+
 =item * B<fetchErrors()>
 
     Simply returns an array of errors, or reasons, that a 
@@ -1219,6 +1229,7 @@ the interface or not.
     Returns: 
         @array if there are errors
         0      if there are no errors
+
 
 =item * B<printAuthErrors()>
 
@@ -1232,6 +1243,7 @@ the interface or not.
     Returns: 
         1 for success
 
+
 =item * B<createAuthHeader($user_name)>
 
     Creates a cookie header that will place the users 
@@ -1241,6 +1253,7 @@ the interface or not.
 
     Returns:
         1 for success
+
 
 =item * B<destroyAuthHeader()>
 
@@ -1253,6 +1266,7 @@ the interface or not.
 
     Returns:
         1 for success
+
 
 =item * B<checkIfUploader($user_name)>
 
@@ -1268,6 +1282,7 @@ the interface or not.
         $username for success
         0         for failure
 
+
 =item * B<checkIfAdmin($user_name)>
 
     Checks the database to find out if the user has administrator
@@ -1281,6 +1296,7 @@ the interface or not.
     Returns:
         $username for success
         0         for failure
+
 
 =item * B<checkUserHasAccess($user_name, $experiment_name)>
 
@@ -1296,6 +1312,7 @@ the interface or not.
     Returns:
         'OK' for success
         0    for failure
+
 
 =item * B<getUsersID($user_name)>
 
