@@ -73,14 +73,20 @@ sub printPageHeader {
 	</HEAD>
 
 	<!-- Background white, links blue (unvisited), navy (visited), red (active) -->
-	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" >
-	<table border=0 width="100%" cellspacing=0 cellpadding=1>
+	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" TOPMARGIN=0 LEFTMARGIN=0 >
+	<table border=0 width="100%" cellspacing=0 cellpadding=0>
 
 	<!------- Header ------------------------------------------------>
 	<a name="TOP"></a>
 	<tr>
-	  <td bgcolor="$BARCOLOR"><a href="http://www.systemsbiology.org/"><img height=60 width=60 border=0 alt="ISB Main" src="/images/ISBlogo60t.gif"></a><a href="http://db.systemsbiology.net/"><img height=60 width=60 border=0 alt="ISB DB" src="/images/ISBDBt.gif"></a></td>
-	  <td align="left" $header_bkg><H1>$DBTITLE - $SBEAMS_PART<BR>$DBVERSION</H1></td>
+		<td colspan=3>
+			<table border=0 width=100% cellspacing=0 cellpadding=0>
+				<tr>
+				  <td bgcolor="#000000" align=left><img alt="MICROARRAY" src="$HTML_BASE_DIR/images/microarray.gif"></td>
+				  <td bgcolor="#000000" align=right valign=center><font color="#ffffff"><a href="$CGI_BASE_DIR/logout.cgi"><img src="$HTML_BASE_DIR/images/logout.gif" border=0 alt="LOGOUT"></a><img src="$HTML_BASE_DIR/images/space.gif" height=1 width=25></td>
+				</tr>
+			</table>
+		</td>
 	</tr>
 
     ~;
@@ -90,12 +96,11 @@ sub printPageHeader {
     if ($navigation_bar eq "YES") {
       print qq~
 	<!------- Button Bar -------------------------------------------->
-	<tr><td bgcolor="$BARCOLOR" align="left" valign="top">
-	<table border=0 width="120" cellpadding=2 cellspacing=0>
+	<tr><td bgcolor="#ffffff" align="left" valign="top">
+	<table bgcolor="#ffffff" border=0 width="100%" cellpadding=2 cellspacing=0>
 
 	<tr><td><a href="$CGI_BASE_DIR/main.cgi">$DBTITLE Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi">$SBEAMS_PART Home</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 
 	<tr><td>Array Requests:</td></tr>
@@ -142,6 +147,9 @@ sub printPageHeader {
 
       print qq~
 	</table>
+	</td>
+	<td width=5 bgcolor="#cc0000">
+		<img src="$HTML_BASE_DIR/images/space.gif" width=5 height=1>
 	</td>
 
 	<!-------- Main Page ------------------------------------------->
@@ -366,8 +374,11 @@ sub printPageFooter {
 
   if ($flag =~ /Footer/) {
     print qq~
-	<BR><HR SIZE="2" NOSHADE WIDTH="30%" ALIGN="LEFT">
-	SBEAMS - Microarray [Under Development]<BR><BR><BR>
+	<BR><HR SIZE="2" NOSHADE WIDTH="70%" ALIGN="CENTER">
+	<center>
+	<font face="Helvetica,Arial,sans-serif" size=-2>
+	SBEAMS - Microarray [Under Development]<BR>
+	&copy; 2002 Institute for Systems Biology<BR><BR>
 	</BODY></HTML>\n\n
     ~;
   }
