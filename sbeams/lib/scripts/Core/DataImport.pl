@@ -145,7 +145,7 @@ sub handleRequest {
   }
 
 
-  my $result = importTableData(
+  $result = importTableData(
     source_file => $source_file,
   );
 
@@ -474,7 +474,14 @@ sub calcRowDiff {
     if (exists($new_row{$key})) {
       my $value2 = $new_row{$key};
       if ($value eq $value2) {
-        print "  Column $key: equal ($value=$value2)\n" if ($VERBOSE > 1);
+
+	#### Special handling for NULLs
+	my $mvalue = $value;
+	$mvalue = '<NULL>' unless (defined($mvalue));
+	my $mvalue2 = $value2;
+	$mvalue2 = '<NULL>' unless (defined($mvalue2));
+
+        print "  Column $key: equal ($mvalue=$mvalue2)\n" if ($VERBOSE > 1);
         if ($creation_columns{$key}) {
           $score += 10;
           $normalization += 9;
@@ -483,8 +490,16 @@ sub calcRowDiff {
         } else {
           $score++;
         }
+
       } else {
-        print "  Column $key: UNEQUAL ($value=/=$value2)\n" if ($VERBOSE > 1);
+
+	#### Special handling for NULLs
+	my $mvalue = $value;
+	$mvalue = '<NULL>' unless (defined($mvalue));
+	my $mvalue2 = $value2;
+	$mvalue2 = '<NULL>' unless (defined($mvalue2));
+
+        print "  Column $key: UNEQUAL ($mvalue=/=$mvalue2)\n" if ($VERBOSE > 1);
         if ($creation_columns{$key}) {
           $score -= 1;
         } elsif ($modification_columns{$key}) {
@@ -560,8 +575,8 @@ sub getTableInfo {
             FROM $TB_TABLE_COLUMN
            WHERE table_name = '$table_name'
   ";
-  my @rows = $sbeams->selectHashArray($sql);
-  my $nrows = scalar(@rows);
+  @rows = $sbeams->selectHashArray($sql);
+  $nrows = scalar(@rows);
   if ($nrows < 1) {
     die("ERROR: Did not get any rows from:\n$sql\n");
   }
