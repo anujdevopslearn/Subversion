@@ -32,10 +32,27 @@ DROP TABLE organism
 
 */
 
+CREATE TABLE dbo.organization_type (
+	organization_type_id	int IDENTITY NOT NULL,
+	organization_type_name	varchar(255) NOT NULL,
+	comment			text NULL,
+	sort_order		int NOT NULL DEFAULT 10,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (organization_type_id)
+)
+GO
+
 
 CREATE TABLE dbo.organization (
 	organization_id		int IDENTITY NOT NULL,
 	organization		varchar(100) NULL,
+	organization_type_id	int NOT NULL REFERENCES organization_type(organization_type_id),
+	parent_organization_id	int NULL REFERENCES organization(organization_id),
 	street			varchar(100) NULL,
 	city			varchar(50) NULL,
 	province_state		varchar(50) NULL,
@@ -45,7 +62,7 @@ CREATE TABLE dbo.organization (
 	fax			varchar(25) NULL,
 	email			varchar(100) NULL,
 	uri			varchar(255) NULL,
-	comment			varchar(255) NULL,
+	comment			text NULL,
 	sort_order		int NOT NULL DEFAULT 10,
 	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
@@ -61,9 +78,8 @@ GO
 
 CREATE TABLE dbo.contact_type (
 	contact_type_id		int IDENTITY NOT NULL,
-	name			varchar(50),
-	is_standard		char(1),
-	comment			varchar(255) NULL,
+	contact_type_name	varchar(255) NOT NULL,
+	comment			text NULL,
 	sort_order		int NOT NULL DEFAULT 10,
 	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	created_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
@@ -82,15 +98,27 @@ CREATE TABLE dbo.contact (
 	first_name		varchar(50) NULL,
 	middle_name		varchar(50) NULL,
 	contact_type_id		int NOT NULL REFERENCES contact_type (contact_type_id),
-	other_type		varchar(50) NULL,
-	lab			varchar(50) NULL,
-	department		varchar(50) NULL,
-	organization_id		int NOT NULL REFERENCES organization (organization_id),
-	phone			varchar(25) NULL,
-	fax			varchar(25) NULL,
+	job_title		varchar(100) NULL,
+	supervisor_contact_id	int NULL REFERENCES contact(contact_id),
+	is_at_local_facility	char(1) NULL DEFAULT 'N',
+	photo_filename		varchar(255) NULL,
+	organization_id		int NOT NULL REFERENCES organization(organization_id),
+	department_id		int NULL REFERENCES organization(organization_id),
+	group_id		int NULL REFERENCES organization(organization_id),
+	lab_id			int NULL REFERENCES organization(organization_id),
+	location		varchar(100) NULL,
+	alternate_location	varchar(100) NULL,
+	phone			varchar(50) NULL,
+	phone_extension		varchar(50) NULL,
+	cell_phone		varchar(50) NULL,
+	pager			varchar(50) NULL,
+	is_messenging_pager	char(1) NULL,
+	home_phone		varchar(50) NULL,
+	fax			varchar(50) NULL,
 	email			varchar(100) NULL,
+	alternate_email		varchar(100) NULL,
 	uri			varchar(255) NULL,
-	comment			varchar(255) NULL,
+	comment			text NULL,
 	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	created_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
 	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -252,6 +280,13 @@ CREATE TABLE dbo.misc_option (
 	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	PRIMARY KEY CLUSTERED (misc_option_id)
 )
+GO
+
+INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'yesno','Y','YES',10 )
+GO
+INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'yesno','N','NO',20 )
 GO
 
 
