@@ -123,7 +123,7 @@ sub getProjectID
 
     my $atlas_build_id = $args{'atlas_build_id'} || '';
 
-    my $sql;
+    my $sql='';
 
     if ($atlas_build_name)
     {
@@ -141,21 +141,28 @@ sub getProjectID
             ~;
     }
 
-    my ($project_id) = $sbeams->selectOneColumn($sql) or
-      die "\nERROR: Unable to find the project_id"
-      . " with $sql\n\n";
-
-    ## check that project is accessible:
-    if ( $sbeams->isProjectAccessible( project_id => $project_id ) )
+    if ($sql)
     {
+        my ($project_id) = $sbeams->selectOneColumn($sql) or
+          die "\nERROR: Unable to find the project_id"
+          . " with $sql\n\n";
 
-        return $project_id;
+        ## check that project is accessible:
+        if ( $sbeams->isProjectAccessible( project_id => $project_id ) )
+        {
+
+            return $project_id;
+
+        } else
+        {
+
+            return 0;
+
+        }
 
     } else
     {
-
         return 0;
-
     }
 
 }
