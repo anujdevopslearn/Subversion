@@ -298,7 +298,7 @@ sub handle_request {
   #### Get all the projects user has access to
   $sql = qq~
 	SELECT P.project_id,P.project_tag,P.name,UL.username,
-               MIN(GPP.privilege_id) AS "best_group_privilege_id",
+               MIN(CASE WHEN UWG.contact_id IS NULL THEN NULL ELSE GPP.privilege_id END) AS "best_group_privilege_id",
                MIN(UPP.privilege_id) AS "best_user_privilege_id"
 	  FROM $TB_PROJECT P
 	  JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
@@ -312,7 +312,7 @@ sub handle_request {
 	  LEFT JOIN $TB_USER_WORK_GROUP UWG
 	       ON ( GPP.work_group_id = UWG.work_group_id
 	            AND UWG.contact_id='$current_contact_id' )
-	  LEFT JOIN WORK_GROUP WG
+	  LEFT JOIN $TB_WORK_GROUP WG
 	       ON ( UWG.work_group_id = WG.work_group_id )
 	 WHERE P.record_status != 'D'
 	   AND ( UPP.privilege_id<=40 OR GPP.privilege_id<=40 )
