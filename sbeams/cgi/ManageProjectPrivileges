@@ -1,0 +1,939 @@
+#!/usr/local/bin/perl -T
+
+
+###############################################################################
+# TO DO LIST FOR THIS PAGE:
+#
+# -note when appropriate that only people with admin privs can change the 
+#  permissions for this project. 
+# -don't to show a blank set of drop downs (or even any drop-downs) to
+#  invite them to choose something they can't update.
+###############################################################################
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+use FindBin;
+
+use lib qw (../../lib/perl);
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+use DBI;
+use CGI::Carp qw(fatalsToBrowser croak);
+use POSIX;
+
+use SBEAMS::Connection;
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+
+
+$sbeams = new SBEAMS::Connection;
+
+use CGI;
+$q = new CGI;
+
+
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value kay=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET   = $OPTIONS{"quiet"} || 0;
+$DEBUG   = $OPTIONS{"debug"} || 0;
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+my $CODE_ADMIN = 'mjohnson';
+my $CODE_ADMIN_EMAIL = 'mjohnson\@systemsbiology.org';
+my ($global_sql, @global_rows);
+
+my $ADMIN_WG_ID;
+my $ADMIN_PRIV_ID;
+my $ALTER_PRIV_CUTOFF;
+
+## set $ADMIN_WG_ID
+$global_sql = qq~
+    SELECT work_group_id
+    FROM work_group
+    WHERE work_group_name = 'Admin'
+    AND record_status != 'D'
+    ~;
+@global_rows = $sbeams->selectOneColumn($global_sql);
+$ADMIN_WG_ID = $global_rows[0];
+
+## set $ADMIN_PRIV_ID
+$global_sql = qq~
+    SELECT privilege_id
+    FROM privilege
+    WHERE name = 'administrator'
+    AND record_status != 'D'
+    ~;
+@global_rows = $sbeams->selectOneColumn($global_sql);
+$ADMIN_PRIV_ID = $global_rows[0];
+
+## set $ALTER_PRIV_CUTOFF
+$ALTER_PRIV_CUTOFF = $ADMIN_PRIV_ID;
+
+main();
+exit(0);
+
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    #connect_read_only=>1,
+    #allow_anonymous_access=>1,
+    #permitted_work_groups_ref=>['Proteomics_user','Proteomics_admin'],
+  ));
+
+
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters);
+  #$sbeams->printDebuggingInfo($q);
+
+
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+  #### Draw the page
+  $sbeams->printPageHeader();
+  if ($parameters{'userPermissions'}){
+      update_user_permissions(ref_parameters=>\%parameters);
+  }
+  if ($parameters{'groupPermissions'}){
+      update_group_permissions(ref_parameters=>\%parameters);
+  }
+  handle_request(ref_parameters=>\%parameters);
+  $sbeams->printPageFooter();
+
+} # end main
+
+
+###############################################################################
+# update_user_permissions
+###############################################################################
+sub update_user_permissions {
+  my %args = @_;
+  my $SUB_NAME = "update_user_permission";
+
+  ## Decode argument list
+  my $ref_parameters = $args{'ref_parameters'};
+  my %parameters = %{$ref_parameters};
+
+  ## Define standard variables
+  my ($sql,@rows);
+  my ($counter,$current_project_id,$priv_chooser,$user_chooser);
+
+  $current_project_id = $sbeams->getCurrent_project_id;
+  $priv_chooser = "userPriv";
+  $user_chooser = "userName";
+  $counter = 0;
+  my $test_string = $priv_chooser.$counter;
+
+  while($parameters{$test_string}){
+      my (%rowdata, $rowdata_ref);
+      my $temp_user = $user_chooser.$counter;
+      my $temp_priv = $priv_chooser.$counter;
+      my $user_id = $parameters{$temp_user};
+      my $priv_id = $parameters{$temp_priv};
+
+      #set up for next go around
+      $counter++;
+      $test_string = $priv_chooser.$counter;
+      next if ($user_id == '-1' || $priv_id == '-1');
+
+      #test to see if the user already has assigned privileges
+      $sql = qq~
+	  SELECT UPP.user_project_permission_id
+	  FROM user_project_permission UPP
+	  LEFT JOIN project P ON (P.project_id = UPP.project_id)
+	  WHERE UPP.contact_id = $user_id
+	  AND P.project_id = $current_project_id
+      ~;
+      @rows = $sbeams->selectOneColumn($sql);
+
+      if (@rows){
+	  $rowdata{'privilege_id'} = $priv_id;
+	  $rowdata_ref= \%rowdata;
+	  $sbeams->updateOrInsertRow(table_name=>'user_project_permission',
+				     rowdata_ref=>$rowdata_ref,
+				     update=>1,
+				     PK_name=>'user_project_permission_id',
+				     PK_value=>$rows[0],
+				     add_audit_parameters=>1);
+      }else {
+	  $rowdata{'contact_id'}   = $user_id;
+	  $rowdata{'project_id'}   = $current_project_id;
+	  $rowdata{'privilege_id'} = $priv_id;
+	  $rowdata_ref = \%rowdata;
+	  $sbeams->updateOrInsertRow(table_name=>'user_project_permission',
+				     rowdata_ref=>$rowdata_ref,
+				     insert=>1,
+				     PK_name=>'user_project_permission_id',
+				     add_audit_parameters=>1);
+      }
+  }
+
+}
+
+###############################################################################
+# update_group_permissions
+###############################################################################
+sub update_group_permissions {
+  my %args = @_;
+  my $SUB_NAME = "update_group_permission";
+
+  ## Decode argument list
+  my $ref_parameters = $args{'ref_parameters'};
+  my %parameters = %{$ref_parameters};
+
+  ## Define standard variables
+  my ($sql,@rows);
+  my ($counter,$current_project_id,$current_work_group_id);
+  my ($priv_chooser,$group_chooser);
+
+  $current_project_id = $sbeams->getCurrent_project_id;
+  $current_work_group_id = $sbeams->getCurrent_work_group_id;
+
+  $priv_chooser = "groupPriv";
+  $group_chooser = "groupName";
+  $counter = 0;
+  my $test_string = $priv_chooser.$counter;
+
+  while($parameters{$test_string}){
+      my (%rowdata, $rowdata_ref);
+      my $temp_group = $group_chooser.$counter;
+      my $temp_priv = $priv_chooser.$counter;
+      my $group_id = $parameters{$temp_group};
+      my $priv_id = $parameters{$temp_priv};
+
+      #set up for next go around
+      $counter++;
+      $test_string = $priv_chooser.$counter;
+      next if ($group_id == '-1' || $priv_id == '-1');
+
+      #test to see if the user already has assigned privileges
+      $sql = qq~
+	  SELECT GPP.group_project_permission_id
+	  FROM group_project_permission GPP
+	  WHERE GPP.project_id = '$current_project_id'
+	  AND GPP.work_group_id = '$group_id'
+      ~;
+      @rows = $sbeams->selectOneColumn($sql);
+
+      if (@rows){
+	  $rowdata{'privilege_id'} = $priv_id;
+	  $rowdata_ref= \%rowdata;
+	  $sbeams->updateOrInsertRow(table_name=>'group_project_permission',
+				     rowdata_ref=>$rowdata_ref,
+				     update=>1,
+				     PK_name=>'group_project_permission_id',
+				     PK_value=>$rows[0],
+				     add_audit_parameters=>1);
+      }else {
+	  $rowdata{'work_group_id'}   = $group_id;
+	  $rowdata{'project_id'}   = $current_project_id;
+	  $rowdata{'privilege_id'} = $priv_id;
+	  $rowdata_ref = \%rowdata;
+	  $sbeams->updateOrInsertRow(table_name=>'group_project_permission',
+				     rowdata_ref=>$rowdata_ref,
+				     insert=>1,
+				     PK_name=>'group_project_permission_id',
+				     add_audit_parameters=>1);
+      }
+  }
+}
+
+###############################################################################
+# handle_request
+###############################################################################
+sub handle_request {
+  my %args = @_;
+  my $SUB_NAME = "handle_request";
+  
+  ## Decode argument list
+  my $ref_parameters = $args{'ref_parameters'};
+  my %parameters = %{$ref_parameters};
+  
+  ## Define standard variables
+  my ($sql, @rows);
+  my $alter_permission;
+  my ($current_contact_id, $current_project_id, $current_group_id);
+
+  #### Show current user context information
+  $sbeams->printUserContext();
+  $current_contact_id = $sbeams->getCurrent_contact_id;
+  $current_project_id = $sbeams->getCurrent_project_id;
+  $current_group_id   = $sbeams->getCurrent_work_group_id;
+  print qq~
+      <H1>Project Privileges</H1>
+      $LINESEPARATOR
+      ~;
+
+  retrofit(project_id=>$current_project_id);
+
+  my $permission = find_best_permission(contact_id=>$current_contact_id,
+					project_id=>$current_project_id,
+					group_id=>$current_group_id);
+  
+
+  print_user_permissions(ref_parameters=>$ref_parameters,
+			 current_project_id=>$current_project_id,
+			 current_contact_id=>$current_contact_id,
+			 current_group_id=>$current_group_id,
+			 best_permission=>$permission);
+
+  print_group_permissions(ref_parameters=>$ref_parameters,
+			  current_project_id=>$current_project_id,
+			  current_contact_id=>$current_contact_id,
+			  current_group_id=>$current_group_id,
+			  best_permission=>$permission);
+}
+
+
+###############################################################################
+# retrofit- give project owner and admin full rights to alter the privileges
+###############################################################################
+sub retrofit {
+  my %args = @_;
+  my $SUB_NAME= "retrofit";
+
+  ## Decode argument list
+  my $current_project_id = $args{'project_id'}
+  || die "ERROR[$SUB_NAME]: project_id not passed";
+
+  ## Define standard variables
+  my ($sql, @rows);
+  my ($proj_pi_id, $proj_pi_name);
+  my (%rowdata, $rowdata_ref);
+
+  # get PI information
+  $sql = qq~
+      SELECT P.PI_contact_id, UL.username
+      FROM project P
+      LEFT JOIN user_login UL ON (UL.contact_id = P.PI_contact_id)
+      WHERE P.project_id = '$current_project_id'
+      AND P.record_status != 'D'
+      ~;
+  @rows = $sbeams->selectSeveralColumns($sql);
+  ($proj_pi_id, $proj_pi_name) = @{$rows[0]};
+
+  #### Make sure owner is has administrator privileges
+  $sql = qq~
+      SELECT UPP.user_project_permission_id, UPP.privilege_id
+      FROM user_project_permission UPP
+      LEFT JOIN project P on (P.project_id = UPP.project_id)
+      WHERE UPP.project_id = '$current_project_id'
+      AND P.PI_contact_id = UPP.contact_id
+      ~;
+  @rows = $sbeams->selectSeveralColumns($sql);
+
+  if (@rows){
+      (my $pi_upp_id,my $proj_owner_priv) = @{$rows[0]};
+      if ($proj_owner_priv != $ADMIN_PRIV_ID) {
+	  $rowdata{'privilege_id'} = $ADMIN_PRIV_ID;
+	  $rowdata_ref= \%rowdata;
+	  $sbeams->updateOrInsertRow(table_name=>'user_project_permission',
+				     rowdata_ref=>$rowdata_ref,
+				     update=>1,
+				     PK_name=>'user_project_permission_id',
+				     PK_value=>$pi_upp_id,
+				     add_audit_parameters=>1);
+      }
+  }else {      
+      $rowdata{'contact_id'} = $proj_pi_id;
+      $rowdata{'project_id'} = $current_project_id;
+      $rowdata{'privilege_id'} = $ADMIN_PRIV_ID;
+      $rowdata_ref=\%rowdata;
+      $sbeams->updateOrInsertRow(table_name=>'user_project_permission',
+				 rowdata_ref=>$rowdata_ref,
+				 insert=>1,
+				 PK_name=>'user_project_permission_id',
+				 add_audit_parameters=>1);
+  }
+
+  #### Make sure Admin group has administrator privileges
+  $sql = qq~
+      SELECT GPP.group_project_permission_id, GPP.privilege_id
+      FROM group_project_permission GPP
+      LEFT JOIN work_group WG ON (WG.work_group_id = GPP.work_group_id)
+      WHERE GPP.project_Id = '$current_project_id'
+      AND WG.work_group_name = 'Admin'
+      ~;
+  @rows = $sbeams->selectOneColumn($sql);
+
+  if (@rows){
+      my $gpp_id = $rows[0];
+
+      $rowdata{'privilege_id'} = $ADMIN_PRIV_ID;
+      $rowdata_ref = \%rowdata;
+      $sbeams->updateOrInsertRow(table_name=>'group_project_permission',
+				 rowdata_ref=>$rowdata_ref,
+				 update=>1,
+				 PK_name=>'group_project_permission_id',
+				 PK_value=>$gpp_id,
+				 add_audit_parameters=>1);
+  }else {
+      $rowdata{'work_group_id'} = $ADMIN_WG_ID;
+      $rowdata{'project_id'} = $current_project_id;
+      $rowdata{'privilege_id'} = $ADMIN_PRIV_ID;
+      $rowdata_ref = \%rowdata;
+      $sbeams->updateOrInsertRow(table_name=>'group_project_permission',
+				 rowdata_ref=>$rowdata_ref,
+				 insert=>1,
+				 PK_name=>'group_project_permission_id',
+				 add_audit_parameters=>1);
+  }
+     
+}
+
+###############################################################################
+# find_best_permission
+###############################################################################
+sub find_best_permission{
+  my %args = @_;
+  my $SUB_NAME = "find_best_permission";
+
+  ## Decode argument list
+  my $current_contact_id = $args{'contact_id'}
+  || die "ERROR[$SUB_NAME]: contact_id not passed";
+  my $current_project_id = $args{'project_id'}
+  || die "ERROR[$SUB_NAME]: project_id not passed";
+  my $current_group_id = $args{'group_id'}
+  || die "ERROR[$SUB_NAME]: group_id not passed";
+
+  ## Define standard variables
+  my ($sql, @rows);
+
+  $sql = qq~
+      SELECT UL.username,
+      MIN(CASE WHEN UWG.contact_id IS NULL THEN NULL ELSE GPP.privilege_id END) AS "best_group_privilege_id",
+      MIN(UPP.privilege_id) AS "best_user_privilege_id"
+      FROM $TB_PROJECT P
+      JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
+      LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
+      ON ( P.project_id = UPP.project_id
+	   AND UPP.contact_id='$current_contact_id' )
+      LEFT JOIN $TB_GROUP_PROJECT_PERMISSION GPP
+      ON ( P.project_id = GPP.project_id )
+      LEFT JOIN $TB_PRIVILEGE PRIV
+      ON ( GPP.privilege_id = PRIV.privilege_id )
+      LEFT JOIN $TB_USER_WORK_GROUP UWG
+      ON ( GPP.work_group_id = UWG.work_group_id
+	   AND UWG.contact_id='$current_contact_id' )
+      LEFT JOIN $TB_WORK_GROUP WG
+      ON ( UWG.work_group_id = WG.work_group_id )
+      WHERE 1=1
+      AND P.record_status != 'D'
+      AND UL.record_status != 'D'
+      AND ( UPP.record_status != 'D' OR UPP.record_status IS NULL )
+      AND ( GPP.record_status != 'D' OR GPP.record_status IS NULL )
+      AND ( PRIV.record_status != 'D' OR PRIV.record_status IS NULL )
+      AND ( UWG.record_status != 'D' OR UWG.record_status IS NULL )
+      AND ( WG.record_status != 'D' OR WG.record_status IS NULL )
+      AND WG.work_group_id = '$current_group_id'
+      AND P.project_id = '$current_project_id'
+      AND ( UPP.privilege_id<=40 OR GPP.privilege_id<=40 )
+      AND ( WG.work_group_name IS NOT NULL OR UPP.privilege_id IS NOT NULL )
+      GROUP BY P.project_id,P.project_tag,P.name,UL.username
+      ORDER BY UL.username,P.project_tag
+      ~;
+  @rows = $sbeams->selectSeveralColumns($sql);
+  
+  my $best_privilege_id = 9999;
+
+  if (@rows) {
+      my ($username,$best_group_privilege_id,$best_user_privilege_id) = @{$rows[0]};
+      
+      #### Select the lowest permission and translate to a name
+      $best_group_privilege_id = 9999
+        unless (defined($best_group_privilege_id));
+      $best_user_privilege_id = 9999
+        unless (defined($best_user_privilege_id));
+
+      $best_privilege_id = $best_group_privilege_id;
+      $best_privilege_id = $best_user_privilege_id if
+        ($best_user_privilege_id < $best_privilege_id);
+  }
+
+  return $best_privilege_id;
+}
+
+
+###############################################################################
+# print_user_permissions
+###############################################################################
+sub print_user_permissions {
+  my %args = @_;
+  my $SUB_NAME = "print_user_permissions";
+
+  ## Decode argument list
+  my $ref_parameters = $args{'ref_parameters'};
+  my %parameters = %{$ref_parameters};
+  my $current_project_id = $args{'current_project_id'}
+  || die "ERROR[$SUB_NAME]: project_id not passed";
+  my $current_contact_id = $args{'current_contact_id'}
+  || die "ERROR[$SUB_NAME]: contact_id not passed";
+  my $current_group_id = $args{'current_group_id'}
+  || die "ERROR[$SUB_NAME]: group_id not passed";
+  my $best_permission = $args{'best_permission'};
+
+  ## Define standard variables
+  my ($sql, $priv_sql, $user_sql, @rows);
+  my (@users, @permissions, $proj_pi_name, $proj_pi_id);
+  my (%rowdata, $rowdata_ref);
+  my $permission_to_alter;
+
+  ## Grant permission to alter if best priv = 10
+  if ($best_permission <= $ALTER_PRIV_CUTOFF || $current_group_id == $ADMIN_WG_ID){
+      $permission_to_alter = 1;
+  }else {
+      $permission_to_alter = 0;
+  }
+
+  # get PI information
+  $sql = qq~
+      SELECT P.PI_contact_id, UL.username
+      FROM project P
+      LEFT JOIN user_login UL ON (UL.contact_id = P.PI_contact_id)
+      WHERE P.project_id = '$current_project_id'
+      AND P.record_status != 'D'
+      ~;
+  @rows = $sbeams->selectSeveralColumns($sql);
+  ($proj_pi_id, $proj_pi_name) = @{$rows[0]};
+  # grant PI permission to alter privleges
+  if ($proj_pi_id == $current_contact_id){
+      $permission_to_alter = 1;
+  }
+
+  #### Make sure owner is an administrator.
+#  $sql = qq~
+#      SELECT UPP.user_project_permission_id, UPP.privilege_id
+#      FROM user_project_permission UPP
+#      LEFT JOIN project P on (P.project_id = UPP.project_id)
+#      LEFT JOIN privilege PRIV ON (PRIV.privilege_id = UPP.privilege_id)
+#      LEFT JOIN user_login UL ON (UL.contact_id = UPP.contact_id)
+#      WHERE UPP.project_id = '$current_project_id'
+#      AND P.PI_contact_id = UPP.contact_id
+#      ~;
+#  @rows = $sbeams->selectSeveralColumns($sql);
+#
+#  if (@rows){
+#      (my $pi_upp_id,my $proj_owner_priv) = @{$rows[0]};
+#      if ($proj_owner_priv != '10') {
+#	  $rowdata{'privilege_id'} = '10';
+#	  $rowdata_ref= \%rowdata;
+#	  $sbeams->updateOrInsertRow(table_name=>'user_project_permission',
+#				     rowdata_ref=>$rowdata_ref,
+#				     update=>1,
+#				     PK_name=>'user_project_permission_id',
+#				     PK_value=>$pi_upp_id,
+#				     add_audit_parameters=>1
+#				 );
+#      }
+#  }else {      
+#      $rowdata{'contact_id'} = $proj_pi_id;
+#      $rowdata{'project_id'} = $current_project_id;
+#      $rowdata{'privilege_id'} = '10';
+#      $rowdata_ref=\%rowdata;
+#      $sbeams->updateOrInsertRow(table_name=>'user_project_permission',
+#				 rowdata_ref=>$rowdata_ref,
+#				 insert=>1,
+#				 PK_name=>'user_project_permission_id',
+#				 add_audit_parameters=>1
+#				 );
+#  }
+
+  # SQL for all privileges
+  $priv_sql = qq~
+      SELECT PRIV.name, PRIV.privilege_id
+      FROM privilege PRIV
+      WHERE record_status != 'D'
+      ~;
+
+  # SQL for all users except current user
+  $user_sql = qq~
+      SELECT UL.username, UL.contact_id
+      FROM user_login UL
+      WHERE record_status != 'D'
+      AND UL.contact_id != '$current_contact_id'
+      ORDER BY UL.username
+      ~;
+
+  #### Get project permissions (minus the project owner)# 
+  $sql = qq~
+      SELECT UL.username,UL.contact_id, UPP.privilege_id 
+      FROM user_login UL
+      LEFT JOIN user_project_permission UPP ON (UPP.contact_id = UL.contact_id)
+      LEFT JOIN project P ON (P.project_id = UPP.project_id)
+      LEFT JOIN privilege PRIV ON (PRIV.privilege_id = UPP.privilege_id)
+      WHERE UPP.project_id = '$current_project_id'
+      AND PRIV.privilege_id < '50'
+      AND UL.contact_id != P.PI_contact_id
+      ~;
+
+  @rows = $sbeams->selectSeveralColumns($sql);
+
+  ## Start permissions table
+  print qq~
+      <FORM NAME="userPermissions" METHOD="POST">
+      <TABLE>
+      <TR>
+        <TD><FONT COLOR="red"><B>User</B></FONT></TD>
+	<TD><FONT COLOR="red"><B>Privilege</B></FONT></TD>
+      </TR>
+      <TR>
+        <TD><B>$proj_pi_name</B></TD>
+	<TD><B>administrator (project PI)</B></TD>
+      </TR>
+      ~;
+  ##Print known users/privileges
+  ## Also see if current contact has permission to alter
+  my ($counter, $chooser_name);
+  $counter = 0;
+  foreach my $row_ref (@rows) {
+      my @row = @{$row_ref};
+
+      # Allow permission granting if an administrator
+      if ($row[1] == $current_contact_id && $row[2] == $ADMIN_PRIV_ID){
+	  $permission_to_alter = 1;
+      }
+
+      print qq~
+      <TR>
+        <TD>
+	~;
+      $chooser_name = "userName".$counter;
+      print_chooser(sql=>$user_sql,
+		    selected_id=>$row[1],
+		    input_name=>$chooser_name);
+      print qq~
+	</TD>
+	<TD>
+      ~;
+      $chooser_name = "userPriv".$counter;
+      print_chooser(sql=>$priv_sql,
+		    selected_id=>$row[2],
+		    input_name=>$chooser_name);
+      print qq~
+	</TD>
+      </TR>
+      ~;
+      $counter++;
+  }
+
+  ## Print new user row
+  print qq~
+      <TR>
+        <TD>
+  ~;
+  $chooser_name = "userName".$counter;
+  print_chooser(sql=>$user_sql,
+		blank_chooser=>1,
+		input_name=>$chooser_name);
+  print qq~
+        </TD>
+	<TD>
+  ~;
+  $chooser_name = "userPriv".$counter;
+  print_chooser(sql=>$priv_sql, 
+		blank_chooser=>1,
+		input_name=>$chooser_name);
+  print qq~
+        </TD>
+      </TR>
+  ~;
+
+  ## End table
+  print qq~
+      </TABLE>
+      ~;
+  if ($permission_to_alter==1){
+      print qq~
+      <INPUT TYPE="submit" NAME="userPermissions" VALUE="Update!">
+      </FORM>
+      ~;
+  }else {
+      print qq~
+      <h3>You need 'administrator' privileges to make changes.  Contact $proj_pi_name to get access</h3>
+      </FORM>
+      ~;
+  }
+
+
+}
+
+
+###############################################################################
+# print_group_permissions
+###############################################################################
+sub print_group_permissions {
+  my %args = @_;
+  my $SUB_NAME = "print_user_permissions";
+
+  ## Decode argument list
+  my $ref_parameters = $args{'ref_parameters'};
+  my %parameters = %{$ref_parameters};
+  my $current_project_id = $args{'current_project_id'}
+  || die "ERROR[$SUB_NAME]: project_id not passed";
+  my $current_contact_id = $args{'current_contact_id'}
+  || die "ERROR[$SUB_NAME]: contact_id not passed";
+  my $current_group_id = $args{'current_group_id'}
+  || die "ERROR[$SUB_NAME]: group_id not passed";
+  my $best_permission = $args{'best_permission'};
+
+  ## Define standard variables
+  my ($sql, $priv_sql, $group_sql, $current_permissions_sql,@rows);
+  my $permission_to_alter;
+
+  ## Grant permission to alter if best priv is admin
+  if ($best_permission <= $ALTER_PRIV_CUTOFF || $current_group_id == $ADMIN_WG_ID){
+      $permission_to_alter = 1;
+  }else {
+      $permission_to_alter = 0;
+  }
+
+  # SQL to get current group permissions
+  $current_permissions_sql = qq~
+      SELECT WG.work_group_id, PRIV.privilege_id
+      FROM work_group WG
+      LEFT JOIN group_project_permission GPP ON (GPP.work_group_id = WG.work_group_id)
+      LEFT JOIN privilege PRIV ON (PRIV.privilege_id = GPP.privilege_id)
+      LEFT JOIN project P ON (P.project_id = GPP.project_id)
+      WHERE P.project_id = '$current_project_id'
+      AND WG.work_group_id != '$ADMIN_WG_ID'
+      AND WG.record_status != 'D'
+      AND PRIV.record_status != 'D'
+      ~;
+
+  # SQL for all privileges
+  $priv_sql = qq~
+      SELECT PRIV.name, PRIV.privilege_id
+      FROM privilege PRIV
+      WHERE PRIV.record_status != 'D'
+      ~;
+
+  # SQL for all work groups except Admin 
+  $group_sql = qq~
+      SELECT  WG.work_group_name, WG.work_group_id 
+      FROM work_group WG
+      WHERE WG.record_status != 'D'
+      AND WG.work_group_name != 'Admin'
+      ~;
+
+
+  ## Start permissions table
+  print qq~
+      <FORM NAME="groupPermissions" METHOD="POST">
+      <TABLE>
+      <TR>
+        <TD><FONT COLOR="red"><B>Group</B></FONT></TD>
+	<TD><FONT COLOR="red"><B>Privilege</B></FONT></TD>
+      </TR>
+      ~;
+
+  ##Print known work groups/privileges
+  @rows = $sbeams->selectSeveralColumns($current_permissions_sql);
+  my ($counter, $chooser_name);
+  $counter = 0;
+  foreach my $row_ref (@rows) {
+      my @row = @{$row_ref};
+      if ($current_group_id eq $row[0] && $row[1] <= $ALTER_PRIV_CUTOFF){
+	  $permission_to_alter = 1;
+      }
+
+      print qq~
+      <TR>
+        <TD>
+	~;
+      $chooser_name = "groupName".$counter;
+      print_chooser(sql=>$group_sql,
+		    selected_id=>$row[0],
+		    input_name=>$chooser_name);
+      print qq~
+	</TD>
+	<TD>
+      ~;
+      $chooser_name = "groupPriv".$counter;
+      print_chooser(sql=>$priv_sql,
+		    selected_id=>$row[1],
+		    input_name=>$chooser_name);
+      print qq~
+	</TD>
+      </TR>
+      ~;
+      $counter++;
+  }
+
+  ## Print new user row
+  print qq~
+      <TR>
+        <TD>
+  ~;
+  $chooser_name = "groupName".$counter;
+  print_chooser(sql=>$group_sql,
+		blank_chooser=>1,
+		input_name=>$chooser_name);
+  print qq~
+        </TD>
+	<TD>
+  ~;
+  $chooser_name = "groupPriv".$counter;
+  print_chooser(sql=>$priv_sql, 
+		blank_chooser=>1,
+		input_name=>$chooser_name);
+  print qq~
+        </TD>
+      </TR>
+  ~;
+
+  ## End table
+  print qq~
+      </TABLE>
+      ~;
+  if ($permission_to_alter==1){
+      print qq~
+      <INPUT TYPE="submit" NAME="groupPermissions" VALUE="Update!">
+      </FORM>
+      ~;
+  }else {
+      print qq~
+      <h3>You need 'administrator' rights to make changes</h3>
+      </FORM>
+      ~;
+  }
+  
+}
+
+################################
+# print_chooser
+################################
+sub print_chooser {
+  my %args = @_;
+  my $SUB_NAME = "print_chooser";
+
+  ## Decode argument list
+  my $selected_id = $args{'selected_id'};
+  my $input_name = $args{'input_name'} || "";
+  my $selected_name = $args{'selected_name'};
+  my $omitted_ids_ref =$args{'omitted_ids'}; 
+  my $blank_chooser = $args{'blank_chooser'};
+  my $sql = $args{'sql'}
+  || die "ERROR[$SUB_NAME]: no sql passed";
+
+  ## Define standard variables
+  my (@rows, %omitted_ids);
+  if ($omitted_ids_ref){
+      %omitted_ids = %{$omitted_ids_ref};
+  }
+
+  @rows = $sbeams->selectSeveralColumns($sql);
+
+  ## Start SELECT
+  print qq~
+      <SELECT NAME="$input_name">
+      ~;
+
+  ## Print OPTIONs
+  if ($blank_chooser){
+      print qq~
+	  <OPTION VALUE="-1" SELECTED>
+	  ~;
+  }else {
+      print qq~
+	  <OPTION VALUE="-1">
+	  ~;
+  }
+  foreach my $row_ref(@rows){
+      my @row = @{$row_ref};
+      next if (defined($omitted_ids{$row[1]}));
+      if ($row[1] == $selected_id || $row[0] eq $selected_name){
+	  print qq~
+	  <OPTION VALUE=\"$row[1]\" SELECTED>$row[0]
+	  ~;
+      }else {
+	  print qq~
+	  <OPTION VALUE=\"$row[1]\">$row[0]
+	  ~;
+      }
+  }
+
+  ## End SELECT
+  print qq~
+      </SELECT>
+      ~;
+  return;
+}
+
+################################
+# Email Notify
+################################
+sub emailer(){
+  my %args = @_;
+  my $SUB_NAME = "emailer";
+
+  print qq~ SUCCESS~;
+
+  #### Define standard variables
+  my ($recipient, $sender, $message, $subject);
+
+  #### Decode argument list
+  $recipient = $args{'recipient'}
+  || die "ERROR[$SUB_NAME]: recipient not passed";
+  $sender  = $args{'sender'}  || "$CODE_ADMIN<$CODE_ADMIN_EMAIL>";
+  $subject = $args{'subject'} || "no subject";
+  $message = $args{'message'} || "no message";
+ 
+  if ($recipient !~ /@.*\..*/){
+      $recipient =~ s/^\s+//;
+      $recipient =~ s/\s+$//;
+      $recipient.='\@systemsbiology.org';
+  }
+
+  my $mailprog = "/usr/lib/sendmail";
+  open (MAIL, "|$mailprog $recipient") || die "Can't open $mailprog!\n";
+  print MAIL "From: $sender\n";
+  print MAIL "To: $recipient\n";
+  print MAIL "Reply-to: $sender\n";
+  print MAIL "Subject: $subject\n\n";
+  print MAIL "$message\n\n";
+  close (MAIL) or warn "sendmail didn't close nicely";
+}
