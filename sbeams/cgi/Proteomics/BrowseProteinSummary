@@ -158,7 +158,7 @@ sub handle_request {
 
   #### Set some specific settings for this program
   #my $CATEGORY="Browse Protein Summary";
-  my $CATEGORY="This interface is experimental";
+  my $CATEGORY="Browse Protein Summary (experimental and incomplete)";
   $TABLE_NAME="PR_BrowseProteinSummary" unless ($TABLE_NAME);
   ($PROGRAM_FILE_NAME) =
     $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
