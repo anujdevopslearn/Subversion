@@ -17,6 +17,8 @@ package SBEAMS::Connection::DataTable;
 use strict;
 use overload ( '""', \&asHTML );
 
+use SBEAMS::Connection qw($log);
+
 ##### Public Methods ###########################################################
 #
 # Module provides interface to build table, then render it in various fashions.
@@ -120,6 +122,15 @@ sub setColAttr {
 }
 
 #+
+#
+#-
+sub setHeaderAttr {
+  my $this = shift;
+  my %args = @_;
+  $this->{_header} = \%args;
+}
+
+#+
 # Method to set attributes one or more rows in the table. 
 # narg ROWS required ref to array of row numbers
 # 
@@ -184,6 +195,21 @@ sub asCSV {
 }
 
 #+
+#
+#-
+sub formatHeader {
+  my $this = shift;
+  my $text = shift;
+  return '' unless $text;
+
+  my %format = %{$this->{_header}};
+  $text = "<B>$text</B>" if $format{BOLD};
+  $text = "<U>$text</U>" if $format{UNDERLINE};
+  return $text;
+
+}
+
+#+
 # Default rendering method, returns table as HTML, with row, col, and cell
 # attributes expressed.
 #-
@@ -197,6 +223,7 @@ sub asHTML {
 
     foreach my $cell ( @$row ) {
       $cell = ( defined $cell ) ? $cell : '';
+      $cell = $this->formatHeader( $cell ) if ( $rnum == 1 && $this->{_header} );
       $html .= $this->_getTD( $rnum, $cnum++ ) . "$cell</TD>\n"
     }
     $html .= "  </TR>\n";
