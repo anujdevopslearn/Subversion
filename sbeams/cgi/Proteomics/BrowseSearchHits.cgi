@@ -113,7 +113,7 @@ sub printEntryForm {
     my (%url_cols,%hidden_cols,%max_widths);
     my $username;
 
-    my $CATEGORY="Proteomics Data Test Query";
+    my $CATEGORY="Browse Search Hits";
     my $TABLE_NAME="BrowseSearchHits";
     $TABLE_NAME = $q->param("QUERY_NAME") if $q->param("QUERY_NAME");
 
@@ -460,8 +460,12 @@ sub printEntryForm {
       #### Build BEST_HIT constraint
       my $best_hit_clause = "";
       if ($parameters{best_hit_constraint}) {
-        if ($parameters{best_hit_constraint} =~ /best_hit/i) {
-          $best_hit_clause = "   AND best_hit_flag = 'Y'";
+        if ($parameters{best_hit_constraint} =~ /Any/i) {
+          $best_hit_clause = "   AND best_hit_flag > ''";
+        } elsif ($parameters{best_hit_constraint} =~ /User/i) {
+          $best_hit_clause = "   AND best_hit_flag = 'U'";
+        } elsif ($parameters{best_hit_constraint} =~ /Default/i) {
+          $best_hit_clause = "   AND best_hit_flag = 'D'";
         }
       }
 
@@ -635,7 +639,7 @@ sub printEntryForm {
         ["next_dCn","STR(SH.next_dCn,5,3)","dCn"],
         ["prelim_score","STR(SH.prelim_score,8,1)","Sp"],
         ["ions","STR(SH.identified_ions,2,0) + '/' + STR(SH.total_ions,3,0)","Ions"],
-        ["ions_old","STR(SH.identified_ions,2,0) + '/' + STR(SH.total_ions,3,0)","!Ions"],
+#        ["ions_old","STR(SH.identified_ions,2,0) + '/' + STR(SH.total_ions,3,0)","!Ions"],
         ["reference","reference","Reference"],
         ["additional_proteins","additional_proteins","N+"],
         ["additional_proteins_old","additional_proteins","!N+"],
@@ -707,8 +711,11 @@ sub printEntryForm {
 
       #print "<PRE>\n$sql_query\n</PRE>\n";
 
+      # '.out' => "http://regis/cgi-bin/showout_html5?OutFile=/data/search/\%$colnameidx{data_location}V/\%$colnameidx{fraction_tag}V/\%$colnameidx{file_root}V.out"
+
+
       my $base_url = "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi";
-      %url_cols = ('.out' => "http://regis/cgi-bin/showout_html5?OutFile=/data/search/\%$colnameidx{data_location}V/\%$colnameidx{fraction_tag}V/\%$colnameidx{file_root}V.out",
+      %url_cols = ('.out' => "$CGI_BASE_DIR/Proteomics/ShowOutFile.cgi?search_id=\%$colnameidx{search_id}V",
 		   '.out_ATAG' => 'TARGET="Win1"',
       		   'file_root' => "$base_url?QUERY_NAME=ShowSearch&search_batch_id=\%$colnameidx{search_batch_id}V&file_root_constraint=\%$colnameidx{file_root}V&apply_action=QUERY",
 		   'file_root_ATAG' => 'TARGET="Win1"',

@@ -173,7 +173,7 @@ sub updateBestHitFlag {
 
 
   #### Now set the best_hit_flag for the desired search_hit
-  $rowdata{best_hit_flag} = 'Y';
+  $rowdata{best_hit_flag} = 'U';
   $result = $sbeams->insert_update_row(update=>1,
     table_name=>"$TBPR_SEARCH_HIT",
     rowdata_ref=>\%rowdata,PK=>"search_hit_id",

@@ -476,32 +476,40 @@ sub printEntryForm {
 
 
       #### Build PEPTIDE constraint
-      my $peptide_clause = "";
-      if ($parameters{peptide_constraint}) {
-        if ($parameters{peptide_constraint} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
-          print "<H4>Cannot parse Peptide Constraint!  Check syntax.</H4>\n\n";
-          return;
-        } else {
-          $peptide_clause = "   AND SH.peptide_string LIKE '$parameters{peptide_constraint}'";
-        }
-      }
+      my $peptide_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"SH.peptide",
+        constraint_type=>"plain_text",
+        constraint_name=>"Peptide",
+        constraint_value=>$parameters{peptide_constraint} );
+      return if ($peptide_clause == -1);
 
+
+
+      #### Build CHARGE constraint
+      my $charge_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"S.assumed_charge",
+        constraint_type=>"int_list",
+        constraint_name=>"Charge",
+        constraint_value=>$parameters{charge_constraint} );
+      return if ($charge_clause == -1);
 
 
       #### Build MASS constraint
-      my $mass_clause = "";
-      if ($parameters{mass_constraint}) {
-        if ($parameters{mass_constraint} =~ /^[\d\.]+$/) {
-          $mass_clause = "   AND SH.hit_mass_plus_H = $parameters{mass_constraint}";
-        } elsif ($parameters{mass_constraint} =~ /^between\s+[\d\.]+\s+and\s+[\d\.]+$/i) {
-          $mass_clause = "   AND SH.hit_mass_plus_H $parameters{mass_constraint}";
-        } elsif ($parameters{mass_constraint} =~ /^[><=][=]*\s*[\d\.]+$/) {
-          $mass_clause = "   AND SH.hit_mass_plus_H $parameters{mass_constraint}";
-        } else {
-          print "<H4>Cannot parse Mass Constraint!  Check syntax.</H4>\n\n";
-          return;
-        }
-      }
+      my $mass_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"SH.hit_mass_plus_H",
+        constraint_type=>"flexible_float",
+        constraint_name=>"Mass Constraint",
+        constraint_value=>$parameters{mass_constraint} );
+      return if ($mass_clause == -1);
+
+
+      #### Build ISOELECTRIC_POINT constraint
+      my $isoelectric_point_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"isoelectric_point",
+        constraint_type=>"flexible_float",
+        constraint_name=>"Isoelectric Point",
+        constraint_value=>$parameters{isoelectric_point_constraint} );
+      return if ($isoelectric_point_clause == -1);
 
 
       #### Build ANNOTATION_LABELS constraint
@@ -641,7 +649,9 @@ sub printEntryForm {
 	$gene_name_clause
 	$accession_clause
 	$peptide_clause
+	$charge_clause
 	$mass_clause
+	$isoelectric_point_clause
 	$annotation_label_clause
 	$group_by_clause
 

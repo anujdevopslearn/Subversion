@@ -69,12 +69,14 @@ sub showMainPage {
     $sbeams->printUserContext();
 
     print qq~
-	<BR>
-	Welcome to FLYCAT, a catalog of observed peptides in Drosophila.
+        <BR>
+	<HR ALIGN=LEFT SIZE="3" WIDTH="30%" NOSHADE>
+	<H3>Welcome to FLYCAT, a catalog of annotated peptides in Drosophila.</H3>
 	<P>
+        <IMG WIDTH="236" HEIGHT="246" SRC="../../images/flycat.gif">
+        <P>
 	Click on one of the links below to view annotations for genes
 	beginning with the character...<P>
-	<BR>
     ~;
 
     my $sql = qq~
@@ -91,7 +93,7 @@ sub showMainPage {
     my $element;
     foreach $element (@columns) {
       $element = uc($element);
-      print "<a href=\"$CGI_BASE_DIR/Proteomics/BrowseAnnotatedPeptides.cgi?search_batch_id=1,4&display_options=GroupReference,BSDesc&reference_constraint=$element\%25&sort_order=reference&row_limit=500&apply_action=QUERYHIDE\">&nbsp;$element&nbsp;</a> "
+      print "<a href=\"$CGI_BASE_DIR/Proteomics/BrowseAnnotatedPeptides.cgi?search_batch_id=10,11,12&display_options=GroupReference,BSDesc&reference_constraint=$element\%25&sort_order=reference&row_limit=500&apply_action=QUERYHIDE\">&nbsp;$element&nbsp;</a> "
     }
 
     print qq~
@@ -103,7 +105,7 @@ sub showMainPage {
 	Gene Name <INPUT TYPE="text" NAME="gene_name_constraint" VALUE="" SIZE=20><BR>
 	Accession <INPUT TYPE="text" NAME="accession_constraint" VALUE="" SIZE=20> (FBgnxxxxxxx)<BR>
 
-	<INPUT TYPE="hidden" NAME="search_batch_id" VALUE="1,4">
+	<INPUT TYPE="hidden" NAME="search_batch_id" VALUE="10,11,12">
 	<INPUT TYPE="hidden" NAME="display_options" VALUE="GroupReference,BSDesc">
 	<INPUT TYPE="hidden" NAME="sort_order" VALUE="reference">
 	<INPUT TYPE="hidden" NAME="row_limit" VALUE="500">

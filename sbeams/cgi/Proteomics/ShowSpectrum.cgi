@@ -372,15 +372,15 @@ sub printEntryForm {
          </FORM>
     ~;
 
-#    printf("\nt0 - t1: %4f<BR>\n",tv_interval($t0,$t1));
-#    printf("t1 - t2: %4f<BR>\n",tv_interval($t1,$t2));
-#    printf("t2 - t3: %4f<BR>\n",tv_interval($t2,$t3));
-#    printf("t3 - t4: %4f<BR>\n",tv_interval($t3,$t4));
-#    printf("t4 - t5: %4f<BR>\n",tv_interval($t4,$t5));
-#    printf("t5 - t6: %4f<BR>\n",tv_interval($t5,$t6));
-#    printf("t6 - t7: %4f<BR>\n",tv_interval($t6,$t7));
-#    printf("t7 - t8: %4f<BR>\n",tv_interval($t7,$t8));
-#    printf("  Total: %4f<BR>\n",tv_interval($t0,$t8));
+    printf("\nt0 - t1: %4f<BR>\n",tv_interval($t0,$t1));
+    printf("t1 - t2: %4f<BR>\n",tv_interval($t1,$t2));
+    printf("t2 - t3: %4f<BR>\n",tv_interval($t2,$t3));
+    printf("t3 - t4: %4f<BR>\n",tv_interval($t3,$t4));
+    printf("t4 - t5: %4f<BR>\n",tv_interval($t4,$t5));
+    printf("t5 - t6: %4f<BR>\n",tv_interval($t5,$t6));
+    printf("t6 - t7: %4f<BR>\n",tv_interval($t6,$t7));
+    printf("t7 - t8: %4f<BR>\n",tv_interval($t7,$t8));
+    printf("  Total: %4f<BR>\n",tv_interval($t0,$t8));
 
 
 } # end printEntryForm
