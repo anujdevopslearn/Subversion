@@ -1,6 +1,6 @@
 #!usr/local/bin/perl -w
 use strict;
-use lib qw (../perl ../../perl);
+use lib qw (/net/dblocal/www/html/sbeams/lib/perl);
 
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
