@@ -103,12 +103,29 @@ Retart the Apache server perhaps with something like:
 
 
 -------------------------------------------------------------------------------
-4) Upack files
+4) Upack files and set up misc directories and links
 
 cd /local/www/html
 mkdir dev1
 cd dev1
-tar -zxvf ~/sbeams-0.10.tar.gz
+tar -zxvf ~/sbeams-0.11.tar.gz
+
+Create tmp directories and symlinks:
+cd sbeams
+  (for now, just create this directories for stuff to live in here, but
+   it may be a good idea to make a sym link to another location since there
+   could possibly be large amounts of data here)
+mkdir data images/tmp tmp tmp/queries
+chown a+rwx image/tmp tmp/queries
+ln -s ../includes doc/includes
+ln -s ../share/load_biosequence_set.pl lib/scripts/Proteomics/load_biosequence_set.pl
+
+For now, make the main site point to dev1, but eventually when there is
+parallel development and production usage, these should be separate trees
+kept in sync with CVS or some other such tool.
+
+cd ..
+ln -s dev1/sbeams sbeams
 
 
 -------------------------------------------------------------------------------
