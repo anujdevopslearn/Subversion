@@ -249,9 +249,12 @@ sub handle_request {
   #### [friendly name used in url_cols,SQL,displayed column title]
   my @column_array = (
     ["project_id","ERV.project_id","Project ID"],
+    ["plate_id","ERV.plate_id","Plate Name"],
     ["assay_id","ERV.assay_id","Assay Name"],
     ["sample_id","ERV.sample_id","Sample Name"],
     ["genotype_id","ERV.genotype_id","Genotype"],
+    ["call_quality","ERV.description","Call Quality"],
+    ["call_date","ERV.call_date","Call Date"],
   );
 
 
@@ -318,10 +321,11 @@ $call_quality_clause
         resultset_ref=>$resultset_ref);
 
 
-      #### Post process the resultset
+      #### Post process the resultset unless plain view
       postProcessResultset(rs_params_ref=>\%rs_params,
         resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters,
-      );
+      ) unless ($parameters{display_options} =~ /PlainView/ ||
+	    $parameters{display_options} !~ /Sample/);
 
       #### Store the resultset and parameters to disk resultset cache
       $rs_params{set_name} = "SETME";
@@ -414,13 +418,20 @@ sub postProcessResultset {
   my $sample_id_index = $resultset_ref->{column_hash_ref}->{sample_id};
   my $assay_id_index = $resultset_ref->{column_hash_ref}->{assay_id};
   my $genotype_id_index = $resultset_ref->{column_hash_ref}->{genotype_id};
+  my $plate_id_index = $resultset_ref->{column_hash_ref}->{plate_id};
+  my $call_quality_index = $resultset_ref->{column_hash_ref}->{call_quality};
+  my $call_date_index = $resultset_ref->{column_hash_ref}->{call_date};
+
 
   #### Create a data structure for all values
-  my ($project_id,$sample_id,$assay_id,$genotype_id);
+  my ($project_id,$sample_id,$assay_id,$genotype_id,$plate_id);
+  my ($call_quality,$call_date);
   my $data;
   my @query_assays = ();
   my %dup_stats;
   my %samples;
+  my %plate_ids;
+
 
   #### Loop over each row in the resultset
   my $n_rows = scalar(@{$resultset_ref->{data_ref}});
@@ -430,51 +441,72 @@ sub postProcessResultset {
     $sample_id = $resultset_ref->{data_ref}->[$row]->[$sample_id_index];
     $assay_id = $resultset_ref->{data_ref}->[$row]->[$assay_id_index];
     $genotype_id = $resultset_ref->{data_ref}->[$row]->[$genotype_id_index];
+    $plate_id = $resultset_ref->{data_ref}->[$row]->[$plate_id_index];
+    $call_quality = $resultset_ref->{data_ref}->[$row]->[$call_quality_index];
+    $call_date = $resultset_ref->{data_ref}->[$row]->[$call_date_index];
     $samples{$sample_id} = 1;
+    $plate_ids{$plate_id} = $call_date;
 
     $genotype_id =~ s/\./\//;
     $genotype_id="C/C" if ($genotype_id eq "C");
     $genotype_id="A/A" if ($genotype_id eq "A");
     $genotype_id="G/G" if ($genotype_id eq "G");
     $genotype_id="T/T" if ($genotype_id eq "T");
+    #### Implement later?
+    #$genotype_id="$1/$2" if ($genotype_id =~ /^(\w)(\w)$/);
 
     #### Store the genotype with great care about collisions
     #### Does this one exist already?
-    if (exists($data->{$assay_id}->{$sample_id})) {
+    if (exists($data->{$assay_id}->{$sample_id}->{single_call})) {
       #### Is it defined?
-      if (defined($data->{$assay_id}->{$sample_id})) {
-        #### If is the same?
-        if ($data->{$assay_id}->{$sample_id} eq $genotype_id) {
+      if (defined($data->{$assay_id}->{$sample_id}->{single_call})) {
+
+        #### If is the same, then nothing to do
+        if ($data->{$assay_id}->{$sample_id}->{single_call} eq $genotype_id) {
           if ($genotype_id eq '') {
-	    $dup_stats{no_replace_empty_with_empty}++;
+	    $dup_stats{n_replace_empty_with_empty}++;
 	  } else {
-  	    $dup_stats{no_replace_with_same}++;
-	  #print "$sample_id: $genotype_id is same as $data->{$assay_id}->{$sample_id}.... ";
+  	    $dup_stats{n_replace_with_same}++;
+	    #print "$sample_id: $genotype_id is same as ".
+	    #  "$data->{$assay_id}->{$sample_id}.... ";
 	  }
-	} elsif ($data->{$assay_id}->{$sample_id} eq '') {
+
+	#### Else is the previous call empty?
+	} elsif ($data->{$assay_id}->{$sample_id}->{single_call} eq '') {
 	  $dup_stats{replace_an_empty}++;
-          $data->{$assay_id}->{$sample_id} = $genotype_id;
+          $data->{$assay_id}->{$sample_id}->{single_call} = $genotype_id;
+
+	#### Else is the current call empty?
 	} elsif ($genotype_id eq '') {
-	  $dup_stats{no_replace_with_empty}++;
+	  $dup_stats{n_replace_with_empty}++;
+
+	#### Else are they different?
 	} else {
-	  $dup_stats{no_replace_conflict}++;
+	  $dup_stats{n_replace_conflict}++;
 	  #print "$genotype_id is not $data->{$assay_id}->{$sample_id}.... ";
 	}
+
+      #### Else if the previous is undefined, just replace the new value
       } else {
         $dup_stats{replace_an_undef}++;
-        $data->{$assay_id}->{$sample_id} = $genotype_id;
+        $data->{$assay_id}->{$sample_id}->{single_call} = $genotype_id;
       }
 
     #### Else just add it
     } else {
-      $data->{$assay_id}->{$sample_id} = $genotype_id;
+      $data->{$assay_id}->{$sample_id}->{single_call} = $genotype_id;
     }
 
+    #### In any case, keep all calls in the hash as well
+    $data->{$assay_id}->{$sample_id}->{all_calls}->{$plate_id} = $genotype_id;
+
+    #### Add this assay to the list of assays if we don't have it yet
     push(@query_assays,$assay_id) unless ($query_assays[-1] eq $assay_id);
 
   }
 
-  #### Print out some stats
+
+  #### Print out some stats from the collation
   foreach my $element (keys %dup_stats) {
     print "$element = $dup_stats{$element}<BR>\n";
   }
@@ -510,16 +542,18 @@ sub postProcessResultset {
 
 
 
+  #### Determine current number of rows
   my $n_rows = scalar(@{$resultset_ref->{data_ref}});
+
+  #### Create an array to hold the reformulated resultset
   my @new_data_array;
 
-
-  #### Create a has to hold allele_frequencies
+  #### Create a hash to hold allele_frequencies
   my %allele_frequencies;
 
 
-  #### Create new resultset
-  if (0 == 1) {
+  #### If the user asked for Concannon reordering, build that way
+  if ($parameters{display_options} =~ /ConcannonReorder/) {
     foreach my $letter ( 'A','B','C','D','E','F','G' ) {
       for (my $num1 = 1; $num1 <=12; $num1++) {
   	for (my $num2 = 0; $num2 <= 84; $num2+=12) {
@@ -527,11 +561,11 @@ sub postProcessResultset {
   	  my $sample_name = "$letter$fac";
   	  my @row = ($sample_name);
   	  foreach my $assay (@assays) {
-  	    if (defined($data->{$assay}->{$sample_name})) {
-  	      push(@row,$data->{$assay}->{$sample_name});
+  	    if (defined($data->{$assay}->{$sample_name}->{single_call})) {
+  	      push(@row,$data->{$assay}->{$sample_name}->{single_call});
 
   	      #### Add to the allele counters
-  	      my @alleles = split("/",$data->{$assay}->{$sample_name});
+  	      my @alleles = split("/",$data->{$assay}->{$sample_name}->{single_call});
   	      foreach my $allele (@alleles) {
   		$allele_frequencies{$assay}->{$allele}++;
   		$allele_frequencies{$assay}->{total}++;
@@ -552,23 +586,24 @@ sub postProcessResultset {
 
     }
 
-  } else {
+
+  #### If the user asked for Sample vs Assay, build that way
+  } elsif ($parameters{display_options} =~ /SampleVsAssay/) {
     my @samples = sort(keys(%samples));
     foreach my $sample_name (@samples) {
       my @row = ($sample_name);
       foreach my $assay (@assays) {
-    	if (defined($data->{$assay}->{$sample_name})) {
-    	  push(@row,$data->{$assay}->{$sample_name});
+    	if (defined($data->{$assay}->{$sample_name}->{single_call})) {
+    	  push(@row,$data->{$assay}->{$sample_name}->{single_call});
 
     	  #### Add to the allele counters
-    	  my @alleles = split("/",$data->{$assay}->{$sample_name});
+    	  my @alleles = split("/",$data->{$assay}->{$sample_name}->{single_call});
     	  foreach my $allele (@alleles) {
     	    $allele_frequencies{$assay}->{$allele}++;
     	    $allele_frequencies{$assay}->{total}++;
     	  }
 
     	} else {
-    	  #push(@row,'0/0');
     	  push(@row,'');
     	}
 
@@ -591,7 +626,7 @@ sub postProcessResultset {
                              $allele_frequencies{$assay}->{total});
 	if ($newval >= 0.90) {
 	  #$failed_assay{$assay} = $newval;
-	  print "Assay $assay failed.  Major frequency too high: $newval<BR>\n";
+	  print "Assay $assay failed? Major frequency >0.90: $newval<BR>\n";
 	  $n_failed_assays++;
 	}
   	push(@row,$newval);
@@ -605,7 +640,7 @@ sub postProcessResultset {
   print scalar(@assays)." total assays<BR><BR>\n";
 
 
-  #### Fudge the assays
+  #### Fudge the assays by remove 'gi' if it exists within
   my @fudged_assays;
   foreach my $tmp (@assays) {
     $tmp =~ s/gi//;
@@ -613,27 +648,12 @@ sub postProcessResultset {
   }
 
 
-
+  #### Replace existing resultset attributes with reformulated ones
   $resultset_ref->{data_ref} = \@new_data_array;
   $resultset_ref->{column_list_ref} = ['Sample',@fudged_assays];
   $resultset_ref->{precisions_list_ref} = [ (50) x (scalar(@assays)+1) ];
 
 
-  #### Print out some debugging information about the returned resultset:
-  if (0 == 1) {
-    my $HTML = "<br>\n";
-    print "<BR><BR>resultset_ref = $resultset_ref$HTML\n";
-    while ( ($key,$value) = each %{$resultset_ref} ) {
-      printf("%s = %s$HTML\n",$key,$value);
-    }
-    #print "columnlist = ",
-    #  join(" , ",@{$resultset_ref->{column_list_ref}}),"<BR>\n";
-    print "nrows = ",scalar(@{$resultset_ref->{data_ref}}),"$HTML\n";
-    print "rs_set_name=",$rs_params{set_name},"$HTML\n";
- }
-
   return 1;
-
-
 
 } # end postProcessResult
