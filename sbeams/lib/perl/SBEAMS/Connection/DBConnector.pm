@@ -12,146 +12,10 @@ package SBEAMS::Connection::DBConnector;
 
 
 use strict;
-use vars qw($DB_SERVER $DB_DATABASE $DB_USER $DB_PASS $DB_RO_USER $DB_RO_PASS
-            $DB_DRIVER $DB_DSN $DB_TYPE $dbh
-            $BIOSAP_DB $PROTEOMICS_DB $PHENOARRAY_DB $SNP_DB);
 use DBI;
 use SBEAMS::Connection::Settings;
 
-
-###############################################################################
-# DBI Connection Variables
-###############################################################################
-if ( $DBVERSION eq "Dev Branch 1" ) {
-  $DB_SERVER   = 'mssql';
-  $DB_DATABASE = 'sbeamsdev';
-  $DB_USER     = 'sbeams';
-  $DB_PASS     = 'SB444';
-  $DB_DRIVER   = "DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE";
-  $DB_TYPE     = "MS SQL Server";
-  $BIOSAP_DB   = "BioSap.dbo.";
-  $PROTEOMICS_DB = "Proteomics.dbo.";
-  $PHENOARRAY_DB = "PhenoArray.dbo.";
-  $SNP_DB      = "SNP.dbo.";
-
-} elsif ( $DBVERSION eq "Dev Branch 2" ) {
-  $DB_SERVER   = 'mssql';
-  $DB_DATABASE = 'sbeams';
-  $DB_USER     = 'sbeams';
-  $DB_PASS     = 'SB444';
-  $DB_RO_USER  = 'sbeamsro';
-  $DB_RO_PASS  = 'guest';
-  $DB_DRIVER   = "DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE";
-  $DB_TYPE     = "MS SQL Server";
-  $BIOSAP_DB   = "BioSap.dbo.";
-  $PROTEOMICS_DB = "Proteomics.dbo.";
-  $PHENOARRAY_DB = "PhenoArray.dbo.";
-  $SNP_DB      = "SNP.dbo.";
-
-} elsif ( $DBVERSION eq "Dev Branch 3" ) {
-  $DB_SERVER   = 'titan';
-  $DB_DATABASE = 'sbeamsLOCAL1';
-  $DB_USER     = 'sbeams';
-  $DB_PASS     = 'SB444';
-  $DB_RO_USER  = 'sbeamsro';
-  $DB_RO_PASS  = 'guest';
-  $DB_DRIVER   = "DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE";
-  $DB_TYPE     = "MS SQL Server";
-  $BIOSAP_DB   = "BioSap.dbo.";
-  $PROTEOMICS_DB = "ProteomicsSAN1.dbo.";
-  $PHENOARRAY_DB = "PhenoArray.dbo.";
-  $SNP_DB      = "SNP.dbo.";
-
-} elsif ( $DBVERSION eq "Dev Branch 5" ) {
-  $DB_SERVER   = 'mssql';
-  $DB_DATABASE = 'sbeams';
-  $DB_USER     = 'sbeams';
-  $DB_PASS     = 'SB444';
-  $DB_DRIVER   = "DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE";
-  $DB_TYPE     = "MS SQL Server";
-  $BIOSAP_DB   = "BioSap.dbo.";
-  $PROTEOMICS_DB = "Proteomics.dbo.";
-  $PHENOARRAY_DB = "PhenoArray.dbo.";
-  $SNP_DB      = "SNP.dbo.";
-
-} elsif ( $DBVERSION eq "Dev Branch 6" ) {
-  $DB_SERVER   = 'mssql';
-  $DB_DATABASE = 'sbeams';
-  $DB_USER     = 'sbeams';
-  $DB_PASS     = 'SB444';
-  $DB_DRIVER   = "DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE";
-  $DB_TYPE     = "MS SQL Server";
-  $BIOSAP_DB   = "BioSap.dbo.";
-  $PROTEOMICS_DB = "Proteomics.dbo.";
-  $PHENOARRAY_DB = "PhenoArray.dbo.";
-  $SNP_DB      = "SNP.dbo.";
-
-} elsif ( $DBVERSION eq "Dev Branch 7" ) {
-  $DB_SERVER   = 'mssql';
-  $DB_DATABASE = 'sbeams';
-  $DB_USER     = 'sbeams';
-  $DB_PASS     = 'SB444';
-  $DB_DRIVER   = "DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE";
-  $DB_TYPE     = "MS SQL Server";
-  $BIOSAP_DB   = "BioSap.dbo.";
-  $PROTEOMICS_DB = "Proteomics.dbo.";
-  $PHENOARRAY_DB = "PhenoArray.dbo.";
-  $SNP_DB      = "SNP.dbo.";
-
-} elsif ( $DBVERSION eq "Dev Branch 8" ) {
-  $DB_SERVER   = 'mssql';
-  $DB_DATABASE = 'sbeams';
-  $DB_USER     = 'sbeams';
-  $DB_PASS     = 'SB444';
-  $DB_DRIVER   = "DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE";
-  $DB_TYPE     = "MS SQL Server";
-  $BIOSAP_DB   = "BioSap.dbo.";
-  $PROTEOMICS_DB = "Proteomics.dbo.";
-  $PHENOARRAY_DB = "PhenoArray.dbo.";
-  $SNP_DB      = "SNP.dbo.";
-
-} elsif ( $DBVERSION eq "MySQL Dev Branch 1" ) {
-  $DB_SERVER   = 'mysql';
-  $DB_DATABASE = 'sbeams';
-  $DB_USER     = 'sbeams';
-  $DB_PASS     = 'SB444';
-  $DB_DRIVER   = "DBI:mysql:$DB_DATABASE:$DB_SERVER";
-  $DB_TYPE     = "MySQL";
-  $BIOSAP_DB   = "biosap.";
-  $PROTEOMICS_DB = "proteomics.";
-
-} elsif ( $DBVERSION eq "Macrogenics" ) {
-  $DB_SERVER   = 'mssql';
-  $DB_DATABASE = 'MGProteomics';
-  $DB_USER     = 'macrog_rw';
-  $DB_PASS     = 'Rock1441';
-  $DB_RO_USER  = 'macrog_ro';
-  $DB_RO_PASS  = 'RockMD';
-  $DB_DRIVER   = "DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE";
-  $DB_TYPE     = "MS SQL Server";
-  $PROTEOMICS_DB = "MGProteomics.dbo.";
-
-} else {
-  $DB_SERVER   = 'mssql';
-  $DB_DATABASE = 'sbeams';
-  $DB_USER     = 'sbeams';
-  $DB_PASS     = 'SB444';
-  $DB_RO_USER  = 'sbeamsro';
-  $DB_RO_PASS  = 'guest';
-  $DB_DRIVER   = "DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE";
-  $DB_TYPE     = "MS SQL Server";
-  $BIOSAP_DB   = "BioSap.dbo.";
-  $PROTEOMICS_DB = "Proteomics.dbo.";
-  $PHENOARRAY_DB = "PhenoArray.dbo.";
-  $SNP_DB      = "SNP.dbo.";
-}
-
-
-
-###############################################################################
-# Global variables
-###############################################################################
-
+use vars qw($dbh);
 
 
 ###############################################################################
@@ -167,17 +31,17 @@ sub new {
 
 
 ###############################################################################
-# db Connect
+# dbConnect
 #
 # Perform the actual database connection open call via DBI.  This should
 # be database independent, but hasn't been tested with several databases.
-# Some databases may not support the "USE databasename" syntax.
 # This should never be called except by getDBHandle().
 ###############################################################################
 sub dbConnect {
     my $self = shift;
     my %args = @_;
 
+    #### Decode the argument list
     my $connect_read_only = $args{'connect_read_only'} || "";
 
     #### Set error handling attributes
@@ -186,21 +50,39 @@ sub dbConnect {
       RaiseError => 0
     );
 
+
+    #### Get the needed connection variables
+    my $DB_SERVER = $self->getDBServer();
+    my $DB_DATABASE = $self->getDBDatabase();
+    my $DB_USER = $self->getDBUser();
+    my $DB_PASS = _getDBPass();
+    my $DB_RO_USER = $self->getDBROUser();
+    my $DB_RO_PASS = _getDBROPass();
+    my $DB_DRIVER = $self->getDBDriver();
+    $DB_DRIVER = eval "\"$DB_DRIVER\"";
+
+
     #### Try to connect to database
-    my $dbh;
+    my $this_dbh;
     if ($connect_read_only) {
-      $dbh = DBI->connect("$DB_DRIVER","$DB_RO_USER","$DB_RO_PASS",\%error_attr)
+      $this_dbh = DBI->connect($DB_DRIVER,$DB_RO_USER,$DB_RO_PASS,\%error_attr)
         or die "$DBI::errstr";
     } else {
-      $dbh = DBI->connect("$DB_DRIVER","$DB_USER","$DB_PASS",\%error_attr)
+      $this_dbh = DBI->connect($DB_DRIVER,$DB_USER,$DB_PASS,\%error_attr)
         or die "$DBI::errstr";
     }
 
-    #### This should only be used if the database cannot be specified in
-    #### the DSN string
-    #$dbh->do("use $DB_DATABASE") if $DB_DATABASE;
 
-    return $dbh;
+    #### This should only be used if the database cannot be specified in
+    #### the DSN string.  In fact, it can sometimes have a nasty side effect
+    #### if used: if the Perl DBI decides to automatically open a second
+    #### connection (for example to execute a query while an existing
+    #### resultset is open) this bit of code may not be executed for the
+    #### new connection, possibly leading to nasty confusion.
+    #$this_dbh->do("use $DB_DATABASE") if $DB_DATABASE;
+
+
+    return $this_dbh;
 }
 
 
@@ -218,7 +100,7 @@ sub dbDisconnect {
 
 
 ###############################################################################
-# get DB Handle
+# getDBHandle
 #
 # Returns the current database connection handle to be used by any query.
 # If the database handle doesn't yet exist, dbConnect() is called to create
@@ -234,22 +116,22 @@ sub getDBHandle {
 
 
 ###############################################################################
-# get DB Server
+# getDBServer
 #
 # Return the servername of the database
 ###############################################################################
 sub getDBServer {
-    return $DB_SERVER;
+  return $DBCONFIG->{$DBINSTANCE}->{DB_SERVER};
 }
 
 
 ###############################################################################
-# get DB Driver
+# getDBDriver
 #
 # Return the driver name (DSN string) of the database connection.
 ###############################################################################
 sub getDBDriver {
-    return $DB_DRIVER;
+  return $DBCONFIG->{$DBINSTANCE}->{DB_DRIVER};
 }
 
 
@@ -259,7 +141,7 @@ sub getDBDriver {
 # Return the Server Type of the database connection.
 ###############################################################################
 sub getDBType {
-    return $DB_TYPE;
+  return $DBCONFIG->{$DBINSTANCE}->{DB_TYPE};
 }
 
 
@@ -269,7 +151,7 @@ sub getDBType {
 # Return the BIOSAP_DB of the database connection.
 ###############################################################################
 sub getBIOSAP_DB {
-    return $BIOSAP_DB;
+  return $DBCONFIG->{$DBINSTANCE}->{DBPREFIX}->{Biosap};
 }
 
 
@@ -279,7 +161,7 @@ sub getBIOSAP_DB {
 # Return the PROTEOMICS_DB of the database connection.
 ###############################################################################
 sub getPROTEOMICS_DB {
-    return $PROTEOMICS_DB;
+  return $DBCONFIG->{$DBINSTANCE}->{DBPREFIX}->{Proteomics};
 }
 
 
@@ -289,7 +171,7 @@ sub getPROTEOMICS_DB {
 # Return the PHENOARRAY_DB of the database connection.
 ###############################################################################
 sub getPHENOARRAY_DB {
-    return $PHENOARRAY_DB;
+  return $DBCONFIG->{$DBINSTANCE}->{DBPREFIX}->{PhenoArray};
 }
 
 
@@ -299,7 +181,7 @@ sub getPHENOARRAY_DB {
 # Return the SNP_DB of the database connection.
 ###############################################################################
 sub getSNP_DB {
-    return $SNP_DB;
+  return $DBCONFIG->{$DBINSTANCE}->{DBPREFIX}->{SNP};
 }
 
 
@@ -309,17 +191,47 @@ sub getSNP_DB {
 # Return the database name of the connection.
 ###############################################################################
 sub getDBDatabase {
-    return $DB_DATABASE;
+  return $DBCONFIG->{$DBINSTANCE}->{DB_DATABASE};
 }
 
 
 ###############################################################################
-# get DB User
+# getDBUser
 #
 # Return the username used to open the connection to the database.
 ###############################################################################
 sub getDBUser {
-    return $DB_USER;
+  return $DBCONFIG->{$DBINSTANCE}->{DB_USER};
+}
+
+
+###############################################################################
+# _getDBPass
+#
+# Return the password used to open the connection to the database.
+###############################################################################
+sub _getDBPass {
+  return $DBCONFIG->{$DBINSTANCE}->{DB_PASS};
+}
+
+
+###############################################################################
+# getDBROUser
+#
+# Return the username used to open a read-only connection to the database.
+###############################################################################
+sub getDBROUser {
+  return $DBCONFIG->{$DBINSTANCE}->{DB_ROUSER};
+}
+
+
+###############################################################################
+# _getDBROPass
+#
+# Return the password used to open the connection to the database.
+###############################################################################
+sub _getDBROPass {
+  return $DBCONFIG->{$DBINSTANCE}->{DB_RO_PASS};
 }
 
 
@@ -357,8 +269,7 @@ application.
 =item * B<getDBHandle()>
 
     Returns the current database handle (opening a connection if one does
-    not yet exist, connected using the variables set in the DBConnector.pm
-    file. 
+    not yet exist) for a connection defined in the config file.
 
 
 
