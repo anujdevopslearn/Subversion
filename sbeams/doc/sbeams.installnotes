@@ -181,6 +181,18 @@ setenv SBEAMS /local/www/html/dev1/sbeams
 
 cd $SBEAMS/lib/conf
 cp SBEAMS.conf.template SBEAMS.conf
+
+The passwords needed to connect to the database are stored encrypted in the
+SBEAMS.conf file.  You will need to generate the encrypted versions at this
+point.  Run the encryption script as follows:
+
+$SBEAMS/lib/scripts/Core/encryptPasswd.pl DB_PASSWORD
+
+Where DB_PASSWORD is the password to encrypt.  The script will print out a 
+hexadecimal string that you can place in the SBEAMS.conf file as per below.
+You will need passwords for the normal and read_only accounts for this
+installation (by default sbeams and sbeamsro).
+
 edit SBEAMS.conf
 
 Important changes:
@@ -188,14 +200,8 @@ Important changes:
   Apache web server.  This might be accounts like 'apache', 'nobody',
   'httpd', etc.  If you're confounded, try:
   egrep "apache|httpd|nobody" /etc/passwd | sort
-  The number after the first colon is the WWW_UID.  As of version 1.70 there
-  is a potential issue running the update_driver_tables script if the UID of 
-  the user is the same as the WWW_UID.  If your system requires this setting,
-  ( generally because the web server is being run by a non-privileged user) it
-  is suggested you temporarily set the WWW_UID to another value while running 
-  the setup scripts; once run, you can restore the WWW_UID setting.  If the 
-  UIDs are not the same this is not an issue.
-
+  The number after the first colon is the WWW_UID.  
+  
 - Change the CRYPT_KEY to some random strings for your site
 
 - Change HOSTNAME, DBADMIN to reflect your environment
@@ -203,7 +209,8 @@ Important changes:
 - You may ignore CYTOSCAPE_URL for first-time installations
 
 - Change the DB_* settings to reflect the default RDBMS on which the SBEAMS
-  databases will reside and the accounts that will access them
+  databases will reside and the accounts that will access them.  For DB_PASS
+  and DB_RO_PASS, use the encrypted versions generated above.
 
 - Uncomment the DB_DRIVER that matches your RDBMS.  MS SQL Server uses the
   Sybase driver. Do not alter the DB_DRIVER values unles you know what
@@ -414,8 +421,27 @@ Now follow the individual module install notes, e.g.:
 
 $SBEAMS/doc/Proteomics/Proteomics.installnotes
 
+-------------------------------------------------------------------------------
+Troubleshooting:
 
+1) All of the setup and cgi scripts use /usr/local/bin/perl as the interpreter.  If
+your system doesn't have perl installed there, you have can either create a 
+symbolic link from your version of perl to /usr/local/bin, you can install a
+new version of perl at that location, or you can modify the #! lines of any 
+affected files.  If the following commands are run from the base of your sbeams 
+installation they will change the perl from /usr/local/bin/perl to /usr/bin/perl:
 
+find . -name '*.pl' -exec perl -pi -e 's/(\/usr\/)local\/(bin\/perl)/$1$2/' {} \;
+find . -name '*.cgi' -exec perl -pi -e 's/(\/usr\/)local\/(bin\/perl)/$1$2/' {} \;
+
+2) As of version 1.70, there may be a problem if the UID of the user executing the
+script is the same as the WWW_UID.  If your system requires this setting, 
+( generally because the web server is being run by a non-privileged user) it 
+is suggested you temporarily set the WWW_UID to another value while running the
+setup scripts; once run, you can restore the WWW_UID setting.  If the UIDs are 
+not the same this is not an issue.  
+
+3) 
 
 
 
