@@ -1285,14 +1285,11 @@ sub getWorkGroupOptions {
 
   # Forstall undef error messages.
   $args{owner_group_id} ||= 0;
-  $log->warn( "Hey ya'll, current owner is $args{owner_group_id}" );
-  $log->warn( "Hey ya'll, current group is $args{current_group_id}" );
 
   # The default selected group is current owner group else current group.
   my $selected = ( $args{owner_group_id} ) ?  $args{owner_group_id} : 
                                               $args{current_group_id}; 
   
-  $log->warn( "Lets select $selected" );
   my $list = "<SELECT NAME='owner_group_id'>\n";  # Base select list
   my $seen_current = 0;
   my $index;
