@@ -1,0 +1,90 @@
+source_ontology	subject_term_type	subject_term_name	relationship_type	predicate_term_name	object_term_type	object_term_name	object_term_definition
+OntologyOntology	Root	OntologyOntology			Root	OntologyOntology	An ontology of terms used to defined ontologies
+OntologyOntology	Root	OntologyOntology	hasClass		Class	TermType	"The type of the term (e.g., Class, Individual, etc.)"
+OntologyOntology	Class	TermType	hasInstance		Individual	Root	
+OntologyOntology	Class	TermType	hasInstance		Individual	Class	A class represents a concept and is a set with multiple inheritance and properties.
+OntologyOntology	Class	TermType	hasInstance		Individual	Individual	An individual is an instance of one or more classes.
+OntologyOntology	Class	TermType	hasInstance		Individual	Datatype	
+OntologyOntology	Class	TermType	hasInstance		Individual	DatatypeProperty	A property that relates objects to datatype values.
+OntologyOntology	Class	TermType	hasInstance		Individual	ObjectProperty	A property that relates objects to other objects.
+OntologyOntology	Class	TermType	hasInstance		Individual	TransitiveProperty	A property that is transitive. A TransitiveProperty is a subclass of ObjectProperty.
+OntologyOntology	Class	TermType	hasInstance		Individual	UnambiguousProperty	A property that an instance y can only be the value of a Property P for a single instance x.
+OntologyOntology	Class	TermType	hasInstance		Individual	UniqueProperty	A property that can only have one (unique) value y for each instance x.
+OntologyOntology	Class	TermType	hasInstance		Individual	UNKNOWN	UNKNOWN TERM TYPE
+OntologyOntology	Root	OntologyOntology	hasClass		Class	RelationshipType	"The type of relationship between terms (e.g., subClassOf, instanceOf, etc.)"
+OntologyOntology	Class	RelationshipType	hasInstance		Individual	hasClass	
+OntologyOntology	Class	RelationshipType	hasInstance		Individual	hasInstance	
+OntologyOntology	Class	RelationshipType	hasInstance		Individual	hasThing	
+OntologyOntology	Class	RelationshipType	hasInstance		Individual	hasDatatype	
+OntologyOntology	Class	RelationshipType	hasInstance		Individual	subClassOf	
+OntologyOntology	Class	RelationshipType	hasInstance		Individual	oneOf	
+OntologyOntology	Class	RelationshipType	hasInstance		Individual	instanceOf	
+OntologyOntology	Class	RelationshipType	hasInstance		Individual	intersectionOf	
+OntologyOntology	Class	RelationshipType	hasInstance		Individual	unionOf	
+OntologyOntology	Class	RelationshipType	hasInstance		Individual	complementOf	
+OntologyOntology	Class	RelationshipType	hasInstance		Individual	domain	
+
+SBEAMSOntology	Root	SBEAMSOntology			Root	SBEAMSOntology	The ontology developed for use with SBEAMS
+SBEAMSOntology	Root	SBEAMSOntology	hasClass		Class	SBEAMSCore	"Core functionality of SBEAMS including user, project, and permission management and much more.  Individual modules designed for a specific biological datatype are built on top of the core."
+SBEAMSOntology	Class	SBEAMSOntology	hasClass		Class	ProteomicsModule	SBEAMS Module designed for LC-MS/MS proteomics data searched with SEQUEST
+SBEAMSOntology	Class	SBEAMSOntology	hasClass		Class	ImmunostainModule	"SBEAMS module designed for storage and analysis of immunohistochemistry, in situ hybridization, and other gene expression localization experiments"
+SBEAMSOntology	Class	ImmunostainModule	hasClass		Class	Specimen	Whole or part of an individual which is the primary biosource for subsequent processing
+SBEAMSOntology	Class	Specimen	hasClass		Class	SurgicalProcedure	Method by which the specimen is obtained
+SBEAMSOntology	Class	SurgicalProcedure	hasInstance		Individual	Radical prostatectomy	Complete surgical removal of the prostate and seminal vesicles performed for patients with clinically localized prostate cancer. 
+SBEAMSOntology	Class	SurgicalProcedure	hasInstance		Individual	Cystoprostatectomy	"Complete removal of the bladder, prostate, and seminal vesicles. This is most commonly performed for patients with invasive bladder cancer, however, occasionally is performed for patients with advanced prostate cancer. "
+SBEAMSOntology	Class	Specimen	hasClass		Class	ClinicalDiagnosis	Provides the rationale for the surgical procedure
+SBEAMSOntology	Class	ClinicalDiagnosis	hasInstance		Individual	Adenocarcinoma	Carcinoma arising from glandular epithelial cells such as within the prostate.
+SBEAMSOntology	Class	ClinicalDiagnosis	hasInstance		Individual	Transitional cell carcinoma	"Carcinoma arising from transitional epithelium which lines the bladder, ureters, urethra, and the collecting system of the kidneys. "
+
+SBEAMSOntology	Class	ImmunostainModule	hasClass		Class	AssayImage	One imaged location on an Assay
+SBEAMSOntology	Class	AssayImage	hasClass		Class	AssayImageType	"Type of image that is provided (e.g., White light, single channel, composite, etc.)"
+SBEAMSOntology	Class	AssayImageType	hasInstance		Individual	White light	Unfiltered transmitted or reflected light image of the assay
+SBEAMSOntology	Class	AssayImageType	hasInstance		Individual	Single channel	Narrow wavelength filtered light imaging one component of the assay
+SBEAMSOntology	Class	AssayImageType	hasInstance		Individual	Composite	Computer-generated composite image combining two or more images of other type
+
+
+STOP							
+
+
+MISFISHIEOntology							
+
+MO	Root	MGEDOntology					
+MO	Class	MGEDCoreOntology	subClassOf			MGEDOntology	An ontology developed by the Microarray Gene Expression Data (MGED) Society to provide descriptors required for MAGE v.1 documents.
+MO	Class	MGEDExtendedOntology	subClassOf			MGEDOntology	Location for those classes that are not in the Core ontology as they do are not containable in MAGE. It is not yet structured to work with the Core ontology
+MO	Class	Scale	subClassOf			MGEDOntology	"The scale (linear, log10, ln, etc) used to represent the value."
+MO	Class	URI	subClassOf			MGEDOntology	Uniform Resource Identifier
+MO	Class	DataType	subClassOf			MGEDOntology	"Primitive data types found in computing languages such as float, boolean, etc."
+MO	Individual	log_base_2	instanceOf			Scale	"The values presented are logarithm, base 2."
+MO	Individual	log_base_e	instanceOf			Scale	"The values presented are logarithm, base e."
+MO	Individual	log_base_10	instanceOf			Scale	"The values presented are logarithm, base 10."
+MO	Individual	linear_scale	instanceOf			Scale	"The scale is a standard base 10, non logarithmic scale."
+MO	Individual	unscaled	instanceOf			Scale	The values are unordered and have no scale.
+MO	Individual	positive_float	instanceOf			DataType	
+MO	Individual	discrete	instanceOf			DataType	
+MO	Individual	negative_integer	instanceOf			DataType	
+MO	Individual	list_of_integer	instanceOf			DataType	
+MO	Class	DescriptionPackage	subClassOf			MGEDCoreOntology	MAGE package for description of annotations and references to annotations.
+MO	Class	PublicationType	subClassOf			DescriptionPackage	"Controlled terms for descriptors of the type of publication such as those used by Medline (review, book, etc.)."
+MO	Class	OntologyEntry	subClassOf			DescriptionPackage	External (to the MGED ontology) controlled vocabulary or ontology that can be referred such as ICD-9 or Gene Ontology.
+MO	Class	DatabaseEntryType	subClassOf			DescriptionPackage	Controlled set of descriptors for the type of database record such as a protein record (in SWISS-PROT) or a gene object (in SGD).
+MO	Class	Database	subClassOf			DescriptionPackage	Identifiable resource containing data or external ontologies or controlled vocabularies which has uniquely identifiable records.
+MO	Class	BibliographicReference	subClassOf			DescriptionPackage	"A bibliographic reference is a published citation in a journal, book, other format e.g. web resource"
+
+MO	Class	Protocol	hasClass	has_citation	Class	BibliographicReference	"A bibliographic reference is a published citation in a journal, book, other format e.g. web resource"
+MO	Class	Protocol	subClassOf			ProtocolPackage	The MAGE package for protocols.
+MO	Class	Transformation	hasClass	has_protocol	Class	Protocol	Documentation of the set of steps taken in a procedure.
+MO	Class	Water	hasClass	has_treatment	Class	Protocol	Documentation of the set of steps taken in a procedure.
+MO	Class	Preservation	hasClass	has_protocol	Class	Protocol	Documentation of the set of steps taken in a procedure.
+MO	Class	Treatment	hasClass	has_protocol	Class	Protocol	Documentation of the set of steps taken in a procedure.
+MO	Class	Protocol	hasClass	has_type	Class	ProtocolType	A controlled set of terms to provide a descriptor for the type of protocol.
+MO	Class	Protocol	hasClass	has_hardware	Class	Hardware	The machine or instrument used.
+MO	Class	Protocol	hasClass	has_software	Class	Software	The software application used.
+MO	Class	Protocol	hasClass	has_URI	Class	URI	Uniform Resource Identifier
+MO	Class	Protocol	hasThing	text		thing	
+MO	Class	Protocol	hasDatatype	title		string	
+MO	Class	Protocol	hasDatatype	description		string	
+
+MO	Class	BioSequence	subClassOf		Class	BioSequencePackage	MAGE package for biological sequences (biosequence).
+MO	Class	BioSequence	hasClass	has_type	Class	PolymerType	"Controlled terms for descriptors of the type of polymer (RNA, DNA, protein) of the biosequence."
+MO	Class	BioSequence	hasClass	has_type	Class	BioSequenceType	"Controlled terms for descriptors indicating the type of biosequence. Types may be physical (e.g BAC, cDNA clone), or  computational (e.g unigene cluster, consensus)"
+MO	Class	BioSequence	hasClass	has_species	Class	Organism	The genus and species (and subspecies) of the organism from which the biomaterial is derived from.

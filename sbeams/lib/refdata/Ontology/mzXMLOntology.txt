@@ -1,0 +1,155 @@
+source_ontology	subject_term_type	subject_term_name	relationship_type	predicate_term_name	object_term_type	object_term_name	object_term_definition
+
+mzXMLOntology	Root	mzXMLOntology			Root	mzXMLOntology	An ontology developed for use with mzXML documents
+mzXMLOntology	Root	mzXMLOntology	hasClass		Class	msRun	A set of consecutive scans with a mass spectrometer
+mzXMLOntology	Class	msRun	hasClass		Class	msInstrument	The mass spectrometer instrument that generated an msRun
+mzXMLOntology	Class	msInstrument	hasClass		Class	msManufacturer	The name of the manufacturer of the mass spectrometer
+mzXMLOntology	Class	msManufacturer	hasInstance		Individual	ABI / SCIEX	Applied Biosystems/MDS SCIEX Joint Venture
+mzXMLOntology	Class	msManufacturer	hasInstance		Individual	Bruker Daltonics	Bruker Daltonics
+mzXMLOntology	Class	msManufacturer	hasInstance		Individual	IonSpec	IonSpec corporation
+mzXMLOntology	Class	msManufacturer	hasInstance		Individual	Shimadzu	Shimadzu corporation
+mzXMLOntology	Class	msManufacturer	hasInstance		Individual	ThermoFinnigan	ThermoFinnigan from Thermo Electron Corporation
+mzXMLOntology	Class	msManufacturer	hasInstance		Individual	Waters	Waters Corporation
+
+mzXMLOntology	Class	msInstrument	hasClass		Class	msModel	The name of the model of the mass spectrometer
+mzXMLOntology	Class	msModel	hasInstance		Individual	microFlex	Bruker Daltonics microFlex MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	ultraFlex TOF/TOF	Bruker Daltonics ultraFlex TOF/TOF MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	ultraFlex	Bruker Daltonics ultraFlex MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	autoFlex TOF/TOF	Bruker Daltonics autoFlex TOF/TOF MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	autoFlex II	Bruker Daltonics autoFlex II MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	OmniFlex	Bruker Daltonics OminFlex MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	HCTPlus	Bruker Daltonics HCTPlus MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	HCT	Bruker Daltonics HCT MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	esquire6000	Bruker Daltonics esquire6000 MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	esquire4000	Bruker Daltonics esquire4000 MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	APEX IV	Bruker Daltonics APEX IV MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	APEX-Q	Bruker Daltonics APEX-Q MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	BioTOF II	Bruker Daltonics BioTOF II MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	BioTOF Q	Bruker Daltonics BioTOF Q MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	microTOFLC	Bruker Daltonics microTOFLC MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	TEMPUS TOF	ThermoFinnigan TEMPUS TOF MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	ELEMENT2	ThermoFinnigan ELEMENT2 MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	Neptune	ThermoFinnigan NEPTUNE MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	TRACE DSQ	ThermoFinnigan TRACE DSQ MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	Surveyor MSQ	ThermoFinnigan Surveyor MSQ MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	TSQ QUANTUM	ThermoFinnigan TSQ QUANTUM MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	LCQ Classic	ThermoFinnigan LCQ Classic MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	LCQ Deca XP Plus	ThermoFinnigan LCQ Deca XP Plus MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	LCQ Advantage	ThermoFinnigan LCQ Advantage MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	PolarisQ	ThermoFinnigan PolarisQ MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	DELTAplusAdvantage	ThermoFinnigan DELTAplusAdvantage MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	DELTAplusXP	ThermoFinnigan DELTAplusXP MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	MAT253	ThermoFinnigan MAT253 MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	MAT900XP	ThermoFinnigan MAT900XP MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	MAT900XP Trap	ThermoFinnigan MAT900XP Trap MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	MAT95XP	ThermoFinnigan MAT95XP MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	MAT95XP Trap	ThermoFinnigan MAT95XP Trap MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	TRITON	ThermoFinnigan TRITON MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	Q-Tof micro	Waters Q-Tof micro MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	Quattro micro	Waters Quattro micro MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	Quattro UItima	Waters Quattro Uitima MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	GCT	Waters GCT MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	AutoSpec Ultima NT	Waters AutoSpec Ultima NT MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	M@LDI L	Waters M@LDI L MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	M@LDI LR	Waters M@LDI LR MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	Q-Tof Ultima	Waters Q-Tof Ultima MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	IsoPrime	Waters IsoPrime MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	IsoProbe	Waters IsoProbe MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	IsoProbe T	Waters IsoProbe T MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	Platform ICP	Waters Platform ICP MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	NG-5400	Waters NG-5400 MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	API 150EX	Applied Biosystems/MDS SCIEX API 150EX MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	API 150EX Prep	Applied Biosystems/MDS SCIEX API 150EX Prep MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	API 2000	Applied Biosystems/MDS SCIEX API 2000 MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	API 3000	Applied Biosystems/MDS SCIEX API 3000 MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	API 4000	Applied Biosystems/MDS SCIEX API 4000 MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	Proteomics Solution 1	Applied Biosystems/MDS SCIEX Proteomics Solution 1 MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	Q TRAP	Applied Biosystems/MDS SCIEX Q TRAP MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	4000 Q TRAP	Applied Biosystems/MDS SCIEX Q 4000 TRAP MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	QSTAR	Applied Biosystems/MDS SCIEX QSTAR MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	4700 Proteomic Analyzer	Applied Biosystems/MDS SCIEX 4700 Proteomic Analyzer MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	SymBiot I	Applied Biosystems/MDS SCIEX SymBiot I MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	SymBiot XVI	Applied Biosystems/MDS SCIEX SymBiot XVI MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	Voyager-DE PRO	Applied Biosystems/MDS SCIEX Voyager-DE PRO MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	Voyager-DE STR	Applied Biosystems/MDS SCIEX Voyager-DE STR MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	HiResMALDI	IonSpec HiResMALDI MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	HiResESI	IonSpec HiResESI MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	Ultima	IonSpec Ultima MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	Explorer	IonSpec Explorer MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	OMEGA	IonSpec OMEGA MS
+mzXMLOntology	Class	msModel	hasInstance		Individual	OMEGA-2001	IonSpec OMEGA-2001 MS
+
+mzXMLOntology	Class	msInstrument	hasClass		Class	msIonization	Type of ionization mechanism the mass spectrometer uses to produce free flying charged peptides for measurement
+mzXMLOntology	Class	msIonization	hasInstance		Individual	ESI	Electrospray Ionization. Sample droplets are sprayed from a thin needle. The ions in the droplets are desolvated with heat and gas flows.
+mzXMLOntology	Class	msIonization	hasInstance		Individual	MALDI	"Matrix Assisted Laser Desorption Ionization. A chromophore containing matrix absorbs energy from a laser beam, resulting in the vaporization and ionization of the analyte."
+mzXMLOntology	Class	msIonization	hasInstance		Individual	EI	Electron Impact Ionization. Electrons are removed from the analyte molecules by an electron beam passing through the gas phase sample.
+mzXMLOntology	Class	msIonization	hasInstance		Individual	CI	Chemical Ionization. A chemical reagent is reacted with the analyte molecules to form ions.
+mzXMLOntology	Class	msIonization	hasInstance		Individual	FAB	Fast Atom Bombardment. Analyte is extracted from a liquid solution by bombardment with a fast atom beam.
+mzXMLOntology	Class	msIonization	hasInstance		Individual	APCI	"Atmospheric Pressure Ionization. Similar to ESI, but plasma is created at the end of the heated capillary by a corona discharge."
+
+mzXMLOntology	Class	msInstrument	hasClass		Class	msMassAnalyzer	Type of mechanism the mass spectrometer uses to measure the mass-to-charge ratio for peptides
+mzXMLOntology	Class	msMassAnalyzer	hasInstance		Individual	TOF	Time of flight mass analyzer measures the time it takes ions of different masses to flight from the ion source to the detector.
+mzXMLOntology	Class	msMassAnalyzer	hasInstance		Individual	Quadrupole	Quadrupole mass analyzer measures the mass-to-charge ratio by combining DC and RF potentials on the quadrupole rods to let only ions of a selected mass-to-charge ratio pass.
+mzXMLOntology	Class	msMassAnalyzer	hasInstance		Individual	Quadrupole Ion Trap	Quadrupole Ion Trap mass analyzer captures the ions in a three dimensional ion trap and then selectively ejects them by varying the RF and DC potentials.
+mzXMLOntology	Class	msMassAnalyzer	hasInstance		Individual	FT-ICR	Fourier Transform Ion Cyclotron Resonance mass analyzer measure the cyclotron frequency of an ion to determine its mass.
+mzXMLOntology	Class	msMassAnalyzer	hasInstance		Individual	Magnetic Sector	Magnetic Sector mass analyzer measures the mass-to-charge of the ions by bending their trajectory using a magnetic field.
+
+mzXMLOntology	Class	msInstrument	hasClass		Class	msDetector	Type of mechanism the mass spectrometer uses to measure the mass-to-charge ratio for peptides
+mzXMLOntology	Class	msDetector	hasInstance		Individual	Channeltron	"Channeltron type detector. Horn-shaped dynode coated with electron emissive material that creates, when struck by an ion, an avalanche of secondary electrons and finally an current pulse."
+mzXMLOntology	Class	msDetector	hasInstance		Individual	Daly	"Daly detector. Electrons created by a metal knob struck by an ion are accelerated onto a scintillator, whose light is detected by a photomultiplier."
+mzXMLOntology	Class	msDetector	hasInstance		Individual	EMT	Electron Multiplier Tube. A series of biased dynodes ejects secondary electrons when struck by an ion.
+mzXMLOntology	Class	msDetector	hasInstance		Individual	Faraday Cup	Faraday Cup type detector. An electrometer attached to a metal cup in the path of the ions detects the ion-beam current.
+mzXMLOntology	Class	msDetector	hasInstance		Individual	Microchannel plate	"Microchannel plate type detector. Array of glass capillaries coated with electron emissive material that creates, when struck by an ion, an avalanche of secondary electrons and finally an current pulse."
+
+mzXMLOntology	Root	mzXMLOntology	hasClass		Class	plate	A plate onto which peptides are spotted in a matrix for later analysis with a MALDI mass spectrometer
+mzXMLOntology	Class	plate	hasClass		Class	plateManufacturer	Name of the manufacturer of the plate
+mzXMLOntology	Class	plateManufacturer	hasInstance		Individual	ABI / SCIEX	Applied Biosystems/MDS SCIEX Joint Venture
+mzXMLOntology	Class	plateManufacturer	hasInstance		Individual	Bruker Daltonics	Bruker Daltonics
+mzXMLOntology	Class	plateManufacturer	hasInstance		Individual	PerkinElmer	PerkinElmer inc.
+mzXMLOntology	Class	plateManufacturer	hasInstance		Individual	Waters	Waters Corporation
+
+mzXMLOntology	Class	plate	hasClass		Class	plateModel	Model Name of the plate
+mzXMLOntology	Class	plateModel	hasInstance		Individual	Scout MTP	Bruker Daltonics Scout MTP MALDI target plate
+mzXMLOntology	Class	plateModel	hasInstance		Individual	AnchorChip	Bruker Daltonics AnchorChip MALDI target plate
+mzXMLOntology	Class	plateModel	hasInstance		Individual	MALDIchip	PerkinElmer MALDIchip MALDI target plate
+mzXMLOntology	Class	plateModel	hasInstance		Individual	LC-MALDIprep	Waters LC-MALDIprep MALDI target plate
+mzXMLOntology	Class	plateModel	hasInstance		Individual	MassPREP DIOS-targets	Waters MassPREP DIOS-targets MALDI target plate
+mzXMLOntology	Class	plateModel	hasInstance		Individual	PerSeptive	definition ?
+
+mzXMLOntology	Class	plate	hasClass		Class	pattern	Model Name of the plate
+mzXMLOntology	Class	pattern	hasClass		Class	spottingPattern	Pattern in which the spots of peptide matrix are deposited on the plate
+mzXMLOntology	Class	spottingPattern	hasInstance		Individual	parallel	spotting directions between two consecutive rows are parallel
+mzXMLOntology	Class	spottingPattern	hasInstance		Individual	antiparallel	spotting directions between two consecutive rows are antiparallel
+
+mzXMLOntology	Root	mzXMLOntology	hasClass		Class	spot	A deposit of analytes crystalized in matrix onto a plate
+mzXMLOntology	Class	spot	hasClass		Class	maldiMatrix	Chemical used to cristalyze analytes in a spot
+mzXMLOntology	Class	maldiMatrix	hasInstance		Individual	sinapinic acid	Sinapinic acid matrix
+mzXMLOntology	Class	maldiMatrix	hasInstance		Individual	alphaCHCA	4-hydroxycinnamic acid matrix
+mzXMLOntology	Class	maldiMatrix	hasInstance		Individual	"2,5-DHB"	"2,5-dihydroxybenzoic acid matrix"
+mzXMLOntology	Class	maldiMatrix	hasInstance		Individual	sDHB	"Mixture of 2,5-dihydroxybenzoic acid and 5-methoxysalicyclic acid matrix"
+mzXMLOntology	Class	maldiMatrix	hasInstance		Individual	HABA	2-(4-hydroxy-phenylazo)-benzoic acid matrix
+mzXMLOntology	Class	maldiMatrix	hasInstance		Individual	3-HPA	3-hydroxypicolinic acid matrix
+mzXMLOntology	Class	maldiMatrix	hasInstance		Individual	Dithranol	Dithranol matrix
+mzXMLOntology	Class	maldiMatrix	hasInstance		Individual	THAP	"2,4,6 trihydroxy acetophenone matrix"
+mzXMLOntology	Class	maldiMatrix	hasInstance		Individual	IAA	trans-3-indoleacrylic acid matrix
+mzXMLOntology	Class	maldiMatrix	hasInstance		Individual	Picolinic acid	Picolinic acid matrix
+mzXMLOntology	Class	maldiMatrix	hasInstance		Individual	Nicotinic acid	Nicotinic acid matrix
+
+mzXMLOntology	Root	mzXMLOntology	hasClass		Class	robot	A machine designed to spot a sample matrix mixture on a MALDI target plate
+mzXMLOntology	Class	robot	hasClass		Class	robotManufacturer	The name of the manufacturer of the robot
+mzXMLOntology	Class	robotManufacturer	hasInstance		Individual	Bruker Daltonics	Bruker Daltonics
+mzXMLOntology	Class	robotManufacturer	hasInstance		Individual	Proteome Systems	Proteome Systems Ltd.
+mzXMLOntology	Class	robotManufacturer	hasInstance		Individual	Shimadzu Biotech	Shimadzu corporation
+mzXMLOntology	Class	robotManufacturer	hasInstance		Individual	Tecan	Tecan
+mzXMLOntology	Class	robotManufacturer	hasInstance		Individual	Waters	Waters Corporation
+
+mzXMLOntology	Class	robot	hasClass		Class	robotModel	The name of the model of the robot
+mzXMLOntology	Class	robotModel	hasInstance		Individual	Map II	Bruker Daltonics Map II MALDI AutoPrep robot System
+mzXMLOntology	Class	robotModel	hasInstance		Individual	MapII / 8	Bruker Daltonics MapII / 8 MALDI AutoPrep robot System
+mzXMLOntology	Class	robotModel	hasInstance		Individual	Map II / pure	Bruker Daltonics Map II/pure Workstation for Magnetic Bead Purification robot
+mzXMLOntology	Class	robotModel	hasInstance		Individual	PROTEINEER dp	Bruker Daltonics PROTEINEER dp Digest and Prep Workstation
+mzXMLOntology	Class	robotModel	hasInstance		Individual	Xcise	Proteome Systems Xcise robot System
+mzXMLOntology	Class	robotModel	hasInstance		Individual	AccuSpot	Shimadzu Biotech AccuSpot robot System
+mzXMLOntology	Class	robotModel	hasInstance		Individual	Xcise In Gel Digest robot	Shimadzu Xcise In Gel Digest robot
+mzXMLOntology	Class	robotModel	hasInstance		Individual	ProTeam Digest System	Tecan Proteam Digest System
+mzXMLOntology	Class	robotModel	hasInstance		Individual	MassPREP	Waters MassPREP Station
