@@ -1,0 +1,19 @@
+table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
+PH_biosequence_set	BioSequence Set	Phenotype_user	YES	$TBPH_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=PH_biosequence_set	PH_biosequence_set	
+PH_biosequence	BioSequence 	Phenotype_user	YES	$TBPH_BIOSEQUENCE	biosequence_id		ManageTable.cgi?TABLE_NAME=PH_biosequence	PH_biosequence	
+PH_sequence_modification	Sequnce Modification	Phenotype_user	YES	$TBPH_SEQUNCE_MODIFICATION	sequnce_modification_id		ManageTable.cgi?TABLE_NAME=PH_sequence_modification	PH_sequence_modification	
+PH_plasmid	Plasmid	Phenotype_user	YES	$TBPH_PLASMID	plasmid_id		ManageTable.cgi?TABLE_NAME=PH_plasmid	PH_plasmid	
+PH_strain	Strain	Phenotype_user	YES	$TBPH_STRAIN	strain_id		ManageTable.cgi?TABLE_NAME=PH_strain	PH_strain	PH_sequence_modification
+PH_cell_type	Cell Type	Phenotype_user	YES	$TBPH_CELL_TYPE	cell_type_id		ManageTable.cgi?TABLE_NAME=PH_cell_type	"PH_strain,PH_cell_type,PH_mating_type,PH_ploidy,PH_construction_method"	
+PH_mating_type	Mating Type	Phenotype_user	YES	$TBPH_MATING_TYPE	mating_type_id		ManageTable.cgi?TABLE_NAME=PH_mating_type	"PH_strain,PH_cell_type,PH_mating_type,PH_ploidy,PH_construction_method"	
+PH_ploidy	Ploidy	Phenotype_user	YES	$TBPH_PLOIDY	ploidy_id		ManageTable.cgi?TABLE_NAME=PH_ploidy	"PH_strain,PH_cell_type,PH_mating_type,PH_ploidy,PH_construction_method"	
+PH_construction_method	Construction Method	Phenotype_user	YES	$TBPH_CONSTRUCTION_METHOD	construction_method_id		ManageTable.cgi?TABLE_NAME=PH_construction_method	"PH_strain,PH_cell_type,PH_mating_type,PH_ploidy,PH_construction_method"	
+PH_array_quantitation	Array Quantitation	Phenotype_user	YES	$TBPH_ARRAY_QUANTITATION	array_quantitation_id		ManageTable.cgi?TABLE_NAME=PH_array_quantitation	PH_array_quantitation	
+PH_array_quantitation_subset	Array Quantitation Subset	Phenotype_user		$TBPH_ARRAY_QUANTITATION_SUBSET	array_quantitation_subset_id		ManageTable.cgi?TABLE_NAME=PH_array_quantitation_subset	PH_array_quantitation_subset	
+PH_spot_quantitation	Spot Quantitation	Phenotype_user		$TBPH_SPOT_QUANTITATION	spot_id		ManageTable.cgi?TABLE_NAME=PH_spot_quantitation	PH_spot_quantitation	
+PH_plate	Stock Plate	Phenotype_user	YES	$TBPH_PLATE	plate_id		ManageTable.cgi?TABLE_NAME=PH_plate	PH_plate	
+PH_plate_layout	Plate Layout	Phenotype_user		$TBPH_PLATE_LAYOUT	plate_layout_id		ManageTable.cgi?TABLE_NAME=PH_plate_layout	PH_plate_layout	
+PH_condition	Experimental Condition	Phenotype_user	YES	$TBPH_CONDITION	condition_id		ManageTable.cgi?TABLE_NAME=PH_condition	PH_condition	
+PH_condition_repeat	Condition Repeat	Phenotype_user	YES	$TBPH_CONDITION_REPEAT	condition_repeat_id		ManageTable.cgi?TABLE_NAME=PH_condition_repeat	PH_condition_repeat
+PH_strain_behavior	Substrain Behavior	Phenotype_user		$TBPH_SUBSTRAIN_BEHAVIOR	substrain_behavior_id		ManageTable.cgi?TABLE_NAME=PH_strain_behavior	PH_strain_behavior
+PH_BrowseBioSequence	Browse BioSequence	QUERY		NA	NA		BrowseBioSequence.cgi	
