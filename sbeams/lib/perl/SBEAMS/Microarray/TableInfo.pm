@@ -107,39 +107,6 @@ sub returnTableInfo {
 
 
 ###############################################################################
-    if ($table_name eq "protocol") {
-
-        if ($info_key eq "BASICQuery") {
-            return qq~
-		SELECT P.protocol_id,P.name,
-		       SUBSTRING(P.protocol,1,100) AS 'protocol'
-		  FROM $TB_PROTOCOL P
-		  LEFT JOIN $TB_PROTOCOL_TYPE PT
-		       ON (P.protocol_type_id=PT.protocol_type_id)
-		 WHERE P.record_status!='D'
-            ~;
-        }
-
-        if ($info_key eq "FULLQuery") {
-            return qq~
-		SELECT P.protocol_id,P.protocol_type_id,P.other_type,P.name,
-		       SUBSTRING(P.abstract,1,100) AS 'abstract',
-		       SUBSTRING(protocol,1,100) AS 'protocol',
-		       SUBSTRING(P.comment,1,100) AS 'comment',
-		       P.date_created,P.created_by_id,P.date_modified,
-		       P.modified_by_id,P.owner_group_id,P.record_status
-		  FROM $TB_PROTOCOL P
-		  LEFT JOIN $TB_PROTOCOL_TYPE PT
-		       ON (P.protocol_type_id=PT.protocol_type_id)
-		 WHERE P.record_status!='D'
-            ~;
-        }
-
-    }
-
-
-
-###############################################################################
     if ($table_name eq "slide_type") {
 
         if ($info_key eq "BASICQuery") {
