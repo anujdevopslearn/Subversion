@@ -1212,10 +1212,12 @@ sub buildSqlClause
 	$oString =~ s/\,$//;
 	$oString = qq~ sbo.organism_id in (~.$oString.")" if ($oString);
 	
-	
-	my $tString =  join ',',$parameters{Bladder},$parameters{'NProstate'};
-	$tString =~ s/^\,//;
-	$tString =~ s/\,$//;
+  my $tString = '';
+  my $sep = '';
+  for ( 'Bladder', 'NProstate','Prostate adenocarcinoma' ) {
+    $tString .= "$sep $parameters{$_} " if $parameters{$_};
+    $sep = ',' if $tString;
+    }
 	$tString = qq ~tt.tissue_type_id in (~.$tString .")" if ($tString);
 	
 	my $totalClause;	
