@@ -142,7 +142,7 @@ sub display_page_header {
     ~;
 
       $current_work_group_name = $sbeams->getCurrent_work_group_name();
-      if ($current_work_group_name eq "Inkjet" || $current_work_group_name eq "Admin" || 1) {
+      if ($current_work_group_name eq "Inkjet_admin" || $current_work_group_name eq "Admin" || 1) {
        print qq~
 	<tr><td>Arrays Core:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=contact"><nobr>&nbsp;&nbsp;&nbsp;Contacts</nobr></a></td></tr>
@@ -153,7 +153,7 @@ sub display_page_header {
       }
 
       $current_work_group_name = $sbeams->getCurrent_work_group_name();
-      if ($current_work_group_name eq "Inkjet" || $current_work_group_name eq "Admin") {
+      if ($current_work_group_name eq "Inkjet_admin" || $current_work_group_name eq "Admin") {
        print qq~
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IJ_slide_lot"><nobr>&nbsp;&nbsp;&nbsp;Physical Slides</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IJ_array_layout"><nobr>&nbsp;&nbsp;&nbsp;Array Layouts</nobr></a></td></tr>
