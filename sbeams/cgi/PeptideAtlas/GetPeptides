@@ -29,6 +29,7 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
+##use CGI::Carp qw(fatalsToBrowser croak);
 
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
@@ -106,7 +107,7 @@ sub main {
   my %parameters;
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters);
-  #$sbeams->printDebuggingInfo($q);
+# $sbeams->printDebuggingInfo($q);
 
 
   #### Process generic "state" parameters before we start
@@ -132,14 +133,12 @@ sub main {
 sub handle_request {
   my %args = @_;
 
-
   #### Process the arguments list
   my $ref_parameters = $args{'ref_parameters'}
     || die "ref_parameters not passed";
   my %parameters = %{$ref_parameters};
-
-
-  #### Define some generic varibles
+  
+  #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql);
 
 
@@ -148,11 +147,9 @@ sub handle_request {
   my $resultset_ref = \%resultset;
   my (%url_cols,%hidden_cols,%max_widths,$show_sql);
 
-
   #### Read in the standard form values
   my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
   my $TABLE_NAME = $parameters{'QUERY_NAME'};
-
 
   #### Set some specific settings for this program
   my $CATEGORY="Get Peptides";
@@ -160,7 +157,6 @@ sub handle_request {
   ($PROGRAM_FILE_NAME) =
     $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
   my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
-
 
   #### Get the columns and input types for this table/query
   my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
@@ -172,6 +168,7 @@ sub handle_request {
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters,
     columns_ref=>\@columns,input_types_ref=>\%input_types);
+   #$sbeams->printDebuggingInfo($q);
 
 
   #### If the apply action was to recall a previous resultset, do it
@@ -253,7 +250,8 @@ sub handle_request {
 
   #### Build PEPTIDE_NAME constraint
   my $peptide_name_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"P.peptide_name",
+#   constraint_column=>"P.peptide_name",
+    constraint_column=>"P.peptide_accession",
     constraint_type=>"plain_text",
     constraint_name=>"Peptide Name",
     constraint_value=>$parameters{peptide_name_constraint} );
@@ -322,6 +320,21 @@ sub handle_request {
     constraint_value=>$parameters{strand_constraint} );
   return if ($chromosome_clause eq '-1');
 
+  #### Build n_mapped_locations constraint
+  my $n_mapped_locations_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"PI.n_mapped_locations",
+    constraint_type=>"flexible_int",
+    constraint_name=>"n_mapped_locations",
+    constraint_value=>$parameters{n_mapped_locations_constraint} );
+  return if ($n_mapped_locations_clause eq '-1');
+
+  #### Build is_exon_spanning constraint
+  my $is_exon_spanning_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"PI.is_exon_spanning",
+    constraint_type=>"plain_text",
+    constraint_name=>"is_exon_spanning",
+    constraint_value=>$parameters{is_exon_spanning_constraint} );
+  return if ($is_exon_spanning_clause eq '-1');
 
   #### Build BIOSEQUENCE_DESC constraint
   my $biosequence_desc_clause = $sbeams->parseConstraint2SQL(
@@ -380,6 +393,9 @@ sub handle_request {
       ["end_in_chromosome","PM.end_in_chromosome","End Position"],
       ["strand","PM.strand","Strand"],
 
+      ["n_mapped_locations","PI.n_mapped_locations","N Mapped Locations"],
+      ["is_exon_spanning","PI.is_exon_spanning","Spans exons? (Y,N)"],
+
       ["organism_full_name","O.full_name","Organism"],
     );
   }
@@ -400,27 +416,32 @@ sub handle_request {
     column_titles_ref=>\@column_titles
   );
 
-
   #### Define the SQL statement
   $sql = qq~
-	SELECT $limit_clause $columns_clause
-          FROM $TBAT_PEPTIDE_INSTANCE PI
-          LEFT JOIN $TBAT_PEPTIDE_MAPPING PM
-	       ON ( PI.peptide_instance_id = PM.peptide_instance_id )
-         INNER JOIN $TBAT_PEPTIDE P
-	       ON ( PI.peptide_id = P.peptide_id )
-         INNER JOIN $TBAT_ATLAS_BUILD AB
-	       ON ( PI.atlas_build_id = AB.atlas_build_id )
-          LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
-               ON ( AB.biosequence_set_id = BSS.biosequence_set_id )
-          LEFT JOIN $TB_ORGANISM O
-               ON ( BSS.organism_id = O.organism_id )
+     SELECT $limit_clause $columns_clause
+     FROM $TBAT_PEPTIDE_INSTANCE PI
 
-	 INNER JOIN $TBAT_BIOSEQUENCE BS
-	       ON ( PM.matched_biosequence_id = BS.biosequence_id )
-          LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
+     INNER JOIN $TBAT_PEPTIDE P
+     ON ( PI.peptide_id = P.peptide_id )
 
-	 WHERE 1 = 1
+     INNER JOIN $TBAT_ATLAS_BUILD AB
+     ON ( PI.atlas_build_id = AB.atlas_build_id )
+
+     LEFT JOIN $TBAT_BIOSEQUENCE_SET BSS
+     ON ( AB.biosequence_set_id = BSS.biosequence_set_id )
+
+     LEFT JOIN $TB_ORGANISM O
+     ON ( BSS.organism_id = O.organism_id )
+
+     LEFT JOIN $TBAT_PEPTIDE_MAPPING PM
+     ON ( PI.peptide_instance_id = PM.peptide_instance_id )
+
+     LEFT JOIN $TBAT_BIOSEQUENCE BS
+     ON ( PM.matched_biosequence_id = BS.biosequence_id )
+
+     LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
+
+     WHERE 1 = 1
         $atlas_build_clause
 	$biosequence_name_clause
 	$biosequence_gene_name_clause
@@ -432,9 +453,11 @@ sub handle_request {
         $start_in_chromosome_clause
         $end_in_chromosome_clause
         $strand_clause
+        $n_mapped_locations_clause
+        $is_exon_spanning_clause
         $biosequence_desc_clause
 
-        ORDER BY P.peptide_accession,PM.chromosome,PM.start_in_chromosome
+    ORDER BY P.peptide_accession,PM.chromosome,PM.start_in_chromosome
   ~;
 
 
