@@ -22,14 +22,15 @@
 use strict;
 use Getopt::Long;
 use FindBin;
+use Data::Dumper;
 
 use lib "$FindBin::Bin/../../lib/perl";
-use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+use vars qw ($sbeams $sbeamsMOD $prot_exp_obj $q $current_contact_id $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
 
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TabMenu;
@@ -37,12 +38,15 @@ use SBEAMS::Connection::TabMenu;
 use SBEAMS::Proteomics;
 use SBEAMS::Proteomics::Settings;
 use SBEAMS::Proteomics::Tables;
+use SBEAMS::Proteomics::Proteomics_experiment;
+
 
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::Proteomics;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
+$prot_exp_obj = new SBEAMS::Proteomics::Proteomics_experiment;
 
 #use CGI;
 #$q = new CGI;
@@ -83,6 +87,9 @@ if ($DEBUG) {
 ###############################################################################
 # Set Global Variables and execute main()
 ###############################################################################
+my $manage_table_url_samples = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_sample";
+my $add_sample_cgi_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/Add_proteomic_sample.cgi";
+
 main();
 exit(0);
 
@@ -108,7 +115,7 @@ sub main {
   my %parameters;
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters);
-  #$sbeams->printDebuggingInfo($q);
+ #$sbeams->printDebuggingInfo($q);
 
 
   #### Process generic "state" parameters before we start
@@ -242,49 +249,16 @@ sub getCurrentProjectDetails {
   my $ref_parameters = $args{'ref_parameters'}
     || die "ref_parameters not passed";
   my %parameters = %{$ref_parameters};
-
+  my $project_id = $sbeams->getCurrent_project_id();
 
   #### Define some generic varibles
   my ($i,$element,$key,$value,$line,$result,$sql);
   my @rows;
-
+   
   #### Define a buffer for content
   my $content = '';
-
-  #### Get information about the current project from the database
-  $sql = qq~
-	SELECT UC.project_id,P.name,P.project_tag,P.project_status,
-               P.PI_contact_id
-	  FROM $TB_USER_CONTEXT UC
-	 INNER JOIN $TB_PROJECT P ON ( UC.project_id = P.project_id )
-	 WHERE UC.contact_id = '$current_contact_id'
-  ~;
-  @rows = $sbeams->selectSeveralColumns($sql);
-
-  my $project_id = '';
-  my $project_name = 'NONE';
-  my $project_tag = 'NONE';
-  my $project_status = 'N/A';
-  my $PI_contact_id = 0;
-  if (@rows) {
-    ($project_id,$project_name,$project_tag,$project_status,$PI_contact_id) = @{$rows[0]};
-  }
-  my $PI_name = $sbeams->getUsername($PI_contact_id);
-
-  #### Print out some information about this project
-  my $obsolete_content = qq~
-	<H1>Current Project: <A class="h1" HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=$project_id">$project_name</A></H1>
-	<TABLE WIDTH="100%" BORDER=0>
-	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
-	             <TD COLSPAN="2" WIDTH="100%"><B>Status:</B> $project_status</TD></TR>
-	<TR><TD></TD><TD COLSPAN="2"><B>Project Tag:</B> $project_tag</TD></TR>
-	<TR><TD></TD><TD COLSPAN="2"><B>Owner:</B> $PI_name</TD></TR>
-	<TR><TD></TD><TD COLSPAN="2"><B>Access Privileges:</B> <A HREF="$CGI_BASE_DIR/ManageProjectPrivileges">[View/Edit]</A></TD></TR>
-	<TR><TD></TD><TD COLSPAN="2"><B>Experiments:</B>&nbsp;&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi">Full Listing</A>&nbsp;&mdash;&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?expt_format=compact">Compact</A></TD></TR>
-	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD> 
-	                 <TD WIDTH="100%" ALIGN=LEFT>
-  ~;
-
+  
+  
 
   #### If the current user is not the owner, the check that the
   #### user has privilege to access this project
@@ -297,146 +271,24 @@ sub getCurrentProjectDetails {
 
   }
 
-
-  #### Get all the experiments for this project
-  if ($project_id > 0) {
-    $sql = qq~
-	SELECT experiment_id,experiment_tag,experiment_name
-	  FROM $TBPR_PROTEOMICS_EXPERIMENT PE
-	 WHERE project_id = '$project_id'
-	   AND PE.record_status != 'D'
-	 ORDER BY experiment_tag
-    ~;
-    @rows = $sbeams->selectSeveralColumns($sql);
-  } else {
-    @rows = ();
-  }
-
-
+	
+ my @experiment_rows = $prot_exp_obj->get_experiment_info(project_id=>$project_id);#rows
+ my @all_samples_results = $prot_exp_obj->get_sample_info(project_id=>$project_id);
+  
+ 
   #### If there are experiments, display them in one of two formats: compact or full
-  if (@rows) {
+  if (@experiment_rows) {
 
-      if ($parameters{expt_format} eq "compact"){
-#print "the condensed table";
-#tag below with colspan=3 would be better suited as colspan=$#search_batch_rows+1, though expts are -not- sorted by number of search batches at this time
-$content .= qq~
-<TABLE BORDER=1>
-  <tr>
-<th align=left><font color="green">- Experiment Name</font> : Description</th>
-<th nowrap>View/Edit<br/>Record</th>
-<th>Fraction<br/>Data</th>
-<th colspan=4 nowrap><font color="green">Search Batch</font><br/>(SBEAMS number: <font color="blue">High-Probability Peptides</font>&nbsp;--<font color="blue">Annotation</font>)<th>
-</tr>
-    ~;
-      my $search_batch_counter = 0;
-    foreach my $row (@rows) {
-      my ($experiment_id,$experiment_tag,$experiment_name) = @{$row};
-
-      #### Find out what search_batches exist for this experiment
-      $sql = qq~
-	SELECT SB.search_batch_id,SB.search_batch_subdir,BSS.set_tag
-	  FROM $TBPR_SEARCH_BATCH SB
-	 INNER JOIN $TBPR_BIOSEQUENCE_SET BSS
-	       ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
-	 WHERE SB.experiment_id = '$experiment_id'
-	 ORDER BY BSS.set_tag,SB.search_batch_subdir
-      ~;
-      my @search_batch_rows = $sbeams->selectSeveralColumns($sql);
-
-      $search_batch_counter++;
-      if (($search_batch_counter % 2) == 1){
-	  $content .= qq( <TR BGCOLOR="#efefef"> \n);
-      }else{
-	  $content .= qq( <TR> \n);
-      }
-      $content .= qq~
-	<TD NOWRAP>- <font color="green">$experiment_tag:</font> $experiment_name</TD>
-	<TD NOWRAP ALIGN=CENTER><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&experiment_id=$experiment_id">[View/Edit]</A></TD>
-	<TD NOWRAP ALIGN=CENTER><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeFractions?action=QUERYHIDE&QUERY_NAME=PR_SummarizeFractions&experiment_id=$experiment_id">[View]</A></TD>
-      ~;
-
-      foreach my $search_batch_row (@search_batch_rows) {
-        my ($search_batch_id,$search_batch_subdir,$set_tag) = @{$search_batch_row};
-        $content .= qq~
-	  <TD>&nbsp;&nbsp;&nbsp;<font color="green">$set_tag</font> ($search_batch_id:&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizePeptides?action=QUERY&QUERY_NAME=PR_SummarizePeptides&search_batch_id=$search_batch_id&probability_constraint=\%3E.9&n_annotations_constraint=%3E0&sort_order=tABS.row_count%20DESC&display_options=GroupReference&input_form_format=minimum_detail">P&gt;0.9</A>&nbsp;--&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizePeptides?action=QUERY&QUERY_NAME=PR_SummarizePeptides&search_batch_id=$search_batch_id&annotation_status_id=Annot&n_annotations_constraint=%3E0&sort_order=tABS.row_count%20DESC&display_options=GroupReference&input_form_format=minimum_detail">Annot</A>)</TD>
-        ~;
-      }
-
-
-      $content .= qq~
-	</TR>
-      ~;
-    }
-   } else {
-#print the full-size results table
-    foreach my $row (@rows) {
-      my ($experiment_id,$experiment_tag,$experiment_name) = @{$row};
-
-      #### Find out what search_batches exist for this experiment
-      $sql = qq~
-	SELECT SB.search_batch_id,SB.search_batch_subdir,BSS.set_tag
-	  FROM $TBPR_SEARCH_BATCH SB
-	 INNER JOIN $TBPR_BIOSEQUENCE_SET BSS
-	       ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
-	 WHERE SB.experiment_id = '$experiment_id'
-	 ORDER BY BSS.set_tag,SB.search_batch_subdir
-      ~;
-      my @search_batch_rows = $sbeams->selectSeveralColumns($sql);
-#need to issue query for number of MS runs
-$sql = qq~
-SELECT COUNT(*)
-FROM $TBPR_FRACTION
-WHERE experiment_id = '$experiment_id'
-    ~;
-my @count_ms_runs = $sbeams->selectOneColumn($sql);
-
-      $content .= qq~
-<TABLE BORDER=0 CELLPADDING=2 CELLSPACING=0>
-      <TR BGCOLOR="#efefef">
-	<TD NOWRAP COLSPAN=2 WIDTH=300>- <font color="green">$experiment_tag:</font> $experiment_name</TD>
-        <TD NOWRAP ALIGN=CENTER COLSPAN=2 WIDTH=300><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&experiment_id=$experiment_id">[View/Edit Experiment Description]</A></TD>
-     </TR>
-      <TR BGCOLOR="#efefef">
-	  <TD>&nbsp;</TD>
-	<TD NOWRAP COLSPAN=3 ALIGN=LEFT><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeFractions?action=QUERYHIDE&QUERY_NAME=PR_SummarizeFractions&experiment_id=$experiment_id">&nbsp;&nbsp;Number of MS Runs: @count_ms_runs</A></TD>
-      </TR>
-      ~;
-
-      foreach my $search_batch_row (@search_batch_rows) {
-        my ($search_batch_id,$search_batch_subdir,$set_tag) = @{$search_batch_row};
-
-    $sql = qq ~
-      SELECT protein_summary_id
-       FROM $TBPR_SEARCH_BATCH_PROTEIN_SUMMARY
-      WHERE search_batch_id = '$search_batch_id'
-     ~;
-      my @protein_summary_status = $sbeams->selectOneColumn($sql);
-
-        $content .= qq~
-     <TR>
-    <TD>&nbsp;</TD>
-  <TD ALIGN=LEFT>Search batch $search_batch_subdir ($search_batch_id) against <font color="green">[$set_tag]</font></TD>
-<TD ALIGN=CENTER> <A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizePeptides?action=QUERY&QUERY_NAME=PR_SummarizePeptides&search_batch_id=$search_batch_id&probability_constraint=\%3E.9&n_annotations_constraint=%3E0&sort_order=tABS.row_count%20DESC&display_options=GroupReference&input_form_format=minimum_detail">PeptideProphet Summary<br/>(P &gt; 0.9)</A></TD>
-    ~;
-	if (@protein_summary_status){#ProteinProphet annotation is available
-	$content .= qq~ <TD ALIGN=CENTER>ProteinProphet Summary<br/><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseProteinSummary?protein_group_probability_constraint=%3E0.9&QUERY_NAME=PR_BrowseProteinSummary&search_batch_id=$search_batch_id&action=QUERY">View</A>&nbsp; <FONT COLOR="#CCCCCC">[ADD]</FONT></TD> ~;
-    } else { #allow the user to add ProteinProphet annotation
-	$content .= qq~ <TD ALIGN=CENTER>ProteinProphet Summary<br/><FONT COLOR="#CCCCCC">View</FONT>&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/UploadProteinSummary?search_batch_id=$search_batch_id">[ADD]</A></TD> ~;
-    }
-
-$content .= qq~
-</TR>
-    ~;
-      }
-      $content .= qq~
-<TR><TD COLSPAN=3>&nbsp;</TD></TR>
-      ~;
-  }
-
-}
-
-
-  } else {
+	if ($parameters{expt_format} eq "compact"){
+		#make "the condensed table";
+		$content .= $prot_exp_obj->make_compact_experiment_html(exp_results_set_aref => \@experiment_rows);
+  	}else{
+		##make the full-size results table
+   		$content .= make_full_experiment_html(exp_results_set_aref => \@experiment_rows,
+   											 sample_results_set_aref => \@all_samples_results);
+	}
+  
+  }else{
     if ($project_id == -99) {
       $content .= qq~	<TR><TD WIDTH="100%">You do not have access to this project.  Contact the owner of this project if you want to have access.</TD></TR>\n ~;
     } else {
@@ -445,6 +297,8 @@ $content .= qq~
   }
 
 
+		
+
   #### If the current user is the owner of this project, invite the
   #### user to register another experiment
   if ($sbeams->isProjectWritable()) {
@@ -452,14 +306,17 @@ $content .= qq~
         <TR><TD COLSPAN=4><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&ShowEntryForm=1&project_id=$project_id">[Register another experiment]</A></TD></TR>
     ~;
   }
-
-
-  #### Finish the table
+	
+	$content .= make_all_samples_for_project_html(sample_results_set_aref => \@all_samples_results,
+												  project_id => $project_id,
+												  );
+	
+ #### Finish the table 
   $content .= qq~
 	</TABLE></TD></TR>
 	</TABLE>
   ~;
-
+ 
 } # getCurrentProjectDetails
 
 
@@ -509,3 +366,375 @@ sub getMiscLinks {
 } # end getMiscLinks
 
 
+##############################################################################
+# make_option_list
+#
+# Return make little forms showing the samples for a particular experiment
+###############################################################################
+sub make_option_list{
+	my %args = @_;
+	my $all_sample_info_aref     = $args{sample_info};
+	my $samles_per_exp_info_aref = $args{experiment_info}; 
+	my $experiment_id			 = $args{experiment_id};
+	my %seen = ();	
+	my @unique_sample_name = ();
+	
+	#$log->debug(Dumper($all_sample_info_aref));
+##make hash of the samples in this experiment
+	foreach my $exp_sample_info (@{$samles_per_exp_info_aref}){
+		#$log->debug("SAMPLE TAG1 '$exp_sample_info->[1]'");
+		$seen{$exp_sample_info->[0]} = 1;
+	}
+	
+	$log->debug('SEEN', Dumper(\%seen));
+
+##Grab on the sample names not already listed for this experiment
+	foreach my $sample_info (@{$all_sample_info_aref}){
+		push (@unique_sample_name, 	$sample_info) unless exists $seen{$sample_info->[0]}; #remember its a aref that is being entered
+	}
+##Make the option list html		
+	my $html = '';
+	
+	
+	
+	my $html_options = '';
+	$html_options .= "<option></option>"; #Add a blank option to the top of the list so nothing is displayed initally
+	foreach my $sample_info_aref (@unique_sample_name){
+		 my $sample_tag = $sample_info_aref->[1];
+	     my $proteomics_sample_id = $sample_info_aref->[0];
+	    #$log->debug("SAMPLE TAG '$sample_tag'");
+	     $html_options .= "<OPTION VALUE=$proteomics_sample_id>$sample_tag</OPTION>";
+	}
+	
+	$html  = qq~ 
+		  <table border=0>
+		   <tr>
+		     <td>Associate a previous Project sample with this experiment</td>
+		   <tr>
+		    <td>
+			   <FORM ACTION="Add_proteomic_sample.cgi" NAME="AddSample__$experiment_id" TARGET='_blank'>
+			   		<INPUT TYPE="hidden" NAME="experiment_id" VALUE="$experiment_id">
+			   		<INPUT TYPE="hidden" NAME="action" VALUE="Add_sample">
+			   		<SELECT NAME="sample_id" onChange="submitsample(this)">
+						$html_options
+					</SELECT>
+				
+			   </FORM>
+			  </td>
+			</tr>
+		</table>
+			~;
+	#Only return the form if there is data to display
+	$html = @unique_sample_name ?$html: '&nbsp;' ;
+
+	return $html;
+}
+
+
+###############################################################################
+# make_compact_experiment_html
+#
+# Return a block of html to print a compact experimental form
+###############################################################################
+
+sub make_compact_experiment_html {
+	my %args = @_;
+	my $results_set_array_ref = $args{exp_results_set_aref};
+	
+	my @rows = @{$results_set_array_ref};
+
+#tag below with colspan=3 would be better suited as colspan=$#search_batch_rows+1, though expts are -not- sorted by number of search batches at this time
+
+
+my $content .= qq~
+<TABLE BORDER=0>
+  <tr>
+<th align=left><font color="green">- Experiment Name</font> : Description</th>
+<th nowrap>View/Edit<br/>Record</th>
+<th>Fraction<br/>Data</th>
+<th colspan=4 nowrap><font color="green">Search Batch</font><br/>(SBEAMS number: <font color="blue">High-Probability Peptides</font>&nbsp;--<font color="blue">Annotation</font>)<th>
+</tr>
+    ~;
+      my $search_batch_counter = 0;
+    foreach my $row (@rows) {
+      my ($experiment_id,$experiment_tag,$experiment_name) = @{$row};
+
+      #### Find out what search_batches exist for this experiment
+      my $sql = qq~
+	SELECT SB.search_batch_id,SB.search_batch_subdir,BSS.set_tag
+	  FROM $TBPR_SEARCH_BATCH SB
+	 INNER JOIN $TBPR_BIOSEQUENCE_SET BSS
+	       ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
+	 WHERE SB.experiment_id = '$experiment_id'
+	 ORDER BY BSS.set_tag,SB.search_batch_subdir
+      ~;
+      my @search_batch_rows = $sbeams->selectSeveralColumns($sql);
+
+      $search_batch_counter++;
+      if (($search_batch_counter % 2) == 1){
+	  $content .= "<TR BGCOLOR='#efefef'> \n";
+      }else{
+	  $content .= "<TR> \n";
+      }
+      $content .= qq~
+	<TD NOWRAP>- <font color="green">$experiment_tag:</font> $experiment_name</TD>
+	<TD NOWRAP ALIGN=CENTER><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&experiment_id=$experiment_id">[View/Edit]</A></TD>
+	<TD NOWRAP ALIGN=CENTER><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeFractions?action=QUERYHIDE&QUERY_NAME=PR_SummarizeFractions&experiment_id=$experiment_id">[View]</A></TD>
+      ~;
+
+      foreach my $search_batch_row (@search_batch_rows) {
+        my ($search_batch_id,$search_batch_subdir,$set_tag) = @{$search_batch_row};
+        $content .= qq~
+	  <TD>&nbsp;&nbsp;&nbsp;<font color="green">$set_tag</font> ($search_batch_id:&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizePeptides?action=QUERY&QUERY_NAME=PR_SummarizePeptides&search_batch_id=$search_batch_id&probability_constraint=\%3E.9&n_annotations_constraint=%3E0&sort_order=tABS.row_count%20DESC&display_options=GroupReference&input_form_format=minimum_detail">P&gt;0.9</A>&nbsp;--&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizePeptides?action=QUERY&QUERY_NAME=PR_SummarizePeptides&search_batch_id=$search_batch_id&annotation_status_id=Annot&n_annotations_constraint=%3E0&sort_order=tABS.row_count%20DESC&display_options=GroupReference&input_form_format=minimum_detail">Annot</A>)</TD>
+        ~;
+      }
+
+	  $content .= qq~
+      	</TR>
+      ~;
+    }
+	return $content;
+}
+
+
+##############################################################################
+# make_full_experiment_html
+#
+# Return a block of html to print a compact experimental form
+###############################################################################
+
+sub make_full_experiment_html {
+	my ($content);
+	
+	
+	my %args = @_;
+	my $results_set_array_ref = $args{exp_results_set_aref};
+	my $sample_set_array_ref  = $args{sample_results_set_aref};
+	
+	my @rows = @{$results_set_array_ref};
+	my @all_samples_results = @{$sample_set_array_ref};
+	
+	my $project_id = $sbeams->getCurrent_project_id();
+	
+	
+	 foreach my $row (@rows) {
+      my ($experiment_id,$experiment_tag,$experiment_name) = @{$row};
+
+      #### Find out what search_batches exist for this experiment
+    my  $sql = qq~
+	SELECT SB.search_batch_id,SB.search_batch_subdir,BSS.set_tag
+	  FROM $TBPR_SEARCH_BATCH SB
+	 INNER JOIN $TBPR_BIOSEQUENCE_SET BSS
+	       ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
+	 WHERE SB.experiment_id = '$experiment_id'
+	 ORDER BY BSS.set_tag,SB.search_batch_subdir
+      ~;
+      my @search_batch_rows = $sbeams->selectSeveralColumns($sql);
+#need to issue query for number of MS runs
+	  $sql = qq~
+SELECT COUNT(*)
+FROM $TBPR_FRACTION
+WHERE experiment_id = '$experiment_id'
+    ~;
+	my @count_ms_runs = $sbeams->selectOneColumn($sql);
+
+
+##Look for sample information for one expeiment
+	$sql = qq~
+SELECT ps.proteomics_sample_id, ps.sample_tag
+FROM $TBPR_PROTEOMICS_SAMPLE ps
+JOIN $TBPR_EXPERIMENTS_SAMPLES es ON (ps.proteomics_sample_id = es.proteomics_sample_id)
+WHERE es.experiment_id = $experiment_id
+~;
+
+	my @samples_per_exp_results = $sbeams->selectSeveralColumns($sql);
+#	$log->debug(Dumper(\@samples_per_exp_results));
+	
+###collect some html to display the sample info or make a default message with a link to add some info
+	my $sample_info_html = '';
+ 	if (@samples_per_exp_results){
+	   $sample_info_html = "<table border=0>";
+	   foreach my $sample_info_aref (@samples_per_exp_results){
+	      my $sample_tag = $sample_info_aref->[1];
+	      my $proteomics_sample_id = $sample_info_aref->[0];
+	      
+	    #  $log->debug("SAMPLE TAG '$sample_tag' SAMPLE_ID '$proteomics_sample_id'");
+	      $sample_info_html .= qq ~
+	      	<tr>
+	      	  <td >$sample_tag</td>
+	      	  <td >
+	      	    <a href="$manage_table_url_samples&proteomics_sample_id=$proteomics_sample_id&ShowEntryForm=1">Edit/View
+	      	  </td>
+	      	</tr>
+	      ~;
+	   }
+	   
+  ###Provide a drop down to select a sample already entered for this project
+	  
+	   my $sample_option_list_html = make_option_list(sample_info => \@all_samples_results,
+	   												  experiment_info => \@samples_per_exp_results,
+	   												  experiment_id   => $experiment_id);
+	   
+	   $sample_info_html .= qq~
+	   	<TR>
+	   	 <TD>
+		   	$sample_option_list_html
+		 </TD>
+		</TR>
+	  
+	   ~;
+	  
+  ##Provide a link to add a new sample associated with with this experiment
+	    $sample_info_html .= qq ~
+	      <TR>
+	   	   <TD>
+	        <br>
+	  		  <a href="$add_sample_cgi_url?experiment_id=$experiment_id&action=Pick_sample" target='_blank'>View All Proteomic Samples</a>
+	  	   </TD>
+		  </TR>
+	  	</TABLE>
+	  	~;
+	  
+	}else{
+  ##If no samples have been shown for this experiment show some defualt info
+	  my $sample_option_list_html = make_option_list(sample_info => \@all_samples_results,
+	   												 experiment_info => [],
+	   												 experiment_id   => $experiment_id);
+	   												 
+	  $sample_info_html .= $sample_option_list_html;
+	  $sample_info_html .=  "<a href='$add_sample_cgi_url?experiment_id=$experiment_id&action=Pick_sample' target='_blank'>View All Proteomic Samples</a>";
+	}  
+	
+	
+	##Print out the full experiment info
+     $content .= qq~
+<TABLE CLASS='table_setup'>
+     <TR CLASS='rev_gray'>
+	   <TD NOWRAP COLSPAN=2 WIDTH=300>- <font color="white">$experiment_tag</font>: $experiment_name</TD>
+       <TD NOWRAP ALIGN='CENTER' COLSPAN=2 WIDTH=300 ><A CLASS='edit_menuButton' HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&experiment_id=$experiment_id">[View/Edit Experiment Description]</A></TD>
+     </TR>
+     <TR class='grey_bg'>
+	   <TD COLSPAN=2 ALIGN='LEFT'>Sample Information</TD>
+	   <TD COLSPAN=2 ALIGN='CENTER' >$sample_info_html</TD>
+     </TR>	
+
+     <TR class='grey_bg'>
+	  <TD>&nbsp;</TD>
+	  <TD NOWRAP COLSPAN=3 ALIGN='LEFT'>
+	    <A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeFractions?action=QUERYHIDE&QUERY_NAME=PR_SummarizeFractions&experiment_id=$experiment_id">&nbsp;&nbsp;Number of MS Runs: @count_ms_runs</A>
+	  </TD>
+     </TR>
+      ~;
+	
+	  foreach my $search_batch_row (@search_batch_rows) {
+        my ($search_batch_id,$search_batch_subdir,$set_tag) = @{$search_batch_row};
+
+    	$sql = qq ~
+	      SELECT protein_summary_id
+	      FROM $TBPR_SEARCH_BATCH_PROTEIN_SUMMARY
+	      WHERE search_batch_id = '$search_batch_id'
+     	~;
+      	my @protein_summary_status = $sbeams->selectOneColumn($sql);
+
+        $content .= qq~
+	     <TR>
+	    	<TD>&nbsp;</TD>
+	  		<TD ALIGN=LEFT>Search batch $search_batch_subdir ($search_batch_id) against <font color="green">[$set_tag]</font></TD>
+			<TD ALIGN=CENTER> <A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizePeptides?action=QUERY&QUERY_NAME=PR_SummarizePeptides&search_batch_id=$search_batch_id&probability_constraint=\%3E.9&n_annotations_constraint=%3E0&sort_order=tABS.row_count%20DESC&display_options=GroupReference&input_form_format=minimum_detail">PeptideProphet Summary<br/>(P &gt; 0.9)</A></TD>
+     ~;
+		if (@protein_summary_status){#ProteinProphet annotation is available
+			$content .= qq~ <TD ALIGN=CENTER>ProteinProphet Summary<br/><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseProteinSummary?protein_group_probability_constraint=%3E0.9&QUERY_NAME=PR_BrowseProteinSummary&search_batch_id=$search_batch_id&action=QUERY">View</A>&nbsp; <FONT COLOR="#CCCCCC">[ADD]</FONT></TD> ~;
+	    }else{ #allow the user to add ProteinProphet annotation
+		 	$content .= qq~ <TD ALIGN=CENTER>ProteinProphet Summary<br/><FONT COLOR="#CCCCCC">View</FONT>&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/UploadProteinSummary?search_batch_id=$search_batch_id">[ADD]</A></TD> ~;
+	    }
+
+		$content .= qq~
+		</TR>
+		~;
+      }
+        $content .= qq~
+		<TR><TD COLSPAN=3>&nbsp;</TD></TR>
+        ~;
+  }#close foreach looping rows of experiments
+
+
+	return ($content);	
+}#close make_full_experiment_html
+
+##############################################################################
+# make_all_samples_for_project_html
+#
+# Return a block of html to print out all the samples for this project
+###############################################################################
+sub make_all_samples_for_project_html {
+	my ($content);
+	my %args = @_;
+	
+	my $sample_set_array_ref  = $args{sample_results_set_aref};
+	my $project_id = $args{project_id};
+	
+	
+	
+	my $content = '';
+	my @all_samples_results = @{$sample_set_array_ref};
+	##Add in a view for all the samples associated with this project
+	
+	if (@all_samples_results){
+	
+	 $content .= qq~ <TR>
+	   				 <TD colspan=4>
+	   				  <br>
+				      <TABLE class='table_setup'>
+					  <TR>
+					    <TD colspan=3 class='rev_gray'>
+					      <h3>View All Samples for the project</h3>
+					    </TD>
+					  <TR>
+					  <TR class='grey_bg'>
+					    <TH>Count</TH>
+					    <TH>Sample Tag</TH>
+					    <TH>Link</TH>
+					  </TR>
+					
+				~;
+				
+	my $row_count = 1;
+	foreach my $sample_aref (@all_samples_results){
+		my $sample_tag = $sample_aref->[1];
+	    my $proteomics_sample_id = $sample_aref->[0];
+	    $content .= $q->Tr(
+	    		    $q->td({class=>'pad_cell'}, $row_count),
+	    		    $q->td({class=>'pad_cell'}, $sample_tag),
+	    		    $q->td({class=>'pad_cell'}, "<a href='$manage_table_url_samples&ShowEntry_Form=1&proteomics_sample_id=$proteomics_sample_id'>View/Edit Record</a>"),
+	    		    );
+	    $row_count ++;
+	}
+	
+	$content .= qq~ </TABLE>
+				    </TD>
+				   </TR>
+				   <TR>
+				     <TD>
+				       <a href="$manage_table_url_samples&ShowEntryForm=1&project_id=$project_id" target='_blank'>Add New Sample to database</a>
+				   	 </TD>
+				   </TR>
+				 ~;
+	}else{
+		#if no sample print default message
+		$content .= qq~ 
+					<TR>
+					  <TD colspan=4>
+					   <h2>Sorry, No Samples for this project</h2>
+					   <p>Click <a href="$manage_table_url_samples&ShowEntryForm=1&project_id=$project_id" target='_blank'>Here</a>
+					   	  to add some more samples to the database.
+					   </p>
+					  </TD>
+					</TR>
+					
+					~;
+					
+	}
+	return $content;
+}
+
+	
