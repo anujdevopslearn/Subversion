@@ -43,41 +43,41 @@ PS_dbxref	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	
 PS_dbxref	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 PS_dbxref	15	record_status	Record Status	char	1	0	N	N	N							N	N				
 PS_biosequence	1	biosequence_id	BioSequence ID	int	4	0	N		Y							N	N				pkDEFAULT
-PS_biosequence	2	biosequence_set_id	BioSequence Set	int	4	0	N		N	PS_biosequence_set	biosequence_set_id					N	N	Y	BioSequence Set to which this BioSequence belongs		pkDEFAULT
+PS_biosequence	2	biosequence_set_id	BioSequence Set	int	4	0	N		N	PS_biosequence_set	biosequence_set_id					N	N	Y	BioSequence Set to which this BioSequence belongs		
 PS_biosequence	3	biosequence_name	BioSequence Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of this BioSequence (generally everything before the first space in a FASTA file header line)		
 PS_biosequence	4	biosequence_gene_name	BioSequence Gene Name	varchar	255	0	Y		N			Y	text	20		Y	Y	N	Gene name of this BioSequence if applicable.  Most common gene name if applicable		
-PS_biosequence	5	dbxref_id	Database Cross Reference	int	4	0	Y		N	PS_dbxref	dbxref_id					Y	Y	N	Database cross reference for which the accession number applies		pkDEFAULT
+PS_biosequence	5	dbxref_id	Database Cross Reference	int	4	0	Y		N	PS_dbxref	dbxref_id					Y	Y	N	Database cross reference for which the accession number applies		
 PS_biosequence	6	biosequence_accession	BioSequence Accession	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Accession number for this BioSequence in some external database designated above		
 PS_biosequence	7	biosequence_desc	Biosequence Description	varchar	1024	0	N		N			Y	text	40		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)		
 PS_biosequence	8	biosequence_seq	Sequence	text	16	0	Y		N			N	file	40		Y	Y	N	Actual sequence of the BioSequence if known		
 PS_biosequence_property_set	1	biosequence_property_set_id	BioSequence Property Set ID	int	4	0	N		Y							N	N				pkDEFAULT
-PS_biosequence_property_set	2	biosequence_id	BioSequence ID	int	4	0	N		N	PS_biosequence	biosequence_id					N	N	Y	Biosequence to which this Biosequence property set belongs		pkDEFAULT
-PS_biosequence_property_set	3	n_transmembrane_regions	Number of Transmembrane Regions	int	4	0	Y		N							Y	Y	N	Number of transmembrane regions		pkDEFAULT
+PS_biosequence_property_set	2	biosequence_id	BioSequence ID	int	4	0	N		N	PS_biosequence	biosequence_id					N	N	Y	Biosequence to which this Biosequence property set belongs		
+PS_biosequence_property_set	3	n_transmembrane_regions	Number of Transmembrane Regions	int	4	0	Y		N							Y	Y	N	Number of transmembrane regions		
 PS_biosequence_property_set	4	transmembrane_class	Transmembrane Region Class	varchar	10	0	Y		N			Y	text	50		Y	Y	N	"Class of the transmembrane region.  May be 0, TM, A, S, TM_xS based on output from TMHMM and signalP"		
 PS_biosequence_property_set	5	transmembrane_topology	Transmembrane Region Topology	varchar	1024	0	Y		N			Y	text	20		Y	Y	N	Coding of which residues belong in the transmembrane regions		
 PS_domain_match	1	domain_match_id	Domain Match ID	int	4	0	N		Y							N	N				pkDEFAULT
-PS_domain_match	2	biosequence_id	BioSequence	int	4	0	N		N	PS_biosequence	biosequence_id					N	N	N	BioSequence to which this Domain Match belongs		pkDEFAULT
+PS_domain_match	2	biosequence_id	BioSequence	int	4	0	N		N	PS_biosequence	biosequence_id					N	N	N	BioSequence to which this Domain Match belongs		
 PS_domain_match	3	domain_match_index	Domain Match Index	int	4	0	Y		N			Y	text	20		Y	Y	N	Consecutive number index used for some domains		
 PS_domain_match	4	query_start	Query Start	int	4	0	Y		N			Y	text	20		Y	Y	N	Offset of the start of the match in the query sequence		
 PS_domain_match	5	query_end	Query End	int	4	0	Y		N			Y	text	20		Y	Y	N	Offset of the end of the match in the query sequence		
 PS_domain_match	6	query_length	Query Length	int	4	0	Y		N			Y	text	20		Y	Y	N	Length of the match in the query sequence		
 PS_domain_match	7	match_start	Match Start	int	4	0	Y		N			Y	text	20		Y	Y	N	Offset of the start of the match in the matched sequence		
-PS_domain_match	8	match_end	Match End	int	4	0	Y		N			Y	text	20		Y	Y	N	Offset of the start of the match in the matched sequence		
-PS_domain_match	9	match_length	Match Length	int	4	0	Y		N			Y	text	20		Y	Y	N	Length of the match in the matched sequence		
-PS_domain_match	10	overall_probability	Overall Probability	real	4	0	Y		N			Y	text	20		Y	Y	N	Overall probability that one of the hits to this domain is the correct one		
-PS_domain_match	11	best_match_flag	Best Match Flag	char	1	0	Y		N			Y	text	20		Y	Y	N	A flag indicating which of several possible hits is the best		
-PS_domain_match	12	cluster_name	Cluster Name	varchar	50	0	Y		N			Y	text	20		Y	Y	N	Name of the cluster in a cluster of possible identifications for a domain		
-PS_domain_match	13	match_name	Match Name	varchar	255	0	Y		N			Y	text	20		Y	Y	N	Name of the matched sequence		
-PS_domain_match	14	match_accession	Match Accession	varchar	50	0	Y		N			Y	text	20		Y	Y	N	Accession number for this match in some external database designated above		
-PS_domain_match	15	match_biosequence_id	Match BioSequence ID	int	4	0	Y		N	PS_biosequence	biosequence_id					N	N	N	BioSequence to which this Domain Match belongs		pkDEFAULT
-PS_domain_match	16	domain_match_type_id	Domain Match Type	int	4	0	Y		N	PS_domain_match_type	domain_match_type_id	Y	optionlist			Y	Y	N	Type of hit against which this match was identified		pkDEFAULT
-PS_domain_match	17	domain_match_source_id	Domain Match Source	int	4	0	Y		N	PS_domain_match_source	domain_match_source_id	Y	optionlist			Y	Y	N	Data source from which this match was identified		pkDEFAULT
-PS_domain_match	18	probability	Probability	real	4	0	Y		N			Y	text	20		Y	Y	N	Probability (0 <= P <= 1) of the match being the correct one		
-PS_domain_match	19	e_value	Expectation Value	float	8	0	Y		N			Y	text	20		Y	Y	N	Expectation Value indicates approximately how many times this match would occur purely by chance in the given search (i.e. a value of 2 indicates that on average two such hits would occur by chance in such a search.  A low value like .001 indicates a very small chance that the hit occurred by chance)		
-PS_domain_match	20	score	Score	real	4	0	Y		N			Y	text	20		Y	Y	N	Score for the match.  A higher number is better.  Often a bit score like in BLAST		
-PS_domain_match	21	z_score	Z Score	real	4	0	Y		N			Y	text	20		Y	Y	N	Z score indicating likelihood of a false match		
-PS_domain_match	22	second_match_name	Second Match Name	varchar	255	0	Y		N			Y	text	20		Y	Y	N	Name of the matched sequence		
-PS_domain_match	23	second_match_accession	Second Match Accession	varchar	50	0	Y		N			Y	text	20		Y	Y	N	Accession number for this match in some external database designated above		
+PS_domain_match	8	match_end	Match End	int	4	0	Y		N			Y	text	20		Y	Y	N	Offset of the start of the match in the matched sequence
+PS_domain_match	9	match_length	Match Length	int	4	0	Y		N			Y	text	20		Y	Y	N	Length of the match in the matched sequence
+PS_domain_match	10	overall_probability	Overall Probability	real	4	0	Y		N			Y	text	20		Y	Y	N	Overall probability that one of the hits to this domain is the correct one
+PS_domain_match	11	best_match_flag	Best Match Flag	char	1	0	Y		N			Y	text	20		Y	Y	N	A flag indicating which of several possible hits is the best
+PS_domain_match	12	cluster_name	Cluster Name	varchar	50	0	Y		N			Y	text	20		Y	Y	N	Name of the cluster in a cluster of possible identifications for a domain
+PS_domain_match	13	match_name	Match Name	varchar	255	0	Y		N			Y	text	20		Y	Y	N	Name of the matched sequence
+PS_domain_match	14	match_accession	Match Accession	varchar	50	0	Y		N			Y	text	20		Y	Y	N	Accession number for this match in some external database designated above
+PS_domain_match	15	match_biosequence_id	Match BioSequence ID	int	4	0	Y		N	PS_biosequence	biosequence_id					N	N	N	BioSequence to which this Domain Match belongs
+PS_domain_match	16	domain_match_type_id	Domain Match Type	int	4	0	Y		N	PS_domain_match_type	domain_match_type_id	Y	optionlist			Y	Y	N	Type of hit against which this match was identified
+PS_domain_match	17	domain_match_source_id	Domain Match Source	int	4	0	Y		N	PS_domain_match_source	domain_match_source_id	Y	optionlist			Y	Y	N	Data source from which this match was identified
+PS_domain_match	18	probability	Probability	real	4	0	Y		N			Y	text	20		Y	Y	N	Probability (0 <= P <= 1) of the match being the correct one
+PS_domain_match	19	e_value	Expectation Value	float	8	0	Y		N			Y	text	20		Y	Y	N	Expectation Value indicates approximately how many times this match would occur purely by chance in the given search (i.e. a value of 2 indicates that on average two such hits would occur by chance in such a search.  A low value like .001 indicates a very small chance that the hit occurred by chance)
+PS_domain_match	20	score	Score	real	4	0	Y		N			Y	text	20		Y	Y	N	Score for the match.  A higher number is better.  Often a bit score like in BLAST
+PS_domain_match	21	z_score	Z Score	real	4	0	Y		N			Y	text	20		Y	Y	N	Z score indicating likelihood of a false match
+PS_domain_match	22	second_match_name	Second Match Name	varchar	255	0	Y		N			Y	text	20		Y	Y	N	Name of the matched sequence
+PS_domain_match	23	second_match_accession	Second Match Accession	varchar	50	0	Y		N			Y	text	20		Y	Y	N	Accession number for this match in some external database designated above
 PS_domain_match	24	match_annotation	Match Annotation	varchar	255	0	Y		N			Y	text	20		Y	Y	N	Name of the matched sequence		
 PS_domain_match_type	1	domain_match_type_id	Domain Match Type	int	4	0	N		Y							N	N				pkDEFAULT
 PS_domain_match_type	2	domain_match_type_name	Domain Match Type Name	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Name of the type of the match		
