@@ -359,3 +359,4 @@ cached_resultset	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TI
 cached_resultset	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N		
 cached_resultset	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N		
 cached_resultset	13	record_status	Record Status	char	1	0	N	N	N							N	N		
+AdHocQuery	1	query	SQL Query									Y	textarea	15		Y	Y		"Enter your Ad Hoc Query here.  Be careful with your SQL because a bad query and beat up the server, or worse yet, return data that look right but are not what you intended.  Writing direct SQL is generally discouraged unless you know what you're doing.  You have been warned."

@@ -28,3 +28,4 @@ software	Software	infrastructure	YES	$TB_SOFTWARE	software_id		ManageTable.cgi?T
 protocol	Protocol	infrastructure	YES	$TB_PROTOCOL	protocol_id		ManageTable.cgi?TABLE_NAME=protocol	"protocol,hardware,software,protocol_type,hardware_type,software_type"	
 software_hardware_protocol	Software Hardware Protocol Linking	admin	NO	$TB_SOFTWARE_HARDWARE_PROTOCOL	software_hardware_protocol_id				
 cached_resultset	Cached Resultset	rowprivate	YES	$TB_CACHED_RESULTSET	cached_resultset_id		ManageTable.cgi?TABLE_NAME=cached_resultset	cached_resultset	
+AdHocQuery	Ad Hoc Query	QUERY					AdHocQuery		
