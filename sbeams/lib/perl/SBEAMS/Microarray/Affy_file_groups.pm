@@ -173,6 +173,52 @@ sub debug {
 		$self->{_DEBUG};
 	}
 }
+
+###############################################################################
+# check_previous_arrays
+#
+#Check to see if an affy_array exists in the db with the same root_name
+#Give file_root name 
+#return the affy_array_id PK or 0
+###############################################################################
+sub check_previous_arrays {
+	my $method = "check_previous_arrays";
+	
+	my $self = shift;
+	my %args = @_;
+	
+	my $root_name = $args{root_name};
+	
+	
+	
+	my $sql = qq~ SELECT affy_array_id
+			FROM $TBMA_AFFY_ARRAY
+			WHERE file_root like '$root_name'
+		   ~;
+		 
+	my @rows = $sbeams->selectOneColumn($sql);
+	
+	if ($self->verbose() > 0){
+		print "method '$method' SQL '$sql'\n";
+		print "DATA RESULTS '@rows'\n";
+	}
+	
+	
+	if ($rows[0] =~ /^\d/){
+		if ($self->verbose() > 0){
+			print "RETURN ARRAY IN DB PK'$rows[0]'\n";
+		}
+		return $rows[0];		#return the affy_array_id if the record is in the database
+	}else{
+		if ($self->verbose() > 0){
+			print "RETURN '0' ARRAY ROOT NOT IN DB\n";
+		}
+		return "ADD";
+	}
+
+}
+
+
 #######################################################
 # find_affy_array_id
 # 
