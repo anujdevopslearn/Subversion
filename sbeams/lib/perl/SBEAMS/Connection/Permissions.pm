@@ -166,7 +166,7 @@ sub update_user_permissions {
       if (@rows){
 	  $rowdata{'privilege_id'} = $priv_id;
 	  $rowdata_ref= \%rowdata;
-	  $self->updateOrInsertRow(table_name=>'user_project_permission',
+	  $self->updateOrInsertRow(table_name=>$TB_USER_PROJECT_PERMISSION,
 				     rowdata_ref=>$rowdata_ref,
 				     update=>1,
 				     PK_name=>'user_project_permission_id',
@@ -177,7 +177,7 @@ sub update_user_permissions {
 	  $rowdata{'project_id'}   = $current_project_id;
 	  $rowdata{'privilege_id'} = $priv_id;
 	  $rowdata_ref = \%rowdata;
-	  $self->updateOrInsertRow(table_name=>'user_project_permission',
+	  $self->updateOrInsertRow(table_name=>$TB_USER_PROJECT_PERMISSION,
 				     rowdata_ref=>$rowdata_ref,
 				     insert=>1,
 				     PK_name=>'user_project_permission_id',
@@ -237,7 +237,7 @@ sub update_group_permissions {
       if (@rows){
 	  $rowdata{'privilege_id'} = $priv_id;
 	  $rowdata_ref= \%rowdata;
-	  $self->updateOrInsertRow(table_name=>'group_project_permission',
+	  $self->updateOrInsertRow(table_name=>$TB_GROUP_PROJECT_PERMISSION,
 				     rowdata_ref=>$rowdata_ref,
 				     update=>1,
 				     PK_name=>'group_project_permission_id',
@@ -248,7 +248,7 @@ sub update_group_permissions {
 	  $rowdata{'project_id'}   = $current_project_id;
 	  $rowdata{'privilege_id'} = $priv_id;
 	  $rowdata_ref = \%rowdata;
-	  $self->updateOrInsertRow(table_name=>'group_project_permission',
+	  $self->updateOrInsertRow(table_name=>$TB_GROUP_PROJECT_PERMISSION,
 				     rowdata_ref=>$rowdata_ref,
 				     insert=>1,
 				     PK_name=>'group_project_permission_id',
