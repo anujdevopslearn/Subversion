@@ -810,10 +810,10 @@ sub processEntryForm {
     my $n_params_found = $sbeams->parse_input_parameters(
       q=>$q,parameters_ref=>\%parameters,
       columns_ref=>\@columns,input_types_ref=>\%input_types);
-foreach my $key (keys %parameters) 
-{ 
-		print "$key == $parameters{$key}<br>";
-}
+    #foreach my $key (keys %parameters)
+    #  {
+    #  print "$key == $parameters{$key}<br>";
+    #  }
 
     my $apply_action  = $parameters{apply_action};
 
@@ -1066,7 +1066,7 @@ foreach my $key (keys %parameters)
         my %unique_values;
         if (@key_columns) {
           foreach $element (@key_columns) {
-						    $unique_values{$element} = $parameters{$element};
+	    $unique_values{$element} = $parameters{$element};
           }
         }
         my $existing_record = checkForPreexistingRecord(%unique_values);
@@ -1165,7 +1165,7 @@ foreach my $key (keys %parameters)
       foreach $element (keys %input_types) {
         #### Check for any file uploaded data for columns of type file
         if ($input_types{$element} eq "file") {
-				     $filename = "$parameters{$PK_COLUMN_NAME}_$element.dat";
+	  $filename = "$parameters{$PK_COLUMN_NAME}_$element.dat";
           if ($parameters{$element}) {
             print "Uploading data for field '$element' from client file ".
               "'$parameters{$element}'<BR>\n";
@@ -1252,7 +1252,7 @@ sub checkForPreexistingRecord {
 
   foreach $element (keys %unique_values) {
     my $value = $unique_values{$element};
-		print "$value == $element<br>";
+    #print "$value == $element<br>";
     $value =~ s/\'/\'\'/g;
     if ($value eq '') {
       $sql_query .= "
@@ -1498,7 +1498,7 @@ sub getFile {
 
   } else {
     $sbeamsMOD->printPageHeader();
-    print "ERROR: The requested file was not found, not originally uploaded, or is a zero length file.  The data you seek if not there <br>\n";
+    print "ERROR: The requested file was not found, not originally uploaded, or is a zero length file.  The data you seek are not there.<BBR>\n";
   }
 
 
