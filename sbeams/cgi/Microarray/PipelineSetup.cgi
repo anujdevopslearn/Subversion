@@ -289,7 +289,7 @@ SELECT	A.array_id,A.array_name,
    AND AR.record_status != 'D'
    AND A.record_status != 'D'
    AND ASCAN.record_status != 'D'
-   AND AQ.record_status != 'D'
+   --AND AQ.record_status != 'D'
    AND AQ.data_flag != 'BAD'
  ORDER BY A.array_name
      ~;
@@ -1125,9 +1125,7 @@ Instructions:<BR>
   my @project_names = ();
 
   foreach my $element (@rows) {
-    if($element->[6] > 0 || $element->[5] == 10 || $element->[4] == 10){
-      push(@project_names,"$element->[2] ($element->[0])");
-    }
+	push(@project_names,"$element->[2] ($element->[0])");
   }
 
   ## Print OPTIONs.  Make current project the default SELECTED one.
@@ -1654,29 +1652,6 @@ sub send_to_pipeline {
   $arraybot_working_dir =~ s/\"/_/g;
   $arraybot_working_dir =~ s/\./_/g;
 	
-  ## Make Project Directory
-  my $project_dir = "$output_dir/project_id/$project";
-  if ( -d $project_dir ) {
-	print scalar localtime," [$prog_name] Base directory already exists\n<BR>";
-  } else {
-	unless (mkdir($project_dir, 0666)) {
-	  print scalar localtime," [$prog_name] Cannot create project directory $project_dir\n<BR>";
-	}
-  }
-
-
-	## Make Working Directory 
-	my $working_dir = "$output_dir/project_id/$project/$proc_subdir";
-	if ( -d $working_dir ) {
-	  print scalar localtime," [$prog_name] working directory exists -- timestamping this one\n<BR>";
-	  $working_dir .= $timestr;
-	  $arraybot_working_dir .= $timestr;
-	}
-	else{
-	  mkdir($working_dir, 0666);
-	}
-
-
 
 #	## Write Project Comments
 #	print "<BR>Writing project comments to working directory:$proc_subdir</BR>";
