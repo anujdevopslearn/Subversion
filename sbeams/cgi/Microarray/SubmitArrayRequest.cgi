@@ -72,7 +72,7 @@ sub main {
 		#### Read in the default input parameters
 		my %parameters;
 		my $n_params_found = $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
-		#$sbeams->printDebuggingInfo($q);
+		$sbeams->printDebuggingInfo($q);
 
 		#### Process generic "state" parameters before we start
 		$sbeams->processStandardParameters(parameters_ref=>\%parameters);
@@ -481,7 +481,7 @@ sub printEntryForm {
         print qq~
         <INPUT TYPE="checkbox" $checked_flag NAME="ignore_table"
            VALUE="ignore_table">
-           Check here if you don't want to fill out the table below.  You
+           Check here if you don\'t want to fill out the table below.  You
            can skip the table below only if you are just requesting slides
            and intend to do all labeling, hybridization, scanning, etc.
            yourself.
@@ -687,6 +687,8 @@ sub printEntryForm {
 
 
     print qq!
+				 <INPUT TYPE="hidden" NAME="set_current_project_id">
+				 <INPUT TYPE="hidden" NAME="set_current_work_group">
          </FORM>
          <P>
     !;
