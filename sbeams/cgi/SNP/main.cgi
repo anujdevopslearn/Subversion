@@ -73,7 +73,7 @@ sub showMainPage {
 	<BR>
 	This system is still under active development.  Please be
 	patient and report bugs, problems, difficulties, suggestions to
-	<B>edeutsch\@systemsbiology.org</B>.<P>
+	<B>kdeutsch\@systemsbiology.org</B>.<P>
 	<BR>
 	<BR>
 
