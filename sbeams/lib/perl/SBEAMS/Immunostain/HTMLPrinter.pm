@@ -130,7 +130,6 @@ sub display_page_header {
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains"><nobr>&nbsp;&nbsp;&nbsp;Summarize Stains</nobr></a></td></tr>
-        <tr><td><a href="$HTML_BASE_DIR/doc/$SBEAMS_SUBDIR/analysis.html"><nobr>&nbsp;&nbsp;&nbsp;(test format)</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
         <tr><td>Documentation:</td></tr>
@@ -139,6 +138,7 @@ sub display_page_header {
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Other Resources:</td></tr>
 	<tr><td><a href="http://scgap.systemsbiology.net"><nobr>&nbsp;&nbsp;&nbsp;SCGAP Home</nobr></a></td></tr>
+	<tr><td><a href="http://scgap.systemsbiology.net/ontology/"><nobr>&nbsp;&nbsp;&nbsp;Ontology</nobr></a></td></tr>
 	<tr><td><a href="http://www.ncbi.nlm.nih.gov/prow/guide/45277084.htm"><nobr>&nbsp;&nbsp;&nbsp;NCBI PROW<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CD Index</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	</table>
