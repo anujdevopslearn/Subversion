@@ -353,15 +353,15 @@ sub removeAtlas {
       peptide_instance =>'peptide_mapping(C),peptide_instance_sample(C)',
    );
 
-   my $TESTONLY = "0";
-   my $VERBOSE = "4";
+   #my $TESTONLY = "0";
+   $VERBOSE = "1" unless ($VERBOSE);
 
    if ($keep_parent_record) {
       my $result = $sbeams->deleteRecordsAndChildren(
          table_name => 'atlas_build',
          table_child_relationship => \%table_child_relationship,
          delete_PKs => [ $atlas_build_id ],
-         delete_batch => 10000,
+         delete_batch => 1000,
          database => $database_name,
          verbose => $VERBOSE,
          testonly => $TESTONLY,
@@ -372,7 +372,7 @@ sub removeAtlas {
          table_name => 'atlas_build',
          table_child_relationship => \%table_child_relationship,
          delete_PKs => [ $atlas_build_id ],
-         delete_batch => 10000,
+         delete_batch => 1000,
          database => $database_name,
          verbose => $VERBOSE,
          testonly => $TESTONLY,
