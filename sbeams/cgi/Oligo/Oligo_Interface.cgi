@@ -151,12 +151,12 @@ sub handle_request {
 <TABLE>
 <TR>
   <TD ALIGN="LEFT">
-   <a href="http://db.systemsbiology.net/sbeams/cgi/Oligo/Add_Oligo.cgi">Add New Oligo</a>
+   <a href="http://db.systemsbiology.net/sbeams/cgi/Oligo/Add_Oligo.cgi?display_mode=ext_halo">Add New Oligo</a>
   </TD>
 </TR>
 <TR>
   <TD ALIGN="LEFT">
-   <a href="http://db.systemsbiology.net/sbeams/cgi/Oligo/Search_Oligo.cgi">Search Existing Oligos</a>
+   <a href="http://db.systemsbiology.net/sbeams/cgi/Oligo/Search_Oligo.cgi?display_mode=ext_halo">Search Existing Oligos</a>
   </TD>
 </TR>
 </TABLE>
