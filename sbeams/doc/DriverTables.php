@@ -4,11 +4,11 @@
   /* $Id$ */
   $TITLE="SBEAMS Documentation";
 
-  include("includes/style.inc.php");
+  include("../includes/style.inc.php");
 
-  include("includes/header.inc.php");
+  include("../includes/header.inc.php");
 
-  include("includes/navbar.inc.php");
+  include("../includes/navbar.inc.php");
 ?>
 
 
