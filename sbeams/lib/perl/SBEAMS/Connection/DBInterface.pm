@@ -1978,11 +1978,15 @@ sub display_input_form {
            ($parameters{input_form_format} eq 'medium_detail'
                      && $is_display_column eq '2')
          ) {
-        print qq!
-          <TD><INPUT TYPE="hidden" NAME="$column_name"
-           VALUE="$parameters{$column_name}"></TD>
-        !;
-        next;
+
+        #### And finally if there's not a value in it, then hide it
+        unless ($parameters{$column_name}) {
+          print qq!
+            <TD><INPUT TYPE="hidden" NAME="$column_name"
+             VALUE="$parameters{$column_name}"></TD>
+          !;
+          next;
+        }
       }
     }
 
