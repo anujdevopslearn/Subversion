@@ -341,7 +341,7 @@ sub handle_request {
      $bioentity_search_fragment_clause
      $limit_clause->{trailing_limit_clause}
     ~;
-print "$sql <br>";
+
 
   #### Certain types of actions should be passed to links
   my $pass_action = "QUERY";
