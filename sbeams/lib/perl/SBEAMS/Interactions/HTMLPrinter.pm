@@ -196,14 +196,21 @@ sub printJavascriptFunctions {
 }
 
 
-
-
-
 ###############################################################################
 # printPageFooter
 ###############################################################################
 sub printPageFooter {
   my $self = shift;
+  $self->display_page_footer(@_);
+}
+
+
+###############################################################################
+# display_page_footer
+###############################################################################
+sub display_page_footer {
+  my $self = shift;
+  my %args = @_;
 
 
   #### If the output mode is interactive text, display text header
@@ -217,21 +224,6 @@ sub printPageFooter {
   #### If the output mode is not html, then we don't want a header here
   if ($sbeams->output_mode() ne 'html') {
     return;
-  }
-
-
-  #### Allow old-style single argument
-  my $n_params = scalar @_;
-  my %args;
-  #### If the old-style single argument exists, create args hash with it
-  if ($n_params == 1) {
-    my $flag = shift;
-    $args{close_tables} = 'NO';
-    $args{close_tables} = 'YES' if ($flag =~ /CloseTables/);
-    $args{display_footer} = 'NO';
-    $args{display_footer} = 'YES' if ($flag =~ /Footer/);
-  } else {
-    %args = @_;
   }
 
 
@@ -266,6 +258,8 @@ sub printPageFooter {
   }
 
 }
+
+
 
 
 
