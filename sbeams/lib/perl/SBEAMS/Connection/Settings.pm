@@ -161,6 +161,8 @@ if ( $SBEAMS_INSTANCE =~ /\/dev1\// ) {
   $HTML_BASE_DIR          = '/macrogenics/sbeams';
   $PHYSICAL_BASE_DIR      = "/net/dblocal/www/html/macrogenics/sbeams";
   $UPLOAD_DIR             = "/net/dblocal/data/macrogenics/sbeams";
+  $DBPREFIX{Core}         = 'MGProteomics.dbo.';
+  $DBPREFIX{Proteomics}   = 'MGProteomics.dbo.';
 
 } else {
   $DBVERSION              = '<FONT COLOR=red>Primary</FONT>';

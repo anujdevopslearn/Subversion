@@ -10,8 +10,11 @@ package SBEAMS::Connection::Tables;
 #
 ###############################################################################
 
-
 use strict;
+
+use SBEAMS::Connection::Settings;
+
+
 use vars qw(@ISA @EXPORT 
     $TB_USER_LOGIN
     $TB_WORK_GROUP
@@ -71,7 +74,7 @@ $TB_CONTACT_TYPE        = 'contact_type';
 $TB_ORGANIZATION        = 'organization';
 $TB_PROJECT             = 'project';
 
-$TB_DBXREF              = 'proteomics.dbo.dbxref';
+$TB_DBXREF              = $DBPREFIX{Proteomics}.'dbxref';
 
 
 $TB_TABLE_COLUMN        = 'table_column';
