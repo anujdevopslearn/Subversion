@@ -41,7 +41,7 @@ $q = CGI->new();
 ###############################################################################
 $PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
-Usage: $PROG_NAME [OPTIONS] biosequence_file biosequence_set_name
+Usage: $PROG_NAME [OPTIONS]
 Options:
   --verbose n         Set verbosity level.  default is 0
   --quiet             Set flag to print nothing at all except errors
