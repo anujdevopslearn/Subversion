@@ -2604,7 +2604,7 @@ sub build_SQL_columns_list {
   foreach $element (@{$column_array_ref}) {
     $columns_clause .= "," if ($columns_clause);
     $columns_clause .= qq ~
-           $element->[1] AS '$element->[0]'~;
+           $element->[1] AS "$element->[0]"~;
     $colnameidx_ref->{$element->[0]} = $i;
     push(@{$column_titles_ref},$element->[2]);
     $i++;
