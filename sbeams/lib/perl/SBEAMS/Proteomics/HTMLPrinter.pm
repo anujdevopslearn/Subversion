@@ -137,6 +137,7 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi"><nobr>&nbsp;&nbsp;&nbsp;My Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project"<nobr>&nbsp;&nbsp;&nbsp;Projects</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment"><nobr>&nbsp;&nbsp;&nbsp;Experiments</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_sample"><nobr>&nbsp;&nbsp;&nbsp;Sample</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_publication"><nobr>&nbsp;&nbsp;&nbsp;Publications</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
@@ -224,11 +225,77 @@ sub printJavascriptFunctions {
     print qq~
 	<SCRIPT LANGUAGE="JavaScript">
 	<!--
+	picked=new Array(); // global array to remember selected items
+	curEmpty=0;       // pointer to first empty location in output
+	maxEntries =1;    // global to only allow one sample to be entered
+	
+	function add2list(sourceID,targetID) {
+		source=document.getElementById(sourceID);
+		target=document.getElementById(targetID);
+		maxItems=source.options.length;
+		//alert('MAX ITEMS'+ maxItems + "Source" + " " + source);
+		for (i=0;i<maxItems;i++) {
+  			if (source.options[i].selected==true && picked[i]!=true && curEmpty < maxEntries) {
+     			target.options[curEmpty].text  = source.options[i].text;
+     			target.options[curEmpty].value = source.options[i].value;
+     			target.options[curEmpty].selected = true;
+     			picked[i]=true; curEmpty++;
+     		} 
+     	} 
+     }
+	
+	function removefromlist(sourceID,targetID) {
+		source=document.getElementById(sourceID);
+		target=document.getElementById(targetID);
+		maxItems=source.options.length;
+		//alert('MAX ITEMS'+ maxItems + "Source \\n" + source + "\\n" + "CUREMPTY" + " " + curEmpty);
+		for (i=0;i<maxItems;i++) {
+  			if (target.options[i].selected==true ) {
+     			target.options[i].text='';
+     		picked=new Array(); curEmpty=0;
+     		} 
+     	} 
+     }
+		
 
-	function refreshDocument() {
-            //confirm( "apply_action ="+document.MainForm.apply_action.options[0].selected+"=");
-            document.MainForm.apply_action_hidden.value = "REFRESH";
-            document.MainForm.action.value = "REFRESH";
+	function submitsample(inputobj) {
+		var currentform = inputobj.form;
+		var exp_id = currentform.experiment_id.value;
+		var form_name = currentform.name
+		var blanksource_list = true;
+		// Return the array position for the option that was selected
+		var current_selected_number = currentform.sample_id.selectedIndex;
+		if (! current_selected_number ){
+			//For some reason the added to select list is not coming through so check for any entries 
+			//we will assume that it is the only one being given so it should be in the option list array at 0
+			current_selected_number = 0;
+			//alert("DEFAULT TO " +currentform.sample_id.options[current_selected_number].text);
+			// Hack to prevent values from being blanked on the form to select samples from all samples page.
+			blanksource_list = false; 
+		}
+		//Grab the value of the option value that was selected
+		var current_selection  = currentform.sample_id.options[current_selected_number].value;
+		var isselected = currentform.sample_id.options[current_selected_number].selected
+		//alert("DEBUG INFO\\n" +  form_name + " *  "+exp_id + " **  " + current_selected_number + " " +current_selection  + "\\nIS SELECTED " +isselected   );           
+		if (current_selection > 0){
+	     	
+	     currentform.submit();
+	     
+	     //Blank out the values so they cannot be used again, only appropriate on the main page
+	     if (blanksource_list == true){
+	     	currentform.sample_id.options[current_selected_number] = null;
+	     	//refresh the window
+	     	window.location = window.location;
+	     }
+	    }else{
+	    	alert("There was no Sample Selected");
+	    }
+	} 
+	
+		function refreshDocument() {
+	    //confirm( "apply_action ="+document.MainForm.apply_action.options[0].selected+"=");
+        document.MainForm.apply_action_hidden.value = "REFRESH";
+        document.MainForm.action.value = "REFRESH";
 	    document.MainForm.submit();
 	} // end refreshDocument
 
