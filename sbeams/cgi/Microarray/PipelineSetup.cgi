@@ -63,7 +63,7 @@ sub main {
   #### Read in the default input parameters
   my %parameters;
   my $n_params_found = $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
-  #$sbeams->printDebuggingInfo($q);
+  $sbeams->printDebuggingInfo($q);
   
   #### Process generic "state" parameters before we start
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
@@ -1334,7 +1334,7 @@ SELECT	A.array_name,
 	  my $rep_file = $quantitation_file;
 	  $rep_file =~ s(^.*/)();				
 	  $rep_file =~ s(\..+)(\.rep);	
-	  $preprocess_commands .= "#PREPROCESS\n".
+	  $preprocess_commands = "#PREPROCESS\n".
 		"file_name = $quantitation_file\n".
 		"map_file = $key_file\n".
 		"output_file = $rep_file\n".
