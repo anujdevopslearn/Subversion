@@ -404,6 +404,10 @@ sub handle_request {
         $second_peptide_clause .= "   AND PP.is_unique = 'Y'";
       }
 
+      if ( $parameters{peptide_options} =~ /IsNotUnique/ ) {
+        $second_peptide_clause .= "   AND PP.is_unique = 'N'";
+      }
+
     }
 
   }
