@@ -1098,11 +1098,11 @@ sub processEntryForm {
         # Build the SQL statement
         $sql_query = qq!
  		INSERT INTO $DB_TABLE_NAME
-		  ($query_part1 created_by_id,modified_by_id,
-		   owner_group_id,record_status)
+		  ($query_part1 created_by_id,date_created,date_modified,
+			 modified_by_id,owner_group_id,record_status)
 		VALUES
-		  ($query_part2 $current_contact_id, $current_contact_id,
- 		  $current_work_group_id, '$parameters{record_status}')
+		  ($query_part2 $current_contact_id,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,
+			 $current_contact_id,$current_work_group_id, '$parameters{record_status}')
         !;
 
     }
@@ -1114,7 +1114,6 @@ sub processEntryForm {
       action => $apply_action,
       parameters_ref => \%parameters,
     );
-
 
     # Execute the SQL statement extract status and PK from result
     @returned_information = $sbeams->applySqlChange(
