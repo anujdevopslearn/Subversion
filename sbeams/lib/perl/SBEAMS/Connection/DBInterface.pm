@@ -18,6 +18,7 @@ use DBI;
 use POSIX;
 use Data::Dumper;
 use URI::Escape;
+use Storable;
 
 
 #use lib "/net/db/src/CPAN/Data-ShowTable-3.3a/blib/lib";
@@ -1511,15 +1512,16 @@ sub readResultSet {
 
 
     #### Read in the resultset
-    $indata = "";
+    #$indata = "";
     $infile = "$PHYSICAL_BASE_DIR/tmp/queries/${resultset_file}.resultset";
-    open(INFILE,"$infile") || die "Cannot open $infile\n";
-    while (<INFILE>) { $indata .= $_; }
-    close(INFILE);
+    %{$resultset_ref} = %{retrieve($infile)};
+    #open(INFILE,"$infile") || die "Cannot open $infile\n";
+    #while (<INFILE>) { $indata .= $_; }
+    #close(INFILE);
 
     #### eval the dump
-    eval $indata;
-    %{$resultset_ref} = %{$VAR1};
+    #eval $indata;
+    #%{$resultset_ref} = %{$VAR1};
 
 
     return 1;
@@ -1563,9 +1565,11 @@ sub writeResultSet {
 
     #### Write out the resultset
     $outfile = "$PHYSICAL_BASE_DIR/tmp/queries/${resultset_file}.resultset";
-    open(OUTFILE,">$outfile") || die "Cannot open $outfile\n";
-    printf OUTFILE Data::Dumper->Dump( [$resultset_ref] );
-    close(OUTFILE);
+    store($resultset_ref,$outfile);
+    #open(OUTFILE,">$outfile") || die "Cannot open $outfile\n";
+    #$Data::Dumper::Indent = 0;
+    #printf OUTFILE Data::Dumper->Dump( [$resultset_ref] );
+    #close(OUTFILE);
 
 
     return 1;
