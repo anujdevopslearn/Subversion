@@ -27,7 +27,7 @@ use FindBin;
 use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
-             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME 
              @MENU_OPTIONS);
 
 use SBEAMS::Connection qw($q);
@@ -139,7 +139,7 @@ sub handle_request {
     || die "ref_parameters not passed";
   my %parameters = %{$ref_parameters};
 
-
+ 
   #### Define some generic varibles
   my ($i,$element,$key,$value,$line,$result,$sql);
 
@@ -218,7 +218,24 @@ sub handle_request {
 
   #########################################################################
   #### Process all the constraints
-
+  
+  #build the interaction detail constraint
+  # 1 = intra
+  # 2 = inter
+  # 3 = all
+   my $detailedClause; 
+   if ($parameters{otherID} == 1)
+   {
+     $detailedClause = " AND (I.while_member_of_bioentity1_id is not  NULL  AND I.while_member_of_bioentity2_id is not NULL)";
+   }
+   elsif ($parameters{otherID} == 2)
+   {
+     $detailedClause = "AND (I.while_member_of_bioentity1_id is  NULL  AND I.while_member_of_bioentity2_id is NULL)";
+  }
+  
+  
+  
+  
   #### Build PROJECT_ID constraint
   my $project_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"IG.project_id",
@@ -437,6 +454,7 @@ sub handle_request {
 			LEFT JOIN $TBIN_PUBLICATION PUB
 					 ON (I.publication_id = PUB.publication_id) 
      WHERE 1 = 1
+
        AND I.record_status != 'D'
        AND ( BE1.record_status != 'D' OR BE1.record_status IS NULL )
        AND ( BE2.record_status != 'D' OR BE2.record_status IS NULL )
@@ -446,16 +464,19 @@ sub handle_request {
        AND ( BEM2.record_status != 'D' OR BEM2.record_status IS NULL )
        AND ( RF1.record_status != 'D' OR RF1.record_status IS NULL )
        AND ( RF2.record_status != 'D' OR RF2.record_status IS NULL )
+     
      $project_clause
      $organism_clause
      $interaction_group_clause
      $bioentity_clause
      $bioentity_common_name_clause
      $interaction_type_clause
+     $detailedClause
      $limit_clause->{trailing_limit_clause}
     ~;
 
-
+  #AND $TBIN_INTERACTION.WHILE_MEMBER_OF_BIOENTITY1_ID IS NULL AND 
+     #   $TBIN_INTERACTION.WHILE_MEMBER_OF_BIOENTITY2_ID IS NUL
   #### Certain types of actions should be passed to links
   my $pass_action = "QUERY";
   $pass_action = $apply_action if ($apply_action =~ /QUERY/i);
@@ -589,8 +610,12 @@ sub handle_request {
 ###############################################################################
 sub evalSQL {
   my $sql = shift;
-
+print "<br>$sql<br>";
+  print  eval "\"$sql\"";
+  if ($@)
+  {
+    print "$@";
+  }
   return eval "\"$sql\"";
-
 } # end evalSQL
 
