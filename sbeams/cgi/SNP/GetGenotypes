@@ -849,6 +849,8 @@ sub postProcessResultset {
     	  }
 
 	  if ($all_calls_final->{n_calls} > 0) {
+            #print "$all_calls_final->{call_final_quality}\n<BR>";
+	    next if (($parameters{display_options} =~ /ConflictOnly/) && $all_calls_final->{call_consistency} eq "OK");
 	    push(@new_data_array,\@newrow);
 	  } else {
 	    $empty_rows++;
@@ -1112,6 +1114,9 @@ sub postProcessResultset {
 	  #### criterion major allele <= 1-minor allele threshold because
 	  #### there's only on major allele but possibly more than one minor)
 	  my $threshold = 0.10;
+	  if (defined $parameters{minor_allele_limit}) {
+            $threshold = $parameters{minor_allele_limit};
+	  }
 	  if ($allele_frequencies{$sorted_alleles[0]} <= (1 - $threshold)) {
 	    push(@newrowtmp,undef);
 	  } else {
