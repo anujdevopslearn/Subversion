@@ -108,7 +108,6 @@ sub main {
     my $n_params_found = $sbeams->parse_input_parameters(
         q=>$q,
         parameters_ref=>\%parameters);
-    #$sbeams->printDebuggingInfo($q);
 
 
     ##xxxxx tab menu info here until moved into sep. module
@@ -135,6 +134,13 @@ sub main {
     }
 
 
+    ## get project_id to send to HTMLPrinter display
+    my $project_id = $sbeamsMOD->getProjectID(
+        atlas_build_name => $parameters{atlasName},
+        atlas_build_id => $parameters{atlasbuild_id}
+        );
+
+
     #### Process generic "state" parameters before we start
     $sbeams->processStandardParameters(parameters_ref=>\%parameters);
     #$sbeams->printDebuggingInfo($q);
@@ -146,7 +152,7 @@ sub main {
 
     } else {
 
-        $sbeamsMOD->display_page_header();
+        $sbeamsMOD->display_page_header(project_id => $project_id);
 
         handle_request(ref_parameters=>\%parameters);
 
@@ -174,22 +180,15 @@ sub handle_request {
 
 
     ## hard coding tab menu here...someday should be moved into separate module in this directory
-    my $tabs = "";
 
-    if ($parameters{'_tab'}) {
-
-        $tabs = "?_tab=" . $parameters{'_tab'};
-
-        $PROG_NAME .= $tabs;
-
-        #$sbeams->printUserContext();
+    $PROG_NAME .= "?_tab=2";
 
     print <<"    END";
         <BR>
     END
 
-        # Create new tabmenu item.  This may be a $sbeams object method in the future.
-        my $tabmenu =
+    # Create new tabmenu item.  This may be a $sbeams object method in the future.
+    my $tabmenu =
             SBEAMS::Connection::TabMenu->new( cgi => $q,
                                           activeColor => 'ffcc99',
                                           inactiveColor   => 'cccccc',
@@ -201,26 +200,31 @@ sub handle_request {
                                           #isSticky => 0, # If true, pass thru cgi params 
                                           # boxContent => 0, # If true draw line around content
                                           # labels => \@labels # Will make one tab per $lab (@labels)
-        );
+                                          # _tabIndex => 0,
+                                          #_tabs => [ 'placeholder' ]
 
-        $tabmenu->addTab( label => 'Browse Peptides',
+    );
+
+    $tabmenu->addTab( label => 'Browse Peptides',
                       helptext => 'Multi-constraint browsing of PeptideAtlas',
                       URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides" );
 
-        $tabmenu->addTab( label => 'Get Peptide',
+    $tabmenu->addTab( label => 'Get Peptide',
                       helptext => 'Look-up info on a peptide by sequence or name',
                       URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide"
                       );
 
-        $tabmenu->addTab( label => 'Browse Proteins',
+    $tabmenu->addTab( label => 'Browse Proteins',
                       helptext => 'Not implemented yet',
                       URL => "$CGI_BASE_DIR/PeptideAtlas/main.cgi"
                       );
 
-        $tabmenu->addTab( label => 'Get Protein',
+    $tabmenu->addTab( label => 'Get Protein',
                       helptext => 'Not implemented yet',
                       URL => "$CGI_BASE_DIR/PeptideAtlas/main.cgi"
                       );
+
+    $tabmenu->setCurrentTab( currtab => '2' );
 
     my $content;
 
@@ -237,8 +241,6 @@ sub handle_request {
 
     print "$tabmenu";
 
-
-    }
 
 
     #### Define some generic varibles
