@@ -21,8 +21,10 @@ use strict;
 use DBI;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Encrypt;
+use SBEAMS::Connection::Log;
 
 use vars qw($dbh);
+my $log = SBEAMS::Connection::Log->new();
 
 
 ###############################################################################
@@ -66,6 +68,7 @@ sub dbConnect {
 
     #### Decode the argument list
     my $connect_read_only = $args{'connect_read_only'} || "";
+    $log->info( "Read-only transaction" ) if $connect_read_only;
 
     #### Set error handling attributes
     my (%error_attr) = (
