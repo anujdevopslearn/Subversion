@@ -24,7 +24,9 @@ use SBEAMS::Connection::Settings;
 
 use vars qw(@ISA @EXPORT 
     $TB_ORGANISM
-
+    $TB_PROTOCOL
+    $TB_PROTOCOL_TYPE
+    
     $TBPR_BIOSEQUENCE_SET
     $TBPR_BIOSEQUENCE_ANNOTATION
     $TBPR_BIOSEQUENCE
@@ -95,6 +97,11 @@ use vars qw(@ISA @EXPORT
 
     $TBPR_NSP_INFORMATION
     $TBPR_NSP_DISTRIBUTION
+    
+    $TBPR_PROTEOMICS_SAMPLE
+    $TBPR_PROTEOMICS_SAMPLE_PROTOCOL
+    $TBPR_EXPERIMENT_SAMPLE
+	
 
 );
 
@@ -104,7 +111,9 @@ require Exporter;
 
 @EXPORT = qw (
     $TB_ORGANISM
-
+    $TB_PROTOCOL
+    $TB_PROTOCOL_TYPE
+    
     $TBPR_BIOSEQUENCE_SET
     $TBPR_BIOSEQUENCE_ANNOTATION
     $TBPR_BIOSEQUENCE
@@ -175,6 +184,10 @@ require Exporter;
 
     $TBPR_NSP_INFORMATION
     $TBPR_NSP_DISTRIBUTION
+    
+    $TBPR_PROTEOMICS_SAMPLE
+    $TBPR_PROTEOMICS_SAMPLE_PROTOCOL
+    $TBPR_EXPERIMENT_SAMPLE
 );
 
 
@@ -186,6 +199,8 @@ my $BioLink = $DBPREFIX{BioLink};
 
 
 $TB_ORGANISM                      = "${core}organism";
+$TB_PROTOCOL			  = "${core}protocol";		
+$TB_PROTOCOL_TYPE		  = "${core}protocol_type";
 
 $TBPR_BIOSEQUENCE_SET             = "${mod}biosequence_set";
 $TBPR_BIOSEQUENCE_ANNOTATION      = "${mod}biosequence_annotation";
@@ -257,5 +272,9 @@ $TBBL_POLYMER_TYPE                = "${BioLink}polymer_type";
 
 $TBPR_NSP_INFORMATION             = "${mod}nsp_information";
 $TBPR_NSP_DISTRIBUTION            = "${mod}nsp_distribution";
+
+$TBPR_PROTEOMICS_SAMPLE		  = "${mod}proteomics_sample";
+$TBPR_PROTEOMICS_SAMPLE_PROTOCOL  = "${mod}proteomics_sample_protocol";
+$TBPR_EXPERIMENT_SAMPLE		  = "${mod}experiment_samples";
 
 
