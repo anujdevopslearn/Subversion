@@ -1115,7 +1115,7 @@ sub postProcessResultset {
   #### Report the statistics
   my $buf = "\n";
   $buf.="<font color=\"red\">Prefilter statistics:</font>\n";
-  $buf.="Total number of proteins: $stats{n_proteins}\n";
+  $buf.="Total number of proteins: $stats{n_proteins} (with some domain information from this query)\n";
   $buf.="Number of single-domain proteins: ".scalar(@{$stats{single_domain_proteins}})."\n";
   $buf.="Number of single-domain protein domains: $stats{single_domain_proteins_domains}\n";
   $buf.="Number of multiple-domain proteins: ".scalar(@{$stats{multiple_domain_proteins}})."\n";
