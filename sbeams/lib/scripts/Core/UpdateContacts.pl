@@ -146,8 +146,8 @@ sub handleRequest {
              C.is_at_local_facility,C.photo_filename,
 	     OrgO.organization AS 'organization',
              DepO.organization AS 'department',
-             GrpO.organization AS 'group',
              LabO.organization AS 'lab',
+             GrpO.organization AS 'group',
 	     C.location,C.alternate_location,C.phone,C.phone_extension,
 	     C.cell_phone,C.pager,C.is_messenging_pager,C.home_phone,
 	     C.fax,C.email,C.alternate_email,C.comment
@@ -157,8 +157,8 @@ sub handleRequest {
         LEFT JOIN $TB_CONTACT SC ON (C.supervisor_contact_id=SC.contact_id)
 	LEFT JOIN $TB_ORGANIZATION OrgO ON (C.organization_id=OrgO.organization_id)
 	LEFT JOIN $TB_ORGANIZATION DepO ON (C.department_id=DepO.organization_id)
-        LEFT JOIN $TB_ORGANIZATION GrpO ON (C.group_id=GrpO.organization_id)
         LEFT JOIN $TB_ORGANIZATION LabO ON (C.lab_id=LabO.organization_id)
+        LEFT JOIN $TB_ORGANIZATION GrpO ON (C.group_id=GrpO.organization_id)
        ORDER BY C.last_name,C.first_name
     ~;
 
@@ -233,7 +233,7 @@ sub handleRequest {
     $sql = "SELECT organization, organization_id ".
 	   "FROM $TB_ORGANIZATION O ".
 	   "JOIN organization_type OT ON (O.organization_type_id=OT.organization_type_id) ".
-	   "WHERE organization_type_name IN ('Non-profit organization','For-profit company') ";
+	   "WHERE organization_type_name IN ('Non-profit organization','For-profit company','UNKNOWN') ";
       #print "\n---organization ids---\n$sql\n";
     my %organization_ids = $sbeams->selectTwoColumnHash($sql);
 
@@ -269,7 +269,7 @@ sub handleRequest {
 	'3'=>'middle_name',
 	'4'=>'contact_type_id',
 	'5'=>'job_title',
-	'6'=>'supervisor_name',
+	'6'=>'supervisor_contact_id',
 	'7'=>'is_at_local_facility',
 	'8'=>'photo_filename',
 	'9'=>'organization_id',
@@ -334,7 +334,6 @@ sub handleRequest {
       );
 
 
-$VERBOSE=1;
 
     #### Create the array of usernames to update
     print "\n----\n";
