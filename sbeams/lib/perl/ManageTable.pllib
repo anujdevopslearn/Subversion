@@ -293,11 +293,12 @@ sub printEntryForm {
       my $subdir = $sbeams->getSBEAMS_SUBDIR();
       $subdir .= "/" if ($subdir);
       $jump_to_list_source = qq~<A TARGET="AddToList" HREF="$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=$fk_table&ShowEntryForm=1"><IMG
-        SRC="$HTML_BASE_DIR/images/greyplus.gif" border=0
-        ALT="Add to or view details about this list box" ></A><A TARGET="ViewProperties" HREF="$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=$fk_table&$fk_column_name=$parameters{$column_name}"><IMG
-        SRC="$HTML_BASE_DIR/images/redqmark.gif" border=0
+        SRC="$HTML_BASE_DIR/images/greenplus.gif" border=0
+        ALT="Add to or view details about this list box" ></A><A TARGET="ViewProperties" HREF="$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=$fk_table&$fk_column_name=$parameters{$column_name}">~;
+      $jump_to_list_source .= qq~<IMG
+        SRC="$HTML_BASE_DIR/images/xmag_sm.png" border=0
         ALT="View properties of the selected item (Click REFRESH after selecting new item)" ></A>
-      ~;
+      ~ if (defined($parameters{$column_name}) && $parameters{$column_name} > '');
     }
 
 
