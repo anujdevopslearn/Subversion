@@ -631,6 +631,16 @@ sub loadBiosequence {
       0,1024);
   }
 
+
+  #### Only return a PK if we need to since can be expensive
+  my $return_PK = 0;
+  if (defined($n_transmembrane_regions) &&
+      defined($n_transmembrane_regions->
+	      {$rowdata_ref->{biosequence_name}}->{topology})) {
+    $return_PK = 1;
+  }
+
+
   #### INSERT/UPDATE the row
   my $result = $sbeams->insert_update_row(insert=>$insert,
 					  update=>$update,
@@ -638,8 +648,68 @@ sub loadBiosequence {
 					  rowdata_ref=>$rowdata_ref,
 					  PK=>$PK,
 					  PK_value => $PK_value,
-					  verbose=>$VERBOSE,testonly=>$TESTONLY
+					  verbose=>$VERBOSE,
+					  testonly=>$TESTONLY,
+					  return_PK=>$return_PK,
 					  );
+
+
+  #### Since we have it, INSERT or UPDATE extra biosequence properties
+  if ($result && $return_PK) {
+
+    #### See if there's already a record there
+    my $sql =
+      "SELECT biosequence_property_set_id
+         FROM ${DATABASE}biosequence_property_set
+        WHERE biosequence_id = '$result'
+      ";
+    my @biosequence_property_set_ids = $sbeams->selectOneColumn($sql);
+
+    #### Determine INSERT or UPDATE based on the result
+    $insert = 0;
+    $update = 0;
+    $insert = 1 if (scalar(@biosequence_property_set_ids) eq 0);
+    $update = 1 if (scalar(@biosequence_property_set_ids) eq 1);
+    if (scalar(@biosequence_property_set_ids) > 1) {
+      die("ERROR: Unexpected result from query:\n$sql\n");
+    }
+    my $biosequence_property_set_id = $biosequence_property_set_ids[0] || 0;
+
+
+    #### Fill the row data hash with information we have
+    my %rowdata;
+    $rowdata{biosequence_id} = $result;
+
+    $rowdata{n_transmembrane_regions} = $n_transmembrane_regions->
+      {$rowdata_ref->{biosequence_name}}->{n_tmm}
+      if (defined($n_transmembrane_regions->
+        {$rowdata_ref->{biosequence_name}}->{n_tmm}));
+
+    $rowdata{transmembrane_topology} = $n_transmembrane_regions->
+      {$rowdata_ref->{biosequence_name}}->{topology}
+      if (defined($n_transmembrane_regions->
+        {$rowdata_ref->{biosequence_name}}->{topology}));
+
+    $rowdata{transmembrane_class} = $n_transmembrane_regions->
+      {$rowdata_ref->{biosequence_name}}->{sec_mem_class}
+      if (defined($n_transmembrane_regions->
+        {$rowdata_ref->{biosequence_name}}->{sec_mem_class}));
+
+
+    #### Insert or update the row
+    my $result = $sbeams->insert_update_row(
+      insert=>$insert,
+      update=>$update,
+      table_name=>"${DATABASE}biosequence_property_set",
+      rowdata_ref=>\%rowdata,
+      PK=>"biosequence_property_set_id",
+      PK_value => $biosequence_property_set_id,
+      verbose=>$VERBOSE,
+      testonly=>$TESTONLY,
+    );
+
+  }
+
 
   return;
 }
@@ -865,7 +935,8 @@ sub specialParsing {
   if (defined($n_transmembrane_regions)) {
     if ($n_transmembrane_regions->{$rowdata_ref->{biosequence_name}}) {
       $rowdata_ref->{n_transmembrane_regions} =
-        $n_transmembrane_regions->{$rowdata_ref->{biosequence_name}};
+        $n_transmembrane_regions->{$rowdata_ref->{biosequence_name}}->
+          {n_tmm};
     }
   }
 
@@ -979,11 +1050,11 @@ sub readFavCodonFrequencyFile {
 
 
 ###############################################################################
-# readNTransmembraneFile
+# readNTransmembraneRegionsFile
 ###############################################################################
-sub readNTransmembraneFile {
+sub readNTransmembraneRegionsFile {
   my %args = @_;
-  my $SUB_NAME = "readNTransmembraneFile";
+  my $SUB_NAME = "readNTransmembraneRegionsFile";
 
 
   #### Decode the argument list
@@ -1021,13 +1092,14 @@ sub readNTransmembraneFile {
   #### Read in all the data putting it into the hash
   print "  Parsing data...\n";
   while ($line = <CODONFILE>) {
+    $line =~ s/[\r\n]//g;
     @columns = split("\t",$line);
     $biosequence_name = $columns[0];
     my %properties;
     if ($line =~/tm: (\d+)/) {
       $properties{n_tmm} = $1;
     }
-    if ($line =~/sec\/mem-class: (.)/) {
+    if ($line =~/sec\/mem-class: (.+?)\s/) {
       $properties{sec_mem_class} = $1;
     }
     if ($columns[5]) {
