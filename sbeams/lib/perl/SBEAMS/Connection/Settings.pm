@@ -206,6 +206,23 @@ sub setSBEAMS_SUBDIR {
 }
 
 
+################################################################################
+## setSBEAMS_BASEDIR
+##
+## Set the current value of SBEAMS_BASEDIR, ususally by subpackages
+################################################################################
+#sub setSBEAMS_BASEDIR {
+#    my $self = shift || die("parameter self not passed");
+#    my $newbasedir = shift || '';
+#
+#    $SBEAMS_BASEDIR = $newbasedir;
+#
+#    return $SBEAMS_BASEDIR;
+#
+#}
+
+
+
 ###############################################################################
 # getWWWUID
 #
