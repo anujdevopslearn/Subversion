@@ -135,8 +135,7 @@ sub printEntryForm {
     my $SECONDARY_MESSAGE="<B><FONT COLOR='red'>In order to create a better data processing tool, I need your help!</FONT></B>";
     my $TERTIARY_MESSAGE="If you have any questions, suggestions, or just want some help, please contact me!<BR>Thanks!<BR>- <A HREF=\"mailto:mjohnson\@systemsbiology.org\">Michael Johnson</A>";
 
-    my $apply_action  = $q->param('apply_action');
-    my $update_action = $q->param('UPDATE_CART');
+#    my $apply_action  = $q->param('apply_action');
 #    $parameters{project_id} = $q->param('project_id');
 		$parameters{project_id} = $sbeams->getCurrent_project_id();
 
@@ -154,6 +153,7 @@ sub printEntryForm {
         <H2>$CATEGORY</H2>
 	<BR>$SECONDARY_MESSAGE<BR>
 	<BR>$TERTIARY_MESSAGE<BR>
+	<BR><BR>
 		!;
 #        <FORM METHOD="post">
 #        <TABLE>
@@ -240,9 +240,9 @@ SELECT	A.array_id,A.array_name,
       );
 
 
-    } else {
-      $apply_action="BAD SELECTION";
-    }
+    }# else {
+    #  $apply_action="BAD SELECTION";
+    #}
 
 
 #    if ($apply_action eq "QUERY") {

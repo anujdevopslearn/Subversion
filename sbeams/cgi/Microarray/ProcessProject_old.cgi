@@ -60,6 +60,16 @@ sub main {
     #### Do the SBEAMS authentication and exit if a username is not returned
     exit unless ($current_username = $sbeams->Authenticate());
 
+		#### Read in the default input parameters
+		my %parameters;
+		my $n_params_found = $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
+		#$sbeams->printDebuggingInfo($q);
+		
+		
+		#### Process generic "state" parameters before we start
+		$sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+
     #### Print the header, do what the program does, and print footer
     $sbeamsMA->printPageHeader();
     processRequests();
@@ -122,24 +132,21 @@ sub printEntryForm {
     my $CATEGORY="Process Experiments";
 
 
-    my $apply_action  = $q->param('apply_action');
-    $parameters{project_id} = $q->param('project_id');
+#    my $apply_action  = $q->param('apply_action');
+#    $parameters{project_id} = $q->param('project_id');
+		$parameters{project_id} = $sbeams->getCurrent_project_id();
 
-
-    # If we're coming to this page for the first time, and there is a
-    # default project set, then automatically select that one and GO!
-    if ( ($parameters{project_id} eq "") && ($current_project_id > 0) ) {
-      $parameters{project_id} = $current_project_id;
-      $apply_action = "QUERY";
-    }
+#    # If we're coming to this page for the first time, and there is a
+#    # default project set, then automatically select that one and GO!
+#    if ( ($parameters{project_id} eq "") && ($current_project_id > 0) ) {
+#      $parameters{project_id} = $current_project_id;
+#      $apply_action = "QUERY";
+#    }
 
 
     $sbeams->printUserContext();
     print qq!
         <H2>$CATEGORY</H2>
-        $LINESEPARATOR
-        <FORM METHOD="post">
-        <TABLE>
     !;
 
 
@@ -155,33 +162,33 @@ sub printEntryForm {
            $sql_query,$parameters{project_id});
 
 
-    print qq!
-          <TR><TD><B>Project:</B></TD>
-          <TD><SELECT NAME="project_id">
-          <OPTION VALUE=""></OPTION>
-          $optionlist</SELECT></TD>
-          <TD BGCOLOR="E0E0E0">Select the Project Name</TD>
-          </TD></TR>
-    !;
-
-
-    # ---------------------------
-    # Show the QUERY, REFRESH, and Reset buttons
-    print qq!
-	<TR><TD COLSPAN=2>
-	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-	<INPUT TYPE="submit" NAME="apply_action" VALUE="QUERY">
-	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-	<INPUT TYPE="submit" NAME="apply_action" VALUE="REFRESH">
-	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-	<INPUT TYPE="reset"  VALUE="Reset">
-         </TR></TABLE>
-         </FORM>
-    !;
-
-
-    $sbeams->printPageFooter("CloseTables");
-    print "<BR><HR SIZE=5 NOSHADE><BR>\n";
+#    print qq!
+#          <TR><TD><B>Project:</B></TD>
+#          <TD><SELECT NAME="project_id">
+#          <OPTION VALUE=""></OPTION>
+#          $optionlist</SELECT></TD>
+#          <TD BGCOLOR="E0E0E0">Select the Project Name</TD>
+#          </TD></TR>
+#    !;
+#
+#
+#    # ---------------------------
+#    # Show the QUERY, REFRESH, and Reset buttons
+#    print qq!
+#	<TR><TD COLSPAN=2>
+#	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+#	<INPUT TYPE="submit" NAME="apply_action" VALUE="QUERY">
+#	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+#	<INPUT TYPE="submit" NAME="apply_action" VALUE="REFRESH">
+#	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+#	<INPUT TYPE="reset"  VALUE="Reset">
+#         </TR></TABLE>
+#         </FORM>
+#    !;
+#
+#
+#    $sbeams->printPageFooter("CloseTables");
+#    print "<BR><HR SIZE=5 NOSHADE><BR>\n";
 
     # --------------------------------------------------
     if ($parameters{project_id} > 0) {
@@ -223,14 +230,14 @@ SELECT	A.array_id,A.array_name,
       );
 
 
-    } else {
-      $apply_action="BAD SELECTION";
-    }
-
-
-    if ($apply_action eq "QUERY") {
-      $sbeams->displayQueryResult(sql_query=>$sql_query,
-          url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols);
+    }# else {
+#      $apply_action="BAD SELECTION";
+#    }
+#
+#
+#    if ($apply_action eq "QUERY") {
+#      $sbeams->displayQueryResult(sql_query=>$sql_query,
+#          url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols);
 
 
       print qq~
@@ -443,9 +450,9 @@ SELECT	A.array_id,A.array_name,
       ~;
 
 
-    } else {
-      print "<H4>Select parameters above and press QUERY\n";
-    }
+#    } else {
+#      print "<H4>Select parameters above and press QUERY\n";
+#    }
 
 
 } # end printEntryForm
