@@ -190,11 +190,33 @@ table_group_security	9	modified_by_id	Record Modified By	int	8	0	N		N	contact	co
 table_group_security	10	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 table_group_security	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 help_text	1	help_text_id	Help Text ID	int	8	0	N		Y							N	N				pkDEFAULT
-help_text	2	title	Title	varchar	255	0	Y		N			Y	text	40		Y	Y	Y	Title for the help popup
-help_text	3	help_text	Text	text	 	0	Y		N			Y	textarea	20		Y	Y	N	HTML text for the help popup
-help_text	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-help_text	5	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N		
-help_text	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-help_text	7	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N		
-help_text	8	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N		
-help_text	9	record_status	Record Status	char	1	0	N	N	N							N	N		
+help_text	2	title	Title	varchar	255	0	Y		N			Y	text	40		Y	Y	Y	Title for the help popup		
+help_text	3	help_text	Text	text	 	0	Y		N			Y	textarea	20		Y	Y	N	HTML text for the help popup		
+help_text	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+help_text	5	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+help_text	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+help_text	7	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+help_text	8	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+help_text	9	record_status	Record Status	char	1	0	N	N	N							N	N				
+user_project_permission	1	user_project_permission_id	User Project Permission ID	int	8	0	N		Y							N	N				pkDEFAULT
+user_project_permission	2	contact_id	Username	int	8	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Username	"SELECT contact_id,username FROM $TB_USER_LOGIN ORDER BY username"	
+user_project_permission	3	project_id	Project	int	8	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	Project for which the permissions apply	"SELECT project_id,username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' ORDER BY username,name"	
+user_project_permission	4	privilege_id	Privilege	int	8	0	N		N		privilege_id	Y	optionlist			Y	Y	N	Privilege level of this user within this project	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
+user_project_permission	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+user_project_permission	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+user_project_permission	7	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+user_project_permission	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+user_project_permission	9	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+user_project_permission	10	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+user_project_permission	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+group_project_permission	1	group_project_permission_id	User Project Permission ID	int	8	0	N		Y							N	N				pkDEFAULT
+group_project_permission	2	work_group_id	Work Group	int	8	0	N		N	work_group	contact_id	Y	optionlist			Y	Y	Y	Work Group	"SELECT work_group_id,work_group_name FROM $TB_WORK_GROUP ORDER BY work_group_name"	
+group_project_permission	3	project_id	Project	int	8	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	Project for which the permissions apply	"SELECT project_id,username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' ORDER BY username,name"	
+group_project_permission	4	privilege_id	Privilege	int	8	0	N		N		privilege_id	Y	optionlist			Y	Y	N	Privilege level of this user within this project	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
+group_project_permission	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+group_project_permission	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+group_project_permission	7	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+group_project_permission	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+group_project_permission	9	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+group_project_permission	10	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+group_project_permission	11	record_status	Record Status	char	1	0	N	N	N							N	N				
