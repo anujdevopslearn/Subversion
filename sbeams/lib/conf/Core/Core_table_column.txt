@@ -1,11 +1,11 @@
 table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
 project	1	project_id	Project ID	int	4	0	N		Y						showPassed(this)	N	N				pkDEFAULT
 project	2	name	Project Name	varchar	100	0	N		N			Y	text	75		Y	Y	N	Name or Title of the project		
-project	3	project_tag	Project Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	A short 'tag' or identity of the project.  Treat this like a folder name.  Use only alphanumeric characters, no spaces (e.g., FlyCatalog, HuTCellRaft, YeastShockExpr)		
+project	3	project_tag	Project Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	"A short 'tag' or identity of the project.  Treat this like a folder name.  Use only alphanumeric characters, no spaces (e.g., FlyCatalog, HuTCellRaft, YeastShockExpr)"		
 project	4	PI_contact_id	PI Contact	int	4	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	Y	PI or Primary contact for this project		
-project	5	description	Description	text	16	0	Y		N			Y	textarea	8		Y	Y	N	Describe this project: what are the goals, how are the samples prepared, derived citations, etc.		
+project	5	description	Description	text	16	0	Y		N			Y	textarea	8		Y	Y	N	"Describe this project: what are the goals, how are the samples prepared, derived citations, etc."		
 project	6	budget	Budget	varchar	25	0	Y		N			Y	text	25		Y	Y	N	Budget number to be charged for experiments under this project		
-project	7	project_status	Project Status	varchar	100	0	Y		N			N	text	50		Y	Y	N	For example: Active, Finished		
+project	7	project_status	Project Status	varchar	100	0	Y		N			N	text	50		Y	Y	N	"For example: Active, Finished"		
 project	8	uri	Project URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	Project webpage or other URI		SELF
 project	9	additional_information	Additional Information	text	16	0	Y		N			N	textarea	4		N	N	N	This is an experimental column designed to hold some module-specific information about a project that cannot (yet) be encoded other ways.		
 project	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
@@ -16,7 +16,7 @@ project	14	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id				
 project	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 project	16	record_status	Record Status	char	1	0	N	N	N							N	N				
 hardware_type	1	hardware_type_id	Hardware Type ID	int	4	0	N		Y							N	N				pkDEFAULT
-hardware_type	2	name	Hardware Type Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of hardware type (e.g., computer, scanner, sequencer, etc.)		
+hardware_type	2	name	Hardware Type Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	"Name of hardware type (e.g., computer, scanner, sequencer, etc.)"		
 hardware_type	3	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
 hardware_type	4	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Number to control the default sort order		
 hardware_type	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -26,8 +26,8 @@ hardware_type	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_
 hardware_type	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 hardware_type	10	record_status	Record Status	char	1	0	N	N	N							N	N				
 hardware	1	hardware_id	Hardware ID	int	4	0	N		Y							N	N				pkDEFAULT
-hardware	2	contact_id	Contact	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Vendor/creator contact for this hardware	SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS "name" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization	
-hardware	3	hardware_type_id	Hardware Type	int	4	0	N		N	hardware_type	hardware_type_id	Y	optionlist			Y	Y	Y	Type of hardware	SELECT hardware_type_id, name FROM $TB_HARDWARE_TYPE ORDER BY name	
+hardware	2	contact_id	Contact	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Vendor/creator contact for this hardware	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS ""name"" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+hardware	3	hardware_type_id	Hardware Type	int	4	0	N		N	hardware_type	hardware_type_id	Y	optionlist			Y	Y	Y	Type of hardware	"SELECT hardware_type_id, name FROM $TB_HARDWARE_TYPE ORDER BY name"	
 hardware	4	other_type	Other Hardware Type	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Only fill in if Type is Other		
 hardware	5	make	Make	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Make or Manufacturer of this hardware		
 hardware	6	model	Model	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Model number of this hardware		
@@ -42,7 +42,7 @@ hardware	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id		
 hardware	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 hardware	16	record_status	Record Status	char	1	0	N	N	N							N	N				
 software_type	1	software_type_id	Software Type ID	int	4	0	N		Y							N	N				pkDEFAULT
-software_type	2	name	Software Type Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of software type (e.g., operating system, database, spreadsheet, spot finder, etc.)		
+software_type	2	name	Software Type Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	"Name of software type (e.g., operating system, database, spreadsheet, spot finder, etc.)"		
 software_type	3	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
 software_type	4	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Number to control the default sort order		
 software_type	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -52,8 +52,8 @@ software_type	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_
 software_type	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 software_type	10	record_status	Record Status	char	1	0	N	N	N							N	N				
 software	1	software_id	Software ID	int	4	0	N		Y							N	N				pkDEFAULT
-software	2	contact_id	Contact	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Vendor/creator contact for this software	SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS "name" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization	
-software	3	software_type_id	Software Type	int	4	0	N		N	software_type	software_type_id	Y	optionlist			Y	Y	Y	Type of software	SELECT software_type_id, name FROM $TB_SOFTWARE_TYPE ORDER BY name	
+software	2	contact_id	Contact	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Vendor/creator contact for this software	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS ""name"" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+software	3	software_type_id	Software Type	int	4	0	N		N	software_type	software_type_id	Y	optionlist			Y	Y	Y	Type of software	"SELECT software_type_id, name FROM $TB_SOFTWARE_TYPE ORDER BY name"	
 software	4	other_type	Other Software Type	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Only fill in if Type is Other		
 software	5	name	Name	varchar	50	0	Y		N			Y	text	50		Y	Y	Y	Name of software		
 software	6	version	Version	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Version of software		
@@ -68,7 +68,7 @@ software	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id		
 software	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 software	16	record_status	Record Status	char	1	0	N	N	N							N	N				
 protocol_type	1	protocol_type_id	Protocol Type ID	int	4	0	N		Y							N	N				pkDEFAULT
-protocol_type	2	name	Protocol Type Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of protocol type (e.g., hybridization, PCR, image analysis, etc.)		
+protocol_type	2	name	Protocol Type Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	"Name of protocol type (e.g., hybridization, PCR, image analysis, etc.)"		
 protocol_type	3	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
 protocol_type	4	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Number to control the default sort order		
 protocol_type	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -78,7 +78,7 @@ protocol_type	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_
 protocol_type	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 protocol_type	10	record_status	Record Status	char	1	0	N	N	N							N	N				
 protocol	1	protocol_id	Protocol ID	int	4	0	N		Y							N	N				pkDEFAULT
-protocol	2	protocol_type_id	Protocol Type	int	4	0	N		N	protocol_type	protocol_type_id	Y	optionlist			Y	Y	N	Classification of this protocol	SELECT protocol_type_id, name FROM $TB_PROTOCOL_TYPE ORDER BY name	
+protocol	2	protocol_type_id	Protocol Type	int	4	0	N		N	protocol_type	protocol_type_id	Y	optionlist			Y	Y	N	Classification of this protocol	"SELECT protocol_type_id, name FROM $TB_PROTOCOL_TYPE ORDER BY name"	
 protocol	3	other_type	Other Protocol Type	varchar	50	0	Y		N			N	text	50		Y	Y	N	Only fill in if Type is Other		
 protocol	4	name	Name	varchar	50	0	Y		N			Y	text	50		Y	Y	Y	Name of the protocol		
 protocol	5	abstract	Abstract	text	16	0	Y		N			N	textarea	6		Y	Y	N	Abstract of the protocol		
@@ -92,7 +92,7 @@ protocol	12	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id		
 protocol	13	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 protocol	14	record_status	Record Status	char	1	0	N	N	N							N	N				
 organization_type	1	organization_type_id	Organization Type ID	int	4	0	N		Y							N	N				pkDEFAULT
-organization_type	2	organization_type_name	Organization Type Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of organization type (e.g. non-profit organization, company, department, lab, group, etc.)		
+organization_type	2	organization_type_name	Organization Type Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	"Name of organization type (e.g. non-profit organization, company, department, lab, group, etc.)"		
 organization_type	3	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
 organization_type	4	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Number to control the default sort order		
 organization_type	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -103,8 +103,8 @@ organization_type	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_
 organization_type	10	record_status	Record Status	char	1	0	N	N	N							N	N				
 organization	1	organization_id	Organization ID	int	4	0	N		Y							N	N				pkDEFAULT
 organization	2	organization	Organization Name	varchar	100	0	N		N			Y	text	50		Y	Y	Y	Name of Organization		
-organization	3	organization_type_id	Organization Type	int	4	0	N		N	organization_type	organization_type_id	Y	optionlist			Y	Y	N	Classification of this organization	SELECT organization_type_id,organization_type_name FROM $TB_ORGANIZATION_TYPE ORDER BY sort_order,organization_type_name	
-organization	4	parent_organization_id	Parent Organization	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	Organization to which this organization belongs, if appropriate	SELECT organization_id, organization FROM $TB_ORGANIZATION ORDER BY organization	
+organization	3	organization_type_id	Organization Type	int	4	0	N		N	organization_type	organization_type_id	Y	optionlist			Y	Y	N	Classification of this organization	"SELECT organization_type_id,organization_type_name FROM $TB_ORGANIZATION_TYPE ORDER BY sort_order,organization_type_name"	
+organization	4	parent_organization_id	Parent Organization	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	"Organization to which this organization belongs, if appropriate"	"SELECT organization_id, organization FROM $TB_ORGANIZATION ORDER BY organization"	
 organization	5	street	Street	varchar	100	0	Y		N			N	text	75		Y	Y	N	Street address		
 organization	6	city	City	varchar	50	0	Y		N			N	text	25		Y	Y	N	City		
 organization	7	province_state	Province/State	varchar	50	0	Y		N			N	text	15		Y	Y	N	Province or State		
@@ -123,7 +123,7 @@ organization	19	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_
 organization	20	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 organization	21	record_status	Record Status	char	1	0	N	N	N							N	N				
 contact_type	1	contact_type_id	Contact Type ID	int	4	0	N		Y							N	N				pkDEFAULT
-contact_type	2	contact_type_name	Contact Type Name	varchar	100	0	N		N			Y	text	50		Y	Y	Y	Name of contact type (e.g. investigator, lab_tech, IT administrator, etc.)		
+contact_type	2	contact_type_name	Contact Type Name	varchar	100	0	N		N			Y	text	50		Y	Y	Y	"Name of contact type (e.g. investigator, lab_tech, IT administrator, etc.)"		
 contact_type	3	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
 contact_type	4	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Number to control the default sort order		
 contact_type	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -136,22 +136,22 @@ contact	1	contact_id	Contact ID	int	4	0	N		Y							N	N				pkDEFAULT
 contact	2	last_name	Last Name	varchar	50	0	Y		N			Y	text	25		Y	Y	Y	Last Name		
 contact	3	first_name	First Name	varchar	50	0	Y		N			Y	text	25		Y	Y	Y	First Name		
 contact	4	middle_name	Middle Name	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Middle Name		
-contact	5	contact_type_id	Contact Type	int	4	0	N		N	contact_type	contact_type_id	Y	optionlist			Y	Y	N	Classification of this contact	SELECT contact_type_id,contact_type_name FROM $TB_CONTACT_TYPE ORDER BY sort_order,contact_type_name	
+contact	5	contact_type_id	Contact Type	int	4	0	N		N	contact_type	contact_type_id	Y	optionlist			Y	Y	N	Classification of this contact	"SELECT contact_type_id,contact_type_name FROM $TB_CONTACT_TYPE ORDER BY sort_order,contact_type_name"	
 contact	6	job_title	Job Title	varchar	100	0	Y		N			N	text	50		Y	Y	N	Job title or function of this contact if appropriate		
-contact	7	supervisor_contact_id	Supervisor	int	4	0	Y		N	contact	contact_id	N	optionlist			Y	Y	N	Supervisor of this person if applicable	SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS "name" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization	
-contact	8	is_at_local_facility	At Local Facility	char	1	0	Y		N			N	optionlist			Y	Y	N	Is this contact to be considered a local person at this institution (ISB) ?	SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value	
+contact	7	supervisor_contact_id	Supervisor	int	4	0	Y		N	contact	contact_id	N	optionlist			Y	Y	N	Supervisor of this person if applicable	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS ""name"" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+contact	8	is_at_local_facility	At Local Facility	char	1	0	Y		N			N	optionlist			Y	Y	N	Is this contact to be considered a local person at this institution (ISB) ?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
 contact	9	photo_filename	Photograph filename	varchar	255	0	Y		N			N	text	50		Y	Y	N	Filename of the photograph/mug shot of this contact		
-contact	10	organization_id	Organization	int	4	0	N		N	organization	organization_id	Y	optionlist			Y	Y	N	Organization for which contact works	SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE OT.organization_type_name NOT IN ('Lab','Department','Group') ORDER BY organization	
-contact	11	department_id	Department	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	Department in which this contact works	SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE OT.organization_type_name IN ('Department') ORDER BY organization	
-contact	12	group_id	Group	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	Group to which this contact belongs	SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE OT.organization_type_name IN ('Group') ORDER BY organization	
-contact	13	lab_id	Lab	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	Lab in which this contact works	SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE OT.organization_type_name IN ('Lab') ORDER BY organization	
+contact	10	organization_id	Organization	int	4	0	N		N	organization	organization_id	Y	optionlist			Y	Y	N	Organization for which contact works	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE OT.organization_type_name NOT IN ('Lab','Department','Group') ORDER BY organization"	
+contact	11	department_id	Department	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	Department in which this contact works	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE OT.organization_type_name IN ('Department') ORDER BY organization"	
+contact	12	group_id	Group	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	Group to which this contact belongs	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE OT.organization_type_name IN ('Group') ORDER BY organization"	
+contact	13	lab_id	Lab	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	Lab in which this contact works	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE OT.organization_type_name IN ('Lab') ORDER BY organization"	
 contact	14	location	Primary Location	varchar	100	0	Y		N			N	text	25		Y	Y	N	Primary location (e.g. the room number)		
 contact	15	alternate_location	Secondary Location	varchar	100	0	Y		N			N	text	25		Y	Y	N	Alternate/secondary location (e.g. the lab bench area designation)		
 contact	16	phone	Phone	varchar	50	0	Y		N			N	text	25		Y	Y	N	Phone number for this contact		
 contact	17	phone_extension	Phone Extension	varchar	50	0	Y		N			N	text	25		Y	Y	N	Extension/voice mail number		
 contact	18	cell_phone	Cell Phone	varchar	50	0	Y		N			N	text	25		Y	Y	N	Cell phone number for this contact		
 contact	19	pager	Pager	varchar	50	0	Y		N			N	text	25		Y	Y	N	Pager number for this contact		
-contact	20	is_messenging_pager	Is Messenging Pager	char	1	0	Y		N			N	optionlist			Y	Y	N	Is the pager a messaging/NexTel pager?	SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value	
+contact	20	is_messenging_pager	Is Messenging Pager	char	1	0	Y		N			N	optionlist			Y	Y	N	Is the pager a messaging/NexTel pager?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
 contact	21	home_phone	Home Phone	varchar	50	0	Y		N			N	text	25		Y	Y	N	Home phone number for this contact		
 contact	22	fax	Fax	varchar	50	0	Y		N			N	text	25		Y	Y	N	Fax number		
 contact	23	email	Email address	varchar	100	0	Y		N			N	text	50		Y	Y	N	Email address of this contact		
@@ -166,7 +166,7 @@ contact	31	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	
 contact	32	record_status	Record Status	char	1	0	N	N	N							N	N				
 work_group	1	work_group_id	Work Group ID	int	4	0	N		Y							N	N				pkDEFAULT
 work_group	2	work_group_name	Work Group Name	varchar	50	0	N		N			Y	text	25		Y	Y	Y	Short name of the work group		
-work_group	3	primary_contact_id	Primary Contact	int	4	0	Y		N	contact	contact_id	N	optionlist			Y	Y	N	Primary contact for this group	SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS "name" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization	
+work_group	3	primary_contact_id	Primary Contact	int	4	0	Y		N	contact	contact_id	N	optionlist			Y	Y	N	Primary contact for this group	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS ""name"" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
 work_group	4	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Number to control the default sort order		
 work_group	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
 work_group	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -176,10 +176,10 @@ work_group	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	
 work_group	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 work_group	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 user_login	1	user_login_id	User Login ID	int	4	0	N		Y							N	N				pkDEFAULT
-user_login	2	contact_id	Contact	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	N	Contact entry for this user	SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS "name" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization	
+user_login	2	contact_id	Contact	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	N	Contact entry for this user	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS ""name"" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
 user_login	3	username	Username	varchar	50	0	N		N			Y	text	25		Y	Y	Y	user login alias (preferably same as unix user alias)		
 user_login	4	password	password	varchar	50	0	Y		N			N	password	25		Y	Y	N	password (leave blank to use unix password of this username)		
-user_login	5	privilege_id	Privilege	int	4	0	N		N	privilege	privilege_id	Y	optionlist			Y	Y	N	General privilege of this user (different privileges may also be set by group)	SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id	
+user_login	5	privilege_id	Privilege	int	4	0	N		N	privilege	privilege_id	Y	optionlist			Y	Y	N	General privilege of this user (different privileges may also be set by group)	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
 user_login	6	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 user_login	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 user_login	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
@@ -188,9 +188,9 @@ user_login	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id
 user_login	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 user_login	12	record_status	Record Status	char	1	0	N	N	N							N	N				
 user_work_group	1	user_work_group_id	User Login ID	int	4	0	N		Y							N	N				pkDEFAULT
-user_work_group	2	contact_id	Username	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Username	SELECT contact_id,username FROM $TB_USER_LOGIN ORDER BY username	
-user_work_group	3	work_group_id	Work Group	int	4	0	N		N	work_group	work_group_id	Y	optionlist			Y	Y	Y	Work Group	SELECT work_group_id,work_group_name FROM $TB_WORK_GROUP ORDER BY work_group_name	
-user_work_group	4	privilege_id	Privilege	int	4	0	N		N	privilege	privilege_id	Y	optionlist			Y	Y	Y	Privilege level of this user within this work	SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id	
+user_work_group	2	contact_id	Username	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Username	"SELECT contact_id,username FROM $TB_USER_LOGIN ORDER BY username"	
+user_work_group	3	work_group_id	Work Group	int	4	0	N		N	work_group	work_group_id	Y	optionlist			Y	Y	Y	Work Group	"SELECT work_group_id,work_group_name FROM $TB_WORK_GROUP ORDER BY work_group_name"	
+user_work_group	4	privilege_id	Privilege	int	4	0	N		N	privilege	privilege_id	Y	optionlist			Y	Y	Y	Privilege level of this user within this work	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
 user_work_group	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 user_work_group	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 user_work_group	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
@@ -199,10 +199,10 @@ user_work_group	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contac
 user_work_group	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 user_work_group	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 user_context	1	user_context_id	User Login ID	int	4	0	N		Y							N	N				pkDEFAULT
-user_context	2	contact_id	Username	int	4	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	Y	Contact/username	SELECT C.contact_id, username+' ('+first_name+' '+last_name+')' AS 'name' FROM $TB_CONTACT C INNER JOIN $TB_USER_LOGIN UL ON ( C.contact_id = UL.contact_id ) ORDER BY username	
-user_context	3	project_id	Active Project	int	4	0	Y		N	project	project_id	N	optionlist			Y	Y	N	If an Active Project is selected, only relevant items are displayed in some screens	SELECT project_id, username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) ORDER BY username,name	
-user_context	4	work_group_id	Active Work Group	int	4	0	Y		N	work_group	work_group_id	N	optionlist			Y	Y	N	New records are written under this work group	SELECT WG.work_group_id,WG.work_group_name FROM $TB_WORK_GROUP WG INNER JOIN $TB_USER_WORK_GROUP UWG ON ( WG.work_group_id=UWG.work_group_id ) WHERE contact_id=$contact_id ORDER BY WG.work_group_name	
-user_context	5	privilege_id	Privilege	int	4	0	Y		N	privilege	privilege_id	N	optionlist			Y	Y	N	General privilege of this user under this group	SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id	
+user_context	2	contact_id	Username	int	4	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	Y	Contact/username	"SELECT C.contact_id, username+' ('+first_name+' '+last_name+')' AS 'name' FROM $TB_CONTACT C INNER JOIN $TB_USER_LOGIN UL ON ( C.contact_id = UL.contact_id ) ORDER BY username"	
+user_context	3	project_id	Active Project	int	4	0	Y		N	project	project_id	N	optionlist			Y	Y	N	"If an Active Project is selected, only relevant items are displayed in some screens"	"SELECT project_id, username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) ORDER BY username,name"	
+user_context	4	work_group_id	Active Work Group	int	4	0	Y		N	work_group	work_group_id	N	optionlist			Y	Y	N	New records are written under this work group	"SELECT WG.work_group_id,WG.work_group_name FROM $TB_WORK_GROUP WG INNER JOIN $TB_USER_WORK_GROUP UWG ON ( WG.work_group_id=UWG.work_group_id ) WHERE contact_id=$contact_id ORDER BY WG.work_group_name"	
+user_context	5	privilege_id	Privilege	int	4	0	Y		N	privilege	privilege_id	N	optionlist			Y	Y	N	General privilege of this user under this group	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
 user_context	6	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 user_context	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 user_context	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
@@ -211,9 +211,9 @@ user_context	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_
 user_context	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 user_context	12	record_status	Record Status	char	1	0	N	N	N							N	N				
 table_group_security	1	table_group_security_id	Table Group Security ID	int	4	0	N		Y							N	N				pkDEFAULT
-table_group_security	2	table_group	Table Group	varchar	50	0	N		N			N	optionlist			Y	Y	Y	Table Group	SELECT DISTINCT table_group,table_group FROM $TB_TABLE_PROPERTY ORDER BY table_group	
-table_group_security	3	work_group_id	Work Group	int	4	0	N		N	work_group	work_group_id	N	optionlist			Y	Y	Y	Associated Work Group	SELECT work_group_id,work_group_name FROM $TB_WORK_GROUP ORDER BY work_group_name	
-table_group_security	4	privilege_id	Privilege	int	4	0	N		N		privilege_id	Y	optionlist			Y	Y	N	Privilege of this work group for this table group	SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id	
+table_group_security	2	table_group	Table Group	varchar	50	0	N		N			N	optionlist			Y	Y	Y	Table Group	"SELECT DISTINCT table_group,table_group FROM $TB_TABLE_PROPERTY ORDER BY table_group"	
+table_group_security	3	work_group_id	Work Group	int	4	0	N		N	work_group	work_group_id	N	optionlist			Y	Y	Y	Associated Work Group	"SELECT work_group_id,work_group_name FROM $TB_WORK_GROUP ORDER BY work_group_name"	
+table_group_security	4	privilege_id	Privilege	int	4	0	N		N		privilege_id	Y	optionlist			Y	Y	N	Privilege of this work group for this table group	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
 table_group_security	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 table_group_security	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 table_group_security	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
@@ -231,9 +231,9 @@ help_text	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id		
 help_text	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 help_text	9	record_status	Record Status	char	1	0	N	N	N							N	N				
 user_project_permission	1	user_project_permission_id	User Project Permission ID	int	4	0	N		Y							N	N				pkDEFAULT
-user_project_permission	2	contact_id	Username	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Username	SELECT contact_id,username FROM $TB_USER_LOGIN ORDER BY username	
-user_project_permission	3	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	Project for which the permissions apply	SELECT project_id,username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' ORDER BY username,name	
-user_project_permission	4	privilege_id	Privilege	int	4	0	N		N	privilege	privilege_id	Y	optionlist			Y	Y	N	Privilege level of this user within this project	SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id	
+user_project_permission	2	contact_id	Username	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Username	"SELECT contact_id,username FROM $TB_USER_LOGIN ORDER BY username"	
+user_project_permission	3	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	Project for which the permissions apply	"SELECT project_id,username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' ORDER BY username,name"	
+user_project_permission	4	privilege_id	Privilege	int	4	0	N		N	privilege	privilege_id	Y	optionlist			Y	Y	N	Privilege level of this user within this project	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
 user_project_permission	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 user_project_permission	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 user_project_permission	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
@@ -242,9 +242,9 @@ user_project_permission	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contac
 user_project_permission	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 user_project_permission	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 group_project_permission	1	group_project_permission_id	User Project Permission ID	int	4	0	N		Y							N	N				pkDEFAULT
-group_project_permission	2	work_group_id	Work Group	int	4	0	N		N	work_group	work_group_id	Y	optionlist			Y	Y	Y	Work Group	SELECT work_group_id,work_group_name FROM $TB_WORK_GROUP ORDER BY work_group_name	
-group_project_permission	3	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	Project for which the permissions apply	SELECT project_id,username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' ORDER BY username,name	
-group_project_permission	4	privilege_id	Privilege	int	4	0	N		N	privilege	privilege_id	Y	optionlist			Y	Y	N	Privilege level of this user within this project	SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id	
+group_project_permission	2	work_group_id	Work Group	int	4	0	N		N	work_group	work_group_id	Y	optionlist			Y	Y	Y	Work Group	"SELECT work_group_id,work_group_name FROM $TB_WORK_GROUP ORDER BY work_group_name"	
+group_project_permission	3	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	Project for which the permissions apply	"SELECT project_id,username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' ORDER BY username,name"	
+group_project_permission	4	privilege_id	Privilege	int	4	0	N		N	privilege	privilege_id	Y	optionlist			Y	Y	N	Privilege level of this user within this project	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
 group_project_permission	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 group_project_permission	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 group_project_permission	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
@@ -253,7 +253,7 @@ group_project_permission	9	modified_by_id	Record Modified By	int	4	0	N	1	N	conta
 group_project_permission	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 group_project_permission	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 privilege	1	privilege_id	Privilege ID	int	4	0	N		P			Y	text	10		Y	Y	N	Numerical ID of privilege.  Should be in order of privilege		pkDEFAULT
-privilege	2	name	Privilege Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Name of the privilege level (administrator, data_reader, etc.)		
+privilege	2	name	Privilege Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	"Name of the privilege level (administrator, data_reader, etc.)"		
 privilege	3	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
 privilege	4	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Number to control the default sort order		
 privilege	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -263,7 +263,7 @@ privilege	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id		
 privilege	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 privilege	10	record_status	Record Status	char	1	0	N	N	N							N	N				
 record_status	1	record_status_id	Record Status ID	char	1	0	N		N							N	N				pkDEFAULT
-record_status	2	name	Record Status Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Name of the privilege level (administrator, data_reader, etc.)		
+record_status	2	name	Record Status Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	"Name of the privilege level (administrator, data_reader, etc.)"		
 record_status	3	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
 record_status	4	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Number to control the default sort order		
 record_status	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -283,9 +283,9 @@ usage_log	3	username	Username	varchar	50	0	N		N			N	text	50		Y	Y	N	Username atte
 usage_log	4	usage_action	Attempted action	varchar	50	0	N		N			N	text	50		Y	Y	N	Type of action		
 usage_log	5	result	Result of attempt	varchar	50	0	N		N			N	text	25		Y	Y	N	Result of the action		
 misc_option	1	misc_option_id	Misc Option ID	int	4	0	N		Y							N	N				pkDEFAULT
-misc_option	2	option_type	Option Type	varchar	25	0	N		N			N	text	25		Y	Y	N	Namespace for the option (e.g., yesno)		
-misc_option	3	option_key	Option Key	varchar	25	0	N		N			N	text	25		Y	Y	N	Key of the option (e.g., Y)		
-misc_option	4	option_value	Option Value	varchar	255	0	N		N			N	text	255		Y	Y	N	Value of the option (e.g., Yes)		
+misc_option	2	option_type	Option Type	varchar	25	0	N		N			N	text	25		Y	Y	N	"Namespace for the option (e.g., yesno)"		
+misc_option	3	option_key	Option Key	varchar	25	0	N		N			N	text	25		Y	Y	N	"Key of the option (e.g., Y)"		
+misc_option	4	option_value	Option Value	varchar	255	0	N		N			N	text	255		Y	Y	N	"Value of the option (e.g., Yes)"		
 misc_option	5	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Number to control the default sort order		
 misc_option	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 misc_option	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
@@ -294,10 +294,10 @@ misc_option	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id
 misc_option	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 misc_option	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 organism	1	organism_id	Organism ID	int	4	0	N		Y							N	N				pkDEFAULT
-organism	2	organism_name	Organism Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Common name of the organism (e.g., Human)		
+organism	2	organism_name	Organism Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	"Common name of the organism (e.g., Human)"		
 organism	3	ncbi_taxonomy_id	NCBI Taxonomy ID	int	10	0	Y		N			N	text	10		Y	Y	N	Official NCBI Taxonomy ID		
-organism	4	genus	Genus	varchar	100	0	Y		N			N	text	50		Y	Y	N	NCBI Taxonomy Genus (e.g., Homo)		
-organism	5	species	Species	varchar	100	0	Y		N			N	text	50		Y	Y	N	NCBI Taxonomy Species (e.g., Sapiens)		
+organism	4	genus	Genus	varchar	100	0	Y		N			N	text	50		Y	Y	N	"NCBI Taxonomy Genus (e.g., Homo)"		
+organism	5	species	Species	varchar	100	0	Y		N			N	text	50		Y	Y	N	"NCBI Taxonomy Species (e.g., Sapiens)"		
 organism	6	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
 organism	7	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Number to control the default sort order		
 organism	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -323,10 +323,10 @@ table_property	4	table_group	Table Group	varchar	50	0	N		N			Y	text	50		Y	Y	N	Se
 table_property	5	manage_table_allowed	Is ManageTable Allowed	varchar	50	0	Y		N			Y	text	50		Y	Y	N	Set to YES in the ManageTable program is allowed to view and edit		
 table_property	6	db_table_name	Table Variable Name	varchar	50	0	Y		N			Y	text	50		Y	Y	N	Abstract Perl variable name used to refer to the table		
 table_property	7	PK_column_name	PK Column Name	varchar	50	0	Y		N			Y	text	50		Y	Y	N	Name of the Primary Key column		
-table_property	8	multi_insert_column	Is a multi-insert column	varchar	50	0	Y		N			Y	text	50		Y	Y	N	If this table support multiple row INSERTs, which column is the range variable		
+table_property	8	multi_insert_column	Is a multi-insert column	varchar	50	0	Y		N			Y	text	50		Y	Y	N	"If this table support multiple row INSERTs, which column is the range variable"		
 table_property	9	table_url	Table URL	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Relative URL of this tables manager		
 table_property	10	manage_tables	List of similar tables	varchar	255	0	Y		N			Y	text	50		Y	Y	N	List of tables that appear as other options in the menu of tables to manage		
-table_property	11	next_step	Next table to manage	varchar	100	0	Y		N			Y	text	50		Y	Y	N	Possible next table to edit after INSERTing or UPDATing this one (e.g., after adding a contact, user_login might be next, then user_groups, etc.)		
+table_property	11	next_step	Next table to manage	varchar	100	0	Y		N			Y	text	50		Y	Y	N	"Possible next table to edit after INSERTing or UPDATing this one (e.g., after adding a contact, user_login might be next, then user_groups, etc.)"		
 table_column	1	table_column_id	Table Column ID	int	4	0	N		Y							N	N				pkDEFAULT
 table_column	2	table_name	Table Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Abstract name of the table (non-Core tables should be prefixed with the module prefix)		
 table_column	3	column_index	Column Index	int	4	0	N		N			Y	text	10		Y	Y	N	Index of the column used to control odering		
@@ -334,24 +334,24 @@ table_column	4	column_name	Column Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Name
 table_column	5	column_title	Column Title	varchar	50	0	N		N			Y	text	50		Y	Y	N	Friendly title of the column		
 table_column	6	data_type	Data Type	varchar	50	0	N		N			Y	text	25		Y	Y	N	Standardized SQL datatype of the column		
 table_column	7	data_scale	Data Scale	int	4	0	N		N			Y	text	10		Y	Y	N	First qualifier of length of the datatype (depends on the datatype itself)		
-table_column	8	data_precision	Data Precision	int	4	0	Y		N			Y	text	10		Y	Y	N	Second qualifier of precision of datatype (used, e.g., for NUMERIC(10,2))		
-table_column	9	nullable	Is Nullable?	char	1	0	N		N			Y	text	5		Y	Y	N	Is the column NULLable?		
-table_column	10	default_value	Default Value	varchar	50	0	Y		N			N	text	50		Y	Y	N	DEFAULT value for the column if any		
-table_column	11	is_auto_inc	Is Autoincrementing?	char	1	0	N		N			Y	text	5		Y	Y	N	Is the column an auto incrementing number (i.e. SEQUENCE, SERIAL, IDENTITY)?		
-table_column	12	fk_table	FK Table Name	varchar	50	0	Y		N			N	text	50		Y	Y	N	If this column is a foreign key to another table, what is that tables abstract name		
-table_column	13	fk_column_name	FK Column Name	varchar	50	0	Y		N			N	text	50		Y	Y	N	If this column is a foreign key to another table, what is that tables column to which this refers (usually the same)		
-table_column	14	is_required	Is Required?	char	1	0	Y		N			N	text	5		Y	Y	N	Is this column a required field in the data form (shown as red)?		
-table_column	15	input_type	Form Input Type	varchar	50	0	Y		N			N	text	50		Y	Y	N	What is the HTML form input type for this field?		
-table_column	16	input_length	Form Input Length	varchar	25	0	Y		N			N	text	25		Y	Y	N	What is the length of scale or size of the input type (height for textarea)		
-table_column	17	onChange	JavaScript onChange	varchar	255	0	Y		N			N	text	50		Y	Y	N	Javascript that can be triggered with onChange in the HTML form		
-table_column	18	is_data_column	Is Data Column?	char	1	0	Y		N			N	text	5		Y	Y	N	Is this a data column that is potentially editable or is a housekeeping column?		
-table_column	19	is_display_column	Is Display Column?	char	1	0	Y		N			N	text	5		Y	Y	N	Should this column be displayed in a form?		
-table_column	20	is_key_field	Is a Key Field?	char	1	0	Y		N			N	text	5		Y	Y	N	Does this column belong to the (possibly composite) key for this table		
-table_column	21	column_text	Column Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	A friendly description of the meaning of this column (this text here!)		
-table_column	22	optionlist_query	Drop down list query	text	16	0	Y		N			N	textarea	6		Y	Y	N	A query which will populate the contents of this field		
-table_column	23	url	URL	varchar	255	0	Y		N			N	text	50		Y	Y	N	The URL or URL fragment that this column is assoctiated with when it appears in a table		
+table_column	8	data_precision	Data Precision	int	4	0	Y		N			Y	text	10		Y	Y	N	"Second qualifier of precision of datatype (used, e.g., for NUMERIC(10,2))"
+table_column	9	nullable	Is Nullable?	char	1	0	N		N			Y	text	5		Y	Y	N	Is the column NULLable?
+table_column	10	default_value	Default Value	varchar	50	0	Y		N			N	text	50		Y	Y	N	DEFAULT value for the column if any
+table_column	11	is_auto_inc	Is Autoincrementing?	char	1	0	N		N			Y	text	5		Y	Y	N	"Is the column an auto incrementing number (i.e. SEQUENCE, SERIAL, IDENTITY)?"
+table_column	12	fk_table	FK Table Name	varchar	50	0	Y		N			N	text	50		Y	Y	N	"If this column is a foreign key to another table, what is that tables abstract name"
+table_column	13	fk_column_name	FK Column Name	varchar	50	0	Y		N			N	text	50		Y	Y	N	"If this column is a foreign key to another table, what is that tables column to which this refers (usually the same)"
+table_column	14	is_required	Is Required?	char	1	0	Y		N			N	text	5		Y	Y	N	Is this column a required field in the data form (shown as red)?
+table_column	15	input_type	Form Input Type	varchar	50	0	Y		N			N	text	50		Y	Y	N	What is the HTML form input type for this field?
+table_column	16	input_length	Form Input Length	varchar	25	0	Y		N			N	text	25		Y	Y	N	What is the length of scale or size of the input type (height for textarea)
+table_column	17	onChange	JavaScript onChange	varchar	255	0	Y		N			N	text	50		Y	Y	N	Javascript that can be triggered with onChange in the HTML form
+table_column	18	is_data_column	Is Data Column?	char	1	0	Y		N			N	text	5		Y	Y	N	Is this a data column that is potentially editable or is a housekeeping column?
+table_column	19	is_display_column	Is Display Column?	char	1	0	Y		N			N	text	5		Y	Y	N	Should this column be displayed in a form?
+table_column	20	is_key_field	Is a Key Field?	char	1	0	Y		N			N	text	5		Y	Y	N	Does this column belong to the (possibly composite) key for this table
+table_column	21	column_text	Column Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	A friendly description of the meaning of this column (this text here!)
+table_column	22	optionlist_query	Drop down list query	text	16	0	Y		N			N	textarea	6		Y	Y	N	A query which will populate the contents of this field
+table_column	23	url	URL	varchar	255	0	Y		N			N	text	50		Y	Y	N	The URL or URL fragment that this column is assoctiated with when it appears in a table
 cached_resultset	1	cached_resultset_id	Cached Resultset ID	int	4	0	N		Y							N	N				pkDEFAULT
-cached_resultset	2	contact_id	Resultset Owner	int	4	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	Y	Creator of this resultset	SELECT C.contact_id, username+' ('+first_name+' '+last_name+')' AS 'name' FROM $TB_CONTACT C INNER JOIN $TB_USER_LOGIN UL ON ( C.contact_id = UL.contact_id ) ORDER BY username	
+cached_resultset	2	contact_id	Resultset Owner	int	4	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	Y	Creator of this resultset	"SELECT C.contact_id, username+' ('+first_name+' '+last_name+')' AS 'name' FROM $TB_CONTACT C INNER JOIN $TB_USER_LOGIN UL ON ( C.contact_id = UL.contact_id ) ORDER BY username"	
 cached_resultset	3	resultset_name	Resultset Name	varchar	100	0	Y		N			Y	text	50		Y	Y	Y	Friendly name of this resultset		
 cached_resultset	4	resultset_description	Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Longer description about the nature of this resultset		
 cached_resultset	5	query_name	Generating Query Name	varchar	100	0	Y		N			Y	fixed	50		Y	Y	N	Name of the SBEAMS query that manages this resultset		
@@ -363,4 +363,6 @@ cached_resultset	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TI
 cached_resultset	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 cached_resultset	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 cached_resultset	13	record_status	Record Status	char	1	0	N	N	N							N	N				
-AdHocQuery	1	query	SQL Query									Y	textarea	15		Y	Y		Enter your Ad Hoc Query here.  Be careful with your SQL because a bad query and beat up the server, or worse yet, return data that look right but are not what you intended.  Writing direct SQL is generally discouraged unless you know what you're doing.  You have been warned.		
+AdHocQuery	1	query	SQL Query									Y	textarea	15		Y	Y		"Enter your Ad Hoc Query here.  Be careful with your SQL because a bad query and beat up the server, or worse yet, return data that look right but are not what you intended.  Writing direct SQL is generally discouraged unless you know what you're doing.  You have been warned."		
+GetDataSource	1	source_name	Source Name									Y	text	50		Y	Y		Enter the predenfined data source name here.  This must be a data source originally configured by your SBEAMS administrator		
+GetDataSource	2	row_limit	Maximum Rows									N	text	10		Y	Y		"Limit the numbers of rows displayed.  If not provided, default is 10000 rows."		
