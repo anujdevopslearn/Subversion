@@ -245,6 +245,17 @@ sub printEntryForm {
         $onChange = " onChange=\"$onChange\"";
       }
 
+
+      #### If the action included the phrase HIDE, don't print all the options
+      if ($apply_action =~ /HIDE/i) {
+        print qq!
+          <TD><INPUT TYPE="hidden" NAME="$column_name"
+           VALUE="$parameters{$column_name}"></TD>
+        !;
+        next;
+      }
+
+
       if ($is_required eq "N") { print "<TR><TD><B>$column_title:</B></TD>\n"; }
       else { print "<TR><TD><B><font color=red>$column_title:</font></B></TD>\n"; }
 
@@ -482,7 +493,7 @@ sub printEntryForm {
 
       #### Add the protein descriptions at the end if user selected
       if ( $parameters{display_options} =~ /BSDesc/ ) {
-        unshift(@column_array,["biosequence_accession","biosequence_accession","Accession"]);
+        unshift(@column_array,["biosequence_accession","MAX(biosequence_accession)","Accession"]);
         unshift(@column_array,["biosequence_gene_name","biosequence_gene_name","Gene Name"]);
         push(@column_array,["biosequence_desc","biosequence_desc","Reference Description"]);
         $group_by_clause .= ",biosequence_desc,biosequence_gene_name,biosequence_accession" if ($group_by_clause);
@@ -513,7 +524,7 @@ sub printEntryForm {
 	  JOIN $TB_SEARCH_HIT_ANNOTATION SHA ON ( SH.search_hit_id = SHA.search_hit_id )
 	  JOIN proteomics.dbo.search_batch SB ON ( S.search_batch_id = SB.search_batch_id )
 	  JOIN proteomics.dbo.biosequence_set BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
-	  LEFT JOIN $TB_BIOSEQUENCE BS ON ( SB.biosequence_set_id = BS.biosequence_set_id AND SH.reference = BS.biosequence_name )
+	  FULL JOIN $TB_BIOSEQUENCE BS ON ( SB.biosequence_set_id = BS.biosequence_set_id AND SH.reference = BS.biosequence_name )
 	 WHERE 1 = 1
 	$search_batch_clause
 	$reference_clause
@@ -530,8 +541,9 @@ sub printEntryForm {
 		   'Gene Name_ATAG' => 'TARGET="Win1"',
                    'Accession' => "http://flybase.bio.indiana.edu/.bin/fbidq.html?\%$colnameidx{biosequence_accession}V",
 		   'Accession_ATAG' => 'TARGET="Win1"',
-                   'Reference' => "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi?QUERY_NAME=BrowseSearchHits&reference_constraint=\%$colnameidx{reference}V&search_batch_id=$parameters{search_batch_id}&xcorr_rank_constraint=1&apply_action=QUERY",
-		   'Reference_ATAG' => 'TARGET="Win1"','Peptide' => "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi?QUERY_NAME=BrowseSearchHits&peptide_constraint=\%$colnameidx{peptide}V&search_batch_id=$parameters{search_batch_id}&xcorr_rank_constraint=1&apply_action=QUERY",
+                   'Reference' => "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi?QUERY_NAME=BrowseSearchHits&reference_constraint=\%$colnameidx{reference}V&search_batch_id=$parameters{search_batch_id}&xcorr_rank_constraint=1&display_options=BSDesc,MaxRefWidth&apply_action=$apply_action",
+		   'Reference_ATAG' => 'TARGET="Win1"',
+		   'Peptide' => "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi?QUERY_NAME=BrowseSearchHits&peptide_constraint=\%$colnameidx{peptide}V&search_batch_id=$parameters{search_batch_id}&xcorr_rank_constraint=1&display_options=BSDesc,MaxRefWidth&apply_action=$apply_action",
 		   'Peptide_ATAG' => 'TARGET="Win1"',
       );
 
@@ -553,7 +565,7 @@ sub printEntryForm {
     }
 
 
-    if ($apply_action eq "QUERY") {
+    if ($apply_action =~ /QUERY/i) {
       return $sbeams->displayQueryResult(sql_query=>$sql_query,
           url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols,
           max_widths=>\%max_widths);

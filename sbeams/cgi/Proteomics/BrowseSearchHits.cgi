@@ -89,8 +89,8 @@ sub processRequests {
         print "$ee =$ENV{$ee}=<BR>\n";
       }
       foreach $ee ( $q->param ) {
-        $ff = $q->param($ee);
-        print "$ee =$ff=<BR>\n";
+        $ff = join(",",$q->param($ee));
+        print "$ee=$ff<BR>\n";
       }
     }
 
@@ -246,6 +246,16 @@ sub printEntryForm {
       if ($onChange gt "") {
         $onChange = " onChange=\"$onChange\"";
       }
+
+      #### If the action included the phrase HIDE, don't print all the options
+      if ($apply_action =~ /HIDE/i) {
+        print qq!
+          <TD><INPUT TYPE="hidden" NAME="$column_name"
+           VALUE="$parameters{$column_name}"></TD>
+        !;
+        next;
+      }
+
 
       if ($is_required eq "N") { print "<TR><TD><B>$column_title:</B></TD>\n"; }
       else { print "<TR><TD><B><font color=red>$column_title:</font></B></TD>\n"; }
@@ -642,7 +652,7 @@ sub printEntryForm {
     }
 
 
-    if ($apply_action eq "QUERY") {
+    if ($apply_action =~ /QUERY/i) {
       return $sbeams->displayQueryResult(sql_query=>$sql_query,
           url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols,
           max_widths=>\%max_widths);

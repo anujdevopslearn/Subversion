@@ -91,7 +91,7 @@ sub showMainPage {
     my $element;
     foreach $element (@columns) {
       $element = uc($element);
-      print "<a href=\"$CGI_BASE_DIR/Proteomics/BrowseAnnotatedPeptides.cgi?search_batch_id=1,4&display_options=GroupReference,BSDesc&reference_constraint=$element\%25&apply_action=QUERY\">&nbsp;$element&nbsp;</a> "
+      print "<a href=\"$CGI_BASE_DIR/Proteomics/BrowseAnnotatedPeptides.cgi?search_batch_id=1,4&display_options=GroupReference,BSDesc&reference_constraint=$element\%25&apply_action=QUERYHIDE\">&nbsp;$element&nbsp;</a> "
     }
 
     print qq~
