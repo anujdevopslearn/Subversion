@@ -271,8 +271,7 @@ sub handle_request {
   #### Print out some information about this project
   print qq~
 	<H1><CENTER>MIAME Status of $project_name : $category</CENTER></H1>
-	<FONT COLOR="green"><B>This is the first draft of a tool to ensure data is MIAME compliant<BR>Please email <A HREF="mailto:mjohnson\@systemsbiology.org">mjohnson</A> with any suggestions on how to improve this!</B></FONT><BR>
-	<A HREF="ProjectHome.cgi?tab=miame_status">back to MIAME home</A>
+	<FONT COLOR="green"><B>This is a work in progress.<BR>Please email <A HREF="mailto:mjohnson\@systemsbiology.org">mjohnson</A> with any suggestions on how to improve this!</B></FONT><BR>
 	<FORM NAME="miame" METHOD="POST" onSubmit ="prepareForSubmission('$category')">
 	<INPUT TYPE="hidden" NAME="CATEGORY" VALUE="$category">
   ~;
