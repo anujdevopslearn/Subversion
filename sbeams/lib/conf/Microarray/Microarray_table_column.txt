@@ -148,19 +148,21 @@ array	14	record_status	Record Status	char	1	0	N	N	N							N	N
 labeling	1	labeling_id	Labeling ID	int	8	0	N		Y							N	N				pkDEFAULT
 labeling	2	array_request_sample_id	Array Request Sample ID	int	8	0	N		N		array_request_sample_id	Y	multioptionlist	4		Y	Y	Y	"Sample ID number - Sample name (you may select several samples to enter at once, but note all values will be the same)"	MANUAL	
 labeling	3	protocol_id	Protocol	int	8	0	N		N	protocol	protocol_id	Y	optionlist			Y	Y	N	Protocol used for labeling	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='extract_labeling' ORDER BY P.name"	
-labeling	4	date_labeled	Date Labeled	datetime	8	0	N	CURRENT_TIMESTAMP	N			N	textdate	30		Y	Y	N	Date/time the labeling was performed		
-labeling	5	dye_lot_number	Dye Lot #	varchar	25	0	Y		N			Y	text	10		Y	Y	N	Lot number of dye used		
-labeling	6	absorbance_260	Absorbance at 260nm	float	8	0	Y		N			N	text	10		Y	Y	N	Absorbance value at 260 nm		
-labeling	7	absorbance_lambda	Absorbance at dyeWL	float	8	0	Y		N			N	text	10		Y	Y	N	Absorbance value at the reference wavelength for the dye used		
-labeling	8	volume	Volume	float	8	0	Y		N			N	text	10		Y	Y	N	Volume in microliters (ul)		
-labeling	9	dilution_factor	Dilution Factor	float	8	0	Y		N			N	text	10	refreshDocument()	Y	Y	N	Dilutional factor		
-labeling	10	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments about this step		
-labeling	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-labeling	12	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-labeling	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-labeling	14	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-labeling	15	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-labeling	16	record_status	Record Status	char	1	0	N	N	N							N	N				
+labeling	4	protocol_deviations	Protocol Deviations	text	16	0	Y		N			N	textarea	4		Y	Y	N	List any deviations from the selected protocol		
+labeling	5	spiking_controls	Spiking Controls	text	16	0	Y		N			N	textarea	4		Y	Y	N	"Describe the external controls added to the extract, including which features are expected to hybridize with control, spike type, and expected values or other parameters."		
+labeling	6	date_labeled	Date Labeled	datetime	8	0	N	CURRENT_TIMESTAMP	N			N	textdate	30		Y	Y	N	Date/time the labeling was performed		
+labeling	7	dye_lot_number	Dye Lot #	varchar	25	0	Y		N			Y	text	10		Y	Y	N	Lot number of dye used		
+labeling	8	absorbance_260	Absorbance at 260nm	float	8	0	Y		N			N	text	10		Y	Y	N	Absorbance value at 260 nm		
+labeling	9	absorbance_lambda	Absorbance at dyeWL	float	8	0	Y		N			N	text	10		Y	Y	N	Absorbance value at the reference wavelength for the dye used		
+labeling	10	volume	Volume	float	8	0	Y		N			N	text	10		Y	Y	N	Volume in microliters (ul)		
+labeling	11	dilution_factor	Dilution Factor	float	8	0	Y		N			N	text	10	refreshDocument()	Y	Y	N	Dilutional factor		
+labeling	12	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments about this step		
+labeling	13	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+labeling	14	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+labeling	15	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+labeling	16	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+labeling	17	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+labeling	18	record_status	Record Status	char	1	0	N	N	N							N	N				
 hybridization	1	hybridization_id	Hybridization ID	int	8	0	N		Y							N	N				pkDEFAULT
 hybridization	2	name	Batch Name	varchar	100	0	Y		N			N	text	25		Y	Y	N	Arbitrary name for this hybridization		
 hybridization	3	protocol_id	Protocol	int	8	0	N		N	protocol	protocol_id	Y	optionlist			Y	Y	N	Protocol used for this step	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='hybridization' ORDER BY P.name"	
@@ -204,4 +206,4 @@ array_quantitation	10	created_by_id	Record Created By	int	8	0	N		N	contact	conta
 array_quantitation	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 array_quantitation	12	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
 array_quantitation	13	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-array_quantitation	14	record_status	Record Status	char	1	0	N	N	N							N	N				
+array_quantitation	14	record_status	Record Status	char	1	0	N	N	N							N	N
