@@ -204,6 +204,7 @@ sub handle_request {
 	SELECT experiment_id,experiment_tag,experiment_name
 	  FROM $TBPR_PROTEOMICS_EXPERIMENT PE
 	 WHERE project_id = '$project_id'
+	   AND PE.record_status != 'D'
 	 ORDER BY experiment_tag
     ~;
     @rows = $sbeams->selectSeveralColumns($sql);
