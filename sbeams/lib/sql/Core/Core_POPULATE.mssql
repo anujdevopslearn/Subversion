@@ -91,6 +91,14 @@ INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'input_form_options','medium_detail','Medium Detail',20 );
 INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'input_form_options','full_detail','Full Detail',30 );
+INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'job_status','Not Yet Submitted','Not Yet Submitted', 10 );
+INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'job_status','Submitted','Submitted', 20 );
+INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'job_status','Started','Started', 30 );
+INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'job_status','Finished','Finished', 40 );
 
 INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'gender','M','Male',10 );
