@@ -97,9 +97,9 @@ sub printPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=project">- Projects</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=proteomics_experiment">- Experiments</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi">- Browse Search Hits</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi"><nobr>- Browse Search Hits</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="http://db.systemsbiology.net:8080/proteomicsToolkit/">- Proteomics Toolkit</a></td></tr>
+	<tr><td><a href="http://db.systemsbiology.net:8080/proteomicsToolkit/"><nobr>- Proteomics Toolkit</nobr></a></td></tr>
 	</table>
 	</td>
 
