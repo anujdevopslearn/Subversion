@@ -63,6 +63,11 @@ DB_DRIVER   = DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE
 #### system.  Can be one of "MS SQL Server", "MySQL", "PostgreSQL", "Oracle",
 #### or "DB2" at present. Add your own support for more!
 DB_TYPE     = MS SQL Server
+#DB_TYPE     = MySQL
+#DB_TYPE     = Postresql
+#DB_TYPE     = Oracle
+#DB_TYPE     = DB2
+#
 
 
 #### Set the default database prefix as a function of module to be prepended
