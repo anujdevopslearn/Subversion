@@ -326,6 +326,7 @@ sub printEntryForm {
     my $rv  = $sth->execute or croak $dbh->errstr;
 
     while (my @row = $sth->fetchrow_array) {
+      my $mask_description = 0;
       my ($column_name,$column_title,$is_required,$input_type,$input_length,
           $is_data_column,$column_text,$optionlist_query,$onChange) = @row;
 
@@ -387,9 +388,16 @@ sub printEntryForm {
       }
 
       if ($input_type eq "textarea") {
-        print qq!
-          <TD><TEXTAREA NAME="$column_name" rows=$input_length cols=40>$parameters{$column_name}</TEXTAREA></TD>
-        !;
+        if ($column_name eq "comment") {
+          print qq~
+            <TD COLSPAN=2><TEXTAREA NAME="$column_name" rows=$input_length cols=80>$parameters{$column_name}</TEXTAREA></TD>
+          ~;
+          $mask_description = 1;
+       } else {
+          print qq~
+            <TD><TEXTAREA NAME="$column_name" rows=$input_length cols=40>$parameters{$column_name}</TEXTAREA></TD>
+          ~;
+        }
       }
 
       if ($input_type eq "textdate") {
@@ -455,9 +463,12 @@ sub printEntryForm {
         !;
       }
 
-    print qq!
-      <TD BGCOLOR="E0E0E0">$column_text</TD></TR>
-    !;
+      unless ($mask_description) {
+        print qq!
+          <TD BGCOLOR="E0E0E0">$column_text</TD>
+        !;
+      }
+      print "</TR>\n";
 
 
     }
