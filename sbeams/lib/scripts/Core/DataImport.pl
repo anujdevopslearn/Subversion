@@ -48,7 +48,7 @@ $sbeams = new SBEAMS::Connection;
 use SBEAMS::Microarray::Tables;
 use SBEAMS::Proteomics::Tables;
 use SBEAMS::Immunostain::Tables;
-
+use SBEAMS::BioLink::Tables;
 
 #### Set program name and usage banner
 $PROG_NAME = $FindBin::Script;
