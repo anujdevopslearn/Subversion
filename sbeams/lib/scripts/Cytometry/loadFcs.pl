@@ -46,10 +46,11 @@ my $watchDir = "/users/mkorb/cytometry/";
 my $startDir = $ARGV[0] or die "no valid startDir\n";; 
 my ($watch) = $startDir =~ /.*\/(.*?)\/$/; 
 my $watchFile = $watchDir.$watch."watch";
+
 my $project_id;
 $project_id = 397; 
 $project_id = 409  if $startDir  =~ /IkB-GFP/i;
-=commnet
+
 eval
 {
    open( File, "$watchFile") or die "can not $!"; 
@@ -58,7 +59,7 @@ close File;
 print "watch file found\n" and do( exit)  if (! $@);
 
 open (File, ">$watchFile") or die "can not open $watchFile $!";
-=cut
+
 #exit if(-e $watchFile and $startDir =~ /$watch/i); 
 #open $watchFile 
 
@@ -226,7 +227,7 @@ sub loadDataHash
        $insertRecord{n_data_points} = $hashRef->{'$TOT'};
        $insertRecord{operator} = $hashRef->{'$OP'};
        $insertRecord {institution} = $hashRef->{'$INST'};
-       $insertRecord{comment} = $hashRef->{'$COM'} ;
+       $insertRecord{comment} = $hashRef->{'$COM'};
        $insertRecord{filename} = $fileName;
        $insertRecord{original_filepath} = $dirName;
        $insertRecord{run_date} =  $hashRef->{'$DATE'};
@@ -377,7 +378,7 @@ sub recordDataPoints
     $fileName = $PK."_".$fileName;
      my $outfile = $PHYSICAL_BASE_DIR ."/dataPoints/tmp/".$fileName;
 
-    print "writing the tempHash: $PHYSICAL_BASE_DIR/dataPoints/tmp/";
+    print "writing the tempHash: $outfile/dataPoints/tmp/ \n";
     my $dummy; 
     # Read in the data, sort it out into the correct columns, and dump
     # it to the output file.
