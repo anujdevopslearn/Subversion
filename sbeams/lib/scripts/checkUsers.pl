@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/local/bin/perl -w
 
 ###############################################################################
 # Program     : checkUsers.pl
@@ -18,77 +18,127 @@
 
 
 ###############################################################################
-# Get the script set up with everything it will need
+# Generic SBEAMS setup for all the needed modules and objects
 ###############################################################################
 use strict;
-use vars qw ($sbeams $dbh $PROGRAM_FILE_NAME
-             $current_contact_id $current_username
-             $current_work_group_id $current_work_group_name
-             $current_project_id $current_project_name);
-use lib qw (../perl);
+use Getopt::Long;
+use FindBin;
 
+use lib "$FindBin::Bin/../perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
+            );
+
+
+#### Set up SBEAMS core module
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
-use SBEAMS::Connection::TableInfo;
+$sbeams = SBEAMS::Connection->new();
 
-$sbeams = new SBEAMS::Connection;
-$| = 1;
+use CGI;
+$q = CGI->new();
 
 
 ###############################################################################
-# Global Variables
+# Set program name and usage banner for command like use
 ###############################################################################
-$PROGRAM_FILE_NAME = 'checkUsers.pl';
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS]
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+  --testonly          If set, rows in the database are not changed or added
+  --include_users     Comma-separated list of users to process
+  --exclude_users     Comma-separated list of users to exclude from processing
+
+ e.g.:  $PROG_NAME --check --NIS yeast --SBEAMS Yeast --priv data_groupmodifier
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
+        "include_users:s","exclude_users:s",
+  )) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+$TESTONLY = $OPTIONS{"testonly"} || 0;
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+  print "  TESTONLY = $TESTONLY\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
 main();
+exit(0);
 
 
 ###############################################################################
 # Main Program:
 #
-# Call $sbeams->Authentication and stop immediately if authentication
-# fails else continue.
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
 ###############################################################################
 sub main {
 
-    #### Do the SBEAMS authentication and exit if a username is not returned
-    exit unless ($current_username =
-        $sbeams->Authenticate(work_group=>'Admin'));
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    work_group=>'Admin',
+  ));
 
-    #### Print the header, do what the program does, and print footer
-    $sbeams->printTextHeader();
-    showMainPage();
-    $sbeams->printTextFooter();
+
+  $sbeams->printPageHeader() unless ($QUIET);
+  handleRequest();
+  $sbeams->printPageFooter() unless ($QUIET);
+
 
 } # end main
 
 
 ###############################################################################
-# Show the main welcome page
+# handleRequest
 ###############################################################################
-sub showMainPage {
+sub handleRequest {
+  my %args = @_;
 
-  $current_username = $sbeams->getCurrent_username;
-  $current_contact_id = $sbeams->getCurrent_contact_id;
-  $current_work_group_id = $sbeams->getCurrent_work_group_id;
-  $current_work_group_name = $sbeams->getCurrent_work_group_name;
-
-
-  $sbeams->printUserContext(style=>'TEXT');
-  print "\n";
+  #### Set the command-line options
+  my $include_users = $OPTIONS{"include_users"} || '';
+  my $exclude_users = $OPTIONS{"exclude_users"} || '';
 
 
-  my $NOWRITE = 1;
+  #### If there are any parameters left, complain and print usage
+  if ($ARGV[0]){
+    print "ERROR: Unresolved command line parameter '$ARGV[0]'.\n";
+    print "$USAGE";
+    exit;
+  }
 
-  #### Define a mapping of YP groups to SBEAMS groups
-  my %groupMapping = (
-    proteomics => "Proteomics_user",
-    comp_bio => "Comp_Bio"
-  );
 
-  my @excluded_users = qq( db2inst1 sbeams geospiza geap jbuhler access
-    badzioch db2guest sqladmin software db2fenc1 3700user kuchkar licor
-    db2as );
+  #### Print out the header
+  unless ($QUIET) {
+    $sbeams->printUserContext();
+    print "\n";
+  }
+
+
+  my @exclude_users = split(',',$exclude_users);
+  unless (@exclude_users) {
+    @exclude_users = qw( access condor db2as db2fenc1 db2guest db2inst1
+      finch gbrowse geap geospiza kuchkar licor qtem sbeams software
+      sqladmin );
+  };
 
 
   my ($unixgroup,$dbgroup,$group_list,$member,$group,$line);
@@ -96,16 +146,24 @@ sub showMainPage {
   my (@group_members,@groups,@results,@parsed_line);
 
 
-  #### Loop over each group
+  #### Get the list of everyone in passwd
   my @contacts = `/usr/bin/ypcat passwd`;
 
-  my $sql = "SELECT username,contact_id FROM $TB_USER_LOGIN WHERE record_status != 'D'";
+
+  #### Get all current user_logins
+  my $sql = qq~
+    SELECT username,contact_id
+      FROM $TB_USER_LOGIN
+     WHERE record_status != 'D'
+  ~;
   my %user_logins = $sbeams->selectTwoColumnHash($sql);
 
-  foreach $member (@contacts) {
+
+  #### Loop over each group
+  foreach $member (sort @contacts) {
 
     @parsed_line = split(":",$member);
-    my $username = @parsed_line[0];
+    my $username = $parsed_line[0];
 
     $line = $parsed_line[4];
     @parsed_line = split(",",$line);
@@ -116,7 +174,8 @@ sub showMainPage {
     my $department = $parsed_line[2];
 
 
-    next if (grep { /$username/ } @excluded_users);
+    next if (grep { /$username/ } @exclude_users);
+
 
     #### See if the user exists in the database
     $contact_id = $user_logins{$username};
@@ -126,14 +185,30 @@ sub showMainPage {
       $user_logins{$username} = 0;
 
     } else {
-      print "$username: (not in db)\n";
+      print "$username ($real_name): username not in SBEAMS\n";
+
+      my $qqfirst_name = $sbeams->convertSingletoTwoQuotes($first_name);
+      my $qqlast_name = $sbeams->convertSingletoTwoQuotes($last_name);
+      $sql = qq~
+	SELECT contact_id
+	  FROM $TB_CONTACT
+	 WHERE first_name = '$qqfirst_name'
+	   AND last_name = '$qqlast_name'
+      ~;
+      my ($contact_id) = $sbeams->selectOneColumn($sql);
+      if ($contact_id) {
+	print "  but they do seem to be a contact with id $contact_id\n";
+      }
+
+
     }
 
   }
 
 
-  print "SBEAMS user_logins without yppasswd user_logins\n";
-  while ( my ($key,$value) = each %user_logins) {
+  print "\nSBEAMS user_logins without yppasswd user_logins\n";
+  foreach my $key ( sort(keys(%user_logins)) ) {
+    my $value = $user_logins{$key};
     if ($value) {
       print "$key: ???\n";
     }
@@ -141,7 +216,7 @@ sub showMainPage {
   }
 
 
-} # end showMainPage
+} # end handleRequest
 
 
 
