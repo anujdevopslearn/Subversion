@@ -291,7 +291,6 @@ sub displayMain{
 		
 #### If there are experiments, display them
  	my (%hash,%stainedSlideHash,%imageHash);
-	my (@specList,@slideList,@imageList);
 
 	if (@rows)
 	{
@@ -299,12 +298,15 @@ sub displayMain{
 		{
 			my ($specimenID,$stainedSlideID,$slideImageID,$organismName) = @{$row};
 			
-			$hash{$organismName}->{'specimenID'}++ if $specimenID and !scalar(grep /$specimenID/ ,@specList);
-			$hash{$organismName}->{stainID}++ if $stainedSlideID and !scalar(grep /$stainedSlideID/ ,@slideList);
-			$hash{$organismName}->{imageID}++ if $slideImageID; 
-			push @specList, $specimenID;
-			push @slideList, $stainedSlideID;
-			
+			$hash{$organismName}->{specimenID}->{count}++ if ($specimenID and
+        !exists($hash{$organismName}->{specimenID}->{$specimenID}));
+			$hash{$organismName}->{stainedSlideID}->{count}++ if ($stainedSlideID and
+        !exists($hash{$organismName}->{stainedSlideID}->{$stainedSlideID}));
+			$hash{$organismName}->{slideImageID}->{count}++ if ($slideImageID and
+        !exists($hash{$organismName}->{slideImageID}->{$slideImageID}));
+      $hash{$organismName}->{specimenID}->{$specimenID} = 1;
+      $hash{$organismName}->{stainedSlideID}->{$stainedSlideID} = 1;
+      $hash{$organismName}->{slideImageID}->{$slideImageID} = 1;
 			
 		}
 		
@@ -312,16 +314,20 @@ sub displayMain{
 		print qq *
 		<tr></tr><tr></tr>
 		*; 
+		print "<tr><td>Project Summary by Organism:</td></tr><tr></tr><tr></tr>";
 		foreach my $key (sort keys %hash)
 		{
 			
 			
-			print "<td><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&specimen_block_id=$humanString&display_options=MergeLevelsAndPivotCellTypes\"><b>$key</A></b></td></tr>" if $key =~ /human/i;
-			print "<td><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&specimen_block_id=$mouseString&display_options=MergeLevelsAndPivotCellTypes\"><b>$key</A></b></td></tr>" if $key =~ /mouse/i;
+			print "<td><B>$key </B><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&specimen_block_id=$humanString&display_options=MergeLevelsAndPivotCellTypes\"><b>[Full CD Specificity Summary]</A></b></td></tr>" if $key =~ /human/i;
+			print "<td><B>$key </B><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&specimen_block_id=$mouseString&display_options=MergeLevelsAndPivotCellTypes\"><b>[Full CD Specificity Summary]</A></b></td></tr>" if $key =~ /mouse/i;
 			print qq~
-			<tr><td>Total Number of Specimens: $hash{$key}->{specimenID}</td></tr>
-			<tr><td>Total Number of Stains: $hash{$key}->{stainID}</td></tr>
-			<tr><td>Total Number of Images: $hash{$key}->{imageID}</td></tr>
+			<tr><td><UL>
+      <LI>Total Number of Specimens: $hash{$key}->{specimenID}->{count}
+			<LI>Total Number of Stains: $hash{$key}->{stainedSlideID}->{count}
+			<LI>Total Number of Images: $hash{$key}->{slideImageID}->{count}
+      </UL>
+      </td></tr>
 			<tr></tr><tr></tr>
       ~;
 		}
