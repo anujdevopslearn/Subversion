@@ -464,29 +464,62 @@ sub processFile
 				push @yOptionArray, $parameters{minY};
 				$parameters{minY} += 200;
 			}
-			
+			my $count = 0;
 			print qq~<tr><td><Select name="xBoxMin" size =3>~;
 			foreach my $number (@xOptionArray)
 			{
+        if ($count ==0 )
+        {
+          print qq ~ <option selected value="$number">$number~;
+          $count ++;
+        }
+        else
+        {
 				print qq ~ <option value="$number">$number~;
+        }
 			}
+      $count = 0;
 			print qq~</td><td><Select name="yBoxMin" size =3>~;
 			foreach my $number (@yOptionArray)
 			{
+        if ($count ==0 )
+        {
+          print qq ~ <option selected value="$number">$number~;
+          $count ++;
+        }
+        else
+        {
 				print qq ~ <option value="$number">$number~;
+        }
 			}
-			
+			$count = 0;
 			print "</td></tr><tr><tr><td><b>Select max X-coordinates</b></td> <td><b>Select max Y-coordinates</b></td></tr>";
 			print qq~<tr><td><Select name="xBoxMax" size =3>~;
 			for(my $c = scalar(@xOptionArray)-1; $c > -1; $c--)
 			{
-				print qq ~ <option value="$xOptionArray[$c]">$xOptionArray[$c]~;
+        if ($count == 0)
+        {
+          print qq ~ <option selected value="$xOptionArray[$c]">$xOptionArray[$c]~;
+          $count ++; 
+        }
+        else
+        {
+          print qq ~ <option value="$xOptionArray[$c]">$xOptionArray[$c]~;
+        }
 			}
 			print qq~</td><td><Select name="yBoxMax" size =3>~;
-		
+		$count = 0;
 			for(my $c = scalar(@yOptionArray)-1; $c > -1; $c--)
 			{
-				print qq ~ <option value="$yOptionArray[$c]">$yOptionArray[$c]~;
+        if ($count == 0)
+        {
+          print qq ~ <option selected value="$yOptionArray[$c]">$yOptionArray[$c]~;
+          $count ++; 
+        }
+        else
+        {
+          print qq ~ <option value="$yOptionArray[$c]">$yOptionArray[$c]~;
+        }
 			}
 			print qq ~</td></tr>~;			
 			 print qq~<input type= hidden name="action" value = "$GETANOTHERGRAPH"> 
@@ -610,7 +643,7 @@ sub printGraph
 	while (my $imageFile = <TXT>)
 	{ 
 		chomp $imageFile;
-#		print "ddddd $imageFile<br>";
+
 		push @imageArray,$imageFile;
 	}
 	my $prevImage = "xxxx";
@@ -1002,49 +1035,35 @@ sub checkGO
       return false;
    }
    
-   var xx = document.forms[3].xBoxMin.selectedIndex;
-   var xmin = document.forms[3].xBoxMin.options[xx].value;
   
-  
-    var xx = document.forms[3].xBoxMax.selectedIndex;
-    var xmax = document.forms[3].xBoxMax.options[xx].value;
-  
- // alert (xmin);
- // alert(xmax)
-  
-  
-    var yy = document.forms[3].yBoxMin.selectedIndex;
-    var ymin = document.forms[3].yBoxMin.options[yy].value;
-   
-    var yy = document.forms[3].yBoxMax.selectedIndex;
-    var ymax = document.forms[3].yBoxMax.options[yy].value;
-//alert (ymin);
-//alert(ymax)
- /*
-      if (xmin > xmax)
-      {
-        alert ("X min needs to be smaller than X max");
-        return false;
-      }
-  
+     var  xx = document.forms[3].xBoxMin.selectedIndex;
+     var  xmin = document.forms[3].xBoxMin.options[xx].value;
+     xx = document.forms[3].xBoxMax.selectedIndex;
+     xmax = document.forms[3].xBoxMax.options[xx].value;
+     
+     if (xmin > xmax)
+     {
+       alert ("X min can not be greater than X max");
+       return false;
+     }
+      
+      var yy = document.forms[3].yBoxMin.selectedIndex;
+      var ymin = document.forms[3].yBoxMin.options[yy].value;
+      var yy = document.forms[3].yBoxMax.selectedIndex;
+      var ymax = document.forms[3].yBoxMax.options[yy].value;
     
-  
-      if (ymin >ymax)
-      {
-        alert ("Y min needs to be smaller than Y max");
-        return false;
-      }
- 
-*/
-}
-   
-   
+    if (ymin > ymax) 
+    {
+      alert ("Y min can not be greater than Y max");
+      return false;
+    }
+      
+ }       
    
 
 QUERY
 print "<\/script>";
 }
-
 __END__
 		
 
