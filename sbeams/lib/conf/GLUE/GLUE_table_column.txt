@@ -78,14 +78,13 @@ GL_publication	14	editor_name	Editor Name	varchar	255	0	Y		N			N	text	40		Y	Y	N	
 GL_publication	15	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	"URL of other locator for the article, either out on the Internet or in the location Publications repository"		SELF
 GL_publication	16	abstract	Abstract	text	16	0	Y		N			N	textarea	4		Y	Y	N	Plain text abstract of the article		
 GL_publication	17	full_manuscript_file	Manuscript File Upload	varchar	255	0	Y		N			N	file	40		Y	Y	N	Actual file containing the manuscript (e.g. in PDF format)		
-GL_publication	18	manuscript_file_location_id	Full Manuscript File (new)	int	4	0	Y		N			N	fixed			Y	Y	N	"This is a placeholder for an improved file management mechanism, still unimplemented"		
-GL_publication	19	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-GL_publication	20	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-GL_publication	21	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-GL_publication	22	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-GL_publication	23	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-GL_publication	24	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-GL_publication	25	record_status	Record Status	char	1	0	N	N	N							N	N				
+GL_publication	18	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+GL_publication	19	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GL_publication	20	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+GL_publication	21	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GL_publication	22	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+GL_publication	23	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+GL_publication	24	record_status	Record Status	char	1	0	N	N	N							N	N				
 GL_bioentity	1	bioentity_id	BioEntity ID	int	4	0	N		Y							N	N				pkDEFAULT
 GL_bioentity	2	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism for this BioEntity	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 GL_bioentity	3	bioentity_name	BioEntity Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Common name of this BioEntity		
@@ -254,7 +253,7 @@ GL_assay	1	assay_id	Assay ID	int	4	0	N		Y							N	N				pkDEFAULT
 GL_assay	2	assay_type_id	Assay Type	int	4	0	N		N	GL_assay_type	assay_type_id	Y	optionlist			Y	Y	N	Assay Type	"SELECT assay_type_id, assay_type_name FROM $TBGL_ASSAY_TYPE ORDER BY sort_order,assay_type_name"	
 GL_assay	3	sample_type_id	Sample Type	int	4	0	Y		N	GL_sample_type	sample_type_id	N	optionlist			Y	Y	N	Sample Type	"SELECT sample_type_id, sample_type_name FROM $TBGL_SAMPLE_TYPE ORDER BY sort_order,sample_type_name"	
 GL_assay	4	publication_id	Publication	int	4	0	Y		N	GL_publication	publication_id	N	optionlist			Y	Y	N	Publication	"SELECT publication_id, publication_name FROM $TBGL_PUBLICATION ORDER BY publication_name"	
-GL_assay	5	assay_name	Assay Name	varchar	255	0	N		N			Y	text	40		Y	Y	Y	Name of this Assay	
+GL_assay	5	assay_name	Assay Name	varchar	255	0	N		N			Y	text	40		Y	Y	Y	Name of this Assay		
 GL_assay	6	assay_description	Description	varchar	255	0	N		N			Y	textarea	4		Y	Y	N	Longer description of this Assay	
 GL_assay	7	assay_date	Date Assay Performed	datetime	8	0	Y		N			N	text	20		Y	Y	N	Date of Assay	
 GL_assay	8	lab_notebook	Lab Notebook	varchar	255	0	Y		N			N	text	40		Y	Y	N	Lab Notebook	
