@@ -884,7 +884,6 @@ sub PlotPeaks {
 
       #### else if there are no fragments with mass near enough this peak
       } else {
-        $lineclr = 14;
         if (($peakcolors_ref->[$i] != 2) & ($peakcolors_ref->[$i] != 3) &
             ($peakcolors_ref->[$i] != 4) & ($peakcolors_ref->[$i] != 6) &
             ($peakcolors_ref->[$i] != 10) & ($peakcolors_ref->[$i] != 11)) {
@@ -892,7 +891,6 @@ sub PlotPeaks {
           push(@Rinten,$intensity);
           push(@Rmass,$mass);
         }
-        #$lineclr = 14;
 
       }
 
