@@ -325,7 +325,8 @@ sub make_output_dir {
   #### Process the arguments list
   my $testonly = $args{'testonly'};
   my $unique_dir = 0;
-  my $output_dir = "/net/techdev/biosap_ext/";
+#	my $output_dir = "/net/techdev/biosap_ext"; # for MySQL site
+  my $output_dir = "/net/techdev/biosap/"; # for ISB-internal site
   ($testonly == 1) ? ($output_dir .= "tmp/") : ($output_dir .= "data/");
 
   #### Create an output directory.  Make sure it's unique
