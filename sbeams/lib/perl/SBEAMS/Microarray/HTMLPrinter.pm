@@ -62,6 +62,10 @@ sub printPageHeader {
     $self->printStyleSheet();
 
 
+    #### Determine the Title bar background decoration
+    my $header_bkg = "bgcolor=\"$BGCOLOR\"";
+    $header_bkg = "background=\"/images/plaintop.jpg\"" if ($DBVERSION =~ /Primary/);
+
     print qq~
 	<!--META HTTP-EQUIV="Expires" CONTENT="Fri, Jun 12 1981 08:20:00 GMT"-->
 	<!--META HTTP-EQUIV="Pragma" CONTENT="no-cache"-->
@@ -75,7 +79,7 @@ sub printPageHeader {
 	<!------- Header ------------------------------------------------>
 	<a name="TOP"></a>
 	<tr>
-	  <td bgcolor="$BARCOLOR"><img height=50 width=50 border=0 alt="$DBTITLE Logo" src="$HTML_BASE_DIR/images/logo.gif"></td>
+	  <td bgcolor="$BARCOLOR"><a href="http://www.systemsbiology.org/"><img height=60 width=60 border=0 alt="ISB Main" src="/images/ISBlogo60t.gif"></a><a href="http://db.systemsbiology.net/"><img height=60 width=60 border=0 alt="ISB DB" src="/images/ISBDBt.gif"></a></td>
 	  <td align="left" bgcolor="$BGCOLOR"><H1>$DBTITLE - MicroArray<BR>$DBVERSION</H1></td>
 	</tr>
 
@@ -89,25 +93,53 @@ sub printPageHeader {
 	<tr><td bgcolor="$BARCOLOR" align="left" valign="top">
 	<table border=0 width="120" cellpadding=2 cellspacing=0>
 
-	<tr><td><a href="$CGI_BASE_DIR/main.cgi">>$DBTITLE Home</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Microarray/main.cgi">>MicroArray Home</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">>Logout</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=contact">- Contacts</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=project">- Projects</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=protocol">- Protocols</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=slide_lot">- Slides</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=printing_batch">- Printing</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=array">- Arrays</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=labeling">- Label/Hyb</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=array_scan">- Scan/Quant</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/main.cgi">$DBTITLE Home</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi">$SBEAMS_PART Home</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Microarray/SubmitArrayRequest.cgi?TABLE_NAME=array_request">- Array Requests</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=slide_type">- Array Info</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Microarray/ShowProjectStatus.cgi">- Project Status</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Microarray/GridAlignCheck.cgi">- Grid Align Check</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Microarray/ProcessProject.cgi">- Process a Project</a></td></tr>
+
+	<tr><td>Array Requests:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project"><nobr>&nbsp;&nbsp;&nbsp;Manage Projects</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SubmitArrayRequest.cgi?TABLE_NAME=array_request"><nobr>&nbsp;&nbsp;&nbsp;Array Requests</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=user_login">- Admin</a></td></tr>
+
+	<tr><td>Status/Processing:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ShowProjectStatus.cgi"><nobr>&nbsp;&nbsp;&nbsp;Project Status</a></nobr></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GridAlignCheck.cgi"><nobr>&nbsp;&nbsp;&nbsp;Alignment Check</a></nobr></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProcessProject.cgi"><nobr>&nbsp;&nbsp;&nbsp;Data Processing</a></nobr></td></tr>
+	<tr><td>&nbsp;</td></tr>
+
+	<tr><td>Array Information:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=protocol"><nobr>&nbsp;&nbsp;&nbsp;Protocols</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=labeling"><nobr>&nbsp;&nbsp;&nbsp;Labeling</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=hybridization"><nobr>&nbsp;&nbsp;&nbsp;Hybridization</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=array_quantitation"><nobr>&nbsp;&nbsp;&nbsp;Quantitation</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>
+    ~;
+
+      $current_work_group_name = $sbeams->getCurrent_work_group_name();
+      if ($current_work_group_name eq "Arrays" || $current_work_group_name eq "Admin" || 1) {
+       print qq~
+	<tr><td>Arrays Core:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=contact"><nobr>&nbsp;&nbsp;&nbsp;Contacts</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=array"><nobr>&nbsp;&nbsp;&nbsp;Arrays</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=array_scan"><nobr>&nbsp;&nbsp;&nbsp;Scanning</nobr></a></td></tr>
+       ~;
+      }
+
+      $current_work_group_name = $sbeams->getCurrent_work_group_name();
+      if ($current_work_group_name eq "Arrays" || $current_work_group_name eq "Admin") {
+       print qq~
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=slide_lot"><nobr>&nbsp;&nbsp;&nbsp;Physical Slides</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=array_layout"><nobr>&nbsp;&nbsp;&nbsp;Array Layouts</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=printing_batch"><nobr>&nbsp;&nbsp;&nbsp;Printing Batches</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=slide_type"><nobr>&nbsp;&nbsp;&nbsp;Slide Type/Costs</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=user_login"><nobr>Admin</nobr></a></td></tr>
+       ~;
+      }
+
+      print qq~
 	</table>
 	</td>
 
