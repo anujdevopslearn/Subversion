@@ -33,7 +33,7 @@ use SBEAMS::Connection::Tables;
 
 use SBEAMS::Inkjet;
 use SBEAMS::Inkjet::Settings;
-use SBEAMS::Inkjet::Tables; 
+use SBEAMS::Inkjet::Tables;
 
 use lib "/net/arrays/Pipeline/tools/lib";
 require "QuantitationFile.pl";
@@ -42,7 +42,6 @@ $q = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsIJ = new SBEAMS::Inkjet;
 $sbeamsIJ->setSBEAMS($sbeams);
-
 
 ###############################################################################
 # Global Variables
@@ -58,14 +57,23 @@ main();
 ###############################################################################
 sub main { 
 
-    #### Do the SBEAMS authentication and exit if a username is not returned
-    exit unless ($current_username = $sbeams->Authenticate());
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate());
 
-    #### Print the header, do what the program does, and print footer
-    $sbeamsIJ->printPageHeader();
-    processRequests();
-    $sbeamsIJ->printPageFooter();
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(q=>$q,parameters_ref=>\%parameters);
+  #$sbeams->printDebuggingInfo($q);	
 
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+
+
+  #### Print the header, do what the program does, and print footer
+  $sbeamsIJ->printPageHeader();
+  processRequests();
+  $sbeamsIJ->printPageFooter();
 
 } # end main
 
@@ -115,82 +123,26 @@ sub processRequests {
 ###############################################################################
 sub printEntryForm {
 
+		## Define Standard Variables
     my %parameters;
     my $element;
     my $sql_query;
     my (%url_cols,%hidden_cols);
 
-    my $CATEGORY="Welcome to the Test Pipeline Tool!";
-    my $SECONDARY_MESSAGE="Please send commments/bugs/etc. to <A HREF=\"mailto:mjohnson\@systemsbiology.org\">mjohnson</A>";
+    my $CATEGORY="Welcome to the Data Processing Pipeline!";
+    my $SECONDARY_MESSAGE="<B><FONT COLOR='red'>In order to create a better data processing tool, I need your help!</FONT></B>";
+    my $TERTIARY_MESSAGE="If you have any questions, suggestions, or just want some help, please contact me!<BR>Thanks!<BR>- <A HREF=\"mailto:mjohnson\@systemsbiology.org\">Michael Johnson</A>";
 
-    my $apply_action  = $q->param('apply_action');
-    my $update_action = $q->param('UPDATE_CART');#mj
-    $parameters{project_id} = $q->param('project_id');
-
-
-    # If we're coming to this page for the first time, and there is a
-    # default project set, then automatically select that one and GO!
-    if ( ($parameters{project_id} eq "") && ($current_project_id > 0) ) {
-      $parameters{project_id} = $current_project_id;
-      $apply_action = "QUERY";
-    }
-
+    $parameters{project_id} = $sbeams->getCurrent_project_id();
 
     $sbeams->printUserContext();
-    print qq!
-        <H2>$CATEGORY</H2>
-	<BR>$SECONDARY_MESSAGE<BR>
-        $LINESEPARATOR
-        <FORM METHOD="post">
-        <TABLE>
-    !;
+    print qq~
+  <H2>$CATEGORY</H2>
+      <BR>$SECONDARY_MESSAGE<BR>
+      <BR>$TERTIARY_MESSAGE<BR>
+      <BR><BR>
+      ~;
 
-
-    # ---------------------------
-    # Query to obtain column information about the table being managed
-    $sql_query = qq~
-	SELECT project_id,username+' - '+name
-	  FROM $TB_PROJECT P
-	  LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id )
-	  LEFT JOIN $TB_USER_WORK_GROUP UWG
-	       ON ( P.PI_contact_id=UWG.contact_id )
-	 WHERE P.record_status != 'D'
-	   AND UWG.work_group_id = 13
-	 ORDER BY username,name
-    ~;
-    my $optionlist = $sbeams->buildOptionList(
-           $sql_query,$parameters{project_id});
-
-
-    print qq!
-          <TR><TD><B>Project:</B></TD>
-          <TD><SELECT NAME="project_id">
-          <OPTION VALUE=""></OPTION>
-	   $optionlist</SELECT></TD>
-          <TD BGCOLOR="E0E0E0">Select the Project Name</TD>
-          </TD></TR>
-    !;
-
-
-    # ---------------------------
-    # Show the QUERY, REFRESH, and Reset buttons
-   print qq!
-	<TR><TD COLSPAN=2>
-	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-	<INPUT TYPE="submit" NAME="apply_action" VALUE="QUERY">
-	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-	<INPUT TYPE="submit" NAME="apply_action" VALUE="REFRESH">
-	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-	<INPUT TYPE="reset"  VALUE="Reset">
-         </TR></TABLE>
-         </FORM>
-    !;
-
-
-    $sbeams->printPageFooter("CloseTables");
-    print "<BR><HR SIZE=5 NOSHADE><BR>\n";
-
-    # --------------------------------------------------
     if ($parameters{project_id} > 0) {
       $sql_query = qq~
 SELECT	A.array_id,A.array_name,
@@ -198,18 +150,18 @@ SELECT	A.array_id,A.array_name,
 	ARSM2.name AS 'Sample2Name',D2.dye_name AS 'sample2_dye',
 	AQ.array_quantitation_id,AQ.data_flag AS 'quan_flag',
 	AQ.stage_location,AL.source_filename AS 'key_file'
-  FROM $TBIJ_ARRAY_REQUEST AR
-  LEFT JOIN $TBIJ_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )
-  LEFT JOIN $TBIJ_ARRAY_REQUEST_SAMPLE ARSM1 ON ( ARSL.array_request_slide_id = ARSM1.array_request_slide_id AND ARSM1.sample_index=0)
-  LEFT JOIN $TBIJ_LABELING_METHOD LM1 ON ( ARSM1.labeling_method_id = LM1.labeling_method_id )
-  LEFT JOIN $TBIJ_DYE D1 ON ( LM1.dye_id = D1.dye_id )
-  LEFT JOIN $TBIJ_ARRAY_REQUEST_SAMPLE ARSM2 ON ( ARSL.array_request_slide_id = ARSM2.array_request_slide_id AND ARSM2.sample_index=1)
-  LEFT JOIN $TBIJ_LABELING_METHOD  LM2 ON ( ARSM2.labeling_method_id = LM2.labeling_method_id )
-  LEFT JOIN $TBIJ_DYE D2 ON ( LM2.dye_id = D2.dye_id )
-  LEFT JOIN $TBIJ_ARRAY A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
-  LEFT JOIN $TBIJ_ARRAY_LAYOUT AL ON ( A.layout_id = AL.layout_id )
-  LEFT JOIN $TBIJ_ARRAY_SCAN ASCAN ON ( A.array_id = ASCAN.array_id )
-  LEFT JOIN $TBIJ_ARRAY_QUANTITATION  AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
+  FROM array_request AR
+  LEFT JOIN array_request_slide ARSL ON ( AR.array_request_id = ARSL.array_request_id )
+  LEFT JOIN array_request_sample ARSM1 ON ( ARSL.array_request_slide_id = ARSM1.array_request_slide_id AND ARSM1.sample_index=0)
+  LEFT JOIN labeling_method LM1 ON ( ARSM1.labeling_method_id = LM1.labeling_method_id )
+  LEFT JOIN arrays.dbo.dye D1 ON ( LM1.dye_id = D1.dye_id )
+  LEFT JOIN array_request_sample ARSM2 ON ( ARSL.array_request_slide_id = ARSM2.array_request_slide_id AND ARSM2.sample_index=1)
+  LEFT JOIN labeling_method LM2 ON ( ARSM2.labeling_method_id = LM2.labeling_method_id )
+  LEFT JOIN arrays.dbo.dye D2 ON ( LM2.dye_id = D2.dye_id )
+  LEFT JOIN array A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
+  LEFT JOIN array_layout AL ON ( A.layout_id = AL.layout_id )
+  LEFT JOIN array_scan ASCAN ON ( A.array_id = ASCAN.array_id )
+  LEFT JOIN array_quantitation AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
  WHERE AR.project_id=$parameters{project_id}
    AND AQ.array_quantitation_id IS NOT NULL
    AND AR.record_status != 'D'
@@ -217,10 +169,10 @@ SELECT	A.array_id,A.array_name,
    AND ASCAN.record_status != 'D'
    AND AQ.record_status != 'D'
    AND AQ.data_flag != 'BAD'
-ORDER BY A.array_name
+ ORDER BY A.array_name
      ~;
 
-      my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=";
+      my $base_url = "$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=";
       %url_cols = ('array_name' => "${base_url}array&array_id=%0V",
                    'quan_flag' => "${base_url}array_quantitation&array_quantitation_id=%6V", 
       );
@@ -230,170 +182,130 @@ ORDER BY A.array_name
       );
 
 
-    } else {
-      $apply_action="BAD SELECTION";
+    }
+    my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
+    my $rv  = $sth->execute or croak $dbh->errstr;
+    
+    my @rows;
+    my @row;
+    while (@row = $sth->fetchrow_array) {
+      my @temprow = @row;
+      push(@rows,\@temprow);
+    }
+
+    $sth->finish;
+    my @group_names;
+    my %group_names_hash;
+    my @slide_group_names;
+    my @slide_rowrefs;
+    my @slide_directions;
+    
+    foreach $element (@rows) {
+      my $sample1name = $$element[2];
+      my $sample2name = $$element[4];
+      my $forcondition = "${sample1name}_vs_${sample2name}";
+      my $revcondition = "${sample2name}_vs_${sample1name}";
+      my $thiscondition;
+      my $direction = "";
+			
+      if (defined($group_names_hash{$forcondition})) {
+	$direction = "f";
+	$thiscondition = $forcondition;
+      }
+
+      if (defined($group_names_hash{$revcondition})) {
+        $direction = "r";
+	$thiscondition = $revcondition;
+      }
+
+      unless ($direction) {
+        $direction = "f";
+	$thiscondition = $forcondition;
+	push(@group_names,$thiscondition);
+	$group_names_hash{$thiscondition}=$thiscondition;
+      }
+
+      push(@slide_group_names,$thiscondition);
+      push(@slide_rowrefs,$element);
+      push(@slide_directions,$direction);
     }
 
 
-    if ($apply_action eq "QUERY") {
-      $sbeams->displayQueryResult(sql_query=>$sql_query,
-          url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols);
-
-
-
-      my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
-      my $rv  = $sth->execute or croak $dbh->errstr;
-
-      my @rows;
-      my @row;
-      while (@row = $sth->fetchrow_array) {
-        my @temprow = @row;
-        push(@rows,\@temprow);
-      }
-
-      $sth->finish;
-      print qq~
-        <FORM METHOD="post">
-      ~;
-
-
-      my @group_names;
-      my %group_names_hash;
-      my @slide_group_names;
-      my @slide_rowrefs;
-      my @slide_directions;
-
-
-      foreach $element (@rows) {
-        my $sample1name = $$element[2];
-	$sample1name =~ s/ /_/g;
-        my $sample2name = $$element[4];
-	$sample2name =~ s/ /_/g;
-        my $forcondition = "${sample1name}_vs_${sample2name}";
-        my $revcondition = "${sample2name}_vs_${sample1name}";
-        my $thiscondition;
-        my $direction = "";
-
-        if (defined($group_names_hash{$forcondition})) {
-          $direction = "f";
-          $thiscondition = $forcondition;
-        }
-
-        if (defined($group_names_hash{$revcondition})) {
-          $direction = "r";
-          $thiscondition = $revcondition;
-        }
-
-        unless ($direction) {
-          $direction = "f";
-          $thiscondition = $forcondition;
-          push(@group_names,$thiscondition);
-          $group_names_hash{$thiscondition}=$thiscondition;
-        }
-
-        push(@slide_group_names,$thiscondition);
-        push(@slide_rowrefs,$element);
-        push(@slide_directions,$direction);
-      }
-
-
-      my $group;
-      my $error_flag = 0;
-      my ($quantitation_file,$qf_status);
-      my (@ERRORS,@command_file);
-      my (@results,@parts);
-      my @project_outline;#mj
-
-      foreach $group (@group_names) {
-	
-        my $row_counter=0;
-        my $first_flag=1;
-        my $channel_direction = "";
-        foreach $element (@slide_group_names) {
-
-          if ($element eq $group) {
-	
-            if ($first_flag) {
-              my $cmd_line = "$group ${$slide_rowrefs[$row_counter]}[9] EXP";
+    my $group;
+    my $error_flag = 0;
+    my ($quantitation_file,$qf_status);
+    my (@ERRORS,@command_file);
+    my (@results,@parts);
+    my @project_outline;
+    
+    foreach $group (@group_names) {
+      my $row_counter=0;
+      my $first_flag=1;
+      my $channel_direction = "";
+      foreach $element (@slide_group_names) {
+        if ($element eq $group) {
+          if ($first_flag) {
+            my $cmd_line = "$group ${$slide_rowrefs[$row_counter]}[9] EXP";
               push (@command_file,$cmd_line);
               $first_flag=0;
-            }
+	  }
 
-            #### Verify that the data file is okay
-            $quantitation_file = ${slide_rowrefs[$row_counter]}[8];
+	  #### Verify that the data file is okay
+	  $quantitation_file = ${slide_rowrefs[$row_counter]}[8];
+				
+	  my $sample1_dye = ${slide_rowrefs[$row_counter]}[3];
+	  my $sample2_dye = ${slide_rowrefs[$row_counter]}[5];
+	  $qf_status = "";
 
-            my $sample1_dye = ${slide_rowrefs[$row_counter]}[3];
-            my $sample2_dye = ${slide_rowrefs[$row_counter]}[5];
-            $qf_status = "";
+	  #### If the data file is okay
+	  if ( -e $quantitation_file ) {
+            $qf_status = "&nbsp;&nbsp;&nbsp;&nbsp;--- ".
+		"<FONT COLOR=green>File exists</FONT>";
+	    #### Run a parse program on it to see which channel is which dye
+	    my %quantitation_data = readQuantitationFile(inputfilename=>"$quantitation_file",
+							 headeronly=>1);
+	    unless ($quantitation_data{success}) {
+	      $qf_status = "&nbsp;&nbsp;&nbsp;&nbsp;--- ".
+		  "<FONT COLOR=red>$quantitation_data{error_msg}</FONT>";
+	    } else {
+              #### Pull out the channel information
+	      my @channels = @{$quantitation_data{channels}};
+	      my $channel;						
+	      ### <Added to deal with hi-lo scans>
+	      my $number_of_channels = scalar(@channels);
+	      my $first_channel = "ch1";
+	      my $other_channel = "ch".($number_of_channels/2 + 1);
+	      ### </Added to deal with hi-lo scans>
 
-            #### If the data file is okay
-            if ( -e $quantitation_file ) {
+	      #### Loop over each channel
+	      foreach $channel (@channels) {
+                @parts = ($channel->{channel_label},$channel->{fluorophor});
+		$parts[1] =~ /(\d+)/;
+		my $number_part = $1;
+		my $match_flag = 0;
 
-              $qf_status = "&nbsp;&nbsp;&nbsp;&nbsp;--- ".
-                           "<FONT COLOR=green>File exists</FONT>";
-              #### Run a parse program on it to see which channel is which dye
-              #@results = `../lib/perl/SBEAMS/scripts/parseQAheader.pl --verify "$quantitation_file"`;
-              my %quantitation_data = readQuantitationFile(inputfilename=>"$quantitation_file",
-                headeronly=>1);
+		if ($sample1_dye =~ /$number_part/) {
+                  $match_flag = 1;
+		  if ($parts[0] eq $first_channel) {
+                    $channel_direction = "f";
+		  }
+		  if ($parts[0] eq $other_channel) {
+                    $channel_direction = "r";
+		  }
+	        }
 
-              unless ($quantitation_data{success}) {
-                $qf_status = "&nbsp;&nbsp;&nbsp;&nbsp;--- ".
-                             "<FONT COLOR=red>$quantitation_data{error_msg}</FONT>";
-              } else {
-#                print "According to sample names, direction should ".
-#                      "be $slide_directions[$row_counter]<BR>\n";
-                #### Pull out the channel information
-                my @channels = @{$quantitation_data{channels}};
-                my $channel;
-
-		#### If we have no channel information, brazenly assume that
-		#### channel 1 contains the shorter number_part dye
-		#print "channels = ",join(",",@channels),"<BR>\n";
-#		unless (@channels) {
-#		  print "WARNING: Quantitation file has no channel information! (typical of Dapple) ".
-#		    "Guessing that channel 0 is the lower numbered bye!<BR>";
-#		  if ($sample1_dye lt $sample2_dye) {
-#                    $channel_direction = "f";
-#		    print "<font color=red>WARNING: Guessing channel direction should be forward.  Verify!!</font><BR>\n";
-#		  } else {
-#                    $channel_direction = "r";
-#		    print "<font color=red>WARNING: Guessing channel direction should be reverse.  Verify!!</font><BR>\n";
-#		  }
-#		}
-
-                #### Loop over each channel
-                foreach $channel (@channels) {
-                  @parts = ($channel->{channel_label},$channel->{fluorophor});
-                  #print "$parts[0] = $parts[1]<BR>\n";
-                  $parts[1] =~ /(\d+)/;
-                  my $number_part = $1;
-                  my $match_flag = 0;
-
-
-                  if ($sample1_dye =~ /$number_part/) {
-                    $match_flag = 1;
-                    if ($parts[0] eq "ch1") {
-                      $channel_direction = "f";
-                    }
-                    if ($parts[0] eq "ch2") {
-                      $channel_direction = "r";
-                    }
-                  }
-
-                  if ($sample2_dye =~ /$number_part/) {
-                    if ($match_flag) { print "Whoah!  Double match!<BR>\n"; }
-                    $match_flag = 2;
-                    if ($parts[0] eq "ch1") {
-                      $channel_direction = "r";
-                    }
-                    if ($parts[0] eq "ch2") {
-                      $channel_direction = "f";
-                    }
-                  }
-
-                  unless ($match_flag) {
-                    print "Unable to match file name '$parts[1]' with ".
-                        "either dye.<BR>\n";
+                if ($sample2_dye =~ /$number_part/) {
+                  if ($match_flag) { print "Whoah!  Double match!<BR>\n"; }
+		  $match_flag = 2;
+		  if ($parts[0] eq $first_channel) {
+                    $channel_direction = "r";
+		  }
+		  if ($parts[0] eq $other_channel) {
+                    $channel_direction = "f";
+		  }
+	        }
+		unless ($match_flag) {
+                  print "Unable to match file name '$parts[1]' with either dye.<BR>\n";
                   }
                 } # endforeach
 
@@ -408,7 +320,6 @@ ORDER BY A.array_name
                              "<FONT COLOR=green>File verified</FONT>";
 
               } # endelse
-
 
             #### If the data file is not found
             } else {
@@ -428,558 +339,297 @@ ORDER BY A.array_name
                   "<FONT COLOR=red>$slide_directions[$row_counter]</FONT> ".
                   "$qf_status<BR>\n";
 
-          }
+				}
 
           $row_counter++;
-        }
+			}
 
-      }
-      print qq~
-	</FORM><BR>
-      ~;
-
+		}
 
 #######################################
  ###  Start Pipeline Customization   ###
   #######################################
+
+## Print all the javascript!
+    printProjectJavascript();
+
+# Table for entire form to sit in
 print qq~
-
-<SCRIPT LANGUAGE="Javascript">
-<!--
-
-//Opens a new browser window for documentation on pipieline components
-function getDirections(URL){
-  var newWindow;
-  newWindow = window.open(URL);
-}
-
-//makes sure only one checkbox is checked at a time
-//function switchBool(source){
-//  if (source=="base"){
-//    if(pipelineConfig.preprocessBase == true){pipelineConfig.preprocessBase=false;}
-//    else{pipelineConfig.preprocessBase=true;}
-//  }
-//  else if (source=="sat"){
-//    if(pipelineConfig.preprocessSat == true){pipelineConfig.preprocessSat=false;}
-//    else{pipelineConfig.preprocessSat=true;}
-//  }
-//  else if(source=="opt"){
-//    if(pipelineConfig.veraOptimization==true){pipelineConfig.veraOptimization=false;}
-//    else{pipelineConfig.veraOptimization=true;}
-//  }
-//  else {alert("something is wrong-contact mjohnson");}
-//}//end switchBool
-
-
-//function setNorm(source){
-//  if(source=="median")   {pipelineConfig.preprocessNormalize = "median";}
-//  else if(source=='mean'){pipelineConfig.preprocessNormalize = "mean";}
-//  else if(source=='none'){pipelineConfig.preprocessNormalize = "none";}
-//  else{alert("something is wrong-contact mjohnson");}
-//}//end setNorm
-
-
-function addItem(dir){
-  var bufferList = document.choiceList.fileList;
-  var destinationList;
-  if (dir == "forward"){destinationList = document.choiceList.forwardSelectionList;}
-  if (dir == "reverse"){destinationList = document.choiceList.reverseSelectionList;}
-  for(var i=bufferList.length;i>=0;i--){
-    if((bufferList.options[i]!=null) && (bufferList.options[i].selected)){
-
-      //check mergeCondsList and add condition to list if not present
-	var re = /\.key:(.*_vs_.*):/;
-      var cond = re.exec(bufferList.options[i].value);
-      var alreadyExists = false;
-      for (var j=0; j<document.choiceList.forwardSelectionList.length; j++){
-	var test = re.exec(document.choiceList.forwardSelectionList.options[j].value);
-	if (cond[1] == test[1]){
-	  alreadyExists = true;
-	  break;
-	}
-      }
-      //Superfluous error checking- ensure files does not exist in currently used files
-	for(var k=0; k<document.choiceList.reverseSelectionList.length; k++){
-	  var test = re.exec(document.choiceList.reverseSelectionList.options[k].value);
-	  if (cond[1] == test[1]){
-	    alreadyExists = true;
-	    break;
-	  }
-	}
-      if (!alreadyExists){
-	var mergeList = document.choiceList.mergeCondsList;
-	mergeList.options[mergeList.length] = new Option(cond[1], cond[1]);
-      }
-      destinationList.options[destinationList.length] = new Option(bufferList.options[i].text,
-								   bufferList.options[i].value);
-      bufferList.options[i] = null;
-    }
-  }
-}
-
-//for use in removing items from file lists, ensure only forward or reverse files are selected
-function adjust(direction){
-  var otherSelectionList;
-  if (direction == "forward"){otherSelectionList = document.choiceList.reverseSelectionList;}
-  else                       {otherSelectionList = document.choiceList.forwardSelectionList;}
-  for(var i=0;i<otherSelectionList.length;i++){
-    otherSelectionList.options[i].selected=false;
-  }
-}//end adjust
-
-function dealWithMergeConds(list){
-  //remove from mergeCondsList
-  //1. see if others within the group exist
-  //2. if not, remove group name
-
-  var mergeCondsList  = document.choiceList.mergeCondsList;
-  var unusedMergeConds= document.choiceList.mergeBufferList;
-  var group = list.value;
-  var re = /\.key:(.*_vs_.*):/;
-  var cond = re.exec(group);
-  var forwardFiles = document.choiceList.forwardSelectionList;
-  var reverseFiles = document.choiceList.reverseSelectionList;
-
-  //see if condition exists in currently selected files
-  var groupStillExists = checkExists(forwardFiles, cond[1]);
-  if (!groupStillExists){
-    groupStillExists = checkExists(reverseFiles, cond[1]);
-  }
-
-  //we now know if the condition still exists or not
-  if (!groupStillExists){
-    //remove condition from list of possible mergeConds
-    for (var x=(mergeCondsList.length-1);x>=0;x--){
-      if (cond[1] == mergeCondsList.options[x].value){
-	mergeCondsList.options[x] = null;
-      }
-    }
-    //also check buffer list in mergeConds section
-    for (var y=(unusedMergeConds.length-1);y>=0;y--){
-      if (cond[1] == unusedMergeConds.options[y].value){
-	unusedMergeConds.options[y] = null;
-      }
-    }
-  }
-
-}
-
-function checkExists(checkList, checkAgainst){
-  var groupStillExists = false;
-  var re = /\.key:(.*_vs_.*):/;
-  for (var a=(checkList.length-1);a>=0;a--){
-    var test = re.exec(checkList.options[a].value);
-    if (checkAgainst == test[1] && checkList.options[a].selected == false){
-      groupStillExists = true;
-      break;
-    }
-  }
-  return groupStillExists;
-}
-
-
-function removeItem() {
-  var bufferList             = document.choiceList.fileList;
-  var bufferListLength       = bufferList.length;
-  var list;
-  var listLength;
-
-  list       = document.choiceList.forwardSelectionList;
-  listLength = list.length;
-  for (var h = 1; h<=2; h++){
-    for(var i=(listLength-1);i>=0;i--){
-      if((list.options[i]!=null)&&(list.options[i].selected==true)){
-	dealWithMergeConds(list.options[i]);
-	var uniqueCheck = true;
-	for(var j=(bufferListLength-1);j>=0;j--){
-	  if (list.options[i].value == bufferList.options[j].value){
-	    uniqueCheck = false;
-	    break;
-	  }
-	}
-	if (uniqueCheck == true){
-	  bufferList.options[bufferListLength] = new Option(list.options[i].text,
-							    list.options[i].value);
-	  bufferListLength++;
-	}
-	list.options[i] =null;
-      }
-    }
-    list       = document.choiceList.reverseSelectionList;
-    listLength = list.length;
-  }
-}//end removeItem
-
-function checkSwitch(location){
-  var primary;
-  var secondary;
-  if (location == 'general'){
-    primary   = document.choiceList.excludeGenes;
-    secondary = document.choiceList.excludeLocalGenes;
-  }
-  if (location == 'local'  ){
-    primary   = document.choiceList.excludeLocalGenes;
-    secondary = document.choiceList.excludeGenes;
-  }
-  if (primary.checked){secondary.checked = false;}
-}//end checkSwitch
-
-function verifyNumber(testValue,testLocation){
-  var location;
-  if(testLocation=="preprocessBaseValue"){location=document.choiceList.preprocessBaseValue;}
-  if(testLocation=="preprocessSatValue") {location=document.choiceList.preprocessSatValue;}
-  if(testLocation=="preprocessScaleValue"){location=document.choiceList.preprocessScaleValue;}
-  if(testLocation=="veraCritValue")      {location=document.choiceList.veraCritValue;}
-  if(testLocation=="lambdaValue")        {location=document.choiceList.lambdaValue;}
-  if(testLocation=="ratioValue")         {location=document.choiceList.ratioValue;}
-  if(testLocation=="stdevValue")         {location=document.choiceList.stdevValue;}
-  if(testLocation=="errorModel")         {location=document.choiceList.errorModel;}
-  if(testLocation=="repValue")           {location=document.choiceList.repValue;}
-
-  //need just an integer
-  if(testLocation=="errorModel" || testLocation=="repValue"){
-    var number = parseInt(testValue);
-    if(isNaN(number)){
-      alert(testValue+" not a number");
-      location.value ="";
-      return;
-    }
-    else{location.value = number;return;}
-  }
-
-  //need double/float
-  var number = parseFloat(testValue);
-  if(isNaN(number)){
-    alert(testValue+" not a number");
-    location.value = "";
-    return;
-  }
-  else{location.value = number;return;}
-}//end verifyNumber
-
-function moveUp(){
-  var mergeList = document.choiceList.mergeCondsList;
-
-  for(var i=0; i<mergeList.options.length; i++){
-    if(mergeList.options[i].selected &&
-       mergeList.options[i] != "" &&
-       mergeList.options[i] != mergeList.options[0]){
-      var tmpOptionValue = mergeList.options[i].value;
-      var tmpOptionText  = mergeList.options[i].text;
-      mergeList.options[i].value   = mergeList.options[i-1].value;
-      mergeList.options[i].text    = mergeList.options[i-1].text;
-      mergeList.options[i-1].value = tmpOptionValue;
-      mergeList.options[i-1].text  = tmpOptionText;
-      mergeList.options[i-1].selected = true;
-      mergeList.options[i].selected = false;
-    }
-  }
-}
-
-function moveDown(){
-  var mergeList = document.choiceList.mergeCondsList;
-
-  for (var i=mergeList.options.length-1; i>=0; i--){
-    if(mergeList.options[i].selected &&
-       mergeList.options[i] != "" &&
-       mergeList.options[i+1] != mergeList.options[mergeList.options.length]){
-      var tmpOptionValue = mergeList.options[i+1].value;
-      var tmpOptionText  = mergeList.options[i+1].text;
-      mergeList.options[i+1].value = mergeList.options[i].value;
-      mergeList.options[i+1].text  = mergeList.options[i].text;
-      mergeList.options[i].value = tmpOptionValue;
-      mergeList.options[i].text  = tmpOptionText;
-      mergeList.options[i+1].selected = true;
-      mergeList.options[i].selected = false;
-    }
-  }
-}
-
-function testForText(){
-  var filename = document.choiceList.excludeFile;
-  if(filename.value == ""){
-    document.choiceList.excludeGenes.checked = true;
-    document.choiceList.excludeLocalGenes.checked = false;
-  }
-  else{
-    document.choiceList.excludeLocalGenes.checked = true;
-    document.choiceList.excludeGenes.checked = false;
-  }
-}
-
-function addMerge(){
-  var bufferList = document.choiceList.mergeBufferList;
-  var mergeList  = document.choiceList.mergeCondsList;
-  for (var i=bufferList.length-1;i>=0;i--){
-    if (bufferList.options[i].selected){
-      mergeList.options[mergeList.length] = new Option(bufferList.options[i].text,
-						       bufferList.options[i].value);
-      bufferList.options[i] = null;
-    }
-  }
-}
-
-function omitMerge(){
-  var bufferList = document.choiceList.mergeBufferList;
-  var mergeList  = document.choiceList.mergeCondsList;
-  for (var i=mergeList.length-1; i>=0; i--){
-    if (mergeList.options[i].selected){
-      bufferList.options[bufferList.length] = new Option (mergeList.options[i].text,
-							  mergeList.options[i].value);
-      mergeList.options[i] = null;
-    }
-  }
-}
-
-function prepareForSubmission(){
-  var forwardList = document.choiceList.forwardSelectionList;
-  for (var i=0;i<forwardList.length;i++){
-    forwardList.options[i].selected = true;
-  }
-
-  var reverseList = document.choiceList.reverseSelectionList;
-  for (var i=0;i<reverseList.length;i++){
-    reverseList.options[i].selected=true;
-  }
-
-  var mergeList = document.choiceList.mergeCondsList;
-  for (var i=0;i<mergeList.length;i++){
-    mergeList.options[i].selected= true;
-  }
-
-  if (document.choiceList.preprocessBase.checked == true && document.choiceList.preprocessBaseValue.value=="")
-    if(!confirm("no base value set for Preprocess.  Click OK if you're not using a base value.  Click Cancel to provide a value."))
-      {return false;}
-    else
-      {document.choiceList.preprocessBase.checked = false;}
-
-  if (document.choiceList.preprocessBase.checked==false && document.choiceList.preprocessBaseValue.value !=""){
-    if(confirm("Preprocess base value set, but checkbox not checked.  Click OK to use the base value.  Click Cancel to refrain from using it."))
-      {document.choiceList.preprocessBase.checked = true;}
-    else
-      {document.choiceList.preprocessBaseValue.value ="";}
-  }
-
-
-  if (document.choiceList.preprocessSat.checked == true && document.choiceList.preprocessSatValue.value=="")
-    if(!confirm("no saturation value set for Preprocess.  Click OK if you're not using a saturation value.  Click Cancel to provide a value."))
-      {return false;}
-    else
-      {document.choiceList.preprocessSat.checked = false;}
-
-  if (document.choiceList.preprocessSat.checked==false && document.choiceList.preprocessSatValue.value !=""){
-    if(confirm("Saturation value set, but checkbox not checked.  Click OK to use the value.  Click Cancel to refrain from using it."))
-      {document.choiceList.preprocessSat.checked = true;}
-    else
-      {document.choiceList.preprocessSatValue.value ="";}
-  }
-
-
-
-  if (document.choiceList.preprocessScale.checked == true && document.choiceList.preprocessScaleValue.value=="")
-    if(!confirm("no value set for Preprocess' scale.  Click OK if you're not using a value.  Click Cancel to provide a value."))
-      {return false;}
-    else
-      {document.choiceList.preprocessScale.checked = false;}
-
-  if (document.choiceList.preprocessScale.checked == false && document.choiceList.preprocessScaleValue.value !=""){
-    if(confirm("You have entered a scale value for preprocess, but you haven't checked the box.  Click OK to use the value.  Click Cancel to refrain from using it."))
-      {document.choiceList.preprocessScale.checked = true;}
-    else
-      {document.choiceList.preprocessScaleValue.value = "";}
-  }
-
-
-
-  if (document.choiceList.errorModel.checked == true && document.choiceList.errorModelValue.value=="")
-    if(!confirm("no value set for MergeReps optimization.  Click OK if you're not using a value.  Click Cancel to provide a value."))
-      {return false;}
-    else
-      {document.choiceList.errorModel.checked = false;}
-
-  if (document.choiceList.errorModel.checked == false && document.choiceList.errorModelValue.value != ""){
-    if (confirm("You have entered a min. number of replicates for mergereps, but you haven't check the box.  Click OK to use the value.  Click Cancel to refrain from using it."))
-      {document.choiceList.errorModel.checked = true;}
-    else
-      {docuemnt.choiceList.errorModelValue.value = "";}
-  }
-
-
-  if (document.choiceList.veraCrit.checked == true && document.choiceList.veraCritValue.value=="")
-    if(!confirm("no value set for VERA's delta value for optimization.  Click OK if you're not using a value.  Click Cancel to provide a value."))
-      {return false;}
-    else
-      {document.choiceList.veraCrit.checked = false;}
-
-  if (document.choiceList.veraCrit.checked == false && document.choiceList.veraCritValue.value != ""){
-    if (confirm("You have entered a delta value at which VERA stops , but you haven't check the box.  Click OK to use the value.  Click Cancel to refrain from using it."))
-      {document.choiceList.veraCrit.checked = true;}
-    else
-      {document.choiceList.veraCritValue.value = "";}
-  }
-
-  if (document.choiceList.notify.checked == true && document.choiceList.addresses.value=="")
-    if(!confirm("you haven't specified contact email addresses.  Click OK if you're not using them.  Click Cancel to provide a value."))
-      {return false;}
-    else
-      {document.choiceList.notify.checked = false;}
-
-  if (document.choiceList.notify.checked == false && document.choiceList.addresses.value != ""){
-    if (confirm("You have entered an email address, but you haven't checked the box.  Click OK to use the value.  Click Cancel to refrain from using it."))
-      {document.choiceList.notify.checked = true;}
-    else
-      {document.choiceList.addresses.value = "";}
-  }
-
-}
-//-->
-</SCRIPT>
+<TABLE BORDER=0 ALIGN=CENTER WIDTH=80%>
+<TR>
+  <TD>
 ~;
-##########################################################
-##########################################################
-
 
 print qq~
 $LINESEPARATOR<BR>
-<FONT COLOR="red"><B>Step 1 of 3: Choose Files</B></FONT>
-  <FORM METHOD="post"NAME="choiceList" onSubmit="return prepareForSubmission()">
+<FONT COLOR="#cc0000" SIZE="+0" FACE="Arial,Helvetica,sans-serif"><B>Step 1 of 3: Choose Files</B></FONT>
+  <FORM METHOD="post" NAME="MainForm" onSubmit="return prepareForSubmission()">
     <TABLE BORDER=0>
     <TR>
       <TD VALIGN="top">
-    Forward Files:<BR>
-    <SELECT NAME="forwardSelectionList" SIZE=4 MULTIPLE onChange="adjust('forward')">
-~;
-
-      my $testfilename;
-      my $mapfilename;
-      my $shortname;
-      my $testkeyfilename;
-      my $name;
-      my $tempVal;
-      my $direction;
-      for( my $i=0;$i<=$#rows;$i++ ){
-	$direction = $slide_directions[$i];
-	if ($direction eq "f"){
-	  $testfilename  = ${$rows[$i]}[8];
-	  $mapfilename   = ${$rows[$i]}[9];
-	  $shortname   =  $testfilename;
-	  $shortname   =~ (s/^.*\///);
-          $name = $slide_group_names[$i];
-          chomp $direction;
-	  $tempVal = "$testfilename".":$mapfilename".":$slide_group_names[$i]".":$direction";
-	print qq~
-	  <OPTION value="$tempVal">$shortname ($name)
-          ~;
-        }
-      }
-
-print qq~
-</SELECT>
-<BR>
-Reverse Files:<BR>
-<SELECT NAME="reverseSelectionList" SIZE=4 MULTIPLE onChange="adjust('reverse')">
-~;
-      for( my $i=0;$i<=$#rows;$i++ ){
-	$direction = $slide_directions[$i];
-	if ($direction eq "r"){
-	  $testfilename  = ${$rows[$i]}[8];
-	  $mapfilename   = ${$rows[$i]}[9];
-	  $shortname   =  $testfilename;
-	  $shortname   =~ (s/^.*\///);
-          $name = $slide_group_names[$i];
-	  chomp $direction;
-	  $tempVal = "$testfilename".":$mapfilename".":$slide_group_names[$i]".":$direction";
-          print qq~
-	  <OPTION value="$tempVal">$shortname ($name)
-          ~;
-        }
-      }
-print qq~
-</SELECT>
-  </TD>
-
-  <TD VALIGN="top">
-  <CENTER>
-  <BR><BR>
-    <INPUT NAME="forwardButton" TYPE="button" VALUE="<--Add to Forward" onClick="addItem('forward')">
-    <BR><BR>
-    <INPUT NAME="removeButton"  TYPE="button" VALUE="Remove-->" onClick="removeItem()">
-    <BR><BR>
-    <INPUT NAME="reverseButton" TYPE="button" VALUE="<--Add to Reverse" onClick="addItem('reverse')">
-  <BR><BR>
-~;
-print qq~
-  </CENTER>
-  </TD>
-
-  <TD VALIGN="top">
-  Available Files:
-  <BR>
-  <SELECT name="fileList" SIZE=10 MULTIPLE></SELECT>
-   </TD>
-   </TR>
-   </TABLE>
-
-$LINESEPARATOR<BR>
-<FONT COLOR="red"><B>Step 2 of 3: Optional Pipeline Configurations</B><BR>
-                     -Default values used if not selected<BR>
-                     -Click on Pipeline Component title for documentation</FONT>
-     <BR>
-     <B><A HREF="Javascript:getDirections('http://www.systemsbiology.org/ArrayProcess/readme/preProcess.html')">PreProcess:</A></B>
-     <TABLE>
-     <TR>
-      <TD VALIGN="top">
-	  <INPUT TYPE="checkbox" NAME="preprocessBase" VALUE="-base">Use Base Value:<BR>
-	  <INPUT TYPE="checkbox" NAME="preprocessSat" VALUE="-sat" CHECKED>Saturating Intensity:<BR>
-          <INPUT TYPE="checkbox" NAME="preprocessScale" VALUE="-scale">Scale to Value:<BR>
-      </TD>
-      <TD>
-          <INPUT TYPE="text" NAME="preprocessBaseValue" onChange="verifyNumber(this.value,'preprocessBaseValue')"><BR>
-          <INPUT TYPE="text" NAME="preprocessSatValue"  onChange="verifyNumber(this.value,'preprocessSatValue')" VALUE = "65535"><BR>
-          <INPUT TYPE="text" NAME="preprocessScaleValue"onChange="verifyNumber(this.value,'preprocessScaleValue')"><BR>
-      </TD>
-     </TR>
-<BR>
-     <TR>
-      <TD VALIGN="top">
-	  Normalizing Method:<BR>
-	  <INPUT TYPE="radio" NAME="normalization" VALUE="median" CHECKED>Median 
-          <INPUT TYPE="radio" NAME="normalization" VALUE="none" >None
-      </TD>
-     </TR>
-     <TD>
-       <INPUT TYPE="checkbox" NAME="preprocessDebug" VALUE="-debug">Generate debug file<BR>
-     </TD>
-     </TABLE>
-     <BR>
-     <B><A HREF="Javascript:getDirections('http://www.systemsbiology.org/ArrayProcess/readme/mergeReps.html')">MergeReps:</A></B>
-     <BR>
-       <INPUT TYPE="checkbox" NAME="errorModel" VALUE="-opt">Only return those genes that are represented by at least &lt;num&gt; replicate measurements
-       <INPUT TYPE="text"     NAME="errorModelValue" onChange="verifyNumber(this.value,'errorModel')"><BR>
-       <INPUT TYPE="checkbox" NAME="excludeGenes" VALUE="-exclude" onClick="checkSwitch('general')" CHECKED>Use general list of bad genes<BR>
-       <INPUT TYPE="checkbox" NAME="excludeLocalGenes" VALUE="-exclude" onClick="checkSwitch('local')">Select local file of bad genes
-       <INPUT TYPE = "text" NAME = "excludeFile"  SIZE=30 onChange ="testForText()"><BR>
-       <INPUT TYPE="checkbox" NAME="filterGenes"  VALUE="-filter" CHECKED> Filter Outliers<BR>
-     <BR>
-     <B><A HREF="Javascript:getDirections(http://www.systemsbiology.org/VERAandSAM)">VERA/SAM:</A></B><BR>
-        <INPUT TYPE="checkbox" NAME="useVERAandSAM"  VALUE="useVS" CHECKED><FONT COLOR="red">Use VERA and SAM</FONT><BR>
-        <INPUT TYPE="checkbox" NAME="veraCrit" VALUE="critValue">Cease Optimization when changes per step are less than:
-	<INPUT TYPE="text" NAME="veraCritValue" onChange="verifyNumber(this.value,'veraCritValue')">
-     <BR>
-        <INPUT TYPE="checkbox" NAME="veraEvolFlag" VALUE="-evol">Generate file showing how parameters converge<BR>
-        <INPUT TYPE="checkbox" NAME="debugFlag" VALUE="-debug">Generate debug file<BR>
-        <INPUT TYPE="checkbox" NAME="modelFlag" VALUE="-model">Use your own error model
-        <INPUT TYPE="text"     NAME="modelFile" size=30> Specificy complete path<BR>
-      <BR>
-     <B><A HREF="Javascript:getDirections('http://www.systemsbiology.org/ArrayProcess/readme/mergeConds.html')">MergeConds:</A></B><BR>
-       <FONT COLOR="red">-only used with more than one condition</FONT><BR>
-       <TABLE>
-       <TR>
-       <TD VALIGN = "top">
-        Conditions:<BR>
-       <SELECT NAME= "mergeCondsList" SIZE=10 MULTIPLE>
+      Forward Files:<BR>
+      <SELECT NAME="forwardSelectionList" SIZE=4 MULTIPLE onChange="adjust('forward')">
       ~;
 
+    my $testfilename;
+    my $mapfilename;
+    my $shortname;
+    my $testkeyfilename;
+    my $name;
+    my $tempVal;
+    my $direction;
+    for( my $i=0;$i<=$#rows;$i++ ){
+      $direction = $slide_directions[$i];
+      if ($direction eq "f"){
+	  $testfilename  = ${$rows[$i]}[8];
+	  $mapfilename   = ${$rows[$i]}[9];
+	  $shortname   =  $testfilename;
+	  $shortname   =~ (s/^.*\///);
+	  $name = $slide_group_names[$i];
+	  chomp $direction;
+	  $tempVal = "$testfilename".":$mapfilename".":$slide_group_names[$i]".":$direction";
+	  print qq~
+	      <OPTION value="$tempVal">$shortname ($name)
+	      ~;
+      }
+    }
+
+    print qq~
+      </SELECT>
+      <BR>
+      Reverse Files:<BR>
+      <SELECT NAME="reverseSelectionList" SIZE=4 MULTIPLE onChange="adjust('reverse')">
+	~;
+    
+    for( my $i=0;$i<=$#rows;$i++ ){
+      $direction = $slide_directions[$i];
+      if ($direction eq "r"){
+	$testfilename  = ${$rows[$i]}[8];
+	$mapfilename   = ${$rows[$i]}[9];
+	$shortname   =  $testfilename;
+	$shortname   =~ (s/^.*\///);
+	$name = $slide_group_names[$i];
+	chomp $direction;
+	$tempVal = "$testfilename".":$mapfilename".":$slide_group_names[$i]".":$direction";
+	print qq~
+      <OPTION value="$tempVal">$shortname ($name)
+      ~;
+      }
+    }
+    
+    print qq~
+      </SELECT>
+      </TD>
+      <TD VALIGN="top" ALIGN="center">
+      <BR><BR>
+      <INPUT NAME="forwardButton" TYPE="button" VALUE="<--Add to Forward" onClick="addItem('forward')">
+      <BR><BR>
+      <INPUT NAME="removeButton"  TYPE="button" VALUE="Remove-->" onClick="removeItem()">
+      <BR><BR>
+      <INPUT NAME="reverseButton" TYPE="button" VALUE="<--Add to Reverse" onClick="addItem('reverse')">
+      <BR><BR>
+      </TD>
+      <TD VALIGN="top">
+      Available Files:<br>
+      <SELECT name="fileList" SIZE=10 MULTIPLE></SELECT>
+      </TD>
+    </TR>
+    </TABLE>
+
+    $LINESEPARATOR<BR>
+
+    <FONT COLOR="#cc0000" SIZE="+0" FACE="Arial,Helvetica,sans-serif">
+    <B>Step 2 of 3: Optional Pipeline Configurations</B><BR>
+    <FONT SIZE="-1" COLOR="#000000">
+
+    <img src="$HTML_BASE_DIR/images/space.gif" height=1 width="30">- Default values used if not selected<BR>
+    <img src="$HTML_BASE_DIR/images/space.gif" height=1 width="30">- Click on red question marks for help text
+    </FONT>
+    <P>
+    <FONT SIZE="-1" COLOR="#006600">
+    <B>Pre-process:</B>&nbsp;
+    <A HREF="Javascript:getDirections('http://www.systemsbiology.org/ArrayProcess/readme/preProcess.html')"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
+    <TABLE>
+    <TR VALIGN="baseline">
+      <TD>
+      <INPUT TYPE="checkbox" NAME="preprocessBase" VALUE="-base">
+      </TD>
+      <TD>
+      &nbsp;Use Base Value:&nbsp;
+      </TD>
+      <TD>
+      <INPUT TYPE="text" NAME="preprocessBaseValue" size="10" onChange="verifyNumber(this.value,'preprocessBaseValue')">&nbsp;
+      <a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=2','Help','width=400,height=300,resizable=yes');return false">
+      <img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help">
+      </a>
+      </TD>
+    </TR>
+    <TR VALIGN="baseline">
+      <TD>
+      <INPUT TYPE="checkbox" NAME="preprocessSat" VALUE="-sat" CHECKED>
+      </TD>
+      <TD>
+	&nbsp;Saturating Intensity:&nbsp;
+      </TD>
+      <TD>
+      <INPUT TYPE="text" NAME="preprocessSatValue" size="10" onChange="verifyNumber(this.value,'preprocessSatValue')" VALUE="65535">&nbsp;
+      <a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=3','Help','width=400,height=300,resizable=yes');return false">
+      <img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help">
+      </a>
+      </TD>
+    </TR>
+    <TR VALIGN="baseline">
+      <TD>
+      <INPUT TYPE="checkbox" NAME="preprocessScale" VALUE="-scale">
+      </TD>
+      <TD>
+	&nbsp;Scale to Value:&nbsp;
+      </TD>
+      <TD>
+      <INPUT TYPE="text" NAME="preprocessScaleValue" size="10" onChange="verifyNumber(this.value,'preprocessScaleValue')">&nbsp;
+      <a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=4','Help','width=500,height=400,resizable=yes');return false">
+      <img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help">
+      </a>
+      </TD>
+    </TR>
+    </TABLE>
+    <p>
+    <TABLE>
+    <TR>
+      <TD>
+	Normalizing Method:&nbsp;<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=5','Help','width=500,height=400,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE="radio" NAME="normalization" VALUE="median" CHECKED>&nbsp;Median&nbsp;&nbsp;<INPUT TYPE="radio" NAME="normalization" VALUE="none"  >&nbsp;None
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE="checkbox" NAME="preprocessDebug" VALUE="-debug">&nbsp;Generate debug file<BR>
+      </TD>
+    </TR>
+    </TABLE>
+    <BR>
+    <B><FONT SIZE="-1" COLOR="#006600">Merge Replicates:</B>&nbsp;
+    <A HREF="Javascript:getDirections('http://www.systemsbiology.org/ArrayProcess/readme/mergeReps.html')">
+    <img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help">
+    </A>
+    <BR>
+    <TABLE BORDER=0>
+    <TR>
+      <TD>
+      <INPUT TYPE="checkbox" NAME="errorModel" VALUE="-opt">
+      </TD>
+      <TD>
+      &nbsp;Minimum &lt;num&gt; replicate measurements:&nbsp;
+      &nbsp;<INPUT TYPE="text" NAME="errorModelValue" size="10" onChange="verifyNumber(this.value,'errorModel')">
+      &nbsp;<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=6','Help','width=400,height=300,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE="checkbox" NAME="excludeGenes" VALUE="-exclude" onClick="checkSwitch('general')" CHECKED>
+      </TD>
+      <TD>
+      &nbsp;Use general list of bad genes
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE="checkbox" NAME="excludeLocalGenes" VALUE="-exclude" onClick="checkSwitch('local')">
+      </TD>
+      <TD>
+	&nbsp;Select local file of bad genes:
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+	&nbsp;
+      </TD>
+      <TD>
+	&nbsp;<INPUT TYPE = "text" NAME = "excludeFile"  SIZE=50>
+	&nbsp;<A HREF="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=7','Help','width=400,height=300,resizable=yes');return false">
+	<img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help">
+	</A>
+	<br><FONT SIZE="-2">*must specify full path of bad gene file
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE="checkbox" NAME="filterGenes"  VALUE="-filter" CHECKED>
+      </TD>
+      <TD>
+	&nbsp;Filter Outliers
+	&nbsp;<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=8','Help','width=400,height=300,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
+      </TD>
+    </TR>
+    </TABLE>
+    <BR>
+    <B><FONT SIZE="-1" COLOR="#006600">VERA/SAM:</B>&nbsp;<A HREF="Javascript:getDirections('http://www.systemsbiology.org/VERAandSAM')"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></A>
+    <BR>
+    <TABLE BORDER=0>
+    <TR>
+      <TD>
+      <INPUT TYPE="checkbox" NAME="useVERAandSAM"  VALUE="useVS" CHECKED>
+      </TD>
+      <TD>
+	&nbsp;<FONT COLOR="red">Use VERA and SAM</FONT>
+	&nbsp;<A HREF="Javascript:getDirections('http://www.systemsbiology.org/VERAandSAM')"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></A>
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE="checkbox" NAME="veraCrit" VALUE="critValue">
+      </TD>
+      <TD>
+	&nbsp;Cease Optimization when changes per step are less than:
+	&nbsp;<INPUT TYPE="text" NAME="veraCritValue" size="10" onChange="verifyNumber(this.value,'veraCritValue')">
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE="checkbox" NAME="veraEvolFlag" VALUE="-evol">
+      </TD>
+      <TD>
+	&nbsp;Generate file showing how parameters converge
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE="checkbox" NAME="debugFlag" VALUE="-debug">
+      </TD>
+      <TD>
+	&nbsp;Generate debug file
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE="checkbox" NAME="modelFlag" VALUE="-model">
+      </TD>
+      <TD>
+	&nbsp;Use your own error model
+	&nbsp;<INPUT TYPE="file"     NAME="modelFile" size=30>
+      </TD>
+    </TR>
+    </TABLE>
+    <BR>
+    <B><FONT SIZE="-1" COLOR="#006600">Merge Conditions:</B>&nbsp;
+    <A HREF="Javascript:getDirections('http://www.systemsbiology.org/ArrayProcess/readme/mergeConds.html')">
+    <img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help">
+    </A>
+    <BR>
+    <FONT COLOR="#000000" SIZE="-1">
+    <img src="$HTML_BASE_DIR/images/space.gif" height=1 width="30">-only used with more than one condition
+    </FONT><BR>
+    <TABLE>
+    <TR>
+      <TD VALIGN = "top">
+      Conditions:<BR>
+      <SELECT NAME= "mergeCondsList" SIZE=10 MULTIPLE>
+      ~;
+    
 my %unique_group;
 my $test_item;
 my @unique_groups;
@@ -988,64 +638,131 @@ foreach $test_item(@slide_group_names){
 }
 for (my $i=0;$i<=$#unique_groups;$i++){
   print qq~
-    <OPTION VALUE="$unique_groups[$i]">$unique_groups[$i]
+      <OPTION VALUE="$unique_groups[$i]">$unique_groups[$i]
   ~;
 }
 
 print qq~
-     </SELECT>
-     </TD>
-     <TD>
-     Unused Conditions:<BR>
-     <SELECT NAME = "mergeBufferList" SIZE=10 MULTIPLE></SELECT>
-     <BR>
-     </TD>
-     </TR>
-     <TR>
-     <TD>
-     <INPUT TYPE = "button" NAME = "upButton" VALUE ="Move Up " OnClick="moveUp()">
-     <INPUT TYPE = "button" NAME = "downButton" VALUE ="Move Down" OnClick= "moveDown()">
-     </TD>
-     </TR>
-     <TR>
-     <TD>
-     <INPUT TYPE = "button" NAME = "omitFile" VALUE =" Remove " OnClick="omitMerge()">
-     <INPUT TYPE = "button" NAME = "addFILE"  VALUE ="      Add      "    OnClick="addMerge()">
-     <BR>
-     </TD>
-     </TR>
-     </TABLE>
-     <TABLE>
-     <TR>
-      <TD>
-       <INPUT TYPE = "checkbox" NAME = "lambdaFlag" VALUE = "-lam">Lambda &#62;&#61; &#60;num&#62; <BR>
-       <INPUT TYPE = "checkbox" NAME = "ratioFlag"  VALUE = "-rat">Ratio  &#62;&#61; &#60;num&#62;<BR>
-       <INPUT TYPE = "checkbox" NAME = "stdevFlag"  VALUE = "-std">Standard Devation &#62;&#61;  &#60;num&#62;<BR> 
-       <INPUT TYPE = "checkbox" NAME = "repFlag"    VALUE = "-n">Gene represented at least &lt;num&gt; times
+      </SELECT>
+      </TD>
+      <TD VALIGN="center" ALIGN="center">
+    &nbsp;<INPUT TYPE = "button" NAME = "omitFile" VALUE ="Remove-->" OnClick="omitMerge()">&nbsp;<p>
+    &nbsp;<INPUT TYPE = "button" NAME = "addFILE"  VALUE ="<--Add"    OnClick="addMerge()">&nbsp;
+      </TD>
+      <TD VALIGN="top">
+	Unused Conditions:<BR>
+      <SELECT NAME = "mergeBufferList" SIZE=10 MULTIPLE></SELECT>
+      <BR>
+      </TD>
+    </TR>
+    <TR>
+      <TD ALIGN="center">
+      <INPUT TYPE = "button" NAME = "upButton" VALUE ="Move Up " OnClick="moveUp()"><br>
+      <INPUT TYPE = "button" NAME = "downButton" VALUE ="Move Down" OnClick= "moveDown()">
       </TD>
       <TD>
-       <INPUT TYPE = "text" NAME = "lambdaValue" onChange="verifyNumber(this.value,'lambdaValue')"><BR>
-       <INPUT TYPE = "text" NAME = "ratioValue"  onChange="verifyNumber(this.value,'ratioValue')"><BR>
-       <INPUT TYPE = "text" NAME = "stdevValue"  onChange="verifyNumber(this.value,'stdevValue')"><BR>
-       <INPUT TYPE = "text" NAME = "repValue"    onChange="verifyNumber(this.value,'repValue')"><BR>
+	&nbsp;
       </TD>
-     </TR>
-     </TABLE>
-     <B><FONT COLOR="green">Miscellaneous</FONT></B><BR>
-     <INPUT TYPE="checkbox" NAME ="postSam" VALUE="ps">Use postSam<BR>
-     <INPUT TYPE="checkbox" NAME="notify">email notification<BR>
-      -Type comma-separated email addresses (\@systemsbiology is implied, unless otherwise specified)<BR> 
-     <INPUT TYPE="text" NAME="addresses" SIZE="50"><BR>
-     $LINESEPARATOR<BR>
-     <FONT COLOR="red"><B>Step 3 of 3: Proceed to Final Stage!</B></FONT><BR>
-     <INPUT TYPE="hidden" NAME="project_id" VALUE = "$parameters{project_id}">
-     <INPUT TYPE="submit" NAME="PROCESS" VALUE="Proceed to Verification and Submission"><BR>
+	<TD>
+	&nbsp;
+    </TD>
+    </TR>
+    </TABLE>
+    <p>
+    <TABLE>
+    <TR>
+      <TD>
+      <INPUT TYPE = "checkbox" NAME = "lambdaFlag" VALUE = "-lam">
+      </TD>
+      <TD>
+	&nbsp;Lambda &#62;&#61; &#60;num&#62;
+      </TD>
+      <TD>
+	&nbsp;<INPUT TYPE = "text" NAME = "lambdaValue" size="10" onChange="verifyNumber(this.value,'lambdaValue')">
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE = "checkbox" NAME = "ratioFlag"  VALUE = "-rat">
+      </TD>
+      <TD>
+	&nbsp;Ratio  &#62;&#61; &#60;num&#62;
+      </TD>
+      <TD>
+	&nbsp;<INPUT TYPE = "text" NAME = "ratioValue" size="10" onChange="verifyNumber(this.value,'ratioValue')"><BR>
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE = "checkbox" NAME = "stdevFlag"  VALUE = "-std">
+      </TD>
+      <TD>
+	&nbsp;Standard Devation &#62;&#61;&#60;num&#62;
+      </TD>
+      <TD>
+	&nbsp;<INPUT TYPE = "text" NAME = "stdevValue" size="10" onChange="verifyNumber(this.value,'stdevValue')"><BR>
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE = "checkbox" NAME = "repFlag"    VALUE = "-n">
+      </TD>
+      <TD>
+	&nbsp;Gene represented at least &lt;num&gt; times
+      </TD>
+      <TD>
+	&nbsp;<INPUT TYPE = "text" NAME = "repValue" size="10" onChange="verifyNumber(this.value,'repValue')"><BR>
+      </TD>
+    </TR>
+    </TABLE>
+    <BR>
+    <B><FONT SIZE="-1" COLOR="#006600">Miscellaneous</FONT></B><BR>
+    <TABLE BORDER=0>
+    <TR>
+      <TD>
+      <INPUT TYPE="checkbox" NAME="postSam" VALUE = "ps">
+      </TD>
+      <TD>
+	&nbsp;Use postSam (adds info from key file to .sig file)
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+      <INPUT TYPE="checkbox" NAME="notify">
+      </TD>
+      <TD>
+	&nbsp;Email notification - Type comma-separated email addresses (\@systemsbiology is implied, unless otherwise specified):
+      </TD>
+    </TR>
+    <TR>
+      <TD>
+	&nbsp;
+      </TD>
+      <TD>
+	&nbsp<INPUT TYPE="text" NAME="addresses" SIZE="50">
+      </TD>
+    </TR>
+    </TABLE>
+    <BR>
+    $LINESEPARATOR
+    <BR>
+    <FONT COLOR="#cc0000" SIZE="+0" FACE="Arial,Helvetica,sans-serif">
+    <B>Step 3 of 3: Proceed to Final Stage</B>
+    </FONT>
+    <p>
+    <INPUT TYPE="hidden" NAME="set_current_project_id">
+    <INPUT TYPE="hidden" NAME="set_current_work_group">
+    <INPUT TYPE="hidden" NAME="project_id" VALUE = "$parameters{project_id}">
+    <INPUT TYPE="submit" NAME="PROCESS" VALUE="Proceed to Verification and Submission Page"><BR>
     </FORM>
-     ~;
-      } else {
-	print "<H4>Select parameters above and press QUERY\n";
-      }
-} # end printEntryForm
+	~;
+}
+# End of table form sits in
+print qq~
+    </TD>
+    </TR>
+    </TABLE>
+~;
 
   ####################################
  ### End Pipeline Customization   ###
@@ -1119,6 +836,7 @@ sub createFile{
 print qq~
   <P> This is the plan file that will be submitted.<BR>
     If you care to manually alter the file, you may do so in this textbox.<BR>
+    [I will add a link to a page on how to manually alter files here]<BR>
     Click &quot;Submit to Pipeline&quot; to continue</P>
   <FORM METHOD = "post" NAME = "planFile">
   <INPUT TYPE = "submit" NAME = "FINALIZE" VALUE = "Submit to Pipeline"><BR>
@@ -1140,7 +858,7 @@ preprocess_scale_value         = xxxxx
 preprocess_debug_value         = xxxxx
 
 mergereps_optimization_flag = false
-mergereps_filter_flag      = false
+mergereps_filter_flag      = true
 mergereps_exclude_flag      = false
 
 mergereps_optimization_value = xxxxx
@@ -1183,7 +901,7 @@ EXECUTE = default_parameters\n\n
   my $direction;
   my $mapfile;
   my @fileLine;
-  my $forPostSam;
+  my $forPostSam; #need a key file for postSam
 
 #Printing Preprocess Information
   for(my $x = 0;$x<2;$x++){
@@ -1240,8 +958,8 @@ EXECUTE = default_parameters\n\n
 #Printing VERA/SAM Options
   if ($useVandS){
     foreach $key(keys %conditions){
-      $printLine = "#VERA/SAM\nfile_name = $key.merge\nvera_output_file = $key.model\nsam_output_file = $key.sig\n";
-      if ($veraFlag){$printLine.="vera_critical_delta_flag = true\nvera_critical_delat_value= $veraValue\n";}
+      $printLine = "#VERA/SAM\nfile_name = $key.all.merge\nvera_output_file = $key.model\nsam_output_file = $key.sig\n";
+      if ($veraFlag){$printLine.="vera_critical_delta_flag = true\nvera_critical_delta_value= $veraValue\n";}
       if ($veraEvolFile){$printLine.="vera_evolution_flag = true\nvera_evolution_value = xxxxx\n";}
       if ($veraDebug){$printLine.="vera_debugging_file_flag = true\nvera_debugging_file_value = xxxxx\nsam_debugging_file_flag = true\nsam_debugging_file_value = xxxxx\n";}
       if ($veraModelFlag){$printLine.="vera_initial_choice_flag = true\nvera_initial_choice_value= $veraModelFile\n";}
@@ -1255,7 +973,12 @@ EXECUTE = default_parameters\n\n
     my $mergeLoopVar;
     $printLine = "#MERGECONDS\n";
     foreach $mergeLoopVar (@merge_files){
-      $printLine.= "condition_name = $mergeLoopVar\n";
+      if ($useVandS){
+	$printLine.= "condition_name = $mergeLoopVar.sig\n";
+      }
+      else{
+	$printLine.= "condition_name = $mergeLoopVar.all.merge\n";
+      }
     }
     if ($lambdaFlag){$printLine.="mergeconds_lambda_flag = true\nmergeconds_lambda_value = $lambdaValue\n";}
     if ($ratioFlag){$printLine.="mergeconds_ratio_flag = true\nmergeconds_ratio_value = $ratioValue\n";}
@@ -1303,7 +1026,6 @@ EXECUTE = default_parameters\n\n
 
 
   print qq~</TEXTAREA></FORM>~;
-#  if ($print){close (PLAN);}
 }
 
 
@@ -1373,6 +1095,378 @@ sub submitJob {
 }
 
 
+###############################################################################
+# printProjectJavascript
+###############################################################################
+sub printProjectJavascript {
+
+print qq~
+<SCRIPT LANGUAGE="Javascript">
+<!--
+//Opens a new browser window for documentation on pipieline components
+function getDirections(URL){
+  var newWindow;
+  newWindow = window.open(URL);
+}
+
+function addItem(dir){
+  var bufferList = document.MainForm.fileList;
+  var destinationList;
+  if (dir == "forward"){destinationList = document.MainForm.forwardSelectionList;}
+  if (dir == "reverse"){destinationList = document.MainForm.reverseSelectionList;}
+  for(var i=bufferList.length;i>=0;i--){
+    if((bufferList.options[i]!=null) && (bufferList.options[i].selected)){
+      //check mergeCondsList and add condition to list if not present
+					var re = /\.key:(.*_vs_.*):/;
+      var cond = re.exec(bufferList.options[i].value);
+      var alreadyExists = false;
+      for (var j=0; j<document.MainForm.forwardSelectionList.length; j++){
+					var test = re.exec(document.MainForm.forwardSelectionList.options[j].value);
+					if (cond[1] == test[1]){
+							alreadyExists = true;
+							break;
+					}
+      }
+      //Superfluous error checking- ensure files does not exist in currently used files
+	for(var k=0; k<document.MainForm.reverseSelectionList.length; k++){
+	  var test = re.exec(document.MainForm.reverseSelectionList.options[k].value);
+	  if (cond[1] == test[1]){
+	    alreadyExists = true;
+	    break;
+	  }
+	}
+      if (!alreadyExists){
+	var mergeList = document.MainForm.mergeCondsList;
+	mergeList.options[mergeList.length] = new Option(cond[1], cond[1]);
+      }
+      destinationList.options[destinationList.length] = new Option(bufferList.options[i].text,
+								   bufferList.options[i].value);
+      bufferList.options[i] = null;
+    }
+  }
+}
+
+//for use in removing items from file lists, ensure only forward or reverse files are selected
+function adjust(direction){
+  var otherSelectionList;
+  if (direction == "forward"){otherSelectionList = document.MainForm.reverseSelectionList;}
+  else                       {otherSelectionList = document.MainForm.forwardSelectionList;}
+  for(var i=0;i<otherSelectionList.length;i++){
+    otherSelectionList.options[i].selected=false;
+  }
+}//end adjust
+	
+function dealWithMergeConds(list){
+  //remove from mergeCondsList
+  //1. see if others within the group exist
+  //2. if not, remove group name
+
+  var mergeCondsList  = document.MainForm.mergeCondsList;
+  var unusedMergeConds= document.MainForm.mergeBufferList;
+  var group = list.value;
+  var re = /\.key:(.*_vs_.*):/;
+  var cond = re.exec(group);
+  var forwardFiles = document.MainForm.forwardSelectionList;
+  var reverseFiles = document.MainForm.reverseSelectionList;
+
+  //see if condition exists in currently selected files
+  var groupStillExists = checkExists(forwardFiles, cond[1]);
+  if (!groupStillExists){
+    groupStillExists = checkExists(reverseFiles, cond[1]);
+  }
+
+  //we now know if the condition still exists or not
+  if (!groupStillExists){
+    //remove condition from list of possible mergeConds
+    for (var x=(mergeCondsList.length-1);x>=0;x--){
+      if (cond[1] == mergeCondsList.options[x].value){
+	mergeCondsList.options[x] = null;
+      }
+    }
+    //also check buffer list in mergeConds section
+    for (var y=(unusedMergeConds.length-1);y>=0;y--){
+      if (cond[1] == unusedMergeConds.options[y].value){
+	unusedMergeConds.options[y] = null;
+      }
+    }
+  }
+
+}
+
+function checkExists(checkList, checkAgainst){
+  var groupStillExists = false;
+  var re = /\.key:(.*_vs_.*):/;
+  for (var a=(checkList.length-1);a>=0;a--){
+    var test = re.exec(checkList.options[a].value);
+    if (checkAgainst == test[1] && checkList.options[a].selected == false){
+      groupStillExists = true;
+      break;
+    }
+  }
+  return groupStillExists;
+}
+
+
+function removeItem() {
+  var bufferList             = document.MainForm.fileList;
+  var bufferListLength       = bufferList.length;
+  var list;
+  var listLength;
+
+  list       = document.MainForm.forwardSelectionList;
+  listLength = list.length;
+  for (var h = 1; h<=2; h++){
+    for(var i=(listLength-1);i>=0;i--){
+      if((list.options[i]!=null)&&(list.options[i].selected==true)){
+	dealWithMergeConds(list.options[i]);
+	var uniqueCheck = true;
+	for(var j=(bufferListLength-1);j>=0;j--){
+	  if (list.options[i].value == bufferList.options[j].value){
+	    uniqueCheck = false;
+	    break;
+	  }
+	}
+	if (uniqueCheck == true){
+	  bufferList.options[bufferListLength] = new Option(list.options[i].text,
+							    list.options[i].value);
+	  bufferListLength++;
+	}
+	list.options[i] =null;
+      }
+    }
+    list       = document.MainForm.reverseSelectionList;
+    listLength = list.length;
+  }
+}//end removeItem
+
+function checkSwitch(location){
+  var primary;
+  var secondary;
+  if (location == 'general'){
+    primary   = document.MainForm.excludeGenes;
+    secondary = document.MainForm.excludeLocalGenes;
+  }
+  if (location == 'local'  ){
+    primary   = document.MainForm.excludeLocalGenes;
+    secondary = document.MainForm.excludeGenes;
+  }
+  if (primary.checked){secondary.checked = false;}
+}//end checkSwitch
+
+function verifyNumber(testValue,testLocation){
+  var location;
+  if(testLocation=="preprocessBaseValue"){location=document.MainForm.preprocessBaseValue;}
+  if(testLocation=="preprocessSatValue") {location=document.MainForm.preprocessSatValue;}
+  if(testLocation=="preprocessScaleValue"){location=document.MainForm.preprocessScaleValue;}
+  if(testLocation=="veraCritValue")      {location=document.MainForm.veraCritValue;}
+  if(testLocation=="lambdaValue")        {location=document.MainForm.lambdaValue;}
+  if(testLocation=="ratioValue")         {location=document.MainForm.ratioValue;}
+  if(testLocation=="stdevValue")         {location=document.MainForm.stdevValue;}
+  if(testLocation=="errorModel")         {location=document.MainForm.errorModel;}
+  if(testLocation=="repValue")           {location=document.MainForm.repValue;}
+
+  //need just an integer
+  if(testLocation=="errorModel" || testLocation=="repValue"){
+    var number = parseInt(testValue);
+    if(isNaN(number)){
+      alert(testValue+" not a number");
+      location.value ="";
+      return;
+    }
+    else{location.value = number;return;}
+  }
+
+  //need double/float
+  var number = parseFloat(testValue);
+  if(isNaN(number)){
+    alert(testValue+" not a number");
+    location.value = "";
+    return;
+  }
+  else{location.value = number;return;}
+}//end verifyNumber
+
+function moveUp(){
+  var mergeList = document.MainForm.mergeCondsList;
+
+  for(var i=0; i<mergeList.options.length; i++){
+    if(mergeList.options[i].selected &&
+       mergeList.options[i] != "" &&
+       mergeList.options[i] != mergeList.options[0]){
+      var tmpOptionValue = mergeList.options[i].value;
+      var tmpOptionText  = mergeList.options[i].text;
+      mergeList.options[i].value   = mergeList.options[i-1].value;
+      mergeList.options[i].text    = mergeList.options[i-1].text;
+      mergeList.options[i-1].value = tmpOptionValue;
+      mergeList.options[i-1].text  = tmpOptionText;
+      mergeList.options[i-1].selected = true;
+      mergeList.options[i].selected = false;
+    }
+  }
+}
+
+function moveDown(){
+  var mergeList = document.MainForm.mergeCondsList;
+
+  for (var i=mergeList.options.length-1; i>=0; i--){
+    if(mergeList.options[i].selected &&
+       mergeList.options[i] != "" &&
+       mergeList.options[i+1] != mergeList.options[mergeList.options.length]){
+      var tmpOptionValue = mergeList.options[i+1].value;
+      var tmpOptionText  = mergeList.options[i+1].text;
+      mergeList.options[i+1].value = mergeList.options[i].value;
+      mergeList.options[i+1].text  = mergeList.options[i].text;
+      mergeList.options[i].value = tmpOptionValue;
+      mergeList.options[i].text  = tmpOptionText;
+      mergeList.options[i+1].selected = true;
+      mergeList.options[i].selected = false;
+    }
+  }
+}
+
+function testForText(){
+  var filename = document.MainForm.excludeFile;
+  if(filename.value == ""){
+    document.MainForm.excludeGenes.checked = true;
+    document.MainForm.excludeLocalGenes.checked = false;
+  }
+  else{
+    document.MainForm.excludeLocalGenes.checked = true;
+    document.MainForm.excludeGenes.checked = false;
+  }
+}
+
+function addMerge(){
+  var bufferList = document.MainForm.mergeBufferList;
+  var mergeList  = document.MainForm.mergeCondsList;
+  for (var i=bufferList.length-1;i>=0;i--){
+    if (bufferList.options[i].selected){
+      mergeList.options[mergeList.length] = new Option(bufferList.options[i].text,
+						       bufferList.options[i].value);
+      bufferList.options[i] = null;
+    }
+  }
+}
+
+function omitMerge(){
+  var bufferList = document.MainForm.mergeBufferList;
+  var mergeList  = document.MainForm.mergeCondsList;
+  for (var i=mergeList.length-1; i>=0; i--){
+    if (mergeList.options[i].selected){
+      bufferList.options[bufferList.length] = new Option (mergeList.options[i].text,
+							  mergeList.options[i].value);
+      mergeList.options[i] = null;
+    }
+  }
+}
+
+function prepareForSubmission(){
+  var forwardList = document.MainForm.forwardSelectionList;
+  for (var i=0;i<forwardList.length;i++){
+    forwardList.options[i].selected = true;
+  }
+
+  var reverseList = document.MainForm.reverseSelectionList;
+  for (var i=0;i<reverseList.length;i++){
+    reverseList.options[i].selected=true;
+  }
+
+  var mergeList = document.MainForm.mergeCondsList;
+  for (var i=0;i<mergeList.length;i++){
+    mergeList.options[i].selected= true;
+  }
+
+  if (document.MainForm.preprocessBase.checked == true && document.MainForm.preprocessBaseValue.value=="") {
+    if(!confirm("no base value set for Preprocess.  Click OK if you're not using a base value.  Click Cancel to provide a value."))
+      {return false;}
+    else
+      {document.MainForm.preprocessBase.checked = false;}
+  }
+
+  if (document.MainForm.preprocessBase.checked==false && document.MainForm.preprocessBaseValue.value !=""){
+    if(confirm("Preprocess base value set, but checkbox is not checked.  Click OK to use the base value.  Click Cancel to refrain from using it."))
+      {document.MainForm.preprocessBase.checked = true;}
+    else
+      {document.MainForm.preprocessBaseValue.value ="";}
+  }
+
+  if (document.MainForm.preprocessSat.checked == true && document.MainForm.preprocessSatValue.value=="") {
+    if(!confirm("no saturation value set for Preprocess.  Click OK if you're not using a saturation value.  Click Cancel to provide a value."))
+      {return false;}
+    else
+      {document.MainForm.preprocessSat.checked = false;}
+  }
+
+  if (document.MainForm.preprocessSat.checked==false && document.MainForm.preprocessSatValue.value !=""){
+    if(confirm("Saturation value set, but checkbox is not checked.  Click OK to use the value.  Click Cancel to refrain from using it."))
+      {document.MainForm.preprocessSat.checked = true;}
+    else
+      {document.MainForm.preprocessSatValue.value ="";}
+  }
+
+  if (document.MainForm.preprocessScale.checked == true && document.MainForm.preprocessScaleValue.value=="")
+    if(!confirm("no value set for Preprocess' scale.  Click OK if you're not using a value.  Click Cancel to provide a value."))
+      {return false;}
+    else
+      {document.MainForm.preprocessScale.checked = false;}
+
+  if (document.MainForm.preprocessScale.checked == false && document.MainForm.preprocessScaleValue.value !=""){
+    if(confirm("You have entered a scale value for preprocess, but you haven't checked the box.  Click OK to use the value.  Click Cancel to refrain from using it."))
+      {document.MainForm.preprocessScale.checked = true;}
+    else
+      {document.MainForm.preprocessScaleValue.value = "";}
+  }
+
+
+  if (document.MainForm.errorModel.checked == true && document.MainForm.errorModelValue.value==""){
+    if(!confirm("no value set for MergeReps optimization.  Click OK if you're not using a value.  Click Cancel to provide a value."))
+      {return false;}
+    else
+      {document.MainForm.errorModel.checked = false;}
+  }
+
+  if (document.MainForm.errorModel.checked == false && document.MainForm.errorModelValue.value != ""){
+    if (confirm("You have entered a min. number of replicates for mergereps, but you haven't check the box.  Click OK to use the value.  Click Cancel to refrain from using it."))
+      {document.MainForm.errorModel.checked = true;}
+    else
+      {docuemnt.MainForm.errorModelValue.value = "";}
+  }
+
+
+  if (document.MainForm.veraCrit.checked == true && document.MainForm.veraCritValue.value=="") {
+    if(!confirm("no value set for VERA's delta value for optimization.  Click OK if you're not using a value.  Click Cancel to provide a value."))
+      {return false;}
+    else
+      {document.MainForm.veraCrit.checked = false;}
+  }
+
+  if (document.MainForm.veraCrit.checked == false && document.MainForm.veraCritValue.value != ""){
+    if (confirm("You have entered a delta value at which VERA stops , but you didn't check the box.  Click OK to use the value.  Click Cancel to refrain from using it."))
+      {document.MainForm.veraCrit.checked = true;}
+    else
+      {document.MainForm.veraCritValue.value = "";}
+  }
+
+  if (document.MainForm.notify.checked == true && document.MainForm.addresses.value=="") {
+    if(!confirm("you haven't specified contact email addresses.  Click OK if you're not using them.  Click Cancel to provide a value."))
+      {return false;}
+    else
+      {document.MainForm.notify.checked = false;}
+  }
+
+  if (document.MainForm.notify.checked == false && document.MainForm.addresses.value != ""){
+    if (confirm("You have entered an email address, but you haven't checked the box.  Click OK to use the value.  Click Cancel to refrain from using it."))
+      {document.MainForm.notify.checked = true;}
+    else
+      {document.MainForm.addresses.value = "";}
+  }
+
+}
+//-->
+</SCRIPT>
+~;
+return;
+}
 
 
 

@@ -51,6 +51,18 @@ sub main {
     #### Do the SBEAMS authentication and exit if a username is not returned
     exit unless ($current_username = $sbeams->Authenticate());
 
+    #### Read in the default input parameters
+    my %parameters;
+    my $n_params_found = $sbeams->parse_input_parameters(
+				     q=>$q,parameters_ref=>\%parameters);
+    #$sbeams->printDebuggingInfo($q);
+
+
+    #### Process generic "state" parameters before we start
+    $sbeams->processStandardParameters(
+    parameters_ref=>\%parameters);
+
+
     #### Print the header, do what the program does, and print footer
     $sbeamsIJ->printPageHeader();
     showMainPage();
