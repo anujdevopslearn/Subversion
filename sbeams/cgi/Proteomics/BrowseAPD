@@ -633,7 +633,10 @@ sub handle_request {
         $key ne 'charge_constraint' && $key ne 'xx_constraint'
       ) {
       if ($parameters{$key}) {
-        push(@parameters_to_pass,"$key=$parameters{$key}");
+        #### HACK! FIXME
+        my $tmp = $parameters{$key};
+        $tmp =~ s/\+/%2b/g;
+        push(@parameters_to_pass,"$key=$tmp");
       }
     }
   }
