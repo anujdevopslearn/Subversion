@@ -300,7 +300,7 @@ sub handle_request {
 
   #### Build FAVORED CODON FREQUENCY constraint
   my $fav_codon_frequency_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"BPS.fav_codon_frequency",
+    constraint_column=>"fav_codon_frequency",
     constraint_type=>"flexible_float",
     constraint_name=>"Favored Codon Frequency",
     constraint_value=>$parameters{fav_codon_frequency_constraint} );
@@ -309,7 +309,7 @@ sub handle_request {
 
   #### Build NUMBER OF TRANSMEMBRANE REGIONS constraint
   my $n_transmembrane_regions_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"BPS.n_transmembrane_regions",
+    constraint_column=>"n_transmembrane_regions",
     constraint_type=>"flexible_int",
     constraint_name=>"Number of Transmembrane regions",
     constraint_value=>$parameters{n_transmembrane_regions_constraint} );
@@ -387,8 +387,7 @@ sub handle_request {
   #### Add in some extra columns if the user wants to see them
   if ( $parameters{display_options} =~ /ShowExtraProteinProps/ ) {
     @additional_columns = (
-      ["fav_codon_frequency","STR(BPS.fav_codon_frequency,10,3)","Favored Codon Frequency"],
-      ["n_transmembrane_regions","BPS.n_transmembrane_regions","Number of Transmembrane Regions"],
+      ["category","BPS.category","Category"],
       @additional_columns,
     );
   }
@@ -462,6 +461,7 @@ sub handle_request {
   %url_cols = ('set_tag' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=AT_BIOSEQUENCE_SET&biosequence_set_id=\%$colnameidx{biosequence_set_id}V",
                'accession' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi?biosequence_name_constraint=\%$colnameidx{biosequence_accession}V&apply_action=$pass_action",
                'gene_name' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi?biosequence_gene_name_constraint=\%$colnameidx{biosequence_gene_name}V&apply_action=$pass_action",
+               'category'  => "http://www.yeastgenome.org/help/glossary.html",
                'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
                'Molecular Function_ATAG' => 'TARGET="WinExt"',
                'Molecular Function_OPTIONS' => {semicolon_separated_list=>1},
