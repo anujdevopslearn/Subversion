@@ -12,6 +12,7 @@ package SBEAMS::Connection::Settings;
 
 
 use strict;
+use FindBin;
 
 use vars qw($VERSION @ISA @EXPORT 
     $DBTITLE
@@ -87,7 +88,11 @@ if ($_server_port) {
 my $SBEAMS_INSTANCE;
 $SBEAMS_INSTANCE = $ENV{SCRIPT_NAME} if ($ENV{SCRIPT_NAME});
 $SBEAMS_INSTANCE = $ENV{SBEAMS_INSTANCE} if ($ENV{SBEAMS_INSTANCE});
-$SBEAMS_INSTANCE = $ENV{PWD} unless ($SBEAMS_INSTANCE);
+
+#### If nothing set yet, then try to use the location of the script
+#$SBEAMS_INSTANCE = $ENV{PWD} unless ($SBEAMS_INSTANCE);
+$SBEAMS_INSTANCE =  "$FindBin::Bin" unless ($SBEAMS_INSTANCE);
+
 $SBEAMS_INSTANCE = "production" unless ($SBEAMS_INSTANCE);
 
 
