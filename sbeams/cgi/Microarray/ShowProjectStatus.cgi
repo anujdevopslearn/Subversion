@@ -235,9 +235,9 @@ SELECT	A.array_id,A.array_name,
       }
 
 
-      my $base_url = "$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=";
+      my $base_url = "$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=";
       %url_cols = ('array_name' => "${base_url}array&array_id=%0V",
-                   'date_requested' => "$CGI_BASE_DIR/SubmitArrayRequest.cgi?TABLE_NAME=array_request&array_request_id=%2V",
+                   'date_requested' => "$CGI_BASE_DIR/Microarray/SubmitArrayRequest.cgi?TABLE_NAME=array_request&array_request_id=%2V",
                    'date_printed' => "${base_url}printing_batch&printing_batch_id=%5V", 
                    'date_hybridized' => "${base_url}hybridization&hybridization_id=%7V", 
                    'date_scanned' => "${base_url}array_scan&array_scan_id=%9V", 
