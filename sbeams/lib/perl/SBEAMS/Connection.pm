@@ -236,19 +236,26 @@ It multiply inherits
     SBEAMS::Connection::Permissions
 
 
-=head2 USAGE
+=head2 EXAMPLE USAGE
 
+    ##load Connection modules and create instance:
     use SBEAMS::Connection;
     use SBEAMS::Connection::Settings;
     use SBEAMS::Connection::Tables;
-    use CGI;
+
+    $sbeams = new SBEAMS::Connection;
+
+    ##load module of interest and create instance:
     use SBEAMS::PeptideAtlas;
     use SBEAMS::PeptideAtlas::Settings;
     use SBEAMS::PeptideAtlas::Tables;
 
+    $sbeamsMOD = new SBEAMS::PeptideAtlas;
+    $sbeamsMOD->setSBEAMS($sbeams);
+    $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
-    $sbeams = new SBEAMS::Connection;
-
+    ## load CGI module and create instance:
+    use CGI;
     $q = new CGI;
 
     ## authenticate user:
