@@ -630,10 +630,10 @@ sub printEntryForm {
 
 
       #### Build ROWCOUNT constraint
-      my $limit_clause = "TOP 100";
-      if ($parameters{row_limit} > 0 && $parameters{row_limit}<=99999) {
-        $limit_clause = "TOP $parameters{row_limit}";
+      unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=99999) {
+        $parameters{row_limit} = 100;
       }
+      my $limit_clause = "TOP $parameters{row_limit}";
 
 
       #### Define the desired columns
@@ -771,11 +771,37 @@ sub printEntryForm {
     }
 
 
+
+    #### If QUERY was selected, go ahead and execute the query!
     if ($apply_action =~ /QUERY/i) {
+
+      my ($resultset_ref,$key,$value,$element);
+      my %resultset;
+      $resultset_ref = \%resultset;
+
       print "<PRE>$sql_query</PRE><BR>\n" if ($show_sql);
       $sbeams->displayQueryResult(sql_query=>$sql_query,
           url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols,
-          max_widths=>\%max_widths);
+          max_widths=>\%max_widths,resultset_ref=>$resultset_ref);
+
+
+      if ( $parameters{row_limit} == scalar(@{$resultset_ref->{data_ref}}) ) {
+        print "<font color=red>WARNING: </font>Resultset truncated at ".
+          "$parameters{row_limit} rows.  Increase row limit to see more.<BR>\n";
+      }
+
+      #### Print out some information about the returned resultset:
+      if (0 == 1) {
+        print "resultset_ref = $resultset_ref<BR>\n";
+        while ( ($key,$value) = each %{$resultset_ref} ) {
+          printf("%s = %s<BR>\n",$key,$value);
+        }
+        print "columnlist = ",join(" , ",@{$resultset_ref->{column_list_ref}}),"<BR>\n";
+        print "nrows = ",scalar(@{$resultset_ref->{data_ref}}),"<BR>\n";
+      }
+
+
+    #### If QUERY was not selected, then tell the user to enter some parameters
     } else {
       print "<H4>Select parameters above and press QUERY</H4>\n";
     }
