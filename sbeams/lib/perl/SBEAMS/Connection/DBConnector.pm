@@ -55,6 +55,17 @@ if ( $DBVERSION eq "Dev Branch 1" ) {
   $PROTEOMICS_DB = "Proteomics.dbo.";
   $PHENOARRAY_DB = "PhenoArray.dbo.";
 
+} elsif ( $DBVERSION eq "Dev Branch 6" ) {
+  $DB_SERVER   = 'mssql';
+  $DB_DATABASE = 'sbeams';
+  $DB_USER     = 'sbeams';
+  $DB_PASS     = 'SB444';
+  $DB_DRIVER   = "DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE";
+  $DB_TYPE     = "MS SQL Server";
+  $BIOSAP_DB   = "BioSap.dbo.";
+  $PROTEOMICS_DB = "Proteomics.dbo.";
+  $PHENOARRAY_DB = "PhenoArray.dbo.";
+
 } elsif ( $DBVERSION eq "MySQL Dev Branch 1" ) {
   $DB_SERVER   = 'mysql';
   $DB_DATABASE = 'sbeams';
