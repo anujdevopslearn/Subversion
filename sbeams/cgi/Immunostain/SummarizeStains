@@ -622,15 +622,6 @@ sub postProcessResultset {
 
   my (%dataHash,%cellTypeHash,%RefSeqIDs);
 
-#  for my $key ( qw( resultset_ref rs_params_ref query_parameters_ref column_titles_ref ) ) {
-#  next if ref( $args{$key} ) ne 'HASH';
-#    for my $subkey ( keys ( %{$args{$key}} ) ) {
-#      print STDERR "$key: $subkey => $args{$key}->{$subkey}\n";
-#    }
-#  }
-
-  # Print javascript routine to check weighting factor input
-  print getWFJavascript();
 
   #### Process the arguments list
   my $resultset_ref = $args{'resultset_ref'};
@@ -640,6 +631,17 @@ sub postProcessResultset {
   my $cytoscape = $args{'cytoscape'};
   my $option;
 
+  
+  # Print javascript routine to check weighting factor input.  Had to add
+  # the output mode checking because we get in here in a variety of ways.
+  if  ( uc($rs_params_ref->{output_mode} ) =~ /HTML/ && 
+        !defined $query_parameters_ref->{exprTabMode} ) {
+    print getWFJavascript();
+  }
+
+  # This will tell us if we are exporting table as TSV or other
+  my $exprTabMode = $query_parameters_ref->{exprTabMode} || 'HTML';
+  
   #### Set up some data data structures to hold Cytoscape data
   my @cytoscape_files = ( 'network.sif','commonName.noa','organism.noa',
     'ExpressionLevel.eda','ExpressionLevelLabel.eda','NodeType.noa' );
@@ -738,9 +740,6 @@ sub postProcessResultset {
                                                   BORDERCOLOR => 'BLACK',
                                                   ALIGN => 'CENTER' );
 
-  # This will tell us if we are exporting table as TSV or other
-  my $exprTabMode = $query_parameters_ref->{exprTabMode} || 'HTML';
-  
   # Avoid perilous global hash and redundant sorting! (shudder)
   my @skeys = sort { $cellTypeHash{$a} <=> $cellTypeHash{$b} || $a cmp $b } keys( %cellTypeHash );
 
