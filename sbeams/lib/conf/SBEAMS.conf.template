@@ -59,12 +59,14 @@ DB_DRIVER   = DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE
 #DB2INSTANCE = db2inst1
 
 # Settings to allow SMB authentication, must set each to have SMB auth work.
-# PDC => Primary Domain Controller
-# BDC => Backup Domain Controller
+# ENABLE => YES to try to allow SMB Authentication, or NO
+# PDC => Primary Domain Controller servername
+# BDC => Backup Domain Controller servername
 # Domain => NT Domain
-SMBAUTH{PDC}         = ISB-DC1
-SMBAUTH{BDC}         = PRINT
-SMBAUTH{Domain}      = ISB
+SMBAUTH{ENABLE}      = NO
+SMBAUTH{PDC}         = DC1
+SMBAUTH{BDC}         = DC2
+SMBAUTH{Domain}      = MYDOMAIN
 
 
 #### Set the RDBMS flavor.  This triggers engine-specific code within the
@@ -75,7 +77,6 @@ DB_TYPE     = MS SQL Server
 #DB_TYPE     = Postgresql
 #DB_TYPE     = Oracle
 #DB_TYPE     = DB2
-#
 
 
 #### Set the default database prefix as a function of module to be prepended
@@ -117,10 +118,19 @@ LOGIN_DURATION         = 24
 #### If true (1), must reauthenticate upon quitting and restarting browser
 SESSION_REAUTH         = 0
 
+
+#### Specify the site of this installation. This will usually be left
+#### blank, but can be used to enable some special site-specific
+#### development functionality
+#CONFIG_SETTING{SITE} = 
+
 # Determines which messages will get logged, anything above stated level will
 # be printed.  Valid levels are error, warn, info, and debug.  For example, if
 # info is selected, all error, warn, and info messages will print.
 LOGGING_LEVEL = warn
+
+
+
 
 [main]
 DBVERSION              = <FONT COLOR=red>Primary</FONT>
