@@ -21,8 +21,9 @@ use Getopt::Long;
 use vars qw ($sbeams $sbeamsMOD
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
              $current_contact_id $current_username);
-use lib qw (/net/db/lib/sbeams/lib/perl);
+#use lib qw (/net/db/lib/sbeams/lib/perl);
 use FindBin;
+use lib "$FindBin::Bin/../../perl";
 
 #### Set up SBEAMS package
 use SBEAMS::Connection;
@@ -112,7 +113,7 @@ sub main {
   #### Set the string you'd like to use to isolate a data source set
   my $search_string = $ARGV[0];
 
-  #### Get most recent Celera source_version_id
+  #### Get most recent source_version_id that matches search_spec
   $sql = "SELECT SV.source_version_id" .
          "  FROM ${TBSN_SOURCE_VERSION} SV " .
          " WHERE SV.date_created = " .
@@ -150,12 +151,12 @@ sub main {
 
       my ($match_snp_instance_id,$match_snp_id) = @{$row2};
 
-      #### If the celera snp_id is already matched_snp_id then there's
+      #### If the search_spec's snp_id is already matched_snp_id then there's
       #### nothing more to do
       next if ($match_snp_id == $snp_id);
 
 
-      #### Update all snp_instances to point to the Celera snp's snp_id
+      #### Update all snp_instances to point to the search_spec snp's snp_id
       $rowdata{snp_id} = $snp_id;
       $result = $sbeams->insert_update_row(update=>1,
         table_name=>"${TBSN_SNP_INSTANCE}",
@@ -175,7 +176,9 @@ sub main {
 	$rowdata2{hgbase_accession} = $source_accession;
       } elsif ($source_accession =~ /^CM/) {
         $rowdata2{hgmd_accession} = $source_accession;
-      } else {
+       } elsif ($source_accession =~ /^hCV/) {
+        $rowdata2{celera_accession} = $source_accession;
+     } else {
         die "Wah!  I don't know what to do with source_accession ".
           "'$source_accession'";
       }
@@ -193,7 +196,7 @@ sub main {
 
 
       #### If this record hasn't already been re-parented, then UPDATE
-      #### the other native snp entry to have the Celera snp_id in the
+      #### the other native snp entry to have the search_spec's snp_id in the
       #### obsoleted_by_snp_id field
       if ($match_snp_id != $snp_id) {
         my %rowdata = ();
