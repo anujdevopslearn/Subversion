@@ -353,6 +353,7 @@ foreach my $p (keys %parameters)
 	  ["cancer_amount_cc", "cast(cancer_amount_cc as varchar)", "Amount of Cancer (cc)"],
 	  ["gleason3 tumor", "cast(SCP1.percent_type_term_id as varchar)", "Tumor Type Percent"],
 	  ["organism_name","SDO.organism_name", "Organism Name"],
+    ["organism_id", "SDO.organism_id", "organism_id"],
 	["tissue_type_id", "TT.tissue_type_id", "tissue_type_id"],			
 	["tissue_type_name", "TT.tissue_type_name", "Tissue Type"],			
     );
@@ -593,9 +594,8 @@ sub evalSQL {
 sub postProcessResultset {
 		
   my %args = @_;
-
-  my ($i,$key,$line,$result,$sql,$cellTypeIndex,$antibodyIndex,
-      $intenseIndex,$equivocalIndex,$nonIndex);
+    my ($i,$key,$line,$result,$sql,$cellTypeIndex,$antibodyIndex,
+      $intenseIndex,$equivocalIndex,$nonIndex, $organismID);
 
   my (%dataHash,%cellTypeHash,%RefSeqIDs);
 
@@ -640,8 +640,14 @@ sub postProcessResultset {
   #getting the index and populating a datahash with the returned result
   my $biosequence_name_column_index = $resultset_ref->{column_hash_ref};
 
+   
+  
+  
   for (@{$resultset_ref->{data_ref}}) {
+    
     @row = @{$resultset_ref->{data_ref}->[$irow]};
+
+    $organismID =  $row[$biosequence_name_column_index->{organism_id}];
     my $antibodyName =  $row[$biosequence_name_column_index->{antibody_name}];
     my $antibodyId = $row[$biosequence_name_column_index->{antibody_id}];
     my $refseq_accession = $row[$biosequence_name_column_index->{refseq_accession}];
@@ -738,7 +744,7 @@ sub postProcessResultset {
       $colorAbundance = '#A1A1A1 'if ($abundance eq 'high');
       $colorAbundance = '#808080' if ($abundance eq 'most');
 				
-      $HTML .= "<td width=50 height=20 align = center bgcolor = $colorAverage><A HREF =\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&antibody_id=$antibodyHash{$antibodyKey}&cell_type_id=$cellIdHash{$cellKey}&display_options=MergeLevelsAndPivotCellTypes\">$averageNumber</A>";
+      $HTML .= "<td width=50 height=20 align = center bgcolor = $colorAverage><A HREF =\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&antibody_id=$antibodyHash{$antibodyKey}&cell_type_id=$cellIdHash{$cellKey}&organism_id=$organismID&display_options=MergeLevelsAndPivotCellTypes\">$averageNumber</A>";
       #print  qq~ <br>&nbsp;&nbsp;&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=_processAntibody&antibody_id=$antibodyHash{$antibodyKey}">IMAGES</A></td>~;
       $HTML .= "<td  bgcolor = $colorAbundance>$dataHash{$key}->{$cellKey}->{abundance}</td>\n" if $cellKey eq 'Stromal Leukocytes';
       $HTML .= "<td align = center>$expNumber</td>" if $query_parameters_ref->{display_options} =~/numberof/i;
@@ -872,6 +878,8 @@ sub convertGenomeCoordinates {
 	                               AND genome_transcription_end
                )
       ~;
+      
+    
       my @rows = $sbeams->selectOneColumn($sql);
       if (scalar(@rows) > 1) {
 	print "ERROR: More than one row returned trying to find antibodies ".
