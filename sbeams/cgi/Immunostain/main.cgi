@@ -553,7 +553,37 @@ sub processAntibody
 	}
 	my $limitClause;
 	$limitClause  = " and " .$parameters{buildClause} if $parameters{buildClause};
+#get some CD information	
+	my $sqlCoord = qq~ select antibody_name, 
+	alternate_names,
+	biosequence_accession,
+	genenome_location,
+	accessor
+	from $TBIS_ANTIBODY ab
+	left join $TBIS_ANTIGEN an on ab.antigen_id = an.antigen_id
+	left join $TBIS_BIOSEQUENCE bs on an.biosequence_id = bs.biosequence_id
+	left join Immunostain.dbo.genenome_coordinates gc on bs.biosequence_accession = gc.locus_link_id
+	left join $TBIS_BIOSEQUENCE_SET bss on bs.biosequence_set_id = bss.biosequence_set_id
+	left join sbeams.dbo.organism sbo on bss.organism_id = sbo.organism_id
+	left join $TBIS_DBXREF dbx on bs.dbxref_id = dbx.dbxref_id 
+	where ab.antibody_id in ($includeClause) $limitClause and set_Name ='LocusLink' and 
+	dbxref_name = 'LocusLink' ~;
+
 	
+	my @genenomeCoord = $sbeams->selectSeveralColumns($sqlCoord);
+	my %genenomeHash;
+	foreach my $genenome (@genenomeCoord)
+	{
+			my %hash;
+			my($name,$alternateName,$locusID,$genenomeLocation,$url) = @{$genenome};
+			$hash{alternateName} = $alternateName;
+			$hash{locusLinkID} = $locusID;
+			$hash{locusLinkUrl} = $url."LocRpt.cgi?l=".$locusID;
+			$hash{genenomeLocation} = $genenomeLocation;
+			$hash{genenomeLocationUrl} = 'http://genome.ucsc.edu/cgi-bin/hgTracks?org=Human&db=hg16&position='.$name;
+			$genenomeHash{$name}->{attributes} = \%hash;  
+	}		
+
 	my $query = "select ab.antibody_name,ab.antibody_id,
 	ss.stain_name,
 	ss.stained_slide_id,
@@ -664,7 +694,18 @@ $percentHash{$antibody}->{$cellType}->{none} += $atLevelPercent if $row[$levelIn
 		foreach my $antibodyKey (sort bySortOrder keys %stainHash)
 		{
 
-			print "<tr></tr><tr></tr><tr></tr><tr><td align=left><font color =\"#D60000\"><h5>$antibodyKey</h5></font></TD><tr><td><b>Total Number of Stains:</b> </td>";
+			print "<tr></tr><tr></tr><tr></tr><tr><td align=left><font color =\"#D60000\"><h5>$antibodyKey</h5></font></TD></tr>";
+			print "<tr><td align=left><b>Alternate names:</b>&nbsp;&nbsp;$genenomeHash{$antibodyKey}->{attributes}->{alternateName}</td></tr>";
+			print "<tr><td align=left><b>Locuslink ID:</b><a href =$genenomeHash{$antibodyKey}->{attributes}->{locusLinkUrl}>&nbsp;&nbsp;  $genenomeHash{$antibodyKey}->{attributes}->{locusLinkID}</a></td></tr>";
+			print "<tr><td align=left><b>Genenome Coordinates:</b><a href =$genenomeHash{$antibodyKey}->{attributes}->{genenomeLocationUrl}>&nbsp;&nbsp;  $genenomeHash{$antibodyKey}->{attributes}->{genenomeLocation}</a></td></tr>";
+
+			
+			print "<tr><td><b>Total Number of Stains:</b> </td>";
+		
+	
+			
+		
+		
 			print "<td align=center>$countHash{$antibodyKey}</td></tr><tr></tr>";
 			print "<tr><td align=left><b>Staining Summmary:</b></td></tr>";
 			print qq~ <tr><td></td><td align=center colspan=3><b>Average Percentage</b></td><td align=center><b>Number of charaterized Stains</b></td></tr>
