@@ -240,7 +240,7 @@ sub handle_request {
 
 ## xxxx need these edits?
 # $PROGRAM_FILE_NAME = $PROG_NAME;
-# my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
 
   #### Get the columns and input types for this table/query
   my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
