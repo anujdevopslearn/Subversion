@@ -543,10 +543,10 @@ sub handle_request {
       ["n_peptides","n_peptides","Number of Peptides"],
       ["maximum_probability","STR(P.maximum_probability,7,3)","Highest Probability"],
       ["n_experiments","P.n_experiments","# of Exps"],
-      ["experiment_list","P.experiment_list","Exp List"],
+      ["observed_experiment_list","P.experiment_list","Exp List"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
-      ["experiment_list","PS.experiment_list","experiment_list"],
+      ["searched_experiment_list","PS.experiment_list","searched_experiment_list"],
       ["minimum_probability","PS.minimum_probability","minimum_probability"],
     );
     $group_by_clause = "  GROUP BY PI.peptide_identifier_str,BS.biosequence_gene_name,DBX.accessor,BS.biosequence_accession,P.biosequence_name,P.peptide,n_peptides,STR(P.maximum_probability,7,3),P.n_experiments,P.experiment_list,BS.biosequence_desc,PS.experiment_list,PS.minimum_probability";
@@ -662,13 +662,13 @@ sub handle_request {
     	       'Peptide' => "$CGI_BASE_DIR/Proteomics/BrowseAPD?QUERY_NAME=APD_BrowseAPD&peptide_summary_id=$parameters{peptide_summary_id}&peptide_constraint=\%$colnameidx{peptide}V&display_options=ShowModifications&input_form_format=minimum_detail&apply_action=$pass_action",
     	       'Peptide_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show all occurrences of this peptide in these experiments\'; return true"',
 
-	       'Modified Peptide' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=\%$colnameidx{experiment_list}V&peptide_string_constraint=\%$colnameidx{peptide_string}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
+	       'Modified Peptide' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=\%$colnameidx{observed_experiment_list}V&peptide_string_constraint=\%$colnameidx{peptide_string}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
 	       'Modified Peptide_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show all occurrences of this exact peptide instance in these experiments\'; return true"',
 
-	       'Number of Peptides' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=\%$colnameidx{experiment_list}V&peptide_constraint=\%$colnameidx{peptide}V&${parameters_list}&probability_constraint=>\%$colnameidx{minimum_probability}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
+	       'Number of Peptides' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=\%$colnameidx{observed_experiment_list}V&peptide_constraint=\%$colnameidx{peptide}V&${parameters_list}&probability_constraint=>\%$colnameidx{minimum_probability}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
 	       'Number of Peptides_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show just this many that match all above criteria\'; return true"',
 
-	       'Number of Modified Peptides' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=\%$colnameidx{experiment_list}V&peptide_string_constraint=\%$colnameidx{peptide_string}V&charge_constraint=\%$colnameidx{charge_state}V&${parameters_list}&probability_constraint=>\%$colnameidx{minimum_probability}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
+	       'Number of Modified Peptides' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=\%$colnameidx{observed_experiment_list}V&peptide_string_constraint=\%$colnameidx{peptide_string}V&charge_constraint=\%$colnameidx{charge_state}V&${parameters_list}&probability_constraint=>\%$colnameidx{minimum_probability}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
 	       'Number of Modified Peptides_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show just this many that match all above criteria\'; return true"',
 
                'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
