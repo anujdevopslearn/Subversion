@@ -100,6 +100,7 @@ $DBPREFIX{Core} = 'sbeams.dbo.';
 $DBPREFIX{Proteomics} = 'proteomics.dbo.';
 $DBPREFIX{Biosap} = 'Biosap.dbo.';
 $DBPREFIX{BEDB} = 'BEDB.dbo.';
+$DBPREFIX{SNP} = 'SNP.dbo.';
 
 $RAW_DATA_DIR{Proteomics} = '/net/db/projects/proteomics/data';
 
