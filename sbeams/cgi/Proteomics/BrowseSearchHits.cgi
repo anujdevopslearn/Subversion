@@ -580,6 +580,39 @@ sub printEntryForm {
       }
 
 
+      #### Build QUANTITATION FORMAT
+      my $quant_format_clause = "";
+      $parameters{quantitation_format} = "d81" unless $parameters{quantitation_format};
+      if ($parameters{quantitation_format}) {
+        if ($parameters{quantitation_format} eq "raw") {
+          $quant_format_clause = "STR(d0_intensity,5,2) + ':' + STR(d8_intensity,5,2) + ".
+            "(CASE WHEN QUAN.date_modified != QUAN.date_created THEN ' *' ELSE '' END)";
+        } elsif ($parameters{quantitation_format} eq "High1") {
+          $quant_format_clause = "(CASE WHEN d0_intensity > d8_intensity ".
+	    "THEN '1 : ' + STR(d8_intensity/ISNULL(NULLIF(d0_intensity,0.0),0.001),5,2) ".
+	    "ELSE STR(d0_intensity/ISNULL(NULLIF(d8_intensity,0.0),0.001),4,2) + ' : 1' ".
+	    "END) + ".
+            "(CASE WHEN QUAN.date_modified != QUAN.date_created THEN ' *' ELSE '' END)";
+        } elsif ($parameters{quantitation_format} eq "d01") {
+          $quant_format_clause = "'1 :' + STR(d8_intensity/ISNULL(NULLIF(d0_intensity,0.0),0.001),5,2) + ".
+            "(CASE WHEN QUAN.date_modified != QUAN.date_created THEN ' *' ELSE '' END)";
+        } elsif ($parameters{quantitation_format} eq "d81") {
+          $quant_format_clause = "STR(d0_intensity/ISNULL(NULLIF(d8_intensity,0.0),0.001),5,2) + ': 1' + ".
+            "(CASE WHEN QUAN.date_modified != QUAN.date_created THEN ' *' ELSE '' END)";
+        } elsif ($parameters{quantitation_format} eq "decimal") {
+          $quant_format_clause = "STR(d0_intensity/ISNULL(NULLIF(d8_intensity,0.0),0.001),10,4) + ".
+            "(CASE WHEN QUAN.date_modified != QUAN.date_created THEN ' *' ELSE '' END)";
+        } elsif ($parameters{quantitation_format} eq "decimalplain") {
+          $quant_format_clause = "STR(d0_intensity/ISNULL(NULLIF(d8_intensity,0.0),0.001),10,4)";
+        } else {
+          print "<H4>Cannot parse Quantitation Format!  Check syntax.</H4>\n\n";
+          return;
+        }
+      }
+
+
+
+
       #### Build SORT ORDER
       my $order_by_clause = "";
       if ($parameters{sort_order}) {
@@ -648,7 +681,7 @@ sub printEntryForm {
         ["biosequence_set_id","BSS.biosequence_set_id","biosequence_set_id"],
         ["set_path","BSS.set_path","set_path"],
         ["isoelectric_point","STR(isoelectric_point,8,3)","pI"],
-        ["quantitation","STR(d0_intensity,5,2) + ':' + STR(d8_intensity,5,2)","Quant"],
+        ["quantitation","$quant_format_clause","Quant"],
         ["quantitation_id","QUAN.quantitation_id","quantitation_id"],
 #        ["assumed_charge","S.assumed_charge","assumed_charge"],
         ["search_hit_annotation_id","SHA.search_hit_annotation_id","search_hit_annotation_id"],
