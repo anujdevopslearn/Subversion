@@ -118,7 +118,7 @@ sub printPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;BioSequences</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Generate Data:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Biosap/BiosapForm.cgi"><nobr>&nbsp;&nbsp;&nbsp;New Biosap Run</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Biosap/CreateBiosapRun.cgi"><nobr>&nbsp;&nbsp;&nbsp;New Biosap Run</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	</table>
 	</td>
