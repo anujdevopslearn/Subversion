@@ -1218,7 +1218,7 @@ sub readResultSet {
 
 
     #### Read in the query parameters
-    my $infile = "../../tmp/queries/${resultset_file}.params";
+    my $infile = "$PHYSICAL_BASE_DIR/tmp/queries/${resultset_file}.params";
     open(INFILE,"$infile") || die "Cannot open $infile\n";
     while (<INFILE>) { $indata .= $_; }
     close(INFILE);
@@ -1232,7 +1232,7 @@ sub readResultSet {
 
     #### Read in the resultset
     $indata = "";
-    my $infile = "../../tmp/queries/${resultset_file}.resultset";
+    my $infile = "$PHYSICAL_BASE_DIR/tmp/queries/${resultset_file}.resultset";
     open(INFILE,"$infile") || die "Cannot open $infile\n";
     while (<INFILE>) { $indata .= $_; }
     close(INFILE);
@@ -1274,14 +1274,14 @@ sub writeResultSet {
 
 
     #### Write out the query parameters
-    my $outfile = "../../tmp/queries/${resultset_file}.params";
+    my $outfile = "$PHYSICAL_BASE_DIR/tmp/queries/${resultset_file}.params";
     open(OUTFILE,">$outfile") || die "Cannot open $outfile\n";
     printf OUTFILE Data::Dumper->Dump( [$query_parameters_ref] );
     close(OUTFILE);
 
 
     #### Write out the resultset
-    my $outfile = "../../tmp/queries/${resultset_file}.resultset";
+    my $outfile = "$PHYSICAL_BASE_DIR/tmp/queries/${resultset_file}.resultset";
     open(OUTFILE,">$outfile") || die "Cannot open $outfile\n";
     printf OUTFILE Data::Dumper->Dump( [$resultset_ref] );
     close(OUTFILE);
