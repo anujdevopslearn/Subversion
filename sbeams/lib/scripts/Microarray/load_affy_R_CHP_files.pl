@@ -35,6 +35,10 @@ values output from the Affy GCOS software.  It should be noted that the actual s
 different from the Affy software.  Also the p-detection threshold will be different then what Affy computes
 and the correlation between R_CHP and reguar Affy CHP files has been showen to have about 70+% correlation
 
+=head2 WARNING
+
+This particular version does not work with the Yeast chips since there is a Bug in the R-affy library.  10.8.04
+
 
 =head2 EXPORT
 
@@ -147,7 +151,7 @@ Run Mode Notes:
 Examples;
 1) ./$PROG_NAME --run_mode add_new 	 # typical mode, adds any new files
 2) ./$PROG_NAME --run_mode update --redo_R yes or no	 # Re upload the data and or re-compute the R run
-3) ./$PROG_NAME --run_mode update --redo_R yes or no -files 123,124,134  #give the affy_array_ids to update
+3) ./$PROG_NAME --run_mode update --redo_R yes or no --files 123,124,134  #give the affy_array_ids to update
 EOU
 
 		
