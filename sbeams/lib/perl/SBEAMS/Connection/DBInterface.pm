@@ -3753,8 +3753,12 @@ sub printUserChooser {
 									document.groupChooser.submit();
 								} else {
 									document.MainForm.set_current_work_group.value = val;
-									document.MainForm.apply_action_hidden.value = "REFRESH";
-									document.MainForm.action.value = "REFRESH";
+									if (document.MainForm.apply_action_hidden != null){
+										document.MainForm.apply_action_hidden.value = "REFRESH";
+								  }
+									if (document.MainForm.action != null) {
+										document.MainForm.action.value = "REFRESH";
+								  }
 									document.MainForm.submit();
 								}
 						}
@@ -3913,14 +3917,14 @@ sub printUserChooser {
 						<TD>
 						~;
 
-				## Suggestion Form
-				print qq~
-						<FORM NAME="suggestionBox" TARGET="_blank" METHOD="POST" ACTION="$HTML_BASE_DIR/cgi/suggestionBox.cgi">
-						<INPUT TYPE="hidden" NAME="action" VALUE="printSuggestionBox">
-						<INPUT TYPE="hidden" NAME="suggestionURL" VALUE="$ENV{'HTTP_REFERER'}">
-						<A HREF="Javascript:document.suggestionBox.submit()"><IMG SRC="$HTML_BASE_DIR/images/sug.jpg" WIDTH="80"></A>
-						</FORM>
-						~;
+#				## Suggestion Form
+#				print qq~
+#						<FORM NAME="suggestionBox" TARGET="_blank" METHOD="POST" ACTION="$HTML_BASE_DIR/cgi/suggestionBox.cgi">
+#						<INPUT TYPE="hidden" NAME="action" VALUE="printSuggestionBox">
+#						<INPUT TYPE="hidden" NAME="suggestionURL" VALUE="$ENV{'HTTP_REFERER'}">
+#						<A HREF="Javascript:document.suggestionBox.submit()"><IMG SRC="$HTML_BASE_DIR/images/sug.jpg" WIDTH="80"></A>
+#						</FORM>
+#						~;
 
 				#### END master TABLE
 				print qq~
@@ -3937,6 +3941,70 @@ Current Project: $current_project_name ($current_project_id)
 !;
      }
 }
+
+
+###############################################################################
+# addProjectComment
+###############################################################################
+#sub editAdditionalInformation {
+#		my $self = shift || croak("parameter self not passed");
+#    my %args = @_;
+
+		#### Define standard variables
+#		my $current_project = $self->getCurrent_project_id();
+#		my $module = $args{'module'}
+#		|| croak("no module specified");
+#		my $tag = $args{'tag'}
+#		|| croak("no tag specifies");
+#		my $text = $args{'text'}
+#		|| croak("no text provided");
+#		my $update = $args{'update'} || 1;
+#		my $remove = $args{'remove'} || 0;
+#		my ($sql, @rows, $additional_information);
+#		my ($module_information, $tag_information);
+
+		#### Make sure we are only inserting OR updating OR removing
+#		unless (($update+$remove) == 1){
+#				croak ("can do only one of the following:insert,update,remove");
+#		}
+
+		#### Get project additional information from database
+#		$sql = qq~
+#				SELECT P.additional_information
+#				FROM $TB_PROJECT P
+#				WHERE P.project_id = $current_project
+#				AND P.record_status != 'D'
+#				~;
+#		@rows = $self->selectOneColumn($sql);
+#		$additional_information = $rows[0];
+
+		#### Extract Module--WARNING:this only deals with one set of tags per module
+#		if ($additional_information =~ /<$module>(.*)<\/$module>/) {
+#				$module_information = $1;
+#				if ($module_information !~ /<$tag>(.*)<\/$tag>/ ) {
+#						$module_information =~ s(<$module>(.*)</$module>)(<$module><$tag></$tag>$1</$module>);
+#				}
+				## Put $module_information back into $additional_information
+#				$additional_information =~ s(<$module>(.*)</$module>)($module_information);
+#		}else {
+#				$module_information = "<$module><$tag></$tag></$module>";
+#				$additional_information .= $module_information;
+#		}
+
+		#### Either insert/update/remove
+#		if ($update) {
+#				$_information =~ s(<$module>(.*)<$tag>(.*)<\/$tag>(.*)<\/$module>/)(<$module>(.*)<$tag>$tag_information<\/$tag>(.*)<\/$module>/);
+#		}elsif ($update) {
+#				$additional_information =~ 
+		#### insert/update additional_information in the database
+#				}
+
+
+#}
+
+
+
+
 
 ###############################################################################
 
