@@ -82,8 +82,8 @@ DBPREFIX{Biosap}        = Biosap.dbo.
 DBPREFIX{Cytometry}     = Cytometry.dbo.
 DBPREFIX{Genotyping}    = Genotyping.dbo.
 DBPREFIX{Immunostain}   = Immunostain.dbo.
-DBPREFIX{Interactions}   = Immunostain.dbo.
-DBPREFIX{Inkjet}   = Immunostain.dbo.
+DBPREFIX{Interactions}   = Interactions.dbo.
+DBPREFIX{Inkjet}   = Inkjet.dbo.
 DBPREFIX{Microarray}    = sbeams.dbo.
 DBPREFIX{Ontology}      = Ontology.dbo.
 DBPREFIX{Oligo}         = Oligo.dbo.
@@ -92,7 +92,7 @@ DBPREFIX{PeptideAtlas}  = PeptideAtlas.dbo.
 DBPREFIX{ProteinStructure}    = ProteinStructure.dbo.
 DBPREFIX{Proteomics}    = proteomics.dbo.
 DBPREFIX{SNP}           = SNP.dbo.
-DBPREFIX{ADP}           = SNP.dbo.
+DBPREFIX{APD}           = APD.dbo.
 DBPREFIX{UESC}          = UESC.dbo.
 
 #### Set the raw data directory location as a function of module.
