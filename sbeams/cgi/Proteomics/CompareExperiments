@@ -54,7 +54,7 @@ $q = new CGI;
 ###############################################################################
 $PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
-Usage: $PROG_NAME [OPTIONS] key=value kay=value ...
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
 Options:
   --verbose n         Set verbosity level.  default is 0
   --quiet             Set flag to print nothing at all except errors
@@ -680,6 +680,7 @@ sub handle_request {
     @column_array = (
       ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
       ["accessor","DBX.accessor","accessor"],
+      ["accessor_suffix","DBX.accessor_suffix","accessor_suffix"],
       ["biosequence_accession","BS.biosequence_accession","Accession"],
       ["reference","BS.biosequence_name","Reference"],
       ["$colname","$colname","$dispname"],
@@ -700,7 +701,7 @@ sub handle_request {
     );
 
     $group_by_clause = " GROUP BY SB.search_batch_id,SH.reference,$colname";
-    $final_group_by_clause = " GROUP BY BS.biosequence_gene_name,BS.biosequence_accession,BS.biosequence_name,$colname,BS.biosequence_desc,DBX.accessor$additional_grouping_columns";
+    $final_group_by_clause = " GROUP BY BS.biosequence_gene_name,BS.biosequence_accession,BS.biosequence_name,$colname,BS.biosequence_desc,DBX.accessor,DBX.accessor_suffix$additional_grouping_columns";
     $count_column = "COUNT(*) AS 'row_count'";
     $peptide_column = "$colname,";
 
@@ -710,6 +711,7 @@ sub handle_request {
     @column_array = (
       ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
       ["accessor","DBX.accessor","accessor"],
+      ["accessor_suffix","DBX.accessor_suffix","accessor_suffix"],
       ["biosequence_accession","BS.biosequence_accession","Accession"],
       ["reference","BS.biosequence_name","Reference"],
     );
@@ -729,7 +731,7 @@ sub handle_request {
     );
 
     $group_by_clause = " GROUP BY SB.search_batch_id,SH.reference";
-    $final_group_by_clause = " GROUP BY BS.biosequence_gene_name,BS.biosequence_accession,BS.biosequence_name,BS.biosequence_desc,DBX.accessor$additional_grouping_columns";
+    $final_group_by_clause = " GROUP BY BS.biosequence_gene_name,BS.biosequence_accession,BS.biosequence_name,BS.biosequence_desc,DBX.accessor,DBX.accessor_suffix$additional_grouping_columns";
     $count_column = "COUNT(*) AS 'row_count'";
 
 
@@ -738,6 +740,7 @@ sub handle_request {
     @column_array = (
       ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
       ["accessor","DBX.accessor","accessor"],
+      ["accessor_suffix","DBX.accessor_suffix","accessor_suffix"],
       ["biosequence_accession","BS.biosequence_accession","Accession"],
       ["reference","BS.biosequence_name","Reference"],
       ["peptide","peptide","Peptide"],
@@ -757,7 +760,7 @@ sub handle_request {
     );
 
     $peptide_column = "peptide,";
-    $final_group_by_clause = " GROUP BY BS.biosequence_gene_name,BS.biosequence_accession,BS.biosequence_name,peptide,BS.biosequence_desc,DBX.accessor$additional_grouping_columns";
+    $final_group_by_clause = " GROUP BY BS.biosequence_gene_name,BS.biosequence_accession,BS.biosequence_name,peptide,BS.biosequence_desc,DBX.accessor,DBX.accessor_suffix$additional_grouping_columns";
     $count_column = "1 AS 'row_count'";
   }
 
@@ -905,7 +908,7 @@ sub handle_request {
 
 
   #### Define the hypertext links for columns that need them
-  %url_cols = ('Accession' => "\%$colnameidx{accessor}V\%$colnameidx{biosequence_accession}V",
+  %url_cols = ('Accession' => "\%$colnameidx{accessor}V\%$colnameidx{biosequence_accession}V\%$colnameidx{accessor_suffix}V",
     	       'Accession_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information about this protein in source database\'; return true"',
 
                'Reference' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=$parameters{search_batch_id}&reference_constraint=\%$colnameidx{reference}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
@@ -942,6 +945,7 @@ sub handle_request {
 
   #### Define columns that should be hidden in the output table
   %hidden_cols = ('accessor' => 1,
+                  'accessor_suffix' => 1,
                   'molecular_function_GO' => 1,
                   'biological_process_GO' => 1,
                   'cellular_component_GO' => 1,
@@ -953,16 +957,18 @@ sub handle_request {
   #### If QUERY or VIEWRESULTSET was selected, display the data
   if ($apply_action =~ /QUERY/i || $apply_action eq "VIEWRESULTSET") {
 
-    #### Show the SQL that will be or was executed
-    $sbeams->display_sql(sql=>$sql) if ($show_sql);
-
     #### If the action contained QUERY, then fetch the results from
     #### the database
     if ($apply_action =~ /QUERY/i) {
 
+      #### Show the SQL that will be or was executed
+      $sbeams->display_sql(sql=>$sql) if ($show_sql);
+
       #### Fetch the results from the database server
-      $sbeams->fetchResultSet(sql_query=>$sql,
-        resultset_ref=>$resultset_ref);
+      $sbeams->fetchResultSet(
+        sql_query=>$sql,
+        resultset_ref=>$resultset_ref,
+      );
 
       #### Store the resultset and parameters to disk resultset cache
       $rs_params{set_name} = "SETME";
@@ -970,30 +976,41 @@ sub handle_request {
         resultset_file_ref=>\$rs_params{set_name},
         resultset_ref=>$resultset_ref,
         query_parameters_ref=>\%parameters,
+        resultset_params_ref=>\%rs_params,
         query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
       );
     }
 
     #### Display the resultset
-    $sbeams->displayResultSet(rs_params_ref=>\%rs_params,
-        url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols,
-        max_widths=>\%max_widths,resultset_ref=>$resultset_ref,
-        column_titles_ref=>\@column_titles,
-        base_url=>$base_url,query_parameters_ref=>\%parameters,
+    $sbeams->displayResultSet(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      url_cols_ref=>\%url_cols,
+      hidden_cols_ref=>\%hidden_cols,
+      max_widths=>\%max_widths,
+      column_titles_ref=>\@column_titles,
+      base_url=>$base_url,
     );
 
 
     #### Display the resultset controls
-    $sbeams->displayResultSetControls(rs_params_ref=>\%rs_params,
-        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters,
-        base_url=>$base_url);
+    $sbeams->displayResultSetControls(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      base_url=>$base_url,
+    );
 
 
     #### Display some statistics for the result set
-    summarizeExperimentComparison(rs_params_ref=>\%rs_params,
-        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters,
-        column_titles_ref=>\@column_titles,
-        base_url=>$base_url);
+    summarizeExperimentComparison(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      column_titles_ref=>\@column_titles,
+      base_url=>$base_url,
+    );
 
 
   #### If QUERY was not selected, then tell the user to enter some parameters
@@ -1128,7 +1145,8 @@ sub summarizeExperimentComparison {
   #### Define non-data columns that should be ignored
   my %non_data_columns = ( 'Gene Name'=>1, 'Accession'=>1,
     'Reference'=>1, 'Reference Description'=>1, 'Peptide'=>1,
-    'accessor'=>1,'Peptide String'=>1,'Protein Length'=>1,
+    'accessor'=>1,'accessor_suffix'=>1,
+    'Peptide String'=>1,'Protein Length'=>1,
     'Molecular Function' => 1,
     'Biological Process' => 1,
     'Cellular Component' => 1,

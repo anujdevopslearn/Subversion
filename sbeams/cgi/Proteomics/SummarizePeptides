@@ -45,7 +45,6 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 
 use CGI;
-use CGI::Carp qw(fatalsToBrowser croak);
 $q = new CGI;
 
 
@@ -54,7 +53,7 @@ $q = new CGI;
 ###############################################################################
 $PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
-Usage: $PROG_NAME [OPTIONS] key=value kay=value ...
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
 Options:
   --verbose n         Set verbosity level.  default is 0
   --quiet             Set flag to print nothing at all except errors
@@ -121,6 +120,7 @@ sub main {
 } # end main
 
 
+
 ###############################################################################
 # Handle Request
 ###############################################################################
@@ -172,8 +172,12 @@ sub handle_request {
   #### If the apply action was to recall a previous resultset, do it
   my %rs_params = $sbeams->parseResultSetParams(q=>$q);
   if ($apply_action eq "VIEWRESULTSET") {
-    $sbeams->readResultSet(resultset_file=>$rs_params{set_name},
-        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters);
+    $sbeams->readResultSet(
+      resultset_file=>$rs_params{set_name},
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      resultset_params_ref=>\%rs_params,
+    );
     $n_params_found = 99;
   }
 
@@ -383,15 +387,6 @@ sub handle_request {
   return if ($fav_codon_frequency_clause eq '-1');
 
 
-  #### Build PROTEIN LENGTH constraint
-  my $protein_length_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"DATALENGTH(BS.biosequence_seq)",
-    constraint_type=>"flexible_int",
-    constraint_name=>"Protein Length",
-    constraint_value=>$parameters{protein_length_constraint} );
-  return if ($protein_length_clause eq '-1');
-
-
   #### Build NUMBER OF TRANSMEMBRANE REGIONS constraint
   my $n_transmembrane_regions_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"BS.n_transmembrane_regions",
@@ -399,6 +394,15 @@ sub handle_request {
     constraint_name=>"Number of Transmembrane regions",
     constraint_value=>$parameters{n_transmembrane_regions_constraint} );
   return if ($n_transmembrane_regions_clause eq '-1');
+
+
+  #### Build PROTEIN LENGTH constraint
+  my $protein_length_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"DATALENGTH(BS.biosequence_seq)",
+    constraint_type=>"flexible_int",
+    constraint_name=>"Protein Length",
+    constraint_value=>$parameters{protein_length_constraint} );
+  return if ($protein_length_clause eq '-1');
 
 
   #### Build ACCESSION constraint
@@ -663,6 +667,7 @@ sub handle_request {
     @column_array = (
       ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
       ["accessor","DBX.accessor","accessor"],
+      ["accessor_suffix","DBX.accessor_suffix","accessor_suffix"],
       ["biosequence_accession","BS.biosequence_accession","Accession"],
       ["reference","BS.biosequence_name","Reference"],
       ["count","tABS.row_count","Count"],
@@ -680,6 +685,7 @@ sub handle_request {
     @column_array = (
       ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
       ["accessor","DBX.accessor","accessor"],
+      ["accessor_suffix","DBX.accessor_suffix","accessor_suffix"],
       ["biosequence_accession","BS.biosequence_accession","Accession"],
       ["reference","BS.biosequence_name","Reference"],
       ["peptide","peptide","Peptide"],
@@ -833,7 +839,7 @@ sub handle_request {
 
 
   #### Define the hypertext links for columns that need them
-  %url_cols = ('Accession' => "\%$colnameidx{accessor}V\%$colnameidx{biosequence_accession}V",
+  %url_cols = ('Accession' => "\%$colnameidx{accessor}V\%$colnameidx{biosequence_accession}V\%$colnameidx{accessor_suffix}V",
     	       'Accession_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information about this protein in source database\'; return true"',
 
                'Reference' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&search_batch_id=$parameters{search_batch_id}&reference_constraint=\%$colnameidx{reference}V&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
@@ -867,6 +873,7 @@ sub handle_request {
 
   #### Define columns that should be hidden in the output table
   %hidden_cols = ('accessor' => 1,
+                  'accessor_suffix' => 1,
                   'molecular_function_GO' => 1,
                   'biological_process_GO' => 1,
                   'cellular_component_GO' => 1,
@@ -886,28 +893,42 @@ sub handle_request {
       $sbeams->display_sql(sql=>$sql) if ($show_sql);
 
       #### Fetch the results from the database server
-      $sbeams->fetchResultSet(sql_query=>$sql,
-        resultset_ref=>$resultset_ref);
+      $sbeams->fetchResultSet(
+        sql_query=>$sql,
+        resultset_ref=>$resultset_ref,
+      );
 
       #### Store the resultset and parameters to disk resultset cache
       $rs_params{set_name} = "SETME";
-      $sbeams->writeResultSet(resultset_file_ref=>\$rs_params{set_name},
-        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters);
+      $sbeams->writeResultSet(
+        resultset_file_ref=>\$rs_params{set_name},
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters,
+        resultset_params_ref=>\%rs_params,
+        query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+      );
     }
 
     #### Display the resultset
-    $sbeams->displayResultSet(rs_params_ref=>\%rs_params,
-        url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols,
-        max_widths=>\%max_widths,resultset_ref=>$resultset_ref,
-        column_titles_ref=>\@column_titles,
-        base_url=>$base_url,query_parameters_ref=>\%parameters,
+    $sbeams->displayResultSet(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      url_cols_ref=>\%url_cols,
+      hidden_cols_ref=>\%hidden_cols,
+      max_widths=>\%max_widths,
+      column_titles_ref=>\@column_titles,
+      base_url=>$base_url,
     );
 
 
     #### Display the resultset controls
-    $sbeams->displayResultSetControls(rs_params_ref=>\%rs_params,
-        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters,
-        base_url=>$base_url);
+    $sbeams->displayResultSetControls(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      base_url=>$base_url,
+    );
 
 
   #### If QUERY was not selected, then tell the user to enter some parameters
