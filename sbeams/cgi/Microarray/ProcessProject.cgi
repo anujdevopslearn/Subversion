@@ -1422,7 +1422,12 @@ EXECUTE = default_parameters\n\n
     my $mergeLoopVar;
     $printLine = "#MERGECONDS\n";
     foreach $mergeLoopVar (@merge_files){
-      $printLine.= "condition_name = $mergeLoopVar\n";
+      if ($useVandS){
+	$printLine.= "condition_name = $mergeLoopVar.sig\n";
+      }
+      else{
+	$printLine.= "condition_name = $mergeLoopVar.all.merge\n";
+      }
     }
     if ($lambdaFlag){$printLine.="mergeconds_lambda_flag = true\nmergeconds_lambda_value = $lambdaValue\n";}
     if ($ratioFlag){$printLine.="mergeconds_ratio_flag = true\nmergeconds_ratio_value = $ratioValue\n";}
