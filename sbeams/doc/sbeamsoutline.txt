@@ -1,0 +1,159 @@
+
+Thoughts about Data Management Framework for ISB
+Eric Deutsch 2001-06-25
+
+
+1) Design of SBEAMS
+The Systems Biology Experiment Analysis Management System (SBEAMS) is being
+designed as a framework for collecting, exploring, and exporting data produced
+by a variety of biological experiments.
+
+The framework is intended to be flexible for use with a number of different
+experiments.  However, it is not necessarily about integrating all different
+types of data from the beginning and forcing it to fit in a single schema.
+It seems to be generally the case that for exploratory, scientific work,
+*consolidating* data in way that makes it easy for ad hoc queries is more
+successful than trying to integrate disparate data sets from the beginning
+into a single schema.
+Relational databases are excellent tools for this since those with even
+basic experience at writing SQL queries can begin to explore the data in
+their own way, not just in the ways for which a precooked interface exists.
+
+- At its core, SBEAMS is not a single program, but rather a set of software
+tools designed to get data in and out of an evolving relational database
+schema.
+
+- The code is designed around several Perl modules which handle
+most of a communication with the relational database engine and also provide
+a consistent Web front end, although the interface can also be used from
+custom command-line perl scripts.  There's no reason certain tools couldn't
+be written in Java, ROOT, etc. and made to work with the system, although
+likely not through a web front end.
+
+- The primary interface is designed around Perl CGI scripts (ideally very
+few of them, where much of the work is done by the modules or by metadata
+in driver tables.)  The drawback here is that HTML offers a rather clunky
+interface, but the overwhelming advantage is that it is easily accessible
+to any computer or platform without software installation.  Even as the
+framework evolves rapidly, the latest version is always available.
+
+- The currently envisioned components of SBEAMS:
+  - SBEAMS core (Handles RDBMS communication, user authentication, group
+                privileges, etc.)
+  - SBEAMS - Microarray  (The initial proof-of-concept target experiment
+                type.  Includes data management, pipeline processing, and
+                eventually analysis and export to/from a schema designed to
+                hold microarray data based on forming standards like MAML.)
+  - SBEAMS - Tools  (A layer for hosting miscellaneous tools that want to
+                take advantage of user authentication and RDBMS back end)
+  - SBEAMS - Proteomics (A planned future package to manage the metadata
+                and output of proteomics experiments)
+  - SBEAMS - GEAP  (The Gene Expression Analysis Package is an object-
+                oriented set of tools
+                that Tim brought from MIT and now has a summer student
+                extending.  At present it is staying datafile-based as
+                opposed to RDBMS-based, but there are plans of integrating
+                GEAP at least into the authentication scheme of SBEAMS and
+                eventually more.)
+  - SBEAMS - ?  (Future packages can be added using the existing RDBMS calls,
+                authentication, permissions management and Web CGI tools to
+                create a management system for additional experiments)
+  - SBEAMS - Sample ?  (Once the experiment process metadata and output
+                data are collected and in the same place, it is desirable
+                to house the detailed data about samples in tables on the
+                same server for easy correlation.  But everyone's sample
+                data is different so this is tricky.  Direct SQL data
+                data management is always possible, however and may suffice
+                for a while.)
+  - Sequencing  ? (Michelle has been implementing the careful design of the
+                sequencing group application which borrwoed from some
+                early roots of SBEAMS.  Unfortunately, our systems have
+                been diverging more than converging.  However, the goals of
+                that project seem sufficiently different from the others that
+                this is not overtly worrisome.  Still, closer integration
+                would be a benefit for all.)
+  - JDRF specific stuff?
+
+Exactly how this system will be used by Proteomics and JDRF is unclear.
+Plug in systems for genotyping or SNP analysis may also become desirable
+soon.
+
+
+2) Status:
+- Most aspects of the Microarray data entry system are in place.  Users can
+  log into the system, submit requests for slides, and then either the
+  users or the Array Group can enter information about the experiments
+  are fabricated.  The data processing pipeline is nearly complete, wherein
+  the data entered during fabrication is used as input to the data processing
+  pipeline.
+- The system is starting to look pretty good and is usable, but shows some
+  weaknesses due to inadequate design.  These are in part due to the fact
+  that I didn't fully understand where the system would be today when I
+  started and also I'm not an experienced software engineer.  I tend to
+  build klugey systems that end up doing quite well much more than was ever
+  intended, but become a maintenance problem.  My original goal of the
+  Perl Programmer position that I thought Jason McManus would fill nicely
+  was to understand the system I had build and help me design something
+  more maintainable that would withstand growth beyond its original
+  design.  This is still sorely needed, perhaps now more than ever.  In the
+  next few weeks, once we have time to consider the needs of proteomics
+  and JDRF, we can redevelop a requirements spec based on the prototype and
+  what we've learned and decide how to proceed based on the available talent.
+
+
+There are still several Microarray components to build:
+- finish data processing system
+- routines for loading microarray data products (from either Dapple,
+  QuantArray, DigitalGenome formats) into the database
+- Export to/Import from XML
+- Update on the latest MAML/MAGEML to check compliance
+- Explore integration with GeneX and GEAP
+
+And there are tons of other components to design and build:
+- Overall good design
+- proteomics
+- JDRF
+- SNP?
+
+
+3) Available Talent:
+- Paul Edlefsen appears very talented at designing and writing Perl modules
+  and good object oriented code, however with no relational database
+  experience.  His recently presented tool for monitoring several web pages
+  for new publications and sending email notification for registered users
+  could be added to the SBEAMS - Tools area as a useful excerise in him
+  learning my system and rudimentary database usage and also him helping
+  to lay out how SBEAMS could be better and more extensibly designed.
+- Robert Hubley, in addition to good programming talent, has past experience
+  with SQL and the relational model, and has expressed interest in problems
+  of making data in a database available to users without a complex application
+  or API sitting in front of the database, one of the goals I had for SBEAMS.
+- Paul Shannon is perhaps the greatest impendance mismatch for me, only
+  because of his strong belief in the strictly object-oriented data handling
+  approach and my more relatational bent.  He advocates such technologies
+  such as CORBA, OODBMSs, Python, Java, which I have difficulty accepting
+  for the goals I have and the talent available, although I retain the fear
+  that he's right.
+
+A choice of one person to work on SBEAMS is not obvious, but I would tend
+toward Robert first and Paul E second, but perhaps it would be beneficial
+to spend several hour with the three of them explaining my ideas, designs,
+and visions, and see what kind of reactions, ideas, and desires to work
+on this are.  Perhaps if all were able to assist with design choices and
+have some stake in it, it would be a better product.
+
+
+4) Miscellaneous:
+
+Question: Can we build a well-designed framework of software that
+scientists with modest programming skills can use to manage their data
+and build/maintain/enhance tools to do the collection and analysis they
+want, perhaps with modest assistance from programmers.
+
+
+CORBA is an interesting technology when ISB becomes a data exporter,
+but I don't yet understand what ISB's role as a small bits of data
+exporter is.
+
+
+
