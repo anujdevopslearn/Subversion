@@ -8,11 +8,11 @@ OG_oligo_annotation	Oligo Annotation	Oligo_user	YES	$TBOG_OLIGO_ANNOTATION	oligo
 OG_oligo_type	Oligo Type	Oligo_infrastructure	YES	$TBOG_OLIGO_TYPE	oligo_type_id		ManageTable.cgi?TABLE_NAME=OG_oligo_type	OG_oligo_type	
 OG_selected_oligo	Selected Oligo	Oligo_user	NO	$TBOG_SELECTED_OLIGO	selected_oligo_id				
 OG_oligo_search	Oligo Search	Oligo_user	NO	$TBOG_OLIGO_SEARCH	oligo_search_id				
-OG_search_tool	Oligo Search Tool	Oligo_user	YES	$TBOG_OLIGO_SEARCH_TOOL	search_tool_id		ManageTable.cgi?TABLE_NAME=OG_oligo_search_tool	OG_oligo_search_tool	
+OG_search_tool	Oligo Search Tool	Oligo_user	YES	$TBOG_SEARCH_TOOL	search_tool_id		ManageTable.cgi?TABLE_NAME=OG_search_tool	OG_search_tool	
 OG_oligo_parameter_set	Oligo Parameter Set	Oligo_user	NO	$TBOG_OLIGO_PARAMETER_SET	oligo_parameter_set_id				
 OG_featurama_statistic	Featurama Statistic	Oligo_user	NO	$TBOG_FEATURAMA_STATISTIC	featurama_statistic_id				
 OG_oligo_set	Oligo Set	Oligo_user	YES	$TBOG_OLIGO_SET	oligo_set_id		ManageTable.cgi?TABLE_NAME=OG_oligo_set	OG_oligo_set	
 OG_oligo_set_type	Oligo Set Type	Oligo_infrastructure	YES	$TBOG_OLIGO_SET_TYPE	oligo_set_type_id		ManageTable.cgi?TABLE_NAME=OG_oligo_set_type	OG_oligo_set_type	
 OG_oligo_oligo_set	Oligo to Oligo Set	Oligo_user	NO	$TBOG_OLIGO_OLIGO_SET	oligo_oligo_set_id				
-OG_polymer_type	Polymer Type	Oligo_infrastructure	YES	$TBOG_POLYMER_TYPE	polymer_type_id		ManageTable.cgi?TABLE_NAME=OG_polymer_type	OG_polymer_type
-OG_dbxref	Biosequence Database Cross Reference	Oligo_infrastructure	YES	$TBOG_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=OG_dbxref	OG_dbxref
+OG_polymer_type	Polymer Type	Oligo_infrastructure	YES	$TBOG_POLYMER_TYPE	polymer_type_id		ManageTable.cgi?TABLE_NAME=OG_polymer_type	OG_polymer_type	
+OG_dbxref	Biosequence Database Cross Reference	Oligo_infrastructure	YES	$TBOG_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=OG_dbxref	OG_dbxref	
