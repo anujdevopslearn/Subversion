@@ -43,9 +43,10 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
 $sbeams = new SBEAMS::Connection;
 
+#### To get the table names resolving to work all affected modules must
+#### Be listed here.  This is bad.  Is there any way around it?
 use SBEAMS::Microarray::Tables;
 use SBEAMS::Proteomics::Tables;
-use SBEAMS::UESC::Tables;
 use SBEAMS::Immunostain::Tables;
 
 
