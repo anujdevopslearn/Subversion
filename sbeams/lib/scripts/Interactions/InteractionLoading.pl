@@ -187,13 +187,13 @@ organismName1 => $indexHash{Organism_bioentity1_name},
 	$bioentityState = \%bioentityState;
 	my %bioentityType = $recordCon->selectTwoColumnHash(qq /Select Upper(bioentity_type_name),bioentity_type_id from $TBIN_BIOENTITY_TYPE/);
 	$bioentityType = \%bioentityType;
-	my %organismName = $recordCon->selectTwoColumnHash(qq /Select Upper(organism_name),organism_id from $TB_ORGANISM /);
+	my %organismName = $recordCon->selectTwoColumnHash(qq /Select Upper(full_name),organism_id from $TB_ORGANISM /);
 	$organismName = \%organismName;
 	my %interactionTypes = $recordCon->selectTwoColumnHash(qq /Select Upper(interaction_type_name), interaction_type_id from $TBIN_INTERACTION_TYPE/);
 	$interactionTypes = \%interactionTypes;
 	my %interactionGroups = $recordCon->selectTwoColumnHash(qq /Select Upper(interaction_group_name), interaction_group_id from $TBIN_INTERACTION_GROUP/);
 	$interactionGroups = \%interactionGroups;
-	my %confidenceScores = $recordCon->selectTwoColumnHash(qq /Select Upper(confidence_score_name),confidence_score_id from $TBIN_CONFIDENCE_SCORE/);
+	my %confidenceScores = $recordCon->selectTwoColumnHash(qq /Select (confidence_score_name),confidence_score_id from $TBIN_CONFIDENCE_SCORE/);
 	$confidenceScores = \%confidenceScores;
 	my %assayTypes = $recordCon->selectTwoColumnHash(qq /Select Upper(assay_type_name), assay_type_id from $TBIN_ASSAY_TYPE/);
 	$assayTypes = \%assayTypes;
@@ -202,6 +202,7 @@ organismName1 => $indexHash{Organism_bioentity1_name},
 	my %pubMed = $recordCon->selectTwoColumnHash (qq /Select pubmed_ID, publication_id from $TBIN_PUBLICATION/);
 	$pubMed = \%pubMed;
 
+	
 #	$recordCon->printPageHeader() unless ($QUIET);
 	processFile();
 #at this point we have either 
@@ -354,7 +355,7 @@ sub processFile
 #
 		if ($INFOPROTEIN1{$count-2}->{group} and !$interactionGroups->{$INFOPROTEIN1{$count-2}->{group}})
 		{
-				print "dd$INFOPROTEIN1{$count-2}->{group} dd\n";
+				print "$INFOPROTEIN1{$count-2}->{group} not found \n";
 			
 				Error (\@infoArray," $INFOPROTEIN1{$count-2}->{group}: this group is not in $TBIN_INTERACTION_GROUP table");
 				delete $INFOPROTEIN1{$count-2};
@@ -476,11 +477,12 @@ print "checking interaction requirements\n";
 		$INTERACTION{$count-2}->{'group'} =~ s/[\s+\n+\t+\r+]$//g;
 		$INTERACTION{$count-2}->{'group'} =~ s/^[\s+\n+\t+\r+]//g;
 		$INTERACTION{$count-2}->{group} =~ s/^([a-z]+)\s+([a-z]+)$/$1 $2/i;
+		$INTERACTION{$count-2}->{confidence_score} =~ s/\s*//g;
 		$INTERACTION{$count-2}->{group}= uc($INTERACTION{$count-2}->{group});		
 		$INTERACTION{$count-2}->{'interType'} = uc($INTERACTION{$count-2}->{'interType'});
 		$INTERACTION{$count-2}->{bioentityState1} = uc($INTERACTION{$count-2}->{bioentityState1});
 		$INTERACTION{$count-2}->{assay_type} = uc ($INTERACTION{$count-2}->{assay_type});
-		$INTERACTION{$count-2}->{confidence_score} = uc ($INTERACTION{$count-2}->{confidence_score});
+	#	$INTERACTION{$count-2}->{confidence_score} =  ($INTERACTION{$count-2}->{confidence_score});
 
 		if (!$INTERACTION{$count-2}->{'interType'}) 
 		{
@@ -525,6 +527,8 @@ print "checking interaction requirements\n";
 		}
 		if ($INTERACTION{$count-2}->{confidence_score} and !($confidenceScores->{$INTERACTION{$count-2}->{confidence_score}}))
 		{
+			print " $INTERACTION{$count-2}->{confidence_score}\n";
+			getc;
 				Error (\@infoArray," $INTERACTION{$count-2}->{confidence_score}:  confidenceScore is not in the database");
 				delete $INTERACTION{$count-2};
 				next;
