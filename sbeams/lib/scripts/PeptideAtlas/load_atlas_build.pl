@@ -19,9 +19,9 @@ use Getopt::Long;
 use FindBin;
 
 use lib "$FindBin::Bin/../../perl";
-use vars qw ($sbeams $sbeamsMOD $q $current_username
+use vars qw ($sbeams $sbeamsMOD $q $current_username $ATLAS_BUILD_ID
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
-             $TESTVARS
+             $TESTVARS $CHECKTABLES
             );
 
 
@@ -53,6 +53,7 @@ Options:
   --debug n              Set debug flag
   --testonly             If set, rows in the database are not changed or added
   --testvars             If set, makes sure all vars are filled
+  --check_tables         will not insert or update.  does a check of peptide_instance_sample
 
   --delete               Delete an atlas build (does not build an atlas).
   --purge                Delete child records in atlas build (retains parent atlas record).
@@ -69,7 +70,7 @@ EOU
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
-        "testvars","delete", "purge", "load",
+        "testvars","delete", "purge", "load", "check_tables",
         "atlas_build_name:s","source_dir:s", "organism_abbrev:s")) {
 
     die "\n$USAGE";
@@ -86,6 +87,11 @@ $TESTONLY = $OPTIONS{"testonly"} || 0;
 
 $TESTVARS = $OPTIONS{"testvars"} || 0;
 
+$CHECKTABLES = $OPTIONS{"check_tables"} || 0;
+
+$TESTONLY = 1 if ($CHECKTABLES);
+
+
 if ($DEBUG) {
 
     print "Options settings:\n";
@@ -99,6 +105,8 @@ if ($DEBUG) {
     print "  TESTONLY = $TESTONLY\n";
 
     print "  TESTVARS = $TESTVARS\n";
+
+    print "  CHECKTABLES = $CHECKTABLES\n";
 
 }
    
@@ -142,6 +150,8 @@ sub handleRequest {
 
   my %args = @_;
 
+  ##### PROCESS COMMAND LINE OPTIONS AND RESTRICTIONS #####
+
   #### Set the command-line options
   my $del = $OPTIONS{"delete"} || '';
   my $purge = $OPTIONS{"purge"} || '';
@@ -155,6 +165,7 @@ sub handleRequest {
     print "\nERROR: You must specify an --atlas_build_name\n\n";
     die "\n$USAGE";
   }
+
 
   ## --delete with --load will not work
   if ($del && $load) {
@@ -173,7 +184,7 @@ sub handleRequest {
   }
 
 
-  #### If there are any parameters left, complain and print usage
+  #### If there are any unresolved parameters, exit
   if ($ARGV[0]){
     print "ERROR: Unresolved command line parameter '$ARGV[0]'.\n";
     print "$USAGE";
@@ -186,6 +197,7 @@ sub handleRequest {
     print "\n";
   }
 
+  ##### HANDLING REST OF CODE NOW #####
 
   #### Get the atlas_build_id for the supplied name
   my $sql;
@@ -204,8 +216,9 @@ sub handleRequest {
   }
   my ($atlas_build_id,$biosequence_set_id) = @{$rows[0]};
 
+  $ATLAS_BUILD_ID = $atlas_build_id; ## global variable needed for last test
 
-  ##### HANDLING OPTIONS WITH SUBROUTINES #####
+  print "atlas build id = $atlas_build_id\n";
 
   ## --delete option:
   if ($del) {
@@ -250,7 +263,7 @@ sub handleRequest {
      my @peptide_instance_array = $sbeams->selectOneColumn($sql);
 
      ## if has entries, tell user...atlas_build_name might be a user error
-     if (@peptide_instance_array) { 
+     if (@peptide_instance_array && $TESTONLY == 0) { 
         print "ERROR: Records already exist in atlas $\atlas_build name\n";
         print "To purge existing records and load new records\n";
         print "  use: --purge --load \n";
@@ -266,6 +279,8 @@ sub handleRequest {
                 organism_abbrev => $organism_abbrev);
 
   } ## end --load
+
+  print "Finished buildAtlas \n";
 
 
   if ($TESTONLY || $purge) {
@@ -286,12 +301,12 @@ sub removeAtlas {
    my $keep_parent_record = $args{'keep_parent_record'} || 0;
 
    my $table_name = "atlas_build";
-   my $database_name = "peptideatlas.dbo.";
+   my $database_name = "Peptideatlas.dbo.";
    my $full_table_name = "$database_name$table_name";
 
    my %table_child_relationship = (
-      atlas_build => 'peptide_instance(C)',
-      peptide_instance => 'peptide_mapping(C),peptide_instance_sample(C)',
+      atlas_build => 'peptide_instance(C),atlas_build_sample(C)',
+      peptide_instance =>'peptide_mapping(C),peptide_instance_sample(C)',
    );
 
    my $TESTONLY = "0";
@@ -344,6 +359,7 @@ sub buildAtlas {
       FROM $TBAT_PEPTIDE
    ~;
    my %peptides = $sbeams->selectTwoColumnHash($sql);
+   ## creates hash with key=peptide_accession, value=peptide_id
  
  
    #### Get the current list of biosequences in this set
@@ -353,6 +369,7 @@ sub buildAtlas {
       WHERE biosequence_set_id = '$biosequence_set_id'
    ~;
    my %biosequence_ids = $sbeams->selectTwoColumnHash($sql);
+   ## creates hash with key=biosequence_name, value=biosequence_id
  
  
    #### Open the file containing the input peptide properties (APD tsv file)
@@ -361,7 +378,8 @@ sub buildAtlas {
    open(INFILE, $infile) or die "ERROR: Unable to open for reading $infile ($!)";
  
  
-   #### Read and parse the header line of APD_{organism}_all.tsv
+   #### READ  APD_{organism}_all.tsv ##############
+   print "\nReading $infile\n";
    my $line;
 
    chomp($line = <INFILE>);
@@ -434,11 +452,11 @@ sub buildAtlas {
            ## get sample_id using search_batch_id, via Proteomics records:
            $sql = qq~
                SELECT S.sample_id
-                   FROM PeptideAtlas.dbo.sample S
-               JOIN Proteomics.dbo.proteomics_experiment PE
+               FROM PeptideAtlas.dbo.sample S
+                   JOIN Proteomics.dbo.proteomics_experiment PE
                    ON ( PE.experiment_tag = S.sample_tag)
-               JOIN Proteomics.dbo.search_batch SB 
-                 ON ( PE.experiment_id = SB.experiment_id )
+                   JOIN Proteomics.dbo.search_batch SB 
+                   ON ( PE.experiment_id = SB.experiment_id )
                WHERE SB.search_batch_id = '$tmp_search_batch_id[$ii]'
            ~;
 
@@ -459,12 +477,59 @@ sub buildAtlas {
                    $tmp_sample_id;
 
            }
+
+
+           ## get sample table info to help populate atlas_build_sample table
+           my $sql;
+
+           $sql = qq~
+               SELECT date_created, created_by_id, date_modified, modified_by_id, 
+               owner_group_id, record_status
+               FROM $TBAT_SAMPLE
+               WHERE sample_id = '$tmp_sample_id'
+               AND record_status != 'D'
+           ~;
+
+           ## array of refs to array:
+           my @rows = $sbeams->selectSeveralColumns($sql)
+                or die "Couldn't find record for sample_id = ".
+                $tmp_sample_id." in PeptideAtlas.dbo.sample ($!)";
+
+           foreach my $row (@rows) {
+
+               my ($dc, $cbi, $dm, $mbi, $ogi, $rs) = @{$row};
+
+                ## Populate atlas_build_sample table
+                my %rowdata = (   ##   atlas_build_sample    table attributes
+                    atlas_build_id => $atlas_build_id,
+                    sample_id => $tmp_sample_id,
+                    date_created => $dc,
+                    created_by_id  => $cbi,
+                    date_modified  => $dm,
+                    modified_by_id  => $mbi,
+                    owner_group_id  => $ogi,
+                    record_status  => $rs,
+                );
+
+               my $atlas_build_sample_id = $sbeams->updateOrInsertRow(
+                   insert=>1,
+                   table_name=>$TBAT_ATLAS_BUILD_SAMPLE,
+                   rowdata_ref=>\%rowdata,
+                   PK => 'atlas_build_sample_id',
+                   return_PK => 1,
+                   verbose=>$VERBOSE,
+                   testonly=>$TESTONLY,
+               );
+           }  ## end Populate atlas_build_sample
+
        } ## end create string of search_batch_ids for a peptide
 
        #### If this peptide_id doesn't yet exist in the database table "peptide", add it
        $APD_peptide_id{$tmp_pep_acc} = $peptides{$tmp_pep_acc};
-       ## where %peptides is a hash with key peptide_accession  and  value peptide_id
+       ## where %peptides is a hash with key=peptide_accession, value=peptide_id
  
+
+       ## Populate peptide  table
        unless ($APD_peptide_id{$tmp_pep_acc}) {
            my %rowdata = (             ##  peptide     table attributes:
                peptide_accession => $APD_peptide_accession{$tmp_pep_acc},
@@ -497,7 +562,6 @@ sub buildAtlas {
     } # end while INFILE
 
     close(INFILE) or die "Cannot close $infile ($!)";
-    my $APD_last_ind = $counter - 1;
 
 
     ## test that hash values were all filled
@@ -583,11 +647,13 @@ sub buildAtlas {
     }
 
  
-    #### Open the file containing the BLAST alignment summary
     $infile = "$source_dir/coordinate_mapping.txt";
 
     open(INFILE, $infile) or die "ERROR: Unable to open for reading $infile ($!)";
  
+    #### READ  coordinate_mapping.txt  ##############
+    print "\nReading $infile\n";
+
     #### Read and parse the header line of coordinate_mapping.txt...not there currently
     if (0 == 1) {
         chomp($line = <INFILE>);
@@ -602,6 +668,7 @@ sub buildAtlas {
    my %loaded_peptides;
    my $peptide_instance_id = -1;
    my $peptide_instance_sample_id = -1;
+   my $atlas_build_sample_id = -1;
    my %strand_xlate = (
  		      '-' => '-',
  		      '+' => '+',
@@ -683,14 +750,12 @@ sub buildAtlas {
 
    close(INFILE) or die "Cannot close $infile ($!)";
 
-   my $ensembl_hits_last_ind = $ind - 1 ;  #last index of Ensembl hits arrays
-
 
    if ($TESTVARS) {
 
        print "Checking array values after read of file $infile \n";
 
-       for(my $i =0; $i < $ensembl_hits_last_ind; $i++){
+       for(my $i =0; $i <= $#peptide_accession; $i++){
 
            my $tmp_pep_acc = $peptide_accession[$i];
            my $tmp_biosequence_name = $biosequence_name[$i];
@@ -756,6 +821,35 @@ sub buildAtlas {
         
    }
 
+
+   if ($TESTONLY) { 
+   
+       foreach my $tmp_ind_str (values ( %index_hash ) ) {
+
+           my @tmp_ind_array = split(" ", $tmp_ind_str);
+
+           my %unique_protein_hash;
+
+           my %unique_coord_hash;
+
+           for (my $ii = 0; $ii <= $#tmp_ind_array; $ii++) {
+
+               my $i_ind=$tmp_ind_array[$ii];
+
+               reset %unique_protein_hash; ## necessary?
+               reset %unique_coord_hash;   ## necessary?
+
+               ##what is key of index_hash where value = $tmp_ind_str  ?
+               ##is that key = $peptide_accession[$i_ind]  ?
+               my %inverse_index_hash = reverse %index_hash;
+
+               die "check accession numbers in index_hash" 
+                   if ($inverse_index_hash{$tmp_ind_str} != $peptide_accession[$i_ind]); 
+
+           }
+       }
+   } 
+
  
    ## n_protein_mappings -- number of distinct accession numbers (proteins) 
    ##                       that a peptide maps to
@@ -763,9 +857,10 @@ sub buildAtlas {
    ##                       (in other words, counts span over exons only once)
    ## is_exon_spanning  --  whether a peptide has been mapped to a protein more than
    ##                       once (with different chromosomal coordinates)
- 
 
    # print "size of hash = " . keys( %index_hash ) . ".\n";
+
+   print "\nCalculating n_protein_mappings, n_genome_locations, and is_exon_spanning\n";
 
    ## looping through indices to count proteins, locations, etc...
    foreach my $tmp_ind_str (values ( %index_hash ) ) {
@@ -782,17 +877,6 @@ sub buildAtlas {
 
            reset %unique_protein_hash; ## necessary?
            reset %unique_coord_hash;   ## necessary?
-
-           if ($TESTONLY) { ## make sure peptide_accessions are the same...
-
-               ##what is key of index_hash where value = $tmp_ind_str  ?
-               ##is that key = $peptide_accession[$i_ind]  ?
-               my %inverse_index_hash = reverse %index_hash;
-
-               die "check accession numbers in index_hash" 
-                   if ($inverse_index_hash{$tmp_ind_str} != $peptide_accession[$i_ind]); 
-
-           }
 
            ## make unique protein hash (keys = protein, values=coordinate string)
            my $coord_string=$chromosome[$i_ind] . $start_in_chromosome[$i_ind];
@@ -862,7 +946,7 @@ sub buildAtlas {
 
    ## testing match to above rules:
    if ($TESTONLY && ($organism_abbrev eq 'Hs') ) {  ## the above cases have P=1.0, and tested for Ens build 22
-       for (my $ii = 0; $ii < $ensembl_hits_last_ind; $ii++) {
+       for (my $ii = 0; $ii <= $#peptide_accession; $ii++) {
            my @test_pep = ("PAp00011291", "PAp00004221", "PAp00004290", "PAp00005006");
            my @test_n_protein_mappings = ("2", "1", "2", "5");
            my @test_n_genome_locations = ("1", "1", "2", "5");
@@ -890,7 +974,7 @@ sub buildAtlas {
 
        print "Checking storage of values after counting calculations \n";
 
-       for(my $i =0; $i < $ensembl_hits_last_ind; $i++){
+       for(my $i =0; $i <= $#peptide_accession; $i++){
 
            my $tmp_pep_acc = $peptide_accession[$i];
 
@@ -985,8 +1069,13 @@ sub buildAtlas {
 
 
    ####----------------------------------------------------------------------------
-   ## Loading peptides with Ensembl hits into database with SQL statements:
-   for(my $i =0; $i < $ensembl_hits_last_ind; $i++){
+   ## Loading peptides with mappings into tables:
+   ##    peptide_instance, peptide_instance_sample, and peptide_mapping
+   ####----------------------------------------------------------------------------
+   print "\nLoading mapped peptides into peptide_instance, ".
+       "peptide_instance_sample, and peptide_mapping tables\n";
+
+   for(my $i =0; $i <= $#peptide_accession; $i++){
 
        my $tmp = $strand_xlate{$strand[$i]}
            or die("ERROR: Unable to translate strand $strand[$i]");
@@ -997,16 +1086,17 @@ sub buildAtlas {
        my $biosequence_id = $biosequence_ids{$biosequence_name[$i]}
            || die("ERROR: BLAST matched biosequence_name $biosequence_name[$i] ".
            "does not appear to be in the biosequence table!!");
+
+
+       my $tmp_pep_acc = $peptide_accession[$i];
  
        #### If this peptide_instance hasn't yet been added to the database, add it
-       if ($loaded_peptides{$peptide_accession[$i]}) {
+       if ($loaded_peptides{$tmp_pep_acc}) {
 
-           $peptide_instance_id = $loaded_peptides{$peptide_accession[$i]};
+           $peptide_instance_id = $loaded_peptides{$tmp_pep_acc};
  
        } else {
  
-           my $tmp_pep_acc = $peptide_accession[$i];
-
            my $peptide_id = $peptides{$tmp_pep_acc} ||
  	       die("ERROR: Wanted to insert data for peptide $peptide_accession[$i] ".
                "which is in the BLAST output summary, but not in the input ".
@@ -1019,6 +1109,7 @@ sub buildAtlas {
 
            }
 
+           ## Populate peptide_instance table
            my %rowdata = (   ##   peptide_instance    table attributes
                atlas_build_id => $atlas_build_id,
                peptide_id => $peptide_id,
@@ -1043,11 +1134,12 @@ sub buildAtlas {
  
            $loaded_peptides{$peptide_accession[$i]} = $peptide_instance_id;
 
-           ## For each peptide_instance, there may be several peptide_instance_sample s
+           ## Populate peptide_instance_sample table
            ##
+           ## For each peptide_instance, there may be several peptide_instance_sample s
            ## split $APD_sample_ids{$tmp_pep_acc} on commas, and for each member, 
            ## create a peptide_instance_sample that holds the peptide_instance_id
-           my @tmp_sample_id = split(",", $APD_sample_ids{$peptides{$peptide_accession[$i]}} );
+           my @tmp_sample_id = split(",", $APD_sample_ids{$tmp_pep_acc} );
 
            for (my $ii = 0; $ii <= $#tmp_sample_id; $ii++) {
 
@@ -1090,10 +1182,12 @@ sub buildAtlas {
                        verbose=>$VERBOSE,
                        testonly=>$TESTONLY,
                     );
+
                }
-           }  ## end peptide_instance_sample loop
+           }  ## end peptide_instance_sample & atlas_build_sample loop
        }  ## end  "not already present in peptide" loop
  
+
        #### INSERT  into  peptide_mapping
        my %rowdata = (   ##   peptide_mapping      table attributes
            peptide_instance_id => $peptide_instance_id,
@@ -1119,14 +1213,18 @@ sub buildAtlas {
        $counter++;
        print "$counter..." if ($counter % 100 == 0);
    
-   } #end for loop over Ensembl hits
+   } #end for loop over mapped peptides
    ###----------------------------------------------------------------------------
  
    print "\n";
  
  
-   ###----------------------------------------------------------------------------
-   ## Making entries in peptide_instance for peptides that weren't hits in Ensembl:
+   ####----------------------------------------------------------------------------
+   ## Loading peptides without mappings into tables:
+   ##    peptide_instance, peptide_instance_sample
+   ####----------------------------------------------------------------------------
+
+   print "\nLoading un-mapped peptides into peptide_instance and peptide_instance_sample\n";
 
    ## make sql call to get hash of peptide_id and any other variable...
    $sql = qq~
@@ -1212,6 +1310,56 @@ sub buildAtlas {
                }
            }  ## end peptide_instance_sample loop
        }
-   } ## end peptide_instance entries for those not in Ensembl
+   } ## end peptide_instance entries for unmapped peptides
+
+
+   ## LAST TEST to assert that all peptides of an atlas in
+   ## peptide_instance  are associated with a peptide_instance_sample record
+   if ($CHECKTABLES) {
+
+       print "\nChecking peptide_instance_sample records\n";
+
+       my $sql = qq~
+           SELECT peptide_instance_id, sample_ids
+           FROM PeptideAtlas.dbo.peptide_instance
+           WHERE atlas_build_id ='$ATLAS_BUILD_ID'
+       ~;
+
+       ## make hash with key = peptide_instance_id, value = sample_ids
+       my %peptide_instance_hash = $sbeams->selectTwoColumnHash($sql)
+           or die "In last test, unable to complete query:\n$sql\n($!)";
+
+       my $n = keys ( %peptide_instance_hash ) ;
+
+       print "\n$n peptide_instance_ids in atlas build $ATLAS_BUILD_ID\n";
+
+
+       foreach my $peptide_instance_id ( keys %peptide_instance_hash) {
+
+           my $tmp_sample_ids = $peptide_instance_hash{$peptide_instance_id};
+           
+           ## split sample_ids into sample_id:
+           my @sample_id = split(",", $tmp_sample_ids );
+
+           foreach (my $i; $i <= $#sample_id; $i++) {
+
+               $sql = qq~
+                   SELECT peptide_instance_sample_id
+                   FROM PeptideAtlas.dbo.peptide_instance_sample
+                   WHERE sample_id = '$sample_id[$i]'
+                   AND peptide_instance_id = '$peptide_instance_id'
+               ~;
+
+               ## make hash with key = peptide_instance_id, value = sample_ids
+               my @rows = $sbeams->selectOneColumn($sql) 
+                   or die "In last test, unable to complete query:\n$sql\n($!)";
+
+               my $check_peptide_instance_id = @rows[0];
+
+           }
+
+       }
+
+   }
 
 }# end buildAtlas
