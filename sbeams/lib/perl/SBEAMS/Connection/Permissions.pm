@@ -23,9 +23,11 @@ use vars qw(@ERRORS $q
 use CGI::Carp qw(fatalsToBrowser croak);
 
 use SBEAMS::Connection::Settings;
+use SBEAMS::Microarray::Tables;
 #use SBEAMS::Connection::DBInterface;
 #use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Tables;
+
 #use SBEAMS::Connection::TableInfo;
 #use SBEAMS::Connection::Utilities;
 
@@ -768,7 +770,7 @@ sub getAccessibleProjects{
 
 	if ($module eq "microarray") {
 			$sql .= qq~
-      LEFT JOIN array_request AR
+      LEFT JOIN $TBMA_ARRAY_REQUEST AR
       ON ( AR.project_id = P.project_id )
 			~;
 	}
