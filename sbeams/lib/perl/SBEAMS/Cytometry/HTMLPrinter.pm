@@ -228,8 +228,8 @@ sub displayPageHeader {
   <tr></tr>
   <tr></tr>
   <tr><td>Documentation</td></tr>
- <tr><td><a href="$HTML_BASE_DIR/doc/$SBEAMS_SUBDIR/SampleNameConvention.php"><nobr>&nbsp;&nbsp;&nbsp;Sample Name Coding</nobr></a></td></tr>
-       
+ <tr><td><a href="$HTML_BASE_DIR/cgi/$SBEAMS_SUBDIR/Help?document=SampleNameConvention"><nobr>&nbsp;&nbsp;&nbsp;Sample Name Coding</nobr></a></td></tr>
+  
 	<tr><td>&nbsp;</td></tr>
 
 	</table>
