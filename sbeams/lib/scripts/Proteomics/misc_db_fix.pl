@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl -w
 
 ###############################################################################
-# Program     : load_possible_peptides.pl
+# Program     : misc_db_fix.pl
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
 # $Id$
 #
@@ -246,17 +246,27 @@ sub show_data_location {
   #### Loop over all results
   while (my ($search_batch_id,$data_location) = each %rows) {
 
-    $data_location = "/data3/sbeams/archive/$data_location"
+    $data_location = "/sbeams/archive/$data_location"
       unless ($data_location =~ /^\//);
 
     my $model_file = "$data_location/interact-prob-data.model";
+
+    $model_file =~ s/^\/data3//;
 
     if ( -e $model_file) {
       print "$model_file\n";
     } elsif ( -e "$model_file.txt" ) {
       print "$model_file.txt\n";
     } else {
-      print "Missing $model_file\n";
+      $model_file =~ s/-prob-/-/;
+
+      if ( -e $model_file) {
+	print "$model_file\n";
+      } elsif ( -e "$model_file.txt" ) {
+	print "$model_file.txt\n";
+      } else {
+	print "Missing $model_file\n";
+      }
     }
 
 
