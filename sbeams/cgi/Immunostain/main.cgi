@@ -566,9 +566,9 @@ sub processAntibody
 	left join $TBIS_BIOSEQUENCE_SET bss on bs.biosequence_set_id = bss.biosequence_set_id
 	left join sbeams.dbo.organism sbo on bss.organism_id = sbo.organism_id
 	left join $TBIS_DBXREF dbx on bs.dbxref_id = dbx.dbxref_id 
-	where ab.antibody_id in ($includeClause) $limitClause and set_Name ='LocusLink' and 
+	where ab.antibody_id in ($includeClause) and set_Name ='LocusLink' and 
 	dbxref_name = 'LocusLink' ~;
-
+print" $sqlCoord\n";
 	
 	my @genenomeCoord = $sbeams->selectSeveralColumns($sqlCoord);
 	my %genenomeHash;
