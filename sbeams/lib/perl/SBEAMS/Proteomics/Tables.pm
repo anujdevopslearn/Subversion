@@ -66,6 +66,8 @@ use vars qw(@ISA @EXPORT
     $TBAPD_MODIFIED_PEPTIDE_PROPERTY
     $TBAPD_PEPTIDE_PROPERTY_TYPE
 
+    $TBPR_POSSIBLE_PEPTIDE
+
 );
 
 
@@ -115,6 +117,8 @@ require Exporter;
     $TBAPD_MODIFIED_PEPTIDE
     $TBAPD_MODIFIED_PEPTIDE_PROPERTY
     $TBAPD_PEPTIDE_PROPERTY_TYPE
+
+    $TBPR_POSSIBLE_PEPTIDE
 
 );
 
@@ -166,6 +170,8 @@ $TBAPD_PEPTIDE                    = "APD.dbo.peptide";
 $TBAPD_MODIFIED_PEPTIDE           = "APD.dbo.modified_peptide";
 $TBAPD_MODIFIED_PEPTIDE_PROPERTY  = "APD.dbo.modified_peptide_property";
 $TBAPD_PEPTIDE_PROPERTY_TYPE      = "APD.dbo.peptide_property_type";
+
+$TBPR_POSSIBLE_PEPTIDE            = "${mod}possible_peptide";
 
 
 
