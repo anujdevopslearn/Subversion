@@ -40,6 +40,10 @@ $q       = new CGI;
 
 ###############################################################################
 # print_permissions_table
+#
+# arguments:
+# -parameters_ref
+# -no_permissions  --> does not execute 'printUserContext'
 ###############################################################################
 sub print_permissions_table {
   my $self = shift || croak("parameter self not passed");
@@ -79,7 +83,9 @@ sub print_permissions_table {
 
 
   #### Show current user context information
-  $self->printUserContext();
+	unless ($args{'no_permissions'}) {
+			$self->printUserContext();
+	};
   $project_name = $self->getCurrent_project_name;
 
   print qq~
