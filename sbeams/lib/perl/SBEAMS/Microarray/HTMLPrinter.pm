@@ -48,6 +48,20 @@ sub printPageHeader {
 
     my $navigation_bar = $args{'navigation_bar'} || "YES";
 
+    #### If the output mode is interactive text, display text header
+    my $sbeams = $self->getSBEAMS();
+    if ($sbeams->output_mode() eq 'interactive') {
+      $sbeams->printTextHeader();
+      return;
+    }
+
+
+    #### If the output mode is not html, then we don't want a header here
+    if ($sbeams->output_mode() ne 'html') {
+      return;
+    }
+
+
     #### Obtain main SBEAMS object and use its http_header
     $sbeams = $self->getSBEAMS();
     my $http_header = $sbeams->get_http_header();
@@ -347,6 +361,20 @@ sub printPageFooter {
     $args{display_footer} = 'YES' if ($flag =~ /Footer/);
   } else {
     %args = @_;
+  }
+
+
+  #### If the output mode is interactive text, display text header
+  my $sbeams = $self->getSBEAMS();
+  if ($sbeams->output_mode() eq 'interactive') {
+    $sbeams->printTextHeader(%args);
+    return;
+  }
+
+
+  #### If the output mode is not html, then we don't want a header here
+  if ($sbeams->output_mode() ne 'html') {
+    return;
   }
 
 
