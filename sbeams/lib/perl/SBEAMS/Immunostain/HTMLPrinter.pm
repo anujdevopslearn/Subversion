@@ -65,9 +65,7 @@ sub display_page_header
 	
 	if ($sbeams->getCurrent_contact_id() ne 107)
 	{
-#$self->displayRegularPageHeader();
-		$self->displayGuestPageHeader();
-			
+  $self->displayRegularPageHeader();
 	}
 	else 
 	{
