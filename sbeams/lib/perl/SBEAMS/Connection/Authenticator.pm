@@ -61,6 +61,7 @@ sub Authenticate {
     my $set_to_work_group = $args{'work_group'} || "";
     my $connect_read_only = $args{'connect_read_only'} || "";
     my $allow_anonymous_access = $args{'allow_anonymous_access'} || "";
+    my $permitted_work_groups_ref = $args{'permitted_work_groups_ref'} || "";
 
 
     #### Always disable the output buffering
@@ -130,11 +131,15 @@ sub Authenticate {
     }
 
 
-    #### If we're authenticating into a specific work_group, do that:
-    if ($current_username && $set_to_work_group) {
-        $current_work_group_id =
-            $self->setCurrent_work_group($set_to_work_group);
-        $current_username = "" unless ($current_work_group_id);
+    #### If a permitted list of work_groups was provided or a specific
+    #### work_group was provided, verify/switch to that
+    if ( $current_username &&
+         ($set_to_work_group || $permitted_work_groups_ref) ) {
+        $current_work_group_id = $self->setCurrent_work_group(
+            set_to_work_group=>$set_to_work_group,
+            permitted_work_groups_ref=>$permitted_work_groups_ref,
+        );
+        $current_username = '' unless ($current_work_group_id);
     }
 
 
@@ -288,75 +293,142 @@ sub getCurrent_username {
 
 
 ###############################################################################
-# Set the current work_group_id to that requested by the user if allowed
+# Set the current work_group_id to that requested by the script if allowed
 ###############################################################################
 sub setCurrent_work_group {
-    my $self = shift;
-    my $work_group_name = shift;
+  my $self = shift;
+  my %args = @_;
 
-    #### Find the ID for the requested work_group
-    my ($work_group_id) = $self->selectOneColumn(
-        "SELECT work_group_id
-           FROM $TB_WORK_GROUP
-          WHERE work_group_name = '$work_group_name'
-            AND record_status != 'D'
-        ");
-
-    #### If this didn't turn up anything, return
-    unless ($work_group_id) {
-        print STDERR "ERROR: The specified group $work_group_name does ".
-          "not exist\n\n";
-        $self->dbDisconnect();
-        return;
-    }
+  my $set_to_work_group = $args{'set_to_work_group'} || "";
+  my $permitted_work_groups_ref = $args{'permitted_work_groups_ref'} || "";
 
 
-    #### See if this user can be a member of this group
-    my ($result) = $self->selectOneColumn(
-        "SELECT work_group_id
-           FROM $TB_USER_WORK_GROUP
-          WHERE contact_id = '$current_contact_id'
-            AND work_group_id = '$work_group_id'
-            AND record_status != 'D'
-        ");
+  #### First see what the current work_group context is
+  $current_work_group_id = $self->getCurrent_work_group_id()
+    unless ($current_work_group_id);
+  $current_work_group_name = $self->getCurrent_work_group_name()
+    unless ($current_work_group_name);
+
+
+  #### If a list of permitted work_groups is provided, see which ones
+  #### the user can belong to
+  if ($permitted_work_groups_ref && (!$set_to_work_group) ) {
+    my %work_group_ids = $self->selectTwoColumnHash(
+      "SELECT work_group_name,WG.work_group_id
+         FROM $TB_USER_WORK_GROUP UWG
+         JOIN $TB_WORK_GROUP WG ON ( UWG.work_group_id = WG.work_group_id )
+        WHERE UWG.contact_id = '$current_contact_id'
+          AND UWG.record_status != 'D'
+          AND WG.record_status != 'D'
+      ");
 
     #### If this didn't turn up anything, return
-    unless ($result) {
-        print "ERROR: You are not permitted to act under ".
-            "group $work_group_name\n\n";
-        $self->dbDisconnect();
-        return
+    unless (%work_group_ids) {
+      print "ERROR: You are not permitted to act under ".
+        "any work group at all and cannot access this page\n\n";
+      $self->dbDisconnect();
+      return
     }
 
-
-    #### See what the current context is set to and return success if we're
-    #### set already to the desired group
-    ($current_work_group_id) = $self->selectOneColumn(
-        "SELECT work_group_id
-           FROM $TB_USER_CONTEXT
-          WHERE contact_id = '$current_contact_id'
-            AND record_status != 'D'
-        ");
-    if ($current_work_group_id == $work_group_id) {
-      return $current_work_group_id;
+    #### Loop through the list of permitted work groups and see if we're
+    #### already in one of those
+    my $already_valid_work_group = 0;
+    foreach my $work_group (@{$permitted_work_groups_ref}) {
+      if ($work_group eq $current_work_group_name) {
+        $already_valid_work_group = 1;
+        last;
+      }
     }
 
+    #### If so, we're done
+    return $current_work_group_id if ($already_valid_work_group);
 
-    #### We need to change groups, so set the group here
-    $self->executeSQL("
-	UPDATE $TB_USER_CONTEXT
-	   SET work_group_id = $work_group_id,
-	   modified_by_id = $current_contact_id,
-	   date_modified = CURRENT_TIMESTAMP
-	 WHERE contact_id = $current_contact_id
-    ");
-    $current_work_group_id = $work_group_id;
+    #### If not, set it to the first valid one
+    $set_to_work_group = "";
+    foreach my $work_group (@{$permitted_work_groups_ref}) {
+      if ($work_group_ids{$work_group}) {
+        $set_to_work_group = $work_group;;
+        last;
+      }
+    }
 
-    #### If we haven't successfully set the work_group, disconnect!
-    $self->dbDisconnect() unless ($current_work_group_id);
+    #### If this didn't turn up anything, return
+    unless ($set_to_work_group) {
+      $self->displayPermissionToPageDenied(
+        ["You are not a member of any of the work groups that are ".
+        "permitted to to access this page"]);
+      $self->dbDisconnect();
+      return
+    }
 
+  }
+
+
+  #### Find the ID for the requested work_group
+  my ($work_group_id) = $self->selectOneColumn("
+       SELECT work_group_id
+         FROM $TB_WORK_GROUP
+        WHERE work_group_name = '$set_to_work_group'
+          AND record_status != 'D'
+  ");
+
+  #### If this didn't turn up anything, return
+  unless ($work_group_id) {
+      print STDERR "ERROR: The specified group $set_to_work_group does ".
+        "not exist\n\n";
+      $self->dbDisconnect();
+      return;
+  }
+
+
+  #### See if this user can be a member of this group
+  my ($result) = $self->selectOneColumn("
+       SELECT work_group_id
+         FROM $TB_USER_WORK_GROUP
+        WHERE contact_id = '$current_contact_id'
+          AND work_group_id = '$work_group_id'
+          AND record_status != 'D'
+  ");
+
+  #### If this didn't turn up anything, return
+  unless ($result) {
+      print "ERROR: You are not permitted to act under ".
+          "group $set_to_work_group\n\n";
+      $self->dbDisconnect();
+      return
+  }
+
+
+  #### See what the current context is set to and return success if we're
+  #### set already to the desired group
+  ($current_work_group_id) = $self->selectOneColumn("
+       SELECT work_group_id
+         FROM $TB_USER_CONTEXT
+        WHERE contact_id = '$current_contact_id'
+          AND record_status != 'D'
+  ");
+  if ($current_work_group_id == $work_group_id) {
     return $current_work_group_id;
+  }
+
+
+  #### We need to change groups, so set the group here
+  $self->executeSQL("
+      UPDATE $TB_USER_CONTEXT
+         SET work_group_id = $work_group_id,
+         modified_by_id = $current_contact_id,
+         date_modified = CURRENT_TIMESTAMP
+       WHERE contact_id = $current_contact_id
+  ");
+  $current_work_group_id = $work_group_id;
+  $current_work_group_name = $set_to_work_group;
+
+  #### If we haven't successfully set the work_group, disconnect!
+  $self->dbDisconnect() unless ($current_work_group_id);
+
+  return $current_work_group_id;
 }
+
 
 
 ###############################################################################
@@ -589,6 +661,53 @@ sub printAuthErrors {
         $back_button
         </CENTER>
     !;
+}
+
+
+###############################################################################
+# 
+###############################################################################
+sub displayPermissionToPageDenied{
+  my $self = shift;
+  my $ra_errors = shift || \@ERRORS;
+
+  my $back_button = $self->getGoBackButton();
+  my $start_line = " - ";
+  my $end_line = "\n";
+
+  $self->printPageHeader(minimal_header=>"YES");
+
+  if ($self->output_mode() eq 'html') {
+    print qq~
+      <CENTER>
+      <H2>$DBTITLE Access Permission Denied</H2>
+      You are not allowed to access this page for the following reasons
+      </CENTER>
+      <BR><BR>
+      <BLOCKQUOTE>
+    ~;
+    $start_line = "<LI>";
+    $end_line = "<P>\n";
+  } else {
+    print "ERROR: Permission to access this page denied:\n";
+  }
+
+
+  foreach my $error (@{$ra_errors}) {
+    print "$start_line$error$end_line";
+  }
+
+  if ($self->output_mode() eq 'html') {
+    print qq~
+      </BLOCKQUOTE>
+      <CENTER>
+      $back_button
+      </CENTER>
+    ~;
+  }
+
+  $self->printPageFooter();
+
 }
 
 
