@@ -41,7 +41,7 @@ setup are required before installation can begin.  Version numbers are
 for what is used for development; older or newer versions may work:
 
 DBI
-Data-ShowTable-3.3a  (specially modified version by Deutsch and included)
+Data-ShowTable-3.3b  (specially modified version by Deutsch and included)
 DBD-Sybase-0.94      (assuming Sybase or MS SQL Server is back end)
 DBD-????             (if you are using a different type of back end RDBMS)
 Crypt-CBC-1.25
