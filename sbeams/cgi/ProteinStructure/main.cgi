@@ -30,9 +30,11 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
 
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
+use SBEAMS::Connection::DataTable;
 
 use SBEAMS::ProteinStructure;
 use SBEAMS::ProteinStructure::Settings;
@@ -148,6 +150,14 @@ sub handle_request {
   #### Show current user context information
   $sbeams->printUserContext();
   $current_contact_id = $sbeams->getCurrent_contact_id();
+  my $project_id = $sbeams->getCurrent_project_id;
+
+  # Check the permissions the user has on this project
+  my $best_permission = $sbeams->get_best_permission();
+  if ( $best_permission > 40 ) {
+    print "You are not permitted to view this project";
+    return;
+  }
 
 
   #### Write some welcoming text
@@ -166,160 +176,126 @@ sub handle_request {
 	to <B>edeutsch\@systemsbiology.org</B>.</P>
   ~;
 
+  # Create new tabmenu item.  This may be a $sbeams object method in the future.
+  my $tabmenu = SBEAMS::Connection::TabMenu->new( cgi => $q );
 
-  ##########################################################################
-  #### Print out current project information
-
-  my ($sql,@rows);
-
-  #### Get information about the current project from the database
-  $sql = qq~
-	SELECT UC.project_id,P.name,P.project_tag,P.project_status,
-               P.PI_contact_id
-	  FROM $TB_USER_CONTEXT UC
-	 INNER JOIN $TB_PROJECT P ON ( UC.project_id = P.project_id )
-	 WHERE UC.contact_id = '$current_contact_id'
-  ~;
-  @rows = $sbeams->selectSeveralColumns($sql);
-
-  my $project_id = '';
-  my $project_name = 'NONE';
-  my $project_tag = 'NONE';
-  my $project_status = 'N/A';
-  my $PI_contact_id = 0;
-  if (@rows) {
-    ($project_id,$project_name,$project_tag,$project_status,$PI_contact_id) = @{$rows[0]};
-  }
-  my $PI_name = $sbeams->getUsername($PI_contact_id);
-
-  #### Print out some information about this project
-  print qq~
-	<H1>Current Project: <A class="h1" HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=$project_id">$project_name</A></H1>
-	<TABLE WIDTH="100%" BORDER=0>
-	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
-	             <TD COLSPAN="2" WIDTH="100%"><B>Project Name:</B> $project_name</TD></TR>
-	<TR><TD></TD><TD COLSPAN="2"><B>Project Tag:</B> $project_tag <A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=$project_id">[View/Edit]</A></TD></TR>
-	<TR><TD></TD><TD COLSPAN="2"><B>Owner:</B> $PI_name</TD></TR>
-	<TR><TD></TD><TD COLSPAN="2"><B>Access Privileges:</B> <A HREF="$CGI_BASE_DIR/ManageProjectPrivileges">[View/Edit]</A></TD></TR>
-	<TR><TD></TD><TD COLSPAN="2"><B>Status:</B> $project_status</TD></TR>
-	<TR><TD></TD><TD COLSPAN="2"><B>Biosequence Sets:</B></TD></TR>
-	<TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
-	                 <TD WIDTH="100%"><TABLE BORDER=0>
-  ~;
-
-
-  #### If the current user is not the owner, the check that the
-  #### user has privilege to access this project
-  if ($project_id > 0) {
-
-    my $best_permission = $sbeams->get_best_permission();
-
-    #### If not at least data_reader, set project_id to a bad value
-    $project_id = -99 unless ($best_permission > 0 && $best_permission <=40);
-
-  }
-
-
-  #### Get all the experiments for this project
-  if ($project_id > 0) {
-    $sql = qq~
-	SELECT BSS.biosequence_set_id,BSS.set_tag,BSS.set_name
-	  FROM $TBPS_BIOSEQUENCE_SET BSS
-	 WHERE BSS.project_id = '$project_id'
-	   AND BSS.record_status != 'D'
-	 ORDER BY BSS.set_tag
-    ~;
-    @rows = $sbeams->selectSeveralColumns($sql);
-  } else {
-    @rows = ();
-  }
-
-
-  #### If there are biosequence_sets, display them
-  if (@rows) {
-    foreach my $row (@rows) {
-      my ($biosequence_set_id,$biosequence_set_tag,$biosequence_set_name) =
-	@{$row};
-
-      print qq~
-	<TR><TD NOWRAP>- <font color="green">$biosequence_set_tag:</font> $biosequence_set_name</TD>
-	<TD NOWRAP>&nbsp;&nbsp;&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PS_biosequence_set&biosequence_set_id=$biosequence_set_id">[View/Edit]</A></TD>
-      ~;
-
-
-      #### Find out how many biosequences for this set
-      $sql = qq~
-	SELECT COUNT(*)
-	  FROM $TBPS_BIOSEQUENCE
-	 WHERE biosequence_set_id = '$biosequence_set_id'
-      ~;
-      my ($biosequence_count) = $sbeams->selectOneColumn($sql);
-
-      #### Find out how many biosequences for this set
-      $sql = qq~
-	SELECT COUNT(*)
-	  FROM $TBPS_BIOSEQUENCE_ANNOTATION BSA
-         INNER JOIN $TBPS_BIOSEQUENCE BS
-	       ON ( BSA.biosequence_id = BS.biosequence_id )
-	 WHERE biosequence_set_id = '$biosequence_set_id'
-      ~;
-      my ($annotation_count) = $sbeams->selectOneColumn($sql);
-
-        print qq~
-	  <TD>&nbsp;&nbsp;&nbsp;$biosequence_count proteins&nbsp;&nbsp;&nbsp;<font color="green">$annotation_count annotations</font></TD>
-        ~;
-
-      print qq~
-	</TR>
-      ~;
-    }
-  } else {
-    if ($project_id == -99) {
-      print "	<TR><TD WIDTH=\"100%\">You do not have access to this project.  Contact the owner of this project if you want to have access.</TD></TR>\n";
-    } else {
-      print "	<TR><TD WIDTH=\"100%\">NONE</TD></TR>\n";
-    }
-  }
-
-
-  #### If the current user is the owner of this project, invite the
-  #### user to register another experiment
-  if ($current_contact_id == $PI_contact_id) {
-    print qq~
-        <TR><TD COLSPAN=4><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&ShowEntryForm=1">[Register another experiment]</A></TD></TR>
-    ~;
-  }
-
-
-  #### Finish the table
-  print qq~
-	</TABLE></TD></TR>
-	</TABLE>
-  ~;
-
-
+  # Preferred way to add tabs.  label is required, helptext optional
+  $tabmenu->addTab( label => 'Current Project', 
+                    helptext => 'View details of current Project' );
+  $tabmenu->addTab( label => 'My Projects', 
+                    helptext => 'View all projects owned by me' );
+  $tabmenu->addTab( label => 'Recent Resultsets', 
+                    helptext => 'View recent SBEAMS resultsets' );
+  $tabmenu->addTab( label => 'Accessible Projects', 
+                    helptext => 'View projects I have access to' );
 
   ##########################################################################
   #### Print out some recent resultsets
 
-  $sbeams->printRecentResultsets();
+  # Scalar to hold content.  In this case we add content to tabmenu, not required
+  my $content;
 
+  # conditional block to exec code based on selected tab.
+  if ( $tabmenu->getActiveTabName() eq 'Current Project' ){ # Current project info
+   
+    # Show info about current project
+    if ( $project_id ) {
+      $content = $sbeams->getProjectDetailsTable( project_id => $project_id ); 
+      # Also add module-specific content
+      $content .= getProjectInformation( $project_id, $best_permission );
+    } else {
+      $content = "No project currently set";
+    }
 
-  ##########################################################################
-  #### Print out all projects owned by the user
+  # or exec code based on tab index.  Tabs are indexed in the order they are 
+  # added, starting at 1.  
+  } elsif ( $tabmenu->getActiveTab() == 2 ){
+    # Projects owned by the user
+    $content = $sbeams->getProjectsYouOwn();
 
-  $sbeams->printProjectsYouOwn();
+  } elsif ( $tabmenu->getActiveTabName() eq 'Recent Resultsets' ){
+    # Show resultsets
+    $content = $sbeams->getRecentResultsets() ;
 
+  } elsif ( $tabmenu->getActiveTab() == 4 ){
+    # Projects user has access to
+    $content = $sbeams->getProjectsYouHaveAccessTo();
 
-  ##########################################################################
-  #### Print out all projects user has access to
+  }
 
-  $sbeams->printProjectsYouHaveAccessTo();
+  # Add content to tabmenu (if desired). 
+  $tabmenu->addContent( $content );
 
+  # The stringify method is overloaded to call the $tabmenu->asHTML method.  
+  # This simplifies printing the object in a print block. 
+  print "$tabmenu";
+  
 
   return;
 
-
 } # end handleResquest
+
+sub getProjectInformation {
+
+  my $project_id = shift;
+  my $best_permission = shift;
+  my $content = '';
+
+  my $sql =<<"  END";
+  SELECT BS.project_id, BS.biosequence_set_id,BS.set_tag,BS.set_name,
+         COUNT( B.biosequence_id ) AS num_bioseqs, COUNT( BA.biosequence_annotation_id ) AS num_annot
+  FROM $TBPS_BIOSEQUENCE_SET BS
+  LEFT OUTER JOIN $TBPS_BIOSEQUENCE B
+  ON BS.biosequence_set_id = B.biosequence_set_id
+  LEFT OUTER JOIN $TBPS_BIOSEQUENCE_ANNOTATION BA
+  ON BA.biosequence_id = B.biosequence_id
+  WHERE BS.project_id = '$project_id'
+  AND BS.record_status != 'D'
+ -- AND BA.record_status != 'D'
+ --  AND B.record_status != 'D'
+  GROUP BY project_id, BS.biosequence_set_id, set_tag, set_name
+  ORDER BY BS.set_tag
+  END
+  my @rows = $sbeams->selectSeveralColumns($sql);
+
+  my $bio_table = SBEAMS::Connection::DataTable->new( BORDER => 0, WIDTH =>'40%',
+                                                      CELLPADDING => 2 );
+  my $imgpad = "<IMG SRC='$HTML_BASE_DIR/images/space.gif' WIDTH='20' HEIGHT='1'>";
+  $bio_table->addRow( [ $imgpad, 'ID', 'Biosequence Set Name', 'Set Tag', '# Proteins', '# Annotations' ] );
+  $bio_table->setHeaderAttr( UNDERLINE => 1, BOLD => 0 );
+
+  my $urlbase = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME";
+
+  foreach my $row (@rows) {
+    # Link to name
+    $row->[3] =<<"    END_LINK";
+    <A HREF="${urlbase}=PS_biosequence_set&biosequence_set_id=$row->[1]">
+    $row->[3]</A>
+    END_LINK
+
+    $bio_table->addRow( [$imgpad, $row->[1],$row->[2],$row->[3],$row->[4],$row->[5] ]  );
+  }
+  $bio_table->setColAttr( ROWS => [1..$bio_table->getRowNum()], COLS => [1..6],
+                          NOWRAP => 1 );
+  $bio_table->setColAttr( ROWS => [2..$bio_table->getRowNum()], COLS => [5,6],
+                          ALIGN => 'RIGHT' );
+
+  # If user can write to this project, invite them to register another experiment
+  my $addlink =<<"  END_LINK";
+  <BR>
+  <A HREF="${urlbase}=Project&ShowEntryForm=1">[Add a new project]
+  </A>
+  END_LINK
+
+  if ( scalar( @rows ) ) {
+    $content .= "<B>Biosequence Sets in this project:<B><BR>$bio_table";
+  } else {
+    $content .= "No data in this project";
+  }
+
+  $content .= $addlink if $best_permission < 40; 
+  return $content;
+
+}
 
 
