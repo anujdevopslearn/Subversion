@@ -14,9 +14,12 @@ use strict;
 use vars qw($VERSION @ISA $sbeams);
 use CGI::Carp qw(fatalsToBrowser croak);
 
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Log;
 use SBEAMS::ProteinStructure::DBInterface;
 use SBEAMS::ProteinStructure::HTMLPrinter;
 use SBEAMS::ProteinStructure::TableInfo;
+use SBEAMS::ProteinStructure::Tables;
 use SBEAMS::ProteinStructure::Settings;
 
 @ISA = qw(SBEAMS::ProteinStructure::DBInterface
@@ -24,6 +27,7 @@ use SBEAMS::ProteinStructure::Settings;
           SBEAMS::ProteinStructure::TableInfo
           SBEAMS::ProteinStructure::Settings);
 
+my $log = SBEAMS::Connection::Log->new();
 
 ###############################################################################
 # Global Variables
@@ -60,6 +64,41 @@ sub getSBEAMS {
     my $self = shift;
     return($sbeams);
 }
+
+sub getProjectData {
+  my $self = shift;
+  my %args = @_;
+  my %project_data;
+
+  unless ( scalar(@{$args{projects}}) ) {
+    $log->warn( 'No project list provided to getProjectData' );
+    return ( \%project_data);
+  }
+ 
+  my $projects = join ',', @{$args{projects}};
+
+  # SQL to determine which projects have data.
+  my $sql =<<"  END_SQL";
+  SELECT COUNT(*) AS sets,  project_id 
+  FROM $TBPS_BIOSEQUENCE_SET BS
+	WHERE project_id IN ( $projects )
+  GROUP BY project_id
+  END_SQL
+
+  my $cgi_dir = $CGI_BASE_DIR . '/ProteinStructure/';
+  my @rows = $self->getSBEAMS()->selectSeveralColumns( $sql );
+  foreach my $row ( @rows ) {
+    my $title = "$row->[0] Biosequence sets";
+    $project_data{$row->[1]} =<<"    END_LINK";
+    <A HREF=${cgi_dir}main.cgi?set_current_project_id=$row->[1]>
+    <DIV id=Proteinstructure_button TITLE='$title'>
+     ProteinStructure
+    </DIV></A>
+    END_LINK
+  }
+  return ( \%project_data );
+}
+
 
 
 ###############################################################################
