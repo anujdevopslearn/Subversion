@@ -163,8 +163,21 @@ Step 1: Select Project<BR>
   <OPTION SELECTED VALUE="">--- SELECT FROM ACCESSIBLE PROJECTS ---
 ~;
 
-  my @accessible_projects = $sbeams->getAccessibleProjects();
+
+  ## Previously, we used only $sbeams->getAccessibleProjects(), but this
+  ## causes problems if the user doesn't have administrator access. Augmented
+  ## with get_best_permission
+  my @all_projects = $sbeams->getAccessibleProjects();
+  my @accessible_projects;
+  foreach my $p (@all_projects) {
+	if ($sbeams->get_best_permission(project_id=>$p) <= 10  ){
+	  push(@accessible_projects, $p);
+	}
+  }
   my $project_ids_list = join(',',@accessible_projects) || '-1';
+
+
+
   $sql = qq~
     SELECT P.project_id, UL.username+' - '+P.name
       FROM $TB_PROJECT P 
