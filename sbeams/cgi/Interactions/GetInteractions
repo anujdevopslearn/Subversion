@@ -343,7 +343,7 @@ sub handle_request {
     ["bioentity_id1","BE1.bioentity_id","BioEntity 1 ID"],
     ["bioentity_id2","BE2.bioentity_id","BioEntity 2 ID"],
 		["Publication_id","PUB.publication_name+ ' (PMID ' + PUB.pubmed_id +')'", "PubMed ID"],
-		["publication_url","'http://www.ncbi.nlm.nih.gov/entrez/utils/pmfetch.fcgi?db=PubMed&id='+STR(PUB.publication_id)+'&report=xml&mode=text'","publication_url"],
+		["publication_url","PUB.pubmed_id","publication_url"],
     @additional_columns,
   );
 #############
@@ -459,7 +459,7 @@ sub handle_request {
 
     	       'BioEntity 1 Common Name' => "$base_url?bioentity_common_name=\%$colnameidx{bioentity_common_name1}V&apply_action=$pass_action",
     	       'BioEntity 2 Common Name' => "$base_url?bioentity_common_name=\%$colnameidx{bioentity_common_name2}V&apply_action=$pass_action",
-						 'PubMed ID' => "http://www.ncbi.nlm.nih.gov/entrez/utils/pmfetch.fcgi?db=PubMed&id=$colnameidx{Publication_id}&report=xml&mode=text",
+						 'PubMed ID' => "http://www.ncbi.nlm.nih.gov/entrez/utils/pmfetch.fcgi?db=PubMed&id=\%$colnameidx{publication_url}V&report=xml&mode=text",
   );
 
 
