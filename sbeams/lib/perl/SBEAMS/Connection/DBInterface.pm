@@ -441,6 +441,7 @@ sub displayQueryResult {
     my $hidden_cols_ref = $args{'hidden_cols_ref'};
     my $row_color_scheme_ref = $args{'row_color_scheme_ref'};
     my $printable_table = $args{'printable_table'};
+    my $max_widths_ref = $args{'max_widths'};
 
 
     #### Execute the query
@@ -469,6 +470,17 @@ sub displayQueryResult {
     my $types_ref = $self->decodeDataType($sth->{TYPE});
 
 
+    #### Set all column widths to be auto-adjusting unless they're longer than
+    #### 60 characters in which case, limit at 60
+    my @precisions = @{$sth->{PRECISION}};
+    my $i;
+    for ($i = 0; $i <= $#precisions; $i++) {
+      $precisions[$i] = (-1) * $precisions[$i];
+      $precisions[$i] = $max_widths_ref->{$sth->{NAME}->[$i]}
+        if ($max_widths_ref->{$sth->{NAME}->[$i]});
+    }
+
+
     #### If a printable table was desired, use one format
     if ( $printable_table ) {
 
@@ -489,7 +501,7 @@ sub displayQueryResult {
 
       ShowHTMLTable { titles=>$sth->{NAME},
 	types=>$types_ref,
-	widths=>$sth->{PRECISION},
+	widths=>\@precisions,
 	row_sub=>\&fetchNextRow,
         table_attrs=>'BORDER=0 CELLPADDING=2 CELLSPACING=2',
         title_formats=>['FONT COLOR=red,BOLD'],

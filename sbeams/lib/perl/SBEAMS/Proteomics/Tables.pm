@@ -13,12 +13,13 @@ package SBEAMS::Proteomics::Tables;
 
 use strict;
 use vars qw(@ISA @EXPORT 
-    $TB_PROTEIN_DATABASE
+    $TB_BIOSEQUENCE_SET
+    $TB_BIOSEQUENCE
     $TB_PROTEOMICS_EXPERIMENT
     $TB_FRACTION
     $TB_SEARCH_BATCH
-    $TB_SEARCH_BATCH_KEYVALUE
     $TB_SEARCH_BATCH_PARAMETER
+    $TB_SEARCH_BATCH_PARAMETER_SET
     $TB_SEARCH
     $TB_SEARCH_HIT
     $TB_ICAT_QUANTITATION
@@ -31,12 +32,13 @@ require Exporter;
 @ISA = qw (Exporter);
 
 @EXPORT = qw (
-    $TB_PROTEIN_DATABASE
+    $TB_BIOSEQUENCE_SET
+    $TB_BIOSEQUENCE
     $TB_PROTEOMICS_EXPERIMENT
     $TB_FRACTION
     $TB_SEARCH_BATCH
-    $TB_SEARCH_BATCH_KEYVALUE
     $TB_SEARCH_BATCH_PARAMETER
+    $TB_SEARCH_BATCH_PARAMETER_SET
     $TB_SEARCH
     $TB_SEARCH_HIT
     $TB_ICAT_QUANTITATION
@@ -46,12 +48,13 @@ require Exporter;
 );
 
 
-$TB_PROTEIN_DATABASE        = 'proteomics.dbo.protein_database';
+$TB_BIOSEQUENCE_SET         = 'proteomics.dbo.biosequence_set';
+$TB_BIOSEQUENCE             = 'proteomics.dbo.biosequence';
 $TB_PROTEOMICS_EXPERIMENT   = 'proteomics.dbo.proteomics_experiment';
 $TB_FRACTION                = 'proteomics.dbo.fraction';
 $TB_SEARCH_BATCH            = 'proteomics.dbo.search_batch';
-$TB_SEARCH_BATCH_KEYVALUE   = 'proteomics.dbo.search_batch_keyvalue';
 $TB_SEARCH_BATCH_PARAMETER  = 'proteomics.dbo.search_batch_parameter';
+$TB_SEARCH_BATCH_PARAMETER_SET  = 'proteomics.dbo.search_batch_parameter_set';
 $TB_SEARCH                  = 'proteomics.dbo.search';
 $TB_SEARCH_HIT              = 'proteomics.dbo.search_hit';
 $TB_ICAT_QUANTITATION       = 'proteomics.dbo.ICAT_quantitation';

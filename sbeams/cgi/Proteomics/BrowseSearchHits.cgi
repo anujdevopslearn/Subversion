@@ -109,7 +109,7 @@ sub printEntryForm {
     my %parameters;
     my $element;
     my $sql_query;
-    my (%url_cols,%hidden_cols);
+    my (%url_cols,%hidden_cols,%max_widths);
     my $username;
 
     my $CATEGORY="Proteomics Data Test Query";
@@ -529,7 +529,7 @@ sub printEntryForm {
         ["prelim_score","STR(SH.prelim_score,8,1)","Sp"],
         ["ions","STR(SH.identified_ions,2,0) + '/' + STR(SH.total_ions,3,0)","Ions"],
         ["reference","reference","Reference"],
-        ["additional_proteins","additional_proteins","Nmore"],
+        ["additional_proteins","additional_proteins","N+"],
         ["peptide_string","peptide_string","Peptide"],
         ["peptide","peptide","actual_peptide"],
         ["set_path","BSS.set_path","set_path"],
@@ -540,6 +540,9 @@ sub printEntryForm {
       #### Adjust the columns definition based on user-selected options
       if ( $parameters{display_options} =~ /BSDesc/ ) {
         push(@column_array,["biosequence_desc","biosequence_desc","Reference Description"]);
+      }
+      if ( $parameters{display_options} =~ /MaxRefWidth/ ) {
+        $max_widths{'Reference'} = 20;
       }
 
 
@@ -602,6 +605,8 @@ sub printEntryForm {
                       'set_path' => 1,
       );
 
+		   #######'Reference_ATAG' => "TARGET=\"Win1\" ONMOUSEOVER=\"window.status='%V'; return true\"",
+
 
     } else {
       $apply_action="BAD SELECTION";
@@ -610,7 +615,8 @@ sub printEntryForm {
 
     if ($apply_action eq "QUERY") {
       return $sbeams->displayQueryResult(sql_query=>$sql_query,
-          url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols);
+          url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols,
+          max_widths=>\%max_widths);
     } else {
       print "<H4>Select parameters above and press QUERY</H4>\n";
     }
