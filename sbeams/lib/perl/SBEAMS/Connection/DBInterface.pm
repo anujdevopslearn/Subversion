@@ -1371,9 +1371,9 @@ sub displayResultSet {
 sub resultsetByCharacter {
 
   if ($SORT_TYPE eq 'ASC') {
-    return $a->[$SORT_COLUMN] cmp $b->[$SORT_COLUMN];
+    return lc($a->[$SORT_COLUMN]) cmp lc($b->[$SORT_COLUMN]);
   } else {
-    return $b->[$SORT_COLUMN] cmp $a->[$SORT_COLUMN];
+    return lc($b->[$SORT_COLUMN]) cmp lc($a->[$SORT_COLUMN]);
   }
 
 }
