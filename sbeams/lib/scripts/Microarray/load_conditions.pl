@@ -9,6 +9,18 @@
 #               and corresponding data into SBEAMS.  Sorry for the horrible use
 #               of global variables!
 #
+# Notes       : A sample column_map file is:
+#
+# mapped_file = /net/arrays/Pipeline/output/project_id/158/NULL_vs_CONTROL.clone
+# condition = NULL_VS_CONTROL
+# gene_name = 30
+# second_name = 0
+# log10_ratio = 4
+# log10_std_deviation = 5
+# lambda = 20
+# mu_x = 18
+# mu_y = 19
+#
 ###############################################################################
 
 
