@@ -1727,7 +1727,7 @@ sub displayResultSetControls {
     if ($resultset_ref->{column_list_ref}->[0] eq 'interaction_id') {
       my $url_prefix = "$CYTOSCAPE_URL/sbeams";
       print "<BR>\n";
-      print "<A HREF=\"${url_prefix}?m=immunology&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
+      print "<A HREF=\"${url_prefix}?m=interactions&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
     } elsif ($resultset_ref->{column_list_ref}->[0] eq 'Bait') {
       my $url_prefix = "$CYTOSCAPE_URL/sbeams";
       print "<BR>\n";
