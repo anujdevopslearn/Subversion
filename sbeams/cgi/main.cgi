@@ -43,13 +43,13 @@ main();
 ###############################################################################
 sub main { 
 
-    #### Do the SBEAMS authentication and exit if a username is not returned
-    exit unless ($current_username = $sbeams->Authenticate());
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate());
 
-    #### Print the header, do what the program does, and print footer
-    $sbeams->printPageHeader();
-    showMainPage();
-    $sbeams->printPageFooter();
+  #### Print the header, do what the program does, and print footer
+  $sbeams->printPageHeader();
+  showMainPage();
+  $sbeams->printPageFooter();
 
 } # end main
 
@@ -59,9 +59,11 @@ sub main {
 ###############################################################################
 sub showMainPage {
 
-    $sbeams->printUserContext();
+  #### Print out the current user information
+  $sbeams->printUserContext();
 
-    print qq!
+  #### Write some welcoming text
+  print qq~
 	<BR>
 	You have successfully logged into the $DBTITLE interface.<BR>
 	Note your current user group above, and click [CHANGE] to change it.<P> 
@@ -75,28 +77,29 @@ sub showMainPage {
 	<BR>
 
 	<UL>
-	<LI><A HREF="Microarray/main.cgi">SBEAMS - Microarray</A>
+  ~;
+
+
+  #### Get the list of Modules available to us
+  my @modules = $sbeams->getModules();
+
+  #### Print out entries for each module
+  my $module;
+  foreach $module (@modules) {
+    print qq~
+	<LI><A HREF="$module/main.cgi">SBEAMS - $module</A>
 	<BR><BR>
-	<LI><A HREF="Proteomics/main.cgi">SBEAMS - Proteomics</A>
-	<BR><BR>
-	<LI><A HREF="Inkjet/main.cgi">SBEAMS - Inkjet</A>
-	<BR><BR>
-	<LI><A HREF="Biosap/main.cgi">SBEAMS - BioSap</A>
-	<BR><BR>
-	<LI><A HREF="PhenoArray/main.cgi">SBEAMS - Phenotype Array</A>
-	<BR><BR>
-	<LI><A HREF="SNP/main.cgi">SBEAMS - SNP</A>
-	<BR><BR>
-	<LI><A HREF="BEDB/main.cgi">SBEAMS - BEDB</A>
-	<BR><BR>
-	<LI><A HREF="GEAP/main.cgi">SBEAMS - GEAP</A>
-	<BR><BR>
-	<LI><A HREF="tools/main.cgi">SBEAMS - Tools</A>
+    ~;
+  }
+
+
+  #### Finish the list
+  print qq~
 	</UL>
 
 	<BR>
 	<BR>
-    !;
+    ~;
 
 } # end showMainPage
 
