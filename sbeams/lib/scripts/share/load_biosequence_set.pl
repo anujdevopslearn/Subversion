@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/local/bin/perl -w
 
 ###############################################################################
 # Program     : load_biosequence_set.pl
@@ -365,7 +365,7 @@ sub loadBiosequenceSet {
 
     #### At the end of file, set loopflag to 0, but finish this loop, writing
     #### the last entry to the database
-    unless ($line=<INFILE>) {
+    unless (defined($line=<INFILE>)) {
       $loopflag = 0;
       $line = ">BOGUS DESCRIPTION";
     }
