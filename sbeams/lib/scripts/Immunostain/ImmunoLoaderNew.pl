@@ -93,7 +93,7 @@ sub main
 {
 		 #### Do the SBEAMS authentication and exit if a username is not returned
 		 exit unless ($current_username = $sbeams->Authenticate(
-		 work_group=>'Developer',
+		 work_group=>'Immunostain_user',
   ));
 
 my @bladderColumnArray = (
@@ -318,7 +318,7 @@ sub processFile
 #check the correct columnOrder	
 			unless ($lineCount)
 			{
-				$line =~ s/[\n\r]//g;
+				$line =~ s/\n//g;
 				my @columnOrderArray = split /\t/, $line;
 				foreach my $columnIndex (keys %columnHeaderHash)
 				{
