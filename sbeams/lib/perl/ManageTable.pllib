@@ -152,8 +152,9 @@ sub printEntryForm {
         $optionlist_query,$onChange,$fk_table) = @row;
     if ($optionlist_query gt "") {
       $optionlist_queries{$column_name}=$optionlist_query;
+    }
     if ($input_type eq "file") {
-      $file_upload_flag = "ENCTYPE=\"multipart/form-data\""; }
+      $file_upload_flag = "ENCTYPE=\"multipart/form-data\"";
     }
   }
 
@@ -275,12 +276,10 @@ sub printEntryForm {
     if ($input_type eq "file") {
       print qq!
         <TD><INPUT TYPE="$input_type" NAME="$column_name"
-         VALUE="$parameters{$column_name}" SIZE=$input_length $onChange>
-      !;
-      if ($parameters{$column_name}) {
-        print qq!
-          <A HREF="$DATA_DIR/$parameters{$column_name}">view file</A>
-        !;
+         VALUE="" SIZE=$input_length $onChange>!;
+      if ($parameters{$column_name} &&
+        -s "$PHYSICAL_BASE_DIR/data/$parameters{$column_name}" > 0) {
+        print qq~<A HREF="$DATA_DIR/$parameters{$column_name}">view&nbsp;file</A>~;
       }
       print qq!
          </TD>
@@ -853,20 +852,27 @@ sub processEntryForm {
       foreach $element (keys %input_types) {
         if ($input_types{$element} eq "file") {
           $filename = "$parameters{$PK_COLUMN_NAME}_$element.dat";
-          print "Uploading data for $element from $parameters{$element}<BR>\n";
-          writeDataFile($parameters{$element}, $TABLE_NAME, $filename);
+          if ($parameters{$element}) {
+            print "Uploading data for field '$element' from client file ".
+              "'$parameters{$element}'<BR>\n";
+	    my $fh = $q->upload($element);
+            writeDataFile($fh, $TABLE_NAME, $filename);
+          } else {
+            print "Nothing to upload for field '$element'<BR>\n";
+          }
 
-          # Update the table for the file that was actually uploaded
+          #### Update the table for the relative local location
           $sql_query = qq~
-                UPDATE $DB_TABLE_NAME SET
-                  $element='$TABLE_NAME/$filename'
-                WHERE $PK_COLUMN_NAME=$parameters{$PK_COLUMN_NAME}
+              UPDATE $DB_TABLE_NAME SET
+                $element='$TABLE_NAME/$filename'
+              WHERE $PK_COLUMN_NAME=$parameters{$PK_COLUMN_NAME}
           ~;
-
           $sbeams->executeSQL($sql_query);
 
         }
+
       }
+
     }
 
 
@@ -1022,19 +1028,38 @@ sub writeDataFile {
     my $filename  = shift;
     my $buffer;
 
-    open(DATA, ">$UPLOAD_DIR/$subdir/$filename") || croak "Couldn't open $filename: $!";
 
-#    while (<$data>) {
-#       $_ =~ s/\cM/\n/g;
-#       print DATA $_;
-#    }
-
-    while (read($data, $buffer, 1024)) {
-        print DATA $buffer;
+    #### Check that the upload directory is there
+    unless (-d "$UPLOAD_DIR") {
+      die("CONFIGURATION ERROR: The upload directory does not exist! ".
+        "Please report this problem to your SBEAMS administrator.<BR>");
     }
 
 
+    #### Check that the directory for this table is there
+    unless (-d "$UPLOAD_DIR/$subdir") {
+      mkdir("$UPLOAD_DIR/$subdir") ||
+      die("SERVER STORAGE ERROR: The upload directory could not be created! ".
+        "Please report this problem to your SBEAMS administrator.<BR>");
+    }
+
+
+    #### Open the output file
+    open(DATA, ">$UPLOAD_DIR/$subdir/$filename")
+      || die("Could not open $filename: $!");
+
+
+    #### Dump the uploaded data into the output file
+    my $byte_count = 0;
+    while (read($data, $buffer, 1024)) {
+      print DATA $buffer;
+      $byte_count += length($buffer);
+    }
     close(DATA);
+
+
+    print "&nbsp;&nbsp;&nbsp;&nbsp;$byte_count bytes uploaded.<BR>\n";
+
 
 } # end writeDataFile
 
