@@ -280,7 +280,7 @@ usage_log	1	usage_id	System Usage Log ID	int	4	0	N		Y							N	N				pkDEFAULT
 usage_log	2	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N	text	25		Y	Y	N	Datetime the user attempted to login or log out		
 usage_log	3	username	Username	varchar	50	0	N		N			N	text	50		Y	Y	N	Username attempting to log in or out		
 usage_log	4	usage_action	Attempted action	varchar	50	0	N		N			N	text	50		Y	Y	N	Type of action		
-usage_log	5	result	Result of attempt	varchar	25	0	N		N			N	text	25		Y	Y	N	Result of the action		
+usage_log	5	result	Result of attempt	varchar	50	0	N		N			N	text	25		Y	Y	N	Result of the action		
 misc_option	1	misc_option_id	Misc Option ID	int	4	0	N		Y							N	N				pkDEFAULT
 misc_option	2	option_type	Option Type	varchar	25	0	N		N			N	text	25		Y	Y	N	"Namespace for the option (e.g., yesno)"		
 misc_option	3	option_key	Option Key	varchar	25	0	N		N			N	text	25		Y	Y	N	"Key of the option (e.g., Y)"		
