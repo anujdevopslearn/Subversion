@@ -708,7 +708,8 @@ sub specialParsing {
       $rowdata_ref->{biosequence_seq} ) {
     $rowdata_ref->{n_transmembrane_regions} = 
       SBEAMS::Proteomics::Utilities::calcNTransmembraneRegions(
-        peptide=>$rowdata_ref->{biosequence_seq});
+        peptide=>$rowdata_ref->{biosequence_seq},
+        calc_method=>'NewMethod');
   }
 
 
