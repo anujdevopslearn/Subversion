@@ -124,7 +124,6 @@ sub main {
   }
   handle_request(ref_parameters=>\%parameters);
   $sbeams->printPageFooter();
-
 } # end main
 
 
@@ -325,6 +324,7 @@ sub handle_request {
   my ($sql, @rows);
   my $alter_permission;
   my ($current_contact_id, $current_project_id, $current_group_id);
+  my ($permission, $permission_to_alter);
 
   #### Show current user context information
   $sbeams->printUserContext();
@@ -332,195 +332,34 @@ sub handle_request {
   $current_project_id = $sbeams->getCurrent_project_id;
   $current_group_id   = $sbeams->getCurrent_work_group_id;
 
-
-  #### Translate project_id into name
-  $sql = qq~
-      SELECT P.name
-      FROM project P
-      WHERE P.project_id = '$current_project_id'
-      ~;
-  @rows = $sbeams->selectOneColumn($sql);
+  my $project_name = $sbeams->getCurrent_project_name;
 
   print qq~
-      <H1>Privileges for $rows[0]</H1>
+      <H1>Privileges for $project_name</H1>
       $LINESEPARATOR
       ~;
-
-  retrofit(project_id=>$current_project_id);
-
-  my $permission = find_best_permission(contact_id=>$current_contact_id,
-					project_id=>$current_project_id,
-					group_id=>$current_group_id);
   
+  $permission = $sbeams->get_best_permission();
+
+  ## Grant permission to alter if best priv = 10
+  if ($permission <= $ALTER_PRIV_CUTOFF){ $permission_to_alter = 1; }
+  else { $permission_to_alter = 0; }
 
   print_user_permissions(ref_parameters=>$ref_parameters,
 			 current_project_id=>$current_project_id,
 			 current_contact_id=>$current_contact_id,
 			 current_group_id=>$current_group_id,
-			 best_permission=>$permission);
+			 permission_to_alter=>$permission_to_alter);
 
   print_group_permissions(ref_parameters=>$ref_parameters,
 			  current_project_id=>$current_project_id,
 			  current_contact_id=>$current_contact_id,
 			  current_group_id=>$current_group_id,
-			  best_permission=>$permission);
+			  permission_to_alter=>$permission_to_alter);
+
 }
 
 
-###############################################################################
-# retrofit- give project owner and admin full rights to alter the privileges
-###############################################################################
-sub retrofit {
-  my %args = @_;
-  my $SUB_NAME= "retrofit";
-
-  ## Decode argument list
-  my $current_project_id = $args{'project_id'}
-  || die "ERROR[$SUB_NAME]: project_id not passed";
-
-  ## Define standard variables
-  my ($sql, @rows);
-  my (%rowdata, $rowdata_ref);
-
-  #### Make sure owner is has administrator privileges
-  $sql = qq~
-      SELECT UPP.user_project_permission_id, UPP.privilege_id
-      FROM user_project_permission UPP
-      LEFT JOIN project P on (P.project_id = UPP.project_id)
-      WHERE UPP.project_id = '$current_project_id'
-      AND P.PI_contact_id = UPP.contact_id
-      ~;
-  @rows = $sbeams->selectSeveralColumns($sql);
-
-  if (@rows){
-      (my $pi_upp_id,my $proj_owner_priv) = @{$rows[0]};
-      if ($proj_owner_priv != $ADMIN_PRIV_ID) {
-	  $rowdata{'privilege_id'} = $ADMIN_PRIV_ID;
-	  $rowdata_ref= \%rowdata;
-	  $sbeams->updateOrInsertRow(table_name=>'user_project_permission',
-				     rowdata_ref=>$rowdata_ref,
-				     update=>1,
-				     PK_name=>'user_project_permission_id',
-				     PK_value=>$pi_upp_id,
-				     add_audit_parameters=>1);
-      }
-  }else {      
-      $rowdata{'contact_id'} = $PROJ_PI_ID;
-      $rowdata{'project_id'} = $current_project_id;
-      $rowdata{'privilege_id'} = $ADMIN_PRIV_ID;
-      $rowdata_ref=\%rowdata;
-      $sbeams->updateOrInsertRow(table_name=>'user_project_permission',
-				 rowdata_ref=>$rowdata_ref,
-				 insert=>1,
-				 PK_name=>'user_project_permission_id',
-				 add_audit_parameters=>1);
-  }
-
-  #### Make sure Admin group has administrator privileges
-  $sql = qq~
-      SELECT GPP.group_project_permission_id, GPP.privilege_id
-      FROM group_project_permission GPP
-      LEFT JOIN work_group WG ON (WG.work_group_id = GPP.work_group_id)
-      WHERE GPP.project_Id = '$current_project_id'
-      AND WG.work_group_name = 'Admin'
-      ~;
-  @rows = $sbeams->selectOneColumn($sql);
-
-  if (@rows){
-      my $gpp_id = $rows[0];
-
-      $rowdata{'privilege_id'} = $ADMIN_PRIV_ID;
-      $rowdata_ref = \%rowdata;
-      $sbeams->updateOrInsertRow(table_name=>'group_project_permission',
-				 rowdata_ref=>$rowdata_ref,
-				 update=>1,
-				 PK_name=>'group_project_permission_id',
-				 PK_value=>$gpp_id,
-				 add_audit_parameters=>1);
-  }else {
-      $rowdata{'work_group_id'} = $ADMIN_WG_ID;
-      $rowdata{'project_id'} = $current_project_id;
-      $rowdata{'privilege_id'} = $ADMIN_PRIV_ID;
-      $rowdata_ref = \%rowdata;
-      $sbeams->updateOrInsertRow(table_name=>'group_project_permission',
-				 rowdata_ref=>$rowdata_ref,
-				 insert=>1,
-				 PK_name=>'group_project_permission_id',
-				 add_audit_parameters=>1);
-  }
-     
-}
-
-###############################################################################
-# find_best_permission
-###############################################################################
-sub find_best_permission{
-  my %args = @_;
-  my $SUB_NAME = "find_best_permission";
-
-  ## Decode argument list
-  my $current_contact_id = $args{'contact_id'}
-  || die "ERROR[$SUB_NAME]: contact_id not passed";
-  my $current_project_id = $args{'project_id'}
-  || die "ERROR[$SUB_NAME]: project_id not passed";
-  my $current_group_id = $args{'group_id'}
-  || die "ERROR[$SUB_NAME]: group_id not passed";
-
-  ## Define standard variables
-  my ($sql, @rows);
-
-  $sql = qq~
-      SELECT UL.username,
-      MIN(CASE WHEN UWG.contact_id IS NULL THEN NULL ELSE GPP.privilege_id END) AS "best_group_privilege_id",
-      MIN(UPP.privilege_id) AS "best_user_privilege_id"
-      FROM $TB_PROJECT P
-      JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
-      LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
-      ON ( P.project_id = UPP.project_id
-	   AND UPP.contact_id='$current_contact_id' )
-      LEFT JOIN $TB_GROUP_PROJECT_PERMISSION GPP
-      ON ( P.project_id = GPP.project_id )
-      LEFT JOIN $TB_PRIVILEGE PRIV
-      ON ( GPP.privilege_id = PRIV.privilege_id )
-      LEFT JOIN $TB_USER_WORK_GROUP UWG
-      ON ( GPP.work_group_id = UWG.work_group_id
-	   AND UWG.contact_id='$current_contact_id' )
-      LEFT JOIN $TB_WORK_GROUP WG
-      ON ( UWG.work_group_id = WG.work_group_id )
-      WHERE 1=1
-      AND P.record_status != 'D'
-      AND UL.record_status != 'D'
-      AND ( UPP.record_status != 'D' OR UPP.record_status IS NULL )
-      AND ( GPP.record_status != 'D' OR GPP.record_status IS NULL )
-      AND ( PRIV.record_status != 'D' OR PRIV.record_status IS NULL )
-      AND ( UWG.record_status != 'D' OR UWG.record_status IS NULL )
-      AND ( WG.record_status != 'D' OR WG.record_status IS NULL )
-      AND P.project_id = '$current_project_id'
-      AND ( UPP.privilege_id<=40 OR GPP.privilege_id<=40 )
-      AND ( WG.work_group_name IS NOT NULL OR UPP.privilege_id IS NOT NULL )
-      GROUP BY P.project_id,P.project_tag,P.name,UL.username
-      ORDER BY UL.username,P.project_tag
-      ~;
-  @rows = $sbeams->selectSeveralColumns($sql);
-  
-  my $best_privilege_id = 9999;
-
-  if (@rows) {
-      my ($username,$best_group_privilege_id,$best_user_privilege_id) = @{$rows[0]};
-      
-      #### Select the lowest permission and translate to a name
-      $best_group_privilege_id = 9999
-        unless (defined($best_group_privilege_id));
-      $best_user_privilege_id = 9999
-        unless (defined($best_user_privilege_id));
-
-      $best_privilege_id = $best_group_privilege_id;
-      $best_privilege_id = $best_user_privilege_id if
-        ($best_user_privilege_id < $best_privilege_id);
-  }
-
-  return $best_privilege_id;
-}
 
 
 ###############################################################################
@@ -540,23 +379,12 @@ sub print_user_permissions {
   my $current_group_id = $args{'current_group_id'}
   || die "ERROR[$SUB_NAME]: group_id not passed";
   my $best_permission = $args{'best_permission'};
+  my $permission_to_alter = $args{'permission_to_alter'} || 0;
 
   ## Define standard variables
   my ($sql, $priv_sql, $user_sql, @rows);
   my (@users, @permissions);
   my (%rowdata, $rowdata_ref);
-  my $permission_to_alter;
-
-  ## Grant permission to alter if best priv = 10
-  if ($best_permission <= $ALTER_PRIV_CUTOFF || $current_group_id == $ADMIN_WG_ID){
-      $permission_to_alter = 1;
-  }else {
-      $permission_to_alter = 0;
-  }
-
-  if ($PROJ_PI_ID == $current_contact_id){
-      $permission_to_alter = 1;
-  }
 
   # SQL for all privileges
   $priv_sql = qq~
@@ -607,11 +435,6 @@ sub print_user_permissions {
   $counter = 0;
   foreach my $row_ref (@rows) {
       my @row = @{$row_ref};
-
-      # Allow permission granting if an administrator
-      if ($row[1] == $current_contact_id && $row[2] == $ADMIN_PRIV_ID){
-	  $permission_to_alter = 1;
-      }
 
       print qq~
       <TR>
@@ -669,7 +492,8 @@ sub print_user_permissions {
       ~;
   }else {
       print qq~
-      <h3>You need 'administrator' privileges to make changes.  Contact $PROJ_PI_NAME to get access</h3>
+      <H3>You need 'administrator' privileges to make changes.</H3>
+      <H3>Contact <A HREF="mailto:$PROJ_PI_NAME\@systemsbiology.org">$PROJ_PI_NAME</A> or another administrator to obtain access.</H3>
       </FORM>
       ~;
   }
@@ -695,17 +519,10 @@ sub print_group_permissions {
   my $current_group_id = $args{'current_group_id'}
   || die "ERROR[$SUB_NAME]: group_id not passed";
   my $best_permission = $args{'best_permission'};
+  my $permission_to_alter = $args{'permission_to_alter'} || 0;
 
   ## Define standard variables
   my ($sql, $priv_sql, $group_sql, $current_permissions_sql,@rows);
-  my $permission_to_alter;
-
-  ## Grant permission to alter if best priv is admin
-  if ($best_permission <= $ALTER_PRIV_CUTOFF || $current_group_id == $ADMIN_WG_ID){
-      $permission_to_alter = 1;
-  }else {
-      $permission_to_alter = 0;
-  }
 
   # SQL to get current group permissions
   $current_permissions_sql = qq~
@@ -753,9 +570,6 @@ sub print_group_permissions {
   $counter = 0;
   foreach my $row_ref (@rows) {
       my @row = @{$row_ref};
-      if ($current_group_id eq $row[0] && $row[1] <= $ALTER_PRIV_CUTOFF){
-	  $permission_to_alter = 1;
-      }
 
       print qq~
       <TR>
@@ -914,3 +728,176 @@ sub emailer(){
   print MAIL "$message\n\n";
   close (MAIL) or warn "sendmail didn't close nicely";
 }
+
+
+###############################################################################
+#                                                                             #
+#                                                                             #
+#                          ANTIQUATED/DEPRECATED CODE                         #
+#                                                                             #
+#                                                                             #
+###############################################################################
+
+###############################################################################
+# find_best_permission
+###############################################################################
+#sub find_best_permission{
+#  my %args = @_;
+#  my $SUB_NAME = "find_best_permission";
+#
+#  ## Decode argument list
+#  my $current_contact_id = $args{'contact_id'}
+#  || $sbeams->getCurrent_contact_id;
+#  my $current_project_id = $args{'project_id'}
+#  || $sbeams->getCurrent_project_id;
+#  my $current_group_id = $args{'group_id'}
+#  || $sbeams->getCurrent_work_group_id;
+#
+#  ## Define standard variables
+#  my ($sql, @rows);
+#
+#  ## If contact_id is the PI, automatically return 'adminstrator' privileges
+#  if ($PROJ_PI_ID == $current_contact_id){
+#      return $ADMIN_PRIV_ID;
+#  }
+#  ## If work group is set to Admin, automatically return 'administrator' privileges
+#  if ($ADMIN_WG_ID == $current_group_id){
+#      return $ADMIN_PRIV_ID;
+#  }
+#
+#  $sql = qq~
+#      SELECT UL.username,
+#      MIN(CASE WHEN UWG.contact_id IS NULL THEN NULL ELSE GPP.privilege_id END) AS "best_group_privilege_id",
+#      MIN(UPP.privilege_id) AS "best_user_privilege_id"
+#      FROM $TB_PROJECT P
+#      JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
+#      LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
+#      ON ( P.project_id = UPP.project_id
+#	   AND UPP.contact_id='$current_contact_id' )
+#      LEFT JOIN $TB_GROUP_PROJECT_PERMISSION GPP
+#      ON ( P.project_id = GPP.project_id )
+#      LEFT JOIN $TB_PRIVILEGE PRIV
+#      ON ( GPP.privilege_id = PRIV.privilege_id )
+#      LEFT JOIN $TB_USER_WORK_GROUP UWG
+#      ON ( GPP.work_group_id = UWG.work_group_id
+#	   AND UWG.contact_id='$current_contact_id' )
+#      LEFT JOIN $TB_WORK_GROUP WG
+#      ON ( UWG.work_group_id = WG.work_group_id )
+#      WHERE 1=1
+#      AND P.record_status != 'D'
+#      AND UL.record_status != 'D'
+#      AND ( UPP.record_status != 'D' OR UPP.record_status IS NULL )
+#      AND ( GPP.record_status != 'D' OR GPP.record_status IS NULL )
+#      AND ( PRIV.record_status != 'D' OR PRIV.record_status IS NULL )
+#      AND ( UWG.record_status != 'D' OR UWG.record_status IS NULL )
+#      AND ( WG.record_status != 'D' OR WG.record_status IS NULL )
+#      AND P.project_id = '$current_project_id'
+#      AND ( UPP.privilege_id<=40 OR GPP.privilege_id<=40 )
+#      AND ( WG.work_group_name IS NOT NULL OR UPP.privilege_id IS NOT NULL )
+#      GROUP BY P.project_id,P.project_tag,P.name,UL.username
+#      ORDER BY UL.username,P.project_tag
+#      ~;
+#  @rows = $sbeams->selectSeveralColumns($sql);
+#  
+#  my $best_privilege_id = 9999;
+#
+#  if (@rows) {
+#      my ($username,$best_group_privilege_id,$best_user_privilege_id) = @{$rows[0]};
+#      
+#      #### Select the lowest permission and translate to a name
+#      $best_group_privilege_id = 9999
+#        unless (defined($best_group_privilege_id));
+#      $best_user_privilege_id = 9999
+#        unless (defined($best_user_privilege_id));
+#
+#      $best_privilege_id = $best_group_privilege_id;
+#      $best_privilege_id = $best_user_privilege_id if
+#        ($best_user_privilege_id < $best_privilege_id);
+#  }
+#
+#  return $best_privilege_id;
+#}
+
+###############################################################################
+# retrofit- give project owner and admin full rights to alter the privileges
+###############################################################################
+#sub retrofit {
+#  my %args = @_;
+#  my $SUB_NAME= "retrofit";
+#
+#  ## Decode argument list
+#  my $current_project_id = $args{'project_id'}
+#  || die "ERROR[$SUB_NAME]: project_id not passed";
+#
+#  ## Define standard variables
+#  my ($sql, @rows);
+#  my (%rowdata, $rowdata_ref);
+#
+#  #### Make sure owner is has administrator privileges
+#  $sql = qq~
+#      SELECT UPP.user_project_permission_id, UPP.privilege_id
+#      FROM user_project_permission UPP
+#      LEFT JOIN project P on (P.project_id = UPP.project_id)
+#      WHERE UPP.project_id = '$current_project_id'
+#      AND P.PI_contact_id = UPP.contact_id
+#      ~;
+#  @rows = $sbeams->selectSeveralColumns($sql);
+#
+#  if (@rows){
+#      (my $pi_upp_id,my $proj_owner_priv) = @{$rows[0]};
+#      if ($proj_owner_priv != $ADMIN_PRIV_ID) {
+#	  $rowdata{'privilege_id'} = $ADMIN_PRIV_ID;
+#	  $rowdata_ref= \%rowdata;
+#	  $sbeams->updateOrInsertRow(table_name=>'user_project_permission',
+#				     rowdata_ref=>$rowdata_ref,
+#				     update=>1,
+#				     PK_name=>'user_project_permission_id',
+#				     PK_value=>$pi_upp_id,
+#				     add_audit_parameters=>1);
+#      }
+#  }else {      
+#      $rowdata{'contact_id'} = $PROJ_PI_ID;
+#      $rowdata{'project_id'} = $current_project_id;
+#      $rowdata{'privilege_id'} = $ADMIN_PRIV_ID;
+#      $rowdata_ref=\%rowdata;
+#      $sbeams->updateOrInsertRow(table_name=>'user_project_permission',
+#				 rowdata_ref=>$rowdata_ref,
+#				 insert=>1,
+#				 PK_name=>'user_project_permission_id',
+#				 add_audit_parameters=>1);
+#  }
+#
+#  #### Make sure Admin group has administrator privileges
+#  $sql = qq~
+#      SELECT GPP.group_project_permission_id, GPP.privilege_id
+#      FROM group_project_permission GPP
+#      LEFT JOIN work_group WG ON (WG.work_group_id = GPP.work_group_id)
+#      WHERE GPP.project_Id = '$current_project_id'
+#      AND WG.work_group_name = 'Admin'
+#      ~;
+#  @rows = $sbeams->selectOneColumn($sql);
+#
+#  if (@rows){
+#      my $gpp_id = $rows[0];
+#
+#      $rowdata{'privilege_id'} = $ADMIN_PRIV_ID;
+#      $rowdata_ref = \%rowdata;
+#      $sbeams->updateOrInsertRow(table_name=>'group_project_permission',
+#				 rowdata_ref=>$rowdata_ref,
+#				 update=>1,
+#				 PK_name=>'group_project_permission_id',
+#				 PK_value=>$gpp_id,
+#				 add_audit_parameters=>1);
+#  }else {
+#      $rowdata{'work_group_id'} = $ADMIN_WG_ID;
+#      $rowdata{'project_id'} = $current_project_id;
+#      $rowdata{'privilege_id'} = $ADMIN_PRIV_ID;
+#      $rowdata_ref = \%rowdata;
+#      $sbeams->updateOrInsertRow(table_name=>'group_project_permission',
+#				 rowdata_ref=>$rowdata_ref,
+#				 insert=>1,
+#				 PK_name=>'group_project_permission_id',
+#				 add_audit_parameters=>1);
+#  }
+#     
+#}
