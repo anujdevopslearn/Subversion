@@ -371,18 +371,19 @@ sub handle_request {
            ON ( I.bioentity1_state_id = BES1.bioentity_state_id )
       LEFT JOIN $TBIN_BIOENTITY_STATE BES2
            ON ( I.bioentity2_state_id = BES2.bioentity_state_id )
-      LEFT JOIN $TBIN_BIOENTITY_TYPE BET1 
+      LEFT JOIN $TBIN_BIOENTITY_TYPE BET1
            ON ( BE1.bioentity_type_id = BET1.bioentity_type_id)
-      LEFT JOIN $TBIN_BIOENTITY_TYPE BET2 
-           ON ( BE2.bioentity_type_id = BET2.bioentity_type_id)  
-			LEFT JOIN $TBIN_BIOENTITY_MEMBER BEM1 
+      LEFT JOIN $TBIN_BIOENTITY_TYPE BET2
+           ON ( BE2.bioentity_type_id = BET2.bioentity_type_id)
+
+      LEFT JOIN $TBIN_BIOENTITY_MEMBER BEM1
            ON ( BE1.bioentity_id = BEM1.child_bioentity_id)
-			LEFT JOIN $TBIN_BIOENTITY BE1P ON ( BEM1.parent_bioentity_id = BE1P.bioentity_id )
-			
-      LEFT JOIN $TBIN_BIOENTITY_MEMBER BEM2 
-           ON ( BE2.bioentity_id = BEM2.child_bioentity_id)  		 
-		 LEFT JOIN $TBIN_BIOENTITY BE2P ON ( BEM2.parent_bioentity_id = BE2P.bioentity_id )
-     LEFT JOIN $TBIN_REGULATORY_FEATURE RF1
+      LEFT JOIN $TBIN_BIOENTITY BE1P ON ( BEM1.parent_bioentity_id = BE1P.bioentity_id )
+      LEFT JOIN $TBIN_BIOENTITY_MEMBER BEM2
+           ON ( BE2.bioentity_id = BEM2.child_bioentity_id)
+      LEFT JOIN $TBIN_BIOENTITY BE2P ON ( BEM2.parent_bioentity_id = BE2P.bioentity_id )
+
+      LEFT JOIN $TBIN_REGULATORY_FEATURE RF1
            ON ( I.regulatory_feature1_id = RF1.regulatory_feature_id )
       LEFT JOIN $TBIN_REGULATORY_FEATURE RF2
            ON ( I.regulatory_feature2_id = RF2.regulatory_feature_id )
@@ -392,6 +393,8 @@ sub handle_request {
        AND ( BE2.record_status != 'D' OR BE2.record_status IS NULL )
        AND ( BES1.record_status != 'D' OR BES1.record_status IS NULL )
        AND ( BES2.record_status != 'D' OR BES2.record_status IS NULL )
+       AND ( BEM1.record_status != 'D' OR BEM1.record_status IS NULL )
+       AND ( BEM2.record_status != 'D' OR BEM2.record_status IS NULL )
        AND ( RF1.record_status != 'D' OR RF1.record_status IS NULL )
        AND ( RF2.record_status != 'D' OR RF2.record_status IS NULL )
      $project_clause
