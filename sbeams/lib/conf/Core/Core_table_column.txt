@@ -334,15 +334,28 @@ table_column	8	data_precision	Data Precision	int	4	0	Y		N			Y	text	10		Y	Y	N	"Se
 table_column	9	nullable	Is Nullable?	char	1	0	N		N			Y	text	5		Y	Y	N	Is the column NULLable?		
 table_column	10	default_value	Default Value	varchar	50	0	Y		N			N	text	50		Y	Y	N	DEFAULT value for the column if any		
 table_column	11	is_auto_inc	Is Autoincrementing?	char	1	0	N		N			Y	text	5		Y	Y	N	"Is the column an auto incrementing number (i.e. SEQUENCE, SERIAL, IDENTITY)?"		
-table_column	12	fk_table	FK Table Name	varchar	50	0	Y		N			N	text	50		Y	Y	N	"If this column is a foreign key to another table, what is that tables abstract name"
-table_column	13	fk_column_name	FK Column Name	varchar	50	0	Y		N			N	text	50		Y	Y	N	"If this column is a foreign key to another table, what is that tables column to which this refers (usually the same)"
-table_column	14	is_required	Is Required?	char	1	0	Y		N			N	text	5		Y	Y	N	Is this column a required field in the data form (shown as red)?
-table_column	15	input_type	Form Input Type	varchar	50	0	Y		N			N	text	50		Y	Y	N	What is the HTML form input type for this field?
-table_column	16	input_length	Form Input Length	varchar	25	0	Y		N			N	text	25		Y	Y	N	What is the length of scale or size of the input type (height for textarea)
-table_column	17	onChange	JavaScript onChange	varchar	255	0	Y		N			N	text	50		Y	Y	N	Javascript that can be triggered with onChange in the HTML form
-table_column	18	is_data_column	Is Data Column?	char	1	0	Y		N			N	text	5		Y	Y	N	Is this a data column that is potentially editable or is a housekeeping column?
-table_column	19	is_display_column	Is Display Column?	char	1	0	Y		N			N	text	5		Y	Y	N	Should this column be displayed in a form?
-table_column	20	is_key_field	Is a Key Field?	char	1	0	Y		N			N	text	5		Y	Y	N	Does this column belong to the (possibly composite) key for this table
-table_column	21	column_text	Column Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	A friendly description of the meaning of this column (this text here!)
-table_column	22	optionlist_query	Drop down list query	text	16	0	Y		N			N	textarea	6		Y	Y	N	A query which will populate the contents of this field
-table_column	23	url	URL	varchar	255	0	Y		N			N	text	50		Y	Y	N	The URL or URL fragment that this column is assoctiated with when it appears in a table
+table_column	12	fk_table	FK Table Name	varchar	50	0	Y		N			N	text	50		Y	Y	N	"If this column is a foreign key to another table, what is that tables abstract name"		
+table_column	13	fk_column_name	FK Column Name	varchar	50	0	Y		N			N	text	50		Y	Y	N	"If this column is a foreign key to another table, what is that tables column to which this refers (usually the same)"		
+table_column	14	is_required	Is Required?	char	1	0	Y		N			N	text	5		Y	Y	N	Is this column a required field in the data form (shown as red)?		
+table_column	15	input_type	Form Input Type	varchar	50	0	Y		N			N	text	50		Y	Y	N	What is the HTML form input type for this field?		
+table_column	16	input_length	Form Input Length	varchar	25	0	Y		N			N	text	25		Y	Y	N	What is the length of scale or size of the input type (height for textarea)		
+table_column	17	onChange	JavaScript onChange	varchar	255	0	Y		N			N	text	50		Y	Y	N	Javascript that can be triggered with onChange in the HTML form		
+table_column	18	is_data_column	Is Data Column?	char	1	0	Y		N			N	text	5		Y	Y	N	Is this a data column that is potentially editable or is a housekeeping column?		
+table_column	19	is_display_column	Is Display Column?	char	1	0	Y		N			N	text	5		Y	Y	N	Should this column be displayed in a form?		
+table_column	20	is_key_field	Is a Key Field?	char	1	0	Y		N			N	text	5		Y	Y	N	Does this column belong to the (possibly composite) key for this table		
+table_column	21	column_text	Column Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	A friendly description of the meaning of this column (this text here!)		
+table_column	22	optionlist_query	Drop down list query	text	16	0	Y		N			N	textarea	6		Y	Y	N	A query which will populate the contents of this field		
+table_column	23	url	URL	varchar	255	0	Y		N			N	text	50		Y	Y	N	The URL or URL fragment that this column is assoctiated with when it appears in a table		
+cached_resultset	1	cached_resultset_id	Cached Resultset ID	int	4	0	N		Y							N	N				pkDEFAULT
+cached_resultset	2	contact_id	Resultset Owner	int	4	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	Y	Creator of this resultset	"SELECT C.contact_id, username+' ('+first_name+' '+last_name+')' AS 'name' FROM $TB_CONTACT C INNER JOIN $TB_USER_LOGIN UL ON ( C.contact_id = UL.contact_id ) ORDER BY username"	
+cached_resultset	3	resultset_name	Resultset Name	varchar	100	0	Y		N			Y	text	50		Y	Y	Y	Friendly name of this resultset		
+cached_resultset	4	resultset_description	Description	text	16	0	Y		N			Y	textarea	4		Y	Y	N	Longer description about the nature of this resultset		
+cached_resultset	5	query_name	Generating Query Name	varchar	100	0	Y		N			Y	text	50		Y	Y	N	Name of the SBEAMS query that manages this resultset
+cached_resultset	6	cache_descriptor	Cache Descriptor	varchar	100	0	N		N			Y	text	50		Y	Y	N	Internal descriptor in the resultset cache
+cached_resultset	7	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes
+cached_resultset	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
+cached_resultset	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N		
+cached_resultset	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
+cached_resultset	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N		
+cached_resultset	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N		
+cached_resultset	13	record_status	Record Status	char	1	0	N	N	N							N	N		

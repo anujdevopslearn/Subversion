@@ -44,6 +44,7 @@ use vars qw(@ISA @EXPORT
     $TB_USAGE_LOG
     $TB_HELP_TEXT
     $TB_MISC_OPTION
+    $TB_CACHED_RESULTSET
 
 );
 
@@ -73,6 +74,7 @@ require Exporter;
     $TB_USAGE_LOG
     $TB_HELP_TEXT
     $TB_MISC_OPTION
+    $TB_CACHED_RESULTSET
 
 );
 
@@ -101,6 +103,7 @@ $TB_SQL_COMMAND_LOG     = 'sql_command_log';
 $TB_USAGE_LOG           = 'usage_log';
 $TB_HELP_TEXT           = 'help_text';
 $TB_MISC_OPTION         = 'misc_option';
+$TB_CACHED_RESULTSET    = 'cached_resultset';
 
 
 ###############################################################################
