@@ -2594,6 +2594,8 @@ sub transferTable {
   	  $rowdata{$value} = $row->[$key];
   	}
 
+      } else {
+        #print "WARNING: Column $key undefined!\n";
       }
 
     }
@@ -2766,7 +2768,11 @@ sub importTSVFile {
     next if ($comment_char && $line =~ /^$comment_char/);
 
     #### Split the line into columns
+    #### Perl rudely doesn't keep trailing empty columns, so this little
+    #### hack adds a dummy column and then pops it off.  NASTY!
+    $line .= "${delimiter}XXX";
     my @splitline = split(/$delimiter/,$line);
+    pop(@splitline);
 
     #### Decode the enquoted values if any
     my $n_columns = @splitline;
