@@ -231,6 +231,16 @@ sub handle_request {
     constraint_value=>$parameters{probability_constraint} );
   return if ($probability_clause == -1);
 
+  #### For much better performance, add in a hit_index constraint if
+  #### there is a probability contraint.  This could break if
+  #### probabilities get assigned to rows with not hit_index = 1 !!!!
+  #### The reason seems to be that the NONCLUSTERED INDEX on
+  #### SH.probability is a lousy index that doesn't get used or
+  #### something, likely because most values are NULL.
+  if ($probability_clause) {
+    $probability_clause .= " AND SH.hit_index = 1";
+  }
+
 
   #### Build XCORR constraint
   my $xcorr_clause = "";
