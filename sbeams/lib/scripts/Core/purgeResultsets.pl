@@ -205,6 +205,11 @@ sub purgeResultsets {
     $file_root =~ s/\..+?$//;
 
     my $file_size = ( -s "$directory/$file" );
+    unless (defined($file_size)) {
+      print "ERROR: Unable to determine size of file $directory/$file\n";
+      $file_size = 0;
+    }
+
     $size_total += $file_size;
     my $age = ( -M "$directory/$file" );
 
@@ -364,6 +369,7 @@ sub purgeResultsets {
   print "Purge 3\n" if ($VERBOSE > 1);
   @files = ();
   print "purgeResultsets done.\n" if ($VERBOSE > 1);
+  print "\n";
   return 1;
 
 }
