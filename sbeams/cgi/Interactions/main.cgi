@@ -77,15 +77,28 @@ sub showMainPage {
 	You are successfully logged into the $DBTITLE - $SBEAMS_PART system.
 	Please choose your tasks from the menu bar on the left.<P>
 	<BR>
+	<font color=red>TO ENTER A BATCH OF INTERACTIONS:</font>
+	<UL>
+	<LI> Know the Project under which the interactions should be entered.
+	     If there isn't yet one, create it by clicking [Projects] [Add Project]
+	<LI> Do you already have a suitable Interaction Group for your interactions?
+	     If there isn't yet one, create it by clicking [Interactions]
+	     [Manage Interaction Groups]  [Add Interaction Group]
+	<P>
+	<LI> Enter the relevant publications with [Publications] [Add Publication]
+	<LI> Enter the relevant assays with [Assay] [Add Assay].  If the assay is
+	     just for an existing publication for which little additional details
+	     are to be added, just make the Assay Name the same as the Publication Name
+	<LI> Enter the relevant Bioentities involved in the interactions
+	     with [Bioentities] [Add Bioentity]
+	<LI> Enter the relevant Interactions with [Interactions] [Add Interaction]
+	</UL>
+
 	This system is still under active development.  Please be
 	patient and report bugs, problems, difficulties, suggestions to
 	<B>edeutsch\@systemsbiology.org</B>.<P>
 	<BR>
 	<BR>
-
-	<UL>
-	<LI> Here is the starter stub for the Interactions area.
-	</UL>
 
 	<BR>
 	<BR>
