@@ -439,7 +439,7 @@ sub loadBiosequenceSet {
       $rowdata{biosequence_desc} = $2 || '';
       $rowdata{biosequence_set_id} = $biosequence_set_id;
       $rowdata{biosequence_seq} = $sequence unless ($skip_sequence);
-      $rowdata{organism_id} = $organism_id;
+      $rowdata{organism_id} = $organism_id unless ($DATABASE eq 'proteomics.dbo.');
 
       #### Do special parsing depending on which genome set is being loaded
       $result = specialParsing(biosequence_set_name=>$set_name,
@@ -761,8 +761,11 @@ sub specialParsing {
 
   #### Conversion rules for the IPI database
   if ($rowdata_ref->{biosequence_name} =~ /^IPI:(IPI[\d\.]+)$/ ) {
-     $rowdata_ref->{biosequence_gene_name} = $1;
      $rowdata_ref->{biosequence_accession} = $1;
+     $rowdata_ref->{biosequence_gene_name} = $1;
+     if ($rowdata_ref->{biosequence_name} =~ /^IPI:(IPI[\d]+)\.\d+$/ ) {
+       $rowdata_ref->{biosequence_gene_name} = $1;
+     }
      $rowdata_ref->{dbxref_id} = '9';
   }
 
