@@ -114,13 +114,15 @@ sub printStack {
 
   my $stack = '';
   my $file = '';
-  for ( my $i = 1; $i <= $cnt; $i++ ) {
+  my $line = '';
+  for ( my $i = 0; $i <= $cnt ; $i++ ) {
      my ( $p, $f, $l, $s ) = caller( $i );
      last unless $l;
-     $file = $f unless $file; 
-     $stack .= "$i: $p ($s) line $l\n";
+     $file = $f if $i == 1; 
+     $stack .= "$i: $p ($s) line $line\n" if $i;
+     $line = $l;
   }
-  $stack .= "Originated in $file\n";
+  $stack = "$level [" . $this->_getTimestamp() . "] stack trace:\n$stack"; 
   $this->_printMessage( $level => $stack, 1 );
 }
 
@@ -148,12 +150,12 @@ sub _printMessage {
   my $lfile = new IO::File ">> $this->{$lname}";
   unless ( defined $lfile ) {
     print STDERR "Failed to open log ($this->{$lname})[$!]";
-    print STDERR "$msg\n";
+    print STDERR "$msg";
     return undef;
   }
   my $info = ucfirst( $mode ) . " [$time] ($f) $s at line $l:\n";
   print $lfile "$info" unless $stack;
-  print $lfile "$msg\n";
+  print $lfile "$msg";
   $lfile->flush();
   $lfile->close();
 }
