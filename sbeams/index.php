@@ -24,20 +24,19 @@
 <H3>Welcome to the Systems Biology Experiment Analysis System (SBEAMS)</H3>
 
 The Systems Biology Experiment Analysis System provides a customizable
-framework to meet the
-needs of modern systems biology research.  It is composed of a unified
-state-of-the-art relational database management system (RDBMS)
-back end, a collection
-tools to store, manage, and query experiment information and results
-in the RDBMS, a web front end for querying the database and providing integrated
-access to remote data sources, and an interface to existing programs for
-clustering and other analysis.<P>
+framework to meet the needs of modern systems biology research.  It is
+composed of a unified state-of-the-art relational database management
+system (RDBMS) back end, a collection tools to store, manage, and query
+experiment information and results in the RDBMS, a web front end for
+querying the database and providing integrated access to remote data
+sources, and an interface to existing programs for clustering and other
+analysis.<P>
 
-A username and password is required to enter the system and begin using it.
-SBEAMS normally uses unix authentication, so please use your unix username and
-password.  Note that not everyone has an account by default.  If your
-account has not yet been enabled please contact <B>edeutsch</B> 
-or <B>bmarzolf</B>.
+You are required to enter your username and password to use the system.
+SBEAMS normally uses UNIX authentication, so please use your UNIX username
+and password.  Note that not everyone has an account by default.  If your
+account has not yet been enabled please contact your local SBEAMS
+administrators.
 
 
 <BR>
@@ -45,10 +44,6 @@ or <B>bmarzolf</B>.
 
 <UL>
 <LI><A HREF="cgi/main.cgi">Login to SBEAMS</A>
-<P>
-<LI><A HREF="http://www.systemsbiology.org/forum/microarrays">Microarray Discussion Forum</A>
-<LI><A HREF="doc/array_request_instructions.txt">Instructions for Submitting a Microarray Request</A>
-<P>
 </UL>
 
 <BR>
