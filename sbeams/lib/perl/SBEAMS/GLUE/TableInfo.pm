@@ -145,6 +145,34 @@ sub returnTableInfo {
 
       }
 
+    if ($table_name eq "GL_bioentity") {
+
+        if ($info_key eq "BASICQuery") {
+            return qq~
+		SELECT B.bioentity_id,
+		        O.organism_name, bioentity_name, bioentity_alias, BS.biosequence_name,
+			  BT.bioentity_type_name, B.comment
+		  FROM $TBGL_BIOENTITY B
+		  LEFT JOIN $TB_ORGANISM O ON ( B.organism_id = O.organism_id )
+		  LEFT JOIN $TBGL_BIOENTITY_TYPE BT ON ( B.bioentity_type_id = BT.bioentity_type_id )
+		  LEFT JOIN $TBGL_BIOSEQUENCE BS ON (B.biosequence_id = BS.biosequence_id )
+		 WHERE B.record_status != 'D'
+		   AND ( O.record_status != 'D' OR O.record_status IS NULL )
+		   AND ( BT.record_status != 'D' OR BT.record_status IS NULL )
+            ~;
+        }
+
+        if ($info_key eq "FULLQuery") {
+            return qq~
+		SELECT B.*
+		  FROM $TBGL_BIOENTITY B
+		 --WHERE B.record_status!='D'
+            ~;
+        }
+
+
+      }
+
 
 
 ###############################################################################
