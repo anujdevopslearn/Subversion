@@ -167,13 +167,13 @@ end
 SQL Server Example:
 
 To CREATE and POPLULATE:
-sqsh -i $SBEAMS/lib/sql/Core/Core_CREATETABLES.pgsql -D sbeamsdev
+sqsh -i $SBEAMS/lib/sql/Core/Core_CREATETABLES.mssql -D sbeamsdev
 sqsh -i $SBEAMS/lib/sql/Core/Core_POPULATE.mssql -D sbeamsdev
-sqsh -i $SBEAMS/lib/sql/Core/Core_CREATECONSTRAINTS.pgsql -D sbeamsdev
+sqsh -i $SBEAMS/lib/sql/Core/Core_CREATECONSTRAINTS.mssql -D sbeamsdev
 
 To DROP:
-sqsh -i $SBEAMS/lib/sql/Core/Core_DROPCONSTRAINTS.pgsql -D sbeamsdev
-sqsh -i $SBEAMS/lib/sql/Core/Core_DROPTABLES.pgsql -D sbeamsdev
+sqsh -i $SBEAMS/lib/sql/Core/Core_DROPCONSTRAINTS.mssql -D sbeamsdev
+sqsh -i $SBEAMS/lib/sql/Core/Core_DROPTABLES.mssql -D sbeamsdev
 
 
 -----------------------
