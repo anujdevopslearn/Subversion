@@ -114,7 +114,7 @@ $TB_PROJECT             = "${core}project";
 $TB_USER_PROJECT_PERMISSION     = "${core}user_project_permission";
 $TB_GROUP_PROJECT_PERMISSION    = "${core}group_project_permission";
 
-$TB_DBXREF              = $DBPREFIX{Proteomics}."dbxref";
+$TB_DBXREF              = $DBPREFIX{BioLink}."dbxref";
 
 $TB_TABLE_COLUMN        = "${core}table_column";
 $TB_TABLE_PROPERTY      = "${core}table_property";
