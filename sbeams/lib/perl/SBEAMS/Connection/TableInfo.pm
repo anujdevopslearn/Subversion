@@ -189,7 +189,7 @@ sub returnTableInfo {
             return qq~
 		SELECT C.*
                   FROM $TB_CONTACT C
-                  JOIN $TB_ORGANIZATION O
+                 INNER JOIN $TB_ORGANIZATION O
                        ON (C.organization_id=O.organization_id)
                  WHERE C.record_status!='D'
 		   AND O.record_status!='D'
@@ -300,7 +300,8 @@ sub returnTableInfo {
 		SELECT CR.cached_resultset_id,username,CR.date_created,
 		       CR.query_name,CR.resultset_name,CR.cache_descriptor
 		  FROM $TB_CACHED_RESULTSET CR
-		  JOIN $TB_USER_LOGIN UL ON ( CR.contact_id = UL.contact_id )
+		 INNER JOIN $TB_USER_LOGIN UL
+                       ON ( CR.contact_id = UL.contact_id )
 		 WHERE CR.record_status!='D'
 		   AND UL.record_status!='D'
 		   AND CR.contact_id = '$current_contact_id'

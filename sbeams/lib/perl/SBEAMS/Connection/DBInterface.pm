@@ -3636,7 +3636,7 @@ sub printProjectsYouHaveAccessTo {
                MIN(CASE WHEN UWG.contact_id IS NULL THEN NULL ELSE GPP.privilege_id END) AS "best_group_privilege_id",
                MIN(UPP.privilege_id) AS "best_user_privilege_id"
 	  FROM $TB_PROJECT P
-	  JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
+	 INNER JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
 	  LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
 	       ON ( P.project_id = UPP.project_id
 	            AND UPP.contact_id='$current_contact_id' )

@@ -356,7 +356,8 @@ sub setCurrent_work_group {
     my %work_group_ids = $self->selectTwoColumnHash(
       "SELECT work_group_name,WG.work_group_id
          FROM $TB_USER_WORK_GROUP UWG
-         JOIN $TB_WORK_GROUP WG ON ( UWG.work_group_id = WG.work_group_id )
+        INNER JOIN $TB_WORK_GROUP WG
+              ON ( UWG.work_group_id = WG.work_group_id )
         WHERE UWG.contact_id = '$current_contact_id'
           AND UWG.record_status != 'D'
           AND WG.record_status != 'D'
@@ -609,7 +610,7 @@ sub setCurrent_project_id {
     $sql = qq~
 	SELECT P.project_id,P.name
 	  FROM $TB_PROJECT P
-	  JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
+	 INNER JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
 	  LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
 	       ON ( P.project_id = UPP.project_id
 	            AND UPP.contact_id = '$current_contact_id' )

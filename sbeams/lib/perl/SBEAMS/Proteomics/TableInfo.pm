@@ -71,7 +71,7 @@ sub returnTableInfo {
             return qq~
 		SELECT hardware_id,HT.name,make,model,serial_number,uri
 		  FROM xxxxxxxx H
-		  JOIN xxxxxxxxx HT
+		 INNER JOIN xxxxxxxxx HT
 		       ON (H.hardware_type_id=HT.hardware_type_id)
 		 WHERE H.record_status!='D'
             ~;
@@ -81,7 +81,7 @@ sub returnTableInfo {
             return qq~
 		SELECT H.*
 		  FROM xxxxxxx H
-		  JOIN xxxxxx HT
+		 INNER JOIN xxxxxx HT
 		       ON (H.hardware_type_id=HT.hardware_type_id)
 		 WHERE H.record_status!='D'
             ~;
@@ -121,8 +121,8 @@ sub returnTableInfo {
 		       name AS 'project_name',PE.experiment_id AS "exp",
 		       experiment_tag,experiment_name,experiment_description
 		  FROM $TBPR_PROTEOMICS_EXPERIMENT PE
-		  JOIN $TB_USER_LOGIN UL ON (PE.contact_id=UL.contact_id)
-		  JOIN $TB_PROJECT P ON (PE.project_id=P.project_id)
+		 INNER JOIN $TB_USER_LOGIN UL ON (PE.contact_id=UL.contact_id)
+		 INNER JOIN $TB_PROJECT P ON (PE.project_id=P.project_id)
 		 WHERE PE.record_status!='D'
 		   AND UL.record_status!='D'
 		   AND P.record_status!='D'
