@@ -71,12 +71,15 @@ DB_TYPE     = MS SQL Server
 #### For databases that don't support cross-database queries
 #### (e.g. PostgreSQL 7.2), the entries should all be empty strings.
 DBPREFIX{Core}          = sbeams.dbo.
-DBPREFIX{Proteomics}    = proteomics.dbo.
-DBPREFIX{Microarray}    = microarray.dbo.
-DBPREFIX{PhenoArray}    = PhenoArray.dbo.
-DBPREFIX{Biosap}        = Biosap.dbo.
 DBPREFIX{BEDB}          = BEDB.dbo.
+DBPREFIX{BioLink}       = BioLink.dbo.
+DBPREFIX{Biosap}        = Biosap.dbo.
+DBPREFIX{Cytometry}     = Cytometry.dbo.
+DBPREFIX{Microarray}    = sbeams.dbo.
+DBPREFIX{PhenoArray}    = PhenoArray.dbo.
+DBPREFIX{Proteomics}    = proteomics.dbo.
 DBPREFIX{SNP}           = SNP.dbo.
+DBPREFIX{UESC}          = UESC.dbo.
 
 #### Set the raw data directory location as a function of module.
 RAW_DATA_DIR{Proteomics} = /raw/datasets/root/location

@@ -24,16 +24,20 @@ use SBEAMS::Connection::Tables;
 
 # Need to include child table definitions if this program is to process those
 use SBEAMS::Microarray::Tables;
-use SBEAMS::Tools::Tables;
-use SBEAMS::GEAP::Tables;
 use SBEAMS::Proteomics::Tables;
-use SBEAMS::Inkjet::Tables;
+use SBEAMS::BEDB::Tables;
+use SBEAMS::BioLink::Tables;
 use SBEAMS::Biosap::Tables;
+use SBEAMS::Biosap::Tables;
+use SBEAMS::Cytometry::Tables;
+use SBEAMS::GEAP::Tables;
+use SBEAMS::GLUE::Tables;
+use SBEAMS::Inkjet::Tables;
 use SBEAMS::PhenoArray::Tables;
 use SBEAMS::SNP::Tables;
-use SBEAMS::BEDB::Tables;
 use SBEAMS::TOES::Tables;
-use SBEAMS::GLUE::Tables;
+use SBEAMS::UESC::Tables;
+use SBEAMS::Tools::Tables;
 
 
 ###############################################################################

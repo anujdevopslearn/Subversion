@@ -1,0 +1,6 @@
+table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
+UESC_biosequence_set	BioSequence Set	UESC_infrastructure	YES	$TBUESC_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=UESC_biosequence_set	UESC_biosequence_set	
+UESC_dbxref	Biosequence Database Cross Reference	UESC_infrastructure	YES	$TB_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=UESC_dbxref	UESC_biosequence_dbxref	
+UESC_biosequence	BioSequence	UESC_infrastructure	NO	$TBUESC_BIOSEQUENCE	biosequence_id				
+UESC_query_option	Query Option	UESC_infrastructure	YES	$TBUESC_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=TBUESC_query_option	UESC_query_option	
+UESC_BrowseBioSequence	Browse BioSequence	QUERY	NO				BrowseBioSequence.cgi		
