@@ -985,54 +985,31 @@ __END__
 ###############################################################################
 ###############################################################################
 
-=head1 NAME
+=head1 SBEAMS::Connection::Authenticator
 
-SBEAMS::Connection::Authenticator - Perl extension for common authentication methods
+SBEAMS Core authentication methods
 
-=head1 SYNOPSIS
+=head2 SYNOPSIS
 
-  Used as part of SBEAMS 
+See SBEAMS::Connection for usage synopsis.
 
-    use SBEAMS::Connection;
-    $adb = new SBEAMS::Connection;
+=head2 DESCRIPTION
 
-    $adb->printAuthErrors();
+This module is inherited by the SBEAMS::Connection module, although it
+can be used on its own.  Its main function is to provide a set of
+authentication methods for this application.
 
-    $adb->printLoginForm($loginmessage);
+It uses cookie authentication, where when a user logs in successfully
+through a web form, a cookie is placed in the users web browser.  The
+web interface then knows how to look for and find this cookie, and can
+then tell who the user is, and if they have been authenticated to use
+the interface or not.
 
-    $adb->destroyAuthHeader();
+=head2 METHODS
 
-    $adb->createAuthHeader($user_name);
+=over
 
-    $adb->checkLoggedIn();
-
-    $adb->fetchErrors();
-
-    $adb->checkLogin($user_name, $password);
-
-    $adb->checkIfUploader($user_name);
-
-    $adb->checkIfAdmin($user_name);
-
-    $adb->checkUserHasAccess($user_name, $experiment_name);
-
-=head1 DESCRIPTION
-
-    This module is inherited by the SBEAMS::Connection module,
-    although it can be used on its own.  Its main function
-    is to provide a set of authentication methods for
-    this application.
-
-    It uses cookie authentication, where when a user logs 
-    in successfully through a web form, a cookie is placed in 
-    the users web browser.  WebInterface then knows how to look for
-    and find this cookie, and can then tell who the user is, and 
-    if they have been authenticated to use the interface or not.
-    
-
-=head1 METHODS
-
-=item B<checkLoggedIn()>
+=item * B<checkLoggedIn()>
 
     Checks to see if the current user is logged in.  This
     is done by searcing for the cookie that SBEAMS places
@@ -1047,7 +1024,7 @@ SBEAMS::Connection::Authenticator - Perl extension for common authentication met
         login_name for success
         0          for failure
 
-=item B<printLoginForm($loginmessage)>
+=item * B<printLoginForm($loginmessage)>
 
     Prints a standard login form. A text box for the username, 
     a text box for a password, and a submit button.  A message 
@@ -1058,7 +1035,7 @@ SBEAMS::Connection::Authenticator - Perl extension for common authentication met
     Returns: 
         1 for success
 
-=item B<checkLogin($user_name, $password)>
+=item * B<checkLogin($user_name, $password)>
 
     Checks the username and password to see if the user has
     an account to access this application, and if the
@@ -1073,7 +1050,7 @@ SBEAMS::Connection::Authenticator - Perl extension for common authentication met
         1 for success
         0 for failure
 
-=item B<fetchErrors()>
+=item * B<fetchErrors()>
 
     Simply returns an array of errors, or reasons, that a 
     method was not successful. (ex: "Invalid username", 
@@ -1085,7 +1062,7 @@ SBEAMS::Connection::Authenticator - Perl extension for common authentication met
         @array if there are errors
         0      if there are no errors
 
-=item B<printAuthErrors()>
+=item * B<printAuthErrors()>
 
     Prints the errors, or resaons, that a mthod was not
     successfull in a nice HTML list.  You can use this 
@@ -1097,7 +1074,7 @@ SBEAMS::Connection::Authenticator - Perl extension for common authentication met
     Returns: 
         1 for success
 
-=item B<createAuthHeader($user_name)>
+=item * B<createAuthHeader($user_name)>
 
     Creates a cookie header that will place the users 
     username in their browser so that we can retrieve it later.
@@ -1107,9 +1084,9 @@ SBEAMS::Connection::Authenticator - Perl extension for common authentication met
     Returns:
         1 for success
 
-=item B<destroyAuthHeader()>
+=item * B<destroyAuthHeader()>
 
-    Call this when a user want's to log out.  This will remove 
+    Call this when a user wants to log out.  This will remove 
     the cookie that we placed in the users browser, and require 
     them to enter their username and password the next time they 
     want to access any part of this interface. 
@@ -1119,7 +1096,7 @@ SBEAMS::Connection::Authenticator - Perl extension for common authentication met
     Returns:
         1 for success
 
-=item B<checkIfUploader($user_name)>
+=item * B<checkIfUploader($user_name)>
 
     Checks the database to find out if the user has uploader 
     privelages to load experiments into this system.  
@@ -1133,7 +1110,7 @@ SBEAMS::Connection::Authenticator - Perl extension for common authentication met
         $username for success
         0         for failure
 
-=item B<checkIfAdmin($user_name)>
+=item * B<checkIfAdmin($user_name)>
 
     Checks the database to find out if the user has administrator
     privelages to control this system.
@@ -1147,7 +1124,7 @@ SBEAMS::Connection::Authenticator - Perl extension for common authentication met
         $username for success
         0         for failure
 
-=item B<checkUserHasAccess($user_name, $experiment_name)>
+=item * B<checkUserHasAccess($user_name, $experiment_name)>
 
     Checks the database to see if the usere really has access to 
     this experiment.  This is checked before any data is returned 
@@ -1162,7 +1139,7 @@ SBEAMS::Connection::Authenticator - Perl extension for common authentication met
         'OK' for success
         0    for failure
 
-=item B<getUsersID($user_name)>
+=item * B<getUsersID($user_name)>
 
     Gets the user id number for this user.  Commonly used by other 
     methods of this system.
@@ -1171,12 +1148,20 @@ SBEAMS::Connection::Authenticator - Perl extension for common authentication met
         $user_id for success
         0        for failure
 
-=head1 AUTHOR
+
+
+=back
+
+=head2 BUGS
+
+Please send bug reports to the author
+
+=head2 AUTHOR
 
 Eric Deutsch <edeutsch@systemsbiology.org>
 
-=head1 SEE ALSO
+=head2 SEE ALSO
 
-perl(1).
+SBEAMS::Connection
 
 =cut

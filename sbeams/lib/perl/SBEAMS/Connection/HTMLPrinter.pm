@@ -161,6 +161,8 @@ sub printPageHeader {
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=user_login">Admin</a></td></tr>
+	<tr><td>&nbsp;</td></tr>
+	<tr><td><a href="$HTML_BASE_DIR/doc/">Documentation</a></td></tr>
 	</table>
 	</td>
 
@@ -560,54 +562,55 @@ __END__
 ###############################################################################
 ###############################################################################
 
-=head1 NAME
+=head1 SBEAMS::Connection::HTMLPrinter
 
-SBEAMS::Connection::HTMLPrinter - Perl extension for common HTML printing methods
+SBEAMS Core HTML and general header/footer display methods
 
-=head1 SYNOPSIS
+=head2 SYNOPSIS
 
-  Used as part of this system
+See SBEAMS::Connection for usage synopsis.
 
-    use SBEAMS::Connection;
-    $adb = new SBEAMS::Connection;
+=head2 DESCRIPTION
 
-    $adb->printPageHeader();
+This module is inherited by the SBEAMS::Connection module, although it
+can be used on its own.  Its main function is to encapsulate common
+HTML printing routines used by this application.
 
-    $adb->printPageFooter();
 
-    $adb->getGoBackButton();
+=head2 METHODS
 
-=head1 DESCRIPTION
+=over
 
-    This module is inherited by the SBEAMS::Connection module,
-    although it can be used on its own.  Its main function 
-    is to encapsulate common HTML printing routines used by
-    this application.
-
-=head1 METHODS
-
-=item B<printPageHeader()>
+=item * B<printPageHeader()>
 
     Prints the common HTML header used by all HTML pages generated 
     by theis application
 
-=item B<printPageFooter()>
+=item*  B<printPageFooter()>
 
     Prints the common HTML footer used by all HTML pages generated 
     by this application
 
-=item B<getGoBackButton()>
+=item * B<getGoBackButton()>
 
     Returns a form button, coded with javascript, so that when it 
     is clicked the user is returned to the previous page in the 
     browser history.
 
-=head1 AUTHOR
+
+=back
+
+=head2 BUGS
+
+Please send bug reports to the author
+
+=head2 AUTHOR
 
 Eric Deutsch <edeutsch@systemsbiology.org>
 
-=head1 SEE ALSO
+=head2 SEE ALSO
 
-perl(1).
+SBEAMS::Connection
 
 =cut
+

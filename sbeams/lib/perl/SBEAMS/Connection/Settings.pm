@@ -224,5 +224,52 @@ sub setSBEAMS_SUBDIR {
 }
 
 
+###############################################################################
+
 1;
+
+__END__
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+=head1 SBEAMS::Connection::Settings
+
+SBEAMS Core settings definition file
+
+=head2 SYNOPSIS
+
+See SBEAMS::Connection for usage synopsis.
+
+=head2 DESCRIPTION
+
+This pm provides the logic for setting up all the site/instance dependant
+settings for SBEAMS
+
+
+=head2 METHODS
+
+=over
+
+=item * none
+
+
+
+=back
+
+=head2 BUGS
+
+Please send bug reports to the author
+
+=head2 AUTHOR
+
+Eric Deutsch <edeutsch@systemsbiology.org>
+
+=head2 SEE ALSO
+
+SBEAMS::Connection
+
+=cut
+
 

@@ -2818,7 +2818,7 @@ __END__
 
 =head1 SBEAMS::Connection::DBInterface
 
-SBEAMS Core database interface module.
+SBEAMS Core database interface module
 
 =head2 SYNOPSIS
 

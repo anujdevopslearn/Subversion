@@ -95,3 +95,42 @@ __END__
 ###############################################################################
 ###############################################################################
 
+=head1 SBEAMS::Connection::ErrorHandler
+
+SBEAMS Core error handling methods
+
+=head2 SYNOPSIS
+
+See SBEAMS::Connection for usage synopsis.
+
+=head2 DESCRIPTION
+
+This module provides a set of methods for handling errors which do
+different things based on the current output_mode and context.
+
+
+=head2 METHODS
+
+=over
+
+=item * B<error($message)>
+
+The clean way to error out of SBEAMS no matter what the context is.
+
+
+=back
+
+=head2 BUGS
+
+Please send bug reports to the author
+
+=head2 AUTHOR
+
+Eric Deutsch <edeutsch@systemsbiology.org>
+
+=head2 SEE ALSO
+
+SBEAMS::Connection
+
+=cut
+

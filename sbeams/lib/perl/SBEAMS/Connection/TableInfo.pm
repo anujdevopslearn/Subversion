@@ -509,9 +509,57 @@ sub returnTableInfo {
     return 0;
 }
 
+
+
+
+
+###############################################################################
 1;
 
 __END__
+
 ###############################################################################
 ###############################################################################
 ###############################################################################
+
+=head1 SBEAMS::Connection::TableInfo
+
+SBEAMS Core table information methods
+
+=head2 SYNOPSIS
+
+See SBEAMS::Connection for usage synopsis.
+
+=head2 DESCRIPTION
+
+This module is really kind of old and krusty and probably ought to be
+redesigned.  It provides a number of methods for getting properties of
+tables, principally for use by ManageTable
+
+
+=head2 METHODS
+
+=over
+
+=item * B<returnTableInfo($table_name,$info_key)>
+
+This method returns the type of information provided in $info_key for
+the table (or query) provided in $table_name.
+
+
+=back
+
+=head2 BUGS
+
+Please send bug reports to the author
+
+=head2 AUTHOR
+
+Eric Deutsch <edeutsch@systemsbiology.org>
+
+=head2 SEE ALSO
+
+SBEAMS::Connection
+
+=cut
+

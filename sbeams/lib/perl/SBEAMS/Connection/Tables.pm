@@ -91,3 +91,50 @@ $TB_HELP_TEXT           = 'help_text';
 $TB_MISC_OPTION         = 'misc_option';
 
 
+###############################################################################
+
+1;
+
+__END__
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+=head1 SBEAMS::Connection::Tables
+
+SBEAMS Core table definitions
+
+=head2 SYNOPSIS
+
+See SBEAMS::Connection for usage synopsis.
+
+=head2 DESCRIPTION
+
+This pm defines the physical table names for the abstract table variables.
+
+
+=head2 METHODS
+
+=over
+
+=item * none
+
+
+
+=back
+
+=head2 BUGS
+
+Please send bug reports to the author
+
+=head2 AUTHOR
+
+Eric Deutsch <edeutsch@systemsbiology.org>
+
+=head2 SEE ALSO
+
+SBEAMS::Connection
+
+=cut
+

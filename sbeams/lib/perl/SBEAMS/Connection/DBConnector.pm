@@ -320,40 +320,47 @@ __END__
 ###############################################################################
 ###############################################################################
 
-=head1 NAME
+=head1 SBEAMS::Connection::DBConnector
 
-SBEAMS::Connection::DBConnector - Perl extension for providing a common database connection
+SBEAMS Core database connection methods
 
-=head1 SYNOPSIS
+=head2 SYNOPSIS
 
-  Used as part of this system
+See SBEAMS::Connection for usage synopsis.
 
-    use SBEAMS::Connection;
-    $adb = new SBEAMS::Connection;
+=head2 DESCRIPTION
 
-    $dbh = $adb->getDBHandle();
+This module is inherited by the SBEAMS::Connection module, although it
+can be used on its own. Its main function is to provide a single
+database connection to be used by all programs included in this
+application.
 
-=head1 DESCRIPTION
 
-    This module is inherited by the SBEAMS::Connection module, 
-    although it can be used on its own. Its main function
-    is to provide a single database connection to be used 
-    by all programs included in this application.
+=head2 METHODS
 
-=head1 METHODS
+=over
 
-=item B<getDBHandle()>
+=item * B<getDBHandle()>
 
     Returns the current database handle (opening a connection if one does
     not yet exist, connected using the variables set in the DBConnector.pm
     file. 
 
-=head1 AUTHOR
+
+
+=back
+
+=head2 BUGS
+
+Please send bug reports to the author
+
+=head2 AUTHOR
 
 Eric Deutsch <edeutsch@systemsbiology.org>
 
-=head1 SEE ALSO
+=head2 SEE ALSO
 
-perl(1).
+SBEAMS::Connection
 
 =cut
+
