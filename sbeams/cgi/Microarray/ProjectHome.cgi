@@ -505,9 +505,11 @@ my $n_affy_chips = 0;
 
 if ($project_id > 0) {
 	$sql = qq~ 	SELECT count (afa.affy_array_id)
-		   	FROM $TBMA_AFFY_ARRAY afa, $TBMA_AFFY_ARRAY_SAMPLE afs 
-			WHERE afs.project_id = $project_id 
-			AND afa.affy_array_sample_id = afs.affy_array_sample_id
+		   	FROM $TBMA_AFFY_ARRAY afa
+		   	JOIN $TBMA_AFFY_ARRAY_SAMPLE afs ON (afa.affy_array_sample_id = afs.affy_array_sample_id)
+		   	WHERE afs.project_id = $project_id 
+			AND afa.record_status != 'D'
+			AND afs.record_status != 'D'
 			
 		~;
 	($n_affy_chips) = $sbeams->selectOneColumn($sql);	
