@@ -131,12 +131,21 @@ Include in Apache's httpd.conf file the following execution permissions:
     deny from all
 </Location>
 
+<Location /sbeams/var>
+    deny from all
+</Location>
+
+
 <Location /dev1/sbeams/cgi>
     Options ExecCGI
     SetHandler cgi-script
 </Location>
 
 <Location /dev1/sbeams/lib>
+    deny from all
+</Location>
+
+<Location /dev1/sbeams/var>
     deny from all
 </Location>
 #------
