@@ -273,6 +273,15 @@ sub handle_request {
   }
 
 
+  #### Build DELTA CROSS CORRELATION constraint
+  my $delta_xcorr_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SH.next_dCn",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Delta Cross Correlation Constraint",
+    constraint_value=>$parameters{delta_xcorr} );
+  return if ($delta_xcorr_clause eq '-1');
+
+
   #### Build FILE_ROOT constraint
   my $file_root_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"S.file_root",
@@ -548,7 +557,8 @@ sub handle_request {
     ["cross_corr_rank","SH.cross_corr_rank","Rxc"],
     ["prelim_score_rank","SH.prelim_score_rank","RSp"],
     ["precursor_mass","LTRIM(STR((S.sample_mass_plus_H+(S.assumed_charge-1)*1.008)/S.assumed_charge,7,2))","Precursor m/z"],
-    ["hit_mass_plus_H","CONVERT(varchar(20),SH.hit_mass_plus_H) + ' (' + STR(SH.mass_delta,5,2) + ')'","(M+H)+"],
+    ["hit_mass_plus_H","STR(SH.hit_mass_plus_H,9,2)","(M+H)+"],
+    ["hit_mass_diff","STR(SH.mass_delta,5,2)","Mass Diff"],
     ["cross_corr","STR(SH.cross_corr,5,4)","XCorr"],
     ["next_dCn","STR(SH.next_dCn,5,3)","dCn"],
     ["prelim_score","STR(SH.prelim_score,8,1)","Sp"],
@@ -629,6 +639,7 @@ sub handle_request {
 	$probability_clause
 	$best_hit_clause
 	$xcorr_clause
+	$delta_xcorr_clause
 	$xcorr_rank_clause
 	$charge_clause
 	$reference_clause

@@ -284,6 +284,15 @@ sub handle_request {
   }
 
 
+  #### Build DELTA CROSS CORRELATION constraint
+  my $delta_xcorr_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SH.next_dCn",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Delta Cross Correlation Constraint",
+    constraint_value=>$parameters{delta_xcorr} );
+  return if ($delta_xcorr_clause eq '-1');
+
+
   #### Build FILE_ROOT constraint
   my $file_root_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"S.file_root",
@@ -854,6 +863,7 @@ sub handle_request {
 	$probability_clause
 	$best_hit_clause
 	$xcorr_clause
+	$delta_xcorr_clause
 	$xcorr_rank_clause
 	$charge_clause
 	$reference_clause
