@@ -41,6 +41,13 @@ use vars qw(@ISA @EXPORT
     $TB_HYBRIDIZATION
     $TB_ARRAY_SCAN
     $TB_ARRAY_QUANTITATION
+    $TBMA_BIOSEQUENCE_SET
+    $TBMA_BIOSEQUENCE
+    $TBMA_BIOSEQUENCE_EXTERNAL_XREF
+    $TBMA_EXTERNAL_REFERENCE
+    $TBMA_EXTERNAL_REFERENCE_TYPE
+    $TBMA_POLYMER_TYPE
+    $TBMA_ARRAY_ELEMENT
 
 );
 
@@ -76,6 +83,13 @@ require Exporter;
     $TB_HYBRIDIZATION
     $TB_ARRAY_SCAN
     $TB_ARRAY_QUANTITATION
+    $TBMA_BIOSEQUENCE_SET
+    $TBMA_BIOSEQUENCE
+    $TBMA_BIOSEQUENCE_EXTERNAL_XREF
+    $TBMA_EXTERNAL_REFERENCE
+    $TBMA_EXTERNAL_REFERENCE_TYPE
+    $TBMA_POLYMER_TYPE
+    $TBMA_ARRAY_ELEMENT
 
 );
 
@@ -108,5 +122,10 @@ $TB_LABELING            = 'labeling';
 $TB_HYBRIDIZATION       = 'hybridization';
 $TB_ARRAY_SCAN          = 'array_scan';
 $TB_ARRAY_QUANTITATION  = 'array_quantitation';
-
-
+$TBMA_BIOSEQUENCE_SET   = 'biosequence_set';
+$TBMA_BIOSEQUENCE       = 'biosequence';
+$TBMA_BIOSEQUENCE_EXTERNAL_XREF = 'biosequence_external_xref';
+$TBMA_EXTERNAL_REFERENCE = 'external_reference';
+$TBMA_EXTERNAL_REFERENCE_TYPE = 'external_reference_type';
+$TBMA_POLYMER_TYPE      = 'polymer_type';
+$TBMA_ARRAY_ELEMENT     = 'array_element';
