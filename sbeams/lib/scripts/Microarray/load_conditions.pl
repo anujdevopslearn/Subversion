@@ -50,13 +50,15 @@ use strict;
 use Text::Tabs;
 use Getopt::Long;
 use FindBin;
+use Cwd;
 
-use lib qw (../perl ../../perl);
-use vars qw ($sbeams $sbeamsMOD $q
-             $PROG_NAME $USAGE %OPTIONS
-	     $VERBOSE $QUIET $DEBUG
-	     $DATABASE $TESTONLY $PROJECT_ID
-	     $CURRENT_CONTACT_ID $CURRENT_USERNAME
+use lib "$FindBin::Bin/../../perl";
+use vars qw ($sbeams $q
+             $PROG_NAME $USAGE %OPTIONS 
+			 $VERBOSE $QUIET $DEBUG 
+			 $DATABASE $TESTONLY $PROJECT_ID 
+			 $CURRENT_CONTACT_ID $CURRENT_USERNAME 
+			 $SBEAMS_SUBDIR
             );
 
 
@@ -64,38 +66,41 @@ use vars qw ($sbeams $sbeamsMOD $q
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
+
+use SBEAMS::Microarray;
 use SBEAMS::Microarray::Settings;
 use SBEAMS::Microarray::Tables;
 use SBEAMS::Microarray::TableInfo;
-$sbeams = SBEAMS::Connection->new();
+
+
+$sbeams = new SBEAMS::Connection;
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 use CGI;
 $q = CGI->new();
-
 
 ###############################################################################
 # Set program name and usage banner for command like use
 ###############################################################################
 $PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
+$PROG_NAME is used to load conditions into SBEAMS. 
+
+UPDATED VERSION!
+
+THIS SHOULD BE CALLED FROM WITHIN THE DIRECTORY THAT CONTAINS
+THE DATA FILES!!
+
 Usage: $PROG_NAME --project_id n [OPTIONS]
 Options:
     --verbose <num>    Set verbosity level.  Default is 0
     --quiet            Set flag to print nothing at all except errors
     --debug n          Set debug flag
-    --project_id <num> Set project_id. This is required.
+    --project_id <num> Set the SBEAMS project ID. This is required.
     --set_tag <name>   Determines which biosequence set to use when populating
-                       the gene_expression table
-    --directory <dir>  Specify if directory is other than the project directory
-    --check            Check the status of the specified project
-    --delete           Delete all conditions for the specified project
-    --map              Looks for column_map files
-    --clone            Looks/loafd clone files
-    --sig              Looks/loads sig files 
-    --merge            Looks/loads merge files
+                       the gene_expression table (not fully functional)
+    --map              Looks/loads according to column_map files
     --testonly         Information in the database is not altered
-    --organism         Set organism mapping, instead of having script guess
-                       the mapping
 EOU
 
 #### Process options
@@ -104,22 +109,15 @@ unless (GetOptions(\%OPTIONS,
 		   "quiet",
 		   "debug:i",
 		   "project_id=s",
-		   "directory:s",
-		   "check",
-		   "delete",
 		   "file_name:s",
 		   "set_tag:s",
-		   "organism:s",
 		   "map",
-		   "clone",
-		   "sig",
-		   "merge",
 		   "testonly")) {
   print "$USAGE";
   exit;
 }
 
-$PROJECT_ID = $OPTIONS{project_id} || die "ERROR: project_id MUST be specified!\n";
+$PROJECT_ID = $OPTIONS{project_id};
 $VERBOSE    = $OPTIONS{verbose} || 0;
 $QUIET      = $OPTIONS{quiet};
 $DEBUG      = $OPTIONS{debug};
@@ -131,10 +129,7 @@ if ($DEBUG) {
   print "  QUIET = $OPTIONS{quiet}\n";
   print "  DEBUG = $OPTIONS{debug}\n";
   print "  PROJECT_ID = $OPTIONS{project_id}\n";
-  print "  DIRECTORY = $OPTIONS{directory}\n";
-#  print "  FILE_NAME = $OPTIONS{file_name}\n";
-  print "  SIG = $OPTIONS{sig}\n";
-  print "  MERGE = $OPTIONS{merge}\n";
+  print "  FILE_NAME = $OPTIONS{file_name}\n";
   print "  TESTONLY = $OPTIONS{testonly}\n";
 }
 
@@ -153,6 +148,7 @@ exit(0);
 ###############################################################################
 sub main {
 
+  
 #### Try to determine which module we want to affect
   my $module = $sbeams->getSBEAMS_SUBDIR();
   my $work_group = 'unknown';
@@ -173,32 +169,22 @@ sub main {
     $DATABASE = $DBPREFIX{$module};
   }
 
-## Presently, force module to be microarray and work_group to be Microarray_admin
-  if ($module ne 'Microarray') {
-      print "WARNING: Module was not Microarray.  Resetting module to Microarray\n";
-      $work_group = "Microarray_admin";
-      $DATABASE = $DBPREFIX{$module};
-  }
 
 #### Do the SBEAMS authentication and exit if a username is not returned
   exit unless ($CURRENT_USERNAME = $sbeams->Authenticate(
-    work_group=>$work_group,
-  ));
+														 work_group=>$work_group,
+														 ));
+
+## Presently, force module to be microarray and work_group to be Microarray_admin
+  if ($module ne 'Microarray') {
+	print "WARNING: Module was not Microarray.  Resetting module to Microarray\n";
+	$work_group = "Microarray_admin";
+	$DATABASE = $DBPREFIX{$module};
+	}
+
 
   $sbeams->printPageHeader() unless ($QUIET);
-
-## To load all conditions, for all projects, we cycle through PROJECT_IDs
-  if ($PROJECT_ID eq 'all') {
-      my @directories = glob</net/arrays/Pipeline/output/project_id/*>;
-      foreach my $directory (@directories) {
-	  $PROJECT_ID = $directory;
-	  $PROJECT_ID =~ s(^.*/)();
-	  handleRequest();
-
-      }
-  }else {
-      handleRequest();
-  }
+  handleRequest();
   $sbeams->printPageFooter() unless ($QUIET);
 
 } # end main
@@ -214,106 +200,69 @@ sub handleRequest {
   my %args = @_;
   my $SUB_NAME = "handleRequest";
 
-  #### Define standard variables
+#### Define standard variables
   my ($sql);
   my (@rows,$condition_files);
   my (%final_hash);
 	
-  #### Set the command-line options
-  my $directory = $OPTIONS{'directory'}
-    || "/net/arrays/Pipeline/output/project_id/$PROJECT_ID";
+#### Set the command-line options
+  my $directory = cwd(); #NOTE: this is meant to be called from within project directory
+#  my $directory = "/net/arrays/Pipeline/output/project_id/$PROJECT_ID";
   my $file_name = $OPTIONS{'file_name'};
   my $set_tag = $OPTIONS{'set_tag'};
   my $search_for_map = $OPTIONS{'map'} || "false";
-  my $search_for_clone = $OPTIONS{'clone'} || "false";
-  my $search_for_sig = $OPTIONS{'sig'} || "false";
-  my $search_for_merge = $OPTIONS{'merge'} || "false";
-  my $file_mapping = $OPTIONS{'organism'};
-  my $check = $OPTIONS{'check'};
-  my $delete = $OPTIONS{'delete'};
 
+  unless ($PROJECT_ID) {
+	print "ERROR: project_id must be specified!\n";
+	print $USAGE;
+	return;
+  }
 
-  #### Print out the header
+#### Print out the header
   unless ($QUIET) {
     $sbeams->printUserContext();
     print "\n";
   }
 
-
-  ## If set_tag is set, get biosequences
+  
+## If set_tag is set, get biosequences
   if ($set_tag) {
-      $sql = qq~
-	  SELECT BS.biosequence_id,BS.biosequence_name,BS.biosequence_gene_name
-	    FROM $TBMA_BIOSEQUENCE BS
-	   INNER JOIN $TBMA_BIOSEQUENCE_SET BSS
-                 ON ( BSS.biosequence_set_id = BS.biosequence_set_id )
-	   WHERE BSS.set_tag = '$set_tag'
-	     AND BS.record_status != 'D'
+	$sql = qq~
+	  SELECT BS.biosequence_id, BS.biosequence_name, BS.biosequence_gene_name
+	  FROM $TBMA_BIOSEQUENCE BS
+	  LEFT JOIN $TBMA_BIOSEQUENCE_SET BSS ON (BSS.biosequence_set_id = BS.biosequence_set_id)
+	  WHERE BSS.set_tag = '$set_tag'
+	  and BS.record_status != 'D'
 	  ~;
-      @rows = $sbeams->selectHashArray($sql);
+	@rows = $sbeams->selectHashArray($sql);
 
-      ## make the final hash
-      foreach my $temp_row (@rows) {
-	my %temp_hash = %{$temp_row};
-	$final_hash{$temp_hash{'biosequence_gene_name'}} =
-          $temp_hash{'biosequence_id'};
-	$final_hash{$temp_hash{'biosequence_name'}} =
-          $temp_hash{'biosequence_id'};
-      }
+## make the final hash
+	foreach my $temp_row (@rows) {
+	  my %temp_hash = %{$temp_row};
+	  $final_hash{$temp_hash{'biosequence_gene_name'}} = $temp_hash{'biosequence_id'};
+	  $final_hash{$temp_hash{'biosequence_name'}} = $temp_hash{'biosequence_id'};
+	}      
   }
+  
 
-
-  #### If the check option was supplied, print out a summary for this project
-  if ($check) {
-    checkProject(project_id => $PROJECT_ID);
+## Deal with files
+  if ($file_name) {
+	unless(-r $file_name && -e $file_name) {
+	  print "[ERROR] File: $file_name can not be read! Please check this out and re-run\n";
+	}
   }
-
-
-  #### If the delete option was supplied, delete all conditions for project
-  if ($delete) {
-    deleteAllConditions(project_id => $PROJECT_ID);
-  }
-
-
-  ## Search for '.column_map' files
+  
   if ($search_for_map ne "false"){
     print "#loading column_map files\n";
     $condition_files = loadColumnMapFile(directory=>$directory,
 					 loaded_files=>$condition_files,
 					 bs_hash_ref=>\%final_hash);
-  }
-
-
-  ## Search for '.clone' files
-  if ($search_for_clone ne "false"){
-    print "#loading clone files\n";
-    $condition_files = loadFiles(search_string=>"clone",
-				 directory=>$directory,
-				 condition_ref=>$condition_files,
-				 bs_hash_ref=>\%final_hash,
-				 file_mapping=>$file_mapping);
-  }
-
-
-  ## Search for '.sig' files if requested
-  if ($search_for_sig ne "false") {
-    print "#loading sig files\n";
-    $condition_files = loadFiles(search_string=>"sig",
-				 directory=>$directory,
-				 condition_ref=>$condition_files,
-				 bs_hash_ref=>\%final_hash,
-				 file_mapping=>$file_mapping);
-  }
-
-
-  ## Search for '.merge' files if requested
-  if ($search_for_merge ne "false") {
-    print "#loading merge files\n";
-    $condition_files = loadFiles(search_string=>"merge",
-				 directory=>$directory,
-				 condition_ref=>$condition_files,
-				 bs_hash_ref=>\%final_hash,
-				 file_mapping=>$file_mapping);
+  }else {
+    print "# Attempting to load files\n";
+    $condition_files = loadFiles(file_name=>$file_name,
+								 directory=>$directory,
+								 condition_ref=>$condition_files,
+								 bs_hash_ref=>\%final_hash);
   }
 
   return;
@@ -363,8 +312,7 @@ sub insertCondition {
     my $condition_id = $args{'condition_id'};
     my $processed_date = $args{'processed_date'};
     my (%rowdata, $rowdata_ref,$pk);
-    my $insert = 0;
-    my $update = 0;
+    my ($insert, $update) = 0;
 
     ($condition_id) ? $update = 1 : $insert = 1;
 
@@ -374,33 +322,33 @@ sub insertCondition {
     if($update == 1 && !defined($condition_id)){
 	die "ERROR[$SUB_NAME]:UPDATE requires update and condition_id flag\n";
     }
-
+    
     if ($insert == 1) {
 	$rowdata{'condition_name'} = $condition;
 	$rowdata{'project_id'} = $PROJECT_ID;
 	$rowdata{'processed_date'} = $processed_date;
 	$rowdata_ref = \%rowdata;
 	$pk = $sbeams->updateOrInsertRow(table_name=>$TBMA_CONDITION,
-					 rowdata_ref=>$rowdata_ref,
-					 return_PK=>1,
-					 verbose=>$VERBOSE,
-					 testonly=>$TESTONLY,
-					 insert=>1,
-					 add_audit_parameters=>1);
-    }elsif ($update == 1) {
+									 rowdata_ref=>$rowdata_ref,
+									 return_PK=>1,
+									 verbose=>$VERBOSE,
+									 testonly=>$TESTONLY,
+									 insert=>1,
+									 add_audit_parameters=>1);
+  }elsif ($update == 1) {
 	$rowdata{'condition_name'} = $condition;
 	$rowdata{'project_id'} = $PROJECT_ID;
 	$rowdata{'processed_Date'} = $processed_date;
 	$rowdata_ref = \%rowdata;
 	$pk  = $sbeams->updateOrInsertRow(table_name=>$TBMA_CONDITION,
-					  rowdata_ref=>$rowdata_ref,
-					  return_PK=>1,
-					  verbose=>$VERBOSE,
-					  testonly=>$TESTONLY,
-					  update=>1,
-					  PK=>'condition_id',
-					  PK_value=>$condition_id,
-					  add_audit_parameters=>1);
+									  rowdata_ref=>$rowdata_ref,
+									  return_PK=>1,
+									  verbose=>$VERBOSE,
+									  testonly=>$TESTONLY,
+									  update=>1,
+									  PK=>'condition_id',
+									  PK_value=>$condition_id,
+									  add_audit_parameters=>1);
     }
     return $pk;
 }	
@@ -432,7 +380,7 @@ sub insertGeneExpression {
   ## Define standard variables
   my $CURRENT_CONTACT_ID = $sbeams->getCurrent_contact_id();
   my ($sql, @rows);
-
+    
   ## See if there are gene_expression entries with the specified id. DELETE, if so.
   $sql = qq~
       SELECT gene_expression_id
@@ -449,40 +397,21 @@ sub insertGeneExpression {
     $sbeams->executeSQL($sql);
   }
 
-
-  #### Define Transform Map
-  my %transform_map = (
-		       '1000' => sub{ return $condition_id; },
-  );
-
-  #### Add information for full_name and common_name if exists
+  ## Define Transform Map
+  my $full_name_column;
+  my $common_name_column;
   foreach my $key (keys %column_map) {
-    my $value = $column_map{$key};
-    my @columns;
-    if (ref($value)) {
-      @columns = @{$value};
-    } else {
-      @columns = ( $value );
+    if ($column_map{$key} eq "full_name") {
+      $full_name_column = $key;
+    }elsif($column_map{$key} eq "common_name") {
+      $common_name_column = $key;
     }
-
-    foreach my $column_name ( @columns ) {
-      if ($column_name eq 'full_name') {
-	$transform_map{$column_name} = sub {return(substr(shift(@_),0,1024));}
-      } elsif($column_name eq 'common_name') {
-	$transform_map{$column_name} = sub { return(substr(shift(@_),0,255)); }
-      }
-    }
-
   }
 
-  #### Verify that we have both a common_name and full_name
-  unless (defined($transform_map{'full_name'})) {
-    print "WARNING: full_name column not defined\n";
-  }
-  unless (defined($transform_map{'common_name'})) {
-    print "WARNING: common_name column not defined\n";
-  }
-
+  my %transform_map = ('1000'=>sub{return $condition_id;},
+					   $full_name_column=>sub{return substr shift @_ ,0,1024;}, 
+					   $common_name_column=>sub{return substr shift @_,0,255;},
+					   );
 
   ## For debugging purposes, we can print out the column mapping
   if ($VERBOSE >= 0) {
@@ -503,17 +432,17 @@ sub insertGeneExpression {
   }
   print "\nTransferring $source_file -> gene_expression";
   $sbeams->transferTable(source_file=>$source_file,
-			 delimiter=>$delimiter,
-			 skip_lines=>$skip_lines,
-			 dest_PK_name=>'gene_expression_id',
-			 dest_conn=>$sbeams,
-			 column_map_ref=>\%column_map,
-			 transform_map_ref=>\%transform_map,
-			 table_name=>$TBMA_GENE_EXPRESSION,
-			 insert=>1,
-			 verbose=>$VERBOSE,
-			 testonly=>$TESTONLY,
-			 );
+						 delimiter=>$delimiter,
+						 skip_lines=>$skip_lines,
+						 dest_PK_name=>'gene_expression_id',
+						 dest_conn=>$sbeams,
+						 column_map_ref=>\%column_map,
+						 transform_map_ref=>\%transform_map,
+						 table_name=>$TBMA_GENE_EXPRESSION,
+						 insert=>1,
+						 verbose=>$VERBOSE,
+						 testonly=>$TESTONLY,
+						 );
     
   ## Insert biosequences, if set_tag was specified
   if ($set_tag && $id_hash_ref) {
@@ -558,8 +487,6 @@ sub insertGeneExpression {
     close(INFILE);
   }
 }
-
-
 
 ###############################################################################
 # conditionAlreadyLoaded
@@ -649,8 +576,7 @@ sub loadColumnMapFile {
 	  my $tab = '\t';
 	  my $space = '\s';
 	  if ($delimiter eq $tab) {$delimiter = "\t";}
-### This causes an error!! How to fix?? Deutsch
-#	  if ($delimiter eq $space) {$delimiter = "\s";}
+	  if ($delimiter eq $space) {$delimiter = "\s";}
 
 	}elsif (/condition\s*\=\s*(.*)/) {
 	  $condition = $1;
@@ -718,7 +644,6 @@ sub loadColumnMapFile {
 }
 
 
-
 ###############################################################################
 # loadFiles
 ###############################################################################
@@ -727,35 +652,45 @@ sub loadFiles {
   my $SUB_NAME =  "loadFiles";
 
   ## Define local variables
-  my $search_string = $args{'search_string'}
-  || die "\nERROR[$SUB_NAME]: need search_string\n";
+  my $file_name = $args{'file_name'};
   my $condition_ref = $args{'condition_ref'};
   my $directory = $args{'directory'}
   || die "\nERROR[$SUB_NAME]: need directory\n";
   my $bs_hash_ref = $args{'bs_hash_ref'};
-  my $file_mapping = $args{'file_mapping'};
-
-  unless (defined($condition_ref)){
-    print "\nWARNING[$SUB_NAME]: condition_ref is empty before searching for $search_string files\n";
-  }
+  my $search_string;
 
   ## Local Variables
   my ($search_file, $condition, $condition_id, $processed_date);
   my $new_conditions = 0;
 
   ## Search for files ending with $search_string
-  my @search_files = glob("$directory/*\.$search_string");
+  my @search_files;
+  foreach my $search ("clone","sig","merge"){
+	$search_string = $search;
+	@search_files = glob("$directory/*\.$search_string");
+	last if (@search_files);
+  }
+
+  if (@search_files) {
+	print scalar(@search_files) ." files found using $search_string\n";
+  }else {
+	print "ERROR: load_conditions can't find a valid type of file to load within $directory\n";
+	exit;
+  }
+
   foreach my $search_file (@search_files) {
 
-  ## Determine condition    
+	## Determine condition    
     $search_file =~ s(^.*/)();
     $search_file =~ /(.*)\.$search_string$/;
     $condition = $1;
 
+	print "Attempting to load Condition $1\n";
+
     ## See if condition has already been loaded during the running of this script
     ## If it hasn't been loaded, fire it up.
     if (conditionAlreadyLoaded(file=>$search_file,
-			       file_ref=>$condition_ref) eq "true") {
+							   file_ref=>$condition_ref) eq "true") {
       print "Condtion \'$condition\' has already been loaded.\n";
     }else {
       push (@{$condition_ref}, $search_file);
@@ -763,35 +698,43 @@ sub loadFiles {
       $processed_date = getProcessedDate(file=>"$directory/$search_file");
       $condition_id = getConditionID(condition=>$condition);
       if ($VERBOSE > 0 ) {
-	print "condition_id for condition \'$condition\' is $condition_id.\n";
+		print "condition_id for condition \'$condition\' is $condition_id.\n";
       }
 	    
       ## INSERT/UPDATE the condition
       if (!defined($condition_id)) {
-	print "\n->INSERTing condition $condition\n";
+		print "\n->INSERTing condition $condition\n";
       }else {
-	print "\n->UPDATEing condition $condition\n";
+		print "\n->UPDATEing condition $condition\n";
       }
       $condition_id = insertCondition(processed_date=>$processed_date,
-				      condition=>$condition,
-				      condition_id=>$condition_id);
+									  condition=>$condition,
+									  condition_id=>$condition_id);
 	
-      ## Find out how the columns map to fiels in the database
-      my $column_map_ref= getColumnMapping(source_file=>"$directory/$search_file",
-					   file_mapping=>$file_mapping);
+      ## Find out how the columns map to fields in the database
+      my $column_map_ref= getColumnMapping(source_file=>"$directory/$search_file");
+
+
+	  if ($column_map_ref) {
+		print "Column_mapping:\n";
+		my %temp = %{$column_map_ref};
+		foreach my $key (keys %temp ) {
+		  print "$key => $temp{$key}\n";
+		}
+		return;
+	  }
       
       ##  Insert the gene_expression data!
       insertGeneExpression(condition_id=>$condition_id,
-			   column_map_ref=>$column_map_ref,
-			   source_file=>"$directory/$search_file",
-			   id_hash=>$bs_hash_ref,
-			   delimiter => "\t");
+						   column_map_ref=>$column_map_ref,
+						   source_file=>"$directory/$search_file",
+						   id_hash=>$bs_hash_ref,
+						   delimiter => "\t");
     }
   }
   print "# $new_conditions loaded using search string: $search_string\n";
   return $condition_ref;
 }
-
 
 
 ###############################################################################
@@ -819,7 +762,6 @@ sub getConditionID {
 }
 
 
-
 ###############################################################################
 # getColumnMapping
 #
@@ -831,9 +773,10 @@ sub getColumnMapping {
   my $SUB_NAME = "getColumnMapping";
 
   ## Decode the argument list
-  my $source_file = $args{'source_file'} 
+  my $source_file = $args{'source_file'}
   || die "no source file passed in find_column_hash";
-  my $file_type = $args{'file_mapping'};
+
+  my $file_type;
 
   ## Open file and  make sure file exists
   open(INFILE,"$source_file") || die "Unable to open $source_file";
@@ -855,13 +798,33 @@ sub getColumnMapping {
 
   ## Determine what type of file/organism we have
   if (!defined ($file_type)){
-    if   ($line =~ /UG\sBuild/)       {$file_type = "human";}
-    #elsif($line =~ /unigene_build/)   {$file_type = 
-    #elsif($line =~ /locus_link/)      {$file_type = "human";}
-    elsif($line =~ /operon_oligo_ID/) {$file_type = "mouse";}
-    elsif($line =~ /reporter_type/)   {$file_type = "yeast";}
-    elsif($line =~ /younglab_ORF/)    {$file_type = "yeast";}
-    else {$file_type = "generic";}
+    if   ($line =~ /UG\sBuild/ &&
+		  $line =~ /Tissue/ &&
+		  $line =~ /Band/ &&
+		  $line =~ /Antibiotics/) {
+	  $file_type = "human";
+	}elsif($line =~ /operon_oligo_ID/ &&
+		  $line =~ /chromosome_start_position/ &&
+		  $line =~ /locus_link/ && 
+		  $line =~ /melting_temperature/) {
+	  $file_type = "mouse";
+	}elsif($line =~ /reporter_type/ &&
+		  $line =~ /stranded/ &&
+		  $line =~ /control_qualifier/) {
+	  $file_type = "yeast";
+	}elsif($line =~ /younglab_ORF/ &&
+		  $line =~ /intergenic_name/ &&
+		  $line =~ /pcr_score/ &&
+		  $line =~ /primer_reverse_sequence/) {
+	  $file_type = "yeast";
+	}elsif($line =~ /sequence_name/ &&
+		   $line =~ /control_qualifier/ &&
+		   $line =~ /operon_oligo_ID/ && 
+		   $line =~ /control_type/) {
+	  $file_type = "halo";
+	}else {
+	  $file_type = "generic";
+	}
   }
 
   if ($VERBOSE) {
@@ -895,11 +858,11 @@ sub getColumnMapping {
 }
 
 
-
 ###############################################################################
 # getHeaderHash
 #
 # Returns a hash mapping of column headers to fields in the database
+#
 ###############################################################################
 sub getHeaderHash {
   my %args = @_;
@@ -908,29 +871,31 @@ sub getHeaderHash {
   my %hash;
 
   if ($organism eq "yeast") {
-    %hash = ('GENE_NAME'=>['reporter_name','canonical_name'],
-	     'DESCRIPT.'=>['full_name','common_name','gene_name']
+    %hash = ('external_ID'=>['reporter_name','canonical_name','external_identifier'],
+			 'gene_name'=>['full_name','common_name','gene_name']
 	     );
   }elsif ($organism eq "mouse") {
     %hash = ('GENE_NAME'=>'gene_name',
-	     'gene_name'=>'full_name',
-	     'gene_symbol'=>'common_name',
-	     'operon_oligo_ID'=>['reporter_name','canonical_name']
-	     );
-#	     'external_id'=>'canonical_name',
+			 'gene_name'=>'full_name',
+			 'gene_symbol'=>'common_name',
+			 'operon_oligo_ID'=>['reporter_name'],
+			 'external_id'=>['canonical_name','external_identifier']
+			 );
   }elsif ($organism eq "human") {
     %hash = ('GENE_NAME'=>['reporter_name','gene_name'],
-	     'gene_name'=>'full_name',
-	     'Gene Name'=>'full_name',
-	     'external_ID'=>'canonical_name',
-	     'external_ID'=>'external_identifier',
-	     'Gene Symbol'=>'common_name',
-	     'gene_symbol'=>'common_name'
-	     );
+			 'gene_name'=>'full_name',
+			 'external_id'=>['canonical_name','external_identifier'],
+			 'gene_symbol'=>'common_name'
+			 );
+  }elsif ($organism eq "halo") {
+	%hash = ('GENE_NAME'=>['reporter_name','gene_name','external_identifier'],
+			 'gene_name'=>'common_name',
+			 'sequence_name'=>'canonical_name'
+			 );
   }elsif ($organism eq "generic") {
     %hash = ('GENE_NAME'=>['reporter_name','canonical_name'],
-	     'DESCRIPT.'=>['full_name','common_name','gene_name']
-	     );
+			 'DESCRIPT.'=>['full_name','common_name','gene_name']
+			 );
   }
  
   ## Add Universal hash mappings for all 'clone' files
@@ -941,115 +906,3 @@ sub getHeaderHash {
   $hash{'mu_Y'} = 'mu_Y';
   return \%hash;
 };
-
-
-
-###############################################################################
-# checkProject
-#
-# Prints details on the available conditions for the Project
-###############################################################################
-sub checkProject {
-  my %args = @_;
-  my $SUB_NAME = "checkProject";
-
-  ## Define local variables
-  my $project_id = $args{'project_id'}
-    || die("\nERROR[$SUB_NAME]: project_id needs to be specified\n");
-
-  my $sql = qq~
-      SELECT condition_id,condition_name
-        FROM $TBMA_CONDITION
-       WHERE project_id = '$project_id'
-        AND record_status != 'D'
-      ~;
-
-  my @rows = $sbeams->selectSeveralColumns($sql);
-  my $n_rows = scalar(@rows);
-
-  print "contition_id  condition_name\n";
-  print "------------  --------------------------------------------------\n";
-
-  foreach my $row (@rows) {
-    printf("%12d  %s\n",$row->[0],$row->[1]);
-  }
-
-  return(1);
-
-}
-
-
-
-###############################################################################
-# deleteAllConditions
-#
-# Deletes all the conditions for a project
-###############################################################################
-sub deleteAllConditions {
-  my %args = @_;
-  my $SUB_NAME = "deleteAllConditions";
-
-  ## Define local variables
-  my $project_id = $args{'project_id'}
-    || die("\nERROR[$SUB_NAME]: project_id needs to be specified\n");
-
-  my $sql = qq~
-      SELECT condition_id,condition_name
-        FROM $TBMA_CONDITION
-       WHERE project_id = '$project_id'
-         AND record_status != 'D'
-      ~;
-
-  my @rows = $sbeams->selectSeveralColumns($sql);
-  my $n_rows = scalar(@rows);
-
-  print "contition_id  condition_name\n";
-  print "------------  --------------------------------------------------\n";
-
-  foreach my $row (@rows) {
-    printf("DELETE%6d  %s\n",$row->[0],$row->[1]);
-    deleteCondition(condition_id => $row->[0]);
-  }
-
-  return(1);
-
-}
-
-
-
-###############################################################################
-# deleteCondition
-#
-# Delete the specified condition
-###############################################################################
-sub deleteCondition {
-  my %args = @_;
-  my $SUB_NAME = "deleteCondition";
-
-  ## Define local variables
-  my $condition_id = $args{'condition_id'}
-    || die("\nERROR[$SUB_NAME]: condition_id needs to be specified\n");
-
-
-  #### Delete all the expression data
-  my $sql = qq~
-      DELETE FROM $TBMA_GENE_EXPRESSION
-       WHERE condition_id = '$condition_id'
-  ~;
-  $sbeams->executeSQL($sql);
-
-
-  #### Delete the condition
-  my $sql = qq~
-      DELETE FROM $TBMA_CONDITION
-       WHERE condition_id = '$condition_id'
-  ~;
-  $sbeams->executeSQL($sql);
-
-
-  return(1);
-
-}
-
-
-
