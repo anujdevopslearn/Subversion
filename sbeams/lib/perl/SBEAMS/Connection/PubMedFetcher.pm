@@ -73,6 +73,9 @@ sub getArticleInfo {
     "db=PubMed&id=$PubMedID&report=xml&mode=text";
   my $xml = getHTTPData($url);
 
+  print "------ Returned XML -------\n$xml\n-----------------------\n"
+    if ($verbose > 1);
+
 
   #### Return if no XML was returned
   unless ($xml) {
@@ -187,11 +190,12 @@ sub characters {
     Initials => 'append(AuthorList) ',
   );
 
-  if ($element_type{$context} eq 'reg') {
+  if (defined($element_type{$context}) && $element_type{$context} eq 'reg') {
     $info{$context} = $string;
   }
-   
-  if ($element_type{$context} =~ /^append\((.+)\)(.*)$/) {
+
+  if (defined($element_type{$context}) &&
+      $element_type{$context} =~ /^append\((.+)\)(.*)$/) {
 				
     my $prepend = $2 || '';
     if (defined($info{$1})) {
@@ -201,6 +205,7 @@ sub characters {
     }
     $info{$1} .= $string;
   }
+
   if ($context eq 'Year' && $handler->{Context}->[-2] eq 'PubDate') {
     $info{PublishedYear} = $string;
   }
