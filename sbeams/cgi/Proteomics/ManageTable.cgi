@@ -109,7 +109,13 @@ sub main {
     permitted_work_groups_ref=>['Proteomics_user','Proteomics_admin'],
   ));
 
-  $TABLE_NAME = $q->param('TABLE_NAME')
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters);
+  #$sbeams->printDebuggingInfo($q);
+
+  $TABLE_NAME = $parameters{'TABLE_NAME'}
     || croak "TABLE_NAME not specified."; 
 
   croak "This TABLE_NAME=$TABLE_NAME cannot be managed by this program."
@@ -124,46 +130,22 @@ sub main {
     "PK_COLUMN_NAME");
   @MENU_OPTIONS = $sbeamsMOD->returnTableInfo($TABLE_NAME,"MENU_OPTIONS");
 
-  #### Read in the default input parameters
-  my %parameters;
-  my $n_params_found = $sbeams->parse_input_parameters(
-    q=>$q,parameters_ref=>\%parameters);
-  #$sbeams->printDebuggingInfo($q);
 
-
-  #### Print the header, do what the program does, and print footer
+  #### Decide what action to take based on information so far
   $sbeamsMOD->printPageHeader();
-  processRequests(ref_parameters=>\%parameters);
+
+  if      ($parameters{action} eq 'VIEWRESULTSET') { printOptions();
+  } elsif ($parameters{action} eq 'REFRESH') { printEntryForm();
+  } elsif ($parameters{action}) { processEntryForm();
+  } elsif ($q->param('apply_action_hidden')) { printEntryForm();
+  } elsif ($q->param('ShowEntryForm')) { printEntryForm();
+  } elsif ($parameters{"$PK_COLUMN_NAME"}) { printEntryForm();
+  } else { printOptions(); }
+
   $sbeamsMOD->printPageFooter();
 
+
 } # end main
-
-
-###############################################################################
-# Process Requests
-#
-# Test for specific form variables and process the request 
-# based on what the user wants to do. 
-###############################################################################
-sub processRequests {
-    $current_username = $sbeams->getCurrent_username;
-    $current_contact_id = $sbeams->getCurrent_contact_id;
-    $current_work_group_id = $sbeams->getCurrent_work_group_id;
-    $current_work_group_name = $sbeams->getCurrent_work_group_name;
-    $current_project_id = $sbeams->getCurrent_project_id;
-    $current_project_name = $sbeams->getCurrent_project_name;
-    $dbh = $sbeams->getDBHandle();
-
-    # Decide where to go based on form values
-    if      ($q->param('apply_action') eq 'VIEWRESULTSET') { printOptions();
-    } elsif ($q->param('apply_action')) { processEntryForm();
-    } elsif ($q->param('apply_action_hidden')) { printEntryForm();
-    } elsif ($q->param('ShowEntryForm')) { printEntryForm();
-    } elsif ($q->param("$PK_COLUMN_NAME")) { printEntryForm();
-    } else { printOptions();
-    } # end if
-
-} # end processRequests
 
 
 
