@@ -40,13 +40,18 @@ sub printPageHeader {
 # display_page_header
 ###############################################################################
 sub display_page_header {
+
   my $self = shift;
+
   my %args = @_;
 
   my $navigation_bar = $args{'navigation_bar'} || "YES";
 
-  #### If the output mode is interactive text, display text header
   my $sbeams = $self->getSBEAMS();
+
+  my $project_id = $args{'project_id'} || $sbeams->getCurrent_project_id();
+
+  #### If the output mode is interactive text, display text header
   my $http_header = $sbeams->get_http_header();
   if ($sbeams->output_mode() eq 'interactive') {
     $sbeams->printTextHeader();
@@ -64,7 +69,7 @@ sub display_page_header {
 
   if( $sbeams->isGuestUser() ) {
     $self->displayGuestPageHeader();
-  } elsif ( $self->isYeastPA() )
+  } elsif ( $self->isYeastPA(project_id => $project_id) )
   {
     $self->displayInternalResearcherPageHeader();
   } else
