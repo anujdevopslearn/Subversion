@@ -1107,9 +1107,9 @@ sub getArrayNames {
 	  	my $project_id = $sbeams->getCurrent_project_id();
 
 		my $apply_action=$parameters{'action'} || $parameters{'apply_action'} || '';
-
+		
 		my %rs_params = $sbeams->parseResultSetParams(q=>$q);
-
+		$rs_params{page_size} = 500;	#need to override the default 50 row max display for a page
 		my %url_cols      = ();
 	  	my %hidden_cols   = ();
 	  	my $limit_clause  = '';
@@ -1138,7 +1138,7 @@ sub getArrayNames {
 		my $constraint_data = join " , ", @array_ids;
 		my $constraint_column = "afa.affy_array_id";
 		my $constraint        = "AND $constraint_column IN ($constraint_data)";
-
+#$log->debug("AFFY ARRAY IDS '$constraint_data'");
 		unless ($constraint_data) {
 			print
 			  "SORRY NO DATA FOR THIS PROJECT\n";
@@ -1172,7 +1172,7 @@ sub getArrayNames {
 			, #return a sql statement to display all the arrays for a particular project
 			constraint => $constraint
 		);
-
+#$log->debug("SQL '$sql'");
 		%url_cols = (
 			'Sample_Tag' =>"${manage_table_url}affy_array_sample&affy_array_sample_id=\%3V",
 			'File_Root' => "${manage_table_url}affy_array&affy_array_id=\%0V",
@@ -1246,7 +1246,7 @@ sub getArrayNames {
 			base_url             => "$base_url?display_type=Simple",
 		);
 
-		
+		#$log->debug(Dumper(\%rs_params));
 
 			print $q->br,
 			  $q->submit(
@@ -1375,8 +1375,8 @@ sub getArrayNames {
 		my %resultset     = ();
 		my $resultset_ref = \%resultset;
 		my ($sql);
-
-		my %rs_params        = $sbeams->parseResultSetParams( q => $q );
+	
+		my %rs_params        = $sbeams->parseResultSetParams( q => $q);
 		my $base_url         = "$CGI_BASE_DIR/Microarray/$PROG_NAME";
 		my $manage_table_url =
 		  "$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_";
