@@ -394,7 +394,7 @@ sub display_ext_halo_template {
 <td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
 <td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
 <td colspan="2">
-<a href="$HALO_HOME/haloarcula/" class="Nav_link">Halobacterium sp. NRC-1</a><br>
+<a href="$HALO_HOME/halobacterium/" class="Nav_link">Halobacterium sp. NRC-1</a><br>
 <a href="$HALO_HOME/haloarcula/" class="Nav_link">Haloarcula marismortui</a><br>
 </tr>
 <tr>
