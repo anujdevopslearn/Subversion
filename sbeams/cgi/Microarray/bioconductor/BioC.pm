@@ -458,7 +458,16 @@ sub parse_sample_groups_file{
 
 	my %sample_groups = ();
 	#print STDERR "IN PARSE SAMPLE";
+
+	if ($data_type eq 'get_reference_sample'){
+		my $reference_sample_group_node = $root->findnodes('//reference_sample_group');
+    	my $reference_sample_group = $reference_sample_group_node->to_literal;
+		
+		return $reference_sample_group
+	}
+
 #return just the sample group names and the class number 
+	
 	if ($data_type eq 'sample_group_ids'){
 		#print STDERR "IN SAMPLE GROUP IDS SUB ";
 		foreach my $file_name_node ($file_names_ns->get_nodelist) {	
@@ -473,9 +482,6 @@ sub parse_sample_groups_file{
 	}
 	
 	
-	my $reference_sample_group_node = $root->findnodes('//reference_sample_group');
-   
-    my $reference_sample_group = $reference_sample_group_node->to_literal;
 	
 	
 	my $order_count = 1;
