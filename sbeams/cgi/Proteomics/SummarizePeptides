@@ -174,6 +174,7 @@ sub handle_request {
 
   #### Set some reasonable defaults if no parameters supplied
   unless ($n_params_found) {
+    $parameters{input_form_format} = "minimum_detail";
     $parameters{annotation_status_id} = 'Annot';
     $parameters{display_options} = 'GroupReference';
     $parameters{n_annotations_constraint} = '>0';
