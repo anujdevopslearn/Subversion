@@ -1516,7 +1516,7 @@ sub specialParsing {
   }
 
 
-  #### Conversion rules for the older ENSEMBL Human Protein database
+  #### Conversion rules for the older ENSEMBL Human Protein databases v <= 19
   if ($rowdata_ref->{biosequence_name} =~ /^Translation:(ENSP\d+)$/ ) {
      $rowdata_ref->{biosequence_name} = $1;
      $rowdata_ref->{biosequence_accession} = $1;
@@ -1526,11 +1526,10 @@ sub specialParsing {
      $rowdata_ref->{dbxref_id} = '20';
   }
 
-  #### Conversion rules for the  ENSEMBL Human Protein database v 26 - 28
-  if ($rowdata_ref->{biosequence_name} =~ /^(ENSP\d+)\s.*(ENSG\d+)\s.*$/) {
-     $rowdata_ref->{biosequence_name} = $1; 
-     $rowdata_ref->{biosequence_accession} = $1;
-     $rowdata_ref->{biosequence_gene_name} = $2;
+  #### Conversion rules for the  ENSEMBL Human Protein database v 22 - 28
+  if ($rowdata_ref->{biosequence_desc} =~ /^.*(ENSG\d+)\s.*$/) {
+     $rowdata_ref->{biosequence_gene_name} = $1;
+     $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
      $rowdata_ref->{dbxref_id} = '20';
   }
 
@@ -1552,10 +1551,9 @@ sub specialParsing {
   }
 
   #### Conversion rules for the SGD yeast orf fasta
-  if ($rowdata_ref->{biosequence_name} =~ /^(\S+)\s(\S+)\s(SGDID:.*)$/ ) {
-     $rowdata_ref->{biosequence_name} = $1;
-     $rowdata_ref->{biosequence_accession} = $1;
-     $rowdata_ref->{biosequence_gene_name} = $2;
+  if ($rowdata_ref->{biosequence_desc} =~ /^(\S+)\s(SGDID:.*)$/ ) {
+     $rowdata_ref->{biosequence_gene_name} = $1;
+     $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
      $rowdata_ref->{dbxref_id} = '5';
   }
 
