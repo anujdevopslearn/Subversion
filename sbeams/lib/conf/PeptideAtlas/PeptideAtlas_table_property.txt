@@ -10,8 +10,7 @@ AT_biosequence_set	Biosequence Set	PeptideAtlas_infrastructure	YES	$TBAT_BIOSEQU
 AT_biosequence	Biosequence	PeptideAtlas_infrastructure	NO	$TBAT_BIOSEQUENCE	biosequence_id				
 AT_biosequence_property_set	Biosequence Property Set	PeptideAtlas_infrastructure	NO	$TBAT_BIOSEQUENCE_PROPERTY_SET	biosequence_property_set_id				
 AT_dbxref	Biosequence Database Cross Reference	PeptideAtlas_infrastructure	YES	$TB_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=AT_dbxref	AT_biosequence_dbxref	
-organism	Organism	PeptideAtlas_infrastructure	YES	$TB_ORGANISM	organism_id		ManageTable.cgi?TABLE_NAME=organism		
 AT_query_option	Query Option	PeptideAtlas_infrastructure	YES	$TBAT_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=AT_query_option	AT_query_option	
 AT_BrowseBiosequence	Browse Biosequence	QUERY					BrowseBioSequence.cgi		
 AT_GetPeptides	Get Peptides	QUERY					GetPeptides		
-AT_publication	Publication	Proteomics_user	YES	$TBAT_PUBLICATION	publication_id		ManageTable.cgi?TABLE_NAME=AT_publication	"AT_publication,AT_publication_category,AT_publication_rating"
+AT_publication	Publication	PeptideAtlas_user	YES	$TBAT_PUBLICATION	publication_id		ManageTable.cgi?TABLE_NAME=AT_publication	"AT_publication,AT_publication_category,AT_publication_rating"
