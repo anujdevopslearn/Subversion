@@ -178,6 +178,8 @@ sub characters {
   my $string = shift;
   my $context = $handler->{Context}->[-1];
 	
+    
+    
   my %element_type = (
     PMID => 'reg',
     ArticleTitle => 'reg',
@@ -192,6 +194,7 @@ sub characters {
 
   if (defined($element_type{$context}) && $element_type{$context} eq 'reg') {
     $info{$context} = $string;
+
   }
 
   if (defined($element_type{$context}) &&
@@ -207,9 +210,15 @@ sub characters {
   }
 
   if ($context eq 'Year' && $handler->{Context}->[-2] eq 'PubDate') {
+  
     $info{PublishedYear} = $string;
   }
-
+  if (!defined $info{PublishedYear}  && $handler->{Context}->[-2] eq 'PubDate') {
+  # 2001 Dec 20-27
+    ($info{PublishedYear}) = $string =~ /^(\d{4})/;
+    
+}  
+  
 
 
 }
