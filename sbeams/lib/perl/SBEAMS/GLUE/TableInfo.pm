@@ -118,6 +118,33 @@ sub returnTableInfo {
 
     }
 
+    if ($table_name eq "GL_interaction_group") {
+
+        if ($info_key eq "BASICQuery") {
+            return qq~
+		SELECT IG.interaction_group_id,
+		        P.name AS "project_name", O.organism_name, interaction_group_name,
+			  interaction_group_description
+		  FROM $TBGL_INTERACTION_GROUP IG
+		  LEFT JOIN $TB_PROJECT P ON ( IG.project_id = P.project_id )
+		  LEFT JOIN $TB_ORGANISM O ON ( IG.organism_id = O.organism_id )
+		 WHERE IG.record_status != 'D'
+		   AND ( P.record_status != 'D' OR P.record_status IS NULL )
+		   AND ( O.record_status != 'D' OR O.record_status IS NULL )
+            ~;
+        }
+
+        if ($info_key eq "FULLQuery") {
+            return qq~
+		SELECT I.*
+		  FROM $TBGL_INTERACTION_GROUP I
+		 --WHERE I.record_status!='D'
+            ~;
+        }
+
+
+      }
+
 
 
 ###############################################################################
