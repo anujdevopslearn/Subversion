@@ -317,86 +317,53 @@ sub printEntryForm {
     $parent_project_id = $sbeamsMOD->getParentProject( 
                                          table_name => $parameters{TABLE_NAME},
                                          parameters_ref => \%parameters, 
-                                         action => 'UPDATE' # Pending changes to mod.tableinfo scripts ; ( 'SELECT'
+                                         action => 'UPDATE' 
                                                      );
   }
   
-  my $message = '';
+  my $groupInfoLink =<<"  END";
+        <A HREF="javascript:openGroupWindow(); document.groupHelp.submit();">
+          Check Privileges
+        </A>
+  END
+
+  # Convenience, define once to pass to checking routines.
+  my %subargs = ( parent_project_id => $parent_project_id,
+                  pk_column_name => $PK_COLUMN_NAME,
+                  pk_value => $parameters{$PK_COLUMN_NAME},
+                  contact_id => $current_contact_id,
+                  dbtable => $dbtable,
+                  table_name => $parameters{TABLE_NAME},
+                  project_id => $current_project_id,
+                  work_group_id => $current_work_group_id 
+                );
+
+  my $workGroupsRef = $sbeams->getTableGroups( %subargs, privilege => 10000 );
+  print getWorkGroupJavascript( $workGroupsRef, $parameters{TABLE_NAME} );
 
   # FIXME When a user has no project, they end up with project_id = 0!
   if ( defined $parent_project_id ) { # Project security has priority
     $log->debug ( "Found parent project ID = $parent_project_id" );
 
-    $projectAuthLevel = $sbeams->calculateProjectPermission(
-                                parent_project_id => $parent_project_id,
-                                pk_column_name => $PK_COLUMN_NAME,
-                                pk_value => $parameters{$PK_COLUMN_NAME},
-                                contact_id => $current_contact_id,
-                                dbtable => $dbtable,
-                                table_name => $parameters{TABLE_NAME},
-                                project_id => $current_project_id,
-                                work_group_id => $current_work_group_id 
-                                                            );
+    $projectAuthLevel = $sbeams->calculateProjectPermission( %subargs );
+    $log->error( $projectAuthLevel );
+    # check group associations 
 
-    # calcProjPerm uses 'get_best_permission', which doesn't consider current
-    # work group - hence this code won't get exec'd for the time being.
-    if ( $projectAuthLevel > DATA_READER && $parameters{$PK_COLUMN_NAME} ) {
-      # If project auth level prevents display of the page, look for another
-      # group the user could try in order to at least read the item
-      my $altWorkGroupRef = $sbeams->getProjectGroups(
-                                    contact_id => $current_contact_id,
-                                    privilege => DATA_READER,
-                                    parent_project_id => $parent_project_id,
-                                    work_group_id => $current_work_group_id,
-                                                      );
-
-      if ( scalar( @$altWorkGroupRef ) ) {
-        # Set level to reader, since they would otherwise have permissions.
-        $message =<<"        END_MSG";
-        <FONT COLOR=red>
-          <I>&nbsp;&nbsp;&nbsp;&nbsp;
-          Allowing read access to record not normally accessible from current work group
-          </I>
-        </FONT>
-        END_MSG
-        $projectAuthLevel = DATA_READER;
-      } 
+    my $bestpriv = getBestGroupPermission( $workGroupsRef );
+    if ( $bestpriv <= $projectAuthLevel ) {
+      $projectAuthLevel = $bestpriv;
     }
+
   } else { # Table (Mode 1) Permissions are king
     
     # no project permissions, log warning
     $log->warn( "Viewing data not covered by project permissions" ); 
 
-    $tableAuthLevel = $sbeams->calculateTablePermission(
-                                pk_column_name => $PK_COLUMN_NAME,
-                                pk_value => $parameters{$PK_COLUMN_NAME},
-                                contact_id => $current_contact_id,
-                                dbtable => $dbtable,
-                                table_name => $parameters{TABLE_NAME},
-                                project_id => $current_project_id,
-                                work_group_id => $current_work_group_id 
-                                                       );
+    $tableAuthLevel = $sbeams->calculateTablePermission( %subargs );
 
-    if ( $tableAuthLevel >= DATA_READER  && $parameters{$PK_COLUMN_NAME} ) {
-      # The user has DATA_READER or less and is accessing an existing object.
-      my $altWorkGroupRef = $sbeams->getTableGroups(
-                                 contact_id => $current_contact_id,
-                                 privilege => DATA_READER,
-                                 table_name => $parameters{TABLE_NAME},
-                                 work_group_id => $current_work_group_id
-                                                    );
-
-      if ( scalar( @$altWorkGroupRef ) ) {
-        # Set the work group to the new value...
-        $tableAuthLevel = DATA_READER;
-        $message = <<"        END_MSG";
-        <FONT COLOR=red>
-          <I>&nbsp;&nbsp;&nbsp;&nbsp;
-          Allowing read access to record not normally accessible from current work group
-          </I>
-        </FONT>
-        END_MSG
-      } 
+    my $bestpriv = getBestGroupPermission( $workGroupsRef );
+    if ( $bestpriv <= $tableAuthLevel ) {
+      $tableAuthLevel = $bestpriv;
     }
   }
 
@@ -404,7 +371,6 @@ sub printEntryForm {
   $sbeams->printUserContext();
 
   print qq!
-      $message
       <P>
       <H2>Maintain $CATEGORY</H2>
       $LINESEPARATOR
@@ -427,6 +393,7 @@ sub printEntryForm {
 
     if ( $authLevel > DATA_READER ) { # User has no priv
     $viewStates{no_access} = 1;
+    addPrivilegeError( \@errors, $groupInfoLink, $TABLE_NAME );
 
     # Add some information to help user understand situation.
     if ( $projectAuthLevel ) {
@@ -441,6 +408,7 @@ sub printEntryForm {
     } else { # Trying an insert, show error page.
      $viewStates{no_access} = 1;
      addTableErrors( \@errors, $authLevel );
+     addPrivilegeError( \@errors, $groupInfoLink, $TABLE_NAME );
      my $obj = ( $projectAuthLevel ) ? 'project' : 'table';
      push @errors, "You lack authorization to insert records into this $obj."
     }
@@ -621,7 +589,7 @@ sub printEntryForm {
   }
 
   # Add CSS and javascript for popup column_text info (if configured).
-  print getPopupDHTML();
+  print $sbeams->getPopupDHTML();
 
   #### Now loop through again and write the HTML
   foreach $row (@columns_data) {
@@ -933,6 +901,33 @@ sub printEntryForm {
     ~;
   }
 
+#  Code block to add work_group select list to the page.
+  if ( $viewStates{read_insert} || $viewStates{read_only} ) {
+
+    my $group = getWorkGroupName( $parameters{'owner_group_id'} );
+    print <<"    END_PRINT";
+          <TR><TD NOWRAP><B>Owner Work Group:</B></TD>
+          <TD COLSPAN=2>$group &nbsp; $groupInfoLink</TD>
+          </TR>
+    END_PRINT
+  }
+  else {
+
+    my $wg_options = getWorkGroupOptions( 
+                               group_ref => $workGroupsRef,
+                               owner_group_id =>  $parameters{owner_group_id},
+                               current_group_id =>  $current_work_group_id,
+                               project_based => $parent_project_id 
+                                        );
+
+    print qq~
+          <TR><TD NOWRAP><B>Owner Work Group:</B></TD>
+          <TD COLSPAN=2>
+         $wg_options $groupInfoLink</TD>
+          </TR><TR>
+    ~;
+  }
+
   # Display 'block' for various FORM buttons.  Options are more numerous now,
   # Set things up in scalars rather than hard-coded HTML.
   my $pad = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
@@ -971,12 +966,12 @@ sub printEntryForm {
       my $date_created = $parameters{date_created}; chop($date_created);
       my $date_modified = $parameters{date_modified}; chop($date_modified);
       print qq~
-        <TR><TD><B>Record Created:</B></TD>
+        <TR><TD NOWRAP><B>Record Created:</B></TD>
         <TD COLSPAN=2>${date_created} by ${created_by_username}</TD></TR>
       ~;
       unless ($date_created eq $date_modified) {
         print qq~
-          <TR><TD><B>Record Modified:</B></TD>
+          <TR><TD NOWRAP><B>Record Modified:</B></TD>
           <TD COLSPAN=2>${date_modified} by ${modified_by_username}</TD></TR>
         ~;
       }
@@ -1270,6 +1265,86 @@ sub getStatusForDisplay {
   
 } # End getStatusForDisplay
 
+###############################################################################
+# getWorkGroupOptions
+#
+# narg group_ref         ref to array of group array refs
+# narg owner_group_id    Group that owns current record
+# narg current_group_id  User's current group id
+# narg project_based     Is there a parent project
+# 
+###############################################################################
+sub getWorkGroupOptions {
+  my %args = @_;
+
+  my %perms = $sbeams->getPrivilegeNames();
+
+  for( qw( group_ref ) ) { # Check for required params
+    die ("Missing required parameter $_") unless $args{$_};
+  }
+
+  # Forstall undef error messages.
+  $args{owner_group_id} ||= 0;
+  $log->warn( "Hey ya'll, current owner is $args{owner_group_id}" );
+  $log->warn( "Hey ya'll, current group is $args{current_group_id}" );
+
+  # The default selected group is current owner group else current group.
+  my $selected = ( $args{owner_group_id} ) ?  $args{owner_group_id} : 
+                                              $args{current_group_id}; 
+  
+  $log->warn( "Lets select $selected" );
+  my $list = "<SELECT NAME='owner_group_id'>\n";  # Base select list
+  my $seen_current = 0;
+  my $index;
+
+  for my $grp ( @{$args{group_ref}} ) { # Foreach passed group (name, id, priv)
+    $index++;
+
+    $seen_current = $index if $args{owner_group_id} == $grp->[1];
+
+    # Need to have data writer for group to appear
+    next if $$grp[2] >= DATA_READER && $index != $seen_current;
+
+    # Set group val from record (update) or current work group (insert) as SEL
+    my $sel = ( $selected && $selected == $$grp[1] ) ? 'SELECTED' : '';
+    
+    # Add item to select list
+    $list .= "<OPTION $sel VALUE=$$grp[1]>$$grp[0] &nbsp;-&nbsp; ($perms{$$grp[2]})\n";
+  }
+
+  # If there is an owner group, and it wasn't in the user's array, push it on.
+  if ( $args{owner_group_id} && !$seen_current ) {
+    my $name = getWorkGroupName( $args{owner_group_id} );
+    $list .= "<OPTION SELECTED VALUE=$args{owner_group_id}>$name &nbsp;-&nbsp; ($perms{50})\n";
+  }
+
+  $list .= "</SELECT>\n";
+  return $list;
+
+}
+###############################################################################
+# getWorkGroupName
+#
+# arg work_group_id to look up.
+# 
+###############################################################################
+sub getWorkGroupName {
+  my $wg_id = shift;
+  return undef unless $wg_id;
+
+  die ("Illegal group id: $wg_id") if $wg_id !~ /^\d+$/;
+  
+  my ($name) = $sbeams->selectOneColumn( <<"  END_SQL" );
+  SELECT work_group_name
+  FROM $TB_WORK_GROUP 
+  WHERE work_group_id = $wg_id
+  END_SQL
+
+  $log->debug( "Owner group name was: $name" );
+
+  return $name;
+
+} # End getWorkGroupName
 
 ###############################################################################
 # linkToColumnText: Creates link to popup window with column info text inside
@@ -1303,42 +1378,6 @@ sub linkFile {
   return $text;      
 } # End linkFile
 
-
-###############################################################################
-# getPopupDHTML: returns CSS and javascript for popups
-#
-# returns CSS/javascript in a scalar
-# 
-###############################################################################
-sub getPopupDHTML {
-
-  # add CSS class for popup menu
-  my $dhtml =<<"  END_CLASS";
-  <STYLE>
-  .popup
-  {
-  COLOR: #9F141A;
-  CURSOR: help;
-  TEXT-DECORATION: none
-  }
-  </STYLE>
-  END_CLASS
-
-  # add javascript function for popup details
-  $dhtml .=<<"  END_JS";
-  <SCRIPT LANGUAGE="JavaScript" TYPE="text/javascript">
-  <!--
-  function popitup(url)
-  {
-    newwindow=window.open( url ,'name','height=200,width=150,dependent=yes,screenX=5000,screenY=50,scrollbars=1');
-    if (window.focus) {newwindow.focus()}
-    return false;
-  }
-  // -->
-  </SCRIPT>
-  END_JS
-  return $dhtml;
-  } # end getPopupDHTML
 
 
 ###############################################################################
@@ -1720,6 +1759,11 @@ sub processEntryForm {
               }
             }
 
+      if ( $parameters{owner_group_id} ) { 
+            $sql_query .= "owner_group_id=$parameters{owner_group_id},";
+      }
+
+
             $sql_query .= qq!
                   date_modified=CURRENT_TIMESTAMP,
                   modified_by_id='$current_contact_id',
@@ -1785,6 +1829,10 @@ sub processEntryForm {
           }
         }
 
+    # This was formerly always $curr_work_group, can now set    
+    my $owner_group_id = ( $parameters{owner_group_id} ) ?
+                           $parameters{owner_group_id} : $current_work_group_id;
+
         # Build the SQL statement
         $sql_query = qq!
  		INSERT INTO $DB_TABLE_NAME
@@ -1792,7 +1840,7 @@ sub processEntryForm {
 			 modified_by_id,owner_group_id,record_status)
 		VALUES
 		  ($query_part2 $current_contact_id,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,
-			 $current_contact_id,$current_work_group_id, '$parameters{record_status}')
+			 $current_contact_id,$owner_group_id, '$parameters{record_status}')
         !;
 				
 		
@@ -2870,18 +2918,14 @@ sub checkPermission {
 
 ### Loops to support sbeams multi and range inserts
 
-  $log->debug( $args{fval} );
   my @fvals;
-  if ( $args{fval} =~ /\,/ ) { # We have a comma separated list.
-    $log->debug( 'comma list' );
-    @fvals = split( ',', $args{fval} );
-  } elsif ( $args{fval} =~ /\-/ ) { # We have defined a range
-    $log->debug( 'range list' );
-    my @ends = split( '-', $args{fval} );
-    @fvals = ( $ends[0]..$ends[1] )
+  if ( $args{fval} !~ /^[\-\,0-9]+$/ ) { # Illegal specifier
+    $log->error( "Illegal argument string: $args{fval}" );
+    die ( "Unable to complete requested operation: $args{fval}" );
   } else {
-    $log->debug( "just the one, ma'am" );
-    push @fvals, $args{fval};
+    $args{fval} =~ s/\-/\.\./g;
+    @fvals = eval $args{fval};
+    $log->debug( "Converted $args{fval} to " . join( "::", @fvals ) );
   }
 
   foreach my $fval ( @fvals ) {
@@ -2916,6 +2960,76 @@ sub evalSQL {
   return eval "\"$sql\"";
 }
 
+#+
+# Prints form/hidden params to allow privilege check to work.
+#-
+sub getWorkGroupJavascript {
+  my $groupRef = shift;
+  my $table = shift;
+
+  for( $groupRef, $table ) {
+    die "Missing required parameter" unless $_;
+  }
+  
+  my ( $tgroup ) = $sbeams->selectOneColumn( <<"  END_QUERY" );
+  SELECT table_group
+  FROM $TB_TABLE_PROPERTY 
+  WHERE table_name = '$table'
+  END_QUERY
+
+  my %perms = $sbeams->getPrivilegeNames();
+  my $hidden = "<INPUT TYPE=HIDDEN NAME=table_name VALUE=$table>";
+  $hidden .= "<INPUT TYPE=HIDDEN NAME=table_group VALUE=$tgroup>";
+
+  # Calc window dimensions
+  my $height = scalar( @$groupRef ) * 25 + 175;
+  my $width = 0;
+
+  foreach my $grp ( @$groupRef ) {
+    $hidden .= "<INPUT TYPE=HIDDEN NAME=groupinfo VALUE='" . join( ':::', @$grp ) . "'>\n";
+    my $currwidth = length( join( '...', @$grp, $perms{$$grp[2]} ) );
+    $width = ( $width < $currwidth ) ? $currwidth : $width;
+    }
+  $width *= 10;
+
+  return( <<"  END" );
+  <SCRIPT LANGUAGE="JavaScript">
+  <!--
+   function openGroupWindow() {
+     helpwin = window.open('about:blank','groupHelpWin','width=$width,height=$height,resizable=yes,scrollbars=yes');
+     helpwin.focus();
+                               }
+  //-->
+  </SCRIPT>
+  <FORM NAME="groupHelp" ACTION='$HTML_BASE_DIR/cgi/help_popup.cgi' TARGET="groupHelpWin">
+  $hidden
+  </FORM>
+  END
+
+}
+
+
+#+
+# Returns best permission afforded by any of the groups, *excluding* Admin.
+#-
+sub getBestGroupPermission {
+  my $groupref = shift;
+  my $min = 999;
+  foreach my $group ( @{$groupref} ) {
+    next if $$group[0] =~ /^Admin$/i;
+    $min = ( $$group[2] > $min ) ? $min : $$group[2];
+  }
+  return $min;
+}
+
+sub addPrivilegeError {
+  my $errors = shift;
+  my $link = shift;
+  my $table = shift;
+  push @$errors, <<"  END_ERR";
+  Review your privileges on this table ($table): $link
+  END_ERR
+}
 
 
 ###############################################################################
