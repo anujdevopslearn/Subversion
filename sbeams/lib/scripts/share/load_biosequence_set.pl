@@ -129,7 +129,7 @@ sub main {
     $DATABASE = $DBPREFIX{$module};
   }
   if ($module eq 'Microarray') {
-    $work_group = "Arrays";
+    $work_group = "Microarray_admin";
     $DATABASE = $DBPREFIX{$module};
   }
 
