@@ -22,6 +22,18 @@ use vars qw(@ERRORS
            );
 
 ###############################################################################
+# Constructor
+###############################################################################
+sub new {
+    my $this = shift;
+    my $class = ref($this) || $this;
+    my $self = {};
+    bless $self, $class;
+    return($self);
+}
+
+
+###############################################################################
 # histogram
 #
 # Given an input array of data, calculate a histogram, CDF and other goodies
@@ -317,6 +329,108 @@ sub find_nearest {
 sub sortNumerically {
 
   return $a <=> $b;
+
+}
+
+
+
+###############################################################################
+# average
+#
+# Given an input array of data, as well as an optional array or weights or
+# uncertainties, calculate a mean and final uncertainty
+###############################################################################
+sub average {
+  my $self = shift || croak("parameter self not passed");
+  my %args = @_;
+  my $SUB_NAME = 'average';
+  my $VERBOSE = 0;
+
+  #### Decode the argument list
+  my $values_ref = $args{'values'};
+  my $errors_ref = $args{'uncertainties'};
+  my $weights_ref = $args{'weights'};
+
+  #### Determine nature of the input arrays
+  return(undef) unless (defined($values_ref) && @{$values_ref});
+  my @values = @{$values_ref};
+  my $n_values = scalar(@values);
+
+  my @errors;
+  my $n_errors;
+  if (defined($errors_ref) && @{$errors_ref}) {
+    @errors = @{$errors_ref};
+    $n_errors = scalar(@errors);
+  }
+
+  my @weights;
+  my $n_weights;
+  if (defined($weights_ref) && @{$weights_ref}) {
+    @weights = @{$weights_ref};
+    $n_weights = scalar(@weights);
+  }
+
+
+  #### If no weights or errors were provided, calculate a plain mean
+  #### of all non-undef values
+  unless ($n_errors || $n_weights) {
+    my $n_elements = 0;
+    my $total = 0;
+    foreach my $element (@values) {
+      if (defined($element)) {
+	$total += $element;
+	$n_elements++;
+      }
+    }
+    return(undef) unless ($n_elements > 0);
+    return($total/$n_elements);
+  }
+
+
+  #### If only errors were provided, convert to weights
+  if (defined($n_errors) && !defined($n_weights)) {
+    unless ($n_errors == $n_values) {
+      print "ERROR: $SUB_NAME: values and errors arrays must have same size\n";
+      return(undef);
+    }
+    @weights = ();
+    foreach my $element (@errors) {
+      if (defined($element) && $element > 0) {
+	push(@weights,1.0/($element * $element));
+      } else {
+	push(@weights,undef);
+      }
+    }
+  }
+
+
+  #### If both errors and weights were provided, we really should verify
+
+
+  #### Calculate weighted mean and final uncertainty
+  my $array_sum = 0;
+  my $weight_sum = 0;
+  my $n_elements = 0;
+  my $err_sum = 0;
+  for (my $i=0; $i<$n_values; $i++) {
+    if (defined($values[$i]) && defined($weights[$i])) {
+      $array_sum += $values[$i] * $weights[$i];
+      $weight_sum += $weights[$i];
+      $err_sum += 1.0/($weights[$i] * $weights[$i]);
+      $n_elements++;
+    }
+  }
+
+  my $divisor = $weight_sum;
+  $divisor = 1 unless ($divisor);
+  my $mean = $array_sum / $divisor;
+
+  if ($n_errors) {
+    my $uncertainty = sqrt(1.0/$divisor);
+    return($mean,$uncertainty);
+  }
+
+  return($mean);
 
 }
 
