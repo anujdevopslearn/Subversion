@@ -1,10 +1,13 @@
 #!/usr/local/bin/perl -w
 #!/local/bin/perl -w
 
+use vars qw(%DBPREFIX);
 use Getopt::Long;
 use FindBin qw( $Bin );
 use lib ( "$Bin/../../perl" );
+use lib ( "/net/dblocal/www/html/sbeams/lib/perl" );
 use SBEAMS::Connection;
+use SBEAMS::Connection::Settings;
 use SBEAMS::BEDB::Tables;
 use SBEAMS::BioLink::Tables;
 use SBEAMS::Biosap::Tables;
@@ -26,6 +29,11 @@ use SBEAMS::Oligo::Tables;
 
 use strict;
 
+## Global variables ##
+my $verbose = 0;
+my $base = "/net/dblocal/www/html/sbeams/lib/";
+my $msg = '';
+
 main();
 exit 0;
 
@@ -36,57 +44,163 @@ sub main {
   $sbeams->Authenticate() || die "Insufficient priviliges";
   my $dbh = $sbeams->getDBHandle() || die( "Unable to get database handle" );
 
+  
   # Fetch passed options
   my %args = checkOpts();
+#  foreach( keys( %args ) ){ print "$_ => $args{$_}\n" }
+  my @modules = ( $args{all} ) ? keys(%DBPREFIX) :  @{$args{module}};
 
-  my $tref = readTableFile( \%args );
-  my $cref = readColumnFile( \%args );
 
-  my $status = checkSql( $tref, $cref, $dbh, $args{verbose} );
+  # Loop de loop
+  my $t_ok = 0;
+  my $t_error = 0;
+  my $t_undef = 0;
+  my $mcount = 0;
+  foreach my $mod ( @modules ){ 
+    next if $mod eq 'APD';
+    $mcount++;
+    $msg .=<<"    END";
+
+
+Module $mod, Prefix $DBPREFIX{$mod}
+******************************************************
+    END
+
+    my $tref = readTableFile( $mod );
+    my $cref = readColumnFile( $mod );
+    my $results = checkSql( $tref, $cref, $dbh, $args{verbose}, $mod );
+    # Increment counters
+    $t_ok += $results->{ok};
+    $t_error += $results->{problems};
+    $t_undef += $results->{notdef};
+
+    # Add current stats
+    $msg .=<<"    END";
+$results->{problems} tables had Errors
+$results->{ok} tables were OK
+$results->{notdef} tables were not defined in table_properties file
+
+Details:
+================
+$results->{errs};
+    END
+
+    # Append any errors
+
+  }
+  print <<"  END_PRINT";
+Summary
+**********************
+Total modules processed: $mcount
+Total tables with tab_property errors: $t_error
+Total tables without errors: $t_ok
+Total tables not defined in table_property files: $t_undef
+    
+Individual module information
+**********************
+$msg
+
+  END_PRINT
 
 }  # End main
 
 sub checkSql {
-  my ( $tref, $cref, $dbh, $verbose ) = @_;
+  my ( $tref, $cref, $dbh, $verbose, $mod ) = @_;
   my %sql;
   foreach my $table ( keys( %$tref ) ) {
     my $cols = join( ", ", keys( %{$cref->{$table}} ) );
     $sql{$table} = ( $cols ) ? "SELECT $cols FROM $tref->{$table}\n" : '';
   }
   $dbh->{RaiseError} = 1;
-  my $problems = 0;
-  my $ok = 0;
-  for ( keys( %sql ) ) { 
-  open ERRS, ">>/tmp/errorfile" || die "couldn't open file";
+  my %results = ( problems => 0,
+                  ok => 0,
+                  errs => '' );
+
+  for my $table ( keys( %sql ) ) { 
   my $err = '';
     eval {
-      my $sth = $dbh->prepare( $sql{$_} );
+      my $sth = $dbh->prepare( $sql{$table} );
       $sth->execute();
       $err = $dbh->errstr();
     };
     if ( $@ ) {
-      print ERRS "$@\n";
-      print ERRS "$sql{$_}\n\n";
-      print "NOT OK on $_\n";
-      print STDERR "Error: $@\n" if $verbose;
-      $problems++;
+      $results{errs} .= "#######\n";
+      $results{errs} .= "Execute error on $table\n";
+      if($verbose) {
+        $results{errs} .= "#######\n";
+        $results{errs} .= "DBI Error:\n $@\n\n";
+        $results{errs} .= "#######\n";
+        $results{errs} .= "SQL that cause error:\n $sql{$table}\n";
+        my $checkerr = '';
+        my $result = '';
+        my $csth;
+        eval {
+          $csth = $dbh->prepare( "SELECT TOP 1 * FROM $tref->{$table}" );
+          $csth->execute();
+          };
+        if ( $@ ) {
+          $results{errs} .= "Error fetching columns for $tref->{$table}: $checkerr\n";
+        } else {
+          $result = $csth->fetchrow_hashref();
+          $results{errs} .= "#######\n";
+          $results{errs} .= "Table_property defined $table columns are:\n " . join( ', ', keys( %$result ) ) . "\n\n";
+        }
+      }
+      $results{problems}++;
     } else { 
-#print "OK on table $_\n";
-      $ok++;
+      # print "OK on table $table\n" if $verbose;
+      $results{ok}++;
     }
   }
-  print ERRS "\n\n";
-  print "Saw $problems tables with errors\n";
-  print "Saw $ok tables without errors\n";
-  return $problems;
+#  $results{errs} .= "Saw $results{problems} tables with errors\n";
+#  $results{errs} .= "Saw $results{ok} tables without errors\n";
+  my @dberrs = checkdb( $dbh, $mod, $tref );
+  $results{errs} .= $dberrs[1];
+  $results{notdef} = $dberrs[0];
+  return \%results;
+}
+
+sub checkdb {
+  my $dbh = shift;
+  my $mod = shift;
+  my $tref = shift;
+  $mod = ( $mod eq 'Core' ) ? 'sbeams' : $mod;
+  my $err = '';
+  eval {
+    $dbh->do( "use $mod" );
+    $err = $dbh->errstr();
+  };
+  if ( $@ ) {
+    return( 0, "Unable to find database $mod: $err\n\n" );
+  }
+
+  my $sql = "sp_tables";
+  my $sth = $dbh->prepare( $sql );
+  $sth->execute();
+  my @tables;
+  my $tot = 0;
+  while (my $r = $sth->fetchrow_hashref() ) {
+    unless( !$r->{TABLE_NAME} || $r->{TABLE_NAME} =~ /^sys/ ) {
+      $tot++;
+      my $tval = uc($r->{TABLE_NAME}) . " ($r->{TABLE_TYPE})";
+      unless( $tref->{uc($r->{TABLE_NAME})} ) {
+        push @tables,  $tval . " => Not in table_properties"
+      }
+    }
+  }
+  my $inf = "$tot total tables/views in production db\n";
+  $inf .= join "\n", @tables;
+  return ( scalar( @tables ), $inf );
+
 }
 
 sub readTableFile {
 
-  my $argref = shift || die "Failed to pass arguement reference";
+  my $mod = shift || die "Failed to pass arguement reference";
+  my $file = "$base/conf/$mod/$mod";
 
-  open( TAB, "$argref->{table}") || 
-                           die ( "Cannot open table file $argref->{table}" );
+  open( TAB, "$file" . '_table_property.txt' ) || 
+                           die ( "Cannot open table file $file" );
   my @expected_theads = ( qw(table_name Category table_group 
                              manage_table_allowed db_table_name PK_column_name
                              multi_insert_column table_url manage_tables
@@ -99,7 +213,6 @@ sub readTableFile {
   die "Incorrect number of entries in column file" if scalar( @theads ) != 10;
   my $index = 0;
   for ( @theads ) { 
-    print ">$_<\n" if $argref->{verbose};
     $_ = $1 if ( /^\"(.*)\"$/ );
     die ( "Unknown table heading $_" ) unless $_ eq $expected_theads[$index++];
   }
@@ -110,9 +223,11 @@ sub readTableFile {
     my @guts = split("\t",$line, -1);
     $guts[0] =~ s/\"//g;
     $guts[4] =~ s/\"//g;
-    $table{$guts[0]} = getTableSchema( @guts[0,4] ) unless $guts[2] eq 'QUERY';
+    $guts[0] = uc($guts[0]);
+    next if $guts[2] eq 'QUERY';
+    my @names = getRealTableName( @guts[0,4] ); 
+    $table{uc($names[0])} = $names[1] if $names[0];
   }
-#for( keys( %table ) ) {print "$_ => $table{$_}\n" if $argref->{verbose}; }
   return \%table;
 
 } # End readColumnFile
@@ -120,10 +235,11 @@ sub readTableFile {
 
 sub readColumnFile {
 
-  my $argref = shift || die "Failed to pass arguement reference";
+  my $mod = shift || die "Failed to pass arguement reference";
+  my $file = "$base/conf/$mod/$mod";
 
-  open( COL, "$argref->{column}") ||
-                          die ("Can't open column file $argref->{column}");
+  open( COL, "$file" . '_table_column.txt' ) || 
+                          die ("Can't open column file $file");
   my @expected_cheads = ('table_name','column_index','column_name',
       'column_title','datatype','scale','precision','nullable',
       'default_value','is_auto_inc','fk_table','fk_column_name',
@@ -149,11 +265,15 @@ sub readColumnFile {
     $guts[0] =~ s/\"//g;
     $guts[2] =~ s/\"//g;
     $guts[4] =~ s/\"//g;
+    $guts[0] = uc( $guts[0] );
+    if ( $mod ne 'Core' ) {
+      my @long = split "_", $guts[0];
+      $guts[0] = join "_", @long[1..$#long];
+    }
     $column{$guts[0]} ||= {};
     $column{$guts[0]}->{$guts[2]} = $guts[4];
   }
   return \%column;
-
 } # End readColumnFile
 
 
@@ -161,19 +281,7 @@ sub readColumnFile {
 
   sub checkOpts {
     my %args;
-    GetOptions( \%args,"verbose", "table=s", "column=s", "dsn:s" );
-    foreach ( qw( table column ) ) {
-      if ( !$args{$_} ) {
-        print STDERR "Missing required parameter $_\n";
-        printUsage();
-        exit;
-        }
-      if ( ! -e $args{$_} ) {
-        print STDERR "Specified $_ file non-existant\n";
-        printUsage();
-        exit;
-      }
-    }
+    GetOptions( \%args, qw(verbose table=s column=s dsn:s all module:s@) );
     return %args;
   }
     
@@ -184,6 +292,8 @@ sub printUsage {
   Usage: $0 -t tablefile -c columnfile -d DBIconnectString
   Options:
     --verbose, -v           Set verbose messaging
+    --all, -a               Iterate through all known modules
+    --module, -m            Specify a module or modules
     --table, -t  xxx        Set the name of table property file
     --column, -c xxx        Set the name of column property file
     --dsn, -d               DBI connect string
@@ -192,17 +302,20 @@ sub printUsage {
 
 }
 
-sub getTableSchema {
+sub getRealTableName {
   my $table = shift; # table name
   my $dbtable = shift; # db table name
   $dbtable =~ s/\"//g;
 
   my $realname = eval "\"$dbtable\"";
+  my @names = split ".dbo.", $realname;
+  my $realbase = @names[1];
 
-  if ( $realname ) { # Defined in imported symbols.
-    return $realname;
+  if ( $realname && $realbase ) { # Defined in imported symbols.
+    return ( $realbase, $realname );
   } else {
-    print STDERR "Unable to find db table <$dbtable> for table <$table>\n";
+    $msg .= "Unable to evaluate variable $dbtable for table $table\n";
+    return;
   }
 
 ## Legacy guess work below!  
