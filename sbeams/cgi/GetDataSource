@@ -248,7 +248,15 @@ sub handle_request {
   }
 
 
+  #### Define parameters for source 'symposium'
+  if ($parameters{source_name} eq 'symposium') {
+    $sql = "SELECT * FROM ISB..symposium_registration";
+  }
+
+
+
   #########################################################################
+
   #### If QUERY or VIEWRESULTSET was selected, display the data
   if ($apply_action =~ /QUERY/i || $apply_action eq "VIEWRESULTSET") {
 
