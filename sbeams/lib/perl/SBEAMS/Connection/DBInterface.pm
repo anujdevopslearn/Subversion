@@ -3649,6 +3649,7 @@ sub display_input_form {
   my %input_types = %{$input_types_ref};
   my $mask_user_context = $args{'mask_user_context'};
   my $allow_NOT_flags = $args{'allow_NOT_flags'};
+  my $onSubmit = $args{onSubmit} || '';
 
 
   #### Define popular variables
@@ -3699,7 +3700,7 @@ sub display_input_form {
       <P>
       <H2>$CATEGORY</H2>
       $LINESEPARATOR
-      <FORM METHOD="post" ACTION="$PROGRAM_FILE_NAME" NAME="MainForm" $file_upload_flag>
+      <FORM METHOD="post" ACTION="$PROGRAM_FILE_NAME" NAME="MainForm" $file_upload_flag $onSubmit>
       <TABLE BORDER=0>
   !;
 
