@@ -150,20 +150,20 @@ SN_instrument	12	record_status	Record Status	char	1	0	N	N	N							N	N
 SN_GetGenotypes	1	project_id	Project									N	multioptionlist	4		Y	Y	N	Select desired projects to query.  Multiple items may be selected.	"SELECT distinct project_id,project_id FROM SNP.dbo.export_results_view ORDER BY project_id"	
 SN_GetGenotypes	2	assay_id_constraint	Assay ID									N	text	50		Y	Y	N	Constraint for assay name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
 SN_GetGenotypes	3	description	Call Quality									N	multioptionlist	4		Y	Y	N	Select desired genotype quality level.  Multiple items may be selected.	"SELECT distinct description,description FROM SNP.dbo.export_results_view ORDER BY description"	
-SN_job_request	1	job_request_id	SNP Job Request ID	int	8	0	N		Y							N	N				pkDEFAULT
-SN_job_request	2	contact_id	Contact	int	8	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	N	Requestor of this SNP job		
-SN_job_request	3	project_id	Project	int	8	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which these SNPs are requested	"SELECT project_id, name + ' ['+budget+']' FROM $TB_PROJECT WHERE PI_contact_id='$contact_id' ORDER BY name"	
-SN_job_request	4	cost_scheme_id	Cost Structure	varchar	50	0	N		N			N	optionlist			Y	Y	N	Cost Structure from which pricing is calculated	"SELECT cost_scheme_id,cost_scheme_name FROM $TB_COST_SCHEME ORDER BY sort_order,cost_scheme_name"	
-SN_job_request	5	n_snps	Number of SNPs	int	8	0	N		N			Y	text			Y	Y	N	Number of SNPs in this request	MANUAL	
-SN_job_request	6	n_samples	Number of Samples	int	8	0	N		N			Y	text	10		Y	Y	N	Number of samples to be run		
-SN_job_request	7	snp_list_file	SNP List File	varchar	255	0	N		N			N	file	30		Y	Y	N	Hit [Browse] and specify the 2-column tab-delimited text file containing the SNP id and sequence.  Please use the rs identifier if possible, include 100-200bp on either side of the SNP, and indicate the SNP in brackets (e.g. [A/G]).		
-SN_job_request	8	sample_list_file	Sample List File	varchar	255	0	N		N			N	file	30		Y	Y	N	Hit [Browse] and specify the 2-column tab-delimited text file containing the sample id and description.   Description is optional.		
-SN_job_request	9	request_status	Request Status	varchar	50	0	N		N			Y	fixed			Y	Y	N	Status of this request	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='job_status' ORDER BY sort_order,option_value"	
-SN_job_request	10	price	Price	int	8	0	Y		N			N	fixed			N	Y	N	Total price for this request		
-SN_job_request	11	comment	Comment	text	0	0	Y		N			N	textarea	4		Y	Y	N	Additional comments about this request		
-SN_job_request	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N				fixed			N	Y				
-SN_job_request	13	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-SN_job_request	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N				fixed			N	Y				
-SN_job_request	15	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-SN_job_request	16	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-SN_job_request	17	record_status	Record Status	char	1	0	N	N	N				fixed			N	Y				
+SN_assay_request	1	assay_request_id	SNP Assay Request ID	int	8	0	N		Y							N	N				pkDEFAULT
+SN_assay_request	2	contact_id	Contact	int	8	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	N	Requestor of this SNP job		
+SN_assay_request	3	project_id	Project	int	8	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which these SNPs are requested	"SELECT project_id, name + ' ['+budget+']' FROM $TB_PROJECT WHERE PI_contact_id='$contact_id' ORDER BY name"	
+SN_assay_request	4	cost_scheme_id	Cost Structure	varchar	50	0	N		N			N	optionlist			Y	Y	N	Cost Structure from which pricing is calculated	"SELECT cost_scheme_id,cost_scheme_name FROM $TB_COST_SCHEME ORDER BY sort_order,cost_scheme_name"	
+SN_assay_request	5	n_snps	Number of SNPs	int	8	0	N		N			Y	text			Y	Y	N	Number of SNPs in this request	MANUAL	
+SN_assay_request	6	n_samples	Number of Samples	int	8	0	N		N			Y	text	10		Y	Y	N	Number of samples to be run		
+SN_assay_request	7	snp_list_file	SNP List File	varchar	255	0	N		N			N	file	30		Y	Y	N	Hit [Browse] and specify the 2-column tab-delimited text file containing the SNP id and sequence.  Please use the rs identifier if possible, include 100-200bp on either side of the SNP, and indicate the SNP in brackets (e.g. [A/G]).		
+SN_assay_request	8	sample_list_file	Sample List File	varchar	255	0	N		N			N	file	30		Y	Y	N	Hit [Browse] and specify the 2-column tab-delimited text file containing the sample id and description.   Description is optional.		
+SN_assay_request	9	request_status	Request Status	varchar	50	0	N		N			Y	fixed			Y	Y	N	Status of this request	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='job_status' ORDER BY sort_order,option_value"	
+SN_assay_request	10	price	Price	int	8	0	Y		N			N	fixed			N	Y	N	Total price for this request		
+SN_assay_request	11	comment	Comment	text	0	0	Y		N			N	textarea	4		Y	Y	N	Additional comments about this request		
+SN_assay_request	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N				fixed			N	Y				
+SN_assay_request	13	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+SN_assay_request	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N				fixed			N	Y				
+SN_assay_request	15	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+SN_assay_request	16	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+SN_assay_request	17	record_status	Record Status	char	1	0	N	N	N				fixed			N	Y				
