@@ -98,17 +98,20 @@ sub printPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">>Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_biosequence_set"><nobr>- BioSequences</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_reference_strain"><nobr>- Ref Strains</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_condition"><nobr>- Conditions</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_plate"><nobr>- Plates</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/PhenoLoad.cgi">- Phenotype Loader</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequences</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_strain"><nobr>&nbsp;&nbsp;&nbsp;Strains</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_ploidy"><nobr>&nbsp;&nbsp;&nbsp;Ploidy</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_mating_type"><nobr>&nbsp;&nbsp;&nbsp;Mating Type</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_construction_method"><nobr>&nbsp;&nbsp;&nbsp;Construct Method</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_condition"><nobr>&nbsp;&nbsp;&nbsp;Conditions</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_plate"><nobr>&nbsp;&nbsp;&nbsp;Plates</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/PhenoLoad.cgi"><nobr>&nbsp;&nbsp;&nbsp;Phenotype Loader</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/BrowseBioSequence.cgi"><nobr>- BioSequences</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;BioSequences</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Enter Data:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/PhenoLoad.cgi">- Phenotype Loader</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/PhenoLoad.cgi"><nobr>&nbsp;&nbsp;&nbsp;Phenotype Loader</nobr></a></td></tr>
         </table>
 	</td>
 

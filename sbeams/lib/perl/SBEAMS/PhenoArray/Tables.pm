@@ -19,12 +19,12 @@ use vars qw(@ISA @EXPORT
     $TBPH_BIOSEQUENCE_SET
     $TBPH_BIOSEQUENCE
 
-    $TBPH_BIOSEQUNCE_MODIFICATION
+    $TBPH_SEQUNCE_MODIFICATION
     $TBPH_PLASMID
-    $TBPH_SUBSTRAIN
-    $TBPH_REFERENCE_STRAIN
+    $TBPH_STRAIN
     $TBPH_MATING_TYPE
     $TBPH_PLOIDY
+    $TBPH_CONSTRUCTION_METHOD
     $TBPH_ARRAY_QUANTITATION
     $TBPH_ARRAY_QUANTITATION_SUBSET
     $TBPH_SPOT_QUANTITATION
@@ -32,7 +32,7 @@ use vars qw(@ISA @EXPORT
     $TBPH_PLATE_LAYOUT
     $TBPH_CONDITION
     $TBPH_CONDITION_REPEAT
-    $TBPH_SUBSTRAIN_BEHAVIOR
+    $TBPH_STRAIN_BEHAVIOR
 
     $TBPH_QUERY_OPTION
 );
@@ -47,12 +47,12 @@ require Exporter;
     $TBPH_BIOSEQUENCE_SET
     $TBPH_BIOSEQUENCE
 
-    $TBPH_BIOSEQUNCE_MODIFICATION
+    $TBPH_SEQUNCE_MODIFICATION
     $TBPH_PLASMID
-    $TBPH_SUBSTRAIN
-    $TBPH_REFERENCE_STRAIN
+    $TBPH_STRAIN
     $TBPH_MATING_TYPE
     $TBPH_PLOIDY
+    $TBPH_CONSTRUCTION_METHOD
     $TBPH_ARRAY_QUANTITATION
     $TBPH_ARRAY_QUANTITATION_SUBSET
     $TBPH_SPOT_QUANTITATION
@@ -60,7 +60,7 @@ require Exporter;
     $TBPH_PLATE_LAYOUT
     $TBPH_CONDITION
     $TBPH_CONDITION_REPEAT
-    $TBPH_SUBSTRAIN_BEHAVIOR
+    $TBPH_STRAIN_BEHAVIOR
 
     $TBPH_QUERY_OPTION
 );
@@ -72,12 +72,12 @@ $TB_PROTOCOL                      = 'protocol';
 
 $TBPH_BIOSEQUENCE_SET             = 'PhenoArray.dbo.biosequence_set';
 $TBPH_BIOSEQUENCE                 = 'PhenoArray.dbo.biosequence';
-$TBPH_BIOSEQUNCE_MODIFICATION     = 'PhenoArray.dbo.biosequence_modification';
+$TBPH_SEQUNCE_MODIFICATION        = 'PhenoArray.dbo.sequence_modification';
 $TBPH_PLASMID                     = 'PhenoArray.dbo.plasmid';
-$TBPH_SUBSTRAIN                   = 'PhenoArray.dbo.substrain';
-$TBPH_REFERENCE_STRAIN            = 'PhenoArray.dbo.reference_strain';
+$TBPH_STRAIN                      = 'PhenoArray.dbo.strain';
 $TBPH_MATING_TYPE                 = 'PhenoArray.dbo.mating_type';
 $TBPH_PLOIDY                      = 'PhenoArray.dbo.ploidy';
+$TBPH_CONSTRUCTION_METHOD         = 'PhenoArray.dbo.construction_method';
 $TBPH_ARRAY_QUANTITATION          = 'PhenoArray.dbo.array_quantitation';
 $TBPH_ARRAY_QUANTITATION_SUBSET   = 'PhenoArray.dbo.array_quantitation_subset';
 $TBPH_SPOT_QUANTITATION           = 'PhenoArray.dbo.spot_quantitation';
@@ -85,7 +85,7 @@ $TBPH_PLATE                       = 'PhenoArray.dbo.plate';
 $TBPH_PLATE_LAYOUT                = 'PhenoArray.dbo.plate_layout';
 $TBPH_CONDITION                   = 'PhenoArray.dbo.condition';
 $TBPH_CONDITION_REPEAT            = 'PhenoArray.dbo.condition_repeat';
-$TBPH_SUBSTRAIN_BEHAVIOR          = 'PhenoArray.dbo.substrain_behavior';
+$TBPH_STRAIN_BEHAVIOR             = 'PhenoArray.dbo.strain_behavior';
 
 $TBPH_QUERY_OPTION                = 'PhenoArray.dbo.query_option';
 
