@@ -126,13 +126,19 @@ sub getArticleInfo {
 
 ###############################################################################
 # start_element
+#
+# Internal SAX callback function to start tags
 ###############################################################################
 sub start_element {
   my $handler = shift;
   my $element = shift;
   my %attrs = @_;
 
+  #### Push this element name onto a stack for later possible use
   push(@stack,$element);
+
+  #### And that's it for now.  Maybe more processing needed eventually
+  return;
 
 }
 
@@ -140,12 +146,19 @@ sub start_element {
 
 ###############################################################################
 # end_element
+#
+# Internal SAX callback function to end tags
 ###############################################################################
 sub end_element {
   my $handler = shift;
   my $element = shift;
 
+  #### Just pop the top item off the stack.  It should be the current
+  #### element, but we lazily don't check
   pop(@stack);
+
+  #### And that's it for now.  Maybe more processing needed eventually
+  return;
 
 }
 
@@ -153,6 +166,8 @@ sub end_element {
 
 ###############################################################################
 # characters
+#
+# Internal SAX callback function to handle character data between tags
 ###############################################################################
 sub characters {
   my $handler = shift;
@@ -198,13 +213,15 @@ sub characters {
 
 ###############################################################################
 # getHTTPData
+#
+# Simple internal function to fetch data via HTTP
 ###############################################################################
 sub getHTTPData {
   my $url = shift || die("getHTTPData: Must supply the URL");
 
   #### Create a user agent object pretending to be Mozilla
   my $ua = new LWP::UserAgent;
-  $ua->agent("Mozilla/5.0 (X11; U; Linux i686; en-US; rv:0.9.9)");
+  $ua->agent("Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.0.0)");
 
   #### Create a request object with the supplied URL
   my $request = HTTP::Request->new(GET=>$url);
@@ -220,4 +237,104 @@ sub getHTTPData {
   }
 
 }
+
+
+
+###############################################################################
+
+1;
+
+__END__
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+=head1 SBEAMS::Connection::PubMedFetcher
+
+SBEAMS module for fetching article information for a specified article
+
+=head2 SYNOPSIS
+
+      use SBEAMS::Connection::PubMedFetcher;
+      my $PubMedFetcher = new SBEAMS::Connection::PubMedFetcher;
+      my $PubMedID = 123;
+
+      my $pubmed_info = $PubMedFetcher->getArticleInfo(
+        PubMedID=>$PubMedID,
+      );
+
+      if ($pubmed_info) {
+        while (my ($key,$value) = each %{$pubmed_info}) {
+          print "$key=$value=<BR>\n";
+	}
+      }
+
+
+=head2 DESCRIPTION
+
+This module provides a set of methods for obtaining article information
+given a specified article.  At present, articles may only be specified
+by PubMedID.  When the getArticleInfo() method is invoked with a PubMedID,
+an HTTP request is sent to NCBI, the information for the article is returned
+in XML format, the XML is parsed and certain interesting values are
+extracted into a simple hash.
+
+
+=head2 METHODS
+
+=over
+
+=item * B<getArticleInfo( see key value input parameters below )>
+
+    Given a PubMedID, return a hash of attributes of the article.  See above
+    module synopsis for an example of this method.
+
+    INPUT PARAMETERS:
+
+      PubMedID => Numeric PubMedID of the article for which information is
+      desired.
+
+      verbose => Set to TRUE to print error, warning, and diagnostic
+      information
+
+    OUTPUT:
+
+      A hash reference of some article attributes if the fetch was
+      successful, or 0 if the fetch was not successful.
+
+
+=item * B<getHTTPData( $url )>
+
+    This internal method is just a wrapper for LWP.  It returns the result
+    from a URL in a string.
+
+      my $url = 'http://db.systemsbiology.net/';
+      my $result = getHTTPData($url);
+
+    INPUT PARAMETERS:
+
+      $url: a string containing the URL to fetch
+
+    OUTPUT:
+
+      A string containing the contents fetched from the specified URL or the
+      empty string if the data could not be fetched.
+
+
+=back
+
+=head2 BUGS
+
+Please send bug reports to the author
+
+=head2 AUTHOR
+
+Eric Deutsch <edeutsch@systemsbiology.org>
+
+=head2 SEE ALSO
+
+SBEAMS::Connection
+
+=cut
 
