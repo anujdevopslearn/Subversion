@@ -126,10 +126,17 @@ SESSION_REAUTH         = 0
 
 # Determines which messages will get logged, anything above stated level will
 # be printed.  Valid levels are error, warn, info, and debug.  For example, if
-# info is selected, all error, warn, and info messages will print.
+# info is selected, all error, warn, and info messages will print.  Like most
+# config settings, different dev sites can have different values.
 LOGGING_LEVEL = warn
 
-
+# For UPLOAD_DIR and QUERY_DIR, the path can specified either as an
+# absolute or relative path.  If the path set has a leading slash, it
+# is assumed that the path is absolute from the base of the filesystem.
+# If the leading slash is ommitted, the path will be appended to the 
+# PHYSICAL_BASE_DIR as configured.
+UPLOAD_DIR             = /net/dblocal/www/html/SBEAMSTest1/sbeams/tmp
+QUERY_DIR              = var/resultsets
 
 
 [main]
