@@ -149,87 +149,27 @@ sub handle_request {
 
   #### Show current user context information
   $sbeams->printUserContext();
-  $current_contact_id = $sbeams->getCurrent_contact_id();
-  my $project_id = $sbeams->getCurrent_project_id;
 
-  # Check the permissions the user has on this project
-  my $best_permission = $sbeams->get_best_permission();
-  if ( $best_permission > 40 ) {
-    print "You are not permitted to view this project";
-    return;
-  }
+  my $html_ref = $sbeams->getMainPageTabMenu( cgi => $q );
 
-
-  #### Write some welcoming text
+  # Write some welcoming text
   print qq~
 
-	<P> You are successfully logged into the <B>$DBTITLE -
-	$SBEAMS_PART</B> system.  This module is designed as a repository
-	for protein structure prediction software data products,
-	specifically PDB-BLAST, PFAM Search, TMHMM, Ginzu, and
-	Rosetta.  Data products may be queried and annotated.</P>
+  <P> You are successfully logged into the <B>$DBTITLE -
+  $SBEAMS_PART</B> system.  This module is designed as a repository
+  for protein structure prediction software data products,
+  specifically PDB-BLAST, PFAM Search, TMHMM, Ginzu, and
+  Rosetta.  Data products may be queried and annotated.</P>
+        
+  <P>Please choose your tasks from the menu bar on the left.</P>
 
-	<P>Please choose your tasks from the menu bar on the left.</P>
-
-	<P> This system is still under active development.  Please be
-	patient and report bugs, problems, difficulties, suggestions
-	to <B>edeutsch\@systemsbiology.org</B>.</P>
+  <P> This system is still under active development.  Please be
+  patient and report bugs, problems, difficulties, suggestions
+  to <B>edeutsch\@systemsbiology.org</B>.</P>
+  <BR>
+  $$html_ref
   ~;
 
-  # Create new tabmenu item.  This may be a $sbeams object method in the future.
-  my $tabmenu = SBEAMS::Connection::TabMenu->new( cgi => $q );
-
-  # Preferred way to add tabs.  label is required, helptext optional
-  $tabmenu->addTab( label => 'Current Project', 
-                    helptext => 'View details of current Project' );
-  $tabmenu->addTab( label => 'My Projects', 
-                    helptext => 'View all projects owned by me' );
-  $tabmenu->addTab( label => 'Recent Resultsets', 
-                    helptext => 'View recent SBEAMS resultsets' );
-  $tabmenu->addTab( label => 'Accessible Projects', 
-                    helptext => 'View projects I have access to' );
-
-  ##########################################################################
-  #### Print out some recent resultsets
-
-  # Scalar to hold content.  In this case we add content to tabmenu, not required
-  my $content;
-
-  # conditional block to exec code based on selected tab.
-  if ( $tabmenu->getActiveTabName() eq 'Current Project' ){ # Current project info
-   
-    # Show info about current project
-    if ( $project_id ) {
-      $content = $sbeams->getProjectDetailsTable( project_id => $project_id ); 
-      # Also add module-specific content
-      $content .= getProjectInformation( $project_id, $best_permission );
-    } else {
-      $content = "No project currently set";
-    }
-
-  # or exec code based on tab index.  Tabs are indexed in the order they are 
-  # added, starting at 1.  
-  } elsif ( $tabmenu->getActiveTab() == 2 ){
-    # Projects owned by the user
-    $content = $sbeams->getProjectsYouOwn();
-
-  } elsif ( $tabmenu->getActiveTabName() eq 'Recent Resultsets' ){
-    # Show resultsets
-    $content = $sbeams->getRecentResultsets() ;
-
-  } elsif ( $tabmenu->getActiveTab() == 4 ){
-    # Projects user has access to
-    $content = $sbeams->getProjectsYouHaveAccessTo();
-
-  }
-
-  # Add content to tabmenu (if desired). 
-  $tabmenu->addContent( $content );
-
-  # The stringify method is overloaded to call the $tabmenu->asHTML method.  
-  # This simplifies printing the object in a print block. 
-  print "$tabmenu";
-  
 
   return;
 
