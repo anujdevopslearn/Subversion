@@ -850,21 +850,25 @@ sub getProjectDetailsTable {
   my ( $project_id, $project_status, $project_tag, $proj_desc, $PI_name, $project_name ) = @{$rows[0]};
 
   my $table =<<"  END_TAB";
-	<H1>Summary of $project_name (ID # 
-   <A class="h1" HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=$project_id">
-   $project_id </A>):
+	<H1>Summary of <FONT color="red">$project_name</font>
   </H1>
   <TABLE WIDTH="100%" BORDER=0>
 	<TR>
     <TD></TD>
+    <TD COLSPAN="2"><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=$project_id">[View/Edit Full Project Information]</A></TD>
+  </TR>
+
+	<TR>
+    <TD></TD>
     <TD COLSPAN="2"><B>PI:</B> $PI_name</TD>
   </TR>
+
 	<TR>
     <TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
 	  <TD COLSPAN="2" WIDTH="100%"><B>Status:</B> $project_status</TD></TR>
 	<TR>
     <TD></TD>
-    <TD COLSPAN="2"><B>Project Tag:</B> $project_tag</TD>
+    <TD COLSPAN="2"><B>Project Tag:</B> $project_tag  (ID $project_id)</TD>
   </TR>
 	<TR>
     <TD></TD>
