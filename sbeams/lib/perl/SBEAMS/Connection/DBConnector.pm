@@ -137,6 +137,19 @@ sub dbConnect {
 
 
 ###############################################################################
+# dbDisconnect
+#
+# Disconnect from the database.
+###############################################################################
+sub dbDisconnect {
+    my $self = shift;
+    $dbh->disconnect()
+      or die "Error disconnecting from database: $DBI::errstr";
+    return 1;
+}
+
+
+###############################################################################
 # get DB Handle
 #
 # Returns the current database connection handle to be used by any query.

@@ -60,11 +60,11 @@ sub Authenticate {
 
     my $set_to_work_group = $args{'work_group'} || "";
 
-    # Obtain the database handle $dbh, thereby option the DB connection
+    #### Obtain the database handle $dbh, thereby option the DB connection
     $dbh = $self->getDBHandle();
 
-    # If there's a DISABLED file in the main HTML directory, do not allow
-    # entry past here
+    #### If there's a DISABLED file in the main HTML directory, do not allow
+    #### entry past here
     if ( -e "$PHYSICAL_BASE_DIR/DISABLED" &&
          $ENV{REMOTE_ADDR} ne "10.0.230.11") {
       $self->printPageHeader();
@@ -89,11 +89,15 @@ sub Authenticate {
 
     #### Otherwise, try a command-line authentication
     } else {
-        $current_username = $self->checkValidUID()
+        unless ($current_username = $self->checkValidUID()) {
+            print STDERR "You (UID=$uid) are not permitted to connect to ".
+              "$DBTITLE.\nConsult your $DBTITLE Administrator.\n";
+            $self->dbDisconnect();
+	  }
     }
 
-
-    # If we've obtained a valid user, get additional information about the user
+    #### If we've obtained a valid user, get additional information
+    #### about the user
     if ($current_username) {
         $current_contact_id = $self->getContact_id($current_username);
         $current_work_group_id = $self->getCurrent_work_group_id();
@@ -101,7 +105,7 @@ sub Authenticate {
 
 
     #### If we're authenticating into a specific work_group, do that:
-    if ($set_to_work_group) {
+    if ($current_username && $set_to_work_group) {
         $current_work_group_id =
             $self->setCurrent_work_group($set_to_work_group);
         $current_username = "" unless ($current_work_group_id);
@@ -172,7 +176,7 @@ sub checkLoggedIn {
         my $cipher = new Crypt::CBC($SECRET_KEY, 'IDEA');
         $username = $cipher->decrypt($main::q->cookie('SBEAMSName'));
 
-        # Verify that the deciphered result is still an active username
+        #### Verify that the deciphered result is still an active username
         my ($result) = $self->selectOneColumn(
             "SELECT username
                FROM $TB_USER_LOGIN
@@ -215,7 +219,7 @@ sub checkValidUID {
     if ($uid eq $current_uid) {
         $username = $uname;
 
-        # Verify that the deciphered result is still an active username
+        #### Verify that the deciphered result is still an active username
         my ($result) = $self->selectOneColumn(
             "SELECT username
                FROM $TB_USER_LOGIN
@@ -223,9 +227,10 @@ sub checkValidUID {
                 AND record_status != 'D'"
         );
         unless ($result eq $username) {
-            print "ERROR: Your username '$username' is not enabled in ".
+            print STDERR "ERROR: Your username '$username' is not enabled in ".
                 "the database.  See the administrator.\n\n";
             $username = "";
+            $self->dbDisconnect();
         }
     }
 
@@ -266,8 +271,10 @@ sub setCurrent_work_group {
 
     #### If this didn't turn up anything, return
     unless ($work_group_id) {
-        print "ERROR: The specified group $work_group_name does not exist\n\n";
-        return
+        print STDERR "ERROR: The specified group $work_group_name does ".
+          "not exist\n\n";
+        $self->dbDisconnect();
+        return;
     }
 
 
@@ -275,8 +282,8 @@ sub setCurrent_work_group {
     my ($result) = $self->selectOneColumn(
         "SELECT work_group_id
            FROM $TB_USER_WORK_GROUP
-          WHERE contact_id = $current_contact_id
-            AND work_group_id = $work_group_id
+          WHERE contact_id = '$current_contact_id'
+            AND work_group_id = '$work_group_id'
             AND record_status != 'D'
         ");
 
@@ -284,6 +291,7 @@ sub setCurrent_work_group {
     unless ($result) {
         print "ERROR: You are not permitted to act under ".
             "group $work_group_name\n\n";
+        $self->dbDisconnect();
         return
     }
 
@@ -293,7 +301,7 @@ sub setCurrent_work_group {
     ($current_work_group_id) = $self->selectOneColumn(
         "SELECT work_group_id
            FROM $TB_USER_CONTEXT
-          WHERE contact_id = $current_contact_id
+          WHERE contact_id = '$current_contact_id'
             AND record_status != 'D'
         ");
     if ($current_work_group_id == $work_group_id) {
@@ -311,6 +319,9 @@ sub setCurrent_work_group {
     ");
     $current_work_group_id = $work_group_id;
 
+    #### If we haven't successfully set the work_group, disconnect!
+    $self->dbDisconnect() unless ($current_work_group_id);
+
     return $current_work_group_id;
 }
 
@@ -321,11 +332,15 @@ sub setCurrent_work_group {
 sub getCurrent_work_group_id {
     my $self = shift;
 
-    # If the current_work_group_id is already known, return it
+    #### If the current_work_group_id is already known, return it
     if ($current_work_group_id > 0) { return $current_work_group_id; }
-    if ($current_contact_id < 1) { die "current_contact_id undefined!!"; }
+    if ($current_contact_id < 1) {
+      print STDERR "current_contact_id undefined!!  Authentication must ".
+        "have failed!\n\n";
+      exit 1;
+    }
 
-    # Otherwise, see if it's in the user_context table
+    #### Otherwise, see if it's in the user_context table
     ($current_work_group_id) = $self->selectOneColumn(
         "SELECT work_group_id
            FROM $TB_USER_CONTEXT
@@ -334,7 +349,7 @@ sub getCurrent_work_group_id {
         ");
     if ($current_work_group_id > 0) { return $current_work_group_id; }
 
-    # Not there, so let's just set it to the first group for this user
+    #### Not there, so let's just set it to the first group for this user
     ($current_work_group_id) = $self->selectOneColumn(
         "SELECT work_group_id
            FROM $TB_USER_WORK_GROUP
@@ -351,7 +366,7 @@ sub getCurrent_work_group_id {
         return $current_work_group_id;
     }
 
-    # This user apparently does not belong to any groups, so set to Other
+    #### This user apparently does not belong to any groups, so set to Other
     $current_work_group_id = 2;
 
     return $current_work_group_id;
@@ -363,13 +378,13 @@ sub getCurrent_work_group_id {
 sub getCurrent_work_group_name {
     my $self = shift;
 
-    # If the current_work_group_name is already known, return it
+    #### If the current_work_group_name is already known, return it
     if ($current_work_group_name gt "") { return $current_work_group_name; }
     if ($current_work_group_id < 1) {
       $current_work_group_id = $self->getCurrent_work_group_id();
     }
 
-    # Extract the name from the database given the ID
+    #### Extract the name from the database given the ID
     ($current_work_group_name) = $self->selectOneColumn(
         "SELECT work_group_name
            FROM $TB_WORK_GROUP
@@ -387,11 +402,11 @@ sub getCurrent_work_group_name {
 sub getCurrent_project_id {
     my $self = shift;
 
-    # If the current_project_id is already known, return it
+    #### If the current_project_id is already known, return it
     if ($current_project_id > 0) { return $current_project_id; }
     if ($current_contact_id < 1) { die "current_contact_id undefined!!"; }
 
-    # Otherwise, see if it's in the user_context table
+    #### Otherwise, see if it's in the user_context table
     ($current_project_id,$current_user_context_id) = $self->selectOneColumn(
         "SELECT project_id,user_context_id
            FROM $TB_USER_CONTEXT
@@ -400,7 +415,7 @@ sub getCurrent_project_id {
         ");
     if ($current_project_id > 0) { return $current_project_id; }
 
-    # This user has not selected an active project, so leave it 0
+    #### This user has not selected an active project, so leave it 0
     $current_project_id = 0;
 
     return $current_project_id;
@@ -413,11 +428,11 @@ sub getCurrent_project_id {
 sub getCurrent_user_context_id {
     my $self = shift;
 
-    # If the current_user_context_id is already known, return it
+    #### If the current_user_context_id is already known, return it
     if ($current_user_context_id > 0) { return $current_user_context_id; }
     if ($current_contact_id < 1) { die "current_contact_id undefined!!"; }
 
-    # Otherwise, see if it's in the user_context table
+    #### Otherwise, see if it's in the user_context table
     ($current_user_context_id) = $self->selectOneColumn(
         "SELECT user_context_id
            FROM $TB_USER_CONTEXT
@@ -435,17 +450,17 @@ sub getCurrent_user_context_id {
 sub getCurrent_project_name {
     my $self = shift;
 
-    # If the current_project_name is already known, return it
+    #### If the current_project_name is already known, return it
     if ($current_project_name gt "") { return $current_project_name; }
     if ($current_project_id < 1) {
       $current_project_id = $self->getCurrent_project_id();
     }
 
-    # If there is no current_project_id, return a name of "none"
+    #### If there is no current_project_id, return a name of "none"
     if ($current_project_id < 1) {
       $current_project_name = "[none]";
     } else {
-      # Extract the name from the database given the ID
+      #### Extract the name from the database given the ID
       ($current_project_name) = $self->selectOneColumn(
         "SELECT name
            FROM $TB_PROJECT
@@ -493,8 +508,8 @@ sub printLoginForm {
         <INPUT TYPE="reset" VALUE=" Reset ">
     !;
 
-    # Put all passed parameters into a hidden field here so if authentication
-    # succeeds, they are passed to the called program.
+    #### Put all passed parameters into a hidden field here so if
+    #### authentication succeeds, they are passed to the called program.
     my ($key,$value);
     foreach $key ( $q->param ) {
       $value = $q->param($key);
@@ -635,10 +650,10 @@ sub checkLogin {
 		(username,usage_action,result)
 		VALUES ('$user','login','SUCCESS')";
         } else {
-            # Valid Login, Wrong Password
-            # More useful message
+            #### Valid Login, Wrong Password
+            #### More useful message
             push(@ERRORS, "Incorrect Password for this Username");
-            # Safer message
+            #### Safer message
 	    #push(@ERRORS, "Login Incorrect");
             $success = 0;
             $logging_query="INSERT INTO $TB_USAGE_LOG
@@ -646,9 +661,9 @@ sub checkLogin {
 		VALUES ('$user','login','INCORRECT PASSWORD')";
         }
     } else {
-        # More useful message
+        #### More useful message
         push(@ERRORS, "$user is not a valid Username in this system");
-        # Safer message
+        #### Safer message
         #push(@ERRORS, "Login Incorrect");
         $success = 0;
         $logging_query="INSERT INTO $TB_USAGE_LOG
@@ -672,11 +687,11 @@ sub getUnixPassword {
     my $username = shift;
     my $password = 0;
 
-    # Set PATH to something innocuous to keep Taint happy
+    #### Set PATH to something innocuous to keep Taint happy
     $ENV{PATH}="/bin:/usr/bin";
 
-    # Collect the list of all passwds.  Using ypmatch would be more
-    # efficient, but sending user-supplied data to a shell is dangerous
+    #### Collect the list of all passwds.  Using ypmatch would be more
+    #### efficient, but sending user-supplied data to a shell is dangerous
     my @results = `/usr/bin/ypcat passwd`;
     my @row;
     my ($uname,$pword);
