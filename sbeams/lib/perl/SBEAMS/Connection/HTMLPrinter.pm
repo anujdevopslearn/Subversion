@@ -709,8 +709,8 @@ sub getModuleButton {
   my %colors = ( Immunostain => '#77A8FF',
                  Microarray  => '#FFCC66',
                  Proteomics  => '#66CC66',
+                 Cytometry   => '#EEEEEE',
                  unknown     => '#888888' );
-  $log->printStack( 'debug' );
 
   return( <<"  END" );
   <STYLE TYPE=text/css>
