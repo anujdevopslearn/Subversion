@@ -96,52 +96,39 @@ sub printPageHeader {
     if ($navigation_bar eq "YES") {
       print qq~
 	<!------- Button Bar -------------------------------------------->
-	<tr><td bgcolor="#ffffff" align="left" valign="top">
+	<tr><td bgcolor="#ffffff" align="left" valign="top" width="150">
 	<table bgcolor="#ffffff" border=0 width="100%" cellpadding=2 cellspacing=0>
-
-	<tr><td><a href="$CGI_BASE_DIR/main.cgi">$DBTITLE Home</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi">$SBEAMS_PART Home</a></td></tr>
-	<tr><td>&nbsp;</td></tr>
-
-	<tr><td>Array Requests:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project"><nobr>&nbsp;&nbsp;&nbsp;Manage Projects</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SubmitArrayRequest.cgi?TABLE_NAME=array_request"><nobr>&nbsp;&nbsp;&nbsp;Array Requests</nobr></a></td></tr>
-	<tr><td>&nbsp;</td></tr>
-
-	<tr><td>Status/Processing:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ShowProjectStatus.cgi"><nobr>&nbsp;&nbsp;&nbsp;Project Status</a></nobr></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GridAlignCheck.cgi"><nobr>&nbsp;&nbsp;&nbsp;Alignment Check</a></nobr></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProcessProject.cgi"><nobr>&nbsp;&nbsp;&nbsp;NEW Data Processing</a></nobr></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProcessProject_old.cgi"><nobr>&nbsp;&nbsp;&nbsp;OLD Data Processing</a></nobr></td></tr>
-	<tr><td>&nbsp;</td></tr>
-
-	<tr><td>Array Information:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=protocol"><nobr>&nbsp;&nbsp;&nbsp;Protocols</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=labeling"><nobr>&nbsp;&nbsp;&nbsp;Labeling</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=hybridization"><nobr>&nbsp;&nbsp;&nbsp;Hybridization</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=array_quantitation"><nobr>&nbsp;&nbsp;&nbsp;Quantitation</nobr></a></td></tr>
-	<tr><td>&nbsp;</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/main.cgi"><img src="$HTML_BASE_DIR/images/ma_sbeams_home.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi"><img src="$HTML_BASE_DIR/images/ma_array_home.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi"><IMG SRC="$HTML_BASE_DIR/images/ma_project_home.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GridAlignCheck.cgi"><img src="$HTML_BASE_DIR/images/ma_alignment_check.jpg"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi?tab=data_analysis"><img src="$HTML_BASE_DIR/images/ma_data_analysis.jpg"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProcessProject.cgi"><img src="$HTML_BASE_DIR/images/ma_pipeline.jpg"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi?tab=miame_status"><img src="$HTML_BASE_DIR/images/ma_miame_status.jpg"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SubmitArrayRequest.cgi?TABLE_NAME=array_request"><img src="$HTML_BASE_DIR/images/ma_array_requests.jpg"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=protocol"><img src="$HTML_BASE_DIR/images/ma_protocols.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=labeling"><img src="$HTML_BASE_DIR/images/ma_labeling.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=hybridization"><img src="$HTML_BASE_DIR/images/ma_hybridization.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=array_quantitation"><img src="$HTML_BASE_DIR/images/ma_quantitation.jpg"></a></td></tr>
     ~;
 
       $current_work_group_name = $sbeams->getCurrent_work_group_name();
       if ($current_work_group_name eq "Arrays" || $current_work_group_name eq "Admin" || 1) {
        print qq~
-	<tr><td>Arrays Core:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=contact"><nobr>&nbsp;&nbsp;&nbsp;Contacts</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=array"><nobr>&nbsp;&nbsp;&nbsp;Arrays</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=array_scan"><nobr>&nbsp;&nbsp;&nbsp;Scanning</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=contact"><img src="$HTML_BASE_DIR/images/ma_contacts.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=array"><img src="$HTML_BASE_DIR/images/ma_arrays.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=array_scan"><img src="$HTML_BASE_DIR/images/ma_array_scans.jpg"></a></td></tr>
        ~;
       }
 
       $current_work_group_name = $sbeams->getCurrent_work_group_name();
       if ($current_work_group_name eq "Arrays" || $current_work_group_name eq "Admin") {
        print qq~
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=slide_lot"><nobr>&nbsp;&nbsp;&nbsp;Physical Slides</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=array_layout"><nobr>&nbsp;&nbsp;&nbsp;Array Layouts</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=printing_batch"><nobr>&nbsp;&nbsp;&nbsp;Printing Batches</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=slide_type"><nobr>&nbsp;&nbsp;&nbsp;Slide Type/Costs</nobr></a></td></tr>
-	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=user_login"><nobr>Admin</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=slide_lot"><img src="$HTML_BASE_DIR/images/ma_slide_lots.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=array_layout"><img src="$HTML_BASE_DIR/images/ma_array_layout.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=printing_batch"><img src="$HTML_BASE_DIR/images/ma_printing_batches.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=slide_type"><img src="$HTML_BASE_DIR/images/ma_slide_types_costs.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=user_login"><img src="$HTML_BASE_DIR/images/ma_admin.jpg"></a></td></tr>
        ~;
       }
 
@@ -487,6 +474,17 @@ sub print_tabs {
     
     return;
 }
+
+
+###############################################################################
+# Print QuickLinks
+###############################################################################
+sub printQuickLinks {
+	my $self = shift;
+	my $q = shift;
+
+}
+
 
 ###############################################################################
 
