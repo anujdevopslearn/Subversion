@@ -29,7 +29,7 @@ use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username %hash_to_sort
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
-             @MENU_OPTIONS);
+             @MENU_OPTIONS );
 
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
@@ -46,7 +46,11 @@ $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::Immunostain;
 $sbeamsMOD->setSBEAMS($sbeams);
 
+my (%CYTSAMPLEHASH, %IMMUNOSPECHASH );
 
+
+my $subDir = $SBEAMS_SUBDIR; 
+my ($SBEAMS_CY_SUBDIR) = $subDir =~s/Immunostain/Cytometry/;
 ###############################################################################
 # Set program name and usage banner for command like use
 ###############################################################################
@@ -206,6 +210,26 @@ sub handle_request {
 
   }
 
+  my $cytoSql  = "select sample_name, fcs_run_id from Cytometry2.dbo.FCS_RUN";
+  my $immunoSql = "select specimen_name, specimen_id from $TBIS_SPECIMEN";
+  
+ %CYTSAMPLEHASH = $sbeams->selectTwoColumnHash($cytoSql); 
+ %IMMUNOSPECHASH = $sbeams->selectTwoColumnHash($immunoSql);
+
+ foreach my $key (keys %IMMUNOSPECHASH)
+ {
+   my @array = grep /$key/i , keys %CYTSAMPLEHASH; 
+   if (scalar (@array))
+   {
+     $IMMUNOSPECHASH{$key} = 1
+   }
+   else 
+    {
+     $IMMUNOSPECHASH{$key} = 0
+   }
+ }
+  
+  
 #### Get all the experiments for this project
 	my $action = $parameters{'action'};
 	print qq~	<TABLE WIDTH="100%" BORDER=0> ~;
@@ -877,7 +901,12 @@ $percentHash{$antibody}->{$cellType}->{none} += $atLevelPercent if $row[$levelIn
 							my $stainID = $stainIdHash{$stain};
 							print "<tr><ul><td align=left><b><li>Stain</b></td></tr>";
 							print qq~ <tr><TD NOWRAP align=left>- <A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=_processStain&stained_slide_id=$stainID">$stain</A></TD></tr>~;
-							print "</li>";
+                            my ($stainName) = $stain =~ /^.*?\s([\d-]+)/;
+                             if ($IMMUNOSPECHASH{$stainName})
+                            {
+                              print qq~<tr><td>View Cytometry Data related to this Stain  <A HREF="$CGI_BASE_DIR/$SBEAMS_CY_SUBDIR/main.cgi?TableName=CY_FCS_RUN&SampleName=$stainName">$stainName</A></TD></tr>~;
+                            }
+                            print "</li>";
 #channel							
 							if ($stainHash{$antibodyKey}->{$species}->{$stain})
 							{
@@ -1090,6 +1119,11 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Stain Summary</font
 				{
 						next if $stainOrganismHash{$keyStain} eq $what;
 						print "</td><tr></tr><tr></tr><tr></tr><tr><td align=left><font color =\"D60000\">&nbsp;&nbsp;&nbsp;<h5>$keyStain</h5></font></td></tr>";
+                         my ($stainName) = $keyStain =~ /^.*?\s([\d-]+)/;
+                          if ($IMMUNOSPECHASH{$stainName})
+                          {
+                            print qq~<tr><td>View Cytometry Data related to this Stain  <A HREF="$CGI_BASE_DIR/$SBEAMS_CY_SUBDIR/main.cgi?TableName=CY_FCS_RUN&SampleName=$stainName">$stainName</A></TD></tr>~;
+                          }
 						print "<tr><td align=left><b>Species:</b></td><td align=left>&nbsp;&nbsp;&nbsp;$stainOrganismHash{$keyStain}</td></tr>";
 						print "<tr><td align=left><b>Tissue Type:</b></td><td align=left>&nbsp;&nbsp;&nbsp; $stainTissueHash{$keyStain}</td></tr>";
 						print "<tr><td align=left><b>PreparationDate:</b></td><td align=left>&nbsp;&nbsp;&nbsp;$stainDateHash{$keyStain}</td></tr>";
