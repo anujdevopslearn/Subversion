@@ -16,10 +16,12 @@ use Bio::Tools::BPlite;
 use Getopt::Long;
 use vars qw ($sbeams $sbeamsMOD
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
-             $TESTONLY $current_contact_id $current_username);
-use lib qw (/net/db/lib/sbeams/lib/perl);
+             $TESTONLY $current_contact_id $current_username
+             %biosequence_set_data
+            );
+#use lib qw (/net/db/lib/sbeams/lib/perl);
 use FindBin;
-use lib "$FindBin::Bin/../lib";
+use lib "$FindBin::Bin/../../perl";
 
 #### Set up SBEAMS package
 use SBEAMS::Connection;
@@ -126,6 +128,10 @@ sub main {
   my %allele_hash;
   my @snp_data;
 
+  my $counter = 0;
+
+
+  #### Loop over all queries in the file
   {
     $query = $blast->query;
     ($queryname,$junk) = split(/\(/, $query);
@@ -152,14 +158,7 @@ sub main {
     $dbtitle =~ s/bioseqs\///g;
     $dbtitle =~ s/ //g;
 
-    $sql = qq~
-          SELECT biosequence_name,biosequence_id
-            FROM ${TBSN_BIOSEQUENCE}
-       LEFT JOIN ${TBSN_BIOSEQUENCE_SET}
-              ON ${TBSN_BIOSEQUENCE_SET}.biosequence_set_id = ${TBSN_BIOSEQUENCE}.biosequence_set_id
-           WHERE ${TBSN_BIOSEQUENCE_SET}.set_path like '%$dbtitle%'
-    ~;
-    my %biosequence_id = $sbeams->selectTwoColumnHash($sql);
+    my $biosequence_ids = get_biosequence_ids($dbtitle);
 
     $cnt = 0;
     while ($hit = $blast->nextSbjct) {
@@ -168,7 +167,7 @@ sub main {
         #### Get biosequence_id of this dbtitle
         $bioname = $hit->name;
         $bioname =~ s/\s.+//;
-        $rowdata{matched_biosequence_id} = $biosequence_id{$bioname};
+        $rowdata{matched_biosequence_id} = $biosequence_ids->{$bioname};
 
         $hspcnt = 0;
         while ($hsp=$hit->nextHSP) {
@@ -212,7 +211,41 @@ sub main {
         testonly=>$TESTONLY,
       );
     }
+
+    #### Print progress information
+    $counter++;
+    print ".";
+    print "$counter..." if ($counter/10.0 == int($counter/10.0));
+
     last if ($blast->_parseHeader == -1);
     redo
   }
+
 }
+
+
+
+###############################################################################
+# get_biosequence_ids
+###############################################################################
+sub get_biosequence_ids {
+  my $dbtitle = shift || die("ERROR: dbtitle not passed!");
+
+  return $biosequence_set_data{$dbtitle} if ($biosequence_set_data{$dbtitle});
+
+  my $sql = qq~
+          SELECT biosequence_name,biosequence_id
+            FROM ${TBSN_BIOSEQUENCE}
+       LEFT JOIN ${TBSN_BIOSEQUENCE_SET}
+              ON ${TBSN_BIOSEQUENCE_SET}.biosequence_set_id =
+                 ${TBSN_BIOSEQUENCE}.biosequence_set_id
+           WHERE ${TBSN_BIOSEQUENCE_SET}.set_tag like '%$dbtitle%'
+    ~;
+  my %biosequence_ids = $sbeams->selectTwoColumnHash($sql);
+
+  $biosequence_set_data{$dbtitle} = \%biosequence_ids;
+
+  return \%biosequence_ids;
+
+}
+
