@@ -156,6 +156,8 @@ sub printEntryForm {
 
     # Get the columns for this table
     my @columns = $sbeamsMAW->returnTableInfo($TABLE_NAME,"ordered_columns");
+    my %input_types = 
+      $sbeamsMAW->returnTableInfo($TABLE_NAME,"input_types");
 
     # Read the form values for each column
     foreach $element (@columns) {
