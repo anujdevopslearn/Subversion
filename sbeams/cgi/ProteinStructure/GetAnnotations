@@ -188,7 +188,7 @@ sub handle_request {
 
 
   #### Apply any parameter adjustment logic
-  $parameters{biosequence_set_id} = 3;
+  #$parameters{biosequence_set_id} = 3;
   #$parameters{display_options} = 'ShowSQL';
 
 
