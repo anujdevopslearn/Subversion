@@ -1113,7 +1113,7 @@ sub postProcessResultset {
         my %found_alleles=();
         foreach my $sample_name (@samples) {
 	  my $call_final = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls_final}->{call_final};
-          if ( (uc($sample_name) !~ /CEPH/) and (uc($sample_name) !~ /EMPTY/) and 
+          if ( (uc($sample_name) !~ /CEPH/) and (uc($sample_name) !~ /EMPTY/) and
 	       ( ($project_name =~ /IAN/ and (uc($sample_name) !~ /^E/)) or ($project_name !~ /IAN/) ) and
 	       $call_final !~ /0\/0/ and
 	       $call_final ne '') {
@@ -1131,13 +1131,13 @@ sub postProcessResultset {
 	    $counts->{Overall}++;
 	    $counts->{$sample_type}++;
 
-	     #### Store allele counts
-	     foreach my $all ( $all1,$all2 ) {
-	       $all = uc($all);
-	       $counts->{$all}->{Overall}++;
-	       $counts->{$all}->{$sample_type}++;
-	     }
-	  }
+	    #### Store allele counts
+	    foreach my $all ( $all1,$all2 ) {
+	      $all = uc($all);
+	      $counts->{$all}->{Overall}++;
+	      $counts->{$all}->{$sample_type}++;
+	    }
+          }
 	} # end foreach sample_name
 
 	#### Create the rows for the final resultset
