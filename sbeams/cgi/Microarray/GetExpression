@@ -195,7 +195,9 @@ sub handle_request {
 
 
   #### Apply any parameter adjustment logic
-
+  unless ($parameters{project_id}) {
+    $parameters{project_id} = $sbeams->getCurrent_project_id();
+  }
 
   #### Display the user-interaction input form
   $sbeams->display_input_form(
@@ -219,6 +221,14 @@ sub handle_request {
 
   #########################################################################
   #### Process all the constraints
+
+  #### Build PROJECT_ID constraint
+  my $project_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"C.project_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Projects",
+    constraint_value=>$parameters{project_id} );
+  return if ($project_clause eq '-1');
 
   #### Build CONDITION constraint
   my $condition_clause = $sbeams->parseConstraint2SQL(
