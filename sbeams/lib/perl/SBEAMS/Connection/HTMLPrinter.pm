@@ -249,6 +249,9 @@ sub printStyleSheet {
 	A:hover.nav {  font-family: Helvetica, Arial, sans-serif; color: red;}
 	.nav {  font-family: Helvetica, Arial, sans-serif; color: #000000}
 	.grey_bg{ background-color: #CCCCCC }
+	.med_gray_bg{ background-color: #CCCCCC; ${FONT_SIZE_LG}pt; font-weight: bold; Padding:2}
+	.grey_header{ font-family: Helvetica, Arial, sans-serif; color: #000000; font-size: ${FONT_SIZE_HG}pt; background-color: #CCCCCC; font-weight: bold; padding:1 2}
+	.rev_gray{background-color: #555555; ${FONT_SIZE_LG}pt; font-weight: bold; color:white}
 	.blue_bg{ font-family: Helvetica, Arial, sans-serif; background-color: #4455cc; ${FONT_SIZE_HG}pt; font-weight: bold; color: white}
 	.orange_bg{ background-color: #FFCC66; ${FONT_SIZE_LG}pt; font-weight: bold}
 	.small_cell {font-size: 8; background-color: #CCCCCC; white-space: nowrap  }
