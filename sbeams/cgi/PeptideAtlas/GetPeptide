@@ -149,11 +149,17 @@ sub handle_request {
 
     my %parameters = %{$ref_parameters};
 
+
     ## if no parameters are defined, set up some defaults to help with browsing
     ## until I get a help menu set-up
-    unless ( ($parameters{atlas_build_id}) && 
-             ( ($parameters{atlas_build_id}) || ($parameters{atlas_build_id}) ) ) {
+    unless ( ($parameters{'atlasName'}) && ($parameters{'searchWithinThis'}) && 
+             ($parameters{'searchForThis'}) ) {
+
+        $parameters{'atlasName'} = 'Human_P0.9_Ens22_NCBI34';
+        $parameters{'searchWithinThis'} = 'Peptide Name';
+        $parameters{'searchForThis'} = 'PAp00000001';
     }
+
 
     if ($parameters{'_tab'}) {
 
