@@ -1,13 +1,24 @@
-#!/usr/bin/perl -wT
+#!/usr/local/bin/perl -wT
+
+###############################################################################
+# Program     : help_popup.cgi
+# Author      : Michelle Whiting <mwhiting@systemsbiology.org>
+# $Id$
+#
+# Description : Window to be popped up by JavaScript, with help text.
+#
+###############################################################################
 
 #################################################################################
+# Usage: create a popup link as follows:								#
 #																#
-# Program:	help_popup.cgi											#
-# Author:		Michelle Whiting										#
-# Created:	03/11/02												#
+#	<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?		#
+#		help_text_id=1','Help','width=500,height=400,resizable=yes');		#
+#		return false">Link</a>										#
 #																#
-# Window popped up by JavaScript, with help text.							#
-#																#
+# Where the help_text_id is the database Id if the help text you want to be	#
+# displayed. Remember to set the width & height to the size you'd like the		#
+# window to be.													#
 #################################################################################
 
 ###############################################################################
@@ -43,6 +54,10 @@ my (@help_text) = $sbeams->selectSeveralColumns("
 	WHERE	help_text_id = '$help_text_id'
 ");
 
+#####################################
+# Get the title and text out of the 
+# array reference
+#####################################
 my $title	= $help_text[0][0];
 my $text	= $help_text[0][1];
 
