@@ -318,6 +318,7 @@ sub handle_request {
     ["interaction_id","I.interaction_id","Interaction ID"],
     ["bioentity1_common_name","BE1.bioentity_common_name","BioEntity 1 Common Name"],
     ["bioentity1_link","'[Edit]'","BE1 Link"],
+    ["bioentity1_url","'$SERVER_BASE_DIR$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IN_Bioentity&bioentity_id='+STR(BE1.bioentity_id)","bioentity1_url"],
     ["bioentity1_canonical_name","BE1.bioentity_canonical_name","BioEntity 1 Canonical Name"],
     ["bioentity1_full_name","BE1.bioentity_full_name","BioEntity 1 Full Name"],
     ["bioentity1_state_name","BES1.bioentity_state_name","BioEntity 1 State Name"],
@@ -330,6 +331,7 @@ sub handle_request {
 
     ["bioentity2_common_name","BE2.bioentity_common_name","BioEntity 2 Common Name"],
     ["bioentity2_link","'[Edit]'","BE2 Link"],
+    ["bioentity2_url","'$SERVER_BASE_DIR$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IN_Bioentity&bioentity_id='+STR(BE2.bioentity_id)","bioentity2_url"],
     ["bioentity2_canonical_name","BE2.bioentity_canonical_name","BioEntity 2 Canonical Name"],
     ["bioentity2_full_name","BE2.bioentity_full_name","BioEntity 2 Full Name"],
     ["bioentity2_state_name","BES2.bioentity_state_name","BioEntity 2 State Name"],
@@ -448,6 +450,7 @@ sub handle_request {
 
     	       'BioEntity 1 Common Name' => "$base_url?bioentity_common_name=\%$colnameidx{bioentity_common_name1}V&apply_action=$pass_action",
     	       'BioEntity 2 Common Name' => "$base_url?bioentity_common_name=\%$colnameidx{bioentity_common_name2}V&apply_action=$pass_action",
+
   );
 
 
@@ -461,6 +464,8 @@ sub handle_request {
     %hidden_cols = ( %hidden_cols,
                      'Regulatory Feature 1 Name' => 1,
                      'Regulatory Feature 2 Name' => 1,
+                     'bioentity1_url' => 1,
+                     'bioentity2_url' => 1,
     );
   }
 
