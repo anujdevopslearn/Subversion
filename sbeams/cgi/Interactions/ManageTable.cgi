@@ -260,10 +260,27 @@ sub preUpdateDataCheck {
   my $query_parameters_ref = $args{'parameters_ref'};
   my %parameters = %{$query_parameters_ref};
 
-
+##testing
+=comment	
+	foreach my $key(keys %parameters) 
+	{
+			print "<br>$key ---";
+			print "$parameters{$key}<br>";
+	}
+=cut		
+		if ($parameters{TABLE_NAME} eq "IN_bioentity")
+		{
+			
+			if(!($parameters{bioentity_common_name}) && !($parameters{bioentity_canonical_name})) 
+				{
+						return "You need to specify either:<br><b>Bioentity_common_name</b><br>or<br><b>Bioentity_canonical_name</B>";
+				}
+		}
+		
   #### If table XXXX
   if ($TABLE_NAME eq "XXXX") {
     return "An error of some sort $parameters{something} invalid";
+		
   }
 
 
