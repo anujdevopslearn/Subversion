@@ -371,9 +371,6 @@ sub printLoginForm {
         </TD>
         </TR></TABLE>
         </FORM>
-        <B>There is a problem with Windows Internet Explorer in which you
-        sometimes have to login twice before it takes effect.  This problem
-        is being investigated.</B>
         $LINESEPARATOR
     !;
 }
