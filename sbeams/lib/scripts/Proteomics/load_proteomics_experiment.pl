@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/local/bin/perl 
 
 ###############################################################################
 # Program     : load_proteomics_experiment.pl
@@ -555,7 +555,6 @@ sub loadProteomicsExperiment {
           "       This experiment must already exist in the database\n\n";
     return;
   }
-
 
   #### Find all the subdirectories and add them to @fractions
   my @fractions;
@@ -1538,6 +1537,22 @@ sub updateProbabilities {
     return;
   }
 
+
+ #### Read the Interact file with probabilities
+   my $source_file = "$source_dir/interact-prob-data.htm";
+  if ( -f "$source_dir/interact-prob-data.htm") {
+     $source_file = "$source_dir/interact-prob-data.htm";
+  ## nlk: adapting to hold default filename from interact:
+  } elsif ( -f "$source_dir/interact-data.htm") {
+     $source_file = "$source_dir/interact-data.htm";
+  } else {
+    die("ERROR: edit this script to handle your interact file with probabilities ".
+        "directory");
+  }
+  
+  print "Reading source file '$source_file'...\n";
+  my $data_ref = $sbeamsPROT->readSummaryFile(inputfile=>$source_file,
+    verbose=>$VERBOSE);
 
   #### Read in the probabilities
   my $data_ref;
