@@ -78,6 +78,7 @@ if ($DEBUG) {
 ###############################################################################
 # Set Global Variables and execute main()
 ###############################################################################
+$PROGRAM_FILE_NAME = 'main.cgi';
 main();
 exit(0);
 
@@ -137,6 +138,8 @@ sub handle_request {
 
   #### Print out the current user information
   $sbeams->printUserContext();
+  $current_contact_id = $sbeams->getCurrent_contact_id();
+
 
   #### Write some welcoming text
   print qq~
@@ -154,7 +157,12 @@ sub handle_request {
 	<P>This system is still under active development.  Please
 	report bugs, problems, difficulties, and suggestions to
 	<B>edeutsch\@systemsbiology.org</B>.</P>
+  ~;
 
+
+
+  #### Show the list of Modules available to this user
+  print qq~
 	<H1>Available SBEAMS Modules:</H1>
 	<UL>
   ~;
@@ -185,6 +193,14 @@ sub handle_request {
 	<BR>
 	<BR>
     ~;
+
+
+  ##########################################################################
+  #### Print out some recent resultsets
+
+  $sbeams->printRecentResultsets();
+
+
 
   ##########################################################################
   #### Print out all projects owned by the user
