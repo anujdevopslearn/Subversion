@@ -80,10 +80,10 @@ sub getProjectData {
   my $sql =<<"  END_SQL";
   SELECT project_id, COUNT(*) AS total FROM $TBCY_FCS_RUN
   WHERE project_id IN ( $projects )
+  AND record_status != 'D'
   GROUP BY project_id
   END_SQL
 
-#  my $cgi_dir = "${CGI_BASE_DIR}/${subdir}/";
   my $cgi_dir = $CGI_BASE_DIR . '/Cytometry/';
   my @rows = $self->getSBEAMS()->selectSeveralColumns( $sql );
   foreach my $row ( @rows ) {

@@ -87,6 +87,8 @@ sub getProjectData {
   FROM $TBPR_PROTEOMICS_EXPERIMENT PE LEFT OUTER JOIN $TBPR_FRACTION F
     ON F.experiment_id = PE.experiment_id
 	WHERE project_id IN ( $projects )
+  AND PE.record_status != 'D'
+  AND ( F.record_status != 'D' OR F.record_status IS NULL )
   GROUP BY project_id
   END_SQL
 

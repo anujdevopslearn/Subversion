@@ -84,9 +84,11 @@ sub getProjectData {
          COUNT( i.interaction_id ) AS interactions
   FROM $TBIN_INTERACTION i RIGHT OUTER JOIN $TBIN_INTERACTION_GROUP g
   ON g.interaction_group_id = i.interaction_group_id
+  WHERE i.record_status != 'D' OR i.record_status IS NULL 
+  AND g.record_status != 'D'
   GROUP BY project_id
   END_SQL
-
+  $log->debug( $sql );
   my $cgi_dir = $CGI_BASE_DIR . '/Interactions/';
   my @rows = $self->getSBEAMS()->selectSeveralColumns( $sql );
   foreach my $row ( @rows ) {

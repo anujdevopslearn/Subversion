@@ -82,6 +82,7 @@ sub getProjectData {
   SELECT COUNT(*) AS sets,  project_id 
   FROM $TBPS_BIOSEQUENCE_SET BS
 	WHERE project_id IN ( $projects )
+  AND BS.record_status != 'D'
   GROUP BY project_id
   END_SQL
 

@@ -79,15 +79,19 @@ sub getProjectData {
  
   my $projects = join ',', @{$args{projects}};
 
-  # SQL to determine which projects have data.
+  # Query to find data in this module (by project).
   my $sql =<<"  END_SQL";
-	SELECT COUNT(ss.assay_id) AS total, sp.project_id
+  SELECT COUNT(ss.assay_id) Assays, COUNT(DISTINCT sp.specimen_id) Specimens,
+         sp.project_id
 	FROM $TBIS_ASSAY ss
-	LEFT JOIN $TBIS_SPECIMEN_BLOCK sb 
+	RIGHT OUTER JOIN $TBIS_SPECIMEN_BLOCK sb 
        ON ss.specimen_block_id = sb.specimen_block_id
-	LEFT JOIN $TBIS_SPECIMEN sp 
+	RIGHT OUTER JOIN $TBIS_SPECIMEN sp 
        ON sb.specimen_id = sp.specimen_id
 	WHERE sp.project_id IN ( $projects )
+  AND sp.record_status != 'D'
+  AND ( sb.record_status != 'D' OR sb.record_status IS NULL )
+  AND ( ss.record_status != 'D' OR ss.record_status IS NULL )
   GROUP BY sp.project_id
   END_SQL
 
@@ -95,9 +99,10 @@ sub getProjectData {
   my $cgi_dir = $CGI_BASE_DIR . '/Immunostain/';
   my @rows = $self->getSBEAMS()->selectSeveralColumns( $sql );
   foreach my $row ( @rows ) {
-    $project_data{$row->[1]} =<<"    END_LINK";
-    <A HREF=${cgi_dir}main.cgi?set_current_project_id=$row->[1]>
-     <DIV id=Immunostain_button TITLE='$row->[0] total specimens'>Immunostain
+    $project_data{$row->[2]} =<<"    END_LINK";
+    <A HREF=${cgi_dir}main.cgi?set_current_project_id=$row->[2]>
+     <DIV id=Immunostain_button TITLE='$row->[0] Assays from $row->[1] Specimens'>
+     Immunostain
      </DIV>
     </A>
     END_LINK

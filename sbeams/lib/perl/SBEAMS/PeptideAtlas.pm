@@ -82,6 +82,7 @@ sub getProjectData {
   SELECT project_id, COUNT(*) AS builds 
   FROM $TBAT_ATLAS_BUILD
   WHERE project_id IN ( $projects )
+  AND record_status != 'D'
   GROUP BY project_id
   END_SQL
 

@@ -83,10 +83,14 @@ sub getProjectData {
   SELECT project_id, SUM(two_color) AS two_color, SUM(affy) AS affy FROM
     ( 
     SELECT project_id, COUNT(*) AS two_color, 0 AS affy
-    FROM $TBMA_ARRAY GROUP BY project_id
+    FROM $TBMA_ARRAY
+    WHERE record_status != 'D'
+    GROUP BY project_id
     UNION ALL
     SELECT project_id, 0 AS two_color, COUNT(*) AS affy 
-    FROM $TBMA_AFFY_ARRAY_SAMPLE GROUP BY project_id
+    FROM $TBMA_AFFY_ARRAY_SAMPLE
+    WHERE record_status != 'D'
+    GROUP BY project_id
     ) AS temp_table
   WHERE project_id IN ( $projects )
   GROUP BY project_id
