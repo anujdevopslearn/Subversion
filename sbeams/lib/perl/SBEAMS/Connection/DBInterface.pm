@@ -2823,6 +2823,16 @@ sub display_input_form {
       }
 
 
+      # If "$parameters{xxx}" appears in the SQL optionlist query,
+      # then substitute that with either a value of $parameters{xxx}
+      while ( $optionlist_queries{$element} =~ /\$parameters\{(\w+)\}/ ) {
+        my $tmp = $parameters{$1};
+        $tmp = "''" unless (defined($tmp) && $tmp gt '');
+        $optionlist_queries{$element} =~
+          s/\$parameters{$1}/$tmp/g;
+      }
+
+
       #### Evaluate the $TBxxxxx table name variables if in the query
       if ( $optionlist_queries{$element} =~ /\$TB/ ) {
         my $tmp = $optionlist_queries{$element};
