@@ -376,7 +376,9 @@ sub handle_request {
     }
 
     $group_by_clause = "   GROUP BY BS.biosequence_name,".
-      "GE.gene_name,GE.second_name";
+      "GE.reporter_name,GE.common_name,GE.canonical_name,".
+      "GE.external_identifier,".
+      "GE.gene_name,GE.second_name,GE.full_name";
 
 
   #### Else, no pivot, just use the columns as is
@@ -399,7 +401,7 @@ sub handle_request {
     ["canonical_name","GE.canonical_name","Canonical Name"],
     ["external_identifier","GE.external_identifier","External Identifier"],
     ["gene_name","GE.gene_name","Gene Name"],
-#    ["second_name","GE.second_name","Other Name"],
+    ["second_name","GE.second_name","Other Name"],
     @additional_columns,
     ["full_name","GE.full_name","Full Name"],
   );
