@@ -879,7 +879,8 @@ sub getHeaderHash {
 			 'gene_name'=>'full_name',
 			 'gene_symbol'=>'common_name',
 			 'operon_oligo_ID'=>['reporter_name'],
-			 'external_id'=>['canonical_name','external_identifier']
+			 'external_id'=>['canonical_name','external_identifier'],
+			 'external_ID'=>['canonical_name','external_identifier']
 			 );
   }elsif ($organism eq "human") {
     %hash = ('GENE_NAME'=>['reporter_name','gene_name'],
