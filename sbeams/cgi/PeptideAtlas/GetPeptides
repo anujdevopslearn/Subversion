@@ -373,13 +373,15 @@ sub handle_request {
     @column_array = (
       ["label","DISTINCT 'Similarity'","Label"],
       ["peptide_accession","P.peptide_accession","Peptide Accession"],
-      ["peptide_sequence","'peptide '+P.peptide_sequence","Peptide Sequence"],
+      ["n_observations","'Nobs='+LTRIM(STR(PI.n_observations,6,0))","N Obs"],
+      ["peptide_sequence","P.peptide_sequence","Peptide Sequence"],
       ["chromosome","PM.chromosome","Chrom"],
       ["start_in_chromosome","PM.start_in_chromosome","Start Position"],
       ["end_in_chromosome","PM.end_in_chromosome","End Position"],
       ["strand","PM.strand","Strand"],
-      ["n_observations","PI.n_observations","N Obs"],
+      ["n_protein_mappings","PI.n_protein_mappings","N Protein Mappings"],
       ["best_probability","STR(PI.best_probability,7,3)","Best Prob"],
+      ["n_genome_locations","PI.n_genome_locations","N Unique Locations on Genome"],
     );
 
   } else {
@@ -535,7 +537,7 @@ sub handle_request {
         resultset_ref=>$resultset_ref,
         query_parameters_ref=>\%parameters,
         column_titles_ref=>\@column_titles,
-      ) if ($parameters{display_options} =~ /ApplyChilliFilter/i || $parameters{display_options} =~ /SeqWidth/i );
+      ) if ($parameters{display_options} =~ /DASFormat/i);
 
       #### Store the resultset and parameters to disk resultset cache
       $rs_params{set_name} = "SETME";
@@ -630,9 +632,32 @@ sub postProcessResultset {
   my %parameters = %{$query_parameters_ref};
 
   my $n_rows = scalar(@{$resultset_ref->{data_ref}});
-  my @new_data_array;
 
+  my $cols = $resultset_ref->{column_hash_ref};
 
+  my $peptide_accession;
+  my $nprot;
+  my $nloc;
+
+  for (my $i=0; $i<$n_rows; $i++) {
+    $peptide_accession = $resultset_ref->{data_ref}->[$i]->[$cols->{peptide_accession}];
+    $nprot = $resultset_ref->{data_ref}->[$i]->[$cols->{n_protein_mappings}];
+    $nloc = $resultset_ref->{data_ref}->[$i]->[$cols->{n_genome_locations}];
+
+    if ($nprot > 1) {
+      if ($nloc > 1) {
+	$peptide_accession .= "(degen_NLoc=$nloc)";
+      } else {
+	$peptide_accession .= "(degen)";
+      }
+
+      $resultset_ref->{data_ref}->[$i]->[$cols->{peptide_accession}] = $peptide_accession;
+
+    } elsif ($nloc > 1) {
+      die("ERROR: nprot <=2 but $nloc > 1. This is wrong. Please report this error.");
+    }
+
+  }
 
   return 1;
 
