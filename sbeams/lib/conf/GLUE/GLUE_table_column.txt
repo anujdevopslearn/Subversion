@@ -126,5 +126,80 @@ GL_bioentity_state	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIM
 GL_bioentity_state	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
 GL_bioentity_state	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 GL_bioentity_state	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-GL_bioentity_state	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N
-GL_bioentity_state	10	record_status	Record Status	char	1	0	N	N	N							N	N
+GL_bioentity_state	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+GL_bioentity_state	10	record_status	Record Status	char	1	0	N	N	N							N	N				
+GL_confidence_score	1	confidence_score_id	Interaction Type ID	int	4	0	N		Y							N	N				pkDEFAULT
+GL_confidence_score	2	confidence_score_name	Interaction Type Name	varchar	255	0	N		N			Y	text	40		Y	Y	Y	Name of this Confidence Score		
+GL_confidence_score	3	confidence_score_description	Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this Confidence Score		
+GL_confidence_score	4	confidence_score_value	Value of Confidence Score	real	4	0	N		N			Y	text	10		Y	Y	N			
+GL_confidence_score	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+GL_confidence_score	6	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Integer key by which these entities are usually sorted		
+GL_confidence_score	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GL_confidence_score	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+GL_confidence_score	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GL_confidence_score	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+GL_confidence_score	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+GL_confidence_score	12	record_status	Record Status	char	1	0	N	N	N							N	N				
+GL_assay_type	1	assay_type_id	Assay Type ID	int	4	0	N		Y							N	N				pkDEFAULT
+GL_assay_type	2	assay_type_name	Assay Type Name	varchar	255	0	N		N			Y	text	40		Y	Y	Y	Name of this Assay Type		
+GL_assay_type	3	assay_type_description	Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this Assay Type		
+GL_assay_type	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+GL_assay_type	5	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Integer key by which these entities are usually sorted		
+GL_assay_type	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GL_assay_type	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+GL_assay_type	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GL_assay_type	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+GL_assay_type	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+GL_assay_type	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+GL_sample_type	1	sample_type_id	Sample Type ID	int	4	0	N		Y							N	N				pkDEFAULT
+GL_sample_type	2	sample_type_name	Sample Type Name	varchar	255	0	N		N			Y	text	40		Y	Y	Y	Name of this Sample Type		
+GL_sample_type	3	sample_type_description	Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this Sample Type		
+GL_sample_type	4	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+GL_sample_type	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+GL_sample_type	6	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Integer key by which these entities are usually sorted		
+GL_sample_type	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GL_sample_type	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+GL_sample_type	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GL_sample_type	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+GL_sample_type	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+GL_sample_type	12	record_status	Record Status	char	1	0	N	N	N							N	N				
+GL_bioentity_attribute	1	bioentity_attribute_id	BioEntity Attribute ID	int	4	0	N		Y							N	N				pkDEFAULT
+GL_bioentity_attribute	2	bioentity_id	BioEntity	int	4	0	N		N	GL_bioentity	bioentity_id	Y	optionlist			Y	Y	N		"SELECT bioentity_id, bioentity_name FROM $TBGL_BIOENTITY ORDER BY bioentity_name"	
+GL_bioentity_attribute	3	bioentity_attribute_type_id	BioEntity Attribute Type	int	4	0	N		N	GL_bioentity_attribute_type	bioentity_attribute_type_id	Y	optionlist			Y	Y	N		"SELECT bioentity_attribute_type_id, bioentity_attribute_type_name FROM $TBGL_REGULATORY_FEATURE_TYPE ORDER BY sort_order,bioentity_attribute_type_name"	
+GL_bioentity_attribute	4	bioentity_attribute_description	Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioEntity Attribute		
+GL_bioentity_attribute	5	bioentity_attribute_value	BioEntity Attribute Value	varchar	255	0	N		N			Y	text	40		Y	Y	Y	Value of this BioEntity Attribute		
+GL_bioentity_attribute	6	assay_id	Assay	int	4	0	Y		N	GL_assay	assay_id	N	optionlist			Y	Y	N		"SELECT assay_id, assay_name FROM $TBGL_ASSAY ORDER BY assay_name"	
+GL_bioentity_attribute	7	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+GL_bioentity_attribute	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GL_bioentity_attribute	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+GL_bioentity_attribute	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GL_bioentity_attribute	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+GL_bioentity_attribute	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+GL_bioentity_attribute	13	record_status	Record Status	char	1	0	N	N	N							N	N				
+GL_bioentity_attribute_type	1	bioentity_attribute_type_id	BioEntity Attribute Type ID	int	4	0	N		Y							N	N				pkDEFAULT
+GL_bioentity_attribute_type	2	parent_bioentity_attribute_type_id	Parent BioEntity Attribute Type	int	4	0	Y		N			N	optionlist			Y	Y	N	Parent Type	"SELECT bioentity_attribute_type_id, bioentity_attribute_type_name FROM $TBGL_BIOENTITY_ATTRIBUTE_TYPE ORDER BY sort_order,bioentity_attribute_type_name"	
+GL_bioentity_attribute_type	3	bioentity_attribute_type_name	BioEntity Attribute Type Name	varchar	255	0	N		N			Y	text	40		Y	Y	Y	Name of this BioEntity Attribute Type		
+GL_bioentity_attribute_type	4	bioentity_attribute_type_description	Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioEntity Attribute Type		
+GL_bioentity_attribute_type	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+GL_bioentity_attribute_type	6	sort_order	Sort Order	int	4	0	N	10	N							Y	Y	N	Integer key by which these entities are usually sorted		
+GL_bioentity_attribute_type	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GL_bioentity_attribute_type	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+GL_bioentity_attribute_type	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GL_bioentity_attribute_type	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+GL_bioentity_attribute_type	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+GL_bioentity_attribute_type	12	record_status	Record Status	char	1	0	N	N	N							N	N				
+GL_assay	1	assay_id	Assay ID	int	4	0	N		Y							N	N				pkDEFAULT
+GL_assay	2	assay_type_id	Assay Type	int	4	0	N		N	GL_assay_type	assay_type_id	Y	optionlist			Y	Y	N	Assay Type	"SELECT assay_type_id, assay_type_name FROM $TBGL_ASSAY_TYPE ORDER BY sort_order,assay_type_name"	
+GL_assay	3	sample_type_id	Sample Type	int	4	0	Y		N	GL_sample_type	sample_type_id	N	optionlist			Y	Y	N	Sample Type	"SELECT sample_type_id, sample_type_name FROM $TBGL_SAMPLE_TYPE ORDER BY sort_order,sample_type_name"
+GL_assay	4	publication_id	Publication	int	4	0	Y		N	GL_publication	publication_id	N	optionlist			Y	Y	N	Publication	"SELECT publication_id, publication_name FROM $TBGL_PUBLICATION ORDER BY publication_name"
+GL_assay	5	assay_name	Assay Name	varchar	255	0	N		N			Y	text	40		Y	Y	Y	Name of this Assay	
+GL_assay	6	assay_description	Description	varchar	255	0	N		N			Y	textarea	4		Y	Y	N	Longer description of this Assay	
+GL_assay	7	assay_date	Date Assay Performed	datetime	8	0	Y		N			N	text	20		Y	Y	N	Date of Assay	
+GL_assay	8	lab_notebook	Lab Notebook	varchar	255	0	Y		N			N	text	40		Y	Y	N	Lab Notebook	
+GL_assay	9	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments	
+GL_assay	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+GL_assay	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N			
+GL_assay	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+GL_assay	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
+GL_assay	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
+GL_assay	15	record_status	Record Status	char	1	0	N	N	N							N	N			
