@@ -90,6 +90,9 @@ $DBCONFIG = readMainConfFile();
 if ( $SBEAMS_PATH =~ /\/(dev\d)\// ) {
   $DBINSTANCE = $1;
 
+} elsif ( $SBEAMS_PATH =~ /\/(dev[A-Z][A-Z])\// ) {
+  $DBINSTANCE = $1;
+
 } elsif ( $SBEAMS_PATH =~ /\/ext\// ) {
   $DBINSTANCE = 'ext';
 
