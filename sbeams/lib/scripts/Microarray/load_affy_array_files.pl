@@ -632,7 +632,7 @@ sub update_data {
 				my ($PK_COLUMN_NAME) = $sbeams->returnTableInfo($clean_table_name,"PK_COLUMN_NAME");	#get the column name for the primary key
 			
 				
-				$pk_value = $sbeams_affy_groups->find_affy_array_sample_id(affy_array_id => $affy_array_id);
+				my $pk_value = $sbeams_affy_groups->find_affy_array_sample_id(affy_array_id => $affy_array_id);
 				
 				
 				my $user_login_id = $affy_o->get_afa_user_id;
