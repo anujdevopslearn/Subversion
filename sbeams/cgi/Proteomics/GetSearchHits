@@ -418,16 +418,16 @@ sub handle_request {
         "THEN '1 : ' + STR(d8_intensity/ISNULL(NULLIF(d0_intensity,0.0),0.001)*ISNULL(NULLIF(PE.quant_normalization,0.0),1.0),5,2) ".
         "ELSE STR(d0_intensity/ISNULL(NULLIF(d8_intensity,0.0),0.001)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0),4,2) + ' : 1' ".
         "END) + ".
-        "ISNULL(manually_changed,'')";
+        "ISNULL(manually_changed,'') + (CASE WHEN NULLIF(PE.quant_normalization,0.0) IS NULL THEN '' ELSE ' =' END)";
     } elsif ($parameters{quantitation_format} eq "d01") {
       $quant_format_clause = "'1 :' + STR(d8_intensity/ISNULL(NULLIF(d0_intensity,0.0),0.001)*ISNULL(NULLIF(PE.quant_normalization,0.0),1.0),5,2) + ".
-        "ISNULL(manually_changed,'')";
+        "ISNULL(manually_changed,'') + (CASE WHEN NULLIF(PE.quant_normalization,0.0) IS NULL THEN '' ELSE ' =' END)";
     } elsif ($parameters{quantitation_format} eq "d81") {
       $quant_format_clause = "STR(d0_intensity/ISNULL(NULLIF(d8_intensity,0.0),.001)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0),5,2) + ': 1' + ".
-        "ISNULL(manually_changed,'')";
+        "ISNULL(manually_changed,'') + (CASE WHEN NULLIF(PE.quant_normalization,0.0) IS NULL THEN '' ELSE ' =' END)";
     } elsif ($parameters{quantitation_format} eq "decimal") {
       $quant_format_clause = "STR(d0_intensity/ISNULL(NULLIF(d8_intensity,0.0),0.001)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0),10,4) + ".
-        "ISNULL(manually_changed,'')";
+        "ISNULL(manually_changed,'') + (CASE WHEN NULLIF(PE.quant_normalization,0.0) IS NULL THEN '' ELSE ' =' END)";
     } elsif ($parameters{quantitation_format} eq "decimalplain") {
       $quant_format_clause = "STR(d0_intensity/ISNULL(NULLIF(d8_intensity,0.0),0.001)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0),10,4)";
     } else {
