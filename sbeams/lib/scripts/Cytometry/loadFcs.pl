@@ -116,6 +116,25 @@ sub processFile
     
     %hash = get_fcs_key_value_hash_from_file($fcsFile);
     $hash{File} = $fcsFile;
+
+=comment   
+   foreach my $key(keys %hash)
+    {
+      print "$key === $hash{$key}\n";
+    }
+    
+    
+    
+     my @headerInfo = read_fcs_header ($fcsFile);
+    my @karray = get_fcs_keywords($fcsFile, @headerInfo);
+     foreach my $r (@karray) 
+     {
+       print "$r\n";
+     }
+     getc;
+=cut     
+     
+     
      my $fcsRunID = loadHash(\%hash);
      
    }
@@ -323,9 +342,8 @@ sub recordDataPoints
         {
  # This assumes a 16 bit data word.  Not the best way to do this.
 	    		  read(FCSFILE,$data,2);
-           # print "$posPk->{$param}\n";
-           # getc;
-            $event{$posPk->{$param}} = unpack("S",$data);  #%event{fcs_tun_parameters_id} = dataValue
+             next if( !defined( $posPk->{$param}));
+             $event{$posPk->{$param}} = unpack("S",$data);  #%event{fcs_tun_parameters_id} = dataValue
         }
 	
 	#	my $time = $event[$incol{timelow}] + 4096 * ($event[$incol{timehigh}]);
@@ -340,8 +358,7 @@ sub recordDataPoints
       {
         $dataHash{fcs_data_value} = $event{$point}; 
 			  $dataHash{fcs_run_parameters_id} = $point; 
-       # $dataHash{confirmed} = 1;
-         my $pk = insertRecord(\%dataHash,$tableName, $pkName,0);
+          my $pk = insertRecord(\%dataHash,$tableName, $pkName,0);
     	}
     }
  
