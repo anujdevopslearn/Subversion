@@ -231,6 +231,107 @@ public class SBEAMSClient {
 
   }//fetchSbeamsPage
 //-----------------------------------------------------------------------------------------------
+  public String[] fetchSbeamsResultSetColumn (String url, String columnTitle) 
+	throws Exception{
+	if (cookie == null)
+	  fetchCookie();
+   	String result = fetchSbeamsPage (url, "");
+
+	// THIS will break if there is a "\n" in a record.
+	String[] lines = result.split("\\n");
+	String[] headers = lines[0].split("\\t");
+
+	// first line is column header, last line is blank
+	String[] columnData = new String[lines.length-1];
+	int desiredColumn = -1;
+	for (int m=0;m<headers.length;m++){
+	  if (columnTitle.equals(headers[m])){
+		desiredColumn=m;
+		continue;
+	  }
+	}
+	if (desiredColumn == -1){
+	  return null;
+	}else {
+	  for (int m=0;m<columnData.length;m++){
+		String[] splitDataLine = lines[m+1].split("\\t");
+		columnData[m] = splitDataLine[desiredColumn];
+	  }
+	}
+	return columnData;
+  }//fetchSbeamsResultSetColumn
+//-----------------------------------------------------------------------------------------------
+  public String[][] fetchSbeamsResultSetColumns (String url, String[] columnHeaders)
+	throws Exception{
+	if (cookie == null)
+	  fetchCookie();
+   	String result = fetchSbeamsPage (url, "");
+	
+	// THIS will break if there is a "\n" in a record.
+	String[] lines = result.split("\\n");
+	String[] headers = lines[0].split("\\t");
+
+	// first line is column header, last line is blank
+	String[][] columnData = new String[lines.length-1][columnHeaders.length];
+	int[] headerVals = new int[columnHeaders.length];
+	for (int m=0;m<headerVals.length;m++) headerVals[m] = -1;
+
+	for (int m=0;m<columnHeaders.length;m++) {
+	  for (int h=0;h<headers.length;h++){
+		if (columnHeaders[m].equals(headers[h])) {
+		  headerVals[m] = h;
+		}
+	  }
+	}
+
+	for (int m=0;m<columnData.length;m++){
+	  String[] splitDataLine = lines[m+1].split("\\t");
+	  System.out.println(lines[m+1]);
+	  for (int h=0;h<headerVals.length;h++) {
+		if ( headerVals[h] >= 0) {
+		  columnData[m][h] = splitDataLine[headerVals[h]];
+		}
+	  }
+	}
+	return columnData;
+  }//fetchSbeamsResultSetColumns
+//-----------------------------------------------------------------------------------------------
+  public Hashtable fetchSbeamsResultSetHash (String url, String keyColumn, String valueColumn) 
+	throws Exception{
+	if (cookie == null)
+	  fetchCookie();
+   	String result = fetchSbeamsPage (url, "");
+	Hashtable hash = new Hashtable();
+
+	// THIS will break if there is a "\n" in a record.
+	String[] lines = result.split("\\n");
+	String[] headers = lines[0].split("\\t");
+
+	// first line is column header, last line is blank
+	String[] columnData = new String[lines.length-1];
+	int key = -1;
+	int value = -1;
+	for (int m=0;m<headers.length;m++) {
+	  if (keyColumn.equals(headers[m])) {
+		key=m;
+	  }
+	  if (valueColumn.equals(headers[m])) {
+		value=m;
+	  }
+	}
+	if (key == -1 || value == -1){
+	  return null;
+	}else {
+	  for (int m=0;m<columnData.length;m++) {
+		String[] splitDataLine = lines[m+1].split("\\t");
+		if (headers.length != splitDataLine.length)
+		  continue;
+		hash.put(splitDataLine[key], splitDataLine[value]);
+	  }
+	}
+	return hash;
+  }//fetchSbeamsResultSetHash
+//-----------------------------------------------------------------------------------------------
   protected boolean promptForUsernamePassword() {
 	return promptForUsernamePassword(useGui);
   }//promptForUsernamePassword
