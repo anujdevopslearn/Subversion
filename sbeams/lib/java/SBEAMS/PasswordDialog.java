@@ -1,6 +1,5 @@
 //-----------------------------------------------------------------------------------------------
 package SBEAMS;
-//-----------------------------------------------------------------------------------------------
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -19,40 +18,34 @@ public class PasswordDialog extends JDialog {
 //-----------------------------------------------------------------------------------------------
   public PasswordDialog() {
 	this(null, null);
-  }
+  }// constructor
 //-----------------------------------------------------------------------------------------------
   public PasswordDialog(String title) {
 	this(null, title);
-  }
+  }// constructor
 //-----------------------------------------------------------------------------------------------
   public PasswordDialog(Frame parent) {
 	this(parent, null);
-  }
+  }// constructor
 //-----------------------------------------------------------------------------------------------
   public PasswordDialog(Frame parent, String title) {
 	super(parent, title, true);
   	setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-
 	this.pack();
-
-    GraphicsConfiguration gc = this.getGraphicsConfiguration();
+	GraphicsConfiguration gc = this.getGraphicsConfiguration();
 	int screenHeight = (int)gc.getBounds().getHeight();
 	int	screenWidth = (int)gc.getBounds().getWidth();
     int windowWidth = this.getWidth();
     int windowHeight = this.getHeight();
     int x = (int)((screenWidth-windowWidth)/2);
     int y = (int)((screenHeight-windowHeight)/2);
-
     this.setLocation (x, y);
-
 	if (title == null){
 	  setTitle("User Login");
 	}
-
-  }
+  }// constructor
 //-----------------------------------------------------------------------------------------------
   protected void dialogInit(){
-
 	name = new JTextField("", 20);
 	pass = new JPasswordField("", 20);
 	okButton = new JButton("OK");

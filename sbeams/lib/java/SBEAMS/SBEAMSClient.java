@@ -1,9 +1,7 @@
 //-----------------------------------------------------------------------------------------------
 package SBEAMS;
-//-----------------------------------------------------------------------------------------------
 import java.io.*;
 import java.net.*;
-import javax.net.ssl.*;
 import java.util.*;
 import java.util.regex.*;
 
@@ -11,15 +9,14 @@ import java.util.regex.*;
 public class SBEAMSClient {
 
   private String cookie = null;
-  private String userName; 
-  private String password;
+  private static String userName; 
+  private static String password;
   private boolean useGui = false;
   private int passwordAttempts = 3;
   private static boolean DEBUG = false;
   private static String COOKIE_URL = "https://db.systemsbiology.net/sbeams/cgi/main.cgi";
   private static String DEFAULT_COOKIE_FILE = "./.sbeamsCookie";
   private static String COOKIE_ERROR = "badCookie";
-
 //-----------------------------------------------------------------------------------------------
  protected static class Response {
    String contentType = null;
@@ -35,8 +32,8 @@ public class SBEAMSClient {
   }//constructor
 //-----------------------------------------------------------------------------------------------
   public SBEAMSClient( String userName, String password ) throws Exception {
-	this.userName = userName;
-	this.password = password;
+  	SBEAMSClient.userName = userName;
+	SBEAMSClient.password = password;
   }//constructor
 //-----------------------------------------------------------------------------------------------
   protected void destroyCookie() {
