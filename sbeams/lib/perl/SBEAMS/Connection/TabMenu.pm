@@ -460,7 +460,7 @@ sub asCSSHTML {
     my $spc = "&nbsp;";
     my $color = ( $dtab == $i ) ? $this->{activeColor} : $this->{inactiveColor};
     my $htext = '';# ( $tabs[$i]->{helptext} ) ? "TITLE='$tabs[$i]->{helptext}'" : '';
-    my $class = (  $dtab == $i ) ? 'class=here' : '';
+    my $class = (  $dtab == $i ) ? 'class=atab' : '';
     $list .=<<"    END";
     <A $class HREF='$tabs[$i]->{url}' $htext> $tabs[$i]->{label} </A> 
     END
@@ -504,22 +504,30 @@ sub asCSSHTML {
 	              padding:0;
                 float:left;
                 display:block;
-              	color:#444444;
+              	color:#555555;
               	text-decoration:none;
                 padding:0.25em 1em;
               	font-weight:bold;
-              	background:#DDDDDD;
+              	background:#DEDEDE;
               	margin:0;
-              	border-left:1px solid #fff;
-              	border-top:1px solid #fff;
-              	border-right:1px solid #aaa;
+              	border-left:1.25px solid #FFFFFF;
+              	border-top:1.25px solid #FFFFFFF;
+              	border-right:1.25px solid #AAAAAA;
                 }
 
-    #menuset A:hover,
+    #menuset A:hover {
+	    background:#BBCCBB;
+     	color:#444444;
+    }
     #menuset A:active,
-    #menuset A.here:link,
-    #menuset A.here:visited {
-	    background:#bbb;
+    #menuset A.atab:link,
+    #menuset A.atab:visited {
+	    background:#BBBBBB;
+     	color:#333333;
+    }
+    #menuset A.atab:hover {
+	    background:#BBCCBB;
+     	color:#444444;
     }
     </style>
 
