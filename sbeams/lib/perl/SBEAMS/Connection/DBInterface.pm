@@ -2257,7 +2257,7 @@ sub isResultsetColumnNumerical {
   #### Loop though all elements to see if they're all consistent with
   #### Being numerical
   foreach my $element (@{$data_ref}) {
-    next if ($element->[$column_index] =~ /^[0-9\.\+\-\s]*$/);
+    next if ($element->[$column_index] =~ /^[0-9\.\+\-e\s]*$/);
     return 0;
   }
 
