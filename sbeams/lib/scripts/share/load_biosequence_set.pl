@@ -935,7 +935,7 @@ sub loadBiosequence {
 	      {data}->{$biosequence_name})) {
       $have_ginzu_data = 1;
     }
-print "biosequence $biosequence_name: have_ginzu=$have_ginzu_data\n";
+
   }
 
 
@@ -968,7 +968,7 @@ print "biosequence $biosequence_name: have_ginzu=$have_ginzu_data\n";
 
     #### Loop over all the entries for this biosequence
     foreach my $match (@{$ginzu_search_results->{data}->{$biosequence_name}}) {
-print "  match qstart=",$match->{query_start},"\n";
+
       #### Fill the row data hash with information we have
       my %rowdata;
       $rowdata{biosequence_id} = $biosequence_id;
@@ -1035,7 +1035,7 @@ print "  match qstart=",$match->{query_start},"\n";
   	table_name=>"${DATABASE}domain_match",
   	rowdata_ref=>\%rowdata,
   	PK=>"domain_match_id",
-  	verbose=>2,
+  	verbose=>$VERBOSE,
   	testonly=>$TESTONLY,
       );
 
@@ -1449,6 +1449,7 @@ sub specialParsing {
   if ($biosequence_set_name eq "yeast_orf_coding" ||
       $biosequence_set_name eq "Yeast ORFs Database" ||
       $biosequence_set_name eq "Yeast ORFs Common Name Database" ||
+      $biosequence_set_name eq "Yeast ORF Proteins" ||
       $biosequence_set_name eq "Yeast ORFs Database 200210") {
     if ($rowdata_ref->{biosequence_desc} =~ /([\w\-\:]+)\s([\w\-\:]+), .+/ ) {
       if ($biosequence_set_name eq "Yeast ORFs Common Name Database" ||
@@ -1708,18 +1709,24 @@ sub readNTransmembraneRegionsFile {
 
   #### Skip the header
   print "Reading n_transmembrane_regions file...\n";
-  if (1 == 1) {
-    print "  Assuming no header...\n";
-  } else {
-    print "  Parsing header...\n";
-    while ($line = <TMRFILE>) {
-      last if ($line =~ /^\#\# name/);
+  print "  Parsing header...\n";
+  my $first_line_flag = 1;
+  while ($line = <TMRFILE>) {
+    if ($first_line_flag && $line !~ /^\#/) {
+      print "  Ooops. No header! That's okay.\n";
+      close(TMRFILE);
+      open(TMRFILE,"$source_file");
+      last;
     }
-    unless (defined($line)) {
-      print "ERROR Reading TM file: No end of header!";
-      return;
-    }
+    last if ($line =~ /^\#\# name/);
+    $first_line_flag = 0;
   }
+
+  unless (defined($line)) {
+    print "ERROR Reading TM file: No end of header!";
+    return;
+  }
+
 
 
   #### Read in all the data putting it into the hash
