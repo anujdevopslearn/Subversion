@@ -1,0 +1,71 @@
+Proposed new scheme for $SBEAMS/
+
+Overview:
+
+----------
+
+cgi/       executable Perl
+
+lib/       protected static files: libraries, source code, config files
+
+servlet/   Java servlets processed by Tomcat
+
+tmp/       downloadable dynamic files: autogen jars, autogen html
+
+usr/       downloadable static files like jars, images, docs, includes
+
+var/       protected dynamic files: resultsets, uploaded data, logs, data
+
+In more detail:
+
+------------
+
+cgi/ [EXECUTABLE]
+
+   /$MODULE/
+
+lib/ [EXCLUDED] [nothing in here goes out via HTTP]
+
+   /same structure as now
+
+servlet/ [REMAP to Tomcat]
+
+       /$MODULE/
+
+tmp/ [OPEN]
+
+   /images/ (instead of current /images/tmp)
+
+   /jws/
+
+   /$MODULE/ (module-specific dynamically generated files that need to be
+
+              directly accessible like jnlps, data.jars, etc.)
+
+   /Interactions/Cytoscape_upload/  (dynamically generated HTML describing
+
+                                     the results of a bulk upload)
+
+usr/ [OPEN]
+
+   /images/ [move from root]
+
+   /includes/ [move from root]
+
+   /doc/ [move from root]
+
+   /java/share/     (stable jars directly accessible)
+
+   /java/$MODULE/   (module-specific stable jars directly accessible)
+
+var/ [EXCLUDED] [nothing in here goes out via HTTP]
+
+   /resultsets/ (instead of current /tmp/queries/)
+
+   /logs/
+
+   /upload/ (uploaded files via ManageTable)
+
+   /$MODULE/ (module-specific data files that should be accessed via
+
+             security-conscious cgi)
