@@ -1778,6 +1778,10 @@ sub displayResultSetControls {
       my $url_prefix = "$CYTOSCAPE_URL/sbeams";
       print "<BR>\n";
       print "<A HREF=\"${url_prefix}?m=microarray&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
+    } elsif ($resultset_ref->{column_list_ref}->[0] eq 'prophet number') {
+      my $url_prefix = "$CYTOSCAPE_URL/sbeams";
+      print "<BR>\n";
+      print "<A HREF=\"${url_prefix}?m=rchen&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
     } elsif ($resultset_ref->{column_list_ref}->[0] eq 'Systematic') {
       my $url_prefix = "$CYTOSCAPE_URL/sbeams";
       print "<BR>\n";
