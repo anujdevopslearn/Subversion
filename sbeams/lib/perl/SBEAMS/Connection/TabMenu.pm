@@ -72,6 +72,9 @@ sub new {
   # Do we want to include current params?
   push @urlparams, -query => 1;
   $this->{_absQueryURL} = $cgi->url( @urlparams );
+
+  #### If there's a password in here, strip it out!
+  $this->{_absQueryURL} =~ s/password=.*?;/password=xxx;/;
   $log->debug( "Query URL is $this->{_absQueryURL}" );
 
 
