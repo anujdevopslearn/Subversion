@@ -150,8 +150,9 @@ sub printEntryForm {
 
   #### Find the corresponding information for this search_id
   $sql = qq~
-	SELECT SB.data_location+'/'+F.fraction_tag+'/'+S.file_root+'.out' AS 'location',
-	       F.fraction_tag+'/'+S.file_root+'.out' AS 'name'
+	SELECT SB.data_location+'/'+F.fraction_tag AS 'location',
+	       F.fraction_tag+'/'+S.file_root+'.out' AS 'name',
+               S.file_root,SB.data_location,F.fraction_tag
 	  FROM $TBPR_SEARCH S
 	 INNER JOIN $TBPR_SEARCH_BATCH SB
                ON ( S.search_batch_id = SB.search_batch_id )
@@ -171,16 +172,26 @@ sub printEntryForm {
 
   my $location = $rows[0]->[0];
   my $name = $rows[0]->[1];
+  my $file_root = $rows[0]->[2];
+  my $data_location = $rows[0]->[3];
+  my $fraction_tag = $rows[0]->[4];
 
 
   print "<H3>File: $name</H3>\n";
 
-  my $filename = $location;
+  my $filename = "$location/$file_root.out";
   unless ($filename =~ /^\//) {
     $filename = $RAW_DATA_DIR{Proteomics}."/$filename";
   }
 
-  if ( -e $filename ) {
+  #### Instead of accessing the .out file directly, pull it out of the .tgz
+  my $use_tgz_file = 1;
+  if ($use_tgz_file) {
+    $filename = "tar -xzOf $RAW_DATA_DIR{Proteomics}/$data_location/".
+      "$fraction_tag.tgz ./$file_root.out|";
+  }
+
+  if ( $use_tgz_file || -e $filename ) {
     my $line;
     print "<PRE>\n";
     unless (open(INFILE,$filename)) {
