@@ -347,6 +347,11 @@ sub printEntryForm {
           $optionlists{$element}=$sbeams->buildOptionList(
              $optionlist_queries{$element},$parameters{$element},
              $method_options);
+	  #### If the user sent some invalid options, reset the list to the
+	  #### valid list.  This is hacky because buildOptionList() API is poor
+	  if ($optionlists{$element} =~ /\<\!\-\-(.*)\-\-\>/) {
+	    $parameters{$element} = $1;
+	  }
         } else {
           print "WARNING: empty SQL statement for option list. ".
             "Please report this problem<BR>\n";
