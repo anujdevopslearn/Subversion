@@ -119,7 +119,7 @@ form   {  font-family: Tahoma, Arial, Helvetica, sans-serif; font-size: ${FONT_S
 	<tr height=25>
 		<td bgcolor=#99cc66 align=right>
 			<font size=2>
-			Need more help? Email <a href="mailto:edeutsch\@systemsbiology.org">Eric Deutsch</a>&nbsp;
+			Need more help? Email <a href="mailto:$DBADMIN">your local $DBTITLE administrator $DBADMIN</a>&nbsp;
 		</td>
 	</tr>
 </table>
