@@ -2848,7 +2848,6 @@ sub display_input_form {
       !;
     }
 
-
     if ($input_type eq "file") {
       print qq!
         <TD><INPUT TYPE="$input_type" NAME="$column_name"
@@ -3928,13 +3927,17 @@ sub printUserChooser {
 		}
 		
 		#### Get accessible projects and make <SELECT> if we're in HTML mode
-		my @project_ids = $self->getAccessibleProjects();
+		my $module = $self->getSBEAMS_SUBDIR();
+		$module =~ tr/A-Z/a-z/;
+		my @project_ids = $self->getAccessibleProjects(module=>"$module");
 		my $project_ids_list = join(',',@project_ids) || '-1';
 		$project_sql = qq~
 				SELECT P.project_id, UL.username+' - '+P.name
 				FROM $TB_PROJECT P 
 				LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
-				WHERE P.project_id IN ( $project_ids_list );
+				WHERE P.project_id IN ( $project_ids_list )
+				GROUP BY P.project_id, P.name, UL.username
+				ORDER BY UL.username, P.name;
 		~;
 
 		@rows = $self->selectSeveralColumns($project_sql);
