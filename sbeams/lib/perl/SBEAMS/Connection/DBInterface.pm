@@ -5122,14 +5122,20 @@ sub getProjectsYouHaveAccessTo {
     "SELECT privilege_id,name FROM $TB_PRIVILEGE WHERE record_status != 'D'"
   );
 
+  my @accessible = $self->getAccessibleProjects( privilege_level => DATA_READER );
+  my $accessible_projects = join ',', @accessible;
 
   #### Get all the projects user has access to
   $sql = qq~
-	SELECT P.project_id,P.project_tag,P.name,UL.username,
-               MIN(CASE WHEN UWG.contact_id IS NULL THEN NULL ELSE GPP.privilege_id END) AS "best_group_privilege_id",
-               MIN(UPP.privilege_id) AS "best_user_privilege_id"
-	  FROM $TB_PROJECT P
-	 INNER JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
+	SELECT P.project_id,P.project_tag,P.name,
+         CASE WHEN UL.username IS NULL THEN C.first_name + '_' + C.last_name
+              ELSE UL.username END AS username,
+         MIN( CASE WHEN UWG.contact_id IS NULL THEN 9999
+              ELSE GPP.privilege_id END ) AS "best_group_privilege_id",
+         MIN( CASE WHEN P.PI_contact_id = $current_contact_id THEN 10
+              ELSE UPP.privilege_id END ) AS "best_user_privilege_id"
+	  FROM $TB_PROJECT P JOIN $TB_CONTACT C ON ( P.PI_contact_id = C.contact_id )
+	  LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
 	  LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
 	       ON ( P.project_id = UPP.project_id
 	            AND UPP.contact_id='$current_contact_id' )
@@ -5142,20 +5148,12 @@ sub getProjectsYouHaveAccessTo {
 	            AND UWG.contact_id='$current_contact_id' )
 	  LEFT JOIN $TB_WORK_GROUP WG
 	       ON ( UWG.work_group_id = WG.work_group_id )
-	 WHERE 1=1
-	   AND P.record_status != 'D'
-	   AND UL.record_status != 'D'
-	   AND ( UPP.record_status != 'D' OR UPP.record_status IS NULL )
-	   AND ( GPP.record_status != 'D' OR GPP.record_status IS NULL )
-	   AND ( PRIV.record_status != 'D' OR PRIV.record_status IS NULL )
-	   AND ( UWG.record_status != 'D' OR UWG.record_status IS NULL )
-	   AND ( WG.record_status != 'D' OR WG.record_status IS NULL )
-	   AND ( UPP.privilege_id<=40 OR GPP.privilege_id<=40 )
-           AND ( WG.work_group_name IS NOT NULL OR UPP.privilege_id IS NOT NULL )
-         GROUP BY P.project_id,P.project_tag,P.name,UL.username
+	 WHERE P.project_id IN ( $accessible_projects )
+   GROUP BY P.project_id,P.project_tag,P.name, username, first_name, last_name
 	 ORDER BY UL.username,P.project_tag
   ~;
   @rows = $self->selectSeveralColumns($sql);
+  $log->debug( "Found " . scalar( @rows ) . ' Accessible projects' );
 
   if (@rows) {
     my $firstflag = 1;
