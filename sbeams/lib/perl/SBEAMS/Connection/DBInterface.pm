@@ -2591,6 +2591,14 @@ sub displayResultSetControls {
       $param_string .= "apply_action=QUERY";
     }
 
+
+    #### Strip out login information if it's there!
+    foreach my $stripword ( qw ( password username login force_login ) ) {
+      $param_string =~ s/([\?\&])$stripword=.+?[\&]/$1/;
+      $param_string =~ s/[\?\&]$stripword=.+$//;
+    }
+
+
     print qq~
       <BR><nobr>URL to
       <A HREF=\"$base_url${separator}apply_action=VIEWRESULTSET&rs_set_name=$rs_params{set_name}&rs_page_size=$rs_params{page_size}&rs_page_number=$pg$plot_params\">
