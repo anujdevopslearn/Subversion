@@ -458,7 +458,29 @@ sub readIniFile {
 
 } # end readIniFile
 
-
+#+
+# Method returns appropriate module prefix, based on SBEAMS_SUBDIR
+#-
+sub getModulePrefix {
+  my $self = shift;
+  my %prefix = ( BEDB => 'BE',
+                 BioLink => 'BL',
+                 Biosap => 'BS',
+                 Cytometry => 'CY',
+                 Genotyping => 'GT',
+                 Immunostain => 'IS',
+                 Inkjet => 'IJ',
+                 Interactions => 'IN',
+                 Microarray => 'MA',
+                 Oligo => 'OG',
+                 PeptideAtlas => 'AT',
+                 PhenoArray => 'PH',
+                 ProteinStructure => 'PS',
+                 Proteomics => 'PR',
+                 SNP => 'SN'
+                ); 
+  return( $prefix{$SBEAMS_SUBDIR} || '' );
+}
 
 
 
