@@ -63,7 +63,7 @@ use vars qw(%REGISTRY);
 use base qw(SBEAMS::Microarray);		#declare superclass
 use Carp;
 
-#@ISA = qw(SBEAMS::Microarray);     #use our to avoid adding @ISA to the vars mod
+#@ISA = qw(SBEAMS::Microarray::Affy_Analysis);     
 
 
 
@@ -158,6 +158,31 @@ sub get_afa_user_id {
 	return $self->{USER_ID};
 }	
 
+#######################################################
+# set_afa_array_id
+# affy_array_id 
+#######################################################
+sub set_affy_array_id { 
+	my $method = 'set_affy_array_id';
+	
+	my $self = shift;
+	my $name = shift;
+	confess(__PACKAGE__ . "::$method No affy_array_id provided '$name'\n") unless ($name =~ /^\d/);
+	
+	return $self->{ARRAY_ID} = $name;
+}
+
+#######################################################
+# get_affy_array_id
+# affy_array_id
+#######################################################
+	
+sub get_affy_array_id {
+	my $self = shift;
+	return $self->{ARRAY_ID};
+}
+
+
 
 ##################################################################################################
 #set get pair:afs_sample_group_name
@@ -170,7 +195,7 @@ sub set_afs_sample_group_name {
 	
 	my $self = shift;
 	my $name = shift;
-	confess(__PACKAGE__ . "::$method No sample name provided '$name'\n") unless ($name =~ /^\w/);
+	confess(__PACKAGE__ . "::$method No sample name provided '$name'\n") unless ($name =~ /^[\w+-]/);
 	
 	return $self->{SAMPLE_GROUP_NAME} = $name;
 }
@@ -389,7 +414,7 @@ sub set_afa_file_path_id {
 
 #######################################################
 # get_afa_file_path_id
-#  Get the file_base_path which is every thing Upton the root_file_name
+#  Get the file_base_path which is every thing Upto the root_file_name
 #######################################################
 	
 sub get_afa_file_path_id {
