@@ -967,7 +967,8 @@ sub addSearchEntry {
   );
 
   #### Verify successful INSERT
-  die "ERROR: Failed to retreive PK search_id" unless ($search_id);
+  die("ERROR: Failed to retreive PK search_id ".
+    "(got $search_id)") unless ($search_id);
 
   #### Return that key if successful
   return $search_id;
@@ -1261,18 +1262,27 @@ sub updateFromSummaryFiles {
       #### On the other hand, it would be nice to be able to UPDATE
       #### not just INSERT, so that will require some more thought FIXME
       $sql = qq~
-	SELECT search_hit_id
+	SELECT SH.search_hit_id,Q.quantitation_id
 	  FROM $TBPR_SEARCH S
 	  JOIN $TBPR_SEARCH_HIT SH ON ( S.search_id = SH.search_id )
+          LEFT JOIN $TBPR_QUANTITATION Q ON (SH.search_hit_id=Q.search_hit_id)
 	 WHERE search_batch_id = '$search_batch_id'
 	   AND hit_index = 1
 	   AND file_root = '$file_root'
       ~;
-      my ($search_hit_id) = $sbeams->selectOneColumn($sql);
+      my ($search_hit_id,$quantitation_id) =
+        $sbeams->selectTwoColumnHash($sql);
       unless ($search_hit_id) {
         print "\nERROR: Unable to find search_hit_id with\n".
               "$sql\n\n";
         return;
+      }
+
+      #### If a quantitation_id also turned up, kip this one
+      if ($quantitation_id) {
+        print "INFO: There is already a quantitation record for this ".
+          "search_hit_id.  Skip.\n";
+        next;
       }
 
 
