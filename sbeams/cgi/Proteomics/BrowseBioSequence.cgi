@@ -796,11 +796,12 @@ sub displaySequenceView {
   #### Display each row in FASTA format
   print "<BR>Click on the gene name below to follow the link to the source ".
     "database.<BR>\n";
-  print "Referenced peptides are highlighted in <font color=\"green\">GREEN</font>.<BR>\n";
-  print "Transmembrane regions are highlighted in <font color=\"orange\">ORANGE</font>.<BR>\n"
+  print "- Referenced peptides are highlighted in <font color=\"green\">GREEN</font>.<BR>\n";
+  print "- Transmembrane regions (TMRs) are highlighted in <font color=\"orange\">ORANGE</font>.<BR>\n"
     if ($tmr_topology_column);
-  print "Signal peptides are highlighted in <font color=\"blue\">BLUE</font>.<BR>\n";
-  print "Collisions in highlighting are shown in <font color=\"red\">RED</font>.<BR>\n";
+  print "- Signal peptides are highlighted in <font color=\"blue\">BLUE</font>.<BR>\n";
+  print "- Collisions in highlighting are shown in <font color=\"red\">RED</font>.<BR>\n";
+  print "- Internal ends of TMRs are labeled <font color=\"orange\">(i)</font> and external (outer) ends are labeled <font color=\"orange\">(o)</font>.<BR>\n";
   print "<BR><PRE>\n";
   foreach $row (@{$data_ref}) {
 
@@ -856,7 +857,7 @@ sub displaySequenceView {
         $tmr_end_positions{$end} = $start_side;
       }
       $tmr_color = "blue" if ($tmr_class eq 'A' || $tmr_class eq 'S');
-    print "(TMR Topology: $tmr_topology)<BR>\n";
+    print "(Used TMR topology string: $tmr_topology)<BR>\n";
     #print "<A HREF=\"http://www.cbs.dtu.dk/cgi-bin/nph-webface?configfile=/usr/opt/www/pub/CBS/services/TMHMM-2.0/TMHMM2.cf&seqfile=outform=-noshort&SEQ=%3EANON%0D$sequence\">[See full TMHMM result]</A><BR>\n";
     print "<A HREF=\"http://www.cbs.dtu.dk/services/TMHMM/\" TARGET=\"TMHMM\">To see full TMHMM result, click here and paste this:</A><BR>>$biosequence_name Description<BR>$sequence<BR><BR>\n";
     }
