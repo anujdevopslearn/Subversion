@@ -2545,6 +2545,9 @@ sub transferTable {
   	if (defined($transform_map_ref->{$key})) {
   	  my $current_value = $row->[$key];
 
+          #### If the value is empty, then ignore it
+	  next unless ($current_value gt '');
+
           #### Determine if we need to remap this column and if so, do it
           my $map_ref = $transform_map_ref->{$key};
           my $mapped_value;
@@ -2588,8 +2591,15 @@ sub transferTable {
       my @constraints;
       my $constraints_str;
       while ( ($key,$value) = each %{$update_keys_ref} ) {
-        push(@constraints,"$key = '".$row->[$value]."'");
+        my $contraint_value = $self->convertSingletoTwoQuotes($row->[$value]);
+        #### If the constraint value is empty, allow either NULL or empty
+        if ($contraint_value gt '') {
+          push(@constraints,"$key = '$contraint_value'");
+        } else {
+          push(@constraints,"($key = '' OR $key IS NULL)");
+	}
       }
+
       if (@constraints) {
         $constraints_str = join(" AND ",@constraints);
         $sql = qq~
