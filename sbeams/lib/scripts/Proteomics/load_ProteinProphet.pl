@@ -60,6 +60,8 @@ Options:
                       data should be associated
   --delete_existing   If there is already data for this search_batch_id,
                       try to delete it and then load instead of giving up
+  --purge_protein_summary_id nnn
+                      Purges protein_summary_id nnn without loading anything
 
  e.g.:  $PROG_NAME --verbose 2 --testonly --bio HuNCI ProteinProphet.xml
 
@@ -77,6 +79,7 @@ unless ($ARGV[0]){
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
   "validate=s","namespaces","schemas",
   "biosequence_set_tag:s","search_batch_id:s","delete_existing",
+  "purge_protein_summary_id:i",
   )) {
   print "$USAGE";
   exit;
@@ -95,31 +98,33 @@ if ($DEBUG) {
 }
 
 
+#### Get the search_batch_id parameter
+my $search_batch_id = $OPTIONS{search_batch_id} || '';
+my $delete_existing = $OPTIONS{delete_existing} || '';
+my $purge_protein_summary_id = $OPTIONS{purge_protein_summary_id} || '';
+
+
 #### Make sure the file name was supplied or exit
 my $source_file = $ARGV[0];
-unless ($source_file) {
+unless ($source_file || $purge_protein_summary_id) {
+  print "$USAGE";
+  exit 0;
+}
+
+
+#### Process program-specific options
+my $biosequence_set_tag = $OPTIONS{biosequence_set_tag};
+unless ($biosequence_set_tag || $purge_protein_summary_id) {
+  print "ERROR: You must provide a value for the --biosequence_set_tag option";
   print "$USAGE";
   exit 0;
 }
 
 
 #### Check to make sure the file exists
-unless (-f $source_file) {
+unless (-f $source_file || $purge_protein_summary_id) {
   die "File '$source_file' does not exist!\n";
 }
-
-
-#### Process program-specific options
-my $biosequence_set_tag = $OPTIONS{biosequence_set_tag};
-unless ($biosequence_set_tag) {
-  print "ERROR: You must provide a value for the --biosequence_set_tag option";
-  print "$USAGE";
-  exit 0;
-}
-
-#### Get the search_batch_id parameter
-my $search_batch_id = $OPTIONS{search_batch_id} || '';
-my $delete_existing = $OPTIONS{delete_existing} || '';
 
 
 #### Process parser options
@@ -341,7 +346,7 @@ sub start_element {
         my $tmp = {
           protein_summary_id=>$PK,
           search_batch_id=>$self->{search_batch_id},
-          comment=>'fix non NULLabilty',
+#          comment=>'fix non NULLabilty',
         };
         main::insert_attrs(
           table_name=>'search_batch_protein_summary',
@@ -354,6 +359,19 @@ sub start_element {
         print "WARNING: NO search_batch_id was supplied, so this protein ".
           "summary will not be linked to an existing search_batch!!\n";
       }
+    }
+
+
+    #### If this is the start of a new protein, then reset the counter
+    #### for the number of peptides
+    if ($localname eq 'protein') {
+      $self->{n_peptides} = 0;
+    }
+
+
+    #### If this is a pepetide, then update the number of peptides
+    if ($localname eq 'peptide') {
+      $self->{n_peptides} += $attrs{n_instances};
     }
 
 
@@ -390,6 +408,18 @@ sub start_element {
 ###############################################################################
 sub end_element {
   my ($self,$uri,$localname,$qname) = @_;
+
+
+  #### If this the end of a protein, update the number of peptides
+  if ($localname eq 'protein') {
+    main::update_row(
+      table_name=>$localname,
+      attrs_ref=>{ n_peptides=>$self->{n_peptides} },
+      PK=>"${localname}_id",
+      PK_value=>$self->object_stack->[-1]->{PK_value},
+    );
+  }
+
 
   #### If there's an object on the stack consider popping it off
   if (scalar @{$self->object_stack()}){
@@ -482,6 +512,16 @@ sub main {
   $CONTENT_HANDLER->{counter} = 0;
 
 
+  #### If the user asked to purge_protein_summary_id, then do it and return
+  if ($purge_protein_summary_id) {
+    print "Purging protein_summary_id $purge_protein_summary_id...\n"
+      unless ($QUIET);
+    deleteProteinSummary(protein_summary_id=>$purge_protein_summary_id);
+    print "\n\n" unless ($QUIET);
+    return;
+  }
+
+
   #### Get the biosequence information and put it in the content handler
   my %biosequence_data = get_biosequence_data(
     biosequence_set_tag => $biosequence_set_tag
@@ -503,14 +543,12 @@ sub main {
     ";
     my ($existing) = $sbeams->selectOneColumn($sql);
     if ($existing) {
-      print "WARNING: There is already a protein_summary for this ".
+      print "\nWARNING: There is already a protein_summary for this ".
         "search_batch_id.\n";
       if ($delete_existing) {
-        print "  Will make an attempt to delete existing\n";
-        $sql = "DELETE ${DATABASE}search_batch_protein_summary ".
-          "WHERE search_batch_id = '$search_batch_id'";
-        print "$sql\n";
-        $sbeams->executeSQL($sql);
+        print "INFO: Deleting existing data...\n";
+	deleteProteinSummary(search_batch_id=>$search_batch_id);
+
       } else {
         print "  Cannot continue.  Either specify --delete_existing or ".
           "or re-evaluate your command.\n";
@@ -521,11 +559,12 @@ sub main {
 
 
   #### Process the whole document
+  print "INFO: Loading...\n" unless ($QUIET);
   $parser->parse (XML::Xerces::LocalFileInputSource->new($source_file));
 
 
   #### Write out information about the objects we've loaded if verbose
-  unless ($QUIET) {
+  if ($VERBOSE) {
     print "\n-------------------------------------------------\n";
     my ($key,$value);
     my ($key2,$value2);
@@ -567,9 +606,11 @@ sub main {
 
     } # end while
 
-    print "\n\n";
+  } # end if
 
-  } # end unless
+
+  print "\n\n" unless ($QUIET);
+
 
 } # end main
 
@@ -657,7 +698,7 @@ sub get_biosequence_data {
      WHERE set_tag = '$biosequence_set_tag'
        AND record_status != 'D'
   ~;
- print $sql;
+  print "$sql\n" if ($VERBOSE);
 
 
   my @biosequence_set_ids = $sbeams->selectOneColumn($sql);
@@ -698,6 +739,158 @@ sub get_biosequence_data {
   $result{biosequence_ids} = \%biosequence_ids;
 
   return %result;
+
+}
+
+
+
+###############################################################################
+# deleteProteinSummary
+###############################################################################
+sub deleteProteinSummary {
+  my %args = @_;
+
+  my $search_batch_id = $args{'search_batch_id'};
+  my $protein_summary_id = $args{'protein_summary_id'};
+
+  #### Define the inheritance path:
+  ####  (C) means Child that directly links to the parent
+  ####  (A) means Association from parent to this table and requires delete
+  ####  (L) means Linking table from child to parent
+  my %table_child_relationship = (
+    protein_summary => 'protein_summary_header(C),protein_group(C),'.
+      'search_batch_protein_summary(C)',
+    protein_summary_header => 'protein_summary_data_filter(C)',
+    protein_group => 'protein(C)',
+    protein => 'peptide(C),indistinguishable_protein(C),'.
+      'summary_quantitation(A)',
+    peptide => 'peptide_parent_protein(C),indistinguishable_peptide(C)',
+  );
+
+
+  #### Find out which record to delete
+  my @ids;
+  if ($search_batch_id) {
+    my $sql = "
+      SELECT protein_summary_id
+        FROM ${DATABASE}search_batch_protein_summary
+       WHERE search_batch_id = '$search_batch_id'
+    ";
+    @ids = $sbeams->selectOneColumn($sql);
+  } elsif ($protein_summary_id) {
+    @ids = ( $protein_summary_id );
+  } else {
+    die("ERROR: Neither search_batch_id nor protein_summary_id specified");
+  }
+
+
+  foreach my $element (@ids) {
+    my $result = deleteRecordsAndChildren(
+      table_name => 'protein_summary',
+      table_child_relationship => \%table_child_relationship,
+      delete_PKs => [ $element ],
+    );
+  }
+
+
+  return 1;
+
+}
+
+
+
+###############################################################################
+# deleteRecordsAndChildren
+###############################################################################
+sub deleteRecordsAndChildren {
+  my %args = @_;
+
+  my $table_name = $args{'table_name'} || die("table_name not passed");
+  my $table_child_relationship = $args{'table_child_relationship'}
+    || die("table_child_relationship not passed");
+  my $delete_PKs = $args{'delete_PKs'} || die("delete_PKs not passed");
+
+  print "  Entering deleteRecordsAndChildren\n\n" if ($VERBOSE);
+
+  #### If there are child tables, process them first
+  if (defined($table_child_relationship->{$table_name})) {
+
+    my @sub_tables = split(",",$table_child_relationship->{$table_name});
+    foreach my $element (@sub_tables) {
+      if ($element =~ /^([\w_-\d]+)\(([A-Z])\)$/) {
+        my $child_table_name = $1;
+	my $child_type = $2;
+        print "  Processing child $child_table_name ($child_type)\n\n"
+          if ($VERBOSE > 1);
+
+        #### If it's a plain child, determine my PKs and recurse requesting
+        #### all references be deleted
+        if ($child_type eq 'C') {
+	  my $sql = "
+	    SELECT ${child_table_name}_id
+            FROM ${DATABASE}$child_table_name
+            WHERE ${table_name}_id IN (".join(",",@{$delete_PKs}).")
+          ";
+	  print "$sql\n\n" if ($VERBOSE > 1);
+          my @child_PKs = $sbeams->selectOneColumn($sql);
+
+	  if (scalar(@child_PKs) > 0) {
+    	    print "Recursing to delete $child_table_name\n\n" if ($VERBOSE);
+            my $result = deleteRecordsAndChildren(
+              table_name => $child_table_name,
+              table_child_relationship => $table_child_relationship,
+              delete_PKs => \@child_PKs,
+            );
+	  }
+
+        #### If the relationship is an Associative unique child, delete
+	} elsif ($child_type eq 'A') {
+
+          #### Get the child table name ids to be deleted
+	  my $sql = "
+	    SELECT ${child_table_name}_id
+            FROM ${DATABASE}$table_name
+            WHERE ${table_name}_id IN (".join(",",@{$delete_PKs}).")
+            AND ${child_table_name}_id IS NOT NULL
+          ";
+	  print "$sql\n\n" if ($VERBOSE > 1);
+          my @child_PKs = $sbeams->selectOneColumn($sql);
+
+          #### Delete them
+	  if (scalar(@child_PKs) > 0) {
+  	    print "Recursing to delete $child_table_name\n" if ($VERBOSE);
+            my $result = deleteRecordsAndChildren(
+              table_name => $child_table_name,
+              table_child_relationship => $table_child_relationship,
+              delete_PKs => \@child_PKs,
+            );
+	  }
+
+
+        #### Otherwise there was a parsing error or an unimplemented type
+        } else {
+          die("ERROR: Unrecognized child type '$child_type'");
+        }
+
+
+      } else {
+        die("ERROR: Unable to parse relationship '$element'");
+      }
+
+    }
+
+  }
+
+
+  #### All children should be gone we hope, so delete
+  my $sql = "DELETE FROM ${DATABASE}$table_name WHERE ${table_name}_id IN (".
+    join(",",@{$delete_PKs}).")";
+  print "$sql\n\n" if ($VERBOSE > 1);
+  print "." unless ($QUIET || $VERBOSE);
+  $sbeams->executeSQL($sql) unless ($TESTONLY);
+
+
+  return 1;
 
 }
 
