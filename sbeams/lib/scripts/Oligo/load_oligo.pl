@@ -15,9 +15,9 @@
 #               oligo
 #               oligo_annotation
 #
-#               Future work might include update/delete_existing
+#               
 #
-# Last modified : 8/26/04
+# Last modified : 3/22/05
 ######################################################################
 
 
@@ -61,6 +61,9 @@ Usage: load_oligo.pl [OPTIONS]
 Options:
 
   ## REQUIRED parameters.  They must be set 
+
+  ####See COMMANDLINE_README for more info on how to set these parameters
+  ####for the most common uses 
   --search_tool_id n     The search tool that was used to 
                           create this oligo set.
   --gene_set_tag n       The biosequence set this set of oligos 
@@ -103,6 +106,11 @@ unless (GetOptions(\%OPTIONS,
   print "$USAGE";
   exit;
 }
+
+
+
+
+
 
 $VERBOSE = $OPTIONS{"verbose"} || 0;
 $QUIET = $OPTIONS{"quiet"} || 0;
@@ -166,25 +174,24 @@ sub handleRequest {
   my $sql;
   my @rows;
 
-
-  my $oligo_search_id;
-  #my $oligo_types_ref;
-  $oligo_search_id = add_oligo_search_record(user=>$current_username,
+  #Get the oligo search id 
+  my $oligo_search_id = add_oligo_search_record(user=>$current_username,
 											 project=>$project_id);
-
-
+  #Get the gene biosequence set id
   my $gene_biosequence_set_id = add_oligo_parameter_set_record(
      oligo_search_id=>$oligo_search_id,
      gene_set_tag=>$OPTIONS{gene_set_tag},
 	 chromosome_set_tag=>$OPTIONS{chromosome_set_tag}
-															);
+	 														);
+
   
+  #Process and load the file containing the oligos
   handle_oligo_file(project_id=>$OPTIONS{project_id},
 					file=>$OPTIONS{oligo_file},
 					search_tool_id=>$OPTIONS{search_tool_id},
 					oligo_search_id=>$oligo_search_id,
 					biosequence_set_id=>$gene_biosequence_set_id              
-					);
+					);    
 
 }
 
@@ -234,24 +241,24 @@ sub handle_oligo_file {
       $loopflag = 0;
       $line = ">BOGUS DESCRIPTION";
     }
-
+	
     ## Strip CRs of all flavors
     $line =~ s/[\n\r]//g;
-
+   
     ## If the line has a ">" and it's not the first, write the
     ## previous sequence to the database
     if (($line =~ />/) && ($information ne "####")) {
-
-	  ## Get the ID of the oligo (INSERTing a record, if necessary)
-	  my $oligo_id = get_oligo(project_id=>$project_id,
-							   sequence=>$sequence);
 
 	  ## INSERT the selected_oligo record
 	  my %rowdata;
 	  $information =~ /^(.*?)>(.*)/;
 	  $rowdata{header} = $2;
 	  my $header = $2;
-
+	 
+      ## Get the ID of the oligo (INSERTing a record, if necessary)
+	  my $oligo_id = get_oligo(project_id=>$project_id,
+							   sequence=>$sequence,
+							   header=>$header);
       ## Print a warning if malformed
       if ($1) {
 		print "\nWARNING: Header line possibly malformed:\n$information\n".
@@ -265,34 +272,35 @@ sub handle_oligo_file {
 	  $rowdata{oligo_type_id} = '';
 	  $rowdata{biosequence_id} = '';
 	  $rowdata{start_coordinate} = '';
+	  $rowdata{stop_coordinate} = '';
 	  $rowdata{threeprime_distance} = '';
-	  #$rowdata{synthetic_start} = '';
-	  #$rowdata{synthetic_stop} = '';
+	  $rowdata{synthetic_start} = '';
+	  $rowdata{synthetic_stop} = '';
 
-
-
+	
       ## Do special parsing depending on which genome set is being loaded
 	  ##  The returned hash should be ONLY what is to be loaded into the DB!
       special_parsing(rowdata_ref=>\%rowdata,
 					  search_tool_id=>$search_tool_id,
 					  biosequence_set_id=>$biosequence_set_id,
 					  sequence=>$sequence);
-
+	 
 	  ## Verify that we haven't loaded this oligo_type/oligo combination yet
 	  my $key = $oligo_search_id.
 		$rowdata{oligo_id}.
 		$rowdata{oligo_type_id}.
 		$rowdata{biosequence_id}.
 		$rowdata{start_coordinate}.
+        $rowdata{stop_coordinate}.
 		$rowdata{threeprime_distance};
-		#$rowdata{synthetic_start}.
-		#$rowdata{synthetic_stop};
+		$rowdata{synthetic_start}.
+		$rowdata{synthetic_stop};
 
 	  if ( $selected_oligos{$key} ) {
 		print "[WARNING]: Potential duplicate oligo \'$header\' loaded\n";
 	  }
             
-  
+	 
 	  
 	  ## INSERT the selected_oligo record
 	  my $selected_oligo_id = $sbeams->updateOrInsertRow(table_name=>$TBOG_SELECTED_OLIGO,
@@ -302,7 +310,7 @@ sub handle_oligo_file {
 													  testonly=>$TESTONLY,
 													  verbose=>$VERBOSE,
 													  );  ##################took out add_audit_parameters=>1
-
+	 
 	  $selected_oligos{$key} = $selected_oligo_id;
 	  $counter++;
 
@@ -347,7 +355,7 @@ sub handle_oligo_file {
 # 3 => "create_halobacterium_expr.pl"
 #
 ######################################################################
-sub special_parsing {
+sub special_parsing {  
   my %args=@_;
   my $SUB="special_parsing";
 
@@ -364,10 +372,10 @@ sub special_parsing {
 
   ## Get search tool name, which is better than using ID
   my $sql = qq~
-SELECT search_tool_name
+  SELECT search_tool_name
   FROM $TBOG_SEARCH_TOOL
- WHERE search_tool_id = $search_tool_id
- ~;
+  WHERE search_tool_id = $search_tool_id
+  ~;
   my @rows = $sbeams->selectOneColumn($sql);
   my $search_tool_name = $rows[0];
   
@@ -380,13 +388,14 @@ SELECT search_tool_name
   #    ACTGACTGactgactgactg
   # 
   # NOTE: synthetic sequence is capitalized
-
+  
   if ($search_tool_name eq "create_halobacterium_ko.pl" ||
 	  $search_tool_name eq "create_haloarcula_expr.pl" ||
-	  $search_tool_name eq "create_halobacterium_expr.pl" ) {
+	  $search_tool_name eq "create_halobacterium_expr.pl" ||
+	  $search_tool_name eq "user_created_oligo") {
 
 	$header =~ /(\w+)\.(\w+)\s+(\d+)\s(\d+)/;
-	$rowdata_ref->{start_coordinate} = $3;  
+	$rowdata_ref->{start_coordinate} = $3; 
 	$rowdata_ref->{biosequence_id} = get_biosequence_id(name=>$1,
 														bs_set_id=>$bs_set_id);
 
@@ -407,8 +416,23 @@ SELECT search_tool_name
 	  $oligo_type_id = "6";
 	}elsif($type eq "rev") {
 	  $oligo_type_id = "7";
+	}elsif($type eq "f"){
+	  $oligo_type_id = "8";
+	}elsif($type eq "g"){
+	  $oligo_type_id = "9";
+	}elsif($type eq "h"){
+	  $oligo_type_id = "10";
 	}else{
 	  print "[WARNING]: no oligo_type \'$type\' for oligo \'$header\'.\n";
+	}
+
+    ## Calculate Stop Coordinate (wrong in the oligo files for expression)
+	if($type eq "for"){
+	  $rowdata_ref->{stop_coordinate} = $3 + 21;
+	}elsif($type eq "rev"){
+	  $rowdata_ref->{stop_coordinate} = $3 - 21;
+	}else{
+	  $rowdata_ref->{stop_coordinate} = $4;
 	}
 
 	if ($oligo_type_id){
@@ -430,27 +454,14 @@ SELECT search_tool_name
 
 	## Load Synthetic Start/Stop Coordinates
 	if (defined($synth_start) && ($synth_stop != $synth_start)) {   #if synth_stop was incremented
-	  #$rowdata_ref->{synthetic_start} = $synth_start;
-	  #$rowdata_ref->{synthetic_stop} = $synth_stop;
+	  $rowdata_ref->{synthetic_start} = $synth_start;
+	  $rowdata_ref->{synthetic_stop} = $synth_stop;
 	}
 
   }
 
-  #print "\n\n";
-  #print "oligo_search_id: " . $rowdata_ref->{oligo_search_id} . "\n";
-  #print "oligo_id: " . $rowdata_ref->{oligo_id} . "\n";
-  #print "oligo_type_id: " . $rowdata_ref->{oligo_type_id}."\n";
-  #print "biosequence_id: " . $rowdata_ref->{biosequence_id}."\n";
-  #print "start_coordinate: " . $rowdata_ref->{start_coordinate}."\n";
-  #print "threeprime_distance: " . $rowdata_ref->{threeprime_distance}."\n";
-  #print "synthetic_start: " . $rowdata_ref->{synthetic_start}."\n";
-  #print "synthetic_stop: " . $rowdata_ref->{synthetic_stop}."\n";
-
-##KEEP FILLING ME IN!!!!
-
-
   delete($rowdata_ref->{header});
-
+					
 }
 
 
@@ -485,7 +496,7 @@ SELECT biosequence_id
 ######################################################################
 # get_oligo
 ######################################################################
-sub get_oligo {
+sub get_oligo {      
   my %args = @_;
   my $oligo_id;
 
@@ -495,37 +506,49 @@ sub get_oligo {
 	die "[BUG-$SUB]: oligo sequence not passed\n";
   my $project_id = $args{project_id} ||
 	die "[BUG-$SUB]: project_id not passed\n";
+  my $header = $args{header} ||
+	die "[BUG-$SUB]: header not passed\n";
 
+ 
   ## Strip out any non-sequence (whitespace, numbers) characers
   $sequence =~ s/\s//g;
   $sequence =~ s/\d//g;
 
   my $length = length($sequence);
+			  
+  ## Process header
+  $header =~ /(\w+)\.(\w+)\s+(\d+)\s(\d+)\sTM=(\d+)\.(\d+)\sSS=(\w)/;
 
+ 
+  my $melt_temp = $5 . "." . $6;  #get melting temp
+  $melt_temp = sprintf "%.1f", $melt_temp;  #limit to 1 decimal place
+
+  my $sec_struct = $7;            #get secondary structure
+  
   ## See if there is already a matching oligo (within the project) 
   my $sql = qq~
    SELECT O.oligo_id
-     FROM $TBOG_OLIGO O
-LEFT JOIN $TBOG_OLIGO_ANNOTATION OA ON (O.oligo_id = OA.oligo_id)
-    WHERE O.sequence_length = '$length'
-      AND O.feature_sequence = '$sequence'
-      AND OA.project_id = '$project_id'
-      AND OA.record_status != 'D'
-	  ~;
+   FROM $TBOG_OLIGO O
+   LEFT JOIN $TBOG_OLIGO_ANNOTATION OA ON (O.oligo_id = OA.oligo_id)
+   WHERE O.sequence_length = '$length'
+   AND O.feature_sequence = '$sequence'
+   AND OA.project_id = '$project_id'
+   AND OA.record_status != 'D'
+   ~;
   my @rows = $sbeams->selectOneColumn($sql);
   
-
   ## INSERT record or return an ID, based upon the returned result
-  if ( scalar(@rows) > 1 ) {
-	print "[WARNING]: Yikes! multiple oligos appear to have a sequence".
-	  " of \'$sequence\' and a length of $length.  Using the first one.\n";
-	$oligo_id = $rows[0];
-  } elsif ( scalar(@rows) == 1 ) {
-	$oligo_id = $rows[0];
-  } else{
+  #if ( scalar(@rows) > 1 ) {
+#	print "[WARNING]: Yikes! multiple oligos appear to have a sequence".
+#	  " of \'$sequence\' and a length of $length.  Using the first one.\n";
+#	$oligo_id = $rows[0];  
+#    } elsif ( scalar(@rows) == 1 ) {
+#	$oligo_id = $rows[0];
+#	} else{
 
 	## In this case, we need to INSERT the oligo record...
 	my %rowdata;
+	$rowdata{melting_temp} = $melt_temp;
 	$rowdata{sequence_length} = $length;
 	$rowdata{feature_sequence} = $sequence;
 	$oligo_id = $sbeams->updateOrInsertRow(table_name=>$TBOG_OLIGO,
@@ -535,18 +558,23 @@ LEFT JOIN $TBOG_OLIGO_ANNOTATION OA ON (O.oligo_id = OA.oligo_id)
 										   testonly=>$TESTONLY,
 										   verbose=>$VERBOSE);
 	undef %rowdata;
-
+      
+              
 	## ...AND INSERT the oligo_annotation record
 	my %rowdata;
 	$rowdata{oligo_id} = $oligo_id;
 	$rowdata{project_id} = $project_id;
 	$rowdata{in_stock} = 'N'; #default is it's not in stock
+	$rowdata{secondary_structure} = $sec_struct;
+	$rowdata{GC_content} = sprintf "%.1f", calc_gc(sequence => $sequence);
+	$rowdata{primer_dimer} = 'U'; #need to change later
+	$rowdata{location} = 'U'; 
 	$sbeams->updateOrInsertRow(table_name=>$TBOG_OLIGO_ANNOTATION,
 							   rowdata_ref=>\%rowdata,
 							   insert=>1,
 							   testonly=>$TESTONLY,
 							   verbose=>$VERBOSE);
-  }
+  #}  
   return $oligo_id;
 }
 
@@ -774,6 +802,38 @@ sub authenticate_user {
   exit unless ($current_username = $sbeams->Authenticate(work_group=>$work_group));
   
   return $current_username;
+}
+
+
+####################################################################
+#calc_gc - takes a sequence and calculates the percentage that g,c 
+####################################################################
+sub calc_gc {
+
+  my %args = @_;
+  my $SUB_NAME = "calc_gc";
+
+  my $seq = $args{'sequence'};
+  my @array = split(//,$seq);
+
+  my $total = 0;
+  my $gc = 0;
+
+  $seq = lc $seq;
+  
+  foreach my $character (@array) {
+	if($character eq "g" || $character eq "c") {
+	  $gc = $gc + 1;       #increase count for each 'g' or 'c' found
+    }
+    $total = $total + 1;
+  }
+  
+  
+  if ($total == 0) {
+    return 0.0;           #to avoid dividing by zero
+  }else{  
+    return $gc / $total; #percentage of oligo sequence that 'g' and 'c' make up
+  }
 }
 
 
