@@ -50,7 +50,7 @@ if ( $DBVERSION eq "Dev Branch 1" ) {
 
 } elsif ( $DBVERSION eq "Dev Branch 3" ) {
   $DB_SERVER   = 'titan';
-  $DB_DATABASE = 'sbeams';
+  $DB_DATABASE = 'sbeamsLOCAL1';
   $DB_USER     = 'sbeams';
   $DB_PASS     = 'SB444';
   $DB_RO_USER  = 'sbeamsro';
