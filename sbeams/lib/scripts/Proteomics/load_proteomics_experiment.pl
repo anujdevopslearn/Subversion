@@ -102,7 +102,9 @@ Options:
                       verifying the layout
   --delete_search_batch   Perform a delete of all the components of the
                       specified search_batch.  This does not delete spectra
-                      or fractions.  Use --delete_fractions for that
+                      or fractions.  Use --delete_experiment for that
+  --delete_experiment   Perform a delete of fractions, spectra, and the
+                      experiment itself for the specified experiment.
 
  e.g.:  $PROG_NAME --list_all
         $PROG_NAME --check --experiment_tag=rafapr
@@ -122,7 +124,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
   "list_all","search_subdir:s","load","testonly",
   "update_from_summary_files","update_search","update_probabilities",
   "update_timing_info","gradient_program_id:i","column_delay:i",
-  "cleanup_archive","delete_search_batch",
+  "cleanup_archive","delete_search_batch","delete_experiment",
   )) {
   print "$USAGE";
   exit;
@@ -189,6 +191,7 @@ sub handleRequest {
   my $update_timing_info = $OPTIONS{"update_timing_info"} || '';
   my $cleanup_archive = $OPTIONS{"cleanup_archive"} || '';
   my $delete_search_batch = $OPTIONS{"delete_search_batch"} || '';
+  my $delete_experiment = $OPTIONS{"delete_experiment"} || '';
   my $experiment_tag = $OPTIONS{"experiment_tag"} || '';
   my $search_subdir = $OPTIONS{"search_subdir"} || '';
   my $file_prefix = $OPTIONS{"file_prefix"} || '';
@@ -297,7 +300,6 @@ sub handleRequest {
     #### Except if there are none, go to the next item
     } else {
       printf("                                          No search_batch\n");
-      next;
     }
 
     my $search_batch_subdir;
@@ -387,6 +389,18 @@ sub handleRequest {
       } # endif list_all
 
     } # endforeach subdir
+
+
+    #### If user asked for delete_experiment, do it
+    if ($delete_experiment) {
+    print "Deleting experiment '$experiment_tag' in the database ".
+      "(but not the files)...\n\n";
+      $result = deleteExperiment(
+        experiment_tag=>$experiment_tag,
+      );
+      print "\n";
+    }
+
 
   } # endforeach experiment
 
@@ -2516,3 +2530,76 @@ sub deleteSearchBatch {
 
 }
 
+
+
+###############################################################################
+# deleteExperiment
+###############################################################################
+sub deleteExperiment {
+  my %args = @_;
+  my $SUB_NAME = 'deleteExperiment';
+
+  #### Decode the argument list
+  my $experiment_tag = $args{'experiment_tag'}
+   || die "ERROR[$SUB_NAME]: experiment_tag not passed";
+
+
+  #### Try to find this experiment in database
+  my $sql = qq~
+     SELECT experiment_id
+       FROM $TBPR_PROTEOMICS_EXPERIMENT
+      WHERE experiment_tag = '$experiment_tag'
+  ~;
+  my ($proteomics_experiment_id) = $sbeams->selectOneColumn($sql);
+  unless ($proteomics_experiment_id) {
+    print "\nERROR: Unable to find experiment tag '$experiment_tag'.\n".
+          "       This experiment must already exist in the database\n\n";
+    return;
+  }
+
+
+  #### Try to find if there are any search_batches in database
+  $sql = qq~
+      SELECT search_batch_id
+        FROM $TBPR_SEARCH_BATCH
+       WHERE experiment_id = '$proteomics_experiment_id'
+  ~;
+  my @search_batch_ids = $sbeams->selectOneColumn($sql);
+  my $search_batch_id;
+
+  if (scalar(@search_batch_ids) > 0) {
+    print "\nERROR: There are still search batches for this experiment. ".
+      "Please delete all search batches first, then delete the experiment.\n";
+    return;
+  }
+
+
+  #### Define the inheritance path:
+  ####  (C) means Child that directly links to the parent
+  ####  (PKLC) means a PKeyLess Child that should be deleted by it parental key
+  ####  (A) means Association from parent to this table and requires delete
+  ####  (L) means Linking table from child to parent
+  my %table_child_relationship = (
+    proteomics_experiment => 'fraction(C)',
+    fraction => 'msms_spectrum(C)',
+    msms_spectrum => 'msms_spectrum_peak(PKLC)',
+  );
+
+  #### Define some instances where the PK name is not the table name + _id
+  my %table_PK_column_names = (
+    proteomics_experiment => 'experiment_id',
+  );
+
+  my $result = $sbeams->deleteRecordsAndChildren(
+    table_name => 'proteomics_experiment',
+    table_child_relationship => \%table_child_relationship,
+    table_PK_column_names => \%table_PK_column_names,
+    delete_PKs => [ $proteomics_experiment_id ],
+    delete_batch => 10000,
+    database => $DBPREFIX{Proteomics},
+    verbose => $VERBOSE,
+    testonly => $TESTONLY,
+  );
+
+
+}
