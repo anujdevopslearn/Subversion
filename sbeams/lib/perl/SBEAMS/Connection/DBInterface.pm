@@ -1972,7 +1972,7 @@ sub displayResultSetControls {
       print "<BR>\n<A HREF=\"${cytoscape_url_prefix}?m=rchen&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
     } elsif ($resultset_ref->{column_list_ref}->[0] eq 'Systematic') {
       print "<BR>\n<A HREF=\"${cytoscape_url_prefix}?m=blin&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
-    } elsif ($resultset_ref->{column_list_ref}->{biosequence_accession}) {
+    } elsif ($resultset_ref->{column_hash_ref}->{biosequence_accession}) {
       print "<BR>\n<A HREF=\"${cytoscape_url_prefix}?m=generic&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
     }
 
