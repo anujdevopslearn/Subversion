@@ -237,7 +237,22 @@ sub handle_request {
     constraint_value=>$parameters{project_id} );
   return if ($project_clause eq '-1');
 
+  #### Build ORGANISM constraint
+  my $organism_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SDO.organism_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Organism",
+    constraint_value=>$parameters{organism_id} );
+  return if ($organism_clause eq '-1');
 
+  #### Build TISSUE_TYPE constraint
+  my $tissue_type_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"S.tissue_type_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Tisuue Type",
+    constraint_value=>$parameters{tissue_type_id} );
+  return if ($tissue_type_clause eq '-1');
+	
   #### Build SPECIMEN_BLOCK constraint
   my $specimen_block_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"SS.specimen_block_id",
@@ -314,7 +329,9 @@ sub handle_request {
       ["equivocal_percent","SCP2.at_level_percent","Percent Equivocal"],
       ["none_percent","SCP3.at_level_percent","Percent None"],
       ["antibody_sort_order","A.sort_order","antibody_sort_order"],
-      ["cell_type_sort_order","CT.sort_order","cell_type_sort_order"],			
+      ["cell_type_sort_order","CT.sort_order","cell_type_sort_order"],
+			["organism_name","SDO.organism_name", "Organism Name"],
+			["tissue_type_name", "TT.tissue_type_name", "Tissue Type"],			
     );
   }
 
@@ -340,9 +357,17 @@ sub handle_request {
   $sql = qq~
 	SELECT $limit_clause->{top_clause} $columns_clause
 	  FROM $TBIS_STAINED_SLIDE SS
-	  LEFT JOIN $TBIS_STAIN_CELL_PRESENCE SCP1
+		LEFT JOIN $TBIS_SPECIMEN_BLOCK SB 
+			ON SS.specimen_block_id = SB.specimen_block_id 
+		LEFT JOIN $TBIS_SPECIMEN S 
+			ON SB.specimen_id = S.specimen_id 
+		LEFT JOIN SBEAMS.DBO.ORGANISM SDO 
+			ON S.organism_id = SDO.organism_id
+		LEFT JOIN $TBIS_TISSUE_TYPE TT
+			ON S.tissue_type_id = TT.tissue_type_id
+		LEFT JOIN $TBIS_STAIN_CELL_PRESENCE SCP1
 	       ON ( SS.stained_slide_id = SCP1.stained_slide_id AND SCP1.cell_presence_level_id = 1 )
-	  LEFT JOIN $TBIS_CELL_TYPE CT ON ( SCP1.cell_type_id = CT.cell_type_id )
+		LEFT JOIN $TBIS_CELL_TYPE CT ON ( SCP1.cell_type_id = CT.cell_type_id )
 	  LEFT JOIN $TBIS_STAIN_CELL_PRESENCE SCP2
 	       ON ( SS.stained_slide_id = SCP2.stained_slide_id
                     AND SCP2.cell_presence_level_id = 2
@@ -357,6 +382,8 @@ sub handle_request {
 	$specimen_block_clause
 	$antibody_clause
 	$cell_type_clause
+	$organism_clause
+	$tissue_type_clause
 	$group_by_clause
 	 ORDER BY A.sort_order, SS.stain_name,CT.sort_order
 	$limit_clause->{trailing_limit_clause}
