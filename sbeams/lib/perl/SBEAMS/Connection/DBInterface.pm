@@ -4653,8 +4653,14 @@ sub readModuleFile {
 ###############################################################################
 sub printRecentResultsets {
   my $self = shift || croak("parameter self not passed");
+  my $html = $self->getRecentResultsets( @_ );
+  print $html;
+  }
+
+sub getRecentResultsets {
+  my $self = shift || croak("parameter self not passed");
   my %args = @_;
-  my $SUB_NAME = "printRecentResultsets";
+  my $SUB_NAME = "getRecentResultsets";
 
   #### Decode the argument list
   my $verbose = $args{'verbose'} || 0;
@@ -4665,6 +4671,7 @@ sub printRecentResultsets {
   my ($sql, @rows);
   my $current_contact_id = $self->getCurrent_contact_id();
 
+  my $html;    # Content Accumulator
 
   #### Get information about the most recent resultsets
   $sql = qq~
@@ -4682,12 +4689,12 @@ sub printRecentResultsets {
   #### If there's something interesting to show, show a glimpse
   if (scalar(@rows)) {
     if ($SBEAMS_SUBDIR) {
-      print qq~
+      $html .= qq~
 	<H1>Recent Query Resultsets within the $SBEAMS_SUBDIR Module:</H1>
 	<TABLE BORDER=0>
       ~;
     } else {
-      print qq~
+      $html .= qq~
 	<H1>Recent SBEAMS Query Resultsets:</H1>
 	<TABLE BORDER=0>
       ~;
@@ -4714,7 +4721,7 @@ sub printRecentResultsets {
 
     #### If there were any, print them
     if ($output_counter) {
-      print qq~
+      $html .= qq~
 	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD><TD COLSPAN=4>Most recent named resultsets:</TD></TR>
 	$html_buffer
       ~;
@@ -4742,19 +4749,20 @@ sub printRecentResultsets {
 
     #### If there were any, print them
     if ($output_counter) {
-      print qq~
+      $html .= qq~
 	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD><TD COLSPAN=4>Most recent unnamed resultsets:</TD></TR>
 	$html_buffer
       ~;
     }
 
-    print qq~
+    $html .= qq~
       <TR><TD></TD><TD COLSPAN=4><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=cached_resultset">[View all resultsets]</A></TD></TR>
       </TABLE>
     ~;
 
   }
 
+  return $html;
 
 } #end printRecentResultsets
 
@@ -4765,8 +4773,14 @@ sub printRecentResultsets {
 ###############################################################################
 sub printProjectsYouOwn {
   my $self = shift || croak("parameter self not passed");
+  print $self->getProjectsYouOwn( @_ );
+}
+
+  
+sub getProjectsYouOwn {
+  my $self = shift || croak("parameter self not passed");
   my %args = @_;
-  my $SUB_NAME = "printProjectsYouOwn";
+  my $SUB_NAME = "getProjectsYouOwn";
 
   #### Decode the argument list
   my $verbose = $args{'verbose'} || 0;
@@ -4775,8 +4789,10 @@ sub printProjectsYouOwn {
   #### Define standard variables
   my ($sql, @rows);
 
+  my $html;
+  
   ####Print Table
-  print qq~
+  $html .= qq~
 	<H1>Projects You Own:</H1>
 	<TABLE WIDTH="50%" BORDER=0>
 	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
@@ -4797,20 +4813,22 @@ sub printProjectsYouOwn {
     my $firstflag = 1;
     foreach my $row (@rows) {
       my ($project_id,$project_tag,$project_name) = @{$row};
-      print "	<TR><TD></TD>" unless ($firstflag);
-      print "	<TD WIDTH=\"100%\">- <A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?set_current_project_id=$project_id\">$project_tag:</A> $project_name</TD></TR>\n";
+      $html .= "	<TR><TD></TD>" unless ($firstflag);
+      $html .= "	<TD WIDTH=\"100%\">- <A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?set_current_project_id=$project_id\">$project_tag:</A> $project_name</TD></TR>\n";
       $firstflag=0;
     }
   } else {
-    print "	<TD WIDTH=\"100%\">NONE</TD></TR>\n";
+    $html .= "	<TD WIDTH=\"100%\">NONE</TD></TR>\n";
   }
 
 
   #### Finish the table
-  print qq~
+  $html .= qq~
         <TR><TD></TD><TD><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&ShowEntryForm=1">[Add a new project]</A></TD></TR>
 	</TABLE>
   ~;
+
+  return $html;
 } #end printProjectsYouOwn
 
 
@@ -4820,8 +4838,15 @@ sub printProjectsYouOwn {
 ###############################################################################
 sub printProjectsYouHaveAccessTo {
   my $self = shift || croak("parameter self not passed");
+  print $self->getProjectsYouHaveAccessTo( @_ );
+}
+
+sub getProjectsYouHaveAccessTo {
+  my $self = shift || croak("parameter self not passed");
   my %args = @_;
-  my $SUB_NAME = "printProjectsYouHaveAccessTo";
+  my $SUB_NAME = "getProjectsYouHaveAccessTo";
+
+  my $html;  # Content accumulator
 
   #### Decode the argument list
   my $verbose = $args{'verbose'} || 0;
@@ -4832,7 +4857,7 @@ sub printProjectsYouHaveAccessTo {
 
   ##########################################################################
   #### Print out all projects user has access to
-  print qq~
+  $html .= qq~
 	<H1>Projects You Have Access To:</H1>
 	<TABLE WIDTH="50%" BORDER=0>
 	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
@@ -4885,7 +4910,7 @@ sub printProjectsYouHaveAccessTo {
       my ($project_id,$project_tag,$project_name,$username,
           $best_group_privilege_id,$best_user_privilege_id) =
         @{$row};
-      print "	<TR><TD></TD>" unless ($firstflag);
+      $html .= "	<TR><TD></TD>" unless ($firstflag);
 
       #### Select the lowest permission and translate to a name
       $best_group_privilege_id = 9999
@@ -4897,18 +4922,31 @@ sub printProjectsYouHaveAccessTo {
         ($best_user_privilege_id < $best_privilege_id);
       my $privilege_name = $privilege_names{$best_privilege_id} || '???';
 
-      print "	<TD><NOBR>- <A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?set_current_project_id=$project_id\">$username - $project_tag:</A> $project_name</NOBR></TD><TD><font color=\"red\">$privilege_name</font></TD></TR>\n";
+      my $proj_brief = substr( $project_name, 0, 30 );
+      $proj_brief .= '...' unless $proj_brief eq $project_name;
+      $html .=<<"      END";
+      <TD><NOBR>- 
+       <A HREF='$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?set_current_project_id=$project_id'
+        TITLE='$project_name'>
+         $username - $project_tag:
+       </A> $proj_brief</NOBR>
+      </TD>
+      <TD><font color=\"red\">$privilege_name</font>
+      </TD></TR>
+      END
       $firstflag=0;
     }
   } else {
-    print "	<TD WIDTH=\"100%\">NONE</TD></TR>\n";
+    $html .= "	<TD WIDTH=\"100%\">NONE</TD></TR>\n";
   }
 
 
   #### Finish the table
-  print qq~
+  $html .= qq~
 	</TABLE>
   ~;
+
+  return $html;
 }
 
 ###############################################################################
