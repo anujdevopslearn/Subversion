@@ -81,6 +81,45 @@ sub returnTableInfo {
 
 
 
+    if ($table_name eq "GL_interaction") {
+
+        if ($info_key eq "BASICQuery") {
+            return qq~
+		SELECT I.interaction_id,
+			BE1.bioentity_name,BES1.bioentity_state_name,RF1.regulatory_feature_name,
+			IT.interaction_type_name,
+			BE2.bioentity_name,BES2.bioentity_state_name,RF2.regulatory_feature_name
+		  FROM $TBGL_INTERACTION I
+		  LEFT JOIN $TBGL_INTERACTION_TYPE IT ON ( I.interaction_type_id = IT.interaction_type_id )
+		  LEFT JOIN $TBGL_BIOENTITY BE1 ON ( I.bioentity1_id = BE1.bioentity_id )
+		  LEFT JOIN $TBGL_BIOENTITY BE2 ON ( I.bioentity2_id = BE2.bioentity_id )
+		  LEFT JOIN $TBGL_BIOENTITY_STATE BES1 ON ( I.bioentity1_state_id = BES1.bioentity_state_id )
+		  LEFT JOIN $TBGL_BIOENTITY_STATE BES2 ON ( I.bioentity2_state_id = BES2.bioentity_state_id )
+		  LEFT JOIN $TBGL_REGULATORY_FEATURE RF1 ON ( I.regulatory_feature1_id = RF1.regulatory_feature_id )
+		  LEFT JOIN $TBGL_REGULATORY_FEATURE RF2 ON ( I.regulatory_feature2_id = RF1.regulatory_feature_id )
+		 WHERE I.record_status != 'D'
+		   AND ( BE1.record_status != 'D' OR BE1.record_status IS NULL )
+		   AND ( BE2.record_status != 'D' OR BE2.record_status IS NULL )
+		   AND ( BES1.record_status != 'D' OR BES1.record_status IS NULL )
+		   AND ( BES2.record_status != 'D' OR BES2.record_status IS NULL )
+		   AND ( RF1.record_status != 'D' OR RF1.record_status IS NULL )
+		   AND ( RF2.record_status != 'D' OR RF2.record_status IS NULL )
+            ~;
+        }
+
+        if ($info_key eq "FULLQuery") {
+            return qq~
+		SELECT I.*
+		  FROM $TBGL_INTERACTION I
+		 --WHERE I.record_status!='D'
+            ~;
+        }
+
+
+    }
+
+
+
 ###############################################################################
 
     #### Obtain main SBEAMS object and fall back to its TableInfo handler
