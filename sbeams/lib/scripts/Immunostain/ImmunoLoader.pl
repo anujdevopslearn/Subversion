@@ -106,7 +106,7 @@ my @bladderColumnArray = (
 		'Leukocyte abundance (none, rare, moderate, high, most)',
 		'stain intensity',
 		'Transitional Cell Carcinoma',
-		'image file',
+		'file image',
 		'comment');
 my @prostateColumnArray = (
 		'specimen block',
@@ -138,7 +138,7 @@ my @prostateColumnArray = (
 		'% Gleason pattern 4 cancer at each staining intensity',
 		'% of tumor that is Gleason pattern 5',
 		'% Gleason pattern 5 cancer at each staining intensity',
-		'image file',
+		'file image',
 		'comment'
 		);
 %prostateCellHash = (		
@@ -447,11 +447,11 @@ sub processFile
 		my $returnedSlidePK = updateInsert(\%slideRowData,$slideID, "stained_slide_id",$slideInsert,$slideUpdate,$TBIS_STAINED_SLIDE); 
 		$slideID = $returnedSlidePK;
 #now that we have the stained_slide_id we can handle the images
-#images are in a comma seperated list of $infoHash{'image files'}
-		if ($infoHash{'image files'})
+#images are in a comma seperated list of $infoHash{'file images'}
+		if ($infoHash{'file images'})
 		{
-			my @images = split /,\s?/ ,$infoHash{'image files'};
-			print "$infoHash{'image files'}\n";
+			my @images = split /,\s?/ ,$infoHash{'file images'};
+			print "$infoHash{'file images'}\n";
 			
 			foreach my $image (@images)
 			{ 
@@ -491,7 +491,7 @@ sub processFile
 						$imageRowData {protocol_id} = $confHash{protocol_id};
 						$imageRowData {apply_action} = 'INSERT';
 #						my $returnedImagePK = updateInsert(\%imageRowData,$slideImageId, "slide_image_id",$imageInsert,$imageUpdate,$TBIS_SLIDE_IMAGE); 
-#for the very last step to copy all image files to the new dir
+#for the very last step to copy all file images to the new dir
 #						loadImage(\%$imageRowData);  
 #						'/net/dblocal/data/sbeams/IS_slide_image/'.$returnedImagePK.'_'.$imageNameingHash{$fileType}.'_image_file.dat';
 						next;
