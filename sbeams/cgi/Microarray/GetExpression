@@ -927,7 +927,7 @@ sub postProcessResultset {
   			   'network.sif' => undef,
 			   'biosequence_name.noa' 	=> 'Biosequence_name',
 			 	'reporter_name.noa' 	=> 'Reporter_name',
-				'common_name.noa' 		=> 'Common_name',
+				'common_name.noa' 		=> 'commonName', #Common_name
 				'external_identifier.noa' => 'External_identifier',
 				'gene_name.noa' 		=> 'Gene_name',
 				'second_name.noa' 		=> 'Second_name',
@@ -977,9 +977,12 @@ sub postProcessResultset {
 		#$log->debug(Dumper(\@row));
   	} 	# End resultset loop
   	
- #Add in the condition names to the NodeType file
+ #Add in the condition names to the NodeType file 
+ #also add the condition names to the common_name.noa file.  Bit of a hack to have the condition
+ #name show up while using the common name as the node labels
  	foreach my $condition_name (@all_condition_names){
  		push(@{$cytoscape_href->{files}->{'NodeType.noa'}}, $condition_name . "\t=\tcondition" );
+ 		push(@{$cytoscape_href->{files}->{'common_name.noa'}}, $condition_name . "\t=\t$condition_name" );
  	}
  	
  	
@@ -1469,7 +1472,10 @@ sub write_cytoscape_jnlp_file {
     <jar href="$shared_java_html/jars/ouai.jar"/>
     <jar href="$shared_java_html/jars/cytoAux.jar"/>
     <jar href="$shared_java_html/jars/syspatharchivehack.jar"/>
-  	<!-- <jar href="$SERVER_BASE_DIR$HTML_BASE_DIR/usr/java/share/Cytoscape/plugins_1.0/csplugins.jar"/> -->
+  	<jar href="$SERVER_BASE_DIR$HTML_BASE_DIR/usr/java/share/Cytoscape/plugins_1.0/Y2Layouters.jar"/>
+  	<jar href="$SERVER_BASE_DIR$HTML_BASE_DIR/usr/java/share/Cytoscape/plugins_1.0/getInteractions.jar"/>
+  	<jar href="$SERVER_BASE_DIR$HTML_BASE_DIR/usr/java/share/Cytoscape/plugins_1.0/httpdata.jar"/>
+  	<jar href="$SERVER_BASE_DIR$HTML_BASE_DIR/usr/java/share/Cytoscape/plugins_1.0/sequence.jar"/>
   </resources>
   <application-desc>
     <argument>-p</argument>
