@@ -664,7 +664,8 @@ sub readSummaryFile {
     last unless $line;
 
     #### Find the .outfile
-    unless ($line =~ /showout_html5\?OutFile=(.+?\"\>)/) {
+    unless ($line =~ /showout_html5\?OutFile=(.+?\"\>)/ ||
+            $line =~ /sequest-tgz-out.cgi\?OutFile=(.+?\"\>)/) {
       print "ERROR: Unable to parse line: $line\n";
       next;
     }
