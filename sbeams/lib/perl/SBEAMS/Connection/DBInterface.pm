@@ -3869,7 +3869,7 @@ sub printUserChooser {
 						~;
 				## PRINT CGI parameters
 				my $group_query_string = $ENV{'QUERY_STRING'};
-				my @query_parameters = split  /&/, $group_query_string;
+				@query_parameters = split  /&/, $group_query_string;
 				foreach my $temp_param (@query_parameters) {
 						$temp_param =~ /(.*)\=(.*)/;
 						unless ($1 eq "set_current_project_id" || $1 eq "set_current_work_group"){
