@@ -12,8 +12,10 @@
 ###############################################################################
 
 package SBEAMS::Connection::TabMenu;
-use SBEAMS::Connection::DataTable;
+
 use strict;
+use SBEAMS::Connection qw( $log );
+use SBEAMS::Connection::DataTable;
 use overload ( '""', \&asHTML );
 
 ##### Public Methods ###########################################################
@@ -22,6 +24,8 @@ use overload ( '""', \&asHTML );
 # If you create and optionally add content to a TabMenu object, and then refer
 # to it in double quotes, it will stringify using the asHTML method.  This 
 # makes it easy to print within any sort of printing block
+#
+# For further information, please try perldoc `TabMenu.pm`
 
 #+
 # Constructor method.  
@@ -62,10 +66,12 @@ sub new {
   # Cache abs and abs_query urls
   my @urlparams = ( -absolute => 1 );
   $this->{_absURL} = $cgi->url( @urlparams );
+  $log->debug( "Absolute URL is $this->{_absURL}" );
 
   # Do we want to include current params?
   push @urlparams, -query => 1;
   $this->{_absQueryURL} = $cgi->url( @urlparams );
+  $log->debug( "Query URL is $this->{_absURL}" );
 
 
   if ( $this->{maSkin} ) {
@@ -105,12 +111,16 @@ sub getCurrentTab {
   return ( $this->{_currentTab} );
 }
 
+#+
+# stub method, for one day allowing the corners of the tabs to be rounded 
+# -
 sub setRounded {
   my $this = shift;
   $this->{_rounded} = 1;
 }
 
 #+
+# returns number of defined tabs
 # -
 sub getNumTabs {
   my $this = shift;
@@ -119,7 +129,8 @@ sub getNumTabs {
 }
 
 #+
-#
+# Set active tab background color
+# narg color    Color for background  
 #-
 sub setActiveColor {
   my $this = shift;
@@ -130,7 +141,8 @@ sub setActiveColor {
 }
 
 #+
-#
+# Set inactive tab background color
+# narg color    Color for background  
 #-
 sub setInactiveColor {
   my $this = shift;
@@ -142,7 +154,8 @@ sub setInactiveColor {
 
 
 #+
-#
+# Set active tab text color
+# narg color    Color for text 
 #-
 sub setAtextColor {
   my $this = shift;
@@ -153,7 +166,8 @@ sub setAtextColor {
 }
 
 #+
-#
+# Set inactive tab text color
+# narg color    Color for text 
 #-
 sub setItextColor {
   my $this = shift;
@@ -163,6 +177,9 @@ sub setItextColor {
   }
 }
 
+#+
+# creates new DataTable for menu display.
+#-
 sub getTable {
   my $this = shift;
 
@@ -175,7 +192,7 @@ sub getTable {
 
 
 #+
-#
+# I'm sure this is useful somehow!
 #-
 sub setBoxContent {
   my $this = shift;
@@ -183,19 +200,23 @@ sub setBoxContent {
 }
 
 #+
-#
+# Add content to tab, useful only if a border is desired.
 #-
 sub addContent {
   my $this = shift;
   $this->{_content} = shift;
 }
 
+#+
+# Set tab to load by default
+#-
 sub setDefaultTab {
   my $this = shift;
   $this->{_defaultTab} = shift;
 }
 
-# 
+#+
+#  Add a new tab to menuset
 #-
 sub addTab {
   my $this = shift;
@@ -219,6 +240,9 @@ sub addTab {
   return $this->{_tabIndex};
 }
 
+#+
+#  returns numeric index of active tab
+#-
 sub getActiveTab {
   my $this = shift;
   # If a tab was already selected, it is active
@@ -231,7 +255,9 @@ sub getActiveTab {
   return 1;
 }
 
-
+#+
+#  returns name of active tab
+#-
 sub getActiveTabName {
   my $this = shift;
 
@@ -250,6 +276,102 @@ sub asHTML {
   return $this->asCSSHTML();
 }
 
+#+
+# Rendering method, returns CSS derived menu look 'n feel.
+#-
+sub asCSSHTML {
+  my $this = shift;
+
+  # Get table for rendering stuff...
+  $this->getTable();
+
+  my @tabs = @{$this->{_tabs}};
+  my @row;
+  my $dtab ||= $this->getActiveTab();
+
+  my $list = "<DIV id=menuset>\n";
+
+  for( my $i = 1; $i <= $#tabs; $i++ ) {
+    my $spc = "&nbsp;";
+    my $color = ( $dtab == $i ) ? $this->{activeColor} : $this->{inactiveColor};
+    my $htext = '';# ( $tabs[$i]->{helptext} ) ? "TITLE='$tabs[$i]->{helptext}'" : '';
+    my $class = (  $dtab == $i ) ? 'class=atab' : '';
+    $list .=<<"    END";
+    <A $class HREF='$tabs[$i]->{url}' $htext> $tabs[$i]->{label} </A> 
+    END
+
+  }
+  $list .= "</DIV>\n";
+
+  $this->{_table}->addRow ( [ $list] );
+  $this->{_table}->setCellAttr( ROW => 1, COL => 1, ALIGN => 'CENTER' );
+  
+  if ( $this->{_content} ) {
+    $this->{_table}->addRow ( [ "<TABLE WIDTH='100%'><TR><TD BGCOLOR='WHITE'>$this->{_content}</TD></TR></TABLE>" ] );
+    my $color = ( $this->{boxContent} ) ? $this->{activeColor} : 'WHITE';
+    $this->{_table}->setCellAttr ( COL => 1, ROW => 2, BGCOLOR => $color );
+  }
+
+  
+
+
+  return ( <<"  END" );
+  <!-- Begin TabMenu --> 
+    <!-- CSS definitions -->
+    <style type="text/css">
+    #menuset {
+             position:relative;
+	           float:left;
+	           width:100%;
+	           padding:0 0 0 0
+	           margin:0;
+	           list-style:none;
+	           line-height:1.75em;  
+             }
+   
+    #menuset LI {
+                float:left;
+	              margin:0;
+	              padding:0;
+                }
+
+    #menuset A {
+	              padding:0;
+                float:left;
+                display:block;
+              	color:#555555;
+              	text-decoration:none;
+                padding:0.25em 1em;
+              	font-weight:bold;
+              	background:#DEDEDE;
+              	margin:0;
+              	border-left:1.25px solid #FFFFFF;
+              	border-top:1.25px solid #FFFFFFF;
+              	border-right:1.25px solid #AAAAAA;
+                }
+
+    #menuset A:hover {
+	    background:#BBCCBB;
+     	color:#444444;
+    }
+    #menuset A:active,
+    #menuset A.atab:link,
+    #menuset A.atab:visited {
+	    background:#BBBBBB;
+     	color:#333333;
+    }
+    #menuset A.atab:hover {
+	    background:#BBCCBB;
+     	color:#444444;
+    }
+    </style>
+
+  $this->{_table}
+    
+  <!-- End TabMenu -->
+  END
+#return "$this->{_table}";
+}
 
 
 #+
@@ -444,99 +566,100 @@ SELF:   $this->{_self_url};
 }
 
 
-sub asCSSHTML {
-  my $this = shift;
-
-  # Get table for rendering stuff...
-  $this->getTable();
-
-  my @tabs = @{$this->{_tabs}};
-  my @row;
-  my $dtab ||= $this->getActiveTab();
-
-  my $list = "<DIV id=menuset>\n";
-
-  for( my $i = 1; $i <= $#tabs; $i++ ) {
-    my $spc = "&nbsp;";
-    my $color = ( $dtab == $i ) ? $this->{activeColor} : $this->{inactiveColor};
-    my $htext = '';# ( $tabs[$i]->{helptext} ) ? "TITLE='$tabs[$i]->{helptext}'" : '';
-    my $class = (  $dtab == $i ) ? 'class=atab' : '';
-    $list .=<<"    END";
-    <A $class HREF='$tabs[$i]->{url}' $htext> $tabs[$i]->{label} </A> 
-    END
-
-  }
-  $list .= "</DIV>\n";
-
-  $this->{_table}->addRow ( [ $list] );
-  $this->{_table}->setCellAttr( ROW => 1, COL => 1, ALIGN => 'CENTER' );
-  
-  if ( $this->{_content} ) {
-    $this->{_table}->addRow ( [ "<TABLE WIDTH='100%'><TR><TD BGCOLOR='WHITE'>$this->{_content}</TD></TR></TABLE>" ] );
-    my $color = ( $this->{boxContent} ) ? $this->{activeColor} : 'WHITE';
-    $this->{_table}->setCellAttr ( COL => 1, ROW => 2, BGCOLOR => $color );
-  }
-
-  
-
-
-  return ( <<"  END" );
-  <!-- Begin TabMenu --> 
-    <!-- CSS definitions -->
-    <style type="text/css">
-    #menuset {
-             position:relative;
-	           float:left;
-	           width:100%;
-	           padding:0 0 0 0
-	           margin:0;
-	           list-style:none;
-	           line-height:2em;  
-             }
-   
-    #menuset LI {
-                float:left;
-	              margin:0;
-	              padding:0;
-                }
-
-    #menuset A {
-	              padding:0;
-                float:left;
-                display:block;
-              	color:#555555;
-              	text-decoration:none;
-                padding:0.25em 1em;
-              	font-weight:bold;
-              	background:#DEDEDE;
-              	margin:0;
-              	border-left:1.25px solid #FFFFFF;
-              	border-top:1.25px solid #FFFFFFF;
-              	border-right:1.25px solid #AAAAAA;
-                }
-
-    #menuset A:hover {
-	    background:#BBCCBB;
-     	color:#444444;
-    }
-    #menuset A:active,
-    #menuset A.atab:link,
-    #menuset A.atab:visited {
-	    background:#BBBBBB;
-     	color:#333333;
-    }
-    #menuset A.atab:hover {
-	    background:#BBCCBB;
-     	color:#444444;
-    }
-    </style>
-
-  $this->{_table}
-    
-  <!-- End TabMenu -->
-  END
-#return "$this->{_table}";
-}
-
 1;
 
+__END__
+
+=head1 NAME: 
+
+SBEAMS::Connection::TabMenu, sbeams HTML page tabbed menus widget
+
+=head1 SYNOPSIS
+
+Module provides interface to build a set of tabbed menus for a web page.
+If you create and optionally add content to a TabMenu object, and then refer
+to it in double quotes, it will stringify using the asHTML method.  This 
+makes it easy to print within any sort of printing block
+
+
+=head1 USAGE
+
+use SBEAMS::Connection::TabMenu;
+
+my $tabmenu = SBEAMS::Connection::TabMenu->new( cgi => $q,
+                                              );
+
+$tabmenu->addTab( label => 'Current Project', helptext => 'View details of current Project' );
+$tabmenu->addTab( label => 'My Projects', helptext => 'View all projects owned by me' );
+$tabmenu->addTab( label => 'Recent Resultsets', helptext => 'View recent SBEAMS resultsets' );
+$tabmenu->addTab( label => 'Accessible Projects', helptext => 'View projects I have access to' );
+
+my $content;
+
+if ( $tabmenu->getActiveTabName() eq 'Recent Resultsets' ){
+
+  $content = $sbeams->getRecentResultsets() ;
+
+} elsif ( $tabmenu->getActiveTabName() eq 'Current Project' ){
+
+  $content = $sbeams->getProjectDetailsTable( project_id => $project_id ); 
+
+} elsif ( $tabmenu->getActiveTab() == 2 ){
+
+    $content = $sbeams->getProjectsYouOwn();
+
+} elsif ( $tabmenu->getActiveTab() == 4 ){
+
+  $content = $sbeams->getProjectsYouHaveAccessTo();
+
+}
+
+# Add content to tabmenu (if desired). 
+
+$tabmenu->addContent( $content );
+
+# The stringify method is overloaded to call the $tabmenu->asHTML method.  This simplifies printing the object in a print block. 
+
+print "$tabmenu";
+
+
+# This is completely equivalent:
+
+# print $tabmenu->asHTML(); 
+
+
+=head2 Constructor arguements
+
+=head3 cgi
+
+$q/$cgi object from page, needed to extract tab/url. (REQ)
+
+=head3 activeColor
+
+bgcolor for active tab, defaults to gray
+
+=head3 inactiveColor
+
+bgcolor for inactive tab, defaults to light gray
+
+=head3 atextColor
+
+Color of text in active tab, default black
+
+=head3 itextColor
+
+Color of text in inactive tab, default black
+
+=head3 isSticky
+
+If true, pass thru cgi params, else delete 
+
+=head3 boxContent
+
+If true, draw box around content (if any)
+
+=head3 maSkin
+
+If true, reoverload stringify to point at &asMA_skin
+
+=cut
