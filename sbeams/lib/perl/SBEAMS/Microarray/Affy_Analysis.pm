@@ -129,7 +129,7 @@ output.file.name <- c("$out_R_CHP_file")
 data <- ReadAffy(filenames =  cel.file.name)
 
 eset <- mas5(data,sc=250)
-PACalls <- mas5calls(data)
+PACalls <- mas5calls(data,alpha1=0.05,alpha2=0.065)
 
 Matrix <- exprs(eset)
 output <- cbind(row.names(Matrix),Matrix,exprs(PACalls),se.exprs(PACalls))
@@ -286,6 +286,8 @@ sub parse_R_CHP_file {
 
 	 print "\nTransferring $r_chp_file -> affy_gene_intensity" if ($VERBOSE >0);
  	
+	 
+	 
 	 $sbeams->transferTable(
 		 source_file=>$r_chp_file,
 		 delimiter=>"\t",
@@ -339,6 +341,7 @@ sub tag_R_CHP_file {
 	return 1;
 }
 
+	
 
 ###############################################################################
 # R_CHP_file_name
