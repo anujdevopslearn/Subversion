@@ -1221,6 +1221,12 @@ sub finalize {
   ## INSERT array_request_slide record for each array
   for (my $m=0;$m<$array_count;$m++) {
 	my $array = $parameters{'array_'.$m};
+
+	## Format array_id so that it's a five digit number (e.g. '2886' --> '02886')
+	while ($array =~ /\d{5}/){
+	  $array = "0".$array;
+	}
+
 	$rowdata{'array_request_id'} = $array_request_id;
 	$rowdata{'slide_index'}= $m;
 	$rowdata_ref = \%rowdata;
