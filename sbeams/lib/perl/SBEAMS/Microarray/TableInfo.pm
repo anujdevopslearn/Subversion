@@ -577,7 +577,7 @@ sub getParentProject {
       if ( $parameters_ref->{array_quantitation_id} ) {
         # array_quant table has array_scan_id, array_scan has array_id, 
 	# array has project_id.
-        $sqlref->{dbsql} =~ s/KEYVAL/$parameters_ref->{hybridization_id}/;
+        $sqlref->{dbsql} =~ s/KEYVAL/$parameters_ref->{array_quantitation_id}/;
         ( $project_id ) = $sbeams->selectOneColumn( $sqlref->{dbsql} );
       }
     }
