@@ -20,7 +20,6 @@ use vars qw(@ISA @EXPORT
     $TB_ORGANISM
 
     $TBPS_BIOSEQUENCE_SET
-    $TBPS_POLYMER_TYPE
     $TBPS_DBXREF
     $TBPS_BIOSEQUENCE
     $TBPS_BIOSEQUENCE_PROPERTY_SET
@@ -32,7 +31,6 @@ use vars qw(@ISA @EXPORT
 
     $TBPS_DOMAIN
     $TBPS_BIOSEQUENCE_ANNOTATION
-    $TBPS_TEST_TABLE
 );
 
 
@@ -43,7 +41,6 @@ require Exporter;
     $TB_ORGANISM
 
     $TBPS_BIOSEQUENCE_SET
-    $TBPS_POLYMER_TYPE
     $TBPS_DBXREF
     $TBPS_BIOSEQUENCE
     $TBPS_BIOSEQUENCE_PROPERTY_SET
@@ -55,7 +52,6 @@ require Exporter;
 
     $TBPS_DOMAIN
     $TBPS_BIOSEQUENCE_ANNOTATION
-    $TBPS_TEST_TABLE
 
 );
 
@@ -67,7 +63,6 @@ my $mod = $DBPREFIX{ProteinStructure};
 $TB_ORGANISM                      = "${core}organism";
 
 $TBPS_BIOSEQUENCE_SET             = "${mod}biosequence_set";
-$TBPS_POLYMER_TYPE                = "$DBPREFIX{Microarray}polymer_type";
 $TBPS_DBXREF                      = "${mod}dbxref";
 $TBPS_BIOSEQUENCE                 = "${mod}biosequence";
 $TBPS_BIOSEQUENCE_PROPERTY_SET    = "${mod}biosequence_property_set";
@@ -79,5 +74,4 @@ $TBPS_DOMAIN_MATCH_SOURCE         = "${mod}domain_match_source";
 
 $TBPS_DOMAIN                      = "${mod}domain";
 $TBPS_BIOSEQUENCE_ANNOTATION      = "${mod}biosequence_annotation";
-$TBPS_TEST_TABLE                  = "${mod}test_table";
 
