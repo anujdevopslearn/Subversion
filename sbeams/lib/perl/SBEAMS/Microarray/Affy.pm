@@ -371,13 +371,13 @@ sub set_afs_organism_id {
 	
 	my $self = shift;
 	my $name = shift;
-	confess(__PACKAGE__ . "::$method No Organism name provided '$name'\n") unless ($name =~ /^\w/);
+	confess(__PACKAGE__ . "::$method No Organism id provided '$name'\n") unless ($name =~ /^\w/);
 	
 	return $self->{ORGANISM_ID} = $name;
 }
 
 #######################################################
-# get_organism
+# get_afs_organism_id 
 #  return the organism_id for a sample applied to an array 
 #######################################################
 	
@@ -385,6 +385,33 @@ sub get_afs_organism_id {
 	my $self = shift;
 	return $self->{ORGANISM_ID};
 }	
+
+##################################################################################################
+#set get pair:organism
+#######################################################
+# set_organism
+# organism for a sample applied to an array 
+#######################################################
+sub set_organism { 
+	my $method = 'set_organism';
+	
+	my $self = shift;
+	my $name = shift;
+	confess(__PACKAGE__ . "::$method No Organism name provided '$name'\n") unless ($name =~ /^\w/);
+	
+	return $self->{ORGANISM_NAME} = $name;
+}
+
+#######################################################
+# get_afs_organism
+#  return the organism for a sample applied to an array 
+#######################################################
+	
+sub get_organism {
+	my $self = shift;
+	return $self->{ORGANISM_NAME};
+}
+
 
 ##################################################################################################
 #set get pair:afa_file_root
