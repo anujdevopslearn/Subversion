@@ -91,7 +91,6 @@ sub applySqlChange {
     my $PK_COLUMN_NAME = $args{'PK_column_name'} || '';
     my $parent_project_id = $args{'parent_project_id'} || '';
 
-
     #### Define variables to hold the final results
     my $result = "CODE ERROR";
     my $returned_PK;
@@ -1589,6 +1588,42 @@ sub parseConstraint2SQL {
 
 }
 
+
+###############################################################################
+# translateOptionValue
+#
+# arg SQL query as passed to buildOptionList
+# arg VALUE(s) to match
+#
+# Given an SQL query which defines two columns (value and name), and a
+# value for which a match is desired.  If a match is found, return name, 
+# else return empty string ''
+###############################################################################
+sub translateOptionValue {
+    my $self = shift;
+    my $query = shift;
+    my @values = @_;
+
+    # No values?
+    return '' if !scalar( @values );
+
+    # For lots of values, hash lookup is far faster
+    my %values;
+    for( @values ) { $values{$_}++ } 
+
+    # Get hash with option list names keyed by values
+    $query = $self->translateSQL(sql=>$query);
+    my %options = $self->selectTwoColumnHash( $query );
+
+    my $match = '';
+ 
+    for( keys( %values ) ) {
+    # writing as array grep since we'll have to handle multiselects
+    $match .= "$options{$_} " if $options{$_};
+    } # end while
+
+    return $match;
+} # End translateOptionValue
 
 ###############################################################################
 # build Option List
@@ -4886,6 +4921,9 @@ function switchWorkGroup(){
     if (document.MainForm.action != null) {
       document.MainForm.action.value = "REFRESH";
     }
+    if (document.MainForm.insert_with_template != null) {
+      document.MainForm.insert_with_template.value = 0;
+    }
 
     document.MainForm.submit();
   }
@@ -4904,6 +4942,9 @@ function switchProject(){
     }
     if (document.MainForm.action != null) {
       document.MainForm.action.value = "REFRESH";
+    }
+    if (document.MainForm.insert_with_template != null) {
+      document.MainForm.insert_with_template.value = 0;
     }
     document.MainForm.submit();
   }
@@ -5153,7 +5194,6 @@ function switchProject(){
 
 
 #}
-
 
 
 
