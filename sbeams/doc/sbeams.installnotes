@@ -157,7 +157,7 @@ cd sbeams
    it may be a good idea to make a sym link to another location or partition
    since there could eventually be large amounts of data here!!!)
 mkdir data images/tmp tmp tmp/queries
-chown a+rwx image/tmp tmp/queries
+chmod a+rwx images/tmp tmp/queries
 ln -s ../includes doc/includes
 
 For now, make the main site point to dev1, but eventually when there is
