@@ -488,12 +488,10 @@ sub postProcessResultset {
     $assay_id = $resultset_ref->{data_ref}->[$row]->[$assay_id_index];
 
     $genotype_id = $resultset_ref->{data_ref}->[$row]->[$genotype_id_index];
-    $plate_id = $resultset_ref->{data_ref}->[$row]->[$plate_id_index];
     $call_quality = $resultset_ref->{data_ref}->[$row]->[$call_quality_index];
     $call_date = $resultset_ref->{data_ref}->[$row]->[$call_date_index];
     $samples{$sample_id} = 1;
     $projects{$project_id} = 1;
-#    $plate_ids{$plate_id} = $call_date;
     $plate_ids{$plate_id} = "${exp_no}_$well_position";
     $manual_genotype_call = $resultset_ref->{data_ref}->[$row]->[$manual_genotype_call_index];
     $manual_call_quality = $resultset_ref->{data_ref}->[$row]->[$manual_call_quality_index];
@@ -519,8 +517,6 @@ sub postProcessResultset {
 	    $dup_stats{n_replace_empty_with_empty}++;
 	  } else {
   	    $dup_stats{n_replace_with_same}++;
-	    #print "$sample_id: $genotype_id is same as ".
-	    #  "$data->{$project_id}->{$assay_id}->{$sample_id}.... ";
 	  }
 
 	#### Else is the previous call empty?
@@ -535,7 +531,6 @@ sub postProcessResultset {
 	#### Else are they different?
 	} else {
 	  $dup_stats{n_replace_conflict}++;
-	  #print "$genotype_id is not $data->{$project_id}->{$assay_id}->{$sample_id}.... ";
 	}
 
       #### Else if the previous is undefined, just replace the new value
@@ -613,8 +608,9 @@ sub postProcessResultset {
   #### Fudge the assays by removing 'gi' if it exists within
   my @fudged_assays;
   foreach my $tmp (@assays) {
-    $tmp =~ s/gi//;
-    push(@fudged_assays,$tmp);
+    my $aaa = $tmp;
+    $aaa =~ s/gi//;
+    push(@fudged_assays,$aaa);
   }
 
   #### Determine current number of rows
@@ -692,29 +688,6 @@ sub postProcessResultset {
       } # end foreach sample
     } # end foreach project
 
-    #### Don't do this here any more, do it in the Statistical Summary
-    #  #### Add an allele frequency summary at the bottom
-    #  my $n_failed_assays = 0;
-    #  foreach my $allele ('A','T','G','C') {
-    #	 my @row = ("$allele frequency");
-    #	 foreach my $assay (@assays) {
-    #	   if (defined($allele_frequencies{$assay}->{$allele})) {
-    #	     my $newval = sprintf("%.2f",$allele_frequencies{$assay}->{$allele} /
-    #				   $allele_frequencies{$assay}->{total});
-    #	     if ($newval >= 0.90) {
-    #	       #$failed_assay{$assay} = $newval;
-    #	       print "Assay $assay failed? Major frequency >0.90: $newval<BR>\n";
-    #	       $n_failed_assays++;
-    #	     }
-    #	   push(@row,$newval);
-    #	   } else {
-    #	     push(@row,'');
-    #	   }
-    #	 }
-    #	 push(@new_data_array,\@row);
-    #  }
-    #  print "$n_failed_assays total failed assays<BR>\n" if ($n_failed_assays);
-    #  print scalar(@assays)." total assays<BR><BR>\n";
 
     #### Replace existing resultset attributes with reformulated ones
     $resultset_ref->{column_list_ref} = ['Sample',@fudged_assays];
@@ -727,8 +700,10 @@ sub postProcessResultset {
   if ($parameters{view_style} =~ /AssayVsSample/) {
     foreach my $project_name (@projects) {
       foreach my $assay (@assays) {
-        my @row = ($assay);
-        push(@columnheaders,$assay);
+        my $shortAssay = $assay;
+        $shortAssay =~ s/gi//;
+        my @row = ($shortAssay);
+        push(@columnheaders,$shortAssay);
         push(@column_types, qw(varchar));
         foreach my $sample_name (@samples) {
           if (defined($data->{$project_name}->{$assay}->{$sample_name}->{single_call})) {
@@ -767,7 +742,6 @@ sub postProcessResultset {
       foreach my $assay (@assays) {
         foreach my $sample_name (@samples) {
           $ncalls = scalar(keys(%{$data->{$project_name}->{$assay}->{$sample_name}->{all_calls}}));
-          #print "assay=$assay, sample=$sample_name, ncalls = $ncalls<BR>\n";
           $n_max_calls = $ncalls if ($ncalls > $n_max_calls);
           my %temp_hash;
           $temp_hash{n_calls}=$ncalls;
@@ -856,8 +830,10 @@ sub postProcessResultset {
     my $empty_rows = 0;
     foreach my $project_name (@projects) {
       foreach my $assay (@assays) {
+        my $shortAssay = $assay;
+	$shortAssay =~ s/gi//;
         foreach my $sample_name (@samples) {
-          my @newrow = ( $project_name,$assay,$sample_name);
+          my @newrow = ( $project_name,$shortAssay,$sample_name);
 	  my $all_calls_final = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls_final};
 	  push(@newrow,$all_calls_final->{call_final});
 	  push(@newrow,$all_calls_final->{call_final_quality});
@@ -901,10 +877,8 @@ sub postProcessResultset {
     my $n_max_alleles = 0;
     my $ncalls;
 
-    print "First pass...";
     foreach my $project_name (@projects) {
       foreach my $assay (@assays) {
-	#print "$assay...";
 
 	#### Place to store all the genotypes that are observed for this assay
 	my %assay_genotypes;
@@ -997,11 +971,9 @@ sub postProcessResultset {
 
 
     my $num_keys=0;
-    print "Second pass...";
     #### Now fill in all the data rows
     foreach my $project_name (@projects) {
       foreach my $assay (@assays) {
-	#print "$assay...";
 
 	my $counts;
         my @newrow = ( $project_name,$assay );
@@ -1010,7 +982,7 @@ sub postProcessResultset {
         foreach my $sample_name (@samples) {
 	  my $call_final = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls_final}->{call_final};
           if ( (uc($sample_name) !~ /CEPH/) and
-	       (uc($sample_name) !~ /^E/) and
+	       ($project_name =~ /IAN/ and (uc($sample_name) !~ /^E/)) and
 	       $call_final !~ /0\/0/ and
 	       $call_final ne '') {
             my ($all1,$all2) = split(/\//,$call_final);
@@ -1153,8 +1125,6 @@ sub postProcessResultset {
       } # end foreach assay
 
     } # end foreach project
-
-    print "Second pass complete.<BR>\n";
 
 
     #### Define the headers for all the columns
