@@ -55,7 +55,7 @@ main();
 # Call $sbeams->InterfaceEntry with pointer to the subroutine to execute if
 # the authentication succeeds.
 ###############################################################################
-sub main { 
+sub main {
 
     #### Do the SBEAMS authentication and exit if a username is not returned
     $t1 = (times)[0];
@@ -209,11 +209,11 @@ SELECT
 	AR.array_request_id,ARSL.array_request_slide_id,
 	AQ.array_quantitation_id,AQ.date_quantitated,AQ.data_flag AS 'quan_flag',
 	AQ.stage_location AS 'filename'
-  FROM array_request AR
-  LEFT JOIN array_request_slide ARSL ON ( AR.array_request_id = ARSL.array_request_id )
-  LEFT JOIN array A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
-  LEFT JOIN array_scan ASCAN ON ( A.array_id = ASCAN.array_id )
-  LEFT JOIN array_quantitation AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
+  FROM $TBMA_ARRAY_REQUEST AR
+  LEFT JOIN $TBMA_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )
+  LEFT JOIN $TBMA_ARRAY A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
+  LEFT JOIN $TBMA_ARRAY_SCAN ASCAN ON ( A.array_id = ASCAN.array_id )
+  LEFT JOIN $TBMA_ARRAY_QUANTITATION AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
  WHERE AR.project_id=$current_project_id
 -- AND AQ.data_flag='OK'
    AND AQ.array_quantitation_id IS NOT NULL
@@ -253,11 +253,11 @@ SELECT
 
       $sql_query = qq~
 	SELECT	AQ.stage_location AS 'selection',A.array_name+': '+AQ.stage_location AS 'value'
-	  FROM array_request AR
-	  LEFT JOIN array_request_slide ARSL ON ( AR.array_request_id = ARSL.array_request_id )
-	  LEFT JOIN array A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
-	  LEFT JOIN array_scan ASCAN ON ( A.array_id = ASCAN.array_id )
-	  LEFT JOIN array_quantitation AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
+	  FROM $TBMA_ARRAY_REQUEST AR
+	  LEFT JOIN $TBMA_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )
+	  LEFT JOIN $TBMA_ARRAY A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
+	  LEFT JOIN $TBMA_ARRAY_SCAN ASCAN ON ( A.array_id = ASCAN.array_id )
+	  LEFT JOIN $TBMA_ARRAY_QUANTITATION AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
 	 WHERE AR.project_id=$current_project_id
 	   AND AQ.data_flag='OK'
 	   AND AQ.array_quantitation_id IS NOT NULL

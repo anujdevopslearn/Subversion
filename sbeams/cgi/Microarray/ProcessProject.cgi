@@ -150,18 +150,18 @@ SELECT	A.array_id,A.array_name,
 	ARSM2.name AS 'Sample2Name',D2.dye_name AS 'sample2_dye',
 	AQ.array_quantitation_id,AQ.data_flag AS 'quan_flag',
 	AQ.stage_location,AL.source_filename AS 'key_file'
-  FROM array_request AR
-  LEFT JOIN array_request_slide ARSL ON ( AR.array_request_id = ARSL.array_request_id )
-  LEFT JOIN array_request_sample ARSM1 ON ( ARSL.array_request_slide_id = ARSM1.array_request_slide_id AND ARSM1.sample_index=0)
-  LEFT JOIN labeling_method LM1 ON ( ARSM1.labeling_method_id = LM1.labeling_method_id )
-  LEFT JOIN arrays.dbo.dye D1 ON ( LM1.dye_id = D1.dye_id )
-  LEFT JOIN array_request_sample ARSM2 ON ( ARSL.array_request_slide_id = ARSM2.array_request_slide_id AND ARSM2.sample_index=1)
-  LEFT JOIN labeling_method LM2 ON ( ARSM2.labeling_method_id = LM2.labeling_method_id )
-  LEFT JOIN arrays.dbo.dye D2 ON ( LM2.dye_id = D2.dye_id )
-  LEFT JOIN array A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
-  LEFT JOIN array_layout AL ON ( A.layout_id = AL.layout_id )
-  LEFT JOIN array_scan ASCAN ON ( A.array_id = ASCAN.array_id )
-  LEFT JOIN array_quantitation AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
+  FROM $TBMA_ARRAY_REQUEST AR
+  LEFT JOIN $TBMA_ARRAY_REQUEST_SLIDE ARSL ON ( AR.array_request_id = ARSL.array_request_id )
+  LEFT JOIN $TBMA_ARRAY_REQUEST_SAMPLE ARSM1 ON ( ARSL.array_request_slide_id = ARSM1.array_request_slide_id AND ARSM1.sample_index=0)
+  LEFT JOIN $TBMA_LABELING_METHOD LM1 ON ( ARSM1.labeling_method_id = LM1.labeling_method_id )
+  LEFT JOIN $TBMA_DYE D1 ON ( LM1.dye_id = D1.dye_id )
+  LEFT JOIN $TBMA_ARRAY_REQUEST_SAMPLE ARSM2 ON ( ARSL.array_request_slide_id = ARSM2.array_request_slide_id AND ARSM2.sample_index=1)
+  LEFT JOIN $TBMA_LABELING_METHOD LM2 ON ( ARSM2.labeling_method_id = LM2.labeling_method_id )
+  LEFT JOIN $TBMA_DYE D2 ON ( LM2.dye_id = D2.dye_id )
+  LEFT JOIN $TBMA_ARRAY A ON ( A.array_request_slide_id = ARSL.array_request_slide_id )
+  LEFT JOIN $TBMA_ARRAY_LAYOUT AL ON ( A.layout_id = AL.layout_id )
+  LEFT JOIN $TBMA_ARRAY_SCAN ASCAN ON ( A.array_id = ASCAN.array_id )
+  LEFT JOIN $TBMA_ARRAY_QUANTITATION AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
  WHERE AR.project_id=$parameters{project_id}
    AND AQ.array_quantitation_id IS NOT NULL
    AND AR.record_status != 'D'
