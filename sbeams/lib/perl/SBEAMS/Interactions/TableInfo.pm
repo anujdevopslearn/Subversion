@@ -87,7 +87,7 @@ sub returnTableInfo {
 		SELECT I.interaction_id,
 			BE1.bioentity_common_name,BE1.bioentity_canonical_name,BES1.bioentity_state_name,RF1.regulatory_feature_name,
 			IT.interaction_type_name,
-			BE2.bioentity_common_name,BE2.bioentity_canonical_name,BES2.bioentity_state_name,RF2.regulatory_feature_name,
+			BE2.bioentity_common_name AS bioentity2_common_name ,BE2.bioentity_canonical_name AS bioentity2_canonical_name, BES2.bioentity_state_name bioentity2_state_name, RF2.regulatory_feature_name regulatory_feature2_name,
 		PUB.pubmed_id
  		  FROM $TBIN_INTERACTION I
 		  LEFT JOIN $TBIN_INTERACTION_TYPE IT ON ( I.interaction_type_id = IT.interaction_type_id )
