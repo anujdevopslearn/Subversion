@@ -255,6 +255,8 @@ sub handle_request {
     ["experiment_name","experiment_name","experiment_name"],
     ["fraction_id","F.fraction_id","fraction_id"],
     ["fraction_tag","F.fraction_tag","fraction_tag"],
+    ["gradient_program_id","GP.gradient_program_id","gradient_program_id"],
+    ["gradient_program_name","GP.gradient_program_name","LC Gradient Program"],
     ["TIC_plot","'TIC Plot'","TIC_plot"],
     ["MSRun_summary","'MS Run Summary'","MS Run Summary"],
     ["n_scans","COUNT(*)","# CID spectra"],
@@ -290,6 +292,8 @@ sub handle_request {
 	 INNER JOIN $TB_PROJECT P ON (PE.project_id=P.project_id)
 	 INNER JOIN $TBPR_FRACTION F ON (PE.experiment_id=F.experiment_id)
 	  LEFT JOIN $TBPR_MSMS_SPECTRUM S ON (F.fraction_id=S.fraction_id)
+	  LEFT JOIN $TBPR_GRADIENT_PROGRAM GP
+               ON ( F.gradient_program_id = GP.gradient_program_id )
 	 WHERE P.record_status!='D'
 	   AND UL.record_status!='D'
 	   AND PE.record_status!='D'
@@ -310,6 +314,7 @@ sub handle_request {
                'experiment_name' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&experiment_id=\%$colnameidx{experiment_id}V",
                'TIC_plot' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ShowTICPlot?fraction_id=\%$colnameidx{fraction_id}V",
                'MS Run Summary' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ShowMSRunSummary?fraction_id=\%$colnameidx{fraction_id}V",
+               'LC Gradient Program' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_gradient_program&gradient_program_id=\%$colnameidx{gradient_program_id}V",
   );
 
 
@@ -317,6 +322,7 @@ sub handle_request {
   %hidden_cols = ('experiment_id' => 1,
                   'project_id' => 1,
                   'fraction_id' => 1,
+                  'gradient_program_id' => 1,
   );
 
 
