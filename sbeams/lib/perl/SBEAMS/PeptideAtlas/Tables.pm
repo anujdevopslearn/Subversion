@@ -60,6 +60,8 @@ require Exporter;
     $TBAT_PEPTIDE_MAPPING
 
     $TBAT_PUBLICATION
+    $TBAT_BIOSEQUENCE_ANNOTATED_GENE
+    $TBAT_BIOSEQUENCE_ANNOTATION
 );
 
 
@@ -83,5 +85,7 @@ $TBAT_PEPTIDE_INSTANCE      = "${mod}peptide_instance";
 $TBAT_PEPTIDE_INSTANCE_SAMPLE  = "${mod}peptide_instance_sample";
 $TBAT_PEPTIDE_MAPPING       = "${mod}peptide_mapping";
 $TBAT_PUBLICATION           = "${mod}publication";
+$TBAT_BIOSEQUENCE_ANNOTATED_GENE = "${mod}biosequence_annotated_gene";
+$TBAT_BIOSEQUENCE_ANNOTATION = "${mod}biosequence_annotation";
 
 
