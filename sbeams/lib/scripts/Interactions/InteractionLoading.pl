@@ -280,7 +280,7 @@ sub processFile
 		$INFOPROTEIN1{$count-2}->{group} = $infoArray[$columnHashProtein1{group}];
 		$INFOPROTEIN1{$count-2}->{group} =~ s/[\s+\n+]$//g;
 		$INFOPROTEIN1{$count-2}->{group} =~ s/^([a-z]+)\s+([a-z]+)$/$1 $2/i;
-		$INFOPROTEIN1{$count-2}->{bioentityType1} = ucfirst($INFOPROTEIN2{$count-2}->{bioentityType1});
+		$INFOPROTEIN1{$count-2}->{bioentityType1} = ucfirst($INFOPROTEIN1{$count-2}->{bioentityType1});
 		if (!($INFOPROTEIN1{$count-2}->{bioentityComName1}) and !($INFOPROTEIN1{$count-2}->{bioentityCanName1}))
 		{
 			print "Detected error1: bioentity1_common_name and bioentiy1_canonical_name\n";
