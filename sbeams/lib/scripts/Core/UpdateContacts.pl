@@ -189,6 +189,7 @@ sub handleRequest {
     #### Load lookup hashes for supervisor, department, lab, etc.
 
     #### Execute $sbeams->transferTable() to update contact table
+    #### See ./update_driver_tables.pl
 
     #### Execute $sbeams->transferTable() to update user_login
 
