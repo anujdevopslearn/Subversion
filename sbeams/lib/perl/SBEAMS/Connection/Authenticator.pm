@@ -438,7 +438,7 @@ sub setCurrent_work_group {
     unless ($set_to_work_group) {
       $self->displayPermissionToPageDenied(
         ["You are not a member of any of the work groups that are ".
-        "permitted to to access this page"]);
+        "permitted to access this page"]);
       $self->dbDisconnect();
       return
     }
