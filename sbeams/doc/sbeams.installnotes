@@ -42,6 +42,7 @@ GD-1.41
 GDGraph-1.35a        (specially modified version by Deutsch and included)
 GDGraph-XY-0.92
 GDTextUtil-0.84
+Regexp-Common-2.113
 
 
 Additional common Perl modules are needed, but may not be on your system.
