@@ -566,10 +566,10 @@ sub loadColumnMapFile {
 	# If file is just a name, it's in the current dir.
 	if (/mapped.file\s*\=\s*\/(.*)/) {
 	  $mapped_file = "/$1";
-	  print "file path is $mapped_file\n";
+#	  print "file path is $mapped_file\n";
         }elsif (/mapped.file\s*\=\s*(.*)/) {
 	  $mapped_file = "$directory/$1";
-	  print "file path is $mapped_file\n";
+#	  print "file path is $mapped_file\n";
 	}elsif (/delimiter\s*\=\s*(.*)/) {
 	  $delimiter = $1;
 
