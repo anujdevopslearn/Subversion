@@ -226,8 +226,9 @@ Important changes:
   support such features (like MySQL), use just "sbeams.".  The trailing
   period is probably necessary except in rare cases.  Most table name
   references will be prefixed with these strings.  For starters, all that's
-  important is DBPREFIX{Core}.  The others do not need to be set until you
-  wish to set up one of those modules.
+  important is DBPREFIX{Core}.  The others do not need to be set to real values
+  until you wish to set up one of those modules, although you will need to leave 
+  in some default definition to avoid errors.
 
 - Set RAW_DATA_DIR{*} to a directory location where data products
   related to a given module are located.  For example, you might store
@@ -435,7 +436,14 @@ cd $SBEAMS/doc/POD
 
 
 -------------------------------------------------------------------------------
-10) Install Individual Modules
+10) Install required Modules
+
+Follow the install notes for any required modules, currently BioLink.
+
+SBEAMS/doc/BioLink/BioLink.installnotes
+
+-------------------------------------------------------------------------------
+11) Install Individual Modules
 
 Now follow the individual module install notes, e.g.:
 
@@ -461,3 +469,7 @@ is suggested you temporarily set the WWW_UID to another value while running the
 setup scripts; once run, you can restore the WWW_UID setting.  If the UIDs are 
 not the same this is not an issue.  
 
+3) The --schema_file argument of generate_schema.pl is both a path and a prefix for 
+naming the various files created.  If you simply give a path, you will see files such
+as _CREATTABLES.mssql instead of Module_CREATETABLES.mssql.  If the command is executed
+from the destination directory, need only define filename prefix.
