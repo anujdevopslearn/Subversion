@@ -248,7 +248,9 @@ sub printEntryForm {
 
     #### Initialize the plot environment
     my($progname)= basename $0;
-    my($tmpfile) = "$progname.$$.@{[time]}.gif";
+    #my($tmpfile) = "$progname.$$.@{[time]}.gif";
+    #### Reduce length because of PGPLOT 80 char limit??
+    my($tmpfile) = "Spec.$$.@{[time]}.gif";
 
     $parameters{gifwidth} = 640 unless $parameters{gifwidth};
     $parameters{gifheight} = 480 unless $parameters{gifheight};
@@ -258,7 +260,7 @@ sub printEntryForm {
       $parameters{gifheight} = 384;
     }
 
-#    print "Writing GIF to: $PHYSICAL_BASE_DIR/images/tmp/$tmpfile\n";
+    #print "Writing GIF to: $PHYSICAL_BASE_DIR/images/tmp/$tmpfile\n";
     my $win = pg_setup(Device=>"$PHYSICAL_BASE_DIR/images/tmp/$tmpfile/gif",
                        title=>"$spectrum{msms_spectrum_file_root}",
                        xmin=>$parameters{xmin}, xmax=>$parameters{xmax},
@@ -282,8 +284,13 @@ sub printEntryForm {
                                        Win=>$win, Length=>$length,
                                        Window=>$parameters{masstol},
                                        PeakColors=>\@peakcolors);
+
+
+      #### Print out the peptide ion information
       $t6 = [gettimeofday()];
-      PrintIons(Masslist=>$masslist_ref,Color=>1,Html=>1,Charge=>$charge,Length=>$length);
+      PrintIons(masslist_ref=>$masslist_ref,color=>1,html=>1,
+        charge=>$charge,length=>$length);
+
 
       LabelResidues(Ionmasses=>$masslist_ref, Binten=>$B_ref, Yinten=>$Y_ref,
                     Charge=>$charge, Win=>$win, Length=>$length,
@@ -623,6 +630,8 @@ sub pg_setup {
     $ENV{"PGPLOT_BACKGROUND"} = "white";
 
     #### Create a new graphics device
+    #### WARNING: If the device is a filename, it apparently gets
+    #### truncated at 80 characters!!!
     my $win = PDL::Graphics::PGPLOT::Window -> new({Device => "$device"});
 
     #### Set window limits
@@ -1079,74 +1088,83 @@ sub CalcIons {
 # PrintIons
 ###############################################################################
 sub PrintIons {
-    my %args = @_;
+  my %args = @_;
 
-    my $masslist_ref = $args{'Masslist'};
-    my $color = $args{'Color'} || 0;
-    my $html = $args{'Html'} || 0;
-    my $charge = $args{'Charge'};
-    my $length = $args{'Length'};
+  my $masslist_ref = $args{'masslist_ref'};
+  my $color = $args{'color'} || 0;
+  my $html = $args{'html'} || 0;
+  my $charge = $args{'charge'};
+  my $length = $args{'length'};
 
-    print "\n";
-    print " SEQ  #       B         Y    +$charge\n";
-    print " --- --  --------- --------- --\n";
+  print "\n";
+  print " SEQ  #       B         Y    +$charge\n";
+  print " --- --  --------- --------- --\n";
 
-    my ($bcolbegin, $bcolend, $ycolbegin, $ycolend);
+  my ($bcolbegin, $bcolend, $ycolbegin, $ycolend);
 
-    my (%colors);
-    $colors{2} = "#FF0000";
-    $colors{4} = "#0000FF";
-    $colors{3} = "#218D21";
-    $colors{6} = "#F18080";
-    $colors{11} = "#00088";
-    $colors{10} = "#8FBE8F";
+  my (%colors);
+  $colors{2} = "#FF0000";
+  $colors{4} = "#0000FF";
+  $colors{3} = "#218D21";
+  $colors{6} = "#F18080";
+  $colors{11} = "#00088";
+  $colors{10} = "#8FBE8F";
 
 
-    #### Printing stuff
-    for (my $i=0; $i < $length; $i++) {
-      if ($html != 0) {
+  #### Printing stuff
+  for (my $i=0; $i < $length; $i++) {
 
-        #### If a color for this B ion mass, set color tags
-        if ($masslist_ref->{Bcolor}->[$i] >= 2) {
-          $bcolbegin = "<FONT COLOR = $colors{$masslist_ref->{Bcolor}->[$i]}>";
-          $bcolend = "</FONT>";
-        #### else no color (default black)
-        } else {
-          $bcolbegin = "";
-          $bcolend = "";
-        }
+    #### If the output is in HTML, define the colorizing tags
+    if ($html) {
 
-        #### If a color for this Y ion mass, set color tags
-        if ($masslist_ref->{Ycolor}->[$i] >= 2) {
-          $ycolbegin = "<FONT COLOR = $colors{$masslist_ref->{Ycolor}->[$i]}>";
-          $ycolend = "</FONT>";
-        #### else no color (default black)
-        } else {
-          $ycolbegin = "";
-          $ycolend = "";
-        }
-
+      #### If a color for this B ion mass, set color tags
+      if ($masslist_ref->{Bcolor}->[$i] >= 2) {
+        $bcolbegin = "<FONT COLOR = $colors{$masslist_ref->{Bcolor}->[$i]}>";
+        $bcolend = "</FONT>";
+      #### else no color (default black)
+      } else {
+        $bcolbegin = "";
+        $bcolend = "";
       }
 
-      #### Special case --'s for first row
-      if ($i == 0) {
-        printf " %3s %2d $bcolbegin%9.1f$bcolend %9s %3d\n",$masslist_ref->{residues}->[$i],
-                 $i+1, $masslist_ref->{Bions}->[$i], '--  ', $length-$i
-      }
-
-      #### Special case --'s for last row
-      elsif ($i == ($length-1)) {
-        printf " %3s %2d %9s $ycolbegin%9.1f$ycolend %3d\n",$masslist_ref->{residues}->[$i], $i+1,
-                 '--  ', $masslist_ref->{Yions}->[$i], $length-$i
-      }
-
-      #### Else just print the numbers
-      else {
-        printf " %3s %2d $bcolbegin%9.1f$bcolend $ycolbegin%9.1f$ycolend %3d\n",
-                 $masslist_ref->{residues}->[$i], $i+1,
-                 $masslist_ref->{Bions}->[$i], $masslist_ref->{Yions}->[$i], $length-$i;
+      #### If a color for this Y ion mass, set color tags
+      if ($masslist_ref->{Ycolor}->[$i] >= 2) {
+        $ycolbegin = "<FONT COLOR = $colors{$masslist_ref->{Ycolor}->[$i]}>";
+        $ycolend = "</FONT>";
+      #### else no color (default black)
+      } else {
+        $ycolbegin = "";
+        $ycolend = "";
       }
 
     }
 
-}
+
+    #### Special case --'s for first row
+    if ($i == 0) {
+      printf " %3s %2d $bcolbegin%9.1f$bcolend %9s %3d\n",
+        $masslist_ref->{residues}->[$i],
+        $i+1, $masslist_ref->{Bions}->[$i], '--  ', $length-$i
+    }
+
+    #### Special case --'s for last row
+    elsif ($i == ($length-1)) {
+      printf " %3s %2d %9s $ycolbegin%9.1f$ycolend %3d\n",
+        $masslist_ref->{residues}->[$i], $i+1,
+        '--  ', $masslist_ref->{Yions}->[$i], $length-$i
+    }
+
+    #### Else just print the numbers
+    else {
+      printf " %3s %2d $bcolbegin%9.1f$bcolend $ycolbegin%9.1f$ycolend %3d\n",
+        $masslist_ref->{residues}->[$i], $i+1,
+        $masslist_ref->{Bions}->[$i], $masslist_ref->{Yions}->[$i], $length-$i;
+    }
+
+
+  } # end for
+
+
+} # end PrintIons
+
+
