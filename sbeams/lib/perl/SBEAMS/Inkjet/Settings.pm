@@ -35,3 +35,4 @@ $SBEAMS_PART            = 'Inkjet';
 
 
 #### Override variables from main Settings.pm
+$SBEAMS_SUBDIR          = 'Inkjet';

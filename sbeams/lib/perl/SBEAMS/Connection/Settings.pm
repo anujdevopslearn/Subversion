@@ -26,6 +26,7 @@ use vars qw($VERSION @ISA @EXPORT
     $MESSAGE_WIDTH
     $PHYSICAL_BASE_DIR
     $UPLOAD_DIR
+    $SBEAMS_SUBDIR
     );
 
 require Exporter;
@@ -44,6 +45,7 @@ require Exporter;
     $MESSAGE_WIDTH
     $PHYSICAL_BASE_DIR
     $UPLOAD_DIR
+    $SBEAMS_SUBDIR
     );
 
 
@@ -88,4 +90,39 @@ $LINESEPARATOR          = "<P><IMG SRC=\"$HTML_BASE_DIR/images/smalline.gif\">&n
 $MESSAGE_WIDTH          = '350';
 
 
+
+
+###############################################################################
+# getSBEAMS_SUBDIR
+#
+# Get the current value of SBEAMS_SUBDIR, which can be changed by
+# subpackages
+###############################################################################
+sub getSBEAMS_SUBDIR {
+    my $self = shift || die("parameter self not passed");
+
+    $SBEAMS_SUBDIR = '' unless (defined($SBEAMS_SUBDIR));
+
+    return $SBEAMS_SUBDIR;
+
+}
+
+
+###############################################################################
+# setSBEAMS_SUBDIR
+#
+# Set the current value of SBEAMS_SUBDIR, ususally by subpackages
+###############################################################################
+sub setSBEAMS_SUBDIR {
+    my $self = shift || die("parameter self not passed");
+    my $newsubdir = shift || '';
+
+    $SBEAMS_SUBDIR = $newsubdir;
+
+    return $SBEAMS_SUBDIR;
+
+}
+
+
+1;
 

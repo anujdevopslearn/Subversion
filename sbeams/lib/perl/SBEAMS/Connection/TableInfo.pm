@@ -280,6 +280,9 @@ sub returnTableInfo {
   if ($info_key eq "MENU_OPTIONS") {
     my $manage_tables;
 
+    my $subdir = $self->getSBEAMS_SUBDIR();
+    $subdir .= "/" if ($subdir);
+
     ($manage_tables) = $self->selectOneColumn(
       "SELECT manage_tables
          FROM $TB_TABLE_PROPERTY
@@ -294,7 +297,7 @@ sub returnTableInfo {
       $self->returnTableInfo($table_name,"PROGRAM_FILE_NAME");
     @result_array = (
 	"Add $CATEGORY",
-	"$CGI_BASE_DIR/$PROGRAM_FILE_NAME&ShowEntryForm=1"
+	"$CGI_BASE_DIR/$subdir$PROGRAM_FILE_NAME&ShowEntryForm=1"
     );
 
     my $element;
@@ -304,7 +307,7 @@ sub returnTableInfo {
         $self->returnTableInfo($element,"PROGRAM_FILE_NAME");
       push (@result_array, (
         "Manage ${CATEGORY}s",
-        "$CGI_BASE_DIR/$PROGRAM_FILE_NAME"
+        "$CGI_BASE_DIR/$subdir$PROGRAM_FILE_NAME"
       ));
     }
 
@@ -368,6 +371,9 @@ sub returnTableInfo {
 ###############################################################################
   if ($info_key eq "url_cols") {
 
+    my $subdir = $self->getSBEAMS_SUBDIR();
+    $subdir .= "/" if ($subdir);
+
     my %url_cols;
     my ($url,$element);
     my $PROGRAM_FILE_NAME =
@@ -388,7 +394,7 @@ sub returnTableInfo {
 
       $url = $url_cols{$element};
       if ($url eq "pkDEFAULT") {
-        $url_cols{$element} = "$CGI_BASE_DIR/$PROGRAM_FILE_NAME&$PK_COLUMN_NAME=%V";
+        $url_cols{$element} = "$CGI_BASE_DIR/$subdir$PROGRAM_FILE_NAME&$PK_COLUMN_NAME=%V";
       } elsif ($url eq "SELF") {
         $url_cols{$element} = "%V";
       }

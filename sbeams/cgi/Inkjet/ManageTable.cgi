@@ -41,6 +41,7 @@ $q = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsIJ = new SBEAMS::Inkjet;
 $sbeamsIJ->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 
 ###############################################################################
@@ -269,6 +270,11 @@ sub printEntryForm {
           }
         }
 
+        #### Evaluate the $TBxxxxx table name variables if in the query
+        if ( $optionlist_queries{$element} =~ /\$TB/ ) {
+          $optionlist_queries{$element} =
+            eval "\"$optionlist_queries{$element}\"";
+        }
 
         #### Set the MULTIOPTIONLIST flag if this is a multi-select list
         my $method_options;
@@ -874,6 +880,9 @@ sub printAttemptedChangeResult {
     my $result = shift @returned_result;
     my $back_button = $sbeams->getGoBackButton();
 
+    my $subdir = $sbeams->getSBEAMS_SUBDIR();
+    $subdir .= "/" if ($subdir);
+
     $sbeams->printUserContext();
 
     print qq!
@@ -898,7 +907,7 @@ sub printAttemptedChangeResult {
         You can click on BACK to INSERT/UPDATE another record with similar
         values $back_button
         <BR><BR><BR>
-        [ <A HREF="$CGI_BASE_DIR/$PROGRAM_FILE_NAME">View $CATEGORY Table</A>]
+        [ <A HREF="$CGI_BASE_DIR/$subdir$PROGRAM_FILE_NAME">View $CATEGORY Table</A>]
         </B></CENTER><BR><BR><BR><BR>
     !;
 
@@ -914,7 +923,7 @@ sub printAttemptedChangeResult {
       my @next_steps = split(",",$next_step);
       foreach $next_step (@next_steps) {
         print qq~
-	  <B>Next Step? [ <A HREF="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=$next_step&ShowEntryForm=1">Add $next_step</A>
+	  <B>Next Step? [ <A HREF="$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=$next_step&ShowEntryForm=1">Add $next_step</A>
 	  ]</B>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
         ~;
       }

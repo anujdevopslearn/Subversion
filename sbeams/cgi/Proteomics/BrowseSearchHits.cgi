@@ -37,6 +37,7 @@ $q = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsPROT = new SBEAMS::Proteomics;
 $sbeamsPROT->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 
 ###############################################################################
@@ -212,6 +213,12 @@ sub printEntryForm {
             $optionlist_queries{$element} =~
                 s/\$contact_id/$parameters{contact_id}/;
           }
+        }
+
+        #### Evaluate the $TBxxxxx table name variables if in the query
+        if ( $optionlist_queries{$element} =~ /\$TB/ ) {
+          $optionlist_queries{$element} =
+            eval "\"$optionlist_queries{$element}\"";
         }
 
         #### Set the MULTIOPTIONLIST flag if this is a multi-select list

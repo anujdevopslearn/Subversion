@@ -13,6 +13,8 @@ package SBEAMS::GEAP::Tables;
 
 use strict;
 use vars qw(@ISA @EXPORT 
+    $TB_ORGANISM
+
     $TB_SOURCE_DB
 
 );
@@ -21,11 +23,15 @@ require Exporter;
 @ISA = qw (Exporter);
 
 @EXPORT = qw (
+    $TB_ORGANISM
+
     $TB_SOURCE_DB
 
 );
 
 
-$TB_SOURCE_DB           = 'geap.dbo.source_db';
+$TB_ORGANISM                = 'sbeams.dbo.organism';
+
+$TB_SOURCE_DB               = 'geap.dbo.source_db';
 
 

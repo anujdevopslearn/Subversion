@@ -35,3 +35,4 @@ $SBEAMS_PART            = 'Proteomics';
 
 
 #### Override variables from main Settings.pm
+$SBEAMS_SUBDIR          = 'Proteomics';

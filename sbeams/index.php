@@ -63,6 +63,8 @@ or <B>bmarzolf</B>.
 <LI><A HREF="doc/array_request_instructions.txt">Instructions for Submitting a Microarray Request</A>
 <P>
 <LI><A HREF="cgi/Proteomics/main.cgi">Login to SBEAMS - Proteomics</A>
+<P>
+<LI><A HREF="cgi/Inkjet/main.cgi">Login to SBEAMS - Inkjet</A>
 </UL>
 
 <BR>

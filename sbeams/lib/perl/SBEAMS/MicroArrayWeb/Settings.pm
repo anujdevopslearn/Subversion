@@ -35,3 +35,8 @@ $SBEAMS_PART            = 'MicroArray';
 
 
 #### Override variables from main Settings.pm
+$SBEAMS_SUBDIR          = '';
+
+
+1;
+

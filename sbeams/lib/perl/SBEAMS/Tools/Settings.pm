@@ -35,3 +35,4 @@ $SBEAMS_PART            = 'Tools';
 
 
 #### Override variables from main Settings.pm
+$SBEAMS_SUBDIR          = 'Tools';

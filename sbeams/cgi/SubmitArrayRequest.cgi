@@ -41,6 +41,7 @@ $q = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsMAW = new SBEAMS::MicroArrayWeb;
 $sbeamsMAW->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 
 ###############################################################################
@@ -285,6 +286,11 @@ sub printEntryForm {
             s/ORDER BY/WHERE cost_scheme_id = $cost_scheme_id ORDER BY/;
         }
 
+        #### Evaluate the $TBxxxxx table name variables if in the query
+        if ( $optionlist_queries{$element} =~ /\$TB/ ) {
+          $optionlist_queries{$element} =
+            eval "\"$optionlist_queries{$element}\"";
+        }
 
         #### Set the MULTIOPTIONLIST flag if this is a multi-select list
         my $method_options;
@@ -1303,6 +1309,9 @@ sub printAttemptedChangeResult {
     my $result = shift @returned_result;
     my $resulting_PK = shift @returned_result;
 
+    my $subdir = $sbeams->getSBEAMS_SUBDIR();
+    $subdir .= "/" if ($subdir);
+
     $sbeams->printUserContext();
     print qq!
         <P>
@@ -1350,7 +1359,7 @@ sub printAttemptedChangeResult {
       print MAIL "Subject: Microarray request submission\n\n";
       print MAIL "An $apply_action of a microarray request was just executed in SBEAMS by ${current_username}.\n\n";
       print MAIL "To see the request view this link:\n\n";
-      print MAIL "$SERVER_BASE_DIR$CGI_BASE_DIR/$PROGRAM_FILE_NAME&$PK_COLUMN_NAME=$resulting_PK&apply_action=VIEW\n\n";
+      print MAIL "$SERVER_BASE_DIR$CGI_BASE_DIR/${subdir}$PROGRAM_FILE_NAME&$PK_COLUMN_NAME=$resulting_PK&apply_action=VIEW\n\n";
       close (MAIL);
 
       print "<BR><BR>An email was just sent to the Arrays Group informing them of your request.<BR>\n";
@@ -1487,6 +1496,11 @@ sub printCompletedEntry {
               s/\$cost_scheme_id/$cost_scheme_id/;
         }
 
+        #### Evaluate the $TBxxxxx table name variables if in the query
+        if ( $optionlist_queries{$element} =~ /\$TB/ ) {
+          $optionlist_queries{$element} =
+            eval "\"$optionlist_queries{$element}\"";
+        }
 
         # Build the option list
         #$optionlists{$element}=$sbeams->buildOptionList(

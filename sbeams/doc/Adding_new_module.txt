@@ -3,6 +3,8 @@ Notes add a new module:
 
 set TEMPLATE = GEAP
 set DEST = Inkjet
+set TMPLTAG = GEAP
+set TAG = IJ
 
 cd /host/db/local/www/html/dev2/sbeams/lib/perl/SBEAMS
 cp -p $TEMPLATE.pm $DEST.pm
@@ -18,7 +20,7 @@ cp -p -r $TEMPLATE $DEST
 cd $DEST
 replaceall.pl $TEMPLATE $DEST *.cgi
 rm -r CVS
-replaceall.pl sbeams$DEST sbeamsPROT *.cgi
+replaceall.pl sbeams$TMPLTAG sbeams$TAG *.cgi
 chmod a+x *.cgi
 
 cd /host/db/local/www/html/dev2/sbeams/cgi
@@ -38,6 +40,7 @@ cvs add $DEST.pm
 cvs add $DEST
 cvs add $DEST/*
 
+cd /host/db/local/www/html/dev2/sbeams
 cvs commit
 
 

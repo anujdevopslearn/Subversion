@@ -93,7 +93,19 @@ sub printPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/Inkjet/main.cgi">>Inkjet Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">>Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Inkjet/ManageTable.cgi?TABLE_NAME=source_db">- Source DB</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Inkjet/ManageTable.cgi?TABLE_NAME=contact">- Contacts</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Inkjet/ManageTable.cgi?TABLE_NAME=project">- Projects</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Inkjet/ManageTable.cgi?TABLE_NAME=IJ_protocol">- Protocols</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Inkjet/ManageTable.cgi?TABLE_NAME=IJ_slide_lot">- Slides</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Inkjet/ManageTable.cgi?TABLE_NAME=IJ_printing_batch">- Printing</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Inkjet/ManageTable.cgi?TABLE_NAME=IJ_array">- Arrays</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Inkjet/ManageTable.cgi?TABLE_NAME=IJ_labeling">- Label/Hyb</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Inkjet/ManageTable.cgi?TABLE_NAME=IJ_array_scan">- Scan/Quant</a></td></tr>
+	<tr><td>&nbsp;</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Inkjet/SubmitArrayRequest.cgi?TABLE_NAME=IJ_array_request">- Array Requests</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Inkjet/ManageTable.cgi?TABLE_NAME=IJ_slide_type">- Array Info</a></td></tr>
+	<tr><td>&nbsp;</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Inkjet/ManageTable.cgi?TABLE_NAME=user_login">- Admin</a></td></tr>
 	</table>
 	</td>
 

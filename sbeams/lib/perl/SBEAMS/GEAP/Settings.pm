@@ -35,3 +35,4 @@ $SBEAMS_PART            = 'GEAP';
 
 
 #### Override variables from main Settings.pm
+$SBEAMS_SUBDIR          = 'GEAP';

@@ -276,6 +276,9 @@ sub printUserContext {
 
     my $style = $args{'style'} || "HTML";
 
+    my $subdir = $self->getSBEAMS_SUBDIR();
+    $subdir .= "/" if ($subdir);
+
     $current_username = $self->getCurrent_username;
     $current_contact_id = $self->getCurrent_contact_id;
     $current_work_group_id = $self->getCurrent_work_group_id;
@@ -294,7 +297,7 @@ sub printUserContext {
 	Current Login: <B>$current_username</B> ($current_contact_id) &nbsp;
 	Current Group: <B>$temp_current_work_group_name</B> ($current_work_group_id) &nbsp;
 	Current Project: <B>$current_project_name</B> ($current_project_id)
-	&nbsp; <A HREF="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=user_context&user_context_id=$current_user_context_id">[CHANGE]</A><BR>
+	&nbsp; <A HREF="$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=user_context&user_context_id=$current_user_context_id">[CHANGE]</A><BR>
       !;
      }
 

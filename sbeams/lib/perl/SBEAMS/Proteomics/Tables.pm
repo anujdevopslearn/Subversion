@@ -13,6 +13,8 @@ package SBEAMS::Proteomics::Tables;
 
 use strict;
 use vars qw(@ISA @EXPORT 
+    $TB_ORGANISM
+
     $TB_BIOSEQUENCE_SET
     $TB_BIOSEQUENCE
     $TB_PROTEOMICS_EXPERIMENT
@@ -32,6 +34,8 @@ require Exporter;
 @ISA = qw (Exporter);
 
 @EXPORT = qw (
+    $TB_ORGANISM
+
     $TB_BIOSEQUENCE_SET
     $TB_BIOSEQUENCE
     $TB_PROTEOMICS_EXPERIMENT
@@ -47,6 +51,8 @@ require Exporter;
 
 );
 
+
+$TB_ORGANISM                = 'sbeams.dbo.organism';
 
 $TB_BIOSEQUENCE_SET         = 'proteomics.dbo.biosequence_set';
 $TB_BIOSEQUENCE             = 'proteomics.dbo.biosequence';
