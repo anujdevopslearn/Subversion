@@ -42,7 +42,7 @@ use SBEAMS::Immunostain;
 use SBEAMS::Immunostain::Settings;
 use SBEAMS::Immunostain::Tables;
 
-use SBEAMS::Core::Table;
+use SBEAMS::Connection::DataTable;
 
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::Immunostain;
