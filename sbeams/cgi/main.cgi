@@ -87,6 +87,8 @@ sub showMainPage {
 	<BR><BR>
 	<LI><A HREF="SNP/main.cgi">SBEAMS - SNP</A>
 	<BR><BR>
+	<LI><A HREF="BEDB/main.cgi">SBEAMS - BEDB</A>
+	<BR><BR>
 	<LI><A HREF="GEAP/main.cgi">SBEAMS - GEAP</A>
 	<BR><BR>
 	<LI><A HREF="tools/main.cgi">SBEAMS - Tools</A>
