@@ -217,6 +217,13 @@ sub handle_request {
     constraint_value=>$parameters{project_id} );
   return if ($project_id_clause == -1);
 
+  #### Build PLATE_ID constraint
+  my $plate_id_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"ERV.plate_id",
+    constraint_type=>"text_list",
+    constraint_name=>"Plate ID",
+    constraint_value=>$parameters{plate_id} );
+  return if ($plate_id_clause == -1);
 
   #### Build SNP_ACCESSION constraint
   my $assay_id_clause = $sbeams->parseConstraint2SQL(
@@ -280,10 +287,11 @@ SELECT $limit_clause $columns_clause
   FROM SNP.dbo.export_results_view ERV
  WHERE 1=1
 $project_id_clause
+$plate_id_clause
 $assay_id_clause
 $call_quality_clause
    AND genotype_id IS NOT NULL
- ORDER BY project_id,assay_id,sample_id,call_date
+ ORDER BY project_id,plate_id,assay_id,sample_id,call_date
   ~;
 
 
@@ -315,6 +323,7 @@ $call_quality_clause
 
       #### Show the SQL that will be or was executed
       $sbeams->display_sql(sql=>$sql) if ($show_sql);
+
 
       #### Fetch the results from the database server
       $sbeams->fetchResultSet(sql_query=>$sql,
@@ -408,6 +417,7 @@ sub postProcessResultset {
       chomp;
       next if ($_ =~ /pos/);
       my ($snp_id,$snp_pos) = split("\t",$_);
+      $snp_id =~ s/\s+//g;
       $snphash{$snp_pos}=$snp_id;
     }
   }
@@ -415,6 +425,7 @@ sub postProcessResultset {
 
   #### Get the column indices
   my $project_id_index = $resultset_ref->{column_hash_ref}->{project_id};
+  my $plate_id_index = $resultset_ref->{column_hash_ref}->{plate_id};
   my $sample_id_index = $resultset_ref->{column_hash_ref}->{sample_id};
   my $assay_id_index = $resultset_ref->{column_hash_ref}->{assay_id};
   my $genotype_id_index = $resultset_ref->{column_hash_ref}->{genotype_id};
@@ -438,8 +449,10 @@ sub postProcessResultset {
   for (my $row=0;$row<$n_rows-1; $row++) {
 
     $project_id = $resultset_ref->{data_ref}->[$row]->[$project_id_index];
+    $plate_id = $resultset_ref->{data_ref}->[$row]->[$plate_id_index];
     $sample_id = $resultset_ref->{data_ref}->[$row]->[$sample_id_index];
     $assay_id = $resultset_ref->{data_ref}->[$row]->[$assay_id_index];
+
     $genotype_id = $resultset_ref->{data_ref}->[$row]->[$genotype_id_index];
     $plate_id = $resultset_ref->{data_ref}->[$row]->[$plate_id_index];
     $call_quality = $resultset_ref->{data_ref}->[$row]->[$call_quality_index];
@@ -527,6 +540,9 @@ sub postProcessResultset {
   	push (@assays,$assay);
   	print GAPFILE "$assay\t$position";
   	$ppos = $position;
+        #print "INFO: Assay $assay IS in data<BR>\n";
+      } else {
+        #print "WARNING: Assay $assay not in data<BR>\n";
       }
     }
     print GAPFILE "\t0\n";
