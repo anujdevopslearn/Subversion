@@ -246,6 +246,17 @@ sub handle_request {
   return if ($biosequence_name_clause eq '-1');
 
 
+  #### Build BIOSEQUENCE_ACCESSION constraint
+  my $biosequence_accession_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.biosequence_accession",
+    constraint_type=>"plain_text",
+    constraint_name=>"BioSequence Accession",
+    constraint_value=>$parameters{biosequence_accession_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_biosequence_accession_constraint"},
+  );
+  return if ($biosequence_accession_clause eq '-1');
+
+
   #### Build BIOSEQUENCE_GENE_NAME constraint
   my $biosequence_gene_name_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"BS.biosequence_gene_name",
@@ -508,6 +519,7 @@ sub handle_request {
        WHERE 1 = 1
       $biosequence_set_clause
       $biosequence_name_clause
+      $biosequence_accession_clause
       $biosequence_gene_name_clause
       $biosequence_seq_clause
       $biosequence_desc_clause
