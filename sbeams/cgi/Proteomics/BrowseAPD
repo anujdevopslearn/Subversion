@@ -586,11 +586,11 @@ sub handle_request {
           FROM $TBAPD_PEPTIDE P
          INNER JOIN $TBAPD_MODIFIED_PEPTIDE MP
 	       ON ( P.peptide_id = MP.peptide_id )
-         LEFT JOIN $TBAPD_PEPTIDE_IDENTIFIER PI
+          LEFT JOIN $TBAPD_PEPTIDE_IDENTIFIER PI
 	       ON ( P.peptide_identifier_id = PI.peptide_identifier_id )
          INNER JOIN $TBAPD_PEPTIDE_SUMMARY PS
 	       ON ( P.peptide_summary_id = PS.peptide_summary_id )
-	 INNER JOIN $TBPR_BIOSEQUENCE BS
+	  LEFT JOIN $TBPR_BIOSEQUENCE BS
 	       ON ( P.biosequence_id = BS.biosequence_id )
           LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
           LEFT JOIN $TBPR_BIOSEQUENCE_PROPERTY_SET BPS
