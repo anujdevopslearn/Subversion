@@ -27,6 +27,7 @@ my( %fileIDHash, %attributeHash);
 my ($day, $month, $year)  =(localtime)[3,4,5]; 
 my $time = $day.$month.$year;
 my $outFile; 
+
 main();
 exit;
 sub main
@@ -36,10 +37,28 @@ sub main
 		 work_group=>'Cytometry_user',
   ));
 
+my $startDir = $ARGV[0] or die "no valid startDir\n";; 
+my ($watch) = $startDir =~ /.*\/(.*?)\/$/; 
+my $watchFile = $watch."watch";
+my $project_id;
+$project_id = 397; 
+$project_id = 409  if $startDir  =~ /IkB-GFP/i;
 
-my $sql = "select filename, original_filepath from $TBCY_FCS_RUN";
+eval
+{
+   open( File, "$watchFile") or die "can not $!"; 
+} ;
+close File; 
+print "watch file found\n" and do( exit)  if (! $@);
+
+open (File, ">$watchFile") or die "can not open $watchFile $!";
+;
+#exit if(-e $watchFile and $startDir =~ /$watch/i); 
+#open $watchFile 
+
+my $sql = "select filename, original_filepath from $TBCY_FCS_RUN where project_id = $project_id";
  %fileHash = $sbeams->selectTwoColumnHash($sql);
- my $idSql =  "select original_filepath + \'/\' + filename, fcs_run_id  from $TBCY_FCS_RUN";
+ my $idSql =  "select original_filepath + \'/\' + filename, fcs_run_id  from $TBCY_FCS_RUN where project_id = $project_id";
 %fileIDHash = $sbeams->selectTwoColumnHash($idSql);
 
 #selects all the parameters to be measured  and which have been seen before 
@@ -47,19 +66,20 @@ my $attributeSql = "select measured_parameters_name, measured_parameters_id from
  %attributeHash = $sbeams->selectTwoColumnHash($attributeSql);
  
  
-my $startDir = $ARGV[0] or die "no valid startDir\n";; 
+ 
 #my $startDir = "/net/cytometry/IkB-GFP/2004-06-28/";
 #$startDir = "/net/db/projects/StemCell/FCS/072104/";
 
 my ($tag) = $startDir =~ /^.*\/(.*)\/$/;
 
 
+ 
+
 $outFile = "/users/mkorb/cytometry/Load/". $time.$tag."_loadCyt.txt";
 open(LOG,"> $outFile"); 
-
 find(\&wanted, $startDir);
 doTheOtherFiles();
-
+unlink $watchFile; 
 }
 
 #recursing the dir
