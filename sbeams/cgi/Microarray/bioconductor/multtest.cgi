@@ -229,7 +229,7 @@ by analyzing permutations of the measurements.  The threshold can be adjusted to
 of genes, and FDRs are calculated for each set."<br>
 1)  Significance analysis of microarrays applied to the ionizing radiation response.
 Proc Natl Acad Sci U S A. 2001 Apr 24;98(9):5116-21. Epub 2001 Apr 17. Erratum in: Proc Natl Acad Sci U S A 2001 Aug 28;98(18):10515. 
-<b>t_test</b>
+
 
 <p>
 <b>t_test</b><br/>
@@ -311,7 +311,7 @@ sub step3 {
 	
 		print table({border=>0},
 				Tr(td({-class=>'med_gray_bg'},
-				       "Reference Sample"
+				       "Reference Sample Group Name"
 				      ),
 				    td({-class=>'rev_gray'},
 				      $reference_sample_group
@@ -352,7 +352,7 @@ sub step3 {
 		print Tr(
 			  td({-class=>'med_gray_bg'},"Sample Group"),
 		 	  td({-class=>'rev_gray'},$sample_group),
-		 #Getting Crazy, Check for param 'pair_wise_only'.  If so print out a checkbox to allow user
+		 #Check for param 'pair_wise_only'.  If so print out a checkbox to allow user
 		#to select a Sample group name.  Need two boxes one for Group 'A' One of Group 'B'
 			#Create a small table within a cell to hold th Checkboxes for each group of the A or B Sample  
 			  $q->param('pair_wise_only') eq 'YES' ?	
@@ -385,7 +385,7 @@ sub step3 {
 	print '</table>';
 
 #	my @classes = (0 .. $numclasses-1, "Ignore");
-	
+	$log->debug(Dumper($sample_groups_href));
 	for (my $i = 0; $i < @sampleNames; $i++) {
 	    my $sample_name = $sampleNames[$i];
 	   	if (exists $sample_groups_href->{SAMPLE_NAMES}{$sample_name}){ 
@@ -420,12 +420,8 @@ sub step3 {
           p(submit("Submit Job")),
 	      hidden(-name=>'test_stat', -default=>$test_stat, -override=>1),
 	      end_form;
-	
-	
-	
-	
-    print <<'END';
-<h2>Quick Help</h2>
+	print << 'END';
+	<h2>Quick Help</h2>
 
 <p>
 The control group should almost always be in a lower class than
@@ -433,20 +429,23 @@ the experimental group so that positive test statistics indicate
 increased expression and vice versa. 
 
 </p>
+END
+
+	
+	if ($test_stat eq 'SAM'){
+	print <<'END';
 <b>SAM -- Significance Analysis of Microarrays</b>
-<p>
-SAM.
-It is possible to perform one and two class analyses using either 
-a modified t-statistic or a (standardized) Wilcoxon rank statistic, 
-and a multiclass analysis using a modified F-statistic.
-</p>
 <!-- Link to interal ISB copy of the paper -->
 <p>For more information about SAM, click <a href='http://affy/pdf/44.pdf'>here</a> 
 to view the paper by Tusher et al. 
 </p>
 
+END
 
-<hr>
+	}#end SAM Help
+	
+if ($test_stat eq 't_test'){
+print <<'END';
 <p>
 For more information about multiple testing, see these two papers:
 </p>
@@ -465,7 +464,8 @@ Science</em>, Vol. 18, No. 1, p. 71-103. <a
 href="http://www.bepress.com/cgi/viewcontent.cgi?article=1014&context=ucbbiostat">[PDF]</a>
 </p>
 END
-	
+
+	}#end print t-test help
     $sbeamsMOD->printPageFooter();
 }
 
@@ -487,7 +487,7 @@ sub step4 {
 	my @genenames = split(' ', $genenames);
 	my ($script, $output, $jobsummary, $limit, @classlabel, $error, $job);
 	
-	if (grep(/[^0-9\.]|^$/, $cgi->param('limitnum')) || !($cgi->param('limitnum') > 0)) {
+	if (grep(/[^0-9\.]|^$/, $cgi->param('limitnum')) || !($cgi->param('limitnum') >= 0)) {
 	    error('Please enter an number greater than 0.');
 	}
 	if ($cgi->param('email') && !check_email($cgi->param('email'))) {
@@ -669,10 +669,23 @@ END
 						 );
 	}
 
-	my $limit_type = $limits{$cgi->param('limittype')} ? $limits{$cgi->param('limittype')}: $cgi->param('limittype');
+	my $limit_type = $limits{$cgi->param('limittype')} ? 
+							$limits{$cgi->param('limittype')}:
+							$cgi->param('limittype');
 	
-	$limit = $cgi->param('limit') ? $limit_type . " " . 
-	         $cgi->param('limitnum') : "None";
+	$limit = $cgi->param('limit') ? 
+					$limit_type . " " .  $cgi->param('limitnum')
+	         		: "None";
+	
+##If this is a SAM check to see if we are filtering on the number of genes to return
+	my @gene_limits_html = ();
+	my @gene_limits_db   = ();
+	if ($limit_type eq 'fdr_cutoff'){
+		my $min_gene_limitnum = $cgi->param('min_gene_limitnum');
+		my $max_gene_limitnum = $cgi->param('max_gene_limitnum');	
+		@gene_limits_html = ('Min Number of Genes', $min_gene_limitnum, 'Max Number of Genes', $max_gene_limitnum);
+		@gene_limits_db = 	("Min Number of Genes => $min_gene_limitnum", "Max Number of Genes => $max_gene_limitnum");
+	}
 	
 	$log->debug("LIMIT TYPE '$limit_type' LIMIT NUMBER '$limit'");
 	
@@ -688,6 +701,7 @@ END
 	                         'Side', scalar($cgi->param('side')),
 	                         'Procedure', $procs{$cgi->param('proc')},
 	                         'Limit', $limit,
+	                         @gene_limits_html,
 	                         'Gene&nbsp;names', join(', ', @genenames),
 	                         'Expression', $cgi->param('exprs') ? "Yes" : "No",
 	                         'Copy&nbsp;back', $cgi->param('fmcopy') ? "Yes" : "No",
@@ -706,6 +720,7 @@ END
 	                         'Side =>'. scalar($cgi->param('side')),
 	                         'Procedure =>'. $procs{$cgi->param('proc')},
 	                         "Limit => $limit",
+	                         @gene_limits_db,
 	                         'Gene&nbsp;names =>' . join(', ', @genenames),
 	                         'Expression =>' . ($cgi->param('exprs') ? "Yes" : "No"),
 	                         'Copy&nbsp;back =>'. ($cgi->param('fmcopy') ? "Yes" : "No"),
@@ -1352,7 +1367,8 @@ sub generate_sam_r {
 	my $limit = $cgi->param('limit');
 	my $limittype = $cgi->param('limittype');
 	my $limitnum = $cgi->param('limitnum');
-	my $gene_limitnum = $cgi->param('gene_limitnum');
+	my $min_gene_limitnum = $cgi->param('min_gene_limitnum');
+	my $max_gene_limitnum = $cgi->param('max_gene_limitnum');
 	my $exprs = $cgi->param('exprs');	#provide expression numbers in output
 	my $title = $cgi->param('title');
 	
@@ -1387,7 +1403,8 @@ condition.names <- c("@{[join('", "', @$condition_names_aref)]}")
 limit <- @{[$limit ? "TRUE" : "FALSE"]}
 limittype <- "$limittype"
 limitnum <- as.numeric("$limitnum")
-gene.limitnum <- as.numeric("$gene_limitnum")
+min.gene.limitnum <- as.numeric("$min_gene_limitnum")
+max.gene.limitnum <- as.numeric("$max_gene_limitnum")
 rlibpath <- "$R_LIBS"
 exprs <- @{[$exprs ? "TRUE" : "FALSE"]}
 in.title <- "$title"
@@ -1450,7 +1467,8 @@ for (class.numb in unique.classes){
 	title <- in.title
 	
 	Matrix <- exprs(exprset)[,cols]
-	sam.output<-sam(Matrix,current.classlabel,rand=123)
+         #sam.output<-sam(Matrix,current.classlabel,rand=123)
+	sam.output<- sam.dstat(Matrix, current.classlabel, var.equal=FALSE, rand=123, med=TRUE)
 
 #make a small matrix to hold the FDR cuttoffs and the ratio data
 	numb.loops <- 2500
@@ -1462,7 +1480,8 @@ for (class.numb in unique.classes){
 							"mu_X",
 							"mu_Y",
 							"Log_2_Ratio", 
-							"Log_10_Ratio")
+							"Log_10_Ratio",
+							"D_stat")
 							
 	gatherdataMatrix <- cbind(anno.matrix, matrix(data=1, nrow=length(anno.probesetid),ncol=length(matrix.column.names) ))
 	
@@ -1494,7 +1513,7 @@ for (class.numb in unique.classes){
 		}else{
  			gatherdataMatrix[sum.sam.output$row.sig.genes,"FDR"] <- sum.sam.output$mat.fdr[1,5]
 			gatherdataMatrix[sum.sam.output$mat.sig[,1],"SAM_ratio"] <- sum.sam.output$mat.sig[,6]
-
+			gatherdataMatrix[sum.sam.output$mat.sig[,1],"D_stat"] <- sum.sam.output$mat.sig[,2]
 		}
 	}
 ##Convert data to a dataframe
@@ -1514,7 +1533,8 @@ if (limit) {
 	
 	if (limittype == "fdr_cutoff"){
 	    lim <- (output.df$FDR <= limitnum/100)
-		if(length(which(lim)) > gene.limitnum){
+		newlimitNumb <- 0 #initilize var to be used later
+		if(length(which(lim)) > min.gene.limitnum){
 			
 			title = paste(title, 
 						  "Genes Found at less then or equal to", 
@@ -1537,7 +1557,7 @@ if (limit) {
 				newlimitNumb <- newlimitNumb + 1
 
 				lim <- (output.df$FDR <= newlimitNumb/100)
-				if(length(which(lim)) > gene.limitnum){
+				if(length(which(lim)) > min.gene.limitnum){
 					title = paste(title, 
 							      "Genes Found with less then <font color='RED'>", 
 							      newlimitNumb, 
@@ -1558,17 +1578,47 @@ if (limit) {
 					title = paste(title, " Genes Found with greater then <font color='RED'>95% FDR</font>", newlimitNumb, "% FDR<br>Sample Groups:",condition.name)
 					break
 				}
-			}
-		}
+			}#end repeat loop
+		}#end else loop
 			
-	}
+	}#end limit if statment
 ###Convert the FDR ratio to a percentage in both the dataframe and gatherdataMatrix
 output.df$FDR <- output.df$FDR * 100
 allData.output.df$FDR  <- allData.output.df$FDR * 100
 
-###Sort the dataframe on the FDR column
-output.df <- sort.data.frame(output.df, ~ +FDR)
-allData.output.df<- sort.data.frame(allData.output.df, ~ +FDR)
+###Sort the dataframe on the FDR column and D_stat
+output.df <- sort.data.frame(output.df, ~ -FDR+D_stat)
+allData.output.df<- sort.data.frame(allData.output.df, ~ -FDR+D_stat)
+
+###If the HTML output has more genes then the user wants, cut the data down to size
+###The data was sorted on the D_stat column in the step above.  
+if(length(row.names(output.df)) > max.gene.limitnum){
+ 
+ if (newlimitNumb > limitnum){
+ 	 final.fdr <-newlimitNumb
+ }else{
+ 	 final.fdr <- limitnum
+ }
+ total.count <- length(row.names(output.df))
+ 
+ title <- paste(
+ 				"Sample Groups:", 
+ 				condition.name,
+ 				"<br>",
+ 				"Top ", max.gene.limitnum, 
+ 				" Genes of ",
+			     total.count,
+			    "<br>",
+			    "With FDR at or Below ", 
+			     "<font color='blue'>",
+			     final.fdr,
+			     " % </font>"
+				)
+	
+  output.df <- output.df[1:max.gene.limitnum,]
+}
+
+
 
 ##HACK: delete out the extra Column Probe_set_url from the allData.output.df since
 ##we don't want url's in the text output nor do we want the extra probe column in html output...
@@ -1683,24 +1733,54 @@ sub print_sam_controls{
 
 
 	print '<br><br>',
-		  '<table><tr><td>',
-		  p("Run SAM Analysis Two-class Unpaired Assuming Unequal Variances"),
-		  p(checkbox('limit', 'checked', 'YES', ''),
-		  "Limit the HTML Results to FDR percent cut off", 
+		  hr(),
+		  p(b("Run SAM Analysis Two-class Unpaired Assuming Unequal Variances"),
+		  br(),
 		  hidden(-name=>'limittype', -default=>'fdr_cutoff'),
-		  textfield(-name=>'limitnum',
-                -default	=> 2,
-                -size   	=> 3,
-                -maxlength	=>3,
-			 	-override => 1,
-			 	), "% AND at least",
-		  textfield(-name=>'gene_limitnum',
-                -default	=> 10,
-                -size   	=> 3,
-                -maxlength	=>3,
-			 	-override => 1,
-			 	), "Genes"
-		  ),;
+		  table({ style=>"border-width: 3px; border-style: double;"},
+		    Tr(
+		    	td(checkbox('limit', 'checked', 'YES', '')),
+		  		td("Limit the HTML Results to FDR percent cut-off <=&nbsp;"), 
+		 		td(
+		  			textfield(-name=>'limitnum',
+                		-default	=> 2,
+                		-size   	=> 3,
+                		-maxlength	=>3,
+			 			-override => 1,
+			 		), " % ",
+			 	)
+			 ),
+			 Tr(
+			 	td({colspan=>3, align=>'center'}, "AND"),
+			 ),
+			 Tr(
+			   td('&nbsp;'),
+			   td({align=>'center'},'A Minimum number of Genes'),
+			   td(
+		  			textfield(-name=>'min_gene_limitnum',
+                		-default	=> 10,
+               			-size   	=> 4,
+                		-maxlength	=>3,
+			 			-override => 1,
+			 		 ),
+			 	)
+			 ),
+			 Tr(
+			  	td({colspan=>3,align=>'center'}, "AND"),
+			 ),
+			 Tr(td('&nbsp;'),
+			 	td({align=>'center'},'A Maximum number of Genes'),
+			 	td(
+			 		textfield(-name=>'max_gene_limitnum',
+                		-default	=> 250,
+                		-size   	=> 4,
+                		-maxlength	=>5,
+			 			-override => 1,
+			 		)#close textfield
+			 	)
+			 )
+			)#close table
+		  )#close paragraph;
 			 	
 }	      
 
@@ -1962,7 +2042,11 @@ sort.data.frame <- function(form,dat){
   # sort.data.frame(Oats,~nitro-Variety)
 
   # If dat is the formula, then switch form and dat
-  if(inherits(dat,"formula")){
+ #Hard code in SAM data column Name to do a special sort if the column is seen
+stat.col <- "D_stat" 
+reverse.sort.flag <- "NO"
+  
+   if(inherits(dat,"formula")){
     f=dat
     dat=form
     form=f
@@ -1999,12 +2083,28 @@ sort.data.frame <- function(form,dat){
         calllist[[i]] <- rank(dat[,vars[i]])
     }
     else {
-      if(varsign=="-")
-        calllist[[i]] <- -dat[,vars[i]]
-      else
-        calllist[[i]] <- dat[,vars[i]]
-    }
+      if(varsign=="-"){
+        if(stat.col == vars[i]){
+        #If stat.col then sort on the Abs val of the columns 
+	 calllist[[i]] <- abs(-dat[,vars[i]])
+	 reverse.sort.flag <- "YES"
+        }else{
+	 calllist[[i]] <- -dat[,vars[i]]
+        }
+      }else{
+	if(stat.col == vars[i]){        
+	 calllist[[i]] <- abs(dat[,vars[i]]) 
+     reverse.sort.flag <- "YES"
+        }else{
+	 calllist[[i]] <- dat[,vars[i]]
+         
+        } 
+     } 
+   }
   }
+  if (reverse.sort.flag == "YES"){
+    calllist <- c(calllist,decreasing=TRUE)
+  } 
   dat[do.call("order",calllist),]
 
 }
