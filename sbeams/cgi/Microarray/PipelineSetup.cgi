@@ -252,17 +252,17 @@ Instructions:<BR>
 
   ## End SELECT
   print qq~
-			   </SELECT>
-				 </TD>
-			 </TR>
-			 <TR>
-			   <TD ALIGN="right">
-				 <INPUT TYPE="button" NAME="add_slides" VALUE="Add Arrays" onClick="updateArrays()">
-				 </TD
-			 </TR>
-			 </TABLE>
-    </TD>
-    <TD>
+	    </SELECT>
+	  </TD>
+	</TR>
+	<TR>
+	  <TD ALIGN="right">
+	  <INPUT TYPE="button" NAME="add_slides" VALUE="Add Arrays" onClick="updateArrays()">
+	  </TD>
+	</TR>
+  </TABLE>
+  </TD>
+  <TD>
       ~;
 
 
@@ -326,10 +326,10 @@ SELECT	A.array_id,A.array_name,
 
 	## File Status of each file that has been selected
 	print qq~
-			<BR>
-			File Status:
-			<BR>
-			~;
+	  <BR>
+	  File Status:
+	  <BR>
+	  ~;
 
 	## SQL to Track down stage_location information from selected arrays
   if ($selectedFiles) {
