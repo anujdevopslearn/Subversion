@@ -508,16 +508,19 @@ sub handle_request {
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
 
-  #### If grouping by reference
-  if ( $parameters{display_options} =~ /GroupReference/ ) {
-    @column_array = (
-      @additional_columns,
+  #### If the user wants to see the peptides
+  my @peptide_columns = ();
+  if ( $parameters{display_options} =~ /ShowPeptides/ ) {
+    @peptide_columns = (
+      ["peptide_sequence","PEP.peptide_sequence","Peptide"],
+      ["charge","PEP.charge","Chg"],
+      ["peptide_probability","STR(PEP.nsp_adjusted_probability,7,3)","Peptide Prob"],
+      ["peptide_n_instances","PEP.n_instances","Peptide N Instances"],
     );
-    $group_by_clause = "";
-    $count_column = "";
+    $order_by_clause = ",PEP.nsp_adjusted_probability,PEP.peptide_sequence,PEP.charge"
+  }
 
-  #### If no grouping
-  } else {
+  if (1) {
     @column_array = (
       ["experiment_tag","experiment_tag","Exp"],
       ["search_batch_subdir","search_batch_subdir","DB"],
@@ -532,16 +535,18 @@ sub handle_request {
       ["biosequence_accession","BS.biosequence_accession","Accession"],
       ["canonical_name","BSCAN.biosequence_name","Canonical Name"],
       ["protein_probability","STR(PROT.probability,7,3)","Protein Prob"],
-      ["n_peptides","PROT.n_peptides","Total Peptides"],
-      ["average_quant","STR(SQ.ratio_mean,7,3)","Quant Avg"],
-      ["stdev_quant","STR(SQ.ratio_standard_dev,7,3)","Quant StDev"],
-      ["n_quant","SQ.ratio_number_peptides","Quant N"],
+      @peptide_columns,
+      ["protein_n_peptides","PROT.n_peptides","Total Protein Peptides"],
+      ["protein_average_quant","STR(SQ.ratio_mean,7,3)","Protein Quant Avg"],
+      ["protein_stdev_quant","STR(SQ.ratio_standard_dev,7,3)","Protein Quant StDev"],
+      ["protein_n_quant","SQ.ratio_number_peptides","Protein Quant N"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
       ["organism","O.full_name","Organism"],
     );
     $peptide_column = "";
     $count_column = "";
+    $order_by_clause = "ORDER BY PG.group_number,PROT.probability DESC,BS.biosequence_name$order_by_clause"
   }
 
 
@@ -591,6 +596,9 @@ sub handle_request {
                ON ( SB.experiment_id = PE.experiment_id )
           LEFT JOIN $TBPR_BIOSEQUENCE_PROPERTY_SET BPS
                ON ( BS.biosequence_id = BPS.biosequence_id )
+
+         INNER JOIN $TBPR_PEPTIDE PEP
+               ON ( PROT.protein_id = PEP.protein_id )
 
          LEFT JOIN ${BIOLINK}biosequence BSLINK
                ON ( BS.biosequence_gene_name = BSLINK.biosequence_name )
@@ -866,17 +874,34 @@ sub postProcessResultset {
   #### Get some column number indexes
   my $search_batch_id_column_index = $resultset_ref->{column_hash_ref}->{search_batch_id};
   my $biosequence_name_column_index = $resultset_ref->{column_hash_ref}->{biosequence_name};
+  my %col = %{$resultset_ref->{column_hash_ref}};
+
+
+  #### Set a flag for peptide processing
+  my $have_peptides = 0;
+  $have_peptides = 1 if (exists($col{peptide_sequence}));
 
 
   #### Loop over each row in the resultset, coalescing into a data hash
   my %data;
   my $n_rows = scalar(@{$resultset_ref->{data_ref}});
   for (my $row=0;$row<$n_rows-1; $row++) {
+
+    #### Extract a pointer to the row
+    my $rowdata = $resultset_ref->{data_ref}->[$row];
+
     #### Determine the search_batch_id and biosequence_name
-    my $search_batch_id = $resultset_ref->{data_ref}->[$row]->[$search_batch_id_column_index];
-    my $biosequence_name = $resultset_ref->{data_ref}->[$row]->[$biosequence_name_column_index];
+    my $search_batch_id = $rowdata->[$col{search_batch_id}];
+    my $biosequence_name = $rowdata->[$col{biosequence_name}];
+    my $peptide_sequence = $rowdata->[$col{peptide_sequence} || 9999];
+    my $charge = $rowdata->[$col{charge} || 9999];
+
+    #my $key = substr('          ',0,10-length($group_number)).$group_number;
+    my $key = $biosequence_name;
+    $key .= $peptide_sequence.$charge if ($peptide_sequence);
+
     #### Store it in the new hash
-    $data{$biosequence_name}->{$conditions{$search_batch_id}} = $resultset_ref->{data_ref}->[$row];
+    $data{$key}->{$conditions{$search_batch_id}} = $resultset_ref->{data_ref}->[$row];
   }
 
 
@@ -884,12 +909,17 @@ sub postProcessResultset {
   #### First the initial columns before the data points
   my @prefix_columns = qw(biosequence_name accessor accessor_suffix
     search_batch_id biosequence_accession canonical_name);
+  push(@prefix_columns,qw(peptide_sequence charge)) if ($have_peptides);
   my @prefix_column_types = qw(varchar varchar varchar
     int varchar varchar);
+  push(@prefix_column_types,qw(varchar int)) if ($have_peptides);
+
 
   #### Then the data points
-  my @data_columns = qw(protein_probability n_peptides average_quant stdev_quant n_quant);
+  my @data_columns = qw(protein_probability protein_n_peptides protein_average_quant protein_stdev_quant protein_n_quant);
+  push(@data_columns,qw(peptide_probability peptide_n_instances)) if ($have_peptides);
   my @data_column_types = qw(real int real real int);
+  push(@data_column_types,qw(real int)) if ($have_peptides);
   if ($resultset_ref->{column_hash_ref}->{pulldown_protein_name}) {
     unshift(@data_columns,'pulldown_protein_name');
     unshift(@data_column_types,'varchar');
@@ -967,19 +997,19 @@ sub postProcessResultset {
   }
 
 
-  #### Loop over each biosequence_name and print the pivoted summary
+  #### Loop over each row_key and print the pivoted summary
   my @new_data_array;
-  foreach my $biosequence_name (keys(%data)) {
+  foreach my $row_key (sort keys(%data)) {
     my @row;
     my %summaries;
 
-    my ($first_condition) = keys(%{$data{$biosequence_name}});
+    my ($first_condition) = keys(%{$data{$row_key}});
 
     #### Push the pre-data columns onto the row array
     foreach my $element (@prefix_columns) {
       my $column_index = $resultset_ref->{column_hash_ref}->{$element};
       if (defined($column_index)) {
-        push(@row,$data{$biosequence_name}->{$first_condition}->[$column_index]);
+        push(@row,$data{$row_key}->{$first_condition}->[$column_index]);
       }
     }
 
@@ -991,7 +1021,7 @@ sub postProcessResultset {
 	  my $combined_value = '';
 
 	  #### Sum the total number of peptides
-	  if ($data_column eq 'n_peptides') {
+	  if ( $data_column =~ /(protein_n_peptides|peptide_n_instances)/) {
 	    $combined_value = 0;
 	    foreach my $el (@{$summaries{$data_column}}) {
 	      $combined_value += $el;
@@ -999,7 +1029,7 @@ sub postProcessResultset {
 	  }
 
 	  #### Sum the total number of quantitated peptides
-	  if ($data_column eq 'n_quant') {
+	  if ($data_column eq 'protein_n_quant') {
 	    $combined_value = 0;
 	    foreach my $el (@{$summaries{$data_column}}) {
 	      $combined_value += $el;
@@ -1007,22 +1037,22 @@ sub postProcessResultset {
 	  }
 
 	  #### Combine the average quantitation
-	  if ( $data_column =~ /(average_quant|stdev_quant)/) {
-	    if ($data_column eq 'average_quant') {
+	  if ( $data_column =~ /(protein_average_quant|protein_stdev_quant)/) {
+	    if ($data_column eq 'protein_average_quant') {
 	      #### Store pointer to what will be updated later
-	      $summaries{average_quant_pointer} = scalar(@row);
+	      $summaries{protein_average_quant_pointer} = scalar(@row);
 
-	    } elsif ($data_column eq 'stdev_quant' &&
-		     defined($summaries{average_quant}) &&
-		     defined($summaries{stdev_quant})
+	    } elsif ($data_column eq 'protein_stdev_quant' &&
+		     defined($summaries{protein_average_quant}) &&
+		     defined($summaries{protein_stdev_quant})
 		    ) {
   	      my ($mean,$uncertainty) = $sbeams->average(
-                values => $summaries{average_quant},
-                uncertainties => $summaries{stdev_quant},
+                values => $summaries{protein_average_quant},
+                uncertainties => $summaries{protein_stdev_quant},
               );
 	      $combined_value = sprintf('%.3f',$uncertainty);
-	      if (defined($summaries{average_quant_pointer})) {
-		$row[$summaries{average_quant_pointer}] = sprintf('%.3f',$mean);
+	      if (defined($summaries{protein_average_quant_pointer})) {
+		$row[$summaries{protein_average_quant_pointer}] = sprintf('%.3f',$mean);
 	      }
             }
 
@@ -1032,7 +1062,7 @@ sub postProcessResultset {
 
 	} else {
 	  my $column_index = $resultset_ref->{column_hash_ref}->{$data_column};
-	  my $this_value = $data{$biosequence_name}->{$condition}->[$column_index];
+	  my $this_value = $data{$row_key}->{$condition}->[$column_index];
 	  if (defined($this_value)) {
 	    push(@row,$this_value);
 	    unless (defined($summaries{$data_column})) {
@@ -1053,7 +1083,7 @@ sub postProcessResultset {
     foreach my $element (@suffix_columns) {
       my $column_index = $resultset_ref->{column_hash_ref}->{$element};
       if (defined($column_index)) {
-        push(@row,$data{$biosequence_name}->{$first_condition}->[$column_index]);
+        push(@row,$data{$row_key}->{$first_condition}->[$column_index]);
       }
     }
 
