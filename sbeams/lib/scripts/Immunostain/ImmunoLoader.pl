@@ -433,7 +433,7 @@ sub processFile
 	 }
 	 
 	 
-	 print "$update\n $insert\n";
+	 print "$slideUpdate\n $slideInsert\n";
 	 getc;
 #update, insert the cancer level
 		my %slideRowData; 
