@@ -100,14 +100,14 @@ sub returnTableInfo {
 		  LEFT JOIN $TBIN_REGULATORY_FEATURE RF2 ON ( I.regulatory_feature2_id = RF1.regulatory_feature_id )
 			LEFT JOIN $TBIN_PUBLICATION PUB ON (I.publication_id = PUB.publication_id)
 		 WHERE I.record_status != 'D'
-		   AND ( BE1.record_status != 'D' OR BE1.record_status IS NULL )
-		   AND ( BE2.record_status != 'D' OR BE2.record_status IS NULL )
-		   AND ( BES1.record_status != 'D' OR BES1.record_status IS NULL )
-		   AND ( BES2.record_status != 'D' OR BES2.record_status IS NULL )
-		   AND ( RF1.record_status != 'D' OR RF1.record_status IS NULL )
-		   AND ( RF2.record_status != 'D' OR RF2.record_status IS NULL )
             ~;
         }
+#		   AND ( BE1.record_status != 'D' OR BE1.record_status IS NULL )
+#		   AND ( BE2.record_status != 'D' OR BE2.record_status IS NULL )
+#		   AND ( BES1.record_status != 'D' OR BES1.record_status IS NULL )
+#		   AND ( BES2.record_status != 'D' OR BES2.record_status IS NULL )
+#		   AND ( RF1.record_status != 'D' OR RF1.record_status IS NULL )
+#		   AND ( RF2.record_status != 'D' OR RF2.record_status IS NULL )
 
         if ($info_key eq "FULLQuery") {
             return qq~
