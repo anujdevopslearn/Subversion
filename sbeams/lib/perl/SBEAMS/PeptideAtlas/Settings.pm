@@ -33,6 +33,5 @@ require Exporter;
 #### Define new variables
 $SBEAMS_PART            = 'PeptideAtlas';
 
-
 #### Override variables from main Settings.pm
 $SBEAMS_SUBDIR          = 'PeptideAtlas';
