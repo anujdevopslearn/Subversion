@@ -101,6 +101,7 @@ sub printPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetInteractions"><nobr>&nbsp;&nbsp;&nbsp;Interactions</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=project"><nobr>&nbsp;&nbsp;&nbsp;Projects</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=IN_bioentity"><nobr>&nbsp;&nbsp;&nbsp;BioEntities</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=IN_interaction"><nobr>&nbsp;&nbsp;&nbsp;Interactions</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=IN_assay"><nobr>&nbsp;&nbsp;&nbsp;Assays</nobr></a></td></tr>
