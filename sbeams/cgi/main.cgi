@@ -140,16 +140,17 @@ sub handle_request {
 
   #### Write some welcoming text
   print qq~
-	<BR>
-	You have successfully logged into the $DBTITLE interface.<BR>
-	Note your current user group above, and click [CHANGE] to change it.<P> 
+	<P>Welcome to the Systems Biology Experiment Analysis Management
+	System (SBEAMS) interface.  Note your current work group and project
+	listed above and change it via the pull down menus if desired.</P>
 
-	Please choose a section/subsection/task from the menu bar on the
-	left to continue.<P>
+	<P>The modules available to you are listed below and on the navigation
+	bar on the left.  Select one of the available modules by clicking
+	clicking on it to see the home page for that module.</P>
 
-	This system is still under active development.  Please
+	<P>This system is still under active development.  Please
 	report bugs, problems, difficulties, and suggestions to
-	<B>edeutsch\@systemsbiology.org</B>.<P>
+	<B>edeutsch\@systemsbiology.org</B>.</P>
 	<BR>
 
 	<UL>
@@ -164,7 +165,6 @@ sub handle_request {
   foreach $module (@modules) {
     print qq~
 	<LI><A HREF="$module/main.cgi">SBEAMS - $module</A>
-	<BR><BR>
     ~;
   }
 
