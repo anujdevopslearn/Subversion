@@ -529,9 +529,9 @@ my %organismHash = $sbeams->selectTwoColumnHash($organismSql);
     $content .=<<"    END";
     $summaryHTML
     $cprojHTML<BR>
-    $ctitle<BR>
     END
-    $content .= $cb unless $cprojHTML =~ /This project contains no IHC data/;
+#  $ctitle<BR>
+#   $content .= $cb unless $cprojHTML =~ /This project contains no IHC data/;
   } 
  $log->debug( $pad ); 
 
