@@ -223,6 +223,7 @@ sub printJavascriptFunctions {
 	function refreshDocument() {
             //confirm( "apply_action ="+document.forms[0].apply_action.options[0].selected+"=");
             document.forms[0].apply_action_hidden.value = "REFRESH";
+            document.forms[0].action.value = "REFRESH";
 	    document.forms[0].submit();
 	} // end refresh
 
