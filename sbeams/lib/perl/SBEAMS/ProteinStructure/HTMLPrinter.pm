@@ -327,7 +327,7 @@ sub display_ext_halo_template {
 </tr>
   ~;
 
-  my $HALO_HOME = 'http://cytoscape.systemsbiology.net';
+  my $HALO_HOME = 'http://halo.systemsbiology.net';
 
   $buf .= qq~
 <!-- --------------- Navigation Bar: List of links ------------------------ -->
@@ -350,7 +350,7 @@ sub display_ext_halo_template {
 <td><img src="/images/clear.gif" width="1" height="10" border="0"></td>
 <td colspan="2">
 <a href="http://www.systemsbiology.org/" class="Nav_link">ISB Main</a><br>
-<a href="http://cytoscape.systemsbiology.net/" class="Nav_link">Halo Research at ISB</a><br>
+<a href="$HALO_HOME/" class="Nav_link">Halo Research at ISB</a><br>
 </tr>
 <tr>
 <td colspan="4"><img src="/images/clear.gif" width="1" height="10" border="0"></td>
@@ -455,7 +455,7 @@ sub display_ext_halo_template {
 
   $buf =~ s/=\"\/images/=\"$HTML_BASE_DIR\/images/g;
   #$buf =~ s/href=\"\//href=\"$HTML_BASE_DIR\//g;
-  $buf =~ s/href=\"\//href=\"http:\/\/cytoscape.systemsbiology.net\//g;
+  $buf =~ s/href=\"\//href=\"http:\/\/halo.systemsbiology.net\//g;
   print $buf;
   return;
 
