@@ -30,7 +30,7 @@
 "AT_sample"	17	"search_batch_id"	"Search Batch ID"	"int"	4	0	"N"		"N"							"N"	"N"		"Search Batch ID"		
 "AT_sample"	18	"publication_id"	"Publication ID"	"int"	4	0	"N"		"N"							"N"	"N"		"Publication ID"		
 "AT_sample"	19	"data_contributors"	"Data Contributors"	"text"	16	0	"Y"		"N"			"Y"	"textarea"	10		"Y"	"Y"	"N"	"Description of this BioSequence (generally everything after the first space in a FASTA file header line)"		
-"AT_sample"	20	"primary_contact_email"	"Primary Email Contact"	"text"	16	0	"Y"		"N"			"Y"	"text"	40		"Y"	"Y"	"N"	"Email address of primary contact for data"		
+"AT_sample"	20	"primary_contact_email"	"Primary Email Contact"	"text"	16	0	"Y"		"N"			"Y"	"text"	40		"Y"	"P"	"N"	"Email address of primary contact for data"		
 "AT_sample"	21	"is_public"	"Is the dataset publicly available?"	"char"	1	0	"Y"		"N"			"Y"				"Y"	"Y"	"N"	"Indicates whether the dataset is public"		
 "AT_atlas_build_sample"	1	"atlas_build_sample_id"	"Atlas Build Sample ID"	"int"	4	0	"N"		"Y"							"N"	"N"				"pkDEFAULT"
 "AT_atlas_build_sample"	2	"atlas_build_id"	"Atlas Build ID"	"int"	4	0	"N"		"N"	"AT_atlas_build"	"atlas_build_id"					"N"	"N"		"Associated Atlas Build"		
