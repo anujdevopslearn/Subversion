@@ -3381,7 +3381,7 @@ sub readResultSet {
 
 
     #### Read in the query parameters
-    my $infile = "$PHYSICAL_BASE_DIR/tmp/queries/${resultset_file}.params";
+    my $infile = "$QUERY_DIR/${resultset_file}.params";
     open(INFILE,"$infile") || die "Cannot open $infile\n";
     my $indata = "";
     while (<INFILE>) { $indata .= $_; }
@@ -3400,7 +3400,7 @@ sub readResultSet {
 
 
     #### Read in the resultset
-    $infile = "$PHYSICAL_BASE_DIR/tmp/queries/${resultset_file}.resultset";
+    $infile = "$QUERY_DIR/${resultset_file}.resultset";
     %{$resultset_ref} = %{retrieve($infile)};
 
 
@@ -3493,7 +3493,7 @@ sub writeResultSet {
 
 
     #### Write out the query parameters
-    my $outfile = "$PHYSICAL_BASE_DIR/tmp/queries/${resultset_file}.params";
+    my $outfile = "$QUERY_DIR/${resultset_file}.params";
     open(OUTFILE,">$outfile") || die "Cannot open $outfile\n";
     printf OUTFILE Data::Dumper->Dump( [$temp_hash_ref] );
     close(OUTFILE);
@@ -3501,7 +3501,7 @@ sub writeResultSet {
 
 
     #### Write out the resultset
-    $outfile = "$PHYSICAL_BASE_DIR/tmp/queries/${resultset_file}.resultset";
+    $outfile = "$QUERY_DIR/${resultset_file}.resultset";
     store($resultset_ref,$outfile);
 
 
