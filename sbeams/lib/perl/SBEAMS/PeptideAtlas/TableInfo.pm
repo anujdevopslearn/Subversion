@@ -80,7 +80,7 @@ sub returnTableInfo {
       
     if ($info_key eq "BASICQuery") {
       return( <<"      END_QUERY" ); 
-     	SELECT sample_tag, sample_title, 
+     	SELECT sample_id,sample_tag, sample_title, 
         anatomical_site_term, developmental_stage_term, pathology_term, 
         cell_type_term, data_contributors, is_public
       FROM $TBAT_SAMPLE 
