@@ -25,7 +25,8 @@ use vars qw ($sbeams $sbeamsMOD $q
 	     $TESTONLY
              $current_contact_id $current_username
 	     $fav_codon_frequency $n_transmembrane_regions
-	     $pfam_search_results
+	     $rosetta_lookup $pfam_search_results $ginzu_search_results
+             %domain_match_sources
             );
 
 
@@ -72,8 +73,13 @@ Options:
                        number of transmembrane regions values
   --calc_n_transmembrane_regions
                        Set flag to add in n_transmembrane_regions calculations
+  --rosetta_lookup_file   Full path name of a file which containts
+                       lookup information for converting rosetta names
+                       to biosequence_names
   --pfam_search_results_summary_file   Full path name of a file from which
                        to load the pfam search results
+  --ginzu_search_results_dir   Full path name of a directory in which
+                       there are a bunch of .domains files to load
 
  e.g.:  $PROG_NAME --check_status
 
@@ -85,7 +91,8 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
     "delete_existing","update_existing","skip_sequence",
     "set_tag:s","file_prefix:s","check_status","fav_codon_frequency_file:s",
     "calc_n_transmembrane_regions","n_transmembrane_regions_file:s",
-    "pfam_search_results_summary_file:s",
+    "rosetta_lookup_file:s","pfam_search_results_summary_file:s",
+    "ginzu_search_results_dir:s",
   )) {
   print "$USAGE";
   exit;
@@ -165,7 +172,7 @@ sub main {
 ###############################################################################
 # handleRequest
 ###############################################################################
-sub handleRequest { 
+sub handleRequest {
   my %args = @_;
 
 
@@ -183,8 +190,12 @@ sub handleRequest {
   my $fav_codon_frequency_file = $OPTIONS{"fav_codon_frequency_file"} || '';
   my $n_transmembrane_regions_file =
     $OPTIONS{"n_transmembrane_regions_file"} || '';
+  my $rosetta_lookup_file =
+    $OPTIONS{"rosetta_lookup_file"} || '';
   my $pfam_search_results_summary_file =
     $OPTIONS{"pfam_search_results_summary_file"} || '';
+  my $ginzu_search_results_dir =
+    $OPTIONS{"ginzu_search_results_dir"} || '';
 
   #### Get the file_prefix if it was specified, and otherwise guess
   unless ($file_prefix) {
@@ -248,6 +259,16 @@ sub handleRequest {
   }
 
 
+  #### If a rosetta_lookup_file was specified,
+  #### load it for later processing
+  if ($rosetta_lookup_file) {
+    $rosetta_lookup->{zzzHASH} = -1;
+    readRosettaLookupFile(
+      source_file => $rosetta_lookup_file,
+      rosetta_lookup => $rosetta_lookup);
+  }
+
+
   #### If a pfam_search_results_summary_file was specified,
   #### load it for later processing
   if ($pfam_search_results_summary_file) {
@@ -255,6 +276,19 @@ sub handleRequest {
     readPFAMSearchSummaryFile(
       source_file => $pfam_search_results_summary_file,
       pfam_search_results => $pfam_search_results);
+  }
+
+
+  #### If a ginzu_search_results_dir was specified,
+  #### load it for later processing
+  if ($ginzu_search_results_dir) {
+    $ginzu_search_results->{zzzHASH} = -1;
+    readGinzuFiles(
+      source_dir => $ginzu_search_results_dir,
+      ginzu_search_results => $ginzu_search_results);
+    %domain_match_sources = $sbeams->selectTwoColumnHash(
+      "SELECT domain_match_source_name,domain_match_source_id ".
+      "  FROM ${DATABASE}domain_match_source WHERE record_status != 'D'");
   }
 
 
@@ -803,6 +837,91 @@ sub loadBiosequence {
       $rowdata{query_end} = $match->{query_end}
         if (defined($match->{query_end}));
 
+      $rowdata{domain_match_source_id} =
+        $domain_match_sources{'PFAMsearch'};
+
+      #### Insert or update the row
+      $sbeams->insert_update_row(
+  	insert=>1,
+  	table_name=>"${DATABASE}domain_match",
+  	rowdata_ref=>\%rowdata,
+  	PK=>"domain_match_id",
+  	verbose=>$VERBOSE,
+  	testonly=>$TESTONLY,
+      );
+
+    }
+
+  }
+
+
+  #### See if we have Ginzu data to add
+  my $have_ginzu_data = 0;
+  if (defined($ginzu_search_results) && $result) {
+    if (defined($ginzu_search_results->
+	      {data}->{$biosequence_name})) {
+      $have_ginzu_data = 1;
+    }
+  }
+
+
+  #### If we have Ginzu data, INSERT or UPDATE domain_match
+  if ($have_ginzu_data) {
+
+    #### See if there's already a record there
+    my $sql =
+      "SELECT domain_match_id
+         FROM ${DATABASE}domain_match
+        WHERE biosequence_id = '$result'
+      ";
+    my @domain_match_ids = $sbeams->selectOneColumn($sql);
+
+    #### Determine INSERT or UPDATE based on the result
+    if (scalar(@domain_match_ids) > 0) {
+      #### Delete them!  Should just delete PFAM ones!
+    }
+
+
+    #### Loop over all the entries for this biosequence
+    foreach my $match (@{$ginzu_search_results->{data}->{$biosequence_name}}) {
+
+      #### Fill the row data hash with information we have
+      my %rowdata;
+      $rowdata{biosequence_id} = $result;
+
+      $rowdata{query_start} = $match->{query_start}
+        if (defined($match->{query_start}));
+
+      $rowdata{query_end} = $match->{query_end}
+        if (defined($match->{query_end}));
+
+      $rowdata{query_length} = $match->{query_length}
+        if (defined($match->{query_length}));
+
+      $rowdata{match_start} = $match->{match_start}
+        if (defined($match->{match_start}));
+
+      $rowdata{match_end} = $match->{match_end}
+        if (defined($match->{match_end}));
+
+      $rowdata{match_name} = $match->{match_name}
+        if (defined($match->{match_name}));
+
+      $rowdata{confidence_z_score} = $match->{confidence_z_score}
+        if (defined($match->{confidence_z_score}));
+
+      if (defined($match->{match_source})) {
+        if (defined($domain_match_sources{$match->{match_source}})) {
+          $rowdata{domain_match_source_id} =
+            $domain_match_sources{$match->{match_source}};
+        } else {
+            print "WARNING: Unable to transform match source '",
+              $match->{match_source},"'\n";
+        }
+      } else {
+        print "WARNING: No match_source for '$biosequence_name'\n";
+      }
+
 
       #### Insert or update the row
       my $result = $sbeams->insert_update_row(
@@ -1264,14 +1383,14 @@ sub readNTransmembraneRegionsFile {
       $properties{topology} = $columns[5];
     }
 
-    #### If we're also currently loading a PFAM search, then try to do
+    #### If we're also currently have a rosetta lookup, then try to do
     #### a rosetta name lookup
-    if (defined($pfam_search_results) &&
-        defined($pfam_search_results->{lookup}->{$biosequence_name})) {
-      $biosequence_name = $pfam_search_results->{lookup}->{$biosequence_name};
+    if (defined($rosetta_lookup) &&
+        defined($rosetta_lookup->{$biosequence_name})) {
+      $biosequence_name = $rosetta_lookup->{$biosequence_name};
     }
 
-    print "  $biosequence_name has $properties{n_tmm} TMRs\n";
+    #print "  $biosequence_name has $properties{n_tmm} TMRs\n";
     $n_transmembrane_regions->{$biosequence_name} = \%properties;
   }
 
@@ -1281,6 +1400,47 @@ sub readNTransmembraneRegionsFile {
   return;
 
 }
+
+
+
+###############################################################################
+# readRosettaLookupFile
+###############################################################################
+sub readRosettaLookupFile {
+  my %args = @_;
+  my $SUB_NAME = "readRosettaLookupFile";
+
+
+  #### Decode the argument list
+  my $source_file = $args{'source_file'}
+   || die "ERROR[$SUB_NAME]: source_file not passed";
+  # Don't bother getting the output data struct since it's a global
+
+
+  unless ( -f $source_file ) {
+    $rosetta_lookup->{return_status} = 'FAIL';
+    die("Unable to find Rosetta Lookup file '$source_file'");
+  }
+
+
+  open(LOOKUPFILE,"$source_file") ||
+    die("Unable to open Rosetta Lookup file '$source_file'");
+
+
+  #### Define some variables
+  my $line;
+
+  #### Read the contents of the file into a hash
+  while ($line = <LOOKUPFILE>) {
+    $line =~ s/[\r\n]//g;
+    my @columns = split("\t",$line);
+    $rosetta_lookup->{$columns[0]} = $columns[1];
+  }
+
+  close(LOOKUPFILE);
+  return 1;
+
+} # end readRosettaLookupFile
 
 
 
@@ -1354,9 +1514,17 @@ sub readPFAMSearchSummaryFile {
       $pfam_search_results->{data}->{$biosequence_name} = \@tmp;
     }
 
-    #### Store this domain in the data hash and the lookup
+    #### Store this domain in the data hash
     push(@{$pfam_search_results->{data}->{$biosequence_name}},\%properties);
-    $pfam_search_results->{lookup}->{$rosetta_name} = $biosequence_name;
+
+
+    #### Check the lookup
+    if (defined($rosetta_lookup)) {
+      unless ($rosetta_lookup->{$rosetta_name} eq $biosequence_name) {
+        print "ERROR: Rosetta name verification failed! ",
+          "'$biosequence_name' != '",$rosetta_lookup->{$rosetta_name},"'\n";
+      }
+    }
   }
 
   close(PFAMFILE);
@@ -1367,4 +1535,197 @@ sub readPFAMSearchSummaryFile {
 } # end readPFAMSearchSummaryFile
 
 
+
+###############################################################################
+# readGinzuFiles
+###############################################################################
+sub readGinzuFiles {
+  my %args = @_;
+  my $SUB_NAME = "readGinzuFiles";
+
+
+  #### Decode the argument list
+  my $source_dir = $args{'source_dir'}
+   || die "ERROR[$SUB_NAME]: source_dir not passed";
+  # Don't bother getting the output data struct since it's a global
+
+
+  unless ( -d $source_dir ) {
+    $pfam_search_results->{return_status} = 'FAIL';
+    die("Unable to find directory '$source_dir'");
+  }
+
+
+  #### Get all the files in the directory
+  my @files = getDirListing($source_dir);
+
+  #### Loop over all files, ingesting the contents
+  foreach my $file (@files) {
+
+    if ($file =~ /(.+)\.domains/) {
+
+      my $biosequence_name = $1;
+
+      #### If we're also currently have a rosetta lookup, then try to do
+      #### a rosetta name lookup
+      if (defined($rosetta_lookup) &&
+  	  defined($rosetta_lookup->{$biosequence_name})) {
+  	$biosequence_name = $rosetta_lookup->{$biosequence_name};
+      }
+
+      my $domain_search = readDomainsFile(
+        source_file => "$source_dir/$file",
+      );
+
+      #### Put part of the result into the global
+      $ginzu_search_results->{data}->{$biosequence_name} =
+        $domain_search->{matches};
+
+    } else {
+      print "WARNING: File '$file' not recognized as a Ginzu file!\n";
+    }
+
+  }
+
+
+  $ginzu_search_results->{return_status} = 'SUCCESS';
+
+  return;
+
+} # end readGinzuFiles
+
+
+
+###############################################################################
+# getDirectoryListing
+###############################################################################
+sub getDirListing {
+  my $dir = shift;
+  my @files;
+
+  opendir(DIR, $dir)
+    || die "[${PROG_NAME}:getDirListing] Cannot open $dir: $!";
+  @files = grep (!/(^\.$)|(^\.\.$)/, readdir(DIR));
+  closedir(DIR);
+
+  return sort(@files);
+}
+
+
+
+###############################################################################
+# readDomainsFile
+###############################################################################
+sub readDomainsFile {
+  #my $self = shift;
+  my %args = @_;
+
+
+  #### Decode the argument list
+  my $source_file = $args{'source_file'} ||
+    die ("ERROR: Must supply source_file");
+  my $verbose = $args{'verbose'} || '';
+
+  #### Define some variables
+  my ($line);
+
+  #### Define a hash to hold the contents of the file
+  my %data;
+  $data{SUCCESS} = 0;
+
+
+  #### Set the rosetta_name
+  if ($source_file =~ /^(.+)\.domains$/) {
+    $data{rosetta_name} = $1;
+  } else {
+    print "ERROR: Unable to parse the rosetta_name from file name ".
+    "'$source_file'.  Perhaps it has the wrong extension\n";
+    return \%data;
+  }
+
+
+  #### Open the specified file
+  unless ( open(INFILE, "$source_file") ) {
+    die("Cannot open input file $source_file\n");
+  }
+
+
+  #### Verify the header
+  $line = <INFILE>;
+  $line =~ s/[\r\n]//g;
+  unless ($line =~ /CHILI-iBALL ROBETTA DOMAIN PARSER v(.+)/) {
+    print "ERROR: File '$source_file' does not begin as expected\n";
+    return \%data;
+  }
+  $data{program_version} = $1;
+  $line = <INFILE>;
+  $line =~ s/[\r\n]//g;
+
+
+  #### Read the preamble query/coverage information
+  while ($line !~ /^COVERAGE /) {
+    if ($line =~ /^(\w+):\s*([\w\.]+)/) {
+      my $key = $1;
+      my $sequence = $2;
+      if ($key eq 'sspred' || $key eq 'query' || $key eq 'coverage') {
+        $data{$key} = $sequence;
+      } else {
+        print "ERROR: Unrecognized header item '$key' while ".
+          "reading '$source_file'\n";
+        return \%data;
+      }
+    }
+    $line = <INFILE>;
+    $line =~ s/[\r\n]//g;
+  }
+
+
+  #### Read in all the domain matches
+  my @matches = ();
+  while ($line = <INFILE>) {
+    $line =~ s/[\r\n]//g;
+    last if ($line =~ /^\s*$/);
+
+    #### Split the line into columns and insist we get 8
+    my @columns = split(/\s+/,$line);
+    shift(@columns);
+    unless (scalar(@columns) == 8) {
+      print "ERROR: Error parsing line '$line' of '$source_file'.  ".
+        "Expected 8 columns of information but got ".scalar(@columns)."\n";
+      return \%data;
+    }
+
+    #### Create a temporary hash and fill it with these data
+    my %parameters;
+    $parameters{'full_line'} = $line;
+    $parameters{'query_start'} = $columns[0];
+    $parameters{'query_end'} = $columns[1];
+    $parameters{'query_length'} = $columns[2];
+    $parameters{'match_start'} = $columns[3];
+    $parameters{'match_end'} = $columns[4];
+    $parameters{'match_name'} = $columns[5];
+    $parameters{'confidence_z_score'} = $columns[6];
+    $parameters{'match_source'} = $columns[7];
+
+    #### Put the hash on the list
+    push(@matches,\%parameters);
+
+  }
+
+  $data{matches} = \@matches;
+
+
+  #### At this point, skip to the CUTS section and parse that
+  #### We're not bothering yet because we're not using it
+
+
+  #### Close the input file
+  close(INFILE);
+
+
+  #### Set SUCCESS flag and return
+  $data{SUCCESS} = 1;
+  return \%data;
+
+} # end readDomainsFile
 
