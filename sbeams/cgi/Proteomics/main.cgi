@@ -283,10 +283,17 @@ sub handle_request {
   ~;
 
 
+  #### Get the privilege level names
+  my %privilege_names = $sbeams->selectTwoColumnHash(
+    "SELECT privilege_id,name FROM $TB_PRIVILEGE WHERE record_status != 'D'"
+  );
+
+
   #### Get all the projects user has access to
   $sql = qq~
 	SELECT P.project_id,P.project_tag,P.name,UL.username,
-               PRIV.name AS 'privilege_name'
+               MIN(GPP.privilege_id) AS 'best_group_privilege_id',
+               MIN(UPP.privilege_id) AS 'best_user_privilege_id'
 	  FROM $TB_PROJECT P
 	  JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
 	  LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
@@ -299,8 +306,12 @@ sub handle_request {
 	  LEFT JOIN $TB_USER_WORK_GROUP UWG
 	       ON ( GPP.work_group_id = UWG.work_group_id
 	            AND UWG.contact_id='$current_contact_id' )
+	  LEFT JOIN WORK_GROUP WG
+	       ON ( UWG.work_group_id = WG.work_group_id )
 	 WHERE P.record_status != 'D'
 	   AND ( UPP.privilege_id<=40 OR GPP.privilege_id<=40 )
+           AND ( WG.work_group_name IS NOT NULL OR UPP.privilege_id IS NOT NULL )
+         GROUP BY P.project_id,P.project_tag,P.name,UL.username
 	 ORDER BY UL.username,P.project_tag
   ~;
   @rows = $sbeams->selectSeveralColumns($sql);
@@ -308,9 +319,21 @@ sub handle_request {
   if (@rows) {
     my $firstflag = 1;
     foreach my $row (@rows) {
-      my ($project_id,$project_tag,$project_name,$username,$privilege_name) =
+      my ($project_id,$project_tag,$project_name,$username,
+          $best_group_privilege_id,$best_user_privilege_id) =
         @{$row};
       print "	<TR><TD></TD>" unless ($firstflag);
+
+      #### Select the lowest permission and translate to a name
+      $best_group_privilege_id = 9999
+        unless (defined($best_group_privilege_id));
+      $best_user_privilege_id = 9999
+        unless (defined($best_user_privilege_id));
+      my $best_privilege_id = $best_group_privilege_id;
+      $best_privilege_id = $best_user_privilege_id if
+        ($best_user_privilege_id < $best_privilege_id);
+      my $privilege_name = $privilege_names{$best_privilege_id} || '???';
+
       print "	<TD><NOBR>- <A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?set_current_project_id=$project_id\">$username - $project_tag:</A> $project_name</NOBR></TD><TD><font color=\"red\">$privilege_name</font></TD></TR>\n";
       $firstflag=0;
     }
