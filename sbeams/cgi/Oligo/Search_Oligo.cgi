@@ -237,7 +237,9 @@ if ($q->request_method() eq "POST" ) {
   
         
           ####SQL query command
-  	      my $sql = qq~ SELECT $columns_clause
+  	      my $sql = qq~ SELECT BS.biosequence_name AS 'GENE', OT.oligo_type_name AS 'Oligo_Type',
+                               OG.feature_sequence AS 'Oligo_Sequence', OG.sequence_length AS 'Length',
+                               OA.in_stock AS 'In_Stock'
                         FROM $TBOG_SELECTED_OLIGO SO
                         LEFT JOIN $TBOG_BIOSEQUENCE BS ON (BS.biosequence_id=SO.biosequence_id)
                         LEFT JOIN $TBOG_OLIGO_TYPE OT ON (SO.oligo_type_id=OT.oligo_type_id)
@@ -251,20 +253,9 @@ if ($q->request_method() eq "POST" ) {
 
 		  my @rows = $sbeams->selectSeveralColumns($sql);
           if ( scalar(@rows) >= 1 ) {
-            ##############################################################################
-            #below will work##############################################################
-	        ####$sbeams->displayQueryResult(sql_query=>$sql);
-            ##############################################################################
-            ##############################################################################
-            #display(sql_query=>$sql,
-            #        col_name_hash=>%colnameidx
-			#		);
-
-
-              print "Gene: " .$colnameidx{Oligo_type} . "\n";               
-
+           
               ####Define the hypertext links for columns that need them
-              my %url_cols = ('Oligo_Sequence' => "Display_Oligo_Detailed.cgi?TABLE_NAME=TBOG_SELECTED_OLIGO&Gene=$colnameidx{Gene}V&Oligo_type=$colnameidx{Oligo_type}V&Oligo_Sequence=$colnameidx{Oligo_Sequence}V&=In_Stock$colnameidx{In_Stock}");
+              my %url_cols = ('Oligo_Sequence' => "Display_Oligo_Detailed.cgi?Gene=\%$colnameidx{Gene}&Oligo_type=\%$colnameidx{Oligo_type}&Oligo_Sequence=\%$colnameidx{Oligo_Sequence}&In_Stock=\%$colnameidx{In_Stock}");
 
 
               ####Result Set
@@ -300,35 +291,6 @@ if ($q->request_method() eq "POST" ) {
   return;
 
 } # end handle_request
-
-
-sub display {
-  my %args=@_;
-  my $SUB="display";
-  my $sql_query = $args{sql_query} ||
-	die "[BUG-$SUB]: sql query not passed\n";
-  my %colnameidx = $args{col_name_hash} ||
-    die "[BUG-$SUB]: colnameidx not passed in\n";
-  
-  #print "Gene: " .\%$colnameidx{Gene} . "\n";
-
-  ####Define the hypertext links for columns that need them
-  my %url_cols = ('Oligo_Sequence' => "Display_Oligo_Detailed.cgi?Gene=\%$colnameidx{Gene}V&Oligo_type=\%$colnameidx{Oligo_type}V&Oligo_Sequence=\%$colnameidx{Oligo_Sequence}V&=In_Stock\%$colnameidx{In_Stock}");
-
-
-  ####Result Set
-  my %resultset = ();
-  my $resultset_ref = \%resultset;
-  $sbeams->fetchResultSet(sql_query=>$sql_query, 
-                          resultset_ref=>$resultset_ref);
-
-  ####Display query results
-  $sbeams -> displayResultSet(url_cols_ref=>\%url_cols,
-                              resultset_ref=>$resultset_ref);
-
-
-  return;
-}
 
 
 
