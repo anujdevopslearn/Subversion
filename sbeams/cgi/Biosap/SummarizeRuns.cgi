@@ -169,7 +169,7 @@ sub printEntryForm {
 	  LEFT JOIN $TBBS_FEATURAMA_PARAMETER FP ON ( BSR.biosap_search_id = FP.biosap_search_id )
 	  LEFT JOIN $TBBS_FEATURAMA_STATISTIC FS ON ( BSR.biosap_search_id = FS.biosap_search_id )
 	  LEFT JOIN $TBBS_FILTERBLAST_STATISTIC FBS ON ( BSR.biosap_search_id = FBS.biosap_search_id )
-	 ORDER BY BSR.biosap_search_id
+	 ORDER BY BSR.biosap_search_id DESC
      ~;
 
 
