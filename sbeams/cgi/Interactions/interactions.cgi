@@ -511,7 +511,7 @@ WHERE P.record_status != 'D' ORDER BY UL.username+\' -\ '+P.name,P.project_id";
 		$whereClause = qq /bioentity_common_name= '$com'/ if !defined ($can);
 		
 		my $bioentitySql = qq / select bioentity_id from $TBIN_BIOENTITY where $whereClause/;
-		print "<br>$bioentitySql<br>\n";
+;
 		my @rows = $sbeams->selectOneColumn($bioentitySql);	
 		my $nrows = scalar(@rows);
 		$bioentityID = $rows[0] if $nrows == 1;
@@ -530,7 +530,7 @@ WHERE P.record_status != 'D' ORDER BY UL.username+\' -\ '+P.name,P.project_id";
 		$rowData{bioentity_type_id}= $type;
 		$rowData{organism_id} = $organism;		
 	
-		
+=comment		
 		my $returned_PK = $sbeams->updateOrInsertRow(
 							insert => $insert,
 							update => $update,
@@ -543,7 +543,8 @@ WHERE P.record_status != 'D' ORDER BY UL.username+\' -\ '+P.name,P.project_id";
 							testonly=>$TESTONLY,
 							add_audit_parameters => 1
 							);  
-
+=cut
+my $returned_PK = 6;
 		return $returned_PK;
 	}
 	
@@ -569,6 +570,7 @@ WHERE P.record_status != 'D' ORDER BY UL.username+\' -\ '+P.name,P.project_id";
 		$rowData{bioentity2_id} = $id2;	
 		$rowData{interaction_type_id}= $type;
 		$rowData{interaction_group_id} = $interactionGroupID;
+=comment
 			my $returned_PK = $sbeams->updateOrInsertRow(
 							insert => $insert,
 							update => $update,
@@ -581,7 +583,8 @@ WHERE P.record_status != 'D' ORDER BY UL.username+\' -\ '+P.name,P.project_id";
 							testonly=>$TESTONLY,
 							add_audit_parameters => 1
 							);
-							
+=cut
+my $returned_PK = 7;							
 		return $returned_PK;
 	}
 
