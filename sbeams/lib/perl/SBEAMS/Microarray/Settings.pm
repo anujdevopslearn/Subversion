@@ -39,7 +39,7 @@ require Exporter;
 #### Define new variables
 $SBEAMS_PART            = 'MicroArray';
 $AFFY_DEFAULT_DIR	= '/net/arrays/Affymetrix/core/probe_data';
-@AFFY_DEFAULT_FILES	= qw(CHP CEL XML RPT R_CHP JPEG EGRAM_PF.jpg EGRAM_T.jpg EGRAM_F.jpg);		#files that will be used to determine if a group of files, all sharing the same basename, are all present when uploading Affy arrays 
+@AFFY_DEFAULT_FILES	= qw(CHP CEL XML INFO RPT R_CHP JPEG EGRAM_PF.jpg EGRAM_T.jpg EGRAM_F.jpg);		#files that will be used to determine if a group of files, all sharing the same basename, are all present when uploading Affy arrays 
 
 $AFFY_ZIP_REQUEST_DIR 	= '/net/arrays/Affy_Zip_Request';
 
