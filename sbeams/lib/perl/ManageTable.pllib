@@ -810,6 +810,10 @@ sub processEntryForm {
     my $n_params_found = $sbeams->parse_input_parameters(
       q=>$q,parameters_ref=>\%parameters,
       columns_ref=>\@columns,input_types_ref=>\%input_types);
+foreach my $key (keys %parameters) 
+{ 
+		print "$key == $parameters{$key}<br>";
+}
 
     my $apply_action  = $parameters{apply_action};
 
@@ -1042,6 +1046,7 @@ sub processEntryForm {
                   record_status='$parameters{record_status}'
                 WHERE $PK_COLUMN_NAME=$parameters{$PK_COLUMN_NAME}
             !;
+							
         }
 
         if ($sql_query eq "") {
@@ -1061,7 +1066,7 @@ sub processEntryForm {
         my %unique_values;
         if (@key_columns) {
           foreach $element (@key_columns) {
-            $unique_values{$element} = $parameters{$element};
+						    $unique_values{$element} = $parameters{$element};
           }
         }
         my $existing_record = checkForPreexistingRecord(%unique_values);
@@ -1109,7 +1114,8 @@ sub processEntryForm {
 		  ($query_part2 $current_contact_id,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,
 			 $current_contact_id,$current_work_group_id, '$parameters{record_status}')
         !;
-
+				
+		
     }
 
 
@@ -1157,10 +1163,9 @@ sub processEntryForm {
       #### Check for any file uploads
       my $filename;
       foreach $element (keys %input_types) {
-
         #### Check for any file uploaded data for columns of type file
         if ($input_types{$element} eq "file") {
-          $filename = "$parameters{$PK_COLUMN_NAME}_$element.dat";
+				     $filename = "$parameters{$PK_COLUMN_NAME}_$element.dat";
           if ($parameters{$element}) {
             print "Uploading data for field '$element' from client file ".
               "'$parameters{$element}'<BR>\n";
@@ -1247,6 +1252,7 @@ sub checkForPreexistingRecord {
 
   foreach $element (keys %unique_values) {
     my $value = $unique_values{$element};
+		print "$value == $element<br>";
     $value =~ s/\'/\'\'/g;
     if ($value eq '') {
       $sql_query .= "
@@ -1465,6 +1471,9 @@ sub getFile {
     "$parameters{GetFile}.dat";
 
   my $full_file_name = "$PHYSICAL_BASE_DIR/data/$data_file";
+  
+ 
+  
   my $file_size = -s $full_file_name;
 
 
@@ -1489,7 +1498,7 @@ sub getFile {
 
   } else {
     $sbeamsMOD->printPageHeader();
-    print "ERROR: The requested file was not found, not originally uploaded, or is a zero length file.  The data you seek if not there.<BR>\n";
+    print "ERROR: The requested file was not found, not originally uploaded, or is a zero length file.  The data you seek if not there <br>\n";
   }
 
 
