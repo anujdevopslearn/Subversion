@@ -427,6 +427,7 @@ sub find_affy_R_CHP {
 		
 										#find the array_id. Will assume the array has been uploaded by load_affy_array_files.pl
 		my $affy_array_id = $sbeams_affy_groups->find_affy_array_id(root_file_name => $file_name);
+		print "\nAFFY ARRAY ID '$affy_array_id' FOR FILE '$file_name'\n" if ($VERBOSE);
 		if ($affy_array_id){
 				$sbeams_affy->set_affy_array_id($affy_array_id);			
 			
@@ -442,6 +443,7 @@ sub find_affy_R_CHP {
 		$sbeams_affy->set_afs_sample_tag($sample_tag);			#set the sample_tag, within a project this should be a unique name
 		
 		my $sql = $sbeams_affy_groups->get_all_affy_info_sql(affy_array_ids => $affy_array_id);
+		$sbeams->display_sql(sql=>$sql) if ($VERBOSE > 1);
 		my ($array_info_href) = $sbeams->selectHashArray($sql);		#bit dorkey running huge query just to find the organism name
 		my $organisim_name = $$array_info_href{Organism};
 		print "ORGANISIM NAME '$organisim_name'\n" if ($VERBOSE > 0);
