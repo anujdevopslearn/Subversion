@@ -196,8 +196,8 @@ sub applySqlChange {
     }
 
 
-    #### Set the privilege_id to an impossibly high value
-    my $privilege_id=99;
+    #### Set the privilege_id to none
+    my $privilege_id=50;
 
     #### If there's a table_group privilege, use that
     if ($table_group_privilege_id > 0) {
