@@ -463,13 +463,33 @@ sub printEntryForm {
             </SELECT></TD>
         </TR><TR>
         <TD COLSPAN=3 BGCOLOR="#EEEEFF">
-        <INPUT TYPE="hidden" NAME="TABLE_NAME" VALUE="$TABLE_NAME">
+        <INPUT TYPE="hidden" NAME="TABLE_NAME" VALUE="$TABLE_NAME"></TD></TR>
         !;
 
 
        # If a specific record was passed, display UPDATE options
        if ($parameters{$PK_COLUMN_NAME} gt "") {
+
+         if ($parameters{date_created}) {
+           my $created_by_username = $sbeams->getUsername($parameters{created_by_id});
+           my $modified_by_username = $sbeams->getUsername($parameters{modified_by_id});
+           my $date_created = $parameters{date_created}; chop($date_created);
+           my $date_modified = $parameters{date_modified}; chop($date_modified);
+           print qq~
+             <TR><TD><B>Record Created:</B></TD>
+             <TD COLSPAN=2>${date_created} by ${created_by_username}</TD></TR>
+           ~;
+           unless ($date_created eq $date_modified) {
+             print qq~
+               <TR><TD><B>Record Modified:</B></TD>
+               <TD COLSPAN=2>${date_modified} by ${modified_by_username}</TD></TR>
+             ~;
+           }
+         }
+
          print qq!
+            <TR><TD COLSPAN=3 BGCOLOR="#EEEEFF">
+            <INPUT TYPE="hidden" NAME="TABLE_NAME" VALUE="$TABLE_NAME">
             <INPUT TYPE="hidden" NAME="$PK_COLUMN_NAME"
               VALUE="$parameters{$PK_COLUMN_NAME}">
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -485,6 +505,8 @@ sub printEntryForm {
        # Otherwise, just allow INSERT or REFRESH
        } else {
          print qq!
+            <TR><TD COLSPAN=3 BGCOLOR="#EEEEFF">
+            <INPUT TYPE="hidden" NAME="TABLE_NAME" VALUE="$TABLE_NAME">
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
             <INPUT TYPE="submit" NAME="apply_action" VALUE="REFRESH"> this form<BR>
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
