@@ -3699,7 +3699,6 @@ sub printProjectsYouHaveAccessTo {
   ~;
 }
 
-
 ###############################################################################
 # printUserChooser
 ###############################################################################
@@ -3768,16 +3767,24 @@ sub printUserChooser {
 									document.projectChooser.submit();
 								} else {
 									document.MainForm.set_current_project_id.value = val;
-									document.MainForm.apply_action_hidden.value = "REFRESH";
-									document.MainForm.action.value = "REFRESH";
+									if (document.MainForm.apply_action_hidden != null){
+										document.MainForm.apply_action_hidden.value = "REFRESH";
+									}
+									if (document.MainForm.action != null) {
+										document.MainForm.action.value = "REFRESH";
+									}
 									document.MainForm.submit();
 								}
 						}
-
 						</SCRIPT>
 						~;
 		}
-
+		#### Begin Table
+		print qq~
+				<TABLE>
+				<TR>
+				<TD>
+				~;
 
 
 		#### Get work groups and make <SELECT> if we're HTML mode 
@@ -3898,10 +3905,29 @@ sub printUserChooser {
 				print qq~
 						<INPUT TYPE="hidden" NAME="set_current_work_group">
 						</FORM>
-
 						~;
 
-								
+				#### End First TD of master TABLE, and begin new TD
+				print qq~
+						</TD>
+						<TD>
+						~;
+
+				## Suggestion Form
+				print qq~
+						<FORM NAME="suggestionBox" TARGET="_blank" METHOD="POST" ACTION="$HTML_BASE_DIR/cgi/suggestionBox.cgi">
+						<INPUT TYPE="hidden" NAME="action" VALUE="printSuggestionBox">
+						<INPUT TYPE="hidden" NAME="suggestionURL" VALUE="$ENV{'HTTP_REFERER'}">
+						<A HREF="Javascript:document.suggestionBox.submit()"><IMG SRC="$HTML_BASE_DIR/images/sug.jpg" WIDTH="80"></A>
+						</FORM>
+						~;
+
+				#### END master TABLE
+				print qq~
+						</TD>
+						</TR>
+						</TABLE>
+						~;								
     }
 
 		#### PRINT TEXT ####
@@ -3911,13 +3937,6 @@ Current Project: $current_project_name ($current_project_id)
 !;
      }
 }
-
-
-
-
-
-
-
 
 ###############################################################################
 
