@@ -1227,6 +1227,8 @@ sub loadBiosequence {
     	  $rowdata{second_match_name} = $match->{second_match_name};
     	  $rowdata{second_match_accession} = $match->{second_match_name};
     	  $rowdata{second_match_accession} =~ s/\./\//g;
+	  $rowdata{second_match_type_id} = $match->{second_match_type_id}
+	    if (defined($match->{second_match_type_id}));
 	}
 
 
