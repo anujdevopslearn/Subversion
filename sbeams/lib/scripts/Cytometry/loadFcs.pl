@@ -226,8 +226,8 @@ sub loadDataHash
           $tissuePK = $tissueHash{lc $tissueType};
        }
        
-       $insertRecord{sample_name} = $hashRef->{'$SMNO'};
-       $insertRecord{project_id} = $hashRef->{'$PROJ'}|| $project_id;
+       $insertRecord{sample_name} = $hashRef->{'$SMNO'} || 'not specified';
+       $insertRecord{project_id} = $project_id;
        $insertRecord{n_data_points} = $hashRef->{'$TOT'};
        $insertRecord{operator} = $hashRef->{'$OP'};
        $insertRecord {institution} = $hashRef->{'$INST'};
