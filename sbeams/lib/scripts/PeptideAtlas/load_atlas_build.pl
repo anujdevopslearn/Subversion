@@ -57,7 +57,8 @@ Options:
   --delete_existing   Delete the existing data before trying to load
   --atlas_build_name  Name of the atlas build (already entered by hand in
                       the atlas_build table) into which to load the data
-  --source_dir       Name of the source file from which data are loaded
+  --source_dir        Name of the source file from which data are loaded
+  --organism_abbrev   Abbreviation of organism like Hs
 
  e.g.:  $PROG_NAME --atlas_build_name "Human Build 01 from APD"
 
@@ -66,6 +67,7 @@ EOU
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
         "delete_existing","atlas_build_name:s","source_dir:s",
+        "organism_abbrev:s",
   )) {
   print "$USAGE";
   exit;
@@ -131,6 +133,12 @@ sub handleRequest {
     exit;
   }
 
+  unless ($OPTIONS{'organism_abbrev'}) {
+    print "ERROR: Must supply organism_abbrev\n";
+    print "$USAGE";
+    return;
+  }
+
   #### If there are any parameters left, complain and print usage
   if ($ARGV[0]){
     print "ERROR: Unresolved command line parameter '$ARGV[0]'.\n";
@@ -186,9 +194,9 @@ sub handleRequest {
 
 
   #### Open the file containing the input peptide properties
-  unless (open(INFILE,"$source_dir/APD_Hs_all.tsv")) {
+  unless (open(INFILE,"$source_dir/APD_$OPTIONS{organism_abbrev}_all.tsv")) {
     print "ERROR: Unable to open for reading input file ".
-      "'$source_dir/APD_Hs_all.tsv'\n\n";
+      "'$source_dir/APD_$OPTIONS{organism_abbrev}_all.tsv'\n\n";
     return;
   }
 
