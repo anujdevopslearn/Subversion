@@ -241,7 +241,7 @@ sub print_news_and_links_tab {
   <TD ALIGN="left">
   <CENTER><FONT COLOR="red" SIZE="+2"><B>Microarray Links</B></FONT></CENTER>
   <UL>
-   <LI><A HREF="http://www.wustl.edu/\~jbuhler/research/array">Microarray Overview (Jeremey Buhler, Wash. U.)</A>
+   <LI><A HREF="http://www.cs.wustl.edu/\~jbuhler/research/array">Microarray Overview (Jeremey Buhler, Wash. U.)</A>
    <LI><A HREF="http://www.protocol-online.org/cgi-bin/prot/search.cgi?query=microarray">Online Microarray Protocols</A>
    <LI><A HREF="http://www.molmine.com">J-Express (ISB Analysis Software)</A>
    <LI><A HREF="http://www.tigr.org/software/tm4/mev.html">TIGR MeV (ISB Analysis Software)</A>
