@@ -303,11 +303,10 @@ sub displayMain
 			
 			$hash{$organismName}->{'specimenID'}++ if $specimenID and !scalar(grep /$specimenID/ ,@specList);
 			$hash{$organismName}->{stainID}++ if $stainedSlideID and !scalar(grep /$stainedSlideID/ ,@slideList);
-			$hash{$organismName}->{imageID}++ if $slideImageID and !scalar(grep /$slideImageID/ ,@imageList);
-			 
+			$hash{$organismName}->{imageID}++ if $slideImageID; 
 			push @specList, $specimenID;
 			push @slideList, $stainedSlideID;
-			push @imageList, $slideImageID;
+			
 			
 		}
 		
