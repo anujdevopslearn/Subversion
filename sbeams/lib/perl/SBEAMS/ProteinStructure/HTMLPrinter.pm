@@ -507,7 +507,7 @@ sub display_ext_halo_style_sheet {
 	.Nav_link {font-family: Helvetica, Arial, sans-serif; font-size:${FONT_SIZE}pt; line-height:1.3; color:#DC842F; text-decoration:none;}
 	.Nav_link:hover {color: #FFFFFF; text-decoration: none;}
 	.Nav_linkstate {cursor:hand; font-family:Helvetica, Arial, sans-serif; font-size:11px; color:#DC842F; text-decoration:none;}
-	.nav_Sub {font-family: Helvetica, Arial, sans-serif; font-size:12px; font-weight:bold; color:#ffffff;}
+	.nav_Sub {font-family: Helvetica, Arial, sans-serif; font-size:12px; font-weight:bold; color:#ffffff; line-height:1.3;}
 
 	//
 	-->
