@@ -111,8 +111,8 @@ sub returnTableInfo {
 
         if ($info_key eq "BASICQuery") {
             return qq~
-		SELECT experiment_id,username,P.project_id AS 'proj',
-		       name AS 'project_name',PE.experiment_id AS 'exp',
+		SELECT experiment_id,username,P.project_id AS "proj",
+		       name AS 'project_name',PE.experiment_id AS "exp",
 		       experiment_tag,experiment_name,experiment_description
 		  FROM $TBPR_PROTEOMICS_EXPERIMENT PE
 		  JOIN $TB_USER_LOGIN UL ON (PE.contact_id=UL.contact_id)
