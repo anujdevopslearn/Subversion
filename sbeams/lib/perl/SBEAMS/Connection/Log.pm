@@ -29,7 +29,7 @@ sub new {
   my $class = shift;
   my %args = @_;
   my $base = ( $args{base} )   ? $args{base} : 
-             ( $LOG_BASE_DIR ) ? $LOG_BASE_DIR : "$PHYSICAL_BASE_DIR/logs";
+             ( $LOG_BASE_DIR ) ? $LOG_BASE_DIR : "$PHYSICAL_BASE_DIR/var/logs";
 
   unless( -e $base ){
   print STDERR "Try to create base = $base\n";
