@@ -1,169 +1,221 @@
-table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
-SN_biosequence_set	1	biosequence_set_id	BioSequence Set ID	int	8	0	N		Y							N	N				pkDEFAULT
-SN_biosequence_set	2	organism_id	Organism	int	8	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism for this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM WHERE record_status != 'D' ORDER BY sort_order,organism_name"	
-SN_biosequence_set	3	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
-SN_biosequence_set	4	set_tag	Set Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Very short tag (name) of this BioSequence database		
-SN_biosequence_set	5	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioSequence database		
-SN_biosequence_set	6	set_version	Set Version	varchar	255	0	N		N			Y	text	40		Y	Y	N	Version of this BioSequence database		
-SN_biosequence_set	7	upload_file	Upload file	varchar	255	0	N		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
-SN_biosequence_set	8	set_path	Set Path	varchar	255	0	N		N			N	text	40		Y	Y	N	Local network file path of this BioSequence database if not uploaded via the web interface		
-SN_biosequence_set	9	source_file_date	Source File Date	datetime	8	0	Y		N			N	text	40		N	N	N	Date of the FASTA file at last update		
-SN_biosequence_set	10	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
-SN_biosequence_set	11	comment	Comment	text	4000	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-SN_biosequence_set	12	sort_order	Sort Order	int	8	0	N	10	N							N	N	N			
-SN_biosequence_set	13	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-SN_biosequence_set	14	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-SN_biosequence_set	15	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-SN_biosequence_set	16	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-SN_biosequence_set	17	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-SN_biosequence_set	18	record_status	Record Status	char	1	0	N	N	N							N	N				
-SN_biosequence	1	biosequence_id	BioSequence ID	int	8	0	N		Y							N	N	N			pkDEFAULT
-SN_biosequence	2	biosequence_set_id	BioSequence Set ID	int	8	0	N		N	SN_biosequence_set	biosequence_set_id	Y	optionlist	20		Y	Y	Y	 The BioSequence Set from which this BioSequnce come from	"SELECT biosequence_set_id, organism_id FROM $TB_BIOSEQUENCE_SET WHERE record_status != 'D' ORDER BY sort_order, organism_id"	
-SN_biosequence	3	biosequence_name	BIoSequence Name	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Name for the BioSequence (i.e. Gene/Cassette Name)		
-SN_biosequence	4	biosequence_gene_name	BioSequence Gene Name	varchar	50	0	Y		N			N	text	20		Y	Y	N	The Common Name for the BioSequence		
-SN_biosequence	5	biosequence_acession	BioSequence Accession	varchar	8	0	Y		N			N	text	20		Y	Y	N	The Accession Number for this BioSequnce (if available)		
-SN_biosequence	6	biosequence_desc	BioSequence Description	varchar	255	0	Y		N			N	text	20		Y	Y	N	A description		
-SN_biosequence	7	biosequence_start	BioSequence Start	int	25	0	N		N			Y	text	20		Y	Y	N	The start coor		
-SN_biosequence	8	biosequence_length	BioSequence Length	int	25	0	N		N			Y	text	20		Y	Y	N	The length in bp		
-SN_biosequence	9	biosequence_seq	BioSequence Sequence	varchar	4000	0	Y		N			N	textarea	4		Y	Y	N	"The sequence, if present"		
-SN_biosequence	10	inherit_from_biosequence_id	Inherited BioSequence	int	8	0	Y		N		biosequence_id	N	optionlist			Y	Y	N	"The Inherited BioSequence (if this has a ""parent"" sequence)"	"SELECT biosequnce_id, biosequence_name FROM $TB_BIOSEQUENCE WHERE record_status != 'D' ORDER BY biosequence_name"	
-SN_biosequence	11	comment	Comment	text	4000	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-SN_biosequence	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-SN_biosequence	13	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-SN_biosequence	14	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-SN_biosequence	15	record_status	Record Status	char	1	0	N	N	N							N	N				
-SN_biosequence_property_set	1	biosequence_property_set_id	BioSequence Property Set ID	int	4	0	N		Y							N	N				pkDEFAULT
-SN_biosequence_property_set	2	biosequence_id	BioSequence ID	int	4	0	N		N	PS_biosequence	biosequence_id					N	N	Y	Biosequence to which this Biosequence property set belongs		
-SN_biosequence_property_set	3	n_transmembrane_regions	Number of Transmembrane Regions	int	4	0	Y		N							Y	Y	N	Number of transmembrane regions		
-SN_biosequence_property_set	4	transmembrane_class	Transmembrane Region Class	varchar	10	0	Y		N			Y	text	50		Y	Y	N	"Class of the transmembrane region.  May be 0, TM, A, S, TM_xS based on output from TMHMM and signalP"		
-SN_biosequence_property_set	5	transmembrane_topology	Transmembrane Region Topology	varchar	1024	0	Y		N			Y	text	20		Y	Y	N	Coding of which residues belong in the transmembrane regions		
-SN_biosequence_property_set	6	starting_offset	Starting Offset	int	4	0	Y		N			Y	text	20		Y	Y	N	"Absolute offset of the start of this sequence within some reference, usually the chromosome"		
-SN_BrowseBioSequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBSN_BIOSEQUENCE_SET ORDER BY sort_order,set_name"	
-SN_BrowseBioSequence	2	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-SN_BrowseBioSequence	3	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-SN_BrowseBioSequence	4	biosequence_seq_constraint	Sequence Constraint									N	text	40		Y	Y	N	Constraint for the actual sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-SN_BrowseBioSequence	5	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-SN_BrowseBioSequence	6	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'BBS_sort_options' ORDER BY sort_order,option_value"	
-SN_BrowseBioSequence	7	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'BBS_display_options' ORDER BY sort_order,option_value"	
-SN_BrowseBioSequence	8	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 1000 rows."		
-SN_snp_source	1	snp_source_id	SNP Source ID	int	8	0	N		Y							N	N				pkDEFAULT
-SN_snp_source	2	source_name	Source Name	varchar	25	0	N		N			Y	text	25		Y	Y	Y	Name of the direct source of this SNP		
-SN_snp_source	3	orig_source_name	Original Source Name	varchar	25	0	N		N			N	text	25		Y	Y	Y	Name of the original origin of this SNP (perhaps via someone else's curation as listed above)		
-SN_snp_source	4	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
-SN_snp_source	5	comment	Comment	text	4000	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-SN_snp_source	6	sort_order	Sort Order	int	8	0	N	10	N							N	N	N			
-SN_snp_source	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-SN_snp_source	8	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-SN_snp_source	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-SN_snp_source	10	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-SN_snp_source	11	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-SN_snp_source	12	record_status	Record Status	char	1	0	N	N	N							N	N				
-SN_BrowseSNPHit	1	snp_accession_constraint	SNP Accession									N	text	20		Y	Y	N	Constraint for the main SNP accession. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-SN_BrowseSNPHit	2	snp_source_accession_constraint	SNP Source Accession									N	text	20		Y	Y	N	Constraint for the SNP accession from the original source. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-SN_BrowseSNPHit	3	snp_source_id	SNP Source									N	multioptionlist	4		Y	Y	N	"Select desired SNP sources to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT snp_source_id,source_name+' - '+orig_source_name FROM $TBSN_SNP_SOURCE ORDER BY sort_order,source_name"	
-SN_BrowseSNPHit	4	biosequence_set_id	BioSequence Set									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBSN_BIOSEQUENCE_SET ORDER BY sort_order,set_name"	
-SN_BrowseSNPHit	5	identified_percent_constraint	Identified Percent									N	text	20		Y	Y	N	"Constraint for the percentage (00 to 100) of identified base pairs. Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"" or ""n.n +- n.n"""		
-SN_BrowseSNPHit	6	match_to_query_ratio_constraint	Match to Query Ratio									N	text	20		Y	Y	N	"Constraint for how much of the query was matched as a percentage (00 to 100) of the total query length. Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"" or ""n.n +- n.n"""		
-SN_BrowseSNPHit	7	validation_status_constraint	Validation Status									N	multioptionlist	4		Y	Y	N	"Constraint for the validation status of the snp_instance.  If no items are selected, ALL validation statuses are searched."	"SELECT distinct(validation_status) INTO #tmpval FROM $TBSN_SNP_INSTANCE ORDER BY validation_status SELECT validation_status,validation_status FROM #tmpval"	
-SN_BrowseSNPHit	8	threeprime_flanking_length_constraint	3' Flanking Length									N	text	20		Y	Y	N	"Constraint for the length of the 3' flanking length. Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"" or ""n.n +- n.n"""		
-SN_BrowseSNPHit	9	fiveprime_flanking_length_constraint	5' Flanking Length									N	text	20		Y	Y	N	"Constraint for the length of the 5' flanking length. Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"" or ""n.n +- n.n"""		
-SN_BrowseSNPHit	10	snp_location_constraint	SNP Location									N	text	20		Y	Y	N	"Absolute location on the chromosome of the SNPs. Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"" or ""n.n +- n.n"""		
-SN_BrowseSNPHit	11	snp_selection_options	Special Selection Options									N	multioptionlist	4		Y	Y	N	Special SNP selection options.  Multiple options or none may be selected.	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'BSH_selection_options' ORDER BY sort_order,option_value"	
-SN_BrowseSNPHit	12	biosequence_rank_list_id	BioSequence Rank List									N	multioptionlist	4		Y	Y	N	"Select a BioSequence Rank List to prioritize result listing.  If no item is selected, no ranking is done."	"SELECT biosequence_rank_list_id,username+' - '+rank_list_name FROM $TBSN_BIOSEQUENCE_RANK_LIST BRL LEFT JOIN $TB_USER_LOGIN UL ON (BRL.created_by_id = UL.contact_id) WHERE BRL.record_status != 'D' ORDER BY username,rank_list_name"	
-SN_BrowseSNPHit	13	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'BSH_display_options' ORDER BY sort_order,option_value"	
-SN_BrowseSNPHit	14	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 1000 rows."		
-SN_source_version	1	source_version_id	Source Version ID	int	8	0	N		Y							N	N				pkDEFAULT
-SN_source_version	2	source_version_name	Source Version Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of the version of the source dataset (e.g. Celera MHC 2002-04-01)		
-SN_source_version	3	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	"External web page, file, or other URI"		SELF
-SN_source_version	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-SN_source_version	5	sort_order	Sort Order	int	8	0	N	10	N							N	N	N			
-SN_source_version	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-SN_source_version	7	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-SN_source_version	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-SN_source_version	9	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-SN_source_version	10	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-SN_source_version	11	record_status	Record Status	char	1	0	N	N	N							N	N				
-SN_biosequence_rank_list	1	biosequence_rank_list_id	BioSequence Rank List	int	8	0	N		Y							N	N				pkDEFAULT
-SN_biosequence_rank_list	2	rank_list_name	Rank List Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of the list of ranked biosequences (as it will appear in a drop-down list)		
-SN_biosequence_rank_list	3	rank_list_file	Rank List File	varchar	255	0	N		N			N	file	30		Y	Y	N	Hit [Browse] and specify the tab-delimited text file which contains the ranking information.  This must be in the correct format.		
-SN_biosequence_rank_list	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments about this rank list		
-SN_biosequence_rank_list	5	sort_order	Sort Order	int	8	0	N	10	N							N	N	N			
-SN_biosequence_rank_list	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-SN_biosequence_rank_list	7	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-SN_biosequence_rank_list	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-SN_biosequence_rank_list	9	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-SN_biosequence_rank_list	10	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-SN_biosequence_rank_list	11	record_status	Record Status	char	1	0	N	N	N							N	N				
-SN_snp_plate	1	plate_id	Plate ID	int	4	0	N		Y							N	N				pkDEFAULT
-SN_snp_plate	2	contact_id	Contact	int	4	0	N		N	contact	contact_id	Y	current_contact_id	 		Y	Y	N	PI for this plate		
-SN_snp_plate	3	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project to which the plate belongs	"SELECT project_id, name + ' ['+budget+']' FROM $TB_PROJECT WHERE PI_contact_id='$contact_id' ORDER BY name"	
-SN_snp_plate	4	plate_name	Plate Title	varchar	100	0	N		N			Y	text	50		Y	Y	N	Title of this plate		
-SN_snp_plate	5	plate_tag	Plate Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this plate.  Treat this like a directory/folder name.  Do not use spaces or non-standard characters.		
-SN_snp_plate	6	plate_description	Plate Description	text	16	0	N		N			Y	textarea	6		Y	Y	N	"Description of this experiment, the sample or samples used, and any other relevant information not contained in the project description or in list-box elements in this form"		
-SN_snp_plate	7	plate_path	Plate Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	Data path for this plate (e.g. /data/search/edeutsch/TCells/T_000/human_nci)		
-SN_snp_plate	8	organism_id	Organism	int	4	0	N		N			Y	optionlist			Y	Y	N	Organism from which the sample used for this plate was derived	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
-SN_snp_plate	9	plate_type_id	Plate Type	int	4	0	N		N			Y	optionlist			Y	Y	N	Type of plate	"SELECT plate_type_id, plate_type_name FROM $TBSN_PLATE_TYPE ORDER BY sort_order,plate_type_name"	
-SN_snp_plate	10	instrument_id	Instrument	int	4	0	N		N			Y	optionlist			Y	Y	N	Instrument on which this plate was run	"SELECT instrument_id, instrument_name FROM $TBSN_INSTRUMENT ORDER BY sort_order,instrument_name"	
-SN_snp_plate	11	go_public_date	Go Public Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	text	20		Y	Y	N	Date that this plate data will go public.  Please use the form 2002-12-31.  Do not enter a date higher than 2030-01-01.		
-SN_snp_plate	12	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
-SN_snp_plate	13	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-SN_snp_plate	14	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-SN_snp_plate	15	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-SN_snp_plate	16	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-SN_snp_plate	17	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-SN_snp_plate	18	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-SN_snp_plate	19	record_status	Record Status	char	1	0	N	N	N							N	N				
-SN_plate_type	1	plate_type_id	Plate Type ID	int	4	0	N		Y							N	N				pkDEFAULT
-SN_plate_type	2	plate_type_name	Plate Type Name	varchar	100	0	N		N			Y	text	20		Y	Y	Y	Short name of this plate type as it will appear in list boxes		
-SN_plate_type	3	plate_type_description	Plate Type Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	More complete description of this plate type		
-SN_plate_type	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-SN_plate_type	5	sort_order	Sort Order	int	2	0	N	10	N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
-SN_plate_type	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-SN_plate_type	7	created_by_id	Record Created By	int	2	0	N	1	N	contact	contact_id					N	N				
-SN_plate_type	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-SN_plate_type	9	modified_by_id	Record Modified By	int	2	0	N	1	N	contact	contact_id					N	N				
-SN_plate_type	10	owner_group_id	Owner Group ID	int	2	0	N	1	N	work_group	work_group_id					N	N				
-SN_plate_type	11	record_status	Record Status	char	1	0	N	N	N							N	N				
-SN_instrument_type	1	instrument_type_id	Instrument Type ID	int	4	0	N		Y							N	N				pkDEFAULT
-SN_instrument_type	2	instrument_type_name	Instrument Type Name	varchar	100	0	N		N			Y	text	20		Y	Y	Y	Short name of this instrument type as it will appear in list boxes		
-SN_instrument_type	3	instrument_type_description	Instrument Type Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	More complete description of this instrument type		
-SN_instrument_type	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-SN_instrument_type	5	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
-SN_instrument_type	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-SN_instrument_type	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-SN_instrument_type	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-SN_instrument_type	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-SN_instrument_type	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-SN_instrument_type	11	record_status	Record Status	char	1	0	N	N	N							N	N				
-SN_instrument	1	instrument_id	Instrument ID	int	4	0	N		Y							N	N				pkDEFAULT
-SN_instrument	2	instrument_type_id	Instrument Type	int	4	0	N		N	SN_instrument_type	instrument_type_id	Y	optionlist			Y	Y	N	Type of Instrument	"SELECT instrument_type_id,instrument_type_name FROM $TBSN_INSTRUMENT_TYPE ORDER BY sort_order,instrument_type_name"	
-SN_instrument	3	instrument_name	Instrument Name	varchar	100	0	N		N			Y	text	30		Y	Y	Y	Short name of this instrument as it will appear in list boxes		
-SN_instrument	4	instrument_description	Instrument Description	varchar	255	0	N		N			Y	text	60		Y	Y	N	More complete description of this instrument		
-SN_instrument	5	comment	Comment	text	16	0	Y		N			N	textarea	10		Y	Y	N	Additional comments		
-SN_instrument	6	sort_order	Sort Order	int	4	0	N	10	N			Y	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
-SN_instrument	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-SN_instrument	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-SN_instrument	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-SN_instrument	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-SN_instrument	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-SN_instrument	12	record_status	Record Status	char	1	0	N	N	N							N	N				
-SN_GetGenotypes	1	project_id	Project									N	multioptionlist	4		Y	Y	N	Select desired projects to query.  Multiple items may be selected.	"SELECT distinct project_id,project_id FROM SNP.dbo.export_results_view ORDER BY project_id"	
-SN_GetGenotypes	2	assay_id_constraint	Assay ID									N	text	50		Y	Y	N	Constraint for assay name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-SN_GetGenotypes	3	description	Call Quality									N	multioptionlist	4		Y	Y	N	Select desired genotype quality level.  Multiple items may be selected.	"SELECT distinct description,description FROM SNP.dbo.export_results_view ORDER BY description"	
-SN_assay_request	1	assay_request_id	SNP Assay Request ID	int	8	0	N		Y							N	N				pkDEFAULT
-SN_assay_request	2	contact_id	Contact	int	8	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	N	Requestor of this SNP job		
-SN_assay_request	3	project_id	Project	int	8	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which these SNPs are requested	"SELECT project_id, name + ' ['+budget+']' FROM $TB_PROJECT WHERE PI_contact_id='$contact_id' ORDER BY name"	
-SN_assay_request	4	cost_scheme_id	Cost Structure	varchar	50	0	N		N			N	optionlist			Y	Y	N	Cost Structure from which pricing is calculated	"SELECT cost_scheme_id,cost_scheme_name FROM $TB_COST_SCHEME ORDER BY sort_order,cost_scheme_name"	
-SN_assay_request	5	n_snps	Number of SNPs	int	8	0	N		N			Y	text			Y	Y	N	Number of SNPs in this request	MANUAL	
-SN_assay_request	6	n_samples	Number of Samples	int	8	0	N		N			Y	text	10		Y	Y	N	Number of samples to be run		
-SN_assay_request	7	snp_list_file	SNP List File	varchar	255	0	N		N			N	file	30		Y	Y	N	Hit [Browse] and specify the 2-column tab-delimited text file containing the SNP id and sequence.  Please use the rs identifier if possible, include 100-200bp on either side of the SNP, and indicate the SNP in brackets (e.g. [A/G]).		
-SN_assay_request	8	sample_list_file	Sample List File	varchar	255	0	N		N			N	file	30		Y	Y	N	Hit [Browse] and specify the 2-column tab-delimited text file containing the sample id and description.   Description is optional.		
-SN_assay_request	9	request_status	Request Status	varchar	50	0	N		N			Y	fixed			Y	Y	N	Status of this request	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='job_status' ORDER BY sort_order,option_value"	
-SN_assay_request	10	price	Price	int	8	0	Y		N			N	fixed			N	Y	N	Total price for this request		
-SN_assay_request	11	comment	Comment	text	0	0	Y		N			N	textarea	4		Y	Y	N	Additional comments about this request		
-SN_assay_request	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N				fixed			N	Y				
-SN_assay_request	13	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-SN_assay_request	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N				fixed			N	Y				
-SN_assay_request	15	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-SN_assay_request	16	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-SN_assay_request	17	record_status	Record Status	char	1	0	N	N	N				fixed			N	Y				
+"table_name"	"column_index"	"column_name"	"column_title"	"datatype"	"scale"	"precision"	"nullable"	"default_value"	"is_auto_inc"	"fk_table"	"fk_column_name"	"is_required"	"input_type"	"input_length"	"onChange"	"is_data_column"	"is_display_column"	"is_key_field"	"column_text"	"optionlist_query"	"url"
+"SN_biosequence_set"	1	"biosequence_set_id"	"BioSequence Set ID"	"int"	4	0	"N"		"Y"							"N"	"N"				"pkDEFAULT"
+"SN_biosequence_set"	2	"organism_id"	"Organism"	"int"	4	0	"N"		"N"	"organism"	"organism_id"	"Y"	"optionlist"			"Y"	"Y"	"N"	"Organism for this BioSequence database"	"SELECT organism_id, organism_name FROM $TB_ORGANISM WHERE record_status != 'D' ORDER BY sort_order,organism_name"	
+"SN_biosequence_set"	3	"set_name"	"Set Name"	"varchar"	100	0	"N"		"N"			"Y"	"text"	50		"Y"	"Y"	"N"	"Name of this BioSequence database"		
+"SN_biosequence_set"	4	"set_tag"	"Set Tag"	"varchar"	20	0	"N"		"N"			"Y"	"text"	20		"Y"	"Y"	"Y"	"Very short tag (name) of this BioSequence database"		
+"SN_biosequence_set"	5	"set_description"	"Set Description"	"varchar"	255	0	"N"		"N"			"Y"	"text"	50		"Y"	"Y"	"N"	"Longer description of this BioSequence database"		
+"SN_biosequence_set"	6	"set_version"	"Set Version"	"varchar"	255	0	"N"		"N"			"Y"	"text"	40		"Y"	"Y"	"N"	"Version of this BioSequence database"		
+"SN_biosequence_set"	7	"upload_file"	"Upload file"	"varchar"	255	0	"N"		"N"			"N"	"file"	40		"Y"	"Y"	"N"	"File path of this BioSequence database if to be uploaded via the web interface"		
+"SN_biosequence_set"	8	"set_path"	"Set Path"	"varchar"	255	0	"N"		"N"			"N"	"text"	40		"Y"	"Y"	"N"	"Local network file path of this BioSequence database if not uploaded via the web interface"		
+"SN_biosequence_set"	9	"source_file_date"	"Source File Date"	"datetime"	8	0	"Y"		"N"			"N"	"text"	40		"N"	"N"	"N"	"Date of the FASTA file at last update"		
+"SN_biosequence_set"	10	"uri"	"URI"	"varchar"	255	0	"Y"		"N"			"N"	"text"	50		"Y"	"Y"	"N"	"External web page or other URI"		"SELF"
+"SN_biosequence_set"	11	"comment"	"Comment"	"text"	16	0	"Y"		"N"			"N"	"textarea"	4		"Y"	"Y"	"N"	"Additional comments"		
+"SN_biosequence_set"	12	"sort_order"	"Sort Order"	"int"	4	0	"N"	10	"N"							"N"	"N"	"N"			
+"SN_biosequence_set"	13	"date_created"	"Date Record Created"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"SN_biosequence_set"	14	"created_by_id"	"Record Created By"	"int"	4	0	"N"		"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_biosequence_set"	15	"date_modified"	"Date Record Modified"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"SN_biosequence_set"	16	"modified_by_id"	"Record Modified By"	"int"	4	0	"N"		"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_biosequence_set"	17	"owner_group_id"	"Owner Group ID"	"int"	4	0	"N"	1	"N"	"work_group"	"work_group_id"					"N"	"N"				
+"SN_biosequence_set"	18	"record_status"	"Record Status"	"char"	1	0	"N"	"N"	"N"							"N"	"N"				
+"SN_biosequence"	1	"biosequence_id"	"BioSequence ID"	"int"	4	0	"N"		"Y"							"N"	"N"	"N"			"pkDEFAULT"
+"SN_biosequence"	2	"biosequence_set_id"	"BioSequence Set ID"	"int"	4	0	"N"		"N"	"SN_biosequence_set"	"biosequence_set_id"	"Y"	"optionlist"	20		"Y"	"Y"	"Y"	" The BioSequence Set from which this BioSequnce come from"	"SELECT biosequence_set_id, organism_id FROM $TB_BIOSEQUENCE_SET WHERE record_status != 'D' ORDER BY sort_order, organism_id"	
+"SN_biosequence"	3	"biosequence_name"	"BIoSequence Name"	"varchar"	50	0	"N"		"N"			"Y"	"text"	20		"Y"	"Y"	"Y"	"Name for the BioSequence (i.e. Gene/Cassette Name)"		
+"SN_biosequence"	4	"biosequence_gene_name"	"BioSequence Gene Name"	"varchar"	50	0	"Y"		"N"			"N"	"text"	20		"Y"	"Y"	"N"	"The Common Name for the BioSequence"		
+"SN_biosequence"	5	"biosequence_acession"	"BioSequence Accession"	"varchar"	8	0	"Y"		"N"			"N"	"text"	20		"Y"	"Y"	"N"	"The Accession Number for this BioSequnce (if available)"		
+"SN_biosequence"	6	"biosequence_desc"	"BioSequence Description"	"varchar"	255	0	"Y"		"N"			"N"	"text"	20		"Y"	"Y"	"N"	"A description"		
+"SN_biosequence"	7	"biosequence_start"	"BioSequence Start"	"int"	4	0	"N"		"N"			"Y"	"text"	20		"Y"	"Y"	"N"	"The start coor"		
+"SN_biosequence"	8	"biosequence_length"	"BioSequence Length"	"int"	4	0	"N"		"N"			"Y"	"text"	20		"Y"	"Y"	"N"	"The length in bp"		
+"SN_biosequence"	9	"biosequence_seq"	"BioSequence Sequence"	"text"	16	0	"Y"		"N"			"N"	"textarea"	4		"Y"	"Y"	"N"	"The sequence, if present"		
+"SN_biosequence"	10	"biosequence_build_info"	"BioSequence Build/Vesion Info"	"varchar"	255	0	"Y"		"N"			"N"	"text"	20		"Y"	"Y"	"N"	"Information about the assembly build, if needed"		
+"SN_biosequence"	11	"inherit_from_biosequence_id"	"Inherited BioSequence"	"int"	4	0	"Y"		"N"		"biosequence_id"	"N"	"optionlist"			"Y"	"Y"	"N"	"The Inherited BioSequence (if this has a ""parent"" sequence)"	"SELECT biosequnce_id, biosequence_name FROM $TB_BIOSEQUENCE WHERE record_status != 'D' ORDER BY biosequence_name"	
+"SN_biosequence"	12	"comment"	"Comment"	"text"	16	0	"Y"		"N"			"N"	"textarea"	4		"Y"	"Y"	"N"	"Additional comments"		
+"SN_biosequence"	13	"date_created"	"Date Record Created"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"SN_biosequence"	14	"modified_by_id"	"Record Modified By"	"int"	4	0	"N"		"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_biosequence"	15	"owner_group_id"	"Owner Group ID"	"int"	4	0	"N"	1	"N"	"work_group"	"work_group_id"					"N"	"N"				
+"SN_biosequence"	16	"record_status"	"Record Status"	"char"	1	0	"N"	"N"	"N"							"N"	"N"				
+"SN_biosequence_property_set"	1	"biosequence_property_set_id"	"BioSequence Property Set ID"	"int"	4	0	"N"		"Y"							"N"	"N"				"pkDEFAULT"
+"SN_biosequence_property_set"	2	"biosequence_id"	"BioSequence ID"	"int"	4	0	"N"		"N"	"PS_biosequence"	"biosequence_id"					"N"	"N"	"Y"	"Biosequence to which this Biosequence property set belongs"		
+"SN_biosequence_property_set"	3	"n_transmembrane_regions"	"Number of Transmembrane Regions"	"int"	4	0	"Y"		"N"							"Y"	"Y"	"N"	"Number of transmembrane regions"		
+"SN_biosequence_property_set"	4	"transmembrane_class"	"Transmembrane Region Class"	"varchar"	10	0	"Y"		"N"			"Y"	"text"	50		"Y"	"Y"	"N"	"Class of the transmembrane region.  May be 0, TM, A, S, TM_xS based on output from TMHMM and signalP"		
+"SN_biosequence_property_set"	5	"transmembrane_topology"	"Transmembrane Region Topology"	"text"	16	0	"Y"		"N"			"Y"	"text"	20		"Y"	"Y"	"N"	"Coding of which residues belong in the transmembrane regions"		
+"SN_biosequence_property_set"	6	"starting_offset"	"Starting Offset"	"int"	4	0	"Y"		"N"			"Y"	"text"	20		"Y"	"Y"	"N"	"Absolute offset of the start of this sequence within some reference, usually the chromosome"		
+"SN_BrowseBioSequence"	1	"biosequence_set_id"	"BioSequence Sets"									"N"	"multioptionlist"	4		"Y"	"Y"	"N"	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBSN_BIOSEQUENCE_SET ORDER BY sort_order,set_name"	
+"SN_BrowseBioSequence"	2	"biosequence_name_constraint"	"Name Constraint"									"N"	"text"	40		"Y"	"Y"	"N"	"Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported."		
+"SN_BrowseBioSequence"	3	"biosequence_gene_name_constraint"	"Gene Name Constraint"									"N"	"text"	40		"Y"	"Y"	"N"	"Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported."		
+"SN_BrowseBioSequence"	4	"biosequence_seq_constraint"	"Sequence Constraint"									"N"	"text"	40		"Y"	"Y"	"N"	"Constraint for the actual sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported."		
+"SN_BrowseBioSequence"	5	"biosequence_desc_constraint"	"Description Constraint"									"N"	"text"	40		"Y"	"Y"	"N"	"Constraint for the BioSequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported."		
+"SN_BrowseBioSequence"	6	"sort_order"	"Sort Order"									"N"	"optionlist"	" "		"Y"	"Y"	"N"	"Desired display sorting order (DESC means descending: highest to lowest)"	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'BBS_sort_options' ORDER BY sort_order,option_value"	
+"SN_BrowseBioSequence"	7	"display_options"	"Display Options"									"N"	"multioptionlist"	3		"Y"	"Y"	"N"	"Various selectable table display options"	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'BBS_display_options' ORDER BY sort_order,option_value"	
+"SN_BrowseBioSequence"	8	"row_limit"	"Maximum Rows"									"N"	"text"	10		"Y"	"Y"	"N"	"Limit the numbers of rows displayed.  If not provided, default is 1000 rows."		
+"SN_snp_source"	1	"snp_source_id"	"SNP Source ID"	"int"	4	0	"N"		"Y"							"N"	"N"				"pkDEFAULT"
+"SN_snp_source"	2	"source_name"	"Source Name"	"varchar"	25	0	"N"		"N"			"Y"	"text"	25		"Y"	"Y"	"Y"	"Name of the direct source of this SNP"		
+"SN_snp_source"	3	"orig_source_name"	"Original Source Name"	"varchar"	25	0	"N"		"N"			"N"	"text"	25		"Y"	"Y"	"Y"	"Name of the original origin of this SNP (perhaps via someone else's curation as listed above)"		
+"SN_snp_source"	4	"uri"	"URI"	"varchar"	255	0	"Y"		"N"			"N"	"text"	50		"Y"	"Y"	"N"	"External web page or other URI"		"SELF"
+"SN_snp_source"	5	"comment"	"Comment"	"text"	16	0	"Y"		"N"			"N"	"textarea"	4		"Y"	"Y"	"N"	"Additional comments"		
+"SN_snp_source"	6	"sort_order"	"Sort Order"	"int"	4	0	"N"	10	"N"							"N"	"N"	"N"			
+"SN_snp_source"	7	"date_created"	"Date Record Created"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"SN_snp_source"	8	"created_by_id"	"Record Created By"	"int"	4	0	"N"		"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_snp_source"	9	"date_modified"	"Date Record Modified"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"SN_snp_source"	10	"modified_by_id"	"Record Modified By"	"int"	4	0	"N"		"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_snp_source"	11	"owner_group_id"	"Owner Group ID"	"int"	4	0	"N"	1	"N"	"work_group"	"work_group_id"					"N"	"N"				
+"SN_snp_source"	12	"record_status"	"Record Status"	"char"	1	0	"N"	"N"	"N"							"N"	"N"				
+"SN_BrowseSNPHit"	1	"snp_accession_constraint"	"SNP Accession"									"N"	"text"	20		"Y"	"Y"	"N"	"Constraint for the main SNP accession. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported."		
+"SN_BrowseSNPHit"	2	"snp_source_accession_constraint"	"SNP Source Accession"									"N"	"text"	20		"Y"	"Y"	"N"	"Constraint for the SNP accession from the original source. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported."		
+"SN_BrowseSNPHit"	3	"snp_source_id"	"SNP Source"									"N"	"multioptionlist"	4		"Y"	"Y"	"N"	"Select desired SNP sources to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT snp_source_id,source_name+' - '+orig_source_name FROM $TBSN_SNP_SOURCE ORDER BY sort_order,source_name"	
+"SN_BrowseSNPHit"	4	"biosequence_set_id"	"BioSequence Set"									"N"	"multioptionlist"	4		"Y"	"Y"	"N"	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBSN_BIOSEQUENCE_SET ORDER BY sort_order,set_name"	
+"SN_BrowseSNPHit"	5	"identified_percent_constraint"	"Identified Percent"									"N"	"text"	20		"Y"	"Y"	"N"	"Constraint for the percentage (00 to 100) of identified base pairs. Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"" or ""n.n +- n.n"""		
+"SN_BrowseSNPHit"	6	"match_to_query_ratio_constraint"	"Match to Query Ratio"									"N"	"text"	20		"Y"	"Y"	"N"	"Constraint for how much of the query was matched as a percentage (00 to 100) of the total query length. Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"" or ""n.n +- n.n"""		
+"SN_BrowseSNPHit"	7	"validation_status_constraint"	"Validation Status"									"N"	"multioptionlist"	4		"Y"	"Y"	"N"	"Constraint for the validation status of the snp_instance.  If no items are selected, ALL validation statuses are searched."	"SELECT distinct(validation_status) INTO #tmpval FROM $TBSN_SNP_INSTANCE ORDER BY validation_status SELECT validation_status,validation_status FROM #tmpval"	
+"SN_BrowseSNPHit"	8	"threeprime_flanking_length_constraint"	"3' Flanking Length"									"N"	"text"	20		"Y"	"Y"	"N"	"Constraint for the length of the 3' flanking length. Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"" or ""n.n +- n.n"""		
+"SN_BrowseSNPHit"	9	"fiveprime_flanking_length_constraint"	"5' Flanking Length"									"N"	"text"	20		"Y"	"Y"	"N"	"Constraint for the length of the 5' flanking length. Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"" or ""n.n +- n.n"""		
+"SN_BrowseSNPHit"	10	"snp_location_constraint"	"SNP Location"									"N"	"text"	20		"Y"	"Y"	"N"	"Absolute location on the chromosome of the SNPs. Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"" or ""n.n +- n.n"""		
+"SN_BrowseSNPHit"	11	"snp_selection_options"	"Special Selection Options"									"N"	"multioptionlist"	4		"Y"	"Y"	"N"	"Special SNP selection options.  Multiple options or none may be selected."	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'BSH_selection_options' ORDER BY sort_order,option_value"	
+"SN_BrowseSNPHit"	12	"biosequence_rank_list_id"	"BioSequence Rank List"									"N"	"multioptionlist"	4		"Y"	"Y"	"N"	"Select a BioSequence Rank List to prioritize result listing.  If no item is selected, no ranking is done."	"SELECT biosequence_rank_list_id,username+' - '+rank_list_name FROM $TBSN_BIOSEQUENCE_RANK_LIST BRL LEFT JOIN $TB_USER_LOGIN UL ON (BRL.created_by_id = UL.contact_id) WHERE BRL.record_status != 'D' ORDER BY username,rank_list_name"	
+"SN_BrowseSNPHit"	13	"display_options"	"Display Options"									"N"	"multioptionlist"	3		"Y"	"Y"	"N"	"Various selectable table display options"	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'BSH_display_options' ORDER BY sort_order,option_value"	
+"SN_BrowseSNPHit"	14	"row_limit"	"Maximum Rows"									"N"	"text"	10		"Y"	"Y"	"N"	"Limit the numbers of rows displayed.  If not provided, default is 1000 rows."		
+"SN_source_version"	1	"source_version_id"	"Source Version ID"	"int"	4	0	"N"		"Y"							"N"	"N"				"pkDEFAULT"
+"SN_source_version"	2	"source_version_name"	"Source Version Name"	"varchar"	255	0	"N"		"N"			"Y"	"text"	50		"Y"	"Y"	"Y"	"Name of the version of the source dataset (e.g. Celera MHC 2002-04-01)"		
+"SN_source_version"	3	"uri"	"URI"	"varchar"	255	0	"Y"		"N"			"N"	"text"	50		"Y"	"Y"	"N"	"External web page, file, or other URI"		"SELF"
+"SN_source_version"	4	"comment"	"Comment"	"text"	16	0	"Y"		"N"			"N"	"textarea"	4		"Y"	"Y"	"N"	"Additional comments"		
+"SN_source_version"	5	"sort_order"	"Sort Order"	"int"	4	0	"N"	10	"N"							"N"	"N"	"N"			
+"SN_source_version"	6	"date_created"	"Date Record Created"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"SN_source_version"	7	"created_by_id"	"Record Created By"	"int"	4	0	"N"		"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_source_version"	8	"date_modified"	"Date Record Modified"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"SN_source_version"	9	"modified_by_id"	"Record Modified By"	"int"	4	0	"N"		"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_source_version"	10	"owner_group_id"	"Owner Group ID"	"int"	4	0	"N"	1	"N"	"work_group"	"work_group_id"					"N"	"N"				
+"SN_source_version"	11	"record_status"	"Record Status"	"char"	1	0	"N"	"N"	"N"							"N"	"N"				
+"SN_biosequence_rank_list"	1	"biosequence_rank_list_id"	"BioSequence Rank List"	"int"	4	0	"N"		"Y"							"N"	"N"				"pkDEFAULT"
+"SN_biosequence_rank_list"	2	"rank_list_name"	"Rank List Name"	"varchar"	255	0	"N"		"N"			"Y"	"text"	50		"Y"	"Y"	"Y"	"Name of the list of ranked biosequences (as it will appear in a drop-down list)"		
+"SN_biosequence_rank_list"	3	"rank_list_file"	"Rank List File"	"varchar"	255	0	"N"		"N"			"N"	"file"	30		"Y"	"Y"	"N"	"Hit [Browse] and specify the tab-delimited text file which contains the ranking information.  This must be in the correct format."		
+"SN_biosequence_rank_list"	4	"comment"	"Comment"	"text"	16	0	"Y"		"N"			"N"	"textarea"	4		"Y"	"Y"	"N"	"Additional comments about this rank list"		
+"SN_biosequence_rank_list"	5	"sort_order"	"Sort Order"	"int"	4	0	"N"	10	"N"							"N"	"N"	"N"			
+"SN_biosequence_rank_list"	6	"date_created"	"Date Record Created"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"SN_biosequence_rank_list"	7	"created_by_id"	"Record Created By"	"int"	4	0	"N"		"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_biosequence_rank_list"	8	"date_modified"	"Date Record Modified"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"SN_biosequence_rank_list"	9	"modified_by_id"	"Record Modified By"	"int"	4	0	"N"		"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_biosequence_rank_list"	10	"owner_group_id"	"Owner Group ID"	"int"	4	0	"N"	1	"N"	"work_group"	"work_group_id"					"N"	"N"				
+"SN_biosequence_rank_list"	11	"record_status"	"Record Status"	"char"	1	0	"N"	"N"	"N"							"N"	"N"				
+"SN_snp_plate"	1	"plate_id"	"Plate ID"	"int"	4	0	"N"		"Y"							"N"	"N"				"pkDEFAULT"
+"SN_snp_plate"	2	"contact_id"	"Contact"	"int"	4	0	"N"		"N"	"contact"	"contact_id"	"Y"	"current_contact_id"	" "		"Y"	"Y"	"N"	"PI for this plate"		
+"SN_snp_plate"	3	"project_id"	"Project"	"int"	4	0	"N"		"N"	"project"	"project_id"	"Y"	"optionlist"			"Y"	"Y"	"N"	"Project to which the plate belongs"	"SELECT project_id, name + ' ['+budget+']' FROM $TB_PROJECT WHERE PI_contact_id='$contact_id' ORDER BY name"	
+"SN_snp_plate"	4	"plate_name"	"Plate Title"	"varchar"	100	0	"N"		"N"			"Y"	"text"	50		"Y"	"Y"	"N"	"Title of this plate"		
+"SN_snp_plate"	5	"plate_tag"	"Plate Tag"	"varchar"	20	0	"N"		"N"			"Y"	"text"	20		"Y"	"Y"	"Y"	"Short tag (name) of this plate.  Treat this like a directory/folder name.  Do not use spaces or non-standard characters."		
+"SN_snp_plate"	6	"plate_description"	"Plate Description"	"text"	16	0	"N"		"N"			"Y"	"textarea"	6		"Y"	"Y"	"N"	"Description of this experiment, the sample or samples used, and any other relevant information not contained in the project description or in list-box elements in this form"		
+"SN_snp_plate"	7	"plate_path"	"Plate Path"	"varchar"	255	0	"N"		"N"			"Y"	"text"	50		"Y"	"Y"	"N"	"Data path for this plate (e.g. /data/search/edeutsch/TCells/T_000/human_nci)"		
+"SN_snp_plate"	8	"organism_id"	"Organism"	"int"	4	0	"N"		"N"			"Y"	"optionlist"			"Y"	"Y"	"N"	"Organism from which the sample used for this plate was derived"	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+"SN_snp_plate"	9	"plate_type_id"	"Plate Type"	"int"	4	0	"N"		"N"			"Y"	"optionlist"			"Y"	"Y"	"N"	"Type of plate"	"SELECT plate_type_id, plate_type_name FROM $TBSN_PLATE_TYPE ORDER BY sort_order,plate_type_name"	
+"SN_snp_plate"	10	"instrument_id"	"Instrument"	"int"	4	0	"N"		"N"			"Y"	"optionlist"			"Y"	"Y"	"N"	"Instrument on which this plate was run"	"SELECT instrument_id, instrument_name FROM $TBSN_INSTRUMENT ORDER BY sort_order,instrument_name"	
+"SN_snp_plate"	11	"go_public_date"	"Go Public Date"	"datetime"	8	0	"Y"	"CURRENT_TIMESTAMP"	"N"			"N"	"text"	20		"Y"	"Y"	"N"	"Date that this plate data will go public.  Please use the form 2002-12-31.  Do not enter a date higher than 2030-01-01."		
+"SN_snp_plate"	12	"uri"	"URI"	"varchar"	255	0	"Y"		"N"			"N"	"text"	50		"Y"	"Y"	"N"	"External web page or other URI"		"SELF"
+"SN_snp_plate"	13	"comment"	"Comment"	"text"	16	0	"Y"		"N"			"N"	"textarea"	4		"Y"	"Y"	"N"	"Additional comments"		
+"SN_snp_plate"	14	"date_created"	"Date Record Created"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"SN_snp_plate"	15	"created_by_id"	"Record Created By"	"int"	4	0	"N"	1	"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_snp_plate"	16	"date_modified"	"Date Record Modified"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"SN_snp_plate"	17	"modified_by_id"	"Record Modified By"	"int"	4	0	"N"	1	"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_snp_plate"	18	"owner_group_id"	"Owner Group ID"	"int"	4	0	"N"	1	"N"	"work_group"	"work_group_id"					"N"	"N"				
+"SN_snp_plate"	19	"record_status"	"Record Status"	"char"	1	0	"N"	"N"	"N"							"N"	"N"				
+"SN_plate_type"	1	"plate_type_id"	"Plate Type ID"	"int"	4	0	"N"		"Y"							"N"	"N"				"pkDEFAULT"
+"SN_plate_type"	2	"plate_type_name"	"Plate Type Name"	"varchar"	100	0	"N"		"N"			"Y"	"text"	20		"Y"	"Y"	"Y"	"Short name of this plate type as it will appear in list boxes"		
+"SN_plate_type"	3	"plate_type_description"	"Plate Type Description"	"varchar"	255	0	"N"		"N"			"Y"	"text"	50		"Y"	"Y"	"N"	"More complete description of this plate type"		
+"SN_plate_type"	4	"comment"	"Comment"	"text"	16	0	"Y"		"N"			"N"	"textarea"	4		"Y"	"Y"	"N"	"Additional comments"		
+"SN_plate_type"	5	"sort_order"	"Sort Order"	"int"	2	0	"N"	10	"N"			"N"	"text"	10		"Y"	"Y"	"N"	"Numbers which override alphabetical sorting in a list box"		
+"SN_plate_type"	6	"date_created"	"Date Record Created"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"SN_plate_type"	7	"created_by_id"	"Record Created By"	"int"	2	0	"N"	1	"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_plate_type"	8	"date_modified"	"Date Record Modified"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"SN_plate_type"	9	"modified_by_id"	"Record Modified By"	"int"	2	0	"N"	1	"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_plate_type"	10	"owner_group_id"	"Owner Group ID"	"int"	2	0	"N"	1	"N"	"work_group"	"work_group_id"					"N"	"N"				
+"SN_plate_type"	11	"record_status"	"Record Status"	"char"	1	0	"N"	"N"	"N"							"N"	"N"				
+"SN_instrument_type"	1	"instrument_type_id"	"Instrument Type ID"	"int"	4	0	"N"		"Y"							"N"	"N"				"pkDEFAULT"
+"SN_instrument_type"	2	"instrument_type_name"	"Instrument Type Name"	"varchar"	100	0	"N"		"N"			"Y"	"text"	20		"Y"	"Y"	"Y"	"Short name of this instrument type as it will appear in list boxes"		
+"SN_instrument_type"	3	"instrument_type_description"	"Instrument Type Description"	"varchar"	255	0	"N"		"N"			"Y"	"text"	50		"Y"	"Y"	"N"	"More complete description of this instrument type"		
+"SN_instrument_type"	4	"comment"	"Comment"	"text"	16	0	"Y"		"N"			"N"	"textarea"	4		"Y"	"Y"	"N"	"Additional comments"		
+"SN_instrument_type"	5	"sort_order"	"Sort Order"	"int"	4	0	"N"	10	"N"			"N"	"text"	10		"Y"	"Y"	"N"	"Numbers which override alphabetical sorting in a list box"		
+"SN_instrument_type"	6	"date_created"	"Date Record Created"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"SN_instrument_type"	7	"created_by_id"	"Record Created By"	"int"	4	0	"N"	1	"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_instrument_type"	8	"date_modified"	"Date Record Modified"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"SN_instrument_type"	9	"modified_by_id"	"Record Modified By"	"int"	4	0	"N"	1	"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_instrument_type"	10	"owner_group_id"	"Owner Group ID"	"int"	4	0	"N"	1	"N"	"work_group"	"work_group_id"					"N"	"N"				
+"SN_instrument_type"	11	"record_status"	"Record Status"	"char"	1	0	"N"	"N"	"N"							"N"	"N"				
+"SN_instrument"	1	"instrument_id"	"Instrument ID"	"int"	4	0	"N"		"Y"							"N"	"N"				"pkDEFAULT"
+"SN_instrument"	2	"instrument_type_id"	"Instrument Type"	"int"	4	0	"N"		"N"	"SN_instrument_type"	"instrument_type_id"	"Y"	"optionlist"			"Y"	"Y"	"N"	"Type of Instrument"	"SELECT instrument_type_id,instrument_type_name FROM $TBSN_INSTRUMENT_TYPE ORDER BY sort_order,instrument_type_name"	
+"SN_instrument"	3	"instrument_name"	"Instrument Name"	"varchar"	100	0	"N"		"N"			"Y"	"text"	30		"Y"	"Y"	"Y"	"Short name of this instrument as it will appear in list boxes"		
+"SN_instrument"	4	"instrument_description"	"Instrument Description"	"varchar"	255	0	"N"		"N"			"Y"	"text"	60		"Y"	"Y"	"N"	"More complete description of this instrument"		
+"SN_instrument"	5	"comment"	"Comment"	"text"	16	0	"Y"		"N"			"N"	"textarea"	10		"Y"	"Y"	"N"	"Additional comments"		
+"SN_instrument"	6	"sort_order"	"Sort Order"	"int"	4	0	"N"	10	"N"			"Y"	"text"	10		"Y"	"Y"	"N"	"Numbers which override alphabetical sorting in a list box"		
+"SN_instrument"	7	"date_created"	"Date Record Created"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"SN_instrument"	8	"created_by_id"	"Record Created By"	"int"	4	0	"N"	1	"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_instrument"	9	"date_modified"	"Date Record Modified"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"SN_instrument"	10	"modified_by_id"	"Record Modified By"	"int"	4	0	"N"	1	"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_instrument"	11	"owner_group_id"	"Owner Group ID"	"int"	4	0	"N"	1	"N"	"work_group"	"work_group_id"					"N"	"N"				
+"SN_instrument"	12	"record_status"	"Record Status"	"char"	1	0	"N"	"N"	"N"							"N"	"N"				
+"SN_GetGenotypes"	1	"project_id"	"Project"									"N"	"multioptionlist"	4		"Y"	"Y"	"N"	"Select desired projects to query.  Multiple items may be selected."	"SELECT distinct project_id,project_id FROM SNP.dbo.export_results_view ORDER BY project_id"	
+"SN_GetGenotypes"	2	"plate_id_constraint"	"Plate ID"									"N"	"multioptionlist"	4		"Y"	"Y"	"N"	"Select desired plates to query.  Multiple items may be selected."	"SELECT distinct plate_id,plate_id FROM SNP.dbo.export_results_view ORDER BY plate_id"	
+"SN_GetGenotypes"	3	"assay_id_constraint"	"Assay ID"									"N"	"text"	50		"Y"	"Y"	"N"	"Constraint for assay name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported."		
+"SN_GetGenotypes"	4	"description"	"Call Quality"									"N"	"multioptionlist"	4		"Y"	"Y"	"N"	"Select desired genotype quality level.  Multiple items may be selected."	"SELECT distinct description,description FROM SNP.dbo.export_results_view ORDER BY description"	
+"SN_assay_request"	1	"assay_request_id"	"SNP Assay Request ID"	"int"	4	0	"N"		"Y"							"N"	"N"				"pkDEFAULT"
+"SN_assay_request"	2	"contact_id"	"Contact"	"int"	4	0	"N"		"N"	"contact"	"contact_id"	"Y"	"current_contact_id"			"Y"	"Y"	"N"	"Requestor of this SNP job"		
+"SN_assay_request"	3	"project_id"	"Project"	"int"	4	0	"N"		"N"	"project"	"project_id"	"Y"	"optionlist"			"Y"	"Y"	"N"	"Project under which these SNPs are requested"	"SELECT project_id, name + ' ['+budget+']' FROM $TB_PROJECT WHERE PI_contact_id='$contact_id' ORDER BY name"	
+"SN_assay_request"	4	"cost_scheme_id"	"Cost Structure"	"varchar"	50	0	"N"		"N"			"N"	"optionlist"			"Y"	"Y"	"N"	"Cost Structure from which pricing is calculated"	"SELECT cost_scheme_id,cost_scheme_name FROM $TBSN_COST_SCHEME ORDER BY sort_order,cost_scheme_name"	
+"SN_assay_request"	5	"n_snps"	"Number of SNPs"	"int"	4	0	"N"		"N"			"Y"	"text"			"Y"	"Y"	"N"	"Number of SNPs in this request"		
+"SN_assay_request"	6	"n_samples"	"Number of Samples"	"int"	4	0	"N"		"N"			"Y"	"text"	10		"Y"	"Y"	"N"	"Number of samples to be run"		
+"SN_assay_request"	7	"snp_list_file"	"SNP List File"	"varchar"	255	0	"N"		"N"			"N"	"file"	30		"Y"	"Y"	"N"	"Hit [Browse] and specify the 2-column tab-delimited text file containing the SNP id and sequence.  Please use the rs identifier if possible, include 100-200bp on either side of the SNP, and indicate the SNP in brackets (e.g. [A/G])."		
+"SN_assay_request"	8	"sample_list_file"	"Sample List File"	"varchar"	255	0	"N"		"N"			"N"	"file"	30		"Y"	"Y"	"N"	"Hit [Browse] and specify the 2-column tab-delimited text file containing the sample id and description.   Description is optional."		
+"SN_assay_request"	9	"request_status"	"Request Status"	"varchar"	50	0	"N"		"N"			"Y"	"fixed"			"Y"	"Y"	"N"	"Status of this request"	"SELECT option_key,option_value FROM $TBSN_MISC_OPTION WHERE option_type='job_status' ORDER BY sort_order,option_value"	
+"SN_assay_request"	10	"price"	"Price"	"int"	4	0	"Y"		"N"			"N"	"fixed"			"N"	"Y"	"N"	"Total price for this request"		
+"SN_assay_request"	11	"comment"	"Comment"	"text"	0	0	"Y"		"N"			"N"	"textarea"	4		"Y"	"Y"	"N"	"Additional comments about this request"		
+"SN_assay_request"	12	"date_created"	"Date Record Created"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"				"fixed"			"N"	"Y"				
+"SN_assay_request"	13	"created_by_id"	"Record Created By"	"int"	4	0	"N"		"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_assay_request"	14	"date_modified"	"Date Record Modified"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"				"fixed"			"N"	"Y"				
+"SN_assay_request"	15	"modified_by_id"	"Record Modified By"	"int"	4	0	"N"		"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_assay_request"	16	"owner_group_id"	"Owner Group ID"	"int"	4	0	"N"	1	"N"	"work_group"	"work_group_id"					"N"	"N"				
+"SN_assay_request"	17	"record_status"	"Record Status"	"char"	1	0	"N"	"N"	"N"				"fixed"			"N"	"Y"				
+"SN_cost_scheme"	1	"cost_scheme_id"	"Cost Scheme ID"	"int"	4	0	"N"		"Y"							"N"	"N"				"pkDEFAULT"
+"SN_cost_scheme"	2	"cost_scheme_name"	"Scheme Name"	"varchar"	50	0	"N"		"N"			"Y"	"text"	50		"Y"	"Y"	"Y"	"Short name of this cost scheme"		
+"SN_cost_scheme"	3	"comment"	"Comment"	"varchar"	255	0	"Y"		"N"			"N"	"textarea"	4		"Y"	"Y"	"N"	"Additional comments"		
+"SN_cost_scheme"	4	"sort_order"	"Sort Order"	"int"	4	0	"N"	10	"N"							"N"	"N"	"N"			
+"SN_cost_scheme"	5	"date_created"	"Date Record Created"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"SN_cost_scheme"	6	"created_by_id"	"Record Created By"	"int"	4	0	"N"		"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_cost_scheme"	7	"date_modified"	"Date Record Modified"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"SN_cost_scheme"	8	"modified_by_id"	"Record Modified By"	"int"	4	0	"N"		"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_cost_scheme"	9	"owner_group_id"	"Owner Group ID"	"int"	4	0	"N"	1	"N"	"work_group"	"work_group_id"					"N"	"N"				
+"SN_cost_scheme"	10	"record_status"	"Record Status"	"char"	1	0	"N"	"N"	"N"							"N"	"N"				
+"SN_snp_selection_run"	1	"snp_selection_run_id"	"SNP Selection Run ID"	"int"	4	0	"N"		"Y"			"Y"									
+"SN_snp_selection_run"	2	"snp_selection_run_name"	"SNP Selection Run Name"	"varchar"	255	0	"N"		"N"			"Y"	"text"	50		"Y"	"Y"	"Y"	"Name of this SNP selection run"		
+"SN_snp_selection_run"	3	"snp_selection_run_description"	"SNP Selection Run Description"	"text"	16	0	"N"		"N"			"Y"	"textarea"	4		"Y"	"Y"	"N"	"Description of this SNP selection run (e.g., 'Primary Selection for JDRF Chr. 10', 'Extra SNPs for JDRF Chr. 10')"		
+"SN_snp_selection_run"	4	"run_date"	"SNP Selection Run Date"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"			"Y"	"textdate"	20		"Y"	"Y"	"N"	"Date of this SNP selection run"		
+"SN_snp_selection_run"	5	"date_created"	"Date Record Created"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"SN_snp_selection_run"	6	"created_by_id"	"Record Created By"	"int"	4	0	"N"		"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_snp_selection_run"	7	"date_modified"	"Date Record Modified"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"SN_snp_selection_run"	8	"modified_by_id"	"Record Modified By"	"int"	4	0	"N"		"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_snp_selection_run"	9	"owner_group_id"	"Owner Group ID"	"int"	4	0	"N"	1	"N"	"work_group"	"work_group_id"					"N"	"N"				
+"SN_snp_selection_run"	10	"record_status"	"Record Status"	"char"	1	0	"N"	"N"	"N"							"N"	"N"	"N"			
+"SN_status"	1	"status_id"	"Status ID"	"int"	4	0	"N"		"Y"							"N"	"N"				"pkDEFAULT"
+"SN_status"	2	"status_name"	"Status Name"	"text"	4	0	"N"		"N"			"Y"	"text"	50		"Y"	"Y"	"Y"	"SNP status name: Library, Picked, Failed Design, Failed Constant"		
+"SN_status"	3	"status_description"	"Status Description"	"text"	16	0	"N"		"N"			"Y"	"textarea"	4		"Y"	"Y"	"N"	"Longer description of the SNP status"		
+"SN_status"	3	"comment"	"Comment"	"text"	16	0	"Y"		"N"			"N"	"textarea"	4		"Y"	"Y"	"N"	"Additional comments"		
+"SN_status"	4	"sort_order"	"Sort Order"	"int"	4	0	"N"	10	"N"							"N"	"N"	"N"			
+"SN_status"	5	"date_created"	"Date Record Created"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"SN_status"	6	"created_by_id"	"Record Created By"	"int"	4	0	"N"		"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_status"	7	"date_modified"	"Date Record Modified"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"SN_status"	8	"modified_by_id"	"Record Modified By"	"int"	4	0	"N"		"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_status"	9	"owner_group_id"	"Owner Group ID"	"int"	4	0	"N"	1	"N"	"work_group"	"work_group_id"					"N"	"N"				
+"SN_status"	10	"record_status"	"Record Status"	"char"	1	0	"N"	"N"	"N"							"N"	"N"				
+"SN_selected_snp"	1	"selected_snp_id"	"Selected SNP ID"	"varchar"	255	0	"N"		"N"	"SN_snp"	"snp_id"	"Y"	"text"	40				"Y"			
+"SN_selected_snp"	2	"snp_selection_run_id"	"SNP Selection Run ID"	"int"	4	0	"N"		"N"	"SN_snp_selection_run"	"snp_selection_run_id"	"Y"				"Y"	"Y"	"N"			
+"SN_selected_snp"	3	"jared_id"	"Jared Roach ID"	"varchar"	255	0	"N"		"N"			"N"	"text"	40		"Y"	"Y"	"N"	"ID for this SNP from Jared's merging"		
+"SN_selected_snp"	4	"snp_id"	"SNP ID"	"int"	4	0	"N"		"N"			"Y"				"Y"	"Y"	"N"			
+"SN_selected_snp"	5	"position"	"SNP Position"	"int"	4	0	"N"		"N"			"Y"				"Y"	"Y"	"N"	"Position of this SNP, relative to the biosquence"		
+"SN_selected_snp"	6	"quality_score"	"Quality Score"	"int"	4	0	"N"		"N"			"Y"	"text"	40		"Y"	"Y"	"N"			
+"SN_selected_snp"	7	"sequence"	"SNP Sequence"	"text"	16	0	"N"		"N"			"Y"				"Y"	"Y"	"N"			
+"SN_selected_snp"	8	"sequence_is_modified"	"Original Sequence Modified?"	"varchar"	1	0	"N"		"N"			"Y"				"Y"	"Y"	"N"	"Has the original sequence been mofidied?  Usually from merged nearby SNPs."		
+"SN_selected_snp"	9	"status"	"Status"	"text"	4	0	"N"		"N"	"SN_status"	"description"	"Y"	"text"	40		"Y"	"Y"	"N"	"Current status of this SNP.  Valid codes are 'Library', 'Picked', 'Failed design', 'Failed constant'"		
+"SN_selected_snp"	10	"parent_gene_biosequence_id"	"Parent Gene Biosequence ID"	"int"	4	0	"N"		"N"			"Y"				"Y"	"Y"	"N"			
+"SN_selected_snp"	11	"comment"	"Comment"	"text"	16	0	"Y"		"N"			"N"	"textarea"	4		"Y"	"Y"	"N"	"Additional comments"		
+"SN_selected_snp"	12	"created_by_id"	"Record Created By"	"int"	4	0	"N"		"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_selected_snp"	13	"date_modified"	"Date Record Modified"	"datetime"	8	0	"N"	"CURRENT_TIMESTAMP"	"N"							"N"	"N"				
+"SN_selected_snp"	14	"modified_by_id"	"Record Modified By"	"int"	4	0	"N"		"N"	"contact"	"contact_id"					"N"	"N"				
+"SN_selected_snp"	15	"owner_group_id"	"Owner Group ID"	"int"	4	0	"N"	1	"N"	"work_group"	"work_group_id"					"N"	"N"				
+"SN_selected_snp"	16	"record_status"	"Record Status"	"char"	1	0	"N"	"N"	"N"							"N"	"N"				
+"SN_replaced_snp"	1	"snp_id"	"SNP ID"	"int"	4	0	"N"		"N"	"SN_snp"	"snp_id"	"Y"				"Y"	"Y"	"Y"	"SNP ID of the chosed replacement SNP"		
+"SN_replaced_snp"	2	"snp_selection_run_id"	"SNP Selection Run ID"	"int"	4	0	"N"		"N"	"SN_snp_selection_run"	"snp_selection_run_id"	"Y"				"Y"	"Y"	"Y"	"SNP Selection Run of the replacement"		
+"SN_replaced_snp"	3	"replaced_snp_id"	"Replaced SNP ID"	"int"	4	0	"N"		"N"			"Y"				"Y"	"Y"	"Y"	"SNP ID of the SNP that has been replaced"		
