@@ -1338,13 +1338,13 @@ sub updateFromSummaryFiles {
       unless ($search_hit_id) {
         print "\nERROR: Unable to find search_hit_id with\n".
               "$sql\n\n";
-        return;
+        next;
       }
 
       #### If a quantitation_id also turned up, kip this one
       if ($quantitation_id) {
-        print "INFO: There is already a quantitation record for this ".
-          "search_hit_id.  Skip.\n";
+        print "INFO: There is already a quantitation record for $file_root ".
+          "(search_hit_id $search_hit_id).  Skip.\n";
         next;
       }
 
