@@ -255,6 +255,14 @@ tables.
 If this doesn't work.  Do not proceed, debug first.
 
 
+-------------------------------------------------------------------------------
+7) Install Individual Modules
+
+Now follow the individual module install notes, e.g.:
+
+$SBEAMS/doc/Proteomics/Proteomics.installnotes
+
+
 
 
 
