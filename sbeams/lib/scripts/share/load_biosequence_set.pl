@@ -391,6 +391,10 @@ sub loadBiosequenceSet {
   }
 
 
+  #### Create a hash to store biosequence_names that have been seen
+  my %biosequence_names;
+
+
   #### Definitions for loop
   my ($biosequence_id,$biosequence_name,$biosequence_desc,$biosequence_seq);
   my $counter = 0;
@@ -436,7 +440,7 @@ sub loadBiosequenceSet {
         $biosequence_id = get_biosequence_id(
           biosequence_set_id => $biosequence_set_id,
           biosequence_name => $rowdata{biosequence_name});
-        if ($biosequence_id > 0) {
+        if (defined($biosequence_id) && $biosequence_id > 0) {
           $insert = 0; $update = 1;
         } else {
           print "WARNING: biosequence_name = '$rowdata{biosequence_name}' ".
@@ -446,23 +450,35 @@ sub loadBiosequenceSet {
       }
 
 
-      #### Insert the data into the database
-      loadBiosequence(insert=>$insert,update=>$update,
-        table_name=>"${DATABASE}biosequence",
-        rowdata_ref=>\%rowdata,PK=>"biosequence_id",
-        PK_value => $biosequence_id,
-        verbose=>$VERBOSE,
-	testonly=>$TESTONLY,
-        );
+
+      #### Verify that we haven't done this one already
+      if ($biosequence_names{$rowdata{biosequence_name}}) {
+        print "\nWARNING: Duplicate biosequence_name ".
+          "'$rowdata{biosequence_name}'in file!  Skipping the duplicate.\n";
+
+      } else {
+        #### Insert the data into the database
+        loadBiosequence(insert=>$insert,update=>$update,
+          table_name=>"${DATABASE}biosequence",
+          rowdata_ref=>\%rowdata,PK=>"biosequence_id",
+          PK_value => $biosequence_id,
+          verbose=>$VERBOSE,
+	  testonly=>$TESTONLY,
+          );
+
+        $counter++;
+      }
+
 
       #### Reset temporary holders
       $information = "";
       $sequence = "";
 
+      #### Add this one to the list of already seen
+      $biosequence_names{$rowdata{biosequence_name}} = 1;
 
       #### Print some counters for biosequences INSERTed/UPDATEd
       #last if ($counter > 5);
-      $counter++;
       print "$counter..." if ($counter % 100 == 0);
 
     }
