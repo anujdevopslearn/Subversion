@@ -250,6 +250,11 @@ sub printJavascriptFunctions {
 	      array_name = array_name.substr(0,array_name.length-9);
 	    }
 
+	    serial_number = array_name;
+	    if (serial_number.substr(serial_number.length-1,99) >= "A") {
+	      serial_number = serial_number.substr(0,array_name.length-1);
+	    }
+
 	    today = new Date();
 	    date_value =
 	      "" + today.getFullYear() +
@@ -257,10 +262,10 @@ sub printJavascriptFunctions {
 	      addLeadingZeros(today.getDate(),2)
 	    date_value = date_value.substr(2,6);
 
-            start_group = Math.round(array_name/100-0.5)*100+1;
+            start_group = Math.round(serial_number/100-0.5)*100+1;
             start_group = addLeadingZeros(start_group.toString(),5);
 
-            end_group = Math.round(array_name/100+0.5)*100;
+            end_group = Math.round(serial_number/100+0.5)*100;
             end_group = addLeadingZeros(end_group.toString(),5);
 
             array_name = addLeadingZeros(array_name.toString(),5);
