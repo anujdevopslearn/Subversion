@@ -424,35 +424,50 @@ sub printEntryForm {
 
 
       #### Build BIOSEQENCE_SET constraint
-      my $biosequence_set_clause = "";
-      if ($parameters{biosequence_set_id}) {
-        $biosequence_set_clause = "   AND BS.biosequence_set_id IN ( $parameters{biosequence_set_id} )";
-      }
+      my $biosequence_set_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"BS.biosequence_set_id",
+        constraint_type=>"int_list",
+        constraint_name=>"BioSequence Set",
+        constraint_value=>$parameters{biosequence_set_constraint} );
+      return if ($biosequence_set_clause == -1);
 
 
       #### Build BIOSEQUENCE_NAME constraint
-      my $biosequence_name_clause = "";
-      if ($parameters{biosequence_name_constraint}) {
-        if ($parameters{biosequence_name_constraint} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
-          print "<H4>Cannot parse BioSequence Name Constraint!  Check syntax.</H4>\n\n";
-          return;
-        } else {
-          $biosequence_name_clause = "   AND BS.biosequence_name LIKE '$parameters{biosequence_name_constraint}'";
-        }
-      }
+      my $biosequence_name_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"BS.biosequence_name",
+        constraint_type=>"plain_text",
+        constraint_name=>"BioSequence Name",
+        constraint_value=>$parameters{biosequence_name_constraint} );
+      return if ($biosequence_name_clause == -1);
+
+
+      #### Build BIOSEQUENCE_NAME constraint
+      my $biosequence_gene_name_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"BS.biosequence_gene_name",
+        constraint_type=>"plain_text",
+        constraint_name=>"BioSequence Gene Name",
+        constraint_value=>$parameters{biosequence_gene_name_constraint} );
+      return if ($biosequence_gene_name_clause == -1);
 
 
       #### Build BIOSEQUENCE_SEQ constraint
-      my $biosequence_seq_clause = "";
-      if ($parameters{biosequence_seq_constraint}) {
-        if ($parameters{biosequence_seq_constraint} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
-          print "<H4>Cannot parse Sequence Constraint!  Check syntax.</H4>\n\n";
-          return;
-        } else {
-          $biosequence_seq_clause = "   AND BS.biosequence_seq LIKE '$parameters{biosequence_seq_constraint}'";
-          $biosequence_seq_clause =~ s/\*/\%/g;
-        }
-      }
+      my $biosequence_seq_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"BS.biosequence_seq",
+        constraint_type=>"plain_text",
+        constraint_name=>"BioSequence Sequence",
+        constraint_value=>$parameters{biosequence_seq_constraint} );
+      return if ($biosequence_seq_clause == -1);
+      $biosequence_seq_clause =~ s/\*/\%/g;
+
+
+      #### Build BIOSEQUENCE_DESC constraint
+      my $biosequence_desc_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"BS.biosequence_desc",
+        constraint_type=>"plain_text",
+        constraint_name=>"BioSequence Description",
+        constraint_value=>$parameters{biosequence_desc_constraint} );
+      return if ($biosequence_desc_clause == -1);
+
 
 
       #### Build SORT ORDER
@@ -515,7 +530,9 @@ sub printEntryForm {
 	 WHERE 1 = 1
 	$biosequence_set_clause
 	$biosequence_name_clause
+	$biosequence_gene_name_clause
 	$biosequence_seq_clause
+	$biosequence_desc_clause
 	$order_by_clause
        ~;
 
