@@ -285,7 +285,7 @@ function setDefaultQALocation() {
 
   protocol_name = document.MainForm.protocol_id.options[document.MainForm.protocol_id.selectedIndex].text;
   protocol_name = protocol_name.toString();
-  extension = ".?";
+  extension = ".csv";
   
   if (protocol_name.search(/QuantArray/i)>-1) { extension = ".qa"; }
   if (protocol_name.search(/Dapple/i)>-1) { extension = ".dapple"; }
