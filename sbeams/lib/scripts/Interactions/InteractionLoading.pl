@@ -181,7 +181,6 @@ organismName1 => $indexHash{Organism_bioentity1_name},
 	my %organismName = $sbeams->selectTwoColumnHash(qq /Select Upper(organism_name),organism_id from $TB_ORGANISM /);
 	$organismName = \%organismName;
 
-	
 	my %interactionTypes = $sbeams->selectTwoColumnHash(qq /Select Upper(interaction_type_name), interaction_type_id from $TBIN_INTERACTION_TYPE/);
 	$interactionTypes = \%interactionTypes;
 	
@@ -264,9 +263,7 @@ sub processFile
 	{ 
 #do not take empty lines or the column header line but
 #need to make sure the columns are in the correct order 
-#		$line =~ s/[\r\n]//g;
 		next if $line =~ /^\s*$/;
-
 		next if $count == 1 and do
 		{ 
 			$line =~ s/[\r\n]//g;	
@@ -316,8 +313,7 @@ sub processFile
 		$INFOPROTEIN1{$count-2}->{group} =~ s/^([a-z]+)\s+([a-z]+)$/$1 $2/i;
 		$INFOPROTEIN1{$count-2}->{group}= uc($INFOPROTEIN1{$count-2}->{group});
 		$INFOPROTEIN1{$count-2}->{bioentityType1} = uc($INFOPROTEIN1{$count-2}->{bioentityType1});
-		
-				
+	
 		if (!($INFOPROTEIN1{$count-2}->{bioentityComName1}) and !($INFOPROTEIN1{$count-2}->{bioentityCanName1}))
 		{
 			print "Detected error1: bioentity1_common_name and bioentiy1_canonical_name\n";
@@ -351,7 +347,7 @@ sub processFile
 				$INFOPROTEIN1{$count-2}->{bioentityCanGeneName1} = $INFOPROTEIN1{$count-2}->{bioentityFullName1};
 				undef($INFOPROTEIN1{$count-2}->{bioentityFullName1});
 		}
-#		
+# Not implemented 		
 #		if($INFOPROTEIN1{$count-2}->{bioentityReg1} and !($regTypes->{$INFOPROTEIN1{$count-2}->{bioentityReg1}}))
 #		{
 #				Error (\@infoArray," $INFOPROTEIN1{$count-2}->{bioentityReg1}: no such type in  $TBIN_REGULATOR_FEATURE_TYPE table");
@@ -371,7 +367,7 @@ sub processFile
 		where interaction_group_name ='$INFOPROTEIN1{$count-2}->{group}' 
 		and organism_id = $organismName->{$INFOPROTEIN1{$count-2}->{organismName1}}/;
 		@rows = $sbeams->selectOneColumn($interactionGroupQuery);					
-		if ($INFOPROTEIN1{$count-2}->{group} and !(scalar(@rows))))
+		if ($INFOPROTEIN1{$count-2}->{group} and !(scalar(@rows)))
 		{
 				
 				Error (\@infoArray," $INFOPROTEIN1{$count-2}->{group}: this group is not associated with the given organism in $TBIN_INTERACTION_GROUP table");
@@ -393,7 +389,7 @@ sub processFile
 			if ( ! $INFOPROTEIN1{$count-2}->{bioentityCanName1})
 			{
 				$INFOPROTEIN1{$count-2}->{bioentityCanName1} = $locusID;
-				Error (\@infoArray, "$INFOPROTEIN1{$count-2}->{bioentityCanName1}: could not find PROTEIN for this locsuID");
+				Error (\@infoArray, "$INFOPROTEIN1{$count-2}->{bioentityCanName1}: could not find PROTEIN for this locusID");
 				
 			}
 		}
@@ -406,9 +402,7 @@ sub processFile
 			if ( ! $INFOPROTEIN1{$count-2}->{bioentityCanName1})
 			{
 				$INFOPROTEIN1{$count-2}->{bioentityCanName1} = $locusID;
-				Error (\@infoArray,"$INFOPROTEIN1{$count-2}->{bioentityCanName1}: could not find RNA for this locsuID");
-			#	delete $INFOPROTEIN1{$count-2};
-			#	next;
+				Error (\@infoArray,"$INFOPROTEIN1{$count-2}->{bioentityCanName1}: could not find RNA for this locusID");
 			}
 			
 		}
@@ -470,12 +464,12 @@ sub processFile
 		}
 	
 #need to make sure that a group is associated with this organism
-		my @rows;
+	
 		$interactionGroupQuery = qq /select interaction_group_id from $TBIN_INTERACTION_GROUP
 		where interaction_group_name = '$INFOPROTEIN2{$count-2}->{group}' 
 		and organism_id = $organismName->{$INFOPROTEIN2{$count-2}->{organismName2}}/;		
 		@rows = $sbeams->selectOneColumn($interactionGroupQuery);					
-		if ($INFOPROTEIN2{$count-2}->{group} and !(scalar(@rows))))
+		if ($INFOPROTEIN2{$count-2}->{group} and !(scalar(@rows)))
 		{
 				Error (\@infoArray,"$INFOPROTEIN2{$count-2}->{group}: this group is not associated with the given organism in $TBIN_INTERACTION_GROUP table");
 				delete $INFOPROTEIN2{$count-2};
@@ -740,7 +734,7 @@ sub checkPopulateBioentity
 			full outer join $TBIN_INTERACTION_GROUP IG on (SDO.organism_id = IG.organism_id)
 			where BT.bioentity_type_name = \'$hashRef->{$record}->{'bioentityType'.$num}\'
 			and SDO.organism_name = \'$hashRef->{$record}->{'organismName'.$num}\' 
-			and IG.interaction_group_name = \'$hashRef->{$record}->{'group'}\'";
+			and IG.interaction_group_id = \'$hashRef->{$record}->{'group'}\'";
 
 			my $commonClause =  qq / and BE.bioentity_common_name = /;
 			my $canonicalClause = qq / and bioentity_canonical_name =  /;
@@ -789,6 +783,7 @@ sub checkPopulateBioentity
 				
 #need to make sure we are pulling the same record
 					my @rows = $sbeams->selectOneColumn($bioentityQueryCommon);	
+				
 					my $nrows = scalar(@rows);
 					my $bioentityIDCommon = $rows[0] if $nrows == 1;
 					$bioentityIDCommon = 0 if $nrows == 0; 
@@ -799,6 +794,8 @@ sub checkPopulateBioentity
 					delete $INTERACTION{$record};
 					next;
 					}
+					
+					
 					@rows = $sbeams->selectOneColumn($bioentityQueryCanonical);	
 					$nrows = scalar(@rows);
 					my $bioentityIDCanonical = $rows[0] if $nrows == 1;
@@ -815,7 +812,7 @@ sub checkPopulateBioentity
 					{  
 							my $subCommonQuery = "Select bioentity_canonical_name from $TBIN_BIOENTITY
 							where bioentity_common_name =\'$commonName\'";
-							
+						
 							 my @returnedRow = $sbeams->selectOneColumn($subCommonQuery);
 							 if ($returnedRow[0])
 							 {
@@ -829,6 +826,7 @@ sub checkPopulateBioentity
 					{
 							my $subCanonicalQuery = "Select bioentity_common_name from $TBIN_BIOENTITY
 							where bioentity_common_name = \'$canName\'"; 
+					
 							my @returnedRow = $sbeams->selectOneColumn($subCanonicalQuery);
 							if ($returnedRow[0])
 							{
@@ -846,7 +844,8 @@ sub checkPopulateBioentity
 							$bioentityIDCommon=$bioentityIDCanonical unless ($bioentityIDCommon);	
 							$insert = 1 unless ($bioentityIDCommon);
 							$update = 0 unless (!$insert);
-							 							 
+							 
+								
 #If one or no row was fetched, do a update or insert based on the presence of bioentityID
 							
 							
@@ -873,6 +872,8 @@ sub checkPopulateBioentity
 			}
 			elsif ($commonClause and !$canonicalClause)
 			{
+				
+				
 					my @rows = $sbeams->selectOneColumn($bioentityQueryCommon);	
 					my $nrows = scalar(@rows);
 					my $bioentityIDCommon = $rows[0] if $nrows == 1;
@@ -897,6 +898,7 @@ sub checkPopulateBioentity
 			}
 			else 
 			{
+								
 					my @rows = $sbeams->selectOneColumn($bioentityQueryCanonical);	
 					my $nrows = scalar(@rows);
 					my $bioentityIDCanonical = $rows[0] if $nrows == 1;
@@ -911,6 +913,7 @@ sub checkPopulateBioentity
 					$insert = 1 unless ($bioentityIDCanonical);
 					$update = 0 unless (!$insert);
 					
+								
 					my $bioentityPK = insertOrUpdateBioentity($hashRef->{$record},$num,$bioentityIDCanonical,$insert,$update); 
 					if($INTERACTION{$record} and $bioentityPK)
 					{	
@@ -929,6 +932,7 @@ sub insertOrUpdateBioentity
 		if($insert)
 		{
 				print "inserting a BIOENTITY\n";
+				
 		}
 		else 
 		{
