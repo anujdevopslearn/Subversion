@@ -23,7 +23,7 @@ proteomics_experiment	4	experiment_name	Experiment Title	varchar	100	0	N		N			Y	
 proteomics_experiment	5	experiment_tag	Experiment Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this experiment		
 proteomics_experiment	6	experiment_description	Experiment Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	One-line description of this experiment		
 proteomics_experiment	7	experiment_path	Experiment Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	Data path for this experiment (e.g. /data/search/edeutsch/TCells/T_000/human_nci)		
-proteomics_experiment	8	sample_id	Sample	int	8	0	N		N			Y	optionlist			Y	Y	N	Sample used for this experiment	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+proteomics_experiment	8	organism_id	Organism	int	8	0	N		N			Y	optionlist			Y	Y	N	Organism from which the sample used for this experiment was derived	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 proteomics_experiment	9	quant_normalization	D0 / D8 Normalization Factor	real	4	0	Y		N			N	text	10		Y	Y	N	"Optional Normalization factor for d0/d8 quantitation ratio.  This will not be known until some data analysis has already been performed.  If ratios that should be calibrated to 1:1 appear as 1.2:1, enter 1.2 here to adjust."		
 proteomics_experiment	10	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
 proteomics_experiment	11	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
@@ -190,5 +190,85 @@ PR_user_annotation_label	11	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_gro
 PR_user_annotation_label	12	record_status	Record Status	char	1	0	N	N	N							N	N				
 PR_SummarizeFractions	1	input_form_format	Input Form Format									N	optionlist		refreshDocument()	Y	Y	N	Options for level of detail and layout for this input form	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'input_form_options' ORDER BY sort_order,option_value"	
 PR_SummarizeFractions	2	experiment_id	Experiments									N	multioptionlist	4		Y	Y	N	Select desired Experiments to include in query.  Multiple items may be selected.  At least one must be selected	MANUAL	
-PR_SummarizeFractions	3	project_id	Project									N	multioptionlist	4		Y	Y	N	Project in which to search for experiments	"SELECT project_id, name FROM $TB_PROJECT WHERE record_status != 'D' ORDER BY name"
-PR_SummarizeFractions	4	row_limit	Maximum Rows									N	text	10		Y	2	N	"Limit the numbers of rows displayed.  If not provided, default is 1000 rows."	
+PR_SummarizeFractions	3	project_id	Project									N	multioptionlist	4		Y	Y	N	Project in which to search for experiments	"SELECT project_id, name FROM $TB_PROJECT WHERE record_status != 'D' ORDER BY name"	
+PR_SummarizeFractions	4	row_limit	Maximum Rows									N	text	10		Y	2	N	"Limit the numbers of rows displayed.  If not provided, default is 1000 rows."		
+PR_instrument_type	1	instrument_type_id	Instrument Type ID	int	8	0	N		Y							N	N				pkDEFAULT
+PR_instrument_type	2	instrument_type_name	Instrument Type Name	varchar	100	0	N		N			Y	text	20		Y	Y	Y	Short name of this instrument type as it will appear in list boxes		
+PR_instrument_type	3	instrument_type_description	Instrument Type Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	More complete description of this instrument type		
+PR_instrument_type	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PR_instrument_type	5	sort_order	Sort Order	int	8	0	N	10	N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
+PR_instrument_type	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_instrument_type	7	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+PR_instrument_type	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_instrument_type	9	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+PR_instrument_type	10	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+PR_instrument_type	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+PR_instrument	1	instrument_id	Instrument ID	int	8	0	N		Y							N	N				pkDEFAULT
+PR_instrument	2	instrument_type_id	Instrument Type	int	8	0	N		N			Y	optionlist			Y	Y	N	Type of Instrument	"SELECT instrument_type_id,instrument_type_name FROM $TBPR_INSTRUMENT_TYPE ORDER BY sort_order,instrument_type_name"	
+PR_instrument	3	instrument_name	Instrument Name	varchar	100	0	N		N			Y	text	30		Y	Y	Y	Short name of this instrument as it will appear in list boxes		
+PR_instrument	4	instrument_description	Instrument Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	More complete description of this instrument		
+PR_instrument	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PR_instrument	6	sort_order	Sort Order	int	8	0	N	10	N			Y	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
+PR_instrument	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_instrument	8	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+PR_instrument	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_instrument	10	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+PR_instrument	11	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+PR_instrument	12	record_status	Record Status	char	1	0	N	N	N							N	N				
+PR_experiment_type	1	experiment_type_id	Experiment Type ID	int	8	0	N		Y							N	N				pkDEFAULT
+PR_experiment_type	2	experiment_type_name	Experiment Type Name	varchar	100	0	N		N			Y	text	20		Y	Y	Y	Short name of this experiment type as it will appear in list boxes		
+PR_experiment_type	3	experiment_type_description	Experiment Type Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	More complete description of this experiment type		
+PR_experiment_type	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PR_experiment_type	5	sort_order	Sort Order	int	8	0	N	10	N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
+PR_experiment_type	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_experiment_type	7	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+PR_experiment_type	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_experiment_type	9	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+PR_experiment_type	10	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+PR_experiment_type	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+PR_request_status	1	request_status_id	Request Status ID	int	8	0	N		Y							N	N				pkDEFAULT
+PR_request_status	2	request_status_name	Request Status Name	varchar	100	0	N		N			Y	text	20		Y	Y	Y	Short name of this request status as it will appear in list boxes		
+PR_request_status	3	request_status_description	Request Status Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	More complete description of this request status		
+PR_request_status	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PR_request_status	5	sort_order	Sort Order	int	8	0	N	10	N			Y	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
+PR_request_status	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_request_status	7	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+PR_request_status	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_request_status	9	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+PR_request_status	10	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+PR_request_status	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+PR_funding_status	1	funding_status_id	Funding Status ID	int	8	0	N		Y							N	N				pkDEFAULT
+PR_funding_status	2	funding_status_name	Funding Status Name	varchar	100	0	N		N			Y	text	20		Y	Y	Y	Short name of this funding status as it will appear in list boxes		
+PR_funding_status	3	funding_status_description	Funding Status Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	More complete description of this funding status		
+PR_funding_status	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PR_funding_status	5	sort_order	Sort Order	int	8	0	N	10	N			Y	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
+PR_funding_status	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_funding_status	7	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+PR_funding_status	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_funding_status	9	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+PR_funding_status	10	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+PR_funding_status	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+PR_proteomics_experiment_request	1	experiment_request_id	Experiment Request ID	int	8	0	N		Y							N	N				pkDEFAULT
+PR_proteomics_experiment_request	2	contact_id	Requesting Contact	int	8	0	N		N	contact	contact_id	Y	current_contact_id	 		Y	Y	N	Requestor of this experiment		
+PR_proteomics_experiment_request	3	PI_contact_id	PI Contact	int	8	0	N		N	contact	contact_id	Y	scrolloptionlist	4		Y	Y	N	PI for this experiment	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+PR_proteomics_experiment_request	4	project_id	Project	int	8	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project to which the experiment belongs	"SELECT project_id, name + ' ['+budget+']' FROM $TB_PROJECT WHERE PI_contact_id='$contact_id' ORDER BY name"	
+PR_proteomics_experiment_request	5	funding_status_id	Funding Status	int	8	0	N		N			Y	optionlist			Y	Y	N	Select the funding status for this experiment or the project with which it is associated	"SELECT funding_status_id,funding_status_name FROM $TBPR_FUNDING_STATUS ORDER BY sort_order,funding_status_name"	
+PR_proteomics_experiment_request	6	budget_number	Budget Number	varchar	20	0	N		N			Y	text	20		Y	Y	N	Budget Number which is funding this experiment.  Enter NA if none.  Unfunded experiments must be cleared with Dave Goodlett prior to submission		
+PR_proteomics_experiment_request	7	experiment_name	Experiment Title	varchar	100	0	N		N			Y	text	50		Y	Y	N	Title of this experiment	
+PR_proteomics_experiment_request	8	experiment_tag	Experiment Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this experiment	
+PR_proteomics_experiment_request	9	experiment_description	Experiment Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	One-line description of this experiment	
+PR_proteomics_experiment_request	10	organism_id	Sample Organism	int	8	0	N		N			Y	optionlist			Y	Y	N	Organism from which the sample used for this experiment was derived	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"
+PR_proteomics_experiment_request	11	experiment_type_id	Experiment Type	int	8	0	N		N			Y	optionlist			Y	Y	N	Type of Experiment	"SELECT experiment_type_id,experiment_type_name FROM $TBPR_EXPERIMENT_TYPE ORDER BY sort_order,experiment_type_name"
+PR_proteomics_experiment_request	12	instrument_type_id	Instrument Type	int	8	0	N		N			Y	optionlist			Y	Y	N	Type of Instrument	"SELECT instrument_type_id,instrument_type_name FROM $TBPR_INSTRUMENT_TYPE ORDER BY sort_order,instrument_type_name"
+PR_proteomics_experiment_request	13	initial_search_set_id	Initial Search Set	int	8	0	N		N			Y	optionlist			Y	Y	N	Select the initial BioSequenceSet ('database') against which SEQUEST should be run	"SELECT biosequence_set_id,set_path FROM $TBPR_BIOSEQUENCE_SET ORDER BY set_path"
+PR_proteomics_experiment_request	14	number_of_runs	Number of LCMS runs	varchar	50	0	N		N			Y	text	20		Y	Y	N	"Number of LC/MS runs for this experiment/sample (e.g., 30-50 SCX fractions is typical)"	
+PR_proteomics_experiment_request	15	other1_contact_id	Other Contact	int	8	0	N		N	contact	contact_id	N	scrolloptionlist	4		Y	Y	N	You may specify another contact for this experiment.  Confirmation/completion emails will be sent to this person	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"
+PR_proteomics_experiment_request	16	other2_contact_id	Other Contact 2	int	8	0	N		N	contact	contact_id	N	scrolloptionlist	4		Y	Y	N	You may specify another contact for this experiment.  Confirmation/completion emails will be sent to this person	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"
+PR_proteomics_experiment_request	17	request_status_id	Request Status	int	8	0	N		N			Y	optionlist			Y	Y	N	Status of this request	"SELECT request_status_id,request_status_name FROM $TBPR_REQUEST_STATUS ORDER BY sort_order,request_status_name"
+PR_proteomics_experiment_request	18	comment	Comment	text	16	0	Y		N			N	textarea	8		Y	Y	N	Additional comments or notes about this submission or how the experiment should be processed	
+PR_proteomics_experiment_request	19	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+PR_proteomics_experiment_request	20	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N			
+PR_proteomics_experiment_request	21	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+PR_proteomics_experiment_request	22	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N			
+PR_proteomics_experiment_request	23	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N
+PR_proteomics_experiment_request	24	record_status	Record Status	char	1	0	N	N	N							N	N
