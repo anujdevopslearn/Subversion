@@ -593,6 +593,7 @@ sub handle_request {
     ["additional_proteins_old","additional_proteins","!N+"],
     ["peptide_string","peptide_string","Peptide"],
     ["isoelectric_point","STR(isoelectric_point,8,3)","Calc pI"],
+    ["gravy_score","STR(gravy_score,8,3)","Gravy Score"],
     ["quantitation","$quant_format_clause","Quant"],
     #["assumed_charge","S.assumed_charge","assumed_charge"],
     ["annotation_label","label_desc","Annot"],
