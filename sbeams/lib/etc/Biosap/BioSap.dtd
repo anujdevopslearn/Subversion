@@ -1,0 +1,102 @@
+<!-- BioSap DTD - provides a structured output for the BIOSAP project 
+  -----------------------------------------------------------------------
+  Copyright (c) 2001 David Shteynberg, dshteyn@systemsbiology.org
+
+  This program is free software; you can redistribute it and/or
+  modify it under the terms of the GNU Lesser General Public
+  License as published by the Free Software Foundation; either
+  version 2.1 of the License, or (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
+
+  You should have received a copy of the GNU Lesser General Public
+  License along with this library; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  The Institute for Systems Biology, hereby disclaims all copyright
+  interest in this program written by David Shteynberg.
+
+  ----------------------------------------------------------------------
+-->
+
+
+<!ELEMENT BioSapRun (FeaturamaParameters, FeaturamaStatistics, FilteredBlastResults?, FilteredBlastStatistics?)>
+<!ATTLIST BioSapRun 
+        comments             CDATA #REQUIRED >
+
+<!ELEMENT FeaturamaParameters EMPTY>
+<!ATTLIST FeaturamaParameters 
+        gene_library             CDATA #REQUIRED
+        melting_temp             CDATA #REQUIRED
+        melting_temp_range       CDATA #REQUIRED
+        minimum_length           CDATA #REQUIRED
+        maximum_length           CDATA #REQUIRED
+        maximum_selfcomp         CDATA #REQUIRED
+        step_size                CDATA #REQUIRED
+        maximum_3prime_distance  CDATA #REQUIRED
+        initial_3prime_offset    CDATA #REQUIRED
+        maximum_features         CDATA #REQUIRED
+        maximum_polyAT_length    CDATA #REQUIRED
+        maximum_polyGC_length    CDATA #REQUIRED
+        content_window_size      CDATA #REQUIRED
+        maximum_windowAT_content CDATA #REQUIRED
+        maximum_windowGC_content CDATA #REQUIRED
+        oligo_concentration_mMol CDATA #REQUIRED
+        salt_concentration_mMol  CDATA #REQUIRED >
+
+<!ELEMENT FeaturamaStatistics EMPTY>
+<!ATTLIST FeaturamaStatistics
+        n_features_found       CDATA #REQUIRED
+        n_featureless_genes    CDATA #REQUIRED
+        gene_rep_fraction      CDATA #REQUIRED
+        success_fraction       CDATA #REQUIRED
+        self_comp_features_rej CDATA #REQUIRED
+        high_Tm_features_rej   CDATA #REQUIRED
+        low_Tm_features_rej    CDATA #REQUIRED
+        content_features_rej   CDATA #REQUIRED
+        duplicate_features     CDATA #REQUIRED
+        n_features_considered  CDATA #REQUIRED
+        featurama_version      CDATA #REQUIRED >
+
+<!ELEMENT FilteredBlastResults (Feature)*>
+
+<!ELEMENT Feature (Hit)*>
+<!ATTLIST Feature
+        gene_name           CDATA #REQUIRED
+        gene_description    CDATA #REQUIRED
+        melting_temp        CDATA #REQUIRED
+        threeprime_distance CDATA #REQUIRED
+        sequence_length     CDATA #REQUIRED
+        sequence            CDATA #REQUIRED >
+
+<!ELEMENT Hit EMPTY>
+<!ATTLIST Hit 
+        gene_name            CDATA #REQUIRED
+        expect_value         CDATA #REQUIRED
+        score                CDATA #REQUIRED
+        hit_sequence         CDATA #REQUIRED       
+        number_of_identities CDATA #REQUIRED >
+
+<!ELEMENT FilteredBlastStatistics EMPTY>
+<!ATTLIST FilteredBlastStatistics
+        filter_blast_version CDATA #REQUIRED
+        n_unique_features    CDATA #REQUIRED
+        n_multiple_features  CDATA #REQUIRED >
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
