@@ -164,8 +164,7 @@ Now set up the table group securities:
 
 Add a project:
 
-- Switch to the Proteomics_user group by clicking [CHANGE] in the upper
-  right hand corner, selecting the Proteomics_user group and [UPDATE]
+- Switch to the Proteomics_user group by clicking using the drop-down box at top
 - Click [Projects] [Add Project] and add an appropriate project.  Required
   fields are in red.  If you don't have a budget number, enter NA.
 
@@ -204,9 +203,14 @@ Now try loading a biosequence set:
 
 ./load_biosequence_set.pl --set_tag YeastORF
 
-This should load the biosequence set.
+This should load the biosequence set called YeastORF.  Replace YeastORF with
+the name you gave it.
+
 If this doesn't work.  Do not proceed, debug first.
 
+
+-------------------------------------------------------------------------------
+To be continued....
 
 
 
