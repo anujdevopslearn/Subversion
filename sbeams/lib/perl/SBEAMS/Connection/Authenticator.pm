@@ -1179,7 +1179,8 @@ sub checkLogin {
 
 
     #### If success is still 0 but we haven't failed, try SMB Authentication
-    if ($success == 0 && $failed == 0 && $SMBAUTH ) {
+    if ($success == 0 && $failed == 0 && $SMBAUTH &&
+	$SMBAUTH->{ENABLE} =~ /Y/i) {
       my $authResult = Authen::Smb::authen($user,$pass, 
                                            @$SMBAUTH{qw(PDC BDC Domain)});
       if ( $authResult == 0 ) {
