@@ -974,6 +974,7 @@ sub processStain
 	where ss.assay_id in ($includeClause) order by sbo.sort_order, ct.sort_order,a.sort_order";
 
 	my @rows = $sbeams->selectSeveralColumns($query);
+  $log->debug( $query );
   
 print "<TABLE BORDER=0 WIDTH='60%'><tr><td COLSPAN=2 align=center><H4><font color=\"red\">Stain Summary</font></center></H4></td></tr><tr><td COLSPAN=2 align=center><A Href=\"$CGI_BASE_DIR\/$SBEAMS_SUBDIR\/main.cgi\">Back to Main Page <\/A></td></tr>"; 
 #	arrange the data in a result set we can easily use
@@ -1157,7 +1158,7 @@ print "<TABLE BORDER=0 WIDTH='60%'><tr><td COLSPAN=2 align=center><H4><font colo
 					
 				}	
 				
-				print "<tr><td align=left VALIGN=TOP><b>Available Images:</b></td><TD><TABLE WIDTH='100%'>" if $stainImageHash{$keyStain};
+				print "<tr><td align=left VALIGN=TOP><b>Available Images:</b></td><TD><TABLE WIDTH='100%'>"; # if $stainImageHash{$keyStain};
 				my $line = 1;
 				%hash_to_sort = %{$stainImageHash{$keyStain}} if $stainImageHash{$keyStain};
 						foreach my $imageKey (sort bySortOrder keys %{$stainImageHash{$keyStain}})
@@ -1171,7 +1172,8 @@ print "<TABLE BORDER=0 WIDTH='60%'><tr><td COLSPAN=2 align=center><H4><font colo
                                 </TR>~;
 								$line ++;
 						}
-            print "</TD></TR></TABLE>" if $stainImageHash{$keyStain};
+            print "<TR><TD>None &nbsp;" if $line == 1;
+            print "</TD></TR></TABLE>"; # if $stainImageHash{$keyStain};
 						
             my $table = SBEAMS::Connection::DataTable->new( BORDER => 1 );
             $table->addRow( ['<b>Cell Type</b>', '<b>Intense</b>', '<B>Equivocal</B>', '<b>None</b>' ] ) if $stainCellHash{$keyStain};
