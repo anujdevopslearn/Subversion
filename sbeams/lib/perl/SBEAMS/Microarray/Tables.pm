@@ -12,6 +12,10 @@ package SBEAMS::Microarray::Tables;
 
 
 use strict;
+
+use SBEAMS::Connection::Settings;
+
+
 use vars qw(@ISA @EXPORT 
     $TB_PROTOCOL
     $TB_PROTOCOL_TYPE
@@ -112,49 +116,55 @@ require Exporter;
 );
 
 
-$TB_PROTOCOL            = 'protocol';
-$TB_PROTOCOL_TYPE       = 'protocol_type';
-$TB_HARDWARE            = 'hardware';
-$TB_HARDWARE_TYPE       = 'hardware_type';
-$TB_SOFTWARE            = 'software';
-$TB_SOFTWARE_TYPE       = 'software_type';
-$TB_SLIDE_TYPE          = 'slide_type';
-$TB_COST_SCHEME         = 'cost_scheme';
-$TB_SLIDE_TYPE_COST     = 'slide_type_cost';
-$TB_MISC_OPTION         = 'misc_option';
-$TB_ORGANISM            = 'organism';
-$TB_LABELING_METHOD     = 'labeling_method';
-$TB_DYE                 = 'arrays.dbo.dye';
-$TB_XNA_TYPE            = 'xna_type';
-$TB_ARRAY_REQUEST       = 'array_request';
-$TB_ARRAY_REQUEST_SLIDE = 'array_request_slide';
-$TB_ARRAY_REQUEST_SAMPLE= 'array_request_sample';
-$TB_ARRAY_REQUEST_OPTION= 'array_request_option';
-$TB_SLIDE_MODEL         = 'slide_model';
-$TB_SLIDE_LOT           = 'slide_lot';
-$TB_SLIDE               = 'slide';
-$TB_PRINTING_BATCH      = 'printing_batch';
-$TB_ARRAY_LAYOUT        = 'array_layout';
-$TB_ARRAY               = 'array';
-$TB_LABELING            = 'labeling';
-$TB_HYBRIDIZATION       = 'hybridization';
-$TB_ARRAY_SCAN          = 'array_scan';
-$TB_ARRAY_QUANTITATION  = 'array_quantitation';
-$TBMA_BIOSEQUENCE_SET   = 'biosequence_set';
-$TBMA_BIOSEQUENCE       = 'biosequence';
-$TBMA_BIOSEQUENCE_EXTERNAL_XREF = 'biosequence_external_xref';
-$TBMA_EXTERNAL_REFERENCE = 'external_reference';
-$TBMA_EXTERNAL_REFERENCE_TYPE = 'external_reference_type';
-$TBMA_POLYMER_TYPE      = 'polymer_type';
-$TBMA_ARRAY_ELEMENT     = 'array_element';
-$TBMA_CHANNEL = 'channel';
-$TBMA_SERVER='server';
-$TBMA_FILE_PATH='file_path';
-$TBMA_FILE_LOCATION='file_location';
-$TBMA_FILE_TYPE='file_type';
-$TBMA_QUANTITATION_TYPE='quantitation_type';
+#### Get the appropriate database prefixes for the SBEAMS core and this module
+my $core = $DBPREFIX{Core};
+my $mod = $DBPREFIX{Microarray};
 
-$TBMA_QUERY_OPTION      = "query_option";
-$TBMA_CONDITION         = "condition";
-$TBMA_GENE_EXPRESSION   = "gene_expression";
+
+$TB_ORGANISM            = "${core}organism";
+
+$TB_PROTOCOL            = "${mod}protocol";
+$TB_PROTOCOL_TYPE       = "${mod}protocol_type";
+$TB_HARDWARE            = "${mod}hardware";
+$TB_HARDWARE_TYPE       = "${mod}hardware_type";
+$TB_SOFTWARE            = "${mod}software";
+$TB_SOFTWARE_TYPE       = "${mod}software_type";
+$TB_SLIDE_TYPE          = "${mod}slide_type";
+$TB_COST_SCHEME         = "${mod}cost_scheme";
+$TB_SLIDE_TYPE_COST     = "${mod}slide_type_cost";
+$TB_MISC_OPTION         = "${mod}misc_option";
+$TB_LABELING_METHOD     = "${mod}labeling_method";
+$TB_DYE                 = "arrays.dbo.dye";
+$TB_XNA_TYPE            = "${mod}xna_type";
+$TB_ARRAY_REQUEST       = "${mod}array_request";
+$TB_ARRAY_REQUEST_SLIDE = "${mod}array_request_slide";
+$TB_ARRAY_REQUEST_SAMPLE= "${mod}array_request_sample";
+$TB_ARRAY_REQUEST_OPTION= "${mod}array_request_option";
+$TB_SLIDE_MODEL         = "${mod}slide_model";
+$TB_SLIDE_LOT           = "${mod}slide_lot";
+$TB_SLIDE               = "${mod}slide";
+$TB_PRINTING_BATCH      = "${mod}printing_batch";
+$TB_ARRAY_LAYOUT        = "${mod}array_layout";
+$TB_ARRAY               = "${mod}array";
+$TB_LABELING            = "${mod}labeling";
+$TB_HYBRIDIZATION       = "${mod}hybridization";
+$TB_ARRAY_SCAN          = "${mod}array_scan";
+$TB_ARRAY_QUANTITATION  = "${mod}array_quantitation";
+$TBMA_BIOSEQUENCE_SET   = "${mod}biosequence_set";
+$TBMA_BIOSEQUENCE       = "${mod}biosequence";
+$TBMA_BIOSEQUENCE_EXTERNAL_XREF = "${mod}biosequence_external_xref";
+$TBMA_EXTERNAL_REFERENCE = "e${mod}xternal_reference";
+$TBMA_EXTERNAL_REFERENCE_TYPE = "${mod}external_reference_type";
+$TBMA_POLYMER_TYPE      = "${mod}polymer_type";
+$TBMA_ARRAY_ELEMENT     = "${mod}array_element";
+$TBMA_CHANNEL = "${mod}channel";
+$TBMA_SERVER="${mod}server";
+$TBMA_FILE_PATH="${mod}file_path";
+$TBMA_FILE_LOCATION="${mod}file_location";
+$TBMA_FILE_TYPE="${mod}file_type";
+$TBMA_QUANTITATION_TYPE="${mod}quantitation_type";
+
+$TBMA_QUERY_OPTION      = "${mod}query_option";
+$TBMA_CONDITION         = "${mod}condition";
+$TBMA_GENE_EXPRESSION   = "${mod}gene_expression";
 
