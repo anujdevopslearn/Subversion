@@ -739,6 +739,14 @@ sub get_best_permission{
 }
 
 
+###############################################################################
+# getWritableProjects
+###############################################################################
+sub getWritableProjects{
+  my $self = shift || croak("parameter self not passed");
+  return $self->getAccessibleProjects(privilege_level=>30);
+}
+
 
 ###############################################################################
 # getAccessibleProjects
@@ -748,11 +756,13 @@ sub getAccessibleProjects{
   my %args = @_;
   my $SUB_NAME = "getAccessibleProjects";
   my $work_group_name = $self->getCurrent_work_group_name();
-
+  
   ## Decode argument list
   my $current_contact_id = $args{'contact_id'}
     || $self->getCurrent_contact_id();
-	my $module = $args{'module'} || "";
+  my $module = $args{'module'} || "";
+  my $privilege_level = $args{'privilege_level'} || 40;
+
 
   #### Define SQL to get all project to which the current user has access
   my $sql = qq~
@@ -792,7 +802,7 @@ sub getAccessibleProjects{
 			~;
 	if ($work_group_name ne "Admin") {
 			$sql .= qq~
-      AND ( UPP.privilege_id<=40 OR GPP.privilege_id<=40
+      AND ( UPP.privilege_id<=$privilege_level OR GPP.privilege_id<=$privilege_level
             OR P.PI_contact_id = '$current_contact_id' )
       AND ( WG.work_group_name IS NOT NULL OR UPP.privilege_id IS NOT NULL
             OR P.PI_contact_id = '$current_contact_id' )
