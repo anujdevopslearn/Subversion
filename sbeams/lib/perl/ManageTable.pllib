@@ -1354,6 +1354,8 @@ sub showTable {
   }
 
   $full_where_clause =~ s/^AND/WHERE/;		#added 8.9.04 Turn the sql into a temp table and then query with any where_clauses so the column alias can be used
+  $full_orderby_clause =~ s/\w+\./ /ig;		#added 8.10.04 Removes any Table prefixes from full_orderby_clause.  WARNING This will cause an error for queries with the same column name coming from multiple tables 
+ 
   #### Build the final query
   my $sql_query = qq~
       select * from 
@@ -1362,7 +1364,7 @@ sub showTable {
        $full_where_clause
        $full_orderby_clause
                     ~;
-  #print "<PRE>$sql_query\n\n</PRE>";
+#  print "<PRE>$sql_query\n\n</PRE>";
 
 
   #### Get the url link data
