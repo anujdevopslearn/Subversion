@@ -1,0 +1,617 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : CompareBySpectrum
+# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
+# $Id$
+#
+# Description : This program that allows users to
+#               compare different searches of the same data by spectrum.
+#
+# SBEAMS is Copyright (C) 2000-2003 by Eric Deutsch
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+
+use SBEAMS::Connection;
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+
+use SBEAMS::Proteomics;
+use SBEAMS::Proteomics::Settings;
+use SBEAMS::Proteomics::Tables;
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::Proteomics;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+
+use CGI;
+$q = new CGI;
+
+
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main();
+exit(0);
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    permitted_work_groups_ref=>['Proteomics_user','Proteomics_admin',
+      'Proteomics_readonly'],
+    #connect_read_only=>1,
+    #allow_anonymous_access=>1,
+  ));
+
+
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters);
+  #$sbeams->printDebuggingInfo($q);
+
+
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+
+  #### Decide what action to take based on information so far
+  if (defined($parameters{action}) && $parameters{action} eq "???") {
+    # Some action
+  } else {
+    $sbeamsMOD->display_page_header();
+    handle_request(ref_parameters=>\%parameters);
+    $sbeamsMOD->display_page_footer();
+  }
+
+
+} # end main
+
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request {
+  my %args = @_;
+
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+
+
+  #### Define some generic varibles
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+  #### Define some variables for a query and resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+
+  #### Read in the standard form values
+  my $apply_action=$parameters{'action'} || $parameters{'apply_action'} || '';
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+
+  #### Set some specific settings for this program
+  my $CATEGORY="Compare By Spectrum";
+  $TABLE_NAME="PR_CompareBySpectrum" unless ($TABLE_NAME);
+  ($PROGRAM_FILE_NAME) =
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+
+
+  #### Get the columns and input types for this table/query
+  my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
+  my %input_types = 
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
+
+
+  #### Read the input parameters for each column
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters,
+    columns_ref=>\@columns,input_types_ref=>\%input_types);
+
+
+  #### If the apply action was to recall a previous resultset, do it
+  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+  if ($apply_action eq "VIEWRESULTSET") {
+    $sbeams->readResultSet(
+      resultset_file=>$rs_params{set_name},
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      resultset_params_ref=>\%rs_params,
+    );
+    $n_params_found = 99;
+  }
+
+
+  #### Set some reasonable defaults if no parameters supplied
+  unless ($n_params_found) {
+    $parameters{input_form_format} = "minimum_detail";
+  }
+
+
+  #### Apply any parameter adjustment logic
+  #none
+
+
+  #### Display the user-interaction input form
+  $sbeams->display_input_form(
+    TABLE_NAME=>$TABLE_NAME,CATEGORY=>$CATEGORY,apply_action=>$apply_action,
+    PROGRAM_FILE_NAME=>$PROGRAM_FILE_NAME,
+    parameters_ref=>\%parameters,
+    input_types_ref=>\%input_types,
+  );
+
+
+  #### Display the form action buttons
+  $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
+
+
+  #### Finish the upper part of the page and go begin the full-width
+  #### data portion of the page
+  $sbeams->display_page_footer(close_tables=>'YES',
+    separator_bar=>'YES',display_footer=>'NO');
+
+
+
+  #########################################################################
+  #### Process all the constraints
+
+  #### Build SEARCH BATCH / EXPERIMENT constraint
+  my $search_batch_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SB.search_batch_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Search Batch List",
+    constraint_value=>$parameters{search_batch_id} );
+  return if ($search_batch_clause eq '-1');
+  unless (defined($parameters{search_batch_id}) &&
+    $parameters{search_batch_id} =~ /\,/) {
+    print "<H4>You must select at least two experiments to compare!</H4>\n\n";
+    return;
+  }
+
+
+  #### Build PROBABILITY constraint
+  my $probability_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SH.probability",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Probability",
+    constraint_value=>$parameters{probability_constraint} );
+  return if ($probability_clause eq '-1');
+
+  #### For much better performance, add in a hit_index constraint if
+  #### there is a probability contraint.  This could break if
+  #### probabilities get assigned to rows with not hit_index = 1 !!!!
+  #### The reason seems to be that the NONCLUSTERED INDEX on
+  #### SH.probability is a lousy index that doesn't get used or
+  #### something, likely because most values are NULL.
+  $probability_clause .= " AND SH.hit_index = 1";
+
+
+  #### Build FILE_ROOT constraint
+  my $file_root_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"S.file_root",
+    constraint_type=>"plain_text",
+    constraint_name=>"file_root",
+    constraint_value=>$parameters{file_root_constraint} );
+  return if ($file_root_clause eq '-1');
+
+
+  #### Build CHARGE constraint
+  my $charge_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"S.assumed_charge",
+    constraint_type=>"int_list",
+    constraint_name=>"Charge",
+    constraint_value=>$parameters{charge_constraint} );
+  return if ($charge_clause eq '-1');
+
+
+  #### Build PRECURSOR MASS constraint
+  my $precursor_mass_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"(S.sample_mass_plus_H+(S.assumed_charge-1)*1.008)/S.assumed_charge",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Precursor_Mass Constraint",
+    constraint_value=>$parameters{precursor_mass_constraint} );
+  return if ($precursor_mass_clause eq '-1');
+
+
+  #### Build PERCENT BUFFER B constraint
+  my $percent_buffer_b_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"MSS.calc_buffer_percent",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Percent ACN Constraint",
+    constraint_value=>$parameters{percent_buffer_b_constraint} );
+  return if ($percent_buffer_b_clause eq '-1');
+
+
+  #### Get the proper names of all the biosequence_set_tags in the query
+  my %experiment_names = getExperimentNames($parameters{search_batch_id});
+  if (defined($experiment_names{ERROR})) {
+    print "<H4>$experiment_names{ERROR}</H4>\n";
+    return;
+  }
+
+
+  #### Build PROBABILITY IN INDIVIDUAL EXPERIMENTS constraint
+  my @search_batch_ids = split(/,/,$parameters{search_batch_id});
+  my $specific_counts_clause = '';
+  my $i_exp = 1;
+  foreach my $id (@search_batch_ids) {
+    my $tmp_constraint = $sbeams->parseConstraint2SQL(
+      constraint_column=>"$experiment_names{$id}",
+      constraint_type=>"flexible_float",
+      constraint_name=>"Individual Probability Constraint",
+      constraint_value=>$parameters{"probability_in_column_${i_exp}_constraint"} );
+    return if ($tmp_constraint eq '-1');
+
+    if ($tmp_constraint) {
+      unless ($specific_counts_clause) {
+        $tmp_constraint =~ s/\s*AND//;
+        $tmp_constraint = "AND ( $tmp_constraint";
+      }
+      $specific_counts_clause .= "$tmp_constraint\n";
+    }
+
+    $i_exp++;
+
+  }
+  $specific_counts_clause .= ')' if ($specific_counts_clause);
+
+
+  #### Build ROWCOUNT constraint
+  $parameters{row_limit} = 5000
+    unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
+  my $limit_clause = $sbeams->buildLimitClause(
+   row_limit=>$parameters{row_limit});
+
+
+  #### Define some variables needed to build the query
+  my $group_by_clause = "";
+  my $final_group_by_clause = "";
+  my @column_array;
+  my $peptide_column = "";
+  my $count_column = "";
+  my @experiment_names_and_ids;
+
+  #### If the user opted to see the GO columns, add them in
+  my @additional_columns = ();
+  my $additional_grouping_columns = "";
+
+  #### If the user opted to see GO columns or provided some GO constraints,
+  #### then join in the GO tables
+  my $GO_join = "";
+
+
+  #### Define the desired columns in the query
+  #### [friendly name used in url_cols,SQL,displayed column title]
+  @column_array = (
+    ["experiment_tag","experiment_tag","Exp"],
+    ["file_root","file_root","File Root"],
+  );
+
+  my @search_batch_ids = split(/,/,$parameters{search_batch_id});
+  my $pivot_clause = '';
+  foreach my $id (@search_batch_ids) {
+    push(@column_array, ["$experiment_names{$id}",
+      "STR($experiment_names{$id},7,3)",
+      "$experiment_names{$id}"] );
+    push(@experiment_names_and_ids,$experiment_names{$id},$id);
+    $pivot_clause .= "	       SUM(CASE WHEN set_tag = '$experiment_names{$id}' THEN NULLIF(probability,0.0) ELSE 0.0 END) AS \"$experiment_names{$id}\",\n"
+  }
+  chop($pivot_clause);
+  chop($pivot_clause);
+  $pivot_clause .= "\n";
+
+  #### Limit the width of the Reference column if user selected
+  if ( $parameters{display_options} =~ /MaxRefWidth/ ) {
+    $max_widths{'Reference'} = 20;
+  }
+  #### Set flag to display SQL statement if user selected
+  if ( $parameters{display_options} =~ /ShowSQL/ ) {
+    $show_sql = 1;
+  }
+
+
+  #### Build the columns part of the SQL statement
+  my %colnameidx = ();
+  my @column_titles = ();
+  my $columns_clause = $sbeams->build_SQL_columns_list(
+    column_array_ref=>\@column_array,
+    colnameidx_ref=>\%colnameidx,
+    column_titles_ref=>\@column_titles
+  );
+
+
+  #### Define the SQL statement
+  $sql = qq~
+	SELECT
+           experiment_tag AS "experiment_tag",
+           set_tag AS "set_tag",
+           S.file_root AS "file_root",
+           SH.probability AS "probability",
+           reference AS "reference",
+           SB.search_batch_id AS "search_batch_id",
+           S.msms_spectrum_id AS "msms_spectrum_id"
+	  INTO #tmp1
+	  FROM proteomics.dbo.search_hit SH
+	 INNER JOIN proteomics.dbo.search S ON ( SH.search_id = S.search_id )
+	 INNER JOIN proteomics.dbo.search_batch SB
+               ON ( S.search_batch_id = SB.search_batch_id )
+	 INNER JOIN proteomics.dbo.msms_spectrum MSS
+               ON ( S.msms_spectrum_id = MSS.msms_spectrum_id )
+	 INNER JOIN proteomics.dbo.fraction F ON ( MSS.fraction_id = F.fraction_id )
+	 INNER JOIN proteomics.dbo.biosequence_set BSS
+               ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
+	 INNER JOIN proteomics.dbo.proteomics_experiment PE
+               ON ( F.experiment_id = PE.experiment_id )
+	 WHERE 1 = 1
+	$search_batch_clause
+	$probability_clause
+	$file_root_clause
+	$charge_clause
+	$precursor_mass_clause
+	   AND SH.cross_corr_rank = 1
+
+	--
+
+	SELECT experiment_tag,file_root,
+	       $pivot_clause
+	  INTO #tmp2
+	  FROM #tmp1
+	 GROUP BY experiment_tag,file_root
+
+	--
+
+	SELECT $limit_clause->{top_clause} $columns_clause
+	  FROM #tmp2
+	 WHERE 1=1
+	   $specific_counts_clause
+	  ORDER BY 2
+	$limit_clause->{trailing_limit_clause}
+
+   ~;
+
+
+  #### Certain types of actions should be passed to links
+  my $pass_action = "QUERY";
+  $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
+
+
+  #### Pass nearly all of the constraints down to a child query
+  my @parameters_to_pass;
+  my $parameters_list = '';
+  while ( ($key,$value) = each %input_types ) {
+    if ($key ne 'sort_order' && $key ne 'display_options' &&
+        $key ne 'search_batch_id' && $key ne 'reference_constraint') {
+      if ($parameters{$key}) {
+        push(@parameters_to_pass,"$key=$parameters{$key}");
+      }
+    }
+  }
+  if (@parameters_to_pass) {
+    $parameters_list = join('&',@parameters_to_pass);
+  }
+
+
+  #### Define the hypertext links for columns that need them
+  %url_cols = ('File Root' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&file_root_constraint=\%$colnameidx{file_root}V&search_batch_id=$parameters{search_batch_id}&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
+    	       'File Root_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show the SEQUEST results for this spectrum for all selected search batches\'; return true"',
+
+  );
+
+
+  #### Add entries for each experiment
+  for ($i=0;$i<scalar(@experiment_names_and_ids);$i+=2) {
+    my $j = $i+1;
+    $url_cols{$experiment_names_and_ids[$i]} = "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&file_root_constraint=\%$colnameidx{file_root}V&search_batch_id=$experiment_names_and_ids[$j]&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action";
+    $url_cols{$experiment_names_and_ids[$i]."_ATAG"} = 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show the SEQUEST results for this spectrum and search batch\'; return true"';
+  }
+
+
+  #### Define columns that should be hidden in the output table
+  %hidden_cols = ('accessor' => 1,
+                  'accessor_suffix' => 1,
+  );
+
+
+  #########################################################################
+  #### If QUERY or VIEWRESULTSET was selected, display the data
+  if ($apply_action =~ /QUERY/i || $apply_action eq "VIEWRESULTSET") {
+
+    #### If the action contained QUERY, then fetch the results from
+    #### the database
+    if ($apply_action =~ /QUERY/i) {
+
+      #### Show the SQL that will be or was executed
+      $sbeams->display_sql(sql=>$sql) if ($show_sql);
+
+      #### Fetch the results from the database server
+      $sbeams->fetchResultSet(
+        sql_query=>$sql,
+        resultset_ref=>$resultset_ref,
+      );
+
+      #### Store the resultset and parameters to disk resultset cache
+      $rs_params{set_name} = "SETME";
+      $sbeams->writeResultSet(
+        resultset_file_ref=>\$rs_params{set_name},
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters,
+        resultset_params_ref=>\%rs_params,
+        query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+      );
+    }
+
+    #### Display the resultset
+    $sbeams->displayResultSet(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      url_cols_ref=>\%url_cols,
+      hidden_cols_ref=>\%hidden_cols,
+      max_widths=>\%max_widths,
+      column_titles_ref=>\@column_titles,
+      base_url=>$base_url,
+    );
+
+
+    #### Display the resultset controls
+    $sbeams->displayResultSetControls(
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      rs_params_ref=>\%rs_params,
+      base_url=>$base_url,
+    );
+
+
+    #### Display a plot of data from the resultset
+    $sbeams->displayResultSetPlot(
+      rs_params_ref=>\%rs_params,
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters,
+      column_titles_ref=>\@column_titles,
+      base_url=>$base_url,
+    );
+
+
+  #### If QUERY was not selected, then tell the user to enter some parameters
+  } else {
+    if ($sbeams->invocation_mode() eq 'http') {
+      print "<H4>Select parameters above and press QUERY</H4>\n";
+    } else {
+      print "You need to supply some parameters to contrain the query\n";
+    }
+  }
+
+
+} # end handle_request
+
+
+
+###############################################################################
+# evalSQL
+#
+# Callback for translating Perl variables into their values,
+# especially the global table variables to table names
+###############################################################################
+sub evalSQL {
+  my $sql = shift;
+
+  return eval "\"$sql\"";
+
+} # end evalSQL
+
+
+
+###############################################################################
+# getExperimentNames: return a hash of
+#         search_batch names of the supplied list of id's
+###############################################################################
+sub getExperimentNames {
+  my $search_batch_ids = shift || die "getExperimentNames: missing search_batch_ids";
+
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+  my @search_batch_ids = split(/,/,$search_batch_ids);
+
+  #### Get the data for all the specified search_batch_ids
+  $sql = qq~
+      SELECT search_batch_id,experiment_tag,set_tag
+        FROM $TBPR_PROTEOMICS_EXPERIMENT PE
+       INNER JOIN $TBPR_SEARCH_BATCH SB ON ( PE.experiment_id = SB.experiment_id )
+       INNER JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
+       WHERE search_batch_id IN ( $search_batch_ids )
+  ~;
+  my @rows = $sbeams->selectSeveralColumns($sql);
+
+  #### Define some variables
+  my $row;
+  my %exp_tag_hash;            #### Contains all exp tags in hash
+  my $allowed_experiment_tag;  #### Can only honor a single experiment tag!
+
+
+  #### Build the hash of set_tags.  Insist that only one experiment_tag was
+  #### selected
+  foreach $row (@rows) {
+    my $search_batch_id = $row->[0];
+    my $experiment_tag = $row->[1];
+    my $set_tag = $row->[2];
+    $exp_tag_hash{$search_batch_id} = $set_tag;
+
+    $allowed_experiment_tag = $experiment_tag unless ($allowed_experiment_tag);
+    if ($experiment_tag ne $allowed_experiment_tag) {
+      $exp_tag_hash{ERROR} = "More than one experiment selected!! You may ".
+        "only select multiple searches of the same experiment!";
+    }
+  }
+
+  return %exp_tag_hash;
+
+} # end getExperimentNames
+
+
