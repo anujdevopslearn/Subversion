@@ -21,6 +21,7 @@ use CGI::Carp qw(fatalsToBrowser croak);
 
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::Log;
 
 # Need to include child table definitions if this program is to process those
 use SBEAMS::Microarray::Tables;
@@ -42,6 +43,7 @@ use SBEAMS::ProteinStructure::Tables;
 use SBEAMS::SNP::Tables;
 use SBEAMS::Tools::Tables;
 
+my $log = SBEAMS::Connection::Log->new();
 
 ###############################################################################
 # 
@@ -68,7 +70,6 @@ sub returnTableInfo {
     my @row;
     my $sql_query;
     my $result;
-
 
 ###############################################################################
 #
@@ -111,37 +112,39 @@ sub returnTableInfo {
 ###############################################################################
     if ($table_name eq "project") {
 
-        if ($info_key eq "BASICQuery") {
-            return qq~
-		SELECT P.project_id,P.project_tag,P.name,UL.username,
-		       SUBSTRING(P.description,1,100) AS "description"
-		  FROM $TB_PROJECT P
-		  LEFT JOIN $TB_USER_LOGIN UL
-		       ON (P.PI_contact_id=UL.contact_id)
-		 WHERE P.record_status!='D'
-		   AND UL.record_status!='D'
-		 ORDER BY UL.username,P.name
-            ~;
+      my @accessible = $self->getAccessibleProjects();
+      my $accProjects = join( ',', @accessible ) || 0;
 
-        }
+      if ($info_key eq "BASICQuery") {
+        return qq~
+	    	SELECT P.project_id,P.project_tag,P.name,UL.username,
+		    SUBSTRING(P.description,1,100) AS "description"
+		    FROM $TB_PROJECT P
+		    LEFT JOIN $TB_USER_LOGIN UL
+		    ON (P.PI_contact_id=UL.contact_id)
+		    WHERE project_id IN ( $accProjects ) 
+        AND P.record_status!='D'
+	  	  AND UL.record_status!='D'
+        ORDER BY UL.username,P.name
+         ~;
 
-        if ($info_key eq "FULLQuery") {
-            return qq~
-		SELECT P.project_id,P.project_tag,P.name,UL.username,
-		       SUBSTRING(P.description,1,100) AS "description",
-		       P.budget,P.project_status,P.uri,
-		       SUBSTRING(P.comment,1,100) AS "comment",
-		       P.date_created,P.created_by_id,P.date_modified,
-		       P.modified_by_id,P.owner_group_id,P.record_status
-		  FROM $TB_PROJECT P
-		  LEFT JOIN $TB_USER_LOGIN UL
-		       ON (P.PI_contact_id=UL.contact_id)
-		 WHERE P.record_status!='D'
-		   AND UL.record_status!='D'
-		 ORDER BY UL.username,P.name
-            ~;
-        }
-
+      } elsif ($info_key eq "FULLQuery") {
+        return qq~
+	    	SELECT P.project_id,P.project_tag,P.name,UL.username,
+	      SUBSTRING(P.description,1,100) AS "description",
+        P.budget,P.project_status,P.uri,
+		    SUBSTRING(P.comment,1,100) AS "comment",
+	      P.date_created,P.created_by_id,P.date_modified,
+        P.modified_by_id,P.owner_group_id,P.record_status
+		    FROM $TB_PROJECT P
+		    LEFT JOIN $TB_USER_LOGIN UL
+		    ON (P.PI_contact_id=UL.contact_id)
+		    WHERE project_id IN ( $accProjects ) 
+		    AND P.record_status!='D'
+		    AND UL.record_status!='D'
+		    ORDER BY UL.username,P.name
+        ~;
+      }
     }
 
 
@@ -446,11 +449,12 @@ sub returnTableInfo {
     my $subdir = $self->getSBEAMS_SUBDIR();
     $subdir .= "/" if ($subdir);
 
-    ($manage_tables) = $self->selectOneColumn(
-      "SELECT manage_tables
-         FROM $TB_TABLE_PROPERTY
-        WHERE table_name='$table_name'
-      ");
+    my $sql =<<"    END";
+    SELECT manage_tables
+    FROM $TB_TABLE_PROPERTY
+    WHERE table_name='$table_name'
+    END
+    ($manage_tables) = $self->selectOneColumn( $sql );
 
     my @table_array = split(",",$manage_tables);
     my @result_array;
@@ -458,10 +462,11 @@ sub returnTableInfo {
     my $CATEGORY = $self->returnTableInfo($table_name,"CATEGORY");
     my $PROGRAM_FILE_NAME =
       $self->returnTableInfo($table_name,"PROGRAM_FILE_NAME");
+
     @result_array = (
-	"Add $CATEGORY",
-	"$CGI_BASE_DIR/$subdir$PROGRAM_FILE_NAME&ShowEntryForm=1"
-    );
+          "Add $CATEGORY",
+         	"$CGI_BASE_DIR/$subdir$PROGRAM_FILE_NAME&ShowEntryForm=1"
+                     );
 
     my $element;
     foreach $element (@table_array) {
