@@ -141,11 +141,10 @@ sub main {
 		$sbeamsMOD->printPageFooter();
 	    }
 	}elsif ($action eq 'view_image'){
-		die;
 		my $file;
 		my $subdir = $parameters{'SUBDIR'};
 		if ($subdir){$file = "$output_dir/$subdir/$file_name";}
-		else{$file = "$output_dir/$file_name";}
+		else{$file = "$output_dir/$file_name.$file_ext";}
 		linkImage(file=>$file);
 	}else {
 	    #### Start printing the page
