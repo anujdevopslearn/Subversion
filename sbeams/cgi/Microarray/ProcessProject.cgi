@@ -1068,11 +1068,11 @@ $LINESEPARATOR<BR>
      <BR>
      <FONT COLOR="#000000" SIZE="-1">
 	<img src="$HTML_BASE_DIR/images/space.gif" height=1 width=30">-only used with more than one condition</FONT><BR>
-       <TABLE>
-       <TR>
-       <TD VALIGN = "top">
-        Conditions:<BR>
-       <SELECT NAME= "mergeCondsList" SIZE=10 MULTIPLE>
+     <TABLE>
+       	<TR>
+       		<TD VALIGN = "top">
+        			Conditions:<BR>
+       			<SELECT NAME= "mergeCondsList" SIZE=10 MULTIPLE>
       ~;
 
 my %unique_group;
@@ -1088,28 +1088,32 @@ for (my $i=0;$i<=$#unique_groups;$i++){
 }
 
 print qq~
-     </SELECT>
-     </TD>
-     <TD>
-     Unused Conditions:<BR>
-     <SELECT NAME = "mergeBufferList" SIZE=10 MULTIPLE></SELECT>
-     <BR>
-     </TD>
-     </TR>
-     <TR>
-     <TD>
-     <INPUT TYPE = "button" NAME = "upButton" VALUE ="Move Up " OnClick="moveUp()">
-     <INPUT TYPE = "button" NAME = "downButton" VALUE ="Move Down" OnClick= "moveDown()">
-     </TD>
-     </TR>
-     <TR>
-     <TD>
-     <INPUT TYPE = "button" NAME = "omitFile" VALUE =" Remove " OnClick="omitMerge()">
-     <INPUT TYPE = "button" NAME = "addFILE"  VALUE ="      Add      "    OnClick="addMerge()">
-     <BR>
-     </TD>
-     </TR>
+     			</SELECT>
+     		</TD>
+     		<TD VALIGN="center" ALIGN="center">
+     			&nbsp;<INPUT TYPE = "button" NAME = "omitFile" VALUE ="Remove-->" OnClick="omitMerge()">&nbsp;<p>
+     			&nbsp;<INPUT TYPE = "button" NAME = "addFILE"  VALUE ="<--Add"    OnClick="addMerge()">&nbsp;
+     		</TD>
+     		<TD VALIGN="top">
+     			Unused Conditions:<BR>
+     			<SELECT NAME = "mergeBufferList" SIZE=10 MULTIPLE></SELECT>
+     			<BR>
+     		</TD>
+     	</TR>
+     	<TR>
+     		<TD ALIGN="center">
+     			<INPUT TYPE = "button" NAME = "upButton" VALUE ="Move Up " OnClick="moveUp()"><br>
+     			<INPUT TYPE = "button" NAME = "downButton" VALUE ="Move Down" OnClick= "moveDown()">
+     		</TD>
+			<TD>
+				&nbsp;
+			</TD>
+			<TD>
+				&nbsp;
+			</TD>
+     	</TR>
      </TABLE>
+	<p>
      <TABLE>
      	<TR>
      		<TD>
