@@ -430,8 +430,8 @@ sub processAntibody
 #arrange the data in a result set we can easily use
 	my $rowCount = scalar(@{$resultset_ref->{data_ref}});
 	
-#	print "<br><A Href=\"$CGI_BASE_DIR\/$SBEAMS_SUBDIR\/SummarizeMain.cgi\">Back to Main Page <\/A><H4><center><font color=\"red\">Antibody Summary</font></center></H4>";
-print "<tr><td></td><td align=center><H4><font color=\"red\">Antibody Summary</font></center></H4></td></tr><tr><td></td><td align=center><A Href=\"$CGI_BASE_DIR\/$SBEAMS_SUBDIR\/SummarizeMain.cgi\">Back to Main Page <\/A></td></tr>"; 
+#	print "<br><A Href=\"$CGI_BASE_DIR\/$SBEAMS_SUBDIR\/main.cgi\">Back to Main Page <\/A><H4><center><font color=\"red\">Antibody Summary</font></center></H4>";
+print "<tr><td></td><td align=center><H4><font color=\"red\">Antibody Summary</font></center></H4></td></tr><tr><td></td><td align=center><A Href=\"$CGI_BASE_DIR\/$SBEAMS_SUBDIR\/main.cgi\">Back to Main Page <\/A></td></tr>"; 
 
 	if ($rowCount < 1)
 	{
@@ -545,7 +545,7 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Antibody Summary</f
 					foreach my $stain (keys %{$stainHash{$antibodyKey}->{$species}})
 					{
 							my $stainID = $stainIdHash{$stain};
-							print qq~ <tr><TD NOWRAP>- <A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeMain.cgi?action=_processStain&stained_slide_id=$stainID">$stain</A></TD>~;
+							print qq~ <tr><TD NOWRAP>- <A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=_processStain&stained_slide_id=$stainID">$stain</A></TD>~;
 							
 							%hash_to_sort = %{$stainHash{$antibodyKey}->{$species}->{$stain}};
 							foreach my $image (sort bySortOrder keys %{$stainHash{$antibodyKey}->{$species}->{$stain}})
@@ -622,7 +622,7 @@ sub processStain
 	
 	my @rows = $sbeams->selectSeveralColumns($query);
   
-print "<tr><td></td><td align=center><H4><font color=\"red\">Stain Summary</font></center></H4></td></tr><tr><td></td><td align=center><A Href=\"$CGI_BASE_DIR\/$SBEAMS_SUBDIR\/SummarizeMain.cgi\">Back to Main Page <\/A></td></tr>"; 
+print "<tr><td></td><td align=center><H4><font color=\"red\">Stain Summary</font></center></H4></td></tr><tr><td></td><td align=center><A Href=\"$CGI_BASE_DIR\/$SBEAMS_SUBDIR\/main.cgi\">Back to Main Page <\/A></td></tr>"; 
  #	arrange the data in a result set we can easily use
 	if (scalar(@rows) < 1)
 	{
@@ -743,7 +743,7 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Stain Summary</font
 						foreach my $antibodyKey (sort bySortOrder keys %{$stainAntibodyHash{$keyStain}})
 						{
 								$antibodyName = $antibodyKey;
-								print qq~ <td align=left>&nbsp;&nbsp;&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeMain.cgi?action=_processAntibody&antibody_id=$antibodyHash{$antibodyKey}">$antibodyKey</A></td><tr>
+								print qq~ <td align=left>&nbsp;&nbsp;&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=_processAntibody&antibody_id=$antibodyHash{$antibodyKey}">$antibodyKey</A></td><tr>
 								<td align=left><b>Antigen Alternate Names:</b></td><td>&nbsp;&nbsp;&nbsp;
 								$stainAntibodyHash{$keyStain}->{$antibodyKey}->{$antibodyAntigenHash{$antibodyKey}}</td></tr> ~;
 						

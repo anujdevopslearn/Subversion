@@ -626,7 +626,7 @@ sub postProcessResultset {
 				$colorAbundance = '#808080' if ($abundance eq 'most');
 				
 				print "<td width=50 height=20 align = center bgcolor = $colorAverage><A HREF =\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&antibody_id=$antibodyHash{$antibodyKey}&cell_type_id=$cellIdHash{$cellKey}&display_options=MergeLevelsAndPivotCellTypes\">$averageNumber</A>";
-				print  qq~ <br>&nbsp;&nbsp;&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeMain.cgi?action=_processAntibody&antibody_id=$antibodyHash{$antibodyKey}">IMAGES</A></td>~;
+				print  qq~ <br>&nbsp;&nbsp;&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=_processAntibody&antibody_id=$antibodyHash{$antibodyKey}">IMAGES</A></td>~;
 				print "<td  bgcolor = $colorAbundance>$dataHash{$key}->{$cellKey}->{abundance}</td>\n" if $cellKey eq 'Stromal Leukocytes';
 				print "<td align = center>$expNumber</td>" if $query_parameters_ref->{display_options} =~/numberof/i;
 
