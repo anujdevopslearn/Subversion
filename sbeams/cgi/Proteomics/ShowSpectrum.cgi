@@ -270,7 +270,10 @@ sub printEntryForm {
     $t4 = [gettimeofday()];
 
     my @peakcolors;
+    my @theoretical_spectrum;
 
+
+    #### Loop over each desired charge
     my $charge;
     foreach $charge (@charge) {
       my ($masslist_ref) = CalcIons(Residues=>\@residues, Charge=>$charge,
@@ -287,16 +290,21 @@ sub printEntryForm {
 
 
       #### Print out the peptide ion information
+      printIons(masslist_ref=>$masslist_ref,color=>1,html=>1,
+        charge=>$charge,length=>$length,
+        theoretical_spectrum_ref=>\@theoretical_spectrum);
       $t6 = [gettimeofday()];
-      PrintIons(masslist_ref=>$masslist_ref,color=>1,html=>1,
-        charge=>$charge,length=>$length);
 
 
+      #### Label the peaks on the plot
       LabelResidues(Ionmasses=>$masslist_ref, Binten=>$B_ref, Yinten=>$Y_ref,
                     Charge=>$charge, Win=>$win, Length=>$length,
                     Xmin=>$parameters{xmin}, Xmax=>$parameters{xmax},
                     Ymax=>$intenmax, Angle=>$labangle, Fjust=>$fjust);
-    }
+
+    } # end foreach
+
+
     $t7 = [gettimeofday()];
 
 
@@ -371,13 +379,27 @@ sub printEntryForm {
     ~;
 
 
-    #### Store the spectrum data as a recallable resultset
+    #### Store the observed spectrum data as a recallable resultset
     my %dataset;
     $dataset{data_ref} = \@spectrum_array;
     $dataset{column_list_ref} = ['m/z','intensity'];
     my $rs_set_name = "SETME";
     $sbeams->writeResultSet(resultset_file_ref=>\$rs_set_name,
-      resultset_ref=>\%dataset,query_parameters_ref=>\%parameters);
+      resultset_ref=>\%dataset,
+      file_prefix=>'spec_',
+      query_parameters_ref=>\%parameters);
+
+
+    #### Store the peptide data as a recallable resultset
+    my %peptide_dataset;
+    $peptide_dataset{data_ref} = \@theoretical_spectrum;
+    $peptide_dataset{column_list_ref} = ['Residue','Index','Ion','Charge','m/z'];
+    my $pep_rs_set_name = "SETME";
+    $sbeams->writeResultSet(resultset_file_ref=>\$pep_rs_set_name,
+      resultset_ref=>\%peptide_dataset,
+      file_prefix=>'peptide_',
+      query_parameters_ref=>\%parameters);
+
 
 
     #### Finish up the table and form
@@ -389,6 +411,9 @@ sub printEntryForm {
         <BR>Download spectrum in Format: 
         <a href="$CGI_BASE_DIR/GetResultSet.cgi/$rs_set_name.tsv?rs_set_name=$rs_set_name&format=tsv">TSV</a>,
         <a href="$CGI_BASE_DIR/GetResultSet.cgi/$rs_set_name.xls?rs_set_name=$rs_set_name&format=excel">Excel</a>
+        <BR>Download peptide data in Format: 
+        <a href="$CGI_BASE_DIR/GetResultSet.cgi/$pep_rs_set_name.tsv?rs_set_name=$pep_rs_set_name&format=tsv">TSV</a>,
+        <a href="$CGI_BASE_DIR/GetResultSet.cgi/$pep_rs_set_name.xls?rs_set_name=$pep_rs_set_name&format=excel">Excel</a>
         <BR>
 	</TD>
 	</TR>
@@ -1085,9 +1110,9 @@ sub CalcIons {
 }
 
 ###############################################################################
-# PrintIons
+# printIons
 ###############################################################################
-sub PrintIons {
+sub printIons {
   my %args = @_;
 
   my $masslist_ref = $args{'masslist_ref'};
@@ -1095,10 +1120,10 @@ sub PrintIons {
   my $html = $args{'html'} || 0;
   my $charge = $args{'charge'};
   my $length = $args{'length'};
+  my $theoretical_spectrum_ref = $args{'theoretical_spectrum_ref'};
 
-  print "\n";
-  print " SEQ  #       B         Y    +$charge\n";
-  print " --- --  --------- --------- --\n";
+  print "SEQ  #     B       Y    +$charge\n";
+  print "--- --  ------  ------  --\n";
 
   my ($bcolbegin, $bcolend, $ycolbegin, $ycolend);
 
@@ -1140,29 +1165,42 @@ sub PrintIons {
     }
 
 
+    #### Define the m/z columns formats and values
+    my $B_format = '%7.1f';
+    my $Y_format = '%7.1f';
+    my $B_value = $masslist_ref->{Bions}->[$i];
+    my $Y_value = $masslist_ref->{Yions}->[$i];
+
+
     #### Special case --'s for first row
     if ($i == 0) {
-      printf " %3s %2d $bcolbegin%9.1f$bcolend %9s %3d\n",
-        $masslist_ref->{residues}->[$i],
-        $i+1, $masslist_ref->{Bions}->[$i], '--  ', $length-$i
-    }
+      $Y_format = '%7s';
+      $Y_value = '--  ';
 
     #### Special case --'s for last row
-    elsif ($i == ($length-1)) {
-      printf " %3s %2d %9s $ycolbegin%9.1f$ycolend %3d\n",
-        $masslist_ref->{residues}->[$i], $i+1,
-        '--  ', $masslist_ref->{Yions}->[$i], $length-$i
+    } elsif ($i == ($length-1)) {
+      $B_format = '%7s';
+      $B_value = '--  ';
     }
 
-    #### Else just print the numbers
-    else {
-      printf " %3s %2d $bcolbegin%9.1f$bcolend $ycolbegin%9.1f$ycolend %3d\n",
-        $masslist_ref->{residues}->[$i], $i+1,
-        $masslist_ref->{Bions}->[$i], $masslist_ref->{Yions}->[$i], $length-$i;
-    }
+    #### Print out the data
+    printf "%3s %2d $bcolbegin$B_format$bcolend ".
+           "$ycolbegin$Y_format$ycolend %3d\n",
+      $masslist_ref->{residues}->[$i], $i+1,
+      $B_value, $Y_value, $length-$i;
+
+    #### Fill the theoretical spectrum data in a different format
+    #### (Residue,Index,Ion,Charge,m/z)
+    $theoretical_spectrum_ref->[2*$length*($charge-1)+$i] =
+      [$masslist_ref->{residues}->[$i],$i+1,'B',$charge,$B_value];
+    $theoretical_spectrum_ref->[2*$length*($charge-1)+2*$length-1-$i] =
+      [$masslist_ref->{residues}->[$i],$length-$i,'Y',
+      $charge,$Y_value];
 
 
   } # end for
+
+  print "\n";
 
 
 } # end PrintIons
