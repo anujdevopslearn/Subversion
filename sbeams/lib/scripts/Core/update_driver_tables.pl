@@ -3,9 +3,10 @@
 ###############################################################################
 # Program     : update_driver_tables.pl
 # Author      : Kerry Deutsch <kdeutsch@systemsbiology.org>
+# $Id$
 #
-# Description : This script updates the latest copy of the table_property and
-#               table_column columns to database
+# Description : This script updates the table_property and
+#               table_column tables in the database from TSV files
 #
 ###############################################################################
 
@@ -25,14 +26,7 @@ use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
-use SBEAMS::SNP;
-use SBEAMS::SNP::Settings;
-use SBEAMS::SNP::Tables;
-
 $sbeams = new SBEAMS::Connection;
-$sbeamsMOD = new SBEAMS::SNP;
-$sbeamsMOD->setSBEAMS($sbeams);
-$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
@@ -42,15 +36,15 @@ $q = new CGI;
 ###############################################################################
 # Set program name and usage banner for command like use
 ###############################################################################
-$PROG_NAME = "update_tables.pl";
+$PROG_NAME = "update_driver_tables.pl";
 $USAGE = <<EOU;
-Usage: $PROG_NAME [OPTIONS] key=value kay=value ...
+Usage: $PROG_NAME [OPTIONS] input_filename
 Options:
   --verbose n         Set verbosity level.  default is 0
   --quiet             Set flag to print nothing at all except errors
   --debug n           Set debug flag
 
- e.g.:  $PROG_NAME --quiet
+ e.g.:  $PROG_NAME SNP_table_property.tsv
 
 EOU
 
@@ -87,8 +81,7 @@ sub main {
 
   #### Do the SBEAMS authentication and exit if a username is not returned
   exit unless ($current_username = $sbeams->Authenticate(
-    work_group=>'SNP',
-    #connect_read_only=>1,allow_anonymous_access=>1
+    work_group=>'Admin',
   ));
 
 
@@ -103,10 +96,9 @@ sub main {
   if ($parameters{action} eq "???") {
     # Some action
   } else {
-    $sbeamsMOD->printPageHeader();
-    update_table_property(ref_parameters=>\%parameters);
-    update_table_column(ref_parameters=>\%parameters);
-    $sbeamsMOD->printPageFooter();
+    $sbeams->printPageHeader();
+    updateDriverTable(ref_parameters=>\%parameters);
+    $sbeams->printPageFooter();
   }
 
 
@@ -115,9 +107,9 @@ sub main {
 
 
 ###############################################################################
-# update_table_property
+# updateDriverTable
 ###############################################################################
-sub update_table_property {
+sub updateDriverTable {
   my %args = @_;
 
 
@@ -131,9 +123,6 @@ sub update_table_property {
   my ($i,$element,$key,$value,$line,$result,$sql);
 
 
-  #### Set the command-line options
-
-
   #### Print out the header
   unless ($QUIET) {
     $sbeams->printUserContext();
@@ -141,10 +130,117 @@ sub update_table_property {
   }
 
 
+  #### If a parameter is not supplied, print usage and bail
+  unless ($ARGV[0]) {
+    print $USAGE;
+    exit 0;
+  }
+
+
+  #### Set the name file
+  my $source_file = $ARGV[0];
+  unless ( -e "$source_file" ) {
+    die("Cannot find file '$source_file'");
+  }
+
+
+  #### Determine the format of the file
+  unless (open(INFILE,"$source_file")) {
+    die("File '$source_file' exists but cannot be opened");
+  }
+
+
+  #### Read in the first line and try to determine what the columns are
+  $line = <INFILE>;
+  $line =~ s/[\r\n]//g;
+  my @column_names = split("\t",$line);
+  my $n_columns = @column_names;
+
+
+  #### List all the actual column names for code generation
+  #print "'",join("','",@column_names),"'\n";
+  #return;
+
+
+  #### If there are 10 columns, verify it's a table_property file and update
+  if ($n_columns == 10) {
+    my @ref_columns = ('table_name','Category','table_group',
+      'manage_table_allowed','db_table_name','PK_column_name',
+      'multi_insert_column','table_url','manage_tables','next_step');
+    for ($i=0; $i<$n_columns; $i++) {
+      if ($ref_columns[$i] ne $column_names[$i]) {
+        print "ERROR: File header verification failed.\n";
+	print " Expected column $i to be '$ref_columns[$i]' but it appears ".
+          "to be '$column_names[$i]'.  This is unexpected and we cannot ".
+          "continue.  Please resolve and retry.\n";
+        return;
+      }
+    }
+
+    update_table_property(source_file=>$source_file);
+    return;
+
+  #### If there are 22 columns, verify it's a table_column file and update
+  } elsif ($n_columns == 22) {
+    my @ref_columns = ('table_name','column_index','column_name',
+      'column_title','datatype','scale','precision','nullable',
+      'default_value','is_auto_inc','fk_table','fk_column_name',
+      'is_required','input_type','input_length','onChange','is_data_column',
+      'is_display_column','is_key_field','column_text','optionlist_query',
+      'url');
+    for ($i=0; $i<$n_columns; $i++) {
+      if ($ref_columns[$i] ne $column_names[$i]) {
+        print "ERROR: File header verification failed.\n";
+	print " Expected column $i to be '$ref_columns[$i]' but it appears ".
+          "to be '$column_names[$i]'.  This is unexpected and we cannot ".
+          "continue.  Please resolve and retry.\n";
+        return;
+      }
+    }
+
+    update_table_column(source_file=>$source_file);
+    return;
+
+  #### Else we don't know what kind of file this is
+  } else {
+    print "ERROR: File '$source_file' is not recognized as either a ".
+      "table_property file or a table_column_file.  It must be one of ".
+      "these two.  Update failed.\n";
+    return;
+  }
+
+
+
+} # end updateDriverTable
+
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+###############################################################################
+
+
+
+###############################################################################
+# update_table_property
+###############################################################################
+sub update_table_property {
+  my %args = @_;
+
+
+  #### Process the arguments list
+  my $source_file = $args{'source_file'} || die "source_file not passed";
+
+
+  #### Define some generic variables
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
   #### Define column map
   my %column_map = (
     '0'=>'table_name',
-    '1'=>'Category',
+    '1'=>'category',
     '2'=>'table_group',
     '3'=>'manage_table_allowed',
     '4'=>'db_table_name',
@@ -157,7 +253,6 @@ sub update_table_property {
 
 
   #### Define the transform map
-  #### (see ~kdeutsch/SNPS/celera/bin/transfer_celera_to_SNP.pl)
   my %transform_map = (
   );
 
@@ -169,17 +264,17 @@ sub update_table_property {
 
 
   #### Do the transfer
-  print "\nTransferring SNP_table_property.txt -> dbo.table_property";
+  print "\nTransferring $source_file -> table_property";
   $sbeams->transferTable(
     src_conn=>$sbeams,
-    source_file=>'../../conf/SNP/SNP_table_property.txt',
+    source_file=>$source_file,
     delimiter=>'\t',
     skip_lines=>'1',
     dest_PK_name=>'table_property_id',
     dest_conn=>$sbeams,
     column_map_ref=>\%column_map,
     transform_map_ref=>\%transform_map,
-    table_name=>"sbeams.dbo.table_property",
+    table_name=>"table_property",
     update=>1,
     update_keys_ref=>\%update_keys,
   );
@@ -187,12 +282,15 @@ sub update_table_property {
 
   print "\n";
 
-  $sbeams->unix2dosFile(file=>'../../conf/SNP/SNP_table_property.txt');
+  #### Insure that the file is in DOS carriage return format
+  $sbeams->unix2dosFile(file=>$source_file);
 
   return;
 
 
 } # end update_table_property
+
+
 
 ###############################################################################
 # update_table_column
@@ -202,23 +300,11 @@ sub update_table_column {
 
 
   #### Process the arguments list
-  my $ref_parameters = $args{'ref_parameters'}
-    || die "ref_parameters not passed";
-  my %parameters = %{$ref_parameters};
+  my $source_file = $args{'source_file'} || die "source_file not passed";
 
 
   #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql);
-
-
-  #### Set the command-line options
-
-
-  #### Print out the header
-  unless ($QUIET) {
-    $sbeams->printUserContext();
-    print "\n";
-  }
 
 
   #### Define column map
@@ -227,9 +313,9 @@ sub update_table_column {
     '1'=>'column_index',
     '2'=>'column_name',
     '3'=>'column_title',
-    '4'=>'datatype',
-    '5'=>'scale',
-    '6'=>'precision',
+    '4'=>'data_type',
+    '5'=>'data_scale',
+    '6'=>'data_precision',
     '7'=>'nullable',
     '8'=>'default_value',
     '9'=>'is_auto_inc',
@@ -249,7 +335,6 @@ sub update_table_column {
 
 
   #### Define the transform map
-  #### (see ~kdeutsch/SNPS/celera/bin/transfer_celera_to_SNP.pl)
   my %transform_map = (
   );
 
@@ -262,17 +347,17 @@ sub update_table_column {
 
 
   #### Do the transfer
-  print "\nTransferring SNP_table_column.txt -> dbo.table_column";
+  print "\nTransferring $source_file -> table_column";
   $sbeams->transferTable(
     src_conn=>$sbeams,
-    source_file=>'../../conf/SNP/SNP_table_column.txt',
+    source_file=>$source_file,
     delimiter=>'\t',
     skip_lines=>'1',
     dest_PK_name=>'table_column_id',
     dest_conn=>$sbeams,
     column_map_ref=>\%column_map,
     transform_map_ref=>\%transform_map,
-    table_name=>"sbeams.dbo.table_column",
+    table_name=>"table_column",
     update=>1,
     update_keys_ref=>\%update_keys,
   );
@@ -280,17 +365,12 @@ sub update_table_column {
 
   print "\n";
 
-  $sbeams->unix2dosFile(file=>'../../conf/SNP/SNP_table_column.txt');
+
+  #### Insure that the file is in DOS carriage return format
+  $sbeams->unix2dosFile(file=>$source_file);
 
   return;
 
 
 } # end update_table_column
-
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-###############################################################################
 
