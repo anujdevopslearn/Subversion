@@ -222,7 +222,7 @@ sub printEntryForm {
     # Query to obtain column information about the table being managed
     $sql_query = qq~
 	SELECT column_name,column_title,is_required,input_type,input_length,
-	       is_data_column,column_text,optionlist_query,onChange
+	       is_data_column,column_text,optionlist_query,onChange,fk_table
 	  FROM $TB_TABLE_COLUMN
 	 WHERE table_name='$TABLE_NAME'
 	   AND is_data_column='Y'
@@ -240,7 +240,8 @@ sub printEntryForm {
     my $file_upload_flag = "";
     while (my @row = $sth->fetchrow_array) {
       my ($column_name,$column_title,$is_required,$input_type,$input_length,
-          $is_data_column,$column_text,$optionlist_query,$onChange) = @row;
+          $is_data_column,$column_text,$optionlist_query,$onChange,
+          $fk_table) = @row;
       if ($optionlist_query gt "") {
         $optionlist_queries{$column_name}=$optionlist_query;
       }
@@ -328,14 +329,34 @@ sub printEntryForm {
     while (my @row = $sth->fetchrow_array) {
       my $mask_description = 0;
       my ($column_name,$column_title,$is_required,$input_type,$input_length,
-          $is_data_column,$column_text,$optionlist_query,$onChange) = @row;
+          $is_data_column,$column_text,$optionlist_query,$onChange,
+          $fk_table) = @row;
+
+
+      #### If there is a foreign_key table defined, create some HTML
+      #### to provide a link to it
+      my $jump_to_list_source;
+      if ($fk_table) {
+        my $subdir = $sbeams->getSBEAMS_SUBDIR();
+        $subdir .= "/" if ($subdir);
+        $jump_to_list_source = qq~
+          <A TARGET="AddToList" HREF="$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=$fk_table&ShowEntryForm=1">
+          <IMG SRC="$HTML_BASE_DIR/images/greyplus.gif" border=0
+          alt="Add to or view details about this list box" ></A>
+        ~;
+      }
+
 
       if ($onChange gt "") {
         $onChange = " onChange=\"$onChange\"";
       }
 
-      if ($is_required eq "N") { print "<TR><TD><B>$column_title:</B></TD>\n"; }
-      else { print "<TR><TD><B><font color=red>$column_title:</font></B></TD>\n"; }
+
+      if ($is_required eq "N") {
+        print "<TR><TD><B>$column_title:</B></TD>\n";
+      } else {
+        print "<TR><TD><B><font color=red>$column_title:</font></B></TD>\n";
+      }
 
 
       if ($input_type eq "text") {
@@ -419,7 +440,7 @@ sub printEntryForm {
         print qq!
           <TD><SELECT NAME="$column_name" $onChange>
           <OPTION VALUE=""></OPTION>
-          $optionlists{$column_name}</SELECT></TD>
+          $optionlists{$column_name}</SELECT> $jump_to_list_source</TD>
         !;
       }
 
@@ -427,14 +448,14 @@ sub printEntryForm {
         print qq!
           <TD><SELECT NAME="$column_name" SIZE=$input_length $onChange>
           <OPTION VALUE=""></OPTION>
-          $optionlists{$column_name}</SELECT></TD>
+          $optionlists{$column_name}</SELECT> $jump_to_list_source</TD>
         !;
       }
 
       if ($input_type eq "multioptionlist") {
         print qq!
           <TD><SELECT NAME="$column_name" MULTIPLE SIZE=$input_length $onChange>
-          $optionlists{$column_name}</SELECT></TD>
+          $optionlists{$column_name}</SELECT> $jump_to_list_source</TD>
         !;
       }
 
@@ -548,7 +569,7 @@ sub printEntryForm {
        !;
 
 
-    $sbeamsPROT->printPageFooter("CloseTables");
+    $sbeamsPROT->printPageFooter(close_tables=>'YES',display_footer=>'NO');
     showTable('',\%parameters);
 
 } # end printEntryForm
