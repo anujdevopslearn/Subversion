@@ -17,13 +17,11 @@ package SBEAMS::Client;
 ###############################################################################
 
   use strict;
-  use XML::Parser;
   use LWP::UserAgent;
   use HTTP::Cookies;
   use Data::Dumper;
 
   use vars qw($VERSION @ISA);
-  use vars qw(@stack %info);
 
   @ISA = ();
   $VERSION = '0.1';
@@ -35,8 +33,14 @@ package SBEAMS::Client;
 sub new {
     my $this = shift;
     my $class = ref($this) || $this;
-    my $self = {};
-    bless $self, $class;
+
+    #### Create myself with my attributes and return
+    my $self = {
+		_is_authenticated => '',
+		_authentication => '',
+		_server_uri => '',
+	       };
+    bless($self,$class);
     return($self);
 }
 
@@ -50,8 +54,8 @@ sub authenticate {
   my $SUB_NAME = "authenticate";
 
   #### Decode the argument list
-  my $server_uri = $args{'server_uri'};
-  my $SBEAMSAuth_file = $args{'SBEAMSAuth_file'};
+  my $server_uri = $args{'server_uri'} || '';
+  my $SBEAMSAuth_file = $args{'SBEAMSAuth_file'} || '';
 
 
   #### Determine the server_uri
@@ -60,32 +64,46 @@ sub authenticate {
   } else {
     $server_uri = $self->get_server_uri();
     unless ($server_uri) {
-      die("ERROR: $SUB_NAME: parameter 'server_uri' missing")
+      die("ERROR: $SUB_NAME: parameter 'server_uri' missing");
     }
   }
 
 
   #### Determine the name of the SBEAMSAuth cache file
-  unless (defined($SBEAMSAuth_file) && $SBEAMSAuth_file gt '') {
+  unless ($SBEAMSAuth_file gt '') {
     my $HOME = $ENV{'HOME'};
     unless ($HOME) {
-      die("ERROR: $SUB_NAME: Unable to determine home directory");
+      die("ERROR: $SUB_NAME: Unable to determine home directory to find ".
+	  "SBEAMS authorization cache file.");
     }
     $SBEAMSAuth_file = "$HOME/.SBEAMSAuth";
   }
 
 
   #### Create the cookie jar
-  my $cookie_jar = HTTP::Cookies->new(ignore_discard=>1);
+  my $cookie_jar = HTTP::Cookies->new(ignore_discard => 1);
 
 
-  #### See if the file exists and read it if it does
+  #### See if the SBEAMSAuth file exists
   if (-e $SBEAMSAuth_file ) {
+
+    #### Read its contents into a cookie jar
     if ($cookie_jar->load($SBEAMSAuth_file)) {
-      $self->{_is_authenticated} = 1;
-      $self->set_authentication(authentication=>$cookie_jar);
-      #print "Loaded cookie jar $cookie_jar\n";
-      return $cookie_jar;
+
+      #### Decode the server and path for the SBEAMS server_uri
+      my $server = $server_uri;
+      $server =~ s/^http[s]*:\/\///;
+      my $path = '/';
+      if ($server =~ /.+?(\/.+)/) {
+	$path = $1;
+      }
+      $server =~ s/\/.*//;
+
+      #### If we have a cookie for this location, the set the auth
+      if (defined($cookie_jar->{COOKIES}->{$server}->{$path})) {
+        $self->set_authentication(authentication => $cookie_jar);
+        return $cookie_jar;
+      }
     }
   }
 
@@ -95,6 +113,7 @@ sub authenticate {
   my ($username,$password);
   print "SBEAMS Username: ";
   chomp($username = <STDIN>);
+
   system "stty -echo";
   print "SBEAMS Password: ";
   chomp($password = <STDIN>);
@@ -110,7 +129,8 @@ sub authenticate {
 					  password=>$password,
 					 )
 	 ) {
-    die("ERROR: Unable to authenticate to SBEAMS.");
+    print("ERROR: Unable to authenticate to SBEAMS server:\n  $server_uri\n");
+    return '';
   }
 
 
@@ -119,8 +139,7 @@ sub authenticate {
   #### And make sure only the user can read the file
   chmod(0600,$SBEAMSAuth_file);
 
-  $self->{_is_authenticated} = 1;
-  $self->set_authentication(authentication=>$SBEAMS_auth);
+  $self->set_authentication(authentication => $SBEAMS_auth);
   return $SBEAMS_auth;
 
 } # end authenticate
@@ -136,20 +155,21 @@ sub fetch_data {
   my $SUB_NAME = "fetch_data";
 
   #### Decode the argument list
-  my $server_uri = $args{'server_uri'};
+  my $server_uri = $args{'server_uri'} || '';
   my $server_command = $args{'server_command'}
     || die("ERROR: $SUB_NAME: parameter server_command missing");
-  my $command_parameters = $args{'command_parameters'};
+  my $command_parameters = $args{'command_parameters'} || '';
 
 
   #### If authentication hasn't happened yet, do it now if possible
-  unless ($self->is_authenticated) {
+  unless ($self->is_authenticated()) {
     unless ($server_uri) {
       print "ERROR: $SUB_NAME: Parameter server_uri missing";
       return '';
     }
     unless ($self->authenticate(server_uri => $server_uri)) {
-      print "ERROR: $SUB_NAME: Unable to authenticate";
+      print "ERROR: $SUB_NAME: Unable to authenticate\n";
+      return '';
     }
   }
 
@@ -162,10 +182,9 @@ sub fetch_data {
   my $SBEAMS_auth = $self->get_authentication();
 
 
-  #### Create a user agent object pretending to be Mozilla
+  #### Create a user agent object and provide the cookie jar
   my $ua = new LWP::UserAgent(timeout => 600);
-  $ua->agent("Mozilla/5.0 (X11; U; Linux i686; en-US; rv:0.9.9)");
-  #print "My cookie jar is $SBEAMS_auth\n";
+  $ua->agent("SBEAMS::Client");
   $ua->cookie_jar($SBEAMS_auth);
 
 
@@ -188,7 +207,7 @@ sub fetch_data {
 
 
   #### Create a request object with the supplied URL and parameters
-  my $request = HTTP::Request->new(POST=>$url);
+  my $request = HTTP::Request->new(POST => $url);
   $request->content_type('application/x-www-form-urlencoded');
   $request->content($command_parameters_str);
 
@@ -209,7 +228,6 @@ sub fetch_data {
 
   #### Return the result
   return $resultset;
-
 
 } # end fetch_data
 
@@ -284,6 +302,7 @@ sub set_authentication {
     || die("ERROR: $SUB_NAME: parameter 'authentication' missing");
 
   $self->{_authentication} = $authentication;
+  $self->{_is_authenticated} = 1;
 
   return 1;
 
@@ -306,7 +325,7 @@ sub get_authentication {
 
   #### If the authentication has not been yet obtained, try to
   unless ($self->is_authenticated()) {
-    $self->{_authentication} = $self->authenticate();
+    $self->set_authentication($self->authenticate());
   }
 
 
@@ -341,11 +360,11 @@ sub _fetchSBEAMSAuth {
 
   #### Create a user agent object pretending to be Mozilla
   my $ua = new LWP::UserAgent;
-  $ua->agent("Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.0)");
+  $ua->agent("SBEAMS::Client");
 
 
   #### Create a request object with the supplied URL and parameters
-  my $request = HTTP::Request->new(POST=>$url);
+  my $request = HTTP::Request->new(POST => $url);
   $request->content_type('application/x-www-form-urlencoded');
   $request->content($parameters);
 
@@ -358,7 +377,7 @@ sub _fetchSBEAMSAuth {
   if ($response->is_success) {
 
     #### Create a cookie jar and extract the cookie from the response
-    my $cookie_jar = HTTP::Cookies->new(ignore_discard=>1);
+    my $cookie_jar = HTTP::Cookies->new(ignore_discard => 1);
     $cookie_jar->extract_cookies($response);
 
     #### If a cookie was obtained, return it
@@ -405,14 +424,14 @@ sub decode_response {
   #### If we did not figure out the resultset type, squawk and return
   unless ($rawtype) {
     print "ERROR: $SUB_NAME: Unable to determine response type.\n";
-    return 0;
+    return '';
   }
 
 
   #### If the type is xml or html, we don't yet know what to do
   if ($rawtype eq 'xml' || $rawtype eq 'html') {
     print "ERROR: $SUB_NAME: Cannot decode $rawtype into a resultset yet.\n";
-    return 0;
+    return '';
   }
 
 
@@ -450,13 +469,242 @@ sub decode_response {
 
   #### Return error if we got this far
   print "ERROR: $SUB_NAME: Unknown type '$rawtype'\n";
-  return 0;
+  return '';
 
 } # end decode_response
 
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
+
 1;
+
+__END__
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+=head1 SBEAMS::Client
+
+SBEAMS Client module for accessing a remote SBEAMS server via HTTP
+
+=head2 SYNOPSIS
+
+      use SBEAMS::Client;
+      my $sbeams = new SBEAMS::Client;
+
+      my $server_uri = "https://db.systemsbiology.net/sbeams";
+      my $server_command = "Proteomics/BrowseBioSequence.cgi";
+      my $command_parameters = {
+        biosequence_set_id => 3,
+        biosequence_gene_name_constraint => "bo%",
+      };
+
+      my $resultset = $sbeams->fetch_data(
+        server_uri => $server_uri,
+        server_command => $server_command,
+        command_parameters => $command_parameters,
+       );
+
+      while ( my ($key,$value) = each %{$resultset}) {
+        if ($key eq 'raw_response') {
+          print "  key = <FULL DATA RESPONSE>\n";
+        } else {
+          print "  $key = $value\n";
+        }
+      }
+
+
+=head2 DESCRIPTION
+
+This class provides a simple mechanism for fetching data from a remote
+SBEAMS server via HTTP, including handling for authentication and
+parsing the returned data stream.
+
+
+=head2 METHODS
+
+=over
+
+=item * B<new()>
+
+    Constructor creates a new SBEAMS::Client object
+
+    INPUT PARAMETERS:
+
+      None
+
+    OUTPUT:
+
+      New SBEAMS::Client object
+
+
+=item * B<fetch_data(see INPUT PARAMETERS)>
+
+    Fetch a resultset from a remote SBEAMS server
+
+    INPUT PARAMETERS:
+
+      server_uri => Scalar URI address of the remote SBEAMS server, e.g.:
+      https://db.systemsbiology.net/sbeams
+
+      server_command => Scalar command on the server to run, e.g.:
+      Proteomics/BrowseBioSequence.cgi
+
+      command_parameters => Hash reference for the parameters to pass, e.g.
+      {
+        biosequence_set_id => 3,
+        biosequence_gene_name_constraint => "bo%",
+      }
+
+    OUTPUT:
+
+      A hash reference of some complexity containing the fetched resultset:
+      {
+        is_success = 1
+        raw_response = <FULL HTTP RESPONSE BODY>
+        column_list_ref = ARRAY(0x834d380)
+        column_hash_ref = HASH(0x834d428)
+        data_ref = ARRAY(0x834d2e4)
+      }
+
+
+=item * B<authenticate(see INPUT PARAMETERS)>
+
+    Verify the authentication required to communicate with the server,
+    either by reading a cached authentication or promtping the user for
+    an SBEAMS username and password.
+
+    INPUT PARAMETERS:
+
+      server_uri => Scalar URI address of the remote SBEAMS server, e.g.:
+      https://db.systemsbiology.net/sbeams
+
+      SBEAMSAuth_file => Scalar filename containing a cached cookie, e.g.:
+      $HOME/.SBEAMSAuth
+
+    OUTPUT:
+
+      SBEAMS_auth object
+
+
+=item * B<set_server_uri($server_uri)>
+
+    Set the server_uri attribute
+
+    INPUT PARAMETERS:
+
+      $server_uri: a scalar string containing the server URI address, e.g.
+      https://db.systemsbiology.net/sbeams
+
+    OUTPUT:
+
+      1
+
+
+=item * B<get_server_uri()>
+
+    Get the current server_uri attribute
+
+    INPUT PARAMETERS:
+
+      None
+
+    OUTPUT:
+
+      The current value of the $server_uri
+
+
+=item * B<is_authenticated()>
+
+    Determine if the user has currently already authenticated
+
+    INPUT PARAMETERS:
+
+      None
+
+    OUTPUT:
+
+      1 if yes, 0 if not
+
+
+=item * B<set_authentication(see INPUT PARAMETERS)>
+
+    Set the authentication parameter
+
+    INPUT PARAMETERS:
+
+      authentication => SBEAMS authentication object
+
+    OUTPUT:
+
+      1
+
+
+=item * B<get_authentication()>
+
+    Get the current authentication parameter or if the user is not yet
+    authenticated, call authenticate().
+
+    INPUT PARAMETERS:
+
+      None
+
+    OUTPUT:
+
+      SBEAMS authentication object or undef if not able to authenticate.
+
+
+=item * B<_fetchSBEAMSAuth(see INPUT PARAMETERS)>
+
+    Fetch an SBEAMS authentication object (cookie) given the supplied
+    username and password.  The client software using this method
+    must handle a raw password, which is discouraged.  It is preferred
+    to use the authenticate() method which has its internal means of
+    asking for username and password.
+
+    INPUT PARAMETERS:
+
+      server_uri => Scalar URI address of the remote SBEAMS server, e.g.:
+      https://db.systemsbiology.net/sbeams
+
+      username => Scalar SBEAMS username with which to authenticate
+
+      password => Scalar SBEAMS password with which to authenticate
+
+    OUTPUT:
+
+      SBEAMS Auth object if success or empty string if failed.
+
+
+=item * B<decode_response(see INPUT PARAMETERS)>
+
+    This method decodes the raw HTTP response (e.g., TSV or XML) into a
+    resultset object (or rather currently just a hash with the data in it).
+
+    INPUT PARAMETERS:
+
+      resultset_ref => Hash reference to the current fetch result
+
+    OUTPUT:
+
+      1 is success or 0 if failed.
+
+
+=back
+
+=head2 BUGS
+
+Please send bug reports to the author
+
+=head2 AUTHOR
+
+Eric Deutsch <edeutsch@systemsbiology.org>
+
+=head2 SEE ALSO
+
+SBEAMS::Connection
+
+=cut
+
