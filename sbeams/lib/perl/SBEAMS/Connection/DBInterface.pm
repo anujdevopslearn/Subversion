@@ -881,15 +881,15 @@ sub parseConstraint2SQL {
   #### Parse type flexible_float
   if ($constraint_type eq "flexible_float") {
     print "Parsing flexible_float $constraint_name<BR>\n" if ($verbose);
-    if ($constraint_value =~ /^[\d\.]+$/) {
+    if ($constraint_value =~ /^[\d\.\-\+]+$/) {
       return "   AND $constraint_column = $constraint_value";
-    } elsif ($constraint_value =~ /^between\s+[\d\.]+\s+and\s+[\d\.]+$/i) {
+    } elsif ($constraint_value =~ /^between\s+[\d\.\-\+]+\s+and\s+[\d\.\-\+]+$/i) {
       return "   AND $constraint_column $constraint_value";
-    } elsif ($constraint_value =~ /^([\d\.]+)\s*\+\-\s*([\d\.]+)$/i) {
+    } elsif ($constraint_value =~ /^([\d\.\+\-]+)\s*\+\-\s*([\d\.]+)$/i) {
       my $lower = $1 - $2;
       my $upper = $1 + $2;
       return "   AND $constraint_column BETWEEN $lower AND $upper";
-    } elsif ($constraint_value =~ /^[><=][=]*\s*[\d\.]+$/) {
+    } elsif ($constraint_value =~ /^[><=][=]*\s*[\d\.\-\+]+$/) {
       return "   AND $constraint_column $constraint_value";
     } else {
       print "<H4>Cannot parse $constraint_name constraint ".
@@ -1872,7 +1872,7 @@ sub displayResultSetPlot {
       if ($rs_params{"rs_column$column_index"} gt "") {
         foreach my $element (@{$resultset_ref->{data_ref}}) {
           my $value = $element->[$rs_params{"rs_column$column_index"}];
-          $value =~ /([\d\.]+)/;
+          $value =~ /([\d\.\-\+]+)/;
           if ($1) {
             $value = $1;
           } else {
