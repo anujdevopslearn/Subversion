@@ -2398,39 +2398,55 @@ sub displayResultSet {
       #### Convert to a delimiter-safe format
       my @output_row = ();
 
+	  ## If output_mode is tsvfull, append URL column for each column with a hyperlink
+	  my @tsvfull_urls = ();
+	  my %tsvfull_url_column_number = ();
+	  my @tsvfull_column_headers = ();
+
       for (my $column = 0; $column < scalar(@all_columns); $column++){
-	#### If this column's already been flagged for removal, continue;
-	next if ($no_print_columns[$column]);
+	  #### If this column's already been flagged for removal, continue;
+		next if ($no_print_columns[$column]);
 
-	my $datum = $all_columns[$column];
+		my $datum = $all_columns[$column];
 
-	#### Flag Columns to REMOVAL from printing. 
-	if ($self->output_mode() eq 'tsv' || $self->output_mode() eq 'csv' ||
+		#### Flag Columns to REMOVAL from printing. 
+		if ($self->output_mode() eq 'tsv' || $self->output_mode() eq 'csv' ||
             $self->output_mode() eq 'excel') {
-	  if ($hidden_cols{$datum}) {
-	    $no_print_columns[$column] = 1;
-	    next;
-	  } else {
-	    $no_print_columns[$column] = 0;
-	  }
-	}
+		  if ($hidden_cols{$datum}) {
+			$no_print_columns[$column] = 1;
+			next;
+		  } else {
+			$no_print_columns[$column] = 0;
+		  }
+		}
 
-        if ($datum =~ /[\t,\"]/) {
-          $datum =~ s/\t/ /g if ($self->output_mode() =~ /tsv/);
-          $datum =~ s/\"/""/g;
-          $datum = "\"$datum\"";
-        }
-        push(@output_row,$datum);
-      }
+		if ($self->output_mode() eq 'tsvfull') {
+		  if (%{$url_cols_ref}->{@{$column_titles_ref}->[$column]}) {
+			my $link = %{$url_cols_ref}->{@{$column_titles_ref}->[$column]};
+			$tsvfull_url_column_number{$link} = $column;
+			push (@tsvfull_urls, $link);
+			my $url_column_title = $datum."_URL";
+			push(@tsvfull_column_headers, $url_column_title);
+		  }
+		}
+
+		if ($datum =~ /[\t,\"]/) {
+		  $datum =~ s/\t/ /g if ($self->output_mode() =~ /tsv/);
+		  $datum =~ s/\"/""/g;
+		  $datum = "\"$datum\"";
+		}
+		push(@output_row,$datum);
+	  }
+	  push (@output_row, @tsvfull_column_headers);
       print join($delimiter,@output_row),"\n";
 
       #### Print out individual data rows, removing any flagged columns
       while (@row = returnNextRow()) {
         @output_row = ();
 
-	for (my $column = 0; $column < scalar(@row); $column++){
-	  my $datum = $row[$column];
-	  next if ( defined $no_print_columns[$column] && $no_print_columns[$column] == 1);
+		for (my $column = 0; $column < scalar(@row); $column++){
+		  my $datum = $row[$column];
+		  next if ( defined $no_print_columns[$column] && $no_print_columns[$column] == 1);
           if ( defined $datum && $datum =~ /[\t,\",\n]/) {
             $datum =~ s/\t/ /g if ($self->output_mode()  =~ /tsv/);
 
@@ -2441,6 +2457,16 @@ sub displayResultSet {
           }
           push(@output_row,$datum);
         }
+
+		if ($self->output_mode() eq 'tsvfull') {
+		  foreach my $tsvfull_url (@tsvfull_urls) {
+			my $linked_column_number = $tsvfull_url_column_number{$tsvfull_url};
+			$tsvfull_url =~ s/\%(\d+)V/$row[$1]/g;
+			$tsvfull_url =~ s/\%V/$row[$linked_column_number]/g;
+			push (@output_row, $tsvfull_url);
+		  }
+		}
+		
         @output_row = map  { ( defined $_ ) ? $_ : '' } @output_row; 
         print join($delimiter,@output_row),"\n";
 
@@ -2573,9 +2599,9 @@ sub displayResultSet {
      
       ShowHTMLTable{
         titles=>$column_titles_ref,
-	types=>$types_ref,
-	widths=>\@precisions,
-	row_sub=>\&returnNextRow,
+		types=>$types_ref,
+		widths=>\@precisions,
+		row_sub=>\&returnNextRow,
         table_attrs=>'WIDTH=675 BORDER=1 CELLPADDING=2 CELLSPACING=2',
         title_formats=>['BOLD'],
         url_keys=>$url_cols_ref,
@@ -2602,9 +2628,9 @@ sub displayResultSet {
 		
       ShowHTMLTable{
         titles=>$column_titles_ref,
-	types=>$types_ref,
-	widths=>\@precisions,
-	row_sub=>\&returnNextRow,
+		types=>$types_ref,
+		widths=>\@precisions,
+		row_sub=>\&returnNextRow,
         table_attrs=>"$table_width BORDER=0 CELLPADDING=2 CELLSPACING=2",
         title_formats=>['FONT COLOR=white,BOLD'],
         url_keys=>$url_cols_ref,
