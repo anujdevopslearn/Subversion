@@ -94,19 +94,21 @@
     <TD>
     <CENTER><B>Schema</B></CENTER><BR>
     <UL>
-     <LI><A HREF="Core/Core_Schema.gif">Core database schema</A>
+     <LI><A HREF="Core/Core_Schema.gif">SBEAMS Core schema</A>
      <P>
-     <LI><A HREF="Microarray/Microarray_Schema.gif">Microarray database schema</A>
-     <LI><A HREF="Microarray/Microarray_Affy_Schema.gif">Microarray Affy Schema</A>
+     <LI><A HREF="Microarray/Microarray_Schema.gif">Microarray module schema</A>
+     <LI><A HREF="Microarray/Microarray_Affy_Schema.gif">Microarray module (Affymetrix component) schema</A>
      <P>
-     <LI><A HREF="PhenoArray/PhenoArray_Schema.gif">PhenoArray database schema</A>
+     <LI><A HREF="Proteomics/Proteomics_main.gif">Proteomics module schema - main component</A>
+     <LI><A HREF="Proteomics/Proteomics_ProteinProphet.gif">Proteomics module schema - ProteinProphet component</A>
+     <LI><A HREF="Proteomics/Proteomics_APD.gif">Proteomics module schema - APD component</A>
+     <LI><A HREF="Proteomics/Proteomics_request.gif">Proteomics module schema - request mgmt component</A>
      <P>
-     <LI><A HREF="Proteomics/Proteomics_main.gif">Proteomics database schema - main component</A>
-     <LI><A HREF="Proteomics/Proteomics_ProteinProphet.gif">Proteomics database schema - ProteinProphet component</A>
-     <LI><A HREF="Proteomics/Proteomics_APD.gif">Proteomics database schema - APD component</A>
-     <LI><A HREF="Proteomics/Proteomics_request.gif">Proteomics database schema - request mgmt component</A>
+     <LI><A HREF="Cytometry/Cytometry.gif">Cytometry module schema</A>
      <P>
-     <LI><A HREF="SNP/SNP_Schema.gif">SNP database schema</A>
+     <LI><A HREF="PhenoArray/PhenoArray_Schema.gif">PhenoArray module schema</A>
+     <P>
+     <LI><A HREF="SNP/SNP_Schema.gif">SNP module schema</A>
     </UL>
     </TD>
 
