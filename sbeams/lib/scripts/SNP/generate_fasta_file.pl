@@ -130,7 +130,7 @@ sub main {
           FROM #tmp1 t
      LEFT JOIN ${TBSN_QUERY_SEQUENCE} QS
             ON (QS.query_sequence = t.snp_sequence)
-         WHERE t.query_sequence_id IS NULL
+         --WHERE t.query_sequence_id IS NULL --removed Eric 2003-06-08
       ORDER BY t.allele_id
   ~;
 #        print "SQL: $sql\n";
@@ -142,14 +142,17 @@ sub main {
   my ($query_sequence_id,$sequence);
   foreach $row (@sequences) {
     #### If there's no sequence, just skip this record
-    next unless ($row->[1]);
+    unless ($row->[1]) {
+      print "WARNING: Empty sequence for allele_id '$row[0]'!\n"
+      next;
+    }
 
     #### Pull out the query_sequence_id from the result set
     $query_sequence_id = $row->[2];
     $sequence = uc($row->[1]);
 
 
-    #### If it's not defined, then see if we've already cencountered this
+    #### If it's not defined, then see if we've already encountered this
     #### sequence in this program
     unless ($query_sequence_id) {
       $query_sequence_id = $query_sequence_ids{$sequence}
@@ -168,9 +171,13 @@ sub main {
     	verbose=>$VERBOSE,
     	testonly=>$TESTONLY,
       );
-      $row->[1] =~ s/-//g;
-      print FASTAFILE "\>".$query_sequence_id."\n".$row->[1]."\n";
-      $query_sequence_ids{$row->[1]} = $query_sequence_id;
+
+      #### Create the FASTA file entry
+      $sequence =~ s/-//g;
+      print FASTAFILE "\>".$query_sequence_id."\n".$sequence."\n";
+
+      #### Record that this one was processed in the hash
+      $query_sequence_ids{$sequence} = $query_sequence_id;
     }
 
 
