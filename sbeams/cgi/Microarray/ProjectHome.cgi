@@ -674,7 +674,9 @@ if ($display_type eq 'TWO_COLOR' ) {
 
 	   %hidden_cols = ('array_id' => 1,
 		     	'array_request_id' => 1,
+				'array_request_slide_id' => 1,
 		    	'printing_batch_id' => 1,
+				'date_printed' => 1,
 		    	'hybridization_id' => 1,
 		     	'array_scan_id' => 1,
 		     	'array_quantitation_id' => 1,
