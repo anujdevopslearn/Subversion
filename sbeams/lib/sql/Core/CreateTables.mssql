@@ -300,6 +300,7 @@ CREATE TABLE dbo.table_property (
 )
 GO
 
+
 CREATE TABLE dbo.table_column (
 	table_column_id		int IDENTITY NOT NULL,
 	table_name		varchar(50) NOT NULL,
