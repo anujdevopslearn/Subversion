@@ -1181,6 +1181,13 @@ sub processEntryForm {
 
       } # end foreach
 
+      #### Execute the postUpdateOrInsertHook()
+      postUpdateOrInsertHook(
+        parameters_ref => \%parameters,
+        pk_value => $parameters{$PK_COLUMN_NAME},
+      );
+
+
     } # end if SUCCESSFUL
 
 
@@ -1663,6 +1670,155 @@ sub updateLinkingTable {
   return 1;
 
 } # end updateLinkingTable
+
+
+
+###############################################################################
+# updateChildTable
+###############################################################################
+sub updateChildTable {
+  my %args = @_;
+
+  #### Extract input parameters
+  my $parent_table_name = $args{'parent_table_name'}
+    || die("Parameter parent_table_name not passed");
+  my $parent_pk_column_name = $args{'parent_pk_column_name'}
+    || die("Parameter parent_pk_column_name not passed");
+  my $parent_pk_value = $args{'parent_pk_value'}
+    || die("Parameter parent_pk_value not passed");
+
+  my $child_table_name = $args{'child_table_name'}
+    || die("Parameter child_table_name not passed");
+  my $child_pk_column_name = $args{'child_pk_column_name'}
+    || die("Parameter child_pk_column_name not passed");
+
+  my $child_data_columns = $args{'child_data_columns'} || '';
+  my $child_data_values = $args{'child_data_values'} || '';
+
+  my $add_audit_parameters = $args{'add_audit_parameters'} || '';
+
+
+  #### Get the real database table names
+  my ($parent_table_name) =
+    $sbeamsMOD->returnTableInfo($parent_table_name,"DB_TABLE_NAME");
+  my ($child_table_name) =
+    $sbeamsMOD->returnTableInfo($child_table_name,"DB_TABLE_NAME");
+
+
+  #### Get all existing rows in the child table for the parent
+  my $sql = qq~
+    SELECT $child_pk_column_name
+      FROM $child_table_name
+     WHERE $parent_pk_column_name = '$parent_pk_value'
+     ORDER BY $child_pk_column_name
+  ~;
+  my @rows = $sbeams->selectSeveralColumns($sql);
+
+
+  #### Debugging stuff
+  my $verbose = 0;
+  if (0 == 1) {
+    $verbose = 2;
+    print "<PRE>\n";
+  }
+
+  #### Determine the number of old and new rows
+  my $n_old_rows = scalar(@rows);
+  my $n_new_rows = scalar(@{$child_data_values});
+  my $inew = 0;
+
+  #### Loop over each one, overwriting new data
+  for (my $iold=0;$iold<$n_old_rows;$iold++) {
+    my $child_id = $rows[$iold]->[0];
+
+    if ($iold < $n_new_rows) {
+      my %rowdata = (
+        $parent_pk_column_name => $parent_pk_value,
+      );
+      for (my $i; $i<scalar(@{$child_data_columns});$i++) {
+        $rowdata{$child_data_columns->[$i]} = $child_data_values->[$inew]->[$i]
+	  if (defined($child_data_values->[$inew]->[$i]));
+      }
+
+      $sbeams->updateOrInsertRow(
+        update => 1,
+        table_name => $child_table_name,
+        rowdata_ref => \%rowdata,
+        PK => $child_pk_column_name,
+        PK_value => $child_id,
+        add_audit_parameters => $add_audit_parameters,
+        verbose => $verbose,
+        #testonly => 1,
+      );
+
+    #### Otherwise, DELETE it
+    } else {
+
+      #### If it's an auditable table, just mark as deleted
+      if ($add_audit_parameters) {
+	my %rowdata = (
+          record_status => 'D',
+	);
+
+	$sbeams->updateOrInsertRow(
+          update => 1,
+          table_name => $child_table_name,
+          rowdata_ref => \%rowdata,
+          PK => $child_pk_column_name,
+          PK_value => $child_id,
+          add_audit_parameters => 1,
+          verbose => $verbose,
+        );
+
+      #### Else really DELETE it
+      } else {
+	my $sql = qq~
+	  DELETE FROM $child_table_name
+	   WHERE $child_pk_column_name = '$child_id'
+	~;
+	$sbeams->executeSQL($sql);
+
+      }
+
+    }
+
+    $inew++;
+
+  }
+
+
+  #### Loop over any remaining new items, INSERTing the new rows
+  while ($inew < $n_new_rows) {
+    my %rowdata = (
+      $parent_pk_column_name => $parent_pk_value,
+    );
+    for (my $i; $i<scalar(@{$child_data_columns});$i++) {
+      $rowdata{$child_data_columns->[$i]} = $child_data_values->[$inew]->[$i]
+        if (defined($child_data_values->[$inew]->[$i]));
+    }
+
+    $sbeams->updateOrInsertRow(
+      insert => 1,
+      table_name => $child_table_name,
+      rowdata_ref => \%rowdata,
+      PK => $child_pk_column_name,
+      add_audit_parameters => $add_audit_parameters,
+      verbose => $verbose,
+      #testonly => 1,
+    );
+
+    $inew++;
+
+  }
+
+
+  if ($verbose) {
+    print "</PRE><BR>\n";
+  }
+
+  return 1;
+
+} # end updateChildTable
 
 
 
