@@ -78,7 +78,7 @@ require Exporter;
 
 #### Get the appropriate database prefixes for the SBEAMS core and this module
 my $core = $DBPREFIX{Core};
-my $mod = $DBPREFIX{glue};
+my $mod = $DBPREFIX{Interactions};
 
 
 $TB_ORGANISM                      = "${core}organism";
