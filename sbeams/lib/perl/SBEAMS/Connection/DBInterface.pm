@@ -1129,20 +1129,72 @@ sub parseConstraint2SQL {
 
 
   #### Parse type plain_text: a plain, unquoted bit of text
+  #if ($constraint_type eq "plain_text") {
+  #  print "Parsing plain_text $constraint_name<BR>\n" if ($verbose);
+  #  print "constraint_value = $constraint_value<BR>\n" if ($verbose);
+  #
+  #  #### Convert any ' marks to '' to appear okay within the strings
+  #  $constraint_value = $self->convertSingletoTwoQuotes($constraint_value);
+  #
+  #  #### Bad word checking here has been disabled because the string will be
+  #  #### quoted, so there shouldn't be a way to put in dangerous SQL...
+  #  #if ($constraint_value =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {}
+  #
+  #  my $tmp = $constraint_NOT_flag;
+  #  $constraint_NOT_flag .= ' ' if ($constraint_NOT_flag);
+  #  return "   AND $constraint_column ${tmp}LIKE '$constraint_value'";
+  #}
+
+
+  #### Parse type plain_text: a semicolon separated list that uses
+  #### LIKEs and can thus contain wildcards
   if ($constraint_type eq "plain_text") {
     print "Parsing plain_text $constraint_name<BR>\n" if ($verbose);
-    print "constraint_value = $constraint_value<BR>\n" if ($verbose);
+    my @items = split(";",$constraint_value);
+    my $constraint_string = '';
 
-    #### Convert any ' marks to '' to appear okay within the strings
-    $constraint_value = $self->convertSingletoTwoQuotes($constraint_value);
+    #### Loop over all items, building constraint list
+    my $combiner = '';
+    foreach my $element (@items) {
 
-    #### Bad word checking here has been disabled because the string will be
-    #### quoted, so there shouldn't be a way to put in dangerous SQL...
-    #if ($constraint_value =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {}
+      #### Allow individual negations
+      my $is_negated = 0;
+      if (substr($element,0,1) eq '!') {
+	$element = substr($element,1,9999);
+	$is_negated = 1;
+      }
 
-    my $tmp = $constraint_NOT_flag;
-    $constraint_NOT_flag .= ' ' if ($constraint_NOT_flag);
-    return "   AND $constraint_column ${tmp}LIKE '$constraint_value'";
+      #### Enquote the string
+      my $quoted_element = "'".$self->convertSingletoTwoQuotes($element)."'";
+
+      #### Configure the NOT flag
+      my $use_NOT_flag = $constraint_NOT_flag;
+      if ($is_negated) {
+	#### Switch the sense of the NOT flag
+	if ($use_NOT_flag) {
+	  $use_NOT_flag = '';
+	} else {
+	  $use_NOT_flag = 'NOT';
+	}
+	#### Switch the sense of the combiner
+	if ($combiner =~ /OR/) {
+	  $combiner =~ s/OR/AND/;
+	} else {
+	  $combiner =~ s/AND/OR/;
+	}
+      }
+      my $NOT_flag = $use_NOT_flag;
+      $NOT_flag .= ' ' if ($use_NOT_flag);
+
+      #### Build the constraint string
+      $constraint_string .= "${combiner}$constraint_column ".
+        "${NOT_flag}LIKE $quoted_element";
+      $combiner = "\n               OR ";
+      $combiner = "\n               AND " if ($constraint_NOT_flag);
+    }
+
+    #### Put final constraint string into parens
+    return "   AND ( $constraint_string\n             )";
   }
 
 
@@ -1155,7 +1207,10 @@ sub parseConstraint2SQL {
       $constraint_string .= "'".$self->convertSingletoTwoQuotes($element)."',";
     }
     chop($constraint_string);  # Remove last comma
-    return "   AND $constraint_column IN ( $constraint_string )";
+
+    my $tmp = $constraint_NOT_flag;
+    $constraint_NOT_flag .= ' ' if ($constraint_NOT_flag);
+    return "   AND $constraint_column ${tmp}IN ( $constraint_string )";
   }
 
 
