@@ -15,3 +15,4 @@ IS_slide_image	Slide Image	Immunostain_infrastructure	YES	$TBIS_SLIDE_IMAGE	slid
 IS_tissue_type	Tissue Type	Immunostain_infrastructure	YES	$TBIS_TISSUE_TYPE	tissue_type_id		ManageTable.cgi?TABLE_NAME=IS_tissue_type	"IS_cell_type,IS_tissue_type,IS_cell_presence_level"	
 IS_specimen	Specimen	Immunostain_infrastructure	YES	$TBIS_SPECIMEN	specimen_id		ManageTable.cgi?TABLE_NAME=IS_specimen	"IS_specimen,IS_specimen_block"	IS_specimen_block
 IS_specimen_block	Specimen Block	Immunostain_infrastructure	YES	$TBIS_SPECIMEN_BLOCK	specimen_block_id		ManageTable.cgi?TABLE_NAME=IS_specimen_block	"IS_specimen,IS_specimen_block"	IS_stained_slide
+IS_SummarizeStains	Summarize Stains	QUERY	NO				SummarizeStains		
