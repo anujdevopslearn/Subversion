@@ -29,7 +29,6 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
-##use CGI::Carp qw(fatalsToBrowser croak);
 
 use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
@@ -44,10 +43,6 @@ $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
-
-
-#use CGI;
-#$q = new CGI;
 
 
 ###############################################################################
@@ -231,7 +226,6 @@ sub handle_request {
   ($PROGRAM_FILE_NAME) =
     $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
 
-## xxxx need these edits?
   $PROGRAM_FILE_NAME = $PROG_NAME;
   my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
 
@@ -600,22 +594,48 @@ sub handle_request {
 
 
   #### Define the hypertext links for columns that need them
-  %url_cols = (
-      'Biosequence Name' => "$CGI_BASE_DIR/PeptideAtlas/BrowseBioSequence.cgi?biosequence_name_constraint=\%$colnameidx{biosequence_name}V&apply_action=$pass_action",
-      'Biosequence Name_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information about this protein\'; return true"',
+  if ( $parameters{atlas_build_id} == 48 ) {
 
-      'Peptide Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=2&atlasBuildID=$parameters{atlas_build_id}&searchWithinThis=Peptide+Name&searchForThis=\%$colnameidx{peptide_accession}V&action=QUERY",
-      'Peptide Accession_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show summary for this peptide\'; return true"',
+      %url_cols = (
+          'Biosequence Name' => "$CGI_BASE_DIR/PeptideAtlas/BrowseBioSequence.cgi?biosequence_name_constraint=\%$colnameidx{biosequence_name}V&apply_action=$pass_action",
+          'Biosequence Name_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information about this protein\'; return true"',
 
-      'Peptide Sequence' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=2&atlas_build_id=$parameters{atlas_build_id}&searchWithinThis=Peptide+Sequence&searchForThis=\%$colnameidx{peptide_sequence}V&action=QUERY",
-      'Peptide Sequence_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show summary for this peptide\'; return true"',
+          'Peptide Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=2&atlasBuildID=$parameters{atlas_build_id}&searchWithinThis=Peptide+Name&searchForThis=\%$colnameidx{peptide_accession}V&action=QUERY",
+          'Peptide Accession_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show summary for this peptide\'; return true"',
 
-      'Peptides that include this sequence' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides?_tab=1&atlas_build_id=$parameters{atlas_build_id}&peptide_ids_constraint=\%$colnameidx{is_subpeptide_of}V&action=QUERY",
-      'Peptides that include this sequence_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show peptides with these IDs\'; return true"',
+          'Peptide Sequence' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=2&atlas_build_id=$parameters{atlas_build_id}&searchWithinThis=Peptide+Sequence&searchForThis=\%$colnameidx{peptide_sequence}V&action=QUERY",
+          'Peptide Sequence_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show summary for this peptide\'; return true"',
 
-      'Sample IDs'  => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=2&atlasBuildID=$parameters{atlas_build_id}&searchWithinThis=Peptide+Name&searchForThis=\%$colnameidx{peptide_accession}V&action=QUERY",
-      'Sample IDs_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show sample summaries for this peptide\'; return true"',
-  );
+          'Peptides that include this sequence' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides?_tab=1&atlas_build_id=$parameters{atlas_build_id}&peptide_ids_constraint=\%$colnameidx{is_subpeptide_of}V&action=QUERY",
+          'Peptides that include this sequence_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show peptides with these IDs\'; return true"',
+
+          'Sample IDs'  => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=2&atlasBuildID=$parameters{atlas_build_id}&searchWithinThis=Peptide+Name&searchForThis=\%$colnameidx{peptide_accession}V&action=QUERY",
+          'Sample IDs_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show sample summaries for this peptide\'; return true"',
+
+          'Start Position'  => "http://www.ensembl.org/Homo_sapiens/contigview?c=\%$colnameidx{chromosome}V\:\%$colnameidx{start_in_chromosome}V&w=10000",
+          'Start Position_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show peptide in Ensembl DAS genome viewer\'; return true"',
+      );
+
+  } else {
+
+      %url_cols = (
+          'Biosequence Name' => "$CGI_BASE_DIR/PeptideAtlas/BrowseBioSequence.cgi?biosequence_name_constraint=\%$colnameidx{biosequence_name}V&apply_action=$pass_action",
+          'Biosequence Name_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information about this protein\'; return true"',
+
+          'Peptide Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=2&atlasBuildID=$parameters{atlas_build_id}&searchWithinThis=Peptide+Name&searchForThis=\%$colnameidx{peptide_accession}V&action=QUERY",
+          'Peptide Accession_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show summary for this peptide\'; return true"',
+
+          'Peptide Sequence' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=2&atlas_build_id=$parameters{atlas_build_id}&searchWithinThis=Peptide+Sequence&searchForThis=\%$colnameidx{peptide_sequence}V&action=QUERY",
+          'Peptide Sequence_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show summary for this peptide\'; return true"',
+
+          'Peptides that include this sequence' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides?_tab=1&atlas_build_id=$parameters{atlas_build_id}&peptide_ids_constraint=\%$colnameidx{is_subpeptide_of}V&action=QUERY",
+          'Peptides that include this sequence_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show peptides with these IDs\'; return true"',
+
+          'Sample IDs'  => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=2&atlasBuildID=$parameters{atlas_build_id}&searchWithinThis=Peptide+Name&searchForThis=\%$colnameidx{peptide_accession}V&action=QUERY",
+          'Sample IDs_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show sample summaries for this peptide\'; return true"',
+      );
+
+  }
 
 
   #### Define columns that should be hidden in the output table
