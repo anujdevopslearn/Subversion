@@ -26,7 +26,7 @@ use vars qw ($sbeams $sbeamsMOD $q
              $current_contact_id $current_username
 	     $fav_codon_frequency $n_transmembrane_regions
 	     $rosetta_lookup $pfam_search_results $ginzu_search_results
-             $mamSum_search_results
+             $mamSum_search_results $InterProScan_search_results
              %domain_match_types %domain_match_sources
             );
 
@@ -83,6 +83,8 @@ Options:
                        there are a bunch of .domains files to load
   --mamSum_search_results_summary_file   Full path name of a file from which
                        to load the mamSum search results
+  --InterProScan_search_results_summary_file   Full path name of a file from which
+                       to load the InterProScan search results
 
  e.g.:  $PROG_NAME --check_status
 
@@ -96,6 +98,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
     "calc_n_transmembrane_regions","n_transmembrane_regions_file:s",
     "rosetta_lookup_file:s","pfam_search_results_summary_file:s",
     "ginzu_search_results_dir:s","mamSum_search_results_summary_file:s",
+    "InterProScan_search_results_summary_file:s",
   )) {
   print "$USAGE";
   exit;
@@ -201,6 +204,8 @@ sub handleRequest {
     $OPTIONS{"ginzu_search_results_dir"} || '';
   my $mamSum_search_results_summary_file =
     $OPTIONS{"mamSum_search_results_summary_file"} || '';
+  my $InterProScan_search_results_summary_file =
+    $OPTIONS{"InterProScan_search_results_summary_file"} || '';
 
 
   #### Get the file_prefix if it was specified, and otherwise guess
@@ -275,6 +280,22 @@ sub handleRequest {
   }
 
 
+  #### If one of the ProteinStructure options was specified
+  if ($pfam_search_results_summary_file ||
+      $ginzu_search_results_dir ||
+      $mamSum_search_results_summary_file ||
+      $InterProScan_search_results_summary_file) {
+    %domain_match_types = $sbeams->selectTwoColumnHash(
+      "SELECT domain_match_type_name,domain_match_type_id ".
+      "  FROM ${DATABASE}domain_match_type WHERE record_status != 'D'");
+    %domain_match_sources = $sbeams->selectTwoColumnHash(
+      "SELECT domain_match_source_name,domain_match_source_id ".
+      "  FROM ${DATABASE}domain_match_source WHERE record_status != 'D'");
+  }
+
+
+
+
   #### If a pfam_search_results_summary_file was specified,
   #### load it for later processing
   if ($pfam_search_results_summary_file) {
@@ -292,20 +313,22 @@ sub handleRequest {
     readGinzuFiles(
       source_dir => $ginzu_search_results_dir,
       ginzu_search_results => $ginzu_search_results);
-    %domain_match_types = $sbeams->selectTwoColumnHash(
-      "SELECT domain_match_type_name,domain_match_type_id ".
-      "  FROM ${DATABASE}domain_match_type WHERE record_status != 'D'");
-    %domain_match_sources = $sbeams->selectTwoColumnHash(
-      "SELECT domain_match_source_name,domain_match_source_id ".
-      "  FROM ${DATABASE}domain_match_source WHERE record_status != 'D'");
   }
-
 
   #### If a mamSum_search_results_summary_file was specified,
   #### load it for later processing
   if ($mamSum_search_results_summary_file) {
     $mamSum_search_results = readMamSumFile(
       source_file => $mamSum_search_results_summary_file,
+    );
+  }
+
+
+  #### If a InterProScan_search_results_summary_file was specified,
+  #### load it for later processing
+  if ($InterProScan_search_results_summary_file) {
+    $InterProScan_search_results = readInterProScanFile(
+      source_file => $InterProScan_search_results_summary_file,
     );
   }
 
@@ -1005,7 +1028,6 @@ print "  match qstart=",$match->{query_start},"\n";
 	}
       }
 
-print "  match qstart=",$match->{e_value},"\n";
 
       #### Insert or update the row
       my $result = $sbeams->insert_update_row(
@@ -1148,8 +1170,103 @@ print "  match qstart=",$match->{e_value},"\n";
   } # if have mamSum
 
 
+
+  #### See if we have InterProScan data to add
+  my $have_InterProScan_data = 0;
+  if (defined($InterProScan_search_results) && $biosequence_id) {
+    if (defined($InterProScan_search_results->{$biosequence_name})) {
+      $have_InterProScan_data = 1;
+    }
+  }
+
+
+  #### If we have InterProScan data, INSERT or UPDATE domain_match
+  if ($have_InterProScan_data) {
+
+    #### Get the domain_match_source_id
+    my $domain_match_source_id = $domain_match_sources{'InterProScan'} ||
+      die("Unable to find domain match source InterProScan in ".
+	  Data::Dumper->Dump([\%domain_match_sources]));
+
+    #### See if there's already a record there
+    my $sql =
+      "SELECT domain_match_id
+         FROM ${DATABASE}domain_match
+        WHERE biosequence_id = '$biosequence_id'
+          AND domain_match_source_id = '$domain_match_source_id'
+      ";
+    my @domain_match_ids = $sbeams->selectOneColumn($sql);
+
+    #### If there are any of these, DELETE them
+    if (scalar(@domain_match_ids) > 0) {
+      $sql =
+        "DELETE
+           FROM ${DATABASE}domain_match
+          WHERE biosequence_id = '$biosequence_id'
+            AND domain_match_source_id = '$domain_match_source_id'
+        ";
+      $sbeams->executeSQL($sql);
+    }
+
+
+
+    #### Loop over all the domain matches for this biosequence
+    my @matches = @{$InterProScan_search_results->{$biosequence_name}};
+    foreach my $match (@matches) {
+
+	#### Fill the row data hash with information we have
+	my %rowdata;
+	$rowdata{biosequence_id} = $biosequence_id;
+
+        $rowdata{domain_match_source_id} = $domain_match_source_id;
+
+	$rowdata{match_name} = $match->{match_name}
+	  if (defined($match->{match_name}));
+	$rowdata{match_accession} = $match->{match_accession}
+	  if (defined($match->{match_accession}));
+	$rowdata{domain_match_type_id} = $match->{match_type_id}
+	  if (defined($match->{match_type_id}));
+
+	$rowdata{second_match_name} = $match->{second_match_name}
+	  if (defined($match->{second_match_name}));
+	$rowdata{second_match_accession} = $match->{second_match_accession}
+	  if (defined($match->{second_match_accession}));
+	$rowdata{second_match_type_id} = $match->{second_match_type_id}
+	  if (defined($match->{second_match_type_id}));
+
+        $rowdata{e_value} = $match->{evalue}
+	  if (defined($match->{evalue}));
+
+
+        $rowdata{match_start} = $match->{match_start}
+	  if (defined($match->{match_start}));
+        $rowdata{match_end} = $match->{match_end}
+	  if (defined($match->{match_end}));
+	$rowdata{match_length} = $match->{match_length}
+	  if (defined($match->{match_length}));
+
+	$rowdata{match_annotation} = $match->{match_annotation}
+	  if (defined($match->{match_annotation}));
+
+	#### Insert or update the row
+	my $result = $sbeams->insert_update_row(
+	  insert=>1,
+	  table_name=>"${DATABASE}domain_match",
+	  rowdata_ref=>\%rowdata,
+	  PK=>"domain_match_id",
+	  verbose=>2,
+	  testonly=>$TESTONLY,
+	);
+
+    } # end foreach match
+
+  } # if have InterProScan
+
+
   return;
 }
+
+
 
 
 ###############################################################################
@@ -2082,6 +2199,10 @@ sub readMamSumFile {
       if ($columns[4] ne '' &&
           $columns[4] =~ /^CATH-ID:\s+([\d\.]+)$/) {
         $parameters{'second_match_name'} = $1;
+        $parameters{'second_match_accession'} = $1;
+        $parameters{'second_match_accession'} =~ s/\./\//g;
+        $parameters{'second_match_type_id'} = $domain_match_types{'CATH'};
+
       } else {
         print "ERROR: Unable to parse CATH-ID column '$columns[4]' for line: '$line'\n"
           unless ($columns[4] eq 'NO-CATH' || $columns[4] eq 'CATH-TRUNC' ||
@@ -2126,6 +2247,94 @@ sub readMamSumFile {
   return \%data;
 
 } # end readMamSumFile
+
+
+
+###############################################################################
+# readInterProScanFile
+###############################################################################
+sub readInterProScanFile {
+  #my $self = shift;
+  my %args = @_;
+
+
+  #### Decode the argument list
+  my $source_file = $args{'source_file'} ||
+    die ("ERROR: Must supply source_file");
+  my $verbose = $args{'verbose'} || '';
+
+  #### Define some variables
+  my ($line);
+
+  #### Define a hash to hold the contents of the file
+  my %data;
+  $data{SUCCESS} = 0;
+
+
+  #### Open the specified file
+  unless ( open(INFILE, "$source_file") ) {
+    die("Cannot open input file $source_file\n");
+  }
+
+
+  #### Verify the header
+  $line = <INFILE>;
+  $line =~ s/[\r\n]//g;
+  unless ($line =~ /orf\ttigr\tipr\tec/) {
+    print "ERROR: File '$source_file' does not begin as expected\n";
+    return \%data;
+  }
+
+  #### Read in all the domain matches
+  while ($line = <INFILE>) {
+    $line =~ s/[\r\n]//g;
+    next if ($line =~ /^\s*$/);
+
+    #### Split the line into columns and insist we get 10
+    my @columns = split(/\t/,$line);
+    unless (scalar(@columns) == 10) {
+      print "ERROR: Error parsing line '$line' of '$source_file'.  ".
+        "Expected 10 columns of information but got ".scalar(@columns)."\n";
+      return \%data;
+    }
+    my $biosequence_name = $columns[0];
+
+    #### Create a temporary hash and fill it with these data
+    my %parameters;
+    $parameters{'full_line'} = $line;
+    $parameters{'biosequence_name'} = $biosequence_name;
+    $parameters{'match_name'} = $columns[1];
+
+    $parameters{'match_accession'} = $columns[1];
+    $parameters{'match_type_id'} = $domain_match_types{'TIGRFAM'};
+    $parameters{'second_match_name'} = $columns[2];
+    $parameters{'second_match_accession'} = $columns[2];
+    $parameters{'second_match_type_id'} = $domain_match_types{'InterPro'};
+
+    $parameters{'EC_number'} = $columns[3];
+    $parameters{'match_annotation'} = $columns[4].': '.$columns[5];
+    $parameters{'evalue'} = $columns[6];
+    $parameters{'match_start'} = $columns[7];
+    $parameters{'match_end'} = $columns[8];
+    $parameters{'match_length'} = $columns[9];
+
+    #### Store this new data on the array for this biosequence_name
+    my @matches = ();
+    $data{$biosequence_name} = \@matches
+      unless (defined($data{$biosequence_name}));
+    push(@{$data{$biosequence_name}},\%parameters);
+  }
+
+
+  #### Close the input file
+  close(INFILE);
+
+
+  #### Set SUCCESS flag and return
+  $data{SUCCESS} = 1;
+  return \%data;
+
+} # end readInterProScanFile
 
 
 
