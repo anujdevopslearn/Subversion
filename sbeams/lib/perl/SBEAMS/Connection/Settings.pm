@@ -83,17 +83,11 @@ if ($_server_port) {
 }
 
 
-#### Decide which version settings to use based on $ENV{SCRIPT_NAME} or
-#### $ENV{SBEAMS_INSTANCE}
-my $SBEAMS_INSTANCE;
-$SBEAMS_INSTANCE = $ENV{SCRIPT_NAME} if ($ENV{SCRIPT_NAME});
-$SBEAMS_INSTANCE = $ENV{SBEAMS_INSTANCE} if ($ENV{SBEAMS_INSTANCE});
-
-#### If nothing set yet, then try to use the location of the script
-#$SBEAMS_INSTANCE = $ENV{PWD} unless ($SBEAMS_INSTANCE);
-$SBEAMS_INSTANCE =  "$FindBin::Bin" unless ($SBEAMS_INSTANCE);
-
-$SBEAMS_INSTANCE = "production" unless ($SBEAMS_INSTANCE);
+#### Decide which version settings to use based the script location
+my $SBEAMS_INSTANCE =  "$FindBin::Bin";
+my $subdir = $SBEAMS_INSTANCE;
+$subdir =~ s/^.*\///;
+setSBEAMS_SUBDIR('dummy',$subdir);
 
 
 #### Set some database prefixes to be appended before the actualy table
@@ -101,6 +95,8 @@ $SBEAMS_INSTANCE = "production" unless ($SBEAMS_INSTANCE);
 #### (e.g. PostgreSQL 7.2), the entries should be empty strings "".
 $DBPREFIX{Core} = 'sbeams.dbo.';
 $DBPREFIX{Proteomics} = 'proteomics.dbo.';
+$DBPREFIX{Biosap} = 'Biosap.dbo.';
+$DBPREFIX{BEDB} = 'BEDB.dbo.';
 
 
 #### Set version-specific parameters
