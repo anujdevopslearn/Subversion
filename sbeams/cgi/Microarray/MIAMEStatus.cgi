@@ -214,6 +214,15 @@ function verifyNumber(location){
     else{location.value = number;return;}
 }
 
+function allowTyping() {
+		if (document.miame.commonRef[0].checked != true) {
+				document.miame.commonRefText.blur();
+		}
+}
+
+function eraseText() {
+		document.miame.commonRefText.value="";
+}
 
 //-->
 </SCRIPT>
@@ -285,26 +294,25 @@ sub handle_request {
       printLabelingAndHybridizationSection(parameters=>\%parameters);
   }
   
-#  #### Hybridization Section
-#  if ($category =~ /hybridization/ || $category eq "all"){
-#      printHybridizationSection(parameters=>\%parameters);
-#  }
-  
   #### Measurements Section
   if ($category =~ /measurements/ || $category eq "all"){
       printMeasurementsSection(parameters=>\%parameters);
   }
 
   ## only show the update button if the user has permission
-  my $permission = $sbeams->get_best_permission();
-  if ($permission <= 10){
-  print qq~
-      $LINESEPARATOR<BR>
-      <INPUT TYPE="hidden" NAME="CATEGORY" VALUE="$category">
-      <INPUT TYPE="submit" NAME="UPDATEMIAME" VALUE="Update Information">
-      </FORM>
-  ~;
-}
+	# Moving this to experiment design.
+	# Currently, this is the only section using the submit button
+  #my $permission = $sbeams->get_best_permission();
+  #if ($permission <= 10){
+  #print qq~
+  #    $LINESEPARATOR<BR>
+  #    <INPUT TYPE="hidden" NAME="CATEGORY" VALUE="$category">
+  #    <INPUT TYPE="submit" NAME="UPDATEMIAME" VALUE="Update Information">
+  #    </FORM>
+  #~;
+  #}
+	print "$LINESEPARATOR<BR>";
+
   return;
 
 } # end handle_request
@@ -332,10 +340,12 @@ sub printExperimentDesignSection {
     my %parameters = %{$parameters_ref};
 
     #### Define standard variables
-    my (@rows,$sql);
+    my (@rows,$sql,$mod_date,$uri);
     my ($additional_information, $module_information);
-    my ($uri,$exp_type,$exp_desc,$exp_factors,$mod_date,$num_hyb,$qc_steps);
-    my ($exp_desc_bool,$exp_type_bool,$exp_factors_bool,$num_hyb_bool,$qc_steps_bool);
+    my ($exp_type,$exp_desc,$exp_factors);
+		my ($exp_desc_bool,$exp_type_bool,$exp_factors_bool);
+		my ($num_hyb,$qc_steps,$common_ref,$common_ref_text);
+		my ($num_hyb_bool,$qc_steps_bool,$common_ref_bool);
     my $project_id = $sbeams->getCurrent_project_id();
 
     #### Experimental Design info is stored in the project table
@@ -359,31 +369,41 @@ sub printExperimentDesignSection {
     else{$exp_desc_bool = 'FALSE';}
 
     if (defined($module_information)) {
-	if ($module_information =~ /<exp_type>(.*)<\/exp_type>/) {
-	    $exp_type = $1;
-	    $exp_type_bool = 'TRUE';
-	}else {
-	    $exp_type_bool = 'FALSE';
-	}
-	if ($module_information =~ /<exp_factors>(.*)<\/exp_factors>/) {
-	    $exp_factors = $1;
-	    $exp_factors_bool = 'TRUE';
-	}else {
-	    $exp_factors_bool = 'FALSE';
-	}
-	if ($module_information =~ /<num_hybs>(.*)<\/num_hybs>/) {
-	    $num_hyb = $1;
-	    $num_hyb_bool = 'TRUE';
-	}else {
-	    $num_hyb_bool = 'FALSE';
-	}
-	if ($module_information =~ /<qc_steps>(.*)<\/qc_steps>/) {
-	    $qc_steps = $1;
-	    $qc_steps_bool = 'TRUE';
-	}else {
-	    $qc_steps_bool = 'FALSE';
-	}
-    }
+				if ($module_information =~ /<exp_type>(.*)<\/exp_type>/) {
+						$exp_type = $1;
+						$exp_type_bool = 'TRUE';
+				}else {
+						$exp_type_bool = 'FALSE';
+				}
+				if ($module_information =~ /<exp_factors>(.*)<\/exp_factors>/) {
+						$exp_factors = $1;
+						$exp_factors_bool = 'TRUE';
+				}else {
+						$exp_factors_bool = 'FALSE';
+				}
+				if ($module_information =~ /<num_hybs>(.*)<\/num_hybs>/) {
+						$num_hyb = $1;
+						$num_hyb_bool = 'TRUE';
+				}else {
+						$num_hyb_bool = 'FALSE';
+				}
+				if ($module_information =~ /<qc_steps>(.*)<\/qc_steps>/) {
+						$qc_steps = $1;
+						$qc_steps_bool = 'TRUE';
+				}else {
+						$qc_steps_bool = 'FALSE';
+				}
+				if ($module_information =~/<common_ref>(.*)<\/common_ref>/) {
+						$common_ref = $1;
+						if ($common_ref eq 'yes'){
+								$module_information =~/<common_ref_text>(.*)<\/common_ref_text>/;
+								$common_ref_text = $1;
+						}
+						$common_ref_bool = 'TRUE';
+				}else {
+						$common_ref_bool = 'FALSE';
+				}
+		}
 	
 
     #### print HTML
@@ -393,17 +413,27 @@ sub printExperimentDesignSection {
     ~;
 
     ## Determine MIAME compliance
-    if ($exp_desc_bool =~ /TRUE/ &&
-	$exp_type_bool =~ /TRUE/ &&
-	$exp_factors_bool =~ /TRUE/ &&
-	$num_hyb_bool =~ /TRUE/ &&
-	$qc_steps_bool =~ /TRUE/){
+    if ($exp_desc_bool eq 'TRUE' &&
+	$exp_type_bool eq 'TRUE' &&
+	$exp_factors_bool eq 'TRUE' &&
+	$num_hyb_bool eq 'TRUE' &&
+	$qc_steps_bool eq 'TRUE' &&
+	$common_ref_bool eq 'TRUE'){
 	print qq~<FONT COLOR="green">MIAME Compliant</FONT>~;
     }
     else{
 	print qq~NOT MIAME Compliant~;
     }
 
+		## Print "More Info" button
+		my $title = "MIAME Requirements";
+		my $text = qq~<B>MIAME Requirements for Experiment Design:</B><UL><LI>Type of experiment</LI><UL><LI>for example, normal vs. diseased tissue, time course, or gene knock-out</LI></UL><LI>Experimental factors</LI><UL><LI>parameters or conditions tested such as time, dose, or genetic variation</LI></UL><LI>The number of hybridizations performed in the experiment.</LI><LI>The type of reference used for the hybridizations, if any.</LI><LI>Hybridization design</LI><UL><LI>if applicable, a description of the comparisons made in each hybridization</LI></UL><LI>Quality control steps taken: for example, replicates or dye swaps.</LI><LI>URL of any supplemental websites or database accession numbers</LI></UL>~;
+
+		print qq~
+		<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?text=$text','Help','width=450,height=400,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/info.jpg" border=0 alt="Help"></a>
+		~;
+
+		## Begin printing Experiment Design Section
     print qq~</H2>
     <H3><FONT COLOR="red">last modified on $mod_date</FONT><H3>
     <TABLE>
@@ -468,12 +498,12 @@ sub printExperimentDesignSection {
 
     my @factors = split ',',$exp_factors;
     foreach my $factor(@factors) {
-	$expFactorsTemplate =~ s(>$factor<BR>)(CHECKED>$factor<BR>);
-	if ($factor =~ /^other\((.*)\)/) {
-	    my $subst = $1;
-	    $expFactorsTemplate =~ s(>Other)(CHECKED>Other);
-	    $expFactorsTemplate =~ s(\"otherExpFact1\")(\"otherExpFact1\" VALUE=\"$subst\");
-	}
+				$expFactorsTemplate =~ s(>$factor<BR>)(CHECKED>$factor<BR>);
+				if ($factor =~ /^other\((.*)\)/) {
+						my $subst = $1;
+						$expFactorsTemplate =~ s(>Other)(CHECKED>Other);
+						$expFactorsTemplate =~ s(\"otherExpFact1\")(\"otherExpFact1\" VALUE=\"$subst\");
+				}
     }
 
     print qq~
@@ -484,11 +514,54 @@ sub printExperimentDesignSection {
     </TR>
     <TR><TD></TD></TR>
     <TR>
-      <TD><B># of Hybridizations</B></TD>
+      <TD><B>\# of Hybridizations</B></TD>
       <TD>
         <INPUT="text" NAME="numHyb" SIZE="3" VALUE="$num_hyb" onChange="verifyNumber(this)">
       </TD>
     </TR>
+		<TR><TD></TD></TR>
+		<TR>
+		  <TD><B>Common Reference Used in Hybs?</B></TD>
+			<TD>
+			~;
+		if ($common_ref eq 'yes'){
+				print qq~
+			  <INPUT TYPE="radio" NAME="commonRef" VALUE="yes"CHECKED onClick="Javascript:document.miame.commonRefText.focus()">YES
+				~;
+		}else {
+				print qq~
+				<INPUT TYPE="radio" NAME="commonRef" VALUE="yes" onClick="Javascript:document.miame.commonRefText.focus()">YES
+				~;
+		}
+		if ($common_ref eq 'no') {
+				print qq~
+				<INPUT TYPE="radio" NAME="commonRef" VALUE="no" onClick="eraseText()" CHECKED>NO
+				~;
+		}else {
+				print qq~
+				<INPUT TYPE="radio" NAME="commonRef" VALUE="no" onClick="eraseText()">NO
+						~;
+		}
+		print qq~
+			</TD>
+		</TR>
+		<TR><TD></TD></TR>
+		<TR>
+		  <TD><B>If so, describe reference</B></TD>
+			<TD>
+			~;
+		if ($common_ref_text){
+				print qq~
+			  <INPUT TYPE="text" NAME="commonRefText" VALUE="$common_ref_text" onFocus="Javascript:allowTyping()">
+				~;
+		}else {
+				print qq~
+			  <INPUT TYPE="text" NAME="commonRefText" VALUE="$common_ref_text" onFocus="Javascript:allowTyping()">
+						~;
+		}
+		print qq~
+			</TD>
+		</TR>
     <TR><TD></TD></TR>
     <TR>
       <TD VALIGN="top"><B>Quality Control Steps:</B></TD>
@@ -502,12 +575,12 @@ sub printExperimentDesignSection {
 
     @factors = split ',', $qc_steps;
     foreach my $factor(@factors) {
-	$qcTemplate =~ s(>$factor<BR>)(CHECKED>$factor,<BR>);
-	if ($factor =~ /^other\((.*)\)/) {
-	    my $subst = $1;
-	    $qcTemplate =~ s(>Other)(CHECKED>Other);
-	    $qcTemplate =~ s(\"otherQCStep1\")(\"otherQCStep1\" VALUE=\"$subst\");
-	}
+				$qcTemplate =~ s(>$factor<BR>)(CHECKED>$factor,<BR>);
+				if ($factor =~ /^other\((.*)\)/) {
+						my $subst = $1;
+						$qcTemplate =~ s(>Other)(CHECKED>Other);
+						$qcTemplate =~ s(\"otherQCStep1\")(\"otherQCStep1\" VALUE=\"$subst\");
+				}
     }
     print qq~
     $qcTemplate
@@ -518,10 +591,18 @@ sub printExperimentDesignSection {
     </TR>
     </TABLE>
     <INPUT TYPE="hidden" NAME="expHyb">
-    
-    ~;
-#	-is a common reference used for hybridizations<BR>
+		<BR><BR>
+		~;
 
+  my $permission = $sbeams->get_best_permission();
+  if ($permission <= 10){
+  print qq~
+			<BR>
+      <INPUT TYPE="hidden" NAME="CATEGORY" VALUE="experiment_design">
+      <INPUT TYPE="submit" NAME="UPDATEMIAME" VALUE="Update Information">
+      </FORM>
+  ~;
+  }
     return;
 }
 
@@ -610,10 +691,18 @@ sub printArrayDesignSection {
 
     ## Determine MIAME compliance
     if ($miame_compliant == 1){
-	print qq~<FONT COLOR="green">MIAME Compliant</FONT></H2>~;
+	print qq~<FONT COLOR="green">MIAME Compliant</FONT>~;
     }else {
-	print qq~NOT MIAME Compliant</H2>~;
+	print qq~NOT MIAME Compliant~;
     }
+		## Print "More Info" Button
+		my $title = "MIAME Requirements";
+		my $text = qq~<B>MIAME Requirements for Array Design:</B><UL><LI>General array design, including:<UL><LI>the platform type (whether the array is a spotted glass array, an in situ synthesized array, etc.)</LI><LI>surface and coating specifications (when known-- often commercial suppliers do not provide this data)</LI><LI>the availability of the array (the name or make of commercially available arrays)</LI></UL><LI>For each feature (spot) on the array, its location on the array and the ID of its respective reporter (molecule present on each spot) should be given.</LI><LI>For each reporter, its type (e.g., cDNA or oligonucleotide) should be given, along with information that characterizes the reporter molecule unambiguously, in the form of appropriate database reference(s) and sequence (if available).</LI><LI>For commercial arrays: a reference to the manufacturer should be provided, including a catalogue number and references to the manufacturers website if available.</LI><LI>For non-commercial arrays, the following details should be provided:</LI><UL><LI>The source of the reporter molecules: for example, the cDNA or oligo collection used, with references.</LI><LI>The method of reporter preparation.</LI><LI>The spotting protocols used, including the array substrate, the spotting buffer, and any post-printing processing, including cross-linking.</LI><LI>Any additional treatment performed prior to hybridization.</LI></UL></UL>~;
+
+		print qq~
+		<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?text=$text','Help','width=450,height=600,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/info.jpg" border=0 alt="Help"></a></H2>
+		~;
+
 
     if (@rows){
 	## Print of MIAME criteria
@@ -635,9 +724,9 @@ sub printArrayDesignSection {
 	    $map_file =~ s/key\s*/map/;
 	    my $map_location = $map_file;
 	    $map_file =~ s(.*/)();
-	    $comment =~ /MIAME surface coating:\s+\"(.*)\"/;
+	    $comment =~ /MIAME surface coating:\s+\"?(.*)\"?/;
 	    my $spec = $1;
-	    $comment =~ /MIAME physical dimensions:\s+\"(.*)\"/;
+	    $comment =~ /MIAME physical dimensions:\s+\"?(.*)\"?/;
 	    my $dim = $1;
 	    print qq~
 		<TR>
@@ -655,6 +744,7 @@ sub printArrayDesignSection {
 	
 	print qq~
 	    </TABLE>
+			<BR>
 	    ~;
     }else{
 	print qq~
@@ -702,19 +792,23 @@ sub printSampleInformationSection {
 
     ## Determine MIAME compliance
     if (1==0){
-	print qq~<FONT COLOR="green">MIAME Compliant</FONT></H2>~;
+	print qq~<FONT COLOR="green">MIAME Compliant</FONT>~;
     }else {
-	print qq~NOT MIAME Compliant</H2>~;
+	print qq~NOT MIAME Compliant~;
     }
+		## Print "More Info" Button
+		my $title = "MIAME Sample Requirements";
+		my $text = qq~<B>MIAME Sample Requirements:</B><BR><UL><LI>Organism Name</LI><LI>Provider of Sample</LI><LI>Developmental Stage</LI><LI>Strain</LI><LI>Age</LI><LI>Gender</LI><LI>Disease State</LI><LI>Manipulation of Sample</LI><LI>Hybridization extract preparation protocol</LI><LI>External controls added to bybridization extraction</LI></UL>~;
+		print qq~
+		<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?text=$text','Help','width=450,height=400,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/info.jpg" border=0 alt="Help"></a></H2>
+		~;
+
 
     print qq~
-	-Organism<BR>
-	-contact details for sample<BR>
-	-age, sex, development stage, organism part, cell type, etc.<BR>
-	-biomaterial manipulations<BR>
-	-hybridization extract preparation protocol<BR>
-	-external controls added to bybridization extraction<BR>
-    ~;
+				<p>
+				SBEAMS is under construction to handle sample information effectively.
+				</p>
+				~;
     return;
 }
 
@@ -769,7 +863,6 @@ sub printLabelingAndHybridizationSection {
 	$miame_compliant = 0;
     }
 
-
     ## If we find a 'NULL' in the array, we are not MIAME compliant
     foreach my $row_ref (@rows) {
 	my @temp_row = @{$row_ref};
@@ -780,11 +873,19 @@ sub printLabelingAndHybridizationSection {
     
     ## Determine MIAME compliance
     if ($miame_compliant == 1){
-	print qq~<FONT COLOR="green">MIAME Compliant</FONT></H2>~;
+	print qq~<FONT COLOR="green">MIAME Compliant</FONT>~;
     }else {
-	print qq~NOT MIAME Compliant</H2>~;
+	print qq~NOT MIAME Compliant~;
     }
 	
+		##Print "More Info" Button
+		my $title = "MIAME Labeling/Hybridization Requirements";
+		my $text = qq~<B>Labeling/Hybridization Requirements</B><UL><LI>Labeling protocol(s)</LI><LI>The protocol and conditions used during hybridization, blocking and washing</LI></UL>~;
+		print qq~
+		<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?text=$text','Help','width=450,height=400,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/info.jpg" border=0 alt="Help"></a></H2>
+		~;
+
+
     if (@rows){
 	## start table
 	print qq~
@@ -835,50 +936,16 @@ sub printLabelingAndHybridizationSection {
 	## end table
 	print qq~
 	    </TABLE>
+			<BR>
 	    ~;
     }else {
 	print qq~
 	    <H2>No Records for this Project</H2>
 	    ~;
-    }
+    }		
     return;
 }
 
-
-###############################################################################
-# printHybridizationSection
-###############################################################################
-#sub printHybridizationSection {
-#    my %args = @_;
-#    my $SUB_NAME="printHybridizationSection";
-#
-#    #### Decode the argument list
-#    my $parameters_ref = $args{'parameters'};
-#    my %parameters = %{$parameters_ref};
-#
-#    #### Define standard variables
-#    my ($sql, @rows, $comment, $expType, );
-#
-#    #### print HTML
-#    print qq~
-#    $LINESEPARATOR
-#    <H2><FONT COLOR="red">Hybridization</FONT> - 
-#    ~;
-#
-#
-#    ## Determine MIAME compliance
-#    if (1==0){
-#	print qq~<FONT COLOR="green">MIAME Compliant</FONT></H2>~;
-#    }else {
-#	print qq~NOT MIAME Compliant</H2>~;
-#    }
-#
-#
-#    print qq~
-#	-<BR>
-#    ~;
-#    return;
-#}
 
 ###############################################################################
 # printMeasurementsSection
@@ -938,10 +1005,17 @@ sub printMeasurementsSection {
 
     ## Determine MIAME compliance
     if ($miame_compliant == 1){
-	print qq~<FONT COLOR="green">MIAME Compliant</FONT></H2>~;
+	print qq~<FONT COLOR="green">MIAME Compliant</FONT>~;
     }else {
-	print qq~NOT MIAME Compliant</H2>~;
+	print qq~NOT MIAME Compliant~;
     }
+
+		## Print "More Info" Button
+		my $title = "MIAME Measurements/Quantitation Requirements";
+		my $text = qq~<B>Measurement Data Requirements</B><UL><LI>The quantitations based on the images</LI><LI>The set of quantitations from several arrays upon which the authors base their conclusions. While access to images of raw data is not required (although its value is unquestionable), authors should make every effort to provide the following:</LI><UL><LI>Type of scanning hardware and software used: this information is appropriate for a materials and methods section</LI><LI>Type of image analysis software used: specifications should be stated in the materials and methods</LI><LI>A description of the measurements produced by the image-analysis software and a description of which measurements were used in the analysis</LI><LI>The complete output of the image analysis before data selection and transformation (spot quantitation matrices)</LI><LI>Data selection and transformation procedures</LI><LI>Final gene expression data table(s) used by the authors to make their conclusions after data selection and transformation (gene expression data matrices)</LI></UL></UL>~;
+		print qq~
+		<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?text=$text','Help','width=450,height=500,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/info.jpg" border=0 alt="Help"></a></H2>
+		~;
 
 
     if (@rows) {
@@ -1007,6 +1081,7 @@ sub printMeasurementsSection {
     ## end table
     print qq~
 	</TABLE>
+	<BR>
 	~;
     }
     else{
@@ -1014,7 +1089,6 @@ sub printMeasurementsSection {
 	<H2>No Records for this project</H2>
 	~;
     }
-
     return;
 }
 
@@ -1086,6 +1160,15 @@ sub updateMIAMEInfo {
 	  $additional_information .= "<num_hybs>".$parameters{'numHyb'}."<\/num_hybs>";
       }
 
+			## Is a common reference used?
+			if ($parameters{'commonRef'}){
+					$additional_information .="<common_ref>".$parameters{'commonRef'}."<\/common_ref>";
+			}
+			##Description of common ref
+			if ($parameters{'commonRefText'} && $parameters{'commonRef'} eq 'yes') {
+					$additional_information .="<common_ref_text>".$parameters{'commonRefText'}."<\/common_ref_text>";
+			}
+
       ## Quality Control Steps
       my $qc_steps;
       if ($parameters{'reps'} eq 'on') {
@@ -1107,7 +1190,7 @@ sub updateMIAMEInfo {
       
       ## Finish with everything that goes in the 'additional_information' field
       $rowdata{'additional_information'} = update_module(module=>'microarray',
-							 content=>$additional_information);
+																												 content=>$additional_information);
       
 
       ## Project URI
@@ -1208,8 +1291,6 @@ sub getUserProfile {
 
   return %profile;
 }
-
-
 
 ###############################################################################
 #                                                                             #
