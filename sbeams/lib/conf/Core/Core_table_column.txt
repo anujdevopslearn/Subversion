@@ -2,7 +2,7 @@ table_name	column_index	column_name	column_title	datatype	scale	precision	nullab
 project	1	project_id	Project ID	int	4	0	N		Y						showPassed(this)	N	N				pkDEFAULT
 project	2	name	Project Name	varchar	100	0	N		N			Y	text	75		Y	Y	N	Name or Title of the project		
 project	3	project_tag	Project Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	"A short 'tag' or identity of the project.  Treat this like a folder name.  Use only alphanumeric characters, no spaces (e.g., FlyCatalog, HuTCellRaft, YeastShockExpr)"		
-project	4	PI_contact_id	PI Contact	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	PI or Primary contact for this project	SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS name FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization	
+project	4	PI_contact_id	PI Contact	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	PI or Primary contact for this project	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS name FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
 project	5	description	Description	text	16	0	Y		N			Y	textarea	8		Y	Y	N	"Describe this project: what are the goals, how are the samples prepared, derived citations, etc."		
 project	6	budget	Budget	varchar	25	0	Y		N			Y	text	25		Y	Y	N	Budget number to be charged for experiments under this project		
 project	7	project_status	Project Status	varchar	100	0	Y		N			N	text	50		Y	Y	N	"For example: Active, Finished"		
@@ -135,34 +135,35 @@ contact	1	contact_id	Contact ID	int	4	0	N		Y							N	N				pkDEFAULT
 contact	2	last_name	Last Name	varchar	50	0	Y		N			Y	text	25		Y	Y	Y	Last Name		
 contact	3	first_name	First Name	varchar	50	0	Y		N			Y	text	25		Y	Y	Y	First Name		
 contact	4	middle_name	Middle Name	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Middle Name		
-contact	5	contact_type_id	Contact Type	int	4	0	N		N	contact_type	contact_type_id	Y	optionlist			Y	Y	N	Classification of this contact	"SELECT contact_type_id,contact_type_name FROM $TB_CONTACT_TYPE ORDER BY sort_order,contact_type_name"	
-contact	6	job_title	Job Title	varchar	100	0	Y		N			N	text	50		Y	Y	N	Job title or function of this contact if appropriate		
-contact	7	supervisor_contact_id	Supervisor	int	4	0	Y		N	contact	contact_id	N	optionlist			Y	Y	N	Supervisor of this person if applicable	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS ""name"" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
-contact	8	is_at_local_facility	At Local Facility	char	1	0	Y		N			N	optionlist			Y	Y	N	Is this contact to be considered a local person at this institution (ISB) ?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
-contact	9	photo_filename	Photograph filename	varchar	255	0	Y		N			N	text	50		Y	Y	N	Filename of the photograph/mug shot of this contact		
-contact	10	organization_id	Organization	int	4	0	N		N	organization	organization_id	Y	optionlist			Y	Y	N	Organization for which contact works	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE OT.organization_type_name NOT IN ('Lab','Department','Group') ORDER BY organization"	
-contact	11	department_id	Department	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	Department in which this contact works	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE OT.organization_type_name IN ('Department') ORDER BY organization"	
-contact	12	group_id	Group	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	Group to which this contact belongs	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE OT.organization_type_name IN ('Group') ORDER BY organization"	
-contact	13	lab_id	Lab	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	Lab in which this contact works	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE OT.organization_type_name IN ('Lab') ORDER BY organization"	
-contact	14	location	Primary Location	varchar	100	0	Y		N			N	text	25		Y	Y	N	Primary location (e.g. the room number)		
-contact	15	alternate_location	Secondary Location	varchar	100	0	Y		N			N	text	25		Y	Y	N	Alternate/secondary location (e.g. the lab bench area designation)		
-contact	16	phone	Phone	varchar	50	0	Y		N			N	text	25		Y	Y	N	Phone number for this contact		
-contact	17	phone_extension	Phone Extension	varchar	50	0	Y		N			N	text	25		Y	Y	N	Extension/voice mail number		
-contact	18	cell_phone	Cell Phone	varchar	50	0	Y		N			N	text	25		Y	Y	N	Cell phone number for this contact		
-contact	19	pager	Pager	varchar	50	0	Y		N			N	text	25		Y	Y	N	Pager number for this contact		
-contact	20	is_messenging_pager	Is Messenging Pager	char	1	0	Y		N			N	optionlist			Y	Y	N	Is the pager a messaging/NexTel pager?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
-contact	21	home_phone	Home Phone	varchar	50	0	Y		N			N	text	25		Y	Y	N	Home phone number for this contact		
-contact	22	fax	Fax	varchar	50	0	Y		N			N	text	25		Y	Y	N	Fax number		
-contact	23	email	Email address	varchar	100	0	Y		N			N	text	50		Y	Y	N	Email address of this contact		
-contact	24	alternate_email	Alternate Email address	varchar	100	0	Y		N			N	text	50		Y	Y	N	Alternate/secondary email address of this contact		
-contact	25	uri	URI	varchar	255	0	Y		N			N	text	75		Y	Y	N	URL for this contact		SELF
-contact	26	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
-contact	27	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-contact	28	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-contact	29	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-contact	30	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-contact	31	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-contact	32	record_status	Record Status	char	1	0	N	N	N							N	N				
+contact	5	gender	Gender	char	1	0	Y		N			N	optionlist			Y	Y	N	Gender of the this contact	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='gender' ORDER BY sort_order,option_value"	
+contact	6	contact_type_id	Contact Type	int	4	0	N		N	contact_type	contact_type_id	Y	optionlist			Y	Y	N	Classification of this contact	"SELECT contact_type_id,contact_type_name FROM $TB_CONTACT_TYPE ORDER BY sort_order,contact_type_name"	
+contact	7	job_title	Job Title	varchar	100	0	Y		N			N	text	50		Y	Y	N	Job title or function of this contact if appropriate		
+contact	8	supervisor_contact_id	Supervisor	int	4	0	Y		N	contact	contact_id	N	optionlist			Y	Y	N	Supervisor of this person if applicable	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS ""name"" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+contact	9	is_at_local_facility	At Local Facility	char	1	0	Y		N			N	optionlist			Y	Y	N	Is this contact to be considered a local person at this institution (ISB) ?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+contact	10	photo_filename	Photograph filename	varchar	255	0	Y		N			N	text	50		Y	Y	N	Filename of the photograph/mug shot of this contact		
+contact	11	organization_id	Organization	int	4	0	N		N	organization	organization_id	Y	optionlist			Y	Y	N	Organization for which contact works	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE OT.organization_type_name NOT IN ('Lab','Department','Group') ORDER BY organization"	
+contact	12	department_id	Department	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	Department in which this contact works	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE OT.organization_type_name IN ('Department') ORDER BY organization"	
+contact	13	group_id	Group	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	Group to which this contact belongs	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE OT.organization_type_name IN ('Group') ORDER BY organization"	
+contact	14	lab_id	Lab	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	Lab in which this contact works	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE OT.organization_type_name IN ('Lab') ORDER BY organization"	
+contact	15	location	Primary Location	varchar	100	0	Y		N			N	text	25		Y	Y	N	Primary location (e.g. the room number)		
+contact	16	alternate_location	Secondary Location	varchar	100	0	Y		N			N	text	25		Y	Y	N	Alternate/secondary location (e.g. the lab bench area designation)		
+contact	17	phone	Phone	varchar	50	0	Y		N			N	text	25		Y	Y	N	Phone number for this contact		
+contact	18	phone_extension	Phone Extension	varchar	50	0	Y		N			N	text	25		Y	Y	N	Extension/voice mail number		
+contact	19	cell_phone	Cell Phone	varchar	50	0	Y		N			N	text	25		Y	Y	N	Cell phone number for this contact		
+contact	20	pager	Pager	varchar	50	0	Y		N			N	text	25		Y	Y	N	Pager number for this contact		
+contact	21	is_messenging_pager	Is Messenging Pager	char	1	0	Y		N			N	optionlist			Y	Y	N	Is the pager a messaging/NexTel pager?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+contact	22	home_phone	Home Phone	varchar	50	0	Y		N			N	text	25		Y	Y	N	Home phone number for this contact		
+contact	23	fax	Fax	varchar	50	0	Y		N			N	text	25		Y	Y	N	Fax number		
+contact	24	email	Email address	varchar	100	0	Y		N			N	text	50		Y	Y	N	Email address of this contact		
+contact	25	alternate_email	Alternate Email address	varchar	100	0	Y		N			N	text	50		Y	Y	N	Alternate/secondary email address of this contact		
+contact	26	uri	URI	varchar	255	0	Y		N			N	text	75		Y	Y	N	URL for this contact		SELF
+contact	27	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
+contact	28	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+contact	29	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+contact	30	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+contact	31	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+contact	32	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+contact	33	record_status	Record Status	char	1	0	N	N	N							N	N				
 work_group	1	work_group_id	Work Group ID	int	4	0	N		Y							N	N				pkDEFAULT
 work_group	2	work_group_name	Work Group Name	varchar	50	0	N		N			Y	text	25		Y	Y	Y	Short name of the work group		
 work_group	3	primary_contact_id	Primary Contact	int	4	0	Y		N	contact	contact_id	N	optionlist			Y	Y	N	Primary contact for this group	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS ""name"" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
@@ -294,10 +295,10 @@ misc_option	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id
 misc_option	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 misc_option	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 organism	1	organism_id	Organism ID	int	4	0	N		Y							N	N				pkDEFAULT
-organism	2	organism_name	Organism Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Common name of the organism (e.g., Human)		
+organism	2	organism_name	Organism Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	"Common name of the organism (e.g., Human)"		
 organism	3	ncbi_taxonomy_id	NCBI Taxonomy ID	int	10	0	Y		N			N	text	10		Y	Y	N	Official NCBI Taxonomy ID		
-organism	4	genus	Genus	varchar	100	0	Y		N			N	text	50		Y	Y	N	NCBI Taxonomy Genus (e.g., Homo)		
-organism	5	species	Species	varchar	100	0	Y		N			N	text	50		Y	Y	N	NCBI Taxonomy Species (e.g., Sapiens)		
+organism	4	genus	Genus	varchar	100	0	Y		N			N	text	50		Y	Y	N	"NCBI Taxonomy Genus (e.g., Homo)"		
+organism	5	species	Species	varchar	100	0	Y		N			N	text	50		Y	Y	N	"NCBI Taxonomy Species (e.g., Sapiens)"		
 organism	6	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
 organism	7	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Number to control the default sort order		
 organism	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -306,14 +307,14 @@ organism	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	
 organism	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 organism	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 organism	13	record_status	Record Status	char	1	0	N	N	N							N	N				
-software_hardware_protocol	1	protocol_id	Protocol	int	4	0	N		N	protocol	protocol_id	Y	optionlist			N	N	Y	Protocol for this association
-software_hardware_protocol	2	software_id	Software	int	4	0	N		N	software	software_id	Y	optionlist			N	N	Y	Software entity for this association
-software_hardware_protocol	3	hardware_id	Hardware	int	4	0	N		N	hardware	hardware_id	Y	optionlist			N	N	Y	Hardware entity for this association
-software_hardware_protocol	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes
-software_hardware_protocol	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-software_hardware_protocol	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N		
-software_hardware_protocol	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-software_hardware_protocol	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N		
+software_hardware_protocol	1	protocol_id	Protocol	int	4	0	N		N	protocol	protocol_id	Y	optionlist			N	N	Y	Protocol for this association		
+software_hardware_protocol	2	software_id	Software	int	4	0	N		N	software	software_id	Y	optionlist			N	N	Y	Software entity for this association		
+software_hardware_protocol	3	hardware_id	Hardware	int	4	0	N		N	hardware	hardware_id	Y	optionlist			N	N	Y	Hardware entity for this association		
+software_hardware_protocol	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
+software_hardware_protocol	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+software_hardware_protocol	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+software_hardware_protocol	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+software_hardware_protocol	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 software_hardware_protocol	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 software_hardware_protocol	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 table_property	1	table_property_id	Table Property ID	int	4	0	N		Y							N	N				pkDEFAULT
@@ -330,9 +331,9 @@ table_property	11	next_step	Next table to manage	varchar	100	0	Y		N			Y	text	50	
 table_column	1	table_column_id	Table Column ID	int	4	0	N		Y							N	N				pkDEFAULT
 table_column	2	table_name	Table Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Abstract name of the table (non-Core tables should be prefixed with the module prefix)		
 table_column	3	column_index	Column Index	int	4	0	N		N			Y	text	10		Y	Y	N	Index of the column used to control odering		
-table_column	4	column_name	Column Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Name of the column in the database table
-table_column	5	column_title	Column Title	varchar	50	0	N		N			Y	text	50		Y	Y	N	Friendly title of the column
-table_column	6	data_type	Data Type	varchar	50	0	N		N			Y	text	25		Y	Y	N	Standardized SQL datatype of the column
+table_column	4	column_name	Column Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Name of the column in the database table		
+table_column	5	column_title	Column Title	varchar	50	0	N		N			Y	text	50		Y	Y	N	Friendly title of the column		
+table_column	6	data_type	Data Type	varchar	50	0	N		N			Y	text	25		Y	Y	N	Standardized SQL datatype of the column		
 table_column	7	data_scale	Data Scale	int	4	0	N		N			Y	text	10		Y	Y	N	First qualifier of length of the datatype (depends on the datatype itself)
 table_column	8	data_precision	Data Precision	int	4	0	Y		N			Y	text	10		Y	Y	N	"Second qualifier of precision of datatype (used, e.g., for NUMERIC(10,2))"
 table_column	9	nullable	Is Nullable?	char	1	0	N		N			Y	text	5		Y	Y	N	Is the column NULLable?
@@ -346,9 +347,9 @@ table_column	16	input_length	Form Input Length	varchar	25	0	Y		N			N	text	25		Y	
 table_column	17	onChange	JavaScript onChange	varchar	255	0	Y		N			N	text	50		Y	Y	N	Javascript that can be triggered with onChange in the HTML form
 table_column	18	is_data_column	Is Data Column?	char	1	0	Y		N			N	text	5		Y	Y	N	Is this a data column that is potentially editable or is a housekeeping column?
 table_column	19	is_display_column	Is Display Column?	char	1	0	Y		N			N	text	5		Y	Y	N	Should this column be displayed in a form?
-table_column	20	is_key_field	Is a Key Field?	char	1	0	Y		N			N	text	5		Y	Y	N	Does this column belong to the (possibly composite) key for this table		
-table_column	21	column_text	Column Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	A friendly description of the meaning of this column (this text here!)		
-table_column	22	optionlist_query	Drop down list query	text	16	0	Y		N			N	textarea	6		Y	Y	N	A query which will populate the contents of this field		
+table_column	20	is_key_field	Is a Key Field?	char	1	0	Y		N			N	text	5		Y	Y	N	Does this column belong to the (possibly composite) key for this table
+table_column	21	column_text	Column Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	A friendly description of the meaning of this column (this text here!)
+table_column	22	optionlist_query	Drop down list query	text	16	0	Y		N			N	textarea	6		Y	Y	N	A query which will populate the contents of this field
 table_column	23	url	URL	varchar	255	0	Y		N			N	text	50		Y	Y	N	The URL or URL fragment that this column is assoctiated with when it appears in a table		
 cached_resultset	1	cached_resultset_id	Cached Resultset ID	int	4	0	N		Y							N	N				pkDEFAULT
 cached_resultset	2	contact_id	Resultset Owner	int	4	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	Y	Creator of this resultset	"SELECT C.contact_id, username+' ('+first_name+' '+last_name+')' AS 'name' FROM $TB_CONTACT C INNER JOIN $TB_USER_LOGIN UL ON ( C.contact_id = UL.contact_id ) ORDER BY username"	
@@ -365,19 +366,19 @@ cached_resultset	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_
 cached_resultset	13	record_status	Record Status	char	1	0	N	N	N							N	N				
 form_template	1	form_template_id	Form Template ID	int	4	0	N		Y							N	N				pkDEFAULT
 form_template	2	contact_id	Template Owner	int	4	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	Y	Creator of this template	"SELECT C.contact_id, username+' ('+first_name+' '+last_name+')' AS 'name' FROM $TB_CONTACT C INNER JOIN $TB_USER_LOGIN UL ON ( C.contact_id = UL.contact_id ) ORDER BY username"	
-form_template	3	program_file_name	Program File Name	varchar	255	0	Y		N			Y	text	50		Y	Y	Y	CGI program locator to which this template belongs		
-form_template	4	template_name	Template Name	varchar	255	0	Y		N			N	text	50		Y	Y	Y	Name of the template		
-form_template	5	parameters	Parameters	text	16	0	Y		N			Y	textarea	10		Y	Y	N	Stored parameters in the form for a Perl hash Dumper Dump		
-form_template	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-form_template	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-form_template	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-form_template	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-form_template	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-form_template	11	record_status	Record Status	char	1	0	N	N	N							N	N				
-AdHocQuery	1	query	SQL Query									Y	textarea	15		Y	Y		"Enter your Ad Hoc Query here.  Be careful with your SQL because a bad query and beat up the server, or worse yet, return data that look right but are not what you intended.  Writing direct SQL is generally discouraged unless you know what you're doing.  You have been warned."		
-GetDataSource	1	source_name	Source Name									Y	text	50		Y	Y		Enter the predenfined data source name here.  This must be a data source originally configured by your SBEAMS administrator		
-GetDataSource	2	row_limit	Maximum Rows									N	text	10		Y	Y		"Limit the numbers of rows displayed.  If not provided, default is 10000 rows."		
-IntegrateResultsets	1	interactions_resultset	Interactions Resultset									N	multioptionlist	8		Y	Y		Select the SBEAMS - Interactions resultset that you want to use to define the edges for the Cytoscape network visualization	"SELECT cache_descriptor,CONVERT(varchar(19),date_created,121)+' ('+query_name+') '+ISNULL(resultset_name,'') FROM $TB_CACHED_RESULTSET WHERE contact_id='$contact_id' AND record_status!='D' AND query_name LIKE 'Interactions/GetInteractions' ORDER BY date_created DESC"	
+form_template	3	program_file_name	Program File Name	varchar	255	0	Y		N			Y	text	50		Y	Y	Y	CGI program locator to which this template belongs	
+form_template	4	template_name	Template Name	varchar	255	0	Y		N			N	text	50		Y	Y	Y	Name of the template	
+form_template	5	parameters	Parameters	text	16	0	Y		N			Y	textarea	10		Y	Y	N	Stored parameters in the form for a Perl hash Dumper Dump	
+form_template	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+form_template	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N			
+form_template	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+form_template	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
+form_template	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
+form_template	11	record_status	Record Status	char	1	0	N	N	N							N	N			
+AdHocQuery	1	query	SQL Query									Y	textarea	15		Y	Y		"Enter your Ad Hoc Query here.  Be careful with your SQL because a bad query and beat up the server, or worse yet, return data that look right but are not what you intended.  Writing direct SQL is generally discouraged unless you know what you're doing.  You have been warned."	
+GetDataSource	1	source_name	Source Name									Y	text	50		Y	Y		Enter the predenfined data source name here.  This must be a data source originally configured by your SBEAMS administrator	
+GetDataSource	2	row_limit	Maximum Rows									N	text	10		Y	Y		"Limit the numbers of rows displayed.  If not provided, default is 10000 rows."	
+IntegrateResultsets	1	interactions_resultset	Interactions Resultset									N	multioptionlist	8		Y	Y		Select the SBEAMS - Interactions resultset that you want to use to define the edges for the Cytoscape network visualization	"SELECT cache_descriptor,CONVERT(varchar(19),date_created,121)+' ('+query_name+') '+ISNULL(resultset_name,'') FROM $TB_CACHED_RESULTSET WHERE contact_id='$contact_id' AND record_status!='D' AND query_name LIKE 'Interactions/GetInteractions' ORDER BY date_created DESC"
 IntegrateResultsets	2	microarray_resultset	Microarray Resultset									N	multioptionlist	8		Y	Y		Select the SBEAMS - Microarray resultset that you want to use to define node attributes for the Cytoscape network visualization	"SELECT cache_descriptor,CONVERT(varchar(19),date_created,121)+' ('+query_name+') '+ISNULL(resultset_name,'') FROM $TB_CACHED_RESULTSET WHERE contact_id='$contact_id' AND record_status!='D' AND query_name LIKE 'Microarray/GetExpression' ORDER BY date_created DESC"
 IntegrateResultsets	3	proteomics_resultset	Proteomics Resultset									N	multioptionlist	8		Y	Y		Select the SBEAMS - Proteomics resultset that you want to use to define the edges for the Cytoscape network visualization	"SELECT cache_descriptor,CONVERT(varchar(19),date_created,121)+' ('+query_name+') '+ISNULL(resultset_name,'') FROM $TB_CACHED_RESULTSET WHERE contact_id='$contact_id' AND record_status!='D' AND query_name LIKE 'Proteomics/BrowseProteinSummary' ORDER BY date_created DESC"
 IntegrateResultsets	4	m	Mode Command									N	fixed			Y	N		Cytoscape integrator mode	"SELECT 1,1"

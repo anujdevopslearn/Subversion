@@ -149,6 +149,7 @@ sub handleRequest {
       SELECT UL.username,C.last_name,C.first_name,C.middle_name,
              CT.contact_type_name,C.job_title,
              SC.first_name+' '+SC.last_name AS 'supervisor_name',
+             C.gender,
              C.is_at_local_facility,C.photo_filename,
 	     OrgO.organization AS 'organization',
              DepO.organization AS 'department',
@@ -201,8 +202,8 @@ sub handleRequest {
       my @column_names = split("\t", $line);
       my $n_columns = @column_names;
       close(INFILE);
-      if ($n_columns == 25){
-	  my @ref_columns = ('username', 'last_name', 'first_name', 'middle_name', 
+      if ($n_columns == 26){
+	  my @ref_columns = ('username', 'last_name', 'first_name', 'middle_name', 'gender',
 			     'contact_type_name','job_title','supervisor_name',
 			     'is_at_local_facility','photo_filename','organization',
 			     'department','lab','group','location','alternate_location',
@@ -280,24 +281,25 @@ sub handleRequest {
 	'4'=>'contact_type_id',
 	'5'=>'job_title',
 	'6'=>'supervisor_contact_id',
-	'7'=>'is_at_local_facility',
-	'8'=>'photo_filename',
-	'9'=>'organization_id',
-	'10'=>'department_id',
-	'11'=>'lab_id',
-	'12'=>'group_id',
-	'13'=>'location',
-	'14'=>'alternate_location',
-	'15'=>'phone',
-	'16'=>'phone_extension',
-	'17'=>'cell_phone',
-	'18'=>'pager',
-        '19'=>'is_messenging_pager',
-        '20'=>'home_phone',
-        '21'=>'fax',
-        '22'=>'email',
-        '23'=>'alternate_email',
-	'24'=>'comment'
+	'7'=>'gender',
+	'8'=>'is_at_local_facility',
+	'9'=>'photo_filename',
+	'10'=>'organization_id',
+	'11'=>'department_id',
+	'12'=>'lab_id',
+	'13'=>'group_id',
+	'14'=>'location',
+	'15'=>'alternate_location',
+	'16'=>'phone',
+	'17'=>'phone_extension',
+	'18'=>'cell_phone',
+	'19'=>'pager',
+        '20'=>'is_messenging_pager',
+        '21'=>'home_phone',
+        '22'=>'fax',
+        '23'=>'email',
+        '24'=>'alternate_email',
+	'25'=>'comment'
       );
 
 
@@ -306,10 +308,10 @@ sub handleRequest {
   my %transform_map = (
     '4' => \%contact_type_ids,
     '6' => \%supervisor_ids,
-    '9' => \%organization_ids,
-    '10'=> \%department_ids,
-    '11'=> \%lab_ids,
-    '12'=> \%group_ids,
+    '10' => \%organization_ids,
+    '11'=> \%department_ids,
+    '12'=> \%lab_ids,
+    '13'=> \%group_ids,
      );
 
   my %update_keys = (
