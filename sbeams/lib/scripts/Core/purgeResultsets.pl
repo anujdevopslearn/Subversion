@@ -188,6 +188,8 @@ sub purgeResultsets {
   my $n_files_deleted_orphan = 0;
   my $size_deleted_large = 0;
   my $n_files_deleted_large = 0;
+  my $size_deleted_old = 0;
+  my $n_files_deleted_old = 0;
   my $size_special = 0;
   my $size_deleted_special = 0;
   my $n_files_deleted_special = 0;
@@ -196,22 +198,48 @@ sub purgeResultsets {
   #### Keep a hash of all resultsets for which there is file
   my %complete_resultsets;
 
+  #### Keep a hash of all already purged resultsets
+  my %purged_resultsets;
+
 
   #### Loop over all the files and keep stats
   print "Looping over all files to decide what to do...\n" if ($VERBOSE);
   my $ifile = 0;
+  my $file_size = 0;
+  my $age = 0;
+  my $done;
   foreach my $file (@files) {
+    $done = 0;
     my $file_root = $file;
     $file_root =~ s/\..+?$//;
 
-    my $file_size = ( -s "$directory/$file" );
-    unless (defined($file_size)) {
-      print "ERROR: Unable to determine size of file $directory/$file\n";
-      $file_size = 0;
+    print "Processing file $file\n" if ($VERBOSE);
+
+    if ($purged_resultsets{$file_root}) {
+      if (-e "$directory/$file") {
+	if ($purge) {
+	  print " ERROR: File $file should be deleted but is not!\n";
+	} else {
+	  print " It's still there because we're testing...\n";
+	}
+      } else {
+	#print " File is already purged.\n";
+	print "_";
+      }
+      $done = 1;
     }
 
-    $size_total += $file_size;
-    my $age = ( -M "$directory/$file" );
+
+    if (!$done) {
+      $file_size = ( -s "$directory/$file" );
+      unless (defined($file_size)) {
+        print "ERROR: Unable to determine size of file $directory/$file\n";
+        $file_size = 0;
+      }
+
+      $size_total += $file_size;
+      $age = ( -M "$directory/$file" );
+    }
 
     #### If this file has a table entry, make a note
     if (exists($resultsets{$file_root})) {
@@ -219,11 +247,12 @@ sub purgeResultsets {
 
     #### Else it's temporary resultset that doesn't need a table entry
     #### Purge it after 30 days
-    } else {
+    } elsif (!$done) {
       if ($age > 30.0) {
 	unlink("$directory/$file") if ($purge);
         $size_deleted_orphan += $file_size;
         $n_files_deleted_orphan++;
+	$done = 1;
       }
 
       $size_orphan += $file_size;
@@ -231,7 +260,7 @@ sub purgeResultsets {
 
 
     #### Purge files > 10MB if more than 30 days old
-    if ($file_size > 10000000) {
+    if (!$done && $file_size > 10000000) {
       #printf("%10d  %10.2f  %s\n",$file_size,$age,$file);
       if ($age > 30.0) {
         if (defined($resultsets{$file_root}) &&
@@ -253,10 +282,11 @@ sub purgeResultsets {
 	    print "\n  Warning no resultset in database by that name!";
 	  }
 	  if ($purge) {
-	    unlink("$directory/$file_root.resultsets");
+	    unlink("$directory/$file_root.resultset");
 	    unlink("$directory/$file_root.params");
 	  }
 	  delete($resultsets{$file_root});
+	  $purged_resultsets{$file_root} = 1;
           $size_deleted_large += $file_size;
           $n_files_deleted_large++;
 	}
@@ -265,8 +295,41 @@ sub purgeResultsets {
     }
 
 
+    #### Purge any unnamed resultsets more than 365 days old
+    if (!$done && $age > 365.0) {
+      if (defined($resultsets{$file_root}) &&
+          defined($resultsets{$file_root}->[2]) &&
+          $resultsets{$file_root}->[2] gt '') {
+        printf("\nRetaining %s (%7.2f MB) (aged %d days) (named '%s')...\n",
+               $file,$file_size/1024/1024,$age,$resultsets{$file_root}->[2])
+          if ($VERBOSE);
+      } else {
+        printf("\nPurging $file (%7.2f MB) (aged $age days)...",$file_size/1024/1024);
+        if (defined($resultsets{$file_root}->[1]) &&
+          $resultsets{$file_root}->[1] gt '') {
+          $sql = qq~
+            DELETE $TB_CACHED_RESULTSET
+             WHERE cached_resultset_id = '$resultsets{$file_root}->[1]'
+          ~;
+          $sbeams->executeSQL($sql) if ($purge);
+        } else {
+          print "\n  Warning no resultset in database by that name!";
+        }
+        if ($purge) {
+          unlink("$directory/$file_root.resultset");
+          unlink("$directory/$file_root.params");
+        }
+        delete($resultsets{$file_root});
+        $size_deleted_old += $file_size;
+        $n_files_deleted_old++;
+	$purged_resultsets{$file_root} = 1;
+	$done = 1;
+      }
+    }
+
+
     #### Purge special cases if older than 7 days
-    if (defined($resultsets{$file_root}) &&
+    if (!$done && defined($resultsets{$file_root}) &&
 	defined($resultsets{$file_root}->[3]) &&
 	$resultsets{$file_root}->[3] eq 'Proteomics/GetSearchHits' &&
         $file_root =~ /pmallick/) {
@@ -291,6 +354,8 @@ sub purgeResultsets {
 	  delete($resultsets{$file_root});
           $size_deleted_special += $file_size;
           $n_files_deleted_special++;
+	  $purged_resultsets{$file_root} = 1;
+ 	  $done = 1;
 	}
       }
       $size_special += $file_size;
@@ -353,6 +418,9 @@ sub purgeResultsets {
     print "  Number of deleted large files: $n_files_deleted_large\n";
     printf("  Total size of deleted large files: %.2f MB\n",$size_deleted_large/1024/1024);
     printf("  Total size of large files: %.2f MB\n\n",$size_large/1024/1024);
+
+    print "  Number of deleted old files: $n_files_deleted_old\n";
+    printf("  Total size of deleted old files: %.2f MB\n\n",$size_deleted_old/1024/1024);
 
     print "  Number of deleted special files: $n_files_deleted_special\n";
     print "  Total size of deleted special files: $size_deleted_special\n";
