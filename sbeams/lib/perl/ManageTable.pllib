@@ -27,6 +27,9 @@ use constant DATA_READER => 40;
 use constant DATA_NONE => 50;
 use constant DEBUG => 0;
 
+use lib ".";
+use SBEAMS::Connection qw($log);
+
 
 ###############################################################################
 # Print Options Page
@@ -45,7 +48,6 @@ sub printOptions {
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters);
 
-
   #### If we're in HTML mode, print a list of option links for the user
   if ($sbeams->output_mode() eq 'html') {
     print qq~
@@ -56,9 +58,19 @@ sub printOptions {
 
     #### Loop over all the menu options, printing them
     for (my $option=0; $option<$#MENU_OPTIONS; $option+=2) {
+      my $optionLink = '';
+
+      if ( $option == 0 && !$sbeams->isTableWritable(table_name => $parameters{TABLE_NAME}) ) {
+        $optionLink = $sbeams->makeInactiveText( $MENU_OPTIONS[$option] );
+      } else {
+        $optionLink =<<"        END";
+        <A HREF="@MENU_OPTIONS[$option+1]">@MENU_OPTIONS[$option]</A>
+        END
+      }
+      
       print qq~
 	$OPTIONARROW
-	<A HREF="@MENU_OPTIONS[$option+1]">@MENU_OPTIONS[$option]</A>
+  $optionLink
       ~;
     }
 
@@ -309,6 +321,7 @@ sub printEntryForm {
   }
 
   if ( defined $parent_project_id ) { # Project security has priority
+    $log->debug ( "Found parent project ID = $parent_project_id" );
 
     # FIXME When a user has no project, they end up with project_id = 0!
     $projectAuthLevel = $sbeams->calculateProjectPermission( 
@@ -550,15 +563,14 @@ sub printEntryForm {
   my $rec = ( defined $projectAuthLevel ) ? $projectAuthLevel : 'undefined';
   my $pk = ( $parameters{$PK_COLUMN_NAME} ) ? $parameters{$PK_COLUMN_NAME} : 'undefined';
 
-  print STDERR <<"  END_ERR" if DEBUG;
+  $log->debug( <<"  END_ERR" );
   Current Group: $current_work_group_id
   Table: $tableAuthLevel
   Project: $rec
   PK: $pk
   END_ERR
-  if ( DEBUG ) {
-    for( keys( %viewStates ) ){ print STDERR "$_ => $viewStates{$_}\n"; }
-  }
+#for( keys( %viewStates ) ){ $log->debug( "$_ => $viewStates{$_}" ); }
+ 
   #### END debug block ####
 
   # End view-only mode permissions calculation.
