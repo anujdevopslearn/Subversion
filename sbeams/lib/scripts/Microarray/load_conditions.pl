@@ -376,7 +376,11 @@ sub insertGeneExpression {
   || die "ERROR[$SUB_NAME]:column mapping reference needs to be set\n";
   my %column_map = %{$column_map_ref};
   my $delimiter = $args{'delimiter'} || "\t";
-  my $skip_lines = $args{'skip_lines'} || 1;
+
+  #### Deutsch changed.  What if the user asked from 0?  This breaks.
+  #my $skip_lines = $args{'skip_lines'} || 1;
+  my $skip_lines = $args{'skip_lines'};
+  $skip_lines = 1 unless (defined($skip_lines));
 
   ## Define standard variables
   my $CURRENT_CONTACT_ID = $sbeams->getCurrent_contact_id();
@@ -536,6 +540,7 @@ sub loadColumnMapFile {
   || die "ERROR[$SUB_NAME]:directory is required\n";
   my $bs_hash_ref = $args{'bs_hash_ref'};
   my $delimiter = "\t";
+  my $skip_lines;
   my @condition_files;
   my ($mapped_file, $condition, $condition_id, $processed_date);
 
@@ -581,6 +586,8 @@ sub loadColumnMapFile {
 
 	}elsif (/condition\s*\=\s*(.*)/) {
 	  $condition = $1;
+	}elsif (/skip_lines\s*\=\s*(.*)/) {
+	  $skip_lines = $1;
         }elsif (/(\w+)\s*\=\s*(\d+)/) {
 	  if (ref($column_mapping{$2}) eq "ARRAY") {
 	    push @{$column_mapping{$2}}, $1;
@@ -630,7 +637,9 @@ sub loadColumnMapFile {
 			   column_map_ref=>\%column_mapping,
 			   source_file=>"$mapped_file",
 			   if_hash=>$bs_hash_ref,
-			   delimiter=>$delimiter);
+			   delimiter=>$delimiter,
+			   skip_lines=>$skip_lines,
+			  );
 
       push (@condition_files, $map_file);
     }else{
