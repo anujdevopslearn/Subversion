@@ -34,7 +34,7 @@ use GD::Graph::bars;
 use GD::Graph::xypoints;
 
 
-#use lib "/net/db/src/CPAN/Data-ShowTable-3.3b/blib/lib";
+
 #use Data::ShowTableTest;
 use Data::ShowTable;
 
@@ -2120,7 +2120,7 @@ sub decodeDataType {
     my $self = shift;
     my $types_ref = shift || die "decodeDataType: insufficient paramaters\n";
 
-    my %typelist = ( 1=>"varchar", 4=>"int", 2=>"numeric", 6=>"float", #7=>"float",
+    my %typelist = ( 1=>"varchar", 4=>"int", 2=>"numeric", 6=>"float", #7=>"real",
       11=>"date",-1=>"text" );
     my ($i,$type,$newtype);
     my @types = @{$types_ref};
@@ -2130,7 +2130,7 @@ sub decodeDataType {
       $type = $types[$i];
       $newtype = $typelist{$type} || $type;
       push(@newtypes,$newtype);
-     # print "$i: $type --> $newtype<br/>\n";
+      
     }
 
     return \@newtypes;
@@ -2342,7 +2342,7 @@ sub displayResultSet {
 
       #### Print for debugging
     #  print $column_titles_ref->[$i],"(",$types_ref->[$i],"): ",
-   #     $precisions[$i],"<BR>\n";
+    #    $precisions[$i],"<BR>\n";
     }
 
 
@@ -2538,22 +2538,33 @@ sub displayResultSet {
     #### If the desired output format is Cytoscape, prepare a temp directory
     #### for the files and return the jnlp xml
     if ($self->output_mode() eq 'cytoscape' && defined($cytoscape)) {
-      if ( ! -d "$PHYSICAL_BASE_DIR/tmp/cytoscape/") {
-	mkdir("$PHYSICAL_BASE_DIR/tmp/cytoscape/") ||
-	  die("ERROR: Unable to mkdir $PHYSICAL_BASE_DIR/tmp/cytoscape/");
+      if ( ! -d "$PHYSICAL_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/") {
+	mkdir("$PHYSICAL_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/") ||
+	  die("ERROR: Unable to mkdir $PHYSICAL_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/");
       }
 
       my $identifier = $rs_params_ref->{'set_name'} || 'unknown';
-      if ( ! -d "$PHYSICAL_BASE_DIR/tmp/cytoscape/$identifier") {
-	mkdir("$PHYSICAL_BASE_DIR/tmp/cytoscape/$identifier") ||
-	  die("ERROR: Unable to mkdir $PHYSICAL_BASE_DIR/tmp/cytoscape/$identifier");
+      if ( ! -d "$PHYSICAL_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/$identifier") {
+	mkdir("$PHYSICAL_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/$identifier") ||
+	  die("ERROR: Unable to mkdir $PHYSICAL_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/$identifier");
       }
 
+      #select the out folder, Currently must deside if this a Immunostain/SummarizeStains or Microarray/GetExpression session to
+      #launch the ps_cyctoscape flavor 
+	my $out_folder = "";
+  	if (defined $cytoscape->{cytoscape_type} && $cytoscape->{cytoscape_type} eq 'cytoscape_ps'){
+		$out_folder = "$PHYSICAL_BASE_DIR/tmp/Microarray/GetExpression/jws/$identifier";
+	}else{
+		$out_folder = "$PHYSICAL_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/$identifier";
+	}
+     
       my $template = $cytoscape->{template};
-      system("/bin/cp -p $PHYSICAL_BASE_DIR/lib/cytoscape/$SBEAMS_SUBDIR/$template/* $PHYSICAL_BASE_DIR/tmp/cytoscape/$identifier/");
-
+      system("/bin/cp -p $PHYSICAL_BASE_DIR/lib/cytoscape/$SBEAMS_SUBDIR/$template/* $out_folder/");
+      
+        
       foreach my $file (keys %{$cytoscape->{files}}) {
-	my $outfile = "$PHYSICAL_BASE_DIR/tmp/cytoscape/$identifier/$file";
+	my $outfile = "$out_folder/$file";
+	
 	open(OUTFILE,">$outfile") || die("ERROR: Unable to open file $outfile");
 	foreach my $line ( @{$cytoscape->{files}->{$file}} ) {
 	  print OUTFILE "$line\n" if (defined($line));
@@ -2562,34 +2573,49 @@ sub displayResultSet {
 
       }
 
-      #### Update the jnlp file with the latest information
-      my $infile = "$PHYSICAL_BASE_DIR/tmp/cytoscape/$identifier/cytoscape.jnlp";
-      open(INFILE,$infile) || die("ERROR: Unable to open $infile");
-      my $buffer = '';
-      while (my $line = <INFILE>) {
-	if ($line =~ /codebase=/) {
-	  $line =~ s~codebase=\".+\"~codebase="$SERVER_BASE_DIR/$HTML_BASE_DIR/tmp/cytoscape/$identifier"~;
-	}
-	$buffer .= $line;
-      }
-      close(INFILE);
-      open(OUTFILE,">$infile") || die("ERROR: Unable to open $infile for writing");
-      print OUTFILE $buffer;
-      close(OUTFILE);
-
-
+ 
       #### Make the data.jar
-      system("( cd $PHYSICAL_BASE_DIR/tmp/cytoscape/$identifier/ ; /usr/bin/make >& make.out )");
+      system("( cd $out_folder/ ; /usr/bin/make >& make.out )");
 
+      ##Redirect to the gaggle version of cytoscape if we need to
+      if(defined $cytoscape->{cytoscape_type} && $cytoscape->{cytoscape_type} eq 'cytoscape_ps'){
+      
+	my $url = "$HTML_BASE_DIR/tmp/Microarray/GetExpression/jws/$identifier/index.html";
+	
+	print $q->redirect("$url");
+      
+      }
+      
       #### If the invocation_mode is http, provide a header
       if ($self->invocation_mode() eq 'http') {
         print "Content-type: application/x-java-jnlp-file\n\n";
       }
 
+     
+      #### Update the jnlp file with the latest information
+     	 my $infile = "$PHYSICAL_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/$identifier/cytoscape.jnlp";
+     	 open(INFILE,$infile) || die("ERROR: Unable to open $infile");
+     	my $buffer = '';
+     	 while (my $line = <INFILE>) {
+		if ($line =~ /codebase=/) {
+		  $line =~ s~codebase=\".+\"~codebase="$SERVER_BASE_DIR/$HTML_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/$identifier"~;
+		}elsif($line =~ /CYTOSCAPE_JAR_HOOK/){
+			$line =~ s~CYTOSCAPE_JAR_HOOK~$SERVER_BASE_DIR/$HTML_BASE_DIR/usr/java/share/Cytoscape/cytoscape_1.0.jar~;
+		}
+		
+		$buffer .= $line;
+     	 }
+      	close(INFILE);
+      	open(OUTFILE,">$infile") || die("ERROR: Unable to open $infile for writing");
+      	print OUTFILE $buffer;
+      	close(OUTFILE);
+    
       #### Send the jnlp xml
       print $buffer;
+     
+     
 
-
+     
       return;
     }
 
@@ -2842,9 +2868,10 @@ sub displayResultSetControls {
 
     #### If we have Cytoscape information, add that
     if (defined($cytoscape)) {
-      push(@output_modes,
+     push(@output_modes,
 	   ['cytoscape','jnlp','Cytoscape'],
-	  );
+	);
+      
     }
 
 
@@ -4435,15 +4462,22 @@ sub transferTable {
   #### Define some stuff
   my %rowdata;
   my $row;
-
+  
+  my $line_br = '';
+  if ($self->output_mode() eq 'html') {
+  	$line_br = '<br>';
+  }else{
+  	$line_br = "\n";
+  } 
+  
   my $total_row_count = scalar @rows;		#setup counter to watch the inserts or updates proceed
   my $number_inserts_per_dot = int($total_row_count/100);
-  my $load_info = "v-- 0 %".  (" " x 23) . "Number of inserts per dot = " . (sprintf("% 4d", $number_inserts_per_dot)) . (" " x 24) . "100 % done --v\n";
-  my $load_gauge = "|" . ("." x 98) . "|\n";
+  my $load_info = "v-- 0 %".  (" " x 23) . "Number of inserts per dot = " . (sprintf("% 4d", $number_inserts_per_dot)) . (" " x 24) . "100 % done --v $line_br";
+  my $load_gauge = "|" . ("." x 98) . "|$line_br";
   my $row_count = 0;
     
   #### Loop over each row of input data
-  print "\n  Loading data into destination\n";
+  print "$line_br  Loading data into destination$line_br";
   print "$load_info$load_gauge" if $total_row_count > 100;
   foreach $row (@rows) {
     %rowdata = ();
