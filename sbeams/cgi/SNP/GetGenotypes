@@ -751,7 +751,6 @@ sub postProcessResultset {
       foreach my $assay (@assays) {
         foreach my $sample_name (@samples) {
           $ncalls = scalar(keys(%{$data->{$project_name}->{$assay}->{$sample_name}->{all_calls}}));
-print "ncalls is $ncalls\n<BR>";
           $n_max_calls = $ncalls if ($ncalls > $n_max_calls);
           my %temp_hash;
           $temp_hash{n_calls}=$ncalls;
@@ -760,13 +759,13 @@ print "ncalls is $ncalls\n<BR>";
 	  my $call_index = 1;
 	  my $best_quality = 'Z';
 
-          foreach my $expAndWell (sort keys %{ $data->{$project_name}->{$assay}->{$sample_name}->{all_calls} }) {
-            $temp_hash{$call_index}->{call} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWell}->{genotype};
-            $temp_hash{$call_index}->{call_quality} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWell}->{quality};
-            $temp_hash{$call_index}->{call_plate_ID} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWell}->{plate};
-            $temp_hash{$call_index}->{call_exp_no} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWell}->{experiment};
-            $temp_hash{$call_index}->{call_well} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWell}->{well};
-            $temp_hash{$call_index}->{call_date} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWell}->{call_date};
+          foreach my $expAndWellAndDate (sort keys %{ $data->{$project_name}->{$assay}->{$sample_name}->{all_calls} }) {
+            $temp_hash{$call_index}->{call} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWellAndDate}->{genotype};
+            $temp_hash{$call_index}->{call_quality} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWellAndDate}->{quality};
+            $temp_hash{$call_index}->{call_plate_ID} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWellAndDate}->{plate};
+            $temp_hash{$call_index}->{call_exp_no} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWellAndDate}->{experiment};
+            $temp_hash{$call_index}->{call_well} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWellAndDate}->{well};
+            $temp_hash{$call_index}->{call_date} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWellAndDate}->{call_date};
 
 	    $best_quality = $temp_hash{$call_index}->{call_quality}
 	      if ($best_quality gt $temp_hash{$call_index}->{call_quality});
@@ -906,13 +905,13 @@ print "ncalls is $ncalls\n<BR>";
 	  my $call_index = 1;
 	  my $best_quality = 'Z';
 
-          foreach my $expAndWell (sort keys %{ $data->{$project_name}->{$assay}->{$sample_name}->{all_calls} }) {
-            $temp_hash{$call_index}->{call} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWell}->{genotype};
-            $temp_hash{$call_index}->{call_quality} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWell}->{quality};
-            $temp_hash{$call_index}->{call_plate_ID} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWell}->{plate};
-            $temp_hash{$call_index}->{call_exp_no} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWell}->{experiment};
-            $temp_hash{$call_index}->{call_well} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWell}->{well};
-            $temp_hash{$call_index}->{call_date} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWell}->{call_date};
+          foreach my $expAndWellAndDate (sort keys %{ $data->{$project_name}->{$assay}->{$sample_name}->{all_calls} }) {
+            $temp_hash{$call_index}->{call} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWellAndDate}->{genotype};
+            $temp_hash{$call_index}->{call_quality} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWellAndDate}->{quality};
+            $temp_hash{$call_index}->{call_plate_ID} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWellAndDate}->{plate};
+            $temp_hash{$call_index}->{call_exp_no} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWellAndDate}->{experiment};
+            $temp_hash{$call_index}->{call_well} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWellAndDate}->{well};
+            $temp_hash{$call_index}->{call_date} = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls}->{$expAndWellAndDate}->{call_date};
 
 	    $best_quality = $temp_hash{$call_index}->{call_quality}
 	      if ($best_quality gt $temp_hash{$call_index}->{call_quality});
@@ -988,13 +987,15 @@ print "ncalls is $ncalls\n<BR>";
       foreach my $assay (@assays) {
 
 	my $counts;
-        my @newrow = ( $project_name,$assay );
+        my $shortassay = $assay;
+        $shortassay =~ s/gi$//;
+        my @newrow = ( $project_name,$shortassay );
         my %found_genos=();
         my %found_alleles=();
         foreach my $sample_name (@samples) {
 	  my $call_final = $data->{$project_name}->{$assay}->{$sample_name}->{all_calls_final}->{call_final};
-          if ( (uc($sample_name) !~ /CEPH/) and
-	       ($project_name =~ /IAN/ and (uc($sample_name) !~ /^E/)) and
+          if ( (uc($sample_name) !~ /CEPH/) and (uc($sample_name) !~ /EMPTY/) and 
+	       ( ($project_name =~ /IAN/ and (uc($sample_name) !~ /^E/)) or ($project_name !~ /IAN/) ) and
 	       $call_final !~ /0\/0/ and
 	       $call_final ne '') {
             my ($all1,$all2) = split(/\//,$call_final);
@@ -1024,116 +1025,121 @@ print "ncalls is $ncalls\n<BR>";
         $num_keys = scalar keys %found_genos;
 	my @newrow_template = @newrow;
 	foreach my $sample_type ( 'Overall','Control','Sample' ) {
-	  my @newrowtmp = ( @newrow_template,$sample_type );
-	  my $i_genos = 0;
-	  foreach my $gtype (keys %found_genos) {
-	    push (@newrowtmp,$gtype,$counts->{$gtype}->{$sample_type});
-	    $i_genos++;
-	  }
-	  #### Pad to full max genos
-	  while ($i_genos < $n_max_genos) {
-	    push(@newrowtmp,undef,undef);
-	    $i_genos++;
-	  }
-
-
-	  #### Calculate the total alleles in the system
-	  my $total_alleles;
-          foreach my $allele ( keys %found_alleles ) {
-	    $total_alleles += $counts->{$allele}->{$sample_type};
-	  }
-
-
-	  #### Calculate the allele frequencies and allele order
-	  my %allele_frequencies;
-	  my %allele_frequency_values;
-          foreach my $allele ( keys %found_alleles ) {
-	    if ($total_alleles) {
-	      $allele_frequencies{$allele} = $counts->{$allele}->{$sample_type}/$total_alleles;
-	      $allele_frequency_values{$counts->{$allele}->{$sample_type}/$total_alleles} = $allele;
+          if ($counts->{$sample_type} > 0) {
+  	    my @newrowtmp = ( @newrow_template,$sample_type );
+  	    my $i_genos = 0;
+  	    foreach my $gtype (keys %found_genos) {
+  	      push (@newrowtmp,$gtype,$counts->{$gtype}->{$sample_type});
+  	      $i_genos++;
+  	    }
+  	    #### Pad to full max genos
+  	    while ($i_genos < $n_max_genos) {
+  	      push(@newrowtmp,undef,undef);
+  	      $i_genos++;
+  	    }
+	
+	
+  	    #### Calculate the total alleles in the system
+  	    my $total_alleles;
+              foreach my $allele ( keys %found_alleles ) {
+  	      $total_alleles += $counts->{$allele}->{$sample_type};
+  	    }
+	
+	
+  	    #### Calculate the allele frequencies and allele order
+  	    my %allele_frequencies;
+  	    my %allele_frequency_values;
+              foreach my $allele ( keys %found_alleles ) {
+  	      if ($total_alleles) {
+  	        $allele_frequencies{$allele} = $counts->{$allele}->{$sample_type}/$total_alleles;
+                if ($allele_frequency_values{$counts->{$allele}->{$sample_type}/$total_alleles}) {
+                  $allele_frequency_values{$counts->{$allele}->{$sample_type}/$total_alleles + 0.00000001} = $allele;
+                } else {
+		  $allele_frequency_values{$counts->{$allele}->{$sample_type}/$total_alleles} = $allele;
+                }
+  	      } else {
+  	        $allele_frequencies{$allele} = 0;
+  	        $allele_frequency_values{'0'} = $allele;
+  	        #print "WARNING: Total allele count = 0 for project $project_name assay $assay<BR>\n";
+  	      }
+  	    }
+	
+  	    my @sorted_alleles;
+              foreach my $value ( reverse sort(keys(%allele_frequency_values)) ) {
+  	      push(@sorted_alleles,$allele_frequency_values{$value});
+  	    }
+	
+	
+   	    #### Create the alleles part of the data row
+  	    my $i_alleles = 0;
+	    foreach my $allele ( @sorted_alleles ) {
+	      push (@newrowtmp,
+		    $allele,
+		    sprintf("%.2f",$allele_frequencies{$allele})
+		   );
+	      $i_alleles++;
+	    }
+	    #### Pad to full max genos
+	    while ($i_alleles < $n_max_alleles) {
+	      push(@newrowtmp,undef,undef);
+	      $i_alleles++;
+	    }
+	
+	    #### Calcuate expected genotype counts and chi squared
+	    my $chi_squared = 0;
+	    foreach my $gtype (keys %found_genos) {
+	      unless ($gtype =~ /([\w-])\/([\w-])/) {
+		die("ERROR: malformed genotype $gtype");
+	      }
+	      my $allele1 = $1;
+	      my $allele2 = $2;
+	      my $expected_count;
+	
+	      if ($allele1 eq $allele2) {
+		$expected_count = $allele_frequencies{$allele1} *
+		                  $allele_frequencies{$allele1} *
+				  $counts->{AllGenos}->{$sample_type};
+	      } else {
+		$expected_count = $allele_frequencies{$allele1} *
+		                  $allele_frequencies{$allele2} *
+                                  $counts->{AllGenos}->{$sample_type} * 2;
+	      }
+	
+	      if ($expected_count) {
+		 $chi_squared += ( $counts->{$gtype}->{$sample_type} - $expected_count ) *
+  	                         ( $counts->{$gtype}->{$sample_type} - $expected_count ) /
+  	                         $expected_count;
+	       }
+	
+	    }
+	
+	    #### Add the Chi Squared column value
+	    push(@newrowtmp,sprintf("%.3f",$chi_squared));
+	
+	    #### Determine and add the Hardy Weinberg check
+	    my $n_found_alleles = scalar(keys(%found_alleles));
+	    my @HWcutoffs = ( 99,99,3.841,7.815,12.590 );
+	    if ($chi_squared <= $HWcutoffs[$n_found_alleles]) {
+	      push(@newrowtmp,'OK');
 	    } else {
-	      $allele_frequencies{$allele} = 0;
-	      $allele_frequency_values{'0'} = $allele;
-	      #print "WARNING: Total allele count = 0 for project $project_name assay $assay<BR>\n";
+	      push(@newrowtmp,'FAILED');
 	    }
-	  }
-
-	  my @sorted_alleles;
-          foreach my $value ( reverse sort(keys(%allele_frequency_values)) ) {
-	    push(@sorted_alleles,$allele_frequency_values{$value});
-	  }
-
-
-	  #### Create the alleles part of the data row
-	  my $i_alleles = 0;
-          foreach my $allele ( @sorted_alleles ) {
-            push (@newrowtmp,
-		  $allele,
-		  sprintf("%.2f",$allele_frequencies{$allele})
-		 );
-	    $i_alleles++;
-          }
-	  #### Pad to full max genos
-	  while ($i_alleles < $n_max_alleles) {
-	    push(@newrowtmp,undef,undef);
-	    $i_alleles++;
-	  }
-
-	  #### Calcuate expected genotype counts and chi squared
-	  my $chi_squared = 0;
-	  foreach my $gtype (keys %found_genos) {
-	    unless ($gtype =~ /([\w-])\/([\w-])/) {
-	      die("ERROR: malformed genotype $gtype");
+	
+	    #### Determine and add the minor allele check result (using
+	    #### criterion major allele <= 1-minor allele threshold because
+	    #### there's only on major allele but possibly more than one minor)
+	    my $threshold = 0.10;
+	    if (defined $parameters{minor_allele_limit}) {
+	      $threshold = $parameters{minor_allele_limit};
 	    }
-	    my $allele1 = $1;
-	    my $allele2 = $2;
-	    my $expected_count;
-
-	    if ($allele1 eq $allele2) {
-	      $expected_count = $allele_frequencies{$allele1} *
-	 	                $allele_frequencies{$allele1} *
-                                $counts->{AllGenos}->{$sample_type};
+	    if ($allele_frequencies{$sorted_alleles[0]} <= (1 - $threshold)) {
+	      push(@newrowtmp,undef);
 	    } else {
-	      $expected_count = $allele_frequencies{$allele1} *
-	 	                $allele_frequencies{$allele2} *
-                                $counts->{AllGenos}->{$sample_type} * 2;
+	      push(@newrowtmp,"< $threshold");
 	    }
-
-	    if ($expected_count) {
-	      $chi_squared += ( $counts->{$gtype}->{$sample_type} - $expected_count ) *
-	 	              ( $counts->{$gtype}->{$sample_type} - $expected_count ) /
-	            	      $expected_count;
-	    }
-
-
-	  }
-
-	  #### Add the Chi Squared column value
-	  push(@newrowtmp,sprintf("%.3f",$chi_squared));
-
-	  #### Determine and add the Hardy Weinberg check
-	  my $n_found_alleles = scalar(keys(%found_alleles));
-	  my @HWcutoffs = ( 99,99,3.841,7.815,12.590 );
-	  if ($chi_squared <= $HWcutoffs[$n_found_alleles]) {
-	    push(@newrowtmp,'OK');
-	  } else {
-	    push(@newrowtmp,'FAILED');
-	  }
-
-	  #### Determine and add the minor allele check result (using
-	  #### criterion major allele <= 1-minor allele threshold because
-	  #### there's only on major allele but possibly more than one minor)
-	  my $threshold = 0.10;
-	  if (defined $parameters{minor_allele_limit}) {
-            $threshold = $parameters{minor_allele_limit};
-	  }
-	  if ($allele_frequencies{$sorted_alleles[0]} <= (1 - $threshold)) {
-	    push(@newrowtmp,undef);
-	  } else {
-	    push(@newrowtmp,"< $threshold");
-	  }
-
-          push(@new_data_array,\@newrowtmp);
+	
+	    push(@new_data_array,\@newrowtmp);
+	  } # end if count(sample_type) > 0
 
 	} # end foreach sample_type
 
@@ -1145,7 +1151,8 @@ print "ncalls is $ncalls\n<BR>";
     #### Define the headers for all the columns
     my @expanding_column_names = qw(genotype count) ;
     my @expanding_column_types = qw(varchar int);
-    for (my $i=1; $i<=$num_keys; $i++) {
+#    for (my $i=1; $i<=$num_keys; $i++) {
+    for (my $i=1; $i<=$n_max_genos; $i++) {
       for (my $iheader = 0; $iheader<scalar(@expanding_column_names); $iheader++) {
 	my $tmp = $expanding_column_names[$iheader];
 	$tmp .= $i;
@@ -1156,7 +1163,8 @@ print "ncalls is $ncalls\n<BR>";
 
     @expanding_column_names = qw(allele frequency);
     @expanding_column_types = qw(varchar real);
-    for (my $i=1;$i<=2;$i++) {
+#    for (my $i=1;$i<=2;$i++) {
+    for (my $i=1;$i<=$n_max_alleles;$i++) {
       for (my $iheader = 0; $iheader<scalar(@expanding_column_names); $iheader++) {
         my $tmp = $expanding_column_names[$iheader];
         $tmp .= $i;
