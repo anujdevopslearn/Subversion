@@ -650,6 +650,7 @@ sub setCurrent_project_id {
   #### Get a list of accessible projects
   my @accessible_projects = $self->getAccessibleProjects();
   my $accessible_project_list = join(',',@accessible_projects);
+  $accessible_project_list = '0' unless ($accessible_project_list);
 
 
   #### Get a hash of project_ids that the user can access
