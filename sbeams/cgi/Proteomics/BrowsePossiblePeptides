@@ -496,7 +496,7 @@ sub handle_request {
       ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
       ["accessor","DBX.accessor","accessor"],
       ["biosequence_accession","BS.biosequence_accession","Accession"],
-      ["n_peptides","COUNT(*)","Number of Peptides"],
+      ["n_peptides","COUNT(*)","Peptide Count"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
     );
@@ -626,8 +626,11 @@ sub handle_request {
     	       'Protein Count' => "$CGI_BASE_DIR/Proteomics/BrowsePossiblePeptides?QUERY_NAME=PR_BrowsePossiblePeptides&display_options=GroupProtein&n_occurrences=\%0V&$parameters_list&apply_action=$pass_action",
     	       'Protein Count_ATAG' => 'TARGET="Win1"',
 
-    	       'Number of Peptides' => "$CGI_BASE_DIR/Proteomics/BrowsePossiblePeptides?QUERY_NAME=PR_BrowsePossiblePeptides&biosequence_name_constraint=\%$colnameidx{biosequence_name}V&$parameters_list&apply_action=$pass_action",
-    	       'Number of Peptides_ATAG' => 'TARGET="Win1"',
+    	       'Peptide Count' => "$CGI_BASE_DIR/Proteomics/BrowsePossiblePeptides?QUERY_NAME=PR_BrowsePossiblePeptides&biosequence_name_constraint=\%$colnameidx{biosequence_name}V&$parameters_list&apply_action=$pass_action",
+    	       'Peptide Count_ATAG' => 'TARGET="Win1"',
+
+    	       'Peptide Sequence' => "$CGI_BASE_DIR/Proteomics/BrowsePossiblePeptides?QUERY_NAME=PR_BrowsePossiblePeptides&biosequence_set_id=$parameters{biosequence_set_id}&peptide_constraint=\%$colnameidx{peptide_sequence}V&apply_action=$pass_action",
+    	       'Peptide Count_ATAG' => 'TARGET="Win1"',
 
                'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
                'Molecular Function_ATAG' => 'TARGET="WinExt"',
