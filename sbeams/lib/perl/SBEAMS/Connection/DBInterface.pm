@@ -3665,7 +3665,7 @@ sub display_input_form {
       <H2>$CATEGORY</H2>
       $LINESEPARATOR
       <FORM METHOD="post" ACTION="$PROGRAM_FILE_NAME" NAME="MainForm" $file_upload_flag>
-      <TABLE>
+      <TABLE BORDER=0>
   !;
 
 
@@ -3769,11 +3769,12 @@ sub display_input_form {
 
   }
 
+  # Add CSS and javascript for popup column_text info (if configured).
+  print getPopupDHTML();
 
   #### Now loop through again and write the HTML
   foreach $row (@columns_data) {
     my @row = @{$row};
-    my $mask_description = 0;
     my ($column_name,$column_title,$is_required,$input_type,$input_length,
         $is_data_column,$is_display_column,$column_text,
         $optionlist_query,$onChange) = @row;
@@ -3830,11 +3831,25 @@ sub display_input_form {
     }
 
 
+    # FIXME 'static conditional' for image link column text
+    # Should/could be replaced by a user-configuration option
+    use constant LINKHELP => 1; 
+    if ( LINKHELP ) {
+      $column_text = linkToColumnText( $column_text, $column_name, $TABLE_NAME );
+    }
+
+
     #### Write the parameter name, in red if required
     if ($is_required eq "N") {
-      print "<TR><TD><B>$column_title:</B></TD>\n";
+      print qq!
+        <TR><TD><B>$column_title:</B></TD>
+            <TD BGCOLOR="E0E0E0">$column_text</TD>
+              !;
     } else {
-      print "<TR><TD><B><font color=red>$column_title:</font></B></TD>\n";
+      print qq!
+        <TR><TD><B><font color=red>$column_title:</font></B></TD>
+            <TD BGCOLOR="E0E0E0">$column_text</TD>
+              !;
     }
 
 
@@ -3886,12 +3901,9 @@ sub display_input_form {
 
     if ($input_type eq "textarea") {
       print qq~
-        <TD COLSPAN=2 BGCOLOR="E0E0E0">$column_text</TD></TR>
-        <TR><TD> </TD>
         <TD COLSPAN=2><TEXTAREA NAME="$column_name" rows=$input_length
           cols=80>$parameters{$column_name}</TEXTAREA></TD>
       ~;
-      $mask_description = 1;
     }
 
     if ($input_type eq "textdate") {
@@ -3955,11 +3967,6 @@ sub display_input_form {
       !;
     }
 
-    unless ($mask_description) {
-      print qq~
-        <TD BGCOLOR="E0E0E0">$column_text</TD>
-      ~;
-    }
 
     print "</TR>\n";
 
@@ -3989,6 +3996,7 @@ sub display_form_buttons {
     return;
   }
 
+  my $pad = '&nbsp;' x 6;
 
   #### Show the QUERY, REFRESH, and Reset buttons
   print qq~
@@ -3996,13 +4004,10 @@ sub display_form_buttons {
       <INPUT TYPE="hidden" NAME="set_current_project_id" VALUE="">
       <INPUT TYPE="hidden" NAME="QUERY_NAME" VALUE="$TABLE_NAME">
       <INPUT TYPE="hidden" NAME="apply_action_hidden" VALUE="">
-      <TR><TD COLSPAN=2>
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-      <INPUT TYPE="submit" NAME="action" VALUE="QUERY">
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-      <INPUT TYPE="submit" NAME="action" VALUE="REFRESH">
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-      <INPUT TYPE="reset"  VALUE="Reset">
+      <TR><TD COLSPAN=3>
+      $pad <INPUT TYPE="submit" NAME="action" VALUE="QUERY">
+      $pad <INPUT TYPE="submit" NAME="action" VALUE="REFRESH">
+      $pad <INPUT TYPE="reset"  VALUE="Reset">
        </TR></TABLE>
        </FORM>
   ~;
@@ -5135,6 +5140,61 @@ function switchProject(){
   }
 }
 
+###############################################################################
+# linkToColumnText: Creates link to popup window with column info text inside
+#
+# arg column text for display in popup window
+# arg column name
+# arg table name
+# 
+###############################################################################
+sub linkToColumnText {
+  my $text = shift;
+  my $col = shift;
+  my $tab = shift;
+  my $url = "'$HTML_BASE_DIR/cgi/help_popup.cgi?column_name=$col&table_name=$tab'";
+  my $link =<<"  END_LINK";
+  <SPAN title="$text" class="popup">
+  <IMG SRC=$HTML_BASE_DIR/images/greyqmark.gif BORDER=0 ONCLICK="popitup($url);"></SPAN>
+  END_LINK
+  return $link;
+} # End linkToColumnText
+
+###############################################################################
+# getPopupDHTML: returns CSS and javascript for popups
+#
+# returns CSS/javascript in a scalar
+# 
+###############################################################################
+sub getPopupDHTML {
+
+  # add CSS class for popup menu
+  my $dhtml =<<"  END_CLASS";
+  <STYLE>
+  .popup
+  {
+  COLOR: #9F141A;
+  CURSOR: help;
+  TEXT-DECORATION: none
+  }
+  </STYLE>
+  END_CLASS
+
+  # add javascript function for popup details
+  $dhtml .=<<"  END_JS";
+  <SCRIPT LANGUAGE="JavaScript" TYPE="text/javascript">
+  <!--
+  function popitup(url)
+  {
+    newwindow=window.open( url ,'name','height=200,width=150,dependent=yes,screenX=5000,screenY=50,scrollbars=1');
+    if (window.focus) {newwindow.focus()}
+    return false;
+  }
+  // -->
+  </SCRIPT>
+  END_JS
+  return $dhtml;
+  } # end getPopupDHTML
 
 ###############################################################################
 # addProjectComment
