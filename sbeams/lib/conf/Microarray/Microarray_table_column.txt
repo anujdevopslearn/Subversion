@@ -165,7 +165,7 @@ MA_slide	9	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id				
 MA_slide	10	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 MA_slide	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 MA_array_layout	1	layout_id	Layout ID	int	8	0	N		Y							N	N				pkDEFAULT
-MA_array_layout	2	slide_type_id	Slide Type	int	8	0	N		N	MA_slide_type	slide_type_id	Y	optionlist			Y	Y	Y	Slide type	"SELECT slide_type_id, name FROM $TB_SLIDE_TYPE ORDER BY sort_order,name"	
+MA_array_layout	2	slide_type_id	Slide Type	int	8	0	N		N	MA_slide_type	slide_type_id	Y	optionlist			Y	Y	Y	Slide type	"SELECT slide_type_id, name FROM $TBMA_SLIDE_TYPE ORDER BY sort_order,name"	
 MA_array_layout	3	name	name	varchar	50	0	N		N			Y	text	25	setLayoutFileName()	Y	Y	Y	Name of this layout		
 MA_array_layout	4	data_file	Data File	varchar	100	0	N		N			N	file	50		N	N	N	Click Browse and select the file to upload to the database		
 MA_array_layout	5	biosequence_set_id	Biosequence Set	int	8	0	N		N	MA_biosequence_set	biosequence_set_id	Y	optionlist			Y	Y	N	Biosequence Set pertaining to this layout	"SELECT biosequence_set_id, set_name FROM $TBMA_BIOSEQUENCE_SET ORDER BY sort_order,set_name"	
