@@ -765,8 +765,9 @@ sub postProcessResultset {
     push(@{$cytoscape->{files}->{'organism.noa'}},"$canonical_name = Homo sapiens");
     push(@{$cytoscape->{files}->{'commonName.noa'}},"$canonical_name = $antibodyKey");
 
-    # Have to keep track of current column
-    my $colnum = 1;
+    # Have to keep track of current row/column.  With headings/abs, bump each 1 
+    my $colnum = 2;
+    my $rownum = $table->getRowNum();
     foreach my $cellKey ( @skeys ) {
 
 #     Default values, may be overridden
@@ -801,7 +802,7 @@ sub postProcessResultset {
       }
 				
       #### Store information needed for a Cytoscape display
-      if ($averageNumber > 0) {
+      if ($averageNumber && $averageNumber > 0) {
       	my $decimal_number = sprintf("%.2f",$averageNumber);
       	push(@{$cytoscape->{files}->{'network.sif'}},"$canonical_name\tisExpressedIn\t$cellKey");
       	push(@{$cytoscape->{files}->{'ExpressionLevel.eda'}},"$canonical_name (isExpressedIn) $cellKey = $decimal_number");
@@ -810,7 +811,7 @@ sub postProcessResultset {
 
       # First, add average expression regardless
       push @trow, $val;
-      $table->setCellAttr( ROW => $table->getRowNum(), COL => ++$colnum, 
+      $table->setCellAttr( ROW => $rownum + 1, COL => $colnum++, 
                            ALIGN => 'CENTER', BGCOLOR => $colorAverage,
                            WIDTH => 50, HEIGH=> 20 );
 
