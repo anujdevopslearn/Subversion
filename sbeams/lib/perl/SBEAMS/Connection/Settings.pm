@@ -170,7 +170,7 @@ if ( $SBEAMS_INSTANCE =~ /\/dev1\// ) {
   $UPLOAD_DIR             = "/net/dblocal/data/macrogenics/sbeams";
   $DBPREFIX{Core}         = 'MGProteomics.dbo.';
   $DBPREFIX{Proteomics}   = 'MGProteomics.dbo.';
-  $RAW_DATA_DIR{Proteomics} = '/net/dblocal/data/macrogenics/data';
+  $RAW_DATA_DIR{Proteomics} = '/regis/sbeams/archive/macrogenics';
 
 } else {
   $DBVERSION              = '<FONT COLOR=red>Primary</FONT>';
