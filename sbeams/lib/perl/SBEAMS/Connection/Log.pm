@@ -27,15 +27,37 @@ use File::Basename;
 #-
 sub new {
   my $class = shift;
-  my $base = ( $LOG_BASE_DIR ) ? $LOG_BASE_DIR : "$PHYSICAL_BASE_DIR/logs";
-  my $this = { base => $base,
-               debug_log => "$base/debug.log",
-               info_log => "$base/info.log",
-               warn_log => "$base/warn.log",
-               error_log => "$base/error.log",
-               log_level => $LOGGING_LEVEL || 'warn',
+  my %args = @_;
+  my $base = ( $args{base} )   ? $args{base} : 
+             ( $LOG_BASE_DIR ) ? $LOG_BASE_DIR : "$PHYSICAL_BASE_DIR/logs";
+
+  unless( -e $base ){
+  print STDERR "Try to create base = $base\n";
+    mkdir( $base ) || warn "Unable to create logging dir, $base";
+  }
+
+  my $logdir = ( $args{subdir} ) ? $base . '/' . $args{subdir} : $base;
+
+  unless( !$args{subdir} && -e $logdir ){
+  print STDERR "Try to create log subdir = $logdir\n";
+    mkdir( $logdir ) || warn "Unable to create logging dir, $logdir";
+  }
+  
+  my $this = { debug_log => "$logdir/debug.log",
+               info_log => "$logdir/info.log",
+               warn_log => "$logdir/warn.log",
+               error_log => "$logdir/error.log",
+               log_level => $LOGGING_LEVEL || 'error',
                @_
              };
+
+  foreach my $logfile ( qw( debug_log info_log warn_log error_log ) ) {
+    unless( -e $this->{$logfile} ) {
+      open FIL, ">$this->{$logfile}" || warn ("Couldn't open log file for writing: $this->{logfile}" );
+      print FIL "Initializing\n";
+      close FIL;
+    }
+  }
 
   # Objectification.
   bless $this, $class;
