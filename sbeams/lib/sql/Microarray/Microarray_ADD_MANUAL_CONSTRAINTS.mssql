@@ -1,1 +1,2 @@
 ALTER TABLE dbo.affy_array_sample ADD CONSTRAINT Unique_sample_tag__project_id UNIQUE (sample_tag,project_id)
+ALTER TABLE dbo.affy_annotation_set ADD CONSTRAINT Unique_slide_type__annotation_date UNIQUE (slide_type_id,annotation_date)

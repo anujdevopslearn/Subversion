@@ -1,1 +1,2 @@
 ALTER TABLE dbo.affy_array_sample DROP CONSTRAINT Unique_sample_tag__project_id
+ALTER TABLE dbo.affy_annotation_set DROP CONSTRAINT Unique_slide_type__annotation_date
