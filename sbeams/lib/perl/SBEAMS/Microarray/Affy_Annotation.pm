@@ -693,17 +693,22 @@ sub add_data_child_tables {
 									       
 								},
 				"Protein Domains"      		=>{					
-													#Example 'scop // d1bupa1 // d1bupa1 SCOP:c.55.1.1:| Heat shock protein 70kDa, ATPase fragment // --- /// scop // d1dkza_ // d1dkza_ SCOP:e.20.1.1:'
-								REG_EXP =>     qr!(scop)\s//		#grab the Database
-										  \s(\w.+?)\s//   	#grab the Accession number
-										  .+?\s(\w.*)\s// 	#grab the description
-										 !x,		
+													#OLD Example 'scop // d1bupa1 // d1bupa1 SCOP:c.55.1.1:| Heat shock protein 70kDa, ATPase fragment // --- /// scop // d1dkza_ // d1dkza_ SCOP:e.20.1.1:'
+#				REG_EXP =>     qr!(scop)\s//		#grab the Database
+#										  \s(\w.+?)\s//   	#grab the Accession number
+#										  .+?\s(\w.*)\s// 	#grab the description
+#										 !x,		
 													#example ' pfam // IL4 // Interleukin 4 // 6.5E-97'
 								REG_EXP_2 =>    qr!(pfam)\s//		#grab and Accession number 
 										   \s(\w.+?)\s// 	#grab the Database type 
 										  .+?\s(\w.*)\s//\s	#grab the description
 										  (.*)			#grab the e-value
 										 !x,
+                 # New scop example 'scop // a.4.1.Paired domain // All alpha proteins; DNA/RNA-binding 3-helical bundle; Homeodomain-like; Paired domain'
+								REG_EXP =>     qr!(scop)\s//		#grab the Database
+										  \s(\w(?:\.\d)+).+?\s//   	#grab the Accession number
+										  .+?\s(\w.*)\s// 	#grab the description
+										 !x,		
 								
 										
 								COLUMN_NAMES => { 	1 => 'database_type',
