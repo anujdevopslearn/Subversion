@@ -48,6 +48,18 @@ sub printPageHeader {
 
     my $navigation_bar = $args{'navigation_bar'} || "YES";
 
+    my $sbeams = $self->getSBEAMS();
+    if ($sbeams->output_mode() eq 'interactive') {
+      $sbeams->printTextHeader();
+      return;
+    }
+
+    #### If the output mode is not html, then we don't want a header here
+    if ($sbeams->output_mode() ne 'html') {
+      return;
+    }
+
+
     #### Obtain main SBEAMS object and use its http_header
     $sbeams = $self->getSBEAMS();
     my $http_header = $sbeams->get_http_header();
@@ -66,7 +78,7 @@ sub printPageHeader {
     my $header_bkg = "bgcolor=\"$BGCOLOR\"";
     $header_bkg = "background=\"/images/plaintop.jpg\"" if ($DBVERSION =~ /Primary/);
 
-    print qq~
+       print qq~
 	<!--META HTTP-EQUIV="Expires" CONTENT="Fri, Jun 12 1981 08:20:00 GMT"-->
 	<!--META HTTP-EQUIV="Pragma" CONTENT="no-cache"-->
 	<!--META HTTP-EQUIV="Cache-Control" CONTENT="no-cache"-->
@@ -80,10 +92,10 @@ sub printPageHeader {
 	<a name="TOP"></a>
 	<tr>
 	  <td bgcolor="$BARCOLOR"><img border=0 width=120 height=60 alt="BIOSAP" src="$HTML_BASE_DIR/images/bs_logo.jpg"></td>
+
 	  <td align="left" $header_bkg><H1>Blast Integrated Oligonucleotide Selection Accelerator Package<BR>$DBVERSION</H1></td>
 	</tr>
-
-    ~;
+	~;
 
     #print ">>>http_header=$http_header<BR>\n";
 
@@ -124,7 +136,6 @@ sub printPageHeader {
     }
 
 }
-
 # 	<table border=0 width="680" bgcolor="#ffffff" cellpadding=4>
 
 
@@ -193,6 +204,19 @@ sub printJavascriptFunctions {
 sub printPageFooter {
   my $self = shift;
   my $flag = shift || "CloseTablesAndPrintFooter";
+
+
+  my $sbeams = $self->getSBEAMS();
+  if ($sbeams->output_mode() eq 'interactive') {
+      $sbeams->printTextHeader();
+      return;
+  }
+  
+  #### If the output mode is not html, then we don't want a header here
+  if ($sbeams->output_mode() ne 'html') {
+      return;
+  }
+
 
   if ($flag =~ /CloseTables/) {
     print qq~
