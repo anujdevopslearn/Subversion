@@ -1,0 +1,231 @@
+package DataLoader;
+import java.util.List;
+import java.util.Hashtable;
+import java.awt.*;
+import java.awt.event.*;
+import javax.swing.*;
+import javax.swing.event.*;
+import javax.swing.border.*;
+import java.io.*;
+import SBEAMS.*;
+//-----------------------------------------------------------------------------------------------
+public class FileChooserWizardPanel extends WizardPanel 
+  implements ActionListener, ListSelectionListener{
+//-----------------------------------------------------------------------------------------------
+  private static String NEW_EXPERIMENT = "New Experiment";
+  private JButton chooseFileButton;
+  private JPanel imagePanel;
+  private JList conditionList;
+  private String dataFile;
+  private String experimentName = NEW_EXPERIMENT;
+  private JTextField experimentNameField;
+  private String[] conditionNames;
+  private BufferedReader bufferedReader;
+  private StringBuffer strbuf;
+  private Hashtable tempData;
+  private SBEAMSClient sc;
+//-----------------------------------------------------------------------------------------------
+  public FileChooserWizardPanel() {
+	initialize();
+  }
+//-----------------------------------------------------------------------------------------------
+  public FileChooserWizardPanel(String dataFile, String expName) {
+	if (expName != null)
+	  experimentName = expName;
+	initialize();
+	this.dataFile = dataFile;
+	handleDataFile();
+  }
+//-----------------------------------------------------------------------------------------------
+  public void initialize(){
+	tempData = new Hashtable();
+	setLayout(new BorderLayout());
+	setBorder(new TitledBorder("Step 1. Select File to Load"));
+	JPanel experimentNamePanel = new JPanel();
+	experimentNamePanel.add(new JLabel("Experiment Name: "));
+	experimentNameField = new JTextField(15);
+	experimentNameField.requestFocus();
+	experimentNamePanel.add(experimentNameField);
+	add(experimentNamePanel, BorderLayout.NORTH);
+	JPanel leftPanel = new JPanel(new BorderLayout());
+	leftPanel.add(new JLabel("Conditions"), BorderLayout.NORTH);
+	conditionList = new JList();
+	conditionList.addListSelectionListener(this);
+	leftPanel.add(new JScrollPane(conditionList), BorderLayout.CENTER);
+	imagePanel = new JPanel(new BorderLayout());
+	JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, imagePanel);
+	splitPane.setDividerLocation(150);
+	add(splitPane, BorderLayout.CENTER);
+	JPanel buttonPanel = new JPanel();
+	chooseFileButton = new JButton ("Select File");	
+	chooseFileButton.addActionListener(this);
+	buttonPanel.add(chooseFileButton);
+	add(buttonPanel, BorderLayout.SOUTH);
+  }
+//-----------------------------------------------------------------------------------------------
+  private boolean readFile(String filePath){
+	try{
+	  bufferedReader = new BufferedReader(new FileReader(filePath));
+	}catch (IOException e) {
+	  e.printStackTrace();
+	  return false;
+	}
+	strbuf = new StringBuffer();
+	String newLineOfText;
+	int conditionMax = 0;
+	try {
+	  // Read file into a big string
+	  while ( (newLineOfText = bufferedReader.readLine()) != null ) {
+		strbuf.append(newLineOfText +"\n");
+	  }
+	  String all = strbuf.toString();
+	  String [] dataLines = all.split("\\n");
+	  // Look at 1st line (header)
+	  String[] line = (dataLines[0]).split("\\s");
+	  int conditions = (int)(line.length-2)/2;
+	  conditionNames = new String[conditions];
+	  for (int m=0;m<conditions;m++){
+		conditionNames[m] = line[m+2];
+	  }
+	  //Handle rest of lines
+	  String[] genes = new String[dataLines.length-1];
+	  float[][] ratioValues = new float[conditions][dataLines.length-1];
+	  float[][] lambdaValues = new float[conditions][dataLines.length-1];
+	  for (int m=1;m<dataLines.length;m++) {
+		line = dataLines[m].split("\\s");
+		if (line.length != (2*conditions) + 2) 
+		  return false;
+		genes[m-1] = line[0];
+		for (int h=0;h<conditions;h++){
+		  ratioValues[h][m-1] = (new Float(line[h+2])).floatValue();
+		  lambdaValues[h][m-1] = (new Float(line[h+2+conditions])).floatValue();
+		}
+	  }
+
+	  for (int m=0;m<conditionNames.length;m++) {
+		ExperimentCondition e =  new ExperimentCondition(conditionNames[m],
+														 genes,
+														 ratioValues[m],
+														 lambdaValues[m]);
+		tempData.put(conditionNames[m], e);
+	  }
+	}
+	catch (IOException e) {
+	  e.printStackTrace ();
+	  return false;
+	}
+	return true;
+  }
+//-----------------------------------------------------------------------------------------------
+  public void actionPerformed(ActionEvent e) {
+	JFileChooser fc = new JFileChooser();
+	int returnVal = fc.showOpenDialog(this);
+	if (returnVal ==JFileChooser.APPROVE_OPTION) {
+	  dataFile = (fc.getSelectedFile()).toString();
+	  handleDataFile();
+ 	}
+  }
+//-----------------------------------------------------------------------------------------------
+  private String getExperimentName() {
+	String newName = JOptionPane.showInputDialog(this, 
+												 "What is the name of this experiment?",
+												 experimentName);
+	if (newName == null || newName.equals("")) 
+	  experimentName = new String(NEW_EXPERIMENT);
+	else 
+	  experimentName = newName;
+
+	return experimentName;
+  }
+//-----------------------------------------------------------------------------------------------
+  private void handleDataFile() {
+	boolean success = false;
+	GeneExpressionFileReader gefr = new GeneExpressionFileReader(dataFile);
+	success = gefr.read();
+	if (!success) {
+	  JOptionPane.showMessageDialog(null, "Unable to Load File", "Alert", JOptionPane.ERROR_MESSAGE);
+	  return;
+	}else {
+	  if (gefr.getSbeamsClient() != null) 
+		sc = gefr.getSbeamsClient();
+	  conditionNames = gefr.getConditionNames();
+	  tempData = gefr.getData();
+	  conditionList.setListData(conditionNames);
+	  conditionList.setSelectedIndex(0);
+	  conditionList.repaint();
+	  paintIcon();
+	  experimentName = getExperimentName();
+	  experimentNameField.setText(experimentName);
+	  experimentNameField.repaint();
+	}
+  }// handleDataFile
+//-----------------------------------------------------------------------------------------------
+  private void paintIcon () {
+	String condition = (String)conditionList.getSelectedValue();
+	ExperimentCondition ec = (ExperimentCondition)tempData.get(condition);
+	ArrayIcon icon = new ArrayIcon (ec.getIconData());
+	JPanel tempPanel = icon.getPanel();
+	imagePanel.setVisible(false);
+	imagePanel.add(tempPanel, BorderLayout.CENTER);
+	imagePanel.setVisible(true);
+  }
+//-----------------------------------------------------------------------------------------------
+  public void valueChanged(ListSelectionEvent e){
+	if (e.getValueIsAdjusting()) {
+	  paintIcon();
+	}
+  }
+//-----------------------------------------------------------------------------------------------
+  public void display() {
+  }
+//-----------------------------------------------------------------------------------------------
+  public boolean hasNext() {
+	return true;
+  }
+//-----------------------------------------------------------------------------------------------
+  public boolean validateNext(List list) {
+	boolean valid = true;
+	if (dataFile == null) {
+	  list.add("Please Select a Data File Before Continuing");
+	  valid = false;
+	}else if (experimentNameField.getText() == null ||
+			  experimentNameField.getText().matches("^\\s*$")){
+	  list.add("Please Input an ExperimentName");
+	  experimentNameField.requestFocus();
+	  valid = false;
+	}else {
+	  experimentName = experimentNameField.getText();
+	  if (sc != null){
+		wizardContext.setAttribute(SBEAMS_CLIENT, sc);
+	  }
+	  wizardContext.setAttribute(WIZARD_FILE, dataFile);
+	  wizardContext.setAttribute(WIZARD_EXPERIMENT, experimentName);
+	  wizardContext.setAttribute(WIZARD_HASH_CONDITIONS, tempData);
+	  wizardContext.setAttribute(WIZARD_CONDITIONS, conditionNames);
+	}
+	return valid;
+  }
+//-----------------------------------------------------------------------------------------------
+  public boolean hasHelp() {
+	return false;
+  }
+//-----------------------------------------------------------------------------------------------
+  public void help() {
+  }
+//-----------------------------------------------------------------------------------------------
+  public WizardPanel next() {
+	return new ConditionTreeWizardPanel(getWizardContext());
+  }
+//-----------------------------------------------------------------------------------------------
+  public boolean canFinish() {
+	return false;
+  }
+//-----------------------------------------------------------------------------------------------
+  public boolean validateFinish(List list) {
+	return false;
+  }
+//-----------------------------------------------------------------------------------------------
+  public void finish() {
+  }
+//-----------------------------------------------------------------------------------------------
+}
