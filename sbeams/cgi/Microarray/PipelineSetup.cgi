@@ -1690,7 +1690,7 @@ sub send_to_pipeline {
 
         Well, theres no link yet, but paste this into a unix window:<BR><BR>
 
-	cd $working_dir<BR>
+	cd $arraybot_working_dir<BR>
 	if ( -e $log_filename ) tail -f $log_filename<BR>
 
 	<BR><BR><BR>
