@@ -3157,7 +3157,23 @@ sub getModules {
   }
 
 
-  #### Return whatever we got
+  #### Check to see whether this person is at the local facility
+  #### If not, then restrict to Proteomics.  This needs much better
+  #### permissions control.  FIXME.
+  my $current_contact_id = $self->getCurrent_contact_id();
+  my $sql = qq ~
+    SELECT is_at_local_facility
+      FROM $TB_CONTACT
+     WHERE contact_id = '$current_contact_id'
+       AND record_status != 'D'
+  ~;
+  my (@rows) = $self->selectOneColumn($sql);
+  unless (scalar(@rows) > 0 && $rows[0] eq 'Y') {
+    @modules = ('Proteomics','Tools');
+  }
+
+
+  #### Return the resulting list of available modules
   return @modules;
 
 } # end getModules
