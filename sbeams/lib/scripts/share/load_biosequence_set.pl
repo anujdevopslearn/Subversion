@@ -47,28 +47,28 @@ $PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
 Usage: $PROG_NAME [OPTIONS]
 Options:
-  --verbose n         Set verbosity level.  default is 0
-  --quiet             Set flag to print nothing at all except errors
-  --debug n           Set debug flag
-  --testonly          If set, rows in the database are not changed or added
-  --delete_existing   Delete the existing biosequences for this set before
-                      loading.  Normally, if there are existing biosequences,
-                      the load is blocked.
-  --update_existing   Update the existing biosequence set with information
-                      in the file
-  --skip_sequence     If set, only the names, descs, etc. are loaded;
-                      the actual sequence (often not really necessary)
-                      is not written
-  --set_tag           The set_tag of a biosequence_set that is to be worked
-                      on; all are checked if none is provided
-  --file_prefix       A prefix that is prepended to the set_path in the
-                      biosequence_set table
-  --check_status      Is set, nothing is actually done, but rather the
-                      biosequence_sets are verified
-  --codon_bias_file   Full path name of a file from which to load codon
-                      bias values
+  --verbose n          Set verbosity level.  default is 0
+  --quiet              Set flag to print nothing at all except errors
+  --debug n            Set debug flag
+  --testonly           If set, rows in the database are not changed or added
+  --delete_existing    Delete the existing biosequences for this set before
+                       loading.  Normally, if there are existing biosequences,
+                       the load is blocked.
+  --update_existing    Update the existing biosequence set with information
+                       in the file
+  --skip_sequence      If set, only the names, descs, etc. are loaded;
+                       the actual sequence (often not really necessary)
+                       is not written
+  --set_tag            The set_tag of a biosequence_set that is to be worked
+                       on; all are checked if none is provided
+  --file_prefix        A prefix that is prepended to the set_path in the
+                       biosequence_set table
+  --check_status       Is set, nothing is actually done, but rather the
+                       biosequence_sets are verified
+  --codon_bias_file    Full path name of a file from which to load codon
+                       bias values
   --calc_n_transmembrane_regions
-                      Set flag to add in n_transmembrane_regions calculations
+                       Set flag to add in n_transmembrane_regions calculations
 
  e.g.:  $PROG_NAME --check_status
 
@@ -167,7 +167,6 @@ sub handleRequest {
   my $file_prefix = $OPTIONS{"file_prefix"} || '';
   my $codon_bias_file = $OPTIONS{"codon_bias_file"} || '';
 
-
   #### Get the file_prefix if it was specified, and otherwise guess
   unless ($file_prefix) {
     my $module = $sbeams->getSBEAMS_SUBDIR();
@@ -208,9 +207,9 @@ sub handleRequest {
   #### If there was NOT a set_tag specified, scan for all available ones
   } else {
     $sql = qq~
-          SELECT BSS.biosequence_set_id
-            FROM ${DATABASE}biosequence_set BSS
-           WHERE BSS.record_status != 'D'
+          SELECT biosequence_set_id
+            FROM ${DATABASE}biosequence_set
+           WHERE record_status != 'D'
     ~;
 
     @biosequence_set_ids = $sbeams->selectOneColumn($sql);
@@ -229,8 +228,6 @@ sub handleRequest {
       source_file => $codon_bias_file,
       fav_codon_frequency => $fav_codon_frequency);
   }
-
-
   #### Loop over each biosequence_set, determining its status and processing
   #### it if desired
   print "        set_tag      n_rows  set_path\n";
@@ -254,7 +251,6 @@ sub handleRequest {
           source_file=>$file_prefix.$status->{set_path});
       }
     }
-
   }
 
 
@@ -530,7 +526,7 @@ sub loadBiosequence {
   #### FIX ME!!!
 
   if ($module eq 'Microarray') {
-      print "$rowdata_ref->{dbxref_id}\t";
+      #print "$rowdata_ref->{dbxref_id}\t";
       delete ($rowdata_ref->{biosequence_accession});
       delete ($rowdata_ref->{dbxref_id});
   }
