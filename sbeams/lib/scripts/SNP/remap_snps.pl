@@ -173,6 +173,8 @@ sub main {
 	$rowdata2{dbSNP_accession} = $source_accession;
       } elsif ($source_accession =~ /^SNP/ || $source_accession =~ /^IND/) {
 	$rowdata2{hgbase_accession} = $source_accession;
+      } elsif ($source_accession =~ /^CM/) {
+        $rowdata2{hgmd_accession} = $source_accession;
       } else {
         die "Wah!  I don't know what to do with source_accession ".
           "'$source_accession'";
