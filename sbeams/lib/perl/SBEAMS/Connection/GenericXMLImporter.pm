@@ -260,6 +260,11 @@ sub createDataModel {
         $type = $value2->{type};
         $scale = 8 if ($type eq 'datetime');
       }
+      if ($type eq 'varchar' && $scale > 1024) {
+	$type = 'text';
+	$scale = 16;
+      }
+
 
       my @data = ( $table_name,$index,$column_name,$column_name,
         $type,$scale,"0","Y","","N","","","N","text",
@@ -463,11 +468,10 @@ sub start_element {
   #print "start_element<$element>\n";
   #print ".";
 
-  #### Strip out and funky characters
-  $element =~ s/\W//g;
-  $element = "identity_value" if ($element eq "identity");
-  $context =~ s/\W//g;
-  $context = "identity_value" if ($context eq "identity");
+  #### Fix any problems with the tags
+  $element = fix_tag($element);
+  $context = fix_tag($context);
+
 
   foreach my $key (keys(%attrs)) {
     my $newkey = $key;
@@ -627,11 +631,9 @@ sub end_element {
   my $element = shift;
 
   my $context = $handler->{Context}->[-1];
-  #### Strip out and funky characters
-  $element =~ s/\W//g;
-  $element = "identity_value" if ($element eq "identity");
-  $context =~ s/\W//g;
-  $context = "identity_value" if ($context eq "identity");
+  #### Fix any problems with the tags
+  $element = fix_tag($element);
+  $context = fix_tag($context);
 
   #### Just pop the top item off the stack.  It should be the current
   #### element, but we lazily don't check
@@ -714,9 +716,8 @@ sub characters {
 
   my $context = $handler->{Context}->[-1];
 
-  #### Strip out and funky characters
-  $context =~ s/\W//g;
-  $context = "identity_value" if ($context eq "identity");
+  #### Fix any problems with the tags
+  $context = fix_tag($context);
 
 
   #### If we're in Learn mode, just collect information about the XML
@@ -775,6 +776,8 @@ sub characters {
       #### Get this element's parent which is assumed to be the table
       #### which has attribute of element
       my $parent_context = $handler->{Context}->[-2];
+      $parent_context = fix_tag($parent_context);
+
       unless ($parent_context) {
         die("ERROR: Unable to find element's parent.  This violates ".
             "an assumption.");
@@ -797,6 +800,26 @@ sub characters {
 }
 
 
+
+###############################################################################
+# fix_tag
+#
+# A hack routine to fix strange tags into something different
+###############################################################################
+sub fix_tag {
+  my $tag = shift;
+
+  #### Strip out and funky characters
+  $tag =~ s/\W//g;
+
+  $tag = "identity_value" if ($tag eq "identity");
+  $tag = "begin_loc" if ($tag eq "begin");
+  $tag = "end_loc" if ($tag eq "end");
+  $tag = "ENTRY_A" if ($tag eq "ENTRY");
+
+  return $tag;
+
+}
 
 
 
