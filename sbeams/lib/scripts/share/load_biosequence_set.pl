@@ -1623,6 +1623,18 @@ sub specialParsing {
   }
 
 
+  #### Special conversion rules for new Halobacterium proteins
+  #### >VNG0008G graD5;Glucose-1-phosphate thymidylyltransferase
+  if ($biosequence_set_name =~ "Halobacterium-20") {
+    $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
+    $rowdata_ref->{dbxref_id} = '12';
+    if ($rowdata_ref->{biosequence_desc} =~ /(.+?);(.+)/) {
+      $rowdata_ref->{biosequence_gene_name} = $1;
+      $rowdata_ref->{dbxref_id} = '1';
+    }
+  }
+
+
   #### Special conversion rules for Drosophila genome R2, e.g.:
   #### >Scr|FBgn0003339|CT1096|FBan0001030 "transcription factor" mol_weight=44264  located on: 3R 84A6-84B1; 
   if ($biosequence_set_name eq "Drosophila aa_gadfly Protein Database R2" ||
