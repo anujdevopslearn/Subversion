@@ -356,8 +356,19 @@ sub printLoginForm {
         <TD COLSPAN=2 ALIGN="center">
         <BR>
         <INPUT TYPE="submit" NAME="login" VALUE=" Login ">
-        <INPUT TYPE="reset" VALUE=" Reset "></TD>
-        <INPUT TYPE="hidden" NAME="TABLE_NAME" VALUE="$table_name"></TD>
+        <INPUT TYPE="reset" VALUE=" Reset ">
+    !;
+
+    # Put all passed parameters into a hidden field here so if authentication
+    # succeeds, they are passed to the called program.
+    my ($key,$value);
+    foreach $key ( $q->param ) {
+      $value = $q->param($key);
+      print qq~<INPUT TYPE="hidden" NAME="$key" VALUE="$value">\n~;
+    }
+
+    print qq!
+        </TD>
         </TR></TABLE>
         </FORM>
         <B>There is a problem with Windows Internet Explorer in which you
