@@ -7,13 +7,14 @@ project	5	description	Description	text	16	0	Y		N			Y	textarea	8		Y	Y	N	"Describe
 project	6	budget	Budget	varchar	25	0	Y		N			Y	text	25		Y	Y	N	Budget number to be charged for experiments under this project		
 project	7	project_status	Project Status	varchar	100	0	Y		N			N	text	50		Y	Y	N	"For example: Active, Finished"		
 project	8	uri	Project URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	Project webpage or other URI		SELF
-project	9	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
-project	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-project	11	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
-project	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-project	13	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
-project	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-project	15	record_status	Record Status	char	1	0	N	N	N							N	N				
+project	9	additional_information	Additional Information	text	16	0	Y		N			N	textarea	4		N	N	N	This is an experimental column designed to hold some module-specific information about a project that cannot (yet) be encoded other ways.		
+project	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
+project	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+project	12	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
+project	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+project	14	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
+project	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+project	16	record_status	Record Status	char	1	0	N	N	N							N	N				
 hardware_type	1	hardware_type_id	Hardware Type ID	int	4	0	N		Y							N	N				pkDEFAULT
 hardware_type	2	name	Hardware Type Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	"Name of hardware type (e.g., computer, scanner, sequencer, etc.)"		
 hardware_type	3	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
@@ -349,7 +350,7 @@ table_column	23	url	URL	varchar	255	0	Y		N			N	text	50		Y	Y	N	The URL or URL fra
 cached_resultset	1	cached_resultset_id	Cached Resultset ID	int	4	0	N		Y							N	N				pkDEFAULT
 cached_resultset	2	contact_id	Resultset Owner	int	4	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	Y	Creator of this resultset	"SELECT C.contact_id, username+' ('+first_name+' '+last_name+')' AS 'name' FROM $TB_CONTACT C INNER JOIN $TB_USER_LOGIN UL ON ( C.contact_id = UL.contact_id ) ORDER BY username"	
 cached_resultset	3	resultset_name	Resultset Name	varchar	100	0	Y		N			Y	text	50		Y	Y	Y	Friendly name of this resultset		
-cached_resultset	4	resultset_description	Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Longer description about the nature of this resultset		
+cached_resultset	4	resultset_description	Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Longer description about the nature of this resultset
 cached_resultset	5	query_name	Generating Query Name	varchar	100	0	Y		N			Y	fixed	50		Y	Y	N	Name of the SBEAMS query that manages this resultset
 cached_resultset	6	cache_descriptor	Cache Descriptor	varchar	100	0	N		N			Y	fixed	50		Y	Y	N	Internal descriptor in the resultset cache
 cached_resultset	7	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes
