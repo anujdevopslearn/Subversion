@@ -138,7 +138,7 @@ sub handle_request {
 
 
   #### verify that needed parameters were passed
-  unless ($parameters{fraction_id}) {
+  unless ($parameters{fraction_id} && $parameters{search_batch_id}) {
     print "ERROR: not all needed parameters were passed.  This should never ".
       "happen!  Please report this error.<BR>\n";
     return;
@@ -151,6 +151,7 @@ sub handle_request {
 	  FROM $TBPR_FRACTION F
 	  JOIN $TBPR_SEARCH_BATCH SB ON ( F.experiment_id = SB.experiment_id )
 	 WHERE fraction_id = '$parameters{fraction_id}'
+           AND SB.search_batch_id = '$parameters{search_batch_id}'
   ~;
 
   my %fractions = $sbeams->selectTwoColumnHash($sql);
