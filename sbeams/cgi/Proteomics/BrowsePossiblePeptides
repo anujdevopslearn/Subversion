@@ -589,6 +589,7 @@ sub handle_request {
 	$peptide_clause
 	$second_peptide_clause
 	$mass_clause
+	$isoelectric_point_clause
 
         $molecular_function_clause
         $biological_process_clause
@@ -608,12 +609,13 @@ sub handle_request {
   if ( $parameters{display_options} =~ /GroupCount/ ) {
     $sql .= "
 	SELECT n_peptides,COUNT(*) AS 'protein_count',
-               AVG(protein_length) AS 'avg_protein_length'
+               AVG(protein_length) AS 'avg_protein_length',
+               n_peptides * COUNT(*) AS 'total_peptides'
           FROM #tmp
          GROUP BY n_peptides
          ORDER BY n_peptides
     ";
-    @column_titles = ( 'Number of Peptides','Protein Count','Mean Protein Length' );
+    @column_titles = ( 'Number of Peptides Per Protein','Protein Count','Mean Protein Length','Total Number of Peptides' );
   }
 
 
