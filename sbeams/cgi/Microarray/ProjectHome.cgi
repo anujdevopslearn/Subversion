@@ -118,22 +118,20 @@ sub main {
 ##############################################################################
 sub print_javascript {
 
-    my $uri = $ENV{SCRIPT_URI};
-    $uri =~ /(^.*\/).*/;
-    $uri = $1;
+    my $uri = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/";
 
 print qq~
 <SCRIPT LANGUAGE="Javascript">
 <!--
-
+<!-- $uri -->
 function viewRequest(status){
     var site;
     if (status == 'old') {
 	var id = document.requests.chooser.options[document.requests.chooser.selectedIndex].value;
-	site = "$uri/SubmitArrayRequest.cgi?TABLE_NAME=MA_array_request&array_request_id="+id;
+	site = "${uri}SubmitArrayRequest.cgi?TABLE_NAME=MA_array_request&array_request_id="+id;
     }
     else {
-	site = "$uri/SubmitArrayRequest.cgi?TABLE_NAME=MA_array_request&ShowEntryForm=1";
+	site = "${uri}SubmitArrayRequest.cgi?TABLE_NAME=MA_array_request&ShowEntryForm=1";
     }
     var newWindow = window.open(site);
 }
@@ -143,11 +141,11 @@ function viewImage(status){
     if (status == 'old') {
 	//alert ("scan images not available to be viewed.  Will be developed later");
     var id = document.images.chooser.options[document.images.chooser.selectedIndex].value
-    var site = "$uri/ManageTable.cgi?TABLE_NAME=MA_array_scan&array_scan_id="+id
+    var site = "${uri}ManageTable.cgi?TABLE_NAME=MA_array_scan&array_scan_id="+id
     }
     else {
 	//alert ("scan images not on a network share.");
-        var site = "$uri/ManageTable.cgi?TABLE_NAME=$TBMA_ARRAY_SCAN&ShowEntryForm=1";
+        var site = "${uri}ManageTable.cgi?TABLE_NAME=$TBMA_ARRAY_SCAN&ShowEntryForm=1";
     }
     var newWindow = window.open(site);
 }
@@ -156,10 +154,10 @@ function viewQuantitation(status){
     var site;
     if (status == 'old') {
 	var id = document.quantitations.chooser.options[document.quantitations.chooser.selectedIndex].value;
-	site = "$uri/ManageTable.cgi?TABLE_NAME=MA_array_quantitation&array_quantitation_id="+id;
+	site = "${uri}ManageTable.cgi?TABLE_NAME=MA_array_quantitation&array_quantitation_id="+id;
     }
     else {
-	site = "$uri/ManageTable.cgi?TABLE_NAME=MA_array_quantitation&ShowEntryForm=1";
+	site = "${uri}ManageTable.cgi?TABLE_NAME=MA_array_quantitation&ShowEntryForm=1";
     }
     var newWindow = window.open(site);
 }
