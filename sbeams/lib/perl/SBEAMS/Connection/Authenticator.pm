@@ -86,7 +86,7 @@ sub Authenticate {
     #### entry past here
     if ( -e "$PHYSICAL_BASE_DIR/DISABLED" &&
          $ENV{REMOTE_ADDR} ne "10.0.230.11") {
-      $self->printPageHeader();
+      $self->printMinimalPageHeader();
       print "<H3>";
       open(INFILE,"$PHYSICAL_BASE_DIR/DISABLED");
       my $line;
