@@ -48,6 +48,12 @@ provided below first for the user and then for a developer.</P>
 <UL>
 <LI><A HREF="DevInstance.php">Notes on using an SBEAMS "dev instance"</A>
 <LI><A HREF="Proteomics/Pipeline.doc">General Proposal and Documenation for the Proteomics Data Pipeline (Word .doc)</A>
+<P>
+<LI><A HREF="Core/Core_Schema.gif">Core database schema</A>
+<LI><A HREF="Microarray/Microarray_Schema.gif">Microarray database schema</A>
+<LI><A HREF="PhenoArray/PhenoArray_Schema.gif">PhenoArray database schema</A>
+<LI><A HREF="Proteomics/Proteomics_Schema.gif">Proteomics database schema</A>
+<LI><A HREF="SNP/SNP_Schema.gif">SNP database schema</A>
 </UL>
 
 
