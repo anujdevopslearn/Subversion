@@ -874,6 +874,11 @@ sub printEntryForm {
 	  base_url=>$base_url);
 
 
+     #### Prepare a resultset of spectra
+     prepare_msms_spectra_resultset(rs_params_ref=>\%rs_params,
+          resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters,
+	  base_url=>$base_url);
+
 
     #### If QUERY was not selected, then tell the user to enter some parameters
     } else {
@@ -886,3 +891,112 @@ sub printEntryForm {
 } # end printEntryForm
 
 
+###############################################################################
+# prepare_msms_spectra_resultset
+#
+# Prepare a resultset of spectra if all the peptides that came back from
+# the query are identical
+###############################################################################
+sub prepare_msms_spectra_resultset {
+    my %args = @_;
+
+    my ($i,$element,$key,$value,$line,$result,$sql);
+
+    #### Process the arguments list
+    my $resultset_ref = $args{'resultset_ref'};
+    my $rs_params_ref = $args{'rs_params_ref'};
+    my $query_parameters_ref = $args{'query_parameters_ref'};
+    my $base_url = $args{'base_url'};
+
+    #my %rs_params = %{$rs_params_ref};
+    my %rs_params = ();
+    my %parameters = %{$query_parameters_ref};
+
+
+    #### Find out what column the msms_spectrum_id is or just return
+    my $msms_spectrum_id_column =
+      $resultset_ref->{column_hash_ref}->{msms_spectrum_id};
+    return unless ($msms_spectrum_id_column);
+
+
+    #### Find out what column the peptide_string is or just return
+    my $peptide_string_column =
+      $resultset_ref->{column_hash_ref}->{Peptide};
+    return unless ($msms_spectrum_id_column);
+
+
+    #### Set up variables for statistics collection
+    my $row;
+    my $n_rows = scalar(@{$resultset_ref->{data_ref}});
+    return unless ($n_rows);
+    my $first_peptide_string;
+    my @msms_spectrum_ids = ();
+
+
+    #### Loop over each row in the resultset, compiling statistics
+    for ($row=0; $row<$n_rows; $row++) {
+
+      #### Check the peptide_string
+      if ($row == 0) {
+        $first_peptide_string =
+          $resultset_ref->{data_ref}->[$row]->[$peptide_string_column];
+      } else {
+        return unless ($first_peptide_string eq
+          $resultset_ref->{data_ref}->[$row]->[$peptide_string_column]);
+      }
+
+      #### Add the msms_spectrum_id to the list
+      push(@msms_spectrum_ids,
+        $resultset_ref->{data_ref}->[$row]->[$msms_spectrum_id_column]);
+
+    }
+
+
+    #### Start a new section
+    print qq~
+      <HR SIZE=3 WIDTH=\"30%\" NOSHADE ALIGN=LEFT>
+      <TABLE WIDTH="800" BORDER=0><TR><TD>
+      <B>All peptides are exactly the same
+      in the above resultset.</B><BR>\n
+    ~;
+
+
+    #### Create the list of msms_spectrum_id's
+    my $msms_spectrum_id_list = join(',',@msms_spectrum_ids);
+
+
+    #### Get the spectra
+    $sql = qq~
+      SELECT msms_spectrum_id,mass,intensity
+        FROM $TBPR_MSMS_SPECTRUM_PEAK
+       WHERE msms_spectrum_id IN ( $msms_spectrum_id_list )
+    ~;
+
+
+    #### Fetch the results from the database
+    my %spectra_resultset = ();
+    $sbeams->fetchResultSet(sql_query=>$sql,
+      resultset_ref=>\%spectra_resultset);
+
+    #### Store the resultset and parameters to disk
+    $rs_params{set_name} = "SETME";
+    $sbeams->writeResultSet(resultset_file_ref=>\$rs_params{set_name},
+      resultset_ref=>\%spectra_resultset,
+      query_parameters_ref=>\%parameters,
+      file_prefix=>'spectra_');
+
+
+    #### Supply some additional links to the Result Set
+    print qq~
+      <BR>Click to download all these MS/MS spectra in format:
+      <a href="$CGI_BASE_DIR/GetResultSet.cgi/$rs_params{set_name}.tsv?rs_set_name=$rs_params{set_name}&format=tsv">TSV</a>,
+      <a href="$CGI_BASE_DIR/GetResultSet.cgi/$rs_params{set_name}.xls?rs_set_name=$rs_params{set_name}&format=excel">Excel</a>
+      <BR>
+      </TD></TR></TABLE>
+    ~;
+
+
+    return;
+
+
+} # end prepare_msms_spectra_resultset
