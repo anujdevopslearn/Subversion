@@ -410,6 +410,27 @@ $optionlist
   $full_gene_name_clause =~ s/AND/ OR/;
 
 
+  #### Sepcial handling for scope of 'All'
+  if ($parameters{search_scope} =~ /All/) {
+    my $result = searchExternal(
+      query_parameters_ref => \%parameters,
+    );
+    if ($result) {
+      $orf_name_clause = $sbeams->parseConstraint2SQL(
+        constraint_column=>"BS.biosequence_accession",
+        constraint_type=>"plain_text",
+        constraint_name=>"ORF Name",
+        constraint_value=>$result,
+      );
+      $gene_symbol_clause = '';
+      $ec_number_clause = '';
+      $full_gene_name_clause = '';
+      $orf_name_clause =~ s/AND/ OR/;
+    }
+
+  }
+
+
   #### No LIMITs
   my $limit_clause = '';
 
@@ -535,6 +556,17 @@ $optionlist
 
     #### Display the result
     if ( 1 == 1) {
+
+      if ($sbeams->output_mode() eq 'html') {
+	print qq~<TABLE WIDTH="500"><TR><TD>
+          <font color="red">NOTE</font>:
+          Since you search for "All Attributes",
+          some proteins in this resultset may match the search constraint
+          in fields not displayed.  To see the complete domain search
+          information, click on [View Domain Hits].</TD></TR></TABLE><BR>
+        ~ if ($parameters{search_scope} =~ /All/);
+      }
+
       $sbeams->displayResultSet(rs_params_ref=>\%rs_params,
   	  url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols,
   	  max_widths=>\%max_widths,resultset_ref=>$resultset_ref,
@@ -577,5 +609,74 @@ sub evalSQL {
 } # end evalSQL
 
 
+
+################################################################################
+# searchExternal: A method to search an external file for any matching info
+###############################################################################
+sub searchExternal {
+  my %args = @_;
+
+  #### Process the arguments list
+  my $query_parameters_ref = $args{'query_parameters_ref'};
+
+  #### Determine which external data source to search
+  my %files = (
+    '3' => 'query_edeutsch_20041119-131631.tsv', # Hm
+    '2' => 'query_edeutsch_20041119-144819.tsv', # Halobac
+  );
+  my $file = $files{$query_parameters_ref->{biosequence_set_id}};
+  unless ($file) {
+    print "ERROR: Unable to find a file for this dataset<BR>\n";
+    return 0;
+  }
+
+  #### Open the file
+  my $fullfile = "$PHYSICAL_BASE_DIR/data/$SBEAMS_SUBDIR/$file";
+  open(INFILE,$fullfile) || die("ERROR: Unable to open $fullfile");
+
+  #### Parse header line
+  my $line = <INFILE>;
+  my $line =~ s/[\r\n]//g;
+
+  my @column_list = split("\t",$line);
+
+  #### Convert the array into a hash of names to column numbers
+  my $i = 0;
+  my %column_hash;
+  foreach my $element (@column_list) {
+    $column_hash{$element} = $i;
+    $i++;
+  }
+
+  #### Get the search_spec
+  my $search_spec = $query_parameters_ref->{search_key};
+  my @specs = split(/\s+/,$search_spec);
+
+  #### Search through the file looking for matches
+  my %biosequence_accessions;
+  while ($line = <INFILE>) {
+    $line =~ s/[\r\n]//g;
+    my $match = 1;
+    foreach my $spec (@specs) {
+      if ($line !~ /$spec/i) {
+	$match = 0;
+	last;
+      }
+    }
+
+    #### If there was a match, save this accession
+    if ($match) {
+      my @columns = split("\t",$line);
+      $biosequence_accessions{$columns[2]}++;
+    }
+  }
+
+  close(INFILE);
+
+  #print join(";",keys(%biosequence_accessions)),"\n";
+
+  return join(";",keys(%biosequence_accessions));
+
+} # end searchExternal
 
 
