@@ -760,6 +760,8 @@ sub getWritableProjects{
   return $self->getAccessibleProjects(privilege_level=>30);
 }
 
+
+
 ###############################################################################
 # isProjectAccessible
 ###############################################################################
@@ -778,6 +780,30 @@ sub isProjectAccessible{
   }
   return 0;
 }
+
+
+
+###############################################################################
+# isProjectWritable
+###############################################################################
+sub isProjectWritable{
+  my $self = shift || croak("parameter self not passed");
+  my %args = @_;
+
+  ## Decode Arguments
+  my $project_id = $args{'project_id'} || $self->getCurrent_project_id();
+
+  my @writable_projects = $self->getWritableProjects();
+  foreach my $id (@writable_projects) {
+    if ($id == $project_id) {
+      return 1;
+    }
+  }
+
+  return 0;
+}
+
+
 
 ###############################################################################
 # getAccessibleProjects
