@@ -294,7 +294,7 @@ sub start_element {
 
 
   #### If deemed necessary, UPDATE or INSERT the data
-  my $returned_PK;
+  my $returned_PK = $PK_value;
   if ($insert + $update > 0) {
     $returned_PK = $sbeams->updateOrInsertRow(
       insert=>$insert,
