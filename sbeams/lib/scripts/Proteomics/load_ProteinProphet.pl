@@ -920,6 +920,9 @@ sub guess_source_file {
   my ($data_location) = $sbeams->selectOneColumn($sql);
 
   if ($data_location) {
+    unless ($data_location =~ /^\//) {
+      $data_location = "$RAW_DATA_DIR{Proteomics}/$data_location";
+    }
     return "$data_location/interact-prob-prot.xml";
   }
 
