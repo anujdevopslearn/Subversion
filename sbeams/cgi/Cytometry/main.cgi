@@ -452,14 +452,16 @@ sub specifyRun
   
    my $project_id = $args{'project_id'};
    my $entitySql = "select se.sort_entity_id,sort_entity_name from $TBCY_SORT_ENTITY se
-   join $TBCY_FCS_RUN rf on se.sort_entity_id = rf.sort_entity_id  where project_id = $project_id order by sort_entity_name";
+   join $TBCY_FCS_RUN rf on se.sort_entity_id = rf.sort_entity_id  where project_id = $project_id 
+   group by sort_entity_name,se.sort_entity_id order by sort_entity_name";
    my $entityOption = $sbeams->buildOptionList($entitySql, "Selected","MULTIOPTIONLIST");
      
    my $sampleNameSelect = "select  fcs_run_id, sample_Name  from $TBCY_FCS_RUN where project_id = $project_id order by sample_name";
    my $sampleNameOption  =  $sbeams->buildOptionList($sampleNameSelect, "Selected", "MULTIOPTIONLIST");
 
   my $tissueSelect = "select  tt.tissue_type_id, tissue_type_name  from $TBCY_TISSUE_TYPE tt
-  join $TBCY_FCS_RUN rf on tt.tissue_type_id = rf.tissue_type_id  where project_id = $project_id order by tissue_type_name";
+  join $TBCY_FCS_RUN rf on tt.tissue_type_id = rf.tissue_type_id  where project_id = $project_id
+  group by tissue_type_name, tt.tissue_type_id order by tissue_type_name";
    my $tissueOption  =  $sbeams->buildOptionList($tissueSelect, "Selected", "MULTIOPTIONLIST");
       
    
