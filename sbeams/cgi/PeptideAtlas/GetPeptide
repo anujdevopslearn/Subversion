@@ -4,9 +4,8 @@
 # Program     : GetPeptide
 # $Id$
 #
-# Description : This program that allows users to
-#               view all the information for a given peptide in the context
-#               of a certain build.
+# Description : Prints summary of a given peptide given selection
+#               atlas build, and peptide name or sequence.
 #
 # SBEAMS is Copyright (C) 2000-2003 by Eric Deutsch
 # This program is governed by the terms of the GNU General Public License (GPL)
@@ -46,7 +45,7 @@ $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 
-use CGI qw(param);
+use CGI qw(parameters);
 $q = new CGI;
 
 
@@ -115,8 +114,6 @@ sub main {
 
 
     ##xxxxx tab menu info here until moved into sep. module
-    $q->param( -name=> "_tab",
-               -value=> "2");
     $parameters{'_tab'} = 2;
 
     if ( $parameters{'atlasBuildID'} ) {
@@ -137,11 +134,6 @@ sub main {
 
         $parameters{'searchForThis'} = "PAp00000001";
 
-        $q->param( -name=> "atlasName", -value=> "Human_P0.9_Ens26_NCBI35");
-
-        $q->param( -name=> "searchWithinThis", -value=> "Peptide Name");
-
-        $q->param( -name=> "searchForThis", -value=> "PAp00000001");
     }
 
 
@@ -181,15 +173,6 @@ sub handle_request {
 
     my %parameters = %{$ref_parameters};
 
-
-    ## if no parameters are defined, set up some defaults to help with browsing
-    ## until I get a help menu set-up
-    unless ( ($parameters{'searchWithinThis'}) && ($parameters{'searchForThis'})  
-           && ( ($parameters{'atlasName'}) || ($parameters{'atlas_build_id'}) ) ) {
-        $parameters{'atlasName'} = 'Human_P0.9_Ens22_NCBI34';
-        $parameters{'searchWithinThis'} = "Peptide Name";
-        $parameters{'searchForThis'} = 'PAp00000001';
-    }
 
 
     ## hard coding tab menu here...someday should be moved into separate module in this directory
@@ -327,15 +310,15 @@ sub handle_request {
 
 
     ## Display HTML FORM to select Atlas and Search constraints:
-    my $atlasBuildName = $q->param("atlasName");
+    my $atlasBuildName = $parameters{"atlasName"};
 
-    my $searchKey = $q->param('searchWithinThis');
+    my $searchKey = $parameters{"searchWithinThis"};
 
-    my $searchValue = $q->param("searchForThis");
+    my $searchValue = $parameters{"searchForThis"};
 
     unless ( $apply_action eq "QUERY" ) { ## if receive from link, don't assign null
 
-        $apply_action = $q->param("query");
+        $apply_action = $parameters{"query"};
 
     }
 
@@ -359,10 +342,14 @@ sub handle_request {
                               -action=>"$base_url",
                              );
         print $q->popup_menu(-name=> "atlasName",
-                              -values=> [@atlas_option_name_array]);
+                              -values=> [@atlas_option_name_array],
+                              -default=>$atlasBuildName,
+            );
         print "&nbsp;&nbsp;Search&nbsp;";
         print $q->popup_menu(-name=> "searchWithinThis",
-                             -values=> [@textbox_option_tags]);
+                             -values=> [@textbox_option_tags],
+                             -default=>$searchKey,
+            );
         print "&nbsp;for:&nbsp;";
         print $q->textfield( "searchForThis", $selected_key_search);
         print $q->submit(-name => "query", 
