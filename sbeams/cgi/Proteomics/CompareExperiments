@@ -193,7 +193,7 @@ sub handle_request {
   #### Set some reasonable defaults if no parameters supplied
   unless ($n_params_found) {
     $parameters{input_form_format} = "minimum_detail";
-    $parameters{annotation_status_id} = 'Annot';
+    $parameters{probability_contrstraint} = '>.7';
     $parameters{display_options} = 'GroupReference';
     $parameters{n_annotations_constraint} = '>0';
     $parameters{sort_order} = 'SUM(tABS.row_count) DESC';
