@@ -640,6 +640,7 @@ sub printEntryForm {
 	 WHERE 1 = 1
 	$search_batch_clause
 	$biosequence_name_clause
+        $description_clause
 	$gene_name_clause
 	$accession_clause
 
@@ -672,6 +673,7 @@ sub printEntryForm {
 	  LEFT JOIN #tmpAnnBSids tABS ON ( tBS.biosequence_id = tABS.biosequence_id )
 	  JOIN $TBPR_BIOSEQUENCE BS ON ( tBS.biosequence_id = BS.biosequence_id )
 	$n_annotations_clause
+        $description_clause
 	$order_by_clause
 
        ~;
