@@ -623,6 +623,14 @@ sub handle_request {
                'Match Name' => "\%$colnameidx{match_accessor}V\%$colnameidx{match_accession}V\%$colnameidx{match_accessor_suffix}V",
     	       'Match Name_ATAG' => 'TARGET="WinExt" ',
 
+               'Protein EC Numbers' => "http://ca.expasy.org/cgi-bin/nicezyme.pl?\%V",
+               'Protein EC Numbers_ATAG' => 'TARGET="WinExt"',
+               'Protein EC Numbers_OPTIONS' => {semicolon_separated_list=>1},
+
+               'Domain EC Numbers' => "http://ca.expasy.org/cgi-bin/nicezyme.pl?\%V",
+               'Domain EC Numbers_ATAG' => 'TARGET="WinExt"',
+               'Domain EC Numbers_OPTIONS' => {semicolon_separated_list=>1},
+
                'Query Start' => "$CGI_BASE_DIR/ProteinStructure/BrowseBioSequence.cgi?biosequence_name_constraint=\%$colnameidx{biosequence_name}V&biosequence_set_id=\%$colnameidx{biosequence_set_id}V&label_start=\%$colnameidx{query_start}V&label_end=\%$colnameidx{query_end}V&apply_action=HIDEQUERY&display_options=SequenceFormat,ShowExtraProteinProps",
     	       'Query Start_ATAG' => 'TARGET="Win1" ',
 
