@@ -903,11 +903,12 @@ print qq~
 
 $LINESEPARATOR<BR>
 <FONT COLOR="#cc0000" SIZE="+0" FACE="Arial,Helvetica,sans-serif"><B>Step 2 of 3: Optional Pipeline Configurations</B><BR>
-<FONT SIZE="-1">
+<FONT SIZE="-1" COLOR="#000000">
 <img src="$HTML_BASE_DIR/images/space.gif" height=1 width=30">- Default values used if not selected<BR>
 <img src="$HTML_BASE_DIR/images/space.gif" height=1 width=30">- Click on red question marks for help text</FONT>
-     <BR>
-     <B><A HREF="Javascript:getDirections('http://www.systemsbiology.org/ArrayProcess/readme/preProcess.html')">Pre-process:</A></B>
+     <p>
+     <FONT SIZE="-1" COLOR="#006600"><B>Pre-process:</B>&nbsp;<A HREF="Javascript:getDirections('http://www.systemsbiology.org/ArrayProcess/readme/preProcess.html')"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
+
      <TABLE>
 		<TR VALIGN="baseline">
 			<TD>
@@ -965,7 +966,7 @@ $LINESEPARATOR<BR>
      	</TR>
      </TABLE>
      <BR>
-     <B><A HREF="Javascript:getDirections('http://www.systemsbiology.org/ArrayProcess/readme/mergeReps.html')">Merge Replicates:</A></B>
+     <B><FONT SIZE="-1" COLOR="#006600">Merge Replicates:</B>&nbsp;<A HREF="Javascript:getDirections('http://www.systemsbiology.org/ArrayProcess/readme/mergeReps.html')"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
      <BR>
 	<TABLE BORDER=0>
 		<TR>
@@ -1009,12 +1010,14 @@ $LINESEPARATOR<BR>
        			<INPUT TYPE="checkbox" NAME="filterGenes"  VALUE="-filter" CHECKED>
        		</TD>
        		<TD>
-       			&nbsp;Filter Outliers<BR>
+       			&nbsp;Filter Outliers
+       			&nbsp;<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=8','Help','width=400,height=300,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
 			</TD>
 		</TR>
 	</TABLE>
      <BR>
-     <B><A HREF="Javascript:getDirections('http://www.systemsbiology.org/VERAandSAM')">VERA/SAM:</A></B><BR>
+     <B><FONT SIZE="-1" COLOR="#006600">VERA/SAM:</B>&nbsp;<A HREF="Javascript:getDirections('http://www.systemsbiology.org/VERAandSAM')"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></A>
+     <BR>
  	<TABLE BORDER=0>
  		<TR>
  			<TD>
@@ -1061,8 +1064,9 @@ $LINESEPARATOR<BR>
         	</TR>
 	</TABLE>
 	<BR>
-     <B><A HREF="Javascript:getDirections('http://www.systemsbiology.org/ArrayProcess/readme/mergeConds.html')">Merge Conditions:</A></B><BR>
-     <FONT COLOR="#cc0000" SIZE="-1">
+     <B><FONT SIZE="-1" COLOR="#006600">Merge Conditions:</A></B>&nbsp;<A HREF="Javascript:getDirections('http://www.systemsbiology.org/ArrayProcess/readme/mergeConds.html')"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></A>
+     <BR>
+     <FONT COLOR="#000000" SIZE="-1">
 	<img src="$HTML_BASE_DIR/images/space.gif" height=1 width=30">-only used with more than one condition</FONT><BR>
        <TABLE>
        <TR>
@@ -1153,7 +1157,7 @@ print qq~
       	 </TR>
      </TABLE>
 	<BR>
-     <B><FONT COLOR="green">Miscellaneous</FONT></B><BR>
+     <B><FONT SIZE="-1" COLOR="#006600">Miscellaneous</FONT></B><BR>
 	<TABLE BORDER=0>
 		<TR>
 			<TD>
@@ -1182,7 +1186,7 @@ print qq~
 	</TABLE>
 	<BR>
      $LINESEPARATOR<BR>
-     <FONT COLOR="#cc0000" SIZE="+0" FACE="Arial,Helvetica,sans-serif"><B>Step 3 of 3: Proceed to Final Stage!</B></FONT>
+     <FONT COLOR="#cc0000" SIZE="+0" FACE="Arial,Helvetica,sans-serif"><B>Step 3 of 3: Proceed to Final Stage</B></FONT>
      <p>
      <INPUT TYPE="hidden" NAME="project_id" VALUE = "$parameters{project_id}">
      <INPUT TYPE="submit" NAME="PROCESS" VALUE="Proceed to Verification and Submission Page"><BR>
