@@ -1163,7 +1163,7 @@ sub processEntryForm {
         } # end if file
 
 
-        #### Check for any file uploaded data for columns of type file
+        #### Check for any file uploaded data for columns of type multilink
         if ($input_types{$element} eq "multilink") {
           my %fk_tables =
             $sbeamsMOD->returnTableInfo($TABLE_NAME,"fk_tables");
