@@ -125,6 +125,7 @@ sub returnTableInfo {
 		  LEFT JOIN $TBIS_ANTIBODY A
 		       ON ( SS.antibody_id = A.antibody_id )
 		 WHERE SS.record_status!='D'
+                   AND SI.record_status!='D'
 		 ORDER BY project_tag,tissue_type_name,specimen_block_name,
                        A.sort_order,A.antibody_name,SS.stain_name,
                        SI.image_magnification,SI.image_name
