@@ -60,14 +60,22 @@ main();
 ###############################################################################
 sub main { 
 
-    #### Do the SBEAMS authentication and exit if a username is not returned
-    exit unless ($current_username = $sbeams->Authenticate());
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate());
 
-    #### Print the header, do what the program does, and print footer
-    $sbeamsBS->printPageHeader();
-    processRequests();
-    $sbeamsBS->printPageFooter();
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(
+      q=>$q,parameters_ref=>\%parameters);
+  #$sbeams->printDebuggingInfo($q);
 
+  #### Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+
+  #### Print the header, do what the program does, and print footer
+  $sbeamsBS->printPageHeader();
+  processRequests(parameters_ref=>\%parameters);
+  $sbeamsBS->printPageFooter();
 } # end main
 
 
@@ -78,6 +86,9 @@ sub main {
 # based on what the user wants to do. 
 ###############################################################################
 sub processRequests {
+    my %args = @_;
+    my $parameters_ref = $args{'parameters_ref'};
+
     $current_username = $sbeams->getCurrent_username;
     $current_contact_id = $sbeams->getCurrent_contact_id;
     $current_work_group_id = $sbeams->getCurrent_work_group_id;
@@ -86,22 +97,7 @@ sub processRequests {
     $current_project_name = $sbeams->getCurrent_project_name;
     $dbh = $sbeams->getDBHandle();
 
-
-    # Enable for debugging
-    if (0==1) {
-      print "Content-type: text/html\n\n";
-      my ($ee,$ff);
-      foreach $ee (keys %ENV) {
-        print "$ee =$ENV{$ee}=<BR>\n";
-      }
-      foreach $ee ( $q->param ) {
-        $ff = join(",",$q->param($ee));
-        print "$ee=$ff<BR>\n";
-      }
-    }
-
-
-    printEntryForm();
+    printEntryForm(parameters_ref=>$parameters_ref);
 
 
 } # end processRequests
@@ -112,6 +108,10 @@ sub processRequests {
 # Print Entry Form
 ###############################################################################
 sub printEntryForm {
+    my %args = @_;
+
+    my $page_parameters_ref = $args{'parameters_ref'};
+    my %page_parameters = %{$page_parameters_ref};
 
     my ($i,$element,$key,$value,$line,$result,$sql);
     my %parameters;
@@ -123,8 +123,8 @@ sub printEntryForm {
     my $username;
 
     #### Read in the standard form values
-    my $apply_action  = $q->param('apply_action');
-    my $TABLE_NAME = $q->param("QUERY_NAME");
+    my $apply_action  = $page_parameters{'apply_action'};
+    my $TABLE_NAME = $page_parameters{'QUERY_NAME'};
 
 
     #### Set some specific settings for this program
@@ -558,7 +558,7 @@ sub printEntryForm {
       }
 
       #### Set flag to display in tab separated value format
-      if ( $parameters{display_options} =~ /TSV/i ) {
+      if ( $parameters{display_options} =~ /tsv/ ) {
         $tsv_output = 1;
       }
 
@@ -598,7 +598,7 @@ $mismatch_rejection_clause
 
 
 -- Create a second table of unique feature,hit_biosequence_id rows
--- since we'll ignore multiple hits to the same gene (won't we?)
+-- since we will ignore multiple hits to the same gene (wont we?)
 SELECT feature_id,hit_biosequence_id,COUNT(*) AS 'Count'
   INTO #tmpUniqueMatches
   FROM #tmpAllCloseMatches
@@ -696,10 +696,15 @@ $order_by_clause
 
 
       #### Display the resultset
-      $sbeams->displayResultSet(page_size=>$rs_params{page_size},
-	  page_number=>$rs_params{page_number},
-          url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols,
-          max_widths=>\%max_widths,resultset_ref=>$resultset_ref);
+      $sbeams->displayResultSet(
+	  rs_params_ref=>\%rs_params,
+	  query_parameters_ref=>\%parameters,
+	  url_cols_ref=>\%url_cols,
+	  hidden_cols_ref=>\%hidden_cols,
+          max_widths=>\%max_widths,
+	  resultset_ref=>$resultset_ref,
+	  base_url=>$base_url
+      );
 
 
       #### Display the resultset controls
