@@ -392,12 +392,13 @@ sub postProcessResultset {
 
 
   #### Get the predicted locations of the rank list file
-  my $order_file = "/users/kdeutsch/examples/oracle/picked-sorted.tsv";
+  my $order_file = "/users/kdeutsch/examples/oracle/picked-sorted.tsv:chr10";
 
 
   #### Read in order file and create hash out of its contents
   my %snphash;
-  if (open(ASSAYFILE,"picked-sorted.tsv")) {
+  #if (open(ASSAYFILE,"picked-sorted.tsv")) {
+  if (open(ASSAYFILE,"$order_file")) {
     while (<ASSAYFILE>) {
       chomp;
       next if ($_ =~ /pos/);
@@ -516,8 +517,9 @@ sub postProcessResultset {
     my @row = ("$allele frequency");
     foreach my $assay (@assays) {
       if (defined($allele_frequencies{$assay}->{$allele})) {
-  	push(@row,$allele_frequencies{$assay}->{$allele} /
-          $allele_frequencies{$assay}->{total});
+        my $newval = sprintf("%.2f",$allele_frequencies{$assay}->{$allele} /
+                             $allele_frequencies{$assay}->{total});
+  	push(@row,$newval);
       } else {
         push(@row,'');
       }
