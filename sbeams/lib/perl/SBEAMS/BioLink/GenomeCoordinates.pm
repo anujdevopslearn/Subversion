@@ -4,7 +4,7 @@
 # Description : Module which facilitates the lookup of information based on
 # a set of genome coordinates. 
 #
-# SBEAMS is Copyright (C) 2000-2004 by Eric Deutsch
+# SBEAMS is Copyright (C) 2005 by Eric Deutsch
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
@@ -200,7 +200,7 @@ sub _validateCoordinates {
 sub _validateGenomeBuild {
   my $this = shift;
   # Current valid genome identifiers
-  if ( lc($this->{genome_build_id}) =~ /^mm5$|^hg16$|^hg17$/ ) {
+  if ( lc($this->{genome_build_id}) =~ /^mm4$|^mm5$|^hg16$|^hg17$|^z/ ) {
     return 1;
   }
   $log->debug( "Illegal genome_build_id: $this->{genome_build_id}" );
