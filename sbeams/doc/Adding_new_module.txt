@@ -34,6 +34,7 @@ cvs add $DEST
 cvs add $DEST/*
 
 cd /host/db/local/www/html/dev2/sbeams/lib/perl/SBEAMS
+cvs add $DEST.pm
 cvs add $DEST
 cvs add $DEST/*
 
