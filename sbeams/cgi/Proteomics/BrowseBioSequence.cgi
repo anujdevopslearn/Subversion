@@ -782,7 +782,7 @@ sub displaySequenceView {
   print "Referenced peptides are highlighted in <font color=\"green\">GREEN</font>.<BR>\n";
   print "Transmembrane regions are highlighted in <font color=\"orange\">ORANGE</font>.<BR>\n"
     if ($tmr_topology_column);
-  print "Signal peptides are highlighted in <font color=\"yellow\">YELLOW</font>.<BR>\n";
+  print "Signal peptides are highlighted in <font color=\"blue\">BLUE</font>.<BR>\n";
   print "Collisions in highlighting are shown in <font color=\"red\">RED</font>.<BR>\n";
   print "<BR><PRE>\n";
   foreach $row (@{$data_ref}) {
@@ -829,7 +829,7 @@ sub displaySequenceView {
         $tmr_start_positions{$start} = 1;
         $tmr_end_positions{$end} = 1;
       }
-      $tmr_color = "yellow" if ($tmr_class eq 'A' || $tmr_class eq 'S');
+      $tmr_color = "blue" if ($tmr_class eq 'A' || $tmr_class eq 'S');
     }
 
 
