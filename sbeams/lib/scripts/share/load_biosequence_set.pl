@@ -765,6 +765,20 @@ sub specialParsing {
   }
 
 
+  #### Conversion rules for some generic GenBank IDs
+  if ($rowdata_ref->{biosequence_name} =~ /gb\|([A-Z\d\.]+)\|/ ) {
+     $rowdata_ref->{biosequence_gene_name} = $1;
+     $rowdata_ref->{biosequence_accession} = $1;
+     $rowdata_ref->{dbxref_id} = '7';
+  }
+
+
+  #### Conversion rules for some generic GenBank IDs
+  if ($rowdata_ref->{biosequence_name} =~ /gi\|(\d+)\|/ ) {
+     $rowdata_ref->{biosequence_accession} = $1;
+     $rowdata_ref->{dbxref_id} = '12';
+  }
+
 
   #### Special conversion rules for Drosophila genome R2, e.g.:
   #### >Scr|FBgn0003339|CT1096|FBan0001030 "transcription factor" mol_weight=44264  located on: 3R 84A6-84B1; 
@@ -844,10 +858,12 @@ sub specialParsing {
     if ($rowdata_ref->{biosequence_desc} =~ /([\w\-\:]+)\s([\w\-\:]+), .+/ ) {
       if ($biosequence_set_name eq "Yeast ORFs Common Name Database") {
         $rowdata_ref->{biosequence_gene_name} = $rowdata_ref->{biosequence_name};
-        $rowdata_ref->{biosequence_accession} = $1;
+        #$rowdata_ref->{biosequence_accession} = $1;
+        $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
       } else {
         $rowdata_ref->{biosequence_gene_name} = $1;
-        $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
+        #$rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
+        $rowdata_ref->{biosequence_accession} = $1;
       }
       $rowdata_ref->{dbxref_id} = '7';
     }
