@@ -54,6 +54,12 @@ Options:
   --skip_sequence     If set, only the names, descs, etc. are loaded;
                       the actual sequence (often not really necessary)
                       is not written
+  --set_tag           The set_tag of a biosequence_set that is to be worked
+                      on; all are checked if none is provided
+  --file_prefix       A prefix that is prepended to the set_path in the
+                      biosequence_set table
+  --check_status      Is set, nothing is actually done, but rather the
+                      biosequence_sets are verified
 
  e.g.:  $PROG_NAME 
 
@@ -133,15 +139,15 @@ sub handleRequest {
 
 
   #### Set the command-line options
-  my $delete_existing = $OPTIONS{"delete_existing"};
-  my $update_existing = $OPTIONS{"update_existing"};
-  my $skip_sequence = $OPTIONS{"skip_sequence"};
-  my $check_status = $OPTIONS{"check_status"};
+  my $delete_existing = $OPTIONS{"delete_existing"} || '';
+  my $update_existing = $OPTIONS{"update_existing"} || '';
+  my $skip_sequence = $OPTIONS{"skip_sequence"} || '';
+  my $check_status = $OPTIONS{"check_status"} || '';
   my $set_tag = $OPTIONS{"set_tag"} || '';
+  my $file_prefix = $OPTIONS{"file_prefix"} || '';
 
 
   #### Get the file_prefix if it was specified, and otherwise guess
-  my $file_prefix = $OPTIONS{"file_prefix"} || "";
   unless ($file_prefix) {
     my $module = $sbeams->getSBEAMS_SUBDIR();
     $file_prefix = '/net/dblocal/data/proteomics' if ($module eq 'Proteomics');
