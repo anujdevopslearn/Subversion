@@ -71,9 +71,13 @@ sub returnTableInfo {
 
         if ($info_key eq "BASICQuery") {
             return qq~
-		SELECT organization_id,organization,city,province_state,uri
-                  FROM $TB_ORGANIZATION
-		 WHERE record_status!='D'
+		SELECT O.organization_id,O.organization,
+		       PO.organization AS 'parent_organization',
+		       O.city,O.province_state,O.uri
+                  FROM $TB_ORGANIZATION O
+                  LEFT JOIN $TB_ORGANIZATION PO
+                       ON (O.parent_organization_id = PO.organization_id)
+		 WHERE O.record_status!='D'
             ~;
         }
 
@@ -131,13 +135,24 @@ sub returnTableInfo {
 
         if ($info_key eq "BASICQuery") {
             return qq~
-		SELECT contact_id,last_name,first_name,middle_name,lab,
-                         department,organization,C.email
+		SELECT C.contact_id,last_name,first_name,middle_name AS 'MI',
+		       CT.contact_type_name,O.organization,
+		       DpO.organization AS 'deparment',
+		       GrO.organization AS 'group',
+		       LbO.organization AS 'lab',
+                       C.phone,C.email,C.uri
                   FROM $TB_CONTACT C
-                  JOIN $TB_ORGANIZATION O
+                  LEFT JOIN $TB_CONTACT_TYPE CT
+                       ON (C.contact_type_id=CT.contact_type_id)
+                  LEFT JOIN $TB_ORGANIZATION O
                        ON (C.organization_id=O.organization_id)
+                  LEFT JOIN $TB_ORGANIZATION DpO
+                       ON (C.department_id=DpO.organization_id)
+                  LEFT JOIN $TB_ORGANIZATION GrO
+                       ON (C.group_id=GrO.organization_id)
+                  LEFT JOIN $TB_ORGANIZATION LbO
+                       ON (C.lab_id=LbO.organization_id)
                  WHERE C.record_status!='D'
-		   AND O.record_status!='D'
             ~;
         }
 
