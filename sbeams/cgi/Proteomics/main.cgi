@@ -412,7 +412,7 @@ sub make_option_list{
 		     <td>Associate a previous Project sample with this experiment</td>
 		   <tr>
 		    <td>
-			   <FORM ACTION="Add_proteomic_sample.cgi" NAME="AddSample__$experiment_id" TARGET='_blank'>
+			   <FORM ACTION="Add_proteomic_sample.cgi" NAME="AddSample__$experiment_id" TARGET='add_sample'>
 			   		<INPUT TYPE="hidden" NAME="experiment_id" VALUE="$experiment_id">
 			   		<INPUT TYPE="hidden" NAME="action" VALUE="Add_sample">
 			   		<SELECT NAME="sample_id" onChange="submitsample(this)">
@@ -552,7 +552,7 @@ WHERE es.experiment_id = $experiment_id
 	
 ###collect some html to display the sample info or make a default message with a link to add some info
 	my $sample_info_html = '';
- 	if (@samples_per_exp_results){
+ 	if (@samples_per_exp_results  ){
 	   $sample_info_html = "<table border=0>";
 	   foreach my $sample_info_aref (@samples_per_exp_results){
 	      my $sample_tag = $sample_info_aref->[1];
@@ -574,35 +574,41 @@ WHERE es.experiment_id = $experiment_id
 	   my $sample_option_list_html = make_option_list(sample_info => \@all_samples_results,
 	   												  experiment_info => \@samples_per_exp_results,
 	   												  experiment_id   => $experiment_id);
+   ###Only display the drop down if user has write access
+	   if  ($sbeams->isProjectWritable()){
+		   $sample_info_html .= qq~
+		   	<TR>
+		   	 <TD>
+			   	$sample_option_list_html
+			 </TD>
+			</TR>
+		  
+		   ~;
+		  
+	  ##Provide a link to add a new sample associated with with this experiment
+		    $sample_info_html .= qq ~
+		      <TR>
+		   	   <TD>
+		        <br>
+		  		  <a href="$add_sample_cgi_url?experiment_id=$experiment_id&action=Pick_sample" target='_blank'>View All Proteomic Samples</a>
+		  	   </TD>
+			  </TR>
+		  	
+		  	~;
+	   }
+	   $sample_info_html .= "</TABLE>";#close the table
 	   
-	   $sample_info_html .= qq~
-	   	<TR>
-	   	 <TD>
-		   	$sample_option_list_html
-		 </TD>
-		</TR>
-	  
-	   ~;
-	  
-  ##Provide a link to add a new sample associated with with this experiment
-	    $sample_info_html .= qq ~
-	      <TR>
-	   	   <TD>
-	        <br>
-	  		  <a href="$add_sample_cgi_url?experiment_id=$experiment_id&action=Pick_sample" target='_blank'>View All Proteomic Samples</a>
-	  	   </TD>
-		  </TR>
-	  	</TABLE>
-	  	~;
-	  
 	}else{
-  ##If no samples have been shown for this experiment show some defualt info
-	  my $sample_option_list_html = make_option_list(sample_info => \@all_samples_results,
-	   												 experiment_info => [],
-	   												 experiment_id   => $experiment_id);
-	   												 
-	  $sample_info_html .= $sample_option_list_html;
-	  $sample_info_html .=  "<a href='$add_sample_cgi_url?experiment_id=$experiment_id&action=Pick_sample' target='_blank'>View All Proteomic Samples</a>";
+  ##If no samples have been associated with this experiment show some defualt info if they have write access 
+	  if  ($sbeams->isProjectWritable()){
+		  my $sample_option_list_html = make_option_list(sample_info => \@all_samples_results,
+		   												 experiment_info => [],
+		   												 experiment_id   => $experiment_id);
+		   												 
+		  $sample_info_html .= "No Samples Registered for this project<br>";
+		  $sample_info_html .= $sample_option_list_html;
+		  $sample_info_html .=  "<a href='$add_sample_cgi_url?experiment_id=$experiment_id&action=Pick_sample' target='_blank'>View All Proteomic Samples</a>";
+	  }	
 	}  
 	
 	
@@ -724,8 +730,8 @@ sub make_all_samples_for_project_html {
 		$content .= qq~ 
 					<TR>
 					  <TD colspan=4>
-					   <h2>Sorry, No Samples for this project</h2>
-					   <p>Click <a href="$manage_table_url_samples&ShowEntryForm=1&project_id=$project_id" target='_blank'>Here</a>
+					   <br>Sorry, No Samples for this project<br>
+					   Click <a href="$manage_table_url_samples&ShowEntryForm=1&project_id=$project_id" target='_blank'>Here</a>
 					   	  to add some more samples to the database.
 					   </p>
 					  </TD>
