@@ -125,10 +125,9 @@ sub returnTableInfo {
 		SELECT P.protocol_id,P.protocol_type_id,P.other_type,P.name,
 		       SUBSTRING(P.abstract,1,100) AS 'abstract',
 		       SUBSTRING(protocol,1,100) AS 'protocol',
-		       SUBSTRING(P.deviations,1,100) AS 'deviations',
 		       SUBSTRING(P.comment,1,100) AS 'comment',
 		       P.date_created,P.created_by_id,P.date_modified,
-		       P.modified_by_id,P.record_status
+		       P.modified_by_id,P.owner_group_id,P.record_status
 		  FROM $TB_PROTOCOL P
 		  LEFT JOIN $TB_PROTOCOL_TYPE PT
 		       ON (P.protocol_type_id=PT.protocol_type_id)
