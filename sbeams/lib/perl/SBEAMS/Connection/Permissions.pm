@@ -737,7 +737,6 @@ sub get_best_permission{
       ORDER BY UL.username,P.project_tag
       ~;
   @rows = $self->selectSeveralColumns($sql);
-  $log->debug( $sql );
 
   my $best_privilege_id = 9999;
 
@@ -996,7 +995,6 @@ sub calculateTablePermission {
   END
 
   my @uperms = $self->selectSeveralColumns( $usql );
-    $log->debug( $usql );
  
   if ( scalar( @uperms ) > 1 ) { # Should only return one row
     $log->error( $usql );
