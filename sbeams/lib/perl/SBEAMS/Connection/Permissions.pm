@@ -727,12 +727,12 @@ sub getAccessibleProjects{
   my $self = shift || croak("parameter self not passed");
   my %args = @_;
   my $SUB_NAME = "getAccessibleProjects";
-
+	my $work_group_name = $self->getCurrent_work_group_name();
 
   ## Decode argument list
   my $current_contact_id = $args{'contact_id'}
     || $self->getCurrent_contact_id();
-
+	my $module = $args{'module'} || "";
 
   #### Define SQL to get all project to which the current user has access
   my $sql = qq~
@@ -741,6 +741,15 @@ sub getAccessibleProjects{
                       ELSE GPP.privilege_id END) AS "best_group_privilege_id",
              MIN(CASE WHEN P.PI_contact_id = $current_contact_id THEN 10
                       ELSE UPP.privilege_id END) AS "best_user_privilege_id"
+			~;
+
+	if ($module eq "microarray"){
+			$sql .= qq~,
+			COUNT (AR.array_request_id) AS 'array_requests'
+					~;
+	}
+
+	$sql .= qq~
       FROM $TB_PROJECT P
      INNER JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
       LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
@@ -755,6 +764,16 @@ sub getAccessibleProjects{
 	   AND UWG.contact_id='$current_contact_id' )
       LEFT JOIN $TB_WORK_GROUP WG
       ON ( UWG.work_group_id = WG.work_group_id )
+			~;
+
+	if ($module eq "microarray") {
+			$sql .= qq~
+      LEFT JOIN array_request AR
+      ON ( AR.project_id = P.project_id )
+			~;
+	}
+
+	$sql .= qq~
       WHERE 1=1
       AND P.record_status != 'D'
       AND UL.record_status != 'D'
@@ -763,10 +782,17 @@ sub getAccessibleProjects{
       AND ( PRIV.record_status != 'D' OR PRIV.record_status IS NULL )
       AND ( UWG.record_status != 'D' OR UWG.record_status IS NULL )
       AND ( WG.record_status != 'D' OR WG.record_status IS NULL )
+			~;
+	if ($work_group_name ne "Admin") {
+			$sql .= qq~
       AND ( UPP.privilege_id<=40 OR GPP.privilege_id<=40
             OR P.PI_contact_id = '$current_contact_id' )
       AND ( WG.work_group_name IS NOT NULL OR UPP.privilege_id IS NOT NULL
             OR P.PI_contact_id = '$current_contact_id' )
+			~;
+	}
+
+	$sql .= qq~
       GROUP BY P.project_id,P.project_tag,P.name,UL.username
       ORDER BY UL.username,P.project_tag
   ~;
@@ -776,8 +802,15 @@ sub getAccessibleProjects{
   my @project_ids = ();
 
   foreach my $element (@rows) {
-    push(@project_ids,$element->[0]);
-  }
+			## If microarray, check to see if there have been array requests
+			if ($module eq "microarray"){
+					if($element->[6] > 0 || $element->[5] == 10 || $element->[4] == 10){
+							push(@project_ids,$element->[0]);
+					}
+			}else {
+					push(@project_ids,$element->[0]);
+			}
+	}
 
   return (@project_ids);
 
