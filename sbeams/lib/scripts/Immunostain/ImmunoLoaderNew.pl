@@ -617,7 +617,7 @@ print "$stainName\n";
 				$cellLineRowData{assay_channel_id} = $channelID;
 				$cellLineRowData{structural_unit_id} = $cellType{$cellLine};# if($cellInsert);
 				$cellLineRowData{expression_level_id} = $cellPresenceLevel{$infoHash{'stain intensity'}} if($cellLine ne 'Stromal Leukocytes');
-				$cellLineRowData{structural_unit_percent} = $infoHash{$cellLine} unless ($cellLine eq 'Stromal Leukocytes');
+				$cellLineRowData{at_level_percent} = $infoHash{$cellLine} unless ($cellLine eq 'Stromal Leukocytes');
 				$cellLineRowData{abundance_level_id} = $abundanceLevel{$infoHash{$cellLine}} if $cellLine eq 'Stromal Leukocytes';
 				$cellLineRowData{comment} = $comment; 
 				$cellLineRowData{expression_pattern_term_id} = $ontologyHash{$infoHash{expression_pattern}}; 
