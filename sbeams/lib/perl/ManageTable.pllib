@@ -697,30 +697,73 @@ sub processEntryForm {
     $current_project_name = $sbeams->getCurrent_project_name;
 
 
-    # Check for missing required information
+    #### Check for missing required information
     my @required_columns = 
       $sbeamsMOD->returnTableInfo($TABLE_NAME,"required_columns");
+    my $error_message;
     if (@required_columns) {
-      my $error_message;
       foreach $element (@required_columns) {
         $error_message .= "<LI> You must provide a <B>$element</B>."
           unless (defined($parameters{$element}) &&
                   $parameters{$element} gt '');
       }
 
-      $error_message .= preUpdateDataCheck(parameters_ref=>\%parameters);
-
-      if ($error_message) {
-          $sbeams->printIncompleteForm($error_message);
-          return 0;
-      }
     }
 
-
+    #### Get the data columns and input types for this table
     my @data_columns = 
       $sbeamsMOD->returnTableInfo($TABLE_NAME,"data_columns");
     my %input_types = 
       $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
+    my %data_types = 
+      $sbeamsMOD->returnTableInfo($TABLE_NAME,"data_types");
+    my %data_scales = 
+      $sbeamsMOD->returnTableInfo($TABLE_NAME,"data_scales");
+
+
+    #### Check that the data entered was valid for the datatype
+    foreach $element (@data_columns) {
+      if ($parameters{$element} gt '') {
+        if ($data_types{$element} eq 'varchar' ||
+            $data_types{$element} eq 'char') {
+          if (length($parameters{$element}) > $data_scales{$element}) {
+            $error_message .= "<LI> Size limit for field <B>$element</B> is ".
+              $data_scales{$element}." but your entry is ".
+              length($parameters{$element})." characters long.  Please ".
+              "shorten it or contact your SBEAMS administrator if this ".
+              "limitation seems unreasonable.";
+          }
+        }
+        if ($data_types{$element} eq 'int') {
+          unless ($parameters{$element} =~ /^[\d\-\+]+$/) {
+            $error_message .= "<LI> The field <B>$element</B> is of type ".
+              "integer, but your entry '".$parameters{$element}.
+              "' seems to contain non-integer ".
+              "characters.  Please enter just an integer.";
+          }
+        }
+        if ($data_types{$element} eq 'real' ||
+            $data_types{$element} eq 'float') {
+          unless ($parameters{$element} =~ /^[\d\-\+\.e]+$/) {
+            $error_message .= "<LI> The field <B>$element</B> is of type ".
+              $data_types{$element}.", but your entry '".$parameters{$element}.
+              "' seems to contain non-numeric ".
+              "characters.  Please enter just a real number.";
+          }
+        }
+      }
+    }
+
+
+    #### Run the module-specific data check
+    $error_message .= preUpdateDataCheck(parameters_ref=>\%parameters);
+
+
+    #### If any error messages have been kicked out, print and return
+    if ($error_message) {
+      $sbeams->printIncompleteForm($error_message);
+      return 0;
+    }
 
 
     # Multi-Insert logic.  In certain cases, we'll allow the user to specify
