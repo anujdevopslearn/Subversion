@@ -447,7 +447,7 @@ sub printExperimentDesignSection {
     <TABLE CELLSPACING=0 CELLPADDING=0 BORDER="3"BORDERCOLOR="#000000">
     <TR>
       <TD>
-      <TABLE CELLSPACING=0 CELLPADDIN=0>
+      <TABLE CELLSPACING=0 CELLPADDING=0>
       <TR BGCOLOR="#CCFFFF" BORDERCOLOR="#000000">
         <TD><B>Experiment Description:</B></TD>
 	<TD><TEXTAREA NAME="expDesc" COLS="50" ROWS="10">$exp_desc</TEXTAREA></TD>
