@@ -89,6 +89,7 @@ sub printEntryForm {
   #### Get the columns for this table
   my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
   my %input_types = $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
 
 
   #### Read the input parameters for each column
@@ -305,10 +306,20 @@ sub printEntryForm {
         my $file_size = -s "$PHYSICAL_BASE_DIR/data/$data_file";
         my $file_name = $parameters{$column_name};
         $file_name =~ s/^.+\///;
+        #### Check for legacy names before original names were stored
+        if ($file_name eq $data_file) {
+          $file_name = 'Original File Name Unknown';
+        }
+        #### If the file is of non-zero length, provide a link to it
         if ($file_size > 0) {
-          print "<nowrap>View File: <A HREF=\"$DATA_DIR/$data_file\">".
+          my $url = $base_url;
+          $url =~ s/\?/\/$file_name?/;
+          print "<nowrap>View File: <A HREF=\"$url&".
+            "$PK_COLUMN_NAME=$parameters{$PK_COLUMN_NAME}&".
+            "GetFile=$column_name\">".
             "$file_name</A> </nowrap><BR>\n";
         }
+
       }
 
       print qq~
@@ -911,6 +922,20 @@ sub processEntryForm {
           #~;
           #$sbeams->executeSQL($sql_query);
 
+          #### If there's a Windows path as part of the parameter,
+          #### update the table for the name without the path
+          if ($parameters{$element} =~ /:\\/) {
+            my $file_name = $parameters{$element};
+            $file_name =~ s/^.*\\//;
+            $file_name =~ s/\'/''/g;
+            $sql_query = qq~
+              UPDATE $DB_TABLE_NAME SET
+                $element='$file_name'
+              WHERE $PK_COLUMN_NAME=$parameters{$PK_COLUMN_NAME}
+            ~;
+            $sbeams->executeSQL($sql_query);
+          }
+
         }
 
       }
@@ -1105,6 +1130,132 @@ sub writeDataFile {
 
 } # end writeDataFile
 
+
+
+###############################################################################
+# getFile
+###############################################################################
+sub getFile {
+
+  #### Get the columns for this table
+  my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
+  my %input_types = $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
+
+  #### Read the form values for each column
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,
+    parameters_ref=>\%parameters,
+    columns_ref=>\@columns,
+    input_types_ref=>\%input_types,
+  );
+
+
+  #### Load data from this record into hash
+  my $column_list = join(",",@columns);
+  my $sql = qq~
+    SELECT $column_list
+      FROM $DB_TABLE_NAME
+     WHERE $PK_COLUMN_NAME='$parameters{$PK_COLUMN_NAME}'
+  ~;
+  my @rows = $sbeams->selectSeveralColumns($sql);
+  my @row = @{$rows[0]};
+  for (my $element=0; $element<scalar(@row); $element++) {
+    $parameters{@columns[$element]}=@row[$element];
+  }
+
+
+  #### Determine the name of the requested file
+  my $data_file =
+    "$TABLE_NAME/$parameters{$PK_COLUMN_NAME}_".
+    "$parameters{GetFile}.dat";
+
+  my $full_file_name = "$PHYSICAL_BASE_DIR/data/$data_file";
+  my $file_size = -s $full_file_name;
+
+
+  #### If the file is nonzero, then send it
+  if ($file_size > 0) {
+
+    #### Determine the content type based on the file name
+    my $content_type = getContentType(
+      file_name => $parameters{$parameters{GetFile}},
+    ) || 'text/plain';
+
+
+    #### Send the HTTP header
+    print "Content-type: $content_type\n\n";
+
+    #### Send the contents of the file
+    my $buffer;
+    open(DATA, $full_file_name) || die("Couldn't open $full_file_name: ".$!);
+    while (read(DATA, $buffer, 1024)) {
+      print $buffer;
+    }
+
+  }
+
+
+} # end getFile
+
+
+
+###############################################################################
+# getContentType
+###############################################################################
+sub getContentType {
+  my %args = @_;
+
+  my $file_name = $args{'file_name'};
+
+  #### Return empty string if a non-empty input file name was not provided
+  return '' unless ($file_name);
+
+  #### Get the file extension
+  my $file_ext = '';
+  if ($file_name =~ /\.(.+)?$/) {
+    $file_ext = $1;
+  }
+
+
+  #### If we found a valid extention
+  if ($file_ext) {
+
+    #### Parse the mime.types file
+    my $mime_types_file = '/etc/mime.types';
+    my $line;
+    my %ext_hash;
+    open(DATA,$mime_types_file) || die("Couldn't open $mime_types_file: ".$!);
+    while ($line=<DATA>) {
+      next if ($line =~ /^\#/);
+      $line =~ s/[\r\n]//g;
+      $line =~ s/\s+$//;
+      next unless ($line);
+
+      #### Split the line into its components
+      my @items = split(/\s+/,$line);
+      my $n_items = scalar(@items);
+
+      #### If there's more than one item, register each of the file
+      #### extensions with the mime type in the hash
+      if ($n_items > 1) {
+        for (my $i=1;$i<$n_items;$i++) {
+          $ext_hash{lc($items[$i])} = $items[0];
+        }
+      }
+
+    }
+
+    #### If there's a match to this extention, return it
+    if ($ext_hash{lc($file_ext)}) {
+      return $ext_hash{lc($file_ext)};
+    }
+
+  }
+
+  return '';
+
+} # end getContentType
 
 
 
