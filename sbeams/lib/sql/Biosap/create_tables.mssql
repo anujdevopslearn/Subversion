@@ -1,0 +1,145 @@
+
+
+DROP TABLE feature_hit
+GO
+DROP TABLE feature
+GO
+DROP TABLE filterblast_statistic
+GO
+DROP TABLE featurama_statistic
+GO
+DROP TABLE featurama_parameter
+GO
+DROP TABLE biosap_search
+GO
+DROP TABLE biosequence
+GO
+DROP TABLE biosequence_set
+GO
+
+
+CREATE TABLE biosequence_set (
+    biosequence_set_id        int IDENTITY NOT NULL,
+    species_id                int NOT NULL /*REFERENCES organism(organism_id)*/,
+    set_name                  varchar(100) NOT NULL,
+    set_tag                   varchar(20) NOT NULL,
+    set_description           varchar(255) NOT NULL,
+    set_version               varchar(255) NOT NULL,
+    upload_file               varchar(255) NULL,
+    set_path                  varchar(255) NULL,
+    uri                       varchar(255) NULL,
+    comment                   text NULL,
+    sort_order                int NOT NULL DEFAULT 10,
+    date_created              datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by_id             int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+    date_modified             datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified_by_id            int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+    owner_group_id            int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+    record_status             char(1) DEFAULT 'N',
+    PRIMARY KEY (biosequence_set_id)
+)
+GO
+
+
+CREATE TABLE biosequence (
+    biosequence_id            int IDENTITY NOT NULL,
+    biosequence_set_id        int NOT NULL REFERENCES biosequence_set(biosequence_set_id),
+    biosequence_name          varchar(255) NOT NULL,
+    biosequence_gene_name     varchar(255) NULL,
+    biosequence_accession     varchar(255) NULL,
+    biosequence_desc          varchar(1024) NOT NULL,
+    biosequence_seq           text NULL,
+    PRIMARY KEY (biosequence_id)
+)
+GO
+
+
+CREATE TABLE biosap_search (
+    biosap_search_id          int IDENTITY NOT NULL,
+    biosap_search_idcode      varchar(255) NULL,
+    search_username           varchar(255) NULL,
+    search_date               datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    biosap_version            varchar(255) NULL,
+    comments                  varchar(255) NULL,
+    PRIMARY KEY (biosap_search_id)
+)
+GO
+
+
+CREATE TABLE featurama_parameter (
+    biosap_search_id          int NOT NULL REFERENCES biosap_search(biosap_search_id),
+    gene_library              varchar(255) NOT NULL,
+    melting_temp              real NOT NULL,
+    melting_temp_range        real NOT NULL,
+    minimum_length            int NOT NULL,
+    maximum_length            int NOT NULL,
+    maximum_selfcomp          int NOT NULL,
+    step_size                 int NOT NULL,
+    maximum_3prime_distance   int NOT NULL,
+    initial_3prime_offset     int NOT NULL,
+    maximum_features          int NOT NULL,
+    maximum_polyAT_length     int NOT NULL,
+    maximum_polyGC_length     int NOT NULL,
+    content_window_size       int NOT NULL,
+    maximum_windowAT_content  int NOT NULL,
+    maximum_windowGC_content  int NOT NULL,
+    oligo_concentration_mMol  real NOT NULL,
+    salt_concentration_mMol   real NOT NULL,
+    PRIMARY KEY (biosap_search_id)
+)
+GO
+
+
+CREATE TABLE featurama_statistic (
+    biosap_search_id          int NOT NULL REFERENCES biosap_search(biosap_search_id),
+    n_features_found          int NULL,
+    n_featureless_genes       int NULL,
+    gene_rep_fraction         real NULL,
+    success_fraction          real NULL,
+    self_comp_features_rej    int NULL,
+    high_Tm_features_rej      int NULL,
+    low_Tm_features_rej       int NULL,
+    content_features_rej      int NULL,
+    duplicate_features        int NULL,
+    n_features_considered     int NULL,
+    featurama_version         varchar(50) NULL,
+    PRIMARY KEY (biosap_search_id)
+)
+GO
+
+
+CREATE TABLE filterblast_statistic (
+    biosap_search_id          int NOT NULL REFERENCES biosap_search(biosap_search_id),
+    filter_blast_version      varchar(50) NULL,
+    n_unique_features         int NULL,
+    n_multiple_features       int NULL,
+    PRIMARY KEY (biosap_search_id)
+)
+GO
+
+
+CREATE TABLE feature (
+    feature_id                int IDENTITY NOT NULL,
+    biosap_search_id          int NOT NULL REFERENCES biosap_search(biosap_search_id),
+    biosequence_id            int NOT NULL REFERENCES biosequence(biosequence_id),
+    melting_temp              real NOT NULL,
+    threeprime_distance       int NULL,
+    sequence_length           int NOT NULL,
+    feature_sequence          varchar(1024) NOT NULL,
+    n_blast_matches           int NULL,
+    PRIMARY KEY (feature_id)
+)
+GO
+
+
+CREATE TABLE feature_hit (
+    feature_id                int NOT NULL REFERENCES feature(feature_id),
+    biosequence_id            int NOT NULL REFERENCES biosequence(biosequence_id),
+    expect_value              float NOT NULL,
+    score                     real NOT NULL,
+    number_of_identities      int NOT NULL,
+    hit_sequence              varchar(1024) NOT NULL
+)
+GO
+
+
