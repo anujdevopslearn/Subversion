@@ -268,9 +268,9 @@ sub printEntryForm {
     if ($fk_table) {
       my $subdir = $sbeams->getSBEAMS_SUBDIR();
       $subdir .= "/" if ($subdir);
-      $jump_to_list_source = qq~<A TARGET="AddToList" HREF="$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=$fk_table&ShowEntryForm=1">
-        <IMG SRC="$HTML_BASE_DIR/images/greyplus.gif" border=0
-        alt="Add to or view details about this list box" ></A>
+      $jump_to_list_source = qq~<A TARGET="AddToList" HREF="$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=$fk_table&ShowEntryForm=1"><IMG
+        SRC="$HTML_BASE_DIR/images/greyplus.gif" border=0
+        ALT="Add to or view details about this list box" ></A>
       ~;
     }
 
