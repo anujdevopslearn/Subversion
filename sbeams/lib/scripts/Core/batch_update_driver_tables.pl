@@ -68,6 +68,8 @@
   ./update_driver_tables.pl $CONFDIR/Cytometry/Cytometry_table_property.txt
   ./update_driver_tables.pl $CONFDIR/Cytometry/Cytometry_table_column.txt
 
+  ./update_driver_tables.pl $CONFDIR/ProteinStructure/ProteinStructure_table_property.txt
+  ./update_driver_tables.pl $CONFDIR/ProteinStructure/ProteinStructure_table_column.txt
 
 
 

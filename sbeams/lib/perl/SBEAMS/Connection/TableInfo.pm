@@ -35,7 +35,7 @@ use SBEAMS::Immunostain::Tables;
 use SBEAMS::Inkjet::Tables;
 use SBEAMS::Interactions::Tables;
 use SBEAMS::PhenoArray::Tables;
-#use SBEAMS::ProteinStructure::Tables;
+use SBEAMS::ProteinStructure::Tables;
 use SBEAMS::SNP::Tables;
 use SBEAMS::TOES::Tables;
 use SBEAMS::UESC::Tables;

@@ -1,0 +1,10 @@
+table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
+PS_biosequence_set	BioSequence Set	ProteinStructure_infrastructure	YES	$TBPS_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=PS_biosequence_set	PS_biosequence_set	
+PS_polymer_type	Polymer Type	ProteinStructure_infrastructure	YES	$TBPS_POLYMER_TYPE	polymer_type_id		ManageTable.cgi?TABLE_NAME=PS_polymer_type	PS_polymer_type	
+PS_dbxref	Biosequence Database Cross Reference	ProteinStructure_infrastructure	YES	$TB_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=PS_dbxref	PS_biosequence_dbxref	
+PS_biosequence	BioSequence	ProteinStructure_infrastructure	NO	$TBPS_BIOSEQUENCE	biosequence_id				
+PS_biosequence_property_set	BioSequence Property Set	ProteinStructure_infrastructure	NO	$TBPS_BIOSEQUENCE_PROPERTY_SET	biosequence_property_set_id				
+PS_domain_match	Domain Match	ProteinStructure_infrastructure	NO	$TBPS_DOMAIN_MATCH	domain_match_id				
+PS_domain_match_source	Domain Match Source	ProteinStructure_infrastructure	YES	$TBPS_DOMAIN_MATCH_SOURCE	domain_match_source_id		ManageTable.cgi?TABLE_NAME=PS_domain_match_source	PS_domain_match_source	
+PS_query_option	Query Option	ProteinStructure_infrastructure	YES	$TBPS_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=PS_query_option	PS_query_option	
+PS_BrowseBioSequence	Browse BioSequence	QUERY	NO				BrowseBioSequence.cgi		

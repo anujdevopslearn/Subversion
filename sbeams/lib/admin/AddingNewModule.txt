@@ -4,8 +4,8 @@ Notes add a new module:
 set TEMPLATE = MODULETEMPLATE
 set TMPLTAG = ModTmpTAG
 
-set DEST = Immunostain
-set TAG = IS
+set DEST = ProteinStructure
+set TAG = PS
 
 ---
 
@@ -100,6 +100,29 @@ Create table_group_security entries for new groups for common and rowprivate
 
 ---
 
+Add the scripts directory and add load_biosequence_set support if desired:
+
+cd /net/dblocal/www/html/dev2/sbeams/lib/scripts
+mkdir $DEST
+cd $DEST
+ln -s ../share/load_biosequence_set.pl
+cd ../share
+ed load_biosequence_set.pl
+cd ../Core
+ed UpdateSymLinks.pl
+
+
+---
+
+Add query_option data:
+
+cd /net/dblocal/www/html/dev2/sbeams/lib/sql/ProteinStructure
+cp -p ../Proteomics/Proteomics_POPULATE.mssql ProteinStructure_POPULATE.mssql
+ed ProteinStructure_POPULATE.mssql
+execute
+
+
+---
 Test in your dev2 area.  Once all is good, check into CVS:
 
 

@@ -78,6 +78,7 @@ DBPREFIX{Cytometry}     = Cytometry.dbo.
 DBPREFIX{Immunostain}   = Immunostain.dbo.
 DBPREFIX{Microarray}    = sbeams.dbo.
 DBPREFIX{PhenoArray}    = PhenoArray.dbo.
+DBPREFIX{ProteinStructure}    = ProteinStructure.dbo.
 DBPREFIX{Proteomics}    = proteomics.dbo.
 DBPREFIX{SNP}           = SNP.dbo.
 DBPREFIX{UESC}          = UESC.dbo.
