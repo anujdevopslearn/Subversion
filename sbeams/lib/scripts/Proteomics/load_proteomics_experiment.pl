@@ -112,6 +112,9 @@ Options:
   --fix_ipi           If set, then convert long ugly IPI accessions to a
                       simple IPInnnnnnnnnn
 
+  --interact_fname    name of interact file (e.g. interact-prob-data.htm or
+                      interact-prob.xml)
+
  e.g.:  $PROG_NAME --list_all
         $PROG_NAME --check --experiment_tag=rafapr
 
@@ -132,6 +135,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
   "update_timing_info","gradient_program_id:i","column_delay:i",
   "cleanup_archive","delete_search_batch","delete_experiment",
   "delete_fraction:s","force_search_batch","fix_ipi",
+  "interact_fname:s",
   )) {
   print "$USAGE";
   exit;
@@ -151,6 +155,8 @@ if ($DEBUG) {
 ###############################################################################
 # Set Global Variables and execute main()
 ###############################################################################
+my $search_database;  ## needed for parsing NCBInr file later
+
 main();
 exit(0);
 
@@ -204,6 +210,7 @@ sub handleRequest {
   my $search_subdir = $OPTIONS{"search_subdir"} || '';
   my $file_prefix = $OPTIONS{"file_prefix"} || '';
   my $force_ref_db = $OPTIONS{'force_ref_db'} || '';
+  my $interact_file = $OPTIONS{"interact_fname"} || '';
 
   $TESTONLY = $OPTIONS{'testonly'} || 0;
   $DATABASE = $DBPREFIX{'Proteomics'};
@@ -338,7 +345,8 @@ sub handleRequest {
   	  $result = updateFromSummaryFiles(
   	    experiment_tag=>$status->{experiment_tag},
   	    search_batch_subdir=>$search_batch_subdir,
-  	    source_dir=>$source_dir);
+  	    source_dir=>$source_dir,
+          );
   	  print "\n";
   	}
 
@@ -349,7 +357,9 @@ sub handleRequest {
   	  $result = updateProbabilities(
   	    experiment_tag=>$status->{experiment_tag},
   	    search_batch_subdir=>$search_batch_subdir,
-  	    source_dir=>$source_dir);
+  	    source_dir=>$source_dir,
+            interact_file=>$interact_file,
+          );
   	  print "\n";
   	}
 
@@ -589,7 +599,6 @@ sub loadProteomicsExperiment {
   #### then add a search_batch records but nothing else to do
   unless (@fractions) {
     if ($OPTIONS{force_search_batch}) {
-      my $search_database;
       if (-e "$source_dir/sequest.params") {
 	my $line;
 	open(INF,"$source_dir/sequest.params");
@@ -715,7 +724,6 @@ sub loadProteomicsExperiment {
   #### For each @fraction, descend into the directory and start loading
   #### the data therein
   my $search_batch_id;
-  my $search_database;
   my $search_id;
   my $search_hit_id;
   my $msms_spectrum_id;
@@ -1377,7 +1385,8 @@ sub updateFromSummaryFiles {
   unless ( -f "$source_dir/interact.htm" ||
            -f "$source_dir/finalInteract/interact.htm" ||
            -f "$source_dir/sequest.params" ||
-           -f "source_dir/interact-prob-data.htm" ) {
+           -f "$source_dir/interact-prob-data.htm"
+  ) {
     die("ERROR: '$source_dir' just doesn't look like a sequest search ".
         "directory");
   }
@@ -1518,6 +1527,8 @@ sub updateProbabilities {
   my $source_dir = $args{'source_dir'}
    || die "ERROR[$SUB_NAME]: source_dir not passed";
 
+  my $interact_file = $args{'interact_file'} || "";
+
 
   #### Define standard variables
   my ($i,$element,$key,$value,$line,$result,$sql,$file);
@@ -1556,13 +1567,67 @@ sub updateProbabilities {
 
   #### Read in the probabilities
   my $data_ref;
+
+  ## determine interact file name and whether it's an htm or xml
   my $source_file;
 
+  my $isXMLFile = '';
+
+  my $isHTMFile = '';
+
+  my $potential_xml_file = "$source_dir/interact-prob.xml";
+
+  my $potential_htm_file = "$source_dir/interact-prob-data.htm";
+
+  ## use user speficied interact file if exists:
+  if ( -f "$source_dir/$interact_file")
+  {
+      $source_file = "$source_dir/$interact_file";
+
+      if ($source_file =~ /(.+)(xml)$/)
+      {
+
+          $isXMLFile = 1;
+
+      } else
+      {
+
+          $isHTMFile = 1;
+
+      }
+
+  }
+
+  ## otherwise, run through potential names:
+  if (!$source_file)
+  {
+      if (-f $potential_xml_file)
+      {
+          $source_file = $potential_xml_file;
+
+          $isXMLFile = 1;
+      }
+  }
+
+  ## otherwise, run through potential names:
+  if (!$source_file)
+  {
+      if (-f $potential_htm_file)
+      {
+          $source_file = $potential_htm_file;
+
+          $isHTMFile = 1;
+
+          $isXMLFile = '';
+      }
+  }
+
+  print "attempting to load $source_file\n";
 
   #### First guess an XML Interact file with probabilities
-  $source_file = "$source_dir/interact-prob.xml";
-  if (-f $source_file) {
-    print "Found XML interact file. Reading probabilities from source file '$source_file'\n";
+  if ($isXMLFile == 1) {
+    print "Found XML interact file. " +
+    "Reading probabilities from source file '$source_file'\n";
     use SBEAMS::Proteomics::XMLUtilities;
     my $XMLreader = new SBEAMS::Proteomics::XMLUtilities;
     $data_ref = $XMLreader->readXInteractFile(
@@ -1571,15 +1636,15 @@ sub updateProbabilities {
     );
 
   #### Second, guess an HTML Interact file with probabilities
-  } elsif (-f "$source_dir/interact-prob-data.htm") {
-    $source_file = "$source_dir/interact-prob-data.htm";
-    print "Reading probabilities from source file '$source_file'...\n";
+  } elsif ( $isHTMFile == 1 ) {
+    print "Found HTM interact file. " +
+    "Reading probabilities from source file '$source_file'...\n";
     $data_ref = $sbeamsPROT->readSummaryFile(
       inputfile=>$source_file,
       verbose=>$VERBOSE
     );
   } else {
-    die "!! UNABLE TO FIND INTERACT FILE (looking for pipeline's interact-prob*)";
+    die "!! UNABLE TO FIND INTERACT FILE (looking for $source_file)";
   }
 
 
