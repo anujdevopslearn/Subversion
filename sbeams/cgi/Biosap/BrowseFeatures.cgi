@@ -520,7 +520,7 @@ sub printEntryForm {
 
       #### Build ROWCOUNT constraint
       unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=99999) {
-        $parameters{row_limit} = 100;
+        $parameters{row_limit} = 5000;
       }
       my $limit_clause = "TOP $parameters{row_limit}";
 
@@ -648,7 +648,7 @@ $threeprime_distance_clause
 
 
 -- Print out the final dataset with the desired columns
-SELECT $columns_clause
+SELECT $limit_clause $columns_clause
   FROM #tmpFinal
 $order_by_clause
       ~;
