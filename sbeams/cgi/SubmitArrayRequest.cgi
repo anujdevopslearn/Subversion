@@ -1507,7 +1507,7 @@ sub printCompletedEntry {
         #   $optionlist_queries{$element},$parameters{$element});
         #print "--> $optionlist_queries{$element} ==: ",join(",",%templist),"<BR>\n"
 
-        %templist = $sbeams->SelectTwoColumnHash($optionlist_queries{$element});
+        %templist = $sbeams->selectTwoColumnHash($optionlist_queries{$element});
         $optionlists{$element} = $templist{$parameters{$element}};
     }
 
@@ -1634,7 +1634,7 @@ sub printCompletedEntry {
 	  FROM $TB_LABELING_METHOD
 	 ORDER BY sort_order,name
       ~;
-      my %optionlist=$sbeams->SelectTwoColumnHash($sql_query);
+      my %optionlist=$sbeams->selectTwoColumnHash($sql_query);
 
 
 

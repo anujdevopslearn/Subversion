@@ -388,7 +388,7 @@ sub returnTableInfo {
 	   AND url > ''
     ~;
 
-    %url_cols = $self->SelectTwoColumnHash($sql_query);
+    %url_cols = $self->selectTwoColumnHash($sql_query);
 
     foreach $element (keys %url_cols) {
 
@@ -475,7 +475,7 @@ sub returnTableInfo {
 	 ORDER BY column_index
     ~;
 
-    return $self->SelectTwoColumnHash($sql_query);
+    return $self->selectTwoColumnHash($sql_query);
   }
 
 

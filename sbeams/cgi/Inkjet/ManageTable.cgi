@@ -284,7 +284,7 @@ sub printEntryForm {
         # Build the option list
         if ($input_types{$element} eq "fixedfromlist") {
           my %templist =
-            $sbeams->SelectTwoColumnHash($optionlist_queries{$element});
+            $sbeams->selectTwoColumnHash($optionlist_queries{$element});
           $optionlists{$element} = $templist{$parameters{$element}};
         } else {
           $optionlists{$element}=$sbeams->buildOptionList(

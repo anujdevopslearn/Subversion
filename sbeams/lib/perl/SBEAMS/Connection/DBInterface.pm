@@ -79,7 +79,7 @@ sub applySqlChange {
 
 
     # Get the names of all the permission levels
-    my %level_names = $self->SelectTwoColumnHash("
+    my %level_names = $self->selectTwoColumnHash("
 	SELECT privilege_id,name FROM $TB_PRIVILEGE");
 
     my ($DB_TABLE_NAME) = $self->returnTableInfo($table_name,"DB_TABLE_NAME");
@@ -296,12 +296,12 @@ sub selectSeveralColumns {
 
 
 ###############################################################################
-# SelectTwoColumnHash
+# selectTwoColumnHash
 #
 # Given a SQL statement which returns exactly two columns, return a hash
 # containing the results of that query.
 ###############################################################################
-sub SelectTwoColumnHash {
+sub selectTwoColumnHash {
     my $self = shift || croak("parameter self not passed");
     my $sql_query = shift || croak("parameter sql_query not passed");
 

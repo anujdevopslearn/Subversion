@@ -613,7 +613,7 @@ sub checkLogin {
 
     my $success = 0;
 
-    my %query_result = $self->SelectTwoColumnHash(
+    my %query_result = $self->selectTwoColumnHash(
         "SELECT username,password
            FROM $TB_USER_LOGIN
           WHERE username = '$user'

@@ -70,7 +70,7 @@ sub showMainPage {
     print "\n";
 
     my $sqlquery = "SELECT layout_id,source_filename FROM array_layout";
-    my %layouts = $sbeams->SelectTwoColumnHash($sqlquery);
+    my %layouts = $sbeams->selectTwoColumnHash($sqlquery);
 
     my ($layout_id,$nrows,$element,$i,$key,$value,$igene);
     my (%data);
