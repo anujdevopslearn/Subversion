@@ -67,7 +67,7 @@ different databases.  This may or may not be a significant concern.
 - Generate the appropriate schema for your type(s) of database:
 
 setenv SBEAMS /local/html/dev1/sbeams
-cd $SBEAMS/lib/scripts/Proteomics
+cd $SBEAMS/lib/scripts/Core
 
 foreach dbtype ( mssql mysql pgsql oracle )
   ./generate_schema.pl \
@@ -105,8 +105,10 @@ probably work for all flavors of database
 setenv SBEAMS /local/html/dev1/sbeams
 
 cd $SBEAMS/lib/conf
-cp SBEAMS.conf.template SBEAMS.conf
-edit SBEAMS.conf to taste
+edit SBEAMS.conf as appropriate for the new Proteomics modules
+The defaults may be fine.  Specifically:
+DBPREFIX{Proteomics}    = proteomics.dbo.
+RAW_DATA_DIR{Proteomics} = /net/db/projects/proteomics/data
 
 
 -------------------------------------------------------------------------------
@@ -120,29 +122,90 @@ set CONFDIR = "../../conf"
 If this doesn't work.  Do not proceed, debug first.
 
 Now that the Proteomics driver tables are loaded, you should be able to
-go to the web site again and click on SBEAMS - Protoemics and explore the
-tables.
+go to the web site again and click on SBEAMS - Proteomics and explore the
+tables.  They're all going to be empty, but you shouldn't get any errors,
+just empty resultsets.
 
 If this doesn't work.  Do not proceed, debug first.
+
 
 -------------------------------------------------------------------------------
 6) Add groups
 
 Log in via the web interface and add two work groups:
- - Proteomics_user
- - Proteomics_admin
-and add yourself and whoever else appropriate to those groups.
+[SBEAMS Home] [Admin] [Manage Work Groups] [Add Work Group]
+Add entries for (exacly as shown!):
+  Proteomics_user
+  Proteomics_admin
+(Note that after doing the first, you can click [Back] and edit and
+add another.)
+
 Proteomics_admin has privilege over all tables in the Proteomics
 module, while the Proteomics_user only has access to certain tables
 and may often not modify other users records.
 
+Now go to [Manage User-Group Associations] and add yourself and whoever
+else to these groups as appropriate.
+
+Now set up the table group securities:
+  rowprivate - Proteomics_user - data_writer
+  rowprivate - Proteomics_admin - data_writer
+  project - Proteomics_user - data_writer
+  project - Proteomics_admin - data_modifier
+  Proteomics_infrastructure - Proteomics_admin - data_modifier
+  Proteomics_user - Proteomics_user - data_groupmodifier
+  Proteomics_user - Proteomics_admin - data_modifier
 
 
 
 
+-------------------------------------------------------------------------------
+7) Add some sample data
+
+Add a project:
+
+- Switch to the Proteomics_user group by clicking [CHANGE] in the upper
+  right hand corner, selecting the Proteomics_user group and [UPDATE]
+- Click [Projects] [Add Project] and add an appropriate project.  Required
+  fields are in red.  If you don't have a budget number, enter NA.
 
 
+Add an experiment:
 
+- Click [Experiments] [Add Experiment]
+- Fill in the appropriate information and [INSERT]
+
+
+Register a biosequence_set:
+
+A biosequence_set is a list of proteins, genes, orfs, etc., sometimes called
+a "sequence database".  Relevant for the Proteomics module are the
+"sequence databases" you run SEQUEST against.
+
+Click [Core Management: BioSequenceSets] [Add BioSequence Set]
+Fill in the appropriate information.  Make sure that the set_path points
+to the location of FASTA file that is SEQUEST searched against.
+[INSERT] that record.
+
+
+-------------------------------------------------------------------------------
+8) Test the Protoemics command line functiality
+
+cd $SBEAMS/lib/scripts/Proteomics
+
+./load_biosequence_set.pl --check
+
+./load_proteomics_experiment.pl --list
+
+These two programs should list the entries for the BioSequence Set and
+Experiment you have loaded above.
+
+Now try loading a biosequence set:
+
+./load_biosequence_set.pl --set_tag YeastORF
+
+This should load the biosequence set.
+If this doesn't work.  Do not proceed, debug first.
 
 
 
