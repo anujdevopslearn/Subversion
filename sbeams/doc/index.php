@@ -17,8 +17,10 @@
 <tr><td align="top">
 
 
+<!-- BEGIN_CONTENT -->
 
-<CENTER><FONT SIZE="+1"><P>The <B>S</B>ystems <B>B</B>iology <B>E</B>xperiment <B>A</B>nalysis 
+
+<CENTER><FONT SIZE="+1"><P>The <B>S</B>ystems <B>B</B>iology <B>E</B>xperiment <B>A</B>nalysis <B>M</B>anagement 
 <B>S</B>ystem (<B>SBEAMS</B>) provides a customizable software and database framework 
 to meet the needs of modern systems biology research.</P></FONT></CENTER>
 
@@ -34,6 +36,10 @@ to meet the needs of modern systems biology research.</P></FONT></CENTER>
 </TABLE>
 </CENTER>
 <BR>
+
+
+<!-- END_CONTENT -->
+
 
 <?php
   include("../includes/footer.inc.php");
