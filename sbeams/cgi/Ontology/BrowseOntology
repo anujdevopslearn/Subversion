@@ -347,7 +347,7 @@ sub expandTree {
     print qq~
         <TR><TD><TABLE><TR><TD><IMG SRC="$HTML_BASE_DIR/images/clear.gif" WIDTH="$indent" HEIGHT="1"></TD>
         <TD ALIGN="LEFT" NOWRAP BGCOLOR="#E0E0E0">$term->[3]</TD>
-        <TD ALIGN="LEFT" NOWRAP BGCOLOR="#E0E0E0">$term->[1]</TD>
+        <TD ALIGN="LEFT" NOWRAP BGCOLOR="#E0E0E0"><A TARGET="TermWin" HREF="ManageTable.cgi?TABLE_NAME=ON_ontology_term&ontology_term_id=$term->[0]">$term->[1]</A></TD>
         <TD ALIGN="LEFT" BGCOLOR="#EEEEEE">$term->[2]</TD>
         </TR></TABLE></TD></TR>
     ~;
