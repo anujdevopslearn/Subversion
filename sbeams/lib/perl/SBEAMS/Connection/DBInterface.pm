@@ -2000,6 +2000,39 @@ sub parse_input_parameters {
 
 
 ###############################################################################
+# processStandardParameters
+#
+# Look for and process and standard input parameters that preset the state
+# of the user before the request is handled
+###############################################################################
+sub processStandardParameters {
+  my $self = shift;
+  my %args = @_;
+
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'parameters_ref'};
+
+
+  #### Define some generic varibles
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+  #### If there's a parameter to set the current default project
+  if (defined($ref_parameters->{set_current_project_id})) {
+    my $set_current_project_id = $ref_parameters->{set_current_project_id};
+    if ($set_current_project_id > 0) {
+      $self->setCurrent_project_id(
+        set_to_project_id=>$set_current_project_id);
+    }
+  }
+
+
+} # end processStandardParameters
+
+
+
+###############################################################################
 # display_input_form
 #
 # Print the parameter input form for this particular table or query
