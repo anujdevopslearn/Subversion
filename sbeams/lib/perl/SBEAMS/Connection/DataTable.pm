@@ -214,11 +214,18 @@ sub asHTML {
 sub _delimitData {
   my $this = shift;
   my $sep = shift || die( 'Must pass delimiter' );
-  my $data = '';
+  my $datafile = '';
   foreach my $row ( @{$this->{__rowvals}} ) {
-    $data .= join( "$sep", @$row ) . "\n";
+    my $line = '';
+    my $pad = '';
+    foreach my $datum ( @$row ) {
+      $datum =~ s/\n/\\n/gm;
+      $line .=  $pad . $datum;
+      $pad = $sep;
+    }
+    $datafile .= "$line\n";
   }
-  return $data;
+  return $datafile;
 }
 
 #+
