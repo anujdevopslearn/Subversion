@@ -269,9 +269,15 @@ sub printEntryForm {
           }
         }
 
+
+        #### Set the MULTIOPTIONLIST flag if this is a multi-select list
+        my $method_options;
+        $method_options = "MULTIOPTIONLIST"
+          if ($input_types{$element} eq "multioptionlist");
+
         # Build the option list
         $optionlists{$element}=$sbeams->buildOptionList(
-           $optionlist_queries{$element},$parameters{$element});
+           $optionlist_queries{$element},$parameters{$element},$method_options);
     }
 
 

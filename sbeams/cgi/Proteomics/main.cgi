@@ -77,8 +77,15 @@ sub showMainPage {
 	<BR>
 	<BR>
 
+	The navigation bar on the left will take you to the various
+	capabilities available thus far, or choose from this more
+	descriptive list:
 	<UL>
-	<LI> Here is the starter stub for the Proteomics area.
+	<LI><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=protein_database">Manage Protein Database information</a>
+	<LI><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=project">Manage Project information</a>
+	<LI><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=proteomics_experiment">Manage Experiment information</a>
+	<P>
+	<LI><a href="$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi">Simple Interface to browsing the results of SEQUEST searches</a>
 	</UL>
 
 	<BR>
