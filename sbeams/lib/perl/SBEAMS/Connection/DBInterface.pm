@@ -563,6 +563,19 @@ sub parseConstraint2SQL {
   return if ($constraint_value eq "");
 
 
+  #### Parse type int
+  if ($constraint_type eq "int") {
+    print "Parsing int $constraint_name<BR>\n" if ($verbose);
+    if ($constraint_value =~ /^[\d]+$/) {
+      return "   AND $constraint_column = $constraint_value";
+    } else {
+      print "<H4>Cannot parse $constraint_name constraint ".
+        "'$constraint_value'!  Check syntax.</H4>\n\n";
+      return -1;
+    }
+  }
+
+
   #### Parse type flexible_int
   if ($constraint_type eq "flexible_int") {
     print "Parsing flexible_int $constraint_name<BR>\n" if ($verbose);
@@ -584,6 +597,27 @@ sub parseConstraint2SQL {
   }
 
 
+  #### Parse type flexible_float
+  if ($constraint_type eq "flexible_float") {
+    print "Parsing flexible_float $constraint_name<BR>\n" if ($verbose);
+    if ($constraint_value =~ /^[\d\.]+$/) {
+      return "   AND $constraint_column = $constraint_value";
+    } elsif ($constraint_value =~ /^between\s+[\d\.]+\s+and\s+[\d\.]+$/i) {
+      return "   AND $constraint_column $constraint_value";
+    } elsif ($constraint_value =~ /^([\d\.]+)\s*\+\-\s*([\d\.]+)$/i) {
+      my $lower = $1 - $2;
+      my $upper = $1 + $2;
+      return "   AND $constraint_column BETWEEN $lower AND $upper";
+    } elsif ($constraint_value =~ /^[><=][=]*\s*[\d\.]+$/) {
+      return "   AND $constraint_column $constraint_value";
+    } else {
+      print "<H4>Cannot parse $constraint_name constraint ".
+        "'$constraint_value'!  Check syntax.</H4>\n\n";
+      return -1;
+    }
+  }
+
+
   #### Parse type int_list: a list of integers like "+1, 2,-3"
   if ($constraint_type eq "int_list") {
     print "Parsing int_list $constraint_name<BR>\n" if ($verbose);
@@ -595,6 +629,23 @@ sub parseConstraint2SQL {
       return -1;
     }
   }
+
+
+  #### Parse type plain_text: a plain, unquoted bit of text
+  if ($constraint_type eq "plain_text") {
+    print "Parsing plain_text $constraint_name<BR>\n" if ($verbose);
+
+    #### Convert any ' marks to '' to appear okay within the strings
+    $constraint_value =~ s/'/''/g;
+
+    #### Bad word checking here has been disabled because the string will be
+    #### quoted, so there shouldn't be a way to put in dangerous SQL...
+    #if ($constraint_value =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {}
+
+    return "   AND $constraint_column LIKE '$constraint_value'";
+  }
+
+
 
 
   die "ERROR: unrecognized constraint_type!";
