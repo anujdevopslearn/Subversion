@@ -18,6 +18,14 @@
 
 use strict;
 
+# These constants map loosely to the access privilege levels, but there are 
+# only three: READ, WRITE, and MODIFY, in ascending permissions.
+use constant DATA_ADMIN => 10;
+use constant DATA_MODIFIER => 20;
+use constant DATA_WRITER => 30;
+use constant DATA_READER => 40;
+use constant DATA_NONE => 50;
+
 
 ###############################################################################
 # Print Options Page
@@ -104,6 +112,9 @@ sub printEntryForm {
   my $apply_action_hidden  = $q->param('apply_action_hidden');
   if ($apply_action_hidden gt "") { $apply_action = $apply_action_hidden; }
 
+  # Special case parameter, user can write table but not modify record, and 
+  # has chosen to insert with record as a template.
+  my $second_pass_insert  = $q->param('insert_with_template');
 
   #### If the action was to SET FIELDS TO THIS TEMPLATE, then try
   if ($apply_action eq "SET FIELDS TO THIS TEMPLATE") {
@@ -149,6 +160,10 @@ sub printEntryForm {
        WHERE $PK_COLUMN_NAME='$parameters{$PK_COLUMN_NAME}'
     ~;
     my @rows = $sbeams->selectSeveralColumns($sql);
+
+    # Found cases where this throws an error, next stmt throws perl error.
+    print STDERR "SQL stmt yeilds no rows: \n $sql \n" if !scalar @rows;
+
     my @row = @{$rows[0]};
 
     #### See if the submitter specified how to resolve conflicts
@@ -244,24 +259,266 @@ sub printEntryForm {
     if ($optionlist_query gt "") {
       $optionlist_queries{$column_name}=$optionlist_query;
     }
+
+    # There appears to be a Netscape bug in that one cannot [BACK] to a form
+    # that had multipart encoding.  So, only include form type multipart if
+    # we really have an upload field.  IE users are fine either way.
     if ($input_type eq "file") {
       $file_upload_flag = "ENCTYPE=\"multipart/form-data\"";
     }
   }
 
 
-  # There appears to be a Netscape bug in that one cannot [BACK] to a form
-  # that had multipart encoding.  So, only include form type multipart if
-  # we really have an upload field.  IE users are fine either way.
+  # Begin read-only context display code.  Fetch auth level for the current user. 
+  # This may be for given table, or for a specific record within that table.  
+  my ( $projectAuthLevel, $tableAuthLevel ); # project and table permissions
+
+  # Fully qualified table name
+  my $dbtable = getDbTableName( $parameters{TABLE_NAME} );
+
+
+  # Need this in a few places, calculate here.  Use MOD object, which will call
+  # back to 'parent' module if need be.
+  my $parent_project_id;
+  if ( $parameters{$PK_COLUMN_NAME} ) {
+    $parent_project_id = $sbeamsMOD->getParentProject( 
+                                         table_name => $parameters{TABLE_NAME},
+                                         parameters_ref => \%parameters, 
+                                         action => 'UPDATE' # Pending changes to mod.tableinfo scripts ; ( 'SELECT'
+                                                     );
+  }
+
+  if ( defined $parent_project_id ) { # Project security has priority
+
+    # FIXME When a user has no project, they end up with project_id = 0!
+    $projectAuthLevel = $sbeams->getProjectPermission( 
+                                    pk_column_name => $PK_COLUMN_NAME,
+                                    pk_value => $parameters{$PK_COLUMN_NAME},
+                                    contact_id => $current_contact_id,
+                                    dbtable => $dbtable,
+                                    table_name => $parameters{TABLE_NAME},
+                                    project_id => $current_project_id,
+                                    parent_project_id => $parent_project_id,
+                                    work_group_id => $current_work_group_id,
+                                                   );
+
+    if ( $projectAuthLevel > DATA_READER ) {
+      # If project auth level prevents display of the page, see if there is another
+      # group the user could try in order to at least read the item
+      # Method in Permissions.pm.  Gets alt group based on current module
+      my $altWorkGroupRef = $sbeams->getProjectGroups(
+                                    contact_id => $current_contact_id,
+                                    privilege => DATA_READER,
+                                    parent_project_id => $parent_project_id,
+                                    work_group_id => $current_work_group_id,
+                                                      );
+
+      # SLAM!
+      if ( scalar( @$altWorkGroupRef ) ) {
+        # Set the work group to the new value...
+        foreach my $group ( @$altWorkGroupRef ) {
+          $sbeams->setCurrent_work_group( set_to_work_group => $group,
+                                          permanent => 1 );
+
+          # Update work group info
+          $current_work_group_id = $sbeams->getCurrent_work_group_id;
+
+          # Call back to projectPermission to get value with new group
+          $projectAuthLevel = $sbeams->getProjectPermission( 
+                                    pk_column_name => $PK_COLUMN_NAME,
+                                    pk_value => $parameters{$PK_COLUMN_NAME},
+                                    contact_id => $current_contact_id,
+                                    dbtable => $dbtable,
+                                    table_name => $parameters{TABLE_NAME},
+                                    project_id => $current_project_id,
+                                    parent_project_id => $parent_project_id,
+                                    work_group_id => $current_work_group_id,
+                                                   );
+
+          last if $projectAuthLevel < DATA_READER; # We have what we wanted
+        }
+      } 
+    }
+  } else { # Table (Mode 1) Permissions are king
+    # no project permissions, log warning
+    print STDERR "Warning: viewing data not covered by project permissions\n"; 
+
+    $tableAuthLevel = $sbeams->getTablePermission( 
+                                       work_group_id => $current_work_group_id,
+                                       pk_column_name => $PK_COLUMN_NAME,       
+                                       pk_value => $parameters{$PK_COLUMN_NAME},
+                                       contact_id => $current_contact_id,
+                                       project_id => $current_project_id,
+                                       dbtable => $dbtable,
+                                       table_name => $parameters{TABLE_NAME},
+                                       work_group_id => $current_work_group_id,
+                                                 );
+
+    if ( $tableAuthLevel >= DATA_READER ) {
+      my $altWorkGroupRef = $sbeams->getTableGroups(
+                                              contact_id => $current_contact_id,
+                                              privilege => DATA_READER,
+                                              table_name => $parameters{TABLE_NAME},
+                                              work_group_id => $current_work_group_id
+                                                    );
+
+      # SLAM! Try to change the group so that they can view record
+      if ( scalar( @$altWorkGroupRef ) ) {
+        # Set the work group to the new value...
+        foreach my $group ( @$altWorkGroupRef ) {
+          print STDERR "Trying $group\n";
+          $sbeams->setCurrent_work_group( set_to_work_group => $group,
+                                          permanent => 1 );
+
+          # Update work group info
+          $current_work_group_id = $sbeams->getCurrent_work_group_id;
+
+          # Call back to tablePermissions to get value with new group
+            $tableAuthLevel = $sbeams->getTablePermission( 
+                                        work_group_id => $current_work_group_id,
+                                        pk_column_name => $PK_COLUMN_NAME,       
+                                        pk_value => $parameters{$PK_COLUMN_NAME},
+                                        contact_id => $current_contact_id,
+                                        project_id => $current_project_id,
+                                        dbtable => $dbtable,
+                                        table_name => $parameters{TABLE_NAME},
+                                        work_group_id => $current_work_group_id,
+                                                         );
+
+          last if $tableAuthLevel < DATA_READER; # We have what we wanted
+        }
+      } 
+    }
+  }
+
+
+  # Make sure that the tableAuthLevel is copacetic 
+  $tableAuthLevel ||=  $sbeams->getTablePermission( 
+                                    contact_id => $current_contact_id,
+                                    project_id => $current_project_id,
+                                    table_name => $parameters{TABLE_NAME},
+                                    work_group_id => $current_work_group_id,
+                                    pk_column_name => $PK_COLUMN_NAME,       
+                                    pk_value => $parameters{$PK_COLUMN_NAME},
+                                    dbtable => $dbtable,
+                                  );
+
+
+  # This call prints out the userChooser widget, delayed until here so that any
+  # group changes will be manifested in the display.
   $sbeams->printUserContext();
   print qq!
       <P>
       <H2>Maintain $CATEGORY</H2>
       $LINESEPARATOR
       <FORM METHOD="post" NAME="MainForm" $file_upload_flag>
-      <TABLE>
+      <TABLE BORDER=0>
   !;
 
+
+  # Translate record and table permissions into sensible options in one place.
+  # Initialize view states hash with 0 (boolean false)
+  my %viewStates;  # Hash of permission states
+  my @errors;  # Array of error messages to display
+
+  for ( qw( no_access read_only insert_new insert_template add_mod_del) ) {
+    $viewStates{$_} = 0;
+  }
+
+  if ( $tableAuthLevel > DATA_READER ) {
+    # This overrides all else 
+    $viewStates{no_access} = 1;
+    push @errors, <<"    END";
+    You lack basic ($tableAuthLevel) authorization to access this resource.
+    END
+
+  } elsif ( $projectAuthLevel && $projectAuthLevel > DATA_READER ) {
+    # Denied based on project permissions.
+    $viewStates{no_access} = 1;
+    push @errors, <<"    END";
+    You lack project ($projectAuthLevel) authorization to access this resource.
+    END
+
+  } elsif ( ( $projectAuthLevel && $projectAuthLevel == DATA_ADMIN ) ||
+            ( $projectAuthLevel && $projectAuthLevel <= DATA_MODIFIER ) ||
+            ( !defined $projectAuthLevel && $tableAuthLevel <= DATA_MODIFIER ) 
+          ) { 
+    # User can add/modify/delete data
+    $viewStates{add_mod_del} = 1;
+
+  } elsif ( !defined $parameters{$PK_COLUMN_NAME} 
+             && $tableAuthLevel <= DATA_WRITER ) { 
+    # Form with insert
+    $viewStates{insert_new} = 1;
+
+  } elsif ( $second_pass_insert && $tableAuthLevel <= DATA_WRITER  ) {
+    # Form with insert, template values filled in
+    $viewStates{insert_template} = 1;
+
+  } elsif ( $tableAuthLevel <= DATA_WRITER ) {
+    # read only mode with link to second-pass INSERT
+    $viewStates{read_insert} = 1;
+
+  } elsif ( ( $projectAuthLevel && $projectAuthLevel == DATA_READER ) ||
+            ( $tableAuthLevel == DATA_READER  )    ) {
+    # We can only read
+    $viewStates{read_only} = 1;
+
+  } else {
+    # If you're not part of the solution, you are part of the problem!
+    $viewStates{no_access} = 1;
+    push @errors, <<"    END_ERR";
+    Unknown permissions mode, unable to proceed.  Please<BR>
+    contact Eric Deutsch or submit a bug report to the sbeams bug database<BR>
+    you feel that this denial was in error.<BR><BR>
+    END_ERR
+
+  }
+
+  #### FIXME debug block ####
+  use constant DEBUG => 0;
+
+  my $rec = ( defined $projectAuthLevel ) ? $projectAuthLevel : 'undefined';
+  my $pk = ( defined $parameters{$PK_COLUMN_NAME} ) ? $parameters{$PK_COLUMN_NAME} : 'undefined';
+
+  print STDERR <<"  END_ERR" if DEBUG;
+  Current Group: $current_work_group_id
+  Table: $tableAuthLevel
+  Project: $rec
+  PK: $pk
+  END_ERR
+  if ( DEBUG ) {
+    for( keys( %viewStates ) ){ print STDERR "$_ => $viewStates{$_}\n"; }
+  }
+  #### END debug block ####
+
+  # End view-only mode permissions calculation.
+
+  # If resource is denied, reject access here.
+  if ( $viewStates{no_access} ) { 
+
+    # Print page with error message
+    unshift @errors,  <<"    END_ERR";
+    You lack permission to view the requested resource.  Please<BR>
+    contact Eric Deutsch or submit a bug report to the sbeams bug database<BR>
+    you feel that this denial was in error.<BR><BR>
+    END_ERR
+
+    # Add fields group/project choosers need
+    print qq!
+    <INPUT TYPE="hidden" NAME="set_current_work_group" VALUE="">
+    <INPUT TYPE="hidden" NAME="set_current_project_id" VALUE="">
+    <INPUT TYPE=hidden NAME=TABLE_NAME VALUE=$TABLE_NAME>
+    </TR></TABLE></FORM>
+    !;
+    print qq!
+    <INPUT TYPE=hidden NAME=$PK_COLUMN_NAME VALUE=$parameters{$PK_COLUMN_NAME}>
+    ! if $parameters{$PK_COLUMN_NAME};
+
+    $sbeams->displayPermissionToPageDenied( \@errors, 1 );
+    return;
+  }
+ 
 
   # ---------------------------
   # Build option lists for each optionlist query provided for this table
@@ -359,9 +616,10 @@ sub printEntryForm {
         }
 
       }
-
   }
 
+  # Add CSS and javascript for popup column_text info (if configured).
+  print getPopupDHTML();
 
   #### Now loop through again and write the HTML
   foreach $row (@columns_data) {
@@ -371,6 +629,12 @@ sub printEntryForm {
         $is_data_column,$is_display_column,$column_text,
         $optionlist_query,$onChange,$fk_table,$fk_column_name) = @row;
 
+    # FIXME 'static conditional' for image link column text
+    # Should/could be replaced by a user-configuration option
+    use constant LINKHELP => 1; 
+    if ( LINKHELP ) {
+    $column_text = linkToColumnText( $column_text, $column_name, $TABLE_NAME );
+    }
 
     #### If there is a foreign_key table defined, create some HTML
     #### to provide a link to it
@@ -388,6 +652,59 @@ sub printEntryForm {
     }
 
 
+    # Begin display block for read-only data.  Render as a simple HTML <TABLE>
+    # instead of as a <FORM>
+    if ( $viewStates{read_insert} || $viewStates{read_only} ) {
+
+      # Value of parameter
+      my $text = '';
+      # Different input_types
+      if ( $input_type =~ /optionlist/ ) {
+        my $query = $optionlist_query;
+       
+        # Use parameter set contact if available, else current
+        my $contact_id = ( $parameters{contact_id} ) ? $parameters{contact_id} 
+                                           : $sbeams->getCurrent_contact_id();
+
+        $query =~ s/\"/\\\"/g;
+        $query = eval "\"$query\"";
+
+        if ( !$query ) { # Can't translate without query
+          print STDERR <<"          END_ERR";
+          Error translating query: $@
+          Pre_interplolation => $optionlist_query
+          END_ERR
+        } else {
+
+          $text = $sbeams->translateOptionValue( $query, $parameters{$column_name} );
+        }
+      } elsif ($input_type eq "file") {
+        $text = linkFile( $text ); # No op stub for now...
+        # Calculate size, link to file, etc.
+      } elsif ($input_type eq "password") {
+        # display hash marks 
+      } else {
+        # Can read but not modify the record, and cannot write the table
+        # Handle text fields
+        # 'block' long strings into 80-char chunks
+        $text = $parameters{$column_name};
+        $text = wrapText( $text ) if length($text) > 60;
+        $text = '&nbsp;' if !defined $text || $text eq '';
+      
+        $text .= $jump_to_list_source if ($input_type eq "optionlist");
+      }
+
+      # <TD BGCOLOR="E0E0E0">$column_text</TD>
+      print <<"      END_PRINT";
+      <TR>
+        <TD VALIGN="top"><B>$column_title:</B></TD>
+        <TD>$text</TD>
+      <TR>
+      END_PRINT
+
+      next;
+    } # End view-only display block
+
     #### Set the JavaScript onChange string if supplied
     if ($onChange gt "") {
       $onChange = " onChange=\"$onChange\"";
@@ -396,9 +713,16 @@ sub printEntryForm {
 
     #### Write the parameter name, in red if required
     if ($is_required eq "N") {
-      print "<TR><TD><B>$column_title:</B></TD>\n";
+      print <<"      END"; 
+        <TR><TD><B>$column_title:</B></TD>
+            <TD BGCOLOR="E0E0E0">$column_text</TD>
+      END
+
     } else {
-      print "<TR><TD><B><font color=red>$column_title:</font></B></TD>\n";
+      print <<"      END"; 
+        <TR><TD><B><font color=red>$column_title:</font></B></TD>
+            <TD BGCOLOR="E0E0E0">$column_text</TD>
+      END
     }
 
 
@@ -474,8 +798,6 @@ sub printEntryForm {
 
     if ($input_type eq "textarea") {
       print qq~
-        <TD COLSPAN=2 BGCOLOR="E0E0E0">$column_text</TD></TR>
-        <TR><TD> </TD>
         <TD COLSPAN=2><TEXTAREA NAME="$column_name" rows=$input_length
           cols=80>$param</TEXTAREA></TD>
       ~;
@@ -545,12 +867,6 @@ sub printEntryForm {
       ~;
     }
 
-    unless ($mask_description) {
-      print qq~
-        <TD BGCOLOR="E0E0E0">$column_text</TD>
-      ~;
-    }
-
     print "</TR>\n";
 
 
@@ -560,21 +876,56 @@ sub printEntryForm {
   #### Allow some additional processing here based on current table
   postFormHook(parameters_ref=>\%parameters);
 
+  if ( $viewStates{read_insert} || $viewStates{read_only} ) {
 
+    my $status = getStatusForDisplay( $parameters{'record_status'} );
+    print <<"    END_PRINT";
+          <TR><TD><B>record_status:</B></TD>
+          <TD>$status</TD>
+          </TR>
+    END_PRINT
+  }
+  else {
+    my $record_status_options = 
+                 $sbeams->getRecordStatusOptions($parameters{"record_status"});
 
-  my $record_status_options =
-    $sbeams->getRecordStatusOptions($parameters{"record_status"});
+    print qq~
+          <TR><TD><B>record_status:</B></TD>
+          <TD COLSPAN=2><SELECT NAME="record_status">
+              $record_status_options
+              </SELECT></TD>
+          </TR><TR>
+    ~;
+  }
 
-  print qq~
-        <TR><TD><B>record_status:</B></TD>
-        <TD><SELECT NAME="record_status">
-            $record_status_options
-            </SELECT></TD>
-        </TR><TR>
-  ~;
+  # Display 'block' for various FORM buttons.  Options are more numerous now,
+  # Set things up in scalars rather than hard-coded HTML.
+  my $pad = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
 
+  my $update =<<"  END_UPDATE";
+  <INPUT TYPE=submit NAME=apply_action VALUE=UPDATE> this record with this new data<BR>
+  END_UPDATE
 
-  #### If a specific record was passed, display UPDATE options
+  my $insert =<<"  END_INSERT";
+  <INPUT TYPE=submit NAME=apply_action VALUE=INSERT> 
+  new record(s) with this information (uniqueness will be checked)<BR>
+  END_INSERT
+
+  my $alt_insert =<<"  END_INSERT";
+  <INPUT TYPE=hidden NAME=insert_with_template VALUE=1> 
+  <INPUT TYPE=submit NAME=alt_action VALUE=CREATE> 
+  new record with this information as a template<BR>
+  END_INSERT
+
+  my $refresh =<<"  END_REFRESH";
+  <INPUT TYPE=submit NAME=apply_action VALUE=REFRESH> this form<BR>
+  END_REFRESH
+
+  my $delete =<<"  END_DELETE";
+  <INPUT TYPE=submit NAME=apply_action VALUE=DELETE> this record<BR>
+  END_DELETE
+
+  #### If a specific record was passed, potentially display UPDATE/DELETE options
   if ($parameters{$PK_COLUMN_NAME} gt "") {
 
     if ($parameters{date_created}) {
@@ -596,12 +947,71 @@ sub printEntryForm {
       }
     }
 
+    my $hidden =<<"    END_HIDDEN";
+    <INPUT TYPE=hidden NAME=TABLE_NAME VALUE=$TABLE_NAME>
+    <INPUT TYPE=hidden NAME=$PK_COLUMN_NAME VALUE=$parameters{$PK_COLUMN_NAME}>
+    END_HIDDEN
 
-    print qq!
+  if ( $viewStates{add_mod_del} ) {
+
+      # Can read and write current record (and presumably current table).
+      # Whole ball of wax, UPDATE, DELETE, INSERT, REFRESH, HIDDEN
+      print <<"      END";
+      <TR><TD COLSPAN=3 BGCOLOR='#EEEEFF'>
+      $hidden
+      $pad
+      $update
+      $pad
+      $insert
+      $pad
+      $refresh
+      $pad
+      $delete
+      END
+    } elsif ( $viewStates{insert_template} ) {
+      print <<"      END";
+      <TR><TD COLSPAN=3 BGCOLOR='#EEEEFF'>
+      $hidden
+      $pad
+      $insert
+      $pad
+      END
+      # $refresh doesn't work so well here.
+      
+    } elsif ( $viewStates{read_insert} ) {
+
+      # Can only read current record but can write current table.
+      # Add INSERT, REFRESH, HIDDEN
+      print <<"      END";
+      <TR><TD COLSPAN=3 BGCOLOR='#EEEEFF'>
+      $hidden
+      $pad
+      $alt_insert
+      $pad
+      END
+
+    } elsif ( $viewStates{read_only} ) {
+
+      # Can only read current record and current table.
+      # No buttons to add.
+      print <<"      END";
+      <TR><TD COLSPAN=3 BGCOLOR='#EEEEFF'>
+      $hidden
+      END
+
+    } elsif ( $viewStates{no_access} ) {
+
+      # Caught above, shouldn't be able to get here...
+      die ( 'Unexpected permissions state, please report error' );
+
+    } else {
+
+      # Legacy 
+      print qq!
+       LEGACY
        <TR><TD COLSPAN=3 BGCOLOR="#EEEEFF">
        <INPUT TYPE="hidden" NAME="TABLE_NAME" VALUE="$TABLE_NAME">
-       <INPUT TYPE="hidden" NAME="$PK_COLUMN_NAME"
-         VALUE="$parameters{$PK_COLUMN_NAME}">
+       <INPUT TYPE="hidden" NAME="$PK_COLUMN_NAME" VALUE="$parameters{$PK_COLUMN_NAME}">
        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
        <INPUT TYPE="submit" NAME="apply_action" VALUE="UPDATE"> this record with this new data<BR>
        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -610,60 +1020,103 @@ sub printEntryForm {
        <INPUT TYPE="submit" NAME="apply_action" VALUE="REFRESH"> this form<BR>
        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
        <INPUT TYPE="submit" NAME="apply_action" VALUE="DELETE"> this record<BR>
-    !;
+       !;
+    }
 
 
   #### Otherwise, just allow INSERT or REFRESH
+  # FIXME, bolster logic in this section, oy!
   } else {
-    print qq!
+    my $hidden =<<"    END_HIDDEN";
+    <INPUT TYPE=hidden NAME=TABLE_NAME VALUE=$TABLE_NAME>
+    END_HIDDEN
+
+    if ( $viewStates{read_only} || $viewStates{read_insert} ) {
+
+    # Can only read current record and current table.
+    # No buttons to add.
+    print <<"    END";
+    <TR><TD COLSPAN=3 BGCOLOR='#EEEEFF'>
+    $hidden
+    $pad
+    END
+    }
+
+    elsif ( $viewStates{insert_new} || 
+            $viewStates{insert_template} || 
+            $viewStates{add_mod_del} ) {
+
+    # Can read and write current record and current table.
+    # Whole ball of wax, INSERT, REFRESH, HIDDEN
+    print <<"    END";
+    <TR><TD COLSPAN=3 BGCOLOR='#EEEEFF'>
+    $hidden
+    $pad
+    $insert
+    $pad
+    $refresh
+    END
+    }
+    else { # Legacy 
+      print qq!
+      LEGACY?
        <TR><TD COLSPAN=3 BGCOLOR="#EEEEFF">
        <INPUT TYPE="hidden" NAME="TABLE_NAME" VALUE="$TABLE_NAME">
        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
        <INPUT TYPE="submit" NAME="apply_action" VALUE="INSERT"> new record(s) with this information<BR>
        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
        <INPUT TYPE="submit" NAME="apply_action" VALUE="REFRESH"> this form<BR>
-    !;
+      !;
+    }
   }
 
 
   #### Finish the form
-  print qq!
-       &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-       <INPUT TYPE="reset" VALUE="RESET"> fields to their original values
-       <INPUT TYPE="hidden" NAME="apply_action_hidden" VALUE="">
-       <INPUT TYPE="hidden" NAME="set_current_work_group" VALUE="">
-       <INPUT TYPE="hidden" NAME="set_current_project_id" VALUE="">
-  !;
+  if ( $viewStates{read_only} || $viewStates{read_insert} ) {
 
+    # We are viewing only
+    print qq!
+    <INPUT TYPE="hidden" NAME="set_current_work_group" VALUE="">
+    <INPUT TYPE="hidden" NAME="set_current_project_id" VALUE="">
+    </TR></TABLE></FORM>
+    !
+  } else {
+    print qq!
+    $pad
+    <INPUT TYPE="reset" VALUE="RESET"> fields to their original values
+    <INPUT TYPE="hidden" NAME="apply_action_hidden" VALUE="">
+    <INPUT TYPE="hidden" NAME="set_current_work_group" VALUE="">
+    <INPUT TYPE="hidden" NAME="set_current_project_id" VALUE="">
+    <BR>
+    !;
 
-  #### Finish the form
-  my $sql = qq~
-    SELECT template_name,template_name
-      FROM $TB_FORM_TEMPLATE
-     WHERE contact_id = '$current_contact_id'
-       AND program_file_name = '$PROGRAM_FILE_NAME'
-       AND record_status != 'D'
-  ~;
+    # build template saving select list.
+    my $sql = qq~
+      SELECT template_name,template_name
+        FROM $TB_FORM_TEMPLATE
+       WHERE contact_id = '$current_contact_id'
+         AND program_file_name = '$PROGRAM_FILE_NAME'
+         AND record_status != 'D'
+    ~;
+    my $available_template_options = $sbeams->buildOptionList($sql,$parameters{selected_template});
 
-  my $available_template_options = $sbeams->buildOptionList($sql,$parameters{selected_template});
-  print qq!
-       <BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-       Store current state of fields as template: <INPUT TYPE="text" WIDTH=30 NAME="save_template_as_name" VALUE="$parameters{save_template_as_name}">
-       <INPUT TYPE="submit" NAME="apply_action" VALUE="SAVE TEMPLATE">
-       <BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-       Existing templates: <SELECT NAME="selected_template"><OPTION VALUE=""></OPTION>$available_template_options</SELECT>
-       &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<INPUT TYPE="submit" NAME="apply_action" VALUE="DELETE THIS TEMPLATE">
-       <BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<INPUT TYPE="submit" NAME="apply_action" VALUE="SET FIELDS TO THIS TEMPLATE">
-       &nbsp;&nbsp;&nbsp;<INPUT TYPE="checkbox" NAME="template_overrides_existing_data"> including non-blank fields
-    </TR></TABLE>
-    </FORM>
-  !;
-
-
-
-
-
-
+    # Add template saving block
+    print qq!
+    $pad
+    Store current state of fields as template: 
+    <INPUT TYPE="text" WIDTH=30 NAME="save_template_as_name" VALUE="$parameters{save_template_as_name}">
+    <INPUT TYPE="submit" NAME="apply_action" VALUE="SAVE TEMPLATE">
+    <BR>$pad
+    Existing templates: 
+    <SELECT NAME="selected_template"><OPTION VALUE=""></OPTION>$available_template_options</SELECT>
+    <INPUT TYPE="submit" NAME="apply_action" VALUE="DELETE THIS TEMPLATE">
+    <BR>
+    $pad
+    <INPUT TYPE="submit" NAME="apply_action" VALUE="SET FIELDS TO THIS TEMPLATE">
+    &nbsp;&nbsp;&nbsp;<INPUT TYPE="checkbox" NAME="template_overrides_existing_data"> including non-blank fields
+    </TR></TABLE></FORM>
+    !;
+  }
 
   $sbeamsMOD->printPageFooter(close_tables=>'YES',display_footer=>'NO');
 
@@ -671,6 +1124,145 @@ sub printEntryForm {
 
 } # end printEntryForm
 
+
+###############################################################################
+# getDbTableName
+#
+# arg table_name
+# ret db_table_name
+#
+# Given a table_name, return name of db object for that item
+###############################################################################
+sub getDbTableName {
+  my $name = shift;
+
+  my $dbname = $sbeams->getDBHandle()->selectrow_array( <<"  END" );
+  SELECT db_table_name
+  FROM $TB_TABLE_PROPERTY
+  WHERE table_name = '$name'
+  END
+
+  print STDERR "Couldn't find table ( $name ) in table_property" if !$dbname;
+
+  return eval "\"$dbname\"";
+  } # End getDbTableName
+
+
+###############################################################################
+# wrapText 
+#
+# arg text string to wrap (required)
+# arg length at which to wrap (optional)
+# 
+# Breaks text into 80-character lines.  Currently assumes HTML display mode,
+# uses <BR> as line separator. 
+###############################################################################
+sub wrapText
+   {
+   my $text = shift;
+   return unless $text || $text == 0;
+   my $len = shift;
+   
+   use Text::Wrap qw( $columns wrap );
+                                                                                
+   # If len not passed, default to 80
+   $columns = ( $len ) ? $len : 80;
+
+   # wrap it up
+   my $wrapped = wrap( '', '', $text );
+
+   # enclose in PRE tags if in HTML mode
+   $wrapped = "<PRE>$wrapped</PRE>"; 
+
+   return $wrapped;
+   } # End wrapText
+
+###############################################################################
+# getStatusForDisplay
+#
+# arg one-character status code
+# 
+###############################################################################
+sub getStatusForDisplay {
+  my $statusCode = shift;
+  return '<I>&nbsp;n/a&nbsp;</I>' if !$statusCode;
+ 
+  if ( $statusCode eq 'N' ){ return 'Normal'; }
+  elsif ( $statusCode eq 'M' ){ return 'Modifiable'; }
+  elsif ( $statusCode eq 'L' ){ return 'Locked'; }
+  elsif ( $statusCode eq 'D' ){ return 'Deleted'; }
+  else { return 'Unknown'; }
+  
+} # End getStatusForDisplay
+
+
+###############################################################################
+# linkToColumnText: Creates link to popup window with column info text inside
+#
+# arg column text for display in popup window
+# arg column name
+# arg table name
+# 
+###############################################################################
+sub linkToColumnText {
+  my $text = shift;
+  my $col = shift;
+  my $tab = shift;
+  my $url = "'$HTML_BASE_DIR/cgi/help_popup.cgi?column_name=$col&table_name=$tab'";
+  my $link =<<"  END_LINK";
+  <SPAN title="$text" class="popup">
+  <IMG SRC=$HTML_BASE_DIR/images/greyqmark.gif BORDER=0 ONCLICK="popitup($url);"></SPAN>
+  END_LINK
+  return $link;
+} # End linkToColumnText
+
+###############################################################################
+# linkFile: Creates a link to the file on the filesystem.
+#
+# arg file_name
+# 
+###############################################################################
+sub linkFile {
+  my $text = shift;
+  return $text;      
+} # End linkFile
+
+
+###############################################################################
+# getPopupDHTML: returns CSS and javascript for popups
+#
+# returns CSS/javascript in a scalar
+# 
+###############################################################################
+sub getPopupDHTML {
+
+  # add CSS class for popup menu
+  my $dhtml =<<"  END_CLASS";
+  <STYLE>
+  .popup
+  {
+  COLOR: #9F141A;
+  CURSOR: help;
+  TEXT-DECORATION: none
+  }
+  </STYLE>
+  END_CLASS
+
+  # add javascript function for popup details
+  $dhtml .=<<"  END_JS";
+  <SCRIPT LANGUAGE="JavaScript" TYPE="text/javascript">
+  <!--
+  function popitup(url)
+  {
+    newwindow=window.open( url ,'name','height=200,width=150,dependent=yes,screenX=5000,screenY=50,scrollbars=1');
+    if (window.focus) {newwindow.focus()}
+    return false;
+  }
+  // -->
+  </SCRIPT>
+  END_JS
+  return $dhtml;
+  } # end getPopupDHTML
 
 
 ###############################################################################
@@ -810,11 +1402,11 @@ sub processEntryForm {
     my $n_params_found = $sbeams->parse_input_parameters(
       q=>$q,parameters_ref=>\%parameters,
       columns_ref=>\@columns,input_types_ref=>\%input_types);
+
     #foreach my $key (keys %parameters)
     #  {
     #  print "$key == $parameters{$key}<br>";
     #  }
-
     my $apply_action  = $parameters{apply_action};
 
 
@@ -831,6 +1423,7 @@ sub processEntryForm {
     #### This whole system is messy and ugly.  Needs better implementation!!!!
     my @required_columns = 
       $sbeamsMOD->returnTableInfo($TABLE_NAME,"required_columns");
+
     my @data_columns = 
       $sbeamsMOD->returnTableInfo($TABLE_NAME,"data_columns");
     my %input_types = 
@@ -1263,6 +1856,9 @@ sub checkForPreexistingRecord {
     }
     $error_message .= "<B>$element</B> = '$unique_values{$element}'<BR>\n";
   }
+
+  # ADD FIX?  Check for preexistence doesn't take into account deleted records.
+  # $sql_query .= " AND record_status != 'D' ";
 
   my @rows = $sbeams->selectOneColumn($sql_query);
 
@@ -2148,4 +2744,3 @@ sub getTemplateParameters {
 ###############################################################################
 ###############################################################################
 1;
-
