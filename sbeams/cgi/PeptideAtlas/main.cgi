@@ -98,42 +98,26 @@ sub showMainPage {
     #Preferred way to add tabs.  label is required, helptext optional
     $tabmenu->addTab( label => 'Browse Peptides', 
                       helptext => 'Multi-constraint browsing of PeptideAtlas',
-                      url => "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptides" );
+                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides" );
 
     $tabmenu->addTab( label => 'Get Peptide', 
                       helptext => 'Look-up info on a peptide by sequence or name',
-                      url => "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptide" 
+                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide" 
                       );
 
     $tabmenu->addTab( label => 'Browse Proteins',
                       helptext => 'Not implemented yet',
-                      url => "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/main.cgi"
+                      URL => "$CGI_BASE_DIR/PeptideAtlas/main.cgi"
                       );
 
     $tabmenu->addTab( label => 'Get Protein',
                       helptext => 'Not implemented yet',
-                      url => "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/main.cgi"
+                      URL => "$CGI_BASE_DIR/PeptideAtlas/main.cgi"
                       );
 
 #   my $content;# = '&nbsp;';
 
     $tabmenu->addHRule();
-
-
-    if ( $tabmenu->getActiveTabName() eq 'Browse Peptides' ){
-
-        ## want to pipe results from call to GetPeptides into $content here...
-        ## $content = $sbeams->getCgiPage(GetPeptides);
-        
-    } elsif ( $tabmenu->getActiveTabName() eq 'Get Peptide' ) {
-
-    } elsif ( $tabmenu->getActiveTabName() eq 'Browse Proteins' ) {
-
-    } elsif ( $tabmenu->getActiveTabName() eq 'Get Protein' ) {
-
-    }
-
-#   $tabmenu->addContent( $content );
 
     print "$tabmenu";
 
