@@ -9,7 +9,7 @@ PS_biosequence_set	7	set_version	Set Version	varchar	50	0	N		N			Y	text	40		Y	Y	
 PS_biosequence_set	8	polymer_type_id	Polymer Type	int	4	0	N		N	PS_polymer_type	polymer_type_id	Y	optionlist			Y	Y	N	Polymer type of the biosequence in this set	"SELECT polymer_type_id, polymer_type_name FROM $TBPS_POLYMER_TYPE ORDER BY polymer_type_name"	
 PS_biosequence_set	9	upload_file	Upload file	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
 PS_biosequence_set	10	set_path	Set Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	File path of this BioSequence database		
-PR_biosequence_set	11	source_file_date	Source File Date	datetime	8	0	Y		N			N	text	40		N	N	N	Date of the FASTA file at last update		
+PS_biosequence_set	11	source_file_date	Source File Date	datetime	8	0	Y		N			N	text	40		N	N	N	Date of the FASTA file at last update		
 PS_biosequence_set	12	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
 PS_biosequence_set	13	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 PS_biosequence_set	14	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
@@ -66,6 +66,7 @@ PS_biosequence_property_set	12	start_in_chromosome	Start Position in Chromosome	
 PS_biosequence_property_set	13	end_in_chromosome	End Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	End position of the biosequence in the chromosome		
 PS_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	"Strand (+,-) of the biosequence in the chromosome"		
 PS_biosequence_property_set	15	isoelectric_point	Isoelectric Point	real	4	0	Y		N			N	text	10		Y	Y	N	Isoelectric Point (pI) of the protein		
+PS_biosequence_property_set	16	fav_codon_frequency	Favorite Codon Frequency	real	4	0	Y		N			N	text	10		Y	Y	N	Favorite Codon Frequency		
 PS_domain_match	1	domain_match_id	Domain Match ID	int	4	0	N		Y							N	N				pkDEFAULT
 PS_domain_match	2	biosequence_id	BioSequence	int	4	0	N		N	PS_biosequence	biosequence_id					N	N	N	BioSequence to which this Domain Match belongs		
 PS_domain_match	3	domain_match_index	Domain Match Index	int	4	0	Y		N			Y	text	20		Y	Y	N	Consecutive number index used for some domains		
