@@ -329,6 +329,7 @@ sub updatePeptideSummary {
             FROM $TBAPD_PEPTIDE
            WHERE peptide_summary_id = '$peptide_summary_id'
   ~;
+  print "$sql\n\n" if ($VERBOSE);
   my ($count) = $sbeams->selectOneColumn($sql);
   if ($count) {
     if ($delete_existing) {
@@ -341,6 +342,7 @@ sub updatePeptideSummary {
         DELETE FROM $TBAPD_PEPTIDE
          WHERE peptide_summary_id = '$peptide_summary_id'
       ~;
+      print "$sql\n\n" if ($VERBOSE);
       $sbeams->executeSQL($sql);
     } elsif (!($update_existing)) {
       die("There are already peptide records for this " .
@@ -391,14 +393,16 @@ print "experiment_list = ",$experiment_list,"\n";
 	  LEFT JOIN proteomics.dbo.annotation_label AL ON ( SHA.annotation_label_id = AL.annotation_label_id )
 	 WHERE 1 = 1
 	   AND SB.search_batch_id IN ( $experiment_list )
-	   AND ( ( SH.probability >= '$minimum_probability'
-	           AND ( SHA.annotation_label_id IN ( 1 ) OR SHA.annotation_label_id IS NULL ) )
-                 OR SHA.annotation_label_id IN ( 1 )
-               )
+	   AND SH.probability >= '$minimum_probability'
+------ The following conditionals cause tempdb to fill.  hmmm FIXME.
+--	   AND ( ( SH.probability >= '$minimum_probability'
+--	           AND ( SHA.annotation_label_id IN ( 1 ) OR SHA.annotation_label_id IS NULL ) )
+--                 OR SHA.annotation_label_id IN ( 1 )
+--               )
 	 ORDER BY peptide,peptide_string,assumed_charge,S.file_root,experiment_tag,set_tag,SH.cross_corr_rank,SH.hit_index
   ~;
 
-  #print "$sql\n\n" if ($VERBOSE);
+  print "$sql\n\n" if ($VERBOSE);
   my @rows = $sbeams->selectSeveralColumns($sql);
 
 
@@ -712,32 +716,47 @@ sub calculateMoment {
 
 
   #### Set up some things to calculate
-  my $min = $array_ref->[0];
-  my $max = $array_ref->[0];
-  my $mean = 0.0;
-  my $n_elements = scalar(@{$array_ref});
+  my $min = undef;
+  my $max = undef;
+  my $mean = undef;
+
+  #### Set the number of elements
+  my $n_elements = 0;
 
 
   #### Loop through the array, obtaining stats
   foreach $element (@{$array_ref}) {
-    $min = $element if ($element < $min);
-    $max = $element if ($element > $max);
-    $mean += $element;
+
+    #### If this element is actaully defined
+    if (defined($element)) {
+      $min = $element if (!defined($min) || $element < $min);
+      $max = $element if (!defined($max) || $element > $max);
+      $mean += $element;
+      $n_elements++;
+    }
   }
 
 
-  #### Finish a few calculations
-  $mean = $mean / $n_elements;
+  #### Calculate the mean
+  if (defined($mean)) {
+    my $divisor = $n_elements;
+    $divisor = 1 if ($divisor < 1);
+    $mean = $mean / $divisor;
+  }
 
 
   #### Calculate the standard deviation now that we know the mean
-  my $stdev = 0;
-  foreach $element (@{$array_ref}) {
-    $stdev += ($element-$mean) * ($element-$mean);
+  my $stdev = undef;
+  if (defined($mean) && $n_elements > 1) {
+    foreach $element (@{$array_ref}) {
+      if (defined($element)) {
+        $stdev += ($element-$mean) * ($element-$mean);
+      }
+    }
+    my $divisor = $n_elements - 1;
+    $divisor = 1 if ($divisor < 1);
+    $stdev = sqrt($stdev / $divisor);
   }
-  my $divisor = $n_elements - 1;
-  $divisor = 1 if ($divisor < 1);
-  $stdev = sqrt($stdev / $divisor);
 
 
   #### Create a final hash of results and return a reference to it
