@@ -195,7 +195,7 @@ sub getAbDetails {
         WHERE ab.antibody_id = $params{antibody_id}
         AND su1.structural_unit_id = su2.structural_unit_id
         AND su3.structural_unit_id = su2.structural_unit_id
-        AND aue3 .expression_level_id = 1
+        AND aue3.expression_level_id = 1
         AND aue2.expression_level_id = 2
         AND aue1.expression_level_id = 3
         GROUP BY su1.structural_unit_name, su1.sort_order,
@@ -314,12 +314,29 @@ sub getAbDetails {
   # Fetch data
   my @assays = $sbeams->selectSeveralColumns( $assaySQL );
 
+  # Also want to fetch characterizations for the various channesl.  Doing
+  # as a separate query because the groupings interfere with the above query
+  my $charSQL =<<"  END";
+  SELECT assay_channel_id, structural_unit_id, 
+         COUNT(*) as Characterizations 
+  FROM $TBIS_ASSAY_UNIT_EXPRESSION 
+  GROUP BY assay_channel_id, structural_unit_id
+  END
+
+  my %characterizations;
+  my @rows = $sbeams->selectSeveralColumns( $charSQL );
+  foreach my $row ( @rows ) {
+    $characterizations{$row->[0]}++;
+  }
+
+  
   # Create display table, add headings 
   my $assaytable = SBEAMS::Connection::DataTable->new( BORDER => 0, 
                                                        CELLPADDING => 2, 
                                                        CELLSPACING => 2 );
   $assaytable->addRow( ["<B>Assay Name $addAssay $pad</B>", 
                         "<B>Channel Name $pad</B>", 
+                        "<B>Characterizations $pad</B>", 
                         "<B>Available Images $pad </B>" ] );
 
 #$assaytable->addRow( ["<B>Assay $plus &nbsp;</B>", '<B>Channel &nbsp;</B>',
@@ -328,6 +345,9 @@ sub getAbDetails {
 
   my %assayhash;     # counts total number of assays, and channels within them
   my %achash;        # Hash to store info for an assay channel
+
+  # The number of adjacent image links to display per line.
+  my $img_per_line = 7;
 
   foreach my $row ( @assays ) {
     my $img = '';
@@ -344,6 +364,9 @@ sub getAbDetails {
                              assay_name => $row->[0],
                              image      => $img };
     } else { # Seen it, append the image and move on.
+      $achash{$row->[4]}->{imagecnt}++;
+      $achash{$row->[4]}->{image} .= '&nbsp;<BR>' 
+                          unless $achash{$row->[4]}->{imagecnt} % $img_per_line;
       $achash{$row->[4]}->{image} .= $img;
     }
   }
@@ -375,19 +398,30 @@ sub getAbDetails {
     # Set up add image link
     ( my $add_im = $addImg ) =~ s/LINKNAME/$plus/g;
     $add_im =~ s/AC_ID/$id/g;
+
+    
+    # Merge characterization info
+    my $chars = $characterizations{$id} || '&nbsp;';
     
     $assaytable->addRow( [ $alink,
-                           $chan . '&nbsp;' . $add_ch,
-                           $achash{$id}->{image} . '&nbsp;' . $add_im
+                           $chan . '&nbsp;',
+                           $add_ch,
+                           "$chars $pad",
+                           $achash{$id}->{image} . '&nbsp;',
+                           $add_im
                          ] 
                        );
                            
   }
-  $assaytable->setRowAttr( ROWS => [1], COLS => [1..3], ALIGN => 'CENTER', NOWRAP => 1 );
-  $assaytable->setColAttr( COLS => [3], ROWS => [2..$assaytable->getRowNum()],
+  $assaytable->setRowAttr( ROWS => [1], COLS => [1..4], ALIGN => 'CENTER', NOWRAP => 1 );
+  $assaytable->setColAttr( COLS => [2, 4], ROWS => [1], COLSPAN => 2 );
+
+  $assaytable->setColAttr( COLS => [1..6], ROWS => [2..$assaytable->getRowNum()],
                            NOWRAP => 1, ALIGN => 'RIGHT' );
-  $assaytable->setColAttr( COLS => [1,2], ROWS => [2..$assaytable->getRowNum()],
-                           NOWRAP => 1, ALIGN => 'LEFT' );
+  $assaytable->alternateColors( PERIOD => 1, FIRSTROW => 2, 
+                                BGCOLOR => '#EEEEEE' );
+#  $assaytable->setColAttr( COLS => [1], ROWS => [2..$assaytable->getRowNum()],
+#                           NOWRAP => 1, ALIGN => 'LEFT' );
   
 # End Assay Block;
 
