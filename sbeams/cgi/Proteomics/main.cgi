@@ -81,14 +81,21 @@ sub showMainPage {
 	capabilities available thus far, or choose from this more
 	descriptive list:
 	<UL>
+	<LI><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=project">Manage Project information</a> (Click to add a new project under which to register experiments)
+	<LI><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=proteomics_experiment">Manage Experiment information</a> (Click to add information about a proteomics experiment; required before data load)
+	<P>
+	<LI><a href="$CGI_BASE_DIR/Proteomics/SummarizeExperiment.cgi">Summarize fractions/spectra over one or more experiments</a>
+	<LI><a href="$CGI_BASE_DIR/Proteomics/SummarizePeptides">Summarize proteins/peptides over one or more experiments</a>
+	<LI><a href="$CGI_BASE_DIR/Proteomics/CompareExperiments">Compare number of proteins/peptides found over two or more experiments</a>
+	<LI><a href="$CGI_BASE_DIR/Proteomics/GetSearchHits">Browse possible peptide identifications from sequest searches</a>
+	<LI><a href="$CGI_BASE_DIR/Proteomics/BrowseBioSequence.cgi">Browse biosequences in the database</a>
+	<P>
 	<LI><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=biosequence_set">Manage BioSequence Database information</a>
-	<LI><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=project">Manage Project information</a>
-	<LI><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=proteomics_experiment">Manage Experiment information</a>
+	<LI><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=dbxref">Manage Database Cross-reference information</a>
+	<LI><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=PR_gradient_program">Manage Gradient Program information</a>
 	<P>
-	<LI><a href="$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi">Simple Interface to browsing the results of SEQUEST searches</a>
-	<P>
-	<LI><a href="$CGI_BASE_DIR/Proteomics/BrowseAnnotatedPeptides.cgi">Simple Interface to browsing Annotated Peptides</a>
-	<P>
+	<LI><a href="http://db.systemsbiology.net:8080/proteomicsToolkit/">Access Proteomics Toolkit Interface</a>
+	<LI><a href="$HTML_BASE_DIR/doc/$SBEAMS_SUBDIR/$SBEAMS_PART.gif">View GIF of the database schema</a>
 	<LI><a href="$CGI_BASE_DIR/Proteomics/flycat.cgi">Go to the prototype FLYCAT interface</a>
 	</UL>
 
