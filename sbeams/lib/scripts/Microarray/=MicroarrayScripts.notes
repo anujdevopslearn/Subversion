@@ -93,3 +93,14 @@ update  ./load_affy_R_CHP_files.pl --run_mode update --redo_R yes or no --files 
 
 Typical usage.  Looks for any arrays that do not have an R_CHP file, Runs R and then parses the output and puts into SBEAMS 
 ./load_affy_R_CHP_files.pl --run_mode add_new 
+
+ ################################
+    ## Pre_process_affy_info_file.pl ##
+#####################################################################
+Purpose: Parse a tab delimited file holding information about CEL files and samples to be loaded in to SBEAMS.  
+Script will make a INFO file for each CEL file listed in the master info file. The reason to make INFO files is the 
+script load_affy_array_files.pl will load a CEL if it also has a *.INFO file or XML.  
+This will most likely be the method of choice to upload external data sets.
+
+
+Typical usage.  ./Pre_process_affy_info_file.pl --run_mode make_new --info_file give/path_to_file/info.txt
