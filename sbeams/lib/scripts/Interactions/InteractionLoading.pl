@@ -391,9 +391,9 @@ sub processFile
 			$INFOPROTEIN1{$count-2}->{bioentityCanName1} = $locusIDProteinHash{	$locusID};
 			if ( ! $INFOPROTEIN1{$count-2}->{bioentityCanName1})
 			{
+				$INFOPROTEIN1{$count-2}->{bioentityCanName1} = $locusID;
 				Error (\@infoArray, "$INFOPROTEIN1{$count-2}->{bioentityCanName1}: could not find PROTEIN for this locsuID");
-				delete $INFOPROTEIN1{$count-2};
-				next;
+				
 			}
 		}
 		
@@ -404,9 +404,10 @@ sub processFile
 			$INFOPROTEIN1{$count-2}->{bioentityCanName1} = $locusIDmRNAHash{$locusID};
 			if ( ! $INFOPROTEIN1{$count-2}->{bioentityCanName1})
 			{
+				$INFOPROTEIN1{$count-2}->{bioentityCanName1} = $locusID;
 				Error (\@infoArray,"$INFOPROTEIN1{$count-2}->{bioentityCanName1}: could not find RNA for this locsuID");
-				delete $INFOPROTEIN1{$count-2};
-				next;
+			#	delete $INFOPROTEIN1{$count-2};
+			#	next;
 			}
 			
 		}
@@ -486,9 +487,10 @@ sub processFile
 			$INFOPROTEIN2{$count-2}->{bioentityCanName2} = $locusIDProteinHash{$locusID};
 			if ( ! $INFOPROTEIN2{$count-2}->{bioentityCanName2})
 			{
+				$INFOPROTEIN2{$count-2}->{bioentityCanName2} = $locusID;
 				Error  (\@infoArray,"$INFOPROTEIN2{$count-2}->{bioentityCanName2}: could not find PROTEIN for this locsuID");
-				delete $INFOPROTEIN2{$count-2};
-				next;
+				#delete $INFOPROTEIN2{$count-2};
+				#next;
 			}
 			
 		
@@ -501,9 +503,10 @@ sub processFile
 			$INFOPROTEIN2{$count-2}->{bioentityCanName2} = $locusIDmRNAHash{$locusID};
 			if ( ! $INFOPROTEIN2{$count-2}->{bioentityCanName2})
 			{
+				$INFOPROTEIN2{$count-2}->{bioentityCanName2} = $locusID;
 				Error  (\@infoArray,"$INFOPROTEIN2{$count-2}->{bioentityCanName2}: could not find  RNA for this locsuID");
-				delete $INFOPROTEIN2{$count-2};
-				next;
+				#delete $INFOPROTEIN2{$count-2};
+				#next;
 			}
 		}
 		
