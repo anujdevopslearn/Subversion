@@ -584,6 +584,45 @@ sub printDebuggingInfo {
 
 
 ###############################################################################
+# Report Exception
+###############################################################################
+sub reportException {
+  my $self = shift;
+  my $METHOD = 'reportException';
+  my %args = @_;
+
+  #### Process the arguments list
+  my $state = $args{'state'} || 'INTERNAL ERROR';
+  my $type = $args{'type'} || '';
+  my $message = $args{'message'} || 'NO MESSAGE';
+  my $HTML_message = $args{'HTML_message'} || '';
+
+
+  #### If invocation_mode is HTTP, then printout an HTML message
+  if ($self->invocation_mode() eq 'http') {
+    print "<H4>$state: ";
+    print "$type<BR>\n" if ($type);
+    if ($HTML_message) {
+      print "$HTML_message</H4>\n";
+    } else {
+      print "$message</H4>\n";
+    }
+    return;
+  }
+
+
+  if (1 == 1) {
+    print "$state: ";
+    print "$type\n" if ($type);
+    print "$message\n";
+    return;
+  }
+
+} # end reportException
+
+
+
+###############################################################################
 
 1;
 
