@@ -339,8 +339,12 @@ sub postUpdateOrInsertHook {
         # Since the pi changed, we need to make sure the current PI doesn't
         # have a stray upp record. 
         if ( defined $$upp_new_pi{id} ) {
+
+          # Well, we should delete the old record, but it turns out that 
+          # this causes other problems.  Leaving stub in here in case we
+          # ever get a chance to do the right thing.
           # 'delete' old record
-          if ( $$upp_new_pi{status} ne 'D' ) {
+          if ( 0 && $$upp_new_pi{status} ne 'D' ) {
           $sbeams->updateOrInsertRow( %updOrInsInfo,
                                       update => 1,
                                       PK_value => $$upp_new_pi{id},
