@@ -48,6 +48,7 @@ use vars qw(@ISA @EXPORT
     $TBMA_EXTERNAL_REFERENCE_TYPE
     $TBMA_POLYMER_TYPE
     $TBMA_ARRAY_ELEMENT
+    $TBMA_CHANNEL
 
 );
 
@@ -90,6 +91,7 @@ require Exporter;
     $TBMA_EXTERNAL_REFERENCE_TYPE
     $TBMA_POLYMER_TYPE
     $TBMA_ARRAY_ELEMENT
+    $TBMA_CHANNEL
 
 );
 
@@ -129,3 +131,4 @@ $TBMA_EXTERNAL_REFERENCE = 'external_reference';
 $TBMA_EXTERNAL_REFERENCE_TYPE = 'external_reference_type';
 $TBMA_POLYMER_TYPE      = 'polymer_type';
 $TBMA_ARRAY_ELEMENT     = 'array_element';
+$TBMA_CHANNEL = 'channel';
