@@ -621,12 +621,24 @@ sub loadProteomicsExperiment {
       if ($tmp =~ /^$experiment_tag.+$/) {
         $tmp =~ s/$experiment_tag//;
       }
+
+      #### Caculate a fraction number
       my $fraction_number;
-      if ($tmp =~ /^.*?(\d+).*?$/) {
+
+      #### If it looks like a 96 well plate ID, turn into number
+      if ($tmp =~ /^([A-H])(\d{1,2})$/ && $2 <= 12) {
+        my $letter = $1;
+        my $number = $2;
+        $letter =~ tr/A-H/1-8/;
+        $fraction_number = ($number - 1) * 8 + $letter;
+
+      #### Else just pull out a number
+      } elsif ($tmp =~ /^.*?(\d+).*?$/) {
         $fraction_number = $1;
         # Guard against numbers too big
         $fraction_number = substr($fraction_number,0,8);
       }
+
 
       my %rowdata;
       $rowdata{experiment_id} = $experiment_id;
