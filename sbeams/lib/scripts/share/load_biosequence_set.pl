@@ -25,6 +25,7 @@ use vars qw ($sbeams $sbeamsMOD $q
 	     $TESTONLY
              $current_contact_id $current_username
 	     $fav_codon_frequency $n_transmembrane_regions
+	     $pfam_search_results
             );
 
 
@@ -71,6 +72,8 @@ Options:
                        number of transmembrane regions values
   --calc_n_transmembrane_regions
                        Set flag to add in n_transmembrane_regions calculations
+  --pfam_search_results_summary_file   Full path name of a file from which
+                       to load the pfam search results
 
  e.g.:  $PROG_NAME --check_status
 
@@ -79,9 +82,11 @@ EOU
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
-  "delete_existing","update_existing","skip_sequence",
-  "set_tag:s","file_prefix:s","check_status","fav_codon_frequency_file:s",
-  "calc_n_transmembrane_regions","n_transmembrane_regions_file:s")) {
+    "delete_existing","update_existing","skip_sequence",
+    "set_tag:s","file_prefix:s","check_status","fav_codon_frequency_file:s",
+    "calc_n_transmembrane_regions","n_transmembrane_regions_file:s",
+    "pfam_search_results_summary_file:s",
+  )) {
   print "$USAGE";
   exit;
 }
@@ -132,6 +137,10 @@ sub main {
     $work_group = "Microarray_admin";
     $DATABASE = $DBPREFIX{$module};
   }
+  if ($module eq 'ProteinStructure') {
+    $work_group = "ProteinStructure_admin";
+    $DATABASE = $DBPREFIX{$module};
+  }
 
 
   #### Do the SBEAMS authentication and exit if a username is not returned
@@ -170,6 +179,8 @@ sub handleRequest {
   my $fav_codon_frequency_file = $OPTIONS{"fav_codon_frequency_file"} || '';
   my $n_transmembrane_regions_file =
     $OPTIONS{"n_transmembrane_regions_file"} || '';
+  my $pfam_search_results_summary_file =
+    $OPTIONS{"pfam_search_results_summary_file"} || '';
 
   #### Get the file_prefix if it was specified, and otherwise guess
   unless ($file_prefix) {
@@ -230,6 +241,16 @@ sub handleRequest {
     readFavCodonFrequencyFile(
       source_file => $fav_codon_frequency_file,
       fav_codon_frequency => $fav_codon_frequency);
+  }
+
+
+  #### If a pfam_search_results_summary_file was specified,
+  #### load it for later processing
+  if ($pfam_search_results_summary_file) {
+    $pfam_search_results->{zzzHASH} = -1;
+    readPFAMSearchSummaryFile(
+      source_file => $pfam_search_results_summary_file,
+      pfam_search_results => $pfam_search_results);
   }
 
 
@@ -444,7 +465,7 @@ sub loadBiosequenceSet {
       $rowdata{biosequence_desc} = $2 || '';
       $rowdata{biosequence_set_id} = $biosequence_set_id;
       $rowdata{biosequence_seq} = $sequence unless ($skip_sequence);
-      $rowdata{organism_id} = $organism_id unless ($DATABASE eq 'proteomics.dbo.');
+      $rowdata{organism_id} = $organism_id if ($DATABASE eq 'sbeams.dbo.');
 
       #### Do special parsing depending on which genome set is being loaded
       $result = specialParsing(biosequence_set_name=>$set_name,
@@ -629,6 +650,7 @@ sub loadBiosequence {
     $rowdata_ref->{biosequence_name} = substr($rowdata_ref->{biosequence_name},
       0,255);
   }
+  my $biosequence_name = $rowdata_ref->{biosequence_name};
 
   #### If the biosequence_desc bloats beyond 1024, truncate it
   if (length($rowdata_ref->{biosequence_desc}) > 1024) {
@@ -639,11 +661,11 @@ sub loadBiosequence {
   }
 
 
-  #### Only return a PK if we need to since can be expensive
+  #### Only return a PK if we might need to INSERT or UPDATE additional
+  #### records in other tables with this biosequence_id. because getting
+  #### the PK_value can be expensive
   my $return_PK = 0;
-  if (defined($n_transmembrane_regions) &&
-      defined($n_transmembrane_regions->
-	      {$rowdata_ref->{biosequence_name}}->{topology})) {
+  if (defined($n_transmembrane_regions) || defined($pfam_search_results)) {
     $return_PK = 1;
   }
 
@@ -660,9 +682,18 @@ sub loadBiosequence {
 					  return_PK=>$return_PK,
 					  );
 
+  #### See if we have TMR data to add
+  my $have_tmr_data = 0;
+  if (defined($n_transmembrane_regions) && $result) {
+    if (defined($n_transmembrane_regions->
+	      {$rowdata_ref->{biosequence_name}}->{topology})) {
+      $have_tmr_data = 1;
+    }
+  }
 
-  #### Since we have it, INSERT or UPDATE extra biosequence properties
-  if ($result && $return_PK) {
+
+  #### If we have TMR data, INSERT or UPDATE extra biosequence properties
+  if ($have_tmr_data) {
 
     #### See if there's already a record there
     my $sql =
@@ -718,6 +749,72 @@ sub loadBiosequence {
   }
 
 
+
+  #### See if we have PFAM data to add
+  my $have_pfam_data = 0;
+  if (defined($pfam_search_results) && $result) {
+    if (defined($pfam_search_results->
+	      {data}->{$biosequence_name})) {
+      $have_pfam_data = 1;
+    }
+  }
+
+
+  #### If we have PFAM data, INSERT or UPDATE domain_match
+  if ($have_pfam_data) {
+
+    #### See if there's already a record there
+    my $sql =
+      "SELECT domain_match_id
+         FROM ${DATABASE}domain_match
+        WHERE biosequence_id = '$result'
+      ";
+    my @domain_match_ids = $sbeams->selectOneColumn($sql);
+
+    #### Determine INSERT or UPDATE based on the result
+    if (scalar(@domain_match_ids) > 0) {
+      #### Delete them!  Should just delete PFAM ones!
+    }
+
+
+    #### Loop over all the entries for this biosequence
+    foreach my $match (@{$pfam_search_results->{data}->{$biosequence_name}}) {
+
+      #### Fill the row data hash with information we have
+      my %rowdata;
+      $rowdata{biosequence_id} = $result;
+
+      $rowdata{bit_score} = $match->{bit_score}
+        if (defined($match->{bit_score}));
+
+      $rowdata{e_value} = $match->{e_value}
+        if (defined($match->{e_value}));
+
+      $rowdata{match_name} = $match->{match_name}
+        if (defined($match->{match_name}));
+
+      $rowdata{query_start} = $match->{query_start}
+        if (defined($match->{query_start}));
+
+      $rowdata{query_end} = $match->{query_end}
+        if (defined($match->{query_end}));
+
+
+      #### Insert or update the row
+      my $result = $sbeams->insert_update_row(
+  	insert=>1,
+  	table_name=>"${DATABASE}domain_match",
+  	rowdata_ref=>\%rowdata,
+  	PK=>"domain_match_id",
+  	verbose=>$VERBOSE,
+  	testonly=>$TESTONLY,
+      );
+
+    }
+
+  }
+
+
   return;
 }
 
@@ -757,7 +854,7 @@ sub specialParsing {
      $rowdata_ref->{dbxref_id} = '6';
   }
 
-  if ($rowdata_ref->{biosequence_name} =~ /^GP.{0,1}\:(.+)_\d$/ ) {
+  if ($rowdata_ref->{biosequence_name} =~ /^GP.{0,1}\:(.+)_\d+$/ ) {
      $rowdata_ref->{biosequence_gene_name} = $1;
      $rowdata_ref->{biosequence_accession} = $1;
      $rowdata_ref->{dbxref_id} = '8';
@@ -841,6 +938,12 @@ sub specialParsing {
        $rowdata_ref->{biosequence_accession} = undef;
        $rowdata_ref->{dbxref_id} = undef;
     }
+  }
+
+
+  #### Special conversion rules for Drosophila genome R3 genome, e.g.:
+  if ($biosequence_set_name eq "Drosophila genome_gadfly Nucleotide Database R3") {
+    $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
   }
 
 
@@ -978,25 +1081,25 @@ sub specialParsing {
   }
 
 
-  #### If there's n_transmembrane_regions lookup information, set it
-  if (defined($n_transmembrane_regions)) {
-    if ($n_transmembrane_regions->{$rowdata_ref->{biosequence_name}}) {
-      $rowdata_ref->{n_transmembrane_regions} =
-        $n_transmembrane_regions->{$rowdata_ref->{biosequence_name}}->
-          {n_tmm};
-    }
-  }
-
-
-  #### If the calc_n_transmembrane_regions flag is set, do the calculation
-  if (defined($OPTIONS{"calc_n_transmembrane_regions"}) &&
-      defined($rowdata_ref->{biosequence_seq}) &&
-      $rowdata_ref->{biosequence_seq} ) {
-    $rowdata_ref->{n_transmembrane_regions} = 
-      SBEAMS::Proteomics::Utilities::calcNTransmembraneRegions(
-        peptide=>$rowdata_ref->{biosequence_seq},
-        calc_method=>'NewMethod');
-  }
+#  #### If there's n_transmembrane_regions lookup information, set it
+#  if (defined($n_transmembrane_regions)) {
+#    if ($n_transmembrane_regions->{$rowdata_ref->{biosequence_name}}) {
+#      $rowdata_ref->{n_transmembrane_regions} =
+#	 $n_transmembrane_regions->{$rowdata_ref->{biosequence_name}}->
+#	   {n_tmm};
+#    }
+#  }
+#
+#
+#  #### If the calc_n_transmembrane_regions flag is set, do the calculation
+#  if (defined($OPTIONS{"calc_n_transmembrane_regions"}) &&
+#      defined($rowdata_ref->{biosequence_seq}) &&
+#      $rowdata_ref->{biosequence_seq} ) {
+#    $rowdata_ref->{n_transmembrane_regions} = 
+#      SBEAMS::Proteomics::Utilities::calcNTransmembraneRegions(
+#	 peptide=>$rowdata_ref->{biosequence_seq},
+#	 calc_method=>'NewMethod');
+#  }
 
 
 }
@@ -1116,7 +1219,7 @@ sub readNTransmembraneRegionsFile {
   }
 
 
-  open(CODONFILE,"$source_file") ||
+  open(TMRFILE,"$source_file") ||
     die("Unable to n_transmembrane_regions file '$source_file'");
 
 
@@ -1131,14 +1234,18 @@ sub readNTransmembraneRegionsFile {
   #### Skip the header
   print "Reading n_transmembrane_regions file...\n";
   print "  Parsing header...\n";
-  while ($line = <CODONFILE>) {
+  while ($line = <TMRFILE>) {
     last if ($line =~ /^\#\# name/);
   }
-
+  unless (defined($line)) {
+    print "ERROR Reading TM file: No end of header!";
+    return;
+  }
 
   #### Read in all the data putting it into the hash
   print "  Parsing data...\n";
-  while ($line = <CODONFILE>) {
+  while ($line = <TMRFILE>) {
+    next if ($line =~ /^\#/);
     $line =~ s/[\r\n]//g;
     @columns = split("\t",$line);
     $biosequence_name = $columns[0];
@@ -1153,14 +1260,107 @@ sub readNTransmembraneRegionsFile {
       $properties{topology} = $columns[5];
     }
 
+    #### If we're also currently loading a PFAM search, then try to do
+    #### a rosetta name lookup
+    if (defined($pfam_search_results) &&
+        defined($pfam_search_results->{lookup}->{$biosequence_name})) {
+      $biosequence_name = $pfam_search_results->{lookup}->{$biosequence_name};
+    }
+
+    print "  $biosequence_name has $properties{n_tmm} TMRs\n";
     $n_transmembrane_regions->{$biosequence_name} = \%properties;
   }
 
-  close(CODONFILE);
+  close(TMRFILE);
 
   $n_transmembrane_regions->{return_status} = 'SUCCESS';
   return;
 
 }
+
+
+
+###############################################################################
+# readPFAMSearchSummaryFile
+###############################################################################
+sub readPFAMSearchSummaryFile {
+  my %args = @_;
+  my $SUB_NAME = "readPFAMSearchSummaryFile";
+
+
+  #### Decode the argument list
+  my $source_file = $args{'source_file'}
+   || die "ERROR[$SUB_NAME]: source_file not passed";
+  # Don't bother getting the output data struct since it's a global
+
+
+  unless ( -f $source_file ) {
+    $pfam_search_results->{return_status} = 'FAIL';
+    die("Unable to find PFAM Search Results file '$source_file'");
+  }
+
+
+  open(PFAMFILE,"$source_file") ||
+    die("Unable to open PFAM Search Results file '$source_file'");
+
+
+  #### Define some variables
+  my $line;
+  my $tmp;
+  my ($rosetta_name,$biosequence_name);
+  my @columns;
+  my @words;
+
+
+  #### Skip the header
+  print "Reading pfam_search_results file...\n";
+  print "  No header...\n";
+
+  #### Read in all the data putting it into the hash
+  print "  Parsing data...\n";
+  while ($line = <PFAMFILE>) {
+    next if ($line =~ /^\#/);
+    $line =~ s/[\r\n]//g;
+    @columns = split(/\s+/,$line);
+    shift(@columns);
+    $rosetta_name = $columns[0];
+    $biosequence_name = $columns[1];
+    my %properties;
+    if ($columns[2]) {
+      $properties{bit_score} = $columns[2];
+    }
+    if ($columns[3]) {
+      $properties{e_value} = $columns[3];
+    }
+    if ($columns[4]) {
+      $properties{match_name} = $columns[4];
+    }
+    if ($columns[5]) {
+      $properties{query_start} = $columns[5];
+    }
+    if ($columns[6]) {
+      $properties{query_end} = $columns[6];
+    }
+
+    #print "  $biosequence_name has match $properties{match_name}\n";
+
+    #### If this is a new biosequence, create an empty array for it
+    unless (defined($pfam_search_results->{data}->{$biosequence_name})) {
+      my @tmp = ();
+      $pfam_search_results->{data}->{$biosequence_name} = \@tmp;
+    }
+
+    #### Store this domain in the data hash and the lookup
+    push(@{$pfam_search_results->{data}->{$biosequence_name}},\%properties);
+    $pfam_search_results->{lookup}->{$rosetta_name} = $biosequence_name;
+  }
+
+  close(PFAMFILE);
+
+  $pfam_search_results->{return_status} = 'SUCCESS';
+  return;
+
+} # end readPFAMSearchSummaryFile
+
 
 
