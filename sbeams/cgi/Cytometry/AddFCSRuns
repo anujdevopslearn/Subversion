@@ -192,12 +192,6 @@ sub printEntryForm {
   $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
 
 
-  #### Finish the upper part of the page and go begin the full-width
-  #### data portion of the page
-  $sbeams->display_page_footer(close_tables=>'YES',
-    separator_bar=>'YES',display_footer=>'YES');
-
-
 } # end printEntryForm
 
 
@@ -247,10 +241,10 @@ sub processEntryForm {
   #### Obtain information about the current user
   $current_username = $sbeams->getCurrent_username;
   $current_contact_id = $sbeams->getCurrent_contact_id;
-  $current_work_group_id = $sbeams->getCurrent_work_group_id;
-  $current_work_group_name = $sbeams->getCurrent_work_group_name;
-  $current_project_id = $sbeams->getCurrent_project_id;
-  $current_project_name = $sbeams->getCurrent_project_name;
+#  $current_work_group_id = $sbeams->getCurrent_work_group_id;
+#  $current_work_group_name = $sbeams->getCurrent_work_group_name;
+#  $current_project_id = $sbeams->getCurrent_project_id;
+#  $current_project_name = $sbeams->getCurrent_project_name;
 
 
   #### Check for missing required information
@@ -312,7 +306,7 @@ sub processEntryForm {
 
         #### If successful, copy the file to a safe, predictable place
         if ($result) {
-          my $project_name = $sbeams->getProjectName($parameters{project_id});
+          my $project_name = getProjectName($parameters{project_id});
           my $cmd = "/usr/bin/cp -p $parameters{filepath}/$element ".
             "/net/cytometry/archive/$current_username/".
             "$project_name/";
@@ -327,13 +321,29 @@ sub processEntryForm {
   }
 
 
-  #### Finish the upper part of the page and go begin the full-width
-  #### data portion of the page
-  $sbeams->display_page_footer(close_tables=>'YES',
-    separator_bar=>'YES',display_footer=>'YES');
-
-
 } # end processEntryForm
+
+
+
+###############################################################################
+# getProjectName
+###############################################################################
+sub getProjectName {
+  my $project_id = shift || die("ERROR: No project_id specified");
+
+  #### Get the name of this project_id
+  my $sql = qq"
+    SELECT name
+      FROM $TB_PROJECT
+     WHERE project_id = '$project_id'
+       AND record_status != 'D'
+  ";
+
+  my ($project_name) = $sbeams->selectOneColumn($sql);
+
+  return $project_name;
+
+}
 
 
 
@@ -349,31 +359,29 @@ sub getFCSRun {
   my $filename = $args{'filename'};
   my $project_id = $args{'project_id'};
 
-  my %parameters = %{$parameters_ref};
-
   #### Find the fcs_run_id for this project and file
   $sql = qq"
     SELECT fcs_run_id
-      FROM fcs_run
+      FROM $TBCY_FCS_RUN
      WHERE project_id = '$project_id'
        AND filename = '$filename'
   ";
 
-  my @rcs_run_ids = $sbeams->selectOneColumn($sql);
-  my $n_rcs_run_ids = scalar(@fcs_runs_ids);
+  my @fcs_run_ids = $sbeams->selectOneColumn($sql);
+  my $n_fcs_run_ids = scalar(@fcs_run_ids);
 
   #### If this one is not yet in database
-  if ($n_rcs_run_ids == 0) {
+  if ($n_fcs_run_ids == 0) {
     return 0;
   }
 
   #### If more than one row comes back, this is very bad
-  if ($n_rcs_run_ids > 1) {
-    die("EROR: Expected 1 row but got $n_rcs_runs_ids from\n$sql\n");
+  if ($n_fcs_run_ids > 1) {
+    die("EROR: Expected 1 row but got $n_fcs_run_ids from\n$sql\n");
   }
 
   #### Return PK
-  return $rcs_run_ids[0];
+  return $fcs_run_ids[0];
 
 } # end getFCSRun
 
@@ -402,6 +410,7 @@ sub addFCSRun {
 
   my %rowdata = (
     project_id => $parameters{project_id},
+    organism_id => $parameters{organism_id},
     project_designator => $header->{PROJ},
     sample_name => $header->{CELLS},
     filename => $filename,
@@ -432,7 +441,7 @@ sub addFCSRun {
       key_order => $counter,
       parameter_key => $key,
       parameter_value => $value,
-    }
+    );
 
     my $fcs_run_id = $sbeams->updateOrInsertRow(
       insert=>1,
@@ -465,9 +474,10 @@ sub readFCSFileHeader {
 
 
   #### Read header from file
-  %header;
-  $header{PROJ} = 'blah';
+  my %header;
+  $header{PROJ} = 'test PROJ';
   $header{TOT} = '10000';
+  $header{CELLS} = 'test CELLS';
   ### Finish this!
 
 
@@ -491,5 +501,17 @@ sub getDirListing {
 
   return sort(@files);
 }
+
+
+
+###############################################################################
+# evalSQL: Callback for translating global table variables to names
+###############################################################################
+sub evalSQL {
+  my $sql = shift;
+
+  return eval "\"$sql\"";
+
+} # end evalSQL
 
 
