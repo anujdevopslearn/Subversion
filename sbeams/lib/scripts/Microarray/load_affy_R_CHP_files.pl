@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/tools/bin/perl -w
 
 ###############################################################################
 # Program     : load_affy_R_CHP_files.pl
