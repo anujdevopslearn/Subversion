@@ -100,7 +100,7 @@ PR_biosequence	3	biosequence_name	BioSequence Name	varchar	255	0	N		N			Y	text	5
 PR_biosequence	4	biosequence_gene_name	BioSequence Gene Name	varchar	255	0	Y		N			Y	text	20		Y	Y	N	Gene name of this BioSequence if applicable.  Most common gene name if applicable		
 PR_biosequence	5	dbxref_id	Database Cross Reference	int	4	0	Y		N	PR_dbxref	dbxref_id					Y	Y	N	Database cross reference for which the accession number applies		pkDEFAULT
 PR_biosequence	6	biosequence_accession	BioSequence Accession	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Accession number for this BioSequence in some external database designated above		
-PR_biosequence	7	biosequence_desc	Biosequence Description	text	16	0	N		N			Y	textarea	5		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)		
+PR_biosequence	7	biosequence_desc	Biosequence Description	varchar	1024	0	N		N			Y	textarea	5		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)		
 PR_biosequence	8	biosequence_seq	Sequence	text	16	0	Y		N			N	file	40		Y	Y	N	Actual sequence of the BioSequence if known		
 PR_biosequence_property_set	1	biosequence_property_set_id	BioSequence Property Set ID	int	4	0	N		Y							N	N				pkDEFAULT
 PR_biosequence_property_set	2	biosequence_id	BioSequence ID	int	4	0	N		N	PR_biosequence	biosequence_id					N	N	Y	Biosequence to which this Biosequence property set belongs		pkDEFAULT
