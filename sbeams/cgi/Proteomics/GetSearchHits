@@ -507,7 +507,7 @@ sub handle_request {
 
     #["start_scan","MSS.start_scan","Scan Num"],
     #["scan_time","STR(MSS.scan_time/60.0,7,2)","Scan Time"],
-    ["retention_time","STR((MSS.scan_time-F.column_delay)/60.0,7,2)","Est RT (min)"],
+    ["retention_time","STR((MSS.scan_time-F.column_delay)/60.0,7,2)","EstRT (min)"],
     ["calc_buffer_precent","STR(MSS.calc_buffer_percent,7,1)","% ACN"],
 
     ["best_hit_flag","best_hit_flag","bh"],
@@ -702,6 +702,7 @@ sub handle_request {
         url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols,
         max_widths=>\%max_widths,resultset_ref=>$resultset_ref,
         column_titles_ref=>\@column_titles,
+        base_url=>$base_url,query_parameters_ref=>\%parameters,
     );
 
 
