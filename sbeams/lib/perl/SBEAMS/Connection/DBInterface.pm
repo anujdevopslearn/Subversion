@@ -531,6 +531,78 @@ sub getLastInsertedPK {
 
 
 ###############################################################################
+# parseConstraint2SQL
+#
+# Given human-entered constraint, convert it to a SQL "AND" clause which some
+# suitable checking to make sure the user isn't trying to enter something
+# bogus
+###############################################################################
+sub parseConstraint2SQL {
+  my $self = shift || croak("parameter self not passed");
+  my %args = @_;
+
+  #### Decode the argument list
+  my $constraint_column = $args{'constraint_column'}
+   || die "ERROR: constraint_column not passed";
+  my $constraint_type = $args{'constraint_type'}
+   || die "ERROR: constraint_type not passed";
+  my $constraint_name = $args{'constraint_name'}
+   || die "ERROR: constraint_name not passed";
+  my $constraint_value = $args{'constraint_value'};
+  my $verbose = $args{'verbose'} || 0;
+
+
+  #### Strip leading and trailing whitespace
+  return unless (defined($constraint_value));
+  $constraint_value =~ s/^\s+//;
+  $constraint_value =~ s/\s+$//;
+
+
+  #### If no value was provided, simply return an empty string
+  #### Don't return is the value is "0" because that may be a value
+  return if ($constraint_value eq "");
+
+
+  #### Parse type flexible_int
+  if ($constraint_type eq "flexible_int") {
+    print "Parsing flexible_int $constraint_name<BR>\n" if ($verbose);
+    if ($constraint_value =~ /^[\d]+$/) {
+      return "   AND $constraint_column = $constraint_value";
+    } elsif ($constraint_value =~ /^between\s+[\d]+\s+and\s+[\d]+$/i) {
+      return "   AND $constraint_column $constraint_value";
+    } elsif ($constraint_value =~ /^([\d]+)\s*\+\-\s*([\d]+)$/i) {
+      my $lower = $1 - $2;
+      my $upper = $1 + $2;
+      return "   AND $constraint_column BETWEEN $lower AND $upper";
+    } elsif ($constraint_value =~ /^[><=][=]*\s*[\d]+$/) {
+      return "   AND $constraint_column $constraint_value";
+    } else {
+      print "<H4>Cannot parse $constraint_name constraint ".
+        "'$constraint_value'!  Check syntax.</H4>\n\n";
+      return -1;
+    }
+  }
+
+
+  #### Parse type int_list: a list of integers like "+1, 2,-3"
+  if ($constraint_type eq "int_list") {
+    print "Parsing int_list $constraint_name<BR>\n" if ($verbose);
+    if ($constraint_value =~ /^[\d,\s]+$/ ) {
+      return "   AND $constraint_column IN ( $constraint_value )";
+    } else {
+      print "<H4>Cannot parse $constraint_name constraint ".
+        "'$constraint_value'!  Check syntax.</H4>\n\n";
+      return -1;
+    }
+  }
+
+
+  die "ERROR: unrecognized constraint_type!";
+
+}
+
+
+###############################################################################
 # build Option List
 #
 # Given an SQL query which returns exactly two columns (option value and
