@@ -217,7 +217,13 @@ sub printEntryForm {
         my $tmp = $optionlist_queries{$element};
         #### If there are any double quotes, need to escape them first
         $tmp =~ s/\"/\\\"/g;
+        my $nonNULL = 0;
+        $nonNULL = 1 if ($tmp);
         $optionlist_queries{$element} = eval "\"$tmp\"";
+        if ($nonNULL && !($optionlist_queries{$element})) {
+          print "WARNING: eval failed for =$tmp=. ".
+            "Please report this problem<BR>\n";
+	}
       }
 
       #### Set the MULTIOPTIONLIST flag if this is a multi-select list
@@ -232,9 +238,16 @@ sub printEntryForm {
         $optionlists{$element} = $templist{$parameters{$element}};
       } else {
         #print "$optionlist_queries{$element}<BR><BR>\n";
-        $optionlists{$element}=$sbeams->buildOptionList(
-           $optionlist_queries{$element},$parameters{$element},
-           $method_options);
+        if ($optionlist_queries{$element}) {
+          $optionlists{$element}=$sbeams->buildOptionList(
+             $optionlist_queries{$element},$parameters{$element},
+             $method_options);
+        } else {
+          print "WARNING: empty SQL statement for option list. ".
+            "Please report this problem<BR>\n";
+          $optionlist_queries{$element} = "";
+        }
+
       }
 
   }
