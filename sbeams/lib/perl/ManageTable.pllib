@@ -59,10 +59,13 @@ sub printOptions {
 
 
   #### Close the upper portion of the page and get ready for data table
-  $sbeamsMOD->printPageFooter(close_table=>"YES",display_footer=>"NO");
+  #$sbeamsMOD->printPageFooter(close_table=>"YES",display_footer=>"NO");
 
   #### Display the data table
   showTable(with_options=>'YES',parameters_ref=>\%parameters);
+
+  #### Close the upper portion of the page and get ready for data table
+  $sbeamsMOD->printPageFooter(close_table=>"YES",display_footer=>"NO");
 
 
 } # end printOptions
