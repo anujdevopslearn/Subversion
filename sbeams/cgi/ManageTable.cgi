@@ -240,3 +240,28 @@ sub preUpdateDataCheck {
 } # end preUpdateDataCheck
 
 
+###############################################################################
+# postUpdateOrInsertHook
+#
+# This is a hook to do some processing after the record has been updated
+# or inserted.
+###############################################################################
+sub postUpdateOrInsertHook {
+  my %args = @_;
+
+  my $query_parameters_ref = $args{'parameters_ref'};
+  my %parameters = %{$query_parameters_ref};
+  my $pk_value = $args{'pk_value'};
+
+
+  #### If table XXXX
+  if ($TABLE_NAME eq "XXXX") {
+    return "An error of some sort $parameters{something} invalid";
+  }
+
+
+  #### Otherwise, no special processing, so just return undef
+  return;
+
+} # end postUpdateOrInsertHook
+
