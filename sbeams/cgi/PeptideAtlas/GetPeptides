@@ -163,6 +163,11 @@ sub handle_request {
   my %input_types = 
     $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
 
+  ## print contents to browswer:
+  #foreach my $k ( %input_types ) {
+  #   print "key:$k  value:$input_types{$k} ||  \n";
+  #}
+
 
   #### Read the input parameters for each column
   my $n_params_found = $sbeams->parse_input_parameters(

@@ -138,7 +138,13 @@ sub handle_request {
   #### Process the arguments list
   my $ref_parameters = $args{'ref_parameters'}
     || die "ref_parameters not passed";
+
   my %parameters = %{$ref_parameters};
+
+  #foreach my $k (keys %parameters) {
+  #    print"key: $k  value: $parameters{$k} \n";
+  #}
+
 
   #### Define some generic varibles
   my ($i,$element,$key,$value,$line,$result,$sql);
@@ -152,14 +158,24 @@ sub handle_request {
   my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
   my $TABLE_NAME = $parameters{'QUERY_NAME'};
 
+
   #### Set some specific settings for this program
+  my $CATEGORY="Get Peptide";
   my $PROGRAM_FILE_NAME="GetPeptide";
   my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
 
 
   #### Get the columns and input types for this table/query
-  my @columns = ( 'select_atlas', 'select_peptide', 'search_key' );
-  my %input_types = ( 'optionlist','text' );
+  my @columns = ( 'search_scope','search_key' );
+# my %input_types = ( "atlas_build_id" => "multioptionlist",
+#                     "multioptionlist"  => "",
+#                     "text" => "",
+#                   );
+  my %input_types = ( "atlas_build_id" => "optionlist",
+                      "optionlist"  => "",
+                      "text" => "",
+                    );
+
 
   #### Read the input parameters for each column
   my $n_params_found = $sbeams->parse_input_parameters(
@@ -176,6 +192,7 @@ sub handle_request {
   }
 
 
+
   #### Set some reasonable defaults if no parameters supplied
   unless ($n_params_found) {
   }
@@ -184,133 +201,149 @@ sub handle_request {
   #### Apply any parameter adjustment logic
   #$parameters{display_options} = 'ShowSQL';
 
-  #########################################################################
-  ##########################   HTML CONTENT  ##############################
-
-  ## pull-down list of Atlas builds, default=current_human P > 0.9
-  
-  ## need atlases:
-##xxxxxx
-  my $sql = qq~
-    SELECT atlas_build_id,atlas_build_name
-    FROM $TBAT_ATLAS_BUILD
-    WHERE atlas_build_id IN ( $parameters{atlas_build_id} )
-    AND record_status != 'D'
-  ~;
-  my %atlas_options = $sbeams->selectTwoColumnHash($sql);
-
-
+  ## Display a pull-down list of Atlas builds, with a default of current_human P > 0.9
   if ($sbeams->output_mode() eq 'html') {
 
-    #### Build the Atlas option list
-    my $atlas_optionlist = '';
-    foreach my $key ( %atlas_options ) {
-      my $atlas_flag = '';
-      $atlas_flag = 'SELECTED' if ($parameters{select_atlas} eq $key);
-      $atlas_optionlist .= "<OPTION VALUE=\"$key\" $atlas_flag>$atlas_options{$key}</OPTION>\n";
-    };
 
-    #### Display a user-interaction input form
-    my @pep_options = ( 'peptide_accession', 
-                    'peptide_sequence'
-                  );
-    my %pep_options = ( 'peptide_accession' => 'Peptide Atlas Identifier',
-                    'peptide_sequence' => 'Peptide Sequence',
-		  );
-
-    #### Build the option list
-    my $pep_optionlist = '';
-    foreach my $key ( @pep_options ) {
-      my $pep_flag = '';
-      $pep_flag = 'SELECTED' if ($parameters{select_peptide} eq $key);
-      $pep_optionlist .= "<OPTION VALUE=\"$key\" $pep_flag>$pep_options{$key}</OPTION>\n";
-    };
-
-
-    ##print Atlas select-list, peptide-select list, and peptide textbox:
-    print qq~
-        <br><br>
-        <HR COLOR="#555555" size=5>
-        <br>
-        <table BGCOLOR=#D2D9D2>
-        <tr>
-            <td>
-            <nobr>
-            <FORM ACTION="$base_url" METHOD="POST">
-                <b>Atlas:</b>
-                <SELECT NAME="select_atlas">
-                    $atlas_optionlist
-                </SELECT> 
-
-                Search:
-                <SELECT NAME="select_peptide">
-                    $pep_optionlist
-                </SELECT> 
-                for:
-                <INPUT NAME="peptide_accession" TYPE="text" SIZE="35" VALUE="$parameters{peptide_accession}">
-                <INPUT NAME="peptide_sequence" TYPE="hidden" VALUE="$parameters{peptide_sequence}">
-                <INPUT TYPE="submit" NAME="action" VALUE="GO">
-            </FORM>
-            </nobr>
-            </td>
-        </tr>
-        </table>
-        <HR COLOR="#555555" size=5>
+    ## Get and store list of atlases:
+    my %atlas_option_hash;  #key = id, value = name
+    my @atlas_option_array;  #key = id, value = name
+    my $sql = qq~
+        SELECT atlas_build_id,atlas_build_name
+        FROM PeptideAtlas.dbo.atlas_build
     ~;
+
+    my @rows = $sbeams->selectSeveralColumns($sql) or
+        die "Cannot complete $sql ($!)";
+
+    my ($tmp_id, $tmp_name);
+
+    foreach my $row (@rows) {
+
+        ($tmp_id, $tmp_name) = @{$row};
+
+        $atlas_option_hash{$tmp_id} = $tmp_name;
+
+        push(@atlas_option_array, $tmp_id);
+        
+
+    }
+
+
+        #### Build the option list for atlases:
+        my $atlas_option_list = '';
+
+        foreach my $key ( @atlas_option_array ) {
+            my $flag = '';
+            $flag = 'SELECTED' if ($parameters{search_scope} eq $key);
+            $atlas_option_list .= "<OPTION VALUE=\"$key\" $flag>$atlas_option_hash{$key}</OPTION>\n";
+        };
+
+
+
+        #### Build search options for text box:
+        my @textbox_options = ( 'peptide_accession', 
+                             'peptide_sequence'
+                          );
+        my %textbox_options = ( 'peptide_accession' => 'Peptide Name',
+                             'peptide_sequence' => 'Peptide Sequence',
+                           );
+    
+        #### Build the text option list
+        my $textbox_option_list = '';
+        foreach my $key ( @textbox_options ) {
+          my $flag = '';
+          $flag = 'SELECTED' if ($parameters{search_scope} eq $key);
+          $textbox_option_list .= "<OPTION VALUE=\"$key\" $flag>$textbox_options{$key}</OPTION>\n";
+        };
+
+
+        ##      <tr><td><span class="sub_header">GET PEPTIDE SUMMARY</span></td></tr>
+        #   <tr>
+        #     <td height="1"><img src="$HTML_BASE_DIR/images/bg_Nav.gif" width="518" height="1" border="0"></td>
+        #   </tr>
+        print qq~
+
+            <tr>
+              <td height="5"><img src="$HTML_BASE_DIR/images/clear.gif" width="1" height="1" border="0"></td>
+            </tr>
+
+            <tr>
+              <td>
+                <FORM ACTION="$base_url" METHOD="POST">
+                  Atlas Build:
+                  <SELECT NAME="search_scope">
+                      $atlas_option_list
+                  </SELECT> 
+              </td>
+              <td>
+                  Search
+                  <SELECT NAME="search_scope">
+                      $textbox_option_list
+                  </SELECT> for
+                  <INPUT NAME="search_key" TYPE="text" SIZE="15" VALUE="$parameters{search_key}">
+                  <INPUT NAME="search_value" TYPE="hidden" VALUE="$parameters{search_value}">
+                  <INPUT TYPE="submit" NAME="action" VALUE="GO">
+    
+                </FORM>
+               </td>
+             </tr>
+        ~;
   }
+
+
+
 
 
   #### Finish the upper part of the page and go begin the full-width
   #### data portion of the page
-  $sbeams->display_page_footer(close_tables=>'YES',
-    separator_bar=>'YES',display_footer=>'NO')
-    unless ( $parameters{display_options} =~ /SequenceFormat/ &&
-      $apply_action =~ /HIDE/ );
+#  $sbeams->display_page_footer(close_tables=>'YES',
+#    separator_bar=>'YES',display_footer=>'NO')
+#    unless ( $parameters{display_options} =~ /SequenceFormat/ &&
+#      $apply_action =~ /HIDE/ );
 
 
 
   #########################################################################
   #### Process all the constraints
 
-  #### Build ATLAS_SET constraint
-  my $form_test = $sbeams->parseConstraint2SQL(
-    constraint_column=>"PA.atlas_build_id",
-    constraint_type=>"int_list",
-    constraint_name=>"Atlas Build Set",
-    constraint_value=>$parameters{atlas_build_id} );
-  return if ($form_test eq '-1');
+  #### If no atlas_build_id was selected, stop here
+  unless ($parameters{atlas_build_id}) {
+    $sbeams->reportException(
+      state => 'ERROR',
+      type => 'INSUFFICIENT CONSTRAINTS',
+      message => 'You must select at least one Atlas Build',
+    );
+    return;
+  }
 
- ### Build peptide_accession constraint
-  my $peptide_accession_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"PA.peptide_accession",
+
+  #### Build PEPTIDE_NAME constraint
+  my $peptide_name_clause = $sbeams->parseConstraint2SQL(
+#   constraint_column=>"P.peptide_name",
+    constraint_column=>"P.peptide_accession",
     constraint_type=>"plain_text",
-    constraint_name=>"Peptide Accession",
-    constraint_value=>$parameters{peptide_accession_constraint} );
-  return if ($peptide_accession_clause eq '-1');
+    constraint_name=>"Peptide Name",
+    constraint_value=>$parameters{peptide_name_constraint} );
+  return if ($peptide_name_clause eq '-1');
 
- ### Build peptide_sequence constraint
+  #### Build PEPTIDE_SEQUENCE constraint
   my $peptide_sequence_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"PA.peptide_sequence",
+    constraint_column=>"P.peptide_sequence",
     constraint_type=>"plain_text",
     constraint_name=>"Peptide Sequence",
     constraint_value=>$parameters{peptide_sequence_constraint} );
   return if ($peptide_sequence_clause eq '-1');
 
 
-  #########################################################################
-  #### Verify that the atlas build sets are permitted
-  ### xxxx this is for future implementation??  atlas_build does not currently have project_id
-  ##       can, however get project_id's from $TB_PROJECTor $TB_GROUP_PROJECT_PERMISSION
-  ##       see lib/perl/SBEAMS/Connection/Permissions.pm
-  if ($parameters{atlas_build_id}) {
+  #### Verify that the selected biosequence_sets are permitted
+  if ($parameters{biosequence_set_id}) {
     my $sql = qq~
-      SELECT atlas_build_id,project_id 
-	FROM $TBAT_ATLAS_BUILD
-       WHERE atlas_build_id IN ( $parameters{atlas_build_id} )
+      SELECT biosequence_set_id,project_id
+	FROM $TBAT_BIOSEQUENCE_SET
+       WHERE biosequence_set_id IN ( $parameters{biosequence_set_id} )
 	 AND record_status != 'D'
     ~;
-    my @rows = $sbeams->selectOneColumn($sql);
-
     my %project_ids = $sbeams->selectTwoColumnHash($sql);
     my @accessible_project_ids = $sbeams->getAccessibleProjects();
     my %accessible_project_ids;
@@ -318,24 +351,24 @@ sub handle_request {
       $accessible_project_ids{$id} = 1;
     }
 
-    my @input_ids = split(',',$parameters{atlas_build_id});
+    my @input_ids = split(',',$parameters{biosequence_set_id});
     my @verified_ids;
     foreach my $id ( @input_ids ) {
 
-      #### If the requested atlas_build_d doesn't exist
+      #### If the requested biosequence_set_id doesn't exist
       if (! defined($project_ids{$id})) {
 	$sbeams->reportException(
           state => 'ERROR',
           type => 'BAD CONSTRAINT',
-          message => "Non-existent atlas_build_id = $id specified",
+          message => "Non-existent biosequence_set_id = $id specified",
         );
 
-      #### If the project for this atlas_build is not accessible
+      #### If the project for this biosequence_set is not accessible
       } elsif (! defined($accessible_project_ids{$project_ids{$id}})) {
 	$sbeams->reportException(
           state => 'ERROR',
           type => 'PERMISSION DENIED',
-          message => "Your current privilege settings do not allow you to access atlas_build_id = $id.  See project owner to gain permission.",
+          message => "Your current privilege settings do not allow you to access biosequence_set_id = $id.  See project owner to gain permission.",
         );
 
       #### Else, let it through
@@ -346,19 +379,49 @@ sub handle_request {
     }
 
     #### Set the input constraint to only allow that which is valid
-    $parameters{atlas_build_id} = join(',',@verified_ids);
+    $parameters{biosequence_set_id} = join(',',@verified_ids);
 
   }
 
-  #### If no valid atlas_build_id was selected, stop here
-  unless ($parameters{atlas_build_id}) {
+  #### If no valid biosequence_set_id was selected, stop here
+  unless ($parameters{biosequence_set_id}) {
     $sbeams->reportException(
       state => 'ERROR',
       type => 'INSUFFICIENT CONSTRAINTS',
-      message => "You must select at least one valid Atlas Build",
+      message => "You must select at least one valid Biosequence Set",
     );
     return;
   }
+
+  #### Build BIOSEQUENCE_SET constraint
+  my $biosequence_set_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.biosequence_set_id",
+    constraint_type=>"int_list",
+    constraint_name=>"BioSequence Set",
+    constraint_value=>$parameters{biosequence_set_id} );
+  return if ($biosequence_set_clause eq '-1');
+
+
+  #### Build SEARCH SCOPE constraint
+  my $search_scope_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.search_scope",
+    constraint_type=>"plain_text",
+    constraint_name=>"Search Scope",
+    constraint_value=>$parameters{search_scope},
+  );
+  return if ($search_scope_clause eq '-1');
+
+
+  #### Build SEARCH KEY constraint
+  my $search_key_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.search_key",
+    constraint_type=>"plain_text",
+    constraint_name=>"Search Key",
+    constraint_value=>$parameters{search_key},
+  );
+  return if ($search_scope_clause eq '-1');
+
+
 
 
   #### Put full peptide display here or in a subroutine.

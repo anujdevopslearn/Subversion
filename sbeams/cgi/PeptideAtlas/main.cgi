@@ -85,7 +85,8 @@ sub showMainPage {
 
 	<UL>
 	<LI> <A Href="http://www.peptideatlas.org/">About PeptideAtlas</A>
-	<LI> <A Href="GetPeptide">Browse PeptideAtlas [in progress]</A>
+	<LI> <A Href="GetPeptides">Browse PeptideAtlas </A>
+	<LI> <A Href="GetPeptide">Browse Peptide View [in progress]</A>
 	</UL>
 
 	<BR>
