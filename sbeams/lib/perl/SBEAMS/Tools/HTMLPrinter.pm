@@ -97,6 +97,9 @@ sub printPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/main.cgi">$SBEAMS_PART Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
+	<tr><td>Manage&nbsp;Contacts:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=contact"<nobr>&nbsp;&nbsp;&nbsp;Contacts</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=organization"<nobr>&nbsp;&nbsp;&nbsp;Organizations</a></td></tr>
 	</table>
 	</td>
 
