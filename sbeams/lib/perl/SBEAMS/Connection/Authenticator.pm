@@ -533,6 +533,82 @@ sub getCurrent_project_id {
 
 
 ###############################################################################
+# Set the active project_id of the user currently logged in
+###############################################################################
+sub setCurrent_project_id {
+  my $self = shift;
+  my %args = @_;
+
+
+  #### Process the arguments list
+  my $set_to_project_id = $args{'set_to_project_id'} || "";
+
+
+  #### First see what the current project context is
+  $current_project_id = $self->getCurrent_project_id()
+    unless ($current_project_id > 0);
+
+
+  #### If the desired project_id is the current one, then just return it
+  return($current_project_id) if ($set_to_project_id == $current_project_id);
+
+
+  #### Define some generic varibles
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+  #### Get a list of project_ids that the user can access
+  if ($set_to_project_id > 0) {
+    $sql = qq~
+	SELECT P.project_id,P.name
+	  FROM $TB_PROJECT P
+	  JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
+	  LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
+	       ON ( P.project_id = UPP.project_id
+	            AND UPP.contact_id = '$current_contact_id' )
+	  LEFT JOIN $TB_GROUP_PROJECT_PERMISSION GPP
+	       ON ( P.project_id = GPP.project_id )
+	  LEFT JOIN $TB_USER_WORK_GROUP UWG
+	       ON ( GPP.work_group_id = UWG.work_group_id
+	            AND UWG.contact_id = '$current_contact_id' )
+	 WHERE P.record_status != 'D'
+	   AND ( UPP.privilege_id<=40 OR GPP.privilege_id<=40
+	         OR P.PI_contact_id = '$current_contact_id')
+    ~;
+    my %allowed_project_ids = $self->selectTwoColumnHash($sql);
+
+
+    #### If this didn't turn up anything, return
+    unless (exists($allowed_project_ids{$set_to_project_id})) {
+      print "Content-type: text/html\n\n".
+        "ERROR: You are not permitted to access ".
+        "project_id $set_to_project_id\n\n";
+      return
+    }
+
+
+    #### We need to change groups, so set the group here
+    $self->executeSQL("
+      UPDATE $TB_USER_CONTEXT
+         SET project_id = '$set_to_project_id',
+         modified_by_id = '$current_contact_id',
+         date_modified = CURRENT_TIMESTAMP
+       WHERE contact_id = '$current_contact_id'
+    ");
+
+    $current_project_id = $set_to_project_id;
+    $current_project_name = $allowed_project_ids{$set_to_project_id};
+
+  }
+
+
+  return $current_project_id;
+
+}
+
+
+
+###############################################################################
 # Return the active user_context_id of the user currently logged in
 ###############################################################################
 sub getCurrent_user_context_id {
