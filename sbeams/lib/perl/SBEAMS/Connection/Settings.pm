@@ -16,6 +16,7 @@ use strict;
 use vars qw($VERSION @ISA @EXPORT 
     $DBTITLE
     $DBVERSION
+    %DBPREFIX
     $BGCOLOR
     $BARCOLOR
     $SERVER_BASE_DIR
@@ -36,6 +37,7 @@ require Exporter;
 @EXPORT = qw (
     $DBTITLE
     $DBVERSION
+    %DBPREFIX
     $BGCOLOR
     $BARCOLOR
     $SERVER_BASE_DIR
@@ -87,6 +89,13 @@ $SBEAMS_INSTANCE = $ENV{SCRIPT_NAME} if ($ENV{SCRIPT_NAME});
 $SBEAMS_INSTANCE = $ENV{SBEAMS_INSTANCE} if ($ENV{SBEAMS_INSTANCE});
 $SBEAMS_INSTANCE = $ENV{PWD} unless ($SBEAMS_INSTANCE);
 $SBEAMS_INSTANCE = "production" unless ($SBEAMS_INSTANCE);
+
+
+#### Set some database prefixes to be appended before the actualy table
+#### names.  For databases that don't support cross-database queries
+#### (e.g. PostgreSQL 7.2), the entries should be empty strings "".
+$DBPREFIX{Core} = 'sbeams.dbo.';
+$DBPREFIX{Proteomics} = 'proteomics.dbo.';
 
 
 #### Set version-specific parameters
@@ -145,6 +154,13 @@ if ( $SBEAMS_INSTANCE =~ /\/dev1\// ) {
   $HTML_BASE_DIR          = '/mysqldev1/sbeams';
   $PHYSICAL_BASE_DIR      = "/net/dblocal/www/html/mysqldev1/sbeams";
   $UPLOAD_DIR             = "/net/dblocal/data/mysqldev1/sbeams";
+
+} elsif ( $SBEAMS_INSTANCE =~ /\/macrogenics\// ) {
+  $DBVERSION              = '<FONT COLOR=red>Macrogenics</FONT>';
+  $BGCOLOR                = '#BFD8D8';
+  $HTML_BASE_DIR          = '/macrogenics/sbeams';
+  $PHYSICAL_BASE_DIR      = "/net/dblocal/www/html/macrogenics/sbeams";
+  $UPLOAD_DIR             = "/net/dblocal/data/macrogenics/sbeams";
 
 } else {
   $DBVERSION              = '<FONT COLOR=red>Primary</FONT>';
