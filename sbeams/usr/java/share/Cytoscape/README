@@ -12,6 +12,11 @@ cytoscape_ps/
 	within the cytoscape_ps/jars directory.
 	
 plugins_1.0/
+	Populated with Y2layouter.jar complied form CVS source.
+	David R jars were sent by David to use.  All the jars need to loaded for
+	getInteractions to load properly
+	getInteractions.jar httpdata.jar sequence.jar
+	
 
 plugins_2.0/
 	Initially populated with jars downloaded from http://cytoscape.org
