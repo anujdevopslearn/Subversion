@@ -10,3 +10,4 @@ PR_CompareExperiments	Compare Experiments	QUERY		NA	NA		CompareExperiments
 dbxref	Database Cross Reference	Proteomics_infrastructure	YES	$TB_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=dbxref		
 PR_gradient_program	Gradient Program	Proteomics_infrastructure	YES	$TBPR_GRADIENT_PROGRAM	gradient_program_id		ManageTable.cgi?TABLE_NAME=PR_gradient_program	PR_gradient_program	
 PR_SummarizePeptides	Summarize Peptides	QUERY		NA	NA		SummarizePeptides		
+PR_user_annotation_label	User Annotation Label	Proteomics_user	YES	$TBPR_USER_ANNOTATION_LABEL	user_annotation_label_id		ManageTable.cgi?TABLE_NAME=PR_user_annotation_label		
