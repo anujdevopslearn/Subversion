@@ -991,22 +991,19 @@ sub convertGenomeCoordinates {
   #### Define an aray to bold antibodies
   my @antibody_ids = ();
 
-  #### Define the genome_build to organism mapping
-  my %build2organism = (
-    'hg16' => 2,
-    'mm4' => 6,
-  );
-
   #### Loop over each one and try the conversion
   foreach my $coordinate_str (@genome_coordinates) {
-    if ($coordinate_str =~ /(.+)?:chr(.+)?:(\d+)-(\d+)([\-\+])/) {
+    if ($coordinate_str =~ /(.+)?:chr(.+)?:(\d+)-(\d+)([\-\+\?])/) {
       my $genome_build_id = $1;
       my $chromosome = $2;
       my $start_pos = $3;
       my $end_pos = $4;
       my $strand = $5;
 
-      my $organism_id = $build2organism{$genome_build_id};
+      # Map genome_build_id to organism_id
+      my $organism_id = ( $genome_build_id =~ /mm/ ) ? 6 :
+                        ( $genome_build_id =~ /hg/ ) ? 2 : 0;
+      
       unless ($organism_id) {
 	      print "ERROR: Invalid genome_build_id '$genome_build_id'<BR>\n";
 	      next;
