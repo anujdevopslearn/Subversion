@@ -205,6 +205,8 @@ sub fetch_data {
     chop($command_parameters_str);
   }
 
+  #print "URL=$url\n";
+  #print "params=$command_parameters_str\n";
 
   #### Create a request object with the supplied URL and parameters
   my $request = HTTP::Request->new(POST => $url);
@@ -221,6 +223,9 @@ sub fetch_data {
   $resultset->{is_success} = $response->is_success;
   $resultset->{raw_response} = $response->content;
 
+  #print "RAW=".$response->content."\n";
+  #use Data::Dumper;
+  #print Data::Dumper->Dump([$response])."\n\n";
 
   #### Decode the raw result into a real resultset
   $self->decode_response(resultset_ref => $resultset);
