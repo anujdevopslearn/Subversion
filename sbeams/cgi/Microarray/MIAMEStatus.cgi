@@ -1185,116 +1185,109 @@ sub updateMIAMEInfo {
   ## Experiment Design ##
   #######################
   if ($category=~ /experiment_design/ || $category eq "all") {
-
-      ## Experiment Description
-      if($parameters{'expDesc'} =~ /\w/) {
-	  $rowdata{'description'} = $parameters{'expDesc'};
-      }
+    ## Experiment Description
+    if($parameters{'expDesc'} =~ /\w/) {
+      $rowdata{'description'} = $parameters{'expDesc'};
+    }
       
-      ## Experiment Type
-      my $exp_type = $parameters{'expType'};
+    ## Experiment Type
+    my $exp_type = $parameters{'expTypeChooser'};
       
-      if ($exp_type !~ /^nothing$/){
-	  if ($exp_type =~ /^other$/){
-	      my $other = $parameters{'otherExpType'};
-	      $additional_information .= "<exp_type>other\($other\)<\/exp_type>";
-	  }
-	  else{
-	      $additional_information .= "<exp_type>$exp_type<\/exp_type>";    
-	  }
-      }
-
-      ## Experimental Factors
-      my $exp_factors;
-      my @factors = {"age","cell line","cell type",
-		     "compound","developmental stage", "disease state",
-		     "dose","genetic variation","genotype",
-		     "organism part","post-transcriptional gene silencing","protocol",
-		     "sex/mating type","species","strain", 
-		     "temperature","time","tissue type",
-		     "other"};
-
-      foreach my $factor (@factors){
-	  if ($parameters{$factor} eq 'on') {
-	      if ($factor eq 'other') {
-		  $exp_factors .= "$factor($parameters{'otherExpFact1'}),"
-	      }else {
-		  $exp_factors .= "$factor,";
-	      }
-	  }
-      }
-		    
-      if ($exp_factors){ chop($exp_factors); }
-
-      if ($exp_factors) {
-	  $additional_information .= "<exp_factors>".$exp_factors."<\/exp_factors>";
-      }
-
-      ## # of Hybridizations
-      if ($parameters{'numHyb'}) {
-	  $additional_information .= "<num_hybs>".$parameters{'numHyb'}."<\/num_hybs>";
-      }
-
-      ## Is a common reference used?
-      if ($parameters{'commonRef'}){
-	  $additional_information .="<common_ref>".$parameters{'commonRef'}."<\/common_ref>";
-      }
-      ##Description of common ref
-      if ($parameters{'commonRefText'} && $parameters{'commonRef'} eq 'yes') {
-	  $additional_information .="<common_ref_text>".$parameters{'commonRefText'}."<\/common_ref_text>";
-      }
-
-      ## Quality Control Steps
-      my $qc_steps;
-      if ($parameters{'reps'} eq 'on') {
-	  $qc_steps .= "replicates,";
-      }
-      if ($parameters{'dyeSwap'} eq 'on') {
-	  $qc_steps .= "dye swapping,";
-      }
-			if ($parameters{'spikeIns'} eq 'on') {
-					$qc_steps .="spike-in controls,";
-			}
-      if ($parameters{'qc_other1'} eq 'on') {
-	  $qc_steps .= "other($parameters{'otherQCStep1'}),";
-      }
-
-      if ($qc_steps){ chop($qc_steps); }
-
-      if ($qc_steps) {
-	  $additional_information .= "<qc_steps>".$qc_steps."<\/qc_steps>";
-      }
-
-      
-      ## Finish with everything that goes in the 'additional_information' field
-      $rowdata{'additional_information'} = update_module(module=>'microarray',
-							 content=>$additional_information);
-      
-
-      ## Project URI
-      if ($parameters{'url'}) {
-	  $rowdata{'uri'} = $parameters{'url'};
+    if ($exp_type !~ /^nothing$/){
+      if ($exp_type =~ /^other$/){
+	my $other = $parameters{'otherExpType'};
+	$additional_information .= "<exp_type>other\($other\)<\/exp_type>";
       }else {
-	  $rowdata{'uri'} = "";
+	$additional_information .= "<exp_type>$exp_type<\/exp_type>";    
       }
-      
+    }
 
-      $rowdata_ref= \%rowdata;
-      $sbeams->updateOrInsertRow(table_name=>'project',
-				 rowdata_ref=>$rowdata_ref,
-				 update=>1,
-				 PK_name=>'project_id',
-				 PK_value=>$project_id,
-				 add_audit_parameters=>1
-				 );
+    ## Experimental Factors
+    my $exp_factors;
+    my @factors = ('age','cell line','cell type',
+		   'compound','developmental stage', 'disease state',
+		   'dose','genetic variation','genotype',
+		   'organism part','post-transcriptional gene silencing','protocol',
+		   'sex/mating type','species','strain', 
+		   'temperature','time','tissue type',
+		   'other');
 
-      ## Clear out hash
-      foreach my $key(keys %rowdata) {
-	  delete($rowdata{$key});
+    foreach my $factor (@factors){
+      if ($parameters{$factor} eq 'on') {
+	if ($factor eq 'other') {
+	  $exp_factors .= "$factor($parameters{'otherExpFact1'}),";
+	}else {
+	  $exp_factors .= "$factor,";
+        }
       }
+    }
+	    
+    #Get rid of the last comma since there is no following term
+    if ($exp_factors){ chop($exp_factors); }
 
+    if ($exp_factors) {
+      $additional_information .= "<exp_factors>".$exp_factors."<\/exp_factors>";
+    }
+
+    ## # of Hybridizations
+    if ($parameters{'numHyb'}) {
+      $additional_information .= "<num_hybs>".$parameters{'numHyb'}."<\/num_hybs>";
+    }
+
+    ## Is a common reference used?
+    if ($parameters{'commonRef'}){
+      $additional_information .="<common_ref>".$parameters{'commonRef'}."<\/common_ref>";
+    }
+
+    ##Description of common ref
+    if ($parameters{'commonRefText'} && $parameters{'commonRef'} eq 'yes') {
+      $additional_information .="<common_ref_text>".$parameters{'commonRefText'}."<\/common_ref_text>";
+    }
+
+    ## Quality Control Steps
+    my $qc_steps;
+    if ($parameters{'reps'} eq 'on') {
+      $qc_steps .= "replicates,";
+    }
+    if ($parameters{'dyeSwap'} eq 'on') {
+      $qc_steps .= "dye swapping,";
+    }
+    if ($parameters{'spikeIns'} eq 'on') {
+      $qc_steps .="spike-in controls,";
+    }
+    if ($parameters{'qc_other1'} eq 'on') {
+      $qc_steps .= "other($parameters{'otherQCStep1'}),";
+    }
+    if ($qc_steps){ chop($qc_steps); }
+    if ($qc_steps) {
+      $additional_information .= "<qc_steps>".$qc_steps."<\/qc_steps>";
+    }
+
+    ## Finish with everything that goes in the 'additional_information' field
+    $rowdata{'additional_information'} = update_module(module=>'microarray',
+						       content=>$additional_information);
+
+    ## Project URI
+    if ($parameters{'url'}) {
+      $rowdata{'uri'} = $parameters{'url'};
+    }else {
+      $rowdata{'uri'} = "";
+    }  
+
+    $rowdata_ref= \%rowdata;
+    $sbeams->updateOrInsertRow(table_name=>'project',
+			       rowdata_ref=>$rowdata_ref,
+			       update=>1,
+			       PK_name=>'project_id',
+			       PK_value=>$project_id,
+			       add_audit_parameters=>1
+			       );
+
+    ## Clear out hash
+    foreach my $key(keys %rowdata) {
+      delete($rowdata{$key});
+    }
   }
-
   return;
 }
 
@@ -1309,9 +1302,7 @@ sub update_module {
   my $module = $args{'module'}
   || die "ERROR[$SUB_NAME]: module not passed";
   my $content = $args{'content'};
-#  my $parameters_ref = $args{'parameters'};
-#  my %parameters = %{$parameters_ref};
- 
+
   ## Define standard variables
   my ($sql, @rows);
   my (%rowdata, $rowdata_ref);
@@ -1328,20 +1319,19 @@ sub update_module {
   
   @rows = $sbeams->selectOneColumn($sql);
   
-  ## get '$module' section
+  ## get '$module' section, then add/switch the content.
   if (@rows){
-      $additional_information = $rows[0];
-      if ($additional_information =~ /<$module>.*<\/$module>/) {
-	  $additional_information =~ s(<$module>.*<\/$module>)(<$module>$content<\/$module>);
-      }else {
-	  $additional_information .= "<$module>$content<\/$module>";
-      }
+    $additional_information = $rows[0];
+    if ($additional_information =~ /<$module>.*<\/$module>/) {
+      $additional_information =~ s(<$module>.*<\/$module>)(<$module>$content<\/$module>);
+    }else {
+      $additional_information .= "<$module>$content<\/$module>";
+    }
   }else {
-      $additional_information = "<$module>$content<\/$module>";
+    $additional_information = "<$module>$content<\/$module>";
   }
-  return $additional_information
+  return $additional_information;
 }
-
 
 
 ###############################################################################
