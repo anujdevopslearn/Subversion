@@ -14,7 +14,7 @@ use SBEAMS::Interactions;
 use SBEAMS::Interactions::Settings;
 use SBEAMS::Interactions::Tables;
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 

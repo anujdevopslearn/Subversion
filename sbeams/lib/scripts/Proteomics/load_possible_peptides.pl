@@ -33,15 +33,15 @@ use vars qw ($sbeams $sbeamsMOD $q
 
 
 #### Set up SBEAMS core module
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 $sbeams = SBEAMS::Connection->new();
 
 use SBEAMS::Proteomics::Utilities;
 
-use CGI;
-$q = CGI->new();
+#use CGI;
+#$q = CGI->new();
 
   #### Set up use of some special stuff to calculate pI.  FIXME
   use lib qw (/net/db/projects/proteomics/src/Proteomics/blib/lib

@@ -21,7 +21,7 @@ use FindBin;
 use lib "$FindBin::Bin/../../perl";
 
 #### Set up SBEAMS package
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
@@ -35,9 +35,10 @@ $sbeamsMOD = new SBEAMS::SNP;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
-use CGI;
-use CGI::Carp qw(fatalsToBrowser croak);
-$q = CGI->new();
+#use CGI;
+#use CGI::Carp qw(fatalsToBrowser croak);
+#$q = CGI->new();
+croak ( 'blah' );
 
 
 #### Set program name and usage banner

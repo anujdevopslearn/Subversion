@@ -32,13 +32,13 @@ use vars qw ($sbeams $sbeamsMOD $q $current_username
 
 
 #### Set up SBEAMS core module
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 $sbeams = SBEAMS::Connection->new();
 
-use CGI;
-$q = CGI->new();
+#use CGI;
+#$q = CGI->new();
 
 
 ###############################################################################

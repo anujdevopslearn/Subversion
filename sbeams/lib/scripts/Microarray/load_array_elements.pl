@@ -26,7 +26,7 @@ use vars qw ($sbeams $sbeamsMOD $q
 
 
 #### Set up SBEAMS core module
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Microarray::Settings;
@@ -34,8 +34,8 @@ use SBEAMS::Microarray::Tables;
 use SBEAMS::Microarray::TableInfo;
 $sbeams = SBEAMS::Connection->new();
 
-use CGI;
-$q = CGI->new();
+#use CGI;
+#$q = CGI->new();
 
 
 ###############################################################################

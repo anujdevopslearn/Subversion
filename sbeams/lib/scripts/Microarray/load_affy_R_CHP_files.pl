@@ -101,7 +101,7 @@ use vars qw ($sbeams $q $sbeams_affy $sbeams_affy_groups
 
 
 #### Set up SBEAMS core module
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 

@@ -36,13 +36,13 @@ use vars qw ($sbeams $sbeamsMOD $q
 require "generate_schema.pllib";
 
 #### Set up SBEAMS core module
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 #use SBEAMS::Connection::Settings;
 #use SBEAMS::Connection::Tables;
 $sbeams = new SBEAMS::Connection;
 
-use CGI;
-$q = new CGI;
+#use CGI;
+#$q = new CGI;
 
 
 ###############################################################################

@@ -20,7 +20,7 @@ use SBEAMS::Ontology::Settings;
 use SBEAMS::Ontology::Tables;
 
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -31,8 +31,8 @@ $sbeamsMOD = new SBEAMS::Immunostain;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
-use CGI;
-$q = CGI->new();
+#use CGI;
+#$q = CGI->new();
 
 
 my $PROG_NAME = $FindBin::Script;

@@ -97,7 +97,7 @@ use vars qw ($sbeams $q $sbeams_affy $sbeams_affy_groups
 
 
 #### Set up SBEAMS core module
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -117,8 +117,8 @@ $sbeams_affy_groups = new SBEAMS::Microarray::Affy_file_groups;
 
 $sbeams_affy_groups->setSBEAMS($sbeams);
 
-use CGI;
-$q = CGI->new();
+#use CGI;
+#$q = CGI->new();
 
 ###############################################################################
 # Set program name and usage banner for command like use

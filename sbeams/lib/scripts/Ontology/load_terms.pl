@@ -27,7 +27,7 @@ use vars qw (%ontology_ids %term_type_ids %relationship_type_ids);
 
 
 #### Set up SBEAMS core module
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 $sbeams = SBEAMS::Connection->new();
@@ -41,8 +41,8 @@ $sbeamsMOD = new SBEAMS::Ontology;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
-use CGI;
-$q = CGI->new();
+#use CGI;
+#$q = CGI->new();
 
 
 ###############################################################################

@@ -12,7 +12,7 @@ use vars qw ($PROG_NAME $q $sbeamsMOD $sbeams $USAGE %OPTIONS $QUIET $VERBOSE $D
             $current_contact_id $current_username );
 
 			
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -26,8 +26,8 @@ $sbeamsMOD = new SBEAMS::Interactions;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
-use CGI;
-$q = CGI->new();
+#use CGI;
+#$q = CGI->new();
 
 
 ###############################################################################

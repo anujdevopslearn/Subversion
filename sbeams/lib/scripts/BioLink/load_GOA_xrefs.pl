@@ -27,7 +27,7 @@ use vars qw ($sbeams $sbeamsMOD $q
 
 
 #### Set up SBEAMS core module
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 $sbeams = SBEAMS::Connection->new();
@@ -40,8 +40,8 @@ $sbeams = SBEAMS::Connection->new();
 $sbeamsMOD = SBEAMS::BioLink->new();
 $sbeamsMOD->setSBEAMS($sbeams);
 
-use CGI;
-$q = CGI->new();
+#use CGI;
+#$q = CGI->new();
 
 
 ###############################################################################

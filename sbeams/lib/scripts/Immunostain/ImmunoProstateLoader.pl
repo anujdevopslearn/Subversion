@@ -14,7 +14,7 @@ use SBEAMS::Immunostain;
 use SBEAMS::Immunostain::Settings;
 use SBEAMS::Immunostain::Tables;
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 

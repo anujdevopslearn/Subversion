@@ -35,7 +35,7 @@ use vars qw ($sbeams $sbeamsMOD $q $module $work_group $USAGE %OPTIONS
              $current_contact_id $current_username);
 
 ####Setup SBEAMS core module####
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -48,8 +48,8 @@ $sbeamsMOD = new SBEAMS::Oligo;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
-use CGI;
-$q = new CGI;
+#use CGI;
+#$q = new CGI;
 
 $PROG_NAME = "load_oligo.pl";
 

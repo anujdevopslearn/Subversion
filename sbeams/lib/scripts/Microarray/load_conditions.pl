@@ -63,7 +63,7 @@ use vars qw ($sbeams $q
 
 
 #### Set up SBEAMS core module
-use SBEAMS::Connection;
+use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -76,8 +76,8 @@ use SBEAMS::Microarray::TableInfo;
 $sbeams = new SBEAMS::Connection;
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
-use CGI;
-$q = CGI->new();
+#use CGI;
+#$q = CGI->new();
 
 ###############################################################################
 # Set program name and usage banner for command like use
