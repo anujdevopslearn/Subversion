@@ -6,9 +6,6 @@ use lib "$FindBin::Bin/../../perl";
 
 use vars qw ($sbeams $sbeamsMOD $VERBOSE $TESTONLY $current_username);
 
-
-
-
 use SBEAMS::Connection;
 use SBEAMS::Cytometry::Alcyt;
 use SBEAMS::Cytometry;
@@ -17,7 +14,6 @@ use SBEAMS::Cytometry::Tables;
 
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
-
 
 $sbeams = new SBEAMS::Connection; 
 $sbeamsMOD = new SBEAMS::Cytometry;
@@ -29,7 +25,7 @@ my( %fileIDHash, %attributeHash, %paramHash , %tissueHash, %entityHash, %sortTyp
 
 my ($day, $month, $year)  =(localtime)[3,4,5]; 
 my $time = $day.$month.$year;
-my $outFile; 
+my ($outFile, $project_id); 
 
 main();
 exit;
@@ -38,22 +34,36 @@ sub main
   
 		 #### Do the SBEAMS authentication and exit if a username is not returned
 		 exit unless ($current_username = $sbeams->Authenticate(
-		 work_group=>'Cytometry_user',
+         work_group=> 'Cytometry_admin',
   ));
 
 ;   
+############################################
+#change the watchDir to your watch directory
+############################################
+my $WATCHDIR  = "/users/mkorb/cytometry/";  
 
-my $watchDir = "/users/mkorb/cytometry/";  
-my $startDir = $ARGV[0] or die "no valid startDir\n";; 
+############################################
+#pass the data directory and the project id 
+###########################################
+my $startDir = $ARGV[0] or die "no valid startDir\n";
+$project_id = $ARGV[1] or die "not a valid project_id\n"; 
+
+
 my ($watch) = $startDir =~ /.*\/(.*?)\/$/; 
-my $watchFile = $watchDir.$watch."watch";
+my $watchFile = $WATCHDIR.$watch."watch";
 my ($tag) = $startDir =~ /^.*\/(.*)\/$/;
-$outFile = "/users/mkorb/cytometry/Load/". $time.$tag."_loadCyt.txt";
-open(LOG,"> $outFile"); 
-my $project_id;
-$project_id = 397; 
-$project_id = 409  if $startDir  =~ /IkB-GFP/i;
 
+####################################################
+#change the Load log directory to your directory 
+###################################################
+my $LOGFILE = "/users/mkorb/cytometry/Load/". $time.$tag."_loadCyt.txt";
+open(LOG,"> $LOGFILE") or die "can not find $LOGFILE $!";; 
+
+################################################
+#check if we have a previous watch file (maybe a large upload is happening)
+#abort nicley if we do
+################################################ 
 eval
 {
    open( File, "$watchFile") or die "can not $!"; 
@@ -63,11 +73,20 @@ print "watch file found\n" if (! $@);
 print LOG "watch file found\n" and do( exit)  if (! $@);
 
 open (File, ">$watchFile") or die "can not open $watchFile $!";
-print LOG "$watchFile\n";
+print LOG "watch file: $watchFile\n";
 
-#exit if(-e $watchFile and $startDir =~ /$watch/i); 
-#open $watchFile 
-
+##################################################################
+#get some data from the database for dupe checking, lookup values and project_id
+##################################################################
+my $projectSql = "select name from $TB_PROJECT where project_id = $project_id";
+my @projectRow = $sbeams->selectOneColumn($projectSql);
+if (scalar(@projectRow)<1)
+{
+  print LOG "$project_id does not exist in database\n";
+  print "$project_id does not exist in database\n  Upload is being aborted\n";
+  close LOG; 
+   exit;
+}
 my $tissueSql = "select lower (left (tissue_type_name,1)), tissue_type_id  from $TBCY_TISSUE_TYPE";
 %tissueHash = $sbeams->selectTwoColumnHash($tissueSql);
  
@@ -82,7 +101,6 @@ my $sql = "select filename, original_filepath from $TBCY_FCS_RUN where project_i
  my $idSql =  "select original_filepath + \'/\' + filename, fcs_run_id  from $TBCY_FCS_RUN where project_id = $project_id";
 %fileIDHash = $sbeams->selectTwoColumnHash($idSql);
 
-#selects all the parameters to be measured  and which have been seen before 
 my $attributeSql = "select measured_parameters_name, measured_parameters_id from $TBCY_MEASURED_PARAMETERS";
  %attributeHash = $sbeams->selectTwoColumnHash($attributeSql);
  
@@ -93,21 +111,13 @@ foreach my $fileID(@rows)
   $paramHash{$fileID} = 1;
 }    
   
- 
-#my $startDir = "/net/cytometry/IkB-GFP/2004-06-28/";
-#$startDir = "/net/db/projects/StemCell/FCS/072104/";
-
-
-
-print "$startDir\n";
- 
- 
+  
 find(\&wanted, $startDir);
-#doTheOtherFiles();
 unlink $watchFile; 
 }
-
-#recursing the dir
+#####################################
+#recursing the $start_dir
+#################################### 
 sub wanted
 {
   	my $file = $File::Find::name if -f;
@@ -115,57 +125,48 @@ sub wanted
   	processFile($file)
 	
 }
-
-
+#################################################
+#LOGIC:
 # if the file exist 
 #get the the key - value pairs of the parameters in the header and put them into a hash
 #add the filepath as a value to the hash
 #pass a ref of the hash to loadHash subroutine
 #else 
 # write to the log that the file was not found
+################################################
 sub processFile 
 {
   my $fcsFile = shift;
-  print "this ie the file: $fcsFile\n";
+  print "this is the file to be checked: $fcsFile\n";
 
+#################################
+#do some basic checking on the file encountered
+################################  
   return if ! defined($fcsFile); 
   return  if ($fcsFile !~ /\.fcs$/i);
+#DATE  
   return if $fcsFile !~ /\/\d{4}/;
   my %hash;
 
   if (-e $fcsFile)
   { 
-       
+#####################################
+#this is a call to Alcyt.pm
+####################################
+     print "getting all the values\n";       
     %hash = get_fcs_key_value_hash_from_file($fcsFile);
     $hash{File} = $fcsFile;
-
-=comment   
-   foreach my $key(keys %hash)
-    {
-      print "$key === $hash{$key}\n";
-    }
-            
-     my @headerInfo = read_fcs_header ($fcsFile);
-     my @karray = get_fcs_keywords($fcsFile, @headerInfo);
-     foreach my $r (@karray) 
-     {
-       print "$r\n";
-     }
-    
-=cut     
-      my $fcsRunID = loadDataHash(\%hash);
+     my $fcsRunID = loadDataHash(\%hash);
      
    }
    else 
    {
-     print LOG "file does not exist:   $fcsFile\n\n";
+     print LOG "file does not exist:   $fcsFile\n";
+     print "file does not exist:   $fcsFile\n";
 
    }
 }
   
-  
-  
-# determines the project_id based on the filepath
 # tests if  data about this file already exists in the table fcs_run
 # if not then uses value from the header of the file ($hashRef) and inserts it to fields in fcs_run
 # the pk is returned
@@ -179,14 +180,16 @@ sub loadDataHash
 {  
     my $hashRef = shift; 
     my ($dirName,$fileName) = $hashRef->{File} =~ /(.*)\/(.*)$/;
-    my $project_id;
-    $project_id = 397; 
-    $project_id = 409  if $hashRef->{File} =~ /IkB-GFP/i;
     my $fileID = $fileIDHash{$hashRef->{File}};
     my $outfile = $PHYSICAL_BASE_DIR ."/data/Cytometry/".$fileID. "_". $fileName;
-    print LOG  "tmp file for storing Hash: $outfile\n";
+    print LOG  "tmp file for storing Hash variable: $outfile\n";
+    print  "tmp file for storing Hash variable: $outfile\n";
     return if (-e $outfile) and do {print LOG "tmp data file already exist\n"; print "tmp file: $outfile already exists\n";};
-#file in fcs_run ?   
+
+################################
+# is this file in the database ? 
+################################  
+
      if ($fileHash{$fileName} ne $dirName) 
      {
        $fileHash{$fileName} = $dirName; 
@@ -194,17 +197,21 @@ sub loadDataHash
        my $tableName = "$TBCY_FCS_RUN";
        my $pkName = "fcs_run_id";
        print LOG "inserting a new Record:  $hashRef->{File}\n\n";     
-       
-
+       print "inserting a new Record:  $hashRef->{File}\n\n";     
+######################################
+# getting several values from the header of the fcs file
+# see the fcs file documentation in cytometry/doc      
+######################################
        $insertRecord{fcs_run_Description} = $hashRef->{'$CYT'} .",  ". $hashRef->{'$P4N'} .",  " . $hashRef->{'$P5N'} ;
        $insertRecord{sortedCellType} = $hashRef->{'$CELLS'};
        
        my $sampleName = $hashRef->{'$SMNO'}; 
-    #  11-333p_M_cd138_abcg2_f_abcg2
-    #  11-333p_M_cd138
        my ($sortEntity,$tissueType, $sortType);
        my ($sortPK, $entityPK, $tissuePK) = 0;
-      
+####################################
+# we expect a certain naming convention for the sample name
+# it will not break if we don't
+####################################
        if ($sampleName =~ /^\d+-\d+[pb]_[a-z]_/i)
        {
          ($sortEntity) = $sampleName =~/^.*_(.*)$/;
@@ -225,7 +232,9 @@ sub loadDataHash
           $sortPK  = $sortTypeHash{uc $sortType};
           $tissuePK = $tissueHash{lc $tissueType};
        }
-       
+######################
+# insert the record 
+######################               
        $insertRecord{sample_name} = $hashRef->{'$SMNO'} || 'not specified';
        $insertRecord{project_id} = $project_id;
        $insertRecord{n_data_points} = $hashRef->{'$TOT'};
@@ -242,14 +251,17 @@ sub loadDataHash
        $insertRecord{sort_entity_id} = $entityPK if ($entityPK);
        $insertRecord{tissue_type_id} = $tissuePK if ($tissuePK) ;
         my $insert = 1;
-        
         my $record = insertRecord (\%insertRecord , $insert,$tableName, $pkName,1);
-   
         print LOG "created fcs_run record: $fileName ---- $record\n";
-#load the datapoints (the path to the file, the primary key 
+        print "created fcs_run record: $fileName ---- $record\n";
+########################
+#load the datapoints (passing in the path to the file, the primary key
+######################## 
         getDataPoints($hashRef->{File}, $record)
     }
-#file in fcs_run, do we have data in data_points?    
+#####################
+# file is already in fcs_run, however do we also have the data
+#####################    
      else 
     {
        my $query = "Select  frp.fcs_run_id   from $TBCY_FCS_RUN_PARAMETERS  frp
@@ -257,40 +269,40 @@ sub loadDataHash
 	    where fr.fcs_run_id = $fileIDHash{$hashRef->{File}} group by frp.fcs_run_id";
        my @rows = $sbeams->selectOneColumn($query);
        my $fileID = $rows[0] if scalar(@rows == 1);
-#yes we do , do nothing
-	     if ($fileID) 
-         {
-           my $tmpFile = $fileID."_".$fileName;
-              
-#check if we have the data file in the tmp
-#this file  is based on the the fcs_run_id
+       if ($fileID) 
+       {
+         my $tmpFile = $fileID."_".$fileName;
             if( -e "$PHYSICAL_BASE_DIR/data/Cytometry/$tmpFile")
             {
+              print LOG "datapointFile already exist:  $tmpFile \n";
               print "datapointFile already exist:  $tmpFile \n";
               next;
             }
             else 
             { 
               print LOG "adding datapointFile:   $tmpFile \n";
+              print "adding datapointFile:   $tmpFile \n";
               getDataPoints($hashRef->{File}, $fileID);
                
             }
               delete $fileIDHash{$hashRef->{File}};
          }
-       }
+     }
 }
   
   
 
 
  
-# -----------------------------------------------------------------------------------------------------------
+# #########################
+#LOGIC:
 # get the values of the $P[0-9]N keys
 # test if we have such a parameter in the measured_parameters table
 # if we do not, add it,  get the pK back and add it to the attribute hash (attributeHash{measured_parameters_name} = pk)
 # add the mesured_parameter_name and its column position in the file to the %inpars Hash
 # after we are done looping through the $P[0-9]N keys 
 # pass the fcs_run_id, filepath, headerValue[3], 2, number of parameters, total_number of events, %inpars Hash to the recordDataPoints subroutine
+############################
  sub getDataPoints
 {
 	my %args = @_;
@@ -317,10 +329,14 @@ sub loadDataHash
 			next if $values{$key} =~ /adc/i;
             next if $values{$key} =~ /^c[lot].*/i;
             next if $values{$key} =~/^lut.*/i; 
-  #    print "this is the $key ---- $values{$key} ---- $position\n";
+#######################
+#TEST:
+# print "this is the $key ---- $values{$key} ---- $position\n";
+#######################
     
 #need to look if we have these attributes in the table
 #if we do not add them     
+
          if (! $attributeHash{$values{$key}})
          {
            my $insert = 1;
@@ -328,13 +344,15 @@ sub loadDataHash
            my $tableName = "$TBCY_MEASURED_PARAMETERS";
            my $pkName = "measured_parameters_id";
            $dataHash{measured_parameters_name} = $values{$key};
+           $dataHash{project_id} = $project_id;
            my $record = insertRecord (\%dataHash ,$insert, $tableName, $pkName,1);
            print LOG" Creating a new measured_parameters record for: $values{$key}  ----- $record\n"; 
            $attributeHash{$values{$key}} = $record
          }
-     
+# position = PK of the measured_parameters_name (measured_parameters_id)   
         $inpars{$position} = $values{$key};
-        $parsPosPk{$position} = $attributeHash{$values{$key}};  # position = PK of the measured_parameters_name (measured_parameters_id)
+        $parsPosPk{$position} = $attributeHash{$values{$key}};
+    
         }
 	 }
     my $num_events = $values{'$TOT'};
@@ -359,34 +377,35 @@ sub loadDataHash
       
       recordDataPoints( $filePK,$infile,$header[3],2,$num_par,$num_events,\ %inpars);
 }
+
+#########################
+#all the data is collected into a perl variable 
+#and written out to the disk. 
+#the file for the variable is unique since it contains a fcs_run_id
+#the variable is read in again when one displays the graph on the website
+#########################
+
+
   
-    
-  
-# the parsing code is mostly legacy code
-# now we need to go through each measured_parameters in the %inpars Hash and create a record in the fcs_run_parameter table 
-# and also insert the measured_parameters_id ,datapoint value into the fcs_run_datapoint table  
-# 
-#data2( $filePK,$infile,$header[3],2,$num_par,$num_events,%inpars);  
 sub recordDataPoints
 {
-
    my $PK = shift;
    my  $infile   = shift(@_);
    my  $offset   = shift(@_); #where the data actually starts
    my $size     = shift(@_); # not used
    my $n_params = shift(@_); #$PAR
    my $n_events = shift(@_);  # $TOT
- #  my $incol    =  shift(@_);  #keyed on measured_parameters_name = position   also pk = attributeHash{measured_parameters_name}
    my $posPk = shift(@_);  # keyed on position = fcs_run_parameters_id 
   	my ($fileName) = $infile =~ /^.*\/(.*)$/; 
     $fileName = $PK."_".$fileName;
      my $outfile = $PHYSICAL_BASE_DIR ."/data/Cytometry/".$fileName;
 
+    print LOG "writing the tempHash: $outfile \n";
     print "writing the tempHash: $outfile \n";
     my $dummy; 
-    # Read in the data, sort it out into the correct columns, and dump
-    # it to the output file.
-    open(FCSFILE,"$infile") or die "dump_data2: Can't find input file $infile.";
+# Read in the data, sort it out into the correct columns, and dump
+# it to the output file.
+    open(FCSFILE,"$infile") or die "dump_data: Can't find input file $infile.";
     binmode(FCSFILE);
     read(FCSFILE,$dummy,$offset); # read over header and text sections.
     my $data;
@@ -402,21 +421,14 @@ sub recordDataPoints
            push @{$event{$posPk->{$param}}}, unpack("S", $data);
         }
 	}
-	#	my $time = $event[$incol{timelow}] + 4096 * ($event[$incol{timehigh}]);
     my $temp_hash_ref = \%event;
-    
-    
-       
     open(OUTFILE,">$outfile") || die "Cannot open $outfile    $!\n";
     printf OUTFILE Data::Dumper->Dump( [$temp_hash_ref] );
     close(OUTFILE);
     close(FCSFILE);
    
  }
-
-
-
-  
+ 
 sub insertRecord
 {
   
