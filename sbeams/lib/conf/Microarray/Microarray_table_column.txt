@@ -359,7 +359,7 @@ MA_GetExpression	19	sort_order	Sort Order									N	optionlist			Y	N	N	Desired d
 MA_GetExpression	20	display_options	Display Options									N	multioptionlist	5		Y	Y	N	Various selectable table display options	SELECT option_key,option_value FROM $TBMA_QUERY_OPTION WHERE option_type = 'GE_display_options' ORDER BY sort_order,option_value	
 MA_GetExpression	21	row_limit	Maximum Rows									N	text	10		Y	Y	N	Limit the numbers of rows displayed.  If not provided, default is 10000 rows.		
 MA_affy_array_sample	1	affy_array_sample_id	Affy Array Sample ID	int	4	0	N		Y			Y				N	N	Y	Affy Array Sample ID		pkDEFAULT
-MA_affy_array_sample	2	project_id	Project	int	4	0	N		N	project	project_id	N				N	N	N	FK to project.project_id		
+MA_affy_array_sample	2	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	FK to project.project_id	SELECT project_id, UL.username + ' - ' + proj.name + ' ( ' + RTRIM(CAST(proj.project_id AS CHAR)) + ' )'   AS name FROM $TB_PROJECT proj JOIN $TB_USER_LOGIN UL ON (proj.PI_contact_id = UL.contact_id)  WHERE proj.project_tag IS NOT NULL AND proj.record_status != 'D' ORDER BY UL.username	
 MA_affy_array_sample	3	sample_tag	Sample Tag	varchar	50	0	N		N			Y	text	50		Y	Y	N	Sample Name.  Keep it short.  Do not use any strange characters like /\*&$() (e.g. NP Epi 03-123)		
 MA_affy_array_sample	4	full_sample_name	Full Sample Name	varchar	255	0	Y		N			Y	textarea	3		Y	Y	N	Full Sample Name.  A longer, less cryptic name should be placed here.  It should be long enough so that someone else can understand quickly the general idea of the sample. (e.g. Epithelial cells FACS sorted from "normal" prostate tissue from specimen 03-123)		
 MA_affy_array_sample	5	sample_group_name	Sample Group Name	varchar	50	0	Y		N			Y	text	50		Y	Y	N	Sample Group Name.  Name used to group together biological replicates		
@@ -563,3 +563,26 @@ MA_GetAffy_GeneIntensity	19	db_id_constraint	Accession Number									N	text	10	
 MA_GetAffy_GeneIntensity	20	genome_coordinates_constraint	Genome Coordinates									N	text	50		Y	Y	N	Specify the probe_set_ids to constraint the query with using genome coordinates in a form like hg16:chr5:123456-123457+ where hg16 is the build and the final character is the orientation + or -<br><br>Current genome builds Human hg16<br> Mouse mm4		
 MA_GetAffy_GeneIntensity	21	display_options	Display Options									N	multioptionlist	5		Y	Y	N	Various selectable table display options	SELECT option_key,option_value FROM $TBMA_QUERY_OPTION WHERE option_type = 'GI_display_options' ORDER BY sort_order,option_value	
 MA_GetAffy_GeneIntensity	22	row_limit	Maximum Rows									N	text	10		Y	Y	N	Limit the numbers of rows displayed.  If not provided, default is 10000 rows.		
+MA_affy_analysis	1	affy_analysis_id	Affy Analysis ID	int	4	0	N		Y							N	N	Y	Affy Analysis ID		
+MA_affy_analysis	2	user_id	User ID	int	4		N					Y	multioptionlist	5		Y	Y	N	User Name	SELECT user_login_id, username FROM $TB_USER_LOGIN WHERE record_status != 'D'	
+MA_affy_analysis	3	project_id	Project ID	int	4		N					Y	text	20		Y	Y	N	Project Name	SELECT project_id, username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) ORDER BY name	
+MA_affy_analysis	4	folder_name	Folder Name	varchar	50		N					Y	text	50		Y	Y	N	Folder that contains the analysis		
+MA_affy_analysis	5	parent_analysis_id	Parent Analysis ID	int	4		Y					N	text	10		Y	Y	N	Parent analysis ID		
+MA_affy_analysis	6	affy_analysis_type_id	Affy Analysis Type Id	int	4		N			MA_affy_analysis_type	affy_analysis_id	Y	text	20		Y	Y	N	Type of analysis		
+MA_affy_analysis	7	user_description	User Description	varchar	255		Y					N	textarea	4		Y	Y	N	User Description about what is going to be done		
+MA_affy_analysis	8	analysis_description	Analysis Description	varchar	1024		Y					N	textarea	4		Y	Y	N	Computer generated descripition about what was done		
+MA_affy_analysis	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+MA_affy_analysis	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
+MA_affy_analysis	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+MA_affy_analysis	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
+MA_affy_analysis	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
+MA_affy_analysis	10	record_status	Record Status	char	1	0	N	N	N							N	N	N			
+MA_affy_analysis_type	1	affy_analysis_type_id	Affy Analysis ID	int	4	0	N		Y							N	N	Y	Affy Analysis Type ID		
+MA_affy_analysis_type	2	affy_analysis_name	Affy Analysis Name	varchar	50	0	N		N			Y	text	30		Y	Y	N	Affy Analysis type Name		
+MA_affy_analysis_type	3	affy_analysis_description	Affy Analysis Description	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Affy analysis description		
+MA_affy_analysis_type	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+MA_affy_analysis_type	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
+MA_affy_analysis_type	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+MA_affy_analysis_type	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
+MA_affy_analysis_type	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
+MA_affy_analysis_type	9	record_status	Record Status	char	1	0	N	N	N							N	N	N			
