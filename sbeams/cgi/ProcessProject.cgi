@@ -491,7 +491,8 @@ sub submitJob {
 
         Well, there's no link yet, but paste this into a unix window:<BR><BR>
 
-	if ( -e /net/arrays/Pipeline/output/project_id/$project_id/$log_filename ) tail -f /net/arrays/Pipeline/output/project_id/$project_id/$log_filename
+	cd /net/arrays/Pipeline/output/project_id/$project_id<BR>
+	if ( -e $log_filename ) tail -f $log_filename<BR>
 
 	<BR><BR><BR>
     ~;
