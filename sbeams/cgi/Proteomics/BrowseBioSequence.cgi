@@ -405,8 +405,10 @@ sub handle_request {
   if ( $parameters{display_options} =~ /ShowExtraProteinProps/ ) {
     @additional_columns = (
       ["fav_codon_frequency","STR(BS.fav_codon_frequency,10,3)","Favored Codon Frequency"],
+      ["transmembrane_class","BPS.transmembrane_class","Transmembrane Regions Class"],
       ["n_transmembrane_regions","BS.n_transmembrane_regions","Number of Transmembrane Regions"],
       ["protein_length","DATALENGTH(BS.biosequence_seq)","Protein Length"],
+      ["transmembrane_topology","BPS.transmembrane_topology","Transmembrane Regions Topology"],
       @additional_columns,
     );
   }
@@ -454,6 +456,8 @@ sub handle_request {
         LEFT JOIN $TBPR_BIOSEQUENCE_SET BSS
              ON ( BS.biosequence_set_id = BSS.biosequence_set_id )
         LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
+        LEFT JOIN $TBPR_BIOSEQUENCE_PROPERTY_SET BPS
+             ON ( BS.biosequence_id = BPS.biosequence_id )
         $GO_join
        WHERE 1 = 1
       $biosequence_set_clause
@@ -745,6 +749,8 @@ sub displaySequenceView {
     $resultset_ref->{column_hash_ref}->{accessor};
   my $accession_column =
     $resultset_ref->{column_hash_ref}->{biosequence_accession};
+  my $tmr_topology_column =
+    $resultset_ref->{column_hash_ref}->{transmembrane_topology};
 
 
   #### Get some information about the resultset
@@ -754,14 +760,16 @@ sub displaySequenceView {
 
   #### Define some variables
   my ($row,$pos);
-  my ($biosequence_name,$description,$sequence,$seq_length);
+  my ($biosequence_name,$description,$sequence,$seq_length,$tmr_topology);
   my ($accessor,$accession);
 
 
   #### Display each row in FASTA format
-  print "Click on the gene name below to follow the link to the source ".
-    "database.<BR><BR>\n\n";
-  print "<PRE>\n";
+  print "<BR>Click on the gene name below to follow the link to the source ".
+    "database.<BR>\n";
+  print "Transmembrane regions are highlighted in blue.<BR>\n"
+    if ($tmr_topology_column);
+  print "<BR><PRE>\n";
   foreach $row (@{$data_ref}) {
 
     #### Pull out data for this row into names variables
@@ -769,6 +777,8 @@ sub displaySequenceView {
     $description = $row->[$description_column];
     $accessor = $row->[$accessor_column];
     $accession = $row->[$accession_column];
+    $tmr_topology = $row->[$tmr_topology_column];
+
 
     #### Find all instances of the possibly-supplied peptide in the sequence
     $sequence = $row->[$sequence_column];
@@ -780,6 +790,27 @@ sub displaySequenceView {
         $start_positions{$pos} = 1;
         $end_positions{$pos+length($label_peptide)} = 1;
         $pos++;
+      }
+    }
+
+
+    #### If we're in a label peptide mode, then set the width to 100 else 60
+    my $page_width = 60;
+    if ($label_peptide) {
+      $page_width = 100;
+    }
+
+
+    #### If transmembrane regions topoloy has been supplied, find the TMRs
+    my %tmr_start_positions;
+    my %tmr_end_positions;
+    if ($tmr_topology) {
+      $page_width = 100;
+      my @regions = split(/[io]/,$tmr_topology);
+      foreach my $region (@regions) {
+        my ($start,$end) = split(/-/,$region);
+        $tmr_start_positions{$start} = 1;
+        $tmr_end_positions{$end} = 1;
       }
     }
 
@@ -799,21 +830,62 @@ sub displaySequenceView {
     if (0 == 1) {
       print "$sequence\n";
     } else {
+      my $width_counter = 0;
       $seq_length = length($sequence);
       $i = 0;
       while ($i < $seq_length) {
-  	print "</B></font>" if ($end_positions{$i});
-  	print "<font color=\"red\"><B>" if ($start_positions{$i});
-  	print substr($sequence,$i,1);
-  	$i++;
-  	if ($i % 100 == 0) {
-  	  print "\n";
-  	} elsif ($i % 10 == 0) {
-  	  print " ";
-  	}
+
+	if ($end_positions{$i}) {
+	  print "</B></font>";
+	}
+	if ($start_positions{$i}) {
+	  print "<font color=\"red\"><B>";
+	}
+
+	if ($tmr_end_positions{$i}) {
+	  print "</B></font>";
+	}
+	if ($tmr_start_positions{$i}) {
+	  print "<font color=\"blue\"><B>";
+	}
+
+
+        #if (substr($sequence,$i,1) eq 'K' || substr($sequence,$i,1) eq 'R') {
+	#  print "<font color=\"green\"><B>".substr($sequence,$i,1).
+        #    "</B></font>";
+	#} else {
+	  print substr($sequence,$i,1);
+	#}
+        $width_counter++;
+
+        #### If we're in page_width=60 mode (FASTA format) then just
+        #### do a line break every 60
+        if ($page_width == 60) {
+  	  if ($width_counter == $page_width) {
+  	    print "\n";
+            $width_counter = 0;
+  	  }
+        }
+
+        #### If we're not in page_width=60 mode, then put spaces after
+        #### tryptic cuts and break line at the first cut after 80
+        if ($page_width != 60) {
+          if (substr($sequence,$i,1) eq 'K' || substr($sequence,$i,1) eq 'R') {
+            if ($width_counter > $page_width - 20) {
+	      print "\n";
+	      $width_counter = 0;
+	    } else {
+	      print " ";
+              $width_counter++;
+	    }
+          }
+        }
+
+	$i++;
 
       }
 
+      print "</B></font>" if ($end_positions{$i});
       print "\n\n";
 
     }

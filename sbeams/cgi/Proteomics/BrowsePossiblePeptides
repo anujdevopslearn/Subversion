@@ -732,7 +732,7 @@ sub handle_request {
     	       'Peptide Sequence' => "$CGI_BASE_DIR/Proteomics/BrowsePossiblePeptides?QUERY_NAME=PR_BrowsePossiblePeptides&biosequence_set_id=$parameters{biosequence_set_id}&peptide_constraint=\%$colnameidx{peptide_sequence}V&apply_action=$pass_action",
     	       'Peptide Count_ATAG' => 'TARGET="Win1"',
 
-    	       'Protein Name' => "$CGI_BASE_DIR/Proteomics/BrowseBioSequence.cgi?QUERY_NAME=PR_BrowseBioSequence&biosequence_set_id=$parameters{biosequence_set_id}&biosequence_name_constraint=\%$colnameidx{biosequence_name}V&label_peptide=\%$colnameidx{peptide_sequence}V&display_options=SequenceFormat&apply_action=HIDEQUERY",
+    	       'Protein Name' => "$CGI_BASE_DIR/Proteomics/BrowseBioSequence.cgi?QUERY_NAME=PR_BrowseBioSequence&biosequence_set_id=$parameters{biosequence_set_id}&biosequence_name_constraint=\%$colnameidx{biosequence_name}V&label_peptide=\%$colnameidx{peptide_sequence}V&display_options=SequenceFormat,ShowExtraProteinProps&apply_action=HIDEQUERY",
     	       'Protein Name_ATAG' => 'TARGET="Win1"',
 
                'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
