@@ -47,7 +47,7 @@ my $attributeSql = "select measured_parameters_name, measured_parameters_id from
  %attributeHash = $sbeams->selectTwoColumnHash($attributeSql);
  
  
-my $startDir = $ARGV[0]; 
+my $startDir = $ARGV[0] or die "no valid startDir\n";; 
 #my $startDir = "/net/cytometry/IkB-GFP/2004-06-28/";
 #$startDir = "/net/db/projects/StemCell/FCS/072104/";
 
@@ -56,6 +56,7 @@ my ($tag) = $startDir =~ /^.*\/(.*)\/$/;
 
 $outFile = "/users/mkorb/cytometry/Load/". $time.$tag."_loadCyt.txt";
 open(LOG,"> $outFile"); 
+
 find(\&wanted, $startDir);
 doTheOtherFiles();
 
