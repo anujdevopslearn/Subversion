@@ -932,7 +932,7 @@ sub summarizeExperimentComparison {
 
     #### Define non-data columns that should be ignored
     my %non_data_columns = ( 'Gene Name'=>1, 'Accession'=>1,
-      'Reference'=>1, 'Reference Description'=>1, 'Peptide'=>1
+      'Reference'=>1, 'Reference Description'=>1, 'Peptide'=>1,
       'accessor'=>1 );
 
 
