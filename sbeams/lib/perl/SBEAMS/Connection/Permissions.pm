@@ -763,13 +763,6 @@ sub getAccessibleProjects{
                       ELSE UPP.privilege_id END) AS "best_user_privilege_id"
 			~;
 
-	## Only show microarry/inkjet specific projects
-	if ($module eq "microarray" || $module eq "inkjet"){
-			$sql .= qq~,
-			COUNT (AR.array_request_id) AS 'array_requests'
-					~;
-	}
-
 	$sql .= qq~
       FROM $TB_PROJECT P
      INNER JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
@@ -786,20 +779,6 @@ sub getAccessibleProjects{
       LEFT JOIN $TB_WORK_GROUP WG
       ON ( UWG.work_group_id = WG.work_group_id )
 			~;
-
-	if ($module eq "microarray") {
-			$sql .= qq~
-      LEFT JOIN $TBMA_ARRAY_REQUEST AR
-      ON ( AR.project_id = P.project_id )
-			~;
-	}
-
-	if ($module eq "inkjet") {
-			$sql .= qq~
-      LEFT JOIN $TBIJ_ARRAY_REQUEST AR
-      ON ( AR.project_id = P.project_id )
-			~;
-	}
 
 	$sql .= qq~
       WHERE 1=1
@@ -830,14 +809,7 @@ sub getAccessibleProjects{
   my @project_ids = ();
 
   foreach my $element (@rows) {
-    ## If microarray, check to see if there have been array requests
-    if ($module eq "microarray" || $module eq "inkjet"){
-      if($element->[6] > 0 || $element->[5] == 10 || $element->[4] == 10){
-					push(@project_ids,$element->[0]);
-      }
-    }else {
       push(@project_ids,$element->[0]);
-    }
   }
   return (@project_ids);
 } # end getAccessibleProjects
