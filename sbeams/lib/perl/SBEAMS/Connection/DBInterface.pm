@@ -1500,12 +1500,26 @@ sub displayResultSetControls {
 
 
     #### Supply some additional links to the Result Set
-    print qq~
-      <BR>Download ResultSet in Format:
-      <a href="$CGI_BASE_DIR/GetResultSet.cgi/$rs_params{set_name}.tsv?rs_set_name=$rs_params{set_name}&format=tsv">TSV</a>,
-      <a href="$CGI_BASE_DIR/GetResultSet.cgi/$rs_params{set_name}.xls?rs_set_name=$rs_params{set_name}&format=excel">Excel</a>
-      <BR>
-    ~;
+    my @output_modes = (
+      ['excel','xls','Excel'],
+      ['xml','xml','XML'],
+      ['tsv','tsv','TSV']
+    );
+    print "<BR>Download ResultSet in Format: \n";
+    my $first_flag = 1;
+
+    #### Loop over each mode, building the URL to get this dataset
+    foreach my $output_mode_ref (@output_modes ) {
+      my $output_mode = $output_mode_ref->[0];
+      my $output_mode_ext = $output_mode_ref->[1];
+      my $output_mode_name = $output_mode_ref->[2];
+      my $url_prefix = "$base_url${separator}";
+      $url_prefix =~ s/\?/\/$rs_params{set_name}\.$output_mode_ext\?/;
+      print ",\n" unless ($first_flag);
+      $first_flag = 0;
+      print "<A HREF=\"${url_prefix}apply_action=VIEWRESULTSET&rs_set_name=$rs_params{set_name}&rs_page_size=1000000&output_mode=$output_mode\">$output_mode_name</A>";
+    }
+    print "\n<BR>\n";
 
 
     #### Supply URLs to get back to this resultset or redo this query
