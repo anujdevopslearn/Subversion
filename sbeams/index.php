@@ -37,7 +37,7 @@
 
 The Systems Biology Experiment Analysis System provides a customizable
 framework to meet the
-needs of modern systems biology research, composed of a unified
+needs of modern systems biology research.  It is composed of a unified
 state-of-the-art relational database management system (RDBMS)
 back end, a collection
 tools to store, manage, and query experiment information and results
@@ -46,7 +46,7 @@ access to remote data sources, and an interface to existing programs for
 clustering and other analysis.<P>
 
 A username and password is required to enter the system and begin using it.
-SBEAMS can use unix authentication, so please use your unix username and
+SBEAMS normally uses unix authentication, so please use your unix username and
 password.  Note that not everyone has an account by default.  If your
 account has not yet been enabled please contact <B>edeutsch</B> 
 or <B>bmarzolf</B>.
