@@ -22,15 +22,16 @@ proteomics_experiment	3	project_id	Project	int	8	0	N		N	project	project_id	Y	opt
 proteomics_experiment	4	experiment_name	Experiment Title	varchar	100	0	N		N			Y	text	50		Y	Y	N	Title of this experiment		
 proteomics_experiment	5	experiment_tag	Experiment Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this experiment		
 proteomics_experiment	6	experiment_description	Experiment Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	One-line description of this experiment		
-proteomics_experiment	7	sample_id	Sample	int	8	0	N		N	proteomics_sample	sample_id	Y	optionlist			Y	Y	N	Sample used for this experiment	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
-proteomics_experiment	8	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
-proteomics_experiment	9	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-proteomics_experiment	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-proteomics_experiment	11	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-proteomics_experiment	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-proteomics_experiment	13	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-proteomics_experiment	14	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-proteomics_experiment	15	record_status	Record Status	char	1	0	N	N	N							N	N			
+proteomics_experiment	7	experiment_path	Experiment Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	Data path for this experiment (e.g. /data/search/edeutsch/TCells/T_000/human_nci)		
+proteomics_experiment	8	sample_id	Sample	int	8	0	N		N	proteomics_sample	sample_id	Y	optionlist			Y	Y	N	Sample used for this experiment	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+proteomics_experiment	9	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
+proteomics_experiment	10	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+proteomics_experiment	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+proteomics_experiment	12	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+proteomics_experiment	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+proteomics_experiment	14	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+proteomics_experiment	15	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N			
+proteomics_experiment	16	record_status	Record Status	char	1	0	N	N	N							N	N			
 PR_GetSearchHits	1	search_batch_id	Search Batches									N	multioptionlist	4		Y	Y	N	"Select desired Experiments and Search Batches to include in query.  Multiple items may be selected.  If no items are selected, ALL experiments are searched."	MANUAL
 PR_GetSearchHits	2	probability_constraint	Probability Constraint									N	text	20		Y	Y	N	"Constraint for the probability of being the correct hit.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
 PR_GetSearchHits	3	xcorr_charge1	XCorr for +1									N	text	20		Y	Y	N	"Constraint for the XCorr value for charge state +1.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"""	
@@ -61,7 +62,7 @@ PR_GetSearch	3	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired displ
 PR_GetSearch	4	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."	
 BrowseAnnotatedPeptides	1	search_batch_id	Search Batches									N	multioptionlist	4		Y	Y	N	"Select desired Experiments and Search Batches to include in query.  Multiple items may be selected.  If no items are selected, ALL experiments are searched."	MANUAL
 BrowseAnnotatedPeptides	2	probability_constraint	Probability Constraint									N	text	20		Y	Y	N	"Constraint for the probability of being the correct hit.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
-BrowseAnnotatedPeptides	3	annotation_status_id	Annotation status constraint									N	optionlist	 		Y	Y	N	Select desired status of annotations to include in result (I.e. display only peptides that have been annotated or have not been annotated at all; set to blank to be insensitive to annotations)	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_annotation_status' ORDER BY sort_order,option_value"
+BrowseAnnotatedPeptides	3	annotation_status_id	Annotation status constraint									N	optionlist	 		Y	Y	N	Select desired status of annotations to include in result (I.e. display only peptides that have been annotated or have not been annotated at all; set to blank to be insensitive to annotations)	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BSH_annotation_status' ORDER BY sort_order,option_value"	
 BrowseAnnotatedPeptides	4	annotation_label_id	Annotation Labels									N	multioptionlist	5		Y	Y	N	Select desired annotation labels to include (applies only to records that have annotations)	"SELECT annotation_label_id,label_desc FROM $TBPR_ANNOTATION_LABEL ORDER BY sort_order,label_desc"	
 BrowseAnnotatedPeptides	5	reference_constraint	Reference									N	text	40		Y	Y	N	Constraint for the Protein Reference. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
 BrowseAnnotatedPeptides	6	description_constraint	Reference Description Constraint									N	text	40		Y	Y	N	Constraint for the Protein Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
@@ -77,7 +78,7 @@ BrowseAnnotatedPeptides	15	sort_order	Sort Order									N	optionlist	 		Y	Y	N	D
 BrowseAnnotatedPeptides	16	display_options	Display Options									N	multioptionlist	5		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BAP_display_options' ORDER BY sort_order,option_value"	
 BrowseAnnotatedPeptides	17	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 1000 rows."		
 search_hit_annotation	1	search_hit_annotation_id	Search Hit Annotation	int	8	0	N		Y							N	N				pkDEFAULT
-search_hit_annotation	2	search_hit_id	Search Hit ID	int	8	0	N		N			Y	fixed			Y	Y	Y	Database ID for the Search Hit to be annotated		
+search_hit_annotation	2	search_hit_id	Search Hit ID	int	8	0	N		N			Y	fixed			Y	Y	Y	Database ID for the Search Hit to be annotated	
 search_hit_annotation	3	annotation_label_id	Annotation Label	int	8	0	N		N	annotation_label	annotation_label_id	Y	scrolloptionlist	6		Y	Y	N	Annotation label to associate with this Search Hit.  A description of how sure the annotater is that this is a correct peptide identification	"SELECT annotation_label_id,label_desc FROM $TBPR_ANNOTATION_LABEL ORDER BY sort_order,label_desc"
 search_hit_annotation	4	annotation_confidence_id	Annotation Confidence	int	8	0	N		N	annotation_confidence	annotation_confidence_id	Y	scrolloptionlist	5		Y	Y	N	Confidence in the above labeling	"SELECT annotation_confidence_id,confidence_desc FROM $TBPR_ANNOTATION_CONFIDENCE ORDER BY sort_order,confidence_desc"
 search_hit_annotation	5	annotation_source_id	Annotation Source	int	8	0	N		N	annotation_source	annotation_source_id	Y	fixedfromlist			Y	Y	N	Source from which this annotation came	"SELECT annotation_source_id,source_desc FROM $TBPR_ANNOTATION_SOURCE ORDER BY sort_order,source_desc"
@@ -109,7 +110,7 @@ PR_CompareExperiments	10	charge_constraint	Charge Constraint									N	optionlis
 PR_CompareExperiments	11	precursor_mass_constraint	Precursor Mass constraint									N	text	40		Y	Y	N	"Constraint for the measured precursor mass (as a single decimal value).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""	
 PR_CompareExperiments	12	mass_constraint	Mass constraint									N	text	40		Y	Y	N	"Constraint for the theoretical peptide mass (as a single decimal value).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""	
 PR_CompareExperiments	13	isoelectric_point_constraint	pI constraint									N	text	40		Y	Y	N	"Constraint for the theoretical isoelectric point (pI).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""n.n +- n.n"", ""between n.n and n.n"""	
-PR_CompareExperiments	14	n_annotations_constraint	# of matches constraint									N	text	10		Y	Y	N	"Constraint for the number of entries per row (e.g. use >0 to show only those rows that have at least one match)  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"""	
+PR_CompareExperiments	14	n_annotations_constraint	# of matches constraint									N	text	10		Y	Y	N	"Constraint for the number of entries per row (e.g. use >0 to show only those rows that have at least one match)  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"""		
 PR_CompareExperiments	15	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'CE_sort_options' ORDER BY sort_order,option_value"	
 PR_CompareExperiments	16	display_options	Display Options									N	multioptionlist	5		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBPR_QUERY_OPTION WHERE option_type = 'BAP_display_options' ORDER BY sort_order,option_value"	
 PR_CompareExperiments	17	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 1000 rows."		
