@@ -4,7 +4,7 @@ CY_fcs_run_parameters	FCS Run Parameters	Cytometry_infrastructure	NO	$TBCY_FCS_R
 CY_query_option	Query Option	Cytometry_infrastructure	YES	$TBCY_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=CY_query_option	CY_query_option	
 CY_BrowseFCSRuns	Browse FCS Runs	QUERY	NO				BrowseFCSRun		
 CY_AddFCSRuns	Add FCS Runs	QUERY	NO				AddFCSRuns		
-CY_measured_parameters	Measured Parameters	Cytometry_infrastructure	NO	$TBCY_MEASURED_PARAMETERS	measured_parameters_id		ManageTable.cgi?TABLE_NAME=CY_measured_parameters	CY_measured_parameters	CY_fcs_run
+CY_measured_parameters	Measured Parameters	Cytometry_infrastructure	YES	$TBCY_MEASURED_PARAMETERS	measured_parameters_id		ManageTable.cgi?TABLE_NAME=CY_measured_parameters	CY_measured_parameters	CY_fcs_run
 CY_fcs_run_data_point	FCS DataPoints	Cytometry_infrastructure	NO	$TBCY_FCS_DATA_POINT	fcs_data_point_id				
 CY_sort_entity	Sort Entity	Cytometry_infrastructure	YES	$TBCY_SORT_ENTITY	sort_entity_id		ManageTable.cgi?TABLE_NAME=CY_sort_entity	CY_sort_entity	CY_fcs_run
 CY_tissue_type	Tissue Type	Cytometry_infrastructure	YES	$TBCY_TISSUE_TYPE	tissue_type_id		ManageTable.cgi?TABLE_NAME=CY_tissue_type	CY_tissue_type	CY_fcs_run
