@@ -347,6 +347,7 @@ sub start_element {
       total_no_spectrum_ids => 1,
       pct_spectrum_ids => 1,
       subsuming_protein_entry => 1,
+      calc_neutral_pep_mass => 1,
     );
     foreach my $attr (keys(%attrs_to_drop)) {
       if (exists($attrs{$attr})) {
