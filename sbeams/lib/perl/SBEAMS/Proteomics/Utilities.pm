@@ -903,16 +903,34 @@ sub calcNTransmembraneRegions {
 
   #### Parse input parameters
   my $peptide = $args{'peptide'} || die "Must supply the peptide";
+  my $iWindowSize = $args{'window_size'} || 19.0
+  my $calc_method = $args{'calc_method'} || ''
+
 
   #### Define the hydropathy index
   my %hydropathy_index = getHydropathyIndex();
+
 
   #### Define some variables
   my ($i,$iStart,$iNumHydroRegions,$dHydro,$dCutOff,$iWindowSize);
   $dHydro=0.0;
   $iNumHydroRegions=0;
   $dCutOff=1.58;
-  $iWindowSize=19.0;
+
+
+  #### Define information for specific residue counting
+  my $iProleinCount = 0;
+  my $iKRDECount = 0;
+  my %KRDE = (K=>1,R=>1,D=>1,E=>1);
+
+
+  #### If a specific calc_method was selected, set those parameters
+  if ($calc_method eq 'NewMethod') {
+    #### Subtract 1.0 from every hydropathy index
+    while ( my ($key,$value) = each %hydropathy_index) {
+      $hydropathy_index{$key} = $value - 1.0;
+    }
+  }
 
 
   #### Split peptide into an array of residues and get number
@@ -920,15 +938,17 @@ sub calcNTransmembraneRegions {
   my $iLengthProtein = scalar(@residues);
 
 
-  #### If the peptide/protein is shorter than 19 residues, return 0
+  #### If the peptide/protein is shorter than window size, return 0
   if ($iLengthProtein <= $iWindowSize) {
     return($iNumHydroRegions);
   }
 
 
-  #### Sum up the hydropathy scores for first 19 residues
+  #### Sum up the hydropathy scores for first window-width residues
   for ($i=0; $i<$iWindowSize; $i++) {
     $dHydro += $hydropathy_index{$residues[$i]};
+    $iProleinCount += 1 if ($residues[$i] eq 'P');
+    $iKRDEcount += 1 if (defined($KRDE{$residues[$i]}));
   }
 
 
@@ -938,16 +958,25 @@ sub calcNTransmembraneRegions {
   #### for peaks above the cutoff
   for ($i=$iWindowSize; $i<$iLengthProtein; $i++) {
 
-    #### If this is a new peak above the cutoff
-    if ($dHydro/$iWindowSize > $dCutOff && $isHydroRegion==0) {
-      $iNumHydroRegions++;
-      $isHydroRegion = 1;
-      #print "  Region at ",$i-$iWindowSize," is above cutoff at ",
-      #  $dHydro/$iWindowSize,"\n";
+    #### If we're not in a transmembrane region, see if we entered one
+    if ($isHydroRegion==0) {
+      my $enter_region_flag = 0;
+      $enter_region_flag = 1 if ($dHydro/$iWindowSize >= $dCutOff);
+      $enter_region_flag = 0 if ($calc_method eq 'NewMethod' &&
+        ($iProleinCount > 0 || $iKRDEcount > 2) );
 
-    #### Otherwise set the flag to 0
-    } elsif ($dHydro/$iWindowSize <= $dCutOff) {
-      $isHydroRegion = 0;
+      if ($enter_region_flag) {
+        $iNumHydroRegions++;
+        $isHydroRegion = 1;
+        #print "  Region at ",$i-$iWindowSize," is above cutoff at ",
+        #  $dHydro/$iWindowSize,"\n";
+      }
+
+    #### Else if we are in a transmembrane region, see if we should exit
+    } else {
+      $isHydroRegion = 0 if ($dHydro/$iWindowSize < $dCutOff);
+      $isHydroRegion = 0 if ($calc_method eq 'NewMethod' &&
+        ($iProleinCount > 0 || $iKRDEcount > 2) );
     }
 
     #print $i-$iWindowSize," at ",$dHydro/$iWindowSize,"\n";
@@ -965,8 +994,17 @@ sub calcNTransmembraneRegions {
     }
 
     #### Update the rolling hydropathy sum
-    $dHydro += $hydropathy_index{$residues[$i]} -
-      $hydropathy_index{$residues[$i-$iWindowSize]};
+    $new_residue = $residues[$i];
+    $old_residue = $residues[$i-$iWindowSize];
+    $dHydro += $hydropathy_index{$new_residue} -
+      $hydropathy_index{$old_residue};
+
+    #### Update the window content statistics
+    $iProleinCount += 1 if ($new_residue eq 'P');
+    $iProleinCount -= 1 if ($old_residue eq 'P');
+    $iKRDEcount += 1 if (defined($KRDE{$new_residue}));
+    $iKRDEcount -= 1 if (defined($KRDE{$old_residue}));
+
   }
 
   return $iNumHydroRegions;
