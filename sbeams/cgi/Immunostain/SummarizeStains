@@ -31,7 +31,7 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
 
-use SBEAMS::Connection;
+use SBEAMS::Connection qw( $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -114,6 +114,7 @@ sub main {
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters);
   #$sbeams->printDebuggingInfo($q);
+  
 
 
   #### Process generic "state" parameters before we start
@@ -440,6 +441,7 @@ foreach my $p (keys %parameters)
 
   ~;
 
+  $log->debug( $sql );
 
   #### Certain types of actions should be passed to links
   my $pass_action = "QUERY";
@@ -634,7 +636,7 @@ sub postProcessResultset {
   
   # Print javascript routine to check weighting factor input.  Had to add
   # the output mode checking because we get in here in a variety of ways.
-  if  ( uc($rs_params_ref->{output_mode} ) =~ /HTML/ && 
+  if  ( uc($sbeams->output_mode()) =~ /HTML/ && 
         !defined $query_parameters_ref->{exprTabMode} ) {
     print getWFJavascript();
   }
@@ -998,7 +1000,6 @@ sub convertGenomeCoordinates {
   #### Loop over each one and try the conversion
   foreach my $coordinate_str (@genome_coordinates) {
     if ($coordinate_str =~ /(.+)?:chr(.+)?:(\d+)-(\d+)([\-\+])/) {
-
       my $genome_build_id = $1;
       my $chromosome = $2;
       my $start_pos = $3;
@@ -1007,8 +1008,8 @@ sub convertGenomeCoordinates {
 
       my $organism_id = $build2organism{$genome_build_id};
       unless ($organism_id) {
-	print "ERROR: Invalid genome_build_id '$genome_build_id'<BR>\n";
-	next;
+	      print "ERROR: Invalid genome_build_id '$genome_build_id'<BR>\n";
+	      next;
       }
 
       my $sql = qq~
@@ -1027,18 +1028,14 @@ sub convertGenomeCoordinates {
                )
       ~;
       
-    
       my @rows = $sbeams->selectOneColumn($sql);
       if (scalar(@rows) > 1) {
-	print "ERROR: More than one row returned trying to find antibodies ".
-	  "for ''!  Report this!<BR>\n";
-	next;
+	      print STDERR "ERROR: More than one row returned by genome_coordinate lookup\n";
+        # Give em the first one.
+      	push(@antibody_ids,$rows[0]);
+      } elsif (scalar(@rows) == 1) {
+      	push(@antibody_ids,$rows[0]);
       }
-
-      if (scalar(@rows) == 1) {
-	push(@antibody_ids,$rows[0]);
-      }
-
     } else {
       print "ERROR: Unable to parse coordinate string '$coordinate_str'<BR>\n";
       return(-1);
@@ -1046,7 +1043,6 @@ sub convertGenomeCoordinates {
   }
 
   return(0) unless (@antibody_ids);
-
   return(join(',',@antibody_ids));
 }
 
