@@ -13,7 +13,7 @@ package SBEAMS::Connection::DBInterface;
 
 use strict;
 use vars qw(@ERRORS $dbh $sth $q $resultset_ref $rs_params_ref
-            $SORT_COLUMN $SORT_TYPE
+            $SORT_COLUMN $SORT_TYPE $timing_info
            );
 use CGI::Carp qw(fatalsToBrowser croak);
 use DBI;
@@ -21,6 +21,7 @@ use POSIX;
 use Data::Dumper;
 use URI::Escape;
 use Storable;
+use Time::HiRes qw( usleep ualarm gettimeofday tv_interval );
 
 
 #use lib "/net/db/src/CPAN/Data-ShowTable-3.3a/blib/lib";
@@ -1081,11 +1082,20 @@ sub fetchResultSet {
     #### Get the database handle
     $dbh = $self->getDBHandle();
 
+
+    #### Update timing info
+    $timing_info->{send_query} = [gettimeofday()];
+
+
     #### Execute the query
     $sth = $dbh->prepare("$sql_query") ||
       croak("Unable to prepare query:\n".$dbh->errstr);
     my $rv  = $sth->execute ||
       croak("Unable to execute query:\n".$dbh->errstr);
+
+
+    #### Update timing info
+    $timing_info->{begin_resultset} = [gettimeofday()];
 
 
     #### Decode the type numbers into type strings
@@ -1115,6 +1125,10 @@ sub fetchResultSet {
 
     #### Read the result set into memory
     while (fetchNextRow()) { 1; }
+
+
+    #### Update timing info
+    $timing_info->{finished_resultset} = [gettimeofday()];
 
 
     #### finish up
@@ -1489,7 +1503,7 @@ sub displayResultSetControls {
     my $npages = int($nrowsminus / $rs_params{page_size}) + 1;
     for ($i=0; $i<$npages; $i++) {
       my $pg = $i+1;
-      
+
       if ( ( $i % 50 ) == 0 ) {
           print "<BR>";
       }
@@ -1567,6 +1581,31 @@ sub displayResultSetControls {
       $SERVER_BASE_DIR$base_url?apply_action=QUERY&$param_string</nobr>
       <BR>
     ~;
+
+
+    #### Print out some timing information
+    if (1) {
+
+      if (defined($timing_info->{send_query}) &&
+          defined($timing_info->{begin_resultset})) {
+        printf("Process Query: %8.2f s<BR>\n",tv_interval(
+          $timing_info->{send_query},$timing_info->{begin_resultset}));
+      }
+
+      if (defined($timing_info->{begin_resultset}) &&
+          defined($timing_info->{finished_resultset})) {
+        printf("Fetch Resultset: %8.2f s<BR>\n",tv_interval(
+          $timing_info->{begin_resultset},$timing_info->{finished_resultset}));
+      }
+
+      if (defined($timing_info->{begin_write_resultset}) &&
+          defined($timing_info->{finished_write_resultset})) {
+        printf("Cache Resultset: %8.2f s<BR>\n",tv_interval(
+          $timing_info->{begin_write_resultset},
+          $timing_info->{finished_write_resultset}));
+      }
+
+    }
 
 
     #### Finish the form
@@ -1670,6 +1709,10 @@ sub readResultSet {
     my $indata = "";
 
 
+    #### Update timing info
+    $timing_info->{begin_resultset} = [gettimeofday()];
+
+
     #### Read in the query parameters
     my $infile = "$PHYSICAL_BASE_DIR/tmp/queries/${resultset_file}.params";
     open(INFILE,"$infile") || die "Cannot open $infile\n";
@@ -1694,6 +1737,10 @@ sub readResultSet {
     #### eval the dump
     #eval $indata;
     #%{$resultset_ref} = %{$VAR1};
+
+
+    #### Update timing info
+    $timing_info->{finished_resultset} = [gettimeofday()];
 
 
     return 1;
@@ -1722,10 +1769,14 @@ sub writeResultSet {
     if ($$resultset_file_ref eq "SETME") {
       my ($sec,$min,$hour,$mday,$mon,$year) = localtime(time);
       my $timestr = strftime("%Y%m%d-%H%M%S",$sec,$min,$hour,$mday,$mon,$year);
-      $$resultset_file_ref = $file_prefix . $self->getCurrent_username() ."_" . 
-	$timestr;
+      $$resultset_file_ref = $file_prefix . $self->getCurrent_username() .
+        "_" . $timestr;
     }
     my $resultset_file = $$resultset_file_ref;
+
+
+    #### Update timing info
+    $timing_info->{begin_write_resultset} = [gettimeofday()];
 
 
     #### Write out the query parameters
@@ -1742,6 +1793,10 @@ sub writeResultSet {
     #$Data::Dumper::Indent = 0;
     #printf OUTFILE Data::Dumper->Dump( [$resultset_ref] );
     #close(OUTFILE);
+
+
+    #### Update timing info
+    $timing_info->{finished_write_resultset} = [gettimeofday()];
 
 
     return 1;
