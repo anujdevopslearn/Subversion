@@ -248,6 +248,13 @@ sub printStyleSheet {
 	A:visited.nav {  font-family: Helvetica, Arial, sans-serif; color: #000000}
 	A:hover.nav {  font-family: Helvetica, Arial, sans-serif; color: red;}
 	.nav {  font-family: Helvetica, Arial, sans-serif; color: #000000}
+	.grey_bg{ background-color: #CCCCCC }
+	.orange_bg{ background-color: #FFCC66; ${FONT_SIZE_LG}pt; font-weight: bold}
+	.small_cell {font-size: 8; background-color: #CCCCCC; white-space: nowrap  }
+	.anno_cell {white-space: nowrap  }
+	.present_cell{border: none}
+	.marginal_cell{border: 1px solid #0033CC}
+	.absent_cell{border: 2px solid #660033}
 	//-->
 	</style>
     ~;
