@@ -5,8 +5,9 @@ use DirHandle;
 use Getopt::Long;
 use Data::Dumper;
 use FindBin;
+use lib "$FindBin::Bin/../../perl";
 #use FreezeThaw qw( freeze thaw );
-use lib qw (../perl ../../perl);
+
 use vars qw ($PROG_NAME $q $sbeamsMOD $sbeams $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
             $current_contact_id $current_username );
 

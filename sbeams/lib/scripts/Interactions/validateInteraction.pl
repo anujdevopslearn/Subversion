@@ -1,6 +1,8 @@
 #!usr/local/bin/perl -w
 use strict;
-use lib qw (/net/dblocal/www/html/sbeams/lib/perl);
+
+use FindBin;
+use lib "$FindBin::Bin/../../perl";
 
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
@@ -264,7 +266,7 @@ foreach my $type (keys %dupeHash)
 sub recordInfo
 { 
     my $outFile = "/users/mkorb/Interaction/dupeCheck/".$time."_Dupe.txt";
-  open (FileEx, "> $outFile") or die "can not open $outFile $!";
+   open (FileEx, "> $outFile") or die "can not open $outFile $!";
  
   print FileEx "bioentity_id\tbioentity_common_name\tbioentity_canonical_name\t bioentity_full_name\t bioentity_canonical_gene_name\t bioentity_type_name\torganism_id\n";
  
