@@ -119,7 +119,7 @@ sub printEntryForm {
     my $username;
 
     my $CATEGORY="BioSequence Search";
-    my $TABLE_NAME="BrowseBioSequence";
+    my $TABLE_NAME="SN_BrowseBioSequence";
     $TABLE_NAME = $q->param("QUERY_NAME") if $q->param("QUERY_NAME");
     ($PROGRAM_FILE_NAME) =
       $sbeamsSN->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");

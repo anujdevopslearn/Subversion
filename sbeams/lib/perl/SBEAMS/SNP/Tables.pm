@@ -23,8 +23,6 @@ use vars qw(@ISA @EXPORT
 
     $TBSN_QUERY_OPTION
 
-    $TBPR_QUERY_OPTION
-    $TBPR_BIOSEQUENCE_SET
 );
 
 require Exporter;
@@ -41,23 +39,17 @@ require Exporter;
 
     $TBSN_QUERY_OPTION
 
-    $TBPR_QUERY_OPTION
-    $TBPR_BIOSEQUENCE_SET
 );
 
 
 $TB_ORGANISM                = 'sbeams.dbo.organism';
 
-$TBSN_BIOSEQUENCE_SET       = 'biosap.dbo.biosequence_set';
-$TBSN_BIOSEQUENCE           = 'biosap.dbo.biosequence';
+$TBSN_BIOSEQUENCE_SET       = 'SNP.dbo.biosequence_set';
+$TBSN_BIOSEQUENCE           = 'SNP.dbo.biosequence';
 
-$TBSN_SNP                   = 'geap.dbo.snp';
-$TBSN_SNP_SOURCE            = 'geap.dbo.snp_source';
+$TBSN_SNP                   = 'SNP.dbo.snp';
+$TBSN_SNP_SOURCE            = 'SNP.dbo.snp_source';
 
-$TBSN_QUERY_OPTION          = 'geap.dbo.query_option';
-
-#### BIG UGLY FUDGE
-$TBPR_QUERY_OPTION          = 'proteomics.dbo.query_option';
-$TBPR_BIOSEQUENCE_SET       = 'biosap.dbo.biosequence_set';
+$TBSN_QUERY_OPTION          = 'SNP.dbo.query_option';
 
 

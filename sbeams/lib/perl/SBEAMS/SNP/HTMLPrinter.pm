@@ -98,8 +98,7 @@ sub printPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/SNP/ManageTable.cgi?TABLE_NAME=source_db"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/SNP/ManageTable.cgi?TABLE_NAME=sn_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;xBioSequenceSets</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/SNP/ManageTable.cgi?TABLE_NAME=SN_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/SNP/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;BioSequences</nobr></a></td></tr>
