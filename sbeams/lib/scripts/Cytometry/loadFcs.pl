@@ -183,7 +183,7 @@ sub loadDataHash
     $project_id = 397; 
     $project_id = 409  if $hashRef->{File} =~ /IkB-GFP/i;
     my $fileID = $fileIDHash{$hashRef->{File}};
-    my $outfile = $PHYSICAL_BASE_DIR ."/dataPoints/tmp/".$fileID. "_". $fileName;
+    my $outfile = $PHYSICAL_BASE_DIR ."/data/Cytometry/".$fileID. "_". $fileName;
     print LOG  "tmp file for storing Hash: $outfile\n";
     return if (-e $outfile) and do {print LOG "tmp data file already exist\n"; print "tmp file: $outfile already exists\n";};
 #file in fcs_run ?   
@@ -263,8 +263,8 @@ sub loadDataHash
            my $tmpFile = $fileID."_".$fileName;
               
 #check if we have the data file in the tmp
-#this file  is based on the the fcr_run_id
-            if( -e "$PHYSICAL_BASE_DIR/dataPoints/tmp/$tmpFile")
+#this file  is based on the the fcs_run_id
+            if( -e "$PHYSICAL_BASE_DIR/data/Cytometry/$tmpFile")
             {
               print "datapointFile already exist:  $tmpFile \n";
               next;
@@ -380,13 +380,14 @@ sub recordDataPoints
    my $posPk = shift(@_);  # keyed on position = fcs_run_parameters_id 
   	my ($fileName) = $infile =~ /^.*\/(.*)$/; 
     $fileName = $PK."_".$fileName;
-     my $outfile = $PHYSICAL_BASE_DIR ."/dataPoints/tmp/".$fileName;
+     my $outfile = $PHYSICAL_BASE_DIR ."/data/Cytometry/".$fileName;
 
-    print "writing the tempHash: $outfile/dataPoints/tmp/ \n";
+    print "writing the tempHash: $outfile \n";
     my $dummy; 
     # Read in the data, sort it out into the correct columns, and dump
     # it to the output file.
     open(FCSFILE,"$infile") or die "dump_data2: Can't find input file $infile.";
+    binmode(FCSFILE);
     read(FCSFILE,$dummy,$offset); # read over header and text sections.
     my $data;
     my %event;
