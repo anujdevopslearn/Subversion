@@ -292,8 +292,8 @@ sub handle_request {
   #### Get all the projects user has access to
   $sql = qq~
 	SELECT P.project_id,P.project_tag,P.name,UL.username,
-               MIN(GPP.privilege_id) AS 'best_group_privilege_id',
-               MIN(UPP.privilege_id) AS 'best_user_privilege_id'
+               MIN(GPP.privilege_id) AS "best_group_privilege_id",
+               MIN(UPP.privilege_id) AS "best_user_privilege_id"
 	  FROM $TB_PROJECT P
 	  JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
 	  LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
