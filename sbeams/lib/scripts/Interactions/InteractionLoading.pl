@@ -7,63 +7,52 @@ use Data::Dumper;
 use FindBin;
 #use FreezeThaw qw( freeze thaw );
 use lib qw (../perl ../../perl);
-use vars qw ($q $recordCon $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
-             $current_contact_id $current_username );
+use vars qw ($PROG_NAME $q $sbeamsMOD $sbeams $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
+            $current_contact_id $current_username );
+
+			
+use SBEAMS::Connection;
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
 
 use SBEAMS::Interactions;
 use SBEAMS::Interactions::Settings;
 use SBEAMS::Interactions::Tables;
 
-use SBEAMS::Connection;
-use SBEAMS::Connection::Settings;
-use SBEAMS::Connection::Tables;
 
-$recordCon = new SBEAMS::Connection;
-$recordCon->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::Interactions;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
-my (%INFOPROTEIN1,
-	%INFOPROTEIN2,
-	%INTERACTION, @columnOrder, %columnHashProtein1, %columnHashProtein2, %interactionHash,$bioentityState,$bioentityType,$organismName,$interactionTypes,
-	$interactionGroups,$confidenceScores,$assayTypes,$pubMed, $interactionGroupsOrganism, $fhError, $fhLog, $regTypes);
-
-#hese are the clomumn arrangements for the spreadsheet
-#organisName1[0],bioentityComName1[1], bioentityCanName1[2], bioentityFullName1[3], bioentityAliasesName1[4],bioentityTypeName1[5],
-#bioentityLoc1[6], bioentityState1[7], bioentityReg1[8],
-#interactionType [9],
-#organismName2[10], bioentityComName2[11], bioentityCanName2[12], bioentityFullName2[13], bioentityAliasName2[14],
-#bioentityTypeName2[15], bioentityLoc2[16], bioentityState2[17], bioentityReg2[18], interaction_group[19]
-#confidence_score[20], interaction_description[21], assay_name[22], assay_type[23], publication_ids[24]
+use CGI;
+$q = CGI->new();
 
 
-
-#looking for a txt, tab delmited file in the current dir
-#or an excel spreadsheet get the dir as a command line argument 
-#die without doing any work
-
-
-my $PROG_NAME = $FindBin::Script;
-
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
 Usage: $PROG_NAME [OPTIONS]
 Options:
-  --verbose n          Set verbosity level.  default is 0
-  --quiet              Set flag to print nothing at all except errors
-  --debug n            Set debug flag
-  --testonly           If set, rows in the database are not changed or added
-  --source_file XXX    Source file name from which data are to be updated
-  --check_status       Is set, nothing is actually done, but rather
+ --verbose n          Set verbosity level.  default is 0
+ --quiet              Set flag to print nothing at all except errors
+ --debug n            Set debug flag
+ --testonly           If set, rows in the database are not changed or added
+ --source_file XXX    Source file name from which data are to be updated
+ 							It is a tab delimeted txt file
+ --check_status       Is set, nothing is actually done, but rather
                        a summary of what should be done is printed
-
- e.g.:  $PROG_NAME --check_status --source_file 45277084.htm
-
+--error_file	Error file name to which loading errors are printed
+ e.g.:  $PROG_NAME --check_status --source_file  /users/bob/source.txt  --error_file  /users/bob/error.txt
 EOU
 
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
-		   "source_file:s","check_status",
-		  ))
-{
+		   "source_file:s","check_status", "error_file:s",
+		  )) {
   print "$USAGE";
   exit;
 }
@@ -72,8 +61,7 @@ $VERBOSE = $OPTIONS{"verbose"} || 0;
 $QUIET = $OPTIONS{"quiet"} || 0;
 $DEBUG = $OPTIONS{"debug"} || 0;
 $TESTONLY = $OPTIONS{"testonly"} || 0;
-if ($DEBUG)
-{
+if ($DEBUG) {
   print "Options settings:\n";
   print "  VERBOSE = $VERBOSE\n";
   print "  QUIET = $QUIET\n";
@@ -84,6 +72,10 @@ if ($DEBUG)
 	
 #we need the available data as global data from the lookup tables to make sure the user entered valid data
 #ref to all lookup tables
+my (%INFOPROTEIN1,
+	%INFOPROTEIN2,
+	%INTERACTION, @columnOrder, %columnHashProtein1, %columnHashProtein2, %interactionHash,$bioentityState,$bioentityType,$organismName,$interactionTypes,
+	$interactionGroups,$confidenceScores,$assayTypes,$pubMed, $interactionGroupsOrganism, $fhError, $fhLog, $regTypes);
 
 main();
 exit;
@@ -91,12 +83,11 @@ exit;
 sub main
 {
 		 #### Do the SBEAMS authentication and exit if a username is not returned
-		 exit unless ($current_username = $recordCon->Authenticate(
+		 exit unless ($current_username = $sbeams->Authenticate(
 		 work_group=>'Interactions_user',
   ));
 
-	
-	
+
 	
 ###Housekeeping, should be in a conf file
 @columnOrder = 
@@ -182,28 +173,30 @@ organismName1 => $indexHash{Organism_bioentity1_name},
 	
 #getting data from all the lookup tables
 #table, column, column
-#		my %bioentityState = ($recordCon->selectTwoColumnHash(qq /Select bioentity_state_id, bioentity_state_name from $TBIN_BIOENTITY_STATE/));  
-	my %bioentityState = $recordCon->selectTwoColumnHash(qq /Select Upper(bioentity_state_name), bioentity_state_id from $TBIN_BIOENTITY_STATE/);  
+#		my %bioentityState = ($sbeams->selectTwoColumnHash(qq /Select bioentity_state_id, bioentity_state_name from $TBIN_BIOENTITY_STATE/));  
+	my %bioentityState = $sbeams->selectTwoColumnHash(qq /Select Upper(bioentity_state_name), bioentity_state_id from $TBIN_BIOENTITY_STATE/);  
 	$bioentityState = \%bioentityState;
-	my %bioentityType = $recordCon->selectTwoColumnHash(qq /Select Upper(bioentity_type_name),bioentity_type_id from $TBIN_BIOENTITY_TYPE/);
+	my %bioentityType = $sbeams->selectTwoColumnHash(qq /Select Upper(bioentity_type_name),bioentity_type_id from $TBIN_BIOENTITY_TYPE/);
 	$bioentityType = \%bioentityType;
-	my %organismName = $recordCon->selectTwoColumnHash(qq /Select Upper(full_name),organism_id from $TB_ORGANISM /);
+	my %organismName = $sbeams->selectTwoColumnHash(qq /Select Upper(full_name),organism_id from $TB_ORGANISM /);
 	$organismName = \%organismName;
-	my %interactionTypes = $recordCon->selectTwoColumnHash(qq /Select Upper(interaction_type_name), interaction_type_id from $TBIN_INTERACTION_TYPE/);
+
+	
+	my %interactionTypes = $sbeams->selectTwoColumnHash(qq /Select Upper(interaction_type_name), interaction_type_id from $TBIN_INTERACTION_TYPE/);
 	$interactionTypes = \%interactionTypes;
-	my %interactionGroups = $recordCon->selectTwoColumnHash(qq /Select Upper(interaction_group_name), interaction_group_id from $TBIN_INTERACTION_GROUP/);
+	my %interactionGroups = $sbeams->selectTwoColumnHash(qq /Select Upper(interaction_group_name), interaction_group_id from $TBIN_INTERACTION_GROUP/);
 	$interactionGroups = \%interactionGroups;
-	my %confidenceScores = $recordCon->selectTwoColumnHash(qq /Select (confidence_score_name),confidence_score_id from $TBIN_CONFIDENCE_SCORE/);
+	my %confidenceScores = $sbeams->selectTwoColumnHash(qq /Select (confidence_score_name),confidence_score_id from $TBIN_CONFIDENCE_SCORE/);
 	$confidenceScores = \%confidenceScores;
-	my %assayTypes = $recordCon->selectTwoColumnHash(qq /Select Upper(assay_type_name), assay_type_id from $TBIN_ASSAY_TYPE/);
+	my %assayTypes = $sbeams->selectTwoColumnHash(qq /Select Upper(assay_type_name), assay_type_id from $TBIN_ASSAY_TYPE/);
 	$assayTypes = \%assayTypes;
-	my %regTypes = $recordCon->selectTwoColumnHash (qq /Select Upper(regulatory_feature_type_name), regulatory_feature_type_id from $TBIN_REGULATORY_FEATURE_TYPE/);
+	my %regTypes = $sbeams->selectTwoColumnHash (qq /Select Upper(regulatory_feature_type_name), regulatory_feature_type_id from $TBIN_REGULATORY_FEATURE_TYPE/);
 	$regTypes = \%regTypes; 
-	my %pubMed = $recordCon->selectTwoColumnHash (qq /Select pubmed_ID, publication_id from $TBIN_PUBLICATION/);
+	my %pubMed = $sbeams->selectTwoColumnHash (qq /Select pubmed_ID, publication_id from $TBIN_PUBLICATION/);
 	$pubMed = \%pubMed;
 
 	
-#	$recordCon->printPageHeader() unless ($QUIET);
+	$sbeams->printPageHeader() unless ($QUIET);
 	processFile();
 #at this point we have either 
 #records in INFOPROTEIN1 with no matching in INFOPROTEIN2 and INTERACTION
@@ -216,39 +209,52 @@ organismName1 => $indexHash{Organism_bioentity1_name},
 		checkPopulateBioentity(\%INFOPROTEIN2,2);
 		print "checking, populating the database for current Interactions entries\n";	
 		checkPopulateInteraction(\%INTERACTION);
-		print $fhLog "</body></html>";
-		$recordCon->printPageFooter() unless ($QUIET);
+		$sbeams->printPageFooter() unless ($QUIET);
 }
 
 
 sub processFile
 {
-	my $caseFile = shift;
 	
+	
+#	my $caseFile = shift;
+#	my $source_file = $ARGV[0];	
 	my $source_file = $OPTIONS{"source_file"} || '';
 	my $check_status = $OPTIONS{"check_status"} || '';
-	
-	unless (-e $source_file) 
-	{
-			print "File to parse does not exist\n";
-			exit;
-	}
+	my $errorFile =$OPTIONS{"error_file"} || '';
+	 unless ($QUIET)
+	 {
+		 $sbeams->printUserContext();
+		 print "\n";
+	 }
+
+  #### Verify that source_file was passed and exists
+  unless ($source_file) 
+  {
+	  print "ERROR: You must supply a --source_file parameter\n$USAGE\n";
+	  exit;
+  }
+  unless (-e $source_file)
+  {
+	  print "ERROR: Supplied source_file '$source_file' not found\n";
+	  exit;
+  }
+  unless ( $errorFile)
+   {
+	  print "ERROR: You must supply a  --error_file parameter\n$USAGE\n";
+	  exit;
+  }
 	my $count = 1;
 	
   #### Print out the header
-  unless ($QUIET) 
-	{
-    $recordCon->printUserContext();
 
-  }
 #errorLogs
 #make them global
-	(my $fileID) = $source_file =~ /.*\/(.*)\./;
-	my $errorFile = "InteractionLoadingError_".$fileID.".txt";
-	my $errorLog = "InteractionErrorLog_".$fileID.".htm";
-	$fhError = new FileHandle (">/../users/mkorb/Interaction/inputData/$errorFile") or die "can not open $!";
+	(my $fileID) = $errorFile =~ /^(.*\.).*$/;
+	my $errorLog = $fileID."htm";
+	$fhError = new FileHandle (">$errorFile") or die "can not open $!";
 	Error(\@columnOrder);
-	$fhLog = new FileHandle (">/../users/mkorb/Interaction/inputData/$errorLog") or die "can not open $!";
+	$fhLog = new FileHandle (">$errorLog") or die "can not open $!";
 	print $fhLog "<html><body><br>"; 
 
 	open (INFILE, $source_file) or die "$!";
@@ -301,6 +307,7 @@ sub processFile
 		}
 		
 		$INFOPROTEIN1{$count-2}->{organismName1} = uc($INFOPROTEIN1{$count-2}->{organismName1});
+		print "aa $INFOPROTEIN1{$count-2}->{organismName1} aa\n";
 		$INFOPROTEIN1{$count-2}->{bioentityReg1} = uc($INFOPROTEIN1{$count-2}->{bioentityReg1});
 		$INFOPROTEIN1{$count-2}->{group} = $infoArray[$columnHashProtein1{group}];
 		$INFOPROTEIN1{$count-2}->{group} =~ s/[\s+\n+\t+\r+]$//g;
@@ -329,6 +336,8 @@ sub processFile
  		$organismName->{$INFOPROTEIN1{$count-2}->{organismName1}}) 
 		{
 			print "Detected error1: type1 or organism1 not defined \n";
+			print "$bioentityType->{$INFOPROTEIN1{$count-2}->{bioentityType1}}   -----   $organismName->{$INFOPROTEIN1{$count-2}->{organismName1}} \n ";
+			
 			Error(\@infoArray, "bioentity1_type or organism1 is not defined");
 			delete $INFOPROTEIN1{$count-2};
 			next;
@@ -366,7 +375,7 @@ sub processFile
 		where interaction_group_name ='$INFOPROTEIN1{$count-2}->{group}' 
 		and organism_id = $organismName->{$INFOPROTEIN1{$count-2}->{organismName1}}/;
 								
-		if ($INFOPROTEIN1{$count-2}->{group} and !(scalar($recordCon->selectOneColumn($interactionGroupQuery))))
+		if ($INFOPROTEIN1{$count-2}->{group} and !(scalar($sbeams->selectOneColumn($interactionGroupQuery))))
 		{
 				
 				Error (\@infoArray," $INFOPROTEIN1{$count-2}->{group}: this group is not associated with the given organism in $TBIN_INTERACTION_GROUP table");
@@ -434,7 +443,7 @@ sub processFile
 		where interaction_group_name = '$INFOPROTEIN2{$count-2}->{group}' 
 		and organism_id = $organismName->{$INFOPROTEIN2{$count-2}->{organismName2}}/;		
 		
-		if ($INFOPROTEIN2{$count-2}->{group} and !(scalar($recordCon->selectOneColumn($interactionGroupQuery))))
+		if ($INFOPROTEIN2{$count-2}->{group} and !(scalar($sbeams->selectOneColumn($interactionGroupQuery))))
 		{
 				
 			
@@ -588,7 +597,7 @@ print "checking interaction requirements\n";
 					 
 					 	 print "$insert ----- $update   ----------$pubMed->{$INTERACTION{$count-2}->{pubMedID}} ";
 					 
-							my $returned_PK = $recordCon->updateOrInsertRow(
+							my $returned_PK = $sbeams->updateOrInsertRow(
 							insert => $insert,
 							update => $update,
 							table_name => "$TBIN_PUBLICATION",
@@ -711,7 +720,7 @@ sub checkPopulateBioentity
 #need to make sure we are pulling the same record
 		print "$bioentityQueryCommon\n";
 		
-					my @rows = $recordCon->selectOneColumn($bioentityQueryCommon);	
+					my @rows = $sbeams->selectOneColumn($bioentityQueryCommon);	
 					my $nrows = scalar(@rows);
 					my $bioentityIDCommon = $rows[0] if $nrows == 1;
 					$bioentityIDCommon = 0 if $nrows == 0; 
@@ -724,7 +733,7 @@ sub checkPopulateBioentity
 					next;
 					}
 					print "$bioentityQueryCanonical\n";
-					@rows = $recordCon->selectOneColumn($bioentityQueryCanonical);	
+					@rows = $sbeams->selectOneColumn($bioentityQueryCanonical);	
 					$nrows = scalar(@rows);
 					my $bioentityIDCanonical = $rows[0] if $nrows == 1;
 					$bioentityIDCanonical = 0 if $nrows == 0; 
@@ -741,7 +750,7 @@ sub checkPopulateBioentity
 							my $subCommonQuery = "Select bioentity_canonical_name from $TBIN_BIOENTITY
 							where bioentity_common_name =\'$commonName\'";
 							
-							 my @returnedRow = $recordCon->selectOneColumn($subCommonQuery);
+							 my @returnedRow = $sbeams->selectOneColumn($subCommonQuery);
 							 if ($returnedRow[0])
 							 {
 									 ErrorLog ("$SUB_NAME:<br>Database Query: subCommonQuery returned bioentity_canonical_Name:<br><b>$returnedRow[0]</b> for bioenity_common_Name: <b>$hashRef->{$record}->{'bioentityComName'.$num}</b>.<br>The upload canonical name is:<b>$hashRef->{$record}->{'bioentityCanName'.$num}</b>",
@@ -754,7 +763,7 @@ sub checkPopulateBioentity
 					{
 							my $subCanonicalQuery = "Select bioentity_common_name from $TBIN_BIOENTITY
 							where bioentity_common_name = \'$canName\'"; 
-							my @returnedRow = $recordCon->selectOneColumn($subCanonicalQuery);
+							my @returnedRow = $sbeams->selectOneColumn($subCanonicalQuery);
 							if ($returnedRow[0])
 							{
 									ErrorLog ("$SUB_NAME:<br>Database Query: subCanonicalQuery returned bioentity_common_Name:<br><b>$returnedRow[0]</b> for bioentity_canonical_Name: <b>$hashRef->{$record}->{'bioentityCanName'.$num}<b>. The upload common name is: <b>$hashRef->{$record}->{'bioentityComName'.$num}</b><br><br>",
@@ -801,7 +810,7 @@ sub checkPopulateBioentity
 			{
 					print "only bioentity_common_name is known\n";
 					print "$bioentityQueryCommon\n";
-					my @rows = $recordCon->selectOneColumn($bioentityQueryCommon);	
+					my @rows = $sbeams->selectOneColumn($bioentityQueryCommon);	
 					my $nrows = scalar(@rows);
 					my $bioentityIDCommon = $rows[0] if $nrows == 1;
 					$bioentityIDCommon = 0 if $nrows == 0; 
@@ -827,7 +836,7 @@ sub checkPopulateBioentity
 			{
 					print "only bioentity_canonical_name is known\n";
 					
-					my @rows = $recordCon->selectOneColumn($bioentityQueryCanonical);	
+					my @rows = $sbeams->selectOneColumn($bioentityQueryCanonical);	
 					my $nrows = scalar(@rows);
 					my $bioentityIDCanonical = $rows[0] if $nrows == 1;
 					$bioentityIDCanonical = 0 if $nrows == 0; 
@@ -891,13 +900,13 @@ sub insertOrUpdateBioentity
 				my %groupRowData;
 				$groupRowData{organism_id} = $organismName->{$record->{'organismName2'.$num}};
 				$groupRowData{interaction_group_name} =  $record->{group};
-				if(!scalar($recordCon->selectOneColumn($interactionGroupQuery)))
+				if(!scalar($sbeams->selectOneColumn($interactionGroupQuery)))
 				{
 						my $groupUpdate = 0; 
 						my $groupInsert = 1;
 						my $interactionGroupID = 0;
 						
-						my $groupReturned_PK = $recordCon->updateOrInsertRow(
+						my $groupReturned_PK = $sbeams->updateOrInsertRow(
 							insert => $groupInsert,
 							update => $groupUpdate,
 							table_name => "$TBIN_INTERACTION_GROUP",
@@ -925,7 +934,7 @@ sub insertOrUpdateBioentity
 #########	
 			
 
-		my $returned_PK = $recordCon->updateOrInsertRow(
+		my $returned_PK = $sbeams->updateOrInsertRow(
 				insert => $insert,
 				update => $update,
 				table_name => "$TBIN_BIOENTITY",
@@ -960,7 +969,7 @@ sub checkPopulateInteraction
 			where bioentity1_id = $hashRef->{$record}->{bioentityID1} and 
 			bioentity2_id = $hashRef->{$record}->{bioentityID2}/;
 						
-			my @rows = $recordCon->selectOneColumn($interactionQuery);	
+			my @rows = $sbeams->selectOneColumn($interactionQuery);	
 			my $nrows = scalar(@rows);
 			my $interactionID = $rows[0] if $nrows == 1;
 			$interactionID = 0 if $nrows == 0; 
@@ -1008,7 +1017,7 @@ sub insertOrUpdateInteraction
 		$rowData{assay_id} = $assayTypes->{$record->{assay_type}} if($record->{assay_type});
 		$rowData{publication_id} = $record->{pubMedID} if ($record->{pubMedID});
 		
-		my $returned_PK = $recordCon->updateOrInsertRow(
+		my $returned_PK = $sbeams->updateOrInsertRow(
 				insert => $insert,
 				update => $update,
 				table_name => "$TBIN_INTERACTION",
