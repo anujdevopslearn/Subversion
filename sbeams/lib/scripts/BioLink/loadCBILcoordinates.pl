@@ -85,7 +85,7 @@ sub getInsertSQL {
   my @cols = getColMap( 'array' );
  
   my $colstr = join( ", ", @cols );
-  my $sql = "INSERT INTO CIBL_genome_coordinates ( $colstr ) VALUES ( XXXXXX )";
+  my $sql = "INSERT INTO CBIL_genome_coordinates ( $colstr ) VALUES ( XXXXXX )";
   
   return $sql;
 }
