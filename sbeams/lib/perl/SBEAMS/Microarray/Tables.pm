@@ -69,6 +69,11 @@ use vars qw(@ISA @EXPORT
 
     $TBMA_CONDITION
     $TBMA_GENE_EXPRESSION
+    
+    $TBMA_AFFY_ARRAY_SAMPLE
+    $TBMA_AFFY_ARRAY
+    $TBMA_AFFY_ARRAY_SAMPLE_PROTOCOL
+    $TBMA_AFFY_ARRAY_PROTOCOL
 );
 
 require Exporter;
@@ -127,6 +132,11 @@ require Exporter;
 
     $TBMA_CONDITION
     $TBMA_GENE_EXPRESSION
+
+    $TBMA_AFFY_ARRAY_SAMPLE
+    $TBMA_AFFY_ARRAY
+    $TBMA_AFFY_ARRAY_SAMPLE_PROTOCOL
+    $TBMA_AFFY_ARRAY_PROTOCOL
 );
 
 
@@ -190,3 +200,11 @@ $TBMA_QUANTITATION_TYPE   = "${modMARR}quantitation_type";
 $TBMA_CONDITION           = "${mod}condition";
 $TBMA_GENE_EXPRESSION     = "${mod}gene_expression";
 
+$TBMA_AFFY_ARRAY_SAMPLE	  = "${mod}affy_array_sample";
+$TBMA_AFFY_ARRAY	  = "${mod}affy_array";
+
+$TBMA_AFFY_ARRAY_SAMPLE_PROTOCOL = "${mod}affy_array_sample_protocol";
+$TBMA_AFFY_ARRAY_PROTOCOL	= "${mod}affy_array_protocol";
+
+
+1;
