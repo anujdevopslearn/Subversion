@@ -1,6 +1,6 @@
 
 SBEAMS: Systems Biology Experiment Analysis Management System
-Copyright (C) 2000-2002  Eric Deutsch
+Copyright (C) 2000-2004  Eric Deutsch
 
 This software provides an extensible platform for building interfaces
 to one or more relational databases and may come with one or more
@@ -25,6 +25,6 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 You may contact the SBEAMS author at edeutsch@systemsbiology.org
 
 
-For installation insformation, see doc/sbeams.installnotes
+For installation information, see doc/sbeams.installnotes
 
 
