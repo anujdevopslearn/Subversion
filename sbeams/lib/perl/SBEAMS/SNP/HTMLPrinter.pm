@@ -127,6 +127,7 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SN_snp_plate"<nobr>&nbsp;&nbsp;&nbsp;Plates</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SN_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SN_biosequence_rank_list"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceRankLists</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SN_assay_order_list"><nobr>&nbsp;&nbsp;&nbsp;AssayOrderLists</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SN_snp_source"><nobr>&nbsp;&nbsp;&nbsp;SNPSource</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=SN_source_version"><nobr>&nbsp;&nbsp;&nbsp;SNPSource Version</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
