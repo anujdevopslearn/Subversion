@@ -31,7 +31,7 @@ Options:
 
 This script will run on a cron job, scanning a directory tree looking
 for new affy files. The data will be entered into the SBEAMS affy_array and
-affy_array_sample microarray database tables
+affy_array_sample microarray database tables this 
 
 
 =head2 EXPORT
@@ -90,6 +90,7 @@ use vars qw ($sbeams $q $sbeams_affy $sbeams_affy_groups
 			 %data_to_find
 			 @BAD_PROJECTS
 			 $METHOD
+			 $UPDATE_ARRAY
 			 $DELETE_ARRAY
 			 $DELETE_BOTH
 			 $DELETE_ALL
@@ -113,6 +114,7 @@ $sbeams = new SBEAMS::Connection;
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 $sbeams_affy = new SBEAMS::Microarray::Affy;
+$sbeams_affy->setSBEAMS($sbeams);
 $sbeams_affy_groups = new SBEAMS::Microarray::Affy_file_groups;
 
 $sbeams_affy_groups->setSBEAMS($sbeams);
@@ -147,22 +149,28 @@ Run Mode Notes:
  	Update run mode runs just like the add_new mode, parsing and gathering information.  It will upload NEW files
 	if it finds them, but if the root_file name has been previously set this method will update the data pointed to by the method flag
 	
-	Must provide a --method command line flag followed by a space separated list of method names.
+	Must provide a --method command line flag followed by a comma separated list of method names.
 	Data will be updated only for fields with a valid method name always over riding the data in the database 
 	See Affy.pm for the names of the setters
+	 
+	
+	Will also accept array number(s) to specifically update instead of all the arrays
+	Set the --array_id flag and give some ids comma seperated
  
- delete --array <affy_array_id> OR <root_file_name> Space separated list
+ delete --array <affy_array_id> OR <root_file_name> Comma separated list
  	   Delete the array but LEAVES the sample
-	--both <affy_array_id> OR <root_file_name>  Space separated list
+	--both <affy_array_id> OR <root_file_name>  Comma separated list
 	   Delete the array and sample
 	--delete_all YES
 	  Removes all the samples and array information
 Examples;
 1) ./$PROG_NAME --run_mode add_new 			        # typical mode, adds any new files
 2) ./$PROG_NAME --run_mode update --method set_afs_sample_tag    # will parse the sample tag information and stomp the data in the database 	  
-3) ./$PROG_NAME --run_mode delete --array 20040609_02_LPS1-50	# Delete the array with the file root given but LEAVES the sample
-4) ./$PROG_NAME --run_mode delete --both 20040609_02_LPS1-40 20040609_02_LPS1-50	# removes both the array and sample records for the two root_file names
-5) ./$PROG_NAME --run_mode delete --delete_all YES			#REMOVES ALL ARRAYS AND SAMPLES....Becareful
+3) ./$PROG_NAME --run_mode update --method set_afs_sample_tag --array_id 507,508
+4) ./$PROG_NAME --run_mode update --method show_all_methods
+5) ./$PROG_NAME --run_mode delete --array 20040609_02_LPS1-50	# Delete the array with the file root given but LEAVES the sample
+6) ./$PROG_NAME --run_mode delete --both 20040609_02_LPS1-40 20040609_02_LPS1-50	# removes both the array and sample records for the two root_file names
+7) ./$PROG_NAME --run_mode delete --delete_all YES			#REMOVES ALL ARRAYS AND SAMPLES....Becareful
 
 EOU
 
@@ -180,7 +188,8 @@ unless (GetOptions(\%OPTIONS,
 		   "method:s",
 		   "base_directory:s",
 		   "file_types:s",
-		   "testonly")) {
+		   "testonly",
+		   "array_id:s")) {
   print "$USAGE";
   exit;
 }
@@ -193,7 +202,9 @@ $DEBUG      = $OPTIONS{debug};
 $TESTONLY   = $OPTIONS{testonly};
 $RUN_MODE   = $OPTIONS{run_mode};
 
-$METHOD	    = $OPTIONS{method};
+$METHOD		= $OPTIONS{method};
+
+$UPDATE_ARRAY = $OPTIONS{array_ids};
 
 $DELETE_ARRAY = $OPTIONS{array};
 $DELETE_BOTH  = $OPTIONS{both};
@@ -204,8 +215,8 @@ my $val = grep {$RUN_MODE eq $_} @run_modes;
 die "*** RUN_MODE DOES NOT LOOK GOOD '$RUN_MODE' ***\n $USAGE" unless ($val);
 
 if ($RUN_MODE eq 'update' ){		#if update mode check to see if --method <name> is set correctly
-	unless ($METHOD =~ /^set/) {
-		print "*** Must provide a --method command line argument when updating data ***$USAGE\n";
+	unless ($METHOD =~ /^set/ || $METHOD =~ /^show/ ) {
+		print "\n*** Must provide a --method command line argument when updating data ***$USAGE\n";
 		die;
 			
 	}
@@ -243,7 +254,7 @@ if ($DEBUG) {
   print "  BASE_DIR = $BASE_DIRECTORY\n";
   print "  FILE_TYPE = @FILE_TYPES\n";
   print "  TESTONLY = $OPTIONS{testonly}\n";
-
+  print "  METHOD = $METHOD\n";
 }
 
 
@@ -312,10 +323,11 @@ sub handleRequest {
 
 	if ( $RUN_MODE eq 'add_new' || $RUN_MODE eq 'update') {
 	
+		print "Reading Directories\n";
 		$sbeams_affy_groups->read_dirs();			#Read the affy dirs containing all the data.  Sets global object in Affy_file_groups
-		
+		print "Starting to Read files\n";
 		parse_affy_data(object => $sbeams_affy_groups);		#extract useful bits of information
-	
+		print "Starting to Add Arrays\n";
 		add_affy_arrays(object => $sbeams_affy);		#add all the data to the database
 	
 	
@@ -355,28 +367,30 @@ sub add_affy_arrays {
 		next unless ($affy_o->get_afs_project_id);			#Some Affy objects might not be used to store array data.  This appears bad
 		
 		
-		
-		my $return = $sbeams_affy_groups->check_previous_arrays(root_name => $affy_o->get_afa_file_root);	#return the affy_array_id if the array is already in the db
-									#otherwise return the value 'ADD'
-		if ($return == 0){					
+		#return the affy_array_id if the array is already in the db otherwise return 0
+		my $db_affy_array_id = $sbeams_affy_groups->find_affy_array_id(root_file_name => $affy_o->get_afa_file_root());	
+									
+		if ( $db_affy_array_id == 0){					
 			if ($VERBOSE > 0) {
-				print "ADDING OBJECT '". $affy_o->get_afa_file_root. "'\n";
+				print "ADDING OBJECT '". $affy_o->get_afa_file_root(). "'\n";
+				
 			}	
 		
 			
 			
 			
 			my $rowdata_ref =    	{ 	
-						 file_root 	=> $affy_o->get_afa_file_root,
+						 file_root 		=> $affy_o->get_afa_file_root,
 						 array_type_id  => $affy_o->get_afa_array_type_id,
-						 user_id 	=> $affy_o->get_afa_user_id,
-						 processed_date	=> $affy_o->get_afa_processed_date,
-						 affy_array_sample_id=>$affy_o->get_afs_affy_array_sample_id, 	
-					    	 file_path_id	=> $affy_o->get_afa_file_path_id, 
+						 user_id 		=> $affy_o->get_afa_user_id,
+						 processed_date	=> $affy_o->get_afa_processed_date ? $affy_o->get_afa_processed_date: 'CURRENT_TIMESTAMP',
+						 affy_array_sample_id=>$affy_o->get_afs_affy_array_sample_id  , 	
+					     file_path_id	=> $affy_o->get_afa_file_path_id, 
 						 affy_array_protocol_ids => $affy_o->get_afa_affy_array_protocol_ids,
+						 comment 		=>$affy_o->get_afa_comment,
 						};   
 			
-			my $affy_array_id = $sbeams->updateOrInsertRow(
+			my $new_affy_array_id = $sbeams->updateOrInsertRow(
 							table_name=>$TBMA_AFFY_ARRAY,
 				   			rowdata_ref=>$rowdata_ref,
 				   			return_PK=>1,
@@ -388,24 +402,30 @@ sub add_affy_arrays {
 						        );
 		
 			
-			if ($affy_array_id){
+			if ($new_affy_array_id){
 				add_protocl_information(object 		=> $affy_o,
-							affy_array_id	=> $affy_array_id
+							affy_array_id	=> $new_affy_array_id
 							);
 			}
 			
-		}elsif ($return =~ /^\d/   && $RUN_MODE eq 'update'){		#come here if the root_file name has been seen before
+		}elsif ($db_affy_array_id =~ /^\d/   && $RUN_MODE eq 'update'){		#come here if the root_file name has been seen before
 		
 			if ($VERBOSE > 0) {
 				print "UPDATEING DATA '" . $affy_o->get_afa_file_root . "'\n",
-					"METHOD '$METHOD' ARRAY_ID '$return'\n";
+					"METHODS '$METHOD' ARRAY_ID '$db_affy_array_id'\n";
 			}
 			
 			update_data(	object   => $affy_o,
-					array_id => $return,
+					array_id => $db_affy_array_id,
 				   	method	 => $METHOD,
 				   );
 		
+		
+		}else{
+			
+			if ($VERBOSE > 0 ){
+				print Dumper("BAD OBJECT MISSING STUFF" . $affy_o);
+			}
 		}
 	}
 }
@@ -510,9 +530,9 @@ sub update_data {
 	}
 	my %args = @_;
 	
-	my $affy_o      = $args{object};
-	my $affy_array_id    = $args{array_id};
-	my $method_names = $args{method};
+	my $affy_o      		= $args{object};
+	my $affy_array_id  = $args{array_id};
+	my $method_names 	= $args{method};
 
 	my %table_names = ( afa   => $TBMA_AFFY_ARRAY,
 			    afs   => $TBMA_AFFY_ARRAY_SAMPLE,
@@ -520,51 +540,67 @@ sub update_data {
 			    afsp  => $TBMA_AFFY_ARRAY_SAMPLE_PROTOCOL,
 			  );  
 
-	
-	my @methods = split /\s+/, $args{method};
-	
+	my @methods = split /,/, $args{method};
+	print "ALL METHODS '@methods'\n" if ($VERBOSE >0)	;
+###############################################################################################
+##Start looping through all the methods	
 	foreach my $method (@methods) {
-		 							#parse the method name to figure out what table and column to update
-		if ($method =~ /set_(af.+?)_(.*)/){			#example set_afs_sample_tag  TABLE types afs => (af)fy array (s)ample or afa => (af)fy (a)rray 
+	#parse the method name to figure out what table and column to update
+	#example set_afs_sample_tag  TABLE types afs => (af)fy array (s)ample or afa => (af)fy (a)rray 	
+		if ($method =~ /set_(af.+?)_(.*)/){			
 			my $table_type = $1;
 			my $table_name = $table_names{$table_type};	#table name for the data to update
-			
+	
+
 			my $column_name = $2;
-			$method =~ s/set_/get_/;			#bit dorky but we want to call the get_(method) but on the command line we entered set_(method)
+			#bit dorky but we want to call the get_(method) but on the command line we entered set_(method)
+			$method =~ s/set_/get_/;			
 									
+			my $rowdata_ref ={};
 			
-			
-			my $rowdata_ref = { 	$column_name  => $affy_o->$method(),	
+			##if we have a list of arrays to update just update a few specific arrays
+			if ($UPDATE_ARRAY){
+			 	
+			 	if (grep {$affy_array_id == $_} split /,/, $UPDATE_ARRAY){
+			 		$rowdata_ref = { 	$column_name  => $affy_o->$method(),	
 						
-					  };   
+					  };  
+			 	}
+			}else{
+			 	$rowdata_ref = { 	$column_name  => $affy_o->$method(),	
+						
+					  };  
+			}
 			
 			
+			#the returnTableInfo cannot contain the database name for Example Microarray.dbo.affy_array
+			my $clean_table_name = $table_name;		
+			#remove everything upto the last period and append on the db prefix to make MA_affy_array
+			$clean_table_name =~ s/.*\./MA_/;		
 			
-			
-			my $clean_table_name = $table_name;		#the returnTableInfo cannot contain the database name for Example Microarray.dbo.affy_array
-			$clean_table_name =~ s/.*\./MA_/;		#remove everything upto the last period and append on the db prefix to make MA_affy_array
-			
-			my ($PK_COLUMN_NAME) = $sbeams->returnTableInfo($clean_table_name,"PK_COLUMN_NAME");	#get the column name for the primary key
+			#get the column name for the primary key
+			my ($PK_COLUMN_NAME) = $sbeams->returnTableInfo($clean_table_name,"PK_COLUMN_NAME");	
 			
 			my $pk_value = '';
-			
-			if ($table_type eq 'afa'){			#if we are updating data in the affy_array table then we can use the affy_array_id which was passed in
+			#if we are updating data in the affy_array table then we can use the affy_array_id which was passed in
+			if ($table_type eq 'afa'){			
 				$pk_value = $affy_array_id;
-			}elsif( $table_type eq 'afs'){			#if we are going to update data in the sample table use the affy_array_id and find the affy_sample_id
+			#if we are going to update data in the sample table use the affy_array_id and find the affy_sample_id
+			}elsif( $table_type eq 'afs'){			
 				
 				$pk_value = $sbeams_affy_groups->find_affy_array_sample_id(affy_array_id => $affy_array_id);
 			}
 			
 			
-			if ($method =~ /protocol_ids$/){		#if this a method to update the protocol_ids we will need to update the data in the linking tables too.
+			if ($method =~ /protocol_ids$/){		#if this is a method to update the protocol_ids we will need to update the data in the linking tables too.
 				my $protocol_prefix = "${table_type}p"; #append a "p" to figure out which protocol linking table to update
 				
 				update_linking_table(	object 	   => $affy_o,
 							fk_value   => $pk_value,	#will need the foreign key to update the linking table
 							method	   => $method,
-						     	linking_table_name => $table_names{$protocol_prefix},
+						    linking_table_name => $table_names{$protocol_prefix},
 							
-						     );
+				);
 			}
 			
 			
@@ -750,6 +786,8 @@ sub parse_affy_data {
 	
 	foreach my $file_name ( $sbeams_affy_groups->sorted_root_names() ) {				
 		
+		#next unless ($file_name =~ /3AJZ/);
+		#print "FILE NAME '$file_name'\n";
 		next unless ($sbeams_affy_groups->check_file_group(root_file_name => $file_name) eq 'YES');
 		
 		my $return = $sbeams_affy_groups->check_previous_arrays(root_name => $file_name);	#return the affy_array_id if the array is already in the db
@@ -777,16 +815,15 @@ sub parse_affy_data {
 		
 		$sbeams_affy->set_afa_file_root($file_name);			
 		
+		print "FILE NAME IS '$file_name'\n" if ($VERBOSE >0);
+		
+		
 		$sbeams_affy->set_afs_sample_tag($sample_tag);			#set the sample_tag, within a project this should be a unique name
 		
-		
-		if (my $xml_file =  $sbeams_affy_groups->get_file_path( root_file_name 	=> $file_name,
-									file_ext 	=> 'XML', 
-								      )
-		   )   {
-		   
-		   
-			my $basepath = dirname($xml_file);
+##Load up the base path info.  Assume that the CEL file will always be present
+		my $basepath = dirname($sbeams_affy_groups->get_file_path(root_file_name => $file_name,
+									  file_ext 	 => 'CEL', 
+									  ));
 			
 			my $base_path_id = get_file_path_id( basepath => $basepath);
 			
@@ -794,8 +831,14 @@ sub parse_affy_data {
 				print "BASENAME '$basepath' CONVERTED TO FILE_PATH_ID '$base_path_id'\n";
 			}
 			
-			$sbeams_affy->set_afa_file_path_id($base_path_id);		   
-		   
+			$sbeams_affy->set_afa_file_path_id($base_path_id);	
+		
+		
+		
+		if (my $xml_file =  $sbeams_affy_groups->get_file_path( root_file_name 	=> $file_name,
+									file_ext 	=> 'XML', 
+								      )
+		   )   {		   
 		   	parse_xml_files(file   		=> $xml_file,
 					affy_object 	=> $sbeams_affy,
 					affy_group_obj 	=> $sbeams_affy_groups,
@@ -803,13 +846,15 @@ sub parse_affy_data {
 					sample_tag	=> $sample_tag,
 					);
 		}elsif(my $info_file = $sbeams_affy_groups->get_file_path(root_file_name => $file_name,
-									  file_ext 	 => 'INFO_FILE', 
+									  file_ext 	 => 'INFO', 
 									  )
 		      )   {
-		      
-			parse_info_file(file   => $info_file,
-					object => $sbeams_affy,
-					); #######METHOD NOT YET IMPLEMENTED
+		  	parse_info_file(file   => $info_file,
+							object => $sbeams_affy,
+							affy_group_obj 	=> $sbeams_affy_groups,
+							root_file 	=> $file_name,
+							sample_tag	=> $sample_tag,
+					       );
 		}else{
 			print "****NO REFERENCE DATA FOR '$file_name'\n";
 		}
@@ -896,7 +941,7 @@ sub parse_xml_files {
 	my $sample_tag = $args{'sample_tag'};
 	 				
 		
-	print "XML FILE NAME '$xml_file'\n";
+	print "XML FILE NAME '$xml_file'\n" if ($VERBOSE > 0);
 			
 	my $xml_string = xml_string($xml_file);			#terrible hack to prevent the file from being validated with the external dtd
 			
@@ -907,40 +952,33 @@ sub parse_xml_files {
 								#Hash keys <Table_abbreviation _ column name> which should also match the method names in Affy.pm
 								#using a direct X-path to the needed data.  Data in the XML file usually the text name but the program will turn most of them into ID's for storage in the database
 								#the sort order is critical since the project_id needs to be determined first.  If it is not found none of the additional data will be searched for
-	
+								#moved most of the sql to covert an name or tag to an id to the Affy.pm mod.  Note the the SQL_METHOD methods are in single quotes and they will be eval(ed) later
 	%data_to_find = ( 	AFS_PROJECT_ID =>  {		X_PATH	=> 'MAGE-ML/BioMaterial_package/BioMaterial_assnlist/BioSource/Characteristics_assnlist/OntologyEntry[@category="Affymetrix:Sample Project"]/@value',
 					   	 		VAL	=> '',
 						 		SORT	=> 1,
-						 		SQL	=> "	SELECT project_id
-						 	  			FROM $TB_PROJECT
-										WHERE name like 'HOOK_VAL'",
-							},
+						 		SQL_METHOD =>'$sbeams_affy->find_project_id(project_name=>$val, do_not_die => 1)',
+						 	},
 	
 	
 	
 				AFA_USER_ID    => 	{	X_PATH  => 'MAGE-ML/BioMaterial_package/BioMaterial_assnlist/BioSource/PropertySets_assnlist/NameValueType[@name="Array User Name"]/@value',  #same as Project_name xpath, could not get substring xpath expressions to work 
 						 		SORT	=> 2,
 						 		VAL	=> '',
-						 		SQL	=> "	SELECT user_login_id
-						 	    			FROM $TB_USER_LOGIN
-										WHERE username like 'HOOK_VAL'",
-						
-						        },
+						 		SQL_METHOD => '$sbeams_affy->find_user_login_id(username=>$val)',
+						 		},
 				
 				AFS_ORGANISM_ID  =>	{	X_PATH  => 'MAGE-ML/BioMaterial_package/BioMaterial_assnlist/BioSource/MaterialType_assn/OntologyEntry/@value',
 						 		VAL	=> '',
 						 		SORT	=> '3',
-						 		SQL	=> "	SELECT organism_id
-						 				FROM $TB_ORGANISM
-										WHERE organism_name like 'HOOK_VAL'",
+						 		SQL_METHOD => '$sbeams_affy->find_organism_id(organism_name=>$val)',
+						 		
 							},
 				
 				AFA_ARRAY_TYPE_ID =>    {  	X_PATH  => 'MAGE-ML/ArrayDesign_package/ArrayDesign_assnlist/PhysicalArrayDesign/@name',
 						 		VAL	=> '',
 						 		SORT	=> 4,
-						 		SQL 	=> "    SELECT slide_type_id
-						 				FROM $TBMA_SLIDE_TYPE
-										WHERE  name like 'HOOK_VAL'",
+						 		SQL_METHOD => '$sbeams_affy->find_slide_type_id(slide_name=>$val)',
+						 		
 							  },
 						
 			 	AFS_SAMPLE_GROUP_NAME    =>{	X_PATH  => 'MAGE-ML/BioMaterial_package/BioMaterial_assnlist/BioSource/@name',
@@ -1023,14 +1061,16 @@ sub parse_xml_files {
 		
 		
 		my $val = '';
-		
-		if (my $xpath = $data_to_find{$data_key}{X_PATH}){		#check to see if there is a X_PATH statement to use for searching the MAGE XML file
+
+##########################################################################################
+##check to see if there is a X_PATH statement to use for searching the MAGE XML file	
+		if (my $xpath = $data_to_find{$data_key}{X_PATH}){		
 			
 			if ($VERBOSE > 0) {
 				print "XPATH '$xpath'\n";
 			}
 			
-			my $nodeset = $xp->find($xpath); 			# Grab the node pointed by the xpath expression
+			my $nodeset = $xp->find($xpath); 				# Grab the node pointed by the xpath expression
     			
     			foreach my $node ($nodeset->get_nodelist) {
         			
@@ -1039,7 +1079,7 @@ sub parse_xml_files {
 					print "FOUND NODE '$val'\n";
 				}
 				
-				$val =~ s/.+?="(.*)"/$1/; 			#Strip off the attribute name Example 'value="T4 knockout"'
+				$val =~ s/.+?="(.*)"/$1/; 					#Strip off the attribute name Example 'value="T4 knockout"'
 			}
 		}elsif($data_key =~ /protocol_ids$/i){				#skip setting any data for .*PROTOCOL_IDS methods since they will be set after the arrays are uploaded and to protocol id's will be generated within the linking tables
 			next;
@@ -1061,12 +1101,13 @@ sub parse_xml_files {
 		if ($VERBOSE > 0){
 			print "$data_key => '$val'\n";
 		}
-			
-				
-		if ($data_to_find{$data_key}{SQL}) {			#if the data $val needs to be converted to a id value from the database run the little sql statement to do so
+##########################################################################################			
+###if the data $val needs to be converted to a id value from the database run the little sql statement to do so				
+		if ($data_to_find{$data_key}{SQL} || $data_to_find{$data_key}{SQL_METHOD}) {			
 		
 		 	$id_val = convert_val_to_id( 	value    => $val,
-					   		sql    	 => $data_to_find{$data_key}{SQL},
+					   			sql    	 => $data_to_find{$data_key}{SQL},
+					   	      	sql_method => $data_to_find{$data_key}{SQL_METHOD},
 					   	      	data_key => $data_key,
 						     	affy_obj => $sbeams_affy,
 						     );
@@ -1079,10 +1120,11 @@ sub parse_xml_files {
 			$id_val = $val;					#if the val from the XML does not need to be convert or formatted give it back
 		}
 			
-			
-		$data_to_find{$data_key}{VAL} = $id_val;		#store the results of the conversion (if needed) no matter what the results are
-			
-		if  ($id_val =~ /ERROR/) {				#collected errors in the all_files_h and print them to the log file
+#store the results of the conversion (if needed) no matter what the results are			
+		$data_to_find{$data_key}{VAL} = $id_val;		
+##########################################################################################
+#collected errors in the all_files_h and print them to the log file			
+		if  ($id_val =~ /ERROR/) {				
 			$sbeams_affy_groups->group_error(root_file_name => $root_file,
 							 error => "$id_val",
 							);
@@ -1142,11 +1184,13 @@ sub convert_val_to_id {
 	
 	my $val = $args{'value'};
 	my $sql = $args{'sql'};
+	my $sql_method = $args{'sql_method'};
+	
 	my $data_key    = $args{'data_key'};
 	my $sbeams_affy = $args{'affy_obj'};
 	
-	
-	return unless $sql;
+	print "STARTING $SUB_NAME\n" if ($VERBOSE>0);
+	return unless ($sql || $sql_method)  && $val;
 	
 	
 		###########################################	
@@ -1160,29 +1204,39 @@ sub convert_val_to_id {
 	}
 		###########################################	
 	
-	
-	$sql =~ s/HOOK_VAL/$val/;								#replace the 'HOOK_VAL' in the sql query with the $val
-	
-	if (exists $data_to_find{$data_key}{'CONSTRAINT'}) {					#if there is a constraint to attach to the sql attach the value to the sql statment
-		my $constraint = '';
+	my @rows = ();
+	if($sql){
+		$sql =~ s/HOOK_VAL/$val/;								#replace the 'HOOK_VAL' in the sql query with the $val
 		
-		$constraint = eval  $data_to_find{$data_key}{'CONSTRAINT'};			#takes the value from the CONSTRAINT key, then does an eval on the perl statement returning the value which can then be appended to the sql statment
+		if (exists $data_to_find{$data_key}{'CONSTRAINT'}) {					#if there is a constraint to attach to the sql attach the value to the sql statment
+			my $constraint = '';
+			
+			$constraint = eval  $data_to_find{$data_key}{'CONSTRAINT'};			#takes the value from the CONSTRAINT key, then does an eval on the perl statement returning the value which can then be appended to the sql statment
+			
+			if ($@){
+				print "ERROR: COULD NOT ADD CONSTRAINT to SQL '$@'\n";
+				die;
+			}
+			
+			if ($VERBOSE > 0 ) {
+				print "ADDING CONSTRAINT TO SQL '$constraint'\n";
+			}
+			$sql .= $constraint;
+		}	
+		print "ABOUT TO RUN SQL'$sql'\n" if ($VERBOSE>0);
+		@rows = $sbeams->selectOneColumn($sql);
+	}elsif($sql_method && $val){
+		print "SQL METHOD TO RUN '$sql_method'\n" if ($VERBOSE>0);
 		
-		if ($@){
-			print "ERROR: COULD NOT ADD CONSTRAINT to SQL '$@'\n";
-			die;
-		}
-		
-		if ($VERBOSE > 0 ) {
-			print "ADDING CONSTRAINT TO SQL '$constraint'\n";
-		}
-		$sql .= $constraint;
-	}	
+		@rows = eval $sql_method;			#eval the sql_method which will point to a method in Affy.pm, that should convert a name tag to the database id
+			
+			if ($@){
+				print "ERROR: COULD NOT RUN METHOD '$sql_method' '$@'\n";
+				die;
+			}
+	}
 	
 	
-	
-	
-	my @rows = $sbeams->selectOneColumn($sql);
 	
 	if ($VERBOSE > 0){
 		print "SUB '$SUB_NAME' SQL '$sql'\n";
@@ -1196,22 +1250,39 @@ sub convert_val_to_id {
 	}else{
 		if ($data_key eq 'AFS_AFFY_ARRAY_SAMPLE_ID') {							#if there was no affy_sample_id then the record needs to be inserted
 			
-			my $org_id = get_organization_id(user_login_id => $data_to_find{AFA_USER_ID}{VAL});	#Grab the organization_id if there is a valid user_login_id
-			my $sample_tag = $sbeams_affy->get_afs_sample_tag();
-			my $sample_protocol_ids = $sbeams_affy->get_afs_affy_sample_protocol_ids();
-			
-			my $rowdata_ref = { 	project_id => $data_to_find{AFS_PROJECT_ID}{VAL},		#get the project_id, should always be the first piece of data to be converted
-						sample_tag => $sample_tag,
-						sample_group_name => $data_to_find{AFS_SAMPLE_GROUP_NAME}{VAL},
-						affy_sample_protocol_ids => $sample_protocol_ids,
-					   	sample_preparation_date=>'CURRENT_TIMESTAMP', 	#default to current time stamp, user is the only one who knows this data
-					   	sample_provider_organization_id =>$org_id,
-					   	organism_id => $data_to_find{AFS_ORGANISM_ID}{VAL},    
+			my $organization_id = get_organization_id(user_login_id => $data_to_find{AFA_USER_ID}{VAL});	#Grab the organization_id if there is a valid user_login_id
+		
+			my $rowdata_ref = { 	
+						project_id 					=> $sbeams_affy->get_afs_project_id(),		#get the project_id, should always be the first piece of data to be converted
+						sample_tag 					=> $sbeams_affy->get_afs_sample_tag(),
+						sample_group_name 			=> $sbeams_affy->get_afs_sample_group_name(),
+						affy_sample_protocol_ids 	=> $sbeams_affy->get_afs_affy_sample_protocol_ids(),
+					   	sample_preparation_date		=> $sbeams_affy->get_afs_sample_preparation_date()? 
+					   									$sbeams_affy->get_afs_sample_preparation_date(): 
+					   									'CURRENT_TIMESTAMP' , 	#default to current time stamp, user is the only one who knows this data
+					   	sample_provider_organization_id =>$organization_id,
+					   	organism_id 				=> $sbeams_affy->get_afs_organism_id(),    
 					   	
+					    strain_or_line 				=> $sbeams_affy->get_afs_strain_or_line(),
+						individual 					=> $sbeams_affy->get_afs_individual(),
+						sex_ontology_term_id 		=> $sbeams_affy->get_afs_sex_ontology_term_id(),
+						age 						=> $sbeams_affy->get_afs_age(),
+						organism_part				=> $sbeams_affy->get_afs_organism_part(),
+						cell_line 					=> $sbeams_affy->get_afs_cell_line(),
+						cell_type 					=> $sbeams_affy->get_afs_cell_type(),
+						disease_state 				=> $sbeams_affy->get_afs_disease_state(),
+						rna_template_mass 			=> $sbeams_affy->get_afs_rna_template_mass(),
+						
+						protocol_deviations 		=> $sbeams_affy->get_afs_protocol_deviations(),
+						sample_description 			=> $sbeams_affy->get_afs_sample_description(),
+						
+						treatment_description 		=> $sbeams_affy->get_afs_treatment_description(),
+						comment 					=> $sbeams_affy->get_afs_comment(),
+					   
+					   
 					   };   
 			
-			
-			if ($DEBUG > 0) {
+				if ($DEBUG > 0) {
 				print "SQL DATA\n";
 				print Dumper($rowdata_ref);
 			}
@@ -1230,14 +1301,15 @@ sub convert_val_to_id {
 			print "SAMPLE ID '$sample_id'\n";
 			
 			unless ($sample_id){
-				return "ERROR: COULD NOT ENTER SAMPLE FOR SAMPLE TAG '$sample_tag'\n";
+				return "ERROR: COULD NOT ENTER SAMPLE FOR SAMPLE TAG '" . 
+				$sbeams_affy->get_afs_sample_tag() ."'\n";
 			}
 			
 			return $sample_id;		#SHOULD CHECK THIS
 		
 		}
 		
-		return "ERROR: CANNOT FIND ID CONVERTING '$data_key' FOR VAL '$val'\n";
+		return "ERROR: CANNOT FIND ID CONVERTING '$data_key' FOR VAL '$val'";
 	}
 }
 
@@ -1500,10 +1572,9 @@ sub check_setters{
 	my $SUB_NAME = 'check_setters';
 	my $command_line_method = shift;
 	
-	my @methods = split /\s+/, $command_line_method;		#methods could be a space delimited list
+	my @methods = split /,/, $command_line_method;		#methods could be a comma delimited list
 	
-	
-	
+		
 	foreach my $method ( @methods) {
 	
 		if ($method =~ /protocol_id$/){				#not currently setup to just update the linking table only.  Need to update the affy_array or sample tables protocl ids first which will automatically update the linking tables
@@ -1520,7 +1591,7 @@ sub check_setters{
 			next;
 		}
 		
-		print "*** This is not a method I recognize '$METHOD' ***\n";
+		print "*** This is not a method I recognize '$method' ***\n";
 		print "*** Here are the known methods ***\n";
 	
 		foreach my $key (sort keys %main::SBEAMS::Microarray::Affy::){ #loop through the package symbol tables for the Affy.pm module and print all the set(ter) methods
@@ -1577,4 +1648,277 @@ sub write_error_log{
 		
 	}
 }
+##############################################################################
+# parse_info_file	
+#
+# Parse the info file usually associated with external arrays.
+###############################################################################
+	
+sub parse_info_file{
+
+	my %args = @_;
+	my $info_file = $args{file};
+	my $sbeams_affy = $args{object};
+	my $root_file = $args{root_file};
+	
+	
+	
+	my $sbeams_affy_groups = $args{'affy_group_obj'};
+	my $sample_tag = $args{'sample_tag'};
+	
+	
+	open INFO, "$info_file" ||
+		die "Cannot open info file '$info_file'\n";
+	my %info_data = ();
+	while (<INFO>){
+		s/\s$//g;		#remove any white space at the end of the line
+		my($header, $val) = split /=>/, $_;
+		$info_data{$header} = $val;
+	}
+	#Hash keys <Table_abbreviation _ column name> which should also match the method names in Affy.pm
 		
+						
+	%data_to_find = ( 	AFS_PROJECT_ID =>  {		HEADER	=> 'Project Name',
+					   	 		VAL	=> '',
+						 		SORT	=> 1,
+						 		SQL_METHOD =>'$sbeams_affy->find_project_id(project_name=>$val, do_not_die => 1)',
+						 		FILE_VAL_REQUIRED => 'YES',
+						 	},
+	
+				AFA_USER_ID    => 	{	HEADER  => 'Username',
+						 		SORT	=> 2,
+						 		VAL	=> '',
+						 		SQL_METHOD => '$sbeams_affy->find_user_login_id(username=>$val)',
+						 		FILE_VAL_REQUIRED => 'YES',
+						 		},
+				
+				AFS_ORGANISM_ID  =>	{	HEADER  => 'organism_common_name',
+						 		VAL	=> '',
+						 		SORT	=> 3,
+						 		SQL_METHOD => '$sbeams_affy->find_organism_id(organism_name=>$val)',
+						 		FILE_VAL_REQUIRED => 'YES',
+							},
+				
+				AFA_ARRAY_TYPE_ID =>    {  	HEADER  => 'Array Type',
+						 		VAL	=> '',
+						 		SORT	=> 4,
+						 		SQL_METHOD => '$sbeams_affy->find_slide_type_id(slide_name=>$val)',
+						 		FILE_VAL_REQUIRED => 'YES',
+							  },
+				
+				
+				
+				
+				AFS_SAMPLE_TAG    =>{	HEADER  => 'sample_tag',
+						          	VAL	=> '',
+						          	SORT	=> 5,
+						 			FILE_VAL_REQUIRED => 'YES',
+						           },	  
+				AFS_SAMPLE_GROUP_NAME    =>{	HEADER  => 'sample_group_name',
+						          	VAL	=> '',
+						          	SORT	=> 6,
+						 			FILE_VAL_REQUIRED => 'YES',
+						           },
+				#
+				AFS_SAMPLE_PREPARATION_DATE   =>{	HEADER  => 'sample_preparation_date',
+						          	VAL	=> '',
+						          	SORT	=> 31,
+						 			FILE_VAL_REQUIRED => 'NO',
+						           },
+				AFS_FULL_SAMPLE_NAME    =>{	HEADER  => 'full_sample_name',
+						          	VAL	=> '',
+						          	SORT	=> 7,
+						 			FILE_VAL_REQUIRED => 'NO',
+						           },
+				#DEFAULT TO THE USER_id ORGANIZATION ID
+				#AFS_SAMPLE_PROVIDER_ORGANIZATION    =>{	HEADER  => 'sample_sample_provider_organization',
+				#		          	VAL	=> '',
+				#		          	SORT	=> 8,
+				#		 			FILE_VAL_REQUIRED => 'NO',
+				#		 			SQL_METHOD => 'get_organization_id(user_login_id => $data_to_find{AFA_USER_ID}{VAL})'
+				#		           },
+				AFS_STRAIN_OR_LINE    =>{	HEADER  => 'strain_or_line',
+						          	VAL	=> '',
+						          	SORT	=> 9,
+						 			FILE_VAL_REQUIRED => 'NO',
+						           },
+				AFS_INDIVIDUAL    =>{	HEADER  => 'individual',
+						          	VAL	=> '',
+						          	SORT	=> 10,
+						 			FILE_VAL_REQUIRED => 'NO',
+						           },
+				AFS_SEX_ONTOLOGY_TERM_ID    =>{	HEADER  => 'SEX',
+						          	VAL	=> '',
+						          	SORT	=> 11,
+						 			FILE_VAL_REQUIRED => 'NO',
+						            SQL_METHOD => '$sbeams_affy->find_ontology_id(ontology_term => $val, do_not_die =>1 )',
+						           },
+				AFS_AGE    =>{	HEADER  => 'AGE',
+						          	VAL	=> '',
+						          	SORT	=> 11,
+						 			FILE_VAL_REQUIRED => 'NO',
+						           },
+				AFS_ORGANISM_PART    =>{	HEADER  => 'organism_part',
+						          	VAL	=> '',
+						          	SORT	=> 12,
+						 			FILE_VAL_REQUIRED => 'NO',
+						           },
+				AFS_CELL_LINE    =>{	HEADER  => 'cell_line',
+						          	VAL	=> '',
+						          	SORT	=> 13,
+						 			FILE_VAL_REQUIRED => 'NO',
+						           },
+				AFS_CELL_TYPE    =>{	HEADER  => 'cell_type',
+						          	VAL	=> '',
+						          	SORT	=> 14,
+						 			FILE_VAL_REQUIRED => 'NO',
+						           },
+				AFS_DISEASE_STATE    =>{	HEADER  => 'disease_state',
+						          	VAL	=> '',
+						          	SORT	=> 15,
+						 			FILE_VAL_REQUIRED => 'NO',
+						           },
+				AFS_RNA_TEMPLATE_MASS    =>{	HEADER  => 'rna_template_mass',
+						          	VAL	=> '',
+						          	SORT	=> 16,
+						 			FILE_VAL_REQUIRED => 'NO',
+						           },
+				AFS_PROTOCOL_DEVIATIONS    =>{	HEADER  => 'sample_protocol_deviations',
+						          	VAL	=> '',
+						          	SORT	=> 17,
+						 			FILE_VAL_REQUIRED => 'NO',
+						           },
+				AFS_SAMPLE_DESCRIPTION    =>{	HEADER  => 'sample_description',
+						          	VAL	=> '',
+						          	SORT	=> 18,
+						 			FILE_VAL_REQUIRED => 'NO',
+						           },
+				AFS_TREATMENT_DESCRIPTION    =>{	HEADER  => 'sample_treatment_description',
+						          	VAL	=> '',
+						          	SORT	=> 19,
+						 			FILE_VAL_REQUIRED => 'NO',
+						           },
+				AFS_COMMENT    =>{	HEADER  => 'sample_comment',
+						          	VAL	=> '',
+						          	SORT	=> 20,
+						 			FILE_VAL_REQUIRED => 'NO',
+						           },
+				AFA_COMMENT    =>{	HEADER  => 'array_comment',
+						          	VAL	=> '',
+						          	SORT	=> 21,
+						 			FILE_VAL_REQUIRED => 'NO',
+						           },		           		           		           		           		           		           
+						          		           		           		           		           		           		           		           		           		           
+				
+			
+			#### End of protocol section ###
+				AFS_AFFY_ARRAY_SAMPLE_ID  =>{	VAL 	 => $sample_tag,		#bit of a hack, will query on the sample_tag and project_id which must be unique
+						  		SORT	 =>  100,			#really want this to go last since it will insert the affy_array_sample if it cannot find the Sample tag in the database.  And it needs some information collected by some of the other hash elements before it does so.	
+						  		SQL	 => "	SELECT affy_array_sample_id
+						 				FROM $TBMA_AFFY_ARRAY_SAMPLE
+										WHERE sample_tag like 'HOOK_VAL'",
+						
+						  		CONSTRAINT => '"AND project_id = " . $data_to_find{AFS_PROJECT_ID}{VAL}',
+						 	     },
+			);
+			
+			
+#############################################################################################################################
+#loop through the data_to_find keys pulling data from the INFO files and converting the human readable names to id within the database
+	foreach my $data_key (sort {$data_to_find{$a}{'SORT'} 		
+					<=> 
+				$data_to_find{$b}{'SORT'} }keys %data_to_find
+		         ) 
+			 {							#start foreach loop
+		
+	
+	my $val = '';
+	
+##########################################################################################
+##Pull the value from the info file
+		if (my $header = $data_to_find{$data_key}{HEADER}){		
+			
+			if ($VERBOSE > 0) {
+				print "FIND DATA FOR HEADER '$header'\n";
+			}
+			
+			$val = $info_data{$header};		
+		}else{
+			$val = $data_to_find{$data_key}{VAL};			#use the default VAL from the data_to_find hash if No XPATH statement
+		}
+		
+		
+		if ($data_to_find{$data_key}{FILE_VAL_REQUIRED} eq 'YES' &! $val) {
+			$sbeams_affy_groups->group_error(root_file_name => $root_file,
+							 error => "CANNOT FIND VAL FOR '$data_key' EITHER FROM THE INFO".
+								 "FILE OR DEFAULT, THIS IS NOT GOOD.  Please EDIT THE FILE AND TRY AGAIN",
+							);
+			next;
+		}
+		
+				
+			
+		if ($VERBOSE > 0){
+			print "$data_key => '$val'\n";
+		}
+##########################################################################################			
+###if the data $val needs to be converted to a id value from the database run the little sql statement to do so				
+		my $id_val = '';	
+		
+		if ($data_to_find{$data_key}{SQL} || $data_to_find{$data_key}{SQL_METHOD}) {			
+		
+		 	$id_val = convert_val_to_id( 	value    => $val,
+					   			sql    	 => $data_to_find{$data_key}{SQL},
+					   	      	sql_method => $data_to_find{$data_key}{SQL_METHOD},
+					   	      	data_key => $data_key,
+						     	affy_obj => $sbeams_affy,
+						     );
+		}elsif($data_to_find{$data_key}{FORMAT}){
+				
+			$id_val = format_val	( value    => $val,
+					   	  transform=> $data_to_find{$data_key}{FORMAT},
+					   	);
+		}else{
+			$id_val = $val;					#if the val from the INFO FILE does not need to be convert or formatted give it back
+		}
+	
+	
+	
+	
+	#store the results of the conversion (if needed) no matter what the results are			
+		$data_to_find{$data_key}{VAL} = $id_val;		
+##########################################################################################
+#collected errors in the all_files_h and print them to the log file			
+		if  ($id_val =~ /ERROR/) {				
+			$sbeams_affy_groups->group_error(root_file_name => $root_file,
+							 error => "$id_val",
+							);
+			print "$id_val\n";
+				
+				
+			if ($data_key eq 'AFS_PROJECT_ID') {			#TESTING 
+				
+				push @BAD_PROJECTS, ($info_file, "\t$val\n");
+			}
+				
+			return;						#if error converting the data to an id do not bother looking at the rest of the data move on to the next group of files
+				
+		}else{
+			
+			set_data(value  => $id_val,			#collect the 'Good' data in Affy objects
+				 key    => $data_key,
+				 object => $sbeams_affy,
+			         );
+		}
+					
+	}
+	
+	
+
+
+
+
+	
+	
+
+}
