@@ -1346,7 +1346,7 @@ sub showTable {
   #### If a new ORDER BY clause is specified, remove the default one
   if ($full_orderby_clause) {
     $main_query_part =~ s/\s*ORDER BY.*//i;
-  } elsif ($full_where_clause) {
+  } else {
     if ($main_query_part =~ /\s*(ORDER BY.+)/is) {
       $full_orderby_clause = $1;
       $main_query_part =~ s/\s*ORDER BY.+//is;
@@ -1357,10 +1357,11 @@ sub showTable {
   #### Build the final query
   my $sql_query = qq~
       select * from 
-      ($main_query_part
-      $full_orderby_clause
-     ) AS TEMP $full_where_clause
-  ~;
+      ( $main_query_part
+      ) AS TEMP
+       $full_where_clause
+       $full_orderby_clause
+                    ~;
   #print "<PRE>$sql_query\n\n</PRE>";
 
 
