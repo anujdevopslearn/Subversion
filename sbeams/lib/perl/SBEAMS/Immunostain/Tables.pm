@@ -50,6 +50,8 @@ use vars qw(@ISA @EXPORT
 	$TBIS_ONTOTLOGY 
 	$TBIS_ONTOLOGY_TERM  
 	$TBIS_ONTOLOGY_TERM_RELATIONSHIP
+
+	$TBCY_FCS_RUN
 );
 
 
@@ -91,15 +93,18 @@ require Exporter;
 	$TBIS_ONTOLOGY_TERM  
 	$TBIS_ONTOLOGY_TERM_RELATIONSHIP
 
+	$TBCY_FCS_RUN
 );
 
 
 #### Get the appropriate database prefixes for the SBEAMS core and this module
 my $core = $DBPREFIX{Core};
 my $mod = $DBPREFIX{Immunostain};
+my $cyt = $DBPREFIX{Cytometry};
 
 $TB_ORGANISM                = "${core}organism";
 $TB_PROTOCOL                = "${core}protocol";
+
 $TB_PROTOCOL_TYPE           = "${core}protocol_type";
 
 $TBIS_BIOSEQUENCE_SET       = "${mod}biosequence_set";
@@ -131,4 +136,6 @@ $TBIS_ASSAY    = "${mod}assay";
 	$TBIS_ONTOTLOGY   = "${mod}ontology";
 	$TBIS_ONTOLOGY_TERM    = "${mod}ontology_term"; 
 	$TBIS_ONTOLOGY_TERM_RELATIONSHIP    = "${mod}ontology_term_relationship";
+
+$TBCY_FCS_RUN               = "${cyt}fcs_run";
 
