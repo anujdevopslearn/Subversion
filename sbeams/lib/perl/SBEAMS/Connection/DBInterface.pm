@@ -1718,6 +1718,14 @@ sub displayResultSetControls {
     }
 
 
+    #### For certain types of resultsets, we'll allow a cytoscape trigger
+    if ($resultset_ref->{column_list_ref}->[0] eq 'interaction_id') {
+      my $url_prefix = "http://hazel:8080/test/sbeams";
+      print "<BR>\n";
+      print "<A HREF=\"${url_prefix}?m=immunology&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
+    }
+
+
     #### If this resulset has a name, show it and the date is was created
     if (defined($rs_params_ref->{cached_resultset_id})) {
       print qq~
