@@ -396,7 +396,7 @@ foreach my $p (keys %parameters)
 	       ON ( AC.assay_channel_id = SCP1.assay_channel_id AND SCP1.expression_level_id = 1 )
 		LEFT JOIN $TBIS_STRUCTURAL_UNIT  CT ON ( SCP1.STRUCTURAL_UNIT_ID = CT.structural_unit_id )
 		LEFT JOIN $TBIS_ASSAY_UNIT_EXPRESSION SCP2
-	       ON ( AC.assay_channel_id = SCP2.assay_channel_id AND SCP1.expression_level_id = 2 AND SCP2.structural_unit_id = SCP1.structural_unit_id)
+	       ON ( AC.assay_channel_id = SCP2.assay_channel_id AND SCP2.expression_level_id = 2 AND SCP2.structural_unit_id = SCP1.structural_unit_id)
 		LEFT JOIN $TBIS_ASSAY_UNIT_EXPRESSION SCP3
 	       ON ( AC.assay_channel_id = SCP3.assay_channel_id AND SCP3.expression_level_id = 3 AND SCP3.structural_unit_id  = SCP1.structural_unit_id)
 	INNER JOIN $TBIS_ANTIBODY A ON ( AC.antibody_id = A.antibody_id )
