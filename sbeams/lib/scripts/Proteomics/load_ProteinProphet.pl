@@ -104,6 +104,11 @@ my $delete_existing = $OPTIONS{delete_existing} || '';
 my $purge_protein_summary_id = $OPTIONS{purge_protein_summary_id} || '';
 
 
+#### Set the $DATABASE name
+my $module = 'Proteomics';
+$DATABASE = $DBPREFIX{$module};
+
+
 #### Get the source_file from the command line
 my $source_file = $ARGV[0];
 
@@ -537,11 +542,6 @@ sub main {
     $sbeams->printUserContext();
     print "\n";
   }
-
-
-  #### Set the $DATABASE name
-  my $module = 'Proteomics';
-  $DATABASE = $DBPREFIX{$module};
 
 
   #### Set up the Xerces parser
