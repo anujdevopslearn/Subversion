@@ -325,24 +325,29 @@ sub processFile
 				if ($TISSUETYPE =~/prostate/i)
 				{
 				print "section: $infoHash{'block antibody section index'}";
-				$infoHash{'block antibody section index'}?$sectionIndex=$infoHash{'block antibody section index'}:$sectionIndex=1; 
-				$stainName  = $stainName . " ".$sectionIndex; 
-				print "Stain: $stainName\n";
-				getc;
+					if ($infoHash{'block antibody section index'})
+					{;
+						$sectionIndex = $infoHash{'block antibody section index'}; 
+						$stainName  = $stainName . " ".$sectionIndex;
+					}
+					else 
+					{
+						$sectionIndex = 1;
+						$stainName  = $stainName . " ".$sectionIndex;
+					}
 				}
+				
 				if ($TISSUETYPE =~/bladder/i)
 				{
-					print "($infoHash{'section'}\n";
-					getc;
+					print "$infoHash{'section'}\n";
 					if ($infoHash{'section'})
 					{
 						$stainName = $stainName. " ".$infoHash{'section'};
 						print "Stain: $stainName\n";
-						getc;
 					}
 				}
 				print "$stainName\n";
-				getc;
+				
 				$lastName = $infoHash{person};
 				$abundanceLevelLeuk = $infoHash{'Leukocyte abundance (none, rare, moderate, high, most)'};
 				$comment = $infoHash{'comment'};
@@ -412,9 +417,6 @@ sub processFile
 		join $TBIS_SPECIMEN_BLOCK  sb on sb.specimen_block_id = st.specimen_block_id 
 		where ab.antibody_name = \'$infoHash{antibody}\' and sb.specimen_block_id = $blockID and st.stain_name = \'$stainName\';/; 
 		
-		print "$slideQuery\n";
-		getc;
-		
 		my @slides  = $sbeams->selectSeveralColumns($slideQuery);  
 		$nrows = scalar(@slides);
 		if ($nrows > 1)
@@ -433,8 +435,7 @@ sub processFile
 	 }
 	 
 	 
-	 print "$slideUpdate\n $slideInsert\n";
-	 getc;
+	
 #update, insert the cancer level
 		my %slideRowData; 
 		$slideRowData{project_id} = $confHash{project_id};
