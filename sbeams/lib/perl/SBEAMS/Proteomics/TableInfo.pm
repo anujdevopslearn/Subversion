@@ -115,6 +115,9 @@ sub returnTableInfo {
 
     if ($table_name eq "PR_proteomics_experiment") {
 
+        my @accessible_project_ids = $self->getSBEAMS()->getAccessibleProjects();
+	my $accessible_project_ids = join( ",", @accessible_project_ids ) || '0';
+
         if ($info_key eq "BASICQuery") {
             return qq~
 		SELECT experiment_id,username,P.project_id AS "proj",
@@ -128,11 +131,22 @@ sub returnTableInfo {
 		 WHERE PE.record_status!='D'
 		   AND UL.record_status!='D'
 		   AND P.record_status!='D'
+                   AND P.project_id IN ( $accessible_project_ids )
 		 ORDER BY username,experiment_tag
             ~;
 
         }
 
+
+        if ($info_key eq "FULLQuery") {
+            return qq~
+		SELECT PE.*
+		  FROM $TBPR_PROTEOMICS_EXPERIMENT PE
+		 WHERE PE.record_status!='D'
+                   AND PE.project_id IN ( $accessible_project_ids )
+            ~;
+
+        }
 
     }
 
