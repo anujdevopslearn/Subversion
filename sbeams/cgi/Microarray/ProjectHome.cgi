@@ -1658,7 +1658,7 @@ sub append_new_data {
 			my $anchor = '';
 			if (($display_file eq 'JPEG' || $display_file =~ /EGRAM/) && $file_exists){
 				$anchor = "<a href=View_Affy_files.cgi?action=view_image&affy_array_id=$array_id&file_ext=$display_file>View</a>";
-			print STDERR "ITS A JPEG '$display_file'\n";
+			#print STDERR "ITS A JPEG '$display_file'\n";
 			}elsif ($file_exists){			#make a url to open this file
 				$anchor = "<a href=View_Affy_files.cgi?action=view_file&affy_array_id=$array_id&file_ext=$display_file>View</a>";
 			}else{
