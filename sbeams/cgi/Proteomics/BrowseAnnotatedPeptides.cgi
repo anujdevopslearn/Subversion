@@ -628,8 +628,23 @@ sub printEntryForm {
       my $peptide_column = "";
       my $count_column = "";
 
+      #### If grouping by peptide string
+      if ( $parameters{display_options} =~ /GroupPeptideString/ ) {
+        @column_array = (
+          ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
+          ["accessor","DBX.accessor","accessor"],
+          ["biosequence_accession","BS.biosequence_accession","Accession"],
+          ["reference","BS.biosequence_name","Reference"],
+          ["peptide_string","peptide_string","Peptide String"],
+          ["count","tABS.row_count","Count"],
+          ["biosequence_desc","BS.biosequence_desc","Reference Description"],
+        );
+        $group_by_clause = " GROUP BY SH.biosequence_id,peptide_string";
+        $peptide_column = "peptide_string,";
+        $count_column = "COUNT(*) AS 'row_count'";
+
       #### If grouping by peptide,reference
-      if ( $parameters{display_options} =~ /GroupPeptide/ ) {
+      } elsif ( $parameters{display_options} =~ /GroupPeptide/ ) {
         @column_array = (
           ["biosequence_gene_name","BS.biosequence_gene_name","Gene Name"],
           ["accessor","DBX.accessor","accessor"],
@@ -756,6 +771,8 @@ sub printEntryForm {
 		   'Reference_ATAG' => 'TARGET="Win2"',
 		   'Peptide' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&peptide_constraint=\%$colnameidx{peptide}V&search_batch_id=$parameters{search_batch_id}&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
 		   'Peptide_ATAG' => 'TARGET="Win2"',
+		   'Peptide String' => "$CGI_BASE_DIR/Proteomics/GetSearchHits?QUERY_NAME=PR_GetSearchHits&peptide_string_constraint=\%$colnameidx{peptide_string}V&search_batch_id=$parameters{search_batch_id}&display_options=BSDesc,MaxRefWidth&apply_action=$pass_action",
+		   'Peptide String_ATAG' => 'TARGET="Win2"',
       );
 
       %hidden_cols = ('accessor' => 1,
