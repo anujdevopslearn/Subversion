@@ -547,6 +547,7 @@ sub printEntryForm {
 
 
       $sql_query = qq~
+-- Create a table of the desired genes
 SELECT biosequence_id,biosequence_name
   INTO #tmpDesiredGene
   FROM $TBBS_BIOSEQUENCE BS
@@ -554,7 +555,7 @@ SELECT biosequence_id,biosequence_name
 $gene_constraints
 
 
-
+-- Create a table of all features and their close matches
 SELECT F.feature_id,F.biosequence_id AS 'main_biosequence_id',
        FH.biosequence_id AS 'hit_biosequence_id'
   INTO #tmpAllCloseMatches
@@ -580,7 +581,7 @@ DELETE FROM #tmpAllCloseMatches
  WHERE feature_id IN ( SELECT feature_id FROM #tmpBadMatches )
 
 
--- Create the final list of good genes and features
+-- Create the final table of good genes and features
 SELECT F.feature_id,BS1.biosequence_name AS 'main_biosequence_name',
        BS2.biosequence_name AS 'hit_biosequence_name',
        CONVERT(NUMERIC(10,1),melting_temp) AS 'melting_temp',
@@ -598,7 +599,7 @@ $threeprime_distance_clause
  ORDER BY BS1.biosequence_name,feature_sequence,BS2.biosequence_name
 
 
--- If we're happy with the testing, create the final dataset
+-- Now create the final dataset in a pretty format
 SELECT DISTINCT BS1.biosequence_name AS 'biosequence_name',
        CONVERT(NUMERIC(10,1),F.melting_temp) AS 'melting_temp',
        F.threeprime_distance,F.feature_sequence
@@ -615,7 +616,7 @@ $threeprime_distance_clause
  ORDER BY BS1.biosequence_name,F.melting_temp,F.feature_sequence
 
 
--- Print out the final dataset for only the desired genes
+-- Print out the final dataset with the desired columns
 SELECT $columns_clause
   FROM #tmpFinal
 $order_by_clause
