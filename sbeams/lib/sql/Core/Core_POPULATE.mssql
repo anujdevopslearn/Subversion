@@ -59,9 +59,9 @@ INSERT INTO contact ( last_name,first_name,middle_name,contact_type_id,
   1,'sbeams@localdomain.org',
   'http://localhost/' );
 INSERT INTO contact ( last_name,first_name,middle_name,contact_type_id,job_title,
-  organization_id,phone,fax,email,uri )
+  organization_id,email,uri )
   VALUES ( 'Deutsch','Eric','W',9,'Sr. Database Architect',
-  1,'206-732-1397','206-732-1260','edeutsch@systemsbiology.org',
+  1,'edeutsch@systemsbiology.org',
   'http://db.systemsbiology.net/~edeutsch/' );
 
 
@@ -101,7 +101,7 @@ INSERT INTO contact ( last_name,first_name,middle_name,contact_type_id,
   organization_id )
   VALUES ( 'LastName','First','',9,2 );
 INSERT INTO user_login ( contact_id,username,privilege_id )
-  VALUES ( 2,'NISusername',10 );
+  VALUES ( 3,'NISusername',10 );
 INSERT INTO user_work_group ( contact_id,work_group_id,privilege_id ) VALUES ( 2,1,10 );
 INSERT INTO user_work_group ( contact_id,work_group_id,privilege_id ) VALUES ( 2,4,10 );
 
