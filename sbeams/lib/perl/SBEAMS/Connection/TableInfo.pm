@@ -99,7 +99,7 @@ sub returnTableInfo {
 
         if ($info_key eq "BASICQuery") {
             return qq~
-		SELECT P.project_id,P.name,UL.username,
+		SELECT P.project_id,P.project_tag,P.name,UL.username,
 		       SUBSTRING(P.description,1,100) AS 'description'
 		  FROM $TB_PROJECT P
 		  LEFT JOIN $TB_USER_LOGIN UL
@@ -113,7 +113,7 @@ sub returnTableInfo {
 
         if ($info_key eq "FULLQuery") {
             return qq~
-		SELECT P.project_id,P.name,UL.username,
+		SELECT P.project_id,P.project_tag,P.name,UL.username,
 		       SUBSTRING(P.description,1,100) AS 'description',
 		       P.budget,P.project_status,P.uri,
 		       SUBSTRING(P.comment,1,100) AS 'comment',
