@@ -133,7 +133,6 @@ sub handle_request {
     || die "ref_parameters not passed";
   my %parameters = %{$ref_parameters};
 
-
   #### Define some generic varibles
   my ($i,$element,$key,$value,$line,$result,$sql);
 
@@ -190,18 +189,24 @@ sub handle_request {
   #### Apply any parameter adjustment logic
   #none
 
+  my $isAdmin = $sbeams->isAdminUser( current_group => 0 ); 
 
-  #### Display the user-interaction input form
-  $sbeams->display_input_form(
-    TABLE_NAME=>$TABLE_NAME,CATEGORY=>$CATEGORY,apply_action=>$apply_action,
-    PROGRAM_FILE_NAME=>$PROGRAM_FILE_NAME,
-    parameters_ref=>\%parameters,
-    input_types_ref=>\%input_types,
-  );
+  # Only want to display form if the user is an admin user, need not be
+  # currently in the group.
+  if ( $isAdmin ) {
+  
+    #### Display the user-interaction input form
+    $sbeams->display_input_form(
+      TABLE_NAME=>$TABLE_NAME,CATEGORY=>$CATEGORY,apply_action=>$apply_action,
+      PROGRAM_FILE_NAME=>$PROGRAM_FILE_NAME,
+      parameters_ref=>\%parameters,
+      input_types_ref=>\%input_types,
+    );
 
 
-  #### Display the form action buttons
-  $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
+    #### Display the form action buttons
+    $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
+  }
 
 
   #### Finish the upper part of the page and go begin the full-width
@@ -216,7 +221,11 @@ sub handle_request {
 
   #### Build SQL constraint
   unless (defined($parameters{query}) && $parameters{query} ) {
-    print "<H4>Enter your SQL above and press QUERY</H4>\n\n";
+    if ( $isAdmin ) {
+      print "<H4>Enter your SQL above and press QUERY</H4>\n\n";
+    } else {
+      print "<H4>Queries can only be composed by Admin users.</H4>\n\n";
+    }
     return;
   }
 
