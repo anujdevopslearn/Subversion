@@ -43,6 +43,13 @@ use vars qw(@ISA @EXPORT
     $TBPR_USER_ANNOTATION_LABEL
     $TBPR_QUERY_OPTION
 
+    $TBPR_PROTEOMICS_EXPERIMENT_REQUEST
+    $TBPR_EXPERIMENT_TYPE
+    $TBPR_INSTRUMENT_TYPE
+    $TBPR_INSTRUMENT
+    $TBPR_REQUEST_STATUS
+    $TBPR_FUNDING_STATUS
+
 );
 
 
@@ -75,6 +82,13 @@ require Exporter;
     $TBPR_ANNOTATION_SOURCE
     $TBPR_USER_ANNOTATION_LABEL
     $TBPR_QUERY_OPTION
+
+    $TBPR_PROTEOMICS_EXPERIMENT_REQUEST
+    $TBPR_EXPERIMENT_TYPE
+    $TBPR_INSTRUMENT_TYPE
+    $TBPR_INSTRUMENT
+    $TBPR_REQUEST_STATUS
+    $TBPR_FUNDING_STATUS
 
 );
 
@@ -109,6 +123,13 @@ $TBPR_ANNOTATION_CONFIDENCE       = "${mod}annotation_confidence";
 $TBPR_ANNOTATION_SOURCE           = "${mod}annotation_source";
 $TBPR_USER_ANNOTATION_LABEL       = "${mod}user_annotation_label";
 $TBPR_QUERY_OPTION                = "${mod}query_option";
+
+$TBPR_PROTEOMICS_EXPERIMENT_REQUEST  = "${mod}proteomics_experiment_request";
+$TBPR_EXPERIMENT_TYPE             = "${mod}experiment_type";
+$TBPR_INSTRUMENT_TYPE             = "${mod}instrument_type";
+$TBPR_INSTRUMENT                  = "${mod}instrument";
+$TBPR_REQUEST_STATUS              = "${mod}request_status";
+$TBPR_FUNDING_STATUS              = "${mod}funding_status";
 
 
 
