@@ -801,6 +801,14 @@ sub handle_request {
       );
     }
 
+
+    #### Provide column definition link
+    print qq~
+      Additional Information: <A TARGET="HelpWin" HREF="Help?document=GetDomainHitsColumnDefinitions">[Column Definitions]</A><BR>
+      <BR>
+    ~;
+
+
     #### Display the resultset
     $sbeams->displayResultSet(
       resultset_ref=>$resultset_ref,
