@@ -43,6 +43,9 @@ sub returnTableInfo {
     my @row;
     my $sql_query;
     my $result;
+	my @ids = $self->getSBEAMS()->getAccessibleProjects();
+	my $project_string = join( ",", @ids ) || '0';
+
 
 
 ###############################################################################
@@ -444,8 +447,20 @@ sub returnTableInfo {
 			AND p.record_status != 'D'
      		    ~;
    	}
-   }
- 
+###############################################################################
+   } elsif ( $table_name eq 'MA_EXPERIMENT_CONSTANTS' ) {
+
+   if ($info_key eq "BASICQuery") {
+      return( <<"      END_QUERY" ); 
+     	SELECT *
+      FROM $TBMA_EXPERIMENT_CONSTANTS
+      WHERE project_id IN ( $project_string )
+      AND record_status!='D'
+      END_QUERY
+
+    } 
+
+  }
 ###############################################################################
 
     #### Obtain main SBEAMS object and fall back to its TableInfo handler
