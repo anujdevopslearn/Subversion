@@ -201,7 +201,7 @@ sub handleRequest {
   }
 
 
-  #### Read and parse the header line
+  #### Read and parse the header line of APD_{organism}_all.tsv
   my $line;
   $line = <INFILE>;
   $line =~ s/[\r\n]//g;
@@ -229,11 +229,11 @@ sub handleRequest {
     my $sample_ids = $columns[$column_indices{maximum_probability}+2];
 
 
-    #### If this doesn't yet exist in the database, add it
+    #### If this doesn't yet exist in the database table "peptide", add it
     my $peptide_id = $peptides{$peptide_accession};
-#print "$peptide_accession   ".$peptide_id."\n";
+
     unless ($peptide_id) {
-      my %rowdata = (
+      my %rowdata = (             ##  peptide     table attributes:
         peptide_accession => $peptide_accession,
         peptide_sequence => $peptide_sequence,
         peptide_length => $peptide_length,
@@ -250,16 +250,41 @@ sub handleRequest {
 
     } # end unless
 
-    $peptides{$peptide_accession} = {
+    ## create peptide_instance entries
+    $peptides{$peptide_accession} = { ##peptide_instance     table attributes:
       peptide_id => $peptide_id,
       best_probability => $best_probability,
       n_observations => $n_observations,
       sample_ids => $sample_ids,
     };
 
-  } # end whiile INFILE
+    my %rowdata = ( ##   peptide_instance    table attributes
+      atlas_build_id => $atlas_build_id,
+      peptide_id => $peptide_id,
+      best_probability => $best_probability,
+      n_observations => ,$n_observations,
+      sample_ids => ,$sample_ids,
+      n_mapped_locations => '0',
+      is_exon_spanning => 'n',
+    );  ## entered some dummy values above
 
+    my $peptide_instance_id = -1;
+    $peptide_instance_id = $sbeams->updateOrInsertRow(
+      insert=>1,
+      table_name=>$TBAT_PEPTIDE_INSTANCE,
+      rowdata_ref=>\%rowdata,
+      PK => 'peptide_instance_id',
+      return_PK => 1,
+      verbose=>$VERBOSE,
+      testonly=>$TESTONLY,
+    );
+## end peptide_instance entries
+ 
+    $counter++;
+
+  } # end while INFILE
   close(INFILE);
+  my $peptides_last_ind = $counter - 1;
 
 
   #### Open the file containing the BLAST alignment summary
@@ -270,8 +295,7 @@ sub handleRequest {
   }
 
 
-  #### Read and parse the header line
-  ## There is none, but there should be
+  #### Read and parse the header line of coordinate_mapping.txt
   if (0 == 1) {
     $line = <INFILE>;
     $line =~ s/[\r\n]//g;
@@ -294,47 +318,122 @@ sub handleRequest {
 		      '1' => '+',
 		     );
 
-  #### Load the relevant information in the peptide input file
+  #### Load the relevant information in the coordinate mapping file:
+  ## storage in arrays to look at all entries to calculate 
+  ## n_mapped_locations and is_exon_spanning
+  my %index_hash; # key   = $peptide_accession[$ind], 
+                  # value = string of array indices
+  my (@peptide_accession, @biosequence_name, @start_in_biosequence, 
+      @end_in_biosequence, @chromosome, @strand, @start_in_chromosome, 
+      @end_in_chromosome, @n_mapped_locations, @is_exon_spanning);
+
+  my $ind=0;
   while ($line = <INFILE>) {
-    $line =~ s/[\r\n]//g;
-    my @columns = split(/\t/,$line);
+     $line =~ s/[\r\n]//g;
+     my @columns = split(/\t/,$line);
+ 
+     $peptide_accession[$ind] = $columns[0];
+     $biosequence_name[$ind] = $columns[2];
+     $start_in_biosequence[$ind] = $columns[5];
+     $end_in_biosequence[$ind] = $columns[6];
+     $chromosome[$ind] = $columns[8];
+     $strand[$ind] = $columns[9];
+     $start_in_chromosome[$ind] = $columns[10];
+     $end_in_chromosome[$ind] = $columns[11];
 
-    my $peptide_accession = $columns[0];
-    my $biosequence_name = $columns[2];
-    my $start_in_biosequence = $columns[5];
-    my $end_in_biosequence = $columns[6];
-    my $chromosome = $columns[8];
-    my $strand = $columns[9];
-    my $start_in_chromosome = $columns[10];
-    my $end_in_chromosome = $columns[11];
+     ## calculate n_mapped_locations, with hash of peptide_accessions
+     if ( exists $index_hash{$peptide_accession[$ind]} ) {
+        $index_hash{$peptide_accession[$ind]} = 
+          join " ", $index_hash{$peptide_accession[$ind]}, $ind;
+     } else {
+        $index_hash{$peptide_accession[$ind]} = $ind;
+     }
+     $n_mapped_locations[$ind] = 1; #until next section
+     $is_exon_spanning[$ind]= 'n';  #until next section
 
-    my $tmp = $strand_xlate{$strand}
-      || die("ERROR: Unable to translate strand '$strand'");
-    $strand = $tmp;
+     $ind++;
+  }
+  close(INFILE);
+  my $last_ind = $ind - 1;
+
+
+  #  print "size of hash = " . keys( %index_hash ) . ".\n";
+  ##looping through indices of multiple peptide identifications:
+  foreach my $tmp_ind_str (values ( %index_hash ) ) {
+     my @tmp_ind_array = split(" ", $tmp_ind_str);
+     my $last_ind = $#tmp_ind_array;
+     ## making match_coords_hash with key = protein names which are same 
+     ## in subset of multiple responses...
+     ##    values = string of chromosome coords
+     ## then, size of %match_coords_hash gives n_mapped_locations
+     my %match_coords_hash;
+     foreach (@tmp_ind_array) {
+        my $coord_str = $start_in_chromosome[$_] . ":" . $end_in_chromosome[$_];
+        $match_coords_hash{$biosequence_name[$_]} = 
+        $match_coords_hash{$biosequence_name[$_]} . " " . $coord_str;
+     }
+
+     foreach my $t_ind (@tmp_ind_array) {
+        $n_mapped_locations[$t_ind] = keys( %match_coords_hash ); #size of hash
+        ## look-up coordinates in that name set, and if split coords 
+        ## are not equal, is_exon_spanning = 'y'
+        my @tmp_coord_list = split(" ", $match_coords_hash{$biosequence_name[$t_ind]});
+        for (my $t=0; $t < $#tmp_coord_list; $t++) {
+           if ($tmp_coord_list[$t] ne $tmp_coord_list[$t+1]){
+              $is_exon_spanning[$t_ind] = 'y';
+           }
+        }
+     }
+  }
+
+  ### ABOVE, n_mapped_locations and is_exon_spanning modeled following rules:
+  ## APDpep00011291  9       ENSP00000295561 ... 24323279        24323305
+  ## APDpep00011291  9       ENSP00000336741 ... 24323279        24323305
+  ## ---> n_mapped_locations = 2 for both
+  ## ---> is_exon_spanning   = n for both
+  ##
+  ## APDpep00004221  13      ENSP00000317473 ... 75675871        75675882
+  ## APDpep00004221  13      ENSP00000317473 ... 75677437        75677463
+  ## ---> n_mapped_locations = 1 for both
+  ## ---> is_exon_spanning   = y for both
+  ## 
+  ## APDpep00004290  16      ENSP00000306222 ...   1151627         1151633
+  ## APDpep00004290  16      ENSP00000306222 ...   1151067         1151107
+  ## APDpep00004290  16      ENSP00000281456 ... 186762937       186762943
+  ## APDpep00004290  16      ENSP00000281456 ... 186763858       186763898
+  ## ---> n_mapped_locations = 2 for all
+  ## ---> is_exon_spanning   = y for all
+
+
+  for(my $i =0; $i < $last_ind; $i++){
+    my $tmp = $strand_xlate{$strand[$i]}
+      or die("ERROR: Unable to translate strand $strand[$i]");
+    $strand[$i] = $tmp;
 
     #### Make sure we can resolve the biosequence_id
-    my $biosequence_id = $biosequence_ids{$biosequence_name}
-      || die("ERROR: BLAST matched biosequence_name '$biosequence_name' ".
+    my $biosequence_id = $biosequence_ids{$biosequence_name[$i]}
+      || die("ERROR: BLAST matched biosequence_name $biosequence_name[$i] ".
 	     "does not appear to be in the biosequence table!!");
 
     #### If this peptide_instance hasn't yet been added to the database, add it
-    if ($loaded_peptides{$peptide_accession}) {
-      $peptide_instance_id = $loaded_peptides{$peptide_accession};
+    if ($loaded_peptides{$peptide_accession[$i]}) {
+      $peptide_instance_id = $loaded_peptides{$peptide_accession[$i]};
 
     } else {
 
-      my $peptide_id = $peptides{$peptide_accession}->{peptide_id} ||
-	die("ERROR: Wanted to insert data for peptide '$peptide_accession' ".
+      my $peptide_id = $peptides{$peptide_accession[$i]}->{peptide_id} ||
+	die("ERROR: Wanted to insert data for peptide $peptide_accession[$i] ".
 	    "which is in the BLAST output summary, but not in the input ".
 	    "peptide file??");
 
-      my %rowdata = (
+      my %rowdata = (   ##   peptide_instance    table attributes
         atlas_build_id => $atlas_build_id,
         peptide_id => $peptide_id,
-        best_probability => $peptides{$peptide_accession}->{best_probability},
-        n_observations => ,$peptides{$peptide_accession}->{n_observations},
-        sample_ids => ,$peptides{$peptide_accession}->{sample_ids},
-        n_mapped_locations => 1,  #### assume 1, and UPDATE later if not
+        best_probability => $peptides{$peptide_accession[$i]}->{best_probability},
+        n_observations => ,$peptides{$peptide_accession[$i]}->{n_observations},
+        sample_ids => ,$peptides{$peptide_accession[$i]}->{sample_ids},
+        n_mapped_locations => $n_mapped_locations[$i],
+        is_exon_spanning => $is_exon_spanning[$i],
       );
 
       $peptide_instance_id = $sbeams->updateOrInsertRow(
@@ -347,21 +446,21 @@ sub handleRequest {
   	testonly=>$TESTONLY,
       );
 
-      $loaded_peptides{$peptide_accession} = $peptide_instance_id;
+      $loaded_peptides{$peptide_accession[$i]} = $peptide_instance_id;
 
     }
 
 
     #### Now INSERT this peptide_mapping
-    my %rowdata = (
+    my %rowdata = (   ##   peptide_mapping      table attributes
       peptide_instance_id => $peptide_instance_id,
       matched_biosequence_id => $biosequence_id,
-      start_in_biosequence => $start_in_biosequence,
-      end_in_biosequence => $end_in_biosequence,
-      chromosome => $chromosome,
-      start_in_chromosome => $start_in_chromosome,
-      end_in_chromosome => $end_in_chromosome,
-      strand => $strand,
+      start_in_biosequence => $start_in_biosequence[$i],
+      end_in_biosequence => $end_in_biosequence[$i],
+      chromosome => $chromosome[$i],
+      start_in_chromosome => $start_in_chromosome[$i],
+      end_in_chromosome => $end_in_chromosome[$i],
+      strand => $strand[$i],
     );
 
     $sbeams->updateOrInsertRow(
@@ -377,10 +476,9 @@ sub handleRequest {
     $counter++;
     print "$counter..." if ($counter % 100 == 0);
 
-  } # end while INFILE
-
-  close(INFILE);
+  } #end for loop
 
   print "\n";
+
 
 } # end handleRequest
