@@ -448,6 +448,22 @@ VALUES ( 'input_form_options','medium_detail','Medium Detail',20 )
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'input_form_options','full_detail','Full Detail',30 )
 
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAPD_display_options','ShowModifications','Show Modifications',10 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAPD_display_options','ShowGOColumns','Show GO Columns',70 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAPD_display_options','ShowExtraProteinProps','Show Extra Protein Properties',80 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAPD_display_options','ShowSQL','Show SQL Query',90 )
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAPD_sort_options','P.biosequence_name,P.peptide','Protein',50 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAPD_sort_options','P.peptide','Peptide',60 )
+
+
+
 GO
 
 
@@ -848,6 +864,10 @@ DROP INDEX search_hit.idx_search_hit_peptide
 DROP INDEX search_hit.idx_search_hit_peptide_string
 DROP INDEX search_hit.idx_search_hit_cross_corr
 DROP INDEX search_hit.idx_search_hit_probability
+
+DROP INDEX search_hit_annotation.idx_search_hit_annotation_search_hit_id
+DROP INDEX search_hit.idx_search_hit_search_id
+
 */
 
 /*
@@ -864,6 +884,8 @@ CREATE NONCLUSTERED INDEX idx_search_hit_peptide_string ON dbo.search_hit ( pept
 CREATE NONCLUSTERED INDEX idx_search_hit_cross_corr ON dbo.search_hit ( cross_corr ) WITH DROP_EXISTING
 CREATE NONCLUSTERED INDEX idx_search_hit_probability ON dbo.search_hit ( probability ) WITH DROP_EXISTING
 
+CREATE NONCLUSTERED INDEX idx_search_hit_annotation_search_hit_id ON dbo.search_hit_annotation ( search_hit_id ) WITH DROP_EXISTING
+CREATE NONCLUSTERED INDEX idx_search_hit_search_id ON dbo.search_hit ( search_id ) WITH DROP_EXISTING
 
 
 
