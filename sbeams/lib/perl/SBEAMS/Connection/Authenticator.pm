@@ -836,6 +836,60 @@ sub printAuthErrors {
     !;
 }
 
+###############################################################################
+# 
+###############################################################################
+sub displaySBEAMSError{
+  my $self = shift;
+  my $errors = shift || \@ERRORS;
+
+  # New option.  If template is defined the header below will not print, useful
+  # in cases where page printing has already begun when error is thrown.
+  my $template = shift || 0;
+
+  my $back_button = $self->getGoBackButton();
+  my $start_line = " - ";
+  my $end_line = "\n";
+
+  $self->printPageHeader(minimal_header=>"YES") if !$template;
+
+  my $email = 'edeutsch@systemsbiology.net';
+
+  if ($self->output_mode() eq 'html') {
+    print qq~
+      <CENTER>
+      <H2>$DBTITLE Error </H2>
+      The system has encountered an error.  Please report this problem to 
+      <A HREF='mailto:$email'>Eric Deutsch</A><BR>
+      or submit a bug to the SBEAMS 
+      <A HREF='http://bugzilla.systemsbiology.net/index.cgi'
+         TARGET='bugwindow'>bug database</A>
+      <BR><BR>
+      <BLOCKQUOTE>
+    ~;
+    $start_line = "<LI>";
+    $end_line = "<P>\n";
+  } else {
+    print "ERROR: Unknown error encountered:\n";
+  }
+
+
+  foreach my $error (@{$errors}) {
+    print "$start_line$error$end_line";
+  }
+
+  if ($self->output_mode() eq 'html') {
+    print qq~
+      </BLOCKQUOTE>
+      $back_button
+      </CENTER>
+    ~;
+  }
+
+  $self->printPageFooter() if !$template;
+
+}
+
 
 ###############################################################################
 # 
