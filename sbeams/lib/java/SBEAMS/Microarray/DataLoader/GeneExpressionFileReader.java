@@ -9,7 +9,7 @@ import javax.swing.Timer;
 //-----------------------------------------------------------------------------------------------
 public class GeneExpressionFileReader {
 //-----------------------------------------------------------------------------------------------
-  private String filename;
+  private String dataFileURI;
   private SBEAMSClient sc;
   private BufferedReader br;
   private StringBuffer sb;
@@ -20,20 +20,20 @@ public class GeneExpressionFileReader {
   private String[] conditionNames;
   private Hashtable rosetta;
 //-----------------------------------------------------------------------------------------------
-  public GeneExpressionFileReader(String filename, String translatorFile){
+  public GeneExpressionFileReader(String dataFileURI, String translatorFile){
 	rosetta = readTranslator(translatorFile);
-	this.filename = filename;
+	this.dataFileURI = dataFileURI;
 	data = new Hashtable();
   }// FileReader
 //-----------------------------------------------------------------------------------------------
-  public GeneExpressionFileReader(String filename){
+  public GeneExpressionFileReader(String dataFileURI){
 	rosetta = new Hashtable();
-	this.filename = filename;
+	this.dataFileURI = dataFileURI;
 	data = new Hashtable();
   }// FileReader
 //-----------------------------------------------------------------------------------------------
   public boolean read() {
-	String[] dataLines  = getFile();
+	String[] dataLines  = getFile(dataFileURI);
 	String filetype = determineFileType(dataLines[0]);
 	boolean successfulRead = false;
 	if (filetype.equals(MRNA)){
@@ -46,10 +46,10 @@ public class GeneExpressionFileReader {
 	return successfulRead;
   }// read
 //-----------------------------------------------------------------------------------------------
-  private String[] getFile(){
-	if (filename.startsWith("sbeamsIndirect://")) {
+  private String[] getFile(String file){
+	if (file.startsWith("sbeamsIndirect://")) {
 	  try {
-		String[] pieces = filename.split("://");
+		String[] pieces = file.split("://");
 		sc = new SBEAMSClient(true);
 		String bigLine = sc.fetchSbeamsPage("http://"+pieces[1]);
 		return bigLine.split("\\n");
@@ -60,7 +60,7 @@ public class GeneExpressionFileReader {
 	  }
 	}else {
 	  try{
-		br = new BufferedReader(new FileReader(filename));
+		br = new BufferedReader(new FileReader(file));
 		sb = new StringBuffer();
 		String newLineOfText;
 		while ((newLineOfText = br.readLine()) != null)
@@ -105,10 +105,10 @@ public class GeneExpressionFileReader {
   }// determineFileType
 //-----------------------------------------------------------------------------------------------
   private String fileTypeUsingFileName() {
-	if (filename.endsWith(".mrna")) {
+	if (dataFileURI.endsWith(".mrna")) {
 	  return MRNA;
-	}else if (filename.equals("matrix_output") ||
-			  filename.endsWith(".merge")) {
+	}else if (dataFileURI.equals("matrix_output") ||
+			  dataFileURI.endsWith(".merge")) {
 	  return MERGECONDS;
 	}else {
 	  return UNKNOWN;
@@ -192,19 +192,11 @@ GENE    DESCRIPT        1296_HO_D_vs_NRC-1.sig  1296_HO_L_vs_NRC-1.sig  1296_LO_
 //-----------------------------------------------------------------------------------------------
   private Hashtable readTranslator(String rosettaFile) {
 	Hashtable translator = new Hashtable();
-	if (rosettaFile != null) {
-	  try{
-		br = new BufferedReader(new FileReader(rosettaFile));
-		sb = new StringBuffer();
-		String newLineOfText;
-		while ((newLineOfText = br.readLine()) != null){
-		  String[] entry = newLineOfText.split("\\t");
-		  if (entry.length == 2)
-			translator.put(entry[0].trim().toLowerCase(), entry[1].trim());
-		}
-	  } catch (IOException e) {
-		e.printStackTrace();
-	  }
+	String[] dataLines = getFile(rosettaFile);
+	for (int m=0;m<dataLines.length;m++) {
+	  String[] entry = dataLines[m].trim().split("\\t");
+	  if (entry.length == 2)
+		translator.put(entry[0].trim().toLowerCase(), entry[1].trim());
 	}
 	return translator;
   }// readTranslator
