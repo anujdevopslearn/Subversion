@@ -185,7 +185,7 @@ sub printEntryForm {
     parameters_ref=>\%parameters,
     input_types_ref=>\%input_types,
   );
-
+  
 
   #### Display the form action buttons
   $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
@@ -265,6 +265,7 @@ sub processEntryForm {
 
 
   #### Verify that the directory exists and is readable
+  $parameters{filepath} .+ '/'  if $parameters{filepath} !~ /\/$/;
   unless (-d $parameters{filepath}) {
     my $error_message = qq"
       <LI> The filepath specified '$parameters{filepath}' could
@@ -471,10 +472,11 @@ sub readFCSFileHeader {
   #### Process the arguments list
   my $filepath = $args{'filepath'};
   my $filename = $args{'filename'};
-  $filepath .+ "/" if ($filepath !~ /\/$/);
+  $filepath .= "/" if ($filepath !~ /\/$/);
   
+
   my @header = read_fcs_header($filepath.$filename);
-  my @keyValue = get_fcs_keywords("$filepath$filename",@header);
+  my @keyValue = get_fcs_keywords($filepath.$filename,@header);
   my %keyValueHash = get_fcs_key_value_hash(@keyValue);
   
    #### Read header from file
