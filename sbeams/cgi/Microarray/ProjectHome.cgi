@@ -230,14 +230,9 @@ sub handle_request {
     ($project_name,$project_tag,$project_status,$pi_first_name,$pi_last_name,$pi_contact_id,$username) = @{$rows[0]};
   }
 
-  #### Print Project Title
-  print qq~
-      	<H1><A class="h1" HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=$project_id">$project_name</A></H1><BR>
-	~;
-
   #### print_tabs
   my @tab_titles = ("Summary","Management","Data Analysis", "Permissions");
-  #my @tab_titles = ("Summary","MIAME Status","Management","Data Analysis","Permissions");
+#  my @tab_titles = ("Summary","MIAME Status","Management","Data Analysis","Permissions");
   my $tab_titles_ref = \@tab_titles;
   my $page_link = 'ProjectHome.cgi';
 
@@ -248,12 +243,12 @@ sub handle_request {
 			     selected_tab=>0);
       print_summary_tab(); 
   }
-#  elsif($parameters{'tab'} eq "miame_status") { 
-#      $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
-#			     page_link=>$page_link,
-#			     selected_tab=>1);
-#      print_miame_status_tab(); 
-#  }
+  elsif($parameters{'tab'} eq "miame_status") { 
+      $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
+			     page_link=>$page_link,
+			     selected_tab=>1);
+      print_miame_status_tab(); 
+  }
   elsif($parameters{'tab'} eq "management") { 
       $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
 			     page_link=>$page_link,
@@ -319,6 +314,7 @@ sub print_summary_tab {
   #### Print out some information about this project
   print qq~
 	<H1>Summary of $project_name:</H1>
+  <B><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=$project_id">[Edit Project Description]</A></B><BR>
 	<TABLE WIDTH="100%" BORDER=0>
 	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
 	             <TD COLSPAN="2" WIDTH="100%"><B>PI: </B>$pi_first_name $pi_last_name</TD></TR>
@@ -387,7 +383,6 @@ sub print_summary_tab {
       </TABLE>
       $LINESEPARATOR
   ~;
-
 }
 
 
@@ -411,7 +406,7 @@ sub print_miame_status_tab {
         <LI><A HREF="MIAME_checklist.doc">Download MIAME Checklist</A>
       </UL>
       <A HREF="MIAMEStatus.cgi?PROJECT_ID=$project_id">Complete MIAME Details for this Project</A>
-      <TABLE>
+      <TABLE CELLSPACING="5">
         <TR><TD></TD></TR>
 	<TR>
 	<TD>Experiment Design</TD>
@@ -426,12 +421,8 @@ sub print_miame_status_tab {
 	<TD><A HREF="MIAMEStatus.cgi?CATEGORY=sample_information">Detailed Information</A></TD>
 	</TR>
 	<TR>
-	<TD>Labeling</TD>
-	<TD><A HREF="MIAMEStatus.cgi?CATEGORY=labeling">Detailed Information</A></TD>
-	</TR>
-	<TR>
-	<TD>Hybridization</TD>
-	<TD><A HREF="MIAMEStatus.cgi?CATEGORY=hybridization">Detailed Information</A></TD>
+	<TD>Labeling and Hybridization</TD>
+	<TD><A HREF="MIAMEStatus.cgi?CATEGORY=labeling_and_hybridization">Detailed Information</A></TD>
 	</TR>
 	<TR>
 	<TD>Measurements</TD>
@@ -664,6 +655,7 @@ sub print_permissions_tab {
   my $ref_parameters = $args{'ref_parameters'}
     || die "ref_parameters not passed";
   
-  $sbeams->print_permissions_table(ref_parameters=>$ref_parameters);
+  $sbeams->print_permissions_table(ref_parameters=>$ref_parameters,
+																	 no_permissions=>1);
 }
 
