@@ -19,9 +19,10 @@ use POSIX qw(strftime);
 use POSIX qw(:sys_wait_h);
 use lib qw (../../lib/perl);
 use vars qw ($q $tm $tm_rng $o_conc $s_conc $blast_lib $same_as_lib
-	     $mn_len $mx_len $init_offset $step $dist $ftrs $featurama_lib 
-	     $dirstr $pol_at $pol_gc $win_sz $win_at $win_gc $action $comments
-	     $PROGRAM_FILE_NAME $dbh $sbeams $sbeamsBS $current_username);
+	     $mn_len $mx_len $mx_selfcomp $init_offset $step $dist 
+	     $ftrs $featurama_lib $dirstr $pol_at $pol_gc $win_sz 
+	     $win_at $win_gc $action $comments $PROGRAM_FILE_NAME $dbh 
+	     $sbeams $sbeamsBS $current_username);
 use DBI;
 use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
@@ -248,6 +249,7 @@ sub createRun {
     print (SINK "melting_temp_range=".$tm_rng."\n");
     print (SINK "minimum_length=".$mn_len."\n");
     print (SINK "maximum_length=".$mx_len."\n");
+    print (SINK "maximum_selfcomp=".$mx_selfcomp."\n");
     print (SINK "step_size=".$step."\n");
     print (SINK "maximum_3prime_distance=".$dist."\n");
     print (SINK "initial_3prime_offset=".$init_offset."\n"); #TODO: change this later !!!
@@ -333,7 +335,14 @@ sub processParams {
 	print "<font color=red>ERROR: Max Length is not valid</font><br>";
 	$mx_len="";
 	$ok=0;
-    }    
+    } 
+    $mx_selfcomp=$q->param('maxSelfComp');
+    if ($mx_selfcomp > $mn_len || $mx_selfcomp < 0 || 
+	!($mx_len =~ /^[+-]?\d+$/)) {
+	print "<font color=red>ERROR: Max Self-Comp is not valid</font><br>";
+	$mx_selfcomp="";
+	$ok=0;
+    } 
     $step=$q->param('stepSize');
     if ($step > 100000 || $step < 0 || !($step =~ /^[+-]?\d+$/)) {
 	print "<font color=red>ERROR: Step size is not valid</font><br>";
@@ -484,7 +493,7 @@ sub printForm {
 	"<td> <input type=text size=5 name=minLen value=$mn_len></td>",
 	"<td align=right><b> Max. Feature Length</b> (Min. Length-100):</td>",
 	"<td> <input type=text size=5 name=maxLen value=$mx_len></td></tr>",
-	"<tr>",
+        "<tr>",
 	"<td><b>Max. 3' Distance</b> (2-100,000):</td>",
 	"<td> <input type=text size=5 name=max3PrimeDist value=$dist></td>",
 	"<td align=right><b> Max. Features per Gene</b> (1-30):</td>",
@@ -492,6 +501,8 @@ sub printForm {
         "<tr>",
 	"<td><b>Initial 3' Offset</b> (0-100,000):</td>",
 	"<td> <input type=text size=5 name=initOffset value=$init_offset></td>",
+        "<td><b>Max. Self-Comp Score</b> (0-Min. Length):</td>",
+	"<td> <input type=text size=5 name=maxSelfComp value=$mx_selfcomp></td>",
 	"</table>",
 	"<br>",	
 	"<hr>",
