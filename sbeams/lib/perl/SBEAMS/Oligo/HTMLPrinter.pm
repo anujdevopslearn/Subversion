@@ -72,7 +72,13 @@ sub display_page_header {
 
     #### If the current user is the virtual ext_halo user, then show that
     #### a different template
-    if ($display_mode eq 'ext_halo') {
+    #if ($display_mode eq 'ext_halo') {
+    #  $self->display_ext_halo_template();
+    #  return;
+    #}
+
+    if ($sbeams->getCurrent_work_group_name() eq 'Oligo_user' ||
+		$sbeams->getCurrent_username() eq 'Oligo_user') {
       $self->display_ext_halo_template();
       return;
     }
@@ -247,9 +253,15 @@ sub display_page_footer {
 
   #### If the current user is the virtual ext_halo user, then show
   #### a different template
-  if ($display_mode eq 'ext_halo') {
-	$self->display_ext_halo_footer();
-	return;
+  #if ($display_mode eq 'ext_halo') {
+#	$self->display_ext_halo_footer();
+#	return;
+#  }
+
+  if ($sbeams->getCurrent_work_group_name() eq 'Oligo_user' ||
+		$sbeams->getCurrent_username() eq 'Oligo_user') {
+      $self->display_ext_halo_footer();
+      return;
   }
 
   #### If closing the content tables is desired
