@@ -264,6 +264,12 @@ function refreshDocument() {
   document.MainForm.submit();
 }
 
+function refreshPairWiseOnly()
+{
+    document.MainForm.pair_wise_only.value = "YES";
+	document.MainForm.submit();
+}
+
 function showPassed(input_field) {
   confirm( "selected option ="+document.MainForm.slide_id.options[document.MainForm.slide_id.selectedIndex].text+"=");
   return;
