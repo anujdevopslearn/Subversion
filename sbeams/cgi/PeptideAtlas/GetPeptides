@@ -111,6 +111,12 @@ sub main {
   #$sbeams->printDebuggingInfo($q);
 
 
+  ##xxxx  hard coding tab menu info here until moved into sep. module
+  $q->param( -name=> "_tab",
+              -value=> "1");
+  $parameters{'_tab'} = 1;
+
+
   #### Process generic "state" parameters before we start
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
@@ -138,9 +144,17 @@ sub handle_request {
     || die "ref_parameters not passed";
   my %parameters = %{$ref_parameters};
 
-#xxxxxx
+  ## xxxx hard coding tab menu here...someday should be moved into separate module in this directory
+  my $tabs = "";
+
   if ($parameters{'_tab'}) {
+
     $sbeams->printUserContext();
+
+    $tabs = "?_tab=" . $parameters{'_tab'};
+
+    $PROG_NAME .= $tabs;
+
 
     print <<"    END";
         <BR>
@@ -163,21 +177,21 @@ sub handle_request {
     #Preferred way to add tabs.  label is required, helptext optional
     $tabmenu->addTab( label => 'Browse Peptides',
                       helptext => 'Multi-constraint browsing of PeptideAtlas',
-                      url => "http://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptides?_tab=1" );
+                      url => "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptides?_tab=1" );
 
     $tabmenu->addTab( label => 'Get Peptide',
                       helptext => 'Look-up info on a peptide by sequence or name',
-                      url => "http://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptide?"
+                      url => "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptide?"
                       );
 
     $tabmenu->addTab( label => 'Browse Proteins',
                       helptext => 'Not implemented yet',
-                      url => "http://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/main.cgi"
+                      url => "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/main.cgi"
                       );
 
     $tabmenu->addTab( label => 'Get Protein',
                       helptext => 'Not implemented yet',
-                      url => "http://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/main.cgi"
+                      url => "https://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/main.cgi"
                       );
 
 #   my $content;# = '&nbsp;';

@@ -114,9 +114,14 @@ sub main {
 
     #$sbeams->printDebuggingInfo($q);
 
+    ##xxxx  hard coding tab menu info here until moved into sep. module
+    $q->param( -name=> "_tab",
+                   -value=> "2");
+    $parameters{'_tab'} = 2;
 
     #### Process generic "state" parameters before we start
     $sbeams->processStandardParameters(parameters_ref=>\%parameters);
+    #$sbeams->printDebuggingInfo($q);
 
     #### Decide what action to take based on information so far
     if ($parameters{action} eq "???") {
@@ -159,6 +164,8 @@ sub handle_request {
         $parameters{'searchForThis'} = 'PAp00000001';
     }
 
+
+    ## hard coding tab menu here...someday should be moved into separate module in this directory
     my $tabs = "";
 
     if ($parameters{'_tab'}) {
