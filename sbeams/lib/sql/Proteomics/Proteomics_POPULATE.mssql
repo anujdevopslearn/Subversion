@@ -1,0 +1,212 @@
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_charge_constraint','1,2,3','+1, +2, +3',10 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_charge_constraint','1,2','+1, +2',20 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_charge_constraint','1','+1',30 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_charge_constraint','2,3','+2, +3',40 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_charge_constraint','2','+2',50 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_charge_constraint','3','+3',60 );
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','experiment_tag,set_tag,S.file_root,SH.cross_corr_rank,SH.hit_index','Exp, DB, file_root, Rxc',10 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','set_tag,experiment_tag,S.file_root,SH.cross_corr_rank,SH.hit_index','DB, Exp, file_root, Rxc',20 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','S.file_root,experiment_tag,set_tag,SH.cross_corr_rank,SH.hit_index','file_root, Exp, DB, Rxc',30 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','SH.cross_corr DESC,S.file_root,experiment_tag,set_tag,SH.cross_corr_rank,SH.hit_index','XCorr DESC, file_root, Exp, DB, Rxc',40 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','reference,S.file_root,experiment_tag,set_tag,SH.cross_corr_rank,SH.hit_index','Reference, file_root, Exp, DB, Rxc',50 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','peptide,S.file_root,experiment_tag,set_tag,SH.cross_corr_rank,SH.hit_index','Peptide, file_root, Exp, DB, Rxc',60 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','peptide_string,S.file_root,experiment_tag,set_tag,SH.cross_corr_rank,SH.hit_index','Full Peptide String, file_root, Exp, DB, Rxc',70 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','SH.next_dCn DESC,S.file_root,experiment_tag,set_tag,SH.cross_corr_rank,SH.hit_index','dCn DESC, file_root, Exp, DB, Rxc',80 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','S.assumed_charge,S.file_root,experiment_tag,set_tag,SH.cross_corr_rank,SH.hit_index','Charge, file_root, Exp, DB, Rxc',90 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','d0_intensity/ISNULL(NULLIF(d8_intensity,0),0.01) DESC,experiment_tag,set_tag,S.file_root,SH.cross_corr_rank,SH.hit_index','Quant DESC,Exp, DB, file_root, Rxc',100 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','d0_intensity/ISNULL(NULLIF(d8_intensity,0),0.01),experiment_tag,set_tag,S.file_root,SH.cross_corr_rank,SH.hit_index','Quant,Exp, DB, file_root, Rxc',110 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','SH.hit_mass_plus_H,experiment_tag,set_tag,S.file_root,SH.cross_corr_rank,SH.hit_index','Mass ,Exp, DB, file_root, Rxc',120 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_sort_options','isoelectric_point,reference,S.file_root,experiment_tag,set_tag,SH.cross_corr_rank,SH.hit_index','pI, Reference, file_root, Exp, DB, Rxc',50 );
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_display_options','BSDesc','Display BioSequence Descriptions',50 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_display_options','MaxRefWidth','Limit Reference Width',60 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_display_options','ShowSQL','Show SQL Query',60 );
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_peptide_options','SinglyTryptic','At least singly tryptic',50 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_peptide_options','DoublyTryptic','Only doubly tryptic',60 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_peptide_options','C_containing','Cysteine containing',70 );
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_annotation_status','Annot','Only annotated',10 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_annotation_status','UNAnnot','Only not annotated',20 );
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_quant_format','High1','Highest value norm to 1',10 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_quant_format','d01','d0 norm to 1',20 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_quant_format','d81','d8 norm to 1',30 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_quant_format','decimal','decimal ratio',40 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_quant_format','decimalplain','decimal ratio without *',50 );
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_quant_values','d0d8','d0 / d8 (default)',10 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_quant_values','d8d0','d8 / d0',20 );
+
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAP_sort_options','reference','Reference',50 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAP_sort_options','peptide','Peptide',60 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAP_sort_options','peptide_string','Full Peptide String',70 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAP_sort_options','tABS.row_count DESC','Count',70 );
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAP_display_options','GroupReference','Group by Reference',10 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAP_display_options','GroupPeptide','Group by Peptide',20 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAP_display_options','GroupPeptideString','Group by Peptide String',21 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAP_display_options','BSDesc','Display BioSequence Descriptions',50 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAP_display_options','MaxRefWidth','Limit Reference Width',60 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAP_display_options','ShowGOColumns','Show GO Columns',70 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAP_display_options','ShowExtraProteinProps','Show Extra Protein Properties',80 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAP_display_options','ShowSQL','Show SQL Query',90 );
+
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BBS_display_options','MaxSeqWidth','Limit Sequence Width',50 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BBS_display_options','ShowSQL','Show SQL Query',60 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BBS_display_options','SequenceFormat','Display in Sequence Format',70 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BBS_display_options','ShowGOColumns','Show GO Columns',80 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BBS_display_options','ShowExtraProteinProps','Show Extra Protein Properties',90 );
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BBS_sort_options','biosequence_name','biosequence_name',10 );
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_best_hit_options','Any','Any best hit',10 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_best_hit_options','User','User-set (U) best hits',20 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BSH_best_hit_options','Default','Default (D) best hits',30 );
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'CE_sort_options','reference','Reference',50 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'CE_sort_options','peptide','Peptide',60 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'CE_sort_options','SUM(tABS.row_count) DESC','Count',70 );
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'input_form_options','minimum_detail','Minimum Detail',10 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'input_form_options','medium_detail','Medium Detail',20 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'input_form_options','full_detail','Full Detail',30 );
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAPD_display_options','ShowModifications','Show Modifications',10 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAPD_display_options','ShowGOColumns','Show GO Columns',70 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAPD_display_options','ShowExtraProteinProps','Show Extra Protein Properties',80 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAPD_display_options','ShowSQL','Show SQL Query',90 );
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAPD_sort_options','P.biosequence_name,P.peptide','Protein',50 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BAPD_sort_options','P.peptide','Peptide',60 );
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BPP_display_options','GroupProtein','Group by Protein',10 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BPP_display_options','GroupCount','Group by Peptide Count',20 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BPP_display_options','BSDesc','Display BioSequence Descriptions',50 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BPP_display_options','MaxRefWidth','Limit Reference Width',60 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BPP_display_options','ShowGOColumns','Show GO Columns',70 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BPP_display_options','ShowExtraProteinProps','Show Extra Protein Properties',80 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BPP_display_options','ShowSQL','Show SQL Query',90 );
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BPP_peptide_options','IsUnique','Is unique within set',50 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BPP_peptide_options','IsNotUnique','Is NOT unique within set',55 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BPP_peptide_options','C_containing','Cysteine containing',60 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BPP_peptide_options','SinglyTryptic','At least singly tryptic',70 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BPP_peptide_options','DoublyTryptic','Only doubly tryptic',80 );
+
+
+
+
+INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( '100% - certain',1.0,10 );
+INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( '90%',0.9001,20 );
+INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( '80% - Likely',0.8001,30 );
+INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( '70%',0.7001,40 );
+INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( '60%',0.6001,50 );
+INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( '50% - Possible',0.5001,60 );
+INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( '40%',0.4001,70 );
+INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( '30%',0.3001,80 );
+INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( '20% - Unlikely',0.2001,90 );
+INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( '10%',0.1001,100 );
+INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( '0% - Rejected',0.0,110 );
+INSERT INTO annotation_label ( label_desc,annotation_probability,sort_order ) VALUES ( 'Unknown',NULL,120 );
+
+INSERT INTO annotation_confidence ( confidence_desc,sort_order ) VALUES ( 'High',10 );
+INSERT INTO annotation_confidence ( confidence_desc,sort_order ) VALUES ( 'Medium',20 );
+INSERT INTO annotation_confidence ( confidence_desc,sort_order ) VALUES ( 'Low',30 );
+INSERT INTO annotation_confidence ( confidence_desc,sort_order ) VALUES ( 'Unknown',40 );
+
+INSERT INTO annotation_source ( source_desc,sort_order ) VALUES ( 'By hand in SBEAMS',10 );
+INSERT INTO annotation_source ( source_desc,sort_order ) VALUES ( 'Historical load from Interact file',20 );
+INSERT INTO annotation_source ( source_desc,sort_order ) VALUES ( 'Unknown',30 );
+
+/*
+INSERT INTO quality_label ( quality_desc,sort_order ) VALUES ( 'Very High',10 );
+INSERT INTO quality_label ( quality_desc,sort_order ) VALUES ( 'High',20 );
+INSERT INTO quality_label ( quality_desc,sort_order ) VALUES ( 'Medium',30 );
+INSERT INTO quality_label ( quality_desc,sort_order ) VALUES ( 'Low',40 );
+INSERT INTO quality_label ( quality_desc,sort_order ) VALUES ( 'Junk',50 );
+INSERT INTO quality_label ( quality_desc,sort_order ) VALUES ( 'Unknown',60 );
+*/
