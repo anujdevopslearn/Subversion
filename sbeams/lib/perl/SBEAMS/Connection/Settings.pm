@@ -42,7 +42,7 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS
     $MESSAGE_WIDTH
     $PHYSICAL_BASE_DIR
     $UPLOAD_DIR
-    $QUERY_DIR
+    $RESULTSET_DIR
     $SBEAMS_PART
     $SBEAMS_SUBDIR
     $LOGGING_LEVEL
@@ -80,7 +80,7 @@ require Exporter;
     $MESSAGE_WIDTH
     $PHYSICAL_BASE_DIR
     $UPLOAD_DIR
-    $QUERY_DIR
+    $RESULTSET_DIR
     $SBEAMS_SUBDIR
     $SBEAMS_PART
     %CONFIG_SETTING
@@ -149,7 +149,7 @@ $BARCOLOR = $DBCONFIG->{$DBINSTANCE}->{BARCOLOR};
 $HTML_BASE_DIR = $DBCONFIG->{$DBINSTANCE}->{HTML_BASE_DIR};
 $PHYSICAL_BASE_DIR = $DBCONFIG->{$DBINSTANCE}->{PHYSICAL_BASE_DIR};
 $UPLOAD_DIR = $DBCONFIG->{$DBINSTANCE}->{UPLOAD_DIR};
-$QUERY_DIR = $DBCONFIG->{$DBINSTANCE}->{QUERY_DIR} || 'tmp/queries'; #legacy
+$RESULTSET_DIR = $DBCONFIG->{$DBINSTANCE}->{RESULTSET_DIR} || 'tmp/queries'; #legacy
 $HOSTNAME = $DBCONFIG->{$DBINSTANCE}->{HOSTNAME};
 $CYTOSCAPE_URL = $DBCONFIG->{$DBINSTANCE}->{CYTOSCAPE_URL};
 %DBPREFIX = %{$DBCONFIG->{$DBINSTANCE}->{DBPREFIX}};
@@ -164,7 +164,7 @@ my $config_setting = $DBCONFIG->{$DBINSTANCE}->{CONFIG_SETTING} || {};
 %CONFIG_SETTING = %{$config_setting};
 
 # Translate relative paths to absolute.
-for my $arg ( $UPLOAD_DIR, $QUERY_DIR ) {
+for my $arg ( $UPLOAD_DIR, $RESULTSET_DIR ) {
   if ( $arg !~ /^\// ) {
     my $delim = ($PHYSICAL_BASE_DIR =~ /\/$/) ? '' : '/'; 
     $arg = $PHYSICAL_BASE_DIR . $delim . $arg;
