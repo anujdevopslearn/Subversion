@@ -255,6 +255,33 @@ sub handle_request {
   return if ($biosequence_desc_clause == -1);
 
 
+  #### Build MOLECULAR FUNCTION constraint
+  my $molecular_function_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"MFA.annotation",
+    constraint_type=>"plain_text",
+    constraint_name=>"Molecular Function",
+    constraint_value=>$parameters{molecular_function_constraint} );
+  return if ($molecular_function_clause == -1);
+
+
+  #### Build BIOLOGICAL PROCESS constraint
+  my $biological_process_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BPA.annotation",
+    constraint_type=>"plain_text",
+    constraint_name=>"Biological Process",
+    constraint_value=>$parameters{biological_process_constraint} );
+  return if ($biological_process_clause == -1);
+
+
+  #### Build CELLULAR COMPONENT constraint
+  my $cellular_component_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"CCA.annotation",
+    constraint_type=>"plain_text",
+    constraint_name=>"Cellular Component",
+    constraint_value=>$parameters{cellular_component_constraint} );
+  return if ($cellular_component_clause == -1);
+
+
   #### Build SORT ORDER
   my $order_by_clause = "";
   if ($parameters{sort_order}) {
@@ -281,6 +308,40 @@ sub handle_request {
   my $count_column = "";
 
 
+  #### If the user opted to see the GO columns, add them in
+  my @additional_columns = ();
+  if ( $parameters{display_options} =~ /ShowGOColumns/ ) {
+    @additional_columns = (
+      ["molecular_function","MFA.annotation","Molecular Function"],
+      ["molecular_function_GO","MFA.external_accession","molecular_function_GO"],
+      ["biological_process","BPA.annotation","Biological Process"],
+      ["biological_process_GO","BPA.external_accession","biological_process_GO"],
+      ["cellular_component","CCA.annotation","Cellular Component"],
+      ["cellular_component_GO","CCA.external_accession","cellular_component_GO"],
+    );
+  }
+
+  #### If the user opted to see GO columns or provided some GO constraints,
+  #### then join in the GO tables
+  my $GO_join = "";
+  if ( $parameters{display_options} =~ /ShowGOColumns/ ||
+       $molecular_function_clause.$biological_process_clause.
+       $cellular_component_clause ) {
+    $GO_join = qq~
+        LEFT JOIN flybase.dbo.FBgn FBgn
+             ON ( BS.biosequence_accession = FBgn.accession )
+        LEFT JOIN flybase.dbo.FB_annotation MFA
+             ON ( FBgn.FBgn_id = MFA.FBgn_id AND MFA.fbacode='ENZ'
+                  AND MFA.idx=0)
+        LEFT JOIN flybase.dbo.FB_annotation BPA
+             ON ( FBgn.FBgn_id = BPA.FBgn_id AND BPA.fbacode='FNC'
+                  AND BPA.idx=0)
+        LEFT JOIN flybase.dbo.FB_annotation CCA
+             ON ( FBgn.FBgn_id = CCA.FBgn_id AND CCA.fbacode='CEL'
+                  AND CCA.idx=0)
+    ~;
+  }
+
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
   my @column_array = (
@@ -291,10 +352,7 @@ sub handle_request {
     ["biosequence_gene_name","BS.biosequence_gene_name","gene_name"],
     ["accessor","DBX.accessor","accessor"],
     ["biosequence_accession","BS.biosequence_accession","accession"],
-
-    #["molecular_function","MFA.annotation","Molecular Function"],
-    #["biological_process","BPA.annotation","Biological Process"],
-
+    @additional_columns,
     ["biosequence_desc","BS.biosequence_desc","description"],
     ["biosequence_seq","BS.biosequence_seq","sequence"],
   );
@@ -325,18 +383,16 @@ sub handle_request {
         LEFT JOIN $TBPR_BIOSEQUENCE_SET BSS
              ON ( BS.biosequence_set_id = BSS.biosequence_set_id )
         LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
---        LEFT JOIN flybase.dbo.FBgn FBgn
---             ON ( BS.biosequence_accession = FBgn.accession )
---        LEFT JOIN flybase.dbo.FB_GO_annotation MFA
---             ON ( FBgn.FBgn_id = MFA.FBgn_id AND MFA.fbacode='ENZ' )
---        LEFT JOIN flybase.dbo.FB_GO_annotation BPA
---             ON ( FBgn.FBgn_id = BPA.FBgn_id AND BPA.fbacode='FNC' )
+        $GO_join
        WHERE 1 = 1
       $biosequence_set_clause
       $biosequence_name_clause
       $biosequence_gene_name_clause
       $biosequence_seq_clause
       $biosequence_desc_clause
+      $molecular_function_clause
+      $biological_process_clause
+      $cellular_component_clause
       $order_by_clause
    ~;
 
@@ -347,14 +403,23 @@ sub handle_request {
 
   #### Define the hypertext links for columns that need them
   %url_cols = ('set_tag' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=biosequence_set&biosequence_set_id=\%$colnameidx{biosequence_set_id}V",
-                 'accession' => "\%$colnameidx{accessor}V\%$colnameidx{accesssion}V",
+               'accession' => "\%$colnameidx{accessor}V\%$colnameidx{accesssion}V",
+               'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
+               'Molecular Function_ATAG' => 'TARGET="WinExt"',
+               'Biological Process' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{biological_process_GO}V",
+               'Biological Process_ATAG' => 'TARGET="WinExt"',
+               'Cellular Component' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{cellular_component_GO}V",
+               'Cellular Component_ATAG' => 'TARGET="WinExt"',
     );
 
 
   #### Define columns that should be hidden in the output table
   %hidden_cols = ('biosequence_set_id' => 1,
-                    'biosequence_id' => 1,
-                    'accessor' => 1,
+                  'biosequence_id' => 1,
+                  'accessor' => 1,
+                  'molecular_function_GO' => 1,
+                  'biological_process_GO' => 1,
+                  'cellular_component_GO' => 1,
    );
 
 
