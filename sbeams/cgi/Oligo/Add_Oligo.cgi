@@ -157,7 +157,7 @@ sub handle_request {
   # start the form
   # the statement shown defaults to POST method, and action equal to this script
   print $q->start_form;  
-
+  
   # print the form elements
   print
     "Enter gene name: ",$q->textfield(-name=>'gene'),
@@ -173,9 +173,11 @@ sub handle_request {
     $q->popup_menu(-name=>'set_type',
                    -values=>['Gene Expression', 'Gene Knockout']),
 	$q->p,
+	"Select oligo type extension: ",
+	$q->p,
 	$q->popup_menu(-name=>'type_extension',
-				   -values=>['a','b','c','d','e','for','rev']),
-    
+				   -values=>['a','b','c','d','e','f','g','h','for','rev']),
+                                                              
     $q->p,
     $q->submit(-name=>"Add Oligo");
 
@@ -191,342 +193,125 @@ sub handle_request {
     my $set_type = $parameters{set_type};
 	my $type_extension = $parameters{type_extension};
 
-    ####get project_id, chromosome set_tag, gene set_tag
-    if($organism eq "halobacterium-nrc1"){
-	  $project_id = 425;
-      $chromosome_set_tag = "halobacterium_genome";
-      $gene_set_tag = "halobacterium_orfs";
+    ####error check for haloarcula marismortui and knockouts: invalid choice
+	if($organism eq "haloarcula marismortui" && $set_type eq "Gene Knockout"){
+	  print "No knockouts for haloarcula marismortui available", $q->p;
 	}else{
-	  $project_id = 424;    ##must be haloarcula marismortui
-      $chromosome_set_tag = "haloarcula_genome";
-      $gene_set_tag = "haloarcula_orfs";
+
+	  ####get project_id, chromosome set_tag, gene set_tag
+	  if($organism eq "halobacterium-nrc1"){
+		$project_id = 425;
+		$chromosome_set_tag = "halobacterium_genome";
+		$gene_set_tag = "halobacterium_orfs";
+	  }else{
+		$project_id = 424;    ##must be haloarcula marismortui
+		$chromosome_set_tag = "haloarcula_genome";
+		$gene_set_tag = "haloarcula_orfs";
+	  }
+
+	  ####more error checking
+	  if($set_type eq "Gene Expression" && ($type_extension ne "for" || $type_extension ne "rev")){
+		print "Invalid type extension selected for Gene Expression.", $q->p;
+	  }elsif($set_type eq "Gene Knockout" && ($type_extension eq "for" || $type_extension eq "rev")){
+		print "Invalid type extension selected for Gene Knockout", $q->p;
+	  }else{
+	  
+		####search tool id
+		my $search_tool_id = 5;   #5 is the default search tool id for 
+		                          #user-defined oligos
+
+
+        ####search for vng synonym of common name
+		if($organism eq 'halobacterium-nrc1'){
+		  open(A, "halobacterium.txt") || die "Could not open halobacterium.txt";
+		}elsif($organism eq 'haloarcula marismortui'){
+		  open(A, "haloarcula.txt") || die "Could not open haloarcula.txt";
+		}else{
+		  open(A, "halobacterium.txt") || die "Could not open halobacterium.txt"; #default = nrc-1
+		}
+		while(<A>){
+		  my @temp = split;
+		  if($gene eq $temp[1]){  #if a common name was entered
+			$gene = $temp[0];     #assign $gene to the equivalent canonical name
+		  }
+		}  
+		close(A);
+
+		$gene = lc $gene;
+
+		####get TM, SS
+        my $tm;
+        my $ss;
+	    my $tm_command = "melttemp -OLI=" . $sequence . " -OUT=gene.melt -Default";
+        my $ss_command = "primepair -OLIGOSF=" . $sequence . " -OLIGOSR=" . $sequence . " -OUT=gene.primepair -Default";
+
+		$tm_command = "ssh -l gcgbot -i /net/dblocal/www/html/dev5/sbeams/cgi/Oligo/gcg-key2 ouzo \"uptime; cd /local/scratch/pmar; $tm_command; scp gene.melt /net/dblocal/www/html/dev5/sbeams/cgi/Oligo/gene.melt\"";
+
+		system("$tm_command | /dev/null");
+		open(MELT, "<gene.melt") || die "cannot open gene.melt\n";
+		my(@lines) = <MELT>;
+		my $melt_file = "";
+		foreach my $line (@lines) {
+		  $melt_file = $melt_file . $line;
+		}
+		close(MELT);
+		if($melt_file =~ /oligo Tm\s\(degrees Celsius\):\s+(\d+)\.(\d+)/){
+		  $tm = $1 . "." . $2;
+	    }else{
+		  $tm = "undefined";
+		}
+
+		$ss_command = "ssh -l gcgbot -i /net/dblocal/www/html/dev5/sbeams/cgi/Oligo/gcg-key2 ouzo \"uptime; cd /local/scratch/pmar; $ss_command; scp gene.primepair /net/dblocal/www/html/dev5/sbeams/cgi/Oligo/gene.primepair\"";
+	
+		system("$ss_command | /dev/null");		
+		open(PRIMEPAIR, "<gene.primepair") || die "cannot open gene.primepair\n";
+		my (@lines) = <PRIMEPAIR>;
+		my $primepair_file = "";
+		foreach my $line (@lines) {
+		  $primepair_file = $primepair_file . $line;
+		}
+		close(PRIMEPAIR);
+
+		if($primepair_file =~ /primer self-annealing:\s+(\d+)/){
+		  if($1 ne "0"){
+			$ss = 'Y';    #primer does fold back onto itself
+		  }else{
+			$ss = 'N';    #primer is good to go
+		  }
+		}else{
+		  $ss = 'U';      #secondary structure unknown 
+		}
+
+        system("rm ./gene.melt; rm ./gene.primepair");
+	   
+
+		####create a new oligo_file
+		open(OLIGO, ">temp_oligo_file");
+		my $outputdata = ">" . $gene . "." . $type_extension . " 0 0 TM=$tm SS=$ss\n";
+		$outputdata = $outputdata . $sequence;
+		print OLIGO $outputdata;
+		close(OLIGO);
+		
+		####use load_oligo.pl to load the newly created oligo into the db
+		my $command_line = "/net/dblocal/www/html/dev5/sbeams/lib/scripts/Oligo/load_oligo.pl --search_tool_id " . $search_tool_id . " --gene_set_tag " .  $gene_set_tag . " --chromosome_set_tag " . $chromosome_set_tag . " --oligo_file ./temp_oligo_file --project_id 425";
+		system("$command_line | /dev/null");
+
+		####Allow user to view if oligo has been added.
+		my @gene_arr = ($gene);
+		print qq~ 
+		  New Oligo Submitted to Database.  Note: Will only be added if valid.  View added Oligo:
+          <A HREF="http://db.systemsbiology.net/dev5/sbeams/cgi/Oligo/Search_Oligo.cgi?apply_action=QUERY&organism=$organism&set_type=$set_type&genes=@gene_arr">Oligo Search</A><BR><BR>  
+        ~;
+	  }
 	}
-
-    ####search tool id
-    $search_tool_id = 5;  #for user defined oligo
-
-   
-
-
-    my $oligo_search_id;
-    $oligo_search_id = add_oligo_search_record(user=>$current_username,
-											 project=>$project_id);
-
-
-    my $gene_biosequence_set_id = add_oligo_parameter_set_record(
-    oligo_search_id=>$oligo_search_id,
-    gene_set_tag=>$gene_set_tag,
-	chromosome_set_tag=>$chromosome_set_tag
-															);
-  
-    insert_oligo(project_id=>$project_id,
-					search_tool_id=>$search_tool_id,
-					oligo_search_id=>$oligo_search_id,
-				    type_extension=>$type_extension,
-					biosequence_set_id=>$gene_biosequence_set_id,   
-                    sequence=>$sequence           
-					);
-    
   }
 
-
+  
+  ####Back button
+  print qq~
+	<BR><A HREF="http://db.systemsbiology.net/dev5/sbeams/cgi/Oligo/Oligo_Interface.cgi">Back</A><BR><BR>   ~;
   return;
 
 } # end handle_request
 
 
-######################################################################
-# add_oligo_search_record
-######################################################################
-sub add_oligo_search_record{
-  my %args = @_;
-
-  ## Variables
-  my $current_username = $args{user} || die "[ERROR]: username not passed\n";
-  my $project_id = $args{project} || die "[ERROR]: project not passed\n";
-  my $sql;
-  my @rows;
-  
-  ## Get oligo_types that correspond to oligo_set_type
-  
-  my $search_id_code = get_timestamp();
-
-  ## Populate oligo_search table
-  my %rowdata = ('project_id' => $project_id,                 
-				 'search_tool_id' => $search_tool_id,
-				 'search_id_code' => $search_id_code,
-				 'search_username' => $current_username,
-				 'comments' => "created by Add_Oligo.cgi");
-
-  my $rowdata_ref = \%rowdata; 
-
-  my $oligo_search_id = $sbeams->updateOrInsertRow(
-	table_name => "$TBOG_OLIGO_SEARCH",
-		print_SQL=>1,
-        rowdata_ref => $rowdata_ref,
-        insert => 1,
-        return_PK => 1,
-        testonly => 0, 
-        verbose => 0,
-        add_audit_parameters => 1 );
-    undef %rowdata;
-  
-
-  return $oligo_search_id;
-  }
-
-
-######################################################################
-# get_timestamp
-######################################################################
-sub get_timestamp {
-  my ($sec,$min,$hour,$mday,$mon,$year) = localtime();
-  return sprintf("%d-%02d-%02d_%02d:%02d:%02d",
-      1900+$year,$mon+1,$mday,$hour,$min,$sec);
-}
-
-
-######################################################################
-# add_oligo_parameter_set_record
-######################################################################
-sub add_oligo_parameter_set_record{
-  my %args = @_;
-
-  ## Variables
-  my $SUB = "add_oligo_parameter_set_record";
-  my $oligo_search_id = $args{oligo_search_id} || 
-	die "[BUG-$SUB]: oligo_search_id not passed\n";
-  my $gene_tag = $args{gene_set_tag} ||
-	die "[BUG-$SUB]: gene_set_tag not passed\n";
-  my $chrom_tag = $args{chromosome_set_tag} ||
-	die "[BUG-$SUB]: chromosome_set_tag not passed\n";
-
-  my $sql;  
-  my @rows;
-
-  ## Find biosequence_set_ids corresponding to gene tag
-  $sql = qq~
-SELECT biosequence_set_id 
-  FROM $TBOG_BIOSEQUENCE_SET
- WHERE set_tag = '$gene_tag'
-   AND record_status != 'D'
-   ~;
-  my @rows = $sbeams->selectOneColumn($sql);
-  if ( scalar(@rows) == 0 ) {
-	print "[ERROR]: no biosequence set found with tag $gene_tag\n";
-	exit;
-  }elsif ( scalar(@rows) > 1 ) {
-	print "[WARNING]: Multiple ids found for $gene_tag.  Using first one.\n";
-  }
-  my $gene_library_id = $rows[0];
-
-  ## Find biosequence_set_ids corresponding to chrom tag
-  $sql = qq~
-SELECT biosequence_set_id 
-  FROM $TBOG_BIOSEQUENCE_SET
- WHERE set_tag = '$chrom_tag'
-   AND record_status != 'D'
-   ~;
-  my @rows = $sbeams->selectOneColumn($sql);
-  if ( scalar(@rows) == 0 ) {
-	print "[ERROR]: no biosequence set found with tag $chrom_tag\n";
-	exit;
-  }elsif ( scalar(@rows) > 1 ) {
-	print "[WARNING]: Multiple ids found for $chrom_tag.  Using first one.\n";
-  }
-  my $chromosome_library_id = $rows[0];
-
-  my %rowdata =('oligo_search_id' => $oligo_search_id,
-				'gene_library_id'=>$gene_library_id,
-				'chromosome_library_id'=>$chromosome_library_id);
-  
- $sbeams->updateOrInsertRow(
-	table_name => "$TBOG_OLIGO_PARAMETER_SET",
-		print_SQL=>1,
-        rowdata_ref => \%rowdata,
-        insert => 1,
-        return_PK => 1,
-        testonly => 0, 
-        verbose => 0 
-        );
-  
-  return $gene_library_id;
-}
-
-
-######################################################################
-# insert_oligo
-######################################################################
-sub insert_oligo {
-  my %args = @_;
-
-  ## Variables
-  my $sql;
-  my @rows;
-  my $counter = 0;
-
-  my $SUB="insert_oligo";
-  my $oligo_search_id = $args{oligo_search_id} ||
-	die "[BUG-$SUB]: oligo_search_id not passed.\n";
-  my $search_tool_id = $args{search_tool_id} ||
-	die "[BUG-$SUB]: search_tool_id not passed\n";
-  my $biosequence_set_id = $args{biosequence_set_id} ||
-	die "[BUG-$SUB]: biosequence_set_id not passed.\n";
-  my $project_id = $args{project_id} ||
-	die "[BUG-$SUB]: project_id not passed\n";
-  my $sequence = $args{sequence} ||
-	die "[BUG-$SUB]: sequence not passed\n";
-  my $type_extension = $args{type_extension} ||
-	die "[BUG-$SUB]: type extension not passed\n";
-
-  #my %oligo_types = %{$oligo_types_ref};
-  my %selected_oligos;
-
-
-  ## Get the ID of the oligo (INSERTing a record, if necessary)
-  my $oligo_id = get_oligo(project_id=>$project_id,
-							   sequence=>$sequence);
-  my %rowdata;
-
-
-  ## Find the oligo type extension (ie: a,b,c,d,e,for,rev)
-  ## Also, find biosequence_id
-  my $oligo_type_id;
-  if ($type_extension eq "a") {
-    $oligo_type_id = "1";
-  }elsif ($type_extension eq "b") {
-    $oligo_type_id = "2";
-  }elsif($type_extension eq "c") {
-    $oligo_type_id = "3";
-  }elsif ($type_extension eq "d") {
-    $oligo_type_id = "4";
-  }elsif ($type_extension eq "e") {
-	$oligo_type_id = "5";
-  }elsif($type_extension eq "for") {
-	$oligo_type_id = "6";
-  }elsif($type_extension eq "rev") {
-	$oligo_type_id = "7";
-  }else{
-	print "[WARNING]: no type extension selected\n";
-  }
-
-
-  ## Create a hash for information that we'll need.
-  $rowdata{oligo_search_id} = $oligo_search_id;
-  $rowdata{oligo_id} = $oligo_id;
-  $rowdata{oligo_type_id} = $oligo_type_id;
-  $rowdata{biosequence_id} = '';
-  $rowdata{start_coordinate} = '';
-  $rowdata{stop_coordinate} = '';
-  $rowdata{synthetic_start} = '';
-  $rowdata{synthetic_stop} = '';
-
-
-
-  ## Do special parsing depending on which genome set is being loaded
-  ##  The returned hash should be ONLY what is to be loaded into the DB!
-  #special_parsing(rowdata_ref=>\%rowdata,
-	#	 search_tool_id=>$search_tool_id,
-	#	 biosequence_set_id=>$biosequence_set_id,
-	#	 sequence=>$sequence);
-
-  ## Verify that we haven't loaded this oligo_type/oligo combination yet
-  my $key = $oligo_search_id.
-	$rowdata{oligo_id}.
-	$rowdata{oligo_type_id}.
-	$rowdata{biosequence_id}.
-	$rowdata{start_coordinate}.
-	$rowdata{threeprime_distance};
-	#$rowdata{synthetic_start}.
-	#$rowdata{synthetic_stop};
-
-  if ( $selected_oligos{$key} ) {
-	print "[WARNING]: Potential duplicate oligo loaded\n";
-  }
-            
-  
-	  
-  ## INSERT the selected_oligo record
-  my $selected_oligo_id = $sbeams->updateOrInsertRow(table_name=>$TBOG_SELECTED_OLIGO,
-													  rowdata_ref=>\%rowdata,
-													  insert=>1,
-													  return_PK=>1,
-													  testonly=>0,
-													  verbose=>0,
-													  );  ##################took out add_audit_parameters=>1
-   
-
-
- 
-
-
-}
-
-
-######################################################################
-# get_oligo
-######################################################################
-sub get_oligo {
-  my %args = @_;
-  my $oligo_id;
-
-  ## Variables
-  my $SUB = "get_oligo";
-  my $sequence = $args{sequence} || 
-	die "[BUG-$SUB]: oligo sequence not passed\n";
-  my $project_id = $args{project_id} ||
-	die "[BUG-$SUB]: project_id not passed\n";
-
-  ## Strip out any non-sequence (whitespace, numbers) characers
-  $sequence =~ s/\s//g;
-  $sequence =~ s/\d//g;
-
-  my $length = length($sequence);
-
-  ## See if there is already a matching oligo (within the project) 
-  my $sql = qq~
-   SELECT O.oligo_id
-     FROM $TBOG_OLIGO O
-LEFT JOIN $TBOG_OLIGO_ANNOTATION OA ON (O.oligo_id = OA.oligo_id)
-    WHERE O.sequence_length = '$length'
-      AND O.feature_sequence = '$sequence'
-      AND OA.project_id = '$project_id'
-      AND OA.record_status != 'D'
-	  ~;
-  my @rows = $sbeams->selectOneColumn($sql);
-  
-
-  ## INSERT record or return an ID, based upon the returned result
-  if ( scalar(@rows) > 1 ) {
-	print "[WARNING]: Yikes! multiple oligos appear to have a sequence".
-	  " of \'$sequence\' and a length of $length.  Using the first one.\n";
-	$oligo_id = $rows[0];
-  } elsif ( scalar(@rows) == 1 ) {
-	$oligo_id = $rows[0];
-  } else{
-
-	## In this case, we need to INSERT the oligo record...
-	my %rowdata;
-	$rowdata{sequence_length} = $length;
-	$rowdata{feature_sequence} = $sequence;
-	$oligo_id = $sbeams->updateOrInsertRow(table_name=>$TBOG_OLIGO,
-										   rowdata_ref=>\%rowdata,
-										   insert=>1,
-										   return_PK=>1,
-										   testonly=>0,
-										   verbose=>0);
-	undef %rowdata;
-
-	## ...AND INSERT the oligo_annotation record
-	my %rowdata;
-	$rowdata{oligo_id} = $oligo_id;
-	$rowdata{project_id} = $project_id;
-	$rowdata{in_stock} = 'N'; #default is it's not in stock
-	$sbeams->updateOrInsertRow(table_name=>$TBOG_OLIGO_ANNOTATION,
-							   rowdata_ref=>\%rowdata,
-							   insert=>1,
-							   testonly=>0,
-							   verbose=>0);
-  }
-  return $oligo_id;
-}

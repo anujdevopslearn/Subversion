@@ -147,20 +147,16 @@ sub handle_request {
 
   print "<H1> Oligo Interface</H1>";
   
-  print qq~ 
-<TABLE>
-<TR>
-  <TD ALIGN="LEFT">
-   <a href="http://db.systemsbiology.net/sbeams/cgi/Oligo/Add_Oligo.cgi?display_mode=ext_halo">Add New Oligo</a>
-  </TD>
-</TR>
-<TR>
-  <TD ALIGN="LEFT">
-   <a href="http://db.systemsbiology.net/sbeams/cgi/Oligo/Search_Oligo.cgi?display_mode=ext_halo">Search Existing Oligos</a>
-  </TD>
-</TR>
-</TABLE>
-~;
+
+  print qq~ <br>
+            <a href="http://db.systemsbiology.net/dev5/sbeams/cgi/Oligo/Add_Oligo.cgi">Add New</a>
+            <br>
+            <a href="http://db.systemsbiology.net/dev5/sbeams/cgi/Oligo/Search_Oligo.cgi?">Search Existing</a>
+            <br>
+		    ~;
+             
+
+
   return;
 
 } # end handle_request

@@ -151,17 +151,17 @@ sub print_entry_form {
   my %parameters = %{$ref_parameters};
 
   # start the form
-# the statement shown defaults to POST method, and action equal to this script
+  # the statement shown defaults to POST method, and action equal to this script
   print "<H1> Oligo Search</H1>";
   
   print $q->start_form;  
   
-## Print the form elements
-## TO DO:
-#  1) Generalize this form to query SBEAMS for organism
-#  2) Generalize this form to query SBEAMS for set_type
-#
-print
+  ## Print the form elements
+  ## TO DO:
+  #  1) Generalize this form to query SBEAMS for organism
+  #  2) Generalize this form to query SBEAMS for set_type
+  #
+  print
     "Genes: ",$q->textarea(-name=>'genes'),
     $q->p,
     "Organism: ",
@@ -174,10 +174,10 @@ print
                    -values=>['Gene Expression', 'Gene Knockout']),
     
     $q->p,
-  $q->submit(-name=>"action", value=>"QUERY");
+	$q->submit(-name=>"action", value=>"QUERY");
 
-# end of the form
-print $q->end_form,
+  # end of the form
+  print $q->end_form,
       $q->hr; 
 
   return;
@@ -226,15 +226,13 @@ sub handle_request {
   ## Stuff gene names from text area into array
   my $genes = $parameters{genes};
   my @gene_array = split(/\s\n/,$genes);   
-  #$gene =~ /\w*(\d*)\w*/;   Need to fix these two lines.
-  #my $gene_number = $1;  
     
   ## Decide whether to search knockouts or expression
   my $set_type_search;    #The part of the sql query below that depends on set type value
   if ($set_type eq 'Gene Expression') {
 	$set_type_search = "(OT.oligo_type_name='halo_exp_for' OR OT.oligo_type_name='halo_exp_rev')";      
   }elsif($set_type eq 'Gene Knockout'){
-	$set_type_search = "(OT.oligo_type_name='halo_ko_a' OR OT.oligo_type_name='halo_ko_b' OR OT.oligo_type_name='halo_ko_c' OR OT.oligo_type_name='halo_ko_d' OR OT.oligo_type_name='halo_ko_e')";
+	$set_type_search = "(OT.oligo_type_name='halo_ko_a' OR OT.oligo_type_name='halo_ko_b' OR OT.oligo_type_name='halo_ko_c' OR OT.oligo_type_name='halo_ko_d' OR OT.oligo_type_name='halo_ko_e' OR OT.oligo_type_name='halo_ko_f' OR OT.oligo_type_name='halo_ko_g' OR OT.oligo_type_name='halo_ko_h')";
   }else{
 	#print "Error: Invalid oligo type selected. ";
   }
@@ -246,11 +244,27 @@ sub handle_request {
   }elsif($organism eq 'halobacterium-nrc1'){
 	$set_tag = "'halobacterium_orfs'";
   }else{
-#	print "ERROR: No organism type selected.\n";
+	print "ERROR: No organism type selected.\n";
   }
 
   ####process for each individual gene in array
   foreach my $gene (@gene_array) {
+
+	####search for vng synonym of common name
+	if($organism eq 'halobacterium-nrc1'){
+	  open(A, "halobacterium.txt") || die "Could not open halobacterium.txt";
+	}elsif($organism eq 'haloarcula marismortui'){
+	  open(A, "haloarcula.txt") || die "Could not open haloarcula.txt";
+	}else{
+	  open(A, "halobacterium.txt") || die "Could not open halobacterium.txt"; #default = nrc-1
+	}
+	while(<A>){
+	  my @temp = split;
+	  if(lc $gene eq lc $temp[1]){  #if a common name was entered
+		$gene = $temp[0];     #assign $gene to the equivalent canonical name
+	  }
+	}  
+	close(A);
 
 	####strip gene name of letters and get just the gene number (in case of partial entry)
 	$gene =~ /[a-z,A-Z]*(\d*)[a-z,A-Z]*/;
@@ -260,12 +274,17 @@ sub handle_request {
 	####Define the desired columns in the query
 	#### [friendly name used in url_cols,SQL,displayed column title]
 	my @column_array = (
-						["Gene","BS.biosequence_name","Gene"],
+						["Primer","BS.biosequence_name","Oligo"],
 						["Oligo_type","OT.oligo_type_name","Oligo Type"],
-						["Oligo_Sequence","OG.feature_sequence","Oligo Sequence"],
+						["Primer_Sequence","OG.feature_sequence","Oligo Sequence"],
 						["Length","OG.sequence_length","Length"],
-						["In_Stock","OA.in_stock","In Stock"],
 						["Oligo","OG.oligo_id","Oligo"],
+						["GC Content", "OA.GC_content", "GC Content"],
+						["Melting Temperature", "OG.melting_temp", "Melting Temperature"],
+						["Secondary Structure", "OA.secondary_structure", "Secondary Structure"],
+						["In_Stock","OA.in_stock","In Stock"],
+						["Location", "OA.location", "Location"],
+						["Comments", "OA.comments", "Comments"]
 						);
 
 	####Build the columns part of the SQL statement
@@ -289,11 +308,21 @@ sub handle_request {
 	  ~;
 
 	##Define the hypertext links for columns that need them
-	my %url_cols = ('Oligo_Sequence' => "Display_Oligo_Detailed.cgi?Gene=%0V&Oligo_type=%1V&Oligo_Sequence=%2V&In_Stock=%4V");
+	my %url_cols = ('Primer_Sequence' => "Display_Oligo_Detailed.cgi?Gene=%0V&Oligo_type=%1V&Oligo_Sequence=%2V&In_Stock=%7V");
 
 	## Define columns that should be hidden in the output table
-	my %hidden_cols = ('Oligo' => 1,
-								 );
+	my %hidden_cols = ('Oligo_type' => 1,
+					   'Oligo' => 1,
+					   'Comments' => 1);
+
+    my %hidden_cols_download = ('Oligo_type' => 1,
+								'Oligo' => 1, 
+								'Length' => 1,
+								'GC Content' => 1,
+								'Melting Temperature' => 1,
+								'Secondary Structure' => 1,
+								'In_Stock' => 1,
+								'Location' => 1);
 
 	##  Print the data ##
 
@@ -302,30 +331,35 @@ sub handle_request {
 	  unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
 	$limit_clause = $sbeams->buildLimitClause(row_limit=>$parameters{row_limit});
 
+    ## Prevent execution of query for Haloarcula Knockouts, which hasn't been written yet
+    unless($organism eq 'haloarcula_marismortui' && $set_type eq 'Gene Knockout'){
 
-	## If the action contained QUERY, then fetch the results from SBEAMS
-	if ($apply_action ne "VIEWRESULTSET") {
+	  ## If the action contained QUERY, then fetch the results from SBEAMS
+	  if ($apply_action ne "VIEWRESULTSET") {
 
-	  ## Fetch the results from the database server
-	  $sbeams->fetchResultSet(sql_query=>$sql,
+		## Fetch the results from the database server
+		$sbeams->fetchResultSet(sql_query=>$sql,
 							  resultset_ref=>$resultset_ref,
 							  );
 
-	  #### Store the resultset and parameters to disk resultset cache
-	  $rs_params{set_name} = "SETME";
-	  $sbeams->writeResultSet(resultset_file_ref=>\$rs_params{set_name},
+		#### Store the resultset and parameters to disk resultset cache
+		$rs_params{set_name} = "SETME";
+		$sbeams->writeResultSet(resultset_file_ref=>\$rs_params{set_name},
 							  resultset_ref=>$resultset_ref,
 							  query_parameters_ref=>\%parameters,
 							  resultset_params_ref=>\%rs_params,
 							  query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
 							  );
-	}
+	  }
 			
-	## Set the column_titles to just the column_names
-	@column_titles = @{$resultset_ref->{column_list_ref}};
-	
-	## Display the resultset
-	$sbeams->displayResultSet(resultset_ref=>$resultset_ref,
+	  ## Set the column_titles to just the column_names
+	  @column_titles = @{$resultset_ref->{column_list_ref}};
+      
+      ## make additional modifications to display table
+      modify_table(resultset_ref => $resultset_ref);	
+	  
+      ## Display the resultset
+	  $sbeams->displayResultSet(resultset_ref=>$resultset_ref,
 							  query_parameters_ref=>\%parameters,
 							  rs_params_ref=>\%rs_params,
 							  url_cols_ref=>\%url_cols,
@@ -333,14 +367,33 @@ sub handle_request {
 							  column_titles_ref=>\@column_titles,
 							  base_url=>$base_url,
 							  );
+      
+      ## Display the resultset download version
+      $sbeams->displayResultSet(resultset_ref=>$resultset_ref,
+							  query_parameters_ref=>\%parameters,
+							  rs_params_ref=>\%rs_params,
+							  url_cols_ref=>\%url_cols,
+							  hidden_cols_ref=>\%hidden_cols_download,
+							  column_titles_ref=>\@column_titles,
+							  base_url=>$base_url,
+							  );
 
-	## Display the resultset controls
-	$sbeams->displayResultSetControls(rs_params_ref=>\%rs_params,
-									  resultset_ref=>$resultset_ref,
-									  query_parameters_ref=>\%parameters,
-									  base_url=>$base_url
-									  );
+	  
+      ## Display the resultset controls - This allows table downloads in excel format
+	  $sbeams->displayResultSetControls(rs_params_ref=>\%rs_params,
+							  resultset_ref=>$resultset_ref,
+							  query_parameters_ref=>\%parameters,
+							  base_url=>$base_url
+							  );
+	}
+
   }
+
+  ####Back button
+  print qq~
+	<BR><A HREF="http://db.systemsbiology.net/dev5/sbeams/cgi/Oligo/Search_Oligo.cgi">Search again</A>  
+    <BR><A HREF="http://db.systemsbiology.net/dev5/sbeams/cgi/Oligo/Add_Oligo.cgi">Add New Oligo</A><BR><BR>
+  ~;
 
   return;
 
@@ -348,3 +401,47 @@ sub handle_request {
 
 
 
+##############################################################################
+# modify_table
+#
+# make additional modifications to SBEAMS table such as primer name, checkboxes, etc.
+##############################################################################
+sub modify_table{  
+    my %args = @_;
+	my $resultset_ref = $args{resultset_ref};
+
+    my $aref = $$resultset_ref{data_ref};
+ 
+    my $full_oligo_name = "";
+    foreach my $row_aref (@{$aref} ) { 
+      if ($row_aref->[1] =~ /halo_exp_(.*)/ || $row_aref->[1] =~ /halo_ko_(.*)/) {
+		$full_oligo_name = $row_aref->[0] . "." . $1; 
+	  }
+      $row_aref->[0] = $full_oligo_name;
+	  #my $input = "<input type='checkbox' name='select_oligo'>";
+	  #push @$row_aref, $input;
+	}
+
+    #push @{$resultset_ref->{column_list_ref}}, "select"; 
+
+    #append_precision_data($resultset_ref);
+    
+}
+
+
+
+
+###############################################################################
+# append_precision_data
+#
+# need to append a value for every column added otherwise the column headers will not show
+###############################################################################
+sub append_precision_data {
+	my $resultset_ref = shift;
+	
+	my $aref = $$resultset_ref{precisions_list_ref};	
+	
+	push @$aref, '-10';					
+	
+	$$resultset_ref{precisions_list_ref} = $aref;
+}
