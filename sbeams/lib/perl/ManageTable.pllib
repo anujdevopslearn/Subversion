@@ -659,7 +659,7 @@ sub showTable {
       $full_where_clause
       $full_orderby_clause
   ~;
-  print "<PRE>$sql_query\n\n</PRE>";
+  #print "<PRE>$sql_query\n\n</PRE>";
 
 
   #### Get the url link data
