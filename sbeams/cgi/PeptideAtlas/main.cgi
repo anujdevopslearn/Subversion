@@ -121,4 +121,6 @@ sub showMainPage {
 
     print "$tabmenu";
 
+    print "$SERVER_BASE_DIR <BR>  $CGI_BASE_DIR <BR>";
+
 } # end showMainPage
