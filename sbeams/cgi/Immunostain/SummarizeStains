@@ -602,8 +602,11 @@ sub postProcessResultset {
 			$dataHash{$antibodyName}->{$cellTypeName}->{probability}+=$probability if $cellTypeName; 
 			$dataHash{$antibodyName}->{$cellTypeName}->{numberOfEx}++ if $cellTypeName;
 			$cellTypeHash{$cellTypeName} = $row[$biosequence_name_column_index->{cell_type_sort_order}] if ($cellTypeName);
-			push @antibodyArray, $antibodyName if $prevAntibodyName ne $antibodyName and $cellTypeName; 
-			$prevAntibodyName = $antibodyName;
+
+			if ($prevAntibodyName ne $antibodyName and $cellTypeName) {
+			  push(@antibodyArray, $antibodyName);
+			  $prevAntibodyName = $antibodyName;
+			}
 			$antibodyHash{$antibodyName} = $antibodyId;
 			$cellIdHash{$cellTypeName} = $cellTypeId;
 			$irow++;
