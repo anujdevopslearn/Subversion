@@ -776,9 +776,9 @@ sub printEntryForm {
       %url_cols = ('Accession' => "\%$colnameidx{accessor}V\%$colnameidx{biosequence_accession}V",
 		   'Accession_ATAG' => 'TARGET="Win1"',
                    'Reference' => "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi?QUERY_NAME=BrowseSearchHits&reference_constraint=\%$colnameidx{reference}V&search_batch_id=$parameters{search_batch_id}&display_options=BSDesc,MaxRefWidth&apply_action=$apply_action",
-		   'Reference_ATAG' => 'TARGET="Win1"',
+		   'Reference_ATAG' => 'TARGET="Win2"',
 		   'Peptide' => "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi?QUERY_NAME=BrowseSearchHits&peptide_constraint=\%$colnameidx{peptide}V&search_batch_id=$parameters{search_batch_id}&display_options=BSDesc,MaxRefWidth&apply_action=$apply_action",
-		   'Peptide_ATAG' => 'TARGET="Win1"',
+		   'Peptide_ATAG' => 'TARGET="Win2"',
       );
 
       %hidden_cols = ('accessor' => 1,
