@@ -402,6 +402,15 @@ sub handle_request {
   return if ($mass_clause == -1);
 
 
+  #### Build PERCENT BUFFER B constraint
+  my $percent_buffer_b_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"MSS.calc_buffer_percent",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Percent ACN Constraint",
+    constraint_value=>$parameters{percent_buffer_b_constraint} );
+  return if ($mass_clause == -1);
+
+
   #### Build ISOELECTRIC_POINT constraint
   my $isoelectric_point_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"isoelectric_point",
@@ -695,6 +704,8 @@ sub handle_request {
 	  INTO #tmpAnnBSids
 	  FROM $TBPR_SEARCH_HIT SH
 	  JOIN $TBPR_SEARCH S ON ( SH.search_id = S.search_id )
+	  JOIN $TBPR_MSMS_SPECTRUM MSS
+               ON ( S.msms_spectrum_id = MSS.msms_spectrum_id )
 	  LEFT JOIN $TBPR_SEARCH_HIT_ANNOTATION SHA
 	       ON ( SH.search_hit_id = SHA.search_hit_id )
 	  LEFT JOIN $TBPR_QUANTITATION QUAN 
@@ -720,6 +731,7 @@ sub handle_request {
 	$second_peptide_clause
 	$precursor_mass_clause
 	$mass_clause
+        $percent_buffer_b_clause
 	$isoelectric_point_clause
 	$file_root_clause
 	$quantitation_clause
