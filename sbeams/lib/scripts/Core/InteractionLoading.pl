@@ -185,10 +185,15 @@ qw / Organism_bioentity1_name
 	my %pubMed = $recordCon->selectTwoColumnHash (qq /Select pubmed_ID, publication_id from $TBIN_PUBLICATION/);
 	$pubMed = \%pubMed;
 #error logs
-	open (ERRORTEXT, ">InteractionLoadingError.txt") or die "can not open $!";
+
+
+	open (ERRORTEXT, ">/../users/mkorb/GLUE/inputData/InteractionLoadingError.txt") or die "can not open $!";
 	print Error(\@columnOrder);
-	open (ERRORLOG, ">InteractionErrorLog.txt") or die "can not open $!";
-#now process the file since we got this far
+	open (ERRORLOG, ">/../users/mkorb/GLUE/inputData/InteractionErrorLog.txt") or die "can not open $!";
+
+	
+	
+	
 	$recordCon->printPageHeader() unless ($QUIET);
 	processFile();
 #at this point we have either 
