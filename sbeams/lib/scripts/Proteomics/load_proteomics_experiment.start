@@ -1,0 +1,27 @@
+#!/bin/csh
+
+###############################################################################
+# Program     : load_proteomics_experiment.start
+# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
+# $Id$
+#
+# Description : Utility wrapper to load_proteomics_experiment.csh
+#               Automatically writes to a new logfile.
+#
+# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+  set LOGFILE = "load_proteomics.out"
+
+  while ( -e $LOGFILE )
+    set LOGFILE = ${LOGFILE}x
+  end
+  echo "INFO: Writing to log file $LOGFILE"
+
+  ./load_proteomics_experiment.csh >& $LOGFILE &
+
