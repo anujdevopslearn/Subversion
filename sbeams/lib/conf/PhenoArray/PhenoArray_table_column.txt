@@ -54,7 +54,7 @@ PH_plasmid	4	plasmid_type_id	Plasmid Type	int	8	0	N		N	PH_plasmid_type	plasmid_t
 PH_plasmid	5	vector	Vector	varchar	50	0	N		N			N	text	40		Y	Y	N	Vector		
 PH_plasmid	6	coli_strain	Coli Strain	varchar	50	0	N		N			N	text	20		Y	Y	N	?		
 PH_plasmid	7	coli_marker_id	Coli Marker	int	8	0	N		N	PH_coli_marker	coli_marker_id	Y	optionlist			Y	Y	N	Coli Marker	"SELECT coli_marker_id, coli_marker_tag FROM $TBPH_COLI_MARKER WHERE record_status != 'D' ORDER BY sort_order,coli_marker_tag"	
-PH_plasmid	8	yeast_selection_marker_id	Yeast Selection Marker	int	8	0	N		N	PH_yeast_selection_marker	yeast_selection_marker_id	Y	optionlist			Y	Y	N	Yeast Selection Marker	"SELECT yeast_selection_marker_id, yeast_selection_marker_tag FROM $TBPH_YEAST_SELECTION_MARKER WHERE record_status != 'D' ORDER BY sort_order,yeast_selection_marker_tag"	
+PH_plasmid	8	yeast_selection_marker_id	Yeast Selection Marker	int	8	0	N		N	PH_yeast_selection_marker	yeast_selection_marker_id	N	optionlist			Y	Y	N	Yeast Selection Marker	"SELECT yeast_selection_marker_id, yeast_selection_marker_tag FROM $TBPH_YEAST_SELECTION_MARKER WHERE record_status != 'D' ORDER BY sort_order,yeast_selection_marker_tag"	
 PH_plasmid	9	yeast_origin_id	Yeast Origin	int	8	0	N		N	PH_yeast_origin	yeast_origin_id	Y	optionlist			Y	Y	N	Yeast Origin	"SELECT yeast_origin_id, yeast_origin_tag FROM $TBPH_YEAST_ORIGIN WHERE record_status != 'D' ORDER BY sort_order,yeast_origin_tag"	
 PH_plasmid	10	plasmid_insert	Plasmid Insert	varchar	150	0	N		N			N	text	40		Y	Y	N	?		
 PH_plasmid	11	cloned_by	Cloned By	varchar	50	0	N		N			N	text	40		Y	Y	N	?		
