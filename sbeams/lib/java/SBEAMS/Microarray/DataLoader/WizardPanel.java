@@ -17,6 +17,7 @@ public abstract class WizardPanel extends JPanel {
   protected static String WIZARD_CONSTANTS = "WIZARD_constants";
   protected static String WIZARD_CONSTANTS_ID = "WIZARD_constants_file";
   protected static String SBEAMS_CLIENT = "SBEAMS_CLIENT";
+  protected static String WIZARD_PROJECT_ID = "WIZARD_project_id";
   protected WizardContext wizardContext;
 //-----------------------------------------------------------------------------------------------
   public WizardPanel() {
