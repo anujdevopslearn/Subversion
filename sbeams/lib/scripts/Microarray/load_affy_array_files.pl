@@ -1537,11 +1537,12 @@ sub write_error_log{
 	my $SUB_NAME = 'write_error_log';
 	
 	
-	open ERROR_LOG, ">AFFY_ERROR_LOG.txt" or 
+	open ERROR_LOG, ">../../../tmp/Microarray/AFFY_ERROR_LOG.txt" or 
 		die "CANNOT OPEN AFFY ERROR LOG $!\n";
 	
 	my $date = `date`;
-	print "TIME OF RUN '$date'\n";
+	chomp $date;
+	print ERROR_LOG "TIME OF RUN '$date'\n";
 	
 	my $count = 1;
 	
