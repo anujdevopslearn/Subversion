@@ -541,6 +541,7 @@ sub selectSeveralColumns {
     #### Get the database handle
     $dbh = $self->getDBHandle();
 
+	
     #### Convert the SQL dialect if necessary
     $sql = $self->translateSQL(sql=>$sql);
 
