@@ -1504,6 +1504,7 @@ sub specialParsing {
   }
 
 
+  #### Conversion rules for the ENSEMBL Drosophila Protein database
   if ($rowdata_ref->{biosequence_name} =~ /^Translation:(.+)$/ ) { ## parse for old format 
      $rowdata_ref->{biosequence_name} = $1;
      $rowdata_ref->{biosequence_accession} = $1;
@@ -1816,6 +1817,14 @@ sub specialParsing {
   #### Conversion Rules for ATH1.pep (TAIR):
   #### >At1g79800.1 hypothetical protein   /  contains similarity to phytocyanin/early nodulin-like protein GI:4559346 from [Arabidopsis thaliana]
   if ($biosequence_set_name eq "Arabidopsis Protein Database") {
+    $rowdata_ref->{biosequence_gene_name} = $rowdata_ref->{biosequence_name};
+    $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
+    $rowdata_ref->{dbxref_id} = '10';
+  }
+
+  #### Conversion Rules for ATH1.pep.2004061 (TIGR R5, Jan 2004):
+  #### >At1g79800.1 hypothetical protein   /  contains similarity to phytocyanin/early nodulin-like protein GI:4559346 from [Arabidopsis thaliana]
+  if ($biosequence_set_name eq "Arabidopsis Protein Database R5") {
     $rowdata_ref->{biosequence_gene_name} = $rowdata_ref->{biosequence_name};
     $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
     $rowdata_ref->{dbxref_id} = '10';
