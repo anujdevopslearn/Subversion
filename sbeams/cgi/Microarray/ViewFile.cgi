@@ -117,6 +117,8 @@ sub main {
 	$output_dir = "/net/";
   }elsif ($file_name eq "matrix_output") {
 	$output_dir = "$FILE_BASE_DIR/$project_id";
+  }elsif ($file_name =~/\d+\_constants_file/) {
+	$output_dir = "$PHYSICAL_BASE_DIR/data/MA_experiment_constants";
   }else {
 	$output_dir = "$FILE_BASE_DIR/$project_id";
   }
@@ -157,6 +159,7 @@ sub main {
 
   elsif($action eq 'read' && $sbeams->get_best_permission <= $DATA_READER_ID){
 	  print "Content-type: text/html\n\n";
+	  print ($file_path);
 	  if (!printFile(file=>$file_path)){
 		print qq~
 	  $file_path COULD NOT BE OPENED FOR VIEWING
