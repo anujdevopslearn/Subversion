@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl 
+#!/usr/local/bin/perl
 
 ###############################################################################
 # Program     : load_proteomics_experiment.pl
@@ -207,6 +207,7 @@ sub handleRequest {
 
   $TESTONLY = $OPTIONS{'testonly'} || 0;
   $DATABASE = $DBPREFIX{'Proteomics'};
+
 
   #### Get the file_prefix if it was specified, and otherwise guess
   unless ($file_prefix) {
@@ -556,6 +557,7 @@ sub loadProteomicsExperiment {
     return;
   }
 
+
   #### Find all the subdirectories and add them to @fractions
   my @fractions;
   my @dir_contents = getDirListing($source_dir);
@@ -904,13 +906,8 @@ sub addMsmsSpectrumEntry {
 
   #### Now insert all the mass,intensity pairs
   my ($i,$mass,$intensity);
-
-  #### By default, we insert spectra into the database, but there's a hack
-  #### to bypass this and create a bcp file for one database.
-  #### This should be a SBEAMS.conf parameter.  FIXME.
-  my $create_bcp_file = 0;
-  $create_bcp_file = 'YES' if ($DBPREFIX{'Proteomics'} =~ /proteomics\.dbo\./);
-
+  my $create_bcp_file = "YES";
+  $create_bcp_file = 0;
 
   if ($create_bcp_file) {
     return $msms_spectrum_id if (defined($spectra_written{$msms_spectrum_id}));
@@ -1538,22 +1535,6 @@ sub updateProbabilities {
   }
 
 
- #### Read the Interact file with probabilities
-   my $source_file = "$source_dir/interact-prob-data.htm";
-  if ( -f "$source_dir/interact-prob-data.htm") {
-     $source_file = "$source_dir/interact-prob-data.htm";
-  ## nlk: adapting to hold default filename from interact:
-  } elsif ( -f "$source_dir/interact-data.htm") {
-     $source_file = "$source_dir/interact-data.htm";
-  } else {
-    die("ERROR: edit this script to handle your interact file with probabilities ".
-        "directory");
-  }
-  
-  print "Reading source file '$source_file'...\n";
-  my $data_ref = $sbeamsPROT->readSummaryFile(inputfile=>$source_file,
-    verbose=>$VERBOSE);
-
   #### Read in the probabilities
   my $data_ref;
   my $source_file;
@@ -1578,6 +1559,8 @@ sub updateProbabilities {
       inputfile=>$source_file,
       verbose=>$VERBOSE
     );
+  } else {
+    die "!! UNABLE TO FIND INTERACT FILE (looking for pipeline's interact-prob*)";
   }
 
 
