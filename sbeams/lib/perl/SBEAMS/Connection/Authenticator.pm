@@ -1,3 +1,4 @@
+#!/usr/local/bin/perl -w
 package SBEAMS::Connection::Authenticator;
 
 ###############################################################################
@@ -843,11 +844,15 @@ sub displayPermissionToPageDenied{
   my $self = shift;
   my $ra_errors = shift || \@ERRORS;
 
+  # New option.  If template is defined the header below will not print, useful
+  # in cases where page printing has already begun when error is thrown.
+  my $template = shift || 0;
+
   my $back_button = $self->getGoBackButton();
   my $start_line = " - ";
   my $end_line = "\n";
 
-  $self->printPageHeader(minimal_header=>"YES");
+  $self->printPageHeader(minimal_header=>"YES") if !$template;
 
   if ($self->output_mode() eq 'html') {
     print qq~
@@ -878,7 +883,7 @@ sub displayPermissionToPageDenied{
     ~;
   }
 
-  $self->printPageFooter();
+  $self->printPageFooter() if !$template;
 
 }
 
