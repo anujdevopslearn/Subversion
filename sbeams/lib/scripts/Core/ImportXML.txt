@@ -24,6 +24,25 @@ rm zztmp/celera*
 ./ImportXML.pl --schema_file zztmp/celera --destination_type mssql --source_file $source_file --load --database_prefix CeleraTemp.dbo.
 
 
+---------------
+
+
+set source_file=/net/db/src/DIP/DIP.ALL.xml
+
+./ImportXML.pl --schema_file zztmp/DIP --destination_type mssql --database_prefix DIP.dbo. --drop_tables
+
+rm zztmp/DIP*
+
+./ImportXML.pl --schema_file zztmp/DIP --destination_type mssql --source_file $source_file --create_data_model --database_prefix DIP.dbo.
+
+./ImportXML.pl --schema_file zztmp/DIP --destination_type mssql --database_prefix DIP.dbo. --create_tables
+
+./ImportXML.pl --schema_file zztmp/DIP --destination_type mssql --source_file $source_file --load --database_prefix DIP.dbo.
+
+Had to put in a special hack to allow multiple parents.  Just allow multiple fk's per table.
+Had to put in a special hack for attribute names "from" and "to"
+
+
 
 
 
