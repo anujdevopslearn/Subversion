@@ -70,8 +70,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
   exit;
 }
 
-$VERBOSE =
-$OPTIONS{"verbose"} || 0;
+$VERBOSE = $OPTIONS{"verbose"} || 0;
 $QUIET = $OPTIONS{"quiet"} || 0;
 $DEBUG = $OPTIONS{"debug"} || 0;
 if ($DEBUG) {
@@ -598,7 +597,7 @@ sub handle_request {
         resultset_ref=>$resultset_ref,
         query_parameters_ref=>\%parameters,
         column_titles_ref=>\@column_titles,
-      ) if ($parameters{display_options} =~ /ApplyChilliFilter/i || $parameters{display_options} =~ /Sequence/i );
+      ) if ($parameters{display_options} =~ /ApplyChilliFilter/i || $parameters{display_options} =~ /SeqWidth/i );
 
       #### Store the resultset and parameters to disk resultset cache
       $rs_params{set_name} = "SETME";
@@ -705,9 +704,9 @@ sub postProcessResultset {
   #### Determine some column indices in the resultset
   my $column_indices = $resultset_ref->{column_hash_ref};
   my $biosequence_name_column_index = $column_indices->{biosequence_name};
-  my $match_source_column_index = $column_indices->{match_source};
-  my $match_type_column_index = $column_indices->{match_type};
-  my $domain_match_index_column_index = $column_indices->{domain_match};
+  my $match_source_column_index = $column_indices->{match_source_name};
+  my $match_type_column_index = $column_indices->{match_type_name};
+  my $domain_match_index_column_index = $column_indices->{domain_match_index};
   my $query_start_column_index = $column_indices->{query_start};
   my $query_end_column_index = $column_indices->{query_end};
   my $e_value_column_index = $column_indices->{e_value};
@@ -736,7 +735,7 @@ sub postProcessResultset {
 
     #### Now examine the details of this group of rows and decide what to do
 
-    #### First count the numbered of domains present
+    #### First count the number of domains present
     my %domain_indices = ();
     for (my $i=$startrow; $i<=$endrow; $i++) {
       if ($rows[$i]->[$domain_match_index_column_index] gt '') {
@@ -744,7 +743,9 @@ sub postProcessResultset {
       }
     }
     ## Will this work, or does keys return a list instead of array?
-    my $n_domains = scalar(keys(%domain_indices));
+    my @domain_list = keys(%domain_indices);
+    #print "Domains: ".join(",",@domain_list)."<BR>\n";
+    my $n_domains = scalar(@domain_list);
     my $pdbblast_domains = 0;
     my $pfam_domains = 0;
     my $rosetta_success_domains = 0;
@@ -807,7 +808,7 @@ sub postProcessResultset {
         #### If we already have a pdbblast result for this domain, drop this
         } elsif (exists($pdbblast_domains{$domain_match_index})) {
           print "INFO: ignoring pfam hit where pdbblast already exists".
-            "for $biosequence_name($domain_match_index)<BR>\n";
+            "for $biosequence_name($domain_match_index)<BR>\n" if ($VERBOSE);
 
         #### Else we probably have a live, one, but a couple more checks apply
         } else {
@@ -823,7 +824,7 @@ sub postProcessResultset {
                    ( $rows[$i]->[$query_end_column_index] <= $pdbblast_domains{$index}->{query_end} &&
                      $rows[$i]->[$query_end_column_index] > $pdbblast_domains{$index}->{query_start} ) ) {
                 print "INFO: ignoring pfam hit where pdbblast already exists".
-                  "for $biosequence_name($domain_match_index)<BR>\n";
+                  "for $biosequence_name($domain_match_index)<BR>\n" if ($VERBOSE);
               } else {
                 $attrs{new_row} = scalar(@new_data_array);
                 push(@new_data_array,$rows[$i]);
@@ -844,7 +845,7 @@ sub postProcessResultset {
                    ( $rows[$i]->[$query_end_column_index] <= $pfam_domains{$index}->{query_end} &&
                      $rows[$i]->[$query_end_column_index] > $pfam_domains{$index}->{query_start} ) ) {
                 print "INFO: Overlapping Ginzu pfam and PFAM Search pfam hit".
-                  "for $biosequence_name($domain_match_index).  Keeping only Ginzu result.<BR>\n";
+                  "for $biosequence_name($domain_match_index).  Keeping only Ginzu result.<BR>\n" if ($VERBOSE);
 		#### Replace the previous row
                 $new_data_array[$pfam_domains{$index}->{new_row}] = $rows[$i];
                 #### Delete the previous entry in the hash and add this one
@@ -873,35 +874,39 @@ sub postProcessResultset {
     my @rosetta_buffer = ();
     my $current_domain = -999;
     my $max_probability = 0;
+    my $domain_match_index;
     for (my $i=$startrow; $i<=$endrow; $i++) {
       if ($rows[$i]->[$match_source_column_index] eq 'mamSum') {
 
-        my $domain_match_index = $rows[$i]->[$domain_match_index_column_index];
-
+        $domain_match_index = $rows[$i]->[$domain_match_index_column_index];
+	#print "Rosetta domain match index: ".$domain_match_index.", current: ".$current_domain." for $biosequence_name<BR>\n";
 	#### If this is a new batch of results
 	if ($domain_match_index != $current_domain) {
-
 	  #### But not the beginning of the first batch
-	  unless ($current_domain = -999) {
+	  if ($current_domain != -999) {
 
  	    PROCESS_LAST_MAMSUM:
 
             #### If we already have a result for this domain
-            if (exists($rosetta_domains{$domain_match_index})) {
+            if (exists($rosetta_domains{$current_domain})) {
               print "WARNING: duplicate rosetta domains for $biosequence_name".
-                "($domain_match_index).  This should never happen. Sort err?<BR>\n";
+                "($current_domain).  This should never happen. Sort err?<BR>\n" if ($VERBOSE);
 
-            } elsif (exists($pdbblast_domains{$domain_match_index})) {
+            } elsif (exists($pdbblast_domains{$current_domain})) {
               ## This is fine, just ignore the Rosetta stuff
+	      print "INFO: ignoring Rosetta hit where pdbblast already exists ".
+                "for $biosequence_name($current_domain)<BR>\n" if ($VERBOSE);
 
-            } elsif (exists($pfam_domains{$domain_match_index})) {
+            } elsif (exists($pfam_domains{$current_domain})) {
               ## This is fine, just ignore the Rosetta stuff
+	      print "INFO: ignoring Rosetta hit where pfam already exists ".
+                "for $biosequence_name($current_domain)<BR>\n" if ($VERBOSE);
 
             } elsif ($max_probability >= 0.3) {
               push(@new_data_array,@rosetta_buffer);
-              $rosetta_domains{$domain_match_index} = 1;
+              $rosetta_domains{$current_domain} = 1;
 	      $rosetta_best_domains++;
-	      @rosetta_buffer = ();
+	      #print "Rosetta best: $biosequence_name($current_domain)<BR>\n";
 
             } else {
 	      ## Rosetta tried and failed. No match anywhere. Unknown domain...
@@ -910,12 +915,14 @@ sub postProcessResultset {
 	    #### If Rosetta succeeded, make a note regardless of other
 	    if ($max_probability >= 0.3) {
 	      $rosetta_success_domains++;
+	      #print "Rosetta success: $biosequence_name($current_domain)<BR>\n";
 	    }
 
 	  }
 
 	  $current_domain = $domain_match_index;
 	  $max_probability = 0;
+	  @rosetta_buffer = ();
 
 	}
 
@@ -931,13 +938,14 @@ sub postProcessResultset {
     }
 
     #### Hop back into the loop to process the last mamSum group
-    goto PROCESS_LAST_MAMSUM if (scalar(@rosetta_buffer));
+    if (scalar(@rosetta_buffer)) {
+      goto PROCESS_LAST_MAMSUM;
+    }
 
 
 
     #### Done processing this biosequence.  Store some statistics
     #push(@proteins,$biosequence_name);
-    $stats{n_proteins}++;
     if ($n_domains > 1) {
       push(@{$stats{multiple_domain_proteins}},$biosequence_name);
       $stats{multiple_domain_proteins_domains} += $n_domains;
@@ -959,17 +967,17 @@ sub postProcessResultset {
 
 
   #### Report the statistics
-  my $buf = '\n';
+  my $buf = "\n";
   $buf.="Total number of proteins: $stats{n_proteins}\n";
   $buf.="Number of single-domain proteins: ".scalar(@{$stats{single_domain_proteins}})."\n";
   $buf.="Number of single-domain protein domains: $stats{single_domain_proteins_domains}\n";
-  $buf.="Number of multiple-domain proteins: ".scalar(@{$stats{single_domain_proteins}})."\n";
+  $buf.="Number of multiple-domain proteins: ".scalar(@{$stats{multiple_domain_proteins}})."\n";
   $buf.="Number of multiple-domain protein domains: $stats{multiple_domain_proteins_domains}\n";
-  $buf.="Total number of domains: ".$stats{single_domain_proteins_domains}+$stats{multiple_domain_proteins_domains}."\n";
+  $buf.="Total number of domains: ".($stats{single_domain_proteins_domains}+$stats{multiple_domain_proteins_domains})."\n";
   $buf.="Number of good PDB hit domains: $stats{pbdblast_domains}\n";
   $buf.="Number of good PFAM hit but not PDB hit domains: $stats{pfam_domains}\n";
   $buf.="Number of good Rosetta hit domains without PDB or PFAM hits: $stats{rosetta_best_domains}\n";
-  $buf.="Total number of identified domains: ".$stats{pbdblast_domains}+$stats{pfam_domains}+$stats{rosetta_best_domains}."\n";
+  $buf.="Total number of identified domains: ".($stats{pbdblast_domains}+$stats{pfam_domains}+$stats{rosetta_best_domains})."\n";
 
   $buf.="Number of good Rosetta hits regardless of PDB or PFAM hits: $stats{rosetta_success_domains}\n";
   $buf.="\n\n";
