@@ -169,7 +169,8 @@ sub returnTableInfo {
             return qq~
 		SELECT B.*
 		  FROM $TBIN_BIOENTITY B
-		 --WHERE B.record_status!='D'
+		 WHERE 1 = 1
+		 --AND B.record_status!='D'
             ~;
         }
 
