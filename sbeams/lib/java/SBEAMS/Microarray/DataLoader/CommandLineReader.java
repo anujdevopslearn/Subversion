@@ -4,10 +4,11 @@ import java.util.*;
 import gnu.getopt.Getopt;
 //-----------------------------------------------------------------------------------------------
 public class CommandLineReader {
-  private String    validArguments         = "m:t:hv";
+  private String    validArguments         = "m:t:r:hv";
   private String[]  commandLineArguments;
   private String    matrixFile;
   private String    experimentTitle;
+  private String    translator;
   private boolean   verbose                = false;
   private boolean   inputError             = false;
   private boolean   helpRequested          = false;
@@ -39,6 +40,9 @@ public class CommandLineReader {
 	  case 'h':
 	    helpRequested = true;
 	    break;
+	  case 'r':
+		translator = options.getOptarg();
+		break;
 	  case 't':
 		experimentTitle = options.getOptarg();
 		break;
@@ -79,6 +83,7 @@ public class CommandLineReader {
     usage.append("\t-m <file> matrix file name\n");
 	usage.append("\t-t <title> experiment name\n");
     usage.append("\t-h display help\n");
+	usage.append("\t-r <file> ORF translator table\n");
     return usage.toString();
   }// getUsage
 //-----------------------------------------------------------------------------------------------
@@ -96,6 +101,10 @@ public class CommandLineReader {
 //-----------------------------------------------------------------------------------------------
   public String getExperimentTitle() {
 	return experimentTitle;
-  }
+  }// getExperimentTitle
+//-----------------------------------------------------------------------------------------------
+  public String getTranslator() {
+	return translator;
+  }// getTranslator
 //-----------------------------------------------------------------------------------------------
 }//end CommandLineReader
