@@ -1,6 +1,15 @@
 Notes on using/development of scripts for SBEAMS::Microarray
 
 
+    ###########################
+   ##   load_conditions.pl  ##
+#####################################################################
+Purpose: loads .sig file data into the 'condition' and 'gene_expression' tables
+
+You should only need to specificy a project id for this script.  When invoked, it should check the /net/arrays/Pipeline/output/project_id/<id> directory for any .sig files.  Upon finding one, it loads the lambdas, ratios, etc. into the gene_expression table and makes a new 'condition' record.  
+
+Typical usage:
+./load_conditions.pl --project_id 166
 
     ################################
    ##   load_biosequence_set.pl  ##
