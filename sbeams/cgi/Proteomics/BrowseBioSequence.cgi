@@ -397,7 +397,7 @@ sub handle_request {
     @additional_columns = (
       ["fav_codon_frequency","STR(BS.fav_codon_frequency,10,3)","Favored Codon Frequency"],
       ["n_transmembrane_regions","BS.n_transmembrane_regions","Number of Transmembrane Regions"],
-      ["protein_length","MIN(DATALENGTH(BS.biosequence_seq))","Protein Length"],
+      ["protein_length","DATALENGTH(BS.biosequence_seq)","Protein Length"],
       @additional_columns,
     );
   }
