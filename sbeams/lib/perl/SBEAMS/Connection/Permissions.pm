@@ -537,21 +537,29 @@ sub print_chooser {
   my $SUB_NAME = "print_chooser";
 
   ## Decode argument list
-  my $selected_id = $args{'selected_id'};
-  my $input_name = $args{'input_name'} || "";
-  my $selected_name = $args{'selected_name'};
-  my $omitted_ids_ref =$args{'omitted_ids'}; 
-  my $blank_chooser = $args{'blank_chooser'};
-  my $sql = $args{'sql'}
-  || die "ERROR[$SUB_NAME]: no sql passed";
-
+  my $selected_id     = $args{'selected_id'};
+  my $input_name      = $args{'input_name'} || "";
+  my $selected_name   = $args{'selected_name'};
+  my $omitted_ids_ref = $args{'omitted_ids'}; 
+  my $blank_chooser   = $args{'blank_chooser'};
+  my $sql             = $args{'sql'};
+  my $row_ref         = $args{'sql_results_ref'};
+ 
   ## Define standard variables
-  my (@rows, %omitted_ids);
+  my @rows;
+  my %omitted_ids;
   if ($omitted_ids_ref){
       %omitted_ids = %{$omitted_ids_ref};
   }
-
-  @rows = $self->selectSeveralColumns($sql);
+ 
+  ## Get results if SQL is passed
+  if ($sql){
+      @rows = $self->selectSeveralColumns($sql);
+  }elsif ($row_ref) {
+      @rows = @{$row_ref};
+  }else{
+      die "ERROR[$SUB_NAME]:Niether SQL nor SQL results not passed\n";
+  }
 
   ## Start SELECT
   print qq~
