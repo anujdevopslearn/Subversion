@@ -2029,7 +2029,8 @@ sub updateTimingInfo {
 
     #### If no msms_spectra were found, fail
     unless (%msms_spectrum_ids) {
-      die("Unable to find any msms_spectrum_ids with: $sql");
+      print "SEVERE WARNING: Unable to find any msms_spectrum_ids with: $sql";
+      next;
     }
 
 
