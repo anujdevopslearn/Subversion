@@ -226,6 +226,9 @@ sub processLogin {
 
   my $chours = $self->isValidDuration(cookie_duration => $LOGIN_DURATION) || 24;
   my $csecs = $chours * 3600;
+
+  # Define mid-point of cookie life, re-issue if more than half gone.
+  my $half_eaten = int( $csecs/2 );
   
   # If user and pass were given in login context, use the info.
   if ( $user && $pass && $login ) { 
@@ -264,7 +267,7 @@ sub processLogin {
         $log->info( "Expired cookie, forcing reauthentication" );
 
       } else {
-        if ( $stale < 3600 || $time_diff < 0 ) {
+        if ( $stale < $half_eaten || $time_diff < 0 ) {
           # The cookie is in its final 60 minutes of validity, or postdated
           $http_header = $self->createAuthHeader($valid_username);
           $log->info( "Cookie will expire soon or is postdated, reissuing" );
