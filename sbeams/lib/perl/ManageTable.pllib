@@ -656,11 +656,8 @@ sub processEntryForm {
                 }
               }
 
-              #### If this is an optionlist or scrolloptionlist, put in
-              #### a NULL if the value is empty
-              if ( ($input_types{$element} eq 'optionlist' ||
-                    $input_types{$element} eq 'scrolloptionlist') &&
-                   $tmp eq '') {
+              #### If the value is blank, put in a NULL value
+              if ( $tmp eq '') {
                 $sql_query .= "$element=NULL,\n";
 
               # Change all ' to '' so that it can go in the INSERT statement
@@ -708,7 +705,6 @@ sub processEntryForm {
         # Build the column names and VALUES for each data column
         my ($query_part1,$query_part2,$tmp);
         foreach $element (@data_columns) {
-          $query_part1 .= "$element,";
           $tmp = $parameters{$element};
 
           # If datatype is password, then decode the ********** to
@@ -723,16 +719,14 @@ sub processEntryForm {
              }
           }
 
-          #### If this is an optionlist or scrolloptionlist, put in
-          #### a NULL if the value is empty
-          if ( ($input_types{$element} eq 'optionlist' ||
-                $input_types{$element} eq 'scrolloptionlist') &&
-               $tmp eq '') {
-            $query_part2 .= "NULL,";
+          #### If the value is blank, put in a NULL value
+          if ( $tmp eq '') {
+            #$query_part2 .= "NULL,";
 
           # Change all ' to '' so that it can go in the INSERT statement
           } else {
             $tmp =~ s/\'/\'\'/g;
+            $query_part1 .= "$element,";
             $query_part2 .= "'$tmp',";
           }
         }
