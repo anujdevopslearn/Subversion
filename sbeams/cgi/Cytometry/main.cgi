@@ -37,6 +37,7 @@ use SBEAMS::Cytometry::Alcyt;
 use SBEAMS::Cytometry;
 use SBEAMS::Cytometry::Settings;
 use SBEAMS::Cytometry::Tables;
+use SBEAMS::Connection::TabMenu;
 
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::DBConnector;
@@ -137,11 +138,11 @@ sub handle_request
 #### Define some generic varibles
      my ($i,$element,$key,$value,$line,$result,$sql);
      my @rows;
-     $current_contact_id = $sbeams->getCurrent_contact_id();
+     
 
  #### Show current user context information
       $sbeams->printUserContext();
-
+      $current_contact_id = $sbeams->getCurrent_contact_id();
   #### Get information about the current project from the database
     $sql = qq~
     SELECT UC.project_id,P.name,P.project_tag,P.project_status,
@@ -181,8 +182,10 @@ sub handle_request
      {
 #print some info about this project
 #only on the main page
-         if ($sub eq $actionHash{$INTRO})
+=comment  
+       if ($sub eq $actionHash{$INTRO})
          {
+        
            print qq~
            <P> You are successfully logged into the <B>$DBTITLE -
            $SBEAMS_PART	</B> system.  This module is designed as a repository
@@ -211,6 +214,102 @@ sub handle_request
 				<TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
 	      <TD WIDTH="100%"><TABLE BORDER=0>
         ~ if ($action eq '_displayIntro' || !$action) ;
+        
+
+
+foreach my $p (keys %parameters)
+{ 
+  print "<br>$p === $parameters{$p}<br>";
+}
+
+=cut
+
+
+        if ($sub eq $actionHash{$INTRO}) 
+        {
+          if (($action eq '_displayIntro' || !$action) and ($parameters{searchCombo} != 1 and $parameters{wildcardSample} != 1))
+          {
+         my $tabmenu = SBEAMS::Connection::TabMenu->new(
+    cgi => $q,
+    # paramName => 'mytabname', # uses this as cgi param
+    # maSkin => 1,   # If true, use MA look/feel
+    # isSticky => 0, # If true, pass thru cgi params 
+    # boxContent => 0, # If true draw line around content
+    # labels => \@labels # Will make one tab per $lab (@labels)
+  );
+
+
+  #### Add the individual tab items
+  $tabmenu->addTab( label => 'Current Project',
+		    helptext => 'View details of current Project' );
+  $tabmenu->addTab( label => 'My Projects',
+		    helptext => 'View all projects owned by me' );
+  $tabmenu->addTab( label => 'Accessible Projects',
+		    helptext => 'View projects I have access to' );
+  $tabmenu->addTab( label => 'Recent Resultsets',
+		    helptext => "View recent $SBEAMS_SUBDIR resultsets" );
+
+
+  ##########################################################################
+  #### Buffer to hold content.
+  my $content;
+
+  #### Conditional block to exec code based on selected tab
+
+
+  #### Print out details on the current default project
+  if ( $tabmenu->getActiveTabName() eq 'Current Project' ){
+    my $project_id = $sbeams->getCurrent_project_id();
+    if ( $project_id ) {
+      $content = $sbeams->getProjectDetailsTable(
+        project_id => $project_id
+      );
+
+#     $content .= getCurrentProjectDetails(
+  #      ref_parameters => \%parameters,
+   #   );
+
+    }
+
+
+  #### Print out all projects owned by the user
+  } elsif ( $tabmenu->getActiveTabName() eq 'My Projects' ){
+    $content = $sbeams->getProjectsYouOwn();
+
+
+  #### Print out all projects user has access to
+  } elsif ( $tabmenu->getActiveTabName() eq 'Accessible Projects' ){
+    $content = $sbeams->getProjectsYouHaveAccessTo();
+
+
+  #### Print out some recent resultsets
+  } elsif ( $tabmenu->getActiveTabName() eq 'Recent Resultsets' ){
+
+    $content = $sbeams->getRecentResultsets() ;
+
+  }
+
+
+  #### Add content to tabmenu (if desired).
+  $tabmenu->addContent( $content );
+
+  #### Display the result
+  print $tabmenu->asHTML();
+ print qq~
+    <BR>
+    <BR>
+    <center>
+    This system and this module in particular are still under
+    active development.<br>  Please be patient and report bugs,
+    problems, difficulties, as well as suggestions to
+    <B>mkorb\@systemsbiology.org</B></center>
+    <BR>
+    <BR>
+    ~;
+ 
+       # checkGO();
+        }
+        }
         checkGO();
 #### If the project_id wasn't reverted to -99, display i`nformation about it
 		      if ($project_id == -99) 
@@ -223,11 +322,13 @@ sub handle_request
           }
 #could not find a sub
      }
+     
      else
      {
        print_fatal_error("Could not find the specified routine: $sub");
      }
      print "</table>";
+     
 }
 
 
@@ -261,15 +362,18 @@ sub displayIntro
        my $sampleID = $parameters{sampleID};
        my $sortEntityID = $parameters{sortEntityID};
        my $runDate = $parameters{dates};
-       my $tissueID = $parameters{tissueTypeIdD};
+       my $tissueID = $parameters{tissueTypeID};
+
+       
         push @clauseArray, "fcs_run_id in ($sampleID)" if defined($sampleID);
         push @clauseArray, "sort_entity_id in ($sortEntityID)" if defined($sortEntityID);
         push @clauseArray, "fcs_run_id  in ($runDate)" if defined($runDate);
         push @clauseArray, "tissue_type_id in ($tissueID)" if defined ($tissueID);
-        $queryClause = join ' and ', @clauseArray;
+        $queryClause = join ' and ', @clauseArray if @clauseArray;;
      }
     
     
+      
       
   	 my $organismSql = qq~ select organism_id,organism_name from 
 	 sbeams.dbo.organism ~; 
@@ -295,8 +399,11 @@ sub displayIntro
     my $searchComboSql =   "select  fcs_run_id,Organism_id , project_designator, sample_name, filename, run_date 
     from $TBCY_FCS_RUN  where project_id = $project_id and $queryClause  order by project_designator, run_date";
 
-  
+    my $moreSql = "select count(*) from $TBCY_FCS_RUN fr where fr.project_id = $project_id and fr.showFlag = 0";
+    my $moreCount =  ($sbeams->selectOneColumn($moreSql))[0];  
    
+   
+
    my @rows;
     @rows = $sbeams->selectSeveralColumns($sql);
     @rows = $sbeams->selectSeveralColumns($immunoStainSql) if ($immunoStainName)and do { $parameters{noShow} = 1}; ;
@@ -307,9 +414,11 @@ sub displayIntro
      if (@rows)
      {
        
-       print qq~ <BR><BR><font size ="2">Search for a  <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=_specifyRun"><font size =" 4 "> Cytometry Run</a>?</font><br>~;
-       print "<br><center><h4> Current Cytometry data for this project</h4></center><br>";
-       print "<center><table border=2>"; 
+       print "<BR><BR>";
+       print qq~ <font size ="2"><font size=4>Search for a</font> <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=_specifyRun"><font size =" 2 ">Specific  Cytometry Run</a>?</font><br>     
+       <br><center><h4> Current Cytometry data for this project</h4></center><br>
+       <center> ~ if( ! $parameters{search});
+       print "<table border=2>";
        foreach my $row(@rows)
        {
          my ($fcsID,$organismID, $projectDes, $sampleName, $fileName, $runDate) = @{$row};
@@ -329,7 +438,7 @@ sub displayIntro
       foreach my $key (keys %hashFile)
       {
         print "<tr><td> <b>Project Designator: </b>$key</td></tr>";
-        print "<tr><td><b>Sample Name</b></td><td><b>Organism</b></td><td><b>File Name</b></td><td><b>Run Date</b></td><td>Create Graph</td></tr>";
+        print "<tr><td><b>Sample Name</b></td><td><b>Organism</b></td><td><b>File Name</b></td><td><b>Run Date</b></td><td>Plot Data</td></tr>";
         foreach my $id (keys %{$hashFile{$key}})
         { 
           print qq ~<tr>
@@ -337,26 +446,46 @@ sub displayIntro
           <td>$hashFile{$key}->{$id}->{Organism} </td>
           <td>$hashFile{$key}->{$id}->{'File Name'}</td> 
           <td>$hashFile{$key}->{$id}->{'Run Date'} </td>
-          <td><a href=$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=$PROCESSFILE&fileID=$id > Create Graph</a></td></tr>~;
+          <td><a href=$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=$PROCESSFILE&fileID=$id > Plot Data</a></td></tr>~;
         }
       }	
-          print $q->start_form;
+        print $q->start_form;
        print qq~<input type= hidden name="action" value = "$INTRO">  ~ ;
        print qq ~<input type =hidden name="noShow"  value = 1>~ if (! $parameters{noShow});
-       print qq~<tr></tr><tr><td><input type ="submit" name= "SUBMIT" value = "More Cytometry Runs"> ~ if (! $parameters{noShow});
+       print qq~<tr></tr><tr><td><input type ="submit" name= "SUBMIT" value = "More Cytometry Runs"> ~ if (! $parameters{noShow} and $moreCount > 0);
   #     print qq~<tr></tr><tr><td><input type ="submit" name= "SUBMIT" value = "Featured Cytometry Runs">~ if $parameters{noShow};
        print qq ~<input type =hidden name="noShow"  value = 0>~ if ($parameters{noShow});
        print $q->end_form; 
+       if ($parameters{search})
+       {
+         anotherQuery();
+       }
+
         }
      else
      { 
-       print "<TR><TD WIDTH=\"100%\"><B><font color=red><NOWRAP><h4>This project contains no Cytometry Data</h4></NOWRAP></font></B></TD></TR>\n";
+       if (! $parameters{search})
+       {
+         
+         print "<TR><TD WIDTH=\"100%\"><B><font color=red><NOWRAP><br><br><center><h3>This project contains no Cytometry Data</center></h3></NOWRAP></font></B></TD></TR>\n";
         }
+        elsif ($parameters{search} == 1)
+        {
+          
+           print "<TR><TD WIDTH=\"100%\"><B><font color=red><NOWRAP><br><br><center><h3>Sorry, your Query returned no Fcs Run</center> </h3></NOWRAP></font></B></TD></TR>\n";
+           anotherQuery();
+  #         print $q->start_form;
+  #         print qq~<input type= hidden name="action" value =$SPECRUN>  ~ ;
+  #         print qq~<tr></tr><tr><td colspan=3 align=center><input type ="submit" name= "SUBMIT" value ="Another Query"></td></tr>~;
+   #        print $q ->end_form;
+        }
+     }
 #### Finish the table
    print qq~
    </TABLE> </TD></TR> </TABLE>~;
+      
     	
-        
+=comment        
 	  ##########################################################################
   #### Print out all projects owned by the user
 	$sbeams->printProjectsYouOwn() if $sbeams->getCurrent_contact_id();
@@ -369,17 +498,8 @@ sub displayIntro
 
   ##########################################################################
   #### Finish with a disclaimer
-    print qq~
-    <BR>
-    <BR>
-    This system and this module in particular are still under
-    active development.  Please be patient and report bugs,
-    problems, difficulties, as well as suggestions to
-    <B>mkorb\@systemsbiology.org</B>.<P>
-    <BR>
-    <BR>
-    ~;
-    return;
+=cut
+     return;
 } # end showMainPage
 
 sub processFile
@@ -397,8 +517,8 @@ sub processFile
 		{
 				print "$k  ==== $parameters{$k}<br>";
 		}
-
 =cut
+
 
       my $fileQuery = "select original_filepath +'/' + filename as completeFile from $TBCY_FCS_RUN  where fcs_run_id = $parameters{fileID}";
  
@@ -462,11 +582,12 @@ sub specifyRun
   
    my $project_id = $args{'project_id'};
    my $entitySql = "select se.sort_entity_id,sort_entity_name from $TBCY_SORT_ENTITY se
-   join $TBCY_FCS_RUN rf on se.sort_entity_id = rf.sort_entity_id  where project_id = $project_id 
+   join $TBCY_FCS_RUN rf on se.sort_entity_id = rf.sort_entity_id  where rf.project_id = $project_id 
    group by sort_entity_name,se.sort_entity_id order by sort_entity_name";
+   
    my $entityOption = $sbeams->buildOptionList($entitySql, "Selected","MULTIOPTIONLIST");
      
-   my $sampleNameSelect = "select  fcs_run_id, sample_Name  from $TBCY_FCS_RUN where project_id = $project_id order by sample_name";
+   my $sampleNameSelect = "select  fcs_run_id, sample_Name  from $TBCY_FCS_RUN rf where rf.project_id = $project_id order by sample_name";
    my %sampleNameHash = $sbeams->selectTwoColumnHash($sampleNameSelect);
    my %sampleNameIDHash; 
    foreach my $key (keys %sampleNameHash)
@@ -478,12 +599,12 @@ sub specifyRun
    my $sampleNameOption  =  $sbeams->buildOptionList($sampleNameSelect, "Selected", "MULTIOPTIONLIST");
 
   my $tissueSelect = "select  tt.tissue_type_id, tissue_type_name  from $TBCY_TISSUE_TYPE tt
-  join $TBCY_FCS_RUN rf on tt.tissue_type_id = rf.tissue_type_id  where project_id = $project_id
+  join $TBCY_FCS_RUN rf on tt.tissue_type_id = rf.tissue_type_id  where rf.project_id = $project_id
   group by tissue_type_name, tt.tissue_type_id order by tissue_type_name";
    my $tissueOption  =  $sbeams->buildOptionList($tissueSelect, "Selected", "MULTIOPTIONLIST");
       
    
-   my $dateSelect = "select fcs_run_id, run_date from $TBCY_FCS_RUN where project_id = $project_id order by run_date";
+   my $dateSelect = "select fcs_run_id, run_date from $TBCY_FCS_RUN rf where rf.project_id = $project_id order by run_date";
    my %dateHash = $sbeams->selectTwoColumnHash($dateSelect);
    my %dateIDHash;
    foreach my $key (keys %dateHash)
@@ -504,18 +625,21 @@ sub specifyRun
    }
    
 #this is one form 
+  
    print $q->start_form;
    print qq~ <TR><br><br></TR><TR></TR><tr><td nowrap width=300><b>Enter part or all of a Sample Name</b></td><td align=center width = 200><input type =" text" name="sampleGuess" size = 10></td>~; 
   
    print qq~<input type= hidden name="action" value = "$INTRO">  ~ ;
    print qq ~<input type =hidden name="wildcardSample"  value = 1>~;
+   print qq ~<input type =hidden name="search"  value = 1>~;
     print qq~<td><input type ="submit" name= "SUBMIT" value = "QUERY"></td></tr><tr></tr><tr></tr><tr></tr>~;
     print $q->end_form;
 
 #this is the second form    
 
 	print qq ~<tr><td colspan = 3> <hr size = 2></td</tr>~;
-    print $q->start_form;
+    print $q->start_form (-onSubmit=>"return checkForm2()", -target => "_blank");
+    #print $q->start_form;
     print qq~ <tr><td nowrap width=300><b>Select none, one or multiple SampleNames</b></td><td><Select Name="sampleID" Size=6 Multiple>~;
     foreach my $key (sort keys  %sampleNameIDHash){
      my $element = join ', ', @{$sampleNameIDHash{$key}}; 
@@ -537,6 +661,7 @@ sub specifyRun
    print qq~</select></td></tr>~;
    print qq~<input type= hidden name="action" value = "$INTRO">  ~ ;
    print qq ~<input type =hidden name="searchCombo"  value = 1>~;
+      print qq ~<input type =hidden name="search"  value = 1>~;
     print qq ~</TABLE></TD></TR></TABLE> ~;
    print $q->end_form;
     
@@ -575,6 +700,8 @@ sub getGraph
 sub printGraph 
 {
    my $parameterRef = shift;
+   my %parameters;
+ 
    my $imgsrcbuffer = '&nbsp;';
    my $image = $parameterRef->{imageFile};
     my $imgsrcbuffer ='&nbsp;';
@@ -586,6 +713,9 @@ sub printGraph
      
 
     print "</table>";
+    my %para; 
+   $para{ref_parameters} =$parameterRef;
+    processFile(%para);
 }
 #-------------------------------------------------------------------------		  
 #create radio button and x - y min and max 
@@ -665,7 +795,7 @@ sub createGraph
     my $yLabel = $yCoorName;
 
     my $graph;
-    $graph = GD::Graph::xypoints->new(400,400);
+    $graph = GD::Graph::xypoints->new(600,600);
      $graph->set(
              x_label           =>$xLabel,
              y_label           => $yLabel,
@@ -727,6 +857,13 @@ sub printMessage  #not used
 		return; 
 }
 #---------------------------------------------------
+    sub anotherQuery()
+    {
+            print $q->start_form;
+           print qq~<input type= hidden name="action" value =$SPECRUN>  ~ ;
+           print qq~<tr></tr><tr><td colspan=3 align=center><input type ="submit" name= "SUBMIT" value ="Another Query"></td></tr>~;
+           print $q ->end_form;
+    }
 # checking input mostly java script functions	
 sub checkGO
 {
@@ -775,8 +912,50 @@ sub checkGO
         return false; 
       }
     }
-  }   
- function checkAnotherRadioButton()
+  }
+ function checkForm2()
+ {
+  var selectedOption = false; 
+  var dateNumber = document.forms[4].dates.options.length - 1;
+ // var tissueNumber = document.forms[4].tissueTyepID.options.length-1;
+ // var sampleIDNumber = document.forms[4].sampleID.options.length-1;
+ // var sortEntityNumber = document.forms[4].sortEntityID.options.length-1;
+ 
+  var optionNumber = document.forms[4].length-1;
+ // var optionName = document.forms[4].elements[4].name 
+    for (var optionCount = 0; optionCount < optionNumber; optionCount++)
+    {
+      var optionName = document.forms[4].elements[optionCount].name;
+       if (document.forms[4].elements[optionCount ].name == "sortEntityID"|| 
+        document.forms[4].elements[optionCount ].name == "sampleID" ||
+        document.forms[4].elements[optionCount ].name == "tissueTypeID"|| 
+        document.forms[4].elements[optionCount ].name == "dates")
+         {
+        // alert ("Alert" + optionName + selectedOption);  
+         if (selectedOption == true)
+         {
+            break;
+         }
+         var optionLength = document.forms[4].elements[optionCount ].options.length;;
+         for (var c = 0 ; c< optionLength; c++)
+         {
+           if (document.forms[4].elements[optionCount].options[c].selected == true )
+           {
+              selectedOption = true;
+              break;
+           }
+         }
+       }
+    }
+
+    if (selectedOption == false)
+    {
+      alert ("ERROR: You need to select an option" );
+      return false;
+     }
+     return true; 
+ }
+function checkAnotherRadioButton()
  {
    var  isAnotherXChecked = false;
    var num = document.forms.length;
