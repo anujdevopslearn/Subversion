@@ -2268,7 +2268,7 @@ sub transferTable {
   my $src_conn = $args{'src_conn'};
   my $sql = $args{'sql'};
   my $source_file = $args{'source_file'};
-  my $delimiter = $args{'delimiter'};
+  my $delimiter = $args{'delimiter'} || "\t";
   my $comment_char = $args{'comment_char'};
   my $skip_lines = $args{'skip_lines'} || 0;
   die ("either sql or source_file must be passed")
