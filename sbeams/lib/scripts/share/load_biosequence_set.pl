@@ -65,8 +65,8 @@ Options:
                        biosequence_set table
   --check_status       Is set, nothing is actually done, but rather the
                        biosequence_sets are verified
-  --codon_bias_file    Full path name of a file from which to load codon
-                       bias values
+  --fav_codon_frequency_file   Full path name of a file from which to load
+                       favored codon frequency values
   --calc_n_transmembrane_regions
                        Set flag to add in n_transmembrane_regions calculations
 
@@ -78,7 +78,7 @@ EOU
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
   "delete_existing","update_existing","skip_sequence",
-  "set_tag:s","file_prefix:s","check_status","codon_bias_file:s",
+  "set_tag:s","file_prefix:s","check_status","fav_codon_frequency_file:s",
   "calc_n_transmembrane_regions")) {
   print "$USAGE";
   exit;
@@ -165,7 +165,7 @@ sub handleRequest {
   my $check_status = $OPTIONS{"check_status"} || '';
   my $set_tag = $OPTIONS{"set_tag"} || '';
   my $file_prefix = $OPTIONS{"file_prefix"} || '';
-  my $codon_bias_file = $OPTIONS{"codon_bias_file"} || '';
+  my $fav_codon_frequency_file = $OPTIONS{"fav_codon_frequency_file"} || '';
 
   #### Get the file_prefix if it was specified, and otherwise guess
   unless ($file_prefix) {
@@ -221,11 +221,11 @@ sub handleRequest {
   }
 
 
-  #### If a codon bias file was specified, load it for later processing
-  if ($codon_bias_file) {
+  #### If a fav codon freq file was specified, load it for later processing
+  if ($fav_codon_frequency_file) {
     $fav_codon_frequency->{zzzHASH} = -1;
-    readCodonBiasFile(
-      source_file => $codon_bias_file,
+    readFavCodonFrequencyFile(
+      source_file => $fav_codon_frequency_file,
       fav_codon_frequency => $fav_codon_frequency);
   }
   #### Loop over each biosequence_set, determining its status and processing
@@ -368,7 +368,7 @@ sub loadBiosequenceSet {
   my ($count) = $sbeams->selectOneColumn($sql);
   if ($count) {
     if ($delete_existing) {
-      print "Deleting...\n$sql\n";
+      print "Deleting...\n";
       $sql = "DELETE FROM ${DATABASE}biosequence ".
              " WHERE biosequence_set_id = '$biosequence_set_id'";
       $sbeams->executeSQL($sql);
@@ -732,7 +732,7 @@ sub specialParsing {
   }
 
 
-  #### If there's codon bias lookup information, set it
+  #### If there's favored codon frequency lookup information, set it
   if (defined($fav_codon_frequency)) {
     if ($fav_codon_frequency->{$rowdata_ref->{biosequence_name}}) {
       $rowdata_ref->{fav_codon_frequency} =
@@ -790,11 +790,11 @@ sub get_biosequence_id {
 
 
 ###############################################################################
-# readCodonBiasFile
+# readFavCodonFrequencyFile
 ###############################################################################
-sub readCodonBiasFile {
+sub readFavCodonFrequencyFile {
   my %args = @_;
-  my $SUB_NAME = "readCodonBiasFile";
+  my $SUB_NAME = "readFavCodonFrequencyFile";
 
 
   #### Decode the argument list
@@ -805,12 +805,17 @@ sub readCodonBiasFile {
 
   unless ( -f $source_file ) {
     $fav_codon_frequency->{return_status} = 'FAIL';
-    die("Unable to find codon bias file '$source_file'");
+    die("Unable to find favored codon frequency file '$source_file'");
   }
 
 
+  #### Define the column number from which data are loaded
+  my $column_number;
+  $column_number = 2 if ($source_file =~ /bias_gadfly.dros.RELASE2/);
+  $column_number = 29 if ($source_file =~ /protein_properties.tab/);
+
   open(CODONFILE,"$source_file") ||
-    die("Unable to open codon bias file '$source_file'");
+    die("Unable to favored codon frequency file '$source_file'");
 
 
   #### Read the header column
@@ -823,13 +828,17 @@ sub readCodonBiasFile {
 
 
   #### Read in all the data putting it into the hash
-  print "Reading codon bias file...\n";
+  print "Reading favored codon frequency file...\n";
   while ($line = <CODONFILE>) {
     @columns = split("\t",$line);
-    $tmp = $columns[3];
-    @words = split(/\s/,$tmp);
-    $biosequence_name = $words[0];
-    $fav_codon_frequency->{$biosequence_name} = $columns[2];
+    if ($source_file =~ /bias_gadfly.dros.RELASE2/) {
+      $tmp = $columns[3];
+      @words = split(/\s/,$tmp);
+      $biosequence_name = $words[0];
+    } else {
+      $biosequence_name = $columns[0];
+    }
+    $fav_codon_frequency->{$biosequence_name} = $columns[$column_number];
   }
 
   close(CODONFILE);
