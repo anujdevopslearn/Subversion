@@ -68,6 +68,13 @@ sub main {
     exit unless ($current_username = $sbeams->Authenticate());
 
 
+    #### Deutsch added these in to reduce speing of warnings during
+    #### Printform().  But still not enough.  Rewrite this to the all
+    #### parameters are processed properly.  Fix rats nest below, too.
+    $blast_lib = $q->param('blastlib') || "";
+    $featurama_lib = $q->param('featuramalib') || "";
+
+
 #    print
 #	$q->header(-type=>'text/html'),
 #	$q->start_html(-title=>'BioSap', 
@@ -230,10 +237,11 @@ sub createRun {
     print (SINK "user_name=$current_username\n");
 
     #TODO: What happens if multiple libs have same name ???
-    my $sql_query = qq!
+    my $sql_query = qq~
 	SELECT set_path
-	    FROM  biosap.dbo.biosequence_set
-		WHERE set_name='$featurama_lib'!;
+	  FROM  biosap.dbo.biosequence_set
+	 WHERE set_name='$featurama_lib'
+	   AND record_status != 'D'~;
     my ($gene_library) = $sbeams->selectOneColumn($sql_query);
     print (SINK "gene_library=$gene_library\n");
 
@@ -264,10 +272,11 @@ sub createRun {
     close (SINK) || croak "Couldn't create file featurama.params ".$dirstr." " . $!;
     print "File ". $dirstr."/featurama.params created. <br>";
     open (SINK,  ">".$dirstr."/blast.params") || croak "Couldn't create file blast.params ".$dirstr." " . $!;
-    $sql_query = qq!
+    $sql_query = qq~
 	    SELECT set_path
-	    FROM  biosap.dbo.biosequence_set
-	    WHERE set_name='$blast_lib'!;
+	      FROM  biosap.dbo.biosequence_set
+	     WHERE set_name='$blast_lib'
+	       AND record_status != 'D'~;
     $sth = $dbh->prepare("$sql_query") || croak $dbh->errstr;
     $rv  = $sth->execute || croak $dbh->errstr;
     @row = $sth->fetchrow_array;
@@ -281,8 +290,8 @@ sub createRun {
 sub processParams {
     my $ok=1;
     $same_as_lib = $q->param('same_as_lib');
-    $blast_lib = $q->param('blastlib');
-    $featurama_lib = $q->param('featuramalib');
+    $blast_lib = $q->param('blastlib') || "";
+    $featurama_lib = $q->param('featuramalib') || "";
     #$search_filename =~ m/^.*(\\|\/)(.*)/; # strip the remote path and keep filename
    # $search_filename = $2;
 
@@ -417,7 +426,7 @@ sub processParams {
 }
 
 sub printForm {
-    my $sql_query = "SELECT set_name FROM biosap.dbo.biosequence_set";
+    my $sql_query = "SELECT set_name FROM biosap.dbo.biosequence_set WHERE record_status != 'D'";
     my $sth = $dbh->prepare("$sql_query") || croak $dbh->errstr;
     my $rv  = $sth->execute || croak $dbh->errstr;
     my @libs;
