@@ -482,6 +482,7 @@ sub handle_request {
     ["protein_EC_numbers","BSA.EC_numbers","Protein EC Numbers"],
 
     @tmhmm_columns,
+    ["isoelectric_point","STR(BPS.isoelectric_point,7,3)","pI"],
     ["match_source_name","DMS.domain_match_source_name","Match Source"],
     ["domain_match_index","DM.domain_match_index","Domain Index"],
     ["overall_probability","STR(DM.overall_probability,7,3)","Over- all P"],
@@ -511,7 +512,11 @@ sub handle_request {
     ["second_match_accession","DM.second_match_accession","second_match_accession"],
     ["match_annotation","DM.match_annotation","Match Annotation"],
 
+    ["chromosome","BPS.chromosome","Chromosome"],
+    ["start_in_chromosome","BPS.start_in_chromosome","Start"],
+    ["end_in_chromosome","BPS.end_in_chromosome","End"],
     ["biosequence_desc","BS.biosequence_desc","Biosequence Description"],
+
     ["biosequence_set_id","BSS.biosequence_set_id","biosequence_set_id"],
     ["biosequence_id","BS.biosequence_id","biosequence_id"],
     ["biosequence_annotation_id","BSA.biosequence_annotation_id","biosequence_annotation_id"],
