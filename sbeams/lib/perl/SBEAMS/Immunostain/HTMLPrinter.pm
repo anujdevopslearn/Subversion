@@ -109,6 +109,7 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project"><nobr>&nbsp;&nbsp;&nbsp;Projects</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_specimen"><nobr>&nbsp;&nbsp;&nbsp;Specimens</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_specimen_block"><nobr>&nbsp;&nbsp;&nbsp;Specimen Blocks</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
