@@ -412,6 +412,9 @@ sub processFile
 		join $TBIS_SPECIMEN_BLOCK  sb on sb.specimen_block_id = st.specimen_block_id 
 		where ab.antibody_name = \'$infoHash{antibody}\' and sb.specimen_block_id = $blockID/; 
 		
+		print "$slideQuery\n";
+		getc;
+		
 		my @slides  = $sbeams->selectSeveralColumns($slideQuery);  
 		$nrows = scalar(@slides);
 		if ($nrows > 1)
@@ -428,6 +431,10 @@ sub processFile
 			$slideUpdate = 0;
 			$slideInsert = 1;
 	 }
+	 
+	 
+	 print "$update\n $insert\n";
+	 getc;
 #update, insert the cancer level
 		my %slideRowData; 
 		$slideRowData{project_id} = $confHash{project_id};
