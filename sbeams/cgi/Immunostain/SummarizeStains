@@ -49,10 +49,10 @@ $sbeamsMOD = new SBEAMS::Immunostain;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
-
 use CGI;
 $q = new CGI;
 
+use constant WEIGHTING_FACTOR => 0.1;
 
 ###############################################################################
 # Set program name and usage banner for command like use
@@ -225,7 +225,10 @@ foreach my $p (keys %parameters)
 
 
   #### Apply any parameter adjustment logic
-  #none
+
+  # Make weighting factor be passed value else default.
+  $parameters{weighting_factor} = ( defined $parameters{weighting_factor} ) ? 
+                              $parameters{weighting_factor} : WEIGHTING_FACTOR;
 
   #### Display the user-interaction input form
   $sbeams->display_input_form(
@@ -233,6 +236,7 @@ foreach my $p (keys %parameters)
     PROGRAM_FILE_NAME=>$PROGRAM_FILE_NAME,
     parameters_ref=>\%parameters,
     input_types_ref=>\%input_types,
+    onSubmit => 'ONSUBMIT="return checkform();"'
   );
 
 
@@ -618,6 +622,15 @@ sub postProcessResultset {
 
   my (%dataHash,%cellTypeHash,%RefSeqIDs);
 
+#  for my $key ( qw( resultset_ref rs_params_ref query_parameters_ref column_titles_ref ) ) {
+#  next if ref( $args{$key} ) ne 'HASH';
+#    for my $subkey ( keys ( %{$args{$key}} ) ) {
+#      print STDERR "$key: $subkey => $args{$key}->{$subkey}\n";
+#    }
+#  }
+
+  # Print javascript routine to check weighting factor input
+  print getWFJavascript();
 
   #### Process the arguments list
   my $resultset_ref = $args{'resultset_ref'};
@@ -668,6 +681,14 @@ sub postProcessResultset {
 
   #getting the index and populating a datahash with the returned result
   my $biosequence_name_column_index = $resultset_ref->{column_hash_ref};
+
+  my $weight = ( defined $query_parameters_ref->{weighting_factor} ) ? 
+                         $query_parameters_ref->{weighting_factor} : WEIGHTING_FACTOR;
+
+  if ( $weight !~ /^\d*\.*\d*$/ || $weight < 0 || $weight > 1 ) {
+    die ( "Illegal weighting factor $weight" );
+  }
+
   
   for (@{$resultset_ref->{data_ref}}) {
     
@@ -681,9 +702,10 @@ sub postProcessResultset {
     my $cellTypeId = $row[$biosequence_name_column_index->{structural_unit_id}];
 
     if ($cellTypeName) {
+
       #### Calculate the expression coefficient with equivocal weight of 0.1
       my $probability = ( ($row[$biosequence_name_column_index->{intense_percent}]||0) * 1.0 +
-			  ($row[$biosequence_name_column_index->{equivocal_percent}]||0) * 0.1)/100;
+			  ($row[$biosequence_name_column_index->{equivocal_percent}]||0) * $weight)/100;
       $dataHash{$antibodyName}->{$cellTypeName}->{probability}+=$probability if $cellTypeName; 
       $dataHash{$antibodyName}->{$cellTypeName}->{numberOfEx}++ if $cellTypeName;
       $cellTypeHash{$cellTypeName} = $row[$biosequence_name_column_index->{structural_unit_sort_order}] if ($cellTypeName);
@@ -910,6 +932,44 @@ sub bySortOrder {
 
 }
 
+
+sub getWFJavascript {
+  print <<"  END";
+  <SCRIPT language="javascript">
+
+  // Script to validate numeric input in weighting factor.
+  function checkform() {
+    wfact = document.MainForm.weighting_factor.value;
+    if ( wfact > 1 ) {
+      alert( "Weighting factor must be less than or equal to 1" );
+      return false;
+    }
+    if ( wfact < 0 ) {
+      alert( "Weighting factor must be greater than or equal to 0" );
+      return false;
+    }
+
+    dec_yet = 0; 
+    for ( i = 0; i < wfact.length; i++ ) {
+      if ( wfact.charAt(i) == '.' ) {
+        dec_yet++;
+      } else {
+        if ( ! /[0123456789]/.test( wfact.charAt(i) ) ) {
+          alert ( "Illegal non-numeric character '" + wfact.charAt(i) + "'" );
+          return false;
+        }
+      }
+    }
+  if ( dec_yet > 1 ) {
+    alert ( "Cannot have more than one decimal" );
+    return false
+  }
+  // We made it!
+  return true;
+  }
+  </SCRIPT>
+  END
+}
 
 ###############################################################################
 # convertGenomeCoordinates
