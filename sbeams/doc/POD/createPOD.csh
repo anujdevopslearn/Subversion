@@ -16,7 +16,7 @@
 
 
   #### For each module, create the documentation
-  foreach file ( Connection )
+  foreach file ( Connection Client )
     pod2html --title=$file \
       --infile=$INDIR/$file.pm --outfile=$OUTDIR/$file.html \
       --index --recurse
