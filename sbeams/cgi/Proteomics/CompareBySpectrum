@@ -372,9 +372,9 @@ sub handle_request {
       "$experiment_names{$id}__cross_corr",
       "$experiment_names{$id}__cross_corr"] );
     push(@experiment_names_and_ids,$experiment_names{$id},$id);
-    $pivot_clause .= "	       SUM(CASE WHEN set_tag = '$experiment_names{$id}' THEN NULLIF(probability,0.0) ELSE 0.0 END) AS \"$experiment_names{$id}\",\n";
-    $pivot_clause2 .= "	       MAX(CASE WHEN set_tag = '$experiment_names{$id}' THEN peptide ELSE NULL END) AS \"$experiment_names{$id}__peptide\",\n";
-    $pivot_clause3 .= "	       MAX(CASE WHEN set_tag = '$experiment_names{$id}' THEN cross_corr ELSE NULL END) AS \"$experiment_names{$id}__cross_corr\",\n";
+    $pivot_clause .= "	       SUM(CASE WHEN search_batch_subdir = '$experiment_names{$id}' THEN NULLIF(probability,0.0) ELSE 0.0 END) AS \"$experiment_names{$id}\",\n";
+    $pivot_clause2 .= "	       MAX(CASE WHEN search_batch_subdir = '$experiment_names{$id}' THEN peptide ELSE NULL END) AS \"$experiment_names{$id}__peptide\",\n";
+    $pivot_clause3 .= "	       MAX(CASE WHEN search_batch_subdir = '$experiment_names{$id}' THEN cross_corr ELSE NULL END) AS \"$experiment_names{$id}__cross_corr\",\n";
   }
   chop($pivot_clause3);
   chop($pivot_clause3);
@@ -407,6 +407,7 @@ sub handle_request {
 	SELECT
            experiment_tag AS "experiment_tag",
            set_tag AS "set_tag",
+           search_batch_subdir AS "search_batch_subdir",
            S.file_root AS "file_root",
            SH.probability AS "probability",
            reference AS "reference",
