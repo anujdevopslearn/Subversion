@@ -104,8 +104,13 @@ sub output_mode {
 
   #### Otherwise, verify that we have a value
   } else {
-    die "$METHOD_NAME: value has not yet been set!"
-      unless ($output_mode);
+    unless ($output_mode) {
+      print "$METHOD_NAME: value has not yet been set!  This should never ".
+        "happen, but I will set it to interactive just to see where this ".
+        "ends up.  It is almost surely a bug that needs ".
+        "to be reported.<BR><BR>\n\n";
+      $output_mode = $self->output_mode('interactive');
+    }
   }
 
   #### Return the current value in either case
