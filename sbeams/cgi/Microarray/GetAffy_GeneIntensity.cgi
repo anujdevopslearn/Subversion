@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
 
 ###############################################################################
-# Program     : GetExpression
+# Program     : GetAffy_GeneIntensity.cgi
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
 # $Id$
 #
@@ -29,9 +29,10 @@ use vars qw ($sbeams $sbeamsMOD $affy_o $q $current_contact_id $current_username
   $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
   @MENU_OPTIONS %CONVERSION_H *sym);
 
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::Merge_results_sets;
 
 use SBEAMS::Microarray;
 use SBEAMS::Microarray::Settings;
@@ -39,7 +40,7 @@ use SBEAMS::Microarray::Tables;
 use SBEAMS::Microarray::Affy_file_groups;
 use SBEAMS::Microarray::Affy_Analysis;
 use SBEAMS::Microarray::Affy_Annotation;
-use SBEAMS::Microarray::Merge_results_sets;
+
 use Data::Dumper;
 $sbeams    = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::Microarray;
@@ -843,7 +844,7 @@ sub print_full_form {
 ### Look to see if we need to do any 2nd queries which will gather data from any child tables
 		
 		if ( have_2nd_queires() ){
-		 	my $m_sbeams = SBEAMS::Microarray::Merge_results_sets->new();
+		 	my $m_sbeams = SBEAMS::Connection::Merge_results_sets->new();
 			
 			my $all_pk = $m_sbeams ->get_pk_from_results_set(results_set    => $resultset_ref, 
 			  												pk_column_name => "affy_annotation_id",
@@ -1131,7 +1132,7 @@ sub getArrayNames {
 
 		  ## Print the data
 
-		my @array_ids = $affy_o->find_chips_with_data(project_id => $project_id);	#find affy_array_ids in the, could be multipule arrays with differnt protocols usedfor quantification
+		my @array_ids = $affy_o->find_chips_with_R_CHP_data(project_id => $project_id);	#find affy_array_ids in the, could be multipule arrays with differnt protocols usedfor quantification
 		  
 
 		my $constraint_data = join " , ", @array_ids;
@@ -1464,7 +1465,7 @@ sub getArrayNames {
 			r_chp_protocol => $R_CHP_protocol_id,
 			annotation_id  => $annotation_set_id,
 		);
-print STDERR "$sql\n";
+#print STDERR "$sql\n";
 		#$sbeams->display_sql(sql=>$sql);
 		#### Fetch the results from the database server
 		$sbeams->fetchResultSet(
@@ -2012,7 +2013,7 @@ example view of pivot hash
 		$sql = $affy_anno->get_annotation_sql();    			#returns just the sql text
 
 		$sql = "$sql $annotation_set_id_clause $probe_set_id_clause";    #append on the constriants to the main sql
-
+		$sql =~ s/SELECT/SELECT top 1 affy_annotation_id,/; 
 		#$sbeams->display_sql(sql=>$sql);
 
 		my @anno_data = $sbeams->selectHashArray($sql);
