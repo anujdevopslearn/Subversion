@@ -54,6 +54,10 @@ use vars qw(@ISA @EXPORT
     $TBMA_FILE_LOCATION
     $TBMA_FILE_TYPE
     $TBMA_QUANTITATION_TYPE
+
+    $TBMA_QUERY_OPTION
+    $TBMA_CONDITION
+    $TBMA_GENE_EXPRESSION
 );
 
 require Exporter;
@@ -101,6 +105,10 @@ require Exporter;
     $TBMA_FILE_LOCATION
     $TBMA_FILE_TYPE
     $TBMA_QUANTITATION_TYPE
+
+    $TBMA_QUERY_OPTION
+    $TBMA_CONDITION
+    $TBMA_GENE_EXPRESSION
 );
 
 
@@ -145,3 +153,8 @@ $TBMA_FILE_PATH='file_path';
 $TBMA_FILE_LOCATION='file_location';
 $TBMA_FILE_TYPE='file_type';
 $TBMA_QUANTITATION_TYPE='quantitation_type';
+
+$TBMA_QUERY_OPTION      = "query_option";
+$TBMA_CONDITION         = "condition";
+$TBMA_GENE_EXPRESSION   = "gene_expression";
+
