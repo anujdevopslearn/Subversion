@@ -575,12 +575,15 @@ sub handle_request {
       ["reference","BS.biosequence_name","Reference"],
       ["$colname","$colname","$dispname"],
       ["count","tABS.row_count","Count"],
+      ["average_quant","tABS.average_quant","Average Quant"],
+      ["stdev_quant","tABS.stdev_quant","StdDev Quant"],
+      ["n_quant","tABS.n_quant","N Quant"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
     );
     $group_by_clause = " GROUP BY SH.biosequence_id,$colname";
     $peptide_column = "$colname,";
-    $count_column = "COUNT(*) AS 'row_count'";
+    $count_column = "COUNT(*) AS 'row_count',STR(AVG(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0)),10,2) AS 'average_quant',STR(STDEV(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0)),10,2) AS 'stdev_quant',SUM(CASE WHEN (NULLIF(d0_intensity,0.0) IS NULL OR NULLIF(d8_intensity,0.0) IS NULL) THEN 0 ELSE 1 END) AS 'n_quant'";
 
   #### If grouping by reference
   } elsif ( $parameters{display_options} =~ /GroupReference/ ) {
@@ -590,11 +593,14 @@ sub handle_request {
       ["biosequence_accession","BS.biosequence_accession","Accession"],
       ["reference","BS.biosequence_name","Reference"],
       ["count","tABS.row_count","Count"],
+      ["average_quant","tABS.average_quant","Quant Avg"],
+      ["stdev_quant","tABS.stdev_quant","Quant StDev"],
+      ["n_quant","tABS.n_quant","Quant N"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
     );
     $group_by_clause = " GROUP BY SH.biosequence_id";
-    $count_column = "COUNT(*) AS 'row_count'";
+    $count_column = "COUNT(*) AS 'row_count',STR(AVG(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0)),10,2) AS 'average_quant',STR(STDEV(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0)),10,2) AS 'stdev_quant',SUM(CASE WHEN (NULLIF(d0_intensity,0.0) IS NULL OR NULLIF(d8_intensity,0.0) IS NULL) THEN 0 ELSE 1 END) AS 'n_quant'";
 
   #### If no grouping
   } else {
@@ -667,6 +673,8 @@ sub handle_request {
                ON ( SH.search_hit_id = QUAN.search_hit_id )
 	  JOIN $TBPR_SEARCH_BATCH SB
 	       ON ( S.search_batch_id = SB.search_batch_id )
+	  JOIN $TBPR_PROTEOMICS_EXPERIMENT PE
+	       ON ( SB.experiment_id = PE.experiment_id )
 	  JOIN $TBPR_BIOSEQUENCE BS
 	       ON ( SB.biosequence_set_id = BS.biosequence_set_id
 	       AND SH.biosequence_id = BS.biosequence_id )
