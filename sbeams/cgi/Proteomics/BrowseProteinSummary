@@ -179,12 +179,14 @@ sub handle_request {
 
   #### If the apply action was to recall a previous resultset, do it
   my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+  my @resultset_column_titles = ();
   if ($apply_action eq "VIEWRESULTSET") {
     $sbeams->readResultSet(
       resultset_file=>$rs_params{set_name},
       resultset_ref=>$resultset_ref,
       query_parameters_ref=>\%parameters,
       resultset_params_ref=>\%rs_params,
+      column_titles_ref=>\@resultset_column_titles,
     );
     $n_params_found = 99;
   }
@@ -424,7 +426,9 @@ sub handle_request {
 
 
   #### Build ROWCOUNT constraint
-  $parameters{row_limit} = 5000
+  #### FIXME: This is fundamentally broken because of the changing of the
+  #### number of rows in the resultset
+  $parameters{row_limit} = 50000
     unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
   my $limit_clause = $sbeams->buildLimitClause(
    row_limit=>$parameters{row_limit});
@@ -517,6 +521,7 @@ sub handle_request {
     @column_array = (
       ["experiment_tag","experiment_tag","Exp"],
       ["search_batch_subdir","search_batch_subdir","DB"],
+      ["search_batch_id","SB.search_batch_id","search_batch_id"],
       @bait_columns,
       ["group_number","PG.group_number","Group #"],
       ["pseudo_name","PG.pseudo_name","Group Name"],
@@ -552,8 +557,6 @@ sub handle_request {
 
   #### Build the columns part of the SQL statement
   my %colnameidx = ();
-  $colnameidx{peptide} = 99;
-  $colnameidx{peptide_string} = 99;
   my @column_titles = ();
   my $columns_clause = $sbeams->build_SQL_columns_list(
     column_array_ref=>\@column_array,
@@ -688,17 +691,24 @@ sub handle_request {
   );
 
 
-               ##'Reference_ATAG' => "TARGET=\"Win1\" ONMOUSEOVER=\"window.status='%V'; return true\"",
+	       ##'Reference_ATAG' => "TARGET=\"Win1\" ONMOUSEOVER=\"window.status='%V'; return true\"",
 
   #### Define columns that should be hidden in the output table
   %hidden_cols = ('accessor' => 1,
                   'accessor_suffix' => 1,
+                  'search_batch_id' => 1,
                   'molecular_function_GO' => 1,
                   'biological_process_GO' => 1,
                   'cellular_component_GO' => 1,
                   'interpro_protein_domain_GO' => 1,
                   'Organism' => 1,
   );
+
+
+  #### If there are titles from the resultset, use those
+  if (@resultset_column_titles) {
+    @column_titles = @resultset_column_titles;
+  }
 
 
   #########################################################################
@@ -734,6 +744,7 @@ sub handle_request {
         query_parameters_ref=>\%parameters,
         resultset_params_ref=>\%rs_params,
         query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+        column_titles_ref=>\@column_titles,
       );
     }
 
@@ -799,6 +810,58 @@ sub evalSQL {
 
 
 ###############################################################################
+# getExperimentNames: return a hash of the experiment (and possibly
+#         search_batch) names of the supplied list of id's
+###############################################################################
+sub getExperimentNames {
+  my $search_batch_ids = shift || die "getExperimentNames: missing search_batch_ids";
+
+  #### Split into an array
+  my @search_batch_ids = split(/,/,$search_batch_ids);
+  #### Get the data for all the specified search_batch_ids
+  my $sql = qq~
+      SELECT search_batch_id,experiment_tag,set_tag
+        FROM $TBPR_PROTEOMICS_EXPERIMENT PE
+       INNER JOIN $TBPR_SEARCH_BATCH SB ON ( PE.experiment_id = SB.experiment_id )
+       INNER JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
+       WHERE search_batch_id IN ( $search_batch_ids )
+  ~;
+  my @rows = $sbeams->selectSeveralColumns($sql);
+
+  #### Define some variables
+  my $row;
+  my %exp_tag_hash;            #### Contains just the experment tags
+  my %exp_search_tag_hash;     #### Contains both exp and search tags
+  my %unique_tags_hash;        #### Contains all exp tags in hash
+  my $need_search_tags = 0;    #### Set if we need to do search tags
+
+
+  #### Go ahead and build all the hashes.  The idea here is that if all
+  #### the selected search_batch_ids correspond to different experiments
+  #### (common) then we just want to display the experiment names.  But,
+  #### if two search_batch_id's correspond to two different search batches
+  #### for the same experiment, then we need to display both experiment
+  #### names and search library tags
+  foreach $row (@rows) {
+    my $search_batch_id = $row->[0];
+    my $experiment_tag = $row->[1];
+    my $set_tag = $row->[2];
+    $exp_tag_hash{$search_batch_id} = $experiment_tag;
+    $exp_search_tag_hash{$search_batch_id} = "$experiment_tag($set_tag)";
+    if (exists($unique_tags_hash{$experiment_tag})) {
+      $need_search_tags = 1;
+    }
+    $unique_tags_hash{$experiment_tag} = 1;
+  }
+
+  return %exp_search_tag_hash if ($need_search_tags);
+  return %exp_tag_hash;
+
+} # end getExperimentNames
+
+
+
+###############################################################################
 # postProcessResultset
 #
 # Perform some additional processing on the resultset that would otherwise
@@ -819,35 +882,39 @@ sub postProcessResultset {
   my %parameters = %{$query_parameters_ref};
 
 
-  my $n_rows = scalar(@{$resultset_ref->{data_ref}});
+  #### Get a list of conditions to work with
+  my %conditions = getExperimentNames($parameters{search_batch_id});
+  my @conditions = sort(values(%conditions));
 
-  my @new_data_array;
-  my %data;
-  my %conditions;
-
-
-  my $experiment_tag_column_index = $resultset_ref->{column_hash_ref}->{experiment_tag};
+  #### Get some column number indexes
+  my $search_batch_id_column_index = $resultset_ref->{column_hash_ref}->{search_batch_id};
   my $biosequence_name_column_index = $resultset_ref->{column_hash_ref}->{biosequence_name};
 
 
-  #### Loop over each row in the resultset, coalescing into a hash
+  #### Loop over each row in the resultset, coalescing into a data hash
+  my %data;
+  my $n_rows = scalar(@{$resultset_ref->{data_ref}});
   for (my $row=0;$row<$n_rows-1; $row++) {
-
-    my $experiment_tag = $resultset_ref->{data_ref}->[$row]->[$experiment_tag_column_index];
+    #### Determine the search_batch_id and biosequence_name
+    my $search_batch_id = $resultset_ref->{data_ref}->[$row]->[$search_batch_id_column_index];
     my $biosequence_name = $resultset_ref->{data_ref}->[$row]->[$biosequence_name_column_index];
-    $conditions{$experiment_tag} = 1;
-
-    $data{$biosequence_name}->{$experiment_tag} = $resultset_ref->{data_ref}->[$row];
-
+    #### Store it in the new hash
+    $data{$biosequence_name}->{$conditions{$search_batch_id}} = $resultset_ref->{data_ref}->[$row];
   }
 
 
-  my @conditions = sort(keys(%conditions));
-
-
-  my @prefix_columns = qw(biosequence_name accessor accessor_suffix biosequence_accession canonical_name);
+  #### Define the columns that are to be in the new resultset
+  my @prefix_columns = qw(biosequence_name accessor accessor_suffix
+    search_batch_id biosequence_accession canonical_name);
   my @data_columns = qw(protein_probability n_peptides average_quant n_quant);
-  my @suffix_columns = qw(fav_codon_frequency transmembrane_class n_transmembrane_regions protein_length molecular_function molecular_function_GO biological_process biological_process_GO cellular_component cellular_component_GO interpro_protein_domain interpro_protein_domain_GO biosequence_desc organism);
+  my @suffix_columns = qw(fav_codon_frequency transmembrane_class
+    n_transmembrane_regions protein_length
+    molecular_function molecular_function_GO
+    biological_process biological_process_GO
+    cellular_component cellular_component_GO
+    interpro_protein_domain interpro_protein_domain_GO
+     biosequence_desc organism
+  );
 
 
   my @new_column_names;
@@ -862,6 +929,7 @@ sub postProcessResultset {
       push(@new_precisions,$resultset_ref->{precisions_list_ref}->[$column_index]);
     }
   }
+
 
   #### Push the data columns onto the array
   foreach my $data_column (@data_columns) {
@@ -885,6 +953,7 @@ sub postProcessResultset {
 
 
   #### Loop over each biosequence_name and print the pivoted summary
+  my @new_data_array;
   foreach my $biosequence_name (keys(%data)) {
     my @row;
 
@@ -938,3 +1007,6 @@ sub postProcessResultset {
 
 
 } # end postProcessResult
+
+
+
