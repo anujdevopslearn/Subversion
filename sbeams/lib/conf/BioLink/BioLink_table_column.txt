@@ -140,4 +140,4 @@ BL_CBIL_genome_coordinates	8	DoTS	DoTS accession	varchar	255	0	Y		N			N
 BL_CBIL_genome_coordinates	9	GenBank	GenBank accession	varchar	255	0	Y		N			N									
 BL_CBIL_genome_coordinates	10	Gene_Symbol	Official Gene Symbol	varchar	255	0	Y		N			N									
 BL_CBIL_genome_coordinates	11	Gene_Synonyms	Gene Synonyms	varchar	255	0	Y		N			N									
-BL_CBIL_genome_coordinates	12	organism_id	Organism identifier	int	4	0	N		Y			Y									
+BL_CBIL_genome_coordinates	12	organism_id	Organism identifier	int	4	0	N		Y			N									
