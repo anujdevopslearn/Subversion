@@ -15,6 +15,7 @@ PH_condition	Experimental Condition	Phenotype_user	YES	$TBPH_CONDITION	condition
 PH_condition_repeat	Condition Repeat	Phenotype_user	YES	$TBPH_CONDITION_REPEAT	condition_repeat_id		ManageTable.cgi?TABLE_NAME=PH_condition_repeat	PH_condition_repeat	
 PH_strain_behavior	Substrain Behavior	Phenotype_user		$TBPH_SUBSTRAIN_BEHAVIOR	substrain_behavior_id		ManageTable.cgi?TABLE_NAME=PH_strain_behavior	PH_strain_behavior	
 PH_BrowseBioSequence	Browse BioSequence	QUERY		NA	NA		BrowseBioSequence.cgi	
+PH_StrainFinder	StrainFinder	QUERY		NA	NA		StrainFinder.cgi	
 PH_coli_marker	Coli Marker	Phenotype_user	YES	$TBPH_COLI_MARKER	coli_marker_id		ManageTable.cgi?TABLE_NAME=PH_coli_marker	"PH_plasmid,PH_plasmid_type,PH_coli_marker,PH_yeast_selection_marker,PH_yeast_origin"
 PH_yeast_selection_marker	Yeast Selection Marker	Phenotype_user	YES	$TBPH_YEAST_SELECTION_MARKER	yeast_selection_marker_id		ManageTable.cgi?TABLE_NAME=PH_yeast_selection_marker	"PH_plasmid,PH_plasmid_type,PH_coli_marker,PH_yeast_selection_marker,PH_yeast_origin"
 PH_yeast_origin	Yeast Origin	Phenotype_user	YES	$TBPH_YEAST_ORIGIN	yeast_origin_id		ManageTable.cgi?TABLE_NAME=PH_yeast_origin	"PH_plasmid,PH_plasmid_type,PH_coli_marker,PH_yeast_selection_marker,PH_yeast_origin"
