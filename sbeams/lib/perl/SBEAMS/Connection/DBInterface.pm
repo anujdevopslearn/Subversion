@@ -1742,7 +1742,7 @@ sub parse_input_parameters {
   my @columns = @{$ref_columns};
   if ($add_standard_params eq 'YES') {
     push(@columns,'apply_action','action','output_mode','TABLE_NAME',
-      'QUERY_NAME');
+      'QUERY_NAME','navigation_bar');
   }
 
 
