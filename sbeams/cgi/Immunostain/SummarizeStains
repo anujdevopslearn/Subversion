@@ -262,6 +262,16 @@ sub handle_request {
   return if ($specimen_block_clause eq '-1');
 
 
+  #### Build GENOME_COORINATES constraint
+  if ($parameters{genome_coordinates_constraint}) {
+    my $antibodies = convertGenomeCoordinates(
+      genome_coordinates => $parameters{genome_coordinates_constraint},
+    );
+    return if ($antibodies eq '-1');
+    $parameters{antibody_id} = $antibodies if ($antibodies gt '');
+  }
+
+
   #### Build ANTIBODY constraint
   my $antibody_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"SS.antibody_id",
@@ -548,7 +558,7 @@ sub postProcessResultset {
 		
 	my %args = @_;
 
-  my ($i,$element,$key,$value,$line,$result,$sql,$cellTypeIndex,$antibodyIndex,
+  my ($i,$key,$line,$result,$sql,$cellTypeIndex,$antibodyIndex,
 	$intenseIndex,$equivocalIndex,$nonIndex);
 	my (%dataHash,%cellTypeHash);
   #### Process the arguments list
@@ -718,3 +728,84 @@ sub bySortOrder {
   }
 
 }
+
+
+###############################################################################
+# convertGenomeCoordinates
+#
+# Convert one or more genome coordinate strings of the form
+# hg16:chr15:123456-12347+ to the corresponding antibodies
+###############################################################################
+sub convertGenomeCoordinates {
+  my %args = @_;
+
+  #### Process the arguments list
+  my $genome_coordinates = $args{'genome_coordinates'};
+  return unless($genome_coordinates);
+
+  #### Split the coordinates on semicolon
+  my @genome_coordinates = split(/;/,$genome_coordinates);
+
+  #### Define an aray to bold antibodies
+  my @antibody_ids = ();
+
+  #### Define the genome_build to organism mapping
+  my %build2organism = (
+    'hg16' => 2,
+    'mm4' => 6,
+  );
+
+  #### Loop over each one and try the conversion
+  foreach my $coordinate_str (@genome_coordinates) {
+    if ($coordinate_str =~ /(.+)?:chr(.+)?:(\d+)-(\d+)([\-\+])/) {
+
+      my $genome_build_id = $1;
+      my $chromosome = $2;
+      my $start_pos = $3;
+      my $end_pos = $4;
+      my $strand = $5;
+
+      my $organism_id = $build2organism{$genome_build_id};
+      unless ($organism_id) {
+	print "ERROR: Invalid genome_build_id '$genome_build_id'<BR>\n";
+	next;
+      }
+
+      my $sql = qq~
+	SELECT AB.antibody_id
+	  FROM Immunostain.dbo.genome_coordinates GC
+	  JOIN $TBIS_BIOSEQUENCE BS
+	    ON (GC.locus_link_id = BS.biosequence_accession )
+	  JOIN $TBIS_ANTIGEN AN ON ( BS.biosequence_id = AN.biosequence_id )
+	  JOIN $TBIS_ANTIBODY AB ON ( AN.antigen_id = AB.antigen_id )
+	 WHERE organism_id = $organism_id
+	   AND genome_chromosome = '$chromosome'
+	   AND ( genome_transcription_start BETWEEN $start_pos AND $end_pos
+	         OR genome_transcription_end BETWEEN $start_pos AND $end_pos
+	         OR $start_pos BETWEEN genome_transcription_start
+	                               AND genome_transcription_end
+               )
+      ~;
+      my @rows = $sbeams->selectOneColumn($sql);
+      if (scalar(@rows) > 1) {
+	print "ERROR: More than one row returned trying to find antibodies ".
+	  "for ''!  Report this!<BR>\n";
+	next;
+      }
+
+      if (scalar(@rows) == 1) {
+	push(@antibody_ids,$rows[0]);
+      }
+
+    } else {
+      print "ERROR: Unable to parse coordinate string '$coordinate_str'<BR>\n";
+      return(-1);
+    }
+  }
+
+  return(0) unless (@antibody_ids);
+
+  return(join(',',@antibody_ids));
+}
+
+
