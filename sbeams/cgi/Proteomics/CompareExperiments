@@ -358,6 +358,15 @@ sub handle_request {
   return if ($cellular_component_clause == -1);
 
 
+  #### Build INTERPRO PROTEIN DOMAIN constraint
+  my $protein_domain_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"IPDA.annotation",
+    constraint_type=>"plain_text",
+    constraint_name=>"InterPro Protein Domain",
+    constraint_value=>$parameters{protein_domain_constraint} );
+  return if ($protein_domain_clause == -1);
+
+
   #### Build ACCESSION constraint
   my $accession_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"BS.biosequence_accession",
@@ -558,22 +567,22 @@ sub handle_request {
   my $GO_join = "";
   if ( $parameters{display_options} =~ /ShowGOColumns/ ||
        $molecular_function_clause.$biological_process_clause.
-       $cellular_component_clause ) {
+       $cellular_component_clause.$protein_domain_clause ) {
     $GO_join = qq~
-        LEFT JOIN flybase.dbo.FBgn FBgn
-             ON ( BS.biosequence_accession = FBgn.accession )
-        LEFT JOIN flybase.dbo.FB_annotation MFA
-             ON ( FBgn.FBgn_id = MFA.FBgn_id AND MFA.fbacode='ENZ'
-                  AND MFA.idx=0)
-        LEFT JOIN flybase.dbo.FB_annotation BPA
-             ON ( FBgn.FBgn_id = BPA.FBgn_id AND BPA.fbacode='FNC'
-                  AND BPA.idx=0)
-        LEFT JOIN flybase.dbo.FB_annotation CCA
-             ON ( FBgn.FBgn_id = CCA.FBgn_id AND CCA.fbacode='CEL'
-                  AND CCA.idx=0)
-        LEFT JOIN flybase.dbo.FB_annotation IPDA
-             ON ( FBgn.FBgn_id = IPDA.FBgn_id AND IPDA.fbacode='PDOM'
-                  AND IPDA.idx=0 AND IPDA.external_reference_id=2)
+        LEFT JOIN flybase.dbo.annotated_gene AG
+             ON ( BS.biosequence_accession = AG.gene_accession )
+        LEFT JOIN flybase.dbo.gene_annotation MFA
+             ON ( AG.annotated_gene_id = MFA.annotated_gene_id
+                   AND MFA.gene_annotation_type_id = 1 AND MFA.idx = 0 )
+        LEFT JOIN flybase.dbo.gene_annotation BPA
+             ON ( AG.annotated_gene_id = BPA.annotated_gene_id
+                   AND BPA.gene_annotation_type_id = 2 AND BPA.idx = 0 )
+        LEFT JOIN flybase.dbo.gene_annotation CCA
+             ON ( AG.annotated_gene_id = CCA.annotated_gene_id
+                   AND CCA.gene_annotation_type_id = 3 AND CCA.idx = 0 )
+        LEFT JOIN flybase.dbo.gene_annotation IPDA
+             ON ( AG.annotated_gene_id = IPDA.annotated_gene_id
+                   AND IPDA.gene_annotation_type_id = 4 AND IPDA.idx = 0 )
     ~;
   }
 
@@ -714,6 +723,7 @@ sub handle_request {
         $molecular_function_clause
         $biological_process_clause
         $cellular_component_clause
+	$protein_domain_clause
 	 GROUP BY BS.biosequence_name
 
 	--
