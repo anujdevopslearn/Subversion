@@ -22,6 +22,8 @@ use vars qw(@ISA @EXPORT
     $TBBL_BIOSEQUENCE_SET
     $TBBL_DBXREF
     $TBBL_BIOSEQUENCE
+    $TBBL_BIOSEQUENCE_PROPERTY_SET
+    $TBBL_BIOSEQUENCE_ANNOTATION
     $TBBL_QUERY_OPTION
 
     $TBBL_POLYMER_TYPE
@@ -44,6 +46,8 @@ require Exporter;
     $TBBL_BIOSEQUENCE_SET
     $TBBL_DBXREF
     $TBBL_BIOSEQUENCE
+    $TBBL_BIOSEQUENCE_PROPERTY_SET
+    $TBBL_BIOSEQUENCE_ANNOTATION
     $TBBL_QUERY_OPTION
 
     $TBBL_POLYMER_TYPE
@@ -66,6 +70,8 @@ $TB_ORGANISM                      = "${core}organism";
 $TBBL_BIOSEQUENCE_SET       = "${mod}biosequence_set";
 $TBBL_DBXREF                = "${mod}dbxref";
 $TBBL_BIOSEQUENCE           = "${mod}biosequence";
+$TBBL_BIOSEQUENCE_PROPERTY_SET = "${mod}biosequence_property_set";
+$TBBL_BIOSEQUENCE_ANNOTATION   = "${mod}biosequence_annotation";
 $TBBL_QUERY_OPTION          = "${mod}query_option";
 
 $TBBL_POLYMER_TYPE          = "${mod}polymer_type";
