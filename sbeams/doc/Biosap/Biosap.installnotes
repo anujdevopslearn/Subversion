@@ -9,7 +9,7 @@ You must first install the SBEAMS Core.  See the separate installation
 notes (sbeams.installnotes) on how to accomplish that.
 
 The following Perl Modules often not found on a standard UNIX/Linux
-setup are required to successfully use SBEAMS - Proteomics (in addition
+setup are required to successfully use SBEAMS - Biosap (in addition
 to the dependencies for the SBEAMS Core).
 
 PDL                  Perl Data Language - available from CPAN
@@ -55,7 +55,7 @@ ln -s ../share/load_biosequence_set.pl lib/scripts/Proteomics/load_biosequence_s
 3) Create and populate the database
 
 It is assumed that you have already created and tested your SBEAMS Core
-database.  You may either create a separate database for the Proteomics
+database.  You may either create a separate database for the Biosap
 database or you can put everything in the same database.
 
 Note that some database engines (rare now) may not permit
@@ -81,7 +81,7 @@ foreach dbtype ( mssql mysql pgsql oracle )
 end
 
 - Verify that the SQL CREATE and DROP statements have been correctly
-  generated in $SBEAMS/lib/sql/Proteomics/
+  generated in $SBEAMS/lib/sql/Biosap/
 
 - Execute the statements to create and populate the database with some
   bare bones data:
@@ -112,19 +112,11 @@ edit SBEAMS.conf
 
 Specifically:
 
-DBPREFIX{Proteomics}    = proteomics.dbo.
-RAW_DATA_DIR{Proteomics} = /raw/datasets/root/location
+DBPREFIX{Biosap}    = Biosap.dbo.
+RAW_DATA_DIR{Biosap} = /raw/datasets/root/location
 
-Set DBPREFIX{Proteomics} to the database name and schema/owner to prefix
-to table names.  RAW_DATA_DIR{Proteomics} should be set to the location
-where SEQUEST and other data processing will take place.  Typical
-organization might be like:
-
-/data3/sbeams/archive/$PROJECT_TAG/$EXPERIMENT_TAG/$SEARCH_BATCH_TAG/
-
-for which:
-RAW_DATA_DIR{Proteomics} = /data2/sbeams/archve
-
+Set DBPREFIX{Biosap} to the database name and schema/owner to prefix
+to table names. 
 
 
 -------------------------------------------------------------------------------
@@ -137,8 +129,8 @@ set CONFDIR = "../../conf"
 
 If this doesn't work.  Do not proceed, debug first.
 
-Now that the Proteomics driver tables are loaded, you should be able to
-go to the web site again and click on SBEAMS - Proteomics and explore the
+Now that the Biosap driver tables are loaded, you should be able to
+go to the web site again and click on SBEAMS - Biosap and explore the
 tables.  They're all going to be empty, but you shouldn't get any errors,
 just empty resultsets.
 
@@ -153,29 +145,29 @@ switch to the Admin group using the pull-down menu at the top, and add
 two work groups:
 [SBEAMS Home] [Admin] [Manage Work Groups] [Add Work Group]
 Add entries for (exacly as shown!):
-  Proteomics_user
-  Proteomics_admin
-  Proteomics_readonly
+  Biosap_user
+  Biosap_admin
+  Biosap_readonly
 (Note that after INSERTing the first, you can click [Back], edit the previous
 information slightly, and click [INSERT] to add another.)
 
-Proteomics_admin has privilege over all tables in the Proteomics
-module, while the Proteomics_user only has access to certain tables
-and may often not modify other users records.  The Proteomics_readonly
+Biosap_admin has privilege over all tables in the Biosap
+module, while the Biosap_user only has access to certain tables
+and may often not modify other users records.  The Biosap_readonly
 group is a separate group for looky loos.
 
 Now go to [Manage User Group Associations], [Add ...], and add
 yourself and whoever else to these groups as appropriate.
 
 Now set up the table group securities:
-  rowprivate - Proteomics_user - data_writer
-  rowprivate - Proteomics_admin - data_writer
-  rowprivate - Proteomics_readonly - data_writer
-  project - Proteomics_user - data_writer
-  project - Proteomics_admin - data_modifier
-  Proteomics_infrastructure - Proteomics_admin - data_modifier
-  Proteomics_user - Proteomics_user - data_writer
-  Proteomics_user - Proteomics_admin - data_modifier
+  rowprivate - Biosap_user - data_writer
+  rowprivate - Biosap_admin - data_writer
+  rowprivate - Biosap_readonly - data_writer
+  project - Biosap_user - data_writer
+  project - Biosap_admin - data_modifier
+  Biosap_infrastructure - Biosap_admin - data_modifier
+  Biosap_user - Biosap_user - data_writer
+  Biosap_user - Biosap_admin - data_modifier
 
 
 
@@ -186,8 +178,8 @@ Now set up the table group securities:
 
 Add a Project as follows:
 
-- Switch to the Proteomics_user group by using the drop-down box at top
-- Click on [Proteomics Home]
+- Switch to the Biosap_user group by using the drop-down box at top
+- Click on [Biosap Home]
 - Under "Projects You Own", click [Add A New Project].  Required
   fields are in red.  If you don't have a budget number, enter NA.
 - Fill in the appropriate information and [INSERT]
@@ -195,7 +187,7 @@ Add a Project as follows:
 
 Add an Experiment as follows:
 
-- Click on [Proteomics Home]
+- Click on [Biosap Home]
 - Click on the Project you jst created
 - Click [Register another Experiment]
 - Fill in the appropriate information and [INSERT]
@@ -204,30 +196,20 @@ Add an Experiment as follows:
 Register a Biosequence Set as follows:
 
 A biosequence_set is a set of proteins, genes, orfs, etc., sometimes called
-a "sequence database".  Relevant for the Proteomics module are the
-"sequence databases" you run SEQUEST against.
+a "sequence database". .
 
-Click [Core Management: BiosequenceSets] [Add Biosequence Set]
+Click [Add Biosequence Set]
 Fill in the appropriate information.  Make sure that the set_path points
-to the location of the FASTA file that is SEQUEST searched against.
-Do not use the upload functionality.  Currently, the system will work
-much better if the set_path matches the entry for the FASTA file in the
-SEQUEST .out files.  If they do not match, some manual overriding must
-take place.
+to the location of the FASTA file.  Do not use the upload functionality.  
 [INSERT] that record.
 
 
 -------------------------------------------------------------------------------
-8) Test the Protoemics command line functiality
+8) Test the Protoemics command line functionality
 
-cd $SBEAMS/lib/scripts/Proteomics
+cd $SBEAMS/lib/scripts/Biosap
 
 ./load_biosequence_set.pl --check
-
-./load_proteomics_experiment.pl --list
-
-These two programs should list the entries for the BioSequence Set and
-Experiment you have loaded above.
 
 Now try loading a biosequence set:
 
@@ -237,68 +219,6 @@ This should load the biosequence set called YeastORF.  Replace YeastORF with
 the tag of your Biosequence Set as defined in step 7.
 
 If this doesn't work.  Do not proceed, debug first.
-
-
--------------------------------------------------------------------------------
-9) Add a Gradient Program
-
-If you didn't already in step 7 as part of adding an experiment add a
-gradient program, it is recommended that you do so now.  It is not necessary.
-
-
--------------------------------------------------------------------------------
-10) Load the data products for a sample experiment.
-
-The next step is to load the SEQUEST output and data products of your
-data processing.
-
-The recommended way of organizing searches is as follows:
-
-RAW_DATA_DIR{Proteomics}/$PROJECT_TAG/$EXPERIMENT_TAG/$SEARCH_BATCH_TAG/
-
-for which:
-RAW_DATA_DIR{Proteomics} = Some absolute location as defined in step 4
-$PROJECT_TAG = Tag (i.e. short name) defined for th propject in step 7
-$EXPERIMENT_TAG = Tag (i.e. short name) for the experimet defined in step 7
-$SEARCH_BATCH_TAG = Unique tag for a search_batch (i.e. a running of SEQUEST)
-  It is possible to run SEQUEST multiple times on the same experiment,
-  against different Biosequence Sets or against the same one, perhaps
-  with different parameters.  The recommenation is to name the
-  $SEARCH_BATCH_TAG after the Biosequence Set tag with additional
-  qualifiers if multiples searches against the same set exist or are
-  expected.
-
-Eventually, there will be an automated system which will organize the data
-so that this does not need to happen manually (search of sbeamsbot) but it
-is not yet finished.
-
-The following files should be placed in the directories:
-
-RAW_DATA_DIR{Proteomics}/$PROJECT_TAG/$EXPERIMENT_TAG/
-  *.dat
-  *.nfo
-  *.png
-RAW_DATA_DIR{Proteomics}/$PROJECT_TAG/$EXPERIMENT_TAG/$SEARCH_BATCH_TAG/
-  sequest.params
-  *.html
-  interact*
-RAW_DATA_DIR{Proteomics}/$PROJECT_TAG/$EXPERIMENT_TAG/$SEARCH_BATCH_TAG/$FRAC/
-  *.dta
-  *.out
-
-If the files are thus organized, you can trigger the load with:
-
-cd $SBEAMS/lib/scripts/Proteomics
-
-./load_proteomics_experiment.pl --list
-
-./load_proteomics_experiment.pl
-
-  FINISH THIS!
-
-
-
-
 
 
 
