@@ -188,7 +188,8 @@ sub handleRequest {
 								 gene_set_tag=>$OPTIONS{gene_set_tag},
 								 chromosome_set_tag=>$OPTIONS{chromosome_set_tag});
 
-  handle_oligo_file{file=>$OPTIONS{oligo_file},
+  handle_oligo_file{project_id=>$OPTIONS{project_id},
+					file=>$OPTIONS{oligo_file},
 					oligo_search_id=>$oligo_search_id,
 					oligo_set_type=>$OPTIONS{oligo_set_type_name},
 					oligo_types_ref=>$oligo_types_ref
@@ -217,6 +218,9 @@ sub handle_oligo_file {
 	die "[BUG-$SUB]: oligo_set_type not passed.\n";
   my $oligo_types_ref = $args{oligo_types_ref} ||
 	die "[BUG-$SUB]: oligo_types_ref not passed.\n";
+  my $project_id = $args{project_id} ||
+	die "[BUG-$SUB]: project_id not passed\n";
+
   my %oligo_types = %{$oligo_types_ref};
 
 
@@ -261,9 +265,16 @@ SELECT oligo_set_type_id
     ## If the line has a ">" and it's not the first, write the
     ## previous sequence to the database
     if (($line =~ />/) && ($information ne "####")) {
-      my %rowdata;
-      $information =~ /^(.*?)>(\S+)/;
-      $rowdata{biosequence_name}= $2;
+
+	  ## Get the ID of the oligo (INSERTing a record, if necessary)
+	  my $oligo_id = get_oligo(project_id=>$project_id,
+							   sequence=>$sequence);
+
+
+	  ## INSERT the selected_oligo record
+	  my %rowdata;
+	  $information =~ /^(.*?)>(.*)/;
+	  my $rowdata{header} = $2;
 
       ## Print a warning if malformed
       if ($1) {
@@ -271,88 +282,144 @@ SELECT oligo_set_type_id
 		  "Ignoring all characters before >\n";
       }
 
-	  $information =~ /^>(\S+)\s(.+)/;
-      $rowdata{biosequence_desc} = $2 || '';
-      $rowdata{biosequence_set_id} = $biosequence_set_id;
-      $rowdata{biosequence_seq} = $sequence unless ($skip_sequence);
-      $rowdata{organism_id} = $organism_id if ($DATABASE eq 'sbeams.dbo.');
+
+	  ## Create a hash for information that we'll need.
+	  $rowdata{oligo_search_id} = $oligo_search_id;
+	  $rowdata{oligo_id} = $oligo_id;
+	  $rowdata{oligo_type_id} = '';
+	  $rowdata{biosequence_id} = '';
+	  $rowdata{start_coordinate} = '';
+	  $rowdata{threeprime_distance} = '';
+	  $rowdata{synthetic_start} = '';
+	  $rowdata{synthetic_stop} = '';
 
 
+      #### Do special parsing depending on which genome set is being loaded
+      specialParsing(rowdata_ref=>\%rowdata);
 
-#      #### Do special parsing depending on which genome set is being loaded
-#      $result = specialParsing(biosequence_set_name=>$set_name,
-#        rowdata_ref=>\%rowdata);
-#
-#
-#      ## If we're updating, then try to find the appropriate record
-#      ## The whole program could be sped up quite a bit by doing a single
-#      ## select and returning a single hash at the beginning of the program
-#      $insert = 1; $update = 0;
-#      if ($update_existing) {
-#        $biosequence_id = get_biosequence_id(
-#          biosequence_set_id => $biosequence_set_id,
-#          biosequence_name => $rowdata{biosequence_name});
-#        if (defined($biosequence_id) && $biosequence_id > 0) {
-#          $insert = 0; $update = 1;
-#        } else {
-#          print "WARNING: INSERT instead of UPDATE ".
-#            "'$rowdata{biosequence_name}'\n";
-#        }
-#      }
-#
-#      ## Verify that we haven't done this one already
-#      if ($biosequence_names{$rowdata{biosequence_name}}) {
-#        print "\nWARNING: Duplicate biosequence_name ".
-#          "'$rowdata{biosequence_name}'in file!  Skipping the duplicate.\n";
-#
-#      } else {
-#        #### Insert the data into the database
-#        loadBiosequence(insert=>$insert,update=>$update,
-#          table_name=>"${DATABASE}biosequence",
-#          rowdata_ref=>\%rowdata,PK=>"biosequence_id",
-#          PK_value => $biosequence_id,
-#          verbose=>$VERBOSE,
-#	  testonly=>$TESTONLY,
-#          );
-#
-#        $counter++;
-#      }
-#
-#
-#      #### Reset temporary holders
-#      $information = "";
-#      $sequence = "";
-#
-#      #### Add this one to the list of already seen
-#      $biosequence_names{$rowdata{biosequence_name}} = 1;
-#
-#      #### Print some counters for biosequences INSERTed/UPDATEd
-#      #last if ($counter > 5);
-#      print "$counter..." if ($counter % 100 == 0);
-#
-#    }
-#
-#
-#    #### If the line has a ">" then parse it
-#    if ($line =~ />/) {
-#      $information = $line;
-#      $sequence = "";
-#    #### Otherwise, it must be sequence data
-#    } else {
-#      $sequence .= $line;
-#    }
-#
-#
-#  }
-#
-#
+	  ## Verify that we haven't loaded this oligo_type/oligo combination yet
+	  FILL ME IN!!!!
+
+	  ## INSERT the selected_oligo record
+	  $selected_oligo_id = $sbeams->updateOrInsertRow(table_name=>$TBOG_SELECTED_OLIGO,
+													  rowdata_ref=>\%rowdata,
+													  insert=>1,
+													  return_PK=>1,
+													  testonly=>$TESTONLY,
+													  verbose=>$VERBOSE,
+													  add_audit_parameters=>1);
+	  $counter++;
+
+      ## Reset temporary holders
+      $information = "";
+      $sequence = "";
+
+      ## Add this one to the list of already seen
+      $biosequence_names{$rowdata{biosequence_name}} = 1;
+
+      print "$counter..." if ($counter % 100 == 0);
+    }
+
+    #### If the line has a ">" then parse it
+    if ($line =~ />/) {
+      $information = $line;
+      $sequence = "";
+
+    #### Otherwise, it must be sequence data
+    } else {
+      $sequence .= $line;
+    }
+
+  }
+
+
   close(INFILE);
  # print "\n$counter rows INSERT/UPDATed\n";
 
-  ## Check to see if oligo currently exists in oligo table
-  ## Add oligo and oligo_annotation records (if not already in db)
-  ## With oligo_id create selected_oligo_record
+}
 
+
+######################################################################
+# specialParsing
+######################################################################
+sub specialParsing {
+
+
+
+
+
+FILL ME IN!!!!
+
+
+
+}
+
+######################################################################
+# get_oligo
+######################################################################
+sub get_oligo {
+  my %args = @_;
+  my $oligo_id;
+
+  ## Variables
+  my $SUB = "get_oligo";
+  my $sequence = $args{sequence} || 
+	die "[BUG-$SUB]: oligo sequence not passed\n";
+  my $project_id = $args{project_id} ||
+	die "[BUG-$SUB]: project_id not passed\n";
+
+  ## Strip out any non-sequence (whitespace, numbers) characers
+  $sequence =~ s/\s//g;
+  $sequence =~ s/\d//g;
+
+  my $length = length($sequence);
+
+  ## See if there is already a matching oligo (within the project) 
+  my $sql = qq~
+   SELECT O.oligo_id
+     FROM $TBOG_OLIGO O
+LEFT JOIN $TBOG_OLIGO_ANNOTATION OA ON (O.oligo_id = OA.oligo_id)
+    WHERE O.sequence_length = '$length'
+      AND O.feature_sequence = '$sequence'
+      AND OA.project_id = '$project_id'
+      AND OA.record_status != 'D'
+	  ~;
+  my @rows = $sbeams->selectOneColumn($sql);
+  
+
+  ## INSERT record or return an ID, based upon the returned result
+  if ( scalar(@rows) > 1 ) {
+	print "[WARNING]: Yikes! multiple oligos appear to have a sequence".
+	  " of \'$sequence\' and a length of $length.  Using the first one.\n";
+	$oligo_id = $rows[0];
+  }elsif ( scalar(@rows) == 1 ) {
+	$oligo_id = $rows[0];
+  }else{
+
+	## In this case, we need to INSERT the oligo record...
+	my %rowdata;
+	$rowdata{sequence_length} = $length;
+	$rowdata{feature_sequence} = $sequence;
+	$oligo_id = $sbeams->updateOrInsertRow(table_name=>$TBOG_OLIGO,
+										   rowdata_ref=>\%rowdata,
+										   insert=>1,
+										   return_PK=>1,
+										   testonly=>$TESTONLY,
+										   verbose=>$VERBOSE);
+	undef %rowdata;
+
+	## ...AND INSERT the oligo_annotation record
+	my %rowdata;
+	$rowdata{oligo_id} = $oligo_id;
+	$rowdata{project_id} = $project_id;
+	$rowdata{in_stock} = 'N'; #default is it's not in stock
+	$sbeams->updateOrInsertRow(table_name=$TBOG_OLIGO_ANNOTATION,
+							   rowdata_ref=>\%rowdata,
+							   insert=>1,
+							   testonly=>$TESTONLY,
+							   verbose=>$VERBOSE);
+  }
+  return $oligo_id;
 }
 
 
