@@ -613,6 +613,7 @@ sub specialParsing {
        $rowdata_ref->{biosequence_gene_name} = $other_names[0];
        $rowdata_ref->{biosequence_accession} = $other_names[1];
        $rowdata_ref->{dbxref_id} = '2';
+       $rowdata_ref->{biosequence_description} =~ s/^\s+//;;
     }
   }
 
@@ -707,6 +708,26 @@ sub specialParsing {
     }
     if ($rowdata_ref->{biosequence_name} =~ /\|(Hs\S+)$/ ) {
        $rowdata_ref->{biosequence_gene_name} = $1;
+    }
+  }
+
+
+  #### Conversion Rules for ATH1.pep (TAIR):
+  #### >At1g79800.1 hypothetical protein   /  contains similarity to phytocyanin/early nodulin-like protein GI:4559346 from [Arabidopsis thaliana]
+  if ($biosequence_set_name eq "Arabidopsis Protein Database") {
+    $rowdata_ref->{biosequence_gene_name} = $rowdata_ref->{biosequence_name};
+    $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
+    $rowdata_ref->{dbxref_id} = '10';
+  }
+
+
+  #### Conversion Rules for wormpep92 (C Elegans):
+  #### >B0285.7 CE00646   Aminopeptidase status:Partially_confirmed SW:P46557 protein_id:CAA84298.1
+  if ($biosequence_set_name eq "C Elegans Protein Database") {
+    $rowdata_ref->{biosequence_gene_name} = $rowdata_ref->{biosequence_name};
+    if ($rowdata_ref->{biosequence_desc} =~ /^(\S+)\s+(.+)/ ) {
+      $rowdata_ref->{biosequence_accession} = $1;
+      $rowdata_ref->{dbxref_id} = '11';
     }
   }
 
