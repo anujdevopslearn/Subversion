@@ -180,9 +180,9 @@ sub handle_request {
 	<TR><TD></TD><TD COLSPAN="2"><B>Project Tag:</B> $project_tag</TD></TR>
 	<TR><TD></TD><TD COLSPAN="2"><B>Owner:</B> $PI_name</TD></TR>
 	<TR><TD></TD><TD COLSPAN="2"><B>Access Privileges:</B> <A HREF="$CGI_BASE_DIR/ManageProjectPrivileges">[View/Edit]</A></TD></TR>
-	<TR><TD></TD><TD COLSPAN="2"><B>Experiments:</B></TD></TR>
-	<TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
-	                 <TD WIDTH="100%"><TABLE BORDER=0>
+	<TR><TD></TD><TD COLSPAN="2"><B>Experiments:</B>&nbsp;&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi">Full Listing</A>&nbsp;&mdash;&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?expt_format=compact">Compact</A></TD></TR>
+	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD> 
+	                 <TD WIDTH="100%" ALIGN=LEFT>
   ~;
 
 
@@ -213,8 +213,22 @@ sub handle_request {
   }
 
 
-  #### If there are experiments, display them
+  #### If there are experiments, display them in one of two formats: compact or full
   if (@rows) {
+
+      if ($parameters{expt_format} eq "compact"){
+#print "the condensed table";
+#tag below with colspan=3 would be better suited as colspan=$#search_batch_rows+1, though expts are -not- sorted by number of search batches at this time
+print qq~
+<TABLE BORDER=1>
+  <tr>
+<th align=left><font color="green">- Experiement Name</font> : Description</th>
+<th nowrap>View/Edit<br/>Data</th>
+<th>Fraction<br/>Data</th>
+<th colspan=4 nowrap><font color="green">Search Batch</font><br/>(SBEAMS number: <font color="blue">High-Probability Peptides</font>&nbsp;--<font color="blue">Annotation</font>)<th>
+</tr>
+    ~;
+      my $search_batch_counter = 0;
     foreach my $row (@rows) {
       my ($experiment_id,$experiment_tag,$experiment_name) = @{$row};
 
@@ -229,10 +243,16 @@ sub handle_request {
       ~;
       my @search_batch_rows = $sbeams->selectSeveralColumns($sql);
 
+      $search_batch_counter++;
+      if (($search_batch_counter % 2) == 1){
+	  print qq( <TR BGCOLOR="#efefef"> \n);
+      }else{
+	  print qq( <TR> \n);
+      }
       print qq~
-	<TR><TD NOWRAP>- <font color="green">$experiment_tag:</font> $experiment_name</TD>
-	<TD NOWRAP>&nbsp;&nbsp;&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&experiment_id=$experiment_id">[View/Edit]</A></TD>
-	<TD NOWRAP>&nbsp;&nbsp;&nbsp;<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeFractions?action=QUERYHIDE&QUERY_NAME=PR_SummarizeFractions&experiment_id=$experiment_id">[View Fractions]</A></TD>
+	<TD NOWRAP>- <font color="green">$experiment_tag:</font> $experiment_name</TD>
+	<TD NOWRAP ALIGN=CENTER><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&experiment_id=$experiment_id">[View/Edit]</A></TD>
+	<TD NOWRAP ALIGN=CENTER><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeFractions?action=QUERYHIDE&QUERY_NAME=PR_SummarizeFractions&experiment_id=$experiment_id">[View]</A></TD>
       ~;
 
       foreach my $search_batch_row (@search_batch_rows) {
@@ -247,11 +267,80 @@ sub handle_request {
 	</TR>
       ~;
     }
+   } else {
+#print the full-size results table
+    foreach my $row (@rows) {
+      my ($experiment_id,$experiment_tag,$experiment_name) = @{$row};
+
+      #### Find out what search_batches exist for this experiment
+      $sql = qq~
+	SELECT SB.search_batch_id,SB.search_batch_subdir,BSS.set_tag
+	  FROM $TBPR_SEARCH_BATCH SB
+	 INNER JOIN $TBPR_BIOSEQUENCE_SET BSS
+	       ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
+	 WHERE SB.experiment_id = '$experiment_id'
+	 ORDER BY BSS.set_tag,SB.search_batch_subdir
+      ~;
+      my @search_batch_rows = $sbeams->selectSeveralColumns($sql);
+#need to issue query for number of MS runs
+$sql = qq~
+SELECT COUNT(*)
+FROM $TBPR_FRACTION
+WHERE experiment_id = '$experiment_id'
+    ~;
+my @count_ms_runs = $sbeams->selectOneColumn($sql);
+
+      print qq~
+<TABLE BORDER=0 CELLPADDING=2 CELLSPACING=0>
+      <TR BGCOLOR="#efefef">
+	<TD NOWRAP COLSPAN=2 WIDTH=300>- <font color="green">$experiment_tag:</font> $experiment_name</TD>
+        <TD NOWRAP ALIGN=CENTER COLSPAN=2 WIDTH=300><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&experiment_id=$experiment_id">[View/Edit Experiment Description]</A></TD>
+     </TR>
+      <TR BGCOLOR="#efefef">
+	  <TD>&nbsp;</TD>
+	<TD NOWRAP COLSPAN=3 ALIGN=LEFT><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeFractions?action=QUERYHIDE&QUERY_NAME=PR_SummarizeFractions&experiment_id=$experiment_id">&nbsp;&nbsp;Number of MS Runs: @count_ms_runs</A></TD>
+      </TR>
+      ~;
+
+      foreach my $search_batch_row (@search_batch_rows) {
+        my ($search_batch_id,$search_batch_subdir,$set_tag) = @{$search_batch_row};
+
+    $sql = qq ~
+      SELECT protein_summary_id
+       FROM $TBPR_SEARCH_BATCH_PROTEIN_SUMMARY
+      WHERE search_batch_id = '$search_batch_id'
+     ~;
+      my @protein_summary_status = $sbeams->selectOneColumn($sql);
+
+        print qq~
+     <TR>
+    <TD>&nbsp;</TD>
+  <TD ALIGN=LEFT>Search batch $search_batch_id against <font color="green">[$set_tag]</font></TD>
+<TD ALIGN=CENTER> <A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizePeptides?action=QUERY&QUERY_NAME=PR_SummarizePeptides&search_batch_id=$search_batch_id&probability_constraint=\%3E.9&n_annotations_constraint=%3E0&sort_order=tABS.row_count%20DESC&display_options=GroupReference&input_form_format=minimum_detail">PeptideProphet Summary<br/>(P &gt; 9)</A></TD>
+    ~;
+	if (@protein_summary_status){#ProteinProphet annotation is available
+	print qq~ <TD ALIGN=CENTER>ProteinProphet Summary<br/><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseProteinSummary?protein_group_probability_constraint=%3E0.9&QUERY_NAME=PR_BrowseProteinSummary&search_batch_id=$search_batch_id&action=QUERY">View</A>&nbsp; <FONT COLOR="#CCCCCC">[ADD]</FONT></TD> ~;
+    } else { #allow the user to add ProteinProphet annotation
+	print qq~ <TD ALIGN=CENTER>ProteinProphet Summary<br/><FONT COLOR="#CCCCCC">View</FONT>&nbsp;<!-- not available yet -->[ADD]</TD> ~;
+    }
+
+print qq~
+</TR>
+    ~;
+      }
+      print qq~
+<TR><TD COLSPAN=3>&nbsp;</TD></TR>
+      ~;
+  }
+
+}
+  
+  
   } else {
     if ($project_id == -99) {
-      print "	<TR><TD WIDTH=\"100%\">You do not have access to this project.  Contact the owner of this project if you want to have access.</TD></TR>\n";
+      print qq~	<TR><TD WIDTH="100%">You do not have access to this project.  Contact the owner of this project if you want to have access.</TD></TR>\n ~;
     } else {
-      print "	<TR><TD WIDTH=\"100%\">NONE</TD></TR>\n";
+      print qq~	<TR><TD COLSPAN=2><FONT COLOR=RED>No experiments available, please <A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment">add</A> an experiment.</TD></TR> \n~;
     }
   }
 
