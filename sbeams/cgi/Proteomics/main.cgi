@@ -247,7 +247,7 @@ sub handle_request {
       ~;
     }
   } else {
-    if ($project_id = -99) {
+    if ($project_id == -99) {
       print "	<TR><TD WIDTH=\"100%\">You do not have access to this project.  Contact the owner of this project if you want to have access.</TD></TR>\n";
     } else {
       print "	<TR><TD WIDTH=\"100%\">NONE</TD></TR>\n";
@@ -259,7 +259,7 @@ sub handle_request {
   #### user to register another experiment
   if ($current_contact_id == $PI_contact_id) {
     print qq~
-        <TR><TD COLSPAN=4><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=proteomics_experiment&ShowEntryForm=1">[Register another experiment]</A></TD></TR>
+        <TR><TD COLSPAN=4><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&ShowEntryForm=1">[Register another experiment]</A></TD></TR>
     ~;
   }
 
