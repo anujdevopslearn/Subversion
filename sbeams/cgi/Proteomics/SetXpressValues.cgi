@@ -141,7 +141,7 @@ sub setXpressValues {
   #### Read the form values for each column
   foreach $element (@columns) {
     $parameters{$element}=$q->param($element);
-    #print "$element = $parameters{$element}<BR>\n";
+    print "$element = $parameters{$element}<BR>\n";
   }
 
 
@@ -152,14 +152,6 @@ sub setXpressValues {
     return;
   }
 
-
-
-  #### Print out what we got
-  if (1==1) {
-    while ( ($key,$value) = each %parameters ) {
-      print "$key=$value<BR>\n";
-    }
-  }
 
 
   #### Verify that this quantitation_id exists
@@ -189,7 +181,7 @@ sub setXpressValues {
     table_name=>"$TBPR_QUANTITATION",
     rowdata_ref=>\%rowdata,PK=>"quantitation_id",
     PK_value => $parameters{quantitation_id},
-    ,verbose=>1,#testonly=>1
+    #,verbose=>1,testonly=>1
   );
   print "\n\n</PRE>\n";
 
