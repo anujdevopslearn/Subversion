@@ -205,6 +205,7 @@ sub handle_request {
     parameters_ref=>\%parameters,
     input_types_ref=>\%input_types,
     mask_user_context => 0,
+    allow_NOT_flags => 1,
   );
 
 
@@ -238,7 +239,9 @@ sub handle_request {
     constraint_column=>"BS.biosequence_name",
     constraint_type=>"plain_text",
     constraint_name=>"BioSequence Name",
-    constraint_value=>$parameters{biosequence_name_constraint} );
+    constraint_value=>$parameters{biosequence_name_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_biosequence_name_constraint"},
+  );
   return if ($biosequence_name_clause eq '-1');
 
 
@@ -247,7 +250,9 @@ sub handle_request {
     constraint_column=>"BS.biosequence_gene_name",
     constraint_type=>"plain_text",
     constraint_name=>"BioSequence Gene Name",
-    constraint_value=>$parameters{biosequence_gene_name_constraint} );
+    constraint_value=>$parameters{biosequence_gene_name_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_biosequence_gene_name_constraint"},
+  );
   return if ($biosequence_gene_name_clause eq '-1');
 
 
@@ -256,7 +261,9 @@ sub handle_request {
     constraint_column=>"BS.biosequence_seq",
     constraint_type=>"plain_text",
     constraint_name=>"BioSequence Sequence",
-    constraint_value=>$parameters{biosequence_seq_constraint} );
+    constraint_value=>$parameters{biosequence_seq_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_biosequence_seq_constraint"},
+  );
   return if ($biosequence_seq_clause eq '-1');
   $biosequence_seq_clause =~ s/\*/\%/g;
 
@@ -266,7 +273,9 @@ sub handle_request {
     constraint_column=>"BS.biosequence_desc",
     constraint_type=>"plain_text",
     constraint_name=>"BioSequence Description",
-    constraint_value=>$parameters{biosequence_desc_constraint} );
+    constraint_value=>$parameters{biosequence_desc_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_biosequence_desc_constraint"},
+  );
   return if ($biosequence_desc_clause eq '-1');
 
 
@@ -275,7 +284,9 @@ sub handle_request {
     constraint_column=>"MFA.annotation",
     constraint_type=>"plain_text",
     constraint_name=>"Molecular Function",
-    constraint_value=>$parameters{molecular_function_constraint} );
+    constraint_value=>$parameters{molecular_function_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_molecular_function_constraint"},
+  );
   return if ($molecular_function_clause eq '-1');
 
 
@@ -284,7 +295,9 @@ sub handle_request {
     constraint_column=>"BPA.annotation",
     constraint_type=>"plain_text",
     constraint_name=>"Biological Process",
-    constraint_value=>$parameters{biological_process_constraint} );
+    constraint_value=>$parameters{biological_process_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_biological_process_constraint"},
+  );
   return if ($biological_process_clause eq '-1');
 
 
@@ -293,7 +306,9 @@ sub handle_request {
     constraint_column=>"CCA.annotation",
     constraint_type=>"plain_text",
     constraint_name=>"Cellular Component",
-    constraint_value=>$parameters{cellular_component_constraint} );
+    constraint_value=>$parameters{cellular_component_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_cellular_component_constraint"},
+  );
   return if ($cellular_component_clause eq '-1');
 
 
@@ -302,7 +317,9 @@ sub handle_request {
     constraint_column=>"IPDA.annotation",
     constraint_type=>"plain_text",
     constraint_name=>"InterPro Protein Domain",
-    constraint_value=>$parameters{protein_domain_constraint} );
+    constraint_value=>$parameters{protein_domain_constraint},
+    constraint_NOT_flag=>$parameters{"NOT_protein_domain_constraint"},
+  );
   return if ($protein_domain_clause eq '-1');
 
 
