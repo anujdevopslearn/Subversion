@@ -544,7 +544,9 @@ sub start_element {
   my $element = shift;
   my %attrs = @_;
 
-  die("Unrecognized element '$element'") unless ($element eq 'export_data');
+  die("Unrecognized element '$element'")
+    unless ($element eq 'export' || $element eq 'export_command_list');
+  return if ($element eq 'export_command_list');
 
   #### Define a hash ref holder for this command
   my $command_parameters;
