@@ -76,7 +76,7 @@ sub printPageHeader {
 	<a name="TOP"></a>
 	<tr>
 	  <td bgcolor="$BGCOLOR"><img border=0 alt="BIOSAP" src="$HTML_BASE_DIR/images/biosap_logo.png"></td>
-	  <td align="left" bgcolor="$BGCOLOR"><H1><font color="#FFFFFF">Blast Integrated Oligonucleotide Selection Accelerator Package</font></H1></td>
+	  <td align="left" bgcolor="$BGCOLOR"><H1>Blast Integrated Oligonucleotide Selection Accelerator Package</H1></td>
 	</tr>
 
     ~;
@@ -86,14 +86,17 @@ sub printPageHeader {
     if ($navigation_bar eq "YES") {
       print qq~
 	<!------- Button Bar -------------------------------------------->
-	<tr><td bgcolor="$BGCOLOR" align="left" valign="top">
+	<tr><td bgcolor="$BARCOLOR" align="left" valign="top">
 	<table border=0 width="120" cellpadding=2 cellspacing=0>
 
 	<tr><td><a href="$CGI_BASE_DIR/main.cgi">>$DBTITLE Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/Biosap/main.cgi">>Biosap Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">>Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Biosap/ManageTable.cgi?TABLE_NAME=bs_biosequence_set"><nobr>- Gene Libraries</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Biosap/ManageTable.cgi?TABLE_NAME=bs_biosequence_set"><nobr>- Manage BioSequence</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Biosap/SummarizeRuns.cgi"><nobr>- Summarize Runs</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Biosap/BrowseFeatures.cgi"><nobr>- Browse Features</nobr></a></td></tr>
 	</table>
 	</td>
 
