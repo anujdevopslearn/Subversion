@@ -460,6 +460,8 @@ int try_tds_login(
    char *appname,
    int verbose)
 {
+   TDSCONTEXT *context;
+   int DEBUG=FALSE;
 
 #ifdef MACROGENICS
    static char SERVER[] = "mssql";
@@ -471,7 +473,7 @@ int try_tds_login(
    static char PASSWORD[] = "SB444";
 #endif
 
-   if (verbose)	{ fprintf(stdout, "Entered tds_try_login()<BR>\n"); }
+   if (verbose || DEBUG) { fprintf(stdout, "Entered tds_try_login()<BR>\n"); }
    if (! login) {
       fprintf(stderr, "Invalid TDSLOGIN**\n");
       return TDS_FAIL;
@@ -481,7 +483,7 @@ int try_tds_login(
       return TDS_FAIL;
    }
 
-   if (verbose)	{ fprintf(stdout, "Setting login parameters<BR>\n"); }
+   if (verbose || DEBUG)	{ fprintf(stdout, "Setting login parameters<BR>\n"); }
    *login = tds_alloc_login();
    if (! *login) {
       fprintf(stderr, "tds_alloc_login() failed.<BR>\n");
@@ -497,14 +499,15 @@ int try_tds_login(
    tds_set_language(*login, "us_english");
    tds_set_packet(*login, 512);
   
-   if (verbose)	{ fprintf(stdout, "Connecting to database<BR>\n"); }
+   if (verbose || DEBUG)	{ fprintf(stdout, "Connecting to database<BR>\n"); }
    //*tds = tds_connect(*login, NULL);
-   *tds = tds_connect(*login,NULL,NULL);
+   context = tds_alloc_context();
+   *tds = tds_connect(*login,context,NULL);
    if (! *tds) {
       fprintf(stderr, "tds_connect() failed<BR>\n");
       return TDS_FAIL;
    }
-   if (verbose)	{ fprintf(stdout, "Connected.<BR>\n"); }
+   if (verbose || DEBUG)	{ fprintf(stdout, "Connected.<BR>\n"); }
 
    return TDS_SUCCEED;
 } /*try_tds_login*/
@@ -543,7 +546,6 @@ void GET_PARAMETERS(struct QuanStruct *pQuan,
 #else
    static char DATABASE[] = "proteomics";
 #endif
-
 
    //#### Build the query string
    if (DEBUG) printf("\n\nquantition_id = %d<BR>\n\n\n\n\n",pQuan->iquantitation_id);
