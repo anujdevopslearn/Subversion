@@ -133,10 +133,12 @@ sub printEntryForm {
     my $apply_action  = $q->param('apply_action');
 
 
-    #### If xcorr_constraint is undefined (not just "") then set to a high limit
+    #### If xcorr_charge is undefined (not just "") then set to a high limit
     #### So that a naive query is quick
-    unless (defined($parameters{xcorr_constraint})) {
-      $parameters{xcorr_constraint} = ">5.0";
+    unless (defined($parameters{xcorr_charge1})) {
+      $parameters{xcorr_charge1} = ">4.0";
+      $parameters{xcorr_charge2} = ">4.5";
+      $parameters{xcorr_charge3} = ">5.0";
     }
 
 
@@ -383,16 +385,20 @@ sub printEntryForm {
 
       #### Build XCORR constraint
       my $xcorr_clause = "";
-      if ($parameters{xcorr_constraint}) {
-        if ($parameters{xcorr_constraint} =~ /^[\d\.]+$/) {
-          $xcorr_clause = "   AND SH.cross_corr = $parameters{xcorr_constraint}";
-        } elsif ($parameters{xcorr_constraint} =~ /^between\s+[\d\.]+\s+and\s+[\d\.]+$/i) {
-          $xcorr_clause = "   AND SH.cross_corr $parameters{xcorr_constraint}";
-        } elsif ($parameters{xcorr_constraint} =~ /^[><=][=]*\s*[\d\.]+$/) {
-          $xcorr_clause = "   AND SH.cross_corr $parameters{xcorr_constraint}";
-        } else {
-          print "<H4>Cannot parse XCorr Constraint!  Check syntax.</H4>\n\n";
-          return;
+      my ($icharge,$xcorr);
+      for ($icharge=1;$icharge<4;$icharge++) {
+        $xcorr = $parameters{"xcorr_charge$icharge"};
+        if ($xcorr) {
+          if ($xcorr =~ /^[\d\.]+$/) {
+            $xcorr_clause = "   AND ( S.assumed_charge = $icharge AND SH.cross_corr = $xcorr )\n";
+          } elsif ($xcorr =~ /^between\s+[\d\.]+\s+and\s+[\d\.]+$/i) {
+            $xcorr_clause = "   AND ( S.assumed_charge = $icharge AND SH.cross_corr $xcorr )\n";
+          } elsif ($xcorr =~ /^[><=][=]*\s*[\d\.]+$/) {
+            $xcorr_clause = "   AND ( S.assumed_charge = $icharge AND SH.cross_corr $xcorr )\n";
+          } else {
+            print "<H4>Cannot parse XCorr Constraint $icharge!  Check syntax.</H4>\n\n";
+            return;
+          }
         }
       }
 
