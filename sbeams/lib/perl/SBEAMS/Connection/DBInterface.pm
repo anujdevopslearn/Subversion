@@ -1236,7 +1236,7 @@ sub displayResultSet {
       }
 
       #### Print all the rows with TABs.
-      #### FIXME: Verify that there are no TABs in the data iteself!
+      #### FIXME: Verify that there are no TABs in the data itself!
       print join("\t",@{$resultset_ref->{column_list_ref}}),"\n";
       while (@row = returnNextRow()) {
         print join("\t",@row),"\n";

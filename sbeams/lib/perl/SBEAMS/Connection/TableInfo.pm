@@ -26,6 +26,7 @@ use SBEAMS::Biosap::Tables;
 use SBEAMS::PhenoArray::Tables;
 use SBEAMS::SNP::Tables;
 use SBEAMS::BEDB::Tables;
+use SBEAMS::TOES::Tables;
 
 
 ###############################################################################
