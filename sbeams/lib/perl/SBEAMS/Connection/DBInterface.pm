@@ -638,7 +638,9 @@ sub getDbTableName {
   my $self = shift;
   my $name = shift;
 
-  my $dbname = $self->getDBHandle()->selectrow_array( <<"  END" );
+  $dbh ||= $self->getDBHandle();
+
+  my $dbname = $dbh->selectrow_array( <<"  END" );
   SELECT db_table_name
   FROM $TB_TABLE_PROPERTY
   WHERE table_name = '$name'
@@ -673,7 +675,7 @@ sub selectOneColumn {
     my @rows;
 
     #### Get the database handle
-    $dbh = $self->getDBHandle();
+    $dbh ||= $self->getDBHandle();
 
     #### Convert the SQL dialect if necessary
     $sql = $self->translateSQL(sql=>$sql);
@@ -711,7 +713,7 @@ sub selectSeveralColumns {
     my @rows;
 
     #### Get the database handle
-    $dbh = $self->getDBHandle();
+    $dbh ||= $self->getDBHandle();
 
 	
     #### Convert the SQL dialect if necessary
@@ -745,7 +747,7 @@ sub selectHashArray {
     my @rows;
 
     #### Get the database handle
-    $dbh = $self->getDBHandle();
+    $dbh ||= $self->getDBHandle();
 
     #### Convert the SQL dialect if necessary
     $sql = $self->translateSQL(sql=>$sql);
@@ -777,7 +779,7 @@ sub selectTwoColumnHash {
     my %hash;
 
     #### Get the database handle
-    $dbh = $self->getDBHandle();
+    $dbh ||= $self->getDBHandle();
 
     #### Convert the SQL dialect if necessary
     $sql = $self->translateSQL(sql=>$sql);
@@ -1246,7 +1248,7 @@ sub executeSQL {
 
     #print "Content-type: text/html\n\n$sql\n\n";
     #### Get the database handle
-    $dbh = $self->getDBHandle();
+    $dbh ||= $self->getDBHandle();
 
     #### Prepare the query
     my $sth = $dbh->prepare($sql);
@@ -1855,7 +1857,7 @@ sub buildOptionList {
     }
 
     #### Get the database handle
-    $dbh = $self->getDBHandle();
+    $dbh ||= $self->getDBHandle();
 
     #### Convert the SQL dialect if necessary
     $sql_query = $self->translateSQL(sql=>$sql_query); 
@@ -1946,7 +1948,7 @@ sub displayQueryResult {
 
 
     #### Get the database handle
-    $dbh = $self->getDBHandle();
+    $dbh ||= $self->getDBHandle();
 
     #### Convert the SQL dialect if necessary
     $sql_query = $self->translateSQL(sql=>$sql_query);
@@ -2149,7 +2151,7 @@ sub fetchResultSet {
 
 
     #### Get the database handle
-    $dbh = $self->getDBHandle();
+    $dbh ||= $self->getDBHandle();
 
 
     #### Update timing info
@@ -5057,12 +5059,20 @@ sub getDataFromModules {
   
 
   my %mod_data;
+# Commented out Benchmark code, but left for testing in case of performance
+# issues.
+#  use Benchmark;
+#  my $t0 = new Benchmark;
 
   # loop through sbeams objects, 
   for my $mod ( @valid_mods ) {
     next unless $sbeams{$mod};
     $sbeams{$mod}->setSBEAMS($this) || die "Doh";
     $mod_data{$mod} = $sbeams{$mod}->getProjectData( projects => $args{projects} );
+#    my $t1 = new Benchmark;
+#    $log->debug( "Fetch of data (" . scalar( @{$args{projects}} ) . " projects) from $mod took " . timestr(timediff( $t1, $t0 )) );
+#    $t0 = $t1;
+
   }
 
   # Return reference to data structure
