@@ -245,7 +245,7 @@ sub postFormHook {
 
 
     my $A260 = $parameters{absorbance_260}*$parameters{dilution_factor};
-    my $Adye = $parameters{absorbance_lambda};
+    my $Adye = $parameters{absorbance_lambda}*$parameters{dilution_factor};
     my $volume = $parameters{volume};
     my $Abase = $A260 - ($Adye * $CFdye);
 
