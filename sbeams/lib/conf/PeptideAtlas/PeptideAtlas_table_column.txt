@@ -80,45 +80,58 @@ AT_peptide_mapping	8	end_in_chromosome	End Position in Chromosome	int	4	0	N		N		
 AT_peptide_mapping	9	strand	Strand	char	1	0	N		N			Y	text	10		Y	Y	N	"Strand (+,-) of the peptide in the chromosome"		
 AT_biosequence_set	1	biosequence_set_id	BioSequence Set ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_biosequence_set	2	project_id	Owner Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id"	
-AT_biosequence_set	3	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Species for this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+AT_biosequence_set	3	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism to which the BioSequences in this database belong	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 AT_biosequence_set	4	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
 AT_biosequence_set	5	set_tag	Set Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this BioSequence database		
-AT_biosequence_set	6	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Longer description of this BioSequence database		
-AT_biosequence_set	7	set_version	Set Version	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Version of this BioSequence database		
-AT_biosequence_set	8	upload_file	Upload file	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
-AT_biosequence_set	9	set_path	Set Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	File path of this BioSequence database		
-AT_biosequence_set	10	source_file_date	Source File Date	datetime	8	0	Y		N			N	text	40		N	N	N	Date of the FASTA file at last update		
-AT_biosequence_set	11	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
-AT_biosequence_set	12	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-AT_biosequence_set	13	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
-AT_biosequence_set	14	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_biosequence_set	15	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_biosequence_set	16	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_biosequence_set	17	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_biosequence_set	18	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_biosequence_set	19	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_biosequence_set	6	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioSequence database		
+AT_biosequence_set	7	set_version	Set Version	varchar	50	0	N		N			Y	text	40		Y	Y	N	Version of this BioSequence database		
+AT_biosequence_set	8	polymer_type_id	Polymer Type	int	4	0	N		N	BL_polymer_type	polymer_type_id	Y	optionlist			Y	Y	N	"Polymer type (e.g. protein, DNA, RNA) for the BioSequences in this database"	"SELECT polymer_type_id, polymer_type_name FROM $TBBL_POLYMER_TYPE ORDER BY sort_order,polymer_type_name"	
+AT_biosequence_set	9	upload_file	Upload file	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
+AT_biosequence_set	10	set_path	Set Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	File path of this BioSequence database		
+AT_biosequence_set	11	source_file_date	Source File Date	datetime	8	0	Y		N			N	text	40		N	N	N	Date of the FASTA file at last update		
+AT_biosequence_set	12	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
+AT_biosequence_set	13	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_biosequence_set	14	sort_order	Sort Order	int	4	0	N	10	N			Y	text	20		Y	Y	N	Allows the ordering or ranking of Biosequence Sets which is used to break ties for choosing canonical names.  Lower numbers indicate better rank.		
+AT_biosequence_set	15	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_biosequence_set	16	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_biosequence_set	17	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_biosequence_set	18	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_biosequence_set	19	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_biosequence_set	20	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_biosequence	1	biosequence_id	BioSequence ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_biosequence	2	biosequence_set_id	BioSequence Set	int	4	0	N		N	AT_biosequence_set	biosequence_set_id					N	N	Y	BioSequence Set to which this BioSequence belongs		pkDEFAULT
 AT_biosequence	3	biosequence_name	BioSequence Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of this BioSequence (generally everything before the first space in a FASTA file header line)		
 AT_biosequence	4	biosequence_gene_name	BioSequence Gene Name	varchar	255	0	Y		N			Y	text	20		Y	Y	N	Gene name of this BioSequence if applicable.  Most common gene name if applicable		
 AT_biosequence	5	dbxref_id	Database Cross Reference	int	4	0	Y		N	AT_dbxref	dbxref_id					Y	Y	N	Database cross reference for which the accession number applies		pkDEFAULT
 AT_biosequence	6	biosequence_accession	BioSequence Accession	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Accession number for this BioSequence in some external database designated above		
-AT_biosequence	7	biosequence_desc	Biosequence Description	text	16	0	N		N			Y	textarea	5		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)		
-AT_biosequence	8	biosequence_seq	Sequence	text	16	0	Y		N			N	file	40		Y	Y	N	Actual sequence of the BioSequence if known		
+AT_biosequence	7	organism_id	Organism	int	4	0	Y		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism to which this BioSequence belongs	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+AT_biosequence	8	polymer_type_id	Polymer Type	int	4	0	Y		N	BL_polymer_type	polymer_type_id	Y	optionlist			Y	Y	N	"Polymer type (e.g. protein, DNA, RNA) of this BioSequence"	"SELECT polymer_type_id, polymer_type_name FROM $TBBL_POLYMER_TYPE ORDER BY sort_order,polymer_type_name"	
+AT_biosequence	9	biosequence_desc	Biosequence Description	varchar	1024	0	N		N			Y	text	40		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)		
+AT_biosequence	10	biosequence_seq	Sequence	text	16	0	Y		N			N	file	40		Y	Y	N	Actual sequence of the BioSequence if known		
+AT_biosequence	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_biosequence	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_biosequence	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_biosequence	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_biosequence	15	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_biosequence	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_biosequence	17	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_biosequence_property_set	1	biosequence_property_set_id	BioSequence Property Set ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_biosequence_property_set	2	biosequence_id	BioSequence ID	int	4	0	N		N	AT_biosequence	biosequence_id					N	N	Y	Biosequence to which this Biosequence property set belongs		pkDEFAULT
 AT_biosequence_property_set	3	n_transmembrane_regions	Number of Transmembrane Regions	int	4	0	Y		N							Y	Y	N	Number of transmembrane regions		pkDEFAULT
 AT_biosequence_property_set	4	transmembrane_class	Transmembrane Region Class	varchar	10	0	Y		N			Y	text	50		Y	Y	N	"Class of the transmembrane region.  May be 0, TM, A, S, TM_xS based on output from TMHMM and signalP"		
 AT_biosequence_property_set	5	transmembrane_topology	Transmembrane Region Topology	varchar	1024	0	Y		N			Y	text	20		Y	Y	N	Coding of which residues belong in the transmembrane regions		
-AT_biosequence_property_set	6	has_signal_peptide	Has a Signal Peptide	char	1	0	Y		N			N	text	50		Y	Y	N	"Does this protein have a signal peptide on the end Y/N? (Note that Y means that there is some non-zero probability that it does, not that is necessarily does)"	
-AT_biosequence_property_set	7	has_signal_peptide_probability	Probability that it has a Signal Peptide	real	4	0	Y		N			N	text	50		Y	Y	N	Probability that there is a signal peptide on the end as calculated by SignalP	
-AT_biosequence_property_set	8	signal_peptide_length	Length of the Signal Peptide	int	4	0	Y		N			N	text	50		Y	Y	N	Length in residues of the signal peptide	
-AT_biosequence_property_set	9	signal_peptide_is_cleaved	Signal Peptide gets Cleaved	char	1	0	Y		N			N	text	50		Y	Y	N	Does the signal peptide get cleaved off Y/N?	
-AT_biosequence_property_set	10	genome_build	Genome Build	varchar	50	0	Y		N			N	text	50		Y	Y	N	Genome build name for which the following mapping parameters are valid	
-AT_biosequence_property_set	11	chromosome	Chromosome	varchar	50	0	Y		N			N	text	50		Y	Y	N	Chromosome in which this mapping occurs	
-AT_biosequence_property_set	12	start_in_chromosome	Start Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	Start position of the biosequence in the chromosome	
-AT_biosequence_property_set	13	end_in_chromosome	End Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	End position of the biosequence in the chromosome	
-AT_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	"Strand (+,-) of the biosequence in the chromosome"	
+AT_biosequence_property_set	6	has_signal_peptide	Has a Signal Peptide	char	1	0	Y		N			N	text	50		Y	Y	N	"Does this protein have a signal peptide on the end Y/N? (Note that Y means that there is some non-zero probability that it does, not that is necessarily does)"		
+AT_biosequence_property_set	7	has_signal_peptide_probability	Probability that it has a Signal Peptide	real	4	0	Y		N			N	text	50		Y	Y	N	Probability that there is a signal peptide on the end as calculated by SignalP		
+AT_biosequence_property_set	8	signal_peptide_length	Length of the Signal Peptide	int	4	0	Y		N			N	text	50		Y	Y	N	Length in residues of the signal peptide		
+AT_biosequence_property_set	9	signal_peptide_is_cleaved	Signal Peptide gets Cleaved	char	1	0	Y		N			N	text	50		Y	Y	N	Does the signal peptide get cleaved off Y/N?		
+AT_biosequence_property_set	10	genome_build	Genome Build	varchar	50	0	Y		N			N	text	50		Y	Y	N	Genome build name for which the following mapping parameters are valid		
+AT_biosequence_property_set	11	chromosome	Chromosome	varchar	50	0	Y		N			N	text	50		Y	Y	N	Chromosome in which this mapping occurs		
+AT_biosequence_property_set	12	start_in_chromosome	Start Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	Start position of the biosequence in the chromosome		
+AT_biosequence_property_set	13	end_in_chromosome	End Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	End position of the biosequence in the chromosome		
+AT_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	"Strand (+,-) of the biosequence in the chromosome"		
+AT_biosequence_property_set	15	isoelectric_point	Isoelectric Point	real	4	0	Y		N			N	text	10		Y	Y	N	Isoelectric Point (pI) of the protein		
+AT_biosequence_property_set	16	fav_codon_frequency	Favorite Codon Frequency	real	4	0	Y		N			N	text	10		Y	Y	N	Favorite Codon Frequency		
+AT_biosequence_property_set	17	duplicate_biosequences	Duplicate Biosequences	varchar	255	0	Y		N			N	text	50		Y	Y	N	Semicolon delimited list of duplicate sequences within the same set		
 AT_BrowseBiosequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBAT_BIOSEQUENCE_SET WHERE project_id IN (  $accessible_project_ids ) ORDER BY sort_order,set_name"
 AT_BrowseBiosequence	2	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 AT_BrowseBiosequence	3	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
@@ -203,15 +216,19 @@ AT_biosequence_annotated_gene	1	biosequence_annotated_gene_id	BioSequence Annota
 AT_biosequence_annotated_gene	2	biosequence_id	BioSequence ID	int	4	0	N		N	AT_biosequence	biosequence_id					N	N	Y	Biosequence to which this Biosequence property set belongs		pkDEFAULT
 AT_biosequence_annotated_gene	3	gene_annotation_id	Gene Annotation ID	int	4	0	N		N	BL_gene_annotation	gene_annotation_id					N	N	Y	Gene ID associated with Biosequence ID		pkDEFAULT
 AT_biosequence_annotation	1	biosequence_annotation_id	Domain Match Type	int	4	0	N		Y							N	N				pkDEFAULT
-AT_biosequence_annotation	2	biosequence_id	BioSequence	int	4	0	N		N	PS_biosequence	biosequence_id	Y	fixed			Y	Y	Y	BioSequence to which this annotation belongs		
-AT_biosequence_annotation	3	full_gene_name	Full Gene Name	varchar	255	0	Y		N			N	text	50		Y	Y	N	Full name of the gene (e.g. Toll-like Receptor 2)		
-AT_biosequence_annotation	4	aliases	BioSequence Aliases	varchar	255	0	Y		N			N	text	50		Y	Y	N	Aliases of this BioSequence.  These are stored as a semi-colon delimited string		
-AT_biosequence_annotation	6	functional_description	Functional Description	varchar	255	0	Y		N			N	textarea	3		Y	Y	N	Functional description of the protein
-AT_biosequence_annotation	7	biosequence_type	Biosequence Type	varchar	255	0	Y		N				text	50		Y	Y	N	Further annotation of biosequence type
-AT_biosequence_annotation	9	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments
-AT_biosequence_annotation	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-AT_biosequence_annotation	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N		
-AT_biosequence_annotation	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-AT_biosequence_annotation	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N		
-AT_biosequence_annotation	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N		
-AT_biosequence_annotation	15	record_status	Record Status	char	1	0	N	N	N							N	N		
+AT_biosequence_annotation	2	biosequence_id	BioSequence	int	4	0	N		N	AT_biosequence	biosequence_id	Y	fixed			Y	Y	Y	BioSequence to which this annotation belongs		
+AT_biosequence_annotation	3	gene_symbol	Gene Symbol	varchar	255	0	Y		N			N	text	50		Y	Y	N	Gene Symbol to describe this protein (e.g. TLR2)		
+AT_biosequence_annotation	4	full_gene_name	Full Gene Name	varchar	255	0	Y		N			N	text	50		Y	Y	N	Full name of the gene (e.g. Toll-like Receptor 2)		
+AT_biosequence_annotation	5	aliases	BioSequence Aliases	varchar	255	0	Y		N			N	text	50		Y	Y	N	Aliases of this BioSequence.  These are stored as a semi-colon delimited string		
+AT_biosequence_annotation	6	former_names	Former BioSequence Names	varchar	255	0	Y		N			N	text	50		Y	Y	N	Former Aliases of this BioSequence.  These are stored as a colon-delimited string		
+AT_biosequence_annotation	7	functional_description	Functional Description	text	16	0	Y		N			N	textarea	3		Y	Y	N	Functional description of the protein		
+AT_biosequence_annotation	8	EC_numbers	EC Numbers	varchar	255	0	Y		N			N	text	50		Y	Y	N	EC Number(s) that corresponds to this domain.  Separate multiple numbers with a semicolon		
+AT_biosequence_annotation	9	biosequence_type	Biosequence Type	varchar	255	0	Y		N				text	50		Y	Y	N	Further annotation of biosequence type		
+AT_biosequence_annotation	10	category	Category	varchar	255	0	Y		N			N	text	50		Y	Y	N	Category		
+AT_biosequence_annotation	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_biosequence_annotation	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_biosequence_annotation	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_biosequence_annotation	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_biosequence_annotation	15	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_biosequence_annotation	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_biosequence_annotation	17	record_status	Record Status	char	1	0	N	N	N							N	N				
