@@ -29,6 +29,7 @@ OBJS =	DataLoader.class\
 	NullWizardPanel.class\
 	TextWriter.class\
 	VariableTable.class\
+	VariableTableModel.class\
 	WelcomeWizardPanel.class\
 	WizardAdapter.class\
 	WizardContext.class\
@@ -51,7 +52,7 @@ basic: objs
 	-java ${PKG}DataLoader
 
 sbeams: jar
-	(java -jar DataLoader.jar -p "328" -m "sbeamsIndirect://db/sbeams/cgi/Microarray/ViewFile.cgi?action=read&FILE_NAME=matrix_output&project_id=497&SUBDIR=20050119_160105" -r "sbeamsIndirect://db/sbeams/tmp/Microarray/dataLoader/translator.tsv")
+	(java -cp ${CP} -jar DataLoader.jar -p "328" -m "sbeamsIndirect://db/sbeams/cgi/Microarray/ViewFile.cgi?action=read&FILE_NAME=matrix_output&project_id=497&SUBDIR=20050119_160105" -r "sbeamsIndirect://db/sbeams/tmp/Microarray/dataLoader/translator.tsv")
 
 jar: objs
 	(cd ..;jar cmf DataLoader/MANIFEST.MF DataLoader/DataLoader.jar DataLoader/*.class)
