@@ -2493,18 +2493,23 @@ sub displayResultSetControls {
 
 
     #### Display the URLs to reaccess these data
-    my $delim = '?';
-    $delim = '&' if ($base_url =~ /\?/);
+    if ($base_url =~ /ManageTable/) {
+      $param_string = "${separator}$param_string" if ($param_string);
+    } else {
+      $param_string = "${separator}$param_string" if ($param_string);
+      $param_string .= "apply_action=QUERY";
+    }
+
     print qq~
       <BR><nobr>URL to
-      <A HREF=\"$base_url${delim}apply_action=VIEWRESULTSET&rs_set_name=$rs_params{set_name}&rs_page_size=$rs_params{page_size}&rs_page_number=$pg$plot_params\">
+      <A HREF=\"$base_url${separator}apply_action=VIEWRESULTSET&rs_set_name=$rs_params{set_name}&rs_page_size=$rs_params{page_size}&rs_page_number=$pg$plot_params\">
       recall this result set</A>:
-      $SERVER_BASE_DIR$base_url${delim}apply_action=VIEWRESULTSET&rs_set_name=$rs_params{set_name}&rs_page_size=$rs_params{page_size}&rs_page_number=$pg$plot_params</nobr>
+      $SERVER_BASE_DIR$base_url${separator}apply_action=VIEWRESULTSET&rs_set_name=$rs_params{set_name}&rs_page_size=$rs_params{page_size}&rs_page_number=$pg$plot_params</nobr>
 
       <nobr>URL to
-      <A HREF=\"$base_url${delim}apply_action=QUERY&$param_string\">
+      <A HREF=\"$base_url${param_string}\">
       re-execute this query</A>:
-      $SERVER_BASE_DIR$base_url${delim}apply_action=QUERY&$param_string</nobr>
+      $SERVER_BASE_DIR$base_url${param_string}</nobr>
       <BR>
     ~;
 
