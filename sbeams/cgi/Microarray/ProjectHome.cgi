@@ -1597,7 +1597,7 @@ sub print_data_download_tab {
 
 			@downloadable_file_types = $sbeamsMOD->get_AFFY_FILES;
 			@default_file_types = qw(CEL);							  #default file type to turn on the checkbox
-			@diplay_files	    = qw(XML RPT JPEG EGRAM_PF.jpg EGRAM_T.jpg EGRAM_F.jpg);		  #files that should have urls constructed to open the file in the browser	
+			@diplay_files	    = qw(XML RPT INFO JPEG EGRAM_PF.jpg EGRAM_T.jpg EGRAM_F.jpg);		  #files that should have urls constructed to open the file in the browser	
 		
 			$sbeams_affy_groups->setSBEAMS($sbeams);					  #set the sbeams object into the affy_groups_object
 		
@@ -1846,7 +1846,7 @@ sub check_for_file {
 	
 	my $file_path = "$path/$root_name.$file_ext";
 	
-	
+	$log->debug("FILE PATH '$file_path'");
 	if (-e $file_path){
 		return 1;
 	}else{
