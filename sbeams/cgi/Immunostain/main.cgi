@@ -121,10 +121,10 @@ sub main
   exit unless ($current_username = $sbeams->Authenticate(
     permitted_work_groups_ref=>['Immunostain_user','Immunostain_admin',
       'Immunostain_readonly','Admin'],
-	  allow_anonymous_access=>1, 
-   connect_read_only=>1,
-  ) );
-  
+    allow_anonymous_access=>1,
+    #connect_read_only=>1,
+  ));
+
 
 #### Read in the default input parameters
   my %parameters;
