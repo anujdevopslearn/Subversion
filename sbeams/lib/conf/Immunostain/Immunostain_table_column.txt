@@ -144,7 +144,7 @@ IS_stained_slide	3	specimen_block_id	Specimen Block	int	4	0	N		N	IS_specimen_blo
 IS_stained_slide	4	antibody_id	Antibody	int	4	0	N		N	IS_antibody	antibody_id	Y	optionlist			Y	Y	N	Antibody used to stain this sample	"SELECT antibody_id, antibody_name FROM $TBIS_ANTIBODY ORDER BY sort_order,antibody_name"	
 IS_stained_slide	5	stain_name	Stain Name	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Unique name for this stain		
 IS_stained_slide	6	stain_description	Stain Description	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Longer description of this stain		
-IS_stained_slide	7	section_index	Section Index	varchar	50	0	Y		N			Y	text	4		Y	Y	N	"Index of the section used for this stain (1,2,3,?)"		
+IS_stained_slide	7	section_index	Section Index	varchar	50	0	Y		N			N	text	4		Y	Y	N	"Index of the section used for this stain (1,2,3,?)"		
 IS_stained_slide	8	preparation_date	Preparation Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	textdate	20		Y	Y	N	Date this stained slide was prepared		
 IS_stained_slide	9	protocol_id	Preparation Protocol	int	4	0	N		N	protocol	protocol_id	Y	optionlist			Y	Y	Y	Protocol used to prepare and stain this slide	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='Immunostain Slide Preparation' AND P.record_status != 'D' ORDER BY P.name"	
 IS_stained_slide	10	protocol_deviations	Protocol Deviations	text	16	0	Y		N			N	textarea	6		Y	Y	N	Describe any deviations from the intented above protocol to the way this preparation was actually executed		
