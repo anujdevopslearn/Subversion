@@ -849,6 +849,8 @@ sub postProcessResultset {
     my $rosetta_success_domains = 0;
     my $rosetta_best_domains = 0;
 
+    my $TIGRFAM_hits = 0;
+    my $COGs_hits = 0;
 
     #### Look for imported annotations and show those
     for (my $i=$startrow; $i<=$endrow; $i++) {
@@ -861,6 +863,16 @@ sub postProcessResultset {
     for (my $i=$startrow; $i<=$endrow; $i++) {
       if ($rows[$i]->[$match_type_column_index] eq 'TIGRFAM') {
         push(@new_data_array,$rows[$i]);
+	$TIGRFAM_hits++;
+      }
+    }
+
+
+    #### Look for COGs hits and show those
+    for (my $i=$startrow; $i<=$endrow; $i++) {
+      if ($rows[$i]->[$match_type_column_index] eq 'COGs') {
+        push(@new_data_array,$rows[$i]);
+	$COGs_hits++;
       }
     }
 
@@ -1097,6 +1109,9 @@ sub postProcessResultset {
     $stats{rosetta_success_domains} += $rosetta_success_domains;
     $stats{rosetta_best_domains} += $rosetta_best_domains;
 
+    $stats{TIGRFAM_hits} += $TIGRFAM_hits;
+    $stats{COGs_hits} += $COGs_hits;
+
     if ($pdbblast_domains + $pfam_best_domains + $rosetta_best_domains > 0) {
       $stats{proteins_with_an_id}++;
       if ($pdbblast_domains + $pfam_best_domains + $rosetta_best_domains ==
@@ -1131,7 +1146,9 @@ sub postProcessResultset {
   $buf.="Total number of well identified domains: ".($stats{pbdblast_domains}+$stats{pfam_best_domains}+$stats{rosetta_best_domains})."\n";
 
   $buf.="Number of good PFAM hits regardless of PDB hits: $stats{pfam_domains} (sometimes more than one match per domain!)\n";
-  $buf.="Number of good Rosetta hits regardless of PDB or PFAM hits: $stats{rosetta_success_domains}\n";
+  $buf.="Number of good Rosetta hits regardless of PDB or PFAM hits: $stats{rosetta_success_domains}\n\n";
+  $buf.="Number of good TIGRFAM hits: $stats{TIGRFAM_hits} (sometimes more than one match per protein!)\n";
+  $buf.="Number of good COGs hits: $stats{COGs_hits} (sometimes more than one match per protein!)\n";
   $buf.="\n\n";
 
   $buf =~ s/\n/<BR>\n/g;
