@@ -700,20 +700,10 @@ sub processEntryForm {
     $current_project_name = $sbeams->getCurrent_project_name;
 
 
-    #### Check for missing required information
+    #### Get information about the nature of the columns for this table
+    #### This whole system is messy and ugly.  Needs better implementation!!!!
     my @required_columns = 
       $sbeamsMOD->returnTableInfo($TABLE_NAME,"required_columns");
-    my $error_message;
-    if (@required_columns) {
-      foreach $element (@required_columns) {
-        $error_message .= "<LI> You must provide a <B>$element</B>."
-          unless (defined($parameters{$element}) &&
-                  $parameters{$element} gt '');
-      }
-
-    }
-
-    #### Get the data columns and input types for this table
     my @data_columns = 
       $sbeamsMOD->returnTableInfo($TABLE_NAME,"data_columns");
     my %input_types = 
@@ -722,6 +712,31 @@ sub processEntryForm {
       $sbeamsMOD->returnTableInfo($TABLE_NAME,"data_types");
     my %data_scales = 
       $sbeamsMOD->returnTableInfo($TABLE_NAME,"data_scales");
+
+
+    #### Check for missing required information
+    my $error_message;
+    if (@required_columns) {
+
+      #### Create a hash of the data columns for lookups
+      my %data_columns_hash;
+      foreach $element (@data_columns) {
+        $data_columns_hash{$element} => 1;
+      }
+
+      #### Loop over each required column and make sure it exists if it's
+      #### also a data column
+      foreach $element (@required_columns) {
+
+        if ($data_columns_hash{$element}) {
+          unless (defined($parameters{$element}) &&
+                  $parameters{$element} gt '') {
+            $error_message .= "<LI> You must provide a <B>$element</B>.";
+          }
+        }
+      }
+
+    }
 
 
     #### Check that the data entered was valid for the datatype
