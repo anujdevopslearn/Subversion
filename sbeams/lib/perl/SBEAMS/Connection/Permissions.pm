@@ -23,6 +23,7 @@ use CGI::Carp qw(fatalsToBrowser croak);
 use Exporter;
 our @ISA = qw( Exporter );
 
+use SBEAMS::Connection::Log;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Microarray::Tables;
 use SBEAMS::Inkjet::Tables;
@@ -38,6 +39,7 @@ use constant DATA_MODIFIER => 20;
 use constant DATA_ADMIN => 10;
 
 $q       = new CGI;
+my $log = SBEAMS::Connection::Log->new();
 
 ###############################################################################
 # print_permissions_table
@@ -935,7 +937,8 @@ sub calculateTablePermission {
   AND tgs.record_status != 'D'
   END
 
-  # print STDERR "USQL: $usql \n\n TGSQL: $gsql\n";
+  $log->debug( "USQL: $usql" );
+  $log->debug( "TGSQL: $gsql" );
 
   my @gperms = $self->selectSeveralColumns( $gsql );
  
@@ -968,6 +971,7 @@ sub calculateTablePermission {
   } elsif ( scalar( @rec_info ) ) { # Existing record.
 
     if ( $rec_info[2] == $args{contact_id} ) { # last modifier, allow
+      $log->debug( "Letting them get away with it!" );
       return getMin( $privilege, DATA_MODIFIER ); # return MIN
           
     } elsif ( $rec_info[1] eq 'L' ) { # Locked record, deny all others.
@@ -1223,7 +1227,7 @@ sub getUserProjectPermission {
   END_SQL
 
   if ( scalar( @rows ) > 1 ) {
-    print STDERR "Error, more than one UPP row for a given user and project";
+    $log->error("Error, more than one UPP row for a given user and project");
   }
 
   my %vals = ( id => undef, privilege => undef, status => undef );
@@ -1360,6 +1364,23 @@ sub getMax {
 sub getMin {
   my @sorted = sort { $a <=> $b } @_;
   return $sorted[0];
+}
+
+
+###############################################################################
+# Utility routine, checks if current user is 'guest' user.
+# FIXME: make id lookup dynamic
+###############################################################################
+sub isGuestUser {
+  my $sbeams = shift;
+  my $currID =  $sbeams->getCurrent_contact_id();
+  if ( !defined $currID ) {
+    return undef;
+  } elsif ( $currID == 107 ) {
+    return 1;
+  } else { 
+    return 0;
+  }
 }
 
 
