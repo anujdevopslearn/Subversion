@@ -1123,7 +1123,7 @@ END
 		if($n_array_scans > 0){
 $html .= <<END;
  <tr>
-  <td><A HREF="ProcessProject.cgi">Submit a New Job to the Two Color Analysis Pipeline</A></td>
+  <td><A HREF="PipelineSetup.cgi">Submit a New Job to the Two Color Analysis Pipeline</A></td>
   <td>Process Two Color Arrays.  
   	<A HREF="http://db.systemsbiology.net/software/ArrayProcess/" TARGET="_blank">What is the Two Color Data Processing Pipeline?</A> 
   </td>
