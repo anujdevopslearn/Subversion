@@ -26,6 +26,7 @@ use FindBin;
 
 use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+	     %hash_to_sort
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
@@ -307,8 +308,8 @@ sub handle_request {
       ["intense_percent","SCP1.at_level_percent","Percent Intense"],
       ["equivocal_percent","SCP2.at_level_percent","Percent Equivocal"],
       ["none_percent","SCP3.at_level_percent","Percent None"],
-["sort_order","A.sort_order","A.sort_order"],
-["sort_order","CT.sort_order","CT.sort_order"],			
+      ["antibody_sort_order","A.sort_order","antibody_sort_order"],
+      ["cell_type_sort_order","CT.sort_order","cell_type_sort_order"],			
     );
   }
 
@@ -389,8 +390,8 @@ sub handle_request {
 
   #### Define columns that should be hidden in the output table
   %hidden_cols = ('stained_slide_id' => 1,
-									'A.sort_order'	=>	1,
-									'CT.sort_order'	=>	1
+		  'antibody_sort_order'	=> 1,
+		  'cell_type_sort_order' => 1
   );
 
 
@@ -550,7 +551,7 @@ foreach my $key (keys %{$query_parameters_ref})
 			my $probability = ($row[$biosequence_name_column_index->{intense_percent}] + $row[$biosequence_name_column_index->{equivocal_percent}]/2)/100;
 			$dataHash{$antibodyName}->{$cellTypeName}->{probability}+=$probability if $cellTypeName; 
 			$dataHash{$antibodyName}->{$cellTypeName}->{numberOfEx}++ if $cellTypeName;
-			$cellTypeHash{$cellTypeName}=1 if $cellTypeName;
+			$cellTypeHash{$cellTypeName} = $row[$biosequence_name_column_index->{cell_type_sort_order}] if ($cellTypeName);
 			push @antibodyArray, $antibodyName if $prevAntibodyName ne $antibodyName and $cellTypeName; 
 			$prevAntibodyName = $antibodyName;
 			$irow++;
@@ -564,7 +565,8 @@ foreach my $key (keys %{$query_parameters_ref})
 	print "<table border = 2 borderColor=black align = center>";
 	print "<tr><td></td>\n";
 
-	foreach my $cellType (sort keys %cellTypeHash)
+        %hash_to_sort = %cellTypeHash;
+	foreach my $cellType (sort bySortOrder keys %cellTypeHash)
 	{
 			print  "<td><b>$cellType</b></td>";
 			print "<td>NumOfExp</td>" if $query_parameters_ref->{display_options} =~ /number of/i;
@@ -580,7 +582,7 @@ foreach my $key (keys %{$query_parameters_ref})
 			my $expNumber;
 			print  "<tr><td><b>$antibodyKey</b></td>\n"; 
 
-			foreach my $cellKey (sort keys %{$dataHash{$antibodyKey}})
+			foreach my $cellKey (sort bySortOrder keys %cellTypeHash)
 			{
 					my $key = $antibodyKey; 
 #		print "anbtibody: $key\n";	
@@ -653,3 +655,20 @@ foreach my $key (keys %{$query_parameters_ref})
 
 
 
+###############################################################################
+# bySortOrder
+#
+# Sorting function for a hash with sort_order values
+###############################################################################
+sub bySortOrder {
+
+  #### First sort by the value
+  if ($hash_to_sort{$a} <=> $hash_to_sort{$b}) {
+    return $hash_to_sort{$a} <=> $hash_to_sort{$b};
+
+  #### And if those are equal, sort by key
+  } else {
+    return $a cmp $b;
+  }
+
+}
