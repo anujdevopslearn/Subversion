@@ -74,4 +74,10 @@
   ./update_driver_tables.pl $CONFDIR/PeptideAtlas/PeptideAtlas_table_property.txt
   ./update_driver_tables.pl $CONFDIR/PeptideAtlas/PeptideAtlas_table_column.txt
 
+  ./update_driver_tables.pl $CONFDIR/Ontology/Ontology_table_property.txt
+  ./update_driver_tables.pl $CONFDIR/Ontology/Ontology_table_column.txt
+
+
+
+
 

@@ -82,6 +82,7 @@ DBPREFIX{Biosap}        = Biosap.dbo.
 DBPREFIX{Cytometry}     = Cytometry.dbo.
 DBPREFIX{Immunostain}   = Immunostain.dbo.
 DBPREFIX{Microarray}    = sbeams.dbo.
+DBPREFIX{Ontology}      = Ontology.dbo.
 DBPREFIX{PhenoArray}    = PhenoArray.dbo.
 DBPREFIX{PeptideAtlas}  = PeptideAtlas.dbo.
 DBPREFIX{ProteinStructure}    = ProteinStructure.dbo.

@@ -1,0 +1,44 @@
+table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
+ON_ontology	1	ontology_id	Ontology ID	int	4	0	N		Y							N	N				pkDEFAULT
+ON_ontology	2	ontology_name	Ontology Name	varchar	255	0	N		N			Y	text	40		Y	Y	Y	Name of this Tissue Type		
+ON_ontology	3	ontology_tag	Ontology Tag	varchar	50	0	N		N			Y	text	20		Y	Y	N	Name of this Tissue Type		
+ON_ontology	4	ontology_description	Ontology Description	text	16	0	N		N			Y	textarea	4		Y	Y	N	Longer description of this Tissue Type		
+ON_ontology	5	accessor	Accessor	varchar	255	0	N		N			Y	text	50		Y	Y	N	Part of a URL or URI to which an accession number can be appended to get more information about the entity using this cross reference		
+ON_ontology	6	accessor_suffix	Accessor Suffix	varchar	255	0	Y		N			N	text	50		Y	Y	N	Part of a URL or URI which comes after the accession number to build the full URL to get more information about the entity using this cross reference		
+ON_ontology	7	uri	URI	varchar	255	0	N		N			Y	text	50		Y	Y	N	External web page or other URI of the database		SELF
+ON_ontology	8	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+ON_ontology	9	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Integer designed to assist in sort records of this type		
+ON_ontology	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+ON_ontology	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+ON_ontology	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+ON_ontology	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+ON_ontology	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+ON_ontology	15	record_status	Record Status	char	1	0	N	N	N							N	N				
+ON_ontology_term	1	ontology_term_id	Ontology ID	int	4	0	N		Y							N	N				pkDEFAULT
+ON_ontology_term	2	term_type_term_id	Term Type	int	4	0	N		N	ON_ontology_term	ontology_term_id	Y	optionlist			Y	Y	Y	Name of this Tissue Type		
+ON_ontology_term	3	term_name	Term Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of this Tissue Type		
+ON_ontology_term	4	term_abbreviation	Term Abbreviation	varchar	50	0	Y		N			N	text	30		Y	Y	N	Name of this Tissue Type		
+ON_ontology_term	5	term_definition	Term Definition	text	16	0	N		N			Y	textarea	8		Y	Y	N	Longer description of this Tissue Type		
+ON_ontology_term	6	source_ontology_id	Source Ontology	int	4	0	N		N	ON_ontology	ontology_id	Y	textarea	8		Y	Y	N	Name of this Tissue Type		
+ON_ontology_term	7	source_ontology_accession	Source Ontology Accession	varchar	255	0	N		N			Y	text	40		Y	Y	N	Name of this Tissue Type		
+ON_ontology_term	8	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+ON_ontology_term	9	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Integer designed to assist in sort records of this type		
+ON_ontology_term	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+ON_ontology_term	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+ON_ontology_term	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+ON_ontology_term	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+ON_ontology_term	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+ON_ontology_term	15	record_status	Record Status	char	1	0	N	N	N							N	N				
+ON_ontology_term_relationship	1	ontology_term_relationship_id	Ontology ID	int	4	0	N		Y							N	N				pkDEFAULT
+ON_ontology_term_relationship	2	subject_term_id	Subject Term	int	4	0	N		N	ON_ontology_term	ontology_term_id	Y	optionlist			Y	Y	Y	Name of this Tissue Type
+ON_ontology_term_relationship	3	predicate_term_id	Predicate Term	int	4	0	N		N	ON_ontology_term	ontology_term_id	Y	optionlist			Y	Y	Y	Name of this Tissue Type
+ON_ontology_term_relationship	4	object_term_id	Object Term	int	4	0	N		N	ON_ontology_term	ontology_term_id	Y	optionlist			Y	Y	Y	Name of this Tissue Type
+ON_ontology_term_relationship	5	relationship_type_term_id	Relationship Type	int	4	0	N		N	ON_ontology_term	ontology_term_id	Y	optionlist			Y	Y	N	Name of this Tissue Type
+ON_ontology_term_relationship	6	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments
+ON_ontology_term_relationship	7	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Integer designed to assist in sort records of this type
+ON_ontology_term_relationship	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
+ON_ontology_term_relationship	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N		
+ON_ontology_term_relationship	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
+ON_ontology_term_relationship	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N		
+ON_ontology_term_relationship	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N		
+ON_ontology_term_relationship	13	record_status	Record Status	char	1	0	N	N	N							N	N		
