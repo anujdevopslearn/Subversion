@@ -115,9 +115,9 @@ IS_cell_presence_level	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contac
 IS_cell_presence_level	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 IS_cell_presence_level	13	record_status	Record Status	char	1	0	N	N	N							N	N				
 IS_stain_cell_presence	1	stain_cell_presence_id	Stain Cell Presence ID	int	4	0	N		Y							N	N				pkDEFAULT
-IS_stain_cell_presence	2	stained_slide_id	Stain Slide	int	4	0	N		N	IS_stained_slide	stained_slide_id	Y	optionlist			Y	Y	Y	Stain for this this call is made	"SELECT stain_id, stain_name FROM $TBIS_STAIN ORDER BY sort_order,stain_name"	
+IS_stain_cell_presence	2	stained_slide_id	Stain Slide	int	4	0	N		N	IS_stained_slide	stained_slide_id	Y	optionlist			Y	Y	Y	Stain for this this call is made	"SELECT stained_slide_id, stain_name FROM $TBIS_STAINED_SLIDE ORDER BY stain_name"	
 IS_stain_cell_presence	3	cell_type_id	Cell Type	int	4	0	N		N	IS_cell_type	cell_type_id	Y	optionlist			Y	Y	Y	Cell type for this which this call is made	"SELECT cell_type_id, cell_type_name FROM $TBIS_CELL_TYPE ORDER BY sort_order,cell_type_name"	
-IS_stain_cell_presence	4	cell_presence_level_id	Cell Presence Level	int	4	0	N		N	IS_cell_presence_level	cell_presence_level_id	Y	optionlist			Y	Y	N	Level of presence that is called out	"SELECT cell_presence_level_id, level_name FROM $TBIS_CELL_PRESENCE_LEVEL ORDER BY sort_order,cell_presence_level_name"	
+IS_stain_cell_presence	4	cell_presence_level_id	Cell Presence Level	int	4	0	N		N	IS_cell_presence_level	cell_presence_level_id	Y	optionlist			Y	Y	N	Level of presence that is called out	"SELECT cell_presence_level_id, level_name FROM $TBIS_CELL_PRESENCE_LEVEL ORDER BY sort_order,level_name"	
 IS_stain_cell_presence	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 IS_stain_cell_presence	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 IS_stain_cell_presence	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
@@ -143,6 +143,7 @@ IS_stained_slide	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_
 IS_stained_slide	16	record_status	Record Status	char	1	0	N	N	N							N	N				
 IS_slide_image	1	slide_image_id	Slide Image ID	int	4	0	N		Y							N	N				pkDEFAULT
 IS_slide_image	2	stained_slide_id	Stained Slide	int	4	0	N		N	IS_stained_slide	stained_slide_id	Y	optionlist			Y	Y	Y	Stained slide of which this is an image (or of a part of thereof)	"SELECT stained_slide_id, stain_name FROM $TBIS_STAINED_SLIDE ORDER BY stain_name"	
+IS_slide_image	4	image_name	Image Name	varchar	255	0	Y		N			N	text	50		Y	Y	N	Name of the image (perhaps the file name or perhaps some carefully encoded name created by rules)		
 IS_slide_image	3	protocol_id	Imaging Protocol	int	4	0	N		N	protocol	protocol_id	Y	optionlist			Y	Y	Y	Protocol used to image this slide	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='Immunostain Image Acquisition' AND P.record_status != 'D' ORDER BY P.name"	
 IS_slide_image	4	image_magnification	Image Magnification	real	4	0	N		N			N	text	20		Y	Y	Y	Magnification of the instrument for this image (Enter a decimal number with no 'x' or other characters)		
 IS_slide_image	5	protocol_deviations	Protocol Deviations	text	16	0	Y		N			N	textarea	6		Y	Y	Y	Describe any deviations from the intented above protocol to the way this slide was actually imaged or supply special instrument settings not normally recorded in the protocol		
@@ -189,7 +190,7 @@ IS_specimen_block	5	acquisition_time	Acquisition Time	real	4	0	Y		N			N	text	20	
 IS_specimen_block	6	protocol_deviations	Protocol Deviations	text	16	0	Y		N			N	textarea	6		Y	Y	N	Describe any deviations from the intented above protocol to the way this preparation was actually executed		
 IS_specimen_block	7	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 IS_specimen_block	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-IS_specimen_block	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_specimen_block	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N
 IS_specimen_block	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N
 IS_specimen_block	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N
 IS_specimen_block	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N
