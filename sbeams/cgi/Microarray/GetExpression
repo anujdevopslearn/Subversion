@@ -273,6 +273,16 @@ sub handle_request {
     constraint_value=>$parameters{log10_ratio_constraint} );
   return if ($log10_ratio_clause eq '-1');
 
+
+  #### Build P VALUE constraint
+  my $p_value_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"GE.p_value",
+    constraint_type=>"flexible_float",
+    constraint_name=>"P Value",
+    constraint_value=>$parameters{p_value_constraint} );
+  return if ($p_value_clause eq '-1');
+
+
   #### Build Lambda constraint
   my $lambda_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"GE.lambda",
@@ -318,6 +328,7 @@ sub handle_request {
     "GE.log10_ratio"=>["log10_ratio","GE.log10_ratio","log10 Ratio"],
     "GE.log10_uncertainty"=>["log10_uncertainty","GE.log10_uncertainty","log10 Uncertainty"],
     "GE.log10_std_deviation"=>["log10_std_deviation","GE.log10_std_deviation","log10 Std Dev"],
+    "GE.p_value"=>["p_value","GE.p_value","P Value"],
     "GE.lambda"=>["lambda","GE.lambda","Lambda"],
     "GE.mu_x"=>["mu_x","GE.mu_x","mu_x"],
     "GE.mu_y"=>["mu_y","GE.mu_y","mu_y"],
@@ -326,7 +337,7 @@ sub handle_request {
   );
 
 
-  #### If the user does not choose which columns to show, set defaults
+  #### If the user does not choose which data columns to show, set defaults
   my @additional_columns = ();
   my $display_columns = $parameters{display_columns};
   unless (defined($parameters{display_columns}) &&
@@ -337,7 +348,7 @@ sub handle_request {
     #### Else, select them all
     } else {
       $display_columns = "GE.log10_ratio,GE.log10_uncertainty,".
-        "GE.log10_std_deviation,".
+        "GE.log10_std_deviation,GE.p_value,".
         "GE.lambda,GE.mu_x,GE.mu_y,GE.mean_intensity,GE.quality_flag";
     }
   }
@@ -346,7 +357,7 @@ sub handle_request {
   #### Add the desired display columns to the assitional_columns array
   my @tmp = split(",",$display_columns);
 
-  #### If this is a pivot query, design the aggregate colums
+  #### If this is a pivot query, design the aggregate data columns
   if ($parameters{display_options} =~ /PivotConditions/) {
     my @condition_ids = split(/,/,$parameters{condition_id});
     my $counter = 1;
@@ -383,9 +394,14 @@ sub handle_request {
   my @column_array = (
     ["condition_name","C.condition_name","Condition"],
     ["biosequence_name","BS.biosequence_name","Biosequence Name"],
+    ["reporter_name","GE.reporter_name","Reporter Name"],
+    ["common_name","GE.common_name","Common Name"],
+    ["canonical_name","GE.canonical_name","Canonical Name"],
+    ["external_identifier","GE.external_identifier","External Identifier"],
     ["gene_name","GE.gene_name","Gene Name"],
-    ["second_name","GE.second_name","Other Name"],
+#    ["second_name","GE.second_name","Other Name"],
     @additional_columns,
+    ["full_name","GE.full_name","Full Name"],
   );
 
 
@@ -436,11 +452,13 @@ sub handle_request {
               $description_clause
    	      $second_name_clause
 	      $log10_ratio_clause
+	      $p_value_clause
 	      $lambda_clause
              )
     ~;
     #### Remove contraints that might limit conditions
     $log10_ratio_clause = '';
+    $p_value_clause = '';
     $lambda_clause = '';
   }
 
@@ -460,6 +478,7 @@ sub handle_request {
 	$biosequence_name_clause
         $description_clause
 	$log10_ratio_clause
+        $p_value_clause
 	$lambda_clause
 
         $subselect_clause
