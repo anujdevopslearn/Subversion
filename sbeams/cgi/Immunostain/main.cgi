@@ -389,13 +389,14 @@ sub processAntibody
   my %parameters = %{$ref_parameters};
 	my %resultset = ();
   my $resultset_ref = \%resultset;
-	
 	my $includeClause = $parameters{antibody_id};
-	if ($includeClause eq 'all')
+	$includeClause = 'all' if !$includeClause;
+	if ($includeClause eq 'all' )
 	{ 
 			$includeClause = "Select antibody_id from $TBIS_ANTIBODY";
 	}
 	
+
 	my $query = "select ab.antibody_name,ab.antibody_id,
 	ss.stain_name,
 	ss.stained_slide_id,
@@ -425,7 +426,7 @@ sub processAntibody
 	my $columHashRef = $resultset_ref->{column_hash_ref};
   my $dataArrayRef = $resultset_ref->{data_ref};
   my ($count, $prevStainedSlideId,$indexCounter) = 0;
-	my (%stainHash,%cellHash,%stainIdHash,%imageIdHash, %imageProcessedHash,%percentHash,%countHash,,%antibodyHash, %cellTypeHash);
+	my (%stainHash,%cellHash,%stainIdHash,%stainCellHash,%imageIdHash, %imageProcessedHash,%percentHash,%countHash,,%antibodyHash, %cellTypeHash);
 	my ($prevStain,$prevAntibody);
 #arrange the data in a result set we can easily use
 	my $rowCount = scalar(@{$resultset_ref->{data_ref}});
@@ -482,19 +483,22 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Antibody Summary</f
 				
 #get all the cell types and the number of the stains available per intensity level per celltype per antibody
 #this is the number of instances a cell type stains at a certain level
-				$cellHash{$antibody}->{$cellType}->{$level}++ if $cellType;
+			$cellHash{$antibody}->{$cellType}->{intense}++ if !$stainCellHash{$stainName}->{$cellType} and  $cellType and $atLevelPercent ne 'NULL'; 
+				$cellHash{$antibody}->{$cellType}->{equivocal}++  if !$stainCellHash{$stainName}->{$cellType} and   $cellType and $atLevelPercent ne 'NULL';
+				$cellHash{$antibody}->{$cellType}->{none}++ if !$stainCellHash{$stainName}->{$cellType} and  $cellType and $atLevelPercent ne 'NULL';
 		  
 #get the average percent of staining per celltype per level
 #number of total percent level of intensity (at this level) for a celltype/total number of available stains		
 
-				$percentHash{$antibody}->{$cellType}->{intense} +=	$atLevelPercent if $row[$levelIndex] eq 'intense';			
-				$percentHash{$antibody}->{$cellType}->{equivocal} += $atLevelPercent if $row[$levelIndex] eq 'equivocal'; 	
-				$percentHash{$antibody}->{$cellType}->{none} += $atLevelPercent if $row[$levelIndex] eq 'none';
+				$percentHash{$antibody}->{$cellType}->{intense} +=	$atLevelPercent if $row[$levelIndex] eq 'intense' and $atLevelPercent ne 'NULL';			
+				$percentHash{$antibody}->{$cellType}->{equivocal} += $atLevelPercent if $row[$levelIndex] eq 'equivocal' and $atLevelPercent ne 'NULL'; 	
+				$percentHash{$antibody}->{$cellType}->{none} += $atLevelPercent if $row[$levelIndex] eq 'none' and $atLevelPercent ne 'NULL';
 				$cellTypeHash{$cellType} = $row[$cellNameIdIndex];
 				$antibodyHash{$antibody} = $row[$antibodyIdIndex];
 				$indexCounter ++;
 				$prevStain = $stainName;
 				$prevAntibody = $antibody;
+				$stainCellHash{$stainName}->{$cellType} = 1;
 		}	
 		
 
@@ -536,7 +540,7 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Antibody Summary</f
 					 
 			}	
 			
-			print "<tr></tr><tr></tr><tr><td><b>Individual Stains</b></td><td align=center colspan=4><b>Available Images</b></td></tr><tr></tr>";
+			print "<tr></tr><tr></tr><tr><td><b>Individual Stains</b></td><td align=center><b>Available Images</b></td></tr><tr></tr>";
 			
 		foreach my $species (keys %{$stainHash{$antibodyKey}})
 			{
@@ -548,13 +552,16 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Antibody Summary</f
 							print qq~ <tr><TD NOWRAP>- <A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=_processStain&stained_slide_id=$stainID">$stain</A></TD>~;
 							
 							%hash_to_sort = %{$stainHash{$antibodyKey}->{$species}->{$stain}};
+							my $imageString = '';
 							foreach my $image (sort bySortOrder keys %{$stainHash{$antibodyKey}->{$species}->{$stain}})
 							{
 									my $magnification = $stainHash{$antibodyKey}->{$species}->{$stain}->{$image};
 									my $imageID = $imageIdHash{$image};
 									my $flag = $imageProcessedHash{$image};
-									print qq~ <TD NOWRAP align = center>- <A HREF= "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_slide_image&slide_image_id=$imageID&GetFile=$flag"> $magnification x</A></td>~ if $imageID;  
+									$imageString .=  "&nbsp\;&nbsp\;  - <A HREF= \"$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_slide_image&slide_image_id=$imageID&GetFile=$flag\"> $magnification x<\/A>" if $imageID;
+									
 							}
+							print "<TD colspan=4>$imageString</td>";
 							print "</tr><tr></tr>";
 					}
 					
@@ -585,6 +592,7 @@ sub processStain
 
 
 	my $includeClause = $parameters{stained_slide_id};
+	$includeClause = 'all' if !$includeClause;
 	if ($includeClause eq 'all')
 	{ 
 			$includeClause = "Select stained_slide_id from $TBIS_STAINED_SLIDE";
@@ -845,6 +853,7 @@ sub processCells
   my $resultset_ref = \%resultset;
 	
 	my $includeClause = $parameters{cell_type_id};
+	$includeClause = 'all' if !$includeClause;
 	if ($includeClause eq 'all')
 	{ 
 			$parameters{cell_type_id} ='';
