@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
 
 ###############################################################################
-# Program     : CompareExperiments
+# Program     : AddFCSRuns
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
 # $Id$
 #
@@ -333,7 +333,7 @@ sub getProjectName {
 
   #### Get the name of this project_id
   my $sql = qq"
-    SELECT name
+    SELECT project_tag
       FROM $TB_PROJECT
      WHERE project_id = '$project_id'
        AND record_status != 'D'
