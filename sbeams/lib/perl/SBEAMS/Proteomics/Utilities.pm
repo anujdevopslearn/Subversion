@@ -838,6 +838,12 @@ sub getHydropathyIndex {
     N => -3.5,
     K => -3.9,
     R => -4.5,
+
+    X => 0.0,
+    B => -3.5,
+    Z => -3.5,
+    U => 2.5,
+
   );
 
   return %hydropathy_index;
@@ -939,6 +945,17 @@ sub calcNTransmembraneRegions {
 
     #print $i-$iWindowSize," at ",$dHydro/$iWindowSize,"\n";
 
+
+    #### During debugging, figure out who's missing
+    if (0) {
+      unless (defined($hydropathy_index{$residues[$i]}) && defined($hydropathy_index{$residues[$i-$iWindowSize]})) {
+        print "Leading residue '$residues[$i]'\n";
+        print "Trailing residue '$residues[$i-$iWindowSize]'\n";
+        print "i=$i\n";
+        print "Sequence: $peptide\n";
+        exit;
+      }
+    }
 
     #### Update the rolling hydropathy sum
     $dHydro += $hydropathy_index{$residues[$i]} -
