@@ -415,16 +415,16 @@ sub handle_request {
            SB.search_batch_id AS "search_batch_id",
            S.msms_spectrum_id AS "msms_spectrum_id"
 	  INTO #tmp1
-	  FROM proteomics.dbo.search_hit SH
-	 INNER JOIN proteomics.dbo.search S ON ( SH.search_id = S.search_id )
-	 INNER JOIN proteomics.dbo.search_batch SB
+	  FROM $TBPR_SEARCH_HIT SH
+	 INNER JOIN $TBPR_SEARCH S ON ( SH.search_id = S.search_id )
+	 INNER JOIN $TBPR_SEARCH_BATCH SB
                ON ( S.search_batch_id = SB.search_batch_id )
-	 INNER JOIN proteomics.dbo.msms_spectrum MSS
+	 INNER JOIN $TBPR_MSMS_SPECTRUM MSS
                ON ( S.msms_spectrum_id = MSS.msms_spectrum_id )
-	 INNER JOIN proteomics.dbo.fraction F ON ( MSS.fraction_id = F.fraction_id )
-	 INNER JOIN proteomics.dbo.biosequence_set BSS
+	 INNER JOIN $TBPR_FRACTION F ON ( MSS.fraction_id = F.fraction_id )
+	 INNER JOIN $TBPR_BIOSEQUENCE_SET BSS
                ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
-	 INNER JOIN proteomics.dbo.proteomics_experiment PE
+	 INNER JOIN $TBPR_PROTEOMICS_EXPERIMENT PE
                ON ( F.experiment_id = PE.experiment_id )
 	 WHERE 1 = 1
 	$search_batch_clause
