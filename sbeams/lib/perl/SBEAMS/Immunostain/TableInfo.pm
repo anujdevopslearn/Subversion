@@ -85,13 +85,15 @@ sub returnTableInfo {
       return qq~	
 		  SELECT SS.assay_id,project_tag,tissue_type_name,
 			specimen_block_name,antibody_name,assay_name,
-			assay_description, A.sort_order
+			assay_description, A.sort_order, organism_name
 			FROM $TBIS_ASSAY SS
 			LEFT JOIN $TB_PROJECT P ON ( SS.project_id = P.project_id )
 			LEFT JOIN $TBIS_SPECIMEN_BLOCK SB
 			ON ( SS.specimen_block_id = SB.specimen_block_id )
 			LEFT JOIN $TBIS_SPECIMEN S
 			ON ( SB.specimen_id = S.specimen_id )
+			LEFT JOIN $TB_ORGANISM O
+			ON ( S.organism_id = O.organism_id )
 			LEFT JOIN $TBIS_TISSUE_TYPE TT
 			ON ( S.tissue_type_id = TT.tissue_type_id )
 			Left Join $TBIS_ASSAY_CHANNEL AC 
@@ -103,7 +105,8 @@ sub returnTableInfo {
 			A.sort_order,A.antibody_name,SS.assay_name
       ~;
       } elsif ( $info_key eq 'hidden_cols' ) {
-        return ( sort_order => 1 );
+        return ( sort_order => 1,
+                 organism_id => 1 );
     }
   }
 	
