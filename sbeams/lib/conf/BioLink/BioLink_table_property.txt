@@ -9,3 +9,4 @@ BL_evidence	Evidence	BioLink_infrastructure	YES	$TBBL_EVIDENCE	evidence_id		Mana
 BL_relationship_type	Relationship Type	BioLink_infrastructure	YES	$TBBL_RELATIONSHIP_TYPE	relationship_type_id		ManageTable.cgi?TABLE_NAME=BL_relationship_type	BL_relationship_type	
 BL_relationship	Relationship	BioLink_infrastructure	YES	$TBBL_RELATIONSHIP	relationship_id		ManageTable.cgi?TABLE_NAME=BL_relationship	BL_relationship	
 BL_BrowseBioSequence	Browse BioSequence	QUERY	NO				BrowseBioSequence.cgi		
+BL_genome_coordinates	Biosequence	BioLink_infrastructure	NO $TBBL_GENOME_COORDS	coordinate_id ManageTable.cgi?TABLE_NAME=BL_genome_coordinates	
