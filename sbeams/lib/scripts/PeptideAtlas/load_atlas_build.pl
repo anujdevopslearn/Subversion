@@ -251,6 +251,12 @@ sub handleRequest {
 
   } ## end --load
 
+
+  if ($TESTONLY || $purge) {
+      print "\a done\n";
+  }
+
+
 } # end handleRequest
 
 ###############################################################################
@@ -392,7 +398,10 @@ sub buildAltas {
                 FROM $TBPR_SEARCH_BATCH
             WHERE search_batch_id = '$tmp_search_batch_id[$ii]'
         ~;
-        @rows = $sbeams->selectOneColumn($sql); # should return a single entry
+        # should return a single entry
+        @rows = $sbeams->selectOneColumn($sql)
+            or die "could not find search batch id/experiment id $tmp_search_batch_id[$ii] in Proteomics.dbo.search_batch ($!)"; 
+
         my $tmp_experiment_id = @rows[0];
 
         $sql = qq~
@@ -400,15 +409,20 @@ sub buildAltas {
                 FROM $TBPR_PROTEOMICS_EXPERIMENT
             WHERE experiment_id = '$tmp_experiment_id'
         ~;
-        @rows = $sbeams->selectOneColumn($sql); # should return a single entry
+        # should return a single entry
+        @rows = $sbeams->selectOneColumn($sql)
+            or die "could not find experiment_tag for experiment id $tmp_experiment_id" .
+            " in Proteomics.dbo.proteomics_experiment ($!)";
         my $tmp_experiment_tag = @rows[0];
 
         $sql = qq~
             SELECT sample_id
                 FROM $TBAT_SAMPLE
             WHERE sample_tag = '$tmp_experiment_tag'
+            AND record_status != 'D'
         ~;
-        @rows = $sbeams->selectOneColumn($sql); # should return a single entry
+        @rows = $sbeams->selectOneColumn($sql) 
+            or die "could not find sample id for tag $tmp_experiment_tag in PeptideAtlas.dbo.sample ($!)";
         my $tmp_sample_id = @rows[0];
 
  
@@ -539,15 +553,15 @@ sub buildAltas {
       $ind++;
    }   ## end reading coordinate mapping file
    close(INFILE);
+
    my $ensembl_hits_last_ind = $ind - 1 ;  #last index of Ensembl hits arrays
  
    ## n_protein_mappings -- number of distinct accession numbers (proteins) 
    ##                       that a peptide maps to
-   ## n_genome_locations -- number of hits to Genome where protein is not the same
+   ## n_genome_locations -- number of mappings to Genome where protein is not the same
    ##                       (in other words, counts span over exons only once)
-   ## is_exon_spanning  --  whether a peptide has been identified as the
-   ##                       same protein with two or more different sets of 
-   ##                       chromosomal coordinates
+   ## is_exon_spanning  --  whether a peptide has been mapped to a protein more than
+   ##                       once (with different chromosomal coordinates)
  
 
    # print "size of hash = " . keys( %index_hash ) . ".\n";
@@ -576,9 +590,9 @@ sub buildAltas {
          my $coord_string=$chromosome[$i_ind] . $start_in_chromosome[$i_ind];
          $unique_protein_hash{$biosequence_name[$i_ind]} = $coord_string;
 
-         ## is_exon_spanning...'y' when maps to one protein with more than one coordinate sets
+         ## is_exon_spanning...'y' when maps to one protein with more than one coordinate set
          ## make unique coord hash (keys=coordinate string, values=protein)
-         $unique_coord_hash{$coord_string} = $biosequence_name[$i_ind];
+         $unique_coord_hash{$biosequence_name[$i_ind]}{$coord_string} = $biosequence_name[$i_ind];
 
       } 
 
@@ -599,13 +613,13 @@ sub buildAltas {
           my $array_protein = $biosequence_name[$tmpind];
           ## if values of unique_coord_hash == $array_protein more than once, is_exon_spanning='y'
           my $coord_count = 0;
-          foreach my $hash_protein (values ( %unique_coord_hash ) ) {
-              if ($array_protein == $hash_protein) {
-                  $coord_count++;
-              }
-          }
-          if ($coord_count > 1) {
-              $is_exon_spanning[$tmpind]= 'y'; 
+
+          ## need to unroll for each biosequence_name...
+          foreach my $tmp_biosequence_name ( keys %unique_coord_hash ) {       
+
+              $coord_count =  ( keys %{$unique_coord_hash{$tmp_biosequence_name}} );
+
+              if ($coord_count > 1) { $is_exon_spanning[$tmpind]= 'y'; }
           }
       }
      
@@ -636,13 +650,13 @@ sub buildAltas {
    ## testing match to above rules:
    if ($TESTONLY && ($organism_abbrev eq 'Hs') ) {  ## the above cases have P=1.0, and tested for Ens build 22
        for (my $ii = 0; $ii <= $ensembl_hits_last_ind; $ii++) {
-           my @test_pep = ("APDpep00011291", "APDpep00004221", "APDpep00004290");
-           my @test_n_genome_locations = ("1", "1", "2");
-           my @test_n_protein_mappings = ("2", "1", "2");
-           my @test_is_exon_spanning = ('n', 'y', 'y');
+           my @test_pep = ("APDpep00011291", "APDpep00004221", "APDpep00004290", "APDpep00005006");
+           my @test_n_protein_mappings = ("2", "1", "2", "5");
+           my @test_n_genome_locations = ("1", "1", "2", "5");
+           my @test_is_exon_spanning = ('n', 'y', 'y', 'n');
 
-           for (my $jj = 0; $jj < 3; $jj++) {
-               if ($peptide_accession[$ii] == $test_pep[$jj]) {
+           for (my $jj = 0; $jj <= $#test_pep; $jj++) {
+               if ($peptide_accession[$ii] eq $test_pep[$jj]) {
                    if ($n_genome_locations[$ii] != $test_n_genome_locations[$jj]) {
                        print "!!  $test_pep[$jj] ";
                        print " $n_genome_locations[$ii] not equal to $test_n_genome_locations[$jj]!! \n";
@@ -722,31 +736,36 @@ sub buildAltas {
                    owner_group_id, record_status
               FROM $TBAT_SAMPLE
             WHERE sample_id = '$tmp_sample_id[$ii]'
-              AND record_status != 'D'
+                AND record_status != 'D'
           ~;
-          my @rows = $sbeams->selectSeveralColumns($sql); ## array of refs to array
-#         print "sample id $tmp_sample_id[$ii]...@rows->[0]->[0] @rows->[0]->[1] \n";
+          ## array of refs to array:
+          my @rows = $sbeams->selectSeveralColumns($sql)
+             or die "Couldn't find record for sample_id = $tmp_sample_id[$ii] in PeptideAtlas.dbo.sample ($!)";
 
-          my %rowdata = (   ##   peptide_instance_sample    table attributes
-             peptide_instance_id => $peptide_instance_id,
-             sample_id => $tmp_sample_id[$ii],
-             date_created => @rows->[0]->[0],
-             created_by_id  => @rows->[0]->[1],
-             date_modified  => @rows->[0]->[2],
-             modified_by_id  => @rows->[0]->[3],
-             owner_group_id  => @rows->[0]->[4],
-             record_status  => @rows->[0]->[5],
-          );
+          foreach my $row (@rows) {
+             my ($dc, $cbi, $dm, $mbi, $ogi, $rs) = @{$row};
 
-          $peptide_instance_sample_id = $sbeams->updateOrInsertRow(
-             insert=>1,
-             table_name=>$TBAT_PEPTIDE_INSTANCE_SAMPLE,
-             rowdata_ref=>\%rowdata,
-             PK => 'peptide_instance_sample_id',
-             return_PK => 1,
-             verbose=>$VERBOSE,
-             testonly=>$TESTONLY,
-          );
+             my %rowdata = (   ##   peptide_instance_sample    table attributes
+                peptide_instance_id => $peptide_instance_id,
+                sample_id => $tmp_sample_id[$ii],
+                date_created => $dc,
+                created_by_id  => $cbi,
+                date_modified  => $dm,
+                modified_by_id  => $mbi,
+                owner_group_id  => $ogi,
+                record_status  => $rs,
+             );
+
+             $peptide_instance_sample_id = $sbeams->updateOrInsertRow(
+                insert=>1,
+                table_name=>$TBAT_PEPTIDE_INSTANCE_SAMPLE,
+                rowdata_ref=>\%rowdata,
+                PK => 'peptide_instance_sample_id',
+                return_PK => 1,
+                verbose=>$VERBOSE,
+                testonly=>$TESTONLY,
+             );
+          }
        }  ## end peptide_instance_sample loop
      }  ## end  "not already present in peptide" loop
  
@@ -836,30 +855,33 @@ sub buildAltas {
               WHERE sample_id = '$tmp_sample_id[$ii]'
                 AND record_status != 'D'
             ~;
-            my @rows = $sbeams->selectSeveralColumns($sql); ## array of refs to array
-#           print "sample id $tmp_sample_id[$ii]...@rows->[0]->[0] @rows->[0]->[1] ",
-            "@rows->[0]->[2] @rows->[0]->[3] @rows->[0]->[4] @rows->[0]->[5]\n";
+            my @rows = $sbeams->selectSeveralColumns($sql)
+               or die "Couldn't find record for sample_id = $tmp_sample_id[$ii] in PeptideAtlas.dbo.sample ($!)";
 
-            my %rowdata = (   ##   peptide_instance_sample    table attributes
-               peptide_instance_id => $peptide_instance_id,
-               sample_id => $tmp_sample_id[$ii],
-               date_created => @rows->[0]->[0],
-               created_by_id  => @rows->[0]->[1],
-               date_modified  => @rows->[0]->[2],
-               modified_by_id  => @rows->[0]->[3],
-               owner_group_id  => @rows->[0]->[4],
-               record_status  => @rows->[0]->[5],
-            );
+             foreach my $row (@rows) {
+                my ($dc, $cbi, $dm, $mbi, $ogi, $rs) = @{$row};
 
-            $peptide_instance_sample_id = $sbeams->updateOrInsertRow(
-               insert=>1,
-               table_name=>$TBAT_PEPTIDE_INSTANCE_SAMPLE,
-               rowdata_ref=>\%rowdata,
-               PK => 'peptide_instance_sample_id',
-               return_PK => 1,
-               verbose=>$VERBOSE,
-               testonly=>$TESTONLY,
-            );
+                my %rowdata = (   ##   peptide_instance_sample    table attributes
+                    peptide_instance_id => $peptide_instance_id,
+                    sample_id => $tmp_sample_id[$ii],
+                    date_created => $dc,
+                    created_by_id  => $cbi,
+                    date_modified  => $dm,
+                    modified_by_id  => $mbi,
+                    owner_group_id  => $ogi,
+                    record_status  => $rs,
+                 );
+
+                 $peptide_instance_sample_id = $sbeams->updateOrInsertRow(
+                    insert=>1,
+                    table_name=>$TBAT_PEPTIDE_INSTANCE_SAMPLE,
+                    rowdata_ref=>\%rowdata,
+                    PK => 'peptide_instance_sample_id',
+                    return_PK => 1,
+                    verbose=>$VERBOSE,
+                    testonly=>$TESTONLY,
+                 );
+             }
          }  ## end peptide_instance_sample loop
       }
    } ## end peptide_instance entries for those not in Ensembl
