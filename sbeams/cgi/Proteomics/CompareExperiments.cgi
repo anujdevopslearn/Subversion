@@ -165,7 +165,7 @@ sub printEntryForm {
 
 
     #### If no parameters are supplied, set some sensible defaults
-    if (($TABLE_NAME eq "BrowseAnnotatedPeptides") && $no_params_flag ) {
+    if (($TABLE_NAME eq "CompareExperiments") && $no_params_flag ) {
       $parameters{annotation_status_id} = 'Annot';
     }
 
