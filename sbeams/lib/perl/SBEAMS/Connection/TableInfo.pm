@@ -830,7 +830,7 @@ sub getProjectDetailsTable {
   }
   
   my @rows = $self->selectSeveralColumns( <<"  END_SQL" );
-  SELECT project_id, project_status, project_tag,
+  SELECT project_id, project_status, project_tag, description,
          first_name + ' ' + last_name AS PI_name, name 
   FROM $TB_PROJECT p JOIN $TB_CONTACT c
   ON c.contact_id = p.PI_contact_id
@@ -842,14 +842,18 @@ sub getProjectDetailsTable {
     return undef;
   }
     
-  my ( $project_id, $project_status, $project_tag, $PI_name, $project_name ) = @{$rows[0]};
+  my ( $project_id, $project_status, $project_tag, $proj_desc, $PI_name, $project_name ) = @{$rows[0]};
 
   my $table =<<"  END_TAB";
-	<H1>Current Project: 
+	<H1>Summary of $project_name (ID # 
    <A class="h1" HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=$project_id">
-   $project_name </A>
+   $project_id </A>):
   </H1>
   <TABLE WIDTH="100%" BORDER=0>
+	<TR>
+    <TD></TD>
+    <TD COLSPAN="2"><B>PI:</B> $PI_name</TD>
+  </TR>
 	<TR>
     <TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
 	  <TD COLSPAN="2" WIDTH="100%"><B>Status:</B> $project_status</TD></TR>
@@ -859,7 +863,7 @@ sub getProjectDetailsTable {
   </TR>
 	<TR>
     <TD></TD>
-    <TD COLSPAN="2"><B>Owner:</B> $PI_name</TD>
+    <TD COLSPAN="2"><B>Description:</B> $proj_desc</TD>
   </TR>
 	<TR>
     <TD></TD>
@@ -867,6 +871,7 @@ sub getProjectDetailsTable {
     </TD>
   </TR>
   </TABLE>
+  <BR>
   END_TAB
 
   return $table;
