@@ -30,6 +30,7 @@ use vars qw(@ISA @EXPORT
     $TB_TABLE_GROUP_SECURITY
     $TB_SQL_COMMAND_LOG
     $TB_USAGE_LOG
+    $TB_HELP_TEXT
 
 );
 
@@ -54,6 +55,7 @@ require Exporter;
     $TB_TABLE_GROUP_SECURITY
     $TB_SQL_COMMAND_LOG
     $TB_USAGE_LOG
+    $TB_HELP_TEXT
 
 );
 
@@ -77,5 +79,6 @@ $TB_TABLE_PROPERTY      = 'table_property';
 $TB_TABLE_GROUP_SECURITY= 'table_group_security';
 $TB_SQL_COMMAND_LOG     = 'sql_command_log';
 $TB_USAGE_LOG           = 'usage_log';
+$TB_HELP_TEXT           = 'help_text';
 
 
