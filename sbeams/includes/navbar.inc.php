@@ -3,7 +3,7 @@
 
 <!-- --------------- Navigation Bar: List of links ------------------------ -->
 <tr><td align="left" valign="top" bgcolor="#cdd1e7">
-<table border=0 width="120" cellpadding=0 cellspacing=0>
+<table border=0 width="128" cellpadding=0 cellspacing=0>
 
 <a href="http://www.systemsbiology.org/">ISB Main WWW</a><br>
 

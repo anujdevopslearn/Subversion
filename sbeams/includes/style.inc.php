@@ -47,5 +47,5 @@ if (eregi("Mozilla\/4.+X11",$client)) {
 </head>
 
 <!-- Begin body: background white, text black -------------------------------->
-<body bgcolor="#FFFFFF" text="#000000">
+<body bgcolor="#FFFFFF" text="#000000" TOPMARGIN=0 LEFTMARGIN=0>
 
