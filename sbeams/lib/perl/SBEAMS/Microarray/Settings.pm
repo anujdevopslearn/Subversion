@@ -23,6 +23,7 @@ use vars qw(@ISA @EXPORT
     $AFFY_DEFAULT_DIR
     @AFFY_DEFAULT_FILES
     $AFFY_ZIP_REQUEST_DIR
+    $AFFY_R_CHP_ANALYSIS_PROTOCOL
 );
 
 require Exporter;
@@ -36,9 +37,11 @@ require Exporter;
 #### Define new variables
 $SBEAMS_PART            = 'MicroArray';
 $AFFY_DEFAULT_DIR	= '/net/arrays/Affymetrix/core/probe_data';
-@AFFY_DEFAULT_FILES	= qw(CHP CEL XML RPT);		#files that will be used to determine if a group of files, all sharing the same basename, are all present when uploading Affy arrays 
+@AFFY_DEFAULT_FILES	= qw(CHP CEL XML RPT R_CHP JPEG);		#files that will be used to determine if a group of files, all sharing the same basename, are all present when uploading Affy arrays 
 
 $AFFY_ZIP_REQUEST_DIR 	= '/net/arrays/Affy_Zip_Request';
+
+$AFFY_R_CHP_ANALYSIS_PROTOCOL = 'R Mas5.0 CHP';				#Current protocol that describes the R script to produce the CHP like file
 
 #### Override variables from main Settings.pm
 $SBEAMS_SUBDIR          = 'Microarray';
@@ -47,6 +50,16 @@ $SBEAMS_SUBDIR          = 'Microarray';
 
 ### Methods to access data
 
+#######################################################
+# get_affy_r_chp_protocol
+# get the default affy files extensions need for uploading a complete set of files
+#######################################################
+sub get_affy_r_chp_protocol {
+	my $either = shift;
+    
+    	my $class = ref($either) || $either;		#class level method no need to get the class name
+    	return $AFFY_R_CHP_ANALYSIS_PROTOCOL;
+}
 
 #######################################################
 # get_AFFY_FILES
