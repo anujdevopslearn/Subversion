@@ -525,7 +525,7 @@ sub printForm {
 	"</table>",
 	"<br><hr>",
 	"<h3>Comments:</h3>",
-	"<textarea name=comments cols=80 rows=5></textarea>",
+	"<textarea name=comments cols=80 rows=5>$comments</textarea>",
         "<br><br><hr>",
 	"<input type=submit name=action value=\"Submit to BioSap\">",
 	"<input type=submit name=action value=\"Test Run Featurama\">",
