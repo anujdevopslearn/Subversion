@@ -318,6 +318,15 @@ sub handle_request {
   return if ($domain_match_source_clause eq '-1');
 
 
+  #### Build DOMAIN MATCH TYPE constraint
+  my $domain_match_type_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"DM.domain_match_type_id",
+    constraint_type=>"int_list",
+    constraint_name=>"Domain Match Type",
+    constraint_value=>$parameters{domain_match_type_constraint} );
+  return if ($domain_match_type_clause eq '-1');
+
+
   #### Build DOMAIN MATCH NAME constraint
   my $domain_match_name_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"DM.match_name",
@@ -414,21 +423,40 @@ sub handle_request {
   @column_array = (
     ["biosequence_set_name","BSS.set_name","Biosequence Set Name"],
     ["biosequence_name","BS.biosequence_name","Biosequence Name"],
-    ["accessor","DBX.accessor","accessor"],
-    ["biosequence_accession","BS.biosequence_accession","Accession"],
+    ["biosequence_accessor","DBX.accessor","biosequence_accessor"],
+    ["biosequence_accession","BS.biosequence_accession","Biosequence Accession"],
+    ["match_source_name","DMS.domain_match_source_name","Match Source"],
+    ["domain_match_index","DM.domain_match_index","idx"],
+    ["overall_probability","STR(DM.overall_probability,7,3)","Over- all P"],
+    ["best_match_flag","DM.best_match_flag","BH"],
+    ["cluster_name","DM.cluster_name","Cluster"],
+
     ["query_start","DM.query_start","Query Start"],
     ["query_end","DM.query_end","Query End"],
     ["query_length","DM.query_length","Query Length"],
     ["match_start","DM.match_start","Match Start"],
     ["match_end","DM.match_end","Match End"],
+    ["match_length","DM.match_length","Match Length"],
+
+    ["match_type_name","DMT.domain_match_type_name","Match Type"],
     ["match_name","DM.match_name","Match Name"],
-    ["match_source_name","DMS.domain_match_source_name","Match Source"],
+    ["match_accessor","TDBX.accessor","match_accessor"],
+    ["match_accession","DM.match_accession","match_accession"],
+    ["match_accessor_suffix","TDBX.accessor_suffix","match_accessor_suffix"],
+
+    ["probability","STR(DM.probability,7,3)","Prob"],
     ["e_value","DM.e_value","E value"],
     ["score","DM.score","Score"],
     ["z_score","DM.z_score","Z Score"],
+
     @additional_columns,
+
+    ["second_match_name","DM.second_match_name","Cath ID"],
+    ["second_match_accession","DM.second_match_accession","second_match_accession"],
+    ["match_annotation","DM.match_annotation","Match Annotation"],
+
     ["biosequence_desc","BS.biosequence_desc","Reference Description"],
-    ["biosequence_set_id","BSS.biosequence_set_id","Biosequence Set ID"],
+    ["biosequence_set_id","BSS.biosequence_set_id","biosequence_set_id"],
   );
 
 
@@ -458,6 +486,10 @@ sub handle_request {
           FROM $TBPS_DOMAIN_MATCH DM
           LEFT JOIN $TBPS_DOMAIN_MATCH_SOURCE DMS
 	       ON ( DM.domain_match_source_id = DMS.domain_match_source_id )
+          LEFT JOIN $TBPS_DOMAIN_MATCH_TYPE DMT
+	       ON ( DM.domain_match_type_id = DMT.domain_match_type_id )
+          LEFT JOIN $TB_DBXREF TDBX
+	       ON ( DMT.dbxref_id = TDBX.dbxref_id )
 	 INNER JOIN $TBPS_BIOSEQUENCE BS
 	       ON ( DM.biosequence_id = BS.biosequence_id )
           LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
@@ -473,6 +505,7 @@ sub handle_request {
         $biosequence_desc_clause
 
         $domain_match_source_clause
+        $domain_match_type_clause
         $domain_match_name_clause
 
         $molecular_function_clause
@@ -509,32 +542,30 @@ sub handle_request {
 
 
   #### Define the hypertext links for columns that need them
-  %url_cols = ('Accession' => "\%$colnameidx{accessor}V\%$colnameidx{biosequence_accession}V",
-    	       'Accession_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information about this protein in source database\'; return true"',
+  %url_cols = ('Biosequence Accession' => "\%$colnameidx{accessor}V\%$colnameidx{biosequence_accession}V\%$colnameidx{biosequence_accessor_suffix}V",
+    	       'Biosequence Accession_ATAG' => 'TARGET="Win1" ',
                'Biosequence Name' => "$CGI_BASE_DIR/ProteinStructure/GetDomainHits?QUERY_NAME=PS_GetDomainHit&biosequence_id=$parameters{biosequence_id}&biosequence_name_constraint=\%V&apply_action=$pass_action",
-               'Match Name' => "http://www.sanger.ac.uk/cgi-bin/Pfam/getacc?\%V",
+               'Match Name' => "\%$colnameidx{match_accessor}V\%$colnameidx{match_accession}V\%$colnameidx{match_accessor_suffix}V",
     	       'Match Name_ATAG' => 'TARGET="WinExt" ',
 
                'Query Start' => "$CGI_BASE_DIR/ProteinStructure/BrowseBioSequence.cgi?biosequence_name_constraint=\%$colnameidx{biosequence_name}V&biosequence_set_id=\%$colnameidx{biosequence_set_id}V&label_start=\%$colnameidx{query_start}V&label_end=\%$colnameidx{query_end}V&apply_action=HIDEQUERY&display_options=SequenceFormat,ShowExtraProteinProps",
     	       'Query Start_ATAG' => 'TARGET="Win1" ',
 
-               'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
-               'Molecular Function_ATAG' => 'TARGET="WinExt"',
-               'Molecular Function_OPTIONS' => {semicolon_separated_list=>1},
-               'Biological Process' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{biological_process_GO}V",
-               'Biological Process_ATAG' => 'TARGET="WinExt"',
-               'Biological Process_OPTIONS' => {semicolon_separated_list=>1},
-               'Cellular Component' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{cellular_component_GO}V",
-               'Cellular Component_ATAG' => 'TARGET="WinExt"',
-               'Cellular Component_OPTIONS' => {semicolon_separated_list=>1},
-               'InterPro Protein Domain' => "http://www.ebi.ac.uk/interpro/IEntry?ac=\%$colnameidx{interpro_protein_domain_GO}V",
-               'InterPro Protein Domain_ATAG' => 'TARGET="WinExt"',
-               'InterPro Protein Domain_OPTIONS' => {semicolon_separated_list=>1},
+               'Cath ID' => "http://www.biochem.ucl.ac.uk/bsm/cath_new/class\%$colnameidx{second_match_accession}V/index.html",
+    	       'Cath ID_ATAG' => 'TARGET="WinExt" ',
+
   );
 
 
   #### Define columns that should be hidden in the output table
-  %hidden_cols = ('accessor' => 1,
+  %hidden_cols = (
+		  'biosequence_accessor' => 1,
+		  'biosequence_accessor_suffix' => 1,
+		  'match_accessor' => 1,
+		  'match_accession' => 1,
+		  'match_accessor_suffix' => 1,
+                  'second_match_accession' => 1,
+                  'molecular_function_GO' => 1,
                   'molecular_function_GO' => 1,
                   'biological_process_GO' => 1,
                   'cellular_component_GO' => 1,
