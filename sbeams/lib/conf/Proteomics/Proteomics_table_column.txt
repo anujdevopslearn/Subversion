@@ -871,12 +871,12 @@ PR_proteomics_sample_protocol	6	date_modified	Date Record Modified	datetime	8	0	
 PR_proteomics_sample_protocol	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 PR_proteomics_sample_protocol	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 PR_proteomics_sample_protocol	9	record_status	Record Status	char	1	0	N	N	N							N	N				
-PR_experiment_samples	1	experiment_sample_id	Experiment Samples ID	int	4	0	N		Y			Y				N	N		Linking table for experiments and proteomic samples		pkDEFAULT
-PR_experiment_samples	2	proteomics_sample_id	Proteomics Sample ID	int	4	0	N		N	PR_proteomics_sample	proteomics_sample_id	Y				Y	N		Proteomics Sample ID		
-PR_experiment_samples	3	experiment_id	Experiment ID	int	4	0	N		N	PR_proteomics_experiment	experiment_id	Y				N	N		Experiment ID		
-PR_experiment_samples	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PR_experiment_samples	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-PR_experiment_samples	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PR_experiment_samples	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-PR_experiment_samples	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N
-PR_experiment_samples	9	record_status	Record Status	char	1	0	N	N	N							N	N
+PR_experiments_samples	1	experiment_sample_id	Experiment Samples ID	int	4	0	N		Y			Y				N	N		Linking table for experiments and proteomic samples		pkDEFAULT
+PR_experiments_samples	2	proteomics_sample_id	Proteomics Sample ID	int	4	0	N		N	PR_proteomics_sample	proteomics_sample_id	Y				Y	N		Proteomics Sample ID		
+PR_experiments_samples	3	experiment_id	Experiment ID	int	4	0	N		N	PR_proteomics_experiment	experiment_id	Y				N	N		Experiment ID		
+PR_experiments_samples	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_experiments_samples	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+PR_experiments_samples	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_experiments_samples	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+PR_experiments_samples	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N
+PR_experiments_samples	9	record_status	Record Status	char	1	0	N	N	N							N	N
