@@ -595,7 +595,7 @@ sub handle_request {
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
     );
 
-    $group_by_clause = " GROUP BY SB.search_batch_id,SH.biosequence_id,$colname";
+    $group_by_clause = " GROUP BY SB.search_batch_id,SH.reference,$colname";
     $final_group_by_clause = " GROUP BY BS.biosequence_gene_name,BS.biosequence_accession,BS.biosequence_name,$colname,BS.biosequence_desc,DBX.accessor$additional_grouping_columns";
     $count_column = "COUNT(*) AS 'row_count'";
     $peptide_column = "$colname,";
@@ -624,7 +624,7 @@ sub handle_request {
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
     );
 
-    $group_by_clause = " GROUP BY SB.search_batch_id,SH.biosequence_id";
+    $group_by_clause = " GROUP BY SB.search_batch_id,SH.reference";
     $final_group_by_clause = " GROUP BY BS.biosequence_gene_name,BS.biosequence_accession,BS.biosequence_name,BS.biosequence_desc,DBX.accessor$additional_grouping_columns";
     $count_column = "COUNT(*) AS 'row_count'";
 
@@ -682,7 +682,7 @@ sub handle_request {
 
   #### Define the SQL statement
   $sql = qq~
-	SELECT DISTINCT BS.biosequence_id
+	SELECT BS.biosequence_name,MIN(BS.biosequence_id) AS 'min_biosequence_id'
 	  INTO #tmpBSids
 	  FROM $TBPR_BIOSEQUENCE BS
 	  JOIN $TBPR_SEARCH_BATCH SB
@@ -697,10 +697,11 @@ sub handle_request {
         $molecular_function_clause
         $biological_process_clause
         $cellular_component_clause
+	 GROUP BY BS.biosequence_name
 
 	--
 
-	SELECT SB.search_batch_id,SH.biosequence_id,$peptide_column$count_column
+	SELECT SB.search_batch_id,SH.reference,$peptide_column$count_column
 	  INTO #tmpAnnBSids
 	  FROM $TBPR_SEARCH_HIT SH
 	  JOIN $TBPR_SEARCH S ON ( SH.search_id = S.search_id )
@@ -714,7 +715,7 @@ sub handle_request {
 	       ON ( S.search_batch_id = SB.search_batch_id )
 	  JOIN $TBPR_BIOSEQUENCE BS
 	       ON ( SB.biosequence_set_id = BS.biosequence_set_id
-	       AND SH.biosequence_id = BS.biosequence_id )
+	       AND SH.reference = BS.biosequence_name )
 	 WHERE 1 = 1
 	$search_batch_clause
 	$probability_clause
@@ -744,9 +745,9 @@ sub handle_request {
 	SELECT $limit_clause $columns_clause
 	  FROM #tmpBSids tBS
 	  LEFT JOIN #tmpAnnBSids tABS
-               ON ( tBS.biosequence_id = tABS.biosequence_id )
+               ON ( tBS.biosequence_name = tABS.reference )
 	  JOIN $TBPR_BIOSEQUENCE BS
-               ON ( tBS.biosequence_id = BS.biosequence_id )
+               ON ( tBS.min_biosequence_id = BS.biosequence_id )
           LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
           $GO_join
 	 WHERE 1 = 1
