@@ -23,7 +23,9 @@ use SBEAMS::Proteomics::Utilities;
 @ISA = qw(SBEAMS::Proteomics::DBInterface
           SBEAMS::Proteomics::HTMLPrinter
           SBEAMS::Proteomics::TableInfo
-          SBEAMS::Proteomics::Settings);
+          SBEAMS::Proteomics::Settings
+          SBEAMS::Proteomics::Utilities
+         );
 
 
 ###############################################################################
