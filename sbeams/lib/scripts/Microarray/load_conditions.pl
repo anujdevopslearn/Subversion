@@ -715,14 +715,14 @@ sub loadFiles {
       my $column_map_ref= getColumnMapping(source_file=>"$directory/$search_file");
 
 
-	  if ($column_map_ref) {
-		print "Column_mapping:\n";
-		my %temp = %{$column_map_ref};
-		foreach my $key (keys %temp ) {
-		  print "$key => $temp{$key}\n";
-		}
-		return;
-	  }
+#	  if ($column_map_ref) {
+#		print "Column_mapping:\n";
+#		my %temp = %{$column_map_ref};
+#		foreach my $key (keys %temp ) {
+#		  print "$key => $temp{$key}\n";
+#		}
+#		return;
+#	  }
       
       ##  Insert the gene_expression data!
       insertGeneExpression(condition_id=>$condition_id,
@@ -827,9 +827,7 @@ sub getColumnMapping {
 	}
   }
 
-  if ($VERBOSE) {
-      print "# Will load file according to $file_type scheme\n";
-  }
+  print "# Will load file according to $file_type scheme\n";
 
   ## Get appropriate mapping of column headers to database fields
   my $header_hash_ref;
@@ -872,7 +870,7 @@ sub getHeaderHash {
 
   if ($organism eq "yeast") {
     %hash = ('external_ID'=>['reporter_name','canonical_name','external_identifier'],
-			 'gene_name'=>['full_name','common_name','gene_name']
+			 'GENE_NAME'=>['full_name','common_name','gene_name']
 	     );
   }elsif ($organism eq "mouse") {
     %hash = ('GENE_NAME'=>'gene_name',
