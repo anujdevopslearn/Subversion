@@ -619,6 +619,43 @@ sub update_data {
 			}
 			
 			
+ ####################################################################################################
+ ### Updating the Organization id
+			
+			if ($method =~ /afa_user_id$/){			#if we are updating the user ID for what ever reason we will have to update the sample_provider_organization_id too, since it is found by quering with the 
+									#user_login_id
+				
+				my $user_login_id = $affy_o->get_afa_user_id;
+				
+				my $org_id = $HOLD_COVERSION_VALS{'ORG_VAL'}{$user_login_id};	#need to pull the organizational info out of the HASH used to store data as the script runs
+				
+				my $rowdata_ref = { 	$column_name  => $org_id,	
+						
+					  };  
+				
+				if ($DEBUG > 0) {
+				print "UPDATE DATA FOR ORGANIZATION '$table_name' CLEAN NAME '$clean_table_name' \n", 
+					"PK_NAME = '$PK_COLUMN_NAME', PK_value = '$pk_value'\n",
+					"COLUMN NAME '$column_name' DATA '" . $affy_o->$method() . "' IN PROXY FOR UPDATING OGANIZATION ID\n";
+				
+				print Dumper($rowdata_ref);
+				}
+				
+				
+				my $returned_id = $sbeams->updateOrInsertRow(
+							table_name=>$table_name,
+				   			rowdata_ref=>$rowdata_ref,
+				   			return_PK=>1,
+				   			verbose=>$VERBOSE,
+				   			testonly=>$TESTONLY,
+				   			update=>1,
+				   			PK_name => $PK_COLUMN_NAME,
+							PK_value=> $pk_value,
+				   		   	add_audit_parameters=>1,
+						   );
+			}
+####################################################################################################			
+### Update the data
 			my $returned_id = $sbeams->updateOrInsertRow(
 							table_name=>$table_name,
 				   			rowdata_ref=>$rowdata_ref,
@@ -908,7 +945,7 @@ sub parse_xml_files {
 				AFA_USER_ID    => 	{	X_PATH  => 'MAGE-ML/BioMaterial_package/BioMaterial_assnlist/BioSource/PropertySets_assnlist/NameValueType[@name="Array User Name"]/@value',  #same as Project_name xpath, could not get substring xpath expressions to work 
 						 		SORT	=> 2,
 						 		VAL	=> '',
-						 		SQL	=> "	SELECT contact_id
+						 		SQL	=> "	SELECT user_login_id
 						 	    			FROM $TB_USER_LOGIN
 										WHERE username like 'HOOK_VAL'",
 						
