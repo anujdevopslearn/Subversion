@@ -22,8 +22,9 @@ use vars qw(@ISA @EXPORT
     $TB_USER_CONTEXT
     $TB_RECORD_STATUS
     $TB_PRIVILEGE
-    $TB_CONTACT
     $TB_CONTACT_TYPE
+    $TB_CONTACT
+    $TB_ORGANIZATION_TYPE
     $TB_ORGANIZATION
     $TB_PROJECT
     $TB_DBXREF
@@ -34,6 +35,7 @@ use vars qw(@ISA @EXPORT
     $TB_SQL_COMMAND_LOG
     $TB_USAGE_LOG
     $TB_HELP_TEXT
+    $TB_MISC_OPTION
 
 );
 
@@ -47,8 +49,9 @@ require Exporter;
     $TB_USER_CONTEXT
     $TB_RECORD_STATUS
     $TB_PRIVILEGE
-    $TB_CONTACT
     $TB_CONTACT_TYPE
+    $TB_CONTACT
+    $TB_ORGANIZATION_TYPE
     $TB_ORGANIZATION
     $TB_PROJECT
     $TB_DBXREF
@@ -59,6 +62,7 @@ require Exporter;
     $TB_SQL_COMMAND_LOG
     $TB_USAGE_LOG
     $TB_HELP_TEXT
+    $TB_MISC_OPTION
 
 );
 
@@ -69,8 +73,9 @@ $TB_USER_WORK_GROUP     = 'user_work_group';
 $TB_USER_CONTEXT        = 'user_context';
 $TB_RECORD_STATUS       = 'record_status';
 $TB_PRIVILEGE           = 'privilege';
-$TB_CONTACT             = 'contact';
 $TB_CONTACT_TYPE        = 'contact_type';
+$TB_CONTACT             = 'contact';
+$TB_ORGANIZATION_TYPE   = 'organization_type';
 $TB_ORGANIZATION        = 'organization';
 $TB_PROJECT             = 'project';
 
@@ -83,5 +88,6 @@ $TB_TABLE_GROUP_SECURITY= 'table_group_security';
 $TB_SQL_COMMAND_LOG     = 'sql_command_log';
 $TB_USAGE_LOG           = 'usage_log';
 $TB_HELP_TEXT           = 'help_text';
+$TB_MISC_OPTION         = 'misc_option';
 
 
