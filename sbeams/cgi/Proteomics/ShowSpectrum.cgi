@@ -113,7 +113,8 @@ sub printEntryForm {
 
     #### Define the parameters that can be passed by CGI
     my @possible_parameters = qw ( msms_spectrum_id search_batch_id peptide
-                                   masstype charge zoom xmin xmax masstol ionlab);
+      masstype charge zoom xmin xmax masstol ionlab assumed_charge
+      precursor_mass );
     my %parameters;
 
 
@@ -143,8 +144,19 @@ sub printEntryForm {
 
 
     $BKGCOLOR = "#EEEEEE";
-    $parameters{'charge'} = "1,2" unless $parameters{'charge'};
+
+    #### If no list of charges was supplied, set a default based on
+    #### the assumed_charge of the search
+    unless ($parameters{'charge'}) {
+      if ($parameters{'assumed_charge'} == 1) {
+        $parameters{'charge'} = "1";
+      } else {
+        $parameters{'charge'} = "1,2"
+      }
+    }
+
     my @charge = split(',',$parameters{'charge'});
+
     $parameters{'masstol'} = 2 unless $parameters{'masstol'};
 
     $parameters{'ionlab'} = "Horizontal" unless $parameters{'ionlab'};
@@ -239,7 +251,7 @@ sub printEntryForm {
     my $interval_power = int( log($interval) / log(10) );
     my $roundval = 10**$interval_power;
     $intenmax = int($intenmax/$roundval)*$roundval;
-    my $ydiv = $intenmax / 2;
+    my $ydiv = $intenmax / 5;
 
     #### Calculate fragment ions for the given peptide
     my @residues = Fragment($peptide);
@@ -264,9 +276,11 @@ sub printEntryForm {
     my $win = pg_setup(Device=>"$PHYSICAL_BASE_DIR/images/tmp/$tmpfile/gif",
                        title=>"$spectrum{msms_spectrum_file_root}",
                        xmin=>$parameters{xmin}, xmax=>$parameters{xmax},
-                       ymax=>$intenmax, ydiv=>$ydiv, nyticks=>1,
+                       ymax=>$intenmax, ydiv=>$ydiv, nyticks=>5,
                        gifwidth=>$parameters{gifwidth},gifheight=>$parameters{gifheight});
-    pgmtext 'T',-2,.01,0,"Peak value = $maxval";
+    pgsch 0.9;
+    pgmtext 'T',0.7,.01,0,"Peak value = $maxval";
+    pgmtext 'RV',-2,1.02,1,"Assumed charge = $parameters{assumed_charge}";
     $t4 = [gettimeofday()];
 
     my @peakcolors;
@@ -305,6 +319,18 @@ sub printEntryForm {
     } # end foreach
 
 
+    #### Draw Precursor mass symbol
+    if ($parameters{precursor_mass}) {
+      pgsci 2;    #### Default color
+      pgsch 2;    #### Character size
+      pgslw 5;    #### Line thinkness
+      pgsclp(0);   #### Disable clipping
+      pgpt(1,$parameters{precursor_mass},-0.34 * $interval,7);
+      pgsch 1;    #### Character size
+      pgpt(1,$parameters{precursor_mass},-0.34 * $interval,7);
+    }
+
+
     $t7 = [gettimeofday()];
 
 
@@ -321,9 +347,12 @@ sub printEntryForm {
 
 
     #### Print static input paramters as hidden fields
-    foreach $element ( qw ( msms_spectrum_id search_batch_id peptide masstype ) ) {
+    foreach $element ( qw ( msms_spectrum_id search_batch_id peptide
+      masstype assumed_charge precursor_mass ) ) {
       if ($parameters{$element}) {
-        print qq~<INPUT TYPE="hidden" NAME="$element" VALUE="$parameters{$element}">\n~;
+        print qq~
+          <INPUT TYPE="hidden" NAME="$element" VALUE="$parameters{$element}">
+        ~;
       }
     }
 
@@ -643,7 +672,7 @@ sub pg_setup {
     my $ytickdiv = $args{'ydiv'} || 100000;
 
     #### Default number of y ticks
-    my $nyticks = $args{'nyticks'}+1 || 4;
+    my $nyticks = ($args{'nyticks'}+1) || 4;
 
     #### Default image size is 640x480
     my $gifwidth = $args{'gifwidth'} || 640;
@@ -672,7 +701,7 @@ sub pg_setup {
     pgsci 15;
 
     #### Set character height
-    pgsch .8;
+    pgsch 0.9;
 
     #### Set line width
     pgslw 1;
@@ -812,48 +841,36 @@ sub PlotPeaks {
       #### If there are just B fragments with mass near enough this peak
       if (($Bind !~ 'Empty') && ($Yind =~ 'Empty')) {
         $lineclr = $redcol;
-        #$masslist_ref->{Bcolor}->[$Bind->at(0)] = $lineclr;
         push(@Binten,$intensity);
         push(@Bmass,$mass);
         if ($Bmaxinten[$Bind->at(0)] < $intensity) {
           $Bmaxinten[$Bind->at(0)] = $intensity;
-          $masslist_ref->{Bcolor}->[$Bind->at(0)] = $lineclr;
-          #$Binten[$Bind->at(0)] = $intensity;
-          #$Bmass[$Bind->at(0)] = $mass;
+          $masslist_ref->{Bcolor}->[$Bind->at(0)] = $lineclr
+            unless ($masslist_ref->{Bcolor}->[$Bind->at(0)]);
         }
 
       #### Else if there are just Y fragments with mass near enough this peak
       } elsif (($Yind !~ 'Empty') && ($Bind =~ 'Empty')) {
         $lineclr = $bluecol;
-        #$masslist_ref->{Ycolor}->[$Yind->at(0)] = $lineclr;
-        #$Yinten[$Yind->at(0)] = $intensity;
-        #$Ymass[$Yind->at(0)] = $mass;
         push(@Yinten,$intensity);
         push(@Ymass,$mass);
-        #if ($Yinten[$Yind->at(0)] < $intensity) {
         if ($Ymaxinten[$Yind->at(0)] < $intensity) {
           $Ymaxinten[$Yind->at(0)] = $intensity;
           $masslist_ref->{Ycolor}->[$Yind->at(0)] = $lineclr;
         }
 
-      #### Else if there are both B and Y fragments with mass near enough this peak
+      #### Else if both B and Y fragments with mass near enough this peak
       } elsif (($Bind !~ 'Empty') && ($Yind !~ 'Empty')) {
         $lineclr = $grcol;
-        #$masslist_ref->{Bcolor}->[$Bind->at(0)] = $lineclr;
-        #$masslist_ref->{Ycolor}->[$Yind->at(0)] = $lineclr;
         push(@BYinten,$intensity);
         push(@BYmass,$mass);
         if ($Ymaxinten[$Yind->at(0)] < $intensity) {
           $Ymaxinten[$Yind->at(0)] = $intensity;
           $masslist_ref->{Ycolor}->[$Yind->at(0)] = $lineclr;
-          #$BYinten[$Yind->at(0)] = $intensity;
-          #$BYmass[$Yind->at(0)] = $mass;
         }
-        if ($Binten[$Bind->at(0)] < $intensity) {
+        if ($Bmaxinten[$Bind->at(0)] < $intensity) {
           $Bmaxinten[$Bind->at(0)] = $intensity;
           $masslist_ref->{Bcolor}->[$Bind->at(0)] = $lineclr;
-          #$BYinten[$Bind->at(0)] = $intensity;
-          #$BYmass[$Bind->at(0)] = $mass;
         }
 
       #### else if there are no fragments with mass near enough this peak
@@ -982,7 +999,7 @@ sub LabelResidues {
           $lineclr = $grcol;
 
           #### Location of label above tick mark (moved up)
-          $labht = $y+6.5*($interval/3.);
+          $labht = $y+8.5*($interval/3.);
         } else {
           #### Red text and line for B ion match
           pgsci $redcol;
