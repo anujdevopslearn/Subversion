@@ -76,54 +76,54 @@ sub showMainPage {
 
     $sbeams->printUserContext();
 
-#   if ( $sbeams->isGuestUser ) {
-
-#       print <<"    END";
-#       <BR>
-#   END
-
-#   } else {
-
-#       print qq!
-#       <BR>
-# 	You are successfully logged into the $DBTITLE - $SBEAMS_PART system.
-# 	Please choose your tasks from the menu bar on the left.<P>
-# 	<BR>
-# 	This system is still under active development.  Please be
-# 	patient and report bugs, problems, difficulties, suggestions to
-# 	<B>edeutsch\@systemsbiology.org</B>.<P>
-# 	<BR>
-#       !;
-#   }
+    print <<"    END";
+        <BR>
+    END
 
     # Create new tabmenu item.  This may be a $sbeams object method in the future.
     my $tabmenu = 
         SBEAMS::Connection::TabMenu->new( cgi => $q,
-                                          inactiveColor => 'ffcc99',
-                                          activeColor   => 'aaaaff',
+                                          activeColor => 'ffcc99',
+                                          inactiveColor   => 'aaaacc',
+                                          hoverColor => 'ffcc99', 
                                           atextColor => '000000', # black
                                           itextColor => 'ff0000', # black
                                           # paramName => 'mytabname', # uses this as cgi param
-                                          # maSkin => 1,   # If true, use MA look/feel
-                                          # isSticky => 0, # If true, pass thru cgi params 
+                                          #maSkin => 1,   # If true, use MA look/feel
+                                          #isSticky => 0, # If true, pass thru cgi params 
                                           # boxContent => 0, # If true draw line around content
                                           # labels => \@labels # Will make one tab per $lab (@labels)
     );
 
     #Preferred way to add tabs.  label is required, helptext optional
-    $tabmenu->addTab( label => 'Browse Peptides', helptext => 'Multi-constraint browsing of PeptideAtlas' );
+    $tabmenu->addTab( label => 'Browse Peptides', 
+                      helptext => 'Multi-constraint browsing of PeptideAtlas',
+                      url => "http://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptides" );
 
-    $tabmenu->addTab( label => 'Get Peptide', helptext => 'Look-up info on a peptide by sequence or name' );
+    $tabmenu->addTab( label => 'Get Peptide', 
+                      helptext => 'Look-up info on a peptide by sequence or name',
+                      url => "http://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptide" 
+                      );
 
-    $tabmenu->addTab( label => 'Browse Proteins', helptext => 'Not implemented yet' );
+    $tabmenu->addTab( label => 'Browse Proteins',
+                      helptext => 'Not implemented yet',
+                      url => "http://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/main.cgi"
+                      );
 
-    $tabmenu->addTab( label => 'Get Protein', helptext => 'Not implemented yet' );
+    $tabmenu->addTab( label => 'Get Protein',
+                      helptext => 'Not implemented yet',
+                      url => "http://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/main.cgi"
+                      );
 
-    my $content;
+#   my $content;# = '&nbsp;';
+
+    $tabmenu->addHRule();
 
 
     if ( $tabmenu->getActiveTabName() eq 'Browse Peptides' ){
 
+        ## want to pipe results from call to GetPeptides into $content here...
+        ## $content = $sbeams->getCgiPage(GetPeptides);
         
     } elsif ( $tabmenu->getActiveTabName() eq 'Get Peptide' ) {
 
@@ -133,8 +133,8 @@ sub showMainPage {
 
     }
 
-    #print $tabmenu->asCSSHTML();
-    #print $tabmenu->asHTML();
-    print $tabmenu->asSimpleHTML();
+#   $tabmenu->addContent( $content );
+
+    print "$tabmenu";
 
 } # end showMainPage

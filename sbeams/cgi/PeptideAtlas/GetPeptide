@@ -34,6 +34,7 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TabMenu;
 
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
@@ -148,6 +149,79 @@ sub handle_request {
 
     my %parameters = %{$ref_parameters};
 
+    ## if no parameters are defined, set up some defaults to help with browsing
+    ## until I get a help menu set-up
+    unless ( ($parameters{atlas_build_id}) && 
+             ( ($parameters{atlas_build_id}) || ($parameters{atlas_build_id}) ) ) {
+    }
+
+    if ($parameters{'_tab'}) {
+
+        $sbeams->printUserContext();
+
+    print <<"    END";
+        <BR>
+    END
+
+        # Create new tabmenu item.  This may be a $sbeams object method in the future.
+        my $tabmenu =
+            SBEAMS::Connection::TabMenu->new( cgi => $q,
+                                          activeColor => 'ffcc99',
+                                          inactiveColor   => 'aaaacc',
+                                          hoverColor => 'ffcc99',
+                                          atextColor => '000000', # black
+                                          itextColor => 'ff0000', # black
+                                          # paramName => 'mytabname', # uses this as cgi param
+                                          #maSkin => 1,   # If true, use MA look/feel
+                                          #isSticky => 0, # If true, pass thru cgi params 
+                                          # boxContent => 0, # If true draw line around content
+                                          # labels => \@labels # Will make one tab per $lab (@labels)
+        );
+
+        #Preferred way to add tabs.  label is required, helptext optional
+        $tabmenu->addTab( label => 'Browse Peptides',
+                      helptext => 'Multi-constraint browsing of PeptideAtlas',
+                      url => "http://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptides" );
+
+        $tabmenu->addTab( label => 'Get Peptide',
+                      helptext => 'Look-up info on a peptide by sequence or name',
+                      url => "http://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/GetPeptide"
+                      );
+
+        $tabmenu->addTab( label => 'Browse Proteins',
+                      helptext => 'Not implemented yet',
+                      url => "http://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/main.cgi"
+                      );
+
+        $tabmenu->addTab( label => 'Get Protein',
+                      helptext => 'Not implemented yet',
+                      url => "http://db.systemsbiology.net/sbeams/cgi/PeptideAtlas/main.cgi"
+                      );
+
+#       my $content;# = '&nbsp;';
+
+        $tabmenu->addHRule();
+
+
+        if ( $tabmenu->getActiveTabName() eq 'Browse Peptides' ){
+
+            ## want to pipe results from call to GetPeptides into $content here...
+            ## $content = $sbeams->getCgiPage(GetPeptides);
+
+        } elsif ( $tabmenu->getActiveTabName() eq 'Get Peptide' ) {
+
+        } elsif ( $tabmenu->getActiveTabName() eq 'Browse Proteins' ) {
+
+        } elsif ( $tabmenu->getActiveTabName() eq 'Get Protein' ) {
+
+        }
+
+#       $tabmenu->addContent( $content );
+
+        print "$tabmenu";
+
+    }
+
 
     #### Define some generic varibles
     my ($i,$element,$key,$value,$line,$result,$sql);
@@ -216,10 +290,11 @@ sub handle_request {
 
         my ($tmp_id, $tmp_name) = @{$row};
 
-        push(@atlas_option_id_array, $tmp_id);
-        push(@atlas_option_name_array, $tmp_name);
+        unshift(@atlas_option_id_array, $tmp_id);
+        unshift(@atlas_option_name_array, $tmp_name);
     
     }
+
 
 
     #### Build search options for textbox:
