@@ -43,6 +43,12 @@ use SBEAMS::Proteomics::Utilities;
 use CGI;
 $q = CGI->new();
 
+  #### Set up use of some special stuff to calculate pI.  FIXME
+  use lib qw (/net/db/projects/proteomics/src/Proteomics/blib/lib
+    /net/db/projects/proteomics/src/Proteomics/blib/arch/auto/Proteomics);
+  use Proteomics;
+
+
 
 ###############################################################################
 # Set program name and usage banner for command like use
@@ -68,14 +74,14 @@ Options:
                        biosequence_set and number of existing peptide is shown
 
  e.g.:  $PROG_NAME --check_status
- e.g.:  $PROG_NAME --set_tag DrosAA_R2 --source_file floyd-pep.txt
+ e.g.:  $PROG_NAME --set_tag Dros_aaR2 --source_file floyd-pep.txt
 
 EOU
 
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
-  "delete_existing","update_existing","source_file",
+  "delete_existing","update_existing","source_file:s",
   "set_tag:s","check_status",
   )) {
   print "$USAGE";
@@ -197,6 +203,8 @@ sub handleRequest {
     exit;
   }
 
+  $biosequence_set_id = $biosequence_set_ids[0];
+
 
   #### Get the status of the biosequence_set
   my $status = getBiosequenceSetStatus(
@@ -281,7 +289,7 @@ sub getBiosequenceSetStatus {
   #### Get the number of peptides for this biosequence_set_id from database
   $sql = "
           SELECT count(*) AS 'count'
-            FROM ${DATABASE}possible_peptides PP
+            FROM ${DATABASE}possible_peptide PP
             JOIN ${DATABASE}biosequence BS
 	         ON ( PP.biosequence_id = BS.biosequence_id )
            WHERE BS.biosequence_set_id = '$biosequence_set_id'
@@ -346,12 +354,15 @@ sub loadPossiblePeptides {
   }
 
 
+  #goto UNIQUENESSUPDATE;
+
+
   #### Test if there are already sequences for this biosequence_set
   $sql = "
     SELECT COUNT(*)
       FROM ${DATABASE}possible_peptide PP
       JOIN ${DATABASE}biosequence BS
-           ON ( PP.biosequence_id = BS.biosequence_id PP )
+           ON ( PP.biosequence_id = BS.biosequence_id )
      WHERE biosequence_set_id = '$biosequence_set_id'
   ";
   my ($count) = $sbeams->selectOneColumn($sql);
@@ -363,10 +374,10 @@ sub loadPossiblePeptides {
     if ($delete_existing) {
       print "Deleting...\n$sql\n";
       $sql = "
-        DELETE possible_peptide
+        DELETE ${DATABASE}possible_peptide
           FROM ${DATABASE}possible_peptide PP
           JOIN ${DATABASE}biosequence BS
-               ON ( PP.biosequence_id = BS.biosequence_id PP )
+               ON ( PP.biosequence_id = BS.biosequence_id )
          WHERE biosequence_set_id = '$biosequence_set_id'
       ";
       $sbeams->executeSQL($sql);
@@ -402,14 +413,14 @@ sub loadPossiblePeptides {
   my %possible_peptide_ids;
   if ($update_existing) {
     $sql = "
-          SELECT biosequence_name+'-'+peptide+'-'+STR(peptide_offset),
+          SELECT biosequence_name+'-'+peptide_sequence+'-'+LTRIM(STR(peptide_offset)),
                  possible_peptide_id
             FROM ${DATABASE}possible_peptide PP
             JOIN ${DATABASE}biosequence BS
-                 ON ( PP.biosequence_id = BS.biosequence_id PP )
+                 ON ( PP.biosequence_id = BS.biosequence_id )
            WHERE BS.biosequence_set_id = '$biosequence_set_id'
     ";
-    my %possible_peptide_ids = $sbeams->selectTwoColumnHash($sql);
+    %possible_peptide_ids = $sbeams->selectTwoColumnHash($sql);
   }
 
 
@@ -421,6 +432,7 @@ sub loadPossiblePeptides {
 
   my ($biosequence_name,$mass,$peptide,$peptide_offset,$preceding_residue);
   my ($following_residue,$n_tryptic_terminii,$is_cysteine_containing);
+  my ($isoelectric_point);
 
   #### Loop over all data in the file
   while ($line=<INFILE>) {
@@ -443,19 +455,38 @@ sub loadPossiblePeptides {
       if (substr($peptide,length($peptide)-1,1) =~ /^[KR]$/);
     $is_cysteine_containing = 'N';
     $is_cysteine_containing = 'Y' if ($peptide =~ /C/);
+    $isoelectric_point = Proteomics::COMPUTE_PI($peptide,length($peptide),0);
+
+
+    #### Determine the biosequence_id
+    $biosequence_id = $biosequence_ids{$biosequence_name};
+    unless ($biosequence_id) {
+      print "ERROR: Unable to resolve biosequence_name '$biosequence_name'. ".
+        "Current settings require this.  Cannot continue.\n\n";
+      exit;
+    }
+
+
+    #### Add in a hack/check for peptide length
+    my $limited_peptide = $peptide;
+    if (length($peptide) > 1024) {
+      $limited_peptide = substr($peptide,0,1021).'...';
+      print "\nWARNING: Truncating peptide in '$biosequence_name'\n";
+    }
 
 
     #### Split the line into its components and populate attribute hash
     my %rowdata = (
       biosequence_id => $biosequence_id,
       mass => $mass,
-      peptide => $peptide,
+      peptide_sequence => $limited_peptide,
       peptide_offset => $peptide_offset,
       preceding_residue => $preceding_residue,
       following_residue => $following_residue,
       n_tryptic_terminii => $n_tryptic_terminii,
       is_cysteine_containing => $is_cysteine_containing,
       is_unique => 'N',
+      isoelectric_point => $isoelectric_point,
     );
 
 
@@ -510,19 +541,20 @@ sub loadPossiblePeptides {
   close(INFILE);
   print "\n$counter rows INSERT/UPDATed\n";
 
+UNIQUENESSUPDATE:
 
   print "Updating uniqueness flags...\n";
   $sql = "
-	UPDATE possible_peptide
+	UPDATE ${DATABASE}possible_peptide
 	   SET is_unique = 'Y'
 	 WHERE possible_peptide_id IN (
 		SELECT MAX(possible_peptide_id)
-		  FROM possible_peptide PP
-		  JOIN biosequence BS
-		       ON ( PP.biosequence_set_id = BS.biosequence_id )
+		  FROM ${DATABASE}possible_peptide PP
+		  JOIN ${DATABASE}biosequence BS
+		       ON ( PP.biosequence_id = BS.biosequence_id )
 		 WHERE 1 = 1
-		   AND biosequence_set_id = '$biosequence_set_id'
-		 GROUP BY peptide
+		   AND BS.biosequence_set_id = '$biosequence_set_id'
+		 GROUP BY peptide_sequence
 		HAVING COUNT(*) = 1
 	       )
   ";
