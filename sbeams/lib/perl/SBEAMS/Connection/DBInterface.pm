@@ -17,6 +17,7 @@ use CGI::Carp qw(fatalsToBrowser croak);
 use DBI;
 use POSIX;
 use Data::Dumper;
+use URI::Escape;
 
 
 #use lib "/net/db/src/CPAN/Data-ShowTable-3.3a";
@@ -1176,6 +1177,31 @@ sub displayResultSetControls {
       <BR>Download ResultSet in Format:
       <a href="$CGI_BASE_DIR/GetResultSet.cgi/$rs_params{set_name}.tsv?rs_set_name=$rs_params{set_name}&format=tsv">TSV</a>,
       <a href="$CGI_BASE_DIR/GetResultSet.cgi/$rs_params{set_name}.xls?rs_set_name=$rs_params{set_name}&format=excel">Excel</a>
+      <BR>
+    ~;
+
+
+    #### Supply URLs to get back to this resultset or redo this query
+    my $pg = $rs_params{page_number};
+    my $param_string = "";
+    while ( ($key,$value) = each %{$query_parameters_ref} ) {
+      if ($value) {
+        $param_string .= "&" if ($param_string);
+        my $value = uri_escape($value);
+        $param_string .= "$key=$value";
+      }
+    }
+
+    print qq~
+      <BR><nobr>URL to
+      <A HREF=\"$base_url?apply_action=VIEWRESULTSET&rs_set_name=$rs_params{set_name}&rs_page_size=$rs_params{page_size}&rs_page_number=$pg\">
+      recall this result set</A>:
+      $SERVER_BASE_DIR$base_url?apply_action=VIEWRESULTSET&rs_set_name=$rs_params{set_name}&rs_page_size=$rs_params{page_size}&rs_page_number=$pg</nobr>
+
+      <BR><nobr>URL to
+      <A HREF=\"$base_url?apply_action=QUERY&$param_string\">
+      re-execute this query</A>:
+      $SERVER_BASE_DIR$base_url?apply_action=QUERY&$param_string</nobr>
       <BR>
     ~;
 
