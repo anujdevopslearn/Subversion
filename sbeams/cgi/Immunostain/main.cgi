@@ -426,7 +426,7 @@ sub processAntibody
 	my $columHashRef = $resultset_ref->{column_hash_ref};
   my $dataArrayRef = $resultset_ref->{data_ref};
   my ($count, $prevStainedSlideId,$indexCounter) = 0;
-	my (%stainHash,%cellHash,%stainIdHash,%stainCellHash,%imageIdHash, %imageProcessedHash,%percentHash,%countHash,,%antibodyHash, %cellTypeHash);
+	my (%stainHash,%cellHash,%stainIdHash,%stainCellHash,%stainLevelHash,%imageIdHash, %imageProcessedHash,%percentHash,%countHash,,%antibodyHash, %cellTypeHash);
 	my ($prevStain,$prevAntibody);
 #arrange the data in a result set we can easily use
 	my $rowCount = scalar(@{$resultset_ref->{data_ref}});
@@ -480,25 +480,25 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Antibody Summary</f
 				
 				
 				
-				
 #get all the cell types and the number of the stains available per intensity level per celltype per antibody
 #this is the number of instances a cell type stains at a certain level
-			$cellHash{$antibody}->{$cellType}->{intense}++ if !$stainCellHash{$stainName}->{$cellType} and  $cellType and $atLevelPercent ne 'NULL'; 
-				$cellHash{$antibody}->{$cellType}->{equivocal}++  if !$stainCellHash{$stainName}->{$cellType} and   $cellType and $atLevelPercent ne 'NULL';
-				$cellHash{$antibody}->{$cellType}->{none}++ if !$stainCellHash{$stainName}->{$cellType} and  $cellType and $atLevelPercent ne 'NULL';
-		  
+				$cellHash{$antibody}->{$cellType}->{intense}++ if !$stainCellHash{$stainName}->{$cellType} and  $cellType and defined($atLevelPercent); 
+				$cellHash{$antibody}->{$cellType}->{equivocal}++  if !$stainCellHash{$stainName}->{$cellType} and   $cellType and defined($atLevelPercent);
+				$cellHash{$antibody}->{$cellType}->{none}++ if !$stainCellHash{$stainName}->{$cellType} and  $cellType and defined($atLevelPercent);
+				$cellHash{$antibody}->{$cellType}->{count}++if !$stainCellHash{$stainName}->{$cellType} and  $cellType;
 #get the average percent of staining per celltype per level
 #number of total percent level of intensity (at this level) for a celltype/total number of available stains		
 
-				$percentHash{$antibody}->{$cellType}->{intense} +=	$atLevelPercent if $row[$levelIndex] eq 'intense' and $atLevelPercent ne 'NULL';			
-				$percentHash{$antibody}->{$cellType}->{equivocal} += $atLevelPercent if $row[$levelIndex] eq 'equivocal' and $atLevelPercent ne 'NULL'; 	
-				$percentHash{$antibody}->{$cellType}->{none} += $atLevelPercent if $row[$levelIndex] eq 'none' and $atLevelPercent ne 'NULL';
+$percentHash{$antibody}->{$cellType}->{intense} +=	$atLevelPercent if $row[$levelIndex] eq 'intense' and defined($atLevelPercent) and !$stainLevelHash{$stainName}->{intense}->{$cellType};			
+$percentHash{$antibody}->{$cellType}->{equivocal} += $atLevelPercent if $row[$levelIndex] eq 'equivocal' and defined($atLevelPercent)	and !$stainLevelHash{$stainName}->{equivocal}->{$cellType};
+$percentHash{$antibody}->{$cellType}->{none} += $atLevelPercent if $row[$levelIndex] eq 'none' and defined($atLevelPercent) and !$stainLevelHash{$stainName}->{none}->{$cellType};	
 				$cellTypeHash{$cellType} = $row[$cellNameIdIndex];
 				$antibodyHash{$antibody} = $row[$antibodyIdIndex];
 				$indexCounter ++;
 				$prevStain = $stainName;
 				$prevAntibody = $antibody;
 				$stainCellHash{$stainName}->{$cellType} = 1;
+				$stainLevelHash{$stainName}->{$level}->{$cellType} = 1; 
 		}	
 		
 
@@ -520,8 +520,8 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Antibody Summary</f
 			print "<tr></tr><tr></tr><tr></tr><tr><td align=left><font color =\"#D60000\"><h5>$antibodyKey</h5></font></TD><tr><td><b>Total Number of Stains:</b> </td>";
 			print "<td align=center>$countHash{$antibodyKey}</td></tr><tr></tr>";
 			print "<tr><td align=left><b>Staining Summmary:</b></td></tr>";
-			print qq~ <tr><td></td><td align=center colspan=3><b>Average Percentage</b></td><td>&nbsp;&nbsp;&nbsp;</td><td align=center colspan=3><b>Number of charaterized Stains</b></td></tr>
-			<tr><td align = left> Cell Type </td><td align=center>Intense</td><td align=center> Equivocal </td><td align=center> None </td></tr> ~if $cellHash{$antibodyKey};
+			print qq~ <tr><td></td><td align=center colspan=3><b>Average Percentage</b></td><td align=center><b>Number of charaterized Stains</b></td></tr>
+			<tr><td align = left> Cell Type </td><td align=center>Intense</TD><TD align=center>Equivocal</td><td align=center>None</td></tr> ~if $cellHash{$antibodyKey};
 			
 			%hash_to_sort = %{$cellHash{$antibodyKey}} if $cellHash{$antibodyKey};
 			foreach my $cell (sort bySortOrder keys %{$cellHash{$antibodyKey}})
@@ -535,7 +535,7 @@ print "<tr><td></td><td align=center><H4><font color=\"red\">Antibody Summary</f
 					
 					print "<tr><td align=left><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&antibody_id=$antibodyHash{$antibodyKey}&cell_type_id=$cellTypeHash{$cell}&display_options=MergeLevelsAndPivotCellTypes\">$cell</A></td>";
 					print "<td align=center>$percentIntense</td><td align=center>$percentEquivocal</td><td align=center>$percentNone</td>";
-					print "<td></td><td align=center>$cellHash{$antibodyKey}->{$cell}->{'intense'}</td></tr>";
+					print "<td align=center>$cellHash{$antibodyKey}->{$cell}->{'count'}</td></tr>";
 					#<td align=center>$cellHash{$antibodyKey}->{$cell}->{'equivocal'}</td><td align=center>$cellHash{$antibodyKey}->{$cell}->{'none'}</td>";
 					 
 			}	
