@@ -818,16 +818,22 @@ function prepareForSubmission(){
 ##########################################################
 ##########################################################
 
+# Table for entire form to sit in
+print qq~
+	<TABLE BORDER=0 ALIGN=CENTER WIDTH=80%>
+		<TR>
+			<TD>
+~;
 
 print qq~
 $LINESEPARATOR<BR>
-<FONT COLOR="red"><B>Step 1 of 3: Choose Files</B></FONT>
-  <FORM METHOD="post"NAME="choiceList" onSubmit="return prepareForSubmission()">
+<FONT COLOR="#cc0000" SIZE="+0" FACE="Arial,Helvetica,sans-serif"><B>Step 1 of 3: Choose Files</B></FONT>
+  <FORM METHOD="post" NAME="choiceList" onSubmit="return prepareForSubmission()">
     <TABLE BORDER=0>
-    <TR>
-      <TD VALIGN="top">
-    Forward Files:<BR>
-    <SELECT NAME="forwardSelectionList" SIZE=4 MULTIPLE onChange="adjust('forward')">
+		<TR>
+      		<TD VALIGN="top">
+				Forward Files:<BR>
+    				<SELECT NAME="forwardSelectionList" SIZE=4 MULTIPLE onChange="adjust('forward')">
 ~;
 
       my $testfilename;
@@ -854,10 +860,10 @@ $LINESEPARATOR<BR>
       }
 
 print qq~
-</SELECT>
-<BR>
-Reverse Files:<BR>
-<SELECT NAME="reverseSelectionList" SIZE=4 MULTIPLE onChange="adjust('reverse')">
+			</SELECT>
+			<BR>
+			Reverse Files:<BR>
+			<SELECT NAME="reverseSelectionList" SIZE=4 MULTIPLE onChange="adjust('reverse')">
 ~;
       for( my $i=0;$i<=$#rows;$i++ ){
 	$direction = $slide_directions[$i];
@@ -875,85 +881,189 @@ Reverse Files:<BR>
         }
       }
 print qq~
-</SELECT>
-  </TD>
-
-  <TD VALIGN="top">
-  <CENTER>
-  <BR><BR>
-    <INPUT NAME="forwardButton" TYPE="button" VALUE="<--Add to Forward" onClick="addItem('forward')">
-    <BR><BR>
-    <INPUT NAME="removeButton"  TYPE="button" VALUE="Remove-->" onClick="removeItem()">
-    <BR><BR>
-    <INPUT NAME="reverseButton" TYPE="button" VALUE="<--Add to Reverse" onClick="addItem('reverse')">
-  <BR><BR>
+			</SELECT>
+		</TD>
+		<TD VALIGN="top" ALIGN="center">
+			<BR><BR>
+			<INPUT NAME="forwardButton" TYPE="button" VALUE="<--Add to Forward" onClick="addItem('forward')">
+			<BR><BR>
+			<INPUT NAME="removeButton"  TYPE="button" VALUE="Remove-->" onClick="removeItem()">
+			<BR><BR>
+			<INPUT NAME="reverseButton" TYPE="button" VALUE="<--Add to Reverse" onClick="addItem('reverse')">
+			<BR><BR>
 ~;
 print qq~
-  </CENTER>
-  </TD>
-
-  <TD VALIGN="top">
-  Available Files:
-  <BR>
-  <SELECT name="fileList" SIZE=10 MULTIPLE></SELECT>
-   </TD>
-   </TR>
+		</TD>
+		<TD VALIGN="top">
+			Available Files:<br>
+			<SELECT name="fileList" SIZE=10 MULTIPLE></SELECT>
+		</TD>
+	</TR>
    </TABLE>
 
 $LINESEPARATOR<BR>
-<FONT COLOR="red"><B>Step 2 of 3: Optional Pipeline Configurations</B><BR>
-                     -Default values used if not selected<BR>
-                     -Click on Pipeline Component title for documentation</FONT>
+<FONT COLOR="#cc0000" SIZE="+0" FACE="Arial,Helvetica,sans-serif"><B>Step 2 of 3: Optional Pipeline Configurations</B><BR>
+<FONT SIZE="-1">
+<img src="$HTML_BASE_DIR/images/space.gif" height=1 width=30">- Default values used if not selected<BR>
+<img src="$HTML_BASE_DIR/images/space.gif" height=1 width=30">- Click on red question marks for help text</FONT>
      <BR>
-     <B><A HREF="Javascript:getDirections('http://www.systemsbiology.org/ArrayProcess/readme/preProcess.html')">PreProcess:</A></B>
+     <B><A HREF="Javascript:getDirections('http://www.systemsbiology.org/ArrayProcess/readme/preProcess.html')">Pre-process:</A></B>
      <TABLE>
-     <TR>
-      <TD VALIGN="top">
-	  <INPUT TYPE="checkbox" NAME="preprocessBase" VALUE="-base">Use Base Value:<BR>
-	  <INPUT TYPE="checkbox" NAME="preprocessSat" VALUE="-sat" CHECKED>Saturating Intensity:<BR>
-          <INPUT TYPE="checkbox" NAME="preprocessScale" VALUE="-scale">Scale to Value:<BR>
-      </TD>
-      <TD>
-          <INPUT TYPE="text" NAME="preprocessBaseValue" onChange="verifyNumber(this.value,'preprocessBaseValue')">
-          &nbsp;<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=2','Help','width=400,height=300,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a><BR>
-          <INPUT TYPE="text" NAME="preprocessSatValue" onChange="verifyNumber(this.value,'preprocessSatValue')" VALUE="65535"><BR>
-          <INPUT TYPE="text" NAME="preprocessScaleValue"onChange="verifyNumber(this.value,'preprocessScaleValue')"><BR>
-      </TD>
-     </TR>
-<BR>
-     <TR>
-      <TD VALIGN="top">
-	  Normalizing Method:<BR>
-	  <INPUT TYPE="radio" NAME="normalization" VALUE="median" CHECKED>Median
-          <INPUT TYPE="radio" NAME="normalization" VALUE="none"  >None
-      </TD>
-     </TR>
-     <TD>
-       <INPUT TYPE="checkbox" NAME="preprocessDebug" VALUE="-debug">Generate debug file<BR>
-     </TD>
+		<TR VALIGN="baseline">
+			<TD>
+				<INPUT TYPE="checkbox" NAME="preprocessBase" VALUE="-base">
+			</TD>
+			<TD>
+				&nbsp;Use Base Value:&nbsp;
+			</TD>
+			<TD>
+		          <INPUT TYPE="text" NAME="preprocessBaseValue" size="10" onChange="verifyNumber(this.value,'preprocessBaseValue')">&nbsp;
+		          <a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=2','Help','width=400,height=300,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
+			</TD>
+		</TR>
+		<TR VALIGN="baseline">
+			<TD>
+				<INPUT TYPE="checkbox" NAME="preprocessSat" VALUE="-sat" CHECKED>
+			</TD>
+			<TD>
+				&nbsp;Saturating Intensity:&nbsp;
+			</TD>
+			<TD>
+		          <INPUT TYPE="text" NAME="preprocessSatValue" size="10" onChange="verifyNumber(this.value,'preprocessSatValue')" VALUE="65535">&nbsp;
+         			<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=3','Help','width=400,height=300,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
+			</TD>
+		</TR>
+		<TR VALIGN="baseline">
+			<TD>
+		          <INPUT TYPE="checkbox" NAME="preprocessScale" VALUE="-scale">
+			</TD>
+			<TD>
+				&nbsp;Scale to Value:&nbsp;
+			</TD>
+			<TD>
+          		<INPUT TYPE="text" NAME="preprocessScaleValue" size="10" onChange="verifyNumber(this.value,'preprocessScaleValue')">&nbsp;
+         			<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=4','Help','width=500,height=400,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
+			</TD>
+		</TR>
+     </TABLE>
+	<p>
+     <TABLE>
+     	<TR>
+     		<TD>
+				Normalizing Method:&nbsp;<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=5','Help','width=500,height=400,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
+			</TD>
+		</TR>
+		<TR>
+			<TD>
+				<INPUT TYPE="radio" NAME="normalization" VALUE="median" CHECKED>&nbsp;Median&nbsp;&nbsp;<INPUT TYPE="radio" NAME="normalization" VALUE="none"  >&nbsp;None
+      		</TD>
+     	</TR>
+		<TR>
+     		<TD>
+       			<INPUT TYPE="checkbox" NAME="preprocessDebug" VALUE="-debug">&nbsp;Generate debug file<BR>
+     		</TD>
+     	</TR>
      </TABLE>
      <BR>
-     <B><A HREF="Javascript:getDirections('http://www.systemsbiology.org/ArrayProcess/readme/mergeReps.html')">MergeReps:</A></B>
+     <B><A HREF="Javascript:getDirections('http://www.systemsbiology.org/ArrayProcess/readme/mergeReps.html')">Merge Replicates:</A></B>
      <BR>
-       <INPUT TYPE="checkbox" NAME="errorModel" VALUE="-opt">Only return those genes that are represented by at least &lt;num&gt; replicate measurements
-       <INPUT TYPE="text"     NAME="errorModelValue" onChange="verifyNumber(this.value,'errorModel')"><BR>
-       <INPUT TYPE="checkbox" NAME="excludeGenes" VALUE="-exclude" onClick="checkSwitch('general')" CHECKED>Use general list of bad genes<BR>
-       <INPUT TYPE="checkbox" NAME="excludeLocalGenes" VALUE="-exclude" onClick="checkSwitch('local')">Select local file of bad genes
-       <INPUT TYPE = "text" NAME = "excludeFile"  SIZE=30>*must specify full path of bad gene file<BR>
-       <INPUT TYPE="checkbox" NAME="filterGenes"  VALUE="-filter" CHECKED> Filter Outliers<BR>
+	<TABLE BORDER=0>
+		<TR>
+			<TD>
+		       	<INPUT TYPE="checkbox" NAME="errorModel" VALUE="-opt">
+		     </TD>
+		     <TD>
+		     	&nbsp;Minimum &lt;num&gt; replicate measurements:&nbsp;
+       			&nbsp;<INPUT TYPE="text"     NAME="errorModelValue" size="10" onChange="verifyNumber(this.value,'errorModel')">
+		          &nbsp;<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=6','Help','width=400,height=300,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
+			</TD>
+		</TR>
+		<TR>
+			<TD>
+       			<INPUT TYPE="checkbox" NAME="excludeGenes" VALUE="-exclude" onClick="checkSwitch('general')" CHECKED>
+       		</TD>
+       		<TD>
+       			&nbsp;Use general list of bad genes
+			</TD>
+		</TR>
+		<TR>
+			<TD>
+       			<INPUT TYPE="checkbox" NAME="excludeLocalGenes" VALUE="-exclude" onClick="checkSwitch('local')">
+       		</TD>
+       		<TD>
+       			&nbsp;Select local file of bad genes:
+			</TD>
+		</TR>
+		<TR>
+			<TD>
+				&nbsp;
+			</TD>
+			<TD>
+       			&nbsp;<INPUT TYPE = "text" NAME = "excludeFile"  SIZE=50>
+ 		          &nbsp;<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=7','Help','width=400,height=300,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a>
+       			<br><FONT SIZE="-2">*must specify full path of bad gene file
+			</TD>
+		</TR>
+		<TR>
+			<TD>
+       			<INPUT TYPE="checkbox" NAME="filterGenes"  VALUE="-filter" CHECKED>
+       		</TD>
+       		<TD>
+       			&nbsp;Filter Outliers<BR>
+			</TD>
+		</TR>
+	</TABLE>
      <BR>
      <B><A HREF="Javascript:getDirections('http://www.systemsbiology.org/VERAandSAM')">VERA/SAM:</A></B><BR>
-        <INPUT TYPE="checkbox" NAME="useVERAandSAM"  VALUE="useVS" CHECKED><FONT COLOR="red">Use VERA and SAM</FONT><BR>
-        <INPUT TYPE="checkbox" NAME="veraCrit" VALUE="critValue">Cease Optimization when changes per step are less than:
-	<INPUT TYPE="text" NAME="veraCritValue" onChange="verifyNumber(this.value,'veraCritValue')">
-     <BR>
-        <INPUT TYPE="checkbox" NAME="veraEvolFlag" VALUE="-evol">Generate file showing how parameters converge<BR>
-        <INPUT TYPE="checkbox" NAME="debugFlag" VALUE="-debug">Generate debug file<BR>
-        <INPUT TYPE="checkbox" NAME="modelFlag" VALUE="-model">Use your own error model
-        <INPUT TYPE="file"     NAME="modelFile" size=30<BR>
-      <BR>
-     <B><A HREF="Javascript:getDirections('http://www.systemsbiology.org/ArrayProcess/readme/mergeConds.html')">MergeConds:</A></B><BR>
-       <FONT COLOR="red">-only used with more than one condition</FONT><BR>
+ 	<TABLE BORDER=0>
+ 		<TR>
+ 			<TD>
+        			<INPUT TYPE="checkbox" NAME="useVERAandSAM"  VALUE="useVS" CHECKED>
+        		</TD>
+        		<TD>
+        			&nbsp;<FONT COLOR="red">Use VERA and SAM</FONT>
+        			&nbsp;<A HREF="Javascript:getDirections('http://www.systemsbiology.org/VERAandSAM')"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></A>
+        		</TD>
+        	</TR>
+        	<TR>
+        		<TD>
+        			<INPUT TYPE="checkbox" NAME="veraCrit" VALUE="critValue">
+        		</TD>
+        		<TD>
+        			&nbsp;Cease Optimization when changes per step are less than:
+				&nbsp;<INPUT TYPE="text" NAME="veraCritValue" size="10" onChange="verifyNumber(this.value,'veraCritValue')">
+			</TD>
+		</TR>
+		<TR>
+			<TD>
+        			<INPUT TYPE="checkbox" NAME="veraEvolFlag" VALUE="-evol">
+        		</TD>
+        		<TD>
+        			&nbsp;Generate file showing how parameters converge
+        		</TD>
+        	</TR>
+        	<TR>
+        		<TD>
+        			<INPUT TYPE="checkbox" NAME="debugFlag" VALUE="-debug">
+        		</TD>
+        		<TD>
+        			&nbsp;Generate debug file
+        		</TD>
+        	</TR>
+        	<TR>
+        		<TD>
+        			<INPUT TYPE="checkbox" NAME="modelFlag" VALUE="-model">
+        		</TD>
+        		<TD>
+        			&nbsp;Use your own error model
+        			&nbsp;<INPUT TYPE="file"     NAME="modelFile" size=30>
+        		</TD>
+        	</TR>
+	</TABLE>
+	<BR>
+     <B><A HREF="Javascript:getDirections('http://www.systemsbiology.org/ArrayProcess/readme/mergeConds.html')">Merge Conditions:</A></B><BR>
+     <FONT COLOR="#cc0000" SIZE="-1">
+	<img src="$HTML_BASE_DIR/images/space.gif" height=1 width=30">-only used with more than one condition</FONT><BR>
        <TABLE>
        <TR>
        <TD VALIGN = "top">
@@ -997,28 +1107,83 @@ print qq~
      </TR>
      </TABLE>
      <TABLE>
-     <TR>
-      <TD>
-       <INPUT TYPE = "checkbox" NAME = "lambdaFlag" VALUE = "-lam">Lambda &#62;&#61; &#60;num&#62; <BR>
-       <INPUT TYPE = "checkbox" NAME = "ratioFlag"  VALUE = "-rat">Ratio  &#62;&#61; &#60;num&#62;<BR>
-       <INPUT TYPE = "checkbox" NAME = "stdevFlag"  VALUE = "-std">Standard Devation &#62;&#61;  &#60;num&#62;<BR> 
-       <INPUT TYPE = "checkbox" NAME = "repFlag"    VALUE = "-n">Gene represented at least &lt;num&gt; times
-      </TD>
-      <TD>
-       <INPUT TYPE = "text" NAME = "lambdaValue" onChange="verifyNumber(this.value,'lambdaValue')"><BR>
-       <INPUT TYPE = "text" NAME = "ratioValue"  onChange="verifyNumber(this.value,'ratioValue')"><BR>
-       <INPUT TYPE = "text" NAME = "stdevValue"  onChange="verifyNumber(this.value,'stdevValue')"><BR>
-       <INPUT TYPE = "text" NAME = "repValue"    onChange="verifyNumber(this.value,'repValue')"><BR>
-      </TD>
-     </TR>
+     	<TR>
+     		<TD>
+       			<INPUT TYPE = "checkbox" NAME = "lambdaFlag" VALUE = "-lam">
+       		</TD>
+       		<TD>
+       			&nbsp;Lambda &#62;&#61; &#60;num&#62;
+       		</TD>
+			<TD>
+       			&nbsp;<INPUT TYPE = "text" NAME = "lambdaValue" size="10" onChange="verifyNumber(this.value,'lambdaValue')">
+			</TD>
+       	</TR>
+       	<TR>
+       		<TD>
+       			<INPUT TYPE = "checkbox" NAME = "ratioFlag"  VALUE = "-rat">
+       		</TD>
+       		<TD>
+       			&nbsp;Ratio  &#62;&#61; &#60;num&#62;
+       		</TD>
+			<TD>
+       			&nbsp;<INPUT TYPE = "text" NAME = "ratioValue" size="10" onChange="verifyNumber(this.value,'ratioValue')"><BR>
+			</TD>
+       	</TR>
+       	<TR>
+       		<TD>
+       			<INPUT TYPE = "checkbox" NAME = "stdevFlag"  VALUE = "-std">
+       		</TD>
+       		<TD>
+       			&nbsp;Standard Devation &#62;&#61;  &#60;num&#62;
+       		</TD>
+			<TD>
+       			&nbsp;<INPUT TYPE = "text" NAME = "stdevValue" size="10" onChange="verifyNumber(this.value,'stdevValue')"><BR>
+			</TD>
+       	</TR>
+       	<TR>
+       		<TD>
+      	 		<INPUT TYPE = "checkbox" NAME = "repFlag"    VALUE = "-n">
+      	 	</TD>
+      	 	<TD>
+      	 		&nbsp;Gene represented at least &lt;num&gt; times
+      	 	</TD>
+      	 	<TD>
+       			&nbsp;<INPUT TYPE = "text" NAME = "repValue" size="10" onChange="verifyNumber(this.value,'repValue')"><BR>
+      	 	</TD>
+      	 </TR>
      </TABLE>
+	<BR>
      <B><FONT COLOR="green">Miscellaneous</FONT></B><BR>
-      <INPUT TYPE="checkbox" NAME="postSam" VALUE = "ps">Use postSam (adds info from key file to .sig file)<BR>
-      <INPUT TYPE="checkbox" NAME="notify">email notification<BR>
-      -Type comma-separated email addresses (\@systemsbiology is implied, unless otherwise specified)<BR> 
-     <INPUT TYPE="text" NAME="addresses" SIZE="30"><BR>
+	<TABLE BORDER=0>
+		<TR>
+			<TD>
+      			<INPUT TYPE="checkbox" NAME="postSam" VALUE = "ps">
+      		</TD>
+      		<TD>
+      			&nbsp;Use postSam (adds info from key file to .sig file)
+      		</TD>
+      	</TR>
+      	<TR>
+      		<TD>
+      			<INPUT TYPE="checkbox" NAME="notify">
+      		</TD>
+      		<TD>
+      			&nbsp;Email notification - Type comma-separated email addresses (\@systemsbiology is implied, unless otherwise specified):
+      		</TD>
+      	</TR>
+      	<TR>
+      		<TD>
+      			&nbsp;
+      		</TD>
+      		<TD>
+      			&nbsp<INPUT TYPE="text" NAME="addresses" SIZE="50">
+      		</TD>
+      	</TR>
+	</TABLE>
+	<BR>
      $LINESEPARATOR<BR>
-     <FONT COLOR="red"><B>Step 3 of 3: Proceed to Final Stage!</B></FONT><BR>
+     <FONT COLOR="#cc0000" SIZE="+0" FACE="Arial,Helvetica,sans-serif"><B>Step 3 of 3: Proceed to Final Stage!</B></FONT>
+     <p>
      <INPUT TYPE="hidden" NAME="project_id" VALUE = "$parameters{project_id}">
      <INPUT TYPE="submit" NAME="PROCESS" VALUE="Proceed to Verification and Submission Page"><BR>
     </FORM>
@@ -1027,6 +1192,13 @@ print qq~
 	print "<H4>Select parameters above and press QUERY\n";
       }
 } # end printEntryForm
+
+# End of table form sits in
+print qq~
+			</TD>
+		</TR>
+	</TABLE>
+~;
 
   ####################################
  ### End Pipeline Customization   ###
