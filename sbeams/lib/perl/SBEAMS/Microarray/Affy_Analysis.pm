@@ -558,11 +558,11 @@ sub find_chips_with_data {
 			FROM $TBMA_AFFY_GENE_INTENSITY gi
 			JOIN $TBMA_AFFY_ARRAY afa ON (afa.affy_array_id = gi.affy_array_id)
 			JOIN $TBMA_AFFY_ARRAY_SAMPLE afs ON (afs.affy_array_sample_id = afa.affy_array_sample_id)
-			WHERE afs.project_id = $project_id 
+			WHERE afs.project_id IN ($project_id) 
 		
 		   ~;
 	
-#	print "SQL '$sql'";	
+#$sbeams->display_sql(sql=>$sql);
 	return my @rows = $sbeams->selectOneColumn($sql);
 
 }
