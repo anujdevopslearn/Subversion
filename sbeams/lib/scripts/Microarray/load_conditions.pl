@@ -636,7 +636,7 @@ sub loadColumnMapFile {
       insertGeneExpression(condition_id=>$condition_id,
 			   column_map_ref=>\%column_mapping,
 			   source_file=>"$mapped_file",
-			   if_hash=>$bs_hash_ref,
+			   id_hash=>$bs_hash_ref,
 			   delimiter=>$delimiter,
 			   skip_lines=>$skip_lines,
 			  );
@@ -715,7 +715,7 @@ sub loadFiles {
       insertGeneExpression(condition_id=>$condition_id,
 			   column_map_ref=>$column_map_ref,
 			   source_file=>"$directory/$search_file",
-			   if_hash=>$bs_hash_ref,
+			   id_hash=>$bs_hash_ref,
 			   delimiter => "\t");
     }
   }
