@@ -179,12 +179,12 @@ sub printEntryForm {
 
 
     #### Build SNP_SOURCE_ACCESSION constraint
-    my $snp_source_accession_clause = $sbeams->parseConstraint2SQL(
-      constraint_column=>"SI.snp_source_accession",
+    my $snp_instance_source_accession_clause = $sbeams->parseConstraint2SQL(
+      constraint_column=>"SI.snp_instance_source_accession",
       constraint_type=>"plain_text",
-      constraint_name=>"SNP Source Accession",
-      constraint_value=>$parameters{snp_source_accession_constraint} );
-    return if ($snp_source_accession_clause == -1);
+      constraint_name=>"SNP Instance Source Accession",
+      constraint_value=>$parameters{snp_instance_source_accession_constraint} );
+    return if ($snp_instance_source_accession_clause == -1);
 
 
     #### Build SNP_SOURCE constraint
@@ -244,7 +244,7 @@ sub printEntryForm {
     #### Define the desired columns
     my @column_array = (
       ["snp_accession","SI.snp_accession","SNP Accession"],
-      ["snp_source_accession","SI.snp_source_accession","SNP Source Accession"],
+      ["snp_instance_source_accession","SI.snp_instance_source_accession","SNP Instance Source Accession"],
       ["allele_id","A.allele_id","Allele Id"],
       ["biosequence_name","BS.biosequence_name","BioSequence Name"],
       ["end_fiveprime_position","ABS.end_fiveprime_position","End Fiveprime Position"],
