@@ -17,37 +17,47 @@ use strict;
 # Print Options Page
 ###############################################################################
 sub printOptions {
+  my %args = @_;
+
+  #### Process the arguments list
 
 
+  #### Print the current user context information
   $sbeams->printUserContext();
-
-  if ($sbeams->output_mode() eq 'html') {
-
-    print qq!
-	<BR>
-        <H2>$DBTITLE $CATEGORY Maintenance</H2>
-        $LINESEPARATOR
-    !;
-
-    for (my $option=0; $option<$#MENU_OPTIONS; $option+=2) {
-      print qq!
-  	$OPTIONARROW
-  	<A HREF="@MENU_OPTIONS[$option+1]">@MENU_OPTIONS[$option]</A>
-      !;
-    }
-
-    print "$LINESEPARATOR<P>";
-
-  }
-
-  $sbeamsMOD->printPageFooter(close_table=>"YES",display_footer=>"NO");
 
   #### Read in the default input parameters
   my %parameters;
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters);
 
+
+  #### If we're in HTML mode, print a list of option links for the user
+  if ($sbeams->output_mode() eq 'html') {
+    print qq~
+	<BR>
+	<H2>$DBTITLE $CATEGORY Maintenance</H2>
+	$LINESEPARATOR
+    ~;
+
+    #### Loop over all the menu options, printing them
+    for (my $option=0; $option<$#MENU_OPTIONS; $option+=2) {
+      print qq~
+	$OPTIONARROW
+	<A HREF="@MENU_OPTIONS[$option+1]">@MENU_OPTIONS[$option]</A>
+      ~;
+    }
+
+    print "$LINESEPARATOR<P>";
+
+  }
+
+
+  #### Close the upper portion of the page and get ready for data table
+  $sbeamsMOD->printPageFooter(close_table=>"YES",display_footer=>"NO");
+
+  #### Display the data table
   showTable(with_options=>'YES',parameters_ref=>\%parameters);
+
 
 } # end printOptions
 
@@ -59,35 +69,24 @@ sub printOptions {
 sub printEntryForm {
   my %args = @_;
 
-
   #### Process the arguments list
 
 
   #### Define popular variables
   my ($i,$element,$key,$value,$line,$result,$sql);
-  my %parameters;
   my ($username,$row);
 
 
   #### Get the columns for this table
   my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
-  my %input_types = 
-    $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
+  my %input_types = $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
 
 
-  #### Read the form values for each column
-  foreach $element (@columns,'project_id') {
-    if ($input_types{$element} eq "multioptionlist") {
-      my @tmparray = $q->param($element);
-      if (scalar(@tmparray) > 1) {
-        pop @tmparray unless ($tmparray[$#tmparray]);
-        shift @tmparray unless ($tmparray[0]);
-      }
-      $parameters{$element}=join(",",@tmparray);
-    } else {
-      $parameters{$element}=$q->param($element);
-    }
-  }
+  #### Read the input parameters for each column
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters,
+    columns_ref=>\@columns,input_types_ref=>\%input_types);
 
 
   #### Get the action values that triggered this
@@ -99,18 +98,28 @@ sub printEntryForm {
   #### If a specific PK row was referenced and this is not a REFRESH of an
   #### existing form, then load data from it into hash
   if ($parameters{$PK_COLUMN_NAME} gt "" && $apply_action ne "REFRESH") {
+    my $column_list = join(",",@columns);
     $sql = qq~
-      SELECT *
+      SELECT $column_list
         FROM $DB_TABLE_NAME
        WHERE $PK_COLUMN_NAME='$parameters{$PK_COLUMN_NAME}'
     ~;
     my @rows = $sbeams->selectSeveralColumns($sql);
     my @row = @{$rows[0]};
     for ($element=0; $element<scalar(@row); $element++) {
-        $parameters{@columns[$element]}=@row[$element];
+      $parameters{@columns[$element]}=@row[$element];
     }
 
   }
+
+
+  #### Obtain information about the current user
+  $current_username = $sbeams->getCurrent_username;
+  $current_contact_id = $sbeams->getCurrent_contact_id;
+  $current_work_group_id = $sbeams->getCurrent_work_group_id;
+  $current_work_group_name = $sbeams->getCurrent_work_group_name;
+  $current_project_id = $sbeams->getCurrent_project_id;
+  $current_project_name = $sbeams->getCurrent_project_name;
 
 
   #### Execute some special code for the current table
@@ -587,14 +596,14 @@ sub showTable {
 #
 ###############################################################################
 sub processEntryForm {
-    my %parameters;
     my $element;
     my $sql_query;
     my @returned_information;
     my $tmp;
 
-    # Get the columns for this table
+    #### Get the columns for this table
     my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
+    my %input_types = $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
 
 
     # Check to see if there is a column which will allow a range of numbers
@@ -603,24 +612,22 @@ sub processEntryForm {
       $sbeamsMOD->returnTableInfo($TABLE_NAME,"MULTI_INSERT_COLUMN");
 
 
-    # Read the form values for each column
-    foreach $element (@columns) {
-        if ($element eq $multi_insert_column) {
-          $parameters{$element}=join(",",$q->param($element));
-        } else {
-          $parameters{$element}=$q->param($element);
-        }
-        #print "$element=$parameters{$element}=<BR>\n";
-    }
+    #### Read the form values for each column
+    my %parameters;
+    my $n_params_found = $sbeams->parse_input_parameters(
+      q=>$q,parameters_ref=>\%parameters,
+      columns_ref=>\@columns,input_types_ref=>\%input_types);
+
+    my $apply_action  = $parameters{apply_action};
 
 
-    my $apply_action  = $q->param('apply_action');
-
-
-    if ($apply_action eq "REFRESH") {
-      printEntryForm();
-      exit;
-    }
+    #### Obtain information about the current user
+    $current_username = $sbeams->getCurrent_username;
+    $current_contact_id = $sbeams->getCurrent_contact_id;
+    $current_work_group_id = $sbeams->getCurrent_work_group_id;
+    $current_work_group_name = $sbeams->getCurrent_work_group_name;
+    $current_project_id = $sbeams->getCurrent_project_id;
+    $current_project_name = $sbeams->getCurrent_project_name;
 
 
     # Check for missing required information
@@ -856,8 +863,7 @@ sub processEntryForm {
                 WHERE $PK_COLUMN_NAME=$parameters{$PK_COLUMN_NAME}
           ~;
 
-          my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
-          my $rv  = $sth->execute or croak $dbh->errstr;
+          $sbeams->executeSQL($sql_query);
 
         }
       }
@@ -895,18 +901,16 @@ sub checkForPreexistingRecord {
     $error_message .= "<B>$element</B> = $unique_values{$element}<BR>\n";
   }
 
-  my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
-  $sth->execute or croak $dbh->errstr;
+  my @rows = $sbeams->selectOneColumn($sql_query);
 
-  my @row = $sth->fetchrow_array;
-  $sth->finish;
+  if (@rows) {
+    print qq~
+      The following columns where checked for uniqueness:<BR>
+      $error_message<BR>
+    ~;
+  }
 
-  print qq!
-    The following columns where checked for uniqueness:<BR>
-    $error_message<BR>
-  ! if @row;
-
-  return shift @row;
+  return($rows[0]);
 
 } # end checkForPreexistingRecord
 
