@@ -406,6 +406,10 @@ sub handle_request {
         $second_peptide_clause .= "   AND PP.is_cysteine_containing = 'Y'";
       }
 
+      if ( $parameters{peptide_options} =~ /C_missing/ ) {
+        $second_peptide_clause .= "   AND PP.is_cysteine_containing = 'N'";
+      }
+
       if ( $parameters{peptide_options} =~ /DoublyTryptic/ ) {
         $second_peptide_clause .= "   AND PP.peptide_sequence LIKE '%[RK]'".
                         "            AND PP.preceding_residue LIKE '[RK]'";
