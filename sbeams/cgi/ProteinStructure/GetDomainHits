@@ -751,7 +751,7 @@ sub handle_request {
                'Domain EC Numbers_ATAG' => 'TARGET="WinExt"',
                'Domain EC Numbers_OPTIONS' => {semicolon_separated_list=>1},
 
-               'Query Start' => "$CGI_BASE_DIR/ProteinStructure/BrowseBioSequence.cgi?biosequence_name_constraint=\%$colnameidx{biosequence_name}V&biosequence_set_id=\%$colnameidx{biosequence_set_id}V&label_start=\%$colnameidx{query_start}V&label_end=\%$colnameidx{query_end}V&apply_action=HIDEQUERY&display_options=SequenceFormat,ShowExtraProteinProps",
+               'Query Start' => "$CGI_BASE_DIR/ProteinStructure/BrowseBioSequence.cgi?biosequence_name_constraint=\%$colnameidx{biosequence_name}V&biosequence_set_id=\%$colnameidx{biosequence_set_id}V&label_start=\%$colnameidx{query_start}V&label_end=\%$colnameidx{query_end}V&apply_action=HIDEQUERY&display_options=SequenceFormat,ShowExtraProteinProps&project_id=\%$colnameidx{project_id}V",
     	       'Query Start_ATAG' => 'TARGET="Win1" ',
 
                'Second Reference' => "\%$colnameidx{second_match_accessor}V\%$colnameidx{second_match_accession}V\%$colnameidx{second_match_accessor_suffix}V",
