@@ -108,13 +108,14 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/main.cgi">$SBEAMS_PART Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
+	<tr><td>Browse Data:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseOntology"><nobr>&nbsp;&nbsp;&nbsp;Browse Hierarchy</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseTerms"><nobr>&nbsp;&nbsp;&nbsp;Browse Terms</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=ON_ontology"><nobr>&nbsp;&nbsp;&nbsp;Ontologies</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=ON_ontology_term"><nobr>&nbsp;&nbsp;&nbsp;Ontology Terms</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=ON_ontology_term_relationship"><nobr>&nbsp;&nbsp;&nbsp;Term Relationships</nobr></a></td></tr>
-	<tr><td>&nbsp;</td></tr>
-	<tr><td>Browse Data:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseTerms"><nobr>&nbsp;&nbsp;&nbsp;Browse Terms</nobr></a></td></tr>
 	</table>
 	</td>
 
