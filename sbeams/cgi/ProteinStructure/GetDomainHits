@@ -840,11 +840,6 @@ sub postProcessResultset {
     my $biosequence_name = $rows[$startrow]->[$biosequence_name_column_index];
     $stats{n_proteins}++;
 
-    #### Store the chromosome stats
-    if (defined($rows[$startrow]->[$chromosome_column_index])) {
-      $stats{chromosome}->{$rows[$startrow]->[$chromosome_column_index]}++;
-    }
-
     #### Set $endrow to the last row for this biosequence
     $endrow = $startrow;
     $endrow++ while ($endrow < $n_rows &&
@@ -1137,8 +1132,14 @@ sub postProcessResultset {
     $stats{COGs_hits} += $COGs_hits;
     $stats{NgAnnots} += $NgAnnots;
 
-    if ($pdbblast_domains + $pfam_best_domains + $rosetta_best_domains > 0) {
+    if ($pdbblast_domains + $pfam_best_domains + $rosetta_best_domains + $TIGRFAM_hits + $COGs_hits > 0) {
       $stats{proteins_with_an_id}++;
+
+      #### Store the chromosome stats
+      if (defined($rows[$startrow]->[$chromosome_column_index])) {
+	$stats{chromosome}->{$rows[$startrow]->[$chromosome_column_index]}++;
+      }
+
       if ($pdbblast_domains + $pfam_best_domains + $rosetta_best_domains ==
 	  $n_domains) {
 	$stats{proteins_with_all_id}++;
@@ -1164,12 +1165,12 @@ sub postProcessResultset {
   $buf.="\n";
 
   $buf.="<font color=\"red\">Filtering statistics:</font>\n";
-  $buf.="Number of proteins with at least one matched domain: $stats{proteins_with_an_id}\n";
-  $buf.="Number of proteins with all domains matched: $stats{proteins_with_all_id}\n";
+  $buf.="Number of proteins with at least one matched domain: $stats{proteins_with_an_id} (includes PDB, PFAM, Ginzu, Rosetta, TIGRFAM, COGs, etc.)\n";
+  $buf.="Number of proteins with all domains matched: $stats{proteins_with_all_id} (includes only PDB, PFAM, Ginzu, Rosetta)\n";
   $buf.="Number of good PDB match domains: $stats{pbdblast_domains}\n";
   $buf.="Number of good PFAM match but not PDB match domains: $stats{pfam_best_domains}\n";
   $buf.="Number of good Rosetta match domains without PDB or PFAM matches: $stats{rosetta_best_domains}\n";
-  $buf.="Total number of matched domains: ".($stats{pbdblast_domains}+$stats{pfam_best_domains}+$stats{rosetta_best_domains})."\n";
+  $buf.="Total number of matched domains: ".($stats{pbdblast_domains}+$stats{pfam_best_domains}+$stats{rosetta_best_domains})."  (includes only PDB, PFAM, Ginzu, Rosetta)\n";
   $buf.="\n";
 
   $buf.="Number of good PFAM matches regardless of PDB matches: $stats{pfam_domains} (sometimes more than one match per domain!)\n";
