@@ -3736,6 +3736,7 @@ sub printProjectsYouOwn {
 
   #### Finish the table
   print qq~
+        <TR><TD></TD><TD><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&ShowEntryForm=1">[Add a new project]</A></TD></TR>
 	</TABLE>
   ~;
 } #end printProjectsYouOwn
