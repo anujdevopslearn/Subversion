@@ -129,99 +129,97 @@ print qq~
 var characters = new RegExp("[A-Za-z0-9]");
 
 function prepareForSubmission(category){
+  var all = new RegExp("all");
+  var other = new RegExp("other");
+  var expDesign = new RegExp("experiment_design");
 
-    var all = new RegExp("all");
-    var other = new RegExp("other");
-    var expDesign = new RegExp("experiment_design");
-   
-    if (all.test(category) || expDesign.test(category)) {
-	var chooser = document.miame.expTypeChooser;
-	var expOther = document.miame.otherExpType.value;
+  if (all.test(category) || expDesign.test(category)) {
+    var chooser = document.miame.expTypeChooser;
+    var expOther = document.miame.otherExpType.value;
 
-	if (other.test(chooser.options[chooser.selectedIndex].value) && !characters.test(expOther)){
-	    expOther = prompt ("You selected the 'Other' experiment type.  Please enter the experiment type");
-	    if (!characters.test(expOther)){
-		document.miame.exTypeChooser.selectedIndex = 0;
-		return FALSE;}
-	}else {
-	    expOther = document.miame.otherExpType.value;
-	}
+    if (other.test(chooser.options[chooser.selectedIndex].value) && !characters.test(expOther)){
+      expOther = prompt ("You selected the 'Other' experiment type.  Please enter the experiment type");
+      if (!characters.test(expOther)){
+	document.miame.exTypeChooser.selectedIndex = 0;
+	return FALSE;
+      }else {
+	expOther = document.miame.otherExpType.value;
+      }
 
 
-	if (other.test(chooser.options[chooser.selectedIndex].value)) {
-	    document.miame.expType.value = "other(";
-	    document.miame.expType.value += expOther;
-	    document.miame.expType.value += ")";
-	}else {
-	    document.miame.expType.value = chooser.options[chooser.selectedIndex].value;
-	}
-	
-	var efo1box = document.miame.expFactOther1;
-	var efo1text = document.miame.otherExpFact1;
-	
-	if (efo1box.checked && !characters.test(efo1text.value)) {
-	    var r1 = prompt("No value set for Experimental Factor.  Click Cancel if you don't want to use this factor.  Otherwise, enter the factor below");
-	    if (r1) { efo1text.value = r1; }
-	    else    { efo1box.checked = false; }
-	       	     
-	}
-	
-	var qc1box = document.miame.qc_other1;
-	var qc1text = document.miame.otherQCStep1;
-	
-	if (qc1box.checked && !characters.test(qc1text.value)) {
-	    var r1 = prompt("No value set for Quality Control Step.  Click Cancel if you don't want to use this factor.  Otherwise, enter the factor below");
-	    if (r1) { qc1text.value = r1; }
-	    else    { qc1box.checked = false; }
-	       	     
-	}
+      if (other.test(chooser.options[chooser.selectedIndex].value)) {
+	document.miame.expType.value = "other(";
+	document.miame.expType.value += expOther;
+	document.miame.expType.value += ")";
+      }else {
+	document.miame.expType.value = chooser.options[chooser.selectedIndex].value;
+      }
+
+      var efo1box = document.miame.expFactOther1;
+      var efo1text = document.miame.otherExpFact1;
+
+      if (efo1box.checked && !characters.test(efo1text.value)) {
+	var r1 = prompt("No value set for Experimental Factor.  Click Cancel if you don't want to use this factor.  Otherwise, enter the factor below");
+	if (r1) { efo1text.value = r1; }
+	else    { efo1box.checked = false; }
+      }
+
+      var qc1box = document.miame.qc_other1;
+      var qc1text = document.miame.otherQCStep1;
+
+      if (qc1box.checked && !characters.test(qc1text.value)) {
+	var r1 = prompt("No value set for Quality Control Step.  Click Cancel if you don't want to use this factor.  Otherwise, enter the factor below");
+	if (r1) { qc1text.value = r1; }
+	else    { qc1box.checked = false; }
+
+      }
     }
+  }
 }
 
 function checkForText(chooser, textSite){
-    if (chooser.options[chooser.selectedIndex].value == 'other' && 
-	characters.test(textSite.value)) {
-	var answer=prompt("No Experimental Type set.  Enter one below or click Cancel if you do not wish to change your Experimental Type setting..") ;
-	if(answer){
-	    textSite.value = answer;
-	}else {
-	    chooser.selectedIndex = 0;
-	}
+  if (chooser.options[chooser.selectedIndex].value == 'other' && 
+    characters.test(textSite.value)) {
+    var answer=prompt("No Experimental Type set.  Enter one below or click Cancel if you do not wish to change your Experimental Type setting..") ;
+    if(answer){
+      textSite.value = answer;
+    }else {
+      chooser.selectedIndex = 0;
     }
+  }
 }
 
 function setToOther(theChooser, theText) {
-    if (characters.test(theText.value) == true) {
-	theChooser.selectedIndex = theChooser.length -1;
-    }
-    else if (theChooser.selectedIndex == theChooser.length -1) {
-	theChooser.selectedIndex = 0;
-    }
+  if (characters.test(theText.value) == true) {
+    theChooser.selectedIndex = theChooser.length -1;
+  }else if (theChooser.selectedIndex == theChooser.length -1) {
+    theChooser.selectedIndex = 0;
+  }
 }
 
 function verifyNumber(location){
-    if (!characters.test(location.value)) {
-	location.value ="";
-	return;
-    }
+  if (!characters.test(location.value)) {
+    location.value ="";
+    return;
+  }
 
-    var number = parseInt(location.value);
-    if(isNaN(number)){
-	alert(location.value+" not a number");
-	location.value ="";
-	return;
-    }
-    else{location.value = number;return;}
+  var number = parseInt(location.value);
+  if(isNaN(number)){
+    alert(location.value+" not a number");
+    location.value ="";
+    return;
+  }
+  else{location.value = number;return;}
 }
 
 function allowTyping() {
-		if (document.miame.commonRef[0].checked != true) {
-				document.miame.commonRefText.blur();
-		}
+  if (document.miame.commonRef[0].checked != true) {
+    document.miame.commonRefText.blur();
+  }
 }
 
 function eraseText() {
-		document.miame.commonRefText.value="";
+  document.miame.commonRefText.value="";
 }
 
 //-->
@@ -301,9 +299,7 @@ sub handle_request {
       printMeasurementsSection(parameters=>\%parameters);
   }
 
-
-  #}
-	print "$LINESEPARATOR<BR>";
+  print "$LINESEPARATOR<BR>";
 
   return;
 
@@ -335,9 +331,9 @@ sub printExperimentDesignSection {
     my (@rows,$sql,$mod_date,$uri);
     my ($additional_information, $module_information);
     my ($exp_type,$exp_desc,$exp_factors);
-		my ($exp_desc_bool,$exp_type_bool,$exp_factors_bool);
-		my ($num_hyb,$qc_steps,$common_ref,$common_ref_text);
-		my ($num_hyb_bool,$qc_steps_bool,$common_ref_bool);
+    my ($exp_desc_bool,$exp_type_bool,$exp_factors_bool);
+    my ($num_hyb,$qc_steps,$common_ref,$common_ref_text);
+    my ($num_hyb_bool,$qc_steps_bool,$common_ref_bool);
     my $project_id = $sbeams->getCurrent_project_id();
 
     #### Experimental Design info is stored in the project table
@@ -361,42 +357,41 @@ sub printExperimentDesignSection {
     else{$exp_desc_bool = 'FALSE';}
 
     if (defined($module_information)) {
-				if ($module_information =~ /<exp_type>(.*)<\/exp_type>/) {
-						$exp_type = $1;
-						$exp_type_bool = 'TRUE';
-				}else {
-						$exp_type_bool = 'FALSE';
-				}
-				if ($module_information =~ /<exp_factors>(.*)<\/exp_factors>/) {
-						$exp_factors = $1;
-						$exp_factors_bool = 'TRUE';
-				}else {
-						$exp_factors_bool = 'FALSE';
-				}
-				if ($module_information =~ /<num_hybs>(.*)<\/num_hybs>/) {
-						$num_hyb = $1;
-						$num_hyb_bool = 'TRUE';
-				}else {
-						$num_hyb_bool = 'FALSE';
-				}
-				if ($module_information =~ /<qc_steps>(.*)<\/qc_steps>/) {
-						$qc_steps = $1;
-						$qc_steps_bool = 'TRUE';
-				}else {
-						$qc_steps_bool = 'FALSE';
-				}
-				if ($module_information =~/<common_ref>(.*)<\/common_ref>/) {
-						$common_ref = $1;
-						if ($common_ref eq 'yes'){
-								$module_information =~/<common_ref_text>(.*)<\/common_ref_text>/;
-								$common_ref_text = $1;
-						}
-						$common_ref_bool = 'TRUE';
-				}else {
-						$common_ref_bool = 'FALSE';
-				}
-		}
-	
+	if ($module_information =~ /<exp_type>(.*)<\/exp_type>/) {
+	    $exp_type = $1;
+	    $exp_type_bool = 'TRUE';
+	}else {
+	    $exp_type_bool = 'FALSE';
+	}
+	if ($module_information =~ /<exp_factors>(.*)<\/exp_factors>/) {
+	    $exp_factors = $1;
+	    $exp_factors_bool = 'TRUE';
+	}else {
+	    $exp_factors_bool = 'FALSE';
+	}
+	if ($module_information =~ /<num_hybs>(.*)<\/num_hybs>/) {
+	    $num_hyb = $1;
+	    $num_hyb_bool = 'TRUE';
+	}else {
+	    $num_hyb_bool = 'FALSE';
+	}
+	if ($module_information =~ /<qc_steps>(.*)<\/qc_steps>/) {
+	    $qc_steps = $1;
+	    $qc_steps_bool = 'TRUE';
+	}else {
+	    $qc_steps_bool = 'FALSE';
+	}
+	if ($module_information =~/<common_ref>(.*)<\/common_ref>/) {
+	    $common_ref = $1;
+	    if ($common_ref eq 'yes'){
+		$module_information =~/<common_ref_text>(.*)<\/common_ref_text>/;
+		$common_ref_text = $1;
+	    }
+	    $common_ref_bool = 'TRUE';
+	}else {
+	    $common_ref_bool = 'FALSE';
+	}
+    } 
 
     #### print HTML
     print qq~
@@ -417,29 +412,30 @@ sub printExperimentDesignSection {
 	print qq~NOT MIAME Compliant~;
     }
 
-		## Print "More Info" button
-		my $title = "MIAME Requirements";
-		my $text = qq~<B>MIAME Requirements for Experiment Design:</B><UL><LI>Type of experiment</LI><UL><LI>for example, normal vs. diseased tissue, time course, or gene knock-out</LI></UL><LI>Experimental factors</LI><UL><LI>parameters or conditions tested such as time, dose, or genetic variation</LI></UL><LI>The number of hybridizations performed in the experiment.</LI><LI>The type of reference used for the hybridizations, if any.</LI><LI>Hybridization design</LI><UL><LI>if applicable, a description of the comparisons made in each hybridization</LI></UL><LI>Quality control steps taken: for example, replicates or dye swaps.</LI><LI>URL of any supplemental websites or database accession numbers</LI></UL>~;
+    ## Print "More Info" button
+    my $title = "MIAME Requirements";
+    my $text = qq~<B>MIAME Requirements for Experiment Design:</B><UL><LI>Type of experiment</LI><UL><LI>for example, normal vs. diseased tissue, time course, or gene knock-out</LI></UL><LI>Experimental factors</LI><UL><LI>parameters or conditions tested such as time, dose, or genetic variation</LI></UL><LI>The number of hybridizations performed in the experiment.</LI><LI>The type of reference used for the hybridizations, if any.</LI><LI>Hybridization design</LI><UL><LI>if applicable, a description of the comparisons made in each hybridization</LI></UL><LI>Quality control steps taken: for example, replicates or dye swaps.</LI><LI>URL of any supplemental websites or database accession numbers</LI></UL>~;
 
-		print qq~
-		<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?text=$text','Help','width=450,height=400,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/info.jpg" border=0 alt="Help"></a>
-		~;
+    print qq~
+	<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?text=$text','Help','width=450,height=400,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/info.jpg" border=0 alt="Help"></a>
+	~;
 
-		## Begin printing Experiment Design Section
+    ## Begin printing Experiment Design Section
     print qq~</H2>
     <H3><FONT COLOR="red">last modified on $mod_date</FONT><H3>
     <TABLE CELLSPACING=0 CELLPADDING=0 BORDER="3"BORDERCOLOR="#000000">
-    <TR><TD>
-    <TABLE CELLSPACING=0 CELLPADDIN=0>
-    <TR BGCOLOR="#CCFFFF" BORDERCOLOR="#000000">
-      <TD><B>Experiment Description:</B></TD>
-      <TD><TEXTAREA NAME="expDesc" COLS="50" ROWS="10">$exp_desc</TEXTAREA></TD>
-    </TR>
-    <TR BGCOLOR="#FFFFFF" BORDER="0">
-      <TD><B>Type of Experiment:</B></TD>
-      <TD><br>
+    <TR>
+      <TD>
+      <TABLE CELLSPACING=0 CELLPADDIN=0>
+      <TR BGCOLOR="#CCFFFF" BORDERCOLOR="#000000">
+        <TD><B>Experiment Description:</B></TD>
+	<TD><TEXTAREA NAME="expDesc" COLS="50" ROWS="10">$exp_desc</TEXTAREA></TD>
+      </TR>
+      <TR BGCOLOR="#FFFFFF" BORDER="0">
+        <TD><B>Type of Experiment:</B></TD>
+        <TD><BR>
         <SELECT NAME="expTypeChooser">
-    ~;
+	~;
 
     my $expTypeTemplate = qq~
         <OPTION VALUE="nothing">
@@ -482,7 +478,7 @@ sub printExperimentDesignSection {
 	<OPTION VALUE="translational bias">Translational Bias
 	<OPTION VALUE="other">Other
 	~;
-
+    
     $expTypeTemplate =~ s(\"$exp_type\")(\"$exp_type\" SELECTED);
     if ($exp_type =~ /^other\((.*)\)/) {
 	$expTypeTemplate =~ s(\"other\")(\"other\" SELECTED);
@@ -496,7 +492,7 @@ sub printExperimentDesignSection {
 
     my $otherExpTemplate = qq~
 	<INPUT TYPE="text" NAME="otherExpType" onChange="setToOther(this.form.expTypeChooser, this.form.otherExpType)">
-    ~;
+	~;
 
     if ($exp_type =~/^other\((.*)\)/) {
 	my $subst = $1;
@@ -506,14 +502,15 @@ sub printExperimentDesignSection {
     print qq~
         $otherExpTemplate
 	<INPUT TYPE="hidden" NAME="expType">
-      </TD>
-    </TR>
-    <TR><TD></TD></TR>
-    <TR BGCOLOR="#CCFFFF">
-      <TD VALIGN="top"><B>Experimental Factors:</B></TD>
-      <TD>
-      <TABLE>
-        <TR><TD>
+	</TD>
+      </TR>
+      <TR><TD></TD></TR>
+      <TR BGCOLOR="#CCFFFF">
+        <TD VALIGN="top"><B>Experimental Factors:</B></TD>
+	<TD>
+	<TABLE>
+        <TR>
+	  <TD>
     ~;
 
 
@@ -531,7 +528,7 @@ sub printExperimentDesignSection {
     for (my $i=0;defined($factors[$i]);$i++) {
 	my $val = $i%3;
 	my $factor = $factors[$i];
-
+	
 	if ($val == 0) {
 	    $expFactorsTemplate .= "<TR>\n";
 	}
@@ -540,8 +537,11 @@ sub printExperimentDesignSection {
 	    $expFactorsTemplate .= "</TR>\n";
 	}
     }
-    $expFactorsTemplate .= "</TABLE>\n";
-
+    if ($expFactorsTemplate !~ /<\/TR>$/) {
+      $expFactorsTemplate .= "</TR>";
+    }
+    $expFactorsTemplate .= "</TABLE>";
+    
     my @factors = split ',',$exp_factors;
     foreach my $factor(@factors) {
 	$expFactorsTemplate =~ s(>$factor<\/TD>)(CHECKED>$factor<\/TD>);
@@ -554,10 +554,11 @@ sub printExperimentDesignSection {
 
     print qq~
 	$expFactorsTemplate
-	</TD></TR>
+	</TD>
+      </TR>
       </TABLE>
       </TD>
-    </TR>
+      </TR>
     <TR><TD></TD></TR>
     <TR BGCOLOR="#FFFFFF">
       <TD><B>\# of Hybridizations</B></TD>
@@ -609,7 +610,7 @@ sub printExperimentDesignSection {
       </TR>
       <TR><TD></TD></TR>
       <TR BGCOLOR="#FFFFFF">
-      <TD VALIGN="top"><B>Quality Control Steps:</B></TD>
+        <TD VALIGN="top"><B>Quality Control Steps:</B></TD>
     ~;
 
     my $qcTemplate = qq~
@@ -629,33 +630,34 @@ sub printExperimentDesignSection {
 
     @factors = split ',', $qc_steps;
     foreach my $factor(@factors) {
-				$qcTemplate =~ s(>$factor<\/TD>)(CHECKED>$factor<\/TD>);
-				if ($factor =~ /^other\((.*)\)/) {
-						my $subst = $1;
-						$qcTemplate =~ s(>Other)(CHECKED>Other);
-						$qcTemplate =~ s(\"otherQCStep1\")(\"otherQCStep1\" VALUE=\"$subst\");
-				}
+	$qcTemplate =~ s(>$factor<\/TD>)(CHECKED>$factor<\/TD>);
+	if ($factor =~ /^other\((.*)\)/) {
+	    my $subst = $1;
+	    $qcTemplate =~ s(>Other)(CHECKED>Other);
+	    $qcTemplate =~ s(\"otherQCStep1\")(\"otherQCStep1\" VALUE=\"$subst\");
+	}
     }
     print qq~
-    $qcTemplate
-    </TR>
-    <TR><TD></TD></TR>
-    <TR BGCOLOR="#CCFFFF">
-      <TD><B>Supplemental URL</B></TD>
-      <TD><INPUT TYPE="text" NAME="url" SIZE="50" VALUE="$uri"></TD>
-    </TR>
-    </TABLE>
-    </TD></TR>
-    </TABLE>
-    <INPUT TYPE="hidden" NAME="expHyb">
+	$qcTemplate
+	</TR>
+	<TR><TD></TD></TR>
+	<TR BGCOLOR="#CCFFFF">
+	  <TD><B>Supplemental URL</B></TD>
+	  <TD><INPUT TYPE="text" NAME="url" SIZE="50" VALUE="$uri"></TD>
+	</TR>
+	</TABLE>
+	</TD>
+      </TR>
+      </TABLE>
+      <INPUT TYPE="hidden" NAME="expHyb">
     ~;
 
-  my $permission = $sbeams->get_best_permission();
-  if ($permission <= 10){
-  print qq~
-			<BR>
-      <INPUT TYPE="submit" NAME="UPDATEMIAME" VALUE="Update Information">
-      </FORM>
+    my $permission = $sbeams->get_best_permission();
+    if ($permission <= 10){
+	print qq~
+	    <BR>
+	    <INPUT TYPE="submit" NAME="UPDATEMIAME" VALUE="Update Information">
+	    </FORM>
   ~;
   }
     return;
@@ -829,42 +831,42 @@ sub printArrayDesignSection {
 #
 ###############################################################################
 sub printSampleInformationSection {
-    my %args = @_;
-    my $SUB_NAME="printSampleInformationSection";
+  my %args = @_;
+  my $SUB_NAME="printSampleInformationSection";
 
-    #### Decode the argument list
-    my $parameters_ref = $args{'parameters'};
-    my %parameters = %{$parameters_ref};
+  #### Decode the argument list
+  my $parameters_ref = $args{'parameters'};
+  my %parameters = %{$parameters_ref};
 
-    #### Define standard variables
-    my ($sql, @rows, $comment, $expType, );
+  #### Define standard variables
+  my ($sql, @rows, $comment, $expType, );
 
-    #### print HTML
-    print qq~
-    $LINESEPARATOR
-    <H2><FONT COLOR="red">Sample Information</FONT> - 
+  #### print HTML
+  print qq~
+$LINESEPARATOR
+<H2><FONT COLOR="red">Sample Information</FONT> - 
     ~;
 
-    ## Determine MIAME compliance
-    if (1==0){
-	print qq~<FONT COLOR="green">MIAME Compliant</FONT>~;
-    }else {
-	print qq~NOT MIAME Compliant~;
-    }
-		## Print "More Info" Button
-		my $title = "MIAME Sample Requirements";
-		my $text = qq~<B>MIAME Sample Requirements:</B><BR><UL><LI>Organism Name</LI><LI>Provider of Sample</LI><LI>Developmental Stage</LI><LI>Strain</LI><LI>Age</LI><LI>Gender</LI><LI>Disease State</LI><LI>Manipulation of Sample</LI><LI>Hybridization extract preparation protocol</LI><LI>External controls added to bybridization extraction</LI></UL>~;
-		print qq~
-		<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?text=$text','Help','width=450,height=400,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/info.jpg" border=0 alt="Help"></a></H2>
-		~;
+  ## Determine MIAME compliance
+  if (1==0){
+      print qq~<FONT COLOR="green">MIAME Compliant</FONT>~;
+  }else {
+      print qq~NOT MIAME Compliant~;
+  }
 
+  ## Print "More Info" Button
+  my $title = "MIAME Sample Requirements";
+  my $text = qq~<B>MIAME Sample Requirements:</B><BR><UL><LI>Organism Name</LI><LI>Provider of Sample</LI><LI>Developmental Stage</LI><LI>Strain</LI><LI>Age</LI><LI>Gender</LI><LI>Disease State</LI><LI>Manipulation of Sample</LI><LI>Hybridization extract preparation protocol</LI><LI>External controls added to bybridization extraction</LI></UL>~;
+  print qq~
+<A HREF="#"onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?text=$text','Help','width=450,height=400,resizable=yes');return false"><IMG SRC="$HTML_BASE_DIR/images/info.jpg" border=0 alt="Help"></A></H2>
+  ~;
 
-    print qq~
-				<p>
-				<B>SBEAMS is under construction to handle sample information effectively.</B>
-				</p>
-				~;
-    return;
+  print qq~
+<P>
+<B>SBEAMS is under construction to handle sample information effectively.</B>
+</P>
+  ~;
+  return;
 }
 
 
@@ -872,133 +874,147 @@ sub printSampleInformationSection {
 # printLabelingAndHybridizationSection
 ###############################################################################
 sub printLabelingAndHybridizationSection {
-    my %args = @_;
-    my $SUB_NAME="printLabelingAndHybridizationSection";
+  my %args = @_;
+  my $SUB_NAME="printLabelingAndHybridizationSection";
 
-    #### Decode the argument list
-    my $parameters_ref = $args{'parameters'};
-    my %parameters = %{$parameters_ref};
+  #### Decode the argument list
+  my $parameters_ref = $args{'parameters'};
+  my %parameters = %{$parameters_ref};
 
-    #### Define standard variables
-    my ($labeling_hybridization_sql);
-    my (@rows, $comment, $expType);
-    my $miame_compliant = 1;
-    my $project_id = $sbeams->getCurrent_project_id();
+  #### Define standard variables
+  my ($labeling_hybridization_sql);
+  my (@rows, $comment, $expType);
+  my $miame_compliant = 1;
+  my $project_id = $sbeams->getCurrent_project_id();
 
-    #### print HTML
+  #### print HTML
+  print qq~
+$LINESEPARATOR
+<H2><FONT COLOR="red">Labeling and Hybridization</FONT> - 
+  ~;
+
+  ## SQL to extract information 
+  $labeling_hybridization_sql = qq~
+    SELECT A.array_name, A.array_id,
+      LPR.name,LPR.protocol_id,L.labeling_id,
+      HPR.name,HPR.protocol_id,H.hybridization_id,
+      ARSMPL.name,ARSMPL.array_request_sample_id
+      FROM $TB_ARRAY_REQUEST AR
+      LEFT JOIN $TB_ARRAY_REQUEST_SLIDE ARSL ON (ARSL.array_request_id = AR.array_request_id)
+      LEFT JOIN $TB_ARRAY_REQUEST_SAMPLE ARSMPL ON (ARSMPL.array_request_slide_id = ARSL.array_request_slide_id)
+      LEFT JOIN $TB_LABELING L ON (L.array_request_sample_id = ARSMPL.array_request_sample_id)
+      LEFT JOIN $TB_PROTOCOL LPR ON (LPR.protocol_id = L.protocol_id)
+      LEFT JOIN $TB_ARRAY A ON (A.array_request_slide_id = ARSL.array_request_slide_id)
+      LEFT JOIN $TB_HYBRIDIZATION H ON (H.array_id = A.array_id)
+      LEFT JOIN $TB_PROTOCOL HPR ON (HPR.protocol_id = H.protocol_id)
+      WHERE 1=1
+      AND AR.project_id = '$project_id'
+      AND A.record_status != 'D'
+      AND AR.record_status != 'D'
+      ORDER BY A.array_name
+    ~;
+  @rows = $sbeams->selectSeveralColumns($labeling_hybridization_sql);
+
+  ## if we have no records, we're not miame compliant
+  unless (@rows) {
+    $miame_compliant = 0;
+  }
+
+  ## If we find a 'NULL' in the array, we are not MIAME compliant
+  foreach my $row_ref (@rows) {
+    my @temp_row = @{$row_ref};
+    foreach my $value (@temp_row) {
+      unless ($value) { $miame_compliant = 0; }
+    }
+  }
+    
+  ## Determine MIAME compliance
+  if ($miame_compliant == 1){
+    print qq~<FONT COLOR="green">MIAME Compliant</FONT>~;
+  }else {
+    print qq~NOT MIAME Compliant~;
+  }
+	
+  ##Print "More Info" Button
+  my $title = "MIAME Labeling/Hybridization Requirements";
+  my $text = qq~<B>Labeling/Hybridization Requirements</B><UL><LI>Labeling protocol(s)</LI><LI>The protocol and conditions used during hybridization, blocking and washing</LI></UL>~;
+  print qq~
+<A HREF="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?text=$text','Help','width=450,height=400,resizable=yes');return false"><IMG SRC="$HTML_BASE_DIR/images/info.jpg" border=0 alt="Help"></a></H2>
+  ~;
+
+  if (@rows){
+    ## start table
     print qq~
-    $LINESEPARATOR
-    <H2><FONT COLOR="red">Labeling and Hybridization</FONT> - 
+
+<TABLE BORDER>
+<TR BGCOLOR="\#1C3887">
+  <TD><FONT COLOR="white">Array Name</FONT></TD>
+  <TD><FONT COLOR="white">Array Request Sample Name/ID</FONT></TD>
+  <TD><FONT COLOR="white">Labeling</FONT></TD>
+  <TD><FONT COLOR="white">Hybridization</FONT></TD>
+</TR>
     ~;
 
-    ## SQL to extract information 
-    $labeling_hybridization_sql = qq~
-	SELECT A.array_name, A.array_id,
-	       LPR.name,LPR.protocol_id,L.labeling_id,
-	       HPR.name,HPR.protocol_id,H.hybridization_id,
-	       ARSMPL.name,ARSMPL.array_request_sample_id
-	FROM $TB_ARRAY_REQUEST AR
-	LEFT JOIN $TB_ARRAY_REQUEST_SLIDE ARSL ON (ARSL.array_request_id = AR.array_request_id)
-	LEFT JOIN $TB_ARRAY_REQUEST_SAMPLE ARSMPL ON (ARSMPL.array_request_slide_id = ARSL.array_request_slide_id)
-	LEFT JOIN $TB_LABELING L ON (L.array_request_sample_id = ARSMPL.array_request_sample_id)
-	LEFT JOIN $TB_PROTOCOL LPR ON (LPR.protocol_id = L.protocol_id)
-	LEFT JOIN $TB_ARRAY A ON (A.array_request_slide_id = ARSL.array_request_slide_id)
-	LEFT JOIN $TB_HYBRIDIZATION H ON (H.array_id = A.array_id)
-	LEFT JOIN $TB_PROTOCOL HPR ON (HPR.protocol_id = H.protocol_id)
-	WHERE 1=1
-	AND AR.project_id = '$project_id'
-	AND A.record_status != 'D'
-	AND AR.record_status != 'D'
-	ORDER BY A.array_name
-	~;
-    @rows = $sbeams->selectSeveralColumns($labeling_hybridization_sql);
-
-    ## if we have no records, we're not miame compliant
-    unless (@rows) {
-	$miame_compliant = 0;
-    }
-
-    ## If we find a 'NULL' in the array, we are not MIAME compliant
     foreach my $row_ref (@rows) {
-	my @temp_row = @{$row_ref};
-	foreach my $value (@temp_row) {
-	    unless ($value) { $miame_compliant = 0; }
-	}
-    }
+      my ($array_name, $array_id,$lab_prot_name, $lab_prot_id, $lab_id,$hyb_prot_name, $hyb_prot_id,$hyb_id,$arsmpl_name,$arsmpl_id) = @{$row_ref};
+      print qq~
+<TR>
+  <TD>
+  <A HREF="ManageTable.cgi?TABLE_NAME=array&array_id=$array_id" TARGET="_blank">$array_name</A>
+  </TD>
+  <TD>$arsmpl_name ($arsmpl_id)</TD>
+      ~;
+
+      ## Print Labeling Information
+      if ($lab_prot_name) {
+	print qq~
+  <TD>$lab_prot_name <BR>
+  <A HREF="ManageTable.cgi?TABLE_NAME=protocol&protocol_id=$lab_prot_id" TARGET="_blank">[Protocol]</A>
+  <A HREF="ManageTable.cgi?TABLE_NAME=labeling&labeling_id=$lab_id" TARGET="_blank">[Record]</A>
+  </TD>
+        ~;
+      }else {
+        print qq~
+  <TD>
+  <FONT COLOR="red">No Labeling Record</FONT><BR>
+  <A HREF="ManageTable.cgi?TABLE_NAME=labeling&ShowEntryForm=1&array_request_sample_id=$arsmpl_id" TARGET="_blank">[Insert Record]
+  </TD>
+		    ~;
+      }
+
+      ## Print Hyb Information
+      if ($hyb_prot_name) {
+	print qq~
+   <TD>$hyb_prot_name <BR>
+   <A HREF="ManageTable.cgi?TABLE_NAME=protocol&protocol_id=$hyb_prot_id"TARGET="_blank">[Protocol]</A>
+   <A HREF="ManageTable.cgi?TABLE_NAME=hybridization&hybridization_id=$hyb_id"TARGET="_blank">[Record]</A>
+   </TD>
+       ~;
+      }else {
+	print qq~
+   <TD>
+   <FONT COLOR="red">No Hybridization Record</FONT><BR>
+   <A HREF="ManageTable.cgi?TABLE_NAME=hybridization&ShowEntryForm=1" TARGET="_blank">[Insert Record]</A>
+   </TD>
+        ~;
+      }
     
-    ## Determine MIAME compliance
-    if ($miame_compliant == 1){
-	print qq~<FONT COLOR="green">MIAME Compliant</FONT>~;
-    }else {
-	print qq~NOT MIAME Compliant~;
+      ## end row
+      print qq~
+ </TR>
+      ~;
     }
-	
-		##Print "More Info" Button
-		my $title = "MIAME Labeling/Hybridization Requirements";
-		my $text = qq~<B>Labeling/Hybridization Requirements</B><UL><LI>Labeling protocol(s)</LI><LI>The protocol and conditions used during hybridization, blocking and washing</LI></UL>~;
-		print qq~
-		<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?text=$text','Help','width=450,height=400,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/info.jpg" border=0 alt="Help"></a></H2>
-		~;
-
-
-    if (@rows){
-	## start table
-	print qq~
-	    <TABLE BORDER>
-	    <TR BGCOLOR="\#1C3887">
-	    <TD><FONT COLOR="white">Array Name</FONT></TD>
-	    <TD><FONT COLOR="white">Array Request Sample Name/ID</FONT></TD>
-	    <TD><FONT COLOR="white">Labeling</FONT></TD>
-	    <TD><FONT COLOR="white">Hybridization</FONT></TD>
-	    </TR>
-	    ~;
-	
-	foreach my $row_ref (@rows) {
-	    my ($array_name, $array_id,$lab_prot_name, $lab_prot_id, $lab_id,$hyb_prot_name, $hyb_prot_id,$hyb_id,$arsmpl_name,$arsmpl_id) = @{$row_ref};
-	    print qq~
-		<TR>
-		<TD><A HREF="ManageTable.cgi?TABLE_NAME=array&array_id=$array_id" TARGET="_blank">$array_name</A></TD>
-		<TD>$arsmpl_name ($arsmpl_id)</TD>
-		~;
-
-	    ## Print Labeling Information
-	    if ($lab_prot_name) {
-		print qq~
-		    <TD>$lab_prot_name <BR><A HREF="ManageTable.cgi?TABLE_NAME=protocol&protocol_id=$lab_prot_id" TARGET="_blank">[Protocol]</A> <A HREF="ManageTable.cgi?TABLE_NAME=labeling&labeling_id=$lab_id" TARGET="_blank">[Record]</A></TD>
-		    ~;
-	    }else {
-		print qq~
-		    <TD><FONT COLOR="red">No Labeling Record</FONT><BR><A HREF="ManageTable.cgi?TABLE_NAME=labeling&ShowEntryForm=1&array_request_sample_id=$arsmpl_id" TARGET="_blank">[Insert Record]</TD></TD>
-		    ~;
-	    }
-	    
-	    ## Print Hyb Information
-	    if ($hyb_prot_name) {
-		print qq~
-		    <TD>$hyb_prot_name <BR><A HREF="ManageTable.cgi?TABLE_NAME=protocol&protocol_id=$hyb_prot_id" TARGET="_blank">[Protocol]<A HREF="ManageTable.cgi?TABLE_NAME=hybridization&hybridization_id=$hyb_id" TARGET="_blank">[Record]</A></TD>
-		    ~;
-	    }else {
-		print qq~
-		    <TD><FONT COLOR="red">No Hybridization Record</FONT><BR><A HREF="ManageTable.cgi?TABLE_NAME=hybridization&ShowEntryForm=1" TARGET="_blank">[Insert Record]</TD>
-		    ~;
-	    }
-	    
-	    ## end row
-	    print qq~
-		</TR>
-		~;
-	}
-	## end table
-	print qq~
-	    </TABLE>
-			<BR>
-	    ~;
-    }else {
-	print qq~
-	    <H2>No Records for this Project</H2>
-	    ~;
-    }		
-    return;
+    ## end table
+    print qq~
+</TABLE>
+<BR>
+    ~;
+  }else {
+    print qq~
+<H2>No Records for this Project</H2>
+    ~;
+  }		
+  return;
 }
 
 
@@ -1011,140 +1027,139 @@ sub printLabelingAndHybridizationSection {
 # data processing protocol -> Data Processing Webpage
 ###############################################################################
 sub printMeasurementsSection {
-    my %args = @_;
-    my $SUB_NAME="printMeasurementsSection";
+  my %args = @_;
+  my $SUB_NAME="printMeasurementsSection";
 
-    #### Decode the argument list
-    my $parameters_ref = $args{'parameters'};
-    my %parameters = %{$parameters_ref};
+  #### Decode the argument list
+  my $parameters_ref = $args{'parameters'};
+  my %parameters = %{$parameters_ref};
 
-    #### Define standard variables
-    my ($sql, @rows, $comment, $expType);
-    my $miame_compliant = 1;
-    my $project_id = $sbeams->getCurrent_project_id();
+  #### Define standard variables
+  my ($sql, @rows, $comment, $expType);
+  my $miame_compliant = 1;
+  my $project_id = $sbeams->getCurrent_project_id();
 
-    #### print HTML
-    print qq~
-    $LINESEPARATOR
-    <H2><FONT COLOR="red">Measurements</FONT> - 
+  #### print HTML
+  print qq~
+$LINESEPARATOR
+<H2><FONT COLOR="red">Measurements</FONT> - 
+  ~;
+
+  $sql = qq~
+    SELECT A.array_name,A.array_id,ASPR.name, ASPR.protocol_id,ASCAN.array_scan_id,AQPR.name, AQPR.protocol_id,AQUANT.array_quantitation_id,AQUANT.stage_location
+    FROM $TB_ARRAY A
+    LEFT JOIN $TB_PROJECT PR ON (PR.project_id = A.project_id)
+    LEFT JOIN $TB_ARRAY_SCAN ASCAN ON (ASCAN.array_id = A.array_id)
+    LEFT JOIN $TB_PROTOCOL ASPR ON (ASPR.protocol_id = ASCAN.protocol_id)
+    LEFT JOIN $TB_ARRAY_QUANTITATION AQUANT ON (AQUANT.arraY_scan_id = ASCAN.array_scan_id)
+    LEFT JOIN $TB_PROTOCOL AQPR ON (AQPR.protocol_id = AQUANT.protocol_id)
+    WHERE 1=1
+    AND PR.project_id = '$project_id'
+    AND A.record_status != 'D'
+    AND ASCAN.record_status != 'D'
+    AND AQUANT.record_status != 'D'
     ~;
+  @rows = $sbeams->selectSeveralColumns($sql);
 
-    $sql = qq~
-	SELECT A.array_name,A.array_id,ASPR.name, ASPR.protocol_id,ASCAN.array_scan_id,AQPR.name, AQPR.protocol_id,AQUANT.array_quantitation_id,AQUANT.stage_location
-	FROM $TB_ARRAY A
-	LEFT JOIN $TB_PROJECT PR ON (PR.project_id = A.project_id)
-	LEFT JOIN $TB_ARRAY_SCAN ASCAN ON (ASCAN.array_id = A.array_id)
-	LEFT JOIN $TB_PROTOCOL ASPR ON (ASPR.protocol_id = ASCAN.protocol_id)
-	LEFT JOIN $TB_ARRAY_QUANTITATION AQUANT ON (AQUANT.arraY_scan_id = ASCAN.array_scan_id)
-	LEFT JOIN $TB_PROTOCOL AQPR ON (AQPR.protocol_id = AQUANT.protocol_id)
-	WHERE 1=1
-	AND PR.project_id = '$project_id'
-	AND A.record_status != 'D'
-	AND ASCAN.record_status != 'D'
-	AND AQUANT.record_status != 'D'
-	~;
-    @rows = $sbeams->selectSeveralColumns($sql);
+  ## if there are no records, no miame compliance
+  unless (@rows){
+    $miame_compliant = 0;
+  }
 
-    ## if there are no records, no miame compliance
-    unless (@rows){
-	$miame_compliant = 0;
+  ## go through records to make sure something exists
+  foreach my $row_ref (@rows){
+    my @temp = @{$row_ref};
+    foreach my $value (@temp){
+      unless ($value) {$miame_compliant = 0;}
     }
+  }
 
-    ## go through records to make sure something exists
-    foreach my $row_ref (@rows){
-	my @temp = @{$row_ref};
-	foreach my $value (@temp){
-	    unless ($value) {$miame_compliant = 0;}
-	}
-    }
+  ## Determine MIAME compliance
+  if ($miame_compliant == 1){
+    print qq~<FONT COLOR="green">MIAME Compliant</FONT>~;
+  }else {
+    print qq~NOT MIAME Compliant~;
+  }
 
-    ## Determine MIAME compliance
-    if ($miame_compliant == 1){
-	print qq~<FONT COLOR="green">MIAME Compliant</FONT>~;
-    }else {
-	print qq~NOT MIAME Compliant~;
-    }
+  ## Print "More Info" Button
+  my $title = "MIAME Measurements/Quantitation Requirements";
+  my $text = qq~<B>Measurement Data Requirements</B><UL><LI>The quantitations based on the images</LI><LI>The set of quantitations from several arrays upon which the authors base their conclusions. While access to images of raw data is not required (although its value is unquestionable), authors should make every effort to provide the following:</LI><UL><LI>Type of scanning hardware and software used: this information is appropriate for a materials and methods section</LI><LI>Type of image analysis software used: specifications should be stated in the materials and methods</LI><LI>A description of the measurements produced by the image-analysis software and a description of which measurements were used in the analysis</LI><LI>The complete output of the image analysis before data selection and transformation (spot quantitation matrices)</LI><LI>Data selection and transformation procedures</LI><LI>Final gene expression data table(s) used by the authors to make their conclusions after data selection and transformation (gene expression data matrices)</LI></UL></UL>~;
+  print qq~
+<A HREF="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?text=$text','Help','width=450,height=500,resizable=yes');return false"><IMG SRC="$HTML_BASE_DIR/images/info.jpg" border=0 alt="Help"></A></H2>
+  ~;
 
-		## Print "More Info" Button
-		my $title = "MIAME Measurements/Quantitation Requirements";
-		my $text = qq~<B>Measurement Data Requirements</B><UL><LI>The quantitations based on the images</LI><LI>The set of quantitations from several arrays upon which the authors base their conclusions. While access to images of raw data is not required (although its value is unquestionable), authors should make every effort to provide the following:</LI><UL><LI>Type of scanning hardware and software used: this information is appropriate for a materials and methods section</LI><LI>Type of image analysis software used: specifications should be stated in the materials and methods</LI><LI>A description of the measurements produced by the image-analysis software and a description of which measurements were used in the analysis</LI><LI>The complete output of the image analysis before data selection and transformation (spot quantitation matrices)</LI><LI>Data selection and transformation procedures</LI><LI>Final gene expression data table(s) used by the authors to make their conclusions after data selection and transformation (gene expression data matrices)</LI></UL></UL>~;
-		print qq~
-		<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?text=$text','Help','width=450,height=500,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/info.jpg" border=0 alt="Help"></a></H2>
-		~;
-
-
-    if (@rows) {
+  if (@rows) {
     ## start table
-	print qq~
-	    <TABLE BORDER>
-	    <TR BGCOLOR="\#1C3887">
-	    <TD><FONT COLOR="white">Array Name</FONT></TD>
-	    <TD><FONT COLOR="white">Array Scan Protocol/Record</FONT></TD>
-	    <TD><FONT COLOR="white">Image Analysis Protocol/Record</FONT></TD>
-	    <TD><FONT COLOR="white">Data Processing Protocol</FONT></TD>
-	    </TR>
-	    ~;
+    print qq~
+<TABLE BORDER>
+<TR BGCOLOR="\#1C3887">
+  <TD><FONT COLOR="white">Array Name</FONT></TD>
+  <TD><FONT COLOR="white">Array Scan Protocol/Record</FONT></TD>
+  <TD><FONT COLOR="white">Image Analysis Protocol/Record</FONT></TD>
+  <TD><FONT COLOR="white">Data Processing Protocol</FONT></TD>
+</TR>
+    ~;
 	
-	foreach my $row_ref (@rows) {
-	    my ($array_name,$array_id,$scan_protocol_name,$scan_protocol_id,$array_scan_id,$quant_protocol_name,$quant_protocol_id,$array_quant_id,$array_quant_location) = @{$row_ref};
-	    print qq~
-	    <TR>
-	    <TD><A HREF="ManageTable.cgi?TABLE_NAME=array&array_id=$array_id" TARGET="_blank">$array_name</A></TD>
-	    ~;
+    foreach my $row_ref (@rows) {
+      my ($array_name,$array_id,$scan_protocol_name,$scan_protocol_id,$array_scan_id,$quant_protocol_name,$quant_protocol_id,$array_quant_id,$array_quant_location) = @{$row_ref};
+      print qq~
+<TR>
+  <TD><A HREF="ManageTable.cgi?TABLE_NAME=array&array_id=$array_id"TARGET="_blank">$array_name</A></TD>
+      ~;
 
+      ## Array Scan Protocol
+      if ($array_scan_id){
+	print qq~
+  <TD>
+  $scan_protocol_name<BR>
+  <A HREF="ManageTable.cgi?TABLE_NAME=protocol&protocol_id=$scan_protocol_id" TARGET="_blank">[View Protocol]</A> 
+  <A HREF="ManageTable.cgi?TABLE_NAME=array_scan&array_scan_id=$array_scan_id" TARGET="_blank">[View Record]</A>
+  </TD>
+      ~;
+      }else {
+	  print qq~
+  <TD>
+  <FONT COLOR="red">No Record</FONT><BR>
+  <A HREF="ManageTable.cgi?TABLE_NAME=array_scan&ShowEntryForm=1" TARGET="_blank">[Insert Record]</A>
+  </TD>
+          ~;
+      }
 
-	    ## Array Scan Protocol
-	    if ($array_scan_id){
-	    print qq~
-	    <TD>
-	    $scan_protocol_name<BR>
-	    <A HREF="ManageTable.cgi?TABLE_NAME=protocol&protocol_id=$scan_protocol_id" TARGET="_blank">[View Protocol]</A> 
-	    <A HREF="ManageTable.cgi?TABLE_NAME=array_scan&array_scan_id=$array_scan_id" TARGET="_blank">[View Record]</A>
-	    </TD>
-	    ~;
-	    }else {
-	    print qq~
-	    <TD>
-	    <FONT COLOR="red">No Record</FONT><BR>
-	    <A HREF="ManageTable.cgi?TABLE_NAME=array_scan&ShowEntryForm=1" TARGET="_blank">[Insert Record]</A>
-	    </TD>
-	    ~;
-	    }
+      ## Image Analysis Protocol
+      if ($array_quant_id){
+	print qq~
+  <TD>
+  $quant_protocol_name<BR>
+  <A HREF="ManageTable.cgi?TABLE_NAME=protocol&protocol_id=$quant_protocol_id" TARGET="_blank">[View Protocol]</A> 
+  <A HREF="ManageTable.cgi?TABLE_NAME=array_quantitation&array_quantitation_id=$array_quant_id" TARGET="_blank">[View Record]</A>
+  </TD>
+        ~;
+      }else {
+	  print qq~
+  <TD>
+  <A HREF="ManageTable.cgi?TABLE_NAME=array_scan&ShowEntryForm=1" TARGET="_blank">[Insert Record]</A>
+  </TD>
+          ~;
+      }
 
-	    ## Image Analysis Protocol
-	    if ($array_quant_id){
-	    print qq~
-	    <TD>
-	    $quant_protocol_name<BR>
-	    <A HREF="ManageTable.cgi?TABLE_NAME=protocol&protocol_id=$quant_protocol_id" TARGET="_blank">[View Protocol]</A> 
-	    <A HREF="ManageTable.cgi?TABLE_NAME=array_quantitation&array_quantitation_id=$array_quant_id" TARGET="_blank">[View Record]</A>
-	    </TD>
-	    ~;
-	    }else {
-	    print qq~
-	    <TD>
-	    <A HREF="ManageTable.cgi?TABLE_NAME=array_scan&ShowEntryForm=1" TARGET="_blank">[Insert Record]</A>
-	    </TD>
-	    ~;
-	    }
-
-	    print qq~
-	    <TD><A HREF="http://db.systemsbiology.net/software/ArrayProcess/" TARGET="_blank">Pipeline Documentation</A></TD>
-	    </TR>
-	    ~;
-	}
+      print qq~
+  <TD>
+  <A HREF="http://db.systemsbiology.net/software/ArrayProcess/" TARGET="_blank">Pipeline Documentation</A>
+  </TD>
+</TR>
+      ~;
+    }
     ## end table
     print qq~
-	</TABLE>
-	<BR>
-	~;
-    }
-    else{
-	print qq~
-	<H2>No Records for this project</H2>
-	~;
-    }
-    return;
+</TABLE>
+<BR>
+    ~;
+  }else {
+    print qq~
+<H2>No Records for this project</H2>
+  ~;
+  }
+  return;
 }
 
 ###############################################################################
@@ -1220,14 +1235,14 @@ sub updateMIAMEInfo {
 	  $additional_information .= "<num_hybs>".$parameters{'numHyb'}."<\/num_hybs>";
       }
 
-			## Is a common reference used?
-			if ($parameters{'commonRef'}){
-					$additional_information .="<common_ref>".$parameters{'commonRef'}."<\/common_ref>";
-			}
-			##Description of common ref
-			if ($parameters{'commonRefText'} && $parameters{'commonRef'} eq 'yes') {
-					$additional_information .="<common_ref_text>".$parameters{'commonRefText'}."<\/common_ref_text>";
-			}
+      ## Is a common reference used?
+      if ($parameters{'commonRef'}){
+	  $additional_information .="<common_ref>".$parameters{'commonRef'}."<\/common_ref>";
+      }
+      ##Description of common ref
+      if ($parameters{'commonRefText'} && $parameters{'commonRef'} eq 'yes') {
+	  $additional_information .="<common_ref_text>".$parameters{'commonRefText'}."<\/common_ref_text>";
+      }
 
       ## Quality Control Steps
       my $qc_steps;
@@ -1253,7 +1268,7 @@ sub updateMIAMEInfo {
       
       ## Finish with everything that goes in the 'additional_information' field
       $rowdata{'additional_information'} = update_module(module=>'microarray',
-																												 content=>$additional_information);
+							 content=>$additional_information);
       
 
       ## Project URI
@@ -1324,7 +1339,6 @@ sub update_module {
   }else {
       $additional_information = "<$module>$content<\/$module>";
   }
-
   return $additional_information
 }
 
