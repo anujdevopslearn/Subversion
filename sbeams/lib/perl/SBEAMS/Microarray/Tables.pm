@@ -152,17 +152,19 @@ $TB_ARRAY_SCAN          = "${mod}array_scan";
 $TB_ARRAY_QUANTITATION  = "${mod}array_quantitation";
 $TBMA_BIOSEQUENCE_SET   = "${mod}biosequence_set";
 $TBMA_BIOSEQUENCE       = "${mod}biosequence";
+
 $TBMA_BIOSEQUENCE_EXTERNAL_XREF = "${mod}biosequence_external_xref";
-$TBMA_EXTERNAL_REFERENCE = "e${mod}xternal_reference";
-$TBMA_EXTERNAL_REFERENCE_TYPE = "${mod}external_reference_type";
-$TBMA_POLYMER_TYPE      = "${mod}polymer_type";
+$TBMA_EXTERNAL_REFERENCE        = "${mod}external_reference";
+$TBMA_EXTERNAL_REFERENCE_TYPE   = "${mod}external_reference_type";
+$TBMA_POLYMER_TYPE              = "${mod}polymer_type";
 $TBMA_ARRAY_ELEMENT     = "${mod}array_element";
-$TBMA_CHANNEL = "${mod}channel";
-$TBMA_SERVER="${mod}server";
-$TBMA_FILE_PATH="${mod}file_path";
-$TBMA_FILE_LOCATION="${mod}file_location";
-$TBMA_FILE_TYPE="${mod}file_type";
-$TBMA_QUANTITATION_TYPE="${mod}quantitation_type";
+$TBMA_CHANNEL           = "${mod}channel";
+
+$TBMA_SERVER            = "${mod}server";
+$TBMA_FILE_PATH         = "${mod}file_path";
+$TBMA_FILE_LOCATION     = "${mod}file_location";
+$TBMA_FILE_TYPE         = "${mod}file_type";
+$TBMA_QUANTITATION_TYPE = "${mod}quantitation_type";
 
 $TBMA_QUERY_OPTION      = "${mod}query_option";
 $TBMA_CONDITION         = "${mod}condition";
