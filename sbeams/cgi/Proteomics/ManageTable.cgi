@@ -184,6 +184,39 @@ sub preFormHook {
   }
 
 
+  #### If this is publication and there is a PubMedID and there is
+  #### not a title, try to fetch the data from PubMed
+  if ($TABLE_NAME eq "PR_publication") {
+    if ($query_parameters_ref->{pubmed_ID} &&
+        !$query_parameters_ref->{publication_name}) {
+      use SBEAMS::Connection::PubMedFetcher;
+      my $PubMedFetcher = new SBEAMS::Connection::PubMedFetcher;
+      my $pubmed_info = $PubMedFetcher->getArticleInfo(
+        PubMedID=>$query_parameters_ref->{pubmed_ID});
+      if ($pubmed_info) {
+        my %keymap = (
+		      MedlineTA=>'journal_name',
+		      AuthorList=>'author_list',
+		      Volume=>'volume_number',
+		      Issue=>'issue_number',
+		      AbstractText=>'abstract',
+		      ArticleTitle=>'title',
+		      PublishedYear=>'published_year',
+		      MedlinePgn=>'page_numbers',
+		      PublicationName=>'publication_name',
+		     );
+        while (my ($key,$value) = each %{$pubmed_info}) {
+          #print "$key=$value=<BR>\n";
+	  if ($keymap{$key}) {
+            $query_parameters_ref->{$keymap{$key}} = $value;
+	    #print "Mapped to $keymap{$key}<BR>\n";
+	  }
+        }
+      }
+    }
+  }
+
+
   #### Otherwise, no special processing, so just return undef
   return;
 
