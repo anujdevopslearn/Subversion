@@ -818,6 +818,7 @@ sub translateSQL{
   my $self = shift || croak("parameter self not passed");
   my %args = @_;
 
+ 
   #### Process the arguments list
   my $sql = $args{'sql'} || croak "parameter sql missing";
 
@@ -3991,11 +3992,15 @@ sub display_input_form {
       #### Evaluate the $TBxxxxx table name variables if in the query
       if ( $optionlist_queries{$element} =~ /\$TB/ ) {
         my $tmp = $optionlist_queries{$element};
+        
         #### If there are any double quotes, need to escape them first
         $tmp =~ s/\"/\\\"/g;
-        $optionlist_queries{$element} = main::evalSQL($tmp);
+         $optionlist_queries{$element} = $self->evalSQL($tmp);
+     #   $optionlist_queries{$element} = main::evalSQL($tmp);
 	unless ($optionlist_queries{$element}) {
 	  print "<font color=\"red\">ERROR: SQL for field '$element' fails to resolve embedded \$TB table name variable(s)</font><BR><PRE>$tmp</PRE><BR>\n";
+      
+      
 	}
 
       }
