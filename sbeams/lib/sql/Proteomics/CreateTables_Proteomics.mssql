@@ -96,6 +96,7 @@ CREATE TABLE dbxref (
 	dbxref_tag			varchar(50) NOT NULL,
 	dbxref_description		varchar(255) NOT NULL,
 	accessor			varchar(255) NULL,
+	accessor_suffix			varchar(255) NULL,
 	uri				varchar(255) NULL,
 	comment				text NULL,
 	sort_order			int NOT NULL DEFAULT 10,
