@@ -154,7 +154,7 @@ sub handle_request {
 	~;
 
   #### print_tabs
-  my @tab_titles = ("Graphical Overview","Current Project","Projects You Own","Accessible Projects","Array News");
+  my @tab_titles = ("Graphical Overview","Current Project","Projects You Own","Accessible Projects","News And Links");
   my $tab_titles_ref = \@tab_titles;
   my $page_link = "main.cgi";
   my $unselected_bg_color = "\#008000";
@@ -199,7 +199,7 @@ sub handle_request {
 			     selected_font_color=>$selected_font_color,
 			     selected_tab=>3);
       print_accessible_projects_tab(); 
-  }elsif($parameters{'tab'} eq "array_news") {
+  }elsif($parameters{'tab'} eq "news_and_links") {
       $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
 			     page_link=>$page_link,
 			     unselected_bg_color=>$unselected_bg_color,
@@ -207,7 +207,7 @@ sub handle_request {
 			     selected_bg_color=>$selected_bg_color,
 			     selected_font_color=>$selected_font_color,
 			     selected_tab=>4);
-      print_array_news_tab();
+      print_news_and_links_tab();
   }else{
       $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
 			     page_link=>$page_link,
@@ -225,34 +225,70 @@ sub handle_request {
 
 
 ###############################################################################
-# print_array_news_tab
+# print_news_and_links_tab
 ###############################################################################
-sub print_array_news_tab {
+sub print_news_and_links_tab {
   my %args = @_;
   my $SUB_NAME = "print_array_news_tab";
   my $file_name = "$PHYSICAL_BASE_DIR/lib/etc/$SBEAMS_SUBDIR/news/current_news.txt";
 
+  ## Start News and Links Page
+  print qq~
+<!-- --------- News and Links Table --------- -->
+<TABLE WIDTH="100%"CELLSPACING="0" CELLPADDING="0">
+<TR VALIGN="top">
+
+  <TD ALIGN="left">
+  <CENTER><FONT COLOR="red" SIZE="+2"><B>Microarray Links</B></FONT></CENTER>
+  <UL>
+   <LI><A HREF="http://www.wustl.edu/\~jbuhler/research/array">Microarray Overview (Jeremey Buhler, Wash. U.)</A>
+   <LI><A HREF="http://www.protocol-online.org/cgi-bin/prot/search.cgi?query=microarray">Online Microarray Protocols</A>
+   <LI><A HREF="http://www.molmine.com">J-Express (ISB Analysis Software)</A>
+   <LI><A HREF="http://www.tigr.org/software/tm4/mev.html">TIGR MeV (ISB Analysis Software)</A>
+   <LI><A HREF="http://www.mged.org">Microarray Gene Expression Data Society (MAGE/MIAME)</A>
+   <LI><A HREF="http://www.bioconductor.org">BioConductor (R, open-source analysis software)</A>
+   <LI><A HREF="http://www.cytoscape.org">Cytoscape Homepage</A>
+
+  </UL>
+  </TD>
+</TR>
+<TR><TD>$LINESEPARATOR</TD></TR>
+<TR>
+  <TD ALIGN="center">
+  <FONT COLOR="red" SIZE="+2"><B>Microarray News</B></FONT>
+  <BR>
+  ~;
+
+  ## Print anything in the 'news' file 
   open(INFILE, $file_name) || die "unable to open news file, $file_name";
   print qq~
-      <P>
-      ~;
+  <P>
+  ~;
   while (<INFILE>) {
       my $textline = $_;
       if ($textline =~ /^Title:(.*)/){
          print qq ~
-	   <H3><FONT COLOR="red"><U>$1</U></FONT></H3>
+  <H3><FONT COLOR="red"><U>$1</U></FONT></H3>
 	  ~;
       }elsif($textline =~/^Posted:(.*)/){
 	 print qq~
-	     <B>Posted on: $1</B><BR>
+  <B>Posted on: $1</B><BR>
 	     ~;
      }elsif($textline =~/\w/){
 	 print qq~$textline~;
      }
   }
   print qq~
-      </P>
-      ~;    
+  </P>
+      ~;  
+
+  ## Finish up News and Links Page
+  print qq~
+  </TD>
+</TR>
+</TABLE>
+~;
+
   return;
 }
 ###############################################################################
