@@ -840,13 +840,25 @@ sub displaySequenceView {
     my $tmr_color = "orange";
     if ($tmr_topology) {
       $page_width = 100;
-      my @regions = split(/[io]/,$tmr_topology);
+      my $start_side = substr($tmr_topology,0,1);
+      my $tmp = substr($tmr_topology,1,9999);
+      my @regions = split(/[io]/,$tmp);
       foreach my $region (@regions) {
         my ($start,$end) = split(/-/,$region);
-        $tmr_start_positions{$start} = 1;
-        $tmr_end_positions{$end} = 1;
+        $tmr_start_positions{$start} = $start_side;
+	if ($start_side eq 'i') {
+          $start_side = 'o';
+        } elsif ($start_side eq 'o') {
+          $start_side = 'i';
+        } else {
+          $start_side = '?';
+        }
+        $tmr_end_positions{$end} = $start_side;
       }
       $tmr_color = "blue" if ($tmr_class eq 'A' || $tmr_class eq 'S');
+    print "(TMR Topology: $tmr_topology)<BR>\n";
+    #print "<A HREF=\"http://www.cbs.dtu.dk/cgi-bin/nph-webface?configfile=/usr/opt/www/pub/CBS/services/TMHMM-2.0/TMHMM2.cf&seqfile=outform=-noshort&SEQ=%3EANON%0D$sequence\">[See full TMHMM result]</A><BR>\n";
+    print "<A HREF=\"http://www.cbs.dtu.dk/services/TMHMM/\" TARGET=\"TMHMM\">To see full TMHMM result, click here and paste this:</A><BR>>$biosequence_name Description<BR>$sequence<BR><BR>\n";
     }
 
 
@@ -871,6 +883,8 @@ sub displaySequenceView {
       my $color_state = '';
       while ($i < $seq_length) {
 
+	my $trailing_flag = '';
+
 	if ($end_positions{$i}) {
 	  if ($color_state eq 'T+P') {
             print "</B></font><font color=\"$tmr_color\"><B>";
@@ -892,6 +906,7 @@ sub displaySequenceView {
 	}
 
 	if ($tmr_end_positions{$i}) {
+	  print "($tmr_end_positions{$i})";
 	  if ($color_state eq 'T+P') {
             print "</B></font><font color=\"green\"><B>";
             $color_state = 'P';
@@ -909,6 +924,7 @@ sub displaySequenceView {
 	    print "<font color=\"$tmr_color\"><B>";
             $color_state = 'T';
           }
+	  print "($tmr_start_positions{$i})";
 	}
 
 
