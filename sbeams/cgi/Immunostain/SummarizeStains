@@ -114,7 +114,6 @@ sub main {
   #### Process generic "state" parameters before we start
   $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
-
   #### Decide what action to take based on information so far
   if (defined($parameters{action}) && $parameters{action} eq "???") {
     # Some action
@@ -341,7 +340,10 @@ sub handle_request {
       ["none_percent","SCP3.at_level_percent","Percent None"],
       ["antibody_sort_order","A.sort_order","antibody_sort_order"],
       ["cell_type_sort_order","CT.sort_order","cell_type_sort_order"],
-			["organism_name","SDO.organism_name", "Organism Name"],
+	  
+	  ["cancer_amount_cc", "cast(cancer_amount_cc as varchar)", "Amount of Cancer (cc)"],
+	  ["gleason3 tumor", "cast(SCP1.cell_type_percent as varchar)", "Tumor Type Percent"],
+	  ["organism_name","SDO.organism_name", "Organism Name"],
 			["tissue_type_name", "TT.tissue_type_name", "Tissue Type"],			
     );
   }
@@ -376,6 +378,24 @@ sub handle_request {
 			ON S.organism_id = SDO.organism_id
 		LEFT JOIN $TBIS_TISSUE_TYPE TT
 			ON S.tissue_type_id = TT.tissue_type_id
+			
+/*			
+	LEFT  JOIN $TBIS_STAIN_CELL_PRESENCE SCP4 
+	 	ON (SS.stained_slide_id = SCP4.stained_slide_id
+			and SCP4.cell_type_id = 13)
+	
+	LEFT JOIN $TBIS_STAIN_CELL_PRESENCE SCP5 
+	 	ON (SS.stained_slide_id = SCP5.stained_slide_id
+			and SCP5.cell_type_id = 14)
+			
+	  LEFT JOIN $TBIS_STAIN_CELL_PRESENCE SCP6 
+	 	ON (SS.stained_slide_id = SCP6.stained_slide_id
+			and SCP6.cell_type_id  = 15)	
+			
+	*/		
+			
+			
+			
 		LEFT JOIN $TBIS_STAIN_CELL_PRESENCE SCP1
 	       ON ( SS.stained_slide_id = SCP1.stained_slide_id AND SCP1.cell_presence_level_id = 1 )
 		LEFT JOIN $TBIS_CELL_TYPE CT ON ( SCP1.cell_type_id = CT.cell_type_id )
@@ -387,7 +407,8 @@ sub handle_request {
 	       ON ( SS.stained_slide_id = SCP3.stained_slide_id
                     AND SCP3.cell_presence_level_id = 3
                     AND SCP3.cell_type_id = SCP1.cell_type_id )
-	 INNER JOIN $TBIS_ANTIBODY A ON ( SS.antibody_id = A.antibody_id )
+				
+	INNER JOIN $TBIS_ANTIBODY A ON ( SS.antibody_id = A.antibody_id )
 	  LEFT JOIN $TBIS_ANTIGEN AG ON ( A.antigen_id = AG.antigen_id )
 	  LEFT JOIN $TBIS_BIOSEQUENCE BS ON ( AG.biosequence_id = BS.biosequence_id )
 	  LEFT JOIN Immunostain.dbo.biosequence_refseq_association BSRSA ON ( BS.biosequence_accession = BSRSA.LocusLinkID )
