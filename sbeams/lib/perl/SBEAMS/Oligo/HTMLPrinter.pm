@@ -22,6 +22,7 @@ use CGI::Carp qw(fatalsToBrowser croak);
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::TableInfo;
+use SBEAMS::Connection::Tables;
 
 use SBEAMS::Oligo::Settings;
 use SBEAMS::Oligo::TableInfo;
@@ -69,20 +70,24 @@ sub display_page_header {
 	<TITLE>$DBTITLE - $SBEAMS_PART</TITLE>
     ~;
 
+	#### Check to see if the PI of the project is Halo User.
+	#### If so, print the halo skin.  NOTE: you also need to adjust the halo_footer
+	my $current_project = $sbeams->getCurrent_project_id();
+	my $sql = qq~
 
-    #### If the current user is the virtual ext_halo user, then show that
-    #### a different template
-    #if ($display_mode eq 'ext_halo') {
-    #  $self->display_ext_halo_template();
-    #  return;
-    #}
+	  SELECT UWG.contact_id
+	    FROM $TB_WORK_GROUP WG
+		JOIN $TB_USER_WORK_GROUP UWG ON (WG.work_group_id = UWG.work_group_id)
+		JOIN $TB_PROJECT P ON (P.PI_contact_id = UWG.contact_id)
+	   WHERE WG.work_group_name = 'HaloPIs'
+	     AND P.project_id = $current_project
 
-    if ($sbeams->getCurrent_work_group_name() eq 'Oligo_user' ||
-		$sbeams->getCurrent_username() eq 'Oligo_user') {
-      $self->display_ext_halo_template();
-      return;
-    }
-
+	   ~;
+	my @rows = $sbeams->selectOneColumn($sql);
+	if (scalar(@rows) > 0 ) {
+	  $self->display_ext_halo_template();
+	  return;
+	}
     $self->printJavascriptFunctions();
     $self->printStyleSheet();
 
@@ -140,7 +145,7 @@ sub display_page_header {
 	</td>
 
 	<!-------- Main Page ------------------------------------------->
-	<td valign=top>
+	<td valign=top WIDTH="100%">
 	<table border=0 bgcolor="#ffffff" cellpadding=4>
 	<tr><td>
 
@@ -251,18 +256,27 @@ sub display_page_footer {
   my $separator_bar = $args{'separator_bar'} || 'NO';
 
 
-  #### If the current user is the virtual ext_halo user, then show
-  #### a different template
-  #if ($display_mode eq 'ext_halo') {
-#	$self->display_ext_halo_footer();
-#	return;
-#  }
+  #### Check to see if the PI of the curernt project is a Halobacterium guy.
+  #### If so, print the halo skin
+  if ($display_footer eq 'YES') {
+	my $current_project = $sbeams->getCurrent_project_id();
+	my $sql = qq~
 
-  if ($sbeams->getCurrent_work_group_name() eq 'Oligo_user' ||
-		$sbeams->getCurrent_username() eq 'Oligo_user') {
-      $self->display_ext_halo_footer();
-      return;
+	  SELECT UWG.contact_id
+	    FROM $TB_WORK_GROUP WG
+		JOIN $TB_USER_WORK_GROUP UWG ON (WG.work_group_id = UWG.work_group_id)
+		JOIN $TB_PROJECT P ON (P.PI_contact_id = UWG.contact_id)
+	   WHERE WG.work_group_name = 'HaloPIs'
+	     AND P.project_id = $current_project
+
+	   ~;
+	my @rows = $sbeams->selectOneColumn($sql);
+	if (scalar(@rows) > 0 ) {
+	  $self->display_ext_halo_footer();
+	  return;
+	}
   }
+  
 
   #### If closing the content tables is desired
   if ($close_tables eq 'YES') {
