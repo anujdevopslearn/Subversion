@@ -144,6 +144,14 @@ public class DataSaverPanel extends WizardPanel
 	xmlbuf.append(".lambda</uri>"+"\n");
 	xmlbuf.append("\t</dataset>"+"\n");
 
+	Vector constants = (Vector)wizardContext.getAttribute(WIZARD_CONSTANTS);
+	xmlbuf.append("\t<constants>\n");
+	for (int m=0;m<constants.size();m++) {
+	  ConditionVariable cv = (ConditionVariable)constants.elementAt(m);
+	  xmlbuf.append("\t\t"+cv.getVariableTag()+"\n");
+	}
+	xmlbuf.append("\t</constants>\n");
+
 	for (int m=0;m<conds;m++){
 	  String conditionName = conditions[m];
 	  ec = (ExperimentCondition)condData.get(conditionName);
@@ -283,7 +291,6 @@ public class DataSaverPanel extends WizardPanel
 	  writeFiles(baseName);
 	  String message = new String("Data Has Been Saved!\n\n"+
 								  "Status:\n"+status.toString()+"\n"+
-								  "Click 'Finish' to Exit\n\n"+
 								  "Thanks for using the Data Loader");
  	  JOptionPane.showMessageDialog(this,
  									message,
