@@ -6,21 +6,32 @@ This document describes how to install a new SBEAMS site.
 
 
 Terms:
- - SBEAMS: Systems Biology Extensible Analysis Management System)
+ - SBEAMS: Systems Biology Extensible Analysis Management System
  - SBEAMS site: an independant installation of SBEAMS with its own core tables
- - SBEAMS instance: a version of source code, often for development, sharing
-   the core tables with other instances
+ - SBEAMS instance: a version of source code, often for development, which
+   shares the core tables with other instances
 
 
 -------------------------------------------------------------------------------
 1) Software Dependencies
 
+The following software programs are required to run SBEAMS:
+- Apache or similar web server software
+- PHP (There are a few PHP pages, but nothing elaborate.  As long as basic
+       PHP works with the web server, this should be fine)
+- Perl (probably anything greater than version 5 will work)
+- A relational database engine.  This software was delveloped with SQL
+  Server.  Products from either Microsoft or Sybase should work right away.
+  Attempts has been made to make this software operable with other 
+  engines such as Oracle, MySQL, and PostgreSQL, however further development
+  is required to acheive this fully.
+
 The following Perl Modules often not found on a standard UNIX/Linux
 setup are required before installation can begin:
 
-DBI-1.15
-Data-ShowTable-3.3a  (specially modified version by Deutsch)
-DBD-Sybase-0.91      (assuming MS SQL or Sybase is back end)
+DBI
+Data-ShowTable-3.3a  (specially modified version by Deutsch and included)
+DBD-Sybase-0.94      (assuming Sybase or MS SQL Server is back end)
 DBD-????             (if you are using a different type of back end RDBMS)
 Crypt-CBC-1.25
 Crypt-IDEA-1.01
@@ -31,7 +42,7 @@ Should really write a little dependency checker program.  FIXME.
 ---------------
 The following non-Perl software is required:
 
-FreeTDS 0.53         (required by DBD-Sybase. Allows UNIX -> MSSQL/Sybase)
+FreeTDS 0.60         (required by DBD-Sybase. Allows UNIX -> MSSQL/Sybase)
 
 ---------------
 Certain modules (Proteomics) also require the following Perl modules:
@@ -49,18 +60,20 @@ web server.  For the remainder of this installation, it will be assumed
 that your installation is configured like this:
   servername: db
   DocumentRoot: /local/www/html
-  sbeams location: directly located in DocumentRoot
+  Primary location: directly located in DocumentRoot,
+                   /local/www/html/sbeams  --> http:/db/sbeams/
+  Development location: In a dev1 tree starting in the DocumentRoot,
+                   /local/www/html/dev1/sbeams  -> http:/db/dev1/sbeams/
+
+There is typically significant ongoing development in an SBEAMS environment
+and it is recommended that all development work be done in a devN area
+which is then sync'ed with the primary area when changes are tested.  This
+is so users can continue to use the stable version until new features have
+passed testing.
 
 
 -------------------------------------------------------------------------------
-3) Upack files
-
-cd /local/www/html
-tar -zxvf ~/sbeams-0.40.tar.gz
-
-
--------------------------------------------------------------------------------
-4) Configure Apache
+3) Configure Apache
 
 Include in Apache's http.conf file the following execution permissions:
 
@@ -73,11 +86,29 @@ Include in Apache's http.conf file the following execution permissions:
 <Location /sbeams/lib>
     deny from all
 </Location>
+
+<Location /dev1/sbeams/cgi>
+    Options ExecCGI
+    SetHandler cgi-script
+</Location>
+
+<Location /dev1/sbeams/lib>
+    deny from all
+</Location>
 #------
 
 
 Retart the Apache server perhaps with something like:
   /etc/rc.d/init.d/httpd restart
+
+
+-------------------------------------------------------------------------------
+4) Upack files
+
+cd /local/www/html
+mkdir dev1
+cd dev1
+tar -zxvf ~/sbeams-0.10.tar.gz
 
 
 -------------------------------------------------------------------------------
@@ -95,7 +126,7 @@ this is not finished so please contribute to this effort if you can.
 
 - Generate the appropriate schema for your type(s) of database:
 
-setenv SBEAMS /local/html/sbeams
+setenv SBEAMS /local/html/dev1/sbeams
 cd $SBEAMS/lib/scripts/Core
 
 foreach dbtype ( mssql mysql pgsql )
@@ -106,7 +137,7 @@ end
 
 
 - Verify that the SQL CREATE and DROP statements have been correctly
-  generated.
+  generated in $SBEAMS/lib/sql/Core/
 
 - Edit the bottom of the POPULATE file to include your UNIX username
   edit $SBEAMS/lib/sql/Core/Core_POPULATE.mssql
@@ -116,7 +147,6 @@ end
 
 SQL Server Example:
 
-sqsh -i 
 To CREATE and POPLULATE:
 sqsh -i $SBEAMS/lib/sql/Core/Core_CREATETABLES.pgsql -D sbeamsdev
 sqsh -i $SBEAMS/lib/sql/Core/Core_POPULATE.mssql -D sbeamsdev
@@ -130,8 +160,6 @@ sqsh -i $SBEAMS/lib/sql/Core/Core_DROPTABLES.pgsql -D sbeamsdev
 -----------------------
 PostgreSQL Example:
 
-setenv SBEAMS /net/dblocal/www/html/dev2/sbeams
-
 To CREATE and POPLULATE:
 psql -f $SBEAMS/lib/sql/Core/Core_CREATETABLES.pgsql sbeamsdev
 psql -f $SBEAMS/lib/sql/Core/Core_POPULATE.mssql sbeamsdev
@@ -144,8 +172,6 @@ psql -f $SBEAMS/lib/sql/Core/Core_DROPTABLES.pgsql sbeamsdev
 
 -------------------
 MySQL Example:
-
-setenv SBEAMS /net/dblocal/www/html/dev2/sbeams
 
 To CREATE:
 mysql -u sbeams -p -h mysql sbeamsdev < $SBEAMS/lib/sql/Core/Core_CREATETABLES.mysql
@@ -162,18 +188,27 @@ mysql -u sbeams -p -h mysql -f sbeamsdev < $SBEAMS/lib/sql/Core/Core_DROP.mysql
 -------------------------------------------------------------------------------
 6) Edit the SBEAMS Configuration files
 
+setenv SBEAMS /local/html/dev1/sbeams
+
 cd $SBEAMS/lib/conf
 cp SBEAMS.conf.template SBEAMS.conf
 edit SBEAMS.conf to taste
 
-You should now be able to log in via the web interface.  Test it by
-pointing a browser to the proper location like:
+You should now be able to log in via the web interface, either as the
+"admin" account (password SBEAMSadm) or with the user account you added to
+Core_POPULATE.mssql.  Test it by pointing a browser to the proper location
+like:
 
-http://db.localdomain.org/sbeams/
+http://db.localdomain.org/dev1/sbeams/
 
 and going to login.  Don't try to run any of the modules yet.
 
 If this doesn't work.  Do not proceed, debug first.
+
+One possible problem you may find.  At present, the regular user account
+expects there to be a UNIX NIS account with the same name present and
+obtainable with `ypcat passwd`.  If you use a local /etc/passwd, a little
+additional development will need to be done to accomodate this.
 
 
 -------------------------------------------------------------------------------
@@ -190,6 +225,7 @@ Now that the Core driver tables are loaded, you should be able to
 go to the web site again and click on "Admin" and explore the
 tables.
 
+If this doesn't work.  Do not proceed, debug first.
 
 
 
