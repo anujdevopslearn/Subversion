@@ -1023,6 +1023,17 @@ sub print_file_output_screen {
   my $merge_recipe = $parameters{'mergeRecipe'};
   my $vs_recipe = $parameters{'vsRecipe'};
 
+  my $current_user_id = $sbeams->getCurrent_contact_id();
+  # Get email address
+  $sql = qq~
+	SELECT email from $TB_CONTACT where contact_id = '$current_user_id'
+	~;
+  my ($email) = $sbeams->selectOneColumn($sql);
+  unless ($email =~ /\w+\@\w+\.\w+/) {
+	$email = "$user\@systemsbiology.org";
+  }
+
+
   print_file_output_javascript();
 
   ## Print Introductory Header
@@ -1048,7 +1059,7 @@ Instructions:<BR>
 	Should you decide that you need a file that hasn\'t been saved, contact <A HREF="mailto:mjohnson\@systemsbiology.org">mjohnson</A> to rerun your processing.<BR><BR><BR>
 
 	<INPUT TYPE="checkbox" NAME="emailNotify" VALUE="notify" CHECKED> Email Notify Process Completion
-	<INPUT TYPE="text" NAME="emailAddress" SIZE="50" VALUE="$user\@systemsbiology.org"><BR>
+	<INPUT TYPE="text" NAME="emailAddress" SIZE="50" VALUE="$email"><BR>
 
 		Select project output directory: <SELECT NAME="outputDirectory">
 	~;
