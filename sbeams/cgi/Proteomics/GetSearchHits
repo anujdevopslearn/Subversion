@@ -322,6 +322,15 @@ sub handle_request {
   return if ($reference_clause eq '-1');
 
 
+  #### Build BIOSEQUENCE_ACCESSION constraint
+  my $biosequence_accession_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.biosequence_accession",
+    constraint_type=>"plain_text",
+    constraint_name=>"Biosequence Accession",
+    constraint_value=>$parameters{biosequence_accession_constraint} );
+  return if ($biosequence_accession_clause eq '-1');
+
+
   #### Build PROTEIN DESCRIPTION constraint
   my $description_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"BS.biosequence_desc",
@@ -623,6 +632,7 @@ sub handle_request {
 	$xcorr_rank_clause
 	$charge_clause
 	$reference_clause
+	$biosequence_accession_clause
         $description_clause
 	$peptide_clause
 	$peptide_string_clause
