@@ -1144,7 +1144,7 @@ print qq~
 	    <TD><FONT COLOR="white">File Suffix</FONT></TD>
     </TR>
 		<TR>
-		  <TD><INPUT TYPE="checkbox" name="keepDappleFiles"></TD>
+		  <TD><INPUT TYPE="checkbox" name="keepDappleFiles" CHECKED></TD>
 			<TD>Dapple File</TD>
 			<TD>Files from spotfinding on AnalyzerDG are changed to another format so they can be sent through the pipeline.  These files don\'t contain any information that is not in the AnalyzerDG files</TD>
 			<TD>.dapple or .dapplefmt</TD>
@@ -1162,25 +1162,25 @@ print qq~
 			<TD>.rep.jpg</TD>
 		</TR>
 		<TR>
-			<TD><INPUT TYPE="checkbox" name="keepFTFiles"></TD>
+			<TD><INPUT TYPE="checkbox" name="keepFTFiles" CHECKED></TD>
 			<TD>File Table</TD>
 			<TD>Used to identify the direction (e.g. Cy3 vs. Cy5 OR Cy5 vs. Cy3) of each file prior to merging replicates</TD>
 			<TD>.ft</TD>
 		</TR>
 		<TR>
-			<TD><INPUT TYPE="checkbox" name="keepMergeFiles"></TD>
+			<TD><INPUT TYPE="checkbox" name="keepMergeFiles" CHECKED></TD>
 			<TD>Merge File</TD>
 			<TD>Data table of merged replicates for each reporter</TD>
 			<TD>.opt.merge or .all.merge</TD>
 		</TR>
 		<TR>
-			<TD><INPUT TYPE="checkbox" name="keepModelFiles"></TD>
+			<TD><INPUT TYPE="checkbox" name="keepModelFiles" CHECKED></TD>
 			<TD>Model File</TD>
 			<TD>Error Model parameters created by VERA</TD>
 			<TD>.model</TD>
 		</TR>
 		<TR>
-			<TD><INPUT TYPE="checkbox" name="keepSigFiles"></TD>
+			<TD><INPUT TYPE="checkbox" name="keepSigFiles" CHECKED></TD>
 			<TD>Sig File</TD>
 			<TD>Table of merged replicates and statistical analysis of differential expression</TD>
 			<TD>.sig</TD>
