@@ -17,6 +17,8 @@ The following Perl Modules often not found on a standard UNIX/Linux
 setup are required to successfully use SBEAMS - Proteomics (in addition
 to the dependencies for the SBEAMS Core).
 
+Math::Interpolate
+XML::Xerces
 PDL                  Perl Data Language - available from CPAN
 PDL::Graphics::PGPLOT
 PDL::PGLOT
@@ -24,6 +26,7 @@ PDL::PGLOT
 ---------------
 The following non-Perl software is required:
 
+Xerces C++ (a requirement for XML::Xerces Perl module)
 PGPLOT              (required by PDL::PGPLOT)
 
 (Note that only the MS/MS spectrum viewer uses these modules.  It might
@@ -50,9 +53,7 @@ main SBEAMS area.
 
 Set up the following sym link:
 
-cd /local/www/html
-cd dev1
-cd sbeams/lib/scripts/Proteomics
+cd $SBEAMS/lib/scripts/Proteomics
 ln -s ../share/load_biosequence_set.pl
 
 
@@ -70,15 +71,14 @@ enforce referential integrity between tables in the different
 databases.  This may or may not be a significant concern.
 
 - If you decide on a separate database, create it and within it,
-  create users "sbeams" and "sbeamsro" as a read/write
-  account and a read-only account, respectively, as done for the Core.
+  enable users "sbeams", "sbeamsro", "sbeamsadmin" as done for the Core.
 
 - Generate the appropriate schema for your type(s) of database as follows:
 
-setenv SBEAMS /local/html/dev1/sbeams
+set DBTYPES="mssql"   #### or one or more of mssql mysql pgsql oracle etc.
 cd $SBEAMS/lib/scripts/Core
 
-foreach dbtype ( mssql mysql pgsql oracle )
+foreach dbtype ( $DBTYPES )
   ./generate_schema.pl \
     --table_prop ../../conf/Proteomics/Proteomics_table_property.txt \
     --table_col ../../conf/Proteomics/Proteomics_table_column.txt \
@@ -90,22 +90,28 @@ end
 - Verify that the SQL CREATE and DROP statements have been correctly
   generated in $SBEAMS/lib/sql/Proteomics/
 
+cd $SBEAMS/lib/sql/Proteomics
+more Proteomics_CREATETABLES.mssql
+                                                                                
 - Execute the statements to create and populate the database with some
   bare bones data and indexes (for faster loading and querying):
 
 SQL Server Example:
 
 To CREATE and POPULATE:
-sqsh -i $SBEAMS/lib/sql/Proteomics/Proteomics_CREATETABLES.mssql -D sbeamsdev
-sqsh -i $SBEAMS/lib/sql/Proteomics/Proteomics_POPULATE.mssql -D sbeamsdev
-sqsh -i $SBEAMS/lib/sql/Proteomics/Proteomics_CREATECONSTRAINTS.mssql -D sbeamsdev
+$SBEAMS/lib/scripts/Core/runsql.pl Proteomics_CREATETABLES.mssql
+$SBEAMS/lib/scripts/Core/runsql.pl Proteomics_POPULATE.mssql
+$SBEAMS/lib/scripts/Core/runsql.pl Proteomics_CREATECONSTRAINTS.mssql
+$SBEAMS/lib/scripts/Core/runsql.pl Proteomics_ADD_MANUAL_CONSTRAINTS.mssql
 
 To CREATE indexes:
-sqsh -i $SBEAMS/lib/sql/Proteomics/Proteomics_CREATEINDEXES.mssql -D sbeamsdev
+$SBEAMS/lib/scripts/Core/runsql.pl Proteomics_CREATEINDEXES.mssql
 
 To DROP:
-sqsh -i $SBEAMS/lib/sql/Proteomics/Proteomics_DROPCONSTRAINTS.mssql -D sbeamsdev
-sqsh -i $SBEAMS/lib/sql/Proteomics/Proteomics_DROPTABLES.mssql -D sbeamsdev
+#### FIXME: DON'T DO THIS BECAUSE THIS WILL AFFECT BIOLINK AS WELL!!!
+#$SBEAMS/lib/scripts/Core/runsql.pl Proteomics_DROPCONSTRAINTS.mssql
+#$SBEAMS/lib/scripts/Core/runsql.pl Proteomics_DROPTABLES.mssql
+
 
 Note that the Proteomics_POPULATE.mssql is not auto-generated and should
 probably work for all flavors of database
@@ -116,8 +122,6 @@ Core installation notes and will not be repeated here.
 
 -------------------------------------------------------------------------------
 4) Edit the SBEAMS Configuration files
-
-setenv SBEAMS /local/www/html/dev1/sbeams
 
 cd $SBEAMS/lib/conf
 edit SBEAMS.conf
@@ -138,7 +142,6 @@ for which:
 RAW_DATA_DIR{Proteomics} = /data3/sbeams/archive
 
 
-
 -------------------------------------------------------------------------------
 5) Populate the driver tables and register the module
 
@@ -151,8 +154,12 @@ set CONFDIR = "../../conf"
 If this doesn't work.  Do not proceed, debug first.
 
 -Register the module:
-cd $SBEAMS/lib/conf/Proteomics
-echo Proteomics >> AvailableModules.conf
+cd $SBEAMS/lib/conf/Core
+echo "Proteomics" >> AvailableModules.conf
+grep '^#' AvailableModules.conf > AvailableModules.conf-tmp
+grep -v '^#' AvailableModules.conf | uniq | sort >> AvailableModules.conf-tmp
+mv AvailableModules.conf-tmp AvailableModules.conf
+
 
 -------------------------------------------------------------------------------
 6) Add groups
@@ -182,6 +189,8 @@ Now set up the table group securities:
   rowprivate - Proteomics_readonly - data_writer
   project - Proteomics_user - data_writer
   project - Proteomics_admin - data_modifier
+  common - Proteomics_user - data_writer
+  common - Proteomics_admin - data_modifier
   Proteomics_infrastructure - Proteomics_admin - data_modifier
   Proteomics_user - Proteomics_user - data_writer
   Proteomics_user - Proteomics_admin - data_modifier
@@ -198,45 +207,38 @@ If this doesn't work.  Do not proceed, debug first.
 -------------------------------------------------------------------------------
 7) Add some sample data
 
-(logged in as your user account)
+(logged in as your regular user account)
 
 Add a Project as follows:
 
 - Switch to the Proteomics_user group by using the drop-down box at top
-- Click on [Proteomics]
-- Under "My Projects" tab, "Projects You Own", click [Add A New Project].
+- Click on [Proteomics] module or [Proteomics Home]
+- Click "My Projects" tab
+- Under "Projects You Own", click [Add A New Project].
   Required fields are in red.  If you don't have a budget number, enter NA.
 - Fill in the appropriate information and [INSERT]
 
-
-Add an Instrument as follows:
-
-- Switch to the Proteomics_admin group by using the drop-down box at top
+Register an Experiment as follows:
 - Click on [Proteomics Home]
-- Click on [Request Management] (under Core Management)
-- Click on [Manage Instrument Types]
-- Click on [Add Instrument Type]
-- Fill in the appropriate information and [INSERT]
-
-- Click on [Manage Instruments]
-- Click on [Add Instrument]
-- Fill in the appropriate information and [INSERT]
-
-
-Add an Experiment Type as follows:
-- Click on [Proteomics Home]
-- Click on [Request Management] (under Core Management)
-- Click on [Add Experiment Type]
-- Fill in the appropriate information and [INSERT]
-
-
-Add an Experiment as follows:
-
-- Switch back to the Proteomics_user group by using the drop-down box at top
-- Click on [Proteomics Home]
+- Click on "My Projects" tab
 - Click on the Project you just created
 - Click [Register another Experiment]
-- Fill in the appropriate information and [INSERT]
+- Fill in the appropriate information
+
+- If no appropriate Experiment Type exists, click on the green + and add it.
+  After [INSERT]ing the Experiment Type, close that window and go back to
+  the Experiment window and click on the [REFRESH] button at the bottom
+  of the form, and then select the new Experiment Type
+
+- If no appropriate Instrument exists, click on the green + and add it.
+  After [INSERT]ing the Instrument, close that window and go back to
+  the Experiment window and click on the [REFRESH] button at the bottom
+  of the form, and then select the new Instrument
+
+- If no appropriate Instrument Type exists, click on the green + and add it.
+  After [INSERT]ing the Instrument Type, close that window and go back to
+  the Instrument window and click on the [REFRESH] button at the bottom
+  of the form, and then select the new Instrument Type
 
 
 Register a Biosequence Set as follows:
@@ -266,6 +268,8 @@ cd $SBEAMS/lib/scripts/Core
 
 ./DataImport.pl --source_file ../../refdata/Proteomics/dbxref.xml
 
+**** FIXME This should really be in BioLink!
+
 
 - Load a biosequence set:
 
@@ -280,7 +284,7 @@ Experiment you have loaded above.
 
 Now try loading a biosequence set:
 
-./load_biosequence_set.pl --set_tag YeastORF
+./load_biosequence_set.pl --load --set_tag YeastORF
 
 This should load the biosequence set called YeastORF.  Replace YeastORF with
 the tag of your Biosequence Set as defined in step 7.
