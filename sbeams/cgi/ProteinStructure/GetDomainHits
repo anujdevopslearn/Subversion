@@ -222,6 +222,71 @@ sub handle_request {
   #### Process all the constraints
 
   #### Build BIOSEQUENCE_SET constraint
+  my $form_test = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.biosequence_set_id",
+    constraint_type=>"int_list",
+    constraint_name=>"BioSequence Set",
+    constraint_value=>$parameters{biosequence_set_id} );
+  return if ($form_test eq '-1');
+
+  #### Verify that the selected biosequence_sets are permitted
+  if ($parameters{biosequence_set_id}) {
+    my $sql = qq~
+      SELECT biosequence_set_id,project_id
+	FROM $TBPS_BIOSEQUENCE_SET
+       WHERE biosequence_set_id IN ( $parameters{biosequence_set_id} )
+	 AND record_status != 'D'
+    ~;
+    my %project_ids = $sbeams->selectTwoColumnHash($sql);
+    my @accessible_project_ids = $sbeams->getAccessibleProjects();
+    my %accessible_project_ids;
+    foreach my $id ( @accessible_project_ids ) {
+      $accessible_project_ids{$id} = 1;
+    }
+
+    my @input_ids = split(',',$parameters{biosequence_set_id});
+    my @verified_ids;
+    foreach my $id ( @input_ids ) {
+
+      #### If the requested biosequence_set_id doesn't exist
+      if (! defined($project_ids{$id})) {
+	$sbeams->reportException(
+          state => 'ERROR',
+          type => 'BAD CONSTRAINT',
+          message => "Non-existent biosequence_set_id = $id specified",
+        );
+
+      #### If the project for this biosequence_set is not accessible
+      } elsif (! defined($accessible_project_ids{$project_ids{$id}})) {
+	$sbeams->reportException(
+          state => 'ERROR',
+          type => 'PERMISSION DENIED',
+          message => "Your current privilege settings do not allow you to access biosequence_set_id = $id.  See project owner to gain permission.",
+        );
+
+      #### Else, let it through
+      } else {
+	push(@verified_ids,$id);
+      }
+
+    }
+
+    #### Set the input constraint to only allow that which is valid
+    $parameters{biosequence_set_id} = join(',',@verified_ids);
+
+  }
+
+  #### If no valid biosequence_set_id was selected, stop here
+  unless ($parameters{biosequence_set_id}) {
+    $sbeams->reportException(
+      state => 'ERROR',
+      type => 'INSUFFICIENT CONSTRAINTS',
+      message => "You must select at least one valid Biosequence Set",
+    );
+    return;
+  }
+
+  #### Build BIOSEQUENCE_SET constraint
   my $biosequence_set_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"BS.biosequence_set_id",
     constraint_type=>"int_list",
