@@ -123,9 +123,6 @@ sub updateDriverTable {
   my ($i,$element,$key,$value,$line,$result,$sql);
 
 
-  #### Set the command-line options
-
-
   #### Print out the header
   unless ($QUIET) {
     $sbeams->printUserContext();
@@ -160,12 +157,17 @@ sub updateDriverTable {
   my $n_columns = @column_names;
 
 
+  #### List all the actual column names for code generation
+  #print "'",join("','",@column_names),"'\n";
+  #return;
+
+
   #### If there are 10 columns, verify it's a table_property file and update
   if ($n_columns == 10) {
     my @ref_columns = ('table_name','Category','table_group',
       'manage_table_allowed','db_table_name','PK_column_name',
       'multi_insert_column','table_url','manage_tables','next_step');
-    for ($i=0; $i<10; $i++) {
+    for ($i=0; $i<$n_columns; $i++) {
       if ($ref_columns[$i] ne $column_names[$i]) {
         print "ERROR: File header verification failed.\n";
 	print " Expected column $i to be '$ref_columns[$i]' but it appears ".
@@ -180,8 +182,24 @@ sub updateDriverTable {
 
   #### If there are 22 columns, verify it's a table_column file and update
   } elsif ($n_columns == 22) {
-    print "Cannot do column files yet\n";
-    return
+    my @ref_columns = ('table_name','column_index','column_name',
+      'column_title','datatype','scale','precision','nullable',
+      'default_value','is_auto_inc','fk_table','fk_column_name',
+      'is_required','input_type','input_length','onChange','is_data_column',
+      'is_display_column','is_key_field','column_text','optionlist_query',
+      'url');
+    for ($i=0; $i<$n_columns; $i++) {
+      if ($ref_columns[$i] ne $column_names[$i]) {
+        print "ERROR: File header verification failed.\n";
+	print " Expected column $i to be '$ref_columns[$i]' but it appears ".
+          "to be '$column_names[$i]'.  This is unexpected and we cannot ".
+          "continue.  Please resolve and retry.\n";
+        return;
+      }
+    }
+
+    update_table_column(source_file=>$source_file);
+    return;
 
   #### Else we don't know what kind of file this is
   } else {
@@ -235,7 +253,6 @@ sub update_table_property {
 
 
   #### Define the transform map
-  #### (see ~kdeutsch/SNPS/celera/bin/transfer_celera_to_SNP.pl)
   my %transform_map = (
   );
 
@@ -257,7 +274,7 @@ sub update_table_property {
     dest_conn=>$sbeams,
     column_map_ref=>\%column_map,
     transform_map_ref=>\%transform_map,
-    table_name=>"MGProteomics.dbo.table_property",
+    table_name=>"table_property",
     update=>1,
     update_keys_ref=>\%update_keys,
   );
@@ -283,23 +300,11 @@ sub update_table_column {
 
 
   #### Process the arguments list
-  my $ref_parameters = $args{'ref_parameters'}
-    || die "ref_parameters not passed";
-  my %parameters = %{$ref_parameters};
+  my $source_file = $args{'source_file'} || die "source_file not passed";
 
 
   #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql);
-
-
-  #### Set the command-line options
-
-
-  #### Print out the header
-  unless ($QUIET) {
-    $sbeams->printUserContext();
-    print "\n";
-  }
 
 
   #### Define column map
@@ -308,9 +313,9 @@ sub update_table_column {
     '1'=>'column_index',
     '2'=>'column_name',
     '3'=>'column_title',
-    '4'=>'datatype',
-    '5'=>'scale',
-    '6'=>'precision',
+    '4'=>'data_type',
+    '5'=>'data_scale',
+    '6'=>'data_precision',
     '7'=>'nullable',
     '8'=>'default_value',
     '9'=>'is_auto_inc',
@@ -330,7 +335,6 @@ sub update_table_column {
 
 
   #### Define the transform map
-  #### (see ~kdeutsch/SNPS/celera/bin/transfer_celera_to_SNP.pl)
   my %transform_map = (
   );
 
@@ -343,17 +347,17 @@ sub update_table_column {
 
 
   #### Do the transfer
-  print "\nTransferring SNP_table_column.txt -> dbo.table_column";
+  print "\nTransferring $source_file -> table_column";
   $sbeams->transferTable(
     src_conn=>$sbeams,
-    source_file=>'../../conf/SNP/SNP_table_column.txt',
+    source_file=>$source_file,
     delimiter=>'\t',
     skip_lines=>'1',
     dest_PK_name=>'table_column_id',
     dest_conn=>$sbeams,
     column_map_ref=>\%column_map,
     transform_map_ref=>\%transform_map,
-    table_name=>"sbeams.dbo.table_column",
+    table_name=>"table_column",
     update=>1,
     update_keys_ref=>\%update_keys,
   );
@@ -361,7 +365,9 @@ sub update_table_column {
 
   print "\n";
 
-  $sbeams->unix2dosFile(file=>'../../conf/SNP/SNP_table_column.txt');
+
+  #### Insure that the file is in DOS carriage return format
+  $sbeams->unix2dosFile(file=>$source_file);
 
   return;
 
