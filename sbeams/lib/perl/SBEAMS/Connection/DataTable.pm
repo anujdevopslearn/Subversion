@@ -17,7 +17,12 @@ package SBEAMS::Connection::DataTable;
 use strict;
 use overload ( '""', \&asHTML );
 
-use SBEAMS::Connection qw($log);
+use SBEAMS::Connection;
+use SBEAMS::Connection::Log;
+
+use POSIX;
+
+my $log = SBEAMS::Connection::Log->new();
 
 ##### Public Methods ###########################################################
 #
@@ -130,6 +135,23 @@ sub setHeaderAttr {
   $this->{_header} = \%args;
 }
 
+# Impelements alternating row background colors
+sub alternateColors {
+  my $this = shift;
+  my %args = @_;
+  for( qw( PERIOD FIRSTROW BGCOLOR ) ){
+    unless ( $args{$_} ) {
+      $log->warn( "Missing required param $_ in alternateColors" );
+      return;
+    }
+  }
+  $this->{_alternate_colors} = 1;
+  $this->{_altc_first} = $args{FIRSTROW};
+  $this->{_altc_period} = $args{PERIOD};
+  $this->{_altc_bgcolor} = $args{BGCOLOR};
+  $this->{_altc_defcolor} = $args{DEF_BGCOLOR} || '#FFFFFF';
+}
+
 #+
 # Method to set attributes one or more rows in the table. 
 # narg ROWS required ref to array of row numbers
@@ -137,6 +159,7 @@ sub setHeaderAttr {
 # All other args are interpreted as NAME => VALUE attributes to 
 # pass to each row (<TR> tag)
 # -
+# 
 sub setRowAttr {
   my $this = shift;
   my %args = @_;
@@ -291,6 +314,16 @@ sub _getTD {
   return '    <TR>';
 }
 
+sub _getColor {
+  my $this = shift;
+  my $row = shift;
+  $log->debug( "here we are, $this->{_altc_bgcolor}" );
+  return '' if $row < $this->{_altc_first};
+  my $s = POSIX::ceil( ($row + 1 - $this->{_altc_first})/$this->{_altc_period} );
+  my $color = ( $s % 2 ) ? $this->{_altc_bgcolor} : $this->{_altc_defcolor};
+  return "BGCOLOR=$color";
+}
+
 #+
 # Returns <TR> element with attributes filled in
 #-
@@ -305,7 +338,8 @@ sub _getTR {
       $tag .= " ${key}=$attrs{$key}";
     }
   }
-  $tag .= ">\n";
+  my $bgcolor = ( $this->{_alternate_colors} ) ? $this->_getColor($row) : '';
+  $tag .= " $bgcolor>\n";
 
   return $tag;
   return '    <TR>';
