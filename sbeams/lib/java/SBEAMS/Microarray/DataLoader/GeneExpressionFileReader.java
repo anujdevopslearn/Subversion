@@ -18,8 +18,16 @@ public class GeneExpressionFileReader {
   private static String UNKNOWN = "UNKNOWN";
   private Hashtable data;
   private String[] conditionNames;
+  private Hashtable rosetta;
+//-----------------------------------------------------------------------------------------------
+  public GeneExpressionFileReader(String filename, String translatorFile){
+	rosetta = readTranslator(translatorFile);
+	this.filename = filename;
+	data = new Hashtable();
+  }// FileReader
 //-----------------------------------------------------------------------------------------------
   public GeneExpressionFileReader(String filename){
+	rosetta = new Hashtable();
 	this.filename = filename;
 	data = new Hashtable();
   }// FileReader
@@ -159,7 +167,13 @@ GENE    DESCRIPT        1296_HO_D_vs_NRC-1.sig  1296_HO_L_vs_NRC-1.sig  1296_LO_
 	  if (line.length != (2*conditions) + extraneousColumns) {
 		return false;
 	  }
-	  genes[m-headerRows] = line[0];
+
+	  //translate the name, if possible
+	  if (rosetta.containsKey(line[0].trim().toLowerCase())){
+		genes[m-headerRows] = (String)rosetta.get(line[0].trim().toLowerCase());
+	  } else
+		genes[m-headerRows] = line[0].trim();
+
 	  for (int h=0;h<conditions;h++){
 		ratioValues[h][m-headerRows] = (new Float(line[h+prependedColumns])).floatValue();
 		lambdaValues[h][m-headerRows] = (new Float(line[h+prependedColumns+conditions])).floatValue();
@@ -175,6 +189,25 @@ GENE    DESCRIPT        1296_HO_D_vs_NRC-1.sig  1296_HO_L_vs_NRC-1.sig  1296_LO_
 	}
 	return true;
   }// readDelimitedFile
+//-----------------------------------------------------------------------------------------------
+  private Hashtable readTranslator(String rosettaFile) {
+	Hashtable translator = new Hashtable();
+	if (rosettaFile != null) {
+	  try{
+		br = new BufferedReader(new FileReader(rosettaFile));
+		sb = new StringBuffer();
+		String newLineOfText;
+		while ((newLineOfText = br.readLine()) != null){
+		  String[] entry = newLineOfText.split("\\t");
+		  if (entry.length == 2)
+			translator.put(entry[0].trim().toLowerCase(), entry[1].trim());
+		}
+	  } catch (IOException e) {
+		e.printStackTrace();
+	  }
+	}
+	return translator;
+  }// readTranslator
 //-----------------------------------------------------------------------------------------------
   public Hashtable getData(){
 	return data;
