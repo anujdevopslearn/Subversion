@@ -467,6 +467,7 @@ SELECT	A.array_id,A.array_name,
    AND ( H.record_status != 'D' OR H.record_status IS NULL )
    AND ( ASCAN.record_status != 'D' OR ASCAN.record_status IS NULL )
    AND ( AQ.record_status != 'D' OR AQ.record_status IS NULL )
+   AND ( AQ.data_flaga != 'BAD' )
  ORDER BY A.array_name,AR.array_request_id,ARSL.array_request_slide_id
         ~;
 
@@ -760,10 +761,10 @@ sub print_data_analysis_tab {
   ## Decode argument list
   my $project_id = $sbeams->getCurrent_project_id();
 
-	## Hyperlink processing folders in this directory
-	my $output_dir = "/net/arrays/Pipeline/output/project_id/".$project_id;
-	opendir (PROJECTDIR, $output_dir);
-	my @dir_contents = readdir PROJECTDIR;
+  ## Hyperlink processing folders in this directory
+  my $output_dir = "/net/arrays/Pipeline/output/project_id/".$project_id;
+  opendir (PROJECTDIR, $output_dir);
+  my @dir_contents = readdir PROJECTDIR;
 
 	print  qq~ 
 <BR><BR>
@@ -775,20 +776,20 @@ sub print_data_analysis_tab {
 </TR>
 ~;
 
-	foreach my $content (@dir_contents) {
-			my $content_dir = "$output_dir/$content";
-			next if ($content eq "." || $content eq "..");
-			if (-d $content_dir) {
-					my $processed_date = getProcessedDate(file=>$content_dir);
-					print qq ~
+  foreach my $content (@dir_contents) {
+	my $content_dir = "$output_dir/$content";
+	next if ($content eq "." || $content eq "..");
+	if (-d $content_dir) {
+	  my $processed_date = getProcessedDate(file=>$content_dir);
+	  print qq ~
 <TR>
   <TD ALIGN="right"><A HREF=\"DataAnalysis.cgi?project_id=$project_id&proc_event=$content\">$content</A></TD>
 	<TD ALIGN="right">$processed_date</TD>
 </TR>
 ~;
-			}
 	}
-	print "</TABLE>";
+  }
+  print "</TABLE>";
 
   ## Define standard variables
   my ($sql, @rows);
