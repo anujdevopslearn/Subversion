@@ -996,8 +996,10 @@ sub calculateTablePermission {
   END
 
   my @uperms = $self->selectSeveralColumns( $usql );
+    $log->debug( $usql );
  
   if ( scalar( @uperms ) > 1 ) { # Should only return one row
+    $log->error( $usql );
     die ( <<'    END_ERROR' );
     More than one row returned from permissions query.  Please report this 
     error to Eric Deutsch or to submit to sbeams bug database
@@ -1023,6 +1025,7 @@ sub calculateTablePermission {
   my @gperms = $self->selectSeveralColumns( $gsql );
  
   if ( scalar( @gperms ) > 1 ) { # Should only return one row
+    $log->error( $gsql );
     die ( <<'    END_ERROR' );
     More than one row returned from permissions query.  Please report this 
     error to Eric Deutsch or to submit to sbeams bug database
@@ -1525,6 +1528,39 @@ sub getAdminWorkGroupId {
   END_SQL
 
   return $admin_gid;
+}
+
+#+ 
+# Method to determine if user is an admin user.  
+# narg  current_group  If defined, requires that user is currently in group.
+#                      Field is boolean, 1 is yes (require) 0 is no.  Default 1
+# narg  contact_id     User to check on, defaults to current contact_id
+#                      NOT YET IMPLEMENTED
+#-
+sub isAdminUser {
+  my $self = shift;
+  my %args = @_;
+  $args{current_group} = 1 if !defined $args{current_group};
+
+  my $current_contact = $self->getCurrent_contact_id();
+  my $current_group = $self->getCurrent_work_group_id();
+  my $admin_group = $self->getAdminWorkGroupId();
+
+  if ( $admin_group == $current_group ) {
+    # We are in Admin group, return 1 regardless
+    return 1;
+  } elsif ( $args{current_group} ) {
+    # We aren't in Admin the group right now, and that was stipulated.
+    return 0;
+  } else {
+    my $sql =<<"    END_SQL";
+    SELECT COUNT(*) FROM $TB_USER_WORK_GROUP
+    WHERE work_group_id = $admin_group
+    AND contact_id = $current_contact
+    END_SQL
+    my ( $isAdmin ) = $self->selectOneColumn( $sql );
+    return $isAdmin;
+  }
 }
 
 #+
