@@ -143,7 +143,15 @@ sub createDataModel {
       }
       #### Remove this element as an entity; it's now an attribute
       delete($datamodel{entities}->{$key});
+
+    #### Otherwise, check to see if there's data for this entity, and if
+    #### so, create an attribute with its name to store the data
+    } else {
+      if (defined($value->{length}) && $value->{length} > 0) {
+        $value->{attributes}->{$key}->{length} = $value->{length};
+      }
     }
+
   }
 
 
@@ -457,12 +465,16 @@ sub start_element {
 
   #### Strip out and funky characters
   $element =~ s/\W//g;
+  $element = "identity_value" if ($element eq "identity");
   $context =~ s/\W//g;
+  $context = "identity_value" if ($context eq "identity");
+
   foreach my $key (keys(%attrs)) {
     my $newkey = $key;
     $newkey =~ s/\W//g;
     $newkey = "goes_from" if ($newkey eq "from");
     $newkey = "goes_to" if ($newkey eq "to");
+    $newkey = "alter_value" if ($newkey eq "alter");
     if ($key ne $newkey) {
       $attrs{$newkey} = $attrs{$key};
       delete($attrs{$key});
@@ -617,7 +629,9 @@ sub end_element {
   my $context = $handler->{Context}->[-1];
   #### Strip out and funky characters
   $element =~ s/\W//g;
+  $element = "identity_value" if ($element eq "identity");
   $context =~ s/\W//g;
+  $context = "identity_value" if ($context eq "identity");
 
   #### Just pop the top item off the stack.  It should be the current
   #### element, but we lazily don't check
@@ -702,15 +716,27 @@ sub characters {
 
   #### Strip out and funky characters
   $context =~ s/\W//g;
+  $context = "identity_value" if ($context eq "identity");
 
 
   #### If we're in Learn mode, just collect information about the XML
   if ($PARSEMODE eq 'LEARN') {
 
+    #### Strip off leading and trailing whitespace. FIXME Thi should be Opt
+    $string =~ s/^\s+//;
+    $string =~ s/\s+$//;
+
     #### Add the current string to the bin
     #### Note that some XML parsers return the CDATA line by line instead
     #### of one huge chunk
-    $datamodel{entities}->{$context}->{CDATA} .= $string;
+    if ($string gt '') {
+      $datamodel{entities}->{$context}->{CDATA} .= $string;
+    }
+
+    # DEBUGGING
+    #if ($context eq 'ENTRY') {
+    #  print "string=$string=\n";
+    #}
 
   }
 
@@ -721,12 +747,25 @@ sub characters {
     #### If this is element corresponds to a table
     if (defined($datamodel{entities}->{$context})) {
 
-      #### Do nothing, I guess.  If this is an element, it must have
-      #### children and thus no CDATA???
+      #### For those wanting to make life very difficult, it's possible
+      #### that there is both CDATA and child elements.  Try to handle
+      #### with the assumption that there's attribute with the element name
       unless ($string =~ /^\s*$/) {
-        print "ERROR: Expected empty space but got CDATA '$string' ".
-          "instead!!\n";
-        die("  Rats!");
+        #print "ERROR: Expected empty space but got CDATA '$string' ".
+        #  "instead!!\n";
+        #die("  Rats!");
+
+  	#### Strip off leading and trailing whitespace. FIXME Thi should be Opt
+  	$string =~ s/^\s+//;
+  	$string =~ s/\s+$//;
+
+  	#### Store this information for later inserting
+  	$element_state{$context}->{needs_update} = 1;
+        if (defined($element_state{$context}->{attributes}->{$context})) {
+    	  $element_state{$context}->{attributes}->{$context} .= $string;
+	} else {
+    	  $element_state{$context}->{attributes}->{$context} = $string;
+	}
       }
 
 
