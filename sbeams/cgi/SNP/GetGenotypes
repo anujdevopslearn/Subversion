@@ -241,6 +241,8 @@ sub handle_request {
   $parameters{row_limit} = 50000
     unless ($parameters{row_limit} > 0);
   my $limit_clause = "TOP $parameters{row_limit}";
+  #### Disable LIMIT clause
+  $limit_clause = "";
 
 
   #### Define the desired columns in the query
@@ -392,12 +394,11 @@ sub postProcessResultset {
 
 
   #### Get the predicted locations of the rank list file
-  my $order_file = "/users/kdeutsch/examples/oracle/picked-sorted.tsv:chr10";
+  my $order_file = "/users/kdeutsch/examples/oracle/picked-sorted.tsv:chr10zzz";
 
 
   #### Read in order file and create hash out of its contents
   my %snphash;
-  #if (open(ASSAYFILE,"picked-sorted.tsv")) {
   if (open(ASSAYFILE,"$order_file")) {
     while (<ASSAYFILE>) {
       chomp;
@@ -418,6 +419,8 @@ sub postProcessResultset {
   my ($project_id,$sample_id,$assay_id,$genotype_id);
   my $data;
   my @query_assays = ();
+  my %dup_stats;
+  my %samples;
 
   #### Loop over each row in the resultset
   my $n_rows = scalar(@{$resultset_ref->{data_ref}});
@@ -427,16 +430,53 @@ sub postProcessResultset {
     $sample_id = $resultset_ref->{data_ref}->[$row]->[$sample_id_index];
     $assay_id = $resultset_ref->{data_ref}->[$row]->[$assay_id_index];
     $genotype_id = $resultset_ref->{data_ref}->[$row]->[$genotype_id_index];
+    $samples{$sample_id} = 1;
 
     $genotype_id =~ s/\./\//;
     $genotype_id="C/C" if ($genotype_id eq "C");
     $genotype_id="A/A" if ($genotype_id eq "A");
     $genotype_id="G/G" if ($genotype_id eq "G");
     $genotype_id="T/T" if ($genotype_id eq "T");
-    $data->{$assay_id}->{$sample_id} = $genotype_id;
+
+    #### Store the genotype with great care about collisions
+    #### Does this one exist already?
+    if (exists($data->{$assay_id}->{$sample_id})) {
+      #### Is it defined?
+      if (defined($data->{$assay_id}->{$sample_id})) {
+        #### If is the same?
+        if ($data->{$assay_id}->{$sample_id} eq $genotype_id) {
+          if ($genotype_id eq '') {
+	    $dup_stats{no_replace_empty_with_empty}++;
+	  } else {
+  	    $dup_stats{no_replace_with_same}++;
+	  #print "$sample_id: $genotype_id is same as $data->{$assay_id}->{$sample_id}.... ";
+	  }
+	} elsif ($data->{$assay_id}->{$sample_id} eq '') {
+	  $dup_stats{replace_an_empty}++;
+          $data->{$assay_id}->{$sample_id} = $genotype_id;
+	} elsif ($genotype_id eq '') {
+	  $dup_stats{no_replace_with_empty}++;
+	} else {
+	  $dup_stats{no_replace_conflict}++;
+	  #print "$genotype_id is not $data->{$assay_id}->{$sample_id}.... ";
+	}
+      } else {
+        $dup_stats{replace_an_undef}++;
+        $data->{$assay_id}->{$sample_id} = $genotype_id;
+      }
+
+    #### Else just add it
+    } else {
+      $data->{$assay_id}->{$sample_id} = $genotype_id;
+    }
 
     push(@query_assays,$assay_id) unless ($query_assays[-1] eq $assay_id);
 
+  }
+
+  #### Print out some stats
+  foreach my $element (keys %dup_stats) {
+    print "$element = $dup_stats{$element}<BR>\n";
   }
 
 
@@ -479,33 +519,62 @@ sub postProcessResultset {
 
 
   #### Create new resultset
-  foreach my $letter ( 'A','B','C','D','E','F','G' ) {
-    for (my $num1 = 1; $num1 <=12; $num1++) {
-      for (my $num2 = 0; $num2 <= 84; $num2+=12) {
-  	my $fac = ($num1 + $num2);
-  	my $sample_name = "$letter$fac";
-        my @row = ($sample_name);
-  	foreach my $assay (@assays) {
-  	  if (defined($data->{$assay}->{$sample_name})) {
-  	    push(@row,$data->{$assay}->{$sample_name});
+  if (0 == 1) {
+    foreach my $letter ( 'A','B','C','D','E','F','G' ) {
+      for (my $num1 = 1; $num1 <=12; $num1++) {
+  	for (my $num2 = 0; $num2 <= 84; $num2+=12) {
+  	  my $fac = ($num1 + $num2);
+  	  my $sample_name = "$letter$fac";
+  	  my @row = ($sample_name);
+  	  foreach my $assay (@assays) {
+  	    if (defined($data->{$assay}->{$sample_name})) {
+  	      push(@row,$data->{$assay}->{$sample_name});
 
-            #### Add to the allele counters
-            my @alleles = split("/",$data->{$assay}->{$sample_name});
-            foreach my $allele (@alleles) {
-              $allele_frequencies{$assay}->{$allele}++;
-              $allele_frequencies{$assay}->{total}++;
-            }
+  	      #### Add to the allele counters
+  	      my @alleles = split("/",$data->{$assay}->{$sample_name});
+  	      foreach my $allele (@alleles) {
+  		$allele_frequencies{$assay}->{$allele}++;
+  		$allele_frequencies{$assay}->{total}++;
+  	      }
 
-  	  } else {
-  	    #push(@row,'0/0');
-  	    push(@row,'');
+  	    } else {
+  	      #push(@row,'0/0');
+  	      push(@row,'');
+  	    }
+
   	  }
+
+  	  push(@new_data_array,\@row);
 
   	}
 
-        push(@new_data_array,\@row);
+      }
+
+    }
+
+  } else {
+    my @samples = sort(keys(%samples));
+    foreach my $sample_name (@samples) {
+      my @row = ($sample_name);
+      foreach my $assay (@assays) {
+    	if (defined($data->{$assay}->{$sample_name})) {
+    	  push(@row,$data->{$assay}->{$sample_name});
+
+    	  #### Add to the allele counters
+    	  my @alleles = split("/",$data->{$assay}->{$sample_name});
+    	  foreach my $allele (@alleles) {
+    	    $allele_frequencies{$assay}->{$allele}++;
+    	    $allele_frequencies{$assay}->{total}++;
+    	  }
+
+    	} else {
+    	  #push(@row,'0/0');
+    	  push(@row,'');
+    	}
 
       }
+
+      push(@new_data_array,\@row);
 
     }
 
@@ -513,12 +582,18 @@ sub postProcessResultset {
 
 
   #### Add an allele frequency summary at the bottom
+  my $n_failed_assays = 0;
   foreach my $allele ('A','T','G','C') {
     my @row = ("$allele frequency");
     foreach my $assay (@assays) {
       if (defined($allele_frequencies{$assay}->{$allele})) {
         my $newval = sprintf("%.2f",$allele_frequencies{$assay}->{$allele} /
                              $allele_frequencies{$assay}->{total});
+	if ($newval >= 0.90) {
+	  #$failed_assay{$assay} = $newval;
+	  print "Assay $assay failed.  Major frequency too high: $newval<BR>\n";
+	  $n_failed_assays++;
+	}
   	push(@row,$newval);
       } else {
         push(@row,'');
@@ -526,7 +601,8 @@ sub postProcessResultset {
     }
     push(@new_data_array,\@row);
   }
-
+  print "$n_failed_assays total failed assays<BR>\n" if ($n_failed_assays);
+  print scalar(@assays)." total assays<BR><BR>\n";
 
 
   #### Fudge the assays
