@@ -275,6 +275,8 @@ INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BBS_display_options','MaxSeqWidth','Limit Sequence Width',50 )
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BBS_display_options','ShowSQL','Show SQL Query',60 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BBS_display_options','SequenceFormat','Display in Sequence Format',70 )
 
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BBS_sort_options','biosequence_name','biosequence_name',10 )
@@ -647,6 +649,11 @@ CREATE NONCLUSTERED INDEX idx_search_hit_peptide ON dbo.search_hit ( peptide ) -
 CREATE NONCLUSTERED INDEX idx_search_hit_peptide_string ON dbo.search_hit ( peptide_string ) --WITH DROP_EXISTING
 CREATE NONCLUSTERED INDEX idx_search_hit_cross_corr ON dbo.search_hit ( cross_corr ) --WITH DROP_EXISTING
 CREATE NONCLUSTERED INDEX idx_search_hit_probability ON dbo.search_hit ( probability ) --WITH DROP_EXISTING
+
+
+Need the following to do a DELETE of an experiment:
+CREATE NONCLUSTERED INDEX idx_search_hit_search_hit_index ON dbo.search_hit_protein ( search_hit_id,reference ) --WITH DROP_EXISTING
+
 
 */
 
