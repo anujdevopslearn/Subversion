@@ -226,7 +226,7 @@ sub showMainPage {
 				{
 					if ($count == 0)
 					{
-						print qq ~<td>  <a href=http://db.systemsbiology.net/devMK/sbeams/cgi/Cytometry/ManageTable.cgi?TABLE_NAME=CY_fcs_run&fcs_run_id=$kk>$element</a></td>~;
+						print qq ~<td>  <a href=http://db.systemsbiology.net/sbeams/cgi/Cytometry/ManageTable.cgi?TABLE_NAME=CY_fcs_run&fcs_run_id=$kk>$element</a></td>~;
 					}
 					else 
 					{
