@@ -941,7 +941,7 @@ $LINESEPARATOR<BR>
        <INPUT TYPE = "text" NAME = "excludeFile"  SIZE=30>*must specify full path of bad gene file<BR>
        <INPUT TYPE="checkbox" NAME="filterGenes"  VALUE="-filter" CHECKED> Filter Outliers<BR>
      <BR>
-     <B><A HREF="Javascript:getDirections(http://www.systemsbiology.org/VERAandSAM)">VERA/SAM:</A></B><BR>
+     <B><A HREF="Javascript:getDirections('http://www.systemsbiology.org/VERAandSAM')">VERA/SAM:</A></B><BR>
         <INPUT TYPE="checkbox" NAME="useVERAandSAM"  VALUE="useVS" CHECKED><FONT COLOR="red">Use VERA and SAM</FONT><BR>
         <INPUT TYPE="checkbox" NAME="veraCrit" VALUE="critValue">Cease Optimization when changes per step are less than:
 	<INPUT TYPE="text" NAME="veraCritValue" onChange="verifyNumber(this.value,'veraCritValue')">
