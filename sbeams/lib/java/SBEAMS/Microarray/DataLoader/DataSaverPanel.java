@@ -1,9 +1,11 @@
 package DataLoader;
 //-----------------------------------------------------------------------------------------------
+import java.io.*;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.regex.*;
 import java.util.List;
 import java.util.Vector;
 import java.util.Hashtable;
@@ -53,16 +55,16 @@ public class DataSaverPanel extends WizardPanel
 	fileButton.addActionListener(this);
 	filePanel.add(fileButton);
 
-	JPanel sbeamsPanel = new JPanel();
-	sbeamsCheck = new JCheckBox("Save to SBEAMS");
-	sbeamsPanel.add(sbeamsCheck);
-	sbeamsPanel.setPreferredSize(filePanel.getPreferredSize());
+// 	JPanel sbeamsPanel = new JPanel();
+// 	sbeamsCheck = new JCheckBox("Save to SBEAMS");
+// 	sbeamsPanel.add(sbeamsCheck);
+// 	sbeamsPanel.setPreferredSize(filePanel.getPreferredSize());
 
 	JPanel savePanel = new JPanel();
 	savePanel.setLayout(new GridLayout(0,1));
 	savePanel.add(instructionPanel);
 	savePanel.add(filePanel);
-	savePanel.add(sbeamsPanel);
+// 	savePanel.add(sbeamsPanel);
 
 	JPanel outerPanel = new JPanel();
 	outerPanel.add(savePanel);
@@ -91,93 +93,98 @@ public class DataSaverPanel extends WizardPanel
 	float[] individualLambdas = ec.getLambdaData();
 
 
-	StringBuffer xmlbuf = new StringBuffer();
+	StringBuffer predicateBuf = new StringBuffer();
+	StringBuffer constantsBuf = new StringBuffer();
+	StringBuffer variablesBuf = new StringBuffer();
+
 	String exptName =(String)wizardContext.getAttribute(WIZARD_EXPERIMENT); 
-	xmlbuf.append("<?xml version=\"1.0\" ?>"+"\n");
-	xmlbuf.append("<experiment name=\"");
-	xmlbuf.append(exptName);
-	xmlbuf.append("\" date=\""+date+"\">"+"\n");
-	xmlbuf.append ("\t");
-	xmlbuf.append("<predicate category='species' value='");
-	xmlbuf.append((String)wizardContext.getAttribute(WIZARD_ORGANISM));
-	xmlbuf.append("'/>"+"\n");
+	predicateBuf.append("<?xml version=\"1.0\" ?>"+"\n");
+	predicateBuf.append("<experiment name=\"");
+	predicateBuf.append(exptName);
+	predicateBuf.append("\" date=\""+date+"\">"+"\n");
+	predicateBuf.append ("\t");
+	predicateBuf.append("<predicate category='species' value='");
+	predicateBuf.append((String)wizardContext.getAttribute(WIZARD_ORGANISM));
+	predicateBuf.append("'/>"+"\n");
 
-	xmlbuf.append ("\t");
-	xmlbuf.append("<predicate category='perturbation' value='");
-	xmlbuf.append((String)wizardContext.getAttribute(WIZARD_PERTURBATION));
-	xmlbuf.append("'/>\n");
+	predicateBuf.append ("\t");
+	predicateBuf.append("<predicate category='perturbation' value='");
+	predicateBuf.append((String)wizardContext.getAttribute(WIZARD_PERTURBATION));
+	predicateBuf.append("'/>\n");
 
-	xmlbuf.append ("\t");
-	xmlbuf.append("<predicate category='strain' value='");
-	xmlbuf.append((String)wizardContext.getAttribute(WIZARD_STRAIN));
-	xmlbuf.append("'/>"+"\n");
+	predicateBuf.append ("\t");
+	predicateBuf.append("<predicate category='strain' value='");
+	predicateBuf.append((String)wizardContext.getAttribute(WIZARD_STRAIN));
+	predicateBuf.append("'/>"+"\n");
 
 	String manipulationType = (String)wizardContext.getAttribute(WIZARD_MANIPULATION_TYPE);
 	if (manipulationType != null) {
-	  xmlbuf.append ("\t");
-	  xmlbuf.append("<predicate category='manipulationType' value='");
-	  xmlbuf.append(manipulationType);
-	  xmlbuf.append("'/>"+"\n");
+	  predicateBuf.append ("\t");
+	  predicateBuf.append("<predicate category='manipulationType' value='");
+	  predicateBuf.append(manipulationType);
+	  predicateBuf.append("'/>"+"\n");
 	}
 
 	String manipulatedVariable = (String)wizardContext.getAttribute(WIZARD_MANIPULATED_VARIABLE);
 	if (manipulatedVariable != null) {
-	  xmlbuf.append("\t");
-	  xmlbuf.append("<predicate category='manipulatedVariable' value='");
-	  xmlbuf.append(manipulatedVariable);
-	  xmlbuf.append("'/>"+"\n");
+	  predicateBuf.append("\t");
+	  predicateBuf.append("<predicate category='manipulatedVariable' value='");
+	  predicateBuf.append(manipulatedVariable);
+	  predicateBuf.append("'/>"+"\n");
 	}
 
-	xmlbuf.append("\t");
-	xmlbuf.append("<dataset status='primary' type='log10 ratios'>"+"\n");
-	xmlbuf.append("\t\t"+"<uri>");
-	xmlbuf.append("httpIndirect://db.systemsbiology.net:8080/halo/DataFetcher.py/");
-	xmlbuf.append(exptName);
-	xmlbuf.append(".ratio</uri>"+"\n");
-	xmlbuf.append("\t</dataset>"+"\n");
+	predicateBuf.append("\t");
+	predicateBuf.append("<dataset status='primary' type='log10 ratios'>"+"\n");
+	predicateBuf.append("\t\t"+"<uri>");
+	//	predicateBuf.append("httpIndirect://db.systemsbiology.net:8080/halo/DataFetcher.py/");
+	predicateBuf.append(exptName);
+	predicateBuf.append(".ratio</uri>"+"\n");
+	predicateBuf.append("\t</dataset>"+"\n");
 
-	xmlbuf.append("\t");
-	xmlbuf.append("<dataset status='derived' type='lambdas'>"+"\n");
-	xmlbuf.append("\t\t"+"<uri>");
-	xmlbuf.append("httpIndirect://db.systemsbiology.net:8080/halo/DataFetcher.py/");
-	xmlbuf.append(exptName);
-	xmlbuf.append(".lambda</uri>"+"\n");
-	xmlbuf.append("\t</dataset>"+"\n");
+	predicateBuf.append("\t");
+	predicateBuf.append("<dataset status='derived' type='lambdas'>"+"\n");
+	predicateBuf.append("\t\t"+"<uri>");
+	//	predicateBuf.append("httpIndirect://db.systemsbiology.net:8080/halo/DataFetcher.py/");
+	predicateBuf.append(exptName);
+	predicateBuf.append(".lambda</uri>"+"\n");
+	predicateBuf.append("\t</dataset>"+"\n");
 
 	Vector constants = (Vector)wizardContext.getAttribute(WIZARD_CONSTANTS);
-	xmlbuf.append("\t<constants>\n");
+	predicateBuf.append("\t<constants>\n");
 	for (int m=0;m<constants.size();m++) {
 	  ConditionVariable cv = (ConditionVariable)constants.elementAt(m);
-	  xmlbuf.append("\t\t"+cv.getVariableTag()+"\n");
+	  constantsBuf.append("\t\t"+cv.getVariableTag()+"\n");
 	}
-	xmlbuf.append("\t</constants>\n");
+	variablesBuf.append("\t</constants>\n");
 
 	for (int m=0;m<conds;m++){
 	  String conditionName = conditions[m];
 	  ec = (ExperimentCondition)condData.get(conditionName);
 	  Vector varVector = ec.getVariables();
-	  xmlbuf.append("\t");
-	  xmlbuf.append("<condition alias='");
-	  xmlbuf.append(ec.getConditionAlias());
-	  xmlbuf.append("'>"+"\n");
+	  variablesBuf.append("\t");
+	  variablesBuf.append("<condition alias='");
+	  variablesBuf.append(ec.getConditionAlias());
+	  variablesBuf.append("'>"+"\n");
 	  for (int h=0;h<varVector.size();h++){
 		ConditionVariable cv = (ConditionVariable)varVector.elementAt(h);
 		String var = cv.getVariableTag();
-		xmlbuf.append("\t\t");
-		xmlbuf.append(var+"\n");
+		variablesBuf.append("\t\t");
+		variablesBuf.append(var+"\n");
 	  }
-	  xmlbuf.append("\t"+"</condition>"+"\n");
+	  variablesBuf.append("\t"+"</condition>"+"\n");
 	}
-	xmlbuf.append("</experiment>"+"\n");
+	variablesBuf.append("</experiment>"+"\n");
 
 	// Write XML
 	TextWriter xmlWriter = new TextWriter(xmlFile);
-	xmlWriter.write(xmlbuf.toString());
+	xmlWriter.write(predicateBuf.toString());
+	xmlWriter.write(constantsBuf.toString());
+	xmlWriter.write(variablesBuf.toString());
 	xmlWriter.close();
 
 	try{
 	  VerifierFactory factory = new com.sun.msv.verifier.jarv.TheFactoryImpl();
-	  Schema schema = factory.compileSchema("experiment.xsd");
+	  Schema schema = factory.compileSchema("http://db/sbeams/tmp/Microarray/dataLoader/experiment.xsd");
 	  Verifier verifier = schema.newVerifier();
 	  if( verifier.verify(xmlFile) ) 
 		status.append("Document is valid\n");
@@ -235,6 +242,35 @@ public class DataSaverPanel extends WizardPanel
 
   }// writeFiles
 //-----------------------------------------------------------------------------------------------
+  public boolean updateRepository(String fileBase) {
+	boolean successfulUpdate = false;
+	Pattern reposPattern = Pattern.compile("(.*)/.*?");
+	Matcher reposMatch = reposPattern.matcher(fileBase);
+	if (reposMatch.matches()){
+	  String repos = reposMatch.group(1);
+	  repos += "/.permissions";
+	  System.out.println(repos);
+	  String exp = (String)wizardContext.getAttribute(WIZARD_EXPERIMENT);
+	  try{
+		BufferedReader br = new BufferedReader(new FileReader(repos));
+		TextWriter newRepos = new TextWriter(repos);
+		StringBuffer sb = new StringBuffer();
+		String newLineOfText;
+		while ((newLineOfText = br.readLine()) != null)
+		  sb.append(newLineOfText+"\n");
+		sb.append(exp+": lab\n");
+		newRepos.write(sb.toString());
+		newRepos.close();
+		successfulUpdate = true;
+	  } catch (IOException e) {
+		successfulUpdate = false;
+	  }
+	}else {
+	  successfulUpdate = false;
+	}
+	return successfulUpdate;
+  }
+//-----------------------------------------------------------------------------------------------
   public void actionPerformed(ActionEvent e) {
 	String command = e.getActionCommand();
 	if (CHOOSE_DIRECTORY.equals(command) ||
@@ -289,6 +325,7 @@ public class DataSaverPanel extends WizardPanel
 	  String path = directoryPath.getText();
 	  String baseName = new String(path+"/"+wizardContext.getAttribute(WIZARD_EXPERIMENT));
 	  writeFiles(baseName);
+	  //	  updateRepository(baseName);
 	  String message = new String("Data Has Been Saved!\n\n"+
 								  "Status:\n"+status.toString()+"\n"+
 								  "Thanks for using the Data Loader");
