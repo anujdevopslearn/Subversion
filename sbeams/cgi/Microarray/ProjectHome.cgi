@@ -377,7 +377,7 @@ sub print_summary_tab {
 
   #### Print out some information about this project
   print qq~
-	<H1>Summary of $project_name:</H1>
+	<H1>Summary of $project_name (ID \#$project_id):</H1>
   <B><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=$project_id">[Edit Project Description]</A></B><BR>
 	<TABLE WIDTH="100%" BORDER=0>
 	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
@@ -738,7 +738,7 @@ sub print_data_analysis_tab {
 	           </SELECT>
 		   </TD>
 		   <TD>
-		   <A HREF="http://www.tigr.org/software/tm4/mev.html" TARGET="_blank"><IMG SRC="../../images/mev_logo.gif"></A>
+		   <A HREF="http://www.tigr.org/software/tm4/mev.html" TARGET="_blank"><IMG SRC="../../images/ma_mev_logo.gif"></A>
 		   </TD>
 		 </TR>
 		 <TR>
