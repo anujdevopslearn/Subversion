@@ -247,6 +247,29 @@ sub returnTableInfo {
     }
 
 
+###############################################################################
+    if ($table_name eq "user_project_permission") {
+
+        if ($info_key eq "BASICQuery") {
+            return qq~
+		SELECT UPP.user_project_permission_id,
+                       PUL.username+' - '+PROJ.name AS "Project",UL.username,PRIV.name,UPP.comment
+                  FROM $TB_USER_PROJECT_PERMISSION UPP
+                  LEFT JOIN $TB_PROJECT PROJ ON ( UPP.project_id = PROJ.project_id )
+                  LEFT JOIN $TB_USER_LOGIN PUL ON ( PROJ.PI_contact_id = PUL.contact_id )
+                  LEFT JOIN $TB_USER_LOGIN UL ON ( UPP.contact_id = UL.contact_id )
+                  LEFT JOIN $TB_PRIVILEGE PRIV ON ( UPP.privilege_id = PRIV.privilege_id )
+                 WHERE UPP.record_status!='D'
+                   AND PROJ.record_status!='D'
+                   AND PUL.record_status!='D'
+                   AND UL.record_status!='D'
+                   AND PRIV.record_status!='D'
+                 ORDER BY UL.username,PROJ.name
+            ~;
+        }
+
+    }
+
 
 
 ###############################################################################
