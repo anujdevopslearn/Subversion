@@ -8,3 +8,5 @@ CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.peptide_mapping ( pepti
 
 CREATE NONCLUSTERED INDEX idx_atlas_build_id ON dbo.peptide_instance ( atlas_build_id ) --WITH DROP_EXISTING
 
+CREATE NONCLUSTERED INDEX idx_peptide_instance_id ON dbo.peptide_instance_sample ( peptide_instance_id ) --WITH DROP_EXISTING
+
