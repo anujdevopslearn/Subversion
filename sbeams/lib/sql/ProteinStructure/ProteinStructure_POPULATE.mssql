@@ -20,11 +20,14 @@ VALUES ( 'input_form_options','medium_detail','Medium Detail',20 );
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'input_form_options','full_detail','Full Detail',30 );
 
+--DELETE FROM query_option WHERE option_type = 'GDH_display_options'
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'GDH_display_options','ApplyChilliFilter','Apply Chilli Filter',50 );
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
-VALUES ( 'GDH_display_options','ShowSQL','Show SQL Query',60 );
+VALUES ( 'GDH_display_options','ShowAllMatches','Show All Matches for Proteins that Match Constraint',60 );
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
-VALUES ( 'GDH_display_options','ShowExtraProteinProps','Show Extra Protein Properties',90 );
+VALUES ( 'GDH_display_options','ShowExtraProteinProps','Show Extra Protein Properties',70 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'GDH_display_options','ShowSQL','Show SQL Query',80 );
 
 
