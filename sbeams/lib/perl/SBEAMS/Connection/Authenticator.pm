@@ -701,6 +701,22 @@ sub setCurrent_project_id {
 }
 
 
+###############################################################################
+# Return the most recently modified project owned by the user
+###############################################################################
+sub get_default_project_id {
+  my $self = shift;
+  my $contact = $self->getCurrent_contact_id();
+
+  my @rows = selectSeveralColumns( <<"  END_SQL" );
+  SELECT project_id 
+  FROM $TB_PROJECT
+  WHERE PI_contact_id = $contact
+  ORDER BY date_modified DESC
+  END_SQL
+
+  return ( scalar( @rows ) ) ? $rows[0]->[0] : undef;
+}
 
 ###############################################################################
 # Return the active user_context_id of the user currently logged in
