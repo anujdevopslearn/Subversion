@@ -186,9 +186,9 @@ sub handleRequest {
 
 
   #### Open the file containing the input peptide properties
-  unless (open(INFILE,"$source_dir/input.tsv")) {
+  unless (open(INFILE,"$source_dir/APD_Hs_all.tsv")) {
     print "ERROR: Unable to open for reading input file ".
-      "'$source_dir/input.tsv'\n\n";
+      "'$source_dir/APD_Hs_all.tsv'\n\n";
     return;
   }
 
@@ -223,6 +223,7 @@ sub handleRequest {
 
     #### If this doesn't yet exist in the database, add it
     my $peptide_id = $peptides{$peptide_accession};
+#print "$peptide_accession   ".$peptide_id."\n";
     unless ($peptide_id) {
       my %rowdata = (
         peptide_accession => $peptide_accession,
