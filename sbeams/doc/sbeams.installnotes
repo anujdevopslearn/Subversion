@@ -381,6 +381,7 @@ To CREATE and POPULATE:
 sqsh -i $SBEAMS/lib/sql/Core/Core_CREATETABLES.mssql -D $SBEAMSDB
 sqsh -i $SBEAMS/lib/sql/Core/Core_POPULATE.mssql -D $SBEAMSDB
 sqsh -i $SBEAMS/lib/sql/Core/Core_CREATECONSTRAINTS.mssql -D $SBEAMSDB
+sqsh -i $SBEAMS/lib/sql/Core/Core_CREATE_MANUAL_CONSTRAINTS.sql -D $SBEAMSDB
 
 To DROP:
 sqsh -i $SBEAMS/lib/sql/Core/Core_DROPCONSTRAINTS.mssql -D $SBEAMSDB
