@@ -397,7 +397,7 @@ sub asCSSHTML {
 
 sub setRule {
   my $this = shift;
-  my $hbase = '/sbeams';
+  my $hbase = '/devDC/sbeams';
   my $cnt = ( $this->getNumTabs() ) * 2 + 5 ;
   $this->{_table}->addRow ( [ "<IMG SRC='$hbase/images/transparent.gif' HEIGHT='2' WIDTH='1' BORDER='0'>" ] );
   $this->{_table}->setCellAttr ( COL => 1, ROW => 2, COLSPAN => $cnt, BGCOLOR => $this->{activeColor} );
