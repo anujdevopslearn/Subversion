@@ -306,7 +306,9 @@ sub printEntryForm {
   my ( $projectAuthLevel, $tableAuthLevel ); # project and table permissions
 
   # Fully qualified table name
-  my $dbtable = getDbTableName( $parameters{TABLE_NAME} );
+#  my $dbtable = getDbTableName( $parameters{TABLE_NAME} );
+   my $dbtable = $sbeams->returnTableInfo( $parameters{TABLE_NAME},
+                                                   'DB_TABLE_NAME' );
 
 
   # Need this in a few places, calculate here.  Use MOD object, which will call
