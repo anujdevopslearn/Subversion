@@ -2143,7 +2143,7 @@ sub displayResultSet {
       #### Convert to a delimiter-safe format
       my @output_row = ();
 
-	  for (my $column = 0; $column < $#all_columns; $column++){
+	  for (my $column = 0; $column < scalar(@all_columns); $column++){
 		#### If this column's already been flagged for removal, continue;
 		next if ($no_print_columns[$column] == 1);
 
@@ -2172,7 +2172,7 @@ sub displayResultSet {
       while (@row = returnNextRow()) {
         @output_row = ();
 
-		for (my $column = 0; $column < $#row; $column++){
+		for (my $column = 0; $column < scalar(@row); $column++){
 		  my $datum = $row[$column];
 		  next if ($no_print_columns[$column] == 1);
           if ($datum =~ /[\t,\"]/) {
