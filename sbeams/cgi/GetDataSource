@@ -250,7 +250,9 @@ sub handle_request {
 
   #### Define parameters for source 'symposium'
   if ($parameters{source_name} eq 'symposium') {
-    $sql = "SELECT * FROM ISB..symposium_registration";
+    $sql = "SELECT * FROM ISB..symposium_registration ".
+	  "WHERE comments LIKE 'credit_cardApproved' ".
+	  "OR comments LIKE 'check' ";
   }
 
   #### Define parameters for source 'symposium_preregistration'
