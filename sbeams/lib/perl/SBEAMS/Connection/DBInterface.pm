@@ -2531,6 +2531,7 @@ sub displayResultSetControls {
     #### For certain types of resultsets, we'll allow a cytoscape trigger
     my $cytoscape_url_prefix = "$CYTOSCAPE_URL/sbeams";
     my $cytotest_url_prefix = "http://hazel.systemsbiology.net:8080/cytoscape/sbeamsTest";
+    my $current_username = $self->getCurrent_username();
     if ($resultset_ref->{column_list_ref}->[0] eq 'interaction_id') {
       print "<BR>\n<A HREF=\"${cytoscape_url_prefix}?m=interactions&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
       #print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<A HREF=\"${cytoscape_url_prefix}?m=NIDA&rs=$rs_params{set_name}\">[NIDA]</A>";
@@ -2539,7 +2540,8 @@ sub displayResultSetControls {
              $resultset_ref->{column_list_ref}->[1] eq 'Bait') {
       print "<BR>\n<A HREF=\"${cytoscape_url_prefix}?m=agingras&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
     } elsif ($resultset_ref->{column_list_ref}->[0] eq 'condition_name' || $FindBin::Script =~ /GetExpression/) {
-      print "<BR>\n<A HREF=\"${cytoscape_url_prefix}?m=microarray&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
+      print "<BR>\n<A HREF=\"http://db.systemsbiology.net/cytoscape/sbeamsTest?microarray_resultset=$rs_params{set_name}&action=Cytoscape+test&m=merge&username=$current_username\">[View this Resultset with Cytoscape]</A>";
+      #print "<BR>\n<A HREF=\"${cytoscape_url_prefix}?m=microarray&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
       #print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<A HREF=\"${cytotest_url_prefix}?m=microarray&rs=$rs_params{set_name}\">[test]</A>";
     } elsif ($resultset_ref->{column_list_ref}->[0] eq 'prophet number') {
       print "<BR>\n<A HREF=\"${cytoscape_url_prefix}?m=rchen&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
