@@ -1,0 +1,469 @@
+
+/*
+
+SELECT * FROM sysobjects WHERE type='U'
+SELECT 'DROP TABLE '+name FROM sysobjects WHERE type='U' ORDER BY crdate DESC
+
+
+DROP TABLE strain_behavior
+DROP TABLE sequence_modification
+DROP TABLE strain_parent
+DROP TABLE strain_child
+DROP TABLE plate_layout
+DROP TABLE strain
+
+DROP TABLE plasmid
+
+DROP TABLE citation
+DROP TABLE strain_background
+DROP TABLE strain_status
+DROP TABLE yeast_origin
+DROP TABLE yeast_selection_marker
+DROP TABLE coli_marker
+DROP TABLE strain_behavior
+
+
+DROP TABLE condition_repeat
+DROP TABLE condition
+DROP TABLE plate
+DROP TABLE spot_quantitation
+DROP TABLE array_quantitation_subset
+DROP TABLE array_quantitation
+DROP TABLE contruction_method
+DROP TABLE cell_type
+DROP TABLE biosequence
+DROP TABLE biosequence_set
+
+*/
+
+
+CREATE TABLE biosequence_set (
+	biosequence_set_id		int IDENTITY NOT NULL,
+	species_id			int NOT NULL /*REFERENCES organism(organism_id)*/,
+	set_name			varchar(100) NOT NULL,
+	set_tag				varchar(20) NOT NULL,
+	set_description			varchar(255) NOT NULL,
+	set_version			varchar(255) NOT NULL,
+	upload_file			varchar(255) NULL,
+	set_path			varchar(255) NULL,
+	uri				varchar(255) NULL,
+	comment				varchar(4000) NULL,
+	sort_order			int NOT NULL DEFAULT 10,
+	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id			int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status			char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (biosequence_set_id)
+)
+GO
+
+
+CREATE TABLE biosequence (
+	biosequence_id			int IDENTITY NOT NULL,
+	biosequence_set_id		int NOT NULL REFERENCES biosequence_set(biosequence_set_id),
+	biosequence_name		varchar(255) NOT NULL,
+	biosequence_gene_name		varchar(255) NULL,
+	biosequence_accession		varchar(255) NULL,
+	biosequence_desc		varchar(1024) NOT NULL,
+	biosequence_start		int NULL,
+	biosequence_length		int NULL,
+	biosequence_seq			text NULL,
+	inherit_from_biosequence_id	int NULL REFERENCES biosequence(biosequence_id),
+	comment				varchar(4000) NULL,
+	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id			int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status			char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (biosequence_id)
+)
+GO
+
+
+CREATE TABLE cell_type (
+	cell_type_id			int IDENTITY NOT NULL,
+	mating_type			varchar(255) NOT NULL,
+	ploidy				varchar(255) NOT NULL,
+	cell_type_description		varchar(255) NULL,
+	comment				varchar(4000) NULL,
+	sort_order			int NOT NULL DEFAULT 10,
+	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id			int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status			char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (cell_type_id)
+)
+GO
+
+
+CREATE TABLE construction_method (
+	construction_method_id		int IDENTITY NOT NULL,
+	construction_method_name	varchar(255) NOT NULL,
+	comment				varchar(4000) NULL,
+	sort_order			int NOT NULL DEFAULT 10,
+	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id			int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status			char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (construction_method_id)
+)
+GO
+
+
+CREATE TABLE coli_marker (
+	coli_marker_id			int IDENTITY NOT NULL,
+	coli_marker_name		varchar(255) NOT NULL,
+	comment				varchar(4000) NULL,
+	sort_order			int NOT NULL DEFAULT 10,
+	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id			int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status			char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (coli_marker_id)
+)
+GO
+
+
+CREATE TABLE yeast_selection_marker (
+	yeast_selection_marker_id	int IDENTITY NOT NULL,
+	yeast_selection_marker_name	varchar(255) NOT NULL,
+	comment				varchar(4000) NULL,
+	sort_order			int NOT NULL DEFAULT 10,
+	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id			int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status			char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (yeast_selection_marker_id)
+)
+GO
+
+
+CREATE TABLE yeast_origin (
+	yeast_origin_id			int IDENTITY NOT NULL,
+	yeast_origin_name		varchar(255) NOT NULL,
+	comment				varchar(4000) NULL,
+	sort_order			int NOT NULL DEFAULT 10,
+	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id			int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status			char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (yeast_origin_id)
+)
+GO
+
+
+CREATE TABLE strain_status (
+	strain_status_id		int IDENTITY NOT NULL,
+	strain_status_name		varchar(255) NOT NULL,
+	comment				varchar(4000) NULL,
+	sort_order			int NOT NULL DEFAULT 10,
+	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id			int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status			char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (strain_status_id)
+)
+GO
+
+
+CREATE TABLE strain_background (
+	strain_background_id		int IDENTITY NOT NULL,
+	strain_background_name		varchar(255) NOT NULL,
+	comment				varchar(4000) NULL,
+	sort_order			int NOT NULL DEFAULT 10,
+	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id			int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status			char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (strain_background_id)
+)
+GO
+
+
+CREATE TABLE dbo.citation (
+	citation_id		int IDENTITY NOT NULL,
+	pub_med_ID		varchar(50) NULL,
+	citation_name		varchar(100) NULL,
+	journal			varchar(100) NULL,
+	published_year		varchar(10) NULL,
+	volume			varchar(50) NULL,
+	issue			varchar(50) NULL,
+	page			varchar(50) NULL,
+	authors			varchar(255) NULL,
+	title			varchar(255) NULL,
+	publisher		varchar(100) NULL,
+	editor			varchar(255) NULL,
+	uri			varchar(255) NULL,
+	abstract		text NULL,
+	comment			varchar(255) NULL,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (citation_id)
+)
+GO
+
+
+CREATE TABLE condition (
+	condition_id			int IDENTITY NOT NULL,
+	condition_name			varchar(50) NULL,
+	condition_description		text NULL,
+	protocol_id			int NOT NULL /* REFERENCES protocol (protocol_id) */,
+	deviations			text NULL,
+	growth_time_hr			real NULL,
+	comment				text NULL,
+	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id			int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id			int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id			int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status			char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (condition_id)
+)
+GO
+
+
+CREATE TABLE condition_repeat (
+	condition_repeat_id		int IDENTITY NOT NULL,
+	condition_id			int NOT NULL REFERENCES condition(condition_id) ,
+	protocol_id			int NOT NULL /* REFERENCES protocol (protocol_id) */,
+	is_washed			char(1) DEFAULT 'N',
+	comment				text NULL,
+	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id			int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id			int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id			int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status			char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (condition_repeat_id)
+)
+GO
+
+
+CREATE TABLE plate (
+	plate_id			int IDENTITY NOT NULL,
+	plate_name			varchar(50) NULL,
+	location			varchar(50) NULL,
+	comment				text NULL,
+	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id			int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id			int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id			int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status			char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (plate_id)
+)
+GO
+
+
+CREATE TABLE array_quantitation (
+	array_quantitation_id		int IDENTITY NOT NULL,
+	protocol_id			int NULL,
+	quant_file_path			varchar(255) NULL,
+	quant_file_name			varchar(255) NULL,
+	data_flag			varchar(10) NULL,
+	quantitated_date		datetime NULL,
+	comment				varchar(255) NULL,
+	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id			int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id			int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id			int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status			char(1) NOT NULL DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (array_quantitation_id)
+)
+GO
+
+
+CREATE TABLE array_quantitation_subset (
+	array_quantitation_subset_id	int IDENTITY NOT NULL,
+	array_quantitation_id		int NOT NULL REFERENCES array_quantitation(array_quantitation_id) ,
+	set_row				int NULL,
+	set_column			int NULL,
+	condition_repeat_id		int NOT NULL REFERENCES condition_repeat(condition_repeat_id) ,
+	plate_id			int NOT NULL REFERENCES plate(plate_id) ,
+	quality_flag			varchar(10) NULL,
+	PRIMARY KEY CLUSTERED (array_quantitation_subset_id)
+)
+GO
+
+
+CREATE TABLE spot_quantitation (
+	spot_id				int IDENTITY NOT NULL ,
+	array_quantitation_subset_id	int NOT NULL REFERENCES array_quantitation_subset(array_quantitation_subset_id) ,
+	spot_number			int NULL ,
+	set_row				int NULL ,
+	set_column			int NULL ,
+	rel_row				int NULL ,
+	rel_column			int NULL ,
+	ch1_flag			char(1) NULL ,
+	ch1_intensity			real NULL ,
+	ch1_bkg				real NULL ,
+	ch1_inten_stdev			real NULL ,
+	ch1_bkg_stdev			real NULL ,
+	ch1_size			real NULL ,
+	PRIMARY KEY CLUSTERED (spot_id)
+)
+GO
+
+
+CREATE TABLE plasmid (
+	plasmid_id			int IDENTITY NOT NULL,
+	plasmid_strainID		varchar(50) NULL,
+	plasmid_name			varchar(255) NULL,
+	vector				varchar(50) NULL,
+	coli_strain			varchar(50) NULL,
+	coli_marker			varchar(50) NULL,
+	yeast_selection_marker		varchar(50) NULL,
+	yeast_origin			varchar(50) NULL,
+	plasmid_insert			varchar(150) NULL,
+	cloned_by			varchar(50) NULL,
+	cloned_date			datetime NULL,
+	source				varchar(255) NULL,
+	reference			varchar(255) NULL,
+	biosequence_id			int NULL REFERENCES biosequence (biosequence_id),
+	comment				text NULL,
+	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id			int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status			char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (plasmid_id)
+)
+GO
+
+
+CREATE TABLE strain (
+	strain_id			int IDENTITY NOT NULL,
+	strain_status_id		int NOT NULL REFERENCES strain_status (strain_status_id),
+	strain_name			varchar(255) NOT NULL,
+	former_name			varchar(255) NULL,
+	organism_id			int NOT NULL /* REFERENCES organism (organism_id) */,
+	strain_background_id		int NOT NULL REFERENCES strain_background (strain_background_id),
+	cell_type_id			int NOT NULL REFERENCES cell_type (cell_type_id),
+	plasmid1_id			int NULL REFERENCES plasmid (plasmid_id),
+	plasmid2_id			int NULL REFERENCES plasmid (plasmid_id),
+	construction_method_id		int NOT NULL REFERENCES construction_method (construction_method_id),
+	strain_source_id		int NOT NULL /* REFERENCES contact (contact_id) */,
+	reference_id			int NOT NULL REFERENCES citation (citation_id),
+	comment				text NULL,
+	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id			int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id			int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id			int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status			char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (strain_id)
+)
+GO
+
+
+CREATE TABLE strain_child (
+	strain_id			int NOT NULL REFERENCES strain (strain_id),
+	child_strain_id			int NOT NULL REFERENCES strain (strain_id)
+)
+GO
+
+
+CREATE TABLE strain_parent (
+	strain_id			int NOT NULL REFERENCES strain (strain_id),
+	parent_strain_id		int NOT NULL REFERENCES strain (strain_id)
+)
+GO
+
+
+CREATE TABLE sequence_modification (
+	sequence_modification_id	int IDENTITY NOT NULL,
+	strain_id			int NULL REFERENCES strain (strain_id),
+	plasmid_id			int NULL REFERENCES plasmid (plasmid_id),
+	affected_biosequence_id		int NULL REFERENCES biosequence (biosequence_id),
+	deletion_start			int NULL,
+	deletion_length			int NULL,
+	inserted_biosequence_id		int NULL REFERENCES biosequence (biosequence_id),
+	modification_index		int NULL,
+	allele_index			int NULL,
+	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id			int NOT NULL /*REFERENCES contact(contact_id)*/,
+	date_modified			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id			int NOT NULL /*REFERENCES contact(contact_id)*/,
+	owner_group_id			int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status			char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (sequence_modification_id)
+)
+GO
+
+
+CREATE TABLE plate_layout (
+	plate_layout_id			int IDENTITY NOT NULL,
+	strain_id			int NOT NULL REFERENCES strain(strain_id) ,
+	w384_plate_id			int NOT NULL REFERENCES plate(plate_id) ,
+	w384_row			varchar(10) NULL ,
+	w384_column			varchar(10) NULL ,
+	w96_plate			varchar(25) NULL ,
+	w96_row				varchar(10) NULL ,
+	w96_column			varchar(10) NULL ,
+ 	PRIMARY KEY CLUSTERED (plate_layout_id)
+)
+GO
+
+
+CREATE TABLE strain_behavior (
+	strain_behavior_id		int IDENTITY NOT NULL ,
+	strain_id			int NOT NULL REFERENCES strain(strain_id) ,
+	condition_id			int NOT NULL REFERENCES condition(condition_id) ,
+	growth				real NULL ,
+	spot_size			real NULL ,
+	adhesion			real NULL ,
+	invasion			real NULL ,
+	PRIMARY KEY CLUSTERED (strain_behavior_id)
+)
+GO
+
+
+--DROP TABLE dbo.query_option
+CREATE TABLE dbo.query_option (
+	query_option_id		int IDENTITY NOT NULL,
+	option_type		varchar(255) NOT NULL,
+	option_key		varchar(255) NOT NULL,
+	option_value		varchar(255) NOT NULL,
+	sort_order		int NOT NULL DEFAULT 10,
+	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id		int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id		int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status		char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (query_option_id)
+)
+GO
+
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BBS_display_options','MaxSeqWidth','Limit Sequence Width',50 )
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BBS_display_options','ShowSQL','Show SQL Query',60 )
+
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BBS_sort_options','biosequence_name','biosequence_name',10 )
+
