@@ -35,6 +35,7 @@ if (eregi("Mozilla\/4.+X11",$client)) {
 	h2   {  font-family: Helvetica, Arial, sans-serif; font-size: <?php echo $FONT_SIZE_LG ?>pt; font-weight: bold}
 	h3   {  font-family: Helvetica, Arial, sans-serif; font-size: <?php echo $FONT_SIZE_LG ?>pt; color: red}
 	h4   {  font-family: Helvetica, Arial, sans-serif; font-size: <?php echo $FONT_SIZE_LG ?>pt}
+	h5   {  font-family: Helvetica, Arial, sans-serif; font-size: <?php echo $FONT_SIZE_LG ?>pt; color: orange}
 	A:link    {  font-family: Helvetica, Arial, sans-serif; font-size: <?php echo $FONT_SIZE ?>pt; text-decoration: none; color: blue}
 	A:visited {  font-family: Helvetica, Arial, sans-serif; font-size: <?php echo $FONT_SIZE ?>pt; text-decoration: none; color: darkblue}
 	A:hover   {  font-family: Helvetica, Arial, sans-serif; font-size: <?php echo $FONT_SIZE ?>pt; text-decoration: underline; color: red}
