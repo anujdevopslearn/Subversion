@@ -18,3 +18,4 @@ IS_specimen_block	Specimen Block	Immunostain_infrastructure	YES	$TBIS_SPECIMEN_B
 IS_SummarizeStains	Summarize Stains	QUERY	NO				SummarizeStains		
 IS_surgical_procedure	Surgical_procedure	Immunostain_infrastructure	YES	$TBIS_SURGICAL_PROCEDURE	surgical_procedure_id		ManageTable.cgi?TABLE_NAME=IS_surgical_procedure	IS_surgical_procedure	
 IS_clinical_diagnosis	Clinical_diagnosis	Immunostain_infrastructure	YES	$TBIS_CLINICAL_DIAGNOSIS	clinical_diagnosis_id		ManageTable.cgi?TABLE_NAME=IS_clinical_diagnosis	IS_clinical_diagnosis	
+IS_genome_coordinates	Genome_coordinates	Immunostain_infrastructure	NO	$TBIS_GENOME_COORDINATES					
