@@ -276,6 +276,9 @@ sub selectOneColumn {
     #### Get the database handle
     $dbh = $self->getDBHandle();
 
+    #### Convert the SQL dialect if necessary
+    $sql = $self->translateSQL(sql=>$sql);
+
     my $sth = $dbh->prepare($sql) or croak $dbh->errstr;
     my $rv  = $sth->execute or croak $dbh->errstr;
 
@@ -304,6 +307,9 @@ sub selectSeveralColumns {
 
     #### Get the database handle
     $dbh = $self->getDBHandle();
+
+    #### Convert the SQL dialect if necessary
+    $sql = $self->translateSQL(sql=>$sql);
 
     #### FIX ME replace with $dbh->selectall_arrayref ?????
     my $sth = $dbh->prepare($sql) or croak $dbh->errstr;
@@ -335,6 +341,9 @@ sub selectHashArray {
     #### Get the database handle
     $dbh = $self->getDBHandle();
 
+    #### Convert the SQL dialect if necessary
+    $sql = $self->translateSQL(sql=>$sql);
+
     my $sth = $dbh->prepare($sql) or croak $dbh->errstr;
     my $rv  = $sth->execute or croak $dbh->errstr;
 
@@ -357,14 +366,17 @@ sub selectHashArray {
 ###############################################################################
 sub selectTwoColumnHash {
     my $self = shift || croak("parameter self not passed");
-    my $sql_query = shift || croak("parameter sql_query not passed");
+    my $sql = shift || croak("parameter sql not passed");
 
     my %hash;
 
     #### Get the database handle
     $dbh = $self->getDBHandle();
 
-    my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
+    #### Convert the SQL dialect if necessary
+    $sql = $self->translateSQL(sql=>$sql);
+
+    my $sth = $dbh->prepare("$sql") or croak $dbh->errstr;
     my $rv  = $sth->execute or croak $dbh->errstr;
 
     while (my @row = $sth->fetchrow_array) {
@@ -376,6 +388,40 @@ sub selectTwoColumnHash {
     return %hash;
 
 }
+
+
+###############################################################################
+# translateSQL
+#
+# Given an SQL statement in one dialect of SQL, translate to the current
+# dialect of SQL
+###############################################################################
+sub translateSQL {
+  my $self = shift || croak("parameter self not passed");
+  my %args = @_;
+
+  #### Process the arguments list
+  my $sql = $args{'sql'} || croak "parameter sql missing";
+
+  my $DBType = $self->getDBType() || "";
+  return $sql if ($DBType =~ /MS SQL Server/i);
+
+
+  my $new_statement = $sql;
+
+
+  #### Things we do to convert from MS SQL Server to PostgreSQL
+  if ($DBType =~ /PostgreSQL/i) {
+
+    #### Real naive and stupid so far...
+    $new_statement = s/\+/||/g;
+
+  }
+
+
+  return $new_statement;
+
+} # end translateSQL
 
 
 ###############################################################################
