@@ -75,7 +75,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
 $VERBOSE = $OPTIONS{"verbose"} || 0;
 $QUIET = $OPTIONS{"quiet"} || 0;
 $DEBUG = $OPTIONS{"debug"} || 0;
-$TESTONLY = $OPTIONS{"testonly"} || 1;
+$TESTONLY = $OPTIONS{"testonly"} || 0;
 if ($DEBUG) {
   print "Options settings:\n";
   print "  VERBOSE = $VERBOSE\n";
@@ -161,10 +161,9 @@ sub handleRequest {
   foreach my $row ( @{$new_data->{rows}} ) {
 
     my $antigen_name = $row->{antigen_name};
-
-    #### INSERT or UPDATE this antigen based on the parsed information
+#### INSERT or UPDATE this antigen based on the parsed information
     update_antigen(
-      antigen_name => $antigen_name,
+      antigen_name => 	$antigen_name,
       antigen_attributes => $row,
     );
 
@@ -198,11 +197,9 @@ sub parse_source_file {
 
   #### Skip header
   my $line;
-  while ($line = <INFILE>) {
+  while ($line = <INFILE>)
+	{
     last if ( $line =~ /<TD><B>CD molecule<\/B><\/TD>/ );
-  }
-  while ($line = <INFILE>) {
-    last if ( $line =~ /<TR>/ );
   }
   $line = <INFILE>;
 
@@ -211,63 +208,44 @@ sub parse_source_file {
   my @rows;
   my %result;
   $result{SUCCESS} = 0;
+#### Loop through the file until we're done
+	$/ = "</TD></TR>";
+	while (1)
+	{
+		
+			if ($line =~ /<TD><B>/is)
+			{
+					($line = <INFILE>);
+					next;
+			}
+			last if ($line =~ /<\/TABLE>/);
+			my %data;
 
-
-  #### Loop through the file until we're done
-  while (1) {
-
-    my %data;
-
-    #### Parse antigen_name
-    if ( $line =~ /<TD>(.+)<\/TD>/ ) {
-      $data{antigen_name} = $1;
-      if ($data{antigen_name} =~ /(\d+)/) {
-        $data{antigen_number} = $1;
-      } else {
-        $data{antigen_number} = 9999;
-      }
-    } else {
-      print "ERROR parsing at step 1: '$line'";
-    }
-
-    #### Parse alternate_names
-    if ( $line =~ /<TD>(.+)<\/TD>/ ) {
-      $data{alternate_names} = $1;
-    } else {
-      print "ERROR parsing at step 2: '$line'";
-    }
-
-    #### Parse locus_link_id
-    if ( $line =~ /<TD>(.+)<\/TD>/ ) {
-      $data{locus_link_id} = $1;
-    } else {
-      print "ERROR parsing at step 3: '$line'";
-    }
-
-
-    #### Parse cross reference link
-    if ( $line =~ /<TD>(.+)<\/TD>/ ) {
-      $data{xref_link} = $1;
-    } else {
-      print "ERROR parsing at step 4: '$line'";
-    }
-
-    #### Push this hash onto the @rows array
-    push(@rows,\%data);
-
-    #### Decide if we're done
-    while ($line = <INFILE>) {
-      next if ( $line =~ /^\s*$/ );
-      last if ($line =~ /<TR>/);
-      last if ($line =~ /<\/TABLE>/);
-    }
-    last if ($line =~ /<\/TABLE>/);
-
-    #### Read the next line
-    $line = <INFILE>;
-
+#### Parse the line into antigen_name, alternate_names, locus_link_id and xref_link
+    	($data{antigen_name},$data{alternate_names}, $data{locus_link_id},$data{xref_link})= $line =~ /<TD>(.+)<\/TD>.*?<TD>(.+)<\/TD>.*?<TD>(.+)<\/TD>.*?<TD>(.+)<\/TD>.*/is;
+#### just making sure we got some value otherwise the parsing is not working 
+			if(!defined($data{antigen_name}||$data{alternate_names}||$data{locus_link_id}||$data{xref_link}))
+			{
+				print "Error: Parsing error on line: $line\n";
+				sleep(2);
+				$line = <INFILE>;
+				next;
+			}
+#### getting all the linking stuff out of the values before parsing the number from the antigen_name			
+			my $refData = decomposeDatum(\%data);
+#### now get the number			
+			if ($refData->{antigen_name} =~ /(\d+)/)
+			{
+					$refData->{antigen_number} = $1;
+			}
+			else 
+			{
+					$refData->{antigen_number} = 9999;
+			}
+#### add the hash ref to the array  
+    	push(@rows,$refData);
+			$line = <INFILE>;
   }
-
 
   #### Close and return
   close(INFILE);
@@ -276,34 +254,20 @@ sub parse_source_file {
 
   return \%result;
 
-
 } # end parse_source_file
 
-
-
-###############################################################################
-# decomposeDatum
-###############################################################################
-sub decomposeDatum {
+sub decomposeDatum
+{
   my $data = shift;
 
-  my %decomposition;
-  $decomposition{name} = '';
-  $decomposition{link} = '';
-
-  if ($data =~ /<A HREF="(.+)">(.+)<\/A>/) {
-    $decomposition{name} = $2;
-    $decomposition{link} = $1;
-  } else {
-    $decomposition{name} = $data;
-  }
-
-  $decomposition{name} = '' if ($decomposition{name} =~ /^\s*&nbsp;\s*$/);
-
-  return \%decomposition;
-
-} # end decomposeDatum
-
+#later we can also capture the link
+	foreach my $key (keys %$data)
+	{
+			$data->{$key} = '' if ($data->{$key} =~ /^\s*&nbsp;\s*$/is);	
+			$data->{$key} =~ s/<A HREF="(.+)">(.+)<\/A>/$2/is;
+	}
+	return $data;
+}
 
 
 ###############################################################################
@@ -317,6 +281,7 @@ sub get_antigen_id {
   my $antigen_name = $args{'antigen_name'}
    || die("ERROR[$SUB_NAME]: antigen_name not passed");
 
+print "Getting the anitgen\n";
 
   #### Get id for this antigen from database
   my $sql = qq~
@@ -356,7 +321,7 @@ sub update_antigen {
 
 
   #### Eventually we should check for/insert/update a biosequence here
-  1;
+
 
 
   #### See if this antigen already exists
@@ -383,8 +348,15 @@ sub update_antigen {
     alternate_names => $antigen_attributes->{alternate_names},
     sort_order => $antigen_attributes->{antigen_number},
   );
-
-
+	
+#####testing
+=comment
+foreach my $key(keys %rowdata)
+{
+		print "$key\n";
+		print "$rowdata{$key}\n";
+}
+=cut
   #### Do the INSERT/UPDATE
   my $returned_PK = $sbeams->updateOrInsertRow(
     insert => $insert,
@@ -395,8 +367,7 @@ sub update_antigen {
     PK_value => $antigen_id,
     return_PK => 1,
     verbose=>$VERBOSE,
-    testonly=>$TESTONLY,
-    add_audit_parameters=>1,
+    testonly=>$TESTONLY
   );
 
   #### Verify we got the PK back
