@@ -149,7 +149,7 @@ sub handle_request {
 
   if ($parameters{'_tab'}) {
 
-    $sbeams->printUserContext();
+    #$sbeams->printUserContext();
 
     $tabs = "?_tab=" . $parameters{'_tab'};
 
@@ -273,6 +273,7 @@ sub handle_request {
     PROGRAM_FILE_NAME=>$PROGRAM_FILE_NAME,
     parameters_ref=>\%parameters,
     input_types_ref=>\%input_types,
+    mask_user_context=> '1',
   );
 
   #for (my $i=0; $i<=$#columns;$i++){
