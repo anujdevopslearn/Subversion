@@ -155,6 +155,7 @@ sub updateDriverTable {
   $line =~ s/[\r\n]//g;
   my @column_names = split("\t",$line);
   my $n_columns = @column_names;
+  close(INFILE);
 
 
   #### List all the actual column names for code generation
@@ -199,6 +200,19 @@ sub updateDriverTable {
     }
 
     update_table_column(source_file=>$source_file);
+    return;
+
+  #### If there is 1 column, verify it's a manual update file and update
+  } elsif ($n_columns == 1) {
+    if ($line ne '#MANUAL updates to table_column') {
+      print "ERROR: File header verification failed.\n";
+        print " Expected line 1 to be '#MANUAL updates to table_column', ".
+        "but it's not.  This is unexpected and we cannot ".
+        "continue.  Please resolve and retry.\n";
+      return;
+    }
+
+    executeManualCommands(source_file=>$source_file);
     return;
 
   #### Else we don't know what kind of file this is
@@ -373,4 +387,49 @@ sub update_table_column {
 
 
 } # end update_table_column
+
+###############################################################################
+# executeManualCommands
+#
+# This is really quick and dirty and not very safe or elegant.  FIXME.
+###############################################################################
+sub executeManualCommands {
+  my %args = @_;
+
+
+  #### Process the arguments list
+  my $source_file = $args{'source_file'} || die "source_file not passed";
+
+
+  #### Define some generic variables
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+  #### Open the file
+  unless (open(INFILE,"$source_file")) {
+    die("Cannot open file '$source_file'");
+  }
+
+
+  #### Read in all the data at once
+  $sql = '';
+  while ($line = <INFILE>) {
+    $sql .= $line unless ($line =~ /^\#/);
+  }
+  close(INFILE);
+
+
+  #### And just execute it
+  print "Executing manual commands...\n";
+  $sbeams->executeSQL($sql);
+  print "done.\n";
+
+
+  #### Insure that the file is in DOS carriage return format
+  $sbeams->unix2dosFile(file=>$source_file);
+
+  return;
+
+
+} # end executeManualCommands
 

@@ -10,6 +10,7 @@
 
   ./update_driver_tables.pl $CONFDIR/Proteomics/Proteomics_table_property.txt
   ./update_driver_tables.pl $CONFDIR/Proteomics/Proteomics_table_column.txt
+  ./update_driver_tables.pl $CONFDIR/Proteomics/Proteomics_table_column_manual.txt
 
 
 
