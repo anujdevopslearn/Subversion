@@ -726,9 +726,11 @@ sub PlotPeaks {
       $grcol = 3;
     }
 
+#    my ($bdata,$ydata);
+
     #### Convert to piddle for easy sub-selecting
-    my $bdata = pdl $masslist_ref->{Bion};
-    my $ydata = pdl $masslist_ref->{Yion};
+    my $bdata = pdl $masslist_ref->{Bions};
+    my $ydata = pdl $masslist_ref->{Yions};
 
     #### Draw peaks
     my $i;
@@ -736,6 +738,7 @@ sub PlotPeaks {
     my ($mass, $intensity);
 
     for ($i=0; $i<$specdata->{n_peaks}; $i++) {
+print "Here now\n";
       $mass = $specdata->{masses}->[$i];
       $intensity = $specdata->{intensities}->[$i];
 
@@ -753,9 +756,6 @@ sub PlotPeaks {
 
       my $Bind = which($bdata >= ($mass-$window) & $bdata <= ($mass+$window));
       my $Yind = which($ydata >= ($mass-$window) & $ydata <= ($mass+$window));
-
-print "Here now\n";
-
 
       if (($Bind !~ 'Empty') && ($Yind =~ 'Empty')) {
         if ($Binten[$Bind->at(0)] < $intensity) {
@@ -822,7 +822,7 @@ print "Here now\n";
     my $byh = {Color => $grcol};
     $win -> line ($byx,$byy,$byh);
 
-    return ($win,\@Binten,\@Yinten,);
+    return ($win,\@Binten,\@Yinten);
 }
 
 
