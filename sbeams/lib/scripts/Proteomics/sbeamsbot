@@ -1,0 +1,1182 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : sbeamsbot
+# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
+# $Id$
+#
+# Description : This program watches for new data coming from the instruments
+#               and processes it accordingly
+#
+###############################################################################
+
+
+###############################################################################
+# Generic SBEAMS setup for all the needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+use FindBin;
+use DirHandle;
+use POSIX;
+
+use lib qw (../perl ../../perl);
+use vars qw ($sbeams $sbeamsPROT $q
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TESTONLY
+             $current_contact_id $current_username
+            );
+
+
+#### Set up SBEAMS core module
+use SBEAMS::Connection;
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+
+use SBEAMS::Proteomics;
+use SBEAMS::Proteomics::Settings;
+use SBEAMS::Proteomics::Tables;
+
+$sbeams = SBEAMS::Connection->new();
+$sbeamsPROT = SBEAMS::Proteomics->new();
+$sbeamsPROT->setSBEAMS($sbeams);
+
+
+#### Set program name and usage banner
+$PROG_NAME = $FindBin::Script;
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS]
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+  --testonly          If set, nothing is actually inserted into the database,
+                      or moved or changed, but we just go through all the
+                      motions.  Use --verbose to see all the system and
+                      SQL statements that would occur
+  --once              If set, just check if there is anything to do and
+                      exit if not
+  --daemon            If set, loop forever waiting for things to do
+
+ e.g.:  $PROG_NAME --testonly --once
+
+EOU
+
+
+#### If no parameters are given, print usage information
+unless ($ARGV[0]){
+  print "$USAGE";
+  exit;
+}
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
+  "testonly","once","daemon",
+  )) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 1;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main();
+exit(0);
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    work_group=>'Proteomics_admin',
+  ));
+
+
+  $sbeams->printPageHeader() unless ($QUIET);
+  handleRequest();
+  $sbeams->printPageFooter() unless ($QUIET);
+
+
+} # end main
+
+
+
+###############################################################################
+# handleRequest
+###############################################################################
+sub handleRequest { 
+  my %args = @_;
+
+
+  #### Define standard variables
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+  #### Get $BASE_DIR from the environment
+  my $BASE_DIR = $ENV{BASE_DIR};
+  unless ($BASE_DIR) {
+    print "ERROR: This program needs to be started by the special starter\n".
+      "script.  If you are trying to run this by hand, don't!\n";
+    return;
+  }
+
+
+  #### Define some settings
+  my $staging_dir = "$BASE_DIR/staging";
+  my $archive_dir = "$BASE_DIR/archive";
+  my $user_dir = "$BASE_DIR/users";
+  my $BIN_DIR = "$BASE_DIR/../.bin";
+
+
+  #### Set the command-line options
+  my $daemon_mode = $OPTIONS{"daemon"} || '';
+  my $once_mode = $OPTIONS{"once"} || '';
+  $TESTONLY = $OPTIONS{'testonly'} || 0;
+  $once_mode = 1 unless ($daemon_mode || $once_mode);
+
+
+  #### If there are any parameters left, complain and print usage
+  if ($ARGV[0]){
+    print "ERROR: Unresolved parameter '$ARGV[0]'.\n";
+    print "$USAGE";
+    return;
+  }
+
+
+  #### Set looping parameters
+  my $sleeptime = 5;
+  my $heartbeat_interval = 2;
+  my $heartbeat = 0;
+
+
+  #### Print a message and get started
+  unless ($QUIET) {
+    $sbeams->printUserContext();
+    print "\n";
+    print scalar localtime," [$PROG_NAME] Starting...\n";
+  }
+
+
+  #### Define some additional variables
+  my $stopflag = 0;
+  my $file;
+  my @files;
+  my %parameters;
+
+
+  #### Loop forever until we're told to stop or get killed
+  until ($stopflag) {
+
+    #### See if there are new files in the staging area and register
+    processNewDataFiles(
+      staging_dir => $staging_dir,
+      archive_dir => $archive_dir,
+    );
+
+    #### Process files that need attention
+    processDataFiles(
+      staging_dir => $staging_dir,
+      archive_dir => $archive_dir,
+      user_dir => $user_dir,
+    );
+
+
+    #### Sleep for a while and then check again
+    unless ($once_mode) {
+      print scalar localtime," [$PROG_NAME] Sleeping $sleeptime seconds.\n"
+        if ($VERBOSE > 2);
+      sleep($sleeptime);
+    } else {
+      $stopflag = 1;
+    }
+
+
+    #### Update heartbeat counter and squawk when appropriate
+    $heartbeat++;
+    if ($heartbeat >= $heartbeat_interval) {
+      $heartbeat = 0;
+      print scalar localtime," [$PROG_NAME] Alive and waiting for new jobs\n"
+        if ($VERBOSE);
+    }
+
+
+  } # enduntil
+
+
+  unless ($QUIET) {
+    print scalar localtime," [$PROG_NAME] Finished.\n";
+  }
+
+  return;
+
+}
+
+
+
+###############################################################################
+# processNewDataFiles
+###############################################################################
+sub processNewDataFiles {
+  my %args = @_;
+  my $SUB_NAME = 'processNewDataFiles';
+
+
+  #### Decode the argument list
+  my $staging_dir = $args{'staging_dir'}
+   || die "ERROR[$SUB_NAME]: staging_dir not passed";
+
+
+  #### Get a directory listing of what's in the staging area
+  my @files = getDirListing(directory=>$staging_dir,exclude_dot_files=>1);
+
+
+  #### Define standard variables
+  my ($i,$element,$key,$value,$line,$result,$sql);
+  my $file_name;
+
+
+  #### If there are any, process them
+  if (@files) {
+
+    #### Get a list of the available processing_status's
+    $sql = qq~
+      SELECT status_tag,processing_status_id
+        FROM $TBPR_PROCESSING_STATUS
+       WHERE record_status != 'D'
+    ~;
+    my %processing_status_ids = $sbeams->selectTwoColumnHash($sql);
+
+
+    #### Get information about current user
+    my $current_contact_id = $sbeams->getCurrent_contact_id();
+    my $current_work_group_id = $sbeams->getCurrent_work_group_id();
+
+
+    #### Loop over each file and decide what to do
+    foreach $file_name (@files) {
+
+      #### Query to see if this file is already known
+      my $sql = qq~
+        SELECT raw_data_file_id,file_path
+          FROM $TBPR_RAW_DATA_FILE
+         WHERE file_name = '$file_name'
+           AND file_path = '$staging_dir'
+           AND record_status != 'D'
+      ~;
+      my @rows = $sbeams->selectSeveralColumns($sql);
+
+      #### If there are multiple rows, barf
+      if (scalar @rows > 1) {
+        print "ERROR[$SUB_NAME]: There are mulitple records for this ".
+          "filename!! This should never happen.\n";
+        return;
+      }
+
+
+      #### Extract data
+      my $raw_data_file_id = $rows[0]->[0];
+
+
+      #### If it is known, then we don't do anything here
+      if ($raw_data_file_id) {
+        print "  File '$file_name' is already known and in the queue\n"
+          if ($VERBOSE > 1);
+
+
+      #### Else, put it in the queue as WaitingToAge
+      } else {
+        print "  Found new file '$file_name'.\n"
+          if ($VERBOSE);
+
+        my %rowdata = (
+          file_name => $file_name,
+          file_path => $staging_dir,
+          processing_status_id => $processing_status_ids{WaitingToAge},
+          file_status_message => 'Waiting to make sure file is complete',
+          date_created => 'CURRENT_TIMESTAMP',
+          created_by_id => $current_contact_id,
+          date_modified => 'CURRENT_TIMESTAMP',
+          modified_by_id => $current_contact_id,
+          owner_group_id => $current_work_group_id,
+        );
+
+        $sbeams->insert_update_row(
+  	  insert=>1,
+  	  table_name=>$TBPR_RAW_DATA_FILE,
+  	  rowdata_ref=>\%rowdata,
+  	  verbose=>$VERBOSE,
+  	  testonly=>$TESTONLY,
+  	);
+
+      }
+
+    }
+
+
+  #### If there are no files
+  } else {
+    print scalar localtime," [$PROG_NAME] No new files in staging area.\n"
+      if ($VERBOSE > 1);
+  }
+
+
+  return(1);
+}
+
+
+
+###############################################################################
+# processDataFiles
+###############################################################################
+sub processDataFiles {
+  my %args = @_;
+  my $SUB_NAME = 'processDataFiles';
+
+
+  #### Decode the argument list
+  my $staging_dir = $args{'staging_dir'}
+   || die "ERROR[$SUB_NAME]: staging_dir not passed";
+  my $archive_dir = $args{'archive_dir'}
+   || die "ERROR[$SUB_NAME]: archive_dir not passed";
+  my $user_dir = $args{'user_dir'}
+   || die "ERROR[$SUB_NAME]: user_dir not passed";
+
+
+  #### Define standard variables
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+  #### Query to see what files need attention
+  my $sql = qq~
+    SELECT raw_data_file_id,status_tag
+      FROM $TBPR_RAW_DATA_FILE RDF
+     INNER JOIN $TBPR_PROCESSING_STATUS PS
+           ON ( RDF.processing_status_id = PS.processing_status_id )
+     WHERE RDF.record_status != 'D'
+       AND PS.status_tag != 'Finished'
+  ~;
+  my @rows = $sbeams->selectSeveralColumns($sql);
+
+  #### If there's nothing to do, return
+  unless (@rows) {
+    print "  No unfinished files in the queue.\n" if ($VERBOSE);
+    return;
+  }
+
+
+  #### Loop over all files
+  foreach my $row (@rows) {
+    my $raw_data_file_id = $row->[0];
+    my $status_tag = $row->[1];
+
+
+    #### If we're WaitingToAge, move the data file if it's ready
+    if ($status_tag eq 'WaitingToAge') {
+      moveDataFile(
+        raw_data_file_id=>$raw_data_file_id,
+        staging_dir => $staging_dir,
+        archive_dir => $archive_dir,
+        user_dir => $user_dir,
+      );
+
+
+    #### If the current status is an error state, try to climb out
+    } elsif ($status_tag eq 'UnableToParseName' ||
+             $status_tag eq 'ProcessError' ||
+             $status_tag eq 'UnableToFindExperiment') {
+      recoverFromErrorState(
+        raw_data_file_id=>$raw_data_file_id,
+        staging_dir => $staging_dir,
+      );
+
+
+    #### Otherwise, confess we don't know what to do yet
+    } else {
+      print "  Don't know what to do with status '$status_tag' yet.\n";
+    }
+
+  }
+
+
+  return(1);
+}
+
+
+
+###############################################################################
+# moveDataFile
+###############################################################################
+sub moveDataFile {
+  my %args = @_;
+  my $SUB_NAME = 'moveDataFile';
+
+
+  #### Decode the argument list
+  my $raw_data_file_id = $args{'raw_data_file_id'}
+   || die "ERROR[$SUB_NAME]: raw_data_file_id not passed";
+  my $staging_dir = $args{'staging_dir'}
+   || die "ERROR[$SUB_NAME]: staging_dir not passed";
+  my $archive_dir = $args{'archive_dir'}
+   || die "ERROR[$SUB_NAME]: archive_dir not passed";
+  my $user_dir = $args{'user_dir'}
+   || die "ERROR[$SUB_NAME]: user_dir not passed";
+
+
+  #### Define standard variables
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+  #### Get a list of the available processing_status's
+  $sql = qq~
+    SELECT status_tag,processing_status_id
+      FROM $TBPR_PROCESSING_STATUS
+     WHERE record_status != 'D'
+  ~;
+  my %processing_status_ids = $sbeams->selectTwoColumnHash($sql);
+  my $current_contact_id = $sbeams->getCurrent_contact_id();
+
+
+  #### Get some information about this data file
+  my $sql = qq~
+    SELECT raw_data_file_id,status_tag,file_name,file_path
+      FROM $TBPR_RAW_DATA_FILE RDF
+     INNER JOIN $TBPR_PROCESSING_STATUS PS
+           ON ( RDF.processing_status_id = PS.processing_status_id )
+     WHERE raw_data_file_id = '$raw_data_file_id'
+  ~;
+  my @rows = $sbeams->selectSeveralColumns($sql);
+
+  #### If there's nothing to do, print error and return
+  unless (@rows) {
+    print "ERROR[$SUB_NAME]: Cannot find raw_data_file_id=".
+      "'$raw_data_file_id'.  This should never happen.\n";
+    return;
+  }
+
+  #### If more than one row returned, print error and return
+  if (scalar @rows > 1) {
+    print "ERROR[$SUB_NAME]: More than one row returned from $sql ".
+    "This should never happen.\n";
+    return;
+  }
+
+
+  #### Extract data from result
+  my ($raw_data_file_id,$status_tag,$file_name,$file_path) = @{$rows[0]};
+
+
+  #### If the file_name doesn't exist, delete it in the queue
+  my $full_file_name = "$file_path/$file_name";
+  unless ( -e $full_file_name ) {
+    print "  Cannot find file '$full_file_name'.  This is unfortunate.  ".
+      "Perhaps it wasn't meant to be.\n";
+    my %rowdata = (
+      record_status => 'D',
+      date_modified => 'CURRENT_TIMESTAMP',
+      modified_by_id => $current_contact_id,
+    );
+
+    $sbeams->insert_update_row(
+      update=>1,
+      table_name=>$TBPR_RAW_DATA_FILE,
+      rowdata_ref=>\%rowdata,
+      PK=>'raw_data_file_id',
+      PK_value=>$raw_data_file_id,
+      verbose=>$VERBOSE,
+      testonly=>$TESTONLY,
+    );
+
+    return;
+  }
+
+
+  #### Verify that this file isn't already somewhere in the system
+  my $sql = qq~
+    SELECT raw_data_file_id,file_path
+      FROM $TBPR_RAW_DATA_FILE
+     WHERE file_name = '$file_name'
+       AND file_path != '$staging_dir'
+       AND record_status != 'D'
+  ~;
+  my @rows = $sbeams->selectSeveralColumns($sql);
+
+  #### If there are multiple rows, barf
+  if (scalar @rows > 1) {
+    print "ERROR[$SUB_NAME]: There are multiple records for this ".
+      "filename!! This should never happen.\n";
+    return;
+  }
+
+
+  #### Extract data
+  my $other_raw_data_file_id = $rows[0]->[0];
+  my $current_dir = $rows[0]->[1];
+
+
+  #### If there is another one, complain and stop
+  if ($other_raw_data_file_id) {
+
+    updateRawDataFileRecord(
+      raw_data_file_id=>$raw_data_file_id,
+      processing_status=>'ProcessError',
+      file_status_message=>"There is already a file by this name in ".
+        "the system in '$current_dir'.  Cannot continue.  Delete old or ".
+        "new duplicate.",
+    );
+    return;
+  }
+
+
+  #### Get the size of the file
+  my $file_size = ( -s $full_file_name );
+
+
+  #### Get the age of the file in minutes
+  $^T = time;
+  my $age = ( -M $full_file_name ) * 24 * 60;
+  if ($age < 2.0) {
+    print "File $file_name is still too young.  Needs to age 2 minutes.\n"
+      if ($VERBOSE);
+    return;
+  }
+
+
+  #### Print some information about the file if verbose
+  if ($VERBOSE) {
+    print "  File name: $full_file_name\n";
+    print "  File size: $file_size\n";
+    print "  File age: $age minutes\n";
+  }
+
+
+  #### Parse the data file name
+  my %file_name_components = parseDataFileName(
+    file_name => $file_name,
+  );
+
+
+  #### If the parsing didn't go well, set this to UnableToParse
+  if ($file_name_components{parse_error}) {
+    my %rowdata = (
+      processing_status_id => $processing_status_ids{UnableToParseName},
+      file_status_message => $file_name_components{parse_error},
+      date_modified => 'CURRENT_TIMESTAMP',
+      modified_by_id => $current_contact_id,
+    );
+
+    $sbeams->insert_update_row(
+      update=>1,
+      table_name=>$TBPR_RAW_DATA_FILE,
+      rowdata_ref=>\%rowdata,
+      PK=>'raw_data_file_id',
+      PK_value=>$raw_data_file_id,
+      verbose=>$VERBOSE,
+      testonly=>$TESTONLY,
+    );
+
+    return;
+  }
+
+
+  #### Show the results of the parsing
+  if ($VERBOSE > 1) {
+    print "  Decomposed components:\n";
+    while (($key,$value) = each (%file_name_components)) {
+      print "    $key = $value\n";
+    }
+  }
+
+
+  #### Try to identify the experiment this belongs to
+  $sql = qq~
+    SELECT experiment_id,experiment_tag,username,project_tag
+      FROM $TBPR_PROTEOMICS_EXPERIMENT PE
+     INNER JOIN $TB_USER_LOGIN UL ON ( PE.contact_id = UL.contact_id )
+     INNER JOIN $TB_PROJECT P ON ( PE.project_id = P.project_id )
+     WHERE PE.record_status != 'D'
+       AND UL.record_status != 'D'
+       AND P.record_status != 'D'
+       AND username = '$file_name_components{client}'
+       AND experiment_tag = '$file_name_components{experiment_tag}'
+  ~;
+  @rows = $sbeams->selectSeveralColumns($sql);
+
+
+  #### If there's no match
+  unless (@rows) {
+    print "ERROR[$SUB_NAME]: Cannot find an already registered experiment ".
+      "that matches this file\n";
+    my %rowdata = (
+      processing_status_id => $processing_status_ids{UnableToFindExperiment},
+      file_status_message => "An experiment called ".
+        "'$file_name_components{experiment_tag}' does exist for user ".
+        "'$file_name_components{client}'.  It must before we can continue.",
+      date_modified => 'CURRENT_TIMESTAMP',
+      modified_by_id => $current_contact_id,
+    );
+
+    $sbeams->insert_update_row(
+      update=>1,
+      table_name=>$TBPR_RAW_DATA_FILE,
+      rowdata_ref=>\%rowdata,
+      PK=>'raw_data_file_id',
+      PK_value=>$raw_data_file_id,
+      verbose=>$VERBOSE,
+      testonly=>$TESTONLY,
+    );
+
+    return;
+  }
+
+
+  #### If more than one row returned, print error and return
+  if (scalar @rows > 1) {
+    print "ERROR[$SUB_NAME]: More than one row returned from $sql ".
+    "This should never happen.\n";
+    return;
+  }
+
+
+  #### Extract data from result
+  my ($experiment_id,$experiment_tag,$username,$project_tag) = @{$rows[0]};
+
+
+  #### Create the final archive and user directories
+  foreach my $area ( $archive_dir,$user_dir ) {
+    $result = createArchiveDir(
+      archive_dir => $area,
+      username=>$username,
+      project_tag=>$project_tag,
+      experiment_tag=>$experiment_tag,
+    );
+
+    #### If it didn't work
+    unless ($result eq '1') {
+
+      my %rowdata = (
+  	processing_status_id => $processing_status_ids{ProcessError},
+  	file_status_message => $result,
+  	date_modified => 'CURRENT_TIMESTAMP',
+  	modified_by_id => $current_contact_id,
+      );
+  
+      $sbeams->insert_update_row(
+  	update=>1,
+  	table_name=>$TBPR_RAW_DATA_FILE,
+  	rowdata_ref=>\%rowdata,
+  	PK=>'raw_data_file_id',
+  	PK_value=>$raw_data_file_id,
+  	verbose=>$VERBOSE,
+  	testonly=>$TESTONLY,
+      );
+  
+      return;
+    }
+
+  }
+
+
+  #### Create the new file name, without the client and exptag
+  my $new_file_name = $file_name;
+  #$new_file_name =~ s/^.+?_//;
+  #$new_file_name =~ s/^.+?_//;
+  my $new_file_path = "$archive_dir/$username/$project_tag/$experiment_tag";
+  my $new_full_file_name = "$new_file_path/$new_file_name";
+
+
+  #### Now move the file to its final place and rename it in the process
+  print "  Move: $full_file_name\n    to: $new_full_file_name\n";
+  unless (rename($full_file_name,$new_full_file_name)) {
+    my $message = "Move to archive area failed: $!";
+    print "ERROR[$SUB_NAME]: $message\n";
+    updateRawDataFileRecord(
+      raw_data_file_id=>$raw_data_file_id,
+      processing_status=>'ProcessError',
+      file_status_message=>$message,
+    );
+  }
+
+
+  #### Add some details about the file size and date
+  my %rowdata;
+  $rowdata{file_size} = $file_size;
+  my @fs = stat($new_full_file_name);
+  my $mtime = $fs[9];
+  my ($sec,$min,$hour,$mday,$mon,$year) = localtime($mtime);
+  my $timestr = strftime("%Y-%m-%d %H:%M:%S",$sec,$min,$hour,$mday,$mon,$year);
+  $rowdata{file_written_date} = $timestr;
+  $rowdata{file_path} = $new_file_path;
+
+  #For now, just leave the file names the same in the database
+  #$rowdata{file_name} = $new_file_name;
+
+
+  #### Now update the record status
+  updateRawDataFileRecord(
+    raw_data_file_id=>$raw_data_file_id,
+    processing_status=>'ReadyToExtract',
+    file_status_message=>"File has been moved to archive area and is ".
+      "ready for extractms",
+    rowdata_ref=>\%rowdata,
+  );
+
+
+  return(1);
+}
+
+
+
+###############################################################################
+# recoverFromErrorState
+###############################################################################
+sub recoverFromErrorState {
+  my %args = @_;
+  my $SUB_NAME = 'recoverFromErrorState';
+
+
+  #### Decode the argument list
+  my $raw_data_file_id = $args{'raw_data_file_id'}
+   || die "ERROR[$SUB_NAME]: raw_data_file_id not passed";
+  my $staging_dir = $args{'staging_dir'}
+   || die "ERROR[$SUB_NAME]: staging_dir not passed";
+
+
+  #### Define standard variables
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+  #### Get some information about this data file
+  my $sql = qq~
+    SELECT raw_data_file_id,status_tag,file_name,file_path
+      FROM $TBPR_RAW_DATA_FILE RDF
+     INNER JOIN $TBPR_PROCESSING_STATUS PS
+           ON ( RDF.processing_status_id = PS.processing_status_id )
+     WHERE raw_data_file_id = '$raw_data_file_id'
+  ~;
+  my @rows = $sbeams->selectSeveralColumns($sql);
+
+  #### If there's nothing to do, print error and return
+  unless (@rows) {
+    print "ERROR[$SUB_NAME]: Cannot find raw_data_file_id=".
+      "'$raw_data_file_id'.  This should never happen.\n";
+    return;
+  }
+
+  #### If more than one row returned, print error and return
+  if (scalar @rows > 1) {
+    print "ERROR[$SUB_NAME]: More than one row returned from $sql ".
+    "This should never happen.\n";
+    return;
+  }
+
+
+  #### Extract data from result
+  my ($raw_data_file_id,$status_tag,$file_name,$file_path) = @{$rows[0]};
+
+
+  #### If the file_name doesn't exist, delete it in the queue
+  my $full_file_name = "$file_path/$file_name";
+  unless ( -e $full_file_name ) {
+    print "  Cannot find file '$full_file_name'.  This is curious.  ".
+      "Perhaps it has been removed or renamed to fix the error.\n";
+
+    my %rowdata = (
+      record_status => 'D',
+    );
+
+    updateRawDataFileRecord(
+      raw_data_file_id=>$raw_data_file_id,
+      processing_status=>'ProcessError',
+      file_status_message=>"File has disappeared from staging area",
+      rowdata_ref=>\%rowdata,
+    );
+
+    return;
+  }
+
+
+  if ($status_tag eq 'UnableToFindExperiment') {
+
+    #### Parse the data file name
+    my %file_name_components = parseDataFileName(
+      file_name => $file_name,
+    );
+
+
+    #### Try to identify the experiment this belongs to
+    $sql = qq~
+      SELECT experiment_id,experiment_tag,username,project_tag
+  	FROM $TBPR_PROTEOMICS_EXPERIMENT PE
+       INNER JOIN $TB_USER_LOGIN UL ON ( PE.contact_id = UL.contact_id )
+       INNER JOIN $TB_PROJECT P ON ( PE.project_id = P.project_id )
+       WHERE PE.record_status != 'D'
+  	 AND UL.record_status != 'D'
+  	 AND P.record_status != 'D'
+  	 AND username = '$file_name_components{client}'
+  	 AND experiment_tag = '$file_name_components{experiment_tag}'
+    ~;
+    @rows = $sbeams->selectSeveralColumns($sql);
+  
+  
+    #### If there's now a match, push back to WaitingToAge
+    if (scalar @rows == 1) {
+
+      updateRawDataFileRecord(
+  	raw_data_file_id=>$raw_data_file_id,
+  	processing_status=>'WaitingToAge',
+  	file_status_message=>"Retrying... Experiment definition now appears ".
+          "to exist.",
+      );
+
+    }
+
+  }
+
+
+} # end recoverFromErrorState
+
+
+
+###############################################################################
+# updateRawDataFileRecord
+###############################################################################
+sub updateRawDataFileRecord {
+  my %args = @_;
+  my $SUB_NAME = 'updateRawDataFileRecord';
+
+
+  #### Decode the argument list
+  my $raw_data_file_id = $args{'raw_data_file_id'}
+   || die "ERROR[$SUB_NAME]: raw_data_file_id not passed";
+  my $processing_status = $args{'processing_status'}
+   || die "ERROR[$SUB_NAME]: processing_status not passed";
+  my $file_status_message = $args{'file_status_message'}
+   || die "ERROR[$SUB_NAME]: file_status_message not passed";
+  my $rowdata_ref = $args{'rowdata_ref'};
+
+
+  #### If no rowdata hash was passed, create it
+  unless (defined($rowdata_ref)) {
+    unless (ref($rowdata_ref)) {
+      my %rowdata;
+      $rowdata_ref = \%rowdata;
+    }
+  }
+
+
+  #### Get a list of the available processing_status's
+  my $sql = qq~
+    SELECT status_tag,processing_status_id
+      FROM $TBPR_PROCESSING_STATUS
+     WHERE record_status != 'D'
+  ~;
+  my %processing_status_ids = $sbeams->selectTwoColumnHash($sql);
+  my $current_contact_id = $sbeams->getCurrent_contact_id();
+
+
+  #### Add the processing_status to the rowdata hash
+  if ($processing_status_ids{$processing_status}) {
+    $rowdata_ref->{processing_status_id} =
+      $processing_status_ids{$processing_status};
+  } else {
+    $rowdata_ref->{processing_status_id} = 3;
+    $rowdata_ref->{file_status_message} = "INTERNAL ERROR: Unrecognized ".
+      "processing_status '$processing_status'";
+  }
+
+
+  #### Add the file_status_message to the rowdata hash
+  $rowdata_ref->{file_status_message} = $file_status_message;
+
+
+  #### Add audit information to the rowdata hash
+  $rowdata_ref->{date_modified} = 'CURRENT_TIMESTAMP';
+  $rowdata_ref->{modified_by_id} = $current_contact_id;
+
+
+  #### UPDATE the record
+  $sbeams->insert_update_row(
+    update=>1,
+    table_name=>$TBPR_RAW_DATA_FILE,
+    rowdata_ref=>$rowdata_ref,
+    PK=>'raw_data_file_id',
+    PK_value=>$raw_data_file_id,
+    verbose=>$VERBOSE,
+    testonly=>$TESTONLY,
+  );
+
+
+}
+
+
+
+###############################################################################
+# parseDataFileName
+###############################################################################
+sub parseDataFileName {
+  my %args = @_;
+  my $SUB_NAME = 'parseDataFileName';
+
+
+  #### Decode the argument list
+  my $file_name = $args{'file_name'}
+   || die "ERROR[$SUB_NAME]: file_name not passed";
+
+
+  #### Define a hash to hold the various properties
+  my %components;
+  $components{parse_error} = 'UNKNOWN';
+
+
+  #### Make sure there's a .dat at the end
+  unless ( $file_name =~ /\.dat$/i ) {
+    $components{parse_error} = 'File must end in .dat';
+    return %components;
+  }
+
+
+  #### Get the file_root without the extension
+  my $file_root = $file_name;
+  $file_root =~ s/\.dat$//i;
+
+
+  #### Split file_root by underscores
+  my @parts = split(/_/,$file_root);
+  if (scalar @parts < 6) {
+    $components{parse_error} =
+      "filename must have at least 6 fields separated by an underscore";
+    return %components;
+  }
+
+
+  #### Extract the parts into the hash
+  $components{client} = $parts[0];
+  $components{experiment_tag} = $parts[1];
+  $components{fraction_type} = $parts[2];
+  $components{fraction_number} = $parts[3];
+  $components{window} = $parts[4];
+  $components{fraction_repeat} = $parts[5];
+  $components{other} = $parts[6];
+  $components{other} = '' unless (defined($components{other}));
+
+
+  #### Look for errors
+  unless ($components{client} &&
+          $components{client} =~ /^[A-Z,a-z,0-9\-]+$/) {
+    $components{parse_error} =
+      "client '$components{client}' is not valid: /^[A-Z,a-z,0-9\-]+\$/";
+    return %components;
+  }
+
+  unless ($components{experiment_tag} &&
+          $components{experiment_tag} =~ /^[A-Z,a-z,0-9\-]+$/) {
+    $components{parse_error} =
+      "experiment_tag '$components{experiment_tag}' is not valid: ".
+      "/^[A-Z,a-z,0-9\-]+\$/";
+    return %components;
+  }
+
+  unless ($components{fraction_type} &&
+          $components{fraction_type} =~ /^[A-Z,a-z,0-9\-]+$/) {
+    $components{parse_error} =
+      "fraction_type '$components{fraction_type}' is not valid: ".
+      "/^[A-Z,a-z,0-9\-]+\$/";
+    return %components;
+  }
+
+  unless ($components{fraction_number} &&
+          $components{fraction_number} =~ /^[A-Z,a-z,0-9\-]+$/) {
+    $components{parse_error} =
+      "fraction_number '$components{fraction_number}' is not valid: ".
+      "/^[A-Z,a-z,0-9\-]+\$/";
+    return %components;
+  }
+
+  unless ($components{window} &&
+          $components{window} =~ /^[A-Z,a-z,0-9\-]+$/) {
+    $components{parse_error} =
+      "window '$components{window}' is not valid: /^[A-Z,a-z,0-9\-]+\$/";
+    return %components;
+  }
+
+  unless ($components{fraction_repeat} &&
+          $components{fraction_repeat} =~ /^[A-Z,a-z,0-9\-]+$/) {
+    $components{parse_error} =
+      "fraction_repeat '$components{fraction_repeat}' is not valid: ".
+      "/^[A-Z,a-z,0-9\-]+\$/";
+    return %components;
+  }
+
+
+  #### Success
+  $components{parse_error} = '';
+  return %components;
+
+}
+
+
+
+###############################################################################
+# createArchiveDir
+###############################################################################
+sub createArchiveDir {
+  my %args = @_;
+  my $SUB_NAME = 'createArchiveDir';
+
+  my $error;
+
+  #### Decode the argument list
+  my $archive_dir = $args{'archive_dir'}
+   || die "ERROR[$SUB_NAME]: archive_dir not passed";
+  my $username = $args{'username'}
+   || die "ERROR[$SUB_NAME]: username not passed";
+  my $project_tag = $args{'project_tag'} || '';
+  my $experiment_tag = $args{'experiment_tag'}
+   || die "ERROR[$SUB_NAME]: experiment_tag not passed";
+  my $search_batch_subdir = $args{'search_batch_subdir'} || '';
+
+
+  #### Verify that the $archive_dir exists
+  unless ( -d $archive_dir ) {
+    $error = "ERROR[$SUB_NAME]: archive_dir '$archive_dir' does not exist ".
+      "and it must!  This should never happen.\n";
+    return $error;
+  }
+
+
+  #### Look for and create each subdirectory
+  foreach my $newdir ( "$archive_dir/$username",
+      "$archive_dir/$username/$project_tag",
+      "$archive_dir/$username/$project_tag/$experiment_tag",
+      "$archive_dir/$username/$project_tag/$experiment_tag/".
+        "$search_batch_subdir" ) {
+    if ( -d $newdir ) {
+      print " Already exists: $newdir\n" if ($VERBOSE);
+    } else {
+      print " Creating $newdir\n" if ($VERBOSE);
+      mkdir($newdir);
+      unless ( -d $newdir) {
+    	$error = "ERROR[$SUB_NAME]: Failed to create directory '$newdir'\n";
+    	return $error;
+      }
+    }
+  }
+
+
+  return 1;
+
+}
+
+
+
+###############################################################################
+# getDirListing
+###############################################################################
+sub getDirListing {
+  my %args = @_;
+  my $SUB_NAME = 'getDirListing';
+
+
+  #### Decode the argument list
+  my $dir = $args{'directory'}
+   || die "ERROR[$SUB_NAME]: directory not passed";
+  my $exclude_dot_files = $args{'exclude_dot_files'} || 0;
+
+  #### Open the directory and get the files (except . and ..)
+  opendir(DIR, $dir) || die "[$PROG_NAME::getDirListing] Cannot open $dir: $!";
+  my @files = grep (!/^\.{1,2}$/, readdir(DIR));
+  closedir(DIR);
+
+  #### Remove the dot files if we don't want them
+  if ($exclude_dot_files) {
+    @files = grep (!/^\./,@files);
+  }
+
+  #### Always sort the files
+  @files = sort(@files);
+
+
+  return @files;
+}
+
+
+
+###############################################################################
+# read Control File
+###############################################################################
+sub readControlFile {
+  my $file = shift;
+
+  my %parameters;
+  my ($key,$value,$line);
+
+  unless (open(INFILE,"$file")) {
+    print scalar localtime," [$PROG_NAME::getControlStatus] cannot ".
+      "find file $file\n";
+    return ("ERROR","ERROR");
+  }
+
+  while ($line=<INFILE>) {
+    chomp $line;
+    ($key,$value) = split("=",$line);
+    $parameters{$key} = $value if ($key);
+  }
+
+  close(INFILE);
+  return %parameters;
+
+}
+
+
+###############################################################################
+# update Control File
+###############################################################################
+sub updateControlFile {
+  my $file = shift;
+  my %newparameters = @_;
+
+  my ($key,$value,$line);
+  my %parameters = readControlFile($file);
+  return if ($parameters{'ERROR'});
+
+  while ( ($key,$value) = each %newparameters ) {
+    $parameters{$key}=$newparameters{$key};
+  }
+
+  unless ( unlink("$file") ) {
+    print scalar localtime," [$PROG_NAME::updateControlStatus] cannot ".
+      "delete file $file\n";
+    return 0;
+  }
+
+  unless (open(OUTFILE,">$file")) {
+    print scalar localtime," [$PROG_NAME::updateControlStatus] cannot ".
+      "open for writing file $file\n";
+    return 0;
+  }
+
+  while ( ($key,$value) = each %parameters ) {
+    print OUTFILE "$key=$value\n";
+  }
+
+  close(OUTFILE);
+  return 1;
+
+}
+
