@@ -642,18 +642,18 @@ sub handle_request {
        $molecular_function_clause.$biological_process_clause.
        $cellular_component_clause.$protein_domain_clause ) {
     $GO_join = qq~
-        LEFT JOIN flybase.dbo.annotated_gene AG
+        LEFT JOIN BioLink.dbo.annotated_gene AG
              ON ( BS.biosequence_accession = AG.gene_accession )
-        LEFT JOIN flybase.dbo.gene_annotation MFA
+        LEFT JOIN BioLink.dbo.gene_annotation MFA
              ON ( AG.annotated_gene_id = MFA.annotated_gene_id
                    AND MFA.gene_annotation_type_id = 1 AND MFA.idx = 0 )
-        LEFT JOIN flybase.dbo.gene_annotation BPA
+        LEFT JOIN BioLink.dbo.gene_annotation BPA
              ON ( AG.annotated_gene_id = BPA.annotated_gene_id
                    AND BPA.gene_annotation_type_id = 2 AND BPA.idx = 0 )
-        LEFT JOIN flybase.dbo.gene_annotation CCA
+        LEFT JOIN BioLink.dbo.gene_annotation CCA
              ON ( AG.annotated_gene_id = CCA.annotated_gene_id
                    AND CCA.gene_annotation_type_id = 3 AND CCA.idx = 0 )
-        LEFT JOIN flybase.dbo.gene_annotation IPDA
+        LEFT JOIN BioLink.dbo.gene_annotation IPDA
              ON ( AG.annotated_gene_id = IPDA.annotated_gene_id
                    AND IPDA.gene_annotation_type_id = 4 AND IPDA.idx = 0 )
     ~;
