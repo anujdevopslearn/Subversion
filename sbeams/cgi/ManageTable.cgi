@@ -44,18 +44,11 @@ use SBEAMS::Connection::TableInfo;
 $q = new CGI;
 $sbeams = new SBEAMS::Connection;
 
-#use SBEAMS::Proteomics;
-#use SBEAMS::Proteomics::Settings;
-#use SBEAMS::Proteomics::Tables;
-#use SBEAMS::Proteomics::TableInfo;
-#$sbeamsMOD = new SBEAMS::Proteomics;
 $sbeamsMOD = $sbeams;
-
-#$sbeamsMOD->setSBEAMS($sbeams);
-#$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 require 'ManageTable.pllib';
 
+use constant DATA_ADMIN => 10;
 
 
 ###############################################################################
@@ -145,6 +138,8 @@ sub main {
   if ($parameters{"GetFile"} && $parameters{"$PK_COLUMN_NAME"}) {
     getFile(); return;
   }
+
+  
   $sbeamsMOD->printPageHeader();
   if      ($parameters{action} eq 'VIEWRESULTSET') { printOptions();
   } elsif ($parameters{action} eq 'REFRESH') { printEntryForm();
@@ -171,15 +166,19 @@ sub main {
 sub preFormHook {
   my %args = @_;
 
-  my $query_parameters_ref = $args{'parameters_ref'};
-
+  my $param_ref = $args{'parameters_ref'};
 
   #### If table XXXX
   if ($TABLE_NAME eq "XXXX") {
-    $query_parameters_ref->{YYYY} = 'XXXX'
-      unless ($query_parameters_ref->{YYYY});
-  }
+    $param_ref->{YYYY} = 'XXXX' unless ($param_ref->{YYYY});
 
+  } elsif ($TABLE_NAME eq "project") {
+    # If we're inserting a new record, set the current contact as default PI
+    if ( !defined $param_ref->{PI_contact_id} ) {
+    $param_ref->{PI_contact_id} ||= $sbeams->getCurrent_contact_id();
+    }
+
+  }
 
   #### Otherwise, no special processing, so just return undef
   return;
@@ -231,6 +230,28 @@ sub preUpdateDataCheck {
   #### If table XXXX
   if ($TABLE_NAME eq "XXXX") {
     return "An error of some sort $parameters{something} invalid";
+    
+  } elsif ($TABLE_NAME eq "project") {
+    # If updating project need to know existing PI and contact.priv <= DATA_ADM 
+    if ( $parameters{apply_action} eq 'UPDATE' ) {
+      my $contact_id = $sbeams->getCurrent_contact_id();
+      
+      my ( $original_pi ) = $sbeams->selectOneColumn( <<"      END" );
+      SELECT pi_contact_id FROM $TB_PROJECT
+      WHERE project_id = $parameters{project_id}
+      END
+      $query_parameters_ref->{original_pi} = $original_pi;
+      return if $original_pi eq $parameters{PI_contact_id};
+      
+      # Make sure current user has admin on this project if PI changed
+      my $best = $sbeams->get_best_permission (
+                                          project_id => $parameters{project_id},
+                                          contact_id => $contact_id
+                                               );
+      unless ( $best && $best <= DATA_ADMIN ) {
+        return "You must be an administrator on this project to edit the PI";
+      }
+    } 
   }
 
 
@@ -252,12 +273,193 @@ sub postUpdateOrInsertHook {
   my $query_parameters_ref = $args{'parameters_ref'};
   my %parameters = %{$query_parameters_ref};
   my $pk_value = $args{'pk_value'};
-
+   
+  my $contact_id = $sbeams->getCurrent_contact_id();
+  my $work_group_id = $sbeams->getCurrent_work_group_id();
 
   #### If table XXXX
   if ($TABLE_NAME eq "XXXX") {
     return "An error of some sort $parameters{something} invalid";
-  }
+
+  } elsif ($TABLE_NAME eq "project") { # Project AMD has extra baggage
+    use constant DEBUG => 1;
+
+    my $priv; my $stat;
+    # Prepare hashes for updates/inserts
+    # Values needed for INSERT into user_proj_perms
+    my %insertUPP = ( project_id => $parameters{project_id},
+                   privilege_id => DATA_ADMIN,
+                   comment => 'Autocreated by SBEAMS',
+                   record_status => 'N' );
+
+    # Values needed for UPDATE of user_proj_perms
+    my %updateUPP = ( privilege_id => DATA_ADMIN, record_status => 'N' );
+
+    # Common values for updateOrInsertRow
+    my %updOrInsInfo = ( table_name => $TB_USER_PROJECT_PERMISSION,
+                         add_audit_parameters => 1,
+                       );
+    my $project = $parameters{project_id};
+    my $orig_pi = $parameters{original_pi};
+    my $pi_contact = $parameters{PI_contact_id};
+                         
+    if ( $parameters{apply_action} eq 'INSERT' ) { 
+
+      if ( $pi_contact != $contact_id ) { 
+        # We inserted by proxy. Insert contact_id as a user_project admin
+
+        $sbeams->updateOrInsertRow( %updOrInsInfo,
+                                    insert => 1,
+                                    rowdata_ref => 
+                                    { %insertUPP, contact_id => $contact_id } 
+                                  );
+      }
+
+    } elsif ( $parameters{apply_action} eq 'UPDATE' ) { 
+      # UPDATE; PI changed ?
+
+      if ( $orig_pi != $pi_contact ) {
+        # Yes; PI == contact ?  
+      
+        # Fetch existing UPP entries for contact and original pi
+        my $upp_orig_pi = $sbeams->getUserProjectPermission(
+                                                      project_id => $project,
+                                                      contact_id => $orig_pi
+                                                           );
+        my $upp_contact = $sbeams->getUserProjectPermission(
+                                                      project_id => $project,
+                                                      contact_id => $contact_id
+                                                           );
+        my $upp_new_pi = $sbeams->getUserProjectPermission(
+                                                      project_id => $project,
+                                                      contact_id => $pi_contact
+                                                           );
+
+        # Since the pi changed, we need to make sure the current PI doesn't
+        # have a stray upp record. 
+        if ( !defined $$upp_new_pi{id} ) {
+          # No; we're cool 
+        } else {
+          # Yes; 'delete' old record
+          if ( $$upp_new_pi{status} ne 'D' ) {
+          $sbeams->updateOrInsertRow( %updOrInsInfo,
+                                      update => 1,
+                                      PK_value => $$upp_new_pi{id},
+                                      PK_name => 'user_project_permission_id',
+                                      rowdata_ref => 
+                                       { %updateUPP, record_status => 'D' } 
+                                );
+          }
+        } # end upp exists block
+
+        
+        if ( $contact_id == $pi_contact ) {
+          # Yes.  upp record needed for original_pi, cannot exist for new one
+
+          # Does upp entry already exist for original_pi? 
+          if ( !defined $$upp_orig_pi{id} ) {
+            # No; insert upp for c 
+            $sbeams->updateOrInsertRow( %updOrInsInfo,
+                                        insert => 1,
+                                        rowdata_ref => 
+                                         { %insertUPP, contact_id => $orig_pi } 
+                                  );
+          } else {
+            # Yes; upgrade to admin iff necessary 
+            if ( $$upp_orig_pi{privilege} != DATA_ADMIN ||
+                 $$upp_orig_pi{status} eq 'D' ) {
+
+            $sbeams->updateOrInsertRow( %updOrInsInfo,
+                                        update => 1,
+                                        PK_value => $$upp_orig_pi{id},
+                                        PK_name => 'user_project_permission_id',
+                                        rowdata_ref => 
+                                         { %updateUPP } 
+                                      );
+            }
+          } # end upp_exists block
+
+          # upp entry for contact? contact now = pi, delete entry if it exists
+          if ( !defined $$upp_contact{id} ) {
+            # No; we're cool 
+          } else {
+            # Yes; 'delete' old record
+            if ( $$upp_contact{status} ne 'D' ) {
+            $sbeams->updateOrInsertRow( %updOrInsInfo,
+                                        update => 1,
+                                        PK_value => $$upp_contact{id},
+                                        PK_name => 'user_project_permission_id',
+                                        rowdata_ref => 
+                                         { %updateUPP, record_status => 'D' } 
+                                  );
+            }
+          } # end upp_exists block
+
+        } else {
+          # No; upp record needed for contact AND original pi
+
+          # Does contact have existing record?
+          if ( !defined $$upp_contact{id} ) { 
+            # No; insert 
+            $sbeams->updateOrInsertRow( %updOrInsInfo,
+                                        insert => 1,
+                                        rowdata_ref => 
+                                         { %insertUPP, contact_id => $contact_id } 
+                                      );
+
+          } else {
+            # Yes; upgrade to admin iff necessary 
+            if ( $$upp_contact{privilege} != DATA_ADMIN ||
+                 $$upp_contact{status} eq 'D' ) {
+
+            $sbeams->updateOrInsertRow( %updOrInsInfo,
+                                        update => 1,
+                                        PK_value => $$upp_contact{id},
+                                        PK_name => 'user_project_permission_id',
+                                        rowdata_ref => 
+                                         { %updateUPP } 
+                                      );
+            }
+          }
+            # Now the same for the original pi
+          if ( !defined $$upp_orig_pi{id} ) { 
+            # No; insert 
+            $sbeams->updateOrInsertRow( %updOrInsInfo,
+                                        insert => 1,
+                                        rowdata_ref => 
+                                         { %insertUPP, contact_id => $orig_pi } 
+                                      );
+          } else {
+            # Yes; upgrade to admin iff necessary 
+            if ( $$upp_orig_pi{privilege} != DATA_ADMIN ||
+                 $$upp_orig_pi{status} eq 'D' ) {
+
+            $sbeams->updateOrInsertRow( %updOrInsInfo,
+                                        update => 1,
+                                        PK_value => $$upp_orig_pi{id},
+                                        PK_name => 'user_project_permission_id',
+                                        rowdata_ref => 
+                                         { %updateUPP } 
+                                      );
+
+            } 
+
+          } # end upp_exists block
+
+        } # end contact = current_pi
+
+      } else {
+        # PI unchanged, do nothing
+      } # end contact = original_pi
+         
+    } elsif ( $parameters{apply_action} eq 'DELETE' ) {
+      # DELETE; will we even get here? 
+    } else {
+      # Shouldn't get here
+      print STDERR "Unknown action, report this error\n";
+    } # end apply_action block
+    
+  } # end tablename eq 'XXX' block
 
 
   #### Otherwise, no special processing, so just return undef
