@@ -157,4 +157,4 @@ cd /net/dblocal/www/html/dev2/sbeams
 cvs commit
 
 
-Added new PeptideAtlas Module
+Added new Ontology Module
