@@ -553,6 +553,7 @@ sub pg_setup {
 
     #### Default device is to screen (xserver)
     my $device = $args{'Device'} || "\/xs";
+    #$device = "/xs";
 
     #### Plot title
     my $title = $args{'title'} || "";
@@ -579,7 +580,7 @@ sub pg_setup {
     $ENV{"PGPLOT_GIF_WIDTH"} = $gifwidth;
     $ENV{"PGPLOT_GIF_HEIGHT"} = $gifheight;
     $ENV{"PGPLOT_BACKGROUND"} = "lightyellow";
-$device = "/xs";
+
     #### Create a new graphics device
     my $win = PDL::Graphics::PGPLOT::Window -> new({Device => "$device"});
 
@@ -659,9 +660,6 @@ sub PlotPeaks {
     #### Peak finding window
     my $window = $args{'Window'} || 2;
 
-    #### Peak coloring
-    my $coloring_flag = $args{'Coloring'} || 1;
-
 
     my $length = $args{'Length'};
     my @Binten = (0) x $length;
@@ -703,8 +701,6 @@ sub PlotPeaks {
     my $lineclr;
     my ($mass, $intensity);
 
-my $oldway;
-if ($oldway) {
     for ($i=0; $i<$specdata->{n_peaks}; $i++) {
       $mass = $specdata->{masses}->[$i];
       $intensity = $specdata->{intensities}->[$i];
@@ -715,7 +711,6 @@ if ($oldway) {
       my $mainx = pdl [$mass, $mass];
       my $mainy = pdl [0, $intensity];
 
-if ($coloring_flag) {
 
       #### This kludge lets me not colorize the last B and/or
       #### first Y peaks found
@@ -743,31 +738,42 @@ if ($coloring_flag) {
       $peakcolors_ref->[$i] = $lineclr;
 
 
-}
-
-      #### Plot the data line
-      $win -> line($mainx, $mainy,{Color=>$lineclr});
+      #### Plotting lines in a loop like this is just too slow
+      #$win -> line($mainx, $mainy,{Color=>$lineclr});
       #$win -> hold;
     }
-}
+
+
     my ($mass2, $intensity2);
     $mass2 = $specdata->{masses};
     $intensity2 = $specdata->{intensities};
 
-    my $tx = pdl ($mass2, $mass2)->xchg(0,1);
 
-    my $aa = [(1) x scalar(@{$mass2})];
-    my $ty = pdl ($aa, $intensity2)->xchg(0,1);
+    #### First we tried tline() which seemed like a good way of plotting
+    #### many independent lines.  Slow as a fat dog...
+    if (0 == 1) {
+      my $tx = pdl ($mass2, $mass2)->xchg(0,1);
+      my $aa = [(1) x scalar(@{$mass2})];
+      my $ty = pdl ($aa, $intensity2)->xchg(0,1);
+      my $h = {Color => ['Red'], Linestyle => ['Solid']};
+      print "before tline...\n";
+      $win -> tline($tx,$ty,$h);
+      print "after tline...\n";
 
-    my $h = {Color => ['Red'], Linestyle => ['Solid']};
-print "before tline...\n";
-    $win -> tline($tx,$ty,$h);
-print "after tline...\n";
-    #$win -> close;
-
+    #### Now we resort to plotting all peaks by "never lifting the pen"
+    #### and drawing it all in a continuous line with line() because this
+    #### is much faster
+    } else {
+      my $tx = pdl ($mass2,$mass2,$mass2)->xchg(0,1)->clump(2);
+      my $aa = [(0) x scalar(@{$mass2})];
+      my $ty = pdl ($aa,$intensity2,$aa)->xchg(0,1)->clump(2);
+      my $h = {Color => 14};
+      $win -> line($tx,$ty,$h);
+    }
 
     return ($win,\@Binten,\@Yinten);
 }
+
 
 ###############################################################################
 # LabelResidues
