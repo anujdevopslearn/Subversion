@@ -4,11 +4,11 @@
   /* $Id$ */
   $TITLE="SBEAMS Home Page";
 
-  include("$DOCUMENT_ROOT/includes/style.inc.php");
+  include("includes/style.inc.php");
 
-  include("$DOCUMENT_ROOT/includes/header.inc.php");
+  include("includes/header.inc.php");
 
-  include("$DOCUMENT_ROOT/includes/navbar.inc.php");
+  include("includes/navbar.inc.php");
 ?>
 
 
@@ -53,6 +53,6 @@ administrators.
 
 
 <?php
-  include("$DOCUMENT_ROOT/includes/footer.inc.php");
+  include("includes/footer.inc.php");
 ?>
 
