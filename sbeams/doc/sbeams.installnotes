@@ -1,5 +1,6 @@
 
 Notes installing a new SBEAMS site
+
 $Id$
 
 This document describes how to install a new SBEAMS site.
@@ -7,9 +8,17 @@ This document describes how to install a new SBEAMS site.
 
 Terms:
  - SBEAMS: Systems Biology Extensible Analysis Management System
- - SBEAMS site: an independant installation of SBEAMS with its own core tables
+ - SBEAMS site: an independent installation of SBEAMS with its own core tables
  - SBEAMS instance: a version of source code, often for development, which
    shares the core tables with other instances
+
+If you find errors in these installation notes, please report them.
+If you have suggestions for making some part of this clearer, please
+send them along.  It is recommended that you read this whole document
+before delving it.  It's not simple.  Database installations rarely
+are.  Some of these steps could be automated, but it is probably
+helpful to do them manually to learn how the systems is set up and
+development would proceed.
 
 
 -------------------------------------------------------------------------------
@@ -23,8 +32,9 @@ The following software programs are required to run SBEAMS:
 - A relational database engine.  This software was delveloped with SQL
   Server.  Products from either Microsoft or Sybase should work right away.
   Attempts has been made to make this software operable with other 
-  engines such as Oracle, MySQL, and PostgreSQL, however further development
-  is required to acheive this fully.
+  engines such as Oracle, MySQL, and PostgreSQL, however some further
+  development is required to acheive this fully.  If you do so, please
+  contibute your changes.
 
 The following Perl Modules often not found on a standard UNIX/Linux
 setup are required before installation can begin.  Version numbers are
@@ -67,7 +77,8 @@ Proteomics:
 
 SBEAMS is designed to live entirely in the "htdocs" area of your Apache
 web server.  For the remainder of this installation, it will be assumed
-that your installation is configured like this:
+that your installation is configured as follows; compensate for your
+specific setup:
   servername: db
   DocumentRoot: /local/www/html
   Primary location: directly located in DocumentRoot,
@@ -81,9 +92,27 @@ which is then sync'ed with the primary area when changes are tested.  This
 is so users can continue to use the stable version until new features have
 passed testing.
 
+A Discussion of File Ownerships:
+At a site with several developers, it is recommended that a generic
+software maintenance acount be created, who owns the production code
+area and that each individual developer owns his or her development area.
+For example,
+  /local/www/html/sbeams/ owned by the sbeams account
+  /local/www/html/dev1/sbeams/ owned by the user1 account
+  /local/www/html/dev2/sbeams/ owned by the user2 account
+Developers need only log into the sbeams account to "roll out" code
+to production (from CVS is recommended).  All development is done by each
+user in their area.  Finished changes are checked into CVS and rolled out
+to production using the sbeams account. Smaller sites with one developer
+may choose to have everything owned by one person.  It is not recommended
+that the code be owned by root.  Since you are the installer, your
+account is what is referred to above as "user1".
+
 
 -------------------------------------------------------------------------------
 3) Configure Apache
+
+(root access probably required)
 
 Include in Apache's http.conf file the following execution permissions:
 
@@ -108,32 +137,34 @@ Include in Apache's http.conf file the following execution permissions:
 #------
 
 
-Retart the Apache server perhaps with something like:
+Retart the Apache server, perhaps with something like:
   /etc/rc.d/init.d/httpd restart
 
 
 -------------------------------------------------------------------------------
 4) Upack files and set up misc directories and links
 
+Do as much of this as possible as a regular user account, i.e. yours.
+
 cd /local/www/html
-mkdir dev1
+mkdir dev1   (this may need to be done as root. then do: chown user1 dev1)
 cd dev1
 tar -zxvf ~/sbeams-0.16.tar.gz
 
 Create tmp directories and symlinks:
 cd sbeams
-  (for now, just create this directories for stuff to live in here, but
-   it may be a good idea to make a sym link to another location since there
-   could possibly be large amounts of data here)
+  (for now, just create the directories for stuff to live in right here, but
+   it may be a good idea to make a sym link to another location or partition
+   since there could eventually be large amounts of data here!!!)
 mkdir data images/tmp tmp tmp/queries
 chown a+rwx image/tmp tmp/queries
 ln -s ../includes doc/includes
-ln -s ../share/load_biosequence_set.pl lib/scripts/Proteomics/load_biosequence_set.pl
 
 For now, make the main site point to dev1, but eventually when there is
 parallel development and production usage, these should be separate trees
 kept in sync with CVS or some other such tool.
 
+(may require root privilege)
 cd ..
 ln -s dev1/sbeams sbeams
 
@@ -141,19 +172,67 @@ ln -s dev1/sbeams sbeams
 -------------------------------------------------------------------------------
 5) Edit the SBEAMS Configuration files
 
-setenv SBEAMS /local/html/dev1/sbeams
+This is an important step!  If you do not set the configurations for your
+site properly, you will have trouble later!
+
+setenv SBEAMS /local/www/html/dev1/sbeams
 
 cd $SBEAMS/lib/conf
 cp SBEAMS.conf.template SBEAMS.conf
-edit SBEAMS.conf to taste
+edit SBEAMS.conf
 
-Important notes:
-- Be sure to change WWW_UID to reflect the UID of the account running Apache
-- Change HOSTNAME, DBADMIN, DB_* to reflect your environment
+Important changes:
+- Be sure to change WWW_UID to reflect the UID of the account running the
+  Apache web server.  This might be accounts like 'apache', 'nobody',
+  'httpd', etc.  If you're confounded, try:
+  egrep "apache|httpd|nobody" /etc/passwd | sort
+  The number after the first colon is the WWW_UID
+
+- Change the CRYPT_KEY to some random strings for your site
+
+- Change HOSTNAME, DBADMIN to reflect your environment
+
+- You may ignore CYTOSCAPE_URL for first-time installations
+
+- Change the DB_* settings to reflect the default RDBMS on which the SBEAMS
+  databases will reside and the accounts that will access them
+
+- Uncomment the DB_DRIVER that matches your RDBMS.  MS SQL Server uses the
+  Sybase driver. Do not alter the DB_DRIVER values unles you know what
+  you're doing!!  Set the DB_TYPE to reflect your RDBMS.
+
 - Change DBPREFIX{*} to reflect the absolute locations of your tables.  For
   RDBMS systems that use schemas or users, DBPREFIX{Core} will likely be
   something like "sbeams.dbo." or "sbeams.Core." while with RDBMSs that do not
-  support such features (like MySQL), use just "sbeams.".
+  support such features (like MySQL), use just "sbeams.".  The trailing
+  period is probably necessary except in rare cases.  Most table name
+  references will be prefixed with these strings.  For starters, all that's
+  important is DBPREFIX{Core}.  The others do not need to be set until you
+  wish to set up one of those modules.
+
+- Set RAW_DATA_DIR{*} to a directory location where data products
+  related to a given module are located.  For example, you might store
+  your Proteomics SEQUEST searches in /data3/proteomics/archive or similar.
+  If you're not sure about this yet, you can ignore for now.
+
+- Below this are sections for the individual instances for your site.
+  You probably only need to change the PHYSICAL_BASE_DIR and UPLOAD_DIR
+  sections. Set PHYSICAL_BASE_DIR to the place where you installed SBEAMS.
+  Set the UPLOAD_DIR to a location where uploaded data files may be stored.
+  This directory should be owned by the Web Server User (or the Web Server
+  User should have write privilege).
+
+- Note that you can override all of the settings in the [default] section
+  (including DB_SERVER, DB_PREFIX{*}, etc.) to set certain dev instances
+  to point to different locations.  For example, dev2 might point to a
+  completely different RDBMS server or different databases for major
+  development, while dev1 might point to all the live databases for
+  final testing, or one dev instance may use the sbeams core database
+  but point to a different database for one of the modules (for
+  testing), etc.
+
+This should allow for a fairly flexible development and production
+environment.
 
 
 -------------------------------------------------------------------------------
@@ -162,14 +241,19 @@ Important notes:
 SBEAMS is being developed on SQL Server and should work quite easily
 with either the Sybase or Microsoft versions.  Attempts are being made
 to make it work equally well with DB2, Oracle, PostgreSQL, and MySQL;
-this is not finished so please contribute to this effort if you can.
+it's pretty close to workig well, but this is not finished so please
+contribute to this effort if you try different RDBMS engines.
 
-- First create a database called 'sbeams' or 'sbeamsdev' or similar
+- First, create a database called 'sbeams' or 'sbeamsdev' or similar
+  (whatever was referred to in the SBEAMS.conf DBPREFIX{Core} setting)
 
 - Within it, create users "sbeams" and "sbeamsro" as a read/write
   account and a read-only account, respectively.
 
-- Generate the appropriate schema for your type(s) of database:
+- Generate the appropriate schema for your type(s) of database as follows:
+
+(logged in as your account ("user1" above))
+(and working in the dev1 area - this is a good habit)
 
 setenv SBEAMS /local/www/html/dev1/sbeams
 cd $SBEAMS/lib/scripts/Core
@@ -184,71 +268,110 @@ end
 - Verify that the SQL CREATE and DROP statements have been correctly
   generated in $SBEAMS/lib/sql/Core/
 
-- Edit the bottom of the POPULATE file to include your UNIX username
-  edit $SBEAMS/lib/sql/Core/Core_POPULATE.mssql
+- Edit the bottom of the $SBEAMS/lib/sql/Core/Core_POPULATE.mssql file
+  to include entries for *you* and *your* local username on the SBEAMS
+  server.  Give yourself an encrypted temporary password in the SQL
+  statements, generated as described the following paragraph.
 
-- Execute the statements to create and populate the database with some
-  bare bones data:
+A Discussion of Passwords:
+
+There are four possibilities for SBEAMS passwords.  The preferred
+method for larger sites is to create SBEAMS usernames that match NIS
+accounts or Windows domain accounts.  If there exists an SBEAMS
+account with a NULL password, the authenticator attempts to run
+/bin/ypmatch passwd to try to match a NIS password.  If this does not
+produce success, then the supplied Windows domain account is tested.
+Although not currently fully coded, it would be possible to use local
+UNIX/Linux account passwords; however, this may be severely hampered
+by the fact that most modern UNIX/Linux systems use /etc/shadow files
+that cannot be read by normal users to hold the encrypted paswords.
+There are possible workarounds, but they are not part of the
+distribution.  The final possibility is to set a password manually in
+the SBEAMS tables.  Only UNIX crypted passwords should be placed in
+the tables, never plain passwords.  This may be the best solution for
+small sites with only a few users.  You can create encrypted passwords
+with the $SBEAMS/lib/scripts/Core/crypt.pl
+
+A Discussion of the 'admin' account:
+You should never use the admin account.  At one time, logging into the
+admin account seemed like a good idea, but it no longer is.  Rather,
+persons who will administer the site should be given Administrator
+privileges over the necessary data.  The benefit here is that all
+changes are tracked as the user who performed them and situations
+where multiple people have "admin" account access and thus changes
+cannot be traced to a person are avoided.  The admin account remains
+as the owner of various records but other Administrators can modify
+thos records if necessary, so logging in as admin is discouraged.
+
+
+- Execute the statements below to create and populate the database with some
+  bare bones data where the SBEAMS database has been set:
+
+set SBEAMSDB = sbeamsdev
 
 SQL Server Example:
 
 To CREATE and POPLULATE:
-sqsh -i $SBEAMS/lib/sql/Core/Core_CREATETABLES.mssql -D sbeamsdev
-sqsh -i $SBEAMS/lib/sql/Core/Core_POPULATE.mssql -D sbeamsdev
-sqsh -i $SBEAMS/lib/sql/Core/Core_CREATECONSTRAINTS.mssql -D sbeamsdev
+sqsh -i $SBEAMS/lib/sql/Core/Core_CREATETABLES.mssql -D $SBEAMSDB
+sqsh -i $SBEAMS/lib/sql/Core/Core_POPULATE.mssql -D $SBEAMSDB
+sqsh -i $SBEAMS/lib/sql/Core/Core_CREATECONSTRAINTS.mssql -D $SBEAMSDB
 
 To DROP:
-sqsh -i $SBEAMS/lib/sql/Core/Core_DROPCONSTRAINTS.mssql -D sbeamsdev
-sqsh -i $SBEAMS/lib/sql/Core/Core_DROPTABLES.mssql -D sbeamsdev
+sqsh -i $SBEAMS/lib/sql/Core/Core_DROPCONSTRAINTS.mssql -D $SBEAMSDB
+sqsh -i $SBEAMS/lib/sql/Core/Core_DROPTABLES.mssql -D $SBEAMSDB
 
 
 -----------------------
 PostgreSQL Example:
 
 To CREATE and POPLULATE:
-psql -f $SBEAMS/lib/sql/Core/Core_CREATETABLES.pgsql sbeamsdev
-psql -f $SBEAMS/lib/sql/Core/Core_POPULATE.mssql sbeamsdev
-psql -f $SBEAMS/lib/sql/Core/Core_CREATECONSTRAINTS.pgsql sbeamsdev
+psql -f $SBEAMS/lib/sql/Core/Core_CREATETABLES.pgsql $SBEAMSDB
+psql -f $SBEAMS/lib/sql/Core/Core_POPULATE.mssql $SBEAMSDB
+psql -f $SBEAMS/lib/sql/Core/Core_CREATECONSTRAINTS.pgsql $SBEAMSDB
 
 To DROP:
-psql -f $SBEAMS/lib/sql/Core/Core_DROPCONSTRAINTS.pgsql sbeamsdev
-psql -f $SBEAMS/lib/sql/Core/Core_DROPTABLES.pgsql sbeamsdev
+psql -f $SBEAMS/lib/sql/Core/Core_DROPCONSTRAINTS.pgsql $SBEAMSDB
+psql -f $SBEAMS/lib/sql/Core/Core_DROPTABLES.pgsql $SBEAMSDB
 
 
 -------------------
 MySQL Example:
 
 To CREATE:
-mysql -u sbeams -p -h mysql sbeamsdev < $SBEAMS/lib/sql/Core/Core_CREATETABLES.mysql
+mysql -u sbeams -p -h mysql $SBEAMSDB < $SBEAMS/lib/sql/Core/Core_CREATETABLES.mysql
 
 To POPULATE:
-mysql -u sbeams -p -h mysql sbeamsdev < $SBEAMS/lib/sql/Core/Core_POPULATE.mssql
+mysql -u sbeams -p -h mysql $SBEAMSDB < $SBEAMS/lib/sql/Core/Core_POPULATE.mssql
 
 To DROP:
-mysql -u sbeams -p -h mysql sbeamsdev < $SBEAMS/lib/sql/Core/Core_DROPTABLES.mysql
+mysql -u sbeams -p -h mysql $SBEAMSDB < $SBEAMS/lib/sql/Core/Core_DROPTABLES.mysql
  or
-mysql -u sbeams -p -h mysql -f sbeamsdev < $SBEAMS/lib/sql/Core/Core_DROP.mysql
+mysql -u sbeams -p -h mysql -f $SBEAMSDB < $SBEAMS/lib/sql/Core/Core_DROP.mysql
 
 
 You should now be able to log in via the web interface, either as the
-"admin" account (password SBEAMSadm) or with the user account you added to
-Core_POPULATE.mssql.  Test it by pointing a browser to the proper location
-like:
+"admin" account (if you set a password above; not recommended) or with
+your user account you added to Core_POPULATE.mssql.  Test your installation
+by pointing a browser to the proper location like:
 
 http://db.localdomain.org/dev1/sbeams/
 
-and going to login.  Don't try to run any of the modules yet.
+You should see a welcome page with a link inviting a login.  Click there
+and you should be challenged with a login page.  Once you login,
+don't try to do anything else with the web interface yet; we're not
+fully configured yet!
 
 If this doesn't work.  Do not proceed, debug first.
 
-One possible problem you may find.  At present, the regular user account
-expects there to be a UNIX NIS account with the same name present and
-obtainable with `ypcat passwd`.  If you use a local /etc/passwd, a little
-additional development will need to be done to accomodate this.
+If your password is no accepted, reread the password section above and
+try to determine the reason for failure.
 
 
 -------------------------------------------------------------------------------
 7) Populate the driver tables
+
+Logged in as your account (that has a matching SBEAMS account configured
+in the Core_POPULATE.mssql file), run the following:
 
 cd $SBEAMS/lib/scripts/Core
 set CONFDIR = "../../conf"
@@ -258,8 +381,9 @@ set CONFDIR = "../../conf"
 If this doesn't work.  Do not proceed, debug first.
 
 Now that the Core driver tables are loaded, you should be able to
-go to the web site again and click on "Admin" and explore the
-tables.
+go to the web site again and click on the "Admin" link at the bottom of
+the left Nav Bar and explore the tables.  Do not try to run any of the
+individual modules yet; they are not configured.
 
 If this doesn't work.  Do not proceed, debug first.
 
