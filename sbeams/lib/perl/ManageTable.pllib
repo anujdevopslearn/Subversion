@@ -1705,6 +1705,12 @@ sub processEntryForm {
         print "Processing record for $multi_insert...<BR>\n";
       }
 
+    # Get rid of newlines in text fields
+    foreach my $field ( keys( %input_types ) ){ 
+      if ( $input_types{$field} eq 'text' ) {
+        $parameters{$field} =~ s/[\r\n]+/ /gm;
+      }
+    }
 
     # Note the following block has NOT been indented properly for historical
     # reasons of insertion into above foreach statement
