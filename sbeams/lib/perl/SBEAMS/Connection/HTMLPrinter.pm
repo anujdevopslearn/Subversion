@@ -356,6 +356,8 @@ sub printUserContext {
     #### If the output mode is html, then switch to html mode
     } elsif ($self->output_mode() eq 'html') {
       $style = 'HTML';
+      #$self->printUserChooser();
+      #return;
 
     #### Otherwise, we're in some data mode and don't want to see this
     } else {
