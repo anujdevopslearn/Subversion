@@ -29,7 +29,7 @@ use vars qw ($sbeams $sbeamsMOD $affy_o $q $current_contact_id $current_username
   $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
   @MENU_OPTIONS %CONVERSION_H *sym);
 
-use SBEAMS::Connection;
+use SBEAMS::Connection  ;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -114,13 +114,14 @@ sub main {
 	  unless (
 		$current_username = $sbeams->Authenticate(
 			permitted_work_groups_ref =>
-			  [ 'Microarray_user', 'Microarray_admin', 'Admin' ],
+			  [ 'Microarray_user', 'Microarray_admin', 'Admin', 'Microarray_readonly' ],
 
 			#connect_read_only=>1,
-			#allow_anonymous_access=>1,
+			allow_anonymous_access=>1,
 		)
 	  );
-
+ #$log->debug( "Current username is $current_username" );
+ #$log->printStack( 'debug' ); 
 	#### Read in the default input parameters
 	my %parameters;
 	my $n_params_found = $sbeams->parse_input_parameters(
