@@ -903,8 +903,9 @@ sub calcNTransmembraneRegions {
 
   #### Parse input parameters
   my $peptide = $args{'peptide'} || die "Must supply the peptide";
-  my $iWindowSize = $args{'window_size'} || 19.0
-  my $calc_method = $args{'calc_method'} || ''
+  my $iWindowSize = $args{'window_size'} || 19.0;
+  my $calc_method = $args{'calc_method'} || '';
+  my $verbose = $args{'verbose'} || '';
 
 
   #### Define the hydropathy index
@@ -912,10 +913,11 @@ sub calcNTransmembraneRegions {
 
 
   #### Define some variables
-  my ($i,$iStart,$iNumHydroRegions,$dHydro,$dCutOff,$iWindowSize);
-  $dHydro=0.0;
-  $iNumHydroRegions=0;
-  $dCutOff=1.58;
+  my ($i,$iStart);
+  my $dHydro = 0.0;
+  my $iNumHydroRegions = 0;
+  my $dCutOff = 1.58;
+  my ($new_residue,$old_residue);
 
 
   #### Define information for specific residue counting
@@ -926,6 +928,11 @@ sub calcNTransmembraneRegions {
 
   #### If a specific calc_method was selected, set those parameters
   if ($calc_method eq 'NewMethod') {
+    # Engelman et al., "Identifying nonpolar transbilayer helices in
+    # amino acid sequences of emmbrane proteins", Annu. Rev. Biophys.
+    # Biophys. Chem., 15, 321-353, 1986.
+    $iWindowSize = 27;
+    print "iWindowSize = $iWindowSize\n" if ($verbose);
     #### Subtract 1.0 from every hydropathy index
     while ( my ($key,$value) = each %hydropathy_index) {
       $hydropathy_index{$key} = $value - 1.0;
@@ -948,7 +955,7 @@ sub calcNTransmembraneRegions {
   for ($i=0; $i<$iWindowSize; $i++) {
     $dHydro += $hydropathy_index{$residues[$i]};
     $iProleinCount += 1 if ($residues[$i] eq 'P');
-    $iKRDEcount += 1 if (defined($KRDE{$residues[$i]}));
+    $iKRDECount += 1 if (defined($KRDE{$residues[$i]}));
   }
 
 
@@ -963,23 +970,27 @@ sub calcNTransmembraneRegions {
       my $enter_region_flag = 0;
       $enter_region_flag = 1 if ($dHydro/$iWindowSize >= $dCutOff);
       $enter_region_flag = 0 if ($calc_method eq 'NewMethod' &&
-        ($iProleinCount > 0 || $iKRDEcount > 2) );
+        ($iProleinCount > 0 || $iKRDECount > 2) );
 
       if ($enter_region_flag) {
         $iNumHydroRegions++;
         $isHydroRegion = 1;
-        #print "  Region at ",$i-$iWindowSize," is above cutoff at ",
-        #  $dHydro/$iWindowSize,"\n";
+        print "  Region at ",$i-$iWindowSize," (",
+          substr($peptide,$i-$iWindowSize,$iWindowSize),") ",
+          " is above cutoff at ",
+          $dHydro/$iWindowSize," ($iKRDECount)\n" if ($verbose);
       }
 
     #### Else if we are in a transmembrane region, see if we should exit
     } else {
       $isHydroRegion = 0 if ($dHydro/$iWindowSize < $dCutOff);
       $isHydroRegion = 0 if ($calc_method eq 'NewMethod' &&
-        ($iProleinCount > 0 || $iKRDEcount > 2) );
+        ($iProleinCount > 0 || $iKRDECount > 2) );
     }
 
-    #print $i-$iWindowSize," at ",$dHydro/$iWindowSize,"\n";
+    print $i-$iWindowSize,": ",substr($peptide,$i-$iWindowSize,$iWindowSize)," has ",
+      "KRDE=$iKRDECount, P=$iProleinCount, avg=",
+      $dHydro/$iWindowSize,"\n" if ($verbose>1);
 
 
     #### During debugging, figure out who's missing
@@ -1002,8 +1013,8 @@ sub calcNTransmembraneRegions {
     #### Update the window content statistics
     $iProleinCount += 1 if ($new_residue eq 'P');
     $iProleinCount -= 1 if ($old_residue eq 'P');
-    $iKRDEcount += 1 if (defined($KRDE{$new_residue}));
-    $iKRDEcount -= 1 if (defined($KRDE{$old_residue}));
+    $iKRDECount += 1 if (defined($KRDE{$new_residue}));
+    $iKRDECount -= 1 if (defined($KRDE{$old_residue}));
 
   }
 
