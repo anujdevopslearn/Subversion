@@ -3194,7 +3194,7 @@ sub transferTable {
   my $newkey_map_ref = $args{'newkey_map_ref'};
 
   my $table_name = $args{'table_name'} || die "ERROR: table_name not passed";
-  my $dest_PK_name = $args{'dest_PK_name'} || '';
+  my $dest_PK_name = $args{'dest_PK_name'} || $args{'dest_PK'} || '';
 
   my $update = $args{'update'} || 0;
   my $update_keys_ref = $args{'update_keys_ref'};
@@ -3285,8 +3285,8 @@ sub transferTable {
 
           #### Else complain and leave as NULL
   	  } else {
-  	    print "\nWARNING: Unable to transform column $key having value ".
-              "'$current_value'\n";
+  	    print "\nWARNING: Unable to transform column ".$key.
+              " having value '".$current_value."'\n";
   	  }
 
         #### Otherwise use as is

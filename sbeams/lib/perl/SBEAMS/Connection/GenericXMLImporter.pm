@@ -183,7 +183,7 @@ sub createDataModel {
     #### Make sure there's only one parent
     if (defined($value->{has_parents}) &&
         scalar(keys %{$value->{has_parents}}) > 1) {
-      print "ERROR: There multiple parents for '$key'  I cannot handle "
+      print "ERROR: There multiple parents for '$key'  I cannot handle ".
         "this condition yet.  Need more programmers.\n\n";
       exit;
     }
