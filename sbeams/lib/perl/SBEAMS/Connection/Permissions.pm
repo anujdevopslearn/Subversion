@@ -27,6 +27,14 @@ use SBEAMS::Microarray::Tables;
 use SBEAMS::Inkjet::Tables;
 use SBEAMS::Connection::Tables;
 
+# Constants that represent access levels
+use constant DATA_NONE => 50;
+use constant DATA_READER => 40;
+use constant DATA_WRITER => 30;
+use constant DATA_GROUP_MOD => 25;
+use constant DATA_MODIFIER => 20;
+use constant DATA_ADMIN => 10;
+
 $q       = new CGI;
 
 ###############################################################################
@@ -70,6 +78,7 @@ sub print_permissions_table {
   }
   if ($parameters{'groupPermissions'}){
       $self->update_group_permissions(ref_parameters=>\%parameters);
+
   }
 
 
@@ -718,7 +727,7 @@ sub get_best_permission{
       ORDER BY UL.username,P.project_tag
       ~;
   @rows = $self->selectSeveralColumns($sql);
-  
+
   my $best_privilege_id = 9999;
 
   if (@rows) {
@@ -823,6 +832,359 @@ sub getAccessibleProjects{
   }
   return (@project_ids);
 } # end getAccessibleProjects
+
+
+###############################################################################
+# Passed a table name, the routine will determine the access
+# rights of the currently authenticated sbeams user to that table, based on 
+# user's current work_group.  Access rights will be one of the # enumerated
+# types DATA_XXX, where XXX is among NONE, READER, WRITER, MODIFIER, ADMIN.
+#
+# named arg table_name - fully qualified tablename (db.dbo.tablename) !required 
+#
+# returns DATA_X access mode for the user on this table
+#
+###############################################################################
+sub getTablePermission {
+  my $self = shift;
+  my %args = @_;
+
+  # Need to know what table, user, and group we're working with.
+  # These must be passed (rather than determined) to avoid mismatches
+  foreach my $param ( qw( dbtable table_name contact_id work_group_id ) ) {
+    die ( "Missing required parameter $param" ) unless $args{$param};
+  }
+
+  # Current thinking is that ADMIN workgroup does NOT automatically convey priv
+  # return DATA_ADMIN if $args{work_group_id} == 1;
+
+  # We may have a specific record to consider
+  my @rec_info;
+
+  # If we have optional parameters for primary key column name and value
+  if ( $args{pk_column_name} && $args{pk_value} ) {
+    @rec_info = $self->selectSeveralColumns( <<"    END_SQL" );
+    SELECT $args{pk_column_name}, record_status, modified_by_id,
+           created_by_id, owner_group_id
+    FROM $args{dbtable}
+    WHERE $args{pk_column_name} = $args{pk_value}
+    END_SQL
+
+    die ( "Unable to find specified record" ) if !scalar( @rec_info );
+
+    # Convienience, put record values into array instead of array of array refs
+    @rec_info = @{$rec_info[0]};
+  }
+
+  # This query will return user/work_group privileges
+  my $usql =<<"  END";
+  SELECT ul.privilege_id userlogin_priv,
+        uwg.privilege_id userworkgroup_priv,
+         uc.privilege_id usercontext_priv
+  FROM $TB_USER_LOGIN ul
+  LEFT OUTER JOIN $TB_USER_CONTEXT uc
+    ON ul.contact_id = uc.contact_id
+  LEFT OUTER JOIN $TB_USER_WORK_GROUP uwg
+    ON uwg.contact_id = ul.contact_id
+  WHERE ul.contact_id = $args{contact_id}
+  AND uwg.work_group_id = $args{work_group_id}
+  AND ul.record_status != 'D'
+  AND uc.record_status != 'D'
+  AND uwg.record_status != 'D'
+  END
+
+  my @uperms = $self->selectSeveralColumns( $usql );
+ 
+  if ( scalar( @uperms ) > 1 ) { # Should only return one row
+    die ( <<'    END_ERROR' );
+    More than one row returned from permissions query.  Please report this 
+    error to Eric Deutsch or to submit to sbeams bug database
+    END_ERROR
+  }
+
+
+  # This query will fetch table_group_security info, if available
+  # Note that this schism was due to lack of tgs entries for some table groups
+  my $gsql =<<"  END";
+  SELECT tgs.privilege_id tablegroupsecurity_priv
+  FROM $TB_TABLE_GROUP_SECURITY tgs
+  LEFT OUTER JOIN $TB_TABLE_PROPERTY tp
+    ON tgs.table_group = tp.table_group
+  WHERE tgs.work_group_id = $args{work_group_id}
+  AND tp.table_name = '$args{table_name}'
+  AND tgs.record_status != 'D'
+  END
+
+  my @gperms = $self->selectSeveralColumns( $gsql );
+ 
+  if ( scalar( @gperms ) > 1 ) { # Should only return one row
+    die ( <<'    END_ERROR' );
+    More than one row returned from permissions query.  Please report this 
+    error to Eric Deutsch or to submit to sbeams bug database
+    END_ERROR
+  }
+
+  # The computed privilege for this user, group, table combo
+  my $privilege;
+
+    my @permissions;
+  if ( !scalar( @gperms ) ) {
+    $privilege = DATA_NONE;
+
+  } else {
+    # Cull the NULL
+    for( @{$gperms[0]}, @{$uperms[0]} ) { push @permissions, $_ if defined $_; }
+    # The biggest (worst access) or null permissions
+    $privilege = ( scalar @permissions ) ? getMax( @permissions ) : DATA_NONE ;
+
+  } 
+
+  # Decision time.
+  if ( $privilege == DATA_NONE ) { # Deny if overall priv is DATA_NONE ?
+    return DATA_NONE;
+
+  } elsif ( scalar( @rec_info ) ) { # Existing record.
+
+    if ( $rec_info[2] == $args{contact_id} ) { # last modifier, allow
+      return getMin( $privilege, DATA_MODIFIER ); # return MIN
+          
+    } elsif ( $rec_info[1] eq 'L' ) { # Locked record, deny all others.
+      return getMax( $privilege, DATA_WRITER ); # return MAX
+      
+    } elsif ( $rec_info[1] eq 'M' ) { # Modifiable, allow if <= DATA_WRITE.
+      return ( $privilege > DATA_WRITER ) ? $privilege 
+                                          : getMin( $privilege, DATA_MODIFIER );
+
+    } elsif ( $privilege == DATA_GROUP_MOD ) {        # User is group_mod &&
+      if ( $rec_info[4] == $args{work_group_id} ) {  # Group data, allow
+        return DATA_MODIFIER;
+
+      } else { # Not group data, demote to DATA_WRITER
+        return DATA_WRITER;
+
+      }
+    
+    } else { # No special cases apply, return calculated privilege
+      return $privilege;
+
+    }
+
+  } else { # No record, just return calculated privilege
+    return $privilege;
+
+  }
+
+
+} # End getTablePermission
+
+
+###############################################################################
+# Utility routine, returns (arithmetic) maximum value of passed array 
+###############################################################################
+sub getMax {
+  my @sorted = sort { $b <=> $a } @_;
+  return $sorted[0];
+}
+
+###############################################################################
+# Utility routine, returns (arithmetic) minimum value of passed array 
+###############################################################################
+sub getMin {
+  my @sorted = sort { $a <=> $b } @_;
+  return $sorted[0];
+}
+
+###############################################################################
+# getProjectPermission Passed a table name, primary_key, and primary_key column, 
+# the routine will determine the access rights of the currently authenticated
+# sbeams user to that record, based on user's current work_group, status of the 
+# record, and project associated permissions for that record.  Access rights
+# will be one of the enumerated
+# types DATA_XXX, where XXX is among NONE, READER, WRITER, MODIFIER, ADMIN.
+#
+# named arg table_name - fully qualified tablename (db.dbo.tablename) required!
+# named arg pk_name - name of primary key column required!
+# named arg pk_value - value of primary key required!
+#
+# returns DATA_X access mode for the user on this table
+#
+###############################################################################
+sub getProjectPermission {
+  my $self = shift;
+  my %args = @_;
+
+  # Need to know what table, user, group, and record we're working with.
+  # These must be passed (rather than determined) to avoid mismatches
+  foreach my $param ( qw( table_name contact_id work_group_id parent_project_id
+                          pk_column_name pk_value dbtable ) ) {
+    die ( "Missing required parameter $param" ) unless defined $args{$param};
+  }
+
+
+  # Determine it the record has a parent project, without it 
+  # the routine is moot.
+  my $parent_project_id = ( $args{parent_project_id} ) ? $args{parent_project_id} : 
+                            $self->getParentProject ( table_name => $args{table_name},
+                                                      parameters_ref => \%args,
+                                                      action => 'SELECT');
+                                               
+  # This will signal that the item is not under project control, use only mode1
+  return undef unless $parent_project_id;
+
+  # Used DBI call cause it will be a single row, don't want array of array refs
+  my @rec_info = $self->getDBHandle()->selectrow_array( <<"  END_SQL" );
+  SELECT $args{pk_column_name}, record_status, modified_by_id,
+         created_by_id, owner_group_id
+  FROM $args{dbtable}
+  WHERE $args{pk_column_name} = $args{pk_value}
+  END_SQL
+
+  die ( "Unable to find specified record" ) if !defined $rec_info[0];
+
+  # Get best project permission (of User and Group) for this record.  By
+  # using the parent project for the record of interest, we get the desired
+  # behavior.
+  my $privilege = $self->get_best_permission (
+                                          work_group_id => $args{work_group_id},
+                                          contact_id => $args{contact_id}, 
+                                          project_id => $parent_project_id 
+                                              );
+
+  # We have the record information, the parent project, and user's permission on
+  # it.   Now determine what permission level all these boil down to.
+  if ( $privilege == DATA_NONE ) { # Deny if overall priv is DATA_NONE ?
+    return DATA_NONE;
+
+  } elsif ( $rec_info[2] == $args{contact_id} ) { # last modifier, allow
+    return getMin( $privilege, DATA_MODIFIER ); # return MIN
+          
+  } elsif ( $rec_info[1] eq 'L' ) { # Locked record, deny all others.
+      return getMax( $privilege, DATA_WRITER ); # return MAX
+      
+  } elsif ( $rec_info[1] eq 'M' ) { # Modifiable, allow if <= DATA_WRITE.
+      return ( $privilege > DATA_WRITER ) ? $privilege 
+                                          : getMin( $privilege, DATA_MODIFIER );
+
+  } elsif ( $privilege == DATA_GROUP_MOD ) {        # User is group_mod &&
+    if ( $rec_info[4] == $args{work_group_id} ) {  # Group data, allow
+        return DATA_MODIFIER;
+
+    } else { # Not group data, demote to DATA_WRITER
+        return DATA_WRITER;
+
+    }
+    
+  } else { # No special cases apply, return calculated privilege
+    return $privilege;
+
+  }
+
+} # End getProjectPermission
+
+###############################################################################
+# Passed user information, resource information, and access level sought 
+# ( READER, WRITER, MODIFIER ), returns one or more groups that user 
+# belongs to that would allow specified access to the resource.
+#
+# named arg table_name - fully qualified tablename (db.dbo.tablename) Req.
+# named arg pk_column_name - Name of primary key field Req.
+# named arg pk_column_value - value of primary key
+# named arg parent_project_id
+# named arg contact_id
+# named arg permission_level
+#
+###############################################################################
+sub getProjectGroups {
+  my $self = shift;
+  my %args = @_;
+  
+  # Need to know what user, group, project and privilege we're looking for.
+  # These must be passed (rather than determined) to avoid mismatches
+  foreach my $param ( qw( contact_id
+                          privilege
+                          work_group_id 
+                          parent_project_id )
+                    ) {
+
+    die ( "Missing required parameter $param" ) unless $args{$param};
+  }
+
+  # Get list of groups to which user belongs
+  # where group has <= specified permissions on parent project
+  my $sql =<<"  END_SQL";
+  SELECT wg.work_group_name
+  FROM $TB_GROUP_PROJECT_PERMISSION gpp
+       JOIN $TB_USER_WORK_GROUP uwg
+       ON gpp.work_group_id = uwg.work_group_id
+       JOIN $TB_WORK_GROUP wg
+       ON gpp.work_group_id = wg.work_group_id
+       WHERE gpp.project_id = $args{parent_project_id}
+       AND uwg.contact_id = $args{contact_id}
+       AND gpp.privilege_id >= $args{privilege}
+       AND gpp.record_status != 'D'
+       AND uwg.record_status != 'D'
+  END_SQL
+
+  my @row = $self->selectOneColumn( $sql );
+
+  # return reference to group array
+  return \@row;
+  
+}
+
+###############################################################################
+# Passed user information, resource information, and access level sought 
+# ( READER, WRITER, MODIFIER ), returns one or more groups that user 
+# belongs to that would allow specified access to the resource.
+#
+# named arg table_name - fully qualified tablename (db.dbo.tablename) Req.
+# named arg contact_id
+# named arg permission_level
+#
+###############################################################################
+sub getTableGroups {
+  my $self = shift;
+  my %args = @_;
+  
+  # Need to know what user, group, project and privilege we're looking for.
+  # These must be passed (rather than determined) to avoid mismatches
+  foreach my $param ( qw( contact_id
+                          privilege
+                          table_name
+                          work_group_id )
+                    ) {
+
+    die ( "Missing required parameter $param" ) unless $args{$param};
+  }
+
+  # Get list of groups to which user belongs
+  # where group has <= specified permissions table in question
+  my $sql =<<"  END_SQL";
+  SELECT wg.work_group_name
+  FROM $TB_WORK_GROUP wg 
+    JOIN $TB_USER_WORK_GROUP uwg
+      ON wg.work_group_id = uwg.work_group_id
+    JOIN $TB_TABLE_GROUP_SECURITY tgs
+      ON wg.work_group_id = tgs.work_group_id
+    JOIN $TB_TABLE_PROPERTY tp
+      ON tgs.table_group = tp.table_group
+  WHERE tp.table_name = '$args{table_name}'
+    AND uwg.contact_id = $args{contact_id}
+    AND uwg.privilege_id <= $args{privilege}
+    AND tgs.privilege_id <= $args{privilege}
+    AND tgs.record_status != 'D'
+  END_SQL
+
+  # To keep from coercing into ADMIN group:
+  $sql .= " AND wg.work_group_name <> 'Admin' ";
+
+  my @row = $self->selectOneColumn( $sql );
+
+  # return reference to group array
+  return \@row;
+  
+}
+
 
 
 ###############################################################################
