@@ -2215,14 +2215,15 @@ sub displayResultSet {
 
 	for (my $column = 0; $column < scalar(@row); $column++){
 	  my $datum = $row[$column];
-	  next if ($no_print_columns[$column] == 1);
-          if ($datum =~ /[\t,\"]/) {
+	  next if ( defined $no_print_columns[$column] && $no_print_columns[$column] == 1);
+          if ( defined $datum && $datum =~ /[\t,\"]/) {
             $datum =~ s/\t/ /g if ($self->output_mode()  =~ /tsv/);
             $datum =~ s/\"/""/g;
             $datum = "\"$datum\"";
           }
           push(@output_row,$datum);
         }
+        @output_row = map  { ( defined $_ ) ? $_ : '' } @output_row; 
         print join($delimiter,@output_row),"\n";
 
       }
@@ -3297,6 +3298,9 @@ sub writeResultSet {
 sub returnNextRow {
   my $flag = shift @_;
   #print "Entering returnNextRow (flag = $flag)...<BR>\n";
+  
+  # had problems with undefined flag...
+  $flag ||= 0;
 
   #### If flag == 1, just testing to see if this is rewindable
   if ($flag == 1) {
