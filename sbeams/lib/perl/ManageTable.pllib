@@ -176,7 +176,7 @@ sub printEntryForm {
       <P>
       <H2>Maintain $CATEGORY</H2>
       $LINESEPARATOR
-      <FORM METHOD="post" $file_upload_flag>
+      <FORM METHOD="post" NAME="MainForm" $file_upload_flag>
       <TABLE>
   !;
 
@@ -298,16 +298,24 @@ sub printEntryForm {
 
 
     if ($input_type eq "file") {
-      print qq!
-        <TD><INPUT TYPE="$input_type" NAME="$column_name"
-         VALUE="" SIZE=$input_length $onChange>!;
-      if ($parameters{$column_name} &&
-        -s "$PHYSICAL_BASE_DIR/data/$parameters{$column_name}" > 0) {
-        print qq~<A HREF="$DATA_DIR/$parameters{$column_name}">view&nbsp;file</A>~;
+      print "<TD>";
+      my $data_file =
+        "$TABLE_NAME/$parameters{$PK_COLUMN_NAME}_$column_name.dat";
+      if ($parameters{$column_name}) {
+        my $file_size = -s "$PHYSICAL_BASE_DIR/data/$data_file";
+        my $file_name = $parameters{$column_name};
+        $file_name =~ s/^.+\///;
+        if ($file_size > 0) {
+          print "<nowrap>View File: <A HREF=\"$DATA_DIR/$data_file\">".
+            "$file_name</A> </nowrap><BR>\n";
+        }
       }
-      print qq!
-         </TD>
-      !;
+
+      print qq~
+        <INPUT TYPE="$input_type" NAME="$column_name"
+         VALUE="" SIZE=$input_length $onChange>
+        </TD>
+      ~;
     }
 
 
@@ -495,6 +503,8 @@ sub printEntryForm {
        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
        <INPUT TYPE="reset" VALUE="CLEAR"> fields
        <INPUT TYPE="hidden" NAME="apply_action_hidden" VALUE="">
+       <INPUT TYPE="hidden" NAME="set_current_work_group" VALUE="">
+       <INPUT TYPE="hidden" NAME="set_current_project_id" VALUE="">
     </TR></TABLE>
     </FORM>
   !;
@@ -767,7 +777,11 @@ sub processEntryForm {
 
               #### If the value is blank, put in a NULL value
               if ( $tmp eq '') {
-                $sql_query .= "$element=NULL,\n";
+
+                #### unless it is type file in which case leave alone
+                unless ($input_types{$element} eq "file") {
+                  $sql_query .= "$element=NULL,\n";
+                }
 
               # Change all ' to '' so that it can go in the INSERT statement
               } else {
@@ -890,12 +904,12 @@ sub processEntryForm {
           }
 
           #### Update the table for the relative local location
-          $sql_query = qq~
-              UPDATE $DB_TABLE_NAME SET
-                $element='$TABLE_NAME/$filename'
-              WHERE $PK_COLUMN_NAME=$parameters{$PK_COLUMN_NAME}
-          ~;
-          $sbeams->executeSQL($sql_query);
+          #$sql_query = qq~
+          #    UPDATE $DB_TABLE_NAME SET
+          #      $element='$TABLE_NAME/$filename'
+          #    WHERE $PK_COLUMN_NAME=$parameters{$PK_COLUMN_NAME}
+          #~;
+          #$sbeams->executeSQL($sql_query);
 
         }
 
