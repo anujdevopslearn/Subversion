@@ -1162,6 +1162,7 @@ sub displayResultSetControls {
 
     #### Start form
     print qq~
+      <TABLE WIDTH="800" BORDER=0><TR><TD>
       <FORM METHOD="POST">
     ~;
 
@@ -1251,6 +1252,7 @@ sub displayResultSetControls {
     #### Finish the form
     print qq~
       </FORM>
+      </TR></TD></TABLE>
     ~;
 
 
