@@ -905,7 +905,7 @@ sub calcNTransmembraneRegions {
   my $peptide = $args{'peptide'} || die "Must supply the peptide";
   my $iWindowSize = $args{'window_size'} || 19.0;
   my $calc_method = $args{'calc_method'} || '';
-  my $verbose = $args{'verbose'} || '';
+  my $verbose = $args{'verbose'} || 0;
 
 
   #### Define the hydropathy index
