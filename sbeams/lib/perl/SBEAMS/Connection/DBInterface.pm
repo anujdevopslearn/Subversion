@@ -30,8 +30,8 @@ use Storable;
 use Time::HiRes qw( usleep ualarm gettimeofday tv_interval );
 
 use lib "/net/dblocal/src/CPAN/GDGraph-1.33a/blib/lib";
-#use GD::Graph::histogram;
-#use GD::Graph::xypoints;
+use GD::Graph::histogram;
+use GD::Graph::xypoints;
 
 
 #use lib "/net/db/src/CPAN/Data-ShowTable-3.3a/blib/lib";
