@@ -1,0 +1,16 @@
+table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
+IS_biosequence_set	BioSequence Set	Immunostain_infrastructure	YES	$TBIS_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=IS_biosequence_set	IS_biosequence_set	
+IS_dbxref	Biosequence Database Cross Reference	Immunostain_infrastructure	YES	$TB_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=IS_dbxref	IS_biosequence_dbxref	
+IS_biosequence	BioSequence	Immunostain_infrastructure	NO	$TBIS_BIOSEQUENCE	biosequence_id				
+IS_query_option	Query Option	Immunostain_infrastructure	YES	$TBIS_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=IS_query_option	IS_query_option	
+IS_BrowseBioSequence	Browse BioSequence	QUERY	NO				BrowseBioSequence.cgi		
+IS_antibody	Antibody	Immunostain_infrastructure	YES	$TBIS_ANTIBODY	antibody_id		ManageTable.cgi?TABLE_NAME=IS_antibody	"IS_antigen,IS_antibody"	IS_stained_slide
+IS_antigen	Antigen	Immunostain_infrastructure	YES	$TBIS_ANTIGEN	antigen_id		ManageTable.cgi?TABLE_NAME=IS_antigen	"IS_antigen,IS_antibody"	IS_antibody
+IS_cell_type	Cell Type	Immunostain_infrastructure	YES	$TBIS_CELL_TYPE	cell_type_id		ManageTable.cgi?TABLE_NAME=IS_cell_type	"IS_cell_type,IS_tissue_type,IS_cell_presence_level"	
+IS_cell_presence_level	Cell Presence Level	Immunostain_infrastructure	YES	$TBIS_CELL_PRESENCE_LEVEL	cell_presence_level_id		ManageTable.cgi?TABLE_NAME=IS_cell_presence_level	"IS_cell_type,IS_tissue_type,IS_cell_presence_level"	
+IS_stain_cell_presence	Stain Cell Presence	Immunostain_infrastructure	YES	$TBIS_STAIN_CELL_PRESENCE	stain_cell_presence_id		ManageTable.cgi?TABLE_NAME=IS_stain_cell_presence	IS_stain_cell_presence	
+IS_stained_slide	Stained Slide	Immunostain_infrastructure	YES	$TBIS_STAINED_SLIDE	stained_slide_id		ManageTable.cgi?TABLE_NAME=IS_stained_slide	"IS_stained_slide,IS_slide_image"	
+IS_slide_image	Slide Image	Immunostain_infrastructure	YES	$TBIS_SLIDE_IMAGE	slide_image_id		ManageTable.cgi?TABLE_NAME=IS_slide_image	"IS_stained_slide,IS_slide_image"	IS_slide_image
+IS_tissue_type	Tissue Type	Immunostain_infrastructure	YES	$TBIS_TISSUE_TYPE	tissue_type_id		ManageTable.cgi?TABLE_NAME=IS_tissue_type	"IS_cell_type,IS_tissue_type,IS_cell_presence_level"	
+IS_specimen	Specimen	Immunostain_infrastructure	YES	$TBIS_SPECIMEN	specimen_id		ManageTable.cgi?TABLE_NAME=IS_specimen	"IS_specimen,IS_specimen_block"	IS_specimen_block
+IS_specimen_block	Specimen Block	Immunostain_infrastructure	YES	$TBIS_SPECIMEN_BLOCK	specimen_block_id		ManageTable.cgi?TABLE_NAME=IS_specimen_block	"IS_specimen,IS_specimen_block"	IS_stained_slide

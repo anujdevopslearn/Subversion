@@ -87,6 +87,7 @@ $DBCONFIG = readMainConfFile();
 
 
 #### Set instance-specific parameters
+$SBEAMS_PATH = $DBCONFIG->{__SOURCE_FILE};
 if ( $SBEAMS_PATH =~ /\/(dev\d)\// ) {
   $DBINSTANCE = $1;
 
@@ -299,6 +300,7 @@ sub readIniFile {
   #### Set up a hash reference to hold all the configuration data
   my $config;
   $config->{CONFIG_LOADED} = 'NOT YET';
+  $config->{__SOURCE_FILE} = $source_file;
 
 
   #### Read in all the modules

@@ -1,0 +1,196 @@
+table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
+IS_biosequence_set	1	biosequence_set_id	BioSequence Set ID	int	4	0	N		Y							N	N				pkDEFAULT
+IS_biosequence_set	2	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism (genus+species) for the entries in this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+IS_biosequence_set	3	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
+IS_biosequence_set	4	set_tag	Set Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this BioSequence database		
+IS_biosequence_set	5	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Longer description of this BioSequence database		
+IS_biosequence_set	6	set_version	Set Version	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Version of this BioSequence database		
+IS_biosequence_set	7	upload_file	Upload file	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
+IS_biosequence_set	8	set_path	Set Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	File path of this BioSequence database		
+IS_biosequence_set	9	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
+IS_biosequence_set	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IS_biosequence_set	11	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
+IS_biosequence_set	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_biosequence_set	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_biosequence_set	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_biosequence_set	15	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_biosequence_set	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+IS_biosequence_set	17	record_status	Record Status	char	1	0	N	N	N							N	N				
+IS_dbxref	1	dbxref_id	dbxref ID	int	4	0	N		Y							N	N				pkDEFAULT
+IS_dbxref	2	dbxref_name	CrossRef Name	varchar	50	0	N		N			Y	text	40		Y	Y	N	Name of this Database Cross Reference		
+IS_dbxref	3	dbxref_tag	CrossRef Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this Database Cross Reference		
+IS_dbxref	4	dbxref_description	Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this Database Cross Reference		
+IS_dbxref	5	accessor	Accessor	varchar	255	0	N		N			Y	text	50		Y	Y	N	Part of a URL or URI to which an accession number can be appended to get more information about the entity using this cross reference		
+IS_dbxref	6	accessor_suffix	Accessor Suffix	varchar	255	0	Y		N			N	text	50		Y	Y	N	Part of a URL or URI which comes after the accession number to build the full URL to get more information about the entity using this cross reference		
+IS_dbxref	7	uri	URI	varchar	255	0	N		N			Y	text	50		Y	Y	N	External web page or other URI of the database		SELF
+IS_dbxref	8	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IS_dbxref	9	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
+IS_dbxref	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_dbxref	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_dbxref	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_dbxref	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_dbxref	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+IS_dbxref	15	record_status	Record Status	char	1	0	N	N	N							N	N				
+IS_biosequence	1	biosequence_id	BioSequence ID	int	4	0	N		Y							N	N				pkDEFAULT
+IS_biosequence	2	biosequence_set_id	BioSequence Set	int	4	0	N		N	IS_biosequence_set	biosequence_set_id					N	N	Y	BioSequence Set to which this BioSequence belongs		pkDEFAULT
+IS_biosequence	3	biosequence_name	BioSequence Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of this BioSequence (generally everything before the first space in a FASTA file header line)		
+IS_biosequence	4	biosequence_gene_name	BioSequence Gene Name	varchar	255	0	Y		N			Y	text	20		Y	Y	N	Gene name of this BioSequence if applicable.  Most common gene name if applicable		
+IS_biosequence	5	dbxref_id	Database Cross Reference	int	4	0	Y		N	IS_dbxref	dbxref_id					Y	Y	N	Database cross reference for which the accession number applies		pkDEFAULT
+IS_biosequence	6	biosequence_accession	BioSequence Accession	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Accession number for this BioSequence in some external database designated above		
+IS_biosequence	7	biosequence_desc	Biosequence Description	varchar	1024	0	N		N			Y	text	40		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)		
+IS_biosequence	8	biosequence_seq	Sequence	text	16	0	Y		N			N	file	40		Y	Y	N	Actual sequence of the BioSequence if known		
+IS_query_option	1	query_option_id	Query Option ID	int	4	0	N		Y							N	N				pkDEFAULT
+IS_query_option	2	option_type	Option Type	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Type or category of this option		
+IS_query_option	3	option_key	Option Key	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Key for this key/value pair option		
+IS_query_option	4	option_value	Option Value	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Value of this key/value pair option		
+IS_query_option	5	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
+IS_query_option	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_query_option	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_query_option	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+IS_query_option	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
+IS_query_option	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
+IS_query_option	11	record_status	Record Status	char	1	0	N	N	N							N	N			
+IS_BrowseBioSequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBIS_BIOSEQUENCE_SET ORDER BY sort_order,set_name"
+IS_BrowseBioSequence	2	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+IS_BrowseBioSequence	3	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+IS_BrowseBioSequence	4	molecular_function_constraint	Molecular Function Constraint									N	text	40		Y	Y	N	Constraint for the GO Molecular Function. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+IS_BrowseBioSequence	5	biological_process_constraint	Biological Process Constraint									N	text	40		Y	Y	N	Constraint for the GO Biological Process. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+IS_BrowseBioSequence	6	cellular_component_constraint	Cellular Component Constraint									N	text	40		Y	Y	N	Constraint for the GO Cellular Component. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+IS_BrowseBioSequence	7	protein_domain_constraint	Protein Domain Constraint									N	text	40		Y	Y	N	Constraint for the InterPro Protein Domain. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+IS_BrowseBioSequence	8	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	Y	N	"Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
+IS_BrowseBioSequence	9	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	Y	N	"Constraint for the number of transmembrane regions (based on a 19-residue wide sliding window of hydropathy indexes above 1.58).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
+IS_BrowseBioSequence	10	biosequence_seq_constraint	Sequence Constraint									N	text	40		Y	Y	N	Constraint for the actual sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+IS_BrowseBioSequence	11	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+IS_BrowseBioSequence	12	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBIS_QUERY_OPTION WHERE option_type = 'BBS_sort_options' ORDER BY sort_order,option_value"
+IS_BrowseBioSequence	13	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBIS_QUERY_OPTION WHERE option_type = 'BBS_display_options' ORDER BY sort_order,option_value"	
+IS_BrowseBioSequence	14	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."		
+IS_antibody	1	antibody_id	Antibody ID	int	4	0	N		Y							N	N				pkDEFAULT
+IS_antibody	2	antibody_name	Antibody Name	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Name of this Antibody		
+IS_antibody	3	antibody_description	Antibody Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this Antibody		
+IS_antibody	4	antigen_id	Antigen	int	4	0	N		N	IS_antigen	antigen_id	Y	optionlist			Y	Y	N	Antigen that this antibody is recognized by	"SELECT antigen_id, antigen_name FROM $TBIS_ANTIGEN ORDER BY sort_order,antigen_name"	
+IS_antibody	5	provider_contact_id	Provider Contact	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Provider or vendor contact for obtaining this antibody	"SELECT contact_id, first_name+' '+last_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY organization,last_name,first_name"	
+IS_antibody	6	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IS_antibody	7	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Integer designed to assist in sort records of this type		
+IS_antibody	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_antibody	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_antibody	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_antibody	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_antibody	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+IS_antibody	13	record_status	Record Status	char	1	0	N	N	N							N	N				
+IS_antigen	1	antigen_id	Antigen ID	int	4	0	N		Y							N	N				pkDEFAULT
+IS_antigen	2	antigen_name	Antigen Name	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Short name of this Antigen		
+IS_antigen	3	alternate_names	Alternate Names	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Alternate names of this antigen		
+IS_antigen	4	antigen_description	Antigen Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this Antigen		
+IS_antigen	5	biosequence_id	Biosequence	int	4	0	Y		N	IS_biosequence	biosequence_id	N	optionlist			Y	Y	N	Biosequence entry (gene) that encodes for this antigen	"SELECT biosequence_id, biosequence_name FROM $TBIS_BIOSEQUENCE ORDER BY biosequence_name"	
+IS_antigen	6	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IS_antigen	7	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Integer designed to assist in sort records of this type		
+IS_antigen	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_antigen	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_antigen	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_antigen	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_antigen	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+IS_antigen	13	record_status	Record Status	char	1	0	N	N	N							N	N				
+IS_cell_type	1	cell_type_id	Cell Type ID	int	4	0	N		Y							N	N				pkDEFAULT
+IS_cell_type	2	cell_type_name	Cell Type Name	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Name of this Cell Type		
+IS_cell_type	3	cell_type_description	Cell Type Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this Cell Type		
+IS_cell_type	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IS_cell_type	5	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Integer designed to assist in sort records of this type		
+IS_cell_type	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_cell_type	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_cell_type	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_cell_type	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_cell_type	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+IS_cell_type	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+IS_cell_presence_level	1	cell_presence_level_id	Cell Presence Level ID	int	4	0	N		Y							N	N				pkDEFAULT
+IS_cell_presence_level	2	level_name	Level Name	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Name for the level of presence of a cell type		
+IS_cell_presence_level	3	level_description	Level Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this level		
+IS_cell_presence_level	4	probability	Probability	real	4	0	N		N			Y	text	20		Y	Y	N	A value between 0 and 1 that approximates the probability that this cell type is present in the stain		
+IS_cell_presence_level	5	present_percent	Present Percent	real	4	0	N		N			Y	text	20		Y	Y	N	A value between 0 and 100 that approximates the percentage of cells of a certain type that are stained by the antibody		
+IS_cell_presence_level	6	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IS_cell_presence_level	7	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Integer designed to assist in sort records of this type		
+IS_cell_presence_level	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_cell_presence_level	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_cell_presence_level	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_cell_presence_level	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_cell_presence_level	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+IS_cell_presence_level	13	record_status	Record Status	char	1	0	N	N	N							N	N				
+IS_stain_cell_presence	1	stain_cell_presence_id	Stain Cell Presence ID	int	4	0	N		Y							N	N				pkDEFAULT
+IS_stain_cell_presence	2	stained_slide_id	Stain Slide	int	4	0	N		N	IS_stained_slide	stained_slide_id	Y	optionlist			Y	Y	Y	Stain for this this call is made	"SELECT stain_id, stain_name FROM $TBIS_STAIN ORDER BY sort_order,stain_name"	
+IS_stain_cell_presence	3	cell_type_id	Cell Type	int	4	0	N		N	IS_cell_type	cell_type_id	Y	optionlist			Y	Y	Y	Cell type for this which this call is made	"SELECT cell_type_id, cell_type_name FROM $TBIS_CELL_TYPE ORDER BY sort_order,cell_type_name"	
+IS_stain_cell_presence	4	cell_presence_level_id	Cell Presence Level	int	4	0	N		N	IS_cell_presence_level	cell_presence_level_id	Y	optionlist			Y	Y	N	Level of presence that is called out	"SELECT cell_presence_level_id, level_name FROM $TBIS_CELL_PRESENCE_LEVEL ORDER BY sort_order,cell_presence_level_name"	
+IS_stain_cell_presence	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IS_stain_cell_presence	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_stain_cell_presence	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_stain_cell_presence	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_stain_cell_presence	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_stain_cell_presence	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+IS_stain_cell_presence	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+IS_stained_slide	1	stained_slide_id	Stained Slide ID	int	4	0	N		Y							N	N				pkDEFAULT
+IS_stained_slide	2	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	Project under which this specimen is organized	"SELECT project_id,username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.project_id IN ( $accessible_project_ids ) AND P.record_status != 'D' ORDER BY username,name"	
+IS_stained_slide	3	specimen_block_id	Specimen Block	int	4	0	N		N	IS_specimen_block	specimen_block_id	Y	optionlist			Y	Y	N	Specimen block from which the sample on this slide was prepared	"SELECT specimen_block_id, specimen_block_name FROM $TBIS_SPECIMEN_BLOCK ORDER BY sort_order,specimen_block_name"	
+IS_stained_slide	4	antibody_id	Antibody	int	4	0	N		N	IS_antibody	antibody_id	Y	optionlist			Y	Y	N	Antibody used to stain this sample	"SELECT antibody_id, antibody_name FROM $TBIS_ANTIBODY ORDER BY sort_order,antibody_name"	
+IS_stained_slide	5	stain_name	Stain Name	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Unique name for this stain		
+IS_stained_slide	6	stain_description	Stain Description	varchar	255	0	N		N			Y	textarea	4		Y	Y	N	Longer description of this stain		
+IS_stained_slide	7	preparation_date	Preparation Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	text	20		Y	Y	N	Date this stained slide was prepared		
+IS_stained_slide	8	protocol_id	Preparation Protocol	int	4	0	N		N	protocol	protocol_id	Y	optionlist			Y	Y	Y	Protocol used to prepare and stain this slide	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='immunostain_preparation' AND P.record_status != 'D' ORDER BY P.name"	
+IS_stained_slide	9	protocol_deviations	Protocol Deviations	text	16	0	Y		N			N	textarea	6		Y	Y	N	Describe any deviations from the intented above protocol to the way this preparation was actually executed		
+IS_stained_slide	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IS_stained_slide	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_stained_slide	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_stained_slide	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_stained_slide	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_stained_slide	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+IS_stained_slide	16	record_status	Record Status	char	1	0	N	N	N							N	N				
+IS_slide_image	1	slide_image_id	Slide Image ID	int	4	0	N		Y							N	N				pkDEFAULT
+IS_slide_image	2	stained_slide_id	Stained Slide	int	4	0	N		N	IS_stained_slide	stained_slide_id	Y	optionlist			Y	Y	N	Stained slide of which this is an image (or of a part of thereof)	"SELECT stained_slide_id, stained_slide_name FROM $TBIS_STAINED_SLIDE ORDER BY stained_slide_name"	
+IS_slide_image	3	protocol_id	Imaging Protocol	int	4	0	N		N	protocol	protocol_id	Y	optionlist			Y	Y	Y	Protocol used to image this slide	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='immunostain_preparation' AND P.record_status != 'D' ORDER BY P.name"	
+IS_slide_image	4	image_magnification	Image Magnification	real	4	0	N		N			N	text	20		Y	Y	N	Magnification of the instrument for this image (Enter a decimal number with no 'x' or other characters)		
+IS_slide_image	5	protocol_deviations	Protocol Deviations	text	16	0	Y		N			N	textarea	6		Y	Y	N	Describe any deviations from the intented above protocol to the way this slide was actually imaged or supply special instrument settings not normally recorded in the protocol		
+IS_slide_image	6	image_file_date	Image Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	text	20		Y	Y	N	Date this stain image was taken		
+IS_slide_image	7	raw_image_file	Raw Image File	varchar	255	0	Y		N			N	file	40		Y	Y	N	Click BROWSE and select the raw image file to be uploaded via the web interface		uploaded_file
+IS_slide_image	8	processed_image_file	Processed Image File	varchar	255	0	Y		N			N	file	40		Y	Y	N	"Click BROWSE and select the processed image file (e.g., contrast adjustment or other enhancements in Photoshop) to be uploaded via the web interface"		uploaded_file
+IS_slide_image	9	annotated_image_file	Annotated Image File	varchar	255	0	Y		N			N	file	40		Y	Y	N	"Click BROWSE and select the annotated image file (e.g., with labels or markers indicating interesting features) to be uploaded via the web interface"		uploaded_file
+IS_slide_image	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IS_slide_image	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_slide_image	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_slide_image	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_slide_image	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_slide_image	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+IS_slide_image	16	record_status	Record Status	char	1	0	N	N	N							N	N				
+IS_tissue_type	1	tissue_type_id	Tissue Type ID	int	4	0	N		Y							N	N				pkDEFAULT
+IS_tissue_type	2	tissue_type_name	Tissue Type Name	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Name of this Tissue Type		
+IS_tissue_type	3	tissue_type_description	Tissue Type Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this Tissue Type		
+IS_tissue_type	4	is_cancerous	Is Cancerous?	char	1	0	N		N			Y	optionlist			Y	Y	N	Is this tissue type a cancerous type?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
+IS_tissue_type	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IS_tissue_type	6	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Integer designed to assist in sort records of this type		
+IS_tissue_type	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_tissue_type	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_tissue_type	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_tissue_type	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_tissue_type	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+IS_tissue_type	12	record_status	Record Status	char	1	0	N	N	N							N	N				
+IS_specimen	1	specimen_id	Specimen	int	4	0	N		Y							N	N				pkDEFAULT
+IS_specimen	2	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	Project under which this specimen is organized	"SELECT project_id,username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.project_id IN ( $accessible_project_ids ) AND P.record_status != 'D' ORDER BY username,name"	
+IS_specimen	3	specimen_name	Specimen Name/Designator	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Name/Coded designator for this specimen		
+IS_specimen	4	tissue_type_id	Tissue Type	int	4	0	N		N	IS_tissue_type	tissue_type_id	Y	optionlist			Y	Y	Y	Tissue type of this specimen	"SELECT tissue_type_id, tissue_type_name FROM $TBIS_TISSUE_TYPE BY sort_order,tissue_type_name"	
+IS_specimen	5	donor_age	Donor Age	real	4	0	N		N			Y	text	20		Y	Y	Y	Age in years of the donor of the specimen		
+IS_specimen	6	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IS_specimen	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_specimen	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_specimen	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_specimen	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_specimen	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+IS_specimen	12	record_status	Record Status	char	1	0	N	N	N							N	N				
+IS_specimen_block	1	specimen_block_id	Specimen Block	int	4	0	N		Y							N	N				pkDEFAULT
+IS_specimen_block	2	specimen_block_name	Specimen Block Name/Designator	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Name/Coded designator for this specimen block		
+IS_specimen_block	3	specimen_id	Specimen	int	4	0	N		N	IS_specimen	specimen_id	Y	optionlist			Y	Y	Y	Specimen from which this block was taken	"SELECT specimen_id, specimen_name FROM $TBIS_SPECIMEN BY specimen_name"	
+IS_specimen_block	4	protocol_id	Preparation Protocol	int	4	0	N		N	protocol	protocol_id	Y	optionlist			Y	Y	Y	Protocol used to prepare this specimen block	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='immunostain_preparation' AND P.record_status != 'D' ORDER BY P.name"	
+IS_specimen_block	5	acquisition_time	Acquisition Time	real	4	0	Y		N			Y	text	20		Y	Y	Y	Time in minutes between harvesting specimen and fixing specimen block		
+IS_specimen_block	6	protocol_deviations	Protocol Deviations	text	16	0	Y		N			N	textarea	6		Y	Y	N	Describe any deviations from the intented above protocol to the way this preparation was actually executed		
+IS_specimen_block	7	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IS_specimen_block	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_specimen_block	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_specimen_block	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N
+IS_specimen_block	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N
+IS_specimen_block	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N
+IS_specimen_block	13	record_status	Record Status	char	1	0	N	N	N							N	N

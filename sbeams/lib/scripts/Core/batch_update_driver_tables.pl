@@ -53,6 +53,9 @@
   ./update_driver_tables.pl $CONFDIR/GEAP/GEAP_table_property.txt
   ./update_driver_tables.pl $CONFDIR/GEAP/GEAP_table_column.txt
 
+  ./update_driver_tables.pl $CONFDIR/Immunostain/Immunostain_table_property.txt
+  ./update_driver_tables.pl $CONFDIR/Immunostain/Immunostain_table_column.txt
+
   ./update_driver_tables.pl $CONFDIR/Interactions/Interactions_table_property.txt
   ./update_driver_tables.pl $CONFDIR/Interactions/Interactions_table_column.txt
 

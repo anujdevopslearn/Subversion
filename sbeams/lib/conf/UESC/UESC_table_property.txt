@@ -5,8 +5,12 @@ UESC_biosequence	BioSequence	UESC_infrastructure	NO	$TBUESC_BIOSEQUENCE	bioseque
 UESC_query_option	Query Option	UESC_infrastructure	YES	$TBUESC_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=UESC_query_option	UESC_query_option	
 UESC_BrowseBioSequence	Browse BioSequence	QUERY	NO				BrowseBioSequence.cgi		
 UESC_antibody	Antibody	UESC_infrastructure	YES	$TBUESC_ANTIBODY	antibody_id		ManageTable.cgi?TABLE_NAME=UESC_antibody	UESC_antibody	
+UESC_antigen	Antigen	UESC_infrastructure	YES	$TBUESC_ANTIGEN	antigen_id		ManageTable.cgi?TABLE_NAME=UESC_antigen	UESC_antigen	
 UESC_cell_type	Cell Type	UESC_infrastructure	YES	$TBUESC_CELL_TYPE	cell_type_id		ManageTable.cgi?TABLE_NAME=UESC_cell_type	UESC_cell_type	
-UESC_tissue_type	Tissue Type	UESC_infrastructure	YES	$TBUESC_TISSUE_TYPE	tissue_type_id		ManageTable.cgi?TABLE_NAME=UESC_tissue_type	UESC_tissue_type	
 UESC_cell_presence_level	Cell Presence Level	UESC_infrastructure	YES	$TBUESC_CELL_PRESENCE_LEVEL	cell_presence_level_id		ManageTable.cgi?TABLE_NAME=UESC_cell_presence_level	UESC_cell_presence_level	
 UESC_stain_cell_presence	Stain Cell Presence	UESC_infrastructure	YES	$TBUESC_STAIN_CELL_PRESENCE	stain_cell_presence_id				
-UESC_stain	Stain	UESC_infrastructure	YES	$TBUESC_STAIN	stain_id		ManageTable.cgi?TABLE_NAME=UESC_stain	UESC_stain	
+UESC_stained_slide	Stained Slide	UESC_infrastructure	YES	$TBUESC_STAINED_SLIDE	stained_slide_id		ManageTable.cgi?TABLE_NAME=UESC_stained_slide	UESC_stained_slide	
+UESC_slide_image	Slide Image	UESC_infrastructure	YES	$TBUESC_SLIDE_IMAGE	slide_image_id		ManageTable.cgi?TABLE_NAME=UESC_slide_image	UESC_slide_image	
+UESC_tissue_type	Tissue Type	UESC_infrastructure	YES	$TBUESC_TISSUE_TYPE	tissue_type_id		ManageTable.cgi?TABLE_NAME=UESC_tissue_type	UESC_tissue_type	
+UESC_specimen	Specimen	UESC_infrastructure	YES	$TBUESC_SPECIMEN	specimen_id		ManageTable.cgi?TABLE_NAME=UESC_specimen	UESC_specimen	
+UESC_specimen_block	Specimen Block	UESC_infrastructure	YES	$TBUESC_SPECIMEN_BLOCK	specimen_block_id		ManageTable.cgi?TABLE_NAME=UESC_specimen_block	UESC_specimen_block	
