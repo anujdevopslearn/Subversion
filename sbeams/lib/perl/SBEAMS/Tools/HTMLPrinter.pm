@@ -100,6 +100,8 @@ sub printPageHeader {
 	<tr><td>Manage&nbsp;Contacts:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=contact"<nobr>&nbsp;&nbsp;&nbsp;Contacts</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=organization"<nobr>&nbsp;&nbsp;&nbsp;Organizations</a></td></tr>
+	<tr><td>&nbsp;</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=organism"<nobr>&nbsp;&nbsp;&nbsp;Organisms</a></td></tr>
 	</table>
 	</td>
 
