@@ -906,6 +906,127 @@ sub getWimleyWhiteIndex {
 
 
 ###############################################################################
+# getPNNLRetentionCoeffs: Get a hash of the Retention Time Coefficients
+# as calculated by Petritis et al. (2003): Anal. Chem 2003, 75, 1039
+###############################################################################
+sub getPNNLRetentionCoeffs {
+  my %args = @_;
+  my $SUB_NAME = 'getPNNLRetentionCoeffs';
+
+  #### Define the retention time coefficients
+  my %retention_coefficients = (
+    L => 6.12,
+    F => 3.37,
+    I => 2.37,
+    W => 2.27,
+    M => 1.63,
+    V => 1.63,
+    Y => 0.72,
+    A => 0.71,
+    E => 0.56,
+    P => 0.48,
+    C => 0.32,
+    D => 0.18,
+    T => 0.18,
+    G => -0.21,
+    R => +0.24,
+    N => -0.29,
+    Q => -0.3,
+    S => -0.35,
+    K => -0.55,
+    H => -0.59,
+
+    X => 4.25,
+    B => -0.06,
+    Z => 0.13,
+    U => 0,    # ????
+
+  );
+
+  return %retention_coefficients;
+
+}
+
+
+
+###############################################################################
+# getResidueMasses: Get a hash of masses for each of the residues
+###############################################################################
+sub getResidueMasses {
+  my %args = @_;
+  my $SUB_NAME = 'getResidueMasses';
+
+  #### Define the residue masses
+  my %residue_masses = (
+    I => 113.1594,   # Isoleucine
+    V =>  99.1326,   # Valine
+    L => 113.1594,   # Leucine
+    F => 147.1766,   # Phenyalanine
+    C => 103.1388,   # Cysteine
+    M => 131.1926,   # Methionine
+    A =>  71.0788,   # Alanine
+    G =>  57.0519,   # Glycine
+    T => 101.1051,   # Threonine
+    W => 186.2132,   # Tryptophan
+    S =>  87.0782,   # Serine
+    Y => 163.1760,   # Tyrosine
+    P =>  97.1167,   # Proline
+    H => 137.1411,   # Histidine
+    E => 129.1155,   # Glutamic_Acid (Glutamate)
+    Q => 128.1307,   # Glutamine
+    D => 115.0886,   # Aspartic_Acid (Aspartate)
+    N => 114.1038,   # Asparagine
+    K => 128.1741,   # Lysine
+    R => 156.1875,   # Arginine
+
+    X => 113.1594,   # L or I
+    B => 114.5962,   # avg N and D
+    Z => 128.6231,   # avg Q and E
+    U => 100,        # ?????
+
+  );
+
+  return %residue_masses;
+
+}
+
+
+
+
+###############################################################################
+# calcElutionTime: Calculate the elution time of the peptide
+#   Thus far, all we have is some lame, unitless calculation from the
+#   PNNL paper.  This is bad. and wrong. bad and wrong together.
+###############################################################################
+sub calcElutionTime {
+  my %args = @_;
+  my $SUB_NAME = 'calcElutionTime';
+
+  #### Parse input parameters
+  my $peptide = $args{'peptide'} || die "Must supply the peptide";
+  my $mode = $args{'mode'} || "PNNL_ANN";
+
+
+  #### Define the retention coefficients
+  my %retention_coefficients = getPNNLRetentionCoeffs();
+
+  #### Split peptide into an array of residues and get number
+  my @residues = split(//,$peptide);
+  my $nresidues = scalar(@residues);
+
+  #### Loop over each residue and add in the hydropathy_index
+  my $retention_index = 0;
+  foreach my $residue (@residues) {
+    $retention_index += $retention_coefficients{$residue};
+  }
+
+  return $retention_index;
+
+} # end calcElutionTime
+
+
+
+###############################################################################
 # calcGravyScore: Calculate the gravy_score based on the hydropathy indexes
 #   of each of the residues in the peptide
 ###############################################################################
