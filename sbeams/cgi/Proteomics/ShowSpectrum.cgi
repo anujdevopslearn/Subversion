@@ -606,13 +606,15 @@ sub get_mass_modifications {
 
     #### Query to find all the static mass modifications for this
     #### search_batch_id
+    #### Deutsch added [_] to actaully search for the _ character not wildcard
     $sql_query = qq~
 	  SELECT parameter_key,parameter_value
 	    FROM $TBPR_SEARCH_BATCH_PARAMETER
 	   WHERE search_batch_id = '$search_batch_id'
-	     AND parameter_key LIKE 'add%'
+	     AND parameter_key LIKE 'add[_]%'
 	     AND CONVERT(real,parameter_value) != 0
     ~;
+    #print "<PRE>$sql_query\n\n</PRE>";
 
     #### Execute the query and store any returned modifications
     my %mods = $sbeams->selectTwoColumnHash($sql_query);
