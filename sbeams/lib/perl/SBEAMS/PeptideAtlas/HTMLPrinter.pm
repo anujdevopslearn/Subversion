@@ -312,7 +312,11 @@ sub display_page_footer {
 
         print qq~
 	<BR><HR SIZE="2" NOSHADE WIDTH="30%" ALIGN="LEFT">
-	SBEAMS - $SBEAMS_PART [Under Development]<BR><BR><BR>
+        <BR>
+        You are successfully logged into the $DBTITLE - $SBEAMS_PART system.
+        <BR>
+        [This system is under active development.]
+        <BR>
 	</BODY></HTML>\n\n
         ~;
      }
