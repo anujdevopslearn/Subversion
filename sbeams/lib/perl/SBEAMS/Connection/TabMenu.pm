@@ -271,14 +271,23 @@ sub addHRule {
 #-
 sub getActiveTab {
   my $this = shift;
-  # If a tab was already selected, it is active
-  return ( $this->{_currentTab} ) if $this->{_currentTab};
+  
+  if ( $this->{_currentTab} && $this->{_currentTab} <= $this->{_tabIndex} ) {
+   
+    # If a tab was already selected, it is active
+    return ( $this->{_currentTab} )
+    
+  } elsif ( $this->{_defaultTab} ) {
 
-  # Else use default
-  return ( $this->{_defaultTab} ) if $this->{_defaultTab};
+    # Else use default
+    return ( $this->{_defaultTab} );
+
+  } else {
 
   # Else use first tab
   return 1;
+
+  }
 }
 
 #+
