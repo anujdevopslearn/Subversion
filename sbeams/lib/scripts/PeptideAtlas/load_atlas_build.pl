@@ -268,7 +268,7 @@ sub removeAtlas {
 
    my %table_child_relationship = (
       atlas_build => 'peptide_instance(C)',
-      peptide_instance => 'peptide_mapping(C)',
+      peptide_instance => 'peptide_mapping(C),peptide_instance_sample(C)',
    );
 
    my $TESTONLY = "0";
@@ -326,8 +326,7 @@ sub buildAltas {
    my %biosequence_ids = $sbeams->selectTwoColumnHash($sql);
  
  
-   ## READ APD file of experiment peptides
-   #### Open the file containing the input peptide properties
+   #### Open the file containing the input peptide properties (APD tsv file)
    unless (open(INFILE,"${source_dir}/APD_${organism_abbrev}_all.tsv")) {
      print "ERROR: Unable to open for reading input file ".
        "'${source_dir}/APD_${organism_abbrev}_all.tsv'\n\n";
@@ -348,11 +347,11 @@ sub buildAltas {
    }
  
  
-   #### Load the relevant information in the peptide input file
-   ## storing APD info in hashes with keys of peptide_id (can be found as $peptides{$peptide_accession[$i]})
+   #### Load the relevant information from the  APD_{organism}_all.tsv file
+   ##  into hashes with keys of peptide_id (e.g., $peptides{$peptide_accession[$i]}) )
    my $counter = 0;
    my (%APD_peptide_accession, %APD_peptide_sequence, %APD_peptide_length, %APD_best_probability);
-   my (%APD_n_observations, %APD_sample_ids, %APD_peptide_id);
+   my (%APD_n_observations, %APD_search_batch_ids, %APD_sample_ids, %APD_peptide_id);
    while ($line = <INFILE>) {
      $line =~ s/[\r\n]//g;
      my @columns = split(/\t/,$line);
@@ -364,9 +363,31 @@ sub buildAltas {
      $APD_best_probability{$tmp_pep_id} = $columns[$column_indices{maximum_probability}];
      $APD_n_observations{$tmp_pep_id} = $columns[$column_indices{n_peptides}];
      #### FIXME !!!! APD output has two columns names with the same name!!
-     $APD_sample_ids{$tmp_pep_id} = $columns[$column_indices{maximum_probability}+2];
- 
-     #### If this doesn't yet exist in the database table "peptide", add it
+     $APD_search_batch_ids{$tmp_pep_id} = $columns[$column_indices{maximum_probability}+2];
+     $APD_search_batch_ids{$tmp_pep_id} =~ s/\"//g;  ## removing quotes " from string
+
+     my @tmp_search_batch_id = split(",", $APD_search_batch_ids{$tmp_pep_id} );
+
+     for (my $ii = 0; $ii <= $#tmp_search_batch_id; $ii++) {
+
+        my $sql;
+        $sql = qq~
+           SELECT sample_id
+              FROM $TBAT_SAMPLE
+           WHERE search_batch_id = '$tmp_search_batch_id[$ii]'
+              AND record_status != 'D'
+        ~;
+        my @rows = $sbeams->selectOneColumn($sql); # should return a single entry
+
+        ## create string of sample ids:
+        if ($ii == 0) {
+           $APD_sample_ids{$tmp_pep_id} = @rows[0];
+        } else {
+           $APD_sample_ids{$tmp_pep_id} =  join ",", $APD_sample_ids{$tmp_pep_id}, @rows[0];
+        }
+     }
+
+     #### If this peptide_id doesn't yet exist in the database table "peptide", add it
      $APD_peptide_id{$tmp_pep_id} = $peptides{$APD_peptide_accession{$tmp_pep_id}};
  
      unless ($APD_peptide_id{$tmp_pep_id}) {
@@ -404,7 +425,6 @@ sub buildAltas {
    my $APD_last_ind = $counter - 1;
  
  
-   ## READ peptides found in Ensembl along with their coord info:
    #### Open the file containing the BLAST alignment summary
    unless (open(INFILE,"$source_dir/coordinate_mapping.txt")) {
      print "ERROR: Unable to open for reading input file ".
@@ -426,6 +446,7 @@ sub buildAltas {
    #### Define a hash to hold the loaded Ensembl hits:
    my %loaded_peptides;
    my $peptide_instance_id = -1;
+   my $peptide_instance_sample_id = -1;
    my %strand_xlate = (
  		      '-' => '-',
  		      '+' => '+',
@@ -458,8 +479,9 @@ sub buildAltas {
       $start_in_chromosome[$ind] = $columns[10];
       $end_in_chromosome[$ind] = $columns[11];
  
-      ## making hash, keys =  peptide_accession
-      ##              values = the array indices (of the arrays above, holding info for the peptide_accession)
+      ## %index_hash has:
+      ## keys =  peptide_accession
+      ## values = the array indices (of the arrays above, holding info for the peptide_accession)
       if ( exists $index_hash{$peptide_accession[$ind]} ) {
          $index_hash{$peptide_accession[$ind]} = 
            join " ", $index_hash{$peptide_accession[$ind]}, $ind;
@@ -471,23 +493,22 @@ sub buildAltas {
       $is_exon_spanning[$ind]= 'n';  #unless replaced in next section
  
       $ind++;
-   }
+   }   ## end reading coordinate mapping file
    close(INFILE);
-   my $last_ind = $ind - 1;
+   my $ensembl_hits_last_ind = $ind - 1 ;  #last index of Ensembl hits arrays
  
    ## n_mappings is a peptide's number of hits
-   ## n_mapped_locations is a peptide's number of hits (where none of the
-   ##    chromosomal coordinates are the same)
+   ## n_mapped_locations is a peptide's number of hits where none of the
+   ##    chromosomal coordinates are the same
    ## is_exon_spanning is whether a peptide has been identified as the
-   ##    same protein with two sets of chromosomal coordinates
+   ##    same protein with two different sets of chromosomal coordinates
  
-   #  print "size of hash = " . keys( %index_hash ) . ".\n";
+   ## print "size of hash = " . keys( %index_hash ) . ".\n";
    ## looping through indices of multiple peptide identifications:
    foreach my $tmp_ind_str (values ( %index_hash ) ) {
       my @tmp_ind_array = split(" ", $tmp_ind_str);
-      my $last_ind = $#tmp_ind_array;
  
-      my %nml=0;  ## xxxx reset nml each loop
+      my %nml=0;  ## reset nml each loop
       for (my $ii = 0; $ii <= $#tmp_ind_array; $ii++) {
          my $i_ind=$tmp_ind_array[$ii];
 
@@ -537,9 +558,12 @@ sub buildAltas {
    ## APDpep00004290  16      ENSP00000281456 ... 186763858       186763898
    ## ---> n_mapped_locations = 4 for all
    ## ---> is_exon_spanning   = y for all
- 
- 
-   for(my $i =0; $i <= $last_ind; $i++){
+
+
+
+   ####----------------------------------------------------------------------------
+   ## Loading peptides with Ensembl hits into database with SQL statements:
+   for(my $i =0; $i <= $ensembl_hits_last_ind; $i++){
      my $tmp = $strand_xlate{$strand[$i]}
        or die("ERROR: Unable to translate strand $strand[$i]");
      $strand[$i] = $tmp;
@@ -567,6 +591,7 @@ sub buildAltas {
          peptide_id => $peptide_id,
          best_probability => $APD_best_probability{$peptides{$peptide_accession[$i]}},
          n_observations => $APD_n_observations{$peptides{$peptide_accession[$i]}},
+         search_batch_ids => $APD_search_batch_ids{$peptides{$peptide_accession[$i]}},
          sample_ids => $APD_sample_ids{$peptides{$peptide_accession[$i]}},
          n_mapped_locations => $n_mapped_locations[$i],
          is_exon_spanning => $is_exon_spanning[$i],
@@ -574,18 +599,57 @@ sub buildAltas {
        );
  
        $peptide_instance_id = $sbeams->updateOrInsertRow(
-   	insert=>1,
-   	table_name=>$TBAT_PEPTIDE_INSTANCE,
-   	rowdata_ref=>\%rowdata,
+         insert=>1,
+         table_name=>$TBAT_PEPTIDE_INSTANCE,
+         rowdata_ref=>\%rowdata,
          PK => 'peptide_instance_id',
          return_PK => 1,
-   	verbose=>$VERBOSE,
- 	testonly=>$TESTONLY,
+         verbose=>$VERBOSE,
+         testonly=>$TESTONLY,
        );
  
        $loaded_peptides{$peptide_accession[$i]} = $peptide_instance_id;
- 
-     }
+
+       ## For each peptide_instance, there may be several peptide_instance_sample s
+       ##
+       ## split $APD_sample_ids{$tmp_pep_id} on commas, and for each member, 
+       ## create a peptide_instance_sample that holds the peptide_instance_id
+       my @tmp_sample_id = split(",", $APD_sample_ids{$peptides{$peptide_accession[$i]}} );
+       for (my $ii = 0; $ii <= $#tmp_sample_id; $ii++) {
+
+          my $sql;
+          $sql = qq~
+            SELECT date_created, created_by_id, date_modified, modified_by_id, 
+                   owner_group_id, record_status
+              FROM $TBAT_SAMPLE
+            WHERE sample_id = '$tmp_sample_id[$ii]'
+              AND record_status != 'D'
+          ~;
+          my @rows = $sbeams->selectSeveralColumns($sql); ## array of refs to array
+#         print "sample id $tmp_sample_id[$ii]...@rows->[0]->[0] @rows->[0]->[1] \n";
+
+          my %rowdata = (   ##   peptide_instance_sample    table attributes
+             peptide_instance_id => $peptide_instance_id,
+             sample_id => $tmp_sample_id[$ii],
+             date_created => @rows->[0]->[0],
+             created_by_id  => @rows->[0]->[1],
+             date_modified  => @rows->[0]->[2],
+             modified_by_id  => @rows->[0]->[3],
+             owner_group_id  => @rows->[0]->[4],
+             record_status  => @rows->[0]->[5],
+          );
+
+          $peptide_instance_sample_id = $sbeams->updateOrInsertRow(
+             insert=>1,
+             table_name=>$TBAT_PEPTIDE_INSTANCE_SAMPLE,
+             rowdata_ref=>\%rowdata,
+             PK => 'peptide_instance_sample_id',
+             return_PK => 1,
+             verbose=>$VERBOSE,
+             testonly=>$TESTONLY,
+          );
+       }  ## end peptide_instance_sample loop
+     }  ## end  "not already present in peptide" loop
  
  
      #### INSERT  into  peptide_mapping
@@ -613,11 +677,13 @@ sub buildAltas {
      $counter++;
      print "$counter..." if ($counter % 100 == 0);
    
-   } #end for loop
+   } #end for loop over Ensembl hits
+   ###----------------------------------------------------------------------------
  
    print "\n";
  
  
+   ###----------------------------------------------------------------------------
    ## Making entries in peptide_instance for peptides that weren't hits in Ensembl:
 
    ## make sql call to get hash of peptide_id and any other variable...
@@ -642,6 +708,7 @@ sub buildAltas {
             peptide_id => $tmp_pep_id,
             best_probability => $APD_best_probability{$tmp_pep_id},
             n_observations => ,$APD_n_observations{$tmp_pep_id},
+            search_batch_ids => ,$APD_search_batch_ids{$tmp_pep_id},
             sample_ids => ,$APD_sample_ids{$tmp_pep_id},
             n_mapped_locations => '0',
             is_exon_spanning => 'n',
@@ -657,6 +724,46 @@ sub buildAltas {
            verbose=>$VERBOSE,
            testonly=>$TESTONLY,
          );
+         
+         ## for each sample, create peptide_instance_sample record
+         my @tmp_sample_id = split(",", $APD_sample_ids{$tmp_pep_id} );
+         for (my $ii = 0; $ii <= $#tmp_sample_id; $ii++) {
+
+            my $sql;
+            $sql = qq~
+              SELECT date_created, created_by_id, date_modified, modified_by_id, 
+                     owner_group_id, record_status
+                FROM $TBAT_SAMPLE
+              WHERE sample_id = '$tmp_sample_id[$ii]'
+                AND record_status != 'D'
+            ~;
+            my @rows = $sbeams->selectSeveralColumns($sql); ## array of refs to array
+#           print "sample id $tmp_sample_id[$ii]...@rows->[0]->[0] @rows->[0]->[1] ",
+            "@rows->[0]->[2] @rows->[0]->[3] @rows->[0]->[4] @rows->[0]->[5]\n";
+
+            my %rowdata = (   ##   peptide_instance_sample    table attributes
+               peptide_instance_id => $peptide_instance_id,
+               sample_id => $tmp_sample_id[$ii],
+               date_created => @rows->[0]->[0],
+               created_by_id  => @rows->[0]->[1],
+               date_modified  => @rows->[0]->[2],
+               modified_by_id  => @rows->[0]->[3],
+               owner_group_id  => @rows->[0]->[4],
+               record_status  => @rows->[0]->[5],
+            );
+
+            $peptide_instance_sample_id = $sbeams->updateOrInsertRow(
+               insert=>1,
+               table_name=>$TBAT_PEPTIDE_INSTANCE_SAMPLE,
+               rowdata_ref=>\%rowdata,
+               PK => 'peptide_instance_sample_id',
+               return_PK => 1,
+               verbose=>$VERBOSE,
+               testonly=>$TESTONLY,
+            );
+         }  ## end peptide_instance_sample loop
       }
    } ## end peptide_instance entries for those not in Ensembl
+
+
 }# end buildAtlas
