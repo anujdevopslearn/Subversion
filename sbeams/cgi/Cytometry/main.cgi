@@ -64,6 +64,7 @@ my $PROCESSFILE = '_processFile';
 my $GETGRAPH = '_getGraph';
 my $CELL = '_processCells';
 my $GETANOTHERGRAPH = '_getAnotherGraph';
+my $SPECRUN = '_specifyRun';
 my (%indexHash,%editorHash,%inParsParam);
 
 #possible actions (pages) displayed
@@ -74,7 +75,8 @@ my %actionHash = (
 	$GETGRAPH 	=>	 \&getGraph,
 	$CELL	=>	\&processCells,
 	$ERROR	=>	\&processError,
-	$GETANOTHERGRAPH =>	\&getAnotherGraph
+	$GETANOTHERGRAPH =>	\&getAnotherGraph,
+    $SPECRUN => \&specifyRun
 	);
 my $attributeSql = "select measured_parameters_id, measured_parameters_name from $TBCY_MEASURED_PARAMETERS";
 my  %attributeHash = $sbeams->selectTwoColumnHash($attributeSql);
@@ -237,30 +239,64 @@ sub displayIntro
      my $ref_parameters = $args{'ref_parameters'}
     || die "ref_parameters not passed";
     my %parameters = %{$ref_parameters};
-	my %resultset = ();
-    my $resultset_ref = \%resultset;
-         
+    my ($sampleID, $sortEntityID, $runDate); 
+=comment    
+	foreach my $k (keys %parameters)
+		{
+				print "$k  ==== $parameters{$k}<br>";
+		}
+=cut
+     my @clauseArray;
+     my $queryClause;
+     if($parameters{searchCombo})
+     {
+      
+       $sampleID = $parameters{sampleID};
+       $sortEntityID = $parameters{sortEntityID};
+       $runDate = $parameters{dates};
+        push @clauseArray, "fcs_run_id in ($sampleID)" if defined($sampleID);
+        push @clauseArray, "sort_entity_id in ($sortEntityID)" if defined($sortEntityID);
+        push @clauseArray, "run_date in ($runDate)" if defined($runDate);
+        $queryClause = join ' and ', @clauseArray;
+     }
+      
+      
   	 my $organismSql = qq~ select organism_id,organism_name from 
 	 sbeams.dbo.organism ~; 
 	
 	  my %organismHash = $sbeams->selectTwoColumnHash($organismSql);
       my $flag = 0; 
-      $flag = 1 if  (! $parameters{noShow}); #or (! defined($parameters{noShow}));
+      $flag = 1 if  (! $parameters{noShow}); 
 
 	 my $sql = "select  fcs_run_id,Organism_id , project_designator, sample_name, filename, run_date 
     from $TBCY_FCS_RUN  where project_id = $project_id and showFlag = $flag order by project_designator, run_date";
+    
     my $immunoStainName = $parameters{TableName};
     my $immunoStainFiles = $parameters{SampleName};
-    print "$immunoStainFiles<br> $immunoStainName <br>";
-    my $immunoStainSql =  "select  fcs_run_id,Organism_id , project_designator, sample_name, filename, run_date 
+     my $immunoStainSql =  "select  fcs_run_id,Organism_id , project_designator, sample_name, filename, run_date 
     from $TBCY_FCS_RUN  where project_id = $project_id and sample_Name like '%$immunoStainFiles%' order by project_designator, run_date";
-    my @rows;
-    @rows = $sbeams->selectSeveralColumns($sql) if (! defined ($immunoStainName)); 
-    @rows = $sbeams->selectSeveralColumns($immunoStainSql) if ( defined ($immunoStainName));  
+   
+   
+   my $wildCardGuess = $parameters{sampleGuess}; 
+   my $wildCard = $parameters{wildcardSample};
+   my $wildCardSql =  "select  fcs_run_id,Organism_id , project_designator, sample_name, filename, run_date 
+    from $TBCY_FCS_RUN  where project_id = $project_id and sample_Name like '%$wildCardGuess%' order by project_designator, run_date";
+    
+    my $searchComboSql =   "select  fcs_run_id,Organism_id , project_designator, sample_name, filename, run_date 
+    from $TBCY_FCS_RUN  where project_id = $project_id and $queryClause  order by project_designator, run_date";
+   
+   my @rows;
+    @rows = $sbeams->selectSeveralColumns($sql);
+    @rows = $sbeams->selectSeveralColumns($immunoStainSql) if ( defined ($immunoStainName))and do { $parameters{noShow} = 1}; ;
+    @rows = $sbeams->selectSeveralColumns($wildCardSql) if ( $wildCard) and do { $parameters{noShow} = 1};;
+    @rows = $sbeams->selectSeveralColumns($searchComboSql) if ($parameters{searchCombo}) and do { $parameters{noShow} = 1};
      my %hashFile;
      my $count = 1; 
      if (@rows)
      {
+       
+       print qq~ <BR><BR><font size ="2">Looking for a specific <a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=_specifyRun"><font size =" 4 "> Cytometry Sort</a>?</font><br>~;
+       print qq ~You can search based on Sample Name (like), Date or Sort Entity<br>~;       
        print "<br><center><h4> Current Cytometry data for this project</h4></center><br>";
        print "<center><table border=2>"; 
        foreach my $row(@rows)
@@ -297,7 +333,7 @@ sub displayIntro
        print qq~<input type= hidden name="action" value = "$INTRO">  ~ ;
        print qq ~<input type =hidden name="noShow"  value = 1>~ if (! $parameters{noShow});
        print qq~<tr></tr><tr><td><input type ="submit" name= "SUBMIT" value = "More Cytometry Runs"> ~ if (! $parameters{noShow});
-       print qq~<tr></tr><tr><td><input type ="submit" name= "SUBMIT" value = "Featured Cytometry Runs">~ if $parameters{noShow};
+  #     print qq~<tr></tr><tr><td><input type ="submit" name= "SUBMIT" value = "Featured Cytometry Runs">~ if $parameters{noShow};
        print qq ~<input type =hidden name="noShow"  value = 0>~ if ($parameters{noShow});
        print $q->end_form; 
         }
@@ -400,8 +436,69 @@ sub processFile
     
 }
 #-----------------------------------------------------------------------------
+sub specifyRun
+{
+  	 my %args = @_;
+#### Process the arguments list
+ 	my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+  
+ # 	foreach my $k (keys %parameters)
+#		{
+#				print "$k  ==== $parameters{$k}<br>";
+  #  }
+  
+   my $project_id = $args{'project_id'};
+   my $entitySql = "select se.sort_entity_id,sort_entity_name from $TBCY_SORT_ENTITY se
+   join $TBCY_FCS_RUN rf on se.sort_entity_id = rf.sort_entity_id  where project_id = $project_id order by sort_entity_name";
+   my $entityOption = $sbeams->buildOptionList($entitySql, "Selected","MULTIOPTIONLIST");
+     
+   my $sampleNameSelect = "select  fcs_run_id, sample_Name  from $TBCY_FCS_RUN where project_id = $project_id order by sample_name";
+   my $sampleNameOption  =  $sbeams->buildOptionList($sampleNameSelect, "Selected", "MULTIOPTIONLIST");
 
-#-----------------------------------------------------------------------------
+   my $dateSelect = "select run_date, run_date from $TBCY_FCS_RUN where project_id = $project_id order by run_date";
+   my %dateHash = $sbeams->selectTwoColumnHash($dateSelect); 
+   my %modeDateHash;
+   foreach my $keys (keys %dateHash)
+   {
+    $keys =~ s/^(.*?)00:.*$/$1/;
+    $keys =~ s/\s+//g;
+    $modeDateHash{$keys} = $keys; 
+   }
+   
+#this is one form 
+   print $q->start_form;
+   print qq~ <TR></TR><TR></TR><tr><td nowrap width=300><b>Enter part or all of a Sample Name</b></td><td align=center width = 200><input type =" text" name="sampleGuess" size = 10></td>~; 
+  
+   print qq~<input type= hidden name="action" value = "$INTRO">  ~ ;
+   print qq ~<input type =hidden name="wildcardSample"  value = 1>~;
+    print qq~<td><input type ="submit" name= "SUBMIT" value = "QUERY"></td></tr><tr></tr><tr></tr><tr></tr>~;
+    print $q->end_form;
+
+#this is the second form    
+
+	
+    print $q->start_form;
+    print qq~ <tr><td nowrap width=300><b>Select none, one or multiple SampleName</b></td><td><Select Name="sampleID" Size=6 Multiple> $sampleNameOption</td></tr>~;
+   
+   print qq~ <tr><td nowrap width=300><b>Select none, one or multiple Sort Entities</b></td><td align=center><Select Name="sortEntityID" Size=6 Multiple> ~;
+   print "$entityOption</td></tr>";
+#   print $q->end_form;  
+   print qq~ <tr><td nowrap width=300><b>Select none, one or multiple Run  Dates<b></td><td align=center><Select Name="dates" Size=6 Multiple> ~;
+   foreach my $key (keys %modeDateHash)
+   {
+     print qq~<option value="\'$key\'"> $key\n~;
+   }
+   print qq~</select></td></tr>~;
+   print qq~<input type= hidden name="action" value = "$INTRO">  ~ ;
+   print qq ~<input type =hidden name="searchCombo"  value = 1>~;
+   print qq~<tr><td><input type ="submit" name= "SUBMIT" value = "QUERY COMBO"></td></tr>~;
+   print qq ~</TABLE></TD></TR></TABLE> ~;
+   print $q->end_form;
+    
+}
+#--------------------------------------------------------------------------
 
 sub getGraph
 {
@@ -410,9 +507,6 @@ sub getGraph
  	my $ref_parameters = $args{'ref_parameters'}
     || die "ref_parameters not passed";
   my %parameters = %{$ref_parameters};
-  my %resultset = ();
-	my $resultset_ref = \%resultset;
-	my %parameters = %{$ref_parameters};
  
 =comment
 	foreach my $k (keys %parameters)
