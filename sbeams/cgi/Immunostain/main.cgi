@@ -254,6 +254,46 @@ sub displayIntro
 {
 	 my %args = @_;
 
+	 
+#data for the grand summary	 
+
+#/*total number of stains*/
+my $totalStainsSql = qq /select count(*) from $TBIS_STAINED_SLIDE/;
+
+#/*number of imaged stains*/
+my $imagedStainsSql = qq/ select stain_name from $TBIS_STAINED_SLIDE ss
+join $TBIS_SLIDE_IMAGE si on ss.stained_slide_id = si.stained_slide_id
+group by stain_name/;
+
+#/*number of char. stains*/
+my $charStainsSql = qq/ select stain_name from $TBIS_STAINED_SLIDE ss
+join $TBIS_STAIN_CELL_PRESENCE scp on ss.stained_slide_id = scp.stained_slide_id
+group by stain_name/;
+
+#/*total number of antibodies*/
+my $totalAntibodySql = qq / select count(*) from $TBIS_ANTIBODY/;
+
+#/*number of characterized anitbodies*/
+my $charAntibodySql = qq / select antibody_name from $TBIS_STAINED_SLIDE ss
+join $TBIS_STAIN_CELL_PRESENCE scp on ss.stained_slide_id = scp.stained_slide_id
+join $TBIS_ANTIBODY ab on ss.antibody_id = ab.antibody_id group by antibody_name/;
+
+#/*total number of images*/
+my $totalImagesSql = qq / select count(*) from $TBIS_SLIDE_IMAGE/;
+
+#/*number of unique images */
+my $uniqueImagesSql = qq / select stained_slide_id from $TBIS_SLIDE_IMAGE where patindex('%- %', image_name) != 0/; 
+
+	 
+my $totalStains =($sbeams->selectOneColumn($totalStainsSql))[0];	 
+my $imagedStains = scalar($sbeams->selectOneColumn($imagedStainsSql));
+my $charStains  = scalar($sbeams->selectOneColumn($charStainsSql));
+my $totalAntibody  = ($sbeams->selectOneColumn($totalAntibodySql))[0];
+my $charAntibody  = scalar($sbeams->selectOneColumn($charAntibodySql));
+my $totalImages  = ($sbeams->selectOneColumn($totalImagesSql))[0];
+my $uniqueImages  = scalar($sbeams->selectOneColumn($uniqueImagesSql));
+
+	 
 #### get the project id
   my $project_id = $args{'project_id'} || die "project_id not passed";
 #load the javascript functions
@@ -326,8 +366,28 @@ my %tissueHash = $sbeams->selectTwoColumnHash($tissueSql);
 		print qq *
 		<tr></tr><tr></tr>
 		*; 
+#Grand Summary		
+print qq *	<tr><td><b><font color =red>Project Grand Summary :</b></font></td></tr><tr></tr><tr></tr><tr>
+			<td colspan = 2><UL>
+			<li>Total Number of Stains: $totalStains
+				<ul>
+				<li>Number of characterized Stains: $charStains
+				<li>Number of Stains with Images: $imagedStains
+				</ul>
+			<li>Total Number of Antibodies: $totalAntibody
+				<ul>
+				<li>Number of  Antibodies with Tissue Characterization: $charAntibody
+				</ul>
+			<li>Total Number of Images: $totalImages
+				<ul>
+				<li>Number of unique Images: $uniqueImages
+				</ul>
+			</ul>
+			<td>
+			</tr><tr></tr><tr></tr>*;
+			
 #summary by organismtype		
-		print "<tr><td>Project Summary by Organism:</td></tr><tr></tr><tr></tr><tr>";
+		print "<tr><td><b><font color=red>Project Summary by Organism:</b></font></td></tr><tr></tr><tr></tr><tr>";
 		foreach my $key (sort keys %hash)
 		{
 			print "<td colspan=2><B>$key </B><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&specimen_block_id=$humanString&display_options=MergeLevelsAndPivotCellTypes\"><b>[Full CD Specificity Summary]</A></b></td>" if $key =~ /human/i;
@@ -349,7 +409,7 @@ my %tissueHash = $sbeams->selectTwoColumnHash($tissueSql);
 			<tr></tr><tr></tr>";
     
 #summary  by tissuetype
-	print "<tr><td>Project Summary by TissueType:</td></tr><tr></tr><tr></tr><tr>";
+	print "<tr><td><b><font color =red>Project Summary by TissueType:</b></font></td></tr><tr></tr><tr></tr><tr>";
 	foreach my $key (sort keys %tissueTypeHash)
 		{
 				print "<tr><td colspan=2><b>$key</B><td></tr><tr>";
