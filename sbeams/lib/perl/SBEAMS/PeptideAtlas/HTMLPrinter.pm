@@ -96,7 +96,7 @@ sub displayGuestPageHeader {
   use HTTP::Request;
   my $ua = LWP::UserAgent->new();
   my $skinLink = 'http://www.peptideatlas.org';
-  my $response = $ua->request( HTTP::Request->new( GET => "$skinLink/index.php" ) );
+  my $response = $ua->request( HTTP::Request->new( GET => "$skinLink/.index.dbbrowse.php" ) );
   my @page = split( "\r", $response->content() );
   my $skin = '';
   for ( @page ) {
