@@ -32,12 +32,23 @@ public class PasswordDialog extends JDialog {
   public PasswordDialog(Frame parent, String title) {
 	super(parent, title, true);
   	setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+
+	this.pack();
+
+    GraphicsConfiguration gc = this.getGraphicsConfiguration();
+	int screenHeight = (int)gc.getBounds().getHeight();
+	int	screenWidth = (int)gc.getBounds().getWidth();
+    int windowWidth = this.getWidth();
+    int windowHeight = this.getHeight();
+    int x = (int)((screenWidth-windowWidth)/2);
+    int y = (int)((screenHeight-windowHeight)/2);
+
+    this.setLocation (x, y);
+
 	if (title == null){
 	  setTitle("User Login");
 	}
-	if (parent != null){
-	  setLocationRelativeTo(parent);
-	}
+
   }
 //-----------------------------------------------------------------------------------------------
   protected void dialogInit(){
