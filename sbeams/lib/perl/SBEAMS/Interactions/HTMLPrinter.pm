@@ -112,11 +112,12 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetBioentities"><nobr>&nbsp;&nbsp;&nbsp;Bioentities</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetInteractions"><nobr>&nbsp;&nbsp;&nbsp;Interactions</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=project"><nobr>&nbsp;&nbsp;&nbsp;Projects</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=IN_bioentity"><nobr>&nbsp;&nbsp;&nbsp;BioEntities</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=IN_bioentity"><nobr>&nbsp;&nbsp;&nbsp;Bioentities</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=IN_interaction"><nobr>&nbsp;&nbsp;&nbsp;Interactions</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=IN_assay"><nobr>&nbsp;&nbsp;&nbsp;Assays</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=IN_publication"><nobr>&nbsp;&nbsp;&nbsp;Publications</nobr></a></td></tr>
