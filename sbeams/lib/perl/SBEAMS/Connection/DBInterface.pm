@@ -697,7 +697,7 @@ sub convert_concatenation {
 
   #### Separate out functions and quoted text segments
   my @words = split( /(\w+\s*$RE{balanced}{-parens=>'()'}|$RE{delimited}{-delim=>"'"}|RE{delimited}{-delim=>'"'})/, $select_list);
-  print "0-->", @words;
+#  print "0-->", @words;
 
   my @new;
   for (@words){
