@@ -40,20 +40,22 @@ The following Perl Modules often not found on a standard UNIX/Linux
 setup are required before installation can begin.  Version numbers are
 for what is used for development; older or newer versions may work:
 
-DBI
+Authen-Smb-0.91      (For Windows Domain Authentication instead of UNIX auth)
+Crypt-CBC-1.25
+Crypt-IDEA-1.01
 Data-ShowTable-3.3b  (specially modified version by Deutsch and included)
 DBD-Sybase-0.94      (assuming Sybase or MS SQL Server is back end)
 DBD-????             (if you are using a different type of back end RDBMS)
-Crypt-CBC-1.25
-Crypt-IDEA-1.01
-Authen-Smb-0.91      (For Windows Domain Authentication instead of UNIX auth)
-XML-Parser-2.29
+DBI
 GD-1.41
 GDGraph-1.35a        (specially modified version by Deutsch and included)
 GDGraph-XY-0.92
 GDTextUtil-0.84
 Regexp-Common-2.113
+XML-Parser-2.29
 
+Some versions of perl may require the following module be installed
+URI-1.31
 
 Additional common Perl modules are needed, but may not be on your system.
 Should really write a little dependency checker program.  FIXME.
@@ -156,16 +158,16 @@ cd sbeams
   (for now, just create the directories for stuff to live in right here, but
    it may be a good idea to make a sym link to another location or partition
    since there could eventually be large amounts of data here!!!)
-mkdir data images/tmp tmp tmp/queries
+mkdir data images/tmp tmp tmp/../queries
 chmod a+rwx images/tmp tmp/queries
-ln -s ../includes doc/includes
+ln -s includes doc/includes
 
 For now, make the main site point to dev1, but eventually when there is
 parallel development and production usage, these should be separate trees
 kept in sync with CVS or some other such tool.
 
 (may require root privilege)
-cd ..
+cd ../..
 ln -s dev1/sbeams sbeams
 
 
