@@ -88,13 +88,14 @@ sub main {
 
     #Step 1
     readCondAndPlateIDandArrayQuant();
-    #checkHashes();
+    
+    checkHashes();
 
     #Step2
     #send a list of all dapple files
     @dappleFiles = displayDappleFiles();
     makeNewCondRep(@dappleFiles);
-
+    
     #Step3
     #Run through the files, sending one each time:
     foreach my $file (@dappleFiles) {
@@ -458,10 +459,10 @@ sub insertSpotQuantitation {
 	next if ( /^\#/ || /^1536/);
 	
 	my @entry = split;
-	my $set_row = $entry[0];
-	my $set_col = $entry[1];
-	my $rel_row = $entry[2];
-	my $rel_col = $entry[3];
+	my $set_col = $entry[0];
+	my $set_row = $entry[1];
+	my $rel_col = $entry[2];
+	my $rel_row = $entry[3];
 	my $size = $entry[4];
 	my $flag = $entry[5];
 	my $intensity = $entry[6];
