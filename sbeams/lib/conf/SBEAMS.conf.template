@@ -16,6 +16,7 @@ WWW_UID = 48
 CRYPT_KEY = ChangeThis!
 BARCOLOR = #cdd1e7
 HOSTNAME = host.domain.org
+DBADMIN = SBEAMS Administrator <sbeams@localdomain.org>
 
 
 DB_SERVER   = sqlhostname
