@@ -237,13 +237,51 @@ sub handle_request {
   return if ($biosequence_name_clause eq '-1');
 
 
-  #### Build E VALUE constraint
-  my $e_value_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"DM.e_value",
-    constraint_type=>"flexible_float",
-    constraint_name=>"Expectation Value",
-    constraint_value=>$parameters{e_value_constraint} );
-  return if ($e_value_clause eq '-1');
+  #### Build GENE SYMBOL constraint
+  my $gene_symbol_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BSA.gene_symbol",
+    constraint_type=>"plain_text",
+    constraint_name=>"Gene Symbol",
+    constraint_value=>$parameters{gene_symbol_constraint} );
+  return if ($gene_symbol_clause eq '-1');
+
+
+  #### Build FULL GENE NAME constraint
+  my $full_gene_name_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BSA.full_gene_name",
+    constraint_type=>"plain_text",
+    constraint_name=>"full Gene Name",
+    constraint_value=>$parameters{full_gene_name_constraint} );
+  return if ($full_gene_name_clause eq '-1');
+
+
+  #### Build EC Numbers constraint
+  if (defined($parameters{EC_number_constraint}) &&
+      $parameters{EC_number_constraint} &&
+      $parameters{EC_number_constraint} !~ /^%.+%$/) {
+    $parameters{EC_number_constraint} =
+      '%'.$parameters{EC_number_constraint}.'%';
+  }
+  my $EC_numbers_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"D.EC_numbers",
+    constraint_type=>"plain_text",
+    constraint_name=>"EC Number",
+    constraint_value=>$parameters{EC_number_constraint} );
+  return if ($EC_numbers_clause eq '-1');
+
+  if ($EC_numbers_clause =~ /(\'[%\d\.\-]+\')/) {
+    my $str = $1;
+    $EC_numbers_clause =~ s/$str/$str OR BSA.EC_numbers LIKE $str/;
+  }
+
+
+  #### Build BIOSEQUENCE_DESC constraint
+  my $biosequence_desc_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.biosequence_desc",
+    constraint_type=>"plain_text",
+    constraint_name=>"BioSequence Description",
+    constraint_value=>$parameters{biosequence_desc_constraint} );
+  return if ($biosequence_desc_clause eq '-1');
 
 
   #### Build BIOSEQUENCE_SEQ constraint
@@ -254,15 +292,6 @@ sub handle_request {
     constraint_value=>$parameters{biosequence_seq_constraint} );
   return if ($biosequence_seq_clause eq '-1');
   $biosequence_seq_clause =~ s/\*/\%/g;
-
-
-  #### Build BIOSEQUENCE_DESC constraint
-  my $biosequence_desc_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"BS.biosequence_desc",
-    constraint_type=>"plain_text",
-    constraint_name=>"BioSequence Description",
-    constraint_value=>$parameters{biosequence_desc_constraint} );
-  return if ($biosequence_desc_clause eq '-1');
 
 
   #### Build MOLECULAR FUNCTION constraint
@@ -335,6 +364,24 @@ sub handle_request {
     constraint_name=>"Domain Match Name",
     constraint_value=>$parameters{domain_match_name_constraint} );
   return if ($domain_match_name_clause eq '-1');
+
+
+  #### Build MATCH ANNOTATION constraint
+  my $match_annotation_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"DM.match_annotation",
+    constraint_type=>"plain_text",
+    constraint_name=>"Match Annotation",
+    constraint_value=>$parameters{match_annotation_constraint} );
+  return if ($match_annotation_clause eq '-1');
+
+
+  #### Build E VALUE constraint
+  my $e_value_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"DM.e_value",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Expectation Value",
+    constraint_value=>$parameters{e_value_constraint} );
+  return if ($e_value_clause eq '-1');
 
 
   #### Build TRANSMEMBRANE CLASS constraint
@@ -519,12 +566,16 @@ sub handle_request {
 	 WHERE 1 = 1
         $biosequence_set_clause
 	$biosequence_name_clause
-	$e_value_clause
         $biosequence_desc_clause
+        $gene_symbol_clause
+        $full_gene_name_clause
+        $EC_numbers_clause
 
         $domain_match_source_clause
         $domain_match_type_clause
         $domain_match_name_clause
+	$e_value_clause
+        $match_annotation_clause
 
         $molecular_function_clause
         $biological_process_clause
