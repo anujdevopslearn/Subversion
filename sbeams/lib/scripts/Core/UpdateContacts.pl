@@ -165,6 +165,8 @@ sub handleRequest {
 	LEFT JOIN $TB_ORGANIZATION DepO ON (C.department_id=DepO.organization_id)
         LEFT JOIN $TB_ORGANIZATION LabO ON (C.lab_id=LabO.organization_id)
         LEFT JOIN $TB_ORGANIZATION GrpO ON (C.group_id=GrpO.organization_id)
+       WHERE C.record_status != 'D'
+         AND UL.record_status != 'D'
        ORDER BY C.last_name,C.first_name
     ~;
 
@@ -242,14 +244,14 @@ sub handleRequest {
     $sql = "SELECT organization, organization_id ".
 	   "FROM $TB_ORGANIZATION O ".
 	   "JOIN organization_type OT ON (O.organization_type_id=OT.organization_type_id) ".
-	   "WHERE organization_type_name IN ('Non-profit organization','For-profit company','UNKNOWN') ";
+	   "WHERE organization_type_name IN ('Non-profit organization','For-profit company','UNKNOWN') AND O.record_status !='D'";
       #print "\n---organization ids---\n$sql\n";
     my %organization_ids = $sbeams->selectTwoColumnHash($sql);
 
    
     $sql = "SELECT organization, organization_id ".
 	   "FROM $TB_ORGANIZATION O ".
-	   "JOIN organization_type OT ON (O.organization_type_id=OT.organization_type_id) ".
+	   "JOIN organization_type OT ON (O.organization_type_id=OT.organization_type_id) AND O.record_status !='D'".
 	   "WHERE organization_type_name = 'Department' ";
       #print "\n---department ids---\n$sql\n";
     my %department_ids = $sbeams->selectTwoColumnHash($sql);
@@ -258,7 +260,7 @@ sub handleRequest {
     $sql = "SELECT organization, organization_id ".
 	   "FROM $TB_ORGANIZATION O ".
 	   "JOIN organization_type OT ON (O.organization_type_id=OT.organization_type_id) ".
-	   "WHERE organization_type_name = 'Group' ";
+	   "WHERE organization_type_name = 'Group' AND O.record_status !='D'";
       #print "\n---group ids---\n$sql\n";
     my %group_ids = $sbeams->selectTwoColumnHash($sql);
 
@@ -266,7 +268,7 @@ sub handleRequest {
     $sql = "SELECT organization, organization_id ".
 	   "FROM $TB_ORGANIZATION O ".
 	   "JOIN organization_type OT ON (O.organization_type_id=OT.organization_type_id) ".
-	   "WHERE organization_type_name = 'Lab' ";
+	   "WHERE organization_type_name = 'Lab' AND O.record_status !='D'";
       #print "\n---lab ids---\n$sql\n";
     my %lab_ids = $sbeams->selectTwoColumnHash($sql);
 
