@@ -74,6 +74,22 @@ use vars qw(@ISA @EXPORT
     $TBMA_AFFY_ARRAY
     $TBMA_AFFY_ARRAY_SAMPLE_PROTOCOL
     $TBMA_AFFY_ARRAY_PROTOCOL
+    
+    $TBMA_AFFY_GENE_INTENSITY		
+    $TBMA_AFFY_ANNOTATION				
+    $TBMA_AFFY_DB_LINKS
+    $TBMA_AFFY_ANNOTATION_SET
+     
+    $TBMA_OVERLAPPING_TRANSCRIPT
+    $TBMA_GENE_ONTOLOGY
+    $TBMA_GENE_ONTOLOGY_TYPE
+    $TBMA_PROTEIN_FAMILIES
+    $TBMA_TRANS_MEMBRANE
+    $TBMA_TRANS_MEMBRANE_DOMAIN
+    $TBMA_INTERPRO
+    $TBMA_PROTEIN_DOMAIN
+    $TBMA_ALIGNMENT	
+	
 );
 
 require Exporter;
@@ -137,6 +153,24 @@ require Exporter;
     $TBMA_AFFY_ARRAY
     $TBMA_AFFY_ARRAY_SAMPLE_PROTOCOL
     $TBMA_AFFY_ARRAY_PROTOCOL
+
+    $TBMA_AFFY_GENE_INTENSITY		
+    $TBMA_AFFY_ANNOTATION				
+    $TBMA_AFFY_DB_LINKS
+    $TBMA_AFFY_ANNOTATION_SET
+    
+    $TBMA_OVERLAPPING_TRANSCRIPT
+    $TBMA_GENE_ONTOLOGY
+    $TBMA_GENE_ONTOLOGY_TYPE
+    $TBMA_PROTEIN_FAMILIES
+    $TBMA_TRANS_MEMBRANE
+    $TBMA_TRANS_MEMBRANE_DOMAIN
+    $TBMA_INTERPRO
+    $TBMA_PROTEIN_DOMAIN
+    $TBMA_ALIGNMENT
+
+
+
 );
 
 
@@ -204,7 +238,23 @@ $TBMA_AFFY_ARRAY_SAMPLE	  = "${mod}affy_array_sample";
 $TBMA_AFFY_ARRAY	  = "${mod}affy_array";
 
 $TBMA_AFFY_ARRAY_SAMPLE_PROTOCOL = "${mod}affy_array_sample_protocol";
-$TBMA_AFFY_ARRAY_PROTOCOL	= "${mod}affy_array_protocol";
+$TBMA_AFFY_ARRAY_PROTOCOL	 = "${mod}affy_array_protocol";
+
+$TBMA_AFFY_GENE_INTENSITY	=  "${mod}affy_gene_intensity";			
+$TBMA_AFFY_ANNOTATION		=  "${mod}affy_annotation";				
+$TBMA_AFFY_DB_LINKS		=  "${mod}affy_db_links";
+$TBMA_AFFY_ANNOTATION_SET	=  "${mod}affy_annotation_set";
+
+$TBMA_OVERLAPPING_TRANSCRIPT	=  "${mod}overlapping_transcript";
+$TBMA_GENE_ONTOLOGY		=  "${mod}gene_ontology";
+$TBMA_GENE_ONTOLOGY_TYPE	=  "${mod}gene_ontology_type";
+$TBMA_PROTEIN_FAMILIES		=  "${mod}protein_families";
+$TBMA_TRANS_MEMBRANE		=  "${mod}trans_membrane";
+$TBMA_TRANS_MEMBRANE_DOMAIN	=  "${mod}trans_membrane_domain";
+$TBMA_INTERPRO			=  "${mod}interpro";
+$TBMA_PROTEIN_DOMAIN		=  "${mod}protein_domain";
+$TBMA_ALIGNMENT			=  "${mod}alignment";
+
 
 
 1;
