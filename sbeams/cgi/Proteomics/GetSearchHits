@@ -210,7 +210,6 @@ sub handle_request {
     PROGRAM_FILE_NAME=>$PROGRAM_FILE_NAME,
     parameters_ref=>\%parameters,
     input_types_ref=>\%input_types,
-    mask_user_context => 1,
   );
 
 
