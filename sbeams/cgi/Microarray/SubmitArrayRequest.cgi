@@ -17,8 +17,8 @@
 # Get the script set up with everything it will need
 ###############################################################################
 use strict;
-use lib qw (../lib/perl);
-use vars qw ($q $sbeams $sbeamsMAW $dbh $current_contact_id $current_username
+use lib qw (../../lib/perl);
+use vars qw ($q $sbeams $sbeamsMA $dbh $current_contact_id $current_username
              $current_work_group_id $current_work_group_name
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              $PK_COLUMN_NAME @MENU_OPTIONS
@@ -32,15 +32,15 @@ use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
 
-use SBEAMS::MicroArrayWeb;
-use SBEAMS::MicroArrayWeb::Settings;
-use SBEAMS::MicroArrayWeb::Tables;
-use SBEAMS::MicroArrayWeb::TableInfo;
+use SBEAMS::Microarray;
+use SBEAMS::Microarray::Settings;
+use SBEAMS::Microarray::Tables;
+use SBEAMS::Microarray::TableInfo;
 
 $q = new CGI;
 $sbeams = new SBEAMS::Connection;
-$sbeamsMAW = new SBEAMS::MicroArrayWeb;
-$sbeamsMAW->setSBEAMS($sbeams);
+$sbeamsMA = new SBEAMS::Microarray;
+$sbeamsMA->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 
@@ -60,18 +60,18 @@ main();
 ###############################################################################
 sub main { 
 
-    ($CATEGORY) = $sbeamsMAW->returnTableInfo($TABLE_NAME,"CATEGORY");
-    ($PROGRAM_FILE_NAME) = $sbeamsMAW->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
-    ($DB_TABLE_NAME) = $sbeamsMAW->returnTableInfo($TABLE_NAME,"DB_TABLE_NAME");
-    ($PK_COLUMN_NAME) = $sbeamsMAW->returnTableInfo($TABLE_NAME,"PK_COLUMN_NAME");
-    @MENU_OPTIONS = $sbeamsMAW->returnTableInfo($TABLE_NAME,"MENU_OPTIONS");
+    ($CATEGORY) = $sbeamsMA->returnTableInfo($TABLE_NAME,"CATEGORY");
+    ($PROGRAM_FILE_NAME) = $sbeamsMA->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+    ($DB_TABLE_NAME) = $sbeamsMA->returnTableInfo($TABLE_NAME,"DB_TABLE_NAME");
+    ($PK_COLUMN_NAME) = $sbeamsMA->returnTableInfo($TABLE_NAME,"PK_COLUMN_NAME");
+    @MENU_OPTIONS = $sbeamsMA->returnTableInfo($TABLE_NAME,"MENU_OPTIONS");
 
     #### Do the SBEAMS authentication and exit if a username is not returned
     exit unless ($current_username = $sbeams->Authenticate());
 
     #### Don't print the header, do what the program does, and print footer
     processRequests();
-    $sbeamsMAW->printPageFooter();
+    $sbeamsMA->printPageFooter();
 
 } # end main
 
@@ -117,7 +117,7 @@ sub processRequests {
 ###############################################################################
 sub printOptions {
 
-    $sbeamsMAW->printPageHeader();
+    $sbeamsMA->printPageHeader();
     $sbeams->printUserContext();
 
     print qq!
@@ -134,7 +134,7 @@ sub printOptions {
     }
 
     print "$LINESEPARATOR<P>";
-    $sbeamsMAW->printPageFooter("CloseTables");
+    $sbeamsMA->printPageFooter("CloseTables");
     showTable("WithOptions");
 
 } # end printOptions
@@ -147,7 +147,7 @@ sub printOptions {
 ###############################################################################
 sub printEntryForm {
 
-    $sbeamsMAW->printPageHeader();
+    $sbeamsMA->printPageHeader();
     $sbeams->printUserContext();
 
     my %parameters;
@@ -158,9 +158,9 @@ sub printEntryForm {
     my $total_price=0;
 
     # Get the columns for this table
-    my @columns = $sbeamsMAW->returnTableInfo($TABLE_NAME,"ordered_columns");
+    my @columns = $sbeamsMA->returnTableInfo($TABLE_NAME,"ordered_columns");
     my %input_types = 
-      $sbeamsMAW->returnTableInfo($TABLE_NAME,"input_types");
+      $sbeamsMA->returnTableInfo($TABLE_NAME,"input_types");
 
     # Read the form values for each column
     foreach $element (@columns) {
@@ -658,7 +658,7 @@ sub printEntryForm {
     !;
 
 
-    $sbeamsMAW->printPageFooter("CloseTables");
+    $sbeamsMA->printPageFooter("CloseTables");
 
 } # end printEntryForm
 
@@ -674,7 +674,7 @@ sub showTable {
     my $detail_level  = $q->param('detail_level') || "BASIC";
 
     my ($main_query_part) =
-      $sbeamsMAW->returnTableInfo($TABLE_NAME,$detail_level."Query");
+      $sbeamsMA->returnTableInfo($TABLE_NAME,$detail_level."Query");
 
     my ($full_where_clause,$full_orderby_clause) = 
       $sbeams->processTableDisplayControls($TABLE_NAME);
@@ -686,7 +686,7 @@ sub showTable {
     ~;
 
     my ($element,$value);
-    my %url_cols = $sbeamsMAW->returnTableInfo($TABLE_NAME,"url_cols");
+    my %url_cols = $sbeamsMA->returnTableInfo($TABLE_NAME,"url_cols");
 
     return $sbeams->displayQueryResult(sql_query=>$sql_query,
         url_cols_ref=>\%url_cols);
@@ -708,7 +708,7 @@ sub processEntryForm {
     my $total_price=0;
 
     # Get the columns for this table
-    my @columns = $sbeamsMAW->returnTableInfo($TABLE_NAME,"ordered_columns");
+    my @columns = $sbeamsMA->returnTableInfo($TABLE_NAME,"ordered_columns");
 
     # Read the form values for each column
     foreach $element (@columns) {
@@ -731,7 +731,7 @@ sub processEntryForm {
     }
 
 
-    $sbeamsMAW->printPageHeader();
+    $sbeamsMA->printPageHeader();
 
     if ($parameters{"request_status"} eq "Not Yet Submitted") {
       $parameters{"request_status"}="Submitted";
@@ -751,7 +751,7 @@ sub processEntryForm {
 
     # Check for missing required information
     my @required_columns = 
-      $sbeamsMAW->returnTableInfo($TABLE_NAME,"required_columns");
+      $sbeamsMA->returnTableInfo($TABLE_NAME,"required_columns");
     if (@required_columns) {
       my $error_message;
       foreach $element (@required_columns) {
@@ -808,7 +808,7 @@ sub processEntryForm {
     }
 
     my @data_columns = 
-      $sbeamsMAW->returnTableInfo($TABLE_NAME,"data_columns");
+      $sbeamsMA->returnTableInfo($TABLE_NAME,"data_columns");
 
 
     # If a PK has already been provided and action is /^SET/ then
@@ -1376,7 +1376,7 @@ sub printAttemptedChangeResult {
 ###############################################################################
 sub printCompletedEntry {
 
-    $sbeamsMAW->printPageHeader(navigation_bar=>"NO");
+    $sbeamsMA->printPageHeader(navigation_bar=>"NO");
 
     my %parameters;
     my $element;
@@ -1386,7 +1386,7 @@ sub printCompletedEntry {
     my $total_price=0;
 
     # Get the columns for this table
-    my @columns = $sbeamsMAW->returnTableInfo($TABLE_NAME,"ordered_columns");
+    my @columns = $sbeamsMA->returnTableInfo($TABLE_NAME,"ordered_columns");
 
     # Read the form values for each column
     foreach $element (@columns) {
@@ -1800,7 +1800,7 @@ sub printCompletedEntry {
     ~;
 
 
-    $sbeamsMAW->printPageFooter("CloseTables");
+    $sbeamsMA->printPageFooter("CloseTables");
 
 } # end printEntryForm
 

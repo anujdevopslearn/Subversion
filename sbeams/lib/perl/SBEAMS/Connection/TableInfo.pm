@@ -17,7 +17,7 @@ use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
 # Need to include child table definitions if this program is to process those
-use SBEAMS::MicroArrayWeb::Tables;
+use SBEAMS::Microarray::Tables;
 use SBEAMS::Tools::Tables;
 use SBEAMS::GEAP::Tables;
 use SBEAMS::Proteomics::Tables;

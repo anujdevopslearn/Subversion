@@ -5,7 +5,7 @@ package SBEAMS::Microarray::DBInterface;
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
 # $Id$
 #
-# Description : This is part of the SBEAMS::Connection module which handles
+# Description : This is part of the SBEAMS::Microarray module which handles
 #               general communication with the database.
 #
 ###############################################################################

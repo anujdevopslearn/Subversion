@@ -15,28 +15,28 @@
 # Get the script set up with everything it will need
 ###############################################################################
 use strict;
-use vars qw ($q $sbeams $sbeamsMAW $PROGRAM_FILE_NAME
+use vars qw ($q $sbeams $sbeamsMA $PROGRAM_FILE_NAME
              $current_contact_id $current_username);
-use lib qw (../lib/perl);
+use lib qw (../../lib/perl);
 use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 
-use SBEAMS::MicroArrayWeb;
-use SBEAMS::MicroArrayWeb::Settings;
+use SBEAMS::Microarray;
+use SBEAMS::Microarray::Settings;
 
 $q   = new CGI;
 $sbeams = new SBEAMS::Connection;
-$sbeamsMAW = new SBEAMS::MicroArrayWeb;
-$sbeamsMAW->setSBEAMS($sbeams);
+$sbeamsMA = new SBEAMS::Microarray;
+$sbeamsMA->setSBEAMS($sbeams);
 
 
 ###############################################################################
 # Global Variables
 ###############################################################################
-$PROGRAM_FILE_NAME = 'MicroArrayMain.cgi';
+$PROGRAM_FILE_NAME = 'main.cgi';
 main();
 
 
@@ -52,9 +52,9 @@ sub main {
     exit unless ($current_username = $sbeams->Authenticate());
 
     #### Print the header, do what the program does, and print footer
-    $sbeamsMAW->printPageHeader();
+    $sbeamsMA->printPageHeader();
     showMainPage();
-    $sbeamsMAW->printPageFooter();
+    $sbeamsMA->printPageFooter();
 
 } # end main
 

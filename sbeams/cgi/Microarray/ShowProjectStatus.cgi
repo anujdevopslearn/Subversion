@@ -15,8 +15,8 @@
 # Get the script set up with everything it will need
 ###############################################################################
 use strict;
-use lib qw (../lib/perl);
-use vars qw ($q $sbeams $sbeamsMAW $dbh $current_contact_id $current_username
+use lib qw (../../lib/perl);
+use vars qw ($q $sbeams $sbeamsMA $dbh $current_contact_id $current_username
              $current_work_group_id $current_work_group_name
              $current_project_id $current_project_name
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
@@ -29,14 +29,14 @@ use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
-use SBEAMS::MicroArrayWeb;
-use SBEAMS::MicroArrayWeb::Settings;
-use SBEAMS::MicroArrayWeb::Tables;
+use SBEAMS::Microarray;
+use SBEAMS::Microarray::Settings;
+use SBEAMS::Microarray::Tables;
 
 $q = new CGI;
 $sbeams = new SBEAMS::Connection;
-$sbeamsMAW = new SBEAMS::MicroArrayWeb;
-$sbeamsMAW->setSBEAMS($sbeams);
+$sbeamsMA = new SBEAMS::Microarray;
+$sbeamsMA->setSBEAMS($sbeams);
 
 
 ###############################################################################
@@ -57,9 +57,9 @@ sub main {
     exit unless ($current_username = $sbeams->Authenticate());
 
     #### Print the header, do what the program does, and print footer
-    $sbeamsMAW->printPageHeader();
+    $sbeamsMA->printPageHeader();
     processRequests();
-    $sbeamsMAW->printPageFooter();
+    $sbeamsMA->printPageFooter();
 
 } # end main
 

@@ -5,7 +5,7 @@ package SBEAMS::Microarray::HTMLPrinter;
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
 # $Id$
 #
-# Description : This is part of the SBEAMS::WebInterface module which handles
+# Description : This is part of the SBEAMS::Microarray module which handles
 #               standardized parts of generating HTML.
 #
 #		This really begs to get a lot more object oriented such that
@@ -90,21 +90,21 @@ sub printPageHeader {
 	<table border=0 width="120" cellpadding=2 cellspacing=0>
 
 	<tr><td><a href="$CGI_BASE_DIR/main.cgi">>$DBTITLE Home</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/MicroArrayMain.cgi">>MicroArray Home</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Microarray/main.cgi">>MicroArray Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">>Logout</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=contact">- Contacts</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=project">- Projects</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=protocol">- Protocols</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=slide_lot">- Slides</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=printing_batch">- Printing</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=array">- Arrays</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=labeling">- Label/Hyb</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=array_scan">- Scan/Quant</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=contact">- Contacts</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=project">- Projects</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=protocol">- Protocols</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=slide_lot">- Slides</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=printing_batch">- Printing</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=array">- Arrays</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=labeling">- Label/Hyb</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=array_scan">- Scan/Quant</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/SubmitArrayRequest.cgi?TABLE_NAME=array_request">- Array Requests</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=slide_type">- Array Info</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/ShowProjectStatus.cgi">- Project Status</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/GridAlignCheck.cgi">- Grid Align Check</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Microarray/SubmitArrayRequest.cgi?TABLE_NAME=array_request">- Array Requests</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=slide_type">- Array Info</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Microarray/ShowProjectStatus.cgi">- Project Status</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Microarray/GridAlignCheck.cgi">- Grid Align Check</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/Microarray/ProcessProject.cgi">- Process a Project</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=user_login">- Admin</a></td></tr>
@@ -331,7 +331,7 @@ sub printPageFooter {
   if ($flag =~ /Footer/) {
     print qq~
 	<BR><HR SIZE="2" NOSHADE WIDTH="30%" ALIGN="LEFT">
-	SBEAMS - MicroArray [Under Development]<BR><BR><BR>
+	SBEAMS - Microarray [Under Development]<BR><BR><BR>
 	</BODY></HTML>\n\n
     ~;
   }
