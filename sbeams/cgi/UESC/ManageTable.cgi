@@ -132,8 +132,10 @@ sub main {
 
 
   #### Decide what action to take based on information so far
+  if ($parameters{"GetFile"} && $parameters{"$PK_COLUMN_NAME"}) {
+    getFile(); return;
+  }
   $sbeamsMOD->printPageHeader();
-
   if      ($parameters{action} eq 'VIEWRESULTSET') { printOptions();
   } elsif ($parameters{action} eq 'REFRESH') { printEntryForm();
   } elsif ($parameters{action}) { processEntryForm();
