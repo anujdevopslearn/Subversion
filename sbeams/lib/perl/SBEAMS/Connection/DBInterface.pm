@@ -821,6 +821,7 @@ sub deleteRecordsAndChildren {
   my $table_name = $args{'table_name'} || die("table_name not passed");
   my $table_child_relationship = $args{'table_child_relationship'}
     || die("table_child_relationship not passed");
+  my $table_PK_column_names = $args{'table_PK_column_names'};
   my $delete_PKs = $args{'delete_PKs'} || die("delete_PKs not passed");
   my $delete_batch = $args{'delete_batch'} || 0;
   my $VERBOSE = $args{'verbose'} || 0;
@@ -829,6 +830,13 @@ sub deleteRecordsAndChildren {
   my $TESTONLY = $args{'testonly'} || 0;
 
   print "  Entering deleteRecordsAndChildren\n\n" if ($VERBOSE > 1);
+
+  #### Define and redereference PK column names
+  my %table_PK_column_names = ();
+  if (defined($table_PK_column_names)) {
+    %table_PK_column_names = %{$table_PK_column_names};
+  }
+
 
   #### If there are child tables, process them first
   if (defined($table_child_relationship->{$table_name})) {
@@ -862,10 +870,15 @@ sub deleteRecordsAndChildren {
   	    my @ids = @{$delete_PKs};
   	    @ids = @ids[$first_element..$last_element];
 
+	    my $child_PK = $table_PK_column_names{$child_table_name} ||
+	      "${child_table_name}_id";
+	    my $parent_PK = $table_PK_column_names{$table_name} ||
+	      "${table_name}_id";
+
   	    my $sql = "
-  	      SELECT ${child_table_name}_id
+  	      SELECT $child_PK
   	      FROM ${DATABASE}$child_table_name
-  	      WHERE ${table_name}_id IN (".join(",",@ids).")
+  	      WHERE $parent_PK IN (".join(",",@ids).")
   	    ";
 
   	    print "$sql\n\n" if ($VERBOSE > 1);
@@ -881,6 +894,7 @@ sub deleteRecordsAndChildren {
   	      my $result = $self->deleteRecordsAndChildren(
   		table_name => $child_table_name,
   		table_child_relationship => $table_child_relationship,
+                table_PK_column_names => $table_PK_column_names,
   		delete_PKs => \@child_PKs,
   		delete_batch => $delete_batch,
   		database => $DATABASE,
@@ -904,11 +918,15 @@ sub deleteRecordsAndChildren {
 	} elsif ($child_type eq 'A') {
 
           #### Get the child table name ids to be deleted
+          my $child_PK = $table_PK_column_names{$child_table_name} ||
+            "${child_table_name}_id";
+          my $parent_PK = $table_PK_column_names{$table_name} ||
+            "${table_name}_id";
 	  my $sql = "
-	    SELECT ${child_table_name}_id
+	    SELECT $child_PK
             FROM ${DATABASE}$table_name
-            WHERE ${table_name}_id IN (".join(",",@{$delete_PKs}).")
-            AND ${child_table_name}_id IS NOT NULL
+            WHERE $parent_PK IN (".join(",",@{$delete_PKs}).")
+            AND $child_PK IS NOT NULL
           ";
 	  print "$sql\n\n" if ($VERBOSE > 1);
 	  print "SELECT #2 with ",scalar(@{$delete_PKs})," element IN\n\n"
@@ -921,6 +939,7 @@ sub deleteRecordsAndChildren {
             my $result = $self->deleteRecordsAndChildren(
               table_name => $child_table_name,
               table_child_relationship => $table_child_relationship,
+              table_PK_column_names => $table_PK_column_names,
               delete_PKs => \@child_PKs,
               delete_batch => $delete_batch,
               database => $DATABASE,
@@ -935,10 +954,12 @@ sub deleteRecordsAndChildren {
 	} elsif ($child_type eq 'PKLC') {
 
       	  #### Create the SQL and do the DELETE
+          my $parent_PK = $table_PK_column_names{$table_name} ||
+            "${table_name}_id";
       	  my $sql = "DELETE FROM ${DATABASE}$child_table_name ".
-            "WHERE ${table_name}_id IN (".join(",",@{$delete_PKs}).")";
+            "WHERE $parent_PK IN (".join(",",@{$delete_PKs}).")";
       	  print "$sql\n\n" if ($VERBOSE > 1);
-      	  print "  DELETING FROM $child_table_name by ${table_name}_id\n"
+      	  print "  DELETING FROM $child_table_name by $parent_PK\n"
       	    if ($VERBOSE);
       	  print "." unless ($QUIET || $VERBOSE);
       	  $self->executeSQL($sql) unless ($TESTONLY);
@@ -978,7 +999,9 @@ sub deleteRecordsAndChildren {
     @ids = @ids[$first_element..$last_element];
 
     #### Create the SQL and do the DELETE
-    my $sql = "DELETE FROM ${DATABASE}$table_name WHERE ${table_name}_id IN (".
+    my $parent_PK = $table_PK_column_names{$table_name} ||
+      "${table_name}_id";
+    my $sql = "DELETE FROM ${DATABASE}$table_name WHERE $parent_PK IN (".
       join(",",@ids).")";
     print "$sql\n\n" if ($VERBOSE > 1);
     print "  DELETING FROM $table_name (batch $first_element / $n_ids)\n"
