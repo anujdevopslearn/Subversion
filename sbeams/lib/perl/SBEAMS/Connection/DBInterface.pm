@@ -1627,12 +1627,32 @@ sub buildOptionList {
 
     while (my @row = $sth->fetchrow_array) {
         $selected_flag="";
-        $selected_flag=" SELECTED"
-          if ($selected_options{$row[0]});
+	if ($selected_options{$row[0]}) {
+	  $selected_flag=" SELECTED";
+	  delete($selected_options{$row[0]});
+	}
         $options .= qq!<OPTION$selected_flag VALUE="$row[0]">$row[1]\n!;
     } # end while
 
     $sth->finish;
+
+    #### Look through the list of requested id's and delete any that
+    #### weren't in the list of available options
+    my @valid_options = ();
+    my $invalid_option_present = 0;
+    foreach my $id (@tmp) {
+      if ($selected_options{$id}) {
+	$invalid_option_present = 1;
+      } else {
+	push(@valid_options,$id);
+      }
+    }
+    #### If there were some invalid options, then append the list of valid
+    #### ones.  This is an ugly hack. FIXME
+    if ($invalid_option_present) {
+      $options .= "<!--".join(',',@valid_options)."-->\n";
+    }
+
 
     return $options;
 
@@ -3628,6 +3648,13 @@ sub display_input_form {
       #print "<font color=\"red\">$element</font><BR><PRE>$optionlist_queries{$element}</PRE><BR>\n";
       $optionlists{$element}=$self->buildOptionList(
          $optionlist_queries{$element},$parameters{$element},$method_options);
+
+      #### If the user sent some invalid options, reset the list to the
+      #### valid list.  This is a hack because buildOptionList() API is poor
+      if ($optionlists{$element} =~ /\<\!\-\-(.*)\-\-\>/) {
+	$parameters_ref->{$element} = $1;
+      }
+
   }
 
 
