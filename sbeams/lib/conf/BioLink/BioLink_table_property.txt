@@ -2,6 +2,8 @@ table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_nam
 BL_biosequence_set	BioSequence Set	BioLink_infrastructure	YES	$TBBL_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=BL_biosequence_set	BL_biosequence_set	
 BL_dbxref	Biosequence Database Cross Reference	BioLink_infrastructure	YES	$TBBL_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=BL_dbxref	BL_dbxref	
 BL_biosequence	BioSequence	BioLink_infrastructure	YES	$TBBL_BIOSEQUENCE	biosequence_id		ManageTable.cgi?TABLE_NAME=BL_biosequence	BL_biosequence	
+BL_biosequence_property_set	BioSequence Property Set	BioLink_infrastructure	NO	$TBBL_BIOSEQUENCE_PROPERTY_SET	biosequence_property_set_id				
+BL_biosequence_annotation	Biosequence Annotation	BioLink_project	YES	$TBBL_BIOSEQUENCE_ANNOTATION	biosequence_annotation_id		ManageTable.cgi?TABLE_NAME=BL_biosequence_annotation		
 BL_query_option	Query Option	BioLink_infrastructure	YES	$TBBL_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=BL_query_option	BL_query_option	
 BL_polymer_type	Polymer Type	BioLink_infrastructure	YES	$TBBL_POLYMER_TYPE	polymer_type_id		ManageTable.cgi?TABLE_NAME=BL_polymer_type	BL_polymer_type	
 BL_evidence_source	Evidence Source	BioLink_infrastructure	YES	$TBBL_EVIDENCE_SOURCE	evidence_source_id		ManageTable.cgi?TABLE_NAME=BL_evidence_source	BL_evidence_source	
