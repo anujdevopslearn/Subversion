@@ -20,7 +20,9 @@
 # Basic SBEAMS setup
 ###############################################################################
 use strict;
-use lib qw (../../lib/perl);
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($q $sbeams $sbeamsPROT
              $current_contact_id $current_username );
 use CGI;

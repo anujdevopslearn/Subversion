@@ -18,14 +18,16 @@
 
 
 ###############################################################################
-# Basic SBEAMS setup
+# Set up all needed modules and objects
 ###############################################################################
 use strict;
-use lib qw (../../lib/perl);
-use vars qw ($q $sbeams $sbeamsPROT
-             $current_contact_id $current_username );
-use CGI;
-use CGI::Carp qw(fatalsToBrowser croak);
+use Getopt::Long;
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+            );
 
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
@@ -35,10 +37,14 @@ use SBEAMS::Proteomics;
 use SBEAMS::Proteomics::Settings;
 use SBEAMS::Proteomics::Tables;
 
-$q = new CGI;
 $sbeams = new SBEAMS::Connection;
-$sbeamsPROT = new SBEAMS::Proteomics;
-$sbeamsPROT->setSBEAMS($sbeams);
+$sbeamsMOD = new SBEAMS::Proteomics;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+
+use CGI;
+$q = new CGI;
 
 
 ###############################################################################
@@ -59,9 +65,9 @@ sub main {
     exit unless ($current_username = $sbeams->Authenticate());
 
     #### Print the header, figure and do what the user want, and print footer
-    $sbeamsPROT->printPageHeader();
+    $sbeamsMOD->printPageHeader();
     processRequests();
-    $sbeamsPROT->printPageFooter();
+    $sbeamsMOD->printPageFooter();
 
 } # end main
 

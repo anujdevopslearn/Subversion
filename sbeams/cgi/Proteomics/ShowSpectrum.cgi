@@ -21,7 +21,9 @@
 # Basic SBEAMS setup
 ###############################################################################
 use strict;
-use lib qw (../../lib/perl);
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($q $sbeams $sbeamsPROT $BKGCOLOR
              $t0 $t1 $t2 $t3 $t4 $t5 $t6 $t7 $t8 $t9
              $current_contact_id $current_username );

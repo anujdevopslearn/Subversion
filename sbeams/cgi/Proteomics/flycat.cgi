@@ -21,9 +21,11 @@
 # Get the script set up with everything it will need
 ###############################################################################
 use strict;
+use FindBin;
+
+use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($q $sbeams $sbeamsPROT $PROGRAM_FILE_NAME
              $current_contact_id $current_username);
-use lib qw (../../lib/perl);
 use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 

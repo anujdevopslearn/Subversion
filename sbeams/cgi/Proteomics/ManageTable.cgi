@@ -26,7 +26,7 @@ use strict;
 use Getopt::Long;
 use FindBin;
 
-use lib qw (../lib/perl ../../lib/perl);
+use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($sbeams $sbeamsMOD $q $dbh $current_contact_id $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
              $current_work_group_id $current_work_group_name
