@@ -710,6 +710,10 @@ sub getModuleButton {
                  Microarray  => '#FFCC66',
                  Proteomics  => '#66CC66',
                  Cytometry   => '#EEEEEE',
+                 Inkjet      => '#AABBFF',
+                 Interactions => '#DDFFFF',
+                 PeptideAtlas => '#FFBBEE',
+                 ProteinStructure => '#CCCCFF',
                  unknown     => '#888888' );
 
   return( <<"  END" );
@@ -718,6 +722,7 @@ sub getModuleButton {
   background-color: $colors{$module};
   border: 1px #666666 solid;
   width: auto;
+  text-align: center;
   white-space: nowrap;
   padding: 0 3 0 3
   }
