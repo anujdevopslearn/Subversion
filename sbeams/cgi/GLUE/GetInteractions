@@ -326,6 +326,7 @@ sub handle_request {
     ["regulatory_feature_name2","RF2.regulatory_feature_name","Regulatory Feature 2 Name"],
     ["bioentity_name_link1","'[Edit]'","BE1 Link"],
     ["bioentity_id1","BE1.bioentity_id","BioEntity 1 ID"],
+    ["bioentity_id2","BE2.bioentity_id","BioEntity 2 ID"],
     @additional_columns,
   );
 
@@ -423,7 +424,8 @@ sub handle_request {
 
   #### Define columns that should be hidden in the output table
   %hidden_cols = ('BioEntity 1 ID' => 1,
-  );
+		  'BioEntity 2 ID' => 1,
+		 );
 
 
   unless ( $parameters{display_options} =~ /ShowReg/) {
