@@ -1,6 +1,6 @@
 table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
 GL_biosequence_set	1	biosequence_set_id	BioSequence Set ID	int	4	0	N		Y							N	N				pkDEFAULT
-GL_biosequence_set	2	species_id	Species	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Species for this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+GL_biosequence_set	2	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism for this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 GL_biosequence_set	3	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
 GL_biosequence_set	4	set_tag	Set Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this BioSequence database		
 GL_biosequence_set	5	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Longer description of this BioSequence database		
@@ -39,18 +39,55 @@ GL_biosequence	5	dbxref_id	Database Cross Reference	int	4	0	Y		N	GL_dbxref	dbxre
 GL_biosequence	6	biosequence_accession	BioSequence Accession	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Accession number for this BioSequence in some external database designated above		
 GL_biosequence	7	biosequence_desc	Biosequence Description	varchar	1024	0	N		N			Y	text	40		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)		
 GL_biosequence	8	biosequence_seq	Sequence	text	16	0	Y		N			N	file	40		Y	Y	N	Actual sequence of the BioSequence if known		
+PR_publication_category	1	publication_category_id	Publication Category ID	int	4	0	N		Y							N	N				pkDEFAULT
+PR_publication_category	2	publication_category_name	Publication Category Name	varchar	100	0	N		N			Y	text	40		Y	Y	Y	Short name of this category as it will appear in list boxes		
+PR_publication_category	3	publication_category_description	Publication Category Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	More complete description of this publication category		
+PR_publication_category	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PR_publication_category	5	sort_order	Sort Order	int	2	0	N	10	N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
+PR_publication_category	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_publication_category	7	created_by_id	Record Created By	int	2	0	N	1	N	contact	contact_id					N	N				
+PR_publication_category	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_publication_category	9	modified_by_id	Record Modified By	int	2	0	N	1	N	contact	contact_id					N	N				
+PR_publication_category	10	owner_group_id	Owner Group ID	int	2	0	N	1	N	work_group	work_group_id					N	N				
+PR_publication_category	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+PR_publication	1	publication_id	Publication ID	int	8	0	N		Y							N	N				pkDEFAULT
+PR_publication	2	pubmed_ID	PubMed ID	varchar	50	0	Y		N			N	text	30	refreshDocument()	Y	Y	N	"PubMed ID for this publication.  When this field is changed, the interface fetch the title,author,etc. information for you if the field below this (Publication Name) is empty"		
+PR_publication	3	publication_name	Publication Name	varchar	100	0	N		N			Y	text	50		Y	Y	Y	"Friendly name of the citation, e.g. Dewey, Cheetham & Howe (1998)"		
+PR_publication	4	keywords	Keywords	varchar	255	0	Y		N			N	text	50		Y	Y	N	A comma-separated list of keywords appropriate when searching for papers of this sort		
+PR_publication	5	publication_category_id	Publication Category	int	4	0	Y		N	PR_publication_category	publication_category_id	N	optionlist			Y	Y	N	Broad category within which this publication is classified	"SELECT publication_category_id,publication_category_name FROM $TBPR_PUBLICATION_CATEGORY WHERE record_status != 'D' ORDER BY sort_order,publication_category_name"	
+PR_publication	6	title	Title	varchar	255	0	Y		N			N	textarea	2		Y	Y	N	Title of the article		
+PR_publication	7	author_list	Author List	varchar	255	0	Y		N			N	textarea	2		Y	Y	N	"Author list in 'Lastname, FIMI' format"		
+PR_publication	8	journal_name	Journal Name	varchar	100	0	Y		N			N	text	50		Y	Y	N	Name of the Journal in which the article appears		
+PR_publication	9	published_year	Published Year	varchar	10	0	Y		N			N	text	20		Y	Y	N	Year the article was published		
+PR_publication	10	volume_number	Volume Number	varchar	50	0	Y		N			N	text	20		Y	Y	N	Volume number of the article		
+PR_publication	11	issue_number	Issue Number	varchar	50	0	Y		N			N	text	20		Y	Y	N	Issue number of the article		
+PR_publication	12	page_numbers	Page Numbers	varchar	50	0	Y		N			N	text	30		Y	Y	N	Page numbers of the article		
+PR_publication	13	publisher_name	Publisher Name	varchar	255	0	Y		N			N	text	40		Y	Y	N	Name of the publisher		
+PR_publication	14	editor_name	Editor Name	varchar	255	0	Y		N			N	text	40		Y	Y	N	"Name of the editor, if any"		
+PR_publication	15	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	"URL of other locator for the article, either out on the Internet or in the location Publications repository"		SELF
+PR_publication	16	abstract	Abstract	text	16	0	Y		N			N	textarea	4		Y	Y	N	Plain text abstract of the article		
+PR_publication	17	full_manuscript_file	Manuscript File Upload	varchar	255	0	Y		N			N	file	40		Y	Y	N	Actual file containing the manuscript (e.g. in PDF format)		
+PR_publication	18	manuscript_file_location_id	Full Manuscript File (new)	int	4	0	Y		N			N	fixed			Y	Y	N	"This is a placeholder for an improved file management mechanism, still unimplemented"		
+PR_publication	19	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PR_publication	20	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_publication	21	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+PR_publication	22	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PR_publication	23	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+PR_publication	24	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+PR_publication	25	record_status	Record Status	char	1	0	N	N	N							N	N				
 GL_bioentity	1	bioentity_id	BioEntity ID	int	4	0	N		Y							N	N				pkDEFAULT
-GL_bioentity	2	bioentity_name	BioEntity Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Common name of this BioEntity		
-GL_bioentity	3	bioentity_alias	BioEntity Alias	varchar	255	0	Y		N			N	text	50		Y	Y	N	Other Aliases for this BioEntity		
-GL_bioentity	4	bioentity_type_id	BioEntity Type	int	4	0	N		N	GL_bioentity_type	bioentity_type_id	Y	optionlist			Y	Y	N	Type of the BioEntity	"SELECT bioentity_type_id, bioentity_type_name FROM $TBGL_BIOENTITY_TYPE ORDER BY sort_order,bioentity_type_name"	
-GL_bioentity	5	biosequence_id	BioSequence ID	int	4	0	Y		N	GL_biosequence	biosequence_id	N	optionlist			N	N	N	BioSequence identification	"SELECT 1,2"	
-GL_bioentity	6	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-GL_bioentity	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-GL_bioentity	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-GL_bioentity	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-GL_bioentity	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-GL_bioentity	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-GL_bioentity	12	record_status	Record Status	char	1	0	N	N	N							N	N				
+GL_bioentity	2	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism for this BioEntity	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+GL_bioentity	3	bioentity_name	BioEntity Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Common name of this BioEntity		
+GL_bioentity	4	bioentity_alias	BioEntity Alias	varchar	255	0	Y		N			N	text	50		Y	Y	N	Other Aliases for this BioEntity		
+GL_bioentity	5	bioentity_type_id	BioEntity Type	int	4	0	N		N	GL_bioentity_type	bioentity_type_id	Y	optionlist			Y	Y	N	Type of the BioEntity	"SELECT bioentity_type_id, bioentity_type_name FROM $TBGL_BIOENTITY_TYPE ORDER BY sort_order,bioentity_type_name"	
+GL_bioentity	6	biosequence_id	BioSequence ID	int	4	0	Y		N	GL_biosequence	biosequence_id	N	optionlist			N	N	N	BioSequence identification	"SELECT 1,2"	
+GL_bioentity	7	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+GL_bioentity	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GL_bioentity	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+GL_bioentity	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GL_bioentity	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+GL_bioentity	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+GL_bioentity	13	record_status	Record Status	char	1	0	N	N	N							N	N				
 GL_bioentity_type	1	bioentity_type_id	BioEntity Type ID	int	4	0	N		Y							N	N				pkDEFAULT
 GL_bioentity_type	2	bioentity_type_name	BioEntity Type Name	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Name of this BioEntity Type		
 GL_bioentity_type	3	bioentity_type_description	Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioEntity Type		
@@ -63,7 +100,7 @@ GL_bioentity_type	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	cont
 GL_bioentity_type	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 GL_bioentity_type	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 GL_regulatory_feature	1	regulatory_feature_id	Regulatory Feature ID	int	4	0	N		Y							N	N				pkDEFAULT
-GL_regulatory_feature	2	bioentity_id	Bioentity	int	4	0	N		N			Y	optionlist			Y	Y	N		"SELECT bioentity_id, bioentity_name FROM $TBGL_BIOENTITY ORDER BY bioentity_name"	
+GL_regulatory_feature	2	bioentity_id	Bioentity	int	4	0	N		N	GL_bioentity	bioentity_id	Y	optionlist			Y	Y	N		"SELECT bioentity_id, bioentity_name FROM $TBGL_BIOENTITY ORDER BY bioentity_name"	
 GL_regulatory_feature	3	regulatory_feature_type_id	Regulatory Feature Type	int	4	0	N		N	GL_regulatory_feature_type	regulatory_feature_type_id	Y	optionlist			Y	Y	N		"SELECT regulatory_feature_type_id, regulatory_feature_type_name FROM $TBGL_REGULATORY_FEATURE_TYPE ORDER BY sort_order,regulatory_feature_type_name"	
 GL_regulatory_feature	4	regulatory_feature_name	Regulatory Feature Name	varchar	255	0	N		N			Y	text	40		Y	Y	Y	Name of this Regulatory Feature		
 GL_regulatory_feature	5	regulatory_feature_description	Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this Regulatory Feature		
@@ -89,22 +126,22 @@ GL_regulatory_feature_type	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_g
 GL_regulatory_feature_type	12	record_status	Record Status	char	1	0	N	N	N							N	N				
 GL_interaction	1	interaction_id	Interaction ID	int	4	0	N		Y							N	N	N			pkDEFAULT
 GL_interaction	2	bioentity1_id	BioEntity1	int	4	0	N		N	GL_bioentity	bioentity_id	Y	optionlist			Y	Y	N	Bioentity1	"SELECT bioentity_id, bioentity_name FROM $TBGL_BIOENTITY ORDER BY bioentity_name"	
-GL_interaction	3	bioentity1_state_id	BioEntity1 State	int	4	0	Y		N	GL_bioentity_state	bioentity_state_id	N	optionlist			Y	Y	N	The State of Bioentity1	"SELECT bioentity_state_id, bioentity_state_name FROM $TBGL_BIOENTITY_STATE ORDER BY bioentity_state_name"	
-GL_interaction	4	regulatory_feature1_id	Regulatory Feature of Bioentity1	int	4	0	Y		N	GL_regulatory_feature	regulatory_feature_id	N	optionlist			Y	Y	N	The Regulatory Feature of Bioentity1	"SELECT regulatory_feature_id, regulatory_feature_name FROM $TBGL_REGULATORY_FEATURE ORDER BY regulatory_feature_name"	
-GL_interaction	5	interaction_type_id	Interaction Type	int	4	0	N		N	GL_interaction_type	interaction_type_id	Y	optionlist			Y	Y	N	The Type of Interaction	"SELECT interaction_type_id, interaction_type_name FROM $TBGL_INTERACTION_TYPE ORDER BY interaction_type_name"	
-GL_interaction	6	bioentity2_id	BioEntity2	int	4	0	N		N	GL_bioentity	bioentity_id	Y	optionlist			Y	Y	N	Bioentity2	"SELECT bioentity_id, bioentity_name FROM $TBGL_BIOENTITY ORDER BY bioentity_name"	
-GL_interaction	7	bioentity2_state_id	BioEntity2 State	int	4	0	Y		N	GL_bioentity_state	bioentity_state_id	N	optionlist			Y	Y	N	The State of Bioentity2	"SELECT bioentity_state_id, bioentity_state_name FROM $TBGL_BIOENTITY_STATE ORDER BY bioentity_state_name"	
-GL_interaction	8	regulatory_feature2_id	Regulatory Feature of Bioentity2	int	4	0	Y		N	GL_regulatory_feature	regulatory_feature_id	N	optionlist			Y	Y	N	The Regulatory Feature of Bioentity2	"SELECT regulatory_feature_id, regulatory_feature_name FROM $TBGL_REGULATORY_FEATURE ORDER BY regulatory_feature_name"	
-GL_interaction	9	confidence_score_id	Confidence Score for Interaction	int	4	0	Y		N	GL_confidence_score	confidence_score_id	N	optionlist			Y	Y	N	The Confidence Score for the Interaction	"SELECT 1,2"	
-GL_interaction	10	interaction_name	Interaction Name	varchar	255	0	Y		N			N	text	50		Y	Y	Y	Common name of this Interaction		
-GL_interaction	11	interaction_description	Description of Interaction	varchar	255	0	Y		N			N	text	50		Y	Y	N	Other Aliases for this Interaction		
-GL_interaction	12	assay_id	Assay	int	4	0	Y		N	GL_assay	assay_id	N	optionlist			Y	Y	N	The Assay from which the Interaction was Determined	"SELECT assay_id, assay_name FROM $TBGL_ASSAY ORDER BY assay_name"	
-GL_interaction	13	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-GL_interaction	14	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-GL_interaction	15	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-GL_interaction	16	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-GL_interaction	17	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-GL_interaction	18	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+GL_interaction	3	bioentity1_state_id	BioEntity1 State	int	4	0	Y		N	GL_bioentity_state	bioentity_state_id	N	optionlist			Y	Y	N	The State of Bioentity1	"SELECT bioentity_state_id, bioentity_state_name FROM $TBGL_BIOENTITY_STATE ORDER BY bioentity_state_name"
+GL_interaction	4	regulatory_feature1_id	Regulatory Feature of Bioentity1	int	4	0	Y		N	GL_regulatory_feature	regulatory_feature_id	N	optionlist			Y	Y	N	The Regulatory Feature of Bioentity1	"SELECT regulatory_feature_id, regulatory_feature_name FROM $TBGL_REGULATORY_FEATURE ORDER BY regulatory_feature_name"
+GL_interaction	5	interaction_type_id	Interaction Type	int	4	0	N		N	GL_interaction_type	interaction_type_id	Y	optionlist			Y	Y	N	The Type of Interaction	"SELECT interaction_type_id, interaction_type_name FROM $TBGL_INTERACTION_TYPE ORDER BY interaction_type_name"
+GL_interaction	6	bioentity2_id	BioEntity2	int	4	0	N		N	GL_bioentity	bioentity_id	Y	optionlist			Y	Y	N	Bioentity2	"SELECT bioentity_id, bioentity_name FROM $TBGL_BIOENTITY ORDER BY bioentity_name"
+GL_interaction	7	bioentity2_state_id	BioEntity2 State	int	4	0	Y		N	GL_bioentity_state	bioentity_state_id	N	optionlist			Y	Y	N	The State of Bioentity2	"SELECT bioentity_state_id, bioentity_state_name FROM $TBGL_BIOENTITY_STATE ORDER BY bioentity_state_name"
+GL_interaction	8	regulatory_feature2_id	Regulatory Feature of Bioentity2	int	4	0	Y		N	GL_regulatory_feature	regulatory_feature_id	N	optionlist			Y	Y	N	The Regulatory Feature of Bioentity2	"SELECT regulatory_feature_id, regulatory_feature_name FROM $TBGL_REGULATORY_FEATURE ORDER BY regulatory_feature_name"
+GL_interaction	9	confidence_score_id	Confidence Score for Interaction	int	4	0	Y		N	GL_confidence_score	confidence_score_id	N	optionlist			Y	Y	N	The Confidence Score for the Interaction	"SELECT 1,2"
+GL_interaction	10	interaction_name	Interaction Name	varchar	255	0	Y		N			N	text	50		Y	Y	Y	Common name of this Interaction	
+GL_interaction	11	interaction_description	Description of Interaction	varchar	255	0	Y		N			N	text	50		Y	Y	N	Other Aliases for this Interaction	
+GL_interaction	12	assay_id	Assay	int	4	0	Y		N	GL_assay	assay_id	N	optionlist			Y	Y	N	The Assay from which the Interaction was Determined	"SELECT assay_id, assay_name FROM $TBGL_ASSAY ORDER BY assay_name"
+GL_interaction	13	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments	
+GL_interaction	14	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+GL_interaction	15	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N			
+GL_interaction	16	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+GL_interaction	17	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
+GL_interaction	18	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
 GL_interaction	19	record_status	Record Status	char	1	0	N	N	N							N	N				
 GL_interaction_type	1	interaction_type_id	Interaction Type ID	int	4	0	N		Y							N	N				pkDEFAULT
 GL_interaction_type	2	parent_interaction_type_id	Parent Interaction Type	int	4	0	Y		N			N	optionlist			Y	Y	N	Optional Parent Type	"SELECT interaction_type_id, interaction_type_name FROM $TBGL_INTERACTION_TYPE ORDER BY sort_order,interaction_type_name"	
@@ -118,6 +155,19 @@ GL_interaction_type	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_
 GL_interaction_type	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 GL_interaction_type	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 GL_interaction_type	12	record_status	Record Status	char	1	0	N	N	N							N	N				
+GL_interaction_group	1	interaction_group_id	Interaction Group ID	int	4	0	N		Y							N	N				pkDEFAULT
+GL_interaction_group	2	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	Project to which this Interaction Group belongs	"SELECT project_id,username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' ORDER BY username,name"	
+GL_interaction_group	3	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	Y	Organism for this BioEntity	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+GL_interaction_group	4	interaction_group_name	Interaction Group Name	varchar	255	0	N		N			Y	text	40		Y	Y	Y	"Name of this Interaction Group.  This is a broad-brush classification of interactions to aid querying.  You may have two separate Interaction Groups of the same name as long as they belong to different Organisms; in fact, it is encouraged."		
+GL_interaction_group	5	interaction_group_description	Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this Interaction Group		
+GL_interaction_group	6	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+GL_interaction_group	7	sort_order	Sort Order	int	4	0	N	10	N							N	N	N	Integer key by which these entities are usually sorted		
+GL_interaction_group	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GL_interaction_group	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+GL_interaction_group	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GL_interaction_group	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+GL_interaction_group	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+GL_interaction_group	13	record_status	Record Status	char	1	0	N	N	N							N	N				
 GL_bioentity_state	1	bioentity_state_id	Bioentity State ID	int	4	0	N		Y							N	N				pkDEFAULT
 GL_bioentity_state	2	bioentity_state_name	Bioentity State Name	varchar	255	0	N		N			Y	text	40		Y	Y	Y	Name of this Bioentity State		
 GL_bioentity_state	3	bioentity_state_description	Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this Bioentity State		
@@ -190,16 +240,16 @@ GL_bioentity_attribute_type	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_
 GL_bioentity_attribute_type	12	record_status	Record Status	char	1	0	N	N	N							N	N				
 GL_assay	1	assay_id	Assay ID	int	4	0	N		Y							N	N				pkDEFAULT
 GL_assay	2	assay_type_id	Assay Type	int	4	0	N		N	GL_assay_type	assay_type_id	Y	optionlist			Y	Y	N	Assay Type	"SELECT assay_type_id, assay_type_name FROM $TBGL_ASSAY_TYPE ORDER BY sort_order,assay_type_name"	
-GL_assay	3	sample_type_id	Sample Type	int	4	0	Y		N	GL_sample_type	sample_type_id	N	optionlist			Y	Y	N	Sample Type	"SELECT sample_type_id, sample_type_name FROM $TBGL_SAMPLE_TYPE ORDER BY sort_order,sample_type_name"
-GL_assay	4	publication_id	Publication	int	4	0	Y		N	GL_publication	publication_id	N	optionlist			Y	Y	N	Publication	"SELECT publication_id, publication_name FROM $TBGL_PUBLICATION ORDER BY publication_name"
-GL_assay	5	assay_name	Assay Name	varchar	255	0	N		N			Y	text	40		Y	Y	Y	Name of this Assay	
-GL_assay	6	assay_description	Description	varchar	255	0	N		N			Y	textarea	4		Y	Y	N	Longer description of this Assay	
-GL_assay	7	assay_date	Date Assay Performed	datetime	8	0	Y		N			N	text	20		Y	Y	N	Date of Assay	
-GL_assay	8	lab_notebook	Lab Notebook	varchar	255	0	Y		N			N	text	40		Y	Y	N	Lab Notebook	
-GL_assay	9	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments	
-GL_assay	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-GL_assay	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N			
-GL_assay	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-GL_assay	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
-GL_assay	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
-GL_assay	15	record_status	Record Status	char	1	0	N	N	N							N	N			
+GL_assay	3	sample_type_id	Sample Type	int	4	0	Y		N	GL_sample_type	sample_type_id	N	optionlist			Y	Y	N	Sample Type	"SELECT sample_type_id, sample_type_name FROM $TBGL_SAMPLE_TYPE ORDER BY sort_order,sample_type_name"	
+GL_assay	4	publication_id	Publication	int	4	0	Y		N	GL_publication	publication_id	N	optionlist			Y	Y	N	Publication	"SELECT publication_id, publication_name FROM $TBGL_PUBLICATION ORDER BY publication_name"	
+GL_assay	5	assay_name	Assay Name	varchar	255	0	N		N			Y	text	40		Y	Y	Y	Name of this Assay		
+GL_assay	6	assay_description	Description	varchar	255	0	N		N			Y	textarea	4		Y	Y	N	Longer description of this Assay		
+GL_assay	7	assay_date	Date Assay Performed	datetime	8	0	Y		N			N	text	20		Y	Y	N	Date of Assay		
+GL_assay	8	lab_notebook	Lab Notebook	varchar	255	0	Y		N			N	text	40		Y	Y	N	Lab Notebook		
+GL_assay	9	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+GL_assay	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GL_assay	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+GL_assay	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GL_assay	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+GL_assay	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+GL_assay	15	record_status	Record Status	char	1	0	N	N	N							N	N				
