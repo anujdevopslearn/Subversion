@@ -995,6 +995,7 @@ sub addSearchBatchEntry {
       SELECT biosequence_set_id
         FROM $TBPR_BIOSEQUENCE_SET
        WHERE set_path = '$search_database'
+         AND record_status != 'D'
   ~;
   my ($biosequence_set_id) = $sbeams->selectOneColumn($sql_query);
   unless ($biosequence_set_id) {
