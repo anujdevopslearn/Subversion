@@ -33,6 +33,9 @@ HOSTNAME = webhost.domain.org
 #### A contact username and email address for SBEAMS issues
 DBADMIN = SBEAMS Administrator <sbeams@localdomain.org>
 
+#### URL for triggering a Web Start of Cytoscape. Experimental
+CYTOSCAPE_URL = webhost.domain.org:8080/cytoscape
+
 
 #### Set the RDBMS servername or DSN name and the name of the sbeams database
 DB_SERVER   = sqlhostname
