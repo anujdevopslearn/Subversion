@@ -111,12 +111,14 @@ sub main {
     elsif ($action eq "Test Run Featurama")
     {
 	if (processParams()) {
-	    createRun(1); #create a run in a temp folder
 	    print "</td></tr></table>";
+            $sbeams->printPageFooter("CloseTables");
+	    createRun(1); #create a run in a temp folder
+	    #print "</td></tr></table>";
 	    runFeaturama();
-	    print "<table width=\"750\" border=\"0\" bordercolor=\"#FFFFFF\" cellpadding=\"7\" cellspacing=\"0\" bgcolor=\"#D0DDDA\">",
-	          "<tr><td>",
-	          "<font face=\"Helvetica\" size=\"3\" color=\"#000000\">";
+	    #print "<table width=\"750\" border=\"0\" bordercolor=\"#FFFFFF\" cellpadding=\"7\" cellspacing=\"0\" bgcolor=\"#D0DDDA\">",
+	    #      "<tr><td>",
+	    #      "<font face=\"Helvetica\" size=\"3\" color=\"#000000\">";
 	}
 	 
 	printForm();
@@ -130,29 +132,33 @@ sub main {
 }
 
 sub runFeaturama {
-    print "<table width=\"750\" border=\"0\" bordercolor=\"#FFFFFF\" cellpadding=\"7\" cellspacing=\"0\" bgcolor=\"#D0DDDA\">",
-	  "<tr><td>",
-          "<font face=\"Helvetica\" size=\"3\" color=\"#000000\">",
-          "Please wait for Featurama to finish ...  <br>";
+    #print "<table width=\"750\" border=\"0\" bordercolor=\"#FFFFFF\" cellpadding=\"7\" cellspacing=\"0\" bgcolor=\"#D0DDDA\">",
+#	  "<tr><td>",
+#          "<font face=\"Helvetica\" size=\"3\" color=\"#000000\">",
+          print "Please wait for Featurama to finish ...  <br>";
    
     $| = 1;
     #print "/net/techdev/featurama/bin/featurama $dirstr/featurama.params<br>";
-    open(FEATURAMA, 
-	 "/net/techdev/featurama/bin/featurama $dirstr/featurama.params 2>&1|") 
-	 || croak "Can't run program: $!\n";
-    
-    print "</font></td></tr></table>";
+    print "<PRE>\n";
+    system "/net/techdev/featurama/bin/featurama $dirstr/featurama.params 2>&1" || croak "Couldn't run featurama: $!";
+    print "</PRE>\n";
 
-    while(<FEATURAMA>) {
-	print "<table width=\"750\" border=\"0\" bordercolor=\"#FFFFFF\" cellpadding=\"0\" cellspacing=\"0\" bgcolor=\"#D0DDDA\">",
-	      "<tr><td>",
-              "<font face=\"Helvetica\" size=\"2\" color=\"#000000\">";
-	print "$_ <br>";
-	print "</font></td></tr></table>";
-    }
+    #open(FEATURAMA, 
+#	 "/net/techdev/featurama/bin/featurama $dirstr/featurama.params 2>&1|") 
+#	 || croak "Can't run program: $!\n";
+    
+    #print "</font></td></tr></table>";
+
+    #while(<FEATURAMA>) {
+#	print "<table width=\"750\" border=\"0\" bordercolor=\"#FFFFFF\" cellpadding=\"0\" cellspacing=\"0\" bgcolor=\"#D0DDDA\">",
+#	      "<tr><td>",
+##              "<font face=\"Helvetica\" size=\"2\" color=\"#000000\">";
+#	print "$_ <br>";
+#	print "</font></td></tr></table>";
+#    }
    
 
-    close(FEATURAMA);
+   # close(FEATURAMA);
     
     #remove the temporary files
     system "/bin/rm", "-r","-f", "$dirstr" || croak "Couldn't formatdb: $!";
