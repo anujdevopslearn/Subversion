@@ -601,7 +601,7 @@ MA_experiment_information	10	date_modified	Date Record Modified	datetime	4	0	N	C
 MA_experiment_information	11	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
 MA_experiment_information	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 MA_experiment_information	13	record_status	Record Status	char	1	0	N	N	N							N	N				
-MA_experiment_constants	1	experiments_constants_id	Experiment Constants ID	int	4	0	N		Y							N	N				pkDEFAULT
+MA_experiment_constants	1	experiment_constants_id	Experiment Constants ID	int	4	0	N		Y							N	N				pkDEFAULT
 MA_experiment_constants	2	project_id	Project ID	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	Project with which this experiment is associated	"SELECT project_id, username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) WHERE project_id IN ( $accessible_project_ids ) AND P.record_status != 'D' ORDER BY name"	
 MA_experiment_constants	3	name	Name	varchar	255	0	N		N			Y	text	50		Y	Y	N	Name of this Constants File		
 MA_experiment_constants	4	tag	Constants Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Shortened Name of this Constants File		
