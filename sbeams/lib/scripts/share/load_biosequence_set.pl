@@ -560,6 +560,15 @@ sub specialParsing {
   }
 
 
+  #### Special conversion rules for DQA, DBQ, DRB exons, e.g.:
+  #### >DQB1_0612_exon1
+  if ($biosequence_set_name =~ /Allelic exons/) {
+    if ($rowdata_ref->{biosequence_name} =~ /^([A-Za-z0-9]+)_/ ) {
+       $rowdata_ref->{biosequence_gene_name} = $1;
+    }
+    $rowdata_ref->{biosequence_desc} = $rowdata_ref->{biosequence_name};
+  }
+
   #### Special conversion rules for Halobacterium genome, e.g.:
   #### >gene-275_2467-rpl31e
   if ($biosequence_set_name eq "halobacterium_orf_coding") {
