@@ -441,6 +441,7 @@ sub executeManualCommands {
 
   #### And just execute it
   print "Executing manual commands...\n";
+  print "$sql\n\n" if ($VERBOSE);
   $sbeams->executeSQL($sql);
   print "done.\n";
 
