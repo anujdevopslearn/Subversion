@@ -41,7 +41,7 @@ Options:
  --debug n            Set debug flag
  --testonly           If set, rows in the database are not changed or added
  --source_file XXX    Source file name from which data are to be updated
- 							It is a tab delimeted txt file
+ 							It is a tab delimited txt file
  --check_status       Is set, nothing is actually done, but rather
                        a summary of what should be done is printed
 --error_file	Error file name to which loading errors are printed
@@ -75,7 +75,7 @@ if ($DEBUG) {
 my (%INFOPROTEIN1,
 	%INFOPROTEIN2,
 	%INTERACTION, @columnOrder, %columnHashProtein1, %columnHashProtein2, %interactionHash,$bioentityState,$bioentityType,$organismName,$interactionTypes,
-	$interactionGroups,$confidenceScores,$assayTypes,$pubMed, $interactionGroupsOrganism, $fhError, $fhLog, $regTypes);
+	$interactionGroups,$confidenceScores,$assayTypes,$pubMed, $interactionGroupsOrganism, $fhError, $fhLog, $regTypes, %locusIDProteinHash,  %locusIDmRNAHash);
 
 main();
 exit;
@@ -194,7 +194,8 @@ organismName1 => $indexHash{Organism_bioentity1_name},
 	$regTypes = \%regTypes; 
 	my %pubMed = $sbeams->selectTwoColumnHash (qq /Select pubmed_ID, publication_id from $TBIN_PUBLICATION/);
 	$pubMed = \%pubMed;
-
+	%locusIDProteinHash = $sbeams->selectTwoColumnHash( qq/Select locus_id, protein from locuslink.dbo.refseq/); 
+	%locusIDmRNAHash = $sbeams->selectTwoColumnHash( qq/Select locus_id,mRNA from locuslink.dbo.refseq/); 
 	
 	$sbeams->printPageHeader() unless ($QUIET);
 	processFile();
@@ -382,6 +383,34 @@ sub processFile
 				delete $INFOPROTEIN1{$count-2};
 				next;
 		}
+		
+		if ($INFOPROTEIN1{$count-2}->{bioentityCanName1} =~ /^\d+$/ and $INFOPROTEIN1{$count-2}->{bioentityType1} =~ /protein/i )
+		{
+			my $locusID = 	$INFOPROTEIN1{$count-2}->{bioentityCanName1};
+			$INFOPROTEIN1{$count-2}->{bioentityCanName1} = $locusIDProteinHash{	$INFOPROTEIN1{$count-2}->{bioentityCanName1}};
+			if ( ! $INFOPROTEIN1{$count-2}->{bioentityCanName1})
+			{
+				$INFOPROTEIN1{$count-2}->{bioentityCanName1}= $locusID;
+				Error (\@infoArray, "$INFOPROTEIN1{$count-2}->{bioentityCanName1}: could not find PROTEIN for this locsuID");
+				delete $INFOPROTEIN1{$count-2};
+				next;
+			}
+		}
+		
+		if ($INFOPROTEIN1{$count-2}->{bioentityCanName1} =~ /^\d+$/ and $INFOPROTEIN1{$count-2}->{bioentityType1} =~ /dna/i )
+		{
+			my $locusID = 	$INFOPROTEIN1{$count-2}->{bioentityCanName1};
+			$INFOPROTEIN1{$count-2}->{bioentityCanName1} = $locusIDmRNAHash{$INFOPROTEIN1{$count-2}->{bioentityCanName1}};
+			if ( ! $INFOPROTEIN1{$count-2}->{bioentityCanName1})
+			{
+				$INFOPROTEIN1{$count-2}->{bioentityCanName1}= $locusID;
+				Error (\@infoArray,"$INFOPROTEIN1{$count-2}->{bioentityCanName1}: could not find RNA for this locsuID");
+				delete $INFOPROTEIN1{$count-2};
+				next;
+			}
+			
+		}
+		
 #bioentity2				
 		print "checking bioentity2 requirements\n";
 		foreach my $column (sort keys %columnHashProtein2)
@@ -445,12 +474,42 @@ sub processFile
 		
 		if ($INFOPROTEIN2{$count-2}->{group} and !(scalar($sbeams->selectOneColumn($interactionGroupQuery))))
 		{
-				
-			
 				Error (\@infoArray,"$INFOPROTEIN2{$count-2}->{group}: this group is not associated with the given organism in $TBIN_INTERACTION_GROUP table");
 				delete $INFOPROTEIN2{$count-2};
 				next;
 		}
+		
+		if ($INFOPROTEIN2{$count-2}->{bioentityCanName2} =~ /^\d+$/ and $INFOPROTEIN2{$count-2}->{bioentityType2} =~ /protein/i )
+		{
+			my $locusID = $INFOPROTEIN2{$count-2}->{bioentityCanName2};
+			$INFOPROTEIN2{$count-2}->{bioentityCanName2} = $locusIDProteinHash{$INFOPROTEIN2{$count-2}->{bioentityCanName2}};
+			if ( ! $INFOPROTEIN2{$count-2}->{bioentityCanName2})
+			{
+				$INFOPROTEIN2{$count-2}->{bioentityCanName2}= $locusID;
+				Error  (\@infoArray,"$INFOPROTEIN2{$count-2}->{bioentityCanName2}: could not find PROTEIN for this locsuID");
+				delete $INFOPROTEIN2{$count-2};
+				next;
+			}
+			
+		
+		}
+		
+		if ($INFOPROTEIN2{$count-2}->{bioentityCanName2} =~ /^\d+$/ and $INFOPROTEIN2{$count-2}->{bioentityType2} =~ /dna/i )
+		{
+			my $locusID = $INFOPROTEIN2{$count-2}->{bioentityCanName2};
+			$INFOPROTEIN2{$count-2}->{bioentityCanName2} = $locusIDmRNAHash{$INFOPROTEIN2{$count-2}->{bioentityCanName2}};
+			if ( ! $INFOPROTEIN2{$count-2}->{bioentityCanName2})
+			{
+				$INFOPROTEIN2{$count-2}->{bioentityCanName2}= $locusID;
+				Error  (\@infoArray,"$INFOPROTEIN2{$count-2}->{bioentityCanName2}: could not find  RNA for this locsuID");
+				delete $INFOPROTEIN2{$count-2};
+				next;
+			}
+		}
+		
+		
+		
+		
 #		
 #		if($INFOPROTEIN2{$count-2}->{bioentityReg2} and !($regTypes->{$INFOPROTEIN2{$count-2}->{bioentityReg2}}))
 #		{
