@@ -128,7 +128,7 @@ ORDER BY S.snp_instance_id,BSS.biosequence_set_id
   ######################################################################
   #### Select out high scoring hits
   $sql = qq~
-  SELECT SI.snp_source_accession,A.allele_id,BSS.biosequence_set_id AS ref_id,
+  SELECT SI.snp_instance_source_accession,A.allele_id,BSS.biosequence_set_id AS ref_id,
          BS.end_fiveprime_position AS end_fiveprime,BS.strand,BS.identified_percent AS 'percent',
          convert(numeric(5,2),convert(real,BS.match_length)/BS.query_length) AS match_ratio,
          convert(varchar(1000),S.fiveprime_sequence)+'['+S.allele_string+']'+
