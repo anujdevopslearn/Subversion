@@ -60,6 +60,7 @@
     <UL>
      <LI><A HREF="Microarray/HOWTO_SubmitArrayRequest.php">Instructions for Submitting a Microarray Request</A>
      <LI><A HREF="DevInstance.php">Notes on using an SBEAMS "dev instance"</A>
+     <LI><A HREF="Core/project_control.recipe">Putting a module under project control</A>
     </UL>
     </TD>
   </TR>
