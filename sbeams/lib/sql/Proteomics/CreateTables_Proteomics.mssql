@@ -887,6 +887,7 @@ CREATE NONCLUSTERED INDEX idx_search_hit_probability ON dbo.search_hit ( probabi
 CREATE NONCLUSTERED INDEX idx_search_hit_annotation_search_hit_id ON dbo.search_hit_annotation ( search_hit_id ) WITH DROP_EXISTING
 CREATE NONCLUSTERED INDEX idx_search_hit_search_id ON dbo.search_hit ( search_id ) WITH DROP_EXISTING
 
+-- 05:53 in TITAN
 
 
 -- NON STANDARD AREA BELOW!!!!!
