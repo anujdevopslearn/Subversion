@@ -242,6 +242,13 @@ sub handle_request {
     constraint_value=>$parameters{biosequence_set_id} );
   return if ($biosequence_set_clause == -1);
 
+  #### Build Validation Status constraint
+  my $validation_status_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"SI.validation_status",
+    constraint_type=>"text_list",
+    constraint_name=>"Validation Status",
+    constraint_value=>$parameters{validation_status_constraint} );
+  return if ($validation_status_clause == -1);
 
   #### Build IDENTIFIED PERCENT constraint
   my $identified_percent_clause = $sbeams->parseConstraint2SQL(
@@ -292,6 +299,7 @@ sub handle_request {
     ["strand","ABS.strand","Strand"],
     ["identified_percent","ABS.identified_percent","Percent"],
     ["match_ratio","convert(numeric(5,2),convert(real,ABS.match_length)/ABS.query_length)*100","Match Ratio"],
+    ["validation_status","SI.validation_status","Validation Status"],
   );
 
 
@@ -307,7 +315,7 @@ sub handle_request {
     $show_sql = 1;
   }
 
- 
+
   #### Build the columns part of the SQL statement
   my %colnameidx = ();
   my @column_titles = ();
@@ -355,6 +363,7 @@ SELECT $limit_clause $columns_clause
 $identified_percent_clause
 $match_to_query_ratio_clause
 $biosequence_set_clause
+$validation_status_clause
 $order_by_clause
 ORDER BY BSS.biosequence_set_id,ABS.end_fiveprime_position
   ~;
