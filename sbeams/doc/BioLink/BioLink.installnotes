@@ -43,8 +43,7 @@ enforce referential integrety between tables in the different
 databases.  This may or may not be a significant concern.
 
 - If you decide on a separate database, create it and within it,
-  create users "sbeams" and "sbeamsro" as a read/write
-  account and a read-only account, respectively, as done for the Core.
+  enable users "sbeams", "sbeamsro", "sbeamsadmin" as done for the Core.
 
 - Create directory to store BioLink sql statement files:
 
@@ -53,13 +52,14 @@ mkdir sql/BioLink
 
 - Generate the appropriate schema for your type(s) of database as follows:
 
+set DBTYPES="mssql"   #### or one or more of mssql mysql pgsql oracle etc.
 cd scripts/Core/
 
-foreach dbtype ( mssql mysql pgsql oracle )
+foreach dbtype ( $DBTYPES )
   ./generate_schema.pl \
     --table_prop ../../conf/BioLink/BioLink_table_property.txt \
     --table_col ../../conf/BioLink/BioLink_table_column.txt \
-    --schema_file ../../sql/BioLink/BioLink
+    --schema_file ../../sql/BioLink/BioLink \
     --destination_type $dbtype
 end
 
@@ -67,9 +67,13 @@ end
 - Verify that the SQL CREATE and DROP statements have been correctly
   generated in $SBEAMS/lib/sql/BioLink/
 
-- Create all tables described within sql/Biolink/BioLink_CREATETABLES.mssql
-  **except** first 4: dbo.biosequence_set, dbo.dbxref, dbo.biosequence, and
-  dbo.query_option)
+cd $SBEAMS/lib/sql/BioLink
+more BioLink_CREATETABLES.mssql
+
+- Create all tables and constraints as described in the Core installnotes, e.g.
+
+$SBEAMS/lib/scripts/Core/runsql.pl BioLink_CREATETABLES.mssql
+$SBEAMS/lib/scripts/Core/runsql.pl BioLink_CREATECONSTRAINTS.mssql
 
 Examples for table creation for other database flavors can be found in the
 Core installation notes and will not be repeated here.
@@ -83,12 +87,19 @@ setenv SBEAMS /local/www/html/dev1/sbeams
 cd $SBEAMS/lib/conf
 edit SBEAMS.conf
 
-Specifically:
+Specifically, change:
 
 DBPREFIX{BioLink}    = BioLink.dbo.
 
-Set DBPREFIX{BioLink} to the database name and schema/owner to prefix
-to table names. 
+to the database name and schema/owner to prefix to table names. 
+
+Add the BioLink module to available modules:
+
+cd $SBEAMS/lib/conf/Core
+echo "BioLink" >> AvailableModules.conf
+grep '^#' AvailableModules.conf > AvailableModules.conf-tmp
+grep -v '^#' AvailableModules.conf | uniq | sort >> AvailableModules.conf-tmp
+mv AvailableModules.conf-tmp AvailableModules.conf
 
 
 -------------------------------------------------------------------------------
@@ -111,11 +122,17 @@ If this doesn't work.  Do not proceed, debug first.
 
 
 -------------------------------------------------------------------------------
-6) Add groups ??
+6) Add groups
+
+BioLink_admin
+BioLink_user
+BioLink_readonly
+
+FIXME: script this! FIXME
 
 
 -------------------------------------------------------------------------------
-7) Add some data via the command line
+7) Populate some of the tables with initial data
 
 - Load data onto polymer_type table:
 
