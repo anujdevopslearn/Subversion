@@ -1068,7 +1068,7 @@ sub convertGenomeCoordinates {
       }
 
       # SQL to perform lookups in CBIL genome coordinates table.
-      my $cSQL =<<"      END";
+      my $bgcSQL =<<"      END";
 	    SELECT AB.antibody_id
 	    FROM Biolink.dbo.CBIL_genome_coordinates GC
 	    JOIN Biolink.dbo.dots_to_locuslink DTL
@@ -1084,11 +1084,9 @@ sub convertGenomeCoordinates {
 	         OR $start_pos BETWEEN gene_start
 	                               AND gene_end
                )
-      ~;
-      
       END
 
-      my $sql = qq~
+      my $igcSQL = qq~
 	SELECT AB.antibody_id
 	  FROM Immunostain.dbo.genome_coordinates GC
 	  JOIN $TBIS_BIOSEQUENCE BS
@@ -1104,6 +1102,8 @@ sub convertGenomeCoordinates {
                )
       ~;
      
+      my $sql = ( $genome_build_id eq 'hg17' ) ? $bgcSQL : $igcSQL;
+
       my @rows = $sbeams->selectOneColumn($sql);
       if (scalar(@rows) > 1) {
         $log->warn( "Found multiple rows on lookup for $coordinate_str\n" );
