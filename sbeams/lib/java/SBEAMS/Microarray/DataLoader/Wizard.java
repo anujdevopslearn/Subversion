@@ -28,16 +28,16 @@ public class Wizard extends JPanel implements ActionListener {
 	this.i18n = i18n;
 	init();
 	this.applyI18N( this.i18n );
-  }
+  }// constructor
 //-----------------------------------------------------------------------------------------------
   public Wizard() {
 	init();
-  }
+  }// constructor
 //-----------------------------------------------------------------------------------------------
   public Wizard(WizardContext wc) {
 	init();
 	ctx = wc;
-  }
+  }// constructor
 //-----------------------------------------------------------------------------------------------
   private void init() {
 	nextButton.addActionListener(this);
@@ -67,12 +67,12 @@ public class Wizard extends JPanel implements ActionListener {
 	add(buttons, BorderLayout.SOUTH);
 	setMinimumSize( WIZARD_WINDOW_SIZE );
 	setPreferredSize( WIZARD_WINDOW_SIZE );
-  }
+  }// init
 //-----------------------------------------------------------------------------------------------
   public void setI18NMap( Map map ) {
 	i18n = map;
 	applyI18N( i18n );
-  }
+  }// setI18NMap
 //-----------------------------------------------------------------------------------------------
   private void applyI18N( Map map ) {
 	if ( map.size() > 0 ) {
@@ -87,15 +87,15 @@ public class Wizard extends JPanel implements ActionListener {
 	  cancelButton.setActionCommand( "cancel" );
 	  helpButton.setActionCommand( "help" );
 	}
-  }
+  }// applyI18N
 //-----------------------------------------------------------------------------------------------
   public void addWizardListener(WizardListener listener) {
 	listeners.put(listener, listener);
-  }
+  }// addWizardListener
 //-----------------------------------------------------------------------------------------------
   public void removeWizardListener(WizardListener listener) {
 	listeners.remove(listener);
-  }
+  }// removeWizardListener
 //-----------------------------------------------------------------------------------------------
   public void start(WizardPanel wp) {
 	previous = new Stack();
@@ -104,7 +104,7 @@ public class Wizard extends JPanel implements ActionListener {
 	wp.setWizardContext(ctx);
 	setPanel(wp);
 	updateButtons();
-  }
+  }// start
 //-----------------------------------------------------------------------------------------------
   public void actionPerformed(ActionEvent ae) {
 	String ac = ae.getActionCommand();
@@ -119,7 +119,7 @@ public class Wizard extends JPanel implements ActionListener {
 	} else if ("help".equals(ac)) {
 	  help();
 	}
-  }
+  }// actionPerformed
 //-----------------------------------------------------------------------------------------------
   private void setPanel(WizardPanel wp) {
 	if (null != current) {
@@ -139,7 +139,7 @@ public class Wizard extends JPanel implements ActionListener {
 	revalidate();
 	updateUI();
 	current.display();
-  }
+  }// setPanel
 //-----------------------------------------------------------------------------------------------
   private void updateButtons() {
 	cancelButton.setEnabled(current.canCancel());
@@ -147,13 +147,13 @@ public class Wizard extends JPanel implements ActionListener {
 	backButton.setEnabled(previous.size() > 0);
 	nextButton.setEnabled(current.hasNext());
 	finishButton.setEnabled(current.canFinish());
-  }
+  }// updateButtons
 //-----------------------------------------------------------------------------------------------
   private void back() {
 	WizardPanel wp = (WizardPanel)previous.pop();
 	setPanel(wp);
 	updateButtons();
-  }
+  }// back
 //-----------------------------------------------------------------------------------------------
   private void next() {
 	ArrayList list = new ArrayList();
@@ -168,7 +168,7 @@ public class Wizard extends JPanel implements ActionListener {
 	} else {
 	  showErrorMessages(list);
 	}
-  }
+  }// next
 //-----------------------------------------------------------------------------------------------
   private void finish() {
 	ArrayList list = new ArrayList();
@@ -182,7 +182,7 @@ public class Wizard extends JPanel implements ActionListener {
 	} else {
 	  showErrorMessages(list);
 	}
-  }
+  }// finish
 //-----------------------------------------------------------------------------------------------
   private void cancel() {
 	Iterator iter = listeners.values().iterator();
@@ -190,11 +190,11 @@ public class Wizard extends JPanel implements ActionListener {
 	  WizardListener listener = (WizardListener)iter.next();
 	  listener.wizardCancelled(this);
 	}
-  }
+  }// cancel
 //-----------------------------------------------------------------------------------------------
   private void help() {
 	current.help();
-  }
+  }// help
 //-----------------------------------------------------------------------------------------------
   private void showErrorMessages(ArrayList list) {
 	Object[] errors = (Object[])list.toArray();
@@ -202,7 +202,7 @@ public class Wizard extends JPanel implements ActionListener {
 	  if (errors[m] instanceof String)
 		JOptionPane.showMessageDialog(this, errors[m], "Data Loader Error", JOptionPane.ERROR_MESSAGE);
 	}
-  }
+  }// showErrorMessages
 //-----------------------------------------------------------------------------------------------
 }
 
