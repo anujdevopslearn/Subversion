@@ -174,12 +174,13 @@ IS_assay	11	cancer_amount_cc	Amount of Cancer	real	4	0	Y		N			N	text	20		Y	Y	N	A
 IS_assay	12	contact_id	Contact ID	int	4	0	Y		N	contact	contact_id	N	text	40		Y	N	N	Person analyzing this slide		
 IS_assay	13	is_control	Is Control Assay	char	1	0	Y		N			Y	optionlist			Y	Y	N	Is this Stain a control Stain?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
 IS_assay	14	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-IS_assay	15	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-IS_assay	16	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-IS_assay	17	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-IS_assay	18	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-IS_assay	19	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-IS_assay	20	record_status	Record Status	char	1	0	N	N	N							N	N				
+IS_assay	15	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Integer designed to assist in sort records of this type		
+IS_assay	16	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_assay	17	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_assay	18	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_assay	19	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_assay	20	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+IS_assay	21	record_status	Record Status	char	1	0	N	N	N							N	N				
 IS_assay_channel	1	assay_channel_id	Assay Channel ID	int	4	0	N		Y							N	N				pkDEFAULT
 IS_assay_channel	2	assay_id	Assay	int	4	0	N		N	IS_assay	assay_id	Y	optionlist			Y	Y	N	Stain used for this sample	"SELECT assay_id, assay_name FROM $TBIS_ASSAY ORDER BY assay_name"	
 IS_assay_channel	3	channel_index	Channel Index	int	4	0	N		N			N	text	4		Y	Y	N	"Index of the section used for this stain (1,2,3,?)"		
@@ -269,7 +270,7 @@ IS_specimen	17	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group
 IS_specimen	18	record_status	Record Status	char	1	0	N	N	N							N	N				
 IS_specimen_block	1	specimen_block_id	Specimen Block	int	4	0	N		Y							N	N				pkDEFAULT
 IS_specimen_block	2	specimen_block_name	Specimen Block Name/Designator	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Name/Coded designator for this specimen block		
-IS_specimen_block	3	specimen_id	Specimen	int	4	0	N		N	IS_specimen	specimen_id	Y	optionlist			Y	Y	N	Specimen from which this block was taken	"SELECT specimen_id, specimen_name FROM $TBIS_SPECIMEN ORDER BY specimen_name"	
+IS_specimen_block	3	specimen_id	Specimen	int	4	0	N		N	IS_specimen	specimen_id	Y	optionlist			Y	Y	N	Specimen from which this block was taken	"SELECT specimen_id, specimen_name FROM $TBIS_SPECIMEN ORDER BY specimen_name"
 IS_specimen_block	4	protocol_id	Preparation Protocol	int	4	0	N		N	protocol	protocol_id	Y	optionlist			Y	Y	N	Protocol used to prepare this specimen block	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='Immunostain Specimen Preparation' AND P.record_status != 'D' ORDER BY P.name"
 IS_specimen_block	5	acquisition_time	Acquisition Time	real	4	0	Y		N			N	text	20		Y	Y	N	Time in minutes between harvesting specimen and fixing specimen block	
 IS_specimen_block	6	protocol_deviations	Protocol Deviations	text	16	0	Y		N			N	textarea	6		Y	Y	N	Describe any deviations from the intented above protocol to the way this preparation was actually executed	
@@ -285,7 +286,7 @@ IS_specimen_block	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work
 IS_specimen_block	16	record_status	Record Status	char	1	0	N	N	N							N	N			
 IS_SummarizeStains	1	input_form_format	Input Form Format									N	optionlist		refreshDocument()	Y	Y	N	Options for level of detail and layout for this input form	"SELECT option_key,option_value FROM $TBIS_QUERY_OPTION WHERE option_type = 'input_form_options' ORDER BY sort_order,option_value"
 IS_SummarizeStains	2	project_id	Projects									N	multioptionlist	4		Y	Y	N	Constrain query to selected projects.  Multiple projects may be selected.	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P INNER JOIN $TBIS_ASSAY SS ON ( P.project_id = SS.project_id ) LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' ORDER BY UL.username+' - '+P.name,P.project_id"
-IS_SummarizeStains	3	organism_id	Organism									N	multioptionlist	4		Y	Y	N	Constrain query to selected organism. Multiple organisms may be selected.	"SELECT DISTINCT sbo.organism_id, sbo.organism_name from $TBIS_SPECIMEN S join sbeams.dbo.organism sbo on S.organism_id = sbo.organism_id WHERE S.record_status != 'D' "
+IS_SummarizeStains	3	organism_id	Organism									N	multioptionlist	4		Y	Y	N	Constrain query to selected organism. Multiple organisms may be selected.	"SELECT DISTINCT sbo.organism_id, sbo.organism_name from $TBIS_SPECIMEN S join sbeams.dbo.organism sbo on S.organism_id = sbo.organism_id WHERE S.record_status != 'D' "	
 IS_SummarizeStains	4	specimen_block_id	Specimen Blocks									N	multioptionlist	4		Y	Y	N	Constrain query only to selected specimen blocks  Multiple specimen blocks may be selected.	"SELECT DISTINCT SB.specimen_block_id,SB.specimen_block_name FROM $TBIS_SPECIMEN_BLOCK SB INNER JOIN $TBIS_ASSAY SS ON ( SB.specimen_block_id = SS.specimen_block_id ) WHERE SS.record_status != 'D' ORDER BY SB.specimen_block_name"	
 IS_SummarizeStains	5	genome_coordinates_constraint	Genome Coordinates									N	text	50		Y	Y	N	Specify the antibodies to constraint the query with using genome coordinates in a form like hg16:chr5:123456-123457+ where hg16 is the build and the final character is the orientation + or -		
 IS_SummarizeStains	6	antibody_id	Antibodies									N	multioptionlist	4		Y	Y	N	Constrain query only to selected antibodies  Multiple antibodies may be selected.	"SELECT DISTINCT AB.antibody_id,AB.antibody_name,AB.sort_order FROM $TBIS_ANTIBODY AB INNER JOIN $TBIS_ASSAY_CHANNEL AC ON ( AB.antibody_id = AC.antibody_id ) WHERE AC.record_status != 'D' ORDER BY AB.sort_order, AB.antibody_name"	
@@ -301,7 +302,7 @@ IS_genome_coordinates	5	genome_strand	DNA Strand	varchar	2				N							Y	Y
 IS_genome_coordinates	6	genome_transcription_start	Gene Transcription Start	int	4				N							Y	Y				
 IS_genome_coordinates	7	genome_transcription_end	Gene Transcription End	int	4				N							Y	Y				
 IS_genome_coordinates	8	genome_coding_region_start	Gene Coding Start	int	4				N							Y	Y				
-IS_genome_coordinates	9	genome_coding_region_end	Gene Coding End	int	4				N							Y	Y				
+IS_genome_coordinates	9	genome_coding_region_end	Gene Coding End	int	4				N							Y	Y
 IS_genome_coordinates	10	genome_location	Chromosomal Location	varchar	255				N							Y	Y
 IS_genome_coordinates	11	organism_id	Organism	int	4				N							Y	Y
 IS_genome_coordinates	12	comment	Comment	text	16				N							N	N
