@@ -461,8 +461,13 @@ sub postProcessResultset {
   my $rs_params_ref = $args{'rs_params_ref'};
   my $query_parameters_ref = $args{'query_parameters_ref'};
 
-  my ($bioseq_rank_list) = $sbeams->selectOneColumn("SELECT rank_list_file from $TBSN_BIOSEQUENCE_RANK_LIST
-    where biosequence_rank_list_id = '$query_parameters_ref->{biosequence_rank_list_id}'");
+  #### Changed from using column content to predicted location
+  #my ($bioseq_rank_list) = $sbeams->selectOneColumn("SELECT rank_list_file from $TBSN_BIOSEQUENCE_RANK_LIST
+  #  where biosequence_rank_list_id = '$query_parameters_ref->{biosequence_rank_list_id}'");
+  my $bioseq_rank_list = "SN_biosequence_rank_list/".
+    "$query_parameters_ref->{biosequence_rank_list_id}".
+    "_rank_list_file.dat";
+
 
   my %rs_params = %{$rs_params_ref};
   my %parameters = %{$query_parameters_ref};
