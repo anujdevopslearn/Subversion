@@ -55,7 +55,7 @@ main();
 sub main { 
 
     #### Do the SBEAMS authentication and exit if a username is not returned
-    exit unless ($current_username = $sbeams->Authenticate());
+    exit unless ($current_username = $sbeams->Authenticate( allow_anonymous_access => 1 ) );
 
     #### Print the header, do what the program does, and print footer
     $sbeamsPeptideAtlas->printPageHeader();
@@ -70,27 +70,35 @@ sub main {
 ###############################################################################
 sub showMainPage {
 
-    $sbeams->printUserContext();
+  $sbeams->printUserContext();
 
+  if ( $sbeams->isGuestUser ) {
+    print <<"    END";
+	  <BR>
+  	You are logged into the $DBTITLE - $SBEAMS_PART system as a guest user.
+  	<BR>
+    END
+  } else {
     print qq!
-	<BR>
-	You are successfully logged into the $DBTITLE - $SBEAMS_PART system.
-	Please choose your tasks from the menu bar on the left.<P>
-	<BR>
-	This system is still under active development.  Please be
-	patient and report bugs, problems, difficulties, suggestions to
-	<B>edeutsch\@systemsbiology.org</B>.<P>
-	<BR>
-	<BR>
-
-	<UL>
-	<LI> <A Href="http://www.peptideatlas.org/">About PeptideAtlas</A>
-	<LI> <A Href="GetPeptides">Browse PeptideAtlas </A>
-	<LI> <A Href="GetPeptide">Browse Peptide View [in progress]</A>
-	</UL>
-
-	<BR>
-	<BR>
+	  <BR>
+  	You are successfully logged into the $DBTITLE - $SBEAMS_PART system.
+  	Please choose your tasks from the menu bar on the left.<P>
+  	<BR>
+  	This system is still under active development.  Please be
+  	patient and report bugs, problems, difficulties, suggestions to
+  	<B>edeutsch\@systemsbiology.org</B>.<P>
+  	<BR>
     !;
+  }
+  print <<"  END";
+  <UL>
+  <LI> <A Href="http://www.peptideatlas.org/">About PeptideAtlas</A>
+ 	<LI> <A Href="GetPeptides">Browse PeptideAtlas </A>
+ 	<LI> <A Href="GetPeptide">Browse Peptide View [in progress]</A>
+	 </UL>
+
+  <BR>
+  <BR>
+  END
 
 } # end showMainPage
