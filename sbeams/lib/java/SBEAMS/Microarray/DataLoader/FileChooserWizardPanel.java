@@ -24,28 +24,43 @@ public class FileChooserWizardPanel extends WizardPanel
   private StringBuffer strbuf;
   private Hashtable tempData;
   private SBEAMSClient sc;
+  private Integer project_id;
+  private static String expNameURL="http://db/sbeams/cgi/Microarray/ManageTable.cgi?TABLE_NAME=project&output_mode=tsv";
 //-----------------------------------------------------------------------------------------------
   public FileChooserWizardPanel() {
 	initialize();
   }// constructor
 //-----------------------------------------------------------------------------------------------
-  public FileChooserWizardPanel(String dataFile, String expName) {
+  public FileChooserWizardPanel(String dataFile) {
 	this.dataFile = dataFile;
-	if (expName != null)
-	  experimentName = expName;
 	initialize();
 	handleDataFile(dataFile);
   }// constructor
 //-----------------------------------------------------------------------------------------------
-  public FileChooserWizardPanel(String dataFile, String translatorFile, String expName) {
+  public FileChooserWizardPanel(String dataFile, String translatorFile, Integer project_id) {
 	this.dataFile = dataFile;
-	if (expName != null)
-	  experimentName = expName;
-	initialize();
+	this.project_id = project_id;
+	initialize();	
 	handleDataFile(dataFile, translatorFile);
   }// constructor
 //-----------------------------------------------------------------------------------------------
   public void initialize(){
+
+	if (project_id != null) {
+	  try{
+		if (sc == null)
+		  sc = new SBEAMSClient(true);
+		Hashtable h = sc.fetchSbeamsResultSetHash(expNameURL, "project_id", "name");
+		if ( h.containsKey( project_id.toString() ) ) {
+		  experimentName =  (String) ( h.get(project_id.toString()) );
+		  experimentName = experimentName.trim();
+		  experimentName = experimentName.replaceAll("\\s","_");
+		}
+	  }catch (Exception e) {
+		e.printStackTrace();
+	  }
+	}
+
 	tempData = new Hashtable();
 	setLayout(new BorderLayout());
 	setBorder(new TitledBorder("Step 1. Select File to Load"));
@@ -152,13 +167,13 @@ public class FileChooserWizardPanel extends WizardPanel
 //-----------------------------------------------------------------------------------------------
   private void handleDataFile(String dataFile, String translator) {
 	boolean success = false;
-	GeneExpressionFileReader gefr = new GeneExpressionFileReader(dataFile, translator);
+	GeneExpressionFileReader gefr = new GeneExpressionFileReader(dataFile, translator,sc);
 	success = gefr.read();
 	if (!success) {
 	  JOptionPane.showMessageDialog(null, "Unable to Load File", "Alert", JOptionPane.ERROR_MESSAGE);
 	  return;
 	}else {
-	  if (gefr.getSbeamsClient() != null) 
+	  if (sc == null  && gefr.getSbeamsClient() != null) 
 		sc = gefr.getSbeamsClient();
 	  conditionNames = gefr.getConditionNames();
 	  tempData = gefr.getData();
@@ -210,6 +225,8 @@ public class FileChooserWizardPanel extends WizardPanel
 	  if (sc != null){
 		wizardContext.setAttribute(SBEAMS_CLIENT, sc);
 	  }
+	  if (project_id != null)
+		wizardContext.setAttribute(WIZARD_PROJECT_ID, project_id);
 	  wizardContext.setAttribute(WIZARD_FILE, dataFile);
 	  wizardContext.setAttribute(WIZARD_EXPERIMENT, experimentName);
 	  wizardContext.setAttribute(WIZARD_HASH_CONDITIONS, tempData);
