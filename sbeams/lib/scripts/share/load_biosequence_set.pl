@@ -79,7 +79,7 @@ Options:
                        lookup information for converting rosetta names
                        to biosequence_names
   --pfam_search_results_summary_file   Full path name of a file from which
-                       to load the pfam search results
+                    to load the pfam search results
   --ginzu_search_results_dir   Full path name of a directory in which
                        there are a bunch of .domains files to load
   --mamSum_search_results_summary_file   Full path name of a file from which
@@ -400,28 +400,28 @@ sub handleRequest {
       #### If it's determined that we need to do a load, do it
       if ($do_load) {
         $result = loadBiosequenceSet(set_name=>$status->{set_name},
-				     source_file=>$file_prefix.$status->{set_path},
-				     organism_id=>$status->{organism_id});
-      }
-    }
-  }
+					     source_file=>$file_prefix.$status->{set_path},
+					     organism_id=>$status->{organism_id});
+	      }
+	    }
+	  }
 
 
-  return;
+	  return;
 
-}
-
-
-
-###############################################################################
-# getBiosequenceSetStatus
-###############################################################################
-sub getBiosequenceSetStatus {
-  my %args = @_;
-  my $SUB_NAME = 'getBiosequenceSetStatus';
+	}
 
 
-  #### Decode the argument list
+
+	###############################################################################
+	# getBiosequenceSetStatus
+	###############################################################################
+	sub getBiosequenceSetStatus {
+	  my %args = @_;
+	  my $SUB_NAME = 'getBiosequenceSetStatus';
+
+
+	  #### Decode the argument list
   my $biosequence_set_id = $args{'biosequence_set_id'}
    || die "ERROR[$SUB_NAME]: biosequence_set_id not passed";
 
@@ -1493,7 +1493,7 @@ sub specialParsing {
   }
 
 
-  #### Conversion rules for the ENSEMBLE Protein database
+  #### Conversion rules for the ENSEMBL Human Protein database
   if ($rowdata_ref->{biosequence_name} =~ /^Translation:(ENSP\d+)$/ ) {
      $rowdata_ref->{biosequence_name} = $1;
      $rowdata_ref->{biosequence_accession} = $1;
@@ -1504,14 +1504,19 @@ sub specialParsing {
   }
 
 
-  #### Conversion rules for the ENSEMBLE Drosophila Protein database
-  if ($rowdata_ref->{biosequence_name} =~ /^Translation:(.+)$/ ) {
+  if ($rowdata_ref->{biosequence_name} =~ /^Translation:(.+)$/ ) { ## parse for old format 
      $rowdata_ref->{biosequence_name} = $1;
      $rowdata_ref->{biosequence_accession} = $1;
-     if ($rowdata_ref->{biosequence_desc} =~ /Gene:(\S+)/ ) {
+     if ($rowdata_ref->{biosequence_name} =~ /Gene:(.+)$/ ) {
        $rowdata_ref->{biosequence_gene_name} = $1;
      }
-     $rowdata_ref->{dbxref_id} = '20';
+  } elsif ($rowdata_ref->{biosequence_name} =~ /^(CG.+)/ ) { ## updated parse
+     $rowdata_ref->{biosequence_name} = $1;
+     $rowdata_ref->{biosequence_accession} = $1;
+     if ($rowdata_ref->{biosequence_name} =~ /(CG\d+)/ ) {
+       $rowdata_ref->{biosequence_gene_name} = $1;
+     }
+     $rowdata_ref->{dbxref_id} = '25';
   }
 
 
