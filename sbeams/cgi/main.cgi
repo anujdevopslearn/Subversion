@@ -140,19 +140,22 @@ sub handle_request {
 
   #### Write some welcoming text
   print qq~
-	<P>Welcome to the Systems Biology Experiment Analysis Management
-	System (SBEAMS) interface.  Note your current work group and project
-	listed above and change it via the pull down menus if desired.</P>
 
-	<P>The modules available to you are listed below and on the navigation
-	bar on the left.  Select one of the available modules by clicking
-	clicking on it to see the home page for that module.</P>
+	<P>Welcome to the Systems Biology Experiment Analysis
+	Management System (SBEAMS) interface.  Please check your
+	current work group and current project listed above and change
+	it via the pull down menus if desired, or use the list of
+	projects below.</P>
+
+	<P>The modules available to you are listed below and on the
+	navigation bar on the left.  Enter the interface for one of
+	the available modules by clicking on it.</P>
 
 	<P>This system is still under active development.  Please
 	report bugs, problems, difficulties, and suggestions to
 	<B>edeutsch\@systemsbiology.org</B>.</P>
-	<BR>
 
+	<H1>Available SBEAMS Modules:</H1>
 	<UL>
   ~;
 
@@ -173,9 +176,29 @@ sub handle_request {
   print qq~
 	</UL>
 
+	<P>To integrate resultsets from queries in multiple modules
+	(e.g., Interactions, Microarray, and Proteomics) and visualize
+	with Cytoscape, try out the new, experimental <B><A
+	HREF="$CGI_BASE_DIR/IntegrateResultsets">IntegrateResultsets</A></B>
+	interface.
+
 	<BR>
 	<BR>
     ~;
+
+  ##########################################################################
+  #### Print out all projects owned by the user
+
+  $sbeams->printProjectsYouOwn();
+
+
+
+  ##########################################################################
+  #### Print out all projects user has access to
+
+  $sbeams->printProjectsYouHaveAccessTo();
+
+
 
 } # end handle_request
 
