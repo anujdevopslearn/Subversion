@@ -416,7 +416,7 @@ sub handle_request {
 
   #### Build ISOELECTRIC_POINT constraint
   my $isoelectric_point_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"isoelectric_point",
+    constraint_column=>"SH.isoelectric_point",
     constraint_type=>"flexible_float",
     constraint_name=>"Isoelectric Point",
     constraint_value=>$parameters{isoelectric_point_constraint} );
@@ -592,7 +592,7 @@ sub handle_request {
     ["additional_proteins","additional_proteins","N+"],
     ["additional_proteins_old","additional_proteins","!N+"],
     ["peptide_string","peptide_string","Peptide"],
-    ["isoelectric_point","STR(isoelectric_point,8,3)","Calc pI"],
+    ["isoelectric_point","STR(SH.isoelectric_point,8,3)","Calc pI"],
     ["gravy_score","STR(gravy_score,8,3)","Gravy Score"],
     ["quantitation_dat","$quant_format_clause","DAT Quant"],
     ["quantitation_mzXML","$quant_format_clause","mzXML Quant"],

@@ -396,7 +396,7 @@ sub handle_request {
 
   #### Build ISOELECTRIC_POINT constraint
   my $isoelectric_point_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"isoelectric_point",
+    constraint_column=>"PP.isoelectric_point",
     constraint_type=>"flexible_float",
     constraint_name=>"Isoelectric Point",
     constraint_value=>$parameters{isoelectric_point_constraint} );

@@ -494,7 +494,7 @@ sub handle_request {
 
   #### Build ISOELECTRIC_POINT constraint
   my $isoelectric_point_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"isoelectric_point",
+    constraint_column=>"SH.isoelectric_point",
     constraint_type=>"flexible_float",
     constraint_name=>"Isoelectric Point",
     constraint_value=>$parameters{isoelectric_point_constraint} );
@@ -690,14 +690,14 @@ sub handle_request {
       ["average_quant","tABS.average_quant","Average Quant"],
       ["stdev_quant","tABS.stdev_quant","StdDev Quant"],
       ["n_quant","tABS.n_quant","N Quant"],
-      ["isoelectric_point","STR(isoelectric_point,8,3)","Calc pI"],
+      ["isoelectric_point","STR(tABS.isoelectric_point,8,3)","Calc pI"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
       ["organism","O.full_name","Organism"],
     );
-    $group_by_clause = " GROUP BY SH.reference,$colname,isoelectric_point";
+    $group_by_clause = " GROUP BY SH.reference,$colname,SH.isoelectric_point";
     $peptide_column = "$colname,";
-    $count_column = "COUNT(*) AS 'row_count',STR(AVG(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0)),10,2) AS 'average_quant',STR(STDEV(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0)),10,2) AS 'stdev_quant',SUM(CASE WHEN (NULLIF(d0_intensity,0.0) IS NULL OR NULLIF(d8_intensity,0.0) IS NULL) THEN 0 ELSE 1 END) AS 'n_quant',isoelectric_point";
+    $count_column = "COUNT(*) AS 'row_count',STR(AVG(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0)),10,2) AS 'average_quant',STR(STDEV(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0)),10,2) AS 'stdev_quant',SUM(CASE WHEN (NULLIF(d0_intensity,0.0) IS NULL OR NULLIF(d8_intensity,0.0) IS NULL) THEN 0 ELSE 1 END) AS 'n_quant',SH.isoelectric_point";
 
   #### If grouping by reference
   } elsif ( $parameters{display_options} =~ /GroupReference/ ) {
@@ -729,13 +729,13 @@ sub handle_request {
       ["peptide","peptide","Peptide"],
       ["count","tABS.row_count","Count"],
       ["average_quant","tABS.average_quant","Quant"],
-      ["isoelectric_point","STR(isoelectric_point,8,3)","Calc pI"],
+      ["isoelectric_point","STR(tABS.isoelectric_point,8,3)","Calc pI"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
       ["organism","O.full_name","Organism"],
     );
     $peptide_column = "peptide,";
-    $count_column = "1 AS 'row_count',STR(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0),10,2) AS 'average_quant',isoelectric_point";
+    $count_column = "1 AS 'row_count',STR(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0),10,2) AS 'average_quant',SH.isoelectric_point";
   }
 
 
