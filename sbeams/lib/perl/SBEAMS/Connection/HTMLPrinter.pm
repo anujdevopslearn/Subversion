@@ -30,7 +30,11 @@ use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
+use SBEAMS::Connection::Log;
 use Env qw (HTTP_USER_AGENT);
+
+my $log = SBEAMS::Connection::Log->new();
+
 
 
 ###############################################################################
@@ -699,6 +703,43 @@ sub makeInactiveText {
   return( "<FONT COLOR=#AAAAAA>$text</FONT>" );
 }
 
+sub getModuleButton {
+  my $self = shift;
+  my $module = shift || 'unknown';
+  my %colors = ( Immunostain => '#77A8FF',
+                 Microarray  => '#FFCC66',
+                 Proteomics  => '#66CC66',
+                 unknown     => '#888888' );
+  $log->printStack( 'debug' );
+
+  return( <<"  END" );
+  <STYLE TYPE=text/css>
+  #${module}_button {
+  background-color: $colors{$module};
+  border: 1px #666666 solid;
+  width: auto;
+  white-space: nowrap;
+  padding: 0 3 0 3
+  }
+  </STYLE>
+  END
+  my $extra =<<"  END";
+  padding: 1px;
+  margin-top: 100px;
+  margin-left: 37.5%;
+  text-align: center;
+  text-decoration: none;
+  margin-right: 37.5%;
+  #${module}_button A:visited, A:active, A:link {
+  text-decoration: none;
+  }
+  #${module}_button A:hover {
+  background:#0090D0;
+  color:#0090D0;             
+  }
+   
+  END
+}
 
 ###############################################################################
 
