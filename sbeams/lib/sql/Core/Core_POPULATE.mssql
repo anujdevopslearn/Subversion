@@ -80,15 +80,6 @@ INSERT INTO table_group_security ( table_group,work_group_id,privilege_id ) VALU
 INSERT INTO table_group_security ( table_group,work_group_id,privilege_id ) VALUES ( 'rowprivate',3,30 );
 
 
-INSERT INTO organism ( organism_name,sort_order ) VALUES ( 'Other',100 );
-INSERT INTO organism ( organism_name ) VALUES ( 'Human' );
-INSERT INTO organism ( organism_name ) VALUES ( 'Yeast' );
-INSERT INTO organism ( organism_name ) VALUES ( 'Halobacterium' );
-INSERT INTO organism ( organism_name ) VALUES ( 'Hemophilus' );
-INSERT INTO organism ( organism_name ) VALUES ( 'Mouse' );
-INSERT INTO organism ( organism_name,sort_order ) VALUES ( 'All',110 );
-INSERT INTO organism ( organism_name ) VALUES ( 'Drosophila' );
-
 
 INSERT INTO misc_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'yesno','Y','YES',10 );
