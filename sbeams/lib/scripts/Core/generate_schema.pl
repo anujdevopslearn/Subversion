@@ -209,7 +209,7 @@ sub generateSchema {
 
   #### If there are 10 columns, verify it's a table_property file and load
   if ($n_columns == 10) {
-    my @ref_columns = ('table_name','table_title','table_group',
+    my @ref_columns = ('table_name','Category','table_group',
       'manage_table_allowed','db_table_name','PK_column_name',
       'multi_insert_column','table_url','manage_tables','next_step');
     for ($i=0; $i<$n_columns; $i++) {
@@ -674,11 +674,16 @@ sub generateColumnDefinition {
     } elsif ($destination_type eq 'mysql') {
       $line .= "$datatype AUTO_INCREMENT";
     } elsif ($destination_type eq 'pgsql') {
-      $line .= "$datatype DEFAULT NEXTVAL('seq_${table_name}_${column_name}')";
+      my $sequence_name = "seq_${table_name}_${column_name}";
+      #### PostgreSQL *#&%$ingly truncates SEQUENCES to 31 characters
+      #### at this writing
+      $sequence_name = substr($sequence_name,0,31);
+      $line .= "$datatype DEFAULT NEXTVAL('$sequence_name')";
       $create_sequence_statement =
-        "CREATE SEQUENCE seq_${table_name}_${column_name}";
+        "CREATE SEQUENCE $sequence_name;\n".
+        "GRANT ALL ON $sequence_name TO sbeams";
       $drop_sequence_statement =
-        "DROP SEQUENCE seq_${table_name}_${column_name}";
+        "DROP SEQUENCE $sequence_name";
     } else {
       $line .= "SERIAL";
     }
