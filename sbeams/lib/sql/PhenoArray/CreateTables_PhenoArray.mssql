@@ -13,6 +13,7 @@ DROP TABLE plate_layout
 DROP TABLE strain
 
 DROP TABLE plasmid
+DROP TABLE plasmid_type
 
 DROP TABLE citation
 DROP TABLE strain_background
@@ -20,7 +21,6 @@ DROP TABLE strain_status
 DROP TABLE yeast_origin
 DROP TABLE yeast_selection_marker
 DROP TABLE coli_marker
-DROP TABLE strain_behavior
 
 
 DROP TABLE condition_repeat
@@ -47,7 +47,7 @@ CREATE TABLE biosequence_set (
 	upload_file			varchar(255) NULL,
 	set_path			varchar(255) NULL,
 	uri				varchar(255) NULL,
-	comment				varchar(4000) NULL,
+	comment				text NULL,
 	sort_order			int NOT NULL DEFAULT 10,
 	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	created_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
@@ -71,7 +71,7 @@ CREATE TABLE biosequence (
 	biosequence_length		int NULL,
 	biosequence_seq			text NULL,
 	inherit_from_biosequence_id	int NULL REFERENCES biosequence(biosequence_id),
-	comment				varchar(4000) NULL,
+	comment				text NULL,
 	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	created_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
 	date_modified			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -88,7 +88,7 @@ CREATE TABLE cell_type (
 	mating_type			varchar(255) NOT NULL,
 	ploidy				varchar(255) NOT NULL,
 	cell_type_description		varchar(255) NULL,
-	comment				varchar(4000) NULL,
+	comment				text NULL,
 	sort_order			int NOT NULL DEFAULT 10,
 	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	created_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
@@ -104,7 +104,7 @@ GO
 CREATE TABLE construction_method (
 	construction_method_id		int IDENTITY NOT NULL,
 	construction_method_name	varchar(255) NOT NULL,
-	comment				varchar(4000) NULL,
+	comment				text NULL,
 	sort_order			int NOT NULL DEFAULT 10,
 	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	created_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
@@ -119,8 +119,9 @@ GO
 
 CREATE TABLE coli_marker (
 	coli_marker_id			int IDENTITY NOT NULL,
+	coli_marker_tag			varchar(255) NOT NULL,
 	coli_marker_name		varchar(255) NOT NULL,
-	comment				varchar(4000) NULL,
+	comment				text NULL,
 	sort_order			int NOT NULL DEFAULT 10,
 	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	created_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
@@ -135,8 +136,9 @@ GO
 
 CREATE TABLE yeast_selection_marker (
 	yeast_selection_marker_id	int IDENTITY NOT NULL,
+	yeast_selection_marker_tag	varchar(255) NOT NULL,
 	yeast_selection_marker_name	varchar(255) NOT NULL,
-	comment				varchar(4000) NULL,
+	comment				text NULL,
 	sort_order			int NOT NULL DEFAULT 10,
 	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	created_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
@@ -151,8 +153,9 @@ GO
 
 CREATE TABLE yeast_origin (
 	yeast_origin_id			int IDENTITY NOT NULL,
+	yeast_origin_tag		varchar(255) NOT NULL,
 	yeast_origin_name		varchar(255) NOT NULL,
-	comment				varchar(4000) NULL,
+	comment				text NULL,
 	sort_order			int NOT NULL DEFAULT 10,
 	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	created_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
@@ -168,7 +171,7 @@ GO
 CREATE TABLE strain_status (
 	strain_status_id		int IDENTITY NOT NULL,
 	strain_status_name		varchar(255) NOT NULL,
-	comment				varchar(4000) NULL,
+	comment				text NULL,
 	sort_order			int NOT NULL DEFAULT 10,
 	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	created_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
@@ -183,8 +186,9 @@ GO
 
 CREATE TABLE strain_background (
 	strain_background_id		int IDENTITY NOT NULL,
+	strain_background_tag		varchar(255) NOT NULL,
 	strain_background_name		varchar(255) NOT NULL,
-	comment				varchar(4000) NULL,
+	comment				text NULL,
 	sort_order			int NOT NULL DEFAULT 10,
 	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	created_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
@@ -199,20 +203,21 @@ GO
 
 CREATE TABLE dbo.citation (
 	citation_id		int IDENTITY NOT NULL,
-	pub_med_ID		varchar(50) NULL,
+	pubmed_ID		varchar(50) NULL,
 	citation_name		varchar(100) NULL,
-	journal			varchar(100) NULL,
+	journal_name		varchar(100) NULL,
 	published_year		varchar(10) NULL,
-	volume			varchar(50) NULL,
-	issue			varchar(50) NULL,
-	page			varchar(50) NULL,
-	authors			varchar(255) NULL,
+	volume_number		varchar(50) NULL,
+	issue_number		varchar(50) NULL,
+	page_numbers		varchar(50) NULL,
+	author_list		varchar(255) NULL,
 	title			varchar(255) NULL,
-	publisher		varchar(100) NULL,
-	editor			varchar(255) NULL,
+	publisher_name		varchar(255) NULL,
+	editor_name		varchar(255) NULL,
 	uri			varchar(255) NULL,
 	abstract		text NULL,
-	comment			varchar(255) NULL,
+	full_manuscript_file	varchar(255) NULL,
+	comment			text NULL,
 	date_created		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	created_by_id		int NOT NULL /*REFERENCES contact(contact_id)*/,
 	date_modified		datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -222,6 +227,7 @@ CREATE TABLE dbo.citation (
 	PRIMARY KEY CLUSTERED (citation_id)
 )
 GO
+
 
 
 CREATE TABLE condition (
@@ -283,7 +289,7 @@ CREATE TABLE array_quantitation (
 	quant_file_name			varchar(255) NULL,
 	data_flag			varchar(10) NULL,
 	quantitated_date		datetime NULL,
-	comment				varchar(255) NULL,
+	comment				text NULL,
 	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	created_by_id			int NOT NULL /*REFERENCES contact(contact_id)*/,
 	date_modified			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -327,19 +333,38 @@ CREATE TABLE spot_quantitation (
 GO
 
 
+CREATE TABLE plasmid_type (
+	plasmid_type_id			int IDENTITY NOT NULL,
+	plasmid_type_name		varchar(255) NOT NULL,
+	comment				text NULL,
+	sort_order			int NOT NULL DEFAULT 10,
+	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	created_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	date_modified			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	modified_by_id			int NOT NULL DEFAULT 1 /*REFERENCES contact(contact_id)*/,
+	owner_group_id			int NOT NULL DEFAULT 1 /*REFERENCES work_group(work_group_id)*/,
+	record_status			char(1) DEFAULT 'N',
+	PRIMARY KEY CLUSTERED (plasmid_type_id)
+)
+GO
+
+
 CREATE TABLE plasmid (
 	plasmid_id			int IDENTITY NOT NULL,
 	plasmid_strainID		varchar(50) NULL,
 	plasmid_name			varchar(255) NULL,
+	plasmid_type_id			int NULL REFERENCES plasmid_type (plasmid_type_id),
 	vector				varchar(50) NULL,
 	coli_strain			varchar(50) NULL,
-	coli_marker			varchar(50) NULL,
-	yeast_selection_marker		varchar(50) NULL,
-	yeast_origin			varchar(50) NULL,
+	coli_marker_id			int NULL REFERENCES coli_marker (coli_marker_id),
+	yeast_selection_marker_id	int NULL REFERENCES yeast_selection_marker (yeast_selection_marker_id),
+	yeast_origin_id			int NULL REFERENCES yeast_origin (yeast_origin_id),
 	plasmid_insert			varchar(150) NULL,
 	cloned_by			varchar(50) NULL,
 	cloned_date			datetime NULL,
+	source_contact_id		int NULL /* REFERENCES contact (contact_id) */,
 	source				varchar(255) NULL,
+	reference_citation_id		int NULL REFERENCES citation (citation_id),
 	reference			varchar(255) NULL,
 	biosequence_id			int NULL REFERENCES biosequence (biosequence_id),
 	comment				text NULL,
@@ -365,8 +390,8 @@ CREATE TABLE strain (
 	plasmid1_id			int NULL REFERENCES plasmid (plasmid_id),
 	plasmid2_id			int NULL REFERENCES plasmid (plasmid_id),
 	construction_method_id		int NOT NULL REFERENCES construction_method (construction_method_id),
-	strain_source_id		int NOT NULL /* REFERENCES contact (contact_id) */,
-	reference_id			int NOT NULL REFERENCES citation (citation_id),
+	source_contact_id		int NOT NULL /* REFERENCES contact (contact_id) */,
+	reference_citation_id		int NOT NULL REFERENCES citation (citation_id),
 	comment				text NULL,
 	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	created_by_id			int NOT NULL /*REFERENCES contact(contact_id)*/,
@@ -403,6 +428,7 @@ CREATE TABLE sequence_modification (
 	inserted_biosequence_id		int NULL REFERENCES biosequence (biosequence_id),
 	modification_index		int NULL,
 	allele_index			int NULL,
+	comment				text NULL,
 	date_created			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	created_by_id			int NOT NULL /*REFERENCES contact(contact_id)*/,
 	date_modified			datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
