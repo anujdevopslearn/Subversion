@@ -82,7 +82,7 @@ use vars qw(@ISA @EXPORT
     $TBPR_PEPTIDE
     $TBPR_PEPTIDE_PARENT_PROTEIN
     $TBPR_INDISTINGUISHABLE_PEPTIDE
-    $TBPR_SUMMARY_QUANTITIATION
+    $TBPR_SUMMARY_QUANTITATION
 
 );
 
@@ -150,7 +150,7 @@ require Exporter;
     $TBPR_PEPTIDE
     $TBPR_PEPTIDE_PARENT_PROTEIN
     $TBPR_INDISTINGUISHABLE_PEPTIDE
-    $TBPR_SUMMARY_QUANTITIATION
+    $TBPR_SUMMARY_QUANTITATION
 
 );
 
@@ -219,7 +219,7 @@ $TBPR_INDISTINGUISHABLE_PROTEIN   = "${mod}indistinguishable_protein";
 $TBPR_PEPTIDE                     = "${mod}peptide";
 $TBPR_PEPTIDE_PARENT_PROTEIN      = "${mod}peptide_parent_protein";
 $TBPR_INDISTINGUISHABLE_PEPTIDE   = "${mod}indistinguishable_peptide";
-$TBPR_SUMMARY_QUANTITIATION       = "${mod}summary_quantitation";
+$TBPR_SUMMARY_QUANTITATION        = "${mod}summary_quantitation";
 
 
 
