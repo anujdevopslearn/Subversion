@@ -669,6 +669,9 @@ sub checkPopulateBioentity
 			my $groupByClause = qq / group by BE.bioentity_id/;
 			my $bioentityQueryCommon; 
 			my $bioentityQueryCanonical;
+			my ($commonName,$canName);
+			$commonName = escapeString ($hashRef->{$record}->{'bioentityComName'.$num}) if ($hashRef->{$record}->{'bioentityComName'.$num});
+			$canName = escapeString($hashRef->{$record}->{"bioentityCanName".$num})if($hashRef->{$record}->{'bioentityCanName'.$num});
 			if (!($hashRef->{$record}->{'bioentityComName'.$num}))
 			{
 #4,5
@@ -678,8 +681,7 @@ sub checkPopulateBioentity
 			else 
 			{
 
-				$hashRef->{$record}->{'bioentityComName'.$num} = escapeString ($hashRef->{$record}->{'bioentityComName'.$num});
-				$commonClause .= 	qq /\'$hashRef->{$record}->{'bioentityComName'.$num}\'/;
+				$commonClause .= "\'". $commonName ."\'";
 #1,2
 				$bioentityQueryCommon = $bioentityQuery.$commonClause.$groupByClause;
 				
@@ -692,8 +694,7 @@ sub checkPopulateBioentity
 			}
 			else 
 			{
-					$hashRef->{$record}->{'bioentityCanName'.$num} = escapeString($hashRef->{$record}->{'bioentityCanName'.$num});
-					$canonicalClause .= 	qq /\'$hashRef->{$record}->{'bioentityCanName'.$num}\'/;
+					$canonicalClause .= "\'". $canName ."\'";
 #4,5
 
 					$bioentityQueryCanonical = $bioentityQuery.$canonicalClause.$groupByClause;
@@ -704,6 +705,7 @@ sub checkPopulateBioentity
 			
 				
 #need to make sure we are pulling the same record
+		print "$bioentityQueryCommon\n";
 		
 					my @rows = $recordCon->selectOneColumn($bioentityQueryCommon);	
 					my $nrows = scalar(@rows);
@@ -717,6 +719,7 @@ sub checkPopulateBioentity
 					delete $INTERACTION{$record};
 					next;
 					}
+					print "$bioentityQueryCanonical\n";
 					@rows = $recordCon->selectOneColumn($bioentityQueryCanonical);	
 					$nrows = scalar(@rows);
 					my $bioentityIDCanonical = $rows[0] if $nrows == 1;
@@ -731,9 +734,8 @@ sub checkPopulateBioentity
 					
 					if ($bioentityIDCommon and !$bioentityIDCanonical)
 					{  
-							$hashRef->{$record}->{'bioentityComName'.$num} = escapeString($hashRef->{$record}->{'bioentityComName'.$num});
 							my $subCommonQuery = "Select bioentity_canonical_name from $TBIN_BIOENTITY
-							where bioentity_common_name = \'$hashRef->{$record}->{'bioentityComName'.$num}\'";
+							where bioentity_common_name =\'$commonName\'";
 							
 							 my @returnedRow = $recordCon->selectOneColumn($subCommonQuery);
 							 if ($returnedRow[0])
@@ -746,9 +748,8 @@ sub checkPopulateBioentity
 					}
 					elsif (!$bioentityIDCommon and $bioentityIDCanonical)
 					{
-							$hashRef->{$record}->{'bioentityCanName'.$num} = escapeString($hashRef->{$record}->{'bioentityCanName'.$num});
 							my $subCanonicalQuery = "Select bioentity_common_name from $TBIN_BIOENTITY
-							where bioentity_common_name = \'$hashRef->{$record}->{'bioentityCanName'.$num}\'"; 
+							where bioentity_common_name = \'$canName\'"; 
 							my @returnedRow = $recordCon->selectOneColumn($subCanonicalQuery);
 							if ($returnedRow[0])
 							{
@@ -1048,11 +1049,11 @@ sub ErrorLog
 sub escapeString {
       my $word = $_[0];
       return undef unless (defined($word));
-      $word =~ s /\\/\\\\/g;    
-      $word =~ s /\'/\'\'/g;
-      $word =~ s /\"/\'\"/g;
-      $word =~ s /%/\'%/g;  
-			$word =~ s /\./\'\./g;
+      $word =~ s/\\/\\\\/g;    
+      $word =~ s/\'/\'\'/g;
+      $word =~ s/\"/\'\"/g;
+      $word =~ s/%/\'%/g;  
+			$word =~ s/\./\'\./g;
       return $word;
     }
 	
