@@ -447,7 +447,7 @@ sub insert_update_row {
 
     #### Enquote and add the value as the column value
     $value = $self->convertSingletoTwoQuotes($value);
-    if (uc($value) eq "CURRENT_TIMESTAMP") {
+    if (uc($value) eq "CURRENT_TIMESTAMP" || uc($value) eq "NULL") {
       $value_list .= "$value,";
       $columnvalue_list .= "$key = $value,\n";
     } else {
