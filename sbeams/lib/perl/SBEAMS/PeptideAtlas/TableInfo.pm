@@ -90,9 +90,7 @@ sub returnTableInfo {
 
     } elsif ($info_key eq "FULLQuery") {
       return( <<"      END_QUERY" ); 
-     	SELECT sample_tag, sample_title, sample_description, 
-        anatomical_site_term, developmental_stage_term, pathology_term, 
-        cell_type_term, data_contributors, is_public
+     	SELECT *
       FROM $TBAT_SAMPLE 
       WHERE project_id IN ( $project_string )
       AND record_status!='D'
