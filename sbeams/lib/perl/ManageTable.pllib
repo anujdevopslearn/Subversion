@@ -10,6 +10,8 @@
 #
 ###############################################################################
 
+use strict;
+
 
 ###############################################################################
 # Print Options Page
@@ -33,7 +35,13 @@ sub printOptions {
 
   print "$LINESEPARATOR<P>";
   $sbeamsMOD->printPageFooter(close_table=>"YES",display_footer=>"NO");
-  showTable("WithOptions");
+
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters);
+
+  showTable(with_options=>'YES',parameters_ref=>\%parameters);
 
 } # end printOptions
 
@@ -52,7 +60,7 @@ sub printEntryForm {
   #### Define popular variables
   my ($i,$element,$key,$value,$line,$result,$sql);
   my %parameters;
-  my $username;
+  my ($username,$row);
 
 
   #### Get the columns for this table
@@ -455,7 +463,8 @@ sub printEntryForm {
 
 
   $sbeamsMOD->printPageFooter(close_tables=>'YES',display_footer=>'NO');
-  showTable('',\%parameters);
+
+  showTable(with_options=>'',parameters_ref=>\%parameters);
 
 } # end printEntryForm
 
@@ -467,17 +476,29 @@ sub printEntryForm {
 # Displays the Table
 ###############################################################################
 sub showTable {
-  my $with_options = shift;
-  my $parameters_ref = shift;
+  my %args = @_;
 
+  #### Process the arguments list
+  my $query_parameters_ref = $args{'parameters_ref'};
+  my %parameters = %{$query_parameters_ref};
+  my $with_options = $args{'with_options'};
+
+
+  #### Get the specified level of detail or set to BASIC
   my $detail_level = $q->param('detail_level') || "BASIC";
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+  my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
 
+
+  #### Get the query to show this table
   my ($main_query_part) =
     $sbeamsMOD->returnTableInfo($TABLE_NAME,$detail_level."Query",
-    $parameters_ref);
+    $query_parameters_ref);
 
+  #### Display the table controls
   my ($full_where_clause,$full_orderby_clause) = 
     $sbeams->processTableDisplayControls($TABLE_NAME);
+
 
   #### If a new ORDER BY clause is specified, remove the default one
   if ($full_orderby_clause) {
@@ -485,19 +506,71 @@ sub showTable {
   }
 
 
+  #### Build the final query
   my $sql_query = qq~
       $main_query_part
       $full_where_clause
       $full_orderby_clause
   ~;
-
   #print "<PRE>$sql_query\n\n</PRE>";
 
-  my ($element,$value);
+
+  #### Get the url link data
   my %url_cols = $sbeamsMOD->returnTableInfo($TABLE_NAME,"url_cols");
 
-  return $sbeams->displayQueryResult(sql_query=>$sql_query,
-      url_cols_ref=>\%url_cols);
+
+  #### Define some variables for the resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+
+  #### If the apply action was to recall a previous resultset, do it
+  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+  if ($apply_action eq "VIEWRESULTSET") {
+    $sbeams->readResultSet(
+       resultset_file=>$rs_params{set_name},
+       resultset_ref=>$resultset_ref,
+       query_parameters_ref=>\%parameters
+    );
+
+
+  #### Otherwise fetch the results from the database server
+  } else {
+
+    #### Fetch the results from the database server
+    $sbeams->fetchResultSet(sql_query=>$sql_query,
+      resultset_ref=>$resultset_ref);
+  
+    #### Store the resultset and parameters to disk resultset cache
+    $rs_params{set_name} = "SETME";
+    $sbeams->writeResultSet(
+      resultset_file_ref=>\$rs_params{set_name},
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters
+    );
+  }
+
+
+  #### Display the resultset
+  $sbeams->displayResultSet(
+    rs_params_ref=>\%rs_params,
+    url_cols_ref=>\%url_cols,
+    #hidden_cols_ref=>\%hidden_cols,
+    #max_widths=>\%max_widths,
+    resultset_ref=>$resultset_ref,
+    #column_titles_ref=>\@column_titles,
+    base_url=>$base_url,
+    query_parameters_ref=>\%parameters,
+  );
+
+
+  #### Display the resultset controls
+  $sbeams->displayResultSetControls(
+    rs_params_ref=>\%rs_params,
+    resultset_ref=>$resultset_ref,
+    query_parameters_ref=>\%parameters,
+    base_url=>$base_url
+  );
+
 
 } # end showTable
 
