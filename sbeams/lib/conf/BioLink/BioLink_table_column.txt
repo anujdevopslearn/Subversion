@@ -1,11 +1,11 @@
 table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
 BL_biosequence_set	1	biosequence_set_id	BioSequence Set ID	int	4	0	N		Y							N	N				pkDEFAULT
-BL_biosequence_set	2	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism to which the BioSequences in this database belong	SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name	
+BL_biosequence_set	2	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism to which the BioSequences in this database belong	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 BL_biosequence_set	3	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
 BL_biosequence_set	4	set_tag	Set Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this BioSequence database		
 BL_biosequence_set	5	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioSequence database		
 BL_biosequence_set	6	set_version	Set Version	varchar	50	0	N		N			Y	text	40		Y	Y	N	Version of this BioSequence database		
-BL_biosequence_set	7	polymer_type_id	Polymer Type	int	4	0	N		N	BL_polymer_type	polymer_type_id	Y	optionlist			Y	Y	N	Polymer type (e.g. protein, DNA, RNA) for the BioSequences in this database	SELECT polymer_type_id, polymer_type_name FROM $TBBL_POLYMER_TYPE ORDER BY sort_order,polymer_type_name	
+BL_biosequence_set	7	polymer_type_id	Polymer Type	int	4	0	N		N	BL_polymer_type	polymer_type_id	Y	optionlist			Y	Y	N	"Polymer type (e.g. protein, DNA, RNA) for the BioSequences in this database"	"SELECT polymer_type_id, polymer_type_name FROM $TBBL_POLYMER_TYPE ORDER BY sort_order,polymer_type_name"	
 BL_biosequence_set	8	upload_file	Upload file	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
 BL_biosequence_set	9	set_path	Set Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	File path of this BioSequence database		
 BL_biosequence_set	10	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
@@ -38,8 +38,8 @@ BL_biosequence	3	biosequence_name	BioSequence Name	varchar	255	0	N		N			Y	text	5
 BL_biosequence	4	biosequence_gene_name	BioSequence Gene Name	varchar	255	0	Y		N			Y	text	20		Y	Y	N	Gene name of this BioSequence if applicable.  Most common gene name if applicable		
 BL_biosequence	5	dbxref_id	Database Cross Reference	int	4	0	Y		N	BL_dbxref	dbxref_id					Y	Y	N	Database cross reference for which the accession number applies		pkDEFAULT
 BL_biosequence	6	biosequence_accession	BioSequence Accession	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Accession number for this BioSequence in some external database designated above		
-BL_biosequence	7	organism_id	Organism	int	4	0	Y		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism to which this BioSequence belongs	SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name	
-BL_biosequence	8	polymer_type_id	Polymer Type	int	4	0	Y		N	BL_polymer_type	polymer_type_id	Y	optionlist			Y	Y	N	Polymer type (e.g. protein, DNA, RNA) of this BioSequence	SELECT polymer_type_id, polymer_type_name FROM $TBBL_POLYMER_TYPE ORDER BY sort_order,polymer_type_name	
+BL_biosequence	7	organism_id	Organism	int	4	0	Y		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism to which this BioSequence belongs	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+BL_biosequence	8	polymer_type_id	Polymer Type	int	4	0	Y		N	BL_polymer_type	polymer_type_id	Y	optionlist			Y	Y	N	"Polymer type (e.g. protein, DNA, RNA) of this BioSequence"	"SELECT polymer_type_id, polymer_type_name FROM $TBBL_POLYMER_TYPE ORDER BY sort_order,polymer_type_name"	
 BL_biosequence	9	biosequence_desc	Biosequence Description	varchar	1024	0	N		N			Y	text	40		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)		
 BL_biosequence	10	biosequence_seq	Sequence	text	16	0	Y		N			N	file	40		Y	Y	N	Actual sequence of the BioSequence if known		
 BL_biosequence	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
@@ -96,9 +96,9 @@ BL_evidence_source	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	co
 BL_evidence_source	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 BL_evidence_source	12	record_status	Record Status	char	1	0	N	N	N							N	N				
 BL_relationship	1	relationship_id	Relationship ID	int	4	0	N		Y							N	N				pkDEFAULT
-BL_relationship	2	biosequence1_id	BioSequence 1 ID	int	4	0	N		N	BL_biosequence	biosequence_id	N	optionlist			N	N	Y	BioSequence identification	SELECT 1,2	
-BL_relationship	3	biosequence2_id	BioSequence 2 ID	int	4	0	N		N	BL_biosequence	biosequence_id	N	optionlist			N	N	Y	BioSequence identification	SELECT 1,2	
-BL_relationship	4	relationship_type_id	Relationship Type ID	int	4	0	N		N	BL_relationship_type	relationship_type_id	N	optionlist			N	N	Y	Relationship type for this relationship	SELECT relationship_type_id, relationship_type_name FROM $TBBL_RELATIONSHIP_TYPE ORDER BY sort_order,relationship_type_name	
+BL_relationship	2	biosequence1_id	BioSequence 1 ID	int	4	0	N		N	BL_biosequence	biosequence_id	N	optionlist			N	N	Y	BioSequence identification	"SELECT 1,2"	
+BL_relationship	3	biosequence2_id	BioSequence 2 ID	int	4	0	N		N	BL_biosequence	biosequence_id	N	optionlist			N	N	Y	BioSequence identification	"SELECT 1,2"	
+BL_relationship	4	relationship_type_id	Relationship Type ID	int	4	0	N		N	BL_relationship_type	relationship_type_id	N	optionlist			N	N	Y	Relationship type for this relationship	"SELECT relationship_type_id, relationship_type_name FROM $TBBL_RELATIONSHIP_TYPE ORDER BY sort_order,relationship_type_name"	
 BL_relationship	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 BL_relationship	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
 BL_relationship	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -106,29 +106,29 @@ BL_relationship	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contac
 BL_relationship	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 BL_relationship	10	record_status	Record Status	char	1	0	N	N	N							N	N				
 BL_evidence	1	evidence_id	Evidence ID	int	4	0	N		Y							N	N				pkDEFAULT
-BL_evidence	2	relationship_id	Relationship ID	int	4	0	N		N	BL_relationship	relationship_id	Y	optionlist			Y	Y	N	Relationship ID this line of evidence presents	SELECT relationship_id, relationship_name FROM $TB_RELATIONSHIP ORDER BY sort_order,relationship_name	
-BL_evidence	3	evidence_source_id	Evidence Source ID	int	4	0	N		N	BL_evidence_source	evidence_source_id	Y	optionlist			Y	Y	N	Evidence Source that produced this line of evidence	SELECT evidence_source_id, evidence_source_name FROM $TB_EVIDENCE_SOURCE ORDER BY sort_order,evidence_source_name	
+BL_evidence	2	relationship_id	Relationship ID	int	4	0	N		N	BL_relationship	relationship_id	Y	optionlist			Y	Y	N	Relationship ID this line of evidence presents	"SELECT relationship_id, relationship_name FROM $TB_RELATIONSHIP ORDER BY sort_order,relationship_name"	
+BL_evidence	3	evidence_source_id	Evidence Source ID	int	4	0	N		N	BL_evidence_source	evidence_source_id	Y	optionlist			Y	Y	N	Evidence Source that produced this line of evidence	"SELECT evidence_source_id, evidence_source_name FROM $TB_EVIDENCE_SOURCE ORDER BY sort_order,evidence_source_name"	
 BL_evidence	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 BL_evidence	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-BL_evidence	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-BL_evidence	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-BL_evidence	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-BL_evidence	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-BL_evidence	10	record_status	Record Status	char	1	0	N	N	N							N	N				
-BL_BrowseBioSequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched.	SELECT biosequence_set_id,set_name FROM $TBBL_BIOSEQUENCE_SET ORDER BY sort_order,set_name	
-BL_BrowseBioSequence	2	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-BL_BrowseBioSequence	3	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-BL_BrowseBioSequence	4	molecular_function_constraint	Molecular Function Constraint									N	text	40		Y	Y	N	Constraint for the GO Molecular Function. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-BL_BrowseBioSequence	5	biological_process_constraint	Biological Process Constraint									N	text	40		Y	Y	N	Constraint for the GO Biological Process. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-BL_BrowseBioSequence	6	cellular_component_constraint	Cellular Component Constraint									N	text	40		Y	Y	N	Constraint for the GO Cellular Component. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-BL_BrowseBioSequence	7	protein_domain_constraint	Protein Domain Constraint									N	text	40		Y	Y	N	Constraint for the InterPro Protein Domain. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-BL_BrowseBioSequence	8	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	Y	N	Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: "n.n", "> n.n", "< n.n", "between n.n and n.n", "n.n +- n.n"		
-BL_BrowseBioSequence	9	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	Y	N	Constraint for the number of transmembrane regions (based on a 19-residue wide sliding window of hydropathy indexes above 1.58).  Allowed syntax: "n", "> n", "< n", "between n and n", "n +- n"		
-BL_BrowseBioSequence	10	biosequence_seq_constraint	Sequence Constraint									N	text	40		Y	Y	N	Constraint for the actual sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-BL_BrowseBioSequence	11	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-BL_BrowseBioSequence	12	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	SELECT option_key,option_value FROM $TBBL_QUERY_OPTION WHERE option_type = 'BBS_sort_options' ORDER BY sort_order,option_value	
-BL_BrowseBioSequence	13	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	SELECT option_key,option_value FROM $TBBL_QUERY_OPTION WHERE option_type = 'BBS_display_options' ORDER BY sort_order,option_value	
-BL_BrowseBioSequence	14	row_limit	Maximum Rows									N	text	10		Y	Y	N	Limit the numbers of rows displayed.  If not provided, default is 100 rows.		
+BL_evidence	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N			
+BL_evidence	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+BL_evidence	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
+BL_evidence	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
+BL_evidence	10	record_status	Record Status	char	1	0	N	N	N							N	N			
+BL_BrowseBioSequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBBL_BIOSEQUENCE_SET ORDER BY sort_order,set_name"
+BL_BrowseBioSequence	2	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+BL_BrowseBioSequence	3	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+BL_BrowseBioSequence	4	molecular_function_constraint	Molecular Function Constraint									N	text	40		Y	Y	N	Constraint for the GO Molecular Function. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+BL_BrowseBioSequence	5	biological_process_constraint	Biological Process Constraint									N	text	40		Y	Y	N	Constraint for the GO Biological Process. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+BL_BrowseBioSequence	6	cellular_component_constraint	Cellular Component Constraint									N	text	40		Y	Y	N	Constraint for the GO Cellular Component. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+BL_BrowseBioSequence	7	protein_domain_constraint	Protein Domain Constraint									N	text	40		Y	Y	N	Constraint for the InterPro Protein Domain. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+BL_BrowseBioSequence	8	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	Y	N	"Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
+BL_BrowseBioSequence	9	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	Y	N	"Constraint for the number of transmembrane regions (based on a 19-residue wide sliding window of hydropathy indexes above 1.58).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
+BL_BrowseBioSequence	10	biosequence_seq_constraint	Sequence Constraint									N	text	40		Y	Y	N	Constraint for the actual sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+BL_BrowseBioSequence	11	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+BL_BrowseBioSequence	12	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBBL_QUERY_OPTION WHERE option_type = 'BBS_sort_options' ORDER BY sort_order,option_value"
+BL_BrowseBioSequence	13	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBBL_QUERY_OPTION WHERE option_type = 'BBS_display_options' ORDER BY sort_order,option_value"
+BL_BrowseBioSequence	14	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."	
 BL_CBIL_genome_coordinates	1	Coordinate_id	Primary key	int	4	0	N		Y			Y									
 BL_CBIL_genome_coordinates	2	Probe_Set_Name	Affymetrix probe set name	varchar	255	0	Y		N			N									
 BL_CBIL_genome_coordinates	3	Genome_Build	Genome build version number	varchar	255	0	Y		N			N									
