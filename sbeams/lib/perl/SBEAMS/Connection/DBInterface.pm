@@ -3254,6 +3254,162 @@ sub readModuleFile {
 
 
 
+###############################################################################
+# printProjectsYouOwn- prints HTML TABLE that contains all projects you own
+###############################################################################
+sub printProjectsYouOwn {
+  my $self = shift || croak("parameter self not passed");
+  my %args = @_;
+  my $SUB_NAME = "printProjectsYouOwn";
+
+  #### Decode the argument list
+  my $verbose = $args{'verbose'} || 0;
+  my $current_contact_id = $self->getCurrent_contact_id();
+
+  #### Define standard variables
+  my ($sql, @rows);
+
+  ####Print Table
+  print qq~
+	<H1>Projects You Own:</H1>
+	<TABLE WIDTH="50%" BORDER=0>
+	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
+  ~;
+
+
+  #### Get all the projects owned by the user
+  $sql = qq~
+	SELECT project_id,project_tag,P.name
+	  FROM $TB_PROJECT P
+	 WHERE PI_contact_id = '$current_contact_id'
+	 ORDER BY project_tag
+  ~;
+  @rows = $self->selectSeveralColumns($sql);
+
+  if (@rows) {
+    my $firstflag = 1;
+    foreach my $row (@rows) {
+      my ($project_id,$project_tag,$project_name) = @{$row};
+      print "	<TR><TD></TD>" unless ($firstflag);
+      print "	<TD WIDTH=\"100%\">- <A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?set_current_project_id=$project_id\">$project_tag:</A> $project_name</TD></TR>\n";
+      $firstflag=0;
+    }
+  } else {
+    print "	<TD WIDTH=\"100%\">NONE</TD></TR>\n";
+  }
+
+
+  #### Finish the table
+  print qq~
+	</TABLE>
+  ~;
+} #end printProjectsYouOwn
+
+
+###############################################################################
+# printProjectsYouHaveAccessTo
+###############################################################################
+sub printProjectsYouHaveAccessTo {
+  my $self = shift || croak("parameter self not passed");
+  my %args = @_;
+  my $SUB_NAME = "printProjectsYouHaveAccessTo";
+
+  #### Decode the argument list
+  my $verbose = $args{'verbose'} || 0;
+  my $current_contact_id = $self->getCurrent_contact_id();
+
+  #### Define standard variables
+  my ($sql, @rows);
+
+  ##########################################################################
+  #### Print out all projects user has access to
+  print qq~
+	<H1>Projects You Have Access To:</H1>
+	<TABLE WIDTH="50%" BORDER=0>
+	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
+  ~;
+
+
+  #### Get the privilege level names
+  my %privilege_names = $self->selectTwoColumnHash(
+    "SELECT privilege_id,name FROM $TB_PRIVILEGE WHERE record_status != 'D'"
+  );
+
+
+  #### Get all the projects user has access to
+  $sql = qq~
+	SELECT P.project_id,P.project_tag,P.name,UL.username,
+               MIN(CASE WHEN UWG.contact_id IS NULL THEN NULL ELSE GPP.privilege_id END) AS "best_group_privilege_id",
+               MIN(UPP.privilege_id) AS "best_user_privilege_id"
+	  FROM $TB_PROJECT P
+	  JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
+	  LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
+	       ON ( P.project_id = UPP.project_id
+	            AND UPP.contact_id='$current_contact_id' )
+	  LEFT JOIN $TB_GROUP_PROJECT_PERMISSION GPP
+	       ON ( P.project_id = GPP.project_id )
+	  LEFT JOIN $TB_PRIVILEGE PRIV
+	       ON ( GPP.privilege_id = PRIV.privilege_id )
+	  LEFT JOIN $TB_USER_WORK_GROUP UWG
+	       ON ( GPP.work_group_id = UWG.work_group_id
+	            AND UWG.contact_id='$current_contact_id' )
+	  LEFT JOIN $TB_WORK_GROUP WG
+	       ON ( UWG.work_group_id = WG.work_group_id )
+	 WHERE 1=1
+	   AND P.record_status != 'D'
+	   AND UL.record_status != 'D'
+	   AND ( UPP.record_status != 'D' OR UPP.record_status IS NULL )
+	   AND ( GPP.record_status != 'D' OR GPP.record_status IS NULL )
+	   AND ( PRIV.record_status != 'D' OR PRIV.record_status IS NULL )
+	   AND ( UWG.record_status != 'D' OR UWG.record_status IS NULL )
+	   AND ( WG.record_status != 'D' OR WG.record_status IS NULL )
+	   AND ( UPP.privilege_id<=40 OR GPP.privilege_id<=40 )
+           AND ( WG.work_group_name IS NOT NULL OR UPP.privilege_id IS NOT NULL )
+         GROUP BY P.project_id,P.project_tag,P.name,UL.username
+	 ORDER BY UL.username,P.project_tag
+  ~;
+  @rows = $self->selectSeveralColumns($sql);
+
+  if (@rows) {
+    my $firstflag = 1;
+    foreach my $row (@rows) {
+      my ($project_id,$project_tag,$project_name,$username,
+          $best_group_privilege_id,$best_user_privilege_id) =
+        @{$row};
+      print "	<TR><TD></TD>" unless ($firstflag);
+
+      #### Select the lowest permission and translate to a name
+      $best_group_privilege_id = 9999
+        unless (defined($best_group_privilege_id));
+      $best_user_privilege_id = 9999
+        unless (defined($best_user_privilege_id));
+      my $best_privilege_id = $best_group_privilege_id;
+      $best_privilege_id = $best_user_privilege_id if
+        ($best_user_privilege_id < $best_privilege_id);
+      my $privilege_name = $privilege_names{$best_privilege_id} || '???';
+
+      print "	<TD><NOBR>- <A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?set_current_project_id=$project_id\">$username - $project_tag:</A> $project_name</NOBR></TD><TD><font color=\"red\">$privilege_name</font></TD></TR>\n";
+      $firstflag=0;
+    }
+  } else {
+    print "	<TD WIDTH=\"100%\">NONE</TD></TR>\n";
+  }
+
+
+  #### Finish the table
+  print qq~
+	</TABLE>
+  ~;
+
+
+
+}
+
+
+
+
+
+
 
 
 ###############################################################################
