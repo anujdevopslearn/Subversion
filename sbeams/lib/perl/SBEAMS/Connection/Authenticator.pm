@@ -252,21 +252,38 @@ sub checkValidUID {
 
     my $current_uid = "$>" || "$<";
 
-    #### Fix PATH to keep TaintPerl happy and check yp passwd to see
-    #### if this is a valid user
+    #### Fix PATH to keep TaintPerl happy
     my $savedENV=$ENV{PATH};
     $ENV{PATH}="";
-    my @results = `/usr/bin/ypcat passwd`;
-    $ENV{PATH}=$savedENV;
 
     my ($uname,$pword,$uid);
-
     my $element;
-    foreach $element (@results) {
+
+    #### Loop over all the local entries to see if this user is there
+    my @local_users = `/bin/cat /etc/passwd`;
+    foreach $element (@local_users) {
       ($uname,$pword,$uid)=split(":",$element);
       last if ($uid eq $current_uid);
     }
 
+    #### If it wasn't there, check all the NIS users too
+    #### It might be faster to use ypmatch instead of ypcat, but
+    #### TaintPerl doesn't like user input going into a shell command!
+    unless ($uid eq $current_uid) {
+      my @NIS_users = `/usr/bin/ypcat passwd`;
+      foreach $element (@NIS_users) {
+        ($uname,$pword,$uid)=split(":",$element);
+        last if ($uid eq $current_uid);
+      }
+    }
+
+
+    #### Restore the PATH
+    $ENV{PATH}=$savedENV;
+
+
+    #### If there's a match, then check to make sure it's still in the
+    #### database
     if ($uid eq $current_uid) {
         $username = $uname;
 
@@ -952,20 +969,34 @@ sub getUnixPassword {
     my $username = shift;
     my $password = 0;
 
-    #### Set PATH to something innocuous to keep Taint happy
-    $ENV{PATH}="/bin:/usr/bin";
+    #### Fix PATH to keep TaintPerl happy
+    my $savedENV=$ENV{PATH};
+    $ENV{PATH}="";
 
     #### Collect the list of all passwds.  Using ypmatch would be more
     #### efficient, but sending user-supplied data to a shell is dangerous
-    my @results = `/usr/bin/ypcat passwd`;
-    my @row;
-    my ($uname,$pword);
+    my ($uname,$pword,$uid);
     my $element;
 
-    foreach $element (@results) {
-        ($uname,$pword)=split(":",$element);
-        last if ($uname eq $username);
+
+    #### Loop over all the local entries to see if this user is there
+    my @local_users = `/bin/cat /etc/passwd`;
+    foreach $element (@local_users) {
+      ($uname,$pword,$uid)=split(":",$element);
+      last if ($uname eq $username);
     }
+
+    #### If it wasn't there, check all the NIS users too
+    #### It might be faster to use ypmatch instead of ypcat, but
+    #### TaintPerl doesn't like user input going into a shell command!
+    unless ($uname eq $username) {
+      my @NIS_users = `/usr/bin/ypcat passwd`;
+      foreach $element (@NIS_users) {
+        ($uname,$pword,$uid)=split(":",$element);
+        last if ($uname eq $username);
+      }
+    }
+
 
     if ($uname eq $username) {
         $password = $pword;
@@ -973,6 +1004,9 @@ sub getUnixPassword {
         push(@ERRORS, "$username is not a valid UNIX username, so ".
           "database cannot have blank password");
     }
+
+    #### Restore the PATH
+    $ENV{PATH}=$savedENV;
 
     return $password;
 }
