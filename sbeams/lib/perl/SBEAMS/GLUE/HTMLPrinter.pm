@@ -97,6 +97,9 @@ sub printPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/main.cgi">$SBEAMS_PART Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
+	<tr><td>Browse Data:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetInteractions"><nobr>&nbsp;&nbsp;&nbsp;Interactions</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=GL_bioentity"><nobr>&nbsp;&nbsp;&nbsp;BioEntities</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=GL_interaction"><nobr>&nbsp;&nbsp;&nbsp;Interactions</nobr></a></td></tr>

@@ -14,6 +14,7 @@ package SBEAMS::GLUE::Tables;
 use strict;
 use vars qw(@ISA @EXPORT 
     $TB_ORGANISM
+    $TBGL_QUERY_OPTION
 
     $TBGL_BIOENTITY
     $TBGL_BIOENTITY_TYPE
@@ -40,6 +41,7 @@ require Exporter;
 
 @EXPORT = qw (
     $TB_ORGANISM
+    $TBGL_QUERY_OPTION
 
     $TBGL_BIOENTITY
     $TBGL_BIOENTITY_TYPE
@@ -63,6 +65,7 @@ require Exporter;
 
 
 $TB_ORGANISM                = 'sbeams.dbo.organism';
+$TBGL_QUERY_OPTION          = 'glue.dbo.query_option';
 
 $TBGL_BIOENTITY             = 'glue.dbo.bioentity';
 $TBGL_BIOENTITY_TYPE        = 'glue.dbo.bioentity_type';
