@@ -415,21 +415,21 @@ sub handle_request {
         "(CASE WHEN QUAN.date_modified != QUAN.date_created THEN ' *' ELSE '' END)";
     } elsif ($parameters{quantitation_format} eq "High1") {
       $quant_format_clause = "(CASE WHEN d0_intensity > d8_intensity ".
-        "THEN '1 : ' + STR(d8_intensity/ISNULL(NULLIF(d0_intensity,0.0),0.001),5,2) ".
-        "ELSE STR(d0_intensity/ISNULL(NULLIF(d8_intensity,0.0),0.001),4,2) + ' : 1' ".
+        "THEN '1 : ' + STR(d8_intensity/ISNULL(NULLIF(d0_intensity,0.0),0.001)*ISNULL(NULLIF(PE.quant_normalization,0.0),1.0),5,2) ".
+        "ELSE STR(d0_intensity/ISNULL(NULLIF(d8_intensity,0.0),0.001)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0),4,2) + ' : 1' ".
         "END) + ".
         "ISNULL(manually_changed,'')";
     } elsif ($parameters{quantitation_format} eq "d01") {
-      $quant_format_clause = "'1 :' + STR(d8_intensity/ISNULL(NULLIF(d0_intensity,0.0),0.001),5,2) + ".
+      $quant_format_clause = "'1 :' + STR(d8_intensity/ISNULL(NULLIF(d0_intensity,0.0),0.001)*ISNULL(NULLIF(PE.quant_normalization,0.0),1.0),5,2) + ".
         "ISNULL(manually_changed,'')";
     } elsif ($parameters{quantitation_format} eq "d81") {
-      $quant_format_clause = "STR(d0_intensity/ISNULL(NULLIF(d8_intensity,0.0),0.001),5,2) + ': 1' + ".
+      $quant_format_clause = "STR(d0_intensity/ISNULL(NULLIF(d8_intensity,0.0),.001)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0),5,2) + ': 1' + ".
         "ISNULL(manually_changed,'')";
     } elsif ($parameters{quantitation_format} eq "decimal") {
-      $quant_format_clause = "STR(d0_intensity/ISNULL(NULLIF(d8_intensity,0.0),0.001),10,4) + ".
+      $quant_format_clause = "STR(d0_intensity/ISNULL(NULLIF(d8_intensity,0.0),0.001)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0),10,4) + ".
         "ISNULL(manually_changed,'')";
     } elsif ($parameters{quantitation_format} eq "decimalplain") {
-      $quant_format_clause = "STR(d0_intensity/ISNULL(NULLIF(d8_intensity,0.0),0.001),10,4)";
+      $quant_format_clause = "STR(d0_intensity/ISNULL(NULLIF(d8_intensity,0.0),0.001)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0),10,4)";
     } else {
       print "<H4>Cannot parse Quantitation Format!  Check syntax.</H4>\n\n";
       return;
