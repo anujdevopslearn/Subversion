@@ -2020,14 +2020,14 @@ sub displayResultSetControls {
     my $cytotest_url_prefix = "http://hazel.systemsbiology.net:8080/cytoscape/sbeamsTest";
     if ($resultset_ref->{column_list_ref}->[0] eq 'interaction_id') {
       print "<BR>\n<A HREF=\"${cytoscape_url_prefix}?m=interactions&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
-      print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<A HREF=\"${cytoscape_url_prefix}?m=NIDA&rs=$rs_params{set_name}\">[NIDA]</A>";
-      print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<A HREF=\"${cytotest_url_prefix}?m=interactions&rs=$rs_params{set_name}\">[test]</A>";
+      #print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<A HREF=\"${cytoscape_url_prefix}?m=NIDA&rs=$rs_params{set_name}\">[NIDA]</A>";
+      #print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<A HREF=\"${cytotest_url_prefix}?m=interactions&rs=$rs_params{set_name}\">[test]</A>";
     } elsif ($resultset_ref->{column_list_ref}->[0] eq 'Bait' ||
              $resultset_ref->{column_list_ref}->[1] eq 'Bait') {
       print "<BR>\n<A HREF=\"${cytoscape_url_prefix}?m=agingras&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
     } elsif ($resultset_ref->{column_list_ref}->[0] eq 'condition_name' || $FindBin::Script =~ /GetExpression/) {
       print "<BR>\n<A HREF=\"${cytoscape_url_prefix}?m=microarray&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
-      print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<A HREF=\"${cytotest_url_prefix}?m=microarray&rs=$rs_params{set_name}\">[test]</A>";
+      #print "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<A HREF=\"${cytotest_url_prefix}?m=microarray&rs=$rs_params{set_name}\">[test]</A>";
     } elsif ($resultset_ref->{column_list_ref}->[0] eq 'prophet number') {
       print "<BR>\n<A HREF=\"${cytoscape_url_prefix}?m=rchen&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
     } elsif ($resultset_ref->{column_list_ref}->[0] eq 'Systematic') {
