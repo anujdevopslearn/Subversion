@@ -2188,7 +2188,8 @@ sub transferTable {
   die ("parameters sql and source_file cannot both be passed")
     if ($sql && $source_file);
   my $src_PK_name = $args{'src_PK_name'} || '';
-  my $src_PK_column = $args{'src_PK_column'} || -1;
+  my $src_PK_column = $args{'src_PK_column'};
+  $src_PK_column = -1 unless (defined($src_PK_column));
   if ($sql) {
     die ("parameter src_PK_name must be passed if sql is passed")
       unless ($src_PK_name);
