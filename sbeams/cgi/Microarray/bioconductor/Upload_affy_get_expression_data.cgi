@@ -567,7 +567,9 @@ sub getColumnMapping {
 	  $file_type = "fdr_map";
 	}elsif($line =~ /Adjusted p-value/) {
 	  $file_type = "t_test_map";
-	}else {
+	}elsif( $line =~ /Log_2_Expression_Ratio/){
+		$file_type = "ratios_only_map";
+  	}else {
 	  $log->error("File column mapping is not recognized for file '$source_file'\n");
 	  die ("Error: cannot recognize file type from the files column headers.  Please report this error");
 	}
@@ -860,6 +862,16 @@ sub getHeaderHash {
 				"Public_ID"     => 'canonical_name',
 				"Adjusted p-value" => 'p_value',
 				Log_10_Ratio    => 'log10_ratio',
+				
+			 );
+  }elsif($file_type eq "ratios_only_map"){
+  	%hash = (	"Probe_set_id"  => ['reporter_name','gene_name'],
+    			"Gene_Symbol"   => 'common_name',
+				"Gene_Title"    => 'full_name',
+				Unigene         => 'external_identifier',
+				LocusLink       => 'second_name',
+				"Public_ID"     => 'canonical_name',
+				"Log_10_Expression_Ratio"    => 'log10_ratio',
 				
 			 );
   }else{
