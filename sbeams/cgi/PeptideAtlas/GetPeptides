@@ -507,7 +507,7 @@ sub handle_request {
 		  'biosequence_accession' => 1,
 		  'biosequence_accessor' => 1,
 		  'biosequence_accessor_suffix' => 1,
-		  'peptide_accession' => 1,
+#		  'peptide_accession' => 1, not sure why this was here but it was causing "DAS Format" TSC resultsets to be bad. Deutsch
                   'Organism' => 1,
   );
 
