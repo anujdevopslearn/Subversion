@@ -1,4 +1,9 @@
 PKG=DataLoader.
+
+KEYSTORE=/net/db/etc/.keystore
+KEYPASS=sbeamsDevKey
+KEYALIAS=sbeamsDev
+
 JAR_DIR=/net/dblocal/www/html/dev7/sbeams/usr/java/share/util/
 CP = .:..:$(JAR_DIR)java-getopt-1.0.10.jar:$(JAR_DIR)visad.jar:$(JAR_DIR)experiment.jar:$(JAR_DIR)jdom.jar:$(JAR_DIR)SBEAMS.jar:$(JAR_DIR)msv.jar:$(JAR_DIR)isorelax.jar:$(JAR_DIR)relaxngDatatype.jar:$(JAR_DIR)xercesImpl.jar:$(JAR_DIR)xmlParserAPIs.jar:$(JAR_DIR)xsdlib.jar
 
@@ -55,4 +60,16 @@ update_jar: sign
 	(mv DataLoader.jar ../../../../usr/java/Microarray)
 
 sign: jar
-	-jarsigner -keystore /users/mjohnson/.keystore -storepass cytokey DataLoader.jar cytoscape
+	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) DataLoader.jar $(KEYALIAS)
+
+update_sbeams: update_jar
+	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) $(JAR_DIR)java-getopt-1.0.10.jar $(KEYALIAS)
+	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) $(JAR_DIR)visad.jar $(KEYALIAS)
+	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) $(JAR_DIR)experiment.jar $(KEYALIAS)
+	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) $(JAR_DIR)jdom.jar $(KEYALIAS)
+	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) $(JAR_DIR)msv.jar $(KEYALIAS)
+	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) $(JAR_DIR)isorelax.jar $(KEYALIAS)
+	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) $(JAR_DIR)relaxngDatatype.jar $(KEYALIAS)
+	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) $(JAR_DIR)xercesImpl.jar $(KEYALIAS)
+	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) $(JAR_DIR)xmlParserAPIs.jar $(KEYALIAS)
+	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) $(JAR_DIR)xsdlib.jar $(KEYALIAS)
