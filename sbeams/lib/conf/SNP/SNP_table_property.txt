@@ -7,4 +7,8 @@ SN_snp_source	SNP Source	SNP	YES	$TBSN_SNP_SOURCE	snp_source_id		ManageTable.cgi
 SN_BrowseSNPHit	Browse SNP Hits	QUERY		NA	NA		BrowseSNPHit.cgi		
 SN_source_version	Source Version	SNP	YES	$TBSN_SOURCE_VERSION	source_version_id		ManageTable.cgi?TABLE_NAME=SN_source_version	SN_source_version	
 SN_biosequence_rank_list	Biosequence Rank List	SNP	YES	$TBSN_BIOSEQUENCE_RANK_LIST	biosequence_rank_list_id		ManageTable.cgi?TABLE_NAME=SN_biosequence_rank_list		
+SN_snp_plate	SNP Plate	SNP	YES	$TBSN_SNP_PLATE	plate_id		ManageTable.cgi?TABLE_NAME=SN_snp_plate	SN_snp_plate	
+SN_instrument_type	Instrument Type	SNP	YES	$TBSN_INSTRUMENT_TYPE	instrument_type_id		ManageTable.cgi?TABLE_NAME=SN_instrument_type	SN_instrument_type	
+SN_instrument	Instrument	SNP	YES	$TBSN_INSTRUMENT	instrument_id		ManageTable.cgi?TABLE_NAME=SN_instrument	SN_instrument	
+SN_plate_type	Plate Type	SNP	YES	$TBSN_PLATE_TYPE	plate_type_id		ManageTable.cgi?TABLE_NAME=SN_plate_type	SN_plate_type	
 SN_GetGenotypes	Get Genotypes	QUERY		NA	NA		GetGenotypes		
