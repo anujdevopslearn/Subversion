@@ -2107,8 +2107,9 @@ sub display_input_form {
     if ($input_type eq "multioptionlist") {
       print qq!
         <TD><SELECT NAME="$column_name" MULTIPLE SIZE=$input_length $onChange>
+        $optionlists{$column_name}
         <OPTION VALUE=""></OPTION>
-        $optionlists{$column_name}</SELECT></TD>
+        </SELECT></TD>
       !;
     }
 
