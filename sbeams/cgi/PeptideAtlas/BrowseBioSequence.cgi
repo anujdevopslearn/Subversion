@@ -307,6 +307,15 @@ sub handle_request {
   return if ($fav_codon_frequency_clause eq '-1');
 
 
+ #### Build BIOSEQUENCE CATEGORY constraint
+  my $biosequence_category_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BPS.category",
+    constraint_type=>"text_list",
+    constraint_name=>"Biosequence Category",
+    constraint_value=>$parameters{biosequence_category_constraint} );
+  return if ($biosequence_category_clause eq '-1');
+
+
   #### Build NUMBER OF TRANSMEMBRANE REGIONS constraint
   my $n_transmembrane_regions_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"n_transmembrane_regions",
@@ -449,6 +458,7 @@ sub handle_request {
       $cellular_component_clause
       $n_transmembrane_regions_clause
       $fav_codon_frequency_clause
+      $biosequence_category_clause
       $order_by_clause
    ~;
 
@@ -457,8 +467,61 @@ sub handle_request {
   my $pass_action = "QUERY";
   $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
 
-  #### Define the hypertext links for columns that need them
-  %url_cols = ('set_tag' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=AT_BIOSEQUENCE_SET&biosequence_set_id=\%$colnameidx{biosequence_set_id}V",
+  my $organism_id = $parameters{organism_id};
+
+  if ($organism_id == 3)
+  {
+      my $category_html_ref;
+      
+      ## get category of $parameters{biosequence_name_constraint} and parse it for html look-up
+      my $tsql = qq~
+          SELECT BPS.category
+          FROM $TBAT_BIOSEQUENCE_PROPERTY_SET BPS
+          JOIN $TBAT_BIOSEQUENCE B
+          ON ( BPS.biosequence_id = BS.biosequence_id)
+          WHERE BS.biosequence_name = '$parameters{biosequence_name_constraint}'
+          ~;
+
+      ($category_html_ref) = $sbeams->selectOneColumn($sql) || "";
+      
+      if ($category_html_ref =~ /^(verified orf)$/i )
+      {
+          $category_html_ref = "verified";
+      }
+      if ($category_html_ref  =~ /^(uncharacterized orf)$/i )
+      {
+          $category_html_ref = "uncharacterized";
+      }
+      if ($category_html_ref  =~ /^(dubious orf)$/i )
+      {
+          $category_html_ref = "dubious";
+      }
+      if ($category_html_ref  =~ /^(ty orf)$/i )
+      {
+          $category_html_ref = "ty_naming";
+      }
+
+      #### Define the hypertext links for columns that need them
+      %url_cols = ('set_tag' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=AT_BIOSEQUENCE_SET&biosequence_set_id=\%$colnameidx{biosequence_set_id}V",
+               'accession' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi?biosequence_name_constraint=\%$colnameidx{biosequence_accession}V&apply_action=$pass_action",
+               'gene_name' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi?biosequence_gene_name_constraint=\%$colnameidx{biosequence_gene_name}V&apply_action=$pass_action",
+               'category'  => "http://www.yeastgenome.org/help/glossary.html#$category_html_ref",
+               'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
+               'Molecular Function_ATAG' => 'TARGET="WinExt"',
+               'Molecular Function_OPTIONS' => {semicolon_separated_list=>1},
+               'Biological Process' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{biological_process_GO}V",
+               'Biological Process_ATAG' => 'TARGET="WinExt"',
+               'Biological Process_OPTIONS' => {semicolon_separated_list=>1},
+               'Cellular Component' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{cellular_component_GO}V",
+               'Cellular Component_ATAG' => 'TARGET="WinExt"',
+               'Cellular Component_OPTIONS' => {semicolon_separated_list=>1},
+               'InterPro Protein Domain' => "http://www.ebi.ac.uk/interpro/IEntry?ac=\%$colnameidx{interpro_protein_domain_GO}V",
+               'InterPro Protein Domain_ATAG' => 'TARGET="WinExt"',
+               'InterPro Protein Domain_OPTIONS' => {semicolon_separated_list=>1},
+    );
+
+  } else {
+      %url_cols = ('set_tag' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=AT_BIOSEQUENCE_SET&biosequence_set_id=\%$colnameidx{biosequence_set_id}V",
                'accession' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi?biosequence_name_constraint=\%$colnameidx{biosequence_accession}V&apply_action=$pass_action",
                'gene_name' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi?biosequence_gene_name_constraint=\%$colnameidx{biosequence_gene_name}V&apply_action=$pass_action",
                'category'  => "http://www.yeastgenome.org/help/glossary.html",
@@ -475,6 +538,8 @@ sub handle_request {
                'InterPro Protein Domain_ATAG' => 'TARGET="WinExt"',
                'InterPro Protein Domain_OPTIONS' => {semicolon_separated_list=>1},
     );
+  }
+
 
 
   #### Define columns that should be hidden in the output table
