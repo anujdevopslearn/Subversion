@@ -57,12 +57,10 @@ UPDATE table_column
   SET optionlist_query = '
 SELECT DISTINCT condition_id,username + '' - '' + project_tag + '' -> '' + condition_name,username,project_tag,condition_name
   FROM $TBMA_CONDITION C
-  JOIN $TB_PROJECT P ON ( C.project_id = P.project_id )
-  JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
- WHERE P.project_id IN ( $accessible_project_ids )
+ INNER JOIN $TB_PROJECT P ON ( C.project_id = P.project_id )
+ INNER JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
+ WHERE P.project_id IN ( $parameters{project_id} )
  ORDER BY username,project_tag,condition_name'
  WHERE (   table_name = 'MA_GetExpression'
        )
    AND column_name = 'condition_id'
-
-
