@@ -302,6 +302,14 @@ sub display_ext_halo_template {
   $self->printJavascriptFunctions();
   $self->display_ext_halo_style_sheet();
 
+  my $LOGIN_URI = $ENV{REQUEST_URI};
+  if ($LOGIN_URI =~ /\?/) {
+    $LOGIN_URI .= "&force_login=yes";
+  } else {
+    $LOGIN_URI .= "?force_login=yes";
+  }
+
+
   my $buf = qq~
 <!-- Begin body: background white, text black -------------------------------->
 <body TOPMARGIN=0 LEFTMARGIN=0 background="/images/bg.gif" bgcolor="#FBFCFE">
@@ -420,7 +428,7 @@ sub display_ext_halo_template {
 <a href="http://www.sbeams.org/" class="Nav_link">SBEAMS</a><br>
 <BR>
 <BR>
-<a href="$SERVER_BASE_DIR$CGI_BASE_DIR/logout.cgi" class="Nav_link">LOGOUT</a><br>
+<a href="$LOGIN_URI" class="Nav_link">LOGIN</a><br>
 </td>
 </tr>
 <tr>
