@@ -55,11 +55,15 @@ $VERSION = '0.02';
 # Constructor
 ###############################################################################
 sub new {
+
   my $this = shift;
   my $class = ref($this) || $this;
   my $self = {};
   bless($self,$class);
+
+  ## register with Connection::ErrorHandler:
   $self->register_sbeams($self);
+
   return($self);
 
 } # end new
@@ -74,10 +78,10 @@ sub invocation_mode {
 
   my $METHOD_NAME = "invocation_mode()";
 
-  #### If a new value was supplied, set it
+      #### If a new value was supplied, set it
   if ($new_value) {
     die "$METHOD_NAME: Illegal value '$new_value'"
-      unless ($new_value eq 'http' || $new_value eq 'user');
+      unless ($new_value eq 'http' || $new_value eq 'user' || $new_value eq 'https');
     $invocation_mode = $new_value;
 
   #### Otherwise, verify that we have a value or set a blank
@@ -200,3 +204,158 @@ __END__
 ###############################################################################
 ###############################################################################
 ###############################################################################
+
+
+=head1 NAME
+
+ SBEAMS::Connection - The SBEAMS Core database connection module
+
+=head1 DESCRIPTION
+
+Handles all SBEAMS connection issues, including authentication and DB 
+connections.  
+
+It multiply inherits
+
+    SBEAMS::Connection::Authenticator
+
+    SBEAMS::Connection::DBConnector
+    
+    SBEAMS::Connection::DBInterface 
+
+    SBEAMS::Connection::HTMLPrinter
+
+    SBEAMS::Connection::TableInfo
+
+    SBEAMS::Connection::Settings
+
+    SBEAMS::Connection::ErrorHandler
+
+    SBEAMS::Connection::Utilities
+
+    SBEAMS::Connection::Permissions
+
+
+=head2 USAGE
+
+    use SBEAMS::Connection;
+    use SBEAMS::Connection::Settings;
+    use SBEAMS::Connection::Tables;
+    use CGI;
+    use SBEAMS::PeptideAtlas;
+    use SBEAMS::PeptideAtlas::Settings;
+    use SBEAMS::PeptideAtlas::Tables;
+
+
+    $sbeams = new SBEAMS::Connection;
+
+    $q = new CGI;
+
+    ## authenticate user:
+    exit unless ($current_username = $sbeams->Authenticate(
+        allow_anonymous_access => 1
+    ));
+
+
+    ## read in parameters passed to script:
+    my %parameters;
+
+    my $n_params_found = $sbeams->parse_input_parameters(
+        q => $q,
+        parameters_ref => \%parameters
+    );
+
+
+    ## perform action or display HTML:
+    if ($parameters{action} eq "doThis") {
+        doThis();
+    } else {
+        $sbeamsMOD->display_page_header( navigation_bar => $parameters{navigation_bar});
+        handle_request(ref_parameters=>\%parameters);
+        $sbeamsMOD->display_page_footer();
+    }
+
+
+
+
+=head2 METHODS
+
+=over
+
+=item * B<new>
+
+constructor registers the instance with Connection::ErrorHandler
+
+=item * B<invocation_mode>
+
+get/set method.  expecting values such as
+    'http'
+    'user' 
+    'https'
+    ""
+
+=item * B<output_mode>
+
+get/set method.  expecting values such as
+   'html' 
+   'interactive' 
+   'tsv'
+   'tsvfull' 
+   'csv' 
+   'csvfull'
+   'xml'
+   'cytoscape' 
+   'boxtable'
+   'excel'
+   'excelfull'
+
+output_mode is used by Connection::Authenticator, 
+Connection::DBInterface, and Connection::HTMLPrinter
+to direct output to html or a tsv formatted file, for example
+
+=item * B<output_stage>
+
+get/set method.  expecting values such as
+    'no_header_yet'
+    'form_stage'
+    'data_stage'
+    'footer_complete'
+
+
+=item * B<table_nest_level>
+
+get/set method.  expecting values >= 0
+
+
+=back
+
+=head2 BUGS
+
+Please send bug reports to the author
+
+=head2 AUTHOR
+
+Eric Deutsch <edeutsch@systemsbiology.org>
+
+=head2 SEE ALSO
+
+SBEAMS::Connection::Authenticator
+
+SBEAMS::Connection::DBConnector
+
+SBEAMS::Connection::DBInterface
+
+SBEAMS::Connection::HTMLPrinter
+
+SBEAMS::Connection::TableInfo
+
+SBEAMS::Connection::Settings
+
+SBEAMS::Connection::ErrorHandler
+
+SBEAMS::Connection::Utilities
+
+SBEAMS::Connection::Permissions
+
+
+=cut
