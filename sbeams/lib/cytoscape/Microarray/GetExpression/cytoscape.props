@@ -1,0 +1,7 @@
+# RCSid:  $Revision$   $Date$
+#-------------------------------------------------------------------------------
+plugin.0.load=csplugins.isb.pshannon.gaggle.cy.CyGagglePlugin
+plugin.2.load=csplugins.isb.dtenenbaum.jython.PyConsolePlugin
+#plugin.layout.load=csplugins.trial.pshannon.Y2Layouters
+#----------------------------------- vizmapper
+visualStyle=Affy_Expression
