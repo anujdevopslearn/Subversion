@@ -488,11 +488,11 @@ foreach my $p (keys %parameters)
   %url_cols = ('Stain Name' => "$CGI_BASE_DIR/Immunostain/ManageTable.cgi?TABLE_NAME=IS_assay&assay_id=\%$colnameidx{assay_id}V",
     	       'Stain Name_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show more information about this slide\'; return true"',
 
-   	       'Antibody' => "processAntibody.cgi?action=ab_detail&antibody_id=\%$colnameidx{antibody_id}",
+   	       'Antibody' => "processAntibody.cgi?action=ab_details&antibody_id=\%$colnameidx{antibody_id}V",
   	       'Antibody_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show summary of information for this antibody\'; return true"',
 
     	       'RefSeq Accession' => "http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?db=protein&term=\%V",
-    	       'Antibody_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show NCBI entry for this RefSeq identifier\'; return true"',
+    	       'RefSeq Accession_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show NCBI entry for this RefSeq identifier\'; return true"',
 
     	       'Cell Type' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=IS_structural_unit&Structural_unit_id=\%$colnameidx{structural_unit_id}V",
     	       'Cell Type_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show information about this cell type\'; return true"',
