@@ -197,7 +197,7 @@ SELECT	A.array_id,A.array_name,
   LEFT JOIN array_scan ASCAN ON ( A.array_id = ASCAN.array_id )
   LEFT JOIN array_quantitation AQ ON ( ASCAN.array_scan_id = AQ.array_scan_id )
  WHERE AR.request_status!='Finished'
-   AND ARSL.array_request_slide_id IS NOT NULL
+--   AND ARSL.array_request_slide_id IS NOT NULL
  ORDER BY AR.array_request_id,ARSL.array_request_slide_id
         ~;
       } else {
