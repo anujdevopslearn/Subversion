@@ -743,30 +743,21 @@ sub loadBiosequence {
   }
 
 
-  #### Only return a PK if we might need to INSERT or UPDATE additional
-  #### records in other tables with this biosequence_id. because getting
-  #### the PK_value can be expensive
-  my $return_PK = 0;
-  if (defined($n_transmembrane_regions) || defined($pfam_search_results)) {
-    $return_PK = 1;
-  }
-
-
   #### INSERT/UPDATE the row
-  my $result = $sbeams->insert_update_row(insert=>$insert,
-					  update=>$update,
-					  table_name=>$table_name,
-					  rowdata_ref=>$rowdata_ref,
-					  PK=>$PK,
-					  PK_value => $PK_value,
-					  verbose=>$VERBOSE,
-					  testonly=>$TESTONLY,
-					  return_PK=>$return_PK,
-					  );
+  my $biosequence_id = $sbeams->insert_update_row(insert=>$insert,
+		  update=>$update,
+		  table_name=>$table_name,
+		  rowdata_ref=>$rowdata_ref,
+		  PK=>$PK,
+		  PK_value => $PK_value,
+		  verbose=>$VERBOSE,
+		  testonly=>$TESTONLY,
+		  return_PK=>1,
+		  );
 
   #### See if we have TMR data to add
   my $have_tmr_data = 0;
-  if (defined($n_transmembrane_regions) && $result) {
+  if (defined($n_transmembrane_regions) && $biosequence_id) {
     if (defined($n_transmembrane_regions->
 	      {$rowdata_ref->{biosequence_name}}->{topology})) {
       $have_tmr_data = 1;
@@ -781,7 +772,7 @@ sub loadBiosequence {
     my $sql =
       "SELECT biosequence_property_set_id
          FROM ${DATABASE}biosequence_property_set
-        WHERE biosequence_id = '$result'
+        WHERE biosequence_id = '$biosequence_id'
       ";
     my @biosequence_property_set_ids = $sbeams->selectOneColumn($sql);
 
@@ -798,7 +789,7 @@ sub loadBiosequence {
 
     #### Fill the row data hash with information we have
     my %rowdata;
-    $rowdata{biosequence_id} = $result;
+    $rowdata{biosequence_id} = $biosequence_id;
 
     $rowdata{n_transmembrane_regions} = $n_transmembrane_regions->
       {$rowdata_ref->{biosequence_name}}->{n_tmm}
@@ -834,7 +825,7 @@ sub loadBiosequence {
 
   #### See if we have PFAM data to add
   my $have_pfam_data = 0;
-  if (defined($pfam_search_results) && $result) {
+  if (defined($pfam_search_results) && $biosequence_id) {
     if (defined($pfam_search_results->
 	      {data}->{$biosequence_name})) {
       $have_pfam_data = 1;
@@ -852,7 +843,7 @@ sub loadBiosequence {
     my $sql =
       "SELECT domain_match_id
          FROM ${DATABASE}domain_match
-        WHERE biosequence_id = '$result'
+        WHERE biosequence_id = '$biosequence_id'
           AND domain_match_source_id = '$domain_match_source_id'
       ";
     my @domain_match_ids = $sbeams->selectOneColumn($sql);
@@ -862,7 +853,7 @@ sub loadBiosequence {
       $sql =
         "DELETE
            FROM ${DATABASE}domain_match
-          WHERE biosequence_id = '$result'
+          WHERE biosequence_id = '$biosequence_id'
             AND domain_match_source_id = '$domain_match_source_id'
         ";
       $sbeams->executeSQL($sql);
@@ -874,7 +865,7 @@ sub loadBiosequence {
 
       #### Fill the row data hash with information we have
       my %rowdata;
-      $rowdata{biosequence_id} = $result;
+      $rowdata{biosequence_id} = $biosequence_id;
 
       $rowdata{score} = $match->{score}
         if (defined($match->{score}));
@@ -916,11 +907,12 @@ sub loadBiosequence {
 
   #### See if we have Ginzu data to add
   my $have_ginzu_data = 0;
-  if (defined($ginzu_search_results) && $result) {
+  if (defined($ginzu_search_results) && $biosequence_id) {
     if (defined($ginzu_search_results->
 	      {data}->{$biosequence_name})) {
       $have_ginzu_data = 1;
     }
+print "biosequence $biosequence_name: have_ginzu=$have_ginzu_data\n";
   }
 
 
@@ -934,7 +926,7 @@ sub loadBiosequence {
     my $sql =
       "SELECT domain_match_id
          FROM ${DATABASE}domain_match
-        WHERE biosequence_id = '$result'
+        WHERE biosequence_id = '$biosequence_id'
           AND domain_match_source_id = '$domain_match_source_id'
       ";
     my @domain_match_ids = $sbeams->selectOneColumn($sql);
@@ -944,7 +936,7 @@ sub loadBiosequence {
       $sql =
         "DELETE
            FROM ${DATABASE}domain_match
-          WHERE biosequence_id = '$result'
+          WHERE biosequence_id = '$biosequence_id'
             AND domain_match_source_id = '$domain_match_source_id'
         ";
       $sbeams->executeSQL($sql);
@@ -953,10 +945,10 @@ sub loadBiosequence {
 
     #### Loop over all the entries for this biosequence
     foreach my $match (@{$ginzu_search_results->{data}->{$biosequence_name}}) {
-
+print "  match qstart=",$match->{query_start},"\n";
       #### Fill the row data hash with information we have
       my %rowdata;
-      $rowdata{biosequence_id} = $result;
+      $rowdata{biosequence_id} = $biosequence_id;
 
       $rowdata{query_start} = $match->{query_start}
         if (defined($match->{query_start}));
@@ -1013,6 +1005,7 @@ sub loadBiosequence {
 	}
       }
 
+print "  match qstart=",$match->{e_value},"\n";
 
       #### Insert or update the row
       my $result = $sbeams->insert_update_row(
@@ -1020,7 +1013,7 @@ sub loadBiosequence {
   	table_name=>"${DATABASE}domain_match",
   	rowdata_ref=>\%rowdata,
   	PK=>"domain_match_id",
-  	verbose=>$VERBOSE,
+  	verbose=>2,
   	testonly=>$TESTONLY,
       );
 
@@ -1036,7 +1029,7 @@ sub loadBiosequence {
 
   #### See if we have mamSum data to add
   my $have_mamSum_data = 0;
-  if (defined($mamSum_search_results) && $result) {
+  if (defined($mamSum_search_results) && $biosequence_id) {
     if (defined($mamSum_search_results->{$adj_biosequence_name})) {
       $have_mamSum_data = 1;
     }
@@ -1053,7 +1046,7 @@ sub loadBiosequence {
     my $sql =
       "SELECT domain_match_id
          FROM ${DATABASE}domain_match
-        WHERE biosequence_id = '$result'
+        WHERE biosequence_id = '$biosequence_id'
           AND domain_match_source_id = '$domain_match_source_id'
       ";
     my @domain_match_ids = $sbeams->selectOneColumn($sql);
@@ -1063,7 +1056,7 @@ sub loadBiosequence {
       $sql =
         "DELETE
            FROM ${DATABASE}domain_match
-          WHERE biosequence_id = '$result'
+          WHERE biosequence_id = '$biosequence_id'
             AND domain_match_source_id = '$domain_match_source_id'
         ";
       $sbeams->executeSQL($sql);
@@ -1079,7 +1072,7 @@ sub loadBiosequence {
 
   	#### Fill the row data hash with information we have
   	my %rowdata;
-  	$rowdata{biosequence_id} = $result;
+  	$rowdata{biosequence_id} = $biosequence_id;
 
         if ($domain_tag =~ /\d/) {
           $rowdata{domain_match_index} = $domain_tag;
