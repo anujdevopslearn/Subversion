@@ -32,14 +32,110 @@ use SBEAMS::Cytometry::TableInfo;
 ###############################################################################
 sub printPageHeader {
   my $self = shift;
+  
   $self->display_page_header(@_);
 }
+
+
+
+sub display_page_header 
+{ 
+	my $self = shift;
+	my %args = @_;
+	
+ #### If the output mode is interactive text, display text header
+    $sbeams = $self->getSBEAMS();
+    if ($sbeams->output_mode() eq 'interactive') {
+    $sbeams->printTextHeader();
+   return;
+    }
+
+ #### If the output mode is not html, then we don't want a header here
+    if ($sbeams->output_mode() ne 'html') {
+      return;
+    }
+	
+	
+	my $sbeams = $self->getSBEAMS();
+	$current_contact_id = $sbeams->getCurrent_contact_id();
+	print "this is $current_contact_id";
+	
+	
+	if ($sbeams->getCurrent_contact_id() ne 107)
+	{
+      
+      $self->displayPageHeader();
+
+	}
+	else 
+	{
+		$self->displayGuestPageHeader();
+		
+	}
+}
+
+
+sub displayGuestPageHeader
+{ 
+	my $self = shift;
+  my %args = @_;
+
+  my $navigation_bar = $args{'navigation_bar'} || "YES";
+
+  #### Obtain main SBEAMS object and use its http_header
+  my $sbeams = $self->getSBEAMS();
+  my $http_header = $sbeams->get_http_header();
+  use LWP::UserAgent;
+  use HTTP::Request;
+  my $ua = LWP::UserAgent->new();
+  my $scgapLink = 'http://scgap.systemsbiology.net';
+  my $response = $ua->request( HTTP::Request->new( GET => "$scgapLink/skin.php" ) );
+  my @page = split( "\r", $response->content() );
+  my $skin = '';
+  for ( @page ) {
+    last if $_ =~ / End of main content/;
+    $skin .= $_;
+  }
+  print STDERR "SKINNNNN $skin";
+  $skin =~ s/\/images\//\/sbeams\/images\//gm;
+  print STDERR "SKIONNNN$skin";
+ 
+  print "$http_header\n\n";
+  print <<"  END_PAGE";
+  <HTML>
+    $skin
+  END_PAGE
+
+  $self->printJavascriptFunctions();
+}
+
+
+sub  displayGuestPageFooter
+{
+	
+print qq~
+</td></tr>
+</table>
+</td></tr>
+</table>
+<BR>
+<hr size=1 width="55%" align="left" color="#FF8700">
+<TABLE border="0">
+<TR><TD><IMG SRC="/images/ISB_symbol_tiny.jpg"></TD>
+<TD><nowrap>SCGAP UESC - ISB / UW</nowrap></A></TD></TR>
+</TABLE>
+<BR>
+<BR>
+~;
+}
+
+
 
 
 ###############################################################################
 # display_page_header
 ###############################################################################
-sub display_page_header {
+sub displayPageHeader {
     my $self = shift;
     my %args = @_;
 
@@ -194,6 +290,22 @@ sub printJavascriptFunctions {
 	} // end showPassed
 
 
+	function ClickedNowButton(input_field) {
+	  field_name = input_field.name;
+	  today = new Date();
+	  date_value =
+	      today.getFullYear() + "-" + (today.getMonth()+1) + "-" +
+	      today.getDate() + " " +
+	      today.getHours() + ":" +today.getMinutes();
+
+	  if (field_name == "preparation_date") {
+	      document.MainForm.preparation_date.value = date_value;
+	  }
+
+	  return;
+	} // end ClickedNowButton
+
+
 
         // -->
         </SCRIPT>
@@ -215,11 +327,12 @@ sub printPageFooter {
 # display_page_footer
 ###############################################################################
 sub display_page_footer {
-  my $self = shift;
+
+my $self = shift;
   my %args = @_;
 
 
-  #### If the output mode is interactive text, display text header
+#### If the output mode is interactive text, display text header
   my $sbeams = $self->getSBEAMS();
   if ($sbeams->output_mode() eq 'interactive') {
     $sbeams->printTextHeader(%args);
@@ -232,6 +345,30 @@ sub display_page_footer {
     return;
   }
 
+  
+  $sbeams = $self->getSBEAMS();
+	$current_contact_id = $sbeams->getCurrent_contact_id();
+#	print "this is $current_contact_id";
+	
+	
+	if ($sbeams->getCurrent_contact_id() ne 107)
+	{
+		$self->displayRegularPageFooter();
+			
+	}
+	else 
+	{
+		$self->displayGuestPageFooter();
+		
+	}
+}
+  
+ 
+  
+sub displayRegularPageFooter
+{
+	my $self = shift; 
+	my %args = @_;
 
   #### Process the arguments list
   my $close_tables = $args{'close_tables'} || 'YES';
@@ -264,6 +401,8 @@ sub display_page_footer {
   }
 
 }
+
+
 
 
 
