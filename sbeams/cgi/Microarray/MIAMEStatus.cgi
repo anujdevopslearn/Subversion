@@ -914,11 +914,11 @@ SELECT	A.array_id,A.array_name,
 				</TD>
 			  <TD><A HREF="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_array_request_sample&array_request_sample_id=$smpl_1_id">$smpl_1_org</A>
 				</TD>
-			  <TD><A HREF="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_array_request_sample&array_request_sample_id=$smpl_1_id">$smpl_2_name</A>
+			  <TD><A HREF="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_array_request_sample&array_request_sample_id=$smpl_2_id">$smpl_2_name</A>
 				</TD>
-			  <TD><A HREF="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_array_request_sample&array_request_sample_id=$smpl_1_id">$smpl_2_full</A>
+			  <TD><A HREF="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_array_request_sample&array_request_sample_id=$smpl_2_id">$smpl_2_full</A>
 				</TD>
-			  <TD><A HREF="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_array_request_sample&array_request_sample_id=$smpl_1_id">$smpl_2_org</A>
+			  <TD><A HREF="$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=MA_array_request_sample&array_request_sample_id=$smpl_2_id">$smpl_2_org</A>
 				</TD>
 			</TR>
 			~;
