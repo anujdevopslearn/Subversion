@@ -343,6 +343,9 @@ sub start_element {
       decimal_pvalue => 1,
       pvalue => 1,
       adj_ratio_standard_dev => 1,
+      total_no_spectrum_ids => 1,
+      pct_spectrum_ids => 1,
+      subsuming_protein_entry => 1,
     );
     foreach my $attr (keys(%attrs_to_drop)) {
       if (exists($attrs{$attr})) {
