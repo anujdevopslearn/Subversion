@@ -320,13 +320,22 @@ sub handle_request {
     constraint_value=>$parameters{strand_constraint} );
   return if ($chromosome_clause eq '-1');
 
-  #### Build n_mapped_locations constraint
-  my $n_mapped_locations_clause = $sbeams->parseConstraint2SQL(
-    constraint_column=>"PI.n_mapped_locations",
+  #### Build n_protein_mappings constraint
+  my $n_protein_mappings_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"PI.n_protein_mappings",
     constraint_type=>"flexible_int",
-    constraint_name=>"n_mapped_locations",
-    constraint_value=>$parameters{n_mapped_locations_constraint} );
-  return if ($n_mapped_locations_clause eq '-1');
+    constraint_name=>"n_protein_mappings",
+    constraint_value=>$parameters{n_protein_mappings_constraint} );
+  return if ($n_protein_mappings_clause eq '-1');
+
+  #### Build n_genome_locations constraint
+  my $n_genome_locations_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"PI.n_genome_locations",
+    constraint_type=>"flexible_int",
+    constraint_name=>"n_genome_locations",
+    constraint_value=>$parameters{n_genome_locations_constraint} );
+  return if ($n_genome_locations_clause eq '-1');
+
 
   #### Build is_exon_spanning constraint
   my $is_exon_spanning_clause = $sbeams->parseConstraint2SQL(
@@ -393,8 +402,8 @@ sub handle_request {
       ["end_in_chromosome","PM.end_in_chromosome","End Position"],
       ["strand","PM.strand","Strand"],
 
-      ["n_mappings","PI.n_mappings","N Mappings"],
-      ["n_mapped_locations","PI.n_mapped_locations","N Unique Mapped Locations"],
+      ["n_protein_mappings","PI.n_protein_mappings","N Protein Mappings"],
+      ["n_genome_locations","PI.n_genome_locations","N Unique Locations on Genome"],
       ["is_exon_spanning","PI.is_exon_spanning","Spans exons? (Y,N)"],
 
       ["organism_full_name","O.full_name","Organism"],
@@ -454,7 +463,8 @@ sub handle_request {
         $start_in_chromosome_clause
         $end_in_chromosome_clause
         $strand_clause
-        $n_mapped_locations_clause
+        $n_protein_mappings_clause
+        $n_genome_locations_clause
         $is_exon_spanning_clause
         $biosequence_desc_clause
 
@@ -485,7 +495,7 @@ sub handle_request {
 
   #### Define the hypertext links for columns that need them
   %url_cols = ('Biosequence Name' => "\%$colnameidx{biosequence_accessor}V\%$colnameidx{biosequence_accession}V\%$colnameidx{biosequence_accessor_suffix}V",
-    	       'Biosequence Name_ATAG' => 'TARGET="Win1" ',
+    	       'Biosequence Name_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information about this protein\'; return true"',
                'PeptideXXXX Name' => "$CGI_BASE_DIR/ProteinStructure/GetDomainHits?QUERY_NAME=PS_GetDomainHit&biosequence_id=$parameters{biosequence_id}&biosequence_name_constraint=\%V&apply_action=$pass_action",
 	       'PeptideXXXX Name_ATAG' => 'TARGET="Win1"',
 
