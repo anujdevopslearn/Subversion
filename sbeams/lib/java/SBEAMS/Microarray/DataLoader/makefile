@@ -51,25 +51,26 @@ basic: objs
 	-java ${PKG}DataLoader
 
 sbeams: jar
-	(java -jar DataLoader.jar -t "test" -m "sbeamsIndirect://db/dev7/sbeams/cgi/Microarray/ViewFile.cgi?action=read&FILE_NAME=matrix_output&project_id=497&SUBDIR=20050119_160105")
+	(java -jar DataLoader.jar -p "328" -m "sbeamsIndirect://db/sbeams/cgi/Microarray/ViewFile.cgi?action=read&FILE_NAME=matrix_output&project_id=497&SUBDIR=20050119_160105" -r "sbeamsIndirect://db/sbeams/tmp/Microarray/dataLoader/translator.tsv")
 
 jar: objs
 	(cd ..;jar cmf DataLoader/MANIFEST.MF DataLoader/DataLoader.jar DataLoader/*.class)
 
-update_jar: sign
-	(mv DataLoader.jar ../../../../usr/java/Microarray)
-
 sign: jar
 	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) DataLoader.jar $(KEYALIAS)
 
+update_jar: sign
+	(mv DataLoader.jar ../../../../../usr/java/Microarray)
+
 update_sbeams: update_jar
-	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) $(JAR_DIR)java-getopt-1.0.10.jar $(KEYALIAS)
-	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) $(JAR_DIR)visad.jar $(KEYALIAS)
 	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) $(JAR_DIR)experiment.jar $(KEYALIAS)
+	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) $(JAR_DIR)isorelax.jar $(KEYALIAS)
+	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) $(JAR_DIR)java-getopt-1.0.10.jar $(KEYALIAS)
 	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) $(JAR_DIR)jdom.jar $(KEYALIAS)
 	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) $(JAR_DIR)msv.jar $(KEYALIAS)
-	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) $(JAR_DIR)isorelax.jar $(KEYALIAS)
 	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) $(JAR_DIR)relaxngDatatype.jar $(KEYALIAS)
+	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) $(JAR_DIR)SBEAMS.jar $(KEYALIAS)
+	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) $(JAR_DIR)visad.jar $(KEYALIAS)
 	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) $(JAR_DIR)xercesImpl.jar $(KEYALIAS)
 	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) $(JAR_DIR)xmlParserAPIs.jar $(KEYALIAS)
 	-jarsigner -keystore $(KEYSTORE) -storepass $(KEYPASS) $(JAR_DIR)xsdlib.jar $(KEYALIAS)
