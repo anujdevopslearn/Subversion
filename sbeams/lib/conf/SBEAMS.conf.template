@@ -64,7 +64,7 @@ DB_DRIVER   = DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE
 #### or "DB2" at present. Add your own support for more!
 DB_TYPE     = MS SQL Server
 #DB_TYPE     = MySQL
-#DB_TYPE     = Postresql
+#DB_TYPE     = Postgresql
 #DB_TYPE     = Oracle
 #DB_TYPE     = DB2
 #
