@@ -1,0 +1,7 @@
+table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
+SN_biosequence_set	BioSequence Set	SNP	YES	$TBSN_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=SN_biosequence_set	SN_biosequence_set	
+SN_biosequence	BioSequence 	SNP	YES	$TBSN_BIOSEQUENCE	biosequence_id		ManageTable.cgi?TABLE_NAME=SN_biosequence	SN_biosequence	
+SN_BrowseBioSequence	Browse BioSequence	QUERY		NA	NA		BrowseBioSequence.cgi		
+SN_snp_source	SNP Source	SNP	YES	$TBSN_SNP_SOURCE	snp_source_id		ManageTable.cgi?TABLE_NAME=SN_snp_source	SN_snp_source	
+SN_BrowseSNPHit	Browse SNP Hits	QUERY		NA	NA		BrowseSNPHit.cgi		
+SN_source_version	Source Version	SNP	YES	$TBSN_SOURCE_VERSION	source_version_id		ManageTable.cgi?TABLE_NAME=SN_source_version	SN_source_version	

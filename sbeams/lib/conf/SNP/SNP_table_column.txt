@@ -1,0 +1,73 @@
+table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
+SN_biosequence_set	1	biosequence_set_id	BioSequence Set ID	int	8	0	N		Y							N	N				pkDEFAULT
+SN_biosequence_set	2	species_id	Species	int	8	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Species for this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM WHERE record_status != 'D' ORDER BY sort_order,organism_name"	
+SN_biosequence_set	3	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
+SN_biosequence_set	4	set_tag	Set Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Very short tag (name) of this BioSequence database		
+SN_biosequence_set	5	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioSequence database		
+SN_biosequence_set	6	set_version	Set Version	varchar	255	0	N		N			Y	text	40		Y	Y	N	Version of this BioSequence database		
+SN_biosequence_set	7	upload_file	Upload file	varchar	255	0	N		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
+SN_biosequence_set	8	set_path	Set Path	varchar	255	0	N		N			N	text	40		Y	Y	N	Local network file path of this BioSequence database if not uploaded via the web interface		
+SN_biosequence_set	9	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
+SN_biosequence_set	10	comment	Comment	text	4000	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+SN_biosequence_set	11	sort_order	Sort Order	int	8	0	N	10	N							N	N	N			
+SN_biosequence_set	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+SN_biosequence_set	13	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+SN_biosequence_set	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+SN_biosequence_set	15	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+SN_biosequence_set	16	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+SN_biosequence_set	17	record_status	Record Status	char	1	0	N	N	N							N	N				
+SN_biosequence	1	biosequence_id	BioSequence ID	int	8	0	N		Y							N	N	N			pkDEFAULT
+SN_biosequence	2	biosequence_set_id	BioSequence Set ID	int	8	0	N		N	biosequence_set	biosequence_set_id	Y	optionlist	20		Y	Y	Y	 The BioSequence Set from which this BioSequnce come from	"SELECT biosequence_set_id, species_id FROM $TB_BIOSEQUENCE_SET WHERE record_status != 'D' ORDER BY sort_order, species_id"	
+SN_biosequence	3	biosequence_name	BIoSequence Name	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Name for the BioSequence (i.e. Gene/Cassette Name)		
+SN_biosequence	4	biosequence_gene_name	BioSequence Gene Name	varchar	50	0	Y		N			N	text	20		Y	Y	N	The Common Name for the BioSequence		
+SN_biosequence	5	biosequence_acession	BioSequence Accession	varchar	8	0	Y		N			N	text	20		Y	Y	N	The Accession Number for this BioSequnce (if available)		
+SN_biosequence	6	biosequence_desc	BioSequence Description	varchar	255	0	Y		N			N	text	20		Y	Y	N	A description		
+SN_biosequence	7	biosequence_start	BioSequence Start	int	25	0	N		N			Y	text	20		Y	Y	N	The start coor		
+SN_biosequence	8	biosequence_length	BioSequence Length	int	25	0	N		N			Y	text	20		Y	Y	N	The length in bp		
+SN_biosequence	9	biosequence_seq	BioSequence Sequence	varchar	4000	0	Y		N			N	textarea	4		Y	Y	N	"The sequence, if present"		
+SN_biosequence	10	inherit_from_biosequence_id	Inherited BioSequence	int	8	0	Y		N	biosequence	biosequence_id	N	optionlist			Y	Y	N	"The Inherited BioSequence (if this has a ""parent"" sequence)"	"SELECT biosequnce_id, biosequence_name FROM $TB_BIOSEQUENCE WHERE record_status != 'D' ORDER BY biosequence_name"	
+SN_biosequence	11	comment	Comment	text	4000	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+SN_biosequence	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+SN_biosequence	13	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+SN_biosequence	14	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+SN_biosequence	15	record_status	Record Status	char	1	0	N	N	N							N	N				
+SN_BrowseBioSequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBSN_BIOSEQUENCE_SET ORDER BY sort_order,set_name"	
+SN_BrowseBioSequence	2	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+SN_BrowseBioSequence	3	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+SN_BrowseBioSequence	4	biosequence_seq_constraint	Sequence Constraint									N	text	40		Y	Y	N	Constraint for the actual sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+SN_BrowseBioSequence	5	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+SN_BrowseBioSequence	6	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'BBS_sort_options' ORDER BY sort_order,option_value"	
+SN_BrowseBioSequence	7	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'BBS_display_options' ORDER BY sort_order,option_value"	
+SN_BrowseBioSequence	8	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 1000 rows."		
+SN_snp_source	1	snp_source_id	SNP Source ID	int	8	0	N		Y							N	N				pkDEFAULT
+SN_snp_source	2	source_name	Source Name	varchar	25	0	N		N			Y	text	25		Y	Y	Y	Name of the direct source of this SNP		
+SN_snp_source	3	orig_source_name	Original Source Name	varchar	25	0	N		N			N	text	25		Y	Y	Y	Name of the original origin of this SNP (perhaps via someone else's curation as listed above)		
+SN_snp_source	4	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
+SN_snp_source	5	comment	Comment	text	4000	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+SN_snp_source	6	sort_order	Sort Order	int	8	0	N	10	N							N	N	N			
+SN_snp_source	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+SN_snp_source	8	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+SN_snp_source	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+SN_snp_source	10	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+SN_snp_source	11	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+SN_snp_source	12	record_status	Record Status	char	1	0	N	N	N							N	N				
+SN_BrowseSNPHit	1	snp_accession_constraint	SNP Accession									N	text	20		Y	Y	N	Constraint for the main SNP accession. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+SN_BrowseSNPHit	2	snp_source_accession_constraint	SNP Source Accession									N	text	20		Y	Y	N	Constraint for the SNP accession from the original source. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+SN_BrowseSNPHit	3	snp_source_id	SNP Source									N	multioptionlist	4		Y	Y	N	"Select desired SNP sources to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT snp_source_id,source_name+' - '+orig_source_name FROM $TBSN_SNP_SOURCE ORDER BY sort_order,source_name"	
+SN_BrowseSNPHit	4	biosequence_set_id	BioSequence Set									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBSN_BIOSEQUENCE_SET ORDER BY sort_order,set_name"	
+SN_BrowseSNPHit	5	identified_percent_constraint	Identified Percent									N	text	20		Y	Y	N	"Constraint for the percentage (00 to 100) of identified base pairs. Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"" or ""n.n +- n.n"""		
+SN_BrowseSNPHit	6	match_to_query_ratio_constraint	Match to Query Ratio									N	text	20		Y	Y	N	"Constraint for how much of the query was matched as a percentage (00 to 100) of the total query length. Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"" or ""n.n +- n.n"""		
+SN_BrowseSNPHit	7	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'BSH_sort_options' ORDER BY sort_order,option_value"	
+SN_BrowseSNPHit	8	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'BSH_display_options' ORDER BY sort_order,option_value"	
+SN_BrowseSNPHit	9	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 1000 rows."		
+SN_source_version	1	source_version_id	Source Version ID	int	8	0	N		Y							N	N				pkDEFAULT
+SN_source_version	2	source_version_name	Source Version Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of the version of the source dataset (e.g. Celera MHC 2002-04-01)		
+SN_source_version	3	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	"External web page, file, or other URI"		SELF
+SN_source_version	4	comment	Comment	text	4000	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+SN_source_version	5	sort_order	Sort Order	int	8	0	N	10	N							N	N	N			
+SN_source_version	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+SN_source_version	7	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+SN_source_version	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+SN_source_version	9	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+SN_source_version	10	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+SN_source_version	11	record_status	Record Status	char	1	0	N	N	N							N	N				
