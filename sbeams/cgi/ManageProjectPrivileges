@@ -332,7 +332,7 @@ sub handle_request {
   $current_project_id = $sbeams->getCurrent_project_id;
   $current_group_id   = $sbeams->getCurrent_work_group_id;
   print qq~
-      <H1>Project Privileges</H1>
+      <H1>Privileges for Project $current_project_id</H1>
       $LINESEPARATOR
       ~;
 
