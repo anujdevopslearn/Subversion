@@ -102,7 +102,7 @@ sub main {
   my $module = $sbeams->getSBEAMS_SUBDIR();
   my $work_group = 'unknown';
   if ($module eq 'Microarray') {
-    $work_group = "Arrays";
+    $work_group = "Microarray_admin";
     $DATABASE = $DBPREFIX{$module};
   }
   if ($module eq 'Proteomics') {
@@ -121,7 +121,7 @@ sub main {
   ## Presently, force module to be microarray
   if ($module ne 'Microarray') {
       print "WARNING: Module was not Microarray.  Resetting module to Microarray\n";
-      $work_group = "Arrays";
+      $work_group = "Microarray_admin";
       $DATABASE = $DBPREFIX{$module};
   }
 
@@ -135,13 +135,14 @@ sub main {
   # HACK - to load all conditions, for all projects, we simply change PROJECT_ID
   if ($PROJECT_ID eq 'all') {
       my @directories = glob("/net/arrays/Pipeline/output/project_id/base_directory/*");
-
       foreach my $directory (@directories) {
 	  $PROJECT_ID = $directory;
 	  $PROJECT_ID =~ s(^.*/)();
 	  handleRequest();
 
       }
+  }else {
+      handleRequest();
   }
   $sbeams->printPageFooter() unless ($QUIET);
 
@@ -162,7 +163,7 @@ sub handleRequest {
   #### Set the command-line options
   my $directory = $OPTIONS{'directory'} || "/net/arrays/Pipeline/output/project_id/$PROJECT_ID";
   my $file_name = $OPTIONS{'file_name'};
-	my $set_tag = $OPTIONS{'set_tag'};
+  my $set_tag = $OPTIONS{'set_tag'};
   #### Print out the header
   unless ($QUIET) {
     $sbeams->printUserContext();
