@@ -1057,7 +1057,7 @@ sub checkGO
    }
    if (databaseCheck >0)
   {
-    if (confirm ("This is first time this file is being  accessed. Data points need to be loaded into the Database. This may take a few minutes. Please be patient"))
+    if (confirm ("This is the first time this file is being  accessed. Data points need to be loaded into the Database. This may take a few minutes. Please be patient"))
     {
       return;
     }
