@@ -1619,26 +1619,58 @@ sub displayResultSet {
 
 
     #### If the desired output format is TSV, dump out the data that way
-    if ($self->output_mode() eq 'tsv' || $self->output_mode() eq 'excel') {
+    if ($self->output_mode() eq 'tsv' || $self->output_mode() eq 'excel' ||
+        $self->output_mode() eq 'csv' ) {
       my @row;
 
       #### If the invocation_mode is http, provide a header
+      my $delimiter = "\t";
+      my $header = "Content-type: text/tab-separated-values\n\n";
+
       if ($self->invocation_mode() eq 'http') {
-        print "Content-type: text/tab-separated-values\n\n"
-          if ($self->output_mode() eq 'tsv');
-        print "Content-type: application/excel\n\n"
-          if ($self->output_mode() eq 'excel');
+        if ($self->output_mode() eq 'tsv') {
+          $header = "Content-type: text/tab-separated-values\n\n";
+          $delimiter = "\t";
+        } elsif ($self->output_mode() eq 'csv') {
+          $header = "Content-type: text/comma-separated-values\n\n";
+          $delimiter = ",";
+        } elsif ($self->output_mode() eq 'csv') {
+          $header = "Content-type: application/excel\n\n";
+          $delimiter = "\t";
+	}
       }
+
+      print $header if ($self->invocation_mode() eq 'http');
+
 
       #### Set a very high page size if using defaults
       $resultset_ref->{page_size} = 1000000
         if ($rs_params_ref->{default_values} eq 'YES');
 
-      #### Print all the rows with TABs.
-      #### FIXME: Verify that there are no TABs in the data itself!
-      print join("\t",@{$resultset_ref->{column_list_ref}}),"\n";
+      #### Convert to a delimiter-safe format
+      my @output_row = ();
+      foreach my $datum (@{$resultset_ref->{column_list_ref}}) {
+        if ($datum =~ /[\t,\"]/) {
+          $datum =~ s/\t/ /g if ($self->output_mode() eq 'tsv');
+          $datum =~ s/\"/""/g;
+          $datum = "\"$datum\"";
+        }
+        push(@output_row,$datum);
+      }
+      print join($delimiter,@output_row),"\n";
+
       while (@row = returnNextRow()) {
-        print join("\t",@row),"\n";
+        @output_row = ();
+        foreach my $datum (@row) {
+          if ($datum =~ /[\t,\"]/) {
+            $datum =~ s/\t/ /g if ($self->output_mode() eq 'tsv');
+            $datum =~ s/\"/""/g;
+            $datum = "\"$datum\"";
+          }
+          push(@output_row,$datum);
+        }
+        print join($delimiter,@output_row),"\n";
+
       }
       return;
     }
@@ -1941,7 +1973,8 @@ sub displayResultSetControls {
     my @output_modes = (
       ['excel','xls','Excel'],
       ['xml','xml','XML'],
-      ['tsv','tsv','TSV']
+      ['tsv','tsv','TSV'],
+      ['csv','csv','CSV'],
     );
     print "<BR>Download ResultSet in Format: \n";
     my $first_flag = 1;

@@ -102,7 +102,8 @@ sub output_mode {
   if ($new_value) {
     die "$METHOD_NAME: Illegal value '$new_value'"
       unless ($new_value eq 'html' || $new_value eq 'interactive' ||
-              $new_value eq 'tsv' || $new_value eq 'xml' ||
+              $new_value eq 'tsv' || $new_value eq 'csv' ||
+              $new_value eq 'xml' ||
               $new_value eq 'boxtable' || $new_value eq 'excel'
       );
     $output_mode = $new_value;
