@@ -145,6 +145,7 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseAPD"><nobr>&nbsp;&nbsp;&nbsp;Browse APD</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowsePossiblePeptides"><nobr>&nbsp;&nbsp;&nbsp;Browse Possible</nobr><BR><nobr>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Tryptic Peptides</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseProteinSummary"><nobr>&nbsp;&nbsp;&nbsp;Protein Summary</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Core Management:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
@@ -159,6 +160,7 @@ sub display_page_header {
 	<tr><td><a href="$HTML_BASE_DIR/doc/$SBEAMS_SUBDIR/${SBEAMS_PART}_Schema.gif"><nobr>&nbsp;&nbsp;&nbsp;Schema (GIF)</nobr></a></td></tr>
 	<tr><td>Other Tools:</td></tr>
 	<tr><td><a href="http://db.systemsbiology.net:8080/proteomicsToolkit/"><nobr>&nbsp;&nbsp;&nbsp;Proteomics Toolkit</nobr></a></td></tr>
+	<tr><td><a href="http://mss.systemsbiology.net/"><nobr>&nbsp;&nbsp;&nbsp;MassSpec Schedule</nobr></a></td></tr>
         ~;
       }
 
