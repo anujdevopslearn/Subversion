@@ -408,11 +408,13 @@ sub insertGeneExpression {
 		if ($set_tag && $id_hash_ref) {
 				my %id_hash = %{$id_hash_ref};
 				$sql = qq~
-						SELECT GE.gene_name, GE.second_name, GE.gene_expression_id,
+						SELECT GE.gene_name, GE.second_name, GE.gene_expression_id
 						FROM gene_expression GE
 						WHERE GE.condition_id = '$condition_id'
 						~;
 				@rows = $sbeams->selectHashArray($sql);
+
+				my %ge_hash;
 
 				## make the final hash
 				foreach my $temp_row (@rows) {
@@ -424,7 +426,7 @@ sub insertGeneExpression {
 
 				## For each gene_expression record, try to find a corresponding biosequence
 				while ( my($key,$value) = each %ge_hash ){
-						my $result = %id_hash{$key};
+						my $result =  $id_hash{$key};
 						if ($result){
 								print "UPDATEing $key\n";
 								my $ge_id = $value;
