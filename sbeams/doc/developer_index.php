@@ -45,8 +45,11 @@
      <LI><A HREF="/mantis/">Mantis SBEAMS bugs database</A>
     </UL>
     </TD>
+  </TR>
+
 
 <!-- ------------------------ Recipe Links ------------------------ -->
+  <TR VALIGN="top">
     <TD>
     <CENTER><B>Recipes</B></CENTER><BR>
     <UL>
@@ -62,10 +65,10 @@
     </TD>
   </TR>
 
-  <TR VALIGN="top">
 
 <!-- ------------------------ API Links ------------------------ -->
-    <TD>
+  <TR VALIGN="top">
+   <TD>
     <CENTER><B>API</B></CENTER><BR>
     <UL>
      <LI><A HREF="POD/SBEAMS/Client.html">SBEAMS::Client</A>
@@ -84,16 +87,25 @@
      <LI><A HREF="POD/SBEAMS/Connection/Utilities.html">SBEAMS::Connection::Utilities</A>
     </UL>
     </TD>
+  </TR>
 
 <!-- ------------------------ Schema Links ------------------------ -->
+  <TR VALIGN="top">
     <TD>
     <CENTER><B>Schema</B></CENTER><BR>
     <UL>
      <LI><A HREF="Core/Core_Schema.gif">Core database schema</A>
+     <P>
      <LI><A HREF="Microarray/Microarray_Schema.gif">Microarray database schema</A>
      <LI><A HREF="Microarray/Microarray_Affy_Schema.gif">Microarray Affy Schema</A>
+     <P>
      <LI><A HREF="PhenoArray/PhenoArray_Schema.gif">PhenoArray database schema</A>
-     <LI><A HREF="Proteomics/Proteomics_Schema.gif">Proteomics database schema</A>
+     <P>
+     <LI><A HREF="Proteomics/Proteomics_main.gif">Proteomics database schema - main component</A>
+     <LI><A HREF="Proteomics/Proteomics_ProteinProphet.gif">Proteomics database schema - ProteinProphet component</A>
+     <LI><A HREF="Proteomics/Proteomics_APD.gif">Proteomics database schema - APD component</A>
+     <LI><A HREF="Proteomics/Proteomics_request.gif">Proteomics database schema - request mgmt component</A>
+     <P>
      <LI><A HREF="SNP/SNP_Schema.gif">SNP database schema</A>
     </UL>
     </TD>
