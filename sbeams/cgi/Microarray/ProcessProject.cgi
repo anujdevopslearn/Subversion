@@ -209,6 +209,7 @@ SELECT	A.array_id,A.array_name,
    AND A.record_status != 'D'
    AND ASCAN.record_status != 'D'
    AND AQ.record_status != 'D'
+   AND AQ.data_flag != 'BAD'
  ORDER BY A.array_name
      ~;
 
