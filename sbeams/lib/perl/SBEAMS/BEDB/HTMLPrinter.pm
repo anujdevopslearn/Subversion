@@ -157,7 +157,7 @@ sub display_page_header {
           <td class="color3">
             <table width="750" border="0" cellspacing="0" cellpadding="0">
               <tr>
-                <td><img src="/images/BEDB/header03.jpg" width="367" height="75"></td>
+                <td><img src="/images/BEDB/header05.jpg" width="367" height="75"></td>
                 <td valign="bottom" align="right"><img src="/images/BEDB/_plibrary.gif" width="258" height="16" vspace="7" hspace="0" alt="Library &amp; EST archive"></td>
               </tr>
             </table>
