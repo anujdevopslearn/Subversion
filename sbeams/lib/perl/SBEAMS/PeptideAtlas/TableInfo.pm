@@ -44,7 +44,7 @@ sub returnTableInfo {
   my $sql_query;
   my $result;
   my @ids = $self->getSBEAMS()->getAccessibleProjects();
-  my $project_string = join( ",", @ids );
+  my $project_string = join( ",", @ids ) || '0';
 
 
    ###############################################################################
