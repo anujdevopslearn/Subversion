@@ -85,7 +85,7 @@ sub main {
 
   #### Do the SBEAMS authentication and exit if a username is not returned
   exit unless ($current_username = $sbeams->Authenticate(
-    work_group=>'Admin',
+    work_group=>'Developer',
   ));
 
 
