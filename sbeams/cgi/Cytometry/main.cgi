@@ -177,7 +177,7 @@ sub handle_request
 #### Show current user context information
   $sbeams->printUserContext();
 
-#### Get information about the current project from the database
+  #### Get information about the current project from the database
   $sql = qq~
 	SELECT UC.project_id,P.name,P.project_tag,P.project_status,
                P.PI_contact_id
@@ -218,7 +218,36 @@ sub handle_request
 if ($sub )  {
 		#print some info about this project
 		#only on the main page
-		
+    
+  if ($sub eq $actionHash{$INTRO})
+  {
+  print qq~
+
+	<P> You are successfully logged into the <B>$DBTITLE -
+	$SBEAMS_PART	</B> system.  This module is designed as a repository
+	for cytometry data.</P>
+
+
+	<P>Please choose your tasks from the menu bar on the left.</P>
+
+	<font color=red>TO ENTER A NEW CYTOMETRY RUN:</font>
+
+	<UL>
+	<LI> Know the Project under which the cytometry run should be
+	entered.  If there isn\'t yet one, create it by clicking
+	[Projects] [Add Project]
+
+	<LI> Enter the organism from which the cells were acquired.
+
+	<LI> Enter the correct filepath of the file to be uploaded.
+  
+	</UL>
+
+	<P> This system is still under active development.  Please be
+	patient and report bugs, problems, difficulties, suggestions
+	to <B>mkorb\@systemsbiology.org</B>.</P>
+~;
+  }
 		print qq~
 				<H1>Current Project: <A class="h1" HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=$project_id">$project_name</A></H1>
 				<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
@@ -227,7 +256,7 @@ if ($sub )  {
 				<TR><TD></TD><TD COLSPAN="2"><B>Owner:</B> $PI_name</TD></TR>
 				<TR><TD></TD><TD COLSPAN="2"><B>Access Privileges:</B> <A HREF="$CGI_BASE_DIR/ManageProjectPrivileges">[View/Edit]</A></TD></TR>
 				<TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
-	      <TD WIDTH="80%"><TABLE BORDER=0>
+	      <TD WIDTH="100%"><TABLE BORDER=0>
 		  ~ if ($action eq '_displayIntro' || !$action) ;
 		  checkGO();
 #### If the project_id wasn't reverted to -99, display information about it
@@ -271,7 +300,7 @@ sub displayIntro {
 	 if (@rows)
 	 {
 		print "<br><center><h4> Current Cytometry data for this project</h4></center><br>";
-		print "<table border=2>"; 
+		print "<center><table border=2>"; 
 		foreach my $row(@rows)
 		{
 			my ($fcsID,$organismID, $projectDes, $sampleName, $fileName, $runDate) = @{$row};
@@ -315,7 +344,7 @@ sub displayIntro {
 		
  #### Finish the table
   print qq~
-	</TABLE></TD></TR>
+	</TABLE> </TD></TR>
 	</TABLE>~;
     	
 	  ##########################################################################
@@ -336,7 +365,7 @@ sub displayIntro {
 	This system and this module in particular are still under
 	active development.  Please be patient and report bugs,
 	problems, difficulties, as well as suggestions to
-	<B>edeutsch\@systemsbiology.org</B>.<P>
+	<B>mkorb\@systemsbiology.org</B>.<P>
 	<BR>
 	<BR>
   ~;
@@ -402,8 +431,12 @@ sub processFile
 	}
 
 
-  my $databaseUpdate;
-	my $fileID = 0;
+  my $databaseUpdate = 0;;
+	
+  
+  
+=comment  
+  my $fileID = 0;
 	my $query = "Select top 1dp. fcs_run_id  from $TBCY_DATA_POINTS dp 
 	left join $TBCY_FCS_RUN  fcs on dp.fcs_run_id = fcs.fcs_run_id where
 	fcs.filename = \'$fileName\'";
@@ -417,6 +450,10 @@ sub processFile
   {
     $databaseUpdate = 1;
   }
+=cut
+
+
+
 
 	if ($values{'$PAR'})
 	{
@@ -573,12 +610,18 @@ sub getAnotherGraph
 	my %resultset = ();
 	my $resultset_ref = \%resultset;
 	my %parameters = %{$ref_parameters};
+
+  
+  
 =comment
 	foreach my $k (keys %parameters)
 		{
 				print "$k  ==== $parameters{$k}<br>";
 		}	
 =cut
+
+
+
 
 	my $parametersRef = createGraph( \%parameters);
 	printGraph ($parametersRef);
@@ -597,12 +640,17 @@ sub getGraph
 	my %resultset = ();
 	my $resultset_ref = \%resultset;
 	my %parameters = %{$ref_parameters};
+
+  
 =comment
 	foreach my $k (keys %parameters)
 		{
 				print "$k  ==== $parameters{$k}<br>";
 		}	
 =cut
+
+
+
 	my $infile = $parameters{inFile};
 # Strip out all of the keyword-value pairs.
 	my @header = read_fcs_header($infile);	
@@ -642,8 +690,12 @@ sub getGraph
 	$inpars{green}    =$inParsParam{gr} || 0;;
 	$inpars{red}      = $inParsParam{re} || 0;
 
-	data2($infile,$header[3],2,$num_par,$num_events,%inpars);	
-	my $parametersRef = createGraph( \%parameters);
+	#data2($infile,$header[3],2,$num_par,$num_events,%inpars);	
+	
+  
+  my $parametersRef = createGraph( \%parameters);
+  
+  
   if (! $parametersRef->{validData})
   {
     print "<center><b>No valid datapoints for these parameters</b><Br>
@@ -656,6 +708,8 @@ sub getGraph
 }
 	#			<TR rOWSPAN="2">
 		#	<TD COLSPAN="2">
+
+    
 sub printGraph 
 {
 	my $parameterRef = shift;
@@ -707,13 +761,18 @@ sub printGraph
 
 sub createGraph 
 {
-	my ($paramRef) = @_;	
+	my ($paramRef) = @_;
+
+
+	
 =comment
 	foreach my $key (keys %{$paramRef})
 	{
 		print "this is before $key ===  $paramRef->{$key}<br>";
 	}
 =cut
+
+
 	my $xMinCoor = $paramRef->{xBoxMin} || 0;	
 	my  $xMaxCoor = $paramRef->{xBoxMax} || 1000000;
 	my $yMinCoor = $paramRef->{yBoxMin} || 0;
@@ -920,7 +979,11 @@ sub data2
     # it to the output file.
     open(FCSFILE,"$infile") or die "dump_data2: Can't find input file $infile.";
     read(FCSFILE,$dummy,$offset); # read over header and text sections.
-	my $fileID = 0;
+	
+  
+  
+  
+  my $fileID = 0;
 	my $query = "Select top 1dp. fcs_run_id  from $TBCY_DATA_POINTS dp 
 	left join $TBCY_FCS_RUN  fcs on dp.fcs_run_id = fcs.fcs_run_id where
 	fcs.filename = \'$fileName\' and confirmed = 1";
