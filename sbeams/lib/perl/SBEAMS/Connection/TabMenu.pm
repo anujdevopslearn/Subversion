@@ -74,6 +74,7 @@ sub new {
 
   #### If there's a password in here, strip it out!
   $this->{_absQueryURL} =~ s/password=.*?;/password=xxx;/;
+  $log->debug( $this->{_absQueryURL} );
 
 
   if ( $this->{maSkin} ) {
