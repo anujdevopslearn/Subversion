@@ -27,6 +27,9 @@ use vars qw(@ISA @EXPORT
     $TBCY_TISSUE_TYPE
     $TBCY_SORT_TYPE
     $TBCY_CYTOMETRY_SAMPLE
+    
+    $TBCY_BIOSEQUENCE
+    $TBCY_BIOSEQUENCE_SET
 );
 
 
@@ -44,6 +47,9 @@ require Exporter;
     $TBCY_TISSUE_TYPE
     $TBCY_SORT_TYPE
     $TBCY_CYTOMETRY_SAMPLE
+    
+    $TBCY_BIOSEQUENCE
+    $TBCY_BIOSEQUENCE_SET
   
 );
 
@@ -62,18 +68,8 @@ $TBCY_SORT_ENTITY = "${mod}sort_entity";
 $TBCY_TISSUE_TYPE = "${mod}tissue_type";
 $TBCY_SORT_TYPE =  "${mod}sort_type";
 $TBCY_CYTOMETRY_SAMPLE = "${mod}cytometry_sample";
+$TBCY_BIOSEQUENCE = "${mod}biosequence";
+$TBCY_BIOSEQUENCE_SET = "${mod}biosequence_set";
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# Modules must return true
+1;
