@@ -208,11 +208,21 @@ sub printEntryForm {
     #### Update peptide mass information
     #### First loop through static modifications
     foreach (keys %mass_modifications) {
-      $AAmasses_ref->{$_} = $mass_modifications{$_} if /^\w$/;
+      my $prev = $AAmasses_ref->{$_} || "";
+      if (/^\w$/) {
+        my $prev = $AAmasses_ref->{$_} || "";
+        $AAmasses_ref->{$_} = $AAmasses_ref->{$_} + $mass_modifications{$_};
+        #print "Loop 1: $_ = $prev --> $AAmasses_ref->{$_}<BR>\n";
+      }
     }
+
     #### Now loop through to get dynamic modifications
     foreach (keys %mass_modifications) {
-      $AAmasses_ref->{$_} = $AAmasses_ref->{$1} + $mass_modifications{$_} if /^(\w)\W$/;
+      if (/^(\w)\W$/) {
+        my $prev = $AAmasses_ref->{$_} || "";
+        $AAmasses_ref->{$_} = $AAmasses_ref->{$1} + $mass_modifications{$_};
+        #print "Loop 2: $_ = $prev --> $AAmasses_ref->{$_}<BR>\n";
+      }
     }
 
     my %spectrum = get_msms_spectrum(msms_spectrum_id=>$parameters{msms_spectrum_id});
