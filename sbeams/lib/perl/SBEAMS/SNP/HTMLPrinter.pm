@@ -103,6 +103,7 @@ sub printPageHeader {
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/SNP/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;BioSequences</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/SNP/BrowseSNPHit.cgi"><nobr>&nbsp;&nbsp;&nbsp;SNP Hits</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	</table>
 	</td>
