@@ -367,6 +367,24 @@ sub handle_request {
   return if ($protein_domain_clause == -1);
 
 
+  #### Build FAVORED CODON FREQUENCY constraint
+  my $fav_codon_frequency_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.fav_codon_frequency",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Favored Codon Frequency",
+    constraint_value=>$parameters{fav_codon_frequency_constraint} );
+  return if ($fav_codon_frequency_clause == -1);
+
+
+  #### Build NUMBER OF TRANSMEMBRANE REGIONS constraint
+  my $n_transmembrane_regions_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.n_transmembrane_regions",
+    constraint_type=>"flexible_int",
+    constraint_name=>"Number of Transmembrane regions",
+    constraint_value=>$parameters{n_transmembrane_regions_constraint} );
+  return if ($n_transmembrane_regions_clause == -1);
+
+
   #### Build ACCESSION constraint
   my $accession_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"BS.biosequence_accession",
@@ -544,7 +562,9 @@ sub handle_request {
   #### If the user opted to see the GO columns, add them in
   my @additional_columns = ();
   my $additional_grouping_columns = "";
-  if ( $parameters{display_options} =~ /ShowGOColumns/ ) {
+  if ( $parameters{display_options} =~ /ShowGOColumns/ ||
+       $molecular_function_clause.$biological_process_clause.
+       $cellular_component_clause.$protein_domain_clause ) {
     @additional_columns = (
       ["molecular_function","MFA.annotation","Molecular Function"],
       ["molecular_function_GO","MFA.external_accession","molecular_function_GO"],
@@ -584,6 +604,18 @@ sub handle_request {
              ON ( AG.annotated_gene_id = IPDA.annotated_gene_id
                    AND IPDA.gene_annotation_type_id = 4 AND IPDA.idx = 0 )
     ~;
+  }
+
+
+  #### Add in some extra columns if the user wants to see them
+  if ( $parameters{display_options} =~ /ShowExtraProteinProps/ ) {
+    @additional_columns = (
+      ["fav_codon_frequency","STR(BS.fav_codon_frequency,10,3)","Favored Codon Frequency"],
+      ["n_transmembrane_regions","BS.n_transmembrane_regions","Number of Transmembrane Regions"],
+      @additional_columns,
+    );
+
+    $additional_grouping_columns = ",BS.fav_codon_frequency,BS.n_transmembrane_regions".$additional_grouping_columns;
   }
 
 
@@ -724,6 +756,8 @@ sub handle_request {
         $biological_process_clause
         $cellular_component_clause
 	$protein_domain_clause
+        $n_transmembrane_regions_clause
+        $fav_codon_frequency_clause
 	 GROUP BY BS.biosequence_name
 
 	--
@@ -1048,6 +1082,8 @@ sub summarizeExperimentComparison {
     'biological_process_GO' => 1,
     'cellular_component_GO' => 1,
     'interpro_protein_domain_GO' => 1,
+    'Favored Codon Frequency' => 1,
+    'Number of Transmembrane Regions' => 1,
   );
 
 

@@ -282,6 +282,33 @@ sub handle_request {
   return if ($cellular_component_clause == -1);
 
 
+  #### Build INTERPRO PROTEIN DOMAIN constraint
+  my $protein_domain_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"IPDA.annotation",
+    constraint_type=>"plain_text",
+    constraint_name=>"InterPro Protein Domain",
+    constraint_value=>$parameters{protein_domain_constraint} );
+  return if ($protein_domain_clause == -1);
+
+
+  #### Build FAVORED CODON FREQUENCY constraint
+  my $fav_codon_frequency_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.fav_codon_frequency",
+    constraint_type=>"flexible_float",
+    constraint_name=>"Favored Codon Frequency",
+    constraint_value=>$parameters{fav_codon_frequency_constraint} );
+  return if ($fav_codon_frequency_clause == -1);
+
+
+  #### Build NUMBER OF TRANSMEMBRANE REGIONS constraint
+  my $n_transmembrane_regions_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.n_transmembrane_regions",
+    constraint_type=>"flexible_int",
+    constraint_name=>"Number of Transmembrane regions",
+    constraint_value=>$parameters{n_transmembrane_regions_constraint} );
+  return if ($n_transmembrane_regions_clause == -1);
+
+
   #### Build SORT ORDER
   my $order_by_clause = "";
   if ($parameters{sort_order}) {
@@ -310,7 +337,9 @@ sub handle_request {
 
   #### If the user opted to see the GO columns, add them in
   my @additional_columns = ();
-  if ( $parameters{display_options} =~ /ShowGOColumns/ ) {
+  if ( $parameters{display_options} =~ /ShowGOColumns/ ||
+       $molecular_function_clause.$biological_process_clause.
+       $cellular_component_clause.$protein_domain_clause ) {
     @additional_columns = (
       ["molecular_function","MFA.annotation","Molecular Function"],
       ["molecular_function_GO","MFA.external_accession","molecular_function_GO"],
@@ -318,6 +347,8 @@ sub handle_request {
       ["biological_process_GO","BPA.external_accession","biological_process_GO"],
       ["cellular_component","CCA.annotation","Cellular Component"],
       ["cellular_component_GO","CCA.external_accession","cellular_component_GO"],
+      ["interpro_protein_domain","IPDA.annotation","InterPro Protein Domain"],
+      ["interpro_protein_domain_GO","IPDA.external_accession","interpro_protein_domain_GO"],
     );
   }
 
@@ -326,21 +357,35 @@ sub handle_request {
   my $GO_join = "";
   if ( $parameters{display_options} =~ /ShowGOColumns/ ||
        $molecular_function_clause.$biological_process_clause.
-       $cellular_component_clause ) {
+       $cellular_component_clause.$protein_domain_clause ) {
     $GO_join = qq~
-        LEFT JOIN flybase.dbo.FBgn FBgn
-             ON ( BS.biosequence_accession = FBgn.accession )
-        LEFT JOIN flybase.dbo.FB_annotation MFA
-             ON ( FBgn.FBgn_id = MFA.FBgn_id AND MFA.fbacode='ENZ'
-                  AND MFA.idx=0)
-        LEFT JOIN flybase.dbo.FB_annotation BPA
-             ON ( FBgn.FBgn_id = BPA.FBgn_id AND BPA.fbacode='FNC'
-                  AND BPA.idx=0)
-        LEFT JOIN flybase.dbo.FB_annotation CCA
-             ON ( FBgn.FBgn_id = CCA.FBgn_id AND CCA.fbacode='CEL'
-                  AND CCA.idx=0)
+        LEFT JOIN flybase.dbo.annotated_gene AG
+             ON ( BS.biosequence_accession = AG.gene_accession )
+        LEFT JOIN flybase.dbo.gene_annotation MFA
+             ON ( AG.annotated_gene_id = MFA.annotated_gene_id
+                   AND MFA.gene_annotation_type_id = 1 AND MFA.idx = 0 )
+        LEFT JOIN flybase.dbo.gene_annotation BPA
+             ON ( AG.annotated_gene_id = BPA.annotated_gene_id
+                   AND BPA.gene_annotation_type_id = 2 AND BPA.idx = 0 )
+        LEFT JOIN flybase.dbo.gene_annotation CCA
+             ON ( AG.annotated_gene_id = CCA.annotated_gene_id
+                   AND CCA.gene_annotation_type_id = 3 AND CCA.idx = 0 )
+        LEFT JOIN flybase.dbo.gene_annotation IPDA
+             ON ( AG.annotated_gene_id = IPDA.annotated_gene_id
+                   AND IPDA.gene_annotation_type_id = 4 AND IPDA.idx = 0 )
     ~;
   }
+
+
+  #### Add in some extra columns if the user wants to see them
+  if ( $parameters{display_options} =~ /ShowExtraProteinProps/ ) {
+    @additional_columns = (
+      ["fav_codon_frequency","STR(BS.fav_codon_frequency,10,3)","Favored Codon Frequency"],
+      ["n_transmembrane_regions","BS.n_transmembrane_regions","Number of Transmembrane Regions"],
+      @additional_columns,
+    );
+  }
+
 
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
@@ -393,6 +438,8 @@ sub handle_request {
       $molecular_function_clause
       $biological_process_clause
       $cellular_component_clause
+      $n_transmembrane_regions_clause
+      $fav_codon_frequency_clause
       $order_by_clause
    ~;
 
@@ -406,10 +453,16 @@ sub handle_request {
                'accession' => "\%$colnameidx{accessor}V\%$colnameidx{accesssion}V",
                'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
                'Molecular Function_ATAG' => 'TARGET="WinExt"',
+               'Molecular Function_OPTIONS' => {semicolon_separated_list=>1},
                'Biological Process' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{biological_process_GO}V",
                'Biological Process_ATAG' => 'TARGET="WinExt"',
+               'Biological Process_OPTIONS' => {semicolon_separated_list=>1},
                'Cellular Component' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{cellular_component_GO}V",
                'Cellular Component_ATAG' => 'TARGET="WinExt"',
+               'Cellular Component_OPTIONS' => {semicolon_separated_list=>1},
+               'InterPro Protein Domain' => "http://www.ebi.ac.uk/interpro/IEntry?ac=\%$colnameidx{interpro_protein_domain_GO}V",
+               'InterPro Protein Domain_ATAG' => 'TARGET="WinExt"',
+               'InterPro Protein Domain_OPTIONS' => {semicolon_separated_list=>1},
     );
 
 
@@ -420,6 +473,7 @@ sub handle_request {
                   'molecular_function_GO' => 1,
                   'biological_process_GO' => 1,
                   'cellular_component_GO' => 1,
+                  'interpro_protein_domain_GO' => 1,
    );
 
 
@@ -719,9 +773,9 @@ sub displaySequenceView {
   	} elsif ($i % 10 == 0) {
   	  print " ";
   	}
-    
+
       }
-    
+
       print "\n\n";
 
     }
