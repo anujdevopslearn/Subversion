@@ -1,5 +1,6 @@
 PKG=DataLoader.unitTests.
-CP = ../../:..:$(CLASSPATH)
+JAR_DIR=/net/dblocal/www/html/dev7/sbeams/usr/java/share/util/
+CP = ../../:..:$(CLASSPATH):$(JAR_DIR)junit.jar
 JC = javac
 JC += -classpath $(CP)
 
