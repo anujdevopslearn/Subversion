@@ -290,6 +290,7 @@ sub start_element {
       } else {
         print "WARNING: Unable to determine biosequence_id for protein_name '".
           $attrs{protein_name}."'\n";
+        #$attrs{biosequence_id} = 0;
         die("bummer");
       }
     }
