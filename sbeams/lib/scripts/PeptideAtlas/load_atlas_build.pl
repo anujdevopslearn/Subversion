@@ -357,19 +357,20 @@ sub buildAltas {
      my @columns = split(/\t/,$line);
  
      my $tmp_pep_id = $peptides{$columns[$column_indices{peptide_identifier_str}]};
+
      $APD_peptide_accession{$tmp_pep_id} = $columns[$column_indices{peptide_identifier_str}];
      $APD_peptide_sequence{$tmp_pep_id} = $columns[$column_indices{peptide}];
      $APD_peptide_length{$tmp_pep_id} = length($APD_peptide_sequence{$tmp_pep_id});
      $APD_best_probability{$tmp_pep_id} = $columns[$column_indices{maximum_probability}];
      $APD_n_observations{$tmp_pep_id} = $columns[$column_indices{n_peptides}];
-     #### FIXME !!!! APD output has two columns names with the same name!!
-     $APD_search_batch_ids{$tmp_pep_id} = $columns[$column_indices{maximum_probability}+2];
+     $APD_search_batch_ids{$tmp_pep_id} = $columns[$column_indices{observed_experiment_list}];
      $APD_search_batch_ids{$tmp_pep_id} =~ s/\"//g;  ## removing quotes " from string
 
      my @tmp_search_batch_id = split(",", $APD_search_batch_ids{$tmp_pep_id} );
 
      for (my $ii = 0; $ii <= $#tmp_search_batch_id; $ii++) {
 
+        ### given search_batch_id, need sample_id
         my $sql;
         $sql = qq~
            SELECT sample_id
@@ -378,12 +379,14 @@ sub buildAltas {
               AND record_status != 'D'
         ~;
         my @rows = $sbeams->selectOneColumn($sql); # should return a single entry
-
+        my $tmp_sample_id = @rows[0];
+ 
         ## create string of sample ids:
         if ($ii == 0) {
-           $APD_sample_ids{$tmp_pep_id} = @rows[0];
+           $APD_sample_ids{$tmp_pep_id} = $tmp_sample_id;
         } else {
-           $APD_sample_ids{$tmp_pep_id} =  join ",", $APD_sample_ids{$tmp_pep_id}, @rows[0];
+           $APD_sample_ids{$tmp_pep_id} =  join ",", $APD_sample_ids{$tmp_pep_id}, 
+           $tmp_sample_id;
         }
      }
 
@@ -423,7 +426,7 @@ sub buildAltas {
    } # end while INFILE
    close(INFILE);
    my $APD_last_ind = $counter - 1;
- 
+
  
    #### Open the file containing the BLAST alignment summary
    unless (open(INFILE,"$source_dir/coordinate_mapping.txt")) {
@@ -702,7 +705,6 @@ sub buildAltas {
  
       } else {
  
-         ## create peptide_instance entries
          my %rowdata = ( ##   peptide_instance    table attributes
             atlas_build_id => $atlas_build_id,
             peptide_id => $tmp_pep_id,
