@@ -255,6 +255,15 @@ sub handle_request {
   }
 
 
+  #### If the current user is the owner of this project, invite the
+  #### user to register another experiment
+  if ($current_contact_id == $PI_contact_id) {
+    print qq~
+        <TR><TD COLSPAN=4><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=proteomics_experiment&ShowEntryForm=1">[Register another experiment]</A></TD></TR>
+    ~;
+  }
+
+
   #### Finish the table
   print qq~
 	</TABLE></TD></TR>
