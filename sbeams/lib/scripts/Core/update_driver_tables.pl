@@ -152,8 +152,8 @@ sub updateDriverTable {
   if ($delete_existing) {
     print "DELETing existing data in driver tables...\n";
     unless ($TESTONLY) {
-      $sbeams->executeSQL('DELETE FROM table_property');
-      $sbeams->executeSQL('DELETE FROM table_column');
+      $sbeams->executeSQL('DELETE FROM $TB_TABLE_PROPERTY');
+      $sbeams->executeSQL('DELETE FROM $TB_TABLE_COLUMN');
     }
     print "Driver tables DELETEd.  Start reloading data.\n";
     return;
@@ -317,7 +317,7 @@ sub update_table_property {
     dest_conn=>$sbeams,
     column_map_ref=>\%column_map,
     transform_map_ref=>\%transform_map,
-    table_name=>"table_property",
+    table_name=>$TB_TABLE_PROPERTY,
     update=>1,
     update_keys_ref=>\%update_keys,
     verbose => $VERBOSE,
@@ -402,7 +402,7 @@ sub update_table_column {
     dest_conn=>$sbeams,
     column_map_ref=>\%column_map,
     transform_map_ref=>\%transform_map,
-    table_name=>"table_column",
+    table_name=>$TB_TABLE_COLUMN,
     update=>1,
     update_keys_ref=>\%update_keys,
     verbose => $VERBOSE,
