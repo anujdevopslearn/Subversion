@@ -19,6 +19,7 @@ use strict;
 use Getopt::Long;
 use FindBin;
 use DirHandle;
+use Math::Interpolate;
 
 use lib qw (../perl ../../perl);
 use vars qw ($sbeams $sbeamsPROT $q
@@ -45,40 +46,64 @@ $sbeamsPROT->setSBEAMS($sbeams);
 #### Set program name and usage banner
 $PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
-Usage: $PROG_NAME [OPTIONS] <experiment_tag> <directory_path>
+Usage: $PROG_NAME [OPTIONS]
 Options:
   --verbose n         Set verbosity level.  default is 0
   --quiet             Set flag to print nothing at all except errors
   --debug n           Set debug flag
+  --list_all          If set, a list of experiments with status is printed
+  --load              If set, a fresh load of the named experiment_tag
+                      plus search_subdir will be triggered
+  --update_from_summary_files
+                      If set, an update from the html summary files
+                      will be triggered
+  --update_search     If set, a generic update of the search data will
+                      be triggered
+  --update_probabilties
+                      If set, an update of the probability values will be
+                      be triggered
+  --update_timing_info
+                      If set, an update of the timing and percent buffer
+                      B information will be triggered
   --experiment_tag    The experiment_tag of a proteomics_experiment
-                      that is to be worked on
-                      on; all are checked if none is provided
-  --file_prefix       A prefix that is prepended to the set_path in the
-                      biosequence_set table
-  --check_status      Is set, nothing is actually done, but rather the
-                      biosequence_sets are verified
-  --list_all          If set, a list of experiments and the status is printed
+                      that is to be worked on; all are checked if
+                      none is provided
+  --search_subdir     Subdirectory (from the experiment_path of the
+                      specific sequest search to load
+  --check_status      If set, nothing is actually done, but rather the
+                      experiments are verified
   --testonly          If set, nothing is actually inserted into the database,
                       but we just go through all the motions.  Use --verbose
                       to see all the SQL statements that would occur
+  --file_prefix       A prefix that is prepended to the experiment_path in the
+                      proteomics_expierment table, assuming it is a
+                      relative path instead of an absolute one
   --force_ref_db      Normally this program expects the database name for
                       all sequest searches to be the same, but some old
                       fusty data has obsolete database information encoded
                       in the .out files.  If set, this flag ignores the
-                      contents of the .out files and assumes that this is
+                      database name in the .out files and assumes that this is
                       the database to be referenced.  Careful, this disables
                       some safety checks!
 
  e.g.:  $PROG_NAME --list_all
-        $PROG_NAME --experiment_tag=rafapr --check
+        $PROG_NAME --check --experiment_tag=rafapr
 
 EOU
 
 
+#### If no parameters are given, print usage information
+unless ($ARGV[0]){
+  print "$USAGE";
+  exit;
+}
+
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
   "experiment_tag:s","file_prefix:s","check_status","force_ref_db:s",
-  "list_all"
+  "list_all","search_subdir:s","load","testonly",
+  "update_from_summary_files","update_search","update_probabilities",
+  "update_timing_info"
   )) {
   print "$USAGE";
   exit;
@@ -138,7 +163,13 @@ sub handleRequest {
   #### Set the command-line options
   my $check_status = $OPTIONS{"check_status"} || '';
   my $list_all = $OPTIONS{"list_all"} || '';
+  my $load = $OPTIONS{"load"} || '';
+  my $update_from_summary_files = $OPTIONS{"update_from_summary_files"} || '';
+  my $update_search = $OPTIONS{"update_search"} || '';
+  my $update_probabilities = $OPTIONS{"update_probabilities"} || '';
+  my $update_timing_info = $OPTIONS{"update_timing_info"} || '';
   my $experiment_tag = $OPTIONS{"experiment_tag"} || '';
+  my $search_subdir = $OPTIONS{"search_subdir"} || '';
   my $file_prefix = $OPTIONS{"file_prefix"} || '';
   my $force_ref_db = $OPTIONS{'force_ref_db'} || '';
 
@@ -150,6 +181,14 @@ sub handleRequest {
   unless ($file_prefix) {
     my $module = $sbeams->getSBEAMS_SUBDIR();
     $file_prefix = '/net/dblocal/data/proteomics' if ($module eq 'Proteomics');
+  }
+
+
+  #### If there are any parameters left, complain and print usage
+  if ($ARGV[0]){
+    print "ERROR: Unresolved parameter '$ARGV[0]'.\n";
+    print "$USAGE";
+    exit;
   }
 
 
@@ -214,26 +253,99 @@ sub handleRequest {
       $status->{n_search_batches},$status->{n_spectra},
       $status->{experiment_path});
 
-    #### If we're not just checking the status
-    if ($list_all eq '' && $status->{experiment_path}) {
-      my $do_load = 1;
-      #$do_load = 1 if ($status->{n_rows} == 0);
-      #$do_load = 1 if ($update_existing);
-      #$do_load = 1 if ($delete_existing);
-
-      #### If it's determined that we need to do a load, do it
-      if ($do_load) {
-        my $prefix = $file_prefix;
-        $prefix = '' if ($status->{experiment_path} =~ /\/dblocal/);
-        $result = loadProteomicsExperiment(
-          experiment_tag=>$status->{experiment_tag},
-          source_dir=>$prefix.$status->{experiment_path});
-        print "\n";
+    #### If there are search_batchs, print out information on them
+    if ($status->{n_search_batches}) {
+      my $search_batch;
+      foreach $search_batch (@{$status->{search_batch_subdirs}}) {
+        printf("                                          %s\n",
+          $search_batch);
       }
-
     }
 
-  }
+
+    #### Figure out what search_batches to work on
+    #### If the user supplied one, go to work on it
+    my @search_batches;
+    if ($search_subdir) {
+      @search_batches = ($search_subdir);
+
+    #### If not, do them all
+    } elsif ($status->{n_search_batches}) {
+      @search_batches = @{$status->{search_batch_subdirs}};
+
+    #### Except if there are none, go to the next item
+    } else {
+      next;
+    }
+
+
+    my $search_batch_subdir;
+    foreach $search_batch_subdir (@search_batches) {
+
+      #### If we're not just checking the status
+      if ($list_all eq '' && $status->{experiment_path}) {
+    
+        my $prefix = $file_prefix;
+        $prefix = '' if ($status->{experiment_path} =~ /\/dblocal/);
+        my $source_dir = $prefix.$status->{experiment_path}."/".
+          $search_batch_subdir;
+
+
+  	#### If user asked for a load, do it
+  	if ($load) {
+  	  $result = loadProteomicsExperiment(
+  	    experiment_tag=>$status->{experiment_tag},
+  	    source_dir=>$source_dir);
+  	  print "\n";
+  	}
+
+
+  	#### If user asked for an update_from html, do it
+  	if ($update_from_summary_files) {
+          print "Updating from summary files in $source_dir\n";
+  	  $result = updateFromSummaryFiles(
+  	    experiment_tag=>$status->{experiment_tag},
+  	    search_batch_subdir=>$search_batch_subdir,
+  	    source_dir=>$source_dir);
+  	  print "\n";
+  	}
+
+
+  	#### If user asked for an update_probabilities, do it
+  	if ($update_probabilities) {
+          print "Updating probabilities in $source_dir\n";
+  	  $result = updateProbabilities(
+  	    experiment_tag=>$status->{experiment_tag},
+  	    search_batch_subdir=>$search_batch_subdir,
+  	    source_dir=>$source_dir);
+  	  print "\n";
+  	}
+
+  	#### If user asked for an update_search, do it
+  	if ($update_search) {
+          print "Updating search results\n";
+  	  $result = updateSearchResults(
+  	    experiment_tag=>$status->{experiment_tag},
+  	    search_batch_subdir=>$search_batch_subdir,
+  	    source_dir=>$source_dir);
+  	  print "\n";
+  	}
+
+  	#### If user asked for an update_timing_info, do it
+  	if ($update_timing_info) {
+          print "Updating Timing and % ACN information from nfo files\n";
+  	  $result = updateTimingInfo(
+  	    experiment_tag=>$status->{experiment_tag},
+  	    search_batch_subdir=>$search_batch_subdir,
+  	    source_dir=>$source_dir);
+  	  print "\n";
+  	}
+
+      } # endif list_all
+
+    } # endforeach subdir
+
+  } # endforeach experiment
 
 
   return;
@@ -299,14 +411,16 @@ sub getExperimentStatus {
   $status{n_spectra} = $n_rows;
 
 
-  #### Get the number of search_batches for this experiment
+  #### Get the search_batches for this experiment
   $sql = qq~
-          SELECT count(*) AS 'count'
+          SELECT search_batch_subdir
             FROM $TBPR_SEARCH_BATCH SB
            WHERE SB.experiment_id = '$experiment_id'
   ~;
-  my ($n_rows) = $sbeams->selectOneColumn($sql);
-  $status{n_search_batches} = $n_rows;
+  my @subdirs = $sbeams->selectOneColumn($sql);
+  $status{n_search_batches} = scalar(@subdirs);
+  $status{search_batch_subdirs} = \@subdirs;
+
 
   #### Return information
   return \%status;
@@ -442,7 +556,7 @@ sub loadProteomicsExperiment {
 
     #### Else if there is exactly one, mention that it's already there
     } elsif (scalar(@returned_fraction_ids) == 1) {
-      print "There is already an entry for fraction '$element'\n";
+      print "Fraction '$element' already exists in the database\n";
       $fraction_ids{$element} = $returned_fraction_ids[0];
 
 
@@ -544,14 +658,19 @@ sub loadProteomicsExperiment {
         $search_id = addSearchEntry($data{parameters},
           $search_batch_id,$msms_spectrum_id);
 
+        #### If a valid search_id was returned, insert the hits
+        if ($search_id > 0) {
 
-        #### Insert the entries into table "search_hit"
-        $search_hit_id = addSearchHitEntry($data{matches},$search_id);
+          #### Insert the entries into table "search_hit"
+          $search_hit_id = addSearchHitEntry($data{matches},$search_id);
 
+          #print "Successfully loaded $file_root (mass = $mass)\n";
+          print ".";
 
-        #print "Successfully loaded $file_root (mass = $mass)\n";
-        print ".";
+        }
+
         $filecounter++;
+
       }
 
 
@@ -692,6 +811,10 @@ sub addSearchBatchEntry {
 
   my $sql_query;
 
+  #### Determinte the search_batch_subdir as the last item on the directory
+  $directory =~ /.+\/(.+)/;
+  my $search_batch_subdir = $1;
+
 
   #### Find the biosequence_set_id for the supplied $search_database
   $sql_query = qq~
@@ -724,6 +847,7 @@ sub addSearchBatchEntry {
     $rowdata{experiment_id} = $experiment_id;
     $rowdata{biosequence_set_id} = $biosequence_set_id;
     $rowdata{data_location} = $directory;
+    $rowdata{search_batch_subdir} = $search_batch_subdir;
     $search_batch_id = $sbeams->insert_update_row(
   	insert=>1,
   	table_name=>$TBPR_SEARCH_BATCH,
@@ -748,6 +872,8 @@ sub addSearchBatchEntry {
 
   #### If there's exactly one, the that's what we want
   } elsif (scalar(@search_batch_ids) == 1) {
+    print "INFO: The search_batch that would be loaded is already ".
+      "in the database\n";
     $search_batch_id = $search_batch_ids[0];
 
   #### If there's more than one, we have a big problem
@@ -772,6 +898,25 @@ sub addSearchEntry {
     || die "ERROR addSearchBatch: missing parameter 2: search_batch_id\n";
   my ($msms_spectrum_id) = shift
     || die "ERROR addSearchBatch: missing parameter 3: msms_spectrum_id\n";
+
+
+  #### Verify that this search isn't already in the database
+  #### This is a lot of work for the server, so could be disabled
+  #### If a UNIQUE key is put in place to insure a crash here
+  if (1 == 1) {
+    my $sql = qq~
+      SELECT search_id
+        FROM $TBPR_SEARCH
+       WHERE search_batch_id = '$search_batch_id'
+         AND msms_spectrum_id = '$msms_spectrum_id'
+    ~;
+    my ($result) = $sbeams->selectOneColumn($sql);
+    if ($result) {
+      print "INFO: This search is already in the database as id '$result'\n";
+      return -1;
+    }
+  }
+
 
   #### Define the data columns for table "search"
   my @columns = ( "file_root","start_scan","end_scan",
@@ -991,3 +1136,962 @@ sub getDirListing {
 
   return sort(@files);
 }
+
+
+
+###############################################################################
+# updateFromSummaryFiles
+###############################################################################
+sub updateFromSummaryFiles { 
+  my %args = @_;
+  my $SUB_NAME = 'updateFromSummaryFile';
+
+
+  #### Decode the argument list
+  my $experiment_tag = $args{'experiment_tag'}
+   || die "ERROR[$SUB_NAME]: experiment_tag not passed";
+  my $search_batch_subdir = $args{'search_batch_subdir'}
+   || die "ERROR[$SUB_NAME]: search_batch_subdir not passed";
+  my $source_dir = $args{'source_dir'}
+   || die "ERROR[$SUB_NAME]: source_dir not passed";
+
+
+  #### Define standard variables
+  my ($i,$element,$key,$value,$line,$result,$sql,$file);
+
+
+  #### Set the command-line options
+  my $file_prefix = $OPTIONS{"file_prefix"} || '';
+
+
+  #### Verify that the source directory looks right
+  unless ( -d "$source_dir" ) {
+    die("ERROR: '$source_dir' is not a directory!\n");
+  }
+
+  unless ( -f "$source_dir/interact.htm" ||
+           -f "$source_dir/finalInteract/interact.htm" ||
+           -f "$source_dir/sequest.params" ||
+           -f "source_dir/interact-prob-data.htm" ) {
+    die("ERROR: '$source_dir' just doesn't look like a sequest search ".
+        "directory");
+  }
+
+
+  #### Try to find this experiment in database
+  $sql="SELECT experiment_id ".
+      "FROM $TBPR_PROTEOMICS_EXPERIMENT ".
+      "WHERE experiment_tag = '$experiment_tag'";
+  my ($experiment_id) = $sbeams->selectOneColumn($sql);
+  unless ($experiment_id) {
+    print "\nERROR: Unable to find experiment tag '$experiment_tag'.\n".
+          "       This experiment must already exist in the database\n\n";
+    return;
+  }
+
+
+  #### Try to find this search_batch_id in database
+  $sql = qq~
+    SELECT search_batch_id
+      FROM $TBPR_SEARCH_BATCH
+     WHERE experiment_id = '$experiment_id'
+       AND search_batch_subdir = '$search_batch_subdir'
+  ~;
+  my ($search_batch_id) = $sbeams->selectOneColumn($sql);
+  unless ($search_batch_id) {
+    print "\nERROR: Unable to find search_batch '$search_batch_subdir'.\n".
+          "       This search_batch must already exist in the database\n\n";
+    return;
+  }
+
+
+
+  #### Get the fractions for this experiment
+  $sql = qq~
+          SELECT fraction_id,fraction_tag
+            FROM $TBPR_FRACTION F
+           WHERE F.experiment_id = '$experiment_id'
+  ~;
+  my @fractions = $sbeams->selectSeveralColumns($sql);
+  unless (@fractions) {
+    die "Unable to find any fractions for this experiment.  Cannot update.\n";
+  }
+
+
+  #### Loop over all fractions, doing the updates
+  my ($fraction,$fraction_id,$fraction_tag);
+  foreach $fraction (@fractions) {
+    $fraction_id = $fraction->[0];
+    $fraction_tag = $fraction->[1];
+
+    my $source_file = "$source_dir/$fraction_tag.html";
+
+    print "Updating fraction $fraction_tag";
+    my $data_ref = $sbeamsPROT->readSummaryFile(inputfile=>$source_file,
+      verbose=>$VERBOSE);
+
+
+    #### Loop over each row
+    my ($key2,$value2,$file_root);
+    while ( ($key,$value) = each %{$data_ref->{files}} ) {
+
+      $file_root = $key;
+      $file_root =~ s/\.out$//;
+
+      #### Find the corresponding search_hit_id in table search_hit
+      #### Can this be put outside, the loop, it would be a big speed
+      #### improvement
+      #### On the other hand, it would be nice to be able to UPDATE
+      #### not just INSERT, so that will require some more thought FIXME
+      $sql = qq~
+	SELECT search_hit_id
+	  FROM $TBPR_SEARCH S
+	  JOIN $TBPR_SEARCH_HIT SH ON ( S.search_id = SH.search_id )
+	 WHERE search_batch_id = '$search_batch_id'
+	   AND hit_index = 1
+	   AND file_root = '$file_root'
+      ~;
+      my ($search_hit_id) = $sbeams->selectOneColumn($sql);
+      unless ($search_hit_id) {
+        print "\nERROR: Unable to find search_hit_id with\n".
+              "$sql\n\n";
+        return;
+      }
+
+
+      my %rowdata;
+      $rowdata{search_hit_id} = $search_hit_id;
+      while ( ($key2,$value2) = each %{$value} ) {
+        $rowdata{$key2} = $value2;
+      }
+
+      #### INSERT it
+      $sbeams->insert_update_row(
+        insert=>1,
+        table_name=>$TBPR_QUANTITATION,
+        rowdata_ref=>\%rowdata,
+        verbose=>$VERBOSE,
+        testonly=>$TESTONLY,
+      );
+
+      print ".";
+
+    } # endwhile
+
+    print "\n";
+
+  } # end foreach
+
+  return;
+
+} # end updateFromSummaryFiles
+
+
+
+###############################################################################
+# updateProbabilities
+###############################################################################
+sub updateProbabilities { 
+  my %args = @_;
+  my $SUB_NAME = 'updateProbabilities';
+
+
+  #### Decode the argument list
+  my $experiment_tag = $args{'experiment_tag'}
+   || die "ERROR[$SUB_NAME]: experiment_tag not passed";
+  my $search_batch_subdir = $args{'search_batch_subdir'}
+   || die "ERROR[$SUB_NAME]: search_batch_subdir not passed";
+  my $source_dir = $args{'source_dir'}
+   || die "ERROR[$SUB_NAME]: source_dir not passed";
+
+
+  #### Define standard variables
+  my ($i,$element,$key,$value,$line,$result,$sql,$file);
+
+
+  #### Set the command-line options
+  my $file_prefix = $OPTIONS{"file_prefix"} || '';
+
+
+  #### Try to find this experiment in database
+  $sql="SELECT experiment_id ".
+      "FROM $TBPR_PROTEOMICS_EXPERIMENT ".
+      "WHERE experiment_tag = '$experiment_tag'";
+  my ($experiment_id) = $sbeams->selectOneColumn($sql);
+  unless ($experiment_id) {
+    print "\nERROR: Unable to find experiment tag '$experiment_tag'.\n".
+          "       This experiment must already exist in the database\n\n";
+    return;
+  }
+
+
+  #### Try to find this search_batch_id in database
+  $sql = qq~
+    SELECT search_batch_id
+      FROM $TBPR_SEARCH_BATCH
+     WHERE experiment_id = '$experiment_id'
+       AND search_batch_subdir = '$search_batch_subdir'
+  ~;
+  my ($search_batch_id) = $sbeams->selectOneColumn($sql);
+  unless ($search_batch_id) {
+    print "\nERROR: Unable to find search_batch '$search_batch_subdir'.\n".
+          "       This search_batch must already exist in the database\n\n";
+    return;
+  }
+
+
+  #### Read the Interact file with probabilities
+  my $source_file = "$source_dir/interact-prob-data.htm";
+  print "Reading source file '$source_file'...\n";
+  my $data_ref = $sbeamsPROT->readSummaryFile(inputfile=>$source_file,
+    verbose=>$VERBOSE);
+
+
+  #print $data_ref,"\n";
+  #print $data_ref->{files},"\n";
+  my @nfiles = keys(%{$data_ref->{files}});
+  print "  nfiles = ".scalar(@nfiles);
+
+
+  #### Get all the rank 1 search_hit_id's for this search_batch
+  $sql = qq~
+      SELECT file_root,search_hit_id
+        FROM $TBPR_SEARCH S
+        JOIN $TBPR_SEARCH_HIT SH ON ( S.search_id = SH.search_id )
+       WHERE search_batch_id = '$search_batch_id'
+         AND hit_index = 1
+  ~;
+  my %search_hit_ids = $sbeams->selectTwoColumnHash($sql);
+
+
+  #### Loop over each row
+  my ($key,$value,$tmp,$key2,$value2,$file_root);
+  my %rowdata;
+  my $search_hit_id;
+
+
+  while ( ($key,$value) = each %{${$data_ref}{files}} ) {
+    #print "$key = $value\n";
+    $file_root = $key;
+    $file_root =~ s/\.out$//;
+
+    #### Find the corresponding search_hit_id in table search_hit
+    if (1 == 1) {
+      $search_hit_id = $search_hit_ids{$file_root};
+    } else {
+      $sql = qq~
+      SELECT search_hit_id
+        FROM $TBPR_SEARCH S
+        JOIN $TBPR_SEARCH_HIT SH ON ( S.search_id = SH.search_id )
+       WHERE search_batch_id = '$search_batch_id'
+         AND hit_index = 1
+         AND file_root = '$file_root'
+      ~;
+      $search_hit_id = $sbeams->selectOneColumn($sql);
+    }
+
+    unless ($search_hit_id) {
+      print "\nERROR: Unable to find search_hit_id with\n".
+            "$sql\n\n";
+      return;
+    }
+
+
+    #### Update that data
+    if (defined($value->{probability})) {
+      %rowdata = ();
+      $rowdata{probability} = $value->{probability};
+
+      $result = $sbeams->insert_update_row(
+        update=>1,
+        table_name=>$TBPR_SEARCH_HIT,
+        rowdata_ref=>\%rowdata,
+	PK=>'search_hit_id',
+        PK_value=>$search_hit_id,
+        verbose=>$VERBOSE,
+        testonly=>$TESTONLY,
+        );
+
+      print ".";
+
+    }
+
+  } # endwhile
+
+  return;
+
+} # end sub updateProbabilities
+
+
+
+###############################################################################
+# updateSearchResults
+###############################################################################
+sub updateSearchResults { 
+  my %args = @_;
+  my $SUB_NAME = 'updateSearchResults';
+
+  #### Set up use of some special stuff to calculate pI.  FIXME
+  use lib qw (/net/db/projects/proteomics/src/Proteomics/blib/lib
+    /net/db/projects/proteomics/src/Proteomics/blib/arch/auto/Proteomics);
+  use Proteomics;
+
+
+  #### Decode the argument list
+  my $experiment_tag = $args{'experiment_tag'}
+   || die "ERROR[$SUB_NAME]: experiment_tag not passed";
+  my $search_batch_subdir = $args{'search_batch_subdir'}
+   || die "ERROR[$SUB_NAME]: search_batch_subdir not passed";
+  my $source_dir = $args{'source_dir'}
+   || die "ERROR[$SUB_NAME]: source_dir not passed";
+
+
+  #### Define standard variables
+  my ($i,$element,$key,$value,$line,$result,$sql,$file);
+
+
+  #### Settings
+  my $adjust_best_hits = 1;
+
+
+  #### Set the command-line options
+  my $file_prefix = $OPTIONS{"file_prefix"} || '';
+
+
+  #### Try to find this experiment in database
+  $sql="SELECT experiment_id ".
+      "FROM $TBPR_PROTEOMICS_EXPERIMENT ".
+      "WHERE experiment_tag = '$experiment_tag'";
+  my ($experiment_id) = $sbeams->selectOneColumn($sql);
+  unless ($experiment_id) {
+    print "\nERROR: Unable to find experiment tag '$experiment_tag'.\n".
+          "       This experiment must already exist in the database\n\n";
+    return;
+  }
+
+
+  #### Try to find this search_batch_id in database
+  $sql = qq~
+    SELECT search_batch_id
+      FROM $TBPR_SEARCH_BATCH
+     WHERE experiment_id = '$experiment_id'
+       AND search_batch_subdir = '$search_batch_subdir'
+  ~;
+  my ($search_batch_id) = $sbeams->selectOneColumn($sql);
+  unless ($search_batch_id) {
+    print "\nERROR: Unable to find search_batch '$search_batch_subdir'.\n".
+          "       This search_batch must already exist in the database\n\n";
+    return;
+  }
+
+
+  #### Find the appropriate search_id's in the database
+  $sql = "SELECT search_id ".
+           "FROM $TBPR_SEARCH ".
+          "WHERE search_batch_id = '$search_batch_id'";
+  my @search_ids = $sbeams->selectOneColumn($sql);
+  unless (@search_ids) {
+    print "\nERROR: Unable to find search_batch_id '$search_batch_id'.\n".
+          "       in the database.  It must already exist there\n\n";
+    return;
+  }
+
+
+  print scalar(@search_ids)," search_id's found.\n";
+
+
+  #### Set up for main loop
+  my $counter = 0;
+  my ($search_id,$nrows,@data,@newdata);
+  my (@matches,$n_matches,$j,$n_proteins);
+  print "Processing search_batch...\n";
+
+  #### Loop over each search_id
+  foreach $search_id (@search_ids) {
+
+    #### Get the corresponding search_hit's
+    $sql = qq~
+	SELECT SH.*,file_root,SB.search_batch_id,SB.biosequence_set_id,
+	       biosequence_name,BS.biosequence_id AS 'matched_biosequence_id'
+	  FROM $TBPR_SEARCH_HIT SH
+	  JOIN $TBPR_SEARCH S ON ( SH.search_id = S.search_id )
+	  JOIN $TBPR_SEARCH_BATCH SB ON ( S.search_batch_id = SB.search_batch_id )
+	  LEFT JOIN $TBPR_BIOSEQUENCE BS ON
+	       ( SH.reference=BS.biosequence_name
+	         AND SB.biosequence_set_id = BS.biosequence_set_id )
+	 WHERE SH.search_id = '$search_id'
+    ~;
+
+    @data = $sbeams->selectHashArray($sql);
+    $nrows = @data;
+    print "search_id = $search_id, got nrows = $nrows ".
+      " ( $data[0]->{peptide_string} )\n"
+      if ($VERBOSE);
+
+
+    #### If query returned nothing, squawk and go to next search
+    unless ($nrows) {
+      print "WARNING: No rows returned for search_id = $search_id\n";
+      next;
+    }
+
+
+    #### Reset the new data ref array
+    @newdata = ();
+    my ($peptide,$pI);
+
+
+    #### Loop over each search_hit_id
+    for ($i=0; $i<$nrows; $i++) {
+      my %coldata;
+      $coldata{search_hit_id} = $data[$i]->{search_hit_id};
+      $coldata{best_hit_flag} = "";
+
+
+      #### Calculate pI (Isoelectric point)
+      $peptide = $data[$i]->{peptide};
+      $pI = Proteomics::COMPUTE_PI($peptide,length($peptide),0);
+      $coldata{isoelectric_point} = $pI;
+
+
+      #### Find additional proteins
+      #### This is extremely computationally expensive
+      if (0 == 1) {
+  	my @output = `./findpept $data[$i]->{peptide} /net/db/projects/proteomics/dbase/drosophila/aa_gadfly.dros.RELEASE2`;
+  	$n_proteins = @output;
+  	for ($j=0; $j<$n_proteins; $j++) {
+  	  chomp $output[$j];
+  	  my %tmp_rowdata;
+  	  $tmp_rowdata{search_hit_id} = $data[$i]->{search_hit_id};
+  	  $tmp_rowdata{reference} = $output[$j];
+  	  $result = $sbeams->insert_update_row(
+	    table_name=>$TBPR_SEARCH_HIT_PROTEIN,
+  	    insert=>1,rowdata_ref=>\%tmp_rowdata
+  	    #,verbose=>1,testonly=>1
+  	  );
+  	}
+  	#print "Other proteins: ",join(",",@output),"\n";
+      }
+
+
+      #### If the reference and biosequence_name don't match as they should
+      if ($data[$i]->{reference} ne $data[$i]->{biosequence_name}) {
+
+        #### if biosequence_name is not blank, this is very confusing and bad
+        if ($data[$i]->{biosequence_name}) {
+          print "  WARNING: reference and biosequence name don't match!\n";
+          print "           reference[$i] = $data[$i]->{reference}\n";
+          print "    biosequence_name[$i] = $data[$i]->{biosequence_name}\n";
+
+        #### Since biosequence_name is blank, try to guess
+        } else {
+
+          #### If this is a SWx or GPx record, try the other combination
+          my $prot = $data[$i]->{reference};
+          if ($prot =~ /^(SW)(.{0,1})\:(.+)$/ || $prot =~ /^(GP)(.{0,1})\:(.+)$/) {
+            my $src = $1;
+            my $tag = $2;
+            my $acc = $3;
+            if ($tag eq 'N') {
+              $tag = '';
+            } else {
+              $tag = 'N';
+            }
+            $prot = "$src$tag:$acc";
+            $sql = qq~
+		SELECT biosequence_id,biosequence_name
+		  FROM $TBPR_BIOSEQUENCE BS
+		 WHERE biosequence_set_id = '$data[$i]->{biosequence_set_id}'
+		   AND biosequence_name = '$prot'
+            ~;
+
+          #### Otherwise guess that it might be a truncated Reference?
+          } else {
+            $sql = qq~
+		SELECT biosequence_id,biosequence_name
+		  FROM $TBPR_BIOSEQUENCE BS
+		 WHERE biosequence_set_id = '$data[$i]->{biosequence_set_id}'
+		   AND biosequence_name LIKE '$data[$i]->{reference}\%'
+            ~;
+          }
+
+          @matches = $sbeams->selectSeveralColumns($sql);
+          $n_matches = @matches;
+
+          #### If there is exactly one matching row, this is good
+          if ($n_matches == 1) {
+            $data[$i]->{biosequence_id} = $matches[0]->[0];
+            $data[$i]->{biosequence_name} = $matches[0]->[1];
+            if ($VERBOSE) {
+              print "  Repairing mismatch:\n";
+              print "           reference[$i] = $data[$i]->{reference}\n";
+              print "    biosequence_name[$i] = $data[$i]->{biosequence_name}\n";
+            }
+            $coldata{reference} = $data[$i]->{biosequence_name}
+
+          #### If there is more than one matching row, this is very bad
+          } elsif ($n_matches > 1) {
+            print "\nERROR: attempt to find match for".
+              "\n '$data[$i]->{reference}\%' returned more than one row:\n";
+            foreach $element (@matches) {
+              print "  $element->[1]\n";
+            }
+            print "  Rather just leave the record NULL than ".
+              "assume something...\n";
+
+
+          #### If there are no rows, this is not good
+          } else {
+            print "ERROR: Unable to find a match for:\n";
+            print "           reference[$i] = $data[$i]->{reference}\n";
+          }
+
+        }
+
+      }
+
+      $coldata{biosequence_id} = $data[$i]->{matched_biosequence_id};
+      push(@newdata,\%coldata);
+
+    }
+
+
+
+    #### If we want to adjust the best hit status for searches
+    my $make_best_hit_guess = 0;
+    if ($adjust_best_hits) {
+
+      #### First, collect stats on the best hit
+      $i=0;
+      my $n_D_hits = 0;
+      my $n_U_hits = 0;
+      my $n_other_hits = 0;
+      while ($i<$nrows) {
+        if ($data[$i]->{best_hit_flag} eq 'D') {
+          $n_D_hits++;
+        } elsif ($data[$i]->{best_hit_flag} eq 'U') {
+          $n_U_hits++;
+        } elsif ($data[$i]->{best_hit_flag}) {
+          $n_other_hits++;
+        }
+        $i++;
+      }
+
+      #### If there's more than one best hit, complain bitterly
+      if ($n_D_hits + $n_U_hits + $n_other_hits > 1) {
+        print "ERROR: search_id '$search_id' has more than one best hit!!\n";
+        print "       Going to rewrite with best guess...\n";
+        $make_best_hit_guess = 1;
+
+      #### If there's a type of best hit we don't understand, complain
+      } elsif ($n_other_hits) {
+        die("ERROR: search_id '$search_id' has an unknown type of best hit!!\n");
+
+      #### Otherwise, if there's one user hit, clear flag
+      } elsif ($n_U_hits == 1) {
+        $make_best_hit_guess = 0;
+
+      #### Otherwise, if there's one default hit, set flag
+      } elsif ($n_D_hits == 1) {
+        $make_best_hit_guess = 1;
+
+      #### Otherwise, if nothings yet been set a best hit, set flag
+      } elsif ($n_D_hits + $n_U_hits + $n_other_hits == 0) {
+        $make_best_hit_guess = 1;
+
+      #### There should be nothing else
+      } else {
+        die("ERROR: BEST_HIT_OPTION_FAIL. This should never happen");
+      }
+
+    }
+
+
+    #### If the flag is set for adjusting the best hit status for searches
+    if ($make_best_hit_guess) {
+
+      #### First clear all best_hit flags
+      $i=0;
+      while ($i<$nrows) {
+        $newdata[$i]->{best_hit_flag} = "";
+        $i++;
+      }
+
+      #### If the top hit is at least singly tryptic, then make it best_hit
+      if ($data[0]->{peptide_string} =~ /^[KR]\..+/i ||
+  	  $data[0]->{peptide_string} =~ /.+[KR]\..$/i ) {
+  	$newdata[0]->{best_hit_flag} = "D";
+
+      #### If not, see if there's a better match in lower hits
+      } else {
+  	$i=0;
+  	while ($i<$nrows) {
+  	  if ($data[$i]->{peptide_string} =~ /^[KR]\..+/i ||
+  	      $data[$i]->{peptide_string} =~ /.+[KR]\..$/i ) {
+  	    $newdata[$i]->{best_hit_flag} = "D";
+  	    last;
+  	  }
+  	  $i++;
+  	}
+
+	#### There was not, so just set the flag on the top one
+  	$newdata[0]->{best_hit_flag} = "D" if ($i == $nrows);
+
+      }
+
+    }
+
+
+    #### Print out the results of the decisions
+    if ($DEBUG) {
+      foreach $element (@newdata) {
+        print "  >> ";
+        while ( ($key,$value) = each %{$element} ) {
+          print "$key='$value'  ";
+        }
+        print "\n";
+      }
+    }
+
+
+    #### Write the data back to the database
+    my $search_hit_id;
+    foreach $element (@newdata) {
+      $search_hit_id = $element->{search_hit_id};
+
+      unless ($search_hit_id) {
+        print "ERROR: this is very bad.  search_hit_id is null!!\n";
+        print "i = $i\n";
+        print "Query was:\n$sql\n";
+        print "  >> ";
+        while ( ($key,$value) = each %{$element} ) {
+          print "$key='$value'  ";
+        }
+        print "\n";
+        die "bummer";
+      }
+
+      delete $element->{search_hit_id};
+      $result = $sbeams->insert_update_row(table_name=>$TBPR_SEARCH_HIT,
+        update=>1,rowdata_ref=>$element,PK=>"search_hit_id",
+        PK_value=>$search_hit_id
+        #,verbose=>1,testonly=>1
+      );
+
+    }
+
+
+    #last if ($counter > 1);
+    $counter++;
+    print "$counter..." if ($counter % 100 == 0);
+
+
+  }
+
+
+  return;
+
+} # end sub updateSearchResults
+
+
+
+###############################################################################
+# updateTimingInfo
+###############################################################################
+sub updateTimingInfo { 
+  my %args = @_;
+  my $SUB_NAME = 'updateTimingInfo';
+
+  #### Decode the argument list
+  my $experiment_tag = $args{'experiment_tag'}
+   || die "ERROR[$SUB_NAME]: experiment_tag not passed";
+  my $search_batch_subdir = $args{'search_batch_subdir'}
+   || die "ERROR[$SUB_NAME]: search_batch_subdir not passed";
+  my $source_dir = $args{'source_dir'}
+   || die "ERROR[$SUB_NAME]: source_dir not passed";
+
+
+  #### Define standard variables
+  my ($i,$element,$key,$value,$line,$result,$sql,$file);
+
+
+  #### Set the command-line options
+  my $file_prefix = $OPTIONS{"file_prefix"} || '';
+
+
+  #### Try to find this experiment in database
+  $sql="SELECT experiment_id ".
+      "FROM $TBPR_PROTEOMICS_EXPERIMENT ".
+      "WHERE experiment_tag = '$experiment_tag'";
+  my ($proteomics_experiment_id) = $sbeams->selectOneColumn($sql);
+  unless ($proteomics_experiment_id) {
+    print "\nERROR: Unable to find experiment tag '$experiment_tag'.\n".
+          "       This experiment must already exist in the database\n\n";
+    return;
+  }
+
+
+  #### Get all the fraction_ids for this experiment
+  $sql = qq~
+	SELECT fraction_id
+	  FROM $TBPR_FRACTION
+	 WHERE experiment_id = '$proteomics_experiment_id'
+  ~;
+  my @fraction_ids = $sbeams->selectOneColumn($sql);
+
+  #### If no fractions were found, complain
+  unless (@fraction_ids) {
+    die("Unable to find any fractions with: $sql");
+  }
+
+
+  #### Loop over each fraction_id
+  my $fraction_id;
+  foreach $fraction_id (@fraction_ids) {
+
+    #### Get the information about this fraction including location
+    $sql = qq~
+	SELECT fraction_id,fraction_tag,experiment_path,column_delay,
+	       gradient_program_id
+	  FROM $TBPR_FRACTION F
+          JOIN $TBPR_PROTEOMICS_EXPERIMENT PE
+               ON (F.experiment_id=PE.experiment_id)
+	 WHERE fraction_id = '$fraction_id'
+    ~;
+    my @rows = $sbeams->selectSeveralColumns($sql);
+    my @fraction_info = @{$rows[0]};
+
+
+    #### Extract some information into variables
+    my $fraction_tag = $fraction_info[1];
+    my $experiment_path = $fraction_info[2];
+    my $column_delay = $fraction_info[3];
+    my $gradient_program_id = $fraction_info[4];
+    my $source_file = "$experiment_path/$fraction_tag.nfo";
+
+    print "\nProcessing fraction '$fraction_tag'\n";
+
+
+    #### If there's no column delay, set it to a default and warn the user
+    unless ($column_delay) {
+      $column_delay = 240;
+      print "No column_delay has been defined for this fraction yet.\n";
+      print "  Setting it to default value $column_delay seconds.\n";
+    }
+
+
+    #### If there's no gradient_program_id, set it to a default
+    #### and warn the user
+    unless ($gradient_program_id) {
+      $gradient_program_id = 1;
+      print "No gradient_program_id has been defined for this fraction yet.\n";
+      print "  Setting it to default value $gradient_program_id.\n";
+    }
+
+
+    #### Get the gradient program data points to calculate % buffer
+    my $gradient_program = getGradientProgram(
+      gradient_program_id=>$gradient_program_id);
+    my @prog_times = @{$gradient_program->{gradient_delta_times}};
+    my @prog_deltas = @{$gradient_program->{buffer_B_setting_percents}};
+
+
+    #### Read the nfo file for this fraction
+    my %msrun_data = $sbeamsPROT->readNfoFile(source_file=>$source_file,
+      verbose=>$VERBOSE);
+
+
+    #### If we got back data, UPDATE some fraction-specific pieces of data
+    if (%msrun_data) {
+      my %rowdata;
+      $rowdata{fraction_date} = $msrun_data{parameters}->{Date};
+      $rowdata{column_delay} = $column_delay;
+      $rowdata{gradient_program_id} = $gradient_program_id;
+
+      #### UPDATE the information
+      $result = $sbeams->insert_update_row(
+        update=>1,
+        table_name=>$TBPR_FRACTION,
+        rowdata_ref=>\%rowdata,
+	PK=>'fraction_id',
+        PK_value=>$fraction_id,
+        verbose=>$VERBOSE,
+        testonly=>$TESTONLY,
+      );
+
+
+    #### Otherwise we cannot continue
+    } else {
+      die("Unable to get information from '$source_file'");
+    }
+
+
+    #### Get a hash of msms_spectrum_id's
+    $sql = qq~
+	SELECT start_scan,msms_spectrum_id
+	  FROM $TBPR_MSMS_SPECTRUM
+	 WHERE fraction_id = '$fraction_id'
+    ~;
+    my %msms_spectrum_ids = $sbeams->selectTwoColumnHash($sql);
+
+    #### If no msms_spectra were found, fail
+    unless (%msms_spectrum_ids) {
+      die("Unable to find any msms_spectrum_ids with: $sql");
+    }
+
+
+    #### Loop over each row of data from the file
+    my $row;
+    foreach $row (@{$msrun_data{spec_data}}) {
+
+      my $scan_number = $row->[0];
+
+      #### If this scan_number is in the database, update it
+      if ($msms_spectrum_ids{$scan_number}) {
+
+        my $msms_spectrum_id = $msms_spectrum_ids{$scan_number};
+
+        #### Populate a hash with the data we want to update
+        my %rowdata;
+	$rowdata{scan_time} = $row->[3] / 10000.0;
+	my $retention_time = $rowdata{scan_time} - $column_delay;
+	#$rowdata{retention_time} = $rowdata{scan_time} - $column_delay;
+
+        #### Calculate buffer percents
+        my $result_ref = calcBufferPercent(
+          retention_time=>$retention_time,
+          prog_times_ref=>\@prog_times,
+          prog_deltas_ref=>\@prog_deltas,
+        );
+        my $buffer_B_percent = $result_ref->{buffer_B_percent};
+
+
+        #### Verify and add to rowdata
+        if ($buffer_B_percent) {
+          $rowdata{calc_buffer_percent} = $buffer_B_percent;
+        } else {
+          print "ERROR: Unable to calculate buffer B percent\n";
+        }
+
+
+        #### UPDATE the information
+  	$result = $sbeams->insert_update_row(
+  	  update=>1,
+  	  table_name=>$TBPR_MSMS_SPECTRUM,
+  	  rowdata_ref=>\%rowdata,
+  	  PK=>'msms_spectrum_id',
+  	  PK_value=>$msms_spectrum_id,
+  	  verbose=>$VERBOSE,
+  	  testonly=>$TESTONLY,
+  	);
+
+        print ".";
+
+      } else {
+        #### This is scan is not in the database.  There are many good
+        #### reasons why it might be, so sweep on
+      }
+
+
+    } # endforeach $row
+
+    print "\n";
+
+  } # endforeach $fraction
+
+
+} # end updateTimingInfo
+
+
+
+###############################################################################
+# getGradientProgram
+###############################################################################
+sub getGradientProgram {
+  my %args = @_;
+
+  my $gradient_program_id = $args{'gradient_program_id'}
+    || die "Must supply the gradient_program_id";
+  my $verbose = $args{'verbose'} || 0;
+
+
+  #### Define some variables
+  my ($key,$value,$i,$matches,$tmp,$sql);
+
+
+  #### Get all the gradient_program_deltas for this program
+  $sql = qq~
+	SELECT gradient_delta_time,buffer_B_setting_percent
+	  FROM $TBPR_GRADIENT_DELTA
+	 WHERE gradient_program_id = '$gradient_program_id'
+  ~;
+  my @rows = $sbeams->selectSeveralColumns($sql);
+
+  #### Verify
+  unless (@rows) {
+    die("Unable to get information gradient program information with $sql");
+  }
+
+
+  #### Fill arrays with the gradient program points
+  #### NOTE THAT UNITS IN GRADIENT_DELTA IS IN MINUTES, SO CONVERT TO SECONDS
+  my $row;
+  my @gradient_delta_times;
+  my @buffer_B_setting_percents;
+  foreach $row (@rows) {
+    push(@gradient_delta_times,$row->[0]*60.0);
+    push(@buffer_B_setting_percents,$row->[1]);
+  }
+
+
+  #### Create the final hash to return
+  my %finalhash;
+  $finalhash{gradient_delta_times} = \@gradient_delta_times;
+  $finalhash{buffer_B_setting_percents} = \@buffer_B_setting_percents;
+
+  return \%finalhash;
+
+
+}
+
+
+
+###############################################################################
+# calcBufferBPercent
+###############################################################################
+sub calcBufferPercent {
+  my %args = @_;
+
+  my $retention_time = $args{'retention_time'}
+    || die "Must supply the retention_time";
+  my $prog_times_ref = $args{'prog_times_ref'}
+    || die "Must supply the prog_times_ref";
+  my $prog_deltas_ref = $args{'prog_deltas_ref'}
+    || die "Must supply the prog_deltas_ref";
+
+
+  #### Define some variables
+  my ($key,$value,$i,$matches,$tmp,$sql);
+
+
+  #### Calculate the actual buffer percents based on the time
+  my ($buffer_B_percent) = Math::Interpolate::linear_interpolate(
+    $retention_time, $prog_times_ref, $prog_deltas_ref);
+  if ($VERBOSE) {
+    print "x: ",join(',',@{$prog_times_ref}),"\n";
+    print "y: ",join(',',@{$prog_deltas_ref}),"\n";
+    print "retention_time_in: $retention_time\n";
+    print "buffer_B_percent_out: $buffer_B_percent\n";
+  }
+
+
+  #### Create the final hash to return
+  my %finalhash;
+  $finalhash{buffer_B_percent} = $buffer_B_percent;
+  $finalhash{buffer_A_percent} = 100 - $buffer_B_percent;
+
+  return \%finalhash;
+
+
+}
+
