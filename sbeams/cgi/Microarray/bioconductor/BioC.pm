@@ -135,7 +135,7 @@ sub create_files {
 </head>
 <body bgcolor="#FFFFFF">
 <h3>Processing...</h3>
-<p><a href="$RESULT_URL?action=view_file&analysis_folder=$jobname&analysis_file=index&file_ext=html">Click here</a> to manually refresh.</p>
+<p><a href="$RESULT_URL$RESULT_URL?action=view_file&analysis_folder=$jobname&analysis_file=index&file_ext=html">Click here</a> to manually refresh.</p>
 <p><a href="$BIOC_URL/cancel.cgi?name=$jobname" target="_parent">Click here</a> to cancel the job.</p>
 $jobsummary
 </body>
@@ -174,7 +174,7 @@ END
 <p>An error occured while processing the job. Please check the
 input and try again. If the problem persists, please contact the
 <a href="mailto:$ADMIN_EMAIL">site administrator</a>.</p>
-<p><a href="$RESULT_URL?action=view_file&analysis_folder=$jobname&analysis_file=$jobname&file_ext=err">Click here</a> to see the error.</p>
+<p><a href="$RESULT_URL$RESULT_URL?action=view_file&analysis_folder=$jobname&analysis_file=$jobname&file_ext=err">Click here</a> to see the error.</p>
 $jobsummary
 </body>
 </html>
@@ -225,7 +225,7 @@ Subject: Job Completed: $jobname
 To: $email
 
 Your job has finished processing. See the results here:
-$RESULT_URL?action=view_file&analysis_folder=$jobname&analysis_file=index&file_ext=html
+$SERVER_BASE_DIR$RESULT_URL?action=view_file&analysis_folder=$jobname&analysis_file=index&file_ext=html
 
 END_EMAIL
 END
@@ -246,7 +246,7 @@ Subject: Job Error: $jobname
 To: $email
 
 There was a problem while processing your job. See the error here:
-$RESULT_URL?action=view_file&analysis_folder=$jobname&analysis_file=error&file_ext=html
+$SERVER_BASE_DIR$RESULT_URL?action=view_file&analysis_folder=$jobname&analysis_file=error&file_ext=html
 
 END_EMAIL
 END
