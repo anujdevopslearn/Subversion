@@ -363,8 +363,8 @@ sub processParams {
     }
 
     $ftrs=$q->param('maxFeatures');
-    if ($ftrs > 30 || $ftrs < 1 || !($ftrs =~ /^[+-]?\d+$/)) {
-	print "<font color=red>ERROR: Maximum features to find is not valid</font><br>";
+    if ($ftrs > 1000 || $ftrs < 1 || !($ftrs =~ /^[+-]?\d+$/)) {
+	print "<font color=red>ERROR: Maximum features to find is not valid</font> (must be 1-1000)<br>";
 	$ftrs="";
 	$ok=0;
     }
