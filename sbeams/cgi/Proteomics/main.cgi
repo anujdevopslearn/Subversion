@@ -415,7 +415,7 @@ my @count_ms_runs = $sbeams->selectOneColumn($sql);
         $content .= qq~
      <TR>
     <TD>&nbsp;</TD>
-  <TD ALIGN=LEFT>Search batch $search_batch_id against <font color="green">[$set_tag]</font></TD>
+  <TD ALIGN=LEFT>Search batch $search_batch_subdir ($search_batch_id) against <font color="green">[$set_tag]</font></TD>
 <TD ALIGN=CENTER> <A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizePeptides?action=QUERY&QUERY_NAME=PR_SummarizePeptides&search_batch_id=$search_batch_id&probability_constraint=\%3E.9&n_annotations_constraint=%3E0&sort_order=tABS.row_count%20DESC&display_options=GroupReference&input_form_format=minimum_detail">PeptideProphet Summary<br/>(P &gt; 0.9)</A></TD>
     ~;
 	if (@protein_summary_status){#ProteinProphet annotation is available
