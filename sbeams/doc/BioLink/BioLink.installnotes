@@ -1,0 +1,127 @@
+
+Notes installing the SBEAMS - BioLink module
+
+$Id$
+
+
+-------------------------------------------------------------------------------
+1) Software Dependencies
+
+You must first install the SBEAMS Core.  See the separate installation
+notes (sbeams.installnotes) on how to accomplish that.
+
+
+-------------------------------------------------------------------------------
+2) Installation Location
+
+SBEAMS is designed to live entirely in the "htdocs" area of your Apache
+web server.  For the remainder of this installation, it will be assumed
+that your installation is configured as follows; compensate for your
+specific setup:
+  servername: db
+  DocumentRoot: /local/www/html
+  Primary location: directly located in DocumentRoot,
+                   /local/www/html/sbeams  --> http:/db/sbeams/
+  Development location: In a dev1 tree starting in the DocumentRoot,
+                   /local/www/html/dev1/sbeams  -> http:/db/dev1/sbeams/
+
+All modules live in the same area and should be unpacked into the
+main SBEAMS area.
+
+
+-------------------------------------------------------------------------------
+3) Create and populate the database
+
+It is assumed that you have already created and tested your SBEAMS Core
+database.  You may either create a separate database for the BioLink
+database or you can put everything in the same database.
+
+Note that some database engines (rare now) may not permit
+cross-database queries in which case your may NOT use separate
+databases.  If you do use separate databases, you may not be able to
+enforce referential integrety between tables in the different
+databases.  This may or may not be a significant concern.
+
+- If you decide on a separate database, create it and within it,
+  create users "sbeams" and "sbeamsro" as a read/write
+  account and a read-only account, respectively, as done for the Core.
+
+- Create directory to store BioLink sql statement files:
+
+cd $SBEAMS/lib/
+mkdir sql/BioLink
+
+- Generate the appropriate schema for your type(s) of database as follows:
+
+cd scripts/Core/
+
+foreach dbtype ( mssql mysql pgsql oracle )
+  ./generate_schema.pl \
+    --table_prop ../../conf/BioLink/BioLink_table_property.txt \
+    --table_col ../../conf/BioLink/BioLink_table_column.txt \
+    --schema_file ../../sql/BioLink/BioLink
+    --destination_type $dbtype
+end
+
+
+- Verify that the SQL CREATE and DROP statements have been correctly
+  generated in $SBEAMS/lib/sql/BioLink/
+
+- Create all tables described within sql/Biolink/BioLink_CREATETABLES.mssql
+  **except** first 4: dbo.biosequence_set, dbo.dbxref, dbo.biosequence, and
+  dbo.query_option)
+
+Examples for table creation for other database flavors can be found in the
+Core installation notes and will not be repeated here.
+
+
+-------------------------------------------------------------------------------
+4) Edit the SBEAMS Configuration files
+
+setenv SBEAMS /local/www/html/dev1/sbeams
+
+cd $SBEAMS/lib/conf
+edit SBEAMS.conf
+
+Specifically:
+
+DBPREFIX{BioLink}    = BioLink.dbo.
+
+Set DBPREFIX{BioLink} to the database name and schema/owner to prefix
+to table names. 
+
+
+-------------------------------------------------------------------------------
+5) Populate the driver tables
+
+cd $SBEAMS/lib/scripts/Core
+set CONFDIR = "../../conf"
+./update_driver_tables.pl $CONFDIR/BioLink/BioLink_table_property.txt
+./update_driver_tables.pl $CONFDIR/BioLink/BioLink_table_column.txt
+
+
+If this doesn't work.  Do not proceed, debug first.
+
+Now that the BioLink driver tables are loaded, you should be able to
+go to the web site again and click on SBEAMS - BioLink and explore the
+tables.  They're all going to be empty, but you shouldn't get any errors,
+just empty resultsets.
+
+If this doesn't work.  Do not proceed, debug first.
+
+
+-------------------------------------------------------------------------------
+6) Add groups ??
+
+
+-------------------------------------------------------------------------------
+7) Add some data via the command line
+
+- Load data onto polymer_type table:
+
+cd $SBEAMS/lib/scripts/Core
+
+./DataImport.pl --source_file ../../refdata/BioLink/polymer_type.xml
+
+
+
