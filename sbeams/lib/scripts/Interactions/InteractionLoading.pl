@@ -270,7 +270,9 @@ sub processFile
 		print "checking bioentity1 requirements\n";
 		foreach my $column (sort keys %columnHashProtein1)
 		{
-		
+			
+		 $infoArray[$columnHashProtein1{$column}] =~ s/^\s*//;
+		 $infoArray[$columnHashProtein1{$column}] =~ s/\s*$//;
 			$INFOPROTEIN1{$count-2}->{$column} = $infoArray[$columnHashProtein1{$column}];
 			
 		}
@@ -330,6 +332,8 @@ sub processFile
 		print "checking bioentity2 requirements\n";
 		foreach my $column (sort keys %columnHashProtein2)
 		{
+			$infoArray[$columnHashProtein2{$column}] =~ s/^\s*//;
+			$infoArray[$columnHashProtein2{$column}] =~ s/\s*$//;	
 			$INFOPROTEIN2{$count-2}->{$column} = $infoArray[$columnHashProtein2{$column}];
 #in case there is no protein2 defined one can not add an empty protein and interaction
 #however keep the count going so the the record numbers are the same across all hashes		
@@ -387,6 +391,8 @@ sub processFile
 print "checking interaction requirements\n";
 		foreach my $column (sort keys %interactionHash)
 		{
+				$infoArray[$interactionHash{$column}] =~ s/^\s*//;
+				$infoArray[$interactionHash{$column}] =~ s/\s*$//;
 				$INTERACTION{$count-2}->{$column} = $infoArray[$interactionHash{$column}];
 #in case there is no interaction defined, one can not add an empty interaction 
 #however keep the count going so the the record numbers are the same across all hashes
@@ -857,7 +863,14 @@ sub insertOrUpdateInteraction
 sub  Error
 {
 		my($arrayRef,$error) = @_;
-		print $fhError join "\t", (@$arrayRef,$error)."\n"; 
+#	foreach my $column (@$arrayRef)
+#{
+#	print $fhError "$column\t";
+				
+#	}
+#	print $fhError "$error\n";
+		print $fhError join "\t", (@$arrayRef);
+	  print $fhError "\t$error\n";
 
 }
 #specifies Database errors
