@@ -306,7 +306,7 @@ sub handle_request {
       ["cell_type_name","CT.cell_type_name","Cell Type"],
       ["intense_percent","SCP1.at_level_percent","Percent Intense"],
       ["equivocal_percent","SCP2.at_level_percent","Percent Equivocal"],
-      ["none_percent","SCP3.at_level_percent","Percent None"],
+      ["none_percent","SCP3.at_level_percent","Percent None"],			
     );
   }
 
@@ -406,13 +406,14 @@ sub handle_request {
 
       #### Show the SQL that will be or was executed
       $sbeams->display_sql(sql=>$sql) if ($show_sql);
-
+			#### this always happens
       #### Fetch the results from the database server
       $sbeams->fetchResultSet(
         sql_query=>$sql,
         resultset_ref=>$resultset_ref,
       );
-
+			
+			
       #### Post process the resultset
       postProcessResultset(
         rs_params_ref=>\%rs_params,
@@ -421,8 +422,10 @@ sub handle_request {
         column_titles_ref=>\@column_titles,
       ) if ($parameters{display_options} =~ /pivot/i);
 
-      #### Store the resultset and parameters to disk resultset cache
-      $rs_params{set_name} = "SETME";
+   #### Store the resultset and parameters to disk resultset cache
+   #### this always happens
+	 #### creates a file and stores data in file for later call up 
+	   	$rs_params{set_name} = "SETME";
       $sbeams->writeResultSet(
         resultset_file_ref=>\$rs_params{set_name},
         resultset_ref=>$resultset_ref,
@@ -431,8 +434,10 @@ sub handle_request {
         query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
         column_titles_ref=>\@column_titles,
       );
-    }
 
+		}
+		
+		#### This is the actual result
     #### Display the resultset
     $sbeams->displayResultSet(
       resultset_ref=>$resultset_ref,
@@ -445,8 +450,8 @@ sub handle_request {
       base_url=>$base_url,
     );
 
-
-    #### Display the resultset controls
+	 #### this is the query url and download options
+   #### Display the resultset controls
     $sbeams->displayResultSetControls(
       resultset_ref=>$resultset_ref,
       query_parameters_ref=>\%parameters,
@@ -455,7 +460,7 @@ sub handle_request {
     );
 
 
-    #### Display a plot of data from the resultset
+    #### Displays the options for plotting data from the resultset
     $sbeams->displayResultSetPlot(
       rs_params_ref=>\%rs_params,
       resultset_ref=>$resultset_ref,
@@ -501,16 +506,183 @@ sub evalSQL {
 # be very awkward to do in SQL.
 ###############################################################################
 sub postProcessResultset {
-  my %args = @_;
+		
+	my %args = @_;
 
-  my ($i,$element,$key,$value,$line,$result,$sql);
-
+  my ($i,$element,$key,$value,$line,$result,$sql,$cellTypeIndex,$antibodyIndex,
+	$intenseIndex,$equivocalIndex,$nonIndex);
+	my (%dataHash,%cellTypeHash);
   #### Process the arguments list
   my $resultset_ref = $args{'resultset_ref'};
   my $rs_params_ref = $args{'rs_params_ref'};
   my $query_parameters_ref = $args{'query_parameters_ref'};
   my $column_titles_ref = $args{'column_titles_ref'};
 
+
+
+	 #### Process the arguments list
+	 my @row;
+   my $irow = 0;
+   my ($value,$element);
+   my $nrows = scalar(@{$resultset_ref->{data_ref}});
+	 
+#finding the index for the approbriate column
+	my $indexI = 0;
+	foreach my $element (@{$resultset_ref->{column_list_ref}})
+	{			
+			$cellTypeIndex = $indexI if $element  eq 'cell_type_name';
+			$antibodyIndex = $indexI if $element eq 'antibody_name';
+			$intenseIndex = $indexI if $element eq 'intense_percent';
+			$equivocalIndex = $indexI if $element eq 'equivocal_percent';
+#			$noneIndex = $indexI if $element eq 'none_percent';
+			$indexI++;
+	}
+  for (@{$resultset_ref->{data_ref}})
+	{			 
+			@row = @{$resultset_ref->{data_ref}->[$irow]};
+  	   my $antibodyName =  $row[$antibodyIndex];
+			 my $cellTypeName = $row[$cellTypeIndex];
+			 my $probability = ($row[$intenseIndex] + $row[$equivocalIndex]/2)/100;
+			$dataHash{$antibodyName}->{$cellTypeName}->{probability}+=$probability;
+			$dataHash{$antibodyName}->{$cellTypeName}->{numberOfEx}++;
+			$cellTypeHash{$cellTypeName}=1;
+			$irow++;
+	}
+		
+		
+my @colorArray = qw /#FFC6A5 #FF6342 #FF0000 #AD0000/;
+my @shadeArray = qw /#E0E0E0 #BFBFBF #A1A1A1 #808080/;
+
+#generating the table and the cell_type_name row
+print "<table border = 2 borderColor=black align = center>";
+print "<tr><td></td>\n";
+
+foreach my $cellType (sort keys %cellTypeHash)
+{
+	print  "<td><b>$cellType</b></td><td>NumOfExp</td>\n";
+}
+print "</tr>\n";
+
+#here is the actual data
+foreach my $key (sort keys %dataHash)
+{
+
+	my $averageNumber;
+	my $abundance;
+	my $expNumber;
+	print  "<tr><td><b>$key</b></td>\n"; 
+
+	foreach my $cellKey (sort keys %{$dataHash{$key}})
+	{
+#		print "anbtibody: $key\n";	
+#		print "cellName: $cellKey\n";
+#		print "probability: $dataHash{$key}->{$cellKey}->{probability}\n" if $cellKey ne 'Stromal Leukocytes';
+#		print "number of Ex: $dataHash{$key}->{$cellKey}->{numberOfEx}\n";
+
+		$abundance = $dataHash{$key}->{$cellKey}->{abundance} if  $cellKey eq 'Stromal Leukocytes';;
+		$averageNumber =($dataHash{$key}->{$cellKey}->{probability})/($dataHash{$key}->{$cellKey}->{numberOfEx}) unless $cellKey eq 'Stromal Leukocytes';
+		$averageNumber =~ s/(.*\.\d{3}).*$/$1/;
+		$expNumber = $dataHash{$key}->{$cellKey}->{numberOfEx};
+		
+		my $colorAverage;
+		my $colorAbundance;
+		
+#various colors for various probability  and abundance levels
+		$colorAverage = '#FFC6A5' if($averageNumber <= 0.25);
+		$colorAverage = '#FF6342' if($averageNumber >0.25 and $averageNumber <= 0.500);
+		$colorAverage = '#FF0000' if($averageNumber >0.5 and $averageNumber <= 0.750);
+		$colorAverage = '#AD0000' if($averageNumber > 0.750); 
+		
+		
+		$colorAbundance = '#E0E0E0' if ($abundance eq 'rare');
+		$colorAbundance = '#BFBFBF 'if ($abundance eq 'moderate');
+		$colorAbundance = '#A1A1A1 'if ($abundance eq 'high');
+		$colorAbundance = '#808080' if ($abundance eq 'most');
+				
+	 
+		print  "<td align = center bgcolor = $colorAverage>$averageNumber</td>\n" if $cellKey ne 'Stromal Leukocytes';
+		print  "<td align = center bgcolor = $colorAbundance>$dataHash{$key}->{$cellKey}->{abundance}</td>\n" if $cellKey eq 'Stromal Leukocytes';
+		print  "<td align = center>$expNumber</td>\n";
+
+	}
+	print  "</tr><tr></tr>\n";
+}
+
+#print a table legend
+	print  "</table><br><br><table align=center><tr><td align=center><b>Probability Color Scale</b><td>\n";
+	my $count = 0;
+	for my $color(@colorArray)
+	{	
+			print  "<td align=center width = 150 bgcolor=$color>";
+			print  "none 0.0 - 0.250</td>\n" if $count == 0;
+			print  "intense 0.751 - 1.0</td>\n" if $count == 3;
+			print  "0.251 - 0.500</td>\n" if $count == 1;
+			print  "0.501 - 0.750</td>\n" if $count == 2;
+			$count++;
+		
+	}
+	print  "</tr><t></tr><tr></tr>\n";
+	$count = 0;
+	print  "<tr><td align=center><b>Abundance Color Scale</b><td>\n";
+	for my $shade(@shadeArray)
+	{	
+			print  "<td align=center width=150 bgcolor=$shade>";
+			print  "rare</td>\n" if $count == 0;
+			print  "moderate</td>\n" if $count == 1;
+			print  "high</td>\n" if $count == 2;
+			print  "most</td>\n" if $count == 3;
+			$count++;
+		
+	}
+	print  "</tr></table><br>";
+	print "<br><br>";
+
+		
+=comment		
+		my $levelName = $rows[$count]->[2];
+			 my $probability = $rows[$count]->[3];
+			 my $levelPercent = $rows[$count]->[4];
+			 my $abundance = $rows[$count]->[-1];
+
+
+
+
+
+
+
+
+			 $value = $row[$resultset_ref->{column_list_ref}[2]];
+				
+					
+					
+					
+					
+					
+					
+          $value =~ s/\"/\'/g;
+          $value =~ s/&/&amp;/g;
+          print "    $element == $value<br>";
+          print "hell $antibodyName  =====  $cellTypeName<br>";
+					$irow++;
+        }
+#        $irow++;
+    
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
+	 
   my %rs_params = %{$rs_params_ref};
   my %parameters = %{$query_parameters_ref};
 
@@ -563,6 +735,7 @@ sub postProcessResultset {
       #print "$element ($column_titles_ref->[$column_index]) prec=".$resultset_ref->{precisions_list_ref}->[$column_index]."<BR>\n";
     }
   }
+
 
 
   #### Push the data columns onto the array
@@ -637,7 +810,7 @@ sub postProcessResultset {
 
   @{$column_titles_ref} = @new_column_titles;
 
-
+=cut
   return 1;
 
 
