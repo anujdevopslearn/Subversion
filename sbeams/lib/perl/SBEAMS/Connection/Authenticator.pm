@@ -857,9 +857,11 @@ sub destroyAuthHeader {
     my $self = shift;
 
     my $current_username = $self->getCurrent_username;
+
+    my $remote_host = $ENV{REMOTE_HOST} || '?';
     my $logging_query="INSERT INTO $TB_USAGE_LOG
-	(username,usage_action,result)
-	VALUES ('$current_username','logout','SUCCESS')";
+	(username,usage_action,result,remote_host)
+	VALUES ('$current_username','logout','SUCCESS','$remote_host')";
     $self->executeSQL($logging_query);
 
     #### Fixed to set cookie path to tree root instead of possibly middle
@@ -1015,9 +1017,10 @@ sub checkLogin {
 
 
     #### Register the outcome of this attempt
+    my $remote_host = $ENV{REMOTE_HOST} || '?';
     $logging_query = qq~
-	INSERT INTO $TB_USAGE_LOG (username,usage_action,result)
-	VALUES ('$user','login','$error_code')
+	INSERT INTO $TB_USAGE_LOG (username,usage_action,result,remote_host)
+	VALUES ('$user','login','$error_code','$remote_host')
     ~;
 
     $self->executeSQL($logging_query);
