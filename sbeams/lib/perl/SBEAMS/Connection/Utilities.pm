@@ -299,7 +299,149 @@ sub sortNumerically {
 
 
 ###############################################################################
-###############################################################################
-###############################################################################
-###############################################################################
+
 1;
+
+__END__
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+=head1 SBEAMS::Connection::Utilities
+
+A part of the SBEAMS module containing generic utility methods not logically
+placed in one of the standard pm's.
+
+=head2 SYNOPSIS
+
+See SBEAMS::Connection and individual methods for usage synopsis.
+
+=head2 DESCRIPTION
+
+This part of the SBEAMS module containing generic utility methods not logically
+placed in one of the standard pm's.
+
+=head2 METHODS
+
+=over
+
+=item * B<histogram( see key value input parameters below )>
+
+    Given an array of numbers, calculate a histogram and various other
+    statistcs for the array.  All results are returned numerically; no
+    image or plot of the histogram is created.
+
+    INPUT PARAMETERS:
+
+      data_array_ref => Required array reference containing the input data
+      for which a histogram and statistics are calculated.
+
+      min => Minimum edge of the first bin of the histogram.  If none
+      is supplied, a suitable one is chosen.
+
+      max => Maximum edge of the last bin of the histogram?  If none
+      is supplied, a suitable one is chosen.
+
+      bin_size => Width of the bins for the histogram.  If none
+      is supplied, a suitable one is chosen based on the number of
+      data points in the input array; the more data points there are,
+      the finer the bin size.
+
+
+    OUTPUT:
+
+      A hash reference containing all resulting data from the calculation.
+      The hash keys are as follows:
+
+        result = SUCCESS or FAILED
+
+        xaxis = Array ref of lower edge of the output histogram ordinate values
+
+        xaxis_disp = Same as xaxis but with minor tick bin labels
+        blanked out for use by a histogram display program
+
+        yaxis = Array ref of the number of original array values that
+        fall into each bin, corresponding to xaxis
+
+        cdf = Array ref containing the Cumulative Distribution
+        Function (CDF) values corresponding to xaxis.  This is
+        essentially the count of all data array elements in this bin and
+        below.
+
+        n_bins = Scalar number of bins in the histogram
+
+        bin_size = Size of the bins in the histogram, either user
+        specified or determined automatcally
+
+        histogram_min = Minimum edge of the first bin of the histogram
+
+        histogram_max = Maximum edge of the last bin of the histogram?
+
+        minimum = Minimum numeric value in the input data array
+
+        maximum = Maximum numeric value in the input data array
+
+        total = Sum of all values in the input data array
+
+        n_elements = Number of elements in the input data array
+
+        mean = Mean (average) value of the elements in the input data array
+
+        stdev = Standard deviation of the values in the input data array
+
+        median = Median value in the input data array (the smallest
+        50% of values have value this or less)
+
+        quartile1 = First quartile value of the input data array (the smallest
+        25% of values have value this or less)
+
+        quartile3 = Third quartile value of the input data array (the smallest
+        75% of values have value this or less)
+
+        SIQR = Semi-interquartile Range (SIRQ) is half of the difference between
+        quartile3 and quartile1.  SIQR is analogous to the standard deviation
+        but relatively insensitive to outliers (like median is to mean).
+
+        ordered_statistics = Array ref a the list of the scalar
+        statistics returned in the hash, in a vaguely logical order,
+        suitable for use for dumping out the all returned statistics.
+
+
+
+=item * B<find_nearest( $map_array_ref, $value )>
+
+    This internal method is used by histogram to determine round min, max,
+    bin_size numbers.  It is a pretty icky function that could stand some
+    rewriting to work more generically and better.
+
+    See the histogram() function for usage example
+
+    INPUT PARAMETERS:
+
+      $map_array_ref: Array ref of ordered list of "round" numbers.  An example
+      may be [0.25,0.5,1,2,5,10,15,20,25,50,75,100]
+
+      $value: Scalar value which is to be rounded with the supplied array
+
+    OUTPUT:
+
+      The largest value in $map_array_ref that is smaller than $value or the
+      end value if $value is out of bounds.
+
+
+=back
+
+=head2 BUGS
+
+Please send bug reports to the author
+
+=head2 AUTHOR
+
+Eric Deutsch <edeutsch@systemsbiology.org>
+
+=head2 SEE ALSO
+
+SBEAMS::Connection
+
+=cut
