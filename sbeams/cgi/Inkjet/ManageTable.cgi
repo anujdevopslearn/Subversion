@@ -245,7 +245,7 @@ sub postFormHook {
 
 
     my $A260 = $parameters{absorbance_260}*$parameters{dilution_factor};
-    my $Adye = $parameters{absorbance_lambda};
+    my $Adye = $parameters{absorbance_lambda}*$parameters{dilution_factor};
     my $volume = $parameters{volume};
     my $Abase = $A260 - ($Adye * $CFdye);
 
@@ -373,7 +373,7 @@ sub preUpdateDataCheck {
   }
 
 
-  if ($TABLE_NAME eq "IJ_array_scan") {
+  if ($TABLE_NAME eq "IJ_array_scanDISABLED") {
       unless ( ($parameters{stage_location} gt "") &&
              ( -d "$parameters{stage_location}/Images" ) ) {
       return "The specified scanned data location does not exist (looking ".
