@@ -1,0 +1,402 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : get_annotation
+# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
+# $Id$
+#
+# Description : This program allows users to access
+#               Annotations in the BEDB database
+#
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+
+use lib qw (../../lib/perl);
+use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
+             @MENU_OPTIONS);
+
+use SBEAMS::Connection;
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+
+use SBEAMS::BEDB;
+use SBEAMS::BEDB::Settings;
+use SBEAMS::BEDB::Tables;
+
+$sbeams = new SBEAMS::Connection;
+$sbeamsMOD = new SBEAMS::BEDB;
+$sbeamsMOD->setSBEAMS($sbeams);
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+
+
+use CGI;
+use CGI::Carp qw(fatalsToBrowser croak);
+$q = new CGI;
+
+
+###############################################################################
+# Set program name and usage banner for command like use
+###############################################################################
+$PROG_NAME = "get_annotation";
+$USAGE = <<EOU;
+Usage: $PROG_NAME [OPTIONS] key=value kay=value ...
+Options:
+  --verbose n         Set verbosity level.  default is 0
+  --quiet             Set flag to print nothing at all except errors
+  --debug n           Set debug flag
+
+ e.g.:  $PROG_NAME annotation_id=111 rs_output_format=tsv
+
+EOU
+
+#### Process options
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+  print "$USAGE";
+  exit;
+}
+
+$VERBOSE = $OPTIONS{"verbose"} || 0;
+$QUIET = $OPTIONS{"quiet"} || 0;
+$DEBUG = $OPTIONS{"debug"} || 0;
+if ($DEBUG) {
+  print "Options settings:\n";
+  print "  VERBOSE = $VERBOSE\n";
+  print "  QUIET = $QUIET\n";
+  print "  DEBUG = $DEBUG\n";
+}
+
+
+###############################################################################
+# Set Global Variables and execute main()
+###############################################################################
+main();
+exit(0);
+
+
+
+###############################################################################
+# Main Program:
+#
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+###############################################################################
+sub main {
+
+  #### Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate(
+    #connect_read_only=>1,allow_anonymous_access=>1
+  ));
+
+
+  #### Read in the default input parameters
+  my %parameters;
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters);
+  #$sbeams->printDebuggingInfo($q);
+
+
+  #### Decide what action to take based on information so far
+  if ($parameters{action} eq "???") {
+    # Some action
+  } else {
+    $sbeamsMOD->display_page_header();
+    handle_request(ref_parameters=>\%parameters);
+    $sbeamsMOD->display_page_footer();
+  }
+
+
+} # end main
+
+
+
+###############################################################################
+# Handle Request
+###############################################################################
+sub handle_request {
+  my %args = @_;
+
+
+  #### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+
+
+  #### Define some generic varibles
+  my ($i,$element,$key,$value,$line,$result,$sql);
+
+
+  #### Define some variables for a query and resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+  my (%url_cols,%hidden_cols,%max_widths,$show_sql);
+
+
+  #### Read in the standard form values
+  my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
+  my $TABLE_NAME = $parameters{'QUERY_NAME'};
+
+
+  #### Set some specific settings for this program
+  my $CATEGORY="Annotation Search";
+  $TABLE_NAME="BE_get_annotation" unless ($TABLE_NAME);
+  ($PROGRAM_FILE_NAME) =
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+
+
+  #### Get the columns and input types for this table/query
+  my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
+  my %input_types = 
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
+
+
+  #### Read the input parameters for each column
+  my $n_params_found = $sbeams->parse_input_parameters(
+    q=>$q,parameters_ref=>\%parameters,
+    columns_ref=>\@columns,input_types_ref=>\%input_types);
+
+
+  #### If the apply action was to recall a previous resultset, do it
+  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+  if ($apply_action eq "VIEWRESULTSET") {
+    $sbeams->readResultSet(resultset_file=>$rs_params{set_name},
+        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters);
+    $n_params_found = 99;
+  }
+
+
+  #### Set some reasonable defaults if no parameters supplied
+  unless ($n_params_found) {
+  }
+
+
+  #### Display the user-interaction input form
+  $sbeams->display_input_form(
+    TABLE_NAME=>$TABLE_NAME,CATEGORY=>$CATEGORY,apply_action=>$apply_action,
+    PROGRAM_FILE_NAME=>$PROGRAM_FILE_NAME,
+    parameters_ref=>\%parameters,
+    input_types_ref=>\%input_types,
+    mask_user_context => 1,
+  );
+
+
+  #### Display the form action buttons
+  $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
+
+
+  #### Finish the upper part of the page and go begin the full-width
+  #### data portion of the page
+  $sbeams->display_page_footer(close_tables=>'YES',
+    separator_bar=>'YES',display_footer=>'NO');
+
+
+
+  #########################################################################
+  #### Process all the constraints
+
+
+  #### Build EST_LIBRARY constraint
+  my $est_library_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"E.est_library_id",
+    constraint_type=>"int_list",
+    constraint_name=>"EST Library",
+    constraint_value=>$parameters{est_library_id} );
+  return if ($est_library_clause == -1);
+
+
+  #### Build UNIGENE_ACCESSION constraint
+  my $unigene_accession_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"A.ug_accession",
+    constraint_type=>"plain_text",
+    constraint_name=>"UniGene Accession",
+    constraint_value=>$parameters{unigene_accession_constraint} );
+  return if ($unigene_accession_clause == -1);
+
+
+  #### Build GENBANK_ACCESSION constraint
+  my $genbank_accession_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"A.gb_accession",
+    constraint_type=>"plain_text",
+    constraint_name=>"GenBank Accession",
+    constraint_value=>$parameters{genbank_accession_constraint} );
+  return if ($genbank_accession_clause == -1);
+
+
+  #### Build DESCRIPTION 1 constraint
+  my $description1_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"A.description1",
+    constraint_type=>"plain_text",
+    constraint_name=>"Description 1",
+    constraint_value=>$parameters{description1_constraint} );
+  return if ($description1_clause == -1);
+
+
+  #### Build DESCRIPTION 2 constraint
+  my $description2_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"A.description2",
+    constraint_type=>"plain_text",
+    constraint_name=>"Description 2",
+    constraint_value=>$parameters{description2_constraint} );
+  return if ($description2_clause == -1);
+
+
+  #### Build SORT ORDER
+  my $order_by_clause = "";
+  if ($parameters{sort_order}) {
+    $sql = "SELECT option_key FROM $TBBE_QUERY_OPTION ".
+      "WHERE query_option_id = '$parameters{sort_order}'";
+    my ($sort_column) = $sbeams->selectOneColumn($sql);
+    if ($sort_column) {
+      $order_by_clause = " ORDER BY $sort_column";
+    } else {
+      print "<H4>Cannot parse Sort Order!  Check syntax.</H4>\n\n";
+      return;
+    }
+  }
+
+
+  #### Build ROWCOUNT constraint
+  $parameters{row_limit} = 1000;
+    ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
+  my $limit_clause = "TOP $parameters{row_limit}";
+
+
+  #### Define the desired columns [data_name,SQL,Friendly Name]
+  my @column_array = (
+    ["annotation_id","A.annotation_id","annotation_id"],
+    ["ug_accession","A.ug_accession","UniGene"],
+    ["gb_accession","A.gb_accession","GenBank"],
+    ["length","A.length","length"],
+    ["n_contigs","COUNT(DISTINCT contig_length)","n_contigs"],
+    ["n_ests","COUNT(*)","n_ests"],
+    ["description1","description1","description1"],
+    ["description2","description2","description2"],
+  );
+
+
+  #### Adjust the columns definition based on user-selected options
+  if ( $parameters{display_options} =~ /ShowSQL/ ) {
+    $show_sql = 1;
+  }
+
+
+  #### Build the columns part of the SQL statement
+  my %colnameidx = ();
+  my @column_titles = ();
+  my $columns_clause = $sbeams->build_SQL_columns_list(
+    column_array_ref=>\@column_array,
+    colnameidx_ref=>\%colnameidx,
+    column_titles_ref=>\@column_titles
+  );
+
+
+  #### Define the SQL statement
+  $sql = qq~
+    SELECT $limit_clause $columns_clause
+      FROM $TBBE_ANNOTATION A
+      LEFT JOIN $TBBE_CONTIG C ON ( A.annotation_id = C.annotation_id )
+      LEFT JOIN $TBBE_CONTIG_EST CE ON ( C.contig_id = CE.contig_id )
+      LEFT JOIN $TBBE_EST E ON ( CE.est_id = E.est_id )
+     WHERE 1 = 1
+    $est_library_clause
+    $unigene_accession_clause
+    $genbank_accession_clause
+    $description1_clause
+    $description2_clause
+     GROUP BY A.annotation_id,ug_accession,gb_accession,gi_accession,A.length,
+           bitscore,source_db,description1,description2
+    $order_by_clause
+   ~;
+
+
+  #### Define the hypertext links for columns that need them
+  %url_cols = ('UniGene' => "http://www.ncbi.nlm.nih.gov/UniGene/clust.cgi?CID=\%$colnameidx{ug_accession}V",
+               'UniGene_ATAG' => 'TARGET="Win3"',
+               'GenBank' => "http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?db=nucleotide&term=\%$colnameidx{gb_accession}V",
+               'GenBank_ATAG' => 'TARGET="Win3"',
+               'n_contigs' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/get_est?unigene_accession_constraint=\%$colnameidx{ug_accession}V&est_library_id=$parameters{est_library_id}&apply_action=$apply_action",
+               'n_contigs_ATAG' => 'TARGET="Win2"',
+  );
+
+
+  #### Define columns that should be hidden in the output table
+  %hidden_cols = (
+                  'uri' => 1,
+   );
+
+
+
+  #########################################################################
+  #### If QUERY or VIEWRESULTSET was selected, display the data
+  if ($apply_action =~ /QUERY/i || $apply_action eq "VIEWRESULTSET") {
+
+    #### Show the SQL that will be or was executed
+    $sbeams->display_sql(sql=>$sql) if ($show_sql);
+
+    #### If the action contained QUERY, then fetch the results from
+    #### the database
+    if ($apply_action =~ /QUERY/i) {
+
+      #### Fetch the results from the database server
+      $sbeams->fetchResultSet(sql_query=>$sql,
+        resultset_ref=>$resultset_ref);
+
+      #### Store the resultset and parameters to disk resultset cache
+      $rs_params{set_name} = "SETME";
+      $sbeams->writeResultSet(resultset_file_ref=>\$rs_params{set_name},
+        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters);
+    }
+
+    #### Display the resultset
+    $sbeams->displayResultSet(rs_params_ref=>\%rs_params,
+        url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols,
+        max_widths=>\%max_widths,resultset_ref=>$resultset_ref,
+        column_titles_ref=>\@column_titles,
+        table_width=>'1000',
+        row_color_scheme_ref=>$sbeamsMOD->getTableColorScheme(),
+    );
+
+
+    #### Display the resultset controls
+    $sbeams->displayResultSetControls(rs_params_ref=>\%rs_params,
+        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters,
+        base_url=>$base_url);
+
+
+
+  #### If QUERY was not selected, then tell the user to enter some parameters
+  } else {
+    if ($sbeams->invocation_mode() eq 'http') {
+      print "<H4>Select parameters above and press QUERY</H4>\n";
+    } else {
+      print "You need to supply some parameters to contrain the query\n";
+    }
+  }
+
+
+} # end handle_request
+
+
+
+###############################################################################
+# evalSQL
+#
+# Callback for translating Perl variables into their values,
+# especially the global table variables to table names
+###############################################################################
+sub evalSQL {
+  my $sql = shift;
+
+  return eval "\"$sql\"";
+
+} # end evalSQL
+
+
