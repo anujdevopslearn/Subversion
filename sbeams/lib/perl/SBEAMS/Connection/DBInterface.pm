@@ -2396,6 +2396,14 @@ sub importTSVFile {
     #### Split the line into columns
     my @splitline = split(/$delimiter/,$line);
 
+    #### Decode the enquoted values if any
+    my $n_columns = @splitline;
+    for ($i=0; $i<$n_columns; $i++) {
+      if ($splitline[$i] =~ /^\"(.*)\"$/) {
+        $splitline[$i] = $1;
+      }
+    }
+
     #### Add onto the rows array
     push(@rows,\@splitline);
 
