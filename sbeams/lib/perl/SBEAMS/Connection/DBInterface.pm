@@ -812,6 +812,194 @@ sub getLastInsertedPK {
 
 
 ###############################################################################
+# deleteRecordsAndChildren
+###############################################################################
+sub deleteRecordsAndChildren {
+  my $self = shift || croak("parameter self not passed");
+  my %args = @_;
+
+  my $table_name = $args{'table_name'} || die("table_name not passed");
+  my $table_child_relationship = $args{'table_child_relationship'}
+    || die("table_child_relationship not passed");
+  my $delete_PKs = $args{'delete_PKs'} || die("delete_PKs not passed");
+  my $delete_batch = $args{'delete_batch'} || 0;
+  my $VERBOSE = $args{'verbose'} || 0;
+  my $DATABASE = $args{'database'} || '';
+  my $QUIET = $args{'quiet'} || 0;
+  my $TESTONLY = $args{'testonly'} || 0;
+
+  print "  Entering deleteRecordsAndChildren\n\n" if ($VERBOSE > 1);
+
+  #### If there are child tables, process them first
+  if (defined($table_child_relationship->{$table_name})) {
+
+    my @sub_tables = split(",",$table_child_relationship->{$table_name});
+    foreach my $element (@sub_tables) {
+      if ($element =~ /^([\w_-\d]+)\(([A-Z]+)\)$/) {
+        my $child_table_name = $1;
+	my $child_type = $2;
+        print "  Processing child $child_table_name ($child_type)\n\n"
+          if ($VERBOSE > 1);
+
+        #### If it's a plain child, determine my PKs and recurse requesting
+        #### all references be deleted
+        if ($child_type eq 'C') {
+
+  	  #### Get the number of records to delete and set the first and last
+  	  my $n_ids = scalar(@{$delete_PKs});
+  	  my $first_element = 0;
+  	  my $last_element = $n_ids - 1;
+
+  	  #### If the user requested to delete in batches, possibly
+          #### reduce the last
+  	  if ($delete_batch && $n_ids > $delete_batch) {
+  	    $last_element = $delete_batch - 1;
+  	  }
+
+  	  #### While there are still records to delete, do it
+  	  while ($first_element < $n_ids) {
+  	    #### Get the records to delete in this batch
+  	    my @ids = @{$delete_PKs};
+  	    @ids = @ids[$first_element..$last_element];
+
+  	    my $sql = "
+  	      SELECT ${child_table_name}_id
+  	      FROM ${DATABASE}$child_table_name
+  	      WHERE ${table_name}_id IN (".join(",",@ids).")
+  	    ";
+
+  	    print "$sql\n\n" if ($VERBOSE > 1);
+            print "SELECTING children of $table_name ".
+              "(batch $first_element / $n_ids)\n"
+  	      if ($VERBOSE);
+
+  	    my @child_PKs = $self->selectOneColumn($sql);
+
+  	    if (scalar(@child_PKs) > 0) {
+  	      print "Recursing to delete $child_table_name\n\n"
+                if ($VERBOSE > 1);
+  	      my $result = $self->deleteRecordsAndChildren(
+  		table_name => $child_table_name,
+  		table_child_relationship => $table_child_relationship,
+  		delete_PKs => \@child_PKs,
+  		delete_batch => $delete_batch,
+  		database => $DATABASE,
+  		verbose => $VERBOSE,
+  		quiet => $QUIET,
+  		testonly => $TESTONLY,
+  	      );
+            } else {
+              print "  None.\n" if ($VERBOSE);
+            }
+
+  	    #### Update the first and last batch block pointers if relevant
+  	    last unless ($delete_batch);
+  	    $first_element += $delete_batch;
+  	    $last_element += $delete_batch;
+  	    $last_element = $n_ids - 1 if ($last_element > $n_ids - 1);
+
+	  }
+
+        #### If the relationship is an Associative unique child, delete
+	} elsif ($child_type eq 'A') {
+
+          #### Get the child table name ids to be deleted
+	  my $sql = "
+	    SELECT ${child_table_name}_id
+            FROM ${DATABASE}$table_name
+            WHERE ${table_name}_id IN (".join(",",@{$delete_PKs}).")
+            AND ${child_table_name}_id IS NOT NULL
+          ";
+	  print "$sql\n\n" if ($VERBOSE > 1);
+	  print "SELECT #2 with ",scalar(@{$delete_PKs})," element IN\n\n"
+            if ($VERBOSE);
+          my @child_PKs = $self->selectOneColumn($sql);
+
+          #### Delete them
+	  if (scalar(@child_PKs) > 0) {
+  	    print "Recursing to delete $child_table_name\n" if ($VERBOSE);
+            my $result = $self->deleteRecordsAndChildren(
+              table_name => $child_table_name,
+              table_child_relationship => $table_child_relationship,
+              delete_PKs => \@child_PKs,
+              delete_batch => $delete_batch,
+              database => $DATABASE,
+              verbose => $VERBOSE,
+              quiet => $QUIET,
+              testonly => $TESTONLY,
+            );
+	  }
+
+
+        #### If the relationship is a KeyLess Child, just delete by parent key
+	} elsif ($child_type eq 'PKLC') {
+
+      	  #### Create the SQL and do the DELETE
+      	  my $sql = "DELETE FROM ${DATABASE}$child_table_name ".
+            "WHERE ${table_name}_id IN (".join(",",@{$delete_PKs}).")";
+      	  print "$sql\n\n" if ($VERBOSE > 1);
+      	  print "  DELETING FROM $child_table_name by ${table_name}_id\n"
+      	    if ($VERBOSE);
+      	  print "." unless ($QUIET || $VERBOSE);
+      	  $self->executeSQL($sql) unless ($TESTONLY);
+
+
+        #### Otherwise there was a parsing error or an unimplemented type
+        } else {
+          die("ERROR: Unrecognized child type '$child_type'");
+        }
+
+
+      } else {
+        die("ERROR: Unable to parse relationship '$element'");
+      }
+
+    }
+
+  }
+
+
+  #### All children should be gone we hope, so finally delete these records
+
+  #### Get the number of records to delete and set the first and last
+  my $n_ids = scalar(@{$delete_PKs});
+  my $first_element = 0;
+  my $last_element = $n_ids - 1;
+
+  #### If the user requested to delete in batches, possibly reduce the last
+  if ($delete_batch && $n_ids > $delete_batch) {
+    $last_element = $delete_batch - 1;
+  }
+
+  #### While there are still records to delete, do it
+  while ($first_element < $n_ids) {
+    #### Get the records to delete in this batch
+    my @ids = @{$delete_PKs};
+    @ids = @ids[$first_element..$last_element];
+
+    #### Create the SQL and do the DELETE
+    my $sql = "DELETE FROM ${DATABASE}$table_name WHERE ${table_name}_id IN (".
+      join(",",@ids).")";
+    print "$sql\n\n" if ($VERBOSE > 1);
+    print "  DELETING FROM $table_name (batch $first_element / $n_ids)\n"
+      if ($VERBOSE);
+    print "." unless ($QUIET || $VERBOSE);
+    $self->executeSQL($sql) unless ($TESTONLY);
+
+    #### Update the first and last batch block pointers if relevant
+    last unless ($delete_batch);
+    $first_element += $delete_batch;
+    $last_element += $delete_batch;
+    $last_element = $n_ids - 1 if ($last_element > $n_ids - 1);
+  }
+
+  return 1;
+
+}
+
+
+
+###############################################################################
 # parseConstraint2SQL
 #
 # Given human-entered constraint, convert it to a SQL "AND" clause which some
