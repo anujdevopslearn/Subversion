@@ -164,13 +164,9 @@ sub printEntryForm {
     }
 
 
-    #### If xcorr_charge is undefined (not just "") then set to a high limit
-    #### So that a naive query is quick
-    if (($TABLE_NAME eq "BrowseSearchHits") && (!defined($parameters{xcorr_charge1})) ) {
-      $parameters{xcorr_charge1} = ">4.0";
-      $parameters{xcorr_charge2} = ">4.5";
-      $parameters{xcorr_charge3} = ">5.0";
-      $parameters{sort_order} = "reference";
+    #### If no parameters are supplied, set some sensible defaults
+    if (($TABLE_NAME eq "BrowseAnnotatedPeptides") && $no_params_flag ) {
+      $parameters{annotation_status_id} = 'Annot';
     }
 
 
@@ -545,10 +541,32 @@ sub printEntryForm {
       return if ($isoelectric_point_clause == -1);
 
 
-      #### Build ANNOTATION_LABELS constraint
+      #### Build ANNOTATION_STATUS and ANNOTATION_LABELS constraint
+      my $annotation_status_clause = "";
       my $annotation_label_clause = "";
+
       if ($parameters{annotation_label_id}) {
-        $annotation_label_clause = "   AND SHA.annotation_label_id IN ( $parameters{annotation_label_id} )";
+        if ($parameters{annotation_status_id} eq 'Annot') {
+          $annotation_label_clause = "   AND SHA.annotation_label_id IN ( $parameters{annotation_label_id} )";
+        } elsif ($parameters{annotation_status_id} eq 'UNAnnot') {
+          $annotation_status_clause = "   AND SHA.annotation_label_id IS NULL";
+          $annotation_label_clause = "";
+          print "WARNING: Annotation status and Annotation label constraints conflict!<BR>\n";
+        } else {
+          $annotation_label_clause = "   AND ( SHA.annotation_label_id IN ( $parameters{annotation_label_id} ) ".
+            "OR SHA.annotation_label_id IS NULL )";
+        }
+
+
+      } else {
+        if ($parameters{annotation_status_id} eq 'Annot') {
+          $annotation_status_clause = "   AND SHA.annotation_label_id IS NOT NULL";
+        } elsif ($parameters{annotation_status_id} eq 'UNAnnot') {
+          $annotation_status_clause = "   AND SHA.annotation_label_id IS NULL";
+        } else {
+          #### Nothing
+        }
+
       }
 
 
@@ -674,7 +692,7 @@ sub printEntryForm {
 	  INTO #tmpAnnBSids
 	  FROM proteomics.dbo.search_hit SH
 	  JOIN proteomics.dbo.search S ON ( SH.search_id = S.search_id )
-	  JOIN proteomics.dbo.search_hit_annotation SHA ON ( SH.search_hit_id = SHA.search_hit_id )
+	  LEFT JOIN proteomics.dbo.search_hit_annotation SHA ON ( SH.search_hit_id = SHA.search_hit_id )
 	  JOIN proteomics.dbo.search_batch SB ON ( S.search_batch_id = SB.search_batch_id )
 	  JOIN $TBPR_BIOSEQUENCE BS ON ( SB.biosequence_set_id = BS.biosequence_set_id AND SH.biosequence_id = BS.biosequence_id )
 	 WHERE 1 = 1
@@ -688,6 +706,7 @@ sub printEntryForm {
 	$mass_clause
 	$isoelectric_point_clause
 	$annotation_label_clause
+	$annotation_status_clause
 	$group_by_clause
 
 	--
