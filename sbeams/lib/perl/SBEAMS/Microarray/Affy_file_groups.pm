@@ -656,7 +656,9 @@ sub read_dirs {
 	
 	
 	find(\&_group_files, $base_dir);		#find sub in File::Find
-
+	my $total_file_count = $self->get_total_root_file_name_count();
+	print "Total File Count '$total_file_count'\n";
+	
 	if ($self->verbose > 0){
 		if ($self->debug > 1){
 			print Dumper ($self);
@@ -768,7 +770,7 @@ sub check_file_group {
 	   ) 
 	{
 	    	
-		print "\nGOOD FILE '$file_name'\n";
+		#print "\nGOOD FILE '$file_name'\n";
 		return "YES";
 	}else{
 		
