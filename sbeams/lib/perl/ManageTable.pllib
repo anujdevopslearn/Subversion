@@ -829,87 +829,92 @@ sub processEntryForm {
 
     #### Check for missing required information
     my $error_message;
-    if (@required_columns) {
 
-      #### Create a hash of the data columns for lookups
-      my %data_columns_hash;
+    #### Unless we're just DELETing
+    unless ($apply_action eq "DELETE") {
+      if (@required_columns) {
+
+	#### Create a hash of the data columns for lookups
+	my %data_columns_hash;
+	foreach $element (@data_columns) {
+	  $data_columns_hash{$element} = 1;
+	}
+
+	#### Loop over each required column and make sure it exists if it's
+	#### also a data column
+	foreach $element (@required_columns) {
+
+	  if ($data_columns_hash{$element}) {
+	    unless (defined($parameters{$element}) &&
+		    $parameters{$element} gt '') {
+	      $error_message .= "<LI> You must provide a <B>$element</B>.";
+	    }
+	  }
+	}
+
+      }
+
+
+      #### Check that the data entered was valid for the datatype
       foreach $element (@data_columns) {
-        $data_columns_hash{$element} = 1;
-      }
 
-      #### Loop over each required column and make sure it exists if it's
-      #### also a data column
-      foreach $element (@required_columns) {
+	#### Don't check if this is a multi_insert_column
+	next if ($multi_insert_column && $element eq $multi_insert_column);
 
-        if ($data_columns_hash{$element}) {
-          unless (defined($parameters{$element}) &&
-                  $parameters{$element} gt '') {
-            $error_message .= "<LI> You must provide a <B>$element</B>.";
-          }
-        }
-      }
+	#### Make sure that character data isn't too long for the database
+	if ($parameters{$element} gt '') {
+	  if ($data_types{$element} eq 'varchar' ||
+	      $data_types{$element} eq 'char') {
+	    if (length($parameters{$element}) > $data_scales{$element}) {
+	      $error_message .= "<LI> Size limit for field <B>$element</B> is ".
+		$data_scales{$element}." but your entry is ".
+		  length($parameters{$element})." characters long.  Please ".
+		  "shorten it or contact your SBEAMS administrator if this ".
+		  "limitation seems unreasonable.";
+	    }
+	  }
 
-    }
+	  #### Make sure that integer data contains only numbers
+	  if ($data_types{$element} eq 'int') {
+	    unless ($parameters{$element} =~ /^[\d\-\+]+$/) {
+	      $error_message .= "<LI> The field <B>$element</B> is of type ".
+                "integer, but your entry '".$parameters{$element}.
+                "' seems to contain non-integer ".
+                "characters.  Please enter just an integer.";
+	    }
+	  }
 
+	  #### Make sure that real/float data contains only characters that
+	  #### could plausibly make up a number (doesn't prevent 45.-23.eee)
+	  if ($data_types{$element} eq 'real' ||
+	      $data_types{$element} eq 'float') {
+	    unless ($parameters{$element} =~ /^[\d\-\+\.e]+$/) {
+	      $error_message .= "<LI> The field <B>$element</B> is of type ".
+		$data_types{$element}.", but your entry '".$parameters{$element}.
+                "' seems to contain non-numeric ".
+                "characters.  Please enter just a real number.";
+	    }
+	  }
 
-    #### Check that the data entered was valid for the datatype
-    foreach $element (@data_columns) {
+	  #### If the column name ends in _tag, insist upon alphanumeric
+	  #### characters only or period okay
+	  if ($element =~ /\_tag$/ && $parameters{$element} !~ /^[\w\.\-]+$/) {
+	    $error_message .= "<LI> The field <B>$element</B> is required ".
+	      "to be a short name that might be used for a file or directory ".
+              "and may not have any non-alphanumeric characters.  Please ".
+              "go back and remove any characters that are not ".
+              "letters or numbers or underscores. ".
+              "Spaces are also <B>not</B> allowed.";
+	  }
 
-      #### Don't check if this is a multi_insert_column
-      next if ($multi_insert_column && $element eq $multi_insert_column);
+	}
 
-      #### Make sure that character data isn't too long for the database
-      if ($parameters{$element} gt '') {
-        if ($data_types{$element} eq 'varchar' ||
-            $data_types{$element} eq 'char') {
-          if (length($parameters{$element}) > $data_scales{$element}) {
-            $error_message .= "<LI> Size limit for field <B>$element</B> is ".
-              $data_scales{$element}." but your entry is ".
-              length($parameters{$element})." characters long.  Please ".
-              "shorten it or contact your SBEAMS administrator if this ".
-              "limitation seems unreasonable.";
-          }
-        }
+      } # end foreach element
 
-        #### Make sure that integer data contains only numbers
-        if ($data_types{$element} eq 'int') {
-          unless ($parameters{$element} =~ /^[\d\-\+]+$/) {
-            $error_message .= "<LI> The field <B>$element</B> is of type ".
-              "integer, but your entry '".$parameters{$element}.
-              "' seems to contain non-integer ".
-              "characters.  Please enter just an integer.";
-          }
-        }
+      #### Run the module-specific data check
+      $error_message .= preUpdateDataCheck(parameters_ref=>\%parameters);
 
-        #### Make sure that real/float data contains only characters that
-        #### could plausibly make up a number (doesn't prevent 45.-23.eee)
-        if ($data_types{$element} eq 'real' ||
-            $data_types{$element} eq 'float') {
-          unless ($parameters{$element} =~ /^[\d\-\+\.e]+$/) {
-            $error_message .= "<LI> The field <B>$element</B> is of type ".
-              $data_types{$element}.", but your entry '".$parameters{$element}.
-              "' seems to contain non-numeric ".
-              "characters.  Please enter just a real number.";
-          }
-        }
-
-        #### If the column name ends in _tag, insist upon alphanumeric
-        #### characters only or period okay
-        if ($element =~ /\_tag$/ && $parameters{$element} !~ /^[\w\.\-]+$/) {
-          $error_message .= "<LI> The field <B>$element</B> is required ".
-            "to be a short name that might be used for a file or directory ".
-            "and may not have any non-alphanumeric characters.  Please ".
-            "go back and remove any characters that are not ".
-            "letters or numbers or underscores. ".
-            "Spaces are also <B>not</B> allowed.";
-        }
-
-      }
-    }
-
-
-    #### Run the module-specific data check
-    $error_message .= preUpdateDataCheck(parameters_ref=>\%parameters);
+    } # end unless (DELETE)
 
 
     #### If any error messages have been kicked out, print and return
