@@ -4,6 +4,7 @@
   #### Create all needed subdirectories
   foreach dir ( SBEAMS SBEAMS/Connection )
     if ( ! -d $dir ) then
+      echo "Creating directory $dir"
       mkdir $dir
     endif
   end
@@ -17,6 +18,7 @@
 
   #### For each module, create the documentation
   foreach file ( Connection Client )
+    echo "Running pod2html for $OUTDIR/$file"
     pod2html --title=$file \
       --infile=$INDIR/$file.pm --outfile=$OUTDIR/$file.html \
       --index --recurse
@@ -30,6 +32,7 @@
   foreach file ( Authenticator DBConnector DBInterface ErrorHandler \
                  HTMLPrinter Permissions PubMedFetcher Settings \
                  TableInfo Tables Utilities )
+    echo "Running pod2html for $OUTDIR/$file"
     pod2html --infile=$INDIR/$file.pm --outfile=$OUTDIR/$file.html \
       --index --recurse --libpods=Authenticator:DBConnector:DBInterface \
       --title SBEAMS::Connection::$file
