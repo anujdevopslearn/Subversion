@@ -3090,7 +3090,8 @@ sub display_input_form {
       if ( ($parameters{input_form_format} eq 'minimum_detail'
                      && $is_display_column ne 'Y') ||
            ($parameters{input_form_format} eq 'medium_detail'
-                     && $is_display_column eq '2')
+                     && $is_display_column eq '2') ||
+           $is_display_column eq 'N'
          ) {
 
         #### And finally if there's not a value in it, then hide it
