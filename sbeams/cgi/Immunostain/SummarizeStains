@@ -487,7 +487,9 @@ sub handle_request {
       query_parameters_ref=>\%parameters,
       column_titles_ref=>\@column_titles,
       cytoscape=>$cytoscape,
-    ) if ($parameters{display_options} =~ /pivot/i);
+    ) if (defined($parameters{display_options}) &&
+	  $parameters{display_options} =~ /pivot/i);
+
 
     #### Display the resultset
     $sbeams->displayResultSet(
@@ -508,6 +510,7 @@ sub handle_request {
       query_parameters_ref=>\%parameters,
       rs_params_ref=>\%rs_params,
       base_url=>$base_url,
+      cytoscape=>$cytoscape,
     );
 
 
@@ -574,15 +577,14 @@ sub postProcessResultset {
   my $cytoscape = $args{'cytoscape'};
   my $option;
 
-
   #### Set up some data data structures to hold Cytoscape data
-  my @cytoscape_files = ( 'network.sif','CommonName.noa','organism.noa',
-    'ExpressionLevel.noa','ExpressionLevelLabel.noa','NodeType.noa' );
+  my @cytoscape_files = ( 'network.sif','commonName.noa','organism.noa',
+    'ExpressionLevel.eda','ExpressionLevelLabel.eda','NodeType.noa' );
   my %cytoscape_header = ( 'network.sif' => undef,
-			   'CommonName.noa' => 'CommonName',
+			   'commonName.noa' => 'commonName',
 			   'organism.noa' => 'species',
-			   'ExpressionLevel.noa' => 'ExpressionLevel',
-			   'ExpressionLevelLabel.noa' => 'ExpressionLevelLabel',
+			   'ExpressionLevel.eda' => 'ExpressionLevel',
+			   'ExpressionLevelLabel.eda' => 'ExpressionLevelLabel',
 			   'NodeType.noa' => 'NodeType',
 			 );
   foreach my $file ( @cytoscape_files ) {
@@ -602,7 +604,7 @@ sub postProcessResultset {
 
   my(%antibodyHash, %cellIdHash);
   my @antibodyArray;
-  my $prevAntibodyName;
+  my $prevAntibodyName = '';
 
   #getting the index and populating a datahash with the returned result
   my $biosequence_name_column_index = $resultset_ref->{column_hash_ref};
@@ -623,7 +625,7 @@ sub postProcessResultset {
       $dataHash{$antibodyName}->{$cellTypeName}->{numberOfEx}++ if $cellTypeName;
       $cellTypeHash{$cellTypeName} = $row[$biosequence_name_column_index->{cell_type_sort_order}] if ($cellTypeName);
 
-      if ($prevAntibodyName ne $antibodyName and $cellTypeName) {
+      if ($prevAntibodyName ne $antibodyName) {
 	push(@antibodyArray, $antibodyName);
 	$RefSeqIDs{$antibodyName} = $refseq_accession;
 	$prevAntibodyName = $antibodyName;
@@ -638,8 +640,8 @@ sub postProcessResultset {
   }
 		
 		
-  my @colorArray = qw /#FFC6A5 #FF6342 #FF0000 #AD0000/;
-  my @shadeArray = qw /#E0E0E0 #BFBFBF #A1A1A1 #808080/;
+  my @colorArray = ( '#FFC6A5','#FF6342','#FF0000','#AD0000' );
+  my @shadeArray = ( '#E0E0E0','#BFBFBF','#A1A1A1','#808080' );
 
 
   # generating the table and the cell_type_name row
@@ -669,9 +671,11 @@ sub postProcessResultset {
     $HTML .= "<tr><td><b><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=_processAntibody&antibody_id=$antibodyHash{$antibodyKey}\">$antibodyKey</b></A></td>\n";
 
     #### Store information needed for a Cytoscape display
-    push(@{$cytoscape->{files}->{'NodeType.noa'}},"$RefSeqIDs{$antibodyKey} = Antibody");
-    push(@{$cytoscape->{files}->{'organism.noa'}},"$RefSeqIDs{$antibodyKey} = Homo sapiens");
-    push(@{$cytoscape->{files}->{'CommonName.noa'}},"$RefSeqIDs{$antibodyKey} = $antibodyKey");
+    my $canonical_name = $RefSeqIDs{$antibodyKey};
+    $canonical_name = $antibodyKey unless ($canonical_name);
+    push(@{$cytoscape->{files}->{'NodeType.noa'}},"$canonical_name = Antibody");
+    push(@{$cytoscape->{files}->{'organism.noa'}},"$canonical_name = Homo sapiens");
+    push(@{$cytoscape->{files}->{'commonName.noa'}},"$canonical_name = $antibodyKey");
 
     foreach my $cellKey (sort bySortOrder keys %cellTypeHash) {
       my $key = $antibodyKey; 
@@ -710,9 +714,10 @@ sub postProcessResultset {
 
       #### Store information needed for a Cytoscape display
       if ($averageNumber > 0) {
-	push(@{$cytoscape->{files}->{'network.sif'}},"$RefSeqIDs{$antibodyKey}\tisExpressedIn\t$cellKey");
-	push(@{$cytoscape->{files}->{'ExpressionLevel.eda'}},"$RefSeqIDs{$antibodyKey} (isExpressedIn) $cellKey = $averageNumber");
-	push(@{$cytoscape->{files}->{'ExpressionLevelLabel.eda'}},"$RefSeqIDs{$antibodyKey} (isExpressedIn) $cellKey = $averageNumber ($expNumber)");
+	my $decimal_number = sprintf("%.2f",$averageNumber);
+	push(@{$cytoscape->{files}->{'network.sif'}},"$canonical_name\tisExpressedIn\t$cellKey");
+	push(@{$cytoscape->{files}->{'ExpressionLevel.eda'}},"$canonical_name (isExpressedIn) $cellKey = $decimal_number");
+	push(@{$cytoscape->{files}->{'ExpressionLevelLabel.eda'}},"$canonical_name (isExpressedIn) $cellKey = $decimal_number ($expNumber)");
       }
 
     }	
