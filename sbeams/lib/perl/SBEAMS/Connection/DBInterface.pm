@@ -1160,6 +1160,7 @@ sub displayResultSet {
 
         foreach $element (@{$resultset_ref->{column_list_ref}}) {
           $value = $row[$i];
+          $value =~ s/\"/\'/g;
           print "    $element=\"$value\"\n";
           $i++;
         }
@@ -1717,7 +1718,7 @@ sub parse_input_parameters {
 
     #### If the type is a multioptionlist, extract as an array but
     #### turn into a comma separated list
-    if ($ref_input_types->{$element} eq "multioptionlist") {
+    if ($ref_input_types->{$element}.'' eq "multioptionlist") {
       my @tmparray = $q->param($element);
 
       #### Remove any leading or trailing blank items
