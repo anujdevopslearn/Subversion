@@ -249,6 +249,7 @@ sub printStyleSheet {
 	A:hover.nav {  font-family: Helvetica, Arial, sans-serif; color: red;}
 	.nav {  font-family: Helvetica, Arial, sans-serif; color: #000000}
 	.grey_bg{ background-color: #CCCCCC }
+	.blue_bg{ font-family: Helvetica, Arial, sans-serif; background-color: #4455cc; ${FONT_SIZE_HG}pt; font-weight: bold; color: white}
 	.orange_bg{ background-color: #FFCC66; ${FONT_SIZE_LG}pt; font-weight: bold}
 	.small_cell {font-size: 8; background-color: #CCCCCC; white-space: nowrap  }
 	.anno_cell {white-space: nowrap  }
