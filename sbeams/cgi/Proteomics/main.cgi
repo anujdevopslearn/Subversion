@@ -285,7 +285,8 @@ sub handle_request {
 
   #### Get all the projects user has access to
   $sql = qq~
-	SELECT P.project_id,P.project_tag,P.name,UL.username
+	SELECT P.project_id,P.project_tag,P.name,UL.username,
+               PRIV.name AS 'privilege_name'
 	  FROM $TB_PROJECT P
 	  JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
 	  LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
@@ -293,6 +294,8 @@ sub handle_request {
 	            AND UPP.contact_id='$current_contact_id' )
 	  LEFT JOIN $TB_GROUP_PROJECT_PERMISSION GPP
 	       ON ( P.project_id = GPP.project_id )
+	  LEFT JOIN $TB_PRIVILEGE PRIV
+	       ON ( GPP.privilege_id = PRIV.privilege_id )
 	  LEFT JOIN $TB_USER_WORK_GROUP UWG
 	       ON ( GPP.work_group_id = UWG.work_group_id
 	            AND UWG.contact_id='$current_contact_id' )
@@ -305,9 +308,10 @@ sub handle_request {
   if (@rows) {
     my $firstflag = 1;
     foreach my $row (@rows) {
-      my ($project_id,$project_tag,$project_name,$username) = @{$row};
+      my ($project_id,$project_tag,$project_name,$username,$privilege_name) =
+        @{$row};
       print "	<TR><TD></TD>" unless ($firstflag);
-      print "	<TD WIDTH=\"100%\">- <A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?set_current_project_id=$project_id\">$username - $project_tag:</A> $project_name</TD></TR>\n";
+      print "	<TD><NOBR>- <A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?set_current_project_id=$project_id\">$username - $project_tag:</A> $project_name</NOBR></TD><TD><font color=\"red\">$privilege_name</font></TD></TR>\n";
       $firstflag=0;
     }
   } else {
