@@ -178,7 +178,7 @@ organismName1 => $indexHash{Organism_bioentity1_name},
 	$bioentityState = \%bioentityState;
 	my %bioentityType = $sbeams->selectTwoColumnHash(qq /Select Upper(bioentity_type_name),bioentity_type_id from $TBIN_BIOENTITY_TYPE/);
 	$bioentityType = \%bioentityType;
-	my %organismName = $sbeams->selectTwoColumnHash(qq /Select Upper(full_name),organism_id from $TB_ORGANISM /);
+	my %organismName = $sbeams->selectTwoColumnHash(qq /Select Upper(organism_name),organism_id from $TB_ORGANISM /);
 	$organismName = \%organismName;
 
 	
@@ -344,7 +344,7 @@ sub processFile
 			next;
 		}
 		
-		if($INFOPROTEIN1{$count-2}->{bioentityCanName1} =~/(xm)|(nm)/i and $INFOPROTEIN1{$count-2}->{bioentityType1} =~ /protein/i){
+		if($INFOPROTEIN1{$count-2}->{bioentityCanName1} =~/(xm)|(nm)(xp)/i and $INFOPROTEIN1{$count-2}->{bioentityType1} =~ /protein/i){
 				print "this is a gene_name_identifier\n";
 				$INFOPROTEIN1{$count-2}->{bioentityCanGeneName1} = $INFOPROTEIN1{$count-2}->{bioentityCanName1};
 				undef($INFOPROTEIN1{$count-2}->{bioentityCanName1});
@@ -387,10 +387,10 @@ sub processFile
 		if ($INFOPROTEIN1{$count-2}->{bioentityCanName1} =~ /^\d+$/ and $INFOPROTEIN1{$count-2}->{bioentityType1} =~ /protein/i )
 		{
 			my $locusID = 	$INFOPROTEIN1{$count-2}->{bioentityCanName1};
-			$INFOPROTEIN1{$count-2}->{bioentityCanName1} = $locusIDProteinHash{	$INFOPROTEIN1{$count-2}->{bioentityCanName1}};
+			delete$INFOPROTEIN1{$count-2}->{bioentityCanName1};
+			$INFOPROTEIN1{$count-2}->{bioentityCanName1} = $locusIDProteinHash{	$locusID};
 			if ( ! $INFOPROTEIN1{$count-2}->{bioentityCanName1})
 			{
-				$INFOPROTEIN1{$count-2}->{bioentityCanName1}= $locusID;
 				Error (\@infoArray, "$INFOPROTEIN1{$count-2}->{bioentityCanName1}: could not find PROTEIN for this locsuID");
 				delete $INFOPROTEIN1{$count-2};
 				next;
@@ -400,10 +400,10 @@ sub processFile
 		if ($INFOPROTEIN1{$count-2}->{bioentityCanName1} =~ /^\d+$/ and $INFOPROTEIN1{$count-2}->{bioentityType1} =~ /dna/i )
 		{
 			my $locusID = 	$INFOPROTEIN1{$count-2}->{bioentityCanName1};
-			$INFOPROTEIN1{$count-2}->{bioentityCanName1} = $locusIDmRNAHash{$INFOPROTEIN1{$count-2}->{bioentityCanName1}};
+			delete$INFOPROTEIN1{$count-2}->{bioentityCanName1};
+			$INFOPROTEIN1{$count-2}->{bioentityCanName1} = $locusIDmRNAHash{$locusID};
 			if ( ! $INFOPROTEIN1{$count-2}->{bioentityCanName1})
 			{
-				$INFOPROTEIN1{$count-2}->{bioentityCanName1}= $locusID;
 				Error (\@infoArray,"$INFOPROTEIN1{$count-2}->{bioentityCanName1}: could not find RNA for this locsuID");
 				delete $INFOPROTEIN1{$count-2};
 				next;
@@ -482,10 +482,10 @@ sub processFile
 		if ($INFOPROTEIN2{$count-2}->{bioentityCanName2} =~ /^\d+$/ and $INFOPROTEIN2{$count-2}->{bioentityType2} =~ /protein/i )
 		{
 			my $locusID = $INFOPROTEIN2{$count-2}->{bioentityCanName2};
-			$INFOPROTEIN2{$count-2}->{bioentityCanName2} = $locusIDProteinHash{$INFOPROTEIN2{$count-2}->{bioentityCanName2}};
+			delete$INFOPROTEIN2{$count-2}->{bioentityCanName2};
+			$INFOPROTEIN2{$count-2}->{bioentityCanName2} = $locusIDProteinHash{$locusID};
 			if ( ! $INFOPROTEIN2{$count-2}->{bioentityCanName2})
 			{
-				$INFOPROTEIN2{$count-2}->{bioentityCanName2}= $locusID;
 				Error  (\@infoArray,"$INFOPROTEIN2{$count-2}->{bioentityCanName2}: could not find PROTEIN for this locsuID");
 				delete $INFOPROTEIN2{$count-2};
 				next;
@@ -497,10 +497,10 @@ sub processFile
 		if ($INFOPROTEIN2{$count-2}->{bioentityCanName2} =~ /^\d+$/ and $INFOPROTEIN2{$count-2}->{bioentityType2} =~ /dna/i )
 		{
 			my $locusID = $INFOPROTEIN2{$count-2}->{bioentityCanName2};
-			$INFOPROTEIN2{$count-2}->{bioentityCanName2} = $locusIDmRNAHash{$INFOPROTEIN2{$count-2}->{bioentityCanName2}};
+			delete$INFOPROTEIN2{$count-2}->{bioentityCanName2};
+			$INFOPROTEIN2{$count-2}->{bioentityCanName2} = $locusIDmRNAHash{$locusID};
 			if ( ! $INFOPROTEIN2{$count-2}->{bioentityCanName2})
 			{
-				$INFOPROTEIN2{$count-2}->{bioentityCanName2}= $locusID;
 				Error  (\@infoArray,"$INFOPROTEIN2{$count-2}->{bioentityCanName2}: could not find  RNA for this locsuID");
 				delete $INFOPROTEIN2{$count-2};
 				next;
@@ -596,7 +596,7 @@ print "checking interaction requirements\n";
 		if ($INTERACTION{$count-2}->{confidence_score} and !($confidenceScores->{$INTERACTION{$count-2}->{confidence_score}}))
 		{
 			print " $INTERACTION{$count-2}->{confidence_score}\n";
-			getc;
+			
 				Error (\@infoArray," $INTERACTION{$count-2}->{confidence_score}:  confidenceScore is not in the database");
 				delete $INTERACTION{$count-2};
 				next;
@@ -744,6 +744,11 @@ sub checkPopulateBioentity
 			my ($commonName,$canName);
 			$commonName = escapeString ($hashRef->{$record}->{'bioentityComName'.$num}) if ($hashRef->{$record}->{'bioentityComName'.$num});
 			$canName = escapeString($hashRef->{$record}->{"bioentityCanName".$num})if($hashRef->{$record}->{'bioentityCanName'.$num});
+			
+	
+			
+			
+			
 			if (!($hashRef->{$record}->{'bioentityComName'.$num}))
 			{
 #4,5
@@ -770,6 +775,8 @@ sub checkPopulateBioentity
 #4,5
 
 					$bioentityQueryCanonical = $bioentityQuery.$canonicalClause.$groupByClause;
+					print "got it";
+					
 			}
 			
 			if ($commonClause and $canonicalClause)
@@ -894,7 +901,6 @@ sub checkPopulateBioentity
 			else 
 			{
 					print "only bioentity_canonical_name is known\n";
-					
 					my @rows = $sbeams->selectOneColumn($bioentityQueryCanonical);	
 					my $nrows = scalar(@rows);
 					my $bioentityIDCanonical = $rows[0] if $nrows == 1;
@@ -908,6 +914,7 @@ sub checkPopulateBioentity
 					}
 					$insert = 1 unless ($bioentityIDCanonical);
 					$update = 0 unless (!$insert);
+					
 					my $bioentityPK = insertOrUpdateBioentity($hashRef->{$record},$num,$bioentityIDCanonical,$insert,$update); 
 					if($INTERACTION{$record} and $bioentityPK)
 					{	
