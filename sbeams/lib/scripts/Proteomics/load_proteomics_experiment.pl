@@ -2677,7 +2677,7 @@ sub deleteFraction {
     table_name => 'fraction',
     table_child_relationship => \%table_child_relationship,
     delete_PKs => [ $fraction_id ],
-    delete_batch => 10000,
+    delete_batch => 1000,
     database => $DBPREFIX{Proteomics},
     verbose => $VERBOSE,
     testonly => $TESTONLY,
