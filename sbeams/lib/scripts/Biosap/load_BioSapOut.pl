@@ -329,7 +329,7 @@ package main;
 
 #### Do the SBEAMS authentication and exit if a username is not returned
 exit unless ($current_username =
-    $sbeams->Authenticate(work_group=>'BioSap'));
+    $sbeams->Authenticate(work_group=>'BioSap_user'));
   my $DATABASE = $OPTIONS{"database"} || $sbeams->getBIOSAP_DB();
 
 
