@@ -576,7 +576,7 @@ sub processAntibody
 	left join $TBIS_TISSUE_TYPE tt on s.tissue_type_id = tt.tissue_type_id
 	left join sbeams.dbo.organism sbo on s.organism_id = sbo.organism_id
 	where ab.antibody_id  in ( $includeClause ) $limitClause order by ab.sort_order, ct.sort_order";
-	print "$query<br>";
+
 	$sbeams->fetchResultSet(sql_query=>$query,resultset_ref=>$resultset_ref,);
     
 	my $columHashRef = $resultset_ref->{column_hash_ref};
