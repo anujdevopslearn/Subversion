@@ -18,15 +18,17 @@ package SBEAMS::Connection::Permissions;
 
 
 use strict;
-use vars qw(@ERRORS $q
-           );
+use vars qw(@ERRORS $q @EXPORT @EXPORT_OK);
 use CGI::Carp qw(fatalsToBrowser croak);
+use Exporter;
+our @ISA = qw( Exporter );
 
 use SBEAMS::Connection::Settings;
 use SBEAMS::Microarray::Tables;
 use SBEAMS::Inkjet::Tables;
 use SBEAMS::Connection::Tables;
 
+our @EXPORT_OK = qw(DATA_NONE DATA_READER DATA_WRITER DATA_MODIFIER DATA_ADMIN );
 # Constants that represent access levels
 use constant DATA_NONE => 50;
 use constant DATA_READER => 40;
@@ -863,7 +865,7 @@ sub getAccessibleProjects{
 # returns DATA_X access mode for the user on this table
 #
 ###############################################################################
-sub getTablePermission {
+sub calculateTablePermission {
   my $self = shift;
   my %args = @_;
 
@@ -912,13 +914,11 @@ sub getTablePermission {
   END
 
   my @uperms = $self->selectSeveralColumns( $usql );
-
+ 
   if ( scalar( @uperms ) > 1 ) { # Should only return one row
     die ( <<'    END_ERROR' );
-    More than one row was returned from permissions query.  Please report this
-    error to your local $DBTITLE administrator. Please include the following
-    query:
-    $usql
+    More than one row returned from permissions query.  Please report this 
+    error to Eric Deutsch or to submit to sbeams bug database
     END_ERROR
   }
 
@@ -997,41 +997,26 @@ sub getTablePermission {
   }
 
 
-} # End getTablePermission
-
-
-###############################################################################
-# Utility routine, returns (arithmetic) maximum value of passed array 
-###############################################################################
-sub getMax {
-  my @sorted = sort { $b <=> $a } @_;
-  return $sorted[0];
-}
+} # End calculateTablePermission
 
 ###############################################################################
-# Utility routine, returns (arithmetic) minimum value of passed array 
-###############################################################################
-sub getMin {
-  my @sorted = sort { $a <=> $b } @_;
-  return $sorted[0];
-}
-
-###############################################################################
-# getProjectPermission Passed a table name, primary_key, and primary_key column, 
-# the routine will determine the access rights of the currently authenticated
-# sbeams user to that record, based on user's current work_group, status of the 
-# record, and project associated permissions for that record.  Access rights
-# will be one of the enumerated
-# types DATA_XXX, where XXX is among NONE, READER, WRITER, MODIFIER, ADMIN.
+# calculateProjectPermission Passed a table name, primary_key, and primary_key
+# column, the routine will determine the access rights of the currently 
+# authenticated sbeams user to that record, based on user's current work_group,
+# status of the record, and project associated permissions for that record. 
+# 
+# Access rights # will be one of the enumerated types DATA_XXX, where XXX is
+# among NONE, READER, WRITER, MODIFIER, ADMIN.
 #
 # named arg table_name - fully qualified tablename (db.dbo.tablename) required!
 # named arg pk_name - name of primary key column required!
 # named arg pk_value - value of primary key required!
-#
+
+
 # returns DATA_X access mode for the user on this table
 #
 ###############################################################################
-sub getProjectPermission {
+sub calculateProjectPermission {
   my $self = shift;
   my %args = @_;
 
@@ -1101,7 +1086,7 @@ sub getProjectPermission {
 
   }
 
-} # End getProjectPermission
+} # End calculateProjectPermission
 
 ###############################################################################
 # Passed user information, resource information, and access level sought 
@@ -1255,9 +1240,133 @@ sub getUserProjectPermission {
 
 } # End getUserProjectPermission
 
+#+
+# narg fkey  Name of foreign key to access project info (may be project_id)
+# narg fval  Value of foreign key to access project info
+# narg fsql  SQL to fetch parent project_id
+# narg dbsql SQL to fetch parent project_id from db record
+# narg tname Name of table to be modified
+#
+#-
+sub checkProjectPermission {
+  my $self = shift;
+  my %args = @_;
+  my $debug = 1;
+
+  # Check requirements
+  for ( qw( action fkey fval fsql dbsql tname ) ) {
+    next if $_ eq 'fsql' && lc($args{fkey}) eq 'project_id';
+    if ( !$args{$_} ) {
+      print STDERR "Required argument $_  missing";
+      return undef;
+    }
+  }
+
+  # Make sure there are no potential db modifiers in sql string
+  my $err = $self->isTaintedSQL( $args{fsql} );
+  $err ||= $self->isTaintedSQL( $args{dbsql} );
+
+  if ( $err ) {
+    print STDERR "Dangerous SQL caught:\n $args{fsql}\n $args{dbsql}\n";
+    return undef;
+  }
+
+  my $pr_id;
+
+  if ( lc($args{fkey}) eq 'project_id' ) {
+    $pr_id = $args{fval};
+  } else {
+    ( $pr_id ) = $self->selectOneColumn( $args{fsql} );
+  }
+
+  if ( $debug ) {
+    print STDERR "In checkProjectPermission for table $args{tname}.  key is $args{fkey}, value is $args{fval}, proj_id is $pr_id\n";
+  }
+
+  if ( !$pr_id ) {
+    return "Unable to determine project_id\n";
+  }
+
+  my $priv = $self->get_best_permission( project_id => $pr_id );
+  
+  if ( uc($args{action}) eq 'INSERT' ) {
+    print STDERR "Inserting new record?? privilege on $pr_id is $priv\n" if $debug;
+
+    #  Can user write the project? 
+    if ( DATA_WRITER < $priv ) {
+      # Log error and return error string
+      print STDERR "Unable to INSERT $args{tname} record: insufficient permissions\n";
+      return "Insufficient permissions ($priv) in project (ID: $pr_id)";
+    }
+
+  } elsif ( uc($args{action}) eq 'UPDATE' ) {
+
+    my ( $pr_id_orig ) = $self->selectOneColumn( $args{dbsql} );
+    unless ( $pr_id_orig ) {
+      return "Unable to find parent record";
+    }
+
+#   Has associated project has been modified? 
+    if ( $pr_id_orig != $pr_id ) { # We've got a new one...
+
+      my $priv_orig = $self->get_best_permission( project_id => $pr_id_orig );
+      my $priv_new = $priv;  # $priv is calculated with cgi passed value
+
+    print STDERR "Updating record?? project changed, privilege on $pr_id_orig is $priv_orig\n" if $debug;
+      # can this user change original?
+      if ( DATA_WRITER <= $priv_orig ) {
+        # Nope, he/she/it ain't allowed
+        print STDERR "Unable to UPDATE $args{tname}, lacking permission in current project\n";
+        return "Insufficient permissions ($priv_orig) in project (ID: $pr_id_orig)";
+      }
+      # Can user write new one? 
+      if ( DATA_WRITER < $priv_new ) {
+        # Nope, he/she/it ain't allowed
+        print STDERR "Unable to UPDATE $args{tname}, lacking permission in new project\n";
+        return "Insufficient permissions ($priv_new) in project (ID: $pr_id)";
+      }
+    } else { # project association unchanged.
+    print STDERR "Updating record?? privilege on $pr_id is $priv\n" if $debug;
+
+      # Since new project = original project, calculated priv is original priv
+      # can this user change original?
+      if ( DATA_WRITER <= $priv ) {
+        # Nope, he/she/it ain't allowed
+        print STDERR "Unable to UPDATE $args{tname} record: insufficient permissions\n";
+        return "Insufficient permissions ($priv) in project (ID: $pr_id)";
+      }
+
+    } # END proj_id changed
+
+  } else {
+    return 'Unknown action mode!';
+
+  }
+
+}
+
+###############################################################################
+# Utility routine, returns (arithmetic) maximum value of passed array 
+###############################################################################
+#
+sub getMax {
+  my @sorted = sort { $b <=> $a } @_;
+  return $sorted[0];
+}
+
+###############################################################################
+# Utility routine, returns (arithmetic) minimum value of passed array 
+###############################################################################
+sub getMin {
+  my @sorted = sort { $a <=> $b } @_;
+  return $sorted[0];
+}
+
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
-###############################################################################
 1;
+
+###############################################################################
+
