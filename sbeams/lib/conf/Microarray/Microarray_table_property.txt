@@ -29,3 +29,18 @@ MA_affy_array_sample	Affy Array Sample	process	YES	$TBMA_AFFY_ARRAY_SAMPLE	affy_
 MA_affy_array	Affy Array	arrays	YES	$TBMA_AFFY_ARRAY	affy_array_id		ManageTable.cgi?TABLE_NAME=MA_affy_array	MA_affy_array	
 MA_affy_array_sample_protocol	Affy Array Sample Protocol	arrays	NO	$TBMA_AFFY_ARRAY_SAMPLE_PROTOCOL	affy_array_sample_protocol_id		ManageTable.cgi?TABLE_NAME=MA_affy_array_sample_protocol	MA_affy_array_sample_protocol	
 MA_affy_array_protocol	Affy Array Protocol	arrays	NO	$TBMA_AFFY_ARRAY_PROTOCOL	affy_array_protocol_id		ManageTable.cgi?TABLE_NAME=MA_affy_array_protocol	MA_affy_array_protocol	
+MA_affy_gene_intensity	Affy Gene Intensity	arrays	NO	$TBMA_AFFY_GENE_INTENSITY	affy_gene_intensity_id				
+MA_affy_annotation	Affy Annotaiton	arrays	NO	$TBMA_AFFY_ANNOTATION	affy_annotation_id				
+MA_affy_db_links	Affy DB Links	arrays	NO	$TBMA_AFFY_DB_LINKS	affy_db_link_id				
+MA_affy_annotation_set	Affy Annotaiton Set	arrays	YES	$TBMA_AFFY_ANNOTATION_SET	affy_annotation_set_id		ManageTable.cgi?TABLE_NAME=MA_affy_annotation_set	MA_affy_annotation_set	
+MA_condition	Condition	arrays	NO	$TBMA_CONDITION	affy_condition_id				
+MA_gene_expression	Gene Expression	arrays	NO	$TBMA_GENE_EXPRESSION	affy_gene_expression_id				
+MA_overlapping_transcript	Affy overlapping Transcript	arrays	NO	$TBMA_OVERLAPPING_TRANSCRIPT	overlapping_transcript_id				
+MA_gene_ontology	Affy Gene Ontology	arrays	NO	$TBMA_GENE_ONTOLOGY	gene_ontology_id				
+MA_gene_ontology_type	Affy Gene Ontology Type	arrays	NO	$TBMA_GENE_ONTOLOGY_TYPE	gene_ontology_type_id				
+MA_protein_families	Affy Protein Families	arrays	NO	$TBMA_PROTEIN_FAMILIES	protein_families_id				
+MA_trans_membrane	Affy trans membrane	arrays	NO	$TBMA_TRANS_MEMBRANE	trans_membrane_id				
+MA_trans_membrane_domain	Affy trans membrane Domain	arrays	NO	$TBMA_TRANS_MEMBRANE_DOMAIN	trans_membrane_domain_id				
+MA_interpro	Affy interpro	arrays	NO	$TBMA_INTERPRO	interpro_id				
+MA_protein_domain	Affy protein domain	arrays	NO	$TBMA_PROTEIN_DOMAIN	protein_domain_id				
+MA_alignment	Affy gene alignment	arrays	NO	$TBMA_ALIGNMENT	alignment_id				

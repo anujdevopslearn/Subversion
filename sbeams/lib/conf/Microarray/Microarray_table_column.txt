@@ -350,13 +350,14 @@ MA_GetExpression	10	reporter_name_constraint	Reporter Name Constraint									N	
 MA_GetExpression	11	log10_ratio_constraint	log10 Ratio Constraint									N	text	20		Y	Y	N	Constraint for the log 10 ratio of expression.  Allowed syntax: "n.n", "> n.n", "< n.n", "between n.n and n.n", "n.n +- n.n"		
 MA_GetExpression	12	p_value_constraint	P Value Constraint									N	text	20		Y	Y	N	Constraint for the P value of expression.  Allowed syntax: "n.n", "> n.n", "< n.n", "between n.n and n.n", "n.n +- n.n"		
 MA_GetExpression	13	lambda_constraint	Lambda Constraint									N	text	20		Y	Y	N	Constraint for the lamba value of expression.  Allowed syntax: "n.n", "> n.n", "< n.n", "between n.n and n.n", "n.n +- n.n"		
-MA_GetExpression	14	display_columns	Data Columns to Display									N	multioptionlist	4		Y	Y	N	Desired data columns to display (or pivot) for the expression measurements	SELECT option_key,option_value FROM $TBMA_QUERY_OPTION WHERE option_type = 'GE_data_columns' ORDER BY sort_order,option_value	
-MA_GetExpression	15	molecular_function_constraint	Molecular Function Constraint									N	text	40		Y	N	N	Constraint for the GO Molecular Function. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-MA_GetExpression	16	biological_process_constraint	Biological Process Constraint									N	text	40		Y	N	N	Constraint for the GO Biological Process. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-MA_GetExpression	17	cellular_component_constraint	Cellular Component Constraint									N	text	40		Y	N	N	Constraint for the GO Cellular Component. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
-MA_GetExpression	18	sort_order	Sort Order									N	optionlist			Y	N	N	Desired display sorting order (DESC means descending: highest to lowest)	SELECT option_key,option_value FROM $TBMA_QUERY_OPTION WHERE option_type = 'GE_sort_options' ORDER BY sort_order,option_value	
-MA_GetExpression	19	display_options	Display Options									N	multioptionlist	5		Y	Y	N	Various selectable table display options	SELECT option_key,option_value FROM $TBMA_QUERY_OPTION WHERE option_type = 'GE_display_options' ORDER BY sort_order,option_value	
-MA_GetExpression	20	row_limit	Maximum Rows									N	text	10		Y	Y	N	Limit the numbers of rows displayed.  If not provided, default is 10000 rows.		
+MA_GetExpression	14	mean_intensity_constraint	Mean Level Constriant									N	text	20		Y	Y	N	Constraint for the Mean Level .  Allowed syntax: "n.n", "> n.n", "< n.n", "between n.n and n.n", "n.n +- n.n"		
+MA_GetExpression	15	display_columns	Data Columns to Display									N	multioptionlist	4		Y	Y	N	Desired data columns to display (or pivot) for the expression measurements	SELECT option_key,option_value FROM $TBMA_QUERY_OPTION WHERE option_type = 'GE_data_columns' ORDER BY sort_order,option_value	
+MA_GetExpression	16	molecular_function_constraint	Molecular Function Constraint									N	text	40		Y	N	N	Constraint for the GO Molecular Function. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+MA_GetExpression	17	biological_process_constraint	Biological Process Constraint									N	text	40		Y	N	N	Constraint for the GO Biological Process. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+MA_GetExpression	18	cellular_component_constraint	Cellular Component Constraint									N	text	40		Y	N	N	Constraint for the GO Cellular Component. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+MA_GetExpression	19	sort_order	Sort Order									N	optionlist			Y	N	N	Desired display sorting order (DESC means descending: highest to lowest)	SELECT option_key,option_value FROM $TBMA_QUERY_OPTION WHERE option_type = 'GE_sort_options' ORDER BY sort_order,option_value	
+MA_GetExpression	20	display_options	Display Options									N	multioptionlist	5		Y	Y	N	Various selectable table display options	SELECT option_key,option_value FROM $TBMA_QUERY_OPTION WHERE option_type = 'GE_display_options' ORDER BY sort_order,option_value	
+MA_GetExpression	21	row_limit	Maximum Rows									N	text	10		Y	Y	N	Limit the numbers of rows displayed.  If not provided, default is 10000 rows.		
 MA_affy_array_sample	1	affy_array_sample_id	Affy Array Sample ID	int	4	0	N		Y			Y				N	N	Y	Affy Array Sample ID		pkDEFAULT
 MA_affy_array_sample	2	project_id	Project	int	4	0	N		N	project	project_id	N				N	N	N	FK to project.project_id		
 MA_affy_array_sample	3	sample_tag	Sample Tag	varchar	50	0	N		N			Y	text	50		Y	Y	N	Sample Name.  Keep it short.  Do not use any strange characters like /\*&$() (e.g. NP Epi 03-123)		
@@ -385,8 +386,8 @@ MA_affy_array_sample	25	date_modified	Date Record Modified	datetime	8	0	N	CURREN
 MA_affy_array_sample	26	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N	Y			
 MA_affy_array_sample	27	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
 MA_affy_array_sample	28	record_status	Record Status	char	1	0	N	N	N							N	N	N			
-MA_affy_array	1	affy_array_id	Affy Array ID	int	4	0	N		Y			Y				N	N	Y	Affy Array ID		
-MA_affy_array	2	file_root	Root File Name	varchar	50	0	N		N			Y	fixed	50		Y	Y	N	Root Name of the affy data file. No file extensions are needed		
+MA_affy_array	1	affy_array_id	Affy Array ID	int	4	0	N		Y			Y				N	N	Y	Affy Array ID		pkDEFAULT
+MA_affy_array	2	file_root	Root File Name	varchar	100	0	N		N			Y	fixed	50		Y	Y	N	Root Name of the affy data file. No file extensions are needed		
 MA_affy_array	3	file_path_id	File Path	int	4	0	N		N	MA_file_path	file_path_id	Y	optionlist	2		Y	Y	Y	Select the Root file path for the group of files generated from this array.   FK to MA_file_path.file_path_id	SELECT file_path_id , file_path FROM $TBMA_FILE_PATH WHERE record_status != 'D'	
 MA_affy_array	4	array_type_id	Array Type	int	4	0	N		N	MA_slide_type	slide_type_id	Y	optionlist			Y	Y	Y	Pick an Affy Array type from the drop down.  FK to MA_slide_type.slide_type_id	SELECT slide_type_id , name  FROM $TBMA_SLIDE_TYPE WHERE record_status != 'D'	
 MA_affy_array	5	processed_date	Processed Date	datetime	8	0	N		N			Y	text	50		Y	Y	N	Date the array was scanned		
@@ -401,7 +402,7 @@ MA_affy_array	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMES
 MA_affy_array	14	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N	Y			
 MA_affy_array	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
 MA_affy_array	16	record_status	Record Status	char	1	0	N	N	N							N	N	N			
-MA_affy_array_sample_protocol	1	affy_array_sample_protocol_id	Affy Array Sample Protocol	int	4	0	N		Y			Y				N	N	N			
+MA_affy_array_sample_protocol	1	affy_array_sample_protocol_id	Affy Array Sample Protocol	int	4	0	N		Y			Y				N	N	N			pkDEFAULT
 MA_affy_array_sample_protocol	2	affy_array_sample_id	Affy Array Sample	int	4	0	N		N	MA_affy_array_sample	affy_array_sample_id	Y				Y	N	Y	FK to MA_affy_array_sample.affy_array_sample_id		
 MA_affy_array_sample_protocol	3	protocol_id	Protocol ID	int	4	0	N		N	protocol	protocol_id	Y				N	N	Y	Protocol ID		
 MA_affy_array_sample_protocol	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -410,7 +411,7 @@ MA_affy_array_sample_protocol	6	date_modified	Date Record Modified	datetime	8	0	
 MA_affy_array_sample_protocol	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 MA_affy_array_sample_protocol	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 MA_affy_array_sample_protocol	9	record_status	Record Status	char	1	0	N	N	N							N	N				
-MA_affy_array_protocol	1	affy_array_protocol_id	Affy Array Protocol	int	4	0	N		Y							N	N	N			
+MA_affy_array_protocol	1	affy_array_protocol_id	Affy Array Protocol	int	4	0	N		Y							N	N	N			pkDEFAULT
 MA_affy_array_protocol	2	affy_array_id	Affy Array ID	int	4	0	N		N	MA_affy_array	affy_array_id	Y				Y	N	Y	FK to MA_affy_array.affy_array_id		
 MA_affy_array_protocol	3	protocol_id	Protocol ID	int	4	0	N		N	protocol	protocol_id	Y				N	N	Y	Protocol ID		
 MA_affy_array_protocol	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	Y			
@@ -419,3 +420,120 @@ MA_affy_array_protocol	6	date_modified	Date Record Modified	datetime	8	0	N	CURRE
 MA_affy_array_protocol	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 MA_affy_array_protocol	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 MA_affy_array_protocol	9	record_status	Record Status	char	1	0	N	N	N							N	N				
+MA_affy_gene_intensity	1	affy_gene_intensity_id	Affy Gene Intensity ID	int	4	0	N		Y							N	N	Y			
+MA_affy_gene_intensity	2	probe_set_id	Probe Set ID	varchar	50	0	N		N			Y				N	N	Y	affymetix probe set name example '1007_s_at'		
+MA_affy_gene_intensity	3	affy_array_id	Affy Array ID	int	4	0	N		N	MA_affy_array	affy_array_id	Y				N	N	Y			
+MA_affy_gene_intensity	4	signal	Signal	float	8	0	N		N							Y	N	N			
+MA_affy_gene_intensity	5	detection_call	Detection Call	char	1	0	N		N							Y	N	N			
+MA_affy_gene_intensity	6	detection_p_value	Detection P Value	float	8	0	N		N							Y	N	N			
+MA_affy_gene_intensity	7	protocol_id	Protocol ID	int	4	0	N		N	protocol	protocol_id					Y	N	N			
+MA_affy_annotation	1	affy_annotation_id	Affy Annotation ID	int	4	0	N		Y							N	N	N			
+MA_affy_annotation	2	affy_annotation_set_id	Annotation Set ID	int	4	0	N		N	MA_affy_annotation_set	affy_annotation_set_id	Y				Y	N	Y	FK to MA_affy_annotation_set		
+MA_affy_annotation	3	probe_set_id	Probe Set ID	varchar	50	0	N		N			Y				Y	Y	N	affymetix probe set name example '1007_s_at'		
+MA_affy_annotation	4	sequence_type	Sequence Type	varchar	50	0	Y		N							Y	Y	N	Indicates whether the sequence is an Exemplar, Consensus or Control sequence. An Exemplar is a single nucleotide sequence taken directly from a public database. This sequence could be an mRNA or EST. A Consensus sequence, is a nucleotide sequence assembled by Affymetrix, based on one or more sequence taken from a public database.		
+MA_affy_annotation	5	sequence_source	Sequence Source	varchar	50	0	Y		N							Y	Y	N	The database from which the sequence used to design this probe set was taken.		
+MA_affy_annotation	6	transcript_id	Transcript ID	varchar	50	0	Y		N							Y	Y	N	Cluster identification number with a sub-cluster identifier appended. Currently provided only for HG-U133, HG-Focus, and newer arrays.		
+MA_affy_annotation	7	target_description_feature	GB Feature	varchar	255	0	Y		N							Y	Y	N	GenBank description associated with the representative public identifier. Blank for some probe sets.		
+MA_affy_annotation	8	target_description	GB Description	varchar	255	0	Y		N							Y	Y	N	GenBank description associated with the representative public identifier. Blank for some probe sets.		
+MA_affy_annotation	9	target_description_note	GB Note	varchar	255	0	Y		N							Y	Y	N	Parsed from the Target Description column contains information about what part of the gene the probe set targets, used manily to describe the affy controls on the chip		
+MA_affy_annotation	10	representative_public_id	Representative Public ID	varchar	50	0	Y		N							Y	Y	N	The accession number of a representative sequence.		
+MA_affy_annotation	11	archival_unigene_cluster	Archival UniGene Cluster	varchar	50	0	Y		N							Y	Y	N			
+MA_affy_annotation	12	gene_title	Gene Title	varchar	255	0	Y		N							Y	Y	N			
+MA_affy_annotation	13	gene_symbol	Gene Symbol	varchar	50	0	Y		N							Y	Y	N			
+MA_affy_annotation	14	chromosomal_location	Chromosomal Location	varchar	50	0	Y		N							Y	Y	N	Chromosomal Band		
+MA_affy_annotation	15	pathway	Patway	varchar	255	0	Y		N							Y	Y	N	References to Gene MicroArray Pathway Profiler and KEGG: Kyoto Encyclopedia of Genes and Genomes.		
+MA_affy_annotation	16	qtl	QTL	varchar	100	0	Y		N							Y	Y	N	Quantitative Trait Loci (QTL) are genetic linkage data that provide disease associations for various loci.		
+MA_affy_db_links	1	affy_db_links_id	Affy DB Links ID	int	4	0	N		Y							N	N	Y			
+MA_affy_db_links	2	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_annotation	affy_annotation_id	Y				N	N	N	FK to MA_affy_annotaion		
+MA_affy_db_links	3	dbxref_id	DBXref ID	int	4	0	N		N			Y				N	N	N	FK to proteomic dbxref table		
+MA_affy_db_links	4	db_id	DB ID	varchar	50	0	N		N			Y				Y	N	N	Accession number to foregin database		
+MA_affy_annotation_set	1	affy_annotation_set_id	Annotation Set ID	int	4	0	N		Y							N	N	Y			
+MA_affy_annotation_set	2	annotation_date	Affy Annotation Date	varchar	50	1	N		N			Y	text	50		Y	Y	N	Date of the Affy annot.csv file is made by Affymetrix (DATE LEFT IN AFFY FORMAT)		
+MA_affy_annotation_set	3	slide_type_id	Array Type	int	4	2	N		N			Y	optionlist	2		N	Y	Y	Slide Type ID		
+MA_affy_annotation_set	4	genome_version	Genome Version	varchar	50	3	N		N			Y	text	50		Y	Y	N	Version of the Genome used by Affymetrix to generate data for Alignments column		
+MA_affy_annotation_set	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+MA_affy_annotation_set	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
+MA_affy_annotation_set	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+MA_affy_annotation_set	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
+MA_affy_annotation_set	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
+MA_affy_annotation_set	10	record_status	Record Status	char	1	0	N	N	N							N	N	N			
+MA_condition	1	condition_id	Condition ID	int	4	10	N		Y							N	N	Y			
+MA_condition	2	project_id	Project ID	int	4	10	N		N	project	project_id					Y	Y	Y			
+MA_condition	3	condition_name	Condition name	varchar	255	255	N		N							Y	Y	N			
+MA_condition	4	sort_order	Sort Order	int	4	10	N		N							Y	Y	N			
+MA_condition	5	processed_date	Precessed Date	datetime	8	23	Y		N							Y	Y	N			
+MA_condition	6	comment	Comment	text	16	16	Y		N							Y	Y	N			
+MA_condition	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+MA_condition	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
+MA_condition	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+MA_condition	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
+MA_condition	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
+MA_condition	12	record_status	Record Status	char	1	0	N	N	N							N	N	N			
+MA_gene_expression	1	gene_expression_id	Gene Expression Id	int identity	4	10	N		Y							N	N	Y			
+MA_gene_expression	2	condition_id	Condition name	int	4	10	N		N	MA_condition	condition_id					Y	Y	Y			
+MA_gene_expression	3	reporter_name	Reporter Name	varchar	255	255	Y		N							Y	Y	N			
+MA_gene_expression	4	common_name	Common Name	varchar	255	255	Y		N							Y	Y	N			
+MA_gene_expression	5	canonical_name	Canonical Name	varchar	255	255	Y		N							Y	Y	N			
+MA_gene_expression	6	full_name	Full Name	varchar	1024	1024	Y		N							Y	Y	N			
+MA_gene_expression	7	gene_name	Gene Name	varchar	255	255	Y		N							Y	Y	N			
+MA_gene_expression	8	external_identifier	External Identifier	varchar	255	255	Y		N							Y	Y	N			
+MA_gene_expression	9	second_name	Second Name	varchar	255	255	Y		N							Y	Y	N			
+MA_gene_expression	10	biosequence_id	BioSequence ID	int	4	10	Y		N							Y	Y	N			
+MA_gene_expression	11	log10_ratio	log10 Ratio	real	4	7	Y		N							Y	Y	N			
+MA_gene_expression	12	log10_uncertainty	log10 Ratio	real	4	7	Y		N							Y	Y	N			
+MA_gene_expression	13	log10_std_deviation	log10 Std Deviation	real	4	7	Y		N							Y	Y	N			
+MA_gene_expression	14	lambda	Lambda	real	4	7	Y		N							Y	Y	N			
+MA_gene_expression	15	mu_x	Mu X	real	4	7	Y		N							Y	Y	N			
+MA_gene_expression	16	mu_y	mu Y	real	4	7	Y		N							Y	Y	N			
+MA_gene_expression	17	p_value	P Value	real	4	7	Y		N							Y	Y	N			
+MA_gene_expression	18	mean_intensity	Mean Intensity	real	4	7	Y		N							Y	Y	N			
+MA_gene_expression	19	mean_intensity_uncertainty	Mean Intensity Uncertainty	real	4	7	Y		N							Y	Y	N			
+MA_gene_expression	20	quality_flag	Quality Flag	varchar	25	25	Y		N							Y	Y	N			
+MA_overlapping_transcript	1	overlapping_transcript_id	Overlapping Transcript ID	int	4	0	N		Y			Y							Data parsed from Overlapping Transcripts Column		
+MA_overlapping_transcript	2	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_annotation	affy_annotation_id	Y									
+MA_overlapping_transcript	3	accession_number	Accession Number	varchar	50	0	Y		N										Details of overlapping transcripts found in a chromosomal region that aligns with a target sequence.		
+MA_overlapping_transcript	4	title	Title	varchar	255	0	Y		N										Details of overlapping transcripts found in a chromosomal region that aligns with a target sequence.		
+MA_overlapping_transcript	5	overlapping_gene_start	Gene Start bp	int	4	0	Y		N										Details of overlapping transcripts found in a chromosomal region that aligns with a target sequence.		
+MA_overlapping_transcript	6	overlapping_gene_end	Gene End bp	int	4	0	Y		N										Details of overlapping transcripts found in a chromosomal region that aligns with a target sequence.		
+MA_overlapping_transcript	7	overlapping_choromosome	Chromosomal Location	varchar	25	0	Y		N										Details of overlapping transcripts found in a chromosomal region that aligns with a target sequence.		
+MA_overlapping_transcript	8	gene_orientation	Gene Orientation	char	1	0	Y		N										Details of overlapping transcripts found in a chromosomal region that aligns with a target sequence.		
+MA_gene_ontology	1	gene_ontology_id	Gene Ontology ID	int	4	0	N		Y			Y									
+MA_gene_ontology	2	gene_ontology_type_id	Ontology Type ID	int	4	0	N		N	MA_gene_ontology_type	gene_ontology_type_id	Y									
+MA_gene_ontology	3	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_annotation	affy_annotation_id	Y									
+MA_gene_ontology	4	affy_db_links_id	Affy DB Links ID	int	4	0	N		N	MA_affy_db_links	affy_db_links_id	Y							Will hold the Go Ontology Accession number		
+MA_gene_ontology	5	affy_gene_ontology_id	Affy gene ontology id	int	4	0	N		N			Y							Affy Gene ontology ID, which is not the full ontology ID.  Example 1234 should be GO:001234		
+MA_gene_ontology	6	gene_ontology_description	Ontology Description	varchar	255	0	Y		N										The description corresponds directly to the GO ID. 		
+MA_gene_ontology	7	gene_ontology_evidence	Ontology Evidence	varchar	255	0	Y		N										The evidence can be "direct", or "extended". Direct evidence: shows the type of evidence provided by the GO Consortium for their curation of a relationship between the LocusLink accession and the GO Ontology term.  Extended evidence: indicates that the Ontology term was curated by Affymetrix Inc. based on similarity with genes that are annotated by the GO Consortium.		
+MA_gene_ontology_type	1	gene_ontology_type_id	Gene Ontology Type ID	int	4	0	N		Y			Y									
+MA_gene_ontology_type	2	gene_ontology_name_type	Gene Ontology Name Type	varchar	100	0	N		N			Y							One of three types of annotation, Biological Process (GO), Cellular Component (GO), Molecular Function (GO) 		
+MA_protein_families	1	protein_families_id	Protein Families ID	int	4	0	N		Y			Y									
+MA_protein_families	2	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_annotation	affy_annotation_id	Y									
+MA_protein_families	3	affy_db_links_id	Affy DB Links ID	int	4	0	N		N	MA_affy_db_links	affy_db_links_id	Y							References to entries in the various databases, indicated by namespace prefixes.  Examples GPCR, EC, P450, HANKS		
+MA_protein_families	4	description	Protein Families Description	varchar	255	0	Y		N												
+MA_protein_families	5	e_value	E value	float	8	0	Y		N												
+MA_trans_membrane	1	trans_membrane_id	Transmembrane ID	int	4	0	N		Y			Y									
+MA_trans_membrane	2	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_annotation	affy_annotation_id										
+MA_trans_membrane	3	number_of_domains	Number of Transmembrane Domains	int	4	0	Y		N										number of transmembrane domains		
+MA_trans_membrane	4	nin_prob	Probability that the N-terminus is interior	float	8	0	Y		N										the probability that the N-terminus is interior		
+MA_trans_membrane	5	type	Transmembrane Type	varchar	50	0	Y		N										SIGNAL", "ANCHOR" or empty ""		
+MA_trans_membrane_domain	1	trans_membrane_domain_id	Transmembrane Type ID	int	4	0	N		Y			Y									
+MA_trans_membrane_domain	2	trans_membrane_id	Transmembrane ID	int	4	0	N		N	MA_trans_membrane	trans_membrane_id	Y									
+MA_trans_membrane_domain	3	tm_protein_start	TM Protein Start	int	4	0	Y		N										Start of the transmembrane prediction		
+MA_trans_membrane_domain	4	tm_protein_end	TM Protein End	int	4	0	Y		N										End of the transmembrane prediciton		
+MA_trans_membrane_domain	5	tm_e_value	E value	float	8	0	Y		N												
+MA_interpro	1	interpro_id	Interpro_id	int	4	0	N		Y			Y									
+MA_interpro	2	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_annotation	affy_annotation_id	Y									
+MA_interpro	3	affy_db_links_id	Affy DB Links ID	int	4	0	N		N	MA_affy_db_links	affy_db_links_id	Y							InterPro accession number and description. 		
+MA_interpro	4	interpro_description	Interpro Description	varchar	255	0	Y		N										InterPro accession number and description. 		
+MA_protein_domain	1	protein_domain_id	Protein Domain ID	int	4	0	N		Y			Y									
+MA_protein_domain	2	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_annotation	affy_annotation_id	Y									
+MA_protein_domain	3	affy_db_links_id	Affy DB Links ID	int	4	0	N		N	MA_affy_db_links	affy_db_links_id	Y									
+MA_protein_domain	4	protein_domain_description	Protein Domain Description	varchar	255	0	N		N										Pfam or SCOP annotations		
+MA_protein_domain	5	protein_domain_e_value	Protein Domain E-value	float	8	0	Y		N										An E-value reveals how well the RefSeq peptide sequence corresponding to our probe set matches to the sequence in question.  Smaller numbers are better..		
+MA_alignment	1	alignment_id	Alignment ID	int	4		N		Y												
+MA_alignment	2	affy_annotation_id	Affy Annotation ID	int	4		N		N	MA_affy_annotation	affy_annotation_id	Y									
+MA_alignment	3	gene_start	Gene Start bp	int	4	0	N		N			Y				Y	Y	N	Position of the alignment of the target sequence on the genome.  Parsed from Alignments Column		
+MA_alignment	4	gene_stop	Gene Stop bp	int	4	0	Y		N							Y	Y	N	Position of the alignment of the target sequence on the genome.  Parsed from Alignments Column		
+MA_alignment	5	percent_identity	Gene Percent Identity	float	8	0	Y		N							Y	Y	N	percentage identity of target sequence on the genome.  Parsed from Alignments Column		
+MA_alignment	6	gene_orientation	Gene Orientation	char	1	0	Y		N							Y	Y	N	Strand of the genomic alignment.  Parsed from Alignments Column		
+MA_alignment	7	match_chromosome	Match Chromosomal	varchar	25	0	Y		N							Y	Y	N	Chromosome gene aligns to		
