@@ -186,6 +186,8 @@ VALUES ( 'BPS_display_options','ShowExtraProteinProps','Show Extra Protein Prope
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BPS_display_options','ShowBaitProteins','Show Bait Proteins',85 );
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'BPS_display_options','PivotConditions','Pivot Multiple Conditions',86 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'BPS_display_options','ShowSQL','Show SQL Query',90 );
 
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
