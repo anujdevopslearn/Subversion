@@ -172,7 +172,7 @@ sub handle_request {
     $project_id = -99 unless ($best_permission > 0 && $best_permission <=40);
   }
 
-  my $cytoSql  = "select fcs_run_id, substring(sample_name,0,7) from Cytometry2.dbo.FCS_RUN";
+  my $cytoSql  = "select fcs_run_id, substring(sample_name,0,7) from $TBCY_FCS_RUN";
   my $immunoSql = "select specimen_name, specimen_id from $TBIS_SPECIMEN";
   
   %CYTSAMPLEHASH = $sbeams->selectTwoColumnHash($cytoSql); 
@@ -298,7 +298,6 @@ my %organismHash = $sbeams->selectTwoColumnHash($organismSql);
 		order by Organism_Name 
 		~;	
     my @rows = $sbeams->selectSeveralColumns($sql);
-    $log->debug ( $sql );
 
   # If there are experiments, display them
 
@@ -1390,14 +1389,10 @@ sub getCheckboxes {
   for( my $i = 0; $i <= $loop; $i++ ){
     my $a = $organisms[$i] || '&nbsp;';
     my $b = $tissues[$i] || '&nbsp;';
-    $log->debug( "A is $a, B is $b " );
     $tab->addRow( [ $a, $b ] );
   }
   
   $tab->addRow( [ "$pad <INPUT TYPE=submit NAME=SUBMIT VALUE='Get Summary'>" ] );
-
-  $log->debug( "$tab" );
-
   my $form =<<"  END";
   $pad <I>Select one or more options to view summary grouped by assay, antibody
   or cell type.<BR>
