@@ -219,8 +219,9 @@ sub printEntryForm {
       ["library_tag","EL.library_tag","library_tag"],
       ["unigene_library_id","EL.unigene_library_id","unigene_library_id"],
       ["n_ests","EL.n_ests","n_ests"],
-      ["n_good_ests","EL.n_good_ests","n_good_ests"],
       ["n_chromats","EL.n_chromats","n_chromats"],
+      ["n_good_ests","EL.n_good_ests","n_good_ests"],
+      ["n_distinct_genes","EL.n_distinct_genes","n_distinct_genes"],
       ["processed_date","EL.processed_date","processed_date"],
       ["processing_time","EL.processing_time","processing_time"],
       ["tissue","EL.tissue","tissue"],
@@ -265,8 +266,8 @@ sub printEntryForm {
      ~;
 
 
-    %url_cols = ('set_tag' => "$CGI_BASE_DIR/BEDB/ManageTable.cgi?TABLE_NAME=biosequence_set&biosequence_set_id=\%$colnameidx{biosequence_set_id}V",
-                 'accession' => "\%$colnameidx{uri}V\%$colnameidx{accesssion}V",
+    %url_cols = ('library_name' => "http://www.ncbi.nlm.nih.gov/cgi-bin/UniGene/lib?ORG=Hs&LID=\%$colnameidx{unigene_library_id}V",
+                 'n_distinct_genes' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseAnnotation.cgi?est_library_id=\%$colnameidx{est_library_id}V&apply_action=$apply_action",
     );
 
     %hidden_cols = ('biosequence_set_id' => 1,
