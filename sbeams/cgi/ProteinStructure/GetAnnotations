@@ -193,7 +193,7 @@ sub handle_request {
 
   #### Display the user-interaction input form
   if ($sbeams->output_mode() eq 'html') {
-    my @options = ( 'GeneSymbol','ORFName','FullGeneName','ECNumbers','All' );
+    my @options = ( 'All','GeneSymbol','ORFName','FullGeneName','ECNumbers' );
     my %options = ( 'GeneSymbol' => 'Gene Symbol',
 		    'ORFName' => 'ORF Name',
 		    'FullGeneName' => 'Full Gene Name',
