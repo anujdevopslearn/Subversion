@@ -830,7 +830,7 @@ sub handle_request {
     print qq~
       Additional Information: <A TARGET="HelpWin" HREF="Help?document=GetDomainHitsColumnDefinitions">[Column Definitions]</A><BR>
       <BR>
-    ~;
+    ~ if ($sbeams->output_mode() eq 'html');
 
 
     #### Display the resultset
