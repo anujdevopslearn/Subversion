@@ -18,7 +18,7 @@ SELECT DISTINCT search_batch_id,username + '' - '' + experiment_tag + '' -> '' +
         OR table_name = 'PR_SummarizePeptides'
        )
    AND column_name = 'search_batch_id'
-
+GO
 
 
 UPDATE table_column
@@ -34,7 +34,7 @@ SELECT DISTINCT SB.search_batch_id,username + '' - '' + experiment_tag + '' -> '
  WHERE (   table_name = 'PR_BrowseProteinSummary'
        )
    AND column_name = 'search_batch_id'
-
+GO
 
 
 UPDATE table_column
@@ -47,7 +47,7 @@ UPDATE table_column
   '
  WHERE table_name = 'PR_SummarizeFractions'
    AND column_name = 'experiment_id'
-
+GO
 
 
 UPDATE table_column
@@ -65,7 +65,7 @@ UPDATE table_column
   '
  WHERE table_name = 'PR_SummarizeFractions'
    AND column_name = 'project_id'
-
+GO
 
 
 UPDATE table_column
@@ -80,7 +80,7 @@ SELECT DISTINCT fraction_id,username + '' - '' + experiment_tag + '' -> '' + set
  ORDER BY username,experiment_tag,set_tag,fraction_tag'
  WHERE table_name = 'PR_CompareMSRuns'
    AND column_name = 'fraction_id'
-
+GO
 
 
 
