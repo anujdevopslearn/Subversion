@@ -491,7 +491,12 @@ sub handle_request {
     ["set_tag","set_tag","DB"],
     ["file_root","S.file_root","file_root"],
     ["out_file","'.out'",".out"],
-    ["start_scan","MSS.start_scan","scan"],
+
+    ["start_scan","MSS.start_scan","Scan Num"],
+    ["scan_time","STR(MSS.scan_time/60.0,7,2)","Scan Time"],
+    ["retention_time","STR((MSS.scan_time-F.column_delay)/60.0,7,2)","Est. RT"],
+    ["calc_buffer_precent","STR(MSS.calc_buffer_percent,7,1)","% ACN"],
+
     ["best_hit_flag","best_hit_flag","bh"],
     ["probability","STR(SH.probability,7,3)","Prob"],
     ["cross_corr_rank","SH.cross_corr_rank","Rxc"],
