@@ -188,7 +188,13 @@ Important changes:
   Apache web server.  This might be accounts like 'apache', 'nobody',
   'httpd', etc.  If you're confounded, try:
   egrep "apache|httpd|nobody" /etc/passwd | sort
-  The number after the first colon is the WWW_UID
+  The number after the first colon is the WWW_UID.  As of version 1.70 there
+  is a potential issue running the update_driver_tables script if the UID of 
+  the user is the same as the WWW_UID.  If your system requires this setting,
+  ( generally because the web server is being run by a non-privileged user) it
+  is suggested you temporarily set the WWW_UID to another value while running 
+  the setup scripts; once run, you can restore the WWW_UID setting.  If the 
+  UIDs are not the same this is not an issue.
 
 - Change the CRYPT_KEY to some random strings for your site
 
