@@ -220,6 +220,7 @@ my $site;
 $BIOENTITY_URL =$parameters{server_name}."cgi/Interactions/ManageTable.cgi?TABLE_NAME=IN_bioentity&bioentity_id=";
 $INTERACTION_URL = $parameters{server_name}. "cgi/Interactions/ManageTable.cgi?TABLE_NAME=IN_interaction&interaction_id=";
 	$htmlFile = $parameters{filename} .".html";
+
 	if(! -d  $BASEDIR)
 	{
 		mkdir ($BASEDIR) || die "Can not open make $BASEDIR $!"; 
@@ -228,6 +229,14 @@ $INTERACTION_URL = $parameters{server_name}. "cgi/Interactions/ManageTable.cgi?T
 	open (File, ">>$BASEDIR$htmlFile") or print "can not open $htmlFile $!";
 print File "<html><body><h3> Result Summary  For Selected Interaction</h3><br>";
 print File "<center><b>You can edit  your  Sbeams entries by clicking on the links</b></center><br>";
+#################################
+#for testing 
+#	foreach my $key (keys %parameters)
+#	{
+#		print File  "$key ===  $parameters{$key}<br>";
+#	}
+	
+#######################################
 
 print File "<br><pre>";
 	my $organismSql = "select upper( full_name), organism_id  from sbeams.dbo.organism";
@@ -250,8 +259,9 @@ print File "<br><pre>";
     constraint_value=>$parameters{project_id} );
 	
 	
+	
 	$bioentityHash{canSource} = $parameters{canonicalName1};
-	$bioentityHash{comSource} =$parameters{commonName1};
+	$bioentityHash{comSource} =$parameters{comName1};
 	$bioentityHash{typeSource} = uc ($parameters{moleculeType1});	
 	$bioentityHash{typeSource} = 'Protein'	if ($parameters{canonicalName1} =~ /^([nx])[pctgrw].*/i and ! defined($parameters{moleculeType1}));
 	$bioentityHash{typeSource} = 'DNA'  if ($parameters{canonicalName1} =~ /^(nm_).*/i and ! defined($parameters{moleculeType1}));
@@ -540,7 +550,7 @@ WHERE P.record_status != 'D' ORDER BY UL.username+\' -\ '+P.name,P.project_id";
 		my $bioentitySql = qq / select bioentity_id from $TBIN_BIOENTITY where $whereClause/;
 		my @rows = $sbeams->selectOneColumn($bioentitySql);	
 		my $nrows = scalar(@rows);
-		$bioentityID = $rows[0] if $nrows == 1;
+		$bioentityID = $rows[0] if $nrows > 0;
 		return $bioentityID;
 	} 
 
@@ -581,7 +591,7 @@ WHERE P.record_status != 'D' ORDER BY UL.username+\' -\ '+P.name,P.project_id";
 		print "$interactionSql\n" if $DEBUG;
 		my @rows = $sbeams->selectOneColumn($interactionSql);	
 		my $nrows = scalar(@rows);
-		$interactionID = $rows[0] if $nrows == 1;
+		$interactionID = $rows[0] if $nrows > 0;
 		return $interactionID;
 	}
 	sub addToInteractionTable
