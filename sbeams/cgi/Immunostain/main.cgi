@@ -262,21 +262,34 @@ sub handle_request {
 
   ##########################################################################
   #### Print out all projects owned by the user
-
   $sbeams->printProjectsYouOwn();
 
 
 
   ##########################################################################
   #### Print out all projects user has access to
-
   $sbeams->printProjectsYouHaveAccessTo();
 
 
   ##########################################################################
   #### Print out some recent resultsets
-
   $sbeams->printRecentResultsets();
+
+
+
+  ##########################################################################
+  #### Finish with a disclaimer
+  print qq~
+	<BR>
+	<BR>
+	This system and this module in particular are still under
+	active development.  Please be patient and report bugs,
+	problems, difficulties, as well as suggestions to
+	<B>edeutsch\@systemsbiology.org</B>.<P>
+	<BR>
+	<BR>
+  ~;
+
 
 
   return;

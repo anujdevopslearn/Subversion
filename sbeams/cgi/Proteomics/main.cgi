@@ -321,8 +321,9 @@ sub handle_request {
 
 	<BR>
 	<BR>
-	This system is still under active development.  Please be
-	patient and report bugs, problems, difficulties, suggestions to
+	This system and this module in particular are still under
+	active development.  Please be patient and report bugs,
+	problems, difficulties, as well as suggestions to
 	<B>edeutsch\@systemsbiology.org</B>.<P>
 	<BR>
 	<BR>
