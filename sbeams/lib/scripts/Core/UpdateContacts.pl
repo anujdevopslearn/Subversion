@@ -350,7 +350,7 @@ sub handleRequest {
     my @usernames_data = ();
     while ( ($key,$value) = each %username_contact_ids) {
       if ($key) {
-        push(@usernames_data,[$key,$value,30]);
+        push(@usernames_data,[$key,$value,20]);
       }
     }
 
