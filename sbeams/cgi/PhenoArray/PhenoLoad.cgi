@@ -205,7 +205,7 @@ ENDOFPIC
 sub fileUploader {
     print qq!
 	<P>Please Choose the Dapple File to Upload
-	<INPUT TYPE="FILE" NAME="dapple_file">
+	<INPUT TYPE="FILE" SIZE="50" NAME="dapple_file">
 	    !
 }
 
