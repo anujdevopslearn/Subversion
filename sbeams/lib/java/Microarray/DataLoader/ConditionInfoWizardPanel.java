@@ -264,10 +264,13 @@ public class ConditionInfoWizardPanel extends WizardPanel
 	  String variableName = new String();
 	  if (u.matches()) {
 		variableUnits = u.group(2);
+		variableUnits.trim();
 		variableName = u.group(1);
+		variableName.trim();
 	  }
 	  for (int h=0;h<r;h++) {
 		String variableValue = (String)variableTable.getValueAt(h,m);
+		variableValue.trim();
 		ConditionVariable cv = new ConditionVariable(variableName, variableValue, variableUnits);
 		conditionList.setSelectedIndex(h);
 		ExperimentCondition ec = (ExperimentCondition)condData.get(getConditionName(h));
