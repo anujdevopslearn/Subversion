@@ -2979,8 +2979,10 @@ sub getWorkGroupJavascript {
   $hidden .= "<INPUT TYPE=HIDDEN NAME=table_group VALUE=$tgroup>";
 
   # Calc window dimensions
-  my $height = scalar( @$groupRef ) * 25 + 175;
-  my $width = 0;
+  my $height = ( scalar( @$groupRef ) ) ? scalar( @$groupRef ) * 25 + 175 : 200;
+  my $width = 30;
+#my $height = scalar( @$groupRef ) * 25 + 175;
+#my $width = 0;
 
   foreach my $grp ( @$groupRef ) {
     $hidden .= "<INPUT TYPE=HIDDEN NAME=groupinfo VALUE='" . join( ':::', @$grp ) . "'>\n";
