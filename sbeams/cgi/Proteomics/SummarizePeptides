@@ -690,11 +690,13 @@ sub handle_request {
       ["reference","BS.biosequence_name","Reference"],
       ["peptide","peptide","Peptide"],
       ["count","tABS.row_count","Count"],
+      ["average_quant","tABS.average_quant","Quant"],
+      ["isoelectric_point","STR(isoelectric_point,8,3)","Calc pI"],
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
     );
     $peptide_column = "peptide,";
-    $count_column = "1 AS 'row_count'";
+    $count_column = "1 AS 'row_count',STR(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0),10,2) AS 'average_quant',isoelectric_point";
   }
 
 
