@@ -5,7 +5,8 @@ PS_dbxref	Biosequence Database Cross Reference	ProteinStructure_infrastructure	Y
 PS_biosequence	BioSequence	ProteinStructure_infrastructure	NO	$TBPS_BIOSEQUENCE	biosequence_id				
 PS_biosequence_property_set	BioSequence Property Set	ProteinStructure_infrastructure	NO	$TBPS_BIOSEQUENCE_PROPERTY_SET	biosequence_property_set_id				
 PS_domain_match	Domain Match	ProteinStructure_infrastructure	NO	$TBPS_DOMAIN_MATCH	domain_match_id				
-PS_domain_match_source	Domain Match Source	ProteinStructure_infrastructure	YES	$TBPS_DOMAIN_MATCH_SOURCE	domain_match_source_id		ManageTable.cgi?TABLE_NAME=PS_domain_match_source	PS_domain_match_source	
+PS_domain_match_type	Domain Match Type	ProteinStructure_infrastructure	YES	$TBPS_DOMAIN_MATCH_TYPE	domain_match_type_id		ManageTable.cgi?TABLE_NAME=PS_domain_match_type	"PS_domain_match_source,PS_domain_match_type"	
+PS_domain_match_source	Domain Match Source	ProteinStructure_infrastructure	YES	$TBPS_DOMAIN_MATCH_SOURCE	domain_match_source_id		ManageTable.cgi?TABLE_NAME=PS_domain_match_source	"PS_domain_match_source,PS_domain_match_type"	
 PS_query_option	Query Option	ProteinStructure_infrastructure	YES	$TBPS_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=PS_query_option	PS_query_option	
 PS_BrowseBioSequence	Browse BioSequence	QUERY	NO				BrowseBioSequence.cgi		
 PS_GetDomainHit	Get Domain Hit	QUERY	NO				GetDomainHits		
