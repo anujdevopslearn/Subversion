@@ -94,3 +94,6 @@ SN_biosequence_rank_list	8	date_modified	Date Record Modified	datetime	8	0	N	CUR
 SN_biosequence_rank_list	9	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
 SN_biosequence_rank_list	10	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 SN_biosequence_rank_list	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+SN_GetGenotypes	1	project_id	Project									N	multioptionlist	4		Y	Y	N	Select desired projects to query.  Multiple items may be selected.	"SELECT distinct project_id,project_id FROM SNP.dbo.export_results_view ORDER BY project_id"
+SN_GetGenotypes	2	assay_id_constraint	Assay ID									N	text	50		Y	Y	N	Constraint for assay name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+SN_GetGenotypes	3	description	Call Quality									N	multioptionlist	4		Y	Y	N	Select desired genotype quality level.  Multiple items may be selected.	"SELECT distinct description,description FROM SNP.dbo.export_results_view ORDER BY description"
