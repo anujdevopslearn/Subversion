@@ -227,7 +227,7 @@ sub _getDBPass {
 # Return the username used to open a read-only connection to the database.
 ###############################################################################
 sub getDBROUser {
-  return $DBCONFIG->{$DBINSTANCE}->{DB_ROUSER};
+  return $DBCONFIG->{$DBINSTANCE}->{DB_RO_USER};
 }
 
 
