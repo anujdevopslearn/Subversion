@@ -1,0 +1,18 @@
+#MANUAL updates to table_column
+
+UPDATE table_column
+  SET optionlist_query = '
+SELECT search_batch_id,username + '' - '' + experiment_tag + '' -> '' + set_tag
+  FROM $TBPR_PROTEOMICS_EXPERIMENT PE
+  JOIN $TBPR_SEARCH_BATCH SB ON ( PE.experiment_id = SB.experiment_id )
+  JOIN $TBPR_BIOSEQUENCE_SET BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
+  JOIN $TB_USER_LOGIN UL ON ( PE.contact_id = UL.contact_id )
+ WHERE PE.record_status != ''D''
+ ORDER BY username,experiment_tag,set_tag'
+ WHERE (   table_name = 'PR_GetSearchHits'
+        OR table_name = 'PR_GetSearch'
+        OR table_name = 'BrowseAnnotatedPeptides'
+        OR table_name = 'PR_CompareExperiments'
+       )
+   AND column_name = 'search_batch_id'
+
