@@ -63,9 +63,9 @@ Options:
   --source_dir           Name of the source file from which data are loaded
   --organism_abbrev      Abbreviation of organism like Hs
 
- e.g.:  ./load_atlas_build.pl --atlas_build_name "HumanEns21P0.7" --organism_abbrev "Hs" --purge --load --source_dir "/net/db/projects/PeptideAtlas/pipeline/output/HumanV34dP0.9/DATA_FILES"
+ e.g.:  ./load_atlas_build.pl --atlas_build_name 'HumanEns21P0.7' --organism_abbrev 'Hs' --purge --load --source_dir '/net/db/projects/PeptideAtlas/pipeline/output/HumanV34dP0.9/DATA_FILES'
 
- e.g.: ./load_atlas_build.pl --atlas_build_name "TestAtlas" --delete
+ e.g.: ./load_atlas_build.pl --atlas_build_name 'TestAtlas' --delete
 EOU
 
 #### Process options
@@ -404,6 +404,7 @@ sub buildAtlas {
    my $counter = 0;
    my (%APD_peptide_accession, %APD_peptide_sequence, %APD_peptide_length, %APD_best_probability);
    my (%APD_n_observations, %APD_search_batch_ids, %APD_sample_ids, %APD_peptide_id);
+   my (%APD_is_subpeptide_of);
 
    while ($line = <INFILE>) {
 
@@ -433,6 +434,8 @@ sub buildAtlas {
        ## create string of sample_ids given string of search_batch_ids
        for (my $ii = 0; $ii <= $#tmp_search_batch_id; $ii++) {
 
+           my $search_batch_id = $tmp_search_batch_id[$ii];
+
            my $sql;
 
            ### given search_batch_id, need sample_id
@@ -442,8 +445,6 @@ sub buildAtlas {
            #   WHERE search_batch_id = '$tmp_search_batch_id[$ii]'
            #      AND record_status != 'D'
            #~;
-           #my @rows = $sbeams->selectOneColumn($sql); # should return a single entry
-           #my $tmp_sample_id = @rows[0];
  
            ## method above doesn't work for obsolete APD builds as the search_batch_ids have
            ## been updated in the sample record...so, need to use Proteomics records:
@@ -457,12 +458,12 @@ sub buildAtlas {
                    ON ( PE.experiment_tag = S.sample_tag)
                    JOIN Proteomics.dbo.search_batch SB 
                    ON ( PE.experiment_id = SB.experiment_id )
-               WHERE SB.search_batch_id = '$tmp_search_batch_id[$ii]'
+               WHERE SB.search_batch_id = '$search_batch_id'
            ~;
 
            my @rows = $sbeams->selectOneColumn($sql) 
                or die "could not find sample id for search_batch_id = ".
-               $tmp_search_batch_id[$ii]." in PeptideAtlas.dbo.sample ($!)";
+               $search_batch_id." in PeptideAtlas.dbo.sample ($!)";
 
            my $tmp_sample_id = @rows[0];
 
@@ -479,7 +480,7 @@ sub buildAtlas {
            }
 
 
-           ## get sample table info to help populate atlas_build_sample table
+           ## get sample table info to help populate atlas_build_sample table and sample
            my $sql;
 
            $sql = qq~
@@ -493,7 +494,9 @@ sub buildAtlas {
            ## array of refs to array:
            my @rows = $sbeams->selectSeveralColumns($sql)
                 or die "Couldn't find record for sample_id = ".
-                $tmp_sample_id." in PeptideAtlas.dbo.sample ($!)";
+                "$tmp_sample_id in PeptideAtlas.dbo.sample ".
+                "[search_batch_id = $search_batch_id".
+                "] \n$sql\n($!)";
 
            foreach my $row (@rows) {
 
@@ -520,7 +523,10 @@ sub buildAtlas {
                    verbose=>$VERBOSE,
                    testonly=>$TESTONLY,
                );
-           }  ## end Populate atlas_build_sample
+
+               ## Update sample table too to have search_batch_id 
+
+           }  ## end Populate atlas_build_sample and sample
 
        } ## end create string of search_batch_ids for a peptide
 
@@ -851,73 +857,103 @@ sub buildAtlas {
    } 
 
  
-   ## n_protein_mappings -- number of distinct accession numbers (proteins) 
+   ## n_protein_mappings -- Number of distinct accession numbers (proteins) 
    ##                       that a peptide maps to
-   ## n_genome_locations -- number of mappings to Genome where protein is not the same
+   ## n_genome_locations -- Number of mappings to Genome where protein is not the same
    ##                       (in other words, counts span over exons only once)
-   ## is_exon_spanning  --  whether a peptide has been mapped to a protein more than
-   ##                       once (with different chromosomal coordinates)
+   ## is_exon_spanning  --  Whether a peptide has been mapped to a protein more than
+   ##                       once (with different chromosomal coordinates), and not
+   ##                       mapping the entire peptide sequence.  Some proteins have
+   ##                       repeated sequences, so want to make sure not recording
+   ##                       those as exon_spanning
 
-   # print "size of hash = " . keys( %index_hash ) . ".\n";
+   ## protein_mappings_hash:  1st key = peptide, 2nd key = protein, value=anything
+   ## --> n_protein_mappings = keys ( $protein_mappings_hash{$peptide} )
+   ##
+   ## genome_locations_hash:  1st key = peptide, 2nd key = "chrom:start_chrom:end_chrom"
+   ## --> n_genome_locations = see below
+   ##
+   ## is_exon_spanning_hash:  1st key = peptide, 2nd key = protein,
+   ##                         value = 'y' if (  (diff_coords + 1) != (seq_length*3);
 
    print "\nCalculating n_protein_mappings, n_genome_locations, and is_exon_spanning\n";
 
-   ## looping through indices to count proteins, locations, etc...
-   foreach my $tmp_ind_str (values ( %index_hash ) ) {
+   ## looping through a peptide's array indices to calculate these:
+   foreach my $tmp_ind_str (values ( %index_hash ) ) {  #key = peptide_accession
 
        my @tmp_ind_array = split(" ", $tmp_ind_str);
  
-       my %unique_protein_hash;
+       my (%protein_mappings_hash, %genome_locations_hash, %is_exon_spanning_hash);
 
-       my %unique_coord_hash;
+       ## will skip 1st key = peptide in hashes below, and instead, 
+       ## reset hash for each peptide
+       reset %protein_mappings_hash; ## necessary?  above declaration should have cleared these?
+       reset %genome_locations_hash;
+       reset %is_exon_spanning_hash;
 
+       my $peptide = $peptide_accession[$tmp_ind_array[0]];
+       my $protein;
+
+       ## initialize to 'n'
+       $is_exon_spanning_hash{$protein} = 'n';
+
+
+       ## for each index:
        for (my $ii = 0; $ii <= $#tmp_ind_array; $ii++) {
 
            my $i_ind=$tmp_ind_array[$ii];
 
-           reset %unique_protein_hash; ## necessary?
-           reset %unique_coord_hash;   ## necessary?
+           $protein = $biosequence_name[$i_ind];
 
-           ## make unique protein hash (keys = protein, values=coordinate string)
-           my $coord_string=$chromosome[$i_ind] . $start_in_chromosome[$i_ind];
+           my $chrom = $chromosome[$i_ind];
 
-           $unique_protein_hash{$biosequence_name[$i_ind]} = $coord_string;
+           my $start = $start_in_chromosome[$i_ind];
 
-           ## is_exon_spanning...'y' when maps to one protein with more than one coordinate set
-           ## make unique coord hash (keys=coordinate string, values=protein)
-           $unique_coord_hash{$biosequence_name[$i_ind]}{$coord_string} = $biosequence_name[$i_ind];
+           my $end = $end_in_chromosome[$i_ind];
+
+           my $coord_str = "$chrom:$start:$end";
+
+          
+           $protein_mappings_hash{$protein} = $coord_str;
+
+
+           my $diff_coords = abs($start - $end );
+
+           my $seq_length = $APD_peptide_length{$peptide};
+
+           ## If entire sequence fits between coordinates, the protein has
+           ## redundant sequences.  If the sequence doesn't fit between
+           ## coordinates, it's exon spanning:
+           if (  ($diff_coords + 1) != ($seq_length * 3) ) {
+
+               $is_exon_spanning_hash{$protein} = 'y';
+
+           }
 
        } 
 
-       ## n_protein_mappings = final number of elements in %unique_protein_hash 
-       my $pep_n_protein_mappings = keys( %unique_protein_hash);
-
-       ## invert protein hash, making keys = coordinate string.
-       ## n_genome_locations = final number of elements in inverted_protein_hash
-       ## (that is unique protein names further filtered for unique coordinates)
-       my %inverse_protein_hash = reverse %unique_protein_hash;
+       ## Another iteration through indices to count n_genome_locations
+       ## want the number of unique coord strings, corrected to count is_exon_spanning peptides as only 1 addition.
+       my %inverse_protein_hash = reverse %protein_mappings_hash;
 
        my $pep_n_genome_locations = keys( %inverse_protein_hash);
+
+
+       my $pep_n_protein_mappings = keys( %protein_mappings_hash );
+
 
        ## need to assign values to array members now:
        foreach my $tmpind (@tmp_ind_array) {
 
+           $protein = $biosequence_name[$tmpind];
+
+
            $n_protein_mappings[$tmpind] = $pep_n_protein_mappings;
+
+           $is_exon_spanning[$tmpind] = $is_exon_spanning_hash{$protein};
 
            $n_genome_locations[$tmpind] = $pep_n_genome_locations;
 
-           my $array_protein = $biosequence_name[$tmpind];
-
-           ## if values of unique_coord_hash == $array_protein more than once, is_exon_spanning='y'
-           my $coord_count = 0;
-
-           ## need to unroll for each biosequence_name...
-           foreach my $tmp_biosequence_name ( keys %unique_coord_hash ) {       
-
-               $coord_count =  ( keys %{$unique_coord_hash{$tmp_biosequence_name}} );
-
-               if ($coord_count > 1) { $is_exon_spanning[$tmpind]= 'y'; }
-           }
        }
      
    } ## end calculate n_genome_locations, n_protein_mappings and is_exon_spanning loop
@@ -945,7 +981,8 @@ sub buildAtlas {
    ## ---> is_exon_spanning   = y for all
 
    ## testing match to above rules:
-   if ($TESTONLY && ($organism_abbrev eq 'Hs') ) {  ## the above cases have P=1.0, and tested for Ens build 22
+   ## the above cases have P=1.0, and tested for Ens build 22 - 26
+   if ($TESTONLY && ($organism_abbrev eq 'Hs') ) {  
        for (my $ii = 0; $ii <= $#peptide_accession; $ii++) {
            my @test_pep = ("PAp00011291", "PAp00004221", "PAp00004290", "PAp00005006");
            my @test_n_protein_mappings = ("2", "1", "2", "5");
@@ -955,14 +992,16 @@ sub buildAtlas {
            for (my $jj = 0; $jj <= $#test_pep; $jj++) {
                if ($peptide_accession[$ii] eq $test_pep[$jj]) {
                    if ($n_genome_locations[$ii] != $test_n_genome_locations[$jj]) {
-                       print "!!  $test_pep[$jj] ";
-                       print " $n_genome_locations[$ii] not equal to $test_n_genome_locations[$jj]!! \n";
+                       print "!! $test_pep[$jj] : expected n_genome_locations=$test_n_genome_locations[$jj]",
+                       " but calculated $n_genome_locations[$ii]\n";
                    }
                    if ($n_protein_mappings[$ii] != $test_n_protein_mappings[$jj]) {
-                       print "   !! $n_protein_mappings[$ii] not equal to $test_n_protein_mappings[$jj]!! \n";
+                       print "!! $test_pep[$jj] : expected n_protein_mappings=$test_n_protein_mappings[$jj]",
+                       " but calculated $n_protein_mappings[$ii]\n";
                    }
                    if ($is_exon_spanning[$ii] != $test_is_exon_spanning[$jj]) {
-                       print "   !! $is_exon_spanning[$ii] not equal to $test_is_exon_spanning[$jj]!! \n";
+                       print "!! $test_pep[$jj] : expected is_exon_spanning=$test_is_exon_spanning[$jj]",
+                       " but calculated $is_exon_spanning[$ii]\n";
                    }
                }
            }
@@ -1221,7 +1260,7 @@ sub buildAtlas {
  
    ####----------------------------------------------------------------------------
    ## Loading peptides without mappings into tables:
-   ##    peptide_instance, peptide_instance_sample
+   ##    peptide_instance, peptide_instance_sample.
    ####----------------------------------------------------------------------------
 
    print "\nLoading un-mapped peptides into peptide_instance and peptide_instance_sample\n";
@@ -1312,6 +1351,52 @@ sub buildAtlas {
        }
    } ## end peptide_instance entries for unmapped peptides
 
+
+   ##  calculate is_subpeptide_of, and enter into table peptide
+   ##
+   foreach my $sub_pep_acc (keys %APD_peptide_accession) {
+
+       for my $super_pep_acc ( keys %APD_peptide_accession) {
+
+           if ( index($super_pep_acc, $sub_pep_acc) && ($super_pep_acc ne $sub_pep_acc) ) {
+       
+
+               if ( $APD_is_subpeptide_of{$sub_pep_acc} ) {
+
+                   $APD_is_subpeptide_of{$sub_pep_acc} = 
+                       join ",", $APD_is_subpeptide_of{$sub_pep_acc}, $super_pep_acc;
+
+               } else { 
+
+                   $APD_is_subpeptide_of{$sub_pep_acc} = $super_pep_acc;
+
+               }
+
+           }
+       }
+
+ 
+       ## surround string with quotes:
+       $APD_is_subpeptide_of{$sub_pep_acc} = '"'.$APD_is_subpeptide_of{$sub_pep_acc}.'"';
+
+
+       ## update table peptide:
+       my %rowdata = ( ##   peptide           some of the table attributes:
+           is_subpeptide_of => , $APD_is_subpeptide_of{$sub_pep_acc},
+       );  
+ 
+
+       my $result = $sbeams->updateOrInsertRow(
+           update=>1,
+           table_name=>$TBAT_PEPTIDE,
+           rowdata_ref=>\%rowdata,
+           PK => 'peptide_id',
+           PK_value=>$APD_peptide_id{$sub_pep_acc},
+           verbose=>$VERBOSE,
+           testonly=>$TESTONLY,
+       );
+         
+   }
 
    ## LAST TEST to assert that all peptides of an atlas in
    ## peptide_instance  are associated with a peptide_instance_sample record
