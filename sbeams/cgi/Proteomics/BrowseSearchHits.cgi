@@ -140,13 +140,14 @@ sub printEntryForm {
       $parameters{xcorr_charge1} = ">4.0";
       $parameters{xcorr_charge2} = ">4.5";
       $parameters{xcorr_charge3} = ">5.0";
+      $parameters{sort_order} = "experiment_tag,set_tag,S.file_root,SH.cross_corr_rank";
     }
 
 
     #### If this is a ShowSearch query and sort_order is undefined (not just ""),
     #### then set to a likely default
     if (($TABLE_NAME eq "ShowSearch") && (!defined($parameters{sort_order})) ) {
-      $parameters{sort_order} = "S.file_root,experiment_tag,database_tag,SH.cross_corr_rank";
+      $parameters{sort_order} = "S.file_root,experiment_tag,set_tag,SH.cross_corr_rank";
     }
 
 
@@ -188,7 +189,7 @@ sub printEntryForm {
     $sbeams->printUserContext();
     print qq!
         <P>
-        <H2>Maintain $CATEGORY</H2>
+        <H2>$CATEGORY</H2>
         $LINESEPARATOR
         <FORM METHOD="post" $file_upload_flag>
         <TABLE>
@@ -516,7 +517,7 @@ sub printEntryForm {
         ["search_id","S.search_id","search_id"],
         ["search_hit_id","SH.search_hit_id","search_hit_id"],
         ["experiment_tag","experiment_tag","Exp"],
-        ["database_tag","database_tag","DB"],
+        ["set_tag","set_tag","DB"],
         ["data_location","SB.data_location","data_location"],
         ["fraction_tag","F.fraction_tag","fraction_tag"],
         ["file_root","S.file_root","file_root"],
@@ -531,9 +532,16 @@ sub printEntryForm {
         ["additional_proteins","additional_proteins","Nmore"],
         ["peptide_string","peptide_string","Peptide"],
         ["peptide","peptide","actual_peptide"],
-        ["database_path","PD.database_path","database_path"],
+        ["set_path","BSS.set_path","set_path"],
         ["ICAT","STR(ICAT_light,5,2) + ':' + STR(ICAT_heavy,5,2)","ICAT"],
       );
+
+
+      #### Adjust the columns definition based on user-selected options
+      if ( $parameters{display_options} =~ /BSDesc/ ) {
+        push(@column_array,["biosequence_desc","biosequence_desc","Reference Description"]);
+      }
+
 
       my $columns_clause = "";
       my $i = 0;
@@ -553,9 +561,10 @@ sub printEntryForm {
 	  JOIN proteomics.dbo.search_batch SB ON ( S.search_batch_id = SB.search_batch_id )
 	  JOIN proteomics.dbo.msms_scan MSS ON ( S.msms_scan_id = MSS.msms_scan_id )
 	  JOIN proteomics.dbo.fraction F ON ( MSS.fraction_id = F.fraction_id )
-	  JOIN proteomics.dbo.protein_database PD ON ( SB.protein_database_id = PD.protein_database_id )
+	  JOIN proteomics.dbo.biosequence_set BSS ON ( SB.biosequence_set_id = BSS.biosequence_set_id )
 	  JOIN proteomics.dbo.proteomics_experiment PE ON ( F.experiment_id = PE.experiment_id )
 	  LEFT JOIN $TB_ICAT_QUANTITATION ICAT ON ( SH.search_hit_id = ICAT.search_hit_id )
+	  LEFT JOIN $TB_BIOSEQUENCE BS ON ( SB.biosequence_set_id = BS.biosequence_set_id AND SH.reference = BS.biosequence_name )
 	 WHERE 1 = 1
 	$search_batch_clause
 	$xcorr_clause
@@ -574,11 +583,11 @@ sub printEntryForm {
 		   'file_root_ATAG' => 'TARGET="Win1"',
       		   'Rxc' => "$base_url?QUERY_NAME=ShowSearch&search_batch_id=\%$colnameidx{search_batch_id}V&file_root_constraint=\%$colnameidx{file_root}V&apply_action=QUERY",
 		   'Rxc_ATAG' => 'TARGET="Win1"',
-                   'Reference' => "http://regis/cgi-bin/consensus_html4?Ref=%V&Db=\%$colnameidx{database_path}V&Pep=\%$colnameidx{peptide}V&MassType=0",
+                   'Reference' => "http://regis/cgi-bin/consensus_html4?Ref=%V&Db=\%$colnameidx{set_path}V&Pep=\%$colnameidx{peptide}V&MassType=0",
 		   'Reference_ATAG' => 'TARGET="Win1"',
                    'Ions' => "http://regis/cgi-bin/displayions_html5?Dta=/data/search/\%$colnameidx{data_location}V/\%$colnameidx{fraction_tag}V/\%$colnameidx{file_root}V.dta&MassType=0&NumAxis=1&Pep=\%$colnameidx{peptide}V",
 		   'Ions_ATAG' => 'TARGET="Win1"',
-                   'Nmore' => "http://regis/cgi-bin/blast_html4?Db=\%$colnameidx{database_path}V&Pep=\%$colnameidx{peptide}V&MassType=0",
+                   'Nmore' => "http://regis/cgi-bin/blast_html4?Db=\%$colnameidx{set_path}V&Pep=\%$colnameidx{peptide}V&MassType=0",
 		   'Nmore_ATAG' => 'TARGET="Win1"',
                    'Peptide' => "http://www.ncbi.nlm.nih.gov/blast/Blast.cgi?PROGRAM=blastp&DATABASE=nr&OVERVIEW=TRUE&EXPECT=1000&FILTER=L&QUERY=\%$colnameidx{peptide}V",
 		   'Peptide_ATAG' => 'TARGET="Win1"',
@@ -590,7 +599,7 @@ sub printEntryForm {
                       'search_hit_id' => 1,
                       'fraction_tag' => 1,
                       'actual_peptide' => 1,
-                      'database_path' => 1,
+                      'set_path' => 1,
       );
 
 

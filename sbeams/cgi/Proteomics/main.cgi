@@ -81,7 +81,7 @@ sub showMainPage {
 	capabilities available thus far, or choose from this more
 	descriptive list:
 	<UL>
-	<LI><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=protein_database">Manage Protein Database information</a>
+	<LI><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=biosequence_set">Manage BioSequence Database information</a>
 	<LI><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=project">Manage Project information</a>
 	<LI><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=proteomics_experiment">Manage Experiment information</a>
 	<P>
