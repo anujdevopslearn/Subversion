@@ -1,7 +1,7 @@
 #!/usr/local/bin/perl
 
 ###############################################################################
-# Program     : ShowTICPlot.cgi
+# Program     : ShowTICPlot
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
 # $Id$
 #
@@ -165,8 +165,8 @@ sub printEntryForm {
 
     #print("filename = $filename<BR>\n");
     if ( -e $filename ) {
-      print "<IMG SRC=\"$CGI_BASE_DIR/Proteomics/SendTICImage.cgi?".
-        "fraction_id=$parameters{fraction_id}\"><BR>\n";
+      print "<IMG SRC=\"$CGI_BASE_DIR/Proteomics/GetImage?".
+        "fraction_id=$parameters{fraction_id}&image_type=TIC\"><BR>\n";
     } else {
       print "[PLOTS NOT AVAILABLE FOR THIS FRACTION]<BR>\n";
     }
