@@ -28,7 +28,7 @@ use vars qw ($sbeams $sbeamsMOD $q $current_username
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
-$sbeams = SBEAMS::Connection->new();
+#$sbeams = SBEAMS::Connection->new();
 
 use SBEAMS::PeptideAtlas;
 use SBEAMS::PeptideAtlas::Settings;
@@ -71,32 +71,41 @@ EOU
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
         "delete", "purge", "load",
-        "atlas_build_name:s","source_dir:s",
-        "organism_abbrev:s",
-     )) {
-  print "$USAGE";
-  exit;
+        "atlas_build_name:s","source_dir:s", "organism_abbrev:s")) {
+
+    die "\n$USAGE";
+
 }
 
 $VERBOSE = $OPTIONS{"verbose"} || 0;
+
 $QUIET = $OPTIONS{"quiet"} || 0;
+
 $DEBUG = $OPTIONS{"debug"} || 0;
+
 $TESTONLY = $OPTIONS{"testonly"} || 0;
+
 if ($DEBUG) {
-  print "Options settings:\n";
-  print "  VERBOSE = $VERBOSE\n";
-  print "  QUIET = $QUIET\n";
-  print "  DEBUG = $DEBUG\n";
-  print "  TESTONLY = $TESTONLY\n";
+
+    print "Options settings:\n";
+
+    print "  VERBOSE = $VERBOSE\n";
+
+    print "  QUIET = $QUIET\n";
+
+    print "  DEBUG = $DEBUG\n";
+
+    print "  TESTONLY = $TESTONLY\n";
 }
    
    
 ###############################################################################
 # Set Global Variables and execute main()
 ###############################################################################
-main();
-exit(0);
 
+main();
+
+exit(0);
 
 ###############################################################################
 # Main Program:
@@ -106,15 +115,17 @@ exit(0);
 sub main {
 
   #### Do the SBEAMS authentication and exit if a username is not returned
-  exit unless ($current_username = $sbeams->Authenticate(
-    work_group=>'PeptideAtlas_admin',
-  ));
+  exit unless (
+      $current_username = $sbeams->Authenticate(
+          work_group=>'PeptideAtlas_admin')
+  );
 
 
   $sbeams->printPageHeader() unless ($QUIET);
-  handleRequest();
-  $sbeams->printPageFooter() unless ($QUIET);
 
+  handleRequest();
+
+  $sbeams->printPageFooter() unless ($QUIET);
 
 } # end main
 
@@ -124,6 +135,7 @@ sub main {
 # handleRequest
 ###############################################################################
 sub handleRequest {
+
   my %args = @_;
 
   #### Set the command-line options
@@ -136,16 +148,15 @@ sub handleRequest {
 
   #### Verify required parameters
   unless ($atlas_build_name) {
-    print "ERROR: You must specify an --atlas_build_name\n\n";
-    print "$USAGE";
-    exit;
+    print "\nERROR: You must specify an --atlas_build_name\n\n";
+    die "\n$USAGE";
   }
 
   ## --delete with --load will not work
   if ($del && $load) {
       print "ERROR: --delete --load will not work.\n";
       print "  use: --purge --load instead\n\n";
-      print "$USAGE";
+      die "\n$USAGE";
       exit;
   }
 
@@ -533,6 +544,12 @@ sub buildAltas {
       if ($chromosome[$ind] =~ /^(chromosome:)(DROM.+:)(.+)(:.+:.+:.+)/ ) {
           $chromosome[$ind] = $3;
       }
+
+      ## if $columns[8] begins with an S, this is SGD data: ...could store SGDID later
+      if ($columns[8]  =~ /^S/ ) {
+          $chromosome[$ind] = $columns[12];
+      }
+
       $strand[$ind] = $columns[9];
       $start_in_chromosome[$ind] = $columns[10];
       $end_in_chromosome[$ind] = $columns[11];
