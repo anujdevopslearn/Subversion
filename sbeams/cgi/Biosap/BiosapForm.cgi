@@ -130,7 +130,7 @@ sub runFeaturama {
     $| = 1;
     #print "/net/techdev/featurama/bin/featurama $dirstr/featurama.params<br>";
     open(FEATURAMA, 
-	 "/net/techdev/featurama/bin/featurama $dirstr/featurama.params |") 
+	 "/net/techdev/featurama/bin/featurama $dirstr/featurama.params 2>&1|") 
 	 || croak "Can't run program: $!\n";
     
     print "</font></td></tr></table>";
