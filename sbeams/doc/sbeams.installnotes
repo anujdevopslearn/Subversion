@@ -38,10 +38,10 @@ Crypt-CBC-1.25
 Crypt-IDEA-1.01
 Authen-Smb-0.91      (For Windows Domain Authentication instead of UNIX auth)
 XML-Parser-2.29
-GD-1.33              (GD-1.41 not yet tested but may work)
-GDGraph-1.33a        (Modified to add the histogram subclass)
+GD-1.41
+GDGraph-1.35a        (specially modified version by Deutsch and included)
 GDGraph-XY-0.92
-GDTextUtil-0.82      (GDTextUtil-0.83 not yet tested but may work)
+GDTextUtil-0.84
 
 
 Additional common Perl modules are needed, but may not be on your system.
@@ -50,7 +50,7 @@ Should really write a little dependency checker program.  FIXME.
 ---------------
 The following non-Perl software is required:
 
-FreeTDS 0.60         (required by DBD-Sybase. Allows UNIX -> MSSQL/Sybase)
+FreeTDS 0.61         (required by DBD-Sybase only. Allows UNIX -> MSSQL/Sybase)
 libgd                (required by GD Perl modules)
 
 ---------------
@@ -256,7 +256,7 @@ If this doesn't work.  Do not proceed, debug first.
 
 
 -------------------------------------------------------------------------------
-7) Install Individual Modules
+8) Install Individual Modules
 
 Now follow the individual module install notes, e.g.:
 
