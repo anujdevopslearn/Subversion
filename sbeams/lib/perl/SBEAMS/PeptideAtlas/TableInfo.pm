@@ -86,7 +86,6 @@ sub returnTableInfo {
       FROM $TBAT_SAMPLE 
       WHERE project_id IN ( $project_string )
       AND record_status!='D'
-      AND project_id = '475'
       END_QUERY
 
     } elsif ($info_key eq "FULLQuery") {
