@@ -500,7 +500,11 @@ sub executeSQL {
     #### Get the database handle
     $dbh = $self->getDBHandle();
 
-    my ($rows) = $dbh->do("$sql") or croak $dbh->errstr;
+    my $sth = $dbh->prepare($sql) or die($dbh->errstr);
+    my $rows  = $sth->execute or die($dbh->errstr);
+
+    #### This doesn't seem to die if the execute fails????
+    #my ($rows) = $dbh->do("$sql") or die($dbh->errstr);
 
     return $rows;
 
@@ -2159,17 +2163,23 @@ sub transferTable {
   #### Decode the argument list
   my $src_conn = $args{'src_conn'} || die "ERROR: src_conn not passed";
   my $sql = $args{'sql'} || die("parameter sql not passed");
-  my $src_PK_name = $args{'src_PK_name'} || die("parameter src_PK_name not passed");
+  my $src_PK_name = $args{'src_PK_name'}
+    || die("parameter src_PK_name not passed");
   my $src_PK_column = $args{'src_PK_column'};
   die("parameter src_PK_column not passed") unless ($src_PK_column>=0);
 
   my $dest_conn = $args{'dest_conn'} || die "ERROR: dest_conn not passed";
-  my $column_map_ref = $args{'column_map_ref'} || die "ERROR: column_map_ref not passed";
-  my $transform_map_ref = $args{'transform_map_ref'} || die "ERROR: transform_map_ref not passed";
+  my $column_map_ref = $args{'column_map_ref'}
+    || die "ERROR: column_map_ref not passed";
+  my $transform_map_ref = $args{'transform_map_ref'}
+    || die "ERROR: transform_map_ref not passed";
   my $newkey_map_ref = $args{'newkey_map_ref'};
 
   my $table_name = $args{'table_name'} || die "ERROR: table_name not passed";
-  my $dest_PK = $args{'dest_PK'};
+  my $dest_PK_name = $args{'dest_PK_name'};
+
+  my $update = $args{'update'} || 0;
+  my $update_keys_ref = $args{'update_keys_ref'};
 
 
   #### Define standard variables
@@ -2197,7 +2207,8 @@ sub transferTable {
   	  if (defined($mapped_value)) {
   	    $rowdata{$value} = $mapped_value;
   	  } else {
-  	    print "Unable to transform column $key having value '$current_value'\n";
+  	    print "Unable to transform column $key having value ".
+              "'$current_value'\n";
   	  }
   	} else {
   	  $rowdata{$value} = $row->[$key];
@@ -2210,18 +2221,66 @@ sub transferTable {
 
     #### Logic to control whether we want returned PKs or not
     my $return_PK = 0;
-    $return_PK = 1 if ($dest_PK);
+    $return_PK = 1 if ($dest_PK_name);
 
 
-    $result = $dest_conn->insert_update_row(insert=>1,
-      table_name=>$table_name,
-      rowdata_ref=>\%rowdata,
-      PK=>$src_PK_name,return_PK=>$return_PK,
-      #verbose=>1,testonly=>1
+    #### If the update flag is set, then try to find out which record to update
+    my $did_update = 0;
+    if ($update) {
+      my @constraints;
+      my $constraints_str;
+      while ( ($key,$value) = each %{$update_keys_ref} ) {
+        push(@constraints,"$key = '".$row->[$value]."'");
+      }
+      if (@constraints) {
+        $constraints_str = join(" AND ",@constraints);
+        $sql = qq~
+          SELECT $dest_PK_name
+            FROM $table_name
+           WHERE $constraints_str
+        ~;
+
+        my @results = $self->selectOneColumn($sql);
+
+        #### If there is one matching record
+        if (scalar(@results) == 1) {
+          $result = $dest_conn->insert_update_row(update=>1,
+            table_name=>$table_name,
+            rowdata_ref=>\%rowdata,
+            PK=>$dest_PK_name,PK_value=>$results[0],
+            return_PK=>$return_PK,
+            #verbose=>1,
+            #testonly=>1,
+          );
+          $did_update = 1;
+
+        #### If there's more than one, then complain and exit
+        } elsif (scalar(@results) > 1) {
+          print "ERROR: Found more than one record matching $constraints_str";
+          return;
+
+        #### If there are none, then assume we will INSERT
+        } else {
+          $did_update = 0;
+	}
+      }
+    }
+
+
+    #### If we didn't do an update operation, do an INSERT
+    if ($did_update == 0) {
+      $result = $dest_conn->insert_update_row(insert=>1,
+  	table_name=>$table_name,
+  	rowdata_ref=>\%rowdata,
+  	PK=>$dest_PK_name,return_PK=>$return_PK,
+  	#verbose=>1,
+  	#testonly=>1,
       );
+    }  
+
     print "."; 
 
-    if ($dest_PK && $result) {
+    if ($dest_PK_name && $result) {
       $newkey_map_ref->{$row->[$src_PK_column]} = $result;
     }
 
