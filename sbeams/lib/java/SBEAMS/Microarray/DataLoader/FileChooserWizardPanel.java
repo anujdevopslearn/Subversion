@@ -16,8 +16,8 @@ public class FileChooserWizardPanel extends WizardPanel
   private JButton chooseFileButton;
   private JPanel imagePanel;
   private JList conditionList;
-  private String dataFile;
   private String experimentName = NEW_EXPERIMENT;
+  private String dataFile;
   private JTextField experimentNameField;
   private String[] conditionNames;
   private BufferedReader bufferedReader;
@@ -30,11 +30,19 @@ public class FileChooserWizardPanel extends WizardPanel
   }// constructor
 //-----------------------------------------------------------------------------------------------
   public FileChooserWizardPanel(String dataFile, String expName) {
+	this.dataFile = dataFile;
 	if (expName != null)
 	  experimentName = expName;
 	initialize();
+	handleDataFile(dataFile);
+  }// constructor
+//-----------------------------------------------------------------------------------------------
+  public FileChooserWizardPanel(String dataFile, String translatorFile, String expName) {
 	this.dataFile = dataFile;
-	handleDataFile();
+	if (expName != null)
+	  experimentName = expName;
+	initialize();
+	handleDataFile(dataFile, translatorFile);
   }// constructor
 //-----------------------------------------------------------------------------------------------
   public void initialize(){
@@ -122,7 +130,7 @@ public class FileChooserWizardPanel extends WizardPanel
 	int returnVal = fc.showOpenDialog(this);
 	if (returnVal ==JFileChooser.APPROVE_OPTION) {
 	  dataFile = (fc.getSelectedFile()).toString();
-	  handleDataFile();
+	  handleDataFile( dataFile );
  	}
   }// actionPerformed
 //-----------------------------------------------------------------------------------------------
@@ -138,9 +146,13 @@ public class FileChooserWizardPanel extends WizardPanel
 	return experimentName;
   }// getExperimentName
 //-----------------------------------------------------------------------------------------------
-  private void handleDataFile() {
+  private void handleDataFile(String dataFile) {
+	handleDataFile(dataFile, null);
+  }
+//-----------------------------------------------------------------------------------------------
+  private void handleDataFile(String dataFile, String translator) {
 	boolean success = false;
-	GeneExpressionFileReader gefr = new GeneExpressionFileReader(dataFile);
+	GeneExpressionFileReader gefr = new GeneExpressionFileReader(dataFile, translator);
 	success = gefr.read();
 	if (!success) {
 	  JOptionPane.showMessageDialog(null, "Unable to Load File", "Alert", JOptionPane.ERROR_MESSAGE);
