@@ -12,11 +12,15 @@ package SBEAMS::Connection;
 
 
 use strict;
-use vars qw($VERSION @ISA);
+use vars qw($VERSION @EXPORT_OK $invocation_mode $output_mode 
+            $output_stage $table_nest_level);
 
-use vars qw($invocation_mode $output_mode $output_stage $table_nest_level
-           );
+require Exporter;
+use SBEAMS::Connection::Log;
 
+our @ISA =  qw( Exporter );
+our $log = SBEAMS::Connection::Log->new();
+@EXPORT_OK = qw( $log );
 
 use SBEAMS::Connection::Authenticator;
 use SBEAMS::Connection::DBConnector;
@@ -28,17 +32,17 @@ use SBEAMS::Connection::ErrorHandler;
 use SBEAMS::Connection::Utilities;
 use SBEAMS::Connection::Permissions;
 
+push @ISA, qw(SBEAMS::Connection::Authenticator 
+           SBEAMS::Connection::DBConnector
+           SBEAMS::Connection::DBInterface 
+           SBEAMS::Connection::HTMLPrinter
+           SBEAMS::Connection::TableInfo
+           SBEAMS::Connection::Settings
+           SBEAMS::Connection::ErrorHandler
+           SBEAMS::Connection::Utilities
+           SBEAMS::Connection::Permissions
+           );
 
-@ISA = qw(SBEAMS::Connection::Authenticator 
-          SBEAMS::Connection::DBConnector
-          SBEAMS::Connection::DBInterface 
-          SBEAMS::Connection::HTMLPrinter
-          SBEAMS::Connection::TableInfo
-          SBEAMS::Connection::Settings
-          SBEAMS::Connection::ErrorHandler
-          SBEAMS::Connection::Utilities
-          SBEAMS::Connection::Permissions
-         );
 
 
 ###############################################################################
