@@ -563,7 +563,7 @@ sub printExperimentDesignSection {
     <TR BGCOLOR="#FFFFFF">
       <TD><B>\# of Hybridizations</B></TD>
       <TD>
-        <INPUT="text" NAME="numHyb" SIZE="5" VALUE="$num_hyb" onChange="verifyNumber(this)">
+        <INPUT TYPE="text" NAME="numHyb" SIZE="5" VALUE="$num_hyb" onChange="verifyNumber(this)">
       </TD>
     </TR>
     <TR><TD></TD></TR>
