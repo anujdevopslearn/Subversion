@@ -376,7 +376,7 @@ sub displayIntro
       
       
   	 my $organismSql = qq~ select organism_id,organism_name from 
-	 sbeams.dbo.organism ~; 
+	 $TB_ORGANISM ~; 
 	
 	  my %organismHash = $sbeams->selectTwoColumnHash($organismSql);
       my $flag = 0; 
