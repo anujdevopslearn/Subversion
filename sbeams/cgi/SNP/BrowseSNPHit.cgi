@@ -25,6 +25,7 @@ use CGI::Carp qw(fatalsToBrowser croak);
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::DBInterface;
 
 use SBEAMS::SNP;
 use SBEAMS::SNP::Settings;
@@ -243,18 +244,18 @@ sub printEntryForm {
     #### Define the desired columns
     my @column_array = (
       ["snp_accession","SI.snp_accession","SNP Accession"],
-      ["snp_source_accession","SI.snp_source_accession","snp_source_accession"],
-      ["allele_id","A.allele_id","allele_id"],
-      ["biosequence_set_id","BSS.biosequence_set_id","ref_id"],
-      ["end_fiveprime_position","ABS.end_fiveprime_position","end_fiveprime"],
-      ["strand","ABS.strand","strand"],
-      ["identified_percent","ABS.identified_percent","percent"],
-      ["match_ratio","convert(numeric(5,2),convert(real,ABS.match_length)/ABS.query_length)*100","match_ratio"],
+      ["snp_source_accession","SI.snp_source_accession","SNP Source Accession"],
+      ["allele_id","A.allele_id","Allele Id"],
+      ["set_name","BSS.set_name","BioSequence Set"],
+      ["end_fiveprime_position","ABS.end_fiveprime_position","End Fiveprime Position"],
+      ["strand","ABS.strand","Strand"],
+      ["identified_percent","ABS.identified_percent","Percent"],
+      ["match_ratio","convert(numeric(5,2),convert(real,ABS.match_length)/ABS.query_length)*100","Match Ratio"],
     );
 
     if ( $parameters{display_options} =~ /ShowSequence/ ) {
       @column_array = ( @column_array,
-        ["snp_sequence","convert(varchar(1000),S.fiveprime_sequence)+'['+S.allele_string+']'+convert(varchar(1000),S.threeprime_sequence)","snp_sequence"],
+        ["snp_sequence","convert(varchar(1000),SI.trimmed_fiveprime_sequence)+'['+SI.allele_string+']'+convert(varchar(1000),SI.trimmed_threeprime_sequence)","SNP Sequence"],
       );
     }
 
@@ -277,7 +278,8 @@ sub printEntryForm {
     }
 
     $sql = qq~
-SELECT SI.snp_instance_id,BSS.biosequence_set_id AS ref_id,MAX(ABS.identified_percent) AS 'identified_percent'
+SELECT SI.snp_instance_id,BSS.biosequence_set_id AS ref_id,
+       MAX(ABS.identified_percent) AS 'identified_percent'
   INTO #tmp1
   FROM $TBSN_SNP_INSTANCE SI
   JOIN $TBSN_SNP_SOURCE SS on (SS.snp_source_id = SI.snp_source_id)
