@@ -18,7 +18,7 @@ use SBEAMS::Connection::Settings;
 
 
 #### Set up new variables
-use vars qw(@ISA @EXPORT 
+use vars qw(@ISA @EXPORT
     $SBEAMS_PART
 );
 
