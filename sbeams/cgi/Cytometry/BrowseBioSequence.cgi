@@ -459,8 +459,10 @@ sub handle_request {
   my $pass_action = "QUERY";
   $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
 
+  my $module_prefix = $sbeams->getModulePrefix() . '_';
+
   #### Define the hypertext links for columns that need them
-  %url_cols = ('set_tag' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=biosequence_set&biosequence_set_id=\%$colnameidx{biosequence_set_id}V",
+  %url_cols = ('set_tag' => "$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=${module_prefix}biosequence_set&biosequence_set_id=\%$colnameidx{biosequence_set_id}V",
                'accession' => "\%$colnameidx{accessor}V\%$colnameidx{accesssion}V",
                'Molecular Function' => "http://www.ebi.ac.uk/ego/QuickGO?mode=display&entry=\%$colnameidx{molecular_function_GO}V",
                'Molecular Function_ATAG' => 'TARGET="WinExt"',
