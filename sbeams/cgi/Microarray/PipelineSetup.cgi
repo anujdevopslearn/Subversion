@@ -42,16 +42,18 @@ $q = new CGI;
 $sbeams = new SBEAMS::Connection;
 $sbeamsMA = new SBEAMS::Microarray;
 $sbeamsMA->setSBEAMS($sbeams);
+my $JNLP_DIRECTORY = "$PHYSICAL_BASE_DIR/tmp/Microarray/dataLoader";
+my $JAR_DIRECTORY = "$SERVER_BASE_DIR$HTML_BASE_DIR/bin/java/jars/dataLoader";
 
 ###############################################################################
-# Global Variables
+# global Variables
 ###############################################################################
 main();
 
 
 ###############################################################################
 # Main Program:
-#x
+#
 # Call $sbeams->InterfaceEntry with pointer to the subroutine to execute if
 # the authentication succeeds.
 ###############################################################################
@@ -113,7 +115,6 @@ sub handle_request {
   }elsif($tab eq 'process') {
 	send_to_pipeline(parameters_ref=>\%parameters);
   }
-
 
 } # end processRequests
 
@@ -1429,6 +1430,7 @@ sub print_final_screen {
   <FORM METHOD="POST" NAME="finalForm"><BR>
 	<INPUT TYPE="hidden" NAME="tab" VALUE="">
 	<INPUT TYPE="hidden" NAME="workingDir" VALUE = "$parameters{'outputDirectory'}">
+	<INPUT TYPE="hidden" NAME="loader" VALUE = "$parameters{'loader'}">
 	<INPUT TYPE="button" VALUE="<--Back" OnClick="history.go(-1)">
   <INPUT TYPE="button" NAME="actionButton" VALUE="Send to Pipeline!" OnClick="prepareForSubmission()">
   $LINESEPARATOR
@@ -1716,15 +1718,19 @@ SELECT	A.array_name,
 
 
   ## Data Loader Details
-  my $dataLoader_commands = "";
-  if ($parameters{'loader'} eq 'Yes'){
-	$dataLoader_commands = "#DATA LOADER\n";
-	my $pid = $parameters{'outputDirectory'};
-	$dataLoader_commands .=  "project_id = $pid\n";
-	$dataLoader_commands .= "subdirectory = TBD\n";
-	$dataLoader_commands .= "EXECUTE = data_loader\n\n";
-  }
-  print $dataLoader_commands;
+#  my $dataLoader_commands = "";
+#  if ($parameters{'loader'} eq 'Yes'){
+#	$dataLoader_commands = "#DATA LOADER\n";
+#	my $pid = $parameters{'outputDirectory'};
+#	my @title = $sbeams->selectOneColumn("SELECT name FROM $TB_PROJECT WHERE project_id = $pid");
+#	my $project_title = $title[0];
+#	$project_title =~ s/\s+/_/g;
+#	$dataLoader_commands .= "project_title = $project_title\n";
+#	$dataLoader_commands .=  "project_id = $pid\n";
+#	$dataLoader_commands .= "subdirectory = TBD\n";
+#	$dataLoader_commands .= "EXECUTE = data_loader\n\n";
+#  }
+#  print $dataLoader_commands;
 
   ## Print Load Conditions Commands
 #  if ($parameters{'dataLoad'} eq 'Yes'){
@@ -1820,15 +1826,75 @@ sub send_to_pipeline {
   my $timestr = strftime("%Y%m%d.%H%M%S",$sec,$min,$hour,$mday,$mon,$year);
   my $proc_subdir = $parameters{'proc_name'} || $timestr;
 
-  ## Last-minute changes
-  # identify subdirectory for data loader
-  $command_file_content =~ s/subdirectory\s?=\s?TBD/subdirectory = $proc_subdir/;
-  
+
+  ## try to eliminate bug-causing namings
+  $proc_subdir =~ s/\s/_/g;
+  $proc_subdir =~ s/\'/_/g;
+  $proc_subdir =~ s/\"/_/g;
+  $proc_subdir =~ s/\./_/g;
+
+  ## Data Loader JNLP Details
+  if ($parameters{'loader'} eq 'Yes'){
+
+	# Determine Project Title
+	my @title = $sbeams->selectOneColumn("SELECT name FROM $TB_PROJECT WHERE project_id = $project");
+	my $project_title = $title[0];
+	$project_title =~ s/\s+/_/g;
+
+	# Command Line Arguments
+	my @a = ("-t", $project_title,"-m", "sbeamsIndirect://db/sbeams/cgi/Microarray/ViewFile.cgi?".
+	"action=read".
+	"&FILE_NAME=matrix_output".
+	"&project_id=$project".
+	"&SUBDIR=$proc_subdir");
+	my $arguments = "";
+	foreach my $argument (@a) {
+	  $arguments .= qq~
+	<argument>$argument</argument>~;
+	}
+
+	# Create JNLP File
+	my $jnlp_file_path = $JNLP_DIRECTORY."/$proc_subdir".".jnlp";
+	my $jnlp_file_url = $jnlp_file_path;
+	$jnlp_file_url =~ s/$PHYSICAL_BASE_DIR/$SERVER_BASE_DIR$HTML_BASE_DIR/;
+	open (INFILE, ">$jnlp_file_path");
+	print INFILE qq~
+<?xml version="1.0" encoding="utf-8"?>
+<jnlp
+  codebase="$jnlp_file_url">
+  <information>
+    <title>MetaDataEditor (prototype)</title>
+    <vendor>ISB</vendor>
+    <offline-allowed/>
+  </information>
+  <security>
+      <all-permissions/>
+  </security>
+  <resources>
+    <j2se version="1.4+" max-heap-size="1024M"/>
+    <jar href="$JAR_DIRECTORY/DataLoader.jar"/>
+    <jar href="$JAR_DIRECTORY/experiment.jar"/>
+    <jar href="$JAR_DIRECTORY/jdom.jar"/>
+    <jar href="$JAR_DIRECTORY/visad.jar"/>
+    <jar href="$JAR_DIRECTORY/java-getopt-1.0.10.jar"/>
+  </resources>
+  <application-desc>
+$arguments
+  </application-desc>
+</jnlp>
+~;
+	close INFILE;
+	chmod (0666,"$jnlp_file_path");
+
+	# Adjust Email Notification Process
+
+	my $jnlp_command = "jnlp_file = $jnlp_file_url\n";
+	$command_file_content =~ s/(EXECUTE\s=\semail_notify)/$jnlp_command$1/;
+  }
+
   ## Directories
   my $queue_dir = "/net/arrays/Pipeline/queue";
-#	my $queue_dir = "/users/mjohnson/test_site/queue";
   my $output_dir = "/net/arrays/Pipeline/output";
-#	my $output_dir = "/users/mjohnson/test_site/output";
   my $arraybot_working_dir = "project_id/$project/$proc_subdir";
 
   ## Plan/Control File
@@ -1846,44 +1912,36 @@ sub send_to_pipeline {
 	return;
   }
 
-  ## try to eliminate bug-causing namings
-  $arraybot_working_dir =~ s/\s/_/g;
-  $arraybot_working_dir =~ s/\'/_/g;
-  $arraybot_working_dir =~ s/\"/_/g;
-  $arraybot_working_dir =~ s/\./_/g;
+  ## Write Project Comments
+  print "<BR>Writing project comments to working directory:$proc_subdir</BR>";
+  open (COMMENTSFILE,">$queue_dir/comments$timestr") ||
+	croak ("Unable to write comments $queue_dir/comments$timestr ");
+  print COMMENTSFILE $pipeline_comments;
+  close (COMMENTSFILE);
+  chmod (0666,"$queue_dir/comments$timestr");
 
 
-#	## Write Project Comments
-#	print "<BR>Writing project comments to working directory:$proc_subdir</BR>";
-#	open (COMMENTSFILE,">$queue_dir/comments$timestr") ||
-#			croak ("Unable to write comments $queue_dir/comments$timestr ");
-#	print COMMENTSFILE $pipeline_comments;
-#	close (COMMENTSFILE);
-#	chmod (0666,"$queue_dir/comments$timestr");
+  #### Write the plan file
+  print "<BR>Writing processing plan file '$plan_filename'<BR>\n";
+  open(PLANFILE,">$queue_dir/$plan_filename") ||
+	croak("Unable to write to file '$queue_dir/$plan_filename'");
+  print PLANFILE $command_file_content;
+  close(PLANFILE);
+  chmod (0777,"$queue_dir/$plan_filename");
 
-
-	#### Write the plan file
-	print "<BR>Writing processing plan file '$plan_filename'<BR>\n";
-	open(PLANFILE,">$queue_dir/$plan_filename") ||
-      croak("Unable to write to file '$queue_dir/$plan_filename'");
-	print PLANFILE $command_file_content;
-	close(PLANFILE);
-	chmod (0777,"$queue_dir/$plan_filename");
-
-	#### Write the control file
+  #### Write the control file
 	print "<BR>Writing job control file '$control_filename'<BR>\n";
-	open(CONTROLFILE,">$queue_dir/$control_filename") ||
-      croak("Unable to write to file '$queue_dir/$control_filename'");
-	print CONTROLFILE "submitted_by=$current_username\n";
-	print CONTROLFILE "working_dir=$arraybot_working_dir\n";
-	print CONTROLFILE "status=SUBMITTED\n";
-	close(CONTROLFILE);
-	chmod (0777,"$queue_dir/$control_filename");
+  open(CONTROLFILE,">$queue_dir/$control_filename") ||
+	croak("Unable to write to file '$queue_dir/$control_filename'");
+  print CONTROLFILE "submitted_by=$current_username\n";
+  print CONTROLFILE "working_dir=$arraybot_working_dir\n";
+  print CONTROLFILE "status=SUBMITTED\n";
+  close(CONTROLFILE);
+  chmod (0777,"$queue_dir/$control_filename");
 
+  print "Done!<BR><BR>\n";
 
-    print "Done!<BR><BR>\n";
-
-    print qq~
+  print qq~
 	The plan and job control files have been successfully written to the
 	queue.  Your job will be processed in the order received.  You can
 	see the log file of your job by clicking on the link below:<BR><BR>
