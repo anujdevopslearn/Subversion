@@ -238,6 +238,11 @@ sub handle_request {
     constraint_name=>"Search Batch List",
     constraint_value=>$parameters{search_batch_id} );
   return if ($search_batch_clause eq '-1');
+  unless (defined($parameters{search_batch_id}) &&
+          $parameters{search_batch_id}) {
+    print "<H4>You must select at least one experiment to browse!</H4>\n\n";
+    return;
+  }
 
 
   #### Build PROBABILITY constraint
