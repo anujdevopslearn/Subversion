@@ -258,11 +258,99 @@ sub printStyleSheet {
 	.rev_gray{background-color: #555555; ${FONT_SIZE_LG}pt; font-weight: bold; color:white}
 	.blue_bg{ font-family: Helvetica, Arial, sans-serif; background-color: #4455cc; ${FONT_SIZE_HG}pt; font-weight: bold; color: white}
 	.orange_bg{ background-color: #FFCC66; ${FONT_SIZE_LG}pt; font-weight: bold}
+	.red_bg{ background-color: #882222; ${FONT_SIZE_LG}pt; font-weight: bold; color:white;}
 	.small_cell {font-size: 8; background-color: #CCCCCC; white-space: nowrap  }
 	.anno_cell {white-space: nowrap  }
 	.present_cell{border: none}
 	.marginal_cell{border: 1px solid #0033CC}
 	.absent_cell{border: 2px solid #660033}
+	.small_text{font-family: Helvetica,Arial,sans-serif; font-size:x-small; color:#aaaaaa}
+	
+	a.edit_menuButton:link {
+	/* font-size: 12px; */
+	font-family: arial,helvetica,san-serif;
+	color: #000000;
+	line-height: 10px;
+	white-space: nowrap;
+	font-style: normal;
+	font-weight: bold;
+  	/* display: block; */
+  	margin: 3px;
+  	border-style: solid;
+	border-width: 1px;
+	border-color: #ccffff #669999 #669999 #ccffff;
+	padding: 2px 2px 2px 2px;
+	background-color: #ffbb00;
+ 	}
+a.edit_menuButton:visited {
+	/* font-size: 12px; */
+	font-family: arial,helvetica,san-serif;
+	color: #333333;
+	line-height: 10px;
+	font-style: normal;
+	font-weight: bold;
+	text-decoration: none;
+  	/* display: block; */
+  	border-color: #ffffff #99cccc #99cccc #ffffff;
+	margin: 3px;
+	border-style: solid;
+	border-width: 1px;
+	padding: 2px 2px 2px 2px;
+	background-color: #ff8800;
+	
+ 	}
+
+a.edit_menuButton:hover {
+ 	/* font-size: 12px; */
+	font-family: arial,helvetica,san-serif;
+	color: #000000;
+	line-height: 12px;
+	font-style: normal;
+	font-weight: bold;
+	/* display: block; */
+  	margin: 0px;
+  	border-style: solid;
+	border-width: 1px;
+	border-color: #ffffff #99cccc #99cccc #ffffff;
+	margin: 3px;
+	padding: 2px 2px 2px 2px;
+	background-color: #ff8800;
+}
+a.edit_menuButton:active {
+ 	/* font-size: 12px; */
+	font-family: arial,helvetica,san-serif;
+	color: #ffffff;
+	line-height: 10px;
+	font-style: normal;
+	font-weight: bold;
+	text-decoration: none;
+  	/* display: block; */	
+  	margin: 0px;
+  	border-style: solid;
+	border-width: 2px;
+	border-color: #336666 #ccffff #ccffff #336666;
+	margin: 3px;
+	padding: 2px 2px 2px 2px;
+	background-color: #ff8800;
+}
+a.red_button:link{
+ 	/* font-size: 12px; */
+	font-family: arial,helvetica,san-serif;
+	color: #ffffff;
+	line-height: 10px;
+	font-style: normal;
+	font-weight: bold;
+	text-decoration: none;
+  	/* display: block; */	
+  	margin: 0px;
+  	border-style: solid;
+	border-width: 2px;
+	border-color: #336666 #ccffff #ccffff #336666;
+	margin: 0px;
+	padding: 2px 2px 2px 2px;
+	background-color: #ff0066;
+}
+	
 	//-->
 	</style>
     ~;
@@ -485,8 +573,18 @@ sub display_page_footer {
   #### If finishing up the page completely is desired
   if ($display_footer eq 'YES') {
     print qq~
-	<BR><HR SIZE="2" NOSHADE WIDTH="30%" ALIGN="LEFT">
-	SBEAMS @ ISB [Under Development]<BR><BR><BR>
+	<BR>
+	<HR SIZE="2" NOSHADE WIDTH="55%" ALIGN="LEFT" color="#FF8700">
+	<TABLE>
+	<TR>
+	  <TD><IMG SRC="/images/ISB_symbol_tiny.jpg"></TD>
+	  <TD class='small_text'>SBEAMS version $SBEAMS_VERSION<TD>
+	</TR>
+	<TR>
+	  <TD>&nbsp;</TD>
+	  <TD class='small_text'>&copy; 2005 Institute for Systems Biology</TD>
+	</TR>
+	</TABLE>
 	</BODY></HTML>\n\n
     ~;
   }
