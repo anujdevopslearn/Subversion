@@ -74,7 +74,7 @@ sub showMainPage {
 	<BR>
 
 	<UL>
-	<LI><A HREF="MicroArrayMain.cgi">SBEAMS - MicroArray</A>
+	<LI><A HREF="MicroArrayMain.cgi">SBEAMS - Microarray</A>
 	<BR><BR>
 	<LI><A HREF="Proteomics/main.cgi">SBEAMS - Proteomics</A>
 	<BR><BR>
