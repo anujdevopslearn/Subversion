@@ -1017,7 +1017,7 @@ sub loadBiosequence {
   }
 
 
-  #### Hack folr yucky halo mamSumm
+  #### Hack for yucky halo mamSum
   my $adj_biosequence_name = $biosequence_name;
   chop($adj_biosequence_name);
 
