@@ -90,6 +90,15 @@ sub error {
 
 } # end error
 
+sub getStackTrace {
+  my ( $message, $p, $f, $l, $s, $h, $w );
+  my $i = 0;
+  use File::Basename;
+  while (($p, $f, $l, $s, $h, $w) = caller($i++)) {
+    $message .= "Package: $p\t File: " . basename($f) . "\t Line: $l\t Sub: $s\n";
+  }
+  return $message;
+}
 
 ###############################################################################
 
