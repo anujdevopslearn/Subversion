@@ -1001,7 +1001,7 @@ sub postProcessResultset {
   $buf.="Number of good PDB hit domains: $stats{pbdblast_domains}\n";
   $buf.="Number of good PFAM hit but not PDB hit domains: $stats{pfam_best_domains}\n";
   $buf.="Number of good Rosetta hit domains without PDB or PFAM hits: $stats{rosetta_best_domains}\n";
-  $buf.="Total number of well identified domains: ".($stats{pbdblast_domains}+$stats{pfam_domains}+$stats{rosetta_best_domains})."\n";
+  $buf.="Total number of well identified domains: ".($stats{pbdblast_domains}+$stats{pfam_best_domains}+$stats{rosetta_best_domains})."\n";
 
   $buf.="Number of good PFAM hits regardless of PDB hits: $stats{pfam_domains} (often more than one match per domain!)\n";
   $buf.="Number of good Rosetta hits regardless of PDB or PFAM hits: $stats{rosetta_success_domains}\n";
