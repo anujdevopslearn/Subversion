@@ -122,6 +122,11 @@ account is what is referred to above as "user1".
 Include in Apache's httpd.conf file the following execution permissions:
 
 #------
+<Location /sbeamscommon>
+    deny from all
+</Location>
+
+
 <Location /sbeams/cgi>
     Options ExecCGI
     SetHandler cgi-script
@@ -165,22 +170,40 @@ mkdir dev1   (this may need to be done as root. then do: chown user1 dev1)
 cd dev1
 tar -zxvf ~/sbeams-0.20.tar.gz
 
-Create tmp directories and symlinks:
-cd sbeams
+Create a sbeamscommon directory for sharing dynamic files between
+different instances and create symlinks:
+mkdir sbeamscommon
+
   (for now, just create the directories for stuff to live in right here, but
    it may be a good idea to make a sym link to another location or partition
    since there could eventually be large amounts of data here!!!)
-mkdir data images/tmp tmp tmp/queries
-chmod a+rwx images/tmp tmp/queries
-ln -s ../includes doc/includes
+cd sbeamscommon
+mkdir images images/tmp
+mkdir lib lib/conf
+chmod a+w images/tmp
+mkdir var var/resultsets var/logs var/upload
+chmod g+w var/resultsets var/logs var/upload
 
-For now, make the main site point to dev1, but eventually when there is
+cd ..
+cd sbeams
+ln -s ../includes doc/includes
+ln -s ../sbeamscommon/var
+ln -s ../sbeamscommon/images/tmp images/tmp
+
+For now, duplicate the main site from dev1, but eventually when there is
 parallel development and production usage, these should be separate trees
 kept in sync with CVS or some other such tool.
 
 (may require root privilege)
 cd ../..
-ln -s dev1/sbeams sbeams
+cp -a dev1/sbeams sbeams
+
+rm sbeams/var
+ln -s ../sbeamscommon/var sbeams/var
+rm sbeams/images/tmp
+ln -s ../../sbeamscommon/images/tmp sbeams/images/tmp
+rm sbeams/lib/conf/SBEAMS.conf
+ln -s ../../../sbeamscommon/lib/conf/SBEAMS.conf sbeams/lib/conf/SBEAMS.conf
 
 
 -------------------------------------------------------------------------------
@@ -192,11 +215,18 @@ site properly, you will have trouble later!
 setenv SBEAMS /local/www/html/dev1/sbeams
 
 cd $SBEAMS/lib/conf
-cp SBEAMS.conf.template SBEAMS.conf
+cp SBEAMS.conf.template ../../../sbeamscommon/lib/conf/SBEAMS.conf
+ln -s ../../../sbeamscommon/lib/conf/SBEAMS.conf
 
 The passwords needed to connect to the database are stored encrypted in the
 SBEAMS.conf file.  You will need to generate the encrypted versions at this
 point.  Run the encryption script as follows:
+
+(note that all SBEAMS scripts use /usr/local/bin/perl.  If you do not
+have a /usr/local/bin/perl, it is highly recommended that you create
+a sym link from /usr/local/bin/perl to your actual perl, e.g.:
+ln -s /usr/bin/perl /usr/local/bin/perl
+)
 
 $SBEAMS/lib/scripts/Core/encryptDbPasswd.pl -p DB_PASSWORD -c CONF_FILE
 
