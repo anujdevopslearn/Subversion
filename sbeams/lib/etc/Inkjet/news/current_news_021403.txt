@@ -1,0 +1,8 @@
+Title: Inkjet DB Interface changes
+Posted: 01-16-03
+Welcome to the new user home for the Inkjet DB!
+This is under active construction-- let <A HREF="mailto:mjohnson@systemsbiology.org">Michael Johnson</A> know if you have any suggestions on how to make a better database interface.  
+
+Title:MIAME Status pages on the way
+Posted: 01-16-03
+It is a top priority to ensure that ISB array users have the ability to create MIAME compliant datasets.  These tools and interfaces to do this are being developed currently and will be rolled out ASAP!
