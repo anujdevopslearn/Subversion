@@ -216,8 +216,8 @@ sub get_pw_par {
 	}
     }
     if ($plsnum eq "") {
-	print "mkstd.pl: pulse width parameter not found.\n";
-	print "mkstd.pl: Something is wrong, this parameter should exist.\n";
+	print "<br><b>No pulse width factor.\n";
+	print "Error:  Something is wrong, thisf actor should exist.\n </b><br>";
     }
     return($plsnum);
 }
@@ -240,7 +240,7 @@ sub get_lut_par {
 	}
     }
     if ($lutnum eq "") {
-	print "mkstd.pl: LUT DECISIONS parameter not found.\n";
+	print "No LUT Decision factor<br>";
     }
     return($lutnum);
 }
@@ -292,7 +292,7 @@ sub get_cls_par {
 	}
     }
     if ($clsnum eq "") {
-	print "mkstd.pl: CLASS DECISIONS parameter not found.\n";
+	print "No Class decision factor<br>";
     }
     return($clsnum);
 }
@@ -313,7 +313,7 @@ sub get_cts_par {
 	}
     }
     if ($ctsnum eq "") {
-	print "mkstd.pl: COUNTER parameter not found.\n";
+		print  "No Count factor<br>";
     }
     return($ctsnum);
 }
@@ -496,6 +496,7 @@ sub dump_data {
 # On a file of 535745 events, mkstd.pl using "dump_data" took 4:28 on
 # diercks3, and consumed all of the available memory, making things very slow.
 # Using dump_data2, the same file conversion took 1:45.
+=comment
 sub dump_data2 {
 
     $infile   = shift(@_);
@@ -590,14 +591,13 @@ sub dump_data2 {
 	# Now, output all the non-standard parameters.
 	for ($i = 0; $i <= $#unnamed; $i++) {
 	    printf OUTFILE ("%6d",$event[$unnamed[$i]]);
-	}
-	printf  OUTFILE ("\n");
+		printf  OUTFILE ("\n");
     }
     close(FCSFILE);
     close(OUTFILE);
 
 }
-
+=cut
 ###############################################################################
 # This is an updated version of the "dump_data" routine coded above.  The
 # main difference is that this version does not load all of the data into 
