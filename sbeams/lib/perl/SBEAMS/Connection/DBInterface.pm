@@ -769,6 +769,17 @@ sub parseConstraint2SQL {
   }
 
 
+  #### Parse type text_list: a list of strings separated by commas
+  if ($constraint_type eq "text_list") {
+    print "Parsing text_list $constraint_name<BR>\n" if ($verbose);
+    my @tmplist = split(",",$constraint_value);
+    my $constraint_string = '';
+    foreach my $element (@tmplist) {
+      $constraint_string .= "'".$self->convertSingletoTwoQuotes($element)."',";
+    }
+    chop($constraint_string);  # Remove last comma
+    return "   AND $constraint_column IN ( $constraint_string )";
+  }
 
 
   die "ERROR: unrecognized constraint_type!";
