@@ -62,6 +62,10 @@ sub printPageHeader {
     }
 
 
+    #### Determine the Title bar background decoration
+    my $header_bkg = "bgcolor=\"$BGCOLOR\"";
+    $header_bkg = "background=\"/images/plaintop.jpg\"" if ($DBVERSION =~ /Primary/);
+
     print qq~
 	<!--META HTTP-EQUIV="Expires" CONTENT="Fri, Jun 12 1981 08:20:00 GMT"-->
 	<!--META HTTP-EQUIV="Pragma" CONTENT="no-cache"-->
@@ -70,13 +74,13 @@ sub printPageHeader {
 
 	<!-- Background white, links blue (unvisited), navy (visited), red (active) -->
 	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" OnLoad="self.focus();">
-	<table border=0 width="100%" cellspacing=0 cellpadding=1>
+	<table border=0 width="100%" cellspacing=0 cellpadding=3>
 
 	<!------- Header ------------------------------------------------>
 	<a name="TOP"></a>
 	<tr>
-	  <td bgcolor="$BARCOLOR"><img height=50 width=50 border=0 alt="$DBTITLE Logo" src="$HTML_BASE_DIR/images/logo.gif"></td>
-	  <td align="left" bgcolor="$BGCOLOR"><H1>$DBTITLE - Systems Biology Experiment Analysis Management System<BR>$DBVERSION</H1></td>
+	  <td bgcolor="$BARCOLOR"><a href="http://www.systemsbiology.org/"><img height=60 width=60 border=0 alt="ISB Main" src="/images/ISBlogo60t.gif"></a><a href="http://db.systemsbiology.net/"><img height=60 width=60 border=0 alt="ISB DB" src="/images/ISBDBt.gif"></a></td>
+	  <td align="left" $header_bkg><H1>$DBTITLE - Systems Biology Experiment Analysis Management System<BR>$DBVERSION</H1></td>
 	</tr>
     ~;
 
@@ -88,6 +92,7 @@ sub printPageHeader {
 	<tr><td bgcolor="$BARCOLOR" align="left" valign="top">
 	<table border=0 width="120" cellpadding=2 cellspacing=0>
 
+	<tr><td><a href="/"><b>Server Home</b></a></td></tr>
 	<tr><td><a href="$HTML_BASE_DIR/"><b>$DBTITLE Home</b></a></td></tr>
 
 	</table>
@@ -108,18 +113,20 @@ sub printPageHeader {
 	<tr><td bgcolor="$BARCOLOR" align="left" valign="top">
 	<table border=0 width="120" cellpadding=2 cellspacing=0>
 
-	<tr><td><a href="$CGI_BASE_DIR/main.cgi">>$DBTITLE Home</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">>Logout</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/main.cgi">$DBTITLE Home</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Microarray/main.cgi">- Microarray</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/main.cgi">- Proteomics</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Inkjet/main.cgi">- Inket</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Biosap/main.cgi">- Biosap</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/main.cgi"><nobr>- Phenotype Array</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/GEAP/main.cgi">- GEAP</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/tools/main.cgi">- Tools</a></td></tr>
+	<tr><td>Installed Modules:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Microarray/main.cgi"><nobr>&nbsp;&nbsp;&nbsp;Microarray</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Proteomics/main.cgi"><nobr>&nbsp;&nbsp;&nbsp;Proteomics</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Inkjet/main.cgi"><nobr>&nbsp;&nbsp;&nbsp;Inket</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Biosap/main.cgi"><nobr>&nbsp;&nbsp;&nbsp;Biosap</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/main.cgi"><nobr>&nbsp;&nbsp;&nbsp;Phenotype Array</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/GEAP/main.cgi"><nobr>&nbsp;&nbsp;&nbsp;GEAP</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/tools/main.cgi"><nobr>&nbsp;&nbsp;&nbsp;Tools</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=user_login">- Admin</a></td></tr>
+	<tr><td>&nbsp;</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=user_login">Admin</a></td></tr>
 	</table>
 	</td>
 
@@ -160,41 +167,29 @@ sub printStyleSheet {
       $FONT_SIZE=12;
       $FONT_SIZE_SM=10;
       $FONT_SIZE_LG=14;
-      $FONT_SIZE_HG=20;
-    }
-    if ( $HTTP_USER_AGENT =~ /Win/ ) {
-      $FONT_SIZE=9;
-      $FONT_SIZE_SM=8;
-      $FONT_SIZE_LG=12;
-      $FONT_SIZE_HG=14;
-    }
-    if ( $HTTP_USER_AGENT =~ /Mozilla\/5/ ) {
-      $FONT_SIZE=9;
-      $FONT_SIZE_SM=8;
-      $FONT_SIZE_LG=12;
-      $FONT_SIZE_HG=14;
+      $FONT_SIZE_HG=19;
     }
 
 
     print qq~
 	<style type="text/css">
 	//<!--
-	body {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt}
-	th   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt; font-weight: bold;}
-	td   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt;}
-	form   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt}
+	body {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt}
+	th   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; font-weight: bold;}
+	td   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt;}
+	form   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt}
 	pre    {  font-family: Courier New, Courier; font-size: ${FONT_SIZE_SM}pt}
-	h1   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_HG}pt; font-weight: bold}
-	h2   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
-	h3   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_LG}pt}
-	h4   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE_LG}pt}
-	A:link    {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: none; color: blue}
-	A:visited {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: none; color: blue}
-	A:hover   {  font-family: Arial, Helvetica, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: red}
-	A:link.nav {  font-family: Verdana, Arial, Helvetica, sans-serif; color: #000000}
-	A:visited.nav {  font-family: Verdana, Arial, Helvetica, sans-serif; color: #000000}
-	A:hover.nav {  font-family: Verdana, Arial, Helvetica, sans-serif; color: red;}
-	.nav {  font-family: Verdana, Arial, Helvetica, sans-serif; color: #000000}
+	h1   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_HG}pt; font-weight: bold}
+	h2   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_LG}pt; font-weight: bold}
+	h3   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE_LG}pt}
+	h4   {  font-family: AHelvetica, rial, sans-serif; font-size: ${FONT_SIZE_LG}pt}
+	A:link    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: none; color: blue}
+	A:visited {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: none; color: darkblue}
+	A:hover   {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: red}
+	A:link.nav {  font-family: Helvetica, Arial, sans-serif; color: #000000}
+	A:visited.nav {  font-family: Helvetica, Arial, sans-serif; color: #000000}
+	A:hover.nav {  font-family: Helvetica, Arial, sans-serif; color: red;}
+	.nav {  font-family: Helvetica, Arial, sans-serif; color: #000000}
 	//-->
 	</style>
     ~;

@@ -62,6 +62,10 @@ sub printPageHeader {
     $self->printStyleSheet();
 
 
+    #### Determine the Title bar background decoration
+    my $header_bkg = "bgcolor=\"$BGCOLOR\"";
+    $header_bkg = "background=\"/images/plaintop.jpg\"" if ($DBVERSION =~ /Primary/);
+
     print qq~
 	<!--META HTTP-EQUIV="Expires" CONTENT="Fri, Jun 12 1981 08:20:00 GMT"-->
 	<!--META HTTP-EQUIV="Pragma" CONTENT="no-cache"-->
@@ -76,7 +80,7 @@ sub printPageHeader {
 	<a name="TOP"></a>
 	<tr>
 	  <td bgcolor="$BARCOLOR"><img height=50 width=50 border=0 alt="$DBTITLE Logo" src="$HTML_BASE_DIR/images/logo.gif"></td>
-	  <td align="left" bgcolor="$BGCOLOR"><H1>$DBTITLE - $SBEAMS_PART<BR>$DBVERSION</H1></td>
+	  <td align="left" $header_bkg><H1>$DBTITLE - $SBEAMS_PART<BR>$DBVERSION</H1></td>
 	</tr>
 
     ~;
@@ -89,22 +93,26 @@ sub printPageHeader {
 	<tr><td bgcolor="$BARCOLOR" align="left" valign="top">
 	<table border=0 width="120" cellpadding=2 cellspacing=0>
 
-	<tr><td><a href="$CGI_BASE_DIR/main.cgi">>$DBTITLE Home</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/main.cgi">>Proteomics Home</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">>Logout</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/main.cgi">$DBTITLE Home</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/main.cgi">$SBEAMS_PART Home</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=biosequence_set"><nobr>- BioSequence DBs</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=project">- Projects</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=proteomics_experiment"><nobr>- Experiments</nobr></a></td></tr>
+	<tr><td>Manage Tables:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=project"<nobr>&nbsp;&nbsp;&nbsp;Projects</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=proteomics_experiment"><nobr>&nbsp;&nbsp;&nbsp;Experiments</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/SummarizeExperiment.cgi"><nobr>- Summarize Exp'ment</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi"><nobr>- Browse Search Hits</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/BrowseAnnotatedPeptides.cgi"><nobr>- Browse Annotated</nobr><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Peptides</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/BrowseBioSequence.cgi"><nobr>- Browse BioSeqs</nobr></a></td></tr>
+	<tr><td>Browse Data:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Proteomics/SummarizeExperiment.cgi"><nobr>&nbsp;&nbsp;&nbsp;Summarize Exp's</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse Search Hits</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Proteomics/BrowseAnnotatedPeptides.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse Annotated</nobr><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Peptides</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Proteomics/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Proteomics/flycat.cgi"><nobr>- FLYCAT</nobr></a></td></tr>
+	<tr><td>Special Interfaces:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Proteomics/flycat.cgi"><nobr>&nbsp;&nbsp;&nbsp;FLYCAT</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="http://db.systemsbiology.net:8080/proteomicsToolkit/"><nobr>- Proteomics Toolkit</nobr></a></td></tr>
+	<tr><td>Other Tools:</td></tr>
+	<tr><td><a href="http://db.systemsbiology.net:8080/proteomicsToolkit/"><nobr>&nbsp;&nbsp;&nbsp;Proteomics Toolkit</nobr></a></td></tr>
 	</table>
 	</td>
 

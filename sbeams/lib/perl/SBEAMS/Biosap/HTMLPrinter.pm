@@ -62,6 +62,10 @@ sub printPageHeader {
     $self->printStyleSheet();
 
 
+    #### Determine the Title bar background decoration
+    my $header_bkg = "bgcolor=\"$BGCOLOR\"";
+    $header_bkg = "background=\"/images/plaintop.jpg\"" if ($DBVERSION =~ /Primary/);
+
     print qq~
 	<!--META HTTP-EQUIV="Expires" CONTENT="Fri, Jun 12 1981 08:20:00 GMT"-->
 	<!--META HTTP-EQUIV="Pragma" CONTENT="no-cache"-->
@@ -75,8 +79,8 @@ sub printPageHeader {
 	<!------- Header ------------------------------------------------>
 	<a name="TOP"></a>
 	<tr>
-	  <td bgcolor="$BGCOLOR"><img border=0 width=175 height=100 alt="BIOSAP" src="$HTML_BASE_DIR/images/bs_logo.jpg"></td>
-	  <td align="left" bgcolor="$BGCOLOR"><H1>Blast Integrated Oligonucleotide Selection Accelerator Package</H1></td>
+	  <td bgcolor="$BARCOLOR"><img border=0 width=120 height=60 alt="BIOSAP" src="$HTML_BASE_DIR/images/bs_logo.jpg"></td>
+	  <td align="left" $header_bkg><H1>Blast Integrated Oligonucleotide Selection Accelerator Package</H1></td>
 	</tr>
 
     ~;
@@ -89,16 +93,20 @@ sub printPageHeader {
 	<tr><td bgcolor="$BARCOLOR" align="left" valign="top">
 	<table border=0 width="120" cellpadding=2 cellspacing=0>
 
-	<tr><td><a href="$CGI_BASE_DIR/main.cgi">>$DBTITLE Home</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Biosap/main.cgi">>Biosap Home</a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">>Logout</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/main.cgi">$DBTITLE Home</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/main.cgi">$SBEAMS_PART Home</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Biosap/ManageTable.cgi?TABLE_NAME=bs_biosequence_set"><nobr>- Manage BioSequence</nobr></a></td></tr>
+	<tr><td>Manage Tables:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Biosap/ManageTable.cgi?TABLE_NAME=bs_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Biosap/BiosapForm.cgi"><nobr>- New Biosap Run</nobr></a></td></tr>
+	<tr><td>Browse Data:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Biosap/SummarizeRuns.cgi"><nobr>&nbsp;&nbsp;&nbsp;Summarize Runs</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Biosap/BrowseFeatures.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse Features</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Biosap/SummarizeRuns.cgi"><nobr>- Summarize Runs</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/Biosap/BrowseFeatures.cgi"><nobr>- Browse Features</nobr></a></td></tr>
+	<tr><td>Generate Data:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/Biosap/BiosapForm.cgi"><nobr>&nbsp;&nbsp;&nbsp;New Biosap Run</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>
 	</table>
 	</td>
 
