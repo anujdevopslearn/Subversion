@@ -16,7 +16,7 @@ use Bio::Tools::BPlite;
 use Getopt::Long;
 use vars qw ($sbeams $sbeamsMOD
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
-             $current_contact_id $current_username);
+             $TESTONLY $current_contact_id $current_username);
 use lib qw (/net/db/lib/sbeams/lib/perl);
 use FindBin;
 use lib "$FindBin::Bin/../lib";
@@ -58,19 +58,22 @@ EOU
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
-  "database:s","delete_existing","update_existing")) {
+        "database:s","delete_existing","update_existing","testonly")
+        && ($ARGV[0])) {
   print "$USAGE";
   exit;
 }
 $VERBOSE = $OPTIONS{"verbose"} || 0;
 $QUIET = $OPTIONS{"quiet"} || 0;
 $DEBUG = $OPTIONS{"debug"} || 0;
+$TESTONLY = $OPTIONS{"testonly"} || 0;
 if ($DEBUG) {
   print "Options settings:\n";
   print "  VERBOSE = $VERBOSE\n";
   print "  QUIET = $QUIET\n";
   print "  DEBUG = $DEBUG\n";
   print "  DBVERSION = $DBVERSION\n";
+  print "  TESTONLY = $TESTONLY\n";
 }
 
 
@@ -106,12 +109,6 @@ sub main {
   print "\n" unless ($QUIET);
 
 
-  #### If a parameter is not supplied, print usage and bail
-  unless ($ARGV[0]) {
-    print $USAGE;
-    exit 0;
-  }
-
   #### Set the name file
   my $source_file = $ARGV[0];
   unless ( -e "$source_file" ) {
@@ -132,13 +129,12 @@ sub main {
     $sql = "SELECT A.snp_instance_id,SI.trimmed_fiveprime_length,SI.trimmed_threeprime_length" .
            "  FROM ${TBSN_ALLELE} A " .
            "LEFT JOIN ${TBSN_SNP_INSTANCE} SI on (A.snp_instance_id = SI.snp_instance_id)" .
-           " WHERE A.allele_id = '$queryname'";
-#    print "SQL: $sql\n";
+           " WHERE A.query_sequence_id = '$queryname'";
 
     @snp_data = $sbeams->selectSeveralColumns($sql);
     $allele_hash{$queryname}=$snp_data[0];
 
-    $rowdata{allele_id} = $queryname if (defined($queryname));
+    $rowdata{query_sequence_id} = $queryname if (defined($queryname));
     $querylen = $blast->qlength;
     $rowdata{query_length} = $querylen if (defined($querylen));
     $dbtitle = $blast->database;
@@ -155,7 +151,6 @@ sub main {
         $sql = "SELECT biosequence_name,biosequence_id" .
   	       "  FROM ${TBSN_BIOSEQUENCE}" .
   	       " WHERE biosequence_name = '$bioname'";
-#        print "SQL: $sql\n";
         my %biosequence_id = $sbeams->selectTwoColumnHash($sql);
         $rowdata{matched_biosequence_id} = $biosequence_id{$bioname};
 
@@ -192,10 +187,13 @@ sub main {
 
     #### Insert the data into the database
     if ($rowdata{matched_biosequence_id}) {
-      $result = $sbeams->insert_update_row(insert=>1,
+      $result = $sbeams->insert_update_row(
+        insert=>1,
         table_name=>"${TBSN_ALLELE_BLAST_STATS}",
-        rowdata_ref=>\%rowdata,PK=>"allele_id",
-#        ,verbose=>1,testonly=>1
+        rowdata_ref=>\%rowdata,
+        PK=>"allele_id",
+        verbose=>$VERBOSE,
+        testonly=>$TESTONLY,
       );
     }
     last if ($blast->_parseHeader == -1);
