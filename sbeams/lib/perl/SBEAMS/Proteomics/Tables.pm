@@ -40,6 +40,7 @@ use vars qw(@ISA @EXPORT
     $TBPR_ANNOTATION_LABEL
     $TBPR_ANNOTATION_CONFIDENCE
     $TBPR_ANNOTATION_SOURCE
+    $TBPR_USER_ANNOTATION_LABEL
     $TBPR_QUERY_OPTION
 
 );
@@ -72,6 +73,7 @@ require Exporter;
     $TBPR_ANNOTATION_LABEL
     $TBPR_ANNOTATION_CONFIDENCE
     $TBPR_ANNOTATION_SOURCE
+    $TBPR_USER_ANNOTATION_LABEL
     $TBPR_QUERY_OPTION
 
 );
@@ -105,6 +107,7 @@ $TBPR_SEARCH_HIT_ANNOTATION       = "${mod}search_hit_annotation";
 $TBPR_ANNOTATION_LABEL            = "${mod}annotation_label";
 $TBPR_ANNOTATION_CONFIDENCE       = "${mod}annotation_confidence";
 $TBPR_ANNOTATION_SOURCE           = "${mod}annotation_source";
+$TBPR_USER_ANNOTATION_LABEL       = "${mod}user_annotation_label";
 $TBPR_QUERY_OPTION                = "${mod}query_option";
 
 
