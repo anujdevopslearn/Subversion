@@ -66,7 +66,7 @@ sub showMainPage {
 
     $sbeams->printUserContext();
 
-    print qq!
+    print qq~
 	<BR>
 	You are successfully logged into the $DBTITLE - $SBEAMS_PART system.
 	Please choose your tasks from the menu bar on the left.<P>
@@ -78,12 +78,12 @@ sub showMainPage {
 	<BR>
 
 	<UL>
-	<LI>
+	<LI> Here is the stub for the Tools area.  We need tools!
 	</UL>
 
 	<BR>
 	<BR>
-    !;
+    ~;
 
 } # end showMainPage
 

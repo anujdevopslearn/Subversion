@@ -1399,10 +1399,29 @@ sub printCompletedEntry {
     my %optionlists;
     my %templist;
     foreach $element (keys %optionlist_queries) {
-        $optionlist_queries{$element} =~ s/\$contact_id/$current_contact_id/;
+
+        # If "$contact_id" appears in the SQL optionlist query, then substitute
+        # that with either a value of $parameters{contact_id} if it is not
+        # empty, or otherwise replace with the $current_contact_id
+        if ( $optionlist_queries{$element} =~ /\$contact_id/ ) {
+          if ( $parameters{"contact_id"} eq "" ) {
+            $optionlist_queries{$element} =~
+                s/\$contact_id/$current_contact_id/;
+          } else {
+            $optionlist_queries{$element} =~
+                s/\$contact_id/$parameters{contact_id}/;
+          }
+        }
+
+        # Build the option list
+        #$optionlists{$element}=$sbeams->buildOptionList(
+        #   $optionlist_queries{$element},$parameters{$element});
+        #print "--> $optionlist_queries{$element} ==: ",join(",",%templist),"<BR>\n"
+
         %templist = $sbeams->SelectTwoColumnHash($optionlist_queries{$element});
         $optionlists{$element} = $templist{$parameters{$element}};
     }
+
 
 
     # ---------------------------

@@ -212,7 +212,7 @@ sub printEntryForm {
 	SELECT column_name,column_title,is_required,input_type,input_length,
 	       is_data_column,column_text,optionlist_query,onChange
 	  FROM $TB_TABLE_COLUMN
-	 WHERE table_name='$DB_TABLE_NAME'
+	 WHERE table_name='$TABLE_NAME'
 	   AND is_data_column='Y'
 	 ORDER BY column_index
     ~;
@@ -739,7 +739,7 @@ sub processEntryForm {
     # Execute the SQL statement extract status and PK from result
     @returned_information = $sbeams->applySqlChange("$sql_query",
       $current_contact_id,
-      $DB_TABLE_NAME,"$PK_COLUMN_NAME=$parameters{$PK_COLUMN_NAME}");
+      $TABLE_NAME,"$PK_COLUMN_NAME=$parameters{$PK_COLUMN_NAME}");
     my $returned_request_status = shift @returned_information;
     my $returned_request_PK = shift @returned_information;
 
