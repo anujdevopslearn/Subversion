@@ -26,15 +26,14 @@ Immunostain image files will be named according to the following convention
 for consistency, with 6 items separated by spaces:
 
 <PRE>
-CD90 02-002A 1 b hp a 100.jpg
- |      |  | | | |  |  |
- |      |  | | | |  |  +--------- <font color=red>Total image magnification</font> (20,40,100,200,400,...)
- |      |  | | | |  |
- |      |  | | | |  +------------ <font color=red>Parent image designator</font> (-,a,b,c,d,...)
- |      |  | | | |
- |      |  | | | +----------------<font color=red>Species Organ designator</font> (human h, mouse m, bladder b, prostate p)
- |      |  | | |
- |      |  | | +-------------- <font color=red>Image index</font> (a,b,c,d,e,...)
+CD90 02-002A 1  HP a 100.jpg
+ |      |  | |  |  |  |
+ |      |  | |  |  |  +--------- <font color=red>Total image magnification</font> (20,40,100,200,400,...)
+ |      |  | |  |  |
+ |      |  | |  |  +------------ <font color=red>Image Label</font> (lowercase letter for the image, followed be a second lower case image label
+ |      |  | |  |                of the parent/lower magnification image or a hyphen if there is no parent image  -,a,b,c,d,...)
+ |      |  | |  |
+ |      |  | |  +----------------<font color=red>Species Organ designator</font> (human H, mouse M, bladder B, prostate P)
  |      |  | |
  |      |  | +---------------- <font color=red>Section index</font> (1,2,3,4,...)
  |      |  |
