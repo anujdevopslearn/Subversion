@@ -835,7 +835,7 @@ sub deleteRecordsAndChildren {
 
     my @sub_tables = split(",",$table_child_relationship->{$table_name});
     foreach my $element (@sub_tables) {
-      if ($element =~ /^([\w_-\d]+)\(([A-Z]+)\)$/) {
+      if ($element =~ /^([\w_\-\d]+)\(([A-Z]+)\)$/) {
         my $child_table_name = $1;
 	my $child_type = $2;
         print "  Processing child $child_table_name ($child_type)\n\n"
