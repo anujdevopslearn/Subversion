@@ -299,11 +299,33 @@ sub start_element {
     #### Since someone changes the XML format regularly without telling
     #### anyone else, provide a facility to kill some attributes while trying
     #### to load
-    print "!";
-    delete $attrs{group_sibling_id} if (exists($attrs{group_sibling_id}));
-    delete $attrs{unique_stripped_peptides} if (exists($attrs{unique_stripped_peptides}));
-    delete $attrs{is_contributing_evidence} if (exists($attrs{is_contributing_evidence}));
-
+    my %attrs_to_drop = (
+      group_sibling_id => 1,
+      unique_stripped_peptides => 1,
+      is_contributing_evidence => 1,
+      source_files_alt => 1,
+      run_options => 1,
+      output_file => 1,
+      num_input_1_spectra => 1,
+      num_input_2_spectra => 1,
+      num_input_3_spectra => 1,
+      num_predicted_correct_prots => 1,
+      initial_min_peptide_prob => 1,
+      initial_peptide_wt_iters => 1,
+      final_peptide_wt_iters => 1,
+      nsp_distribution_iters => 1,
+      source_file_xtn => 1,
+      predicted_num_correct => 1,
+      predicted_num_incorrect => 1,
+      total_number_peptides => 1,
+      index => 1,
+    );
+    foreach my $attr (keys(%attrs_to_drop)) {
+      if (exists($attrs{$attr})) {
+        print "!";
+        delete $attrs{$attr};
+      }
+    }
 
 
     #### If there's a execution_date attribute, then convert format
@@ -405,7 +427,7 @@ sub start_element {
     if ($ignored_elements{$localname}) {
       #### Just ignore it
     } else {
-      print "<$localname> Don't know what to do with <$localname> yet\n";
+      print "\nSKIP: Don't know what to do with <$localname> yet\n";
     }
 
   }
