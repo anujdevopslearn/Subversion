@@ -417,6 +417,78 @@ sub printPageFooter {
 
 
 ###############################################################################
+# print_tabs
+###############################################################################
+sub print_tabs {
+    my $self= shift;
+    my %args = @_;
+    my $SUB_NAME = "print_tabs";
+    
+## Decode argument list
+    my $tab_titles_ref = $args{'tab_titles_ref'}
+    || die "ERROR[$SUB_NAME]:tab_titles_ref not passed";
+    my $selected_tab = $args{'selected_tab'} || 0;
+    my $page_link = $args{'page_link'}
+    || die "ERROR[$SUB_NAME]:page_link not passed";
+    my $unselected_bg_color   = $args{'unselected_bg_color'}   || "\#224499";
+    my $unselected_font_color = $args{'unselected_font_color'} || "\#ffffff";
+    my $selected_bg_color     = $args{'selected_bg_color'}     || "\#ffcc33";
+    my $selected_font_color   = $args{'selected_font_color'}   || "\#000000";
+    my $line_color            = $args{'line_color'}            || "\#3366cc";
+    
+    
+    
+## Define standard variables
+    my @tab_titles = @{$tab_titles_ref};
+    my $counter = 0;
+    
+## Start TABLE
+    print qq~
+	<TABLE BORDER="0" CELLSPACING="0" CELLPADDING="0">
+	<TR>
+	~;
+    
+## for each desired tab, make one
+    while (@tab_titles) {
+	my $tab_title = shift(@tab_titles);
+	my $link = $tab_title;
+	while ($link =~ /\s+/) {
+	    $link =~ s(\s+)(_);
+	}
+	$link =~ tr/A-Z/a-z/;
+	if ($counter == $selected_tab) {
+	    print qq~
+		<TD WIDTH="15">&nbsp;</TD>
+		<TD BGCOLOR="$selected_bg_color" ALIGN="CENTER" WIDTH="95" NOWRAP><A HREF="$page_link?tab=$link"><FONT COLOR="$selected_font_color" SIZE="-1">$tab_title</FONT></A></TD>
+		~;
+	}else {
+	    print qq~
+		<TD WIDTH="15">&nbsp;</TD>
+		<TD BGCOLOR="$unselected_bg_color" ALIGN="CENTER" WIDTH="95" NOWRAP><A HREF="$page_link?tab=$link"><FONT COLOR="$unselected_font_color" SIZE="-1">$tab_title</FONT></A></TD>
+		~;
+	}
+	$counter++;
+	
+    }
+    
+## Draw line underneath tabs
+    print qq~
+	<TD WIDTH="15">&nbsp;</TD>
+	</TR>
+	<TR>
+        <TD colspan=12 BGCOLOR="$line_color"><IMG WIDTH=1 height=1 alt=""></TD>
+	~;
+    
+## Finish table
+    print qq~
+	</TR>
+	</TABLE>
+	~;
+    
+    return;
+}
+
+###############################################################################
 
 1;
 
