@@ -2558,7 +2558,7 @@ sub transferTable {
     %rowdata = ();
 
     while ( ($key,$value) = each %{$column_map_ref} ) {
-      if (defined($row->[$key])) {
+      if (defined($row->[$key]) || defined($transform_map_ref->{$key})) {
 
         #### If there's a mapping for this column
   	if (defined($transform_map_ref->{$key})) {
