@@ -892,7 +892,7 @@ sub processEntryForm {
     # If the INSERT or UPDATE of the request_status record was SUCCESSFUL,
     # then insert or update all the individual slide and sample information.
     if ( ( ($apply_action eq "INSERT") || ($apply_action eq "UPDATE") ) &&
-        ($returned_request_status eq "SUCCESSFUL") && (!($ignore_table)) ) {
+        ($returned_request_status eq "SUCCESSFUL") ) {
 
 
       # Loop over each slide, INSERTing or UPDATing as appropriate
@@ -973,7 +973,8 @@ sub processEntryForm {
 
         # If we have an array_request_slide PK, then now work on UPDATing
         # or INSERTing array_request_sample
-        if ($table_parameters{"slide${element}id"} gt "") {
+        if ( ($table_parameters{"slide${element}id"} gt "")
+             && (!($ignore_table)) ) {
 
           # Now work on the individual sample records for this slide
           for $isample (0..($n_samples-1)) {
@@ -1091,7 +1092,11 @@ sub processEntryForm {
           } # endfor
 
 
-        # If we don't have an array_request_slide PK, something bad happened.
+        # If we don't have an array_request_slide PK, either $ignore_table set
+        } elsif ($ignore_table) {
+          # OK. do nothing
+
+        #### or something bad happened.
         } else {
           print qq~ERROR: I do not have the PK information for the slide that
               I just INSERTed or UPDATEd.
@@ -1102,7 +1107,6 @@ sub processEntryForm {
       }
 
     }
-
 
 
     if ($returned_request_status eq "SUCCESSFUL") {
