@@ -1,0 +1,4 @@
+GO
+--Proteomics_sample unique constriant experiment_id, proteomics_sample_id
+ALTER TABLE dbo.experiments_samples ADD CONSTRAINT Unique_experiment_id_proteomics_sample_id UNIQUE (experiment_id, proteomics_sample_id)
+GO

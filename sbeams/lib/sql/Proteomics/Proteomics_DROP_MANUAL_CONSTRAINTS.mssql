@@ -1,0 +1,3 @@
+GO
+ALTER TABLE dbo.experiments_samples DROP CONSTRAINT Unique_experiment_id_proteomics__sample_id
+GO
