@@ -125,13 +125,11 @@ sub display_page_header {
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequences</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_construction_method"><nobr>&nbsp;&nbsp;&nbsp;Construct Method</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_plasmid"><nobr>&nbsp;&nbsp;&nbsp;Plasmids</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_cell_type"><nobr>&nbsp;&nbsp;&nbsp;Cell Type</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_strain"><nobr>&nbsp;&nbsp;&nbsp;Strains</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_citation"><nobr>&nbsp;&nbsp;&nbsp;Citations</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_condition"><nobr>&nbsp;&nbsp;&nbsp;Conditions</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_plate"><nobr>&nbsp;&nbsp;&nbsp;Plates</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/ManageTable.cgi?TABLE_NAME=PH_strain"><nobr>&nbsp;&nbsp;&nbsp;Strains</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/PhenoLoad.cgi"><nobr>&nbsp;&nbsp;&nbsp;Phenotype Loader</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/PhenoArray/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;BioSequences</nobr></a></td></tr>
