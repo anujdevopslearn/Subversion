@@ -188,7 +188,6 @@ sub handle_request {
 
 
   #### Apply any parameter adjustment logic
-  #$parameters{biosequence_set_id} = 3;
   #$parameters{display_options} = 'ShowSQL';
 
 
@@ -211,7 +210,7 @@ sub handle_request {
     };
 
     print qq~
-<tr><td><span class="sub_header">EXPLORE THE GENOME</span></td></tr>
+<tr><td><span class="sub_header">BROWSE THE PROTEOME</span></td></tr>
 
 <tr><td height="1"><img src="$HTML_BASE_DIR/images/bg_Nav.gif" width="518" height="1" border="0"></td></tr>
 <tr><td height="5"><img src="$HTML_BASE_DIR/images/clear.gif" width="1" height="1" border="0"></td></tr>
@@ -223,6 +222,7 @@ Search
 $optionlist
 </SELECT> for
 <INPUT NAME="search_key" TYPE="text" SIZE="35" VALUE="$parameters{search_key}">
+<INPUT NAME="biosequence_set_id" TYPE="hidden" VALUE="$parameters{biosequence_set_id}">
 <INPUT TYPE="submit" NAME="action" VALUE="GO">
 </FORM></P>
     ~;
