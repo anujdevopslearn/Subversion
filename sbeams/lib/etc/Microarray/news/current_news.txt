@@ -1,5 +1,5 @@
 Title: Project Permissions
-Posted 2-14-03
+Posted: 2-14-03
 To increase data security, project PIs and administrators have the ability to grant access to specific groups and users.  By default, only the PI is given access-- it is up to him/her to grant others access.  Let <A HREF="mailto:mjohnson@systemsbiology.org">Michael Johnson</A> know if you have any difficulties with this new functionality.
 
 Title:MIAME Status pages on the way
