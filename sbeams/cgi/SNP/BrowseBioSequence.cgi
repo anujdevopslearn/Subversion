@@ -227,8 +227,8 @@ sub printEntryForm {
 
 
     #### Build ROWCOUNT constraint
-    $parameters{row_limit} = 1000;
-      ($parameters{row_limit} > 0 && $parameters{row_limit}<=99999);
+    $parameters{row_limit} = 1000
+      unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=99999);
     my $limit_clause = "TOP $parameters{row_limit}";
 
 
