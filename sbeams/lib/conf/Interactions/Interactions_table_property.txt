@@ -22,3 +22,4 @@ IN_sample_type	Sample Type	Interactions_user	YES	$TBIN_SAMPLE_TYPE	sample_type_i
 IN_GetInteractions	Browse Interactions	QUERY	NO				GetInteractions	
 IN_BioEntity_Member	BioEntity Members 	Interactions_admin	NO	$TBIN_BIOENTITY_MEMBER	bioentity_member_id			
 IN_GetBioentities	Browse Bioentities	QUERY	NO				GetBioentities	
+IN_Other	Other	Interaction_user	NO	$TBIN_OTHER	otherID			
