@@ -447,6 +447,7 @@ sub decode_response {
     #### Decode into rows
     my @rows = split("\n",$resultset->{raw_response});
 
+
     #### Pull off the first row as the header and make an array
     my $header = shift(@rows);
     my @column_list = split("\t",$header);
@@ -464,7 +465,13 @@ sub decode_response {
     #### Convert each row from string to array ref
     for ($i=0;$i<scalar(@rows);$i++) {
       $rows[$i] = [ split("\t",$rows[$i]) ];
+      
+      #### Substitute any literal \n's
+      foreach ( @{$rows[$i]} ) {
+        $_ =~ s/\\n/\n/g;
+      }
     }
+    
     $resultset->{data_ref} = \@rows;
 
     #### Return success
