@@ -88,7 +88,10 @@ use vars qw(@ISA @EXPORT
     $TBMA_TRANS_MEMBRANE_DOMAIN
     $TBMA_INTERPRO
     $TBMA_PROTEIN_DOMAIN
-    $TBMA_ALIGNMENT	
+    $TBMA_ALIGNMENT
+    
+    $TBMA_AFFY_ANALYSIS
+    $TBMA_AFFY_ANALYSIS_TYPE	
 	
 );
 
@@ -168,6 +171,9 @@ require Exporter;
     $TBMA_INTERPRO
     $TBMA_PROTEIN_DOMAIN
     $TBMA_ALIGNMENT
+    
+    $TBMA_AFFY_ANALYSIS
+    $TBMA_AFFY_ANALYSIS_TYPE
 
 
 
@@ -254,6 +260,9 @@ $TBMA_TRANS_MEMBRANE_DOMAIN	=  "${mod}trans_membrane_domain";
 $TBMA_INTERPRO			=  "${mod}interpro";
 $TBMA_PROTEIN_DOMAIN		=  "${mod}protein_domain";
 $TBMA_ALIGNMENT			=  "${mod}alignment";
+
+$TBMA_AFFY_ANALYSIS			=  "${mod}affy_analysis";
+$TBMA_AFFY_ANALYSIS_TYPE	=  "${mod}affy_analysis_type";
 
 
 
