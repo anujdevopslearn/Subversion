@@ -860,6 +860,50 @@ sub getHydropathyIndex {
 
 
 ###############################################################################
+# getWimleyWhiteIndex: Get a hash of Wimley-White indexes for each of the
+# residues
+###############################################################################
+sub getWimleyWhiteIndex {
+  my %args = @_;
+  my $SUB_NAME = 'getWimleyWhiteIndex';
+
+  #### Define the hydropathy index
+  my %hydropathy_index = (
+    I => -1.12,
+    V => -0.46,
+    L => -1.25,
+    F => -1.71,
+    C => -0.02,
+    M => -0.67,
+    A => +0.50,
+    G => +1.15,
+    T => +0.25,
+    W => -2.09,
+    S => +0.46,
+    Y => -0.71,
+    P => +0.14,
+    H => +0.11,  #### His 0
+    E => +3.68,
+    Q => +0.77,
+    D => +3.64,
+    N => +0.85,
+    K => +2.80,
+    R => +1.81,
+
+    X => 0.0,
+    B => 2,
+    Z => 2,
+    U => 0,
+
+  );
+
+  return %hydropathy_index;
+
+}
+
+
+
+###############################################################################
 # calcGravyScore: Calculate the gravy_score based on the hydropathy indexes
 #   of each of the residues in the peptide
 ###############################################################################
@@ -910,6 +954,9 @@ sub calcNTransmembraneRegions {
 
   #### Define the hydropathy index
   my %hydropathy_index = getHydropathyIndex();
+  if ($calc_method eq 'WimleyWhite') {
+    %hydropathy_index = getWimleyWhiteIndex();
+  }
 
 
   #### Define some variables
@@ -931,13 +978,24 @@ sub calcNTransmembraneRegions {
     # Engelman et al., "Identifying nonpolar transbilayer helices in
     # amino acid sequences of emmbrane proteins", Annu. Rev. Biophys.
     # Biophys. Chem., 15, 321-353, 1986.
-    $iWindowSize = 27;
+    $iWindowSize = 19;
     print "iWindowSize = $iWindowSize\n" if ($verbose);
     #### Subtract 1.0 from every hydropathy index
     while ( my ($key,$value) = each %hydropathy_index) {
       $hydropathy_index{$key} = $value - 1.0;
     }
   }
+
+
+  #### If a specific calc_method was selected, set those parameters
+  if ($calc_method eq 'WimleyWhite') {
+    # Engelman et al., "Identifying nonpolar transbilayer helices in
+    # amino acid sequences of emmbrane proteins", Annu. Rev. Biophys.
+    # Biophys. Chem., 15, 321-353, 1986.
+    $iWindowSize = 19;
+    print "iWindowSize = $iWindowSize\n" if ($verbose);
+  }
+
 
 
   #### Split peptide into an array of residues and get number
@@ -969,7 +1027,7 @@ sub calcNTransmembraneRegions {
     if ($isHydroRegion==0) {
       my $enter_region_flag = 0;
       $enter_region_flag = 1 if ($dHydro/$iWindowSize >= $dCutOff);
-      $enter_region_flag = 0 if ($calc_method eq 'NewMethod' &&
+      $enter_region_flag = 0 if ($calc_method gt '' &&
         ($iProleinCount > 0 || $iKRDECount > 2) );
 
       if ($enter_region_flag) {
@@ -984,7 +1042,7 @@ sub calcNTransmembraneRegions {
     #### Else if we are in a transmembrane region, see if we should exit
     } else {
       $isHydroRegion = 0 if ($dHydro/$iWindowSize < $dCutOff);
-      $isHydroRegion = 0 if ($calc_method eq 'NewMethod' &&
+      $isHydroRegion = 0 if ($calc_method gt '' &&
         ($iProleinCount > 0 || $iKRDECount > 2) );
     }
 
