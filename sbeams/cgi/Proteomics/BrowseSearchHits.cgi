@@ -405,6 +405,7 @@ sub printEntryForm {
     # --------------------------------------------------
     # --------------------------------------------------
     # --------------------------------------------------
+    my $show_sql;
 
     if ($apply_action gt "") {
 
@@ -423,16 +424,20 @@ sub printEntryForm {
         $xcorr = $parameters{"xcorr_charge$icharge"};
         if ($xcorr) {
           if ($xcorr =~ /^[\d\.]+$/) {
-            $xcorr_clause = "   AND ( S.assumed_charge = $icharge AND SH.cross_corr = $xcorr )\n";
+            $xcorr_clause .= "	    OR ( S.assumed_charge = $icharge AND SH.cross_corr = $xcorr )\n";
           } elsif ($xcorr =~ /^between\s+[\d\.]+\s+and\s+[\d\.]+$/i) {
-            $xcorr_clause = "   AND ( S.assumed_charge = $icharge AND SH.cross_corr $xcorr )\n";
+            $xcorr_clause .= "	    OR ( S.assumed_charge = $icharge AND SH.cross_corr $xcorr )\n";
           } elsif ($xcorr =~ /^[><=][=]*\s*[\d\.]+$/) {
-            $xcorr_clause = "   AND ( S.assumed_charge = $icharge AND SH.cross_corr $xcorr )\n";
+            $xcorr_clause .= "	    OR ( S.assumed_charge = $icharge AND SH.cross_corr $xcorr )\n";
           } else {
             print "<H4>Cannot parse XCorr Constraint $icharge!  Check syntax.</H4>\n\n";
             return;
           }
         }
+      }
+      if ($xcorr_clause) {
+        $xcorr_clause =~ s/^\s+OR/ AND \(/;
+        $xcorr_clause .= "	     )\n";
       }
 
 
@@ -444,6 +449,15 @@ sub printEntryForm {
           return;
         } else {
           $file_root_clause = "   AND S.file_root LIKE '$parameters{file_root_constraint}'";
+        }
+      }
+
+
+      #### Build BEST_HIT constraint
+      my $best_hit_clause = "";
+      if ($parameters{best_hit_constraint}) {
+        if ($parameters{best_hit_constraint} =~ /best_hit/i) {
+          $best_hit_clause = "   AND best_hit_flag = 'Y'";
         }
       }
 
@@ -507,17 +521,78 @@ sub printEntryForm {
       }
 
 
-      #### Build ICAT RATIO constraint
-      my $ICAT_ratio_clause = "";
-      if ($parameters{ICAT_constraint}) {
-        if ($parameters{ICAT_constraint} =~ /^[\d\.]+$/) {
-          $ICAT_ratio_clause = "   AND ICAT_light/ISNULL(NULLIF(ICAT_heavy,0),0.01) = $parameters{ICAT_constraint}";
-        } elsif ($parameters{ICAT_constraint} =~ /^between\s+[\d\.]+\s+and\s+[\d\.]+$/i) {
-          $ICAT_ratio_clause = "   AND ICAT_light/ISNULL(NULLIF(ICAT_heavy,0),0.01) $parameters{ICAT_constraint}";
-        } elsif ($parameters{ICAT_constraint} =~ /^[><=][=]*\s*[\d\.]+$/) {
-          $ICAT_ratio_clause = "   AND ICAT_light/ISNULL(NULLIF(ICAT_heavy,0),0.01) $parameters{ICAT_constraint}";
+      #### Build MASS constraint
+      my $mass_clause = "";
+      if ($parameters{mass_constraint}) {
+        if ($parameters{mass_constraint} =~ /^[\d\.]+$/) {
+          $mass_clause = "   AND SH.hit_mass_plus_H = $parameters{mass_constraint}";
+        } elsif ($parameters{mass_constraint} =~ /^between\s+[\d\.]+\s+and\s+[\d\.]+$/i) {
+          $mass_clause = "   AND SH.hit_mass_plus_H $parameters{mass_constraint}";
+        } elsif ($parameters{mass_constraint} =~ /^[><=][=]*\s*[\d\.]+$/) {
+          $mass_clause = "   AND SH.hit_mass_plus_H $parameters{mass_constraint}";
         } else {
-          print "<H4>Cannot parse ICAT Ratio Constraint!  Check syntax.</H4>\n\n";
+          print "<H4>Cannot parse Mass Constraint!  Check syntax.</H4>\n\n";
+          return;
+        }
+      }
+
+
+      #### Build ISOELECTRIC_POINT constraint
+      my $isoelectric_point_clause = "";
+      if ($parameters{isoelectric_point_constraint}) {
+        if ($parameters{isoelectric_point_constraint} =~ /^[\d\.]+$/) {
+          $mass_clause = "   AND isoelectric_point = $parameters{isoelectric_point_constraint}";
+        } elsif ($parameters{isoelectric_point_constraint} =~ /^between\s+[\d\.]+\s+and\s+[\d\.]+$/i) {
+          $mass_clause = "   AND isoelectric_point $parameters{isoelectric_point_constraint}";
+        } elsif ($parameters{isoelectric_point_constraint} =~ /^[><=][=]*\s*[\d\.]+$/) {
+          $mass_clause = "   AND isoelectric_point $parameters{isoelectric_point_constraint}";
+        } else {
+          print "<H4>Cannot parse pI Constraint!  Check syntax.</H4>\n\n";
+          return;
+        }
+      }
+
+
+      #### Build ANNOTATION_STATUS and ANNOTATION_LABELS constraint
+      my $annotation_status_clause = "";
+      my $annotation_label_clause = "";
+
+      if ($parameters{annotation_label_id}) {
+        if ($parameters{annotation_status_id} eq 'Annot') {
+          $annotation_label_clause = "   AND SHA.annotation_label_id IN ( $parameters{annotation_label_id} )";
+        } elsif ($parameters{annotation_status_id} eq 'UNAnnot') {
+          $annotation_status_clause = "   AND SHA.annotation_label_id IS NULL";
+          $annotation_label_clause = "";
+          print "WARNING: Annotation status and Annotation label constraints conflict!<BR>\n";
+        } else {
+          $annotation_label_clause = "   AND ( SHA.annotation_label_id IN ( $parameters{annotation_label_id} ) ".
+            "OR SHA.annotation_label_id IS NULL )";
+        }
+
+
+      } else {
+        if ($parameters{annotation_status_id} eq 'Annot') {
+          $annotation_status_clause = "   AND SHA.annotation_label_id IS NOT NULL";
+        } elsif ($parameters{annotation_status_id} eq 'UNAnnot') {
+          $annotation_status_clause = "   AND SHA.annotation_label_id IS NULL";
+        } else {
+          #### Nothing
+        }
+
+      }
+
+
+      #### Build QUANTITATION constraint
+      my $quantitation_clause = "";
+      if ($parameters{quantitation_constraint}) {
+        if ($parameters{quantitation_constraint} =~ /^[\d\.]+$/) {
+          $quantitation_clause = "   AND ICAT_light/ISNULL(NULLIF(ICAT_heavy,0),0.01) = $parameters{quantitation_constraint}";
+        } elsif ($parameters{quantitation_constraint} =~ /^between\s+[\d\.]+\s+and\s+[\d\.]+$/i) {
+          $quantitation_clause = "   AND ICAT_light/ISNULL(NULLIF(ICAT_heavy,0),0.01) $parameters{quantitation_constraint}";
+        } elsif ($parameters{quantitation_constraint} =~ /^[><=][=]*\s*[\d\.]+$/) {
+          $quantitation_clause = "   AND ICAT_light/ISNULL(NULLIF(ICAT_heavy,0),0.01) $parameters{quantitation_constraint}";
+        } else {
+          print "<H4>Cannot parse Quantitation Constraint!  Check syntax.</H4>\n\n";
           return;
         }
       }
@@ -533,6 +608,26 @@ sub printEntryForm {
           $order_by_clause = " ORDER BY $parameters{sort_order}";
         }
       }
+
+
+      #### Build Additional peptide constraints
+      my $second_peptide_clause = "";
+      if ($parameters{peptide_options}) {
+        if ($parameters{sort_order} =~ /SELECT|TRUNCATE|DROP|DELETE|FROM|GRANT/i) {
+          print "<H4>Cannot parse Peptide Options!  Check syntax.</H4>\n\n";
+          return;
+        } else {
+          my $C = "";
+          $C = "C" if ( $parameters{peptide_options} =~ /C_containing/ );
+          if ( $parameters{peptide_options} =~ /DoublyTryptic/ ) {
+            $second_peptide_clause = "   AND SH.peptide_string LIKE '[RK].%${C}%[RK]._'";
+          } elsif ( $parameters{peptide_options} =~ /SinglyTryptic/ ) {
+            $second_peptide_clause = "   AND ( SH.peptide_string LIKE '[RK].%${C}%._' OR ".
+                                              "SH.peptide_string LIKE '_.%${C}%[RK]._' )";
+          }
+        }
+      }
+
 
       #### Build ROWCOUNT constraint
       my $limit_clause = "TOP 100";
@@ -552,6 +647,8 @@ sub printEntryForm {
         ["data_location","SB.data_location","data_location"],
         ["fraction_tag","F.fraction_tag","fraction_tag"],
         ["file_root","S.file_root","file_root"],
+        ["out_file","'.out'",".out"],
+        ["best_hit_flag","best_hit_flag","bh"],
         ["cross_corr_rank","SH.cross_corr_rank","Rxc"],
         ["prelim_score_rank","SH.prelim_score_rank","RSp"],
         ["hit_mass_plus_H","CONVERT(varchar(20),SH.hit_mass_plus_H) + ' (' + STR(SH.mass_delta,5,2) + ')'","(M+H)+"],
@@ -564,7 +661,8 @@ sub printEntryForm {
         ["peptide_string","peptide_string","Peptide"],
         ["peptide","peptide","actual_peptide"],
         ["set_path","BSS.set_path","set_path"],
-        ["ICAT","STR(ICAT_light,5,2) + ':' + STR(ICAT_heavy,5,2)","ICAT"],
+        ["isoelectric_point","STR(isoelectric_point,8,3)","pI"],
+        ["quantitation","STR(ICAT_light,5,2) + ':' + STR(ICAT_heavy,5,2)","Quant"],
         ["search_hit_annotation_id","SHA.search_hit_annotation_id","search_hit_annotation_id"],
         ["annotation_label","label_desc","Annot"],
       );
@@ -576,6 +674,9 @@ sub printEntryForm {
       }
       if ( $parameters{display_options} =~ /MaxRefWidth/ ) {
         $max_widths{'Reference'} = 20;
+      }
+      if ( $parameters{display_options} =~ /ShowSQL/ ) {
+        $show_sql = 1;
       }
 
 
@@ -605,23 +706,29 @@ sub printEntryForm {
 	  LEFT JOIN $TBPR_ANNOTATION_LABEL AL ON ( SHA.annotation_label_id = AL.annotation_label_id )
 	 WHERE 1 = 1
 	$search_batch_clause
+	$best_hit_clause
 	$xcorr_clause
 	$charge_clause
 	$reference_clause
 	$peptide_clause
 	$peptide_string_clause
+	$second_peptide_clause
+	$mass_clause
+	$isoelectric_point_clause
 	$file_root_clause
-	$ICAT_ratio_clause
+	$quantitation_clause
+	$annotation_label_clause
+	$annotation_status_clause
 	$order_by_clause
        ~;
 
       #print "<PRE>\n$sql_query\n</PRE>\n";
 
       my $base_url = "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi";
-      %url_cols = ('file_root' => "http://regis/cgi-bin/showout_html5?OutFile=/data/search/\%$colnameidx{data_location}V/\%$colnameidx{fraction_tag}V/\%$colnameidx{file_root}V.out",
+      %url_cols = ('.out' => "http://regis/cgi-bin/showout_html5?OutFile=/data/search/\%$colnameidx{data_location}V/\%$colnameidx{fraction_tag}V/\%$colnameidx{file_root}V.out",
+		   '.out_ATAG' => 'TARGET="Win1"',
+      		   'file_root' => "$base_url?QUERY_NAME=ShowSearch&search_batch_id=\%$colnameidx{search_batch_id}V&file_root_constraint=\%$colnameidx{file_root}V&apply_action=QUERY",
 		   'file_root_ATAG' => 'TARGET="Win1"',
-      		   'Rxc' => "$base_url?QUERY_NAME=ShowSearch&search_batch_id=\%$colnameidx{search_batch_id}V&file_root_constraint=\%$colnameidx{file_root}V&apply_action=QUERY",
-		   'Rxc_ATAG' => 'TARGET="Win1"',
                    'Reference' => "http://regis/cgi-bin/consensus_html4?Ref=%V&Db=\%$colnameidx{set_path}V&Pep=\%$colnameidx{peptide}V&MassType=0",
 		   'Reference_ATAG' => 'TARGET="Win1"',
 ####                   'Ions' => "http://regis/cgi-bin/displayions_html5?Dta=/data/search/\%$colnameidx{data_location}V/\%$colnameidx{fraction_tag}V/\%$colnameidx{file_root}V.dta&MassType=0&NumAxis=1&Pep=\%$colnameidx{peptide}V",
@@ -629,8 +736,8 @@ sub printEntryForm {
                    'Ions' => "$CGI_BASE_DIR/Proteomics/ShowSpectrum.cgi?msms_scan_id=\%$colnameidx{msms_scan_id}V&search_batch_id=\%$colnameidx{search_batch_id}V&peptide=\%$colnameidx{peptide_string}V",
 
 		   'Ions_ATAG' => 'TARGET="Win1"',
-                   'Nmore' => "http://regis/cgi-bin/blast_html4?Db=\%$colnameidx{set_path}V&Pep=\%$colnameidx{peptide}V&MassType=0",
-		   'Nmore_ATAG' => 'TARGET="Win1"',
+                   'N+' => "http://regis/cgi-bin/blast_html4?Db=\%$colnameidx{set_path}V&Pep=\%$colnameidx{peptide}V&MassType=0",
+		   'N+_ATAG' => 'TARGET="Win1"',
                    'Peptide' => "http://www.ncbi.nlm.nih.gov/blast/Blast.cgi?PROGRAM=blastp&DATABASE=nr&OVERVIEW=TRUE&EXPECT=1000&FILTER=L&QUERY=\%$colnameidx{peptide}V",
 		   'Peptide_ATAG' => 'TARGET="Win1"',
                    'Annot' => "$CGI_BASE_DIR/Proteomics/ManageTable.cgi?TABLE_NAME=search_hit_annotation&search_hit_annotation_id=\%$colnameidx{search_hit_annotation_id}V&search_hit_id=\%$colnameidx{search_hit_id}V&ShowEntryForm=1",
@@ -658,6 +765,7 @@ sub printEntryForm {
 
 
     if ($apply_action =~ /QUERY/i) {
+      print "<PRE>$sql_query</PRE><BR>\n" if ($show_sql);
       return $sbeams->displayQueryResult(sql_query=>$sql_query,
           url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols,
           max_widths=>\%max_widths);

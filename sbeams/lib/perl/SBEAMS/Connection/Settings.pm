@@ -17,6 +17,7 @@ use vars qw($VERSION @ISA @EXPORT
     $DBTITLE
     $DBVERSION
     $BGCOLOR
+    $BARCOLOR
     $SERVER_BASE_DIR
     $CGI_BASE_DIR
     $HTML_BASE_DIR
@@ -36,6 +37,7 @@ require Exporter;
     $DBTITLE
     $DBVERSION
     $BGCOLOR
+    $BARCOLOR
     $SERVER_BASE_DIR
     $CGI_BASE_DIR
     $HTML_BASE_DIR
@@ -56,9 +58,11 @@ $SERVER_BASE_DIR        = 'http://db';
 
 #### Decide which version settings to use based on $ENV{SCRIPT_NAME} or
 #### $ENV{SBEAMS_INSTANCE}
-my $SBEAMS_INSTANCE = "production";
+my $SBEAMS_INSTANCE;
 $SBEAMS_INSTANCE = $ENV{SCRIPT_NAME} if ($ENV{SCRIPT_NAME});
 $SBEAMS_INSTANCE = $ENV{SBEAMS_INSTANCE} if ($ENV{SBEAMS_INSTANCE});
+$SBEAMS_INSTANCE = $ENV{PWD} unless ($SBEAMS_INSTANCE);
+$SBEAMS_INSTANCE = "production" unless ($SBEAMS_INSTANCE);
 
 
 #### Set version-specific parameters
@@ -107,6 +111,7 @@ if ( $SBEAMS_INSTANCE =~ /\/dev1\// ) {
 
 
 #### Set some additional settings which depend on version-specific parameters
+$BARCOLOR               = '#e0e0e0';
 $DATA_DIR               = "$HTML_BASE_DIR/data";
 $CGI_BASE_DIR           = "$HTML_BASE_DIR/cgi";
 $OPTIONARROW            = "<P><IMG SRC=\"$HTML_BASE_DIR/images/yellow-arrow.gif\">&nbsp;";

@@ -281,11 +281,38 @@ sub selectSeveralColumns {
 
     my @rows;
 
+    #### FIX ME replace with $dbh->selectall_arrayref ?????
     my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
     my $rv  = $sth->execute or croak $dbh->errstr;
 
     while (my @row = $sth->fetchrow_array) {
         push(@rows,\@row);
+    }
+
+    $sth->finish;
+
+    return @rows;
+
+}
+
+
+###############################################################################
+# selectHashArray
+#
+# Given a SQL statement which returns one or more columns, return an array
+# of references to hashes of the results of each row of that query.
+###############################################################################
+sub selectHashArray {
+    my $self = shift || croak("parameter self not passed");
+    my $sql_query = shift || croak("parameter sql_query not passed");
+
+    my @rows;
+
+    my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
+    my $rv  = $sth->execute or croak $dbh->errstr;
+
+    while (my $columns = $sth->fetchrow_hashref) {
+        push(@rows,$columns);
     }
 
     $sth->finish;

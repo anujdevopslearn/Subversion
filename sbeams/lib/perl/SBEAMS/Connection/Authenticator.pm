@@ -620,8 +620,10 @@ sub checkLogin {
             AND record_status != 'D'
         ");
 
-    unless ($query_result{$user}) {
-        $query_result{$user} = $self->getUnixPassword($user);
+    if (exists $query_result{$user}) {
+        unless ($query_result{$user}) {
+            $query_result{$user} = $self->getUnixPassword($user);
+        }
     }
 
     @ERRORS  = ();
@@ -731,10 +733,12 @@ sub getContact_id {
     my $self = shift;
     my $username = shift;
 
-    my $sql_query = qq!
+    my $sql_query = qq~
 	SELECT contact_id
 	  FROM $TB_USER_LOGIN
-	 WHERE username = '$username'!;
+	 WHERE username = '$username'
+	   AND record_status != 'D'
+    ~;
 
     my ($contact_id) = $self->selectOneColumn($sql_query);
 
@@ -749,10 +753,12 @@ sub getUsername {
     my $self = shift;
     my $contact_id = shift;
 
-    my $sql_query = qq!
+    my $sql_query = qq~
 	SELECT username
 	  FROM $TB_USER_LOGIN
-	 WHERE contact_id = '$contact_id'!;
+	 WHERE contact_id = '$contact_id'
+	   AND record_status != 'D'
+    ~;
 
     my ($username) = $self->selectOneColumn($sql_query);
 
@@ -769,10 +775,12 @@ sub get_work_group_id {
 
     return unless ($work_group_name);
 
-    my $sql_query = qq!
+    my $sql_query = qq~
 	SELECT work_group_id
 	  FROM $TB_WORK_GROUP
-	 WHERE work_group_name = '$work_group_name'!;
+	 WHERE work_group_name = '$work_group_name'
+	   AND record_status != 'D'
+    ~;
 
     my ($work_group_id) = $self->selectOneColumn($sql_query);
 

@@ -14,7 +14,7 @@ package SBEAMS::Connection::DBConnector;
 use strict;
 use vars qw($DB_SERVER $DB_DATABASE $DB_USER $DB_PASS $DB_DRIVER
             $DB_DSN $DB_TYPE $dbh
-            $BIOSAP_DB);
+            $BIOSAP_DB $PROTEOMICS_DB);
 use DBI;
 use SBEAMS::Connection::Settings;
 
@@ -30,6 +30,7 @@ if ( $DBVERSION eq "Dev Branch 1" ) {
   $DB_DRIVER   = "DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE";
   $DB_TYPE     = "MS SQL Server";
   $BIOSAP_DB   = "BioSap.dbo.";
+  $PROTEOMICS_DB = "Proteomics.dbo.";
 
 } elsif ( $DBVERSION eq "Dev Branch 2" ) {
   $DB_SERVER   = 'mssql';
@@ -39,6 +40,7 @@ if ( $DBVERSION eq "Dev Branch 1" ) {
   $DB_DRIVER   = "DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE";
   $DB_TYPE     = "MS SQL Server";
   $BIOSAP_DB   = "BioSap.dbo.";
+  $PROTEOMICS_DB = "Proteomics.dbo.";
 
 } elsif ( $DBVERSION eq "Dev Branch 5" ) {
   $DB_SERVER   = 'mssql';
@@ -48,6 +50,7 @@ if ( $DBVERSION eq "Dev Branch 1" ) {
   $DB_DRIVER   = "DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE";
   $DB_TYPE     = "MS SQL Server";
   $BIOSAP_DB   = "BioSap.dbo.";
+  $PROTEOMICS_DB = "Proteomics.dbo.";
 
 } elsif ( $DBVERSION eq "MySQL Dev Branch 1" ) {
   $DB_SERVER   = 'mysql';
@@ -57,6 +60,7 @@ if ( $DBVERSION eq "Dev Branch 1" ) {
   $DB_DRIVER   = "DBI:mysql:$DB_DATABASE:$DB_SERVER";
   $DB_TYPE     = "MySQL";
   $BIOSAP_DB   = "biosap.";
+  $PROTEOMICS_DB = "proteomics.";
 
 } else {
   $DB_SERVER   = 'mssql';
@@ -66,6 +70,7 @@ if ( $DBVERSION eq "Dev Branch 1" ) {
   $DB_DRIVER   = "DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE";
   $DB_TYPE     = "MS SQL Server";
   $BIOSAP_DB   = "BioSap.dbo.";
+  $PROTEOMICS_DB = "Proteomics.dbo.";
 }
 
 
@@ -158,6 +163,16 @@ sub getDBType {
 ###############################################################################
 sub getBIOSAP_DB {
     return $BIOSAP_DB;
+}
+
+
+###############################################################################
+# getPROTEOMICS_DB
+#
+# Return the PROTEOMICS_DB of the database connection.
+###############################################################################
+sub getPROTEOMICS_DB {
+    return $PROTEOMICS_DB;
 }
 
 

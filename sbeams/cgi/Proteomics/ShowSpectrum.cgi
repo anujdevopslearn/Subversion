@@ -17,9 +17,12 @@
 use strict;
 use lib qw (../../lib/perl);
 use vars qw ($q $sbeams $sbeamsPROT
+             $t0 $t1 $t2 $t3 $t4 $t5 $t6 $t7 $t8 $t9
              $current_contact_id $current_username );
 use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
+use Time::HiRes qw( usleep ualarm gettimeofday tv_interval );
+$t0 = [gettimeofday()];
 
 use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
@@ -59,7 +62,6 @@ sub main {
     exit unless ($current_username = $sbeams->Authenticate());
 
     #### Print the header, figure and do what the user want, and print footer
-    $sbeamsPROT->printPageHeader();
     processRequests();
     $sbeamsPROT->printPageFooter();
 
@@ -106,11 +108,12 @@ sub printEntryForm {
 
     #### Define some general variables
     my ($i,$element,$key,$value,$sql);
+    $t1 = [gettimeofday()];
 
 
     #### Define the parameters that can be passed by CGI
     my @possible_parameters = qw ( msms_scan_id search_batch_id peptide
-                                   masstype charge zoom xmin xmax);
+                                   masstype charge zoom xmin xmax window);
     my %parameters;
 
 
@@ -119,6 +122,13 @@ sub printEntryForm {
       $parameters{$element}=$q->param($element);
     }
     my $apply_action  = $q->param('apply_action');
+
+
+    if ($apply_action eq "PRINTABLE FORMAT") {
+      $sbeamsPROT->printPageHeader(navigation_bar=>"NO");
+    } else {
+      $sbeamsPROT->printPageHeader();
+    }
 
 
     #### Resolve the keys from the command line if any
@@ -135,6 +145,8 @@ sub printEntryForm {
 
     $parameters{'charge'} = "1,2" unless $parameters{'charge'};
     my @charge = split(',',$parameters{'charge'});
+    $parameters{'window'} = 2 unless $parameters{'window'};
+
 
     #### Begin the page and form
     $sbeams->printUserContext();
@@ -160,6 +172,7 @@ sub printEntryForm {
       %mass_modifications =
         get_mass_modifications(search_batch_id=>$parameters{search_batch_id});
     }
+    $t2 = [gettimeofday()];
 
 
     #### Calculate peptide mass information
@@ -182,6 +195,7 @@ sub printEntryForm {
       print "ERROR: Unable to load spectrum\n";
       return;
     }
+    $t3 = [gettimeofday()];
 
     my ($i,$mass,$intensity,$massmin,$xticks,$xmin,$xmax);
     my ($massmax,$intenmax)=(0,0);
@@ -221,11 +235,22 @@ sub printEntryForm {
     my($progname)= basename $0;
     my($tmpfile) = "$progname.$$.@{[time]}.gif";
 
+    $parameters{gifwidth} = 640 unless $parameters{gifwidth};
+    $parameters{gifheight} = 480 unless $parameters{gifheight};
+
+    if ($apply_action eq "PRINTABLE FORMAT") {
+      $parameters{gifwidth} = 480;
+      $parameters{gifheight} = 384;
+    }
+
+    #print "Writing GIF to: $PHYSICAL_BASE_DIR/images/tmp/$tmpfile\n";
     my $win = pg_setup(Device=>"$PHYSICAL_BASE_DIR/images/tmp/$tmpfile/gif",
                        title=>"$spectrum{msms_scan_file_root}",
                        xmin=>$parameters{xmin}, xmax=>$parameters{xmax},
-                       ymax=>$intenmax, ydiv=>$ydiv, nyticks=>1);
+                       ymax=>$intenmax, ydiv=>$ydiv, nyticks=>1,
+                       gifwidth=>$parameters{gifwidth},gifheight=>$parameters{gifheight});
     pgptext 1.2*$parameters{xmin}, 0.95*$intenmax, 0, 0.5, "$maxval";
+    $t4 = [gettimeofday()];
 
     my @peakcolors;
 
@@ -242,17 +267,20 @@ sub printEntryForm {
       my $lineclr;
 
       my ($B_ref,$Y_ref);
+      $t5 = [gettimeofday()];
 
       #### Make the plot
       ($win,$B_ref,$Y_ref) = PlotPeaks(SpecData=>\%spectrum, Bion=>$Bion,
                                        Yion=>$Yion, Charge=>$charge,
-                                       Win=>$win, Length=>$length,
+                                       Win=>$win, Length=>$length, Window=>$parameters{window},
                                        PeakColors=>\@peakcolors);
+      $t6 = [gettimeofday()];
       LabelResidues(Bdata=>$Bion, Ydata=>$Yion, Binten=>$B_ref, Yinten=>$Y_ref,
                     Ionmasses=>$masslist_ref, Charge=>$charge, Win=>$win,
                     Length=>$length, Xmin=>$parameters{xmin}, Xmax=>$parameters{xmax},
                     Ymax=>$intenmax);
     }
+    $t7 = [gettimeofday()];
 
 
     #### Finish and close the plot
@@ -275,12 +303,17 @@ sub printEntryForm {
     }
 
 
+    #### Window selector
+    my $onChange = "";
+    print qq~
+	Window: <INPUT NAME="window" VALUE="$parameters{window}" SIZE="2" $onChange>
+    ~;
+
     #### Charge selector
     $sql = "SELECT option_key,option_value FROM $TBPR_QUERY_OPTION " .
            " WHERE option_type = 'BSH_charge_constraint' " .
            " ORDER BY sort_order,option_value";
     my $optionlist = $sbeams->buildOptionList($sql,$parameters{'charge'});
-    my $onChange = "";
     print qq~
 	Charge: <SELECT NAME="charge" $onChange>
 	$optionlist</SELECT>
@@ -303,15 +336,26 @@ sub printEntryForm {
 
 
     #### Finish up the table and form
+    $t8 = [gettimeofday()];
     print qq~<BR>
 	&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 	<INPUT TYPE="submit" NAME="apply_action" VALUE="REFRESH">
+        <INPUT TYPE="submit" NAME="apply_action" VALUE="PRINTABLE FORMAT">
 	</TD>
 	</TR>
 	</TABLE>
          </FORM>
     ~;
 
+    printf("\nt0 - t1: %4f<BR>\n",tv_interval($t0,$t1));
+    printf("t1 - t2: %4f<BR>\n",tv_interval($t1,$t2));
+    printf("t2 - t3: %4f<BR>\n",tv_interval($t2,$t3));
+    printf("t3 - t4: %4f<BR>\n",tv_interval($t3,$t4));
+    printf("t4 - t5: %4f<BR>\n",tv_interval($t4,$t5));
+    printf("t5 - t6: %4f<BR>\n",tv_interval($t5,$t6));
+    printf("t6 - t7: %4f<BR>\n",tv_interval($t6,$t7));
+    printf("t7 - t8: %4f<BR>\n",tv_interval($t7,$t8));
+    printf("  Total: %4f<BR>\n",tv_interval($t0,$t8));
 
 
 } # end printEntryForm
@@ -535,7 +579,7 @@ sub pg_setup {
     $ENV{"PGPLOT_GIF_WIDTH"} = $gifwidth;
     $ENV{"PGPLOT_GIF_HEIGHT"} = $gifheight;
     $ENV{"PGPLOT_BACKGROUND"} = "lightyellow";
-
+$device = "/xs";
     #### Create a new graphics device
     my $win = PDL::Graphics::PGPLOT::Window -> new({Device => "$device"});
 
@@ -612,6 +656,13 @@ sub PlotPeaks {
     #### Peak Colors
     my $peakcolors_ref = $args{'PeakColors'};
 
+    #### Peak finding window
+    my $window = $args{'Window'} || 2;
+
+    #### Peak coloring
+    my $coloring_flag = $args{'Coloring'} || 1;
+
+
     my $length = $args{'Length'};
     my @Binten = (0) x $length;
     my @Yinten = (0) x $length;
@@ -651,22 +702,28 @@ sub PlotPeaks {
     my $i;
     my $lineclr;
     my ($mass, $intensity);
+
+my $oldway;
+if ($oldway) {
     for ($i=0; $i<$specdata->{n_peaks}; $i++) {
       $mass = $specdata->{masses}->[$i];
       $intensity = $specdata->{intensities}->[$i];
 
       #### Set default line color to Black
       $lineclr = $peakcolors_ref->[$i] || 14;
+
       my $mainx = pdl [$mass, $mass];
       my $mainy = pdl [0, $intensity];
+
+if ($coloring_flag) {
 
       #### This kludge lets me not colorize the last B and/or
       #### first Y peaks found
       set $bdata, ($length-1),-9999;
       set $ydata, 0, -9999;
 
-      my $Bind = which($bdata >= ($mass-2) & $bdata <= ($mass+2));
-      my $Yind = which($ydata >= ($mass-2) & $ydata <= ($mass+2));
+      my $Bind = which($bdata >= ($mass-$window) & $bdata <= ($mass+$window));
+      my $Yind = which($ydata >= ($mass-$window) & $ydata <= ($mass+$window));
       if ($Bind !~ 'Empty') {
         #### Red line for Y ion match
         $lineclr = $redcol;
@@ -685,10 +742,30 @@ sub PlotPeaks {
 
       $peakcolors_ref->[$i] = $lineclr;
 
+
+}
+
       #### Plot the data line
       $win -> line($mainx, $mainy,{Color=>$lineclr});
-      $win -> hold;
+      #$win -> hold;
     }
+}
+    my ($mass2, $intensity2);
+    $mass2 = $specdata->{masses};
+    $intensity2 = $specdata->{intensities};
+
+    my $tx = pdl ($mass2, $mass2)->xchg(0,1);
+
+    my $aa = [(1) x scalar(@{$mass2})];
+    my $ty = pdl ($aa, $intensity2)->xchg(0,1);
+
+    my $h = {Color => ['Red'], Linestyle => ['Solid']};
+print "before tline...\n";
+    $win -> tline($tx,$ty,$h);
+print "after tline...\n";
+    #$win -> close;
+
+
     return ($win,\@Binten,\@Yinten);
 }
 

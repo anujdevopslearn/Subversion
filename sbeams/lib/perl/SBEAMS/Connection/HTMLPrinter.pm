@@ -69,13 +69,13 @@ sub printPageHeader {
 	</HEAD>
 
 	<!-- Background white, links blue (unvisited), navy (visited), red (active) -->
-	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" >
+	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" OnLoad="self.focus();">
 	<table border=0 width="100%" cellspacing=0 cellpadding=1>
 
 	<!------- Header ------------------------------------------------>
 	<a name="TOP"></a>
 	<tr>
-	  <td bgcolor="$BGCOLOR"><img height=50 width=50 border=0 alt="$DBTITLE Logo" src="$HTML_BASE_DIR/images/logo.gif"></td>
+	  <td bgcolor="$BARCOLOR"><img height=50 width=50 border=0 alt="$DBTITLE Logo" src="$HTML_BASE_DIR/images/logo.gif"></td>
 	  <td align="left" bgcolor="$BGCOLOR"><H1>$DBTITLE - Systems Biology Experiment Analysis Management System<BR>$DBVERSION</H1></td>
 	</tr>
     ~;
@@ -85,7 +85,7 @@ sub printPageHeader {
     if ($minimal_header eq "YES") {
       print qq~
 	<!------- Button Bar -------------------------------------------->
-	<tr><td bgcolor="$BGCOLOR" align="left" valign="top">
+	<tr><td bgcolor="$BARCOLOR" align="left" valign="top">
 	<table border=0 width="120" cellpadding=2 cellspacing=0>
 
 	<tr><td><a href="$HTML_BASE_DIR/"><b>$DBTITLE Home</b></a></td></tr>
@@ -105,7 +105,7 @@ sub printPageHeader {
     if ($navigation_bar eq "YES") {
       print qq~
 	<!------- Button Bar -------------------------------------------->
-	<tr><td bgcolor="$BGCOLOR" align="left" valign="top">
+	<tr><td bgcolor="$BARCOLOR" align="left" valign="top">
 	<table border=0 width="120" cellpadding=2 cellspacing=0>
 
 	<tr><td><a href="$CGI_BASE_DIR/main.cgi">>$DBTITLE Home</a></td></tr>

@@ -592,9 +592,9 @@ sub printEntryForm {
 		   'Gene Name_ATAG' => 'TARGET="Win1"',
                    'Accession' => "http://flybase.bio.indiana.edu/.bin/fbidq.html?\%$colnameidx{biosequence_accession}V",
 		   'Accession_ATAG' => 'TARGET="Win1"',
-                   'Reference' => "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi?QUERY_NAME=BrowseSearchHits&reference_constraint=\%$colnameidx{reference}V&search_batch_id=$parameters{search_batch_id}&xcorr_rank_constraint=1&display_options=BSDesc,MaxRefWidth&apply_action=$apply_action",
+                   'Reference' => "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi?QUERY_NAME=BrowseSearchHits&reference_constraint=\%$colnameidx{reference}V&search_batch_id=$parameters{search_batch_id}&best_hit_constraint=best_hit&display_options=BSDesc,MaxRefWidth&apply_action=$apply_action",
 		   'Reference_ATAG' => 'TARGET="Win1"',
-		   'Peptide' => "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi?QUERY_NAME=BrowseSearchHits&peptide_constraint=\%$colnameidx{peptide}V&search_batch_id=$parameters{search_batch_id}&xcorr_rank_constraint=1&display_options=BSDesc,MaxRefWidth&apply_action=$apply_action",
+		   'Peptide' => "$CGI_BASE_DIR/Proteomics/BrowseSearchHits.cgi?QUERY_NAME=BrowseSearchHits&peptide_constraint=\%$colnameidx{peptide}V&search_batch_id=$parameters{search_batch_id}&best_hit_constraint=best_hit&display_options=BSDesc,MaxRefWidth&apply_action=$apply_action",
 		   'Peptide_ATAG' => 'TARGET="Win1"',
       );
 
