@@ -504,7 +504,7 @@ sub handle_request {
 ###############################################################################
 sub evalSQL {
   my $sql = shift;
-
+	
   return eval "\"$sql\"";
 
 } # end evalSQL

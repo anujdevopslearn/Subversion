@@ -164,6 +164,10 @@ sub handle_request {
 	
   #### Define some generic varibles
   my ($i,$element,$key,$value,$line,$result,$sql);
+	
+	
+	
+	
   my @rows;
 
 
@@ -192,20 +196,7 @@ sub handle_request {
   }
   my $PI_name = $sbeams->getUsername($PI_contact_id);
 
-  #### Print out some information about this project
-  print qq~
-	<H1>Current Project: <A class="h1" HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=$project_id">$project_name</A></H1>
-	<TABLE WIDTH="100%" BORDER=0>
-	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
-	             <TD COLSPAN="2" WIDTH="100%"><B>Status:</B> $project_status</TD></TR>
-	<TR><TD></TD><TD COLSPAN="2"><B>Project Tag:</B> $project_tag</TD></TR>
-	<TR><TD></TD><TD COLSPAN="2"><B>Owner:</B> $PI_name</TD></TR>
-	<TR><TD></TD><TD COLSPAN="2"><B>Access Privileges:</B> <A HREF="$CGI_BASE_DIR/ManageProjectPrivileges">[View/Edit]</A></TD></TR>
-	<TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
-	                 <TD WIDTH="100%"><TABLE BORDER=0>
-  ~;
 
-				
   #### If the current user is not the owner, the check that the
   #### user has privilege to access this project
   if ($project_id > 0) {
@@ -223,11 +214,25 @@ sub handle_request {
   if ($project_id == 274)
 	{
 			my $action = $parameters{'action'};
+			print qq~	<TABLE WIDTH="100%" BORDER=0> ~;
 #loading the default page (start)
 			my $sub = $actionHash{$action} || $actionHash{$START};
 			if ($sub)
 			{
-					&$sub (ref_parameters=>\%parameters);
+#print some info about this project
+#only on the main page 
+				print qq~
+				<H1>Current Project: <A class="h1" HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=$project_id">$project_name</A></H1>
+				<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
+	      <TD COLSPAN="2" WIDTH="100%"><B>Status:</B> $project_status</TD></TR>
+				<TR><TD></TD><TD COLSPAN="2"><B>Project Tag:</B> $project_tag</TD></TR>
+				<TR><TD></TD><TD COLSPAN="2"><B>Owner:</B> $PI_name</TD></TR>
+				<TR><TD></TD><TD COLSPAN="2"><B>Access Privileges:</B> <A HREF="$CGI_BASE_DIR/ManageProjectPrivileges">[View/Edit]</A></TD></TR>
+				<TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
+	      <TD WIDTH="100%"><TABLE BORDER=0>
+				~ if $action eq '_start' || !$action;
+	
+ 				&$sub (ref_parameters=>\%parameters);
 			}
 			else
 			{
@@ -271,9 +276,22 @@ sub displayMain
 		$antibodyOption = $sbeams->buildOptionList("Select antibody_id, antibody_name from $TBIS_ANTIBODY order by sort_order", "sELECTED","MULTIOPTIONLIST");
 		$stainOption = $sbeams->buildOptionList("Select stained_slide_id, stain_name from $TBIS_STAINED_SLIDE order by stain_name", "Selected","MULTIOPTIONLIST");
 		$cellOption = $sbeams->buildOptionList("Select cell_type_id,cell_type_name from $TBIS_CELL_TYPE order by sort_order", "Selected","MULTIOPTIONLIST");
- 
-	
-  #### If there are experiments, display them
+		my @humanSpecimenBlockArray = $sbeams->selectOneColumn("select specimen_block_id from $TBIS_SPECIMEN_BLOCK sb
+						join $TBIS_SPECIMEN s on sb.specimen_id = s.specimen_id
+						join sbeams.dbo.organism  sdo on s.organism_id  = sdo.organism_id
+						where organism_name = \'human\'"); 
+						
+		my $humanString = join ', ', @humanSpecimenBlockArray;
+		
+		my @mouseSpecimenBlockArray = $sbeams->selectOneColumn("select specimen_block_id from $TBIS_SPECIMEN_BLOCK sb
+						join $TBIS_SPECIMEN s on sb.specimen_id = s.specimen_id
+						join sbeams.dbo.organism  sdo on s.organism_id  = sdo.organism_id
+						where organism_name = \'mouse\'"); 
+						
+		my $mouseString = join ', ', @mouseSpecimenBlockArray;
+		
+		
+#### If there are experiments, display them
  	my (%hash,%stainedSlideHash,%imageHash);
 	my (@specList,@slideList,@imageList);
 
@@ -300,8 +318,10 @@ sub displayMain
 		foreach my $key (sort keys %hash)
 		{
 			
+			
+			print "<td><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&specimen_block_id=$humanString&display_options=MergeLevelsAndPivotCellTypes\"><b>$key</A></b></td></tr>" if $key =~ /human/i;
+			print "<td><A HREF=\"$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains?action=QUERY&specimen_block_id=$mouseString&display_options=MergeLevelsAndPivotCellTypes\"><b>$key</A></b></td></tr>" if $key =~ /mouse/i;
 			print qq~
-			<td><b>$key</b></td></tr>
 			<tr><td>Total Number of Specimens: $hash{$key}->{specimenID}</td></tr>
 			<tr><td>Total Number of Stains: $hash{$key}->{stainID}</td></tr>
 			<tr><td>Total Number of Images: $hash{$key}->{imageID}</td></tr>
