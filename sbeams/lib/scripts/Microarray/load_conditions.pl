@@ -442,7 +442,9 @@ sub insertGeneExpression {
 	while ( my($key,$value) = each %ge_hash ){
 	    my $result =  $id_hash{$key};
 	    if ($result){
-		print "UPDATEing $key\n";
+		if ($VERBOSE > 0) {
+		    print "UPDATEing $key\n";
+		}
 		my $ge_id = $value;
 		my %rowdata;
 		$rowdata{'biosequence_id'} = $result;
