@@ -462,8 +462,8 @@ sub handle_request {
        $molecular_function_clause.$biological_process_clause.
        $cellular_component_clause.$protein_domain_clause ) {
     $GO_join = qq~
-        LEFT JOIN BioLink.dbo.annotated_gene AG
-             ON ( BS.biosequence_accession = AG.gene_accession )
+        LEFT JOIN BioLink.dbo.biosequence_annotated_gene AG
+             ON ( BS.biosequence_id = AG.biosequence_id )
         LEFT JOIN BioLink.dbo.gene_annotation MFA
              ON ( AG.annotated_gene_id = MFA.annotated_gene_id
                    AND MFA.gene_annotation_type_id = 1 AND MFA.idx = 0 )
