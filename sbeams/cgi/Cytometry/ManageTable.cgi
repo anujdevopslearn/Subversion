@@ -37,7 +37,7 @@ use DBI;
 #use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection qw($q);;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
@@ -158,7 +158,16 @@ sub main {
     );
   } elsif ($parameters{action}) { processEntryForm();
   } elsif ($q->param('apply_action_hidden')) { printEntryForm();
-  } elsif ($q->param('ShowEntryForm')) { printEntryForm();
+  } elsif ($q->param('ShowEntryForm')) {
+    if (uc($TABLE_NAME) eq "CY_FCS_RUN")
+    {
+      my $infoString = "<center><b>
+      All non-required Fields can be left blank.<br>In this case the values from the header of  the FSC file to be uploaded  will be 
+      used to populate the missing information<br>
+      </b><br></center>";
+      print $infoString;
+    }
+    printEntryForm();
   } elsif ($parameters{"$PK_COLUMN_NAME"}) { printEntryForm();
   } else { printOptions(); }
 
@@ -235,9 +244,12 @@ sub preUpdateDataCheck {
 
   my $query_parameters_ref = $args{'parameters_ref'};
   my %parameters = %{$query_parameters_ref};
-  if ( uc($TABLE_NAME) eq "CY_FCS_RUN" )
+    if ( uc($TABLE_NAME) eq "CY_FCS_RUN" )
   {
-      return "Error: fcs_run_id not defined" if !$parameters{project_id};
+    
+             
+      return "Error: project  not defined" if !$parameters{project_id};
+      
     my $errstr = checkPermission( fkey => 'project_id',
                                   fval => $parameters{project_id},
                                   pval => $parameters{fcs_run_id},
@@ -245,6 +257,10 @@ sub preUpdateDataCheck {
                                   tname => $TABLE_NAME );
 
     return ( $errstr ) if $errstr;
+    
+    
+#if it is an insert , need to 
+    
   }
   
    if ( uc($TABLE_NAME) eq "CY_CYTOMETRY_SAMPLE" )
@@ -329,7 +345,31 @@ sub postUpdateOrInsertHook {
   my %parameters = %{$query_parameters_ref};
   my $pk_value = $args{'pk_value'};
 
-
+  if ( uc($TABLE_NAME) eq "CY_FCS_RUN" )
+  {
+    if ($parameters{'action'} = 'INSERT')
+    {
+      my $saveFile = $TABLE_NAME.'/'.$parameters{fcs_run_id}.'_original_filepath.dat';
+      $parameters{'savedFile'} = $saveFile; 
+      my $string;
+       foreach my $key (keys %parameters)
+       {
+         $string .= " ".$key ."==".$parameters{$key}; 
+       }
+      
+       my $result = `/usr/local/bin/perl ./loadFcsWeb.pl $string
+#      parameters{'processFile'} $parameters{project_id}`;
+         if ($result != 1)
+       {
+         #delete the record
+         #print the error statement
+         return "Error: Could not upload $parameters{original_filepath} == $result" if $result != 1;
+       }
+     }
+  }
+  
+  
+  
   #### If table XXXX
   if ($TABLE_NAME eq "XXXX") {
     return "An error of some sort $parameters{something} invalid";
