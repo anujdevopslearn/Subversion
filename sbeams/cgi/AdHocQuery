@@ -30,7 +30,7 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
 
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -231,7 +231,7 @@ sub handle_request {
 
   my $sql_clause = "";
   if ($parameters{query}) {
-    if ($parameters{query} =~ /TRUNCATE|DROP|DELETE|GRANT/i) {
+    if ($parameters{query} =~ /TRUNCATE|DROP|DELETE|GRANT|update/i) {
       print "<H4>Illegal word in SQL!  Check syntax.</H4>\n\n";
       return;
     } else {
@@ -260,7 +260,6 @@ sub handle_request {
   %hidden_cols = (
   );
 
-
   #########################################################################
   #### If QUERY or VIEWRESULTSET was selected, display the data
   if ( ($apply_action =~ /QUERY/i && $isAdmin ) || $apply_action eq "VIEWRESULTSET") {
@@ -277,6 +276,10 @@ sub handle_request {
         sql_query=>$sql,
         resultset_ref=>$resultset_ref,
       );
+
+      # We have connected as the read-only user up to now, but we need to store
+      # the resultset.  Get a write handle by reauthenticating.
+      $sbeams->setNewDBHandle() || die "Unable to reconnect";
 
       #### Store the resultset and parameters to disk resultset cache
       $rs_params{set_name} = "SETME";
