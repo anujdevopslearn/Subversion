@@ -30,15 +30,12 @@ use SBEAMS::BioLink::Tables;
 use SBEAMS::Biosap::Tables;
 use SBEAMS::Biosap::Tables;
 use SBEAMS::Cytometry::Tables;
-use SBEAMS::GEAP::Tables;
 use SBEAMS::Immunostain::Tables;
 use SBEAMS::Inkjet::Tables;
 use SBEAMS::Interactions::Tables;
 use SBEAMS::PhenoArray::Tables;
 use SBEAMS::ProteinStructure::Tables;
 use SBEAMS::SNP::Tables;
-use SBEAMS::TOES::Tables;
-use SBEAMS::UESC::Tables;
 use SBEAMS::Tools::Tables;
 
 
