@@ -1764,11 +1764,22 @@ sub displayResultSetControls {
       }
     }
 
+
+    #### If there are plotting parameters set, include those
+    my $plot_params = '';
+    foreach my $param_name ('rs_plot_type','rs_columnA','rs_columnB') {
+      if ($rs_params{$param_name}) {
+        $plot_params .= "&$param_name=".$rs_params{$param_name};
+      }
+    }
+
+
+    #### Display the URLs to reaccess these data
     print qq~
       <BR><nobr>URL to
-      <A HREF=\"$base_url?apply_action=VIEWRESULTSET&rs_set_name=$rs_params{set_name}&rs_page_size=$rs_params{page_size}&rs_page_number=$pg\">
+      <A HREF=\"$base_url?apply_action=VIEWRESULTSET&rs_set_name=$rs_params{set_name}&rs_page_size=$rs_params{page_size}&rs_page_number=$pg$plot_params\">
       recall this result set</A>:
-      $SERVER_BASE_DIR$base_url?apply_action=VIEWRESULTSET&rs_set_name=$rs_params{set_name}&rs_page_size=$rs_params{page_size}&rs_page_number=$pg</nobr>
+      $SERVER_BASE_DIR$base_url?apply_action=VIEWRESULTSET&rs_set_name=$rs_params{set_name}&rs_page_size=$rs_params{page_size}&rs_page_number=$pg$plot_params</nobr>
 
       <nobr>URL to
       <A HREF=\"$base_url?apply_action=QUERY&$param_string\">
