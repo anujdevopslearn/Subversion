@@ -143,6 +143,13 @@ sub printEntryForm {
     }
 
 
+    #### If this is a ShowSearch query and sort_order is undefined (not just ""),
+    #### then set to a likely default
+    if (($TABLE_NAME eq "ShowSearch") && (!defined($parameters{sort_order})) ) {
+      $parameters{sort_order} = "S.file_root,experiment_tag,database_tag,SH.cross_corr_rank";
+    }
+
+
     # ---------------------------
     # Query to obtain column information about the table being managed
     $sql_query = qq~
