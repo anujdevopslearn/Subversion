@@ -263,6 +263,11 @@ sub handle_request {
 	$sql = "SELECT * FROM ISB..course_registration";
   }
 
+  #### Define parameters for source 'protcourse'
+  if ($parameters{source_name} eq 'protcourse') {
+    $sql = "SELECT * FROM ISB..proteomics_course_reg";
+  }
+
 
   #########################################################################
 
@@ -272,6 +277,11 @@ sub handle_request {
     #### If the action contained QUERY, then fetch the results from
     #### the database
     if ($apply_action =~ /QUERY/i) {
+
+      unless($sql) {
+	print "<H4>You did not supply a valid data source</H4>\n";
+	return;
+      }
 
       #### Show the SQL that will be or was executed
       $sbeams->display_sql(sql=>$sql) if ($show_sql);
