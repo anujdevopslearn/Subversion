@@ -241,7 +241,7 @@ sub handleRequest {
 ###############################################################################
 # getBiosequenceSetStatus
 ###############################################################################
-sub getBiosequenceSetStatus { 
+sub getBiosequenceSetStatus {
   my %args = @_;
   my $SUB_NAME = 'getBiosequenceSetStatus';
 
@@ -297,7 +297,7 @@ sub getBiosequenceSetStatus {
 ###############################################################################
 # loadBiosequenceSet
 ###############################################################################
-sub loadBiosequenceSet { 
+sub loadBiosequenceSet {
   my %args = @_;
   my $SUB_NAME = 'loadBiosequenceSet';
 
@@ -394,7 +394,7 @@ sub loadBiosequenceSet {
       $information =~ /^>(\S+)/;
       $rowdata{biosequence_name} = $1;
       $information =~ /^>(\S+)\s(.+)/;
-      $rowdata{biosequence_desc} = $2;
+      $rowdata{biosequence_desc} = $2 || '';
       $rowdata{biosequence_set_id} = $biosequence_set_id;
       $rowdata{biosequence_seq} = $sequence unless ($skip_sequence);
 
@@ -555,7 +555,9 @@ sub specialParsing {
   if ($biosequence_set_name eq "yeast_orf_coding" || $biosequence_set_name eq "Yeast ORFs Database") {
     if ($rowdata_ref->{biosequence_desc} =~ /([\w-]+), .+/ ) {
        $rowdata_ref->{biosequence_gene_name} = $1;
-       $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
+       #### Deutsch switched 2002-08-30 for GO related proteomics
+       #$rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
+       $rowdata_ref->{biosequence_accession} = $1;
        $rowdata_ref->{dbxref_id} = '7';
     }
   }
