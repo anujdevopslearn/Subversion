@@ -232,6 +232,8 @@ sub start_element {
     protein_summary => 1,
     protein_summary_header => 1,
     protein_summary_data_filter => 1,
+    nsp_information => 1,
+    nsp_distribution => 1,
     protein_group => 1,
     protein => 1,
     indistinguishable_protein => 1,
@@ -247,6 +249,8 @@ sub start_element {
     protein_summary => '',
     protein_summary_header => 'protein_summary_id',
     protein_summary_data_filter => 'protein_summary_header_id',
+    nsp_information => 'protein_summary_header_id',
+    nsp_distribution => 'nsp_information_id',
     protein_group => 'protein_summary_id',
     protein => 'protein_group_id',
     indistinguishable_protein => 'protein_id',
@@ -296,6 +300,14 @@ sub start_element {
       my $date0 = ParseDate($attrs{execution_date});
       if ($date0) {
         $attrs{execution_date} = UnixDate($date0,"%Y-%m-%d %H:%M:%S");
+      }
+    }
+
+
+    #### If this is the nsp_distribution object, fix any "inf" attributes
+    if ($localname eq 'nsp_distribution') {
+      while ( my ($k,$v) = each %attrs ) {
+        $attrs{$k} = 1e35 if ($v eq 'inf');
       }
     }
 
