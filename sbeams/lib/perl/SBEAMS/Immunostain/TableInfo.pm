@@ -83,16 +83,50 @@ sub returnTableInfo {
     if ($table_name eq "IS_stained_slide") {
         if ($info_key eq "BASICQuery") {
             return qq~
-		SELECT stain_id,tissue_type_name,antibody_name,stain_name,
-                       annotated_image_file,raw_image_file,image_file_date,
+		SELECT stained_slide_id,project_tag,tissue_type_name,
+                       specimen_block_name,antibody_name,stain_name,
                        stain_description
 		  FROM $TBIS_STAINED_SLIDE SS
+		  LEFT JOIN $TB_PROJECT P ON ( SS.project_id = P.project_id )
+		  LEFT JOIN $TBIS_SPECIMEN_BLOCK SB
+		       ON ( SS.specimen_block_id = SB.specimen_block_id )
+		  LEFT JOIN $TBIS_SPECIMEN S
+		       ON ( SB.specimen_id = S.specimen_id )
 		  LEFT JOIN $TBIS_TISSUE_TYPE TT
-		       ON ( SS.tissue_type_id = TT.tissue_type_id )
+		       ON ( S.tissue_type_id = TT.tissue_type_id )
 		  LEFT JOIN $TBIS_ANTIBODY A
 		       ON ( SS.antibody_id = A.antibody_id )
 		 WHERE SS.record_status!='D'
-		 ORDER BY A.sort_order,A.antibody_name,SS.stain_name
+		 ORDER BY project_tag,tissue_type_name,specimen_block_name,
+                       A.sort_order,A.antibody_name,SS.stain_name
+            ~;
+        }
+
+    }
+
+
+    if ($table_name eq "IS_slide_image") {
+        if ($info_key eq "BASICQuery") {
+            return qq~
+		SELECT slide_image_id,project_tag,
+                       specimen_block_name,antibody_name,stain_name,
+                       image_magnification,raw_image_file,processed_image_file,
+                       annotated_image_file
+		  FROM $TBIS_SLIDE_IMAGE SI
+		  LEFT JOIN $TBIS_STAINED_SLIDE SS
+                       ON ( SI.stained_slide_id = SS.stained_slide_id )
+		  LEFT JOIN $TB_PROJECT P ON ( SS.project_id = P.project_id )
+		  LEFT JOIN $TBIS_SPECIMEN_BLOCK SB
+		       ON ( SS.specimen_block_id = SB.specimen_block_id )
+		  LEFT JOIN $TBIS_SPECIMEN S
+		       ON ( SB.specimen_id = S.specimen_id )
+		  LEFT JOIN $TBIS_TISSUE_TYPE TT
+		       ON ( S.tissue_type_id = TT.tissue_type_id )
+		  LEFT JOIN $TBIS_ANTIBODY A
+		       ON ( SS.antibody_id = A.antibody_id )
+		 WHERE SS.record_status!='D'
+		 ORDER BY project_tag,tissue_type_name,specimen_block_name,
+                       A.sort_order,A.antibody_name,SS.stain_name
             ~;
         }
 
