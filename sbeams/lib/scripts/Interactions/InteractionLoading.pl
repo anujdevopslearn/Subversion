@@ -105,6 +105,7 @@ qw / Organism_bioentity1_name
 	 Bioentity1_common_name
 	 Bioentity1_canonical_name
 	 Bioentity1_full_name
+	 Bioentity1_canonical_gene_name
 	 Bioentity1_aliases
 	 Bioentity1_location
 	 Bioentity1_state
@@ -124,44 +125,60 @@ qw / Organism_bioentity1_name
 	 Assay_name
 	 Assay_type
 	 Publication_ids/;
+#get the indexes of all columns
+my %indexHash;
+my $indexCount = 0;	 
+foreach my $column (@columnOrder)
+{
+		$indexHash{$column} = $indexCount;
+		$indexCount++;
+}
+	 
+	 
 #this should be read from a conf file
 %columnHashProtein1 = (
- 	organismName1 => 0,
-	bioentityComName1 => 2, 
-	bioentityCanName1 =>	3,
-	bioentityFullName1	=>	4, 
-	bioentityAliasName1 =>	5,
-	bioentityType1 =>	1,
-	bioentityReg1	=> 8,
-	bioentityLoc1 =>	6,
-	group => 18);
+organismName1 => $indexHash{Organism_bioentity1_name},
+	bioentityComName1 =>$indexHash{Bioentity1_common_name}, 
+	bioentityCanName1 =>$indexHash{Bioentity1_canonical_name},
+	bioentityCanGeneName1 => $indexHash{Bioentity1_canonical_gene_name},
+	bioentityFullName1	=>$indexHash{Bioentity1_full_name}, 
+	bioentityAliasName1 =>$indexHash{Bioentity1_aliases},
+	bioentityType1 =>$indexHash{Bioentity1_type},
+	bioentityReg1	=>$indexHash{Bioentity1_regulatory_feature},
+	bioentityLoc1 =>$indexHash{Bioentity1_location},
+	group => $indexHash{Interaction_group},);
+	
+
 %columnHashProtein2 = (
-	organismName2	=> 10,
-	bioentityComName2	=>	11,
-	bioentityCanName2 =>	12, 	
-	bioentityFullName2	=>	12,
-	bioentityAliasName2	=>	14,
-	bioentityType2	=>	15,
-	bioentityReg2	=>	16,
-	bioentityLoc2	=>	17,
-	group =>	18);
+	organismName2	=>$indexHash{Organism_bioentity2_name},
+	bioentityComName2	=>$indexHash{Bioentity2_common_name},
+	bioentityCanName2 =>	$indexHash{Bioentity2_canonical_name}, 	
+	bioentityFullName2	=>$indexHash{Bioentity2_full_name},
+	bioentityAliasName2	=>	$indexHash{Bioentity2_aliases},
+	bioentityType2	=>$indexHash{Bioentity2_type},
+	bioentityReg2	=>$indexHash{Bioentity2_regulatory_feature},
+	bioentityLoc2	=>	$indexHash{Bioentity2_location},
+	group =>$indexHash{Interaction_group});
+
+	
 %interactionHash = (
-	organismName1	=>	0,
-	bioentityComName1	=>	2,	
-	bioentityCanName1	=>	3,
-	bioentityType1	=>	1,
-	bioentityState1	=>	7,
-	organismName2	=>	10, 
-	bioentityComName2	=>	11,
-	bioentityCanName2	=>	12,
-	bioentityType2	=>	15,
-	interType	=>	9,
-	group	=>	18,
-	interaction_description => 20,
-	assay_name => 21,
-	assay_type=> 22,
-	pubMedID	=>	23,
-	confidence_score => 19);
+	organismName1	=>$indexHash{Organism_bioentity1_name},
+	bioentityComName1	=>	$indexHash{Bioentity1_common_name},	
+	bioentityCanName1	=>$indexHash{Bioentity1_canonical_name},
+	bioentityCanGeneName1 =>$indexHash{Bioentity1_canonical_gene_name},
+	bioentityType1	=>	$indexHash{Bioentity1_type},
+	bioentityState1	=>$indexHash{Bioentity1_state},
+	organismName2	=>$indexHash{Organism_bioentity2_name}, 
+	bioentityComName2	=>$indexHash{Bioentity2_common_name},
+	bioentityCanName2	=>$indexHash {Bioentity2_canonical_name},
+	bioentityType2	=>$indexHash{Bioentity2_type},
+	interType	=>$indexHash{Interaction_type},
+	group	=>	$indexHash{Interaction_group},
+	interaction_description =>$indexHash{Interaction_description},
+	assay_name =>$indexHash{Assay_name},
+	assay_type=> $indexHash{Assay_type},
+	pubMedID	=>	$indexHash{Publication_ids},
+	confidence_score => $indexHash{Confidence_score});
 	
 #getting data from all the lookup tables
 #table, column, column
@@ -275,12 +292,13 @@ sub processFile
 		print "checking bioentity1 requirements\n";
 		foreach my $column (sort keys %columnHashProtein1)
 		{
-			
+		
 		 $infoArray[$columnHashProtein1{$column}] =~ s/^\s*//;
 		 $infoArray[$columnHashProtein1{$column}] =~ s/\s*$//;
-			$INFOPROTEIN1{$count-2}->{$column} = $infoArray[$columnHashProtein1{$column}];
+		 $INFOPROTEIN1{$count-2}->{$column} = $infoArray[$columnHashProtein1{$column}];
 			
 		}
+		
 		$INFOPROTEIN1{$count-2}->{organismName1} = uc($INFOPROTEIN1{$count-2}->{organismName1});
 		$INFOPROTEIN1{$count-2}->{bioentityReg1} = uc($INFOPROTEIN1{$count-2}->{bioentityReg1});
 		$INFOPROTEIN1{$count-2}->{group} = $infoArray[$columnHashProtein1{group}];
@@ -289,6 +307,7 @@ sub processFile
 		$INFOPROTEIN1{$count-2}->{group} =~ s/^([a-z]+)\s+([a-z]+)$/$1 $2/i;
 		$INFOPROTEIN1{$count-2}->{group}= uc($INFOPROTEIN1{$count-2}->{group});
 		$INFOPROTEIN1{$count-2}->{bioentityType1} = uc($INFOPROTEIN1{$count-2}->{bioentityType1});
+		
 				
 		if (!($INFOPROTEIN1{$count-2}->{bioentityComName1}) and !($INFOPROTEIN1{$count-2}->{bioentityCanName1}))
 		{
@@ -513,7 +532,7 @@ print "checking interaction requirements\n";
 		
 	
 		
-		if ($INTERACTION{$count-2}->{pubMedID} and !($pubMed->{$INTERACTION{$count-2}->{pubMedID}}))
+		if ($INTERACTION{$count-2}->{pubMedID})# and !($pubMed->{$INTERACTION{$count-2}->{pubMedID}}))
 		{
 #get the pubMedID
  	  	
@@ -551,9 +570,21 @@ print "checking interaction requirements\n";
 						my $ll = length($pubRowData{$keymap{AuthorList}});
 						$pubRowData{$keymap{AuthorList}} =~ s/^([\w\W]{250}).*$/$1/ if (256 < length($pubRowData{$keymap{AuthorList}}));
 						$pubRowData{'pubmed_id'} = $INTERACTION{$count-2}->{pubMedID};
-				 		my $insert = 1;
-						my $update = 0;
-						my $returned_PK = $recordCon->updateOrInsertRow(
+				 		
+					my $insert = 1;
+					my $update = 0;
+					 print "$insert ----- $update";
+				
+					 if ($pubMed->{$INTERACTION{$count-2}->{pubMedID}})
+					 {
+							 $insert = 0;
+							 $update = 1;
+							 $publicationID = $pubMed->{$INTERACTION{$count-2}->{pubMedID}};
+					 }
+					 
+					 	 print "$insert ----- $update   ----------$pubMed->{$INTERACTION{$count-2}->{pubMedID}} ";
+					 
+							my $returned_PK = $recordCon->updateOrInsertRow(
 							insert => $insert,
 							update => $update,
 							table_name => "$TBIN_PUBLICATION",
@@ -566,6 +597,12 @@ print "checking interaction requirements\n";
 							add_audit_parameters => 1
 							);      
 						$pubMed->{$INTERACTION{$count-2}->{pubMedID}} = $returned_PK; 
+						
+						
+						print "thus pk $returned_PK\n";
+						print "$pubMed->{$INTERACTION{$count-2}->{pubMedID}}\n";
+						$INTERACTION{$count-2}->{pubMedID} = $returned_PK
+					
 																
 				}			
 				else
@@ -641,7 +678,7 @@ sub checkPopulateBioentity
 			else 
 			{
 
-				$hashRef->{$record}->{'bioentityComName'.$num} =~ s/\'/ /;
+				$hashRef->{$record}->{'bioentityComName'.$num} = escapeString ($hashRef->{$record}->{'bioentityComName'.$num});
 				$commonClause .= 	qq /\'$hashRef->{$record}->{'bioentityComName'.$num}\'/;
 #1,2
 				$bioentityQueryCommon = $bioentityQuery.$commonClause.$groupByClause;
@@ -655,7 +692,7 @@ sub checkPopulateBioentity
 			}
 			else 
 			{
-					$hashRef->{$record}->{'bioentityCanName'.$num} =~ s/\'/ /;
+					$hashRef->{$record}->{'bioentityCanName'.$num} = escapeString($hashRef->{$record}->{'bioentityCanName'.$num});
 					$canonicalClause .= 	qq /\'$hashRef->{$record}->{'bioentityCanName'.$num}\'/;
 #4,5
 
@@ -693,7 +730,8 @@ sub checkPopulateBioentity
 					}
 					
 					if ($bioentityIDCommon and !$bioentityIDCanonical)
-					{
+					{  
+							$hashRef->{$record}->{'bioentityComName'.$num} = escapeString($hashRef->{$record}->{'bioentityComName'.$num});
 							my $subCommonQuery = "Select bioentity_canonical_name from $TBIN_BIOENTITY
 							where bioentity_common_name = \'$hashRef->{$record}->{'bioentityComName'.$num}\'";
 							
@@ -708,6 +746,7 @@ sub checkPopulateBioentity
 					}
 					elsif (!$bioentityIDCommon and $bioentityIDCanonical)
 					{
+							$hashRef->{$record}->{'bioentityCanName'.$num} = escapeString($hashRef->{$record}->{'bioentityCanName'.$num});
 							my $subCanonicalQuery = "Select bioentity_common_name from $TBIN_BIOENTITY
 							where bioentity_common_name = \'$hashRef->{$record}->{'bioentityCanName'.$num}\'"; 
 							my @returnedRow = $recordCon->selectOneColumn($subCanonicalQuery);
@@ -756,6 +795,7 @@ sub checkPopulateBioentity
 			elsif ($commonClause and !$canonicalClause)
 			{
 					print "only bioentity_common_name is known\n";
+					print "$bioentityQueryCommon\n";
 					my @rows = $recordCon->selectOneColumn($bioentityQueryCommon);	
 					my $nrows = scalar(@rows);
 					my $bioentityIDCommon = $rows[0] if $nrows == 1;
@@ -818,13 +858,16 @@ sub insertOrUpdateBioentity
 		{
 				print "updating BIOENTITY: $bioentityID\n";
 		}
+		
+		
+		
 		my %rowData;
-		$rowData{bioentity_common_name} = $record->{'bioentityComName'.$num} if ($record->{"bioentityComName".$num});	
-		$rowData{bioentity_canonical_name} = $record->{'bioentityCanName'.$num} if ($record->{"bioentityCanName".$num});	
-		$rowData{bioentity_Full_Name} = $record->{'bioentityFullName'.$num} if ($record->{"bioentityFullName".$num});
-		$rowData{bioentity_canonical_gene_name} = $record->{'bioentityCanGeneName'.$num} if ($record->{"bioentityCanGeneName".$num});
-		$rowData{bioentity_Aliases} = $record->{'bioentityAliasName'.$num} if ($record->{"bioentityAliases".$num});
-		$rowData{bioentity_location}= $record->{'bioentityLoc'.$num} if ($record->{"bioentityLoc".$num});
+		$rowData{bioentity_common_name} = escapeString($record->{'bioentityComName'.$num}) if ($record->{"bioentityComName".$num});	
+		$rowData{bioentity_canonical_name} = escapeString($record->{'bioentityCanName'.$num}) if ($record->{"bioentityCanName".$num});	
+		$rowData{bioentity_Full_Name} = escapeString($record->{'bioentityFullName'.$num}) if ($record->{"bioentityFullName".$num});
+		$rowData{bioentity_canonical_gene_name} = escapeString($record->{'bioentityCanGeneName'.$num}) if ($record->{"bioentityCanGeneName".$num});
+		$rowData{bioentity_Aliases} = escapeString($record->{'bioentityAliasName'.$num}) if ($record->{"bioentityAliases".$num});
+		$rowData{bioentity_location}= escapeString($record->{'bioentityLoc'.$num}) if ($record->{"bioentityLoc".$num});
 		
 		if ($insert)
 		{					 
@@ -943,8 +986,7 @@ sub insertOrUpdateInteraction
 		{
 				print "updating INTERACTION: $interactionID\n";
 		}
-		
-		
+		print "  $record->{pubMedID}";
 		my %rowData; 
 		$rowData{interaction_group_id} = $interactionGroups->{$record->{group}} if ($record->{group});
 		$rowData{bioentity1_id} = $record->{bioentityID1};
@@ -957,9 +999,9 @@ sub insertOrUpdateInteraction
 		$rowData{assay_id} = $assayTypes->{$record->{assay_type}} if ($record->{assay_type}); 
 		$rowData{confidence_score_id} = $confidenceScores->{$record->{confidence_score}} if ($record->{confidence_scores});
 		$rowData{interaction_name} = $record->{interactionName} if ($record->{interactionName});
-		$rowData{interaction_description} = $record->{interaction_description} if ($record->{interaction_description});		
+		$rowData{interaction_description} = escapeString($record->{interaction_description}) if ($record->{interaction_description});		
 		$rowData{assay_id} = $assayTypes->{$record->{assay_type}} if($record->{assay_type});
-		$rowData{publication_id} = $pubMed->{$record->{pubMedID}} if ($record->{pubMedID});
+		$rowData{publication_id} = $record->{pubMedID} if ($record->{pubMedID});
 		
 		my $returned_PK = $recordCon->updateOrInsertRow(
 				insert => $insert,
@@ -996,11 +1038,24 @@ sub ErrorLog
 		my ($error,$record) = @_;
 		foreach my $key (keys %{$record})
 		{
-				print $fhLog "$key  ===  $record->{$key}<br>";
+				print $fhLog "$key  ===  $record->{$key}<br>\n";
 		}
-		print $fhLog "$error<br><br>";
+		print $fhLog "$error<br><br>\n\n";
 		
-}		
+}	
+
+
+sub escapeString {
+      my $word = $_[0];
+      return undef unless (defined($word));
+      $word =~ s /\\/\\\\/g;    
+      $word =~ s /\'/\'\'/g;
+      $word =~ s /\"/\'\"/g;
+      $word =~ s /%/\'%/g;  
+			$word =~ s /\./\'\./g;
+      return $word;
+    }
+	
 
 __END__
 
