@@ -485,11 +485,19 @@ sub showTable {
     my ($full_where_clause,$full_orderby_clause) = 
       $sbeams->processTableDisplayControls($TABLE_NAME);
 
+    #### If a new ORDER BY clause is specified, remove the default one
+    if ($full_orderby_clause) {
+      $main_query_part =~ s/\s*ORDER BY.*//i;
+    }
+
+
     my $sql_query = qq~
         $main_query_part
         $full_where_clause
         $full_orderby_clause
     ~;
+
+    #print "<PRE>$sql_query\n\n</PRE>";
 
     my ($element,$value);
     my %url_cols = $sbeamsMAW->returnTableInfo($TABLE_NAME,"url_cols");

@@ -460,7 +460,8 @@ sub processTableDisplayControls {
     $full_orderby_clause = "ORDER BY $orderby_clause" if ($orderby_clause);
 
     # If a user typed ", he probably meant ' instead, so replace since "
-    # will fail.  This is a bit rude, becase what if the user really meant "
+    # will fail.  This is a bit rude, because what if the user really meant "
+    # then he should use [ and ]
     $full_where_clause =~ s/"/'/g;
     $full_orderby_clause =~ s/"/'/g;
 

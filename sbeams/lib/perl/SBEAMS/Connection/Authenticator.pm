@@ -56,7 +56,9 @@ sub new {
 ###############################################################################
 sub Authenticate { 
     my $self = shift;
-    my %params = @_;
+    my %args = @_;
+
+    my $set_to_work_group = $args{'work_group'} || "";
 
     # Obtain the database handle $dbh, thereby option the DB connection
     $dbh = $self->getDBHandle();
@@ -96,6 +98,15 @@ sub Authenticate {
         $current_contact_id = $self->getContact_id($current_username);
         $current_work_group_id = $self->getCurrent_work_group_id();
     }
+
+
+    #### If we're authenticating into a specific work_group, do that:
+    if ($set_to_work_group) {
+        $current_work_group_id =
+            $self->setCurrent_work_group($set_to_work_group);
+        $current_username = "" unless ($current_work_group_id);
+    }
+
 
     return $current_username;
 
@@ -211,7 +222,11 @@ sub checkValidUID {
               WHERE username = '$username'
                 AND record_status != 'D'"
         );
-        $username = "" if ($result ne $username);
+        unless ($result eq $username) {
+            print "ERROR: Your username '$username' is not enabled in ".
+                "the database.  See the administrator.\n\n";
+            $username = "";
+        }
     }
 
     return $username;
@@ -231,6 +246,72 @@ sub getCurrent_contact_id {
 ###############################################################################
 sub getCurrent_username {
     return $current_username;
+}
+
+
+###############################################################################
+# Set the current work_group_id to that requested by the user if allowed
+###############################################################################
+sub setCurrent_work_group {
+    my $self = shift;
+    my $work_group_name = shift;
+
+    #### Find the ID for the requested work_group
+    my ($work_group_id) = $self->selectOneColumn(
+        "SELECT work_group_id
+           FROM $TB_WORK_GROUP
+          WHERE work_group_name = '$work_group_name'
+            AND record_status != 'D'
+        ");
+
+    #### If this didn't turn up anything, return
+    unless ($work_group_id) {
+        print "ERROR: The specified group $work_group_name does not exist\n\n";
+        return
+    }
+
+
+    #### See if this user can be a member of this group
+    my ($result) = $self->selectOneColumn(
+        "SELECT work_group_id
+           FROM $TB_USER_WORK_GROUP
+          WHERE contact_id = $current_contact_id
+            AND work_group_id = $work_group_id
+            AND record_status != 'D'
+        ");
+
+    #### If this didn't turn up anything, return
+    unless ($result) {
+        print "ERROR: You are not permitted to act under ".
+            "group $work_group_name\n\n";
+        return
+    }
+
+
+    #### See what the current context is set to and return success if we're
+    #### set already to the desired group
+    ($current_work_group_id) = $self->selectOneColumn(
+        "SELECT work_group_id
+           FROM $TB_USER_CONTEXT
+          WHERE contact_id = $current_contact_id
+            AND record_status != 'D'
+        ");
+    if ($current_work_group_id == $work_group_id) {
+      return $current_work_group_id;
+    }
+
+
+    #### We need to change groups, so set the group here
+    $self->executeSQL("
+	UPDATE $TB_USER_CONTEXT
+	   SET work_group_id = $work_group_id,
+	   modified_by_id = $current_contact_id,
+	   date_modified = CURRENT_TIMESTAMP
+	 WHERE contact_id = $current_contact_id
+    ");
+    $current_work_group_id = $work_group_id;
+
+    return $current_work_group_id;
 }
 
 
@@ -275,7 +356,6 @@ sub getCurrent_work_group_id {
 
     return $current_work_group_id;
 }
-
 
 ###############################################################################
 # Return the work_group_name of the user currently logged in
