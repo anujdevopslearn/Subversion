@@ -112,12 +112,13 @@ $DATABASE = $DBPREFIX{$module};
 #### Get the source_file from the command line
 my $source_file = $ARGV[0];
 
-#### If it was not provided
-unless ($source_file) {
+## if $source_file not given, or ifgiven but not in same directory
+unless ( ($source_file) && (-e $source_file) ) { 
 
   if ($search_batch_id) {
     $source_file = guess_source_file(
       search_batch_id => $search_batch_id,
+      protein_prophet_file => $source_file,
     );
   }
 
@@ -259,7 +260,7 @@ sub start_element {
     ASAPRatio => 'summary_quantitation',
   );
 
-
+# nlk:  changing peptide => 'protein_id', to: peptide => 'peptide_id'?
   #### Define the parent IDs
   my %parent_ids = (
     protein_summary => '',
@@ -579,6 +580,7 @@ sub main {
   $CONTENT_HANDLER->{counter} = 0;
 
 
+
   #### If the user asked to purge_protein_summary_id, then do it and return
   if ($purge_protein_summary_id) {
     print "Purging protein_summary_id $purge_protein_summary_id...\n"
@@ -630,7 +632,6 @@ sub main {
   print "INFO: Loading...\n" unless ($QUIET);
   $parser->parse (XML::Xerces::LocalFileInputSource->new($source_file));
 
-
   #### Write out information about the objects we've loaded if verbose
   if ($VERBOSE) {
     print "\n-------------------------------------------------\n";
@@ -675,7 +676,6 @@ sub main {
     } # end while
 
   } # end if
-
 
   print "\n\n" unless ($QUIET);
 
@@ -900,12 +900,15 @@ sub deleteProteinSummary {
 sub guess_source_file {
   my %args = @_;
   my $search_batch_id = $args{'search_batch_id'};
+  my $file = $args{'protein_prophet_file'} || "";
 
   my ($sql,@biosequence_set_ids);
 
   #### If a search_batch_id was provided
   unless (defined($search_batch_id) && $search_batch_id > 0) {
+
     return;
+
   }
 
 
@@ -920,14 +923,28 @@ sub guess_source_file {
   my ($data_location) = $sbeams->selectOneColumn($sql);
 
   if ($data_location) {
-    unless ($data_location =~ /^\//) {
-      $data_location = "$RAW_DATA_DIR{Proteomics}/$data_location";
-    }
-    return "$data_location/interact-prob-prot.xml";
+
+      if ($file) {
+
+          if (-e "$data_location/$file") { 
+
+               return "$data_location/$file"; 
+
+          }
+ 
+      }
+
+      if (-e "$data_location/interact-prob-prot.xml") {
+    
+          return "$data_location/interact-prob-prot.xml";
+
+      } elsif (-e "$data_location/interact-prot.xml") {
+
+          return "$data_location/interact-prot.xml";
+
+      }
   }
 
   return;
 
 }
-
-
