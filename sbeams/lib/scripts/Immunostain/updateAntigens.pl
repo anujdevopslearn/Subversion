@@ -21,7 +21,7 @@ use FindBin;
 use lib qw (../perl ../../perl);
 use vars qw ($sbeams $sbeamsMOD $q
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
-             $current_contact_id $current_username
+             $current_contact_id $current_username %ANTIBODYHASH
             );
 
 
@@ -146,7 +146,9 @@ sub handleRequest {
     print "ERROR: Supplied source_file '$source_file' not found\n";
     return;
   }
-
+#before we parse make a call to the database to get all the data for the antibody table
+	my $sqlAntibody = "select antigen_id, antibody_id from $TBIS_ANTIBODY";
+	%ANTIBODYHASH =  $sbeams->selectTwoColumnHash($sqlAntibody);
 
   #### Parse the source_file into rows of data
   my $new_data = parse_source_file(
@@ -349,6 +351,7 @@ sub update_antigen {
     sort_order => $antigen_attributes->{antigen_number},
   );
 	
+	
 #####testing
 =comment
 foreach my $key(keys %rowdata)
@@ -357,7 +360,7 @@ foreach my $key(keys %rowdata)
 		print "$rowdata{$key}\n";
 }
 =cut
-  #### Do the INSERT/UPDATE
+  #### Do the INSERT/UPDATE for the anitigen
   my $returned_PK = $sbeams->updateOrInsertRow(
     insert => $insert,
     update => $update,
@@ -367,18 +370,57 @@ foreach my $key(keys %rowdata)
     PK_value => $antigen_id,
     return_PK => 1,
     verbose=>$VERBOSE,
-    testonly=>$TESTONLY
+    testonly=>$TESTONLY,
+		add_audit_parameters => 1
   );
 
   #### Verify we got the PK back
   unless ($returned_PK) {
-    die("ERROR: PK not returned from database\n");
+   die("ERROR: PK not returned from database\n");
   }
-
-
-  #### See if there's an antibody corresponding to this antigen_id
-  1;
-
+	
+#do the INSERT/UPDATE for the antibody
+#this is the same as for antigen since the antibody convention and
+#antigen convention we are using is interchangeable (hence the %rowdata is identical)
+#this may change when we are adding the biosequence data
+	
+	$update = 0;
+  $insert = 1;
+	if ($ANTIBODYHASH{$returned_PK})
+	{
+    $update = 1;
+    $insert = 0;
+    print "AntiBody '$antigen_name' already exists with id $ANTIBODYHASH{$returned_PK}\n";
+  }
+	else
+	{
+    print "AntiBody '$antigen_name' does not yet exist.  Add it.\n";
+  }
+	
+	my %antibodyRowdata = (
+	   antibody_name => $antigen_name,
+		 sort_order => $antigen_attributes->{antigen_number},
+		 antigen_id => $returned_PK
+  );
+		$returned_PK = $sbeams->updateOrInsertRow(
+    insert => $insert,
+    update => $update,
+    table_name => "$TBIS_ANTIBODY",
+    rowdata_ref => \%antibodyRowdata,
+    PK => "antibody_id",
+    PK_value => $ANTIBODYHASH{$returned_PK},
+    return_PK => 1,
+    verbose=>$VERBOSE,
+    testonly=>$TESTONLY,
+		add_audit_parameters => 1
+  );
+	
+	 #### Verify we got the PK back
+  unless ($returned_PK)
+	{
+			die("ERROR: PK not returned from database\n");
+  }
+	
 
 } # end update_antigen
 
