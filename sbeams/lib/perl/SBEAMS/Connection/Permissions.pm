@@ -24,19 +24,7 @@ use CGI::Carp qw(fatalsToBrowser croak);
 
 use SBEAMS::Connection::Settings;
 use SBEAMS::Microarray::Tables;
-#use SBEAMS::Connection::DBInterface;
-#use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Tables;
-
-#use SBEAMS::Connection::TableInfo;
-#use SBEAMS::Connection::Utilities;
-
-#use DBI;
-#use POSIX;
-#use Data::Dumper;
-#use URI::Escape;
-#use Storable;
-#use Time::HiRes qw( usleep ualarm gettimeofday tv_interval );
 
 $q       = new CGI;
 
@@ -85,9 +73,9 @@ sub print_permissions_table {
 
 
   #### Show current user context information
-	unless ($args{'no_permissions'}) {
-			$self->printUserContext();
-	};
+  unless ($args{'no_permissions'}) {
+    $self->printUserContext();
+  };
   $project_name = $self->getCurrent_project_name;
 
   print qq~
@@ -729,7 +717,7 @@ sub getAccessibleProjects{
   my $self = shift || croak("parameter self not passed");
   my %args = @_;
   my $SUB_NAME = "getAccessibleProjects";
-	my $work_group_name = $self->getCurrent_work_group_name();
+  my $work_group_name = $self->getCurrent_work_group_name();
 
   ## Decode argument list
   my $current_contact_id = $args{'contact_id'}
@@ -804,18 +792,16 @@ sub getAccessibleProjects{
   my @project_ids = ();
 
   foreach my $element (@rows) {
-			## If microarray, check to see if there have been array requests
-			if ($module eq "microarray"){
-					if($element->[6] > 0 || $element->[5] == 10 || $element->[4] == 10){
-							push(@project_ids,$element->[0]);
-					}
-			}else {
-					push(@project_ids,$element->[0]);
-			}
-	}
-
+    ## If microarray, check to see if there have been array requests
+    if ($module eq "microarray"){
+      if($element->[6] > 0 || $element->[5] == 10 || $element->[4] == 10){
+	push(@project_ids,$element->[0]);
+      }
+    }else {
+      push(@project_ids,$element->[0]);
+    }
+  }
   return (@project_ids);
-
 } # end getAccessibleProjects
 
 
