@@ -21,6 +21,7 @@ use FindBin;
 use lib "$FindBin::Bin/../../perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
+             $TESTVARS
             );
 
 
@@ -55,6 +56,8 @@ Options:
   --quiet                Set flag to print nothing at all except errors
   --debug n              Set debug flag
   --testonly             If set, rows in the database are not changed or added
+  --testvars             If set, makes sure all vars are filled
+
   --delete               Delete an atlas build (does not build an atlas).
   --purge                Delete child records in atlas build (retains parent atlas record).
   --load                 Build an atlas (can be used in conjunction with --purge).
@@ -70,7 +73,7 @@ EOU
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
-        "delete", "purge", "load",
+        "testvars","delete", "purge", "load",
         "atlas_build_name:s","source_dir:s", "organism_abbrev:s")) {
 
     die "\n$USAGE";
@@ -85,6 +88,8 @@ $DEBUG = $OPTIONS{"debug"} || 0;
 
 $TESTONLY = $OPTIONS{"testonly"} || 0;
 
+$TESTVARS = $OPTIONS{"testvars"} || 0;
+
 if ($DEBUG) {
 
     print "Options settings:\n";
@@ -96,6 +101,9 @@ if ($DEBUG) {
     print "  DEBUG = $DEBUG\n";
 
     print "  TESTONLY = $TESTONLY\n";
+
+    print "  TESTVARS = $TESTVARS\n";
+
 }
    
    
@@ -201,7 +209,7 @@ sub handleRequest {
   my ($atlas_build_id,$biosequence_set_id) = @{$rows[0]};
 
 
-  ## HANDLING OPTIONS  
+  ##### HANDLING OPTIONS WITH SUBROUTINES #####
 
   ## --delete option:
   if ($del) {
@@ -321,12 +329,18 @@ sub removeAtlas {
 # buildAtlas -- populates PeptideAtlas records in requested atlas_build
 ###############################################################################
 sub buildAtlas {  
+
    my %args = @_;
+
    my $atlas_build_id = $args{'atlas_build_id'};
+
    my $biosequence_set_id = $args{'biosequence_set_id'};
+
    my $source_dir = $args{'source_dir'};
+
    my $organism_abbrev = $args{'organism_abbrev'};
  
+
    #### Get the current list of peptides in the peptide table
    my $sql;
    $sql = qq~
@@ -346,13 +360,9 @@ sub buildAtlas {
  
  
    #### Open the file containing the input peptide properties (APD tsv file)
-   unless (open(INFILE,"${source_dir}/APD_${organism_abbrev}_all.tsv")) {
-
-       print "ERROR: Unable to open for reading input file ".
-       "'${source_dir}/APD_${organism_abbrev}_all.tsv'\n\n";
-
-       return;
-   }
+   my $infile = "${source_dir}/APD_${organism_abbrev}_all.tsv";
+   
+   open(INFILE, $infile) or die "ERROR: Unable to open for reading $infile ($!)";
  
  
    #### Read and parse the header line of APD_{organism}_all.tsv
@@ -375,8 +385,8 @@ sub buildAtlas {
    }
  
  
-   #### Load the relevant information from the  APD_{organism}_all.tsv file
-   ##  into hashes with keys of peptide_accession 
+   #### read the rest of the file  APD_{organism}_all.tsv and store in hashes with
+   ##   keys of peptide_accession 
    my $counter = 0;
    my (%APD_peptide_accession, %APD_peptide_sequence, %APD_peptide_length, %APD_best_probability);
    my (%APD_n_observations, %APD_search_batch_ids, %APD_sample_ids, %APD_peptide_id);
@@ -391,9 +401,9 @@ sub buildAtlas {
 
        $APD_peptide_accession{$tmp_pep_acc} = $tmp_pep_acc;
 
-       $APD_peptide_length{$tmp_pep_acc} = length($APD_peptide_sequence{$tmp_pep_acc});
-
        $APD_peptide_sequence{$tmp_pep_acc} = $columns[$column_indices{peptide}];
+
+       $APD_peptide_length{$tmp_pep_acc} = length($APD_peptide_sequence{$tmp_pep_acc});
 
        $APD_best_probability{$tmp_pep_acc} = $columns[$column_indices{maximum_probability}];
        $APD_best_probability{$tmp_pep_acc} =~ s/\s+//g; ## remove empty spaces 
@@ -490,16 +500,97 @@ sub buildAtlas {
  
     } # end while INFILE
 
-    close(INFILE);
+    close(INFILE) or die "Cannot close $infile ($!)";
     my $APD_last_ind = $counter - 1;
+
+
+    ## test that hash values were all filled
+    if ($TESTVARS) {
+        
+       print "Checking hash values after read of $infile\n";
+        
+       foreach my $tmp_pep_acc   (keys %APD_peptide_accession) {
+
+           my $pep_acc = $APD_peptide_accession{$tmp_pep_acc};
+           my $pep_seq = $APD_peptide_sequence{$tmp_pep_acc};
+           my $pep_length = $APD_peptide_length{$tmp_pep_acc};
+           my $best_prob = $APD_best_probability{$tmp_pep_acc};
+           my $n_obs = $APD_n_observations{$tmp_pep_acc};
+           my $sb_ids=$APD_search_batch_ids{$tmp_pep_acc};
+           my $s_ids = $APD_sample_ids{$tmp_pep_acc};
+           my $pep_id = $APD_peptide_id{$tmp_pep_acc};
+
+           my $str = "    $APD_peptide_accession{$tmp_pep_acc}*\t".
+                   "$APD_peptide_sequence{$tmp_pep_acc}*\t".
+                   "$APD_peptide_length{$tmp_pep_acc}*\t".
+                   "$APD_best_probability{$tmp_pep_acc}*\t".
+                   "$APD_n_observations{$tmp_pep_acc}*\t".
+                   "$APD_search_batch_ids{$tmp_pep_acc}*\t".
+                   "$APD_sample_ids{$tmp_pep_acc}*\t".
+                   "$APD_peptide_id{$tmp_pep_acc}*\n";
+
+
+           if ( !$pep_acc ) {
+
+               print "PROBLEM...missing info for \$pep_acc for peptide $pep_acc\n"; ##this won't happen
+
+               print $str;
+
+           } elsif (!$pep_seq) {
+
+               print "PROBLEM...missing info for \$pep_seq for peptide $pep_acc\n";
+
+               print $str;
+
+           } elsif (!$pep_length) {
+
+               print "PROBLEM...missing info for \$pep_length for peptide $pep_acc\n";
+
+               print $str;
+
+           } elsif (!$best_prob) {
+
+               print "PROBLEM...missing info for \$best_prob for peptide $pep_acc\n";
+
+               print $str;
+
+           } elsif (!$n_obs) {
+
+               print "PROBLEM...missing info for \$n_obs for peptide $pep_acc\n";
+
+               print $str;
+
+           } elsif (!$sb_ids) {
+
+               print "PROBLEM...missing info for \$sb_ids for peptide $pep_acc\n";
+
+               print $str;
+
+           } elsif (!$s_ids) {
+
+               print "PROBLEM...missing info for \$s_ids for peptide $pep_acc\n";
+
+               print $str;
+
+           } elsif (!$pep_id) {
+
+               print "PROBLEM...missing info for \$pep_id for peptide $pep_acc\n";
+
+               print $str;
+
+           } 
+
+       } 
+
+       print "   end first stage test of vars\n";
+        
+    }
 
  
     #### Open the file containing the BLAST alignment summary
-    unless (open(INFILE,"$source_dir/coordinate_mapping.txt")) {
-        print "ERROR: Unable to open for reading input file ".
-        "'$source_dir/coordinate_mapping.txt'\n\n";
-       return;
-    }
+    $infile = "$source_dir/coordinate_mapping.txt";
+
+    open(INFILE, $infile) or die "ERROR: Unable to open for reading $infile ($!)";
  
     #### Read and parse the header line of coordinate_mapping.txt...not there currently
     if (0 == 1) {
@@ -594,9 +685,81 @@ sub buildAtlas {
 
    }   ## end reading coordinate mapping file
 
-   close(INFILE);
+   close(INFILE) or die "Cannot close $infile ($!)";
 
    my $ensembl_hits_last_ind = $ind - 1 ;  #last index of Ensembl hits arrays
+
+
+   if ($TESTVARS) {
+
+       print "Checking array values after read of file $infile \n";
+
+       for(my $i =0; $i < $ensembl_hits_last_ind; $i++){
+
+           my $tmp_pep_acc = $peptide_accession[$i];
+           my $tmp_biosequence_name = $biosequence_name[$i];
+           my $tmp_start_in_biosequence = $start_in_biosequence[$i];
+           my $tmp_end_in_biosequence = $end_in_biosequence[$i];
+	   my $tmp_chromosome = $chromosome[$i];
+           my $tmp_strand = $strand_xlate{$strand[$i]} ;
+           my $tmp_start_in_chromosome = $start_in_chromosome[$i];
+           my $tmp_end_in_chromosome = $end_in_chromosome[$i];
+           my $tmp_n_genome_locations = $n_genome_locations[$i];
+           my $tmp_is_exon_spanning = $is_exon_spanning[$i];
+           my $tmp_n_protein_mappings = $n_protein_mappings[$i];
+           
+
+           if (!$tmp_pep_acc) {
+         
+               print "PROBLEM:  missing \$tmp_pep_acc for index $i\n";
+
+           } elsif (!$tmp_biosequence_name) {
+
+               print "PROBLEM:  missing \$tmp_biosequence_name for $tmp_pep_acc \n";
+
+           } elsif (!$tmp_strand) {
+
+               print "PROBLEM:  missing \$tmp_strand for $tmp_pep_acc \n";
+
+           } elsif (!$tmp_n_genome_locations) {
+
+               print "PROBLEM:  missing \$tmp_n_genome_locations for $tmp_pep_acc \n";
+
+           } elsif (!$tmp_is_exon_spanning) {
+
+               print "PROBLEM:  missing \$tmp_is_exon_spanning  for $tmp_pep_acc \n";
+
+           } elsif (!$tmp_n_protein_mappings){
+
+               print "PROBLEM:  missing \$tmp_n_protein_mappings for $tmp_pep_acc \n";
+
+           } elsif (!$tmp_start_in_biosequence) {
+
+               print "PROBLEM:  missing \$tmp_start_in_biosequence for $tmp_pep_acc \n";
+
+           } elsif (!$tmp_end_in_biosequence ) {
+
+               print "PROBLEM:  missing \$tmp_end_in_biosequence for $tmp_pep_acc \n";
+
+           } elsif (!$tmp_chromosome ){
+
+               print "PROBLEM:  missing \$tmp_chromosome for $tmp_pep_acc \n";
+
+           } elsif (!$tmp_start_in_chromosome ) {
+
+               print "PROBLEM:  missing \$tmp_start_in_chromosome for $tmp_pep_acc \n";
+
+           } elsif (!$tmp_end_in_chromosome ) {
+
+               print "PROBLEM:  missing \$tmp_end_in_chromosome  for $tmp_pep_acc \n";
+
+           }
+       }
+
+       print "   end second stage test of vars\n";
+        
+   }
+
  
    ## n_protein_mappings -- number of distinct accession numbers (proteins) 
    ##                       that a peptide maps to
@@ -703,7 +866,7 @@ sub buildAtlas {
 
    ## testing match to above rules:
    if ($TESTONLY && ($organism_abbrev eq 'Hs') ) {  ## the above cases have P=1.0, and tested for Ens build 22
-       for (my $ii = 0; $ii <= $ensembl_hits_last_ind; $ii++) {
+       for (my $ii = 0; $ii < $ensembl_hits_last_ind; $ii++) {
            my @test_pep = ("PAp00011291", "PAp00004221", "PAp00004290", "PAp00005006");
            my @test_n_protein_mappings = ("2", "1", "2", "5");
            my @test_n_genome_locations = ("1", "1", "2", "5");
@@ -727,10 +890,107 @@ sub buildAtlas {
    }
 
 
+   if ($TESTVARS) {
+
+       print "Checking storage of values after counting calculations \n";
+
+       for(my $i =0; $i < $ensembl_hits_last_ind; $i++){
+
+           my $tmp_pep_acc = $peptide_accession[$i];
+
+           my $tmp_strand = $strand_xlate{$strand[$i]} ;
+           my $tmp_peptide_id = $peptides{$tmp_pep_acc};
+           my $tmp_best_probability = $APD_best_probability{$tmp_pep_acc};
+           my $tmp_n_obs = $APD_n_observations{$tmp_pep_acc};
+           my $tmp_search_batch_ids = $APD_search_batch_ids{$tmp_pep_acc};
+           my $tmp_sample_ids = $APD_sample_ids{$tmp_pep_acc};
+           my $tmp_n_genome_locations = $n_genome_locations[$i];
+           my $tmp_is_exon_spanning = $is_exon_spanning[$i];
+           my $tmp_n_protein_mappings = $n_protein_mappings[$i];
+           my $tmp_peptide_instance_id = $loaded_peptides{$tmp_pep_acc};
+           my $tmp_biosequence_id = $biosequence_ids{$biosequence_name[$i]};
+           my $tmp_start_in_biosequence = $start_in_biosequence[$i];
+           my $tmp_end_in_biosequence = $end_in_biosequence[$i];
+           my $tmp_chromosome = $chromosome[$i];
+           my $tmp_start_in_chromosome = $start_in_chromosome[$i];
+           my $tmp_end_in_chromosome = $end_in_chromosome[$i];
+           my $tmp_strand = $strand[$i];
+
+
+           if (!$tmp_pep_acc) {
+         
+               print "PROBLEM:  missing \$tmp_pep_acc for index $i\n";
+
+           } elsif (!$tmp_strand) {
+
+               print "PROBLEM:  missing \$tmp_strand for $tmp_pep_acc \n";
+
+           } elsif (!$tmp_best_probability) {
+
+               print "PROBLEM:  missing \$tmp_best_probability for $tmp_pep_acc \n";
+
+           } elsif (!$tmp_n_obs) {
+
+               print "PROBLEM:  missing \$tmp_n_obs for $tmp_pep_acc \n";
+
+           } elsif (!$tmp_search_batch_ids) {
+
+               print "PROBLEM:  missing \$tmp_search_batch_ids for $tmp_pep_acc \n";
+
+           } elsif (!$tmp_sample_ids) {
+
+               print "PROBLEM:  missing \$tmp_sample_ids for $tmp_pep_acc \n";
+
+           } elsif (!$tmp_n_genome_locations) {
+
+               print "PROBLEM:  missing \$tmp_n_genome_locations for $tmp_pep_acc \n";
+
+           } elsif (!$tmp_is_exon_spanning) {
+
+               print "PROBLEM:  missing \$tmp_is_exon_spanning  for $tmp_pep_acc \n";
+
+           } elsif (!$tmp_n_protein_mappings){
+
+               print "PROBLEM:  missing \$tmp_n_protein_mappings for $tmp_pep_acc \n";
+
+           } elsif (!$tmp_biosequence_id ) {
+
+               print "PROBLEM:  missing \$tmp_biosequence_id  for $tmp_pep_acc \n";
+
+           } elsif (!$tmp_start_in_biosequence) {
+
+               print "PROBLEM:  missing \$tmp_start_in_biosequence for $tmp_pep_acc \n";
+
+           } elsif (!$tmp_end_in_biosequence ) {
+
+               print "PROBLEM:  missing \$tmp_end_in_biosequence for $tmp_pep_acc \n";
+
+           } elsif (!$tmp_chromosome ){
+
+               print "PROBLEM:  missing \$tmp_chromosome for $tmp_pep_acc \n";
+
+           } elsif (!$tmp_start_in_chromosome ) {
+
+               print "PROBLEM:  missing \$tmp_start_in_chromosome for $tmp_pep_acc \n";
+
+           } elsif (!$tmp_end_in_chromosome ) {
+
+               print "PROBLEM:  missing \$tmp_end_in_chromosome  for $tmp_pep_acc \n";
+
+           } elsif (!$tmp_strand) {
+
+               print "PROBLEM:  missing \$tmp_strand for $tmp_pep_acc \n";
+
+           }
+       }
+
+       print "   end third stage test of vars\n";
+   }
+
 
    ####----------------------------------------------------------------------------
    ## Loading peptides with Ensembl hits into database with SQL statements:
-   for(my $i =0; $i <= $ensembl_hits_last_ind; $i++){
+   for(my $i =0; $i < $ensembl_hits_last_ind; $i++){
 
        my $tmp = $strand_xlate{$strand[$i]}
            or die("ERROR: Unable to translate strand $strand[$i]");
