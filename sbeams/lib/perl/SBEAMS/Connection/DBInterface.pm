@@ -479,12 +479,24 @@ sub buildLimitClause {
 
 
 ###############################################################################
-# insert_update_row
+# insert_update_row: deprecated in favor of updateOrInsertRow
+###############################################################################
+sub insert_update_row {
+  my $self = shift || croak("parameter self not passed");
+  my %args = @_;
+
+  $self->updateOrInsertRow(@_);
+
+}
+
+
+###############################################################################
+# updateOrInsertRow
 #
 # This method builds either an INSERT or UPDATE SQL statement based on the
 # supplied parameters and executes the statement.
 ###############################################################################
-sub insert_update_row {
+sub updateOrInsertRow {
   my $self = shift || croak("parameter self not passed");
   my %args = @_;
 
@@ -582,6 +594,10 @@ sub insert_update_row {
 
 
   #### Build the SQL statement
+  #### Could also imagine allowing parameter binding as an option
+  #### for database engines that support it instead of sending
+  #### the full text SQL statement.  This should then support
+  #### cached statement handles for multiple bindings per prepare.
   my $sql;
   if ($update) {
     my $PK_tag = $PK;
@@ -2865,7 +2881,7 @@ sub transferTable {
 	    $rowdata{modified_by_id}=$self->getCurrent_contact_id();
           }
 
-          $result = $dest_conn->insert_update_row(update=>1,
+          $result = $dest_conn->updateOrInsertRow(update=>1,
             table_name=>$table_name,
             rowdata_ref=>\%rowdata,
             PK=>$dest_PK_name,PK_value=>$results[0],
@@ -2901,7 +2917,7 @@ sub transferTable {
         $rowdata{record_status}='N';
       }
 
-      $result = $dest_conn->insert_update_row(insert=>1,
+      $result = $dest_conn->updateOrInsertRow(insert=>1,
   	table_name=>$table_name,
   	rowdata_ref=>\%rowdata,
   	PK=>$dest_PK_name,return_PK=>$return_PK,
@@ -3220,7 +3236,7 @@ original value in the second column is lost.
   my %hash = selectTwoColumnHash("SELECT contact_id,last_name FROM contact");
 
 
-=item * B<insert_update_row(several key value parameters)>
+=item * B<updateOrInsertRow(several key value parameters)>
 
 This method builds either an INSERT or UPDATE SQL statement based on the
 supplied parameters and executes the statement.
@@ -3258,7 +3274,7 @@ return_PK => If TRUE, the Primary Key of the just INSERTed or UPDATEd
   my %rowdata;
   $rowdata{first_name} = "Pikop";
   $rowdata{last_name} = "Andropov";
-  my $contact_id = $sbeams->insert_update_row(insert=>1,
+  my $contact_id = $sbeams->updateOrInsertRow(insert=>1,
     table_name => "contact", rowdata_ref => \%rowdata,
     PK=>"contact_id", return_PK=>1,
     #verbose=>1,
@@ -3268,7 +3284,7 @@ return_PK => If TRUE, the Primary Key of the just INSERTed or UPDATEd
   %rowdata = ();
   $rowdata{phone_number} = "123-456-7890";
   $rowdata{email} = "SpamMeSenseless@hotmail.com";
-  my $result = $sbeams->insert_update_row(update=>1,
+  my $result = $sbeams->updateOrInsertRow(update=>1,
     table_name => "contact", rowdata_ref => \%rowdata,
     PK=>"contact_id", PK_value=>$contact_id,
     #verbose=>1,
@@ -3282,7 +3298,7 @@ Given an SQL query in the first parameter as a string, this method
 executes the query and returns the return value of the $dbh->do() which
 is just a scalar not a resultset.  This method should normally not be
 used by ordinary user code.  User code should probably be calling some
-functions like insert_update_row() or methods that update indexes or
+functions like updateOrInsertRow() or methods that update indexes or
 something like that.
 
   executeSQL("EXEC sp_flushbuffers");
