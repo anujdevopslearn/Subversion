@@ -482,7 +482,7 @@ foreach my $p (keys %parameters)
   %url_cols = ('Stain Name' => "$CGI_BASE_DIR/Immunostain/ManageTable.cgi?TABLE_NAME=IS_assay&assay_id=\%$colnameidx{assay_id}V",
     	       'Stain Name_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show more information about this slide\'; return true"',
 
-   	       'Antibody' => "$CGI_BASE_DIR/Immunostain/main.cgi?action=_processAntibody&antibody_id=\%$colnameidx{antibody_id}V",
+   	       'Antibody' => "processAntibody.cgi?action=ab_detail&antibody_id=\%$colnameidx{antibody_id}",
   	       'Antibody_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show summary of information for this antibody\'; return true"',
 
     	       'RefSeq Accession' => "http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?db=protein&term=\%V",
@@ -831,7 +831,7 @@ sub postProcessResultset {
     my $expNumber;
 
     my $abody = ( $exprTabMode ne 'HTML' ) ? $antibodyKey :
-    "<A HREF='$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=_processAntibody&antibody_id=$antibodyHash{$antibodyKey}'><B>$antibodyKey</B></A>";
+    "<A HREF='$CGI_BASE_DIR/$SBEAMS_SUBDIR/processAntibody.cgi?action=ab_details;antibody_id=$antibodyHash{$antibodyKey}'><B>$antibodyKey</B></A>";
     push @trow, $abody;
     
     #### Store information needed for a Cytoscape display
