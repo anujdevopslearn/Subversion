@@ -168,7 +168,7 @@ sub printEntryForm {
     if (($TABLE_NAME eq "BrowseAnnotatedPeptides") && $no_params_flag ) {
       $parameters{annotation_status_id} = 'Annot';
       $parameters{n_annotations_constraint} = '>0';
-      $parameters{display_options} = 'GroupPeptide';
+      $parameters{display_options} = 'GroupReference';
       $parameters{sort_order} = 'tABS.row_count DESC';
     }
 
@@ -712,11 +712,13 @@ sub printEntryForm {
       }
 
 
+      #### Define the SQL statement
       $sql_query = qq~
 	SELECT DISTINCT BS.biosequence_id
 	  INTO #tmpBSids
-	  FROM proteomics.dbo.biosequence BS
-	  JOIN proteomics.dbo.search_batch SB ON ( BS.biosequence_set_id = SB.biosequence_set_id )
+	  FROM $TBPR_BIOSEQUENCE BS
+	  JOIN $TBPR_SEARCH_BATCH SB
+	       ON ( BS.biosequence_set_id = SB.biosequence_set_id )
 	 WHERE 1 = 1
 	$search_batch_clause
 	$biosequence_name_clause
@@ -728,11 +730,15 @@ sub printEntryForm {
 
 	SELECT SH.biosequence_id,$peptide_column$count_column
 	  INTO #tmpAnnBSids
-	  FROM proteomics.dbo.search_hit SH
-	  JOIN proteomics.dbo.search S ON ( SH.search_id = S.search_id )
-	  LEFT JOIN proteomics.dbo.search_hit_annotation SHA ON ( SH.search_hit_id = SHA.search_hit_id )
-	  JOIN proteomics.dbo.search_batch SB ON ( S.search_batch_id = SB.search_batch_id )
-	  JOIN $TBPR_BIOSEQUENCE BS ON ( SB.biosequence_set_id = BS.biosequence_set_id AND SH.biosequence_id = BS.biosequence_id )
+	  FROM $TBPR_SEARCH_HIT SH
+	  JOIN $TBPR_SEARCH S ON ( SH.search_id = S.search_id )
+	  LEFT JOIN $TBPR_SEARCH_HIT_ANNOTATION SHA
+	       ON ( SH.search_hit_id = SHA.search_hit_id )
+	  JOIN $TBPR_SEARCH_BATCH SB
+	       ON ( S.search_batch_id = SB.search_batch_id )
+	  JOIN $TBPR_BIOSEQUENCE BS
+	       ON ( SB.biosequence_set_id = BS.biosequence_set_id
+	       AND SH.biosequence_id = BS.biosequence_id )
 	 WHERE 1 = 1
 	$search_batch_clause
 	$probability_clause
@@ -753,8 +759,10 @@ sub printEntryForm {
 
 	SELECT $limit_clause $columns_clause
 	  FROM #tmpBSids tBS
-	  LEFT JOIN #tmpAnnBSids tABS ON ( tBS.biosequence_id = tABS.biosequence_id )
-	  JOIN $TBPR_BIOSEQUENCE BS ON ( tBS.biosequence_id = BS.biosequence_id )
+	  LEFT JOIN #tmpAnnBSids tABS
+               ON ( tBS.biosequence_id = tABS.biosequence_id )
+	  JOIN $TBPR_BIOSEQUENCE BS
+               ON ( tBS.biosequence_id = BS.biosequence_id )
           LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
 	 WHERE 1 = 1
 	$n_annotations_clause
