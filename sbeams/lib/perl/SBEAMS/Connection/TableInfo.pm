@@ -24,6 +24,7 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::Log;
 
 # Need to include child table definitions if this program is to process those
+# This should not be necessary.  FIXME
 use SBEAMS::Microarray::Tables;
 use SBEAMS::Proteomics::Tables;
 use SBEAMS::BEDB::Tables;
