@@ -190,11 +190,11 @@ print qq~
 </tr>
 <tr>
 <td background="$HTML_BASE_DIR/images/nav_subTitles.gif"><img 
-src"$HTML_BASE_DIR/images/clear.gif" width="1" height="18" border="0"></td>
+src="$HTML_BASE_DIR/images/clear.gif" width="1" height="18" border="0"></td>
 <td background="$HTML_BASE_DIR/images/nav_subTitles.gif" colspan="2"><span 
-class="nav_Sub">Project Information</span><td>
-<td><img src="$HTML_BASE_DIR/images/nav_subTitles_cr.gif" width="11" height="18" 
-border="0"></td></tr>
+class="nav_Sub">Project Information</span></td>
+<td><img src="$HTML_BASE_DIR/images/nav_subTitles_cr.gif" width="11" height="18" border="0"></td>
+</tr>
 <tr>
 <td colspan="4"><img src="$HTML_BASE_DIR/images/clear.gif" width="1" height="10" border="0"></td>
 </tr>
@@ -210,12 +210,16 @@ border="0"></td></tr>
 <td colspan="4"><img src="$HTML_BASE_DIR/images/clear.gif" width="1" height="10" border="0"></td>
 </tr>
 <tr>
+
+
+<tr>
 <td background="$HTML_BASE_DIR/images/nav_subTitles.gif"><img 
 src="$HTML_BASE_DIR/images/clear.gif" width="1" height="18" border="0"></td>
 <td background="$HTML_BASE_DIR/images/nav_subTitles.gif" colspan="2"><span 
-class="nav_Sub">Project Data</span><td>
-<td><img src="$HTML_BASE_DIR/images/nav_subTitles_cr.gif" width="11" height="18" border="0"></td></tr>
-<tr>
+class="nav_Sub">Project Data</span></td>
+<td><img src="$HTML_BASE_DIR/images/nav_subTitles_cr.gif" width="11" height="18" border="0"></td>
+</tr>
+
 <td colspan="4"><img src="$HTML_BASE_DIR/images/clear.gif" width="1" height="10" border="0"></td>
 </tr>
 <tr>
