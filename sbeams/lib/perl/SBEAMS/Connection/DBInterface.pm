@@ -443,7 +443,7 @@ sub insert_update_row {
 
   unless ($column_list) {
     print "ERROR: insert_row(): column_list is empty!\n";
-    return;
+    return '';
   }
 
 
@@ -2187,12 +2187,12 @@ sub transferTable {
     unless ($sql || $source_file);
   die ("parameters sql and source_file cannot both be passed")
     if ($sql && $source_file);
-  my $src_PK_name = $args{'src_PK_name'};
-  my $src_PK_column = $args{'src_PK_column'};
+  my $src_PK_name = $args{'src_PK_name'} || '';
+  my $src_PK_column = $args{'src_PK_column'} || -1;
   if ($sql) {
     die ("parameter src_PK_name must be passed if sql is passed")
       unless ($src_PK_name);
-    die("parameter src_PK_column msut be passed if sql is passed")
+    die("parameter src_PK_column must be passed if sql is passed")
       unless ($src_PK_column>=0);
   }
 
@@ -2204,7 +2204,7 @@ sub transferTable {
   my $newkey_map_ref = $args{'newkey_map_ref'};
 
   my $table_name = $args{'table_name'} || die "ERROR: table_name not passed";
-  my $dest_PK_name = $args{'dest_PK_name'};
+  my $dest_PK_name = $args{'dest_PK_name'} || '';
 
   my $update = $args{'update'} || 0;
   my $update_keys_ref = $args{'update_keys_ref'};
