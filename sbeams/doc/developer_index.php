@@ -38,8 +38,9 @@
      <LI><A HREF="SBEAMSOutline.php">General Outline of the State of SBEAMS</A>
      <LI><A HREF="http://www.sbeams.org/project_description.php">Longer Concept Overview of SBEAMS</A>
      <LI><A HREF="SecurityLayout.php">Description of Security Layout</A>
-     <LI><A HREF="Proteomics/ProcPipeline.doc">General Proposal and Documenation for the Proteomics Data Pipeline (Word .doc)</A>
+     <LI><A HREF="Proteomics/ProcPipeline.doc">General Proposal and Documentation for the Proteomics Data Pipeline (Word .doc)</A>
      <LI><A HREF="Microarray/keymapfiles.notes">Misc notes about .key and .map files</A>
+     <LI><A HREF="misc/Sbeams_directory_layout.txt">Over View of Sbeams Directory Structure</A>
      <P>
      <LI><A HREF="/mantis/">Mantis SBEAMS bugs database</A>
     </UL>
