@@ -162,16 +162,14 @@ sub main {
 #
 # A very simple script.  Throw the contents of the file within <PRE> tags and
 # we're done
-################################################################################
+###############################################################################
 sub printFile {
   my %args = @_;
 
   my $file = $args{'file'};
   my $error = 0;
 
-  unless(open(INFILE, "< $file")) {
-      $error = -1;
-  }
+  open(INFILE, "< $file") || $error = -1;
 
   if ($error == 0) {
       print qq~ <PRE> ~;
