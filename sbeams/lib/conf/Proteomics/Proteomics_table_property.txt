@@ -1,0 +1,11 @@
+table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
+biosequence_set	BioSequence Set	Proteomics_infrastructure	YES	$TBPR_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=biosequence_set	biosequence_set	
+proteomics_experiment	Proteomics Experiment	Proteomics_user	YES	$TBPR_PROTEOMICS_EXPERIMENT	experiment_id		ManageTable.cgi?TABLE_NAME=proteomics_experiment	proteomics_experiment	
+PR_GetSearchHits	Browse Search Hits	QUERY		NA	NA		GetSearchHits		
+PR_GetSearch	Browse Search	QUERY		NA	NA		GetSearchHits		
+BrowseAnnotatedPeptides	Browse Annotated Peptides	QUERY		NA	NA		BrowseAnnotatedPeptides.cgi		
+search_hit_annotation	Search Hit Annotation	Proteomics_user	YES	$TBPR_SEARCH_HIT_ANNOTATION	search_hit_annotation_id		ManageTable.cgi?TABLE_NAME=search_hit_annotation		
+PR_BrowseBioSequence	Browse BioSequence	QUERY		NA	NA		BrowseBioSequence.cgi		
+PR_CompareExperiments	Compare Experiments	QUERY		NA	NA		CompareExperiments		
+dbxref	Database Cross Reference	Proteomics_infrastructure	YES	$TB_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=dbxref		
+PR_gradient_program	Gradient Program	Proteomics_infrastructure	YES	$TBPR_GRADIENT_PROGRAM	gradient_program_id		ManageTable.cgi?TABLE_NAME=PR_gradient_program	PR_gradient_program	
