@@ -672,7 +672,9 @@ sub filelist {
 		print '</table>';
 	}
 	
-	print p(@filenames . " files", br, hr);
+	#print p(@filenames . " files", br, hr);
+	
+	print h3("Choose Additional Files Below or proceed to next step");
 	
 	if (@filenames != 0) {
 	
@@ -685,7 +687,7 @@ sub filelist {
 			 br;
 	}    
 	      
-	print end_form;
+	print end_form;	
 	
 }
 
@@ -892,7 +894,7 @@ sub make_group_arrays_form{
 	my $token = $cgi->param('token');
 	my $analysis_id = $fm->analysis_id();
 	
-	print "ANALYSIS ID '$analysis_id'<br>";
+	#print "ANALYSIS ID '$analysis_id'<br>";
 		
 ###Find the sample group names 
 	if ($cgi->param('all_sample_group_names') ) {
@@ -951,7 +953,7 @@ sub make_group_arrays_form{
 		 	    <td>Group</td>
 		 	    <td>Order</td>
 		 	    <td>Sample Group Name</td>
-		 	    <td>Reference Sample</td>
+		 	    <td>Reference Sample *</td>
 		  ~;
 
 	#my @sample_group_order = split /,/, $cgi->param('sample_group_order');	#should return a comma seperated list of numbers
@@ -998,8 +1000,11 @@ sub make_group_arrays_form{
  <p>The Reference Sample, will be compared to all additional samples groups provided if you whish to run t-test
 between two different sample groups.
 The "control group" should almost always be the Reference Sample, 
-so that positive test statistics indicate
+so that positive Log ratios indicate
 increased expression in the experimental group and vice versa.
+</p>
+* Please note that the reference sample can be ignored at the analysis so just two sample groups can be compared
+to one another.  
 </p>
 END
 	
@@ -1164,7 +1169,7 @@ sub order_sample_groups{
 	for (my $i=0; $i < @$sample_group_order_aref ; $i++){
 		$sort_index{$sample_group_order_aref->[$i]} = $i;  #group sort number => orginal index number
 	}	
-	my @sorted_keys = sort keys %sort_index;
+	my @sorted_keys = sort{ $a<=> $b} keys %sort_index;
 	
 	foreach my $key (@sorted_keys){
 		my $index_number = $sort_index{$key};
