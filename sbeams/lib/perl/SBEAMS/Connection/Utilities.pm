@@ -247,7 +247,7 @@ sub histogram {
   $result->{quartile3} = $sorted_data[int($n_elements*0.75)];
   $result->{SIQR} = ($result->{quartile3}-$result->{quartile1})/2;
 
-  $result->{ordered_statistics} = ['n_elements','minimum','maximum',
+  $result->{ordered_statistics} = ['n_elements','minimum','maximum','total',
     'mean','stdev','median','SIQR','quartile1','quartile3',
     'n_bins','bin_size','histogram_min','histogram_max'];
 
