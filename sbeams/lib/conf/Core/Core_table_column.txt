@@ -189,7 +189,7 @@ user_login	12	record_status	Record Status	char	1	0	N	N	N							N	N
 user_work_group	1	user_work_group_id	User Login ID	int	4	0	N		Y							N	N				pkDEFAULT
 user_work_group	2	contact_id	Username	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Username	"SELECT contact_id,username FROM $TB_USER_LOGIN ORDER BY username"	
 user_work_group	3	work_group_id	Work Group	int	4	0	N		N	work_group	work_group_id	Y	optionlist			Y	Y	Y	Work Group	"SELECT work_group_id,work_group_name FROM $TB_WORK_GROUP ORDER BY work_group_name"	
-user_work_group	4	privilege_id	Privilege	int	4	0	N		N	privilege	privilege_id	Y	optionlist			Y	Y	Y	Privilege level of this user within this work	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
+user_work_group	4	privilege_id	Privilege	int	4	0	N		N	privilege	privilege_id	Y	optionlist			Y	Y	N	Privilege level of this user within this work	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
 user_work_group	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 user_work_group	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 user_work_group	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
