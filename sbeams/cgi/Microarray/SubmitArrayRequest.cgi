@@ -536,9 +536,18 @@ sub printEntryForm {
       }
 
 
+      #### If the Arrays Group does both Labeling and Hyb
       if ( $parameters{"hybridization_request"} =~ /LH/ ) {
         print "<P>Total Label/Hyb Cost: \$ $proc_cost<P>\n";
         $total_price += $proc_cost;
+
+      #### Else if the user does Labeling and the Arrays Group does Hyb
+      } elsif ( $parameters{"hybridization_request"} eq "L" ) {
+        $proc_cost = $n_slides * 50;
+        print "<P>Total Hyb Cost: \$ $proc_cost<P>\n";
+        $total_price += $proc_cost;
+
+      #### Else the user does it all
       } else {
         print "<P>Label/Hyb Cost: (you have chosen to do this yourself)<P>\n";
       }
@@ -1182,12 +1191,22 @@ sub processEntryForm {
       }
 
 
+      #### If the Arrays Group does both Labeling and Hyb
       if ( $parameters{"hybridization_request"} =~ /LH/ ) {
-        print "Total Label/Hyb Cost: \$ $proc_cost<BR>\n";
+        print "<P>Total Label/Hyb Cost: \$ $proc_cost<P>\n";
         $total_price += $proc_cost;
+
+      #### Else if the user does Labeling and the Arrays Group does Hyb
+      } elsif ( $parameters{"hybridization_request"} eq "L" ) {
+        $proc_cost = $n_slides * 50;
+        print "<P>Total Hyb Cost: \$ $proc_cost<P>\n";
+        $total_price += $proc_cost;
+
+      #### Else the user does it all
       } else {
-        print "Label/Hyb Cost: (you have chosen to do this yourself)<BR>\n";
+        print "<P>Label/Hyb Cost: (you have chosen to do this yourself)<P>\n";
       }
+
 
 
       if ($parameters{"scanning_request"}) {
@@ -1721,9 +1740,18 @@ sub printCompletedEntry {
       }
 
 
+      #### If the Arrays Group does both Labeling and Hyb
       if ( $parameters{"hybridization_request"} =~ /LH/ ) {
         print "<P>Total Label/Hyb Cost: \$ $proc_cost<P>\n";
         $total_price += $proc_cost;
+
+      #### Else if the user does Labeling and the Arrays Group does Hyb
+      } elsif ( $parameters{"hybridization_request"} eq "L" ) {
+        $proc_cost = $n_slides * 50;
+        print "<P>Total Hyb Cost: \$ $proc_cost<P>\n";
+        $total_price += $proc_cost;
+
+      #### Else the user does it all
       } else {
         print "<P>Label/Hyb Cost: (you have chosen to do this yourself)<P>\n";
       }
