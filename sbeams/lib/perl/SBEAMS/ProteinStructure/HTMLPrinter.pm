@@ -302,7 +302,7 @@ sub display_ext_halo_template {
   $self->printJavascriptFunctions();
   $self->display_ext_halo_style_sheet();
 
-  my $LOGIN_URI = "$SERVER_HOME$ENV{REQUEST_URI}";
+  my $LOGIN_URI = "$SERVER_BASE_DIR$ENV{REQUEST_URI}";
   if ($LOGIN_URI =~ /\?/) {
     $LOGIN_URI .= "&force_login=yes";
   } else {
