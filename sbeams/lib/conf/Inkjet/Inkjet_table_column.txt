@@ -1,0 +1,257 @@
+table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
+IJ_hardware	1	hardware_id	Hardware ID	int	8	0	N		Y							N	N				pkDEFAULT
+IJ_hardware	2	contact_id	Contact	int	8	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Vendor/creator contact for this hardware	"SELECT contact_id, first_name+' '+last_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY organization,last_name,first_name"	
+IJ_hardware	3	hardware_type_id	Hardware Type	int	8	0	N		N	hardware_type	hardware_type_id	Y	optionlist			Y	Y	Y	Type of hardware	"SELECT hardware_type_id, name FROM $TBIJ_HARDWARE_TYPE ORDER BY name"	
+IJ_hardware	4	other_type	Other Hardware Type	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Only fill in if Type is Other		
+IJ_hardware	5	make	Make	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Make or Manufacturer of this hardware		
+IJ_hardware	6	model	Model	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Model number of this hardware		
+IJ_hardware	7	serial_number	Serial Number	varchar	50	0	Y		N			N	text	25		Y	Y	Y	serial number		
+IJ_hardware	8	year	Year	varchar	10	0	Y		N			N	text	10		Y	Y	N	Year of manufacture		
+IJ_hardware	9	uri	URI	varchar	255	0	Y		N			N	text	75		Y	Y	N	URL for this hardware		SELF
+IJ_hardware	10	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IJ_hardware	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_hardware	12	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_hardware	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_hardware	14	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_hardware	15	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+IJ_hardware	16	record_status	Record Status	char	1	0	N	N	N							N	N				
+IJ_software	1	software_id	Software ID	int	8	0	N		Y							N	N				pkDEFAULT
+IJ_software	2	contact_id	Contact	int	8	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Vendor/creator contact for this software	"SELECT contact_id, first_name+' '+last_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY organization,last_name,first_name"	
+IJ_software	3	software_type_id	Software Type	int	8	0	N		N	software_type	software_type_id	Y	optionlist			Y	Y	Y	Type of software	"SELECT software_type_id, name FROM $TBIJ_SOFTWARE_TYPE ORDER BY name"	
+IJ_software	4	other_type	Other Software Type	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Only fill in if Type is Other		
+IJ_software	5	name	Name	varchar	50	0	Y		N			Y	text	50		Y	Y	Y	Name of software		
+IJ_software	6	version	Version	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Version of software		
+IJ_software	7	operating_system	Operating System	varchar	50	0	Y		N			Y	text	25		Y	Y	Y	Operating system the software runs on		
+IJ_software	8	year	Year	varchar	10	0	Y		N			N	text	10		Y	Y	N	Year of release		
+IJ_software	9	uri	URI	varchar	255	0	Y		N			N	text	75		Y	Y	N	URL for this software		SELF
+IJ_software	10	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IJ_software	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_software	12	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_software	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_software	14	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_software	15	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+IJ_software	16	record_status	Record Status	char	1	0	N	N	N							N	N				
+IJ_protocol	1	protocol_id	Protocol ID	int	8	0	N		Y							N	N				pkDEFAULT
+IJ_protocol	2	protocol_type_id	Protocol Type	int	8	0	N		N	protocol_type	protocol_type_id	Y	optionlist			Y	Y	N	Classification of this protocol	"SELECT protocol_type_id, name FROM $TBIJ_PROTOCOL_TYPE ORDER BY name"	
+IJ_protocol	3	other_type	Other Protocol Type	varchar	50	0	Y		N			N	text	50		Y	Y	N	Only fill in if Type is Other		
+IJ_protocol	4	name	Name	varchar	50	0	Y		N			Y	text	50		Y	Y	Y	Name of the protocol		
+IJ_protocol	5	abstract	Abstract	text	0	0	Y		N			N	textarea	6		Y	Y	N	Abstract of the protocol		
+IJ_protocol	6	protocol	Protocol	text	0	0	Y		N			Y	textarea	6		Y	Y	N	Complete description of the protocol		
+IJ_protocol	7	deviations	Deviations	text	0	0	Y		N			N	textarea	6		Y	Y	N	List of deviation from the standard protocol described above		
+IJ_protocol	8	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IJ_protocol	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_protocol	10	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_protocol	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_protocol	12	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_protocol	13	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+IJ_protocol	14	record_status	Record Status	char	1	0	N	N	N							N	N				
+IJ_slide_type	1	slide_type_id	Slide Type ID	int	8	0	N		Y							N	N				pkDEFAULT
+IJ_slide_type	2	name	Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Short name of this slide type		
+IJ_slide_type	3	organism_id	Organism	int	8	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism for this type	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+IJ_slide_type	4	price	Price	float	8	0	Y		N			N	text	25		Y	Y	N	Arrays Lab price for this slide_type		
+IJ_slide_type	5	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IJ_slide_type	6	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
+IJ_slide_type	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_slide_type	8	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_slide_type	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_slide_type	10	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_slide_type	11	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+IJ_slide_type	12	record_status	Record Status	char	1	0	N	N	N							N	N				
+IJ_cost_scheme	1	cost_scheme_id	Cost Scheme ID	int	8	0	N		Y							N	N				pkDEFAULT
+IJ_cost_scheme	2	cost_scheme_name	Scheme Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Short name of this cost scheme		
+IJ_cost_scheme	3	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IJ_cost_scheme	4	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
+IJ_cost_scheme	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_cost_scheme	6	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_cost_scheme	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_cost_scheme	8	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_cost_scheme	9	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+IJ_cost_scheme	10	record_status	Record Status	char	1	0	N	N	N							N	N				
+IJ_slide_type_cost	1	slide_type_cost_id	Slide Type ID	int	8	0	N		Y							N	N				pkDEFAULT
+IJ_slide_type_cost	2	slide_type_id	Slide Type	int	8	0	N		N	IJ_slide_type	slide_type_id	Y	optionlist			Y	Y	Y	Slide Type for this price	"SELECT ST.slide_type_id, name FROM $TBIJ_SLIDE_TYPE ST WHERE ST.record_status != 'D' ORDER BY sort_order,name"	
+IJ_slide_type_cost	3	cost_scheme_id	Cost Scheme	int	8	0	N		N	IJ_cost_scheme	cost_scheme_id	Y	optionlist			Y	Y	Y	Cost Scheme for this price	"SELECT cost_scheme_id, cost_scheme_name FROM $TBIJ_COST_SCHEME ORDER BY sort_order,cost_scheme_name"	
+IJ_slide_type_cost	4	price	Price	float	8	0	Y		N			Y	text	25		Y	Y	N	Arrays Lab price for this slide_type		
+IJ_slide_type_cost	5	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IJ_slide_type_cost	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_slide_type_cost	7	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_slide_type_cost	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_slide_type_cost	9	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_slide_type_cost	10	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+IJ_slide_type_cost	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+IJ_labeling_method	1	labeling_method_id	Labeling Method ID	int	8	0	N		Y							N	N				pkDEFAULT
+IJ_labeling_method	2	name	Method Name	varchar	100	0	N		N			Y	text	50		Y	Y	Y	Name of this labeling method		
+IJ_labeling_method	3	xna_type_id	xNA Type	int	8	0	N		N	xna_type	xna_type_id	Y	optionlist			Y	Y	Y	xNA type	"SELECT xna_type_id, xna_type FROM $TBIJ_XNA_TYPE ORDER BY sort_order,xna_type"	
+IJ_labeling_method	4	dye_id	Dye	int	8	0	N		N	dye	dye_id	Y	optionlist			Y	Y	Y	Dye	"SELECT dye_id, dye_name FROM $TBIJ_DYE ORDER BY dye_name"	
+IJ_labeling_method	5	desired_micrograms	Desired Micrograms	float	8	0	Y		N			N	text	25		Y	Y	N	Number of micrograms required to label		
+IJ_labeling_method	6	Ebase	Ebase	float	8	0	Y		N			Y	text	25		Y	Y	N	Extinction coefficient for a base		
+IJ_labeling_method	7	MWbase	MWbase	float	8	0	Y		N			Y	text	25		Y	Y	N	Molecular weight for a base in g/mol		
+IJ_labeling_method	8	price	Price	float	8	0	Y		N			N	text	25		Y	Y	N	Arrays Lab price for this labeling method		
+IJ_labeling_method	9	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
+IJ_labeling_method	10	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
+IJ_labeling_method	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_labeling_method	12	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_labeling_method	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_labeling_method	14	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_labeling_method	15	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+IJ_labeling_method	16	record_status	Record Status	char	1	0	N	N	N							N	N				
+IJ_array_request	1	array_request_id	Array Request ID	int	8	0	N		Y							N	N				pkDEFAULT
+IJ_array_request	2	contact_id	Contact	int	8	0	N		N	contact	contact_id	Y	current_contact_id	 		Y	Y	N	Requestor of these slides		
+IJ_array_request	3	project_id	Project	int	8	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which these slides are requested	"SELECT project_id, username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) ORDER BY username,name"	
+IJ_array_request	4	cost_scheme_id	Cost Structure	varchar	50	0	N		N			N	optionlist			Y	Y	N	Cost Structure from which pricing is calculated	"SELECT cost_scheme_id,cost_scheme_name FROM $TBIJ_COST_SCHEME ORDER BY sort_order,cost_scheme_name"	
+IJ_array_request	5	slide_type_id	Slide Type	int	8	0	N		N	IJ_slide_type	slide_type_id	Y	optionlist			Y	Y	N	Slide Type	"SELECT ST.slide_type_id, name FROM $TBIJ_SLIDE_TYPE ST WHERE ST.record_status != 'D' ORDER BY sort_order,name"	
+IJ_array_request	6	n_slides	Number of Slides	int	8	0	N		N			Y	text	10		Y	Y	N	Number of slides in this request		
+IJ_array_request	7	n_samples_per_slide	Samples per Slide	int	8	0	N		N			Y	optionlist	 		Y	Y	N	Number of samples per slide (usually 2)	"SELECT option_key,option_value FROM $TBIJ_MISC_OPTION WHERE option_type='samples_per_slide' ORDER BY sort_order,option_value"	
+IJ_array_request	8	hybridization_request	Prep Request	varchar	50	0	N		N			Y	optionlist	 		Y	Y	N	Whether you want the Arrays Group to perform Labeling and Hybridization (priced by labeling method)	"SELECT option_key,option_value FROM $TBIJ_ARRAY_REQUEST_OPTION WHERE option_type='hybridization_request' ORDER BY sort_order,option_value"	
+IJ_array_request	9	scanning_request	Analysis Request	varchar	50	0	N		N			Y	optionlist	 		Y	Y	N	Whether you want the Arrays Group to perform Scanning and Quantitation	"SELECT option_key,option_value+' (\$'+CONVERT(varchar(50),price)+')' FROM $TBIJ_ARRAY_REQUEST_OPTION WHERE option_type='scanning_request' ORDER BY sort_order,option_value"	
+IJ_array_request	10	request_status	Request Status	varchar	50	0	N		N			Y	fixed			Y	Y	N	Status of this request	"SELECT option_key,option_value FROM $TBIJ_MISC_OPTION WHERE option_type='job_status' ORDER BY sort_order,option_value"	
+IJ_array_request	11	price	Price	int	8	0	Y		N			N	fixed	 		N	Y	N	Total price for this request		
+IJ_array_request	12	comment	Comment	text	0	0	Y		N			N	textarea	4		Y	Y	N	Additional comments about this request		
+IJ_array_request	13	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N				fixed			N	Y				
+IJ_array_request	14	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_array_request	15	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N				fixed			N	Y				
+IJ_array_request	16	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_array_request	17	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+IJ_array_request	18	record_status	Record Status	char	1	0	N	N	N				fixed			N	Y				
+IJ_slide_model	1	slide_model_id	Slide Model ID	int	8	0	N		Y							N	N				pkDEFAULT
+IJ_slide_model	2	vendor_name	Vendor Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Vendor for this slide model		
+IJ_slide_model	3	model_name	Model Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Model name of these slides		
+IJ_slide_model	4	contact_id	Contact	int	8	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Vendor contact entry for these slides	"SELECT contact_id, first_name+' '+last_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY organization,last_name,first_name"	
+IJ_slide_model	5	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IJ_slide_model	6	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
+IJ_slide_model	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_slide_model	8	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_slide_model	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_slide_model	10	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_slide_model	11	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+IJ_slide_model	12	record_status	Record Status	char	1	0	N	N	N							N	N				
+IJ_slide_lot	1	slide_lot_id	Slide Lot ID	int	8	0	N		Y							N	N				pkDEFAULT
+IJ_slide_lot	2	slide_model_id	Slide Model	int	8	0	N		N	IJ_slide_model	slide_model_id	Y	optionlist			Y	Y	Y	Model name of these slides	"SELECT slide_model_id,vendor_name+' '+model_name AS 'name' FROM $TBIJ_SLIDE_MODEL WHERE record_status != 'D' ORDER BY 2"	
+IJ_slide_lot	3	lot_number	Lot Number	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Lot number of these slides		
+IJ_slide_lot	4	date_received	Date Received	datetime	8	0	Y		N			N	textdate	30		Y	Y	N	Date this lot was received		
+IJ_slide_lot	5	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IJ_slide_lot	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_slide_lot	7	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_slide_lot	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_slide_lot	9	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_slide_lot	10	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+IJ_slide_lot	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+IJ_printing_batch	1	printing_batch_id	Printing Batch ID	int	8	0	N		Y							N	N				pkDEFAULT
+IJ_printing_batch	2	slide_type_id	Slide Type	int	8	0	N		N	IJ_slide_type	slide_type_id	Y	optionlist			Y	Y	Y	Slide type	"SELECT ST.slide_type_id, name FROM $TBIJ_SLIDE_TYPE ST WHERE ST.record_status != 'D' ORDER BY sort_order,name"	
+IJ_printing_batch	3	protocol_id	Protocol	int	8	0	N		N	IJ_protocol	protocol_id	Y	optionlist			Y	Y	Y	Protocol for this printing	"SELECT protocol_id,P.name FROM $TBIJ_PROTOCOL P LEFT JOIN $TBIJ_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='array_printing' ORDER BY P.name"	
+IJ_printing_batch	4	date_started	Date Started	datetime	8	0	N		N			Y	text	30		Y	Y	Y	Date/time the printing began		
+IJ_printing_batch	5	date_finished	Date Finished	datetime	8	0	Y		N			N	text	30		Y	Y	N	Date/time the printing finished		
+IJ_printing_batch	6	number_of_spots	Number of Spots	int	4	0	Y		N			N	text	10		Y	Y	N	Number of spots per slide		
+IJ_printing_batch	7	spot_spacing	Spot Spacing (microns)	float	8	0	N		N			N	text	10		Y	Y	N	Spacing of the spots		
+IJ_printing_batch	8	solvent	Solvent	varchar	50	0	N		N			N	optionlist	 		Y	Y	N	Solvent used	"SELECT option_key,option_value FROM $TBIJ_MISC_OPTION WHERE option_type='solvent' ORDER BY sort_order,option_value"	
+IJ_printing_batch	9	temperature	Temperature	float	8	0	Y		N			N	text	10		Y	Y	N	Temperature during printing		
+IJ_printing_batch	10	humidity	Humidity	float	8	0	Y		N			N	text	10		Y	Y	N	Humidity during printing		
+IJ_printing_batch	11	post_treatment	Post Treatment	varchar	50	0	N		N			N	optionlist	 		Y	Y	N	Post treatment of slides	"SELECT option_key,option_value FROM $TBIJ_MISC_OPTION WHERE option_type='post_treatment' ORDER BY sort_order,option_value"	
+IJ_printing_batch	12	slide_list	Slide List	varchar	255	0	Y		N			N	text	50		Y	Y	N	Serial numbers of slides printed (NOTE: this is a non-binding entry; it does not automatically create slides associated with this printing)		
+IJ_printing_batch	13	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IJ_printing_batch	14	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_printing_batch	15	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_printing_batch	16	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_printing_batch	17	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_printing_batch	18	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+IJ_printing_batch	19	record_status	Record Status	char	1	0	N	N	N							N	N				
+IJ_slide	1	slide_id	Slide ID	int	8	0	N		Y							N	N				pkDEFAULT
+IJ_slide	2	slide_lot_id	Slide Lot	int	8	0	N		N	IJ_slide_lot	slide_lot_id	Y	optionlist			Y	Y	Y	Slide Lot	"SELECT slide_lot_id, vendor_name+' '+model_name+' # '+lot_number FROM $TBIJ_SLIDE_LOT SL LEFT JOIN $TBIJ_SLIDE_MODEL SM ON (SL.slide_model_id=SM.slide_model_id) WHERE SL.record_status != 'D' ORDER BY 2"	
+IJ_slide	3	slide_number	Serial Number	int	4	0	N		N			Y	text	25		Y	Y	Y	"Slide Serial Number (This should be of the form 2002032506.  To insert 6 slides, write 2002032501-2002032506)"		
+IJ_slide	4	barcode	Barcode	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Barcode		
+IJ_slide	5	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IJ_slide	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_slide	7	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_slide	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_slide	9	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_slide	10	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+IJ_slide	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+IJ_array_layout	1	layout_id	Layout ID	int	8	0	N		Y							N	N				pkDEFAULT
+IJ_array_layout	2	slide_type_id	Slide Type	int	8	0	N		N	IJ_slide_type	slide_type_id	Y	optionlist			Y	Y	Y	Slide type	"SELECT ST.slide_type_id, name FROM $TBIJ_SLIDE_TYPE ST WHERE ST.record_status != 'D' ORDER BY sort_order,name"	
+IJ_array_layout	3	name	name	varchar	50	0	N		N			Y	text	25	setLayoutFileName()	Y	Y	Y	Name of this layout		
+IJ_array_layout	4	data_file	Data File	varchar	100	0	N		N			N	file	50		N	N	N	Click Browse and select the file to upload to the database		
+IJ_array_layout	5	source_filename	Source Filename	varchar	100	0	N		N			Y	text	50		Y	Y	N	Enter the network location of the key file		
+IJ_array_layout	6	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IJ_array_layout	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_array_layout	8	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_array_layout	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_array_layout	10	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_array_layout	11	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+IJ_array_layout	12	record_status	Record Status	char	1	0	N	N	N							N	N				
+IJ_array	1	array_id	Layout ID	int	8	0	N		Y						document.forms[0].array_name.value=document.forms[0].slide_id.options[document.forms[0].slide_id.selectedIndex].text	N	N				pkDEFAULT
+IJ_array	2	project_id	Project	int	8	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project to which this microarray is to be assigned	"SELECT project_id, username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) ORDER BY name"	
+IJ_array	3	layout_id	Layout	int	8	0	N		N	IJ_array_layout	layout_id	Y	optionlist			Y	Y	N	Layout name associated with this microarray	"SELECT layout_id, ST.name+' - '+AL.name FROM $TBIJ_ARRAY_LAYOUT AL LEFT JOIN $TBIJ_SLIDE_TYPE ST ON ( AL.slide_type_id=ST.slide_type_id ) ORDER BY ST.name,AL.name"	
+IJ_array	4	printing_batch_id	Printing Batch	int	8	0	N		N	IJ_printing_batch	printing_batch_id	Y	optionlist			Y	Y	N	Printing batch in which this microarray was produced	"SELECT printing_batch_id, ST.name+' ('+slide_list+') ('+SUBSTRING(CONVERT(varchar(50),date_started,121),1,16)+')' FROM $TBIJ_PRINTING_BATCH PB LEFT JOIN $TBIJ_SLIDE_TYPE ST ON ( PB.slide_type_id=ST.slide_type_id ) ORDER BY ST.name,date_started"	
+IJ_array	5	slide_id	Slide	int	8	0	N		N	IJ_slide	slide_id	Y	scrolloptionlist	4	setArrayName()	Y	Y	N	Slide serial number for this microarray (choose only one slide)	"SELECT S.slide_id, convert(varchar(20),slide_number)+CASE WHEN A.slide_id IS NOT NULL THEN ' - *DONE*' ELSE '' END FROM $TBIJ_SLIDE S LEFT JOIN $TBIJ_ARRAY A ON ( S.slide_id=A.slide_id ) ORDER BY slide_number"	
+IJ_array	6	array_name	Array Name	varchar	50	0	N		N			Y	text	25		Y	Y	Y	"Official Name of this microarray that it will be subsequently referred to (usually just the serial number of the slide, but can be different)"		
+IJ_array	7	array_request_slide_id	Requested Slide ID	int	8	0	N		N	IJ_array_request_slide	array_request_slide_id	Y	scrolloptionlist	4		Y	Y	N	ID assigned to this slide during the array request process	MANUAL	
+IJ_array	8	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Optional comment about this particular microarray		
+IJ_array	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_array	10	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_array	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_array	12	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_array	13	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+IJ_array	14	record_status	Record Status	char	1	0	N	N	N							N	N				
+IJ_labeling	1	labeling_id	Labeling ID	int	8	0	N		Y							N	N				pkDEFAULT
+IJ_labeling	2	array_request_sample_id	Array Request Sample ID	int	8	0	N		N	IJ_array_request_sample	array_request_sample_id	Y	multioptionlist	4		Y	Y	Y	"Sample ID number - Sample name (you may select several samples to enter at once, but note all values will be the same)"	MANUAL	
+IJ_labeling	3	protocol_id	Protocol	int	8	0	N		N	IJ_protocol	protocol_id	Y	optionlist			Y	Y	N	Protocol used for labeling	"SELECT protocol_id,P.name FROM $TBIJ_PROTOCOL P LEFT JOIN $TBIJ_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='extract_labeling' ORDER BY P.name"	
+IJ_labeling	4	date_labeled	Date Labeled	datetime	8	0	N	CURRENT_TIMESTAMP	N			N	textdate	30		Y	Y	N	Date/time the labeling was performed		
+IJ_labeling	5	dye_lot_number	Dye Lot #	varchar	25	0	Y		N			Y	text	10		Y	Y	N	Lot number of dye used		
+IJ_labeling	6	absorbance_260	Absorbance at 260nm	float	8	0	Y		N			N	text	10		Y	Y	N	Absorbance value at 260 nm		
+IJ_labeling	7	absorbance_lambda	Absorbance at dyeWL	float	8	0	Y		N			N	text	10		Y	Y	N	Absorbance value at the reference wavelength for the dye used		
+IJ_labeling	8	volume	Volume	float	8	0	Y		N			N	text	10		Y	Y	N	Volume in microliters (ul)		
+IJ_labeling	9	dilution_factor	Dilution Factor	float	8	0	Y		N			N	text	10	refreshDocument()	Y	Y	N	Dilutional factor		
+IJ_labeling	10	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments about this step		
+IJ_labeling	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_labeling	12	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_labeling	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_labeling	14	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_labeling	15	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+IJ_labeling	16	record_status	Record Status	char	1	0	N	N	N							N	N				
+IJ_hybridization	1	hybridization_id	Hybridization ID	int	8	0	N		Y							N	N				pkDEFAULT
+IJ_hybridization	2	name	Batch Name	varchar	100	0	Y		N			N	text	25		Y	Y	N	Arbitrary name for this hybridization		
+IJ_hybridization	3	protocol_id	Protocol	int	8	0	N		N	IJ_protocol	protocol_id	Y	optionlist			Y	Y	N	Protocol used for this step	"SELECT protocol_id,P.name FROM $TBIJ_PROTOCOL P LEFT JOIN $TBIJ_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='hybridization' ORDER BY P.name"	
+IJ_hybridization	4	array_id	Array Name	int	8	0	N		N	IJ_array	array_id	Y	multioptionlist	4		Y	Y	Y	Array Name (must already have been defined)	"SELECT A.array_id,array_name+CASE WHEN H.array_id IS NOT NULL THEN ' - *DONE*' ELSE '' END, H.array_id FROM $TBIJ_ARRAY A LEFT JOIN $TBIJ_HYBRIDIZATION H ON ( A.array_id=H.array_id ) ORDER BY A.array_name"	
+IJ_hybridization	5	date_hybridized	Date Hybridized	datetime	8	0	N	CURRENT_TIMESTAMP	N			Y	textdate	30		Y	Y	N	Date/time this was performed		
+IJ_hybridization	6	prehyb_chamber	PreHyb Chamber	varchar	25	0	Y		N			N	text	10		Y	Y	N			
+IJ_hybridization	7	hyb_chamber	Hyb Chamber	varchar	25	0	Y		N			N	text	10		Y	Y	N			
+IJ_hybridization	8	wash_chamber	Wash Chamber	varchar	25	0	Y		N			N	text	10		Y	Y	N			
+IJ_hybridization	9	deviations	Deviations from Protocol	varchar	1000	0	Y		N			N	textarea	4		Y	Y	N	Text describing any deviations from the protocol or other comments		
+IJ_hybridization	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_hybridization	11	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_hybridization	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_hybridization	13	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_hybridization	14	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+IJ_hybridization	15	record_status	Record Status	char	1	0	N	N	N							N	N				
+IJ_array_scan	1	array_scan_id	Array Scan ID	int	8	0	N		Y							N	N				pkDEFAULT
+IJ_array_scan	2	array_id	Array Name	int	8	0	N		N	IJ_array	array_id	Y	scrolloptionlist	4	setDefaultImagesLocation()	Y	Y	Y	Array Name which was scanned	"SELECT A.array_id,array_name+CASE WHEN S.array_id IS NOT NULL THEN ' - *DONE*' ELSE '' END, S.array_id FROM $TBIJ_ARRAY A LEFT JOIN $TBIJ_ARRAY_SCAN S ON ( A.array_id=S.array_id ) ORDER BY A.array_name"	
+IJ_array_scan	3	protocol_id	Protocol	int	8	0	N		N	IJ_protocol	protocol_id	Y	optionlist			Y	Y	N	Protocol used for scanning	"SELECT protocol_id,P.name FROM $TBIJ_PROTOCOL P LEFT JOIN $TBIJ_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='array_scanning' ORDER BY P.name"	
+IJ_array_scan	4	resolution	Resolution	float	8	0	Y		N			Y	text	10		Y	Y	N	Scan resolution in microns		
+IJ_array_scan	5	stage_location	Orig Data Location	varchar	255	0	Y		N			Y	text	60	refreshDocument()	Y	Y	Y	Location of the source data directory (containing the Images/ subdirectory)		
+IJ_array_scan	6	uri	Data URI	varchar	255	0	Y		N			N	text	60		N	N	N	Internal database URI for data directory		SELF
+IJ_array_scan	7	data_flag	Data Flag	varchar	10	0	N		N			Y	optionlist			Y	Y	N	"OK, or set to BAD if this scan should not be processed"	"SELECT option_key,option_value FROM $TBIJ_MISC_OPTION WHERE option_type='data_flag' ORDER BY sort_order,option_value"	
+IJ_array_scan	8	date_scanned	Date Scanned	datetime	8	0	N	CURRENT_TIMESTAMP	N			N	textdate	30		Y	Y	N	Date and time the slide was scanned (optional; will be replaced with file timestamps eventually)		
+IJ_array_scan	9	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Optional comment about this particular microarray scan		
+IJ_array_scan	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_array_scan	11	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_array_scan	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IJ_array_scan	13	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+IJ_array_scan	14	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+IJ_array_scan	15	record_status	Record Status	char	1	0	N	N	N							N	N				
+IJ_array_quantitation	1	array_quantitation_id	Array Quantitation ID	int	8	0	N		Y							N	N				pkDEFAULT
+IJ_array_quantitation	2	array_scan_id	Array Name	int	8	0	N		N	array_scan	array_scan_id	Y	scrolloptionlist	4	setDefaultQALocation()	Y	Y	Y	Array Name which was quantitated	MANUAL
+IJ_array_quantitation	3	protocol_id	Protocol	int	8	0	N		N	IJ_protocol	protocol_id	Y	optionlist			Y	Y	N	Protocol used for spot finding	"SELECT protocol_id,P.name FROM $TBIJ_PROTOCOL P LEFT JOIN $TBIJ_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='image_analysis' ORDER BY P.name"
+IJ_array_quantitation	4	stage_location	Orig Data Location	varchar	255	0	Y		N			Y	text	60	refreshDocument()	Y	Y	Y	Location of the output data file	
+IJ_array_quantitation	5	uri	Data URI	varchar	255	0	Y		N			N	text	60		N	N	N	Internal database URI for data directory	
+IJ_array_quantitation	6	data_flag	Data Flag	varchar	10	0	N		N			Y	optionlist			Y	Y	N	"OK, or set to BAD if this quantitation should not be processed"	"SELECT option_key,option_value FROM $TBIJ_MISC_OPTION WHERE option_type='data_flag' ORDER BY sort_order,option_value"
+IJ_array_quantitation	7	date_quantitated	Date Quantitated	datetime	8	0	N	CURRENT_TIMESTAMP	N			N	textdate	30		Y	Y	N	Date and time the slide was quantitated (optional; will be replaced with file timestamps eventually)	
+IJ_array_quantitation	8	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Optional comment about this particular quantitation	
+IJ_array_quantitation	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+IJ_array_quantitation	10	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N			
+IJ_array_quantitation	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+IJ_array_quantitation	12	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N			
+IJ_array_quantitation	13	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N			
+IJ_array_quantitation	14	record_status	Record Status	char	1	0	N	N	N							N	N			
+IJ_get_scanned_array	1	start_date_constraint	Starting Date									N	text	40		Y	Y	N	"Constraint for the minimum date of scanned entry records to display.  Note that this is the date that a scan record was created, not the date entered by the user on when the work was performed. (BROKEN)"	
+IJ_get_scanned_array	2	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT query_option_id,option_value FROM $TBIJ_QUERY_OPTION WHERE option_type = 'GSA_sort_options' ORDER BY sort_order,option_value"
+IJ_get_scanned_array	3	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBIJ_QUERY_OPTION WHERE option_type = 'GSA_display_options' ORDER BY sort_order,option_value"
+IJ_get_scanned_array	4	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 1000 rows."

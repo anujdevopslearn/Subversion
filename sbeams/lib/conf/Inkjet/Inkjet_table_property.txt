@@ -1,0 +1,22 @@
+table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
+IJ_hardware	Hardware	inkjet	YES	$TBIJ_HARDWARE	hardware_id		ManageTable.cgi?TABLE_NAME=IJ_hardware	"IJ_protocol,IJ_hardware,IJ_software"	IJ_software
+IJ_software	Software	inkjet	YES	$TBIJ_SOFTWARE	software_id		ManageTable.cgi?TABLE_NAME=IJ_software	"IJ_protocol,IJ_hardware,IJ_software"	IJ_protocol
+IJ_protocol	Protocol	inkjet	YES	$TBIJ_PROTOCOL	protocol_id		ManageTable.cgi?TABLE_NAME=IJ_protocol	"IJ_protocol,IJ_hardware,IJ_software"	
+IJ_slide	Slide	inkjet	YES	$TBIJ_SLIDE	slide_id	slide_number	ManageTable.cgi?TABLE_NAME=IJ_slide	"IJ_slide,IJ_slide_lot,IJ_slide_model"	IJ_array
+IJ_slide_model	Slide Model	inkjet	YES	$TBIJ_SLIDE_MODEL	slide_model_id		ManageTable.cgi?TABLE_NAME=IJ_slide_model	"IJ_slide,IJ_slide_lot,IJ_slide_model"	IJ_slide_lot
+IJ_slide_lot	Slide Lot	inkjet	YES	$TBIJ_SLIDE_LOT	slide_lot_id		ManageTable.cgi?TABLE_NAME=IJ_slide_lot	"IJ_slide,IJ_slide_lot,IJ_slide_model"	IJ_slide
+IJ_slide_type	Slide Type	inkjet	YES	$TBIJ_SLIDE_TYPE	slide_type_id		ManageTable.cgi?TABLE_NAME=IJ_slide_type	"IJ_slide_type,IJ_labeling_method,IJ_cost_scheme,IJ_slide_type_cost"	IJ_slide_type_cost
+IJ_labeling_method	Labeling Method	inkjet	YES	$TBIJ_LABELING_METHOD	labeling_method_id		ManageTable.cgi?TABLE_NAME=IJ_labeling_method	"IJ_slide_type,IJ_labeling_method,IJ_cost_scheme,IJ_slide_type_cost"	
+IJ_cost_scheme	Cost Scheme	inkjet	YES	$TBIJ_COST_SCHEME	cost_scheme_id		ManageTable.cgi?TABLE_NAME=IJ_cost_scheme	"IJ_slide_type,IJ_labeling_method,IJ_cost_scheme,IJ_slide_type_cost"	IJ_slide_type_cost
+IJ_slide_type_cost	Slide Type Cost	inkjet	YES	$TBIJ_SLIDE_TYPE_COST	slide_type_cost_id		ManageTable.cgi?TABLE_NAME=IJ_slide_type_cost	"IJ_slide_type,IJ_labeling_method,IJ_cost_scheme,IJ_slide_type_cost"	
+IJ_array_request	Array Request	inkjet_user		$TBIJ_ARRAY_REQUEST	array_request_id		SubmitArrayRequest.cgi?TABLE_NAME=IJ_array_request	IJ_array_request	
+IJ_array_request_slide	Array Request Slide	inkjet_user		$TBIJ_ARRAY_REQUEST_SLIDE	array_request_slide_id				
+IJ_array_request_sample	Array Request Sample	inkjet_user		$TBIJ_ARRAY_REQUEST_SAMPLE	array_request_sample_id				
+IJ_printing_batch	Printing Batch	inkjet	YES	$TBIJ_PRINTING_BATCH	printing_batch_id		ManageTable.cgi?TABLE_NAME=IJ_printing_batch	"IJ_printing_batch,IJ_array_layout"	IJ_array
+IJ_array_layout	Array Layout	inkjet	YES	$TBIJ_ARRAY_LAYOUT	layout_id		ManageTable.cgi?TABLE_NAME=IJ_array_layout	"IJ_printing_batch,IJ_array_layout"	IJ_printing_batch
+IJ_array	Array	inkjet	YES	$TBIJ_ARRAY	array_id		ManageTable.cgi?TABLE_NAME=IJ_array	IJ_array	IJ_hybridization
+IJ_labeling	Labeling	inkjet_user	YES	$TBIJ_LABELING	labeling_id	array_request_sample_id	ManageTable.cgi?TABLE_NAME=IJ_labeling	"IJ_labeling,IJ_hybridization"	"IJ_array,IJ_hybridization"
+IJ_hybridization	Hybridization	inkjet_user	YES	$TBIJ_HYBRIDIZATION	hybridization_id	array_id	ManageTable.cgi?TABLE_NAME=IJ_hybridization	"IJ_labeling,IJ_hybridization"	IJ_array_scan
+IJ_array_scan	Array Scan	inkjet_user	YES	$TBIJ_ARRAY_SCAN	array_scan_id		ManageTable.cgi?TABLE_NAME=IJ_array_scan	"IJ_array_scan,IJ_array_quantitation"	IJ_array_quantitation
+IJ_array_quantitation	Array Quantitation	inkjet_user	YES	$TBIJ_ARRAY_QUANTITATION	array_quantitation_id		ManageTable.cgi?TABLE_NAME=IJ_array_quantitation	"IJ_array_scan,IJ_array_quantitation"	
+IJ_get_scanned_array	Scanned Arrays Detail	QUERY		NA	NA		get_scanned_array		
