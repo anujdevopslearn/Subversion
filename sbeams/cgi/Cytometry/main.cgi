@@ -21,6 +21,10 @@
 # Get the script set up with everything it will need
 ###############################################################################
 use strict;
+use Alcyt;
+use Text::Wrap;
+use Data::Dumper;
+use GD::Graph::xypoints;
 use vars qw ($q $sbeams $sbeamsMOD $PROGRAM_FILE_NAME
              $current_contact_id $current_username);
 use lib qw (../../lib/perl);
@@ -28,13 +32,16 @@ use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
 use SBEAMS::Connection;
-use SBEAMS::Connection::Settings;
-use SBEAMS::Connection::Tables;
 
 use SBEAMS::Cytometry;
 use SBEAMS::Cytometry::Settings;
 use SBEAMS::Cytometry::Tables;
 
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::DBConnector;
+use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::TableInfo;
+use SBEAMS::Connection::Utilities;
 
 $q   = new CGI;
 $sbeams = new SBEAMS::Connection;
@@ -46,9 +53,65 @@ $sbeamsMOD->setSBEAMS($sbeams);
 # Global Variables
 ###############################################################################
 $PROGRAM_FILE_NAME = 'main.cgi';
+
+my $INTRO = '_displayIntro';
+my $START = '_start';
+my $ERROR = '_error';
+my $PROCESSFILE = '_processFile';
+my $GETGRAPH = '_getGraph';
+my $CELL = '_processCells';
+my (%indexHash,%editorHash,%inParsParam);
+#possible actions (pages) displayed
+my %actionHash = (
+	$INTRO	=>	\&displayIntro,
+	$START	=>	\&displayMain,
+	$PROCESSFILE =>	 \&processFile,
+	$GETGRAPH 	=>	 \&getGraph,
+	$CELL	=>	\&processCells,
+	$ERROR	=>	\&processError
+	);
+	my %optionHash = (
+		'FLS' => 'fl',
+		'RED' => 're',
+		'PLS' => 'pl',
+		'BLUE' => 'bl',
+		'GREEN' => 'gr',
+		'pulse width' => 'pw',
+		'LOG(FLS)' => 'fl',
+		'Hoechst Red' => 're',
+		'Hoechst red' => 're',
+		'ADC12' => 'aaa',
+		'ADC12' => 'bbb',
+		'LOG(PLS)' => 'pl',
+		'Hoechst Blue' => 'bl',
+		'Hoechst blue' => 'bl',
+		'xxx' => 'wave',
+		'LUT DECISION' => 'lut',
+		'CLASS DECISION'  =>'cls',
+		'COUNTER' => 'cts',
+		'yyy' => 'spec',
+		'www' => 'gr',
+		'zzz' => 'rate',
+		'qqq' => 'time',
+		'uuu' => 'event No.' );
+
+	my %indexHash = (
+		' event No.'	=>	0,
+		time 	=>	1,
+		rate	=>	2,
+		cls		=>	3,
+		cts		=>	4,
+		lut		=>	5,
+		pw 	=>	6,
+		fl		=>	7,
+		pl		=>	8,
+		wave	=>	9,
+		spec	=>	10,
+		bl	=>	11,
+		gr	=>	12,
+		re	=>	13);
 main();
-
-
+exit(0);
 ###############################################################################
 # Main Program:
 #
@@ -141,10 +204,9 @@ sub handle_request
 #### Get all the experiments for this project
 	my $action = $parameters{'action'};
 	print qq~	<TABLE WIDTH="100%" BORDER=0> ~;
+	my $sub = $actionHash{$action} || $actionHash{$INTRO};
 #loading the default page (Intro)
 #my $sub = $actionHash{$action} || $actionHash{$INTRO};
-
-my $sub = 1;
 if ($sub )  {
 		#print some info about this project
 		#only on the main page
@@ -167,7 +229,7 @@ if ($sub )  {
 		}
 		else
 		{
-			showMainPage(ref_parameters=>\%parameters,project_id=>$project_id);
+			&$sub(ref_parameters=>\%parameters,project_id=>$project_id);
 		}
 		
 #could not find a sub
@@ -181,7 +243,7 @@ if ($sub )  {
 }
 
 ####----------------------------------------------------------------------------------
-sub showMainPage {
+sub displayIntro {
 
 	 my %args = @_;
 	 #### get the project id
@@ -196,7 +258,7 @@ sub showMainPage {
 	 from $TBCY_FCS_RUN where project_id = '$project_id' order by project_designator";
 	 
 	 my @rows = $sbeams->selectSeveralColumns($sql);
-	 my %hash;
+	 my %hashFile;
 	my $count = 1; 
 	 if (@rows)
 	 {
@@ -210,34 +272,34 @@ sub showMainPage {
 #		print "$count ==  $projectDes  == $organismID == ,$sampleName == $fileName === $runDate <br>";
 			$projectDes = uc($projectDes);
 			push @array,( $sampleName, $organismHash{$organismID},$fileName, $runDate);
-			$hash{$projectDes}->{$fcsID} = \ @array;
+			
+		#	$hashFile{$projectDes}->{$fcsID} = \ @array;
+			$hashFile{$projectDes}->{$fcsID}->{'Sample Name'} = $sampleName;
+			$hashFile{$projectDes}->{$fcsID}->{Organism} = $organismHash{$organismID};
+			$hashFile{$projectDes}->{$fcsID}->{'File Name'} = $fileName;
+			$hashFile{$projectDes}->{$fcsID}->{'Run Date'} = $runDate;
+			$hashFile{$projectDes}->{$fcsID}->{'Create Graph'} = $fileName;
+			
+			
 			$count++;
 		}	
 			
-		foreach my $key (keys %hash)
+		foreach my $key (keys %hashFile)
 		{
-			print " <tr><td> <b>Project Designator: </b>$key</td></tr>";
-			print "<tr><td><b>Sample Name</b></td><td><b>Organism</b></td><td><b>File Name</b></td><td><b>Run Date</b></td></tr>";
-			foreach my $kk (keys %{$hash{$key}})
+			print "<tr><td> <b>Project Designator: </b>$key</td></tr>";
+			print "<tr><td><b>Sample Name</b></td><td><b>Organism</b></td><td><b>File Name</b></td><td><b>Run Date</b></td><td>Create Graph</td></tr>";
+			foreach my $id (keys %{$hashFile{$key}})
 			{ 
-				print "<tr>";
-				my $count = 0;
-				foreach my $element (@{$hash{$key}->{$kk}})
-				{
-					if ($count == 0)
-					{
-						print qq ~<td>  <a href=http://db.systemsbiology.net/sbeams/cgi/Cytometry/ManageTable.cgi?TABLE_NAME=CY_fcs_run&fcs_run_id=$kk>$element</a></td>~;
-					}
-					else 
-					{
-						print "<td>$element</td>";
-					}
-					$count++;
-				}
-				print "</tr>";
+			print qq ~<tr>
+			<td> <a href=$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=CY_fcs_run&fcs_run_id=$id>$hashFile{$key}->{$id}->{'Sample Name'}</td>
+			<td>$hashFile{$key}->{$id}->{Organism} </td>
+			<td>$hashFile{$key}->{$id}->{'File Name'}</td> 
+			<td>$hashFile{$key}->{$id}->{'Run Date'} </td>
+			<td><a href=$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?action=$PROCESSFILE&fileID=$id > Create Graph</a></td></tr>~;
 			}
-		}
+		}	
 	 }
+	 
 	 else
 	 { 
 		 print "	<TR><TD WIDTH=\"100%\"><B><font color=red><NOWRAP>This project contains no Cytometry Data</NOWRAP></font></B></TD></TR>\n";
@@ -272,27 +334,321 @@ sub showMainPage {
   ~;
 
   return;
-=comment
-    print qq!
-	<BR>
-	You are successfully logged into the $DBTITLE - $SBEAMS_PART system.
-	Please choose your tasks from the menu bar on the left.<P>
-	<BR>
-	This system is still under active development.  Please be
-	patient and report bugs, problems, difficulties, suggestions to
-	<B>edeutsch\@systemsbiology.org</B>.<P>
-	<BR>
-	<BR>
-
-	<UL>
-	<LI> Here is the starter stub for the Cytometry area.
-	</UL>
-
-	<BR>
-	<BR>
-    !;
-=cut
 
 } # end showMainPage
 
+sub processFile
+{
+
+		my %args = @_;
+#### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+	my %resultset = ();
+  my $resultset_ref = \%resultset;
+	my %parameters = %{$ref_parameters};
+#		foreach my $k (keys %parameters)
+#		{
+#				print "$k  ==== $parameters{$k}<br>";
+#		}
+
+my $fileQuery = "select original_filepath +'/' + filename as completeFile from $TBCY_FCS_RUN where fcs_run_id = $parameters{fileID}";
+		my @row = $sbeams->selectOneColumn($fileQuery);
+
+	my $infile = $row[0];  #'/net/db/projects/StemCell/FCS/102403/'.$parameters{fileName};
+;
+	my @header = read_fcs_header($infile);	
+	my @keywords = get_fcs_keywords($infile,@header);
+	my %values = get_fcs_key_value_hash(@keywords);
+
+
+		print "<br><center><h4>Assembling the data points.<br></h4></center><br><br>";
+		print "<center><br>Number of parameters measured: $values{'$PAR'}<br><br>";
+		print "<b>Measured parameters:</b><br>";
+		print "Choose the X and Y coordinates<br>";
+#		my $string;
+		my (%cytoParameters) ;
+		foreach my $key (keys %values)
+		{	
+			if ($key =~ /\$P(\d+)N/i)
+			{
+				my $position = $1;
+				$values{$key} =~ s/^[\s\n]+//g;
+				$values{$key} =~ s/[\s\n]+$//g;
+				next if $values{$key} =~ /adc/i;
+				$inParsParam{$optionHash{$values{$key}}} = $1;
+				$cytoParameters{$key} = $values{$key};
+#				$postionHash{$optionHash{$values{$key}}} = $1;
+#				$string .= " -".$optionHash{$values{$key}}." ".$1;			
+			}
+		}
+		
+		if ($values{'$PAR'})
+		{
+			print qq~ <center><table><tr><td>x-axis</td><td>y-axis</td></tr>~;
+			print qq~ <tr><td colspan=2><hr size =2></td></tr>~;
+			print $q->start_form ( ) ;             #-onSubmit=>"return checkForm()");
+			foreach my $key (keys %cytoParameters)
+			{
+						
+				print qq~ <tr><td><input type="radio" name="xbox" value="$cytoParameters{$key}">$cytoParameters{$key}</td>~;
+				print qq~ <td><input type="radio" name="ybox" value="$cytoParameters{$key}">$cytoParameters{$key}</td></tr>~;
+			}
+
+			print q~<tr></tr><tr><td><input type ="submit" name= "SUBMIT" value = "SUBMIT PARAMETERS"></td></tr></table></center> ~;
+			print qq~<input type= hidden name="action" value = "$GETGRAPH">
+			<input type=hidden name="inFile" value="$infile">~;
+			print $q->end_form; 
+		}
+		else
+		{
+			print "<h4><center><br><br>Unable to process file: $infile.<br>$!<br> <br>Please see your Admin<br></center></h4>";
+		}
+}
+# Read in the header to determine where the text and data sections are in
+# in the file.
+
+sub getGraph
+{
+	
+			my %args = @_;
+#### Process the arguments list
+  my $ref_parameters = $args{'ref_parameters'}
+    || die "ref_parameters not passed";
+  my %parameters = %{$ref_parameters};
+	my %resultset = ();
+  my $resultset_ref = \%resultset;
+	my %parameters = %{$ref_parameters};
+=comment
+	foreach my $k (keys %parameters)
+		{
+				print "$k  ==== $parameters{$k}<br>";
+		}	
+=cut
+
+
+	my $infile = $parameters{inFile};
+	
+# Strip out all of the keyword-value pairs.
+my @header = read_fcs_header($infile);	
+my @keywords = get_fcs_keywords($infile,@header);
+my %values = get_fcs_key_value_hash(@keywords);
+
+	foreach my $key (keys %values)
+	{	
+		if ($key =~ /\$P(\d+)N/i)
+		{
+			my $position = $1;
+			$values{$key} =~ s/^[\s\n]+//g;
+			$values{$key} =~ s/[\s\n]+$//g;
+			next if $values{$key} =~ /adc/i;
+			$inParsParam{$optionHash{$values{$key}}} = $1;
+		}
+	}
+
+# Write the header parameters to the output file.
+# Also add the standard column headings.
+
+my $num_events = $values{'$TOT'};
+print "<br><b>Number of events:</b> $num_events\n<br>";
+my $num_par =  $values{'$PAR'};
+
+my %inpars = ();
+($inpars{timelow},$inpars{timehigh}) = get_time_par(@keywords);
+$inpars{lut}      = get_lut_par(@keywords);
+$inpars{cls}      = get_cls_par(@keywords);
+$inpars{cts}      = get_cts_par(@keywords);
+$inpars{pw}       = $inParsParam{pw} || 0;   #get_pw_par(@keywords); 
+$inpars{fls}      =  $inParsParam{fl} || 0;
+$inpars{pls}      = $inParsParam{pl} || 0;
+$inpars{wave}     = $inParsParam{wave} || 0;
+$inpars{spec}     = $inParsParam{spec} || 0;
+$inpars{blue}     = $inParsParam{bl} || 0;
+$inpars{green}    =$inParsParam{gr} || 0;;
+$inpars{red}      = $inParsParam{re} || 0;
+
+my $dataHashRef = dump_data2($infile,$header[3],2,$num_par,$num_events,%inpars);
+
+my $xCor = $parameters{xbox};
+my $yCor = $parameters{ybox};
+my (@xArray,@yArray);
+my $maxX = 0;
+my $maxY = 0;
+my $xCount = 0;
+my $yCount = 0;
+
+		foreach my $point (@{$dataHashRef->{$optionHash{$xCor}}})
+		{
+				next if $point =~ /\$/;
+				next if $point =~ /fcs/i;
+				next if $point=~/##/;
+				next if $point =~ /\#/;
+				$xCount++;		
+				next if  $xCount%3; 
+				push @xArray,$point;
+				$maxX = $point if $maxX <$point;
+		}
+		
+		foreach my $point (@{$dataHashRef->{$optionHash{$yCor}}})
+		{
+			next if $point =~ /\$/;
+			next if $point =~ /fcs/i;
+			next if $point=~/##/;
+			next if $point =~ /\#/;
+			$yCount++;		
+			next if  $yCount%3; 
+			push @yArray,$point;
+			$maxY = $point if $maxY < $point;
+		}
+
+#@data = ([@indexArray],[@xArray],[@yArray]);
+ my $tmpfile = "plot.$$.@{[time]}.png";
+my @data=([@xArray],[@yArray]);;
+my $graph = GD::Graph::xypoints->new(640,500);
+ $graph->set(
+             x_label           =>$xCor,
+             y_label           => $yCor,
+             title             => $infile,
+			 long_ticks        => 0,
+              x_label_position  => 0.5,
+			 markers => 7,
+			 marker_size => .1,
+			  x_max_value =>$maxX +500,
+			   y_max_value       => $maxY+500
+);
+	my $image = $graph->plot(\@data) or die $graph->error;
+
+
+      my $gd = $graph->plot(\@data);
+my $file = "$PHYSICAL_BASE_DIR/images/tmp/$tmpfile";
+
+      open(IMG, ">$PHYSICAL_BASE_DIR/images/tmp/$tmpfile") or die $!;
+      binmode IMG;
+      print IMG $gd->png;
+      close IMG;
+ #### Provide the link to the image
+    my $imgsrcbuffer = '&nbsp;';
+    $imgsrcbuffer = "<IMG SRC=\"$HTML_BASE_DIR/images/tmp/$tmpfile\">";
+          print qq~
+        <TR><TD COLSPAN="2">
+		$imgsrcbuffer
+        </TD></TR>
+        <TD VALIGN="TOP" WIDTH="50%">
+          <TABLE>
+          ~;
+
+   }
+
+
+=comment
+		 open(IMG, '>/users/mkorb/cytometry/hmkFile.png') or die $!;
+         binmode IMG;
+         print IMG $image->png;
+         close IMG;
+=cut		 
+		 
+ 
+
+sub dump_data2
+ {
+
+   my  $infile   = shift(@_);
+   my  $offset   = shift(@_);
+    my $size     = shift(@_); # not used
+    my $n_params = shift(@_);
+    my $n_events = shift(@_);
+    my %incol    = @_; # This hash contains the column assignments for the
+                    # parameters in the input datafile.  See the main
+                    # code for details.
+
+    # Next, we deal with any parameters which are not amoung the "standard
+    # set".  There is probably a slicker way to do this but I don't have
+    # time to think about it right now.
+
+# Define an array which contains the indices of all parameters.
+	my( @cols,@unnamed);
+    for (my $i = 1; $i <= $n_params; $i++) {
+	$cols[$i] = $i;
+    }
+
+    while ((my($key,$value)) = each %incol) {
+	$cols[$value] = 0;
+    }  
+
+    my $j = 0;
+    for (my $i = 1; $i <= $n_params; $i++) {
+	if ($cols[$i] != 0) {
+	    $unnamed[$j] = $cols[$i];
+	    $j++;
+	}
+    }
+    open(FCSFILE,"$infile") or die "dump_data: Can't find input file $infile.";
+
+    # Throw away all of the bits up to the data part of the file.
+    my $pre_text = $offset;
+    my $dummy = "";
+    read(FCSFILE,$dummy,$offset);
+
+    # Initialize the event array.
+    my @firstevent = ();
+	my $data;
+    # Read the first event in order to get the starting time.
+    for (my $param = 1; $param <= $n_params; $param++) {
+	read(FCSFILE,$data,2);
+	$firstevent[$param] = unpack("S",$data);
+    }
+    my $time0 = ( $firstevent[$incol{timelow}]) + 4096 * ($firstevent[$incol{timehigh}] ); 
+    close(FCSFILE); # For ease of understanding the code and to avoid
+                    # duplicating code, we close the file, then re-open
+                    # it and read in the first event again along with the
+                    # rest of the data.
+
+    # Read in the data, sort it out into the correct columns, and dump
+    # it to the output file.
+    open(FCSFILE,"$infile") or die "dump_data2: Can't find input file $infile.";
+    read(FCSFILE,$dummy,$offset); # read over header and text sections.
+	
+	my @event;
+	my %dataHash;
+    for (my $event_num = 1 ; $event_num <= $n_events; $event_num++) {
+	for (my $param = 1; $param <= $n_params; $param++) {
+
+	    # This assumes a 16 bit data word.  Not the best way to do this.
+	    read(FCSFILE,$data,2);
+	    $event[$param] = unpack("S",$data);
+	}
+
+	# Compute the time from the two 12-bit values.  Subtract off the
+	# time of the earliest event in the file.
+	# June 12, 2003.  Change this to not subtract off the initial time
+	# to allow concatenation of multiple files while preserving the time.
+	# $time = $event[$incol{timelow}] + 4096 * ($event[$incol{timehigh}])  - $time0; 
+	my $time = $event[$incol{timelow}] + 4096 * ($event[$incol{timehigh}]);
+	
+		
+
+	push @{$dataHash{lut}},$event[$incol{lut}]; 
+	push @{$dataHash{cls}},$event[$incol{cls}]; 
+	push @{$dataHash{cts}},$event[$incol{cts}]; 
+	push @{$dataHash{pw}},$event[$incol{pw}]; 
+	push @{$dataHash{fl}},$event[$incol{fls}]; 
+	push @{$dataHash{pl}},$event[$incol{pls}]; 
+	push @{$dataHash{wave}},$event[$incol{wave}]; 
+	push @{$dataHash{spec}},$event[$incol{spec}]; 
+	push @{$dataHash{bl}},$event[$incol{blue}]; 
+	push @{$dataHash{gr}},$event[$incol{green}];
+	push @{$dataHash{re}},$event[$incol{red}]; 
+	}
+	close(FCSFILE);
+	return \%dataHash;
+ }
+
+	
+	
+	
+	
+	
+	
+	
 
