@@ -91,7 +91,7 @@ sub returnTableInfo {
     }
 
 
-    if ($table_name eq "search_hit_annotation") {
+    if ($table_name eq "PR_search_hit_annotation") {
 
         if ($info_key eq "BASICQuery") {
             return qq~
@@ -113,7 +113,7 @@ sub returnTableInfo {
     }
 
 
-    if ($table_name eq "proteomics_experiment") {
+    if ($table_name eq "PR_proteomics_experiment") {
 
         if ($info_key eq "BASICQuery") {
             return qq~
@@ -145,14 +145,14 @@ sub returnTableInfo {
     my $PK_COLUMN_NAME =
       $sbeams->returnTableInfo($table_name,"PK_COLUMN_NAME");
 
-    if ($table_name eq "proteomics_experiment") {
+    if ($table_name eq "PR_proteomics_experiment") {
       my %url_cols;
       $url_cols{experiment_id} =
         "$CGI_BASE_DIR/$subdir$PROGRAM_FILE_NAME&$PK_COLUMN_NAME=%V";
       $url_cols{proj} =
         "$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=project&project_id=%V";
       $url_cols{exp} =
-        "$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=proteomics_experiment&experiment_id=%V";
+        "$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&experiment_id=%V";
       return %url_cols;
     }
 
