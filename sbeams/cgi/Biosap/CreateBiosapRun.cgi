@@ -515,13 +515,13 @@ sub create_request_form {
   </TR>
   <TR>
     <TD>
-    <B>Max. 3\' Distance</B> (2-100,000):
+    <B>Max. 3\' Distance</B> (2-150,000):
     </TD>
     <TD>
     <INPUT TYPE="text" SIZE="5" NAME="max3PrimeDist" VALUE="$parameters{'max3PrimeDist'}">
     </TD>
     <TD ALIGN="right">
-    <B> Max. Reporters per Gene</B> (1-1000):
+    <B> Max. Reporters per Gene</B> (1-10000):
     </TD>
     <TD> <INPUT TYPE="text" SIZE="5" NAME="maxReporters" VALUE="$parameters{'maxReporters'}"
     </TD>
@@ -715,7 +715,7 @@ sub verify_parameters {
 
   # Max 3' Distance
   my $dist = $parameters{'max3PrimeDist'};
-  if ($dist > 100000 || $dist < 2 || !($dist =~ /^[+-]?\d+$/)) {
+  if ($dist > 150000 || $dist < 2 || !($dist =~ /^[+-]?\d+$/)) {
     print "<FONT COLOR=\"red\">ERROR: Max 3' distance is not valid</FONT><BR>\n";
     $parameters{'max3PrimeDist'} = "";
     $ok=0;
@@ -731,7 +731,7 @@ sub verify_parameters {
   
   # Maximum Features
   my $features = $parameters{'maxReporters'};
-  if ($features > 1000 || $features < 1 || !($features =~ /^[+-]?\d+$/)) {
+  if ($features > 10000 || $features < 1 || !($features =~ /^[+-]?\d+$/)) {
     print "<FONT COLOR=\"red\">ERROR: Maximum features is not valid</FONT><BR>\n";
     $parameters{'maxReporters'} = "";
     $ok=0;
