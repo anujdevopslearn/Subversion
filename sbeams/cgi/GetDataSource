@@ -253,6 +253,13 @@ sub handle_request {
     $sql = "SELECT * FROM ISB..symposium_registration";
   }
 
+  #### Define parameters for source 'symposiu'
+  if ($parameters{source_name} eq 'symposium_preregistration') {
+    $sql = "SELECT * FROM ISB..symposium_preregistration";
+  }
+
+
+
 
 
   #########################################################################
