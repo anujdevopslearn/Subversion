@@ -809,6 +809,147 @@ sub readNfoFile {
 
 
 
+###############################################################################
+# getHydropathyIndex: Get a hash of hydropathy indexes for each of the residues
+###############################################################################
+sub getHydropathyIndex {
+  my %args = @_;
+  my $SUB_NAME = 'getHydropathyIndex';
+
+  #### Define the hydropathy index
+  my %hydropathy_index = (
+    I => 4.5,
+    V => 4.2,
+    L => 3.8,
+    F => 2.8,
+    C => 2.5,
+    M => 1.9,
+    A => 1.8,
+    G => -0.4,
+    T => -0.7,
+    W => -0.9,
+    S => -0.8,
+    Y => -1.3,
+    P => -1.6,
+    H => -3.2,
+    E => -3.5,
+    Q => -3.5,
+    D => -3.5,
+    N => -3.5,
+    K => -3.9,
+    R => -4.5,
+  );
+
+  return %hydropathy_index;
+
+}
+
+
+
+###############################################################################
+# calcGravyScore: Calculate the gravy_score based on the hydropathy indexes
+#   of each of the residues in the peptide
+###############################################################################
+sub calcGravyScore {
+  my %args = @_;
+  my $SUB_NAME = 'calcGravyScore';
+
+  #### Parse input parameters
+  my $peptide = $args{'peptide'} || die "Must supply the peptide";
+
+  #### Define the hydropathy index
+  my %hydropathy_index = getHydropathyIndex();
+
+  #### Split peptide into an array of residues and get number
+  my @residues = split(//,$peptide);
+  my $nresidues = scalar(@residues);
+
+  #### Loop over each residue and add in the hydropathy_index
+  my $gravy_score = 0;
+  foreach my $residue (@residues) {
+    $gravy_score += $hydropathy_index{$residue};
+  }
+
+
+  #### Divide the total score by the number of residues
+  $gravy_score = $gravy_score / $nresidues;
+
+  return $gravy_score;
+
+}
+
+
+
+###############################################################################
+# calcNTransmembraneRegions: Calculate the number of transmembrane regions
+# based on the hydropathy indexes of each of the residues in the protein
+###############################################################################
+sub calcNTransmembraneRegions {
+  my %args = @_;
+  my $SUB_NAME = 'calcNTransmembraneRegions';
+
+  #### Parse input parameters
+  my $peptide = $args{'peptide'} || die "Must supply the peptide";
+
+  #### Define the hydropathy index
+  my %hydropathy_index = getHydropathyIndex();
+
+  #### Define some variables
+  my ($i,$iStart,$iNumHydroRegions,$dHydro,$dCutOff,$iWindowSize);
+  $dHydro=0.0;
+  $iNumHydroRegions=0;
+  $dCutOff=1.58;
+  $iWindowSize=19.0;
+
+
+  #### Split peptide into an array of residues and get number
+  my @residues = split(//,$peptide);
+  my $iLengthProtein = scalar(@residues);
+
+
+  #### If the peptide/protein is shorter than 19 residues, return 0
+  if ($iLengthProtein <= $iWindowSize) {
+    return($iNumHydroRegions);
+  }
+
+
+  #### Sum up the hydropathy scores for first 19 residues
+  for ($i=0; $i<$iWindowSize; $i++) {
+    $dHydro += $hydropathy_index{$residues[$i]};
+  }
+
+
+  my $isHydroRegion=0;
+
+  #### Loop over the residues in the protein, checking the rolling average
+  #### for peaks above the cutoff
+  for ($i=$iWindowSize; $i<$iLengthProtein; $i++) {
+
+    #### If this is a new peak above the cutoff
+    if ($dHydro/$iWindowSize > $dCutOff && $isHydroRegion==0) {
+      $iNumHydroRegions++;
+      $isHydroRegion = 1;
+      #print "  Region at ",$i-$iWindowSize," is above cutoff at ",
+      #  $dHydro/$iWindowSize,"\n";
+
+    #### Otherwise set the flag to 0
+    } elsif ($dHydro/$iWindowSize <= $dCutOff) {
+      $isHydroRegion = 0;
+    }
+
+    #print $i-$iWindowSize," at ",$dHydro/$iWindowSize,"\n";
+
+
+    #### Update the rolling hydropathy sum
+    $dHydro += $hydropathy_index{$residues[$i]} -
+      $hydropathy_index{$residues[$i-$iWindowSize]};
+  }
+
+  return $iNumHydroRegions;
+
+}
+
+
 
 ###############################################################################
 
