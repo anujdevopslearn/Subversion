@@ -1,0 +1,27 @@
+Things to remember for set.
+
+At ISB the data produced by these scripts is not kept local to the web server.
+
+So the web user needs permission to write to the remote drives.
+
+Have IT setup a new group affydata
+
+Add the web user to this group.
+
+setup the folder "delivery" and change the group to affydata
+
+Need to set group id on the delivery folder so all data written into the folder 
+will have the group arraydata
+/net/arrays/Affymetrix/core/data_analysis/delivery  chmod g+s
+
+
+To run the job on pbs you might need to create a new user to run the jobs
+
+We create a user arraybot and added it to the affydata group.
+
+Need to setup a key less ssh connection to the pbs server so the apache cgi
+script can hand off the job to the batch schedular
+(GET MORE DETAIL)
+
+
+

@@ -1,0 +1,105 @@
+The Webbioc library was download from bioconductor http://bioconductor.org/
+
+Info from Bioconductor
+package: webbioc
+Description: An integrated web interface for doing microarray analysis using several of the Bioconductor packages. It is intended to be deployed as a centralized bioinformatics resource for use by many users. (Currently only Affymetrix oligonucleotide analysis is supported.)
+Version: 1.0.1
+Author: Colin A. Smith 
+
+Below is a brief description about each of cgi pages and how it was altered from
+the original pages produced by Colin Smith.  It should be noted that the pages written by Colin S. are written in a very nice and concise manor
+make heavy but efficient use of the Perl CGI module.
+
+Overview:
+Many of the pages were integrated into SBEAMS to facilitate easy data transfer
+and storage of the results in a regularized directory tree. This should help the end user easily run
+and analyze their data in a variety of ways.
+Some of the scripts were altered quite a bit while others have been totally cut out, see below for more info.
+
+
+Current Script Names:
+affy.cgi           Batch.pm     FileManager.pm           multtest.cgi    Site.pm
+annaffy.cgi        BioC.pm      job.cgi                           	 Upload_affy_get_expression_data.cgi
+annaffysearch.cgi  cancel.cgi  Make_MEV_jws_files.cgi  Setup_Notes.txt   upload.cgi
+
+
+### affy.cgi ###
+
+This script was altered a bit to be able to efficiently talk with the upload script.  Tweaked some of the R code to process RMA and GCRMA
+utilizing a different function from bioconductor.
+
+### annaffy.cgi  ###
+Script is no longer used.  All the annotation is pushed out into the analysis file
+
+### annaffysearch.cgi  ###
+Script is no longer used.
+
+### Batch.pm  ### 
+This module modified very little.  Tweaked the commands to the batch scheduler for wall time.
+
+### BioC.pm  ###
+This module was modified just a bit, mainly to deal with SBEAMS.  Added subroutine to deal with the sample groups XML file and tweaked methods
+to make sure the files were routed properly within ISB.
+
+### cancel.cgi  ###
+Script no longer functioning.  This needs to be fixed.
+
+### FileManager.pm  ###
+The module was modified a bit to just become aware of what ISB file names look like.  This allows the script to automatically parse certain
+bits of info from the name.
+
+### job.cgi  ###
+Removed some of the functionality of the original script, which allowed the user to enter their token key to hopefully retrieve a previous data
+set.  All the data tracking is now done in the database.  Now this page just functions to make the temp html page to be displayed while
+certain analysis functions are running.
+
+### Make_MEV_jws_files.cgi  ###
+This is a new script and allows the user to easily load data from SBEAMS into MEV via a java web start. The web start will load the normalized data file and
+the sample groups the user has already defiend. See http://www.tigr.org/software/tm4/mev.html for more info on how to run MEV.  They have a ton of
+documentation on how to use the program.
+
+### multtest.cgi  ###
+Script has been modified to allow the user to select between original multtest analysis choices or SAM analysis.  Wrote some R code to utilize the
+siggenes library from bioconductor.  Both the multtest and SAM analysis will automatically loop through all the sample groups to produce unquie
+conditions between a reference sample group and a additional groups for all the non-reference sample groups.  For example if four sample groups where added to the SAM
+analysis page and A was designated as the reference sample (before the normalization step in the upload.cgi script) the following 3
+condition would be setup.  A_vs_B, A_vs_C, A_vs_D.  Of course things will not loop if the F-test(ANOVA) is used.  The looping was setup to
+setup the data to be loaded back into SBEAMS as a series of ratios.
+
+### Site.pm  ###
+A few new variables were added
+
+### Upload_affy_get_expression_data.cgi  ###
+This script is new and SBEAMS specific.  It takes the data from the differential analysis section and adds the data to the get expression
+table.
+
+### upload.cgi ###
+
+This script was altered quite a bit and now serves as the main navigation point to reach the three different stopping points during 
+analysis.  The three main points are File Groups, Normalized Data, Analysis Results
+
+File groups, allows a user to group together CEL files from any number of projects and annotate what/why they have started this analysis
+session.  The user no longer has to remember or keep track of a random key token provided in the original version.
+
+Normalized Data, the user starting from a group of files can refine the association of which samples belong to which sample groups that will
+be used for analysis.  In addition the user can add more sample groups and will select the so called reference sample group, more on this
+later.  The actual choice of a normalization method is selected within the affy.cgi script.  Once the normalization run is complete the user
+will have access to all the files generated during the run, including a tab delimited file of all the normalized gene expression values for all the
+arrays entered into the normalization session.
+
+Analysis Results: After a group of files are normalized a user can select to process the normalized output to find differentially expressed genes.  Now
+they have two main paths with a variety of choices in each path.  One, they can view the data in MEV from tigr, see above for more info.  Two,
+they can analyze they data within these cgi pages by selecting the multtest link, which now allows the user to analyze data with a variety of
+t-test type algorithms original setup by Colin S. or to analyze the data via SAM, see above for more info.  After analysis is complete all
+files are available for viewing.  The user can view a html of the "top" differentially expressed genes or have access to tab delimited files
+of all the genes on the chip.  The user then can select to have all the data loaded back into SBEAMS into the GetExpression table, see above
+for more info.
+
+
+
+
+
+
+
+ 
+
