@@ -313,7 +313,33 @@ sub set_afa_array_type_id {
 sub get_afa_array_type_id {
 	my $self = shift;
 	return $self->{ARRAY_TYPE_ID};
-}	
+}
+
+##################################################################################################
+#set get pair:afa_array_slide_type
+#######################################################
+# set_array_slide_type
+# Store the name of array
+#######################################################
+sub set_array_slide_type { 
+	my $method = 'set_array_slide_type';
+	
+	my $self = shift;
+	my $name = shift;
+	confess(__PACKAGE__ . "::$method No slide name provided provided '$name'\n") unless ($name =~ /^\w/);
+	
+	return $self->{ARRAY_SLIDE_TYPE} = $name;
+}
+
+#######################################################
+# get_array_slide_type
+#Store the type of the array
+#######################################################
+	
+sub get_array_slide_type {
+	my $self = shift;
+	return $self->{ARRAY_SLIDE_TYPE};
+}		
 
 ##################################################################################################
 #set get pair:afs_organism_id
