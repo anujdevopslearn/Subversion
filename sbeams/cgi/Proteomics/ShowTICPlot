@@ -144,14 +144,15 @@ sub printEntryForm {
 
   #### Find the corresponding information for this fraction_id
   $sql = qq~
-	SELECT fraction_tag,data_location
+	SELECT fraction_tag,data_location,SB.search_batch_id,
+               search_batch_subdir
 	  FROM $TBPR_FRACTION F
 	  JOIN $TBPR_SEARCH_BATCH SB ON ( F.experiment_id = SB.experiment_id )
-	 WHERE fraction_id = '$parameters{fraction_id}'
+	 WHERE fraction_id IN ($parameters{fraction_id})
   ~;
 
-  my %fractions = $sbeams->selectTwoColumnHash($sql);
-  unless (%fractions) {
+  my @fractions = $sbeams->selectSeveralColumns($sql);
+  unless (@fractions) {
     print "ERROR: Unable to find any fractions for fraction_id".
       " = '$parameters{fraction_id}'.  This really should never ".
       "happen!  Please report the problem.<BR>\n";
@@ -160,7 +161,11 @@ sub printEntryForm {
 
 
   #### Provide links to the plots
-  while ( ($key,$value) = each %fractions ) {
+  foreach my $fraction_ref ( @fractions ) {
+    $key = $fraction_ref->[0];
+    $value = $fraction_ref->[1];
+    my $search_batch_id = $fraction_ref->[2];
+    my $search_batch_subdir = $fraction_ref->[3];
     #printf("%22s = %s<BR>\n",$key,$value);
     print "<H3>Fraction: $key</H3>\n";
 
@@ -172,7 +177,7 @@ sub printEntryForm {
     #print("filename = $filename<BR>\n");
     if ( -e $filename ) {
       print "<IMG SRC=\"$CGI_BASE_DIR/Proteomics/GetImage?".
-        "fraction_id=$parameters{fraction_id}&image_type=TIC\"><BR>\n";
+        "fraction_id=$parameters{fraction_id}&image_type=TIC&search_batch_id=$search_batch_id\"><BR>\n";
     } else {
       print "[PLOTS NOT AVAILABLE FOR THIS FRACTION]<BR>\n";
     }
