@@ -80,6 +80,7 @@ DBPREFIX{BEDB}          = BEDB.dbo.
 DBPREFIX{BioLink}       = BioLink.dbo.
 DBPREFIX{Biosap}        = Biosap.dbo.
 DBPREFIX{Cytometry}     = Cytometry.dbo.
+DBPREFIX{Genotyping}    = Genotyping.dbo.
 DBPREFIX{Immunostain}   = Immunostain.dbo.
 DBPREFIX{Microarray}    = sbeams.dbo.
 DBPREFIX{Ontology}      = Ontology.dbo.

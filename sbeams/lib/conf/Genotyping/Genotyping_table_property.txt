@@ -1,0 +1,10 @@
+table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
+GT_biosequence_set	BioSequence Set	Genotyping_infrastructure	YES	$TBGT_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=GT_biosequence_set	GT_biosequence_set	
+GT_dbxref	Biosequence Database Cross Reference	Genotyping_infrastructure	YES	$TB_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=GT_dbxref	GT_biosequence_dbxref	
+GT_biosequence	BioSequence	Genotyping_infrastructure	NO	$TBGT_BIOSEQUENCE	biosequence_id				
+GT_biosequence_property_set	Biosequence Property Set	Genotyping_infrastructure	NO	$TBGT_BIOSEQUENCE_PROPERTY_SET	biosequence_property_set_id				
+GT_query_option	Query Option	Genotyping_infrastructure	YES	$TBGT_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=GT_query_option	GT_query_option	
+GT_BrowseBioSequence	Browse BioSequence	QUERY	NO				BrowseBioSequence.cgi		
+GT_experiment	Experiment	Genotyping_infrastructure	YES	$TBGT_EXPERIMENT	experiment_id		ManageTable.cgi?TABLE_NAME=GT_experiment	GT_experiment	
+GT_sample	Sample	Genotyping_infrastructure	YES	$TBGT_SAMPLE	sample_id		ManageTable.cgi?TABLE_NAME=GT_sample	GT_sample	
+GT_pooling_set	Pooling Set	Genotyping_infrastructure	YES	$TBGT_POOLING_SET	pooling_set_id		ManageTable.cgi?TABLE_NAME=GT_pooling_set	GT_pooling_set	

@@ -1,0 +1,28 @@
+table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
+GT_experiment	1	experiment_id	Experiment ID	int	4	0	N		Y						N	N	N				
+GT_experiment	2	project_id	Project ID	int	4	0	N		N	project	project_id	Y	optionlist		Y	Y	Y		Project this experiment belongs to	“SELECT project_id,project_name FROM $TB_PROJECT WHERE record_status != 'D' ORDER BY sort_order,project_name”	
+GT_experiment	3	contact_id	Contact ID	int	4	0	N		N	contact	contact_id	Y	optionlist		Y	Y	Y		Contact for this experiment		
+GT_experiment	4	experiment_name	Experiment Name	varchar	50	0	N		N			Y	text	50	Y	Y	Y		Name of this experiment (meaningful & descriptive, please!)		
+GT_experiment	5	experiment_tag	Experiment Tag	varchar	25	0	N		N			Y	text	40	Y	Y	Y		Very short tag (name) of this experiment		
+GT_experiment	6	experiment_description	Experiment Description	varchar	255	0	N		N			Y	text	40	Y	Y	Y		Longer description of this experiment		
+GT_experiment	7	number_of_samples	Number of Samples	int	4	0	N		N			Y	text	20	Y	Y	Y		Number of samples		
+GT_experiment	8	number_of_snps	Number of SNPs	int	4	0	N		N			Y	text	20	Y	Y	Y		Number of SNPs		
+GT_experiment	9	validation	Validation	int	4	0	N		N			Y	optionlist		Y	Y	Y		Validation desired?		
+GT_experiment	10	pooling	Pooling	int	4	0	N		N			Y	optionlist		Y	Y	Y		Pooling desired?		
+GT_experiment	11	pooling_set_id	Pooling Set ID	int	4	0	N		N			Y	text	20	Y	Y	Y		Pooling set ID to be used		
+GT_experiment	12	typing	Typing	int	4	0	N		N			Y	optionlist		Y	Y	Y		Typing desired?		
+GT_experiment	13	sample_set_id	Sample Set ID	int	4	0	N		N			Y	text	20	Y	Y	Y		Sample set ID		
+GT_experiment	14	multiplexing_allowed	Multiplexing	int	4	0	N		N			Y	optionlist		Y	Y	Y		Multiplexing allowed?		
+GT_experiment	15	upload_file	Upload file	varchar	255	0	N		N			N	file	40	Y	Y	Y		File path of this sample set if to be uploaded via the web interface		
+GT_experiment	16	set_path	Set Path	varchar	255	0	N		N			N	text	40	Y	Y	Y		Local network file path of this sample set if not uploaded via the web interface		
+GT_experiment	17	source_file_date	Source File Date	datetime	8	0	Y		N			N	text	40	N	N	N		Date of the sample file at last update		
+GT_sample_information	1	sample_set_id		int	4	0	N		Y			Y			N	N	N		Sample set ID		
+GT_sample_information	2	plate_id	Plate ID	int	4	0	N		N			Y			Y	Y	Y		Plate ID		
+GT_sample_information	3	well_position	Well Position	varchar	20	0	N		N			Y			Y	Y	Y		Well position		
+GT_sample_information	4	sample_id	Sample ID	varchar	20	0	N		N			Y			Y	Y	Y		Sample ID		
+GT_sample_information	5	dna_concentration	DNA Concentration	real	8	0	N		N			Y			Y	Y	Y		Measured DNA concentration (e.g. 10 ng/ul)		
+GT_sample_information	6	initial_well_volume	Initial Well Volume	real	8	0	N		N			Y			Y	Y	Y		Well volume (e.g. 80 ul)		
+GT_sample_information	7	stock_dna_solvent	Stock DNA Solvent	varchar	50	0	N		N			Y			Y	Y	Y		Stock DNA solvent (e.g. TE)		
+GT_sample_information	8	dna_dilution_solvent	DNA Dilution Solvent	varchar	50	0	N		N			Y			Y	Y	Y		DNA dilution solvent (e.g. ddH20)		
+GT_sample_information	9	experiments_run	Number of Experiments Run	int	4	0	N		N			Y			Y	Y	Y		Number of experiments that have been run on this sample		
+GT_sample_information	10	current_well_volume	Current Well Volume	real	8	0	N		N			Y			Y	Y	Y		Current well volume		

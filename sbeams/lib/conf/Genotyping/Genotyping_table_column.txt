@@ -1,0 +1,133 @@
+table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
+GT_biosequence_set	1	biosequence_set_id	BioSequence Set ID	int	4	0	N		Y							N	N				pkDEFAULT
+GT_biosequence_set	2	species_id	Species	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Species for this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+GT_biosequence_set	3	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
+GT_biosequence_set	4	set_tag	Set Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this BioSequence database		
+GT_biosequence_set	5	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Longer description of this BioSequence database		
+GT_biosequence_set	6	set_version	Set Version	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Version of this BioSequence database		
+GT_biosequence_set	7	upload_file	Upload file	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
+GT_biosequence_set	8	set_path	Set Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	File path of this BioSequence database		
+GT_biosequence_set	9	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
+GT_biosequence_set	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+GT_biosequence_set	11	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
+GT_biosequence_set	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GT_biosequence_set	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+GT_biosequence_set	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GT_biosequence_set	15	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+GT_biosequence_set	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+GT_biosequence_set	17	record_status	Record Status	char	1	0	N	N	N							N	N				
+GT_dbxref	1	dbxref_id	dbxref ID	int	4	0	N		Y							N	N				pkDEFAULT
+GT_dbxref	2	dbxref_name	CrossRef Name	varchar	50	0	N		N			Y	text	40		Y	Y	N	Name of this Database Cross Reference		
+GT_dbxref	3	dbxref_tag	CrossRef Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this Database Cross Reference		
+GT_dbxref	4	dbxref_description	Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this Database Cross Reference		
+GT_dbxref	5	accessor	Accessor	varchar	255	0	N		N			Y	text	50		Y	Y	N	Part of a URL or URI to which an accession number can be appended to get more information about the entity using this cross reference		
+GT_dbxref	6	accessor_suffix	Accessor Suffix	varchar	255	0	Y		N			N	text	50		Y	Y	N	Part of a URL or URI which comes after the accession number to build the full URL to get more information about the entity using this cross reference		
+GT_dbxref	7	uri	URI	varchar	255	0	N		N			Y	text	50		Y	Y	N	External web page or other URI of the database		SELF
+GT_dbxref	8	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+GT_dbxref	9	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
+GT_dbxref	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GT_dbxref	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+GT_dbxref	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GT_dbxref	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+GT_dbxref	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+GT_dbxref	15	record_status	Record Status	char	1	0	N	N	N							N	N				
+GT_biosequence	1	biosequence_id	BioSequence ID	int	4	0	N		Y							N	N				pkDEFAULT
+GT_biosequence	2	biosequence_set_id	BioSequence Set	int	4	0	N		N	GT_biosequence_set	biosequence_set_id					N	N	Y	BioSequence Set to which this BioSequence belongs		pkDEFAULT
+GT_biosequence	3	biosequence_name	BioSequence Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of this BioSequence (generally everything before the first space in a FASTA file header line)		
+GT_biosequence	4	biosequence_gene_name	BioSequence Gene Name	varchar	255	0	Y		N			Y	text	20		Y	Y	N	Gene name of this BioSequence if applicable.  Most common gene name if applicable		
+GT_biosequence	5	dbxref_id	Database Cross Reference	int	4	0	Y		N	GT_dbxref	dbxref_id					Y	Y	N	Database cross reference for which the accession number applies		pkDEFAULT
+GT_biosequence	6	biosequence_accession	BioSequence Accession	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Accession number for this BioSequence in some external database designated above		
+GT_biosequence	7	biosequence_desc	Biosequence Description	varchar	1024	0	N		N			Y	text	40		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)		
+GT_biosequence	8	biosequence_seq	Sequence	text	16	0	Y		N			N	file	40		Y	Y	N	Actual sequence of the BioSequence if known		
+GT_biosequence_property_set	1	biosequence_property_set_id	BioSequence Property Set ID	int	4	0	N		Y							N	N				pkDEFAULT
+GT_biosequence_property_set	2	biosequence_id	BioSequence ID	int	4	0	N		N	AT_biosequence	biosequence_id					N	N	Y	Biosequence to which this Biosequence property set belongs		pkDEFAULT
+GT_biosequence_property_set	3	n_transmembrane_regions	Number of Transmembrane Regions	int	4	0	Y		N							Y	Y	N	Number of transmembrane regions		pkDEFAULT
+GT_biosequence_property_set	4	transmembrane_class	Transmembrane Region Class	varchar	10	0	Y		N			Y	text	50		Y	Y	N	"Class of the transmembrane region.  May be 0, TM, A, S, TM_xS based on output from TMHMM and signalP"		
+GT_biosequence_property_set	5	transmembrane_topology	Transmembrane Region Topology	varchar	1024	0	Y		N			Y	text	20		Y	Y	N	Coding of which residues belong in the transmembrane regions		
+GT_biosequence_property_set	6	has_signal_peptide	Has a Signal Peptide	char	1	0	Y		N			N	text	50		Y	Y	N	"Does this protein have a signal peptide on the end Y/N? (Note that Y means that there is some non-zero probability that it does, not that is necessarily does)"		
+GT_biosequence_property_set	7	has_signal_peptide_probability	Probability that it has a Signal Peptide	real	4	0	Y		N			N	text	50		Y	Y	N	Probability that there is a signal peptide on the end as calculated by SignalP		
+GT_biosequence_property_set	8	signal_peptide_length	Length of the Signal Peptide	int	4	0	Y		N			N	text	50		Y	Y	N	Length in residues of the signal peptide		
+GT_biosequence_property_set	9	signal_peptide_is_cleaved	Signal Peptide gets Cleaved	char	1	0	Y		N			N	text	50		Y	Y	N	Does the signal peptide get cleaved off Y/N?		
+GT_biosequence_property_set	10	genome_build	Genome Build	varchar	50	0	Y		N			N	text	50		Y	Y	N	Genome build name for which the following mapping parameters are valid		
+GT_biosequence_property_set	11	chromosome	Chromosome	varchar	50	0	Y		N			N	text	50		Y	Y	N	Chromosome in which this mapping occurs		
+GT_biosequence_property_set	12	start_in_chromosome	Start Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	Start position of the biosequence in the chromosome		
+GT_biosequence_property_set	13	end_in_chromosome	End Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	End position of the biosequence in the chromosome		
+GT_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	"Strand (+,-) of the biosequence in the chromosome"		
+GT_query_option	1	query_option_id	Query Option ID	int	4	0	N		Y							N	N				pkDEFAULT
+GT_query_option	2	option_type	Option Type	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Type or category of this option		
+GT_query_option	3	option_key	Option Key	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Key for this key/value pair option		
+GT_query_option	4	option_value	Option Value	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Value of this key/value pair option		
+GT_query_option	5	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
+GT_query_option	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GT_query_option	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+GT_query_option	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GT_query_option	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+GT_query_option	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
+GT_query_option	11	record_status	Record Status	char	1	0	N	N	N							N	N			
+GT_BrowseBioSequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBGT_BIOSEQUENCE_SET ORDER BY sort_order,set_name"
+GT_BrowseBioSequence	2	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+GT_BrowseBioSequence	3	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+GT_BrowseBioSequence	4	molecular_function_constraint	Molecular Function Constraint									N	text	40		Y	Y	N	Constraint for the GO Molecular Function. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+GT_BrowseBioSequence	5	biological_process_constraint	Biological Process Constraint									N	text	40		Y	Y	N	Constraint for the GO Biological Process. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+GT_BrowseBioSequence	6	cellular_component_constraint	Cellular Component Constraint									N	text	40		Y	Y	N	Constraint for the GO Cellular Component. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+GT_BrowseBioSequence	7	protein_domain_constraint	Protein Domain Constraint									N	text	40		Y	Y	N	Constraint for the InterPro Protein Domain. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+GT_BrowseBioSequence	8	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	Y	N	"Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
+GT_BrowseBioSequence	9	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	Y	N	"Constraint for the number of transmembrane regions (based on a 19-residue wide sliding window of hydropathy indexes above 1.58).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
+GT_BrowseBioSequence	10	biosequence_seq_constraint	Sequence Constraint									N	text	40		Y	Y	N	Constraint for the actual sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+GT_BrowseBioSequence	11	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+GT_BrowseBioSequence	12	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBGT_QUERY_OPTION WHERE option_type = 'BBS_sort_options' ORDER BY sort_order,option_value"
+GT_BrowseBioSequence	13	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBGT_QUERY_OPTION WHERE option_type = 'BBS_display_options' ORDER BY sort_order,option_value"
+GT_BrowseBioSequence	14	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."	
+GT_experiment	1	experiment_id	Experiment ID	int	4	0	N		Y						N	N	N			
+GT_experiment	2	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist		Y	Y	Y	N	Project this experiment belongs to	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id"
+GT_experiment	3	contact_id	Contact	int	4	0	N		N	contact	contact_id	Y	scrolloptionlist	4		Y	Y	N	PI for this experiment	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"
+GT_experiment	4	experiment_name	Experiment Name	varchar	50	0	N		N			Y	text	50	Y	Y	Y	N	"Name/Title of this experiment (meaningful & descriptive, please!)"	
+GT_experiment	5	experiment_tag	Experiment Tag	varchar	25	0	N		N			Y	text	40	Y	Y	Y	Y	Very short tag (name) of this experiment	
+GT_experiment	6	experiment_description	Experiment Description	varchar	255	0	N		N			Y	textarea	6	Y	Y	Y	N	Longer description of this experiment	
+GT_experiment	7	number_of_samples	Number of Samples	int	4	0	N		N			Y	text	20	Y	Y	Y	N	Number of samples	
+GT_experiment	8	number_of_snps	Number of SNPs	int	4	0	N		N			Y	text	20	Y	Y	Y	N	Number of SNPs	
+GT_experiment	9	want_validation	Validation	char	1	0	N		N			Y	optionlist		Y	Y	Y	N	Is validation desired?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"
+GT_experiment	10	want_pooling	Pooling	char	1	0	N		N			Y	optionlist		Y	Y	Y	N	Is pooling desired?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"
+GT_experiment	11	pooling_set_id	Pooling Set	int	4	0	N		N	GT_pooling_set	pooling_set_id	Y	text	20	Y	Y	Y	N	"Pooling set ID to be used (pulldown: Caucasion, self-supplied)"	"SELECT pooling_set_id,pooling_set_tag FROM $TBGT_POOLING_SET ORDER BY sort_order,pooling_set_tag"
+GT_experiment	12	want_typing	Typing	char	1	0	N		N			Y	optionlist		Y	Y	Y	N	Is typing desired?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"
+GT_experiment	13	is_multiplexing_allowed	Multiplexing Allowed?	char	1	0	N		N			Y	optionlist		Y	Y	Y	N	Is Multiplexing allowed?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"
+GT_experiment	14	samples_file	Samples file	varchar	255	0	N		N			N	file	40	Y	Y	Y	N	Select the tab-delimited text file of sample information to be uploaded via the web interface	
+GT_experiment	15	snps_file	SNPs file	varchar	255	0	N		N			N	file	40	Y	Y	Y	N	Select the tab-delimited text file of SNP information to be uploaded via the web interface	
+GT_experiment	16	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments	
+GT_experiment	17	sort_order	Sort Order	int	4	0	N	10	N							N	N	N		
+GT_experiment	18	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+GT_experiment	19	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N			
+GT_experiment	20	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+GT_experiment	21	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
+GT_experiment	22	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
+GT_experiment	23	record_status	Record Status	char	1	0	N	N	N							N	N			
+GT_sample	1	sample_id	Sample ID	int	4	0	N		Y			Y			N	N	N		Sample set ID	
+GT_sample	2	experiment_id	Experiment	int	4	0	N		N	GT_experiment	experiment_id	Y	optionlist		Y	Y	Y	Y	Experiment that this sample belongs to	"SELECT experiment_id,experiment_name FROM $TBGT_EXPERIMENT WHERE record_status != 'D' ORDER BY experiment_name"
+GT_sample	3	plate_id	Plate ID	varchar	50	0	N		N			Y	text	20	Y	Y	Y	Y	Plate ID	
+GT_sample	4	well_position	Well Position	varchar	50	0	N		N			Y	text	20	Y	Y	Y	Y	Well position	
+GT_sample	5	sample_name	Sample Name/Identifier	varchar	50	0	N		N			Y	text	50	Y	Y	Y	N	Sample ID	
+GT_sample	6	dna_concentration	DNA Concentration	real	4	0	N		N			Y	text	20	Y	Y	Y	N	Measured DNA concentration (e.g. 10 ng/ul)	
+GT_sample	7	initial_well_volume	Initial Well Volume	real	4	0	N		N			Y	text	20	Y	Y	Y	N	Well volume (e.g. 80 ul)	
+GT_sample	8	stock_dna_solvent	Stock DNA Solvent	varchar	50	0	N		N			Y	text	20	Y	Y	Y	N	Stock DNA solvent (e.g. TE)	
+GT_sample	9	dna_dilution_solvent	DNA Dilution Solvent	varchar	50	0	N		N			Y	text	20	Y	Y	Y	N	DNA dilution solvent (e.g. ddH20)	
+GT_sample	10	n_experiments_run	Number of Experiments Run	int	4	0	N		N			Y	text	20	Y	Y	Y	N	Number of experiments that have been run on this sample		
+GT_sample	11	current_well_volume	Current Well Volume	real	4	0	N		N			Y	text	20	Y	Y	Y	N	Current well volume		
+GT_sample	12	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+GT_sample	13	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
+GT_sample	14	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GT_sample	15	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+GT_sample	16	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GT_sample	17	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+GT_sample	18	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+GT_sample	19	record_status	Record Status	char	1	0	N	N	N							N	N				
+GT_pooling_set	1	pooling_set_id	Pooling Set ID	int	4	0	N		Y							N	N				pkDEFAULT
+GT_pooling_set	2	pooling_set_tag	Set Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this Pooling Set		
+GT_pooling_set	3	pooling_set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this Pooling Set		
+GT_pooling_set	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+GT_pooling_set	5	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
+GT_pooling_set	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GT_pooling_set	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N
+GT_pooling_set	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N
+GT_pooling_set	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N
+GT_pooling_set	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N
+GT_pooling_set	11	record_status	Record Status	char	1	0	N	N	N							N	N

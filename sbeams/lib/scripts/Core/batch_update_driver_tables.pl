@@ -77,6 +77,9 @@
   ./update_driver_tables.pl $CONFDIR/Ontology/Ontology_table_property.txt
   ./update_driver_tables.pl $CONFDIR/Ontology/Ontology_table_column.txt
 
+  ./update_driver_tables.pl $CONFDIR/Genotyping/Genotyping_table_property.txt
+  ./update_driver_tables.pl $CONFDIR/Genotyping/Genotyping_table_column.txt
+
 
 
 

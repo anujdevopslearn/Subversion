@@ -4,8 +4,8 @@ Notes add a new module:
 set TEMPLATE = MODULETEMPLATE
 set TMPLTAG = ModTmpTAG
 
-set DEST = Ontology
-set TAG = ON
+set DEST = Genotyping
+set TAG = GT
 
 ---
 

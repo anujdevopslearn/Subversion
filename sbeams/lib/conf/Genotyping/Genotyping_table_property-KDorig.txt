@@ -1,0 +1,3 @@
+table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
+GT_experiment	Experiment	GT	YES	$TBGT_EXPERIMENT	experiment_id		ManageTable.cgi?TABLE_NAME=GT_experiment	GT_experiment	
+GT_sample_information	Sample Information	GT	YES	$TBGT_SAMPLE_INFORMATION	NA		ManageTable.cgi?TABLE_NAME=GT_sample_information	GT_sample_information	
