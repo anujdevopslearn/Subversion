@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SBEAMS_EXPORT>
+    <BL_polymer_type
+        polymer_type_name="DNA"
+        record_status="N"
+        created_by_id="2"
+        sort_order="10"
+        date_modified="2002-08-19 14:40:58"
+        date_created="2002-08-19 14:40:58"
+        polymer_type_description="DNA"
+        polymer_type_id="1"
+        owner_group_id="1"
+        modified_by_id="2" />
+    <BL_polymer_type
+        polymer_type_name="RNA"
+        record_status="N"
+        created_by_id="2"
+        sort_order="10"
+        date_modified="2002-08-19 14:41:04"
+        date_created="2002-08-19 14:41:04"
+        polymer_type_description="RNA"
+        polymer_type_id="2"
+        owner_group_id="1"
+        modified_by_id="2" />
+    <BL_polymer_type
+        polymer_type_name="Protein"
+        record_status="N"
+        created_by_id="2"
+        sort_order="10"
+        date_modified="2002-08-19 14:41:10"
+        date_created="2002-08-19 14:41:10"
+        polymer_type_description="Protein"
+        polymer_type_id="3"
+        owner_group_id="1"
+        modified_by_id="2" />
+    <BL_polymer_type
+        polymer_type_name="Mixed"
+        record_status="N"
+        created_by_id="2"
+        sort_order="10"
+        date_modified="2003-01-21 16:30:41"
+        date_created="2002-08-19 14:41:34"
+        polymer_type_description="More than one polymer type"
+        polymer_type_id="4"
+        comment="Use for biosequence sets only - for sets made up of a mixture of polymer types.
+"
+        owner_group_id="1"
+        modified_by_id="2" />
+</SBEAMS_EXPORT>
