@@ -95,6 +95,7 @@ INNER JOIN $TBMA_AFFY_ARRAY afa ON (afa.affy_array_sample_id = afs.affy_array_sa
 LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) 
 WHERE P.record_status != ''D'' 
 AND afa.affy_array_id in (SELECT DISTINCT(affy_array_id) FROM $TBMA_AFFY_GENE_INTENSITY gi)
+AND P.project_id IN ($accessible_project_ids)
 ORDER BY UL.username+'' - ''+P.name,P.project_id'
  WHERE (   table_name = 'MA_GetAffy_GeneIntensity'
        )
