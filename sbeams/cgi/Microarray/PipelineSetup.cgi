@@ -1841,7 +1841,7 @@ sub send_to_pipeline {
 	$project_title =~ s/\s+/_/g;
 
 	# Command Line Arguments
-	my @a = ("-t", $project_title,
+	my @a = ("-p", $project,
 			 "-m", "sbeamsIndirect://db/sbeams/cgi/Microarray/ViewFile.cgi?".
 			 "action=read".
 			 "&FILE_NAME=matrix_output".
