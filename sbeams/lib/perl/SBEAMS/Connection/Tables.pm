@@ -53,6 +53,8 @@ use vars qw(@ISA @EXPORT
     $TB_ONTOLOGY_RELATIONSHIP_TYPE
     $TB_ONTOLOGY_TERM_TYPE
 
+    $TB_SOFTWARE_HARDWARE_PROTOCOL
+
 );
 
 require Exporter;
@@ -90,6 +92,7 @@ require Exporter;
     $TB_ONTOLOGY_RELATIONSHIP_TYPE
     $TB_ONTOLOGY_TERM_TYPE
 
+    $TB_SOFTWARE_HARDWARE_PROTOCOL
 );
 
 
@@ -113,7 +116,6 @@ $TB_GROUP_PROJECT_PERMISSION    = "${core}group_project_permission";
 
 $TB_DBXREF              = $DBPREFIX{Proteomics}."dbxref";
 
-
 $TB_TABLE_COLUMN        = "${core}table_column";
 $TB_TABLE_PROPERTY      = "${core}table_property";
 $TB_TABLE_GROUP_SECURITY= "${core}table_group_security";
@@ -124,6 +126,7 @@ $TB_MISC_OPTION         = "${core}misc_option";
 $TB_QUERY_OPTION        = "${core}query_option";
 $TB_CACHED_RESULTSET    = "${core}cached_resultset";
 $TB_FORM_TEMPLATE       = "${core}form_template";
+$TB_SOFTWARE_HARDWARE_PROTOCOL = "${core}software_hardware_protocol";
 
 $TB_MGED_ONTOLOGY_RELATIONSHIP    = "BioLink.dbo.MGEDOntologyRelationship";
 $TB_MGED_ONTOLOGY_TERM            = "BioLink.dbo.MGEDOntologyTerm";
