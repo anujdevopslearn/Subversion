@@ -1,6 +1,6 @@
--- affy_db_links
-CREATE NONCLUSTERED INDEX idx_affy_annotation_id
-   ON dbo.affy_db_links ( affy_annotation_id )
+-- affy_db_links index on affy_annotation id and db_id
+CREATE NONCLUSTERED INDEX idx_affy_annotation_id__db_id
+   ON dbo.affy_db_links ( affy_annotation_id, db_id )
 go
 -- affy_db_links affy_db_links_id --
 CREATE NONCLUSTERED INDEX idx_affy_db_links_id
