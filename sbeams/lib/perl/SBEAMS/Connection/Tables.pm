@@ -79,31 +79,35 @@ require Exporter;
 );
 
 
-$TB_USER_LOGIN          = 'user_login';
-$TB_WORK_GROUP          = 'work_group';
-$TB_USER_WORK_GROUP     = 'user_work_group';
-$TB_USER_CONTEXT        = 'user_context';
-$TB_RECORD_STATUS       = 'record_status';
-$TB_PRIVILEGE           = 'privilege';
-$TB_CONTACT_TYPE        = 'contact_type';
-$TB_CONTACT             = 'contact';
-$TB_ORGANIZATION_TYPE   = 'organization_type';
-$TB_ORGANIZATION        = 'organization';
-$TB_PROJECT             = 'project';
-$TB_USER_PROJECT_PERMISSION     = 'user_project_permission';
-$TB_GROUP_PROJECT_PERMISSION    = 'group_project_permission';
-
-$TB_DBXREF              = $DBPREFIX{Proteomics}.'dbxref';
+#### Get the appropriate database prefixes for the SBEAMS core and this module
+my $core = $DBPREFIX{Core};
 
 
-$TB_TABLE_COLUMN        = 'table_column';
-$TB_TABLE_PROPERTY      = 'table_property';
-$TB_TABLE_GROUP_SECURITY= 'table_group_security';
-$TB_SQL_COMMAND_LOG     = 'sql_command_log';
-$TB_USAGE_LOG           = 'usage_log';
-$TB_HELP_TEXT           = 'help_text';
-$TB_MISC_OPTION         = 'misc_option';
-$TB_CACHED_RESULTSET    = 'cached_resultset';
+$TB_USER_LOGIN          = "${core}user_login";
+$TB_WORK_GROUP          = "${core}work_group";
+$TB_USER_WORK_GROUP     = "${core}user_work_group";
+$TB_USER_CONTEXT        = "${core}user_context";
+$TB_RECORD_STATUS       = "${core}record_status";
+$TB_PRIVILEGE           = "${core}privilege";
+$TB_CONTACT_TYPE        = "${core}contact_type";
+$TB_CONTACT             = "${core}contact";
+$TB_ORGANIZATION_TYPE   = "${core}organization_type";
+$TB_ORGANIZATION        = "${core}organization";
+$TB_PROJECT             = "${core}project";
+$TB_USER_PROJECT_PERMISSION     = "${core}user_project_permission";
+$TB_GROUP_PROJECT_PERMISSION    = "${core}group_project_permission";
+
+$TB_DBXREF              = $DBPREFIX{Proteomics}."dbxref";
+
+
+$TB_TABLE_COLUMN        = "${core}table_column";
+$TB_TABLE_PROPERTY      = "${core}table_property";
+$TB_TABLE_GROUP_SECURITY= "${core}table_group_security";
+$TB_SQL_COMMAND_LOG     = "${core}sql_command_log";
+$TB_USAGE_LOG           = "${core}usage_log";
+$TB_HELP_TEXT           = "${core}help_text";
+$TB_MISC_OPTION         = "${core}misc_option";
+$TB_CACHED_RESULTSET    = "${core}cached_resultset";
 
 
 ###############################################################################
