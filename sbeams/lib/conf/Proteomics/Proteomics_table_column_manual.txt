@@ -13,6 +13,7 @@ SELECT search_batch_id,username + '' - '' + experiment_tag + '' -> '' + set_tag
         OR table_name = 'PR_GetSearch'
         OR table_name = 'BrowseAnnotatedPeptides'
         OR table_name = 'PR_CompareExperiments'
+        OR table_name = 'PR_SummarizePeptides'
        )
    AND column_name = 'search_batch_id'
 
