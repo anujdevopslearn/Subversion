@@ -25,6 +25,7 @@ use vars qw(@ISA @EXPORT
     $TBCY_FCS_RUN_PARAMETERS
     $TBCY_SORT_ENTITY	    
     $TBCY_TISSUE_TYPE
+    $TBCY_SORT_TYPE
 );
 
 
@@ -40,7 +41,7 @@ require Exporter;
     $TBCY_FCS_RUN_PARAMETERS
     $TBCY_SORT_ENTITY
     $TBCY_TISSUE_TYPE
-
+    $TBCY_SORT_TYPE
   
   
 );
@@ -58,7 +59,7 @@ $TBCY_MEASURED_PARAMETERS   = "${mod}measured_parameters";
 $TBCY_FCS_RUN_PARAMETERS  = "${mod}fcs_run_parameters";  
 $TBCY_SORT_ENTITY = "${mod}sort_entity";
 $TBCY_TISSUE_TYPE = "${mod}tissue_type";
-
+$TBCY_SORT_TYPE =  "${mod}sort_type";
 
 
 
