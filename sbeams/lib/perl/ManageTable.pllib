@@ -53,7 +53,7 @@ sub printOptions {
       ~;
     }
 
-    print "$LINESEPARATOR<P>";
+    print "$LINESEPARATOR";
 
   }
 
@@ -200,6 +200,18 @@ sub printEntryForm {
         }
       }
 
+      # If "$accessible_project_ids" appears in the SQL optionlist query,
+      # then substitute it with a call to that function
+      if ( $optionlist_queries{$element} =~ /\$accessible_project_ids/ ) {
+	my @accessible_project_ids = $sbeams->getAccessibleProjects();
+	my $accessible_project_id_list = join(',',@accessible_project_ids);
+	$accessible_project_id_list = '-1'
+          unless ($accessible_project_id_list gt '');
+        $optionlist_queries{$element} =~
+          s/\$accessible_project_ids/$accessible_project_id_list/g;
+      }
+
+
       # If "$project_id" appears in the SQL optionlist query, then substitute
       # that with either a value of $parameters{project_id} if it is not
       # empty, or otherwise replace with the $current_project_id
@@ -212,6 +224,16 @@ sub printEntryForm {
               s/\$project_id/$parameters{project_id}/g;
         }
       }
+
+      # If "$parameters{xxx}" appears in the SQL optionlist query,
+      # then substitute that with either a value of $parameters{xxx}
+      while ( $optionlist_queries{$element} =~ /\$parameters\{(\w+)\}/ ) {
+        my $tmp = $parameters{$1};
+        $tmp = "''" unless (defined($tmp) && $tmp gt '');
+        $optionlist_queries{$element} =~
+          s/\$parameters{$1}/$tmp/g;
+      }
+
 
       #### Evaluate the $TBxxxxx table name variables if in the query
       if ( $optionlist_queries{$element} =~ /\$TB/ ) {
@@ -681,7 +703,8 @@ sub processEntryForm {
       my $error_message;
       foreach $element (@required_columns) {
         $error_message .= "<LI> You must provide a <B>$element</B>."
-          unless $parameters{$element};
+          unless (defined($parameters{$element}) &&
+                  $parameters{$element} gt '');
       }
 
       $error_message .= preUpdateDataCheck(parameters_ref=>\%parameters);
