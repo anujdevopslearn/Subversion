@@ -2952,7 +2952,7 @@ sub displayResultSetControls {
       $param_string = "${separator}$param_string" if ($param_string);
     } else {
       $param_string = "${separator}$param_string" if ($param_string);
-      $param_string .= "apply_action=QUERY";
+      $param_string .= "&apply_action=QUERY";
     }
 
 
