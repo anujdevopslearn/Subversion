@@ -644,7 +644,15 @@ sub getGraph
 
 	data2($infile,$header[3],2,$num_par,$num_events,%inpars);	
 	my $parametersRef = createGraph( \%parameters);
-	printGraph ($parametersRef);
+  if (! $parametersRef->{validData})
+  {
+    print "<center><b>No valid datapoints for these parameters</b><Br>
+    Most likely either one or both selected parameters are NULL values.<BR>Go BACK and change your selection. </center>";
+  }
+  else
+  {
+    printGraph ($parametersRef);
+  }
 }
 	#			<TR rOWSPAN="2">
 		#	<TD COLSPAN="2">
@@ -742,20 +750,31 @@ sub createGraph
 	$xCoor >=  $xMinCoor and $xCoor <= $xMaxCoor and $yCoor >= $yMinCoor and $yCoor <=  $yMaxCoor and fcs_run_id = $fileID)"; 
 
 	 @rows = $sbeams->selectSeveralColumns($anotherGraphQuery) if ($paramRef->{graphNum}); 	
-	
+	$paramRef->{validData} = 1; 
 	my $count = 0;
 	foreach my $row (@rows)
 	{
 
 		next if  $count%5 and (!$paramRef->{graphNum}); 	
 		my ($xData, $yData) = @{$row}; 
-		$maxX = $xData if ($maxX <$xData and (!$paramRef->{graphNum}));
+    if (!defined($xData))
+    {
+     $paramRef->{validData} =0;
+      return ($paramRef); ;
+    }
+ 		$maxX = $xData if ($maxX <$xData and (!$paramRef->{graphNum}));
 		$minX = $xData if ($minX > $xData and (!$paramRef->{graphNum}));
-		push @xArray,$xData;
+		push @xArray,$xData ;
+    if (!defined($yData))
+    {
+     $paramRef->{validData} =0;
+      return ($paramRef); ;
+    };
 		$maxY = $yData  if ($maxY <$yData and (!$paramRef->{graphNum})); 	
 		$minY = $yData if ($minY > $yData and  (!$paramRef->{graphNum}));
 		push @yArray,$yData;
 	}
+ 
 	my $tmpfile;
 	$tmpfile = "plot.$$.@{[time]}_orig.png" if (!$paramRef->{graphNum}); 
 	$tmpfile = "plot.$$.@{[time]}.png" if ($paramRef->{graphNum}); 
