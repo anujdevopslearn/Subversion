@@ -64,7 +64,7 @@ sub display_page_header {
 
   if( $sbeams->isGuestUser() ) {
     $self->displayGuestPageHeader();
-  } elsif ( $sbeams->isPAyeastUser() )
+  } elsif ( $self->isYeastPA() )
   {
     $self->displayInternalResearcherPageHeader();
   } else
@@ -78,7 +78,7 @@ sub display_page_header {
 # displayInternalResearcherPageHeader
 ###############################################################################
 sub displayInternalResearcherPageHeader {
- 	my $self = shift;
+  my $self = shift;
   my %args = @_;
 
   my $navigation_bar = $args{'navigation_bar'} || "YES";
