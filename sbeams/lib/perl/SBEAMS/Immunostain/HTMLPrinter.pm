@@ -92,7 +92,7 @@ sub displayGuestPageHeader
   use LWP::UserAgent;
   use HTTP::Request;
   my $ua = LWP::UserAgent->new();
-  my $scgapLink = 'http://scgaptest.systemsbiology.net';
+  my $scgapLink = 'http://scgap.systemsbiology.net';
   my $response = $ua->request( HTTP::Request->new( GET => "$scgapLink/skin.php" ) );
   my @page = split( "\r", $response->content() );
   my $skin = '';
