@@ -906,19 +906,37 @@ sub addMsmsSpectrumEntry {
 
   #### Now insert all the mass,intensity pairs
   my ($i,$mass,$intensity);
-  my $create_bcp_file = "YES";
-  $create_bcp_file = 0;
 
-  if ($create_bcp_file) {
+
+  #### Define flag to control where spectra will be written, default is TABLE
+  my $spectrum_destination = 'TABLE';
+
+  #### But can override in SBEAMS.conf file to skip writing
+  if (defined($CONFIG_SETTING{Proteomics_SPECTRUM_DESTINATION}) &&
+      $CONFIG_SETTING{Proteomics_SPECTRUM_DESTINATION} eq 'SKIP') {
+    $spectrum_destination = 'SKIP';
+    $spectra_written{$msms_spectrum_id} = 1;
+    print "-";
+    return $msms_spectrum_id;
+  }
+
+  #### Or provide a path name
+  if (defined($CONFIG_SETTING{Proteomics_SPECTRUM_DESTINATION}) &&
+      $CONFIG_SETTING{Proteomics_SPECTRUM_DESTINATION} =~ /!(SKIP|TABLE)/) {
+    $spectrum_destination = 'FILE';
+  }
+
+  #### If we are writing the spectra to a file, open the default file
+  if ($spectrum_destination eq 'FILE') {
     return $msms_spectrum_id if (defined($spectra_written{$msms_spectrum_id}));
-    open(SPECFILE,">>/net/dblocal/data/proteomics/bcp/msms_spectrum_peak.txt");
+    open(SPECFILE,">>".$CONFIG_SETTING{Proteomics_SPECTRUM_DESTINATION});
     $spectra_written{$msms_spectrum_id} = 1;
   }
 
   for ($i=0; $i<${$result}{parameters}->{n_peaks}; $i++) {
     $mass = ${$result}{mass_intensities}->[$i]->[0];
     $intensity = ${$result}{mass_intensities}->[$i]->[1];
-    if ($create_bcp_file) {
+    if ($spectrum_destination eq 'FILE') {
       print SPECFILE "$msms_spectrum_id\t$mass\t$intensity\r\n";
     } else {
 
@@ -938,7 +956,7 @@ sub addMsmsSpectrumEntry {
 
   }
 
-  close SPECFILE if ($create_bcp_file);
+  close SPECFILE if ($spectrum_destination eq 'FILE');
 
   return $msms_spectrum_id;
 
