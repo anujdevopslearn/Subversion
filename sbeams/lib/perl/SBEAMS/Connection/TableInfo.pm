@@ -35,6 +35,7 @@ use SBEAMS::Immunostain::Tables;
 use SBEAMS::Inkjet::Tables;
 use SBEAMS::Interactions::Tables;
 use SBEAMS::PhenoArray::Tables;
+use SBEAMS::ProteinStructure::Tables;
 use SBEAMS::SNP::Tables;
 use SBEAMS::TOES::Tables;
 use SBEAMS::UESC::Tables;
@@ -600,6 +601,54 @@ sub returnTableInfo {
 
     $sql_query = qq~
 	SELECT column_name,input_type
+	  FROM $TB_TABLE_COLUMN
+	 WHERE table_name='$table_name'
+	   AND is_data_column='Y'
+	 ORDER BY column_index
+    ~;
+
+    return $self->selectTwoColumnHash($sql_query);
+  }
+
+
+
+###############################################################################
+  if ($info_key eq "fk_tables") {
+
+    $sql_query = qq~
+	SELECT column_name,fk_table
+	  FROM $TB_TABLE_COLUMN
+	 WHERE table_name='$table_name'
+	   AND is_data_column='Y'
+	 ORDER BY column_index
+    ~;
+
+    return $self->selectTwoColumnHash($sql_query);
+  }
+
+
+
+###############################################################################
+  if ($info_key eq "data_types") {
+
+    $sql_query = qq~
+	SELECT column_name,data_type
+	  FROM $TB_TABLE_COLUMN
+	 WHERE table_name='$table_name'
+	   AND is_data_column='Y'
+	 ORDER BY column_index
+    ~;
+
+    return $self->selectTwoColumnHash($sql_query);
+  }
+
+
+
+###############################################################################
+  if ($info_key eq "data_scales") {
+
+    $sql_query = qq~
+	SELECT column_name,data_scale
 	  FROM $TB_TABLE_COLUMN
 	 WHERE table_name='$table_name'
 	   AND is_data_column='Y'
