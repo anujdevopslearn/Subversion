@@ -329,7 +329,7 @@ sub returnTableInfo {
                        ON ( P.protocol_type_id = PT.protocol_type_id )
 		 WHERE P.record_status!='D'
 		   AND PT.record_status!='D'
-		 ORDER BY PT.name,P.name
+		 ORDER BY protocol_type,protocol_name
             ~;
 
         }
