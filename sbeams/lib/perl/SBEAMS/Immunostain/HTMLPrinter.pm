@@ -46,7 +46,7 @@ sub display_page_header
 	my %args = @_;
 	
  #### If the output mode is interactive text, display text header
-    my $sbeams = $self->getSBEAMS();
+    $sbeams = $self->getSBEAMS();
     if ($sbeams->output_mode() eq 'interactive') {
     $sbeams->printTextHeader();
    return;
@@ -555,7 +555,7 @@ my $self = shift;
   }
 
   
-  my $sbeams = $self->getSBEAMS();
+  $sbeams = $self->getSBEAMS();
 	$current_contact_id = $sbeams->getCurrent_contact_id();
 #	print "this is $current_contact_id";
 	
