@@ -666,6 +666,14 @@ sub reportException {
 
 } # end reportException
 
+#+ 
+# Utility method, returns passed text enclosed in <FONT COLOR=#AAAAAA></FONT>
+#-
+sub makeInactiveText {
+  my $self = shift;
+  my $text = shift;
+  return( "<FONT COLOR=#AAAAAA>$text</FONT>" );
+}
 
 
 ###############################################################################
@@ -728,4 +736,5 @@ Eric Deutsch <edeutsch@systemsbiology.org>
 SBEAMS::Connection
 
 =cut
+
 
