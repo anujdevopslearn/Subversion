@@ -357,9 +357,16 @@ sub start_element {
     }
 
 
-  #### Otherwise, confess we don't know what to do
+  #### Otherwise, drop it or confess we don't know what to do
   } else {
-    print "<$localname> Don't know what to do with <$localname> yet\n";
+
+    my %ignored_elements = ( annotation => 1 );
+    if ($ignored_elements{$localname}) {
+      #### Just ignore it
+    } else {
+      print "<$localname> Don't know what to do with <$localname> yet\n";
+    }
+
   }
 
 
