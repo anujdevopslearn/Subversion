@@ -1526,6 +1526,9 @@ sub updateSearchResults {
   #### Loop over each search_id
   foreach $search_id (@search_ids) {
 
+    ## Testing
+    ##next unless ($search_id == 30234);
+
     #### Get the corresponding search_hit's
     $sql = qq~
 	SELECT SH.*,file_root,SB.search_batch_id,SB.biosequence_set_id,
@@ -1537,6 +1540,7 @@ sub updateSearchResults {
 	       ( SH.reference=BS.biosequence_name
 	         AND SB.biosequence_set_id = BS.biosequence_set_id )
 	 WHERE SH.search_id = '$search_id'
+         ORDER BY SH.search_hit_id
     ~;
 
     @data = $sbeams->selectHashArray($sql);
@@ -1741,7 +1745,7 @@ sub updateSearchResults {
 
       #### If not, see if there's a better match in lower hits
       } else {
-  	$i=0;
+  	$i=1;
   	while ($i<$nrows) {
   	  if ($data[$i]->{peptide_string} =~ /^[KR]\..+/i ||
   	      $data[$i]->{peptide_string} =~ /.+[KR]\..$/i ) {
@@ -1791,8 +1795,9 @@ sub updateSearchResults {
       delete $element->{search_hit_id};
       $result = $sbeams->insert_update_row(table_name=>$TBPR_SEARCH_HIT,
         update=>1,rowdata_ref=>$element,PK=>"search_hit_id",
-        PK_value=>$search_hit_id
-        #,verbose=>1,testonly=>1
+        PK_value=>$search_hit_id,
+        verbose=>$VERBOSE,
+        testonly=>$TESTONLY
       );
 
     }
