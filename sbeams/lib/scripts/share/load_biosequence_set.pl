@@ -775,6 +775,14 @@ sub specialParsing {
   }
 
 
+  #### Conversion rules for the new IPI database
+  if ($rowdata_ref->{biosequence_name} =~ /^(IPI[\d\.]+)$/ ) {
+     $rowdata_ref->{biosequence_accession} = $1;
+     $rowdata_ref->{biosequence_gene_name} = $1;
+     $rowdata_ref->{dbxref_id} = '9';
+  }
+
+
   #### Conversion rules for some generic GenBank IDs
   if ($rowdata_ref->{biosequence_name} =~ /gb\|([A-Z\d\.]+)\|/ ) {
      $rowdata_ref->{biosequence_gene_name} = $1;
