@@ -3552,6 +3552,110 @@ sub readModuleFile {
 
 
 ###############################################################################
+# printRecentResultsets- prints HTML TABLE of recent resultsets
+###############################################################################
+sub printRecentResultsets {
+  my $self = shift || croak("parameter self not passed");
+  my %args = @_;
+  my $SUB_NAME = "printRecentResultsets";
+
+  #### Decode the argument list
+  my $verbose = $args{'verbose'} || 0;
+  my $max_rows = $args{'max_rows'} || 5;
+
+
+  #### Define standard variables
+  my ($sql, @rows);
+  my $current_contact_id = $self->getCurrent_contact_id();
+
+
+  #### Get information about the most recent resultsets
+  $sql = qq~
+    SELECT cached_resultset_id,resultset_name,query_name,cache_descriptor,
+           date_created
+      FROM $TB_CACHED_RESULTSET
+     WHERE contact_id = '$current_contact_id'
+       AND record_status != 'D'
+       AND query_name LIKE '$SBEAMS_SUBDIR\%'
+     ORDER BY date_created DESC
+  ~;
+  @rows = $self->selectSeveralColumns($sql);
+
+
+  #### If there's something interesting to show, show a glimpse
+  if (scalar(@rows)) {
+    print qq~
+	<H1>Recent Query Resultsets within the $SBEAMS_SUBDIR Module:</H1>
+	<TABLE BORDER=0>
+    ~;
+
+    #### Find all the resultsets with names/annotations
+    my $html_buffer = '';
+    my $output_counter = 0;
+    foreach my $row (@rows) {
+      my $resultset_name = $row->[1];
+      my $query_name = $row->[2];
+      my $cache_descriptor = $row->[3];
+      my $date_created = $row->[4];
+      if (defined($resultset_name) && $output_counter < 5) {
+        $html_buffer .= qq~
+	  <TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD><TD NOWRAP>-&nbsp;<A HREF="$CGI_BASE_DIR/$query_name?action=VIEWRESULTSET&rs_set_name=$cache_descriptor">[View]</A>&nbsp;&nbsp;&nbsp;&nbsp;<font color="green">$resultset_name:</font></TD>
+	  <TD NOWRAP>&nbsp;&nbsp;&nbsp;$query_name</A></TD>
+	  <TD NOWRAP>&nbsp;&nbsp;&nbsp;($date_created)</TD></TR>
+        ~;
+        $output_counter++;
+      }
+    }
+
+    #### If there were any, print them
+    if ($output_counter) {
+      print qq~
+	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD><TD COLSPAN=4>Most recent named resultsets:</TD></TR>
+	$html_buffer
+      ~;
+    }
+
+
+    #### Find all the resultsets without names/annotations
+    $html_buffer = '';
+    $output_counter = 0;
+    foreach my $row (@rows) {
+      my $resultset_name = $row->[1];
+      my $query_name = $row->[2];
+      my $cache_descriptor = $row->[3];
+      my $date_created = $row->[4];
+      if (!defined($resultset_name) && $output_counter < 5) {
+        $html_buffer .= qq~
+	  <TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD><TD NOWRAP>-&nbsp;<A HREF="$CGI_BASE_DIR/$query_name?action=VIEWRESULTSET&rs_set_name=$cache_descriptor">[View]</A>&nbsp;&nbsp;&nbsp;&nbsp;<font color="green">(unnamed)</font></TD>
+	  <TD NOWRAP>&nbsp;&nbsp;&nbsp;$query_name</TD>
+	  <TD NOWRAP>&nbsp;&nbsp;&nbsp;($date_created)</A></TD></TR>
+        ~;
+        $output_counter++;
+      }
+    }
+
+
+    #### If there were any, print them
+    if ($output_counter) {
+      print qq~
+	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD><TD COLSPAN=4>Most recent unnamed resultsets:</TD></TR>
+	$html_buffer
+      ~;
+    }
+
+    print qq~
+      <TR><TD></TD><TD COLSPAN=4><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=cached_resultset">[View all resultsets]</A></TD></TR>
+      </TABLE>
+    ~;
+
+  }
+
+
+} #end printRecentResultsets
+
+
+
+###############################################################################
 # printProjectsYouOwn- prints HTML TABLE that contains all projects you own
 ###############################################################################
 sub printProjectsYouOwn {
@@ -3601,6 +3705,7 @@ sub printProjectsYouOwn {
 	</TABLE>
   ~;
 } #end printProjectsYouOwn
+
 
 
 ###############################################################################
