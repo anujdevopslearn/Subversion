@@ -1876,6 +1876,7 @@ sub send_to_pipeline {
     <jar href="$JAR_DIRECTORY/share/util/jdom.jar"/>
     <jar href="$JAR_DIRECTORY/share/util/visad.jar"/>
     <jar href="$JAR_DIRECTORY/share/util/java-getopt-1.0.10.jar"/>
+    <jar href="$JAR_DIRECTORY/share/util/SBEAMS.jar"/>
   </resources>
   <application-desc>
 $arguments
