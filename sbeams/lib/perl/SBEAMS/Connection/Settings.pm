@@ -21,7 +21,7 @@ use FindBin;
 use Data::Dumper;
 
 
-use vars qw($VERSION @ISA @EXPORT @EXPORT_OK
+use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS
     $DBTITLE
     $DBADMIN
     $DBINSTANCE
@@ -45,11 +45,14 @@ use vars qw($VERSION @ISA @EXPORT @EXPORT_OK
     $SBEAMS_SUBDIR
     $LOGGING_LEVEL
     $LOG_BASE_DIR
+    $LOGIN_DURATION
+    $SESSION_REAUTH
     );
 
 require Exporter;
 @ISA = qw (Exporter);
 
+@EXPORT_OK = qw($LOGGING_LEVEL $LOG_BASE_DIR $LOGIN_DURATION $SESSION_REAUTH);
 @EXPORT = qw (
     $DBTITLE
     $DBADMIN
@@ -73,8 +76,10 @@ require Exporter;
     $UPLOAD_DIR
     $SBEAMS_SUBDIR
     );
+my @default = @EXPORT;
+#push @EXPORT, 'default';
 
-@EXPORT_OK = qw( $LOGGING_LEVEL $LOG_BASE_DIR );
+%EXPORT_TAGS = ( default => \@default );
 
 
 #### Decide which version settings to use based the script location
@@ -137,7 +142,8 @@ $CYTOSCAPE_URL = $DBCONFIG->{$DBINSTANCE}->{CYTOSCAPE_URL};
 %RAW_DATA_DIR = %{$DBCONFIG->{$DBINSTANCE}->{RAW_DATA_DIR}};
 $LOGGING_LEVEL = $DBCONFIG->{$DBINSTANCE}->{LOGGING_LEVEL};
 $LOG_BASE_DIR = $DBCONFIG->{$DBINSTANCE}->{LOG_BASE_DIR};
-
+$LOGIN_DURATION = $DBCONFIG->{$DBINSTANCE}->{LOGIN_DURATION};
+$SESSION_REAUTH = $DBCONFIG->{$DBINSTANCE}->{SESSION_REAUTH};
 
 #### Determine what the BASE URL is: first pull out some environment variables
 my $_server_port = $ENV{SERVER_PORT} || "";
