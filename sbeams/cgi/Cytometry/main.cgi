@@ -354,7 +354,9 @@ sub processFile
       print qq~ <center><table><tr>~;
       print qq~ <td >x-axis</td><td>y- axis</td></tr>\n~;
       print qq~ <tr><td colspan=2><hr size =2></td></tr>~;
-      print $q->start_form (-onSubmit=>"return checkRadioButton($databaseUpdate) ");
+      print $q->start_form (-onSubmit=>"return checkRadioButton($databaseUpdate)", -target => "_blank");
+       
+      
  
       foreach my $key (keys %cytoParameters)
      {
@@ -368,7 +370,10 @@ sub processFile
 	  print qq~<input type= hidden name="action" value = "$GETGRAPH">  ~ ;
       print qq ~<input type =hidden name="firstTime"  value = "True">~;
        print qq ~<input type =hidden name="window"  value = "True">~;
-      print qq~<tr></tr><tr><td><input type ="submit" name= "SUBMIT" value = "SUBMIT PARAMETERS"></td></tr> </table></center> ~;
+      print qq~<tr></tr><tr><td><input type ="submit" name= "SUBMIT" value = "SUBMIT PARAMETERS"
+      onClick="window.open( 
+      'height=400,width=400');"> 
+        </td></tr> </table></center> ~;
       print $q->end_form; 
     
 }
@@ -500,7 +505,7 @@ sub createGraph
     my $yLabel = $yCoorName;
 
     my $graph;
-    $graph = GD::Graph::xypoints->new(500,500);
+    $graph = GD::Graph::xypoints->new(400,400);
      $graph->set(
              x_label           =>$xLabel,
              y_label           => $yLabel,
