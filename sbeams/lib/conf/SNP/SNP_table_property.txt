@@ -1,20 +1,21 @@
-"table_name"	"Category"	"table_group"	"manage_table_allowed"	"db_table_name"	"PK_column_name"	"multi_insert_column"	"table_url"	"manage_tables"	"next_step"
-"SN_biosequence_set"	"BioSequence Set"	"SNP"	"YES"	"$TBSN_BIOSEQUENCE_SET"	"biosequence_set_id"		"ManageTable.cgi?TABLE_NAME=SN_biosequence_set"	"SN_biosequence_set"	
-"SN_biosequence"	"BioSequence "	"SNP"	"YES"	"$TBSN_BIOSEQUENCE"	"biosequence_id"		"ManageTable.cgi?TABLE_NAME=SN_biosequence"	"SN_biosequence"	
-"SN_biosequence_property_set"	"BioSequence Property Set"	"SNP"	"NO"	"$TBSN_BIOSEQUENCE_PROPERTY_SET"	"biosequence_property_set_id"				
-"SN_BrowseBioSequence"	"Browse BioSequence"	"QUERY"		"NA"	"NA"		"BrowseBioSequence.cgi"		
-"SN_snp_source"	"SNP Source"	"SNP"	"YES"	"$TBSN_SNP_SOURCE"	"snp_source_id"		"ManageTable.cgi?TABLE_NAME=SN_snp_source"	"SN_snp_source"	
-"SN_BrowseSNPHit"	"Browse SNP Hits"	"QUERY"		"NA"	"NA"		"BrowseSNPHit.cgi"		
-"SN_source_version"	"Source Version"	"SNP"	"YES"	"$TBSN_SOURCE_VERSION"	"source_version_id"		"ManageTable.cgi?TABLE_NAME=SN_source_version"	"SN_source_version"	
-"SN_biosequence_rank_list"	"Biosequence Rank List"	"SNP"	"YES"	"$TBSN_BIOSEQUENCE_RANK_LIST"	"biosequence_rank_list_id"		"ManageTable.cgi?TABLE_NAME=SN_biosequence_rank_list"		
-"SN_snp_plate"	"SNP Plate"	"SNP"	"YES"	"$TBSN_SNP_PLATE"	"plate_id"		"ManageTable.cgi?TABLE_NAME=SN_snp_plate"	"SN_snp_plate"	
-"SN_instrument_type"	"Instrument Type"	"SNP"	"YES"	"$TBSN_INSTRUMENT_TYPE"	"instrument_type_id"		"ManageTable.cgi?TABLE_NAME=SN_instrument_type"	"SN_instrument_type"	
-"SN_instrument"	"Instrument"	"SNP"	"YES"	"$TBSN_INSTRUMENT"	"instrument_id"		"ManageTable.cgi?TABLE_NAME=SN_instrument"	"SN_instrument"	
-"SN_plate_type"	"Plate Type"	"SNP"	"YES"	"$TBSN_PLATE_TYPE"	"plate_type_id"		"ManageTable.cgi?TABLE_NAME=SN_plate_type"	"SN_plate_type"	
-"SN_GetGenotypes"	"Get Genotypes"	"QUERY"		"NA"	"NA"		"GetGenotypes"		
-"SN_assay_request"	"Assay Request"	"SNP"	"YES"	"$TBSN_ASSAY_REQUEST"	"assay_request_id"		"ManageTable.cgi?TABLE_NAME=SN_assay_request"	"SN_assay_request"	
-"SN_cost_scheme"	"Cost Scheme"	"SNP"	"YES"	"$TBSN_COST_SCHEME"	"cost_scheme_id"		"ManageTable.cgi?TABLE_NAME=SN_cost_scheme"	"SN_cost_scheme"	
-"SN_selected_snp"	"Selected SNP"	"SNP"	"YES"	"$TBSN_SELECTED_SNP"	"selected_snp_id"		"ManageTable.cgi?TABLE_NAME=SN_selected_snp"	"SN_selected_snp"	
-"SN_replaced_snp"	"Replaced SNP"	"SNP"	"NO"	"$TBSN_REPLACED_SNP"	"NA"		"ManageTable.cgi?TABLE_NAME=SN_replaced_snp"	"SN_replaced_snp"	
-"SN_snp_selection_run"	"SNP Selection Run"	"SNP"	"YES"	"$TBSN_SNP_SELECTION_RUN"	"snp_selection_run_id"		"ManageTable.cgi?TABLE_NAME=SN_snp_selection_run"	"SN_snp_selection_run"	
-"SN_status"	"SNP Status"	"SNP"	"NO"	"$TBSN_SNP_STATUS"	"snp_status_id"				
+table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
+SN_biosequence_set	BioSequence Set	SNP	YES	$TBSN_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=SN_biosequence_set	SN_biosequence_set	
+SN_biosequence	BioSequence 	SNP	YES	$TBSN_BIOSEQUENCE	biosequence_id		ManageTable.cgi?TABLE_NAME=SN_biosequence	SN_biosequence	
+SN_biosequence_property_set	BioSequence Property Set	SNP	NO	$TBSN_BIOSEQUENCE_PROPERTY_SET	biosequence_property_set_id				
+SN_BrowseBioSequence	Browse BioSequence	QUERY		NA	NA		BrowseBioSequence.cgi		
+SN_snp_source	SNP Source	SNP	YES	$TBSN_SNP_SOURCE	snp_source_id		ManageTable.cgi?TABLE_NAME=SN_snp_source	SN_snp_source	
+SN_BrowseSNPHit	Browse SNP Hits	QUERY		NA	NA		BrowseSNPHit.cgi		
+SN_source_version	Source Version	SNP	YES	$TBSN_SOURCE_VERSION	source_version_id		ManageTable.cgi?TABLE_NAME=SN_source_version	SN_source_version	
+SN_biosequence_rank_list	Biosequence Rank List	SNP	YES	$TBSN_BIOSEQUENCE_RANK_LIST	biosequence_rank_list_id		ManageTable.cgi?TABLE_NAME=SN_biosequence_rank_list		
+SN_snp_plate	SNP Plate	SNP	YES	$TBSN_SNP_PLATE	plate_id		ManageTable.cgi?TABLE_NAME=SN_snp_plate	SN_snp_plate	
+SN_instrument_type	Instrument Type	SNP	YES	$TBSN_INSTRUMENT_TYPE	instrument_type_id		ManageTable.cgi?TABLE_NAME=SN_instrument_type	SN_instrument_type	
+SN_instrument	Instrument	SNP	YES	$TBSN_INSTRUMENT	instrument_id		ManageTable.cgi?TABLE_NAME=SN_instrument	SN_instrument	
+SN_plate_type	Plate Type	SNP	YES	$TBSN_PLATE_TYPE	plate_type_id		ManageTable.cgi?TABLE_NAME=SN_plate_type	SN_plate_type	
+SN_GetGenotypes	Get Genotypes	QUERY		NA	NA		GetGenotypes		
+SN_assay_request	Assay Request	SNP	YES	$TBSN_ASSAY_REQUEST	assay_request_id		ManageTable.cgi?TABLE_NAME=SN_assay_request	SN_assay_request	
+SN_cost_scheme	Cost Scheme	SNP	YES	$TBSN_COST_SCHEME	cost_scheme_id		ManageTable.cgi?TABLE_NAME=SN_cost_scheme	SN_cost_scheme	
+SN_selected_snp	Selected SNP	SNP	YES	$TBSN_SELECTED_SNP	selected_snp_id		ManageTable.cgi?TABLE_NAME=SN_selected_snp	SN_selected_snp
+SN_replaced_snp	Replaced SNP	SNP	NO	$TBSN_REPLACED_SNP	NA		ManageTable.cgi?TABLE_NAME=SN_replaced_snp	SN_replaced_snp
+SN_snp_selection_run	SNP Selection Run	SNP	YES	$TBSN_SNP_SELECTION_RUN	snp_selection_run_id		ManageTable.cgi?TABLE_NAME=SN_snp_selection_run	SN_snp_selection_run
+SN_status	SNP Status	SNP	NO	$TBSN_SNP_STATUS	snp_status_id			
+SN_manual_genotype_call	Manual Genotype Call	SNP	YES	$TBSN_MANUAL_GENOTYPE_CALL	manual_genotype_call_id		ManageTable.cgi?TABLE_NAME=SN_manual_genotype_call	SN_manual_genotype_call

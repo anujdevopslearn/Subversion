@@ -37,7 +37,11 @@ use vars qw(@ISA @EXPORT
     $TBSN_QUERY_SEQUENCE
     $TBSN_BIOSEQUENCE_RANK_LIST
 
+    $TBSN_ASSAY_REQUEST
+    $TBSN_COST_SCHEME
+
     $TBSN_EXPORT_RESULTS
+    $TBSN_MANUAL_GENOTYPE_CALL
 
     $TBSN_QUERY_OPTION
 
@@ -81,7 +85,11 @@ require Exporter;
     $TBSN_QUERY_SEQUENCE
     $TBSN_BIOSEQUENCE_RANK_LIST
 
-    $TBSN_EXPOER_RESULTS
+    $TBSN_ASSAY_REQUEST
+    $TBSN_COST_SCHEME
+
+    $TBSN_EXPORT_RESULTS
+    $TBSN_MANUAL_GENOTYPE_CALL
 
     $TBSN_QUERY_OPTION
 
@@ -128,8 +136,11 @@ $TBSN_ALLELE_FREQUENCY           = "${mod}allele_frequency";
 $TBSN_ALLELE_BLAST_STATS         = "${mod}allele_blast_stats";
 $TBSN_QUERY_SEQUENCE             = "${mod}query_sequence";
 $TBSN_BIOSEQUENCE_RANK_LIST      = "${mod}biosequence_rank_list";
+$TBSN_ASSAY_REQUEST              = "${mod}assay_request";
+$TBSN_COST_SCHEME                = "${mod}cost_scheme";
 
 $TBSN_EXPORT_RESULTS             = "${sequenom}EXPORT_RESULTS_VIEW";
+$TBSN_MANUAL_GENOTYPE_CALL       = "${mod}manual_genotype_call";
 			
 $TBSN_QUERY_OPTION               = "${mod}query_option";
 			

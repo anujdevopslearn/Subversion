@@ -201,7 +201,7 @@ SN_status	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	
 SN_status	8	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
 SN_status	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 SN_status	10	record_status	Record Status	char	1	0	N	N	N							N	N				
-SN_selected_snp	1	selected_snp_id	Selected SNP ID	varchar	255	0	N		N	SN_snp	snp_id	Y	text	40				Y			
+SN_selected_snp	1	selected_snp_id	Selected SNP ID	varchar	255	0	N		Y	SN_snp	snp_id	Y	text	40				Y			
 SN_selected_snp	2	snp_selection_run_id	SNP Selection Run ID	int	4	0	N		N	SN_snp_selection_run	snp_selection_run_id	Y				Y	Y	N			
 SN_selected_snp	3	jared_id	Jared Roach ID	varchar	255	0	N		N			N	text	40		Y	Y	N	ID for this SNP from Jared's merging		
 SN_selected_snp	4	snp_id	SNP ID	int	4	0	N		N			Y				Y	Y	N			
@@ -220,3 +220,16 @@ SN_selected_snp	16	record_status	Record Status	char	1	0	N	N	N							N	N
 SN_replaced_snp	1	snp_id	SNP ID	int	4	0	N		N	SN_snp	snp_id	Y				Y	Y	Y	SNP ID of the chosed replacement SNP
 SN_replaced_snp	2	snp_selection_run_id	SNP Selection Run ID	int	4	0	N		N	SN_snp_selection_run	snp_selection_run_id	Y				Y	Y	Y	SNP Selection Run of the replacement
 SN_replaced_snp	3	replaced_snp_id	Replaced SNP ID	int	4	0	N		N			Y				Y	Y	Y	SNP ID of the SNP that has been replaced
+SN_manual_genotype_call	1	manual_genotype_call_id	Manual Genotype Call ID	int	4	0	N		Y							N	N		
+SN_manual_genotype_call	2	project_id	Project	varchar	255	0	N		N			Y	fixed			Y	Y	Y	Project to which the genotype call belongs
+SN_manual_genotype_call	3	assay_id	Assay ID	varchar	255	0	N		N			Y	fixed			Y	Y	Y	Assay of the genotype call	
+SN_manual_genotype_call	4	sample_id	Sample ID	varchar	255	0	N		N			Y	fixed			Y	Y	Y	Sample ID	
+SN_manual_genotype_call	5	genotype_call	Genotype Call	varchar	20	0	N		N			Y	text	10		Y	Y	N	"Genotype call in a form like T/T or T/C, etc."	
+SN_manual_genotype_call	6	call_quality	Call Quality	varchar	255	0	N		N			Y	optionlist			Y	Y	N	Genotype call quality	"SELECT distinct description,description FROM SNP.dbo.export_results_view ORDER BY description"
+SN_manual_genotype_call	7	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments	
+SN_manual_genotype_call	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+SN_manual_genotype_call	9	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N			
+SN_manual_genotype_call	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
+SN_manual_genotype_call	11	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N			
+SN_manual_genotype_call	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
+SN_manual_genotype_call	13	record_status	Record Status	char	1	0	N	N	N							N	N	N		
