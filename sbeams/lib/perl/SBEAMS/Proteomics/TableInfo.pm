@@ -117,7 +117,7 @@ sub returnTableInfo {
 		  FROM $TBPR_PROTEOMICS_EXPERIMENT PE
 		  JOIN $TB_USER_LOGIN UL ON (PE.contact_id=UL.contact_id)
 		  JOIN $TB_PROJECT P ON (PE.project_id=P.project_id)
-		 WHERE P.record_status!='D'
+		 WHERE PE.record_status!='D'
 		   AND UL.record_status!='D'
 		   AND P.record_status!='D'
 		 ORDER BY username,experiment_tag
