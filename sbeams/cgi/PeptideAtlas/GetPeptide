@@ -112,22 +112,22 @@ sub main {
 
     ## If no parameters are defined, set up some defaults to help with browsing
     ## until I get a help menu set-up
-    if ( !$parameters{searchWithinThis}  && !$parameters{searchForThis}
-         && (  !$parameters{atlas_build_name}  || !$parameters{atlas_build_id} ) ) {
+    if ( !$parameters{'searchWithinThis'}  && !$parameters{'searchForThis'}
+         && (  !$parameters{'atlas_build_name'}  || !$parameters{'atlas_build_id'} ) ) {
 
-        $parameters{atlas_build_name} = "Human_P0.9_Ens26_NCBI35";
+        $parameters{'atlas_build_name'} = "Human_P0.9_Ens26_NCBI35";
 
-        $parameters{searchWithinThis} = "Peptide Name";
+        $parameters{'searchWithinThis'} = "Peptide Name";
 
-        $parameters{searchForThis} = "PAp00000001";
+        $parameters{'searchForThis'} = "PAp00000001";
 
     }
 
 
     ## get project_id to send to HTMLPrinter display
     my $project_id = $sbeamsMOD->getProjectID(
-        atlas_build_name => $parameters{atlas_build_name},
-        atlas_build_id => $parameters{atlas_build_id}
+        atlas_build_name => $parameters{'atlas_build_name'},
+        atlas_build_id => $parameters{'atlas_build_id'}
         );
 
 
@@ -136,7 +136,7 @@ sub main {
     #$sbeams->printDebuggingInfo($q);
 
     #### Decide what action to take based on information so far
-    if ($parameters{action} eq "???") {
+    if ($parameters{'action'} eq "???") {
 
         # Some action
 
@@ -174,9 +174,9 @@ sub handle_request {
     my ($atlas_build_name, $atlas_build_id);
 
     ## only have atlas_build_name, get atlas_build_id too to pass on to neighboring cgi's
-    if ( $parameters{atlas_build_name} && (!$parameters{atlas_build_id}) )
+    if ( $parameters{'atlas_build_name'} && (!$parameters{'atlas_build_id'}) )
     {
-        $atlas_build_name = $parameters{atlas_build_name};
+        $atlas_build_name = $parameters{'atlas_build_name'};
 
         my $sql = qq~
             SELECT atlas_build_id
@@ -193,7 +193,7 @@ sub handle_request {
         if ($tmp)
         {
 
-            $parameters{atlas_build_id} = $tmp;
+            $parameters{'atlas_build_id'} = $tmp;
 
             $atlas_build_id = $tmp;
 
@@ -202,9 +202,9 @@ sub handle_request {
     }
 
     ## only have atlas_build_id, get atlas_build_name too to pass on to neighboring cgi's
-    if ( $parameters{atlas_build_id} && (!$parameters{atlas_build_name}) )
+    if ( $parameters{'atlas_build_id'} && (!$parameters{'atlas_build_name'}) )
     {
-        $atlas_build_id = $parameters{atlas_build_id};
+        $atlas_build_id = $parameters{'atlas_build_id'};
 
         my $sql = qq~
             SELECT atlas_build_name
@@ -213,7 +213,7 @@ sub handle_request {
             AND record_status != 'D'
             ~;
 
-        #$sbeams->display_sql(sql=>$sql);
+#       $sbeams->display_sql(sql=>$sql);
 
         my ($tmp) = $sbeams->selectOneColumn($sql) or
             die "Cannot complete $sql ($!)";
@@ -223,7 +223,7 @@ sub handle_request {
 
              $atlas_build_name = $tmp;
 
-             $parameters{atlas_build_name} = $$atlas_build_name;
+             $parameters{'atlas_build_name'} = $atlas_build_name;
 
         }
 
