@@ -21,7 +21,7 @@ use FindBin;
 
 use lib qw (../perl ../../perl);
 use vars qw ($sbeams $sbeamsMOD $q
-             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $TESTONLY $DEBUG $DATABASE
              $current_contact_id $current_username
             );
 
@@ -60,6 +60,7 @@ Options:
                       biosequence_set table
   --check_status      Is set, nothing is actually done, but rather the
                       biosequence_sets are verified
+  --testonly          If set, information in the db is not altered
 
  e.g.:  $PROG_NAME 
 
@@ -69,7 +70,7 @@ EOU
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
   "delete_existing","update_existing","skip_sequence",
-  "set_tag:s","file_prefix:s","check_status")) {
+  "set_tag:s","file_prefix:s","check_status","testonly")) {
   print "$USAGE";
   exit;
 }
@@ -77,6 +78,8 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
 $VERBOSE = $OPTIONS{"verbose"} || 0;
 $QUIET = $OPTIONS{"quiet"} || 0;
 $DEBUG = $OPTIONS{"debug"} || 0;
+$TESTONLY = $OPTIONS{"testonly"} || 0;
+
 if ($DEBUG) {
   print "Options settings:\n";
   print "  VERBOSE = $VERBOSE\n";
@@ -112,6 +115,10 @@ sub main {
   }
   if ($module eq 'SNP') {
     $work_group = "SNP";
+    $DATABASE = $DBPREFIX{$module};
+  }
+  if ($module eq 'Microarray') {
+    $work_group = "Arrays";
     $DATABASE = $DBPREFIX{$module};
   }
 
@@ -241,7 +248,7 @@ sub handleRequest {
 ###############################################################################
 # getBiosequenceSetStatus
 ###############################################################################
-sub getBiosequenceSetStatus {
+sub getBiosequenceSetStatus { 
   my %args = @_;
   my $SUB_NAME = 'getBiosequenceSetStatus';
 
@@ -291,13 +298,12 @@ sub getBiosequenceSetStatus {
   return \%status;
 
 }
-
-
+    
 
 ###############################################################################
 # loadBiosequenceSet
 ###############################################################################
-sub loadBiosequenceSet {
+sub loadBiosequenceSet { 
   my %args = @_;
   my $SUB_NAME = 'loadBiosequenceSet';
 
@@ -394,7 +400,7 @@ sub loadBiosequenceSet {
       $information =~ /^>(\S+)/;
       $rowdata{biosequence_name} = $1;
       $information =~ /^>(\S+)\s(.+)/;
-      $rowdata{biosequence_desc} = $2 || '';
+      $rowdata{biosequence_desc} = $2;
       $rowdata{biosequence_set_id} = $biosequence_set_id;
       $rowdata{biosequence_seq} = $sequence unless ($skip_sequence);
 
@@ -422,11 +428,11 @@ sub loadBiosequenceSet {
 
 
       #### Insert the data into the database
-      $result = $sbeams->insert_update_row(insert=>$insert,update=>$update,
+      loadBiosequence(insert=>$insert,update=>$update,
         table_name=>"${DATABASE}biosequence",
         rowdata_ref=>\%rowdata,PK=>"biosequence_id",
         PK_value => $biosequence_id,
-        #,verbose=>1,testonly=>1
+        verbose=>1,testonly=>1
         );
 
       #### Reset temporary holders
@@ -460,7 +466,50 @@ sub loadBiosequenceSet {
 
 }
 
+###############################################################################
+# loadBiosequence
+###############################################################################
+sub loadBiosequence {
+  my %args = @_;
+  my $SUB_NAME = "loadBiosequence";
 
+  #### Decode the argument list
+  my $insert   = $args{'insert'}   || 0;
+  my $update   = $args{'update'}   || 0;
+  my $PK       = $args{'PK_name'}  || $args{'PK'} || '';
+  my $PK_value = $args{'PK_value'} || '';
+  
+  my $rowdata_ref = $args{'rowdata_ref'}
+  || die "ERROR[$SUB_NAME]: rowdata not passed!";
+  my $table_name = $args{'table_name'} 
+  || die "ERROR[$SUB_NAME]:table_name not passed!";
+  
+
+  #### Get the file_prefix if it was specified, and otherwise guess
+  my $module = $sbeams->getSBEAMS_SUBDIR();
+
+  #### Microarray uses the new schema and this is just a quick hack to get it
+  #### working.  This will  need to populate biosequence_external_xref in the
+  #### future, using an INSERT, INSERT, UPDATE triplet for new sequences. 
+  #### FIX ME!!!
+  
+  if ($module eq 'Microarray') {
+      print "$rowdata_ref->{dbxref_id}\t";
+      delete ($rowdata_ref->{biosequence_accession});
+      delete ($rowdata_ref->{dbxref_id});
+  }
+
+  my $result = $sbeams->insert_update_row(insert=>$insert,
+					  update=>$update,
+					  table_name=>$table_name,
+					  rowdata_ref=>$rowdata_ref,
+					  PK=>$PK,
+					  PK_value => $PK_value,
+					  verbose=>$VERBOSE,testonly=>$TESTONLY
+					  );
+
+  return;
+} 
 
 ###############################################################################
 # additionalParsing: fill in the gene_name and accession fields based on
@@ -502,7 +551,7 @@ sub specialParsing {
      $rowdata_ref->{biosequence_accession} = $1;
      $rowdata_ref->{dbxref_id} = '8';
   }
-
+  
 
   #### Special conversion rules for Drosophila genome, e.g.:
   #### >Scr|FBgn0003339|CT1096|FBan0001030 "transcription factor" mol_weight=44264  located on: 3R 84A6-84B1; 
@@ -553,15 +602,22 @@ sub specialParsing {
   #### Special conversion rules for Yeast genome, e.g.:
   #### >ORFN:YAL014C YAL014C, Chr I from 128400-129017, reverse complement
   if ($biosequence_set_name eq "yeast_orf_coding" || $biosequence_set_name eq "Yeast ORFs Database") {
-    if ($rowdata_ref->{biosequence_desc} =~ /([\w-]+), .+/ ) {
+    if ($rowdata_ref->{biosequence_desc} =~ /([\w-]+)\s([\w-\:]+), .+/ ) {
        $rowdata_ref->{biosequence_gene_name} = $1;
-       #### Deutsch switched 2002-08-30 for GO related proteomics
-       #$rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
-       $rowdata_ref->{biosequence_accession} = $1;
+       $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
        $rowdata_ref->{dbxref_id} = '7';
     }
   }
 
+  #### Conversion Rules for SGD:
+  #### >ORFN:YAL001C TFC3 SGDID:S0000001, Chr I from 147591-147660,147751-151163, reverse complement
+  if ($biosequence_set_name eq "SGD Yeast ORF Database"){
+    if ($rowdata_ref->{biosequence_desc} =~ /([\w-]+)\sSGDID\:([\w-]+), .+/ ) {
+	$rowdata_ref->{biosequence_gene_name} = $1;
+	$rowdata_ref->{biosequence_accesion} = $2;
+	$rowdata_ref->{dbxref_id} = '7';
+    }
+  }
 
   #### Special conversion rules for DQA, DBQ, DRB exons, e.g.:
   #### >DQB1_0612_exon1
@@ -577,9 +633,18 @@ sub specialParsing {
   if ($biosequence_set_name eq "halobacterium_orf_coding") {
     if ($rowdata_ref->{biosequence_name} =~ /-(\w+)$/ ) {
        $rowdata_ref->{biosequence_gene_name} = $1;
-    }
+   }
   }
 
+  #### Special conversion rules for Human FASTA file, e.g.:
+  ####>ACC:AA406372|zv10c10.s1 Soares_NhHMPu_S1 Homo sapiens cDNA clone IMAGE:753234 3' similar to gb:X59739_rna1 ZINC FINGER X-CHROMOSOMAL PROTEIN (HUMAN );, mRNA sequence.
+  if ($biosequence_set_name eq "Human BioSequence Database") {
+    if ($rowdata_ref->{biosequence_name} =~ /^ACC\:([\w-]+)\|/) {
+	$rowdata_ref->{biosequence_gene_name} = $1;
+	$rowdata_ref->{biosequence_accession} = $1;
+	$rowdata_ref->{dbxref_id} = '8';
+    }
+  }
 
   #### Special conversion rules for Human genome, e.g.:
   #### >gnl|UG|Hs#S35 Human mRNA for ferrochelatase (EC 4.99.1.1) /cds=(29,1300) /gb=D00726 /gi=219655 /ug=Hs.26 /len=2443
