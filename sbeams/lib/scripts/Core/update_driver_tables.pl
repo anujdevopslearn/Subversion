@@ -188,6 +188,9 @@ sub updateDriverTable {
       'manage_table_allowed','db_table_name','PK_column_name',
       'multi_insert_column','table_url','manage_tables','next_step');
     for ($i=0; $i<$n_columns; $i++) {
+      if ($column_names[$i] =~ /^\"(.*)\"$/) {
+        $column_names[$i] = $1;
+      }
       if ($ref_columns[$i] ne $column_names[$i]) {
         print "ERROR: File header verification failed.\n";
 	print " Expected column $i to be '$ref_columns[$i]' but it appears ".
@@ -209,6 +212,9 @@ sub updateDriverTable {
       'is_display_column','is_key_field','column_text','optionlist_query',
       'url');
     for ($i=0; $i<$n_columns; $i++) {
+      if ($column_names[$i] =~ /^\"(.*)\"$/) {
+        $column_names[$i] = $1;
+      }
       if ($ref_columns[$i] ne $column_names[$i]) {
         print "ERROR: File header verification failed.\n";
 	print " Expected column $i to be '$ref_columns[$i]' but it appears ".
