@@ -189,7 +189,6 @@ sub handleRequest {
   my ($biosequence_set_id,$n_biosequence_sets);
   my @biosequence_set_ids;
 
-
   #### If there was a set_tag specified, identify it
   if ($set_tag) {
     $sql = qq~
@@ -264,7 +263,8 @@ sub handleRequest {
       #### If it's determined that we need to do a load, do it
       if ($do_load) {
         $result = loadBiosequenceSet(set_name=>$status->{set_name},
-          source_file=>$file_prefix.$status->{set_path});
+				     source_file=>$file_prefix.$status->{set_path},
+				     organism_id=>$status->{organism_id});
       }
     }
   }
@@ -295,7 +295,7 @@ sub getBiosequenceSetStatus {
 
   #### Get information about this biosequence_set_id from database
   $sql = qq~
-          SELECT BSS.biosequence_set_id,set_name,set_tag,set_path,set_version
+          SELECT BSS.biosequence_set_id,organism_id,set_name,set_tag,set_path,set_version
             FROM ${DATABASE}biosequence_set BSS
            WHERE BSS.biosequence_set_id = '$biosequence_set_id'
              AND BSS.record_status != 'D'
@@ -306,10 +306,11 @@ sub getBiosequenceSetStatus {
   #### Put the information in a hash
   my %status;
   $status{biosequence_set_id} = $rows[0]->[0];
-  $status{set_name} = $rows[0]->[1];
-  $status{set_tag} = $rows[0]->[2];
-  $status{set_path} = $rows[0]->[3];
-  $status{set_version} = $rows[0]->[4];
+  $status{organism_id} = $rows[0]->[1];
+  $status{set_name} = $rows[0]->[2];
+  $status{set_tag} = $rows[0]->[3];
+  $status{set_path} = $rows[0]->[4];
+  $status{set_version} = $rows[0]->[5];
 
 
   #### Get the number of rows for this biosequence_set_id from database
@@ -344,7 +345,7 @@ sub loadBiosequenceSet {
    || die "ERROR[$SUB_NAME]: set_name not passed";
   my $source_file = $args{'source_file'}
    || die "ERROR[$SUB_NAME]: source_file not passed";
-
+  my $organism_id = $args{'organism_id'} || "";
 
   #### Define standard variables
   my ($i,$element,$key,$value,$line,$result,$sql);
@@ -438,6 +439,7 @@ sub loadBiosequenceSet {
       $rowdata{biosequence_desc} = $2 || '';
       $rowdata{biosequence_set_id} = $biosequence_set_id;
       $rowdata{biosequence_seq} = $sequence unless ($skip_sequence);
+      $rowdata{organism_id} = $organism_id;
 
       #### Do special parsing depending on which genome set is being loaded
       $result = specialParsing(biosequence_set_name=>$set_name,
