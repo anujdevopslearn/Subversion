@@ -35,6 +35,8 @@ $q       = new CGI;
 # Global variables
 ###############################################################################
 $dbh = SBEAMS::Connection::DBConnector::getDBHandle();
+#### Can we get rid of this?? This may be creating a connection before
+#### we want it?
 
 
 ###############################################################################
@@ -51,6 +53,8 @@ sub new {
 
 ###############################################################################
 # apply Sql Change
+#
+# This is kind of an old and krusty method that really needs updating
 #
 # All INSERT, UPDATE, DELETE SQL commands initiated by the user should be
 # delivered here first so that all permission checking and logging of the
@@ -232,8 +236,7 @@ sub applySqlChange {
     }
 
 
-    my $altered_sql_query = $sql_query;
-    $altered_sql_query =~ s/'/"/g;
+    my $altered_sql_query = convertSingletoTwoQuotes($sql_query);
     my $log_query = qq!
         INSERT INTO $TB_SQL_COMMAND_LOG
                (created_by_id,result,sql_command)
@@ -252,27 +255,28 @@ sub applySqlChange {
 ###############################################################################
 # SelectOneColumn
 #
-# Given a SQL statement which returns exactly one column, return an array
-# containing the results of that query.
+# Given a SQL query, return an array containing the first column of
+# the resultset of that query.
 ###############################################################################
 sub selectOneColumn {
     my $self = shift || croak("parameter self not passed");
-    my $sql_query = shift || croak("parameter sql_query not passed");
+    my $sql = shift || croak("parameter sql not passed");
 
-    my @columns;
+    my @row;
+    my @rows;
 
-    my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
+    my $sth = $dbh->prepare($sql) or croak $dbh->errstr;
     my $rv  = $sth->execute or croak $dbh->errstr;
 
-    while (my @row = $sth->fetchrow_array) {
-        push(@columns,$row[0]);
+    while (@row = $sth->fetchrow_array) {
+        push(@rows,$row[0]);
     }
 
     $sth->finish;
 
-    return @columns;
+    return @rows;
 
-}
+} # end selectOneColumn
 
 
 ###############################################################################
@@ -283,12 +287,12 @@ sub selectOneColumn {
 ###############################################################################
 sub selectSeveralColumns {
     my $self = shift || croak("parameter self not passed");
-    my $sql_query = shift || croak("parameter sql_query not passed");
+    my $sql = shift || croak("parameter sql not passed");
 
     my @rows;
 
     #### FIX ME replace with $dbh->selectall_arrayref ?????
-    my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
+    my $sth = $dbh->prepare($sql) or croak $dbh->errstr;
     my $rv  = $sth->execute or croak $dbh->errstr;
 
     while (my @row = $sth->fetchrow_array) {
@@ -299,7 +303,7 @@ sub selectSeveralColumns {
 
     return @rows;
 
-}
+} # end selectSeveralColumns
 
 
 ###############################################################################
@@ -310,11 +314,11 @@ sub selectSeveralColumns {
 ###############################################################################
 sub selectHashArray {
     my $self = shift || croak("parameter self not passed");
-    my $sql_query = shift || croak("parameter sql_query not passed");
+    my $sql = shift || croak("parameter sql not passed");
 
     my @rows;
 
-    my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
+    my $sth = $dbh->prepare($sql) or croak $dbh->errstr;
     my $rv  = $sth->execute or croak $dbh->errstr;
 
     while (my $columns = $sth->fetchrow_hashref) {
@@ -325,7 +329,7 @@ sub selectHashArray {
 
     return @rows;
 
-}
+} # end selectHashArray
 
 
 ###############################################################################
@@ -356,6 +360,9 @@ sub selectTwoColumnHash {
 
 ###############################################################################
 # insert_update_row
+#
+# This method builds either an INSERT or UPDATE SQL statement based on the
+# supplied parameters and executes the statement.
 ###############################################################################
 sub insert_update_row {
   my $self = shift || croak("parameter self not passed");
@@ -406,7 +413,7 @@ sub insert_update_row {
     $column_list .= "$key,";
 
     #### Enquote and add the value as the column value
-    $value =~ s/'/''/g;
+    $value = convertSingletoTwoQuotes($value);
     if (uc($value) eq "CURRENT_TIMESTAMP") {
       $value_list .= "$value,";
       $columnvalue_list .= "$key = $value,\n";
@@ -472,14 +479,11 @@ sub insert_update_row {
 ###############################################################################
 sub executeSQL {
     my $self = shift || croak("parameter self not passed");
-    my $sql_query = shift || croak("parameter sql_query not passed");
+    my $sql = shift || croak("parameter sql not passed");
 
-#    my $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
-#    my $rv  = $sth->execute or croak $dbh->errstr;
+    my ($rows) = $dbh->do("$sql") or croak $dbh->errstr;
 
-    my $rows = $dbh->do("$sql_query") or croak $dbh->errstr;
-
-    return 0;
+    return $rows;
 
 }
 
@@ -643,7 +647,7 @@ sub parseConstraint2SQL {
     print "Parsing plain_text $constraint_name<BR>\n" if ($verbose);
 
     #### Convert any ' marks to '' to appear okay within the strings
-    $constraint_value =~ s/'/''/g;
+    $constraint_value = convertSingletoTwoQuotes($constraint_value);
 
     #### Bad word checking here has been disabled because the string will be
     #### quoted, so there shouldn't be a way to put in dangerous SQL...
@@ -1360,8 +1364,8 @@ sub processTableDisplayControls {
     # If a user typed ", he probably meant ' instead, so replace since "
     # will fail.  This is a bit rude, because what if the user really meant "
     # then he should use [ and ]
-    $full_where_clause =~ s/"/'/g;
-    $full_orderby_clause =~ s/"/'/g;
+    $full_where_clause =~ s/"/'/g;  #### "
+    $full_orderby_clause =~ s/"/'/g;  #### "
 
     # If a user typed ", we need to escape them for the form printing
     $where_clause =~ s/"/&#34;/g;
@@ -1394,7 +1398,25 @@ sub processTableDisplayControls {
 } # end processTableDisplayControls
 
 
+###############################################################################
+# convertSingletoTwoQuotes
+#
+# Converts all instances of a single quote to two consecutive single
+# quotes as wanted by an SQL string already enclosed in single quotes
+###############################################################################
+sub convertSingletoTwoQuotes {
+  my $self = shift;
+  my $string = shift;
 
+  return if (! defined($string));
+  return '' if ($string eq '');
+  return 0 unless ($string);
+
+  my $resultstring = $string;
+  $resultstring = s/'/''/g;  ####'
+
+  return $resultstring;
+} # end convertSingletoTwoQuotes
 
 
 
@@ -1403,42 +1425,297 @@ sub processTableDisplayControls {
 1;
 
 __END__
+
 ###############################################################################
 ###############################################################################
 ###############################################################################
 
-=head1 NAME
+=head1 SBEAMS::Connection::DBInterface
 
-SBEAMS::Connection::DBControl - Perl extension for providing common database methods
+SBEAMS Core database interface module.
 
-=head1 SYNOPSIS
+=head2 SYNOPSIS
 
-  Used as part of this system
+See SBEAMS::Connection for usage synopsis.
 
-    use SBEAMS::Connection;
-    $adb = new SBEAMS::Connection;
+=head2 DESCRIPTION
 
-    $dbh = $adb->getDBHandle();   
+This module provides a set of methods for interacting with the RDBMS
+back end with the goal that all SQL queries and statements in any
+other module or script be database-engine independent.  Any
+operations which depend on the brand of RDMBS (SQL Server, DB2, Oracle,
+MySQL, PostgreSQL, etc.) should be abstracted through a method in
+this module.
 
-    This needs to change!
 
-=head1 DESCRIPTION
+=head2 METHODS
 
-    This module is inherited by the SBEAMS::Connection module, 
-    although it can be used on its own. Its main function
-    is to provide a single set of database methods to be used 
-    by all programs included in this application.
+=over
 
-=head1 METHODS
+=item * B<applySqlChange()>
 
-=item B<applySqlChange()>
+This method is olde and krusty and should be replaced/updated
 
-=head1 AUTHOR
+
+=item * B<selectOneColumn($sql)>
+
+Given an SQL query in the first parameter as a string, this method
+executes the query and returns an array containing the first column of
+the resultset of that query.
+
+my @array = selectOneColumn("SELECT last_name FROM contact");
+
+PITFALL ALERT:  If you want to return a single scalar value from a query
+(e.g. SELECT last_name WHERE social_sec_no = '123-45-6789'), you must write:
+
+  my ($value) = selectOneColumn($sql);
+
+instead of:
+
+  my $value = selectOneColumn($sql);
+
+otherwise you will end up with the number of returned rows
+instead of the value!
+
+
+=item * B<selectSeveralColumns($sql)>
+
+Given an SQL query in the first parameter as a string, this method
+executes the query and returns an array containing references to arrays
+containing the data for each row in the resultset of that query.
+
+  my @array = selectSeveralColumns("SELECT * FROM contact");
+
+
+=item * B<selectHashArray($sql)>
+
+Given an SQL query in the first parameter as a string, this method
+executes the query and returns an array containing references to hashes
+containing the column names data for each row in the resultset of that query.
+
+  my @array = selectHashArray("SELECT * FROM contact");
+
+
+=item * B<selectTwoColumnHash($sql)>
+
+Given an SQL query in the first parameter as a string, this method
+executes the query and returns a hash containing the values of the second
+column keyed on the first column for all data in the resultset of that query.
+If there is a duplication of the first column value in the resultset, the
+original value in the second column is lost.
+
+  my %hash = selectTwoColumnHash("SELECT contact_id,last_name FROM contact");
+
+
+=item * B<insert_update_row(several key value parameters)>
+
+This method builds either an INSERT or UPDATE SQL statement based on the
+supplied parameters and executes the statement.
+
+table_name => Name of the table to be affected
+
+rowdata_ref => Reference to a hash containing the column names and value
+to be INSERTed or UPDATEd
+
+database_name => Prefix to be stuck before the table name to fully
+qualify the table to be affected
+
+insert => TRUE if the data should be INSERTed as a new row
+
+update => TRUE if the data should be used to UPDATE an existing row.
+Note that at present exactly one of insert or update should be TRUE.  An
+error is returned if this is not true.  This behavior should be modified
+so that both TRUE means "look for record to UPDATE and if not found, then
+INSERT the data".
+
+verbose => If TRUE, print out diagnostic information including SQL
+
+testonly => Do not actually execute the SQL, just build it
+
+PK => specifies the Primary Key column of the table to be affected
+
+PK_value => Specifies the Primary Key column value to be UPDATEd
+
+return_PK => If TRUE, the Primary Key of the just INSERTed or UPDATEd
+    row is returned instead of 1 for success.  Note that after INSERTions,
+    determining the PK value that was just INSERTED usually requires a
+    second SQL operation (engine specific!) so do not set this flag
+    needlessly if speed is important.
+
+  my %rowdata;
+  $rowdata{first_name} = "Pikop";
+  $rowdata{last_name} = "Andropov";
+  my $contact_id = $sbeams->insert_update_row(insert=>1,
+    table_name => "contact", rowdata_ref => \%rowdata,
+    PK=>"contact_id", return_PK=>1,
+    #,verbose=>1,testonly=>1
+    );
+
+  %rowdata = ();
+  $rowdata{phone_number} = "123-456-7890";
+  $rowdata{email} = "SpamMeSenseless@hotmail.com";
+  my $result = $sbeams->insert_update_row(update=>1,
+    table_name => "contact", rowdata_ref => \%rowdata,
+    PK=>"contact_id", PK_value=>$contact_id,
+    #,verbose=>1,testonly=>1
+    );
+
+
+=item * B<executeSQL($sql)>
+
+Given an SQL query in the first parameter as a string, this method
+executes the query and returns the return value of the $dbh->do() which
+is just a scalar not a resultset.  This method should normally not be
+used by ordinary user code.  User code should probably be calling some
+functions like insert_update_row() or methods that update indexes or
+something like that.
+
+  executeSQL("EXEC sp_flushbuffers");
+
+
+=item * B<getLastInsertedPK(several key value parameters)>
+
+After insertion of a row into the database into a table with an auto
+generated primary key, it is often necessary to retrieve the value of
+that identifier for subsequent INSERTs into other tables.  Note that
+the method of doing this varies wildly from database engine to engine.
+Currently, this has been implemented for MS SQL Server, MySQL, and
+PostgreSQL.
+
+table_name => Name of the table for which the key is desired
+
+PK_column_name => Primary key column name that needs to be fetched
+
+  my $contact_id = getLastInsertedPK(table_name=>"contact",
+    PK_column_name=>"contact_id");
+
+Note that some databases support functionality where the user can just
+say "give me that last auto gen key generated".  Others do not provide
+this and a more complex query needs to be executed to determine this.
+Thus is is always a good idea to provide the table_name and PK_column_name
+if at all possible because some engines need it.  These values are not
+required and if you are using SQL Server, you can get away without supplying
+these.  But get in the habit of supplying this information for portability.
+
+
+=item * B<parseConstraint2SQL(several key value parameters)>
+
+Given human-entered constraint, convert it to a SQL "AND" clause with some
+suitable checking to make sure the user is not trying to enter something
+bogus.
+
+constraint_column => Column name that the constraint affects
+
+constraint_type => Data type that the text string should be converted to.
+This can be one of:
+
+  int             A single integer
+
+  flexible_int    A flexible constraint integer like "55", ">55", "<55",
+                  ">=55", "<=55", "between 55 and 60", "55+-2"
+
+  flexible_float  A flexible constraint floating number with options as
+                  above like "55.22 +- 0.10", etc.
+
+  int_list        A comma-separated list of integers like "3,+4,-5, 6"
+
+  plain_text      Plain unparsed text put within "LIKE ''".  Any single
+                  quotes in the string are converted to two.
+
+constraint_name => Friendly name for the constraint for error messages
+
+constraint_value => Text that the user typed in to be parsed
+
+verbose => Set to 1 for additional debugging output
+
+
+=item * B<buildOptionList($sql,$selected_option,$method_options)>
+
+Given an SQL query in the first parameter as a string, this method
+issues the query and prints a <SELECT> list using the first and second
+column.  Some additional options allows list boxes or scrolled lists.
+This method does things the manual way and should probably be replaced
+with use of CGI.pm popup_menu() and scrolled_list() methods.
+
+$sql => SQL query returning two columns, the values and labels of the list
+
+$selected_option => the value of the selected option or a comma-separated list
+of selcted options
+
+$method_options => one or flags as a string (ew).  At present, only
+MULTIOPTIONLIST is supported.  It allows multiple options to be selected.
+
+
+=item * B<getRecordStatusOptions($selected_option)>
+
+Print a <SELECT> list of the standard record status options.  Set
+$selected_option to make one the selected option.
+
+
+=item * B<DisplayQueryResult(several key value parameters)>
+
+This method executies the supplied SQL query and prints the result as
+an HTML table.  The resultset can also be returned via the reference
+parameter resultset_ref.  This should probably be updated to use the
+more granular methods that follow.  Parameters:
+
+sql_query => SQL query that will yield the resultset to display
+url_cols_ref => a reference to a URL columns hash to be passed to ShowTable
+hidden_cols_ref => a reference to a hash containing hidden columns
+row_color_scheme_ref => reference to a row color scheme structure
+printable_table => set to 1 if the table should be suitable for printing
+max_widths => hash of maximum widths
+resultset_ref = reference to a resultset structure that gets returned
+
+
+=item * B<fetchNextRow>
+
+
+=item * B<fetchNextRowOld>
+
+
+=item * B<decodeDataType>
+
+
+=item * B<fetchResultSet>
+
+
+=item * B<displayResultSet>
+
+
+=item * B<displayResultSetControls>
+
+
+=item * B<readResultSet>
+
+
+=item * B<writeResultSet>
+
+
+=item * B<returnNextRow>
+
+
+=item * B<processTableDisplayControls>
+
+
+=item * B<convertSingletoTwoQuotes>
+
+
+
+
+=back
+
+=head2 BUGS
+
+Please send bug reports to the author
+
+=head2 AUTHOR
 
 Eric Deutsch <edeutsch@systemsbiology.org>
 
-=head1 SEE ALSO
+=head2 SEE ALSO
 
-perl(1).
+SBEAMS::Connection
 
 =cut
+
