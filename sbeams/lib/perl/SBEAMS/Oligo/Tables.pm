@@ -78,6 +78,7 @@ $TBOG_BIOSEQUENCE_SET       = "${mod}biosequence_set";
 $TBOG_BIOSEQUENCE           = "${mod}biosequence";
 $TBOG_BIOSEQUENCE_PROPERTY_SET   = "${mod}biosequence_property_set";
 $TBOG_OLIGO_HIT             = "${mod}oligo_hit";
+$TBOG_OLIGO                 = "${mod}oligo";
 $TBOG_OLIGO_ANNOTATION      = "${mod}oligo_annotation";
 $TBOG_OLIGO_TYPE            = "${mod}oligo_type";
 $TBOG_SELECTED_OLIGO        = "${mod}selected_oligo";
