@@ -32,6 +32,7 @@ use vars qw ($sbeams $sbeamsPROT $q
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
              $TESTONLY
              $current_contact_id $current_username
+             %spectra_written
             );
 
 
@@ -778,43 +779,45 @@ sub addMsmsSpectrumEntry {
     #print "Already found ($msms_spectrum_id)!  No need to reload\n";
     #print "($msms_spectrum_id)";
     return $msms_spectrum_id;
-  }
 
   #### Otherwise, extract some more info and build a statement to INSERT
-  my $start_scan = ${$result}{parameters}->{start_scan};
-  my $end_scan = ${$result}{parameters}->{end_scan};
-  my $n_peaks = ${$result}{parameters}->{n_peaks};
+  } else {
+    my $start_scan = ${$result}{parameters}->{start_scan};
+    my $end_scan = ${$result}{parameters}->{end_scan};
+    my $n_peaks = ${$result}{parameters}->{n_peaks};
 
-  my %rowdata;
-  $rowdata{fraction_id} = $fraction_id;
-  $rowdata{msms_spectrum_file_root} = $file_root;
-  $rowdata{start_scan} = $start_scan;
-  $rowdata{end_scan} = $end_scan;
-  $rowdata{n_peaks} = $n_peaks;
-  $msms_spectrum_id = $sbeams->insert_update_row(
-    insert=>1,
-    table_name=>$TBPR_MSMS_SPECTRUM,
-    rowdata_ref=>\%rowdata,
-    PK=>'msms_spectrum_id',
-    return_PK=>1,
-    verbose=>$VERBOSE,
-    testonly=>$TESTONLY,
-  );
+    my %rowdata;
+    $rowdata{fraction_id} = $fraction_id;
+    $rowdata{msms_spectrum_file_root} = $file_root;
+    $rowdata{start_scan} = $start_scan;
+    $rowdata{end_scan} = $end_scan;
+    $rowdata{n_peaks} = $n_peaks;
+    $msms_spectrum_id = $sbeams->insert_update_row(
+      insert=>1,
+      table_name=>$TBPR_MSMS_SPECTRUM,
+      rowdata_ref=>\%rowdata,
+      PK=>'msms_spectrum_id',
+      return_PK=>1,
+      verbose=>$VERBOSE,
+      testonly=>$TESTONLY,
+    );
 
-
-  #### Verify that we got the autogen key that was just INSERTed
-  unless ($msms_spectrum_id) {
-    die "ERROR: Failed to retreive PK msms_spectrum_id\n";
+    #### Verify that we got the autogen key that was just INSERTed
+    unless ($msms_spectrum_id) {
+      die "ERROR: Failed to retreive PK msms_spectrum_id\n";
+    }
   }
 
 
   #### Now insert all the mass,intensity pairs
   my ($i,$mass,$intensity);
   my $create_bcp_file = "YES";
-  $create_bcp_file = 0;
+  #$create_bcp_file = 0;
 
   if ($create_bcp_file) {
+    return $msms_spectrum_id if (defined($spectra_written{$msms_spectrum_id}));
     open(SPECFILE,">>/net/dblocal/data/proteomics/bcp/msms_spectrum_peak.txt");
+    $spectra_written{$msms_spectrum_id} = 1;
   }
 
   for ($i=0; $i<${$result}{parameters}->{n_peaks}; $i++) {
