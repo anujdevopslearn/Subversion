@@ -43,7 +43,9 @@ my %optionHash = (
 		'zzz' => 'rate',
 		'qqq' => 'time',
 		'uuu' => 'event No.' );
-    
+my ($day, $month, $year)  =(localtime)[3,4,5]; 
+my $time = $day.$month.$year;
+my $outFile; 
 main();
 exit;
 sub main
@@ -59,7 +61,14 @@ my $sql = "select filename, original_filepath from cytometry.dbo.fcs_run";
  my $idSql =  "select original_filepath + \'/\' + filename, fcs_run_id  from cytometry.dbo.fcs_run";
 %fileIDHash = $sbeams->selectTwoColumnHash($idSql);
   
-my $startDir = "/net/db/projects/StemCell/FCS/";
+my $startDir = $ARGV[0]; 
+
+print "$startDir\n";
+my ($tag) = $startDir =~ /^.*\/(.*)\/$/;
+print "$tag\n";
+
+$outFile = "/users/mkorb/cytometry/Load/". $time.$tag."_loadCyt.txt";
+open(LOG,"> $outFile"); 
 find(\&wanted, $startDir);
 doTheOtherFiles();
 
@@ -81,13 +90,13 @@ sub processFile
 {
   my $fcsFile = shift;
   return if $fcsFile !~ /\.fcs$/i;
-  return if $fcsFile !~ /\/\d{6}\//;
+  return if $fcsFile !~ /\/\d{4}/;
   my %hash;
-  open(LOG,">/users/mkorb/cytometry/loadCyt.txt"); 
+  
   if (-e $fcsFile)
   { 
     print "this is: $fcsFile\n";
-    print LOG "$fcsFile\n";
+    
     %hash = get_fcs_key_value_hash_from_file($fcsFile);
     $hash{File} = $fcsFile;
      my $fcsRunID = loadHash(\%hash);
@@ -95,6 +104,7 @@ sub processFile
    }
   else 
   {
+    print LOG "file does not exist:   $fcsFile\n";
     print " $fcsFile ===  could not find it\n";
   }
 }
@@ -104,9 +114,13 @@ sub loadHash
 {  
     my $hashRef = shift; 
     my ($dirName,$fileName) = $hashRef->{File} =~ /(.*)\/(.*)$/;
+    my $project_id;
+    $project_id = 397; 
+    $project_id = 409  if $hashRef->{File} =~ /IkB-GFP/i;
      if ($fileHash{$fileName} ne $dirName) 
      {
        my %insertRecord;
+       print LOG "inserting record:  $hashRef->{File}\n";     
        $insertRecord{fcs_run_Description} =  $hashRef->{'$SMNO'}." ". $hashRef->{'$CYT'}." ". $hashRef->{'$P4N'}." " . $hashRef->{'$P5N'};
        $insertRecord{sample_name} = $hashRef->{'$CELLS'};
        $insertRecord{project_designator} = $hashRef->{'$PROJ'};
@@ -115,9 +129,9 @@ sub loadHash
        $insertRecord{original_filepath} = $dirName;
        $insertRecord{run_date} =  $hashRef->{'$DATE'};
        $insertRecord{organism_id} = 2;
-       $insertRecord{project_id} = 397;
+       $insertRecord{project_id} = $project_id;
         my $record = insertRecord (%insertRecord);
-        print "$record\n";
+        print LOG "PK:   $record\n";
 #load up all the datapoints
         getDataPoints($hashRef->{File}, $record)
     }
@@ -129,6 +143,7 @@ sub loadHash
 	    my $fileID = $rows[0] if scalar(@rows == 1);;
 	     if ($fileID) 
        {
+         print LOG "File and datapoints already exist:  $hashRef->{File} \n";
          delete $fileIDHash{$hashRef->{File}};
          return;
        }
@@ -321,7 +336,7 @@ sub getDataPoints
   
   my $infile = shift; 
   my $filePK = shift;
-  ;
+  print LOG " added datapoints:  $infile\n";
 # Strip out all of the keyword-value pairs.
 	my @header = read_fcs_header($infile);	
 	my @keywords = get_fcs_keywords($infile,@header);
