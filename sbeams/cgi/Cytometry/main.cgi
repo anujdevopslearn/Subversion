@@ -22,7 +22,7 @@
 # Get the script set up with everything it will need
 ###############################################################################
 use strict;
-use Alcyt;
+
 use Text::Wrap;
 use Data::Dumper;
 use GD::Graph::xypoints;
@@ -33,7 +33,7 @@ use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
 use SBEAMS::Connection;
-
+use SBEAMS::Cytometry::Alcyt;
 use SBEAMS::Cytometry;
 use SBEAMS::Cytometry::Settings;
 use SBEAMS::Cytometry::Tables;

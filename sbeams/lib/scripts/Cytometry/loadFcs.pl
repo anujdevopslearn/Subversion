@@ -1,14 +1,14 @@
 #!/usr/local/bin/perl
 use strict;
 use File::Find;
-use lib qw (../perl ../../perl ../../../cgi/Cytometry);
-use Alcyt;
+use lib qw (../perl ../../perl);
+
 use SBEAMS::Connection;
 
 use SBEAMS::Cytometry;
 use SBEAMS::Cytometry::Settings;
 use SBEAMS::Cytometry::Tables;
-
+use SBEAMS::Cytometry::Alcyt; 
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Tables;
