@@ -18,7 +18,7 @@
 ###############################################################################
 use strict;
 use lib qw (../../lib/perl);
-use vars qw ($q $sbeams $sbeamsMA $dbh $current_contact_id $current_username
+use vars qw ($q $sbeams $sbeamsMOD $dbh $current_contact_id $current_username
              $current_work_group_id $current_work_group_name
              $current_project_id $current_project_name
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
@@ -39,8 +39,8 @@ use SBEAMS::Microarray::TableInfo;
 
 $q = new CGI;
 $sbeams = new SBEAMS::Connection;
-$sbeamsMA = new SBEAMS::Microarray;
-$sbeamsMA->setSBEAMS($sbeams);
+$sbeamsMOD = new SBEAMS::Microarray;
+$sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 
@@ -63,21 +63,21 @@ sub main {
     $TABLE_NAME = $q->param('TABLE_NAME') || croak "TABLE_NAME not specified."; 
 
     croak "This TABLE_NAME=$TABLE_NAME cannot be managed by this program."
-      unless ($sbeamsMA->returnTableInfo($TABLE_NAME,"ManageTableAllowed"))[0] eq "YES";
+      unless ($sbeamsMOD->returnTableInfo($TABLE_NAME,"ManageTableAllowed"))[0] eq "YES";
 
-    ($CATEGORY) = $sbeamsMA->returnTableInfo($TABLE_NAME,"CATEGORY");
-    ($PROGRAM_FILE_NAME) = $sbeamsMA->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
-    ($DB_TABLE_NAME) = $sbeamsMA->returnTableInfo($TABLE_NAME,"DB_TABLE_NAME");
-    ($PK_COLUMN_NAME) = $sbeamsMA->returnTableInfo($TABLE_NAME,"PK_COLUMN_NAME");
-    @MENU_OPTIONS = $sbeamsMA->returnTableInfo($TABLE_NAME,"MENU_OPTIONS");
+    ($CATEGORY) = $sbeamsMOD->returnTableInfo($TABLE_NAME,"CATEGORY");
+    ($PROGRAM_FILE_NAME) = $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+    ($DB_TABLE_NAME) = $sbeamsMOD->returnTableInfo($TABLE_NAME,"DB_TABLE_NAME");
+    ($PK_COLUMN_NAME) = $sbeamsMOD->returnTableInfo($TABLE_NAME,"PK_COLUMN_NAME");
+    @MENU_OPTIONS = $sbeamsMOD->returnTableInfo($TABLE_NAME,"MENU_OPTIONS");
 
     #### Do the SBEAMS authentication and exit if a username is not returned
     exit unless ($current_username = $sbeams->Authenticate());
 
     #### Print the header, do what the program does, and print footer
-    $sbeamsMA->printPageHeader();
+    $sbeamsMOD->printPageHeader();
     processRequests();
-    $sbeamsMA->printPageFooter();
+    $sbeamsMOD->printPageFooter();
 
 } # end main
 
@@ -144,7 +144,7 @@ sub printOptions {
     }
 
     print "$LINESEPARATOR<P>";
-    $sbeamsMA->printPageFooter("CloseTables");
+    $sbeamsMOD->printPageFooter("CloseTables");
     showTable("WithOptions");
 
 } # end printOptions
@@ -163,9 +163,9 @@ sub printEntryForm {
     my $username;
 
     # Get the columns for this table
-    my @columns = $sbeamsMA->returnTableInfo($TABLE_NAME,"ordered_columns");
+    my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
     my %input_types = 
-      $sbeamsMA->returnTableInfo($TABLE_NAME,"input_types");
+      $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
 
     # Read the form values for each column
     foreach $element (@columns) {
@@ -496,7 +496,7 @@ sub printEntryForm {
        !;
 
 
-    $sbeamsMA->printPageFooter("CloseTables");
+    $sbeamsMOD->printPageFooter("CloseTables");
     showTable('',\%parameters);
 
 } # end printEntryForm
@@ -514,7 +514,7 @@ sub showTable {
     my $detail_level = $q->param('detail_level') || "BASIC";
 
     my ($main_query_part) =
-      $sbeamsMA->returnTableInfo($TABLE_NAME,$detail_level."Query",
+      $sbeamsMOD->returnTableInfo($TABLE_NAME,$detail_level."Query",
       $parameters_ref);
 
     my ($full_where_clause,$full_orderby_clause) = 
@@ -535,7 +535,7 @@ sub showTable {
     #print "<PRE>$sql_query\n\n</PRE>";
 
     my ($element,$value);
-    my %url_cols = $sbeamsMA->returnTableInfo($TABLE_NAME,"url_cols");
+    my %url_cols = $sbeamsMOD->returnTableInfo($TABLE_NAME,"url_cols");
 
     return $sbeams->displayQueryResult(sql_query=>$sql_query,
         url_cols_ref=>\%url_cols);
@@ -556,13 +556,13 @@ sub processEntryForm {
     my $tmp;
 
     # Get the columns for this table
-    my @columns = $sbeamsMA->returnTableInfo($TABLE_NAME,"ordered_columns");
+    my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
 
 
     # Check to see if there is a column which will allow a range of numbers
     # over which a multi-insert could be performed
     my ($multi_insert_column) = 
-      $sbeamsMA->returnTableInfo($TABLE_NAME,"MULTI_INSERT_COLUMN");
+      $sbeamsMOD->returnTableInfo($TABLE_NAME,"MULTI_INSERT_COLUMN");
 
 
     # Read the form values for each column
@@ -587,7 +587,7 @@ sub processEntryForm {
 
     # Check for missing required information
     my @required_columns = 
-      $sbeamsMA->returnTableInfo($TABLE_NAME,"required_columns");
+      $sbeamsMOD->returnTableInfo($TABLE_NAME,"required_columns");
     if (@required_columns) {
       my $error_message;
       foreach $element (@required_columns) {
@@ -605,9 +605,9 @@ sub processEntryForm {
 
 
     my @data_columns = 
-      $sbeamsMA->returnTableInfo($TABLE_NAME,"data_columns");
+      $sbeamsMOD->returnTableInfo($TABLE_NAME,"data_columns");
     my %input_types = 
-      $sbeamsMA->returnTableInfo($TABLE_NAME,"input_types");
+      $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
 
 
     # Multi-Insert logic.  In certain cases, we'll allow the user to specify
@@ -723,7 +723,7 @@ sub processEntryForm {
 
         # Check for an existing record that this would duplicate
         my @key_columns = 
-          $sbeamsMA->returnTableInfo($TABLE_NAME,"key_columns");
+          $sbeamsMOD->returnTableInfo($TABLE_NAME,"key_columns");
         my %unique_values;
         if (@key_columns) {
           foreach $element (@key_columns) {
