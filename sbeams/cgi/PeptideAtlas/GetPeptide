@@ -587,7 +587,7 @@ sub handle_request {
                 print "&nbsp;&nbsp;&nbsp;&nbsp;";
                 print "Proteins:&nbsp;&nbsp;&nbsp;";
                 foreach my $k ( keys %tmp_hash) {
-                    print "$k &nbsp;&nbsp;&nbsp;";
+                    print "<A HREF=\"$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$parameters{atlas_build_id}&protein_name=$k&action=QUERY\">$k</A> &nbsp;&nbsp;&nbsp;";
                 } 
                 print "<BR><BR>";
             }
