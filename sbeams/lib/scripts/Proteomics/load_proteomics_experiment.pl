@@ -544,9 +544,13 @@ sub loadProteomicsExperiment {
       }
       print "Adding fraction '$element' to database\n";
       my $tmp = $element;
-      $tmp =~ s/$experiment_tag//;
-      $tmp =~ /^.*?(\d+).*?$/;
-      my $fraction_number = $1;
+      if ($tmp =~ /^$experiment_tag.+$/) {
+        $tmp =~ s/$experiment_tag//;
+      }
+      my $fraction_number;
+      if ($tmp =~ /^.*?(\d+).*?$/) {
+        $fraction_number = $1;
+      }
 
       my %rowdata;
       $rowdata{experiment_id} = $experiment_id;
