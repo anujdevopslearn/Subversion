@@ -19,8 +19,9 @@ use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::TableInfo;
 
-use SBEAMS::Proteomics::Settings;
-use SBEAMS::Proteomics::TableInfo;
+#### Commented out because it was forcing SBEAMS_SUBDIR in load_BSS.pl
+#use SBEAMS::Proteomics::Settings;
+#use SBEAMS::Proteomics::TableInfo;
 
 
 ###############################################################################
