@@ -377,14 +377,18 @@ sub print_summary_tab {
 
   #### Print out some information about this project
   print qq~
-	<H1>Summary of $project_name (ID \#$project_id):</H1>
-  <B><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=$project_id">[Edit Project Description]</A></B><BR>
-	<TABLE WIDTH="100%" BORDER=0>
-	<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
-	             <TD COLSPAN="2" WIDTH="100%"><B>PI: </B>$pi_first_name $pi_last_name</TD></TR>
-	<TR><TD></TD><TD COLSPAN="2" WIDTH="100%"><B>Status:</B> $project_status</TD></TR>
-	<TR><TD></TD><TD COLSPAN="2"><B>Project Tag:</B> $project_tag</TD></TR>
-	<TR><TD></TD><TD COLSPAN="2"><B>Description:</B>$project_desc</TD></TR>
+
+<H1>Summary of $project_name (ID \#$project_id):</H1>
+<B>
+<A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project&project_id=$project_id">[Edit Project Description]</A>
+</B><BR>
+
+<TABLE WIDTH="100%" BORDER=0>
+<TR><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
+    <TD COLSPAN="2" WIDTH="100%"><B>PI: </B>$pi_first_name $pi_last_name</TD></TR>
+<TR><TD></TD><TD COLSPAN="2" WIDTH="100%"><B>Status:</B> $project_status</TD></TR>
+<TR><TD></TD><TD COLSPAN="2"><B>Project Tag:</B> $project_tag</TD></TR>
+<TR><TD></TD><TD COLSPAN="2"><B>Description:</B>$project_desc</TD></TR>
   ~;
 
   #### Get all the array information for this project
@@ -439,13 +443,13 @@ sub print_summary_tab {
   }
 
   print qq~
-      <TR><TD></TD><TD COLSPAN="2"><B>Array Requests: $n_array_requests</B></TD></TR>
-      <TR><TD></TD><TD COLSPAN="2"><B>Array Scans: $n_array_scans</B></TD></TR>
-     <TR><TD></TD><TD COLSPAN="2"><B>Array Quantitations: $n_quantitation_files</B></TD></TR>
-      <TR><TD></TD><TD COLSPAN="2"><B>Access Privileges:</B><A HREF="$CGI_BASE_DIR/ManageProjectPrivileges">[View/Edit]</A></TD></TR>    
-      <TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD></TR>
-      </TABLE>
-      $LINESEPARATOR
+<TR><TD></TD><TD COLSPAN="2"><B>Array Requests: $n_array_requests</B></TD></TR>
+<TR><TD></TD><TD COLSPAN="2"><B>Array Scans: $n_array_scans</B></TD></TR>
+<TR><TD></TD><TD COLSPAN="2"><B>Array Quantitations: $n_quantitation_files</B></TD></TR>
+<TR><TD></TD><TD COLSPAN="2"><B>Access Privileges:</B><A HREF="$CGI_BASE_DIR/ManageProjectPrivileges">[View/Edit]</A></TD></TR>    
+<TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD></TR>
+</TABLE>
+$LINESEPARATOR
   ~;
 
 ####  Project Status Section ####
@@ -475,25 +479,24 @@ SELECT	A.array_id,A.array_name,
  ORDER BY A.array_name,AR.array_request_id,ARSL.array_request_slide_id
         ~;
 
-	my $base_url = "$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=";
-	my %url_cols = ('array_name' => "${base_url}array&array_id=%0V",
-									'date_requested' => "$CGI_BASE_DIR/Microarray/SubmitArrayRequest.cgi?TABLE_NAME=array_request&array_request_id=%2V",
-									'date_printed' => "${base_url}printing_batch&printing_batch_id=%5V", 
-									'date_hybridized' => "${base_url}hybridization&hybridization_id=%7V", 
-									'date_scanned' => "${base_url}array_scan&array_scan_id=%9V", 
-									'date_quantitated' => "${base_url}array_quantitation&array_quantitation_id=%12V", 
-									);
+  my $base_url = "$CGI_BASE_DIR/Microarray/ManageTable.cgi?TABLE_NAME=";
+  my %url_cols = ('array_name' => "${base_url}array&array_id=%0V",
+		  'date_requested' => "$CGI_BASE_DIR/Microarray/SubmitArrayRequest.cgi?TABLE_NAME=array_request&array_request_id=%2V",
+		  'date_printed' => "${base_url}printing_batch&printing_batch_id=%5V", 
+		  'date_hybridized' => "${base_url}hybridization&hybridization_id=%7V", 
+		  'date_scanned' => "${base_url}array_scan&array_scan_id=%9V", 
+		  'date_quantitated' => "${base_url}array_quantitation&array_quantitation_id=%12V", 
+		  );
 
-	my %hidden_cols = ('array_id' => 1,
-										 'array_request_id' => 1,
-										 'printing_batch_id' => 1,
-										 'hybridization_id' => 1,
-										 'array_scan_id' => 1,
-										 'array_quantitation_id' => 1,
-										 );
-
-	return $sbeams->displayQueryResult(sql_query=>$sql,
-          url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols);
+  my %hidden_cols = ('array_id' => 1,
+		     'array_request_id' => 1,
+		     'printing_batch_id' => 1,
+		     'hybridization_id' => 1,
+		     'array_scan_id' => 1,
+		     'array_quantitation_id' => 1,
+		     );
+  return $sbeams->displayQueryResult(sql_query=>$sql,
+				     url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols);
 }
 
 
@@ -510,37 +513,41 @@ sub print_miame_status_tab {
   ## Define standard variables
 
   print qq!
-      <H1>MIAME Status:</H1>
-      <IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="100%" HEIGHT="1"><BR>
-			<A HREF="MIAMEStatus.cgi?CATEGORY=all">Complete MIAME Details for this Project</A>
-			<TABLE CELLSPACING="5">
-        <TR><TD></TD></TR>
-	<TR>
-	<TD>Experiment Design</TD>
-	<TD><A HREF="MIAMEStatus.cgi?CATEGORY=experiment_design">Detailed Information</A></TD>
-	</TR>
-	<TR>
-	<TD>Array Design</TD>
-	<TD><A HREF="MIAMEStatus.cgi?CATEGORY=array_design">Detailed Information</A></TD>
-	</TR>
-	<TR>
-	<TD>Sample Information</TD>
-	<TD><A HREF="MIAMEStatus.cgi?CATEGORY=sample_information">Detailed Information</A></TD>
-	</TR>
-	<TR>
-	<TD>Labeling and Hybridization</TD>
-	<TD><A HREF="MIAMEStatus.cgi?CATEGORY=labeling_and_hybridization">Detailed Information</A></TD>
-	</TR>
-	<TR>
-	<TD>Measurements</TD>
-	<TD><A HREF="MIAMEStatus.cgi?CATEGORY=measurements">Detailed Information</A></TD>
-	</TR>
-        <TR><TD></TD><TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD></TR>
-      </TABLE><BR>
-			<B>Links</B><BR>
-      <A HREF="http://www.mged.org/Workgroups/MIAME/miame.html" target="_blank">-MIAME Website</A><BR>
-      <A HREF="../../doc/Microarray/MIAME_checklist.doc">-Download MIAME Checklist</A>
-			$LINESEPARATOR
+
+<H1>MIAME Status:</H1>
+<IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="100%" HEIGHT="1"><BR>
+<A HREF="MIAMEStatus.cgi?CATEGORY=all">Complete MIAME Details for this Project</A>
+<TABLE CELLSPACING="5">
+<TR><TD></TD></TR>
+<TR>
+  <TD>Experiment Design</TD>
+  <TD><A HREF="MIAMEStatus.cgi?CATEGORY=experiment_design">Detailed Information</A></TD>
+</TR>
+<TR>
+  <TD>Array Design</TD>
+  <TD><A HREF="MIAMEStatus.cgi?CATEGORY=array_design">Detailed Information</A></TD>
+</TR>
+<TR>
+  <TD>Sample Information</TD>
+  <TD><A HREF="MIAMEStatus.cgi?CATEGORY=sample_information">Detailed Information</A></TD>
+</TR>
+<TR>
+  <TD>Labeling and Hybridization</TD>
+  <TD><A HREF="MIAMEStatus.cgi?CATEGORY=labeling_and_hybridization">Detailed Information</A></TD>
+</TR>
+<TR>
+  <TD>Measurements</TD>
+  <TD><A HREF="MIAMEStatus.cgi?CATEGORY=measurements">Detailed Information</A></TD>
+</TR>
+<TR>
+  <TD></TD>
+  <TD><IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="20" HEIGHT="1"></TD>
+</TR>
+</TABLE><BR>
+<B>Links</B><BR>
+<A HREF="http://www.mged.org/Workgroups/MIAME/miame.html" target="_blank">-MIAME Website</A><BR>
+<A HREF="../../doc/Microarray/MIAME_checklist.doc">-Download MIAME Checklist</A>
+$LINESEPARATOR
       !;
   return;
 }
@@ -607,15 +614,15 @@ sub print_management_tab {
   }
 
   print qq~
-      <H1>Project Management:</H1>
-      <IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="100%" HEIGHT="1">
+<H1>Project Management:</H1>
+<IMG SRC="$HTML_BASE_DIR/images/space.gif" WIDTH="100%" HEIGHT="1">
   ~;
 
   print qq~
-      <FORM NAME="requests">
-      <TABLE>
-        <TR><TD><B>Array Requests</B></TD></TR>
-        <TR><TD><SELECT NAME="chooser">
+<FORM NAME="requests">
+<TABLE>
+<TR><TD><B>Array Requests</B></TD></TR>
+<TR><TD><SELECT NAME="chooser">
   ~;
   
   foreach my $key(keys %array_requests) {
@@ -623,20 +630,22 @@ sub print_management_tab {
   }
 
   print qq~
-        </SELECT></TD></TR>
-        <TR><TD>
-	<INPUT TYPE="button" name="arButton" value="Go To Record" onClick="viewRequest('old')">
-	<INPUT TYPE="button" name="newARButton" value="Add New Record" onClick="viewRequest('new')">
-	</TD></TR>
-      </TABLE>
-      </FORM>
+</SELECT></TD></TR>
+<TR>
+  <TD>
+  <INPUT TYPE="button" name="arButton" value="Go To Record" onClick="viewRequest('old')">
+  <INPUT TYPE="button" name="newARButton" value="Add New Record" onClick="viewRequest('new')">
+  </TD>
+</TR>
+</TABLE>
+</FORM>
 	
-      <BR>
+<BR>
       
-      <FORM NAME="images">
-      <TABLE>
-        <TR><TD><B>Array Images</B></TD></TR>
-        <TR><TD><SELECT name="chooser">
+<FORM NAME="images">
+<TABLE>
+<TR><TD><B>Array Images</B></TD></TR>
+<TR><TD><SELECT name="chooser">
         ~;
   
   foreach my $key(keys %array_scans) {
@@ -646,20 +655,22 @@ sub print_management_tab {
   }
   
   print qq~
-        </SELECT></TD></TR>
-        <TR><TD>
-	<INPUT TYPE="button"name="aiButton" value="Go To Record" onClick="viewImage('old')">
-	<INPUT TYPE="button"name="newAIButton" value="Add New Record" onClick="viewImage('new')">
-	</TD></TR>
-      </TABLE>
-      </FORM>
+</SELECT></TD></TR>
+<TR>
+  <TD>
+  <INPUT TYPE="button"name="aiButton" value="Go To Record" onClick="viewImage('old')">
+  <INPUT TYPE="button"name="newAIButton" value="Add New Record" onClick="viewImage('new')">
+  </TD>
+</TR>
+</TABLE>
+</FORM>
       
-      <BR>
+<BR>
 
-      <FORM NAME="quantitations">
-      <TABLE>
-        <TR><TD><B>Array Quantitation</B></TD></TR>
-        <TR><TD><SELECT name="chooser">
+<FORM NAME="quantitations">
+<TABLE>
+<TR><TD><B>Array Quantitation</B></TD></TR>
+<TR><TD><SELECT name="chooser">
         ~;
 
   foreach my $key (keys %quantitation_files) {
@@ -668,14 +679,16 @@ sub print_management_tab {
       print qq~ <OPTION value="$key">$name ~;
   }
   print qq~
-        </SELECT></TD></TR>
-        <TR><TD>
-	<INPUT TYPE="button"name="aqButton"value="Go to Record" onClick="viewQuantitation('old')">
-	<INPUT TYPE="button"name="newAQButton"value="Add New Record" onClick="viewQuantitation('new')">
-	</TD></TR>
-      </TABLE>
-      </FORM>
-    $LINESEPARATOR
+</SELECT></TD></TR>
+<TR>
+  <TD>
+  <INPUT TYPE="button"name="aqButton"value="Go to Record" onClick="viewQuantitation('old')">
+  <INPUT TYPE="button"name="newAQButton"value="Add New Record" onClick="viewQuantitation('new')">
+  </TD>
+</TR>
+</TABLE>
+</FORM>
+$LINESEPARATOR
   ~;
   return;
 }
@@ -699,181 +712,214 @@ sub print_data_analysis_tab {
   my $output_dir = "/net/arrays/Pipeline/output/project_id/".$project_id;
   my @pdf_list = glob("$output_dir/*.pdf");
   my @log_list = glob("$output_dir/*.log");
-	my @sig_list = glob("$output_dir/*.sig");
-	my @clone_list = glob("$output_dir/*.clone");
-	my @merge_list = glob("$output_dir/*.merge");
-	my @rep_list = glob("$output_dir/*.rep");
-	my @matrix_list = glob("$output_dir/matrix_output");
-	my @zip_file = glob ("$output_dir/*.zip");
-	my @tav_list = glob ("$output_dir/*.tav");
+  my @sig_list = glob("$output_dir/*.sig");
+  my @clone_list = glob("$output_dir/*.clone");
+  my @merge_list = glob("$output_dir/*.merge");
+  my @rep_list = glob("$output_dir/*.rep");
+  my @matrix_list = glob("$output_dir/matrix_output");
+  my @zip_file = glob ("$output_dir/*.zip");
+  my @tav_list = glob ("$output_dir/*.tav");
 
   print qq~
-      <H1>Data Analysis:</H1>
-      <UL>
-        <LI><A HREF="ProcessProject.cgi">Submit a New Job to the Pipeline</A>
-	<LI><A HREF="http://db.systemsbiology.net/software/ArrayProcess/" TARGET="_blank">What is the Data Processing Pipeline?</A>
-      </UL>
-			$LINESEPARATOR
+<H1>Data Analysis:</H1>
+<UL>
+  <LI><A HREF="ProcessProject.cgi">Submit a New Job to the Pipeline</A>
+  <LI><A HREF="http://db.systemsbiology.net/software/ArrayProcess/" TARGET="_blank">What is the Data Processing Pipeline?</A>
+</UL>
+$LINESEPARATOR
       ~;
 
 	## Display TAV Options if there are such files
 	if ($tav_list[0]) {
 	print qq~
-		<FORM NAME="tavForm" METHOD="GET" ACTION="http://db.systemsbiology.net:8080/microarray/sbeams">
-		<INPUT TYPE="hidden" NAME="project_id" VALUE="">
-		<INPUT TYPE="hidden" NAME="selectedFiles" VALUE="">
-		<INPUT TYPE="hidden" NAME="tab" VALUE="data_analysis">
-     <TABLE>
-		 <TR VALIGN="center"><TD><B>MeV Files</B></TD></TR>
-		 <TR>
-		   <TD>
-		   <SELECT NAME="tavChooser" MULTIPLE SIZE="10">
-		 ~;
+<FORM NAME="tavForm" METHOD="GET" ACTION="http://db.systemsbiology.net:8080/microarray/sbeams">
+<INPUT TYPE="hidden" NAME="project_id" VALUE="">
+<INPUT TYPE="hidden" NAME="selectedFiles" VALUE="">
+<INPUT TYPE="hidden" NAME="tab" VALUE="data_analysis">
+<TABLE>
+<TR VALIGN="center"><TD><B>MeV Files</B></TD></TR>
+<TR>
+  <TD>
+  <SELECT NAME="tavChooser" MULTIPLE SIZE="10">
+        ~;
 	foreach my $tav(@tav_list) {
-	    my $temp = $tav;
-	    $temp=~s(^.*/)();
-	    print qq~<OPTION value="$temp">$temp~;
-	}
+	  my $temp = $tav;
+	  $temp=~s(^.*/)();
+	  print qq~<OPTION value="$temp">$temp~;
+        }
 	print qq~
-	           </SELECT>
-		   </TD>
-		   <TD>
-		   <A HREF="http://www.tigr.org/software/tm4/mev.html" TARGET="_blank"><IMG SRC="../../images/ma_mev_logo.gif"></A>
-		   </TD>
-		 </TR>
-		 <TR>
-		   <TD>
-		   <INPUT TYPE="button" name="mevButton" value="View Selected Files in MeV" onClick="Javascript:startMev($project_id)">
-		   </TD>
-		 </TR>
-		 <TR><TD></TD></TR>
-		</TABLE>
-		</FORM>
-		 ~;
+  </SELECT>
+  </TD>
+  <TD>
+  <A HREF="http://www.tigr.org/software/tm4/mev.html" TARGET="_blank"><IMG SRC="../../images/ma_mev_logo.gif"></A>
+  </TD>
+</TR>
+<TR>
+  <TD>
+  <INPUT TYPE="button" name="mevButton" value="View Selected Files in MeV" onClick="Javascript:startMev($project_id)">
+  </TD>
+</TR>
+<TR><TD></TD></TR>
+</TABLE>
+</FORM>
+~;
+      }
+
+      print qq~
+<FORM NAME="outputFiles" METHOD="POST">
+<TABLE>
+      ~;
+
+  ## Display ZIP file Options if there are such files
+  if ($zip_file[0]){
+      $zip_file[0]=~ s(^.*/)();
+      print qq~
+<TR>
+  <TD>
+  <A HREF="ViewFile.cgi?action=download&FILE_NAME=$zip_file[0]"><B>Download zipped file of entire project directory</B></A>
+  </TD>
+</TR>
+ <TR><TD></TD></TR>
+ ~;
   }
 
-  print qq~
-	  <FORM NAME="outputFiles" METHOD="POST">
-     <TABLE>
-		 ~;
-
-	## Display ZIP file Options if there are such files
-	if ($zip_file[0]){
-			$zip_file[0]=~ s(^.*/)();
-			print qq~
-		 <TR><TD><A HREF="ViewFile.cgi?action=download&FILE_NAME=$zip_file[0]"><B>Download zipped file of entire project directory</B></A></TD></TR>
-		 <TR><TD></TD></TR>
-		 ~;
-	}
-
-	## Display Rep File Options if there are such files
-	if ($rep_list[0]){
-	print qq~
-		   <TR VALIGN="center"><TD><B>Rep Files</B></TD></TR>
-		   <TR><TD><SELECT NAME="repChooser">
-			 ~;
-	foreach my $rep(@rep_list) {
-			my $temp = $rep;
-			$temp =~ s(^.*/)();
-			print qq~<OPTION value="$temp">$temp~;
-	}
-	print qq~
-	 		 </SELECT></TD></TR>
-			 <TR>
-			  <TD><INPUT TYPE="button" name="repButton" value="download" onClick="Javascript:actionRepFile()"></TD>
-			 </TR>
-		   <TR><TD></TD></TR>
-			 ~;
+  ## Display Rep File Options if there are such files
+  if ($rep_list[0]){
+    print qq~
+<TR VALIGN="center"><TD><B>Rep Files</B></TD></TR>
+<TR>
+  <TD>
+  <SELECT NAME="repChooser">
+~;
+    foreach my $rep(@rep_list) {
+      my $temp = $rep;
+      $temp =~ s(^.*/)();
+      print qq~<OPTION value="$temp">$temp~;
+    }
+    print qq~
+  </SELECT>
+  </TD>
+</TR>
+<TR>
+  <TD><INPUT TYPE="button" name="repButton" value="download" onClick="Javascript:actionRepFile()"></TD>
+</TR>
+<TR><TD></TD></TR>
+~;
   }
 
-	## Display Merge File  Options if there are such files
-	if ($merge_list[0]) {
-	print qq~
-		   <TR><TD><B>Merge Files</B></TD></TR>
-			 <TR><TD><SELECT NAME="mergeChooser">
+  ## Display Merge File  Options if there are such files
+  if ($merge_list[0]) {
+    print qq~
+<TR>
+  <TD><B>Merge Files</B></TD>
+</TR>
+<TR>
+  <TD>
+  <SELECT NAME="mergeChooser">
 			 ~;
-	foreach my $merge(@merge_list) {
-			my $temp = $merge;
-			$temp =~ s(^.*/)();
-			print qq~<OPTION value="$temp">$temp~;
-	}
-	print qq~
-			 </SELECT></TD></TR>
-			 <TR>
-			  <TD><INPUT TYPE="button" name="repButton" value="download" onClick="Javascript:actionMergeFile()"></TD>
-			 </TR>
-		   <TR><TD></TD></TR>
-			 ~;
+    foreach my $merge(@merge_list) {
+	my $temp = $merge;
+	$temp =~ s(^.*/)();
+	print qq~<OPTION value="$temp">$temp~;
+    }
+    print qq~
+  </SELECT>
+  </TD>
+</TR>
+<TR>
+  <TD><INPUT TYPE="button" name="repButton" value="download" onClick="Javascript:actionMergeFile()"></TD>
+</TR>
+<TR><TD></TD></TR>
+  ~;
   }
 	
-	## Display Clone File Options if there are such files
-	if ($clone_list[0]) {
-	print qq~
-		   <TR><TD><B>Clone Files</B></TD></TR>
-			 <TR><TD><SELECT NAME="cloneChooser">
-			 ~;
-	foreach my $clone(@clone_list) {
-			my $temp = $clone;
-			$temp =~ s(^.*/)();
-			print qq~ <OPTION value="$temp">$temp~;
-	}
-	print qq~
-			 </SELECT></TD></TR>
-			 <TR>
-			  <TD><INPUT TYPE="button" name="repButton" value="download" onClick="Javascript:actionCloneFile()"></TD>
-			 </TR>
-		   <TR><TD></TD></TR>
-			 ~;
+  ## Display Clone File Options if there are such files
+  if ($clone_list[0]) {
+    print qq~
+<TR>
+  <TD><B>Clone Files</B></TD>
+</TR>
+<TR>
+  <TD>
+  <SELECT NAME="cloneChooser">
+    ~;
+    foreach my $clone(@clone_list) {
+      my $temp = $clone;
+      $temp =~ s(^.*/)();
+      print qq~ <OPTION value="$temp">$temp~;
+    }
+    print qq~
+  </SELECT>
+  </TD>
+</TR>
+<TR>
+  <TD>
+  <INPUT TYPE="button" name="repButton" value="download" onClick="Javascript:actionCloneFile()">
+  </TD>
+</TR>
+<TR><TD></TD></TR>
+  ~;
   }
 
-	## Display Sig File Options if there are such files
-	if ($sig_list[0]) {
-	print qq~
-		   <TR><TD><B>Sig Files</B></TD></TR>
-			 <TR><TD><SELECT NAME="sigChooser">
-			 ~;
-	foreach my $sig(@sig_list) {
-			my $temp = $sig;
-			$temp =~ s(^.*/)();
-			print qq~ <OPTION value="$temp">$temp~;
-	}
-	print qq~
-			</SELECT></TD></TR>
-			 <TR>
-			  <TD><INPUT TYPE="button" name="repButton" value="download" onClick="Javascript:actionSigFile()"></TD>
-			 </TR>
-		   <TR><TD></TD></TR>
-			 ~;
+  ## Display Sig File Options if there are such files
+  if ($sig_list[0]) {
+    print qq~
+<TR>
+  <TD><B>Sig Files</B></TD>
+</TR>
+<TR>
+  <TD>
+  <SELECT NAME="sigChooser">
+    ~;
+    foreach my $sig(@sig_list) {
+      my $temp = $sig;
+      $temp =~ s(^.*/)();
+      print qq~ <OPTION value="$temp">$temp~;
+    }
+    print qq~
+  </SELECT>
+  </TD>
+</TR>
+<TR>
+  <TD><INPUT TYPE="button" name="repButton" value="download" onClick="Javascript:actionSigFile()"></TD>
+</TR>
+<TR><TD></TD></TR>
+  ~;
   }
 
-	## Display Log Fil Options if there are such files
-	if ($log_list[0]) {
-	print qq~
-       <TR><TD><B>Log Files</B></TD></TR>
-       <TR><TD><SELECT NAME="logChooser">
+  ## Display Log Fil Options if there are such files
+  if ($log_list[0]) {
+    print qq~
+<TR><TD><B>Log Files</B></TD></TR>
+<TR>
+  <TD>
+  <SELECT NAME="logChooser">
   ~;
 
-  foreach my $log(@log_list) {
+    foreach my $log(@log_list) {
       my $temp = $log;
       $temp =~ s(^.*/)();
       print qq~ <OPTION value="$temp">$temp~;
+    }
+    print qq~
+  </SELECT>
+  </TD>
+</TR>
+<TR>
+  <TD>
+  <INPUT TYPE="button" name="logButtonView" value="view" onClick="Javascript:actionLogFile('view')">
+  <INPUT TYPE="button" name="logButtonGet" value="download" onClick="Javascript:actionLogFile('get')">
+  </TD>
+</TR>
+  ~;
   }
 
+  ## Finish up table
   print qq~
-       </SELECT></TD></TR>
-       <TR>
-         <TD><INPUT TYPE="button" name="logButtonView" value="view" onClick="Javascript:actionLogFile('view')">
-				 <INPUT TYPE="button" name="logButtonGet" value="download" onClick="Javascript:actionLogFile('get')"></TD>
-       </TR>
-			 ~;
-	}
-
-	## Finish up table
-	print qq~
-     </TABLE>
-     </FORM>
-     $LINESEPARATOR
-     ~;
+</TABLE>
+</FORM>
+$LINESEPARATOR
+~;
 
   return;
 }
@@ -888,6 +934,5 @@ sub print_permissions_tab {
   my $ref_parameters = $args{'ref_parameters'}
     || die "ref_parameters not passed";
   
-  $sbeams->print_permissions_table(ref_parameters=>$ref_parameters,
-																	 no_permissions=>1);
+  $sbeams->print_permissions_table(ref_parameters=>$ref_parameters, no_permissions=>1);
 }
