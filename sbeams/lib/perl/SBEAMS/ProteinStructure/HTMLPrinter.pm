@@ -129,9 +129,6 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PS_domain_match_source"><nobr>&nbsp;&nbsp;&nbsp;Match Sources</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PS_dbxref"><nobr>&nbsp;&nbsp;&nbsp;DB xRefs</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td>Testing:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PS_test_table"><nobr>&nbsp;&nbsp;&nbsp;Test Table</nobr></a></td></tr>
-	<tr><td>&nbsp;</td></tr>
 	<tr><td>Documentation:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Help?document=GetDomainHitsColumnDefinitions"><nobr>&nbsp;&nbsp;&nbsp;Column Definitions</nobr></a></td></tr>
       ~;
