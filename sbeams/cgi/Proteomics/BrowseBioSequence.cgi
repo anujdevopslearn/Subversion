@@ -233,7 +233,7 @@ sub handle_request {
   return if ($biosequence_name_clause eq '-1');
 
 
-  #### Build BIOSEQUENCE_NAME constraint
+  #### Build BIOSEQUENCE_GENE_NAME constraint
   my $biosequence_gene_name_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"BS.biosequence_gene_name",
     constraint_type=>"plain_text",
