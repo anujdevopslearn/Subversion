@@ -20,6 +20,7 @@ use Getopt::Long;
 use lib qw (../../perl);
 use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
+             $TESTONLY
             );
 
 use SBEAMS::Connection;
@@ -56,7 +57,7 @@ Options:
 EOU
 
 #### Process options
-unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
+unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly")) {
   print "$USAGE";
   exit;
 }
@@ -133,6 +134,7 @@ sub handle_request {
 
   #### Set the command-line options
   my $delete_existing = $OPTIONS{"delete_existing"} || 0;
+  $TESTONLY = $OPTIONS{"testonly"} || 0;
   $DATABASE = $OPTIONS{"database"} || $sbeams->getPHENOARRAY_DB();
 
 
@@ -150,14 +152,30 @@ sub handle_request {
   #}
 
 
+  #### First get some of the lookup table values
+  $sql = "SELECT coli_marker_name,coli_marker_id FROM $TBPH_COLI_MARKER ".
+    "WHERE record_status !='D'";
+  my %coli_marker_ids = $sbeams->selectTwoColumnHash($sql);
+
+  $sql = "SELECT yeast_selection_marker_tag,yeast_selection_marker_id ".
+    "FROM $TBPH_YEAST_SELECTION_MARKER WHERE record_status !='D'";
+  my %yeast_selection_marker_ids = $sbeams->selectTwoColumnHash($sql);
+
+  $sql = "SELECT yeast_origin_tag,yeast_origin_id ".
+    "FROM $TBPH_YEAST_ORIGIN WHERE record_status !='D'";
+  my %yeast_origin_ids = $sbeams->selectTwoColumnHash($sql);
+
+  my %undef_to_1 = (undef=>'1');
+
+
   #### Define the query to get data from plasmids_fm5
   $sql = qq~
 	SELECT 'B'+STRAIN_ID_,PLASMID_NA,VECTOR_,YEAST_ORIG,
                INSERT_GEN,COLI_STRAI,
                COLI_MARKE,YEAST_DELE,CLONED_BY_,DATE_,SOURCE_,REFERENCE_,
-               COMMENTS_
+               COMMENTS_,1 AS 'plasmid_type_id'
 	  FROM ${DATABASE}plasmids_fm5
-         ORDER BY STRAIN_ID_
+         ORDER BY CONVERT(int,STRAIN_ID_)
   ~;
 
 
@@ -166,22 +184,27 @@ sub handle_request {
     '0'=>'plasmid_strainID',
     '1'=>'plasmid_name',
     '2'=>'vector',
-    '3'=>'yeast_origin',
+    '3'=>'yeast_origin_id',
     '4'=>'plasmid_insert',
     '5'=>'coli_strain',
-    '6'=>'coli_marker',
-    '7'=>'yeast_selection_marker',
+    '6'=>'coli_marker_id',
+    '7'=>'yeast_selection_marker_id',
     '8'=>'cloned_by',
     '9'=>'cloned_date',
     '10'=>'source',
     '11'=>'reference',
     '12'=>'comment',
+    '13'=>'plasmid_type_id',
   );
 
 
   #### Define the transform map
   #### (see ~kdeutsch/SNPS/celera/bin/transfer_celera_to_SNP.pl)
   my %transform_map = (
+    '3' => \%yeast_origin_ids,
+    '6' => \%coli_marker_ids,
+    '7' => \%yeast_selection_marker_ids,
+    #'13' => \%undef_to_1,
   );
 
 
@@ -195,6 +218,7 @@ sub handle_request {
   print "\nTransferring plasmids_fm5 -> plasmid";
   $sbeams->transferTable(
     src_conn=>$sbeams,
+    #source_file=>"$FindBin::Bin/../../refdata/PhenoArray/GalitskiBaterialStrainsExport.tab",
     sql=>$sql,
     src_PK_name=>'STRAIN_ID_',
     src_PK_column=>'0',
@@ -205,10 +229,12 @@ sub handle_request {
     table_name=>"$TBPH_PLASMID",
     update=>1,
     update_keys_ref=>\%update_keys,
+    testonly=>$TESTONLY,
+    verbose=>$VERBOSE,
   );
 
 
-  print "\n"; 
+  print "\n";
 
 
   return;
