@@ -232,12 +232,82 @@ sub postFormHook {
 sub preUpdateDataCheck {
   my %args = @_;
 
+
   my $query_parameters_ref = $args{'parameters_ref'};
   my %parameters = %{$query_parameters_ref};
+  if ( uc($TABLE_NAME) eq "CY_FCS_RUN" )
+  {
+      return "Error: fcs_run_id not defined" if !$parameters{project_id};
+    my $errstr = checkPermission( fkey => 'project_id',
+                                  fval => $parameters{project_id},
+                                  pval => $parameters{fcs_run_id},
+                                  action => $parameters{action},
+                                  tname => $TABLE_NAME );
+
+    return ( $errstr ) if $errstr;
+  }
+  
+   if ( uc($TABLE_NAME) eq "CY_CYTOMETRY_SAMPLE" )
+  {
+      return "Error: fcs_run_id not defined" if !$parameters{project_id};
+
+    my $errstr = checkPermission( fkey => 'project_id',
+                                  fval => $parameters{project_id},
+                                  pval => $parameters{cytometry_sample_id},
+                                  action => $parameters{action},
+                                  tname => $TABLE_NAME );
+
+    return ( $errstr ) if $errstr;
+  }
+  
+  
+  
+  if ( uc($TABLE_NAME) eq "CY_SORT_ENTITY" )
+  {
+     return "Error: sort_entity_id not defined" if !$parameters{sort_entity_id};
+
+    my $errstr = checkPermission( fkey => 'sort_entity_id',
+                                  fval => $parameters{sort_entity_id},
+                                  pval => $parameters{sort_entity_id},
+                                  action => $parameters{action},
+                                  tname => $TABLE_NAME );
+
+    return ( $errstr ) if $errstr;
+  }
+
+ if ( uc($TABLE_NAME) eq "CY_SORT_TYPE" )
+  {
+    # Must have an array_id
+    return "Error: sort_type_id not defined" if !$parameters{sort_type_id};
+
+    my $errstr = checkPermission( fkey => 'sort_type_id',
+                                  fval => $parameters{sort_type_id},
+                                  pval => $parameters{sort_type_id},
+                                  action => $parameters{action},
+                                  tname => $TABLE_NAME );
+
+    return ( $errstr ) if $errstr;
+  }
 
 
+ if ( uc($TABLE_NAME) eq "CY_TISSUE_TYPE" )
+  {
+    
+    return "Error: tissue_type_id not defined" if !$parameters{tissue_type_id};
+
+    my $errstr = checkPermission( fkey => 'tissue_type_id',
+                                  fval => $parameters{tissue_type_id},
+                                  pval => $parameters{tissue_type_id},
+                                  action => $parameters{action},
+                                  tname => $TABLE_NAME );
+
+    return ( $errstr ) if $errstr;
+  }
+
+
+  
   #### If table XXXX
-  if ($TABLE_NAME eq "XXXX") {
+  elsif ($TABLE_NAME eq "XXXX") {
     return "An error of some sort $parameters{something} invalid";
   }
 

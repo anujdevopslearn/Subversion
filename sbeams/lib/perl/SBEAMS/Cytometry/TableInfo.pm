@@ -43,7 +43,103 @@ sub returnTableInfo {
     my @row;
     my $sql_query;
     my $result;
+    
+    if (uc($table_name) eq 'CY_FCS_RUN') {
+      if ( $info_key eq "projPermSQL" ) { 
+        my %projectSQL;
 
+        $projectSQL{fsql} = '';
+
+        $projectSQL{dbsql} =<<"        END";
+        SELECT project_id FROM $TBCY_FCS_RUN WHERE fcs_run_id = KEYVAL
+        END
+
+        return \%projectSQL
+      }
+    }
+    
+     if (uc($table_name) eq 'CY_CYTOMETRY_SAMPLE') {
+      if ( $info_key eq "projPermSQL" ) { 
+        my %projectSQL;
+
+        $projectSQL{fsql} = '';
+
+        $projectSQL{dbsql} =<<"        END";
+        SELECT project_id FROM $TBCY_CYTOMETRY_SAMPLE WHERE fcs_run_id = KEYVAL
+        END
+
+        return \%projectSQL
+      }
+    }
+    
+   
+     elsif (uc($table_name) eq 'CY_SORT_ENTITY') {
+      if ( $info_key eq "projPermSQL" ) { 
+        my %projectSQL;
+
+        $projectSQL{fsql} =<<"        END";
+        Select project_id from $TBCY_FCS_RUN FR
+        inner join $TBCY_SORT_ENTITY SE on 
+        FR.sort_entity_id = SE.sort_entity_id
+        where FR.fcs_run_id = KEYVAL
+        END
+
+       $projectSQL{dbsql} =<<"        END";
+        SELECT project_id FROM $TBCY_FCS_RUN fcsR
+        Join $TBCY_SORT_ENTITY se on fcsR.sort_entity_id = se.sort_entity_id 
+        where se.sort_entity_id =  KEYVAL
+        END
+
+        return \%projectSQL
+      }
+    }
+        
+      elsif (uc($table_name) eq 'CY_SORT_TYPE') {
+      if ( $info_key eq "projPermSQL" ) { 
+        my %projectSQL;
+
+        $projectSQL{fsql} =<< "        END";
+        Select project_id from $TBCY_FCS_RUN FR
+        inner join $TBCY_SORT_TYPE ST on 
+        FR.sort_type_id = ST.sort_type_id where 
+        fcs_run_id = KEYVAL
+        END
+
+        $projectSQL{dbsql} =<<"        END";
+        SELECT project_id FROM $TBCY_FCS_RUN fcsR
+        Join $TBCY_SORT_TYPE st on fcsR.sort_type_id = st.sort_type_id 
+        where st.sort_type_id =  KEYVAL
+        END
+
+        return \%projectSQL
+      }
+    }
+           
+      elsif (uc($table_name) eq 'CY_TISSUE_TYPE') {
+      if ( $info_key eq "projPermSQL" ) { 
+        my %projectSQL;
+
+        $projectSQL{fsql} =<< "        END";
+        Select project_id from $TBCY_FCS_RUN FR 
+        inner join $TBCY_TISSUE_TYPE TT 
+        on FR.tissue_type_id = TT.tissue_type_id 
+        where  fcs_run_id = KEYVAL
+        END
+
+        $projectSQL{dbsql} =<<"        END";
+        SELECT project_id FROM $TBCY_FCS_RUN fcsR
+        Join $TBCY_TISSUE_TYPE tt on fcsR.tissue_type_id = tt.tissue_type_id 
+        where tt.tissue_type_id =  KEYVAL
+        END
+
+        return \%projectSQL
+      }
+    }
+    
+    
+    
+    
+    
 
 ###############################################################################
 #
@@ -131,12 +227,114 @@ sub getParentProject {
   );
   return($project_id) if ($project_id);
 
+  
+    # We may well have this cached
+  return $parameters_ref->{project_id} if $parameters_ref->{project_id};
+
+  # Fetch SQL to retrieve project_id from table_name, if it is available.
+  my $sqlref = $self->returnTableInfo( $table_name, 'projPermSQL' );
+
+  # If we don't have it 
+  unless ( ref( $sqlref ) && $sqlref->{dbsql} ) {
+    print STDERR "dbsql not defined for $table_name\n";
+    return undef;
+  }
 
   #############################################################################
   #### Process actions for individual tables
 
   #### If table is xxxx
-  if ($table_name eq "xxxx") {
+  if (uc($table_name) eq "CY_FCS_RUN") {
+
+    #### If the user wants to INSERT, determine how it fits into project
+    if ($action eq 'INSERT') {
+      return undef;
+
+    #### Else for an UPDATE or DELETE, determine how it fits into project
+    } elsif ($action eq 'UPDATE' || $action eq 'DELETE') {
+      if ($parameters_ref->{fcs_run_id})
+      {
+        $sqlref->{dbsql} =~ s/KEYVAL/$parameters_ref->{fcs_run_id}/;
+        ( $project_id ) = $sbeams->selectOneColumn( $sqlref->{dbsql} );
+   
+      }
+    }
+    return($project_id) if ($project_id);
+  }
+    elsif (uc($table_name) eq "CY_CYTOMETRY_SAMPLE") {        
+        if ($action eq 'INSERT') {
+            return undef;
+        }
+        
+       #### Else for an UPDATE or DELETE, determine how it fits into project
+    elsif ($action eq 'UPDATE' || $action eq 'DELETE') {
+      if ($parameters_ref->{cytometry_sample_id})
+      {
+        $sqlref->{dbsql} =~ s/KEYVAL/$parameters_ref->{cytometry_sample_id}/;
+        ( $project_id ) = $sbeams->selectOneColumn( $sqlref->{dbsql} );
+   
+      }
+    }
+    return($project_id) if ($project_id);
+  }
+     
+    elsif (uc($table_name) eq "CY_SORT_ENTITY") {
+
+    #### If the user wants to INSERT, determine how it fits into project
+    if ($action eq 'INSERT') {
+      return undef;
+
+    #### Else for an UPDATE or DELETE, determine how it fits into project
+    } elsif ($action eq 'UPDATE' || $action eq 'DELETE') {
+      if ($parameters_ref->{sort_entity_id})
+      {
+        $sqlref->{dbsql} =~ s/KEYVAL/$parameters_ref->{sort_entity_id}/;
+        ( $project_id ) = $sbeams->selectOneColumn( $sqlref->{dbsql} );
+           
+      }
+    }
+       return($project_id) if ($project_id);
+  }
+  
+    elsif (uc($table_name) eq "CY_SORT_TYPE") {
+
+    #### If the user wants to INSERT, determine how it fits into project
+    if ($action eq 'INSERT') {
+      return undef;
+
+    #### Else for an UPDATE or DELETE, determine how it fits into project
+    } elsif ($action eq 'UPDATE' || $action eq 'DELETE') {
+      if ($parameters_ref->{sort_type_id})
+      {
+        $sqlref->{dbsql} =~ s/KEYVAL/$parameters_ref->{sort_type_id}/;
+        ( $project_id ) = $sbeams->selectOneColumn( $sqlref->{dbsql} );
+           
+      }
+    }
+       return($project_id) if ($project_id);
+  
+  }
+   elsif (uc($table_name) eq "CY_TISSUE_TYPE") {
+
+    #### If the user wants to INSERT, determine how it fits into project
+    if ($action eq 'INSERT') {
+      return undef;
+
+    #### Else for an UPDATE or DELETE, determine how it fits into project
+    } elsif ($action eq 'UPDATE' || $action eq 'DELETE') {
+      if ($parameters_ref->{tissue_type_id})
+      {
+        $sqlref->{dbsql} =~ s/KEYVAL/$parameters_ref->{tissue_type_id}/;
+        ( $project_id ) = $sbeams->selectOneColumn( $sqlref->{dbsql} );
+           
+      }
+    }
+       return($project_id) if ($project_id);
+   
+  }
+  
+  
+  elsif ($table_name eq "xxxx") {
 
     #### If the user wants to INSERT, determine how it fits into project
     if ($action eq 'INSERT') {
@@ -146,12 +344,11 @@ sub getParentProject {
 
     }
 
-    return($project_id) if ($project_id);
+    return ( $project_id ) ? $project_id : undef;
   }
 
-
   #### No information for this table so return undef
-  return;
+  return undef;
 
 }
 
