@@ -1,7 +1,20 @@
 #!/bin/csh
+
+###############################################################################
+# Program     : batch_update_driver_tables.pl
+# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
+# $Id$
 #
-# This script runs the reload of all configuration files from the top
+# Description : This script runs the reload of all configuration files
+#               from the top.
 #
+# SBEAMS is Copyright (C) 2000-2002 by Eric Deutsch
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
 
   set CONFDIR = "../../conf"
 
