@@ -60,7 +60,7 @@ my $mod = $DBPREFIX{ProteinStructure};
 $TB_ORGANISM                      = "${core}organism";
 
 $TBPS_BIOSEQUENCE_SET       = "${mod}biosequence_set";
-$TBPS_POLYMER_TYPE          = "${core}polymer_type";
+$TBPS_POLYMER_TYPE          = "$DBPREFIX{Microarray}polymer_type";
 $TBPS_DBXREF                = "${mod}dbxref";
 $TBPS_BIOSEQUENCE           = "${mod}biosequence";
 $TBPS_BIOSEQUENCE_PROPERTY_SET  = "${mod}biosequence_property_set";
