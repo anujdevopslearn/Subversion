@@ -802,6 +802,7 @@ sub deleteProteinSummary {
       table_name => 'protein_summary',
       table_child_relationship => \%table_child_relationship,
       delete_PKs => [ $element ],
+      delete_batch => 10000,
     );
   }
 
@@ -822,6 +823,7 @@ sub deleteRecordsAndChildren {
   my $table_child_relationship = $args{'table_child_relationship'}
     || die("table_child_relationship not passed");
   my $delete_PKs = $args{'delete_PKs'} || die("delete_PKs not passed");
+  my $delete_batch = $args{'delete_batch'} || 0;
 
   print "  Entering deleteRecordsAndChildren\n\n" if ($VERBOSE);
 
@@ -839,12 +841,17 @@ sub deleteRecordsAndChildren {
         #### If it's a plain child, determine my PKs and recurse requesting
         #### all references be deleted
         if ($child_type eq 'C') {
+
 	  my $sql = "
 	    SELECT ${child_table_name}_id
             FROM ${DATABASE}$child_table_name
             WHERE ${table_name}_id IN (".join(",",@{$delete_PKs}).")
           ";
+
 	  print "$sql\n\n" if ($VERBOSE > 1);
+	  print "SELECT 1 with ",scalar(@{$delete_PKs})," element IN\n\n"
+            if ($VERBOSE);
+
           my @child_PKs = $sbeams->selectOneColumn($sql);
 
 	  if (scalar(@child_PKs) > 0) {
@@ -853,6 +860,7 @@ sub deleteRecordsAndChildren {
               table_name => $child_table_name,
               table_child_relationship => $table_child_relationship,
               delete_PKs => \@child_PKs,
+              delete_batch => $delete_batch,
             );
 	  }
 
@@ -867,6 +875,8 @@ sub deleteRecordsAndChildren {
             AND ${child_table_name}_id IS NOT NULL
           ";
 	  print "$sql\n\n" if ($VERBOSE > 1);
+	  print "SELECT 2 with ",scalar(@{$delete_PKs})," element IN\n\n"
+            if ($VERBOSE);
           my @child_PKs = $sbeams->selectOneColumn($sql);
 
           #### Delete them
@@ -876,6 +886,7 @@ sub deleteRecordsAndChildren {
               table_name => $child_table_name,
               table_child_relationship => $table_child_relationship,
               delete_PKs => \@child_PKs,
+              delete_batch => $delete_batch,
             );
 	  }
 
@@ -895,13 +906,38 @@ sub deleteRecordsAndChildren {
   }
 
 
-  #### All children should be gone we hope, so delete
-  my $sql = "DELETE FROM ${DATABASE}$table_name WHERE ${table_name}_id IN (".
-    join(",",@{$delete_PKs}).")";
-  print "$sql\n\n" if ($VERBOSE > 1);
-  print "." unless ($QUIET || $VERBOSE);
-  $sbeams->executeSQL($sql) unless ($TESTONLY);
+  #### All children should be gone we hope, so finally delete these records
 
+  #### Get the number of records to delete and set the first and last
+  my $n_ids = scalar(@{$delete_PKs});
+  my $first_element = 0;
+  my $last_element = $n_ids - 1;
+
+  #### If the user requested to delete in batches, possibly reduce the last
+  if ($delete_batch && $n_ids > $delete_batch) {
+    $last_element = $delete_batch - 1;
+  }
+
+  #### While there are still records to delete, do it
+  while ($first_element < $n_ids) {
+    #### Get the records to delete in this batch
+    my @ids = @{$delete_PKs};
+    @ids = @ids[$first_element..$last_element];
+
+    #### Create the SQL and do the DELETE
+    my $sql = "DELETE FROM ${DATABASE}$table_name WHERE ${table_name}_id IN (".
+      join(",",@ids).")";
+    print "$sql\n\n" if ($VERBOSE > 1);
+    print "DELETE 1 with ",scalar(@ids)," element IN\n\n" if ($VERBOSE);
+    print "." unless ($QUIET || $VERBOSE);
+    $sbeams->executeSQL($sql) unless ($TESTONLY);
+
+    #### Update the first and last batch block pointers if relevant
+    last unless ($delete_batch);
+    $first_element += $delete_batch;
+    $last_element += $delete_batch;
+    $last_element = $n_ids - 1 if ($last_element > $n_ids - 1);
+  }
 
   return 1;
 
