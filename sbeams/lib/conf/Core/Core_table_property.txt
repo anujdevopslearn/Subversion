@@ -5,18 +5,18 @@ contact_type	Contact Type	infrastructure	YES	$TB_CONTACT_TYPE	contact_type_id		M
 contact	Contact	common	YES	$TB_CONTACT	contact_id		ManageTable.cgi?TABLE_NAME=contact	"contact,organization,contact_type,organization_type"	user_login
 privilege	Privilege	admin	NO	$TB_PRIVILEGE	privilege_id				
 record_status	Record Status	admin	NO	$TB_RECORD_STATUS	record_status_id				
-work_group	Work Group	admin	YES	$TB_WORK_GROUP	work_group_id		ManageTable.cgi?TABLE_NAME=work_group	"organization,organization_type,contact,contact_type,user_login,work_group,user_work_group,table_group_security,user_context,help_text"	user_work_group
-user_login	User Login	admin	YES	$TB_USER_LOGIN	user_login_id		ManageTable.cgi?TABLE_NAME=user_login	"project,organization,organization_type,contact,contact_type,user_login,work_group,user_work_group,table_group_security,user_context,help_text"	user_work_group
-user_work_group	User-Group Association	admin	YES	$TB_USER_WORK_GROUP	user_work_group_id		ManageTable.cgi?TABLE_NAME=user_work_group	"organization,organization_type,contact,contact_type,user_login,work_group,user_work_group,table_group_security,user_context,help_text"	contact
-table_group_security	Table Group Security	admin	YES	$TB_TABLE_GROUP_SECURITY	table_group_security_id		ManageTable.cgi?TABLE_NAME=table_group_security	"organization,organization_type,contact,contact_type,user_login,work_group,user_work_group,table_group_security,user_context,help_text"	
-user_context	User Context	rowprivate	YES	$TB_USER_CONTEXT	user_context_id		ManageTable.cgi?TABLE_NAME=user_context	"organization,organization_type,contact,contact_type,user_login,work_group,user_work_group,table_group_security,user_context,help_text"	
+work_group	Work Group	admin	YES	$TB_WORK_GROUP	work_group_id		ManageTable.cgi?TABLE_NAME=work_group	"organization,organization_type,contact,contact_type,user_login,work_group,user_work_group,table_group_security,user_context,help_text,user_project_permission,group_project_permission"	user_work_group
+user_login	User Login	admin	YES	$TB_USER_LOGIN	user_login_id		ManageTable.cgi?TABLE_NAME=user_login	"organization,organization_type,contact,contact_type,user_login,work_group,user_work_group,table_group_security,user_context,help_text,user_project_permission,group_project_permission"	user_work_group
+user_work_group	User-Group Association	admin	YES	$TB_USER_WORK_GROUP	user_work_group_id		ManageTable.cgi?TABLE_NAME=user_work_group	"organization,organization_type,contact,contact_type,user_login,work_group,user_work_group,table_group_security,user_context,help_text,user_project_permission,group_project_permission"	contact
+table_group_security	Table Group Security	admin	YES	$TB_TABLE_GROUP_SECURITY	table_group_security_id		ManageTable.cgi?TABLE_NAME=table_group_security	"organization,organization_type,contact,contact_type,user_login,work_group,user_work_group,table_group_security,user_context,help_text,user_project_permission,group_project_permission"	
+user_context	User Context	rowprivate	YES	$TB_USER_CONTEXT	user_context_id		ManageTable.cgi?TABLE_NAME=user_context	"organization,organization_type,contact,contact_type,user_login,work_group,user_work_group,table_group_security,user_context,help_text,user_project_permission,group_project_permission"	
 sql_command_log	SQL Statement Log	admin	NO	$TB_SQL_COMMAND_LOG	command_id				
 usage_log	Usage Log	admin	NO	$TB_USAGE_LOG	usage_id				
 misc_option	Miscellaneous UI Option	admin	NO	$TB_MISC_OPTION	misc_option_id				
-project	Project	project	YES	$TB_PROJECT	project_id		ManageTable.cgi?TABLE_NAME=project	"project,user_project_permission,group_project_permission"	
-user_project_permission	User Project Permission	admin	YES	$TB_USER_PROJECT_PERMISSION	user_project_permission_id		ManageTable.cgi?TABLE_NAME=user_project_permission	"project,user_project_permission,group_project_permission"	
-group_project_permission	Group Project Permission	admin	YES	$TB_GROUP_PROJECT_PERMISSION	group_project_permission_id		ManageTable.cgi?TABLE_NAME=group_project_permission	"project,user_project_permission,group_project_permission"	
-help_text	Help Text	admin	YES	$TB_HELP_TEXT	help_text_id		ManageTable.cgi?TABLE_NAME=help_text	"organization,organization_type,contact,contact_type,user_login,work_group,user_work_group,table_group_security,user_context,help_text"	
+project	Project	project	YES	$TB_PROJECT	project_id		ManageTable.cgi?TABLE_NAME=project	project	
+user_project_permission	User Project Permission	admin	YES	$TB_USER_PROJECT_PERMISSION	user_project_permission_id		ManageTable.cgi?TABLE_NAME=user_project_permission	project	
+group_project_permission	Group Project Permission	admin	YES	$TB_GROUP_PROJECT_PERMISSION	group_project_permission_id		ManageTable.cgi?TABLE_NAME=group_project_permission	project	
+help_text	Help Text	admin	YES	$TB_HELP_TEXT	help_text_id		ManageTable.cgi?TABLE_NAME=help_text	"organization,organization_type,contact,contact_type,user_login,work_group,user_work_group,table_group_security,user_context,help_text,user_project_permission,group_project_permission"	
 table_property	Table Property	admin	NO	$TB_TABLE_PROPERTY	table_property_id				
 table_column	Table Column	admin	NO	$TB_TABLE_COLUMN	table_column_id				
 organism	Organism	infrastructure	YES	$TB_ORGANISM	organism_id		ManageTable.cgi?TABLE_NAME=organism		
