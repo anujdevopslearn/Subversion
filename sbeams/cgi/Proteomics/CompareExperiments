@@ -608,8 +608,9 @@ sub handle_request {
         $second_peptide_clause = "   AND ( SH.peptide_string LIKE '[RK].%${C}%._' OR ".
                                           "SH.peptide_string LIKE '_.%${C}%[RK]._' )";
       } elsif ( $parameters{peptide_options} =~ /NotAtAllTryptic/ ) {
-        $second_peptide_clause = "   AND ( SH.peptide_string NOT LIKE '[RK].%${C}%._' AND ".
-                                          "SH.peptide_string NOT LIKE '_.%${C}%[RK]._' )";
+        $second_peptide_clause = "   AND ( SH.peptide_string NOT LIKE '[RK].%' AND ".
+                                          "SH.peptide_string NOT LIKE '%[RK]._' AND ".
+                                 "         SH.peptide_string LIKE '_.%${C}%._' )";
       } elsif ( $parameters{peptide_options} =~ /OnlySinglyTryptic/ ) {
         $second_peptide_clause = "   AND ( ( SH.peptide_string LIKE '[RK].%${C}%._'\n".
                                  "           OR SH.peptide_string LIKE '_.%${C}%[RK]._' )\n".
