@@ -99,22 +99,13 @@ sub displayGuestPageHeader
 
 
   #### Obtain main SBEAMS object and use its http_header
-	my $sbeams = $self->getSBEAMS();
- #   my $http_header = $sbeams->get_http_header();
+  my $sbeams = $self->getSBEAMS();
+  my $http_header = $sbeams->get_http_header();
 
-   # print qq~ $http_header
-	#<HTML><HEAD>
-	#<TITLE>$DBTITLE - $SBEAMS_PART</TITLE>
-   # ~;
-
-  #$self->printJavascriptFunctions();
-  # $self->printStyleSheet();
- 
 my $scgapLink = 'http://scgap.systemsbiology.net';
  
- print qq~
- 
- <HTML>
+ print qq~$http_header
+<HTML>
 <head><title>SCGAP Urologic Epithelial Stem Cells Project  </title>
 
 <!-- Style sheet definition --------------------------------------------------->
