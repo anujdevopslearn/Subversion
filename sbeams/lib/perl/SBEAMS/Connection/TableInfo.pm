@@ -716,6 +716,28 @@ sub returnTableInfo {
 }
 
 
+###############################################################################
+# getGroupList
+#
+# returns list of groups for current module in order of ascending permissions.
+# Used to grant minimum allowable access when doing automatic group switching 
+# based on an attempt to access a disallowed resource.
+###############################################################################
+sub getGroupList {
+  my $self = shift;
+  my @groups = selectSeveralColumns( <<"  END" );
+  SELECT work_group_name, work_group_id
+  FROM work_group
+  WHERE work_group_name IN ( 'guest', 'developer', 'other', 'admin' )
+  END
+  
+  my %grps;
+  for( @groups ) {
+  $grps{$_->[0]} = $_->[1];
+  }
+  return( [ $grps{guest}, $grps{other}, $grps{developer} ] ); # skip admin
+}
+
 
 ###############################################################################
 # getParentProject
@@ -736,9 +758,10 @@ sub getParentProject {
   my $parameters_ref = $args{'parameters_ref'}
     || die("ERROR: $SUB_NAME: Parameter parameters_ref not passed");
 
-  #### Make sure action is one of INSERT,UPDATE,DELETE
-  unless ($action =~ /^INSERT$|^UPDATE$|^DELETE$/) {
-    die("ERROR: $SUB_NAME: action must be one of INSERT,UPDATE,DELETE");
+
+  #### Make sure action is one of INSERT,UPDATE,DELETE, or SELECT
+  unless ($action =~ /^INSERT$|^UPDATE$|^DELETE$|^SELECT$/) {
+    die("ERROR: $SUB_NAME: action must be one of INSERT,UPDATE,DELETE, or SELECT");
   }
 
   #### Get sbeams object, we'll need it for queries
@@ -754,12 +777,12 @@ sub getParentProject {
   #### If table is project
   if ($table_name eq "project") {
 
-    #### If the user wants to INSERT, determine how it fits into project
+    ### If the user wants to INSERT, determine how it fits into project
     if ($action eq 'INSERT') {
       #### There is none yet!
 
-    #### Else for an UPDATE or DELETE, determine how it fits into project
-    } elsif ($action eq 'UPDATE' || $action eq 'DELETE') {
+    #### Else for UPDATE, DELETE or SELECT, determine how it fits into project
+    } elsif ( $action =~ /^UPDATE$|^DELETE$|^SELECT$/ ) {
       #### The parent is me!
       $project_id = $parameters_ref->{project_id};
     }
