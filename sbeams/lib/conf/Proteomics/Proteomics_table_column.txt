@@ -55,7 +55,7 @@ PR_fraction	1	fraction_id	Fraction ID	int	4	0	N		Y							N	N				pkDEFAULT
 PR_fraction	2	experiment_id	Experiment ID	int	4	0	N		N	PR_proteomics_experiment	experiment_id	Y	fixed			Y	Y	Y	Experiment to which this msrun belongs		
 PR_fraction	3	fraction_tag	Fraction Tag	varchar	50	0	N		N			Y	fixed			Y	Y	Y	Short tag (name) of this msrun.  This corresponds to the .dat or .raw filename without the extension.  Do not use spaces or non-standard characters.		
 PR_fraction	4	fraction_number	Fraction Number	int	4	0	Y		N			N	text	20		Y	Y	N	"This corresponds to serial number of the msrun, sometimes related to the SCX fraction number, but there are no rules yet"		
-PR_fraction	5	fraction_date	Fraction Date	datetime	8	0	N		N			Y	fixed			Y	Y	N	Datetime when this msrun was completed		
+PR_fraction	5	fraction_date	Fraction Date	datetime	8	0	Y		N			N	fixed			Y	Y	N	Datetime when this msrun was completed		
 PR_fraction	6	gradient_program_id	Gradient Program ID	int	4	0	Y		N	PR_gradient_program	gradient_program_id	N	optionlist			Y	Y	N	Gradient Program used for this fraction	"SELECT gradient_program_id,gradient_program_name FROM $TBPR_GRADIENT_PROGRAM WHERE record_status != 'D'"	
 PR_fraction	7	column_delay	Column Delay (s)	int	4	0	Y		N			N	text	20		Y	Y	N	Column delay in seconds.  This is the offset between when the pumps claims to be at a given setting and the instrument is seeing the spray at that percentage setting		
 PR_fraction	8	fractionation_type_id	Fractionation Type	int	4	0	Y		N	PR_fractionation_type	fractionation_type_id	N	optionlist			Y	Y	N	"Type of fractionation used to creation this fraction (SCX, FFE, etc.)"	"SELECT fractionation_type_id,fractionation_type_name FROM $TBPR_FRACTIONATION_TYPE WHERE record_status != 'D'"	
