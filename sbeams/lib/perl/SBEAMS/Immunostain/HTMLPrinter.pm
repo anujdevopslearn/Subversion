@@ -130,6 +130,7 @@ sub display_page_header {
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeStains"><nobr>&nbsp;&nbsp;&nbsp;Summarize Stains</nobr></a></td></tr>
+        <tr><td><a href="$HTML_BASE_DIR/doc/$SBEAMS_SUBDIR/analysis.html"><nobr>&nbsp;&nbsp;&nbsp;(test format)</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
         <tr><td>Documentation:</td></tr>
