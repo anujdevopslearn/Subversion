@@ -532,6 +532,15 @@ sub returnTableInfo {
     }
 
 
+    #### Put in some fixed URLs for audit trail columns
+    $url_cols{created_by_id} = "$CGI_BASE_DIR/$subdir/ManageTable.cgi?".
+          "TABLE_NAME=contact&contact_id=%V";
+    $url_cols{modified_by_id} = "$CGI_BASE_DIR/$subdir/ManageTable.cgi?".
+          "TABLE_NAME=contact&contact_id=%V";
+    $url_cols{owner_group_id} = "$CGI_BASE_DIR/$subdir/ManageTable.cgi?".
+          "TABLE_NAME=work_group&work_group_id=%V";
+
+
     return %url_cols;
   }
 
