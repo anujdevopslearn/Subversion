@@ -300,7 +300,6 @@ sub printEntryForm {
     }
   }
 
-
   # Begin read-only context display code.  Fetch auth level for the current user. 
   # This may be for given table, or for a specific record within that table.  
   my ( $projectAuthLevel, $tableAuthLevel ); # project and table permissions
@@ -321,26 +320,29 @@ sub printEntryForm {
                                          action => 'UPDATE' # Pending changes to mod.tableinfo scripts ; ( 'SELECT'
                                                      );
   }
+  
+  my $message = '';
 
+  # FIXME When a user has no project, they end up with project_id = 0!
   if ( defined $parent_project_id ) { # Project security has priority
     $log->debug ( "Found parent project ID = $parent_project_id" );
 
-    # FIXME When a user has no project, they end up with project_id = 0!
-    $projectAuthLevel = $sbeams->calculateProjectPermission( 
-                                    pk_column_name => $PK_COLUMN_NAME,
-                                    pk_value => $parameters{$PK_COLUMN_NAME},
-                                    contact_id => $current_contact_id,
-                                    dbtable => $dbtable,
-                                    table_name => $parameters{TABLE_NAME},
-                                    project_id => $current_project_id,
-                                    parent_project_id => $parent_project_id,
-                                    work_group_id => $current_work_group_id,
-                                                   );
+    $projectAuthLevel = $sbeams->calculateProjectPermission(
+                                parent_project_id => $parent_project_id,
+                                pk_column_name => $PK_COLUMN_NAME,
+                                pk_value => $parameters{$PK_COLUMN_NAME},
+                                contact_id => $current_contact_id,
+                                dbtable => $dbtable,
+                                table_name => $parameters{TABLE_NAME},
+                                project_id => $current_project_id,
+                                work_group_id => $current_work_group_id 
+                                                            );
 
-    if ( $projectAuthLevel > DATA_READER ) {
-      # If project auth level prevents display of the page, see if there is another
+    # calcProjPerm uses 'get_best_permission', which doesn't consider current
+    # work group - hence this code won't get exec'd for the time being.
+    if ( $projectAuthLevel > DATA_READER && $parameters{$PK_COLUMN_NAME} ) {
+      # If project auth level prevents display of the page, look for another
       # group the user could try in order to at least read the item
-      # Method in Permissions.pm.  Gets alt group based on current module
       my $altWorkGroupRef = $sbeams->getProjectGroups(
                                     contact_id => $current_contact_id,
                                     privilege => DATA_READER,
@@ -348,101 +350,61 @@ sub printEntryForm {
                                     work_group_id => $current_work_group_id,
                                                       );
 
-      # SLAM!
       if ( scalar( @$altWorkGroupRef ) ) {
-        # Set the work group to the new value...
-        foreach my $group ( @$altWorkGroupRef ) {
-          $sbeams->setCurrent_work_group( set_to_work_group => $group,
-                                          permanent => 1 );
-
-          # Update work group info
-          $current_work_group_id = $sbeams->getCurrent_work_group_id;
-
-          # Call back to projectPermission to get value with new group
-          $projectAuthLevel = $sbeams->calculateProjectPermission( 
-                                    pk_column_name => $PK_COLUMN_NAME,
-                                    pk_value => $parameters{$PK_COLUMN_NAME},
-                                    contact_id => $current_contact_id,
-                                    dbtable => $dbtable,
-                                    table_name => $parameters{TABLE_NAME},
-                                    project_id => $current_project_id,
-                                    parent_project_id => $parent_project_id,
-                                    work_group_id => $current_work_group_id,
-                                                   );
-
-          last if $projectAuthLevel < DATA_READER; # We have what we wanted
-        }
+        # Set level to reader, since they would otherwise have permissions.
+        $message =<<"        END_MSG";
+        <FONT COLOR=red>
+          <I>&nbsp;&nbsp;&nbsp;&nbsp;
+          Allowing read access to record not normally accessible from current work group
+          </I>
+        </FONT>
+        END_MSG
+        $projectAuthLevel = DATA_READER;
       } 
     }
   } else { # Table (Mode 1) Permissions are king
+    
     # no project permissions, log warning
-    print STDERR "Warning: viewing data not covered by project permissions\n"; 
+    $log->warn( "Viewing data not covered by project permissions" ); 
 
-    $tableAuthLevel = $sbeams->calculateTablePermission( 
-                                       work_group_id => $current_work_group_id,
-                                       pk_column_name => $PK_COLUMN_NAME,       
-                                       pk_value => $parameters{$PK_COLUMN_NAME},
-                                       contact_id => $current_contact_id,
-                                       project_id => $current_project_id,
-                                       dbtable => $dbtable,
-                                       table_name => $parameters{TABLE_NAME},
-                                       work_group_id => $current_work_group_id,
-                                                 );
+    $tableAuthLevel = $sbeams->calculateTablePermission(
+                                pk_column_name => $PK_COLUMN_NAME,
+                                pk_value => $parameters{$PK_COLUMN_NAME},
+                                contact_id => $current_contact_id,
+                                dbtable => $dbtable,
+                                table_name => $parameters{TABLE_NAME},
+                                project_id => $current_project_id,
+                                work_group_id => $current_work_group_id 
+                                                       );
 
-    if ( $tableAuthLevel >= DATA_READER ) {
+    if ( $tableAuthLevel >= DATA_READER  && $parameters{$PK_COLUMN_NAME} ) {
+      # The user has DATA_READER or less and is accessing an existing object.
       my $altWorkGroupRef = $sbeams->getTableGroups(
-                                              contact_id => $current_contact_id,
-                                              privilege => DATA_READER,
-                                              table_name => $parameters{TABLE_NAME},
-                                              work_group_id => $current_work_group_id
+                                 contact_id => $current_contact_id,
+                                 privilege => DATA_READER,
+                                 table_name => $parameters{TABLE_NAME},
+                                 work_group_id => $current_work_group_id
                                                     );
 
-      # SLAM! Try to change the group so that they can view record
       if ( scalar( @$altWorkGroupRef ) ) {
         # Set the work group to the new value...
-        foreach my $group ( @$altWorkGroupRef ) {
-          print STDERR "Trying $group\n";
-          $sbeams->setCurrent_work_group( set_to_work_group => $group,
-                                          permanent => 1 );
-
-          # Update work group info
-          $current_work_group_id = $sbeams->getCurrent_work_group_id;
-
-          # Call back to tablePermissions to get value with new group
-            $tableAuthLevel = $sbeams->calculateTablePermission( 
-                                        work_group_id => $current_work_group_id,
-                                        pk_column_name => $PK_COLUMN_NAME,       
-                                        pk_value => $parameters{$PK_COLUMN_NAME},
-                                        contact_id => $current_contact_id,
-                                        project_id => $current_project_id,
-                                        dbtable => $dbtable,
-                                        table_name => $parameters{TABLE_NAME},
-                                        work_group_id => $current_work_group_id,
-                                                         );
-
-          last if $tableAuthLevel < DATA_READER; # We have what we wanted
-        }
+        $tableAuthLevel = DATA_READER;
+        $message = <<"        END_MSG";
+        <FONT COLOR=red>
+          <I>&nbsp;&nbsp;&nbsp;&nbsp;
+          Allowing read access to record not normally accessible from current work group
+          </I>
+        </FONT>
+        END_MSG
       } 
     }
   }
 
-
-  # Make sure that the tableAuthLevel is copacetic 
-  $tableAuthLevel ||=  $sbeams->calculateTablePermission( 
-                                    contact_id => $current_contact_id,
-                                    project_id => $current_project_id,
-                                    table_name => $parameters{TABLE_NAME},
-                                    work_group_id => $current_work_group_id,
-                                    pk_column_name => $PK_COLUMN_NAME,       
-                                    pk_value => $parameters{$PK_COLUMN_NAME},
-                                    dbtable => $dbtable,
-                                  );
-
-
-  # This call prints out the userChooser widget, delayed until here so that any
-  # group changes will be manifested in the display.
+# Prints the group/project selection widgets.
   $sbeams->printUserContext();
+
   print qq!
+      $message
       <P>
       <H2>Maintain $CATEGORY</H2>
       $LINESEPARATOR
@@ -460,119 +422,74 @@ sub printEntryForm {
     $viewStates{$_} = 0;
   }
 
-  if ( $tableAuthLevel > DATA_READER &&
-       !( $projectAuthLevel && $projectAuthLevel > DATA_READER ) ) {
-    # This overrides all else 
-    $viewStates{no_access} = 1;
-    push @errors, <<"    END";
-    You lack basic ($tableAuthLevel) authorization to access this resource.
-    END
+# Set auth level to the appropriate value, project takes precedence.
+  my $authLevel = ( $projectAuthLevel ) ? $projectAuthLevel : $tableAuthLevel;
 
-  } elsif ( $projectAuthLevel && $projectAuthLevel > DATA_READER ) {
-    # Denied based on project permissions.
+    if ( $authLevel > DATA_READER ) { # User has no priv
     $viewStates{no_access} = 1;
 
-    # Need more project info
-    my @rows = $sbeams->selectSeveralColumns( <<"    END_SQL" );
-    SELECT first_name + ' ' + last_name as uname, project_id, name
-    FROM project p JOIN contact c
-    ON p.pi_contact_id = c.contact_id
-    WHERE p.project_id = $parent_project_id
-    END_SQL
+    # Add some information to help user understand situation.
+    if ( $projectAuthLevel ) {
+      addProjectErrors( \@errors, $authLevel, $parent_project_id );
+    } else {
+      addTableErrors( \@errors, $authLevel );
+    }
 
-    my $contact_info =<<"    END";
-    You lack project ($projectAuthLevel) authorization to access this resource.
-    END
+  } elsif ( $authLevel > DATA_WRITER ) { # User can read only
+    if ( $parameters{$PK_COLUMN_NAME} ) {
+     $viewStates{read_only} = 1;
+    } else { # Trying an insert, show error page.
+     $viewStates{no_access} = 1;
+     addTableErrors( \@errors, $authLevel );
+     my $obj = ( $projectAuthLevel ) ? 'project' : 'table';
+     push @errors, "You lack authorization to insert records into this $obj."
+    }
 
-    # This will almost always override the previous message.
-    if ( scalar( @rows ) ) {
-      $contact_info =<<"      END";
-      You do not have sufficient privileges ($projectAuthLevel) to access data in the current project,
-      $rows[0]->[2] ( $rows[0]->[1] ).  Please contact the the project PI ( $rows[0]->[0] ) about granting you access.
-      
-      END
-      }
-
-    
-    push @errors, $contact_info;
-
-  } elsif ( ( $projectAuthLevel && $projectAuthLevel == DATA_ADMIN ) ||
-            ( $projectAuthLevel && $projectAuthLevel <= DATA_MODIFIER ) ||
-            ( !defined $projectAuthLevel && $tableAuthLevel <= DATA_MODIFIER ) 
-          ) { 
-    # User can add/modify/delete data
+  } elsif ( $authLevel <= DATA_MODIFIER ) { # User can add/modify/delete
     $viewStates{add_mod_del} = 1;
 
-  } elsif ( !$parameters{$PK_COLUMN_NAME} 
-             && $tableAuthLevel <= DATA_WRITER ) { 
+  # To get here, permission must be DATA_WRITER
+  } elsif ( !$parameters{$PK_COLUMN_NAME} ) { # No PK, new insert
     # Form with insert
     $viewStates{insert_new} = 1;
 
-  } elsif ( $second_pass_insert && $tableAuthLevel <= DATA_WRITER  ) {
+  } elsif ( $second_pass_insert  ) { # Second time through, INS from template
     # Form with insert, template values filled in
     $viewStates{insert_template} = 1;
 
-  } elsif ( $tableAuthLevel <= DATA_WRITER ) {
-    # read only mode with link to second-pass INSERT
+  } elsif ( $parameters{$PK_COLUMN_NAME} ) { # PK exists, trying to edit 
+    # read only mode with link to second-pass INSERT (can't edit but can INS)
     $viewStates{read_insert} = 1;
 
-  } elsif ( $tableAuthLevel <= DATA_READER && 
-            !$parameters{$PK_COLUMN_NAME} ) {
-    # Trying to add a new thingy, but lack permissions to
-    $viewStates{no_access} = 1;
-    push @errors, <<"    END_ERR";
-    Your current privileges do not permit you to add records
-    to the $parameters{TABLE_NAME} table.
-    END_ERR
-
-    push @errors, <<"    END_ERR";
-    If you feel you have received this message in error, please email this message
-    <BR>to your SBEAMS administrator and request appropriate permissions.
-    END_ERR
-
-    my %priv = ( 10 => 'Administrator',
-                 20 => 'Modifier',
-                 30 => 'Writer',
-                 40 => 'Reader',
-                 50 => 'None' );
-
-    push @errors, <<"    END_ERR";
-    Your current permission level is $tableAuthLevel, 
-    which is Data $priv{$tableAuthLevel}.
-    <BR>
-    END_ERR
-
-
-  } elsif ( ( $projectAuthLevel && $projectAuthLevel == DATA_READER ) ||
-            ( $tableAuthLevel == DATA_READER  )    ) {
-    # We can only read
-    $viewStates{read_only} = 1;
-
   } else {
-    # If you're not part of the solution, you are part of the problem!
+    # If you're not part of the solution, you're part of the problem!
     $viewStates{no_access} = 1;
-
     my $admin = $sbeams->_getDBAdmin();
     unshift @errors, <<"    END_ERR";
     Unknown permissions mode, unable to proceed.  Please<BR>
     contact your site administrator, $admin, <BR>
     you feel that this denial was in error.<BR><BR>
     END_ERR
-
   }
 
+
   #### FIXME debug block ####
-  my $rec = ( defined $projectAuthLevel ) ? $projectAuthLevel : 'undefined';
+  my $proj = ( defined $projectAuthLevel ) ? $projectAuthLevel : 'undefined';
   my $pk = ( $parameters{$PK_COLUMN_NAME} ) ? $parameters{$PK_COLUMN_NAME} : 'undefined';
+  my $r = '';
+  for ( keys( %viewStates ) ) {
+    $r = $_ if $viewStates{$_};
+    last if $r;
+  }
 
   $log->debug( <<"  END_ERR" );
-  Current Group: $current_work_group_id
+  Group: $current_work_group_id
   Table: $tableAuthLevel
-  Project: $rec
+  Project: $proj
+  Auth: $authLevel
   PK: $pk
+  View: $r
   END_ERR
-#for( keys( %viewStates ) ){ $log->debug( "$_ => $viewStates{$_}" ); }
- 
   #### END debug block ####
 
   # End view-only mode permissions calculation.
@@ -589,6 +506,7 @@ sub printEntryForm {
 
     # Add fields group/project choosers need
     print qq!
+    <INPUT TYPE="hidden" NAME="ShowEntryForm" VALUE="1">
     <INPUT TYPE="hidden" NAME="set_current_work_group" VALUE="">
     <INPUT TYPE="hidden" NAME="set_current_project_id" VALUE="">
     <INPUT TYPE=hidden NAME=TABLE_NAME VALUE=$TABLE_NAME>
@@ -1241,6 +1159,46 @@ sub printEntryForm {
 
 } # end printEntryForm
 
+#+
+# Pushes error onto passed array ref
+# -
+sub addTableErrors {
+  my $errors = shift;
+  my $auth = shift;
+  push @$errors, <<"  END_ERR"; 
+  You lack basic ($auth) authorization to access this resource.
+  END_ERR
+}
+
+#+
+# Pushes error onto passed array ref
+# -
+sub addProjectErrors {
+
+  my $errors = shift;
+  my $auth = shift;
+  my $parent_project_id = shift;
+
+  push @$errors, <<"  END_ERR"; 
+  You lack project ($auth) authorization to access this resource.
+  END_ERR
+
+  # Need more project info
+  my @rows = $sbeams->selectSeveralColumns( <<"  END_SQL" );
+  SELECT first_name + ' ' + last_name as uname, project_id, name
+  FROM $TB_PROJECT p JOIN $TB_CONTACT c
+  ON p.pi_contact_id = c.contact_id
+  WHERE p.project_id = $parent_project_id
+  END_SQL
+
+  if ( scalar( @rows ) ) {
+    push @$errors, <<"    END_ERR";
+    You do not have sufficient privileges ($auth) to access data in the
+    current project, $rows[0]->[2] ( $rows[0]->[1] ).  Please contact the the
+    project PI ( $rows[0]->[0] ) about granting you access.
+    END_ERR
+  }
+}
 
 ###############################################################################
 # getDbTableName
@@ -2910,28 +2868,47 @@ sub checkPermission {
     return undef;
   }
 
-  # Need to interpolate fval info prsql->{fsql} unless fkey is project_id.
-  if ( lc($args{fkey}) ne 'project_id' ) {
-    $prSQL->{fsql} =~ s/KEYVAL/$args{fval}/g;
-    $prSQL->{fsql} = evalSQL( $prSQL->{fsql} );
+### Loops to support sbeams multi and range inserts
+
+  $log->debug( $args{fval} );
+  my @fvals;
+  if ( $args{fval} =~ /\,/ ) { # We have a comma separated list.
+    $log->debug( 'comma list' );
+    @fvals = split( ',', $args{fval} );
+  } elsif ( $args{fval} =~ /\-/ ) { # We have defined a range
+    $log->debug( 'range list' );
+    my @ends = split( '-', $args{fval} );
+    @fvals = ( $ends[0]..$ends[1] )
+  } else {
+    $log->debug( "just the one, ma'am" );
+    push @fvals, $args{fval};
   }
 
-  # If update, must also interpolate pkey into dbsql
-  if ( lc( $args{action} ) =~ /update/ ) { 
-    $prSQL->{dbsql} =~ s/KEYVAL/$args{pval}/g;
-    $prSQL->{dbsql} = evalSQL( $prSQL->{dbsql} );
-  }
+  foreach my $fval ( @fvals ) {
+    # Need to interpolate fval info prsql->{fsql} unless fkey is project_id.
+    if ( lc($args{fkey}) ne 'project_id' ) {
+      $prSQL->{fsql} =~ s/KEYVAL/$fval/g;
+      $prSQL->{fsql} = evalSQL( $prSQL->{fsql} );
+    }
+
+    # If update, must also interpolate pkey into dbsql
+    if ( lc( $args{action} ) =~ /update/ ) { 
+      $prSQL->{dbsql} =~ s/KEYVAL/$args{pval}/g;
+      $prSQL->{dbsql} = evalSQL( $prSQL->{dbsql} );
+    }
     
-  # Make call to sbeams method
-  my $errstr = $sbeams->checkProjectPermission( action => $args{action},
-                                                tname  => $args{tname},
-                                                fkey   => $args{fkey},
-                                                fval   => $args{fval},
-                                                fsql   => $prSQL->{fsql},
-                                                dbsql  => $prSQL->{dbsql}
-                                              );
+    # Make call to sbeams method
+    my $errstr = $sbeams->checkProjectPermission( action => $args{action},
+                                                  tname  => $args{tname},
+                                                  fkey   => $args{fkey},
+                                                  fval   => $fval,
+                                                  fsql   => $prSQL->{fsql},
+                                                  dbsql  => $prSQL->{dbsql}
+                                                );
 
-  return ( $errstr ) ? $errstr : '';
+    return ( $errstr ) if $errstr;
+  }
+  return;
 }
 
 sub evalSQL {
