@@ -86,6 +86,9 @@ use vars qw(@ISA @EXPORT
     $TBPR_INDISTINGUISHABLE_PEPTIDE
     $TBPR_SUMMARY_QUANTITATION
 
+    $TBBL_GENE_ANNOTATION
+    $TBPR_BIOSEQUENCE_ANNOTATED_GENE
+
 );
 
 
@@ -156,6 +159,9 @@ require Exporter;
     $TBPR_INDISTINGUISHABLE_PEPTIDE
     $TBPR_SUMMARY_QUANTITATION
 
+    $TBBL_GENE_ANNOTATION
+    $TBPR_BIOSEQUENCE_ANNOTATED_GENE
+
 );
 
 
@@ -163,6 +169,7 @@ require Exporter;
 my $core = $DBPREFIX{Core};
 my $mod = $DBPREFIX{Proteomics};
 my $APD = $DBPREFIX{APD};
+my $BioLink = $DBPREFIX{BioLink};
 
 
 $TB_ORGANISM                      = "${core}organism";
@@ -228,6 +235,8 @@ $TBPR_PEPTIDE_PARENT_PROTEIN      = "${mod}peptide_parent_protein";
 $TBPR_INDISTINGUISHABLE_PEPTIDE   = "${mod}indistinguishable_peptide";
 $TBPR_SUMMARY_QUANTITATION        = "${mod}summary_quantitation";
 
+$TBBL_GENE_ANNOTATION             = "${BioLink}gene_annotation";
+$TBPR_BIOSEQUENCE_ANNOTATED_GENE  = "${mod}biosequence_annotated_gene";
 
 
 
