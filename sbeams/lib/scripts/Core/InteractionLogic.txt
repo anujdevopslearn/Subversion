@@ -1,0 +1,123 @@
+
+interactionLoader logical flowchart for error and dupe checking of bioentities and interactions
+
+column order is checked 
+	exits program if error
+	
+InteractionLoadingError.txt is created
+	this is a tab delimited txt file 
+	columns are set which are identical to the input file 	
+	
+InteractionErrorLog.txt is created
+	this records errors resulting from database returns
+	
+Input file is processed
+	skips all empty lines
+	
+The value of required fields can not be undef	
+
+Bioentity1
+	the value of required fields are checked
+		I assume that there is always a bioentity1 present with a bioentity_common_name/or bioentity_canonical_name
+		
+		bioentity1_organism 
+			 the value is validated against present database entries
+		bioentity_type 			
+			the value is validated against present database entries
+		group
+			the value is validated against present database entries
+			if validated 
+				the association between the group and organism is checked
+				
+	if any of the above fail, the offending row is written to InteractionLoadingError.txt, 
+	a descriptive Error message is added, the row is purged from memory and the next line is processed
+	
+Bioentity2
+	bioentity2 values are only checked if bioentity1 validation was successful
+		presence of a bioentity2_common_name and/or bioentity2_canonical_name are checked
+		same values as in bioentity1 are checked
+	
+	if any of the above fail, the offending row is written to InteractionLoadingError.txt, 
+	a descriptive Error message is added, the row concerning bioentity2 is purged from memory and the next line is processed	
+	
+	At this point one could have a bioentity1 but no bioentity2
+	No interaction check is done for such cases
+	
+	only for a complete set (bioentity1 and bioentity2 validation is successful) interaction requirements are checked
+
+Interaction
+	the value of the required fields are checked
+		interaction_type
+			 the value is validated against present database entries
+		
+		if this fails, the offending row is written to InteractionLoadingError.txt, 
+		a descriptive Error message is added, this interaction is purged from memory and the next line is processed
+		However, complete information regarding bioentity1 and bioentity2 are kept for database entry
+		
+		the values of bioentity1_state
+									bioentity1_regulatory_feature
+									bioentity2_regulatory_feature
+									assay_type
+									confidence_score
+									pubMedId
+		are checked. If any of them is defined than that value is validated against present database entries
+		If any of them fail, the offending row is written to InteractionLoadingError.txt, 
+		a descriptive Error message is added. The interaction is purged from memory and the next line is processed	
+		However, complete information regarding bioentity1 and bioentity2 are kept for database entry
+		
+		
+Database update or insert
+
+at this point: bioentity1 >= bioentity2 >= interaction
+all of these records are keyed on a common record_id
+
+Bioentity1 and Bioentity2
+
+Main Query:			
+			Select BE.bioentity_id
+			from $TBIN_BIOENTITY BE
+			join $TBIN_BIOENTITY_TYPE BT on (BE.bioentity_type_id = BT.bioentity_type_id)
+			full outer join $TBIN_INTERACTION I on (BE.bioentity_id = I.bioentity1_id)
+			full outer join $TBIN_INTERACTION I2 on (BE.bioentity_id = I2.bioentity2_id)
+			full outer join $TB_ORGANISM SDO on (BE.organism_id = SDO.organism_id)
+			full outer join $TBIN_INTERACTION_GROUP IG on (SDO.organism_id = IG.organism_id)
+			where BT.bioentity_type_name = \'$hashRef->{$record}->{'bioentityType'.$num}\'
+			and SDO.organism_name ='$hashRef->{$record}->{'organismName'.$num}\' 
+			and IG.interaction_group_name = \'$hashRef->{$record}->{group}\'";
+
+the presence of bioentity1 and bioentity2 in the database is checked
+
+	commonQuery: "and  bioentity_id from bioentity where bioentity_common_name = ? if (bioentity(1/2)_common_name)"		
+	canonicalQuery: "and  bioentity_id from bioentity where bioentity_canonical_name = ? if (bioentity(1/2)_canonical_name)" 
+		
+	if both names are defined, 
+	the result maybe:
+		-	each returns 1 row and the same bioentity_id -- success  -- do an UPDATE, build an update query, use only defined value from the input file
+			add the bioentity_id to the interaction record if it exists.  			
+		-	returns >1 row and/or different bioentity_id for each  -- failure --  Error is written to the ErrorLog and the interaction record is deleted if it exists	 		
+		-	one returns 0 rows and no bioentity_id  --  the record is checked further: 
+				a new query "Select bioentity_common_name (bioentity_canonical_name) from bioentity where bioentity_canonical_name
+									(bionetity_common_name) = ?"
+				is performed to check that either name (common or canonical) is not associated with a defined value for the other
+				if this query returns a defined value then it will be an Error. Error is written to the ErrorLog and the interaction record is deleted if it exists	  						
+				otherwise -- success -- do an UPDATE, build an update query, use only defined values from the input file. 	add the bioentity_id to the interaction record if it exists.  
+		- no rows are returned from either query -- success -- do an INSERT. Insert query, use only defined values from the input file. add the bioentity_id to the interaction record if it exists.  
+
+	if one name is defined
+		-	returns 1 row	 -- success -- 	do an UPDATE, build an update query, use only defined value from the input file
+		add the bioentity_id to the interaction record if it exists
+		- retuns 0 row -- success  --  do an UPDATE, build an update query, use only defined value from the input file
+		add the bioentity_id to the interaction record if it exists
+		- returns >1 row -- failure --  Error is written to the ErrorLog and the interaction record is deleted if it exists
+	 		
+at this point only complete interaction records are in the Interaction
+
+Interaction Query
+	"select Interaction_id from $TBIN_INTERACTION I	where bioentity1_id = $hashRef->{$record}->{bioentityID1} and 
+	 bioentity2_id = $hashRef->{$record}->{bioentityID2}"
+	 
+	 - return 1 row  -- success --  do an INSERT.   
+	 - return >1 row -- failure --  Error is written to the ErrorLog
+	 
+	 		
+ 
