@@ -80,7 +80,7 @@ sub printPageHeader {
 	<a name="TOP"></a>
 	<tr>
 	  <td bgcolor="$BARCOLOR"><a href="http://www.systemsbiology.org/"><img height=60 width=60 border=0 alt="ISB Main" src="/images/ISBlogo60t.gif"></a><a href="http://db.systemsbiology.net/"><img height=60 width=60 border=0 alt="ISB DB" src="/images/ISBDBt.gif"></a></td>
-	  <td align="left" $header_bkg><H1>Blast Integrated Oligonucleotide Selection Accelerator Package<BR>$DBVERSION</H1></td>
+	  <td align="left" $header_bkg><H1>$DBTITLE - $SBEAMS_PART<BR>$DBVERSION</H1></td>
 	</tr>
 
     ~;
@@ -98,14 +98,11 @@ sub printPageHeader {
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/SNP/ManageTable.cgi?TABLE_NAME=bs_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/SNP/ManageTable.cgi?TABLE_NAME=source_db"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/SNP/ManageTable.cgi?TABLE_NAME=sn_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;xBioSequenceSets</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/SNP/SummarizeRuns.cgi"><nobr>&nbsp;&nbsp;&nbsp;Summarize Runs</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/SNP/BrowseFeatures.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse Features</nobr></a></td></tr>
-	<tr><td>&nbsp;</td></tr>
-	<tr><td>Generate Data:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/SNP/SNPForm.cgi"><nobr>&nbsp;&nbsp;&nbsp;New SNP Run</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/SNP/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;BioSequences</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	</table>
 	</td>

@@ -43,6 +43,7 @@ if ( $DBVERSION eq "Dev Branch 1" ) {
   $BIOSAP_DB   = "BioSap.dbo.";
   $PROTEOMICS_DB = "Proteomics.dbo.";
   $PHENOARRAY_DB = "PhenoArray.dbo.";
+  $SNP_DB      = "geap.dbo.";
 
 } elsif ( $DBVERSION eq "Dev Branch 5" ) {
   $DB_SERVER   = 'mssql';
@@ -77,6 +78,18 @@ if ( $DBVERSION eq "Dev Branch 1" ) {
   $PROTEOMICS_DB = "Proteomics.dbo.";
   $PHENOARRAY_DB = "PhenoArray.dbo.";
 
+} elsif ( $DBVERSION eq "Dev Branch 8" ) {
+  $DB_SERVER   = 'mssql';
+  $DB_DATABASE = 'sbeams';
+  $DB_USER     = 'sbeams';
+  $DB_PASS     = 'SB444';
+  $DB_DRIVER   = "DBI:Sybase:server=$DB_SERVER;database=$DB_DATABASE";
+  $DB_TYPE     = "MS SQL Server";
+  $BIOSAP_DB   = "BioSap.dbo.";
+  $PROTEOMICS_DB = "Proteomics.dbo.";
+  $PHENOARRAY_DB = "PhenoArray.dbo.";
+  $SNP_DB      = "geap.dbo.";
+
 } elsif ( $DBVERSION eq "MySQL Dev Branch 1" ) {
   $DB_SERVER   = 'mysql';
   $DB_DATABASE = 'sbeams';
@@ -97,6 +110,7 @@ if ( $DBVERSION eq "Dev Branch 1" ) {
   $BIOSAP_DB   = "BioSap.dbo.";
   $PROTEOMICS_DB = "Proteomics.dbo.";
   $PHENOARRAY_DB = "PhenoArray.dbo.";
+  $SNP_DB      = "geap.dbo.";
 }
 
 
@@ -222,6 +236,16 @@ sub getPROTEOMICS_DB {
 ###############################################################################
 sub getPHENOARRAY_DB {
     return $PHENOARRAY_DB;
+}
+
+
+###############################################################################
+# getSNP_DB
+#
+# Return the SNP_DB of the database connection.
+###############################################################################
+sub getSNP_DB {
+    return $SNP_DB;
 }
 
 

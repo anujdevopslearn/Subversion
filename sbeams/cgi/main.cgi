@@ -85,7 +85,7 @@ sub showMainPage {
 	<BR><BR>
 	<LI><A HREF="PhenoArray/main.cgi">SBEAMS - Phenotype Array</A>
 	<BR><BR>
-	<LI><A HREF="GEAP/main.cgi">SBEAMS - SNP</A>
+	<LI><A HREF="SNP/main.cgi">SBEAMS - SNP</A>
 	<BR><BR>
 	<LI><A HREF="GEAP/main.cgi">SBEAMS - GEAP</A>
 	<BR><BR>
