@@ -19,7 +19,7 @@ public class TestApplet extends Applet
 	x = width/2 - 20;
 	y = height/2 - 20;
 
-	displaySequence( sequence );
+	//displaySequence( sequence );
 	addMouseListener( this );
 	addMouseMotionListener( this );
   }

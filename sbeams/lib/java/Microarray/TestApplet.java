@@ -9,9 +9,9 @@ public class TestApplet extends Applet
   int x, y;    // the coordinates of the upper-left corner of the box
   int mx, my;  // the most recently recorded mouse coordinates
   boolean isMouseDraggingBox = false;
-  String sequence = "ACTGATCGAAAATTTTCCCCGGGG";
 
   public void init() {
+	String sequence = "ACTGATCGAAAATTTTCCCCGGGG";
 	width = getSize().width;
 	height = getSize().height;
 	setBackground( Color.black );
@@ -19,9 +19,14 @@ public class TestApplet extends Applet
 	x = width/2 - 20;
 	y = height/2 - 20;
 
-	displaySequence( sequence );
+	//displaySequence( sequence );
 	addMouseListener( this );
 	addMouseMotionListener( this );
+  }
+
+
+  public void displaySequence( String s ) {
+	
   }
 
   public void mouseEntered( MouseEvent e ) { }
