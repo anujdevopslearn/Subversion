@@ -974,6 +974,7 @@ sub processEntryForm {
     #### They are: 1) File uploads
     ####           2) multilink columns
     if ($returned_request_status eq "SUCCESSFUL") {
+      print "<BR><BR>\n";
 
       #### Check for any file uploads
       my $filename;
@@ -988,8 +989,9 @@ sub processEntryForm {
 	    my $fh = $q->upload($element);
             if ($fh) {
               writeDataFile($fh, $TABLE_NAME, $filename);
-            }
+            } else {
               print "ERROR: File '$parameters{$element}' was not uploaded.  Perhaps your web browser could not locate your file or ther is a permission problem?  Please check the specified filename and try again.<BR>\n";
+            }
           } else {
             print "Nothing to upload for field '$element'<BR>\n";
           }
@@ -1062,10 +1064,10 @@ sub checkForPreexistingRecord {
     $value =~ s/\'/\'\'/g;
     if ($value eq '') {
       $sql_query .= "
-         AND ( $element = '$value' OR $element IS NULL )";
+         AND ( $element LIKE '$value' OR $element IS NULL )";
     } else {
       $sql_query .= "
-         AND $element = '$value'";
+         AND $element LIKE '$value'";
     }
     $error_message .= "<B>$element</B> = '$unique_values{$element}'<BR>\n";
   }
