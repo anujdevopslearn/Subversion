@@ -95,10 +95,10 @@ sub main {
 
     exit unless ($current_username = $sbeams->Authenticate(
       #connect_read_only=>1,
-      #allow_anonymous_access=>1,
-      permitted_work_groups_ref=>['Cytometry_user','Cytometry_admin','Admin'],
+     permitted_work_groups_ref=>['Cytometry_user','Cytometry_admin','Admin','Cytometry_readonly'],
+     allow_anonymous_access=>1,
    ));
-
+   
 	#### Read in the default input parameters
   my %parameters;
   my $n_params_found = $sbeams->parse_input_parameters(
@@ -633,7 +633,7 @@ sub createGraph
    $graphFile = escapeFile($tmpPlot);
      
 #time       
-    my @data = ([@{$VAR1->{$xCoorName}}],[@{$VAR1->{$yCoorName}}]);  
+    my @data = ([@{$VAR1->{$xCoorName}}],[@{$VAR1->{$yCoorName}}]);
 #      my @data=([@xArray],[@yArray]);
 
 #get the label  based on the x and y Coor (these are the id of the measured_parameters)
