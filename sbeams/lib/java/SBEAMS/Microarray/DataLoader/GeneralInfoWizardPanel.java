@@ -36,7 +36,7 @@ public class GeneralInfoWizardPanel extends WizardPanel {
   private static String SELECT_CONSTANTS="---Select Constants---";
   private static String OTHER_ORGANISM= "Other...";
 
-  private static String SBEAMS_SERVER_BASE = "http://db/dev7";
+  private static String SBEAMS_SERVER_BASE = "http://db";
   private static String constantsFileURL = SBEAMS_SERVER_BASE+"/sbeams/cgi/Microarray/ViewFile.cgi?action=read&FILE_NAME=";
   private static String organismURL = SBEAMS_SERVER_BASE+"/sbeams/cgi/Microarray/ManageTable.cgi?TABLE_NAME=organism&output_mode=tsv";
   private static String constantsURL = SBEAMS_SERVER_BASE+"/sbeams/cgi/Microarray/ManageTable.cgi?TABLE_NAME=MA_experiment_constants&output_mode=tsv";
