@@ -2176,18 +2176,24 @@ sub transferTable {
   my %args = @_;
 
   #### Decode the argument list
-  my $src_conn = $args{'src_conn'} || die "ERROR: src_conn not passed";
-  my $sql = $args{'sql'} || die("parameter sql not passed");
-  my $src_PK_name = $args{'src_PK_name'}
-    || die("parameter src_PK_name not passed");
+  my $src_conn = $args{'src_conn'};
+  my $sql = $args{'sql'};
+  my $source_file = $args{'source_file'};
+  my $delimiter = $args{'delimiter'};
+  my $comment_char = $args{'comment_char'};
+  my $skip_lines = $args{'skip_lines'} || 0;
+  die ("either sql or source_file must be passed") unless ($sql || $source_file);
+  die ("parameters sql and source_file cannot both be passed") if ($sql && $source_file);
+  my $src_PK_name = $args{'src_PK_name'};
   my $src_PK_column = $args{'src_PK_column'};
-  die("parameter src_PK_column not passed") unless ($src_PK_column>=0);
+  if ($sql) {
+    die ("parameter src_PK_name must be passed if sql is passed") unless ($src_PK_name);
+    die("parameter src_PK_column msut be passed if sql is passed") unless ($src_PK_column>=0);
+  }
 
   my $dest_conn = $args{'dest_conn'} || die "ERROR: dest_conn not passed";
-  my $column_map_ref = $args{'column_map_ref'}
-    || die "ERROR: column_map_ref not passed";
-  my $transform_map_ref = $args{'transform_map_ref'}
-    || die "ERROR: transform_map_ref not passed";
+  my $column_map_ref = $args{'column_map_ref'} || die "ERROR: column_map_ref not passed";
+  my $transform_map_ref = $args{'transform_map_ref'} || die "ERROR: transform_map_ref not passed";
   my $newkey_map_ref = $args{'newkey_map_ref'};
 
   my $table_name = $args{'table_name'} || die "ERROR: table_name not passed";
@@ -2199,11 +2205,22 @@ sub transferTable {
 
   #### Define standard variables
   my ($i,$element,$key,$value,$line,$result);
+  my @rows;
+
+  #### Get data from source
+  #### Execute source query if sql is set
+  if ($sql) {
+    print "\n  Getting data from source...";
+    @rows = $src_conn->selectSeveralColumns($sql);
+  }
 
 
-  #### Execute source query
-  print "\n  Getting data from source...";
-  my @rows = $src_conn->selectSeveralColumns($sql);
+  #### Read from file if src_file is set
+  if ($source_file) {
+    print "\n  Loading data from file...";
+    @rows = $self->importTSVFile(source_file=>$source_file,delimiter=>$delimiter,comment_char=>$comment_char);
+  }
+
 
   my %rowdata;
   my $row;
@@ -2264,8 +2281,8 @@ sub transferTable {
             rowdata_ref=>\%rowdata,
             PK=>$dest_PK_name,PK_value=>$results[0],
             return_PK=>$return_PK,
-            #verbose=>1,
-            #testonly=>1,
+            verbose=>1,
+#            testonly=>1,
           );
           $did_update = 1;
 
@@ -2288,12 +2305,12 @@ sub transferTable {
   	table_name=>$table_name,
   	rowdata_ref=>\%rowdata,
   	PK=>$dest_PK_name,return_PK=>$return_PK,
-  	#verbose=>1,
-  	#testonly=>1,
+ 	verbose=>1,
+#  	testonly=>1,
       );
-    }  
+    }
 
-    print "."; 
+    print ".";
 
     if ($dest_PK_name && $result) {
       $newkey_map_ref->{$row->[$src_PK_column]} = $result;
@@ -2307,6 +2324,114 @@ sub transferTable {
 
 
 
+###############################################################################
+# importTSVFile: Import data from a delimited file into an array of arrays
+###############################################################################
+sub importTSVFile {
+  my $self = shift || croak("parameter self not passed");
+  my %args = @_;
+
+
+  my $SUB_NAME = "importTSVFile";
+
+  my ($i,$VERBOSE,$line,$line_number);
+
+  #### Decode the argument list
+  my $source_file = $args{'source_file'};
+  my $delimiter = $args{'delimiter'};
+  my $comment_char = $args{'comment_char'};
+  my $skip_lines = $args{'skip_lines'} || 0;
+
+  my @rows;
+
+
+  #### If a source_file was specified
+  if ($source_file) {
+
+    #### Determine if the specified file exists
+    unless ( -e "$source_file" ) {
+      mydie("Cannot find file '$source_file'");
+    }
+
+
+    #### Open source file
+    unless (open(INFILE,"$source_file")) {
+      mydie("Cannot open file '$source_file'");
+    }
+    my $input_source = \*INFILE;
+
+
+    #### Skip a number of lines if desired
+    if ($skip_lines > 0) {
+      $i=0;
+      print "Skipping $skip_lines lines...\n" if ($VERBOSE);
+      while ($line=<INFILE>) {
+        $i++;
+        last if ($i >= $skip_lines);
+      }
+    }
+
+  }
+
+  #### Loop over all data in the file
+  while ($line = <INFILE>) {
+    $line_number++;
+
+    #### Strip CRs of all flavors
+    $line =~ s/[\n\r]//g;
+
+    #### Skip line if it's a comment
+    next if ($comment_char && $line =~ /^$comment_char/);
+
+    #### Split the line into columns
+    my @splitline = split(/$delimiter/,$line);
+
+    #### Add onto the rows array
+    push(@rows,\@splitline);
+
+  }
+
+
+  return @rows;
+
+} # end importTSVFile
+
+
+###############################################################################
+# unix2dosFile: For compatibility, always revert to the DOS version of carriage
+#               returns.
+###############################################################################
+sub unix2dosFile {
+  my $self = shift || croak("parameter self not passed");
+  my %configuration = @_;
+  my $SUB_NAME = "unix2dosFile";
+
+  my ($i,$VERBOSE,$line,$line_number);
+
+  #### Decode the argument list
+  my $file = $configuration{'file'};
+
+  open (INFILE,"$file")  || die "Cannot open file '$file'";
+  open (DOSFILE,">$file.dos")  || die "Cannot open file '$file.dos'";
+
+  #### Loop over all data in the file
+  while ($line = <INFILE>) {
+
+    #### Strip CRs of all flavors
+    $line =~ s/[\n\r]//g;
+
+    #### Add a DOS type carriage return
+    $line =~ s/$/\r\n/;
+
+    print DOSFILE $line;
+  }
+
+  close INFILE;
+  close DOSFILE;
+
+  rename("$file.dos","$file");
+
+} # end unix2dosFile
 
 
 
