@@ -62,6 +62,21 @@
 
 
   #### Loop over each row
+  my $counter = 0;
+  while ( ($key,$value) = each %{$result->{files}} ) {
+    print "  $key = $value\n";
+    while ( my ($key2,$value2) = each %{$result->{files}->{$key}} ) {
+      print "     $key2 = $value2\n";
+    }
+    $counter++;
+    last if ($counter == 2);
+  }
+
+  exit;
+
+
+
+  #### Loop over each row
   my ($key2,$value2);
   foreach $element qw ( CTCL1_0910_R01_042202.2490.2490.3 CTCL1_0910_R01_042202.1894.1894.3 ) {
     $key = "$element.out";
