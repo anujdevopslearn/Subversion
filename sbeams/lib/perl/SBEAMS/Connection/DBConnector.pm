@@ -14,7 +14,7 @@ package SBEAMS::Connection::DBConnector;
 use strict;
 use vars qw($DB_SERVER $DB_DATABASE $DB_USER $DB_PASS $DB_DRIVER
             $DB_DSN $DB_TYPE $dbh
-            $BIOSAP_DB $PROTEOMICS_DB $PHENOARRAY_DB);
+            $BIOSAP_DB $PROTEOMICS_DB $PHENOARRAY_DB $SNP_DB);
 use DBI;
 use SBEAMS::Connection::Settings;
 
