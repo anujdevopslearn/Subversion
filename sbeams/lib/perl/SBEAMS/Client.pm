@@ -51,6 +51,7 @@ sub authenticate {
 
   #### Decode the argument list
   my $server_uri = $args{'server_uri'};
+  my $SBEAMSAuth_file = $args{'SBEAMSAuth_file'};
 
 
   #### Determine the server_uri
@@ -65,11 +66,13 @@ sub authenticate {
 
 
   #### Determine the name of the SBEAMSAuth cache file
-  my $HOME = $ENV{'HOME'};
-  unless ($HOME) {
-    die("ERROR: $SUB_NAME: Unable to determine home directory");
+  unless (defined($SBEAMSAuth_file) && $SBEAMSAuth_file gt '') {
+    my $HOME = $ENV{'HOME'};
+    unless ($HOME) {
+      die("ERROR: $SUB_NAME: Unable to determine home directory");
+    }
+    $SBEAMSAuth_file = "$HOME/.SBEAMSAuth";
   }
-  my $SBEAMSAuth_file = "$HOME/.SBEAMSAuth";
 
 
   #### Create the cookie jar
@@ -298,7 +301,7 @@ sub get_authentication {
 
 
   #### If the authentication has not been yet obtained, try to
-  unless ($self->{_authentication}) {
+  unless ($self->is_authenticated()) {
     $self->{_authentication} = $self->authenticate();
   }
 
