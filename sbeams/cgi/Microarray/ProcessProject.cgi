@@ -914,7 +914,8 @@ $LINESEPARATOR<BR>
           <INPUT TYPE="checkbox" NAME="preprocessScale" VALUE="-scale">Scale to Value:<BR>
       </TD>
       <TD>
-          <INPUT TYPE="text" NAME="preprocessBaseValue" onChange="verifyNumber(this.value,'preprocessBaseValue')"><BR>
+          <INPUT TYPE="text" NAME="preprocessBaseValue" onChange="verifyNumber(this.value,'preprocessBaseValue')">
+          &nbsp;<a href="#" onClick="window.open('$HTML_BASE_DIR/cgi/help_popup.cgi?help_text_id=2','Help','width=400,height=300,resizable=yes');return false"><img src="$HTML_BASE_DIR/images/redqmark.gif" border=0 alt="Help"></a><BR>
           <INPUT TYPE="text" NAME="preprocessSatValue" onChange="verifyNumber(this.value,'preprocessSatValue')" VALUE="65535"><BR>
           <INPUT TYPE="text" NAME="preprocessScaleValue"onChange="verifyNumber(this.value,'preprocessScaleValue')"><BR>
       </TD>
