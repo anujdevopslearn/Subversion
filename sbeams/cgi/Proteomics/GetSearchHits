@@ -16,6 +16,7 @@
 ###############################################################################
 use strict;
 use Getopt::Long;
+use FindBin;
 
 use lib qw (../../lib/perl);
 use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
@@ -45,9 +46,9 @@ $q = new CGI;
 ###############################################################################
 # Set program name and usage banner for command like use
 ###############################################################################
-$PROG_NAME = "get_annotation";
+$PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
-Usage: $PROG_NAME [OPTIONS] key=value kay=value ...
+Usage: $PROG_NAME [OPTIONS] key=value key=value ...
 Options:
   --verbose n         Set verbosity level.  default is 0
   --quiet             Set flag to print nothing at all except errors
@@ -183,8 +184,8 @@ sub handle_request {
 
 
   #### Apply any parameter adjustment logic
-  #### If this is a PR_GetSearch query and sort_order is undefined (not just ""),
-  #### then set to a likely default
+  #### If this is a PR_GetSearch query and sort_order is undefined
+  #### (not just ""), then set to a likely default
   if (($TABLE_NAME eq "PR_GetSearch") && (!defined($parameters{sort_order})) ) {
     $parameters{sort_order} =
       "S.file_root,experiment_tag,set_tag,SH.cross_corr_rank,SH.hit_index";
@@ -598,7 +599,8 @@ sub handle_request {
 	       '.out_ATAG' => 'TARGET="Win1"',
       	       'file_root' => "$base_url?QUERY_NAME=PR_GetSearch&search_batch_id=\%$colnameidx{search_batch_id}V&file_root_constraint=\%$colnameidx{file_root}V&apply_action=QUERY",
 	       'file_root_ATAG' => 'TARGET="Win1"',
-               'Reference' => "http://regis/cgi-bin/consensus_html4?Ref=%V&Db=\%$colnameidx{set_path}V&Pep=\%$colnameidx{peptide}V&MassType=0",
+               'Reference' => "$CGI_BASE_DIR/Proteomics/BrowseBioSequence.cgi?biosequence_name_constraint=\%V&biosequence_set_id=\%$colnameidx{biosequence_set_id}V&label_peptide=\%$colnameidx{peptide}V&apply_action=HIDEQUERY&display_options=SequenceFormat&navigation_bar=SHORT",
+               ##'Reference' => "http://regis/cgi-bin/consensus_html4?Ref=%V&Db=\%$colnameidx{set_path}V&Pep=\%$colnameidx{peptide}V&MassType=0",
 	       'Reference_ATAG' => 'TARGET="Win1"',
                '!Ions' => "http://regis/cgi-bin/displayions_html5?Dta=/data/search/\%$colnameidx{data_location}V/\%$colnameidx{fraction_tag}V/\%$colnameidx{file_root}V.dta&MassType=0&NumAxis=1&Pep=\%$colnameidx{peptide}V",
 	       '!Ions_ATAG' => 'TARGET="Win1"',
@@ -606,7 +608,7 @@ sub handle_request {
 	       'Ions_ATAG' => 'TARGET="Win1"',
                '!N+' => "http://regis/cgi-bin/blast_html4?Db=\%$colnameidx{set_path}V&Pep=\%$colnameidx{peptide}V&MassType=0",
 	       '!N+_ATAG' => 'TARGET="Win1"',
-               'N+' => "$CGI_BASE_DIR/Proteomics/BrowseBioSequence.cgi?biosequence_set_id=\%$colnameidx{biosequence_set_id}V&biosequence_seq_constraint=*\%$colnameidx{peptide}V*&display_options=MaxSeqWidth&search_hit_id=\%$colnameidx{search_hit_id}V&apply_action=HIDEQUERY",
+               'N+' => "$CGI_BASE_DIR/Proteomics/BrowseBioSequence.cgi?biosequence_set_id=\%$colnameidx{biosequence_set_id}V&biosequence_seq_constraint=*\%$colnameidx{peptide}V*&display_options=MaxSeqWidth&search_hit_id=\%$colnameidx{search_hit_id}V&label_peptide=\%$colnameidx{peptide}V&apply_action=HIDEQUERY&display_options=SequenceFormat&navigation_bar=SHORT",
 	       'N+_ATAG' => 'TARGET="Win1"',
                'Peptide' => "http://www.ncbi.nlm.nih.gov/blast/Blast.cgi?PROGRAM=blastp&DATABASE=nr&OVERVIEW=TRUE&EXPECT=1000&FILTER=L&QUERY=\%$colnameidx{peptide}V",
 	       'Peptide_ATAG' => 'TARGET="Win1"',
