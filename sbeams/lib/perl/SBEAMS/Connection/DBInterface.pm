@@ -15,6 +15,8 @@ use strict;
 use vars qw(@ERRORS $dbh $sth $q $resultset_ref);
 use CGI::Carp qw(fatalsToBrowser croak);
 use DBI;
+use POSIX;
+use Data::Dumper;
 
 
 #use lib "/net/db/src/CPAN/Data-ShowTable-3.3a";
@@ -872,7 +874,9 @@ sub fetchNextRow {
 
   #### Else return the next row
   my @row = $sth->fetchrow_array;
-  push(@{$resultset_ref->{data_ref}},\@row) if (@row);
+  if (@row) {
+    push(@{$resultset_ref->{data_ref}},\@row);
+  }
 
   return @row;
 }
@@ -913,6 +917,385 @@ sub decodeDataType {
 
     return \@newtypes;
 }
+
+
+
+
+
+#### A new way of doing things: having a resultset in memory
+
+
+
+###############################################################################
+# fetchResultSet
+#
+# Executes a query and loads the result into a resultset structure
+###############################################################################
+sub fetchResultSet {
+    my $self = shift;
+    my %args = @_;
+
+    #### Process the arguments list
+    my $sql_query = $args{'sql_query'} || croak "parameter sql_query missing";
+    $resultset_ref = $args{'resultset_ref'};
+
+
+    #### Execute the query
+    $sth = $dbh->prepare("$sql_query") or croak $dbh->errstr;
+    my $rv  = $sth->execute or croak $dbh->errstr;
+
+
+    #### Decode the type numbers into type strings
+    my $types_list_ref = $self->decodeDataType($sth->{TYPE});
+
+    my @precisions = @{$sth->{PRECISION}};
+
+
+    #### Prepare returned resultset
+    my @resultsetdata;
+    my %column_hash;
+    my $element;
+    $resultset_ref->{column_list_ref} = $sth->{NAME};
+    my $i = 0;
+    foreach $element (@{$sth->{NAME}}) {
+      $column_hash{$element} = $i;
+      $i++;
+    }
+    $resultset_ref->{column_hash_ref} = \%column_hash;
+    $resultset_ref->{types_list_ref} = $types_list_ref;
+    $resultset_ref->{precisions_list_ref} = \@precisions;
+    $resultset_ref->{data_ref} = \@resultsetdata;
+    $resultset_ref->{row_pointer} = 0;
+    $resultset_ref->{row_counter} = 0;
+    $resultset_ref->{page_size} = 100;
+
+
+    #### Read the result set into memory
+    while (fetchNextRow()) { 1; }
+
+
+    #### finish up
+    print "\n";
+    $sth->finish;
+
+    return 1;
+
+
+} # end fetchResultSet
+
+
+###############################################################################
+# displayResultSet
+#
+# Displays a resultset in memory as an HTML table
+###############################################################################
+sub displayResultSet {
+    my $self = shift;
+    my %args = @_;
+
+    #### Process the arguments list
+    my $url_cols_ref = $args{'url_cols_ref'};
+    my $hidden_cols_ref = $args{'hidden_cols_ref'};
+    my $row_color_scheme_ref = $args{'row_color_scheme_ref'};
+    my $printable_table = $args{'printable_table'};
+    my $max_widths_ref = $args{'max_widths'};
+    $resultset_ref = $args{'resultset_ref'};
+    my $page_size = $args{'page_size'} || 100;
+    my $page_number = $args{'page_number'} || 0;
+
+
+    #### Set the display window of rows
+    $resultset_ref->{row_pointer} = $page_size * $page_number;
+    $resultset_ref->{row_counter} = 0;
+    $resultset_ref->{page_size} = $page_size;
+
+
+    #### Define <TD> tags
+    my @TDformats=('NOWRAP');
+
+
+    #### If a row_color_scheme was not passed, create one:
+    unless ($row_color_scheme_ref) {
+      my %row_color_scheme;
+      $row_color_scheme{change_n_rows} = 3;
+      my @row_color_list = ("#E0E0E0","#C0D0C0");
+      $row_color_scheme{color_list} = \@row_color_list;
+      $row_color_scheme_ref = \%row_color_scheme;
+    }
+
+
+    my $types_ref = $resultset_ref->{types_list_ref};
+
+
+    #### Make some adjustments to the default column width settings
+    my @precisions = @{$resultset_ref->{precisions_list_ref}};
+    my $i;
+    for ($i = 0; $i <= $#precisions; $i++) {
+      #### Set the width to negative (variable)
+      $precisions[$i] = (-1) * $precisions[$i];
+
+      #### Override the width if the user specified it
+      $precisions[$i] = $max_widths_ref->{$sth->{NAME}->[$i]}
+        if ($max_widths_ref->{$sth->{NAME}->[$i]});
+
+      #### Set the precision to 20 for dates (2001-01-01 00:00:01)
+      $precisions[$i] = 20 if ($types_ref->[$i] =~ /date/i);
+
+      #### Print for debugging
+      #print $sth->{NAME}->[$i],"(",$types_ref->[$i],"): ",
+      #  $precisions[$i],"<BR>\n";
+    }
+
+
+    #### If a printable table was desired, use one format
+    if ( $printable_table ) {
+
+      ShowHTMLTable { titles=>$resultset_ref->{column_list_ref},
+	types=>$types_ref,
+	widths=>\@precisions,
+	row_sub=>\&returnNextRow,
+        table_attrs=>'WIDTH=675 BORDER=1 CELLPADDING=2 CELLSPACING=2',
+        title_formats=>['BOLD'],
+        url_keys=>$url_cols_ref,
+        hidden_cols=>$hidden_cols_ref,
+        THformats=>['BGCOLOR=#C0C0C0'],
+        TDformats=>['NOWRAP']
+      };
+
+    #### Otherwise, use the standard viewable format which doesn't print well
+    } else {
+
+      ShowHTMLTable { titles=>$resultset_ref->{column_list_ref},
+	types=>$types_ref,
+	widths=>\@precisions,
+	row_sub=>\&returnNextRow,
+        table_attrs=>'BORDER=0 CELLPADDING=2 CELLSPACING=2',
+        title_formats=>['FONT COLOR=white,BOLD'],
+        url_keys=>$url_cols_ref,
+        hidden_cols=>$hidden_cols_ref,
+        THformats=>['BGCOLOR=#0000A0'],
+        TDformats=>\@TDformats,
+        row_color_scheme=>$row_color_scheme_ref
+      };
+
+    }
+
+
+    #### finish up
+    print "\n";
+
+    return 1;
+
+
+} # end displayResultSet
+
+
+
+###############################################################################
+# displayResultSetControls
+#
+# Displays the links and form to control ResultSet display
+###############################################################################
+sub displayResultSetControls {
+    my $self = shift;
+    my %args = @_;
+
+    my ($i,$element,$key,$value,$line,$result,$sql);
+
+    #### Process the arguments list
+    my $resultset_ref = $args{'resultset_ref'};
+    my $rs_params_ref = $args{'rs_params_ref'};
+    my $query_parameters_ref = $args{'query_parameters_ref'};
+    my $base_url = $args{'base_url'};
+
+    my %rs_params = %{$rs_params_ref};
+    my %parameters = %{$query_parameters_ref};
+
+
+    #### Display the row statistics and warn the user
+    #### if they're not seeing all the data
+    my $start_row = $rs_params{page_size} * $rs_params{page_number} + 1;
+    my $nrows = scalar(@{$resultset_ref->{data_ref}});
+    print "<BR>Displayed rows $start_row - $resultset_ref->{row_pointer} of ".
+      "$nrows\n";
+
+    if ( $parameters{row_limit} == scalar(@{$resultset_ref->{data_ref}}) ) {
+      print "&nbsp;&nbsp;(<font color=red>WARNING: </font>Resultset ".
+	"truncated at $parameters{row_limit} rows. ".
+	"Increase row limit to see more.)<BR>\n";
+    }
+
+
+    #### Provide links to the other pages of the dataset
+    print "<BR>Result Page \n";
+    $i=0;
+    my $nrowsminus = $nrows - 1 if ($nrows > 0);
+    my $npages = int($nrowsminus / $rs_params{page_size}) + 1;
+    for ($i=0; $i<$npages; $i++) {
+      my $pg = $i+1;
+      if ($i == $rs_params{page_number}) {
+        print "[<font color=red>$pg</font>] \n";
+      } else {
+        print "<A HREF=\"$base_url?apply_action=PREVRESULTSET&".
+          "rs_set_name=$rs_params{set_name}&".
+          "rs_page_size=$rs_params{page_size}&".
+          "rs_page_number=$pg\">$pg</A> \n";
+      }
+    }
+    print "of $npages\n";
+
+
+    #### Print out some debugging information about the returned resultset:
+    if (0 == 1) {
+      print "<BR><BR>resultset_ref = $resultset_ref<BR>\n";
+      while ( ($key,$value) = each %{$resultset_ref} ) {
+        printf("%s = %s<BR>\n",$key,$value);
+      }
+      #print "columnlist = ",
+      #  join(" , ",@{$resultset_ref->{column_list_ref}}),"<BR>\n";
+      print "nrows = ",scalar(@{$resultset_ref->{data_ref}}),"<BR>\n";
+      print "rs_set_name=",$rs_params{set_name},"<BR>\n";
+    }
+
+
+    return 1;
+
+
+} # end displayResultSetControls
+
+
+###############################################################################
+# readResultSet
+#
+# Reads a resultset from a file
+###############################################################################
+sub readResultSet {
+    my $self = shift;
+    my %args = @_;
+
+    #### Process the arguments list
+    my $resultset_file = $args{'resultset_file'};
+    $resultset_ref = $args{'resultset_ref'};
+    my $query_parameters_ref = $args{'query_parameters_ref'};
+
+    my $indata = "";
+
+
+    #### Read in the query parameters
+    my $infile = "../../tmp/queries/${resultset_file}.params";
+    open(INFILE,"$infile") || die "Cannot open $infile\n";
+    while (<INFILE>) { $indata .= $_; }
+    close(INFILE);
+
+
+    #### eval the dump
+    my $VAR1;
+    eval $indata;
+    %{$query_parameters_ref} = %{$VAR1};
+
+
+    #### Read in the resultset
+    $indata = "";
+    my $infile = "../../tmp/queries/${resultset_file}.resultset";
+    open(INFILE,"$infile") || die "Cannot open $infile\n";
+    while (<INFILE>) { $indata .= $_; }
+    close(INFILE);
+
+    #### eval the dump
+    eval $indata;
+    %{$resultset_ref} = %{$VAR1};
+
+
+    return 1;
+
+
+} # end readResultSet
+
+
+###############################################################################
+# writeResultSet
+#
+# Writes a resultset to a file
+###############################################################################
+sub writeResultSet {
+    my $self = shift;
+    my %args = @_;
+
+    #### Process the arguments list
+    my $resultset_file_ref = $args{'resultset_file_ref'};
+    $resultset_ref = $args{'resultset_ref'};
+    my $query_parameters_ref = $args{'query_parameters_ref'};
+
+
+    #### If a filename was not provides, create one
+    if ($$resultset_file_ref eq "SETME") {
+      my ($sec,$min,$hour,$mday,$mon,$year) = localtime(time);
+      my $timestr = strftime("%Y%m%d-%H%M%S",$sec,$min,$hour,$mday,$mon,$year);
+      $$resultset_file_ref = "query_" . $self->getCurrent_username() ."_" . 
+	$timestr;
+    }
+    my $resultset_file = $$resultset_file_ref;
+
+
+    #### Write out the query parameters
+    my $outfile = "../../tmp/queries/${resultset_file}.params";
+    open(OUTFILE,">$outfile") || die "Cannot open $outfile\n";
+    printf OUTFILE Data::Dumper->Dump( [$query_parameters_ref] );
+    close(OUTFILE);
+
+
+    #### Write out the resultset
+    my $outfile = "../../tmp/queries/${resultset_file}.resultset";
+    open(OUTFILE,">$outfile") || die "Cannot open $outfile\n";
+    printf OUTFILE Data::Dumper->Dump( [$resultset_ref] );
+    close(OUTFILE);
+
+
+    return 1;
+
+
+} # end writeResultSet
+
+
+###############################################################################
+# returnNextRow called by ShowTable
+###############################################################################
+sub returnNextRow {
+  my $flag = shift @_;
+  #print "Entering returnNextRow (flag = $flag)...<BR>\n";
+
+  #### If flag == 1, just testing to see if this is rewindable
+  if ($flag == 1) {
+    #print "Test if rewindable: yes<BR>\n";
+    return 1;
+  }
+
+  #### If flag > 1, then really do the rewind  
+  if ($flag > 1) {
+    #print "rewind...<BR>";
+    $resultset_ref->{row_pointer} = 0;
+    #print "and return.<BR>\n";
+    return 1;
+  }
+
+  #### Else return the next row
+  my @row;
+  my $irow = $resultset_ref->{row_pointer};
+  my $nrows = scalar(@{$resultset_ref->{data_ref}});
+  my $nrow = $resultset_ref->{row_counter};
+  my $page_size = $resultset_ref->{page_size};
+  if ($irow < $nrows && $nrow < $page_size) {
+    (@row) = @{$resultset_ref->{data_ref}->[$irow]};
+    $resultset_ref->{row_pointer}++;
+    $resultset_ref->{row_counter}++;
+  }
+
+  return @row;
+}
+
+
+
+
 
 
 ###############################################################################
