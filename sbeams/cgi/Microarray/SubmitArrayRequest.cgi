@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl 
+#!/usr/local/bin/perl
 
 ###############################################################################
 # Program     : SubmitArrayRequest.cgi
@@ -18,7 +18,7 @@
 ###############################################################################
 use strict;
 use lib qw (../../lib/perl);
-use vars qw ($q $sbeams $sbeamsMA $dbh $current_contact_id $current_username
+use vars qw ($q $sbeams $sbeamsMOD $dbh $current_contact_id $current_username
              $current_work_group_id $current_work_group_name
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              $PK_COLUMN_NAME @MENU_OPTIONS
@@ -39,8 +39,8 @@ use SBEAMS::Microarray::TableInfo;
 
 $q = new CGI;
 $sbeams = new SBEAMS::Connection;
-$sbeamsMA = new SBEAMS::Microarray;
-$sbeamsMA->setSBEAMS($sbeams);
+$sbeamsMOD = new SBEAMS::Microarray;
+$sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 
@@ -60,18 +60,18 @@ main();
 ###############################################################################
 sub main { 
 
-    ($CATEGORY) = $sbeamsMA->returnTableInfo($TABLE_NAME,"CATEGORY");
-    ($PROGRAM_FILE_NAME) = $sbeamsMA->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
-    ($DB_TABLE_NAME) = $sbeamsMA->returnTableInfo($TABLE_NAME,"DB_TABLE_NAME");
-    ($PK_COLUMN_NAME) = $sbeamsMA->returnTableInfo($TABLE_NAME,"PK_COLUMN_NAME");
-    @MENU_OPTIONS = $sbeamsMA->returnTableInfo($TABLE_NAME,"MENU_OPTIONS");
+    ($CATEGORY) = $sbeamsMOD->returnTableInfo($TABLE_NAME,"CATEGORY");
+    ($PROGRAM_FILE_NAME) = $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
+    ($DB_TABLE_NAME) = $sbeamsMOD->returnTableInfo($TABLE_NAME,"DB_TABLE_NAME");
+    ($PK_COLUMN_NAME) = $sbeamsMOD->returnTableInfo($TABLE_NAME,"PK_COLUMN_NAME");
+    @MENU_OPTIONS = $sbeamsMOD->returnTableInfo($TABLE_NAME,"MENU_OPTIONS");
 
     #### Do the SBEAMS authentication and exit if a username is not returned
     exit unless ($current_username = $sbeams->Authenticate());
 
     #### Don't print the header, do what the program does, and print footer
     processRequests();
-    $sbeamsMA->printPageFooter();
+    $sbeamsMOD->printPageFooter();
 
 } # end main
 
@@ -103,7 +103,8 @@ sub processRequests {
     }
 
     # Decide where to go based on form values
-    if      ($q->param('apply_action')) { processEntryForm();
+    if      ($q->param('apply_action') eq 'VIEWRESULTSET') { printOptions();
+    } elsif ($q->param('apply_action')) { processEntryForm();
     } elsif ($q->param('ShowEntryForm')) { printEntryForm();
     } elsif ($q->param("$PK_COLUMN_NAME")) { printEntryForm();
     } else { printOptions();
@@ -117,7 +118,7 @@ sub processRequests {
 ###############################################################################
 sub printOptions {
 
-    $sbeamsMA->printPageHeader();
+    $sbeamsMOD->printPageHeader();
     $sbeams->printUserContext();
 
     print qq!
@@ -134,8 +135,21 @@ sub printOptions {
     }
 
     print "$LINESEPARATOR<P>";
-    $sbeamsMA->printPageFooter("CloseTables");
-    showTable("WithOptions");
+
+
+    #### Read in the default input parameters
+    my %parameters;
+    my $n_params_found = $sbeams->parse_input_parameters(
+      q=>$q,parameters_ref=>\%parameters);
+
+    #### Close the upper portion of the page and get ready for data table
+    #$sbeamsMOD->printPageFooter(close_table=>"YES",display_footer=>"NO");
+
+    #### Display the data table
+    showTable(with_options=>'YES',parameters_ref=>\%parameters);
+
+    #### Close the upper portion of the page and get ready for data table
+    $sbeamsMOD->printPageFooter(close_table=>"YES",display_footer=>"NO");
 
 } # end printOptions
 
@@ -147,7 +161,7 @@ sub printOptions {
 ###############################################################################
 sub printEntryForm {
 
-    $sbeamsMA->printPageHeader();
+    $sbeamsMOD->printPageHeader();
     $sbeams->printUserContext();
 
     my %parameters;
@@ -158,9 +172,9 @@ sub printEntryForm {
     my $total_price=0;
 
     # Get the columns for this table
-    my @columns = $sbeamsMA->returnTableInfo($TABLE_NAME,"ordered_columns");
+    my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
     my %input_types = 
-      $sbeamsMA->returnTableInfo($TABLE_NAME,"input_types");
+      $sbeamsMOD->returnTableInfo($TABLE_NAME,"input_types");
 
     # Read the form values for each column
     foreach $element (@columns) {
@@ -670,7 +684,7 @@ sub printEntryForm {
     !;
 
 
-    $sbeamsMA->printPageFooter("CloseTables");
+    $sbeamsMOD->printPageFooter("CloseTables");
 
 } # end printEntryForm
 
@@ -681,27 +695,101 @@ sub printEntryForm {
 # Displays the Table
 ###############################################################################
 sub showTable {
-    my $with_options = shift;
+  my %args = @_;
 
-    my $detail_level  = $q->param('detail_level') || "BASIC";
+  #### Process the arguments list
+  my $query_parameters_ref = $args{'parameters_ref'};
+  my %parameters = %{$query_parameters_ref};
+  my $with_options = $args{'with_options'};
 
-    my ($main_query_part) =
-      $sbeamsMA->returnTableInfo($TABLE_NAME,$detail_level."Query");
 
-    my ($full_where_clause,$full_orderby_clause) = 
-      $sbeams->processTableDisplayControls($TABLE_NAME);
+  #### Get the specified level of detail or set to BASIC
+  my $detail_level = $q->param('detail_level') || "BASIC";
+  my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
+  my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
 
-    my $sql_query = qq~
-        $main_query_part
-        $full_where_clause
-        $full_orderby_clause
-    ~;
 
-    my ($element,$value);
-    my %url_cols = $sbeamsMA->returnTableInfo($TABLE_NAME,"url_cols");
+  #### Get the query to show this table
+  my ($main_query_part) =
+    $sbeamsMOD->returnTableInfo($TABLE_NAME,$detail_level."Query",
+    $query_parameters_ref);
 
-    return $sbeams->displayQueryResult(sql_query=>$sql_query,
-        url_cols_ref=>\%url_cols);
+  #### Display the table controls
+  my ($full_where_clause,$full_orderby_clause) = 
+    $sbeams->processTableDisplayControls($TABLE_NAME);
+
+
+  #### If a new ORDER BY clause is specified, remove the default one
+  if ($full_orderby_clause) {
+    $main_query_part =~ s/\s*ORDER BY.*//i;
+  }
+
+
+  #### Build the final query
+  my $sql_query = qq~
+      $main_query_part
+      $full_where_clause
+      $full_orderby_clause
+  ~;
+  #print "<PRE>$sql_query\n\n</PRE>";
+
+
+  #### Get the url link data
+  my %url_cols = $sbeamsMOD->returnTableInfo($TABLE_NAME,"url_cols");
+
+
+  #### Define some variables for the resultset
+  my %resultset = ();
+  my $resultset_ref = \%resultset;
+
+  #### If the apply action was to recall a previous resultset, do it
+  my %rs_params = $sbeams->parseResultSetParams(q=>$q);
+  if ($apply_action eq "VIEWRESULTSET") {
+    $sbeams->readResultSet(
+       resultset_file=>$rs_params{set_name},
+       resultset_ref=>$resultset_ref,
+       query_parameters_ref=>\%parameters
+    );
+
+
+  #### Otherwise fetch the results from the database server
+  } else {
+
+    #### Fetch the results from the database server
+    $sbeams->fetchResultSet(sql_query=>$sql_query,
+      resultset_ref=>$resultset_ref);
+  
+    #### Store the resultset and parameters to disk resultset cache
+    $rs_params{set_name} = "SETME";
+    $sbeams->writeResultSet(
+      resultset_file_ref=>\$rs_params{set_name},
+      resultset_ref=>$resultset_ref,
+      query_parameters_ref=>\%parameters
+    );
+  }
+
+
+  #### Display the resultset
+  $sbeams->displayResultSet(
+    rs_params_ref=>\%rs_params,
+    url_cols_ref=>\%url_cols,
+    #hidden_cols_ref=>\%hidden_cols,
+    #max_widths=>\%max_widths,
+    resultset_ref=>$resultset_ref,
+    #column_titles_ref=>\@column_titles,
+    base_url=>$base_url,
+    query_parameters_ref=>\%parameters,
+  );
+
+
+  #### Display the resultset controls
+  $sbeams->displayResultSetControls(
+    rs_params_ref=>\%rs_params,
+    resultset_ref=>$resultset_ref,
+    query_parameters_ref=>\%parameters,
+    base_url=>$base_url
+  );
+
 
 } # end showTable
 
@@ -720,7 +808,7 @@ sub processEntryForm {
     my $total_price=0;
 
     # Get the columns for this table
-    my @columns = $sbeamsMA->returnTableInfo($TABLE_NAME,"ordered_columns");
+    my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
 
     # Read the form values for each column
     foreach $element (@columns) {
@@ -743,7 +831,7 @@ sub processEntryForm {
     }
 
 
-    $sbeamsMA->printPageHeader();
+    $sbeamsMOD->printPageHeader();
 
     if ($parameters{"request_status"} eq "Not Yet Submitted") {
       $parameters{"request_status"}="Submitted";
@@ -763,7 +851,7 @@ sub processEntryForm {
 
     # Check for missing required information
     my @required_columns = 
-      $sbeamsMA->returnTableInfo($TABLE_NAME,"required_columns");
+      $sbeamsMOD->returnTableInfo($TABLE_NAME,"required_columns");
     if (@required_columns) {
       my $error_message;
       foreach $element (@required_columns) {
@@ -820,7 +908,7 @@ sub processEntryForm {
     }
 
     my @data_columns = 
-      $sbeamsMA->returnTableInfo($TABLE_NAME,"data_columns");
+      $sbeamsMOD->returnTableInfo($TABLE_NAME,"data_columns");
 
 
     # If a PK has already been provided and action is /^SET/ then
@@ -1401,7 +1489,7 @@ sub printAttemptedChangeResult {
 ###############################################################################
 sub printCompletedEntry {
 
-    $sbeamsMA->printPageHeader(navigation_bar=>"NO");
+    $sbeamsMOD->printPageHeader(navigation_bar=>"NO");
 
     my %parameters;
     my $element;
@@ -1411,7 +1499,7 @@ sub printCompletedEntry {
     my $total_price=0;
 
     # Get the columns for this table
-    my @columns = $sbeamsMA->returnTableInfo($TABLE_NAME,"ordered_columns");
+    my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
 
     # Read the form values for each column
     foreach $element (@columns) {
@@ -1837,7 +1925,7 @@ sub printCompletedEntry {
     ~;
 
 
-    $sbeamsMA->printPageFooter("CloseTables");
+    $sbeamsMOD->printPageFooter("CloseTables");
 
 } # end printEntryForm
 
