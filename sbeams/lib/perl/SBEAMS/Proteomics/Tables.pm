@@ -100,7 +100,7 @@ use vars qw(@ISA @EXPORT
     
     $TBPR_PROTEOMICS_SAMPLE
     $TBPR_PROTEOMICS_SAMPLE_PROTOCOL
-    $TBPR_EXPERIMENT_SAMPLE
+    $TBPR_EXPERIMENTS_SAMPLES
 	
 
 );
@@ -187,7 +187,7 @@ require Exporter;
     
     $TBPR_PROTEOMICS_SAMPLE
     $TBPR_PROTEOMICS_SAMPLE_PROTOCOL
-    $TBPR_EXPERIMENT_SAMPLE
+    $TBPR_EXPERIMENTS_SAMPLES
 );
 
 
@@ -275,6 +275,6 @@ $TBPR_NSP_DISTRIBUTION            = "${mod}nsp_distribution";
 
 $TBPR_PROTEOMICS_SAMPLE		  = "${mod}proteomics_sample";
 $TBPR_PROTEOMICS_SAMPLE_PROTOCOL  = "${mod}proteomics_sample_protocol";
-$TBPR_EXPERIMENT_SAMPLE		  = "${mod}experiment_samples";
+$TBPR_EXPERIMENTS_SAMPLES		  = "${mod}experiments_samples";
 
 
