@@ -506,7 +506,8 @@ sub specialParsing {
 
   #### Special conversion rules for Drosophila genome, e.g.:
   #### >Scr|FBgn0003339|CT1096|FBan0001030 "transcription factor" mol_weight=44264  located on: 3R 84A6-84B1; 
-  if ($biosequence_set_name eq "Drosophila aa_gadfly Database") {
+  if ($biosequence_set_name eq "Drosophila aa_gadfly Database" ||
+      $biosequence_set_name eq "Drosophila na_gadfly Nucleotide Database") {
     @other_names = split('\|',$rowdata_ref->{biosequence_name});
     $n_other_names = scalar(@other_names);
     if ($n_other_names > 1) {
