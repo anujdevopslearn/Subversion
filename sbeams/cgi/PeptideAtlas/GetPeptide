@@ -171,11 +171,12 @@ sub handle_request {
         <BR>
     END
 
+    my ($atlas_build_name, $atlas_build_id);
+
     ## only have atlas_build_name, get atlas_build_id too to pass on to neighboring cgi's
     if ( $parameters{atlas_build_name} && (!$parameters{atlas_build_id}) )
     {
-
-        my $atlas_build_name = $parameters{atlas_build_name};
+        $atlas_build_name = $parameters{atlas_build_name};
 
         my $sql = qq~
             SELECT atlas_build_id
@@ -194,9 +195,55 @@ sub handle_request {
 
             $parameters{atlas_build_id} = $tmp;
 
+            $atlas_build_id = $tmp;
+
         }
 
     }
+
+    ## only have atlas_build_id, get atlas_build_name too to pass on to neighboring cgi's
+    if ( $parameters{atlas_build_id} && (!$parameters{atlas_build_name}) )
+    {
+        $atlas_build_id = $parameters{atlas_build_id};
+
+        my $sql = qq~
+            SELECT atlas_build_name
+            FROM $TBAT_ATLAS_BUILD
+            WHERE atlas_build_id = '$atlas_build_id'
+            AND record_status != 'D'
+            ~;
+
+        #$sbeams->display_sql(sql=>$sql);
+
+        my ($tmp) = $sbeams->selectOneColumn($sql) or
+            die "Cannot complete $sql ($!)";
+
+        if ($tmp)
+        {
+
+             $atlas_build_name = $tmp;
+
+             $parameters{atlas_build_name} = $$atlas_build_name;
+
+        }
+
+    }
+
+
+    ## some extra processing to remove keys that are actually values of previous
+    ## key:   xxxxxxx need to fix that someday
+    my %tmp_parameters;
+
+    foreach my $key (%parameters)
+    {
+        unless ($parameters{$key} eq '')
+        {
+            $tmp_parameters{$key} = $parameters{$key};
+
+        }
+    }
+
+    %parameters = %tmp_parameters;
 
 
     ## if tab menu is requested, display tabs and append parameters to PROG_NAME
@@ -242,6 +289,7 @@ sub handle_request {
     my $project_string = join( ",", @accessible_project_ids ) || '0';
 
 
+    ## get accessible atlases:
     my $sql = qq~
         SELECT atlas_build_id,atlas_build_name
         FROM $TBAT_ATLAS_BUILD
@@ -280,11 +328,11 @@ sub handle_request {
 
 
     ## Display HTML FORM to select Atlas and Search constraints:
-    my $atlas_build_name = $parameters{"atlas_build_name"};
+    my $atlas_build_name = $parameters{atlas_build_name};
 
-    my $searchKey = $parameters{"searchWithinThis"};
+    my $searchKey = $parameters{searchWithinThis};
 
-    my $searchValue = $parameters{"searchForThis"};
+    my $searchValue = $parameters{searchForThis};
 
     unless ( $apply_action eq "QUERY" ) { ## if receive from link, don't assign null
 
@@ -292,14 +340,14 @@ sub handle_request {
 
     }
 
-    ## if receive $parameters{atlas_build_id} from link, get atlas build name 
-    if ( $parameters{atlas_build_id} ) {
-        for (my $i=0; $i<=$#atlas_option_id_array; $i++) {
-            if ( $parameters{atlas_build_id} eq $atlas_option_id_array[$i] ) {
-                $atlas_build_name = $atlas_option_name_array[$i]
-            }
-        }
-    }
+    ### if receive $parameters{atlas_build_id} from link, get atlas build name 
+    #if ( $parameters{atlas_build_id} ) {
+    #    for (my $i=0; $i<=$#atlas_option_id_array; $i++) {
+    #        if ( $parameters{atlas_build_id} eq $atlas_option_id_array[$i] ) {
+    #            $atlas_build_name = $atlas_option_name_array[$i]
+    #        }
+    #    }
+    #}
 
 
 
@@ -333,7 +381,6 @@ sub handle_request {
 
         print "</p>";
     } 
-
 
     ## store form values in %parameters:
     for (my $i=0; $i<=$#atlas_option_name_array; $i++){
