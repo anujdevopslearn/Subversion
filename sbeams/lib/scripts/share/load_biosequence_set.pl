@@ -245,13 +245,13 @@ sub handleRequest {
 
   #### Loop over each biosequence_set, determining its status and processing
   #### it if desired
-  print "        set_tag      n_rows  set_path\n";
-  print "---------------  ----------  -----------------------------------\n";
+  print "        set_tag      n_rows -e set_path\n";
+  print "---------------  ----------  - ---------------------------------\n";
   foreach $biosequence_set_id (@biosequence_set_ids) {
     my $status = getBiosequenceSetStatus(
       biosequence_set_id => $biosequence_set_id);
-    printf("%15s  %10d  %s\n",$status->{set_tag},$status->{n_rows},
-      $status->{set_path});
+    printf("%15s  %10d  %s %s\n",$status->{set_tag},$status->{n_rows},
+      $status->{file_exists},$status->{set_path});
 
     #### If we're not just checking the status
     unless ($check_status) {
@@ -320,6 +320,11 @@ sub getBiosequenceSetStatus {
            WHERE BS.biosequence_set_id = '$biosequence_set_id'
   ~;
   my ($n_rows) = $sbeams->selectOneColumn($sql);
+
+
+  #### See if the file exists
+  $status{file_exists} = ' ';
+  $status{file_exists} = '!' unless ( -e $status{set_path} );
 
 
   #### Put the information in a hash
