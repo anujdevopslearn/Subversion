@@ -514,7 +514,11 @@ sub returnTableInfo {
 
       $url = $url_cols{$element};
       if ($url eq "pkDEFAULT") {
-        $url_cols{$element} = "$CGI_BASE_DIR/$subdir$PROGRAM_FILE_NAME&$PK_COLUMN_NAME=%V";
+        $url_cols{$element} = "$CGI_BASE_DIR/$subdir$PROGRAM_FILE_NAME&".
+          "$PK_COLUMN_NAME=%V";
+      } elsif ($url eq "uploaded_file") {
+        $url_cols{$element} = "$CGI_BASE_DIR/$subdir$PROGRAM_FILE_NAME&".
+          "$PK_COLUMN_NAME=%0V&GetFile=%K";
       } elsif ($url eq "SELF") {
         $url_cols{$element} = "%V";
       }
