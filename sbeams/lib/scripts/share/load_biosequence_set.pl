@@ -487,7 +487,7 @@ sub loadBiosequenceSet {
         if (defined($biosequence_id) && $biosequence_id > 0) {
           $insert = 0; $update = 1;
         } else {
-          print "WARNING: INSERTing instead of UPDATing ".
+          print "WARNING: INSERT instead of UPDATE ".
             "'$rowdata{biosequence_name}'\n";
         }
       }
