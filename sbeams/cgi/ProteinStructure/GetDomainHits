@@ -479,11 +479,19 @@ sub handle_request {
 
 
   #### Build ROWCOUNT constraint
-  $parameters{row_limit} = 5000
+  $parameters{row_limit} = 10000
     unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
-  my $limit_clause = "TOP $parameters{row_limit}";
-  #### Disable row limits because this hides problem with Chilli filter!!!!
-  $limit_clause = "";
+  #### Since the number of rows get changes in postProcess, hack in some
+  #### artificial inflation for later deflation
+  my $server_row_limit = $parameters{row_limit};
+  my $final_row_limit = $parameters{row_limit};
+  if ($parameters{display_options} =~ /ApplyChilliFilter/i ||
+      $parameters{display_options} =~ /SeqWidth/i ) {
+    $server_row_limit = 100000;
+  }
+  my $limit_clause = $sbeams->buildLimitClause(
+   row_limit=>$server_row_limit);
+  $limit_clause->{final_row_limit} = $final_row_limit;
 
 
   #### Define some variables needed to build the query
@@ -626,7 +634,7 @@ sub handle_request {
 
   #### Define the SQL statement
   $sql = qq~
-	SELECT $limit_clause $columns_clause
+	SELECT $limit_clause->{top_clause} $columns_clause
           FROM $TBPS_DOMAIN_MATCH DM
           LEFT JOIN $TBPS_DOMAIN_MATCH_SOURCE DMS
 	       ON ( DM.domain_match_source_id = DMS.domain_match_source_id )
@@ -674,6 +682,7 @@ sub handle_request {
         $transmembrane_class_clause
         $n_transmembrane_regions_clause
         ORDER BY BS.biosequence_name,DM.domain_match_index,DN.cluster_name,DM.query_start
+	$limit_clause->{trailing_limit_clause}
   ~;
 
 
@@ -782,12 +791,17 @@ sub handle_request {
       );
 
       #### Post process the resultset
-      postProcessResultset(
-        rs_params_ref=>\%rs_params,
-        resultset_ref=>$resultset_ref,
-        query_parameters_ref=>\%parameters,
-        column_titles_ref=>\@column_titles,
-      ) if ($parameters{display_options} =~ /ApplyChilliFilter/i || $parameters{display_options} =~ /SeqWidth/i );
+      if ($parameters{display_options} =~ /ApplyChilliFilter/i ||
+	  $parameters{display_options} =~ /SeqWidth/i ) {
+        postProcessResultset(
+          rs_params_ref=>\%rs_params,
+          resultset_ref=>$resultset_ref,
+          query_parameters_ref=>\%parameters,
+          column_titles_ref=>\@column_titles,
+          final_row_limit => $limit_clause->{final_row_limit},
+        );
+      }
+
 
       #### Store the resultset and parameters to disk resultset cache
       $rs_params{set_name} = "SETME";
@@ -885,6 +899,7 @@ sub postProcessResultset {
   my $rs_params_ref = $args{'rs_params_ref'};
   my $query_parameters_ref = $args{'query_parameters_ref'};
   my $column_titles_ref = $args{'column_titles_ref'};
+  my $final_row_limit = $args{'final_row_limit'};
 
   my %rs_params = %{$rs_params_ref};
   my %parameters = %{$query_parameters_ref};
@@ -1240,6 +1255,15 @@ sub postProcessResultset {
 
     #### Set new start and continue
     $startrow = $endrow + 1;
+
+
+    #### Check the final number of rows
+    if ($final_row_limit) {
+      if (scalar(@new_data_array) >= $final_row_limit) {
+	@new_data_array = @new_data_array[0..($final_row_limit-1)];
+	last;
+      }
+    }
 
   }
 
