@@ -232,7 +232,7 @@ print File "<center><b>You can edit  your  Sbeams entries by clicking on the lin
 print File "<br><pre>";
 	my $organismSql = "select upper( full_name), organism_id  from sbeams.dbo.organism";
 	my $organismNameSql = " select upper( organism_Name), organism_id  from sbeams.dbo.organism";
-	my $interactionTypeSql = "select interaction_type_name, interaction_type_id from $TBIN_INTERACTION_TYPE";	
+	my $interactionTypeSql = "select upper(interaction_type_name), interaction_type_id from $TBIN_INTERACTION_TYPE";	
 	my $bioentityTypeSql = "select upper(bioentity_type_name), bioentity_type_id from $TBIN_BIOENTITY_TYPE";
 	
 	my %organismHash = $sbeams->selectTwoColumnHash($organismSql);
@@ -272,12 +272,15 @@ print File "<br><pre>";
 	$species2ID = $organismHash{$bioentityHash{organismTarget}};
 	$species2ID = $organismNameHash{$bioentityHash{organismTarget}} unless defined($species2ID);
 	
-	$bioentityHash{interaction} = $parameters{interactionType};
+	$bioentityHash{interaction} = uc($parameters{interactionType});
 
-	
-		
+print File "Interaction Type: $parameters{interactionType}\n";
+print File "Bioentity Source Name:  $bioentityHash{canSource}\n";
+print File "Bioentity Target Name:  $bioentityHash{canTarget}\n";
 print File "Bioenity Source Type:  $bioentityHash{typeSource}\n" if $bioentityHash{typeSource};
 print File "Bioenity Target Type:  $bioentityHash{typeTarget}\n" if $bioentityHash{typeTarget};
+print File "Organism Source:  $parameters{species1}\n";
+print File "Organism Target:   $parameters{species2}\n";
 	if(!defined( $bioentityHash{typeSource}))
 	{
 print File "\n<b> Configuring Source and Target  Bioentity Type</b>\n\n";	
@@ -404,21 +407,22 @@ Link: <a href =  $BIOENTITY_URL$bioentityHash{idTarget} target=sbeams>$BIOENTITY
 print File "\n\n<b><font size = 3 color = red>Searching Sbeams for Selected Interaction</font></b>\n\n";;
 	if($isPresent)
 	{
-		if (!$interactionTypeHash{$bioentityHash{interactionType}})
+		if (!$interactionTypeHash{$bioentityHash{interaction}})
 		{
+		
 print File "Could not find the specified interaction type in the database:  --   $bioentityHash{interaction}    --    \n
 Used interaction type \"Interacts with\" as default\n";
-			$bioentityHash{interactionType} = "Interacts with";
+			$bioentityHash{interaction} = "Interacts with";
 		}
 		
 		my $interactionID = checkForInteraction($bioentityHash{idSource}, $bioentityHash{idTarget});
 		if(! $interactionID)
 		{	
-		my $interactionID = addToInteractionTable ($bioentityHash{idSource}, $bioentityHash{idTarget}, $interactionTypeHash{$bioentityHash{interactionType}},$parameters{set_interaction_group_id});
+		my $interactionID = addToInteractionTable ($bioentityHash{idSource}, $bioentityHash{idTarget}, $interactionTypeHash{$bioentityHash{interaction}},$parameters{set_interaction_group_id});
 print File " \n<b>Created a NEW Interaction with the following parameters:</b>\n\n
 Bioentity Source ID: $bioentityHash{idSource}\n
 Bioentity Target ID: $bioentityHash{idTarget}\n
-InteractionType:  $bioentityHash{interactionType}\n
+InteractionType:  $bioentityHash{interaction}\n
 
 Added NEW interactionID:  $interactionID\n
 Link: <a href=  $INTERACTION_URL$interactionID target=sbeams> $INTERACTION_URL$interactionID</a>\n";
@@ -431,18 +435,18 @@ Link: <a href = $INTERACTION_URL$interactionID target=sbeams> $INTERACTION_URL$i
 	}
 	else
 	{	
-		if (!$interactionTypeHash{$bioentityHash{interactionType}})
+		if (!$interactionTypeHash{$bioentityHash{interaction}})
 		{
-print File " Could not find the specified interaction type in the database:  --   $bioentityHash{interactionType}    --    \n
+print File " Could not find the specified interaction type in the database:  --   $bioentityHash{interaction}    --    \n
 Used interaction type \"Interacts with\" as default\n";
-			$bioentityHash{interactionType} = "Interacts with";
+			$bioentityHash{interaction} = "Interacts with";
 		}
 
-		my $interactionID = addToInteractionTable ($bioentityHash{idSource}, $bioentityHash{idTarget}, $interactionTypeHash{$bioentityHash{interactionType}},$parameters{set_interaction_group_id});                       
+		my $interactionID = addToInteractionTable ($bioentityHash{idSource}, $bioentityHash{idTarget}, $interactionTypeHash{$bioentityHash{interaction}},$parameters{set_interaction_group_id});                       
 print File " \n<b>Created a NEW Interaction with the following parameters:</b>\n\n
 Bioentity Source ID: $bioentityHash{idSource}\n
 Bioentity Target ID: $bioentityHash{idTarget}\n
-InteractionType:  $bioentityHash{interactionType}\n
+InteractionType:  $bioentityHash{interaction}\n
 
 Added NEW interactionID:  $interactionID\n
 Link: <a href =$INTERACTION_URL$interactionID target=sbeams> $INTERACTION_URL$interactionID</a>\n";
