@@ -711,6 +711,18 @@ sub handle_request {
   ~;
 
 
+  #### Ad-Hoc, and sort of dangerous way of reversing the sense of the
+  #### quantitation ratio
+  if ( $parameters{quantitation_values} eq "d0d8" ) {
+    #### This is the default
+  #### Swap the numerator and denominator
+  } elsif ( $parameters{quantitation_values} eq "d8d0" ) {
+    $sql =~ s/d0\_/dQQQ_/g;
+    $sql =~ s/d8\_/d0_/g;
+    $sql =~ s/dQQQ\_/d8_/g;
+  }
+
+
   #### Certain types of actions should be passed to links
   my $pass_action = "QUERY";
   $pass_action = $apply_action if ($apply_action =~ /QUERY/i); 
