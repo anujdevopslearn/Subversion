@@ -198,6 +198,15 @@ sub preFormHook {
   }
 
 
+  #### For gradient_programs, set a default table header
+  if ($TABLE_NAME eq "PR_gradient_program") {
+    $query_parameters_ref->{gradient_program_table} =
+      "Time  Buf A %  Buf B %  Flow mL/min\n".
+      "----  -------  -------  -----------\n"
+      unless ($query_parameters_ref->{gradient_program_table});
+  }
+
+
   #### If this is publication and there is a PubMedID and there is
   #### not a title, try to fetch the data from PubMed
   if ($TABLE_NAME eq "PR_publication") {
@@ -304,5 +313,97 @@ sub preUpdateDataCheck {
   return '';
 
 } # end preUpdateDataCheck
+
+
+
+###############################################################################
+# postUpdateOrInsertHook
+#
+# This is a hook to do some processing after the record has been updated
+# or inserted.
+###############################################################################
+sub postUpdateOrInsertHook {
+  my %args = @_;
+
+  my $query_parameters_ref = $args{'parameters_ref'};
+  my %parameters = %{$query_parameters_ref};
+  my $pk_value = $args{'pk_value'};
+
+
+  #### If table XXXX
+  if ($TABLE_NAME eq "XXXX") {
+    return "An error of some sort $parameters{something} invalid";
+  }
+
+
+  #### If table PR_gradient_program
+  if ($TABLE_NAME eq "PR_gradient_program") {
+    #return unless ($parameters{gradient_program_table});
+    my @rows = split(/[\r\n]+/,$parameters{gradient_program_table});
+    my $row_index = 1;
+    my @data_rows = ();
+
+    #### Loop over all the data rows
+    foreach my $row (@rows) {
+      #### Ignore if all spaces or empty
+      next if ($row =~ /^\s*$/);
+
+      #### If it contains all numbers, that's good
+      if ($row =~ /^[\d\s\.e]+$/) {
+	#### Strip leading and trailing space
+	$row =~ s/^\s+//;
+	$row =~ s/\s+$//;
+
+	#### Separate the columns
+	my @columns = split(/\s+/,$row);
+
+	#### If there are three or four columns, save the values
+	if (scalar(@columns) == 3 || scalar(@columns == 4)) {
+	  push(@data_rows,\@columns);
+
+	#### Else complain about a bad number of columns
+	} else {
+	  print "Skipping Gradient Program Deltas row $row_index with ".
+	    "incorrect number of columns: '$row'<BR>\n";
+	}
+
+      #### Else tell the user that we're skipping a non-numerical row
+      #### (either a header line or perhaps a bad line
+      } else {
+	print "Skipping non-numerical Gradient Program Deltas row ".
+	  "$row_index: '$row'<BR>\n"
+	  unless ($row =~ /^Time  Buf A/ || $row =~ /^----  -----/);
+      }
+
+      #### Increment the row counter
+      $row_index++;
+
+    } # end foreach $row
+
+
+    #### Store the results to the deltas table
+    my @child_data_columns = qw(gradient_delta_time buffer_A_setting_percent
+      buffer_B_setting_percent flow_rate);
+    updateChildTable(
+      parent_table_name => $TABLE_NAME,
+      parent_pk_column_name => $PK_COLUMN_NAME,
+      parent_pk_value => $parameters{$PK_COLUMN_NAME},
+      child_table_name => 'PR_gradient_delta',
+      child_pk_column_name => 'gradient_delta_id',
+      child_data_columns => \@child_data_columns,
+      child_data_values => \@data_rows,
+    );
+
+
+    return;
+
+  } # end if $TABLE_NAME
+
+
+  #### Otherwise, no special processing, so just return undef
+  return;
+
+} # end postUpdateOrInsertHook
+
 
 
