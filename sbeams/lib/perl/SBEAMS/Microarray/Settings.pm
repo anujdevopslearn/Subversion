@@ -24,6 +24,7 @@ use vars qw(@ISA @EXPORT
     @AFFY_DEFAULT_FILES
     $AFFY_ZIP_REQUEST_DIR
     $AFFY_R_CHP_ANALYSIS_PROTOCOL
+	$BIOCONDUCTOR_DELIVERY_PATH
 );
 
 require Exporter;
@@ -43,12 +44,26 @@ $AFFY_ZIP_REQUEST_DIR 	= '/net/arrays/Affy_Zip_Request';
 
 $AFFY_R_CHP_ANALYSIS_PROTOCOL = 'R Mas5.0 CHP';				#Current protocol that describes the R script to produce the CHP like file
 
+$BIOCONDUCTOR_DELIVERY_PATH = '/net/arrays/Affymetrix/core/data_analysis/delivery';#/net/dblocal/www/html/devPM/sbeams/bioconductor/delivery
+
 #### Override variables from main Settings.pm
 $SBEAMS_SUBDIR          = 'Microarray';
 
 
 
 ### Methods to access data
+
+#######################################################
+# affy_bioconductor_devlivery_path
+# get the path to the bioconductory delivery folder
+#######################################################
+sub affy_bioconductor_devlivery_path {
+	my $self = shift;
+   
+    	return $BIOCONDUCTOR_DELIVERY_PATH;
+}
+
+
 
 #######################################################
 # get_affy_r_chp_protocol
