@@ -119,8 +119,9 @@ sub printEntryForm {
     my $sql_query;
     my (%url_cols,%hidden_cols);
 
-    my $CATEGORY="Welcome to the Test Pipeline Tool!";
-    my $SECONDARY_MESSAGE="Please send commments/bugs/etc. to <A HREF=\"mailto:mjohnson\@systemsbiology.org\">mjohnson</A>";
+    my $CATEGORY="Welcome to the Data Processing Pipeline!";
+    my $SECONDARY_MESSAGE="<B><FONT COLOR='red'>In order to create a better data processing tool, I need your help!</FONT></B>";
+    my $TERTIARY_MESSAGE="If you have any questions, suggestions, or just want some help, please contact me!<BR>Thanks!<BR>- <A HREF=\"mailto:mjohnson\@systemsbiology.org\">mjohnson</A>";
 
     my $apply_action  = $q->param('apply_action');
     my $update_action = $q->param('UPDATE_CART');#mj
@@ -139,6 +140,7 @@ sub printEntryForm {
     print qq!
         <H2>$CATEGORY</H2>
 	<BR>$SECONDARY_MESSAGE<BR>
+	<BR>$TERTIARY_MESSAGE<BR>
         $LINESEPARATOR
         <FORM METHOD="post">
         <TABLE>
