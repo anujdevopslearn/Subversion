@@ -248,7 +248,7 @@ Nichole King, E<lt>nking@localdomainE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2005 by Nichole King
+Copyright 2005 by Institute for Systems Biology	 
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 
