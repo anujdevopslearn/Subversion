@@ -1225,17 +1225,17 @@ sub get_annotation_sql {
 			anno.probe_set_id       AS "probe_set_id",
            		anno.gene_title         AS "gene_title",
            		anno.gene_symbol        AS "gene_symbol",
-           		sequence_type,
-			sequence_source,
-			transcript_id,
-			target_description_feature,
-			target_description,
-			target_description_note,
-			representative_public_id,
-			archival_unigene_cluster,
-			chromosomal_location,
-			pathway,
-			qtl
+           		anno.sequence_type,
+			anno.sequence_source,
+			anno.transcript_id,
+			anno.target_description_feature,
+			anno.target_description,
+			anno.target_description_note,
+			anno.representative_public_id,
+			anno.archival_unigene_cluster,
+			anno.chromosomal_location,
+			anno.pathway,
+			anno.qtl
            		FROM $TBMA_AFFY_ANNOTATION anno 
             		JOIN $TBMA_AFFY_ANNOTATION_SET anno_set 
                 		ON (anno.affy_annotation_set_id = anno_set.affy_annotation_set_id)	
@@ -1261,12 +1261,123 @@ sub get_dbxref_accessor_urls {
 			    	    	     FROM $TB_DBXREF"
 					   );
 }
+###############################################################################
+#get_protein_family_info
+#Give affy_annotation_id
+#return results as an array of hrefs
+###############################################################################
+sub get_protein_family_info {
+	my $self = shift;
+	my $affy_annotation_id = shift;
+	my $sql = qq~ 
+				    SELECT  pf.description, pf.e_value, db.dbxref_id, db.db_id
+					FROM  $TBMA_PROTEIN_FAMILIES pf
+					JOIN $TBMA_AFFY_DB_LINKS db ON (pf.affy_db_links_id = db.affy_db_links_id)
+					WHERE pf.affy_annotation_id = $affy_annotation_id
+				~; 
+	#$sbeams->display_sql(sql=>$sql);
+	
+	return $sbeams->selectHashArray($sql)
+
+}
+
+###############################################################################
+#get_protein_domain_info
+#Give affy_annotation_id
+#return results as an array of hrefs
+###############################################################################
+sub get_protein_domain_info {
+	my $self = shift;
+	my $affy_annotation_id = shift;
+	my $sql = qq~ 
+				    SELECT  pd.protein_domain_description, db.dbxref_id, db.db_id
+					FROM  $TBMA_PROTEIN_DOMAIN pd
+					JOIN $TBMA_AFFY_DB_LINKS db ON (pd.affy_db_links_id = db.affy_db_links_id)
+					WHERE pd.affy_annotation_id = $affy_annotation_id
+				~; 
+	#$sbeams->display_sql(sql=>$sql);
+	
+	return $sbeams->selectHashArray($sql)
+
+}
+###############################################################################
+#get_interpro_info
+#Give affy_annotation_id
+#return results as an array of hrefs
+###############################################################################
+sub get_interpro_info {
+	my $self = shift;
+	my $affy_annotation_id = shift;
+	my $sql = qq~ 
+				    SELECT  ip.interpro_description, db.dbxref_id, db.db_id
+					FROM  $TBMA_INTERPRO ip
+					JOIN $TBMA_AFFY_DB_LINKS db ON (ip.affy_db_links_id = db.affy_db_links_id)
+					WHERE ip.affy_annotation_id = $affy_annotation_id
+				~; 
+	#$sbeams->display_sql(sql=>$sql);
+	
+	return $sbeams->selectHashArray($sql)
+
+}
+###############################################################################
+#get_transmembrane_info
+#
+#Give a affy_annotaion_id
+#Return number of transmembrane domains
+###############################################################################
+sub get_transmembrane_info {
+	my $self = shift;
+	my $anno_id = shift;
+	my @rows = $sbeams->selectOneColumn("	SELECT number_of_domains
+											FROM $TBMA_TRANS_MEMBRANE WHERE
+					     					affy_annotation_id = $anno_id"
+				           				);
+	return $rows[0];
+}
+###############################################################################
+#get_alignment_info
+#
+#Give a affy_annotaion_id
+#Return all the alignment info as an array of hrefs
+###############################################################################
+sub get_alignment_info {
+	my $self = shift;
+	my $anno_id = shift;
+	my $sql = qq~  SELECT a.gene_start, a.gene_stop,  a.percent_identity, a.gene_orientation,a.match_chromosome 
+				   FROM $TBMA_ALIGNMENT a 
+				   WHERE a.affy_annotation_id = $anno_id
+			    ~;
+	return $sbeams->selectHashArray($sql);
+}
+###############################################################################
+#get_go_info
+#
+#Give a affy_annotaion_id
+#Return all the go info as an array of hrefs
+###############################################################################
+sub get_go_info {
+	my $self = shift;
+	my $anno_id = shift;
+	my $sql = qq~SELECT gt.gene_ontology_name_type, 
+				 go.gene_ontology_description, 
+				 go.gene_ontology_evidence, 
+				 db.dbxref_id, 
+				 db.db_id
+ 				 FROM $TBMA_GENE_ONTOLOGY go
+				 JOIN $TBMA_GENE_ONTOLOGY_TYPE gt ON (go.gene_ontology_type_id = gt.gene_ontology_type_id)
+				 JOIN  $TBMA_AFFY_DB_LINKS db ON(go.affy_db_links_id = db.affy_db_links_id) 
+				 WHERE
+				 go.affy_annotation_id = $anno_id
+				 ORDER BY gt.gene_ontology_type_id
+				~;
+	return $sbeams->selectHashArray($sql);
+}
 
 ###############################################################################
 #get_db_acc_numbers
 #
 #Give a affy_annotaion_id
-#retrun all ids as a hash of db_id => dbxref_id: 12345 => 16
+#retrun all ids as a hash of db_id => dbxref_id Example 12345 => 16
 ###############################################################################
 sub get_db_acc_numbers {
 	my $self = shift;
