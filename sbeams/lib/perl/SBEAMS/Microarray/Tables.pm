@@ -125,12 +125,12 @@ my $mod = $DBPREFIX{Microarray};
 
 $TB_ORGANISM            = "${core}organism";
 
-$TB_PROTOCOL            = "${mod}protocol";
-$TB_PROTOCOL_TYPE       = "${mod}protocol_type";
-$TB_HARDWARE            = "${mod}hardware";
-$TB_HARDWARE_TYPE       = "${mod}hardware_type";
-$TB_SOFTWARE            = "${mod}software";
-$TB_SOFTWARE_TYPE       = "${mod}software_type";
+$TB_PROTOCOL            = "${core}protocol";
+$TB_PROTOCOL_TYPE       = "${core}protocol_type";
+$TB_HARDWARE            = "${core}hardware";
+$TB_HARDWARE_TYPE       = "${core}hardware_type";
+$TB_SOFTWARE            = "${core}software";
+$TB_SOFTWARE_TYPE       = "${core}software_type";
 $TBMA_SLIDE_TYPE          = "${mod}slide_type";
 $TBMA_COST_SCHEME         = "${mod}cost_scheme";
 $TBMA_SLIDE_TYPE_COST     = "${mod}slide_type_cost";
