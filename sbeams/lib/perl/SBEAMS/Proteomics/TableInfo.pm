@@ -146,6 +146,7 @@ sub returnTableInfo {
 		       presented_on_date AS "Date Presented",
 		       username AS "Presented By",
 		       title,
+		       full_manuscript_file,
 		       uri
 		  FROM $TBPR_PUBLICATION P
 		  LEFT JOIN $TBPR_PUBLICATION_CATEGORY PC
