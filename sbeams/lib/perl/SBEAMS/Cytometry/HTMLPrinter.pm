@@ -114,7 +114,11 @@ sub display_page_header {
     <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=CY_sort_entity"><nobr>&nbsp;&nbsp;&nbsp;Sort Entity</nobr></a></td></tr>
     <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=CY_tissue_type"><nobr>&nbsp;&nbsp;&nbsp;Tissue Type</nobr></a></td></tr>
   <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=CY_sort_type"><nobr>&nbsp;&nbsp;&nbsp;Sort Technique</nobr></a></td></tr>
-
+  <tr></tr>
+  <tr></tr>
+  <tr><td>Documentation</td></tr>
+ <tr><td><a href="$HTML_BASE_DIR/doc/$SBEAMS_SUBDIR/SampleNameConvention.php"><nobr>&nbsp;&nbsp;&nbsp;Sample Name Coding</nobr></a></td></tr>
+       
 	<tr><td>&nbsp;</td></tr>
 
 	</table>
