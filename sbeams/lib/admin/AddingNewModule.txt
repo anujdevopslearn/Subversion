@@ -4,8 +4,8 @@ Notes add a new module:
 set TEMPLATE = MODULETEMPLATE
 set TMPLTAG = ModTmpTAG
 
-set DEST = BioLink
-set TAG = BL
+set DEST = Immunostain
+set TAG = IS
 
 ---
 
@@ -90,10 +90,13 @@ set CONFDIR = "../../conf"
 
 ---
 
-Add in user groups like ${DEST}_admin and ${DEST}_user if desired.
+Add in user groups like ${DEST}_admin, ${DEST}_user, ${DEST}_readonly if desired.
+Make some users belong to these groups
 
 Create table_group_security entries for these groups and the
 table groups defined in ${DEST}_table_property.txt
+
+Create table_group_security entries for new groups for common and rowprivate
 
 ---
 
