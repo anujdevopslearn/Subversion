@@ -25,6 +25,7 @@ use constant DATA_MODIFIER => 20;
 use constant DATA_WRITER => 30;
 use constant DATA_READER => 40;
 use constant DATA_NONE => 50;
+use constant DEBUG => 0;
 
 
 ###############################################################################
@@ -87,8 +88,6 @@ sub printEntryForm {
   my %args = @_;
 
   #### Process the arguments list
-
-
   #### Define popular variables
   my ($i,$element,$key,$value,$line,$result,$sql);
   my ($username,$row);
@@ -548,8 +547,6 @@ sub printEntryForm {
   }
 
   #### FIXME debug block ####
-  use constant DEBUG => 0;
-
   my $rec = ( defined $projectAuthLevel ) ? $projectAuthLevel : 'undefined';
   my $pk = ( $parameters{$PK_COLUMN_NAME} ) ? $parameters{$PK_COLUMN_NAME} : 'undefined';
 
@@ -595,6 +592,8 @@ sub printEntryForm {
   # ---------------------------
   # Build option lists for each optionlist query provided for this table
   my %optionlists;
+  my $accessible_project_id_list = '';
+
   foreach $element (keys %optionlist_queries) {
 
       # If "$contact_id" appears in the SQL optionlist query, then substitute
@@ -613,10 +612,9 @@ sub printEntryForm {
       # If "$accessible_project_ids" appears in the SQL optionlist query,
       # then substitute it with a call to that function
       if ( $optionlist_queries{$element} =~ /\$accessible_project_ids/ ) {
-	my @accessible_project_ids = $sbeams->getAccessibleProjects();
-	my $accessible_project_id_list = join(',',@accessible_project_ids);
-	$accessible_project_id_list = '-1'
-          unless ($accessible_project_id_list gt '');
+        my @accessible_project_ids = $sbeams->getAccessibleProjects();
+      	$accessible_project_id_list = join(',',@accessible_project_ids);
+      	$accessible_project_id_list ||= '-1';
         $optionlist_queries{$element} =~
           s/\$accessible_project_ids/$accessible_project_id_list/g;
       }
@@ -708,21 +706,29 @@ sub printEntryForm {
     $column_text = linkToColumnText( $column_text, $column_name, $TABLE_NAME );
     }
 
+    
+    # Determine if (potential) fk table can be managed
+    my $manage;  
+    if ($fk_table) {
+      my ( $infoRef ) = \$sbeamsMOD->returnTableInfo($fk_table, "ManageTableAllowed");
+      $manage = $$infoRef;
+    }
+
     #### If there is a foreign_key table defined, create some HTML
     #### to provide a link to it
     my $jump_to_list_source;
-    if ($fk_table) {
+    if ( $fk_table && $manage eq 'YES' ) {
       my $subdir = $sbeams->getSBEAMS_SUBDIR();
       $subdir .= "/" if ($subdir);
       $jump_to_list_source = qq~
-        <A TARGET="AddToList" HREF="$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=$fk_table&ShowEntryForm=1">
-        <IMG SRC="$HTML_BASE_DIR/images/greenplus.gif" border=0 ALT="Add to or view details about this list box" ></A>
-        ~;
+      <A TARGET="AddToList" HREF="$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=$fk_table&ShowEntryForm=1">
+      <IMG SRC="$HTML_BASE_DIR/images/greenplus.gif" border=0 ALT="Add to or view details about this list box" ></A>
+      ~;
 
       $jump_to_list_source .= qq~
-        <A TARGET="ViewProperties" HREF="$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=$fk_table&$fk_column_name=$parameters{$column_name}">
-        <IMG SRC="$HTML_BASE_DIR/images/xmag_sm.png" border=0 ALT="View properties of the selected item (Click REFRESH after selecting new item)" >
-        </A>
+      <A TARGET="ViewProperties" HREF="$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=$fk_table&$fk_column_name=$parameters{$column_name}">
+      <IMG SRC="$HTML_BASE_DIR/images/xmag_sm.png" border=0 ALT="View properties of the selected item (Click REFRESH after selecting new item)" >
+      </A>
       ~ if (defined($parameters{$column_name}) && $parameters{$column_name} > '');
     }
 
@@ -742,12 +748,15 @@ sub printEntryForm {
                                            : $sbeams->getCurrent_contact_id();
 
         $query =~ s/\"/\\\"/g;
+        $query =~ s/\$accessible_project_ids/$accessible_project_id_list/g;
         $query = eval "\"$query\"";
 
         if ( !$query ) { # Can't translate without query
           print STDERR <<"          END_ERR";
-          Error translating query: $@
+          Error translating query => $@
           Pre_interplolation => $optionlist_query
+          Column => $column_name
+          Param => $parameters{$column_name}
           END_ERR
         } else {
 
@@ -768,7 +777,7 @@ sub printEntryForm {
       }
 
       my $view_obj_details;
-      if ($fk_table) {
+      if ( $fk_table && $manage eq 'YES' ) {
       my $subdir =  ( $sbeams->getSBEAMS_SUBDIR() ) ? $sbeams->getSBEAMS_SUBDIR() . '/' : ''; 
       $view_obj_details .= qq~
         <A TARGET="ViewProperties" HREF="$CGI_BASE_DIR/${subdir}ManageTable.cgi?TABLE_NAME=$fk_table&$fk_column_name=$parameters{$column_name}">
@@ -1406,6 +1415,7 @@ sub showTable {
 
   #### Get the url link data
   my %url_cols = $sbeamsMOD->returnTableInfo($TABLE_NAME,"url_cols");
+  my %hidden_cols = $sbeamsMOD->returnTableInfo($TABLE_NAME,"hidden_cols");
 
 
   #### Define some variables for the resultset
@@ -1425,6 +1435,8 @@ sub showTable {
   #### Otherwise fetch the results from the database server
   } else {
 
+    print STDERR "SQL => $sql_query\n" if DEBUG;
+
     #### Fetch the results from the database server
     $sbeams->fetchResultSet(sql_query=>$sql_query,
       resultset_ref=>$resultset_ref);
@@ -1443,7 +1455,7 @@ sub showTable {
   $sbeams->displayResultSet(
     rs_params_ref=>\%rs_params,
     url_cols_ref=>\%url_cols,
-    #hidden_cols_ref=>\%hidden_cols,
+    hidden_cols_ref=>\%hidden_cols,
     #max_widths=>\%max_widths,
     resultset_ref=>$resultset_ref,
     #column_titles_ref=>\@column_titles,
