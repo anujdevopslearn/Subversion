@@ -231,6 +231,16 @@ sub handle_request {
     constraint_value=>$parameters{probability_constraint} );
   return if ($probability_clause == -1);
 
+  #### For much better performance, add in a hit_index constraint if
+  #### there is a probability contraint.  This could break if
+  #### probabilities get assigned to rows with not hit_index = 1 !!!!
+  #### The reason seems to be that the NONCLUSTERED INDEX on
+  #### SH.probability is a lousy index that doesn't get used or
+  #### something, likely because most values are NULL.
+  if ($probability_clause) {
+    $probability_clause .= " AND SH.hit_index = 1";
+  }
+
 
   #### Build XCORR constraint
   my $xcorr_clause = "";
@@ -582,7 +592,7 @@ sub handle_request {
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
     );
-    $group_by_clause = " GROUP BY SH.biosequence_id,$colname,isoelectric_point";
+    $group_by_clause = " GROUP BY SH.reference,$colname,isoelectric_point";
     $peptide_column = "$colname,";
     $count_column = "COUNT(*) AS 'row_count',STR(AVG(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0)),10,2) AS 'average_quant',STR(STDEV(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0)),10,2) AS 'stdev_quant',SUM(CASE WHEN (NULLIF(d0_intensity,0.0) IS NULL OR NULLIF(d8_intensity,0.0) IS NULL) THEN 0 ELSE 1 END) AS 'n_quant',isoelectric_point";
 
@@ -600,7 +610,7 @@ sub handle_request {
       @additional_columns,
       ["biosequence_desc","BS.biosequence_desc","Reference Description"],
     );
-    $group_by_clause = " GROUP BY SH.biosequence_id";
+    $group_by_clause = " GROUP BY SH.reference";
     $count_column = "COUNT(*) AS 'row_count',STR(AVG(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0)),10,2) AS 'average_quant',STR(STDEV(NULLIF(d0_intensity,0.0)/NULLIF(d8_intensity,0.0)/ISNULL(NULLIF(PE.quant_normalization,0.0),1.0)),10,2) AS 'stdev_quant',SUM(CASE WHEN (NULLIF(d0_intensity,0.0) IS NULL OR NULLIF(d8_intensity,0.0) IS NULL) THEN 0 ELSE 1 END) AS 'n_quant'";
 
   #### If no grouping
@@ -644,7 +654,8 @@ sub handle_request {
 
   #### Define the SQL statement
   $sql = qq~
-	SELECT DISTINCT BS.biosequence_id
+	SELECT BS.biosequence_name,
+	       MIN(BS.biosequence_id) AS 'min_biosequence_id'
 	  INTO #tmpBSids
 	  FROM $TBPR_BIOSEQUENCE BS
 	  JOIN $TBPR_SEARCH_BATCH SB
@@ -659,10 +670,11 @@ sub handle_request {
         $molecular_function_clause
         $biological_process_clause
         $cellular_component_clause
+	 GROUP BY BS.biosequence_name
 
 	--
 
-	SELECT SH.biosequence_id,$peptide_column$count_column
+	SELECT SH.reference,$peptide_column$count_column
 	  INTO #tmpAnnBSids
 	  FROM $TBPR_SEARCH_HIT SH
 	  JOIN $TBPR_SEARCH S ON ( SH.search_id = S.search_id )
@@ -678,7 +690,7 @@ sub handle_request {
 	       ON ( SB.experiment_id = PE.experiment_id )
 	  JOIN $TBPR_BIOSEQUENCE BS
 	       ON ( SB.biosequence_set_id = BS.biosequence_set_id
-	       AND SH.biosequence_id = BS.biosequence_id )
+	       AND SH.reference = BS.biosequence_name )
 	 WHERE 1 = 1
 	$search_batch_clause
 	$probability_clause
@@ -708,9 +720,9 @@ sub handle_request {
 	SELECT $limit_clause $columns_clause
 	  FROM #tmpBSids tBS
 	  LEFT JOIN #tmpAnnBSids tABS
-               ON ( tBS.biosequence_id = tABS.biosequence_id )
+               ON ( tBS.biosequence_name = tABS.reference )
 	  JOIN $TBPR_BIOSEQUENCE BS
-               ON ( tBS.biosequence_id = BS.biosequence_id )
+               ON ( tBS.min_biosequence_id = BS.biosequence_id )
           LEFT JOIN $TB_DBXREF DBX ON ( BS.dbxref_id = DBX.dbxref_id )
           $GO_join
 	 WHERE 1 = 1
@@ -741,7 +753,8 @@ sub handle_request {
   my @parameters_to_pass;
   my $parameters_list = '';
   while ( ($key,$value) = each %input_types ) {
-    if ($key ne 'sort_order' && $key ne 'display_options') {
+    if ($key ne 'sort_order' && $key ne 'display_options' &&
+        $key ne 'reference_constraint') {
       if ($parameters{$key}) {
         push(@parameters_to_pass,"$key=$parameters{$key}");
       }
