@@ -215,7 +215,7 @@ sub handle_request {
   #########################################################################
   #### Process all the constraints
 
-  #### If not atlas_build_id was selected, stop here
+  #### If no atlas_build_id was selected, stop here
   unless ($parameters{atlas_build_id}) {
     $sbeams->reportException(
       state => 'ERROR',
