@@ -1512,7 +1512,7 @@ sub specialParsing {
   if ($rowdata_ref->{biosequence_name} =~ /^(UPSP|UPTR)\:(.+)$/ ) {
      $rowdata_ref->{biosequence_gene_name} = $2;
      $rowdata_ref->{biosequence_accession} = $2;
-     $rowdata_ref->{dbxref_id} = '34';
+     $rowdata_ref->{dbxref_id} = '35';
   }
 
 
