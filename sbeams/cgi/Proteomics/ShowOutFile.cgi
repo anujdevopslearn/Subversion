@@ -187,7 +187,9 @@ sub printEntryForm {
   #### Instead of accessing the .out file directly, pull it out of the .tgz
   my $use_tgz_file = 1;
   if ($use_tgz_file) {
-    $filename = "tar -xzOf $RAW_DATA_DIR{Proteomics}/$data_location/".
+    my $prefix = "$RAW_DATA_DIR{Proteomics}/";
+    $prefix = '' if ($location =~ /^\//);
+    $filename = "tar -xzOf $prefix$data_location/".
       "$fraction_tag.tgz ./$file_root.out|";
   }
 
