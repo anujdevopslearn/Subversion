@@ -247,6 +247,24 @@ sub handle_request {
   return if ($second_name_clause eq '-1');
 
 
+  #### Build BIOSEQUENCE NAME constraint
+  my $biosequence_name_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.biosequence_name",
+    constraint_type=>"plain_text",
+    constraint_name=>"Biosequence Name",
+    constraint_value=>$parameters{biosequence_name_constraint} );
+  return if ($biosequence_name_clause eq '-1');
+
+
+  #### Build BIOSEQUENCE DESCRIPTION constraint
+  my $description_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.biosequence_desc",
+    constraint_type=>"plain_text",
+    constraint_name=>"Biosequence Description",
+    constraint_value=>$parameters{description_constraint} );
+  return if ($description_clause eq '-1');
+
+
   #### Build LOG10 RATIO constraint
   my $log10_ratio_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"GE.log10_ratio",
@@ -291,24 +309,54 @@ sub handle_request {
   my $count_column = "";
 
 
+  #### Define the available data columns
+  my %available_columns = (
+    "GE.log10_ratio"=>["log10_ratio","GE.log10_ratio","log10 Ratio"],
+    "GE.log10_uncertainty"=>["log10_uncertainty","GE.log10_uncertainty","log10 Uncertainty"],
+    "GE.log10_std_deviation"=>["log10_std_deviation","GE.log10_std_deviation","log10 Std Dev"],
+    "GE.lambda"=>["lambda","GE.lambda","Lambda"],
+    "GE.mu_x"=>["mu_x","GE.mu_x","mu_x"],
+    "GE.mu_y"=>["mu_y","GE.mu_y","mu_y"],
+    "GE.mean_intensity"=>["mean_intensity","GE.mean_intensity","Mean Level"],
+    "GE.quality_flag"=>["quality_flag","GE.quality_flag","Quality Flag"],
+  );
+
+  #### If the user explicitly chose which columns to show
+  my @additional_columns = ();
+  my $display_columns = $parameters{display_columns};
+  unless (defined($parameters{display_columns}) && $parameters{display_columns}) {
+    $display_columns = "GE.log10_ratio,GE.log10_uncertainty,GE.log10_std_deviation,".
+      "GE.lambda,GE.mu_x,GE.mu_y,GE.mean_intensity,GE.quality_flag";
+  }
+
+  my @tmp = split(",",$display_columns);
+  foreach my $option (@tmp) {
+    if (defined($available_columns{$option})) {
+      push(@additional_columns,$available_columns{$option});
+    }
+  }
+
+
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
   my @column_array = (
     ["condition_name","C.condition_name","Condition"],
+    ["biosequence_name","BS.biosequence_name","Biosequence Name"],
     ["gene_name","GE.gene_name","Gene Name"],
     ["second_name","GE.second_name","Other Name"],
-    ["log10_ratio","GE.log10_ratio","log10 Ratio"],
-    ["log10_uncertainty","GE.log10_uncertainty","log10 Uncertainty"],
-    ["log10_std_deviation","GE.log10_std_deviation","log10 Std Dev"],
-    ["lambda","GE.lambda","Lambda"],
-    ["mu_x","GE.mu_x","mu_x"],
-    ["mu_y","GE.mu_y","mu_y"],
-    ["mean_intensity","GE.mean_intensity","Mean Level"],
-    ["quality_flag","GE.quality_flag","Quality Flag"],
+    @additional_columns,
   );
 
 
   #### Adjust the columns definition based on user-selected options
+  if ( $parameters{display_options} =~ /BSDesc/ ) {
+    push(@column_array,
+      ["biosequence_desc","BS.biosequence_desc","Biosequence Description"],
+    );
+  }
+
+
+  #### Set the show_sql flag if the user requested
   if ( $parameters{display_options} =~ /ShowSQL/ ) {
     $show_sql = 1;
   }
@@ -324,22 +372,55 @@ sub handle_request {
   );
 
 
+  #### In some cases, we need to have a subselect clause
+  my $subselect_clause = '';
+  if ( $parameters{display_options} =~ /AllConditions/ ) {
+    $subselect_clause = qq~
+          AND GE.gene_name IN (
+              SELECT DISTINCT GE.gene_name
+ 	        FROM $TBMA_CONDITION C
+	       INNER JOIN $TBMA_GENE_EXPRESSION GE
+                     ON ( C.condition_id = GE.condition_id )
+	        LEFT JOIN $TBMA_BIOSEQUENCE BS
+                     ON ( GE.biosequence_id = BS.biosequence_id )
+	       WHERE 1 = 1
+    	      $condition_clause
+	      $gene_name_clause
+  	      $biosequence_name_clause
+              $description_clause
+   	      $second_name_clause
+	      $log10_ratio_clause
+	      $lambda_clause
+             )
+    ~;
+    #### Remove contraints that might limit conditions
+    $log10_ratio_clause = '';
+    $lambda_clause = '';
+  }
+
+
   #### Define the SQL statement
   $sql = qq~
 	SELECT $limit_clause->{top_clause} $columns_clause
 	  FROM $TBMA_CONDITION C
 	 INNER JOIN $TBMA_GENE_EXPRESSION GE
                ON ( C.condition_id = GE.condition_id )
+	  LEFT JOIN $TBMA_BIOSEQUENCE BS
+               ON ( GE.biosequence_id = BS.biosequence_id )
 	 WHERE 1 = 1
 	$condition_clause
 	$gene_name_clause
 	$second_name_clause
+	$biosequence_name_clause
+        $description_clause
 	$log10_ratio_clause
 	$lambda_clause
+
+        $subselect_clause
+
 	$order_by_clause
 	$limit_clause->{trailing_limit_clause}
        ~;
-#  print "Query is:<BR>---------------------<BR>$sql<BR>---------------------<BR>";
 
 
   #### Certain types of actions should be passed to links
