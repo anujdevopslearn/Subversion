@@ -1732,6 +1732,10 @@ sub displayResultSetControls {
       my $url_prefix = "$CYTOSCAPE_URL/sbeams";
       print "<BR>\n";
       print "<A HREF=\"${url_prefix}?m=agingras&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
+    } elsif ($resultset_ref->{column_list_ref}->[0] eq 'Systematic') {
+      my $url_prefix = "$CYTOSCAPE_URL/sbeams";
+      print "<BR>\n";
+      print "<A HREF=\"${url_prefix}?m=blin&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
     } elsif ($resultset_ref->{column_hash_ref}->{biosequence_accession}) {
       my $url_prefix = "$CYTOSCAPE_URL/sbeams";
       print "<BR>\n";
