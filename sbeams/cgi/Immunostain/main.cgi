@@ -557,7 +557,7 @@ sub processAntibody
 	my $sqlCoord = qq~ select antibody_name, 
 	alternate_names,
 	biosequence_accession,
-	genome_location,
+	genome_location+genome_strand,
 	accessor
 	from $TBIS_ANTIBODY ab
 	left join $TBIS_ANTIGEN an on ab.antigen_id = an.antigen_id
