@@ -29,3 +29,5 @@ INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'GE_data_columns','GE.mean_intensity','Mean Level',150 );
 INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
 VALUES ( 'GE_data_columns','GE.quality_flag','Quality Flag',160 );
+INSERT INTO query_option ( option_type,option_key,option_value,sort_order )
+VALUES ( 'GE_data_columns','GE.mean_intensity_uncertainty','Mean Intensity Uncertainty',170 );
