@@ -83,6 +83,8 @@ sub authenticate {
   if (-e $SBEAMSAuth_file ) {
     if ($cookie_jar->load($SBEAMSAuth_file)) {
       $self->{_is_authenticated} = 1;
+      $self->set_authentication(authentication=>$cookie_jar);
+      #print "Loaded cookie jar $cookie_jar\n";
       return $cookie_jar;
     }
   }
@@ -118,6 +120,7 @@ sub authenticate {
   chmod(0600,$SBEAMSAuth_file);
 
   $self->{_is_authenticated} = 1;
+  $self->set_authentication(authentication=>$SBEAMS_auth);
   return $SBEAMS_auth;
 
 } # end authenticate
@@ -162,6 +165,7 @@ sub fetch_data {
   #### Create a user agent object pretending to be Mozilla
   my $ua = new LWP::UserAgent;
   $ua->agent("Mozilla/5.0 (X11; U; Linux i686; en-US; rv:0.9.9)");
+  #print "My cookie jar is $SBEAMS_auth\n";
   $ua->cookie_jar($SBEAMS_auth);
 
 
