@@ -86,6 +86,10 @@ sub showMainPage {
 		<area shape=rect coords="432,301,562,351" href="ProcessProject.cgi">
 		<area shape=rect coords="59,178,159,228" href="ManageTable.cgi?TABLE_NAME=hybridization&ShowEntryForm=1">
 		<area shape=rect coords="59,254,159,304" href="ManageTable.cgi?TABLE_NAME=labeling&ShowEntryForm=1">
+		<area shape=rect coords="324,11,424,61" href="ManageTable.cgi?TABLE_NAME=slide_lot&ShowEntryForm=1">
+		<area shape=rect coords="451,11,551,61" href="ManageTable.cgi?TABLE_NAME=slide_model&ShowEntryForm=1">
+		<area shape=rect coords="395,75,495,125" href="ManageTable.cgi?TABLE_NAME=printing_batch&ShowEntryForm=1">
+		<area shape=rect coords="469,137,569,187" href="ManageTable.cgi?TABLE_NAME=protocol&ShowEntryForm=1">
     !;
     # Depending on user context, the image map links will be printed?
     print qq!
