@@ -21,7 +21,6 @@ use FindBin;
 use lib "$FindBin::Bin/../../perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
-             $sbeamsProteomicsMOD
             );
 
 
@@ -455,8 +454,7 @@ sub buildAltas {
  
      $counter++;
 
-   ##xxxxx
-     die "sample_ids is null?? search_batch_ids= $APD_search_batch_ids{$tmp_pep_id} \n" 
+     die "sample_ids is null?? might need to create a sample record search_batch_ids= $APD_search_batch_ids{$tmp_pep_id} \n" 
          if (!$APD_sample_ids{$tmp_pep_id});
  
    } # end while INFILE
@@ -516,6 +514,9 @@ sub buildAltas {
       $chromosome[$ind] = $columns[8]; 
       ## parsing for chromosome:   this is set for Ens 21 and 22 notation...
       if ($chromosome[$ind] =~ /^(chromosome:)(NCBI.+:)(.+)(:.+:.+:.+)/ ) {
+          $chromosome[$ind] = $3;
+      }
+      if ($chromosome[$ind] =~ /^(chromosome:)(DROM.+:)(.+)(:.+:.+:.+)/ ) {
           $chromosome[$ind] = $3;
       }
       $strand[$ind] = $columns[9];
