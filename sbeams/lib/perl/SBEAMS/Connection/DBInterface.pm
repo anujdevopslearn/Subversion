@@ -1966,7 +1966,7 @@ sub displayResultSetControls {
     } elsif ($resultset_ref->{column_list_ref}->[0] eq 'Bait' ||
              $resultset_ref->{column_list_ref}->[1] eq 'Bait') {
       print "<BR>\n<A HREF=\"${cytoscape_url_prefix}?m=agingras&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
-    } elsif ($resultset_ref->{column_list_ref}->[0] eq 'condition_name') {
+    } elsif ($resultset_ref->{column_list_ref}->[0] eq 'condition_name' || $FindBin::Script =~ /GetExpression/) {
       print "<BR>\n<A HREF=\"${cytoscape_url_prefix}?m=microarray&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
     } elsif ($resultset_ref->{column_list_ref}->[0] eq 'prophet number') {
       print "<BR>\n<A HREF=\"${cytoscape_url_prefix}?m=rchen&rs=$rs_params{set_name}\">[View this Resultset with Cytoscape]</A>";
