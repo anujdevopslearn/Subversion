@@ -41,22 +41,22 @@ The following Perl Modules often not found on a standard UNIX/Linux
 setup are required before installation can begin.  Version numbers are
 for what is used for development; older or newer versions may work:
 
-Authen-Smb-0.91      (For Windows Domain Authentication instead of UNIX auth)
-Crypt-CBC-1.25
-Crypt-IDEA-1.01
+Authen::Smb           (For Windows Domain Authentication instead of UNIX auth)
+Crypt::CBC
+Crypt::IDEA
 Data-ShowTable-3.3b  (specially modified version by Deutsch and included)
-DBD-Sybase-0.94      (assuming Sybase or MS SQL Server is back end)
+DBD-Sybase           (assuming Sybase or MS SQL Server is back end)
 DBD-????             (if you are using a different type of back end RDBMS)
 DBI
-GD-1.41
+GD
 GDGraph-1.35a        (specially modified version by Deutsch and included)
 GDGraph-XY-0.92
 GDTextUtil-0.84
-Regexp-Common-2.113
-XML-Parser-2.29
+Regexp::Common
+XML::Parser
 
 Some versions of perl may require the following module be installed
-URI-1.31
+URI
 
 Additional common Perl modules are needed, but may not be on your system.
 Should really write a little dependency checker program.  FIXME.
@@ -64,7 +64,7 @@ Should really write a little dependency checker program.  FIXME.
 ---------------
 The following non-Perl software is required:
 
-FreeTDS 0.61         (required by DBD-Sybase only. Allows UNIX -> MSSQL/Sybase)
+FreeTDS              (required by DBD-Sybase only. Allows UNIX -> MSSQL/Sybase)
 libgd                (required by GD Perl modules)
 
 ---------------
