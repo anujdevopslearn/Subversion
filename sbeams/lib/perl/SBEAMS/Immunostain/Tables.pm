@@ -29,6 +29,8 @@ use vars qw(@ISA @EXPORT
     $TBIS_ANTIBODY
     $TBIS_ANTIGEN
     $TBIS_TISSUE_TYPE
+    $TBIS_SURGICAL_PROCEDURE
+    $TBIS_CLINICAL_DIAGNOSIS
     $TBIS_SPECIMEN
     $TBIS_SPECIMEN_BLOCK
     $TBIS_STAINED_SLIDE
@@ -57,6 +59,8 @@ require Exporter;
     $TBIS_ANTIBODY
     $TBIS_ANTIGEN
     $TBIS_TISSUE_TYPE
+    $TBIS_SURGICAL_PROCEDURE
+    $TBIS_CLINICAL_DIAGNOSIS
     $TBIS_SPECIMEN
     $TBIS_SPECIMEN_BLOCK
     $TBIS_STAINED_SLIDE
@@ -85,6 +89,8 @@ $TBIS_QUERY_OPTION          = "${mod}query_option";
 $TBIS_ANTIBODY              = "${mod}antibody";
 $TBIS_ANTIGEN               = "${mod}antigen";
 $TBIS_TISSUE_TYPE           = "${mod}tissue_type";
+$TBIS_SURGICAL_PROCEDURE    = "${mod}surgical_procedure";
+$TBIS_CLINICAL_DIAGNOSIS    = "${mod}clinical_diagnosis";
 $TBIS_SPECIMEN              = "${mod}specimen";
 $TBIS_SPECIMEN_BLOCK        = "${mod}specimen_block";
 $TBIS_STAINED_SLIDE         = "${mod}stained_slide";
