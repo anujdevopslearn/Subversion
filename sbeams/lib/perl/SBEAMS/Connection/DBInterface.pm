@@ -23,6 +23,7 @@ use Data::Dumper;
 #use Data::ShowTableEWD;
 use Data::ShowTable;
 
+use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
@@ -1112,17 +1113,23 @@ sub displayResultSetControls {
     my %parameters = %{$query_parameters_ref};
 
 
+    #### Start form
+    print qq~
+      <FORM METHOD="POST">
+    ~;
+
+
     #### Display the row statistics and warn the user
     #### if they're not seeing all the data
     my $start_row = $rs_params{page_size} * $rs_params{page_number} + 1;
     my $nrows = scalar(@{$resultset_ref->{data_ref}});
-    print "<BR>Displayed rows $start_row - $resultset_ref->{row_pointer} of ".
+    print "Displayed rows $start_row - $resultset_ref->{row_pointer} of ".
       "$nrows\n";
 
     if ( $parameters{row_limit} == scalar(@{$resultset_ref->{data_ref}}) ) {
       print "&nbsp;&nbsp;(<font color=red>WARNING: </font>Resultset ".
 	"truncated at $parameters{row_limit} rows. ".
-	"Increase row limit to see more.)<BR>\n";
+	"Increase row limit to see more.)\n";
     }
 
 
@@ -1136,13 +1143,42 @@ sub displayResultSetControls {
       if ($i == $rs_params{page_number}) {
         print "[<font color=red>$pg</font>] \n";
       } else {
-        print "<A HREF=\"$base_url?apply_action=PREVRESULTSET&".
+        print "<A HREF=\"$base_url?apply_action=VIEWRESULTSET&".
           "rs_set_name=$rs_params{set_name}&".
           "rs_page_size=$rs_params{page_size}&".
           "rs_page_number=$pg\">$pg</A> \n";
       }
     }
-    print "of $npages\n";
+    print "of $npages<BR>\n";
+
+
+    #### Print out a form to control some variable parameters
+    my $this_page = $rs_params{page_number} + 1;
+    print qq~
+      <INPUT TYPE="hidden" NAME="rs_set_name" VALUE="$rs_params{set_name}">
+      Page Size:
+      <INPUT TYPE="text" NAME="rs_page_size" SIZE=4
+        VALUE="$rs_params{page_size}">
+      &nbsp;&nbsp;&nbsp;&nbsp;Page Number:
+      <INPUT TYPE="text" NAME="rs_page_number" SIZE=4
+        VALUE="$this_page">
+      <INPUT TYPE="submit" NAME="apply_action" VALUE="VIEWRESULTSET">
+    ~;
+
+
+    #### Supply some additional links to the Result Set
+    print qq~
+      <BR>Download ResultSet in Format:
+      <a href="$CGI_BASE_DIR/GetResultSet.cgi/$rs_params{set_name}.tsv?rs_set_name=$rs_params{set_name}&format=tsv">TSV</a>,
+      <a href="$CGI_BASE_DIR/GetResultSet.cgi/$rs_params{set_name}.xls?rs_set_name=$rs_params{set_name}&format=excel">Excel</a>
+      <BR>
+    ~;
+
+
+    #### Finish the form
+    print qq~
+      </FORM>
+    ~;
 
 
     #### Print out some debugging information about the returned resultset:

@@ -156,7 +156,7 @@ sub printEntryForm {
     $rs_params{page_size} = $q->param("rs_page_size") || 50;
     $rs_params{page_number} = $q->param("rs_page_number") || 1;
     $rs_params{page_number} -= 1 if ($rs_params{page_number});
-    if ($apply_action eq "PREVRESULTSET") {
+    if ($apply_action eq "VIEWRESULTSET") {
       $sbeams->readResultSet(resultset_file=>$rs_params{set_name},
           resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters);
       $no_params_flag = 0;
@@ -829,8 +829,8 @@ sub printEntryForm {
 
 
 
-    #### If QUERY or PREVRESULTSET was selected, display the data
-    if ($apply_action =~ /QUERY/i || $apply_action eq "PREVRESULTSET") {
+    #### If QUERY or VIEWRESULTSET was selected, display the data
+    if ($apply_action =~ /QUERY/i || $apply_action eq "VIEWRESULTSET") {
 
       #### Show the SQL that will be or was executed
       print "<PRE>$sql_query</PRE><BR>\n" if ($show_sql);
