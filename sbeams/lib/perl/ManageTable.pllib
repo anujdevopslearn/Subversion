@@ -729,6 +729,7 @@ sub processEntryForm {
       #### Don't check if this is a multi_insert_column
       next if ($multi_insert_column && $element eq $multi_insert_column);
 
+      #### Make sure that character data isn't too long for the database
       if ($parameters{$element} gt '') {
         if ($data_types{$element} eq 'varchar' ||
             $data_types{$element} eq 'char') {
@@ -740,6 +741,8 @@ sub processEntryForm {
               "limitation seems unreasonable.";
           }
         }
+
+        #### Make sure that integer data contains only numbers
         if ($data_types{$element} eq 'int') {
           unless ($parameters{$element} =~ /^[\d\-\+]+$/) {
             $error_message .= "<LI> The field <B>$element</B> is of type ".
@@ -748,6 +751,9 @@ sub processEntryForm {
               "characters.  Please enter just an integer.";
           }
         }
+
+        #### Make sure that real/float data contains only characters that
+        #### could plausibly make up a number (doesn't prevent 45.-23.eee)
         if ($data_types{$element} eq 'real' ||
             $data_types{$element} eq 'float') {
           unless ($parameters{$element} =~ /^[\d\-\+\.e]+$/) {
@@ -757,6 +763,18 @@ sub processEntryForm {
               "characters.  Please enter just a real number.";
           }
         }
+
+        #### If the column name ends in _tag, insist upon alphanumeric
+        #### characters only
+        if ($element =~ /\_tag$/ && $parameters{$element} =~ /\W/) {
+          $error_message .= "<LI> The field <B>$element</B> is required ".
+            "to be a short name that might be used for a file or directory ".
+            "and may not have any non-alphanumeric characters.  Please ".
+            "go back and remove any characters that are not ".
+            "letters or numbers or underscores. ".
+            "Spaces are also <B>not</B> allowed.";
+        }
+
       }
     }
 
