@@ -104,7 +104,11 @@ exit(0);
 sub main {
 
   #### Do the SBEAMS authentication and exit if a username is not returned
-  exit unless ($current_username = $sbeams->Authenticate());
+  exit unless ($current_username = $sbeams->Authenticate(
+    #connect_read_only=>1,
+    #allow_anonymous_access=>1,
+    #permitted_work_groups_ref=>['Proteomics_user','Proteomics_admin'],
+  ));
 
   $TABLE_NAME = $q->param('TABLE_NAME')
     || croak "TABLE_NAME not specified."; 
@@ -152,7 +156,8 @@ sub processRequests {
     $dbh = $sbeams->getDBHandle();
 
     # Decide where to go based on form values
-    if      ($q->param('apply_action')) { processEntryForm();
+    if      ($q->param('apply_action') eq 'VIEWRESULTSET') { printOptions();
+    } elsif ($q->param('apply_action')) { processEntryForm();
     } elsif ($q->param('apply_action_hidden')) { printEntryForm();
     } elsif ($q->param('ShowEntryForm')) { printEntryForm();
     } elsif ($q->param("$PK_COLUMN_NAME")) { printEntryForm();
@@ -174,12 +179,12 @@ sub preFormHook {
   my %args = @_;
 
   my $query_parameters_ref = $args{'parameters_ref'};
-  my %parameters = %{$query_parameters_ref};
 
 
   #### If table XXXX
   if ($TABLE_NAME eq "XXXX") {
-    $parameters{YYYY} = 'XXXX' unless ($parameters{YYYY});
+    $query_parameters_ref->{YYYY} = 'XXXX'
+      unless ($query_parameters_ref->{YYYY});
   }
 
 

@@ -88,7 +88,7 @@ if ($DEBUG) {
 # Set Global Variables and execute main()
 ###############################################################################
 # Set maximum post (file upload) to 10 MB
-$CGI::POST_MAX = 1024 * 10000; 
+$CGI::POST_MAX = 1024 * 10000;
 main();
 exit(0);
 
@@ -156,7 +156,7 @@ sub processRequests {
 
     # Decide where to go based on form values
     if      ($q->param('apply_action') eq 'VIEWRESULTSET') { printOptions();
-    } elsif ($q->param('apply_action')) { printEntryForm();
+    } elsif ($q->param('apply_action')) { processEntryForm();
     } elsif ($q->param('apply_action_hidden')) { printEntryForm();
     } elsif ($q->param('ShowEntryForm')) { printEntryForm();
     } elsif ($q->param("$PK_COLUMN_NAME")) { printEntryForm();
