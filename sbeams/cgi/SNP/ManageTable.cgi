@@ -188,6 +188,11 @@ sub preFormHook {
       unless ($query_parameters_ref->{YYYY});
   }
 
+  #### If table TBSN_MANUAL_GENOTYPE_CALL
+  if ($TABLE_NAME eq "SN_manual_genotype_call") {
+    $query_parameters_ref->{call_quality} = 'E.User Call'
+      unless ($query_parameters_ref->{call_quality});
+  }
 
   #### Otherwise, no special processing, so just return undef
   return;
