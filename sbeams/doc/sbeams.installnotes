@@ -117,7 +117,7 @@ Retart the Apache server perhaps with something like:
 cd /local/www/html
 mkdir dev1
 cd dev1
-tar -zxvf ~/sbeams-0.13.tar.gz
+tar -zxvf ~/sbeams-0.16.tar.gz
 
 Create tmp directories and symlinks:
 cd sbeams
@@ -146,6 +146,14 @@ cd $SBEAMS/lib/conf
 cp SBEAMS.conf.template SBEAMS.conf
 edit SBEAMS.conf to taste
 
+Important notes:
+- Be sure to change WWW_UID to reflect the UID of the account running Apache
+- Change HOSTNAME, DBADMIN, DB_* to reflect your environment
+- Change DBPREFIX{*} to reflect the absolute locations of your tables.  For
+  RDBMS systems that use schemas or users, DBPREFIX{Core} will likely be
+  something like "sbeams.dbo." or "sbeams.Core." while with RDBMSs that do not
+  support such features (like MySQL), use just "sbeams.".
+
 
 -------------------------------------------------------------------------------
 6) Create and populate the database
@@ -162,7 +170,7 @@ this is not finished so please contribute to this effort if you can.
 
 - Generate the appropriate schema for your type(s) of database:
 
-setenv SBEAMS /local/html/dev1/sbeams
+setenv SBEAMS /local/www/html/dev1/sbeams
 cd $SBEAMS/lib/scripts/Core
 
 foreach dbtype ( mssql mysql pgsql )
