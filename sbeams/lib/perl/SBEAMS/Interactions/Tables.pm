@@ -22,6 +22,7 @@ use vars qw(@ISA @EXPORT
 
     $TBIN_BIOENTITY
     $TBIN_BIOENTITY_TYPE
+    $TBIN_BIOENTITY_MEMBER
     $TBIN_BIOENTITY_ATTRIBUTE
     $TBIN_BIOENTITY_ATTRIBUTE_TYPE
     $TBIN_REGULATORY_FEATURE
@@ -37,7 +38,7 @@ use vars qw(@ISA @EXPORT
     $TBIN_SAMPLE_TYPE
     $TBIN_PUBLICATION
     $TBIN_PUBLICATION_CATEGORY
-    
+
     $TBIN_BIOSEQUENCE_SET
     $TBIN_BIOSEQUENCE
     $TBIN_BIOSEQUENCE_DBXREF
@@ -53,6 +54,7 @@ require Exporter;
 
     $TBIN_BIOENTITY
     $TBIN_BIOENTITY_TYPE
+    $TBIN_BIOENTITY_MEMBER
     $TBIN_BIOENTITY_ATTRIBUTE
     $TBIN_BIOENTITY_ATTRIBUTE_TYPE
     $TBIN_REGULATORY_FEATURE
@@ -86,6 +88,7 @@ $TBIN_QUERY_OPTION                = "${mod}query_option";
 
 $TBIN_BIOENTITY                   = "${mod}bioentity";
 $TBIN_BIOENTITY_TYPE              = "${mod}bioentity_type";
+$TBIN_BIOENTITY_MEMBER            = "${mod}bioentity_member";
 $TBIN_BIOENTITY_ATTRIBUTE         = "${mod}bioentity_attribute";
 $TBIN_BIOENTITY_ATTRIBUTE_TYPE    = "${mod}bioentity_attribute_type";
 $TBIN_REGULATORY_FEATURE          = "${mod}regulatory_feature";
