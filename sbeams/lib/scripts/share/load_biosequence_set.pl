@@ -680,7 +680,7 @@ sub specialParsing {
 
 
 
-  #### Special conversion rules for Drosophila genome, e.g.:
+  #### Special conversion rules for Drosophila genome R2, e.g.:
   #### >Scr|FBgn0003339|CT1096|FBan0001030 "transcription factor" mol_weight=44264  located on: 3R 84A6-84B1; 
   if ($biosequence_set_name eq "Drosophila aa_gadfly Protein Database R2" ||
       $biosequence_set_name eq "Drosophila na_gadfly Nucleotide Database R2") {
@@ -695,9 +695,10 @@ sub specialParsing {
   }
 
 
-  #### Special conversion rules for Drosophila genome, e.g.:
+  #### Special conversion rules for Drosophila genome R3, e.g.:
   #### >Scr|FBgn0003339|CT1096|FBan0001030 "transcription factor" mol_weight=44264  located on: 3R 84A6-84B1; 
-  if ($biosequence_set_name eq "Drosophila aa_gadfly Protein Database R3" ||
+  if ($biosequence_set_name eq "Drosophila aa_gadfly Protein Database R3 Non-redundant" ||
+      $biosequence_set_name eq "Drosophila aa_gadfly Protein Database R3 Original" ||
       $biosequence_set_name eq "Drosophila na_gadfly Nucleotide Database R3") {
 
     if ($rowdata_ref->{biosequence_desc} =~
@@ -751,11 +752,18 @@ sub specialParsing {
 
   #### Special conversion rules for Yeast genome, e.g.:
   #### >ORFN:YAL014C YAL014C, Chr I from 128400-129017, reverse complement
-  if ($biosequence_set_name eq "yeast_orf_coding" || $biosequence_set_name eq "Yeast ORFs Database") {
-    if ($rowdata_ref->{biosequence_desc} =~ /([\w\-]+)\s([\w\-\:]+), .+/ ) {
-       $rowdata_ref->{biosequence_gene_name} = $1;
-       $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
-       $rowdata_ref->{dbxref_id} = '7';
+  if ($biosequence_set_name eq "yeast_orf_coding" ||
+      $biosequence_set_name eq "Yeast ORFs Database" ||
+      $biosequence_set_name eq "Yeast ORFs Common Name Database") {
+    if ($rowdata_ref->{biosequence_desc} =~ /([\w\-\:]+)\s([\w\-\:]+), .+/ ) {
+      if ($biosequence_set_name eq "Yeast ORFs Common Name Database") {
+        $rowdata_ref->{biosequence_gene_name} = $rowdata_ref->{biosequence_name};
+        $rowdata_ref->{biosequence_accession} = $1;
+      } else {
+        $rowdata_ref->{biosequence_gene_name} = $1;
+        $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
+      }
+      $rowdata_ref->{dbxref_id} = '7';
     }
   }
 
