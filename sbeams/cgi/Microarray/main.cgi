@@ -157,7 +157,7 @@ sub handle_request {
 	~;
 
   #### print_tabs
-  my @tab_titles = ("Array News","Current Project","Projects You Own","Accessible Projects","Graphical Overview");
+  my @tab_titles = ("Graphical Overview","Current Project","Projects You Own","Accessible Projects","Array News");
   my $tab_titles_ref = \@tab_titles;
   my $page_link = "main.cgi";
   my $unselected_bg_color = "\#008000";
@@ -166,7 +166,7 @@ sub handle_request {
   my $selected_font_color = "\#FFFFFF";
 
   #### Summary Section 
-  if($parameters{'tab'} eq "array_news") {
+  if($parameters{'tab'} eq "graphical_overview") {
       $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
 			     page_link=>$page_link,
 			     unselected_bg_color=>$unselected_bg_color,
@@ -174,7 +174,7 @@ sub handle_request {
 			     selected_bg_color=>$selected_bg_color,
 			     selected_font_color=>$selected_font_color,
 			     selected_tab=>0);
-      print_array_news_tab();
+      print_graphical_overview_tab();
   }elsif ($parameters{'tab'} eq "current_project"){
       $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
 			     page_link=>$page_link,
@@ -202,7 +202,7 @@ sub handle_request {
 			     selected_font_color=>$selected_font_color,
 			     selected_tab=>3);
       print_accessible_projects_tab(); 
-  }elsif($parameters{'tab'} eq "graphical_overview") {
+  }elsif($parameters{'tab'} eq "array_news") {
       $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
 			     page_link=>$page_link,
 			     unselected_bg_color=>$unselected_bg_color,
@@ -210,7 +210,7 @@ sub handle_request {
 			     selected_bg_color=>$selected_bg_color,
 			     selected_font_color=>$selected_font_color,
 			     selected_tab=>4);
-      print_graphical_overview_tab();
+      print_array_news_tab();
   }else{
       $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
 			     page_link=>$page_link,
@@ -219,7 +219,7 @@ sub handle_request {
 			     selected_bg_color=>$selected_bg_color,
 			     selected_font_color=>$selected_font_color,
 			     selected_tab=>0);
-      print_array_news_tab();
+      print_graphical_overview_tab();
   }
  
   return;
