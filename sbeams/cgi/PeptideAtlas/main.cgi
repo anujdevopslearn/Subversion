@@ -84,7 +84,8 @@ sub showMainPage {
 	<BR>
 
 	<UL>
-	<LI> Here is the starter stub for the PeptideAtlas area.
+	<LI> <A Href="http://www.peptideatlas.org/">About PeptideAtlas</A>
+	<LI> <A Href="GetPeptide">Browse PeptideAtlas [in progress]</A>
 	</UL>
 
 	<BR>
@@ -92,5 +93,3 @@ sub showMainPage {
     !;
 
 } # end showMainPage
-
-
