@@ -117,16 +117,21 @@ sub main {
 
   #### Get allele_id, query sequence for fasta file
   $sql = qq~
-        SELECT allele_id,query_sequence_id,convert(varchar(4000),
-               SI.trimmed_fiveprime_sequence)+A.allele+convert(varchar(4000),
-	       SI.trimmed_threeprime_sequence) AS 'snp_sequence'
+        SELECT allele_id,query_sequence_id,
+               convert(varchar(4000),SI.trimmed_fiveprime_sequence)+
+               A.allele+convert(varchar(4000),
+	       SI.trimmed_threeprime_sequence) AS 'snp_sequence',
+               SI.trimmed_fiveprime_sequence,
+               A.allele,
+	       SI.trimmed_threeprime_sequence
           INTO #tmp1
           FROM ${TBSN_ALLELE} A
           JOIN ${TBSN_SNP_INSTANCE} SI
             ON (A.snp_instance_id = SI.snp_instance_id)
          WHERE SI.source_version_id in ($parameters{source_version_id})
 
-        SELECT t.allele_id,t.snp_sequence,QS.query_sequence_id
+        SELECT t.allele_id,t.snp_sequence,QS.query_sequence_id,
+               trimmed_fiveprime_sequence,t.trimmed_threeprime_sequence
           FROM #tmp1 t
      LEFT JOIN ${TBSN_QUERY_SEQUENCE} QS
             ON (QS.query_sequence = t.snp_sequence)
@@ -138,12 +143,17 @@ sub main {
 
 
   my %query_sequence_ids;
+  my $counter = 0;
 
   my ($query_sequence_id,$sequence);
   foreach $row (@sequences) {
     #### If there's no sequence, just skip this record
     unless ($row->[1]) {
-      print "WARNING: Empty sequence for allele_id '$row[0]'!\n"
+      print "\nWARNING: Empty sequence for allele_id '$row->[0]'! Skip\n";
+      next;
+    }
+    unless ($row->[3] && $row->[4]) {
+      print "\nWARNING: No flanking sequences for allele_id '$row->[0]'! Skip\n";
       next;
     }
 
@@ -193,7 +203,8 @@ sub main {
       testonly=>$TESTONLY,
     );
 
-    print ".";
+    $counter++;
+    print "$counter..." if ($counter/100.0 == int($counter/100.0));
 
   }
 
