@@ -117,8 +117,20 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PS_domain_match_type"><nobr>&nbsp;&nbsp;&nbsp;Match Types</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PS_domain_match_source"><nobr>&nbsp;&nbsp;&nbsp;Match Sources</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PS_dbxref"><nobr>&nbsp;&nbsp;&nbsp;DB xRefs</nobr></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PS_test_table"><nobr>&nbsp;&nbsp;&nbsp;Test Table</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
+	<tr><td>Testing:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PS_test_table"><nobr>&nbsp;&nbsp;&nbsp;Test Table</nobr></a></td></tr>
+      ~;
+
+      my $current_work_group_name = $sbeams->getCurrent_work_group_name();
+      if ($current_work_group_name eq 'ProteinStructure_admin') {
+        print qq~
+	  <tr><td>&nbsp;</td></tr>
+	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PS_biosequence_set_project">Permissions</a></td></tr>
+        ~;
+      }
+
+      print qq~
 	</table>
 	</td>
 
