@@ -35,6 +35,8 @@ APD_peptide_summary	Peptide Summary	Proteomics_infrastructure	YES	$TBAPD_PEPTIDE
 PR_protein_summary	Protein Summary	Proteomics_infrastructure	NO	$TBPR_PROTEIN_SUMMARY	protein_summary_id			
 PR_protein_summary_header	Protein Summary Header	Proteomics_infrastructure	NO	$TBPR_PROTEIN_SUMMARY_HEADER	protein_summary_header_id			
 PR_protein_summary_data_filter	Protein Summary Data Filter	Proteomics_infrastructure	NO	$TBPR_PROTEIN_SUMMARY_DATA_FILTER	protein_summary_data_filter_id			
+PR_nsp_information	NSP Information	Proteomics_infrastructure	NO	$TBPR_NSP_INFORMATION	nsp_information_id			
+PR_nsp_distribution	NSP Distribution	Proteomics_infrastructure	NO	$TBPR_NSP_DISTRIBUTION	nsp_distribution_id			
 PR_summary_quantitation	Protein Summary Quantitation	Proteomics_infrastructure	NO	$TBPR_SUMMARY_QUANTITATION	summary_quantitation_id			
 PR_protein_group	Protein Group	Proteomics_infrastructure	NO	$TBPR_PROTEIN_GROUP	protein_group_id			
 PR_protein	Protein	Proteomics_infrastructure	NO	$TBPR_PROTEIN	protein_id			
