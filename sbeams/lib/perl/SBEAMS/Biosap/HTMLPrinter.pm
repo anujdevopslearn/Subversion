@@ -80,7 +80,7 @@ sub printPageHeader {
 	<a name="TOP"></a>
 	<tr>
 	  <td bgcolor="$BARCOLOR"><img border=0 width=120 height=60 alt="BIOSAP" src="$HTML_BASE_DIR/images/bs_logo.jpg"></td>
-	  <td align="left" $header_bkg><H1>Blast Integrated Oligonucleotide Selection Accelerator Package</H1></td>
+	  <td align="left" $header_bkg><H1>Blast Integrated Oligonucleotide Selection Accelerator Package<BR>$DBVERSION</H1></td>
 	</tr>
 
     ~;
