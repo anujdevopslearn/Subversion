@@ -12,7 +12,7 @@
   </security>
   <resources>
     <j2se version="1.4+" max-heap-size="1g"/>
-    <jar href="../cytoscape.jar"/>
+    <jar href="CYTOSCAPE_JAR_HOOK"/>
     <jar href="data.jar"/>
   </resources>
   <application-desc>
