@@ -152,7 +152,8 @@ sub handle_request {
 
   #### Define the query to get data from plasmids_fm5
   $sql = qq~
-	SELECT STRAIN_ID_,PLASMID_NA,VECTOR_,YEAST_ORIG,INSERT_GEN,COLI_STRAI,
+	SELECT 'B'+STRAIN_ID_,PLASMID_NA,VECTOR_,YEAST_ORIG,
+               INSERT_GEN,COLI_STRAI,
                COLI_MARKE,YEAST_DELE,CLONED_BY_,DATE_,SOURCE_,REFERENCE_,
                COMMENTS_
 	  FROM ${DATABASE}plasmids_fm5
