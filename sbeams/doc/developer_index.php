@@ -63,18 +63,20 @@
     <TD>
     <CENTER><B>API</B></CENTER><BR>
     <UL>
-     <LI><A HREF="/dev2/sbeams/doc/POD/SBEAMS/Connection.html">SBEAMS::Connection</A>
-     <LI><A HREF="/dev2/sbeams/doc/POD/SBEAMS/Connection/Authenticator.html">SBEAMS::Connection::Authenticator</A>
-     <LI><A HREF="/dev2/sbeams/doc/POD/SBEAMS/Connection/DBConnector.html">SBEAMS::Connection::DBConnector</A>
-     <LI><A HREF="/dev2/sbeams/doc/POD/SBEAMS/Connection/DBInterface.html">SBEAMS::Connection::DBInterface</A>
-     <LI><A HREF="/dev2/sbeams/doc/POD/SBEAMS/Connection/ErrorHandler.html">SBEAMS::Connection::ErrorHandler</A>
-     <LI><A HREF="/dev2/sbeams/doc/POD/SBEAMS/Connection/HTMLPrinter.html">SBEAMS::Connection::HTMLPrinter</A>
-     <LI><A HREF="/dev2/sbeams/doc/POD/SBEAMS/Connection/Permissions.html">SBEAMS::Connection::Permissions</A>
-     <LI><A HREF="/dev2/sbeams/doc/POD/SBEAMS/Connection/PubMedFetcher.html">SBEAMS::Connection::PubMedFetcher</A>
-     <LI><A HREF="/dev2/sbeams/doc/POD/SBEAMS/Connection/Settings.html">SBEAMS::Connection::Settings</A>
-     <LI><A HREF="/dev2/sbeams/doc/POD/SBEAMS/Connection/TableInfo.html">SBEAMS::Connection::TableInfo</A>
-     <LI><A HREF="/dev2/sbeams/doc/POD/SBEAMS/Connection/Tables.html">SBEAMS::Connection::Tables</A>
-     <LI><A HREF="/dev2/sbeams/doc/POD/SBEAMS/Connection/Utilities.html">SBEAMS::Connection::Utilities</A>
+     <LI><A HREF="POD/SBEAMS/Client.html">SBEAMS::Client</A>
+     <P>
+     <LI><A HREF="POD/SBEAMS/Connection.html">SBEAMS::Connection</A>
+     <LI><A HREF="POD/SBEAMS/Connection/Authenticator.html">SBEAMS::Connection::Authenticator</A>
+     <LI><A HREF="POD/SBEAMS/Connection/DBConnector.html">SBEAMS::Connection::DBConnector</A>
+     <LI><A HREF="POD/SBEAMS/Connection/DBInterface.html">SBEAMS::Connection::DBInterface</A>
+     <LI><A HREF="POD/SBEAMS/Connection/ErrorHandler.html">SBEAMS::Connection::ErrorHandler</A>
+     <LI><A HREF="POD/SBEAMS/Connection/HTMLPrinter.html">SBEAMS::Connection::HTMLPrinter</A>
+     <LI><A HREF="POD/SBEAMS/Connection/Permissions.html">SBEAMS::Connection::Permissions</A>
+     <LI><A HREF="POD/SBEAMS/Connection/PubMedFetcher.html">SBEAMS::Connection::PubMedFetcher</A>
+     <LI><A HREF="POD/SBEAMS/Connection/Settings.html">SBEAMS::Connection::Settings</A>
+     <LI><A HREF="POD/SBEAMS/Connection/TableInfo.html">SBEAMS::Connection::TableInfo</A>
+     <LI><A HREF="POD/SBEAMS/Connection/Tables.html">SBEAMS::Connection::Tables</A>
+     <LI><A HREF="POD/SBEAMS/Connection/Utilities.html">SBEAMS::Connection::Utilities</A>
     </UL>
     </TD>
 
