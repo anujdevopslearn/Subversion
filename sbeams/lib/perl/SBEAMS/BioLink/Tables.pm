@@ -34,6 +34,10 @@ use vars qw(@ISA @EXPORT
 
     $TBBL_BLAST_RESULTS
     $TBBL_CBIL_GENOME_COORDINATES
+    
+    $TBBL_MGED_ONTOLOGY_RELATIONSHIP 
+    $TBBL_MGED_ONTOLOGY_TERM
+
 );
 
 
@@ -58,6 +62,9 @@ require Exporter;
 
     $TBBL_BLAST_RESULTS
     $TBBL_CBIL_GENOME_COORDINATES
+    
+    $TBBL_MGED_ONTOLOGY_RELATIONSHIP 
+    $TBBL_MGED_ONTOLOGY_TERM
 );
 
 
@@ -82,3 +89,7 @@ $TBBL_EVIDENCE_SOURCE       = "${mod}evidence_source";
 
 $TBBL_BLAST_RESULTS         = "${mod}blast_results";
 $TBBL_CBIL_GENOME_COORDINATES  = "${mod}CBIL_GENOME_COORDINATES";
+
+$TBBL_MGED_ONTOLOGY_RELATIONSHIP = "${mod}MGEDOntologyRelationship";
+$TBBL_MGED_ONTOLOGY_TERM	= "${mod}MGEDOntologyTerm";
+
