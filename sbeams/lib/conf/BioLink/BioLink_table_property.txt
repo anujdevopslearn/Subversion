@@ -12,3 +12,5 @@ BL_relationship_type	Relationship Type	BioLink_infrastructure	YES	$TBBL_RELATION
 BL_relationship	Relationship	BioLink_infrastructure	YES	$TBBL_RELATIONSHIP	relationship_id		ManageTable.cgi?TABLE_NAME=BL_relationship	BL_relationship	
 BL_CBIL_genome_coordinates	CBIL_genome_coordinates	BioLink_infrastructure	NO	$TBBL_CBIL_GENOME_COORDINATES	Coordinate_id				
 BL_BrowseBioSequence	Browse BioSequence	QUERY	NO				BrowseBioSequence.cgi		
+BL_MGEDOntologyRelationship	MGED Ontology Relation Ship	BioLink_infrastructure	NO	$TBBL_MGED_ONTOLOGY_RELATIONSHIP	MGED_ontology_relationship_id				
+BL_MGEDOntologyTerm	MGED Ontology Term	BioLink_infrastructure	NO	$TBBL_MGED_ONTOLOGY_TERM	MGED_ontology_term_id				
