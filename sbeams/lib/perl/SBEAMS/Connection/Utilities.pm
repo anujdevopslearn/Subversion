@@ -518,7 +518,6 @@ sub min {
 
 }
 
-
 ###############################################################################
 # max
 #
@@ -554,6 +553,23 @@ sub max {
 
   return($maximum);
 
+}
+
+sub get_datetime {
+  my $self = shift;
+  my @time = localtime();
+  my @days = qw(Sun Mon Tue Wed Thu Fri Sat );
+  my $year = $time[5] + 1900;
+  my $mon = $time[4] + 1;
+  my $day = $time[3];
+  my $hour = $time [2];
+  my $min = $time[1];
+  my $sec = $time[0];
+  for ( $min, $day, $hour, $mon, $sec ) {
+    $_ = '0' . $_ if length( $_ ) == 1;
+  }
+  my $date = "${year}-${mon}-${day} ${hour}:${min}:${sec}";
+  return $date;
 }
 
 
