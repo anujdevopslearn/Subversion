@@ -66,6 +66,7 @@ use FindBin;
 		
 use SBEAMS::Connection::Tables;
 use SBEAMS::Microarray::Tables;
+use SBEAMS::BioLink::Tables;
 
 use base qw(SBEAMS::Microarray::Affy);		#declare superclass
 
@@ -557,7 +558,7 @@ sub get_all_affy_info_sql{
 		JOIN $TB_ORGANISM o ON (afs.organism_id = o.organism_id)
 		LEFT JOIN $TB_PROJECT proj ON ( afs.project_id = proj.project_id)
 		JOIN $TB_USER_LOGIN ul ON  (ul.user_login_id = afa.user_id)
-		LEFT JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOT2.MGED_ontology_term_id = afs.sex_ontology_term_id ) 
+		LEFT JOIN $TBBL_MGED_ONTOLOGY_TERM MOT2 ON ( MOT2.MGED_ontology_term_id = afs.sex_ontology_term_id ) 
 		WHERE afa.affy_array_id IN ($array_ids)
 	 ~;
 	 

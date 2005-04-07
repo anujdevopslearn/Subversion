@@ -62,6 +62,7 @@ use vars qw(%REGISTRY $sbeams);
 
 use SBEAMS::Connection::Tables;
 use SBEAMS::Microarray::Tables;
+use SBEAMS::BioLink::Tables;
 
 use base qw(SBEAMS::Microarray);		#declare superclass
 use Carp;
@@ -1129,7 +1130,7 @@ sub find_ontology_id {
 	confess(__PACKAGE__ . "::$method Need to provide key value pair 'ontology_term' VALUE '$ontology_term'") unless ($ontology_term =~ /^\w/);
 	
 	my $sql =  qq~ 	SELECT MGED_ontology_term_id 
-					FROM $TB_MGED_ONTOLOGY_TERM
+					FROM $TBBL_MGED_ONTOLOGY_TERM
 					WHERE name like '$ontology_term'
 				~;
 	my @rows = $sbeams->selectOneColumn($sql);

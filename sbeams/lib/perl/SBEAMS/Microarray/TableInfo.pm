@@ -16,7 +16,7 @@ use CGI::Carp qw(fatalsToBrowser croak);
 use SBEAMS::Microarray::Settings;
 use SBEAMS::Microarray::Tables;
 use SBEAMS::Connection::Tables;
-
+use SBEAMS::BioLink::Tables;
 
 ###############################################################################
 # Constructor
@@ -439,7 +439,7 @@ sub returnTableInfo {
 			FROM $TBMA_AFFY_ARRAY_SAMPLE afs 
 			JOIN $TB_ORGANISM o ON (afs.organism_id = o.organism_id)
 			LEFT JOIN $TB_PROJECT p ON ( afs.project_id = p.project_id)
-			LEFT JOIN $TB_MGED_ONTOLOGY_TERM MOT2 ON ( MOT2.MGED_ontology_term_id = afs.sex_ontology_term_id ) 
+			LEFT JOIN $TBBL_MGED_ONTOLOGY_TERM MOT2 ON ( MOT2.MGED_ontology_term_id = afs.sex_ontology_term_id ) 
 			LEFT JOIN $TB_ORGANIZATION organ ON (afs.sample_provider_organization_id = organ.organization_id)
 			WHERE
 			afs.record_status!='D'
