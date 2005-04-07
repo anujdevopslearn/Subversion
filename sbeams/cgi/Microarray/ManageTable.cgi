@@ -41,6 +41,7 @@ use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
+use SBEAMS::BioLink::Tables;
 #$q = new CGI;
 $sbeams = new SBEAMS::Connection;
 
