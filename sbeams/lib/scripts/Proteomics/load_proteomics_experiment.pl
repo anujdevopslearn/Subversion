@@ -604,8 +604,14 @@ sub loadProteomicsExperiment {
 	open(INF,"$source_dir/sequest.params");
 	while ($line = <INF>) {
 	  $line =~ s/[\r\n]//g;
-	  if ($line =~ /^\s*database_name\s*=\s*(\S+)\s*$/) {
-	    $search_database = $1;
+	  if ($line =~ /database_name\s*=\s*(\S+)\s*$/) {
+	    if ($1) {
+              if ($search_database) {
+                die("ERROR: more than one search database_name defined.  This is not yet supported.");
+              } else {
+                $search_database = $1;
+              }
+            }
 	  }
 	}
 	close(INF);
@@ -1580,7 +1586,8 @@ sub updateProbabilities {
 
   my $isHTMFile = '';
 
-  my $potential_xml_file = "$source_dir/interact-prob.xml";
+  my @potential_xml_files = ( "$source_dir/interact-prob.xml",
+    "$source_dir/interact.xml" );
 
   my $potential_htm_file = "$source_dir/interact-prob-data.htm";
 
@@ -1606,12 +1613,16 @@ sub updateProbabilities {
   ## otherwise, run through potential names:
   if (!$source_file)
   {
+    foreach my $potential_xml_file ( @potential_xml_files ) {
+print "Trying $potential_xml_file...\n";
       if (-f $potential_xml_file)
       {
           $source_file = $potential_xml_file;
-
           $isXMLFile = 1;
+          last;
       }
+    }
+
   }
 
   ## otherwise, run through potential names:
