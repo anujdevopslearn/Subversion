@@ -113,8 +113,8 @@ sub handleRequest {
   my $output_file = $OPTIONS{"output_file"} || '';
   my $command_file = $OPTIONS{"command_file"} || '';
   my $cascade = $OPTIONS{"cascade"} || '';
-  my $map_audit_user_to = $OPTIONS{"map_audit_user_to"} || '';
-  my $map_audit_group_to = $OPTIONS{"map_audit_group_to"} || '';
+  my $map_audit_user_to = $OPTIONS{"user_map_to"} || '';
+  my $map_audit_group_to = $OPTIONS{"workgroup_map_to"} || '';
 
 
   #### If there are any parameters left, complain and print usage
@@ -560,10 +560,15 @@ sub evalSQL {
 
 
 sub processOptions {
-
+ 
+  # map_audit_xxx_to provided for backwards compatability.
   GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
               "output_file:s","command_file:s","recursive", 
-              "map_audit_user_to:i", "map_audit_group_to:i", 'help' );
+              "user__map_to:i", "workgroup_map_to:i", 'help',
+              'map_audit_user_to:i', 'map_audit_group_to:i' );
+
+  $OPTIONS{user_map_to} ||= $OPTIONS{map_audit_user_to} 
+  $OPTIONS{workgroup_map_to} ||= $OPTIONS{map_audit_group_to} 
 
   # Pleas for help get precedence
   printUsage() if $OPTIONS{help};
@@ -585,13 +590,15 @@ sub printUsage {
 
   Usage: $0 -c cmd_file [ -o out_file -v -q -d -r ]
   Options:
-  -v,  --verbose n         Set verbosity level.  default is 0
-  -q,  --quiet             Set flag to print nothing at all except errors
-  -d,  --debug n           Set debug flag
-  -o,  --output_file       Output file to which to write XML
-  -c,  --command_file      File of instructions as to what data to export.
-  -r,  --recursive         Recursive export (cascade), get dependent records.
-  -h,  --help              Print this usage info and quit.
+  -c,  --command_file        File of instructions as to what data to export.
+  -d,  --debug n             Set debug flag
+  -h,  --help                Print this usage info and quit.
+  -o,  --output_file         Output file to which to write XML
+  -q,  --quiet               Set flag to print nothing at all except errors
+  -r,  --recursive           Recursive export (cascade), get dependent records.
+  -u,  --user_map_to n       User (contact_id) to which to map audit info.
+  -v,  --verbose n           Set verbosity level.  default is 0
+  -w,  --work_group_map_to n Work_group_id id to which to map audit info.
 
   e.g.:  $PROG_NAME --command_file test.exportcmd --output_file SBEAMSdata.xml
 
