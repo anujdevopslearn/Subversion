@@ -1,120 +1,191 @@
-#! /usr/bin/perl
-# runsql.pl - simple bootstrap sql executer for get SBEAMS going. too crude.  replace.
-
+#!/tools/bin/perl -w
 
 use DBI;
+use Getopt::Long;
+use FindBin qw( $Bin );
+
+use lib "$Bin/../../perl";
+use SBEAMS::Connection::Settings qw( $DBCONFIG $DBINSTANCE );
 use strict;
 
+use constant COMMIT => 20;
 
-my ($dsn) = "DBI:Sybase:server=protdb;database=sbeams";
-#my ($dsn) = "DBI:ODBC:mssql";
-my ($user_name) = "sbeamsadmin"; # user name
-my ($password) = 'xxxxxx';  # password
-my ($dbh, $sth);           # database and statement handles
-my (@ary);                 # array for rows returned by query
-my (%attr) =               # error-handling attributes
-(
-    PrintError => 0,
-    RaiseError => 0
-);
-my (%tables);
-my ($tablename);
-my ($counter);
-my ($ntables);
-my ($tablerows);
-my ($querystring);
+$|++; # don't buffer output
+
+{ # MAIN
+
+  # If no args are given, print usage and exit
+  if (! @ARGV) {
+    print usage() . "\n";
+    exit 0;
+  }
+
+  my $args = processArgs();
+  my $dbh = dbConnect( $args );
+  my $cmds = parseFile ( $args );
+  if ( $args->{query} ) {
+    printResults( $args, $dbh, $cmds );
+  } else {
+    insertRecords( $args, $dbh, $cmds );
+  }
+  $dbh->disconnect();
+  exit 0;
+}
 
 
-my $infile = shift;
-my $sql = '';
+sub parseFile {
+  my $args = shift;
+  my @cmds;
+  my $cmd = '';
 
-#### connect to database
-$dbh = DBI->connect ($dsn, $user_name, $password, \%attr )
-	or bail_out ("Cannot connect to database");
+  # Manual queries take precedence...
+  if ( $args->{manual} ) {
+    # This is gonna be querymode.
+    $args->{query} ||= 1;
+    print "Running manual query\n";
+    return( [ $args->{manual} ] );
+  }
 
-if ($infile) {
-  open(INFILE,$infile) || die("ERROR: Unable to open $infile");
-  my $line = '';
-  while ($line = <INFILE>) {
-    if ($line =~ /^GO/) {
-      $sth = $dbh->prepare ($sql)
-	or bail_out ("Cannot prepare query");
-      if ($sth->execute ()) {
-      	## okay
+  # Otherwise, parse the file as usual.
+  print "Parsing command file $args->{sfile}\n" if $args->{verbose};
+  open( FIL, $args->{sfile} ) || die "Unable to open file $args->{sfile}";
+  while ( my $line = <FIL> ) {
+    chomp $line;
+    if ( $args->{delimiter} eq 'GO' ) {
+      if ( $line =~ /^GO\s*$/i ) {
+        push @cmds, $cmd;
+        $cmd = '';
       } else {
-	print "ERROR $DBI::err ($DBI::errstr)\n\n";
-	#or bail_out ("Cannot execute query");
+        $cmd .= "$line\n";
       }
-      $sql ='';
     } else {
-    $sql .= $line;
+      if ( $line =~ /;/ ) {
+        $cmd .= $line;
+        push @cmds, $cmd;
+        $cmd = '';
+      } else {
+        $cmd .= $line;
+      }
     }
   }
+  push @cmds, $cmd if $cmd;  # Leftovers
+  return( \@cmds );
+}
 
-  if ($sql =~ /\S/) {
-    $sth = $dbh->prepare ($sql)
-        or bail_out ("Cannot prepare query");
-    if ($sth->execute ()) {
-      ## okay
+sub printResults {
+  my $args = shift;
+  my $dbh = shift;
+  my $sql = shift;
+  foreach my $sql ( @$sql ) {
+    if ( $sql !~ / UPDATE | DROP | INSERT | DELETE | TRUNCATE /gi ) {
+      print "$sql\n";  # Query mode implies a certain amount of verbosity!
+      my $sth = $dbh->prepare( $sql );
+      $sth->execute();
+      my $firstrow = 1;
+      while ( my $row = $sth->fetchrow_hashref() ) {
+        if ( $firstrow ) {
+          print join( "\t", keys( %{$row} ) . "\n" );
+          $firstrow = 0;
+        }
+        print join( "\t", values( %{$row} ) . "\n" );
+      }
     } else {
-      print "ERROR $DBI::err ($DBI::errstr)\n\n";
-      #or bail_out ("Cannot execute query");
+      print "Query mode is read-only, not running $sql";
     }
   }
+}
 
-  close(INFILE);
+sub insertRecords {
+  my $args = shift;
+  my $dbh = shift;
+  my $cmds = shift;
+  
+  my $cnt;
+  foreach my $cmd ( @$cmds ) {
+    $cnt++;
+    print "$cmd\n" if $args->{verbose};
+    $dbh->do( $cmd );
+    $dbh->commit() unless $cnt % COMMIT;
+  }
+  $dbh->commit();
+}
+
+sub dbConnect {
+  my $args = shift;
+
+  # Get db driver from configuration file
+  my $DB_SERVER = $DBCONFIG->{$DBINSTANCE}->{DB_SERVER};
+  my $DB_DATABASE = $DBCONFIG->{$DBINSTANCE}->{DB_DATABASE};
+  my $cstring = eval "\"$DBCONFIG->{$DBINSTANCE}->{DB_DRIVER}\"";
+
+  my $dbh = DBI->connect( $cstring, "$args->{user}", "$args->{pass}" ) || die ('couldn\'t connect' );
+  $dbh->{AutoCommit} = 0;
+  $dbh->{RaiseError} = ( $args->{ignore_errors} ) ? 0 : 1;
+
+  print "Connected to database successfully\n" if $args->{verbose};
+  return $dbh;
+}
+
+sub processArgs {
+  my %args;
+  unless( GetOptions ( \%args, 'pass=s', 'user=s', 'verbose', 'sfile=s',
+                      'delimiter=s', 'ignore_errors', 'manual:s' ) ) {
+  printUsage("Error with options, please check usage:");
+  }
+
+  for ( qw( user ) ) {
+    if ( !defined $args{$_} ) {
+    printUsage( "Missing required parameter: $_" ); 
+    }
+  }
+  unless( $args{manual} || $args{sfile} ) {
+    printUsage( "Must specify either a sql file or a manual query" );
+  }
+
+  # User declined to enter a password, prompt for one
+  while ( !$args{pass} ) {
+    print "Enter password, followed by [Enter] (cntl-C to quit):\t";
+    $|++;
+    system("stty -echo");
+    my $pass = <>;
+    system("stty echo");
+    chomp $pass;
+    print "\n";
+    if ( $pass ) {
+      ( my $err = $pass ) =~ s/[\w\#]//g;
+      die "Illegal characters in password: $err \n" if $err;
+      $args{pass} = $pass;
+    } else {
+      print "No input received.\n";
+      $|++;
+    }
+  }
+  
+  # Delimiter will either be semicolon or GO
+  $args{delimiter} = ( !$args{delimiter} ) ? 'GO' :
+                     ( $args{delimiter} eq 'semicolon' ) ? ';' : 'GO'; 
+
+  return \%args;
+}
+
+sub printUsage {
+  my $err = shift;
+  print( <<"  EOU" );
+   $err
+   
+   Usage: $0 -u username -s sfile [ -p password ]
+
+   -u --user xxxx     username to authenticate to the db
+   -p --pass xxxx     password to authenticate to the db.  Will be prompted
+                      if value is ommitted.
+   -s --sfile xxxx    SQL file which defines table and columns etc
+   -v --verbose       verbose output
+   -i --ignore_errs   Ignore SQL errors and continue
+   -d --delimiter xx  Delimter for splitting file, either GO or semicolon
+   -q --query_mode    Run (SELECT) query(s) and return results
+   -m --manual_query  SELECT query provided explicitly, obviates the need for
+                      a SQL file.
+
+  EOU
   exit;
-}
-
-
-
-
-#### issue query
-$sql="sp_tables" unless ($sql);
-
-print "[QUERY]: ",$sql,"\n";
-$sth = $dbh->prepare ($sql)
-	or bail_out ("Cannot prepare query");
-$sth->execute ()
-	or bail_out ("Cannot execute query");
-
-
-
-#### read results of query
-$counter = 0;
-while (@ary = $sth->fetchrow_array ())
-{
-	print join(" | ",@ary),"\n";
-        #print "=",length(@ary[6]),"=\n";
-	$counter++;
-}
-
-
-
-$DBI::err == 0
-	or bail_out ("Error during retrieval");
-
-
-#### clean up
-$sth->finish ()
-	or bail_out ("Cannot finish query");
-
-
-
-#### ---------------------------------------------------------
-
-
-$dbh->disconnect ()
-	or bail_out ("Cannot disconnect from database");
-exit (0);
-
-
-#### --------------------------------------------------------------
-#### --------------------------------------------------------------
-#### bail_out() subroutine - print error code and string, then exit
-
-sub bail_out
-{
-my ($message) = shift;
-die "$message\nError $DBI::err ($DBI::errstr)\n";
 }
