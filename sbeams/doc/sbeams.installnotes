@@ -158,6 +158,8 @@ Include in Apache's httpd.conf file the following execution permissions:
 
 Restart the Apache server, perhaps with something like:
   /etc/rc.d/init.d/httpd restart
+or:
+  /etc/init.d/apache2 restart
 
 
 -------------------------------------------------------------------------------
@@ -172,6 +174,8 @@ tar -zxvf ~/sbeams-0.20.tar.gz
 
 Create a sbeamscommon directory for sharing dynamic files between
 different instances and create symlinks:
+
+cd ..
 mkdir sbeamscommon
 
   (for now, just create the directories for stuff to live in right here, but
@@ -202,7 +206,6 @@ rm sbeams/var
 ln -s ../sbeamscommon/var sbeams/var
 rm sbeams/images/tmp
 ln -s ../../sbeamscommon/images/tmp sbeams/images/tmp
-rm sbeams/lib/conf/SBEAMS.conf
 ln -s ../../../sbeamscommon/lib/conf/SBEAMS.conf sbeams/lib/conf/SBEAMS.conf
 
 
@@ -215,8 +218,9 @@ site properly, you will have trouble later!
 setenv SBEAMS /local/www/html/dev1/sbeams
 
 cd $SBEAMS/lib/conf
-cp SBEAMS.conf.template ../../../sbeamscommon/lib/conf/SBEAMS.conf
-ln -s ../../../sbeamscommon/lib/conf/SBEAMS.conf
+
+cp SBEAMS.conf.template ../../../../sbeamscommon/lib/conf/SBEAMS.conf
+ln -s ../../../../sbeamscommon/lib/conf/SBEAMS.conf
 
 The passwords needed to connect to the database are stored encrypted in the
 SBEAMS.conf file.  You will need to generate the encrypted versions at this
@@ -228,7 +232,7 @@ a sym link from /usr/local/bin/perl to your actual perl, e.g.:
 ln -s /usr/bin/perl /usr/local/bin/perl
 )
 
-$SBEAMS/lib/scripts/Core/encryptDbPasswd.pl -p DB_PASSWORD -c CONF_FILE
+$SBEAMS/lib/scripts/Core/encryptDbPasswd.pl -p <DB_PASSWORD? -c SBEAMS.conf
 
 Where DB_PASSWORD is the password to encrypt, and CONF_FILE is the location
 of the SBEAMS.conf file that you want to use.  The script will print out a 
@@ -244,10 +248,17 @@ Important changes:
   'httpd', etc.  If you're confounded, try:
   egrep "apache|httpd|nobody" /etc/passwd | sort
   The number after the first colon is the WWW_UID.  
+    or
+  ps -ef | egrep "apache|httpd|nobody|www"
+  To see what username (first column) is runn your web server.  
   
 - Change the CRYPT_KEY to some random strings for your site
 
-- Change HOSTNAME, DBADMIN to reflect your environment
+- Change HOSTNAME to reflect the web server's name.  If the site is in
+  an Apache virtual server, use the virtual server name
+
+- Change DBADMIN to reflect your environment.  The DBADMIN
+  name should reflect your real name like John Smith <jsmith@foo.org>
 
 - You may ignore CYTOSCAPE_URL for first-time installations
 
@@ -258,6 +269,8 @@ Important changes:
 - Uncomment the DB_DRIVER that matches your RDBMS.  MS SQL Server uses the
   Sybase driver. Do not alter the DB_DRIVER values unless you know what
   you're doing!!  Set the DB_TYPE to reflect your RDBMS.
+
+- Uncomment the DB_TYPE to match your RDBMS. Do not change the spelling.
 
 - Change DBPREFIX{*} to reflect the absolute locations of your tables.  For
   RDBMS systems that use schemas or users, DBPREFIX{Core} will likely be
@@ -322,9 +335,10 @@ contribute to this effort if you try different RDBMS engines.
 (and working in the dev1 area - this is a good habit)
 
 setenv SBEAMS /local/www/html/dev1/sbeams
+set DBTYPES="mssql"   #### or one or more of mssql mysql pgsql oracle etc.
 cd $SBEAMS/lib/scripts/Core
 
-foreach dbtype ( mssql mysql pgsql )
+foreach dbtype ( $DBTYPES )
   ./generate_schema.pl --table_prop ../../conf/Core/Core_table_property.txt \
   --table_col ../../conf/Core/Core_table_column.txt --schema_file \
   ../../sql/Core/Core --destination_type $dbtype
@@ -373,51 +387,9 @@ those records if necessary, so logging in as admin is discouraged.
 - Execute the statements below to create and populate the database with some
   bare bones data where the SBEAMS database has been set:
 
-set SBEAMSDB = sbeamsdev
-
-SQL Server Example:
-
-To CREATE and POPULATE:
-sqsh -i $SBEAMS/lib/sql/Core/Core_CREATETABLES.mssql -D $SBEAMSDB
-sqsh -i $SBEAMS/lib/sql/Core/Core_POPULATE.mssql -D $SBEAMSDB
-sqsh -i $SBEAMS/lib/sql/Core/Core_CREATECONSTRAINTS.mssql -D $SBEAMSDB
-sqsh -i $SBEAMS/lib/sql/Core/Core_CREATE_MANUAL_CONSTRAINTS.sql -D $SBEAMSDB
-
-To DROP:
-sqsh -i $SBEAMS/lib/sql/Core/Core_DROPCONSTRAINTS.mssql -D $SBEAMSDB
-sqsh -i $SBEAMS/lib/sql/Core/Core_DROPTABLES.mssql -D $SBEAMSDB
-
-(Note that if you use the FreeTDS isql utility to run these scripts, it
-requires that the GO statements be lower case!  Do a global search and
-replace to ^GO$ to ^go$ before using FreeTDS isql command-line utility)
-
-
------------------------
-PostgreSQL Example:
-
-To CREATE and POPULATE:
-psql -f $SBEAMS/lib/sql/Core/Core_CREATETABLES.pgsql $SBEAMSDB
-psql -f $SBEAMS/lib/sql/Core/Core_POPULATE.mssql $SBEAMSDB
-psql -f $SBEAMS/lib/sql/Core/Core_CREATECONSTRAINTS.pgsql $SBEAMSDB
-
-To DROP:
-psql -f $SBEAMS/lib/sql/Core/Core_DROPCONSTRAINTS.pgsql $SBEAMSDB
-psql -f $SBEAMS/lib/sql/Core/Core_DROPTABLES.pgsql $SBEAMSDB
-
-
--------------------
-MySQL Example:
-
-To CREATE:
-mysql -u sbeams -p -h mysql $SBEAMSDB < $SBEAMS/lib/sql/Core/Core_CREATETABLES.mysql
-
-To POPULATE:
-mysql -u sbeams -p -h mysql $SBEAMSDB < $SBEAMS/lib/sql/Core/Core_POPULATE.mssql
-
-To DROP:
-mysql -u sbeams -p -h mysql $SBEAMSDB < $SBEAMS/lib/sql/Core/Core_DROPTABLES.mysql
- or
-mysql -u sbeams -p -h mysql -f $SBEAMSDB < $SBEAMS/lib/sql/Core/Core_DROP.mysql
+$SBEAMS/lib/scripts/Core/runsql.pl Core_CREATETABLES.mssql
+$SBEAMS/lib/scripts/Core/runsql.pl Core_POPULATE.mssql
+$SBEAMS/lib/scripts/Core/runsql.pl Core_CREATECONSTRAINTS.mssql
 
 
 You should now be able to log in via the web interface, either as the
