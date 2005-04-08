@@ -50,28 +50,10 @@ use SBEAMS::Proteomics::Tables;
 use SBEAMS::Immunostain::Tables;
 use SBEAMS::BioLink::Tables;
 
-#### Set program name and usage banner
-$PROG_NAME = $FindBin::Script;
-$USAGE = <<EOU;
-Usage: $PROG_NAME [OPTIONS] parameters
-Options:
-  --verbose n         Set verbosity level.  default is 0
-  --quiet             Set flag to print nothing at all except errors
-  --debug n           Set debug flag
-  --testonly          Set to not actually write to database
-  --source_file xxxx  Output file to which data information are dumped
-
- e.g.:  $PROG_NAME --source_file SBEAMSdata.xml
-
-EOU
-
 
 #### Process options
-unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
-  "source_file:s")) {
-  print "$USAGE";
-  exit;
-}
+processOptions();
+
 $VERBOSE = $OPTIONS{"verbose"} || 0;
 $QUIET = $OPTIONS{"quiet"} || 0;
 $DEBUG = $OPTIONS{"debug"} || 0;
@@ -132,8 +114,8 @@ sub handleRequest {
 
   #### If there are any parameters left, complain and print usage
   if ($ARGV[0]){
-    print "ERROR: Unresolved parameter '$ARGV[0]'.\n";
-    print "$USAGE";
+    my $err = "ERROR: Unresolved parameter '$ARGV[0]'.\n";
+    printUsage( $err );
     exit;
   }
 
@@ -162,7 +144,7 @@ sub importTableData {
   my %args = @_;
 
   #### Process the arguments list
-  my $source_file = $args{'source_file'} || die "source_file not passed";
+  my $source_file = $args{'source_file'} || printUsage( "source_file not passed" );
 
 
   #### Define some generic variables
@@ -292,6 +274,43 @@ sub start_element {
     $add_audit_parameters = 1;
   }
 
+  my %cols = %{$table_info->{$element}->{columns}};
+  # Use current audit info?
+  if ( $OPTIONS{new_audit_info} ){
+    my $contact = $sbeams->getCurrent_contact_id();
+    my $workgroup = $sbeams->getCurrent_work_group_id();
+    my $time = $sbeams->get_datetime();
+    print <<"    END";
+    Gonna be setting:
+        Group => $workgroup
+        Contact => $contact
+        Time => $time
+    END
+    $attrs{owner_group_id} = $workgroup if defined $cols{owner_group_id};
+
+    $attrs{created_by_id} = $contact if defined $cols{created_by_id};
+    $attrs{modified_by_id} = $contact if defined $cols{modified_by_id};
+
+    $attrs{date_created} = $time if defined $cols{date_created};
+    $attrs{date_modified} = $time if defined $cols{date_modified};
+
+    $attrs{record_status} = 'N' if defined $cols{modified_at};
+  }
+  
+  # Explicitly set contact_id?
+  if ( $OPTIONS{contact_id} ){
+    for( qw( created_by_id modified_by_id ) ) {
+      $attrs{$_} = $OPTIONS{contact_id} if defined $cols{$_};
+    }
+  }
+  
+  # Explicitly set work_group_id?
+  if ( $OPTIONS{work_group_id} ){
+    $attrs{owner_work_group} = $OPTIONS{work_group_id} if defined $cols{owner_group_id};
+  }
+
+  # print_ddl implies test_only
+  $TESTONLY = 1 if $OPTIONS{print_ddl}; 
 
   #### If deemed necessary, UPDATE or INSERT the data
   my $returned_PK = $PK_value;
@@ -308,6 +327,27 @@ sub start_element {
       verbose=>$VERBOSE,
       testonly=>$TESTONLY,
     );
+
+    if ( $OPTIONS{print_ddl} ) {
+      my $ddl = '';
+      my $table_name = $table_info->{$element}->{real_table_name};
+      foreach( keys( %attrs ) ) {
+        my $q = ( $cols{$_}->{data_type} =~ /int|float/i ) ? '' : "'";
+        $attrs{$_} = $q . $attrs{$_} . $q;
+        $ddl .= ",\n" if $ddl;
+        $ddl .= "$_ = $attrs{$_}";
+      }
+      if ( $insert ) {
+        my $fields = join( ', ', keys( %attrs ) );
+        my $values  = join( ', ', values( %attrs ) );
+        $ddl = "INSERT INTO $table_name\n ( $fields ) \n VALUES ( $values )\n";
+      } elsif ( $update ) {
+        $ddl = "UPDATE $table_name SET $ddl\n WHERE $PK_column_name = $PK_value\n";
+      } else {
+        $ddl = "Unknown action type, column settings are:\n $ddl\n";
+      }
+      print $ddl;
+    }
 
 
     #### If we wanted a PK to come back, verify that we got it
@@ -336,7 +376,6 @@ sub start_element {
 
 
 }
-
 
 
 ###############################################################################
@@ -405,6 +444,14 @@ sub determineDataPresence {
 
   }
 
+
+  # FIXME!!! dsc 04-07-2005
+  # Umm, shouldn't we update if it is different at all, rather that using
+  # some arbitrary 'similarity threshold'?  What good is a record that is 
+  # 71% similar, and is it really better than one that is 69% similar?  Or
+  # should we hammer an existing record just because it is similar to a
+  # record that we are importing?  It seems we should be assuming one or the
+  # other case.
 
   #### If no rows were returned, or the PK row isn't very similar,
   #### try doing a search based on the key columns
@@ -602,5 +649,49 @@ sub evalSQL {
 
 } # end evalSQL
 
+
+sub processOptions {
+  GetOptions( \%OPTIONS, "verbose:s", "quiet", "debug:s", "testonly", 'help', 
+             'new_audit_info', 'print_ddl', "source_file:s", 'contact_id=s',
+             'work_group_id=s' ) || printUsage( "Failed to get parameters" );
+  
+  for my $param ( qw(source_file) ) {
+    print "$param\n";
+    printUsage( "Missing required parameter $param" ) unless $OPTIONS{$param};
+  }
+}
+
+sub printUsage {
+  my $msg = shift;
+
+  my $usage = <<"  EOU";
+  $msg
+
+
+  Usage: $0 -s source_file.xml [ -v -d -t ]
+  Options:
+    -v, --verbose n           Set verbosity level.  default is 0
+    -q, --quiet               Set flag to print nothing at all except errors
+    -d, --debug n             Set debug flag
+    -h, --help                Print usage and exit, overrides all other options.
+    -t, --testonly            Set to not actually write to database
+    -s, --source_file xxxx    Output file to which data information are dumped.
+    -n, --new_audit_info      Use current user, group, and time info for audit
+                              fields.
+    -w, --work_group_id n     Explicit work_group_id to use for audit fields,
+                              supercedes -n.
+    -c, --contact_id n        Explicit contact_id to use for audit fields,
+                              supercedes -n.
+    -p, --print_ddl           Print out DDL stmts, don't execute.
+
+
+   e.g.:  $0 --source_file SBEAMSdata.xml
+
+  EOU
+
+  print $usage;
+  exit(0);
+
+}
 
 
