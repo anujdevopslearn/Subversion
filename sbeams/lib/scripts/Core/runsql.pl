@@ -16,7 +16,7 @@ $|++; # don't buffer output
 
   # If no args are given, print usage and exit
   if (! @ARGV) {
-    print usage() . "\n";
+    printUsage() . "\n";
     exit 0;
   }
 
