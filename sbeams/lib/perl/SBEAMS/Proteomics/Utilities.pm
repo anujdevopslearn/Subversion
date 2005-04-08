@@ -102,17 +102,18 @@ sub readOutFile {
 #    "mass_error",' \~ ([0-9.]+) \(',
     "assumed_charge",'\(\+([0-9])\), fragment',
     "search_date",'(\d+\/\d+\/\d+, \d+:\d+ [AP]M)',
-    "search_elapsed_hr",' (\d+) hr. ',
-    "search_elapsed_min",' (\d+) min. ',
-    "search_elapsed_sec",' (\d+) sec.',
+    "search_elapsed_hr",' ([\d.]+) hr. ',
+    "search_elapsed_min",' ([\d.]+) min. ',
+    "search_elapsed_sec",' ([\d.]+) sec.',
     "search_host",'. on (.+)',
     "total_intensity",'total inten = ([0-9.]+)',
     "lowest_prelim_score",'lowest Sp = ([0-9.]+)',
     "matched_peptides",'\# matched peptides = ([0-9.]+)',
-    "search_database",', # proteins = \d+, (.+)'
+    "search_database",', # proteins = \d+, (.+)',
 #    "Dmass1",'\(C\* \+([0-9.]+)\)',
 #    "Dmass2",'\(M\@ \+([0-9.]+)\)',
-#    "mass_C",' C=([0-9.]+)'
+#    "mass_C",' C=([0-9.]+)',
+    "search_program",'^\s*(\S+).+\(c\) 19',
   );
 
 
@@ -140,8 +141,8 @@ sub readOutFile {
 
 
   #### If a sufficient number of matches were't found, bail out.
-  if ($matches < 8) {
-    print "ERROR: Unable to parse header of $inputfile\n";
+  if ($matches < 6) {
+    print "ERROR: Only found $matches matches in the header.  I fear a header format problem.  Unable to parse header of $inputfile\n";
     while ( ($key,$value) = each %parameters ) {
       printf("%22s = %s\n",$key,$value);
     }
@@ -176,7 +177,7 @@ sub readOutFile {
       @column_titles = split(/\s+/,$line);
     }
 
-    last if ($line =~ /  -------  /);
+    last if ($line =~ /------/);
 
   }
 
@@ -185,7 +186,15 @@ sub readOutFile {
 
 
   #### Define data format
-  my $format = "a5a8a11a8a8a8a8";
+  my $format = '';
+  if ($parameters{search_program} eq 'SEQUEST') {
+    $format = "a5a8a11a8a8a8a8";
+  } elsif ($parameters{search_program} eq 'TurboSEQUEST') {
+    $format = "a5a8a11a11a8a8a8a8";
+  } else {
+    die("ERROR: Unrecognized search program specified in header of file");
+  }
+
 
   #### And some other variables
   my @result;
@@ -204,6 +213,7 @@ sub readOutFile {
 
   #### Find the offset for "Reference".  Need this for later parsing
   my $start_pos = index ($columns_line,"Reference");
+  print "Offset for Reference: $start_pos\n" if ($verbose);
 
   #### Store the hash reference for each line in an array
   my @best_matches = ();
@@ -212,7 +222,6 @@ sub readOutFile {
 
   #### Define a standard error string
   my $errstr = "ERROR: while parsing '$inputfile':\n      ";
-
 
   #### Parse the tabular data
   while ($line = <INFILE>) {
@@ -253,6 +262,7 @@ sub readOutFile {
 
     #### Do a basic test of the line: skip if less than 8 columns
     @values = split(/\s+/,$line);
+    print "line has ",scalar(@values)," values\n" if ($verbose); 
     if ($#values < 8) {
       print "WARNING: Skipping line (maybe duplicate references?):\n$line\n";
       next;
@@ -266,11 +276,29 @@ sub readOutFile {
 
     #### Switched from A-Z to \w due to a SEQUEST bug
     #$last_part =~ /(.+) [A-Z-\@]\..+\.[A-Z-\@]$/;
-    $last_part =~ /(.+) [\w\-\@]\..+\.[\w\-\@]$/;
-    push(@result,$1);
+    #### Add the possibility for flanking *'s: stop codons
+    #$last_part =~ /(.+) [\w\-\@]\..+\.[\w\-\@]$/;
+    $last_part =~ /(.+) [\w\-\*\@]\..+\.[\w\-\*\@]$/;
+
+    #### If the Regexp worked, then append the Reference to result
+    if ($1) {
+      push(@result,$1);
+    } else {
+      print "ERROR: Unable to parse Reference from '$last_part'\n";
+    }
+
+    #### Switched from A-Z to \w due to a SEQUEST bug
     #$last_part =~ /.+ ([A-Z-\@]\..+\.[A-Z-\@])$/;
-    $last_part =~ /.+ ([\w\-\@]\..+\.[\w\-\@])$/;
-    push(@result,$1);
+    #### Add the possibility for flanking *'s: stop codons
+    #$last_part =~ /.+ ([\w\-\@]\..+\.[\w\-\@])$/;
+    $last_part =~ /.+ ([\w\-\*\@]\..+\.[\w\-\*\@])$/;
+
+    #### If the Regexp worked, then append the Reference to result
+    if ($1) {
+      push(@result,$1);
+    } else {
+      print "ERROR: Unable to parse Reference from '$last_part'\n";
+    }
 
 
     if ($verbose) {
@@ -401,6 +429,14 @@ sub readOutFile {
 
         $processed_flag++;
       }
+
+
+      #### At least be aware of column Id#
+      if ($column_titles[$i] eq "Id#") {
+        ### Don't know what to do with this but ignore it
+        $processed_flag++;
+     }
+
 
       unless ($processed_flag) {
         print "$errstr Don't know what to do with column '$column_titles[$i]'\n";
