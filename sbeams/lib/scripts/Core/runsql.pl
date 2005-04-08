@@ -16,7 +16,7 @@ $|++; # don't buffer output
 
   # If no args are given, print usage and exit
   if (! @ARGV) {
-    printUsage() . "\n";
+    printUsage();
     exit 0;
   }
 
@@ -169,7 +169,7 @@ sub processArgs {
 }
 
 sub printUsage {
-  my $err = shift;
+  my $err = shift || '';
   print( <<"  EOU" );
    $err
    
