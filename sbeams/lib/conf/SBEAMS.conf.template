@@ -110,6 +110,8 @@ RAW_DATA_DIR{Proteomics} = /raw/datasets/root/location
 #### Define the place where Proteomics MS/MS spectrum peaks are written
 #### either TABLE, SKIP, or a file path (Default is TABLE)
 CONFIG_SETTING{Proteomics_SPECTRUM_DESTINATION} = TABLE
+CONFIG_SETTING{Proteomics_MAX_TOP_HITS_TO_LOAD} = 10
+CONFIG_SETTING{PGPLOT_FONT} = /usr/local/lib/grfont.dat
 
 
 #### Period of time in hours before login sessions expire
