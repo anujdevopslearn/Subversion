@@ -2913,7 +2913,7 @@ sub displayResultSetControls {
 
 
     #### Supply URLs to get back to this resultset or redo this query
-    my $pg = $rs_params{page_number};
+    my $pg = $rs_params{page_number}+1;
     my $param_string = "";
     while ( ($key,$value) = each %{$query_parameters_ref} ) {
       if ($value gt '' && $key ne 'TABLE_NAME') {
