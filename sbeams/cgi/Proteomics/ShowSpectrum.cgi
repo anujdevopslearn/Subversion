@@ -808,7 +808,8 @@ sub pg_setup {
     $ENV{"PGPLOT_GIF_WIDTH"} = $gifwidth;
     $ENV{"PGPLOT_GIF_HEIGHT"} = $gifheight;
     $ENV{"PGPLOT_RGB"} = "/usr/X11R6/lib/X11/rgb.txt";
-    $ENV{"PGPLOT_FONT"} = "/net/dblocal/src/pgplot/grfont.dat";
+    $ENV{"PGPLOT_FONT"} = $CONFIG_SETTING{PGPLOT_FONT} ||
+      "/usr/local/lib/grfont.dat";
     $ENV{"PGPLOT_BACKGROUND"} = "white";
 
     #### Create a new graphics device
