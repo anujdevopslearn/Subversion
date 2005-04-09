@@ -190,10 +190,19 @@ sub createDataModel {
 
   $datamodel{entities}->{xml_import}->{attributes}->{source_file}->
     {length} = 255;
+  $datamodel{entities}->{xml_import}->{attributes}->{source_file}->
+    {count} = 1;
+
   $datamodel{entities}->{xml_import}->{attributes}->{source_file_date}->
     {type} = 'datetime';
+  $datamodel{entities}->{xml_import}->{attributes}->{source_file_date}->
+    {count} = 1;
+
   $datamodel{entities}->{xml_import}->{attributes}->{import_date}->
     {type} = 'datetime';
+  $datamodel{entities}->{xml_import}->{attributes}->{import_date}->
+    {count} = 1;
+
   $datamodel{entities}->{xml_import}->{count} = 1;
 
 
@@ -262,6 +271,7 @@ sub createDataModel {
     if (defined($value->{has_parents})) {
       my $n_parents = scalar(keys(%{$value->{has_parents}}));
       while (my ($key2,$value2) = each %{$value->{has_parents}}) {
+	$index++;
         my $FKcolumn = "${key2}_fk";
         my $nullable = 'N';
         $nullable = 'Y' if ($n_parents > 1);
@@ -277,11 +287,13 @@ sub createDataModel {
 
     #### Loop over all its attributes, creating columns
     while (my ($key2,$value2) = each %{$value->{attributes}}) {
+      $index++;
       my $column_name = $key2;
       #$column_name =~ s/\W//g;
       push(@{$table_column->{$table_name}->{__ordered_list}},$column_name);
 
-      #### Set default type and length
+      #### Set default type and length (standardized for varchar fields)
+      # This does not affect the "learned" data model. FIXME?
       my $type = 'varchar';
       my $scale = $value2->{length} || 4;
       if (defined($value2->{type})) {
@@ -291,18 +303,51 @@ sub createDataModel {
       if ($type eq 'varchar' && $scale > 1024) {
 	$type = 'text';
 	$scale = 16;
+      } elsif ($type eq 'varchar' && $scale == 1) {
+	$type='char';
+      } elsif ($type eq 'varchar') {
+	  foreach my $vscale (qw(10 20 50 100 255 512 1024)) {
+	      if ($scale <= $vscale) {
+		  $scale = $vscale;
+		  last;
+	      }
+	  }
       }
 
+      #### Set nullable status
+      my $nullable = ($value->{count} eq $value2->{count}) ? "N" : "Y";
 
       my @data = ( $table_name,$index,$column_name,$column_name,
-        $type,$scale,"0","Y","","N","","","N","text",
+        $type,$scale,"0",$nullable,"","N","","","N","text",
         "50","","Y","Y","N",$column_name,"","" );
       $table_column->{$table_name}->{$column_name} = \@data;
 
     }
-    $index++;
 
   }
+
+  #### Write out the table properties and columns for use in driver tables
+  my $colfile = "${schema_file}_table_column.txt";
+  open(COLFILE,">$colfile") || die "Cannot open $colfile\n";
+
+  my @table_list = @{$table_properties->{__ordered_list}};
+  foreach my $table_name (@table_list) {
+
+      $schema_file =~ /.*\//;
+      my $tprefix = $' || "TABLE";  #'
+
+      my @column_list = @{$table_column->{$table_name}->{__ordered_list}};
+      my $table_ref = $table_column->{$table_name};
+      foreach my $column_name (@column_list) {
+	  print COLFILE "${tprefix}_$table_name";
+
+          foreach (@{$table_ref->{$column_name}}[1..19] ) {
+	      print COLFILE "\t$_";
+	  }
+	  print COLFILE "\n";
+      }
+  }
+  close(COLFILE);
 
 
 
@@ -556,6 +601,10 @@ sub start_element {
     if (%attrs) {
       while (my ($key,$value) = each %attrs) {
         if (defined($datamodel{entities}->{$element}->{attributes}->{$key})) {
+
+	  # Use this counter to determine NULLABLE status
+	  $datamodel{entities}->{$element}->{attributes}->{$key}->{count}++;
+
           if (length($value) >
               $datamodel{entities}->{$element}->{attributes}->{$key}->
                 {length}) {
@@ -566,6 +615,17 @@ sub start_element {
         } else {
           $datamodel{entities}->{$element}->{attributes}->{$key}->{length} =
             length($value);
+	  # Use this counter to determine NULLABLE status
+          $datamodel{entities}->{$element}->{attributes}->{$key}->{count} = 1;
+
+	  # Set type from first value.
+	  # Should refine this at some point to detect floating-point
+	  # and adjust type if subsequent values are of different type.   FIXME
+	  my $ttype = "varchar";
+	  if ($value eq int($value)) { $ttype="int"; }
+
+          $datamodel{entities}->{$element}->{attributes}->{$key}->{type} = $ttype;
+
         }
       }
     }
