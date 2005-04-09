@@ -567,8 +567,8 @@ sub processOptions {
               "user__map_to:i", "workgroup_map_to:i", 'help',
               'map_audit_user_to:i', 'map_audit_group_to:i' );
 
-  $OPTIONS{user_map_to} ||= $OPTIONS{map_audit_user_to} 
-  $OPTIONS{workgroup_map_to} ||= $OPTIONS{map_audit_group_to} 
+  $OPTIONS{user_map_to} ||= $OPTIONS{map_audit_user_to}; 
+  $OPTIONS{workgroup_map_to} ||= $OPTIONS{map_audit_group_to}; 
 
   # Pleas for help get precedence
   printUsage() if $OPTIONS{help};
