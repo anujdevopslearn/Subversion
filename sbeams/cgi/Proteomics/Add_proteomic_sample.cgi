@@ -265,7 +265,7 @@ sub pick_sample {
 		    td("<select name='sample_id' id='list2' size='10'>$blank_option_list</select>"),
 		  ),
 		  Tr(
-		    td(submit(-name		=>'Add Array', 
+		    td(submit(-name		=>'Add Sample', 
 		    		  -onClick=>"submitsample(this)"),
 		      br(),
 		  	  button(-name=>'closewindow',
@@ -291,7 +291,7 @@ sub pick_sample {
   		  table(
   			Tr(
   		     td({class=>'grey_bg'}, "Add New Sample to database"),
-  		     td("<a href='$manage_table_url_samples'>Add Sample</a>"),
+  		     td("<a href='$manage_table_url_samples&ShowEntryForm=1'>Add Sample</a>"),
   		  	)
   		  );
   		
