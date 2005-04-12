@@ -276,9 +276,10 @@ sub getCurrentProjectDetails {
  my @all_samples_results = $prot_exp_obj->get_sample_info(project_id=>$project_id);
   
  
+ $content .= '<h2 class="med_gray_bg">Experiment Information</h2>';
   #### If there are experiments, display them in one of two formats: compact or full
   if (@experiment_rows) {
-
+	
 	if ($parameters{expt_format} eq "compact"){
 		#make "the condensed table";
 		$content .= $prot_exp_obj->make_compact_experiment_html(exp_results_set_aref => \@experiment_rows);
@@ -292,7 +293,7 @@ sub getCurrentProjectDetails {
     if ($project_id == -99) {
       $content .= qq~	<TR><TD WIDTH="100%">You do not have access to this project.  Contact the owner of this project if you want to have access.</TD></TR>\n ~;
     } else {
-      $content .= qq~	<TR><TD COLSPAN=2><FONT COLOR=RED>No proteomics experiments registered in this project.</TD></TR> \n~;
+      $content .= qq~	<TR><TD COLSPAN=2 class='red_bg'>No proteomics experiments registered in this project.</TD></TR> \n~;
     }
   }
 
@@ -303,7 +304,8 @@ sub getCurrentProjectDetails {
   #### user to register another experiment
   if ($sbeams->isProjectWritable()) {
     $content .= qq~
-        <TR><TD COLSPAN=4><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&ShowEntryForm=1&project_id=$project_id">[Register another experiment]</A></TD></TR>
+        <TR class='white_bg'><TD COLSPAN=4><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&ShowEntryForm=1&project_id=$project_id">[Register another experiment]</A></TD></TR>
+    	<TR class='white_bg'><TD COLSPAN=4><IMG SRC='$HTML_BASE_DIR/images/clear.gif' HEIGHT=20 ></TD></TR>
     ~;
   }
 	
@@ -620,13 +622,15 @@ WHERE es.experiment_id = $experiment_id
        <TD NOWRAP ALIGN='CENTER' COLSPAN=2 WIDTH=300 ><A CLASS='edit_menuButton' HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&experiment_id=$experiment_id">[View/Edit Experiment Description]</A></TD>
      </TR>
      <TR class='grey_bg'>
-	   <TD COLSPAN=2 ALIGN='LEFT'>Sample Information</TD>
+       <TD><IMG SRC='$HTML_BASE_DIR/images/clear.gif' HEIGHT=25></TD>
+	   <TD ALIGN='LEFT'><b>Sample Information</b></TD>
 	   <TD COLSPAN=2 ALIGN='CENTER' >$sample_info_html</TD>
      </TR>	
 
-     <TR class='grey_bg'>
-	  <TD>&nbsp;</TD>
-	  <TD NOWRAP COLSPAN=3 ALIGN='LEFT'>
+     <TR class='lite_blue_bg'>
+	 <TD><IMG SRC='$HTML_BASE_DIR/images/clear.gif' HEIGHT=25></TD>
+	 <TD ALIGN='LEFT'>MS Run Information</TD>
+	  <TD NOWRAP COLSPAN=2 ALIGN='CENTER'>
 	    <A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SummarizeFractions?action=QUERYHIDE&QUERY_NAME=PR_SummarizeFractions&experiment_id=$experiment_id">&nbsp;&nbsp;Number of MS Runs: @count_ms_runs</A>
 	  </TD>
      </TR>
@@ -685,9 +689,15 @@ sub make_all_samples_for_project_html {
 	my @all_samples_results = @{$sample_set_array_ref};
 	##Add in a view for all the samples associated with this project
 	
+	$content .= qq~ <TR class='white_bg'>
+	 				 <TD colspan=4>
+	 				 <H2 class='med_gray_bg'>Sample Information</H2>
+	 				</TR>
+	 			~;
 	if (@all_samples_results){
 	
-	 $content .= qq~ <TR>
+	 $content .= qq~ 
+	 				<TR>
 	   				 <TD colspan=4>
 	   				  <br>
 				      <TABLE class='table_setup'>
@@ -728,12 +738,11 @@ sub make_all_samples_for_project_html {
 	}else{
 		#if no sample print default message
 		$content .= qq~ 
-					<TR>
+					<TR class='white_bg'>
 					  <TD colspan=4>
-					   <br>Sorry, No Samples for this project<br>
-					   Click <a href="$manage_table_url_samples&ShowEntryForm=1&project_id=$project_id" target='_blank'>Here</a>
-					   	  to add some more samples to the database.
-					   </p>
+					   <p class='red_bg'>No proteomic samples registered for this project</p>
+					 <a href="$manage_table_url_samples&ShowEntryForm=1&project_id=$project_id" target='_blank'>[Add Proteomic Sample]</a>
+					   	  
 					  </TD>
 					</TR>
 					
