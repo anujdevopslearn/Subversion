@@ -276,13 +276,10 @@ sub postUpdateOrInsertHook {
   my $contact_id = $sbeams->getCurrent_contact_id();
   my $work_group_id = $sbeams->getCurrent_work_group_id();
 
-  #### If table XXXX
-  if ($TABLE_NAME eq "XXXX") {
-    return "An error of some sort $parameters{something} invalid";
+  if ($TABLE_NAME eq "project") { # Project AMD has extra baggage
 
-  } elsif ($TABLE_NAME eq "project") { # Project AMD has extra baggage
-
-    my $priv; my $stat;
+    my $priv;
+    my $stat;
     # Prepare hashes for updates/inserts
     # Values needed for INSERT into user_proj_perms
     my %insertUPP = ( project_id => $parameters{project_id},
@@ -313,9 +310,9 @@ sub postUpdateOrInsertHook {
 
         $sbeams->updateOrInsertRow( %updOrInsInfo,
                                     insert => 1,
-                                    rowdata_ref => 
-                                    { %insertUPP, contact_id => $contact_id } 
-                                  );
+                                    rowdata_ref => { %insertUPP,
+                                                     contact_id => $contact_id }
+                                   );
       }
 
     } elsif ( $parameters{apply_action} eq 'UPDATE' ) { 
@@ -387,9 +384,24 @@ sub postUpdateOrInsertHook {
       # Shouldn't get here
       print STDERR "Unknown action, report this error\n";
     } # end apply_action block
-    
-  } # end tablename eq 'XXX' block
 
+
+  if ( $parameters{apply_action} eq 'INSERT' ) {
+    # Chose to keep this separate from the block above for clarity.  If the 
+    # user creates a project *and* their current project_id is null, then we
+    # will set this as their current project_id.
+    if ( ! $sbeams->getCurrent_project_id() ) {
+      $sbeams->setCurrent_project_id( set_to_project_id => $args{pk_value} ); 
+    }
+      
+  }
+    
+  # end tablename eq 'project' block
+  } elsif ($TABLE_NAME eq "XXXX") { # Insert other table-specific instrux here.
+
+    return "An error of some sort $parameters{something} invalid";
+
+  }
 
   #### Otherwise, no special processing, so just return undef
   return;
