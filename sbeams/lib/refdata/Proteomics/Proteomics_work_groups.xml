@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SBEAMS_EXPORT>
+    <work_group
+        record_status="N"
+        created_by_id="3"
+        sort_order="20"
+        date_modified="2005-03-28 11:57:10"
+        date_created="2001-07-26 11:31:31"
+        primary_contact_id="140"
+        work_group_name="Proteomics_user"
+        comment="Standard Proteomics user has access to some data tables
+"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="8" />
+    <work_group
+        record_status="N"
+        created_by_id="3"
+        sort_order="10"
+        date_modified="2005-03-28 11:58:16"
+        date_created="2001-07-26 11:32:58"
+        primary_contact_id="143"
+        work_group_name="Proteomics_admin"
+        comment="Admin Proteomics user has full control over Proteomics infrastructure tables
+"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="9" />
+    <work_group
+        record_status="N"
+        created_by_id="3"
+        sort_order="10"
+        date_modified="2003-01-30 16:34:33"
+        date_created="2003-01-30 16:34:33"
+        primary_contact_id="2"
+        work_group_name="Proteomics_readonly"
+        comment="Users in this group are permitted to view certain public experiments and possibly other specific experiments in a read-only fashion"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="27" />
+</SBEAMS_EXPORT>
+---------------------------------- SBEAMS -------------------------------------

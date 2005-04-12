@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SBEAMS_EXPORT>
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2001-07-26 11:34:15"
+        date_created="2001-07-26 11:34:15"
+        table_group="Proteomics_infrastructure"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="9"
+        table_group_security_id="25" />
+    <table_group_security
+        privilege_id="25"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2001-07-26 11:34:24"
+        date_created="2001-07-26 11:34:24"
+        table_group="Proteomics_user"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="8"
+        table_group_security_id="26" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2001-07-26 11:37:31"
+        date_created="2001-07-26 11:37:31"
+        table_group="rowprivate"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="8"
+        table_group_security_id="27" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2001-07-26 11:37:39"
+        date_created="2001-07-26 11:37:39"
+        table_group="rowprivate"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="9"
+        table_group_security_id="28" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2001-07-26 13:51:40"
+        date_created="2001-07-26 13:51:40"
+        table_group="project"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="8"
+        table_group_security_id="29" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2002-01-11 14:33:18"
+        date_created="2002-01-11 14:33:18"
+        table_group="Proteomics_user"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="9"
+        table_group_security_id="44" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2002-08-22 08:12:22"
+        date_created="2002-08-22 08:12:22"
+        table_group="project"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="9"
+        table_group_security_id="53" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2002-08-28 15:43:57"
+        date_created="2002-08-28 15:43:57"
+        table_group="infrastructure"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="9"
+        table_group_security_id="55" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2002-08-28 15:44:05"
+        date_created="2002-08-28 15:44:05"
+        table_group="infrastructure"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="8"
+        table_group_security_id="56" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2002-11-27 12:24:12"
+        date_created="2002-11-27 12:24:12"
+        table_group="common"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="9"
+        table_group_security_id="69" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2002-11-27 12:24:16"
+        date_created="2002-11-27 12:24:16"
+        table_group="common"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="8"
+        table_group_security_id="70" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2003-01-30 16:35:18"
+        date_created="2003-01-30 16:35:18"
+        table_group="rowprivate"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="27"
+        table_group_security_id="95" />
+    <table_group_security
+        privilege_id="40"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2003-08-08 12:44:26"
+        date_created="2003-08-04 22:27:39"
+        table_group="Proteomics_user"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="27"
+        table_group_security_id="120" />
+    <table_group_security
+        privilege_id="40"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2003-08-08 12:44:37"
+        date_created="2003-08-04 22:27:14"
+        table_group="project"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="27"
+        table_group_security_id="119" />
+</SBEAMS_EXPORT>
+---------------------------------- SBEAMS -------------------------------------
