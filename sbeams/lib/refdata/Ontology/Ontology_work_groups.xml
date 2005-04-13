@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SBEAMS_EXPORT>
+    <work_group
+        record_status="N"
+        created_by_id="3"
+        sort_order="10"
+        date_modified="2004-02-26 16:19:50"
+        date_created="2004-02-26 16:19:50"
+        primary_contact_id="3"
+        comment="Group with administrative access to Ontology tables"
+        work_group_name="Ontology_admin"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="41" />
+    <work_group
+        record_status="N"
+        created_by_id="3"
+        sort_order="10"
+        date_modified="2004-02-26 16:19:57"
+        date_created="2004-02-26 16:19:57"
+        comment="Group with standard access to Ontology tables"
+        primary_contact_id="3"
+        work_group_name="Ontology_user"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="42" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2004-02-26 16:22:32"
+        date_created="2004-02-26 16:22:32"
+        table_group="Ontology_infrastructure"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="41"
+        table_group_security_id="136" />
+    <table_group_security
+        privilege_id="25"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2004-02-26 16:22:47"
+        date_created="2004-02-26 16:22:47"
+        table_group="Ontology_infrastructure"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="42"
+        table_group_security_id="137" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2004-02-26 16:23:11"
+        date_created="2004-02-26 16:23:11"
+        table_group="common"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="42"
+        table_group_security_id="138" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2004-02-26 16:23:24"
+        date_created="2004-02-26 16:23:24"
+        table_group="rowprivate"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="42"
+        table_group_security_id="139" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2004-02-26 16:23:33"
+        date_created="2004-02-26 16:23:33"
+        table_group="rowprivate"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="41"
+        table_group_security_id="140" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2004-02-26 16:23:42"
+        date_created="2004-02-26 16:23:42"
+        table_group="common"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="41"
+        table_group_security_id="141" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2004-08-04 16:11:14"
+        date_created="2004-08-04 16:11:14"
+        table_group="Oligo_user"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="42"
+        table_group_security_id="157" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2004-08-06 14:43:12"
+        date_created="2004-08-04 16:11:26"
+        table_group="Ontology_infrastructure"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="41"
+        table_group_security_id="158" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2004-08-05 15:52:47"
+        date_created="2004-08-05 15:52:47"
+        table_group="project"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="42"
+        table_group_security_id="161" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2004-08-05 15:55:03"
+        date_created="2004-08-05 15:55:03"
+        table_group="project"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="41"
+        table_group_security_id="171" />
+</SBEAMS_EXPORT>
