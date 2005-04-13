@@ -11,22 +11,25 @@ IS_abundance_level	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	con
 IS_abundance_level	10	owner_group_id	Owner Group ID	datetime	8	0	N	1	N	work_group	work_group_id					N	N				
 IS_abundance_level	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 IS_biosequence_set	1	biosequence_set_id	BioSequence Set ID	int	4	0	N		Y							N	N				pkDEFAULT
-IS_biosequence_set	2	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism (genus+species) for the entries in this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
-IS_biosequence_set	3	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
-IS_biosequence_set	4	set_tag	Set Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this BioSequence database		
-IS_biosequence_set	5	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Longer description of this BioSequence database		
-IS_biosequence_set	6	set_version	Set Version	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Version of this BioSequence database		
-IS_biosequence_set	7	upload_file	Upload file	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
-IS_biosequence_set	8	set_path	Set Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	File path of this BioSequence database		
-IS_biosequence_set	9	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
-IS_biosequence_set	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-IS_biosequence_set	11	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
-IS_biosequence_set	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-IS_biosequence_set	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-IS_biosequence_set	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-IS_biosequence_set	15	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-IS_biosequence_set	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-IS_biosequence_set	17	record_status	Record Status	char	1	0	N	N	N							N	N				
+IS_biosequence_set	2	project_id	Owner Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id	
+IS_biosequence_set	3	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism to which the BioSequences in this database belong	SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name	
+IS_biosequence_set	4	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
+IS_biosequence_set	5	set_tag	Set Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this BioSequence database		
+IS_biosequence_set	6	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioSequence database		
+IS_biosequence_set	7	set_version	Set Version	varchar	50	0	N		N			Y	text	40		Y	Y	N	Version of this BioSequence database		
+IS_biosequence_set	8	polymer_type_id	Polymer Type	int	4	0	N		N	BL_polymer_type	polymer_type_id	Y	optionlist			Y	Y	N	Polymer type (e.g. protein, DNA, RNA) for the BioSequences in this database	SELECT polymer_type_id, polymer_type_name FROM $TBBL_POLYMER_TYPE ORDER BY sort_order,polymer_type_name	
+IS_biosequence_set	9	upload_file	Upload file	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
+IS_biosequence_set	10	set_path	Set Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	File path of this BioSequence database		
+IS_biosequence_set	11	source_file_date	Source File Date	datetime	8	0	Y		N			N	text	40		N	N	N	Date of the FASTA file at last update		
+IS_biosequence_set	12	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
+IS_biosequence_set	13	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IS_biosequence_set	14	sort_order	Sort Order	int	4	0	N	10	N			Y	text	20		Y	Y	N	Allows the ordering or ranking of Biosequence Sets which is used to break ties for choosing canonical names.  Lower numbers indicate better rank.		
+IS_biosequence_set	15	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_biosequence_set	16	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_biosequence_set	17	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_biosequence_set	18	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_biosequence_set	19	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+IS_biosequence_set	20	record_status	Record Status	char	1	0	N	N	N							N	N				
 IS_dbxref	1	dbxref_id	dbxref ID	int	4	0	N		Y							N	N				pkDEFAULT
 IS_dbxref	2	dbxref_name	CrossRef Name	varchar	50	0	N		N			Y	text	40		Y	Y	N	Name of this Database Cross Reference		
 IS_dbxref	3	dbxref_tag	CrossRef Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this Database Cross Reference		
@@ -270,22 +273,22 @@ IS_specimen	17	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group
 IS_specimen	18	record_status	Record Status	char	1	0	N	N	N							N	N				
 IS_specimen_block	1	specimen_block_id	Specimen Block	int	4	0	N		Y							N	N				pkDEFAULT
 IS_specimen_block	2	specimen_block_name	Specimen Block Name/Designator	varchar	50	0	N		N			Y	text	40		Y	Y	Y	Name/Coded designator for this specimen block		
-IS_specimen_block	3	specimen_id	Specimen	int	4	0	N		N	IS_specimen	specimen_id	Y	optionlist			Y	Y	N	Specimen from which this block was taken	"SELECT specimen_id, specimen_name FROM $TBIS_SPECIMEN ORDER BY specimen_name"
-IS_specimen_block	4	protocol_id	Preparation Protocol	int	4	0	N		N	protocol	protocol_id	Y	optionlist			Y	Y	N	Protocol used to prepare this specimen block	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='Immunostain Specimen Preparation' AND P.record_status != 'D' ORDER BY P.name"
-IS_specimen_block	5	acquisition_time	Acquisition Time	real	4	0	Y		N			N	text	20		Y	Y	N	Time in minutes between harvesting specimen and fixing specimen block	
-IS_specimen_block	6	protocol_deviations	Protocol Deviations	text	16	0	Y		N			N	textarea	6		Y	Y	N	Describe any deviations from the intented above protocol to the way this preparation was actually executed	
-IS_specimen_block	7	specimen_block_level	Specimen Block Level	varchar	50	0	Y		N			N	text	20		Y	Y	N	Level designator for the specimen block	
-IS_specimen_block	8	anterior_posterior	Anterior or Posterior	varchar	50	0	Y		N			N	text	40		Y	Y	N	Anterior or Posterior designation for the specimen block	
-IS_specimen_block	9	specimen_block_side	Specimen Block Side	varchar	50	0	Y		N			N	text	40		Y	Y	N	Left/right side of the individual from this specimen block	
-IS_specimen_block	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments	
-IS_specimen_block	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-IS_specimen_block	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N			
-IS_specimen_block	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-IS_specimen_block	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
-IS_specimen_block	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
-IS_specimen_block	16	record_status	Record Status	char	1	0	N	N	N							N	N			
-IS_SummarizeStains	1	input_form_format	Input Form Format									N	optionlist		refreshDocument()	Y	Y	N	Options for level of detail and layout for this input form	"SELECT option_key,option_value FROM $TBIS_QUERY_OPTION WHERE option_type = 'input_form_options' ORDER BY sort_order,option_value"
-IS_SummarizeStains	2	project_id	Projects									N	multioptionlist	4		Y	Y	N	Constrain query to selected projects.  Multiple projects may be selected.	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P INNER JOIN $TBIS_ASSAY SS ON ( P.project_id = SS.project_id ) LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' ORDER BY UL.username+' - '+P.name,P.project_id"
+IS_specimen_block	3	specimen_id	Specimen	int	4	0	N		N	IS_specimen	specimen_id	Y	optionlist			Y	Y	N	Specimen from which this block was taken	"SELECT specimen_id, specimen_name FROM $TBIS_SPECIMEN ORDER BY specimen_name"	
+IS_specimen_block	4	protocol_id	Preparation Protocol	int	4	0	N		N	protocol	protocol_id	Y	optionlist			Y	Y	N	Protocol used to prepare this specimen block	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='Immunostain Specimen Preparation' AND P.record_status != 'D' ORDER BY P.name"	
+IS_specimen_block	5	acquisition_time	Acquisition Time	real	4	0	Y		N			N	text	20		Y	Y	N	Time in minutes between harvesting specimen and fixing specimen block		
+IS_specimen_block	6	protocol_deviations	Protocol Deviations	text	16	0	Y		N			N	textarea	6		Y	Y	N	Describe any deviations from the intented above protocol to the way this preparation was actually executed		
+IS_specimen_block	7	specimen_block_level	Specimen Block Level	varchar	50	0	Y		N			N	text	20		Y	Y	N	Level designator for the specimen block		
+IS_specimen_block	8	anterior_posterior	Anterior or Posterior	varchar	50	0	Y		N			N	text	40		Y	Y	N	Anterior or Posterior designation for the specimen block		
+IS_specimen_block	9	specimen_block_side	Specimen Block Side	varchar	50	0	Y		N			N	text	40		Y	Y	N	Left/right side of the individual from this specimen block		
+IS_specimen_block	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+IS_specimen_block	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_specimen_block	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_specimen_block	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+IS_specimen_block	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+IS_specimen_block	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+IS_specimen_block	16	record_status	Record Status	char	1	0	N	N	N							N	N				
+IS_SummarizeStains	1	input_form_format	Input Form Format									N	optionlist		refreshDocument()	Y	Y	N	Options for level of detail and layout for this input form	"SELECT option_key,option_value FROM $TBIS_QUERY_OPTION WHERE option_type = 'input_form_options' ORDER BY sort_order,option_value"	
+IS_SummarizeStains	2	project_id	Projects									N	multioptionlist	4		Y	Y	N	Constrain query to selected projects.  Multiple projects may be selected.	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P INNER JOIN $TBIS_ASSAY SS ON ( P.project_id = SS.project_id ) LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' ORDER BY UL.username+' - '+P.name,P.project_id"	
 IS_SummarizeStains	3	organism_id	Organism									N	multioptionlist	4		Y	Y	N	Constrain query to selected organism. Multiple organisms may be selected.	"SELECT DISTINCT sbo.organism_id, sbo.organism_name from $TBIS_SPECIMEN S join sbeams.dbo.organism sbo on S.organism_id = sbo.organism_id WHERE S.record_status != 'D' "	
 IS_SummarizeStains	4	specimen_block_id	Specimen Blocks									N	multioptionlist	4		Y	Y	N	Constrain query only to selected specimen blocks  Multiple specimen blocks may be selected.	"SELECT DISTINCT SB.specimen_block_id,SB.specimen_block_name FROM $TBIS_SPECIMEN_BLOCK SB INNER JOIN $TBIS_ASSAY SS ON ( SB.specimen_block_id = SS.specimen_block_id ) WHERE SS.record_status != 'D' ORDER BY SB.specimen_block_name"	
 IS_SummarizeStains	5	weighting_factor	Weighting Factor									N	text	7		Y	Y	N	Weighting value given to equivocal staining for compiling staining summary. Must be between 0 and 1		
@@ -303,13 +306,13 @@ IS_genome_coordinates	5	genome_strand	DNA Strand	varchar	2				N							Y	Y
 IS_genome_coordinates	6	genome_transcription_start	Gene Transcription Start	int	4				N							Y	Y				
 IS_genome_coordinates	7	genome_transcription_end	Gene Transcription End	int	4				N							Y	Y				
 IS_genome_coordinates	8	genome_coding_region_start	Gene Coding Start	int	4				N							Y	Y				
-IS_genome_coordinates	9	genome_coding_region_end	Gene Coding End	int	4				N							Y	Y
-IS_genome_coordinates	10	genome_location	Chromosomal Location	varchar	255				N							Y	Y
-IS_genome_coordinates	11	organism_id	Organism	int	4				N							Y	Y
-IS_genome_coordinates	12	comment	Comment	text	16				N							N	N
-IS_genome_coordinates	13	date_created	Date Record Created	datetime	16			CURRENT	N			Y				N	N
-IS_genome_coordinates	14	created_by_id	Record Created By	int	4			1	N	contact	contact_id	Y				N	N
-IS_genome_coordinates	15	date_modified	Date Record Modified	datetime	16			CURRENT	N			Y				N	N
-IS_genome_coordinates	16	modified_by_id	Record Modified By	int	4			1	N	contact	contact_id	Y				N	N
-IS_genome_coordinates	17	owner_group_id	Owner Group ID	int	4			1	N	work_group	work_group_id	Y				N	N
-IS_genome_coordinates	18	record_status	Record Status	char	1			N	N							N	N
+IS_genome_coordinates	9	genome_coding_region_end	Gene Coding End	int	4				N							Y	Y				
+IS_genome_coordinates	10	genome_location	Chromosomal Location	varchar	255				N							Y	Y				
+IS_genome_coordinates	11	organism_id	Organism	int	4				N							Y	Y				
+IS_genome_coordinates	12	comment	Comment	text	16				N							N	N				
+IS_genome_coordinates	13	date_created	Date Record Created	datetime	16			CURRENT	N			Y				N	N				
+IS_genome_coordinates	14	created_by_id	Record Created By	int	4			1	N	contact	contact_id	Y				N	N				
+IS_genome_coordinates	15	date_modified	Date Record Modified	datetime	16			CURRENT	N			Y				N	N				
+IS_genome_coordinates	16	modified_by_id	Record Modified By	int	4			1	N	contact	contact_id	Y				N	N				
+IS_genome_coordinates	17	owner_group_id	Owner Group ID	int	4			1	N	work_group	work_group_id	Y				N	N				
+IS_genome_coordinates	18	record_status	Record Status	char	1			N	N							N	N				
