@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SBEAMS_EXPORT>
+    <work_group
+        record_status="N"
+        created_by_id="3"
+        sort_order="10"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        primary_contact_id="3"
+        work_group_name="SNP_admin"
+        comment="Group with administrative access to SNP tables"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="16" />
+    <work_group
+        record_status="N"
+        created_by_id="3"
+        sort_order="20"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        primary_contact_id="3"
+        work_group_name="SNP_user"
+        comment="Group with standard access to SNP tables"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="17" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="rowprivate"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="16"
+        table_group_security_id="46" />
+    <table_group_security
+        privilege_id="25"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="GEAP"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="16"
+        table_group_security_id="47" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="SNP"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="16"
+        table_group_security_id="48" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="common"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="16"
+        table_group_security_id="71" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="project"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="16"
+        table_group_security_id="118" />
+</SBEAMS_EXPORT>

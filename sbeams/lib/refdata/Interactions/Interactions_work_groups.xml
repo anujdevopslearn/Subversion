@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SBEAMS_EXPORT>
+    <work_group
+        record_status="N"
+        created_by_id="3"
+        sort_order="10"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        primary_contact_id="3"
+        comment="Group with standard access to Interactions tables"
+        work_group_name="Interactions_user"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="19" />
+    <work_group
+        record_status="N"
+        created_by_id="3"
+        sort_order="10"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        primary_contact_id="3"
+        comment="Group with administrative access to Interactions tables"
+        work_group_name="Interactions_admin"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="20" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="Interactions_admin"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="20"
+        table_group_security_id="72" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="Interactions_user"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="20"
+        table_group_security_id="73" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="Interactions_user"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="19"
+        table_group_security_id="74" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="rowprivate"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="20"
+        table_group_security_id="75" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="rowprivate"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="19"
+        table_group_security_id="76" />
+    <table_group_security
+        privilege_id="25"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="project"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="19"
+        table_group_security_id="96" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="common"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="19"
+        table_group_security_id="97" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="common"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="20"
+        table_group_security_id="98" />
+    <table_group_security
+        privilege_id="25"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="infrastructure"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="19"
+        table_group_security_id="121" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="project"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="20"
+        table_group_security_id="170" />
+</SBEAMS_EXPORT>

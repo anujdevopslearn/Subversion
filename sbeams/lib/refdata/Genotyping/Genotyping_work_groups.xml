@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SBEAMS_EXPORT>
+    <work_group
+        record_status="N"
+        created_by_id="3"
+        sort_order="10"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        primary_contact_id="3"
+        comment="Group with administrative access to Genotyping tables"
+        work_group_name="Genotyping_admin"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="43" />
+    <work_group
+        record_status="N"
+        created_by_id="3"
+        sort_order="10"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        primary_contact_id="3"
+        comment="Group with standard access to Genotyping tables"
+        work_group_name="Genotyping_user"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="44" />
+    <work_group
+        record_status="N"
+        created_by_id="3"
+        sort_order="10"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        primary_contact_id="3"
+        work_group_name="Genotyping_readonly"
+        comment="Group with very limited access to Genotyping tables"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="45" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="Genotyping_infrastructure"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="44"
+        table_group_security_id="142" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="Genotyping_infrastructure"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="43"
+        table_group_security_id="143" />
+    <table_group_security
+        privilege_id="40"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="Genotyping_infrastructure"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="45"
+        table_group_security_id="144" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="common"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="45"
+        table_group_security_id="145" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="common"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="44"
+        table_group_security_id="146" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="common"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="43"
+        table_group_security_id="147" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="rowprivate"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="43"
+        table_group_security_id="148" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="rowprivate"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="45"
+        table_group_security_id="149" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="rowprivate"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="44"
+        table_group_security_id="150" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="project"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="44"
+        table_group_security_id="162" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="project"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="43"
+        table_group_security_id="168" />
+</SBEAMS_EXPORT>

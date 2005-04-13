@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SBEAMS_EXPORT>
+    <work_group
+        record_status="N"
+        created_by_id="3"
+        sort_order="10"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        primary_contact_id="3"
+        comment="Group with administrative access to Protein Structure tables"
+        work_group_name="ProteinStructure_admin"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="33" />
+    <work_group
+        record_status="N"
+        created_by_id="3"
+        sort_order="10"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        primary_contact_id="3"
+        comment="Group with standard access to Protein Structure tables"
+        work_group_name="ProteinStructure_user"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="34" />
+    <work_group
+        record_status="N"
+        created_by_id="3"
+        sort_order="10"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        primary_contact_id="3"
+        comment="Group with very limited access to Protein Structure tables"
+        work_group_name="ProteinStructure_readonly"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="35" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="rowprivate"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="33"
+        table_group_security_id="110" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="rowprivate"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="35"
+        table_group_security_id="111" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="common"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="33"
+        table_group_security_id="113" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="common"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="35"
+        table_group_security_id="114" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="common"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="34"
+        table_group_security_id="115" />
+    <table_group_security
+        privilege_id="20"
+        record_status="D"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="ProteinStructure_infrastructure"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="34"
+        table_group_security_id="122" />
+    <table_group_security
+        privilege_id="25"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="ProteinStructure_project"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="34"
+        table_group_security_id="123" />
+    <table_group_security
+        privilege_id="20"
+        record_status="D"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="ProteinStructure_project"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="33"
+        table_group_security_id="124" />
+    <table_group_security
+        privilege_id="40"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="ProteinStructure_project"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="35"
+        table_group_security_id="178" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="rowprivate"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="34"
+        table_group_security_id="112" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="ProteinStructure_infrastructure"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="33"
+        table_group_security_id="116" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="project"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="33"
+        table_group_security_id="173" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="project"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="34"
+        table_group_security_id="125" />
+</SBEAMS_EXPORT>

@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SBEAMS_EXPORT>
+    <work_group
+        record_status="N"
+        created_by_id="3"
+        sort_order="10"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        primary_contact_id="3"
+        comment="Group with administrative access to Immunostain tables"
+        work_group_name="Immunostain_admin"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="29" />
+    <work_group
+        record_status="N"
+        created_by_id="3"
+        sort_order="10"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        primary_contact_id="3"
+        comment="Group with standard access to Immunostain tables"
+        work_group_name="Immunostain_user"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="30" />
+    <work_group
+        record_status="N"
+        created_by_id="3"
+        sort_order="10"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        primary_contact_id="3"
+        comment="Group with very limited access to Immunostain tables"
+        work_group_name="Immunostain_readonly"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="31" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="common"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="29"
+        table_group_security_id="101" />
+    <table_group_security
+        privilege_id="40"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="Immunostain_infrastructure"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="31"
+        table_group_security_id="102" />
+    <table_group_security
+        privilege_id="25"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="Immunostain_infrastructure"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="30"
+        table_group_security_id="103" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="Immunostain_infrastructure"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="29"
+        table_group_security_id="104" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="common"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="30"
+        table_group_security_id="105" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="rowprivate"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="30"
+        table_group_security_id="106" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="rowprivate"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="31"
+        table_group_security_id="107" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="rowprivate"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="29"
+        table_group_security_id="108" />
+    <table_group_security
+        privilege_id="25"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="infrastructure"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="30"
+        table_group_security_id="109" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="project"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="30"
+        table_group_security_id="117" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="project"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="29"
+        table_group_security_id="169" />
+</SBEAMS_EXPORT>

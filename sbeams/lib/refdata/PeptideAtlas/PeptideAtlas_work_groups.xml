@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SBEAMS_EXPORT>
+    <work_group
+        record_status="N"
+        created_by_id="3"
+        sort_order="10"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        primary_contact_id="3"
+        comment="Group with standard access to Peptide Atlas tables"
+        work_group_name="PeptideAtlas_user"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="39" />
+    <work_group
+        record_status="N"
+        created_by_id="3"
+        sort_order="10"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        primary_contact_id="3"
+        comment="Group with administrative access to Peptide Atlas tables"
+        work_group_name="PeptideAtlas_admin"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="40" />
+    <work_group
+        record_status="N"
+        created_by_id="3"
+        sort_order="10"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        primary_contact_id="3"
+        work_group_name="PeptideAtlas_readonly"
+        comment="Group with very limited access to Peptide Atlas tables"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="49" />
+    <table_group_security
+        privilege_id="25"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="PeptideAtlas_infrastructure"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="40"
+        table_group_security_id="126" />
+    <table_group_security
+        privilege_id="40"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="PeptideAtlas_infrastructure"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="39"
+        table_group_security_id="127" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="PeptideAtlas_user"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="39"
+        table_group_security_id="128" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="PeptideAtlas_user"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="40"
+        table_group_security_id="129" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="common"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="40"
+        table_group_security_id="130" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="common"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="39"
+        table_group_security_id="131" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="rowprivate"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="39"
+        table_group_security_id="132" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="rowprivate"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="40"
+        table_group_security_id="133" />
+    <table_group_security
+        privilege_id="40"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="PeptideAtlas_infrastructure"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="49"
+        table_group_security_id="174" />
+    <table_group_security
+        privilege_id="40"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="PeptideAtlas_user"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="49"
+        table_group_security_id="175" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="project"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="39"
+        table_group_security_id="160" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="CURRENT_TIMESTAMP"
+        date_created="CURRENT_TIMESTAMP"
+        table_group="project"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="40"
+        table_group_security_id="172" />
+</SBEAMS_EXPORT>
