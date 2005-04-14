@@ -1,22 +1,24 @@
 table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
 SN_biosequence_set	1	biosequence_set_id	BioSequence Set ID	int	4	0	N		Y							N	N				pkDEFAULT
-SN_biosequence_set	2	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism for this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM WHERE record_status != 'D' ORDER BY sort_order,organism_name"	
-SN_biosequence_set	3	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
-SN_biosequence_set	4	set_tag	Set Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Very short tag (name) of this BioSequence database		
-SN_biosequence_set	5	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioSequence database		
-SN_biosequence_set	6	set_version	Set Version	varchar	255	0	N		N			Y	text	40		Y	Y	N	Version of this BioSequence database		
-SN_biosequence_set	7	upload_file	Upload file	varchar	255	0	N		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
-SN_biosequence_set	8	set_path	Set Path	varchar	255	0	N		N			N	text	40		Y	Y	N	Local network file path of this BioSequence database if not uploaded via the web interface		
-SN_biosequence_set	9	source_file_date	Source File Date	datetime	8	0	Y		N			N	text	40		N	N	N	Date of the FASTA file at last update		
-SN_biosequence_set	10	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
-SN_biosequence_set	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-SN_biosequence_set	12	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
-SN_biosequence_set	13	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-SN_biosequence_set	14	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
-SN_biosequence_set	15	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-SN_biosequence_set	16	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
-SN_biosequence_set	17	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-SN_biosequence_set	18	record_status	Record Status	char	1	0	N	N	N							N	N				
+SN_biosequence_set	2	project_id	Owner Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id	
+SN_biosequence_set	3	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism to which the BioSequences in this database belong	SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name	
+SN_biosequence_set	4	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
+SN_biosequence_set	5	set_tag	Set Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this BioSequence database		
+SN_biosequence_set	6	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioSequence database		
+SN_biosequence_set	7	set_version	Set Version	varchar	50	0	N		N			Y	text	40		Y	Y	N	Version of this BioSequence database		
+SN_biosequence_set	8	polymer_type_id	Polymer Type	int	4	0	N		N	BL_polymer_type	polymer_type_id	Y	optionlist			Y	Y	N	Polymer type (e.g. protein, DNA, RNA) for the BioSequences in this database	SELECT polymer_type_id, polymer_type_name FROM $TBBL_POLYMER_TYPE ORDER BY sort_order,polymer_type_name	
+SN_biosequence_set	9	upload_file	Upload file	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
+SN_biosequence_set	10	set_path	Set Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	File path of this BioSequence database		
+SN_biosequence_set	11	source_file_date	Source File Date	datetime	8	0	Y		N			N	text	40		N	N	N	Date of the FASTA file at last update		
+SN_biosequence_set	12	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
+SN_biosequence_set	13	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+SN_biosequence_set	14	sort_order	Sort Order	int	4	0	N	10	N			Y	text	20		Y	Y	N	Allows the ordering or ranking of Biosequence Sets which is used to break ties for choosing canonical names.  Lower numbers indicate better rank.		
+SN_biosequence_set	15	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+SN_biosequence_set	16	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+SN_biosequence_set	17	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+SN_biosequence_set	18	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+SN_biosequence_set	19	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+SN_biosequence_set	20	record_status	Record Status	char	1	0	N	N	N							N	N				
 SN_biosequence	1	biosequence_id	BioSequence ID	int	4	0	N		Y							N	N	N			pkDEFAULT
 SN_biosequence	2	biosequence_set_id	BioSequence Set ID	int	4	0	N		N	SN_biosequence_set	biosequence_set_id	Y	optionlist	20		Y	Y	Y	 The BioSequence Set from which this BioSequnce come from	"SELECT biosequence_set_id, organism_id FROM $TB_BIOSEQUENCE_SET WHERE record_status != 'D' ORDER BY sort_order, organism_id"	
 SN_biosequence	3	biosequence_name	BIoSequence Name	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Name for the BioSequence (i.e. Gene/Cassette Name)		
@@ -142,54 +144,54 @@ SN_instrument	3	instrument_name	Instrument Name	varchar	100	0	N		N			Y	text	30		
 SN_instrument	4	instrument_description	Instrument Description	varchar	255	0	N		N			Y	text	60		Y	Y	N	More complete description of this instrument		
 SN_instrument	5	comment	Comment	text	16	0	Y		N			N	textarea	10		Y	Y	N	Additional comments		
 SN_instrument	6	sort_order	Sort Order	int	4	0	N	10	N			Y	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
-SN_instrument	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-SN_instrument	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N			
-SN_instrument	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-SN_instrument	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
-SN_instrument	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
-SN_instrument	12	record_status	Record Status	char	1	0	N	N	N							N	N			
-SN_GetGenotypes	1	project_id	Project									N	multioptionlist	4	refreshDocument()	Y	Y	N	Select desired projects to query.  Multiple items may be selected.	"SELECT distinct project_id,project_id FROM SNP.dbo.export_results_view ORDER BY project_id"
-SN_GetGenotypes	2	plate_id_constraint	Plate ID									N	multioptionlist	4		Y	Y	N	Select desired plates to query.  Multiple items may be selected.	"SELECT distinct plate_pk,plate_id FROM SNP.dbo.export_results_view WHERE project_id IN ( $parameters{project_id} ) ORDER BY plate_id"
-SN_GetGenotypes	3	assay_id_constraint	Assay ID									N	text	40		Y	Y	N	Constraint for assay name.  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-SN_GetGenotypes	4	sample_id_constraint	Sample ID									N	text	40		Y	Y	N	Constraint for sample name.  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-SN_GetGenotypes	5	minor_allele_limit	Minor Allele Limit					0.1				N	text	40		Y	Y	N	"Set cutoff value for flagging low minor allele frequencies.  Acceptable range is [0,1]."	
-SN_GetGenotypes	6	description	Call Quality									N	multioptionlist	4		Y	Y	N	Select desired genotype quality level.  Multiple items may be selected.	"SELECT distinct description,description FROM SNP.dbo.export_results_view ORDER BY description"
-SN_GetGenotypes	7	assay_order_list_id	Assay Order List									N	multioptionlist	4		Y	Y	N	"Select an Assay Order List to sort result listing (useful in Sample vs. Assay).  If no item is selected, no ranking is done."	"SELECT assay_order_list_id,username+' - '+assay_order_list_name FROM $TBSN_ASSAY_ORDER_LIST AOL LEFT JOIN $TB_USER_LOGIN UL ON (AOL.created_by_id = UL.contact_id) WHERE AOL.record_status != 'D' ORDER BY username,assay_order_list_name"
-SN_GetGenotypes	8	view_style	View Style									N	optionlist			Y	Y	N	Select desired data view.	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'GG_view_style' ORDER BY sort_order,option_value"
-SN_GetGenotypes	9	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options.  Multiple items may be selected.	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'GG_display_options' ORDER BY sort_order,option_value"
-SN_GetGenotypes_Vietnam	1	project_id	Project									N	multioptionlist	4	refreshDocument()	Y	Y	N	Select desired projects to query.  Multiple items may be selected.	"SELECT distinct project_id,project_id FROM SNP.dbo.export_results_view ORDER BY project_id"
-SN_GetGenotypes_Vietnam	2	plate_id_constraint	Plate ID									N	multioptionlist	4		Y	Y	N	Select desired plates to query.  Multiple items may be selected.	"SELECT distinct plate_pk,plate_id FROM SNP.dbo.export_results_view WHERE project_id IN ( $parameters{project_id} ) ORDER BY plate_id"
-SN_GetGenotypes_Vietnam	3	assay_id_constraint	Assay ID									N	text	40		Y	Y	N	Constraint for assay name.  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-SN_GetGenotypes_Vietnam	4	sample_id_constraint	Sample ID									N	text	40		Y	Y	N	Constraint for sample name.  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-SN_GetGenotypes_Vietnam	5	minor_allele_limit	Minor Allele Limit					0.1				N	text	40		Y	Y	N	"Set cutoff value for flagging low minor allele frequencies.  Acceptable range is [0,1]."	
-SN_GetGenotypes_Vietnam	6	description	Call Quality									N	multioptionlist	4		Y	Y	N	Select desired genotype quality level.  Multiple items may be selected.	"SELECT distinct description,description FROM SNP.dbo.export_results_view ORDER BY description"
-SN_GetGenotypes_Vietnam	7	assay_order_list_id	Assay Order List									N	multioptionlist	4		Y	Y	N	"Select an Assay Order List to sort result listing (useful in Sample vs. Assay).  If no item is selected, no ranking is done."	"SELECT assay_order_list_id,username+' - '+assay_order_list_name FROM $TBSN_ASSAY_ORDER_LIST AOL LEFT JOIN $TB_USER_LOGIN UL ON (AOL.created_by_id = UL.contact_id) WHERE AOL.record_status != 'D' ORDER BY username,assay_order_list_name"
-SN_GetGenotypes_Vietnam	8	view_style	View Style									N	optionlist			Y	Y	N	Select desired data view.	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'GG_view_style' ORDER BY sort_order,option_value"
-SN_GetGenotypes_Vietnam	9	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options.  Multiple items may be selected.	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'GG_display_options' ORDER BY sort_order,option_value"
-SN_GetGenotypes_Ian5	1	project_id	Project									N	multioptionlist	4	refreshDocument()	Y	Y	N	Select desired projects to query.  Multiple items may be selected.	"SELECT distinct project_id,project_id FROM SNP.dbo.export_results_view ORDER BY project_id"
-SN_GetGenotypes_Ian5	2	plate_id_constraint	Plate ID									N	multioptionlist	4		Y	Y	N	Select desired plates to query.  Multiple items may be selected.	"SELECT distinct plate_pk,plate_id FROM SNP.dbo.export_results_view WHERE project_id IN ( $parameters{project_id} ) ORDER BY plate_id"
-SN_GetGenotypes_Ian5	3	assay_id_constraint	Assay ID									N	text	40		Y	Y	N	Constraint for assay name.  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-SN_GetGenotypes_Ian5	4	sample_id_constraint	Sample ID									N	text	40		Y	Y	N	Constraint for sample name.  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-SN_GetGenotypes_Ian5	5	minor_allele_limit	Minor Allele Limit					0.1				N	text	40		Y	Y	N	"Set cutoff value for flagging low minor allele frequencies.  Acceptable range is [0,1]."	
-SN_GetGenotypes_Ian5	6	description	Call Quality									N	multioptionlist	4		Y	Y	N	Select desired genotype quality level.  Multiple items may be selected.	"SELECT distinct description,description FROM SNP.dbo.export_results_view ORDER BY description"
-SN_GetGenotypes_Ian5	7	assay_order_list_id	Assay Order List									N	multioptionlist	4		Y	Y	N	"Select an Assay Order List to sort result listing (useful in Sample vs. Assay).  If no item is selected, no ranking is done."	"SELECT assay_order_list_id,username+' - '+assay_order_list_name FROM $TBSN_ASSAY_ORDER_LIST AOL LEFT JOIN $TB_USER_LOGIN UL ON (AOL.created_by_id = UL.contact_id) WHERE AOL.record_status != 'D' ORDER BY username,assay_order_list_name"
-SN_GetGenotypes_Ian5	8	view_style	View Style									N	optionlist			Y	Y	N	Select desired data view.	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'GG_view_style' ORDER BY sort_order,option_value"
-SN_GetGenotypes_Ian5	9	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options.  Multiple items may be selected.	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'GG_display_options' ORDER BY sort_order,option_value"
-SN_GetGenotypes_Ian5-Extended	1	project_id	Project									N	multioptionlist	4	refreshDocument()	Y	Y	N	Select desired projects to query.  Multiple items may be selected.	"SELECT distinct project_id,project_id FROM SNP.dbo.export_results_view ORDER BY project_id"
-SN_GetGenotypes_Ian5-Extended	2	plate_id_constraint	Plate ID									N	multioptionlist	4		Y	Y	N	Select desired plates to query.  Multiple items may be selected.	"SELECT distinct plate_pk,plate_id FROM SNP.dbo.export_results_view WHERE project_id IN ( $parameters{project_id} ) ORDER BY plate_id"
-SN_GetGenotypes_Ian5-Extended	3	assay_id_constraint	Assay ID									N	text	40		Y	Y	N	Constraint for assay name.  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-SN_GetGenotypes_Ian5-Extended	4	sample_id_constraint	Sample ID									N	text	40		Y	Y	N	Constraint for sample name.  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-SN_GetGenotypes_Ian5-Extended	5	minor_allele_limit	Minor Allele Limit					0.1				N	text	40		Y	Y	N	"Set cutoff value for flagging low minor allele frequencies.  Acceptable range is [0,1]."	
-SN_GetGenotypes_Ian5-Extended	6	description	Call Quality									N	multioptionlist	4		Y	Y	N	Select desired genotype quality level.  Multiple items may be selected.	"SELECT distinct description,description FROM SNP.dbo.export_results_view ORDER BY description"
-SN_GetGenotypes_Ian5-Extended	7	assay_order_list_id	Assay Order List									N	multioptionlist	4		Y	Y	N	"Select an Assay Order List to sort result listing (useful in Sample vs. Assay).  If no item is selected, no ranking is done."	"SELECT assay_order_list_id,username+' - '+assay_order_list_name FROM $TBSN_ASSAY_ORDER_LIST AOL LEFT JOIN $TB_USER_LOGIN UL ON (AOL.created_by_id = UL.contact_id) WHERE AOL.record_status != 'D' ORDER BY username,assay_order_list_name"
-SN_GetGenotypes_Ian5-Extended	8	view_style	View Style									N	optionlist			Y	Y	N	Select desired data view.	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'GG_view_style' ORDER BY sort_order,option_value"
-SN_GetGenotypes_Ian5-Extended	9	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options.  Multiple items may be selected.	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'GG_display_options' ORDER BY sort_order,option_value"
-SN_snp_selection_run	1	snp_selection_run_id	SNP Selection Run ID	int	4	0	N		Y			Y								
-SN_snp_selection_run	2	snp_selection_run_name	SNP Selection Run Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of this SNP selection run	
-SN_snp_selection_run	3	snp_selection_run_description	SNP Selection Run Description	text	16	0	N		N			Y	textarea	4		Y	Y	N	"Description of this SNP selection run (e.g., 'Primary Selection for JDRF Chr. 10', 'Extra SNPs for JDRF Chr. 10')"	
-SN_snp_selection_run	4	run_date	SNP Selection Run Date	datetime	8	0	N	CURRENT_TIMESTAMP	N			Y	textdate	20		Y	Y	N	Date of this SNP selection run	
-SN_snp_selection_run	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-SN_snp_selection_run	6	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N			
+SN_instrument	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+SN_instrument	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+SN_instrument	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+SN_instrument	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+SN_instrument	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+SN_instrument	12	record_status	Record Status	char	1	0	N	N	N							N	N				
+SN_GetGenotypes	1	project_id	Project									N	multioptionlist	4	refreshDocument()	Y	Y	N	Select desired projects to query.  Multiple items may be selected.	"SELECT distinct project_id,project_id FROM SNP.dbo.export_results_view ORDER BY project_id"	
+SN_GetGenotypes	2	plate_id_constraint	Plate ID									N	multioptionlist	4		Y	Y	N	Select desired plates to query.  Multiple items may be selected.	"SELECT distinct plate_pk,plate_id FROM SNP.dbo.export_results_view WHERE project_id IN ( $parameters{project_id} ) ORDER BY plate_id"	
+SN_GetGenotypes	3	assay_id_constraint	Assay ID									N	text	40		Y	Y	N	Constraint for assay name.  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+SN_GetGenotypes	4	sample_id_constraint	Sample ID									N	text	40		Y	Y	N	Constraint for sample name.  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+SN_GetGenotypes	5	minor_allele_limit	Minor Allele Limit					0.1				N	text	40		Y	Y	N	"Set cutoff value for flagging low minor allele frequencies.  Acceptable range is [0,1]."		
+SN_GetGenotypes	6	description	Call Quality									N	multioptionlist	4		Y	Y	N	Select desired genotype quality level.  Multiple items may be selected.	"SELECT distinct description,description FROM SNP.dbo.export_results_view ORDER BY description"	
+SN_GetGenotypes	7	assay_order_list_id	Assay Order List									N	multioptionlist	4		Y	Y	N	"Select an Assay Order List to sort result listing (useful in Sample vs. Assay).  If no item is selected, no ranking is done."	"SELECT assay_order_list_id,username+' - '+assay_order_list_name FROM $TBSN_ASSAY_ORDER_LIST AOL LEFT JOIN $TB_USER_LOGIN UL ON (AOL.created_by_id = UL.contact_id) WHERE AOL.record_status != 'D' ORDER BY username,assay_order_list_name"	
+SN_GetGenotypes	8	view_style	View Style									N	optionlist			Y	Y	N	Select desired data view.	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'GG_view_style' ORDER BY sort_order,option_value"	
+SN_GetGenotypes	9	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options.  Multiple items may be selected.	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'GG_display_options' ORDER BY sort_order,option_value"	
+SN_GetGenotypes_Vietnam	1	project_id	Project									N	multioptionlist	4	refreshDocument()	Y	Y	N	Select desired projects to query.  Multiple items may be selected.	"SELECT distinct project_id,project_id FROM SNP.dbo.export_results_view ORDER BY project_id"	
+SN_GetGenotypes_Vietnam	2	plate_id_constraint	Plate ID									N	multioptionlist	4		Y	Y	N	Select desired plates to query.  Multiple items may be selected.	"SELECT distinct plate_pk,plate_id FROM SNP.dbo.export_results_view WHERE project_id IN ( $parameters{project_id} ) ORDER BY plate_id"	
+SN_GetGenotypes_Vietnam	3	assay_id_constraint	Assay ID									N	text	40		Y	Y	N	Constraint for assay name.  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+SN_GetGenotypes_Vietnam	4	sample_id_constraint	Sample ID									N	text	40		Y	Y	N	Constraint for sample name.  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+SN_GetGenotypes_Vietnam	5	minor_allele_limit	Minor Allele Limit					0.1				N	text	40		Y	Y	N	"Set cutoff value for flagging low minor allele frequencies.  Acceptable range is [0,1]."		
+SN_GetGenotypes_Vietnam	6	description	Call Quality									N	multioptionlist	4		Y	Y	N	Select desired genotype quality level.  Multiple items may be selected.	"SELECT distinct description,description FROM SNP.dbo.export_results_view ORDER BY description"	
+SN_GetGenotypes_Vietnam	7	assay_order_list_id	Assay Order List									N	multioptionlist	4		Y	Y	N	"Select an Assay Order List to sort result listing (useful in Sample vs. Assay).  If no item is selected, no ranking is done."	"SELECT assay_order_list_id,username+' - '+assay_order_list_name FROM $TBSN_ASSAY_ORDER_LIST AOL LEFT JOIN $TB_USER_LOGIN UL ON (AOL.created_by_id = UL.contact_id) WHERE AOL.record_status != 'D' ORDER BY username,assay_order_list_name"	
+SN_GetGenotypes_Vietnam	8	view_style	View Style									N	optionlist			Y	Y	N	Select desired data view.	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'GG_view_style' ORDER BY sort_order,option_value"	
+SN_GetGenotypes_Vietnam	9	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options.  Multiple items may be selected.	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'GG_display_options' ORDER BY sort_order,option_value"	
+SN_GetGenotypes_Ian5	1	project_id	Project									N	multioptionlist	4	refreshDocument()	Y	Y	N	Select desired projects to query.  Multiple items may be selected.	"SELECT distinct project_id,project_id FROM SNP.dbo.export_results_view ORDER BY project_id"	
+SN_GetGenotypes_Ian5	2	plate_id_constraint	Plate ID									N	multioptionlist	4		Y	Y	N	Select desired plates to query.  Multiple items may be selected.	"SELECT distinct plate_pk,plate_id FROM SNP.dbo.export_results_view WHERE project_id IN ( $parameters{project_id} ) ORDER BY plate_id"	
+SN_GetGenotypes_Ian5	3	assay_id_constraint	Assay ID									N	text	40		Y	Y	N	Constraint for assay name.  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+SN_GetGenotypes_Ian5	4	sample_id_constraint	Sample ID									N	text	40		Y	Y	N	Constraint for sample name.  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+SN_GetGenotypes_Ian5	5	minor_allele_limit	Minor Allele Limit					0.1				N	text	40		Y	Y	N	"Set cutoff value for flagging low minor allele frequencies.  Acceptable range is [0,1]."		
+SN_GetGenotypes_Ian5	6	description	Call Quality									N	multioptionlist	4		Y	Y	N	Select desired genotype quality level.  Multiple items may be selected.	"SELECT distinct description,description FROM SNP.dbo.export_results_view ORDER BY description"	
+SN_GetGenotypes_Ian5	7	assay_order_list_id	Assay Order List									N	multioptionlist	4		Y	Y	N	"Select an Assay Order List to sort result listing (useful in Sample vs. Assay).  If no item is selected, no ranking is done."	"SELECT assay_order_list_id,username+' - '+assay_order_list_name FROM $TBSN_ASSAY_ORDER_LIST AOL LEFT JOIN $TB_USER_LOGIN UL ON (AOL.created_by_id = UL.contact_id) WHERE AOL.record_status != 'D' ORDER BY username,assay_order_list_name"	
+SN_GetGenotypes_Ian5	8	view_style	View Style									N	optionlist			Y	Y	N	Select desired data view.	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'GG_view_style' ORDER BY sort_order,option_value"	
+SN_GetGenotypes_Ian5	9	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options.  Multiple items may be selected.	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'GG_display_options' ORDER BY sort_order,option_value"	
+SN_GetGenotypes_Ian5-Extended	1	project_id	Project									N	multioptionlist	4	refreshDocument()	Y	Y	N	Select desired projects to query.  Multiple items may be selected.	"SELECT distinct project_id,project_id FROM SNP.dbo.export_results_view ORDER BY project_id"	
+SN_GetGenotypes_Ian5-Extended	2	plate_id_constraint	Plate ID									N	multioptionlist	4		Y	Y	N	Select desired plates to query.  Multiple items may be selected.	"SELECT distinct plate_pk,plate_id FROM SNP.dbo.export_results_view WHERE project_id IN ( $parameters{project_id} ) ORDER BY plate_id"	
+SN_GetGenotypes_Ian5-Extended	3	assay_id_constraint	Assay ID									N	text	40		Y	Y	N	Constraint for assay name.  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+SN_GetGenotypes_Ian5-Extended	4	sample_id_constraint	Sample ID									N	text	40		Y	Y	N	Constraint for sample name.  '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+SN_GetGenotypes_Ian5-Extended	5	minor_allele_limit	Minor Allele Limit					0.1				N	text	40		Y	Y	N	"Set cutoff value for flagging low minor allele frequencies.  Acceptable range is [0,1]."		
+SN_GetGenotypes_Ian5-Extended	6	description	Call Quality									N	multioptionlist	4		Y	Y	N	Select desired genotype quality level.  Multiple items may be selected.	"SELECT distinct description,description FROM SNP.dbo.export_results_view ORDER BY description"	
+SN_GetGenotypes_Ian5-Extended	7	assay_order_list_id	Assay Order List									N	multioptionlist	4		Y	Y	N	"Select an Assay Order List to sort result listing (useful in Sample vs. Assay).  If no item is selected, no ranking is done."	"SELECT assay_order_list_id,username+' - '+assay_order_list_name FROM $TBSN_ASSAY_ORDER_LIST AOL LEFT JOIN $TB_USER_LOGIN UL ON (AOL.created_by_id = UL.contact_id) WHERE AOL.record_status != 'D' ORDER BY username,assay_order_list_name"	
+SN_GetGenotypes_Ian5-Extended	8	view_style	View Style									N	optionlist			Y	Y	N	Select desired data view.	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'GG_view_style' ORDER BY sort_order,option_value"	
+SN_GetGenotypes_Ian5-Extended	9	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options.  Multiple items may be selected.	"SELECT option_key,option_value FROM $TBSN_QUERY_OPTION WHERE option_type = 'GG_display_options' ORDER BY sort_order,option_value"	
+SN_snp_selection_run	1	snp_selection_run_id	SNP Selection Run ID	int	4	0	N		Y			Y									
+SN_snp_selection_run	2	snp_selection_run_name	SNP Selection Run Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of this SNP selection run		
+SN_snp_selection_run	3	snp_selection_run_description	SNP Selection Run Description	text	16	0	N		N			Y	textarea	4		Y	Y	N	"Description of this SNP selection run (e.g., 'Primary Selection for JDRF Chr. 10', 'Extra SNPs for JDRF Chr. 10')"		
+SN_snp_selection_run	4	run_date	SNP Selection Run Date	datetime	8	0	N	CURRENT_TIMESTAMP	N			Y	textdate	20		Y	Y	N	Date of this SNP selection run		
+SN_snp_selection_run	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+SN_snp_selection_run	6	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
 SN_snp_selection_run	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 SN_snp_selection_run	8	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
 SN_snp_selection_run	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
@@ -206,22 +208,22 @@ SN_status	8	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id			
 SN_status	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 SN_status	10	record_status	Record Status	char	1	0	N	N	N							N	N				
 SN_selected_snp	1	selected_snp_id	Selected SNP ID	varchar	255	0	N		Y	SN_snp	snp_id	Y	text	40				Y			
-SN_selected_snp	2	snp_selection_run_id	SNP Selection Run ID	int	4	0	N		N	SN_snp_selection_run	snp_selection_run_id	Y				Y	Y	N	
-SN_selected_snp	3	jared_id	Jared Roach ID	varchar	255	0	N		N			N	text	40		Y	Y	N	ID for this SNP from Jared's merging
-SN_selected_snp	4	snp_id	SNP ID	int	4	0	N		N			Y				Y	Y	N	
-SN_selected_snp	5	position	SNP Position	int	4	0	N		N			Y				Y	Y	N	"Position of this SNP, relative to the biosquence"
-SN_selected_snp	6	quality_score	Quality Score	int	4	0	N		N			Y	text	40		Y	Y	N	
-SN_selected_snp	7	sequence	SNP Sequence	text	16	0	N		N			Y				Y	Y	N	
-SN_selected_snp	8	sequence_is_modified	Original Sequence Modified?	varchar	1	0	N		N			Y				Y	Y	N	Has the original sequence been mofidied?  Usually from merged nearby SNPs.
-SN_selected_snp	9	status	Status	text	4	0	N		N	SN_status	description	Y	text	40		Y	Y	N	"Current status of this SNP.  Valid codes are 'Library', 'Picked', 'Failed design', 'Failed constant'"
-SN_selected_snp	10	parent_gene_biosequence_id	Parent Gene Biosequence ID	int	4	0	N		N			Y				Y	Y	N	
-SN_selected_snp	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments
-SN_selected_snp	12	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N		
-SN_selected_snp	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-SN_selected_snp	14	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N		
-SN_selected_snp	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N		
-SN_selected_snp	16	record_status	Record Status	char	1	0	N	N	N							N	N		
-SN_replaced_snp	1	snp_id	SNP ID	int	4	0	N		N	SN_snp	snp_id	Y				Y	Y	Y	SNP ID of the chosed replacement SNP
+SN_selected_snp	2	snp_selection_run_id	SNP Selection Run ID	int	4	0	N		N	SN_snp_selection_run	snp_selection_run_id	Y				Y	Y	N			
+SN_selected_snp	3	jared_id	Jared Roach ID	varchar	255	0	N		N			N	text	40		Y	Y	N	ID for this SNP from Jared's merging		
+SN_selected_snp	4	snp_id	SNP ID	int	4	0	N		N			Y				Y	Y	N			
+SN_selected_snp	5	position	SNP Position	int	4	0	N		N			Y				Y	Y	N	"Position of this SNP, relative to the biosquence"		
+SN_selected_snp	6	quality_score	Quality Score	int	4	0	N		N			Y	text	40		Y	Y	N			
+SN_selected_snp	7	sequence	SNP Sequence	text	16	0	N		N			Y				Y	Y	N			
+SN_selected_snp	8	sequence_is_modified	Original Sequence Modified?	varchar	1	0	N		N			Y				Y	Y	N	Has the original sequence been mofidied?  Usually from merged nearby SNPs.		
+SN_selected_snp	9	status	Status	text	4	0	N		N	SN_status	description	Y	text	40		Y	Y	N	"Current status of this SNP.  Valid codes are 'Library', 'Picked', 'Failed design', 'Failed constant'"		
+SN_selected_snp	10	parent_gene_biosequence_id	Parent Gene Biosequence ID	int	4	0	N		N			Y				Y	Y	N			
+SN_selected_snp	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+SN_selected_snp	12	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
+SN_selected_snp	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+SN_selected_snp	14	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
+SN_selected_snp	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+SN_selected_snp	16	record_status	Record Status	char	1	0	N	N	N							N	N				
+SN_replaced_snp	1	snp_id	SNP ID	int	4	0	N		N	SN_snp	snp_id	Y				Y	Y	Y	SNP ID of the chosed replacement SNP		
 SN_replaced_snp	2	snp_selection_run_id	SNP Selection Run ID	int	4	0	N		N	SN_snp_selection_run	snp_selection_run_id	Y				Y	Y	Y	SNP Selection Run of the replacement		
 SN_replaced_snp	3	replaced_snp_id	Replaced SNP ID	int	4	0	N		N			Y				Y	Y	Y	SNP ID of the SNP that has been replaced		
 SN_manual_genotype_call	1	manual_genotype_call_id	Manual Genotype Call ID	int	4	0	N		Y							N	N				
@@ -238,13 +240,13 @@ SN_manual_genotype_call	11	modified_by_id	Record Modified By	int	4	0	N		N	contac
 SN_manual_genotype_call	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 SN_manual_genotype_call	13	record_status	Record Status	char	1	0	N	N	N							N	N	N			
 SN_assay_order_list	1	assay_order_list_id	Assay Order List	int	4	0	N		Y							N	N				pkDEFAULT
-SN_assay_order_list	2	assay_order_list_name	Assay Order List Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of the list of ordered assays (as it will appear in a drop-down list)
-SN_assay_order_list	3	assay_order_list_file	Assay Order List File	varchar	255	0	N		N			N	file	30		Y	Y	N	Hit [Browse] and specify the tab-delimited text file which contains the assay position information.  This must be in the correct format.
-SN_assay_order_list	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments about this assay order list
-SN_assay_order_list	5	sort_order	Sort Order	int	4	0	N	10	N							N	N	N	
-SN_assay_order_list	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-SN_assay_order_list	7	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N		
-SN_assay_order_list	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-SN_assay_order_list	9	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N		
-SN_assay_order_list	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N		
-SN_assay_order_list	11	record_status	Record Status	char	1	0	N	N	N							N	N		
+SN_assay_order_list	2	assay_order_list_name	Assay Order List Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of the list of ordered assays (as it will appear in a drop-down list)		
+SN_assay_order_list	3	assay_order_list_file	Assay Order List File	varchar	255	0	N		N			N	file	30		Y	Y	N	Hit [Browse] and specify the tab-delimited text file which contains the assay position information.  This must be in the correct format.		
+SN_assay_order_list	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments about this assay order list		
+SN_assay_order_list	5	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
+SN_assay_order_list	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+SN_assay_order_list	7	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
+SN_assay_order_list	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+SN_assay_order_list	9	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
+SN_assay_order_list	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+SN_assay_order_list	11	record_status	Record Status	char	1	0	N	N	N							N	N				

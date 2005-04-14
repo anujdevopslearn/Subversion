@@ -1,21 +1,24 @@
 table_name	column_index	column_name	column_title	datatype	scale	precision	nullable	default_value	is_auto_inc	fk_table	fk_column_name	is_required	input_type	input_length	onChange	is_data_column	is_display_column	is_key_field	column_text	optionlist_query	url
-PH_biosequence_set	1	biosequence_set_id	BioSequence Set ID	int	8	0	N		Y							N	N				pkDEFAULT
-PH_biosequence_set	2	species_id	Species	int	8	0	N		N		organism_id	Y	optionlist			Y	Y	N	Species for this BioSequence database	"SELECT organism_id, organism_name FROM $TB_ORGANISM WHERE record_status != 'D' ORDER BY sort_order,organism_name"	
-PH_biosequence_set	3	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
-PH_biosequence_set	4	set_tag	Set Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Very short tag (name) of this BioSequence database		
-PH_biosequence_set	5	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioSequence database		
-PH_biosequence_set	6	set_version	Set Version	varchar	255	0	N		N			Y	text	40		Y	Y	N	Version of this BioSequence database		
-PH_biosequence_set	7	upload_file	Upload file	varchar	255	0	N		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
-PH_biosequence_set	8	set_path	Set Path	varchar	255	0	N		N			N	text	40		Y	Y	N	Local network file path of this BioSequence database if not uploaded via the web interface		
-PH_biosequence_set	9	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
-PH_biosequence_set	10	comment	Comment	text	4000	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-PH_biosequence_set	11	sort_order	Sort Order	int	8	0	N	10	N							N	N	N			
-PH_biosequence_set	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PH_biosequence_set	13	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
-PH_biosequence_set	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-PH_biosequence_set	15	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
-PH_biosequence_set	16	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
-PH_biosequence_set	17	record_status	Record Status	char	1	0	N	N	N							N	N				
+PH_biosequence_set	1	biosequence_set_id	BioSequence Set ID	int	4	0	N		Y							N	N				pkDEFAULT
+PH_biosequence_set	2	project_id	Owner Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id	
+PH_biosequence_set	3	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism to which the BioSequences in this database belong	SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name	
+PH_biosequence_set	4	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
+PH_biosequence_set	5	set_tag	Set Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this BioSequence database		
+PH_biosequence_set	6	set_description	Set Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this BioSequence database		
+PH_biosequence_set	7	set_version	Set Version	varchar	50	0	N		N			Y	text	40		Y	Y	N	Version of this BioSequence database		
+PH_biosequence_set	8	polymer_type_id	Polymer Type	int	4	0	N		N	BL_polymer_type	polymer_type_id	Y	optionlist			Y	Y	N	Polymer type (e.g. protein, DNA, RNA) for the BioSequences in this database	SELECT polymer_type_id, polymer_type_name FROM $TBBL_POLYMER_TYPE ORDER BY sort_order,polymer_type_name	
+PH_biosequence_set	9	upload_file	Upload file	varchar	255	0	Y		N			N	file	40		Y	Y	N	File path of this BioSequence database if to be uploaded via the web interface		
+PH_biosequence_set	10	set_path	Set Path	varchar	255	0	N		N			Y	text	50		Y	Y	N	File path of this BioSequence database		
+PH_biosequence_set	11	source_file_date	Source File Date	datetime	8	0	Y		N			N	text	40		N	N	N	Date of the FASTA file at last update		
+PH_biosequence_set	12	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	External web page or other URI		SELF
+PH_biosequence_set	13	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PH_biosequence_set	14	sort_order	Sort Order	int	4	0	N	10	N			Y	text	20		Y	Y	N	Allows the ordering or ranking of Biosequence Sets which is used to break ties for choosing canonical names.  Lower numbers indicate better rank.		
+PH_biosequence_set	15	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PH_biosequence_set	16	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+PH_biosequence_set	17	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PH_biosequence_set	18	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+PH_biosequence_set	19	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+PH_biosequence_set	20	record_status	Record Status	char	1	0	N	N	N							N	N				
 PH_biosequence	1	biosequence_id	BioSequence ID	int	8	0	N		Y							N	N	N			pkDEFAULT
 PH_biosequence	2	biosequence_set_id	BioSequence Set ID	int	8	0	N		N	PH_biosequence_set	biosequence_set_id	Y	optionlist	20		Y	Y	Y	 The BioSequence Set from which this BioSequnce come from	"SELECT biosequence_set_id, species_id FROM $TBPH_BIOSEQUENCE_SET WHERE record_status != 'D' ORDER BY sort_order, species_id"	
 PH_biosequence	3	biosequence_name	BIoSequence Name	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Name for the BioSequence (i.e. Gene/Cassette Name)		
@@ -46,22 +49,22 @@ PH_sequence_modification	12	modified_by_id	Record Modified By	int	8	0	N		N	conta
 PH_sequence_modification	13	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 PH_sequence_modification	14	record_status	Record Status	char	1	0	N	N	N							N	N				
 PH_plasmid	1	plasmid_id	Plasmid ID	int	8	0	N		Y							N	N				pkDEFAULT
-PH_plasmid	2	plasmid_strainID	Plasmid Strain ID	varchar	50	0	N		N			Y	text	10		Y	Y	Y	FileMaker database Strain ID	
-PH_plasmid	3	plasmid_name	Plasmid Name	varchar	255	0	N		N			Y	text	40		Y	Y	N	Common name of the plasmid	
-PH_plasmid	4	plasmid_type_id	Plasmid Type	int	8	0	N		N	PH_plasmid_type	plasmid_type_id	Y	optionlist			Y	Y	N	Type of Plasmid from list	"SELECT plasmid_type_id, plasmid_type_name FROM $TBPH_PLASMID_TYPE WHERE record_status != 'D' ORDER BY sort_order,plasmid_type_name"
-PH_plasmid	5	vector	Vector	varchar	50	0	N		N			N	text	40		Y	Y	N	Vector	
-PH_plasmid	6	coli_strain	Coli Strain	varchar	50	0	N		N			N	text	20		Y	Y	N	?	
-PH_plasmid	7	coli_marker_id	Coli Marker	int	8	0	N		N	PH_coli_marker	coli_marker_id	Y	optionlist			Y	Y	N	Coli Marker	"SELECT coli_marker_id, coli_marker_tag FROM $TBPH_COLI_MARKER WHERE record_status != 'D' ORDER BY sort_order,coli_marker_tag"
-PH_plasmid	8	yeast_selection_marker_id	Yeast Selection Marker	int	8	0	N		N	PH_yeast_selection_marker	yeast_selection_marker_id	N	optionlist			Y	Y	N	Yeast Selection Marker	"SELECT yeast_selection_marker_id, yeast_selection_marker_tag FROM $TBPH_YEAST_SELECTION_MARKER WHERE record_status != 'D' ORDER BY sort_order,yeast_selection_marker_tag"
-PH_plasmid	9	yeast_origin_id	Yeast Origin	int	8	0	N		N	PH_yeast_origin	yeast_origin_id	Y	optionlist			Y	Y	N	Yeast Origin	"SELECT yeast_origin_id, yeast_origin_tag FROM $TBPH_YEAST_ORIGIN WHERE record_status != 'D' ORDER BY sort_order,yeast_origin_tag"
-PH_plasmid	10	plasmid_insert	Plasmid Insert	varchar	150	0	N		N			N	text	40		Y	Y	N	?	
-PH_plasmid	11	cloned_by	Cloned By	varchar	50	0	N		N			N	text	40		Y	Y	N	?	
-PH_plasmid	12	cloned_date	Cloned Date	datetime	8	0	N		N			N	text	20		Y	Y	N	?	
-PH_plasmid	13	source_contact_id	Source Contact	int	8	0	N		N	contact	contact_id	N	scrolloptionlist	4		Y	Y	N	Contact for the source of this plasmid	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY organization,last_name,first_name"
-PH_plasmid	14	source	Source (plaintext)	varchar	255	0	N		N			N	textarea	4		Y	Y	N	A plaintext version of a source for this plasmid.  Don't use this field.  Add an official contact and use the previous field	
-PH_plasmid	15	reference_citation_id	Reference Citation	int	8	0	N		N	PH_citation	citation_id	N	optionlist			Y	Y	N	Citation to a reference containing information about this plasmid	"SELECT citation_id, citation_name FROM $TBPH_CITATION WHERE record_status != 'D' ORDER BY citation_name"
-PH_plasmid	16	reference	Reference (plaintext)	varchar	255	0	N		N			N	textarea	4		Y	Y	N	A plaintext version of a reference for this plasmid.  Don't use this field.  Add an official citation and use the previous field	
-PH_plasmid	17	biosequence_id	Biosequence ID	int	8	0	N		N			N	fixed	20		Y	Y	N	Biosequence identifier for this plasmid from biosequence table	"SELECT biosequence_id, biosequence_name FROM $TBPH_BIOSEQUENCE WHERE record_status != 'D' ORDER BY biosequence_name"
+PH_plasmid	2	plasmid_strainID	Plasmid Strain ID	varchar	50	0	N		N			Y	text	10		Y	Y	Y	FileMaker database Strain ID		
+PH_plasmid	3	plasmid_name	Plasmid Name	varchar	255	0	N		N			Y	text	40		Y	Y	N	Common name of the plasmid		
+PH_plasmid	4	plasmid_type_id	Plasmid Type	int	8	0	N		N	PH_plasmid_type	plasmid_type_id	Y	optionlist			Y	Y	N	Type of Plasmid from list	"SELECT plasmid_type_id, plasmid_type_name FROM $TBPH_PLASMID_TYPE WHERE record_status != 'D' ORDER BY sort_order,plasmid_type_name"	
+PH_plasmid	5	vector	Vector	varchar	50	0	N		N			N	text	40		Y	Y	N	Vector		
+PH_plasmid	6	coli_strain	Coli Strain	varchar	50	0	N		N			N	text	20		Y	Y	N	?		
+PH_plasmid	7	coli_marker_id	Coli Marker	int	8	0	N		N	PH_coli_marker	coli_marker_id	Y	optionlist			Y	Y	N	Coli Marker	"SELECT coli_marker_id, coli_marker_tag FROM $TBPH_COLI_MARKER WHERE record_status != 'D' ORDER BY sort_order,coli_marker_tag"	
+PH_plasmid	8	yeast_selection_marker_id	Yeast Selection Marker	int	8	0	N		N	PH_yeast_selection_marker	yeast_selection_marker_id	N	optionlist			Y	Y	N	Yeast Selection Marker	"SELECT yeast_selection_marker_id, yeast_selection_marker_tag FROM $TBPH_YEAST_SELECTION_MARKER WHERE record_status != 'D' ORDER BY sort_order,yeast_selection_marker_tag"	
+PH_plasmid	9	yeast_origin_id	Yeast Origin	int	8	0	N		N	PH_yeast_origin	yeast_origin_id	Y	optionlist			Y	Y	N	Yeast Origin	"SELECT yeast_origin_id, yeast_origin_tag FROM $TBPH_YEAST_ORIGIN WHERE record_status != 'D' ORDER BY sort_order,yeast_origin_tag"	
+PH_plasmid	10	plasmid_insert	Plasmid Insert	varchar	150	0	N		N			N	text	40		Y	Y	N	?		
+PH_plasmid	11	cloned_by	Cloned By	varchar	50	0	N		N			N	text	40		Y	Y	N	?		
+PH_plasmid	12	cloned_date	Cloned Date	datetime	8	0	N		N			N	text	20		Y	Y	N	?		
+PH_plasmid	13	source_contact_id	Source Contact	int	8	0	N		N	contact	contact_id	N	scrolloptionlist	4		Y	Y	N	Contact for the source of this plasmid	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY organization,last_name,first_name"	
+PH_plasmid	14	source	Source (plaintext)	varchar	255	0	N		N			N	textarea	4		Y	Y	N	A plaintext version of a source for this plasmid.  Don't use this field.  Add an official contact and use the previous field		
+PH_plasmid	15	reference_citation_id	Reference Citation	int	8	0	N		N	PH_citation	citation_id	N	optionlist			Y	Y	N	Citation to a reference containing information about this plasmid	"SELECT citation_id, citation_name FROM $TBPH_CITATION WHERE record_status != 'D' ORDER BY citation_name"	
+PH_plasmid	16	reference	Reference (plaintext)	varchar	255	0	N		N			N	textarea	4		Y	Y	N	A plaintext version of a reference for this plasmid.  Don't use this field.  Add an official citation and use the previous field		
+PH_plasmid	17	biosequence_id	Biosequence ID	int	8	0	N		N			N	fixed	20		Y	Y	N	Biosequence identifier for this plasmid from biosequence table	"SELECT biosequence_id, biosequence_name FROM $TBPH_BIOSEQUENCE WHERE record_status != 'D' ORDER BY biosequence_name"	
 PH_plasmid	18	comment	Comment	text	4000	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 PH_plasmid	19	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 PH_plasmid	20	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
@@ -190,22 +193,22 @@ PH_strain_behavior	2	strain_id	Substrain ID	int	8	0	N		N	PH_strain	strain_id	Y	o
 PH_strain_behavior	3	condition_id	Condition ID	int	8	0	N		N	PH_condition	condition_id	Y	optionlist			Y	Y		The Condition these results were obtained for	"SELECT condition_id, condition_name FROM $TBPH_CONDITION WHERE record_status != 'D' ORDER BY sort_order, condition_name"	
 PH_strain_behavior	4	growth	Growth	varchar	8	0	N		N			N	text	8		N	N				
 PH_strain_behavior	5	spot_size	Spot Size	varchar	8	0	N		N			N	text	8		N	N				
-PH_strain_behavior	6	adhesion	Adhesion	varchar	8	0	N		N			N	text	8		N	N			
-PH_strain_behavior	7	invasion	Invasion	varchar	8	0	N		N			N	text	8		N	N			
-PH_BrowseBioSequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBPH_BIOSEQUENCE_SET ORDER BY sort_order,set_name"
-PH_BrowseBioSequence	2	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-PH_BrowseBioSequence	3	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-PH_BrowseBioSequence	4	biosequence_seq_constraint	Sequence Constraint									N	text	40		Y	Y	N	Constraint for the actual sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-PH_BrowseBioSequence	5	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-PH_BrowseBioSequence	6	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBPH_QUERY_OPTION WHERE option_type = 'BBS_sort_options' ORDER BY sort_order,option_value"
-PH_BrowseBioSequence	7	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBPH_QUERY_OPTION WHERE option_type = 'BBS_display_options' ORDER BY sort_order,option_value"
-PH_BrowseBioSequence	8	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."	
-PH_StrainFinder	1	cell_type	CellType									N	multioptionlist	4		Y	Y	N	Select the desired cell type from the list of available cell types.  If no cell type is selected all will be searched.	"SELECT cell_type_id, cell_type_description FROM $TBPH_CELL_TYPE ORDER BY sort_order, cell_type_description"
-PH_StrainFinder	2	strain_background	StrainBackGround									N	multioptionlist	4		Y	Y	N	"Select the desired strain background, or all will be searched."	"SELECT strain_background_id, strain_background_name FROM $TBPH_STRAIN_BACKGROUND WHERE record_status != 'D' ORDER BY sort_order, strain_background_name"
-PH_StrainFinder	3	citation	Citation									N	multioptionlist	4		Y	Y	N	"This will currently be a list of citations, but later will include more fields for author, etc."	"SELECT citation_id, citation_name FROM $TBPH_CITATION WHERE record_status != 'D' ORDER BY citation_name"
-PH_StrainFinder	4	allele_name	Allele Name									N	text	40		Y	Y	N	The Name of the ALLELE	
-PH_StrainFinder	5	allele_desc	Locus Description									N	text	40		Y	Y	N	The Description of the ALLELE	
-PH_StrainFinder	5	locus_name	Allele Description									N	text	41		Y	Y	N	The Name of the LOCUS	
+PH_strain_behavior	6	adhesion	Adhesion	varchar	8	0	N		N			N	text	8		N	N				
+PH_strain_behavior	7	invasion	Invasion	varchar	8	0	N		N			N	text	8		N	N				
+PH_BrowseBioSequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBPH_BIOSEQUENCE_SET ORDER BY sort_order,set_name"	
+PH_BrowseBioSequence	2	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+PH_BrowseBioSequence	3	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+PH_BrowseBioSequence	4	biosequence_seq_constraint	Sequence Constraint									N	text	40		Y	Y	N	Constraint for the actual sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+PH_BrowseBioSequence	5	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+PH_BrowseBioSequence	6	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBPH_QUERY_OPTION WHERE option_type = 'BBS_sort_options' ORDER BY sort_order,option_value"	
+PH_BrowseBioSequence	7	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBPH_QUERY_OPTION WHERE option_type = 'BBS_display_options' ORDER BY sort_order,option_value"	
+PH_BrowseBioSequence	8	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."		
+PH_StrainFinder	1	cell_type	CellType									N	multioptionlist	4		Y	Y	N	Select the desired cell type from the list of available cell types.  If no cell type is selected all will be searched.	"SELECT cell_type_id, cell_type_description FROM $TBPH_CELL_TYPE ORDER BY sort_order, cell_type_description"	
+PH_StrainFinder	2	strain_background	StrainBackGround									N	multioptionlist	4		Y	Y	N	"Select the desired strain background, or all will be searched."	"SELECT strain_background_id, strain_background_name FROM $TBPH_STRAIN_BACKGROUND WHERE record_status != 'D' ORDER BY sort_order, strain_background_name"	
+PH_StrainFinder	3	citation	Citation									N	multioptionlist	4		Y	Y	N	"This will currently be a list of citations, but later will include more fields for author, etc."	"SELECT citation_id, citation_name FROM $TBPH_CITATION WHERE record_status != 'D' ORDER BY citation_name"	
+PH_StrainFinder	4	allele_name	Allele Name									N	text	40		Y	Y	N	The Name of the ALLELE		
+PH_StrainFinder	5	allele_desc	Locus Description									N	text	40		Y	Y	N	The Description of the ALLELE		
+PH_StrainFinder	5	locus_name	Allele Description									N	text	41		Y	Y	N	The Name of the LOCUS		
 PH_StrainFinder	6	locus_desc	Locus Name									N	text	42		Y	Y	N	The Description of the LOCUS		
 PH_coli_marker	1	coli_marker_id	Coli Marker ID	int	8	0	N		Y							N	N				pkDEFAULT
 PH_coli_marker	2	coli_marker_tag	Coli Marker Tag	varchar	255	0	N		N			Y	text	20		Y	Y	Y	Tag (short abbreviation) of the Coli Marker		
@@ -286,10 +289,10 @@ PH_citation	12	editor_name	Editor Name	varchar	255	0	Y		N			N	text	40		Y	Y	N	"Na
 PH_citation	13	uri	URI	varchar	255	0	Y		N			N	text	50		Y	Y	N	URL of other locator for the article		SELF
 PH_citation	14	abstract	Abstract	text	16	0	Y		N			N	textarea	4		Y	Y	N	Plain text abstract of the article		
 PH_citation	15	full_manuscript_file	Full Manuscript	varchar	255	0	Y		N			N	file	40		Y	Y	N	Actual file containing the manuscript (e.g. in PDF format)		
-PH_citation	16	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments
-PH_citation	17	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-PH_citation	18	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N		
-PH_citation	19	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-PH_citation	20	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N		
-PH_citation	21	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N		
-PH_citation	22	record_status	Record Status	char	1	0	N	N	N							N	N		
+PH_citation	16	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+PH_citation	17	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PH_citation	18	created_by_id	Record Created By	int	8	0	N		N	contact	contact_id					N	N				
+PH_citation	19	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+PH_citation	20	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact_id					N	N				
+PH_citation	21	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
+PH_citation	22	record_status	Record Status	char	1	0	N	N	N							N	N				
