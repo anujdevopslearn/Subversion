@@ -563,6 +563,9 @@ sub handle_request {
   if ( $parameters{display_options} =~ /MaxSeqWidth/ ) {
     $max_widths{'biosequence_seq'} = 100;
   }
+  if ( $parameters{display_options} =~ /NoSequence/ ) {
+    pop(@column_array);
+  }
   if ( $parameters{display_options} =~ /ShowSQL/ ) {
     $show_sql = 1;
   }
