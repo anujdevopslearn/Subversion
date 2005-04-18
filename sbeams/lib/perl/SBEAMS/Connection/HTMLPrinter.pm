@@ -356,6 +356,49 @@ a.red_button:link{
 	padding: 2px 2px 2px 2px;
 	background-color: #ff0066;
 }
+
+a.blue_button:link{ 
+	background: #366496;
+	color: #ffffff;
+	text-decoration: none; 
+	padding:0px 3px 0px 3px; 
+	border-top: 1px solid #CBE3FF; 
+	border-right: 1px solid #003366; 
+	border-bottom: 1px solid #003366; \
+	border-left:1px solid #B7CFEB; 
+}
+
+a.blue_button:visited{ 
+	background: #366496;
+	color: #ffffff;
+	text-decoration: none; 
+	padding:0px 3px 0px 3px; 
+	border-top: 1px solid #CBE3FF; 
+	border-right: 1px solid #003366; 
+	border-bottom: 1px solid #003366; \
+	border-left:1px solid #B7CFEB; 
+}
+a.blue_button:hover{ 
+	background: #366496;
+	color: #777777;
+	text-decoration: none; 
+	padding:0px 3px 0px 3px; 
+	border-top: 1px solid #CBE3FF; 
+	border-right: 1px solid #003366; 
+	border-bottom: 1px solid #003366; \
+	border-left:1px solid #B7CFEB; 
+}
+
+a.blue_button:active{ 
+	background: #366496;
+	color: #ffffff;
+	text-decoration: none; 
+	padding:0px 3px 0px 3px; 
+	border-top: 1px solid #CBE3FF; 
+	border-right: 1px solid #003366; 
+	border-bottom: 1px solid #003366; \
+	border-left:1px solid #B7CFEB; 
+}
 	
 	//-->
 	</style>
