@@ -619,7 +619,7 @@ WHERE es.experiment_id = $experiment_id
 <TABLE CLASS='table_setup'>
      <TR CLASS='rev_gray'>
 	   <TD NOWRAP COLSPAN=2 WIDTH=300>- <font color="white">$experiment_tag</font>: $experiment_name</TD>
-       <TD NOWRAP ALIGN='CENTER' COLSPAN=2 WIDTH=300 ><A CLASS='edit_menuButton' HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&experiment_id=$experiment_id">[View/Edit Experiment Description]</A></TD>
+       <TD NOWRAP ALIGN='CENTER' COLSPAN=2 WIDTH=300 ><A CLASS='blue_button' HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PR_proteomics_experiment&experiment_id=$experiment_id">View/Edit Experiment Description</A></TD>
      </TR>
      <TR class='grey_bg'>
        <TD><IMG SRC='$HTML_BASE_DIR/images/clear.gif' HEIGHT=25></TD>
