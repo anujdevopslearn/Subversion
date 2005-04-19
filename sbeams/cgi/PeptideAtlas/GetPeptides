@@ -28,7 +28,7 @@ use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
-             @MENU_OPTIONS %parameters);
+             @MENU_OPTIONS);
 
 use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
@@ -100,6 +100,7 @@ sub main {
 
 
   #### Read in the default input parameters
+  my %parameters;
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$q,parameters_ref=>\%parameters);
   #$sbeams->printDebuggingInfo($q);
@@ -142,16 +143,20 @@ sub handle_request {
     || die "ref_parameters not passed";
   my %parameters = %{$ref_parameters};
 
-    print <<"    END";
+    print <<"    END" if ($sbeams->output_mode() eq 'html');
         <BR>
     END
 
 
+
   ## if tab menu is requested, display tabs and append parameters to PROG_NAME
 # if ( $parameters{_tab} )
-# {
+  if ($sbeams->output_mode() eq 'html')
+  {
       ## filter parameters:
-      filterParameters();
+      filterParameters(
+          query_parameters_ref=>\%parameters
+      );
 
       my $parameters_string = $sbeamsMOD->printTabMenu(
           parameters_ref => \%parameters,
@@ -161,7 +166,7 @@ sub handle_request {
       #print "<BR>parameter_string:$parameters_string<BR>";
 
       $PROG_NAME = $PROG_NAME.$parameters_string;
-# }
+  }
 
   
   #### Define some generic variables
@@ -205,8 +210,11 @@ sub handle_request {
   #### If the apply action was to recall a previous resultset, do it
   my %rs_params = $sbeams->parseResultSetParams(q=>$q);
   if ($apply_action eq "VIEWRESULTSET") {
-    $sbeams->readResultSet(resultset_file=>$rs_params{set_name},
-        resultset_ref=>$resultset_ref,query_parameters_ref=>\%parameters);
+    $sbeams->readResultSet(
+        resultset_file=>$rs_params{set_name},
+        resultset_ref=>$resultset_ref,
+        query_parameters_ref=>\%parameters
+    );
     $n_params_found = 99;
   }
 
@@ -631,7 +639,9 @@ sub handle_request {
     ## have to filter %parameters{'rs_<*>'} as without filter, will see each page
     ## query added on and only first will be used in display below
     ## filter to retain only latest rs_set_name:
-    filterParameters();
+    filterParameters(
+        query_parameters_ref=>\%parameters
+    );
     ## filtering rs_params:
     $rs_params{'rs_set_name'} =~ /(.*)(query_\S+)$/;
     $rs_params{'rs_set_name'} = $2;
@@ -694,6 +704,7 @@ sub handle_request {
         query_parameters_ref=>\%parameters,
         column_titles_ref=>\@column_titles,
       ) if ($parameters{display_options} =~ /DASFormat/i);
+
 #     ##xxxxxxx
 #     #$sbeams->printDebuggingInfo($q);
 #     print "<BR><BR>AFTER POST-PROCESSING (PARAMETERS)<BR>";
@@ -720,6 +731,29 @@ sub handle_request {
         column_titles_ref=>\@column_titles,
       );
     }
+
+    ##xxxxxxx
+    ##xxxxxxx
+    ## more debugging:
+#   print "$base_url<BR>";
+#   #$sbeams->printDebuggingInfo($q);
+#   print "<BR><BR>AFTER POST-PROCESSING (PARAMETERS)<BR>";
+#   foreach my $key (keys %parameters)
+#   {
+#       print "$key:$parameters{$key}<BR>";
+#   }
+#   print "<BR><BR>AFTER POST-PROCESSING (RS_PARAMS)<BR><BR>";
+#   foreach my $key (keys %rs_params)
+#   {
+#      print "$key:$rs_params{$key}<BR>";
+#   }
+#   for( int i = 0; i < $#column_titles; i++)
+#   {
+#      print "$column_titles[I4]<BR>";
+#   } 
+
+    
+
 
     #### Display the resultset
     $sbeams->displayResultSet(
@@ -840,6 +874,12 @@ sub postProcessResultset {
 # of passing parameters between tabbed pages)
 ###############################################################################
 sub filterParameters {
+
+    my %args = @_;
+
+    my $query_parameters_ref = $args{'query_parameters_ref'};
+    my %parameters = %{$query_parameters_ref};
+
     ## have to filter %parameters{'rs_<*>'} as without filter, will see each page
     ## query added on and only first will be used in display below
     ## filter to retain only latest rs_set_name:
