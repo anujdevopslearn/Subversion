@@ -123,6 +123,7 @@ unless ( ($source_file) && (-e $source_file) ) {
   }
 
   unless ($source_file || $purge_protein_summary_id) {
+    print "ERROR: You must either specify a file from which to load\n";
     print "$USAGE";
     exit 0;
   }
@@ -348,6 +349,10 @@ sub start_element {
       pct_spectrum_ids => 1,
       subsuming_protein_entry => 1,
       calc_neutral_pep_mass => 1,
+      xmlns => 1,
+      'xmlns:xsi' => 1,
+      'xsi:schemaLocation' => 1,
+      sample_enzyme => 1,
     );
     foreach my $attr (keys(%attrs_to_drop)) {
       if (exists($attrs{$attr})) {
