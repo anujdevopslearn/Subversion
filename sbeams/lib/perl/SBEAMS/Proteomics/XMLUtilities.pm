@@ -115,10 +115,18 @@ sub start_element {
 
 
   #### If this is the start of a search_result, remember the name
-  if ($localname eq 'search_result') {
+  if ($localname eq 'spectrum_query') {
     my $spectrum = $attrs{spectrum}
-      || die("ERROR: No spectrum attribute for this search_result");
+      || die("ERROR: No spectrum attribute for this spectrum_query");
     $self->{current_search_result} = $attrs{spectrum};
+  }
+
+  #### If this is the start of a search_result, remember the name
+  if ($localname eq 'search_result') {
+    my $spectrum = $attrs{spectrum};
+      #### Later formats of pepXML have "spectrum" in <spectrum_query>
+      #|| die("ERROR: No spectrum attribute for this search_result");
+    $self->{current_search_result} = $spectrum if ($spectrum);
   }
 
   #### If this is the peptideprophet_result, store the probability
