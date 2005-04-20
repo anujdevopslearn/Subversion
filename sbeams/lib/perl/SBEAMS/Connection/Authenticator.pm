@@ -1,4 +1,3 @@
-#!/usr/local/bin/perl -w
 package SBEAMS::Connection::Authenticator;
 
 ###############################################################################
@@ -223,7 +222,7 @@ sub processLogin {
   my $pass  = $q->param('password');
   my $login = $q->param('login');
   $current_username = '';
-
+  
   # For security's sake, delete these from the cgi object upon login.
   $q->delete( 'username', 'password' ) if $login;
 
@@ -1097,6 +1096,35 @@ sub createAuthHeader {
     return $head;
 }
 
+#+
+# Wrapper method CGI.pm redirect method, allows for pertinant code to be
+# run in a uniform fashion prior to redirection.  Implemented to allow cookies
+# to be propogated through a redirect.
+# 
+# narg: uri   Required, URI (URL) to which to redirect.
+#-
+sub sbeams_redirect {
+  my $self = shift;
+  my %args = @_;
+  die "Missing required parameter uri" unless $args{uri};
+
+  my %dough = $q->cookie('SBEAMSName');
+
+  # Fetch configured cookie timeout, else use 24 hrs.
+  my $chours = $self->isValidDuration(cookie_duration => $LOGIN_DURATION) || 24;
+  $chours = '+' . $chours . 'h';
+
+  if ( !%dough ) { # no cookie, simply pass through to cgi.pm method
+    print $q->redirect( $args{uri} );
+  } else {
+    $dough{'-name'} = 'SBEAMSName';
+    $dough{'-path'} = $HTML_BASE_DIR;
+    $dough{'-expires'} = $chours unless $SESSION_REAUTH;
+
+    my $cookie = $q->cookie( %dough );
+    print $q->redirect( -uri => $args{uri}, -cookie => $cookie );
+  }
+}
 
 
 ###############################################################################
