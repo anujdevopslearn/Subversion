@@ -29,6 +29,7 @@ protocol	Protocol	infrastructure	YES	$TB_PROTOCOL	protocol_id		ManageTable.cgi?T
 software_hardware_protocol	Software Hardware Protocol Linking	admin	NO	$TB_SOFTWARE_HARDWARE_PROTOCOL	software_hardware_protocol_id				
 cached_resultset	Cached Resultset	rowprivate	YES	$TB_CACHED_RESULTSET	cached_resultset_id		ManageTable.cgi?TABLE_NAME=cached_resultset	cached_resultset	
 form_template	Form Template	rowprivate	YES	$TB_FORM_TEMPLATE	form_template_id		ManageTable.cgi?TABLE_NAME=form_template		
+short_url	Short URL	rowprivate	NO	$TB_SHORT_URL	url_id				
 AdHocQuery	Ad Hoc Query	QUERY					AdHocQuery		
-GetDataSource	Get Data Source	QUERY					GetDataSource
-IntegrateResultsets	Integrate Resultsets	QUERY					IntegrateResultsets
+GetDataSource	Get Data Source	QUERY					GetDataSource		
+IntegrateResultsets	Integrate Resultsets	QUERY					IntegrateResultsets		
