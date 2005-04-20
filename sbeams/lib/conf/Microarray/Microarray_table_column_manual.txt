@@ -110,7 +110,8 @@ SELECT affy_annotation_set_id, annotation_date + '' SLIDE TYPE = '' + st.name + 
 FROM $TBMA_AFFY_ANNOTATION_SET anno_set 
 JOIN $TBMA_SLIDE_TYPE st ON (st.slide_type_id = anno_set.slide_type_id)
 ORDER BY annotation_date + '' SLIDE TYPE = '' + st.name + '' GENOME BUILD = '' + anno_set.genome_version '
-WHERE (   table_name = 'MA_GetAffy_GeneIntensity'
+WHERE (      table_name = 'MA_GetAffy_GeneIntensity'
+	  OR table_name = 'MA_affy_array_sample'
 	)
     AND column_name = 'annotation_set_constraint'
     
@@ -118,4 +119,20 @@ GO
 
 
 
+
+UPDATE table_column
+  SET optionlist_query = '
+SELECT 
+MOT2.MGED_ontology_term_id,
+MOT2.name 
+FROM $TBBL_MGED_ONTOLOGY_RELATIONSHIP MOR 
+INNER JOIN $TBBL_MGED_ONTOLOGY_TERM MOT2 ON ( MOR.subject_term_id = MOT2.MGED_ontology_term_id ) 
+WHERE MOR.object_term_id in 
+(SELECT MGED_ontology_term_id FROM $TBBL_MGED_ONTOLOGY_TERM WHERE name = ''Sex'') 
+ORDER BY MOT2.name'
+
+WHERE (   table_name = 'MA_array_request_sample'
+	OR table_name = 'MA_affy_array_sample'
+	)
+    AND column_name = 'sex_ontology_term_id'
 
