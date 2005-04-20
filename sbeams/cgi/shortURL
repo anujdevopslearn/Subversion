@@ -1,0 +1,65 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : main.cgi
+# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
+# $Id$
+#
+# Description : implements caching of (potentially long) urls and retrieval
+# via 10 character alphanumeric 'url_key'
+#
+# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+###############################################################################
+
+
+use strict;
+use FindBin;
+use lib "$FindBin::Bin/../lib/perl";
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::SBPage;
+use SBEAMS::Connection::Tables;
+
+{  # 'Main' block
+
+  my $sbeams = new SBEAMS::Connection;
+
+  # Read cgi parameters
+  my %params;
+  $sbeams->parse_input_parameters( q => $q, parameters_ref => \%params );
+
+  die ( "missing required parameter key" ) unless $params{key};
+
+  my $sql = "SELECT URL from $TB_SHORT_URL WHERE url_key = '$params{key}'";
+
+  my ( $url ) = $sbeams->selectOneColumn( $sql );
+
+  # our version of DBD::Sybase doesn't support bind params, so we may have been
+  # forced to substitute in two single quotes for each one in the url.  Fix if
+  # and when it becomes feasible, patch with this hack for now:
+  $url =~ s/\'\'/\'/g;
+
+  if ( $url ) {
+    # We got a valid url, we'll redirect and let that page handle authentication
+    $sbeams->sbeams_redirect( uri => $url );
+
+  } else { 
+    my $username = $sbeams->Authenticate();
+    exit unless $username;
+
+    my $page = SBEAMS::Connection::SBPage->new( user_context => 1,
+                                                      sbeams => $sbeams );
+
+    $page->addContent( <<"    END" );
+      <FONT SIZE='+1'><B> Error: </B></FONT>
+      The specified url key ($params{url_key}) wasn't found in the database
+    END
+    $page->printPage(); 
+  }
+
+} # end main
+
+
