@@ -189,3 +189,8 @@ BL_MGEDOntologyTerm	4	definition	Ontology Definition	text	16	0	N		N			Y
 BL_MGEDOntologyTerm	5	uri	Ontology uri	varchar	255	0	Y		N			N
 BL_MGEDOntologyTerm	6	external_database_release_id	external_database_release_id	varchar	255	0	Y		N			N
 BL_MGEDOntologyTerm	7	source_id	source_id	varchar	255	0	Y		N			N
+BL_OntologyRelationshipType	1	ontology_relationship_type_id	Ontology Relationship Type ID	int	4	0	Y		N			Y
+BL_OntologyRelationshipType	2	name	Ontology Relationship Name	varchar	255	0	Y		N			Y
+BL_OntologyTermType	1	ontology_term_type_id	Ontology Term Type ID	int	4	0	N		N			Y
+BL_OntologyTermType	2	name	Ontology Term Name	varchar	255	0	N		N			Y
+BL_OntologyTermType	3	description	Ontology Term Description	varchar	255	0	Y		N			N
