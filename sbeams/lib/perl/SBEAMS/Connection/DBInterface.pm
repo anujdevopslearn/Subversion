@@ -129,7 +129,6 @@ sub applySqlChange {
 
     #### Translate the table handle to the database table name
     my ($DB_TABLE_NAME) = $self->returnTableInfo($table_name,"DB_TABLE_NAME");
-    $log->debug( "Table name is $DB_TABLE_NAME" );
 
 
     # Extract the first word, hopefully INSERT, UPDATE, or DELETE
@@ -1893,7 +1892,6 @@ sub buildOptionList {
       $options .= "<!--".join(',',@valid_options)."-->\n";
     }
 
-
     return $options;
 
 }
@@ -2157,7 +2155,7 @@ sub fetchResultSet {
     $sth = $dbh->prepare("$sql_query") ||
       croak("Unable to prepare query:\n".$dbh->errstr);
     my $rv  = $sth->execute ||
-      croak("Unable to execute query:\n".$dbh->errstr);
+      croak("Unable to execute query: $sql_query \n".$dbh->errstr);
 
 
     #### Update timing info
@@ -2949,23 +2947,31 @@ sub displayResultSetControls {
       $param_string =~ s/[\?\&]$stripword=.+$//;
     }
 
+    my $reexec_url = "${base_url}${param_string}"; 
+    my $recall_url = "$base_url${separator}apply_action=VIEWRESULTSET&" .
+                     "rs_set_name=$rs_params{set_name}&rs_page_size" .
+                     "=$rs_params{page_size}&rs_page_number=$pg$plot_params";
+    
+    my $url_base = $SERVER_BASE_DIR . $CGI_BASE_DIR;
+    
+    my $reexec_key = $self->setShortURL( $reexec_url );
+    my $recall_key = $self->setShortURL( $recall_url );
+
 
     print qq~
-      <BR><nobr>URL to
-      <A HREF=\"$base_url${separator}apply_action=VIEWRESULTSET&rs_set_name=$rs_params{set_name}&rs_page_size=$rs_params{page_size}&rs_page_number=$pg$plot_params\">
-      recall this result set</A>:
-      $SERVER_BASE_DIR$base_url${separator}apply_action=VIEWRESULTSET&rs_set_name=$rs_params{set_name}&rs_page_size=$rs_params{page_size}&rs_page_number=$pg$plot_params</nobr>
+      <BR>
+      <NOBR>URL to
+      <A HREF=\"$recall_url\"> recall this result set</A>: ${url_base}/shortURL?key=$recall_key
+      </NOBR>
 
-      <nobr>URL to
-      <A HREF=\"$base_url${param_string}\">
-      re-execute this query</A>:
-      $SERVER_BASE_DIR$base_url${param_string}</nobr>
+      <BR>
+      <NOBR>URL to
+      <A HREF=\"$reexec_url\"> re-execute this query</A>: ${url_base}/shortURL?key=$reexec_key
+      </NOBR>
       <BR>
     ~;
 
-
     $self->displayTimingInfo();
-
 
     #### Finish the form
     print qq~
@@ -3251,8 +3257,75 @@ sub displayResultSetPlot {
 
 } # end displayResultSetPlot
 
+#+
+# Routine to cache url in database
+# arg:     url to convert, required
+# ret:     8 character url key
+#-
+sub setShortURL {
+  my $self = shift;
+  my $url = shift;
+  $url = $self->convertSingletoTwoQuotes( $url );
+
+  # Does this url already have a short_url?
+  my  ( $url_key ) = $self->selectOneColumn( <<"  END" );
+  SELECT url_key FROM $TB_SHORT_URL
+  WHERE url LIKE '$url'
+  END
+  # return existing key
+  return( $url_key ) if $url_key;
+
+  # There should really be no duplicates, but just in case...
+  for( my $i = 0; $i < 10; $i++ ) {
+    $url_key = $self->getRandomString( num_chars => 8, 
+                                       char_set  => [ 'a'..'z', 0..9 ] );
+
+    my $dup = $self->selectOneColumn( <<"    END" );
+    SELECT url_id FROM $TB_SHORT_URL
+    WHERE url_key = '$url_key'
+    END
+    last unless $dup
+  }
+  $log->error( "No unique url_key in 10 attempts, investigate" ) unless $url_key;
+
+  
+# Insert URL into database
+  my $uid = $self->updateOrInsertRow( insert => 1,
+                                      update => 0,
+                                      return_PK => 1,
+                                      table_name => $TB_SHORT_URL,
+                                      rowdata_ref => { URL     => $url,
+                                                       URL_KEY => $url_key }
+                                     );
+# return key value
+  return $url_key;
+}
 
 
+#+
+# Routine to return pseudo-random string of characters
+#
+# narg: num_chars   Optional, length of character string, def = 8.
+# narg: char_set    Optional, character set to use passed as array reference,
+#                   def = ( 'A'-'Z', 'a'-'z', 0-9, !, @, #, $, %, ^, &, *, ? )
+# ret:              Random string of specified length comprised of elements of 
+#                   character set.
+#-
+sub getRandomString {
+  my $self =  shift;
+  my %args = @_;
+
+  # Use passed number of chars or 8
+  $args{num_chars} ||= 8;
+
+  # Use passed char set if any, else use default a-z, A-Z, 0-9
+  my @chars = ( ref( $args{char_set} ) eq 'ARRAY' ) ?  @{$args{char_set}} :
+                         ( 'A'..'Z', 'a'..'z', 0..9, qw( ! @ # $ % ^ & * ? ) );
+
+  # Thank you perl cookbook... 
+  my $rstring = join( "", @chars[ map {rand @chars} ( 1..$args{num_chars} ) ]);
+
+}
 ###############################################################################
 # displayTimingInfo
 #
@@ -4921,8 +4994,6 @@ sub getRecentResultsets {
   ~;
   @rows = $self->selectSeveralColumns($sql);
 
-  $log->debug( $sql );
-
   #### If there's something interesting to show, show a glimpse
   if (scalar(@rows)) {
     if ($SBEAMS_SUBDIR) {
@@ -5505,7 +5576,6 @@ sub getProjectsYouHaveAccessTo_deprecated {
 	 ORDER BY UL.username,P.project_tag
   ~;
   @rows = $self->selectSeveralColumns($sql);
-  $log->debug( "Found " . scalar( @rows ) . ' Accessible projects' );
 
   if (@rows) {
     my $firstflag = 1;
