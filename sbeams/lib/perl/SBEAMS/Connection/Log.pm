@@ -234,6 +234,17 @@ sub _getTimestamp {
   return "${year}-${mon}-${day} ${hour}:${min}:${sec}";
 }
 
+sub _purgeLogs {
+  my $this = shift;
+  my @logs = @_;
+  for my $log ( qw(debug_log info_log warn_log error_log ) ) {
+    if ( grep @logs, /^$log$/ && $this->{$log} ) {
+      open( FIL, ">$this->{$log}" ); 
+      print FIL "Log reset: " . $this->_getTimestamp() . "\n";
+    }
+  }
+}
+
 1;
 
 __END__
