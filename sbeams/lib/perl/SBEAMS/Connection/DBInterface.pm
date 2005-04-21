@@ -2520,14 +2520,17 @@ sub displayResultSet {
 
     #### If the desired output format is Cytoscape, prepare a temp directory
     #### for the files and return the jnlp xml
+   
     if ($self->output_mode() eq 'cytoscape' && defined($cytoscape)) {
-      if ( ! -d "$PHYSICAL_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/") {
+      if ( ! -d "$PHYSICAL_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/" &&
+      		$cytoscape->{cytoscape_type} ne 'cytoscape_ps') {
 	mkdir("$PHYSICAL_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/") ||
 	  die("ERROR: Unable to mkdir $PHYSICAL_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/");
       }
 
       my $identifier = $rs_params_ref->{'set_name'} || 'unknown';
-      if ( ! -d "$PHYSICAL_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/$identifier") {
+      if ( ! -d "$PHYSICAL_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/$identifier" &&
+      		 $cytoscape->{cytoscape_type} ne 'cytoscape_ps') {
 	mkdir("$PHYSICAL_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/$identifier") ||
 	  die("ERROR: Unable to mkdir $PHYSICAL_BASE_DIR/tmp/Immunostain/SummarizeStains/jws/$identifier");
       }
