@@ -497,6 +497,7 @@ MA_gene_expression	17	p_value	P Value	real	4	7	Y		N							Y	Y	N
 MA_gene_expression	18	mean_intensity	Mean Intensity	real	4	7	Y		N							Y	Y	N	
 MA_gene_expression	19	mean_intensity_uncertainty	Mean Intensity Uncertainty	real	4	7	Y		N							Y	Y	N	
 MA_gene_expression	20	quality_flag	Quality Flag	varchar	25	25	Y		N							Y	Y	N	
+MA_gene_expression	21	false_discovery_rate	False Discovery Rate	real	4	7	Y		N							Y	Y	N	
 MA_overlapping_transcript	1	overlapping_transcript_id	Overlapping Transcript ID	int	4	0	N		Y			Y							Data parsed from Overlapping Transcripts Column
 MA_overlapping_transcript	2	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_annotation	affy_annotation_id	Y							
 MA_overlapping_transcript	3	accession_number	Accession Number	varchar	50	0	Y		N										Details of overlapping transcripts found in a chromosomal region that aligns with a target sequence.
@@ -541,7 +542,7 @@ MA_protein_domain	4	protein_domain_description	Protein Domain Description	varcha
 MA_protein_domain	5	protein_domain_e_value	Protein Domain E-value	float	8	0	Y		N										An E-value reveals how well the RefSeq peptide sequence corresponding to our probe set matches to the sequence in question.  Smaller numbers are better..
 MA_alignment	1	alignment_id	Alignment ID	int	4		N		Y										
 MA_alignment	2	affy_annotation_id	Affy Annotation ID	int	4		N		N	MA_affy_annotation	affy_annotation_id	Y							
-MA_alignment	3	gene_start	Gene Start bp	int	4	0	N		N			Y				Y	Y	N	Position of the alignment of the target sequence on the genome.  Parsed from Alignments Column
+MA_alignment	3	gene_start	Gene Start bp	int	4	0	N		N			Y				Y	Y	N	Position of the alignment of the target sequence on the genome.  Parsed from Alignments Column	
 MA_alignment	4	gene_stop	Gene Stop bp	int	4	0	Y		N							Y	Y	N	Position of the alignment of the target sequence on the genome.  Parsed from Alignments Column	
 MA_alignment	5	percent_identity	Gene Percent Identity	float	8	0	Y		N							Y	Y	N	percentage identity of target sequence on the genome.  Parsed from Alignments Column	
 MA_alignment	6	gene_orientation	Gene Orientation	char	1	0	Y		N							Y	Y	N	Strand of the genomic alignment.  Parsed from Alignments Column	
@@ -573,7 +574,7 @@ MA_affy_analysis	3	project_id	Project	int	4		N					Y	optionlist	5		Y	Y	N	Project
 MA_affy_analysis	4	folder_name	Folder Name	varchar	50		N					Y	text	50		Y	Y	N	"Folder that contains the analysis.  There should be no need to change, but if you have to please make sure you know what you are doing."	
 MA_affy_analysis	5	parent_analysis_id	Parent Analysis ID	int	4		Y					N	text	10		Y	Y	N	Parent analysis ID	
 MA_affy_analysis	6	affy_analysis_type_id	Affy Analysis Type Name	int	4		N			MA_affy_analysis_type	affy_analysis_type_id	Y	optionlist	5		Y	Y	N	Type of analysis	"SELECT aat.affy_analysis_type_id, aat.affy_analysis_name FROM $TBMA_AFFY_ANALYSIS_TYPE aat"
-MA_affy_analysis	7	user_description	User Description	varchar	255		Y					N	textarea	4		Y	Y	N	User Description about about the analysis.  Please describe why this analysis was done.	
+MA_affy_analysis	7	user_description	User Description	varchar	255		Y					N	textarea	4		Y	Y	N	User Description about about the analysis.  Please describe why this analysis was done.
 MA_affy_analysis	8	analysis_description	Analysis Description	text	0	0	Y					N	textarea	4		Y	Y	N	Computer generated descripition about what was done
 MA_affy_analysis	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N	
 MA_affy_analysis	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y	
@@ -589,7 +590,7 @@ MA_affy_analysis_type	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	co
 MA_affy_analysis_type	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N	
 MA_affy_analysis_type	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y	
 MA_affy_analysis_type	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y	
-MA_affy_analysis_type	9	record_status	Record Status	char	1	0	N	N	N							N	N	N	
+MA_affy_analysis_type	9	record_status	Record Status	char	1	0	N	N	N							N	N	N			
 MA_experiment_information	1	experiment_information_id	Experiment Information ID	int	4	0	N		Y							N	N				pkDEFAULT
 MA_experiment_information	2	project_id	Project ID	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	Project with which this experiment is associated	"SELECT project_id, username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) WHERE project_id IN ( $accessible_project_ids ) AND P.record_status != 'D' ORDER BY name"	
 MA_experiment_information	3	name	Name	varchar	255	0	N		N			Y	text	50		Y	Y	N	Name of this Experiment Information		
@@ -605,7 +606,7 @@ MA_experiment_information	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_gr
 MA_experiment_information	13	record_status	Record Status	char	1	0	N	N	N							N	N				
 MA_experiment_constants	1	experiment_constants_id	Experiment Constants ID	int	4	0	N		Y							N	N				pkDEFAULT
 MA_experiment_constants	2	project_id	Project ID	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	Project with which this experiment is associated	"SELECT project_id, username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) WHERE project_id IN ( $accessible_project_ids ) AND P.record_status != 'D' ORDER BY name"	
-MA_experiment_constants	3	name	Name	varchar	255	0	N		N			Y	text	50		Y	Y	N	Name of this Constants File		
+MA_experiment_constants	3	name	Name	varchar	255	0	N		N			Y	text	50		Y	Y	N	Name of this Constants File
 MA_experiment_constants	4	tag	Constants Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Shortened Name of this Constants File
 MA_experiment_constants	5	constants_file	Constants File	varchar	255	0	N		N			Y	file	40		Y	Y	N	Constants File Path
 MA_experiment_constants	6	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments
