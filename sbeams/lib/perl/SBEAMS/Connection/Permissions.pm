@@ -703,58 +703,46 @@ sub get_best_permission{
   }
 
   ## Else find best privilege available
-  $sql = qq~
-      SELECT CASE WHEN UL.username IS NULL THEN '-No Login-' ELSE UL.username END AS username,
-      MIN(CASE WHEN UWG.contact_id IS NULL THEN NULL ELSE GPP.privilege_id END) AS "best_group_privilege_id",
-      MIN(UPP.privilege_id) AS "best_user_privilege_id"
-      FROM $TB_PROJECT P
-      JOIN $TB_CONTACT C ON ( P.PI_contact_id = C.contact_id )
-      LEFT JOIN $TB_USER_LOGIN UL ON ( C.contact_id = UL.contact_id )
-      LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
-      ON ( P.project_id = UPP.project_id
-	   AND UPP.contact_id='$current_contact_id' )
-      LEFT JOIN $TB_GROUP_PROJECT_PERMISSION GPP
-      ON ( P.project_id = GPP.project_id )
-      LEFT JOIN $TB_PRIVILEGE PRIV
-      ON ( GPP.privilege_id = PRIV.privilege_id )
-      LEFT JOIN $TB_USER_WORK_GROUP UWG
-      ON ( GPP.work_group_id = UWG.work_group_id
-	   AND UWG.contact_id='$current_contact_id' )
-      LEFT JOIN $TB_WORK_GROUP WG
-      ON ( UWG.work_group_id = WG.work_group_id )
-      WHERE 1=1
-      AND P.record_status != 'D'
-      AND ( UL.record_status != 'D' OR UL.record_status IS NULL )
-      AND ( UPP.record_status != 'D' OR UPP.record_status IS NULL )
-      AND ( GPP.record_status != 'D' OR GPP.record_status IS NULL )
-      AND ( PRIV.record_status != 'D' OR PRIV.record_status IS NULL )
-      AND ( UWG.record_status != 'D' OR UWG.record_status IS NULL )
-      AND ( WG.record_status != 'D' OR WG.record_status IS NULL )
-      AND P.project_id = '$current_project_id'
-      AND ( UPP.privilege_id<=40 OR GPP.privilege_id<=40 )
-      AND ( WG.work_group_name IS NOT NULL OR UPP.privilege_id IS NOT NULL )
-      GROUP BY P.project_id,P.project_tag,P.name,UL.username
-      ORDER BY UL.username,P.project_tag
-      ~;
-  @rows = $self->selectSeveralColumns($sql);
+  my $sql =<<"  END_SQL";
+  SELECT MIN(CASE WHEN UWG.contact_id IS NULL THEN NULL ELSE GPP.privilege_id END) AS "best_group_privilege_id",
+         MIN(UPP.privilege_id) AS "best_user_privilege_id"
+  FROM $TB_PROJECT P
+  JOIN $TB_CONTACT C 
+   ON ( P.PI_contact_id = C.contact_id AND C.record_status != 'D' )
+  LEFT JOIN $TB_USER_LOGIN UL 
+   ON ( C.contact_id = UL.contact_id AND UL.record_status != 'D' )
+  LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
+   ON ( P.project_id = UPP.project_id AND UPP.contact_id='$current_contact_id' AND UPP.record_status != 'D' )
+  LEFT JOIN $TB_GROUP_PROJECT_PERMISSION GPP
+   ON ( P.project_id = GPP.project_id AND GPP.record_status != 'D' )
+  LEFT JOIN $TB_PRIVILEGE PRIV
+   ON ( GPP.privilege_id = PRIV.privilege_id AND PRIV.record_status != 'D' )
+  LEFT JOIN $TB_USER_WORK_GROUP UWG
+   ON ( GPP.work_group_id = UWG.work_group_id AND UWG.contact_id='$current_contact_id' AND UWG.record_status != 'D' )
+  LEFT JOIN $TB_WORK_GROUP WG
+   ON ( UWG.work_group_id = WG.work_group_id AND WG.record_status != 'D')
+  WHERE P.project_id = '$current_project_id'
+  AND P.record_status != 'D'
+--  
+-- Obsolete? 20005-04-22  
+--
+--  AND ( UPP.privilege_id<=40 OR GPP.privilege_id<=40 )
+--  GROUP BY P.project_id,P.project_tag,P.name,UL.username
+--  ORDER BY UL.username,P.project_tag
+  END_SQL
 
-  my $best_privilege_id = 9999;
+  my @rows = $self->selectSeveralColumns($sql);
+  
+  # Translate null values to 9999 (de facto null), iff there were any rows.
+  @rows = map { ( defined $_ ) ? $_ : 9999 } @{$rows[0]} if @rows; 
 
-  if (@rows) {
-      my ($username,$best_group_privilege_id,$best_user_privilege_id) = @{$rows[0]};
-      
-      #### Select the lowest permission and translate to a name
-      $best_group_privilege_id = 9999
-        unless (defined($best_group_privilege_id));
-      $best_user_privilege_id = 9999
-        unless (defined($best_user_privilege_id));
+  # Afford admin users the ability to at least read records
+  my $default_privilege = ( $admin_work_group_id == $current_group_id ) ? DATA_READER : 9999;
 
-      $best_privilege_id = $best_group_privilege_id;
-      $best_privilege_id = $best_user_privilege_id if
-        ($best_user_privilege_id < $best_privilege_id);
-  }
-  $log->debug( "Best permission is $best_privilege_id" );
-  return $best_privilege_id;
+  # Select the lowest permission
+  my $best_privilege = getMin( $default_privilege, @rows );
+  $log->debug( "Best permission for $current_contact_id on project $current_project_id is $best_privilege" );
+  return( $best_privilege );
 }
 
 #+
@@ -799,7 +787,7 @@ sub isTableWritable {
       $best = $$groups[1];
     }
     
-    # Is the best non-admin group sufficienti (Admin OK iff current group)?
+    # Is the best non-admin group sufficient (Admin OK iff current group)?
     return ( $$best[2] > DATA_WRITER ) ? 0 : 1; 
 
   }
@@ -1139,10 +1127,12 @@ sub calculateProjectPermission {
                                           work_group_id => $args{work_group_id},
                                           contact_id => $args{contact_id}, 
                                           project_id => $parent_project_id, 
+# Note 2005-04-21; Admin workgroup membership doesn't exempt user from 
+# project permissions.  If Admin user needs to override, they can grant 
+# themselves (temporary) privileges on the project.
                                           admin_override => 0
                                               );
 
-  $log->debug( "Priv is $privilege in calcProjPerm" );
   # We have the record information, the parent project, and user's permission on
   # it.   Now determine what permission level all these boil down to.
   if ( $privilege >= DATA_NONE ) { # Deny if overall priv is DATA_NONE or worse?
@@ -1375,12 +1365,11 @@ sub checkProjectPermission {
   my $self = shift;
   my %args = @_;
 
-  # Check requirements
+  # Check requirements, don't need fsql if fkey is project_id
   for ( qw( action fkey fval fsql dbsql tname ) ) {
     next if $_ eq 'fsql' && lc($args{fkey}) eq 'project_id';
     if ( !$args{$_} ) {
-      print STDERR "Required argument $_  missing";
-      return undef;
+      return "Required argument $_  missing";
     }
   }
 
@@ -1389,8 +1378,7 @@ sub checkProjectPermission {
   $err ||= $self->isTaintedSQL( $args{dbsql} );
 
   if ( $err ) {
-    print STDERR "Dangerous SQL caught:\n $args{fsql}\n $args{dbsql}\n";
-    return undef;
+    return "Dangerous SQL caught:\n $args{fsql}\n $args{dbsql}\n";
   }
 
   my $pr_id;
@@ -1405,7 +1393,9 @@ sub checkProjectPermission {
     return "Unable to determine project_id\n";
   }
 
-  my $priv = $self->get_best_permission( project_id => $pr_id );
+  my $priv = $self->get_best_permission( project_id => $pr_id,
+                                         admin_override => 0 
+                                       );
   
   if ( uc($args{action}) eq 'INSERT' ) {
 
@@ -1426,7 +1416,9 @@ sub checkProjectPermission {
 #   Has associated project has been modified? 
     if ( $pr_id_orig != $pr_id ) { # We've got a new one...
 
-      my $priv_orig = $self->get_best_permission( project_id => $pr_id_orig );
+      my $priv_orig = $self->get_best_permission( project_id => $pr_id_orig,
+                                                  admin_override => 0 
+                                                 );
       my $priv_new = $priv;  # $priv is calculated with cgi passed value
 
       # can this user change original?
