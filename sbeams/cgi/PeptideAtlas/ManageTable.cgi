@@ -235,9 +235,14 @@ sub preUpdateDataCheck {
   my $query_parameters_ref = $args{'parameters_ref'};
   my %parameters = %{$query_parameters_ref};
 
+  if ( $parameters{project_id} ) { # General mechanism for tables w/ project_id
 
-  #### If table XXXX
-  if ( uc($TABLE_NAME) eq 'AT_BIOSEQUENCE_SET' ) {
+    my $errstr = checkProjectPermission( param_ref => $query_parameters_ref,
+                                         tname => $TABLE_NAME,
+                                         dbtname => $DB_TABLE_NAME );
+    return ( $errstr ) if $errstr;
+    
+  } elsif ( uc($TABLE_NAME) eq 'AT_BIOSEQUENCE_SET' ) {
     # Must have an project_id
     return "Error: project_id not defined" if !$parameters{project_id};
 

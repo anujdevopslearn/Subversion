@@ -249,11 +249,18 @@ sub preUpdateDataCheck {
   my %parameters = %{$query_parameters_ref};
 
 
-  #### If table XXXX
-  if ($TABLE_NAME eq "XXXX") {
-    return "An error of some sort $parameters{something} invalid";
-  }
+  if ( $parameters{project_id} ) { # General mechanism for tables w/ project_id
 
+    my $errstr = checkProjectPermission( param_ref => $query_parameters_ref,
+                                         tname => $TABLE_NAME,
+                                         dbtname => $DB_TABLE_NAME );
+    return ( $errstr ) if $errstr;
+    
+  } elsif ($TABLE_NAME eq "XXXX") {
+
+    return "An error of some sort $parameters{something} invalid";
+
+  }
 
   #### Otherwise, no special processing, so just return empty string
   return '';

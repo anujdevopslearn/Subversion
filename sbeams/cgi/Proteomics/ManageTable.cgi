@@ -307,8 +307,14 @@ sub preUpdateDataCheck {
   my @stdparams = ( action => $parameters{action},
                      tname => $TABLE_NAME );
 
-  #### If table XXXX
-  if ( $TABLE_NAME eq "PR_proteomics_experiment" ) {
+  if ( $parameters{project_id} ) { # General mechanism for tables w/ project_id
+
+    my $errstr = checkProjectPermission( param_ref => $query_parameters_ref,
+                                         tname => $TABLE_NAME,
+                                         dbtname => $DB_TABLE_NAME );
+    return ( $errstr ) if $errstr;
+    
+  } elsif ( $TABLE_NAME eq "PR_proteomics_experiment" ) {
 
     if ( !$parameters{project_id} ) { # Must have an project_id
       $errstr = 'Error: project_id not defined'

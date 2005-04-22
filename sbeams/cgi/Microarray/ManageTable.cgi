@@ -37,7 +37,7 @@ use DBI;
 #use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
@@ -367,7 +367,14 @@ sub preUpdateDataCheck {
   my $query_parameters_ref = $args{'parameters_ref'};
   my %parameters = %{$query_parameters_ref};
 
-  if ( $TABLE_NAME eq "MA_array" ) {
+  if ( $parameters{project_id} ) { # We can short-circuit the permissions check
+
+    my $errstr = checkProjectPermission( param_ref => $query_parameters_ref,
+                                         tname => $TABLE_NAME,
+                                         dbtname => $DB_TABLE_NAME );
+    return ( $errstr ) if $errstr;
+    
+  } elsif ( $TABLE_NAME eq "MA_array" ) {
 
     # Must have an project_id
     return "Error: project_id not defined" if !$parameters{project_id};
