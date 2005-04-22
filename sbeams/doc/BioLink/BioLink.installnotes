@@ -1,4 +1,4 @@
-
+cd 
 Notes installing the SBEAMS - BioLink module
 
 $Id$
@@ -140,5 +140,8 @@ cd $SBEAMS/lib/scripts/Core
 
 ./DataImport.pl --source_file ../../refdata/BioLink/polymer_type.xml
 
+- Load data into the MGED ontology tables
+
+./DataImport.pl --ignore_pK --source_file  ../../refdata/BioLink/MGED_ontolgy_tables.xml
 
 
