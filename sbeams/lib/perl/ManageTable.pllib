@@ -346,7 +346,7 @@ sub printEntryForm {
 
     $projectAuthLevel = $sbeams->calculateProjectPermission( %subargs );
     # check group associations 
-    $log->warn( "got permission $projectAuthLevel" );
+    $log->info( "got permission $projectAuthLevel" );
 
     my $bestpriv = $sbeams->getBestGroupPermission( $workGroupsRef );
     if ( $bestpriv <= $projectAuthLevel ) {
@@ -365,9 +365,8 @@ sub printEntryForm {
       $tableAuthLevel = $bestpriv;
     }
   }
-$log->warn( "We are outta there" );
 
-# Prints the group/project selection widgets.
+  # Prints the group/project selection widgets.
   $sbeams->printUserContext();
 
   print qq!
@@ -2971,6 +2970,51 @@ sub checkPermission {
     return ( $errstr ) if $errstr;
   }
   return;
+}
+
+#+ 
+# Special case of routine above, for when the table in question has project_id
+# as a foreign-key field, as opposed to having a foreign-key field that in turn
+# has or can be linked to a project_id.  This simplifies the crafting of the
+# relevant SQL.  This is dangerously named insofar as it is the same name as 
+# the $sbeams object method in SBEAMS::Connection::Permissions.
+#
+# narg: param_ref  Required, reference to form parameters (includes project_id)
+# ret:             Error string if any, else undef.
+# 
+sub checkProjectPermission {
+  my %args = @_;
+  
+  for my $param ( qw( param_ref tname dbtname ) ) {
+    die "Missing required parameter $param" unless $args{$param};
+  }
+
+  # Simplify
+  my %params = %{$args{param_ref}};
+
+  # We only need the dbsql if we're doing an update.
+  my $dbsql = 'SELECT';  # placeholder
+
+  if ( uc($params{action}) eq 'UPDATE' ) {
+    my ($pkcol) = $sbeamsMOD->returnTableInfo( $args{tname}, 'PK_COLUMN_NAME' );
+    # This will break on a string primary key...
+    $dbsql = evalSQL( <<"    END" );
+    SELECT project_id FROM $args{dbtname}
+    WHERE $pkcol = $params{$pkcol}
+    END
+  }
+
+  # Make call to sbeams method
+  my $errstr = $sbeams->checkProjectPermission( action => $params{action}, 
+                                                tname  => $args{tname},
+                                                fkey   => 'project_id',
+                                                fval   => $params{project_id},
+                                                fsql   => '',
+                                                dbsql  => $dbsql
+                                                );
+
+  return ( $errstr ) if $errstr;
+
 }
 
 sub evalSQL {
