@@ -129,7 +129,7 @@ $TB_QUERY_OPTION        = "${core}query_option";
 $TB_CACHED_RESULTSET    = "${core}cached_resultset";
 $TB_FORM_TEMPLATE       = "${core}form_template";
 $TB_SOFTWARE_HARDWARE_PROTOCOL = "${core}software_hardware_protocol";
-#$TB_SHORT_URL           = "${core}short_url";
+$TB_SHORT_URL           = "${core}short_url";
 
 $TB_MGED_ONTOLOGY_RELATIONSHIP    = $DBPREFIX{BioLink}."MGEDOntologyRelationship";
 $TB_MGED_ONTOLOGY_TERM            = $DBPREFIX{BioLink}."MGEDOntologyTerm";
