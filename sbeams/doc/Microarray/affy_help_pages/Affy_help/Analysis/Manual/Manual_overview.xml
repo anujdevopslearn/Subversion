@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- edited with XMLSPY v2004 rel. 4 U (http://www.xmlspy.com) by Bruz Marzolf (Institute for Systems Biology) -->
+<!-- <?xml:stylesheet type="text/xsl" href="http://db.systemsbiology.net/devPM/sbeams/doc/Microarray/Affy_help/Affy_help.xslt"?> -->
+<help_document type="Affymetrix Analysis Use Cases">
+	<overview>These are a series of use cases on how to analyze Affymetrix data	
+	</overview>
+	<all_summaries>
+		<summary>
+			<name>Bioconductor Raw Probe Intensity</name>
+			<description>See how to Run R/Bioconductor to get Raw Probe Intensities from from Cell files</description>
+			<extra_data data_type="link">
+				<description>Open Help Link</description>
+				<link_info type="internal_help" href="Analysis/Manual/Bioconductor_raw_probe_intensity.xml">R-Raw Probes</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>RMAExpress</name>
+			<description>Use a stand-alone windows application to pre-process Affymetrix data with RMA method</description>
+			<extra_data data_type="link">
+				<description>Open Help Link</description>
+				<link_info type="internal_help" href="Analysis/Manual/RMAExpress_No_Replicates.xml">RMAExpress Analysis</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>Bioconductor RMA Analysis</name>
+			<description>Use Bioconductor to pre-process Affymetrix data with RMA method</description>
+			<extra_data data_type="link">
+				<description>Open Help Link</description>
+				<link_info type="internal_help" href="Analysis/Manual/Bioconductor_Affy_RMA.xml">Bioconductor RMA method</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>Bioconductor RMA and t-test</name>
+			<description>Use Bioconductor to pre-process Affymetrix data with RMA method, followed by t-test for differential expression</description>
+			<extra_data data_type="link">
+				<description>Open Help Link</description>
+				<link_info type="internal_help" href="Analysis/Manual/Bioconductor_RMA_ttest.xml">Bioconductor RMA/t-test</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>Make R_CHP files using mas5.0</name>
+			<description>Reproduce Affymetrix CHP files using R/Bioconductor</description>
+			<extra_data data_type="link">
+				<description>Open Help Link</description>
+				<link_info type="internal_help" href="Analysis/Manual/Make_R_CHP_file.xml">Run R_CHP</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>R vs. GCOS MAS5</name>
+			<description>Validate R/bioconductor/affy mas5 against Affymetrix GCOS Software</description>
+			<extra_data data_type="link">
+				<description>Open Help Link</description>
+				<link_info type="internal_help" href="Analysis/Manual/R_GCOS_comparison.xml">R vs GCOS MAS5</link_info>
+			</extra_data>
+		</summary>
+	</all_summaries>
+</help_document>

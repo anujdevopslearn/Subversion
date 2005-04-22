@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- edited with XMLSPY v2004 rel. 4 U (http://www.xmlspy.com) by Bruz Marzolf (Institute for Systems Biology) -->
+<help_document type="Affy Core Help">
+	<overview>Information about the Affymetrix Core Facility at ISB</overview>
+	<all_summaries>
+		<summary>
+			<name>Running Chips</name>
+			<description>How to run a chip</description>
+			<extra_data data_type="link">
+				<description>Open Help Link</description>
+				<link_info type="internal_help" href="Core/Running_Chips.xml">Run Chip</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>Affymetrix Core Pricing</name>
+			<description>Prices for Affymetrix supplies and services</description>
+			<extra_data data_type="link">
+				<description>Open Help Link</description>
+				<link_info type="internal_help" href="Core/Core_Pricing.xml">Core Pricing</link_info>
+			</extra_data>
+		</summary>
+	</all_summaries>
+</help_document>

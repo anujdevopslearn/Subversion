@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<help_document type="MAIN LABEL">
+	<overview>Description of what this page is about	
+	</overview>
+	<all_summaries>
+		<!-- You can have as many summary nodes as you want -->
+		<summary>
+			<name>NAME OF THIS NODE</name>
+			<description>DESCRIPTION OF THIS CHUNK OF DATA</description>
+			<extra_data data_type="link">
+				<description>SMALL DESCRIPTION FOR AN IMAGE OR URL</description>
+				<link_info href="DATA_FROM_HREF_ATTR" type="external_link">Data Download Help</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>Example of internal link</name>
+			<description>Internal Link </description>
+			<extra_data data_type="link">
+				<description>Description of the link</description>
+				<link_info type="internal_help" href="DATA_FROM_HREF_ATTR">Data Download Help</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>CURRENT OPTIONS FOR LINK INFO</name>
+			<description>link_info Nodes have an optional 'type' attribute
+			Values for the attribute may be the following 
+			</description>
+			<all_steps>
+				<step>type="internal_help" Will utilize the URL pointing to the Base XML Help Document folder</step>
+				<step>type="sbeams_page"  Will utilize the URL pointing to sbeams </step>
+			</all_steps>
+		</summary>
+		<summary>
+			<name>Small Images</name>
+			<description>Here is what a small image will look like Any Image less then 300px will be shown to the 
+				Right of the description.
+			</description>
+			<extra_data data_type="image">
+				<description>SMALL Image saved at 100x75 px</description>
+				<image width="300" height="300" type="internal_help" src="small_test_image.png"/>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>Large Images</name>
+			<description>Large images will be shown under the description.  Large image is anything over 300px in width
+			</description>
+			<extra_data data_type="image">
+				<description>Large Image saved at 1000x750 px but displayed at 500x325px</description>
+				<image type="internal_help" src="Large_test_image.png"/>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>STEPS.  </name>
+			<description>Each summary node can have one all_steps nodes which contains an unlimited number of step nodes
+			</description>
+			<all_steps>
+				<step>EACH STEP WILL BE COUNTED</step>
+				<step>EACH STEP CAN HAVE A CODE NODE
+					<code><![CDATA[ 
+$var = "Hello World";
+<all sorts of neat stuff>
+#######################
+##Remeber to put your code text against the left margin in the XML document.
+	Look at tab
+		Look two tabs...
+]]></code>
+				</step>
+			</all_steps>
+		</summary>
+		<summary>
+			<name>Make A Table</name>
+			<description>This shows what the format for a table should look like</description>
+			<table_info>
+				<section name="Column 1">
+					<entry>entry c1_1</entry>
+					<entry>entry c1_2</entry>
+					<entry>entry c1_3</entry>
+				</section>
+				<section name="Column 2">
+					<entry>entry c2_1</entry>
+					<entry>entry c2_2</entry>
+					<entry/>
+					<entry>Look the cell above is blank</entry>
+				</section>
+				<section name="Column 3">
+					<entry>entry c3_1</entry>
+					<entry>entry c3_2</entry>
+					<entry>entry c3_3</entry>
+					<entry>entry c3_4</entry>
+				</section>
+			</table_info>
+		</summary>
+	</all_summaries>
+</help_document>

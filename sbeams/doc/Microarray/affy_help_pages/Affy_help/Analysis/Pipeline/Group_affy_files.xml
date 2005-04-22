@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<help_document type="Group Affy Arrays">
+	<overview>Grouping Affy Arrays is the first step of the analysis pipeline.  To Start a new session follow the instructions below.  Remember that arrays from many different projects can grouped together </overview>
+	<all_summaries>
+		<summary>
+			<name>Find the Analysis Tab</name>
+			<description>Follow the steps below to get to the page to start grouping together Affy files or Click the link</description>
+			<extra_data data_type="link">
+				<description>Click on the "File Groups" tab to start a new session</description>
+<link_info type="internal_help" href="cgi/Microarray/bioconductor/upload.cgi">Open Link</link_info>
+			</extra_data>
+			
+			<all_steps>
+				<step>Log into Sbeams</step>
+				<step>Select the Microarray Link in the main navigation bar</step>
+				<step>Select the Project of interest at the top of the page</step>
+				<step>Select the Data Pipeline Button on the main navigation bar</step>
+				<step>If the project has Affy data a link to "Affy Analysis Pipeline" will be displayed at the bottom of the page, Click the link </step>
+			</all_steps>
+			
+			
+					</summary>
+
+		<summary>
+			<name>Start a new Analysis Session</name>
+			<description>Click the Start New Analysis Session button to start selecting arrays. </description>
+		<extra_data data_type="image">
+				<description>Start Session</description>
+				<image type="internal_help" src="Analysis/Pipeline/Start_analysis_session.png"/>
+			</extra_data>			
+		</summary>
+		<summary>
+			<name>Select Arrays</name>
+			<description>Click on the project of interest.  Arrays within that project will show up below.  Use the checkboxes to select the arrays for analysis.  You can select arrays from different projects.  T</description>
+		<all_steps>
+				<step>Click on any of the column headers to sort the rows</step>
+				<step>Click the check box at the top of the arrays to select/de-select all arrays</step>
+			</all_steps>
+
+		<extra_data data_type="image">
+				<!-- <description>Select Arrays</description> -->
+				<image type="internal_help" src="Analysis/Pipeline/Group_arrays.png"/>
+			</extra_data>			
+		</summary>
+		
+		<summary>
+			<name>View Selected Arrays</name>
+			<description>As arrays are selected they will show up in the upper portion of the window.  To add additional arrays go, select a new project and select the arrays of interest. </description>
+		<extra_data data_type="image">
+				<description>Select Arrays</description>
+				<image type="internal_help" src="Analysis/Pipeline/Selected_arrays.png"/>
+			</extra_data>			
+		</summary>
+		
+		<summary>
+			<name>Go to Normalization Section</name>
+			<description>Once all the arrays are selected click on the "Start Normalization" button </description>
+		<extra_data data_type="link">
+				<description>Learn more about starting a normalization run</description>
+				<link_info type="internal_help" href="Analysis/Pipeline/Normalize_data.xml">Normalization Info</link_info>
+			</extra_data>			
+		</summary>
+		<summary>
+			<name>Go Back to the Pipeline Overview </name>
+			<description>Go Back to the Pipeline Overview </description>
+		<extra_data data_type="link">
+				<description>Go Back</description>
+				<link_info type="internal_help" href="Analysis/Pipeline/Pipeline_overview.xml">Over View</link_info>
+			</extra_data>			
+		</summary>
+
+
+
+</all_summaries>
+</help_document>

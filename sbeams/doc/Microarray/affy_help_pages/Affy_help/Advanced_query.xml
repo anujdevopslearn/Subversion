@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- <?xml:stylesheet type="text/xsl" href="http://db.systemsbiology.net/devPM/sbeams/doc/Microarray/Affy_help/Affy_help.xslt"?> --> 
+	<help_document type="Simply Query">
+	<overview>
+	Perform Advanced queries within one or many projects to view probe set intensity values.  Expression values are taken
+	from the R_CHP files.	
+	</overview>
+	<all_summaries>
+		<summary>
+			<name>Advanced Query</name>
+		
+			<description>Open the advanced query interface to query with a variety of options
+			</description>
+			<all_steps>
+				<step>Choose a project or multiple projects </step>
+				<step>Select the arrays of interest, default is to have all arrays selected</step>
+				<step>Enter the search terms</step>
+				<step>Hit the "Advanced_Query" button</step>
+			</all_steps>
+			<extra_data data_type="link">
+				<description>Open Link</description>
+				<link_info type="sbeams_page" href="cgi/Microarray/GetAffy_GeneIntensity.cgi?display_type=Advanced">Advance Query</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>Simple Query</name>
+			<description>Open up the simple query page</description>
+			<extra_data data_type="link">
+				<description>Open Link</description>
+				<link_info type="sbeams_page" href="cgi/Microarray/GetAffy_GeneIntensity.cgi">Simple Query</link_info>
+			</extra_data>
+				
+		</summary>
+			
+		<summary>
+			<name>Wild Card Searching</name>
+			<description>Tips for searching with wild cards. Look to the right for the 
+				three supported types of wild card searches, no other types of 
+				wild card searching is supported. </description>
+			<table_info>
+				<section name="Wild Card">
+					<entry>%</entry>
+					<entry>_</entry>
+					<entry>[a-m]</entry>
+				</section>
+				<section name="Description">
+					<entry>'%' is wildcard character</entry>
+					<entry>'_' is single character wildcard</entry>
+					<entry>character range search '[a-m]'</entry>
+				</section>
+				<section name="More Examples">
+					<entry>%matrix%</entry>
+					<entry>NM_%</entry>
+					<entry></entry>
+				</section>
+			</table_info>
+		</summary>
+			
+		<summary>
+			<name>Example Terms</name>
+		<description>Here are a few terms to try out.  Please note the search terms are case insensitive</description>
+			<table_info>
+			  <section name="Query Type">
+			    <entry>Affy Probe Set ID</entry>
+			    <entry>Gene Symbol</entry>
+			    <entry>Wild Card Gene Symbol</entry>
+				<entry>Accession Number</entry>
+			 </section>
+			<section name="Human">
+			    <entry>205207_at</entry>
+			    <entry>IL6</entry>
+			    <entry>Inter%</entry>
+				<entry>NM_000600</entry>
+			 </section>
+			<section name="Mouse">
+			    <entry>1450297_at</entry>
+			    <entry>Il2</entry>
+			    <entry>%inter%</entry>
+				<entry>NM_031168</entry>
+			 </section>
+			</table_info>	
+		</summary>
+		
+		
+	</all_summaries>
+	
+	
+</help_document>

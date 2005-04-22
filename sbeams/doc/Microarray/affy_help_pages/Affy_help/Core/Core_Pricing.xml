@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- edited with XMLSPY v2004 rel. 4 U (http://www.xmlspy.com) by Bruz Marzolf (Institute for Systems Biology) -->
+<help_document type="ISB Affymetrix Core Pricing">
+	<overview>Pricing for chips, reagents and services from the Affymetrix Core at ISB</overview>
+	<all_summaries>
+		<!-- You can have as many summary nodes as you want -->
+		<summary>
+			<name>Ordering chips and reagents from Affymetrix</name>
+			<description>* These prices are for ISB users only. Non-ISB users must negotiate prices with Affymetrix directly and purchase these items themselves. Please note that labeling kits components each contain the EXACT volume necessary for 30 reactions, so after allowing for pipetting errors it is unlikely you will actually be able to label 30 RNAs from a single labeling kit.</description>
+			<table_info>
+				<section name="Catalog #">
+					<entry>ENTRY YOUR OWN DATA CATALOG NUMBER </entry>
+				</section>
+				<section name="Description">
+					<entry>ENTER YOUR OWN CHIP DESCRIPTION</entry>
+				</section>
+				<section name="Price">
+					<entry>$1,000,000,000,000</entry>
+				</section>
+				<section name="Price/Chip or Reaction">
+					<entry>1,000,000</entry>
+				</section>
+			</table_info>
+		</summary>
+		<summary>
+			<name>Affymetrix Core Facility Charges</name>
+			<table_info>
+				<section name="Description">
+					<entry>One-Cycle Labeling</entry>
+					<entry>Two-Cycle Labeling</entry>
+					<entry>Hybridization, Washing, Staining, Scanning</entry>
+					<entry>Agilent Bioanalyzer RNA anaylsis</entry>
+				</section>
+				<section name="Provide Core Facility With">
+					<entry>At least 2 ug total RNA, Chips</entry>
+					<entry>At least 20 ng total RNA, Chips</entry>
+					<entry>20 ug fragmented cRNA</entry>
+					<entry>1 uL RNA at > 50 ng/uL for a Nano chip, > 200 pg/uL for a Pico chip</entry>
+				</section>
+				<section name="ISB Price">
+					<entry>$1,000,000 </entry>
+					<entry>$1,000,000 </entry>
+					<entry>$1,000,000 </entry>
+					<entry>$1,000,000 </entry>
+				</section>
+				<section name="Non-ISB Price">
+					<entry>$1,000,000,000 </entry>
+					<entry>$1,000,000,000 </entry>
+					<entry>$1,000,000,000 </entry>
+					<entry>$1,000,000,000 </entry>
+				</section>
+			</table_info>
+			<all_steps/>
+		</summary>
+	</all_summaries>
+</help_document>

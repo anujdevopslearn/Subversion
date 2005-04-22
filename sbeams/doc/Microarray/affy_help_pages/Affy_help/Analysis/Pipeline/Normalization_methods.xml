@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<help_document type="Affy Pipeline Normalization methods">
+	<overview>Currently the affy analysis pipeline supports the following pre-processing and normalization methods.  It should be noted that the word "normalization" is actually composed of a few discrete steps.  First is Background Subtraction, RMA, GCRMA and MAS5.0 all do this using different approaches. 
+
+ Normalization is the process of scaling the data so different arrays are comparable.  Finally there are different methods for combing the measurements from multiple features into a single measurement for each probe set.  All the methods below are implemented in Bioconductor and combine all the processing steps listed above.
+
+	</overview>
+	<all_summaries>
+		<!-- Over view of Normalization steps -->
+		<summary>
+			<name>Normalization and pre-processing information</name>
+			<description>Below are some links that describes the methods used in R-Biocondutor for processing Affy array data and are are available from the Affy analysis pipeline.  Please note that some of the links will also describe how to run the methods on the command line, but this will not be necessary for methods implemented in the pipeline</description>
+			<all_steps>
+				<step>Tutorial of RMA, gcRMA and Mas5.0 by Roger Bumgarner from UW
+					<link_info type="external_link" href="http://www.nbn.ac.za/Education/14-microarray-2004/ppt/ProcessingAffyData/ProcessingAffyData.html">View Power Point Talk</link_info>
+				</step>
+				<step> Affy Methods  
+				<link_info type="external_link" href="http://bioconductor.org/repository/devel/vignette/builtinMethods.pdf">Affy Methods Vignette</link_info>
+				</step>
+			</all_steps>
+		</summary>
+		<!-- RMA ANALYSIS -->
+		<summary>
+			<name>RMA</name>
+			<description>Robust Multi-array Analysis.  A peer reviewed and accepted standard to perform background correction,normalization and summarization.  Ignores the MM probes when calculating the background, uses quantile normalization and median polishing method to summarize the data.  Summarization is done after normalization</description>
+			<all_steps>
+				<step>See the Bumgarner talk above to get a good comparison between RMA, gcRMA and MAS5.0</step>
+				<step> Link to Ben Bolstad's page with a good overview of RMA
+				<link_info type="external_link" href="http://www.stat.berkeley.edu/~bolstad/RMAExpress/RMAExpress.html">Learn about RMA</link_info>
+				</step>
+			</all_steps>
+		</summary>
+		<!-- GCRMA Analysis -->
+		<summary>
+			<name>GCRMA</name>
+			<description>GCRMA is modified version of RMA which uses the probes GC content to help determine the background. </description>
+			<all_steps>
+				<step>See the Bumgarner talk above to get a good comparison between RMA, gcRMA and MAS5.0</step>
+				<step>Bioconductor Vignette on using GCRMA
+				  <link_info type="external_link" href="http://bioconductor.org/repository/devel/vignette/gcrma.pdf">GCRMA  Vignette.pdf</link_info>
+				</step>
+			</all_steps>
+		</summary>
+		<!-- MAS 5.0  -->
+		<summary>
+			<name>MAS 5.0</name>
+			<description>MAS 5.0 is a series of algorithms for calculating the background, normalization and probe summarization developed by Affymetrix.</description>
+			<all_steps>
+				<step>See the Bumgarner talk above to get a good comparision between RMA, gcRMA and MAS5.0</step>
+				<step>Most arrays used at ISB are processed to produce MAS5.0 expression values and all the data is avalible for analysis from SBEAMS.  Use the following link to learn more 
+				<link_info type="internal_help" href="Simple_query.xml">Affy Intensity Link</link_info>
+				</step>
+			</all_steps>
+		</summary>
+	</all_summaries>
+</help_document>

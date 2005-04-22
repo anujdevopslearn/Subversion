@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- <?xml:stylesheet type="text/xsl" href="http://db.systemsbiology.net/devPM/sbeams/doc/Microarray/Affy_help/Affy_help.xslt"?> --> 
+	<help_document type="Annotate Affy Samples or Arrays">
+	<overview>
+	All samples hybridized to Affymetrix arrays can be annotated and viewed within SBEAMS.		
+	</overview>
+	<all_summaries>
+		<summary>
+			<name>Annotate Sample Page</name>
+		
+			<description>To access the page to annotate or view information about a sample, 
+				go to the ProjectHome page. </description>
+				<all_steps>
+					<step>Select the project from the drop down located at the top of the page.</step>
+					<step>Click on a Link under the "Sample_Tag" Column to view information about a sample</step>
+					<step>Enter Data to to describe the sample</step>
+					<step>To Save time entering multiple samples use "Save Template" which will 
+						Save a copy of the current page. For the next sample use choose the template in the
+						"Existing Templates" drop down box.  Then Click "Set Fields to this Template".  Change
+						any fields that are different for the second sample.</step>
+					<step>Click "Insert" if this is a new record or "Update" if the record was modified 
+						to save the information</step>
+					</all_steps>
+			
+			<extra_data data_type="link">
+				<description>Open Link</description>
+				<link_info type="sbeams_page" href="cgi/Microarray/ProjectHome.cgi">ProjectHome Page</link_info>
+			</extra_data>
+		
+		</summary>
+		<summary>
+			<name>Annotate Array Page</name>
+		
+			<description>To access the page to annotate or view information about a specific Affy Array, 
+				go to the ProjectHome page. </description>
+				<all_steps>
+					<step>Select the project from the drop down located at the top of the page.</step>
+					<step>Click on a Link under the "File_root" Column to view information about an array</step>
+					<step>Enter Data to to describe the array</step>
+					<step>Click "Insert" or "Update" to save the information</step>
+				</all_steps>
+			
+			<extra_data data_type="link">
+				<description>Open Link</description>
+				<link_info type="sbeams_page" href="cgi/Microarray/ProjectHome.cgi">ProjectHome Page</link_info>
+			</extra_data>
+		
+		</summary>
+		
+	</all_summaries>
+	
+	
+</help_document>

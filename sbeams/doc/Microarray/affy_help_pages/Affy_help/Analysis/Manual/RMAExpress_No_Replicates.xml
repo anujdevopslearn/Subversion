@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- edited with XMLSPY v2004 rel. 4 U (http://www.xmlspy.com) by Bruz Marzolf (Institute for Systems Biology) -->
+<help_document type="RMAExpress No Replicates Analysis">
+	<overview>
+		The users would like to have the raw probe intensities, in a tabular format with one 
+		column of probeset ids, a second column with probe number within that probe set, 
+		and a third column of intensities of the probes.  * RMAExpress output was checked against Bioconductor output to ensure that it produces the same result.  ** This software is only available for Windows **
+	</overview>
+	<all_summaries>
+		<summary>
+			<name>Obtain CEL Files</name>
+			<description>Steps to obtain CEL files for your project</description>
+			<all_steps>
+				<step>Log in to SBEAMS/Microarray <link_info type="sbeams_page" href="cgi/Microarray/main.cgi">(http://db/sbeams/cgi/Microarray/main.cgi)</link_info>
+				</step>
+				<step>Choose the 'Project Home' button on the left side of the screen</step>
+				<step>Choose the 'Data Download' tab along the top of the page</step>
+				<step>Make sure you have the appropriate project selected in the project 
+						chooser drop-down on the top of the page--you should see your Affy 
+						chips listed on the page
+					</step>
+				<step>Check the box under CEL for each chip you'd like to analyze</step>
+				<step>Click the 'GET_AFFY_ARRAY_FILES' button underneath the chip listing, and save these somewhere on your computer.</step>
+				<step>Unzip the downloaded file to get the actual CEL files.</step>
+			</all_steps>
+		</summary>
+		<summary>
+			<name>Use RMAExpress to Analyze</name>
+			<description>Use the following steps to set up and run RMAExpress:</description>
+			<all_steps>
+				<step>Install RMAExpress from \\isb-1\Arrays\Affymetrix\install\RMAExpress0.3a2.exe, and start the application.<extra_data data_type="link">
+						<description>Open Link</description>
+						<link_info href="/downloads/RMAExpress0.3a2.exe">RMAExpress Software</link_info>
+					</extra_data>
+				</step>
+				<step>Select File->Read Unprocessed Files, and select the CDF file you need in \\isb-1\arrays\Affymetrix\library_files, then select CEL files for your experiment, wherever you saved them from SBEAMS.</step>
+				<step>Select File->Compute RMA Measure, and Pick ‘Yes’ for Background Adjust and ‘Quantile’ for Normalization.  Press ‘Okay’</step>
+				<step>Select File->Write Results to File, and save out the results.</step>
+				<step>Open the results, and also open corresponding csv annotation file in \\isb-1\arrays\Affymetrix\library_files.  Sort by probe set id in each, and then copy desired annotation columns from the annotation file to the result file.  Save that, which gives signal for two samples, and their gene names.</step>
+			</all_steps>
+		</summary>
+	</all_summaries>
+</help_document>

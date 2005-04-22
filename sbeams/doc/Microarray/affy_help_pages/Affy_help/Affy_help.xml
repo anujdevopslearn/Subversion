@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- <?xml:stylesheet type="text/xsl" href="http://db.systemsbiology.net/devPM/sbeams/doc/Microarray/Affy_help/Affy_help.xslt"?> -->
+<help_document type="Affy Help Documents">
+	<overview>Learn how to access and view Affymetrix array information within SBEAMS plus how to start analyzing microarray data.	
+	</overview>
+	<all_summaries>
+		<summary>
+			<name>Down Load Affy Files</name>
+			<description>Learn how to download Affymetrix data from SBEAMS</description>
+			<extra_data data_type="link">
+				<description>Open Help Link</description>
+				<link_info type="internal_help" href="Data_download.xml">Data Download</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>Upload Data</name>
+			<description>Learn how data is loaded into SBEAMS, either from Affy arrays used in-house or by loading external data sets</description>
+			<extra_data data_type="link">
+				<link_info type="internal_help" href="Sbeams_info/Upload_data.xml">Upload Help</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>Annotating Sample or Array Information</name>
+			<description>Learn where and how to update Sample and Array information</description>
+			<extra_data data_type="link">
+				<description>Open Help Link</description>
+				<link_info type="internal_help" href="Sample_Annotation.xml">Sample/Array Annotation Help		</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>Analyze Affymetrix Data</name>
+			<description>Learn about the currently supported ways to perform analysis </description>
+			<extra_data data_type="link">
+				<description>Open Analysis Overview Link</description>
+				<link_info type="internal_help" href="Analysis_overview.xml">Analysis Overview</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>Perform Simple Queries</name>
+			<description>Gene Intensity values can be viewed in gray scale by querying project and arrays of interest with
+				affy probe_set_ids, gene symbols/names or accession numbers
+			</description>
+			<extra_data data_type="link">
+				<description>Open Help Link</description>
+				<link_info type="internal_help" href="Simple_query.xml">Simple Query Help</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>Perform Advanced Queries</name>
+			<description>Search and view probe intensity values from one or many projects.  
+			</description>
+			<extra_data data_type="link">
+				<description>Open Help Link</description>
+				<link_info type="internal_help" href="Advanced_query.xml">Advanced Query Help</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>View Project Home page</name>
+			<description>Go to the Microarray ProjectHome page to see if a project of interest has any data for Affymetrix, two color arrays or any GetExpression result sets </description>
+			<extra_data data_type="link">
+				<description>Open Link</description>
+				<link_info type="sbeams_page" href="cgi/Microarray/ProjectHome.cgi">Project Home</link_info>
+			</extra_data>
+		</summary>
+		<!-- OLD STUFF 
+		<summary>
+			<name>Project Review Info</name>
+			<description>Request from users for enhancements
+			</description>
+			<extra_data data_type="link">
+				<description>Open Help Link</description>
+				<link_info type="internal_help" href="Project_update_notes.xml">Project Reviews</link_info>
+			</extra_data>
+		</summary> -->
+		<summary>
+			<name>Report a Bug</name>
+			<description>Please report bugs via Mantis
+			</description>
+			<extra_data data_type="link">
+				<description>Open Help Link</description>
+				<link_info type="internal_help" href="Report_a_bug.xml">Bug Report</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>Software Development Reference</name>
+			<description>Learn about some of the scripts that upload the data via cron jobs and how to fix things when things go wrong
+			</description>
+			<extra_data data_type="link">
+				<description>Open Link</description>
+				<link_info type="internal_help" href="Development/Development_overview.xml">Software Development Link</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>Example XML Page</name>
+			<description>If you want to add some documentation use this template
+			</description>
+			<extra_data data_type="link">
+				<description>Open Link</description>
+				<link_info type="internal_help" href="Example_xml.xml">Example XML</link_info>
+			</extra_data>
+		</summary>
+	</all_summaries>
+</help_document>

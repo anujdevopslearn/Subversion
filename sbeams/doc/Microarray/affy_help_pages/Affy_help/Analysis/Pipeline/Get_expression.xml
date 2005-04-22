@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<help_document type="Get Expression">
+	<overview>Get Expression will allow a user to query data uploaded after the Affy analysis pipeline is completed.    </overview>
+	<all_summaries>
+		<!-- Find Get Expression page -->
+		<summary>
+			<name>Go to GetExpression Page</name>
+			<description>Follow the steps below to find the GetExpression Page</description>
+			
+						<all_steps>
+				<step>Log into Sbeams</step>
+				<step>Select the Microarray Link in the main navigation bar</step>
+				<step>Click the GetExpression button located on the main navigation bar</step>
+				<step>Choose the project(s) of interest</step>
+				<step>Select the conditions of interest</step>
+			</all_steps>
+			<extra_data data_type="image">
+				<description>Get Expression Main Page</description>
+				<image type="internal_help" src="Analysis/Pipeline/Get_expression.png"/>
+			</extra_data>
+		</summary>
+		<!-- Select the proper columns to query on -->
+		<summary>
+			<name>Data Columns to select for use in Cytoscape</name>
+			<description>The Following columns MUST be selected in order to ensure the data can be loaded into Cytoscape</description>
+			
+						<all_steps>
+				<step>Data Columns to Display:</step>
+				<step>Log 10 Ratio</step>
+				<step>False Discovery Rate</step>
+				<step>Display Options:</step>
+				<step>Show All Conditions if one condition meets criteria</step>
+				<step>Pivot Conditions as columns</step>
+			</all_steps>
+			<extra_data data_type="image">
+				<description></description>
+				<image type="internal_help" src="Analysis/Pipeline/Get_expression_select_columns.png"/>
+			</extra_data>
+		</summary>
+
+		
+		
+		
+		<!-- Click Cytoscape Link --> 
+		<summary>
+			<name>Load Results set into Cytoscape</name>
+			<description>After the query is done, click the link at the bottom of the GetExpression for Cytoscape</description>
+			<extra_data data_type="image">
+				<description></description>
+				<image type="internal_help" src="Analysis/Pipeline/Cytoscape_link.png"/>
+			</extra_data>
+		</summary>
+	<!-- View cytoscape info -->
+		<summary>
+			<name>Go to Cytoscape Section</name>
+			<description>View Affy Expression Data in Cytoscape</description>
+			<extra_data data_type="link">
+				<description>Learn more about viewing data in Cytoscape</description>
+				<link_info type="internal_help" href="Analysis/Pipeline/Cytoscape_info.xml">Cytoscape Info</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>Go Back to the Pipeline Overview </name>
+			<description>Go Back to the Pipeline Overview </description>
+			<extra_data data_type="link">
+				<description>Go Back</description>
+				<link_info type="internal_help" href="Analysis/Pipeline/Pipeline_overview.xml">Over View</link_info>
+			</extra_data>
+		</summary>
+
+	</all_summaries>
+</help_document >

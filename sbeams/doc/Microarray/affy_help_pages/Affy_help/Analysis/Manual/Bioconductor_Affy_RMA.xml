@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- edited with XMLSPY v2004 rel. 4 U (http://www.xmlspy.com) by Bruz Marzolf (Institute for Systems Biology) -->
+<help_document type="Bioconductor Affy RMA Anaylsis">
+	<overview>The user would like to obtain signal values for all probe sets on all chips.
+	</overview>
+	<all_summaries>
+		<summary>
+			<name>Obtain CEL files:</name>
+			<description>Steps to obtain CEL files for your project</description>
+			<all_steps>
+				<step>Log in to SBEAMS/Microarray <link_info type="sbeams_page" href="cgi/Microarray/main.cgi">(http://db/sbeams/cgi/Microarray/main.cgi)</link_info>
+				</step>
+				<step>Choose the 'Project Home' button on the left side of the screen</step>
+				<step>Choose the 'Data Download' tab along the top of the page</step>
+				<step>Make sure you have the appropriate project selected in the project 
+						chooser drop-down on the top of the page--you should see your Affy 
+						chips listed on the page
+					</step>
+				<step>Check the box under CEL for each chip you'd like to analyze</step>
+				<step>Click the 'GET_AFFY_ARRAY_FILES' button underneath the chip listing, and save these somewhere on your computer.</step>
+				<step>Unzip the downloaded file to get the actual CEL files.</step>
+			</all_steps>
+			<extra_data data_type="link">
+				<description>Open Link</description>
+				<link_info href="internal_help">Get Project Home Help</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>Use R/Bioconductor:</name>
+			<description>Use the following steps to set up and run R/Bioconductor:</description>
+			<all_steps>
+				<step>R can be downloaded from <link_info href="http://www.r-project.org">(http://www.r-project.org)</link_info></step>
+				<step>Bioconductor packages can be installed by running within R:
+						<code><![CDATA[source("http://www.bioconductor.org/getBioC.R")
+getBioC()]]></code>
+				</step>
+				<step>Create a CEL file table, U:/name_for_analysis.list.  The first line is the chip name, second line is always blank and starting with the third line are the CEL file names.  Here’s an example:<code><![CDATA[Mouse430_2
+
+20040811_01_H1_Healthy_Blood_B6-I_PAXgene.CEL
+20040811_02_H2p_Healthy_Blood_B6-I_RBClysis_PosFraction.CEL
+20040811_03_Healthy_Brain.CEL
+20040811_04_IB_Infected_Brain.CEL
+20040812_01_H3p_Healthy_Blood_B6-I_noRBClysis_PosFraction.CEL
+20040812_02_I1_Infected_Blood_B6-I_PAXgene.CEL
+20040812_03_I2p_Infected_Blood_B6-I_RBClysis_PosFraction.CEL
+20040812_04_I3p_Infected_Blood_B6-I_noRBClysis_PosFraction.CEL
+]]></code>
+				</step>
+				<step>Use the following code to use the affy.rma function:<code><![CDATA[source("Z:/Affymetrix/bioconductor/source/affy_funcs.R")
+# need to substitute in name of directory to which CEL files were saved from SBEAMS
+affy.rma("U:/name_for_analysis.list","U:/ name_for_analysis.txt",”/path/to/CEL/files”) 
+]]></code>
+				</step>
+				<step>Results are in  U:/name_for_analysis.list , columns contained are probeset ID, log2 signal per each chip/probeset, and several annotation fields.</step>
+			</all_steps>
+		</summary>
+	</all_summaries>
+</help_document>

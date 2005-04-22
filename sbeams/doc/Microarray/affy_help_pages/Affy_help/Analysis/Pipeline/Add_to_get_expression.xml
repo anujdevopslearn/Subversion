@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<help_document type="Analyze Data">
+	<overview>After analysis through the pipeline the data can be loaded into the GetExpression SBEAMS table which allows a user to query the data receive a results set and then combine the data with other types of data for analysis in Cytoscape</overview>
+	<all_summaries>
+		<summary>
+			<name>Find a previous  Analysis run</name>
+			<description>Follow  to find a previous analysis run. </description>
+			<all_steps>
+				<step>Log into Sbeams</step>
+				<step>Select the Microarray Link in the main navigation bar</step>
+				<step>Select the Project of interest at the top of the page</step>
+				<step>Select the Data Pipeline Button on the main navigation bar</step>
+				<step>If the project has Affy data a link to "Affy Analysis Pipeline" will be displayed at the bottom of the page, Click the link </step>
+				<step>Click on the "Analysis Results" tab to see any previous runs</step>
+				<step>Click on the "Show files" link to view the run of interest</step>
+				<step>Click the link Under the heading Add Results to Get Expression --> Add Data Link</step>
+			</all_steps>
+			<extra_data data_type="image">
+				<!-- <description>View a Normalization results page</description> -->
+				<image type="internal_help" src="Analysis/Pipeline/Add_data_GetExpression.png"/>
+			</extra_data>
+		</summary>
+		<!-- Upload -->
+		<summary>
+			<name>Adding data to GetExpression</name>
+			<description>If the names of the conditions about to be upload are unique  there should be a simple looking form, similar to the one below.  The condition names can be edited if you wish</description>
+			<extra_data data_type="image">
+				<image type="internal_help" src="Analysis/Pipeline/GetExpression_simple_upload.png"/>
+			</extra_data>
+		</summary>
+		<!-- Warning Upload -->
+		<summary>
+			<name>Warnings Adding Data to GetExpression</name>
+			<description>If the Condition Name already exists in the database a warning will indicate so.  There is two options at this point, change the name and click the button "Check condition Name" to see if it is unique or delete the data in the database by using the same condition name.  Be careful you don't stomp someone else's data if you see a warning.</description>
+			<extra_data data_type="image">
+				<image type="internal_help" src="Analysis/Pipeline/GetExpression_warning_upload.png"/>
+			</extra_data>
+		</summary>
+		<!-- What is being uploaded-->
+		<summary>
+			<name>What Data is Being uploaded from SAM</name>
+			<description>The data from the SAM analysis is parsed and Added to certain database fields.  See below for the mapping.  
+In addition an attempt is made to produce a Canonical Name that will be useful for merging an Affy Expression results sets with other data sets at ISB.  See below for more details.</description>
+			<table_info>
+				<section name="SAM Column Name">
+					<entry>Probe_set_id</entry>
+					<entry>Gene_Symbol</entry>
+					<entry>Gene_Title</entry>
+					<entry>Unigene</entry>
+					<entry>LocusLink</entry>
+					<entry>Public_ID</entry>
+					<entry>FDR</entry>
+					<entry>Log_10_Ratio</entry>
+					<entry>mu_X</entry>
+					<entry>mu_Y</entry>
+					<entry>D_stat</entry>
+				</section>
+				<section name="SBEAM Column Name">
+					<entry>reporter_name &amp; gene_name</entry>
+					<entry>common_name</entry>
+					<entry>full_name</entry>
+					<entry>external_identifier</entry>
+					<entry>second_name</entry>
+					<entry>canonical_name</entry>
+					<entry>false_discovery_rate</entry>
+					<entry>log10_ratio</entry>
+					<entry>mu_X</entry>
+					<entry>mu_Y</entry>
+					<entry>NOT USED</entry>
+				</section>
+				<section name="Data Description">
+					<entry>Affy Probe set id</entry>
+					<entry>Gene Symbol, usually from NCBI</entry>
+					<entry>Full gene Name</entry>
+					<entry>Unigene ID</entry>
+					<entry>LocusLink ID</entry>
+					<entry>Canonical Name ***See below how it was derived from the Affy data</entry>
+					<entry>False Discovery Rate</entry>
+					<entry>Log 10 expression ratio</entry>
+					<entry>Mean linear expression value for the non-reference sample</entry>
+					<entry>Mean linear expression value for the Reference sample</entry>
+					<entry>SAM statistic. Based on the ratio of change in gene expression to standard deviation in the data for a gene</entry>
+				</section>
+			</table_info>
+		</summary>
+		<!-- How is the canonical name found -->
+		<summary>
+			<name>Choosing the canonical name</name>
+			<description>The Canonical name is chosen in a very simple manor.  Initially during analysis Affymetrix provides a file with a bunch of annotation for each probe_set.  One of the columns called 'Representative Public ID' holds a DNA accession number usually from GenBank.  Initially this was used as the canonical name but it was difficult it to match it up with other data sets.  So additional columns of annotation were pulled from the Affy annotation file which including 'RefSeq Protein ID' and 'Locus Link ID'.  During the Upload process a better canonical name is chosen by seeing if a RefSeq Protein ID is present, if so it becomes the new canonical name.  If not then the Unigene name is used and finally the original ID from Affymetrix is used the so called ' Representative Public ID'.  In the event a column of annotation holds more then one accession number (which happens quite frequently) the first accession number is chosen</description>
+			<all_steps>
+				<step>Canonical Names in GetExpression Could come from a combination of places
+<code>
+Potential Names Used for the Canonical Name
+RefSeq Protein ID
+LocusLink ID
+Affy Representative Public ID
+</code>
+				</step>
+			</all_steps>
+		</summary>
+		<!-- Go Back to overview -->
+		<summary>
+			<name>Go Back to the Pipeline Overview </name>
+			<description>Go Back to the Pipeline Overview </description>
+			<extra_data data_type="link">
+				<description>Go Back</description>
+				<link_info type="internal_help" href="Analysis/Pipeline/Pipeline_overview.xml">Pipeline Overview</link_info>
+			</extra_data>
+		</summary>
+	</all_summaries>
+</help_document>

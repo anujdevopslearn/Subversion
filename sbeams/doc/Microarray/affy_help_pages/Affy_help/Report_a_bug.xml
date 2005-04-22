@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- <?xml:stylesheet type="text/xsl" href="http://db.systemsbiology.net/devPM/sbeams/doc/Microarray/Affy_help/Affy_help.xslt"?> -->
+<help_document type="Report a Bug">
+	<overview>Please Report any Bugs Found within the Affy SBEAMS pages via the on-line bug tracking software called Mantis	
+	</overview>
+	<all_summaries>
+		<summary>
+			<name>Report a Bug</name>
+			<description>There is no need to log in.  Just click the following link and follow the instructions</description>
+			<all_steps>
+				<step>Open Mantis Bug page</step>
+				<step>Choose the most appropriate 'Category'.  If the bug is specific to the Affy pages please use Microarray</step>
+				<step>Select the 'Reproducibility' option to indicate how often the bug appears </step>
+				<step>Give a summary</step>
+				<step>Give a quick description on what the problem is and how you encountered the problem</step>
+				<step>Submit the bug report</step>
+			</all_steps>
+			<extra_data data_type="link">
+				<description>Open Link</description>
+				<link_info type="external_link" href="http://db.systemsbiology.net/mantis/bug_report_page.php">Mantis Bug tracker</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>Additional contact information</name>
+			<description>If you have a suggestion, enhancement request or encounter any problem within the SBEAMS systems please contact one of the following people
+			</description>
+			<all_steps>
+				<step>SBEAMS Admin, Eric Deutsch<link_info type="external_link" href="mailto:edeutsch@sytemsbiology.org">edeutsch@sytemsbiology.org</link_info>
+				</step>
+				<step>Affymetrix SBEAM Developer, Pat Moss<link_info type="external_link" href="mailto:pmoss@sytemsbiology.org">pmoss@sytemsbiology.org</link_info>
+				</step>
+				<step>Affymetrix Core Manager, Bruz Marzolf<link_info type="external_link" href="mailto:bmarzolf@sytemsbiology.org">bmarzolf@systemsbiology.org</link_info>
+				</step>
+			</all_steps>
+		</summary>
+	</all_summaries>
+</help_document>

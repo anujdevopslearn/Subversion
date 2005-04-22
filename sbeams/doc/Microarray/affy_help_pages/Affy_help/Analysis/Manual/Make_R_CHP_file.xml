@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<help_document type="R_CHP Production">
+	<overview>
+		Convert an Affy CEL file into Affymetrix like Mas5.0 signal and detection calls using R/Bioconductor
+		This is the same method used to produce the data which is loaded into SBEAMS.  Please note that these
+		files can also be downloaded from SBEAMS.
+	</overview>
+	<all_summaries>
+		<summary>
+			<name>Users</name>
+			<description>pmoss</description>
+		</summary>
+		<summary>
+			<name>What was done</name>
+			<description>Obtain CEL files:</description>
+			<all_steps>
+				<step>Log in to SBEAMS/Microarray <link_info type="sbeams_page" href="cgi/Microarray/main.cgi">(http://db/sbeams/cgi/Microarray/main.cgi)</link_info>
+				</step>
+				<step>Choose the 'Project Home' button on the left side of the screen</step>
+				<step>Choose the 'Data Download' tab along the top of the page</step>
+				<step>Make sure you have the appropriate project selected in the project 
+						chooser drop-down on the top of the page--you should see your Affy 
+						chips listed on the page
+				</step>
+				<step>Check the box under CEL for each chip you'd like to analyze</step>
+				<step>Click the 'GET_AFFY_ARRAY_FILES' button underneath the chip listing, and save these somewhere on your computer.</step>
+				<step>Unzip the downloaded file to get the actual CEL files.</step>
+			</all_steps>
+			<extra_data data_type="link">
+				<description>Open Link</description>
+				<link_info type="sbeams_page" href="cgi/Microarray/main.cgi">Get Project Home Help</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>Use R/Bioconductor:</name>
+			<description>Use the following steps to set up and run R/Bioconductor:</description>
+			<all_steps>
+				<step>R can be downloaded from <link_info href="http://www.r-project.org">(http://www.r-project.org)</link_info></step>
+				<step>Bioconductor packages can be installed by running within R:
+						<code><![CDATA[
+source("http://www.bioconductor.org/getBioC.R")
+getBioC()]]></code>
+				</step>
+				<step>Use the following code to load in a CEL file and export a datafile plus a image of the array.  Please note that you will have to supply
+					path names for the variable $cel_file, $out_R_CHP_file, $out_chip_image.
+						<code><![CDATA[
+switch(.Platform$OS.type, unix = .libPaths("/net/arrays/Affymetrix/bioconductor/library/"),"windows")
+	.libPaths("$R_library")
+library(affy)
+cel.file.name    <- c("$cel_file")
+output.file.name <- c("$out_R_CHP_file")
+data <- ReadAffy(filenames =  cel.file.name)
+
+eset <- mas5(data,sc=250)
+PACalls <- mas5calls(data,alpha1=0.05,alpha2=0.065)
+
+Matrix <- exprs(eset)
+output <- cbind(row.names(Matrix),Matrix,exprs(PACalls),se.exprs(PACalls))
+headings <- c("Probesets","MAS5_Signal","MAS5_Detection_calls", "MAS5_Detection_p-value")
+write.table(output,file=output.file.name,sep="\\t",col.names = headings,row.names=FALSE)
+
+
+
+jpeg("$out_chip_image", width=1000, height=1000)
+image( data[,1] )
+dev.off()
+END]]></code>
+				</step>
+			</all_steps>
+		</summary>
+	</all_summaries>
+</help_document>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<help_document type="Affy Analysis Overview">
+	<overview>Learn about different techniques for analyzing Affymetrics data.  Currently they are manual methods where you can download your data and manipulate it using a variety of methods.  See some examples by clicking on the Manual Analysis link.  The Affy Pipeline allows users to run a few different analysis methods by interacting with a web interface.  A benefit of working with the Affy Pipeline is that all the data is stored for you and the results can be easily loaded into SBEAMS which can then be accessed via the GetExpression page where results can be viewed in Cytoscape.  
+Data can also be analyzed in external programs such as MEV, where a direct link to start and all your data is provided.  To learn more follow the MEV link below.
+	</overview>
+	<all_summaries>
+		<summary>
+			<name>Affy Pipeline</name>
+			<description>Learn how to launch an analysis run using the Affy Analysis Pipeline</description>
+			<extra_data data_type="link">
+				<description>View Pipeline Info</description>
+				<link_info type="internal_help" href="Analysis/Pipeline/Pipeline_overview.xml">Pipeline Link </link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>Manual Analysis</name>
+			<description>Learn where to down load your Affy data and view a few R-Bioconductor scripts to analyze your data		</description>
+			<extra_data data_type="link">
+				<description>View Manual analysis Info</description>
+				<link_info type="internal_help" href="Analysis/Manual/Manual_overview.xml">Manual Link</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>MEV</name>
+			<description>MEV  (Multiple Experiment Viewer) from TIGR is an open source microarray analysis package.  Follow the link to learn how to launch the program and where to find more documentation on how to run the program		</description>
+			<extra_data data_type="link">
+				<description>View MEV analysis Info</description>
+				<link_info type="internal_help" href="Analysis/Pipeline/Analysis_types.xml#MEV">MEV Link</link_info>
+			</extra_data>
+		</summary>
+	</all_summaries>
+</help_document>

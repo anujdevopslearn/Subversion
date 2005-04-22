@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<help_document type="Normalize Affy Arrays">
+	<overview>Once all the arrays are Group together a normalization run can be started which will perform a number of steps to pre-process the data by combining affy features into Affy probe set measurements, subtracting background and normalizing the data set to produce expression measurements</overview>
+	<all_summaries>
+		<summary>
+			<name>Find the Analysis Tab</name>
+			<description>Follow the steps below to get to the page to start grouping together Affy files or Click the link</description>
+			<all_steps>
+				<step>Log into Sbeams</step>
+				<step>Select the Microarray Link in the main navigation bar</step>
+				<step>Select the Project of interest at the top of the page</step>
+				<step>Select the Data Pipeline Button on the main navigation bar</step>
+				<step>If the project has Affy data a link to "Affy Analysis Pipeline" will be displayed at the bottom of the page, Click the link </step>
+				<step>Click on the "Normalized Data" tab to see any previous runs</step>
+			</all_steps>
+
+			
+			<extra_data data_type="link">
+				<description>Click on the "Normalized Data" tab to continue a session</description>
+				<link_info type="sbeams_page" href="cgi/Microarray/bioconductor/upload.cgi">Open Link</link_info>
+			</extra_data>
+		</summary>
+<!-- Choose sample Groups -->
+		<summary>
+			<name>Choosing Sample Groups</name>
+			<description>Each of the Affy arrays needs to be associated with a sample group.  This information will be utilized if the normalized data is moved onto the final step of finding differentially expressed genes.  Most of the data should be filled in by the database to change any of the defaults follow the instructions below as needed</description>
+		<all_steps>
+			<step>To Add an extra sample group</step>
+			<step>Change the Sample Group Number from 3 to 4</step>
+			<step>Give the default Sample Group Name a new name</step>
+			<step>Make sure the sample names are in a order that make sense to the experiment since this is the order the data will be output in</step>
+<step>Select the Reference sample.  This is the sample group all other sample groups will be compared to in the final step of the pipeline.  This data is not utilized in the normalization step.</step>
+		</all_steps>
+		
+		<extra_data data_type="image">
+				<description>Select Sample Groups</description>
+				<image type="internal_help" src="Analysis/Pipeline/Select_sample_groups.png"/>
+			</extra_data>			
+		</summary>
+<!-- Make sure each array is in the proper sample group -->
+<summary>
+	<name>Associate each file with the correct Sample Group Name</name>
+	<description>After Naming all the sample groups the association between the Affy CEL file to be analyzed and the Sample Group Name needs to be confirmed.  Once again if the defaults were used there should be no need to modify this data.  As an  example this data would need to be changed if a Sample Group is split apart so some of the arrays should be in group X and some of the arrays should be in Group Y.  This modification will have to be made below.</description>
+<all_steps>
+			<step>To change the Sample Group Association</step>
+			<step>To change a CEL file to the appropriate group click on the Radio Button with the correct Sample Group Name</step>
+			<step>Click "Start Normalization Run" once everything is in order</step>
+		</all_steps>
+
+			<extra_data data_type="image">
+
+				<description>Associate Files with Sample Groups</description>
+				
+				<image type="internal_help" src="Analysis/Pipeline/Change_file_sample_groups.png"/>
+			</extra_data>			
+		</summary>
+<!--Start Normalization Run -->
+<summary>
+	<name>Start the Normalization Run</name>
+	<description>To start the normalization run, a method to combine the probe features in to a probe set expression measurement, normalize the data and subtract background must be chosen.  Currently there are two methods that wrap up all the steps into one selection.  RMA and GCRMA perform all the steps listed above and gives back a spreadsheet  of log 2 expression values for all the arrays.  If there is a need to control some of the default options choose the Custom option which will allow fine grain control of the different steps.</description>
+		<all_steps>
+			<step>You may edit the Sample names, which will be used to annotate the results </step>
+			<step>Select default method or Custom processing method</step>
+			<step>Click "Submit Job"</step>
+		</all_steps>
+
+			<extra_data data_type="image">
+
+				<description>Associate Files with Sample Groups</description>
+				
+				<image type="internal_help" src="Analysis/Pipeline/Start_normalization_run.png"/>
+			</extra_data>			
+		</summary>
+<!--Normalization Results -->
+<summary>
+	<name>Normalization Results</name>
+	<description>Once the run is complete a web page with links to the results is shown done</description>
+		<all_steps>
+			<step>Click "Show Files" link to show an overview of the results</step>
+		</all_steps>
+
+			<extra_data data_type="image">
+
+				<!-- <description>Normalization Run Complete</description> -->
+				
+				<image type="internal_help" src="Analysis/Pipeline/Normalization_results.png"/>
+			</extra_data>			
+		</summary>
+
+<!--View Results -->
+<summary>
+	<name>View Results</name>
+	<description>The results page provides information about what arrays were processed, how the data was processed and links to where the data is located.  All this data is saved into SBEAMS which so a user can come back at any time and view the files or use the normalized data file for further analysis.</description>
+		<all_steps>
+			<step>An Overview of some of some of the options</step>
+			<step>Add a note to why this analysis run was done, Click the "Edit Analysis Description" Link</step>
+			<step>To view the normalized data file, under the Analysis Run Files --> Data  headers click "Show" to load the data into the browser.  Note:this might not be to useful since it will be a large tab delimited file and will look funny in the browser</step>
+<step>Better option to view the data: Click "Get" under the Analysis Run Files --> Data  headers to load the data into a spreadsheet</step>
+			<step>To Start finding differentially expressed genes select choose an analysis method</step>
+			<step>The Files under the Analysis Run Files --> R Files where used or produced while processing the data</step>
+		</all_steps>
+
+			<extra_data data_type="image">
+
+				<!-- <description>View a Normalization results page</description> -->
+				
+				<image type="internal_help" src="Analysis/Pipeline/View_normalization_results.png"/>
+			</extra_data>			
+		</summary>
+
+
+		
+		
+<!-- GOTO the analysis Page -->
+	
+		<summary>
+			<name>Go to Analysis Section</name>
+			<description>Once the data has been Normalized, links are available to start analysis in the Pipeline or via MEV </description>
+		<extra_data data_type="link">
+				<description>Learn more about finding differentially expressed genes</description>
+				<link_info type="internal_help"  href="Analysis/Pipeline/Analyze_arrays.xml">Analysis Link</link_info>
+			</extra_data>			
+		</summary>
+<!-- Link back to the summary page -->
+		<summary>
+			<name>Go Back to the Pipeline Overview </name>
+			<description>Go Back to the Pipeline Overview </description>
+		<extra_data data_type="link">
+				<description>Go Back</description>
+				<link_info type="internal_help" href="Analysis/Pipeline/Pipeline_overview.xml">Pipeline Overview</link_info>
+			</extra_data>			
+		</summary>
+
+
+
+</all_summaries>
+</help_document>

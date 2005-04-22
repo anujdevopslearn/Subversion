@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<help_document type="Cytoscape">
+	<overview>Loading data from the GetExpression results set into Cytoscape is done via 3 Java Web starts.  After clicking on the Cytoscape link a new page will be presented with 4 links.  Each link will start a java program that can interact and extent Cytoscape</overview>
+	<all_summaries>
+		<!--Gaggle Link -->
+		<summary>
+			<name>Boss Link</name>
+			<description>The Gaggle Boss is a program that will show all the running programs that can interact with one another.</description>
+			<all_steps>
+				<step>Click The Boss Link</step>
+			</all_steps>
+			<extra_data data_type="image">
+				<description>Get Expression Main Page</description>
+				<image type="internal_help" src="Analysis/Pipeline/Boss_link.png"/>
+			</extra_data>
+		</summary>
+		<!-- Cytoscape Link-->
+		<summary>
+			<name> Network Link</name>
+			<description>Will Start Cytoscape and load up an expression network.  Each diamond node represents a condition.  Genes are represented as circular nodes</description>
+			<all_steps>
+				<step>Click the Network Link</step>
+			</all_steps>
+		</summary>
+		<!-- DMV Link -->
+		<summary>
+			<name> DataMatrixViewer</name>
+			<description>This will launch the Data Matrix Viewer (DMV) which will load and display all the expression data</description>
+			<all_steps>
+				<step>DataMatrixViewer</step>
+			</all_steps>
+		</summary>
+		<!-- Go Back to overview -->
+		<summary>
+			<name>Go Back to the Pipeline Overview </name>
+			<description>Go Back to the Pipeline Overview </description>
+			<extra_data data_type="link">
+				<description>Go Back</description>
+				<link_info type="internal_help" href="Analysis/Pipeline/Pipeline_overview.xml">Over View</link_info>
+			</extra_data>
+		</summary>
+	</all_summaries>
+</help_document>

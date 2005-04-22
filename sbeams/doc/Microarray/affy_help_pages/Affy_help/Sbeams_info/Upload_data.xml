@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<help_document type="Upload Affy Data">
+	<overview>Affy Data can be loaded in two different ways by  Affy core personal.  Currently end users cannot upload data to the system but they will need to supply some information to get things started. If the arrays are hybridized at ISB the data will be automatically imported into the system as soon as the data is produced.  External Affy data sets can also be loaded.  See below for more information. </overview>
+	<all_summaries>
+		<!--Internal Load -->
+		<summary>
+			<name>Internal Data</name>
+			<description>Arrays hybridized and scanned at ISB will be automatically uploaded into the systems by a series of scripts controlled by the Affy core personal</description>
+		</summary>
+		<!-- External Upload information-->
+		<summary>
+			<name>External Data Sets</name>
+			<description>External Data sets produced by other groups out side ISB can be loaded into the system.  At a minimum the Affy CEL files and sample information must be available from the external groups for the loading process to work.  To upload external data sets work through the following steps WITH the Affy Core personal</description>
+			<all_steps>
+				<step>Download and fill out the Excel spreadsheet which will be used to annotate all the samples
+					<link_info type="sbeams_page" href="usr/Microarray/Example_master_upload_template.xls">Annotation spreadsheet</link_info>
+				</step>
+				<step>Save the data in a tab delimited format</step>
+				<step>Produce a folder and download all the external CEL  files into it</step>
+				<step>Make sure SBEAMS is aware of the Affy array type the external data is using</step>
+				<step>If this is a new Affy array that SBEAMS is not aware of, download the Affy annotation file from Affymetrix web site</step>
+				<step>Have the Affy Core personal upload the annotation file if it is not already installed</step>
+				<step>Pass the CEL files and annotation spreadsheet off to the Affy Core personal and they will upload the data
+				<link_info type="internal_help" href="Development/Development_overview.xml#Load External Data sets">View development notes</link_info>
+				</step>
+			</all_steps>
+		</summary>
+			</all_summaries>
+</help_document>

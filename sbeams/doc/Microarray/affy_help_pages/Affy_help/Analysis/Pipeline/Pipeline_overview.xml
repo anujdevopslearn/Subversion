@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<help_document type="Affy Analysis Pipeline">
+	<overview>The Affy Analysis Pipeline allows a user to group together Affy Arrays, perform normalization and find differentially expressed genes.  In addition the data generated from finding differentially expressed genes can be easily added into SBEAMS which is then accessible via the GetExpression web page.  Data queried via GetExpression can be directly loaded into Cytoscape.  See below for more information about each of the steps </overview>
+	<all_summaries>
+		<!-- Over view of where pages came from -->
+		<summary>
+			<name>Analysis help</name>
+			<description>Use the image below to navigate to different analysis help pages</description>
+		<extra_data data_type="image">
+		
+		<image type="internal_help" src="Overview_templates/analysis_overview_small.png" width='450' height='338'>
+<map_info>
+<map name="map">
+<!-- #$-:Image Map file created by GIMP Imagemap Plugin -->
+<!-- #$-:GIMP Imagemap Plugin by Maurits Rijk -->
+<!-- #$-:Please do not edit lines starting with "#$" -->
+<!-- #$VERSION:1.4 -->
+<!-- #$AUTHOR:Pat Moss -->
+<area shape="rect" coords="6,14,122,70" href="isb_help.php?help_page=Analysis/Pipeline/Group_affy_files.xml" />
+<area shape="rect" coords="135,15,254,66" href="isb_help.php?help_page=Analysis/Pipeline/Normalization_methods.xml" />
+<!-- Normalization Methods --> 
+<area shape="rect" coords="135,66,249,83" href="isb_help.php?help_page=Analysis/Pipeline/Normalization_methods.xml#RMA" />
+<area shape="rect" coords="134,84,247,100" href="isb_help.php?help_page=Analysis/Pipeline/Normalization_methods.xml#GCRMA" />
+<!-- Analysis methods -->
+<area shape="rect" coords="269,15,395,65" href="isb_help.php?help_page=Analysis/Pipeline/Analysis_types.xml" />
+<!-- SAM analysis method -->
+<area shape="rect" coords="271,68,384,81" href="isb_help.php?help_page=Analysis/Pipeline/Analysis_types.xml#SAM" />
+<!-- MEV Link -->
+<area shape="rect" coords="272,83,383,96" href="isb_help.php?help_page=Analysis/Pipeline/Analysis_types.xml#MEV" />
+<!-- Make Ratios -->
+<area shape="rect" coords="270,97,387,113" href="isb_help.php?help_page=Analysis/Pipeline/Analysis_types.xml#Make Ratios" />
+<!-- Multest -->
+<area shape="rect" coords="270,114,387,129" href="isb_help.php?help_page=Analysis/Pipeline/Analysis_types.xml#Multest" />
+<!-- upload data column descriptions -->
+<area shape="rect" coords="271,140,387,178" href="isb_help.php?help_page=Analysis/Pipeline/Add_to_get_expression.xml#What Data is Being uploaded from SAM" />
+<area shape="rect" coords="272,180,383,262" href="isb_help.php?help_page=Analysis/Pipeline/Get_expression.xml" />
+<area shape="rect" coords="258,272,395,318" href="isb_help.php?help_page=Analysis/Pipeline/Cytoscape_info.xml" />
+</map>
+</map_info>
+</image>
+		</extra_data>
+		</summary>
+		
+		
+		<summary>
+			<name>Affy Analysis Pipeline Overview</name>
+			<description>The Pipeline is broken down into three discrete parts which are Grouping Array Files, Normalization and Analysis.  The analysis pages are all based on some CGI-software downloaded from the Bioconductor library called webbioc.  Software development within ISB tried to fully integrate these pages into SBEAMS to help increase data flow and ease of use.  </description>
+			<extra_data data_type="link">
+				<description>Goto Bioconductor.org to view more about all the Bioconductor packages</description>
+				<link_info type="external_link" href="http://Bioconductor.org">Bioconductor</link_info>
+			</extra_data>
+		</summary>
+		<!-- Grouping arrays -->
+		<summary>
+			<name>Group Affy Arrays</name>
+			<description>The first step of the pipeline is to start a new session within a project and then gather together a group of arrays for analysis</description>
+			<extra_data data_type="link">
+				<description>Group Arrays Info</description>
+				<link_info type="internal_help" href="Analysis/Pipeline/Group_affy_files.xml">Group Arrays</link_info>
+			</extra_data>
+		</summary>
+		<!-- Normalizing Data-->
+		<summary>
+			<name>Normalize Data</name>
+			<description>Once all the files are grouped together, the file group can be moved onto a Normalization step which is composed of a number of steps.  The process actually takes the group of CEL files and pre-process the data through (RMA or GCRMA) and then performs quantilie normalization to produce a file of normalized expression values.</description>
+			<extra_data data_type="link">
+				<description>Normalization Arrays Info</description>
+				<link_info type="internal_help" href="Analysis/Pipeline/Normalize_data.xml">Normalize Array Data</link_info>
+			</extra_data>
+		</summary>
+		<!-- Start Analysis -->
+		<summary>
+			<name>Run Analysis</name>
+			<description>Find differentially expressed genes by running either SAM or t-test based method.  The SAM method is currently the default method, developed by Tusher et al. and has been shown to do a good job at detecting differentially expressed genes.</description>
+			<extra_data data_type="link">
+				<description>Analyze Array Info</description>
+				<link_info type="internal_help" href="Analysis/Pipeline/Analyze_data.xml">Analyze Arrays</link_info>
+			</extra_data>
+		</summary>
+		<!-- Add data to get Expression page -->
+		<summary>
+			<name>Add Data to GetExpression</name>
+			<description>To add data to the GetExpression follow these steps</description>
+			<extra_data data_type="link">
+				<description>Add data to GetExpression</description>
+				<link_info type="internal_help" href="Analysis/Pipeline/Add_to_get_expression.xml">Add to GetExpression</link_info>
+			</extra_data>
+		</summary>
+		<!-- Query data from Get Expression -->
+		<summary>
+			<name>Query Data from GetExpression</name>
+			<description>Query Data from GetExpression.  This page will allow the data to be queried and filtered in a multitude of ways.  Once the results sets is produced the data can be saved in a variety of ways and the data maybe loaded into Cytoscape.  See below about launching Cytoscape with Affy expression data.</description>
+			<extra_data data_type="link">
+				<description>Query data from GetExpression web page</description>
+				<link_info type="internal_help" href="Analysis/Pipeline/Get_expression.xml">Query Get Expression</link_info>
+			</extra_data>
+		</summary>
+		<!-- View data in Cytoscape -->
+		<summary>
+			<name>Cytoscape and Affy Expression Data</name>
+			<description>Cytoscape can be automatically launched to view Affy expression data (other expression data types can be used too).  This method can easily upload all the expression data for an experiment an allows the user to view which differentially expressed genes are shared between the different conditions. </description>
+			<extra_data data_type="link">
+				<description>View Expression data in Cytoscape</description>
+				<link_info type="internal_help" href="Analysis/MEV/MEV_overview.xml">Cytoscape Expression Data</link_info>
+			</extra_data>
+		</summary>
+	</all_summaries>
+</help_document>

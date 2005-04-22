@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- edited with XMLSPY v2004 rel. 4 U (http://www.xmlspy.com) by Bruz Marzolf (Institute for Systems Biology) -->
+<help_document type="Bioconductor Affy RMA and t-test Anaylsis">
+	<overview>The user would like to pre-process and test for differential expression between groups of chips
+	</overview>
+	<all_summaries>
+		<summary>
+			<name>Obtain CEL files:</name>
+			<description>Steps to obtain CEL files for your project</description>
+			<all_steps>
+				<step>Log in to SBEAMS/Microarray <link_info type="sbeams_page" href="cgi/Microarray/main.cgi">(http://db/sbeams/cgi/Microarray/main.cgi)</link_info>
+				</step>
+				<step>Choose the 'Project Home' button on the left side of the screen</step>
+				<step>Choose the 'Data Download' tab along the top of the page</step>
+				<step>Make sure you have the appropriate project selected in the project 
+						chooser drop-down on the top of the page--you should see your Affy 
+						chips listed on the page
+					</step>
+				<step>Check the box under CEL for each chip you'd like to analyze</step>
+				<step>Click the 'GET_AFFY_ARRAY_FILES' button underneath the chip listing, and save these somewhere on your computer.</step>
+				<step>Unzip the downloaded file to get the actual CEL files.</step>
+			</all_steps>
+			<extra_data data_type="link">
+				<description>Open Link</description>
+				<link_info href="internal_help">Get Project Home Help</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>Use R/Bioconductor:</name>
+			<description>Use the following steps to set up and run R/Bioconductor:</description>
+			<all_steps>
+				<step>R can be downloaded from <link_info href="http://www.r-project.org">(http://www.r-project.org)</link_info>
+				</step>
+				<step>Bioconductor packages can be installed by running within R:
+						
+					<code><![CDATA[
+source("http://www.bioconductor.org/getBioC.R")
+getBioC()]]></code>
+				</step>
+				<step>Use the following code to load in CEL files:<code><![CDATA[library(affy)
+# need to substitute in name of directory to which CEL files were saved from SBEAMS
+setwd("/path/to/CEL/files")
+fn = c("20040630_01_G85_A_yf.CEL","20040630_03_G85_B_yf.CEL",
+"20040630_05_G85_C_yf.CEL","20040630_02_G85_A_ff.CEL","20040630_04_G85_B_ff.CEL",
+"20040630_06_G85_C_ff.CEL","20040629_01_G85_A_ffLiq.CEL",
+"20040629_02_G85_B_ffLiq.CEL","20040630_07_G85_C_ffLiq.CEL",
+"20040719_01_G85_D_yf.CEL","20040719_02_G85_E_yf.CEL","20040719_03_G85_F_yf.CEL")
+eset <- justRMA(filenames = fn)]]></code>
+				</step>
+				<step>Perform t-tests and output results with:<code><![CDATA[Matrix <- exprs(eset)
+get.pval.ttest <- function(dataf,index1,index2,
+		           datafilter=as.numeric){
+  f <- function(i) {
+    return(t.test(datafilter(dataf[i,index1]),
+           datafilter(dataf[i,index2]))$p.value)
+  }
+  return(sapply(1:length(dataf[,1]),f))
+}
+# compare chips 1-3 vs 4-6
+pValues <- get.pval.ttest(Matrix,1:3,4:6)
+orders <- order(pValues)
+ordered.data <- cbind(rownames(Matrix)[orders],Matrix[orders,],
+                        pValues[orders])
+write.table(ordered.data,file="U:/G85_yf_vs_ff.txt",sep="\t")
+# compare chips 1-3 vs 7-9
+pValues <- get.pval.ttest(Matrix,1:3,7:9)
+orders <- order(pValues)
+ordered.data <- cbind(rownames(Matrix)[orders],Matrix[orders,],
+                        pValues[orders])
+write.table(ordered.data,file="U:/G85_yf_vs_ffLiq.txt",sep="\t")
+# compare chips 4-6 vs 7-9
+pValues <- get.pval.ttest(Matrix,4:6,7:9)
+orders <- order(pValues)
+ordered.data <- cbind(rownames(Matrix)[orders],Matrix[orders,],
+                        pValues[orders])
+write.table(ordered.data,file="U:/G85_ff_vs_ffLiq.txt",sep="\t")
+# compare chips 1-3 vs 10-12
+pValues <- get.pval.ttest(Matrix,1:3,10:12)
+orders <- order(pValues)
+ordered.data <- cbind(rownames(Matrix)[orders],Matrix[orders,],
+                        pValues[orders])
+# substitute in where you’d like to save the results
+write.table(ordered.data,file="/output/path /G85_yf_vs_yf.txt",sep="\t")
+]]></code>
+				</step>
+				<step>Manually added in annotations by sorting each result file by affy ID, sorting annotation file /net/arrays/Affymetrix/library_files/YG_S98_annot.csv by affy ID, and then copying columns with Transcript ID, Gene Title, Gene Symbol into result files.</step>
+			</all_steps>
+		</summary>
+	</all_summaries>
+</help_document>

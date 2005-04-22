@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<help_document type="Bioconductor Raw Probe Intensity">
+	<overview>
+		The users would like to have the raw probe intensities, in a tabular format with one 
+		column of probeset ids, a second column with probe number within that probe set, 
+		and a third column of intensities of the probes.
+	</overview>
+	<all_summaries>
+		<summary>
+			<name>What was done</name>
+			<description>Obtain CEL files:</description>
+			<all_steps>
+				<step>Log in to SBEAMS/Microarray <link_info type="sbeams_page" href="cgi/Microarray/main.cgi">(http://db/sbeams/cgi/Microarray/main.cgi)</link_info>
+				</step>
+				<step>Choose the 'Project Home' button on the left side of the screen</step>
+				<step>Choose the 'Data Download' tab along the top of the page</step>
+				<step>Make sure you have the appropriate project selected in the project 
+						chooser drop-down on the top of the page--you should see your Affy 
+						chips listed on the page
+					</step>
+				<step>Check the box under CEL for each chip you'd like to analyze</step>
+				<step>Click the 'GET_AFFY_ARRAY_FILES' button underneath the chip listing, and save these somewhere on your computer.</step>
+				<step>Unzip the downloaded file to get the actual CEL files.</step>
+			</all_steps>
+			<extra_data data_type="link">
+				<description>Open Link</description>
+				<link_info type="sbeams_page" href="cgi/Microarray/main.cgi">Get Project Home Help</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>Use R/Bioconductor:</name>
+			<description>Use the following steps to set up and run R/Bioconductor:</description>
+			<all_steps>
+				<step>R can be downloaded from <link_info href="http://www.r-project.org">(http://www.r-project.org)</link_info>
+				</step>
+				<step>Bioconductor packages can be installed by running within R:
+						<code><![CDATA[source("http://www.bioconductor.org/getBioC.R")
+getBioC()]]></code>
+				</step>
+				<step>Use the following code to load in CEL files, and get the probe intensities in 'Matrix':
+						<code><![CDATA[switch(.Platform$OS.type, unix = 
+	.libPaths("/net/arrays/Affymetrix/bioconductor/library/"),"windows")
+library(affy)
+# need to substitute in name of directory to which CEL files were saved from SBEAMS
+setwd("<font class='highlight'>/path/to/CEL/files</font>")
+file.names <- c('20040603_03_LPS1-0.CEL' ,'20040809_03_LPS1-60_4_fold_dilution.CEL',
+	 '20040609_03_LPS1-60.CEL')
+data <- read.affybatch(filenames=file.names)
+Matrix <- exprs(data)
+genes <- geneNames(data)]]></code>
+				</step>
+				<step>Grab PM and MM intensities and combine into a matrix of dimensions [3,# probes], output to file:
+						<code><![CDATA[ints <- c( "probe",row.names(pData(data)) )
+for( i in 1:length(genes) ) {
+	int <- pm(data,genenames=genes[i])
+	tmp <- 1:dim(int)[1]
+	int.matrix <- as.matrix(int)
+	row.names(int.matrix) <- rep(genes[i],dim(int.matrix)[1])	
+	tmp <- cbind(tmp,int.matrix)
+	ints <- rbind(ints,tmp)
+}
+ints.frame <- as.data.frame(ints)
+write.table(ints.frame,paste(output.file.base,"-pm.txt"),sep="\t",col.names=FALSE)
+
+ints <- c( "probe",row.names(pData(data)) )
+for( i in 1:length(genes) ) {
+	int <- pm(data,genenames=genes[i])
+	tmp <- 1:dim(int)[1]
+	int.matrix <- as.matrix(int)
+	row.names(int.matrix) <- rep(genes[i],dim(int.matrix)[1])	
+	tmp <- cbind(tmp,int.matrix)
+	ints <- rbind(ints,tmp)
+}
+ints.frame <- as.data.frame(ints)
+write.table(ints.frame,paste(output.file.base,"-mm.txt"),sep="\t",col.names=FALSE)]]></code>
+				</step>
+			</all_steps>
+		</summary>
+	</all_summaries>
+</help_document>

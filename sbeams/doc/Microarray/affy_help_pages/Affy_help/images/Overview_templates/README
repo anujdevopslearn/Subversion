@@ -1,0 +1,15 @@
+To edit the images use PowerPoint 
+Do As SaveAs --> png
+Open Image in GIMP
+Reduce the Image
+   Right Click on image --> Image --> Scale Image...
+   Orginal Image = 960x720
+   New width = 450 (should re-calculate height to 338)
+   
+Do As SaveAs from GIMP to save the reduced image
+
+To Re-make the image map
+In GIMP Right Click --> Filter --> Web --> ImageMap
+Draw shapes around hot zones
+Save the map to disk
+Copy the map into the html page or XML document it is need in.

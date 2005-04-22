@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!-- <?xml:stylesheet type="text/xsl" href="http://db.systemsbiology.net/devPM/sbeams/doc/Microarray/Affy_help/Affy_help.xslt"?> -->
+<help_document type="Simple Query">
+	<overview>
+	Perform simple queries within a project to view probe set intensity values.  Expression values are taken
+	from the R_CHP files.	
+	</overview>
+	<all_summaries>
+		<summary>
+			<name>Simple Query</name>
+			<description>Open the simple query interface and query with an Affy probe_set_id, 
+				Gene Symbol, Gene Name or Accession number.
+				 </description>
+			<all_steps>
+				<step>Choose the project of interest</step>
+				<step>Select specific arrays, default is to have all arrays for the project selected</step>
+				<step>Enter the search term</step>
+				<step>Hit the "Simply_Query" button</step>
+			</all_steps>
+			<extra_data data_type="link">
+				<description>Open Link</description>
+				<link_info type="sbeams_page" href="cgi/Microarray/GetAffy_GeneIntensity.cgi">GetAffy_GeneIntensity.cgi</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>Advanced Query</name>
+			<description>If you need additional query options check out the Advanced Query Page</description>
+			<extra_data data_type="link">
+				<description>Open Link</description>
+				<link_info type="sbeams_page" href="cgi/Microarray/GetAffy_GeneIntensity.cgi?display_type=Advanced">GetAffy_GeneIntensity.cgi Advance Query</link_info>
+			</extra_data>
+		</summary>
+		<summary>
+			<name>Wild Card Searching</name>
+			<description>Tips for searching with wild cards. Look to the right for the 
+				three supported types of wild card searches, no other types of 
+				wild card searching is supported. </description>
+			<table_info>
+				<section name="Wild Card">
+					<entry>%</entry>
+					<entry>_</entry>
+					<entry>[a-m]</entry>
+					<entry>;</entry>
+				</section>
+				<section name="Description">
+					<entry>'%' is wildcard character</entry>
+					<entry>'_' is single character wildcard</entry>
+					<entry>character range search '[a-m]'</entry>
+					<entry>Search for more then one term at a time, separate with a semi-colon;</entry>
+				</section>
+				<section name="More Examples">
+					<entry>%matrix%</entry>
+					<entry>NM_%</entry>
+					<entry/>
+					<entry>1455899_x_at;1419209_at</entry>
+				</section>
+			</table_info>
+		</summary>
+		<summary>
+			<name>Example Terms</name>
+			<description>Here are a few terms to try out.  Please note the search terms are case insensitive</description>
+			<table_info>
+				<section name="Query Type">
+					<entry>Affy Probe Set ID</entry>
+					<entry>Gene Symbol</entry>
+					<entry>Wild Card Gene Symbol</entry>
+					<entry>Accession Number</entry>
+				</section>
+				<section name="Human">
+					<entry>205207_at</entry>
+					<entry>IL6</entry>
+					<entry>Inter%</entry>
+					<entry>NM_000600</entry>
+				</section>
+				<section name="Mouse">
+					<entry>1450297_at</entry>
+					<entry>Il2</entry>
+					<entry>%inter%</entry>
+					<entry>NM_031168</entry>
+				</section>
+			</table_info>
+		</summary>
+		<summary>
+			<name>What is an R_CHP file</name>
+			<description>Choose one of the following options to learn more about R_CHP files</description>
+			<all_steps>
+				<step>What is a R_CHP file<link_info type="internal_help" href="Data_download.xml">Data Download file Types</link_info>
+				</step>
+				<step>How is an R_CHP file produced<link_info type="internal_help" href="Analysis/Manual/Make_R_CHP_file.xml">Make R_CHP file</link_info>
+				</step>
+				<step>How Good is R_CHP data compared to Affy GCOS data<link_info type="internal_help" href="Analysis/Manual/R_GCOS_comparison.xml">R vs GCOS MAS5</link_info>
+				</step>
+			</all_steps>
+		</summary>
+	</all_summaries>
+</help_document>

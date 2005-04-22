@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<help_document type="Affy Pipeline Analysis methods">
+	<overview>Currently the affy analysis pipeline supports the following methods
+	</overview>
+	<all_summaries>
+		
+		<!-- SAM ANALYSIS -->
+		<summary>
+			<name>SAM</name>
+			<description>SAM is currently the default method for array analysis at ISB.  The method was developed by Tusher et al.  Below are links to the Tusher Paper and some external links that help explain what SAM does.</description>
+		<all_steps>
+				<step>Learn how to start running SAM
+				<link_info type="internal_help" href="Analysis/Pipeline/Analyze_data.xml">Learn to Run SAM</link_info>
+				</step>
+				<step>Power Point presentation from the SAM method authors
+				<link_info type="external_link" href="downloads/SAM.ppt">SAM Info.ppt</link_info>
+				</step>
+				<step>Original SAM Paper
+				<link_info type="external_link" href="/pdf/44.pdf">SAM Paper.pdf</link_info>
+				</step>
+				<step>Bioconductor's implementation of SAM "siggens"
+				<link_info type="external_link" href="http://bioconductor.org/repository/devel/vignette/siggenes.pdf">View Vignettes.pdf</link_info>
+				</step>
+					
+		</all_steps>
+
+
+
+		</summary>
+		
+	<!-- MEV Analysis -->
+		<summary>
+			<name>MEV</name>
+			<description>MEV (MultiExperiment Viewer) is a stand alone, full featured array analysis package developed at TIGR which is freely distributed.  The program can be easily launched from the analysis pipeline once there is some normalized data to analyze.  Currently data loaded into MEV cannot be loaded back into SBEAM for additional analysis</description>
+				
+		<all_steps>
+				<step>View a tutorial by Bruz M. on how to start MEV from the SBEAM Affy analysis pipeline
+				  <link_info type="external_link" href="/downloads/sbeams_mev_tutorial.doc">MEV tutorial</link_info>
+				</step>	
+				<step>Link to TIGR MEV Web Site
+				<link_info type="external_link" href="http://www.tm4.org/mev.html">MEV Home Link</link_info>
+				</step>
+		</all_steps>
+
+		</summary>
+
+<!-- Make Ratios --> 
+		<summary>
+			<name>Make Ratios</name>
+			<description>Make ratios simply combines the replicates within a sample sample group then makes a ratio to it's reference sample group.  This method is only intended to be used on data sets that do not have replicates.  After the ratios are done being made the data can be loaded back into GetExpression</description>
+		<all_steps>
+				<step>Running the page is very similar to Running SAM.  Just click on the "Make_ratios" button instead of SAM when choosing the analysis method.  Click the RUN SAM link above to see how to get things started.
+				</step>	
+		</all_steps>
+
+		
+		</summary>
+<!-- Multest Analysis Info  -->
+		<summary>
+			<name>Multest</name>
+			<description>multtest includes several tests for differences in means (t-test, F-test, etc.) as well as a number of procedures for controlling the error rate for many simultaneous hypotheses. Such control is very important in the context of microarray experiments. Additionally, multtest provides the ability to make specific hypotheses about groups of genes within a microarray experiment and can select genes that meet certain testing criteria. Finally, muttest produces three diagnostic plots, an MA plot, a quantile-quantile plot, and a multiple testing procedure selectivity plot. After the data is done processing the differentially expressed data can be loaded into GetExpression</description>
+			<all_steps>
+				<step>Resampling-based multiple testing for microarray data analysis. 
+					<link_info type="external_link" href="http://www.stat.berkeley.edu/~gyc/633.pdf">PDF</link_info>
+				</step>
+				<step>Multiple hypothesis testing in microarray experiments.
+					<link_info type="external_link" href="http://www.bepress.com/cgi/viewcontent.cgi?article=1014&amp;context=ucbbiostat">PDF</link_info>
+				</step>
+			</all_steps>
+			
+			
+				
+		</summary>
+	</all_summaries>
+</help_document>
+
