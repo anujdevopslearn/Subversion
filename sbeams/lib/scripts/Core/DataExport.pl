@@ -564,11 +564,11 @@ sub processOptions {
   # map_audit_xxx_to provided for backwards compatability.
   GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
               "output_file:s","command_file:s","recursive", 
-              "user__map_to:i", "workgroup_map_to:i", 'help',
+              "user_map_to:i", "workgroup_map_to:i", 'help',
               'map_audit_user_to:i', 'map_audit_group_to:i' );
 
-  $OPTIONS{user_map_to} ||= $OPTIONS{map_audit_user_to}; 
-  $OPTIONS{workgroup_map_to} ||= $OPTIONS{map_audit_group_to}; 
+  $OPTIONS{map_audit_user_to} ||= $OPTIONS{user_map_to}; 
+  $OPTIONS{map_audit_group_to} ||= $OPTIONS{workgroup_map_to}; 
 
   # Pleas for help get precedence
   printUsage() if $OPTIONS{help};
