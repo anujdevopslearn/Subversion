@@ -101,7 +101,7 @@
 			<description>Cytoscape can be automatically launched to view Affy expression data (other expression data types can be used too).  This method can easily upload all the expression data for an experiment an allows the user to view which differentially expressed genes are shared between the different conditions. </description>
 			<extra_data data_type="link">
 				<description>View Expression data in Cytoscape</description>
-				<link_info type="internal_help" href="Analysis/MEV/MEV_overview.xml">Cytoscape Expression Data</link_info>
+				<link_info type="internal_help" href="Analysis/Pipeline/Pipeline_overview.xml">Cytoscape Expression Data</link_info>
 			</extra_data>
 		</summary>
 	</all_summaries>
