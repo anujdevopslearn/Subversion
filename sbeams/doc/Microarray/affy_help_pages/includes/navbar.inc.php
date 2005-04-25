@@ -1,5 +1,9 @@
 
+<?php
+ 
 
+ include("includes/transformation_info.inc.php");
+?>
 
 <!-- --------------- Navigation Bar: List of links ------------------------ -->
 <tr>
@@ -17,7 +21,7 @@
 <td><img src="images/clear.gif" width="1" height="10" border="0"></td>
 <td colspan="2">
 <?php echo( "<a href='$HOME_PAGE_URL' class='Nav_link'>Intranet Home</a><br>") ?>
-<a href="http://affy" class="Nav_link">ISB Affy Home</a><br>
+<a href="<?=$URL_BASE?>" class="Nav_link">ISB Affy Home</a><br>
 </tr>
 <tr>
 <td colspan="4"><img src="images/clear.gif" width="1" height="10" border="0"></td>

@@ -1,8 +1,7 @@
 <?php
   /* $Id$ */
-$SERVER = "www.sbeams.org";
-$HOME_PAGE_URL = "http://intranet.systemsbiology.net";
 
+ include("includes/transformation_info.inc.php");
 ?>
 
 
