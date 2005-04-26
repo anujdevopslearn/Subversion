@@ -177,12 +177,12 @@ BL_CBIL_genome_coordinates	9	GenBank	GenBank accession	varchar	255	0	Y		N			N
 BL_CBIL_genome_coordinates	10	Gene_Symbol	Official Gene Symbol	varchar	255	0	Y		N			N
 BL_CBIL_genome_coordinates	11	Gene_Synonyms	Gene Synonyms	varchar	255	0	Y		N			N
 BL_CBIL_genome_coordinates	12	organism_id	Organism identifier	int	4	0	N		N			N
-BL_MGEDOntologyRelationship	1	MGED_ontology_relationship_id	MGED ontology relationship ID	int	4	0	N		Y			Y
+BL_MGEDOntologyRelationship	1	MGED_ontology_relationship_id	MGED ontology relationship ID	int	4	0	N		N			Y
 BL_MGEDOntologyRelationship	2	subject_term_id	Subject Term ID	int	4	0	N		N			Y
 BL_MGEDOntologyRelationship	3	predicate_term_id	Predicate Term ID	varchar	255	0	Y		N			N
 BL_MGEDOntologyRelationship	4	object_term_id	Object Term ID	int	4	0	N		N			Y
 BL_MGEDOntologyRelationship	5	ontology_relationship_type_id	Ontology Relationship ID	int	4	0	N		N			Y
-BL_MGEDOntologyTerm	1	MGED_ontology_term_id	MGED Ontology Term ID	int	4	0	N		Y			Y
+BL_MGEDOntologyTerm	1	MGED_ontology_term_id	MGED Ontology Term ID	int	4	0	N		N			Y
 BL_MGEDOntologyTerm	2	ontology_term_type_id	Ontology Term Type ID	int	4	0	N		N			Y
 BL_MGEDOntologyTerm	3	name	Ontology Name	varchar	255	0	N		N			Y
 BL_MGEDOntologyTerm	4	definition	Ontology Definition	text	16	0	N		N			Y
