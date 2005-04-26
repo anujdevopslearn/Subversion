@@ -285,7 +285,7 @@ sub make_info_files {
 		
 		my $file_name 	= $master_href->{$key_numb}->{'CEL FILE NAME'};
 		
-		my ($file, $dir, $ext) = fileparse("$BASE_DIRECTORY/$file_name",  qr/\..*/);
+		my ($file, $dir, $ext) = fileparse("$BASE_DIRECTORY/$file_name",  qr/\.[^.]*/); #ignore periods except for the last one
 		
 		print "FILE '$file' FILE NAME '$file_name'\n" if ($VERBOSE > 0); 
 		
@@ -307,7 +307,7 @@ sub make_info_files {
 ###############################################################################
 # check_for_minimal_amount_of_data
 #
-# Perform some sanity checks on the data to make sure it will at least hava a chance of 
+# Perform some sanity checks on the data to make sure it will at least have a chance of 
 #uploading
 ###############################################################################
 sub check_for_minimal_amount_of_data {
