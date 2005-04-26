@@ -189,10 +189,11 @@ mkdir var var/resultsets var/logs var/upload
 chmod g+w var/resultsets var/logs var/upload
 
 cd ..
-cd sbeams
-ln -s ../includes doc/includes
-ln -s ../sbeamscommon/var
-ln -s ../sbeamscommon/images/tmp images/tmp
+cd dev1/sbeams
+ln -s includes doc/includes
+rm -Rf var
+ln -s ../../sbeamscommon/var
+ln -s ../../sbeamscommon/images/tmp images/tmp
 
 For now, duplicate the main site from dev1, but eventually when there is
 parallel development and production usage, these should be separate trees
@@ -203,11 +204,12 @@ cd ../..
 cp -a dev1/sbeams sbeams
 
 rm sbeams/var
-ln -s ../sbeamscommon/var sbeams/var
+ln -s sbeamscommon/var sbeams/var
 rm sbeams/images/tmp
-ln -s ../../sbeamscommon/images/tmp sbeams/images/tmp
-ln -s ../../../sbeamscommon/lib/conf/SBEAMS.conf sbeams/lib/conf/SBEAMS.conf
-
+ln -s sbeamscommon/images/tmp sbeams/images/tmp
+cp sbeams/lib/conf/SBEAMS.conf.template sbeamscommon/lib/conf/SBEAMS.conf
+ln -s sbeamscommon/lib/conf/SBEAMS.conf sbeams/lib/conf/SBEAMS.conf
+ln -s sbeamscommon/lib/conf/SBEAMS.conf dev1/sbeams/lib/conf/SBEAMS.conf
 
 -------------------------------------------------------------------------------
 5) Edit the SBEAMS Configuration files
@@ -219,18 +221,17 @@ setenv SBEAMS /local/www/html/dev1/sbeams
 
 cd $SBEAMS/lib/conf
 
-cp SBEAMS.conf.template ../../../../sbeamscommon/lib/conf/SBEAMS.conf
-ln -s ../../../../sbeamscommon/lib/conf/SBEAMS.conf
 
 The passwords needed to connect to the database are stored encrypted in the
 SBEAMS.conf file.  You will need to generate the encrypted versions at this
 point.  Run the encryption script as follows:
 
-(note that all SBEAMS scripts use /usr/local/bin/perl.  If you do not
+note that all SBEAMS scripts use /usr/local/bin/perl.  If you do not
 have a /usr/local/bin/perl, it is highly recommended that you create
 a sym link from /usr/local/bin/perl to your actual perl, e.g.:
-ln -s /usr/bin/perl /usr/local/bin/perl
-)
+ln -s /usr/bin/perl /usr/local/bin/perl.  If this is not practical given the 
+way your system is configured, see troubleshooting guide for suggestions on systematically changing the path to perl for your scripts.
+
 
 $SBEAMS/lib/scripts/Core/encryptDbPasswd.pl -p <DB_PASSWORD? -c SBEAMS.conf
 
