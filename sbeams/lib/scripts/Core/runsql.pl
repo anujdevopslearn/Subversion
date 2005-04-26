@@ -28,7 +28,7 @@ $|++; # don't buffer output
   } else {
     insertRecords( $args, $dbh, $cmds );
   }
-  $dbh->disconnect();
+#  $dbh->disconnect();
   exit 0;
 }
 
@@ -105,9 +105,9 @@ sub insertRecords {
     $cnt++;
     print "$cmd\n" if $args->{verbose};
     $dbh->do( $cmd );
-    $dbh->commit() unless $cnt % COMMIT;
+#    $dbh->commit() unless $cnt % COMMIT;
   }
-  $dbh->commit();
+#  $dbh->commit();
 }
 
 sub dbConnect {
