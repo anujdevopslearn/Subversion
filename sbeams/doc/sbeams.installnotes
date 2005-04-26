@@ -105,6 +105,12 @@ For example,
   /local/www/html/sbeams/ owned by the sbeams account
   /local/www/html/dev1/sbeams/ owned by the user1 account
   /local/www/html/dev2/sbeams/ owned by the user2 account
+
+Since the web server must read/write data within this heirarchy, you should
+create an 'sbeams' unix group, and make sure the sbeams, user1, user2, and 
+apache (or whichever user the web server runs as; see below) users all belong
+to this group.
+  
 Developers need only log into the sbeams account to "roll out" code
 to production (from CVS is recommended).  All development is done by each
 user in their area.  Finished changes are checked into CVS and rolled out
@@ -186,14 +192,14 @@ mkdir images images/tmp
 mkdir lib lib/conf
 chmod a+w images/tmp
 mkdir var var/resultsets var/logs var/upload
-chmod g+w var/resultsets var/logs var/upload
+chmod g+w var/*
 
 cd ..
 cd dev1/sbeams
-ln -s includes doc/includes
+ln -s ../includes doc/includes
 rm -Rf var
 ln -s ../../sbeamscommon/var
-ln -s ../../sbeamscommon/images/tmp images/tmp
+ln -s ../../../sbeamscommon/images/tmp images/tmp
 
 For now, duplicate the main site from dev1, but eventually when there is
 parallel development and production usage, these should be separate trees
@@ -203,13 +209,16 @@ kept in sync with CVS or some other such tool.
 cd ../..
 cp -a dev1/sbeams sbeams
 
-rm sbeams/var
-ln -s sbeamscommon/var sbeams/var
-rm sbeams/images/tmp
-ln -s sbeamscommon/images/tmp sbeams/images/tmp
-cp sbeams/lib/conf/SBEAMS.conf.template sbeamscommon/lib/conf/SBEAMS.conf
-ln -s sbeamscommon/lib/conf/SBEAMS.conf sbeams/lib/conf/SBEAMS.conf
-ln -s sbeamscommon/lib/conf/SBEAMS.conf dev1/sbeams/lib/conf/SBEAMS.conf
+cd sbeams
+rm var
+ln -s ../sbeamscommon/var
+rm images/tmp
+ln -s ../../sbeamscommon/images/tmp images/tmp
+cp lib/conf/SBEAMS.conf.template ../sbeamscommon/lib/conf/SBEAMS.conf
+ln -s ../../../sbeamscommon/lib/conf/SBEAMS.conf lib/conf/SBEAMS.conf
+cd ../dev1/sbeams/
+ln -s ../../../../sbeamscommon/lib/conf/SBEAMS.conf lib/conf/SBEAMS.conf
+
 
 -------------------------------------------------------------------------------
 5) Edit the SBEAMS Configuration files
@@ -217,10 +226,13 @@ ln -s sbeamscommon/lib/conf/SBEAMS.conf dev1/sbeams/lib/conf/SBEAMS.conf
 This is an important step!  If you do not set the configurations for your
 site properly, you will have trouble later!
 
+# Set up SBEAMS environment variable.  tcsh syntax:
 setenv SBEAMS /local/www/html/dev1/sbeams
 
-cd $SBEAMS/lib/conf
+# *OR* bash syntax:
+export SBEAMS=/local/www/html/dev1/sbeams
 
+cd $SBEAMS/lib/conf
 
 The passwords needed to connect to the database are stored encrypted in the
 SBEAMS.conf file.  You will need to generate the encrypted versions at this
@@ -233,7 +245,7 @@ ln -s /usr/bin/perl /usr/local/bin/perl.  If this is not practical given the
 way your system is configured, see troubleshooting guide for suggestions on systematically changing the path to perl for your scripts.
 
 
-$SBEAMS/lib/scripts/Core/encryptDbPasswd.pl -p <DB_PASSWORD? -c SBEAMS.conf
+$SBEAMS/lib/scripts/Core/encryptDbPasswd.pl -p DB_PASSWORD -c SBEAMS.conf
 
 Where DB_PASSWORD is the password to encrypt, and CONF_FILE is the location
 of the SBEAMS.conf file that you want to use.  The script will print out a 
@@ -246,12 +258,20 @@ edit SBEAMS.conf
 Important changes:
 - Be sure to change WWW_UID to reflect the UID of the account running the
   Apache web server.  This might be accounts like 'apache', 'nobody',
-  'httpd', etc.  If you're confounded, try:
-  egrep "apache|httpd|nobody" /etc/passwd | sort
-  The number after the first colon is the WWW_UID.  
-    or
+  'httpd', etc.  The easiest way to find the id of the user is the id command.
+  Assuming the user is apache, try:
+  id apache
+  The first part of the printout is uid=somenumber, this is the uid.  An alt-
+  ernative method for finding this information is:
+  egrep apache /etc/passwd 
+  The number after the first colon is the WWW_UID.  If you don't even know 
+  which user the web server is running as, the value is set in http.conf, or
+  you if the server is running you can find it by looking at the process table:
+  ps aux | grep httpd
+   or
   ps -ef | egrep "apache|httpd|nobody|www"
-  To see what username (first column) is runn your web server.  
+  Note that there will also very likely be one process running as root; this is
+  *not* the user you want!
   
 - Change the CRYPT_KEY to some random strings for your site
 
@@ -278,10 +298,11 @@ Important changes:
   something like "sbeams.dbo." or "sbeams.Core." while with RDBMSs that do not
   support such features (like MySQL), use just "sbeams.".  The trailing
   period is probably necessary except in rare cases.  Most table name
-  references will be prefixed with these strings.  For starters, all that's
-  important is DBPREFIX{Core}.  The others do not need to be set to real values
-  until you wish to set up one of those modules, although you will need to leave 
-  in some default definition to avoid errors.
+  references will be prefixed with these strings.  You must set values for the 
+  Core and BioLink plus whichever module(s) you wish to install.  The others do
+  not need to be set to real values until you wish to set up one of those
+  modules, although you will need to leave in some default definition to avoid
+  errors.
 
 - Set RAW_DATA_DIR{*} to a directory location where data products
   related to a given module are located.  For example, you might store
@@ -290,10 +311,15 @@ Important changes:
 
 - Below this are sections for the individual instances for your site.
   You probably only need to change the PHYSICAL_BASE_DIR and UPLOAD_DIR
-  sections. Set PHYSICAL_BASE_DIR to the place where you installed SBEAMS.
+  sections. Set PHYSICAL_BASE_DIR to the base dir of each sbeams installation,
+  for the main site this would be /local/www/html/sbeams (making assumptions as
+  above); for the dev1 site specified above this would be the value of $SBEAMS
+  env variable, or /local/www/html/dev1/sbeams.
   Set the UPLOAD_DIR to a location where uploaded data files may be stored.
-  This directory should be owned by the Web Server User (or the Web Server
-  User should have write privilege).
+  As noted in the SBEAMS.conf file itself, this can either be an absolute path
+  or can be specified relative to the PHYSICAL_BASE_DIR.  This directory was 
+  created above in the sbeamscommon directory, and should work with the default
+  setting.  Note that the web server must read and write these directories.
 
 - Note that you can override all of the settings in the [default] section
   (including DB_SERVER, DB_PREFIX{*}, etc.) to set certain dev instances
@@ -321,9 +347,10 @@ contribute to this effort if you try different RDBMS engines.
  No need to create "sbeams" dB. Use existing login/pwd for both accounts.)
 
 - First, create a database called 'sbeams' or 'sbeamsdev' or similar
-  (whatever was referred to in the SBEAMS.conf DBPREFIX{Core} setting)
+  (whatever was referred to in the SBEAMS.conf DBPREFIX{Core} setting).  If you
+  wish each module to exist in its own database, you must create those as well.
 
-- Within it, create users "sbeams" and "sbeamsro" as a read/write
+- Within it(them), create users "sbeams" and "sbeamsro" as a read/write
   account and a read-only account, respectively.
 
 - You will also need to create an administration account, "sbeamsadmin".
@@ -344,6 +371,9 @@ foreach dbtype ( $DBTYPES )
   --table_col ../../conf/Core/Core_table_column.txt --schema_file \
   ../../sql/Core/Core --destination_type $dbtype
 end
+
+- You must also install and build the BioLink module, please see the install
+  notes for that module for details.
 
 
 - Verify that the SQL CREATE and DROP statements have been correctly
@@ -386,12 +416,19 @@ those records if necessary, so logging in as admin is discouraged.
 
 
 - Execute the statements below to create and populate the database with some
-  bare bones data where the SBEAMS database has been set:
+  bare bones data.
 
-$SBEAMS/lib/scripts/Core/runsql.pl Core_CREATETABLES.mssql
-$SBEAMS/lib/scripts/Core/runsql.pl Core_POPULATE.mssql
-$SBEAMS/lib/scripts/Core/runsql.pl Core_CREATECONSTRAINTS.mssql
+cd $SBEAMS/lib/sql/Core
+$SBEAMS/lib/scripts/Core/runsql.pl -s Core_CREATETABLES.mssql -u sbeamsadmin
+$SBEAMS/lib/scripts/Core/runsql.pl -s Core_POPULATE.mssql -u sbeamsadmin -d semicolon
+$SBEAMS/lib/scripts/Core/runsql.pl -s Core_CREATECONSTRAINTS.mssql -u sbeamsadmin
 
+Note that you will be prompted for the sbeamsadmin password; you can also 
+choose to specify it on the command-line with the -p flag, which is more
+convenient but somewhat less secure.  Also, the second command requires that
+you specify the statement delimeter (semicolon).  For help with this (and most
+other) sbeams scripts, simply invoke it without any arguements and it will 
+print out some usage help text.
 
 You should now be able to log in via the web interface, either as the
 "admin" account (if you set a password above; not recommended) or with
