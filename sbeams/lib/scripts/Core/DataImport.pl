@@ -196,16 +196,15 @@ sub start_element {
     getTableInfo(table_name=>$element);
   }
 
-
   #### Check to see if the primary key is there
   my $PK_column_name = $table_info->{$element}->{PK_column_name};
   my $orig_PK_value = $attrs{$PK_column_name};
   my $PK_value = undef;
-  my $return_PK = 1;
+  my $return_PK = $OPTIONS{ignore_pK} ? 0: 1;
   my $insert = 1;
   my $update = 0;
   if ($PK_column_name) {
-
+	print "PRIMARY KEY NAME '$PK_column_name'\n";
     #### If there is a primary key provided, let's examine it more closely
     if ($attrs{$PK_column_name}) {
 
@@ -653,7 +652,7 @@ sub evalSQL {
 sub processOptions {
   GetOptions( \%OPTIONS, "verbose:s", "quiet", "debug:s", "testonly", 'help', 
              'new_audit_info', 'print_ddl', "source_file:s", 'contact_id=s',
-             'work_group_id=s' ) || printUsage( "Failed to get parameters" );
+             'work_group_id=s', 'ignore_pK') || printUsage( "Failed to get parameters" );
   
   for my $param ( qw(source_file) ) {
     print "$param\n";
@@ -683,7 +682,7 @@ sub printUsage {
     -c, --contact_id n        Explicit contact_id to use for audit fields,
                               supercedes -n.
     -p, --print_ddl           Print out DDL stmts, don't execute.
-
+    -i, --ignore_pK	      Ignore returning the PK after updating or inserting a record
 
    e.g.:  $0 --source_file SBEAMSdata.xml
 
