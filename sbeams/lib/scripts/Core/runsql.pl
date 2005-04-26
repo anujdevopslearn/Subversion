@@ -28,7 +28,7 @@ $|++; # don't buffer output
   } else {
     insertRecords( $args, $dbh, $cmds );
   }
-#  $dbh->disconnect();
+  $dbh->disconnect();
   exit 0;
 }
 
