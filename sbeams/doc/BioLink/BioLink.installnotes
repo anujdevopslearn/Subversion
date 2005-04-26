@@ -72,9 +72,11 @@ more BioLink_CREATETABLES.mssql
 
 - Create all tables and constraints as described in the Core installnotes, e.g.
 
-$SBEAMS/lib/scripts/Core/runsql.pl BioLink_CREATETABLES.mssql
-$SBEAMS/lib/scripts/Core/runsql.pl BioLink_CREATECONSTRAINTS.mssql
+$SBEAMS/lib/scripts/Core/runsql.pl -s BioLink_CREATETABLES.mssql -u sbeamsadmin
+$SBEAMS/lib/scripts/Core/runsql.pl -s BioLink_CREATECONSTRAINTS.mssql -u sbeamsadmin
 
+As explained in the sbeams.installnotes, you may also give runsql.pl a password
+on the command line if you so choose, otherwise you will be prompted for one.
 Examples for table creation for other database flavors can be found in the
 Core installation notes and will not be repeated here.
 
@@ -91,24 +93,25 @@ Specifically, change:
 
 DBPREFIX{BioLink}    = BioLink.dbo.
 
-to the database name and schema/owner to prefix to table names. 
+to the database name and schema/owner to prefix to table names.  If your 
+installation will have only one backend database, this will be the same
+prefix as you specified for the DBPREFIX{Core}.
 
 Add the BioLink module to available modules:
 
 cd $SBEAMS/lib/conf/Core
 echo "BioLink" >> AvailableModules.conf
 grep '^#' AvailableModules.conf > AvailableModules.conf-tmp
-grep -v '^#' AvailableModules.conf | uniq | sort >> AvailableModules.conf-tmp
+grep -v '^#' AvailableModules.conf | sort | uniq >> AvailableModules.conf-tmp
 mv AvailableModules.conf-tmp AvailableModules.conf
 
 
 -------------------------------------------------------------------------------
 5) Populate the driver tables
 
-cd $SBEAMS/lib/scripts/Core
-set CONFDIR = "../../conf"
-./update_driver_tables.pl $CONFDIR/BioLink/BioLink_table_property.txt
-./update_driver_tables.pl $CONFDIR/BioLink/BioLink_table_column.txt
+cd ../BioLink
+../../scripts/Core/update_driver_tables.pl BioLink_table_property.txt
+../../scripts/Core/update_driver_tables.pl BioLink_table_column.txt
 
 
 If this doesn't work.  Do not proceed, debug first.
@@ -122,26 +125,17 @@ If this doesn't work.  Do not proceed, debug first.
 
 
 -------------------------------------------------------------------------------
-6) Add groups
+6) Populate some of the tables with initial data
 
-BioLink_admin
-BioLink_user
-BioLink_readonly
-
-FIXME: script this! FIXME
-
-
--------------------------------------------------------------------------------
-7) Populate some of the tables with initial data
+cd ../../refdata/BioLink
 
 - Load data onto polymer_type table:
+../../lib/scripts/Core/DataImport.pl -s polymer_type.xml
 
-cd $SBEAMS/lib/scripts/Core
-
-./DataImport.pl --source_file ../../refdata/BioLink/polymer_type.xml
+- Load data onto polymer_type table:
+../../lib/scripts/Core/DataImport.pl -s BioLink_work_groups.xml
 
 - Load data into the MGED ontology tables
-
-./DataImport.pl --ignore_pK --source_file  ../../refdata/BioLink/MGED_ontolgy_tables.xml
+../../lib/scripts/DataImport.pl --ignore_pK -s MGED_ontolgy_tables.xml
 
 
