@@ -92,6 +92,13 @@ end
 
 cd $SBEAMS/lib/sql/Proteomics
 more Proteomics_CREATETABLES.mssql
+
+Several tables defined in the Proteomics module are also defined in the BioLink
+module.  If you wish to use separate databases for these two modules, you 
+should run the sql as is.  If you are installing into a single instance, you
+may either remove the CREATE TABLE and any associated CREATE CONSTRAINT stmts
+from the SQL files, or you can simply run the CREATETABLES and
+CREATECONSTRAINTS scripts with the -i (--ignore_errors) flag, as shown below.
                                                                                 
 - Execute the statements to create and populate the database with some
   bare bones data and indexes (for faster loading and querying):
@@ -99,16 +106,17 @@ more Proteomics_CREATETABLES.mssql
 SQL Server Example:
 
 To CREATE and POPULATE:
-$SBEAMS/lib/scripts/Core/runsql.pl Proteomics_CREATETABLES.mssql
-$SBEAMS/lib/scripts/Core/runsql.pl Proteomics_POPULATE.mssql
-$SBEAMS/lib/scripts/Core/runsql.pl Proteomics_CREATECONSTRAINTS.mssql
-$SBEAMS/lib/scripts/Core/runsql.pl Proteomics_ADD_MANUAL_CONSTRAINTS.mssql
+$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Proteomics_CREATETABLES.mssql -i
+$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Proteomics_POPULATE.mssql -d semicolon
+$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Proteomics_CREATECONSTRAINTS.mssql -i
+$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Proteomics_ADD_MANUAL_CONSTRAINTS.mssql
 
 To CREATE indexes:
 $SBEAMS/lib/scripts/Core/runsql.pl Proteomics_CREATEINDEXES.mssql
 
 To DROP:
 #### FIXME: DON'T DO THIS BECAUSE THIS WILL AFFECT BIOLINK AS WELL!!!
+#$SBEAMS/lib/scripts/Core/runsql.pl Proteomics_DROP_MANUAL_CONSTRAINTS.mssql
 #$SBEAMS/lib/scripts/Core/runsql.pl Proteomics_DROPCONSTRAINTS.mssql
 #$SBEAMS/lib/scripts/Core/runsql.pl Proteomics_DROPTABLES.mssql
 
@@ -157,18 +165,35 @@ If this doesn't work.  Do not proceed, debug first.
 cd $SBEAMS/lib/conf/Core
 echo "Proteomics" >> AvailableModules.conf
 grep '^#' AvailableModules.conf > AvailableModules.conf-tmp
-grep -v '^#' AvailableModules.conf | uniq | sort >> AvailableModules.conf-tmp
+grep -v '^#' AvailableModules.conf | sort | uniq >> AvailableModules.conf-tmp
 mv AvailableModules.conf-tmp AvailableModules.conf
 
 
 -------------------------------------------------------------------------------
-6) Add groups
+6) Add reference data
+
+cd $SBEAMS/lib/refdata/Proteomics
+
+- Populate the dbxref table:
+
+**** FIXME This should really be in BioLink!
+../../scripts/Core/DataImport.pl -s dbxref.xml
+
+- Add required Proteomics work_groups and TGS entries.  Section below outlines
+the proceedure for doing this manually.  The records indicated will be loaded
+via the DataImport, and shouldn't be repeated.  The instructions were left in
+place for reference purposes.
+
+../../scripts/Core/DataImport.pl -s Proteomics_work_groups.xml
+
+-- Instructions for manually adding work groups, you may safely skip to the 
+beginning of the next section.
 
 Log in via the web interface as a user with Administrator privileges,
 switch to the Admin group using the pull-down menu at the top, and add
 two work groups:
 [SBEAMS Home] [Admin] [Manage Work Groups] [Add Work Group]
-Add entries for (exactly as shown!):
+Add entries, note that this was already done above.
   Proteomics_user
   Proteomics_admin
   Proteomics_readonly
@@ -178,10 +203,8 @@ information slightly, and click [INSERT] to add another.)
 Proteomics_admin has privilege over all tables in the Proteomics
 module, while the Proteomics_user only has access to certain tables
 and may often not modify other users records.  The Proteomics_readonly
-group is a separate group for looky loos.
-
-Now go to [Manage User Group Associations], [Add ...], and add
-yourself and whoever else to these groups as appropriate.
+group is a separate group for users who are allowed to view but not 
+add/modify/delete data.
 
 Now set up the table group securities:
   rowprivate - Proteomics_user - data_writer
@@ -206,6 +229,14 @@ If this doesn't work.  Do not proceed, debug first.
 
 -------------------------------------------------------------------------------
 7) Add some sample data
+
+In the previous section we required Proteomics work groups, you will now have
+to add yourself (and pertinent others) to the work groups.  Via the web UI, go
+to:
+
+[SBEAMS Home] [Admin] [Manage User Group Associations], [Add ...], and add
+yourself and whoever else to these groups as appropriate.
+
 
 (logged in as your regular user account)
 
@@ -261,14 +292,6 @@ was used.)
 
 -------------------------------------------------------------------------------
 8) Test the Proteomics command line functionality
-
-- Populate the dbxref table:
-
-cd $SBEAMS/lib/scripts/Core
-
-./DataImport.pl --source_file ../../refdata/Proteomics/dbxref.xml
-
-**** FIXME This should really be in BioLink!
 
 
 - Load a biosequence set:
