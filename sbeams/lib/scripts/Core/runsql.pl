@@ -119,7 +119,7 @@ sub dbConnect {
   my $cstring = eval "\"$DBCONFIG->{$DBINSTANCE}->{DB_DRIVER}\"";
 
   my $dbh = DBI->connect( $cstring, "$args->{user}", "$args->{pass}" ) || die ('couldn\'t connect' );
-  $dbh->{AutoCommit} = 0;
+#  $dbh->{AutoCommit} = 0;
   $dbh->{RaiseError} = ( $args->{ignore_errors} ) ? 0 : 1;
 
   print "Connected to database successfully\n" if $args->{verbose};
