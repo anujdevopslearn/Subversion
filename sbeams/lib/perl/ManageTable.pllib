@@ -2359,18 +2359,16 @@ sub updateLinkingTable {
   foreach my $element (@child_pk_values) {
     $child_pk_values{$element} = 1;
   }
-
-
-  #### Print some diagnostics
-  if (1 == 1) {
-    print "parent_table_name=$parent_table_name<BR>\n";
-    print "parent_pk_column_name=$parent_pk_column_name<BR>\n";
-    print "parent_pk_value=$parent_pk_value<BR>\n";
-    print "child_pk_column_name=$child_pk_column_name<BR>\n";
-    print "child_pk_values=$child_pk_values<BR>\n";
-    print "linking_table_name=$linking_table_name<BR>\n";
-    print "linking_pk_column_name=$linking_pk_column_name<BR>\n";
-  }
+  
+  $log->debug( <<"  END" );
+  parent_table_name => $parent_table_name
+  parent_pk_column_name => $parent_pk_column_name
+  parent_pk_value => $parent_pk_value
+  child_pk_column_name => $child_pk_column_name
+  child_pk_values => $child_pk_values
+  linking_table_name => $linking_table_name
+  linking_pk_column_name => $linking_pk_column_name
+  END
 
 
   #### Get all existing rows in the linking table for the parent
