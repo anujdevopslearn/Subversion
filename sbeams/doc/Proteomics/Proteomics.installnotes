@@ -161,12 +161,9 @@ set CONFDIR = "../../conf"
 
 If this doesn't work.  Do not proceed, debug first.
 
--Register the module:
-cd $SBEAMS/lib/conf/Core
-echo "Proteomics" >> AvailableModules.conf
-grep '^#' AvailableModules.conf > AvailableModules.conf-tmp
-grep -v '^#' AvailableModules.conf | sort | uniq >> AvailableModules.conf-tmp
-mv AvailableModules.conf-tmp AvailableModules.conf
+-Register the Proteomics module:
+
+$SBEAMS/lib/scripts/Core/addModule.pl Proteomics
 
 
 -------------------------------------------------------------------------------

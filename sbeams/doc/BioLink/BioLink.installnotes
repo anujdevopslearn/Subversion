@@ -99,12 +99,7 @@ prefix as you specified for the DBPREFIX{Core}.
 
 Add the BioLink module to available modules:
 
-cd $SBEAMS/lib/conf/Core
-echo "BioLink" >> AvailableModules.conf
-grep '^#' AvailableModules.conf > AvailableModules.conf-tmp
-grep -v '^#' AvailableModules.conf | sort | uniq >> AvailableModules.conf-tmp
-mv AvailableModules.conf-tmp AvailableModules.conf
-
+$SBEAMS/lib/scripts/Core/addModule.pl BioLink
 
 -------------------------------------------------------------------------------
 5) Populate the driver tables
