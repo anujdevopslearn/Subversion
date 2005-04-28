@@ -234,6 +234,14 @@ export SBEAMS=/local/www/html/dev1/sbeams
 
 cd $SBEAMS/lib/conf
 
+Almost all of the scripts used during the installation of sbeams reside in
+the directory $SBEAMS/lib/scripts/Core.  If you prefer, you can add this
+directory to your $PATH variable, and then invoke the script without explicitly
+defining the path (either relative or absolute).  This document will continue
+to reference the path for clarity.  To append this to your PATH in bash:
+
+export PATH=$PATH:$SBEAMS/lib/scripts/Core
+
 The passwords needed to connect to the database are stored encrypted in the
 SBEAMS.conf file.  You will need to generate the encrypted versions at this
 point.  Run the encryption script as follows:
@@ -482,11 +490,7 @@ If this doesn't work.  Do not proceed, debug first.
 Enable the "Tools" module, which is not really a module, but an extension
 to the Core:
 
-cd $SBEAMS/lib/conf/Core
-grep '^#' Modules.conf > AvailableModules.conf
-echo "Tools" >> AvailableModules.conf
-
-
+$SBEAMS/lib/scripts/Core/addModule.pl Tools
 
 -------------------------------------------------------------------------------
 9) Build the POD docs
