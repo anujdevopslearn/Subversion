@@ -47,12 +47,6 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
 $sbeams = new SBEAMS::Connection;
 
-#### To get the table names resolving to work all affected modules must
-#### Be listed here.  This is bad.  Is there any way around it?
-use SBEAMS::Microarray::Tables;
-use SBEAMS::Proteomics::Tables;
-use SBEAMS::Immunostain::Tables;
-
 processOptions();
 
 $VERBOSE = $OPTIONS{"verbose"} || 0;
@@ -144,7 +138,7 @@ sub handleRequest {
 
   #### If an output_file was specified open it
   if ($output_file) {
-    open(STDOUT,">$output_file")
+    open(OUTFIL,">$output_file")
       || die ("Unable to open output file '$output_file'");
   }
 
@@ -155,8 +149,8 @@ sub handleRequest {
   );
   #$writer->xmlDecl();
   #$writer->startTag("SBEAMS_EXPORT");
-  print STDOUT "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
-  print STDOUT "<SBEAMS_EXPORT>\n";
+  print OUTFIL "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+  print OUTFIL "<SBEAMS_EXPORT>\n";
 
   #### Loop over each command, exporting the results
   foreach my $command (@export_list) {
@@ -174,7 +168,8 @@ sub handleRequest {
 
   #### Write out the final container tag
   #$writer->endTag("SBEAMS_EXPORT");
-  print STDOUT "</SBEAMS_EXPORT>\n";
+  print OUTFIL "</SBEAMS_EXPORT>\n";
+	exit;
 
   return;
 
@@ -391,11 +386,11 @@ sub exportDataRow {
   #### Write out the row
   #$writer->emptyTag($table_handle,%{$row});
   if (1 == 1) {
-    print STDOUT "    <$table_handle";
+    print OUTFIL "    <$table_handle";
     while ( ($key,$value) = each %{$row}) {
-      print STDOUT "\n        $key=\"$value\"";
+      print OUTFIL "\n        $key=\"$value\"";
     }
-    print STDOUT " />\n";
+    print OUTFIL " />\n";
   }
 
 
@@ -554,7 +549,7 @@ sub start_element {
 sub evalSQL {
   my $sql = shift;
 
-  return eval "\"$sql\"";
+  return $sbeams->evalSQL($sql);
 
 } # end evalSQL
 
