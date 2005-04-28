@@ -124,13 +124,15 @@ If this doesn't work.  Do not proceed, debug first.
 
 cd ../../refdata/BioLink
 
-- Load data onto polymer_type table:
+- Load data into polymer_type table:
 ../../lib/scripts/Core/DataImport.pl -s polymer_type.xml
 
-- Load data onto polymer_type table:
+- Load data into work_group/table_group_security tables:
 ../../lib/scripts/Core/DataImport.pl -s BioLink_work_groups.xml
 
 - Load data into the MGED ontology tables
 ../../lib/scripts/DataImport.pl --ignore_pK -s MGED_ontolgy_tables.xml
 
+- Load data into the dbxref table:
+../../scripts/Core/DataImport.pl -s dbxref.xml
 

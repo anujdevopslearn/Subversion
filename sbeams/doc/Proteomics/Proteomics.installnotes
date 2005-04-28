@@ -171,11 +171,6 @@ $SBEAMS/lib/scripts/Core/addModule.pl Proteomics
 
 cd $SBEAMS/lib/refdata/Proteomics
 
-- Populate the dbxref table:
-
-**** FIXME This should really be in BioLink!
-../../scripts/Core/DataImport.pl -s dbxref.xml
-
 - Add required Proteomics work_groups and TGS entries.  Section below outlines
 the proceedure for doing this manually.  The records indicated will be loaded
 via the DataImport, and shouldn't be repeated.  The instructions were left in
