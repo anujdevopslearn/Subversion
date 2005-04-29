@@ -202,7 +202,7 @@ sub printStyleSheet {
 sub printJavascriptFunctions {
     my $self = shift;
     my $javascript_includes = shift;
-	my @tooltip_js = $self->getToolTipJS();
+	my $tooltip_header = $self->getToolTipHeader();
 
     print qq~
 	<SCRIPT LANGUAGE="JavaScript">
@@ -222,7 +222,7 @@ sub printJavascriptFunctions {
     // -->
     </SCRIPT>
 
-	$tooltip_js[0];
+	$tooltip_header;
 
     ~;
 
@@ -244,7 +244,7 @@ sub printPageFooter {
 sub display_page_footer {
   my $self = shift;
   my %args = @_;
-  my @tooltip_js = $self->getToolTipJS();
+  my $tooltip_footer = $self->getToolTipFooter();
 
   #### If the output mode is interactive text, display text header
   my $sbeams = $self->getSBEAMS();
@@ -280,7 +280,7 @@ sub display_page_footer {
     print "<BR><HR SIZE=5 NOSHADE><BR>\n";
   }
 
-  print $tooltip_js[1];
+  print $tooltip_footer;
 
   #### Check to see if the PI of the curernt project is a Halobacterium guy.
   #### If so, print the halo skin
@@ -308,14 +308,11 @@ sub display_page_footer {
 
 
 ###############################################################################
-# getToolTipJS
+# getToolTipHeader
 ###############################################################################
-sub getToolTipJS {
+sub getToolTipHeader {
   my $self = shift;
-  my $header;
-  my $footer;
-
-  $header = qq~
+  my $header = qq~
 
     <STYLE>
     div#tipDiv {
@@ -348,7 +345,15 @@ function hideTip() {
 </SCRIPT>
 	~;
 
-  $footer =  qq~
+return $header;
+}
+
+###############################################################################
+# getToolTipFooter
+###############################################################################
+sub getToolTipFooter {
+  my $self = shift;
+  my $footer = qq~
 
 <SCRIPT>
 var viewport = {
@@ -504,7 +509,7 @@ var Tooltip = {
 Tooltip.init();
   </SCRIPT>
 	~;
-  return ($header, $footer);
+  return $footer;
 }
 
 ###############################################################################
@@ -753,7 +758,7 @@ sub display_ext_halo_style_sheet {
 sub display_ext_halo_footer {
   my $self = shift;
   my %args = @_;
-  my @tooltip_js = $self->getToolTipJS();
+  my $tooltip_footer = $self->getToolTipFooter;
 
   my $buf = qq~
 <!-- ------------------------ End of main content ----------------------- -->
@@ -765,7 +770,7 @@ sub display_ext_halo_footer {
 </td></tr>
 </table>
 
-$tooltip_js[1]
+$tooltip_footer
 
 <BR>
 <hr size=1 noshade width="55%" align="left" color="#FF8700">
