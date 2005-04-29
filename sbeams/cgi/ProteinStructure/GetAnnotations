@@ -457,7 +457,6 @@ $optionlist
     ["biosequence_id","BS.biosequence_id","biosequence_id"],
     ["biosequence_annotation_id","BSA.biosequence_annotation_id","biosequence_annotation_id"],
     ["accessor","DBX.accessor","accessor"],
-    ["accessor_suffix","DBX.accessor_suffix","accessor_suffix"],
 	["biosequence_accession","BS.biosequence_accession","biosequence_accession"],
   );
 
