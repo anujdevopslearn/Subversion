@@ -850,7 +850,10 @@ $LINESEPARATOR
 	}
 	print $header if ($sbeams->invocation_mode() eq 'http');
 
-	print "ORF Name\tChromosome\tCoordinates\tGene Symbol\tFunction\tAliases\tRedundant ORFs\tComments\n";
+	print "ORF Name\tChromosome\tCoordinates\tGene Symbol\tFunction\tAliases\tRedundant ORFs";
+	print "\tComments" if ($sbeams->getCurrent_username() ne 'ext_halo');
+	print "\n";
+
 	foreach my $row (@rows) {
 	  my $protein_biosequence_id    = $row->[0];
 	  my $biosequence_annotation_id = $row->[1];
@@ -867,14 +870,18 @@ $LINESEPARATOR
 	  my $biosequence_accession     = $row->[11];
 	  my $dna_biosequence_id        = $row->[12] if ($row->[12]);
 
-	  print join ($delimiter, ($biosequence_name,
-						 $chromosome,
-						 "$start..$stop",
-						 $gene_symbol,
-						 $functional_description,
-						 $aliases,
-						 $duplicate_biosequences,
-						 $comments));
+	  my @line =  ($biosequence_name,
+				   $chromosome,
+				   "$start..$stop",
+				   $gene_symbol,
+				   $functional_description,
+				   $aliases,
+				   $duplicate_biosequences,
+				   $comments);
+
+	  # remove 'comments' if user eq ext_halo
+	  pop @line if ($sbeams->getCurrent_username() eq 'ext_halo');
+	  print join ($delimiter, @line);
 	  print "\n";
 	}
   }
