@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SBEAMS_EXPORT>
+    <PR_instrument_type
+        instrument_type_description="Electrospray Ionization Ion Trap Mass spectrometer"
+        record_status="N"
+        created_by_id="3"
+        sort_order="100"
+        instrument_type_name="ESI-ITMS"
+        date_modified="2002-08-16 13:57:40"
+        date_created="2002-07-04 16:49:53"
+        instrument_type_id="1"
+        owner_group_id="1"
+        modified_by_id="3" />
+    <PR_instrument
+        record_status="N"
+        created_by_id="3"
+        sort_order="60"
+        date_modified="2002-08-16 14:13:19"
+        date_created="2002-08-16 14:13:19"
+        instrument_type_id="1"
+        instrument_description="HP1100LC/Dionix autosampler coupled to LCQ DECA"
+        instrument_id="2"
+        comment="This is the first ion trap purchased for the high throughput core
+proteomics facility. Unlike the 'classic' ion trap, it is capable of up to
+ten levels of tandem mass spectrometry (MSMS), though it typically only
+runs at the first level for proteomics research. It is coupled to the
+Hewlett Packard (now Agilent Technologies) HP1100 HPLC system through a
+Cytopeia/Mass Evolution electrospray source. Samples are typically loaded
+via the Dionix/LC Packings FAMOS autosampler onto hand made trap columns
+incorporating C18 reverse phase silica beads and New Objective pre-made
+frits. The sample is typically desalted with 20 ul buffer A, then pushed
+onto a hand made 75 um x 10 cm C18 reverse phase tip integrated columns
+through differential valve switching coupled to Upchurch fingertight
+fittings. Electrospray charging is through platinum wire incorporated in
+the Upchurch fingertight fittings. This is a single user platform machine,
+wherein both quantitative and qualitative proteomics multi-sample and/or
+multi-run experiments are performed on samples submitted to the core
+facility. Data is typically collected in centroid form, converted to ICIS
+format, and searched using the SEQUEST algorithm."
+        owner_group_id="1"
+        modified_by_id="3"
+        instrument_name="LCQ DECA" />
+</SBEAMS_EXPORT>
