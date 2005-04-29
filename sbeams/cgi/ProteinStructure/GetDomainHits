@@ -731,7 +731,7 @@ sub handle_request {
 
 
   #### Define the hypertext links for columns that need them
-  %url_cols = ('Biosequence Accession' => "\%$colnameidx{biosequence_accessor}V\%$colnameidx{biosequence_accession}V\%$colnameidx{biosequence_accessor_suffix}V&project_id=\%$colnameidx{project_id}V&biosequence_set_id=\%$colnameidx{biosequence_set_id}V",
+  %url_cols = ('Biosequence Accession' => "\%$colnameidx{biosequence_accessor}V\%$colnameidx{biosequence_accession}V",
     	       'Biosequence Accession_ATAG' => 'TARGET="Win1" ',
                'Biosequence Name' => "$CGI_BASE_DIR/ProteinStructure/GetDomainHits?QUERY_NAME=PS_GetDomainHit&biosequence_id=$parameters{biosequence_id}&biosequence_name_constraint=\%V&project_id=\%$colnameidx{project_id}V&biosequence_set_id=\%$colnameidx{biosequence_set_id}V&display_options=ShowExtraProteinProps&apply_action=$pass_action",
                'Full Gene Name' => "$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=PS_biosequence_annotation&biosequence_annotation_id=\%$colnameidx{biosequence_annotation_id}V&biosequence_id=\%$colnameidx{biosequence_id}V&ShowEntryForm=1",
