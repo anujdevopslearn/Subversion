@@ -299,6 +299,10 @@ sub handle_request {
         resultset_ref=>$resultset_ref,
       );
 
+      # We have connected as the read-only user up to now, but we need to store
+      # the resultset.  Get a write handle by reauthenticating.
+      $sbeams->setNewDBHandle() || die "Unable to reconnect";
+
       #### Store the resultset and parameters to disk resultset cache
       $rs_params{set_name} = "SETME";
       $sbeams->writeResultSet(
