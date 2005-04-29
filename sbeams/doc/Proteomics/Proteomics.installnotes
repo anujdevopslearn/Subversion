@@ -178,8 +178,17 @@ place for reference purposes.
 
 ../../scripts/Core/DataImport.pl -s Proteomics_work_groups.xml
 
--- Instructions for manually adding work groups, you may safely skip to the 
-beginning of the next section.
+- Add default experiment types
+
+../../DataImport.pl -s experiment_type.xml
+
+- Add default instrument types
+
+../../DataImport.pl -s instrument_type.xml
+
+-- Instructions for manually adding work groups.  These were inserted via the 
+DataImport statement above, so while you should read this section for
+informational purposes, you needen't add any of the specified groups.
 
 Log in via the web interface as a user with Administrator privileges,
 switch to the Admin group using the pull-down menu at the top, and add
@@ -209,7 +218,6 @@ Now set up the table group securities:
   Proteomics_infrastructure - Proteomics_admin - data_modifier
   Proteomics_user - Proteomics_user - data_writer
   Proteomics_user - Proteomics_admin - data_modifier
-
 
 Now that the Proteomics driver tables are loaded, and the groups have been
 established, you should be able to go to the web site again and click on
