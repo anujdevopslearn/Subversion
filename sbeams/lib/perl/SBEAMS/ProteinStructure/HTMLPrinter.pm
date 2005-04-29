@@ -202,9 +202,40 @@ sub printStyleSheet {
 sub printJavascriptFunctions {
     my $self = shift;
     my $javascript_includes = shift;
-	my $tooltip_header = $self->getToolTipHeader();
 
     print qq~
+
+    <STYLE>
+    div#tipDiv {
+      position:absolute; 
+      visibility:hidden;
+      left:0;
+      top:0;
+	  z-index:10000;
+	  background-color:#9AC0CD;
+      border:2px solid #EE7621; 
+	  width:200px;
+      padding:4px;
+      color:#000;
+	  font-size:12px;
+	  line-height:1.5;
+    }
+    </STYLE>
+
+	
+    <SCRIPT language="javascript">
+
+    function doTooltip(e, msg) {
+	  if ( typeof Tooltip == "undefined" || !Tooltip.ready ) return;
+	  Tooltip.show(e, msg);
+	}
+    function hideTip() {
+	  if ( typeof Tooltip == "undefined" || !Tooltip.ready ) return;
+	  Tooltip.hide();
+	}
+    </SCRIPT>
+
+
 	<SCRIPT LANGUAGE="JavaScript">
 	<!--
 
@@ -221,8 +252,6 @@ sub printJavascriptFunctions {
 	} // end showPassed
     // -->
     </SCRIPT>
-
-	$tooltip_header;
 
     ~;
 
@@ -304,48 +333,6 @@ sub display_page_footer {
 	  $sbeams->display_page_footer(display_footer=>'YES');
 	}
   }
-}
-
-
-###############################################################################
-# getToolTipHeader
-###############################################################################
-sub getToolTipHeader {
-  my $self = shift;
-  my $header = qq~
-
-    <STYLE>
-    div#tipDiv {
-      position:absolute; 
-      visibility:hidden;
-      left:0;
-      top:0;
-	  z-index:10000;
-	  background-color:#9AC0CD;
-      border:2px solid #EE7621; 
-	  width:200px;
-      padding:4px;
-      color:#000;
-	  font-size:12px;
-	  line-height:1.5;
-    }
-    </STYLE>
-
-	
-<SCRIPT language="javascript">
-
-function doTooltip(e, msg) {
-  if ( typeof Tooltip == "undefined" || !Tooltip.ready ) return;
-  Tooltip.show(e, msg);
-}
-function hideTip() {
-  if ( typeof Tooltip == "undefined" || !Tooltip.ready ) return;
-  Tooltip.hide();
-}
-</SCRIPT>
-	~;
-
-return $header;
 }
 
 ###############################################################################
@@ -696,7 +683,7 @@ sub display_ext_halo_template {
 
 
 ###############################################################################
-# display_ext_halo_template
+# display_ext_halo_style_sheet
 ###############################################################################
 sub display_ext_halo_style_sheet {
   my $self = shift;
