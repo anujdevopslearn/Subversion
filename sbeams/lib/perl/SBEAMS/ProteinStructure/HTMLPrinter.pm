@@ -22,6 +22,7 @@ use CGI::Carp qw(fatalsToBrowser croak);
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::TableInfo;
+use SBEAMS::Connection::Tables;
 
 use SBEAMS::ProteinStructure::Settings;
 use SBEAMS::ProteinStructure::TableInfo;
@@ -71,13 +72,24 @@ sub display_page_header {
     ~;
 
 
-    #### If the current user is the virtual ext_halo user, then show that
-    #### a different template
-    if ($sbeams->getCurrent_username() eq 'ext_halo') {
-      $self->display_ext_halo_template();
-      return;
-    }
+	#### Check to see if the PI of the project is Halo User.
+	#### If so, print the halo skin.  NOTE: you also need to adjust the halo_footer
+	my $current_project = $sbeams->getCurrent_project_id();
+	my $sql = qq~
 
+	  SELECT UWG.contact_id
+	    FROM $TB_WORK_GROUP WG
+		JOIN $TB_USER_WORK_GROUP UWG ON (WG.work_group_id = UWG.work_group_id)
+		JOIN $TB_PROJECT P ON (P.PI_contact_id = UWG.contact_id)
+	   WHERE WG.work_group_name = 'HaloPIs'
+	     AND P.project_id = $current_project
+
+	   ~;
+	my @rows = $sbeams->selectOneColumn($sql);
+	if (scalar(@rows) > 0 ) {
+	  $self->display_ext_halo_template();
+	  return;
+	}
 
     $self->printJavascriptFunctions();
     $self->printStyleSheet();
@@ -190,30 +202,28 @@ sub printStyleSheet {
 sub printJavascriptFunctions {
     my $self = shift;
     my $javascript_includes = shift;
-
+	my @tooltip_js = $self->getToolTipJS();
 
     print qq~
 	<SCRIPT LANGUAGE="JavaScript">
 	<!--
 
 	function refreshDocument() {
-            //confirm( "apply_action ="+document.MainForm.apply_action.options[0].selected+"=");
-            document.MainForm.apply_action_hidden.value = "REFRESH";
-            document.MainForm.action.value = "REFRESH";
-	    document.MainForm.submit();
+	  document.MainForm.apply_action_hidden.value = "REFRESH";
+	  document.MainForm.action.value = "REFRESH";
+	  document.MainForm.submit();
 	} // end refreshDocument
 
-
 	function showPassed(input_field) {
-            //confirm( "input_field ="+input_field+"=");
-            confirm( "selected option ="+document.forms[0].slide_id.options[document.forms[0].slide_id.selectedIndex].text+"=");
-	    return;
+	  confirm( "selected option ="+
+			   document.forms[0].slide_id.options[document.forms[0].slide_id.selectedIndex].text+"=");
+	  return;
 	} // end showPassed
+    // -->
+    </SCRIPT>
 
+	$tooltip_js[0];
 
-
-        // -->
-        </SCRIPT>
     ~;
 
 }
@@ -234,7 +244,7 @@ sub printPageFooter {
 sub display_page_footer {
   my $self = shift;
   my %args = @_;
-
+  my @tooltip_js = $self->getToolTipJS();
 
   #### If the output mode is interactive text, display text header
   my $sbeams = $self->getSBEAMS();
@@ -270,24 +280,232 @@ sub display_page_footer {
     print "<BR><HR SIZE=5 NOSHADE><BR>\n";
   }
 
+  print $tooltip_js[1];
 
-  #### If finishing up the page completely is desired
+  #### Check to see if the PI of the curernt project is a Halobacterium guy.
+  #### If so, print the halo skin
   if ($display_footer eq 'YES') {
+	my $current_project = $sbeams->getCurrent_project_id();
+	my $sql = qq~
 
-    #### If the current user is the virtual ext_halo user, then show
-    #### a different template
-    if ($sbeams->getCurrent_username() eq 'ext_halo') {
-      $self->display_ext_halo_footer();
-      return;
-    }
+	  SELECT UWG.contact_id
+	    FROM $TB_WORK_GROUP WG
+		JOIN $TB_USER_WORK_GROUP UWG ON (WG.work_group_id = UWG.work_group_id)
+		JOIN $TB_PROJECT P ON (P.PI_contact_id = UWG.contact_id)
+	   WHERE WG.work_group_name = 'HaloPIs'
+	     AND P.project_id = $current_project
 
-    #### Default to the Core footer
-    $sbeams->display_page_footer(display_footer=>'YES');
+	   ~;
+	my @rows = $sbeams->selectOneColumn($sql);
+	if (scalar(@rows) > 0 ) {
+	  $self->display_ext_halo_footer();
+	  return;
+	}else {
+	  $sbeams->display_page_footer(display_footer=>'YES');
+	}
   }
-
 }
 
 
+###############################################################################
+# getToolTipJS
+###############################################################################
+sub getToolTipJS {
+  my $self = shift;
+  my $header;
+  my $footer;
+
+  $header = qq~
+
+    <STYLE>
+    div#tipDiv {
+      position:absolute; 
+      visibility:hidden;
+      left:0;
+      top:0;
+	  z-index:10000;
+	  background-color:#9AC0CD;
+      border:2px solid #EE7621; 
+	  width:200px;
+      padding:4px;
+      color:#000;
+	  font-size:12px;
+	  line-height:1.5;
+    }
+    </STYLE>
+
+	
+<SCRIPT language="javascript">
+
+function doTooltip(e, msg) {
+  if ( typeof Tooltip == "undefined" || !Tooltip.ready ) return;
+  Tooltip.show(e, msg);
+}
+function hideTip() {
+  if ( typeof Tooltip == "undefined" || !Tooltip.ready ) return;
+  Tooltip.hide();
+}
+</SCRIPT>
+	~;
+
+  $footer =  qq~
+
+<SCRIPT>
+var viewport = {
+  getWindowpaneX: function () {
+    this.width = 0;
+    if (window.innerWidth) this.width = window.innerWidth - 18;
+    else if (document.documentElement && document.documentElement.clientWidth) 
+  		this.width = document.documentElement.clientWidth;
+    else if (document.body && document.body.clientWidth) 
+  		this.width = document.body.clientWidth;
+  },
+  
+  getWindowpaneY: function () {
+    this.height = 0;
+    if (window.innerHeight) this.height = window.innerHeight - 18;
+  	else if (document.documentElement && document.documentElement.clientHeight) 
+  		this.height = document.documentElement.clientHeight;
+  	else if (document.body && document.body.clientHeight) 
+  		this.height = document.body.clientHeight;
+  },
+  
+  getScrollpaneX: function () {
+    this.scrollX = 0;
+  	if (typeof window.pageXOffset == "number") this.scrollX = window.pageXOffset;
+  	else if (document.documentElement && document.documentElement.scrollLeft)
+  		this.scrollX = document.documentElement.scrollLeft;
+  	else if (document.body && document.body.scrollLeft) 
+  		this.scrollX = document.body.scrollLeft; 
+  	else if (window.scrollX) this.scrollX = window.scrollX;
+  },
+  
+  getScrollpaneY: function () {
+    this.scrollY = 0;    
+    if (typeof window.pageYOffset == "number") this.scrollY = window.pageYOffset;
+    else if (document.documentElement && document.documentElement.scrollTop)
+  		this.scrollY = document.documentElement.scrollTop;
+  	else if (document.body && document.body.scrollTop) 
+  		this.scrollY = document.body.scrollTop; 
+  	else if (window.scrollY) this.scrollY = window.scrollY;
+  },
+  
+  getAllDimensions: function () {
+    this.getWindowpaneX();
+    this.getScrollpaneX();
+	this.getWindowpaneY();
+	this.getScrollpaneY();
+  }
+  
+}
+
+var dw_event = {
+  
+  add: function(obj, etype, fp, cap) {
+    cap = cap || false;
+    if (obj.addEventListener) obj.addEventListener(etype, fp, cap);
+    else if (obj.attachEvent) obj.attachEvent("on" + etype, fp);
+  }, 
+
+  remove: function(obj, etype, fp, cap) {
+    cap = cap || false;
+    if (obj.removeEventListener) obj.removeEventListener(etype, fp, cap);
+    else if (obj.detachEvent) obj.detachEvent("on" + etype, fp);
+  }, 
+
+  DOMit: function(e) { 
+    e = e? e: window.event;
+    e.tgt = e.srcElement? e.srcElement: e.target;
+    
+    if (!e.preventDefault) e.preventDefault = function () { return false; }
+    if (!e.stopPropagation) e.stopPropagation = function () { if (window.event) window.event.cancelBubble = true; }
+        
+    return e;
+  }
+  
+}
+
+var Tooltip = {
+ followMouse: true,
+ offX: 8,
+ offY: 12,
+ tipID: "tipDiv",
+ showDelay: 100,
+ hideDelay: 200,
+    
+ ready:false, timer:null, tip:null, 
+  
+ init: function() {  
+   if ( document.createElement && document.body && typeof document.body.appendChild != "undefined" ) {
+	 if ( !document.getElementById(this.tipID) ) {
+	   var el = document.createElement("DIV");
+	   el.id = this.tipID; document.body.appendChild(el);
+	 }
+	 this.ready = true;
+   }
+ },
+    
+ show: function(e, msg) {
+   if (this.timer) { clearTimeout(this.timer);	this.timer = 0; }
+   this.tip = document.getElementById( this.tipID );
+   if (this.followMouse) // set up mousemove 
+	 dw_event.add( document, "mousemove", this.trackMouse, true );
+   this.writeTip("");  // for mac ie
+	 this.writeTip(msg);
+   viewport.getAllDimensions();
+   this.positionTip(e);
+   this.timer = setTimeout("Tooltip.toggleVis('" + this.tipID + "', 'visible')", this.showDelay);
+ },
+    
+ writeTip: function(msg) {
+   if ( this.tip && typeof this.tip.innerHTML != "undefined" ) this.tip.innerHTML = msg;
+ },
+    
+ positionTip: function(e) {
+   if ( this.tip && this.tip.style ) {
+	 // put e.pageX/Y first! (for Safari)
+	 var x = e.pageX? e.pageX: e.clientX + viewport.scrollX;
+	 var y = e.pageY? e.pageY: e.clientY + viewport.scrollY;
+
+	 if ( x + this.tip.offsetWidth + this.offX > viewport.width + viewport.scrollX ) {
+	   x = x - this.tip.offsetWidth - this.offX;
+	   if ( x < 0 ) x = 0;
+	 } else x = x + this.offX;
+
+	 if ( y + this.tip.offsetHeight + this.offY > viewport.height + viewport.scrollY ) {
+	   y = y - this.tip.offsetHeight - this.offY;
+	   if ( y < viewport.scrollY ) y = viewport.height + viewport.scrollY - this.tip.offsetHeight;
+	 } else y = y + this.offY;
+            
+	 this.tip.style.left = x + "px"; this.tip.style.top = y + "px";
+   }
+ },
+    
+ hide: function() {
+   if (this.timer) { clearTimeout(this.timer);	this.timer = 0; }
+   this.timer = setTimeout("Tooltip.toggleVis('" + this.tipID + "', 'hidden')", this.hideDelay);
+   if (this.followMouse) // release mousemove
+	 dw_event.remove( document, "mousemove", this.trackMouse, true );
+   this.tip = null; 
+ },
+
+ toggleVis: function(id, vis) { 
+   var el = document.getElementById(id);
+   if (el) el.style.visibility = vis;
+ },
+    
+ trackMouse: function(e) {
+   e = dw_event.DOMit(e);
+   Tooltip.positionTip(e);
+ }
+    
+}
+
+Tooltip.init();
+  </SCRIPT>
+	~;
+  return ($header, $footer);
+}
 
 ###############################################################################
 # display_ext_halo_template
@@ -535,6 +753,7 @@ sub display_ext_halo_style_sheet {
 sub display_ext_halo_footer {
   my $self = shift;
   my %args = @_;
+  my @tooltip_js = $self->getToolTipJS();
 
   my $buf = qq~
 <!-- ------------------------ End of main content ----------------------- -->
@@ -545,6 +764,8 @@ sub display_ext_halo_footer {
 
 </td></tr>
 </table>
+
+$tooltip_js[1]
 
 <BR>
 <hr size=1 noshade width="55%" align="left" color="#FF8700">
