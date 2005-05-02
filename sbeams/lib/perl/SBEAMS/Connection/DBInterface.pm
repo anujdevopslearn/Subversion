@@ -3323,7 +3323,7 @@ sub getRandomString {
 
   # Use passed char set if any, else use default a-z, A-Z, 0-9
   my @chars = ( ref( $args{char_set} ) eq 'ARRAY' ) ?  @{$args{char_set}} :
-                         ( 'A'..'Z', 'a'..'z', 0..9, qw( ! @ # $ % ^ & * ? ) );
+                         ( 'A'..'Z', 'a'..'z', 0..9, qw( ! @ $ % ^ & * ? ) );
 
   # Thank you perl cookbook... 
   my $rstring = join( "", @chars[ map {rand @chars} ( 1..$args{num_chars} ) ]);
