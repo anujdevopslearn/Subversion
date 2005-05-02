@@ -42,7 +42,7 @@ $SBEAMS_PART            = 'MicroArray';
 
 #Edit Location to suit installation requirements
 $AFFY_DEFAULT_DIR	= '/net/arrays/Affymetrix/core/probe_data';
-$BIOCONDUCTOR_DELIVERY_PATH = '/net/arrays/Affymetrix/core/data_analysis/delivery';
+$BIOCONDUCTOR_DELIVERY_PATH = "/net/arrays/Affymetrix/core/data_analysis/delivery";
 $ADD_ANNOTATION_OUT_FOLDER = "$PHYSICAL_BASE_DIR/tmp/Microarray/Add_affy_annotation";
 
 $AFFY_TMP_DIR		= "$PHYSICAL_BASE_DIR/tmp/Microarray";
@@ -55,7 +55,6 @@ $AFFY_ZIP_REQUEST_DIR 	= '/net/arrays/Affy_Zip_Request';
 
 $AFFY_R_CHP_ANALYSIS_PROTOCOL = 'R Mas5.0 CHP';				#Current protocol that describes the R script to produce the CHP like file
 
-$BIOCONDUCTOR_DELIVERY_PATH = '/net/arrays/Affymetrix/core/data_analysis/delivery';
 
 #### Override variables from main Settings.pm
 $SBEAMS_SUBDIR          = 'Microarray';
