@@ -703,7 +703,7 @@ sub get_best_permission{
   }
 
   ## Else find best privilege available
-  my $sql =<<"  END_SQL";
+  $sql =<<"  END_SQL";
   SELECT MIN(CASE WHEN UWG.contact_id IS NULL THEN NULL ELSE GPP.privilege_id END) AS "best_group_privilege_id",
          MIN(UPP.privilege_id) AS "best_user_privilege_id"
   FROM $TB_PROJECT P
@@ -731,7 +731,7 @@ sub get_best_permission{
 --  ORDER BY UL.username,P.project_tag
   END_SQL
 
-  my @rows = $self->selectSeveralColumns($sql);
+  @rows = $self->selectSeveralColumns($sql);
   
   # Translate null values to 9999 (de facto null), iff there were any rows.
   @rows = map { ( defined $_ ) ? $_ : 9999 } @{$rows[0]} if @rows; 
@@ -1569,6 +1569,7 @@ sub isAdminUser {
     SELECT COUNT(*) FROM $TB_USER_WORK_GROUP
     WHERE work_group_id = $admin_group
     AND contact_id = $current_contact
+    AND record_status != 'D'
     END_SQL
     my ( $isAdmin ) = $self->selectOneColumn( $sql );
     return $isAdmin;
