@@ -206,38 +206,38 @@ sub printJavascriptFunctions {
     print qq~
 
     <STYLE>
-    div#tipDiv {
+    div#tooltipID {
+	  background-color:#1C3887;
+      border:2px solid #EE7621; 
+      padding:4px;
+	  line-height:1.5;
+	  width:200px;
+      color:#FFFFFF;
+	  font-family: Helvetica, Arial, sans-serif;
+	  font-size:12px;
+      font-weight: normal;
       position:absolute; 
       visibility:hidden;
       left:0;
       top:0;
-	  z-index:10000;
-	  background-color:#9AC0CD;
-      border:2px solid #EE7621; 
-	  width:200px;
-      padding:4px;
-      color:#000;
-	  font-size:12px;
-	  line-height:1.5;
     }
     </STYLE>
-
-	
-    <SCRIPT language="javascript">
-
-    function doTooltip(e, msg) {
-	  if ( typeof Tooltip == "undefined" || !Tooltip.ready ) return;
-	  Tooltip.show(e, msg);
-	}
-    function hideTip() {
-	  if ( typeof Tooltip == "undefined" || !Tooltip.ready ) return;
-	  Tooltip.hide();
-	}
-    </SCRIPT>
 
 
 	<SCRIPT LANGUAGE="JavaScript">
 	<!--
+
+    function showTooltip(ev, tooltipText) {
+	  if ( !Tooltip.ok ||
+		   typeof Tooltip == "undefined" ) return;
+	  Tooltip.showTooltip(ev, tooltipText);
+	}
+
+    function hideTooltip() {
+	  if ( !Tooltip.ok ||
+		   typeof Tooltip == "undefined" ) return;
+	  Tooltip.hideTooltip();
+	}
 
 	function refreshDocument() {
 	  document.MainForm.apply_action_hidden.value = "REFRESH";
@@ -343,158 +343,184 @@ sub getToolTipFooter {
   my $footer = qq~
 
 <SCRIPT>
-var viewport = {
-  getWindowpaneX: function () {
-    this.width = 0;
-    if (window.innerWidth) this.width = window.innerWidth - 18;
-    else if (document.documentElement && document.documentElement.clientWidth) 
-  		this.width = document.documentElement.clientWidth;
-    else if (document.body && document.body.clientWidth) 
-  		this.width = document.body.clientWidth;
-  },
-  
-  getWindowpaneY: function () {
-    this.height = 0;
-    if (window.innerHeight) this.height = window.innerHeight - 18;
-  	else if (document.documentElement && document.documentElement.clientHeight) 
-  		this.height = document.documentElement.clientHeight;
-  	else if (document.body && document.body.clientHeight) 
-  		this.height = document.body.clientHeight;
-  },
-  
-  getScrollpaneX: function () {
-    this.scrollX = 0;
-  	if (typeof window.pageXOffset == "number") this.scrollX = window.pageXOffset;
-  	else if (document.documentElement && document.documentElement.scrollLeft)
-  		this.scrollX = document.documentElement.scrollLeft;
-  	else if (document.body && document.body.scrollLeft) 
-  		this.scrollX = document.body.scrollLeft; 
-  	else if (window.scrollX) this.scrollX = window.scrollX;
-  },
-  
-  getScrollpaneY: function () {
-    this.scrollY = 0;    
-    if (typeof window.pageYOffset == "number") this.scrollY = window.pageYOffset;
-    else if (document.documentElement && document.documentElement.scrollTop)
-  		this.scrollY = document.documentElement.scrollTop;
-  	else if (document.body && document.body.scrollTop) 
-  		this.scrollY = document.body.scrollTop; 
-  	else if (window.scrollY) this.scrollY = window.scrollY;
-  },
-  
-  getAllDimensions: function () {
-    this.getWindowpaneX();
-    this.getScrollpaneX();
-	this.getWindowpaneY();
-	this.getScrollpaneY();
-  }
-  
-}
+<!-- 
+// tooltip credits? mjohnson, other ISBers?
 
-var dw_event = {
-  
-  add: function(obj, etype, fp, cap) {
-    cap = cap || false;
-    if (obj.addEventListener) obj.addEventListener(etype, fp, cap);
-    else if (obj.attachEvent) obj.attachEvent("on" + etype, fp);
-  }, 
-
-  remove: function(obj, etype, fp, cap) {
-    cap = cap || false;
-    if (obj.removeEventListener) obj.removeEventListener(etype, fp, cap);
-    else if (obj.detachEvent) obj.detachEvent("on" + etype, fp);
-  }, 
-
-  DOMit: function(e) { 
-    e = e? e: window.event;
-    e.tgt = e.srcElement? e.srcElement: e.target;
-    
-    if (!e.preventDefault) e.preventDefault = function () { return false; }
-    if (!e.stopPropagation) e.stopPropagation = function () { if (window.event) window.event.cancelBubble = true; }
-        
-    return e;
-  }
-  
-}
-
+var buffer = 18;
 var Tooltip = {
- followMouse: true,
- offX: 8,
- offY: 12,
- tipID: "tipDiv",
- showDelay: 100,
- hideDelay: 200,
-    
- ready:false, timer:null, tip:null, 
-  
+ tipID: "tooltipID",
+ ok:false,
+ timer:null,
+ tooltip:null, 
+ mouseMovement: true,
+
+ offsetX: 10,
+ offsetY: 10,
+
+ evaluateToShow: 100, //how long to wait before evaluating to show (in millisec.)
+ evaluateToHide: 150, //how long to wait before evaluating to hid (in millisec.)
+
  init: function() {  
-   if ( document.createElement && document.body && typeof document.body.appendChild != "undefined" ) {
+   if ( document.createElement && document.body && 
+        typeof document.body.appendChild != "undefined" ) {
+
+	 // Create <DIV> element
 	 if ( !document.getElementById(this.tipID) ) {
-	   var el = document.createElement("DIV");
-	   el.id = this.tipID; document.body.appendChild(el);
+	   var divElement = document.createElement("DIV");
+	   divElement.id = this.tipID; document.body.appendChild(divElement);
 	 }
-	 this.ready = true;
+
+	 this.ok = true;
    }
  },
-    
- show: function(e, msg) {
-   if (this.timer) { clearTimeout(this.timer);	this.timer = 0; }
-   this.tip = document.getElementById( this.tipID );
-   if (this.followMouse) // set up mousemove 
-	 dw_event.add( document, "mousemove", this.trackMouse, true );
-   this.writeTip("");  // for mac ie
-	 this.writeTip(msg);
-   viewport.getAllDimensions();
-   this.positionTip(e);
-   this.timer = setTimeout("Tooltip.toggleVis('" + this.tipID + "', 'visible')", this.showDelay);
- },
-    
- writeTip: function(msg) {
-   if ( this.tip && typeof this.tip.innerHTML != "undefined" ) this.tip.innerHTML = msg;
- },
-    
- positionTip: function(e) {
-   if ( this.tip && this.tip.style ) {
-	 // put e.pageX/Y first! (for Safari)
-	 var x = e.pageX? e.pageX: e.clientX + viewport.scrollX;
-	 var y = e.pageY? e.pageY: e.clientY + viewport.scrollY;
 
-	 if ( x + this.tip.offsetWidth + this.offX > viewport.width + viewport.scrollX ) {
-	   x = x - this.tip.offsetWidth - this.offX;
-	   if ( x < 0 ) x = 0;
-	 } else x = x + this.offX;
+ getWindowpaneX: function () {
+   this.width = 0;
+   if (window.innerWidth) this.width = window.innerWidth - buffer;
+   else if (document.documentElement && 
+			document.documentElement.clientWidth) 
+	 this.width = document.documentElement.clientWidth;
+   else if (document.body && 
+			document.body.clientWidth) 
+	 this.width = document.body.clientWidth;
+ },
+  
+ getWindowpaneY: function () {
+   this.height = 0;
+   if (window.innerHeight) this.height = window.innerHeight - buffer;
+   else if (document.documentElement && 
+			document.documentElement.clientHeight) 
+	 this.height = document.documentElement.clientHeight;
+   else if (document.body && 
+			document.body.clientHeight) 
+	 this.height = document.body.clientHeight;
+ },
+  
+ getScrollpaneX: function () {
+   this.scrollX = 0;
+   if (typeof window.pageXOffset == "number") this.scrollX = window.pageXOffset;
+   else if (document.documentElement && 
+			document.documentElement.scrollLeft)
+	 this.scrollX = document.documentElement.scrollLeft;
+   else if (document.body && 
+			document.body.scrollLeft) 
+	 this.scrollX = document.body.scrollLeft; 
+   else if (window.scrollX) this.scrollX = window.scrollX;
+ },
+  
+ getScrollpaneY: function () {
+   this.scrollY = 0;    
+   if (typeof window.pageYOffset == "number") this.scrollY = window.pageYOffset;
+   else if (document.documentElement && 
+			document.documentElement.scrollTop)
+	 this.scrollY = document.documentElement.scrollTop;
+   else if (document.body && 
+			document.body.scrollTop) 
+	 this.scrollY = document.body.scrollTop; 
+   else if (window.scrollY) this.scrollY = window.scrollY;
+ },
+  
+ getAllDimensions: function () {
+   this.getWindowpaneX();
+   this.getScrollpaneX();
+   this.getWindowpaneY();
+   this.getScrollpaneY();
+ },
+  
+ add: function(obj, eventType, fp, cap) {
+   cap = cap || false;
+   if (obj.addEventListener) obj.addEventListener(eventType, fp, cap);
+   else if (obj.attachEvent) obj.attachEvent("on" + eventType, fp);
+ }, 
 
-	 if ( y + this.tip.offsetHeight + this.offY > viewport.height + viewport.scrollY ) {
-	   y = y - this.tip.offsetHeight - this.offY;
-	   if ( y < viewport.scrollY ) y = viewport.height + viewport.scrollY - this.tip.offsetHeight;
-	 } else y = y + this.offY;
-            
-	 this.tip.style.left = x + "px"; this.tip.style.top = y + "px";
-   }
+ remove: function(obj, eventType, fp, cap) {
+   cap = cap || false;
+   if (obj.removeEventListener) obj.removeEventListener(eventType, fp, cap);
+   else if (obj.detachEvent) obj.detachEvent("on" + eventType, fp);
  },
     
- hide: function() {
+ showTooltip: function(event, tooltipText) {
    if (this.timer) { clearTimeout(this.timer);	this.timer = 0; }
-   this.timer = setTimeout("Tooltip.toggleVis('" + this.tipID + "', 'hidden')", this.hideDelay);
-   if (this.followMouse) // release mousemove
-	 dw_event.remove( document, "mousemove", this.trackMouse, true );
-   this.tip = null; 
+   this.tooltip = document.getElementById( this.tipID );
+
+   // mouse movement tracking
+   if (this.mouseMovement) 
+	 this.add( document, "mousemove", this.trackMouseMovement, true );
+
+   // create the tooltip message
+   if ( this.tooltip && typeof this.tooltip.innerHTML != "undefined" ) this.tooltip.innerHTML = tooltipText;
+
+   // get dimensions and (relative) location
+   this.getAllDimensions();
+
+   // show the tooltip
+   this.placeToolTip(event);
+   this.timer = setTimeout("Tooltip.toggleVis('" + this.tipID + "', 'visible')", this.evaluateToShow);
+ },
+    
+ hideTooltip: function() {
+   if (this.timer) { clearTimeout(this.timer);	this.timer = 0; }
+   this.timer = setTimeout("Tooltip.toggleVis('" + this.tipID + "', 'hidden')", this.evaluateToHide);
+   if (this.mouseMovement)
+	 this.remove( document, "mousemove", this.trackMouseMovement, true );
+   this.tooltip = null; 
  },
 
  toggleVis: function(id, vis) { 
-   var el = document.getElementById(id);
-   if (el) el.style.visibility = vis;
+   var divElement = document.getElementById(id);
+   if (divElement)
+	 divElement.style.visibility = vis;
  },
     
- trackMouse: function(e) {
-   e = dw_event.DOMit(e);
-   Tooltip.positionTip(e);
- }
+ trackMouseMovement: function(ev) {
+   ev = ev? ev: window.event;
+   ev.tgt = ev.srcElement? ev.srcElement: ev.target;
     
-}
+   if (!ev.preventDefault)
+	 ev.preventDefault = function () { return false; }
+   if (!ev.stopPropagation) 
+	 ev.stopPropagation = function () { 
+	   if (window.event) window.event.cancelBubble = true; 
+	 }
+
+   Tooltip.placeToolTip(ev);
+ },
+    
+ placeToolTip: function (event) {
+   // place the tooltip
+   if ( this.tooltip && this.tooltip.style ) {
+
+	 var x = event.pageX? event.pageX:event.clientX+this.scrollX;
+	 var y = event.pageY? event.pageY:event.clientY+this.scrollY;
+
+	 //X-coordinate information
+	 if ( x + this.tooltip.offsetWidth+this.offsetX > this.width+this.scrollX ) {
+	   x = x - this.tooltip.offsetWidth - this.offsetX;
+	   if ( x < 0 ) x = 0;
+	 } else {
+	   x = x + this.offsetX;
+	 }
+
+	 //Y-coordinate information
+	 if ( y + this.tooltip.offsetHeight + this.offsetY > this.height + this.scrollY ) {
+	   y = y - this.tooltip.offsetHeight - this.offsetY;
+	   if ( y < this.scrollY ) 
+		 y = this.height + this.scrollY - this.tooltip.offsetHeight;
+	 } else {
+	   y = y + this.offsetY;
+	 }
+
+	 //Set the tooltip, based upon the coordinate information
+	 this.tooltip.style.left = x+"px";
+	 this.tooltip.style.top = y+"px";
+   }
+ }
+ 
+ }
 
 Tooltip.init();
-  </SCRIPT>
+-->
+</SCRIPT>
 	~;
   return $footer;
 }
