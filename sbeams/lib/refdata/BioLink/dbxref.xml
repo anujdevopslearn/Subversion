@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <SBEAMS_EXPORT>
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="1"
         record_status="N"
         created_by_id="2"
@@ -14,7 +14,7 @@
         modified_by_id="2"
         dbxref_name="Swiss-Prot"
         dbxref_description="SWISS-PROT at ExPASy at NCSC" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="2"
         record_status="N"
         created_by_id="2"
@@ -28,7 +28,7 @@
         modified_by_id="2"
         dbxref_name="FlyBase"
         dbxref_description="Drosophila FlyBase" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="3"
         record_status="N"
         created_by_id="2"
@@ -42,7 +42,7 @@
         modified_by_id="2"
         dbxref_name="MIPS"
         dbxref_description="MIPS" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="4"
         record_status="N"
         created_by_id="2"
@@ -56,7 +56,7 @@
         modified_by_id="2"
         dbxref_name="YPD"
         dbxref_description="Yeast Proteome Database" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="5"
         record_status="N"
         created_by_id="2"
@@ -70,7 +70,7 @@
         modified_by_id="2"
         dbxref_name="SGD"
         dbxref_description="Stanford Genome Database" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="6"
         record_status="N"
         created_by_id="2"
@@ -84,7 +84,7 @@
         modified_by_id="2"
         dbxref_name="PIR"
         dbxref_description="PIR-International Protein Sequence Database" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="7"
         record_status="N"
         created_by_id="2"
@@ -98,7 +98,7 @@
         modified_by_id="2"
         dbxref_name="Yeast ORF"
         dbxref_description="SGD Open Reading Frame database" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="8"
         record_status="N"
         created_by_id="2"
@@ -112,7 +112,7 @@
         modified_by_id="2"
         dbxref_name="NCBI Entrez Nucleotide"
         dbxref_description="NCBI Entrez Nucleotide" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="9"
         record_status="N"
         created_by_id="2"
@@ -127,7 +127,7 @@
         modified_by_id="2"
         dbxref_name="EBI IPI"
         dbxref_description="EBI International Protein Index Database" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="10"
         record_status="N"
         created_by_id="2"
@@ -141,7 +141,7 @@
         modified_by_id="2"
         dbxref_name="TAIR - Arabidopsis"
         dbxref_description="The Arabidopsis Information Resource" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="11"
         record_status="N"
         created_by_id="2"
@@ -155,7 +155,7 @@
         modified_by_id="2"
         dbxref_name="Wormbase Protein"
         dbxref_description="Wormbase Protein Reference" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="12"
         record_status="N"
         created_by_id="2"
@@ -172,7 +172,7 @@ by PM"
         modified_by_id="2"
         dbxref_name="NCBI Entrez Protein"
         dbxref_description="NCBI Entrez Protein" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="13"
         record_status="N"
         created_by_id="2"
@@ -186,7 +186,7 @@ by PM"
         modified_by_id="2"
         dbxref_name="PDB"
         dbxref_description="Protein Data Bank" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="14"
         record_status="N"
         created_by_id="2"
@@ -200,7 +200,7 @@ by PM"
         modified_by_id="2"
         dbxref_name="PFAM"
         dbxref_description="Protein families database of alignments and HMMs" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="15"
         record_status="N"
         created_by_id="2"
@@ -217,7 +217,7 @@ Class(C), Architecture(A), Topology(T) and Homologous superfamily (H)"
         modified_by_id="2"
         dbxref_name="CATH"
         dbxref_description="CATH - Protein Structure Classification" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="16"
         record_status="N"
         created_by_id="2"
@@ -236,7 +236,7 @@ PM 8.14.04"
         modified_by_id="2"
         dbxref_name="LocusLink"
         dbxref_description="LocusLink organizes information from collaborating public databases" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="17"
         record_status="N"
         created_by_id="2"
@@ -250,7 +250,7 @@ PM 8.14.04"
         modified_by_id="2"
         dbxref_name="UNKNOWN"
         dbxref_description="Unknown reference" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="18"
         record_status="N"
         created_by_id="2"
@@ -264,7 +264,7 @@ PM 8.14.04"
         modified_by_id="2"
         dbxref_name="TIGRFAM"
         dbxref_description="TIGR Protein Family" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="19"
         record_status="N"
         created_by_id="2"
@@ -278,7 +278,7 @@ PM 8.14.04"
         modified_by_id="2"
         dbxref_name="InterPro"
         dbxref_description="InterPro database of protein families, domains and functional sites" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="20"
         record_status="N"
         created_by_id="2"
@@ -292,7 +292,7 @@ PM 8.14.04"
         modified_by_id="2"
         dbxref_name="ENSEMBL Human Proteins"
         dbxref_description="ENSEMBL Human Proteins" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="21"
         record_status="N"
         created_by_id="2"
@@ -307,7 +307,7 @@ PM 8.14.04"
         modified_by_id="2"
         dbxref_name="COGs"
         dbxref_description="Phylogenetic classification of proteins encoded in complete genomes" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="22"
         record_status="N"
         created_by_id="2"
@@ -322,7 +322,7 @@ PM 8.14.04"
         modified_by_id="2"
         dbxref_name="COGsProtein"
         dbxref_description="Proteins in COGs" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="23"
         record_status="N"
         created_by_id="2"
@@ -336,7 +336,7 @@ PM 8.14.04"
         modified_by_id="2"
         dbxref_name="EMBL Bioinformatic Harvester"
         dbxref_description="EMBL Bioinformatic Harvester" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="24"
         record_status="N"
         created_by_id="2"
@@ -350,7 +350,7 @@ PM 8.14.04"
         modified_by_id="2"
         dbxref_name="Haloarcula Genome Database"
         dbxref_description="Haloarcula Genome Database" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="25"
         record_status="N"
         created_by_id="2"
@@ -364,7 +364,7 @@ PM 8.14.04"
         modified_by_id="2"
         dbxref_name="ENSEMBL Drosophila Proteins"
         dbxref_description="ENSEMBL Drosophila Proteins" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="26"
         record_status="N"
         created_by_id="2"
@@ -379,7 +379,7 @@ PM 8.14.04"
         modified_by_id="2"
         dbxref_name="Gene Ontology"
         dbxref_description="QuickGo " />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="27"
         record_status="N"
         created_by_id="2"
@@ -394,7 +394,7 @@ PM 8.14.04"
         modified_by_id="2"
         dbxref_name="Enzyme"
         dbxref_description="Enzyme nomenclature database " />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="28"
         record_status="N"
         created_by_id="2"
@@ -409,7 +409,7 @@ PM 8.14.04"
         modified_by_id="2"
         dbxref_name="SCOP"
         dbxref_description="SCOP-Structural Classification of Proteins" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="29"
         record_status="N"
         created_by_id="2"
@@ -424,7 +424,7 @@ PM 8.14.04"
         modified_by_id="2"
         dbxref_name="Hanks"
         dbxref_description="Hanks Protein Kinase Classification" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="30"
         record_status="N"
         created_by_id="2"
@@ -439,7 +439,7 @@ PM 8.14.04"
         modified_by_id="2"
         dbxref_name="P450"
         dbxref_description="P450 Database" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="31"
         record_status="N"
         created_by_id="2"
@@ -453,7 +453,7 @@ PM 8.14.04"
         modified_by_id="2"
         dbxref_name="All Ensembl"
         dbxref_description="Search All of Ensembl" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="32"
         record_status="N"
         created_by_id="2"
@@ -467,7 +467,7 @@ PM 8.14.04"
         modified_by_id="2"
         dbxref_name="OMIM"
         dbxref_description="Online Mendelian Inheritance in Man" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="33"
         record_status="N"
         created_by_id="2"
@@ -482,7 +482,7 @@ PM 8.14.04"
         modified_by_id="2"
         dbxref_name="RGD"
         dbxref_description="The Rat Genome Database" />
-    <PR_dbxref
+    <BL_dbxref
         dbxref_id="34"
         record_status="N"
         created_by_id="2"
