@@ -104,7 +104,7 @@ $SBEAMS/lib/scripts/Core/addModule.pl BioLink
 -------------------------------------------------------------------------------
 5) Populate the driver tables
 
-cd ../BioLink
+cd $SBEAMS/lib/conf/BioLink
 ../../scripts/Core/update_driver_tables.pl BioLink_table_property.txt
 ../../scripts/Core/update_driver_tables.pl BioLink_table_column.txt
 
@@ -125,14 +125,13 @@ If this doesn't work.  Do not proceed, debug first.
 cd ../../refdata/BioLink
 
 - Load data into polymer_type table:
-../../lib/scripts/Core/DataImport.pl -s polymer_type.xml
+../../scripts/Core/DataImport.pl -s polymer_type.xml
 
 - Load data into work_group/table_group_security tables:
-../../lib/scripts/Core/DataImport.pl -s BioLink_work_groups.xml
+../../scripts/Core/DataImport.pl -s BioLink_work_groups.xml
 
 - Load data into the MGED ontology tables
-../../lib/scripts/DataImport.pl --ignore_pK -s MGED_ontolgy_tables.xml
+../../scripts/Core/DataImport.pl --ignore_pK -s MGED_ontolgy_tables.xml
 
 - Load data into the dbxref table:
 ../../scripts/Core/DataImport.pl -s dbxref.xml
-
