@@ -7,7 +7,7 @@ This document describes how to install a new SBEAMS site.
 
 
 Terms:
- - SBEAMS: Systems Biology Extensible Analysis Management System
+ - SBEAMS: Systems Biology Experiment Analysis Management System
  - SBEAMS site: an independent installation of SBEAMS with its own core tables
  - SBEAMS instance: a version of source code, often for development, which
    shares the core tables with other instances
@@ -193,11 +193,14 @@ mkdir lib lib/conf
 chmod a+w images/tmp
 mkdir var var/resultsets var/logs var/upload
 chmod g+w var/*
+   (The previous command assumes that the owner of the web server process
+    e.g. "apache" is a member of the same group as the account with which
+    sbeams is being installed. Please adjust accordingly, or do a+w 
+    instead.)
 
 cd ..
 cd dev1/sbeams
 ln -s ../includes doc/includes
-rm -Rf var
 ln -s ../../sbeamscommon/var
 ln -s ../../../sbeamscommon/images/tmp images/tmp
 
@@ -250,7 +253,8 @@ note that all SBEAMS scripts use /usr/local/bin/perl.  If you do not
 have a /usr/local/bin/perl, it is highly recommended that you create
 a sym link from /usr/local/bin/perl to your actual perl, e.g.:
 ln -s /usr/bin/perl /usr/local/bin/perl.  If this is not practical given the 
-way your system is configured, see troubleshooting guide for suggestions on systematically changing the path to perl for your scripts.
+way your system is configured, see troubleshooting guide for suggestions on
+systematically changing the path to perl for your scripts.
 
 
 $SBEAMS/lib/scripts/Core/encryptDbPasswd.pl -p DB_PASSWORD -c SBEAMS.conf
