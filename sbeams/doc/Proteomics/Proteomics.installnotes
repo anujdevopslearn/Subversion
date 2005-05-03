@@ -109,10 +109,12 @@ To CREATE and POPULATE:
 $SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Proteomics_CREATETABLES.mssql -i
 $SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Proteomics_POPULATE.mssql -d semicolon
 $SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Proteomics_CREATECONSTRAINTS.mssql -i
+  (you might notice 2 "Column x is not the same data type as referencing column
+   y" errors while loading this file; you can safely ignore them.)
 $SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Proteomics_ADD_MANUAL_CONSTRAINTS.mssql
 
 To CREATE indexes:
-$SBEAMS/lib/scripts/Core/runsql.pl Proteomics_CREATEINDEXES.mssql
+$SBEAMS/lib/scripts/Core/runsql.pl -u sbeamsadmin -s Proteomics_CREATEINDEXES.mssql
 
 To DROP:
 #### FIXME: DON'T DO THIS BECAUSE THIS WILL AFFECT BIOLINK AS WELL!!!
@@ -180,11 +182,11 @@ place for reference purposes.
 
 - Add default experiment types
 
-../../DataImport.pl -s experiment_type.xml
+../../scripts/Core/DataImport.pl -s experiment_type.xml
 
 - Add default instrument types
 
-../../DataImport.pl -s instrument_type.xml
+../../scripts/Core/DataImport.pl -s instrument_type.xml
 
 -- Instructions for manually adding work groups.  These were inserted via the 
 DataImport statement above, so while you should read this section for
