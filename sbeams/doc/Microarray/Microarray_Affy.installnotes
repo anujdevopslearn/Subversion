@@ -45,6 +45,10 @@ R -Bioconductor libraries, see below
  library(webbioc)
 
  library(siggenes)
+ 
+ #XSLT transformation engine {semi-optional} Only need to view the help pages
+ Ehttp://xmlsoft.org/XSLT/
+ xsltproc
 
 
 -------------------------------------------------------------------------------
@@ -154,7 +158,7 @@ DD       = Unique Scan Number per Day ie 01, 02, 03....
 Sample_name = User Sample Name, No Spaces or strange characters
 
 Data Location.
-All the data is located within one folder divided into folder named
+All the data is located within one main directory which is subdivided into folders named
 YYYYMM - <Year><Month>
 
 For external dataset download we have a folder "external" within the main data repository and individual 
@@ -166,6 +170,8 @@ For inital setup make the following folders
 mkdir $SBEAMS/tmp \
 $SBEAMS/tmp/Microarray \
 $SBEAMS/tmp/Microarray/AFFY_ANNO_LOGS \
+$SBEAMS/tmp/Microarray/GetExpression \
+$SBEAMS/tmp/Microarray/GetExpression/jws \
 $SBEAMS/var \
 $SBEAMS/var/Microarray \
 $SBEAMS/var/Microarray/Affy_data \
@@ -203,7 +209,7 @@ $BIOCONDUCTOR_DELIVERY_PATH = "$PHYSICAL_BASE_DIR/var/Microarray/Affy_data/deliv
 $ADD_ANNOTATION_OUT_FOLDER  = "$PHYSICAL_BASE_DIR/tmp/Microarray/Add_affy_annotation";
 
   Notes: $AFFY_DEFAULT_DIR = Full path to a folder that will house all Affy CEL files
-  	 $BIOCONDUCTOR_DELIVERY_PATH = Location that all analysis results will be written to
+  	 $BIOCONDUCTOR_DELIVERY_PATH = Location that all analysis results will be written to(see below)
 	 $ADD_ANNOTATION_OUT_FOLDER  = Location that errors from loading affy annotation files will be kept 
 	 			        
   Notes: The web server user will need read access to the CEL file folders and read/write access to the 
@@ -274,6 +280,10 @@ Test Data Background
 - Using  a small subset of data (6 of 158 arrays) from http://wombat.gnf.org/
 
 ########################
+- Download the data from
+http://www.sbeams.org/sample_data/
+Click on the link "Human_test_data.tar.gz"
+
 - Unpack the data and annotation file and copy them to the data folders
 cd $SBEAMS/lib/refdata/Microarray
 gunzip Human_test_data.tar.gz
@@ -314,10 +324,28 @@ Add An Array Type
 - Fill in the Data
    Name: "HG-U133A"
    Organism: "Human"
+- Click Insert 
+
+########################  
+Add Analysis Protocol
+- Switch to the Microarray_admin group by using the drop-down box at top
+- Switch to the the Microarray Module, Click On [Microarray]
+- At the bottom of the page, on the Navigation bar click on [Protocols] button
+- Click [Add Protocol]
+- Add a new Protocol Type, Click the "Plus Icon" next to Protocol Type
+- Fill in Protcol Type Name --> "Quantitation Type", Click Insert.
+- Go Back to the Add Protocol Page, and refresh the page.
+- Insert the data 
+   Protocol Type --> "Quantitation Type",
+   Name          --> "R Mas5.0 CHP",
+   Protocols     --> "Use R-bioconductor to turn a CEL file into a CHP file" 
+- Click Insert
+ 
 ########################
 Add Server Info
-- Some of the scripts and database tables keep track of files.
-- Open the url for the database you are working on.
+- Some of the scripts and database tables keep track of file paths and the server name needs to be
+entered before some of the scripts will work
+- Manually construct the URL to enter the data below
 - The url should be almost the same for the ones above for adding an array, but the TABLE_NAME will = MA_server
 http://<server_name>/sbeams/cgi/Microarray/ManageTable.cgi?TABLE_NAME=MA_server
 - Enter the server name
@@ -325,20 +353,10 @@ http://<server_name>/sbeams/cgi/Microarray/ManageTable.cgi?TABLE_NAME=MA_server
 
 
 ########################
-Add the external dbxref data
-
-- Add external database id's to dbxref table within the core first.  This data is used to make urls to external
-databases
-- (Only do this if they have not been loaded via some other SBEAMS Module
-
-cd $SBEAMS/lib/scripts/Core
-
-./DataImport.pl --source_file ../../refdata/Microarray/dbxref.xml
-
-########################
 Add the Annotation for this array type
 
-- Annotation are downloaded from Affymetrix on quarterly basis.
+- Annotation are downloaded from Affymetrix on quarterly basis.  This must be done manually.  The file provided in the 
+test data set was downloaded from Affymetrix.
 - Use the script to upload the annotation into SBEAMS
 
 cd $SBEAMS/lib/scripts/Microarray
@@ -358,7 +376,7 @@ Add the external arrays to the database
 - See Below on how to upload data from a MAGE-XML file produced by the Affymetrix GCOS software
 
 
-- View the template on how to make a master_info file.  [Not need for this example, the info file already exists]
+- View the template on how to make a master_info file.  [Not needed for this example, the info file already exists]
 $SBEAMS/usr/Microarray/Example_master_upload_template.xls
 
 - Run the script to parse the master_info file
@@ -372,100 +390,173 @@ cd $SBEAMS/lib/scripts/Microarray
  ./load_affy_array_files.pl --run_mode add_new
 
 
-
-
-
 ########################
-Array specific things
-	
-Insert a project into core
+Add expression data to the database
+Convert CEL file to CHP data using R-bioconductor
 
-Add Protocols
-Add Arrays
+cd $SBEAMS/lib/scripts/Microarray
+./load_affy_R_CHP_files.pl --run_mode add_new
+##Note this will take a while of time to process, and running this on a fast machine whould be a good idea
 
-Load Annotation
-Load Arrays
+- Test to see if the data has been entered properly
+- Open the url
+http://<sbeams_server>/sbeams/cgi/Microarray/GetAffy_GeneIntensity.cgi
+- Enter "IL%" in the box Gene Name, Click 'Simple Query'
 
-Run R_CHP
-
-
-Setting up batch Scheduler
-
- TODO Make up a test data set
-
+-------------------------------------------------------------------------------
+8) Setup the help pages
 ########################
-Add an Instrument as follows:
 
-- Switch to the Microarray_admin group by using the drop-down box at top
-- Click on [Microarray_ Home]
-- Click on [Request Management] (under Core Management)
-- Click on [Manage Instrument Types]
-- Click on [Add Instrument Type]
-- Fill in the appropriate information and [INSERT]
+Setting up the Affy user Help pages
+- There is a set of user help pages that were made for the end users and it shows how to use the different pages
+- The pages need an XSL processing engine to work.  Curently they are setup to use xsltproc by defualt.
 
-- Click on [Manage Instruments]
-- Click on [Add Instrument]
-- Fill in the appropriate information and [INSERT]
+Check to to see if xsltproc is installed
+ xsltproc -V
+ If it's not installed goto  http://xmlsoft.org/XSLT/ and install the programs
+ 
+- Set the site specific information to locate the files.  Go and edit the following two files.
+cd $SBEAMS/doc/Microarray/affy_help_pages/includes
 
+- Edit the file 
+vi transformation_info.inc.php
+- Change the following variables to point to where the files are installed
+Example, Change $SBEAMS to suit your needs
+$URL_BASE  = "http://<$SBEAMS>/doc/Microarray/affy_help_pages"
+$BASE_PATH = "<$SBEAMS>/doc/Microarray/affy_help_pages"
 
-Add an Experiment Type as follows:
-- Click on [Microarray Home]
-- Click on [Request Management] (under Core Management)
-- Click on [Add Experiment Type]
-- Fill in the appropriate information and [INSERT]
-
-
-Add an Experiment as follows:
-
-- Switch back to the Microarray_Affy_user group by using the drop-down box at top
-- Click on [Microarray_Affy Home]
-- Click on the Project you just created
-- Click [Register another Experiment]
-- Fill in the appropriate information and [INSERT]
+$HOME_PAGE_URL = "<Local intra-net page>"
 
 
--------------------------------------------------------------------------------
-8) Test the Microarray_Affy command line functionality
+- Edit the xslt file to add the correct server name
+cd $SBEAMS/doc/Microarray/affy_help_pages/Affy_help
+vi Affy_help.xslt
 
-- Populate the dbxref table:
-
-cd $SBEAMS/lib/scripts/Core
-
-./DataImport.pl --source_file ../../refdata/Microarray_Affy/dbxref.xml
+- Change the lines, to indicate your servers that are running both SBEAMS and the affy help pages
+<xsl:variable name="Affy_home_server">db.systemsbiology.net</xsl:variable>
+<xsl:variable name="Sbeams_server">db.systemsbiology.net</xsl:variable>
 
 
-- Load a biosequence set:
-
-cd $SBEAMS/lib/scripts/Microarray_Affy
-
-./load_biosequence_set.pl --check
-
-./load_proteomics_experiment.pl --list
-
-These two programs should list the entries for the BioSequence Set and
-Experiment you have loaded above.
-
-Now try loading a biosequence set:
-
-./load_biosequence_set.pl --set_tag YeastORF
-
-This should load the biosequence set called YeastORF.  Replace YeastORF with
-the tag of your Biosequence Set as defined in step 7.
-
-If this doesn't work.  Do not proceed, debug first.
-
+To See if the links work check out the page http://<sbeams_server>/doc/Microarray/affy_help_pages/
+Most of the links are relative but a few links go directly into SBEAMS therefore the need to set the above links
+Also note some of the links will not work since they are specific to ISB
 
 -------------------------------------------------------------------------------
-9) Add a Gradient Program
+9) Setup the analysis pipeline
+########################
+Setup the analysis pipeline
 
-If you didn't already in step 7 as part of adding an experiment add a
-gradient program, it is recommended that you do so now.  It is not necessary.
+The analysis pipeline allows users to analize affy arrays and find differentially expressed genes.  The analysis is done
+in R and the processing can be done on the local server or passed off to a batch processor like pbs.  A series of web pages
+will walk the users through the analysis pipeline so there is no need for the user to read/write the R code.
+
+The CGI pages were initially written as part of the bioconductor project.  See the bioconductor vignette on "Textual Description of webbioc"
+to learn more about the requirements for running and requirements for running these pages (Link below).  It should be noted that you do NOT have to download
+the pages from bioconductor, the pages have been total integrated into SBEAMS so the actual use of the pages is a bit different and the analysis
+capabilities have been extended, but the setup requirements and some of the settings are still applicable
+http://bioconductor.org/repository/devel/vignette/demoscript.pdf
+
+- Setup Variables in Setting.pm
+Make sure the setting done in step 4-2 is complete for the variable  $BIOCONDUCTOR_DELIVERY_PATH
 
 
--------------------------------------------------------------------------------
-10) Load the data products for a sample experiment.
+After the folder is setup change the permissions to make sure the web user can write to the folder, see below
 
--------------------------------------------------------------------------------
+########### Change directory permissions if data is not local to the web server
+
+At ISB the data produced by these scripts is not kept local to the web server.
+
+So the web user needs permission to write to the remote drives.
+
+Have IT setup a new group affydata
+
+Add the web user to this group.
+
+setup the folder "delivery" and change the group to affydata
+
+Need to set group id on the delivery folder so all data written into the folder 
+will have the group arraydata
+$SBEAMS/var/Microarray/Affy_data/delivery  chmod g+s
+
+
+To run the job on pbs you might need to create a new user to run the jobs (See Below for more info)
+
+We create a user arraybot and added it to the affydata group.
+
+Need to setup a key less ssh connection to the pbs server so the apache cgi
+script can hand off the job to the batch schedular
+(GET MORE DETAIL)
+#############
+
+
+- Setup Variable in Site.pm
+cd $SBEAMS/cgi/Microarray/bioconductor
+vi Site.pm
+#change the variables below to meet the needs of your site.  
+#currently they are hard coded to isb variables
+
+$ADMIN_EMAIL
+$R_BINARY
+$R_LIBS
+$AFFY_ANNO_PATH
+$JAVA_PATH
+#Fist setup a java keystore (See Below)
+$KEYSTORE = '<java_keystore_path>'
+#PLEASE READ THE VIGNETTE LISTED ABOVE TO MAKE THE DECISION ON WHICH OPTION TO USE FOR BATCH_SYSTEM
+# To start it might be best to try 'fork' and the processing will run on the web server.  Please
+# note that this could be computationally expensive and slow the server down
+$BATCH_SYSTEM 
+
+###############
+The keystores and signing jar files is only need if the Cytoscape and MEV programs are utilized
+Use the steps below to create one for sbeams and then use the script below to re-sign the jar files since
+
+Setup the a keystore for sbeams.  Example below
+keytool -keystore <local_path_on_web_server>/.keystore -genkey -alias sbeamsDev
+Enter keystore password: sbeamsDevKey
+What is your first and last name?
+[Unknown]: SBEAMS Development Team
+What is the name of your organizational unit?
+[Unknown]: SBEAMS Development
+What is the name of your organization?
+[Unknown]: Institute for Systems Biology
+What is the name of your City or Locality?
+[Unknown]: Seattle
+What is the name of your State or Province?
+[Unknown]: WA
+What is the two-letter country code for this unit?
+[Unknown]: US
+Is CN=SBEAMS Development Team, OU=SBEAMS Development, O=Institute for Systems Biology, L=Seattle, ST=WA, C=US correct?
+[no]: yes
+
+Enter key password for <sbeamsDev>
+(RETURN if same as keystore password):
+
+
+Need to update the makefile for signing the data files
+cd $SBEAMS/lib/cytoscape/Microarray/GetExpression
+vi makefile 
+#change the line to match your site.  
+#<java_path>                                     <keystore_path>                    <password>       <key to use, see above>    
+/tools/java/j2sdk1.4.2/bin/jarsigner -keystore /users/pshannon/.keystore -storepass cytokey data.jar cytoscape
+
+###############
+
+
+To run the pages
+#Open the main Microarray Modual web page
+- Click on [Microarray]
+- Click on [Data Pipeline] 
+- Click on [Affy Analysis Pipeline]
+- Click on [Start New Analysis Session]
+#Make sure there are no errors displayed.  If there are go back and check the settings.
+
+View the help document to learn how to analyze data sets
+
+http://<sbeams-server>/doc/Microarray/affy_help_pages/isb_help.php?help_page=Analysis/Pipeline/Pipeline_overview.xml
+Read about, "Grouping arrays","Normalizing Array Data" and "Analyze Arrays"
+
+
 -------------------------------------------------------------------------------
 Troubleshooting
 
