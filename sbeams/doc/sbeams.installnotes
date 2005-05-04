@@ -109,7 +109,20 @@ For example,
 Since the web server must read/write data within this heirarchy, you should
 create an 'sbeams' unix group, and make sure the sbeams, user1, user2, and 
 apache (or whichever user the web server runs as; see below) users all belong
-to this group.
+to this group.  All of the sbeams directories and their contents should be
+owned by this group, including the sbeamcommon directory defined below.  To
+change the group of a file or folder, you can use the chgrp command:
+
+chgrp -R sbeams mydirectory
+
+Where the -R flag causes the command to recursively descend the specified
+directory.  If you are creating directories as root, you can also specify
+the group while you are changing the ownership with chown:
+
+chown -R apache:sbeams mydirectory
+
+This assumes you are setting the user to apache and the group to sbeams, the -R
+flag is working as stated above.
   
 Developers need only log into the sbeams account to "roll out" code
 to production (from CVS is recommended).  All development is done by each
