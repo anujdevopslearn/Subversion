@@ -239,7 +239,13 @@ cd $SBEAMS/lib/conf/Core
 echo Microarray >> AvailableModules.conf
 
 -------------------------------------------------------------------------------
-6) Add groups
+6) Add required Microarray work_groups and TGS entries. 
+
+$SBEAMS/lib/scripts/Core/DataImport.pl -s $SBEAMS/lib/refdata/Microarray/Microarray_work_groups.xml
+
+Section below outlines the proceedure for doing this manually.  The records
+indicated will be loaded via the DataImport, and shouldn't be repeated.  The
+instructions were left in place for reference purposes.
 
 Log in via the web interface as a user with Administrator privileges,
 switch to the Admin group using the pull-down menu at the top, and add
