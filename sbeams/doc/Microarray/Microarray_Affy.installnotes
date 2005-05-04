@@ -105,26 +105,30 @@ end
   generated in $SBEAMS/lib/sql/Microarray/
 
 - Execute the statements to create and populate the database with some
-  bare bones data and indexes (for faster loading and querying):
+  bare bones data and indexes (for faster loading and querying).  This
+  uses the generic SQL execution script runsql.pl.  Note that several of
+  the commands below use the -i flag, this allows installation to continue
+  in case there are errors.  Currently there are such errors, so you may well
+  see some error output from the script.
 
 SQL Server Example:
 
 To CREATE and POPULATE:
-sqsh -i $SBEAMS/lib/sql/Microarray/Microarray_CREATETABLES.mssql -D sbeamsdev
-sqsh -i $SBEAMS/lib/sql/Microarray/Microarray_POPULATE.mssql -D sbeamsdev
-sqsh -i $SBEAMS/lib/sql/Microarray/Microarray_CREATECONSTRAINTS.mssql -D sbeamsdev
+./runsql.pl -u sbeamsadmin -i -s $SBEAMS/lib/sql/Microarray/Microarray_CREATETABLES.mssql
+./runsql.pl -u sbeamsadmin -s $SBEAMS/lib/sql/Microarray/Microarray_POPULATE.mssql
+./runsql.pl -u sbeamsadmin -i -s $SBEAMS/lib/sql/Microarray/Microarray_CREATECONSTRAINTS.mssql
 
 To CREATE indexes:
-sqsh -i $SBEAMS/lib/sql/Microarray/Microarray_CREATEINDEXES.mssql -D sbeamsdev
+./runsql.pl -u sbeamsadmin -i -s $SBEAMS/lib/sql/Microarray/Microarray_CREATEINDEXES.mssql
 
 To CREATE Manual Constraints (Constraints that could not be auto-generated)
-sqsh -i $SBEAMS/lib/sql/Microarray/Microarray_ADD_MANUAL_CONSTRAINTS.mssql
+./runsql.pl -u sbeamsadmin -i -s $SBEAMS/lib/sql/Microarray/Microarray_ADD_MANUAL_CONSTRAINTS.mssql
 
 To DROP:
-sqsh -i $SBEAMS/lib/sql/Microarray/Microarray_DROPCONSTRAINTS.mssql -D sbeamsdev
-sqsh -i $SBEAMS/lib/sql/Microarray/Microarray_DROPTABLES.mssql -D sbeamsdev
-sqsh -i $SBEAMS/lib/sql/Microarray/Microarray_DROPINDEXES.sql
-sqsh -i $SBEAMS/lib/sql/Microarray/Microarray_DROP_MANUAL_CONSTRAINTS.mssql
+./runsql.pl -u sbeamsadmin -i -s $SBEAMS/lib/sql/Microarray/Microarray_DROPCONSTRAINTS.mssql
+./runsql.pl -u sbeamsadmin -i -s $SBEAMS/lib/sql/Microarray/Microarray_DROP_MANUAL_CONSTRAINTS.mssql
+./runsql.pl -u sbeamsadmin -i -s $SBEAMS/lib/sql/Microarray/Microarray_DROPINDEXES.mssql
+./runsql.pl -u sbeamsadmin -i -s $SBEAMS/lib/sql/Microarray/Microarray_DROPTABLES.mssql
 
 Note that the Microarray_POPULATE.mssql is not auto-generated and should
 probably work for all flavors of database
