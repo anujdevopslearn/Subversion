@@ -165,12 +165,14 @@ Data Location.
 All the data is located within one main directory which is subdivided into folders named
 YYYYMM - <Year><Month>
 
-For external dataset download we have a folder "external" within the main data repository and individual 
-experiments to be loaded are separated into a user defined folder
+For external datasets we have a folder "external" within the main data repository and individual 
+experiments are separated into a user defined folder
 
 A cron job can be setup (see below) to keep monitoring the default directory for any new files to be uploaded
 
-For inital setup make the following folders
+
+#########################
+For initial setup make the following folders
 mkdir $SBEAMS/tmp \
 $SBEAMS/tmp/Microarray \
 $SBEAMS/tmp/Microarray/AFFY_ANNO_LOGS \
@@ -212,7 +214,7 @@ $AFFY_DEFAULT_DIR	    = "$PHYSICAL_BASE_DIR/var/Microarray/Affy_data/probe_data"
 $BIOCONDUCTOR_DELIVERY_PATH = "$PHYSICAL_BASE_DIR/var/Microarray/Affy_data/delivery";
 $ADD_ANNOTATION_OUT_FOLDER  = "$PHYSICAL_BASE_DIR/tmp/Microarray/Add_affy_annotation";
 
-  Notes: $AFFY_DEFAULT_DIR = Full path to a folder that will house all Affy CEL files
+  Notes: $AFFY_DEFAULT_DIR = Full path to a folder that will house all Affy CEL files and support files
   	 $BIOCONDUCTOR_DELIVERY_PATH = Location that all analysis results will be written to(see below)
 	 $ADD_ANNOTATION_OUT_FOLDER  = Location that errors from loading affy annotation files will be kept 
 	 			        
@@ -281,14 +283,14 @@ If this doesn't work.  Do not proceed, debug first.
 
 ########################
 Test Data Background
-- Set 1) Using  a small subset of data (6 of 158 arrays) File: Human_test_data.tar
+- Set 1) Using  a small subset of data (6 of 158 arrays) File: Human_test_data.tar.gz
 - Set 2) 4 arrays on (HG-133 Plus 2). Experiments with C4-2 and LNCaP human prostate cancer cell lines.  File: Affy_test_data.tar.gz
 ########################
-- Download the data setes from
+- Download the data sets from
 http://www.sbeams.org/sample_data/
 Click on the link "Human_test_data.tar.gz"
 Click on the link "Affy_test_data.tar.gz"
-Save the data to any folder or use the folder below
+Save the data to any folder or use the folder $SBEAMS/lib/refdata/Microarray
 
 - Unpack the data and annotation file and copy them to the data folders
 cd $SBEAMS/lib/refdata/Microarray
@@ -365,7 +367,7 @@ Add Analysis Protocol
 - At the bottom of the page, on the Navigation bar click on [Protocols] button
 - Click [Add Protocol]
 - Add a new Protocol Type, Click the "Plus Icon" next to Protocol Type
-- Fill in Protcol Type Name --> "image_analysis", Click Insert.
+- Fill in Protocol Type Name --> "image_analysis", Click Insert.
 - Go Back to the Add Protocol Page, and refresh the page.
 - Insert the data 
    Protocol Type --> "image_analysis",
@@ -380,7 +382,7 @@ Add Hyb Protocol
 - At the bottom of the page, on the Navigation bar click on [Protocols] button
 - Click [Add Protocol]
 - Add a new Protocol Type, Click the "Plus Icon" next to Protocol Type
-- Fill in Protcol Type Name --> "hybridization", Click Insert.
+- Fill in Protocol Type Name --> "hybridization", Click Insert.
 - Go Back to the Add Protocol Page, and refresh the page.
 - Insert the data 
    Protocol Type --> "hybridization",
@@ -445,7 +447,7 @@ Add the external arrays to the database
 
 - See sections about naming conventions (3-2)
 - The Data in the "Human_test_data.tar.gz" folder contains CEL files that were not generated at ISB, so they did not
-have all the support data needed to automaticlly load the arrays from the core facility.
+have all the support data needed to automatically load the arrays from the core facility.
 
 - Adding external arrays is a two step process.
 - All the sample annotation is first collected in a "master_info" file which is just a tab
@@ -472,13 +474,13 @@ Add more data to the database  MAGE-XML data.
 
 - The data contained within the file "Affy_test_data.tar.gz" contains from 4 arrays scanned at ISB.
 - In addition to the CEL file is a CHP, RPT and XML files that were produced by the Affymetrix software GCOS.
--  ISB exports the MAGE-XML from the GCOS with one extra attribute that will be need for the current to parse the data.
-- Setup GCOS software ## Only needed if trying to import data not from ISB, that extracts data from the MAGE-XML from the GCOS software
+- ISB exports the MAGE-XML from the GCOS software with one extra attribute that will be needed for the current script to parse the data.
+- Setup GCOS software ## Only do this if you have an affy core facility and you want to load the data they produced
 	Goto the GCOS Manager, Click on the template tab.  
 	Create a new template
 	Add New Attribute "Array User Name" Type "String" Required "Yes"
-	Make sure to use the template when exporting data from the GCOS software after scannning slides
-- 
+	Make sure to use the template when exporting data from the GCOS software after scanning slides
+
 
 ########################
 Add expression data to the database
@@ -486,7 +488,7 @@ Convert CEL file to CHP data using R-bioconductor
 
 cd $SBEAMS/lib/scripts/Microarray
 ./load_affy_R_CHP_files.pl --run_mode add_new
-##Note this will take a while of time to process, and running this on a fast machine whould be a good idea
+##Note this will take a while of time to process, and running this on a fast machine would be a good idea
 
 - Test to see if the data has been entered properly
 - Open the url
@@ -499,7 +501,7 @@ http://<sbeams_server>/sbeams/cgi/Microarray/GetAffy_GeneIntensity.cgi
 
 Setting up the Affy user Help pages
 - There is a set of user help pages that were made for the end users and it shows how to use the different pages
-- The pages need an XSL processing engine to work.  Curently they are setup to use xsltproc by defualt.
+- The pages need an XSL processing engine to work.  Currently they are setup to use xsltproc by default.
 
 Check to to see if xsltproc is installed
  xsltproc -V
@@ -536,14 +538,20 @@ Also note some of the links will not work since they are specific to ISB
 ########################
 Setup the analysis pipeline
 
-The analysis pipeline allows users to analize affy arrays and find differentially expressed genes.  The analysis is done
-in R and the processing can be done on the local server or passed off to a batch processor like pbs.  A series of web pages
-will walk the users through the analysis pipeline so there is no need for the user to read/write the R code.
+The analysis pipeline allows users to analize affy arrays and find differentially 
+expressed genes.  The analysis is done in R and the processing can be done on the 
+local server or passed off to a batch processor like pbs.  A series of web pages
+will walk the users through the analysis pipeline so there is no need for the user 
+to read/write R code.
 
-The CGI pages were initially written as part of the bioconductor project.  See the bioconductor vignette on "Textual Description of webbioc"
-to learn more about the requirements for running and requirements for running these pages (Link below).  It should be noted that you do NOT have to download
-the pages from bioconductor, the pages have been total integrated into SBEAMS so the actual use of the pages is a bit different and the analysis
-capabilities have been extended, but the setup requirements and some of the settings are still applicable
+The CGI pages were initially written as part of the bioconductor project.  
+See the bioconductor vignette on "Textual Description of webbioc" to learn more 
+about the requirements for running and requirements for running these pages (Link below).  
+
+It should be noted that you do NOT have to download the pages from bioconductor, 
+the pages have been total integrated into SBEAMS so the actual use of the pages is 
+a bit different and the analysis capabilities have been extended, but the setup 
+requirements and some of the settings are still applicable
 http://bioconductor.org/repository/devel/vignette/demoscript.pdf
 
 - Setup Variables in Setting.pm
@@ -571,15 +579,16 @@ $SBEAMS/var/Microarray/Affy_data/delivery  chmod g+s
 
 To run the job on pbs you might need to create a new user to run the jobs (See Below for more info)
 
-We create a user arraybot and added it to the affydata group.
+We created a user arraybot and added it to the affydata group.
 
 Need to setup a key less ssh connection to the pbs server so the apache cgi
-script can hand off the job to the batch schedular
-(GET MORE DETAIL)
+script can hand off the job to the batch scheduler, and then the process on the batch scheduler can 
+write files back to the directories created by the web user.
+
 #############
 
-
 - Setup Variable in Site.pm
+
 cd $SBEAMS/cgi/Microarray/bioconductor
 vi Site.pm
 #change the variables below to meet the needs of your site.  
@@ -622,11 +631,27 @@ Is CN=SBEAMS Development Team, OU=SBEAMS Development, O=Institute for Systems Bi
 Enter key password for <sbeamsDev>
 (RETURN if same as keystore password):
 
+###############
+- Re-sign the all the cytoscape jars using the key above
+cd $SBEAMS/lib/scripts/Core
+## Re-sign all the plugin jars
+./Re_sign_jar_files.pl --dir $SBEAMS/usr/java/share/Cytoscape/plugins_1.0 \
+ --keystore <local_path_on_web_server>.keystore \
+ --keypass sbeamsDevKey \
+ --keyname sbeamsDev
 
-Need to update the makefile for signing the data files
+## Re-sign all the cytoscape and gaggle components
+  ./Re_sign_jar_files.pl --dir $SBEAMS/usr/java/share/Cytoscape/cytoscape_ps/jars \
+ --keystore <local_path_on_web_server>.keystore \
+ --keypass sbeamsDevKey \
+ --keyname sbeamsDev
+
+###############
+
+Update the makefile for signing the data files (that will be used in Cytoscape) with the key produced above
 cd $SBEAMS/lib/cytoscape/Microarray/GetExpression
 vi makefile 
-#change the line to match your site.  
+#change the line below to variables at your site.  
 #<java_path>                                     <keystore_path>                    <password>       <key to use, see above>    
 /tools/java/j2sdk1.4.2/bin/jarsigner -keystore /users/pshannon/.keystore -storepass cytokey data.jar cytoscape
 
@@ -639,7 +664,7 @@ To run the pages
 - Click on [Data Pipeline] 
 - Click on [Affy Analysis Pipeline]
 - Click on [Start New Analysis Session]
-#Make sure there are no errors displayed.  If there are go back and check the settings.
+#Make sure there are no errors displayed, if there are go back and check the settings.
 
 View the help document to learn how to analyze data sets
 
@@ -674,4 +699,4 @@ Troubleshooting
   e.g. look in Core_POPULATE.mssql
 
 -------------------------------------------------------------------------------
-2) 
+
