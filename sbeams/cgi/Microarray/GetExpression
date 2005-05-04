@@ -1123,7 +1123,7 @@ sub generate_sif_data {
 	
 	#grab the top data orginally setup to be top 100 genes and appened the data to the 
 	#sif file portion of the cytoscape_href data hash.
-	for (my $i=1; $i <= $#sorted_keys && $i <= 100 ; $i++){
+	for (my $i=1; $i <= $#sorted_keys && $i <= 200 ; $i++){
 		my $key = $sorted_keys[$i];
 		my $name = $data_href->{$key}{NAME};
 		my $exp_val = $data_href->{$key}{EXP}? $data_href->{$key}{EXP} : 0;
@@ -1291,7 +1291,7 @@ sub write_dmv_jnlp_file {
     <jar href="$shared_java_html/jars/syspatharchivehack.jar"/>
   </resources>
   <application-desc>
-  <argument>$jws_base_html/$identifier/Condition_xml</argument>
+  <argument>$jws_base_dir/$identifier/Condition_xml</argument>
   </application-desc>
 </jnlp>
 ~;
@@ -1472,7 +1472,7 @@ sub write_cytoscape_jnlp_file {
     <jar href="$shared_java_html/jars/ouai.jar"/>
     <jar href="$shared_java_html/jars/cytoAux.jar"/>
     <jar href="$shared_java_html/jars/syspatharchivehack.jar"/>
-  	<jar href="$SERVER_BASE_DIR$HTML_BASE_DIR/usr/java/share/Cytoscape/plugins_1.0/Y2Layouters.jar"/>
+  	<!-- <jar href="$SERVER_BASE_DIR$HTML_BASE_DIR/usr/java/share/Cytoscape/plugins_1.0/Y2Layouters.jar"/> -->
   	<jar href="$SERVER_BASE_DIR$HTML_BASE_DIR/usr/java/share/Cytoscape/plugins_1.0/getInteractions.jar"/>
   	<jar href="$SERVER_BASE_DIR$HTML_BASE_DIR/usr/java/share/Cytoscape/plugins_1.0/httpdata.jar"/>
   	<jar href="$SERVER_BASE_DIR$HTML_BASE_DIR/usr/java/share/Cytoscape/plugins_1.0/sequence.jar"/>
