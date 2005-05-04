@@ -147,7 +147,7 @@ Error: Column 'dbo.affy_array_protocol.affy_array_protocol_id' is not the same d
 W (1): Warning: The table 'file_location' has been created but its maximum row size (8080) exceeds the maximum number of bytes per row (8060). INSERT or UPDATE of a row in this table will fail if the resulting row length exceeds 8060 bytes.
 
 -------------------------------------------------------------------------------
-Data storage locations and naming conventions
+3-1) Data storage locations and naming conventions
 
 ISB Affymetrix Core facility name it's files with the following convention
 
@@ -277,27 +277,39 @@ If this doesn't work.  Do not proceed, debug first.
 
 ########################
 Test Data Background
-- Using  a small subset of data (6 of 158 arrays) from http://wombat.gnf.org/
-
+- Set 1) Using  a small subset of data (6 of 158 arrays) File: Human_test_data.tar
+- Set 2) 4 arrays on (HG-133 Plus 2). Experiments with C4-2 and LNCaP human prostate cancer cell lines.  File: Affy_test_data.tar.gz
 ########################
-- Download the data from
+- Download the data setes from
 http://www.sbeams.org/sample_data/
 Click on the link "Human_test_data.tar.gz"
+Click on the link "Affy_test_data.tar.gz"
+Save the data to any folder or use the folder below
 
 - Unpack the data and annotation file and copy them to the data folders
 cd $SBEAMS/lib/refdata/Microarray
 gunzip Human_test_data.tar.gz
 tar -xvf Human_test_data.tar
+
+gunzip Affy_test_data.tar.gz
+tar -xvf Affy_test_data.tar
+
  
-- Make the folder to hold the CEL files
+- Make the folders to hold the CEL files
 mkdir $SBEAMS/var/Microarray/Affy_data/probe_data/external/Human_test
+mkdir $SBEAMS/var/Microarray/Affy_data/probe_data/200404
 
 - Move the the CEL files And info file to the test folder
 mv ./Human_test_data/*.CEL $SBEAMS/var/Microarray/Affy_data/probe_data/external/Human_test/.
 mv ./Human_test_data/Master_info_file_test_data.txt $SBEAMS/var/Microarray/Affy_data/probe_data/external/Human_test
 
+-Move All the files CEL, XML, RPT files from the Affy_test_data to the data folder
+mv ./20040421_* $SBEAMS/var/Microarray/Affy_data/probe_data/200404/.
+
+
 -Move the annotation file to annotation directory
 mv ./Human_test_data/HG-U133A_annot.csv $SBEAMS/var/Microarray/Affy_data/annotation/.
+mv HG-U133_Plus_2_annot.csv $SBEAMS/var/Microarray/Affy_data/annotation/.
 
 ########################
 (logged in as your user account)
@@ -315,6 +327,14 @@ Add a Project as follows:
    http://wombat.gnf.org/"
 - Fill in the appropriate information and click [INSERT]
 
+- Make a second Project
+- Click the 'Go Back' button 
+- Make a project using the following information
+   Project Name: "ISB Test Data"
+   Project Tag:  "ISB_test"
+   Description:  "4 Human CEL files HG-U133_Plus_2.  2 files from Human LN prostate cancer cell, 2files from C4-2 cancer cell lines"
+- Fill in the appropriate information and click [INSERT]
+
 ########################
 Add An Array Type
 - Switch to the Microarray_admin group by using the drop-down box at top
@@ -324,7 +344,15 @@ Add An Array Type
 - Fill in the Data
    Name: "HG-U133A"
    Organism: "Human"
-- Click Insert 
+   Comment: "Affymetrix Human U133A"
+- Click Insert
+
+- Make a second array 
+- Click the 'Go Back' Button
+  Name: "HG-U133_Plus_2"
+  Organism: "Human"
+  Comment: "Affymetrix Human Genome U133 Plus 2.0 Array"
+- Click Insert
 
 ########################  
 Add Analysis Protocol
@@ -333,14 +361,52 @@ Add Analysis Protocol
 - At the bottom of the page, on the Navigation bar click on [Protocols] button
 - Click [Add Protocol]
 - Add a new Protocol Type, Click the "Plus Icon" next to Protocol Type
-- Fill in Protcol Type Name --> "Quantitation Type", Click Insert.
+- Fill in Protcol Type Name --> "image_analysis", Click Insert.
 - Go Back to the Add Protocol Page, and refresh the page.
 - Insert the data 
-   Protocol Type --> "Quantitation Type",
+   Protocol Type --> "image_analysis",
    Name          --> "R Mas5.0 CHP",
    Protocols     --> "Use R-bioconductor to turn a CEL file into a CHP file" 
 - Click Insert
- 
+ ########################  
+Add Hyb Protocol
+- Switch to the Microarray_admin group by using the drop-down box at top
+- Switch to the the Microarray Module, Click On [Microarray]
+- Switch to the the Microarray Module, Click On [Microarray]
+- At the bottom of the page, on the Navigation bar click on [Protocols] button
+- Click [Add Protocol]
+- Add a new Protocol Type, Click the "Plus Icon" next to Protocol Type
+- Fill in Protcol Type Name --> "hybridization", Click Insert.
+- Go Back to the Add Protocol Page, and refresh the page.
+- Insert the data 
+   Protocol Type --> "hybridization",
+   Name          --> "AFFY EukGE-WS2v5_450",
+   Protocols     --> "Paste in the text output from the affy wash station" 
+- Click Insert
+########################
+- Click the "Go Back" Button
+Add Scanning Protocol
+- Insert the data 
+   Protocol Type --> "array_scanning",
+   Name          --> "AFFY Scanning",
+   Protocols     --> "Paste in the text output from the affy scanner" 
+ - Click Insert  
+########################
+- Click the "Go Back" Button
+Add Feature extraction Protocol
+- Insert the data
+   Protocol Type --> "image_analysis",
+   Name          --> "AFFY Feature Extraction",
+   Protocols     --> "Generation of CEL file from DAT file is automatic in GCOS 1.0+ Software" 
+- Click Insert
+########################
+- Click the "Go Back" Button
+Add CHP Generation Protocol
+- Insert the data
+   Protocol Type --> "image_analysis",
+   Name          --> "AFFY GCOS CHP Generation",
+   Protocols     --> "Create CHP file in GCOS by right-clicking a CEL file and choosing 'Analyze'"
+- Click Insert
 ########################
 Add Server Info
 - Some of the scripts and database tables keep track of file paths and the server name needs to be
@@ -365,9 +431,17 @@ cd $SBEAMS/lib/scripts/Microarray
 
 It could take about 10-15 minutes to upload the data...
 
+- Add the annotation for the second array
+./load_affy_annotation_files.pl --run_mode update \
+--file_name $SBEAMS/var/Microarray/Affy_data/annotation/HG-U133_Plus_2_annot.csv
+
 
 ########################
 Add the external arrays to the database
+
+- See sections about naming conventions (3-2)
+- The Data in the "Human_test_data.tar.gz" folder contains CEL files that were not generated at ISB, so they did not
+have all the support data needed to automaticlly load the arrays from the core facility.
 
 - Adding external arrays is a two step process.
 - All the sample annotation is first collected in a "master_info" file which is just a tab
@@ -389,6 +463,18 @@ cd $SBEAMS/lib/scripts/Microarray
  cd $SBEAMS/lib/scripts/Microarray
  ./load_affy_array_files.pl --run_mode add_new
 
+########################
+Add more data to the database  MAGE-XML data.
+
+- The data contained within the file "Affy_test_data.tar.gz" contains from 4 arrays scanned at ISB.
+- In addition to the CEL file is a CHP, RPT and XML files that were produced by the Affymetrix software GCOS.
+-  ISB exports the MAGE-XML from the GCOS with one extra attribute that will be need for the current to parse the data.
+- Setup GCOS software ## Only needed if trying to import data not from ISB, that extracts data from the MAGE-XML from the GCOS software
+	Goto the GCOS Manager, Click on the template tab.  
+	Create a new template
+	Add New Attribute "Array User Name" Type "String" Required "Yes"
+	Make sure to use the template when exporting data from the GCOS software after scannning slides
+- 
 
 ########################
 Add expression data to the database
