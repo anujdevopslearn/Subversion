@@ -189,7 +189,7 @@ Do as much of this as possible as a regular user account, i.e. yours.
 cd /local/www/html
 mkdir dev1   (this may need to be done as root. then do: chown user1 dev1)
 cd dev1
-tar -zxvf ~/sbeams-0.20.tar.gz
+tar -zxvf ~/sbeams-0.20.1.tar.gz
 
 Create a sbeamscommon directory for sharing dynamic files between
 different instances and create symlinks:
