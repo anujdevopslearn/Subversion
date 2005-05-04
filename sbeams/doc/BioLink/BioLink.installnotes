@@ -135,3 +135,15 @@ cd ../../refdata/BioLink
 
 - Load data into the dbxref table:
 ../../scripts/Core/DataImport.pl -s dbxref.xml
+
+------------------------------------------------------------------------------
+7) You should now see a link for BioLink in the webUI (may require that you 
+log back in).  In order to use some of the administrative features you will 
+have to add yourself to one or more of the work_groups that you created in 
+the second command in the previous section, most importantly BioLink_admin.
+
+With your browser, navigate to:
+[SBEAMS Home] [Admin] [Manage User Group Associations], [Add ...], and add
+yourself (and appropriate others) to these groups.
+
+You are now ready to install any of the specific modules!
