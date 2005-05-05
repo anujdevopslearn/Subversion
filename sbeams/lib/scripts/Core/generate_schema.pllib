@@ -478,18 +478,19 @@ sub generateColumnDefinition {
     } elsif ($datatype eq 'datetime') {
       $datatype = 'date';
     }
-    #### I guess "comment" is a reserved word in Oracle???
+    # comment is a reserved word in Oracle
+    # This is going to be a serious problem if we ever try to install on Oracle
     if ($column_name eq 'comment') {
        $column_name = 'comments'
     }
-  }
-
-
-  #### Do some adjustment of the datatype names.  This should be done better
-  if ($destination_type eq 'mysql') {
+  } elsif ( $destination_type eq 'pgsql' ) {
+    if ($datatype eq 'datetime') {
+      $datatype = 'timestamp';
+    }
+  } elsif ($destination_type eq 'mysql') {
     if ($datatype =~ /varchar\((\d+)\)/) {
       if ($1 > 255) {
-	$datatype = 'text';
+	      $datatype = 'text';
       }
     }
   }
