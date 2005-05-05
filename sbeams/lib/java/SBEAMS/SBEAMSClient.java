@@ -175,6 +175,11 @@ public class SBEAMSClient {
   }//goodCookie
 //-----------------------------------------------------------------------------------------------
   private Response postRequest (String urlString, String params)
+	throws Exception{
+	return postRequest (urlString, params, -1);
+  }// postRequest
+//-----------------------------------------------------------------------------------------------
+  private Response postRequest (String urlString, String params, int maxLines)
     throws Exception {
 	URL url = new URL(formatURL(urlString));
 	HttpURLConnection uc = (HttpURLConnection)url.openConnection();
@@ -197,8 +202,14 @@ public class SBEAMSClient {
 	StringBuffer sb = new StringBuffer();
 	String inputLine;
 	BufferedReader in = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-	while ((inputLine = in.readLine()) != null) {
-	  sb.append(inputLine + "\n");
+	if (maxLines > 0) {
+	  for (int m=0;m<maxLines && (inputLine = in.readLine()) != null;m++) {
+		sb.append(inputLine+"\n");
+	  }
+	}else {
+	  while ((inputLine = in.readLine()) != null) {
+		sb.append(inputLine + "\n");
+	  }
 	}
 	in.close();
 
@@ -218,7 +229,12 @@ public class SBEAMSClient {
 	  return urlString;	
   }// formatURL
 //-----------------------------------------------------------------------------------------------
-  public String fetchSbeamsPage (String urlString, String params) 
+  public String fetchSbeamsPage (String urlString, String params)
+  throws Exception{
+	return fetchSbeamsPage(urlString, params, -1);
+  }
+//-----------------------------------------------------------------------------------------------
+  public String fetchSbeamsPage (String urlString, String params, int maxLines) 
 	throws Exception{
 	if (cookie == null)
 	  fetchCookie();
@@ -236,7 +252,7 @@ public class SBEAMSClient {
 	}
 
 	Response res = new Response();
-	res = postRequest(unparameterizedUrl, params);
+	res = postRequest(unparameterizedUrl, params, maxLines);
 	return res.content;
 
   }//fetchSbeamsPage
@@ -245,7 +261,14 @@ public class SBEAMSClient {
 	throws Exception{
 	if (cookie == null)
 	  fetchCookie();
-   	return fetchSbeamsPage (url, "");
+   	return fetchSbeamsPage (url, "", -1);
+  }//fetchSbeamsPage
+//-----------------------------------------------------------------------------------------------
+  public String fetchSbeamsPage (String url, int maxLines) 
+	throws Exception{
+	if (cookie == null)
+	  fetchCookie();
+	return fetchSbeamsPage (url, "", maxLines);
   }//fetchSbeamsPage
 //-----------------------------------------------------------------------------------------------
   public String[] fetchSbeamsResultSetColumn (String url, String columnTitle) 
