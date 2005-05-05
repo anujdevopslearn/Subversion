@@ -1796,8 +1796,13 @@ sub specialParsing {
   #### Special conversion rules for Haloarcula
   #### >hmvng0001	rrnAC1199-1066585_1069440
   if ($biosequence_set_name eq "Haloarcula Proteins") {
-      if ($rowdata_ref->{biosequence_desc} =~ /^(.+)-(\d+)_(\d+)$/) {
+      if ($rowdata_ref->{biosequence_desc} =~ /^(.+)-(\d+)_(\d+)(\sGenbank_ID=\"(\d+)\")?$/) {
 	  my $gene_tag = $1;
+	  $rowdata_ref->{former_names} = $rowdata_ref->{biosequence_name};
+	  $rowdata_ref->{biosequence_name} = $1;
+	  $rowdata_ref->{gene_symbol} = $1;
+	  $rowdata_ref->{full_gene_name} = $1;
+	  $rowdata_ref->{biosequence_gene_name} = $gene_tag;
 	  $rowdata_ref->{start_in_chromosome} = $2;
 	  $rowdata_ref->{end_in_chromosome} = $3;
 	  if ($gene_tag =~ /^(rrnAC)/) {
@@ -1809,8 +1814,14 @@ sub specialParsing {
 	  } else {
 	    print "WARNING: Unable to parse gene_tag '$gene_tag'\n";
 	  }
-	  $rowdata_ref->{biosequence_accession} = $gene_tag;
-          $rowdata_ref->{dbxref_id} = '24';
+	  
+
+	  if ($rowdata_ref->{biosequence_desc} =~ /.*Genbank_ID=\"(\d+)\"/) {
+		$rowdata_ref->{biosequence_accession} = $1;
+	  }else {
+		$rowdata_ref->{biosequence_accession} = "";
+	  }
+	  $rowdata_ref->{dbxref_id} = '36';
 
       } else {
 	print "WARNING: The following description cannot be parsed:\n  ==".
@@ -1857,7 +1868,6 @@ sub specialParsing {
 	$rowdata_ref->{biosequence_desc} = $redundant_orfs[0];
 
 	# get ORF name
-	$rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
 	$rowdata_ref->{full_gene_name} = $rowdata_ref->{biosequence_name};
 	
 	# get common name
@@ -1889,7 +1899,10 @@ sub specialParsing {
 	  push @aliases, $1;
 	}
 	if ($redundant_orfs[0] =~ /Genbank_ID=\"(.*?)\"/) {
-	  push @aliases, $1;
+	  my $id = $1;
+	  $rowdata_ref->{dbxref_id} = '36';
+	  $rowdata_ref->{biosequence_accession} = $id;
+	  push @aliases, $id;
 	}
 	if ($redundant_orfs[0] =~ /COG_ID=\"(.*?)\"/) {
 	  push @aliases, $1;
@@ -1916,9 +1929,9 @@ sub specialParsing {
 
   #### Special conversion rules for Halobacterium HALOprot_clean.fasta
   #### >VNG1023c chp-1013_1023-1023
-  if ($biosequence_set_name eq "Halobacterium Proteins") {
-    $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
-  }
+#  if ($biosequence_set_name eq "Halobacterium Proteins") {
+#    $rowdata_ref->{biosequence_accession} = $rowdata_ref->{biosequence_name};
+#  }
 
 
 
