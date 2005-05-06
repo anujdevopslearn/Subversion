@@ -75,18 +75,18 @@ CREATE NONCLUSTERED INDEX idx_afa_id_probe_set_id_protocol_id
    ON dbo.affy_gene_intensity (  affy_array_id,probe_set_id, protocol_id )    
 
 go
--- affy_gene_intensity_   affy_array_id,probe_set_id, protocol_id
+-- condition  condition_id
 CREATE NONCLUSTERED INDEX idx_condition_id
    ON dbo.gene_expression ( condition_id )    
-  WITH DROP_EXISTING
-go
 
+go
+-- condition  gene_name
 CREATE NONCLUSTERED INDEX idx_gene_name
    ON dbo.gene_expression ( gene_name )    
-  WITH DROP_EXISTING
+ 
 go
-
+-- condition  biosequence_id
 CREATE NONCLUSTERED INDEX idx_biosequence_id
    ON dbo.gene_expression ( biosequence_id )    
-  WITH DROP_EXISTING
+
 go
