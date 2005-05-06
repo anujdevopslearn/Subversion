@@ -154,7 +154,7 @@ PR_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	"S
 PR_biosequence_property_set	15	isoelectric_point	Isoelectric Point	real	4	0	Y		N			N	text	10		Y	Y	N	Isoelectric Point (pI) of the protein		
 PR_biosequence_property_set	16	fav_codon_frequency	Favorite Codon Frequency	real	4	0	Y		N			N	text	10		Y	Y	N	Favorite Codon Frequency		
 PR_biosequence_property_set	17	duplicate_biosequences	Duplicate Biosequences	varchar	255	0	Y		N			N	text	50		Y	Y	N	Semicolon delimited list of duplicate sequences within the same set		
-PR_biosequence_property_set	18	category	Category	varchar	255	0	Y		N			N	text	50		Y	Y	N	Semicolon delimited list of duplicate sequences within the same set		
+PR_biosequence_property_set	18	category	Category	varchar	255	0	Y		N			N	text	50		Y	Y	N	Biosequence category		
 PR_biosequence_annotation	1	biosequence_annotation_id	Domain Match Type	int	4	0	N		Y							N	N				pkDEFAULT
 PR_biosequence_annotation	2	biosequence_id	BioSequence	int	4	0	N		N	PR_biosequence	biosequence_id	Y	fixed			Y	Y	Y	BioSequence to which this annotation belongs		
 PR_biosequence_annotation	3	gene_symbol	Gene Symbol	varchar	255	0	Y		N			N	text	50		Y	Y	N	Gene Symbol to describe this protein (e.g. TLR2)		

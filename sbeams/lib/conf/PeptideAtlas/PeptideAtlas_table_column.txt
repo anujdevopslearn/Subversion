@@ -132,6 +132,7 @@ AT_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	"S
 AT_biosequence_property_set	15	isoelectric_point	Isoelectric Point	real	4	0	Y		N			N	text	10		Y	Y	N	Isoelectric Point (pI) of the protein	
 AT_biosequence_property_set	16	fav_codon_frequency	Favorite Codon Frequency	real	4	0	Y		N			N	text	10		Y	Y	N	Favorite Codon Frequency	
 AT_biosequence_property_set	17	duplicate_biosequences	Duplicate Biosequences	varchar	255	0	Y		N			N	text	50		Y	Y	N	Semicolon delimited list of duplicate sequences within the same set	
+AT_biosequence_property_set	18	category	Category	varchar	255	0	Y		N			N	text	50		Y	Y	N	Biosequence category		
 AT_BrowseBiosequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBAT_BIOSEQUENCE_SET WHERE project_id IN (  $accessible_project_ids ) ORDER BY sort_order,set_name"
 AT_BrowseBiosequence	2	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
 AT_BrowseBiosequence	3	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	

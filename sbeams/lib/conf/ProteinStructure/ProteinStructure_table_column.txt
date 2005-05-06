@@ -68,6 +68,7 @@ PS_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	"S
 PS_biosequence_property_set	15	isoelectric_point	Isoelectric Point	real	4	0	Y		N			N	text	10		Y	Y	N	Isoelectric Point (pI) of the protein		
 PS_biosequence_property_set	16	fav_codon_frequency	Favorite Codon Frequency	real	4	0	Y		N			N	text	10		Y	Y	N	Favorite Codon Frequency		
 PS_biosequence_property_set	17	duplicate_biosequences	Duplicate Biosequences	varchar	255	0	Y		N			N	text	50		Y	Y	N	Semicolon delimited list of duplicate sequences within the same set		
+PS_biosequence_property_set	18	category	Category	varchar	255	0	Y		N			N	text	50		Y	Y	N	Biosequence category		
 PS_domain_match	1	domain_match_id	Domain Match ID	int	4	0	N		Y							N	N				pkDEFAULT
 PS_domain_match	2	biosequence_id	BioSequence	int	4	0	N		N	PS_biosequence	biosequence_id					N	N	N	BioSequence to which this Domain Match belongs		
 PS_domain_match	3	domain_match_index	Domain Match Index	int	4	0	Y		N			Y	text	20		Y	Y	N	Consecutive number index used for some domains		
