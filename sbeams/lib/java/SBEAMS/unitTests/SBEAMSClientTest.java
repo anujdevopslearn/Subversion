@@ -12,15 +12,21 @@ import SBEAMS.SBEAMSClient;
 //--------------------------------------------------------------------------------------
 public class SBEAMSClientTest extends TestCase {
 
-  private String testUser = "cytoscape";
-  private String testPassword = "cytoscape";
-  private String testBaseURL = "http://db.systemsbiology.net/sbeams";
+  private String testUser = "setUser";
+  private String testPassword = "setMe";
+  private String testBaseURL = "none specified";
   private SBEAMSClient client;
 
 //------------------------------------------------------------------------------
 public SBEAMSClientTest (String name) 
 {
   super (name);
+  if (testUser.equals("setUser"))
+	System.out.println("WARNING: CHANCES ARE YOU DID NOT UPDATE THE USERNAME");
+  if (testPassword.equals("setMe"))
+	System.out.println("WARNING: CHANCES ARE YOU DID NOT SPECIFY THE PASSWORD");
+  if (testBaseURL.equals("none specified"))
+	System.out.println("WARNGING: YOU NEED TO SPECIFY THE BASE SBEAMS URL");
 }
 //------------------------------------------------------------------------------
 public void setUp () throws Exception
