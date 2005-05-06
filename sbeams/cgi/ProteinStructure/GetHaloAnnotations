@@ -714,11 +714,15 @@ $LINESEPARATOR
 	  
 	  ## put a space in between redundant ORFs so the tooltip will wrap the text
 	  $duplicate_biosequences =~ s/,/, /g;
-	  my $duplicates_link = getColorizedTD (tag=>'Redundant ORFs',
+	  my $tip = "None";
+	  if ($duplicate_biosequences) {
+		$tip = $duplicate_biosequences;
+	  }
+	  my $duplicates_link =  getColorizedTD (tag=>'Redundant ORFs',
 											data=>$duplicate_biosequences,
 											text=>'R',
 											link=>"GetHaloAnnotations?search_scope=All&search_key=$biosequence_name&action=GO&dna_biosequence_set_id=$parameters{dna_biosequence_set_id}&protein_biosequence_set_id=$parameters{protein_biosequence_set_id}&apply_action=QUERY",
-											tooltip=>"$duplicate_biosequences");
+											tooltip=>"Redundant ORFS: $tip");
 	
 
 
