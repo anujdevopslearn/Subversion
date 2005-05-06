@@ -587,11 +587,6 @@ $LINESEPARATOR
 
   my @rows = $sbeams->selectSeveralColumns($sql);
 
-#  print $sql if ($sbeams->getCurrent_username() eq 'mjohnson');
-
-#  foreach my $mj (@{$rows[0]}){
-#	print "'$mj',<TR>";
-#  }
 
   #### Start the table
   my $table_html;
@@ -810,8 +805,8 @@ $LINESEPARATOR
     </SCRIPT>
 	  ~;
 
-	## Prepend summary links
-	print "<BR>";
+	## PREPEND summary links
+	print "<BR><B><FONT COLOR=\"red\">$counter</FONT> Results Returned</B><BR>";
 	$table_html = qq~
 	  <A HREF="GetHaloAnnotations?search_scope=$parameters{search_scope}&search_key=$parameters{search_key}&action=GO&dna_biosequence_set_id=$parameters{dna_biosequence_set_id}&protein_biosequence_set_id=$parameters{protein_biosequence_set_id}&apply_action=QUERY&output_mode=tsv">-Download Tab-delimited Summary</A><BR>
 	  ~ . $table_html;
@@ -827,6 +822,8 @@ $LINESEPARATOR
 	  <A HREF="BrowseBioSequence.cgi?project_id=$project_list&biosequence_set_id=$parameters{dna_biosequence_set_id}&biosequence_id_constraint=$d_list&action=QUERYHIDE&display_options=SequenceFormat&display_mode=FASTA">-View all DNA Entries</A><BR>
 	  ~ . $table_html;
 	}
+
+
 
 	#### Print HTML
 	print $table_html;
