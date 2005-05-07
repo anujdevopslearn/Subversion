@@ -138,6 +138,33 @@ sub returnTableInfo {
       return \%projectSQL
     }
 
+  } elsif ( uc($table_name) eq 'AT_PUBLICATION' ) {
+      
+    if ($info_key eq "BASICQuery") {
+      return( <<"      END_QUERY" ); 
+     	SELECT *
+      FROM $TBAT_PUBLICATION
+      WHERE record_status!='D'
+      END_QUERY
+
+    } elsif ($info_key eq "FULLQuery") {
+      return( <<"      END_QUERY" ); 
+     	SELECT *
+      FROM $TBAT_PUBLICATION
+      WHERE record_status!='D'
+      END_QUERY
+
+    } elsif ( $info_key eq 'projPermSQL' ) { 
+      
+      my %projectSQL;
+      $projectSQL{fsql} = '';
+      $projectSQL{dbsql} =<<"      END";
+      SELECT project_id FROM $TBAT_ATLAS_BUILD 
+      WHERE atlas_build_id = KEYVAL
+      END
+      return \%projectSQL
+    } 
+
   } elsif ( uc($table_name) eq 'AT_ATLAS_BUILD' ) {
       
     if ($info_key eq "BASICQuery") {
