@@ -13,6 +13,6 @@ AT_dbxref	Biosequence Database Cross Reference	PeptideAtlas_infrastructure	YES	$
 AT_query_option	Query Option	PeptideAtlas_infrastructure	YES	$TBAT_QUERY_OPTION	query_option_id		ManageTable.cgi?TABLE_NAME=AT_query_option	AT_query_option	
 AT_BrowseBiosequence	Browse Biosequence	QUERY					BrowseBioSequence.cgi		
 AT_GetPeptides	Get Peptides	QUERY					GetPeptides		
-AT_publication	Publication	PeptideAtlas_user	YES	$TBAT_PUBLICATION	publication_id		ManageTable.cgi?TABLE_NAME=AT_publication	"AT_publication,AT_publication_category,AT_publication_rating"
+AT_publication	Publication	PeptideAtlas_user	YES	$TBAT_PUBLICATION	publication_id		ManageTable.cgi?TABLE_NAME=AT_publication	"AT_publication"
 AT_biosequence_annotated_gene	Biosequence Annotated Gene	PeptideAtlas_infrastructure	NO	$TBAT_BIOSEQUENCE_ANNOTATED_GENE	biosequence_annotated_gene_id				
 AT_biosequence_annotation	Biosequence Annotation	PeptideAtlas_project	YES	$TBAT_BIOSEQUENCE_ANNOTATION	biosequence_annotation_id		ManageTable.cgi?TABLE_NAME=AT_biosequence_annotation		
