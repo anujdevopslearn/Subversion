@@ -174,11 +174,20 @@ sub handle_request {
   my $start_offset = $parameters{'start_offset'} || 0;
   my $stop_offset = $parameters{'stop_offset'} || 0;
 
+  #### Determine the format of the sequence
+  my $format = $parameters{'format'} || 'fasta';
+
   #### Start/Stop when factoring in offsets
   my ($adjusted_start, $adjusted_stop);
 
   #### Display the user-interaction input form
   if ($sbeams->output_mode() eq 'html') {
+	my ($gcg_selected, $fasta_selected);
+	if ($format eq "gcg"){
+	  $gcg_selected = "CHECKED";
+	}else {
+	  $fasta_selected = "CHECKED";
+	}
     print qq~
 <SCRIPT LANGUAGE="Javascript">
 
@@ -210,10 +219,17 @@ function verifyNumber(testValue,testLocation){
 <INPUT NAME="biosequence_id" TYPE="hidden" VALUE="$parameters{biosequence_id}">
 <INPUT NAME="start_coordinate" TYPE="hidden" VALUE="$parameters{start_coordinate}">
 <INPUT NAME="stop_coordinate" TYPE="hidden" VALUE="$parameters{stop_coordinate}">
+<A onmouseover="showTooltip(event,'prepend nucleotides to the start of the gene sequence')" onmouseout="hideTooltip()">
 <INPUT TYPE="text" SIZE="4" NAME="start_offset" VALUE="$parameters{start_offset}" onChange="verifyNumber(this.value, this.name)">
-----[SEQUENCE]----
+</A>
+----[GENE SEQUENCE]----
+<A onmouseover="showTooltip(event,'append nucleotides to the end of the gene sequence')" onmouseout="hideTooltip()">
 <INPUT TYPE="text" SIZE="4" NAME="stop_offset" VALUE="$parameters{stop_offset}" onChange="verifyNumber(this.value, this.name)">
-<INPUT TYPE="submit" NAME="action" VALUE="GO">
+</A>
+<BR>
+<INPUT TYPE="radio" NAME="format" VALUE="fasta" $fasta_selected>FASTA&nbsp;&nbsp;&nbsp;
+<INPUT TYPE="radio" NAME="format" VALUE="gcg" $gcg_selected>Display with Coordinates<BR>
+<INPUT TYPE="submit" NAME="action" VALUE="Submit">
 </FORM>
 </td></tr>
 
@@ -388,46 +404,36 @@ $LINESEPARATOR
 	$colorings{$start_len + $orf_len + $stop_len} = "</FONT>";
   }
 
-  print "$header$newline";  
+  print "$header$newline";
+
+  ## Attempt to extract coordinate information;
+  $header =~ /.*location=\"\w+\s(\d+)\s(\d+)\".*/;
+  my $coord_start = $1;
+  my $coord_stop = $2; # not currently used.
+
+  if ($coord_start && $coord_stop) {
+	$coord_start -= $start_offset;
+	$coord_stop += $stop_offset;
+	if ( $coord_start <= 0) {
+	  $coord_start += length($genome_seq);
+	}
+	if ($coord_stop <= 0 ){
+	  $coord_stop += length($genome_seq);
+	}
+	if ($coord_start > length($genome_seq)) {
+	  $coord_start -=  length($genome_seq);
+	}
+	if ($coord_stop > length($genome_seq)) {
+	  $coord_stop -= length($genome_seq);
+	}
+  }
   print format_sequence('sequence'=>($start_offset_seq.$ORF.$stop_offset_seq),
 						'color_ref'=>\%colorings,
-						'newline'=>$newline);
+						'newline'=>$newline,
+						'format'=>$format,
+						'start'=>$coord_start,
+						'genome_length'=>length($genome_seq));
   print "$newline</PRE>";
-
-
-#	$header.=" stop_offset=\"";
-#	$header .="+" if ($stop_offset>0);
-#	$header .="$stop_offset"."nt\"";
-#
-#	$colorings{$non_adjusted_length + $start_offset} = "<FONT COLOR=\"red\">";
-#	$colorings{$non_adjusted_length + $start_offset + $stop_offset} = "</FONT>";
-#  #### Get subseqeunce, Ensuring that we have enough 
-#  my $length = abs ($adjusted_stop-$adjusted_start);
-#  my $t = length($genome_seq);
-#  print "STATUS: genome sequence length = $t\n";
-#  if ( $length + $adjusted_start > length($genome_seq) ) {
-#	print "WARNING: Truncated due to wrapping around chromosome \n";
-#	$length = length($genome_seq) - $adjusted_start;
-#  }elsif ($adjusted_start < 0){
-#	print "WARNING: Truncated due to wrapping around chromosome \n";
-#	$adjusted_start = 0;
-#  }
-
-
-
-#  #### Get sub sequence
-#  my $sequence;
-#  if ($reverse_complement == 1) {
-#	$sequence = reverse substr( $genome_seq, $adjusted_start, $length);
-#	$sequence =~ tr/ACGTacgt/TGCAtgca/;
-#  }else {
-#	$sequence = substr( $genome_seq, $adjusted_start, $length);
-#  }
-#
-#  $sequence = format_sequence('sequence'=>$sequence,
-#							  'color_ref'=>\%colorings,
-#							  'newline'=>$newline);
-
 
 } # end handle_request
 
@@ -505,18 +511,60 @@ sub format_sequence {
   my $seq = $args{'sequence'} || die "ERROR[format_sequence]: sequence needed\n";
   my $newline = $args{'newline'} || "\n";
   my $color_ref = $args{'color_ref'};
+  my $format = $args{'format'} || 'fasta';
+  my $start = $args{'start'} || 0;
+  my $gen_length = $args{'genome_length'} || length($seq);
 
   my $sequence = "";
   my @temp = split //,$seq;
-  for (my $m=0;$m<scalar(@temp);$m++) {
-	$sequence .= $color_ref->{$m} if (defined ($color_ref->{$m}));
-	$sequence .= $temp[$m];
-	$sequence .= $newline if (($m % 60) == 59 && $m != scalar(@temp) );
+
+  if ($format eq "fasta") {
+	for (my $m=0;$m<scalar(@temp);$m++) {
+	  $sequence .= $color_ref->{$m} if (defined ($color_ref->{$m}));
+	  $sequence .= $temp[$m];
+	  $sequence .= $newline if (($m % 60) == 59 && $m != scalar(@temp) );
+	}
+	if ( defined( $color_ref->{scalar(@temp)} ) ){
+	  print $color_ref->{scalar(@temp)};
+	}
+	$sequence .=  $newline;
+  }elsif ($format eq "gcg") {
+	my $counter = 0;
+	my $coord = $start;
+	for (my $m=0;$m<scalar(@temp);$m++) {
+	  $sequence .= $color_ref->{$m} if (defined ($color_ref->{$m}));
+
+	  #start of $line coordinate
+	  if ($m % 60 == 0) {
+		$sequence .= "$coord\t";
+	  }
+
+	  #sequence
+	  $sequence .= $temp[$m];
+
+	  # space every 10nt
+	  if ($m % 10 == 9) {
+		$sequence .= " ";
+	  }
+
+	  #end of line coordinate
+	  if ( ($m % 60)==59 ) {
+		$sequence .= "\t$coord";
+	  }
+
+	  #newline
+	  $sequence .= $newline if (($m % 60) == 59 && $m != scalar(@temp));
+
+	  $counter++;
+	  $coord++;
+	  if ($coord > $gen_length){
+		$coord -= $gen_length;
+	  }
+
+	}
+
   }
-  if ( defined( $color_ref->{scalar(@temp)} ) ){
-	print $color_ref->{scalar(@temp)};
-  }
-  $sequence .=  $newline;
+
   return $sequence;
 }
 
