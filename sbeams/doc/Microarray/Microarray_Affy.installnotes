@@ -115,11 +115,11 @@ SQL Server Example:
 
 To CREATE and POPULATE:
 ./runsql.pl -u sbeamsadmin -i -s $SBEAMS/lib/sql/Microarray/Microarray_CREATETABLES.mssql
-./runsql.pl -u sbeamsadmin -s $SBEAMS/lib/sql/Microarray/Microarray_POPULATE.mssql
+./runsql.pl -u sbeamsadmin -s $SBEAMS/lib/sql/Microarray/Microarray_POPULATE.sql
 ./runsql.pl -u sbeamsadmin -i -s $SBEAMS/lib/sql/Microarray/Microarray_CREATECONSTRAINTS.mssql
 
 To CREATE indexes:
-./runsql.pl -u sbeamsadmin -i -s $SBEAMS/lib/sql/Microarray/Microarray_CREATEINDEXES.mssql
+./runsql.pl -u sbeamsadmin -i -s $SBEAMS/lib/sql/Microarray/Microarray_CREATEINDEXES.sql
 
 To CREATE Manual Constraints (Constraints that could not be auto-generated)
 ./runsql.pl -u sbeamsadmin -i -s $SBEAMS/lib/sql/Microarray/Microarray_ADD_MANUAL_CONSTRAINTS.mssql
@@ -127,7 +127,7 @@ To CREATE Manual Constraints (Constraints that could not be auto-generated)
 To DROP:
 ./runsql.pl -u sbeamsadmin -i -s $SBEAMS/lib/sql/Microarray/Microarray_DROPCONSTRAINTS.mssql
 ./runsql.pl -u sbeamsadmin -i -s $SBEAMS/lib/sql/Microarray/Microarray_DROP_MANUAL_CONSTRAINTS.mssql
-./runsql.pl -u sbeamsadmin -i -s $SBEAMS/lib/sql/Microarray/Microarray_DROPINDEXES.mssql
+./runsql.pl -u sbeamsadmin -i -s $SBEAMS/lib/sql/Microarray/Microarray_DROPINDEXES.sql
 ./runsql.pl -u sbeamsadmin -i -s $SBEAMS/lib/sql/Microarray/Microarray_DROPTABLES.mssql
 
 Note that the Microarray_POPULATE.mssql is not auto-generated and should
@@ -198,7 +198,7 @@ cd $SBEAMS/lib/conf
 edit SBEAMS.conf
 
 Specifically:
-
+#Change to the correct Database Name, see sbeams.installnotes for more information
 DBPREFIX{Microarray_Affy}    = microarray.dbo.
 
 
@@ -235,45 +235,21 @@ set CONFDIR = "../../conf"
 If this doesn't work.  Do not proceed, debug first.
 
 -Register the module:
-cd $SBEAMS/lib/conf/Core
-echo Microarray >> AvailableModules.conf
+$SBEAMS/lib/scripts/Core/addModule.pl Microarray
 
 -------------------------------------------------------------------------------
 6) Add required Microarray work_groups and TGS entries. 
 
 $SBEAMS/lib/scripts/Core/DataImport.pl -s $SBEAMS/lib/refdata/Microarray/Microarray_work_groups.xml
 
-Section below outlines the proceedure for doing this manually.  The records
-indicated will be loaded via the DataImport, and shouldn't be repeated.  The
-instructions were left in place for reference purposes.
+You should now see a link for Microarray in the webUI (may require that you 
+log back in).  In order to use some of the administrative features you will 
+have to add yourself to one or more of the work_groups that you created in 
+the command above, importantly Microarray_admin.
 
-Log in via the web interface as a user with Administrator privileges,
-switch to the Admin group using the pull-down menu at the top, and add
-three work groups:
-[SBEAMS Home] [Admin] [Manage Work Groups] [Add Work Group]
-Add entries for (exactly as shown!):
-  Microarray_user
-  Microarray_admin
-  Microarray_readonly
-(Note that after INSERTing the first, you can click [Back], edit the previous
-information slightly, and click [INSERT] to add another.)
-
-Microarray_admin has privilege over all tables in the Microarray
-module, while the Microarray_user only has access to certain tables
-and may often not modify other users records.  The Microarray_readonly
-group is a separate group for looky loos.
-
-Now go to [Manage User Group Associations], [Add ...], and add
-yourself and whoever else to these groups as appropriate.
-
-Now set up the table group securities:
-  rowprivate - Microarray_user - data_writer
-  rowprivate - Microarray_admin - data_writer
-  rowprivate - Microarray_readonly - data_writer
-  project - Microarray_user - data_writer
-  project - Microarray_admin - data_modifier
-  arrays - Microarray_user - data_writer
-  arrays - Microarray_admin - data_modifier
+With your browser, navigate to:
+[SBEAMS Home] [Admin] [Manage User Group Associations], [Add ...], and add
+yourself (and appropriate others) to these groups.
 
 
 Now that the Microarray driver tables are loaded, and the groups have been
@@ -344,7 +320,7 @@ Add a Project as follows:
 - Make a project using the following information
    Project Name: "ISB Test Data"
    Project Tag:  "ISB_test"
-   Description:  "4 Human CEL files HG-U133_Plus_2.  2 files from Human LN prostate cancer cell, 2files from C4-2 cancer cell lines"
+   Description:  "4 Human CEL files HG-U133_Plus_2.  2 files from Human LNCaP prostate cancer cell, 2files from C4-2 cancer cell lines"
 - Fill in the appropriate information and click [INSERT]
 
 ########################
@@ -370,10 +346,18 @@ Add An Array Type
 Add Analysis Protocol
 - Switch to the Microarray_admin group by using the drop-down box at top
 - Switch to the the Microarray Module, Click On [Microarray]
-- At the bottom of the page, on the Navigation bar click on [Protocols] button
+- On the Navigation bar click on [Protocols] button
 - Click [Add Protocol]
+
 - Add a new Protocol Type, Click the "Plus Icon" next to Protocol Type
-- Fill in Protocol Type Name --> "image_analysis", Click Insert.
+- Fill in Protocol Type Name --> "image_analysis"
+- Click Insert.
+- Click "Go Back" Button
+- Insert the additional Protocol types 
+ "hybridization"
+ "array_scanning"
+
+
 - Go Back to the Add Protocol Page, and refresh the page.
 - Insert the data 
    Protocol Type --> "image_analysis",
@@ -382,38 +366,35 @@ Add Analysis Protocol
 - Click Insert
  ########################  
 Add Hyb Protocol
-- Switch to the Microarray_admin group by using the drop-down box at top
-- Switch to the the Microarray Module, Click On [Microarray]
-- Switch to the the Microarray Module, Click On [Microarray]
-- At the bottom of the page, on the Navigation bar click on [Protocols] button
-- Click [Add Protocol]
-- Add a new Protocol Type, Click the "Plus Icon" next to Protocol Type
-- Fill in Protocol Type Name --> "hybridization", Click Insert.
-- Go Back to the Add Protocol Page, and refresh the page.
+- Click "Go Back" Button
+
 - Insert the data 
    Protocol Type --> "hybridization",
    Name          --> "AFFY EukGE-WS2v5_450",
    Protocols     --> "Paste in the text output from the affy wash station" 
 - Click Insert
 ########################
-- Click the "Go Back" Button
 Add Scanning Protocol
+- Click the "Go Back" Button
+
 - Insert the data 
    Protocol Type --> "array_scanning",
    Name          --> "AFFY Scanning",
    Protocols     --> "Paste in the text output from the affy scanner" 
  - Click Insert  
 ########################
-- Click the "Go Back" Button
 Add Feature extraction Protocol
+- Click the "Go Back" Button
+
 - Insert the data
    Protocol Type --> "image_analysis",
    Name          --> "AFFY Feature Extraction",
    Protocols     --> "Generation of CEL file from DAT file is automatic in GCOS 1.0+ Software" 
 - Click Insert
 ########################
-- Click the "Go Back" Button
 Add CHP Generation Protocol
+- Click the "Go Back" Button
+
 - Insert the data
    Protocol Type --> "image_analysis",
    Name          --> "AFFY GCOS CHP Generation",
