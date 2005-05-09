@@ -36,6 +36,7 @@ use vars qw(@ISA @EXPORT
     $TB_USER_PROJECT_PERMISSION
     $TB_GROUP_PROJECT_PERMISSION
     $TB_DBXREF
+    $TB_ORGANISM
 
     $TB_TABLE_COLUMN
     $TB_TABLE_PROPERTY
@@ -56,6 +57,9 @@ use vars qw(@ISA @EXPORT
 
     $TB_SOFTWARE_HARDWARE_PROTOCOL
 
+    $TB_TEST_PROTOCOL
+    $TB_TEST_SAMPLE
+    $TB_TEST_SAMPLE_PROTOCOL
 );
 
 require Exporter;
@@ -76,6 +80,7 @@ require Exporter;
     $TB_USER_PROJECT_PERMISSION
     $TB_GROUP_PROJECT_PERMISSION
     $TB_DBXREF
+    $TB_ORGANISM
 
     $TB_TABLE_COLUMN
     $TB_TABLE_PROPERTY
@@ -95,6 +100,10 @@ require Exporter;
     $TB_ONTOLOGY_TERM_TYPE
 
     $TB_SOFTWARE_HARDWARE_PROTOCOL
+
+    $TB_TEST_PROTOCOL
+    $TB_TEST_SAMPLE
+    $TB_TEST_SAMPLE_PROTOCOL
 );
 
 
@@ -117,6 +126,7 @@ $TB_USER_PROJECT_PERMISSION     = "${core}user_project_permission";
 $TB_GROUP_PROJECT_PERMISSION    = "${core}group_project_permission";
 
 $TB_DBXREF              = $DBPREFIX{BioLink}."dbxref";
+$TB_ORGANISM            = "${core}organism";
 
 $TB_TABLE_COLUMN        = "${core}table_column";
 $TB_TABLE_PROPERTY      = "${core}table_property";
@@ -131,11 +141,14 @@ $TB_FORM_TEMPLATE       = "${core}form_template";
 $TB_SOFTWARE_HARDWARE_PROTOCOL = "${core}software_hardware_protocol";
 $TB_SHORT_URL           = "${core}short_url";
 
-$TB_MGED_ONTOLOGY_RELATIONSHIP    = $DBPREFIX{BioLink}."MGEDOntologyRelationship";
-$TB_MGED_ONTOLOGY_TERM            = $DBPREFIX{BioLink}."MGEDOntologyTerm";
-$TB_ONTOLOGY_RELATIONSHIP_TYPE    = $DBPREFIX{BioLink}."OntologyRelationshipType";
-$TB_ONTOLOGY_TERM_TYPE            = $DBPREFIX{BioLink}."OntologyTermType";
+$TB_MGED_ONTOLOGY_RELATIONSHIP  = $DBPREFIX{BioLink}."MGEDOntologyRelationship";
+$TB_MGED_ONTOLOGY_TERM          = $DBPREFIX{BioLink}."MGEDOntologyTerm";
+$TB_ONTOLOGY_RELATIONSHIP_TYPE  = $DBPREFIX{BioLink}."OntologyRelationshipType";
+$TB_ONTOLOGY_TERM_TYPE          = $DBPREFIX{BioLink}."OntologyTermType";
 
+$TB_TEST_PROTOCOL               = ${core}."test_protocol";
+$TB_TEST_SAMPLE                 = ${core}."test_sample";
+$TB_TEST_SAMPLE_PROTOCOL        = ${core}."test_sample_protocol";
 
 ###############################################################################
 
