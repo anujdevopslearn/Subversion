@@ -36,7 +36,7 @@ SN_biosequence	14	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact
 SN_biosequence	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 SN_biosequence	16	record_status	Record Status	char	1	0	N	N	N							N	N				
 SN_biosequence_property_set	1	biosequence_property_set_id	BioSequence Property Set ID	int	4	0	N		Y							N	N				pkDEFAULT
-SN_biosequence_property_set	2	biosequence_id	BioSequence ID	int	4	0	N		N	PS_biosequence	biosequence_id					N	N	Y	Biosequence to which this Biosequence property set belongs		
+SN_biosequence_property_set	2	biosequence_id	BioSequence ID	int	4	0	N		N	SN_biosequence	biosequence_id					N	N	Y	Biosequence to which this Biosequence property set belongs		
 SN_biosequence_property_set	3	n_transmembrane_regions	Number of Transmembrane Regions	int	4	0	Y		N							Y	Y	N	Number of transmembrane regions		
 SN_biosequence_property_set	4	transmembrane_class	Transmembrane Region Class	varchar	10	0	Y		N			Y	text	50		Y	Y	N	"Class of the transmembrane region.  May be 0, TM, A, S, TM_xS based on output from TMHMM and signalP"		
 SN_biosequence_property_set	5	transmembrane_topology	Transmembrane Region Topology	text	16	0	Y		N			Y	text	20		Y	Y	N	Coding of which residues belong in the transmembrane regions		
