@@ -43,7 +43,7 @@ ModTmpTAG_biosequence	6	biosequence_accession	BioSequence Accession	varchar	255	
 ModTmpTAG_biosequence	7	biosequence_desc	Biosequence Description	varchar	1024	0	N		N			Y	text	40		Y	Y	N	Description of this BioSequence (generally everything after the first space in a FASTA file header line)		
 ModTmpTAG_biosequence	8	biosequence_seq	Sequence	text	16	0	Y		N			N	file	40		Y	Y	N	Actual sequence of the BioSequence if known		
 ModTmpTAG_biosequence_property_set	1	biosequence_property_set_id	BioSequence Property Set ID	int	4	0	N		Y							N	N				pkDEFAULT
-ModTmpTAG_biosequence_property_set	2	biosequence_id	BioSequence ID	int	4	0	N		N	AT_biosequence	biosequence_id					N	N	Y	Biosequence to which this Biosequence property set belongs		pkDEFAULT
+ModTmpTAG_biosequence_property_set	2	biosequence_id	BioSequence ID	int	4	0	N		N	ModTmpTAG_biosequence	biosequence_id					N	N	Y	Biosequence to which this Biosequence property set belongs		pkDEFAULT
 ModTmpTAG_biosequence_property_set	3	n_transmembrane_regions	Number of Transmembrane Regions	int	4	0	Y		N							Y	Y	N	Number of transmembrane regions		pkDEFAULT
 ModTmpTAG_biosequence_property_set	4	transmembrane_class	Transmembrane Region Class	varchar	10	0	Y		N			Y	text	50		Y	Y	N	"Class of the transmembrane region.  May be 0, TM, A, S, TM_xS based on output from TMHMM and signalP"		
 ModTmpTAG_biosequence_property_set	5	transmembrane_topology	Transmembrane Region Topology	varchar	1024	0	Y		N			Y	text	20		Y	Y	N	Coding of which residues belong in the transmembrane regions		
@@ -56,6 +56,10 @@ ModTmpTAG_biosequence_property_set	11	chromosome	Chromosome	varchar	50	0	Y		N			
 ModTmpTAG_biosequence_property_set	12	start_in_chromosome	Start Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	Start position of the biosequence in the chromosome		
 ModTmpTAG_biosequence_property_set	13	end_in_chromosome	End Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	End position of the biosequence in the chromosome		
 ModTmpTAG_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	"Strand (+,-) of the biosequence in the chromosome"		
+ModTmpTAG_biosequence_property_set	15	isoelectric_point	Isoelectric Point	real	4	0	Y		N			N	text	10		Y	Y	N	Isoelectric Point (pI) of the protein		
+ModTmpTAG_biosequence_property_set	16	fav_codon_frequency	Favorite Codon Frequency	real	4	0	Y		N			N	text	10		Y	Y	N	Favorite Codon Frequency		
+ModTmpTAG_biosequence_property_set	17	duplicate_biosequences	Duplicate Biosequences	varchar	255	0	Y		N			N	text	50		Y	Y	N	Semicolon delimited list of duplicate sequences within the same set		
+ModTmpTAG_biosequence_property_set	18	category	Category	varchar	255	0	Y		N			N	text	50		Y	Y	N	Biosequence category		
 ModTmpTAG_query_option	1	query_option_id	Query Option ID	int	4	0	N		Y							N	N				pkDEFAULT
 ModTmpTAG_query_option	2	option_type	Option Type	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Type or category of this option		
 ModTmpTAG_query_option	3	option_key	Option Key	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Key for this key/value pair option		
