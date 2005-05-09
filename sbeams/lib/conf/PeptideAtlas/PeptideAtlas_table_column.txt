@@ -222,14 +222,77 @@ AT_biosequence_annotation	3	gene_symbol	Gene Symbol	varchar	255	0	Y		N			N	text	
 AT_biosequence_annotation	4	full_gene_name	Full Gene Name	varchar	255	0	Y		N			N	text	50		Y	Y	N	Full name of the gene (e.g. Toll-like Receptor 2)		
 AT_biosequence_annotation	5	aliases	BioSequence Aliases	varchar	255	0	Y		N			N	text	50		Y	Y	N	Aliases of this BioSequence.  These are stored as a semi-colon delimited string		
 AT_biosequence_annotation	6	former_names	Former BioSequence Names	varchar	255	0	Y		N			N	text	50		Y	Y	N	Former Aliases of this BioSequence.  These are stored as a colon-delimited string		
-AT_biosequence_annotation	7	functional_description	Functional Description	text	16	0	Y		N			N	textarea	3		Y	Y	N	Functional description of the protein
-AT_biosequence_annotation	8	EC_numbers	EC Numbers	varchar	255	0	Y		N			N	text	50		Y	Y	N	EC Number(s) that corresponds to this domain.  Separate multiple numbers with a semicolon
-AT_biosequence_annotation	9	biosequence_type	Biosequence Type	varchar	255	0	Y		N			N	text	50		Y	Y	N	Further annotation of biosequence type
-AT_biosequence_annotation	10	category	Category	varchar	255	0	Y		N			N	text	50		Y	Y	N	Category
-AT_biosequence_annotation	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments
-AT_biosequence_annotation	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-AT_biosequence_annotation	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N		
-AT_biosequence_annotation	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-AT_biosequence_annotation	15	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N		
-AT_biosequence_annotation	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N		
-AT_biosequence_annotation	17	record_status	Record Status	char	1	0	N	N	N							N	N		
+AT_biosequence_annotation	7	functional_description	Functional Description	text	16	0	Y		N			N	textarea	3		Y	Y	N	Functional description of the protein		
+AT_biosequence_annotation	8	EC_numbers	EC Numbers	varchar	255	0	Y		N			N	text	50		Y	Y	N	EC Number(s) that corresponds to this domain.  Separate multiple numbers with a semicolon		
+AT_biosequence_annotation	9	biosequence_type	Biosequence Type	varchar	255	0	Y		N			N	text	50		Y	Y	N	Further annotation of biosequence type		
+AT_biosequence_annotation	10	category	Category	varchar	255	0	Y		N			N	text	50		Y	Y	N	Category		
+AT_biosequence_annotation	11	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_biosequence_annotation	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_biosequence_annotation	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_biosequence_annotation	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_biosequence_annotation	15	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_biosequence_annotation	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_biosequence_annotation	17	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_ipi_version	1	ipi_version_id	IPI Version ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_ipi_version	2	ipi_version_name	IPI Version Name	varchar	255	0	N		N			Y	text	50		Y	Y	N	IPI database name/ Source of Predicted and identified peptides		
+AT_ipi_version	3	ipi_version_date	IPI Version Date	datetime	8	0	N		N				text	50		Y	Y	N	Date the data file was produced		
+AT_ipi_version	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_ipi_version	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_ipi_version	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N		
+AT_ipi_version	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
+AT_ipi_version	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N		
+AT_ipi_version	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N		
+AT_ipi_version	10	record_status	Record Status	char	1	0	N	N	N							N	N		
+AT_ipi_data	1	ipi_data_id	IPI Data ID	int	4	0	N		Y							N	N		
+AT_ipi_data	2	ipi_version_id	IPI Version ID	int	4	0	N		N	AT_ipi_version	ipi_version_id	Y				N	N	Y	
+AT_ipi_data	3	ipi_accession_number	IPI Accession Number	varchar	50	0	N		N			Y	text	30		Y	Y	N	IPI Accession Number ie IPI0000123
+AT_ipi_data	4	protein_name	Protein Name	varchar	255	0	N		N			Y	text	50		Y	Y	N	Descriptive IPI Protein Name 
+AT_ipi_data	5	protein_symbol	Protein Symbol	varchar	50	0	Y		N			N	text	30		Y	Y	N	Short Protein Symbol from IPI
+AT_ipi_data	6	swiss_prot_acc	SwissPro Accession Numbers	varchar	50	0	Y		N			N	text	30		Y	Y	N	Swiss Prot Accession number
+AT_ipi_data	7	cellular_location_id	Cellular Location	int	4	0	Y		N			N				N	N	Y	"Subcelluar location: ie Secreted, Transmembrane"
+AT_ipi_data	8	protein_summary	Protein Summary	text	16	0	Y		N			N	textarea	4		Y	Y	N	Protein Summary Information
+AT_ipi_data	9	protein_sequence	Protein Sequence	text	16	0	N		N			Y	textarea	4		Y	Y	N	Protein Sequence
+AT_ipi_data	10	transmembrane_info	Transmembrane Info	varchar	255	0	N		N			Y	text	50		Y	Y	N	Encoded TM domain informaion from TMHMM  ie o528-550i
+AT_ipi_data	11	signal_sequence_info	Signal Sequence Info	varchar	255	0	N		N			Y	text	50		Y	Y	N	Encoded Singal sequence information from SingalP: ie 28 Y 0.988 Y
+AT_ipi_data	12	synonyms	Synonyms	varchar	255	0	N		N			Y	text	50		Y	Y	N	Synonyms		
+AT_cellular_location	1	cellular_location_id	Cellular Location	int	4	0	N		Y							N	N				pkDEFAULT
+AT_cellular_location	2	cellular_location_name	Cellular Location Name	varchar	255	0	N		N			Y	text	50		Y	Y	N	"Name of the subcellular location: Secreted, Transmembrane"		
+AT_cellular_location	3	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_cellular_location	4	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_cellular_location	5	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_cellular_location	6	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_cellular_location	7	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_cellular_location	8	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_glyco_site	1	glyco_site_id	Cellular Location	int	4	0	N		Y							N	N				pkDEFAULT
+AT_glyco_site	2	glyco_site_position	Glyco Site Prosition	int	4	0	N		N			Y				N	N	Y			
+AT_glyco_site	3	ipi_data_id	IPI Data ID	int	4	0	N		N	AT_ipi_data	ipi_data_id	Y				N	N	Y			
+AT_glyco_site	4	glyco_score	Glyco Score	real	4	0	N		N			Y	text	50		Y	Y	N	Probability that there is glyco site		
+AT_identified_peptide	1	identified_peptide_id	Identified Peptide ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_identified_peptide	2	ipi_data_id	IPI Data ID	int	4	0	N		N	AT_ipi_data	ipi_data_id	Y				N	N	Y			
+AT_identified_peptide	3	identified_peptide_sequence	Identified Peptide Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	N	Peptide Sequence Identified by MS/MS run		
+AT_identified_peptide	4	peptide_prophet_score	Peptide Prophet Score 	real	4	0	N		N			Y	text	50		Y	Y	N	Peptide Prophet Score		
+AT_identified_peptide	5	peptide_mass	Peptide Mass	real	4	0	N		N			Y	text	50		Y	Y	N	Mass of the identified peptide		
+AT_identified_peptide	6	identified_start	Identified Peptide Start	int	4	0	N		N			Y	text	10		N	N	N	Start position of the peptide on the IPI protein		
+AT_identified_peptide	7	identified_stop	Identified  Peptide Stop	int	4	0	N		N			Y	text	10		N	N	N	Stop position of the peptide on the IPI protein		
+AT_predicted_peptide	1	predicted_peptide_id	Predicted Peptide ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_predicted_peptide	2	ipi_data_id	IPI Data ID	int	4	0	N		N	AT_ipi_data	ipi_data_id	Y				N	N	Y			
+AT_predicted_peptide	3	predicted_peptide_sequence	Predicted Peptide Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	N	Peptide Sequence Identified by MS/MS run		
+AT_predicted_peptide	4	peptide_prophet_score	Peptide Prophet Score 	real	4	0	N		N			Y	text	50		Y	Y	N	Peptide Prophet Score		
+AT_predicted_peptide	5	predicted_peptide_mass	Predicted Peptide Mass	real	4	0	N		N			Y	text	50		Y	Y	N	Predicted Peptide Mass		
+AT_predicted_peptide	6	detection_probability	Detection Probability	real	4	0	N		N			Y	text	50		Y	Y	N	Probability that this peptide will be detected in a MS run		
+AT_predicted_peptide	7	number_proteins_match_peptide	Number of Proteins Matching Peptide	int	4	0	N		N			Y	text	10		N	N	Y	"Number of Proteins that match this protein, including the current protein"		
+AT_predicted_peptide	8	matching_protein_ids	IPI Protein Ids	varchar	255	0	N		N			Y	text	50		Y	Y	N	IPI accession numbers for all the proteins that contain this predicted peptide		
+AT_predicted_peptide	9	predicted_start	Identified Peptide Start	int	4	0	N		N			Y	text	10		N	N	N	Start position of the peptide on the IPI protein		
+AT_predicted_peptide	10	predicted_stop	Identified  Peptide Stop	int	4	0	N		N			Y	text	10		N	N	N	Stop position of the peptide on the IPI protein		
+AT_peptide_to_tissue	1	peptide_to_tissue_id	Peptide To Tissue ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_peptide_to_tissue	2	identified_peptide_id	Identified Peptide ID	int	4	0	N		N			Y				N	N				pkDEFAULT
+AT_peptide_to_tissue	3	tissue_id	Tissue ID	int	4	0	N		N			Y				N	N				pkDEFAULT
+AT_tissues	1	tissue_id	Tissue ID	int	4	0	N		Y							N	N				
+AT_tissues	2	tissue_name	Tissue Name	varchar	255	0	N		N			Y	text	50		Y	Y	N	General Tissue Name		
+AT_tissues	3	tissue_description	Tissue Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Description about the tissue		
+AT_tissues	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_tissues	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_tissues	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_tissues	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_tissues	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_tissues	9	record_status	Record Status	char	1	0	N	N	N							N	N				
