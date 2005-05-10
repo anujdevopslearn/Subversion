@@ -56,7 +56,7 @@ sub authenticate {
   #### Decode the argument list
   my $server_uri = $args{'server_uri'} || '';
   my $SBEAMSAuth_file = $args{'SBEAMSAuth_file'} || '';
-
+  my $entrycode = $args{'SBEAMSentrycode'} || '';
 
   #### Determine the server_uri
   if ($server_uri) {
@@ -83,6 +83,22 @@ sub authenticate {
   #### Create the cookie jar
   my $cookie_jar = HTTP::Cookies->new(ignore_discard => 1);
 
+  #### If we have an entrycode, try to authenticate using it
+  my $SBEAMS_auth;
+  if ($entrycode){
+	$SBEAMS_auth = _fetchSBEAMSAuth(
+					  server_uri=>$server_uri,
+					  SBEAMSentrycode=>$entrycode,
+									);
+  }
+
+
+  #### Since we got the authentication cookie, cache it
+  $SBEAMS_auth->save($SBEAMSAuth_file);
+  #### And make sure only the user can read the file
+  chmod(0600,$SBEAMSAuth_file);
+
+
 
   #### See if the SBEAMSAuth file exists
   if (-e $SBEAMSAuth_file ) {
@@ -95,7 +111,7 @@ sub authenticate {
       $server =~ s/^http[s]*:\/\///;
       my $path = '/';
       if ($server =~ /.+?(\/.+)/) {
-	$path = $1;
+		$path = $1;
       }
       $server =~ s/\/.*//;
 
@@ -122,7 +138,6 @@ sub authenticate {
 
 
   #### See if we can get a cookie for this
-  my $SBEAMS_auth;
   unless ($SBEAMS_auth = _fetchSBEAMSAuth(
 					  server_uri=>$server_uri,
 					  username=>$username,
@@ -159,7 +174,7 @@ sub fetch_data {
   my $server_command = $args{'server_command'}
     || die("ERROR: $SUB_NAME: parameter server_command missing");
   my $command_parameters = $args{'command_parameters'} || '';
-
+  my $entrycode = $command_parameters->{'SBEAMSentrycode'} || '';
 
   #### If authentication hasn't happened yet, do it now if possible
   unless ($self->is_authenticated()) {
@@ -167,12 +182,12 @@ sub fetch_data {
       print "ERROR: $SUB_NAME: Parameter server_uri missing";
       return '';
     }
-    unless ($self->authenticate(server_uri => $server_uri)) {
+    unless ($self->authenticate(server_uri => $server_uri,
+								SBEAMSentrycode=>$entrycode)) {
       print "ERROR: $SUB_NAME: Unable to authenticate\n";
       return '';
     }
   }
-
 
   #### Create the URL for getting the result
   my $url = "$server_uri/cgi/$server_command";
@@ -327,7 +342,6 @@ sub get_authentication {
   my $dummy = shift;
   die("ERROR: $SUB_NAME: no parameters allowed") if ($dummy);
 
-
   #### If the authentication has not been yet obtained, try to
   unless ($self->is_authenticated()) {
     $self->set_authentication($self->authenticate());
@@ -352,16 +366,22 @@ sub _fetchSBEAMSAuth {
   #### Decode the argument list
   my $server_uri = $args{'server_uri'}
     || die("ERROR: $SUB_NAME: parameter 'server_uri' missing");
-  my $username = $args{'username'}
-    || die("ERROR: $SUB_NAME: parameter 'username' missing");
-  my $password = $args{'password'}
-    || die("ERROR: $SUB_NAME: parameter 'password' missing");
 
+  my $entrycode = $args{'SBEAMSentrycode'};
+  my ($username,$password);
+  my $parameters;
+  if ($entrycode) {
+	$parameters = "SBEAMSentrycode=$entrycode&login=Login";
+  }else {
+	$username = $args{'username'}
+	|| die("ERROR: $SUB_NAME: parameter 'username' missing");
+	$password = $args{'password'}
+    || die("ERROR: $SUB_NAME: parameter 'password' missing");
+	$parameters = "username=$username&password=$password&login=Login";
+  }
 
   #### Form the rest of the $url
   my $url = "$server_uri/cgi/main.cgi";
-  my $parameters = "username=$username&password=$password&login=Login";
-
 
   #### Create a user agent object pretending to be Mozilla
   my $ua = new LWP::UserAgent;
