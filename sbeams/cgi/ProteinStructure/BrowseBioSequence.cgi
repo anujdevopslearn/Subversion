@@ -300,6 +300,14 @@ sub handle_request {
   return if ($biosequence_set_clause eq '-1');
 
 
+  #### Build BIOSEQUENCE constraint
+  my $biosequence_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"BS.biosequence_id",
+    constraint_type=>"int_list",
+    constraint_name=>"BioSequence",
+    constraint_value=>$parameters{biosequence_id_constraint} );
+  return if ($biosequence_clause eq '-1');
+
   #### Build BIOSEQUENCE_NAME constraint
   my $biosequence_name_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"BS.biosequence_name",
@@ -551,6 +559,10 @@ sub handle_request {
     ["full_gene_name","BSA.full_gene_name","Annotated Full Gene Name"],
     ["protein_EC_numbers","BSA.EC_numbers","Annotated EC Numbers"],
     ["biosequence_annotation_id","BSA.biosequence_annotation_id","biosequence_annotation_id"],
+	["aliases","BSA.aliases","Aliases"],
+	["duplicate_biosequences","BPS.duplicate_biosequences", "Duplicate Biosequences"],
+	["functional_description","BSA.functional_description","Function"],
+	["comment","BSA.comment","Comment"],
     ["last_annotated_by","BSAUL.username","Last Annotated By"],
 
     @additional_columns,
@@ -596,6 +608,7 @@ sub handle_request {
         $GO_join
        WHERE 1 = 1
       $biosequence_set_clause
+	  $biosequence_clause
       $biosequence_name_clause
       $biosequence_accession_clause
       $biosequence_gene_name_clause
@@ -684,12 +697,12 @@ sub handle_request {
         label_peptide=>$label_peptide,
         label_start=>$label_start,
         label_end=>$label_end,
-        url_cols_ref=>\%url_cols
+        url_cols_ref=>\%url_cols,
+		display_mode=>$parameters{display_mode}
       );
 
-
     #### Otherwise display the resultset in conventional style
-    } else {
+	}else {
       $sbeams->displayResultSet(rs_params_ref=>\%rs_params,
   	  url_cols_ref=>\%url_cols,hidden_cols_ref=>\%hidden_cols,
   	  max_widths=>\%max_widths,resultset_ref=>$resultset_ref,
@@ -790,13 +803,12 @@ sub displaySequenceView {
   my $label_start = $args{'label_start'} || '';
   my $label_end = $args{'label_end'} || '';
 
+  #### Define the display mode
+  my $mode = $args{'display_mode'} || 'x';
+
 
   #### Define standard variables
   my ($i,$element,$key,$value,$line,$result,$sql,$file);
-
-
-  #### Define the display mode
-  my $mode = 'x';
 
 
   #### Get the hash of indices of the columns
@@ -817,7 +829,6 @@ sub displaySequenceView {
 
   #### Display each row in the resultset
   foreach $row (@{$data_ref}) {
-
     #### Pull out data for this row into names variables
     $biosequence_name = $row->[$col{biosequence_name}];
     $description = $row->[$col{biosequence_desc}];
@@ -864,7 +875,6 @@ sub displaySequenceView {
     if ($label_peptide) {
       $page_width = 100;
     }
-
 
     #### If transmembrane regions topology has been supplied, find the TMRs
     my %tmr_start_positions;
@@ -934,12 +944,14 @@ sub displaySequenceView {
 
     if ($accessor && $accession && $mode ne 'FASTA') {
       print "<A HREF=\"$accessor$accession\">$biosequence_name</A>";
+    } elsif ($mode eq 'FASTA') {
+	  print "<PRE>&gt;$biosequence_name";
     } else {
-      print "$biosequence_name";
-    }
+	  print "$biosequence_name";
+	}
 
     if ($mode eq 'FASTA') {
-      print " $description\n";
+      print " $description</PRE>\n";
     } else {
       print "</font> <font color=\"purple\">$description</font>\n";
     }
@@ -948,11 +960,18 @@ sub displaySequenceView {
     #### Write out the sequence in a pretty format, possibly labeled
     #### with a highlighted string of bases/residues
     my $offset = 0;
+	if ($mode eq 'FASTA'){
+	  print "<PRE>";
+	}
+
     while (substr($sequence,$offset,60)) {
       print substr($sequence,$offset,60)."\n";
       $offset += 60;
     }
-
+	  
+	if ($mode eq 'FASTA'){
+	  print "</PRE>\n";
+	}
 
     unless ($mode eq 'FASTA') {
 
