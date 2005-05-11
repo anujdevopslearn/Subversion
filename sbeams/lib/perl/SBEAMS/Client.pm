@@ -3,7 +3,7 @@ package SBEAMS::Client;
 ###############################################################################
 # Program     : SBEAMS::Client
 # Author      : Eric Deutsch <edeutsch@systemsbiology.org>
-# $Id $
+# $Id$
 #
 # Description : This module provides a client API to SBEAMS queries
 #               exposed via the HTTP interface.
@@ -79,7 +79,6 @@ sub authenticate {
     $SBEAMSAuth_file = "$HOME/.SBEAMSAuth";
   }
 
-
   #### Create the cookie jar
   my $cookie_jar = HTTP::Cookies->new(ignore_discard => 1);
 
@@ -90,15 +89,11 @@ sub authenticate {
 					  server_uri=>$server_uri,
 					  SBEAMSentrycode=>$entrycode,
 									);
-  }
-
-
   #### Since we got the authentication cookie, cache it
   $SBEAMS_auth->save($SBEAMSAuth_file);
   #### And make sure only the user can read the file
   chmod(0600,$SBEAMSAuth_file);
-
-
+  }
 
   #### See if the SBEAMSAuth file exists
   if (-e $SBEAMSAuth_file ) {
