@@ -64,13 +64,15 @@ use SBEAMS::Connection qw($log);
 
 use base qw(SBEAMS::Microarray::Affy);		
 use SBEAMS::Connection::Tables;
+use SBEAMS::Connection::Settings qw( $PHYSICAL_BASE_DIR );
 use SBEAMS::Microarray::Tables;
 use SBEAMS::Microarray::Analysis_Data;
-use SBEAMS::Microarray::Settings;
+use SBEAMS::Microarray::Settings qw( $AFFY_TMP_DIR );
 
 my $R_program = '/tools/bin/R';
 my $R_library = '/net/arrays/Affymetrix/bioconductor/library';
 
+#our $PHYSICAL_BASE_DIR;
 
 ###############################################################################
 # Receive the main SBEAMS object
@@ -112,9 +114,11 @@ sub make_R_CHP_file {
     	confess(__PACKAGE__ . "::$method Need to provide arugments 'cel_file' & 'file_name \n") unless ($file_name =~ /^\w/ && $cel_file =~ /CEL$/);
     
    	
-	
-	my $R_temp_dir = "/net/dblocal/www/html/sbeams/tmp/Microarray/R_CHP_RUNS/${file_name}_R_CHP";	#temp out dir for storing R and shell scripts	
-	my $out_shell_script = "${file_name}_shell.sh";
+  # temp dir for storing R/shell scripts, use config value or fall back
+	my $R_temp_dir = ( $AFFY_TMP_DIR ) ? "${AFFY_TMP_DIR}R_CHP_RUNS${file_name}_R_CHP" : 
+                  "/net/dblocal/www/html/sbeams/tmp/Microarray/R_CHP_RUNS/${file_name}_R_CHP";
+
+  my $out_shell_script = "${file_name}_shell.sh";
 	my $out_R_script = "${file_name}_R_script.R";					#these paths will be relative to where the shell script will be running, they all should be in the same directory
 	my $out_error_log = "${file_name}_error.txt";
 	
