@@ -34,6 +34,7 @@ require Exporter;
 
 @EXPORT = qw (
     $SBEAMS_PART 
+    $AFFY_TMP_DIR
 );
 
 
@@ -46,7 +47,6 @@ $BIOCONDUCTOR_DELIVERY_PATH = "/net/arrays/Affymetrix/core/data_analysis/deliver
 $ADD_ANNOTATION_OUT_FOLDER = "$PHYSICAL_BASE_DIR/tmp/Microarray/Add_affy_annotation";
 
 $AFFY_TMP_DIR		= "$PHYSICAL_BASE_DIR/tmp/Microarray";
-
 
 
 @AFFY_DEFAULT_FILES	= qw(CHP CEL XML INFO RPT R_CHP JPEG EGRAM_PF.jpg EGRAM_T.jpg EGRAM_F.jpg);		#files that will be used to determine if a group of files, all sharing the same basename, are all present when uploading Affy arrays 
