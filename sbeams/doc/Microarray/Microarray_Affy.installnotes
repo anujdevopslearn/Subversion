@@ -68,7 +68,11 @@ specific setup:
 All modules live in the same area and should be unpacked into the
 main SBEAMS area.
 
+# Set $SBEAMS enviroment variable (tcsh syntax):
+setenv SBEAMS /local/www/html/dev1/sbeams
 
+# bash syntax:
+# export SBEAMS=/local/www/html/dev1/sbeams
 
 -------------------------------------------------------------------------------
 3) Create and populate the database
@@ -89,7 +93,7 @@ databases.  This may or may not be a significant concern.
 
 - Generate the appropriate schema for your type(s) of database as follows:
 
-setenv SBEAMS /local/html/dev1/sbeams
+
 cd $SBEAMS/lib/scripts/Core
 
 foreach dbtype ( mssql mysql pgsql oracle )
@@ -173,12 +177,15 @@ A cron job can be setup (see below) to keep monitoring the default directory for
 
 #########################
 For initial setup make the following folders
-mkdir $SBEAMS/tmp \
-$SBEAMS/tmp/Microarray \
+
+# These should already exist from the installation of the Core module
+mkdir $SBEAMS/tmp $SBEAMS/var 
+
+# These will have to be created.
+mkdir $SBEAMS/tmp/Microarray \
 $SBEAMS/tmp/Microarray/AFFY_ANNO_LOGS \
 $SBEAMS/tmp/Microarray/GetExpression \
 $SBEAMS/tmp/Microarray/GetExpression/jws \
-$SBEAMS/var \
 $SBEAMS/var/Microarray \
 $SBEAMS/var/Microarray/Affy_data \
 $SBEAMS/var/Microarray/Affy_data/probe_data \
@@ -186,13 +193,11 @@ $SBEAMS/var/Microarray/Affy_data/probe_data/external \
 $SBEAMS/var/Microarray/Affy_data/delivery \
 $SBEAMS/var/Microarray/Affy_data/annotation
 
-chgrp -R sbeams $SBEAMS/tmp; chgrp -R sbeams $SBEAMS/var
-chmod -R g+s $SBEAMS/tmp; chmod -R g+s $SBEAMS/var;
+chgrp -R sbeams $SBEAMS/tmp/Microarray; chgrp -R sbeams $SBEAMS/var/Microarray
+chmod -R g+ws $SBEAMS/tmp/Microarray; chmod -R g+ws $SBEAMS/var/Microarray;
 
 -------------------------------------------------------------------------------
 4-1) Edit the SBEAMS Configuration files
-
-setenv SBEAMS /local/www/html/dev1/sbeams
 
 cd $SBEAMS/lib/conf
 edit SBEAMS.conf
@@ -213,6 +218,7 @@ to look like the lines below
 $AFFY_DEFAULT_DIR	    = "$PHYSICAL_BASE_DIR/var/Microarray/Affy_data/probe_data";
 $BIOCONDUCTOR_DELIVERY_PATH = "$PHYSICAL_BASE_DIR/var/Microarray/Affy_data/delivery";
 $ADD_ANNOTATION_OUT_FOLDER  = "$PHYSICAL_BASE_DIR/tmp/Microarray/Add_affy_annotation";
+$AFFY_TMP_DIR	    = "$PHYSICAL_BASE_DIR/tmp/Microarray/";
 
   Notes: $AFFY_DEFAULT_DIR = Full path to a folder that will house all Affy CEL files and support files
   	 $BIOCONDUCTOR_DELIVERY_PATH = Location that all analysis results will be written to(see below)
@@ -251,14 +257,12 @@ With your browser, navigate to:
 [SBEAMS Home] [Admin] [Manage User Group Associations], [Add ...], and add
 yourself (and appropriate others) to these groups.
 
-
 Now that the Microarray driver tables are loaded, and the groups have been
 established, you should be able to go to the web site again and click on
 SBEAMS - Microarray and explore the tables.  They're all going to be empty,
 but you shouldn't get any errors, just empty resultsets.
 
 If this doesn't work.  Do not proceed, debug first.
-
 
 -------------------------------------------------------------------------------
 7) Add some sample data
@@ -288,16 +292,15 @@ mkdir $SBEAMS/var/Microarray/Affy_data/probe_data/external/Human_test
 mkdir $SBEAMS/var/Microarray/Affy_data/probe_data/200404
 
 - Move the the CEL files And info file to the test folder
-mv ./Human_test_data/*.CEL $SBEAMS/var/Microarray/Affy_data/probe_data/external/Human_test/.
+mv ./Human_test_data/*.CEL $SBEAMS/var/Microarray/Affy_data/probe_data/external/Human_test/
 mv ./Human_test_data/Master_info_file_test_data.txt $SBEAMS/var/Microarray/Affy_data/probe_data/external/Human_test
 
 -Move All the files CEL, XML, RPT files from the Affy_test_data to the data folder
-mv ./20040421_* $SBEAMS/var/Microarray/Affy_data/probe_data/200404/.
-
+mv ./20040421_* $SBEAMS/var/Microarray/Affy_data/probe_data/200404/
 
 -Move the annotation file to annotation directory
-mv ./Human_test_data/HG-U133A_annot.csv $SBEAMS/var/Microarray/Affy_data/annotation/.
-mv HG-U133_Plus_2_annot.csv $SBEAMS/var/Microarray/Affy_data/annotation/.
+mv ./Human_test_data/HG-U133A_annot.csv $SBEAMS/var/Microarray/Affy_data/annotation/
+mv HG-U133_Plus_2_annot.csv $SBEAMS/var/Microarray/Affy_data/annotation/
 
 ########################
 (logged in as your user account)
@@ -362,7 +365,7 @@ Add Analysis Protocol
 - Insert the data 
    Protocol Type --> "image_analysis",
    Name          --> "R Mas5.0 CHP",
-   Protocols     --> "Use R-bioconductor to turn a CEL file into a CHP file" 
+   Protocol     --> "Use R-bioconductor to turn a CEL file into a CHP file" 
 - Click Insert
  ########################  
 Add Hyb Protocol
@@ -371,7 +374,7 @@ Add Hyb Protocol
 - Insert the data 
    Protocol Type --> "hybridization",
    Name          --> "AFFY EukGE-WS2v5_450",
-   Protocols     --> "Paste in the text output from the affy wash station" 
+   Protocol     --> "Paste in the text output from the affy wash station" 
 - Click Insert
 ########################
 Add Scanning Protocol
@@ -380,7 +383,7 @@ Add Scanning Protocol
 - Insert the data 
    Protocol Type --> "array_scanning",
    Name          --> "AFFY Scanning",
-   Protocols     --> "Paste in the text output from the affy scanner" 
+   Protocol     --> "Paste in the text output from the affy scanner" 
  - Click Insert  
 ########################
 Add Feature extraction Protocol
@@ -389,7 +392,7 @@ Add Feature extraction Protocol
 - Insert the data
    Protocol Type --> "image_analysis",
    Name          --> "AFFY Feature Extraction",
-   Protocols     --> "Generation of CEL file from DAT file is automatic in GCOS 1.0+ Software" 
+   Protocol     --> "Generation of CEL file from DAT file is automatic in GCOS 1.0+ Software" 
 - Click Insert
 ########################
 Add CHP Generation Protocol
@@ -398,7 +401,7 @@ Add CHP Generation Protocol
 - Insert the data
    Protocol Type --> "image_analysis",
    Name          --> "AFFY GCOS CHP Generation",
-   Protocols     --> "Create CHP file in GCOS by right-clicking a CEL file and choosing 'Analyze'"
+   Protocol     --> "Create CHP file in GCOS by right-clicking a CEL file and choosing 'Analyze'"
 - Click Insert
 ########################
 Add Server Info
@@ -422,7 +425,7 @@ cd $SBEAMS/lib/scripts/Microarray
 ./load_affy_annotation_files.pl --run_mode update \
 --file_name $SBEAMS/var/Microarray/Affy_data/annotation/HG-U133A_annot.csv
 
-It could take about 10-15 minutes to upload the data...
+It could take about 15-30 minutes to upload the data...
 
 - Add the annotation for the second array
 ./load_affy_annotation_files.pl --run_mode update \
