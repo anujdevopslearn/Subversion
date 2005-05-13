@@ -101,7 +101,7 @@ $subdir = '' if ($subdir eq 'cgi');  # Clear it if it's the top cgi directory
 setSBEAMS_SUBDIR('dummy',$subdir);
 
 ###Set the current version of SBEAMS ##
-$SBEAMS_VERSION = "0.20.1";
+$SBEAMS_VERSION = "0.21-dev";
 
 #### Read in local configuration information from SBEAMS.conf file
 $DBCONFIG = readMainConfFile();
