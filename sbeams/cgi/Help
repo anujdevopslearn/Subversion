@@ -27,7 +27,7 @@ use FindBin;
 use lib "$FindBin::Bin/../lib/perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
-	     $SBEAMS_PART
+             $SBEAMS_PART
             );
 
 use SBEAMS::Connection qw($q $log);
@@ -166,11 +166,22 @@ sub handle_request {
       print "ERROR: Illegal characters in module name '$module_name'<BR>\n";
       return;
     } else {
-      $subdir = $module_name;
+      $subdir = $module_name . '/';
     }
   }
 
+  use LWP::UserAgent;
+  my $ua = LWP::UserAgent->new();
+  my $base = $q->url();
+  $base =~ s/cgi\/Help/doc\//;
+  my $response = $ua->get( $base . $subdir . $document_name . '.php' );
+  my $page = $response->content();
+  my @content = split "\n", $page;
+  my $document_file = "$PHYSICAL_BASE_DIR/doc/$subdir$document_name.php";
+    
 
+
+  if ( 0 ) {
   #### Check to see if the specified document exists
   #my $subdir = $SBEAMS_PART;
   $subdir .= '/' if ($subdir);
@@ -185,12 +196,17 @@ sub handle_request {
   open(INFILE,$document_file)
     || die("ERROR: Unable to read $document_file");
 
+  }
+
   my $is_content = 0;
   my $found_content = 0;
   my $content = '';
   my $buffer = '';
 
-  while (my $line = <INFILE>) {
+#  while (my $line = <INFILE>) {
+   for my $line ( @content ) {
+    # Restore original spacing...
+    $line .= "\n";
 
     #### Add the current line to the full buffer
     $buffer .= $line;
@@ -200,37 +216,37 @@ sub handle_request {
 
       #### Finish if we see the END_CONTENT flag
       if ($line =~ /-- END_CONTENT --/) {
-	last;
+        last;
       }
 
       #### Try to rewrite hyperlinks properly
 
       #### If it's just a plain relative link to a php, rewrite it to use Help
       while ($line =~ /HREF\s*=\s*\"(\w+)\.php/) {
-	my $name = $1;
-	my $suffix = '';
-	if ($module_name) {
-	  $suffix = "&module=$module_name";
-	}
-	$line =~ s/HREF\s*=\s*\"(\w+)\.php/HREF=\"$CGI_BASE_DIR\/Help?document=$name$suffix/;
+        my $name = $1;
+        my $suffix = '';
+        if ($module_name) {
+          $suffix = "&module=$module_name";
+        }
+        $line =~ s/HREF\s*=\s*\"(\w+)\.php/HREF=\"$CGI_BASE_DIR\/Help?document=$name$suffix/;
       }
 
       #### If it's just a relative link in a subdirectory to a php, rewrite
       #### it to use Help
       while ($line =~ /HREF\s*=\s*\"(\w+)\/(\w+)\.php/) {
-	my $module = $1;
-	my $name = $2;
-	if ( -e "$PHYSICAL_BASE_DIR/cgi/$module/Helpxx" ) {
-	  $line =~ s/HREF\s*=\s*\"(\w+)\/(\w+)\.php/HREF=\"$CGI_BASE_DIR\/$module\/Help?document=$name/;
+        my $module = $1;
+        my $name = $2;
+      if ( -e "$PHYSICAL_BASE_DIR/cgi/$module/Helpxx" ) {
+        $line =~ s/HREF\s*=\s*\"(\w+)\/(\w+)\.php/HREF=\"$CGI_BASE_DIR\/$module\/Help?document=$name/;
         } else {
-	  $line =~ s/HREF\s*=\s*\"(\w+)\/(\w+)\.php/HREF=\"$CGI_BASE_DIR\/Help?document=$name&module=$module/;
+        $line =~ s/HREF\s*=\s*\"(\w+)\/(\w+)\.php/HREF=\"$CGI_BASE_DIR\/Help?document=$name&module=$module/;
         }
       }
 
       #### if it's a relative link (i.e. not beginning with / or http:// then
       #### rewrite it to use the doc/ directory explicitly
       if ($line =~ /HREF\s*=\s*\"(?!(\/|http:\/\/))/) {
-	$line =~ s/HREF\s*=\s*\"(?!\/)/HREF=\"$HTML_BASE_DIR\/doc\//;
+        $line =~ s/HREF\s*=\s*\"(?!\/)/HREF=\"$HTML_BASE_DIR\/doc\//;
       }
 
 
@@ -238,27 +254,25 @@ sub handle_request {
       $content .= $line;
 
 
-    #### If the we're not in the main part of the content
+      #### If the we're not in the main part of the content
     } else {
       #### Begin the main part if we see the BEGIN CONTENT flag
       if ($line =~ /-- BEGIN_CONTENT --/) {
-	$is_content = 1;
-	$found_content = 1;
+        $is_content = 1;
+        $found_content = 1;
       }
     }
-
-
   }
 
-  close(INFILE);
+#  close(INFILE);
 
   #### If we found real content, print it out
   if ($content) {
-    print $content;
+    print "$content";
 
   #### Else print and error message and dump the entire file
   } else {
-    print "<H1>ERROR: Unable to find content flags</H2>\n";
+    print "<H2>ERROR: Unable to find content flags</H2>\n";
     $log->error( "ERROR: Unable to find content flags in '$document_file'" );
     print $buffer;
   }
