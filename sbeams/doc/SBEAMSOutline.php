@@ -13,7 +13,8 @@
 
 
 
-<!-- --------------------------- Main Page Content ------------------------ -->
+<!----------------------------- BEGIN_CONTENT ----------------------- -->
+
 
 <table border=0 width="100%" bgcolor="#ffffff" cellpadding=10>
 <tr><td align="top">
@@ -84,7 +85,7 @@ always available.</P>
                 management and data pipeline will also be implemented
                 in this module.
   - SBEAMS - Biosap (A system that ingests data from Featurama, a program
-                that generated oligos from an input genome and BLASTs
+                that generated oligos from an input genome and BLAST
                 them against a possibly-different genome.  The oligos
                 loaded into the database can then be explored to
                 select an optimum set of oligos for printing onto an
@@ -117,11 +118,13 @@ always available.</P>
                 number of different data for all JDRF investigators)
 </PRE>
 
+</TD></TR></TABLE>
 
 <BR>
 <BR>
 <BR>
 
+<!----------------------------- END_CONTENT ----------------------- -->
 
 
 <?php

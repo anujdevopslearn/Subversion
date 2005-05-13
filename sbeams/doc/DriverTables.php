@@ -13,7 +13,7 @@
 
 
 
-<!-- --------------------------- Main Page Content ------------------------ -->
+<!-- BEGIN_CONTENT -->
 
 <table border=0 width="100%" bgcolor="#ffffff" cellpadding=10>
 <tr><td align="top">
@@ -131,6 +131,8 @@ It is not necessary to run the script on the table_property file if you have not
 <BR>
 
 </P>
+</TD></TR></TABLE>
+<!-- END_CONTENT -->
 
 <?php
   include("includes/footer.inc.php");

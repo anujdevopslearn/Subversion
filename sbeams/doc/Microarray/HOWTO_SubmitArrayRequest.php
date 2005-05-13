@@ -4,16 +4,16 @@
   /* $Id$ */
   $TITLE="SBEAMS Documentation";
 
-  include("../includes/style.inc.php");
+  include("../../includes/style.inc.php");
 
-  include("../includes/header.inc.php");
+  include("../../includes/header.inc.php");
 
-  include("../includes/navbar.inc.php");
+  include("../../includes/navbar.inc.php");
 ?>
 
 
 
-<!-- --------------------------- Main Page Content ------------------------ -->
+<!-- BEGIN_CONTENT -->
 
 <table border=0 width="100%" bgcolor="#ffffff" cellpadding=10>
 <tr><td align="top">
@@ -96,6 +96,6 @@ projects and click on your Project ID Number
 
 
 <?php
-  include("../includes/footer.inc.php");
+  include("../../includes/footer.inc.php");
 ?>
 
