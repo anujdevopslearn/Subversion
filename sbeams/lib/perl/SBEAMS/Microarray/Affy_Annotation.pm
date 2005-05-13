@@ -1018,7 +1018,7 @@ sub truncate_data {
 	
 		foreach my $key ( keys %record_h){
 		
-			if ($key eq 'gene_symbol' || $key eq 'chromosomal_location'){			#some gene symbol rows were comming in way to big chop them down to size
+			if ($key eq 'gene_symbol' || $key eq 'chromosomal_location' || $key eq 'archival_unigene_cluster'){			#some gene symbol rows were comming in way to big chop them down to size
 				if (length $record_h{$key} > 50){
 					my $big_val = $record_h{$key};
 		
