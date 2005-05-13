@@ -134,7 +134,8 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetDomainHits"><nobr>&nbsp;&nbsp;&nbsp;Browse Domain Hits</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td>Manage Tables:</td></tr>
+	<tr><td>Manage Tables:</td></tr><script src="js/dw_viewport.js" type="text/javascript"></script>
+
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project"><nobr>&nbsp;&nbsp;&nbsp;Projects</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PS_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=PS_domain_match_type"><nobr>&nbsp;&nbsp;&nbsp;Match Types</nobr></a></td></tr>
@@ -223,36 +224,6 @@ sub printJavascriptFunctions {
     }
     </STYLE>
 
-
-	<SCRIPT LANGUAGE="JavaScript">
-	<!--
-
-    function showTooltip(ev, tooltipText) {
-	  if ( !Tooltip.ok ||
-		   typeof Tooltip == "undefined" ) return;
-	  Tooltip.showTooltip(ev, tooltipText);
-	}
-
-    function hideTooltip() {
-	  if ( !Tooltip.ok ||
-		   typeof Tooltip == "undefined" ) return;
-	  Tooltip.hideTooltip();
-	}
-
-	function refreshDocument() {
-	  document.MainForm.apply_action_hidden.value = "REFRESH";
-	  document.MainForm.action.value = "REFRESH";
-	  document.MainForm.submit();
-	} // end refreshDocument
-
-	function showPassed(input_field) {
-	  confirm( "selected option ="+
-			   document.forms[0].slide_id.options[document.forms[0].slide_id.selectedIndex].text+"=");
-	  return;
-	} // end showPassed
-    // -->
-    </SCRIPT>
-
     ~;
 
 }
@@ -273,7 +244,7 @@ sub printPageFooter {
 sub display_page_footer {
   my $self = shift;
   my %args = @_;
-  my $tooltip_footer = $self->getToolTipFooter();
+  my $tooltip_footer = $self->getToolTip();
 
   #### If the output mode is interactive text, display text header
   my $sbeams = $self->getSBEAMS();
@@ -309,8 +280,6 @@ sub display_page_footer {
     print "<BR><HR SIZE=5 NOSHADE><BR>\n";
   }
 
-  print $tooltip_footer;
-
   #### Check to see if the PI of the curernt project is a Halobacterium guy.
   #### If so, print the halo skin
   if ($display_footer eq 'YES') {
@@ -330,6 +299,7 @@ sub display_page_footer {
 	  $self->display_ext_halo_footer();
 	  return;
 	}else {
+	  print $tooltip_footer;
 	  $sbeams->display_page_footer(display_footer=>'YES');
 	}
   }
@@ -338,189 +308,10 @@ sub display_page_footer {
 ###############################################################################
 # getToolTipFooter
 ###############################################################################
-sub getToolTipFooter {
+sub getToolTip {
   my $self = shift;
   my $footer = qq~
-
-<SCRIPT>
-<!-- 
-// tooltip credits? mjohnson, other ISBers?
-
-var buffer = 18;
-var Tooltip = {
- tipID: "tooltipID",
- ok:false,
- timer:null,
- tooltip:null, 
- mouseMovement: true,
-
- offsetX: 10,
- offsetY: 10,
-
- evaluateToShow: 100, //how long to wait before evaluating to show (in millisec.)
- evaluateToHide: 150, //how long to wait before evaluating to hid (in millisec.)
-
- init: function() {  
-   if ( document.createElement && document.body && 
-        typeof document.body.appendChild != "undefined" ) {
-
-	 // Create <DIV> element
-	 if ( !document.getElementById(this.tipID) ) {
-	   var divElement = document.createElement("DIV");
-	   divElement.id = this.tipID; document.body.appendChild(divElement);
-	 }
-
-	 this.ok = true;
-   }
- },
-
- getWindowpaneX: function () {
-   this.width = 0;
-   if (window.innerWidth) this.width = window.innerWidth - buffer;
-   else if (document.documentElement && 
-			document.documentElement.clientWidth) 
-	 this.width = document.documentElement.clientWidth;
-   else if (document.body && 
-			document.body.clientWidth) 
-	 this.width = document.body.clientWidth;
- },
-  
- getWindowpaneY: function () {
-   this.height = 0;
-   if (window.innerHeight) this.height = window.innerHeight - buffer;
-   else if (document.documentElement && 
-			document.documentElement.clientHeight) 
-	 this.height = document.documentElement.clientHeight;
-   else if (document.body && 
-			document.body.clientHeight) 
-	 this.height = document.body.clientHeight;
- },
-  
- getScrollpaneX: function () {
-   this.scrollX = 0;
-   if (typeof window.pageXOffset == "number") this.scrollX = window.pageXOffset;
-   else if (document.documentElement && 
-			document.documentElement.scrollLeft)
-	 this.scrollX = document.documentElement.scrollLeft;
-   else if (document.body && 
-			document.body.scrollLeft) 
-	 this.scrollX = document.body.scrollLeft; 
-   else if (window.scrollX) this.scrollX = window.scrollX;
- },
-  
- getScrollpaneY: function () {
-   this.scrollY = 0;    
-   if (typeof window.pageYOffset == "number") this.scrollY = window.pageYOffset;
-   else if (document.documentElement && 
-			document.documentElement.scrollTop)
-	 this.scrollY = document.documentElement.scrollTop;
-   else if (document.body && 
-			document.body.scrollTop) 
-	 this.scrollY = document.body.scrollTop; 
-   else if (window.scrollY) this.scrollY = window.scrollY;
- },
-  
- getAllDimensions: function () {
-   this.getWindowpaneX();
-   this.getScrollpaneX();
-   this.getWindowpaneY();
-   this.getScrollpaneY();
- },
-  
- add: function(obj, eventType, fp, cap) {
-   cap = cap || false;
-   if (obj.addEventListener) obj.addEventListener(eventType, fp, cap);
-   else if (obj.attachEvent) obj.attachEvent("on" + eventType, fp);
- }, 
-
- remove: function(obj, eventType, fp, cap) {
-   cap = cap || false;
-   if (obj.removeEventListener) obj.removeEventListener(eventType, fp, cap);
-   else if (obj.detachEvent) obj.detachEvent("on" + eventType, fp);
- },
-    
- showTooltip: function(event, tooltipText) {
-   if (this.timer) { clearTimeout(this.timer);	this.timer = 0; }
-   this.tooltip = document.getElementById( this.tipID );
-
-   // mouse movement tracking
-   if (this.mouseMovement) 
-	 this.add( document, "mousemove", this.trackMouseMovement, true );
-
-   // create the tooltip message
-   if ( this.tooltip && typeof this.tooltip.innerHTML != "undefined" ) this.tooltip.innerHTML = tooltipText;
-
-   // get dimensions and (relative) location
-   this.getAllDimensions();
-
-   // show the tooltip
-   this.placeToolTip(event);
-   this.timer = setTimeout("Tooltip.toggleVis('" + this.tipID + "', 'visible')", this.evaluateToShow);
- },
-    
- hideTooltip: function() {
-   if (this.timer) { clearTimeout(this.timer);	this.timer = 0; }
-   this.timer = setTimeout("Tooltip.toggleVis('" + this.tipID + "', 'hidden')", this.evaluateToHide);
-   if (this.mouseMovement)
-	 this.remove( document, "mousemove", this.trackMouseMovement, true );
-   this.tooltip = null; 
- },
-
- toggleVis: function(id, vis) { 
-   var divElement = document.getElementById(id);
-   if (divElement)
-	 divElement.style.visibility = vis;
- },
-    
- trackMouseMovement: function(ev) {
-   ev = ev? ev: window.event;
-   ev.tgt = ev.srcElement? ev.srcElement: ev.target;
-    
-   if (!ev.preventDefault)
-	 ev.preventDefault = function () { return false; }
-   if (!ev.stopPropagation) 
-	 ev.stopPropagation = function () { 
-	   if (window.event) window.event.cancelBubble = true; 
-	 }
-
-   Tooltip.placeToolTip(ev);
- },
-    
- placeToolTip: function (event) {
-   // place the tooltip
-   if ( this.tooltip && this.tooltip.style ) {
-
-	 var x = event.pageX? event.pageX:event.clientX+this.scrollX;
-	 var y = event.pageY? event.pageY:event.clientY+this.scrollY;
-
-	 //X-coordinate information
-	 if ( x + this.tooltip.offsetWidth+this.offsetX > this.width+this.scrollX ) {
-	   x = x - this.tooltip.offsetWidth - this.offsetX;
-	   if ( x < 0 ) x = 0;
-	 } else {
-	   x = x + this.offsetX;
-	 }
-
-	 //Y-coordinate information
-	 if ( y + this.tooltip.offsetHeight + this.offsetY > this.height + this.scrollY ) {
-	   y = y - this.tooltip.offsetHeight - this.offsetY;
-	   if ( y < this.scrollY ) 
-		 y = this.height + this.scrollY - this.tooltip.offsetHeight;
-	 } else {
-	   y = y + this.offsetY;
-	 }
-
-	 //Set the tooltip, based upon the coordinate information
-	 this.tooltip.style.left = x+"px";
-	 this.tooltip.style.top = y+"px";
-   }
- }
- 
- }
-
-Tooltip.init();
--->
-</SCRIPT>
+<SCRIPT src="$HTML_BASE_DIR/usr/javascript/TipWidget.js" TYPE="text/javascript"></SCRIPT>
 	~;
   return $footer;
 }
@@ -771,7 +562,7 @@ sub display_ext_halo_style_sheet {
 sub display_ext_halo_footer {
   my $self = shift;
   my %args = @_;
-  my $tooltip_footer = $self->getToolTipFooter;
+  my $tooltip_footer = $self->getToolTip;
 
   my $buf = qq~
 <!-- ------------------------ End of main content ----------------------- -->
