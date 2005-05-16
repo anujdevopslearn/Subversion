@@ -293,6 +293,9 @@ sub handle_request {
     }
 
 
+    # We can fetch a rw handle now, as we've already run the query.
+    $sbeams->setNewDBHandle() || die "Unable to reconnect";
+
     #### Set the column_titles to just the column_names
     my @column_titles = @{$resultset_ref->{column_list_ref}};
 
