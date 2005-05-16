@@ -168,7 +168,7 @@ sub print_entry_form {
     "Select oligo set type to search: ",
     $cg->p,
     $cg->popup_menu(-name=>'set_type',
-                   -values=>['Gene Expression', 'Gene Knockout']),
+                   -values=>['Gene Knockout', 'Gene Expression', 'Other']),
     
     $cg->p,
 	$cg->submit(-name=>"action", value=>"QUERY");
@@ -230,6 +230,8 @@ sub handle_request {
 	$set_type_search = "(OT.oligo_type_name='halo_exp_for' OR OT.oligo_type_name='halo_exp_rev')";      
   }elsif($set_type eq 'Gene Knockout'){
 	$set_type_search = "(OT.oligo_type_name='halo_ko_a' OR OT.oligo_type_name='halo_ko_b' OR OT.oligo_type_name='halo_ko_c' OR OT.oligo_type_name='halo_ko_d' OR OT.oligo_type_name='halo_ko_e' OR OT.oligo_type_name='halo_ko_f' OR OT.oligo_type_name='halo_ko_g' OR OT.oligo_type_name='halo_ko_h')";
+  }elsif($set_type eq 'Other'){
+	$set_type_search = "(OT.oligo_type_name='halo_generic')";
   }else{
 	#print "Error: Invalid oligo type selected. ";
   }
@@ -247,7 +249,13 @@ sub handle_request {
   ####process for each individual gene in array
   foreach my $gene (@gene_array) {
 
-	####search for vng synonym of common name
+    my $common_name = lc $gene;
+    
+    ####strip gene name of letters and get just the gene number (in case of partial entry)
+	$gene =~ /[a-z,A-Z]*(\d*)[a-z,A-Z]*/;
+	my $gene_number = $1; 
+	
+    ####search for vng synonym of common name
 	if($organism eq 'halobacterium-nrc1'){
 	  open(A, "halobacterium.txt") || die "Could not open halobacterium.txt";
 	}elsif($organism eq 'haloarcula marismortui'){
@@ -255,18 +263,23 @@ sub handle_request {
 	}else{
 	  open(A, "halobacterium.txt") || die "Could not open halobacterium.txt"; #default = nrc-1
 	}
+
+    my $vngC = "VNG" . $gene_number . "C";
+    my $vngH = "VNG" . $gene_number . "H";
+    my $vngG = "VNG" . $gene_number . "G"; 
 	while(<A>){
 	  my @temp = split;
+	  if($common_name =~ /[a-z,A-Z]*\d+[a-z,A-Z]*/ && 
+		                          ($vngC eq $temp[0] || 
+								   $vngH eq $temp[0] ||
+								   $vngG eq $temp[0] ) ){
+		$common_name = lc $temp[1];
+	  }
 	  if(lc $gene eq lc $temp[1]){  #if a common name was entered
 		$gene = $temp[0];     #assign $gene to the equivalent canonical name
 	  }
 	}  
 	close(A);
-
-	####strip gene name of letters and get just the gene number (in case of partial entry)
-	$gene =~ /[a-z,A-Z]*(\d*)[a-z,A-Z]*/;
-	my $gene_number = $1; 
-            
 
 	####Define the desired columns in the query
 	#### [friendly name used in url_cols,SQL,displayed column title]
@@ -281,7 +294,7 @@ sub handle_request {
 						["Secondary Structure", "OA.secondary_structure", "Secondary Structure"],
 						["In_Stock","OA.in_stock","In Stock"],
 						["Location", "OA.location", "Location"],
-						["Comments", "OA.comments", "Comments"]
+						["Comments", "SO.comments", "Comments"]
 						);
 
 	####Build the columns part of the SQL statement
@@ -292,103 +305,125 @@ sub handle_request {
             column_titles_ref=>\@column_titles
 															   );
   
-        
-	####SQL query command
-	my $sql = qq~ SELECT $columns_clause
-	  FROM $TBOG_SELECTED_OLIGO SO
-	  LEFT JOIN $TBOG_BIOSEQUENCE BS ON (BS.biosequence_id=SO.biosequence_id)
-	  LEFT JOIN $TBOG_OLIGO_TYPE OT ON (SO.oligo_type_id=OT.oligo_type_id)
-	  LEFT JOIN $TBOG_OLIGO OG ON (OG.oligo_id=SO.oligo_id)
-	  LEFT JOIN $TBOG_OLIGO_ANNOTATION OA ON (OA.oligo_id=OG.oligo_id)
-	  LEFT JOIN $TBOG_BIOSEQUENCE_SET BSS ON (BSS.biosequence_set_id=BS.biosequence_set_id)
-	  WHERE BS.biosequence_name LIKE '%$gene_number%' AND $set_type_search AND BSS.set_tag=$set_tag
-	  ~;
 
-	##Define the hypertext links for columns that need them
-	my %url_cols = ('Primer_Sequence' => "Display_Oligo_Detailed.cgi?Gene=%0V&Oligo_type=%1V&Oligo_Sequence=%2V&In_Stock=%7V");
-
-	## Define columns that should be hidden in the output table
-	my %hidden_cols = ('Oligo_type' => 1,
-					   'Oligo' => 1,
-					   'Comments' => 1);
-
-    my %hidden_cols_download = ('Oligo_type' => 1,
-								'Oligo' => 1, 
-								'Length' => 1,
-								'GC Content' => 1,
-								'Melting Temperature' => 1,
-								'Secondary Structure' => 1,
-								'In_Stock' => 1,
-								'Location' => 1);
-
-	##  Print the data ##
-
-	## ROWCOUNT
-	$parameters{row_limit} = 5000
-	  unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
-	$limit_clause = $sbeams->buildLimitClause(row_limit=>$parameters{row_limit});
-
-    ## Prevent execution of query for Haloarcula Knockouts, which hasn't been written yet
-    unless($organism eq 'haloarcula_marismortui' && $set_type eq 'Gene Knockout'){
-
-	  ## If the action contained QUERY, then fetch the results from SBEAMS
-	  if ($apply_action ne "VIEWRESULTSET") {
-
-		## Fetch the results from the database server
-		$sbeams->fetchResultSet(sql_query=>$sql,
-							  resultset_ref=>$resultset_ref,
-							  );
-
-		#### Store the resultset and parameters to disk resultset cache
-		$rs_params{set_name} = "SETME";
-		$sbeams->writeResultSet(resultset_file_ref=>\$rs_params{set_name},
-							  resultset_ref=>$resultset_ref,
-							  query_parameters_ref=>\%parameters,
-							  resultset_params_ref=>\%rs_params,
-							  query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
-							  );
+	#Code to search for identical genes
+	my $warning_phrase = "WARNING: Identical Genes Found: ";
+	my @identical_matches = ();
+	open(OPEN_FILE, "halobacterium.txt") || die "Could not open halobacterium.txt";	
+	while(<OPEN_FILE>){
+	  my @temp = split;
+	  if($common_name eq lc $temp[1]){  #get VNG numbers of all identical genes
+		$warning_phrase = $warning_phrase . "$temp[0] ";
+		#append $temp[0] to identical match array;
+		unshift(@identical_matches, $temp[0]);
 	  }
-			
-	  ## Set the column_titles to just the column_names
-	  @column_titles = @{$resultset_ref->{column_list_ref}};
-      
-      ## make additional modifications to display table
-      modify_table(resultset_ref => $resultset_ref);	
-	  
-      ## Display the resultset
-	  $sbeams->displayResultSet(resultset_ref=>$resultset_ref,
-							  query_parameters_ref=>\%parameters,
-							  rs_params_ref=>\%rs_params,
-							  url_cols_ref=>\%url_cols,
-							  hidden_cols_ref=>\%hidden_cols,
-							  column_titles_ref=>\@column_titles,
-							  base_url=>$base_url,
-							  );
-      
-      ## Display the resultset download version
-      $sbeams->displayResultSet(resultset_ref=>$resultset_ref,
-							  query_parameters_ref=>\%parameters,
-							  rs_params_ref=>\%rs_params,
-							  url_cols_ref=>\%url_cols,
-							  hidden_cols_ref=>\%hidden_cols_download,
-							  column_titles_ref=>\@column_titles,
-							  base_url=>$base_url,
-							  );
+	}  
+	close(OPEN_FILE);
 
-	  
-      ## Display the resultset controls - This allows table downloads in excel format
-	  $sbeams->displayResultSetControls(rs_params_ref=>\%rs_params,
-							  resultset_ref=>$resultset_ref,
-							  query_parameters_ref=>\%parameters,
-							  base_url=>$base_url
-							  );
+    if(exists $identical_matches[1]) {
+	  print "<H3>$warning_phrase</H3>";
 	}
 
-  }
+    #Search for all identical genes 
+	foreach my $match (@identical_matches) {
 
+	  $match =~ /[a-z,A-Z]*(\d*)[a-z,A-Z]*/;
+	  $gene_number = $1; 
+	  
+	  ####SQL query command
+	  my $sql = qq~ SELECT $columns_clause
+		FROM $TBOG_SELECTED_OLIGO SO
+		LEFT JOIN $TBOG_BIOSEQUENCE BS ON (BS.biosequence_id=SO.biosequence_id)
+		LEFT JOIN $TBOG_OLIGO_TYPE OT ON (SO.oligo_type_id=OT.oligo_type_id)
+		LEFT JOIN $TBOG_OLIGO OG ON (OG.oligo_id=SO.oligo_id)
+		LEFT JOIN $TBOG_OLIGO_ANNOTATION OA ON (OA.oligo_id=OG.oligo_id)
+		LEFT JOIN $TBOG_BIOSEQUENCE_SET BSS ON (BSS.biosequence_set_id=BS.biosequence_set_id)
+		WHERE BS.biosequence_name LIKE '%$gene_number%' AND $set_type_search AND BSS.set_tag=$set_tag
+		~;
+	 
+	  ##Define the hypertext links for columns that need them
+	  my %url_cols = ('Primer_Sequence' => "Display_Oligo_Detailed.cgi?Gene=%0V&Oligo_type=%1V&Oligo_Sequence=%2V&In_Stock=%7V");
+	  
+	  ## Define columns that should be hidden in the output table
+	  my %hidden_cols = ('Oligo_type' => 1,
+						 'Oligo' => 1,
+						 'Comments' => 1);
+	  
+	  my %hidden_cols_download = ('Oligo_type' => 1,
+								  'Oligo' => 1, 
+								  'Length' => 1,
+								  'GC Content' => 1,
+								  'Melting Temperature' => 1,
+								  'Secondary Structure' => 1,
+								  'In_Stock' => 1,
+								  'Location' => 1);
+	  
+	  ##  Print the data ##
+	  
+	  ## ROWCOUNT
+	  $parameters{row_limit} = 5000
+		unless ($parameters{row_limit} > 0 && $parameters{row_limit}<=1000000);
+	  $limit_clause = $sbeams->buildLimitClause(row_limit=>$parameters{row_limit});
+	  
+	  ## Prevent execution of query for Haloarcula Knockouts, which hasn't been written yet
+	  unless($organism eq 'haloarcula_marismortui' && $set_type eq 'Gene Knockout'){
+		
+		## If the action contained QUERY, then fetch the results from SBEAMS
+		if ($apply_action ne "VIEWRESULTSET") {
+		  
+		  ## Fetch the results from the database server
+		  $sbeams->fetchResultSet(sql_query=>$sql,
+								  resultset_ref=>$resultset_ref,
+								  );
+		  
+		  #### Store the resultset and parameters to disk resultset cache
+		  $rs_params{set_name} = "SETME";
+		  $sbeams->writeResultSet(resultset_file_ref=>\$rs_params{set_name},
+								  resultset_ref=>$resultset_ref,
+								  query_parameters_ref=>\%parameters,
+								  resultset_params_ref=>\%rs_params,
+								  query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
+								  );
+		}
+		
+		## Set the column_titles to just the column_names
+		@column_titles = @{$resultset_ref->{column_list_ref}};
+		
+		## make additional modifications to display table
+		modify_table(resultset_ref => $resultset_ref);	
+		
+		## Display the resultset
+		$sbeams->displayResultSet(resultset_ref=>$resultset_ref,
+								  query_parameters_ref=>\%parameters,
+								  rs_params_ref=>\%rs_params,
+								  url_cols_ref=>\%url_cols,
+								  hidden_cols_ref=>\%hidden_cols,
+								  column_titles_ref=>\@column_titles,
+								  base_url=>$base_url,
+								  );
+		
+		
+		## Display the resultset controls - This allows table downloads in excel format
+		$sbeams->displayResultSetControls(rs_params_ref=>\%rs_params,
+										  resultset_ref=>$resultset_ref,
+										  query_parameters_ref=>\%parameters,
+										  base_url=>$base_url
+										  );
+		
+		
+		#Option(s) for Downloading Oligos
+		print qq~
+		  <A HREF="./Download_Options.cgi?set_tag=$set_tag&set_type_search=$set_type_search&gene_number=$gene_number">View Download Options</A><BR><BR>
+		  ~;
+		
+	  }
+	}
+	
+  }
+  
   ####Back button
   print qq~
-	<BR><A HREF="$CGI_BASE_DIR/Oligo/Search_Oligo.cgi">Search again</A>  
+	<BR><A HREF="$CGI_BASE_DIR/Oligo/Search_Oligo.cgi">Search again</A><BR>  
     <BR><A HREF="$CGI_BASE_DIR/Oligo/Add_Oligo.cgi">Add New Oligo</A><BR><BR>
   ~;
 
