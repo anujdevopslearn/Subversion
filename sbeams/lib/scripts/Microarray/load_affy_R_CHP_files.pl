@@ -167,7 +167,7 @@ unless (GetOptions(\%OPTIONS,
 		   "delete_all:s",
 		   "method:s",
 		   "base_directory:s",
-		   "file_types:s",
+		   "__file_types:s",
 		   "redo_R:s",
 		   "testonly",
 		   "files:s")) {
