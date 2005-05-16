@@ -115,7 +115,7 @@ sub make_R_CHP_file {
     
    	
   # temp dir for storing R/shell scripts, use config value or fall back
-	my $R_temp_dir = ( $AFFY_TMP_DIR ) ? "${AFFY_TMP_DIR}R_CHP_RUNS${file_name}_R_CHP" : 
+	my $R_temp_dir = ( $AFFY_TMP_DIR ) ? "${AFFY_TMP_DIR}/R_CHP_RUNS/${file_name}_R_CHP" : 
                   "/net/dblocal/www/html/sbeams/tmp/Microarray/R_CHP_RUNS/${file_name}_R_CHP";
 
   my $out_shell_script = "${file_name}_shell.sh";
