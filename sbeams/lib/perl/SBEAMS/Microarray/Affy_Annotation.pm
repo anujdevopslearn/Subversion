@@ -239,7 +239,18 @@ sub parse_data_file {
 		}
 	
 		if($count == 1){
-			my ($annotation_date, $genome_version) = @line_parts[3, 10];
+			# find Annotation Date and Genome Version columns
+ 		  my $annotation_date_column;
+			my $genome_version_column;
+		  for(my $i=0;$i<$#col_names;$i++) {
+				if($col_names[$i] =~ /Annotation\ Date/i) {
+						$annotation_date_column = $i;
+				}
+				elsif($col_names[$i] =~ /Genome\ Version/i) {
+						$genome_version_column = $i;
+				}
+		  }
+			my ($annotation_date, $genome_version) = @line_parts[$annotation_date_column, $genome_version_column];
 			my $file_base_name = basename($file_name);		#will use the file name to find the slide_type_id
 			
 			
