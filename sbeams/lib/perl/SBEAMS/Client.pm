@@ -500,6 +500,24 @@ sub decode_response {
 
 } # end decode_response
 
+sub getRandomString {
+  my $self =  shift;
+  my %args = @_;
+
+  # Use passed number of chars or 8
+  $args{num_chars} ||= 8;
+
+  # Use passed char set if any, else use default a-z, A-Z, 0-9
+  my @chars = ( ref( $args{char_set} ) eq 'ARRAY' ) ?  @{$args{char_set}} :
+                         ( 'A'..'Z', 'a'..'z', 0..9, qw( ! @ $ % ^ & * ? ) );
+
+  # Thank you perl cookbook... 
+  my $rstring = join( "", @chars[ map {rand @chars} ( 1..$args{num_chars} ) ]);
+
+  return( $rstring );
+
+}
+
 
 
 ###############################################################################
@@ -734,4 +752,5 @@ Eric Deutsch <edeutsch@systemsbiology.org>
 SBEAMS::Connection
 
 =cut
+
 
