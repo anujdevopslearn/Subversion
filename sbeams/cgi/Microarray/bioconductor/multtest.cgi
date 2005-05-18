@@ -1522,7 +1522,16 @@ for (class.numb in unique.classes){
 		if (class(sum.sam.output) == "try-error" || i == numb.loops){
 #if we are breaking out of the list since there are no more genes then set the last delta cutoff
 #which produced some genes which will be used for graphing
-			last.delta.cutoff <- delta.list[i-1]
+			
+			#if no Significant genes are found need to make sure we record 0 as the last FDR
+			#not the non-existant zero element of the delta.list vector
+			if(identical(0, (i-1))){
+  				last.delta.cutoff <- 2;#set to a small value so the graph functions do not barf
+			}else{
+  				last.delta.cutoff <- as.numeric(delta.list[i-1])
+			}
+			
+			
 			print (paste("LAST DELTA", last.delta.cutoff , "CONDITION" , condition.name, "I COUNT ", i))
 			break
 		}else{
