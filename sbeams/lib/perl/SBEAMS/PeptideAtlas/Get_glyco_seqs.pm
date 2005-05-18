@@ -52,14 +52,18 @@ use Bio::Annotation::Comment;
 use Bio::Annotation::SimpleValue;
 
 use Data::Dumper;
-use base qw(SBEAMS::PeptideAtlas);		
+
+use SBEAMS::PeptideAtlas::Glyco_query;
+
+use base qw(SBEAMS::PeptideAtlas::Glyco_query);		
 
 
 use SBEAMS::Connection::Tables;
+use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::PeptideAtlas::Test_glyco_data;
 use SBEAMS::PeptideAtlas::Get_peptide_seqs;
 
-my $fake_data_o = new SBEAMS::PeptideAtlas::Test_glyco_data();
+
 
 
 ##############################################################################
@@ -71,12 +75,15 @@ sub new {
     my $class = ref($this) || $this;
     my %args = @_;
     
-    my $ipi_id = $args{ipi_id};
-    confess(__PACKAGE__ . "::$method Need to provide IPI id '$ipi_id' is not good  \n") 
-    unless ($ipi_id =~ /IPI\d+$/);
+    my $ipi_data_id = $args{ipi_data_id};
+    confess(__PACKAGE__ . "::$method Need to provide IPI data id '$ipi_data_id' is not good  \n") 
+    unless ($ipi_data_id =~ /^\d+$/);
     
-    my $self = {_ipi_id => $ipi_id};
+    my $self = {_ipi_data_id => $ipi_data_id};
     bless $self, $class;
+    
+    $self->get_protein_info(); 
+    
     return($self);
 }
 
@@ -97,15 +104,34 @@ sub getSBEAMS {
     my $self = shift;
     return($sbeams);
 }
-
-
 ###############################################################################
-#get_ipi_id
+#get_ipi_data_id
 ###############################################################################
-sub get_ipi_id {
+sub get_ipi_data_id {
     my $self = shift;
-   
-    return($self->{_ipi_id});
+    
+    return $self->{_ipi_data_id};
+}
+
+###############################################################################
+#ipi_accession
+###############################################################################
+sub ipi_accession {
+    my $method = 'ipi_accession';
+    my $self = shift;
+    my $accession = shift;
+    
+    if ($accession){# it's a setter
+    	if ($accession =~ /^IPI\d+$/){#it's a good setter.  it should be like IPI001234
+    		$self->{_ipi_accession_number} = $accession;
+    	}else{
+    		confess(__PACKAGE__ . "::$method BAD IPI ACCESSION NUMBER '$accession'\n"); 
+    	}
+    
+    }else{#it's a getter
+    	return $self->{_ipi_accession_number}
+   } 
+  
 }
 
 ###############################################################################
@@ -138,57 +164,54 @@ sub get_protein_info {
 	my $method = 'get_protein_info';
 	my $self = shift; 
 	my %args = @_;
-	my $ipi_id = $self->get_ipi_id();
+	
 
 	$self->get_ipi_data();
 	
 	$self->add_predicted_peptides();
 	$self->add_identified_peptides();
 	$self->add_signal_sequence();
+	$self->add_transmembrane_domains();
 	$self->add_cellular_location();
+	$self->add_glyco_site();
 }
-# ###########################################
+
+
+
+############################################
 #Given an IPI number query the database and return 
 # Return 1 for completion or die;
 # The Bio::seq object is accessible via the seq_info method
 #########################################
 sub get_ipi_data {
-	my $method = 'get_protein_info';
+	my $method = 'get_ipi_data';
 	my $self = shift;
-	my $ipi_id = $self->get_ipi_id();
+	my $ipi_acc = $self->ipi_accession();
 	
-	##TODO will need to add method to query the database and get the info 
-	## out to put into the objects below.  Have fun ;-)
-
+	my $ipi_data_id = $self->get_ipi_data_id;
+	my $results_set_href = $self->query_ipi_data($ipi_data_id);
+	$self->add_query_results($results_set_href);
+	
+	
 	my $seq = Bio::Seq->new(
-        	-display_id => $ipi_id,
-        	-seq        => $fake_data_o->{'aa_seq'},
+        	-display_id => $ipi_acc,
+        	-seq        => $self->raw_protein_sequence,
 	);
-#Fake data example
-#protein_name => "CD166 antigen precursor",
-#		protein_symbol=> "ALCAM",
-#		ipi_id		   => 'IPI00015102',
-#		swiss_prot		=> 'Q13740',
-#		synonyms	=> 'CD166 antigen precursor (Activated leukocyte-cell adhesion molecule) (ALCAM).',
-#		trans_membrane_locations => "o528-550i",
-#		numb_tm_domains => 1,
-#		signal_sequence_info	=> "28 Y 0.988 Y",
-		
 	
 		
 	#add the annotation data
 	my $protein_name = Bio::Annotation::Comment->new;
-	my $symbol 		= new Bio::Annotation::SimpleValue(-value => $fake_data_o->{'protein_symbol'});
-	my $swiss_prot 	= new Bio::Annotation::SimpleValue(-value => $fake_data_o->{'swiss_prot'});
+	my $symbol 		= new Bio::Annotation::SimpleValue(-value => $self->protein_symbol);
+	my $swiss_prot 	= new Bio::Annotation::SimpleValue(-value => $self->swiss_prot_acc);
 	my $synonyms	= Bio::Annotation::Comment->new;
 	my $summary		= Bio::Annotation::Comment->new;
 	
 	
 	
 	
-	$protein_name->text($fake_data_o->{'protein_name'});
-	$synonyms->text($fake_data_o->{'synonyms'});
-	$summary->text($fake_data_o->{'summary'});
+	$protein_name->text($self->protein_name);
+	$synonyms->text($self->synonyms);
+	$summary->text($self->protein_summary);
 	
 
 	my $coll = new Bio::Annotation::Collection();
@@ -207,14 +230,54 @@ sub get_ipi_data {
 	return 1;
 
 }
+
+
+#######################################################
+#add_glyco_site
+# Given a peptide_obj, get the main protein bioseq and add 
+# the position for the predicted N-link glyco site.
+#this method is here because of the way the data was setup
+#return 1 for success 0 for everything else
+#######################################################
+sub add_glyco_site{
+	my $method = 'add_glyco_site';
+	my $self = shift;
+	my $ipi_data_id = $self->get_ipi_data_id;
+	my @array_hrefs = $self->get_glyco_sites($ipi_data_id);
+	#$log->debug(Dumper(\@array_hrefs));
+	return 0 unless @array_hrefs;
+	my $seq_obj = $self->seq_info;
+	
+	foreach my $href (@array_hrefs){ 
+		
+		
+		my $location = $href->{'protein_glyco_site_position'};
+		my $glyco_score = $href->{'glyco_score'};
+		
+		#$log->debug(__PACKAGE__ ."::$method LOCATION '$location' SCORE '$glyco_score'");
+		
+		my $glyco = Bio::SeqFeature::Generic->new(
+									-start        => $location,
+									-end          => $location +2,
+									-primary 	  => "N-Glyco Sites", 
+									-tag 		  =>{glyco_score => sprintf("%01.2f",$glyco_score)
+						 							 },
+						);
+		
+		
+		#add all the feature to the protein Bio::Seq object
+		$seq_obj->add_SeqFeature($glyco);
+	}
+	return 1;
+}
 # ###########################################
 #Add the predicted peptide to the sequence 
 #########################################
 sub add_signal_sequence {
 	my $method = 'add_signal_sequence';
 	my $self = shift;
-	my $signal_sequence_info = $fake_data_o->{'signal_sequence_info'};
-	if ($signal_sequence_info =~ /^(\d+).*Y$/){
+	my $signal_sequence_info = $self->signal_sequence_info;
+	if ($signal_sequence_info =~ /(\d+).*Y$/){
 		$log->debug(__PACKAGE__. "::$method FOUND SIGNAL SEQUENCE");
 		my $seq_obj = $self->seq_info();
 				
@@ -229,20 +292,61 @@ sub add_signal_sequence {
 		$seq_obj->add_SeqFeature($sigseq);
 	}
 }
-
 # ###########################################
+#Add the transmembrane domains sequence 
+#########################################
+sub add_transmembrane_domains {
+	my $method = 'add_transmembrane_domains';
+	my $self = shift;
+	my $tmhmm_info = $self->transmembrane_info;
+	
+	#examples o528-550i, 'o408-430i447-469o555-577i584-606o652-674i785-807o', 'o'
+	
+	$log->debug("TM INFO '$tmhmm_info'");
+	
+	my @regions = split(/[io]/,$tmhmm_info);
+	
+	my $seq_obj = $self->seq_info();
+	
+	
+	foreach my $region (@regions) {
+		next unless $region;
+		my ($start,$end) = split(/-/,$region);
+		
+		$log->debug("TM INFO START END '$start' '$end'");
+	
+		my $tmhmm_f = Bio::SeqFeature::Generic->new(
+													-start        =>$start,
+													-end          =>$end ,
+                                                    -primary          => "Transmembrane",
+                                                    -tag              =>{Transmembrane => 'TMHMM'},
+                                        );
+
+		$seq_obj->add_SeqFeature($tmhmm_f);
+
+	}
+	
+	
+	
+		
+	
+}
+
+############################################
 #Add add the pepredicted peptide seqs to the seq obj
 #########################################
 sub add_predicted_peptides {
 	my $mehtod= 'add_predicted_peptides';
 	my $self = shift;
-	my @array_hrefs = $fake_data_o->get_fake_predicted_seqs();
+	my $ipi_data_id = $self->get_ipi_data_id;
+	my @array_hrefs = $self->get_predicted_peptides($ipi_data_id);
+	
+	
 	my $pep_o = new SBEAMS::PeptideAtlas::Get_peptide_seqs(glyco_obj => $self);
 	
-	##TODO GOING TO NEED METHOD TO QUERY DB AND GET BACK DATA ABOUT PEPTIDE
-	##HAVE ABLITITY TO INDICATE PREDICTED OR IDENTIFED PEPTIDES
+
 	$pep_o->make_peptide_bio_seqs(data => \@array_hrefs,
-								  type => 'Predicted',	
+								  type => 'Predicted Peptides',	
 								);
 	
 
@@ -254,30 +358,46 @@ sub add_predicted_peptides {
 sub add_identified_peptides {
 	my $mehtod= 'add_identified_peptides';
 	my $self = shift;
-	my @array_hrefs = $fake_data_o->get_fake_identifed_seqs();
+	my $ipi_data_id = $self->get_ipi_data_id;
+	my @array_hrefs = $self->get_identified_peptides($ipi_data_id);
+	
+	
 	my $pep_o = new SBEAMS::PeptideAtlas::Get_peptide_seqs(glyco_obj => $self);
 	
-	##TODO GOING TO NEED METHOD TO QUERY DB AND GET BACK DATA ABOUT PEPTIDE
-	##HAVE ABLITITY TO INDICATE PREDICTED OR IDENTIFED PEPTIDES
+	
 	$pep_o->make_peptide_bio_seqs(data => \@array_hrefs,
-								  type => 'Identified',	
+								  type => 'Identified Peptides',	
 								);
 	
 
 }
 
-###############################################################################
-#get_dbxref_accessor_urls
-#Give nothing
-#return results as a hash example  LocusLink => http://www.ncbi.nlm.nih.gov/LocusLink/ 
-#
-###############################################################################
-sub get_dbxref_accessor_urls {
-	my $self = shift;
-	return $sbeams->selectTwoColumnHash("SELECT dbxref_tag, accessor
-			    	    	     FROM $TB_DBXREF"
-					   );
+#########################################################
+#make_url
+#Give key value pairs term => $serach_term, dbxref_tag => tag_val
+#return a url composed of <accessor>$search_term<accessor_suffix>
+#######################################################
+sub make_url {
+        my $self = shift;
+        my %args = @_;
+        my $term = $args{'term'};
+        my $xref_tag = $args{'dbxref_tag'};
+
+        return 0 unless($term && $xref_tag);
+
+        my $sql = qq~   SELECT accessor, accessor_suffix
+                        FROM $TB_DBXREF
+                        WHERE dbxref_tag = '$xref_tag'
+                ~;
+        my ($href) = $sbeams->selectHashArray($sql);
+	my $url = $href->{accessor} . $term . $href->{accessor_suffix};
+	$url =~ s/ /+/g;	#repalce any spaces with a plus.  Needed for EBI_IPI to work
+	$log->debug("MAKE URL '$url'");
+	$url = "<a href='$url'>$term</a>";
+	return $url;
+
 }
+
 ###############################################################################
 #sorted_freatures
 #Sort and array of features based on their primary tag
@@ -345,14 +465,18 @@ sub get_html_protein_seq {
 													   );
                 
 			if ($css_class){
-	                	my $start_tag = "<span class='$css_class' $title>";
-	                	my $end_tag   = "</span>";
-	                	unshift @{$array_of_arrays[$start]}, $start_tag;
-	                	push @{$array_of_arrays[$end]}, $end_tag;
+                	#my $html_tag = 'span';
+                	#$html_tag = 'text' if $tag eq 'N-Glyco Sites';
+                	
+                	#$log->debug("TAG '$tag' HTMLTAG '$html_tag' CLASS '$css_class' $start $end");
+                	my $start_tag = "<span class='$css_class' $title>";
+                	my $end_tag   = "</span>";
+                	unshift @{$array_of_arrays[$start]}, $start_tag;
+                	push @{$array_of_arrays[$end]}, $end_tag;
 			}
 			
         }
-       # $log->debug( Dumper(\@array_of_arrays));
+       #print( Dumper(\@array_of_arrays));
         my $string = $self->flatten_array_of_arrays(@array_of_arrays);
         return  $string;
 
@@ -370,40 +494,40 @@ sub _choose_css_type {
 	my $title = '';
 	my %parameters = ();
 	
-	
-#If we have some parameters, only return a css_class for the one in the parameter hash
-#Glyco N sites will always displayed
+	my $start = $start + 1; #HACK add one to get correct glycosite location.	
+#If we have some parameters, only return one css_class for the one matching info in the parameter hash
+#N-Glyco Sites sites will always displayed
 	if ($ref_parameters->{'redraw_protein_sequence'} == 1){
 		%parameters = %{$ref_parameters};
-		$log->debug("REDRAW PROTEIN '$tag'".  Dumper(\%parameters));
-		if ($tag eq 'Predicted' && exists $parameters{'Predicted Peptide'}){
+		
+		if ($tag eq 'Predicted Peptides' && exists $parameters{'Predicted Peptide'}){
 			$css_class='predicted_pep';
-	           $log->debug("REDRAW PROTEIN I HAVE PREDICTED");     	
-		}elsif($tag eq 'Identified' && exists $parameters{'Indentified Peptide'}){
+	              	
+		}elsif($tag eq 'Identified Peptides' && exists $parameters{'Identified Peptide'}){
 			$css_class='identified_pep';
 			
 		}elsif($tag eq 'Signal Sequence' && exists $parameters{'Signal Sequence'}){
 			$css_class='sseq';
-		}elsif($tag eq 'Trans Membrane Predictions' && exists $parameters{'Trans Membrane Seq'}){
+		}elsif($tag eq 'Transmembrane' && exists $parameters{'Trans Membrane Seq'}){
 			$css_class='tmhmm';
-		}elsif($tag eq 'Glyco N'){
+		}elsif($tag eq 'N-Glyco Sites'){
 			$css_class='glyco_site';
 			$title = "title='Glyco Site $start'";
 		}
 	}else{
 	
 	
-		if ($tag eq 'Predicted'){
+		if ($tag eq 'Predicted Peptides'){
 			$css_class='predicted_pep';
 	                		
-		}elsif($tag eq 'Identified'){
+		}elsif($tag eq 'Identified Peptides'){
 			$css_class='identified_pep';
-			
+			next; #turn off for defualt view
 		}elsif($tag eq 'Signal Sequence'){
 			$css_class='sseq';
-		}elsif($tag eq 'Trans Membrane Predictions'){
+		}elsif($tag eq 'Transmembrane'){
 			$css_class='tmhmm';
-		}elsif($tag eq 'Glyco N'){
+		}elsif($tag eq 'N-Glyco Sites'){
 			$css_class='glyco_site';
 			$title = "title='Glyco Site $start'";
 		}
@@ -449,9 +573,10 @@ sub flatten_array_of_arrays{
         my $self = shift;
 	my @array_of_arrays = @_;
         my @flat_array = ();
-
         foreach my $aref ( @array_of_arrays){
-                push @flat_array, @{$aref};
+              # if (ref($aref)){ #for some reason undef elements are finding their way into the array this does not seem good and needs to be fixed
+		push @flat_array, @{$aref}; #FIX ME IF THE GLYCO SITE EXTENTS BEYOND THE TRYPTIC SITE WE HAVE AN ERROR
+	#	}
         }
         my $string = join "", @flat_array;
         return $string;
@@ -462,26 +587,198 @@ sub flatten_array_of_arrays{
 sub add_cellular_location{
 	my $method = 'add_cellular_location';
 	my $self = shift;
+	my $seq_obj = $self->seq_info;
 	
-	my $subcellular_info = $fake_data_o->{'cellular_location'};
-	my $seq_obj = $self->seq_info();
+	my $location = $self->cellular_location_name;
 	
-	my $location = '';
-	if ($subcellular_info eq 'S'){
-		$location = "Secreted";
-	}elsif($subcellular_info eq 'TM' ){
-		$location = "Trans Membrane";
-	}elsif($subcellular_info == 0){
-		$location = "Unknown";
-	}else{
-		$location = 'No Data';
-	}
 	my $coll = $seq_obj->annotation();
 	my $cellualar_loc_obj 	= new Bio::Annotation::SimpleValue(-value => $location);	
 	 
 	$coll->add_Annotation('cellular_location', $cellualar_loc_obj);
 	$seq_obj->annotation($coll);
 }
+
+##############################################
+#add_query_results
+#given a href from a sql query add the data to the object
+##############################################
+sub add_query_results{
+	my $method = 'add_query_results';
+	my $self = shift;
+	my $href = shift;
+	
+	$self->ipi_accession($href->{'ipi_accession_number'});
+    $self->protein_name($href->{'protein_name'});
+    $self->protein_symbol($href->{'protein_symbol'});
+    $self->swiss_prot_acc($href->{'swiss_prot_acc'});
+    $self->cellular_location_name($href->{'cellular_location_name'});
+    $self->protein_summary($href->{'protein_summary'});
+    $self->raw_protein_sequence($href->{'protein_sequence'});
+    $self->transmembrane_info($href->{'transmembrane_info'});
+    $self->signal_sequence_info($href->{'signal_sequence_info'});
+    $self->synonyms($href->{'synonyms'});
+   
+}
+
+##############################################
+#get/set 
+#protein_name
+##############################################
+sub protein_name {
+    my $method = 'protein_name';
+    my $self = shift;
+    my $info = shift;
+    if ($info){# it's a setter
+    	$self->{_protein_name} = $info;
+    }else{#it's a getter
+    	return $self->{_protein_name};
+   } 
+}
+
+##############################################
+#get/set 
+#protein_symbol
+##############################################
+sub protein_symbol {
+    my $method = 'protein_symbol';
+    my $self = shift;
+    my $info = shift;
+    if ($info){# it's a setter
+    	$self->{_protein_symbol} = $info;
+    }else{#it's a getter
+    	return $self->{_protein_symbol};
+   } 
+}
+##############################################
+#get/set 
+#swiss_prot_acc
+##############################################
+sub swiss_prot_acc {
+    my $method = 'swiss_prot_acc';
+    my $self = shift;
+    my $info = shift;
+    if ($info){# it's a setter
+    	$self->{_swiss_prot_acc} = $info;
+    }else{#it's a getter
+    	return $self->{_swiss_prot_acc};
+   } 
+}
+##############################################
+#get/set 
+#cellular_location_name
+##############################################
+sub cellular_location_name {
+    my $method = 'cellular_location_name';
+    my $self = shift;
+    my $info = shift;
+    if ($info){# it's a setter
+    	$self->{_cellular_location_name} = $info;
+    }else{#it's a getter
+    	return $self->{_cellular_location_name};
+   } 
+}
+##############################################
+#get/set 
+#protein_summary
+##############################################
+sub protein_summary {
+    my $method = 'protein_summary';
+    my $self = shift;
+    my $info = shift;
+    if ($info){# it's a setter
+    	$self->{_protein_summary} = $info;
+    }else{#it's a getter
+    	return $self->{_protein_summary};
+   } 
+}
+##############################################
+#get/set 
+#raw_protein_sequence
+##############################################
+sub raw_protein_sequence {
+    my $method = 'raw_protein_sequence';
+    my $self = shift;
+    my $info = shift;
+    if ($info){# it's a setter
+    	$self->{_raw_protein_sequence} = $info;
+    }else{#it's a getter
+    	return $self->{_raw_protein_sequence};
+   } 
+}
+##############################################
+#get/set 
+#transmembrane_info
+##############################################
+sub transmembrane_info {
+    my $method = 'transmembrane_info';
+    my $self = shift;
+    my $info = shift;
+    if ($info){# it's a setter
+    	$self->{_transmembrane_info} = $info;
+    }else{#it's a getter
+	return $self->{_transmembrane_info};
+	
+   } 
+}
+#############################################
+#has_transmembrane_seq
+##############################################
+sub has_transmembrane_seq {
+    my $method = 'has_transmembrane_seq';
+    my $self = shift;
+    if($self->{_transmembrane_info} eq 'o'){
+	return 0;
+    }else{
+	return 1;
+
+   }
+}
+
+##############################################
+#get/set 
+#signal_sequence_info
+##############################################
+sub signal_sequence_info {
+    my $method = 'signal_sequence_info';
+    my $self = shift;
+    my $info = shift;
+    if ($info){# it's a setter
+    	$self->{_signal_sequence_info} = $info;
+    }else{#it's a getter
+    	return $self->{_signal_sequence_info};
+   } 
+}
+##############################################
+#has_signal_sequence
+##############################################
+sub has_signal_sequence {
+    my $method = 'has_signal_sequence';
+    my $self = shift;
+    if($self->{_signal_sequence_info} =~ m/Y$/ ){
+	return 1;		
+    }else{
+	return 0;
+   }
+}
+
+
+##############################################
+#get/set 
+#synonyms
+##############################################
+sub synonyms {
+    my $method = 'synonyms';
+    my $self = shift;
+    my $info = shift;
+    if ($info){# it's a setter
+    	$self->{_synonyms} = $info;
+    }else{#it's a getter
+    	return $self->{_synonyms};
+   } 
+}
+
+
+
 ###############################################
 #display_peptides
 ##############################################
@@ -503,14 +800,31 @@ sub display_peptides{
                 push @{ $sorted_features{$tag} }, $f;
         }
 	
-	if ($type eq 'Predicted'){
+	if ($type eq 'Predicted Peptides'){
 		$html .= $self->predicted_pep_html($sorted_features{$type});
-	}elsif($type eq 'Identified'){
-		$html .= $self->identified_pep_html($sorted_features{$type});
+	}elsif($type eq 'Identified Peptides'){
+		if (exists $sorted_features{$type}){
+			$html .= $self->identified_pep_html($sorted_features{$type});
+		}else{
+			$html .= $self->nothing_found_html($type);
+		}
+		
 	}
 	
 	
 	return $html;
+}
+
+###############################################
+#nothing_found_html
+##############################################
+sub nothing_found_html{
+    my $method = 'nothing_found_html';
+    my $self = shift;
+	my $type = shift;
+	
+	my $info = "-- No Data found for <i>$type</i> --";
+	return $info;
 }
 
 ###############################################
@@ -543,14 +857,14 @@ END
 		my $first_aa = 'X';
 		my $end_aa = 'X';
 		my $html_seq = '';
-		my $detection_prop = '0.78';
+		my $detection_prop = '-1';
 		my $database_hits = '-1';
 		my $ipi_hits = '-1';
 		my $ipi_ids = '--';
 		my $protein_sim = '1';
 		my $predicted_mass = 0;
 		my $glyco_score = 0;
-		
+		my $protein_glyco_site = 1;		
 		
 		
 		if ($f->has_tag('Peptide_seq_obj')){
@@ -572,28 +886,32 @@ END
 			$html_seq = $self->get_html_protein_seq(seq => $pep_seq_obj);
 			$glyco_score = $self->get_annotation(seq_obj =>$pep_seq_obj, 
 									 anno_type => 'glyco_score');
+			$protein_glyco_site =  $self->get_annotation(seq_obj =>$pep_seq_obj,
+                                                                         anno_type => 'protein_glyco_site');
 			#$detection_prop = $self->get_annotation(seq_obj =>$pep_seq_obj, 
 			#						 anno_type => 'detection_probability');
 			$database_hits = $self->get_annotation(seq_obj =>$pep_seq_obj, 
-									 anno_type => 'database_hits');
+									 anno_type => 'number_proteins_match_peptide');
 			$ipi_ids = $self->get_annotation(seq_obj =>$pep_seq_obj, 
 									 anno_type => 'database_hits_ipi_ids');
 			$predicted_mass = $self->get_annotation(seq_obj =>$pep_seq_obj, 
 									 anno_type => 'predicted_mass');
 			$protein_sim = $self->get_annotation(seq_obj =>$pep_seq_obj, 
-									 anno_type => 'similarity');
+									 anno_type => 'protein_similarity_score');
 					
 		}
-## Detmine what to do wiht the number of other protein database hits
+## Detmine what to do with the number of other protein database hits
+	#TODO CONVERT TO IPI DATA IDS AND MAKE A PAGE TO DISPLAY THE DATABASE HITS
 		my $hit_link = '---';
 		if ($database_hits > 1){
-			$hit_link = "<a href='fake_url/$ipi_ids'>$database_hits</a>?";
+			my $script = $q->script_name();
+			$hit_link = "<a href='$script?action=Show_hits_form&search_type=IPI Accession Number&search_term=$ipi_ids&similarity_score=$protein_sim'>$database_hits Hits</a>";
 		}
 		
 ### Start writing some html that can be returned
 
 		 $html .= $q->Tr(
-				$q->td($id),
+				$q->td($protein_glyco_site),
 				$q->td("$first_aa.$html_seq.$end_aa"),
 				$q->td({align=>'center'}, $glyco_score),
 				$q->td({align=>'center'},$predicted_mass),
@@ -619,7 +937,7 @@ sub identified_pep_html{
 			 <tr class='rev_gray'>
 			   <td>NXS/T<br>Location</td>
 			   <td>Identifed Sequence</td>
-			   <td>Peptide ProPhet Score</td>
+			   <td>PeptideProphet Score</td>
 			   <td>Tryptic Ends</td>
 			   <td>Peptide Mass</td>
 			   <td>Tissues</td>
@@ -638,11 +956,11 @@ END
 		my $first_aa = 'X';
 		my $end_aa = 'X';
 		my $html_seq = '';
-		my $number_tryptic_peptides = '-1';
+		my $tryptic_end = '-1';
 		my $peptide_prophet_score = '-1';
 		my $peptide_mass = '1';
 		my $tissues = 'None';
-		
+		my $protein_glyco_site = 1;
 		
 		
 		if ($f->has_tag('Peptide_seq_obj')){
@@ -662,8 +980,10 @@ END
 			}
 			
 			$html_seq = $self->get_html_protein_seq(seq => $pep_seq_obj);
-			$number_tryptic_peptides = $self->get_annotation(seq_obj =>$pep_seq_obj, 
-									 anno_type => 'number_tryptic_peptides');
+			$protein_glyco_site =  $self->get_annotation(seq_obj =>$pep_seq_obj,
+                                                                         anno_type => 'protein_glyco_site');
+			$tryptic_end = $self->get_annotation(seq_obj =>$pep_seq_obj, 
+									 anno_type => 'tryptic_end');
 			$peptide_prophet_score = $self->get_annotation(seq_obj =>$pep_seq_obj, 
 									 anno_type => 'peptide_prophet_score');
 			$peptide_mass = $self->get_annotation(seq_obj =>$pep_seq_obj, 
@@ -675,10 +995,10 @@ END
 ### Start writing some html that can be returned
 
 		 $html .= $q->Tr(
-				$q->td($id),
+				$q->td($protein_glyco_site),
 				$q->td("$first_aa.$html_seq.$end_aa"),
 				$q->td($peptide_prophet_score),
-				$q->td($number_tryptic_peptides),
+				$q->td($tryptic_end),
 				$q->td($peptide_mass),
 				$q->td($tissues),
 			     );
@@ -686,6 +1006,65 @@ END
 	$html .= "</table>";
 	return $html;
 }
+
+################################
+#gene_symbol_query
+###############################
+sub gene_symbol_query{
+	my $self = shift;
+	my $term = shift;
+	
+	my $sql = qq~ SELECT ipi_data_id, protein_name, protein_symbol 
+				  FROM $TBAT_IPI_DATA 
+				  WHERE protein_symbol like '$term'
+		  qq~;
+	return $sbeams->selectHashArray($sql);
+
+
+}
+
+
+################################
+#gene_name_query
+###############################
+sub gene_name_query{
+	my $self = shift;
+	my $term = shift;
+	my $sql = qq~ SELECT ipi_data_id, protein_name, protein_symbol 
+				  FROM $TBAT_IPI_DATA 
+				  WHERE protein_name like '$term'
+		  qq~;
+	return $sbeams->selectHashArray($sql)
+}
+
+################################
+#ipi_accession_query
+###############################
+sub ipi_accession_query{
+	my $self = shift;
+	my $term = shift;
+	my $sql = qq~ SELECT ipi_data_id, protein_name, protein_symbol 
+				  FROM $TBAT_IPI_DATA 
+				  WHERE ipi_accession like '$term'
+		  qq~;
+	return $sbeams->selectHashArray($sql)
+}
+
+################################
+#protein_seq_query
+###############################
+sub protein_seq_query{
+	my $self = shift;
+	my $seq = shift;
+	
+	my $sql = qq~ SELECT ipi_data_id, protein_name, protein_symbol 
+				  FROM $TBAT_IPI_DATA 
+				  WHERE protein_name like '%$seq%'
+		  qq~;
+	return $sbeams->selectHashArray($sql)
+}
+
+
 ################################
 #extract_first_val
 ###############################
@@ -702,7 +1081,7 @@ sub extract_first_val{
 }
 
 ################################
-#
+#make_features_hash
 ################################
 sub make_features_hash {
 	my $self = shift;
