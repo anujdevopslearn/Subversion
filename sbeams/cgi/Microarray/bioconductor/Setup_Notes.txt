@@ -1,4 +1,4 @@
-Things to remember for set.
+Things to remember for setup.
 
 At ISB the data produced by these scripts is not kept local to the web server.
 
