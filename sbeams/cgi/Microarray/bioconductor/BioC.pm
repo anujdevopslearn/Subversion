@@ -269,10 +269,10 @@ sub log_job {
 	
 	return undef if (! $fm || ! $fm->path);
 	
-	open(LOG, ">>$path/.log") ||
-	    return("Couldn't write to log file");
-	print LOG "$jobname\t$title\t$time\n";
-	close(LOG);
+	#open(LOG, ">>$path/.log") ||
+	 #   return("Couldn't write to log file");
+	#print LOG "$jobname\t$title\t$time\n";
+	#close(LOG);
 	
 	return undef;
 }
