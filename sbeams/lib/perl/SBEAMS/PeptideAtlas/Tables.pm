@@ -36,6 +36,16 @@ use vars qw(@ISA @EXPORT
     $TBAT_PUBLICATION
     $TBAT_BIOSEQUENCE_ANNOTATED_GENE
     $TBAT_BIOSEQUENCE_ANNOTATION
+    
+    $TBAT_IPI_VERSION
+    $TBAT_IPI_DATA
+    $TBAT_CELLULAR_LOCATION
+    $TBAT_GLYCO_SITE
+    $TBAT_IDENTIFIED_PEPTIDE
+    $TBAT_PREDICTED_PEPTIDE
+    $TBAT_PEPTIDE_TO_TISSUE
+    $TBAT_TISSUE
+
 
 );
 
@@ -64,6 +74,15 @@ require Exporter;
     $TBAT_PUBLICATION
     $TBAT_BIOSEQUENCE_ANNOTATED_GENE
     $TBAT_BIOSEQUENCE_ANNOTATION
+    
+    $TBAT_IPI_VERSION
+    $TBAT_IPI_DATA
+    $TBAT_CELLULAR_LOCATION
+    $TBAT_GLYCO_SITE
+    $TBAT_IDENTIFIED_PEPTIDE
+    $TBAT_PREDICTED_PEPTIDE
+    $TBAT_PEPTIDE_TO_TISSUE
+    $TBAT_TISSUE
 );
 
 
@@ -91,5 +110,14 @@ $TBAT_PEPTIDE_MAPPING       = "${mod}peptide_mapping";
 $TBAT_PUBLICATION           = "${mod}publication";
 $TBAT_BIOSEQUENCE_ANNOTATED_GENE = "${mod}biosequence_annotated_gene";
 $TBAT_BIOSEQUENCE_ANNOTATION = "${mod}biosequence_annotation";
+
+$TBAT_IPI_VERSION	    	= "${mod}ipi_version";
+$TBAT_IPI_DATA			= "${mod}ipi_data";
+$TBAT_CELLULAR_LOCATION		= "${mod}cellular_location";
+$TBAT_GLYCO_SITE		= "${mod}glyco_site";
+$TBAT_IDENTIFIED_PEPTIDE	= "${mod}identified_peptide";
+$TBAT_PREDICTED_PEPTIDE		= "${mod}predicted_peptide";
+$TBAT_PEPTIDE_TO_TISSUE		= "${mod}peptide_to_tissue";
+$TBAT_TISSUE			= "${mod}tissue";
 
 
