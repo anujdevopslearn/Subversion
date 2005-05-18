@@ -113,6 +113,9 @@ CONFIG_SETTING{Proteomics_SPECTRUM_DESTINATION} = TABLE
 CONFIG_SETTING{Proteomics_MAX_TOP_HITS_TO_LOAD} = 10
 CONFIG_SETTING{PGPLOT_FONT} = /usr/local/lib/grfont.dat
 
+#### Microarray Settings
+CONFIG_SETTING{Microarray_affy_help_docs_url} = provide url if needed, see install notes
+
 
 #### Period of time in hours before login sessions expire
 LOGIN_DURATION         = 24
