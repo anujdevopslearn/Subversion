@@ -1011,12 +1011,13 @@ The "control group" should almost always be the Reference Sample,
 so that positive Log ratios indicate
 increased expression in the experimental group and vice versa.
 </p>
+<p>Please Click "Update Order" if the Sample Group Names are changed</p>
 * Please note that the reference sample can be ignored at the analysis so just two sample groups can be compared
 to one another.  
 </p>
 END
 	
-	print "NUMBER OF GROUPS '$number_of_sample_groups'<br>";
+	#print "NUMBER OF GROUPS '$number_of_sample_groups'<br>";
 	
 ###Print out the radio buttons to pair up sample groups to file names	
 	if ($cgi->param('Submit') eq 'submit_group_names'){
@@ -1069,96 +1070,81 @@ sub order_all_files{
 	
 	my @files = @{ $args{files_names} };
 	my @all_sample_group_names = @{ $args{all_sample_groups} };
-	my @sample_group_names 	   = @{ $args{sample_groups} };
-#make a copy of the user defined sample group names
-	my @user_sample_groups = @sample_group_names;
-	my @ordered_files 			  = ();
-	my @ordered_all_sample_groups = ();
-	my %sample_groups_files 	  = ();
-#make a map of all the user defined sample groups names.  Remember that 
-#these could be different from the names that are in the database
-	my %sample_group_order_h = ();
-	for( my $i=0; $i <=$#sample_group_names; $i++){
-		$sample_group_order_h{$sample_group_names[$i]} = $i +1;
-	}
-$log->debug("SAMPLE GROUP HASH DUMP " . Dumper (\%sample_group_order_h));
-#now make a map of the sample group names from the database 
-#contained in the var @all_sample_graoup_names
-#we need to figure out for each of the database sample group names
-#what (potenially) user defined sample group name we are going to use
+	my @user_sample_groups 	   = @{ $args{sample_groups} };
 
-#first check to see if any of the orginal database names still exists in the user defined names.
-my %sample_group_map = ();
-foreach my $user_sample_group (@sample_group_names){
-	my $count = scalar (grep { $user_sample_group eq $_} @all_sample_group_names);
-	if ($count > 0 ){
-		$sample_group_map{$user_sample_group} = $user_sample_group;
-		$sample_group_order_h{$user_sample_group} = 0;
-	}
-}
-		
-$log->debug("LOADED OLD NAMES" . Dumper(\%sample_group_map));
-	foreach my $db_sample_group (@all_sample_group_names){
-		if (exists $sample_group_map{$db_sample_group}){
-			next;	#this should have been loaded above
-		}else{
-			my $key = '';
-			#need to do some book keeping to keep track of which user defined keys we
-			#have already used.  If we make it to here we need to return a key that has not
-			#been used yet.
-			foreach  $key (sort { $sample_group_order_h{$a} <=>$sample_group_order_h{$b} }keys %sample_group_order_h){
-				#$log->debug("CURRENT KEY '$key' VAL '$sample_group_order_h{$key}'");
-				next if $sample_group_order_h{$key} == 0;
-				if ($sample_group_order_h{$key} > 0){
-					#$log->debug("I HAVE FOUND A KEY '$key' VAL '$sample_group_order_h{$key}'");
-					$sample_group_map{$db_sample_group} = $key;
-					$sample_group_order_h{$key} = 0;
-					last;
-				}
-			} 
-		}
-		
-	}
-$log->debug(Dumper(\%sample_group_map));
+
+
+	my %file_names_groups_h = ();
+	#make a hash from the two arrays....tricky
+	@file_names_groups_h{@files} = @all_sample_group_names;
 	
-##Make index of all the files a sample group points to	
-	for (my $i=0; $i <= $#all_sample_group_names ; $i++){
-		my $group = $all_sample_group_names[$i];
-			
-#if the user changes or adds new sample groups we will have no way to track 
-#what files belong to the new sample groups.  
-		#Convert the db sample group name to the user defined name
-		#most of the time they should be the same
-		$group = $sample_group_map{$group}; 
-					
-			
-		my $file = $files[$i];
+	
+	$log->debug(Dumper(\%file_names_groups_h));
+	
+	
+	 my @final_file_order = ();
+	 my @final_groups_order = ();
+	 
+	 
+	 #Need to out put a list of all the file names and a array of what
+	#sample group each file belongs to.  This will be used to make the list
+	#of radio buttons to allow the user to select which sample belongs to each group.
+	
+	#If the user changes the sample group names there is no way to figure out what file
+	#belongs to which sample group.  So if a group is missing or changes to who knows what group the files
+	#under the unknown Group
+	
+	foreach my $file_name (keys %file_names_groups_h ){
 		
-		if (exists $sample_groups_files{$group}){
-			push @{ $sample_groups_files{$group} }, $file;
-			
-		}else{
-			$sample_groups_files{$group} = [$file];
-		}
-	}
-	$log->debug(Dumper (\%sample_groups_files));	
-##Collect all the files in an ordered manor
-	foreach my $sample_group (@sample_group_names){
-		my $file_count = 0;
-		if (exists $sample_groups_files{$sample_group} && defined $sample_groups_files{$sample_group} ){
-			 $file_count = scalar @{ $sample_groups_files{$sample_group} };
 		
-			
-		push @ordered_all_sample_groups, ($sample_group) x $file_count;	#make a list of sample group names the same length as number of file names
-		push @ordered_files, @{ $sample_groups_files{$sample_group} };
+		my $orginal_group_name = $file_names_groups_h{$file_name};
+		$log->debug("$file_name => $orginal_group_name");
+		my $new_group = '';
+		
+		foreach my $user_group_name (@user_sample_groups){
+			if ($user_group_name eq $orginal_group_name){
+			#print "MATCHED ORGINAL GROUP TO USER DEFINED GROUP '$orginal_group_name'\n";
+				$new_group = $orginal_group_name;
+				last;
+			}
 		}
+		
+		$new_group =$new_group ?$new_group:'Unknown';
+		
+		#print "NEW GROUP SET TO '$new_group'\n";
+		
+		push @final_groups_order, $new_group ;
+	 	
+	 	push @final_file_order, $file_name;
 	}
+	
+	#now that we have the file to group mapping sort on the sample group names to make it print nice
+	my %final_h = ();
+	@final_h{@final_file_order} = @final_groups_order;
+	
+	my @final_file_order_sorted = ();
+	my @final_groups_order_sorted = ();
+	
+	foreach my $file (sort{$final_h{$a} cmp $final_h{$b}
+					     ||
+				         $a cmp $b}
+			 keys %final_h){
+		push @final_file_order_sorted, $file;
+		push @final_groups_order_sorted, $final_h{$file};
+	}
+	
+	
+	$log->debug("FINAL GROUP ORDER". Dumper( \@final_groups_order_sorted));
+	 
+	$log->debug("FINAL FILE ORDER". Dumper(\@final_file_order_sorted));
 	
 	error("The number of ordered files does not contain the same number of files as the user selected. ")
-	unless (  @ordered_files == @files);
-	#print Dumper (\@ordered_files, \@ordered_all_sample_groups);
+		unless (  @final_file_order_sorted == @files);
+		
+		
+		return (\@final_file_order_sorted, \@final_groups_order_sorted);
 	
-	return (\@ordered_files, \@ordered_all_sample_groups);
+
 	
 }
 
