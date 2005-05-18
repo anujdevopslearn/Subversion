@@ -53,9 +53,9 @@ use Bio::Annotation::SimpleValue;
 use Data::Dumper;
 use SBEAMS::PeptideAtlas::Get_glyco_seqs;
 use base qw(SBEAMS::PeptideAtlas::Get_glyco_seqs);		
-use SBEAMS::PeptideAtlas::Test_glyco_data;
 
-#my $fake_data_o = new SBEAMS::PeptideAtlas::Test_glyco_data();
+
+
 
 ##############################################################################
 #constructor
@@ -116,29 +116,33 @@ sub make_peptide_bio_seqs {
 	my %args = @_;
 	my $data_aref = $args{data};
 	my $pep_type = $args{type};
-	
+
+				
 	foreach my $href (@{$data_aref}){
-	
 		
-		#data coming from fake data object
-		my $modified_pep_seq = $href->{'peptide_seq'};
+		my $modified_pep_seq = '';
+		my $peptide_id = '';
+		my $identified_tissues = '';
 		
-		my $peptide_id =  $href->{'peptide_id'};
-		
+	#pull out the sequence and id for the different types of peptides 
+		if ($pep_type eq 'Identified Peptides'){
+			$modified_pep_seq = $href->{'identified_peptide_sequence'};
+			$peptide_id =  $href->{'identified_peptide_id'};
+			$identified_tissues = $self->identified_tissues($peptide_id);
+		}elsif ($pep_type eq 'Predicted Peptides'){
+			$modified_pep_seq = $href->{'predicted_peptide_sequence'};
+			$peptide_id =  $href->{'predicted_peptide_id'};
+		}	
 		#$log->debug(__PACKAGE__ . "::$method MODIFED PEPTIDE SEQ '$modified_pep_seq' PEPID '$peptide_id'");
 		
-		
-		if ($pep_type eq 'Predicted'){
-			$self->add_glyco_site($href->{'glyco_site_location'});
-		}
-		
-		
+	
 		my $pep_bioseq_o = $self->parse_modfied_pep_seq(pep_seq => $modified_pep_seq,
 													  peptide_id => $peptide_id,
 													  pep_type  => $pep_type
 													  );
 		$self->add_peptide_annotation(data =>$href,
-									  seq  =>$pep_bioseq_o);
+									  seq  =>$pep_bioseq_o,
+									  tissue_info =>$identified_tissues);
 		
 		
 		$self->map_pep_to_protein(pep_bioseq => $pep_bioseq_o,
@@ -150,47 +154,56 @@ sub make_peptide_bio_seqs {
 	
 
 }
-
+#####################################################################
+#add_peptide_annotation
+####################################################################
 sub add_peptide_annotation{
 	my $mehtod = 'add_peptide_annotation';
 	my $self = shift;
 	my %args = @_;
 	my $href = $args{data};
 	my $seq  = $args{seq};
-	
-	
-	my $number_tryptic_ends = new Bio::Annotation::SimpleValue(-value => $href->{'number_tryptic_peptides'});
-	my $pep_prophet_score 	= new Bio::Annotation::SimpleValue(-value => $href->{'peptide_prophet_score'});
-	my $peptide_mass 	= new Bio::Annotation::SimpleValue(-value => $href->{'peptide_mass'});
-	my $tissues			= Bio::Annotation::Comment->new;
-	
-	my $glyco_score = new Bio::Annotation::SimpleValue(-value => sprintf("%01.2f",$href->{'glyco_score'}));
-	my $db_hits = new Bio::Annotation::SimpleValue(-value => $href->{'database_hits'});
-	my $db_hits_ids = Bio::Annotation::Comment->new;
-	my $db_smilarity = new Bio::Annotation::SimpleValue(-value => $href->{'similarity'});
-	my $predicted_mass = new Bio::Annotation::SimpleValue(-value => sprintf("%01.2f", $href->{'predicted_mass'}));
-	
-	
-	$tissues->text($href->{'identifed_tissues'});
-	
-	$db_hits_ids->text($href->{'database_hits_ipi_ids'});
-	
-	
+	my $tissue_info = $args{tissue_info};	
 
+	
+#annotation specific for identified peptides
+	my $pep_prophet_score 	= new Bio::Annotation::SimpleValue(-value => sprintf("%01.2f", $href->{'peptide_prophet_score'}));
+	my $peptide_mass 		= new Bio::Annotation::SimpleValue(-value => sprintf("%01.2f",$href->{'peptide_mass'}));
+	my $tissues				= Bio::Annotation::Comment->new;
+	
+	my $number_tryptic_ends = new Bio::Annotation::SimpleValue(-value => $href->{'tryptic_end'});
+
+#annotation specific for predicted peptides	
+	my $db_hits 	= new Bio::Annotation::SimpleValue(-value => $href->{'number_proteins_match_peptide'});
+	my $db_hits_ids = Bio::Annotation::Comment->new;
+	my $db_smilarity 	= new Bio::Annotation::SimpleValue(-value => sprintf("%d\%",$href->{'protein_similarity_score'} * 100));
+	my $predicted_mass 	= new Bio::Annotation::SimpleValue(-value => sprintf("%01.2f", $href->{'predicted_peptide_mass'}));
+#annotation in both predicted and identified
+	my $glyco_score		= new Bio::Annotation::SimpleValue(-value => sprintf("%01.2f", $href->{'glyco_score'}));	
+	my $protein_glyco_position   = new Bio::Annotation::SimpleValue(-value =>  $href->{'protein_glyco_site_position'});
+	
+	$tissues->text($tissue_info);
+	
+	$db_hits_ids->text($href->{'matching_protein_ids'});
+	
+	
+#$log->debug("GLYCOSITE ". $href->{'protein_glyco_site_position'});
 	my $coll = new Bio::Annotation::Collection();
 	
-	$coll->add_Annotation('number_tryptic_peptides', $number_tryptic_ends);
+	$coll->add_Annotation('tryptic_end', $number_tryptic_ends);
 	$coll->add_Annotation('peptide_prophet_score', $pep_prophet_score);
 	$coll->add_Annotation('peptide_mass', $peptide_mass);
 	$coll->add_Annotation('tissues', $tissues);
 	
-	$coll->add_Annotation('glyco_score', $glyco_score);
-	$coll->add_Annotation('database_hits', $db_hits);
+	
+	$coll->add_Annotation('number_proteins_match_peptide', $db_hits);
 	$coll->add_Annotation('database_hits_ipi_ids', $db_hits_ids);
-	$coll->add_Annotation('similarity', $db_smilarity);
+	$coll->add_Annotation('protein_similarity_score', $db_smilarity);
 	$coll->add_Annotation('predicted_mass', $predicted_mass);
 	
-	
+	$coll->add_Annotation('protein_glyco_site', $protein_glyco_position);
+	$coll->add_Annotation('glyco_score', $glyco_score);
+
 	
 	$seq->annotation($coll);	
 	$self->seq_info($seq);
@@ -258,7 +271,7 @@ sub parse_modfied_pep_seq {
 			my $glyco = Bio::SeqFeature::Generic->new(
 								-start        => $new_i,
 								-end          => $new_i + 2,
-								-primary 	  => "Glyco N", 
+								-primary 	  => "N-Glyco Sites", 
 								-tag 		  =>{Glyco_N_site => 'gly_n'
 					 							 },
 					);
@@ -303,8 +316,6 @@ sub _check_location {
 	my $i = $args{location};
 	my $type = $args{type};
 
-
-	
 		if ($i - 2 <= 0){
 			return 1;
 		}else{
@@ -314,7 +325,7 @@ sub _check_location {
 }
 
 #######################################################
-#Map a peptdie to a protein. Attach the peptide Bio::Seqeunce to a 
+#Map a peptide to a protein. Attach the peptide Bio::Seqeunce to a 
 #feature attached to the main protein Bio::Sequence
 #######################################################
 sub map_pep_to_protein {
@@ -327,7 +338,7 @@ sub map_pep_to_protein {
 	
 	
 	confess(__PACKAGE__ . "::$method pep Bio::Seq object  \n") unless (ref($pep_obj));
-	confess(__PACKAGE__ . "::$method track type Can Only be 'Predicted or Identified'  \n") unless ($track_type =~ /Pr|Id/);
+	confess(__PACKAGE__ . "::$method track type Can Only be 'Predicted or Identified Peptides'  \n") unless ($track_type =~ /Pr|Id/);
 	
 	my $glyco_obj = $self->get_glyco_object();
 	my $seq_obj = $glyco_obj->seq_info();
@@ -375,11 +386,11 @@ sub add_peptide_to_sequence {
 	
 	
 	my $score = '';
-	if ($track_type eq 'Predicted'){
+	if ($track_type eq 'Predicted Peptides'){
 		$score = $self->get_score(pep_object =>$pep_obj, 
 								  score_type => 'glyco_score'
 								  );
-	}elsif($track_type eq 'Identified'){
+	}elsif($track_type eq 'Identified Peptides'){
 		$score = $self->get_score(pep_object =>$pep_obj,
 		 						  score_type => 'peptide_prophet_score'
 		 						 );
@@ -398,7 +409,16 @@ sub add_peptide_to_sequence {
 	
 	);
 	
-	$feature->display_name('Pep_id_' . $pep_obj->display_name());
+##Pull out the position of the glyco_site on the protein to use as the title 
+ 	 my $ac = $pep_obj->annotation();
+
+        #retrieves all the Bio::AnnotationI objects for one or more specific key(s).
+        my @annotations = $ac->get_Annotations('protein_glyco_site');
+
+        my  $info = $annotations[0]->hash_tree;
+	
+	#$feature->display_name('Pep_id_' . $pep_obj->display_name());
+	$feature->display_name($info);
 	
 	#attach the pep_obj to the feature
 	$feature->attach_seq($pep_obj);					
@@ -410,7 +430,26 @@ sub add_peptide_to_sequence {
 	#$log->debug(Dumper($seq_obj));
 }
 
-
+#######################################################
+#identified_tissues
+# give identified_peptide_id
+# return a comma delimited string of all the tissues the 
+#peptide has been identified in
+#######################################################
+sub identified_tissues {
+	my $method = 'identified_tissues';
+	my $self = shift;
+	my $identified_peptide_id = shift;
+	
+	confess(__PACKAGE__ . "::$method NEED identified_peptide_id '$identified_peptide_id'  \n") unless ($identified_peptide_id =~ /^\d+$/); 
+	my @rows = $self->get_identified_tissues($identified_peptide_id);
+	
+	my @tissues = ();
+	foreach my $href (@rows){
+		push @tissues, $href->{'tissue_name'};
+	}
+	return join ",", @tissues;
+}
 #######################################################
 #get_score
 # Given a Bio::Seq object look in the annotation features
@@ -441,37 +480,7 @@ sub get_score {
 	#$log->debug("SCORE TYPE '$score_type' INFO'$info'");
 	return $info
 }
-#######################################################
-#add_glyco_site
-# Given a peptide_obj, get the main protein bioseq and add 
-# the position for the predicted N-link glyco site.
-#this method is here because of the way the data was setup
-#return 1 for success 0 for everything else
-#######################################################
-sub add_glyco_site{
-	my $method = 'add_glyco_site';
-	my $self = shift;
-	my $location = shift;
-	
-	return 0 unless $location =~ /^\d/;
-	
-	my $glyco_obj = $self->get_glyco_object;
-	my $seq_obj = $glyco_obj->seq_info;
-	
-	my $glyco = Bio::SeqFeature::Generic->new(
-								-start        => $location,
-								-end          => $location +2,
-								-primary 	  => "Glyco N", 
-								-tag 		  =>{Glyco_N_site => 'gly_n'
-					 							 },
-					);
-	
-	
-	#add all the feature to the protein Bio::Seq object
-	$seq_obj->add_SeqFeature($glyco);
-	
-	return 1;
-}
+
 
 
 
