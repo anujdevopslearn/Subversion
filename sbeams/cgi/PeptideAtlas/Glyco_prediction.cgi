@@ -22,7 +22,7 @@
 ###############################################################################
 use strict;
 use vars qw ($q $sbeams $sbeamsMOD $PROG_NAME
-             $current_contact_id $current_username);
+             $current_contact_id $current_username $glyco_query_o);
 use lib qw (../../lib/perl);
 use CGI::Carp qw(fatalsToBrowser croak);
 use Data::Dumper;
@@ -37,11 +37,15 @@ use SBEAMS::PeptideAtlas::Settings;
 use SBEAMS::PeptideAtlas::Tables;
 
 use SBEAMS::PeptideAtlas::Get_glyco_seqs;
+use SBEAMS::PeptideAtlas::Glyco_query;
 
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
 
+
+$glyco_query_o = new SBEAMS::PeptideAtlas::Glyco_query;
+$glyco_query_o->setSBEAMS($sbeams);
 
 
 ###############################################################################
@@ -51,8 +55,17 @@ $PROG_NAME = 'main.cgi';
 my $file_name    = $$ . "_glyco_predict.png";
 my $tmp_img_path = "usr/images";
 my $img_file     = "$PHYSICAL_BASE_DIR/$tmp_img_path/$file_name";
-my $predicted_track_type = "Predicted";
-my $id_track_type 		 = 'Identified';
+my $predicted_track_type = "Predicted Peptides";
+my $id_track_type 		 = 'Identified Peptides';
+$sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
+my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/Glyco_prediction.cgi";
+
+my @search_types = ('Gene Symbol',
+					'Gene Name/Alias',
+					'Swiss Prot Accession Number',
+					'IPI Accession Number',
+					  );
+
 
 main();
 
@@ -67,8 +80,8 @@ sub main
 { 
     #### Do the SBEAMS authentication and exit if a username is not returned
     exit unless ($current_username = $sbeams->Authenticate(
-        permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
-        'PeptideAtlas_readonly'],
+       # permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
+       # 'PeptideAtlas_readonly'],
         #connect_read_only=>1,
         allow_anonymous_access=>1,
     ));
@@ -83,10 +96,7 @@ sub main
 
 
     ## get project_id to send to HTMLPrinter display
-    my $project_id = $sbeamsMOD->getProjectID(
-        #atlas_build_name => $parameters{atlas_build_name},
-        #atlas_build_id => $parameters{atlas_build_id}
-        );
+    my $project_id = $sbeamsMOD->getProjectID();
 
 
     #### Process generic "state" parameters before we start
@@ -94,17 +104,31 @@ sub main
     #$sbeams->printDebuggingInfo($q);
 
     #### Decide what action to take based on information so far
-    if ($parameters{action} eq "???") {
-
-        # Some action
- 
+    if ($parameters{action} eq "Show_detail_form" || $parameters{redraw_protein_sequence} == 1) {
+		
+		 clean_params(\%parameters);
+		
+		 my $ipi_data_id = $parameters{'ipi_data_id'};
+		
+		 $sbeamsMOD->display_page_header(project_id => $project_id);
+		
+		display_detail_form(ref_parameters=>\%parameters,
+							ipi_data_id => $ipi_data_id,
+							);
+		
+		$sbeamsMOD->display_page_footer();
+		
+	}elsif($parameters{action} eq 'Show_hits_form'){
+		
+		 $sbeamsMOD->display_page_header(project_id => $project_id);
+		display_hits_form(ref_parameters=>\%parameters);
+		$sbeamsMOD->display_page_footer();
+    
     } else {
 
         $sbeamsMOD->display_page_header(project_id => $project_id);
-
-        handle_request(ref_parameters=>\%parameters);
-
-        $sbeamsMOD->display_page_footer();
+		handle_request(ref_parameters=>\%parameters);
+		$sbeamsMOD->display_page_footer();
 
     }
 
@@ -113,25 +137,492 @@ sub main
 
 } # end main
 
-
 ###############################################################################
 # Show the main welcome page
 ###############################################################################
 sub handle_request {
-
-    my %args = @_;
+ 	my %args = @_;
 
     #### Process the arguments list
-    my $ref_parameters = $args{'ref_parameters'}
+    	my $ref_parameters = $args{'ref_parameters'}
         || die "ref_parameters not passed";
 
-    my %parameters = %{$ref_parameters};
-$log->debug(Dumper($ref_parameters));	
-	##GET IPI SOMEHOW
-	my $ipi_id = "IPI0000123";
-	#go an query the db, add the peptide features and make into a big Bio::Seq object
-	my $glyco_o = new SBEAMS::PeptideAtlas::Get_glyco_seqs(ipi_id => $ipi_id);
+    	my %parameters = %{$ref_parameters};
+$log->debug(Dumper($ref_parameters));
+	
+	print 
+	$q->table({class=>'table_setup'},
+          $q->Tr({class=>'rev_gray'},
+	     $q->td({colspan=>2}, $q->h2("ISB N-glycosylation peptide prediction server")),
+	  	 
+	  ),
+	  $q->Tr(
+ 	     $q->td({colspan=>2}, "The ISB N-Glyco prediction server shows all the N-linked glycosylation site contained 
+		    within predicted and identified tryptic peptides.  
+		    The Glyco score indicates how likely the site is glycosylated and the detection score
+		    is an indication on how likely the glycosylated peptide will be detected in a MS/MS run.  This is 
+		   useful for quantitating proteins of interest. 
+		   <br>
+		   Click <a href='http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?cmd=Retrieve&db=pubmed&dopt=Abstract&list_uids=15637048'>here</a>
+		   for more information."
+		   
+	     )
+	 ), 
+	$q->Tr(
+	   $q->td({colspan=>2},'&nbsp; <br><br> &nbsp;') 
+	 ),	    
+	 $q->Tr({class=>'rev_gray'},
+	   $q->td({colspan=>2}, $q->h2("Text Search"))
+	 ),
+	 $q->Tr(
+	   $q->td({class=>'grey_bg'}, "Choose Search option"),
+	   $q->td(
+	      $q->start_form(),
+	      $q->popup_menu(-name=>'search_type',
+                                -values=>\@search_types,
+                                -default=>['Gene Symbol'],
+                                -size=>1,      
+	   			)
+	   )
+	 ),
+	 $q->Tr(
+	  $q->td({class=>'grey_bg'},'Search Term'),
+	  $q->td(
+	     $q->textfield(-name=>'search_term',
+                           -value=>'',
+                           -size=>50,
+                           -maxlength=>80)
+	  )  
+	 ),
+	 $q->Tr(
+ 	   $q->td({class=>'blue_bg', colspan=>2}, "Wild Card Searching with '%' at the start and/or end of the Search Term")
+	 ),
+	
+	 $q->Tr(
+	   $q->td({colspan=>2}, "<br> -- or -- <br><br>")
+	 ), 
+	 $q->Tr({class=>'rev_gray'},
+	   $q->td({colspan=>2}, $q->h2("Sequence Search") )
+	 ), 
+	 
+	 $q->Tr(
+	    $q->td({class=>'grey_bg'}, "Search by Protein Sequence"),
+	    $q->td(
+	       $q->textarea(-name=>'sequence_search',
+                          -default=>'',
+                          -rows=>10,
+                          -columns=>50)
+	    )
+	 ),
+	 $q->Tr(
+	    $q->td({class=>'blue_bg', colspan=>2}, "Sequence search is by perfect match only, no wild cards.  Sequences will be truncated at 500 residues.")
+	 ),
+	
+
+	),#end table
+	
+	$q->submit(), 
+	$q->reset(),
+	$q->hidden(-name=>'action',
+               -default=>['Show_hits_form']),
+	$q->endform();
+
+### add an Example table
+	my $cgi_url = "$base_url?action=Show_hits_form&search_type";
+	print 
+	"<br><br>",
+	$q->table(
+	   $q->Tr(
+	      $q->td({class=>'rev_gray', colspan=>2}, $q->h2("Examples"))
+	   ),
+	   $q->Tr(
+              $q->td({class=>'grey_bg'}, "Gene Name"),
+              $q->td($q->a({href=>"$cgi_url=Gene Symbol&search_term=ALCAM"}, "ALCAM") )
+	   ),
+	   $q->Tr(
+              $q->td({class=>'grey_bg'}, "Wild Card Gene Name"),
+              $q->td($q->a({href=>"$cgi_url=Gene Name/Alias&search_term=CD%"}, "CD%") )
+	   ),
+	   $q->Tr(
+              $q->td({class=>'grey_bg'}, "IPI Accession Number"),
+              $q->td($q->a({href=>"$cgi_url=IPI Accession Number&search_term=IPI00015102"}, "IPI00015102") )
+	   ),
+	   $q->Tr(
+              $q->td({class=>'grey_bg'}, "Protein Sequence"),
+              $q->td(">IPI00015102|Partial protein sequence|Cut and paste into sequence search window<br>MESKGASSCRLLFCLLISATVFRPGLGWYTVNSAYGDTIIIPCRLDVPQNLMF") 
+	   ),
+	);
+}
+###############################################################################
+# Show hits form
+###############################################################################
+sub display_hits_form {
+ 	my %args = @_;
+
+    #### Process the arguments list
+    	my $ref_parameters = $args{'ref_parameters'}
+        || die "ref_parameters not passed";
+
+    	
+    	$ref_parameters = clean_params($ref_parameters);
+    	my %parameters = %{$ref_parameters};
+$log->debug(Dumper($ref_parameters));
+		
+		my $sql_data = find_hits($ref_parameters);
+	
+
+
+
+}
+
+###############################################################################
+#find_hits
+#Check the parameter and figure out what query to run
+###############################################################################
+sub find_hits{
+	my $method = 'find_hits';
+	
+	my $ref_parameters = shift;
+	my %parameters = %{$ref_parameters};
+	
+				  
+	#check to see if this is a sequence or text search
+	my $type = check_search_params($ref_parameters);
+	my @results_set = ();
+	
+	if ($type eq 'text'){
+		if ($parameters{search_type} eq 'Gene Symbol'){
+			@results_set = $glyco_query_o->gene_symbol_query($parameters{search_term});	
+		
+		}elsif($parameters{search_type} eq 'Gene Name/Alias'){
+			@results_set = $glyco_query_o->gene_name_query($parameters{search_term});	
+			
+		}elsif($parameters{search_type} eq 'Swiss Prot Accession Number'){
+			@results_set = $glyco_query_o->swiss_prot_query($parameters{search_term});	
+		}elsif($parameters{search_type} eq 'IPI Accession Number'){
+			@results_set = $glyco_query_o->ipi_accession_query($parameters{search_term});	
+		}else{
+			print_error("Cannot find correct textsearch to run");
+		}
+	
+	}elsif($type eq 'sequence_search'){
+		
+		@results_set = $glyco_query_o->protein_seq_query($parameters{sequence_search});	
+		
+	}else{
+		print_error("Cannot find correct search type to run '$type'");
+	}
+	
+	
+	
+	
+	
+	
+    $log->debug(Dumper("RESULTS SET DATA", \@results_set));
+    
+    if (@results_set){
+    	
+    	if (scalar(@results_set) == 1 ){
+			#pull out the ipi_id and directly dispaly the details page since there is only one hit
+			my $href_results_info = $results_set[0];
+			my $ipi_data_id = $href_results_info->{'ipi_data_id'};
+			display_detail_form(ipi_data_id 	=> $ipi_data_id, 
+								ref_parameters 	=> $ref_parameters);
+		}else{
+			print_out_hits_page(results_set_aref =>\@results_set,
+					     ref_parameters  => $ref_parameters);
+    	}
+	}else{
+		my $term = $parameters{search_term} ?$parameters{search_term}:$parameters{sequence_search};
+		print $q->h3("Sorry No Hits were found for the query '$term'
+		");
+	}
+
+}
+###############################################################################
+#print_out_hits_page
+#
+###############################################################################
+sub print_out_hits_page{
+	
+	my %args = @_;
+
+	my @results_set = @{ $args{results_set_aref} };
+	my %parameters = %{ $args{ref_parameters} };
+
+	if (exists $parameters{similarity_score} && defined $parameters{similarity_score}){
+		print $q->p(
+			$q->h3("Protein Similarity Score (Percent Match) <span class='lite_blue_bg'>" . $parameters{similarity_score} . "</span>"),
+		);
+	}
+	
+	print $q->start_table(),
+			$q->Tr({class=>'rev_gray'},
+			  $q->td('IPI ID'),
+			  $q->td('Protein Name'),
+			  $q->td('Protein Symbol')
+			
+			);
+	my $cgi_url = "$base_url?action=Show_detail_form&ipi_data_id";
+	foreach my $h_ref (@results_set){
+		my $ipi_id = $h_ref->{ipi_data_id};
+		my $ipi_acc = $h_ref->{ipi_accession_number};
+		my $protein_name = nice_term_print($h_ref->{protein_name});
+		my $protein_sym = $h_ref->{protein_symbol};
+		
+		print $q->Tr(
+			    $q->td(
+			    	$q->a({href=>"$cgi_url=$ipi_id"},$ipi_acc)
+			    ),
+			    $q->td($protein_name),
+			    $q->td($protein_sym)
+			  );
+	}
+
+	print "</table>";
+}
+
+###############################################################################
+#nice_term_print
+#put breaks into long lines
+###############################################################################
+sub nice_term_print{
+	my $info = shift;
+	my @html = ();
+	
+	my $info = substr($info, 0, 75, '...'); #chop things down to 75 or less
+	my @hold = split /\s/, $info;
+	
+	my $count = 0;
+	foreach my $term(@hold){
+		if ($count <= 5){
+			push @html, $term;
+		}else{
+			$count == 0;
+			push @html, "$term<br>";
+		}
+	
+	}
+	return join " ", @html;
+}
+
+###############################################################################
+#print_error
+#print a simple error message
+###############################################################################
+sub print_error{
+	my $error = shift;
+	
+	print $q->header,
+	$q->start_html,
+	$q->p($q->h3($error)),
+	$q->end_html;
+	
+	exit;
+	
+}
+
+###############################################################################
+#check_search_params
+#Make sure that the params only have a text search or sequence not both
+###############################################################################
+sub check_search_params{
+	my $ref_parameters = shift;
+	
+	if ($ref_parameters->{search_term} =~ /^\w/){
+		if ($ref_parameters->{sequence_search} =~ /^\w/ ){
+			print_error("Cannot have a Text Search and Sequence Search in the same query");
+		}
+	}elsif($ref_parameters->{sequence_search} =~ /^\w/ ) {
+		return ('sequence_search');
+	}
+	return 'text';
+
+}
+
+###############################################################################
+#clean_params
+#foreach param this script knows about make sure nothing bad is comming in from the outside
+###############################################################################
+sub clean_params{
+	my $ref_parameters = shift;
+	$log->debug("RUNNING CLEAN PARAMS");
+	$log->debug(Dumper($ref_parameters));
+	
+	KEY:foreach my $k (keys %{$ref_parameters}){
+
+		if ($k eq 'action'){
+			$ref_parameters->{$k} = clean_action($ref_parameters->{$k});
+		}elsif($k eq 'search_type' ){
+		
+			next KEY if ( $ref_parameters->{'sequence_search'} );# ignore if this is a sequnce search
+			
+			($ref_parameters->{$k},$ref_parameters->{'search_term'} ) = 
+				check_search_term(type=>$ref_parameters->{$k},
+							      term =>$ref_parameters->{'search_term'});
+			
+		
+		}elsif($k eq 'search_term'){
+		 	next; #already scaned above
+		
+		}elsif($k eq 'sequence_search'){
+			$ref_parameters->{$k} = clean_seq($ref_parameters->{$k});
+		
+		}elsif($k eq 'ipi_data_id'){
+			$ref_parameters->{$k} = clean_term($ref_parameters->{$k});
+		}elsif($k eq 'similarity_score'){
+			 $ref_parameters->{$k} = clean_term($ref_parameters->{$k});
+##Parameters for re-drawing the protien map
+		}elsif($k eq 'Glyco Site'){
+			$ref_parameters->{$k} = clean_term($ref_parameters->{$k});
+		}elsif($k eq 'Predicted Peptide'){
+			$ref_parameters->{$k} = clean_term($ref_parameters->{$k});
+		}elsif($k eq 'Identified Peptide'){
+			$ref_parameters->{$k} = clean_term($ref_parameters->{$k});
+		}elsif($k eq 'Signal Sequence'){
+			$ref_parameters->{$k} = clean_term($ref_parameters->{$k});
+		}elsif($k eq 'Trans Membrane Seq'){
+			$ref_parameters->{$k} = clean_term($ref_parameters->{$k});
+		}elsif($k eq 'redraw_protein_sequence'){
+			$ref_parameters->{$k} = clean_term($ref_parameters->{$k});
+		}else{
+			print_error("Unknown Paramater passed in '$k' ")
+		}	
    
+	}
+	return $ref_parameters;
+}
+###############################################################################
+#clean_seq
+#Clean the sequence to a sigle clean AA string
+###############################################################################
+sub clean_seq{
+	my $seq = shift;
+	
+	my @seq_lines = split/\n/, $seq;
+	my @clean_seq = ();
+	
+	foreach my $line (@seq_lines){
+		next if( $line =~ /^>/);
+		$line =~ s/[^A-Z]//g;
+		push @clean_seq, $line
+	}
+	my $seq_line = join '', @clean_seq;
+	$seq_line = substr($seq_line, 0, 500);
+	$log->debug("CLEAN SEQ '$seq_line'");
+	return $seq_line;
+	
+		
+}
+
+
+###############################################################################
+#check_search_term
+#Make sure the search term is appropriate for the search type
+###############################################################################
+sub check_search_term{
+	my %args = @_;
+	my $type = $args{type};
+	my $term = $args{term};
+	
+	print_error("Must Supply A Serch Type, you gave '$type'") unless ($type);
+	print_error("Must Supply A Serch Term, you gave '$term'") unless ($term);
+	
+	
+	unless ( (grep {$_ eq $type} @search_types) ){
+		print_error("Search Type '$type' is Not vaild, please fix the problem") unless ($type);
+	}
+	
+	my $clean_term = clean_term($term);
+	
+	##Look at the different search terms and make sure the data looks ok
+	if ($type eq 'Gene Symbol'){
+		if ($clean_term =~ /\s/){
+			print_error("Gene Symobols Cannot have any spaces '$clean_term'");
+		}
+	}elsif($type eq 'Swiss Prot Accession Number'){
+		
+		unless($clean_term =~ /^\w/){
+			print_error("Swiss Prot Accession Does not look good '$clean_term'");
+		}
+	}elsif($type eq 'IPI Accession Number'){
+		
+		unless($clean_term =~ /^IPI\d+/){
+			print_error("IPI Accession Number does not look good '$clean_term'");
+		}
+		
+		$log->debug("IPI CLEAN TERM '$clean_term'");
+		
+	
+	}
+	$log->debug("CHECK SEARCH TERMS '$type' '$clean_term'\n");
+	return ($type, $clean_term);
+	
+}
+
+###############################################################################
+#clean_term
+#remove any bad characters
+###############################################################################
+sub clean_term{
+	my $term = shift;
+	$log->debug("TERM TO CLEAN '$term'");
+	
+	$term =~ s/["'*.]//g; #Remove quotes, "*",  "."
+	$term =~ s/^\s+//g; 		#Remove white space at the start
+	$term =~ s/\s+$//g;		#Remove white space at the end
+	
+	if ($term =~ /^\%$/){ #check for just a wild car search
+		print_error("Must provide more then just a wild card '$term' ") unless ($term);
+	}
+	unless ( (grep {$_ eq $term} @search_types) ){
+		print_error("Search Term '$term' HAS BEEN DELTED") unless ($term);
+	}
+	$log->debug("CLEAN TERM '$term'\n");
+	return $term;
+}
+
+###############################################################################
+#clean_action
+#Make sure this is a param we know about
+#Print error if not a good param
+###############################################################################
+sub clean_action{
+	my $action_param = shift;
+	
+	#Add all the possible action parameters here
+	my @good_actions = qw(Show_hits_form
+						  Show_detail_form
+						);
+	if ( (grep {$_ eq $action_param} @good_actions) ){
+		return $action_param;
+	}else{
+		print_error("ACTION PARAMETER '$action_param' IS NOT VALID");
+	}
+
+}
+
+
+
+
+###############################################################################
+#display_detail_form
+###############################################################################
+sub display_detail_form{
+	my %args = @_;
+	
+	my $ref_parameters = $args{ref_parameters};
+    my $ipi_data_id = $args{ipi_data_id}; 
+    
+    print_error("Must provide a ipi_id to display Glyco Info. '$ipi_data_id' is not valid")unless 
+    ($ipi_data_id =~ /^\d+$/);
+	
+	$log->debug("ABOUT TO MAKE GLYCO OBJ '$ipi_data_id'");
+	#go an query the db, add the peptide features and make into a big Bio::Seq object
+	my $glyco_o = new SBEAMS::PeptideAtlas::Get_glyco_seqs(ipi_data_id => $ipi_data_id);
+  	$glyco_o->setSBEAMS($sbeams);
+  
+   $log->debug("DONE MAKING GLYCO OBJ '$ipi_data_id'");
     make_image(glyco_o => $glyco_o);
     my $swiss_id = get_annotation(glyco_o   => $glyco_o,
 								  anno_type => 'swiss_prot'
@@ -140,12 +631,19 @@ $log->debug(Dumper($ref_parameters));
 	my $protein_name = get_annotation(glyco_o   => $glyco_o,
 									  anno_type => 'protein_name'
 									  );
-    my $ipi_url = "<a href='http://foo?$ipi_id'>$ipi_id</a>";
+    my $ipi_acc = $glyco_o->ipi_accession();
     
+   my $ipi_url = $glyco_o->make_url(term=> $glyco_o->ipi_accession(),
+				     dbxref_tag => 'EBI_IPI'
+				    );
     
+    my $swiss_prot_url = $glyco_o->make_url(term=>$swiss_id, 
+                                     dbxref_tag => 'SwissProt'
+                                    );
+ 
     
 ### Print Out the HTML to Make Dispaly the info About the the Protein and all it's Glyco-Peptides
-	print $q->table({boreder=>0},
+	print $q->table({border=>0},
 			
 	## Print out the protein Information
 			$q->Tr(
@@ -175,7 +673,7 @@ $log->debug(Dumper($ref_parameters));
 			  ),
 			 $q->Tr(
 				$q->td({class=>'rev_gray'}, "Swiss Prot ID"),
-				$q->td("<a href='http://foo?$swiss_id'>$swiss_id</a>")
+				$q->td($swiss_prot_url)
 			  ),
 			$q->Tr(
 				$q->td({class=>'rev_gray'}, "Synonyms"),
@@ -196,15 +694,15 @@ $log->debug(Dumper($ref_parameters));
 				$q->td({class=>'grey_header', colspan=>2}, "Predicted N-linked Proteotypic Glycopeptides"),
 			),
 		$q->Tr(
-				$q->td({colspan=>2},$glyco_o->display_peptides('Predicted'))
+				$q->td({colspan=>2},$glyco_o->display_peptides('Predicted Peptides'))
 			
 			),
 ## Dispaly Identified Peptides
 		$q->Tr(
-				$q->td({class=>'grey_header', colspan=>2}, "Indentified N-linked Proteotypic Glycopeptides"),
+				$q->td({class=>'grey_header', colspan=>2}, "Identified N-linked Proteotypic Glycopeptides"),
 			),
 		$q->Tr(
-				$q->td({colspan=>2},$glyco_o->display_peptides('Identified'))
+				$q->td({colspan=>2},$glyco_o->display_peptides('Identified Peptides'))
 			
 			),
 
@@ -216,42 +714,85 @@ $log->debug(Dumper($ref_parameters));
 				$q->td({colspan=>2},"<img src='$HTML_BASE_DIR/$tmp_img_path/$file_name' alt='Sorry No Img'>")
 			
 			),
+			$q->Tr(
+				$q->td({colspan=>2},
+					#make a table to describe what is in the table
+					$q->table(
+						$q->Tr({class=>'small_text'},
+							$q->td({class=>'blue_bg'}, "Track Name"),
+							$q->td({class=>'blue_bg'}, "Description"),
+						),
+						$q->Tr({class=>'small_cell'},
+							$q->td("Identified Peptides"),
+							$q->td( "Glyco Site Location, PP = Protein Prophet Score. 0 low, 1 high probability of peptide identification"),
+						),
+						$q->Tr({class=>'small_cell'},
+							$q->td("Predicted Peptides"),
+							$q->td( "Glyco Site Location, GS = N-Glycosylation Score. 1 low, 0 high probability of N linked Glycosylation site"),
+						),
+						$q->Tr({class=>'small_cell'},
+							$q->td("Identified/Predicted Peptides"),
+							$q->td( "Peptides are color coded according to scores assoicated with each track.  More intense color means better score"),
+						),
+						$q->Tr({class=>'small_cell'},
+							$q->td("N-Glyco Sites"),
+							$q->td( "Location of all the predicted N-Glycosylation sites"),
+						),
+						$q->Tr({class=>'small_cell'},
+							$q->td("Transmembrane"),
+							$q->td( "Location of all the transmembrane domains as predicted by TMHMM"),
+						),
+						$q->Tr({class=>'small_cell'},
+							$q->td("Singal Sequence"),
+							$q->td( "Location of the Signal Sequence or Anchor as predicted by Singal P"),
+						),
+					)
+				
+				
+				)
+			
+			),
 ### Display the Amino Acid Sequence ###
 			$q->Tr(
-				$q->td({class=>'grey_header', colspan=>2}, "Protein/Peptide Sequence"),
+				$q->td({class=>'grey_header', colspan=>2}, 
+				"Protein/Peptide Sequence"),
 			),
 			$q->Tr(
 				$q->td({colspan=>2, class=>'sequence_font'},">$ipi_url|$protein_name<br>$html_protein_seq")
 			
 			),
 			
-             $q->Tr(
-                   $q->start_form(),
+            $q->Tr(
+                   $q->start_form(-action=>$q->script_name()."#protein_sequence"),
                    $q->td({colspan=>2, class=>'sequence_font'},
 					   $q->table({border=>0},
 					      $q->Tr(
-					        $q->td({class=>'lite_blue_bg', colspan=>5}, "Click a button to highlight different sequence features")
+					        $q->td({class=>'blue_bg', colspan=>5}, "Click a button to highlight different sequence features")
 					      ),
 					      $q->Tr({class=>'sequence_font'},
 					       	$q->td($q->submit({-name=>'Glyco Site',  -value=>'Glyco Site', class=>'glyco_site' })),
 						 	$q->td($q->submit({-name=>'Predicted Peptide',  -value=>'Predicted Peptide', class=>'predicted_pep' })),
-						 	$q->td($q->submit({-name=>'Indentified Peptide',  -value=>'Indentified Peptide', class=>'identified_pep' })),
-							$q->td($q->submit({-name=>'Signal Sequence',  -value=>'Signal Sequence', class=>'sseq' })),
-							$q->td($q->submit({-name=>'Trans Membrane Seq',  -value=>'Trans Membrane Seq', class=>'tmhmm' })),
+						 	$q->td($q->submit({-name=>'Identified Peptide',  -value=>'Identified Peptide', class=>'identified_pep' })),
+							$glyco_o->has_signal_sequence()? $q->td($q->submit({-name=>'Signal Sequence',  -value=>'Signal Sequence', class=>'sseq' })):"",
+							$glyco_o->has_transmembrane_seq()  ?$q->td($q->submit({-name=>'Trans Membrane Seq',  -value=>'Trans Membrane Seq', class=>'tmhmm' })):"",
 					     ),
 					   )#close sequencetable header
 				   ),
-				   $q->hidden(-name=>'ipi_id', -value=>$ipi_id, -override => 1),
+				   $q->hidden(-name=>'ipi_data_id', -value=>$ipi_data_id, -override => 1),
 				   $q->hidden(-name=>'redraw_protein_sequence', -value=>1),
+				   
 				   $q->end_form()
 
-             )
+             ),
+	     #add in an anchor id tag to make protein higlights come back here
+	    
 				
 	
-			);#end_table	
+				);#end_table	
+		
+	print $q->a({id=>'protein_sequence'});
 	
-	#display_protein_info($glyco_o);
-
+	
 
 
 
@@ -267,7 +808,7 @@ sub make_image {
 	my %args = @_;
 	my $glyco_o = $args{glyco_o};
 
-	$glyco_o->get_protein_info(); 
+	
    my $seq =  $glyco_o->seq_info();					
    
   
@@ -283,7 +824,7 @@ sub make_image {
 	my %sorted_features;
 	for my $f (@features) {
 		my $tag = $f->primary_tag;
-		#print "FEATURE PRIMARY TAG '$tag'\n<br>";
+	#	print "FEATURE PRIMARY TAG '$tag'\n<br>";
 		push @{ $sorted_features{$tag} }, $f;
 	}
 	
@@ -436,7 +977,7 @@ sub get_annotation {
 	my $glyco_o = $args{glyco_o};
 	my $anno_type = $args{anno_type};
 	
-	$glyco_o->get_protein_info(); 
+	#$glyco_o->get_protein_info(); 
     my $seq =  $glyco_o->seq_info();		
     my $info = '';
     
