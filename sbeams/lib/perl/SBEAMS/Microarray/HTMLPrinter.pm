@@ -200,7 +200,16 @@ sub displaySBEAMSPageHeader
 	<tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=user_login"><img src="$HTML_BASE_DIR/images/ma_admin.jpg"></a></td></tr>
        ~;
       }
-
+      
+      if ( exists $CONFIG_SETTING{Microarray_affy_help_docs_url} && $CONFIG_SETTING{Microarray_affy_help_docs_url} =~ /http/){
+      
+      	print qq~ 
+		<tr><td><a class='blue_button' href="$CONFIG_SETTING{Microarray_affy_help_docs_url}">Affy Help Docs</a></td></tr>
+	      ~;
+      }else{
+      	print qq~ <tr><td><a class='blue_button' href="$HTML_BASE_DIR/doc/Microarray/affy_help_pages/index.php">Affy Help Docs</a></td></tr>
+	~;
+     }	
       print qq~
 	</table>
 	</td>
