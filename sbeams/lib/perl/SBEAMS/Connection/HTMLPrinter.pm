@@ -271,6 +271,48 @@ sub printStyleSheet {
 	.small_text{font-family: Helvetica,Arial,sans-serif; font-size:x-small; color:#aaaaaa}
 	.table_setup{border: 0px ; border-collapse: collapse;   }
 	.pad_cell{padding:5px;  }
+	.sequence_font{font-family:courier; ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5}	
+	.white_hyper_text{font-family: Helvetica,Arial,sans-serif; color:#000000;}
+	
+	.white_text    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: white; CURSOR: help;}
+	
+	
+	.identified_pep{ 
+	background-color: #882222; 
+	${FONT_SIZE_LG}pt; 
+	font-weight: bold ; 
+	color:white; 
+	Padding:1;
+	border-style: solid;
+	border-left-width: 1px;
+	border-right-width: 1px;
+	border-top-width: 1px;
+	border-left-color: #eeeeee;
+	border-right-color: #eeeeee;
+	border-top-color: #aaaaaa;
+	border-bottom-color:#aaaaaa;
+	}
+	.predicted_pep{ 
+	background-color: #FFCC66; 
+	${FONT_SIZE_LG}pt; 
+	font-weight: bold; 
+	border-style: solid;
+	border-width: 1px;
+	
+	border-right-color: blue ;
+	border-left-color:  red ;
+	
+	}
+	
+	.sseq{ background-color: #CCCCFF; ${FONT_SIZE_LG}pt; font-weight: bold}
+	.tmhmm{ background-color: #CCFFCC; ${FONT_SIZE_LG}pt; font-weight: bold; text-decoration:underline}
+	
+	.glyco_site{ background-color: #ee9999; 
+	border-style: solid;
+	border-width: 1px;
+	/* top right bottom left */
+	border-color: #444444 #eeeeee #eeeee #444444; }	
+	
 	
 	a.edit_menuButton:link {
 	/* font-size: 12px; */
