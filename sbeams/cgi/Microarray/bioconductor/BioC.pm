@@ -467,7 +467,7 @@ sub parse_sample_groups_file{
 		return $reference_sample_group
 	}
 
-#return just the sample group names and the class number 
+  #return just the sample group names and the class number 
 	
 	if ($data_type eq 'sample_group_ids'){
 		#print STDERR "IN SAMPLE GROUP IDS SUB ";
@@ -481,6 +481,18 @@ sub parse_sample_groups_file{
 		}
 		return ( \%sample_groups);
 	}
+	
+  # return reference to hash keyed by group name (not class), in which each
+  # key has as its value a reference to a hash of file names in that class.
+  if ($data_type eq 'group_files'){
+  my %group_files;
+  foreach my $file_name_node ($file_names_ns->get_nodelist) {	
+    my $file_name = $file_name_node->to_literal();
+    my $sample_group = $file_name_node->findnodes('./@sample_group_name')->string_value();
+    push @{$group_files{$sample_group}}, $file_name;
+    }
+  return ( \%group_files);
+  }
 	
 	
 	
