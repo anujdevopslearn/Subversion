@@ -145,9 +145,11 @@ sub handle_request {
   my %parameters = %{$ref_parameters};
 
 
+  if ($sbeams->output_mode() eq 'html') {
     print <<"    END";
         <BR>
     END
+  }
 
 
   ## if tab menu is requested, display tabs and append parameters to PROG_NAME
@@ -160,7 +162,8 @@ sub handle_request {
 
       ##print "<BR>params:$parameters_string<BR>";
 
-      $PROG_NAME = $PROG_NAME.$parameters_string;
+      #### No, the program name does not include the parameters
+      #$PROG_NAME = $PROG_NAME.$parameters_string;
 # }
 
 
@@ -272,17 +275,36 @@ sub handle_request {
   #### If atlas_build_id was not selected, stop here
   unless ($parameters{atlas_build_id}) {
     if ($sbeams->output_mode() eq 'html') {
-      print "Please select an atlas build, type in a protein name, and ".
+      print "Please select an atlas build, type in a protein name ".
+        "(e.g. ENSP00000290230 for human Ensembl protein), and ".
 	"click GO";
     } else {
       $sbeams->reportException(
           state => 'ERROR',
           type => 'INSUFFICIENT CONSTRAINTS',
-          message => 'You must select an Atlas Build',
+          message => 'You must provide an atlas_build_id',
       );
     }
     return;
   }
+
+
+  #### If biosequence_name was not selected, stop here
+  unless ($parameters{protein_name}) {
+    if ($sbeams->output_mode() eq 'html') {
+      print "Please type in a protein name ".
+        "(e.g. ENSP00000290230 for human Ensembl protein), and ".
+	"click GO";
+    } else {
+      $sbeams->reportException(
+          state => 'ERROR',
+          type => 'INSUFFICIENT CONSTRAINTS',
+          message => 'You must provide a protein_name',
+      );
+    }
+    return;
+  }
+
 
 
   #### Build ATLAS_BUILD constraint
@@ -454,7 +476,6 @@ sub handle_request {
 
   #########################################################################
   #### If QUERY or VIEWRESULTSET was selected, display the data
-  $apply_action = 'GO' unless ($apply_action);
   if ($apply_action =~ /(QUERY|GO|VIEWRESULTSET)/) {
 
     #### Show the SQL that will be or was executed
