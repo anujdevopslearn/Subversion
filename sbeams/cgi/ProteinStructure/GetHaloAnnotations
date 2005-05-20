@@ -1003,60 +1003,72 @@ sub searchExternal {
   my $query_parameters_ref = $args{'query_parameters_ref'};
 
   #### Determine which external data source to search
-  my %files = (
-    '3' => 'query_edeutsch_20041119-131631.tsv', # Hm
-    '2' => 'query_edeutsch_20041119-144819.tsv', # Halobac
+  my %abbreviations = (
+    '3' => 'Hm', # Hm
+    '2' => 'Halo', # Halobac
   );
-  my $file = $files{$query_parameters_ref->{protein_biosequence_set_id}};
-  unless ($file) {
+
+  my $abbreviation = $abbreviations{$query_parameters_ref->{protein_biosequence_set_id}};
+  unless ($abbreviation) {
     print "ERROR: Unable to find a file for this dataset<BR>\n";
     return 0;
   }
 
-  #### Open the file
-  my $fullfile = "$PHYSICAL_BASE_DIR/data/$SBEAMS_SUBDIR/$file";
-  open(INFILE,$fullfile) || die("ERROR: Unable to open $fullfile");
-
-  #### Parse header line
-  my $line = <INFILE>;
-  my $line =~ s/[\r\n]//g;
-
-  my @column_list = split("\t",$line);
-
-  #### Convert the array into a hash of names to column numbers
-  my $i = 0;
-  my %column_hash;
-  foreach my $element (@column_list) {
-    $column_hash{$element} = $i;
-    $i++;
-  }
-
-  #### Get the search_spec
-  my $search_spec = $query_parameters_ref->{search_key};
-  $search_spec =~ s/\./\\./g;
-
-  my @specs = split(/\s+/,$search_spec);
-
-  #### Search through the file looking for matches
+  #### Search both the DomainHits and Biosequences files
   my %biosequence_accessions;
-  while ($line = <INFILE>) {
+  foreach my $filetype ( qw (DomainHits Biosequences) ) {
+
+    #### Open the file
+    my $file = "${abbreviation}_$filetype.tsv";
+    my $fullfile = "/net/dblocal/www/html/sbeams/var/$SBEAMS_SUBDIR/$file";
+    open(INFILE,$fullfile) || die("ERROR: Unable to open $fullfile");
+
+    #### Parse header line
+    my $line = <INFILE>;
     $line =~ s/[\r\n]//g;
-    my $match = 1;
-    foreach my $spec (@specs) {
-      if ($line !~ /$spec/i) {
-	$match = 0;
-	last;
+
+    my @column_list = split("\t",$line);
+
+    #### Convert the array into a hash of names to column numbers
+    my $i = 0;
+    my %column_hash;
+    foreach my $element (@column_list) {
+      $column_hash{$element} = $i;
+      $i++;
+    }
+    my $col = $column_hash{'biosequence_name'};
+    unless ($col) {
+      print "ERROR: Could not find column 'biosequence_accession'<BR>";
+      $col = 0;
+    }
+
+    #### Get the search_spec
+    my $search_spec = $query_parameters_ref->{search_key};
+    $search_spec =~ s/\./\\./g;
+
+    my @specs = split(/\s+/,$search_spec);
+
+    #### Search through the file looking for matches
+    while ($line = <INFILE>) {
+      $line =~ s/[\r\n]//g;
+      my $match = 1;
+      foreach my $spec (@specs) {
+	if ($line !~ /$spec/i) {
+	  $match = 0;
+	  last;
+	}
+      }
+
+      #### If there was a match, save this accession
+      if ($match) {
+	my @columns = split("\t",$line);
+	$biosequence_accessions{$columns[$col]}++;
       }
     }
 
-    #### If there was a match, save this accession
-    if ($match) {
-      my @columns = split("\t",$line);
-      $biosequence_accessions{$columns[2]}++;
-    }
-  }
+    close(INFILE);
 
-  close(INFILE);
+  }
 
   #print join(";",keys(%biosequence_accessions)),"\n";
 
