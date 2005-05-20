@@ -23,4 +23,4 @@ AT_glyco_site	Glyco Site	PeptideAtlas_infrastructure	NO	$TBAT_GLYCO_SITE	glyco_s
 AT_identified_peptide	Identified Peptide	PeptideAtlas_infrastructure	NO	$TBAT_IDENTIFIED_PEPTIDE	identified_peptide_id		
 AT_predicted_peptide	Predicted Peptide	PeptideAtlas_infrastructure	NO	$TBAT_PREDICTED_PEPTIDE	predicted_peptide_id		
 AT_peptide_to_tissue	Peptide to tissue	PeptideAtlas_infrastructure	NO	$TBAT_PEPTIDE_TO_TISSUE	peptide_to_tissue_id		
-AT_tissues	Tissues	PeptideAtlas_infrastructure	YES	$TBAT_TISSUE	tissue_id		Table.cgi?TABLE_NAME=AT_tissue
+AT_tissue	Tissue	PeptideAtlas_infrastructure	YES	$TBAT_TISSUE	tissue_id		Table.cgi?TABLE_NAME=AT_tissue
