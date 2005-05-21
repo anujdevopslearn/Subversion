@@ -213,7 +213,8 @@ cd $SBEAMS/lib/perl/SBEAMS/Microarray
 edit Settings.pm
 
 Specifically: use the default folders created above and tweak the perl variables
-to look like the lines below
+to look like the lines below.  Remember this is perl code so do not use single quotes around the
+path, otherwise variables will not be interpolated
 
 $AFFY_DEFAULT_DIR	    = "$PHYSICAL_BASE_DIR/var/Microarray/Affy_data/probe_data";
 $BIOCONDUCTOR_DELIVERY_PATH = "$PHYSICAL_BASE_DIR/var/Microarray/Affy_data/delivery";
@@ -456,7 +457,7 @@ cd $SBEAMS/lib/scripts/Microarray
 
 - Run the script to upload the data into SBEAMS
 - This script will scan the default data directory (set in the Settings file) looking for new data
- cd $SBEAMS/lib/scripts/Microarray
+ cd $SBEAMS/lib/scripts/Microarray;
  ./load_affy_array_files.pl --run_mode add_new
 
 ########################
@@ -476,7 +477,7 @@ Add more data to the database  MAGE-XML data.
 Add expression data to the database
 Convert CEL file to CHP data using R-bioconductor
 
-cd $SBEAMS/lib/scripts/Microarray
+cd $SBEAMS/lib/scripts/Microarray;
 ./load_affy_R_CHP_files.pl --run_mode add_new
 ##Note this will take a while of time to process, and running this on a fast machine would be a good idea
 
