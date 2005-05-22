@@ -842,13 +842,11 @@ sub predicted_pep_html{
 								title   =>"Glyco Site Location within the protein", 
 								column  =>"protein_glyco_site_position", 
 								table   => "AT_glyco_site" 
-								 
 								)
 					),
 			        $q->td("Predicted Sequence"),
 			     	
 			     	
-			     	$q->td(""),
 			     	$q->td($self->linkToColumnText(
 			       				display => "NXS/T Score",
 								title   => "Likelihood of NXS/T sequon", 
