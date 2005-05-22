@@ -57,7 +57,7 @@ use SBEAMS::PeptideAtlas::Glyco_query;
 
 use base qw(SBEAMS::PeptideAtlas::Glyco_query);		
 
-
+use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::PeptideAtlas::Tables;
 use SBEAMS::PeptideAtlas::Test_glyco_data;
@@ -834,21 +834,39 @@ sub predicted_pep_html{
     my $method = 'predicted_pep_html';
     my $self = shift;
 	my $features_aref = shift;
-	my $html = <<"END";
-			<table >
-			 <tr class='rev_gray'>
-			   <td>NXS/T<br>Location</td>
-			   <td>Predicted Sequence</td>
-			   <td>NXS/T Score</td>
-			   <td>Predicted Mass</td>
-			   <td>Detection Probability</td>
-			   <td>Number Other Proteins<br>with Peptide</td>
-			 
-			 </tr>
-			
-END
-  
-			      
+	
+	my $html  = "<table>";
+	$html .= $q->Tr({class=>'rev_gray'},
+			       $q->td( $self->linkToColumnText(
+			       				display => "NXS/T<br>Location",
+								title   =>"Glyco Site Location within the protein", 
+								column  =>"protein_glyco_site_position", 
+								table   => "AT_glyco_site" 
+								 
+								)
+					),
+			        $q->td("Predicted Sequence"),
+			     	
+			     	
+			     	$q->td(""),
+			     	$q->td($self->linkToColumnText(
+			       				display => "NXS/T Score",
+								title   => "Likelihood of NXS/T sequon", 
+								column  => "glyco_score", 
+								table   => "AT_glyco_site" ,
+								),
+					),
+			     	$q->td("Predicted Mass"),
+			     	$q->td($self->linkToColumnText(
+			       				display => "Detection Probability",
+								title   => "Likelihoop of detecting peptide in MS", 
+								column  => "detection_probability", 
+								table   => "AT_predicted_peptide", 
+								),
+					),
+			     	$q->td("Number Proteins<br>with Peptide"),
+			     );
+	
 	foreach my $f (@{$features_aref}){
 		my $start = $f->start;
 		my $seq = $f->seq;
@@ -901,8 +919,8 @@ END
 					
 		}
 ## Detmine what to do with the number of other protein database hits
-	#TODO CONVERT TO IPI DATA IDS AND MAKE A PAGE TO DISPLAY THE DATABASE HITS
-		my $hit_link = '---';
+	
+		my $hit_link = '1';
 		if ($database_hits > 1){
 			my $script = $q->script_name();
 			$hit_link = "<a href='$script?action=Show_hits_form&search_type=IPI Accession Number&search_term=$ipi_ids&similarity_score=$protein_sim'>$database_hits Hits</a>";
@@ -932,19 +950,35 @@ sub identified_pep_html{
         my $method = 'identified_pep_html';
         my $self = shift;
 	my $features_aref = shift;
-	my $html = <<"END";
-			<table >
-			 <tr class='rev_gray'>
-			   <td>NXS/T<br>Location</td>
-			   <td>Identifed Sequence</td>
-			   <td>PeptideProphet Score</td>
-			   <td>Tryptic Ends</td>
-			   <td>Peptide Mass</td>
-			   <td>Tissues</td>
-			 </tr>
-			
-END
-  
+	
+	#start the HTML
+	my $html  = "<table>";
+	$html .= $q->Tr({class=>'rev_gray'},
+			       $q->td( $self->linkToColumnText(
+			       				display => "NXS/T<br>Location",
+								title   =>"Glyco Site Location within the protein", 
+								column  =>"protein_glyco_site_position", 
+								table   => "AT_glyco_site" 
+								 
+								)
+					),
+			        $q->td("Identifed Sequence"),
+			     	$q->td($self->linkToColumnText(
+			       				display => "PeptideProphet Score",
+								title   => "PeptideProphet Score: 1 Best, 0 Worst", 
+								column  => "peptide_prohet_score", 
+								table   => "AT_identified_peptide" 
+								)
+			     	
+			     	),
+			     	$q->td("Tryptic Ends"),
+			     	$q->td("Peptide Mass"),
+			     	$q->td("Tissues"),
+			     );
+				 
+	
+	$log->debug("HTML DUMP '$html'");
+	
 			    
 
 			      
@@ -1124,7 +1158,33 @@ sub get_annotation {
         return $info;
 }
 
+###############################################################################
+# linkToColumnText: Creates link to popup window with column info text inside
+#copied from ManageTable.pllib
+# arg column text for display in popup window
+# arg column name
+# arg table name
+# 
+###############################################################################
+sub linkToColumnText {
+  
+ 
+  my $self = shift;
+  my %args = @_;
+  my $text = $args{title};
+  my $col = $args{column};
+  my $table = $args{table};
+  my $display_name = $args{display};
+  
+  
+  $text = $q->escapeHTML( $text );
+  my $url = "'$HTML_BASE_DIR/cgi/help_popup.cgi?column_name=$col&table_name=$table'";
+  my $link =<<"  END_LINK";
+  <SPAN title="$text" class="white_text" ONCLICK="popitup($url);">$display_name</SPAN>
 
+  END_LINK
+  return $link;
+} # End linkToColumnText
 
 } #end of package
 1;
