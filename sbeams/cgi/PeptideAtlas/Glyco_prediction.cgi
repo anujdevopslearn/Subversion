@@ -111,7 +111,7 @@ sub main
 		 my $ipi_data_id = $parameters{'ipi_data_id'};
 		
 		 $sbeamsMOD->display_page_header(project_id => $project_id);
-		
+		print $sbeams->getPopupDHTML();
 		display_detail_form(ref_parameters=>\%parameters,
 							ipi_data_id => $ipi_data_id,
 							);
@@ -121,6 +121,8 @@ sub main
 	}elsif($parameters{action} eq 'Show_hits_form'){
 		
 		 $sbeamsMOD->display_page_header(project_id => $project_id);
+		print $sbeams->getPopupDHTML();
+		
 		display_hits_form(ref_parameters=>\%parameters);
 		$sbeamsMOD->display_page_footer();
     
@@ -658,14 +660,27 @@ sub display_detail_form{
 				$q->td($protein_name)
 			  ),
 			$q->Tr(
-				$q->td({class=>'rev_gray'}, "Protein Symbol"),
+				$q->td({class=>'rev_gray'}, 
+				$glyco_o->linkToColumnText(display => "Protein Symbol",
+								 title   =>"Protein Symbol Info", 
+								 column  =>"protein_symbol", 
+								 table   => "AT_ipi_data" 
+								 
+								)),
 				$q->td(get_annotation(glyco_o   => $glyco_o,
 									  anno_type => 'symbol'
 									  )
 					   )
 			  ),
-			 $q->Tr(
-				$q->td({class=>'rev_gray'}, "Subcellular Location"),
+		   $q->Tr(
+				$q->td({class=>'rev_gray'}, 
+				$glyco_o->linkToColumnText(display => "Subcellular Location",
+								 title   =>"Find More Info About the Subcellular Location Call", 
+								 column  =>"cellular_location_id", 
+								 table   => "AT_ipi_data" 
+								 
+								)),
+				
 				$q->td(get_annotation(glyco_o   => $glyco_o,
 									  anno_type => 'cellular_location'
 									  )
@@ -676,7 +691,13 @@ sub display_detail_form{
 				$q->td($swiss_prot_url)
 			  ),
 			$q->Tr(
-				$q->td({class=>'rev_gray'}, "Synonyms"),
+				$q->td({class=>'rev_gray'}, 
+				$glyco_o->linkToColumnText(display => "Synonyms",
+								 title   =>"Synonyms Info", 
+								 column  =>"synonyms", 
+								 table   => "AT_ipi_data" 
+								 
+								)),
 				$q->td(get_annotation(glyco_o   => $glyco_o,
 									  anno_type => 'synonyms'
 									  )
@@ -707,51 +728,51 @@ sub display_detail_form{
 			),
 
 ### Display the Protein peptide image ###
-			$q->Tr(
-				$q->td({class=>'grey_header', colspan=>2}, "Protein/Peptide Map"),
-			),
-			$q->Tr(
-				$q->td({colspan=>2},"<img src='$HTML_BASE_DIR/$tmp_img_path/$file_name' alt='Sorry No Img'>")
+			#$q->Tr(
+			#	$q->td({class=>'grey_header', colspan=>2}, "Protein/Peptide Map"),
+			#),
+			#$q->Tr(
+			#	$q->td({colspan=>2},"<img src='$HTML_BASE_DIR/$tmp_img_path/$file_name' alt='Sorry No Img'>")
 			
-			),
-			$q->Tr(
-				$q->td({colspan=>2},
+			#),
+			#$q->Tr(
+			#	$q->td({colspan=>2},
 					#make a table to describe what is in the table
-					$q->table(
-						$q->Tr({class=>'small_text'},
-							$q->td({class=>'blue_bg'}, "Track Name"),
-							$q->td({class=>'blue_bg'}, "Description"),
-						),
-						$q->Tr({class=>'small_cell'},
-							$q->td("Identified Peptides"),
-							$q->td( "Glyco Site Location, PP = Protein Prophet Score. 0 low, 1 high probability of peptide identification"),
-						),
-						$q->Tr({class=>'small_cell'},
-							$q->td("Predicted Peptides"),
-							$q->td( "Glyco Site Location, GS = N-Glycosylation Score. 1 low, 0 high probability of N linked Glycosylation site"),
-						),
-						$q->Tr({class=>'small_cell'},
-							$q->td("Identified/Predicted Peptides"),
-							$q->td( "Peptides are color coded according to scores assoicated with each track.  More intense color means better score"),
-						),
-						$q->Tr({class=>'small_cell'},
-							$q->td("N-Glyco Sites"),
-							$q->td( "Location of all the predicted N-Glycosylation sites"),
-						),
-						$q->Tr({class=>'small_cell'},
-							$q->td("Transmembrane"),
-							$q->td( "Location of all the transmembrane domains as predicted by TMHMM"),
-						),
-						$q->Tr({class=>'small_cell'},
-							$q->td("Singal Sequence"),
-							$q->td( "Location of the Signal Sequence or Anchor as predicted by Singal P"),
-						),
-					)
+			#		$q->table(
+			#			$q->Tr({class=>'small_text'},
+			#				$q->td({class=>'blue_bg'}, "Track Name"),
+			#				$q->td({class=>'blue_bg'}, "Description"),
+			#			),
+			#			$q->Tr({class=>'small_cell'},
+			#				$q->td("Identified Peptides"),
+			#				$q->td( "Glyco Site Location, PP = Protein Prophet Score. 0 low, 1 high probability of peptide identification"),
+			#			),
+			#			$q->Tr({class=>'small_cell'},
+			#				$q->td("Predicted Peptides"),
+			#				$q->td( "Glyco Site Location, GS = N-Glycosylation Score. 1 low, 0 high probability of N linked Glycosylation site"),
+			#			),
+			#			$q->Tr({class=>'small_cell'},
+			#				$q->td("Identified/Predicted Peptides"),
+			#				$q->td( "Peptides are color coded according to scores assoicated with each track.  More intense color means better score"),
+			#			),
+			#			$q->Tr({class=>'small_cell'},
+			#				$q->td("N-Glyco Sites"),
+			#				$q->td( "Location of all the predicted N-Glycosylation sites"),
+			#			),
+			#			$q->Tr({class=>'small_cell'},
+			#				$q->td("Transmembrane"),
+			#				$q->td( "Location of all the transmembrane domains as predicted by TMHMM"),
+			#			),
+			#			$q->Tr({class=>'small_cell'},
+			#				$q->td("Singal Sequence"),
+			#				$q->td( "Location of the Signal Sequence or Anchor as predicted by Singal P"),
+			#			),
+			#		)
 				
 				
-				)
+			#	)
 			
-			),
+			#),
 ### Display the Amino Acid Sequence ###
 			$q->Tr(
 				$q->td({class=>'grey_header', colspan=>2}, 
@@ -997,3 +1018,5 @@ sub get_annotation {
    
 	return $info;
 }
+
+
