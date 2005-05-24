@@ -192,7 +192,7 @@ AT_query_option	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_g
 AT_query_option	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_publication	1	publication_id	Publication	int	8	0	N		Y							N	N				pkDEFAULT
 AT_publication	2	pubmed_ID	PubMed ID	varchar	50	0	Y		N			N	text	30	refreshDocument()	Y	Y	N	"PubMed ID for this publication.  When this field is changed, the interface fetch the title,author,etc. information for you if the field below this (Publication Name) is empty"		
-AT_publication	3	publication_name	Publication Name	varchar	100	0	N		N			Y	text	50		Y	Y	Y	"Friendly name of the citation, e.g. Dewey, Cheetham & Howe (1998)"		
+AT_publication	3	publication_name	Publication Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	"Friendly name of the citation, e.g. Dewey, Cheetham & Howe (1998)"		
 AT_publication	4	keywords	Keywords	varchar	255	0	Y		N			N	text	50		Y	Y	N	A comma-separated list of keywords appropriate when searching for papers of this sort		
 AT_publication	9	title	Title	varchar	255	0	Y		N			N	textarea	2		Y	Y	N	Title of the article		
 AT_publication	10	author_list	Author List	varchar	255	0	Y		N			N	textarea	2		Y	Y	N	"Author list in 'Lastname, FIMI' format"		
