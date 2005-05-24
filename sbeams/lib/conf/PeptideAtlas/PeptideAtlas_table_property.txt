@@ -24,3 +24,4 @@ AT_identified_peptide	Identified Peptide	PeptideAtlas_infrastructure	NO	$TBAT_ID
 AT_predicted_peptide	Predicted Peptide	PeptideAtlas_infrastructure	NO	$TBAT_PREDICTED_PEPTIDE	predicted_peptide_id		
 AT_peptide_to_tissue	Peptide to tissue	PeptideAtlas_infrastructure	NO	$TBAT_PEPTIDE_TO_TISSUE	peptide_to_tissue_id		
 AT_tissue	Tissue	PeptideAtlas_infrastructure	YES	$TBAT_TISSUE	tissue_id		Table.cgi?TABLE_NAME=AT_tissue
+AT_sample_publication	Sample Publication	PeptideAtlas_user	NO	$TBAT_SAMPLE_PUBLICATION	sample_publication_id		
