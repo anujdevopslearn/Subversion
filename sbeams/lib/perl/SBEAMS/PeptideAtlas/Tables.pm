@@ -36,6 +36,7 @@ use vars qw(@ISA @EXPORT
     $TBAT_PUBLICATION
     $TBAT_BIOSEQUENCE_ANNOTATED_GENE
     $TBAT_BIOSEQUENCE_ANNOTATION
+    $TBAT_SAMPLE_PUBLICATION
     
     $TBAT_IPI_VERSION
     $TBAT_IPI_DATA
@@ -74,6 +75,7 @@ require Exporter;
     $TBAT_PUBLICATION
     $TBAT_BIOSEQUENCE_ANNOTATED_GENE
     $TBAT_BIOSEQUENCE_ANNOTATION
+    $TBAT_SAMPLE_PUBLICATION
     
     $TBAT_IPI_VERSION
     $TBAT_IPI_DATA
@@ -110,6 +112,8 @@ $TBAT_PEPTIDE_MAPPING       = "${mod}peptide_mapping";
 $TBAT_PUBLICATION           = "${mod}publication";
 $TBAT_BIOSEQUENCE_ANNOTATED_GENE = "${mod}biosequence_annotated_gene";
 $TBAT_BIOSEQUENCE_ANNOTATION = "${mod}biosequence_annotation";
+$TBAT_SAMPLE                = "${mod}sample";
+$TBAT_SAMPLE_PUBLICATION    = "${mod}sample_publication";
 
 $TBAT_IPI_VERSION	    	= "${mod}ipi_version";
 $TBAT_IPI_DATA			= "${mod}ipi_data";
