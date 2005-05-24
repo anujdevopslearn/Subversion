@@ -182,9 +182,11 @@ sub handle_request {
 
   #### Display the user-interaction input form
   if ($sbeams->output_mode() eq 'html') {
-	my ($gcg_selected, $fasta_selected);
+	my ($gcg_selected, $fasta_selected, $coords_selected);
 	if ($format eq "gcg"){
 	  $gcg_selected = "CHECKED";
+	}elsif ($format eq "with_coords") {
+	  $coords_selected = "CHECKED";
 	}else {
 	  $fasta_selected = "CHECKED";
 	}
@@ -228,7 +230,8 @@ function verifyNumber(testValue,testLocation){
 </A>
 <BR>
 <INPUT TYPE="radio" NAME="format" VALUE="fasta" $fasta_selected>FASTA&nbsp;&nbsp;&nbsp;
-<INPUT TYPE="radio" NAME="format" VALUE="gcg" $gcg_selected>Display with Coordinates<BR>
+<INPUT TYPE="radio" NAME="format" VALUE="with_coords" $coords_selected>Display with Coordinates&nbsp;&nbsp;&nbsp;
+<INPUT TYPE="radio" NAME="format" VALUE="gcg" $gcg_selected>GCG<BR>
 <INPUT TYPE="submit" NAME="action" VALUE="Submit">
 </FORM>
 </td></tr>
@@ -386,6 +389,36 @@ $LINESEPARATOR
 	  $header .="$stop_offset"."nt\"";
 	}
   }
+  if ($format eq "fasta" ||
+	  $format eq "with_coords") {
+	print "$header$newline";
+  }else {
+	my $gcg_header = "!!NA_SEQUENCE 1.0\n";
+	$header =~ />((.*?)\s.*)/;
+	$gcg_header .= "$1\n\n";
+	$gcg_header .= "$2".".seq\tLength: ";
+	$gcg_header .= (abs($start - $stop)) + abs($start_offset) + abs($stop_offset);
+	my ($min, $hour, $day, $month, $year) = (localtime)[1..5];
+	if ($month == 0) {$month = "January";}
+	elsif ($month == 1) {$month = "Februrary";}
+	elsif ($month == 2) {$month = "March";}
+	elsif ($month == 3) {$month = "April";}
+	elsif ($month == 4) {$month = "May";}
+	elsif ($month == 5) {$month = "June";}
+	elsif ($month == 6) {$month = "July";}
+	elsif ($month == 7) {$month = "August";}
+	elsif ($month == 8) {$month = "September";}
+	elsif ($month == 9) {$month = "October";}
+	elsif ($month == 10) {$month = "November";}
+	elsif ($month == 11) {$month = "December";}
+
+
+	my $timestamp .= sprintf("%s %02d, %04d %02d:%02d", $month,$day,$year+1900,$hour,$min);
+	my $checksum = get_GCG_checksum($start_offset_seq.$ORF.$stop_offset_seq);
+	$gcg_header .= "\t ".$timestamp."\tType: N Check: $checksum\t ..\n";
+	$header = $gcg_header;
+	print "$header$newline";
+  }
 
   #### Color and format the sequence
   my %colorings = ();
@@ -403,8 +436,6 @@ $LINESEPARATOR
 	$colorings{$start_len + $orf_len} = "<FONT COLOR=\"red\">";
 	$colorings{$start_len + $orf_len + $stop_len} = "</FONT>";
   }
-
-  print "$header$newline";
 
   ## Attempt to extract coordinate information;
   $header =~ /.*location=\"\w+\s(\d+)\s(\d+)\".*/;
@@ -427,6 +458,7 @@ $LINESEPARATOR
 	  $coord_stop -= length($genome_seq);
 	}
   }
+
   print format_sequence('sequence'=>($start_offset_seq.$ORF.$stop_offset_seq),
 						'color_ref'=>\%colorings,
 						'newline'=>$newline,
@@ -528,7 +560,33 @@ sub format_sequence {
 	  print $color_ref->{scalar(@temp)};
 	}
 	$sequence .=  $newline;
-  }elsif ($format eq "gcg") {
+  }elsif ($format eq "gcg" ) {
+	my $counter = 0;
+	for (my $m=0;$m<scalar(@temp);$m++) {
+	  $sequence .= $color_ref->{$m} if (defined ($color_ref->{$m}));
+
+	  # start of $line coordinate
+	  if ($m % 50 == 0) {
+		$sequence .= ($counter+1)."\t";
+	  }
+
+	  # sequence
+	  $sequence .= $temp[$m];
+
+	  # space every 10nt
+	  if ($m % 10 == 9) {
+		$sequence .= " ";
+	  }
+
+	  # newline 
+	  $sequence .= "$newline" if (($m % 50) == 49 && $m != scalar(@temp));
+
+	  $counter++;
+
+	}
+	  
+
+  }elsif ($format eq "with_coords") {
 	my $counter = 0;
 	my $coord = $start;
 	for (my $m=0;$m<scalar(@temp);$m++) {
@@ -627,3 +685,25 @@ sub verify_biosequence_set_ids {
   return @verified_ids;
 }
 
+
+###############################################################################
+# get_GCG_checksum
+###############################################################################
+sub get_GCG_checksum  {
+  my $seq = shift;
+  my $index = 0;
+  my $checksum = 0;
+  my $char;
+
+  $seq =~ tr/a-z/A-Z/;
+    
+  foreach $char ( split(/[\.\-]*/, $seq)) {
+	$index++;
+	$checksum += ($index * (unpack("c",$char) || 0) );
+	if( $index ==  57 ) {
+	  $index = 0;
+	}
+  }
+
+  return ($checksum % 10000);
+}
