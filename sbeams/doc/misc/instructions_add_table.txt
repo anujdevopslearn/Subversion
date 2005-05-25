@@ -1,0 +1,140 @@
+===========================================================================
+To add a table to SBEAMS:
+===========================================================================
+
+The examples used throughout the file use module PeptideAtlas as an example,
+but can be applied to other modules.  Please feel free to edit or send me 
+email if directions aren't clear (email is nking).
+
+(1) First make sure your dev area is up to date so that any changes
+    you check in will not conflict with current version.
+
+    cd to dev area
+
+    cvs update -dPR
+
+
+(2) Edit the SBEAMS table column file [in dev area]:
+
+    cd /net/dblocal/www/html/devUser/sbeams/lib/conf/PeptideAtlas
+
+    edit PeptideAtlas_table_column.txt 
+
+    Add the new table 
+
+    (NOTE: if you want tkdiff and cvs diff to show changes between
+    revisions most clearly, stick to using either Excel for editing
+    the file, or a linux tool such as OpenOffice.  OpenOffice encloses
+    strings in quotes, so you'll see that tkdiff and cvs diff will
+    unfortunately flag everthing as different if the previous file 
+    didn't have enlcosing quotes.)
+
+    For datatypes other than primitive types, such as making a column
+    a multilink column for example, best to look for existing structures
+    and their related tables in the Module_table_column.txt file
+    (where Module here is PeptideAtlas). 
+
+
+(3) Populate the SQL transaction scripts in SBEAMS [in dev area]:
+
+    cd /net/dblocal/www/html/devNK/sbeams/lib/scripts/PeptideAtlas
+
+    ./create_peptideatlas_sql.csh
+
+
+(4) Update the driver tables in SBEAMS:  
+
+    cd /net/dblocal/www/html/devNK/sbeams/lib/scripts/Core
+
+    set CONFDIR = "../../conf"
+
+    ./update_driver_tables.pl $CONFDIR/PeptideAtlas/PeptideAtlas_table_column.txt 
+
+    ./update_driver_tables.pl $CONFDIR/PeptideAtlas/PeptideAtlas_table_property.txt 
+
+(5)  Add the database table using sql statement:
+
+     Use assql, or AquaDataStudio or other tool to alter table add column ...
+
+     can paste the CREATE statement, directly out of 
+     /net/dblocal/www/html/devNK/sbeams/lib/sql/PeptideAtlas/PeptideAtlas_CREATETABLES.mssql
+     into AquaDAtaStudio query analyzer and execute it
+
+     something like:
+
+          CREATE TABLE dbo.sample_publication (
+            sample_publication_id      int IDENTITY NOT NULL,
+            sample_id                  int NOT NULL,
+            publication_id             int NOT NULL,
+            date_created               datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            created_by_id              int NOT NULL DEFAULT '1',
+            date_modified              datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            modified_by_id             int NOT NULL DEFAULT '1',
+            owner_group_id             int NOT NULL DEFAULT '1',
+            record_status              char(1) NOT NULL DEFAULT 'N',
+            PRIMARY KEY (sample_publication_id)
+          )
+          GO
+
+(6) If you've added a new table, need to include that in Tables.pm
+
+    edit
+    /net/dblocal/www/html/devNK/sbeams/lib/perl/SBEAMS/PeptideAtlas/Tables.pm
+   
+    to include $TBAT_SAMPLE_PUBLICATION
+
+(7) Try pages in dev area.
+
+    If receive errors listing table columns, etc. that you changed,
+    but it appears that the cgi hasn't received them, it may be
+    a known problem with update_drivers.pl.
+    see http://db.systemsbiology.net/mantis/bug_view_page.php?bug_id=0000013
+
+    In this case, please contact Eric Deutsch for advice.
+
+
+(8) Commit [dev area] changes to SBEAMS cvs 
+
+    use tkdiff or cvs diff to check that differences to files are only
+    what you modified (someone may have checked in changes in between
+    your update and now, especially if you've taken awhile to get
+    to this stage.)
+
+
+    cd /net/dblocal/www/html/devNK/sbeams/lib/scripts/PeptideAtlas 
+    cvs commit load_atlas_build.pl
+
+    cd /net/dblocal/www/html/devNK/sbeams/lib/conf/PeptideAtlas
+    cvs commit
+
+    cd /net/dblocal/www/html/devNK/sbeams/cgi/PeptideAtlas
+    cvs commit GetPeptides
+
+    cd /net/dblocal/www/html/devNK/sbeams/lib/perl/SBEAMS/PeptideAtlas
+    cvs commit Tables.pm
+
+(9) Commit the dev changes to production:
+
+    Log in to db as user sbeams and run:
+
+    cd /net/dblocal/www/html/sbeams/dirPath
+    cvs update -dP  yourFile
+
+    cd /net/db/lib/sbeams/dirPath
+    cvs update -dP yourFile
+
+    cd /net/dblocal/wwwSSL/html/sbeams/dirPath
+    cvs update -dP yourFile
+
+    cd /net/dblocal/www/html/macrogenics/sbeams/dirPath
+    cvs update -dP yourFile
+
+(11) Load module tables:
+
+    cd /net/dblocal/www/html/devNK/sbeams/lib/scripts/PeptideAtlas
+
+    use ./load_atlas_build.pl
+
+    (Note that for PeptideAtlas, you'll need to use the SBEAMS web
+    interface, ManageTable, to add a record before running the load
+    script.)
