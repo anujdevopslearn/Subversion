@@ -41,6 +41,24 @@ email if directions aren't clear (email is nking).
 
     ./create_peptideatlas_sql.csh
 
+    where create_peptideatlas_sql.csh contains:
+
+    #!/bin/csh
+
+    setenv SBEAMS /net/dblocal/www/html/devNK/sbeams
+    cd $SBEAMS/lib/scripts/Core
+
+    foreach dbtype ( mssql mysql pgsql )
+
+        ./generate_schema.pl --table_prop
+
+        ../../conf/PeptideAtlas/PeptideAtlas_table_property.txt \
+            --table_col ../../conf/PeptideAtlas/PeptideAtlas_table_column.txt
+            --schema_file \
+            ../../sql/PeptideAtlas/PeptideAtlas --destination_type $dbtype
+
+    end
+
 
 (4) Update the driver tables in SBEAMS:  
 
