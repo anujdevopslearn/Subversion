@@ -115,7 +115,8 @@ sub create_files {
 	close(SCRIPT);
 	
 	# Create shell script file
-	$sh = generate_sh($jobname, $email);
+  my $size = ( $jobname =~ /affynorm/ ) ? 1 : 4;
+	$sh = generate_sh($jobname, $email, $size);
 	open(SH, ">$RESULT_DIR/$jobname/$jobname.sh") ||
 		return("Couldn't create shell script file.");
 	print SH $sh;
@@ -188,7 +189,8 @@ END
 # Generate the shell script to run R
 ####
 sub generate_sh {
-	my ($jobname, $email) = @_;
+	my ($jobname, $email, $resize) = @_;
+  $resize ||= 4;
 	my $sh;
 	
 	$sh = <<END;
@@ -201,7 +203,7 @@ STATUS=\$?
 if ([[ \$STATUS == 0 ]]) then
   if ([[ -n `find $RESULT_DIR/$jobname -name '*.png'` ]]) then
     for i in $RESULT_DIR/$jobname/*.png; do
-      pngtopnm \$i | pnmscale -r 4 | pnmtopng > \$i.tmp
+      pngtopnm \$i | pnmscale -r $resize | pnmtopng > \$i.tmp
       mv \$i.tmp \$i
     done
   fi
