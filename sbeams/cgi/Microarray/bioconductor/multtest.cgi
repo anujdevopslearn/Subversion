@@ -785,10 +785,18 @@ END
 	($previous_analysis_id, undef) = $data_analysis_o->find_analysis_id(folder_name         =>$folder_name,
 																        analysis_name_type  =>'normalization',
 																        );
+
+  my ($user_description) = $sbeams->selectOneColumn( <<"  END_SQL" );
+  SELECT user_description
+  FROM $TBMA_AFFY_ANALYSIS
+  WHERE affy_analysis_id = $previous_analysis_id;
+  END_SQL
+  
 	$log->debug("PREVIOUS FOLDER NAME '$folder_name' PREVIOUS ANALYSIS ID '$previous_analysis_id' "); 
 	my $rowdata_ref = {folder_name => $jobname,
 					   user_id => $USER_ID,
 					   project_id => $project_id,
+             user_description => $user_description,
 					   parent_analysis_id => $previous_analysis_id,
 					   affy_analysis_type_id => $affy_o->find_analysis_type_id("differential_expression"),
 					   analysis_description => (join "//", @db_jobsummary),
