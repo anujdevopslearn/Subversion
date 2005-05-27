@@ -1231,21 +1231,17 @@ for (class.numb in unique.classes){
 	}
 ##initilize the title var each loop
 	title <- in.title
-	
-	Matrix <- exprs(exprset)[,cols]
-
-	 
+		 
 	matrix.column.names <- c(
 							"Log_2_Expression_Ratio", 
 							"Log_10_Expression_Ratio",
 							"mu_X",
 							"mu_Y"
-							)
-							
-	gatherdataMatrix <- cbind(anno.matrix, matrix(data=1, nrow=length(anno.probesetid),ncol=length(matrix.column.names) ))
-	
-	colnames(gatherdataMatrix) <- c(colnames(anno.matrix), matrix.column.names)
-	rownames(gatherdataMatrix) <- rownames(Matrix)
+							)							
+		
+	gatherdataMatrix <- matrix(data=1, nrow=length(anno.probesetid),ncol=length(matrix.column.names) )
+	colnames(gatherdataMatrix) <- matrix.column.names
+	rownames(gatherdataMatrix) <- rownames(exprs(exprset))
 	
 ##Make the log 2 ratios from the data
 	 y <- as.numeric(mean(as.data.frame(2^t(exprs(exprset)[,which(classlabel == reference.class.id)]))))
@@ -1258,10 +1254,15 @@ for (class.numb in unique.classes){
     gatherdataMatrix[,"Log_10_Expression_Ratio"]  <- foldlog10
     
 
-	
-##Convert data to a dataframe
-	output.df <- data.frame(gatherdataMatrix)
-	allData.output.df <- data.frame(gatherdataMatrix)
+##Assign the probe set ids as the row names of the annotation matrix, and
+	rownames(anno.matrix) <- anno.probesetid
+##Find the sort order of probe set ids in the annotation matrix and data matrix
+# and combine into one matrix with correct sorting
+	anno.matrix.orders <- order(rownames(anno.matrix))
+	gatherdataMatrix.orders <- order(rownames(gatherdataMatrix))
+	output <- cbind(anno.matrix[anno.matrix.orders,],gatherdataMatrix[gatherdataMatrix.orders,])
+	output.df <- data.frame(output)
+	allData.output.df <- output.df
 	
 #HACK -- Need to cast all the data columns to numeric since they think they are class factor 
 #see ?factor for more info
@@ -1308,7 +1309,9 @@ output.df$Probe_set_id <- NULL
 	##Write a special aaftable that knows about exprssion data.  It will turn the values green in the output
 		exp.aaftable <- aafTableInt(exprset[which(indexExprs.geneNames),cols])
 		#output.df <- cbind(output.df, exprs(exprset)[which(indexExprs.geneNames),cols])
-  	    allData.output.df <- cbind(allData.output.df, exprs(exprset)[which(index.allData),cols])
+		#create an aafTable for expression values of all probe sets
+		allData.exprs.aaftable <- aafTableFrame(exprs(exprset)[,cols], signed=FALSE)
+		colnames(allData.exprs.aaftable) <- colnames(exprs(exprset)[,cols])
 	}
 
 END
@@ -1325,7 +1328,8 @@ $script .= <<END;
 	saveHTML(html.aaftable, paste("$RESULT_DIR/$jobname/", outFileRoot, ".html", sep = ""), title)
 ##Want to output the full data set in addition to just  differentially expressed genes.
 	
-	allData.aaftable <- aafTableFrame(allData.output.df, signed = FALSE)
+	allData.output.aaftable <- aafTableFrame(allData.output.df,signed=FALSE)
+	allData.aaftable <- merge(allData.output.aaftable,allData.exprs.aaftable)
 		
 	saveText(allData.aaftable, paste("$RESULT_DIR/$jobname/", outFileRoot, ".full_txt", sep = ""), colnames = colnames(allData.aaftable))
 ##Generate a few plots
@@ -1498,10 +1502,9 @@ for (class.numb in unique.classes){
 							"Log_10_Ratio",
 							"D_stat")
 							
-	gatherdataMatrix <- cbind(anno.matrix, matrix(data=1, nrow=length(anno.probesetid),ncol=length(matrix.column.names) ))
-	
-	colnames(gatherdataMatrix) <- c(colnames(anno.matrix), matrix.column.names)
-	rownames(gatherdataMatrix) <- rownames(Matrix)
+	gatherdataMatrix <- matrix(data=1, nrow=length(anno.probesetid),ncol=length(matrix.column.names) )
+	colnames(gatherdataMatrix) <- matrix.column.names
+	rownames(gatherdataMatrix) <- rownames(exprs(exprset))
 	
 ##Make the log 2 ratios from the data
 	 y <- as.numeric(mean(as.data.frame(2^t(exprs(exprset)[,which(classlabel == reference.class.id)]))))
@@ -1540,10 +1543,16 @@ for (class.numb in unique.classes){
 			gatherdataMatrix[sum.sam.output$mat.sig[,1],"D_stat"] <- sum.sam.output$mat.sig[,2]
 		}
 	}
-##Convert data to a dataframe
-	output.df <- data.frame(gatherdataMatrix)
-	allData.output.df <- data.frame(gatherdataMatrix)
-	
+##Assign the probe set ids as the row names of the annotation matrix, and
+	rownames(anno.matrix) <- anno.probesetid
+##Find the sort order of probe set ids in the annotation matrix and data matrix
+# and combine into one matrix with correct sorting
+	anno.matrix.orders <- order(rownames(anno.matrix))
+	gatherdataMatrix.orders <- order(rownames(gatherdataMatrix))
+	output <- cbind(anno.matrix[anno.matrix.orders,],gatherdataMatrix[gatherdataMatrix.orders,])
+	output.df <- data.frame(output)
+	allData.output.df <- output.df
+		
 #HACK -- Need to cast all the data columns to numeric since they think they are class factor 
 #see ?factor for more info
 	for (n in matrix.column.names){
@@ -1656,7 +1665,9 @@ output.df$Probe_set_id <- NULL
 	##Write a special aaftable that knows about exprssion data.  It will turn the values green in the output
 		exp.aaftable <- aafTableInt(exprset[which(indexExprs.geneNames),cols])
 		#output.df <- cbind(output.df, exprs(exprset)[which(indexExprs.geneNames),cols])
-  	    allData.output.df <- cbind(allData.output.df, exprs(exprset)[which(index.allData),cols])
+		#create an aafTable for expression values of all probe sets
+		allData.exprs.aaftable <- aafTableFrame(exprs(exprset)[,cols], signed=FALSE)
+		colnames(allData.exprs.aaftable) <- colnames(exprs(exprset)[,cols])
 	}
 
 END
@@ -1673,7 +1684,8 @@ $script .= <<END;
 	saveHTML(html.aaftable, paste("$RESULT_DIR/$jobname/", outFileRoot, ".html", sep = ""), title)
 ##Want to output the full data set in addition to just  differentially expressed genes.
 	
-	allData.aaftable <- aafTableFrame(allData.output.df, signed = FALSE)
+	allData.output.aaftable <- aafTableFrame(allData.output.df,signed=FALSE)
+	allData.aaftable <- merge(allData.output.aaftable,allData.exprs.aaftable)
 		
 	saveText(allData.aaftable, paste("$RESULT_DIR/$jobname/", outFileRoot, ".full_txt", sep = ""), colnames = colnames(allData.aaftable))
 ##Make some plots 
@@ -1856,6 +1868,7 @@ anno.matrix <- cbind(
  "Gene_Title" = substr(as.character(annot$Gene.Title),1,1023),
  "Unigene"    = substr(as.character(annot$UniGene.ID),1,254), 
  "LocusLink"  = substr(as.character(annot$LocusLink),1,254),
+ "Entrez_Gene" = substr(as.character(annot$Entrez.Gene),1,254),
  "Public_ID"  = substr(as.character(annot$Representative.Public.ID),1,254),
  "Refseq_protein_ID" = substr(as.character(annot$RefSeq.Protein.ID),1,254)
 )
