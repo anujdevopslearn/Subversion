@@ -3327,6 +3327,8 @@ sub getRandomString {
 
   # Thank you perl cookbook... 
   my $rstring = join( "", @chars[ map {rand @chars} ( 1..$args{num_chars} ) ]);
+  
+  return( $rstring );
 
 }
 ###############################################################################
