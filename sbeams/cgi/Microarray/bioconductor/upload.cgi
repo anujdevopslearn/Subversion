@@ -130,6 +130,7 @@ exit(0);
 # Call $sbeams->Authenticate() and exit if it fails or continue if it works.
 ###############################################################################
 sub main {
+#$sbeams->printCGIParams($cgi);
 
 	#### Do the SBEAMS authentication and exit if a username is not returned
 	exit
@@ -200,22 +201,13 @@ sub handle_request {
 	  || die "ref_parameters not passed";
 	my %parameters = %{$ref_parameters};
 	
-	my $submit = $cgi->param('Submit');
-	#print "SUBMIT BUTTON '$submit'<br>";
-	#my $token = $cgi->param('token');
-	
+	my $submit = $parameters{Submit};
 
-
-# Create new tabmenu item.  This may be a $sbeams object method in the future.
 	$sbeams->printUserContext();
 	
-	
+  # Create new tabmenu item.  This may be a $sbeams object method in the future.
 	my $tabmenu = SBEAMS::Connection::TabMenu->new( cgi => $cgi,
-                                                  #paramName => '_tab', # uses this as cgi param
                                                   maSkin => 1,   # If true, use MA look/feel
-                                                 # isSticky => 0, # If true, pass thru cgi params 
-                                                 # boxContent => 0, # If true draw line around content
-                                                 # labels => \@labels # Will make one tab per $lab (@labels)
                                                  );
 
   	
@@ -230,8 +222,8 @@ sub handle_request {
 	start_button();						#add simple start button to start a new session
 	print "$tabmenu";
 
-	$data_analysis_o = $affy_o->check_for_analysis_data( project_id=>$sbeams->getCurrent_project_id(),
-													);
+  my $project = $sbeams->getCurrent_project_id();
+  $data_analysis_o = $affy_o->check_for_analysis_data( project_id => $project );
 													
 	if ($data_analysis_o == 0 ){
 		unless (defined($submit)) {
@@ -241,8 +233,8 @@ sub handle_request {
 		return ;
 		}
 	}
-###Look to see if a token is present and make a $fm object if possible.
-	
+
+  # See if token is present and make $fm (file manager) object if possible.
 	check_for_token();	
 
 ###Choose the correct tab or default to the first tab File Groups
@@ -1052,8 +1044,9 @@ END
 	                             -default=>$ordered_all_sample_groups[$i],
 	                             )),
 	                );       
+
 		}
-		print "</table><br>";
+		print "</table><br>";	
 		print $cgi->submit(-name=>"Submit", -value=>"Start Normalization Run"),	
 		 	  $cgi->end_form();
 	}

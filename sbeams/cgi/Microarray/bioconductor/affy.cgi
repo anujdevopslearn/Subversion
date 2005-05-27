@@ -1,4 +1,4 @@
-#!/tools/bin/perl -w
+#!/usr/local/bin/perl -w
 
 use CGI qw/:standard/;
 use CGI::Pretty;
@@ -16,7 +16,7 @@ use FindBin;
 use lib "$FindBin::Bin/../../../lib/perl";
 use SBEAMS::Connection qw($log $q);
 use SBEAMS::Connection::Settings;
-use SBEAMS::Microarray::Tables;
+use SBEAMS::Connection::DataTable;
 
 use SBEAMS::Microarray;
 use SBEAMS::Microarray::Settings;
@@ -199,7 +199,9 @@ sub step2 {
 		     td(popup_menu('custom', ['avgdiff', 'liwong', 'mas', 'medianpolish', 'playerout', 'rlm'], 'medianpolish'))),
 		  '</table></ul>',
 		  p($cgi->checkbox('log2trans','checked','YES','Log base 2 transform the results (required for multtest)')),
-		  #p($cgi->checkbox('fmcopy','checked','YES','Copy exprSet back to the upload manager for further analysis')),
+		  p($cgi->checkbox('MVAplot','checked','YES','Produce MVA scatter plot among members of each sample group?')),
+		  p($cgi->checkbox('corrMat','checked','YES','Produce correlation matrix for this normalization set?')),
+		  p('Enter description for analysis set (optional)<BR>', $cgi->textfield('user_description', '', 40)),
 		  p("E-mail address where you would like your job status sent: (optional)", br(), textfield('email', '', 40)),
 	      p(submit("Submit Job")),
 	      end_form;
@@ -238,6 +240,7 @@ Arrays</a>.  Also, please note that the gcrma R package is currenly
 a developmental version.
 </p>
 END
+#  $sbeams->printCGIParams( $cgi );
 	
 	site_footer();
 }
@@ -247,6 +250,32 @@ END
 ####
 sub step3 {
 	my $jobname = '';
+
+  
+  # Modified to allow user to specify description on step_2 form.
+  my $udesc = $cgi->param( 'user_description' ); 
+  my $analysis_id = $cgi->param( 'analysis_id' ); 
+  if ( $udesc && $analysis_id ) {
+    $sbeams->updateOrInsertRow( table_name => $TBMA_AFFY_ANALYSIS ,
+                               rowdata_ref => { user_description => $udesc },
+                                   PK_name => 'affy_analysis_id',
+                                  PK_value => $analysis_id,
+                                    update => 1 );
+
+    my ( $parent_id ) = $sbeams->selectOneColumn( <<"    END" );
+    SELECT parent_analysis_id FROM $TBMA_AFFY_ANALYSIS 
+    WHERE affy_analysis_id = $analysis_id 
+    END
+
+    if( $parent_id ) {
+      $sbeams->updateOrInsertRow( table_name => $TBMA_AFFY_ANALYSIS ,
+                                 rowdata_ref => { user_description => $udesc },
+                                     PK_name => 'affy_analysis_id',
+                                    PK_value => $parent_id,
+                                      update => 1 );
+
+    }
+  }
 	
 	
 	if ($cgi->param('normalization_token') ){
@@ -255,6 +284,7 @@ sub step3 {
 	}else{
 		$jobname = "affy-norm" . rand_token();	
 	}
+
 	my (@filenames, $script, $output, $jobsummary, $custom, $error, $args, $job);
 	my @custom = $cgi->param('custom');
 	
@@ -288,20 +318,92 @@ END
 	if ($cgi->param('process') eq "GCRMA") {
 	    $args = "";  
 	}
-	
+  my $log2trans = ($cgi->param('log2trans') ) ? "TRUE" : "FALSE";	   
+  my $MVAplot = ($cgi->param('MVAplot') ) ? "TRUE" : "FALSE";	   
+  my $corrMat = ($cgi->param('corrMat') ) ? "TRUE" : "FALSE";	   
 	
 	$jobsummary = jobsummary('Files', join(', ', @filenames),
-                             'Sample&nbsp;Names', join(', ', $cgi->param('sampleNames')),
-                             'Processing', scalar($cgi->param('process')) . $args,
-                             'Log 2 Transform', $cgi->param('log2trans')?"Yes":"No",	   
+                           'Sample&nbsp;Names', join(', ', $cgi->param('sampleNames')),
+                           'Processing', scalar($cgi->param('process')) . $args,
+                           'Log 2 Transform', $log2trans,
+                           'MVAplot', $MVAplot,	   
+                           'corrMat', $corrMat,	   
 			#  'Copy&nbsp;back', $cgi->param('fmcopy') ? "Yes" : "No",
-                             'E-Mail', scalar($cgi->param('email')));
+                           'E-Mail', scalar($cgi->param('email')));
+
+  # update db with analysis run info, add user defined sample names to XML file
 	 my @db_jobsummary = ('File Names =>' . join(', ', @filenames),
 			     'Log 2 Transform' .  $cgi->param('log2trans')?"Yes":"No",
 			     'Sample Names =>' . join(', ', $cgi->param('sampleNames')),
 			     'Processing =>'. $cgi->param('process')
 			   );
-	$script = generate_r($jobname, [@filenames]);
+  update_analysis_table(@db_jobsummary);
+
+  # Moved this up so as we can fetch the current names
+  my @all_samples = $cgi->param('sampleNames');
+  update_xml_file(token		=> $jobname,
+    				sample_names=>\@all_samples,
+    				file_name   =>\@filenames );
+
+  if ( $cgi->param( 'MVAplot' ) || $cgi->param( 'corrMat' ) ) {
+    $output .=<<"    END";
+    <H3>Image files:</H3>
+    <A HREF=$RESULT_URL?action=view_file&analysis_folder=$jobname&analysis_file=image_index&file_ext=html>
+    View all image files inline</A><BR>
+    END
+  }
+
+  # Table to hold images
+  my $img_table = SBEAMS::Connection::DataTable->new(BORDER=>1);
+
+  if ( $cgi->param('corrMat') ) {
+    my $raw_url = "$RESULT_URL?action=view_image&analysis_folder=$jobname&analysis_file=raw_correlation_matrix&file_ext=png";
+    my $norm_url = "$RESULT_URL?action=view_image&analysis_folder=$jobname&analysis_file=normalized_correlation_matrix&file_ext=png";
+
+    # Add links to main results page
+    $output .=<<"    END";
+    <a href="$raw_url">Raw correlation matrix</a><br>
+    <a href="$norm_url">Normalized correlation matrix</a><br>
+    END
+    
+    # Add links to image page
+    $img_table->addRow( [ "<A HREF=$raw_url target=_images ><IMG SRC='$raw_url' BORDER=0 WIDTH=600></A>" ] ); 
+    $img_table->addRow( [ "<H2>Raw Correlation Matrix</H2>" ] );
+    $img_table->addRow( [ "<A HREF=$raw_url target=_images ><IMG SRC='$norm_url' BORDER=0 WIDTH=600></A>" ] ); 
+    $img_table->addRow( [ "<H2>Normalized Correlation Matrix</H2>" ] );
+  }
+
+  if ( $cgi->param('MVAplot') ) {
+    # Need to see which ones we'll have plots for 
+    my $group_files = BioC::parse_sample_groups_file( folder    => $jobname, 
+                                                      data_type => 'group_files' );
+
+    my $group_ids = BioC::parse_sample_groups_file( folder    => $jobname, 
+                                                    data_type => 'sample_group_ids' );
+
+    for my $id ( sort { $a <=> $b } keys( %{$group_ids} ) ) {
+      my $key = $group_ids->{$id};
+      next unless $#{$group_files->{$key}} > 0; 
+      my $mva_url = "$RESULT_URL?action=view_image&analysis_folder=$jobname&analysis_file=${key}_MVA_matrix&file_ext=png";
+
+      # Add links to main results page
+      $output .= "<a href='$mva_url'>MVA comparison for file group $key</a><br>";
+
+      # Add links to image page
+      $img_table->addRow( [ "<A HREF=$mva_url TARGET=_images BORDER=0><IMG SRC=$mva_url BORDER=0 WIDTH=600></A>" ] );
+      $img_table->addRow( [ "<H2>MVA scatter plot for file group <B>$key</B></H2>" ] );
+    }
+  }
+  $img_table->setColAttr( ROWS => [1..$img_table->getRowNum()], COLS => [1], ALIGN=>'CENTER' );
+
+  # This should be wrapped into create_files call, but not yet...
+  createImageIndexPage( content => $img_table, path => "$RESULT_DIR/$jobname/" );
+
+	$script = generate_r( jobname => $jobname, 
+                        log2trans => $log2trans,
+                        MVAplot => $MVAplot,
+                        corrMat => $corrMat
+                        );
 	
 	$error = create_files($jobname, $script, $output, $jobsummary, 15, 
 	                      "Affymetrix Expression Analysis", $cgi->param('email'));
@@ -318,22 +420,50 @@ END
     print ID $job->id;
     close(ID);
     log_job($jobname, "Affymetrix Expression Analysis", $fm);
-##update the database with the analysis run info and add the user defined sample names to the XML file
-    update_analysis_table(@db_jobsummary);
-    my @all_samples = $cgi->param('sampleNames');
-    update_xml_file(token		=>$jobname,
-    				sample_names=>\@all_samples,
-    				file_name   =>\@filenames, 
-    			   );
- 
+
     print $cgi->redirect("job.cgi?name=$jobname");
 }
+
+
+#+
+#
+#-
+sub createImageIndexPage {
+  my %args = @_;
+  my $page =<<"  END_PAGE";
+<HTML>
+<HEAD>
+<TITLE='Normalization Images'></TITLE>
+</HEAD>
+<BODY>
+<H2>Click on any image to see a larger version</H2><BR>
+$args{content}
+</BODY>
+</HTML>
+  END_PAGE
+  open( IDX, ">$args{path}image_index.html" ) || die "Unable to open image index page";
+  print IDX $page;
+  close IDX;
+}
+
 
 #### Subroutine: generate_r
 # Generate an R script to process the data
 ####
 sub generate_r {
-	my ($jobname, $celfiles) = @_;
+  my %args = @_;
+  my $jobname = $args{jobname};
+  my $group_files = BioC::parse_sample_groups_file( folder    => $jobname, 
+                                                    data_type => 'group_files' );
+
+  my @files;
+  for my $key ( keys( %{$group_files} ) ) {
+    push @files, @{$group_files->{$key}};
+  }
+  my $celfiles = \@files;
+#	$log->debug( "job => $jobname, cel => $celfiles, 
+	$log->debug( join( ":::", @files) );
+  
 	my $celpath = $fm->path;
 	my @sampleNames = $cgi->param('sampleNames');
 	my $process = $cgi->param('process');
@@ -350,21 +480,98 @@ sub generate_r {
 	for (@custom) { s/\"/\\\"/g }
 	
 	# Make R variables out of the perl variables
-	$script = <<END;
+  $script = <<END;
+# fxn to create MVA plot for sets of arrays (courtesy BMarzolf)
+mva.pairs.custom <- function (x, labels = colnames(x), log.it = TRUE, span = 2/3, 
+    family.loess = "gaussian", digits = 3, line.col = 2, main = "MVA plot", 
+    ...) 
+{
+    if (log.it) 
+        x <- log2(x)
+    J <- dim(x)[2]
+    frame()
+    old.par <- par(no.readonly = TRUE)
+    on.exit(par(old.par))
+    par(mfrow = c(J, J), mgp = c(0, 0.2, 0), mar = c(1, 1, 1, 
+        1), oma = c(1, 1.4, 2, 1))
+    for (j in 1:(J - 1)) {
+        par(mfg = c(j, j))
+        plot(1, 1, type = "n", xaxt = "n", yaxt = "n", xlab = "", 
+            ylab = "")
+        text(1, 1, labels[j], cex = .75)
+        for (k in (j + 1):J) {
+            par(mfg = c(j, k))
+            yy <- x[, j] - x[, k]
+            xx <- (x[, j] + x[, k])/2
+            sigma <- IQR(yy)
+            mean <- median(yy)
+            subset <- sample(1:length(x), min(c(10000, length(x))))
+            ma.plot(xx, yy, tck = 0, subset = subset, show.statistics = FALSE, 
+                pch = ".", xlab = "", ylab = "", tck = 0, ...)
+            par(mfg = c(k, j))
+            txt <- format(sigma, digits = digits)
+            txt2 <- format(mean, digits = digits)
+            plot(c(0, 1), c(0, 1), type = "n", ylab = "", xlab = "", 
+                xaxt = "n", yaxt = "n")
+            text(0.5, 0.5, paste(paste("Median:", txt2), paste("IQR:", 
+                txt), sep = "\n"), cex = 1 )
+        }
+    }
+    par(mfg = c(J, J))
+    plot(1, 1, type = "n", xaxt = "n", yaxt = "n", xlab = "", 
+        ylab = "")
+    text(1, 1, labels[J], cex = 1)
+    mtext("A", 1, outer = TRUE, cex = 1.5)
+    mtext("M", 2, outer = TRUE, cex = 1.5, las = 1)
+    mtext(main, 3, outer = TRUE, cex = 1.5)
+    invisible()
+}
+  
 filenames <- c("@{[join('", "', @$celfiles)]}")
 filepath <- "$celpath"
 samples <- c("@{[join('", "', @sampleNames)]}")
 process <- "$process"
 custom <- c("@{[join('", "', @custom)]}")
-log2trans <- @{[$cgi->param('log2trans') ? "TRUE" : "FALSE"]}
+log2trans <- $args{log2trans}
+MVAplot <- $args{MVAplot}
+corrMat <- $args{corrMat}
 lib_path <- "$R_LIBS"
 chip.name <- "$slide_type_name"
 path.to.annotation <- "$AFFY_ANNO_PATH/"
 
 END
 
-	# Main data processing, entirely R
-	$script .= <<'END';
+
+# Generate plot code/dimensions for MVA and correlation plots.
+my %mva_dim;
+my $mva_code = '';
+my $idx = 1;
+my $tot = 0;
+foreach my $grp ( keys( %$group_files ) ) {
+  $tot++;
+  my $height = 3 + .12*scalar( @{$group_files->{$grp}} );
+  my $width  = 4 + .16*scalar( @{$group_files->{$grp}} );
+  my $first = $idx;
+  my $last = $first + $#{$group_files->{$grp}};
+  $idx = $last + 1;
+
+  # If we have only one member in the group, don't try to do an MVA plot
+  next unless ( $first < $last );
+
+  $mva_code .=<<"  END_CODE";
+  # Do MVA (scatterplot) matrix for $grp 
+  bitmap( "$RESULT_DIR/$jobname/${grp}_MVA_matrix.png", height=$height, width=$width, res = 72*4, pointsize = 10)
+  mva.pairs.custom(Matrix[,$first:$last])
+  dev.off()
+  END_CODE
+}
+
+my %corr_dims = ( height => 6, # + .04*$tot,
+                  width  => 4 + .04*$tot,
+                );
+
+  # Main data processing, entirely R
+  $script .= <<"END";
 .libPaths(lib_path)
 library(affy)
 library(gcrma)
@@ -380,22 +587,42 @@ annot.header <- as.matrix(annot[1,])
 annot.noheader <- annot[-1,]
 annot.grab.columns <- c( grep("Representative Public ID",annot.header),grep("Gene Symbol",annot.header),grep("Gene Title",annot.header),grep("LocusLink",annot.header) )
 
-
+# Set working directory, and read CEL files
 setwd(filepath)
-if (process == "RMA")
+affybatch <- ReadAffy(filenames = filenames)
+
+# Output a correlation matrix for pre-normalization data if requested.
+if (corrMat) {
+  pm <- pm(affybatch)# grab perfect match intensities
+  affybatch.cor <- cor(pm)
+  gray.colors <- gray(1:100/100) # define a grayscale color set
+  numChips <- dim(exprs(affybatch))[2]
+#  bitmap("$RESULT_DIR/$jobname/raw_correlation_matrix.png", height=$corr_dims{height}, width=$corr_dims{width}, res = 72*4, pointsize = 10)
+  bitmap("$RESULT_DIR/$jobname/raw_correlation_matrix.png", height=$corr_dims{height}, res = 72*4, pointsize = 10)
+  par(mar=c(3,3,3,9))
+  image(x=1:numChips,y=1:numChips,affybatch.cor,col=gray.colors,zlim=c(min(affybatch.cor),1))
+  title(paste("Correlation Matrix(Raw), black:R=",trunc(min(affybatch.cor)*100)/100,"white:R=1"),cex.main=numChips/15)
+  for(i in 1:numChips) {
+    name <- row.names(pData(affybatch))[i]
+    text(numChips+1,i,name,xpd=TRUE,adj=c(0,0.5),cex=0.666)
+  }
+  dev.off() # dev.off() causes image file to be written
+}
+
+if (process == "RMA") {
 #    exprset <- rma(ReadAffy(filenames = filenames))
 # This is causing an error on Linux but not Mac OS X
 # More investigation needed
     exprset <- justRMA(filenames = filenames) #changed 10.21.04 Bruz
+}
 if (process == "GCRMA"){
-	exprset <- justGCRMA(filenames = filenames)
+exprset <- justGCRMA(filenames = filenames)
 
 }
 
 
-
 if (process == "Custom") {
-    affybatch <- ReadAffy(filenames = filenames)
+#    affybatch <- ReadAffy(filenames = filenames)
     bgcorrect.param <- list()
     if (custom[1] == "gcrma-eb") {
         custom[1] <- "gcrma"
@@ -415,25 +642,49 @@ if (process == "Custom") {
                         pmcorrect.method = custom[3],
                         summary.method = custom[4])
 }
-colnames(exprset@exprs) <- samples
+colnames(exprset\@exprs) <- samples
 log2methods <- c("medianpolish", "mas", "rlm")
 if (log2trans) {
     if (process == "Custom" && !(custom[4] %in% log2methods)) {
-        exprset@exprs <- log2(exprset@exprs)
-        exprset@se.exprs <- log2(exprset@se.exprs)
+        exprset\@exprs <- log2(exprset\@exprs)
+        exprset\@se.exprs <- log2(exprset\@se.exprs)
     }
 } else {
     if (process == "RMA" || process == "Custom" && custom[4] %in% log2methods) {
-        exprset@exprs <- 2^exprset@exprs
-        exprset@se.exprs <- 2^exprset@se.exprs
+        exprset\@exprs <- 2^exprset\@exprs
+        exprset\@se.exprs <- 2^exprset\@se.exprs
     }
 }
 END
 
+
     # Output results
-	$script .= <<END;
+$script .= <<END;
 #Add in the annotaion information
 Matrix <- exprs(exprset)
+
+# Make correlation matrix of normalized data
+affybatch.cor <- cor(Matrix)
+#bitmap("$RESULT_DIR/$jobname/normalized_correlation_matrix.png", height=$corr_dims{height}, width=$corr_dims{width}, res = 72*4, pointsize = 10)
+#bitmap("$RESULT_DIR/$jobname/normalized_correlation_matrix.png", res = 72*4, pointsize = 10)
+bitmap("$RESULT_DIR/$jobname/normalized_correlation_matrix.png", height=$corr_dims{height}, res = 72*4, pointsize = 10)
+par(mar=c(3,3,3,9))
+image(x=1:numChips,y=1:numChips,affybatch.cor,col=gray.colors,zlim=c(min(affybatch.cor),1))
+title(paste("Correlation Matrix(normalized),black:R=",trunc(min(affybatch.cor)*100)/100,"white:R=1"),cex.main=numChips/15)
+for(i in 1:numChips) {
+name <- row.names(pData(affybatch))[i]
+text(numChips+1,i,name,xpd=TRUE,adj=c(0,0.5),cex=0.666)
+}
+dev.off()
+
+
+  
+
+if (MVAplot) {
+  $mva_code
+}
+
+  
 output <- cbind(Matrix)
 output.orders <- order(row.names(Matrix))
 output.annotated <- cbind(row.names(Matrix)[output.orders],annot.noheader[annot.orders,annot.grab.columns],output[output.orders,])
@@ -447,11 +698,11 @@ save(exprset, file = "$RESULT_DIR/$jobname/$jobname.exprSet")
 #            sep = "\t", col.names = sampleNames(exprset))
 END
 
-	$script .= $fmcopy ? <<END : "";
+$script .= $fmcopy ? <<END : "";
 save(exprset, file = "$celpath/$jobname.exprSet")
 END
 
-	return $script;
+return $script;
 }
 
 #### Subroutine: expresso_safe
@@ -550,30 +801,31 @@ sub update_xml_file {
 	
 	my %args = @_;
 	my $folder_name = $args{token};
-    my $all_sample_names_aref = $args{sample_names};
-    my @all_filenames = @{ $args{file_name} };
+  my $all_sample_names_aref = $args{sample_names};
+  my @all_filenames = @{ $args{file_name} };
     
-    my $xml_file = "$BC_UPLOAD_DIR/$folder_name/$SAMPLE_GROUP_XML";
-    my $parser = XML::LibXML->new();
+  my $xml_file = "$BC_UPLOAD_DIR/$folder_name/$SAMPLE_GROUP_XML";
+  my $parser = XML::LibXML->new();
 	my $doc = $parser->parse_file( $xml_file);	
-    my $root  = $doc->getDocumentElement;
+  my $root  = $doc->getDocumentElement;
     
-    my %class_numbers = ();
+  my %class_numbers = ();
 	my $class_count = 0;
   ##need to convert the sample name to a number since R only wants two classes for t-testing O and 1
   ##First frind the reference sample node to use as the class 0	
 		
-		#$sample_groups{SAMPLE_NAMES}{$sample_name} = "$class";  
+  #$sample_groups{SAMPLE_NAMES}{$sample_name} = "$class";  
   
    my $reference_sample_group_node = $root->findnodes('//reference_sample_group');
    
    my $reference_sample_group = $reference_sample_group_node->to_literal;
-  if ($reference_sample_group){
-  	$class_numbers{$reference_sample_group} = $class_count;
-  	$class_count ++;
-  }else{
-  	error("Cannot find the reference sample group node");
-  }
+
+   if ($reference_sample_group){
+     $class_numbers{$reference_sample_group} = $class_count;
+  	 $class_count ++;
+   }else{
+     error("Cannot find the reference sample group node");
+   }
   
   
     for(my $i=0; $i <= $#all_filenames; $i++){
@@ -581,7 +833,6 @@ sub update_xml_file {
     	my $sample_name = $all_sample_names_aref->[$i];
     	my $found_flag = 'F';
     	my $x_path = "//file_name[.='$file_name']";
-   # print STDERR "FILE NAME '$file_name'";
 	    my $count = 0;
 	    foreach my $c ($root->findnodes($x_path)) {
 			$found_flag = 'T';
@@ -606,7 +857,7 @@ sub update_xml_file {
 	    	 
 	 
 	    	 
-	    	 print STDERR "NODE VAL '$sample_group' CLASS '$class'\n";
+#    	 print STDERR "NODE VAL '$sample_group' CLASS '$class'\n";
 	   
 	    	if ($count > 1){
 	    		error("Updating XML Error: More then two files with the same name $file_name");
