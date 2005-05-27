@@ -945,9 +945,6 @@ sub make_cononical_name_file {
   			$count ++;
   			next;
   		}
-  		#if ($count < 5){
-  		#	$log->debug(join " ** ", @columns);
-  		#}
   		
   		#Remember that the column names in the analysis files do not exactlly match the names
   		#within the Affy annotation file, so be sure to use the correct name
@@ -955,39 +952,52 @@ sub make_cononical_name_file {
   		my $locus_link_id = clean_id($columns[$header_h{"LocusLink"}]);
   		my $rep_seq_id	  = $columns[$header_h{"Public_ID"}];
   		
-  		my $new_canonical_id = '';
-  		if ($ref_seq_id =~ /^N/){#Refseq Id should start with NP_ddddd
-  			$new_canonical_id = $ref_seq_id;
+      # Will become canonical_name in gene_expression table
+      my $new_canonical_id = '';
+
+      # Refseq Prot Id should start with N/X . P_ddddd
+      if ($ref_seq_id =~ /^\s*[NX]P_\d+/){ 
+      $new_canonical_id = $ref_seq_id;
+
+        # We are stripping off the dot version attribute if any.
+        $new_canonical_id =~ s/^\s*(.*)\.\d+\s*$/$1/;
+
   		}elsif($locus_link_id =~ /^\d/){
   			$new_canonical_id = $locus_link_id;
   		}else{
   		}
-  		$new_canonical_id =~ s/\W//g;	#Remove any white space
-  		if ($new_canonical_id){
+
+      # Original regex is really substituting away and non-word characters,
+      # which happens to include '.' characters, and was messing us up!
+#  		$new_canonical_id =~ s/\W//g;	#Remove any white space
+  		$new_canonical_id =~ s/\s//g;	#Remove any white space
+
+      if ($new_canonical_id){
   			$columns[$header_h{"Public_ID"}] = $new_canonical_id;
   		}
+
   		
   		if ($count < 5){
   			$log->debug(join " ** ", @columns);
   		}
   		push @all_data, (join "\t", @columns);
   			
-  		#########
+  		##
   		##Select the new file name, and write out the data......
   		$count ++;
   		
-  	}
+	}
   my($file_name, $dir, $ext) = fileparse($file);
   my $out_file = "$dir${file_name}_canonical$ext";
   $log->debug("OUT FILE '$out_file'");
   open OUT, ">$out_file" ||
   	die "ERROR:Cannot open Canonical name out file $out_file $!";
   	
-  	print OUT @all_data;
-  	close OUT;
-  	return $out_file;
-  
+  print OUT @all_data;
+  close OUT;
+  return $out_file;
 }
+
 ###############################################################################
 # clean_id
 # some affy annotation has multiuple id's in the same field seperated with ///
