@@ -238,11 +238,13 @@ sub processLogin {
       $http_header = $self->createAuthHeader($user);
       $current_contact_id = $self->getContact_id($user);
       $current_username = $user;
+      $log->info( "User $user connected from " . $q->remote_host() );
     } else {
       $log->warn( "username ($user) is *not* valid" );
       $self->printPageHeader(minimal_header=>"YES");
       $self->printAuthErrors();
       $self->printPageFooter();
+      $log->info( "User $user failed to connect from " . $q->remote_host() );
       exit;
     } 
 
