@@ -33,7 +33,8 @@ our $RESULT_URL = "$CGI_BASE_DIR/Microarray/View_Affy_files.cgi";
 our $BIOC_URL = "$CGI_BASE_DIR/Microarray/bioconductor";
 
 # Admin e-mail
-our $ADMIN_EMAIL = 'pmoss@systemsbiology.org';
+#our $ADMIN_EMAIL = 'pmoss@systemsbiology.org';
+our $ADMIN_EMAIL = 'bmarzolf@systemsbiology.org';
 
 # Location of R binary & R libraries
 our $R_BINARY = "/tools/bin/R";
