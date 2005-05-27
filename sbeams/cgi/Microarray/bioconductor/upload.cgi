@@ -1,4 +1,4 @@
-#!/tools/bin/perl -w
+#!/usr/local/bin/perl -w
 
 ###############################################################################
 # Program     : GetExpression

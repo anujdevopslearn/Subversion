@@ -1,4 +1,4 @@
-#!/tools/bin/perl -w
+#!/usr/local/bin/perl -w
 
 ###############################################################################
 # Program     : Upload_affy_get_expression_data
