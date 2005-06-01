@@ -333,7 +333,7 @@ $LINESEPARATOR
 
   my $complete_search_keys = $parameters{search_key};
   $complete_search_keys =~ s/\s*\[AND\]\s*/_AND_/g;
-  my @search_keys = split /[\s,;]/, $complete_search_keys;
+  my @search_keys = split /[\s+,;]/, $complete_search_keys;
 
   # Remove [AND]s in parameters for searchExternal
   $complete_search_keys =~ s/_AND_/ /g;
@@ -363,7 +363,6 @@ $LINESEPARATOR
 	#### Build GENE SYMBOL constraint
 	my $temp_gene_symbol_clause = '';
 	if ($parameters{search_scope} =~ /(GeneSymbol|All)/) {
-#	  my $search_key = $parameters{search_key};
 	  if (defined($search_key) &&
 		  $search_key gt '' &&
 		  $search_key !~ /[%_]/) {
@@ -383,7 +382,6 @@ $LINESEPARATOR
 	#### Build EC NUMBER constraint
 	my $temp_ec_number_clause = '';
 	if ($parameters{search_scope} =~ /(ECNumbers|ECNumbers_exact|All)/) {
-#	  my $search_key = $parameters{search_key};
 	  if (defined($search_key) &&
 		  $search_key gt '' &&
 		  $search_key !~ /[%_]/ &&
@@ -404,7 +402,6 @@ $LINESEPARATOR
 	#### Build FULL GENE NAME constraint
 	my $temp_full_gene_name_clause = '';
 	if ($parameters{search_scope} =~ /(FullGeneName|All)/) {
-#	  my $search_key = $parameters{search_key};
 	  if (defined($search_key) &&
 		  $search_key gt '' &&
 		  $search_key !~ /[%_]/) {
@@ -424,7 +421,6 @@ $LINESEPARATOR
 	#### Build DUPLICATE BIOSEQUENCES constraint
 	my $temp_duplicate_biosequences_clause = '';
 	if ($parameters{search_scope} =~ /(RedundantORFs|All)/) {
-#	  my $search_key = $parameters{search_key};
 	  if (defined($search_key) &&
 		  $search_key gt "" &&
 		  $search_key !~ /[%_]/) {
@@ -445,7 +441,6 @@ $LINESEPARATOR
 	#### Build FUNCTIONAL DESCRIPTION constraint
 	my $temp_functional_description_clause = '';
 	if ($parameters{search_scope} =~ /(All)/) {
-#	  my $search_key = $parameters{search_key};
 	  if (defined($search_key) &&
 		  $search_key gt "" &&
 		  $search_key !~ /[%_]/) {
@@ -466,7 +461,6 @@ $LINESEPARATOR
 	#### Build ALIASES constraint
 	my $temp_alias_clause = '';
 	if ($parameters{search_scope} =~ /(Aliases|All)/) {
-#	  my $search_key = $parameters{search_key};
 	  if (defined($search_key) &&
 		  $search_key gt "" &&
 		  $search_key !~ /[%_]/) {
@@ -493,11 +487,11 @@ $LINESEPARATOR
         constraint_name=>"ORF Name",
         constraint_value=>$result,
       );
-#		$gene_symbol_clause = '';
-#		$ec_number_clause = '';
-#		$full_gene_name_clause = '';
-#		$alias_clause = '';
-#		$duplicate_biosequences_clause = '';
+		$gene_symbol_clause = '';
+		$ec_number_clause = '';
+		$full_gene_name_clause = '';
+		$alias_clause = '';
+		$duplicate_biosequences_clause = '';
 		$orf_name_clause =~ s/AND/ OR/;
 	  }
 	}
@@ -586,7 +580,6 @@ $LINESEPARATOR
    ~;
 
   my @rows = $sbeams->selectSeveralColumns($sql);
-
 
   #### Start the table
   my $table_html;
@@ -1046,23 +1039,23 @@ sub searchExternal {
     my $search_spec = $query_parameters_ref->{search_key};
     $search_spec =~ s/\./\\./g;
 
-    my @specs = split(/\s+/,$search_spec);
+    my @specs = split(/[\s+,;]/,$search_spec);
 
     #### Search through the file looking for matches
     while ($line = <INFILE>) {
       $line =~ s/[\r\n]//g;
-      my $match = 1;
+      my $match = 0;
       foreach my $spec (@specs) {
-	if ($line !~ /$spec/i) {
-	  $match = 0;
-	  last;
-	}
+		if ($line =~ /$spec/i) {
+		  $match = 1;
+		  last;
+		}
       }
 
       #### If there was a match, save this accession
-      if ($match) {
-	my @columns = split("\t",$line);
-	$biosequence_accessions{$columns[$col]}++;
+	  if ($match) {
+	   my @columns = split("\t",$line);
+		$biosequence_accessions{$columns[$col]}++;
       }
     }
 
@@ -1070,7 +1063,7 @@ sub searchExternal {
 
   }
 
-  #print join(";",keys(%biosequence_accessions)),"\n";
+#  print join(";",keys(%biosequence_accessions)),"\n";
 
   return join(";",keys(%biosequence_accessions));
 
