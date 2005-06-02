@@ -447,8 +447,8 @@ $LINESEPARATOR
 	  $coord_start -= $start_offset;
 	  $coord_stop += $stop_offset;
 	}else {
-	  $coord_stop -= $start_offset;
-	  $coord_start += $stop_offset;
+	  $coord_start += $start_offset;
+	  $coord_stop -= $stop_offset;
 	}
 	if ( $coord_start <= 0) {
 	  $coord_start += length($genome_seq);
@@ -463,24 +463,14 @@ $LINESEPARATOR
 	  $coord_stop -= length($genome_seq);
 	}
   }
+  print format_sequence('sequence'=>($start_offset_seq.$ORF.$stop_offset_seq),
+						'color_ref'=>\%colorings,
+						'newline'=>$newline,
+						'format'=>$format,
+						'start'=>$coord_start,
+						'reverse_complement'=>$reverse_complement,
+						'genome_length'=>length($genome_seq));
 
-  if ($reverse_complement == 0) {
-	print format_sequence('sequence'=>($start_offset_seq.$ORF.$stop_offset_seq),
-						  'color_ref'=>\%colorings,
-						  'newline'=>$newline,
-						  'format'=>$format,
-						  'start'=>$coord_start,
-						  'reverse_complement'=>$reverse_complement,
-						  'genome_length'=>length($genome_seq));
-  }else {
-	print format_sequence('sequence'=>($start_offset_seq.$ORF.$stop_offset_seq),
-						  'color_ref'=>\%colorings,
-						  'newline'=>$newline,
-						  'format'=>$format,
-						  'start'=>$coord_stop,
-						  'reverse_complement'=>$reverse_complement,
-						  'genome_length'=>length($genome_seq));
-  }
   print "$newline</PRE>";
 
 
@@ -491,9 +481,9 @@ $LINESEPARATOR
 ###############################################################################
 sub grab_sequence {
   my %args = @_;
-  my $start = $args{'start'} || die "ERROR[grab_sequence]: start needed\n";
-  my $stop = $args{'stop'} || die "ERROR[grab_sequence]: stop needed\n";
   my $genome  = $args{'genome'} || die "ERROR[grab_sequence]: genome needed\n";
+  my $start = $args{'start'} || length($genome);
+  my $stop = $args{'stop'} || 0;
   my $reverse_complement = $args{'reverse_complement'} || 0;
 
   my $length = length($genome);
@@ -628,11 +618,18 @@ sub format_sequence {
 
 	  #newline
 	  $sequence .= $newline if (($m % 60) == 59 && $m != scalar(@temp));
-	  $coord++;
+	  if ($reverse_complement == 0){
+		$coord++;
+	  }else {
+		$coord--;
+	  }
 	  if ($coord > $gen_length){
 		$coord -= $gen_length;
 	  }
-	  
+	  # There is no coordinate 0
+	  if ($coord < 1 ){ 
+		$coord += $gen_length;
+	  }
 	}
 
   }
