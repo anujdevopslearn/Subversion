@@ -443,8 +443,13 @@ $LINESEPARATOR
   my $coord_stop = $2; # not currently used.
 
   if ($coord_start && $coord_stop) {
-	$coord_start -= $start_offset;
-	$coord_stop += $stop_offset;
+	if ($reverse_complement == 0){
+	  $coord_start -= $start_offset;
+	  $coord_stop += $stop_offset;
+	}else {
+	  $coord_stop -= $start_offset;
+	  $coord_start += $stop_offset;
+	}
 	if ( $coord_start <= 0) {
 	  $coord_start += length($genome_seq);
 	}
@@ -459,13 +464,25 @@ $LINESEPARATOR
 	}
   }
 
-  print format_sequence('sequence'=>($start_offset_seq.$ORF.$stop_offset_seq),
-						'color_ref'=>\%colorings,
-						'newline'=>$newline,
-						'format'=>$format,
-						'start'=>$coord_start,
-						'genome_length'=>length($genome_seq));
+  if ($reverse_complement == 0) {
+	print format_sequence('sequence'=>($start_offset_seq.$ORF.$stop_offset_seq),
+						  'color_ref'=>\%colorings,
+						  'newline'=>$newline,
+						  'format'=>$format,
+						  'start'=>$coord_start,
+						  'reverse_complement'=>$reverse_complement,
+						  'genome_length'=>length($genome_seq));
+  }else {
+	print format_sequence('sequence'=>($start_offset_seq.$ORF.$stop_offset_seq),
+						  'color_ref'=>\%colorings,
+						  'newline'=>$newline,
+						  'format'=>$format,
+						  'start'=>$coord_stop,
+						  'reverse_complement'=>$reverse_complement,
+						  'genome_length'=>length($genome_seq));
+  }
   print "$newline</PRE>";
+
 
 } # end handle_request
 
@@ -546,7 +563,7 @@ sub format_sequence {
   my $format = $args{'format'} || 'fasta';
   my $start = $args{'start'} || 0;
   my $gen_length = $args{'genome_length'} || length($seq);
-
+  my $reverse_complement = $args{'reverse_complement'} || 0;
   my $sequence = "";
   my @temp = split //,$seq;
 
@@ -587,7 +604,6 @@ sub format_sequence {
 	  
 
   }elsif ($format eq "with_coords") {
-	my $counter = 0;
 	my $coord = $start;
 	for (my $m=0;$m<scalar(@temp);$m++) {
 	  $sequence .= $color_ref->{$m} if (defined ($color_ref->{$m}));
@@ -612,13 +628,11 @@ sub format_sequence {
 
 	  #newline
 	  $sequence .= $newline if (($m % 60) == 59 && $m != scalar(@temp));
-
-	  $counter++;
 	  $coord++;
 	  if ($coord > $gen_length){
 		$coord -= $gen_length;
 	  }
-
+	  
 	}
 
   }
