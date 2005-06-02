@@ -360,8 +360,8 @@ $LINESEPARATOR
 	  $header .="+" if ($start_offset>0);
 	  $header .="$start_offset"."nt\"";
 	}else {
-	  $start_offset_seq = grab_sequence('start'=>($stop+$start_offset),
-										'stop'=>$stop,
+	  $start_offset_seq = grab_sequence('start'=>($start+$start_offset),
+										'stop'=>$start,
 										'genome'=>$genome_seq,
 										'reverse_complement'=>$reverse_complement);
 	  $header.=" start_offset=\"";
@@ -380,8 +380,8 @@ $LINESEPARATOR
 	  $header .="+" if ($stop_offset>0);
 	  $header .="$stop_offset"."nt\"";
 	}else {
-	  $stop_offset_seq = grab_sequence('start'=>$start,
-									   'stop'=>($start-$stop_offset),
+	  $stop_offset_seq = grab_sequence('start'=>$stop,
+									   'stop'=>($stop-$stop_offset),
 									   'genome'=>$genome_seq,
 									   'reverse_complement'=>$reverse_complement);
 	  $header.=" stop_offset=\"";
