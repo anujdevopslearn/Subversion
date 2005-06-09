@@ -484,20 +484,18 @@ sub parse_sample_groups_file{
 		return ( \%sample_groups);
 	}
 	
-  # return reference to hash keyed by group name (not class), in which each
-  # key has as its value a reference to a hash of file names in that class.
-  if ($data_type eq 'group_files'){
-  my %group_files;
+  # return reference to hash with defined keys, each of which points to an arrayref
+  # of some particular data associated with a file
+  if ($data_type eq 'file_info'){
+  my %info;
   foreach my $file_name_node ($file_names_ns->get_nodelist) {	
-    my $file_name = $file_name_node->to_literal();
-    my $sample_group = $file_name_node->findnodes('./@sample_group_name')->string_value();
-    push @{$group_files{$sample_group}}, $file_name;
+    push @{$info{file_names}}, $file_name_node->to_literal();
+    push @{$info{sample_groups}}, $file_name_node->findnodes('./@sample_group_name')->string_value();
+    push @{$info{sample_names}}, $file_name_node->findnodes('./@sample_name')->string_value();
+    push @{$info{class_numbers}}, $file_name_node->findnodes('./@class_number')->string_value();
     }
-  return ( \%group_files);
+  return ( \%info );
   }
-	
-	
-	
 	
 	my $order_count = 1;
 	foreach my $file_name_node ($file_names_ns->get_nodelist) {	
