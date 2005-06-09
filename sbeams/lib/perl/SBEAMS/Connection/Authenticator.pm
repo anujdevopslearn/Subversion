@@ -238,9 +238,9 @@ sub processLogin {
       $http_header = $self->createAuthHeader($user);
       $current_contact_id = $self->getContact_id($user);
       $current_username = $user;
-      $log->info( "User $user connected from " . $q->remote_host() );
+      # $log->info( "User $user connected from " . $q->remote_host() );
     } else {
-      $log->warn( "username ($user) is *not* valid" );
+      $log->warn( "username ($user) failed checkLogin" );
       $self->printPageHeader(minimal_header=>"YES");
       $self->printAuthErrors();
       $self->printPageFooter();
@@ -1175,6 +1175,7 @@ sub checkLogin {
     unless (exists $query_result{$user}) {
       if ($more_helpful_message) {
         push(@ERRORS, "This username is not registered in the system");
+        $log->debug( "username $user is not registered in the system");
       } else {
 	push(@ERRORS, "Login Incorrect");
       }
@@ -1199,6 +1200,7 @@ sub checkLogin {
       } else {
         if ($more_helpful_message) {
           push(@ERRORS, "Incorrect password for this username");
+        $log->info( "Incorrect Unix password for $user ");
         } else {
           push(@ERRORS, "Login Incorrect");
         }
@@ -1206,7 +1208,6 @@ sub checkLogin {
         $error_code = 'INCORRECT PASSWORD';
       }
     }
-
 
     #### If success is still 0 but we haven't failed, try SMB Authentication
     if ($success == 0 && $failed == 0 && $SMBAUTH &&
@@ -1220,6 +1221,7 @@ sub checkLogin {
       } elsif ( $authResult == 3 ) {
         if ($more_helpful_message) {
           push(@ERRORS, "Incorrect password for this username");
+          $log->info( "Incorrect SMB password for $user ");
         } else {
           push(@ERRORS, "Login Incorrect");
         }
@@ -1229,6 +1231,7 @@ sub checkLogin {
       } else {
         if ($more_helpful_message) {
           push(@ERRORS, "ERROR communication with Domain Controller");
+          $log->warn( " SMB Error with $SMBAUTH->{Domain} ");
         } else {
           push(@ERRORS, "Login Incorrect");
         }
@@ -1318,6 +1321,7 @@ sub getContact_id {
 	 WHERE username = '$username'
 	   AND record_status != 'D'
     ~;
+    $log->debug( $sql_query );
 
     my ($contact_id) = $self->selectOneColumn($sql_query);
 
