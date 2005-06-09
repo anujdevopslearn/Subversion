@@ -492,6 +492,7 @@ $LINESEPARATOR
 		$full_gene_name_clause = '';
 		$alias_clause = '';
 		$duplicate_biosequences_clause = '';
+		$functional_description_clause = '';
 		$orf_name_clause =~ s/AND/ OR/;
 	  }
 	}
