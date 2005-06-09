@@ -793,6 +793,13 @@ sub isTableWritable {
   }
 }
 
+###############################################################################
+# getModifiableProjects
+###############################################################################
+sub getModifiableProjects{
+  my $self = shift || croak("parameter self not passed");
+  return $self->getAccessibleProjects(privilege_level=>20);
+}
 
 ###############################################################################
 # getWritableProjects
