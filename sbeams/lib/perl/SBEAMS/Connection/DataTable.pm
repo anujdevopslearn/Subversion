@@ -132,7 +132,7 @@ sub setColAttr {
 sub setHeaderAttr {
   my $this = shift;
   my %args = @_;
-  $this->{_header} = \%args;
+  $this->{__header} = \%args;
 }
 
 # Impelements alternating row background colors
@@ -141,15 +141,15 @@ sub alternateColors {
   my %args = @_;
   for( qw( PERIOD FIRSTROW BGCOLOR ) ){
     unless ( $args{$_} ) {
-      $log->warn( "Missing required param $_ in alternateColors" );
-      return;
+      $log->warn( "Missing param $_ in alternateColors" );
+#return;
     }
   }
-  $this->{_alternate_colors} = 1;
-  $this->{_altc_first} = $args{FIRSTROW};
-  $this->{_altc_period} = $args{PERIOD};
-  $this->{_altc_bgcolor} = $args{BGCOLOR};
-  $this->{_altc_defcolor} = $args{DEF_BGCOLOR} || '#FFFFFF';
+  $this->{__alternate_colors} = 1;
+  $this->{__altc_first} = $args{FIRSTROW} || 2;
+  $this->{__altc_period} = $args{PERIOD} || 3;
+  $this->{__altc_bgcolor} = $args{BGCOLOR}  || '#E0E0E0';
+  $this->{__altc_defcolor} = $args{DEF_BGCOLOR} || '#C0D0C0';
 }
 
 #+
@@ -225,7 +225,7 @@ sub formatHeader {
   my $text = shift;
   return '' unless $text;
 
-  my %format = %{$this->{_header}};
+  my %format = %{$this->{__header}};
   $text = "<B>$text</B>" if $format{BOLD};
   $text = "<U>$text</U>" if $format{UNDERLINE};
   return $text;
@@ -246,7 +246,7 @@ sub asHTML {
 
     foreach my $cell ( @$row ) {
       $cell = ( defined $cell ) ? $cell : '';
-      $cell = $this->formatHeader( $cell ) if ( $rnum == 1 && $this->{_header} );
+      $cell = $this->formatHeader( $cell ) if ( $rnum == 1 && $this->{__header} );
       $html .= $this->_getTD( $rnum, $cnum++ ) . "$cell</TD>\n"
     }
     $html .= "  </TR>\n";
@@ -317,9 +317,9 @@ sub _getTD {
 sub _getColor {
   my $this = shift;
   my $row = shift;
-  return '' if $row < $this->{_altc_first};
-  my $s = POSIX::ceil( ($row + 1 - $this->{_altc_first})/$this->{_altc_period} );
-  my $color = ( $s % 2 ) ? $this->{_altc_bgcolor} : $this->{_altc_defcolor};
+  return '' if $row < $this->{__altc_first};
+  my $s = POSIX::ceil( ($row + 1 - $this->{__altc_first})/$this->{__altc_period} );
+  my $color = ( $s % 2 ) ? $this->{__altc_bgcolor} : $this->{__altc_defcolor};
   return "BGCOLOR=$color";
 }
 
@@ -337,7 +337,7 @@ sub _getTR {
       $tag .= " ${key}=$attrs{$key}";
     }
   }
-  my $bgcolor = ( $this->{_alternate_colors} ) ? $this->_getColor($row) : '';
+  my $bgcolor = ( $this->{__alternate_colors} ) ? $this->_getColor($row) : '';
   $tag .= " $bgcolor>\n";
 
   return $tag;
