@@ -70,6 +70,9 @@ $affy_o->setSBEAMS($sbeams);
 # Create the global FileManager instance
 our $fm = new FileManager;
 
+# Temporary global toggle for locuslink/entrez_gene
+my $locusOrGeneID;
+
 
 
 ###############################################################################
@@ -467,6 +470,11 @@ sub upload_files {
 
 		my $upload_file_name = make_cononical_name_file( source_file=>"$full_file_path",
 													     organism_name	 => "$ogranism_name",);
+		if ( $locusOrGeneID eq 'Entrez_Gene' ) {
+			for my $key ( keys( %{$column_map_ref} ) ) {
+			  $column_map_ref->{$key} = 'Entrez_Gene' if $column_map_ref->{$key} eq 'LocusLink';
+			}
+		}
 		
 		insertGeneExpression(condition_id=>$condition_id,
 						   column_map_ref=>$column_map_ref,
@@ -780,6 +788,16 @@ sub insertGeneExpression {
       }
     }
   }
+
+#  my $dbl = "Transform\n";
+#	for my $k ( keys ( %transform_map ) ) {
+#		$dbl .= "$k => $transform_map{$k}\n";
+#	}
+#  $dbl .= "Column map\n";
+#	for my $k ( keys ( %column_map ) ) {
+#		$dbl .= "$k => $column_map{$k}\n";
+#	}
+#	$log->debug( $dbl );
   
   if ($TESTONLY) {
     print "\n$TESTONLY- TEST ONLY MODE\n";
@@ -860,6 +878,7 @@ sub getHeaderHash {
 				"Gene_Symbol"   => 'common_name',
 				"Gene_Title"    => 'full_name',
 				Unigene         => 'external_identifier',
+				Entrez_Gene       => 'second_name',
 				LocusLink       => 'second_name',
 				"Public_ID"     => 'canonical_name',
 				FDR             => 'false_discovery_rate',
@@ -873,6 +892,7 @@ sub getHeaderHash {
 				"Gene_Title"    => 'full_name',
 				Unigene         => 'external_identifier',
 				LocusLink       => 'second_name',
+				Entrez_Gene       => 'second_name',
 				"Public_ID"     => 'canonical_name',
 				"Adjusted p-value" => 'p_value',
 				Log_10_Ratio    => 'log10_ratio',
@@ -884,6 +904,7 @@ sub getHeaderHash {
 				"Gene_Title"    => 'full_name',
 				Unigene         => 'external_identifier',
 				LocusLink       => 'second_name',
+				Entrez_Gene       => 'second_name',
 				"Public_ID"     => 'canonical_name',
 				"Log_10_Expression_Ratio"    => 'log10_ratio',
 				
@@ -941,7 +962,13 @@ sub make_cononical_name_file {
 				my $column_name = $columns[$i];
 				$header_h{$column_name} = $i;
 			}
-  			
+  			if ( !defined $header_h{LocusLink} ) {
+					$header_h{LocusLink} = $header_h{Entrez_Gene};
+					$log->debug( "Switched to Entrez_Gene, $header_h{Entrez_Gene}" );
+		      $locusOrGeneID = 'Entrez_Gene';
+				} else {
+					$log->debug( "Locus link it is! $header_h{LocusLink}" );
+				}
   			$count ++;
   			next;
   		}
@@ -949,8 +976,25 @@ sub make_cononical_name_file {
   		#Remember that the column names in the analysis files do not exactlly match the names
   		#within the Affy annotation file, so be sure to use the correct name
   		my $ref_seq_id 	  = clean_id($columns[$header_h{"Refseq_protein_ID"}]);
-  		my $locus_link_id = clean_id($columns[$header_h{"LocusLink"}]);
+  		my $locus_link_id = '';
+			if ( defined $header_h{LocusLink} ) {
+				$locus_link_id = clean_id($columns[$header_h{LocusLink}]);
+			}
   		my $rep_seq_id	  = $columns[$header_h{"Public_ID"}];
+#			$log->debug( "Final $locus_link_id" ) if $locus_link_id =~ /\D/;
+# 			$locus_link_id =~ s/\s*(\d)+\D*/$1/g;
+
+      # DSC: changed to allow locus link id to be populated by entrez gene
+      # information.  Should be changed to be EG and not LL centric.
+#      if ( !$locus_link_id ) {
+#  		  $locus_link_id = clean_id($columns[$header_h{"Entrez_Gene"}]);
+#  		  $columns[$header_h{"LocusLink"}] = $locus_link_id;
+#        $log->debug( "Here we are, LL is $locus_link_id" );
+#        exit if $count > 10;
+#      } else {
+#        $log->debug( "LL is $locus_link_id" );
+#        exit if $count > 10;
+#      }
   		
       # Will become canonical_name in gene_expression table
       my $new_canonical_id = '';
@@ -962,7 +1006,7 @@ sub make_cononical_name_file {
         # We are stripping off the dot version attribute if any.
         $new_canonical_id =~ s/^\s*(.*)\.\d+\s*$/$1/;
 
-  		}elsif($locus_link_id =~ /^\d/){
+  		}elsif($locus_link_id =~ /^\s*\d+\s*$/){
   			$new_canonical_id = $locus_link_id;
   		}else{
   		}
@@ -974,7 +1018,13 @@ sub make_cononical_name_file {
 
       if ($new_canonical_id){
   			$columns[$header_h{"Public_ID"}] = $new_canonical_id;
-  		}
+  		} else {
+				$new_canonical_id = clean_id( $columns[$header_h{"Public_ID"}] );
+  			$columns[$header_h{"Public_ID"}] = $new_canonical_id;
+			}
+			if ( length( $new_canonical_id ) > 20 ) {
+				$log->debug( "LL => $locus_link_id, newcan => $new_canonical_id " );
+			}
 
   		
   		if ($count < 5){
