@@ -54,10 +54,11 @@ sub setSBEAMS {
 }
 
 sub setSBEAMSMod {
+  $log->debug( "Setting sbeamsmod" );
   my $this = shift;
   my %args = @_;
-  die "Missing sbeamsMod object" unless $args{sbeamsMod};
-  $this->{sbeamsMod} = $args{sbeamsMod};
+  die "Missing sbeamsMOD object" unless $args{sbeamsMOD};
+  $this->{sbeamsMOD} = $args{sbeamsMOD};
   return 1;
 }
 
@@ -68,7 +69,7 @@ sub getSBEAMS {
 
 sub getSBEAMSMod {
   my $this = shift;
-  return $this->{sbeamsMod};
+  return $this->{sbeamsMOD};
 }
 
 sub addContent {
@@ -106,7 +107,7 @@ sub asHTML {
   my $padding = '&nbsp;' x 300;
   my $mpad = '&nbsp;' x 5;
 
-  my $maintab = SBEAMS::Connection::DataTable->new( BORDER => 0, WIDTH => '100%', CELLPADDING => 2, CELLSPACING => 0 );
+  my $maintab = SBEAMS::Connection::DataTable->new( BORDER => 1, WIDTH => '60%', CELLPADDING => 0, CELLSPACING => 0 );
   my $isblink =<<"  END_LINK";
   <a href="http://db.systemsbiology.net/">
    <img height=64 width=64 border=0 alt="ISB DB" src="$HTML_BASE_DIR/images/dbsmltblue.gif">
@@ -116,9 +117,7 @@ sub asHTML {
   </a>
   END_LINK
 
-  my $banner =<<"  END_BAN";
-  <H1>$DBTITLE - Systems Biology Experiment Analysis Management System<BR> $DBVERSION </H1>
-  END_BAN
+  my $banner = $this->_getBanner( $sbeams );
 
   my $context = ( $this->{user_context} ) ? $this->_getUserContext( $sbeams ) : '';
 
@@ -140,7 +139,7 @@ sub asHTML {
   $maintab->setCellAttr( ROW => 1, COL => 2, $head_tag => $head_bkg,
                          ALIGN => 'LEFT', NOWRAP => 1 ); 
 
-  $maintab->setCellAttr( ROW => 2, COL => 1, BGCOLOR => $BARCOLOR,
+  $maintab->setCellAttr( ROW => 2, COL => 1, # BGCOLOR => $BARCOLOR,
                          ALIGN => 'LEFT', NOWRAP => 1, VALIGN => 'TOP' ); 
 
   $maintab->setCellAttr( ROW => 2, COL => 2, VALIGN => 'TOP',
@@ -204,6 +203,17 @@ sub _getNavBar {
   my $this = shift;
   my $sbeams = shift;
 
+  if ( $this->getSBEAMSMod() ) {
+    my $sbeamsMOD = $this->getSBEAMSMod();
+    my $menu;
+    # Try to call getMenu method on sbeamMOD object
+    eval { $menu = $sbeamsMOD->getMenu( sbeams => $sbeams ) };
+    $log->debug( $@ );
+
+    # Return menu if we got one
+    return $menu if $menu;
+  }
+
   my $ntable = SBEAMS::Connection::DataTable->new( CELLPADDING => 2 );
 
 	$ntable->addRow( [ "<A HREF='$CGI_BASE_DIR/main.cgi'>$DBTITLE Home</A>" ] );
@@ -237,6 +247,27 @@ sub _getNavBar {
   $ntable
   END_NAV
 }
+
+sub _getBanner {
+  my $this = shift;
+  my $sbeams = shift;
+  if ( $this->getSBEAMSMod() ) {
+    my $sbeamsMOD = $this->getSBEAMSMod();
+    my $banner;
+    # Try to call getMenu method on sbeamMOD object
+    eval { $banner = $sbeamsMOD->getBanner( sbeams => $sbeams ) };
+    $log->debug( $@ );
+
+    # Return Banner if we got one
+    return $banner if $banner;
+  }
+  return <<"  END_BAN";
+  <H1>$DBTITLE - Systems Biology Experiment Analysis Management System<BR> $DBVERSION </H1>
+  END_BAN
+
+
+}
+
 
 ###############################################################################
 #
