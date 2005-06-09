@@ -253,11 +253,9 @@ sub write_public_file()
 
             file_suffix => "mzXML",
 
-            file_pattern => "huh7p100_l*.mzXML",
+            file_pattern => "*.mzXML",
 
         );
-##xxxxxxx
-#           file_pattern => "*.mzXML",
 
         
         ## get raw data type by searching data dir for known suffixes
@@ -278,12 +276,10 @@ sub write_public_file()
 
             file_suffix => $rawDataType,
 
-            file_pattern => "huh7p100_l*.$rawDataType",
+            file_pattern => "*.$rawDataType",
 
         );
 
-##xxxxxxx
-#           file_pattern => "*.$rawDataType",
 
         ## get search results file location.
         ## (if doesn't already exist in $repository_dir, will create gzipped tar file)
@@ -295,12 +291,9 @@ sub write_public_file()
 
             file_suffix => "searched",
 
-            file_pattern => "inter*htm",
+            file_pattern => "inter* ASAP*",
 
         );
-##xxxxxxx
-#           file_pattern => "inter* ASAP*",
-
 
 
         ## get protein prophet file location.
@@ -316,9 +309,6 @@ sub write_public_file()
             file_pattern => "inter*prot.x?? inter*prot.shtml",
 
         );
-##xxxxxxx
-#           file_pattern => "inter*prot.x?? inter*prot.shtml",
-
 
         my $data_contributors = $samples{$sample_tag}->{data_contributors};
 
