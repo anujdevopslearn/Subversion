@@ -2434,7 +2434,7 @@ sub displayResultSet {
             $datum =~ s/\t/ /g if ($self->output_mode()  =~ /tsv/);
 
             # Substitute stray \n characters, Mantis bug 0000046
-            $datum =~ s/\n/\\n/g if ($self->output_mode() =~ /tsv|csv/);
+            $datum =~ s/\r?\n/\\n/g if ($self->output_mode() =~ /tsv|csv/);
             $datum =~ s/\"/""/g;
             $datum = "\"$datum\"";
           }
