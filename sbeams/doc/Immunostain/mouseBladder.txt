@@ -1,0 +1,13 @@
+specimen block	section	antibody	gender	stain intensity	Superficial Epithelial Cells	Intermediate Cells	Basal Epithelial Cells	stain intensity	Lamina propria - superficial	Submucosa	Muscularis propria	Stromal Endothelial Cells	"Leukocyte abundance (none, rare, moderate, high, most)"	comment
+mb-2		CD13		intense	0	0	0	intense	100	0	0	100	rare	
+				equivocal	0	0	0	equivocal	0	0	0	0		
+				none	100	100	100	none	0	100	100	0		
+mb-2		CD24		intense	0	100	100	intense	0	0	0	100	mod	status of superficial epithelial cells uncertain
+				equivocal	0	0	0	equivocal	0	0	100	0		
+				none	100	0	0	none	100	100	0	0		
+mb-2		CD44		intense	0	0	10	intense	0	0	0	30	rare	
+				equivocal	0	0	90	equivocal	100	0	0	0		
+				none	100	100	0	none	0	100	100	70		
+mb-2		CD47		intense	0	0	0	intense	0	0	0	0	rare	
+				equivocal	0	0	0	equivocal	50	50	0	0		
+				none	100	100	100	none	50	50	100	100		
