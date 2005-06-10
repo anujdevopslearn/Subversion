@@ -7,3 +7,8 @@ Please send questions to spctools-discuss@googlegroups.com
 
 ---------
 
+Schema changes since last release.  The current best course of action is to run generate_schema.pl using the latest driver_table files for each Module that has changes, copy the SQL stmts to CREATE tables from there and run each manually.  ALTER TABLE statements must be prepared manually, contact listserv above for assistance if required.
+
+Core: Added tables short_url, test_sample, test_protocol, test_sample_protocol
+
+---------
