@@ -1,0 +1,43 @@
+specimen block	block antibody section index	antibody	"lobe of prostate (central, lobe, other/unknown)"	stain intensity	% luminal cells at each staining intensity	% basal cells at each staining intensity	% Stromal Fibromuscular cells at each staining intensity	% Endothelial cells at each staining intensity	"Leukocyte abundance (rare, moderate, high, most, 0)"	comment
+mp-10		CD13	N/A	intense	0	0	50	100	rare	stromal cells expressing adjacent to glands
+				equivocal	0	0	0	0		
+				none	100	100	50	0		
+mp-10		CD24	N/A	intense	60	0	20	100	mod	luminal cells in large glands equivocally stain; stromal cells expressing near smaller glands
+				equivocal	20	0	0	0		
+				none	20	100	80	0		
+mp-10		CD44	N/A	intense	0	0	30	100	rare	expression around glands
+				equivocal	0	0	20	0		
+				none	100	100	50	0		
+mp-10		CD47	N/A	intense	0	0	0	100	rare	moderate background
+				equivocal	10	0	100	0		
+				none	90	100	0	0		
+mp-10		CD49f	N/A	intense	0	100	0	100	rare	nerve sheath staining
+				equivocal	0	0	0	0		
+				none	100	0	100	0		
+mp-10		CD107b	N/A	intense	20	10	0	100	rare	
+				equivocal	30	0	0	0		
+				none	50	90	100	0		
+mp-10		Sca-1	N/A	intense	0	0	100	100	rare	
+				equivocal	0	0	0	0		
+				none	100	100	0	0		
+mcg-11		CD13	N/A	intense	0	0	20	100	rare	
+				equivocal	0	0	0	0		stromal cells expressing adjacent to glands
+				none	100	100	80	0		
+mcg-11		CD24	N/A	intense	40	0	0	100	rare	
+				equivocal	60	0	100	0		
+				none	0	100	0	0		
+mcg-11		CD44	N/A	intense	0	0	30	100	rare	expression around glands
+				equivocal	0	0	20	0		
+				none	100	100	50	0		
+mcg-11		CD47	N/A	intense	0	0	20	100	rare	moderate background; more intense staining at base of glands
+				equivocal	100	0	0	0	
+				none	0	100	80	0	
+mcg-11		CD49f	N/A	intense	0	100	0	100	rare
+				equivocal	0	0	0	0	
+				none	100	0	100	0	
+mcg-11		CD107b	N/A	intense	30	0	0	100	rare
+				equivocal	60	0	0	0	
+				none	10	100	100	0	
+mcg-11		Sca-1	N/A	intense	0	0	0	100	rare
+				equivocal	0	0	50	0	
+				none	100	100	50	0	
