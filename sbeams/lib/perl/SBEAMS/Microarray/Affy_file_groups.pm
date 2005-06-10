@@ -1,3 +1,16 @@
+###############################################################################
+# Program     : SBEAMS::Microarray::Affy_Analysis
+# Author      : Pat Moss <pmoss@systemsbiology.org>
+# $Id$
+#
+# Description :  Module that provides methods for associating Affymetrix
+# array files with appropriate groups.
+# 
+# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+#
+###############################################################################
+
+
 {package SBEAMS::Microarray::Affy_file_groups;
 	
 our $VERSION = '1.00';
@@ -790,6 +803,19 @@ sub check_file_group {
 sub get_projects_with_arrays {
 	my $method = 'get_projects_with_arrays';
 	my $self = shift;
+  my %args = shift;
+
+  # Should we limit access to projects that this user has access to?
+  # off by default for backwards compatibilty
+  $args{limited_access} ||= 0;
+  my $limitSQL = '';
+  if ( $args{limited_access} && !$sbeams->isAdmin() ) {
+
+    my $contactID = $sbeams->getCurrent_contact_id();
+    $limitSQL =<<"    END_SQL";
+    AND ( P.pi_contact_id = $contactID OR 
+    END_SQL
+  }
 	
 	my %args = @_;
 	

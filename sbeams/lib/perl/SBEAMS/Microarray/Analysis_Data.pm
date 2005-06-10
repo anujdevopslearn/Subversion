@@ -1,3 +1,15 @@
+###############################################################################
+# Program     : SBEAMS::Microarray::Affy_Analysis
+# Author      : Pat Moss <pmoss@systemsbiology.org>
+# $Id$
+#
+# Description :  Module for working with results of previous analysis sessions.
+# 
+# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+#
+###############################################################################
+
+
 {package SBEAMS::Microarray::Analysis_Data;
 	
 our $VERSION = '1.00';

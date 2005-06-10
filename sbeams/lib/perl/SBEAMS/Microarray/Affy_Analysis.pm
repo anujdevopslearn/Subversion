@@ -1,3 +1,17 @@
+###############################################################################
+# Program     : SBEAMS::Microarray::Affy_Analysis
+# Author      : Pat Moss <pmoss@systemsbiology.org>
+# $Id$
+#
+# Description :  Module which implements various methods for the analysis of
+# Affymetrix array files.
+# 
+# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+#
+###############################################################################
+
+
+
 {package SBEAMS::Microarray::Affy_Analysis;
 	
 our $VERSION = '1.00';

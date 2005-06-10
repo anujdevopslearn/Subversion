@@ -1,3 +1,15 @@
+###############################################################################
+# Program     : SBEAMS::Microarray::Affy_Analysis
+# Author      : Pat Moss <pmoss@systemsbiology.org>
+# $Id$
+#
+# Description : Object representation of single Affy Array.
+# 
+# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+#
+###############################################################################
+
+
 {package SBEAMS::Microarray::Affy;
 
 our $VERSION = '1.00';
