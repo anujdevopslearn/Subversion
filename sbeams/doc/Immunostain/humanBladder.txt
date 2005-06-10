@@ -1,0 +1,17 @@
+specimen block	section	antibody	gender	stain intensity	Cap Cells	Intermediate Cells	Basal Epithelial Cells	stain intensity	Lamina propria - superficial	Lamina propria - deep	Submucosa	Muscularis propria	"Leukocyte abundance (none, rare, moderate, high, most)"	stain intensity	Transitional Cell Carcinoma	file image	comment
+03-024A3		CD140b		intense	0	0	0	intense	0	0	0	0	mod	intense	NA		
+				equivocal	0	0	0	equivocal	0	0	0	0		equivocal	NA		
+				none	100	100	100	none	100	100	100	100		none	NA		
+03-024A3		CD138		intense	20	20	20	intense	0	0	0	0	mod	intense	NA		
+				equivocal	80	80	80	equivocal	0	0	0	0		equivocal	NA		
+				none	0	0	0	none	100	100	100	100		none	NA		
+03-024A3		CD107b		intense	0	0	0	intense	0	0	0	0	most	intense	NA		endothelial staining
+				equivocal	100	100	100	equivocal	0	0	0	0		equivocal	NA		
+				none	0	0	0	none	100	100	100	100		none	NA		
+03-024A3		CDw78		intense	0	0	0	intense	0	0	0	0	mod	intense	NA		
+				equivocal	100	100	100	equivocal	0	0	0	0		equivocal	NA		
+				none	0	0	0	none	100	100	100	100		none	NA		
+03-024A3		CD75		intense	0	0	0	intense	0	0	0	0	rare	intense	NA		
+				equivocal	0	0	0	equivocal	0	0	0	0		equivocal	NA		
+				none	100	100	100	none	100	100	100	100		none	NA		
+	
