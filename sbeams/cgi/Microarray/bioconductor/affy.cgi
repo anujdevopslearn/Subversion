@@ -562,19 +562,20 @@ my $tot = 0;
 my %seenit;
 foreach my $grp ( @{$info->{sample_groups}} ) {
 
-  # If we have only one member in the group, don't try to do an MVA plot
-  next unless ( $group_files{$grp} > 1 );
-
   # Will do this only once per group
   next if $seenit{$grp};
   $seenit{$grp}++;
 
-  $tot++;
-  my $height = 3 + .12* $group_files{$grp};
-  my $width  = 4 + .16* $group_files{$grp};
   my $first = $idx;
   my $last = $first + $group_files{$grp} - 1;
   $idx = $last + 1;
+
+  # If we have only one member in the group, don't try to do an MVA plot
+  next unless ( $group_files{$grp} > 1 );
+
+  $tot++;
+  my $height = 3 + .12* $group_files{$grp};
+  my $width  = 4 + .16* $group_files{$grp};
 
   $mva_code .=<<"  END_CODE";
   # Do MVA (scatterplot) matrix for $grp 
