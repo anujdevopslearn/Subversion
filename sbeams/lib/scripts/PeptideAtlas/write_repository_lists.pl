@@ -148,7 +148,7 @@ sub main
 sub check_host()
 {
 
-    ## make sure that this is running on atlas as logs are in it's /local
+    ## make sure that this is running on atlas for queries
     my $uname = `uname -a`;
 
     if ($uname =~ /.*(atlas).*/)
@@ -527,6 +527,10 @@ sub get_data_location
         system $cmd;
 
 
+        ## if filelist is empty, die with error message:
+        die "could not find $file_pattern files in $data_dir" if (-z $filelist);
+
+
         ## make a tar archive:
         my $archive_file = get_archive_filename(
 
@@ -576,7 +580,7 @@ sub get_raw_data_type
         die "need data directory ($!)";
 
 
-    my $raw_data_type;
+    my $raw_data_type="";
 
 
     ## check for .dat files:
@@ -709,20 +713,21 @@ sub get_README_location
     my $sample_tag = $args{sample_tag} || die "need sample_tag ($!)";
 
     my $data_contributors = $args{data_contributors} || 
-        die "need data contributors ($!)";
+        die "need data contributors for $sample_tag ($!)";
 
     my $experiment_description = $args{experiment_description} || 
-        die "need experiment description ($!)";
+        die "need experiment description for $sample_tag ($!)";
 
     my $raw_data_type = $args{raw_data_type} ||
-        die "need experiment raw data type ($!)";
+        die "need experiment raw data type for $sample_tag "
+        ."(the data is probably not in the directory)";
 
 
     my $pmids_array_ref = $args{pmids_array_ref} ||
-        die "need pmid array reference ($!)";
+        die "need pmid array reference for $sample_tag ($!)";
 
     my $citation_array_ref = $args{citation_array_ref} ||
-        die "need citation array reference ($!)";
+        die "need citation array reference for $sample_tag ($!)";
 
     my @pmids = @{$pmids_array_ref};
 
