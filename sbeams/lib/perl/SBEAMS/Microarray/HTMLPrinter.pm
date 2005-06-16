@@ -19,6 +19,7 @@ use vars qw($sbeams $current_contact_id $current_username
              $current_work_group_id $current_work_group_name
              $current_project_id $current_project_name $current_user_context_id);
 use CGI::Carp qw(fatalsToBrowser croak);
+use SBEAMS::Connection qw( $log );
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::TableInfo;
@@ -251,6 +252,76 @@ sub printStyleSheet {
 
 }
 
+sub getBanner {
+  my $this = shift;
+  return <<"  END_BANNER"
+  <table border=0 width=100% cellspacing=0 cellpadding=0>
+    <tr>
+      <td bgcolor="#000000" align=left><img alt="MICROARRAY" src="$HTML_BASE_DIR/images/microarray.gif"></td>
+      <td bgcolor="#000000" align=right valign=center><font color="#ffffff"><a href="$CGI_BASE_DIR/logout.cgi"><img src="$HTML_BASE_DIR/images/logout.gif" border=0 alt="LOGOUT"></a><img src="$HTML_BASE_DIR/images/space.gif" height=1 width=25></td>
+    </tr>
+  </table>
+  END_BANNER
+}
+
+sub getMenu {
+  my $self = shift;
+  my $sbeams = $self->getSBEAMS();
+  my $menu =<<"  END";
+	<table bgcolor="#ffffff" border=0 width="100%" cellpadding=2 cellspacing=0>
+	<tr><td><a href="$CGI_BASE_DIR/main.cgi"><img src="$HTML_BASE_DIR/images/ma_sbeams_home.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi"><img src="$HTML_BASE_DIR/images/ma_array_home.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi"><IMG SRC="$HTML_BASE_DIR/images/ma_project_home.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GridAlignCheck.cgi"><img src="$HTML_BASE_DIR/images/ma_alignment_check.jpg"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi?tab=data_pipeline"><img src="$HTML_BASE_DIR/images/ma_pipeline.jpg"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi?tab=data_download"><img src="$HTML_BASE_DIR/images/ma_data_download.jpg"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetExpression"><img src="$HTML_BASE_DIR/images/ma_get_expression.jpg"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetAffy_GeneIntensity.cgi"><img src="$HTML_BASE_DIR/images/ma_get_affy_intensity.jpg"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi?tab=miame_status"><img src="$HTML_BASE_DIR/images/ma_miame_status.jpg"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SubmitArrayRequest.cgi?TABLE_NAME=MA_array_request"><img src="$HTML_BASE_DIR/images/ma_array_requests.jpg"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=protocol"><img src="$HTML_BASE_DIR/images/ma_protocols.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_labeling"><img src="$HTML_BASE_DIR/images/ma_labeling.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_hybridization"><img src="$HTML_BASE_DIR/images/ma_hybridization.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_quantitation"><img src="$HTML_BASE_DIR/images/ma_quantitation.jpg"></a></td></tr>
+  END
+
+  $current_work_group_name = $sbeams->getCurrent_work_group_name();
+  if ($current_work_group_name eq "Microarray_admin" || $current_work_group_name eq "Admin" || 1) {
+    $menu .=<<"    END";
+  	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=contact"><img src="$HTML_BASE_DIR/images/ma_contacts.jpg"></a></td></tr>
+	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array"><img src="$HTML_BASE_DIR/images/ma_arrays.jpg"></a></td></tr>
+  	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_scan"><img src="$HTML_BASE_DIR/images/ma_array_scans.jpg"></a></td></tr>
+    END
+  }
+
+  $current_work_group_name = $sbeams->getCurrent_work_group_name();
+  if ($current_work_group_name eq "Microarray_admin" || $current_work_group_name eq "Admin") {
+    $menu .=<<"    END";
+  	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_slide_lot"><img src="$HTML_BASE_DIR/images/ma_slide_lots.jpg"></a></td></tr>
+	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_layout"><img src="$HTML_BASE_DIR/images/ma_array_layout.jpg"></a></td></tr>
+  	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_printing_batch"><img src="$HTML_BASE_DIR/images/ma_printing_batches.jpg"></a></td></tr>
+	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_slide_type"><img src="$HTML_BASE_DIR/images/ma_slide_types_costs.jpg"></a></td></tr>
+	  <tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=user_login"><img src="$HTML_BASE_DIR/images/ma_admin.jpg"></a></td></tr>
+    END
+  }
+
+  $menu .=<<"  END";
+  </table>
+  END
+
+  return $menu;
+      
+  # This code never gets reached for now, update when needed.
+  if ( exists $CONFIG_SETTING{Microarray_affy_help_docs_url} && $CONFIG_SETTING{Microarray_affy_help_docs_url} =~ /http/){
+    $menu .=<<"    END";
+		<tr><td><a class='blue_button' href="$CONFIG_SETTING{Microarray_affy_help_docs_url}">Affy Help Docs</a></td></tr>
+    END
+  } else {
+    $menu .=<<"    END";
+    <tr><td><a class='blue_button' href="$HTML_BASE_DIR/doc/Microarray/affy_help_pages/index.php">Affy Help Docs</a></td></tr>
+    END
+  }	
+}
 
 ###############################################################################
 # printJavascriptFunctions
@@ -599,13 +670,20 @@ document.get_all_files.submit();
 ~;
 
 }
+
 ###############################################################################
 # updateCheckBoxButtons_javascript
 ###############################################################################
 sub updateCheckBoxButtons_javascript {
-	
-	
-print qq~
+  print  getUpdateCheckBoxButtonsJavascript();
+}
+
+#+
+#
+#-
+sub getUpdateCheckBoxButtonsJavascript {
+
+  return <<"  END_JAVASCRIPT";
 <SCRIPT LANGUAGE="Javascript">
 <!--
 function updateCheckBoxButtons(input_obj){
@@ -659,7 +737,7 @@ function updateCheckBoxButtons(input_obj){
 
 //-->
 </SCRIPT>
-~;
+  END_JAVASCRIPT
 
 }
 
