@@ -73,10 +73,10 @@ sub get_affy_temp_dir_path {
 }
 
 #######################################################
-# affy_bioconductor_devlivery_path
+# affy_bioconductor_delivery_path
 # get the path to the bioconductory delivery folder
 #######################################################
-sub affy_bioconductor_devlivery_path {
+sub affy_bioconductor_delivery_path {
 	my $self = shift;
    
     	return $BIOCONDUCTOR_DELIVERY_PATH;
