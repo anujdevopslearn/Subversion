@@ -748,7 +748,7 @@ sub delete_analysis_folder {
 	my %args = @_;
 	my $analysis_folder = $args{analysis_folder};
 	
-	my $base_folder_path = $self->affy_bioconductor_devlivery_path();
+	my $base_folder_path = $self->affy_bioconductor_delivery_path();
 	$log->debug("OUT MAIN FOLDER '$base_folder_path'");
 	
 	unless ($analysis_folder){
@@ -1028,6 +1028,24 @@ sub return_analysis_description {
 		return 0;
 	}
 }
+
+###############################################################################
+# getAnalysisInfoFromFolderName
+# Given a folder name, return the analysis_id
+###############################################################################
+sub getAnalysisInfoFromFolderName {
+	my $self = shift;
+	my %args = @_;
+	my $folder_name = $args{folder_name};
+	unless ($folder_name =~ /^\w/ ) {
+    $log->error( "Missing required parameter folder_name" );
+    return undef;
+	}
+	my $sql = "SELECT * FROM $TBMA_AFFY_ANALYSIS WHERE folder_name = '$folder_name'";
+  my $row = $sbeams->getDBHandle()->selectrow_hashref( $sbeams->evalSQL( $sql ) );
+  return $row;
+}
+
 
 ###############################################################################
 # parse_file_names_from_analysis_description
