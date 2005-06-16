@@ -236,7 +236,7 @@ END
   tar -czf /tmp/$jobname.tar.gz -C $RESULT_DIR $jobname
   mv /tmp/$jobname.tar.gz $RESULT_DIR/$jobname/ 
 else 
-  cp $RESULT_DIR/$jobname/indexerror.html $RESULT_DIR/$jobname/index.html
+  mv $RESULT_DIR/$jobname/indexerror.html $RESULT_DIR/$jobname/index.html
   touch $RESULT_DIR/$jobname/index.html
 #  rm $RESULT_DIR/$jobname/indexresult.html
   chgrp affydata $RESULT_DIR/$jobname/$jobname.tar.gz
