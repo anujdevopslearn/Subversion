@@ -17,7 +17,7 @@ our @EXPORT = qw/site_header site_footer
   $SH_HEADER $BATCH_SYSTEM %BATCH_ENV $BATCH_BIN $BATCH_ARG
   $MEV_JWS_BASE_DIR $MEV_JWS_BASE_HTML $SHARED_JAVA_DIR $SHARED_JAVA_HTML/;
  
-my $base_path = $sbeamsMOD->affy_bioconductor_devlivery_path();
+my $base_path = $sbeamsMOD->affy_bioconductor_delivery_path();
 
 # Name of xml file holding sample group info
 our $SAMPLE_GROUP_XML = 'File_sample_groups.xml';
