@@ -169,8 +169,24 @@ sub step2 {
 	
 	
 	for (my $i = 0; $i < $numfiles; $i++) {
-	    my $sample_name = $cgi->param("file$i");
-	    $sample_name =~ s/\.CEL$//;	#Remove the .CEL suffix to make a nice sample name
+
+	  my $sample_name = $cgi->param("file$i");
+
+    $sample_name =~ s/\.CEL$//;	#Remove the .CEL suffix to make a nice sample name
+
+    my $default_names = $cgi->param( 'default_sample_names' ) ||  'file_root';
+    print "$default_names\n";
+    if ( $default_names eq 'sample_tag' ) {
+      my $stagSQL =<<"      END";
+      SELECT sample_tag 
+      FROM $TBMA_AFFY_ARRAY_SAMPLE AAS JOIN  $TBMA_AFFY_ARRAY AA
+      ON AAS.affy_array_sample_id = AA.affy_array_sample_id
+      WHERE file_root = '$sample_name'
+      END
+      my ( $tag ) = $sbeams->selectOneColumn( $stagSQL );
+      $sample_name = $tag if $tag;
+    }
+        
 	    
 	    print Tr(td($i+1),
 	             td({-bgcolor=>"#CCCCCC"},
@@ -182,6 +198,8 @@ sub step2 {
 	             
 	             td(textfield('sampleNames', $sample_name, 40)));
 	}
+
+  my $email = $sbeams->getEmailAddress();
 	
 	print '</table>',
 		  p("Choose the processing method:"),
@@ -202,7 +220,7 @@ sub step2 {
 		  p($cgi->checkbox('MVAplot','checked','YES','Produce MVA scatter plot among members of each sample group?')),
 		  p($cgi->checkbox('corrMat','checked','YES','Produce correlation matrix for this normalization set?')),
 		  p('Enter description for analysis set (optional)<BR>', $cgi->textfield('user_description', '', 40)),
-		  p("E-mail address where you would like your job status sent: (optional)", br(), textfield('email', '', 40)),
+		  p("E-mail address where you would like your job status sent: (optional)", br(), textfield('email', $email, 40)),
 	      p(submit("Submit Job")),
 	      end_form;
 	
@@ -280,7 +298,6 @@ sub step3 {
 	
 	if ($cgi->param('normalization_token') ){
 		$jobname = $cgi->param('normalization_token');
-		#print STDERR "FOUND NORM TOKEN '$jobname'<br>";
 	}else{
 		$jobname = "affy-norm" . rand_token();	
 	}
