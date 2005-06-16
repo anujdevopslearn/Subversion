@@ -811,11 +811,15 @@ my  $fm = new FileManager;
 	$output->close();
 
 
+	my $default_names = $cgi->param( 'default_sample_names' ) || '';
+  if ( $default_names ) {
+    $default_names = "&default_sample_names=$default_names";
+  }
+
+  
 ###Redirect to the Affy Script page
-		
-		
 	my $url = "affy.cgi?step=1&files_token=$previous_token&numfiles=" . @filenames;
-	$url .= "&normalization_token=$token&analysis_id=$analysis_id";
+	$url .= "&normalization_token=$token&analysis_id=$analysis_id${default_names}";
 	
 	#print "URL TO REDIR TO '$url'<br>";
 	error("You must select at least one file for affy") if (!@filenames);
@@ -1025,13 +1029,13 @@ END
 		
 		print "<h2 class='grey_bg'>Select the File Sample groups</h2><br>";
 				
-		print $cgi->start_form(-name => 'file_groups'),
+		print $cgi->start_form(-name => 'file_groups', -method => 'POST'),
 			  $cgi->hidden(-name=>"_tab", -value=>'2'),
 			  $cgi->hidden(-name=>"previous_token", -value=>$token),
 			  $cgi->hidden(-name=>"analysis_id", -value=>$analysis_id),
 			  $cgi->hidden(-name=>"reference_sample_group", -value=>$cgi->param('reference_sample_group') );
 		
-		print "<table border=0>\n";
+		print "<table border=1>\n";
 		
 		for(my $i; $i<=$#ordered_files; $i++){
 			my $file = $ordered_files[$i];
@@ -1044,9 +1048,15 @@ END
 	                             -default=>$ordered_all_sample_groups[$i],
 	                             )),
 	                );       
-
 		}
 		print "</table><br>";	
+    print <<"    END";
+        <B>Default sample names:</B> 
+          <INPUT TYPE="radio" NAME="default_sample_names" VALUE="sample_tag" CHECKED>Sample Tag
+          <INPUT TYPE="radio" NAME="default_sample_names" VALUE="file_root"> File Root
+          <BR><BR>
+    END
+
 		print $cgi->submit(-name=>"Submit", -value=>"Start Normalization Run"),	
 		 	  $cgi->end_form();
 	}
