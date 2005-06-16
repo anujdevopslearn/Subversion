@@ -1,0 +1,608 @@
+#!/usr/local/bin/perl
+
+###############################################################################
+# Program     : updateConditions
+# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
+# $Id$
+#
+# Description : Page to allow users to modify/delete gene_expression
+# conditions (GetExpression interface).
+#
+# SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
+# This program is governed by the terms of the GNU General Public License (GPL)
+# version 2 as published by the Free Software Foundation.  It is provided
+# WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
+# LICENSE file distributed with this software.
+#
+###############################################################################
+
+
+###############################################################################
+# Set up all needed modules and objects
+###############################################################################
+use strict;
+use Getopt::Long;
+use FindBin;
+use File::Basename;
+#use Text::CSV;
+
+use lib "$FindBin::Bin/../../lib/perl";
+use lib "bioconductor";
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::SBPage;
+use SBEAMS::Connection::Permissions qw(DATA_MODIFIER);
+use SBEAMS::Connection::Settings;
+
+use SBEAMS::Microarray;
+use SBEAMS::Microarray::Settings;
+use SBEAMS::Microarray::Tables;
+use SBEAMS::Microarray::Affy_Annotation;
+
+use Site qw( $AFFY_ANNO_PATH );
+
+my $sbeams = new SBEAMS::Connection;
+my $sbeamsMOD = new SBEAMS::Microarray;
+$sbeamsMOD->setSBEAMS( $sbeams );
+
+# EOL string, change to be context-specific!
+my $eol = "<BR>\n";
+
+main();
+exit(0);
+
+sub main {
+
+  # Do the SBEAMS authentication and exit if a username is not returned
+  my $current_username = $sbeams->Authenticate() || exit;
+
+  #### Read in the default input params
+  my %parms;
+#  my $params = {};
+  my $params = \%parms;
+  $sbeams->parse_input_parameters( q => $q, parameters_ref => $params );
+
+  #### Process generic "state" params before we start
+  $sbeams->processStandardParameters( parameters_ref => $params );
+
+  my @conditions = $q->param( 'condition' );
+  for my $c ( @conditions ) {
+    unless ( $c =~ /^\d+\s*$/ ) {
+      print $q->header();
+      print "Error with parameters: $c\n";
+      exit;
+    }
+  }
+
+  my $content; # Placeholder for page 'guts'
+  for my $param ( $q->param() ) { $content .= $param . ' ' . $q->param( $param ) . $eol; }
+  $log->debug( "params are $content" );
+#  print $q->header();
+#  print $content;
+ 
+  # Decide what action to take based on information so far
+  if ( $sbeams->get_best_permission() > DATA_MODIFIER ) {
+    $content = "<B><I>You lack permission to modify objects in this project</B></I>";
+  } elsif ( $params->{action} && $params->{action} eq "Delete Condition(s)") {
+    $content = deleteConditions( $params )
+    # Some action
+  } elsif  ( $params->{action} && $params->{action} eq "Update Annotations") {
+    $content = updateAnnotations( $params )
+  } else {
+#    $content = projectMismatch( $params );
+#    $content .= "$eol$eol";
+  }
+  # Show the form regardless?
+  $content .= getEntryForm( ref_params => $params );
+
+  # This assumes that we'll always be returning a page, is this correct?
+
+  my $page = SBEAMS::Connection::SBPage->new( user_context => 1,
+                                              sbeams       => $sbeams,
+                                              content_align => 'top' );
+  
+  $page->setSBEAMSMod( sbeamsMOD => $sbeamsMOD );
+  my $js = getJavascript();
+#  my $js = $sbeamsMOD->getUpdateCheckBoxButtonsJavascript();
+  $page->addContent( $js . $content );
+  $page->printPage();
+
+} # end main
+
+sub projectMismatch {
+  my $params = shift;
+
+  return "No conditions specified" unless $params->{condition};
+  
+  my $sql =<<"  END";
+  SELECT DISTINCT project_id FROM $TBMA_CONDITION WHERE condition_id IN ( $params->{condition} )
+  END
+  print STDERR "$sql\n";
+  my $current_project = $sbeams->getCurrent_project_id;
+  my @projects = $sbeams->selectOneColumn( $sql );
+
+  if ( !scalar @projects ) {
+    return "Can't find project information";
+  } elsif ( scalar @projects > 1 ) {
+    return "<FONT=red>Can only work with conditions in a single project at a time</FONT>";
+  } elsif ( $sbeams->get_best_permission( project_id => $projects[0] ) > DATA_MODIFIER ) { 
+    return "<FONT=red>Nice try, weasel.  Conditions $params->{condition} and project $projects[0] do not match!</FONT>";
+  } elsif ( $current_project != $projects[0] ) {
+    return "<FONT COLOR=red>Can only operate on conditions in your current project ($current_project)</FONT>";
+  }
+  
+  return '';
+
+}
+
+#+
+# Update annotations for specified condition(s) 
+#-
+sub updateAnnotations {
+  my $params = shift;
+  
+  # Verify that user can modify this project
+  my $err = projectMismatch( $params );
+  return "Unable to process request: $err" if $err;
+
+  # We'll be returning data in dribs and drabs, print header now
+  print $q->header();
+
+  # We will be doing some large queries, better to do directly.
+  my $dbh = $sbeams->getDBHandle();
+
+  my %annot; # Hash to hold annotations for various chips in memory.
+
+#  # Loop through conditions
+#  my @conditions = split( ",", $params->{condition} );
+
+  # Select condition info
+  my $conSQL =<<"  END_SELECT";
+  SELECT condition_id, condition_name, organism_id, analysis_type, analysis_id  
+  FROM $TBMA_CONDITION
+  WHERE condition_id IN ( $params->{condition} );
+  END_SELECT
+
+  my @conditions = $sbeams->selectSeveralColumns( $conSQL );
+  foreach my $condition ( @conditions ) {
+
+    unless ( $condition->[3] && $condition->[4] && $condition->[3] =~ /Affymetrix/ ) {
+      print "Unable to process non-affy data, skipping $condition->[1] $eol";
+      next;
+    }
+
+    # Print working on X
+    print "Working on $condition->[1] $eol";
+
+    # Get affy info
+    my $affxSQL =<<"    END_AFFX";
+    SELECT project_id, folder_name, user_description
+    FROM $TBMA_AFFY_ANALYSIS
+    WHERE affy_analysis_id = $condition->[4]
+    END_AFFX
+
+    my @analyses = $sbeams->selectSeveralColumns( $affxSQL );
+    my $affx = $analyses[0];
+
+    unless ( $affx ) {
+      print "Unable to find referenced analysis for $condition->[1], skipping $eol";
+      next;
+    }
+
+    # Find and read R script to get chip name
+    my $r_file = $sbeamsMOD->affy_bioconductor_delivery_path() . 
+                                                  "/$affx->[1]/$affx->[1].R";
+
+    unless ( -e $r_file ) {
+      print "Unable to find analysis for $condition->[1] ( $r_file), skipping $eol";
+      next;
+    }
+
+    unless ( open( RFILE, $r_file ) ) {
+      print "Unable to open R script ($r_file) for $condition->[1], skipping $eol";
+      next;
+    }
+
+
+    # Read R file to get chip name
+    my $chipname = '';
+    while ( my $line = <RFILE> ) {
+      $line =~ /chip\.name[^"]*"([^"]+)"/;
+      $chipname = $1 if $1;
+      last if $chipname;
+    }
+    close RFILE;
+
+    unless ( $chipname ) {
+      print "Unable to find chip type for $condition->[1], skipping $eol";
+      next;
+    }
+
+    # get info from appropriate affy file, read if necessary
+    if ( !$annot{$chipname} ) {
+      print "Reading annotation file for $chipname <BR>";
+      $annot{$chipname} = readAnnotationFile($chipname);
+    } else {
+      print "Using already opened annotation file for $chipname<BR>";
+    }
+
+    # Skip if this annotation file is empty
+    my $cnt = 0;
+    for ( keys( %{$annot{$chipname}} ) ) { 
+      $cnt++; 
+      last;
+    }
+    unless( $cnt ) { # We have at least one record
+      print "No annotation data found, skipping $eol";
+      next;
+    }
+
+    my @fields = qw( reporter_name common_name canonical_name full_name
+       external_identifier second_name gene_name biosequence_id log10_ratio
+       log10_uncertainty log10_std_deviation lambda mu_x mu_y p_value 
+       mean_intensity mean_intensity_uncertainty quality_flag
+       false_discovery_rate condition_id );
+    my $fields = join ",", @fields;
+
+    # read expression data from database
+    my $exprSQL =<<"    END";
+    SELECT
+    $fields
+    FROM $TBMA_GENE_EXPRESSION
+    WHERE condition_id = $condition->[0]
+    END
+    $exprSQL = $sbeams->evalSQL( $exprSQL );
+    my $sth = $dbh->prepare( $exprSQL );
+    $sth->execute();
+
+    # array to hold existing expression data
+    my @expression;
+    my $change = 0;
+    while ( my @row = $sth->fetchrow_array() ) {
+      my %expr;
+      @expr{@fields} = @row;
+      # If we have this value from annotations, update it
+      if ( $annot{$chipname}->{$row[0]} ) {
+        $change++;
+        my %p_anno = %{$annot{$chipname}->{$row[0]}};
+        for my $key ( qw( common_name canonical_name full_name
+                          external_identifier second_name ) ) {
+#          print "Expr: $expr{$key},";
+          $expr{$key} = $p_anno{$key} if $p_anno{$key};
+#          print " Anno: $p_anno{$key} for $key $eol";
+#          exit if $tmpcnt++ > 100;
+        }
+      }
+      push @expression, \%expr;
+    }
+   
+    # set column map info
+    my %col_map;
+    @col_map{@fields} = @fields;
+
+    # If nothing changed, don't do update
+    unless ( $change ) {
+      print "No annotations to change, skipping$eol";
+      next;
+    }
+
+    # delete existing rows
+    print "Deleting old data... ";
+    my $delSQL =<<"    END";
+    DELETE FROM $TBMA_GENE_EXPRESSION
+    WHERE condition_id = $condition->[0]
+    END
+    $dbh->do( $delSQL );
+    print "done $eol";
+
+    my $ins_ctr;
+    my $tot = scalar( @expression );
+    my $dsize = int( $tot/50 ) || 1;
+    my $extra = ( ($dsize * 50) > $tot ) ? 0 : 1;
+
+    print "Inserting $tot updated records $eol";
+    my $gene_expr_table = $sbeams->evalSQL( $TBMA_GENE_EXPRESSION );
+    my $condition_table = $sbeams->evalSQL( $TBMA_CONDITION );
+
+    for my $row ( @expression ) {
+#     $sbeams->transferTable();
+      $sbeams->updateOrInsertRow( insert => 1,
+                                  table_name => $gene_expr_table,
+                                  rowdata_ref => $row,
+                                  PK => 'gene_expression_id',
+                                  return_PK => 0,
+                                  verbose => 0,
+                                  testonly => 0,
+                                  add_audit_parameters => 0 );
+      $ins_ctr++;
+      print '*' unless $ins_ctr % $dsize;
+    }
+    print '*' if $extra;
+    print $eol;
+
+    # update condition table
+    $sbeams->updateOrInsertRow( update => 1,
+                                table_name => $condition_table,
+                                rowdata_ref => {},
+                                PK => 'condition_id',
+                                PK_value => $condition->[0],
+                                return_PK => 0,
+                                verbose => 0,
+                                testonly => 0,
+                                add_audit_parameters => 1 );
+
+  }
+  my $url = $q->url(); 
+  print <<"  END";
+  Finished updating annotations.  Follow <A HREF=$url>this link</A>
+  back to updateCondtion page.
+  END
+  exit;
+
+}
+
+sub readAnnotationFile {
+  my $chip = shift;
+  my $anno_file = "${AFFY_ANNO_PATH}/${chip}_annot.csv";
+  my %annotation;
+  unless ( open( AFILE, $anno_file ) ) {
+    print "Unable to open annotation file: $anno_file $eol";
+    return \%annotation;
+  }
+
+  my $affy_o = SBEAMS::Microarray::Affy_Annotation->new();
+
+  my $head = 1;
+  my %idx;
+  my $numfields;
+  my $gene_id_field = '';
+#  my $anno = Text::CSV->new();
+  while ( my $line = <AFILE> ) {
+    chomp $line;
+    $line =~ s/^"//g;
+    $line =~ s/"$//g;
+    my @line = split( /","/, $line, -1 );
+
+    # Read header line, cache indicies of needed columns
+    if ( $head ) {
+      @line;
+      $head = 0;
+      my $cnt = 0;
+      for my $key ( @line ) {
+        $key =~ s/"//g;
+        $idx{$key} = $cnt++;
+      }
+      $numfields = $cnt;
+
+      # Make sure needed annotation fields are there.
+      for ( 'Probe Set ID', 'Gene Title', 'Gene Symbol', 
+            'Representative Public ID', 'UniGene ID', 'RefSeq Protein ID' ) {
+        if ( !defined $idx{$_} ) {
+          $log->error( "Missing required annotation fields $_ : " );
+          print "Missing required annotation fields: $_ $eol ";
+          return \%annotation;
+        }
+      }
+      if ( defined $idx{'Entrez Gene'} ) {
+        $gene_id_field = 'Entrez Gene';
+      } elsif ( defined $idx{'LocusLink'} ) {
+        $gene_id_field = 'LocusLink';
+      } else {
+        $log->error( "Missing required gene_id annotation field" );
+        print "Missing required gene_id $eol";
+        return \%annotation;
+      }
+    } else {
+      unless ( $numfields == scalar( @line ) ) {
+        $log->error( "Error parsing annotation file!" );
+        print "Error parsing affy annotation file, numfields is $numfields but this line has " . scalar( @line ) . " items $eol";
+        return {};
+      }
+      my %annot_row = ( common_name => $affy_o->clean_id( $line[$idx{'Gene Symbol'}] ), 
+                        full_name => $affy_o->clean_id( $line[$idx{'Gene Title'}] ), 
+                        external_identifier => $affy_o->clean_id( $line[$idx{'UniGene ID'}] ), 
+                        second_name => $affy_o->clean_id( $line[$idx{$gene_id_field}] ) 
+                       );
+      my $public = $affy_o->clean_id( $line[$idx{'Representative Public ID'}] );
+      my $refseq = $affy_o->clean_id( $line[$idx{'RefSeq Protein ID'}] );
+      my $gene_id = $affy_o->clean_id( $line[$idx{$gene_id_field}] );
+
+      $annot_row{canonical_name} = $affy_o->getCanonicalName ( public => $public,
+                                                                refseq => $refseq,
+                                                                gene_id => $gene_id );
+      # Recommended cleanup
+      $annot_row{full_name} = substr( $annot_row{full_name}, 0, 1024 );
+      $annot_row{common_name} = substr( $annot_row{common_name}, 0, 255 );
+      
+      $annotation{$line[$idx{'Probe Set ID'}]} = \%annot_row;
+    }
+  }
+  close AFILE;
+  return \%annotation;
+}
+
+
+#+
+# Delete specified condition(s)
+#-
+sub deleteConditions {
+  my $params = shift;
+
+  my $err = projectMismatch( $params );
+  return "Unable to process request: $err" if $err;
+
+  my $delExprSQL =<<"  END_DELETE";
+  DELETE FROM $TBMA_GENE_EXPRESSION 
+  WHERE condition_id IN ( $params->{condition} )
+  END_DELETE
+
+  my $delCondSQL =<<"  END_DELETE";
+  DELETE FROM $TBMA_CONDITION 
+  WHERE condition_id IN ( $params->{condition} )
+  END_DELETE
+
+  my $dbh = $sbeams->getDBHandle();
+  eval {
+    $log->info( "Deleting gene_expression conditions: $delExprSQL\n $delCondSQL" );
+    $dbh->do( $delExprSQL );
+    $dbh->do( $delCondSQL );
+  };
+  if ( $@ ) {
+    return "Error processing request: $@";
+  } else {
+    return "<FONT=Red>Deleted specified conditions ( $params->{condition} )</FONT>";
+  }
+
+}
+
+#+
+# Catchall option, displays input form
+#-
+sub getEntryForm {
+  my %args = @_;
+
+  #### Process the arguments list
+  my $ref_params = $args{'ref_params'} || die "ref_params not passed";
+
+  #### Print out the current user information
+  # $sbeams->printUserContext();
+  my $current_contact_id = $sbeams->getCurrent_contact_id();
+  my $project_id = $sbeams->getCurrent_project_id();
+
+  # For now, this only works for affy data
+  my $sql =<<"  END";
+  SELECT condition_name, condition_id, date_created, date_modified
+  FROM $TBMA_CONDITION
+  WHERE analysis_type = 'Affymetrix Array'
+  AND project_id = '$project_id'
+  AND analysis_id IS NOT NULL
+  ORDER BY date_created ASC
+  END
+  my @results = $sbeams->selectSeveralColumns( $sql );
+
+  if ( !scalar @results ) {
+    return <<"    NO_DATA";
+    &nbsp;&nbsp;&nbsp;<I> No conditions to update for this project<I>.
+    NO_DATA
+  }
+
+  my $pad = '&nbsp;' x 1;
+
+#  <FORM NAME=mainForm METHOD=POST ONSUBMIT='return confirmDelete(this)'>
+# $log->debug( $sbeams->evalSQL( $sql ) );
+  my $content =<<"  END_CONTENT";
+  $pad This form enables you to update or delete 'conditions' which have been
+  uploaded to the <A HREF="GetExpression" TARGET=gene_expression>GetExpression</A> interface.
+  <UL> 
+  <LI><B>Update Annotations:</B> This works for uploaded affymetrix data only,
+  Will use the most recent annotations from affymetrix to annotate the results 
+  for each probeset in every selected condition.  If you wish to revert to the 
+  original annotations (those that were in place at the time the analysis was 
+  done), you can simply delete the current condition and then re-upload the
+  original.
+  <LI><B>Delete Condition:</B> This will delete the specified condition(s) from 
+  the database completely, but will not affect the results stored in the pipeline.
+  Therefore, if you delete a condition you should be able to re-upload it from
+  the analysis results page.
+  </UL>
+  <FORM NAME=mainForm METHOD=POST ONSUBMIT='return confirmDelete(this)'>
+  END_CONTENT
+
+  my $ctable = SBEAMS::Connection::DataTable->new( CELLSPACING => 3, 
+                                                   BORDER => 0 );
+  my $checkall = "&#10003;<INPUT TYPE=checkbox NAME=master_chk ONCLICK=updateCheckBoxButtons(this);>";
+  my @heads = ( 'Condition Name', 'Date Created', 'Last Modified', $checkall );
+  @heads = map { "<B><FONT COLOR='White'>$_</FONT></B>" } @heads;
+  $ctable->addRow( \@heads );
+#  $ctable->addRow( ['Condition Name', 'Date Created', 'Date Modified', '&#02713; All'] );
+#  $ctable->setHeaderAttr( BOLD => 1 );
+  $ctable->setRowAttr( ROWS => [1], COLS => [1..4], BGCOLOR => '#0000A0' );
+  $ctable->alternateColors( PERIOD => 3,
+                            FIRSTROW => 2, 
+                            BGCOLOR => '#EEEEEE' );
+
+
+  
+  foreach my $condition ( @results ) {
+    my $chk =<<"    END_CHK";
+    <INPUT TYPE=checkbox NAME=condition VALUE=$condition->[1]>
+    </INPUT>
+    END_CHK
+    $ctable->addRow( [@$condition[0,2,3], $chk] );
+  }
+  $ctable->setColAttr( ROWS => [1..$ctable->getRowNum()],
+                       COLS => [1..4],
+                       NOWRAP => 1 );
+#my $update_button = "<INPUT TYPE=SUBMIT NAME=action VALUE='Update Annotations'></INPUT>";
+  my $update_button =<<"  END";
+  <INPUT TYPE=SUBMIT NAME=action VALUE='Update Annotations'
+         onClick='mainForm.action.value="update";return true' >
+  </INPUT>
+  END
+  my $delete_button =<<"  END";
+  <INPUT TYPE=SUBMIT NAME=action VALUE='Delete Condition(s)'
+         onClick='mainForm.action.value="delete";return true' >
+  </INPUT>
+  END
+#my $delete_button = "<INPUT TYPE=SUBMIT NAME=action VALUE='Delete Conditions'></INPUT>";
+
+#  $ctable->addRow( [ $update_button, $delete_button ] );
+#  $ctable->setColAttr( ROWS => [ $ctable->getRowNum() ], COLS => [ 1, 2 ], COLSPAN => 2, ALIGN => 'CENTER' );
+
+  # Scalar to hold page content
+  $content .=<<"  END";
+  <TABLE>
+    <TR><TD COLSPAN=2>$ctable</TD></TR>
+    <TR>
+       <TD ALIGN=CENTER>$update_button</TD>
+       <TD ALIGN=CENTER>$delete_button</TD>
+    </TR>
+  </TABLE>
+  </FORM>
+  END
+  
+  return( $content );
+
+} # end handle_request
+
+#sub allClickJS {
+sub getJavascript {
+
+    return <<"  END_JAVASCRIPT";
+<SCRIPT LANGUAGE="Javascript">
+<!--
+function confirmDelete(form) {
+  var action = form.action;
+  
+  if ( form.action.value == 'delete' ) {
+    if ( confirm("Are you sure you want to delete the specified condition(s)?") ) {
+      form.submit()
+      return true;
+    } else {
+      return false;
+    }
+  }
+  return true;
+}
+
+function updateCheckBoxButtons(input_obj){
+ var form = input_obj.form;
+ var master_chk = form.master_chk;
+ var newval = master_chk.checked;
+
+ var conditions = form.condition
+ for ( var i = 0; i < conditions.length; i++ ) {
+   conditions[i].checked = newval;
+ }
+ 
+ return;
+}
+
+//-->
+</SCRIPT>
+  END_JAVASCRIPT
+
+
+}
+
+
