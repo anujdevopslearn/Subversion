@@ -138,13 +138,14 @@ sub main {
   if ($q->param('token') ) {
     my $token = $q->param('token');
     
-	if ($fm->init_with_token($BC_UPLOAD_DIR, $token)) {
+	  if ($fm->init_with_token($BC_UPLOAD_DIR, $token)) {
 	    error('Upload session has no files') if !($fm->filenames > 0);
-	} else {
+	  } else {
 	    error("Couldn't load session from token: ". $q->param('token')) if
 	        $q->param('token');
-	}
+	  }
   }
+
 #grab the project Id from the database given the token.  Do not default to the current sbeams project since 
 #it could be different
   $PROJECT_ID =  $affy_o->find_analysis_project_id($q->param('token'));
@@ -163,11 +164,13 @@ sub main {
   #### Decide what action to take based on information so far
   if (defined($parameters{'Upload Conditions'}) && $parameters{'Upload Conditions'} eq "Upload Conditions") {
    $sbeamsMOD->printPageHeader(minimal_header=> 'YES', navigation_bar=>'NO');
-    	upload_files(ref_parameters=>\%parameters);
+#   $sbeams->printCGIParams( $q );
+   	upload_files(ref_parameters=>\%parameters);
     $sbeamsMOD->printPageFooter();
     
   } else {
     $sbeamsMOD->printPageHeader();
+#   $sbeams->printCGIParams( $q );
     handle_request(ref_parameters=>\%parameters);
     $sbeamsMOD->printPageFooter();
   }
@@ -256,11 +259,10 @@ sub handle_request {
 ##If the user changed the name use the new name instead of the one parsed from the name above
 		
 		if (defined $condition_names[$i]){
-			$log->debug("TAKEING CONDITION NAME FROM param NEW NAME '$condition_names[$file_count]'");
+			$log->debug("TAKING CONDITION NAME FROM param NEW NAME '$condition_names[$file_count]'");
 			$condition_name = $condition_names[$file_count];
 			
 		}
-		$file_count ++;
 		
 		$log->debug("CONDITION NAME = '$condition_name'  ");
 		
@@ -299,10 +301,11 @@ sub handle_request {
 	          	 td($q->checkbox(-name=>'upload_condition_cb',
 	          	 				 -checked=>$checked_flag, 
 	          	 				 -label=>'', 
-	          	 				 -value=>'YES'
+	          	 				 -value=>$file_count
 	          	 				 )
 	          	 ),
 	          );
+  $file_count ++;
 	}
 	
 	print "</table>",
@@ -365,7 +368,6 @@ sub getConditionNames {
 
 } # end getConditionNames
 
-
 ###############################################################################
 # upload_files
 ###############################################################################
@@ -377,9 +379,9 @@ sub upload_files {
 	my @condition_names = $q->param('condition_name');
 	my @checked_files   = $q->param('upload_condition_cb');
 	my @condition_ids 	= $q->param('condition_ids');
-	
+
 	my $file_path = $fm->path();
-	unless(@files){
+	unless(@checked_files){
 		print "<h3>Sorry No files were selected</h3>";
 		return;
 	}
@@ -403,10 +405,12 @@ sub upload_files {
 
 	my $organism_id 	= '';
 	my $ogranism_name 	= '';
-	for (my $i=0; $i <= $#files ; $i++){
+#	for (my $i=0; $i <= $#files ; $i++){
+	for my $i ( @checked_files ){
 		
-		
-		next unless($checked_files[$i] eq 'YES');
+#   Now iterating only the checked files, per mantis#122
+#		next unless($checked_files[$i] eq 'YES');
+
 		my $file = $files[$i];
 		my $condition_id = $condition_ids[$i];
 		my $condition_name = $condition_names[$i];
@@ -427,6 +431,13 @@ sub upload_files {
 		my $column_map_ref = getColumnMapping(source_file=>"$full_file_path");
 		
 		my $processed_date = getProcessedDate(file=>"$full_file_path");
+
+    # Get analysis info, specifically analysis_id
+  	my $analysis = $affy_o->getAnalysisInfoFromFolderName( folder_name => $fm->token() );
+    for my $key( keys( %$analysis ) ) {
+#      $log->debug( "Key $key => $analysis->{$key}" );
+    }
+    my $analysis_id = $analysis->{affy_analysis_id} || '';
 		
 	## We need to record the organism id in the condition table, go find the info....
 	##Warning: Going to assume that only one type of chip, at least one species, will be used in 
@@ -463,12 +474,14 @@ sub upload_files {
 		
 		$condition_id = insertCondition(processed_date=>$processed_date,
 									  condition=>$condition_name,
+									  analysis_type=>'Affymetrix Array',
+									  analysis_id=>$analysis_id,
 									  condition_id=>$condition_id,
 									  organism_id =>$organism_id,);
 	
 		$log->debug("CONDITION ID '$condition_id'");
 
-		my $upload_file_name = make_cononical_name_file( source_file=>"$full_file_path",
+		my $upload_file_name = make_canonical_name_file( source_file=>"$full_file_path",
 													     organism_name	 => "$ogranism_name",);
 		if ( $locusOrGeneID eq 'Entrez_Gene' ) {
 			for my $key ( keys( %{$column_map_ref} ) ) {
@@ -524,6 +537,7 @@ sub check_files {
 	
 
 }
+
 ###############################################################################
 # check_for_condition
 #Query for a condition id 
@@ -686,6 +700,8 @@ $log->debug("ORGANISM_ID ID '$organism_id'");
 	$rowdata{'project_id'} = $PROJECT_ID;
 	$rowdata{'processed_date'} = $processed_date;
 	$rowdata{'organism_id'} = $organism_id;
+	$rowdata{analysis_type} = $args{analysis_type};
+	$rowdata{analysis_id} = $args{analysis_id};
 	$rowdata_ref = \%rowdata;
 	$pk = $sbeams->updateOrInsertRow(table_name=>$TBMA_CONDITION,
 									 rowdata_ref=>$rowdata_ref,
@@ -699,6 +715,8 @@ $log->debug("ORGANISM_ID ID '$organism_id'");
 	$rowdata{'project_id'} = $PROJECT_ID;
 	$rowdata{'processed_Date'} = $processed_date;
 	$rowdata{'organism_id'} = $organism_id;
+	$rowdata{analysis_type} = $args{analysis_type};
+	$rowdata{analysis_id} = $args{analysis_id};
 	$rowdata_ref = \%rowdata;
 	$pk  = $sbeams->updateOrInsertRow(table_name=>$TBMA_CONDITION,
 									  rowdata_ref=>$rowdata_ref,
@@ -920,18 +938,18 @@ sub getHeaderHash {
 };
 
 ###############################################################################
-# make_cononical_name_file
+# make_canonical_name_file
 #
-# Need to tweak the files so we upload the "correct" cononical_name.
+# Need to tweak the files so we upload the "correct" canonical_name.
 #Currently the column Public_ID derived from the affy annotation file "Representative Public ID" 
-#is uploaded in to gene_expression cononical name field.  
+#is uploaded in to gene_expression canonical name field.  
 #Affy usually give a DNA genbank accession number but the perfered value would be 
 #the Ref Seq Protein ID then Locuslink id and finally we will use the Public_ID if nothing else can
 #be found.  This will allow matching to other data sets in the Get expression cgi page and 
 #mathcing to GO annotation sets......
 #
 ###############################################################################
-sub make_cononical_name_file {
+sub make_canonical_name_file {
   my %args = @_;
  
 													  	
