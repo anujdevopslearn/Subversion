@@ -399,7 +399,10 @@ sub step3 {
 	   #          td(radio_group("class$i", \@classes, floor($i/(@sampleNames)*$numclasses))));
 	}
 	
-	
+  my $email = $sbeams->getEmailAddress();
+  my $info = $affy_o->getAnalysisInfoFromFolderName( folder_name => $token );
+  my $desc = $info->{user_description} || '';
+  $desc = substr( $desc, 0, 40 );
 	
 	if ($test_stat eq 't_test'){
 		print_t_test_controls();
@@ -414,9 +417,9 @@ sub step3 {
 	
 	 print p(checkbox('exprs','checked','YES','Include expression values in results')),
 		  
-		  p("Web Page Title:", br, textfield('title', 'Results:', 40)),
+		  p("Web Page Title:", br, textfield('title', $desc, 40)),
 	      p("E-mail address where you would like your job status sent: (optional)", br,
-            textfield('email', '', 40)),
+            textfield('email', $email, 40)),
           p(submit("Submit Job")),
 	      hidden(-name=>'test_stat', -default=>$test_stat, -override=>1),
 	      end_form;
