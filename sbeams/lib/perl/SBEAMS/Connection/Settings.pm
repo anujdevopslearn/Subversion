@@ -21,6 +21,7 @@ use FindBin;
 use Data::Dumper;
 
 
+
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %EXPORT_TAGS
     $DBTITLE
     $DBADMIN
@@ -344,6 +345,18 @@ sub readMainConfFile {
 } # end readMainConfFile
 
 
+sub getEmailAddress {
+  my $this = shift;
+  my %args = @_;
+  our $TB_CONTACT;
+  $args{contact_id} ||= $this->getCurrent_contact_id();
+  my $contact = $this->evalSQL( '$TB_CONTACT' );
+  my $sql =<<"  END";
+  SELECT email FROM $contact WHERE contact_id = $args{contact_id}
+  END
+  my ( $email ) = $this->getDBHandle()->selectrow_array( $sql ); 
+  return $email || '';
+}
 
 ###############################################################################
 # readIniFile: Read the contents of a .ini style file
