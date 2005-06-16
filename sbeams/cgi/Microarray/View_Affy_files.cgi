@@ -124,7 +124,7 @@ sub main {
 	if ($affy_array_id) {
 		($file_name, $output_dir) = $sbeams_affy_groups->get_file_path_from_id(affy_array_id => $affy_array_id);  #return the file_root_name and file_base_path
 	}elsif($analysis_folder){
-		$output_dir = $sbeamsMOD->affy_bioconductor_devlivery_path();
+		$output_dir = $sbeamsMOD->affy_bioconductor_delivery_path();
 		$output_dir .= "/$analysis_folder";
 		$file_name = $analysis_file;
 	}elsif($annotated_file){
