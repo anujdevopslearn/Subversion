@@ -1484,8 +1484,38 @@ sub  anno_error {
 		$self->{ERROR};
 	
 	}
+}
 
+#+
+# Affy annotations can have multiple id's in the same field seperated with ///
+# Truncate string to first value and return.
+#-
+sub clean_id{
+  my $self = shift;
+	my $val = shift;
+	$val =~ s!///.*!!;
+	return $val;
+}
 
+#+
+# Logic for turning affy annotation values into gene_expression canonical_name
+#-
+sub getCanonicalName {
+  my $self = shift;
+  my %args = @_;
+
+  my $canonical = 'undefined';
+
+  # Refseq Prot Id should start with N/X . P_ddddd
+  if ( $args{refseq} && $args{refseq} =~ /^\s*[NX]P_\d+/ ) { 
+     $canonical = $args{refseq};
+     $canonical =~ s/^\s*(.*)\.\d+\s*$/$1/;
+  } elsif ( $args{gene_id} && $args{gene_id} =~ /^\s*\d+\s*$/ ) {
+     $canonical = $args{gene_id};
+	} elsif ( $args{public} ) {
+     $canonical = $args{public};
+  }
+  return $canonical;     
 }
 
 }#closing bracket for the package
