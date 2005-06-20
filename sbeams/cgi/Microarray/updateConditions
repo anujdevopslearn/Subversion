@@ -511,7 +511,7 @@ sub getEntryForm {
   my $ctable = SBEAMS::Connection::DataTable->new( CELLSPACING => 3, 
                                                    BORDER => 0 );
   my $checkall = "&#10003;<INPUT TYPE=checkbox NAME=master_chk ONCLICK=updateCheckBoxButtons(this);>";
-  my @heads = ( 'Condition Name', 'Date Created', 'Last Modified', $checkall );
+  my @heads = ( 'Condition Name', 'ID', 'Date Created', 'Last Modified', $checkall );
   @heads = map { "<B><FONT COLOR='White'>$_</FONT></B>" } @heads;
   $ctable->addRow( \@heads );
 #  $ctable->addRow( ['Condition Name', 'Date Created', 'Date Modified', '&#02713; All'] );
@@ -528,7 +528,7 @@ sub getEntryForm {
     <INPUT TYPE=checkbox NAME=condition VALUE=$condition->[1]>
     </INPUT>
     END_CHK
-    $ctable->addRow( [@$condition[0,2,3], $chk] );
+    $ctable->addRow( [@$condition[0..3], $chk] );
   }
   $ctable->setColAttr( ROWS => [1..$ctable->getRowNum()],
                        COLS => [1..4],
