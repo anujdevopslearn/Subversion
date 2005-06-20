@@ -175,7 +175,6 @@ sub step2 {
     $sample_name =~ s/\.CEL$//;	#Remove the .CEL suffix to make a nice sample name
 
     my $default_names = $cgi->param( 'default_sample_names' ) ||  'file_root';
-    print "$default_names\n";
     if ( $default_names eq 'sample_tag' ) {
       my $stagSQL =<<"      END";
       SELECT sample_tag 
