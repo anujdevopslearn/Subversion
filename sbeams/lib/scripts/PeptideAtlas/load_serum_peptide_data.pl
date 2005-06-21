@@ -58,6 +58,9 @@ use vars qw ($sbeams $q $sbeams_affy $sbeams_affy_groups
 			$FILE
 	    );
 
+# Unbuffer STDOUT
+$|++;
+
 
 #### Set up SBEAMS core module
 use SBEAMS::Connection qw($q);
@@ -166,18 +169,21 @@ sub main {
 	$work_group = "PeptideAtlas_admin";
 	$DATABASE = $DBPREFIX{$module};
  	print "DATABASE '$DATABASE'\n" if ($DEBUG);
+ 
   }
  
+  print "$module\n";
+  print "$DBPREFIX{$module}\n";
 
 #### Do the SBEAMS authentication and exit if a username is not returned
   exit unless ($CURRENT_USERNAME = $sbeams->Authenticate(
 		work_group=>$work_group,
 	 ));
 	
-
   	$sbeams->printPageHeader() unless ($QUIET);
   	handleRequest();
  	$sbeams->printPageFooter() unless ($QUIET);
+ 
 
 	
 
@@ -191,15 +197,16 @@ sub main {
 # Handles the core functionality of this script
 ###############################################################################
 sub handleRequest {
-  	my %args = @_;
-  	my $SUB_NAME = "handleRequest";
+	my %args = @_;
+ 	my $SUB_NAME = "handleRequest";
 	
 	my $glyco_o = new SBEAMS::PeptideAtlas::Glyco_peptide_load(sbeams => $sbeams,
 														   verbose => $VERBOSE,
 														   debug =>$DEBUG,
 														   test_only =>$TESTONLY,
 														   file =>$FILE,);
-	$glyco_o->parse_data_file();
+
+	$glyco_o->process_data_file();
 	
 	
 	if ($glyco_o->anno_error){
