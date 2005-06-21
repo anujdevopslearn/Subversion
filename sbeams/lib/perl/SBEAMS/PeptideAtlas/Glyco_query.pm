@@ -286,7 +286,7 @@ sub get_identified_peptides{
 	confess(__PACKAGE__ . "::$method ID '$ipi_data_id' is not good  \n") unless $ipi_data_id; 
 	my $sql = qq~
 				SELECT 
-				identified_peptide_id,
+				id.identified_peptide_id,
 				identified_peptide_sequence,
 				peptide_prophet_score,
 				peptide_mass,
@@ -297,7 +297,9 @@ sub get_identified_peptides{
 				identified_stop 
 				FROM $TBAT_IDENTIFIED_PEPTIDE id
 				JOIN $TBAT_GLYCO_SITE gs ON (gs.glyco_site_id = id.glyco_site_id)
-				WHERE id.ipi_data_id = $ipi_data_id
+        JOIN $TBAT_IDENTIFIED_TO_IPI iti 
+          ON iti.identified_peptide_id = id.identified_peptide_id
+				WHERE iti.ipi_data_id = $ipi_data_id
 				~;
 	
 		return $sbeams->selectHashArray($sql);	
