@@ -43,6 +43,7 @@ use vars qw(@ISA @EXPORT
     $TBAT_CELLULAR_LOCATION
     $TBAT_GLYCO_SITE
     $TBAT_IDENTIFIED_PEPTIDE
+    $TBAT_IDENTIFIED_TO_IPI
     $TBAT_PREDICTED_PEPTIDE
     $TBAT_PEPTIDE_TO_TISSUE
     $TBAT_TISSUE
@@ -82,6 +83,7 @@ require Exporter;
     $TBAT_CELLULAR_LOCATION
     $TBAT_GLYCO_SITE
     $TBAT_IDENTIFIED_PEPTIDE
+    $TBAT_IDENTIFIED_TO_IPI
     $TBAT_PREDICTED_PEPTIDE
     $TBAT_PEPTIDE_TO_TISSUE
     $TBAT_TISSUE
@@ -120,6 +122,7 @@ $TBAT_IPI_DATA			= "${mod}ipi_data";
 $TBAT_CELLULAR_LOCATION		= "${mod}cellular_location";
 $TBAT_GLYCO_SITE		= "${mod}glyco_site";
 $TBAT_IDENTIFIED_PEPTIDE	= "${mod}identified_peptide";
+$TBAT_IDENTIFIED_TO_IPI	= "${mod}identified_to_ipi";
 $TBAT_PREDICTED_PEPTIDE		= "${mod}predicted_peptide";
 $TBAT_PEPTIDE_TO_TISSUE		= "${mod}peptide_to_tissue";
 $TBAT_TISSUE			= "${mod}tissue";
