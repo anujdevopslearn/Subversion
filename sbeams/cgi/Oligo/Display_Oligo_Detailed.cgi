@@ -165,7 +165,7 @@ sub print_entry_form {
   my $restr_enzyme = get_restriction_enzyme(sequence=>$oligo_sequence);
 
   my $sql = qq~
-            SELECT OA.in_stock, OG.melting_temp, SO.start_coordinate, SO.stop_coordinate, OA.comments, OA.date_created, SO.date_modified, OG.sequence_length, OA.GC_content, OA.primer_dimer, OA.secondary_structure, OA.location
+            SELECT OA.in_stock, OG.melting_temp, SO.start_coordinate, SO.stop_coordinate, SO.comments, OA.date_created, SO.date_modified, OG.sequence_length, OA.GC_content, OA.primer_dimer, OA.secondary_structure, OA.location, OG.oligo_id
             FROM $TBOG_SELECTED_OLIGO SO
             LEFT JOIN $TBOG_OLIGO OG ON (OG.oligo_id=SO.oligo_id)
             LEFT JOIN $TBOG_OLIGO_ANNOTATION OA ON (OA.oligo_id=OG.oligo_id)
@@ -188,9 +188,10 @@ sub print_entry_form {
   my  $primer_dimer;
   my  $secondary_structure;
   my  $location;
+  my  $oligo_id;
 
   foreach my $row (@rows) {
-    my ($a, $b, $c, $d, $e, $f, $g, $h, $i, $j, $k, $l) = @{$row};
+    my ($a, $b, $c, $d, $e, $f, $g, $h, $i, $j, $k, $l, $m) = @{$row};
     $in_stock = $a;
     $melting_temp = $b;
     $start_coordinate = $c;
@@ -203,6 +204,7 @@ sub print_entry_form {
 	$primer_dimer = $j;
 	$secondary_structure = $k;
 	$location = $l;
+    $oligo_id = $m;
   }
 
   
@@ -211,7 +213,8 @@ sub print_entry_form {
  
   ####print simple table displaying oligo info
   print qq~
-	<TABLE> <TR> <TD>ASSOCIATED GENE:</TD> <TD>$gene</TD> </TR>
+	<TABLE> <TR> <TD>OLIGO ID:</TD> <TD> $oligo_id</TD></TR>
+	        <TR> <TD>ASSOCIATED GENE:</TD> <TD>$gene</TD> </TR>
             <TR> <TD>PRIMER TYPE:</TD> <TD>$oligo_type</TD> </TR>
             <TR> <TD>SEQUENCE:</TD> <TD>$oligo_sequence</TD> </TR>
             <TR> <TD>IN STOCK:</TD> <TD>$in_stock</TD> </TR>
@@ -232,15 +235,27 @@ sub print_entry_form {
   print "<br>";
   
   
-  ####USER INTERFACE section for editing oligo (Commented out for now but don't delete!)
+  ####USER INTERFACE section for editing oligo
   print
-	"In Stock: ",
+	"In Stock: ";
+  if($in_stock eq 'N'){
+	print
 	$cg->popup_menu(-name=>'in_stock',
 				   -values=>['N','Y'],
 				   -default=>[$in_stock],
-				   -override=>1),
+				   -override=>1);
+  }else{
+	print
+	$cg->popup_menu(-name=>'in_stock',
+				   -values=>['Y','N'],
+				   -default=>[$in_stock],
+				   -override=>1);
+  }
+  print
 	$cg->p,
-	"Location: ", $cg->textfield(-name=>'location'),
+	"Location: ", $cg->p,
+	"Please enter: (K) Deep, (P) Minh, (S) Amy, (W) Kenia, (V) Madhavi, (F) Marc, (B) Nitin, (Z) Alok, (M) Patrick, (G) General, (N) Not Applicable", $cg->p, 
+	$cg->textfield(-name=>'location'),
 	$cg->p, 
 	"Comments: ", $cg->textarea(-name=>'comments'),
 	$cg->p,
@@ -248,7 +263,7 @@ sub print_entry_form {
 
   ####Back button
   print qq~
-	<BR><A HREF="$CGI_BASE_DIR/Oligo/Search_Oligo.cgi">Back</A><BR><BR>  
+	<BR><BR><A HREF="$CGI_BASE_DIR/Oligo/Search_Oligo.cgi">Search New Oligo</A><BR><BR>Use back button to return to search results.<BR>  
     ~;
   
   # end of the form
@@ -332,8 +347,8 @@ sub handle_request {
   #Update comments
   if ($comments){
 	my $sql_comments = qq~
-	  UPDATE OA
-      SET OA.comments = '$comments'
+	  UPDATE SO
+      SET SO.comments = '$comments'
       $table_joins
     ~;        
     
@@ -360,7 +375,7 @@ sub handle_request {
 
   ####Back button
   print qq~
-	<BR><A HREF="$CGI_BASE_DIR/Oligo/Search_Oligo.cgi">Back</A><BR><BR>  
+	<BR><A HREF="$CGI_BASE_DIR/Oligo/Search_Oligo.cgi">Search New Oligo</A><BR><BR>  
     ~;
    
 

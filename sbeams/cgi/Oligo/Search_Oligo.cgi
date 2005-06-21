@@ -25,6 +25,10 @@ use SBEAMS::Oligo;
 use SBEAMS::Oligo::Settings;
 use SBEAMS::Oligo::Tables;
 
+use SBEAMS::ProteinStructure;
+use SBEAMS::ProteinStructure::Settings;
+use SBEAMS::ProteinStructure::Tables;
+
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::Oligo;
 $sbeamsMOD->setSBEAMS($sbeams);
@@ -250,6 +254,7 @@ sub handle_request {
   foreach my $gene (@gene_array) {
 
     my $common_name = lc $gene;
+   
     
     ####strip gene name of letters and get just the gene number (in case of partial entry)
 	$gene =~ /[a-z,A-Z]*(\d*)[a-z,A-Z]*/;
@@ -341,6 +346,7 @@ sub handle_request {
 		WHERE BS.biosequence_name LIKE '%$gene_number%' AND $set_type_search AND BSS.set_tag=$set_tag
 		~;
 	 
+	
 	  ##Define the hypertext links for columns that need them
 	  my %url_cols = ('Primer_Sequence' => "Display_Oligo_Detailed.cgi?Gene=%0V&Oligo_type=%1V&Oligo_Sequence=%2V&In_Stock=%7V");
 	  
@@ -403,19 +409,25 @@ sub handle_request {
 								  );
 		
 		
+        #Too detailed for common user -- can uncomment for development purposes
 		## Display the resultset controls - This allows table downloads in excel format
-		$sbeams->displayResultSetControls(rs_params_ref=>\%rs_params,
-										  resultset_ref=>$resultset_ref,
-										  query_parameters_ref=>\%parameters,
-										  base_url=>$base_url
-										  );
+		#$sbeams->displayResultSetControls(rs_params_ref=>\%rs_params,
+			#							  resultset_ref=>$resultset_ref,
+				#						  query_parameters_ref=>\%parameters,
+					#					  base_url=>$base_url
+						#				  );
 		
 		
 		#Option(s) for Downloading Oligos
 		print qq~
-		  <A HREF="./Download_Options.cgi?set_tag=$set_tag&set_type_search=$set_type_search&gene_number=$gene_number">View Download Options</A><BR><BR>
+		  <A HREF="./Download_Options.cgi?gene=$match&organism=$organism&set_tag=$set_tag&set_type_search=$set_type_search&gene_number=$gene_number">View Download Options</A><BR>
 		  ~;
 		
+        #Option for Displaying Oligo in Chromosomal Context
+		my $id = get_ProteinStructure_biosequence_id(vng=>$gene);
+        print qq~ 
+		<BR><A HREF="$CGI_BASE_DIR/ProteinStructure/SequenceViewer.cgi?biosequence_id=$id&mode=OLIGO">Graphical View (Only Default Oligos Shown)</A><BR>
+		~;
 	  }
 	}
 	
@@ -477,3 +489,41 @@ sub append_precision_data {
 	
 	$$resultset_ref{precisions_list_ref} = $aref;
 }
+
+
+
+
+##############################################################################
+# get_ProteinStructure_biosequence_id
+#
+# returns biosequence_id from the biosequence table in ProteinStructure
+# expects as parameter: vng - the number in the VNG name of the gene
+##############################################################################
+sub get_ProteinStructure_biosequence_id {
+  my %args = @_;
+  
+  my $VNG = $args{vng};
+  
+  ####reformat VNG name
+  #make sure that parameter is just the gene number
+  if($VNG =~ /[a-z,A-Z]*(\d*)[a-z,A-Z]*/) {
+	$VNG = $1;
+  } 
+  #if VNG ends with a letter, get rid of it
+  $VNG = "VNG" . $VNG;
+
+  my $sql = qq~
+	use ProteinStructure2
+	SELECT BS.biosequence_id
+	FROM $TBPS_BIOSEQUENCE BS
+	WHERE BS.biosequence_name LIKE '$VNG%'
+	~;
+
+  my @ids = $sbeams->selectOneColumn($sql);
+  my $id = $ids[0];  
+
+  return $id;
+  
+}
+	
+

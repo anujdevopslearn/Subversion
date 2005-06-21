@@ -231,12 +231,11 @@ sub handle_request {
 		}
 		while(<A>){
 		  my @temp = split;
-		  if($gene eq $temp[1]){  #if a common name was entered
+		  if($gene eq lc $temp[1] || $gene eq uc $temp[1]){  #if a common name was entered
 			$gene = $temp[0];     #assign $gene to the equivalent canonical name
 		  }
 		}  
 		close(A);
-
 		$gene = lc $gene;
 
 		####get TM, SS
@@ -292,14 +291,14 @@ sub handle_request {
 		print OLIGO $outputdata;
 		close(OLIGO);
 		
-		####use load_single_oligo.pl to load the newly created oligo into the db
-		my $command_line = "./load_single_oligo.pl --search_tool_id " . $search_tool_id . " --gene_set_tag " .  $gene_set_tag . " --chromosome_set_tag " . $chromosome_set_tag . " --oligo_file ./temp_oligo_file --project_id 425";
+		####use load_oligo.pl to load the newly created oligo into the db
+		my $command_line = "../../lib/scripts/Oligo/load_oligo.pl --search_tool_id " . $search_tool_id . " --gene_set_tag " .  $gene_set_tag . " --chromosome_set_tag " . $chromosome_set_tag . " --oligo_file ./temp_oligo_file --project_id 425";
 		system("$command_line | /dev/null");
 
 		####Allow user to view if oligo has been added.
 		my @gene_arr = ($gene);
 		print qq~ 
-		  New Oligo Submitted to Database.  Note: Will only be added if valid.  View added Oligo:
+		  New Oligo Submitted to Database. Note: Will only be added if valid.  <BR>View added Oligo:
           <A HREF="$CGI_BASE_DIR/Oligo/Search_Oligo.cgi?apply_action=QUERY&organism=$organism&set_type=$set_type&genes=@gene_arr">Oligo Search</A><BR><BR>  
         ~;
 	  }
