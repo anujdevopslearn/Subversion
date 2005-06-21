@@ -20,6 +20,9 @@ use SBEAMS::Connection::Tables;
 use SBEAMS::PeptideAtlas::Tables;
 
 #use base qw(SBEAMS::PeptideAtlas::Affy);		#declare superclass
+#
+# Hash for holding column headings
+my %heads;
 
 
 
@@ -133,67 +136,114 @@ sub getfile {
 }
 
 ###############################################################################
-# parse data file
+# process_data_file
 #
 ###############################################################################
-sub parse_data_file {
+sub process_data_file {
 	my $self = shift;
 	
-	my @all_data = ();
+  my @all_data = ();
   
-    open DATA, $self->getfile() or
-                die "CANNOT OPEN FILE. $self->getfile() . '$!' \n";
+  my $file = $self->getfile();
 
-    my %headers = ();
+  open DATA, $file || die "Unable to open file $file $!\n";
+
 	my $count = 0;
 	my $insert_count = 1;
-        while(<DATA>){
-            chomp;
-			my @line_parts = split /\t/, $_;       #split on the quotes and comma.  Commas do exists in some of the data fields
+    while(<DATA>){
+      chomp;
+			my @tokens = split( /\t/, $_, -1);
 			
+      # populate global hash of col_name => col_index. 
 			if ($count == 0){
-				%headers = $self->column_headers(\@line_parts);
+        # Make them lower case for consistancy
+        @tokens = map {lc($_)} @tokens;
+
+        # Build header index hash
+			  @heads{@tokens} = 0..$#tokens;
 				$count ++;
+
+        # See if col headers have changed
+        $self->checkHeaders;
 				next;
-			}
-			my %record_h = ();
-           # next unless  $line_parts[0] eq 'IPI00015102'; #DEBUG ONLY
-			my $ipi_id = $line_parts[0];
-			
-			$self->add_ipi_record(\@line_parts) unless $self->check_ipi($ipi_id);
+      }
+
+			$self->add_ipi_record( \@tokens ) unless $self->check_ipi($tokens[$heads{'IPI'}]);
 		
-			my $glyco_pk = $self->add_glyco_site(\@line_parts);
+			my $glyco_pk = $self->add_glyco_site( \@tokens );
 			
-			$self->add_predicted_peptide(glyco_pk => $glyco_pk,
-										 line_parts =>\@line_parts);
+			$self->add_predicted_peptide( glyco_pk   => $glyco_pk,
+									              	  line_parts => \@tokens);
 			
-			$self->add_identifed_peptides(glyco_pk => $glyco_pk,
-										 line_parts =>\@line_parts);
+      # add identifed peptide iff there is one.
+	    if ( $tokens[$heads{'identified sequences'}] ) {
+			  $self->add_identified_peptides( glyco_pk   => $glyco_pk,
+		                   								  line_parts => \@tokens);
+      }
 		
 			
-			if ($self->verbose() > 1 ) {
-				for (my $i = 0; $i <= $#line_parts; $i ++){
-		
-					my $name = $headers{$i};
-		             print  "$i $name => $line_parts[$i]\n";
-					$record_h{$name} = $line_parts[$i];
-				}
-			}		
-		
 			$count ++;
-			#last if $count == 10;	#DEBUG ONLY
 
-			#print a little message to indicate script is running
-			if (100  == $insert_count){
-				print "Current Line '$count'\n";
-				$insert_count = 1;
-			}else{
-				$insert_count++;
+			# print progress 'bar'
+			unless ( $count % 100 ){
+				print '*';
 			}
-        }
+			unless ( $count % 5000 ){
+				print "\n";
+			}
+    }
+    print "\n\nLoaded $count records\n";
+  }
 
+
+sub checkHeaders {
+  my $self = shift;
+  my @version_8_columns = ( 'IPI',
+                            'Protein Name',
+                            'Protein Sequences',
+                            'Protein Symbol',
+                            'Swiss-Prot',
+                            'Summary',
+                            'Synonyms',
+                            'Protein Location',
+                            'signalP',
+                            'TM',
+                            'TM location',
+                            'Peptide IPI',
+                            'NXT/S Location',
+                            'NXT/S Score',
+                            'Predicted Tryptic NXT/S Peptide Sequence',
+                            'Predicted Peptide Mass',
+                            'Database Hits',
+                            'Database Hit IPIs',
+                            'Min Similarity Score',
+                            'Detection Probability',
+                            'Identified Sequences',
+                            'Tryptic Ends',
+                            'Peptide ProPhet',
+                            'Identified Peptide Mass',
+                            'Identified Tissues',
+                         );
+  @version_8_columns = map { lc($_) } @version_8_columns;
+  my @current_cols = keys(%heads);
+
+  for my $curr_col ( @current_cols ) {
+#    print "Checking for curr_col $curr_col\n";
+    unless( grep /$curr_col/, @version_8_columns ) {
+      print STDERR "Column $curr_col is not known by the parser\n";
+      exit;
+    }
+  }
+
+  for my $parser_col ( @version_8_columns ) {
+#    print "Checking for parser_col $parser_col\n";
+    unless( grep /$parser_col/, @current_cols ) {
+      print STDERR "Column $parser_col is missing in this file\n";
+      exit;
+    }
+  }
+  
 }
-
 
 =head1 example columns
 0 IPI => IPI00015102
@@ -227,56 +277,65 @@ sub parse_data_file {
 ##############################################################################
 #Add the identifed_peptide for a row
 ###############################################################################
-sub add_identifed_peptides{
-	my $method = 'add_identifed_peptides';
+sub add_identified_peptides{
+	my $method = 'add_identified_peptides';
 	my $self = shift;
 	my %args = @_;
-	my $info_aref = $args{line_parts};
+	my $row = $args{line_parts};
 	my $glyco_pk = $args{glyco_pk};
 	
+	return unless ($row->[$heads{'identified sequences'}]); #make sure we have an identifed peptide otherwise do nothing
 	
-	
-	return unless ($info_aref->[22]); #make sure we have an identifed peptide otherwise do nothing
-	
-	my $ipi_acc = $info_aref->[0];
-	my $clean_seq = $self->clean_seq($info_aref->[22]); 
+	my $ipi_acc = $row->[$heads{'IPI'}];
+	my $clean_seq = $self->clean_seq($row->[$heads{'identified sequences'}]); 
 	my ($start, $stop) = $self->map_peptide_to_protein(peptide=> $clean_seq,
-													   protein_seq => $info_aref->[2]);
+													   protein_seq => $row->[$heads{'protein sequences'}]);
 	
-	
-	my %rowdata_h = ( 	
-					
-					ipi_data_id => $self->get_ipi_data_id($ipi_acc),
-					identified_peptide_sequence => $info_aref->[22],
-					tryptic_end					=> $info_aref->[23],
-					peptide_prophet_score 		=> $info_aref->[24],
-					peptide_mass 				=> $info_aref->[25],
-					identified_start 	=> $start,
-					identified_stop 	=> $stop, 
-					glyco_site_id  		=> $glyco_pk,
-					
-					
+  # First, add row to the identified peptide table
+	my %id_pep_row = ( 	
+					identified_peptide_sequence => $row->[$heads{'identified sequences'}],
+					tryptic_end				        	=> $row->[$heads{'tryptic ends'}],
+					peptide_prophet_score 		  => $row->[$heads{'peptide prophet'}],
+					peptide_mass 			        	=> $row->[$heads{'identified peptide mass'}],
+					identified_start 	          => $start,
+					identified_stop 	          => $stop, 
+					glyco_site_id  		          => $glyco_pk
 			);
 	
-	my $rowdata_ref = \%rowdata_h;
-	my $identified_peptide_id = $sbeams->updateOrInsertRow(				
-							table_name=>$TBAT_IDENTIFIED_PEPTIDE,
-				   			rowdata_ref=>$rowdata_ref,
-				   			return_PK=>1,
-				   			verbose=>$self->verbose(),
-				   			testonly=>$self->testonly(),
-				   			insert=>1,
-				   			PK=>'identified_peptide_id',
+  # returns identified_peptide_id for new row
+	my $iden_pep_id = $sbeams->updateOrInsertRow(				
+							  table_name  => $TBAT_IDENTIFIED_PEPTIDE,
+				   			rowdata_ref => \%id_pep_row,
+				   			return_PK   => 1,
+				   			verbose     => $self->verbose(),
+				   			testonly    => $self->testonly(),
+				   			insert      => 1,
+				   			PK          => 'identified_peptide_id',
 				   		   );
+
+  # Now, add row to identified_to_ipi lookup(join) table
+  my %iden_to_ipi_row = ( ipi_data_id => $self->get_ipi_data_id($ipi_acc),
+                          identified_peptide_id => $iden_pep_id
+                        );
+
+  # Insert row
+	$sbeams->updateOrInsertRow( table_name  => $TBAT_IDENTIFIED_TO_IPI,
+              				   			rowdata_ref => \%iden_to_ipi_row,
+				   		               	return_PK   => 0,
+		              		   			verbose     => $self->verbose(),
+	              			   			testonly    => $self->testonly(),
+              				   			insert      => 1,
+			              	   			PK          => 'identified__to_ipi_id',
+	            		   		    );
+
 				   		   
 	if ($self->verbose()>0){
-		print (__PACKAGE__."::$method Added IDENTIFIED PEPTIDE pk '$identified_peptide_id'\n");
-	
+		print (__PACKAGE__."::$method Added IDENTIFIED PEPTIDE pk '$iden_pep_id'\n");
 	}
 	
-	$self->peptide_to_tissue($identified_peptide_id, $info_aref);
+	$self->peptide_to_tissue($iden_pep_id, $row);
 	
-	return $identified_peptide_id;
+	return $iden_pep_id;
 }
 
 
@@ -329,27 +388,28 @@ sub add_predicted_peptide {
 	my $self = shift;
 	
 	my %args = @_;
-	my $info_aref = $args{line_parts};
+	my $row = $args{line_parts};
 	my $glyco_pk = $args{glyco_pk};
 	
 	
-	my $ipi_acc = $info_aref->[0];
+	my $ipi_acc = $row->[$heads{'IPI'}];
 	
-	#my $fixed_predicted_seq = $self->fix_predicted_peptide_seq($info_aref->[16]);
-	my $clean_seq = $self->clean_seq($info_aref->[16]); 
+	#my $fixed_predicted_seq = $self->fix_predicted_peptide_seq($row->[16]);
+	my $clean_seq = $self->clean_seq($row->[$heads{'predicted tryptic nxt/s peptide sequence'}]); 
 	my ($start, $stop) = $self->map_peptide_to_protein(peptide=> $clean_seq,
-													   protein_seq => $info_aref->[2]);
+													   protein_seq => $row->[$heads{'protein sequences'}]);
 	
+  my $det_prob = 0 ; #$row->[$heads{'detection probablility'}] || 0;
+
 	#TODO WARNING DETECTION PROBABLITY IS FAKE>  DATA IS NOT COMPLETE
 	my %rowdata_h = ( 	
 					ipi_data_id 				=> $self->get_ipi_data_id($ipi_acc),
-					predicted_peptide_sequence => $info_aref->[16],
-					
-					predicted_peptide_mass 		=> $info_aref->[17],
-					detection_probability 		=> 0, #$info_aref->[21],
-					number_proteins_match_peptide => $info_aref->[18],
-					matching_protein_ids 		=> $info_aref->[19],
-					protein_similarity_score	=> $info_aref->[20],
+					predicted_peptide_sequence => $row->[$heads{'predicted tryptic nxt/s peptide sequence'}],
+					predicted_peptide_mass 		=> $row->[$heads{'predicted peptide mass'}],
+					detection_probability 		=> $det_prob, #
+					number_proteins_match_peptide => $row->[$heads{'database hits'}],
+					matching_protein_ids 		=> $row->[$heads{'database hits ipis'}],
+					protein_similarity_score	=> $row->[$heads{'min similarity score'}],
 					predicted_start 			=> $start,
 					predicted_stop 				=> $stop,
 					glyco_site_id  				=> $glyco_pk,
@@ -469,16 +529,14 @@ sub map_peptide_to_protein {
 sub add_glyco_site {
 	my $method = 'add_glyco_site';
 	my $self = shift;
-	my $info_aref = shift;
+	my $row = shift;
 	
-	my $ipi_acc = $info_aref->[0];
-	
+	my $ipi_id = $row->[$heads{'IPI'}];
 	
 	my %rowdata_h = ( 	
-				
-				protein_glyco_site_position => $info_aref->[14],
-				glyco_score =>$info_aref->[15],
-				ipi_data_id => $self->get_ipi_data_id($ipi_acc),
+				protein_glyco_site_position => $row->[$heads{'nxt/s location'}],
+				glyco_score =>$row->[$heads{'nxt/s score'}],
+				ipi_data_id => $self->get_ipi_data_id( $ipi_id ),
 			  );
 	
 	my $rowdata_ref = \%rowdata_h;
@@ -507,35 +565,34 @@ sub add_glyco_site {
 ###############################################################################
 sub add_ipi_record {
 	my $self = shift;
-	my $info_aref = shift;
-	die "Did not bass aref of data\n" unless (ref($info_aref));
+	my $row = shift;
+	die 'Did not pass data ref' unless ( $row && ref($row) =~/ARRAY/ );
 	
-	my $cellular_location_id = $self->find_cellular_location_id($info_aref->[7]);
+	my $cellular_location_id = $self->find_cellular_location_id($row->[$heads{'protein location'}]);
 	
-	my $ipi_id = $info_aref->[0];
+	my $ipi_id = $row->[$heads{'IPI'}];
 	
 	my $ipi_version_id = $self->ipi_version_id();
 	
 												
 	my %rowdata_h = ( 	
-				
 				ipi_version_id => $ipi_version_id,
 				ipi_accession_number =>$ipi_id,
-				protein_name =>$info_aref->[1],
-				protein_symbol =>$info_aref->[3],
-				swiss_prot_acc =>$info_aref->[4],
+				protein_name =>$row->[$heads{'protein name'}],
+				protein_symbol =>$row->[$heads{'protein symbol'}],
+				swiss_prot_acc =>$row->[$heads{'swiss-prot'}],
 				cellular_location_id =>$cellular_location_id,
-				transmembrane_info =>$info_aref->[10],
-				signal_sequence_info =>$info_aref->[8],
-				synonyms => $info_aref->[6],
+				transmembrane_info =>$row->[$heads{'tm location'}],
+				signal_sequence_info =>$row->[$heads{'signalp'}],
+				synonyms => $row->[$heads{'synonyms'}],
 			  );
 
 	my %rowdata_h = $self->truncate_data(record_href => \%rowdata_h); #some of the data will need to truncated to make it easy to put all data in varchar 255 or less
 	
 	##Add in the big columns that should not be truncated
 	
-	$rowdata_h{protein_sequence} = $info_aref->[2];
-	$rowdata_h{protein_summary}  = $info_aref->[5];
+	$rowdata_h{protein_sequence} = $row->[$heads{'protein sequences'}];
+	$rowdata_h{protein_summary}  = $row->[$heads{'summary'}];
 	
 	
 	my $rowdata_ref = \%rowdata_h;
@@ -552,9 +609,6 @@ sub add_ipi_record {
 				   		   );
 	
 	$self->{All_records}{$ipi_id} = {ipi_data_id => $ipi_data_id};
-
-	
-	
 
 	return 1;
 }
@@ -616,8 +670,11 @@ sub tissue_code_id {
 sub find_tissue_code {
 	my $method = 'find_tissue_code';
 	my $self = shift;
-	my $tissue_name = shift;
-	
+  my $tissue = shift;
+	my $tissue_name = ( $tissue =~ /serum/i ) ? 'serum' :
+                    ( $tissue =~ /prostate/i ) ? 'prostate' :
+                    ( $tissue =~ /ovary/i ) ? 'ovary' :
+                    ( $tissue =~ /breast/i ) ? 'breast' : 'unknown';
 	
 	my $sql = qq~ 	SELECT tissue_id
 					FROM $TBAT_TISSUE
