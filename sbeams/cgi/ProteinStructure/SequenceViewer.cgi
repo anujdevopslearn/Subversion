@@ -562,6 +562,7 @@ sub handle_request {
 	}
 	$seq = $top . $bottom;
    
+    print "<FONT FACE=\"Courier\">";
 	print format_sequence('sequence'=>($seq),
 						  'color_ref'=>\%colorings,
 						  'newline'=>$newline,
@@ -570,6 +571,7 @@ sub handle_request {
 						  'genome_length'=>length($genome_seq),
 						  'mode'=>$MODE,
 						  'region_size'=>$complement_offset);
+	print "</FONT>";
 
   }
 
@@ -698,9 +700,15 @@ sub format_sequence {
 		  $prev_top_ref = "";
 	
 		}
+		if($m % 10 == 9){
+		  $top .= "\t";
+		  $bottom .= "\t";
+		}
 		if  (($m % 60) == 59 && $m != scalar(@temp) ) {
+		  #$top = $top . "\t" . $m;
+		  #$bottom = $bottom . "\t" . $m;
 		  $sequence .= "</FONT>";
-		  $sequence = $sequence . $top . "<BR></FONT>" . $bottom . "<BR><BR>";
+		  $sequence = $sequence . ($m - 59) . "\t" . $top . "<BR></FONT>" . ($m - 59) . "\t" . $bottom . "<BR><BR>";
 		  $top = "";
 		  $bottom = "";
 		  $overlap_flag = 1; 
