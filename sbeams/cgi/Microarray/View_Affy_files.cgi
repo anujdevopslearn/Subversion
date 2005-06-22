@@ -15,7 +15,7 @@ use vars qw ($sbeams $sbeamsMOD $q $dbh $current_contact_id $current_username
 #use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
@@ -161,9 +161,18 @@ sub main {
 		else{$file = "$output_dir/$file_name.$file_ext";}
 		linkImage(file=>$file);
 	}else {
-	    #### Start printing the page
-	    $sbeamsMOD->printPageHeader();	
-	    #print "INFO $output_dir/$file_name.$file_ext'<br>";
+	  #### Start printing the page
+	  $sbeamsMOD->printPageHeader();	
+	  # print "INFO $output_dir/$file_name.$file_ext'<br>";
+
+    # This block of code removes the pbs job out/err file if it exists.  This
+    # will keep us from accreting these files, that are unused anyway.  If this
+    # block fails at a remote site it is likely that the permissions on the 
+    # job dir are flawed.
+    if ( -e "${output_dir}/pbs_job.out" ) {
+      $log->info( "Removing pbs_job output file" );
+      unlink( "${output_dir}/pbs_job.out" );
+    }
 	   
 		my $file = "$output_dir/$file_name.$file_ext";
 		printFile(file		=>$file,
