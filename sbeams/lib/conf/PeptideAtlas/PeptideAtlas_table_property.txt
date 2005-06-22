@@ -14,14 +14,15 @@ AT_query_option	Query Option	PeptideAtlas_infrastructure	YES	$TBAT_QUERY_OPTION	
 AT_BrowseBiosequence	Browse Biosequence	QUERY					BrowseBioSequence.cgi		
 AT_GetPeptides	Get Peptides	QUERY					GetPeptides		
 AT_publication	Publication	PeptideAtlas_user	YES	$TBAT_PUBLICATION	publication_id		ManageTable.cgi?TABLE_NAME=AT_publication	AT_publication	
-AT_biosequence_annotated_gene	Biosequence Annotated Gene	PeptideAtlas_infrastructure	NO	$TBAT_BIOSEQUENCE_ANNOTATED_GENE	biosequence_annotated_gene_id		
-AT_biosequence_annotation	Biosequence Annotation	PeptideAtlas_project	YES	$TBAT_BIOSEQUENCE_ANNOTATION	biosequence_annotation_id		ManageTable.cgi?TABLE_NAME=AT_biosequence_annotation
-AT_ipi_version	IPI Version	PeptideAtlas_infrastructure	YES	$TBAT_IPI_VERSION	ipi_version_id		ManageTable.cgi?TABLE_NAME=AT_ipi_version
-AT_ipi_data	IPI Data	PeptideAtlas_infrastructure	YES	$TBAT_IPI_DATA	ipi_data_id		ManageTable.cgi?TABLE_NAME=AT_ipi_data
-AT_cellular_location	Cellular Location	PeptideAtlas_infrastructure	YES	$TBAT_CELLULAR_LOCATION	cellular_location_id		ManageTable.cgi?TABLE_NAME=AT_cellular_location
-AT_glyco_site	Glyco Site	PeptideAtlas_infrastructure	NO	$TBAT_GLYCO_SITE	glyco_site_id		
-AT_identified_peptide	Identified Peptide	PeptideAtlas_infrastructure	NO	$TBAT_IDENTIFIED_PEPTIDE	identified_peptide_id		
-AT_predicted_peptide	Predicted Peptide	PeptideAtlas_infrastructure	NO	$TBAT_PREDICTED_PEPTIDE	predicted_peptide_id		
-AT_peptide_to_tissue	Peptide to tissue	PeptideAtlas_infrastructure	NO	$TBAT_PEPTIDE_TO_TISSUE	peptide_to_tissue_id		
-AT_tissue	Tissue	PeptideAtlas_infrastructure	YES	$TBAT_TISSUE	tissue_id		Table.cgi?TABLE_NAME=AT_tissue
-AT_sample_publication	Sample Publication	PeptideAtlas_user	NO	$TBAT_SAMPLE_PUBLICATION	sample_publication_id		
+AT_biosequence_annotated_gene	Biosequence Annotated Gene	PeptideAtlas_infrastructure	NO	$TBAT_BIOSEQUENCE_ANNOTATED_GENE	biosequence_annotated_gene_id				
+AT_biosequence_annotation	Biosequence Annotation	PeptideAtlas_project	YES	$TBAT_BIOSEQUENCE_ANNOTATION	biosequence_annotation_id		ManageTable.cgi?TABLE_NAME=AT_biosequence_annotation		
+AT_ipi_version	IPI Version	PeptideAtlas_infrastructure	YES	$TBAT_IPI_VERSION	ipi_version_id		ManageTable.cgi?TABLE_NAME=AT_ipi_version		
+AT_ipi_data	IPI Data	PeptideAtlas_infrastructure	YES	$TBAT_IPI_DATA	ipi_data_id		ManageTable.cgi?TABLE_NAME=AT_ipi_data		
+AT_cellular_location	Cellular Location	PeptideAtlas_infrastructure	YES	$TBAT_CELLULAR_LOCATION	cellular_location_id		ManageTable.cgi?TABLE_NAME=AT_cellular_location		
+AT_glyco_site	Glyco Site	PeptideAtlas_infrastructure	NO	$TBAT_GLYCO_SITE	glyco_site_id				
+AT_identified_peptide	Identified Peptide	PeptideAtlas_infrastructure	NO	$TBAT_IDENTIFIED_PEPTIDE	identified_peptide_id				
+AT_predicted_peptide	Predicted Peptide	PeptideAtlas_infrastructure	NO	$TBAT_PREDICTED_PEPTIDE	predicted_peptide_id				
+AT_peptide_to_tissue	Peptide to tissue	PeptideAtlas_infrastructure	NO	$TBAT_PEPTIDE_TO_TISSUE	peptide_to_tissue_id				
+AT_tissue	Tissue	PeptideAtlas_infrastructure	YES	$TBAT_TISSUE	tissue_id		ManageTable.cgi?TABLE_NAME=AT_tissue		
+AT_sample_publication	Sample Publication	PeptideAtlas_user	NO	$TBAT_SAMPLE_PUBLICATION	sample_publication_id				
+AT_identified_to_ipi	Identified To IPI	PeptideAtlas_infrastructure	NO	$TBAT_IDENTIFIED_TO_IPI	identified_to_ipi_id				
