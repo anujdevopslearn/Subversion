@@ -7,7 +7,7 @@
 			<description>Follow the steps below to get to the page to start grouping together Affy files or Click the link</description>
 			<extra_data data_type="link">
 				<description>Click on the "File Groups" tab to start a new session</description>
-<link_info type="internal_help" href="cgi/Microarray/bioconductor/upload.cgi">Open Link</link_info>
+<link_info type="sbeams_page" href="cgi/Microarray/bioconductor/upload.cgi">Open Link</link_info>
 			</extra_data>
 			
 			<all_steps>

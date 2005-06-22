@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <help_document type="Upload Affy Data">
-	<overview>Affy Data can be loaded in two different ways by  Affy core personal.  Currently end users cannot upload data to the system but they will need to supply some information to get things started. If the arrays are hybridized at ISB the data will be automatically imported into the system as soon as the data is produced.  External Affy data sets can also be loaded.  See below for more information. </overview>
+	<overview>Affy Data can be loaded in two different ways by  Affy core personal.  Currently end users cannot upload data to the system but they will need to supply some information to get things started. If the arrays are hybridized with the core facility the data will be automatically imported into the system as soon as the data is produced.  External Affy data sets can also be loaded.  See below for more information. </overview>
 	<all_summaries>
 		<!--Internal Load -->
 		<summary>
 			<name>Internal Data</name>
-			<description>Arrays hybridized and scanned at ISB will be automatically uploaded into the systems by a series of scripts controlled by the Affy core personal</description>
+			<description>Arrays hybridized and scanned with the core facility be automatically uploaded into the systems by a series of scripts controlled by the Affy core personal</description>
 		</summary>
 		<!-- External Upload information-->
 		<summary>
 			<name>External Data Sets</name>
-			<description>External Data sets produced by other groups out side ISB can be loaded into the system.  At a minimum the Affy CEL files and sample information must be available from the external groups for the loading process to work.  To upload external data sets work through the following steps WITH the Affy Core personal</description>
+			<description>External Data sets produced by other external groups can be loaded into the system.  At a minimum the Affy CEL files and sample information must be available from the external groups for the loading process to work.  To upload external data sets work through the following steps WITH the Affy Core personal</description>
 			<all_steps>
 				<step>Download and fill out the Excel spreadsheet which will be used to annotate all the samples
 					<link_info type="sbeams_page" href="usr/Microarray/Example_master_upload_template.xls">Annotation spreadsheet</link_info>

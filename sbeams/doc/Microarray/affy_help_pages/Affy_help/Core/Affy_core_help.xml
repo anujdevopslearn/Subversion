@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <!-- edited with XMLSPY v2004 rel. 4 U (http://www.xmlspy.com) by Bruz Marzolf (Institute for Systems Biology) -->
 <help_document type="Affy Core Help">
-	<overview>Information about the Affymetrix Core Facility at ISB</overview>
+	<overview>Information about the Affymetrix Core Facility</overview>
 	<all_summaries>
 		<summary>
 			<name>Running Chips</name>

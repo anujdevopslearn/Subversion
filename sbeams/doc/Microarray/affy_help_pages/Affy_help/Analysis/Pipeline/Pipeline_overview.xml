@@ -44,7 +44,7 @@
 		
 		<summary>
 			<name>Affy Analysis Pipeline Overview</name>
-			<description>The Pipeline is broken down into three discrete parts which are Grouping Array Files, Normalization and Analysis.  The analysis pages are all based on some CGI-software downloaded from the Bioconductor library called webbioc.  Software development within ISB tried to fully integrate these pages into SBEAMS to help increase data flow and ease of use.  </description>
+			<description>The Pipeline is broken down into three discrete parts which are Grouping Array Files, Normalization and Analysis.  The analysis pages are all based on some CGI-software downloaded from the Bioconductor library called webbioc.  Software was developed to try to fully integrate these pages into SBEAMS to help increase data flow and ease of use.  </description>
 			<extra_data data_type="link">
 				<description>Goto Bioconductor.org to view more about all the Bioconductor packages</description>
 				<link_info type="external_link" href="http://Bioconductor.org">Bioconductor</link_info>

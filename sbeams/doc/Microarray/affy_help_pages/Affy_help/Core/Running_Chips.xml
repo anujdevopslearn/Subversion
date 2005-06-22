@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <!-- edited with XMLSPY v2004 rel. 4 U (http://www.xmlspy.com) by Bruz Marzolf (Institute for Systems Biology) -->
 <help_document type="Running Chips">
-	<overview>Steps to run a chip with the ISB Affymetrix Core Facility</overview>
+	<overview>Steps to run a chip with the Affymetrix Core Facility</overview>
 	<all_summaries>
 		<!-- You can have as many summary nodes as you want -->
 		<summary>
@@ -17,21 +17,13 @@
 			<description>You only need to purchase reagents if you plan on labeling yourself.  The labeling protocol can be found in Affy's technical manual, which you can find at the link to the right.</description>
 			<extra_data data_type="link">
 				<description>Open Link</description>
-				<link_info href="/downloads/expression_ever_manual.pdf">Affy Technical Manual</link_info>
+				<link_info href="downloads/expression_ever_manual.pdf">Affy Technical Manual</link_info>
 			</extra_data>
 			<all_steps/>
 		</summary>
 		<summary>
 			<name>Having the Affymetrix Core Label Your Samples</name>
 			<description>If you would like the Affymetrix Core to label your samples, just email me or drop by and we can discuss dropping off RNA and work out a time line for getting samples run.  Your RNA samples will be run on the Bioanalyzer prior to labeling to ensure quality.</description>
-		</summary>
-		<summary>
-			<name>Scheduling for Hybridization</name>
-			<description>For those labeling their own samples, go to the link on the right, where you should reserve a 30 minute time block per chip on the date you'll drop fragmented cRNA off to be hybridized.  There are eight 30-minute time slots, corresponding to a total of 8 chips that can be hybridized per night on Monday through Thursday.  If eight chips per night becomes a bottleneck, we'll expand the schedule accordingly.  Samples must be dropped off by 4pm on the day which you would like them hybridized.  If the Affy Core is doing your labeling, you don't need to worry about scheduling your hybridizations. Just to reiterate, hybridization, washing, staining and scanning will be performed by the Affy Core, to ensure that the instruments receive good care and maintenance.</description>
-			<extra_data data_type="link">
-				<description>Open Link</description>
-				<link_info href="/schedule/week.php">Affy Schedule</link_info>
-			</extra_data>
 		</summary>
 		<summary>
 			<name>Collect results</name>

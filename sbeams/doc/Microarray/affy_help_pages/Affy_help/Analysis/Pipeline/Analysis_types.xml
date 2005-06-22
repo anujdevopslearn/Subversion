@@ -7,7 +7,7 @@
 		<!-- SAM ANALYSIS -->
 		<summary>
 			<name>SAM</name>
-			<description>SAM is currently the default method for array analysis at ISB.  The method was developed by Tusher et al.  Below are links to the Tusher Paper and some external links that help explain what SAM does.</description>
+			<description>SAM is currently the default method for array analysis.  The method was developed by Tusher et al.  Below are links to the Tusher Paper and some external links that help explain what SAM does.</description>
 		<all_steps>
 				<step>Learn how to start running SAM
 				<link_info type="internal_help" href="Analysis/Pipeline/Analyze_data.xml">Learn to Run SAM</link_info>

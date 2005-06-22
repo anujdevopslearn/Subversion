@@ -40,7 +40,7 @@
 		<summary>
 			<name>What Data is Being uploaded from SAM</name>
 			<description>The data from the SAM analysis is parsed and Added to certain database fields.  See below for the mapping.  
-In addition an attempt is made to produce a Canonical Name that will be useful for merging an Affy Expression results sets with other data sets at ISB.  See below for more details.</description>
+In addition an attempt is made to produce a Canonical Name that will be useful for merging an Affy Expression results sets with other types of data.  See below for more details.</description>
 			<table_info>
 				<section name="SAM Column Name">
 					<entry>Probe_set_id</entry>

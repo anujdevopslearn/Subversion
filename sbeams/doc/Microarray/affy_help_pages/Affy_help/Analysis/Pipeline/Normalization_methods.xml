@@ -47,7 +47,7 @@
 			<description>MAS 5.0 is a series of algorithms for calculating the background, normalization and probe summarization developed by Affymetrix.</description>
 			<all_steps>
 				<step>See the Bumgarner talk above to get a good comparision between RMA, gcRMA and MAS5.0</step>
-				<step>Most arrays used at ISB are processed to produce MAS5.0 expression values and all the data is avalible for analysis from SBEAMS.  Use the following link to learn more 
+				<step>Most arrays are processed to produce MAS5.0 expression values and all the data is avalible for analysis from SBEAMS.  Use the following link to learn more 
 				<link_info type="internal_help" href="Simple_query.xml">Affy Intensity Link</link_info>
 				</step>
 			</all_steps>
