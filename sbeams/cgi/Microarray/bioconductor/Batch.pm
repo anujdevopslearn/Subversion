@@ -113,7 +113,6 @@ sub submit {
     } elsif ($self->type eq "sge") {
         return $self->submit_sge;
     } elsif ($self->type eq "pbs") {
-       # print "SUMBIT PBS FROM SUBMIT<br>";
         return $self->submit_pbs;
     } else {
         
@@ -221,8 +220,12 @@ sub submit_pbs {
    
    # Seems that pbs as of 6-20-2005 wants to write back out/err files to 
    # invokation directory.  Therefore, we'll put this line in to allow
-   # jobs to finish gracefully
-    $command .= " -j oe -o /net/public/pbs_out/" . $self->name() . ".out ";
+   # jobs to finish gracefully.  Also, note that with our version we can't
+   # specify -W umask=0002, so the files are readable only by arraybot.
+    my $script = $self->script();
+    my ( $dir ) =  $script =~ /(.*\/)[^\/]+$/;
+
+    $command .= " -j oe -o ${dir}pbs_job.out"; 
     
     if ($self->cputime) { $command .= " -l walltime=" . $self->cputime; }
     if ($::BATCH_ARG) { $command .= " " . $::BATCH_ARG; }
