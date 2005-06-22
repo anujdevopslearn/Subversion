@@ -8,9 +8,9 @@
 			<description>ANALYSIS WORKSHOP 2/23/2005.  If you want the step-by-step tutorials presented in the  workshop see the links below</description>
 			<all_steps>
 				<step>Pat's Affy analysis pipeline tutorial
-				<link_info type="external_link" href="/downloads/Affy_analysis_pipeline_tutorial.doc">View </link_info>				</step>
+				<link_info type="external_link" href="downloads/Affy_analysis_pipeline_tutorial.doc">View </link_info>				</step>
 				<step>Bruz's introduction to MEV tutorial 
-				<link_info type="external_link"  href="/downloads/sbeams_mev_tutorial.doc" >View </link_info>					</step>
+				<link_info type="external_link"  href="downloads/sbeams_mev_tutorial.doc" >View </link_info>					</step>
 			</all_steps>
 		</summary>
 		<summary>
@@ -18,7 +18,7 @@
 			<description>Presentaion About the Affy analysis pipeline</description>
 			<extra_data data_type="link">
 				<description>View Presentation</description>
-				<link_info type="external_link" href="/downloads/OverView_of_affy_analysis_pipeline_2.ppt">View </link_info>
+				<link_info type="external_link" href="downloads/OverView_of_affy_analysis_pipeline_2.ppt">View </link_info>
 			</extra_data>
 		</summary>
 		<summary>
@@ -26,7 +26,7 @@
 			<description>Presentaion about the SBEAM sample and array page.  Also shows the data download pages</description>
 			<extra_data data_type="link">
 				<description>View Presentation</description>
-				<link_info type="external_link" href="/downloads/SBEAMS_overview_ppt.ppt">View </link_info>
+				<link_info type="external_link" href="downloads/SBEAMS_overview_ppt.ppt">View </link_info>
 			</extra_data>
 		</summary>
 
