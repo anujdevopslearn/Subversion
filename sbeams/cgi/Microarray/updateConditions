@@ -65,6 +65,9 @@ sub main {
   #### Process generic "state" params before we start
   $sbeams->processStandardParameters( parameters_ref => $params );
 
+  # The spaghetti is still wound tight 
+  processStraySBEAMSparameters();
+
   my @conditions = $q->param( 'condition' );
   for my $c ( @conditions ) {
     unless ( $c =~ /^\d+\s*$/ ) {
@@ -488,7 +491,7 @@ sub getEntryForm {
 
   my $pad = '&nbsp;' x 1;
 
-#  <FORM NAME=mainForm METHOD=POST ONSUBMIT='return confirmDelete(this)'>
+#  <FORM NAME=upd_conditions METHOD=POST ONSUBMIT='return confirmDelete(this)'>
 # $log->debug( $sbeams->evalSQL( $sql ) );
   my $content =<<"  END_CONTENT";
   $pad This form enables you to update or delete 'conditions' which have been
@@ -505,7 +508,7 @@ sub getEntryForm {
   Therefore, if you delete a condition you should be able to re-upload it from
   the analysis results page.
   </UL>
-  <FORM NAME=mainForm METHOD=POST ONSUBMIT='return confirmDelete(this)'>
+  <FORM NAME=upd_conditions METHOD=POST ONSUBMIT='return confirmDelete(this)'>
   END_CONTENT
 
   my $ctable = SBEAMS::Connection::DataTable->new( CELLSPACING => 3, 
@@ -536,12 +539,12 @@ sub getEntryForm {
 #my $update_button = "<INPUT TYPE=SUBMIT NAME=action VALUE='Update Annotations'></INPUT>";
   my $update_button =<<"  END";
   <INPUT TYPE=SUBMIT NAME=action VALUE='Update Annotations'
-         onClick='mainForm.action.value="update";return true' >
+         onClick='upd_conditions.action.value="update";return true' >
   </INPUT>
   END
   my $delete_button =<<"  END";
   <INPUT TYPE=SUBMIT NAME=action VALUE='Delete Condition(s)'
-         onClick='mainForm.action.value="delete";return true' >
+         onClick='upd_conditions.action.value="delete";return true' >
   </INPUT>
   END
 #my $delete_button = "<INPUT TYPE=SUBMIT NAME=action VALUE='Delete Conditions'></INPUT>";
@@ -564,6 +567,15 @@ sub getEntryForm {
   return( $content );
 
 } # end handle_request
+
+sub processStraySBEAMSparameters {
+  my $project = $q->param( 'set_current_project_id' );
+  if ( $project ) {
+    $log->debug( "Found a stray set_current_project_id: $project" );
+    $q->delete( 'set_current_project_id' )
+  }
+  return;
+}
 
 #sub allClickJS {
 sub getJavascript {
