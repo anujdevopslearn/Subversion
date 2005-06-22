@@ -27,7 +27,7 @@ use FindBin;
 use lib qw (../perl ../../perl);
 use vars qw ($sbeams $sbeamsMOD $q
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $TESTONLY
-             $current_contact_id $current_username
+             $current_contact_id $current_username $DBPREFIX
             );
 
 
@@ -126,6 +126,7 @@ sub main {
 sub updateDriverTable {
   my %args = @_;
 
+  print "Working with Core database $DBPREFIX{Core}\n";
 
   #### Process the arguments list
   my $ref_parameters = $args{'ref_parameters'}
