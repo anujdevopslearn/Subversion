@@ -348,7 +348,7 @@ sub handle_request {
 	 
 	
 	  ##Define the hypertext links for columns that need them
-	  my %url_cols = ('Primer_Sequence' => "Display_Oligo_Detailed.cgi?Gene=%0V&Oligo_type=%1V&Oligo_Sequence=%2V&In_Stock=%7V");
+	  my %url_cols = ('Primer_Sequence' => "./Display_Oligo_Detailed.cgi?Gene=%0V&Oligo_type=%1V&Oligo_Sequence=%2V&In_Stock=%7V");
 	  
 	  ## Define columns that should be hidden in the output table
 	  my %hidden_cols = ('Oligo_type' => 1,
