@@ -362,6 +362,21 @@ sub start_element {
     }
 
 
+    #### Some attributes just get renamed for tidiness sake.  Provide
+    #### a translation here to support older formats
+    my %attrs_to_rename = (
+      n_tryptic_termini => 'n_enzymatic_termini',
+    );
+    foreach my $attr (keys(%attrs_to_rename)) {
+      if (exists($attrs{$attr})) {
+	my $new_name = $attrs_to_rename{$attr};
+        print "&";
+        $attrs{$new_name} = $attrs{$attr};
+        delete $attrs{$attr};
+      }
+    }
+
+
     #### If there's a execution_date attribute, then convert format
     if ($attrs{execution_date}) {
       my $date0 = ParseDate($attrs{execution_date});
