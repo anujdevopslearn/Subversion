@@ -666,7 +666,7 @@ $LINESEPARATOR
 		  $item = "<A HREF=\"GetHaloAnnotations?search_scope=All&search_key=$item&action=GO&dna_biosequence_set_id=$parameters{dna_biosequence_set_id}&protein_biosequence_set_id=$parameters{protein_biosequence_set_id}&apply_action=QUERY\" onmouseover=\"showTooltip(event,'Search SBEAMS for this gene')\" onmouseout=\"hideTooltip()\">$item</A>";
 		}
 	  }
-	  my $add_an_alias = "<A HREF=\"ManageTable.cgi?TABLE_NAME=PS_biosequence_annotation&biosequence_annotation_id=$biosequence_annotation_id&biosequence_id=$protein_biosequence_id&ShowEntryForm=1\" onmouseover=\"showTooltip(event,'Add Alias to $biosequence_name')\" onmouseout=\"hideTooltip()\">[+]</A>";
+	  my $add_an_alias = "<A HREF=\"ManageTable.cgi?TABLE_NAME=PS_biosequence_annotation&biosequence_annotation_id=$biosequence_annotation_id&biosequence_id=$protein_biosequence_id&ShowEntryForm=1\" onmouseover=\"showTooltip(event,'Add Alias to $biosequence_name')\" onmouseout=\"hideTooltip()\" target=\"annotation\">[+]</A>";
 	  push @alias_items, $add_an_alias if ($sbeams->getCurrent_username() ne 'ext_halo');
 
 	  $aliases = join ",",@alias_items;
@@ -692,17 +692,20 @@ $LINESEPARATOR
 	  my $dna_link = getColorizedTD (tag=>'DNA Sequences',
 									 data=>$dna_biosequence_id,
 									 text=>'D',
+									 target=>'sequence',
 									 link=>"BrowseBioSequence.cgi?project_id=$project_list&biosequence_set_id=$parameters{dna_biosequence_set_id}&biosequence_id_constraint=$dna_biosequence_id&action=QUERYHIDE&display_options=SequenceFormat&display_mode=FASTA",
 									 tooltip=>"DNA sequence in FASTA format");
 	  
 	  my $prot_link = getColorizedTD (tag=>'Protein Sequences',
 									  data=>$protein_biosequence_id,
 									  text=>'P',
+									  target=>'sequence',
 									  link=>"BrowseBioSequence.cgi?project_id=$project_list&biosequence_set_id=$parameters{protein_biosequence_set_id}&biosequence_id_constraint=$protein_biosequence_id&action=QUERYHIDE&display_options=SequenceFormat&display_mode=FASTA",
 									  tooltip=>"Protein sequence in FASTA format");
 	  my $annot_link = getColorizedTD (tag=>'Annotations',
 									   data=>$biosequence_annotation_id,
 									   text=>'A',
+									   target=>'annotation',
 									   link=>"ManageTable.cgi?TABLE_NAME=PS_biosequence_annotation&biosequence_annotation_id=$biosequence_annotation_id&biosequence_id=$protein_biosequence_id&ShowEntryForm=1",
 									   tooltip=>"Edit Annotation (restricted)");
 	  
@@ -752,14 +755,14 @@ $LINESEPARATOR
 	  <!----------------- Aliases -------------------->
 	  <TD>$aliases</TD>
 	  <!----------------- Function -------------------->
-	  <TD><A HREF="$CGI_BASE_DIR/ProteinStructure/GetDomainHits?project_id=150&biosequence_set_id=$parameters{protein_biosequence_set_id}&biosequence_accession_constraint=$biosequence_accession&action=QUERYHIDE&display_options=ApplyChilliFilter,ShowExtraProteinProps" onmouseover="showTooltip(event,'View Domain Hits')" onmouseout="hideTooltip()">$functional_description</A></TD>
+	  <TD><A HREF="$CGI_BASE_DIR/ProteinStructure/GetDomainHits?project_id=150&biosequence_set_id=$parameters{protein_biosequence_set_id}&biosequence_accession_constraint=$biosequence_accession&action=QUERYHIDE&display_options=ApplyChilliFilter,ShowExtraProteinProps" onmouseover="showTooltip(event,'View Domain Hits')" onmouseout="hideTooltip()" target="function">$functional_description</A></TD>
 	  ~;
 
 
 
 	  $table_html .= qq~
 	  <!----------------- Comments -------------------->
-	  <TD><A HREF="ManageTable.cgi?TABLE_NAME=PS_biosequence_annotation&biosequence_annotation_id=$biosequence_annotation_id&biosequence_id=$protein_biosequence_id&ShowEntryForm=1">$comments</A></TD>
+	  <TD><A HREF="ManageTable.cgi?TABLE_NAME=PS_biosequence_annotation&biosequence_annotation_id=$biosequence_annotation_id&biosequence_id=$protein_biosequence_id&ShowEntryForm=1" target="annotation">$comments</A></TD>
 	  ~ if ($sbeams->getCurrent_username() ne 'ext_halo');
 
 	  $table_html .= qq~
@@ -898,6 +901,7 @@ sub getColorizedTD {
   my $data = $args{'data'};
   my $text = $args{'text'};
   my $link = $args{'link'};
+  my $target = $args{'target'};
   my $tooltip = $args{'tooltip'};
   $tooltip = "NO $tag" unless ($tooltip) ;
 
@@ -914,6 +918,7 @@ sub getColorizedTD {
   $html .= "<A";
   $html .= " HREF=\"$link\"" if ($data && $link);
   $html .= " onmouseover=\"showTooltip(event,'$tooltip')\" onmouseout=\"hideTooltip()\"" if ($tooltip);
+  $html .= " target=\"$target\"" if ($target);
   $html .= ">";
   
 
