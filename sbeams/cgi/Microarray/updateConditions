@@ -78,8 +78,8 @@ sub main {
   }
 
   my $content; # Placeholder for page 'guts'
-  for my $param ( $q->param() ) { $content .= $param . ' ' . $q->param( $param ) . $eol; }
-  $log->debug( "params are $content" );
+#  for my $param ( $q->param() ) { $content .= $param . ' ' . $q->param( $param ) . $eol; }
+#  $log->debug( "params are $content" );
 #  print $q->header();
 #  print $content;
  
@@ -96,7 +96,7 @@ sub main {
 #    $content .= "$eol$eol";
   }
   # Show the form regardless?
-  $content .= getEntryForm( ref_params => $params );
+  $content = getEntryForm( ref_params => $params );
 
   # This assumes that we'll always be returning a page, is this correct?
 
