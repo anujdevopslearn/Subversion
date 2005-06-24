@@ -1442,6 +1442,17 @@ sub showTable {
 #  print "<PRE>$sql_query\n\n</PRE>";
 
 
+  #### Special hack for cached resultsets.  Allow Admins to specify a
+  #### different username
+  if ($TABLE_NAME eq 'cached_resultset' &&
+      $sbeams->getCurrent_work_group_name() eq 'Admin') {
+    if ($full_where_clause =~ /username/) {
+      $full_where_clause =~ s/WHERE //;
+      $sql_query =~ s/AND CR.contact_id = '\d+'/AND $full_where_clause/;
+    }
+  }
+
+
   #### Get the url link data
   my %url_cols = $sbeamsMOD->returnTableInfo($TABLE_NAME,"url_cols");
   my %hidden_cols = $sbeamsMOD->returnTableInfo($TABLE_NAME,"hidden_cols");
