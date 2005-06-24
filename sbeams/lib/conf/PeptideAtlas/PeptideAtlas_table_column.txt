@@ -126,38 +126,38 @@ AT_biosequence_property_set	8	signal_peptide_length	Length of the Signal Peptide
 AT_biosequence_property_set	9	signal_peptide_is_cleaved	Signal Peptide gets Cleaved	char	1	0	Y		N			N	text	50		Y	Y	N	Does the signal peptide get cleaved off Y/N?		
 AT_biosequence_property_set	10	genome_build	Genome Build	varchar	50	0	Y		N			N	text	50		Y	Y	N	Genome build name for which the following mapping parameters are valid		
 AT_biosequence_property_set	11	chromosome	Chromosome	varchar	50	0	Y		N			N	text	50		Y	Y	N	Chromosome in which this mapping occurs		
-AT_biosequence_property_set	12	start_in_chromosome	Start Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	Start position of the biosequence in the chromosome	
-AT_biosequence_property_set	13	end_in_chromosome	End Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	End position of the biosequence in the chromosome	
-AT_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	"Strand (+,-) of the biosequence in the chromosome"	
-AT_biosequence_property_set	15	isoelectric_point	Isoelectric Point	real	4	0	Y		N			N	text	10		Y	Y	N	Isoelectric Point (pI) of the protein	
-AT_biosequence_property_set	16	fav_codon_frequency	Favorite Codon Frequency	real	4	0	Y		N			N	text	10		Y	Y	N	Favorite Codon Frequency	
-AT_biosequence_property_set	17	duplicate_biosequences	Duplicate Biosequences	varchar	255	0	Y		N			N	text	50		Y	Y	N	Semicolon delimited list of duplicate sequences within the same set	
-AT_biosequence_property_set	18	category	Category	varchar	255	0	Y		N			N	text	50		Y	Y	N	Biosequence category	
-AT_BrowseBiosequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBAT_BIOSEQUENCE_SET WHERE project_id IN (  $accessible_project_ids ) ORDER BY sort_order,set_name"
-AT_BrowseBiosequence	2	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-AT_BrowseBiosequence	3	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-AT_BrowseBiosequence	4	molecular_function_constraint	Molecular Function Constraint									N	text	40		Y	Y	N	Constraint for the GO Molecular Function. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-AT_BrowseBiosequence	5	biological_process_constraint	Biological Process Constraint									N	text	40		Y	Y	N	Constraint for the GO Biological Process. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-AT_BrowseBiosequence	6	cellular_component_constraint	Cellular Component Constraint									N	text	40		Y	Y	N	Constraint for the GO Cellular Component. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-AT_BrowseBiosequence	7	protein_domain_constraint	Protein Domain Constraint									N	text	40		Y	Y	N	Constraint for the InterPro Protein Domain. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-AT_BrowseBiosequence	8	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	Y	N	"Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
-AT_BrowseBiosequence	9	transmembrane_class_constraint	Transmembrane Class Constraint									N	multioptionlist	3		Y	Y	N	Constraint for the transmembrane class as annotated by TMHMM and SignalP	"SELECT DISTINCT transmembrane_class,transmembrane_class FROM $TBAT_BIOSEQUENCE_PROPERTY_SET ORDER BY transmembrane_class"
-AT_BrowseBiosequence	10	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	Y	N	"Constraint for the number of transmembrane regions (based on TMHMM and SignalP calculation by rbonneau).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
-AT_BrowseBiosequence	11	biosequence_seq_constraint	Sequence Constraint									N	text	40		Y	Y	N	Constraint for the actual sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-AT_BrowseBiosequence	12	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-AT_BrowseBiosequence	13	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE option_type = 'BBS_sort_options' ORDER BY sort_order,option_value"
-AT_BrowseBiosequence	14	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE option_type = 'BBS_display_options' ORDER BY sort_order,option_value"
-AT_BrowseBiosequence	15	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."	
-AT_GetPeptides	1	atlas_build_id	Atlas Build									Y	multioptionlist	4		Y	Y	N	Select desired Atlas Builds to include in query.  Multiple items may be selected.  At least one item must be selected.	"SELECT atlas_build_id,atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids ) ORDER BY atlas_build_name "
-AT_GetPeptides	2	biosequence_name_constraint	Protein Name Constraint									N	text	40		Y	Y	N	Constraint for the Protein Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.	
-AT_GetPeptides	3	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.	
-AT_GetPeptides	4	peptide_name_constraint	Peptide Name Constraint									N	text	40		Y	Y	N	Constraint for the Peptide Name (i.e PApxxxxxxxx). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.	
-AT_GetPeptides	5	peptide_sequence_constraint	Peptide Sequence Constraint									N	text	40		Y	Y	N	Constraint for the Peptide Sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.	
-AT_GetPeptides	6	best_probability_constraint	Best Probability Constraint									N	text	15		Y	Y	N	"Constraint for the best observed probability for a peptide.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
-AT_GetPeptides	7	n_observations_constraint	Number of Observations Constraint									N	text	10		Y	Y	N	"Constraint for the number of observations for a peptide.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
-AT_GetPeptides	8	chromosome_constraint	Chromosome Constraint									N	text	10		Y	Y	N	Constraint for the Chromosome onto which the peptide was mapped. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.	
-AT_GetPeptides	9	start_in_chromosome_constraint	Start in Chromosome Constraint									N	text	20		Y	Y	N	"Constraint for the start position of the peptide in nucleotides along the chromosome.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
-AT_GetPeptides	10	end_in_chromosome_constraint	End in Chromosome Constraint									N	text	20		Y	Y	N	"Constraint for the end position of the peptide in nucleotides along the chromosome.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
+AT_biosequence_property_set	12	start_in_chromosome	Start Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	Start position of the biosequence in the chromosome		
+AT_biosequence_property_set	13	end_in_chromosome	End Position in Chromosome	int	4	0	Y		N			N	text	20		Y	Y	N	End position of the biosequence in the chromosome		
+AT_biosequence_property_set	14	strand	Strand	char	1	0	Y		N			N	text	10		Y	Y	N	"Strand (+,-) of the biosequence in the chromosome"		
+AT_biosequence_property_set	15	isoelectric_point	Isoelectric Point	real	4	0	Y		N			N	text	10		Y	Y	N	Isoelectric Point (pI) of the protein		
+AT_biosequence_property_set	16	fav_codon_frequency	Favorite Codon Frequency	real	4	0	Y		N			N	text	10		Y	Y	N	Favorite Codon Frequency		
+AT_biosequence_property_set	17	duplicate_biosequences	Duplicate Biosequences	varchar	255	0	Y		N			N	text	50		Y	Y	N	Semicolon delimited list of duplicate sequences within the same set		
+AT_biosequence_property_set	18	category	Category	varchar	255	0	Y		N			N	text	50		Y	Y	N	Biosequence category		
+AT_BrowseBiosequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBAT_BIOSEQUENCE_SET WHERE project_id IN (  $accessible_project_ids ) ORDER BY sort_order,set_name"	
+AT_BrowseBiosequence	2	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+AT_BrowseBiosequence	3	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+AT_BrowseBiosequence	4	molecular_function_constraint	Molecular Function Constraint									N	text	40		Y	Y	N	Constraint for the GO Molecular Function. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+AT_BrowseBiosequence	5	biological_process_constraint	Biological Process Constraint									N	text	40		Y	Y	N	Constraint for the GO Biological Process. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+AT_BrowseBiosequence	6	cellular_component_constraint	Cellular Component Constraint									N	text	40		Y	Y	N	Constraint for the GO Cellular Component. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+AT_BrowseBiosequence	7	protein_domain_constraint	Protein Domain Constraint									N	text	40		Y	Y	N	Constraint for the InterPro Protein Domain. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+AT_BrowseBiosequence	8	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	Y	N	"Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""		
+AT_BrowseBiosequence	9	transmembrane_class_constraint	Transmembrane Class Constraint									N	multioptionlist	3		Y	Y	N	Constraint for the transmembrane class as annotated by TMHMM and SignalP	"SELECT DISTINCT transmembrane_class,transmembrane_class FROM $TBAT_BIOSEQUENCE_PROPERTY_SET ORDER BY transmembrane_class"	
+AT_BrowseBiosequence	10	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	Y	N	"Constraint for the number of transmembrane regions (based on TMHMM and SignalP calculation by rbonneau).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
+AT_BrowseBiosequence	11	biosequence_seq_constraint	Sequence Constraint									N	text	40		Y	Y	N	Constraint for the actual sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+AT_BrowseBiosequence	12	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+AT_BrowseBiosequence	13	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE option_type = 'BBS_sort_options' ORDER BY sort_order,option_value"	
+AT_BrowseBiosequence	14	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE option_type = 'BBS_display_options' ORDER BY sort_order,option_value"	
+AT_BrowseBiosequence	15	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."		
+AT_GetPeptides	1	atlas_build_id	Atlas Build									Y	multioptionlist	4		Y	Y	N	Select desired Atlas Builds to include in query.  Multiple items may be selected.  At least one item must be selected.	"SELECT atlas_build_id,atlas_build_name FROM $TBAT_ATLAS_BUILD WHERE record_status != 'D' AND project_id IN (  $accessible_project_ids ) ORDER BY atlas_build_name "	
+AT_GetPeptides	2	biosequence_name_constraint	Protein Name Constraint									N	text	40		Y	Y	N	Constraint for the Protein Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
+AT_GetPeptides	3	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
+AT_GetPeptides	4	peptide_name_constraint	Peptide Name Constraint									N	text	40		Y	Y	N	Constraint for the Peptide Name (i.e PApxxxxxxxx). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
+AT_GetPeptides	5	peptide_sequence_constraint	Peptide Sequence Constraint									N	text	40		Y	Y	N	Constraint for the Peptide Sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
+AT_GetPeptides	6	best_probability_constraint	Best Probability Constraint									N	text	15		Y	Y	N	"Constraint for the best observed probability for a peptide.  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""		
+AT_GetPeptides	7	n_observations_constraint	Number of Observations Constraint									N	text	10		Y	Y	N	"Constraint for the number of observations for a peptide.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
+AT_GetPeptides	8	chromosome_constraint	Chromosome Constraint									N	text	10		Y	Y	N	Constraint for the Chromosome onto which the peptide was mapped. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
+AT_GetPeptides	9	start_in_chromosome_constraint	Start in Chromosome Constraint									N	text	20		Y	Y	N	"Constraint for the start position of the peptide in nucleotides along the chromosome.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
+AT_GetPeptides	10	end_in_chromosome_constraint	End in Chromosome Constraint									N	text	20		Y	Y	N	"Constraint for the end position of the peptide in nucleotides along the chromosome.  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
 AT_GetPeptides	11	strand_constraint	Strand									N	text	5		Y	Y	N	Constraint for the strand (orientiation) of the chromosome mapping (must be either + or -)		
 AT_GetPeptides	12	n_protein_mappings_constraint	Number of Proteins Mapped Constraint									N	text	5		Y	Y	N	Constraint for number of distinct proteins for this peptide ( >=0 )		
 AT_GetPeptides	13	n_genome_locations_constraint	Number of Genome Locations Mapped Constraint									N	text	5		Y	Y	N	Constraint for number of genome locations for this peptide ( >=0 )		
@@ -238,22 +238,22 @@ AT_ipi_version	2	ipi_version_name	IPI Version Name	varchar	255	0	N		N			Y	text	5
 AT_ipi_version	3	ipi_version_date	IPI Version Date	datetime	8	0	N		N				text	50		Y	Y	N	Date the data file was produced		
 AT_ipi_version	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 AT_ipi_version	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_ipi_version	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N		
-AT_ipi_version	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-AT_ipi_version	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N		
-AT_ipi_version	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N		
-AT_ipi_version	10	record_status	Record Status	char	1	0	N	N	N							N	N		
-AT_ipi_data	1	ipi_data_id	IPI Data ID	int	4	0	N		Y							N	N		
-AT_ipi_data	2	ipi_version_id	IPI Version ID	int	4	0	N		N	AT_ipi_version	ipi_version_id	Y				N	N	Y	
-AT_ipi_data	3	ipi_accession_number	IPI Accession Number	varchar	50	0	N		N			Y	text	30		Y	Y	N	IPI Accession Number ie IPI0000123
-AT_ipi_data	4	protein_name	Protein Name	varchar	500	0	N		N			Y	text	50		Y	Y	N	Descriptive IPI Protein Name 
-AT_ipi_data	5	protein_symbol	Protein Symbol	varchar	50	0	Y		N			N	text	30		Y	Y	N	Short Protein Symbol from IPI
-AT_ipi_data	6	swiss_prot_acc	SwissPro Accession Numbers	varchar	50	0	Y		N			N	text	30		Y	Y	N	Swiss Prot Accession number
-AT_ipi_data	7	cellular_location_id	Cellular Location	int	4	0	Y		N			N				N	N	Y	"Subcelluar location: ie Secreted, Transmembrane"
-AT_ipi_data	8	protein_summary	Protein Summary	text	16	0	Y		N			N	textarea	4		Y	Y	N	Protein Summary Information
-AT_ipi_data	9	protein_sequence	Protein Sequence	text	16	0	N		N			Y	textarea	4		Y	Y	N	Protein Sequence
-AT_ipi_data	10	transmembrane_info	Transmembrane Info	varchar	255	0	N		N			Y	text	50		Y	Y	N	Encoded TM domain informaion from TMHMM  ie o528-550i
-AT_ipi_data	11	signal_sequence_info	Signal Sequence Info	varchar	255	0	N		N			Y	text	50		Y	Y	N	Encoded Singal sequence information from SingalP: ie 28 Y 0.988 Y
+AT_ipi_version	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_ipi_version	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_ipi_version	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_ipi_version	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_ipi_version	10	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_ipi_data	1	ipi_data_id	IPI Data ID	int	4	0	N		Y							N	N				
+AT_ipi_data	2	ipi_version_id	IPI Version ID	int	4	0	N		N	AT_ipi_version	ipi_version_id	Y				N	N	Y			
+AT_ipi_data	3	ipi_accession_number	IPI Accession Number	varchar	50	0	N		N			Y	text	30		Y	Y	N	IPI Accession Number ie IPI0000123		
+AT_ipi_data	4	protein_name	Protein Name	varchar	500	0	N		N			Y	text	50		Y	Y	N	Descriptive IPI Protein Name 		
+AT_ipi_data	5	protein_symbol	Protein Symbol	varchar	50	0	Y		N			N	text	30		Y	Y	N	Short Protein Symbol from IPI		
+AT_ipi_data	6	swiss_prot_acc	SwissPro Accession Numbers	varchar	50	0	Y		N			N	text	30		Y	Y	N	Swiss Prot Accession number		
+AT_ipi_data	7	cellular_location_id	Cellular Location	int	4	0	Y		N			N				N	N	Y	"Subcelluar location: ie Secreted, Transmembrane"		
+AT_ipi_data	8	protein_summary	Protein Summary	text	16	0	Y		N			N	textarea	4		Y	Y	N	Protein Summary Information		
+AT_ipi_data	9	protein_sequence	Protein Sequence	text	16	0	N		N			Y	textarea	4		Y	Y	N	Protein Sequence		
+AT_ipi_data	10	transmembrane_info	Transmembrane Info	varchar	255	0	N		N			Y	text	50		Y	Y	N	Encoded TM domain informaion from TMHMM  ie o528-550i		
+AT_ipi_data	11	signal_sequence_info	Signal Sequence Info	varchar	255	0	N		N			Y	text	50		Y	Y	N	Encoded Singal sequence information from SingalP: ie 28 Y 0.988 Y		
 AT_ipi_data	12	synonyms	Synonyms	varchar	500	0	N		N			Y	text	50		Y	Y	N	Synonyms		
 AT_cellular_location	1	cellular_location_id	Cellular Location	int	4	0	N		Y							N	N				pkDEFAULT
 AT_cellular_location	2	cellular_location_name	Cellular Location Name	varchar	255	0	N		N			Y	text	50		Y	Y	N	"Name of the subcellular location: Secreted, Transmembrane"		
@@ -288,23 +288,43 @@ AT_predicted_peptide	9	glyco_site_id	Glyco Site ID	int	4	0	N		N	AT_glyco_site	gl
 AT_predicted_peptide	10	predicted_start	Identified Peptide Start	int	4	0	N		N			Y	text	10		N	N	N	Start position of the peptide on the IPI protein		
 AT_predicted_peptide	11	predicted_stop	Identified  Peptide Stop	int	4	0	N		N			Y	text	10		N	N	N	Stop position of the peptide on the IPI protein		
 AT_peptide_to_tissue	1	peptide_to_tissue_id	Peptide To Tissue ID	int	4	0	N		Y							N	N				pkDEFAULT
-AT_peptide_to_tissue	2	identified_peptide_id	Identified Peptide ID	int	4	0	N		N			Y				N	N				pkDEFAULT
-AT_peptide_to_tissue	3	tissue_id	Tissue ID	int	4	0	N		N			Y				N	N				pkDEFAULT
-AT_tissue	1	tissue_id	Tissue ID	int	4	0	N		Y							N	N				
-AT_tissue	2	tissue_name	Tissue Name	varchar	255	0	N		N			Y	text	50		Y	Y	N	General Tissue Name		
-AT_tissue	3	tissue_description	Tissue Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Description about the tissue		
-AT_tissue	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_tissue	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_tissue	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_tissue	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_tissue	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_tissue	9	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_peptide_to_tissue	2	identified_peptide_id	Identified Peptide ID	int	4	0	N		N	AT_identified_peptide	identified_peptide_id	Y				N	N				pkDEFAULT
+AT_peptide_to_tissue	3	sample_id	Sample ID	int	4	0	N		N	AT_glyco_sample	glyco_sample_id	Y				N	N				pkDEFAULT
 AT_sample_publication	1	sample_publication_id	Sample Publication ID	int	4	0	N		Y			Y				N	N	N			pkDEFAULT
 AT_sample_publication	2	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id	Y				Y	N	Y			
 AT_sample_publication	3	publication_id	Publication ID	int	4	0	N		N	AT_publication	publication_id	Y				N	N	Y	Publication ID		
-AT_sample_publication	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N
-AT_sample_publication	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N
-AT_sample_publication	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N
-AT_sample_publication	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N
-AT_sample_publication	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N
-AT_sample_publication	9	record_status	Record Status	char	1	0	N	N	N							N	N
+AT_sample_publication	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_sample_publication	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_sample_publication	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_sample_publication	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_sample_publication	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_sample_publication	9	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_tissue_type	1	tissue_type_id	Tissue Type ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_tissue_type	2	tissue_type_name	Tissue Type Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of Tissue		
+AT_tissue_type	3	sort_order	Sort Order	int	4	0	Y	10	N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
+AT_tissue_type	4	tissue_type_description	Tissue Type Description	varchar	255	0	Y		N			N	text	50		Y	Y	N	Cell types		
+AT_tissue_type	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_tissue_type	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_tissue_type	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_tissue_type	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_tissue_type	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_tissue_type	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_tissue_type	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_glyco_sample	1	sample_id	Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_glyco_sample	2	sample_name	Sample Name	varchar	255	0	N		N			Y	textarea	2		Y	Y	Y	Name of this Sample		
+AT_glyco_sample	3	sample_description	Sample Description	text	16	0	Y		N			N	text	10		Y	Y	N	Full description of this sample		
+AT_glyco_sample	4	source_id	Source ID	int	4	0	Y		N			N				Y	Y	N	Source of sample		
+AT_glyco_sample	5	parent_sample_id	Parent Sample ID	int	4	0	Y		N			N				Y	Y	N	Source of sample		
+AT_glyco_sample	6	root_sample_id	Root Sample ID	int	4	0	Y		N			N				Y	Y	N	Source of sample		
+AT_glyco_sample	7	project_id	Owner Project	int	4	0	Y		N	project	project_id	N	optionlist			Y	Y	N	Project under which this Sample is organized and for which user privileges is controlled	SELECT DISTINCT P.project_id, UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name	
+AT_glyco_sample	8	generation_date	Sample Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	textdate	20		Y	Y	N	Date on which this sample was prepared		
+AT_glyco_sample	9	comment	Comment	text	16	0	N		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_glyco_sample	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_glyco_sample	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_glyco_sample	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_glyco_sample	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_glyco_sample	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_glyco_sample	15	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_identified_to_ipi	1	identified_to_ipi	Identified to IPI ID	int	4	0	N		Y			Y				N	N	Y			
+AT_identified_to_ipi	2	identified_peptide_id	Identified peptide ID	int	4	0	N		N	AT_identified_peptide	identified_peptide_id	Y				N	N	Y			
+AT_identified_to_ipi	3	ipi_data_id	IPI Data ID	int	4	0	N		N	AT_ipi_data	ipi_data_id	Y				N	N	Y			
