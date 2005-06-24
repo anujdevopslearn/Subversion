@@ -219,13 +219,13 @@ sub handle_request {
   #########################################################################
   #### Process all the constraints
 
-  #### Build PROJECT_ID constraint
-  my $project_id_clause = $sbeams->parseConstraint2SQL(
+  #### Build PROJECT_LABEL constraint
+  my $project_label_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"ERV.project_id",
     constraint_type=>"text_list",
     constraint_name=>"Project ID",
-    constraint_value=>$parameters{project_id} );
-  return if ($project_id_clause == -1);
+    constraint_value=>$parameters{project_label} );
+  return if ($project_label_clause == -1);
 
   #### Build PLATE_ID constraint
   my $plate_id_clause = $sbeams->parseConstraint2SQL(
@@ -272,7 +272,7 @@ sub handle_request {
   #### Define the desired columns in the query
   #### [friendly name used in url_cols,SQL,displayed column title]
   my @column_array = (
-    ["project_id","ERV.project_id","Project ID"],
+    ["project_label","ERV.project_id","Project ID"],
     ["plate_id","ERV.plate_id","Plate Name"],
     ["exp_no","ERV.exp_no","Experiment Number"],
     ["well_position","ERV.well_position","Well Position"],
@@ -309,11 +309,11 @@ sub handle_request {
    SELECT $limit_clause $columns_clause
      FROM SNP.dbo.export_results_view ERV
      LEFT JOIN SNP.dbo.manual_genotype_call MGC
-       ON ( ERV.project_id = MGC.project_id AND
+       ON ( ERV.project_id = MGC.project_label AND
             ERV.assay_id = MGC.assay_id AND
             ERV.sample_id = MGC.sample_id )
     WHERE 1=1
-      $project_id_clause
+      $project_label_clause
       $plate_id_clause
       $assay_id_clause
       $sample_id_clause
@@ -517,7 +517,7 @@ sub postProcessResultset {
 
 
   #### Get the column indices
-  my $project_id_index = $resultset_ref->{column_hash_ref}->{project_id};
+  my $project_label_index = $resultset_ref->{column_hash_ref}->{project_label};
   my $plate_id_index = $resultset_ref->{column_hash_ref}->{plate_id};
   my $exp_no_index = $resultset_ref->{column_hash_ref}->{exp_no};
   my $well_position_index = $resultset_ref->{column_hash_ref}->{well_position};
@@ -534,7 +534,7 @@ sub postProcessResultset {
 
 
   #### Create a data structure for all values
-  my ($project_id,$sample_id,$sample_description,$assay_id,$genotype_id,$plate_id,$exp_no,$well_position);
+  my ($project_label,$sample_id,$sample_description,$assay_id,$genotype_id,$plate_id,$exp_no,$well_position);
   my ($call_quality,$call_date,$manual_genotype_call,$manual_call_quality,$manual_genotype_call_id);
   my $data;
   my %query_assays;
@@ -550,11 +550,11 @@ sub postProcessResultset {
   print "Total number of input rows: $n_rows<BR>\n";
   for (my $row=0;$row<$n_rows; $row++) {
 
-    $project_id = $resultset_ref->{data_ref}->[$row]->[$project_id_index];
+    $project_label = $resultset_ref->{data_ref}->[$row]->[$project_label_index];
     #### If user asked for Concannon reordering, then combine projects
     if ($parameters{display_options} =~ /ConcannonReorder/ &&
         $parameters{view_style} =~ /SampleVsAssay/) {
-      $project_id = 'Combined';
+      $project_label = 'Combined';
     }
 
     $plate_id = $resultset_ref->{data_ref}->[$row]->[$plate_id_index];
@@ -568,7 +568,7 @@ sub postProcessResultset {
     $call_quality = $resultset_ref->{data_ref}->[$row]->[$call_quality_index];
     $call_date = $resultset_ref->{data_ref}->[$row]->[$call_date_index];
     $samples{$sample_id} = 1;
-    $projects{$project_id} = 1;
+    $projects{$project_label} = 1;
     $plate_ids{$plate_id} = "${exp_no}_${well_position}_${call_date}";
     $manual_genotype_call = $resultset_ref->{data_ref}->[$row]->[$manual_genotype_call_index];
     $manual_call_quality = $resultset_ref->{data_ref}->[$row]->[$manual_call_quality_index];
@@ -584,12 +584,12 @@ sub postProcessResultset {
 
     #### Store the genotype with great care about collisions
     #### Does this one exist already?
-    if (exists($data->{$project_id}->{$assay_id}->{$sample_id}->{single_call})) {
+    if (exists($data->{$project_label}->{$assay_id}->{$sample_id}->{single_call})) {
       #### Is it defined?
-      if (defined($data->{$project_id}->{$assay_id}->{$sample_id}->{single_call})) {
+      if (defined($data->{$project_label}->{$assay_id}->{$sample_id}->{single_call})) {
 
         #### If is the same, then nothing to do
-        if ($data->{$project_id}->{$assay_id}->{$sample_id}->{single_call} eq $genotype_id) {
+        if ($data->{$project_label}->{$assay_id}->{$sample_id}->{single_call} eq $genotype_id) {
           if ($genotype_id eq '') {
 	    $dup_stats{n_replace_empty_with_empty}++;
 	  } else {
@@ -597,9 +597,9 @@ sub postProcessResultset {
 	  }
 
 	#### Else is the previous call empty?
-	} elsif ($data->{$project_id}->{$assay_id}->{$sample_id}->{single_call} eq '') {
+	} elsif ($data->{$project_label}->{$assay_id}->{$sample_id}->{single_call} eq '') {
 	  $dup_stats{replace_an_empty}++;
-          $data->{$project_id}->{$assay_id}->{$sample_id}->{single_call} = $genotype_id;
+          $data->{$project_label}->{$assay_id}->{$sample_id}->{single_call} = $genotype_id;
 
 	#### Else is the current call empty?
 	} elsif ($genotype_id eq '') {
@@ -613,28 +613,28 @@ sub postProcessResultset {
       #### Else if the previous is undefined, just replace the new value
       } else {
         $dup_stats{replace_an_undef}++;
-        $data->{$project_id}->{$assay_id}->{$sample_id}->{single_call} = $genotype_id;
+        $data->{$project_label}->{$assay_id}->{$sample_id}->{single_call} = $genotype_id;
       }
 
     #### Else just add it
     } else {
-      $data->{$project_id}->{$assay_id}->{$sample_id}->{single_call} = $genotype_id;
+      $data->{$project_label}->{$assay_id}->{$sample_id}->{single_call} = $genotype_id;
     }
 
 
     #### In any case, keep all calls in the hash as well
     if (defined($exp_no) && $call_date gt '') {
       my $newkey = "${exp_no}_${well_position}_${call_date}";
-      $data->{$project_id}->{$assay_id}->{$sample_id}->{all_calls}->{$newkey}->{genotype} = $genotype_id;
-      $data->{$project_id}->{$assay_id}->{$sample_id}->{all_calls}->{$newkey}->{quality} = $call_quality;
-      $data->{$project_id}->{$assay_id}->{$sample_id}->{all_calls}->{$newkey}->{plate} = $plate_id;
-      $data->{$project_id}->{$assay_id}->{$sample_id}->{all_calls}->{$newkey}->{call_date} = $call_date;
-      $data->{$project_id}->{$assay_id}->{$sample_id}->{all_calls}->{$newkey}->{experiment} = $exp_no;
-      $data->{$project_id}->{$assay_id}->{$sample_id}->{all_calls}->{$newkey}->{well} = $well_position;
-      $data->{$project_id}->{$assay_id}->{$sample_id}->{sample_description}=$sample_description;
-      $data->{$project_id}->{$assay_id}->{$sample_id}->{manual_genotype_call} = $manual_genotype_call;
-      $data->{$project_id}->{$assay_id}->{$sample_id}->{manual_call_quality} = $manual_call_quality;
-      $data->{$project_id}->{$assay_id}->{$sample_id}->{manual_genotype_call_id} = $manual_genotype_call_id;
+      $data->{$project_label}->{$assay_id}->{$sample_id}->{all_calls}->{$newkey}->{genotype} = $genotype_id;
+      $data->{$project_label}->{$assay_id}->{$sample_id}->{all_calls}->{$newkey}->{quality} = $call_quality;
+      $data->{$project_label}->{$assay_id}->{$sample_id}->{all_calls}->{$newkey}->{plate} = $plate_id;
+      $data->{$project_label}->{$assay_id}->{$sample_id}->{all_calls}->{$newkey}->{call_date} = $call_date;
+      $data->{$project_label}->{$assay_id}->{$sample_id}->{all_calls}->{$newkey}->{experiment} = $exp_no;
+      $data->{$project_label}->{$assay_id}->{$sample_id}->{all_calls}->{$newkey}->{well} = $well_position;
+      $data->{$project_label}->{$assay_id}->{$sample_id}->{sample_description}=$sample_description;
+      $data->{$project_label}->{$assay_id}->{$sample_id}->{manual_genotype_call} = $manual_genotype_call;
+      $data->{$project_label}->{$assay_id}->{$sample_id}->{manual_call_quality} = $manual_call_quality;
+      $data->{$project_label}->{$assay_id}->{$sample_id}->{manual_genotype_call_id} = $manual_genotype_call_id;
     }
 
     #### Add this assay to the list of assays if we don't have it yet
@@ -991,7 +991,7 @@ sub postProcessResultset {
     }
 
     #### Replace existing resultset attributes with reformulated ones
-    $resultset_ref->{column_list_ref} = ['project_id','full_assay_id','assay_id','sample_id',@columnheaders];
+    $resultset_ref->{column_list_ref} = ['project_label','full_assay_id','assay_id','sample_id',@columnheaders];
     $resultset_ref->{precisions_list_ref} = [ (50) x (scalar(@columnheaders)+4) ];
     $resultset_ref->{types_list_ref} = [ 'varchar','varchar','varchar','varchar',@column_types ];
 
@@ -1296,7 +1296,7 @@ sub postProcessResultset {
     push(@column_types,'real','varchar','varchar');
 
     #### Replace existing resultset attributes with reformulated ones
-    $resultset_ref->{column_list_ref} = ['project_id','assay_id','sample_type',@columnheaders];
+    $resultset_ref->{column_list_ref} = ['project_label','assay_id','sample_type',@columnheaders];
     $resultset_ref->{precisions_list_ref} = [ (50) x (scalar(@columnheaders)+3) ];
     $resultset_ref->{types_list_ref} = [ 'varchar','varchar','varchar',@column_types ];
 
@@ -1373,7 +1373,7 @@ sub getURLColumns {
 
 
   #### Define the hypertext links for columns that need them
-  %url_cols = ('manual_call' => "$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=SN_manual_genotype_call&manual_genotype_call_id=\%$colnameidx{manual_genotype_call_id}V&project_id=\%$colnameidx{project_id}V&sample_id=\%$colnameidx{sample_id}V&assay_id=\%$colnameidx{full_assay_id}V&ShowEntryForm=1",
+  %url_cols = ('manual_call' => "$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=SN_manual_genotype_call&manual_genotype_call_id=\%$colnameidx{manual_genotype_call_id}V&project_label=\%$colnameidx{project_label}V&sample_id=\%$colnameidx{sample_id}V&assay_id=\%$colnameidx{full_assay_id}V&ShowEntryForm=1",
 	       'manual_call_ATAG' => 'TARGET="Win1"',
 	       'manual_call_ISNULL' => ' [Add] ',
   );
