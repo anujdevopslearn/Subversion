@@ -308,7 +308,9 @@ sub guessMode {
     $self->output_mode('interactive');
     #### Add in a fake reference to MOD_PERL to trick CGI::Carp into
     #### not printing the "Content: text/html\n\n" header
-    $ENV{'MOD_PERL'} = 'FAKE'
+    #$ENV{'MOD_PERL'} = 'FAKE'
+    #### Removed this 2005-06-23 EWD.  It's been here for years, but causes
+    #### a problem at other sites.  I think it's best we try without this.
   }
 
   return 1;
