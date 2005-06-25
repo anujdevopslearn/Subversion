@@ -743,8 +743,15 @@ sub selectHashArray {
     #### Convert the SQL dialect if necessary
     $sql = $self->translateSQL(sql=>$sql);
 
-    my $sth = $dbh->prepare($sql) or croak $dbh->errstr;
-    my $rv  = $sth->execute or croak $dbh->errstr;
+    my ($sth, $rv);
+    eval {
+      $sth = $dbh->prepare($sql) or croak $dbh->errstr;
+      $rv  = $sth->execute or croak $dbh->errstr;
+    };
+    if ( $@ ) {
+      $log->error( "Error running SQL: $sql\n $@" );
+      croak( $@ );
+    }
 
     while (my $columns = $sth->fetchrow_hashref) {
         push(@rows,$columns);
@@ -756,6 +763,43 @@ sub selectHashArray {
 
 } # end selectHashArray
 
+###############################################################################
+# selectTwoColumnHashref
+#
+# Given a SQL statement which returns exactly two columns, return reference to
+# a hash where key is column 0 and value is column 1.
+# 
+###############################################################################
+sub selectTwoColumnHashref {
+    my $self = shift || croak("parameter self not passed");
+    my $sql = shift || croak("parameter sql not passed");
+
+    my %hash;
+
+    #### Get the database handle
+    $dbh = $self->getDBHandle();
+
+    #### Convert the SQL dialect if necessary
+    $sql = $self->translateSQL(sql=>$sql);
+
+    my ($sth, $rv);
+    eval {
+      $sth = $dbh->prepare($sql) or croak $dbh->errstr;
+      $rv  = $sth->execute or croak $dbh->errstr;
+    };
+    if ( $@ ) {
+      $log->error( "Error running SQL: $sql\n $@" );
+      croak( $@ );
+    }
+
+    while (my @row = $sth->fetchrow_array()) {
+        $hash{$row[0]} = $row[1];
+    }
+
+    $sth->finish;
+
+    return \%hash;
+}
 
 ###############################################################################
 # selectTwoColumnHash
