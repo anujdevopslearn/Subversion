@@ -378,7 +378,11 @@ sub peptide_to_tissue {
 	  # bernd means lymphocyte for the time being
 		$sample =~ s/bernd/lymphocytes/g;
     
-    die "Unknown sample $sample" unless $self->{_sample_tissues}->{$sample};
+    # We didn't find tissue type in lookup, try to autocreate
+    unless ( $self->{_sample_tissues}->{$sample} ) {
+      $self->{_sample_tissues}->{$sample} = $self->newGlycoSample( $sample ) ||
+          die "Unable to create new sample type: $sample";
+    }
     my %rowdata = ( identified_peptide_id => $identified_peptide_id, 
                                sample_id  => $self->{_sample_tissues}->{$sample}
                   );
@@ -394,6 +398,39 @@ sub peptide_to_tissue {
   }
 }
 
+
+sub newGlycoSample {
+  my $self = shift;
+  my $sample = shift;
+  my $tissue_sql = $sbeams->evalSQL ( <<"  END" );
+  SELECT tissue_type_id 
+  FROM $TBAT_TISSUE_TYPE WHERE 
+  tissue_type_name = 'unknown'
+  END
+
+  my $dbh = $sbeams->getDBHandle();
+  my ( $tissue_id ) = $dbh->selectrow_array( $tissue_sql ) ||
+    die "Unable to find 'unknown' tissue type, cannot insert new samples";
+
+  my %rowdata = ( tissue_type_id => $tissue_id,
+                  sample_name => $sample );
+
+  my $sample_id =  $sbeams->updateOrInsertRow( return_PK   => 1,
+                                table_name  => $TBAT_GLYCO_SAMPLE,
+				   		                	rowdata_ref => \%rowdata,
+			                	   			verbose     => $self->verbose(),
+			                	   			testonly    => $self->testonly(),
+		                		   			insert      => 1,
+	                			   			PK          => 'sample_id' );
+
+  if ( $sample_id ) {
+    print STDERR "Created new sample entry for $sample: $sample_id\n";
+    return $sample_id;
+  } else {
+    return undef;
+  }
+
+}
 
 ##############################################################################
 #Add the predicted peptide for a row
