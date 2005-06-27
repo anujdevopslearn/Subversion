@@ -1097,8 +1097,11 @@ sub print_data_pipeline_tab {
 
 	my $html  = '';
 
-##Print out the different analysis types that could be ran for this project	
-	if(($n_condition_count + $n_array_scans + $n_affy_chips) > 0){
+#	if(($n_condition_count + $n_array_scans + $n_affy_chips) > 0){
+#
+  # Changed condition to show affy pipeline iff user can write to project.
+  my $canWriteProject = $sbeams->isProjectWritable();
+	if( $canWriteProject ){
 		$html = <<END;
 <table>
  <tr class="grey_header" border=1>
@@ -1146,7 +1149,7 @@ END
 		
 		$html .= "</table>";
 	}else{#end of if clause to print any data 	
-		$html = "<b>Sorry there is no data to analyze for this project</b>";
+		$html = "<b>You lack permission to write to this project</b>";
 	}
 	print $html;
 }
