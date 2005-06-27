@@ -14,6 +14,7 @@ use Data::Dumper;
 use Carp;
 use FindBin;
 use POSIX qw(strftime);
+use Benchmark;
 
 		
 use SBEAMS::Connection::Tables;
@@ -150,6 +151,7 @@ sub process_data_file {
 
 	my $count = 0;
 	my $insert_count = 1;
+  my $t0 = new Benchmark;
     while(<DATA>){
       chomp;
 			my @tokens = split( /\t/, $_, -1);
@@ -189,10 +191,14 @@ sub process_data_file {
 				print '*';
 			}
 			unless ( $count % 5000 ){
-				print "\n";
+        my $t1 = new Benchmark;
+        my $time =  timestr(timediff($t1, $t0)); 
+        $time =~ s/^[^\d]*(\d+) wallclock secs.*/$1/;
+				print "Loaded $count records, elapsed time $time seconds\n";
 			}
     }
-    print "\n\nLoaded $count records\n";
+    my $t2 = new Benchmark;
+    print "\n\nLoaded $count total records in " . timestr(timediff($t2, $t0)) . "\n";
   }
 
 
