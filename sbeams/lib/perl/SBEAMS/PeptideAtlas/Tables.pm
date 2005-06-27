@@ -47,8 +47,7 @@ use vars qw(@ISA @EXPORT
     $TBAT_PEPTIDE_TO_TISSUE
     $TBAT_TISSUE_TYPE
     $TBAT_GLYCO_SAMPLE
-
-
+    $TBAT_IDENTIFIED_TO_IPI
 );
 
 
@@ -87,12 +86,14 @@ require Exporter;
     $TBAT_PEPTIDE_TO_TISSUE
     $TBAT_TISSUE_TYPE
     $TBAT_GLYCO_SAMPLE
+    $TBAT_IDENTIFIED_TO_IPI
 );
 
 
 #### Get the appropriate database prefixes for the SBEAMS core and this module
 my $core = $DBPREFIX{Core};
 my $mod = $DBPREFIX{PeptideAtlas};
+my $glycomod = $DBPREFIX{GlycoPeptide} || $DBPREFIX{PeptideAtlas};
 my $BioLink = $DBPREFIX{BioLink};
 
 $TB_ORGANISM                = "${core}organism";
@@ -117,14 +118,15 @@ $TBAT_BIOSEQUENCE_ANNOTATION = "${mod}biosequence_annotation";
 $TBAT_SAMPLE                = "${mod}sample";
 $TBAT_SAMPLE_PUBLICATION    = "${mod}sample_publication";
 
-$TBAT_IPI_VERSION	    	= "${mod}ipi_version";
-$TBAT_IPI_DATA			= "${mod}ipi_data";
-$TBAT_CELLULAR_LOCATION		= "${mod}cellular_location";
-$TBAT_GLYCO_SITE		= "${mod}glyco_site";
-$TBAT_IDENTIFIED_PEPTIDE	= "${mod}identified_peptide";
-$TBAT_PREDICTED_PEPTIDE		= "${mod}predicted_peptide";
-$TBAT_PEPTIDE_TO_TISSUE		= "${mod}peptide_to_tissue";
-$TBAT_TISSUE_TYPE			= "${mod}tissue_type";
-$TBAT_GLYCO_SAMPLE   = "${mod}glyco_sample";
+$TBAT_IPI_VERSION	    	= "${glycomod}ipi_version";
+$TBAT_IPI_DATA			= "${glycomod}ipi_data";
+$TBAT_CELLULAR_LOCATION		= "${glycomod}cellular_location";
+$TBAT_GLYCO_SITE		= "${glycomod}glyco_site";
+$TBAT_IDENTIFIED_PEPTIDE	= "${glycomod}identified_peptide";
+$TBAT_PREDICTED_PEPTIDE		= "${glycomod}predicted_peptide";
+$TBAT_PEPTIDE_TO_TISSUE		= "${glycomod}peptide_to_tissue";
+$TBAT_TISSUE_TYPE			= "${glycomod}tissue_type";
+$TBAT_IDENTIFIED_TO_IPI= "${glycomod}identified_to_ipi";
+$TBAT_GLYCO_SAMPLE   = "${glycomod}glyco_sample";
 
 
