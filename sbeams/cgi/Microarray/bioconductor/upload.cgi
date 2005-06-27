@@ -428,7 +428,16 @@ sub print_display_files_form {
 
 		my $sql = '';
 		
-		my @all_affy_arrays_project = $sbeams_affy_groups->get_projects_with_arrays();
+    my @all_affy_arrays_project = $sbeams_affy_groups->get_projects_with_arrays();
+
+    # Now that we've fetched the arrays that have data, prune this based on 
+    # which projects the user is allowed to access.  
+    my @accessible_projects = $sbeams->getAccessibleProjects();
+    my @accessible_array_projects;
+    foreach my $proj_ref ( @all_affy_arrays_project ) { 
+      push @accessible_array_projects, $proj_ref if grep ( /^$proj_ref->[0]$/, @accessible_projects )
+    }
+
 
 #############################################
 ## Make form to print all availiable projects
@@ -439,7 +448,7 @@ sub print_display_files_form {
 			<SELECT NAME="apply_action_hidden" MULTIPLE SIZE=10  onChange="refreshDocument()">	
 END
 		
-		foreach my $proj_array_ref (@all_affy_arrays_project) {
+		foreach my $proj_array_ref (@accessible_array_projects) {
 			my ($proj_id, $user_name__proj_name) = @{$proj_array_ref};
 			
 			if (grep{ $_ == $proj_id} @additional_project_ids){	#look to see what projects have allready been selected
