@@ -83,7 +83,7 @@ sub main
        # permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
        # 'PeptideAtlas_readonly'],
         #connect_read_only=>1,
-        allow_anonymous_access=>1,
+# allow_anonymous_access=>1,
     ));
 
 
@@ -488,7 +488,8 @@ sub clean_params{
 		}elsif($k eq 'redraw_protein_sequence'){
 			$ref_parameters->{$k} = clean_term($ref_parameters->{$k});
 		}else{
-			print_error("Unknown Paramater passed in '$k' ")
+# Doesn't allow std sbeams params through
+#print_error("Unknown Paramater passed in '$k' ")
 		}	
    
 	}
