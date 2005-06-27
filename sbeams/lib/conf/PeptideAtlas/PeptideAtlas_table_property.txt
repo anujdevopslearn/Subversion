@@ -26,4 +26,4 @@ AT_peptide_to_tissue	Peptide to tissue	PeptideAtlas_infrastructure	NO	$TBAT_PEPT
 AT_tissue_type	Sample	PeptideAtlas_infrastructure	YES	$TBAT_TISSUE_TYPE	tissue_type_id		ManageTable.cgi?TABLE_NAME=AT_tissue_type		
 AT_sample_publication	Sample Publication	PeptideAtlas_user	NO	$TBAT_SAMPLE_PUBLICATION	sample_publication_id				
 AT_identified_to_ipi	Identified To IPI	PeptideAtlas_infrastructure	NO	$TBAT_IDENTIFIED_TO_IPI	identified_to_ipi_id				
-AT_glyco_sample	Sample	PeptideAtlas_infrastructure	YES	$TBAT_GLYCO_SAMPLE	glyco_sample_id		ManageTable.cgi?TABLE_NAME=AT_glyco_sample		
+AT_glyco_sample	Sample	PeptideAtlas_infrastructure	YES	$TBAT_GLYCO_SAMPLE	sample_id		ManageTable.cgi?TABLE_NAME=AT_glyco_sample		

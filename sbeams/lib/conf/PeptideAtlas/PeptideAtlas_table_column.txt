@@ -274,8 +274,8 @@ AT_identified_peptide	4	peptide_prophet_score	Peptide Prophet Score 	real	4	0	N	
 AT_identified_peptide	5	peptide_mass	Peptide Mass	real	4	0	N		N			Y	text	50		Y	Y	N	Mass of the identified peptide		
 AT_identified_peptide	6	glyco_site_id	Glyco Site ID	int	4	0	N		N	AT_glyco_site	glyco_site_id					N	N				
 AT_identified_peptide	7	tryptic_end	Tryptic Ends	int	4	0	Y		N										Number of tryptic ends for this identified peptide		
-AT_identified_peptide	8	identified_start	Identified Peptide Start	int	4	0	N		N			Y	text	10		N	N	N	Start position of the peptide on the IPI protein		
-AT_identified_peptide	9	identified_stop	Identified  Peptide Stop	int	4	0	N		N			Y	text	10		N	N	N	Stop position of the peptide on the IPI protein		
+																					
+																					
 AT_predicted_peptide	1	predicted_peptide_id	Predicted Peptide ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_predicted_peptide	2	ipi_data_id	IPI Data ID	int	4	0	N		N	AT_ipi_data	ipi_data_id	Y				N	N	Y			
 AT_predicted_peptide	3	predicted_peptide_sequence	Predicted Peptide Sequence	text	16	0	N		N			Y	text	50		Y	Y	N	Peptide Sequence Identified by MS/MS run		
@@ -289,7 +289,7 @@ AT_predicted_peptide	10	predicted_start	Identified Peptide Start	int	4	0	N		N			
 AT_predicted_peptide	11	predicted_stop	Identified  Peptide Stop	int	4	0	N		N			Y	text	10		N	N	N	Stop position of the peptide on the IPI protein		
 AT_peptide_to_tissue	1	peptide_to_tissue_id	Peptide To Tissue ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_peptide_to_tissue	2	identified_peptide_id	Identified Peptide ID	int	4	0	N		N	AT_identified_peptide	identified_peptide_id	Y				N	N				pkDEFAULT
-AT_peptide_to_tissue	3	sample_id	Sample ID	int	4	0	N		N	AT_glyco_sample	glyco_sample_id	Y				N	N				pkDEFAULT
+AT_peptide_to_tissue	3	sample_id	Sample ID	int	4	0	N		N	AT_glyco_sample	sample_id	Y				N	N				pkDEFAULT
 AT_sample_publication	1	sample_publication_id	Sample Publication ID	int	4	0	N		Y			Y				N	N	N			pkDEFAULT
 AT_sample_publication	2	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id	Y				Y	N	Y			
 AT_sample_publication	3	publication_id	Publication ID	int	4	0	N		N	AT_publication	publication_id	Y				N	N	Y	Publication ID		
@@ -311,20 +311,23 @@ AT_tissue_type	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact
 AT_tissue_type	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 AT_tissue_type	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_glyco_sample	1	sample_id	Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
-AT_glyco_sample	2	sample_name	Sample Name	varchar	255	0	N		N			Y	textarea	2		Y	Y	Y	Name of this Sample		
+AT_glyco_sample	2	sample_name	Sample Name	varchar	255	0	N		N			Y	text	2		Y	Y	Y	Name of this Sample		
 AT_glyco_sample	3	sample_description	Sample Description	text	16	0	Y		N			N	text	10		Y	Y	N	Full description of this sample		
 AT_glyco_sample	4	source_id	Source ID	int	4	0	Y		N			N				Y	Y	N	Source of sample		
 AT_glyco_sample	5	parent_sample_id	Parent Sample ID	int	4	0	Y		N			N				Y	Y	N	Source of sample		
 AT_glyco_sample	6	root_sample_id	Root Sample ID	int	4	0	Y		N			N				Y	Y	N	Source of sample		
-AT_glyco_sample	7	project_id	Owner Project	int	4	0	Y		N	project	project_id	N	optionlist			Y	Y	N	Project under which this Sample is organized and for which user privileges is controlled	SELECT DISTINCT P.project_id, UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name	
-AT_glyco_sample	8	generation_date	Sample Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	textdate	20		Y	Y	N	Date on which this sample was prepared		
-AT_glyco_sample	9	comment	Comment	text	16	0	N		N			N	textarea	4		Y	Y	N	Additional comments		
-AT_glyco_sample	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_glyco_sample	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_glyco_sample	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_glyco_sample	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_glyco_sample	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_glyco_sample	15	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_glyco_sample	7	tissue_type_id	Tissue Type ID	int	4	0	N		N	tissue_type	tissue_type_id	N	optionlist			Y	Y	Y	Tissue type of this sample	SELECT  tissue_type_id, tissue_type_name FROM $TBAT_TISSUE_TYPE ORDER BY sort_order ASC, tissue_type_name ASC	
+AT_glyco_sample	8	project_id	Owner Project	int	4	0	Y		N	project	project_id	N	optionlist			Y	Y	N	Project under which this Sample is organized and for which user privileges is controlled	SELECT DISTINCT P.project_id, UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name	
+AT_glyco_sample	9	generation_date	Sample Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	textdate	20		Y	Y	N	Date on which this sample was prepared		
+AT_glyco_sample	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_glyco_sample	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_glyco_sample	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_glyco_sample	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_glyco_sample	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_glyco_sample	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_glyco_sample	16	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_identified_to_ipi	1	identified_to_ipi	Identified to IPI ID	int	4	0	N		Y			Y				N	N	Y			
 AT_identified_to_ipi	2	identified_peptide_id	Identified peptide ID	int	4	0	N		N	AT_identified_peptide	identified_peptide_id	Y				N	N	Y			
 AT_identified_to_ipi	3	ipi_data_id	IPI Data ID	int	4	0	N		N	AT_ipi_data	ipi_data_id	Y				N	N	Y			
+AT_identified_to_ipi	4	identified_start	Identified Peptide Start	int	4	0	N		N			Y	text	10		N	N	N	Start position of the peptide on the IPI protein		
+AT_identified_to_ipi	5	identified_stop	Identified  Peptide Stop	int	4	0	N		N			Y	text	10		N	N	N	Stop position of the peptide on the IPI protein		
