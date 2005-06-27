@@ -168,7 +168,7 @@ sub process_data_file {
 				next;
       }
 
-			$self->add_ipi_record( \@tokens ) unless $self->check_ipi($tokens[$heads{'IPI'}]);
+			$self->add_ipi_record( \@tokens ) unless $self->check_ipi($tokens[$heads{'ipi'}]);
 		
 			my $glyco_pk = $self->add_glyco_site( \@tokens );
 			
@@ -278,32 +278,36 @@ sub checkHeaders {
 #Add the identifed_peptide for a row
 ###############################################################################
 sub add_identified_peptides{
-	my $method = 'add_identified_peptides';
 	my $self = shift;
+	my $method = 'add_identified_peptides';
 	my %args = @_;
 	my $row = $args{line_parts};
 	my $glyco_pk = $args{glyco_pk};
 	
-	return unless ($row->[$heads{'identified sequences'}]); #make sure we have an identifed peptide otherwise do nothing
+  # make sure we have an identifed peptide otherwise do nothing
+	return unless ($row->[$heads{'identified sequences'}]); 
 	
-	my $ipi_acc = $row->[$heads{'IPI'}];
+	my $ipi_acc = $row->[$heads{'ipi'}];
 	my $clean_seq = $self->clean_seq($row->[$heads{'identified sequences'}]); 
 	my ($start, $stop) = $self->map_peptide_to_protein(peptide=> $clean_seq,
 													   protein_seq => $row->[$heads{'protein sequences'}]);
+
+  my $iden_pep_id;
+  # Insert new id'd peptide or use cached version
+  if ( !$self->{_id_peps}->{$row->[$heads{'identified sequences'}]} ) {
+#    print "Got a new one, $row->[$heads{'identified sequences'}]\n";
 	
-  # First, add row to the identified peptide table
-	my %id_pep_row = ( 	
+    # First, add row to the identified peptide table
+	  my %id_pep_row = ( 	
 					identified_peptide_sequence => $row->[$heads{'identified sequences'}],
-					tryptic_end				        	=> $row->[$heads{'tryptic ends'}],
+  				tryptic_end				        	=> $row->[$heads{'tryptic ends'}],
 					peptide_prophet_score 		  => $row->[$heads{'peptide prophet'}],
 					peptide_mass 			        	=> $row->[$heads{'identified peptide mass'}],
-					identified_start 	          => $start,
-					identified_stop 	          => $stop, 
 					glyco_site_id  		          => $glyco_pk
 			);
 	
-  # returns identified_peptide_id for new row
-	my $iden_pep_id = $sbeams->updateOrInsertRow(				
+    # returns identified_peptide_id for new row
+  	$iden_pep_id = $sbeams->updateOrInsertRow(				
 							  table_name  => $TBAT_IDENTIFIED_PEPTIDE,
 				   			rowdata_ref => \%id_pep_row,
 				   			return_PK   => 1,
@@ -312,10 +316,18 @@ sub add_identified_peptides{
 				   			insert      => 1,
 				   			PK          => 'identified_peptide_id',
 				   		   );
+    # Cache value for later use!
+    $self->{_id_peps}->{$row->[$heads{'identified sequences'}]} = $iden_pep_id;
+  } else {
+    $iden_pep_id = $self->{_id_peps}->{$row->[$heads{'identified sequences'}]};
+#    print "Using cached, $row->[$heads{'identified sequences'}] => $iden_pep_id\n";
+  }
 
   # Now, add row to identified_to_ipi lookup(join) table
   my %iden_to_ipi_row = ( ipi_data_id => $self->get_ipi_data_id($ipi_acc),
-                          identified_peptide_id => $iden_pep_id
+                          identified_peptide_id => $iden_pep_id,
+					                identified_start      => $start,
+			                		identified_stop       => $stop, 
                         );
 
   # Insert row
@@ -343,40 +355,43 @@ sub add_identified_peptides{
 #Add peptide_to_tissue information
 ###############################################################################
 sub peptide_to_tissue {
-	my $method = 'peptide_to_tissue';
 	my $self = shift;
+	my $method = 'peptide_to_tissue';
 	my $identified_peptide_id = shift;
-	my $info_aref = shift;
+	my $row = shift;
 	
-	my $tissue_name = $info_aref->[26]?$info_aref->[26]:'serum'; #data incomplete for version 4 default to serum
-	
-	my $tissue_id = $self->find_tissue_id($tissue_name);
-	
-	my %rowdata_h = ( 	
-					identified_peptide_id =>$identified_peptide_id,
-					tissue_id => $tissue_id
-			);
+	my $samples = $row->[$heads{'identified tissues'}];
+  my @samples = split( ",", $samples, -1 );
 
-	my $rowdata_ref = \%rowdata_h;
-	
+  if ( !$self->{_sample_tissues} ) {
+    my $sql = "SELECT sample_name, sample_id FROM $TBAT_GLYCO_SAMPLE";
+    $self->{_sample_tissues} = $sbeams->selectTwoColumnHashref( $sql );
+#    foreach my $k ( keys ( %{$self->{_sample_tissues}} ) ) { print "$k\n"; }
+  }
 
-	my $peptide_to_tissue_id = $sbeams->updateOrInsertRow(				
-							table_name=>$TBAT_PEPTIDE_TO_TISSUE,
-				   			rowdata_ref=>$rowdata_ref,
-				   			return_PK=>1,
-				   			verbose=>$self->verbose(),
-				   			testonly=>$self->testonly(),
-				   			insert=>1,
-				   			PK=>'peptide_to_tissue_id',
+  foreach my $sample ( @samples ) {
+
+    # Trim leading and trailing space
+    $sample =~ s/^\s*//g;
+    $sample =~ s/\s*$//g;
+
+	  # bernd means lymphocyte for the time being
+		$sample =~ s/bernd/lymphocytes/g;
+    
+    die "Unknown sample $sample" unless $self->{_sample_tissues}->{$sample};
+    my %rowdata = ( identified_peptide_id => $identified_peptide_id, 
+                               sample_id  => $self->{_sample_tissues}->{$sample}
+                  );
+	
+	  $sbeams->updateOrInsertRow( return_PK   => 0,
+                                table_name  => $TBAT_PEPTIDE_TO_TISSUE,
+				   		                	rowdata_ref => \%rowdata,
+			                	   			verbose     => $self->verbose(),
+			                	   			testonly    => $self->testonly(),
+		                		   			insert      => 1,
+	                			   			PK          => 'peptide_to_tissue_id',
 				   		   );
-				   		   
-	if ($self->verbose()>0){
-		print (__PACKAGE__."::$method Added PEPTIDE TO TISSUE INFO '$peptide_to_tissue_id'  for tiusse '$tissue_name'$\n");
-	
-	}
-	
-	return $peptide_to_tissue_id;
-	
+  }
 }
 
 
@@ -392,7 +407,7 @@ sub add_predicted_peptide {
 	my $glyco_pk = $args{glyco_pk};
 	
 	
-	my $ipi_acc = $row->[$heads{'IPI'}];
+	my $ipi_acc = $row->[$heads{'ipi'}];
 	
 	#my $fixed_predicted_seq = $self->fix_predicted_peptide_seq($row->[16]);
 	my $clean_seq = $self->clean_seq($row->[$heads{'predicted tryptic nxt/s peptide sequence'}]); 
@@ -503,10 +518,11 @@ sub map_peptide_to_protein {
 	my $protein_seq = $args{protein_seq};
 	
 	if ( $protein_seq =~ /$pep_seq/ ) {
+
 		#add one for the starting position since we want the start of the peptide location
-		
 		my $start_pos = length($`) +1;    
-		my $stop_pos = length($pep_seq) + $start_pos - 1 ;    #subtract 1 since we want the ture end 
+    # subtract 1 since we want the true end 
+		my $stop_pos = length($pep_seq) + $start_pos - 1 ;  
 		if($self->verbose){
 			print (__PACKAGE__."::$method $pep_seq START '$start_pos' STOP '$stop_pos'\n");
 		}
@@ -516,7 +532,6 @@ sub map_peptide_to_protein {
 		return ($start_pos, $stop_pos);	
 	}else{
 		confess(__PACKAGE__. "::$method PEPTIDE '$pep_seq' DOES NOT MATCH '$protein_seq'\n");
-	
 	}
 	
 }
@@ -531,7 +546,7 @@ sub add_glyco_site {
 	my $self = shift;
 	my $row = shift;
 	
-	my $ipi_id = $row->[$heads{'IPI'}];
+	my $ipi_id = $row->[$heads{'ipi'}];
 	
 	my %rowdata_h = ( 	
 				protein_glyco_site_position => $row->[$heads{'nxt/s location'}],
@@ -570,7 +585,7 @@ sub add_ipi_record {
 	
 	my $cellular_location_id = $self->find_cellular_location_id($row->[$heads{'protein location'}]);
 	
-	my $ipi_id = $row->[$heads{'IPI'}];
+	my $ipi_id = $row->[$heads{'ipi'}];
 	
 	my $ipi_version_id = $self->ipi_version_id();
 	
@@ -677,7 +692,7 @@ sub find_tissue_code {
                     ( $tissue =~ /breast/i ) ? 'breast' : 'unknown';
 	
 	my $sql = qq~ 	SELECT tissue_id
-					FROM $TBAT_TISSUE
+					FROM $TBAT_TISSUE_TYPE
 					WHERE tissue_name = '$tissue_name'
 		      ~;
 	
