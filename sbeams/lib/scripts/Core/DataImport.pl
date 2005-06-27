@@ -600,7 +600,7 @@ sub getTableInfo {
   #### Do the translation between db_table_name and real_table_name
   my $db_table_name = $table_info->{$table_name}->{db_table_name};
   #print "  db_table_name = ",$db_table_name,"\n";
-  my ($real_table_name) = evalSQL($db_table_name);
+  my ($real_table_name) = $sbeams->evalSQL($db_table_name);
   #print "  real_table_name = ",$real_table_name,"\n";
   unless ($real_table_name) {
     die("Unable to translate '$table_name' into a real table ".
