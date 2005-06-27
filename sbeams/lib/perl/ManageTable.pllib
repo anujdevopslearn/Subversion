@@ -2025,8 +2025,9 @@ sub checkForPreexistingRecord {
   my @rows = $sbeams->selectOneColumn($sql_query);
 
   if (@rows) {
+    $log->debug( $sql_query) ;
     print qq~
-      The following columns where checked for uniqueness:<BR>
+      The following columns were checked for uniqueness:<BR>
       $error_message<BR>
     ~;
   }
