@@ -855,6 +855,10 @@ sub predicted_pep_html{
 								),
 					),
 			     	$q->td("Predicted Mass"),
+			     	$q->td("Number Proteins<br>with Peptide"),
+			     );
+
+my $foo=<<'  END';
 			     	$q->td($self->linkToColumnText(
 			       				display => "Detection Probability",
 								title   => "Likelihoop of detecting peptide in MS", 
@@ -862,8 +866,7 @@ sub predicted_pep_html{
 								table   => "AT_predicted_peptide", 
 								),
 					),
-			     	$q->td("Number Proteins<br>with Peptide"),
-			     );
+  END
 	
 	foreach my $f (@{$features_aref}){
 		my $start = $f->start;
@@ -931,10 +934,11 @@ sub predicted_pep_html{
 				$q->td("$first_aa.$html_seq.$end_aa"),
 				$q->td({align=>'center'}, $glyco_score),
 				$q->td({align=>'center'},$predicted_mass),
-				$q->td({align=>'center'},$detection_prop),
 				$q->td({align=>'center'},$hit_link),
 				
 			     );
+
+				#$q->td({align=>'center'},$detection_prop),
 		}
 	$html .= "</table>";
 	return $html;
