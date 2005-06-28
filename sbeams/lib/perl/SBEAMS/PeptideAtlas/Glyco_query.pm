@@ -342,10 +342,18 @@ sub get_identified_tissues{
 				JOIN $TBAT_GLYCO_SAMPLE g ON ( ptp.sample_id = g.sample_id ) 
 				JOIN $TBAT_TISSUE_TYPE t ON (t.tissue_type_id = g.tissue_type_id) 
 				WHERE ptp.identified_peptide_id = $id
+        ORDER BY ptp.peptide_to_tissue_id
 				~;
 	
-		return $sbeams->selectHashArray($sql);	
-
+	my @all_tissues = $sbeams->selectHashArray($sql);	
+  my @coalesced_tissues;
+  my %seen;
+  for my $tissue ( @all_tissues ) {
+    next if $seen{$tissue->{tissue_type_name}};
+    push @coalesced_tissues, $tissue->{tissue_type_name};
+    $seen{$tissue->{tissue_type_name}}++;
+  }
+  return \@coalesced_tissues;
 }
 
 } #end of package

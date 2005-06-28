@@ -161,6 +161,8 @@ sub add_peptide_annotation{
 	my $mehtod = 'add_peptide_annotation';
 	my $self = shift;
 	my %args = @_;
+  $log->printStack();
+  $log->debug( "Called with args: " . join( ", ", keys %args ) );
 	my $href = $args{data};
 	my $seq  = $args{seq};
 	my $tissue_info = $args{tissue_info};	
@@ -442,13 +444,9 @@ sub identified_tissues {
 	my $identified_peptide_id = shift;
 	
 	confess(__PACKAGE__ . "::$method NEED identified_peptide_id '$identified_peptide_id'  \n") unless ($identified_peptide_id =~ /^\d+$/); 
-	my @rows = $self->get_identified_tissues($identified_peptide_id);
+	my $tissues = $self->get_identified_tissues($identified_peptide_id);
 	
-	my @tissues = ();
-	foreach my $href (@rows){
-		push @tissues, $href->{'tissue_name'};
-	}
-	return join ",", @tissues;
+	return join ",", @$tissues;
 }
 #######################################################
 #get_score
