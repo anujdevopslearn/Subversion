@@ -166,6 +166,33 @@ sub handle_request {
       #$PROG_NAME = $PROG_NAME.$parameters_string;
 # }
 
+    my ($atlas_build_id, $atlas_build_name);
+
+    ## if have atlas_build_id, but no name, get the name
+    if ( (exists $parameters{'atlas_build_id'})
+    && (!exists $parameters{'atlas_build_name'}) )
+    {
+        $atlas_build_id = $parameters{'atlas_build_id'};
+
+        my $sql = qq~
+            SELECT atlas_build_name
+            FROM $TBAT_ATLAS_BUILD
+            WHERE atlas_build_id = '$atlas_build_id'
+            AND record_status != 'D'
+            ~;
+
+#       $sbeams->display_sql(sql=>$sql);
+
+        my ($tmp) = $sbeams->selectOneColumn($sql) or
+            die "Cannot complete $sql ($!)";
+
+        $atlas_build_name = $tmp;
+
+        $parameters{'atlas_build_name'} = $atlas_build_name;
+
+    }
+
+
 
   #### Define some generic varibles
   my ($i,$element,$key,$value,$line,$result,$sql);
@@ -226,7 +253,7 @@ sub handle_request {
   #### If no atlas_build_id has been set, choose the latest human one.
   #### FIXME. Come up with a better way of doing this.
   unless ($atlas_build_id) {
-    $atlas_build_id = 48;
+    $atlas_build_id = 70;
   }
 
 
@@ -414,15 +441,25 @@ sub handle_request {
   #### For now, hard-code to Ensembl human if not already provided
   $biosequence->{accessor} = "http://www.ensembl.org/Homo_sapiens/protview?peptide=" unless ($biosequence->{accessor});
 
+  ## if atlas_build_name has yeast in it, use SGD look-up
+  if ($atlas_build_name =~ /yeast/i)
+  {
+
+      $biosequence->{accessor} = 
+          "http://db.yeastgenome.org/cgi-bin/locus.pl?locus=";
+
+  }
+
+
   #### Print out a summary of the protein
   if ($sbeams->output_mode() eq 'html') {
     print qq~
       <TABLE width="600">
         <TR><TD colspan="2" background="$HTML_BASE_DIR/images/fade_orange_header_2.png" width="600"><font color="white">$biosequence->{biosequence_name}</font></TD></TR>
-        <TR><TD NOWRAP bgcolor="lightgray">Protein Name</TD><TD bgcolor="lightgray">$biosequence->{biosequence_name}</TD></TR>
-        <TR><TD NOWRAP bgcolor="lightgray">Gene Name</TD><TD bgcolor="lightgray">$biosequence->{biosequence_gene_name}</TD></TR>
-        <TR><TD bgcolor="lightgray">Accession</TD><TD bgcolor="lightgray"><A HREF="$biosequence->{accessor}$biosequence->{biosequence_accession}$biosequence->{accessor_suffix}" target="_blank">$biosequence->{biosequence_accession}</A></TD></TR>
-        <TR><TD bgcolor="lightgray">Description</TD><TD bgcolor="lightgray">$biosequence->{biosequence_desc}</TD></TR>
+        <TR><TD NOWRAP bgcolor="cccccc">Protein Name</TD><TD bgcolor="cccccc">$biosequence->{biosequence_name}</TD></TR>
+        <TR><TD NOWRAP bgcolor="cccccc">Gene Name</TD><TD bgcolor="cccccc">$biosequence->{biosequence_gene_name}</TD></TR>
+        <TR><TD bgcolor="cccccc">Accession</TD><TD bgcolor="cccccc"><A HREF="$biosequence->{accessor}$biosequence->{biosequence_accession}$biosequence->{accessor_suffix}" target="_blank">$biosequence->{biosequence_accession}</A></TD></TR>
+        <TR><TD bgcolor="cccccc">Description</TD><TD bgcolor="cccccc">$biosequence->{biosequence_desc}</TD></TR>
       </TABLE>
       <BR>
       <TABLE width="600">
