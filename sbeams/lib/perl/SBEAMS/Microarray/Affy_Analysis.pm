@@ -83,7 +83,7 @@ use SBEAMS::Microarray::Tables;
 use SBEAMS::Microarray::Analysis_Data;
 use SBEAMS::Microarray::Settings qw( $AFFY_TMP_DIR );
 
-my $R_program = '/tools/bin/R';
+my $R_program = '/net/arrays/Affymetrix/bioconductor/bin/R';
 my $R_library = '/net/arrays/Affymetrix/bioconductor/library';
 
 #our $PHYSICAL_BASE_DIR;
