@@ -37,7 +37,7 @@ our $BIOC_URL = "$CGI_BASE_DIR/Microarray/bioconductor";
 our $ADMIN_EMAIL = 'bmarzolf@systemsbiology.org';
 
 # Location of R binary & R libraries
-our $R_BINARY = "/tools/bin/R";
+our $R_BINARY = "/net/arrays/Affymetrix/bioconductor/bin/R";
 our $R_LIBS   = "/net/arrays/Affymetrix/bioconductor/library";
 
 # Location of Annotation file from affymetrix for chip you will be using
