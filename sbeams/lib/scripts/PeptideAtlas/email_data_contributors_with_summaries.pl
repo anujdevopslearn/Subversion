@@ -8,7 +8,7 @@
 #               (sample_tag, description, is_public, and publication info)
 #               and emails the data contributors asking them if info is
 #               correct.
-#
+#  TODO: add atlas_build_id ability!
 ###############################################################################
 
 
@@ -26,7 +26,7 @@ use Mail::Sendmail;
 use lib "$FindBin::Bin/../../perl";
 #use lib qw(/tools/lib/perl5/site_perl ../lib);
 use vars qw ($sbeams $sbeamsMOD $current_username
-             $PROG_NAME $USAGE %OPTIONS 
+             $PROG_NAME $USAGE %OPTIONS $ATLAS_BUILD_ID
             );
 
 #### Set up SBEAMS core module
@@ -55,14 +55,17 @@ Options:
     --testsend             If set, sends all email to me
     --sendtoall            If set, sends email to primary email contacts
     --sendto               Send email to "name1 name2 name3", for example
+    --atlas_build_id       If want to select specific atlas contributors
 
 e.g.:  $PROG_NAME --testprint 
+e.g.:  $PROG_NAME --testprint --atlas_build_id '74'
+e.g.:  $PROG_NAME --sendtoall --atlas_build_id '74'
 
 EOU
 
 ####### Process options #######################
 unless (GetOptions(\%OPTIONS,"testprint","testsend","sendtoall",
-       "sendto:s",
+       "sendto:s", "atlas_build_id:s",
      )) {
     print "$USAGE";
     exit;
@@ -79,6 +82,8 @@ my $testsend = $OPTIONS{"testsend"} || '';
 my $sendtoall = $OPTIONS{"sendtoall"} || '';
 
 my $sendto = $OPTIONS{"sendto"} || '';
+
+my $ATLAS_BUILD_ID = $OPTIONS{"atlas_build_id"}  || '';
 
 unless ( $testprint || $testsend || $sendtoall || $sendto)
 {
@@ -260,16 +265,39 @@ sub get_sample_info
 
     my %sample_info;
 
+    my $sql;
+
+
     ## get sample info:
-    my $sql = qq~
-        SELECT sample_tag, sample_description, search_batch_id,
-            data_contributors, is_public, sample_publication_ids,
-            primary_contact_email
-        FROM $TBAT_SAMPLE
-        WHERE record_status != 'D'
-        AND sample_tag != 'LnCAP_nuc3'
-        AND sample_tag != 'test'
-    ~;
+    if ($ATLAS_BUILD_ID)
+    {
+
+        $sql = qq~
+            SELECT S.sample_tag, S.sample_description, S.search_batch_id,
+                S.data_contributors, S.is_public, S.sample_publication_ids,
+                S.primary_contact_email
+            FROM $TBAT_SAMPLE S
+            JOIN $TBAT_ATLAS_BUILD_SAMPLE ABS 
+            ON (ABS.sample_id = S.sample_id)
+            WHERE ABS.atlas_build_id='$ATLAS_BUILD_ID'
+            AND S.record_status != 'D'
+            AND S.sample_tag != 'LnCAP_nuc3'
+            AND S.sample_tag != 'test'
+        ~;
+        
+    } else
+    {
+
+        $sql = qq~
+            SELECT sample_tag, sample_description, search_batch_id,
+                data_contributors, is_public, sample_publication_ids,
+                primary_contact_email
+            FROM $TBAT_SAMPLE
+            WHERE record_status != 'D'
+            AND sample_tag != 'LnCAP_nuc3'
+            AND sample_tag != 'test'
+        ~;
+    }
 
     my @rows = $sbeams->selectSeveralColumns($sql) or 
         die "Couldn't find sample records ($!)";
@@ -474,7 +502,7 @@ sub handleEmail
 
 
                 ## put sample info into string array:
-                push(@info, " ");
+                push(@info, "\n ");
             
                 push(@info, "Sample: $sample_tag");
 
@@ -503,6 +531,14 @@ sub handleEmail
                     }
 
                 }
+
+                if ($#publication_ids < 0)
+                {
+
+                    push(@info, "Publication: [none]");
+
+                }
+
 
             }
 
@@ -630,23 +666,25 @@ sub emailContact
 
     $mail{Message} = "\nDear PeptideAtlas Data Contributor,
 
-    This is an automated email asking you to check the information
+    Hello, this is an automated email asking you to check the information
 enclosed.   Each dataset that you have contributed is called a sample.
 With each sample name you will see information.  If you would like the 
-information changed, please let me know.
+information changed, please let me know a.s.a.p.
 
-   Please note the entry for Is Public?.  If this is incorrect, please
+   Please note the entry for *Is Public?*!  If this is incorrect, please
 notify me right away as those with y (yes) entries will be AVAILABLE TO
-THE PUBLIC THIS WEEK!
+THE PUBLIC in a few days!
 
+    Thank you for participating,
+        Nichole
+
+=======================================================================
 
 Here are your samples:
 
     $str
 
-
-    Thank you for participating,
-        Nichole
+=======================================================================
 
     \n \n";
 
