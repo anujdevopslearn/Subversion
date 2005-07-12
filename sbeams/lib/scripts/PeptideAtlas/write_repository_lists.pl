@@ -21,7 +21,7 @@ use lib "$FindBin::Bin/../../perl";
 use vars qw ($sbeams $sbeamsMOD $current_username 
              $PROG_NAME $USAGE %OPTIONS $TEST 
              $repository_dir $public_outfile $notpublic_outfile 
-             $data_root_dir
+             $data_root_dir $errorfile
             );
 
 #### Set up SBEAMS core module
@@ -89,6 +89,7 @@ $public_outfile = "$repository_dir/repository_public.txt";
 
 $notpublic_outfile = "$repository_dir/repository_notpublic.txt";
 
+$errorfile = "$repository_dir/errorfile.txt";
 
 main();
 
@@ -187,6 +188,12 @@ sub check_files()
     close(OUTFILE) or die
         "cannot close $notpublic_outfile ($!)";
 
+    ## write new empty error file:
+    open(OUTFILE,">$errorfile") or die 
+        "cannot open $errorfile for writing ($!)";
+
+    close(OUTFILE) or die
+        "cannot close $errorfile ($!)";
 
 }
 
@@ -528,43 +535,75 @@ sub get_data_location
 
 
         ## if filelist is empty, die with error message:
-        die "could not find $file_pattern files in $data_dir" if (-z $filelist);
+        #die "could not find $file_pattern files in $data_dir" if (-z $filelist);
+        if (-z $filelist)
+        {
 
+            error_message ( 
 
-        ## make a tar archive:
-        my $archive_file = get_archive_filename(
+                message => "could not find $file_pattern files in $data_dir",
 
-            sample_tag => $sample_tag,
+            );
 
-            file_suffix => $file_suffix,
+        } else
+        {
 
-        );
+            ## make a tar archive:
+            my $archive_file = get_archive_filename(
+    
+                sample_tag => $sample_tag,
+    
+                file_suffix => $file_suffix,
+    
+            );
+    
+            my $cmd = "tar -cf $archive_file --files-from=$filelist";
+    
+            system $cmd;
+    
+    
+            ## compress the tar file:
+            my $cmd = "gzip $archive_file";
+    
+            system $cmd;
+    
+    
+            ## move the gzipped tar file
+            $cmd = "mv $compressed_archive_file $repository_dir/";
+    
+    
+            system $cmd;
+    
+            ## return to former pwd
+            chdir $progwd;
 
-        my $cmd = "tar -cf $archive_file --files-from=$filelist";
-
-        system $cmd;
-
-
-        ## compress the tar file:
-        my $cmd = "gzip $archive_file";
-
-        system $cmd;
-
-
-        ## move the gzipped tar file
-        $cmd = "mv $compressed_archive_file $repository_dir/";
-
-
-        system $cmd;
-
-        ## return to former pwd
-        chdir $progwd;
+        }
 
     }
 
     return $data_location;
 
 }
+
+#######################################################################
+# error_message
+#######################################################################
+sub error_message
+{
+
+    my %args = @_;
+
+    my $message = $args{message} || die "need message ($!)";
+
+
+    open(OUTFILE,">>$errorfile") or die "cannot write to $errorfile ($!)";
+
+    print OUTFILE "$message\n";
+
+    close(OUTFILE) or die "cannot close $errorfile ($!)";
+
+}
+
 
 
 
@@ -808,14 +847,37 @@ sub get_README_location
 
         my $file4_content = "ProteinProphet files\n";
 
-        my $file1_size = stat($file1)->size;
+        my ($file1_size, $file2_size, $file3_size, $file4_size);
 
-        my $file2_size = stat($file2)->size;
+        if (-e $file1)
+        {
 
-        my $file3_size = stat($file3)->size;
+            $file1_size = stat($file1)->size;
 
-        my $file4_size = stat($file4)->size;
+        }
 
+        if (-e $file2)
+        {
+
+            $file2_size = stat($file2)->size;
+
+        }
+
+        if (-e $file3)
+        {
+
+            $file3_size = stat($file3)->size;
+
+        }
+
+        if (-e $file4)
+        {
+
+            $file4_size = stat($file4)->size;
+
+        }
+
+            
 
         ## write to README file
         open(OUTFILE,">$file") or die 
@@ -1133,9 +1195,15 @@ sub get_notpublic_sample_info
 
         my ($sample_tag, $cell_type, $data_contributors) = @{$row};
 
-        $sample_info{$sample_tag}->{cell_type} = $cell_type;
+        if ( $sample_tag ne "test" && $sample_tag ne "LnCAP_nuc3" )
+        {
 
-        $sample_info{$sample_tag}->{data_contributors} = $data_contributors;
+            $sample_info{$sample_tag}->{cell_type} = $cell_type;
+
+            $sample_info{$sample_tag}->{data_contributors} = $data_contributors;
+
+        }
+
 
     }
 
