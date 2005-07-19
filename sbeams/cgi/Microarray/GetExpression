@@ -1291,7 +1291,7 @@ sub write_dmv_jnlp_file {
     <jar href="$shared_java_html/jars/syspatharchivehack.jar"/>
   </resources>
   <application-desc>
-  <argument>$jws_base_dir/$identifier/Condition_xml</argument>
+  <argument>$jws_base_html/$identifier/Condition_xml</argument>
   </application-desc>
 </jnlp>
 ~;
