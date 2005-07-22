@@ -55,6 +55,7 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
 require 'ManageTable.pllib';
 
+use SBEAMS::BioLink::Tables;
 
 
 ###############################################################################
