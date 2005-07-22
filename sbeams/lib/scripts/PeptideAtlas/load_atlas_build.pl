@@ -159,7 +159,10 @@ sub handleRequest {
   my $load = $OPTIONS{"load"} || '';
   my $organism_abbrev = $OPTIONS{"organism_abbrev"} || '';
   my $atlas_build_name = $OPTIONS{"atlas_build_name"} || '';
+
+
   my $base_directory = "/net/db/projects/PeptideAtlas/pipeline/output";
+
   my $source_dir;
 
 
@@ -1280,8 +1283,9 @@ sub updateSampleTables {
     #    die "Unable to access sample records for search_batch_ids: ".
     #    " $search_batch_id_list ($!)";
     ####  selectTwoColumnHash doesn't seem to work with IN()
-    my @rows = $sbeams->selectSeveralColumns($sql)
-        or die "Couldn't find sample records using \n$sql\n($!)";
+    my @rows = $sbeams->selectSeveralColumns($sql);
+
+    ## if no sample records have been created yet, need to create them in a bit.
 
     my %SBID_SID_hash;
 
