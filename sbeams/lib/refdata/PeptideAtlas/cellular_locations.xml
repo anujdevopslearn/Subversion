@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SBEAMS_EXPORT>
+    <AT_cellular_location
+        record_status="N"
+        cellular_location_id="1"
+        created_by_id="3"
+        owner_group_id="8"
+        modified_by_id="3"
+        date_modified="2005-06-21 17:14:38"
+        date_created="2005-06-21 17:14:38"
+        cellular_location_name="Anchor" />
+    <AT_cellular_location
+        record_status="N"
+        cellular_location_id="2"
+        created_by_id="3"
+        owner_group_id="8"
+        modified_by_id="3"
+        date_modified="2005-06-21 17:14:46"
+        date_created="2005-06-21 17:14:46"
+        cellular_location_name="Trans membrane" />
+    <AT_cellular_location
+        record_status="N"
+        cellular_location_id="3"
+        created_by_id="3"
+        owner_group_id="8"
+        modified_by_id="3"
+        date_modified="2005-06-21 17:14:56"
+        date_created="2005-06-21 17:14:56"
+        cellular_location_name="Secreted" />
+    <AT_cellular_location
+        record_status="N"
+        cellular_location_id="4"
+        created_by_id="3"
+        owner_group_id="8"
+        modified_by_id="3"
+        date_modified="2005-06-21 17:15:03"
+        date_created="2005-06-21 17:15:03"
+        cellular_location_name="Cytoplasmic" />
+</SBEAMS_EXPORT>
