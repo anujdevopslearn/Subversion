@@ -835,6 +835,16 @@ sub predicted_pep_html{
     my $self = shift;
 	my $features_aref = shift;
 	
+	my $foo =<<END;
+			     	$q->td($self->linkToColumnText(
+			       				display => "NXS/T Score",
+								title   => "Likelihood of NXS/T sequon", 
+								column  => "glyco_score", 
+								table   => "AT_glyco_site" ,
+								),
+					),
+END
+
 	my $html  = "<table>";
 	$html .= $q->Tr({class=>'rev_gray'},
 			       $q->td( $self->linkToColumnText(
@@ -847,13 +857,6 @@ sub predicted_pep_html{
 			        $q->td("Predicted Sequence"),
 			     	
 			     	
-			     	$q->td($self->linkToColumnText(
-			       				display => "NXS/T Score",
-								title   => "Likelihood of NXS/T sequon", 
-								column  => "glyco_score", 
-								table   => "AT_glyco_site" ,
-								),
-					),
 			     	$q->td("Predicted Mass"),
 			     	$q->td("Number Proteins<br>with Peptide"),
 			     );
@@ -928,11 +931,11 @@ my $foo=<<'  END';
 		}
 		
 ### Start writing some html that can be returned
+				#$q->td({align=>'center'}, $glyco_score),
 
 		 $html .= $q->Tr(
 				$q->td($protein_glyco_site),
 				$q->td("$first_aa.$html_seq.$end_aa"),
-				$q->td({align=>'center'}, $glyco_score),
 				$q->td({align=>'center'},$predicted_mass),
 				$q->td({align=>'center'},$hit_link),
 				
@@ -1029,6 +1032,9 @@ sub identified_pep_html{
 					
 		}
 ### Start writing some html that can be returned
+		 $tissues = ( $tissues =~ /^serum$/ ) ? 'serum' :
+		            ( $tissues =~ /serum/ ) ? 'serum, other' :
+		            ( $tissues =~ /\w/ ) ? 'other' : '';
 
 		 $html .= $q->Tr(
 				$q->td($protein_glyco_site),
