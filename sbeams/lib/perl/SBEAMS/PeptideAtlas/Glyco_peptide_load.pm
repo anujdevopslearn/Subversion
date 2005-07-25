@@ -451,16 +451,20 @@ sub add_predicted_peptide {
 	
 	
 	my $ipi_acc = $row->[$heads{'ipi'}];
-	
-	#my $fixed_predicted_seq = $self->fix_predicted_peptide_seq($row->[16]);
 	my $clean_seq = $self->clean_seq($row->[$heads{'predicted tryptic nxt/s peptide sequence'}]); 
-	my ($start, $stop) = $self->map_peptide_to_protein(peptide=> $clean_seq,
-													   protein_seq => $row->[$heads{'protein sequences'}]);
 	
-  my $det_prob = 0 ; #$row->[$heads{'detection probablility'}] || 0;
+   # We may now be getting proteins only, skip this bloc if no predicted peptide
+  if ( $row->[$heads{predicted}] && $ipi_acc && $clean_seq ) {
 
-	#TODO WARNING DETECTION PROBABLITY IS FAKE>  DATA IS NOT COMPLETE
-	my %rowdata_h = ( 	
+  	#my $fixed_predicted_seq = $self->fix_predicted_peptide_seq($row->[16]);
+  	my ($start, $stop) = $self->map_peptide_to_protein(peptide=> $clean_seq,
+	     												   protein_seq => $row->[$heads{'protein sequences'}]);
+	
+    my $det_prob = 0 ; #$row->[$heads{'detection probablility'}] || 0;
+
+
+  	#TODO WARNING DETECTION PROBABLITY IS FAKE>  DATA IS NOT COMPLETE
+  	my %rowdata_h = ( 	
 					ipi_data_id 				=> $self->get_ipi_data_id($ipi_acc),
 					predicted_peptide_sequence => $row->[$heads{'predicted tryptic nxt/s peptide sequence'}],
 					predicted_peptide_mass 		=> $row->[$heads{'predicted peptide mass'}],
@@ -472,13 +476,13 @@ sub add_predicted_peptide {
 					predicted_stop 				=> $stop,
 					glyco_site_id  				=> $glyco_pk,
 					
-			);
-#TODO REMOVE SIZE LIMIT OF DATA	
-	#my %rowdata_h = $self->truncate_data(record_href => \%rowdata_h); #some of the data will need to truncated to make it easy to put all data in varchar 255 or less
-	my $rowdata_ref = \%rowdata_h;
+	  		);
+    #TODO REMOVE SIZE LIMIT OF DATA	
+  	#my %rowdata_h = $self->truncate_data(record_href => \%rowdata_h); #some of the data will need to truncated to make it easy to put all data in varchar 255 or less
+    	my $rowdata_ref = \%rowdata_h;
 	
 
-	my $predicted_peptide_id = $sbeams->updateOrInsertRow(				
+    	my $predicted_peptide_id = $sbeams->updateOrInsertRow(				
 							table_name=>$TBAT_PREDICTED_PEPTIDE,
 				   			rowdata_ref=>$rowdata_ref,
 				   			return_PK=>1,
@@ -488,12 +492,12 @@ sub add_predicted_peptide {
 				   			PK=>'predicted_peptide_id',
 				   		   );
 				   		   
-	if ($self->verbose()>0){
-		print (__PACKAGE__."::$method Added PREDICTED PEPTIDE pk '$predicted_peptide_id'\n");
+	  if ($self->verbose()>0){
+		  print (__PACKAGE__."::$method Added PREDICTED PEPTIDE pk '$predicted_peptide_id'\n");
+  	}
 	
-	}
-	
-	return $predicted_peptide_id;
+  	return $predicted_peptide_id;
+  }
 }
 
 
@@ -526,6 +530,7 @@ sub clean_seq {
 	my $self = shift;
 	my $pep_seq = shift;
 	unless($pep_seq){
+    return $pep_seq;
 		confess(__PACKAGE__."$method MUST PROVIDE A PEPTIDE SEQUENCE YOU GAVE '$pep_seq'\n");
 	}	
 	 $pep_seq =~ s/^.//; #remove first aa
@@ -791,7 +796,7 @@ sub find_cellular_code {
 		$full_name = 'Anchor';
 	}elsif($code == 0){
 		$full_name = 'Cytoplasmic';
-	}else{
+	}elsif($code == 0){
 		print "ERROR:Cannot find full name for CELLULAR CODE '$code'\n";
 	}
 	my $sql = qq~ 	SELECT cellular_location_id
