@@ -234,8 +234,12 @@ sub handle_request {
 		}
 	}
 
+
+  
   # See if token is present and make $fm (file manager) object if possible.
 	check_for_token();	
+
+  
 
 ###Choose the correct tab or default to the first tab File Groups
 	if ( $tabmenu->getActiveTab() == 2 
@@ -342,7 +346,7 @@ sub check_for_token {
 			die"Cannot Delete Files '$status' <br>";
 		}	
 	
-	} elsif (defined($submit) && $submit eq "Start New Analysis Session") {
+	} elsif (defined($submit) && $submit eq "Start Session") {
 		
 		$USER_ID = $affy_o->get_user_id_from_user_name($current_username);
 		my $project_id	= $sbeams->getCurrent_project_id();
@@ -603,21 +607,22 @@ END
 sub start_button {
 	my ($status, $token) = @_;
 	my $tab_number = $cgi->param('_tab')? $cgi->param('_tab'): 5;
+
+  # Switched to manual FORM declaration, start_form method wouldn't allow
+  # needed override of '_tab' parameter.
+  my $start =<<"  END";
+  <FORM ACTION='upload.cgi' enctype="application/x-www-form-urlencoded">
+    <INPUT TYPE=hidden NAME='_tab' VALUE=1>
+  END
 	print table({border=>0},
 		  Tr({class=>'grey_bg'},
 		    td(
 		      h3("Start a New Analysis Session")), 
-	      	td(
-	      	  start_form,
-	      	  submit("Submit", "Start New Analysis Session"))),
-	      Tr({class=>'grey_bg'},
-	        td(
-		      h3("Show Previous Analysis Sessions")),
-	        td(
-	      	submit("Submit", "Show Old Analysis"))),
-	      hidden(-name=>"_tab", -value=>"$tab_number"),
+	      	td( $start, 
+	      	  submit("Submit", "Start Session"))),
 	      end_form),
 	      br;
+
 =head1
     print <<'END';
 <h2>Quick Help</h2>
