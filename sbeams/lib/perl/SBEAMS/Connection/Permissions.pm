@@ -1417,7 +1417,16 @@ sub checkProjectPermission {
 
     my ( $pr_id_orig ) = $self->selectOneColumn( $args{dbsql} );
     unless ( $pr_id_orig ) {
-      return "Unable to find parent record";
+			$log->warn( <<"      END" );
+			Altering record nominally under project control, but which
+      currently lacks a project_id.  We will proceed as if the original
+      ID were equal to new ID:
+      dbsql: $args{dbsql}
+      END
+			
+      $pr_id_orig = $pr_id;
+			
+      # return "Unable to find parent record";
     }
 
 #   Has associated project has been modified? 
