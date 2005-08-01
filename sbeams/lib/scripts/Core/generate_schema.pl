@@ -37,12 +37,7 @@ require "generate_schema.pllib";
 
 #### Set up SBEAMS core module
 use SBEAMS::Connection qw($q);
-#use SBEAMS::Connection::Settings;
-#use SBEAMS::Connection::Tables;
 $sbeams = new SBEAMS::Connection;
-
-#use CGI;
-#$q = new CGI;
 
 
 ###############################################################################
@@ -52,13 +47,14 @@ $PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
 Usage: $PROG_NAME [OPTIONS]
 Options:
-  --verbose n         Set verbosity level.  default is 0
-  --quiet             Set flag to print nothing at all except errors
-  --debug n           Set debug flag
-  --table_property_file ccc   Set the name of table_property file
-  --table_column_file ccc     Set the name of table_property file
-  --schema_file ccc           Set the root of the output schema file
-  --destination_type ccc      Set the destination database server type
+  --verbose n                Set verbosity level.  default is 0
+  --quiet                    Set flag to print nothing at all except errors
+  --debug n                  Set debug flag
+  --table_property_file ccc  Set the name of table_property file
+  --table_column_file ccc    Set the name of table_column file
+  --schema_file ccc          Set the root of the output schema file
+  --dbprefix ccc             prefix for schema elements, e.g. SNP.dbo
+  --destination_type ccc     Set the destination database server type
         (one of: mssql, mysql, pgsql, oracle)
 
  e.g.:  $PROG_NAME --table_prop \$CONFDIR/Core/Core_table_property.txt \\
@@ -72,7 +68,7 @@ EOU
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
   "table_property_file:s","table_column_file:s","schema_file:s",
-  "destination_type:s")) {
+  "destination_type:s","dbprefix:s")) {
   print "$USAGE";
   exit;
 }
@@ -299,9 +295,10 @@ sub generateSchema {
   print "Generating schema for $destination_type\n" unless ($QUIET);
   writeSchema(
     table_properties => $table_properties,
-    table_columns => $table_columns,
-    schema_file => $schema_file,
+    table_columns    => $table_columns,
+    schema_file      => $schema_file,
     destination_type => $destination_type,
+    dbprefix         => $OPTIONS{dbprefix}
   );
 
   print "Done.\n\n" unless ($QUIET);

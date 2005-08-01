@@ -173,8 +173,8 @@ sub writeSchema {
   $SB = "${LB}GO${LB}" if ($destination_type eq "mssql");
 
   #### Set a table prefix
-  my $table_prefix = '';
-  $table_prefix = 'dbo.' if ($destination_type eq "mssql");
+  my $table_prefix = ( $args{dbprefix} ) ? $args{dbprefix} . '.' : '';
+#  $table_prefix = 'dbo.' if ($destination_type eq "mssql");
 
 
   #### Initialize some buffers
