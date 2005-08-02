@@ -22,33 +22,36 @@ BMRK_experiment_type	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	c
 BMRK_experiment_type	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N	N			
 BMRK_experiment_type	9	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
 BMRK_biosource	1	biosource_id	Experiment ID	int	4	0	N		Y			N				N	N	N			pkDEFAULT
-BMRK_biosource	4	biosource_name	Experiment Name	varchar	36	0	N		N			Y	text	36		Y	Y	Y	Name of this Biosource		
-BMRK_biosource	2	age	Age of source organism	int	4	0	Y		N			N	text	12		Y	Y	N	Age of organism from which sample was collected		
-BMRK_biosource	3	age_units	Age Units	char	5	0	Y		N			N	optionlist			Y	Y	N	Units for age value		
-BMRK_biosource	4	organism_id	Genus and species of source	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	genus/species of organism 		
-BMRK_biosource	5	organization_id	Organization from which source was obtained	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	Organization which provided the samples (if any)		
-BMRK_biosource	6	external_id	Identifier defined by external organization	varchar	64	0	Y		N			N	text	36		Y	Y	N	sample identifier (if any) from external organization		
-BMRK_biosource	7	patient_id	Identifier of patient or donor	varchar	64	0	Y		N			N	text	36		Y	Y	N	 patient identifier (if any) from external organization		
-BMRK_biosource	3	biosource_description	Biosource Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Description of Biosource		pkDEFAULT
-BMRK_biosource	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
-BMRK_biosource	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
-BMRK_biosource	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
-BMRK_biosource	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
-BMRK_biosource	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N	N			
-BMRK_biosource	13	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
+BMRK_biosource	2	biosource_name	Experiment Name	varchar	36	0	N		N			Y	text	36		Y	Y	Y	Name of this Biosource		
+BMRK_biosource	3	age	Age of source organism	int	4	0	Y		N			N	text	12		Y	Y	N	Age of organism from which sample was collected		
+BMRK_biosource	4	age_units	Age Units	char	5	0	Y		N			N	optionlist			Y	Y	N	Units for age value		
+BMRK_biosource	5	organism_id	Genus and species of source	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	genus/species of organism 		
+BMRK_biosource	6	organization_id	Organization from which source was obtained	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	Organization which provided the samples (if any)		
+BMRK_biosource	7	external_id	Identifier defined by external organization	varchar	64	0	Y		N			N	text	36		Y	Y	N	sample identifier (if any) from external organization		
+BMRK_biosource	8	patient_id	Identifier of patient or donor	varchar	64	0	Y		N			N	text	36		Y	Y	N	 patient identifier (if any) from external organization		
+BMRK_biosource	9	biosource_description	Biosource Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Description of Biosource		pkDEFAULT
+BMRK_biosource	10	experiment_id	Experiment	int	4	0	Y		N	experiment	experiment_id	N	optionlist			Y	Y	N	Experiment with which this biosource is associated		
+BMRK_biosource	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
+BMRK_biosource	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
+BMRK_biosource	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
+BMRK_biosource	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
+BMRK_biosource	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N	N			
+BMRK_biosource	16	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
 BMRK_biosample	1	biosample_id	Biosample ID	int	4	0	N		Y			N				N	N	N			pkDEFAULT
-BMRK_biosample	4	biosample_name	Biosample Name	varchar	36	0	N		N			Y	text	36		Y	Y	Y	Name of this Biosample		
-BMRK_biosample	2	biosource_id	Biosource_id	int	4	0	N		N	biosource	biosource_id	Y	optionlist			Y	Y	N	ID of biosample		
-BMRK_biosample	3	parent_biosample_id	Parent Biosample ID	int	4	0	Y		N	biosample	biosample_id	N	optionlist			Y	Y	N	Parent biosample if this is a derived sample		
-BMRK_biosample	4	num_ancestors	Number of Ancestors	int	4	0	Y		N			N	optionlist			Y	Y	N	Number of ancestors of this biosample to get to root biosample		
-BMRK_biosample	5	treatment_id	Treatment_id	int	4	0	Y		N	treatment	treatment_id	N	optionlist			Y	Y	N	Treatment which yielded this sample		
-BMRK_biosample	6	original_volumne	Original Volume	float	4	0	Y		N			N	text	12		Y	Y	N	Original volume of this sample		
-BMRK_biosample	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
-BMRK_biosample	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
-BMRK_biosample	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
-BMRK_biosample	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
-BMRK_biosample	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N	N			
-BMRK_biosample	12	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
+BMRK_biosample	2	biosample_name	Biosample Name	varchar	36	0	N		N			Y	text	36		Y	Y	Y	Name of this Biosample		
+BMRK_biosample	3	biosource_id	Biosource_id	int	4	0	N		N	biosource	biosource_id	Y	optionlist			Y	Y	N	ID of biosample		
+BMRK_biosample	4	parent_biosample_id	Parent Biosample	int	4	0	Y		N	biosample	biosample_id	N	optionlist			Y	Y	N	Parent biosample if this is a derived sample		
+BMRK_biosample	5	num_ancestors	Number of Ancestors	int	4	0	Y		N			N	optionlist			Y	Y	N	Number of ancestors of this biosample to get to root biosample		
+BMRK_biosample	6	experiment_id	Experiment	int	4	0	Y		N	experiment	experiment_id	N	optionlist			Y	Y	N	Experiment with which this sample is associated		
+BMRK_biosample	7	treatment_id	Treatment_id	int	4	0	Y		N	treatment	treatment_id	N	optionlist			Y	Y	N	Treatment which yielded this sample		
+BMRK_biosample	8	original_volumne	Original Volume	float	4	0	Y		N			N	text	12		Y	Y	N	Original volume of this sample		
+BMRK_biosample	9	storage_location_id	Storage Location	int	4	0	Y		N	storage_location	storage_location_id	N	optionlist			Y	Y	N	Location where this sample is stored		
+BMRK_biosample	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
+BMRK_biosample	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
+BMRK_biosample	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
+BMRK_biosample	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
+BMRK_biosample	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N	N			
+BMRK_biosample	15	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
 BMRK_disease	1	disease_id	Disease ID	int	4	0	N		Y			N				N	N	N			
 BMRK_disease	2	disease_name	Disease Name	varchar 	36	0	N		N			Y	text	36		Y	Y	Y	Name of disease		
 BMRK_disease	3	disease_type	Disease Type	varchar 	36	0	Y		N	disease_type	disease_type_id	Y	optionlist			Y	Y	N	Type of disease (e.g. Cancer)		
@@ -58,7 +61,7 @@ BMRK_disease	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTA
 BMRK_disease	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
 BMRK_disease	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N	N			
 BMRK_disease	9	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
-BMRK_attribute_type	1	attribute_type_id	Experiment ID	int	4	0	N		Y			N				N	N	N			pkDEFAULT
+BMRK_attribute_type	1	attribute_type_id	Attribute Type ID	int	4	0	N		Y			N				N	N	N			pkDEFAULT
 BMRK_attribute_type	2	attribute_type_name	Attribute Type Name	varchar	36	0	N		N			Y	text	36		Y	Y	Y	Name of attribute type		
 BMRK_attribute_type	3	attribute_type_description	Attribure Type Description	varchar	255	0	N		N			N	textarea	4		Y	Y	N	Description of attribute type		
 BMRK_attribute_type	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
@@ -67,35 +70,46 @@ BMRK_attribute_type	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_
 BMRK_attribute_type	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
 BMRK_attribute_type	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N	N			
 BMRK_attribute_type	9	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
+BMRK_attribute	1	attribute_id	Attribute ID	int	4	0	N		Y			N				N	N	N			pkDEFAULT
+BMRK_attribute	2	attribute_name	Attribute Name	varchar	36	0	N		N			Y	text	36		Y	Y	Y	Name of attribute		
+BMRK_attribute	3	attribute_description	Attribure Description	varchar	255	0	N		N			N	textarea	4		Y	Y	N	Description of attribute		
+BMRK_attribute	4	attribute_type_id	Attribute Type	int	4	0	N		N	attribute_type	attribute_type_id	N	optionlist			Y	Y	N	Type of attribute		
+BMRK_attribute	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
+BMRK_attribute	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
+BMRK_attribute	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
+BMRK_attribute	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
+BMRK_attribute	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N	N			
+BMRK_attribute	10	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
 BMRK_biosource_attribute	1	biosource_attribute_id	Biosource Attribute ID	int	4	0	N		Y			N				N	N	N			pkDEFAULT
-BMRK_biosource_attribute	2	biosource_id	Biosource ID	int	4	0	N		N			Y	optionlist			Y	Y	Y	Biosource to which attribute belongs		
-BMRK_biosource_attribute	3	attribute_id	Attribute ID	int	4	0	N		N			Y	optionlist			Y	Y	Y	Attribute which belongs to specified Biosource		
+BMRK_biosource_attribute	2	biosource_id	Biosource ID	int	4	0	N		N	biosource	biosource_id	Y	optionlist			Y	Y	Y	Biosource to which attribute belongs		
+BMRK_biosource_attribute	3	attribute_id	Attribute ID	int	4	0	N		N	attribute	attribute_id	Y	optionlist			Y	Y	Y	Attribute which belongs to specified Biosource		
 BMRK_biosource_disease	1	biosource_disease_id	Experiment ID	int	4	0	N		N			N				Y	Y	N			pkDEFAULT
 BMRK_biosource_disease	2	biosource_id	Biosource ID	int	4	0	N		N	biosource	biosource_id	Y	optionlist			Y	Y	Y	Biosource to which disease attribute belongs		
 BMRK_biosource_disease	3	disease_id	Disease ID	int	4	0	N		N	disease	disease_id	Y	optionlist			Y	Y	Y	Disease attribute which belongs to specified Biosource		
 BMRK_biosource_disease	4	disease_stage	Disease Stage	varchar	64	0	Y		N			N	text	36		Y	Y	N	Stage of disease in Biosource		
 BMRK_storage_location	1	storage_location_id	Storage Location ID	int	4	0	N		Y			N				N	N	N			pkDEFAULT
-BMRK_storage_location		location_name	Location Name	varchar	36	0	Y		N			Y	text	36		Y	Y	Y	Location name (e.g. -20 freezer in room 404)		
-BMRK_storage_location		location_description	Location Description	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Description of location		
-BMRK_storage_location	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
-BMRK_storage_location	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
-BMRK_storage_location	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
-BMRK_storage_location	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
-BMRK_storage_location	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N	N			
-BMRK_storage_location	13	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
+BMRK_storage_location	2	location_name	Location Name	varchar	36	0	Y		N			Y	text	36		Y	Y	Y	Location name (e.g. -20 freezer in room 404)		
+BMRK_storage_location	3	location_description	Location Description	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Description of location		
+BMRK_storage_location	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
+BMRK_storage_location	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
+BMRK_storage_location	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
+BMRK_storage_location	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
+BMRK_storage_location	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N	N			
+BMRK_storage_location	9	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
 BMRK_analysis_file	1	analysis_file_id	Analysis File ID	int	4	0	N		Y			N				N	N	N			pkDEFAULT
 BMRK_analysis_file	2	file_name	File Name	varchar	64	0	N		N			Y	text	36		Y	Y	Y	Name of file being stored		
 BMRK_analysis_file	3	file_path	File Path	varchar	255	0	N		N			Y	text	48		Y	Y	Y	Path to file on specified server		
 BMRK_analysis_file	4	file_type	File Type	varchar	36	0	N		N			N	text	12		Y	Y	N	Type of file		
 BMRK_analysis_file	5	server_name	Server Name	varchar	64	0	Y		N			N	text	36		Y	Y	Y	Computer on which file resides		
-BMRK_analysis_file	3	file_size	File Size	int	4	0	Y		N			N				N	N	N	Size of file		
-BMRK_analysis_file	6	file_attributes	File Attributes	varchar	255	0	Y		N			N	text	255		Y	Y	N	Any file attributes that user wishes to record, e.g. permissions, etc.		
-BMRK_analysis_file	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
-BMRK_analysis_file	8	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
-BMRK_analysis_file	9	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
-BMRK_analysis_file	10	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
-BMRK_analysis_file	11	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N	N			
-BMRK_analysis_file	12	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
+BMRK_analysis_file	6	file_size	File Size	int	4	0	Y		N			N				N	N	N	Size of file		
+BMRK_analysis_file	7	file_attributes	File Attributes	varchar	255	0	Y		N			N	text	255		Y	Y	N	Any file attributes that user wishes to record, e.g. permissions, etc.		
+BMRK_analysis_file	8	experiment_id	Experiment	int	4	0	Y		N	experiment	experiment_id	N	optionlist			Y	Y	N	Experiment with which this sample is associated		
+BMRK_analysis_file	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
+BMRK_analysis_file	10	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
+BMRK_analysis_file	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
+BMRK_analysis_file	12	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
+BMRK_analysis_file	13	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N	N			
+BMRK_analysis_file	14	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
 BMRK_treatment_type	1	treatment_type_id	Experiment ID	int	4	0	N		Y			N				N	N	N			pkDEFAULT
 BMRK_treatment_type	2	treatment_type_name	Treatment Type Name	varchar	36	0	N		N			Y	text	36		Y	Y	Y	Name of treatment type		
 BMRK_treatment_type	3	treatment_type_description	Treatment Type Description	varchar	255	0	N		N			N	textarea	4		Y	Y	N	Description of treatment type		
