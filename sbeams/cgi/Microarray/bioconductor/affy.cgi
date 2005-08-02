@@ -83,18 +83,18 @@ if ($cgi->param('files_token') ) {
 }
 
 if (! $cgi->param('step')) {
-    $sbeamsMOD->printPageHeader();
+  $sbeamsMOD->printPageHeader();
 	step1();
 	$sbeamsMOD->printPageFooter();
     
 } elsif ($cgi->param('step') == 1) {
-   $sbeamsMOD->printPageHeader();
+  $sbeamsMOD->printPageHeader();
 	step2();
 	$sbeamsMOD->printPageFooter();
 } elsif ($cgi->param('step') == 2) {
-    step3();
+   step3();
 } else {
-    error('There was an error in form input.');
+   error('There was an error in form input.');
 }
 
 #### Subroutine: step1
@@ -153,13 +153,14 @@ sub step2 {
 
 	 site_header('Affymetrix Expression Analysis: affy');
 	
+  my $normalization_token = $cgi->param('normalization_token');
 	
 	print h1('Affymetrix Expression Analysis: affy'),
 	      h2('Step 2:'),
 	      start_form, 
 	      hidden('files_token', $fm->token),
 	      hidden(-name=>'step', -default=>2, -override=>1),
-	      hidden(-name=>'normalization_token', -value=>$cgi->param('normalization_token')),
+	      hidden(-name=>'normalization_token', -value=>$normalization_token),
 	      hidden(-name=>'analysis_id', -value=>$cgi->param('analysis_id')),
 	      hidden('numfiles', $cgi->param('numfiles')),
 	      p("Select files for expression analysis:");
@@ -167,12 +168,22 @@ sub step2 {
 	print '<table>',
 	      Tr(th('#'), th('File'), th('Sample Name'));
 	
+
+  my $file_info = parse_sample_groups_file( data_type => 'file_info',
+                                            folder    => $normalization_token );
+  my @file_names = @{$file_info->{file_names}};
+  unless ( scalar @file_names == $numfiles ) {
+    $log->error( "Mismatch! $numfiles reported, but found " . scalar( @file_names) );
+  }
+  my $i = 0;
 	
-	for (my $i = 0; $i < $numfiles; $i++) {
-
-	  my $sample_name = $cgi->param("file$i");
-
-    $sample_name =~ s/\.CEL$//;	#Remove the .CEL suffix to make a nice sample name
+	for my $sample_name ( @file_names ) {
+    
+    # Cache original name 
+    my $file_name = $sample_name;
+    
+    # Remove the .CEL suffix to make a nice sample name
+    $sample_name =~ s/\.CEL$//;	
 
     my $default_names = $cgi->param( 'default_sample_names' ) ||  'file_root';
     if ( $default_names eq 'sample_tag' ) {
@@ -187,15 +198,16 @@ sub step2 {
     }
         
 	    
-	    print Tr(td($i+1),
-	             td({-bgcolor=>"#CCCCCC"},
-	             	$cgi->textfield(-name=>"file$i",
-                            -default=>$cgi->param("file$i"),
-                            -override=>1,
-                            -size=>40,
-                            -onFocus=>"this.blur()" )),
+    print Tr(td($i+1),
+	           td({-bgcolor=>"#CCCCCC"},
+	            	$cgi->textfield(-name=>"file$i",
+                                -default=>$file_name,
+                                -override=>1,
+                                -size=>40,
+                                -onFocus=>"this.blur()" )),
 	             
-	             td(textfield('sampleNames', $sample_name, 40)));
+	           td(textfield('sampleNames', $sample_name, 40)));
+    $i++;
 	}
 
   my $email = $sbeams->getEmailAddress();

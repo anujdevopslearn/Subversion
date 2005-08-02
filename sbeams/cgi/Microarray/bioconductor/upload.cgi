@@ -838,10 +838,6 @@ my  $fm = new FileManager;
 	#print "URL TO REDIR TO '$url'<br>";
 	error("You must select at least one file for affy") if (!@filenames);
 	
-	for (my $i = 0; $i < @filenames; $i++) {
-		$url .= '&file' . $i . '=' . $filenames[$i];
-	}
-	
 	print $cgi->redirect($url);
 }
 
