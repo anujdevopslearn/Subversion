@@ -1,4 +1,4 @@
-package SBEAMS::Biomarker::ParseSampleWorkbook;
+zckage SBEAMS::Biomarker::ParseSampleWorkbook;
 
 ###############################################################################
 #
@@ -34,12 +34,23 @@ sub parseFile {
 	my %args = @_;
 
 	die 'Missing required parameter wbook' unless $args{wbook};
-	my $skip = 5;
+
+  # Array of column headings
+  my @headings;
+  # column heading indicies
+  my %idx;
 
   open( WBOOK, "<$args{wbook}" ) || die "unable to open $args{wbook}";
   while( my $line = <WBOOK> ){
-    if $skip;
-    next if $skip;
+    chomp $line;
+    my @line = split( "\t", $line, -1 );
+    unless( @headings ) {
+      # Meaningful headings fingerprint?
+      next unless ( $line[0] =~ /Sample Setup Order/ &&
+                    $line[1] =~ /MS Sample Run Number/ &&
+                    $line[1] =~ /ISB Sample ID/ );
+      @headings = @line;
+    }
 
 
   }
