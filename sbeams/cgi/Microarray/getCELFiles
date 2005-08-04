@@ -85,3 +85,5 @@ use constant AUTH => '/net/dblocal/wwwspecial/scgap/SCGAPAuth2';
  $zip->writeToFileHandle( 'STDOUT', 0 );
   exit;
 
+}
+
