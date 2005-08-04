@@ -636,7 +636,11 @@ annot.grab.columns <- c( grep("Representative Public ID",annot.header),grep("Gen
 
 # Set working directory, and read CEL files
 setwd(filepath)
-affybatch <- ReadAffy(filenames = filenames)
+
+# Various circumstances dictate running affybatch
+if (process == "Custom" || MVAplot || corrMat) {
+  affybatch <- ReadAffy(filenames = filenames)
+}
 
 # Output a correlation matrix for pre-normalization data if requested.
 if (corrMat) {
@@ -669,7 +673,6 @@ exprset <- justGCRMA(filenames = filenames)
 
 
 if (process == "Custom") {
-#    affybatch <- ReadAffy(filenames = filenames)
     bgcorrect.param <- list()
     if (custom[1] == "gcrma-eb") {
         custom[1] <- "gcrma"
@@ -710,19 +713,19 @@ $script .= <<END;
 #Add in the annotaion information
 Matrix <- exprs(exprset)
 
-# Make correlation matrix of normalized data
-affybatch.cor <- cor(Matrix)
-#bitmap("$RESULT_DIR/$jobname/normalized_correlation_matrix.png", height=$corr_dims{height}, width=$corr_dims{width}, res = 72*4, pointsize = 10)
-#bitmap("$RESULT_DIR/$jobname/normalized_correlation_matrix.png", res = 72*4, pointsize = 10)
-bitmap("$RESULT_DIR/$jobname/normalized_correlation_matrix.png", height=$corr_dims{height}, res = 72*4, pointsize = 10)
-par(mar=c(3,3,3,9))
-image(x=1:numChips,y=1:numChips,affybatch.cor,col=gray.colors,zlim=c(min(affybatch.cor),1))
-title(paste("Correlation Matrix(normalized),black:R=",trunc(min(affybatch.cor)*100)/100,"white:R=1"),cex.main=numChips/15)
-for(i in 1:numChips) {
-name <- row.names(pData(affybatch))[i]
-text(numChips+1,i,name,xpd=TRUE,adj=c(0,0.5),cex=0.666)
+if( corrMat ) {
+  # Make correlation matrix of normalized data
+  affybatch.cor <- cor(Matrix)
+  bitmap("$RESULT_DIR/$jobname/normalized_correlation_matrix.png", height=$corr_dims{height}, res = 72*4, pointsize = 10)
+  par(mar=c(3,3,3,9))
+  image(x=1:numChips,y=1:numChips,affybatch.cor,col=gray.colors,zlim=c(min(affybatch.cor),1))
+  title(paste("Correlation Matrix(normalized),black:R=",trunc(min(affybatch.cor)*100)/100,"white:R=1"),cex.main=numChips/15)
+  for(i in 1:numChips) {
+  name <- row.names(pData(affybatch))[i]
+  text(numChips+1,i,name,xpd=TRUE,adj=c(0,0.5),cex=0.666)
+  }
+  dev.off()
 }
-dev.off()
 
 
   
