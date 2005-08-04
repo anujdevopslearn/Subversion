@@ -1,0 +1,176 @@
+#!/usr/local/bin/perl -w
+
+use strict;
+
+use lib "/net/dblocal/www/html/devDC/sbeams/lib/perl";
+use SBEAMS::Client;
+use SBEAMS::Connection::DataTable;
+use CGI;
+use Archive::Zip qw( :ERROR_CODES :CONSTANTS );
+use File::Basename;
+
+$|++;
+
+use constant URI => 'http://db.systemsbiology.net/devDC/sbeams';
+use constant AUTH => '/net/dblocal/wwwspecial/scgap/SCGAPAuth2';
+
+my $cgi = CGI->new();
+
+## Main block
+{
+
+  my $pid = $cgi->param( 'project_id' );
+  my @allowed_projects = qw( 511 517 413 414 423 458 435 460 );
+  unless( grep /^$pid$/, @allowed_projects ) {
+    print $cgi->header();
+    print "Error: illegal project id, you loser!";
+    exit;
+  }
+
+
+  # Instantiate the SBEAMS client
+  my $sbeams = SBEAMS::Client->new();
+  my $command = 'Microarray/getProjectFileInfo';
+  my $params = { project_id => $pid, output_mode => 'tsv' };
+
+
+  # Authenticate
+  $sbeams->authenticate( server_uri => URI,
+                         SBEAMSAuth_file => AUTH );
+
+  # Fetch results
+  my $rset = $sbeams->fetch_data(  server_uri         => URI,
+                                   server_command     => $command,
+                                   command_parameters => $params );
+  unless( $rset->{is_success} ) {
+    print STDERR "ERROR: Unable to fetch data\n";
+    exit;
+  }
+
+  my $p_idx = $rset->{column_hash_ref}->{file_path};
+  my $r_idx = $rset->{column_hash_ref}->{file_root};
+  my $t_idx = $rset->{column_hash_ref}->{project_tag};
+  	
+	my $zip = Archive::Zip->new();
+	my $member = '';
+	my $size = '';
+
+  my $tagname = $cgi->param( 'project_name' );
+  $tagname =~ s/\s+/_/g;
+
+	foreach my $file ( @{$rset->{data_ref}} ) {
+    unless ( $tagname ) {
+      $tagname = $file->[$t_idx];
+      $zip->addDirectory( $tagname );
+    }
+    my $name = $file->[$r_idx] . '.CEL';
+    my $pathname = $file->[$p_idx] . '/' . $name;
+    $member = $zip->addFile($pathname, "$file->[$t_idx]/$name"); 
+	  $size += $member->uncompressedSize();
+  }
+  # Can't yet determine compressed size, doh!
+  my $csize = int($size/2.5);
+
+#  print $cgi->header();
+  print $cgi->header( '-Content_Disposition' => "filename=${tagname}.zip",
+                       '-Content_Length' => "$csize",
+                       '-Content_Transfer_Encoding' => "binary",
+                       '-Content_Type' => 'application/force-download' );
+
+
+ $zip->writeToFileHandle( 'STDOUT', 0 );
+  exit;
+
+  
+#  use Data::Dumper;
+#  print Dumper( $rset );
+#  my @names = @{$rset->{column_list_ref}};
+#  my %nkey = %{$rset->{column_hash_ref}};
+#  my @nk = keys( %nkey );
+
+#  for (@nk) { print "col_hash_ref: $_ => $nkey{$_}<BR>"; }
+#  for (@names) { print "col_list_ref: $_<BR>"; }
+#  for my $key ( keys(%$rset) ){ print "$key -> $rset->{$key} " . ref( $rset->{$key} ) . "<BR>"; }
+}
+__DATA__
+  my $cookie = $sbeams->get_authentication();
+  use Data::Dumper;
+  print Dumper( $cookie );
+
+  my $ua = new LWP::UserAgent(timeout => 600);
+  $ua->agent("SBEAMS::Client");
+  $ua->cookie_jar($cookie);
+
+
+  my $table = SBEAMS::Connection::DataTable->new( BORDER => 0 );
+
+# Add section heading for IHC
+  $table->addRow( ['<H3>General Protocols: </H3>' ] );
+  $table->setCellAttr( ROW => 1, COL => 1, COLSPAN => 3 );
+
+  my @headings = ( qw( protocol_id protocol_name protocol_type date_modified ) );
+  my @trow = map { "<B>$_</B>" } @headings;
+  shift ( @trow );
+  $table->addRow( \@trow );
+  
+
+  my @affy; # stores affy-specific protocols
+  my @ihc; # stores ihc-specific protocols
+  
+# Parse rset
+  for my $row ( @{$rset->{data_ref}} ) {
+    @trow = @$row[@nkey{@headings}];  
+    my $url = URI;
+    $url =~ s/http/https/;
+    $trow[1] = "<A HREF='$url/cgi/Immunostain/ManageTable.cgi?TABLE_NAME=protocol&protocol_id=$trow[0]'>$trow[1]</A>";
+    shift ( @trow );
+    my @tmp = @trow;
+    if ( $row->[$nkey{modified_by_id}] == 367 ) {
+      push @affy, \@tmp;
+    } elsif ( $row->[$nkey{owner_group_id}] == 30 ) {
+#      if ( grep /$row->[$nkey{protocol_type_id}]/, @ihc_protocol_types ) {
+      if ( $row->[$nkey{protocol_type}] =~ /.*Immunostain.*/g ) {
+        push @ihc, \@tmp;
+      } else {
+        $table->addRow( \@trow );
+      }
+    }
+  }
+  
+  $table->addRow( ['&nbsp;' ] );
+  my $nrows = $table->getRowNum();
+
+  $table->addRow( ['<H3>Immunohistochemical Protocols: </H3>' ] );
+  $table->setCellAttr( ROW => $nrows, COL => 1, COLSPAN => 3 );
+  @trow = map { "<B>$_</B>" } @headings;
+  shift ( @trow );
+  $table->addRow( \@trow );
+
+  for ( @ihc ) {
+    $table->addRow( $_ );
+  }
+
+  $table->addRow( ['&nbsp;' ] );
+  my $nrows = $table->getRowNum();
+
+  $table->addRow( ['<H3>Affymetrix Protocols: </H3>' ] );
+  $table->setCellAttr( ROW => $nrows, COL => 1, COLSPAN => 3 );
+  @trow = map { "<B>$_</B>" } @headings;
+  shift ( @trow );
+  $table->addRow( \@trow );
+
+  for ( @affy ) {
+    $table->addRow( $_ );
+  }
+
+# print nice table o' protocols
+  print $cgi->header();
+
+#  Hacky method, but works.
+  my $tHTML = $table->asHTML();
+  $tHTML =~ s/\<TD/\<TD NOWRAP/gm;
+  print $tHTML;
+
+} # End main
+
+

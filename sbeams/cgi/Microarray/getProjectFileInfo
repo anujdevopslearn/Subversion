@@ -1,0 +1,49 @@
+#!/usr/local/bin/perl -w
+
+use lib qw (../../lib/perl);
+use strict;
+
+use SBEAMS::Connection qw($q $log);
+use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
+
+use SBEAMS::Microarray;
+use SBEAMS::Microarray::Settings;
+use SBEAMS::Microarray::Tables;
+
+my $sbeams = SBEAMS::Connection->new();
+$sbeams->Authenticate( allow_anonymous_access => 1 );
+
+
+#Main
+{
+## The next 3 lines seriously chap my ass.
+  my $params = {};
+  $sbeams->parse_input_parameters( q => $q, parameters_ref=> $params );
+  $sbeams->processStandardParameters( parameters_ref=> $params );
+
+  return undef unless $params->{project_id};
+
+  my $sql =<<"  END";
+	SELECT afa.affy_array_id, file_root, file_path, project_tag
+	FROM $TBMA_AFFY_ARRAY afa 
+  JOIN $TBMA_AFFY_ARRAY_SAMPLE afs 
+	  ON afa.affy_array_sample_id = afs.affy_array_sample_id
+  JOIN $TBMA_FILE_PATH fp 
+	  ON afa.file_path_id = fp.file_path_id
+  JOIN $TB_PROJECT p 
+	  ON afs.project_id = p.project_id
+	WHERE afs.project_id = $params->{project_id}
+  END
+
+  my $rs_ref = {};
+
+	$sbeams->fetchResultSet( sql_query=>$sql,
+                           resultset_ref=>$rs_ref );
+
+  use Data::Dumper;
+  print STDERR Dumper( $rs_ref );
+  
+  $sbeams->displayResultSet( resultset_ref => $rs_ref );
+
+}
