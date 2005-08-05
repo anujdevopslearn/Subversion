@@ -1,4 +1,4 @@
-package SBEAMS::Biomarker::InsertBiomarkerSamples;
+package SBEAMS::Biomarker::Biosample;
 
 ###############################################################################
 #
