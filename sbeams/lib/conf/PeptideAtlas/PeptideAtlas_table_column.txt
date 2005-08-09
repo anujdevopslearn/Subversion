@@ -214,7 +214,7 @@ AT_publication	25	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact
 AT_publication	26	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 AT_publication	27	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_biosequence_annotated_gene	1	biosequence_id	BioSequence ID	int	4	0	N		N	AT_biosequence	biosequence_id					N	N	Y	Biosequence to which this Biosequence property set belongs		
-AT_biosequence_annotated_gene	1	gene_annotation_id	Gene Annotation ID	int	4	0	N		N	BL_annotated_gene	annotated_gene_id					N	N	Y	Gene ID associated with Biosequence ID		
+AT_biosequence_annotated_gene	2	annotated_gene_id	Annotated Gene ID	int	4	0	N		N	BL_annotated_gene	annotated_gene_id					N	N	Y	Gene ID associated with Biosequence ID		
 AT_biosequence_annotation	1	biosequence_annotation_id	Domain Match Type	int	4	0	N		Y							N	N				pkDEFAULT
 AT_biosequence_annotation	2	biosequence_id	BioSequence	int	4	0	N		N	AT_biosequence	biosequence_id	Y	fixed			Y	Y	Y	BioSequence to which this annotation belongs		
 AT_biosequence_annotation	3	gene_symbol	Gene Symbol	varchar	255	0	Y		N			N	text	50		Y	Y	N	Gene Symbol to describe this protein (e.g. TLR2)		
@@ -273,8 +273,6 @@ AT_identified_peptide	4	peptide_prophet_score	Peptide Prophet Score 	real	4	0	N	
 AT_identified_peptide	5	peptide_mass	Peptide Mass	real	4	0	N		N			Y	text	50		Y	Y	N	Mass of the identified peptide		
 AT_identified_peptide	6	glyco_site_id	Glyco Site ID	int	4	0	N		N	AT_glyco_site	glyco_site_id					N	N				
 AT_identified_peptide	7	tryptic_end	Tryptic Ends	int	4	0	Y		N										Number of tryptic ends for this identified peptide		
-
-
 AT_predicted_peptide	1	predicted_peptide_id	Predicted Peptide ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_predicted_peptide	2	ipi_data_id	IPI Data ID	int	4	0	N		N	AT_ipi_data	ipi_data_id	Y				N	N	Y			
 AT_predicted_peptide	3	predicted_peptide_sequence	Predicted Peptide Sequence	text	16	0	N		N			Y	text	50		Y	Y	N	Peptide Sequence Identified by MS/MS run		
@@ -318,8 +316,8 @@ AT_glyco_sample	6	root_sample_id	Root Sample ID	int	4	0	Y		N			N				Y	Y	N	Source
 AT_glyco_sample	7	tissue_type_id	Tissue Type ID	int	4	0	N		N	tissue_type	tissue_type_id	N	optionlist			Y	Y	Y	Tissue type of this sample	"SELECT  tissue_type_id, tissue_type_name FROM $TBAT_TISSUE_TYPE ORDER BY sort_order ASC, tissue_type_name ASC"	
 AT_glyco_sample	8	project_id	Owner Project	int	4	0	Y		N	project	project_id	N	optionlist			Y	Y	N	Project under which this Sample is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id, UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name"	
 AT_glyco_sample	9	generation_date	Sample Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	textdate	20		Y	Y	N	Date on which this sample was prepared		
-AT_glyco_sample	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments
-AT_glyco_sample	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
+AT_glyco_sample	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+AT_glyco_sample	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
 AT_glyco_sample	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N		
 AT_glyco_sample	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
 AT_glyco_sample	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N		
