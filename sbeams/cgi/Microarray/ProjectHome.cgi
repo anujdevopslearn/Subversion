@@ -1197,7 +1197,7 @@ $LINESEPARATOR
 	  my $processed_date = getProcessedDate(file=>$content_dir);
 	  print qq ~
 <TR>
-  <TD ALIGN="right"><A HREF=\"DataAnalysis.cgi?project_id=$project_id&proc_event=$content\">$content</A></TD>
+  <TD ALIGN="right">$content</TD>
 	<TD ALIGN="right">$processed_date</TD>
 </TR>
 ~;
