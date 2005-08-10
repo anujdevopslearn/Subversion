@@ -2271,6 +2271,10 @@ sub displayResultSet {
     my $query_parameters_ref = $args{'query_parameters_ref'};
     my $cytoscape = $args{'cytoscape'} || undef;
 
+    # Improved formatting capacity, DSC 2005-08-09
+    my $no_escape = $args{no_escape} || 0;
+    my $nowrap = ( $args{nowrap} ) ? ' NOWRAP' : '';
+
     my $resort_url = '';
     if ($base_url) {
       my $separator = '?';
@@ -2663,8 +2667,9 @@ sub displayResultSet {
         title_formats=>['BOLD'],
         url_keys=>$url_cols_ref,
         hidden_cols=>$hidden_cols_ref,
-        THformats=>["BGCOLOR=".$row_color_scheme_ref->{header_background}],
-        TDformats=>['NOWRAP']
+        THformats=>["BGCOLOR=".$row_color_scheme_ref->{header_background} . $nowrap],
+        TDformats=>['NOWRAP'],
+        no_escape => $no_escape
       };
 
     #### Otherwise, use the standard viewable format which doesn't print well
@@ -2692,12 +2697,13 @@ sub displayResultSet {
         title_formats=>['FONT COLOR=white,BOLD'],
         url_keys=>$url_cols_ref,
         hidden_cols=>$hidden_cols_ref,
-        THformats=>["BGCOLOR=".$row_color_scheme_ref->{header_background}],
+        THformats=>["BGCOLOR=".$row_color_scheme_ref->{header_background} . $nowrap],
         TDformats=>\@TDformats,
         row_color_scheme=>$row_color_scheme_ref,
         base_url=>$base_url,
         image_dir=>"$HTML_BASE_DIR/images",
         resort_url=>$resort_url,
+        no_escape => $no_escape
       };
 
     }
@@ -5052,7 +5058,7 @@ sub getRecentResultsets {
       ~;
     } else {
       $html .= qq~
-	<H1>Recent SBEAMS Query Resultsets:</H1>
+	<H1>Recent SBEAMS query resultsets:</H1>
 	<TABLE BORDER=0>
       ~;
     }
@@ -5341,7 +5347,7 @@ sub getProjectsYouOwn {
   return( <<"  END_HTML" );
   $popup_css
   $mod_data_css
-  <H1>Projects You Own:</H1>
+  <H1>Projects you own:</H1>
   $ptable
   $addLink
   END_HTML
@@ -5556,7 +5562,7 @@ sub getProjectsYouHaveAccessTo {
     <FONT type=Courier>
   $popup_css
   $mod_data_css
-  <H1>Projects You Own:</H1>
+  <H1>Projects you can access:</H1>
   $ptable
   $addLink
     </FONT>
