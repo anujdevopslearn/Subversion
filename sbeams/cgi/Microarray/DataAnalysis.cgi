@@ -7,7 +7,7 @@
 use strict;
 use Getopt::Long;
 use FindBin;
-require "/users/mjohnson/test_site/log_proc.pl";
+require "/net/arrays/Pipeline/tools/bin/log_processor.pl";
 
 use lib qw (../../lib/perl);
 use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
