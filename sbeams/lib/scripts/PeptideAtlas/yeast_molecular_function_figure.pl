@@ -271,9 +271,6 @@ sub set_atlas_bins
     my %term_hash= %{$term_hash_ref};
 
 
-    ## NOTE: have to use BioLink name until LM finishes table installation...fix
-    ## this following that
-
     ## SET-UP SQL statement
     my $sql = qq~
         SELECT B.biosequence_gene_name, GA.external_accession
@@ -282,8 +279,8 @@ sub set_atlas_bins
         JOIN $TBAT_PEPTIDE_MAPPING PM ON (PM.peptide_instance_id = PI.peptide_instance_id)
         JOIN $TBAT_BIOSEQUENCE B ON (B.biosequence_id = PM.matched_biosequence_id)
         JOIN $TBAT_BIOSEQUENCE_ANNOTATED_GENE BAG ON (BAG.biosequence_id = B.biosequence_id)
-        JOIN BioLink.dbo.annotated_gene AG ON (BAG.annotated_gene_id = AG.annotated_gene_id)
-        JOIN BioLink.dbo.gene_annotation GA ON (GA.annotated_gene_id = AG.annotated_gene_id)
+        JOIN $TBBL_ANNOTATED_GENE AG ON (BAG.annotated_gene_id = AG.annotated_gene_id)
+        JOIN $TBBL_GENE_ANNOTATION GA ON (GA.annotated_gene_id = AG.annotated_gene_id)
         WHERE PI.atlas_build_id = '$atlas_build_id'
         AND GA.gene_annotation_type_id='1' 
         AND AG.organism_namespace_id='2'   
@@ -340,14 +337,11 @@ sub set_sgd_bins
     my %term_hash= %{$term_hash_ref};
 
 
-    ## NOTE: have to use BioLink name until LM finishes table installation...fix
-    ## this following that
-
     ## SET-UP sql statement
     my $sql = qq~
         SELECT AG.gene_name, GA.external_accession
-        FROM BioLink.dbo.annotated_gene AG 
-        JOIN BioLink.dbo.gene_annotation GA ON (GA.annotated_gene_id = AG.annotated_gene_id)
+        FROM $TBBL_ANNOTATED_GENE AG 
+        JOIN $TBBL_GENE_ANNOTATION GA ON (GA.annotated_gene_id = AG.annotated_gene_id)
         WHERE GA.gene_annotation_type_id='1' 
         AND AG.organism_namespace_id='2'   
         AND (GA.external_accession like '%GO:0016209%'
