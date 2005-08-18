@@ -56,8 +56,9 @@ Options:
 
 EOU
 
+GetOptions(\%OPTIONS, "test", "run");
 
-unless ( GetOptions(\%OPTIONS, "test", "run") )
+unless ( $OPTIONS{"test"}, $OPTIONS{"run"} )
 {
 
     print "$USAGE";
@@ -65,7 +66,6 @@ unless ( GetOptions(\%OPTIONS, "test", "run") )
     exit;
 
 };
-
 
 
 $TEST = $OPTIONS{"test"} || 0;
@@ -136,8 +136,7 @@ sub main
     write_private_file();
 
     print "\nDial up jsp page on browser to generate HTML and
-    copy that viewed source to web location...haven't worked out this
-    step yet to be auto-matic...\n";
+    copy that viewed source to web location. \n";
 
 } ## end main
 
@@ -222,6 +221,7 @@ sub write_public_file()
 
 
     ## Get sample information. Structure is: 
+    ##  $samples{$sample_tag}->{organism} = $organism;
     ##  $samples{$sample_tag}->{description} = $sample_description;
     ##  $samples{$sample_tag}->{search_batch_id} = $search_batch_id;
     ##  $samples{$sample_tag}->{data_contributors} = $data_contributors;
@@ -236,9 +236,28 @@ sub write_public_file()
     my %data_dirs = get_data_directories();
 
 
-    ## iterate over sample_tags, writing formatted info to file:
-    foreach my $sample_tag ( keys %samples)
+    ## Iterate over sample_tags, writing formatted info to file:
+    ## sorting by organism and sample_tag
+    my %sampleTagOrganismHash; 
+
+    foreach my $sample_tag ( keys %samples )
     {
+
+        my $str = $samples{$sample_tag}->{organism} . ":$sample_tag";
+
+        $sampleTagOrganismHash{ $str } = $sample_tag;
+        
+    }
+
+    ## sort by string of organism:sample_tag
+    my @sample_tag_strings = sort {$a cmp $b} keys %sampleTagOrganismHash;
+
+    foreach my $sample_tag_string ( @sample_tag_strings )
+    {
+
+        my @tmp = split(":", $sample_tag_string);
+
+        my $sample_tag = $tmp[1];
 
         my $sbid = $samples{$sample_tag}->{search_batch_id};
 
@@ -386,6 +405,8 @@ sub write_public_file()
             
             sample_tag => $sample_tag,
 
+            organism => $samples{$sample_tag}->{organism},
+
             rawDataLocation => $rawDataLocation,
 
             rawDataType => $rawDataType,
@@ -396,7 +417,11 @@ sub write_public_file()
 
             searchResultsLocation => $searchResultsLocation,
 
+            proteinProphetLocation => $proteinProphetLocation,
+
             description => $description,
+
+            data_contributors => $data_contributors,
 
             pub_citation_array_ref => \@publication_citations,
 
@@ -410,6 +435,8 @@ sub write_public_file()
 
 #######################################################################
 # write_to_public_file -- write info to the public repository file
+#    while replacing disk file locations, with http locations relative
+#    to www.peptideatlas.org
 #######################################################################
 sub write_to_public_file
 {
@@ -417,6 +444,8 @@ sub write_to_public_file
     my %args = @_;
 
     my $sample_tag = $args{sample_tag} || die "need sample_tag ($!)";
+
+    my $organism = $args{organism} || die "need organism ($!)";
 
     my $rawDataLocation = $args{rawDataLocation} || 
         die "need rawDataLocation ($!)";
@@ -433,8 +462,35 @@ sub write_to_public_file
     my $searchResultsLocation = $args{searchResultsLocation} ||
         die "need searchResultsLocation ($!)";
 
+    my $proteinProphetLocation = $args{proteinProphetLocation} ||
+        die "need proteinProphetLocation ($!)";
+
     my $description = $args{description} ||
         die "need description ($!)";
+
+    my $data_contributors = $args{data_contributors} || "[]";
+
+    $data_contributors =~ s/\r/ /g;
+
+    $data_contributors =~ s/\n/ /g;
+
+    ## create soft-links from /sbeams/pa_public_archive to
+    ## http://www.peptideatlas.org/repository/pa_public_archive
+    ## and replace the former with the later here
+    $rawDataLocation = makeHttpLocation( 
+        location => $rawDataLocation );
+
+    $mzXMLDataLocation = makeHttpLocation( 
+        location => $mzXMLDataLocation );
+
+    $READMELocation = makeHttpLocation( 
+        location => $READMELocation );
+
+    $searchResultsLocation = makeHttpLocation( 
+        location => $searchResultsLocation );
+
+    $proteinProphetLocation = makeHttpLocation( 
+        location => $proteinProphetLocation );
 
 
     my $pub_citation_array_ref = $args{pub_citation_array_ref} ||
@@ -449,9 +505,9 @@ sub write_to_public_file
     my @pub_url = @{$pub_url_array_ref};
 
 
-    my $str = "$sample_tag\t$rawDataLocation\t$rawDataType\t"
-        ."$mzXMLDataLocation\t$READMELocation\t$searchResultsLocation"
-        ."\t$description";
+    my $str = "$sample_tag\t$organism\t$rawDataLocation\t$rawDataType\t"
+        ."$mzXMLDataLocation\t$READMELocation\t$searchResultsLocation\t"
+        ."$proteinProphetLocation\t$description\t$data_contributors\t";
 
     for (my $i = 0; $i <= $#pub_cit; $i++)
     {
@@ -472,6 +528,42 @@ sub write_to_public_file
 
 }
 
+
+#######################################################################
+# makeHttpLocation
+#######################################################################
+sub makeHttpLocation
+{
+
+    my %args = @_;
+
+    my $location = $args{location} || die "need location ($!)";
+
+    ## replace /sbeams/ with http://www.peptideatlas.org/repository
+    my $str1 ="\/sbeams\/";
+
+    my $str2 ="http://www.peptideatlas.org/repository/";
+
+    my $newLocation = $location;
+
+    $newLocation =~ s/($str1)(.+)$/$str2$2/gi;
+
+
+    ## make soft link from /sbeams/pa_public_archive to 
+    ## /net/dblocal/wwwspecial/peptideatlas/repository/pa_public_archive
+    my $newSoftLink = $location;
+
+    my $str3 ="/net/dblocal/wwwspecial/peptideatlas/repository/";
+
+    $newSoftLink =~ s/($str1)(.+)$/$str3$2/gi;
+
+    symlink $location, $newSoftLink or warn 
+        "Can't make soft link from $location to $newLocation ($!)\n";
+
+
+    return $newLocation;
+
+}
 
 #######################################################################
 # get_data_location -- given sample_tag, search dir, and data_type, 
@@ -743,6 +835,8 @@ sub sort_by_num
 # get_README_location --  looks for README file in $repository_dir
 #    and if not found, creates it with minimal information...this
 #    section needs work and someday should be its own module.
+#    It also creates a gzipped copy of the README file for use by the 
+#    multi-download servlet
 #######################################################################
 sub get_README_location
 {
@@ -978,6 +1072,11 @@ sub get_README_location
 
         close(OUTFILE) or die
             "cannot close $file ($!)";
+
+        ## make copy of file and gzip it and rename it
+        my $cmd = "cp $file tmp.txt; gzip tmp.txt; mv tmp.txt.gz $file.gz";
+
+        system $cmd;
 
 
         ## return to former pwd
@@ -1277,14 +1376,19 @@ sub get_public_sample_info
 
     ## get sample info:
     my $sql = qq~
-        SELECT sample_tag,
-            sample_description,
-            search_batch_id,
-            data_contributors, 
-            is_public,
-            sample_publication_ids
-        FROM $TBAT_SAMPLE
-        WHERE is_public = 'y'
+        SELECT S.sample_tag, O.organism_name,
+            S.sample_description,
+            S.search_batch_id,
+            S.data_contributors, 
+            S.is_public,
+            S.sample_publication_ids
+        FROM $TBAT_SAMPLE S
+        JOIN $TBPR_SEARCH_BATCH SB 
+            ON (SB.search_batch_id = S.search_batch_id)
+        JOIN $TBPR_BIOSEQUENCE_SET BS 
+            ON (BS.biosequence_set_id = SB.biosequence_set_id)
+        JOIN $TB_ORGANISM O ON (BS.organism_id = O.organism_id)
+        WHERE S.is_public = 'y'
     ~;
 
     my @rows = $sbeams->selectSeveralColumns($sql) or 
@@ -1294,7 +1398,7 @@ sub get_public_sample_info
     foreach my $row (@rows) 
     {
 
-        my ($sample_tag, $sample_description, $search_batch_id,
+        my ($sample_tag, $organism, $sample_description, $search_batch_id,
             $data_contributors, $is_public, $sample_publication_ids) 
             = @{$row};
 
@@ -1302,6 +1406,8 @@ sub get_public_sample_info
         $sample_description =~ s/\r/ /g;
 
         $sample_description =~ s/\n/ /g;
+
+        $sample_info{$sample_tag}->{organism} = $organism;
 
         $sample_info{$sample_tag}->{description} = $sample_description;
 
@@ -1352,7 +1458,7 @@ sub get_public_sample_info
         foreach my $row (@rows) 
         {
 
-            my ($sample_tag, $sample_description, $search_batch_id,
+            my ($sample_tag, $organism, $sample_description, $search_batch_id,
                 $data_contributors, $is_public, $sample_publication_ids) 
                 = @{$row};
 
@@ -1360,6 +1466,16 @@ sub get_public_sample_info
             $sample_description =~ s/\r/ /g;
 
             $sample_description =~ s/\n/ /g;
+
+            if ( $sample_info{$organism}->{organism} ne
+            $organism)
+            {
+
+                warn "TEST fails for 
+                    $sample_info{$sample_tag}->{organism} ($!)";
+
+            }
+
 
             if ( $sample_info{$sample_tag}->{description} ne
             $sample_description)
@@ -1423,6 +1539,9 @@ sub get_public_sample_info
 
             while ($count < 1)
             {
+
+                $small_sample_info{$st}->{organism} 
+                    = $sample_info{$st}->{organism};
 
                 $small_sample_info{$st}->{description} 
                     = $sample_info{$st}->{description};
@@ -1495,10 +1614,12 @@ sub write_to_notpublic_file
 
     my $sample_tag = $args{sample_tag} || die "need sample_tag ($!)";
 
-    my $cell_type = $args{cell_type} || ""; ## might not be in record
+    my $cell_type = $args{cell_type} || "[]"; ## might not be in record
 
     my $data_contributors = $args{data_contributors} ||
         die "need data_contributors for $sample_tag ($!)";
+
+    chomp($data_contributors);
 
 
     my $str = "$sample_tag\t$cell_type\t$data_contributors";
