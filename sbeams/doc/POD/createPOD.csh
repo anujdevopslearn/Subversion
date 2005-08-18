@@ -29,7 +29,7 @@
   set INDIR=../../lib/perl/SBEAMS/Connection
   set OUTDIR=SBEAMS/Connection
 
-  foreach file ( `/bin/ls ../../lib/perl/SBEAMS/Connection  | sed -e 's/\.pm$//g'` )
+  foreach file ( `/bin/ls ../../lib/perl/SBEAMS/Connection/*.pm | sed -e 's/\.pm$//g' | sed -e 's#^.*/##'` )
     echo "Running pod2html for $OUTDIR/$file"
     pod2html --infile=$INDIR/$file.pm --outfile=$OUTDIR/$file.html \
       --index --recurse --libpods=Authenticator:DBConnector:DBInterface \
@@ -37,4 +37,5 @@
   end
 
 
-
+  #### Clean up
+  /bin/rm pod2htm?.*
