@@ -227,7 +227,7 @@ SN_replaced_snp	1	snp_id	SNP ID	int	4	0	N		N	SN_snp	snp_id	Y				Y	Y	Y	SNP ID of 
 SN_replaced_snp	2	snp_selection_run_id	SNP Selection Run ID	int	4	0	N		N	SN_snp_selection_run	snp_selection_run_id	Y				Y	Y	Y	SNP Selection Run of the replacement		
 SN_replaced_snp	3	replaced_snp_id	Replaced SNP ID	int	4	0	N		N			Y				Y	Y	Y	SNP ID of the SNP that has been replaced		
 SN_manual_genotype_call	1	manual_genotype_call_id	Manual Genotype Call ID	int	4	0	N		Y							N	N				
-SN_manual_genotype_call	2	project_id	Project	varchar	255	0	N		N			Y	fixed			Y	Y	Y	Project to which the genotype call belongs		
+SN_manual_genotype_call	2	project_label	Project	varchar	255	0	N		N			Y	fixed			Y	Y	Y	Project to which the genotype call belongs		
 SN_manual_genotype_call	3	assay_id	Assay ID	varchar	255	0	N		N			Y	fixed			Y	Y	Y	Assay of the genotype call		
 SN_manual_genotype_call	4	sample_id	Sample ID	varchar	255	0	N		N			Y	fixed			Y	Y	Y	Sample ID		
 SN_manual_genotype_call	5	genotype_call	Genotype Call	varchar	20	0	N		N			Y	text	10		Y	Y	N	"Genotype call in a form like T/T or T/C, etc."		
