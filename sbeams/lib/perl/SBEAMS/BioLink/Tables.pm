@@ -42,6 +42,8 @@ use vars qw(@ISA @EXPORT
     $TBBL_ONTOLOGY_RELATIONSHIP_TYPE
     $TBBL_ONTOLOGY_TERM_TYPE
 
+    $TBBL_ANNOTATED_GENE
+    $TBBL_GENE_ANNOTATION
 
 );
 
@@ -75,6 +77,9 @@ require Exporter;
     $TBBL_ONTOLOGY_RELATIONSHIP_TYPE
     $TBBL_ONTOLOGY_TERM_TYPE
 
+    $TBBL_ANNOTATED_GENE
+    $TBBL_GENE_ANNOTATION
+
 );
 
 
@@ -106,4 +111,7 @@ $TBBL_MGED_ONTOLOGY_TERM	= "${mod}MGEDOntologyTerm";
 
 $TBBL_ONTOLOGY_RELATIONSHIP_TYPE  = "${mod}OntologyRelationshipType";
 $TBBL_ONTOLOGY_TERM_TYPE           = "${mod}OntologyTermType";
+
+$TBBL_ANNOTATED_GENE = "${mod}annotated_gene";
+$TBBL_GENE_ANNOTATION = "${mod}gene_annotation";
 
