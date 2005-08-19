@@ -34,14 +34,13 @@ use vars qw ($sbeams $sbeamsMOD $q $dbh $current_contact_id $current_username
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              $PK_COLUMN_NAME @MENU_OPTIONS);
 use DBI;
-#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
 use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TableInfo;
-#$q = new CGI;
+
 $sbeams = new SBEAMS::Connection;
 
 use SBEAMS::Genotyping;
@@ -255,7 +254,7 @@ sub preUpdateDataCheck {
                                          tname => $TABLE_NAME,
                                          dbtname => $DB_TABLE_NAME );
     return ( $errstr ) if $errstr;
-    
+
   } elsif ($TABLE_NAME eq "XXXX") {
 
     return "An error of some sort $parameters{something} invalid";
@@ -290,6 +289,65 @@ sub postUpdateOrInsertHook {
 
   #### If table GT_experiment
   if ($TABLE_NAME eq "GT_experiment") {
+
+    #### Add or update a status record
+
+    #### Is there already a status record?
+    my $sql = qq~
+      SELECT experiment_status_id FROM $TBGT_EXPERIMENT_STATUS
+      WHERE experiment_id = '$pk_value'
+    ~;
+    my @rows = $sbeams->selectOneColumn($sql);
+
+    my $experiment_status_id;
+    my $do_insert = 0;
+    my $do_update = 0;
+    my %rowdata;
+
+    if (scalar(@rows) > 1) {
+      die("ERROR: Too many experiment status records!");
+    } elsif (scalar(@rows) == 1) {
+      $experiment_status_id = $rows[0];
+      $do_update = 1;
+      #### Actually, nothing to do, no auto update of record at this time
+    } else {
+      $do_insert = 1;
+      $rowdata{experiment_id} = $pk_value;
+      $rowdata{file_formats_approved} = 'Pending'; #### FIXME only do if file
+      #### is present
+      $rowdata{experiment_status_state_id} = 1;
+      $rowdata{initial_request_date} = 'CURRENT_TIMESTAMP';
+      $sbeams->insert_update_row(
+        insert=>$do_insert,
+        table_name=>$TBGT_EXPERIMENT_STATUS,
+        rowdata_ref=>\%rowdata,
+        PK=>'experiment_status_id',
+	add_audit_parameters=>1,
+      );
+    }
+
+
+    #### Send an email to Marta
+    my $mailprog = "/usr/lib/sendmail";
+    my $recipient_name = "Genotyping_admin Contact";
+    my $recipient = "kdeutsch\@systemsbiology.org";
+    my $cc_name = "SBEAMS";
+    my $cc = "edeutsch\@systemsbiology.org";
+
+    open (MAIL, "|$mailprog $recipient,$cc") || croak "Can't open $mailprog!\n";
+    print MAIL "From: SBEAMS-Genotyping <kdeutsch\@systemsbiology.org>\n";
+    print MAIL "To: $recipient_name <$recipient>\n";
+    print MAIL "Cc: $cc_name <$cc>\n";
+    print MAIL "Reply-to: $current_username <${current_username}\@systemsbiology.org>\n";
+    print MAIL "Subject: Genotyping request submission\n\n";
+    print MAIL "An $apply_action of a genotyping request was just executed in SBEAMS by ${current_username}.\n\n";
+    print MAIL "To see the request view this link:\n\n";
+    print MAIL "$SERVER_BASE_DIR$CGI_BASE_DIR/${subdir}$PROGRAM_FILE_NAME&$PK_COLUMN_NAME=$resulting_PK&apply_action=VIEW\n\n";
+    close (MAIL);
+
+      print "<BR><BR>An email was just sent to the Genotyping_admin Group informing them of your request.<BR>\n";
+
+
 
     #### Get the predicted location of the samples file
     my $samples_file = "GT_experiment/".
