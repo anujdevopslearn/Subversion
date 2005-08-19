@@ -35,6 +35,8 @@ use SBEAMS::Connection qw($log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
+use SBEAMS::BioLink::Tables;
+
 use SBEAMS::Ontology::Tables;
 use SBEAMS::Ontology::TableInfo;
 
@@ -1114,8 +1116,8 @@ sub convertGenomeCoordinates {
       # SQL to perform lookups in CBIL genome coordinates table.
       my $bgcSQL =<<"      END";
 	    SELECT AB.antibody_id
-	    FROM Biolink.dbo.CBIL_genome_coordinates GC
-	    JOIN Biolink.dbo.dots_to_locuslink DTL
+	    FROM $TBBL_CBIL_GENOME_COORDINATES GC
+	    JOIN $TBBL_DOTS_TO_LOCUSLINK DTL
         ON dtl.dots_id = GC.dots
 	    JOIN $TBIS_BIOSEQUENCE BS
 	      ON (DTL.locus_link_id = BS.biosequence_accession )
