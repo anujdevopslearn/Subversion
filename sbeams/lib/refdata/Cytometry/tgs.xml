@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SBEAMS_EXPORT>
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2003-01-21 19:25:31"
+        date_created="2003-01-21 19:25:31"
+        table_group="Cytometry_infrastructure"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="23"
+        table_group_security_id="83" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2003-01-21 19:25:44"
+        date_created="2003-01-21 19:25:44"
+        table_group="Cytometry_infrastructure"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="24"
+        table_group_security_id="84" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2003-01-21 19:26:03"
+        date_created="2003-01-21 19:26:03"
+        table_group="rowprivate"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="24"
+        table_group_security_id="85" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2003-01-21 19:26:10"
+        date_created="2003-01-21 19:26:10"
+        table_group="rowprivate"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="23"
+        table_group_security_id="86" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2003-01-21 19:26:20"
+        date_created="2003-01-21 19:26:20"
+        table_group="common"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="23"
+        table_group_security_id="87" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2003-01-21 19:26:28"
+        date_created="2003-01-21 19:26:28"
+        table_group="common"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="24"
+        table_group_security_id="88" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2004-07-27 10:37:16"
+        date_created="2004-07-27 10:37:16"
+        table_group="project"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="24"
+        table_group_security_id="151" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2004-08-05 15:54:28"
+        date_created="2004-08-05 15:54:28"
+        table_group="project"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="23"
+        table_group_security_id="167" />
+</SBEAMS_EXPORT>
+---------------------------------- SBEAMS -------------------------------------
