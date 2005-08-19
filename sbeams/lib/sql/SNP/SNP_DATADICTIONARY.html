@@ -1,0 +1,2549 @@
+
+    <H1>biosequence_set</H1>
+    <TABLE border=1>
+    <TR>
+      <TH>column_name</TH>
+      <TH>column_title</TH>
+      <TH>datatype</TH>
+      <TH>nullable</TH>
+      <TH>default_value</TH>
+      <TH>is_auto_inc</TH>
+      <TH>fk_table</TH>
+      <TH>fk_column</TH>
+      <TH>column_description</TH>
+    </TR>
+  
+    <TR>
+      <TD>biosequence_set_id</TD>
+      <TD>BioSequence Set ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>organism_id</TD>
+      <TD>Organism</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>organism</TD>
+      <TD>organism_id</TD>
+      <TD>Organism for this BioSequence database</TD>
+    </TR>
+  
+    <TR>
+      <TD>set_name</TD>
+      <TD>Set Name</TD>
+      <TD>varchar(100)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Name of this BioSequence database</TD>
+    </TR>
+  
+    <TR>
+      <TD>set_tag</TD>
+      <TD>Set Tag</TD>
+      <TD>varchar(20)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Very short tag (name) of this BioSequence database</TD>
+    </TR>
+  
+    <TR>
+      <TD>set_description</TD>
+      <TD>Set Description</TD>
+      <TD>varchar(255)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Longer description of this BioSequence database</TD>
+    </TR>
+  
+    <TR>
+      <TD>set_version</TD>
+      <TD>Set Version</TD>
+      <TD>varchar(255)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Version of this BioSequence database</TD>
+    </TR>
+  
+    <TR>
+      <TD>upload_file</TD>
+      <TD>Upload file</TD>
+      <TD>varchar(255)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>File path of this BioSequence database if to be uploaded via the web interface</TD>
+    </TR>
+  
+    <TR>
+      <TD>set_path</TD>
+      <TD>Set Path</TD>
+      <TD>varchar(255)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Local network file path of this BioSequence database if not uploaded via the web interface</TD>
+    </TR>
+  
+    <TR>
+      <TD>source_file_date</TD>
+      <TD>Source File Date</TD>
+      <TD>datetime</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Date of the FASTA file at last update</TD>
+    </TR>
+  
+    <TR>
+      <TD>uri</TD>
+      <TD>URI</TD>
+      <TD>varchar(255)</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>External web page or other URI</TD>
+    </TR>
+  
+    <TR>
+      <TD>comment</TD>
+      <TD>Comment</TD>
+      <TD>text</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Additional comments</TD>
+    </TR>
+  
+    <TR>
+      <TD>sort_order</TD>
+      <TD>Sort Order</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>10</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_created</TD>
+      <TD>Date Record Created</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>created_by_id</TD>
+      <TD>Record Created By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_modified</TD>
+      <TD>Date Record Modified</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>modified_by_id</TD>
+      <TD>Record Modified By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>owner_group_id</TD>
+      <TD>Owner Group ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>1</TD>
+      <TD>N</TD>
+      <TD>work_group</TD>
+      <TD>work_group_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>record_status</TD>
+      <TD>Record Status</TD>
+      <TD>char(1)</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    </TABLE>
+  
+    <H1>biosequence</H1>
+    <TABLE border=1>
+    <TR>
+      <TH>column_name</TH>
+      <TH>column_title</TH>
+      <TH>datatype</TH>
+      <TH>nullable</TH>
+      <TH>default_value</TH>
+      <TH>is_auto_inc</TH>
+      <TH>fk_table</TH>
+      <TH>fk_column</TH>
+      <TH>column_description</TH>
+    </TR>
+  
+    <TR>
+      <TD>biosequence_id</TD>
+      <TD>BioSequence ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>biosequence_set_id</TD>
+      <TD>BioSequence Set ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>biosequence_set</TD>
+      <TD>biosequence_set_id</TD>
+      <TD> The BioSequence Set from which this BioSequnce come from</TD>
+    </TR>
+  
+    <TR>
+      <TD>biosequence_name</TD>
+      <TD>BIoSequence Name</TD>
+      <TD>varchar(50)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Name for the BioSequence (i.e. Gene/Cassette Name)</TD>
+    </TR>
+  
+    <TR>
+      <TD>biosequence_gene_name</TD>
+      <TD>BioSequence Gene Name</TD>
+      <TD>varchar(50)</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>The Common Name for the BioSequence</TD>
+    </TR>
+  
+    <TR>
+      <TD>biosequence_acession</TD>
+      <TD>BioSequence Accession</TD>
+      <TD>varchar(8)</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>The Accession Number for this BioSequnce (if available)</TD>
+    </TR>
+  
+    <TR>
+      <TD>biosequence_desc</TD>
+      <TD>BioSequence Description</TD>
+      <TD>varchar(255)</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>A description</TD>
+    </TR>
+  
+    <TR>
+      <TD>biosequence_start</TD>
+      <TD>BioSequence Start</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>The start coor</TD>
+    </TR>
+  
+    <TR>
+      <TD>biosequence_length</TD>
+      <TD>BioSequence Length</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>The length in bp</TD>
+    </TR>
+  
+    <TR>
+      <TD>biosequence_seq</TD>
+      <TD>BioSequence Sequence</TD>
+      <TD>text</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>"The sequence, if present"</TD>
+    </TR>
+  
+    <TR>
+      <TD>biosequence_build_info</TD>
+      <TD>BioSequence Build/Vesion Info</TD>
+      <TD>varchar(255)</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>"Information about the assembly build, if needed"</TD>
+    </TR>
+  
+    <TR>
+      <TD>inherit_from_biosequence_id</TD>
+      <TD>Inherited BioSequence</TD>
+      <TD>int</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>biosequence_id</TD>
+      <TD>"The Inherited BioSequence (if this has a ""parent"" sequence)"</TD>
+    </TR>
+  
+    <TR>
+      <TD>comment</TD>
+      <TD>Comment</TD>
+      <TD>text</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Additional comments</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_created</TD>
+      <TD>Date Record Created</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>modified_by_id</TD>
+      <TD>Record Modified By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>owner_group_id</TD>
+      <TD>Owner Group ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>1</TD>
+      <TD>N</TD>
+      <TD>work_group</TD>
+      <TD>work_group_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>record_status</TD>
+      <TD>Record Status</TD>
+      <TD>char(1)</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    </TABLE>
+  
+    <H1>biosequence_property_set</H1>
+    <TABLE border=1>
+    <TR>
+      <TH>column_name</TH>
+      <TH>column_title</TH>
+      <TH>datatype</TH>
+      <TH>nullable</TH>
+      <TH>default_value</TH>
+      <TH>is_auto_inc</TH>
+      <TH>fk_table</TH>
+      <TH>fk_column</TH>
+      <TH>column_description</TH>
+    </TR>
+  
+    <TR>
+      <TD>biosequence_property_set_id</TD>
+      <TD>BioSequence Property Set ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>biosequence_id</TD>
+      <TD>BioSequence ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>PS_biosequence</TD>
+      <TD>biosequence_id</TD>
+      <TD>Biosequence to which this Biosequence property set belongs</TD>
+    </TR>
+  
+    <TR>
+      <TD>n_transmembrane_regions</TD>
+      <TD>Number of Transmembrane Regions</TD>
+      <TD>int</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Number of transmembrane regions</TD>
+    </TR>
+  
+    <TR>
+      <TD>transmembrane_class</TD>
+      <TD>Transmembrane Region Class</TD>
+      <TD>varchar(10)</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>"Class of the transmembrane region.  May be 0, TM, A, S, TM_xS based on output from TMHMM and signalP"</TD>
+    </TR>
+  
+    <TR>
+      <TD>transmembrane_topology</TD>
+      <TD>Transmembrane Region Topology</TD>
+      <TD>text</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Coding of which residues belong in the transmembrane regions</TD>
+    </TR>
+  
+    <TR>
+      <TD>starting_offset</TD>
+      <TD>Starting Offset</TD>
+      <TD>int</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>"Absolute offset of the start of this sequence within some reference, usually the chromosome"</TD>
+    </TR>
+  
+    </TABLE>
+  
+    <H1>snp_source</H1>
+    <TABLE border=1>
+    <TR>
+      <TH>column_name</TH>
+      <TH>column_title</TH>
+      <TH>datatype</TH>
+      <TH>nullable</TH>
+      <TH>default_value</TH>
+      <TH>is_auto_inc</TH>
+      <TH>fk_table</TH>
+      <TH>fk_column</TH>
+      <TH>column_description</TH>
+    </TR>
+  
+    <TR>
+      <TD>snp_source_id</TD>
+      <TD>SNP Source ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>source_name</TD>
+      <TD>Source Name</TD>
+      <TD>varchar(25)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Name of the direct source of this SNP</TD>
+    </TR>
+  
+    <TR>
+      <TD>orig_source_name</TD>
+      <TD>Original Source Name</TD>
+      <TD>varchar(25)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Name of the original origin of this SNP (perhaps via someone else's curation as listed above)</TD>
+    </TR>
+  
+    <TR>
+      <TD>uri</TD>
+      <TD>URI</TD>
+      <TD>varchar(255)</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>External web page or other URI</TD>
+    </TR>
+  
+    <TR>
+      <TD>comment</TD>
+      <TD>Comment</TD>
+      <TD>text</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Additional comments</TD>
+    </TR>
+  
+    <TR>
+      <TD>sort_order</TD>
+      <TD>Sort Order</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>10</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_created</TD>
+      <TD>Date Record Created</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>created_by_id</TD>
+      <TD>Record Created By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_modified</TD>
+      <TD>Date Record Modified</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>modified_by_id</TD>
+      <TD>Record Modified By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>owner_group_id</TD>
+      <TD>Owner Group ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>1</TD>
+      <TD>N</TD>
+      <TD>work_group</TD>
+      <TD>work_group_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>record_status</TD>
+      <TD>Record Status</TD>
+      <TD>char(1)</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    </TABLE>
+  
+    <H1>source_version</H1>
+    <TABLE border=1>
+    <TR>
+      <TH>column_name</TH>
+      <TH>column_title</TH>
+      <TH>datatype</TH>
+      <TH>nullable</TH>
+      <TH>default_value</TH>
+      <TH>is_auto_inc</TH>
+      <TH>fk_table</TH>
+      <TH>fk_column</TH>
+      <TH>column_description</TH>
+    </TR>
+  
+    <TR>
+      <TD>source_version_id</TD>
+      <TD>Source Version ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>source_version_name</TD>
+      <TD>Source Version Name</TD>
+      <TD>varchar(255)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Name of the version of the source dataset (e.g. Celera MHC 2002-04-01)</TD>
+    </TR>
+  
+    <TR>
+      <TD>uri</TD>
+      <TD>URI</TD>
+      <TD>varchar(255)</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>"External web page, file, or other URI"</TD>
+    </TR>
+  
+    <TR>
+      <TD>comment</TD>
+      <TD>Comment</TD>
+      <TD>text</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Additional comments</TD>
+    </TR>
+  
+    <TR>
+      <TD>sort_order</TD>
+      <TD>Sort Order</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>10</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_created</TD>
+      <TD>Date Record Created</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>created_by_id</TD>
+      <TD>Record Created By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_modified</TD>
+      <TD>Date Record Modified</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>modified_by_id</TD>
+      <TD>Record Modified By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>owner_group_id</TD>
+      <TD>Owner Group ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>1</TD>
+      <TD>N</TD>
+      <TD>work_group</TD>
+      <TD>work_group_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>record_status</TD>
+      <TD>Record Status</TD>
+      <TD>char(1)</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    </TABLE>
+  
+    <H1>biosequence_rank_list</H1>
+    <TABLE border=1>
+    <TR>
+      <TH>column_name</TH>
+      <TH>column_title</TH>
+      <TH>datatype</TH>
+      <TH>nullable</TH>
+      <TH>default_value</TH>
+      <TH>is_auto_inc</TH>
+      <TH>fk_table</TH>
+      <TH>fk_column</TH>
+      <TH>column_description</TH>
+    </TR>
+  
+    <TR>
+      <TD>biosequence_rank_list_id</TD>
+      <TD>BioSequence Rank List</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>rank_list_name</TD>
+      <TD>Rank List Name</TD>
+      <TD>varchar(255)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Name of the list of ranked biosequences (as it will appear in a drop-down list)</TD>
+    </TR>
+  
+    <TR>
+      <TD>rank_list_file</TD>
+      <TD>Rank List File</TD>
+      <TD>varchar(255)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Hit [Browse] and specify the tab-delimited text file which contains the ranking information.  This must be in the correct format.</TD>
+    </TR>
+  
+    <TR>
+      <TD>comment</TD>
+      <TD>Comment</TD>
+      <TD>text</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Additional comments about this rank list</TD>
+    </TR>
+  
+    <TR>
+      <TD>sort_order</TD>
+      <TD>Sort Order</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>10</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_created</TD>
+      <TD>Date Record Created</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>created_by_id</TD>
+      <TD>Record Created By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_modified</TD>
+      <TD>Date Record Modified</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>modified_by_id</TD>
+      <TD>Record Modified By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>owner_group_id</TD>
+      <TD>Owner Group ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>1</TD>
+      <TD>N</TD>
+      <TD>work_group</TD>
+      <TD>work_group_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>record_status</TD>
+      <TD>Record Status</TD>
+      <TD>char(1)</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    </TABLE>
+  
+    <H1>snp_plate</H1>
+    <TABLE border=1>
+    <TR>
+      <TH>column_name</TH>
+      <TH>column_title</TH>
+      <TH>datatype</TH>
+      <TH>nullable</TH>
+      <TH>default_value</TH>
+      <TH>is_auto_inc</TH>
+      <TH>fk_table</TH>
+      <TH>fk_column</TH>
+      <TH>column_description</TH>
+    </TR>
+  
+    <TR>
+      <TD>plate_id</TD>
+      <TD>Plate ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>contact_id</TD>
+      <TD>Contact</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>PI for this plate</TD>
+    </TR>
+  
+    <TR>
+      <TD>project_id</TD>
+      <TD>Project</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>project</TD>
+      <TD>project_id</TD>
+      <TD>Project to which the plate belongs</TD>
+    </TR>
+  
+    <TR>
+      <TD>plate_name</TD>
+      <TD>Plate Title</TD>
+      <TD>varchar(100)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Title of this plate</TD>
+    </TR>
+  
+    <TR>
+      <TD>plate_tag</TD>
+      <TD>Plate Tag</TD>
+      <TD>varchar(20)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Short tag (name) of this plate.  Treat this like a directory/folder name.  Do not use spaces or non-standard characters.</TD>
+    </TR>
+  
+    <TR>
+      <TD>plate_description</TD>
+      <TD>Plate Description</TD>
+      <TD>text</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>"Description of this experiment, the sample or samples used, and any other relevant information not contained in the project description or in list-box elements in this form"</TD>
+    </TR>
+  
+    <TR>
+      <TD>plate_path</TD>
+      <TD>Plate Path</TD>
+      <TD>varchar(255)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Data path for this plate (e.g. /data/search/edeutsch/TCells/T_000/human_nci)</TD>
+    </TR>
+  
+    <TR>
+      <TD>organism_id</TD>
+      <TD>Organism</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Organism from which the sample used for this plate was derived</TD>
+    </TR>
+  
+    <TR>
+      <TD>plate_type_id</TD>
+      <TD>Plate Type</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Type of plate</TD>
+    </TR>
+  
+    <TR>
+      <TD>instrument_id</TD>
+      <TD>Instrument</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Instrument on which this plate was run</TD>
+    </TR>
+  
+    <TR>
+      <TD>go_public_date</TD>
+      <TD>Go Public Date</TD>
+      <TD>datetime</TD>
+      <TD>Y</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Date that this plate data will go public.  Please use the form 2002-12-31.  Do not enter a date higher than 2030-01-01.</TD>
+    </TR>
+  
+    <TR>
+      <TD>uri</TD>
+      <TD>URI</TD>
+      <TD>varchar(255)</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>External web page or other URI</TD>
+    </TR>
+  
+    <TR>
+      <TD>comment</TD>
+      <TD>Comment</TD>
+      <TD>text</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Additional comments</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_created</TD>
+      <TD>Date Record Created</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>created_by_id</TD>
+      <TD>Record Created By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>1</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_modified</TD>
+      <TD>Date Record Modified</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>modified_by_id</TD>
+      <TD>Record Modified By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>1</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>owner_group_id</TD>
+      <TD>Owner Group ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>1</TD>
+      <TD>N</TD>
+      <TD>work_group</TD>
+      <TD>work_group_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>record_status</TD>
+      <TD>Record Status</TD>
+      <TD>char(1)</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    </TABLE>
+  
+    <H1>instrument_type</H1>
+    <TABLE border=1>
+    <TR>
+      <TH>column_name</TH>
+      <TH>column_title</TH>
+      <TH>datatype</TH>
+      <TH>nullable</TH>
+      <TH>default_value</TH>
+      <TH>is_auto_inc</TH>
+      <TH>fk_table</TH>
+      <TH>fk_column</TH>
+      <TH>column_description</TH>
+    </TR>
+  
+    <TR>
+      <TD>instrument_type_id</TD>
+      <TD>Instrument Type ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>instrument_type_name</TD>
+      <TD>Instrument Type Name</TD>
+      <TD>varchar(100)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Short name of this instrument type as it will appear in list boxes</TD>
+    </TR>
+  
+    <TR>
+      <TD>instrument_type_description</TD>
+      <TD>Instrument Type Description</TD>
+      <TD>varchar(255)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>More complete description of this instrument type</TD>
+    </TR>
+  
+    <TR>
+      <TD>comment</TD>
+      <TD>Comment</TD>
+      <TD>text</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Additional comments</TD>
+    </TR>
+  
+    <TR>
+      <TD>sort_order</TD>
+      <TD>Sort Order</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>10</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Numbers which override alphabetical sorting in a list box</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_created</TD>
+      <TD>Date Record Created</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>created_by_id</TD>
+      <TD>Record Created By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>1</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_modified</TD>
+      <TD>Date Record Modified</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>modified_by_id</TD>
+      <TD>Record Modified By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>1</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>owner_group_id</TD>
+      <TD>Owner Group ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>1</TD>
+      <TD>N</TD>
+      <TD>work_group</TD>
+      <TD>work_group_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>record_status</TD>
+      <TD>Record Status</TD>
+      <TD>char(1)</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    </TABLE>
+  
+    <H1>instrument</H1>
+    <TABLE border=1>
+    <TR>
+      <TH>column_name</TH>
+      <TH>column_title</TH>
+      <TH>datatype</TH>
+      <TH>nullable</TH>
+      <TH>default_value</TH>
+      <TH>is_auto_inc</TH>
+      <TH>fk_table</TH>
+      <TH>fk_column</TH>
+      <TH>column_description</TH>
+    </TR>
+  
+    <TR>
+      <TD>instrument_id</TD>
+      <TD>Instrument ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>instrument_type_id</TD>
+      <TD>Instrument Type</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>instrument_type</TD>
+      <TD>instrument_type_id</TD>
+      <TD>Type of Instrument</TD>
+    </TR>
+  
+    <TR>
+      <TD>instrument_name</TD>
+      <TD>Instrument Name</TD>
+      <TD>varchar(100)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Short name of this instrument as it will appear in list boxes</TD>
+    </TR>
+  
+    <TR>
+      <TD>instrument_description</TD>
+      <TD>Instrument Description</TD>
+      <TD>varchar(255)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>More complete description of this instrument</TD>
+    </TR>
+  
+    <TR>
+      <TD>comment</TD>
+      <TD>Comment</TD>
+      <TD>text</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Additional comments</TD>
+    </TR>
+  
+    <TR>
+      <TD>sort_order</TD>
+      <TD>Sort Order</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>10</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Numbers which override alphabetical sorting in a list box</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_created</TD>
+      <TD>Date Record Created</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>created_by_id</TD>
+      <TD>Record Created By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>1</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_modified</TD>
+      <TD>Date Record Modified</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>modified_by_id</TD>
+      <TD>Record Modified By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>1</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>owner_group_id</TD>
+      <TD>Owner Group ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>1</TD>
+      <TD>N</TD>
+      <TD>work_group</TD>
+      <TD>work_group_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>record_status</TD>
+      <TD>Record Status</TD>
+      <TD>char(1)</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    </TABLE>
+  
+    <H1>plate_type</H1>
+    <TABLE border=1>
+    <TR>
+      <TH>column_name</TH>
+      <TH>column_title</TH>
+      <TH>datatype</TH>
+      <TH>nullable</TH>
+      <TH>default_value</TH>
+      <TH>is_auto_inc</TH>
+      <TH>fk_table</TH>
+      <TH>fk_column</TH>
+      <TH>column_description</TH>
+    </TR>
+  
+    <TR>
+      <TD>plate_type_id</TD>
+      <TD>Plate Type ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>plate_type_name</TD>
+      <TD>Plate Type Name</TD>
+      <TD>varchar(100)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Short name of this plate type as it will appear in list boxes</TD>
+    </TR>
+  
+    <TR>
+      <TD>plate_type_description</TD>
+      <TD>Plate Type Description</TD>
+      <TD>varchar(255)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>More complete description of this plate type</TD>
+    </TR>
+  
+    <TR>
+      <TD>comment</TD>
+      <TD>Comment</TD>
+      <TD>text</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Additional comments</TD>
+    </TR>
+  
+    <TR>
+      <TD>sort_order</TD>
+      <TD>Sort Order</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>10</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Numbers which override alphabetical sorting in a list box</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_created</TD>
+      <TD>Date Record Created</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>created_by_id</TD>
+      <TD>Record Created By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>1</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_modified</TD>
+      <TD>Date Record Modified</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>modified_by_id</TD>
+      <TD>Record Modified By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>1</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>owner_group_id</TD>
+      <TD>Owner Group ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>1</TD>
+      <TD>N</TD>
+      <TD>work_group</TD>
+      <TD>work_group_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>record_status</TD>
+      <TD>Record Status</TD>
+      <TD>char(1)</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    </TABLE>
+  
+    <H1>selected_snp</H1>
+    <TABLE border=1>
+    <TR>
+      <TH>column_name</TH>
+      <TH>column_title</TH>
+      <TH>datatype</TH>
+      <TH>nullable</TH>
+      <TH>default_value</TH>
+      <TH>is_auto_inc</TH>
+      <TH>fk_table</TH>
+      <TH>fk_column</TH>
+      <TH>column_description</TH>
+    </TR>
+  
+    <TR>
+      <TD>selected_snp_id</TD>
+      <TD>Selected SNP ID</TD>
+      <TD>varchar(255)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>Y</TD>
+      <TD>SN_snp</TD>
+      <TD>snp_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>snp_selection_run_id</TD>
+      <TD>SNP Selection Run ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>snp_selection_run</TD>
+      <TD>snp_selection_run_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>jared_id</TD>
+      <TD>Jared Roach ID</TD>
+      <TD>varchar(255)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>ID for this SNP from Jared's merging</TD>
+    </TR>
+  
+    <TR>
+      <TD>snp_id</TD>
+      <TD>SNP ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>position</TD>
+      <TD>SNP Position</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>"Position of this SNP, relative to the biosquence"</TD>
+    </TR>
+  
+    <TR>
+      <TD>quality_score</TD>
+      <TD>Quality Score</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>sequence</TD>
+      <TD>SNP Sequence</TD>
+      <TD>text</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>sequence_is_modified</TD>
+      <TD>Original Sequence Modified?</TD>
+      <TD>varchar(1)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Has the original sequence been mofidied?  Usually from merged nearby SNPs.</TD>
+    </TR>
+  
+    <TR>
+      <TD>status</TD>
+      <TD>Status</TD>
+      <TD>text</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>status</TD>
+      <TD>description</TD>
+      <TD>"Current status of this SNP.  Valid codes are 'Library', 'Picked', 'Failed design', 'Failed constant'"</TD>
+    </TR>
+  
+    <TR>
+      <TD>parent_gene_biosequence_id</TD>
+      <TD>Parent Gene Biosequence ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>comment</TD>
+      <TD>Comment</TD>
+      <TD>text</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Additional comments</TD>
+    </TR>
+  
+    <TR>
+      <TD>created_by_id</TD>
+      <TD>Record Created By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_modified</TD>
+      <TD>Date Record Modified</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>modified_by_id</TD>
+      <TD>Record Modified By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>owner_group_id</TD>
+      <TD>Owner Group ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>1</TD>
+      <TD>N</TD>
+      <TD>work_group</TD>
+      <TD>work_group_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>record_status</TD>
+      <TD>Record Status</TD>
+      <TD>char(1)</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    </TABLE>
+  
+    <H1>replaced_snp</H1>
+    <TABLE border=1>
+    <TR>
+      <TH>column_name</TH>
+      <TH>column_title</TH>
+      <TH>datatype</TH>
+      <TH>nullable</TH>
+      <TH>default_value</TH>
+      <TH>is_auto_inc</TH>
+      <TH>fk_table</TH>
+      <TH>fk_column</TH>
+      <TH>column_description</TH>
+    </TR>
+  
+    <TR>
+      <TD>snp_id</TD>
+      <TD>SNP ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>SN_snp</TD>
+      <TD>snp_id</TD>
+      <TD>SNP ID of the chosed replacement SNP</TD>
+    </TR>
+  
+    <TR>
+      <TD>snp_selection_run_id</TD>
+      <TD>SNP Selection Run ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>snp_selection_run</TD>
+      <TD>snp_selection_run_id</TD>
+      <TD>SNP Selection Run of the replacement</TD>
+    </TR>
+  
+    <TR>
+      <TD>replaced_snp_id</TD>
+      <TD>Replaced SNP ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>SNP ID of the SNP that has been replaced</TD>
+    </TR>
+  
+    </TABLE>
+  
+    <H1>snp_selection_run</H1>
+    <TABLE border=1>
+    <TR>
+      <TH>column_name</TH>
+      <TH>column_title</TH>
+      <TH>datatype</TH>
+      <TH>nullable</TH>
+      <TH>default_value</TH>
+      <TH>is_auto_inc</TH>
+      <TH>fk_table</TH>
+      <TH>fk_column</TH>
+      <TH>column_description</TH>
+    </TR>
+  
+    <TR>
+      <TD>snp_selection_run_id</TD>
+      <TD>SNP Selection Run ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>snp_selection_run_name</TD>
+      <TD>SNP Selection Run Name</TD>
+      <TD>varchar(255)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Name of this SNP selection run</TD>
+    </TR>
+  
+    <TR>
+      <TD>snp_selection_run_description</TD>
+      <TD>SNP Selection Run Description</TD>
+      <TD>text</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>"Description of this SNP selection run (e.g., 'Primary Selection for JDRF Chr. 10', 'Extra SNPs for JDRF Chr. 10')"</TD>
+    </TR>
+  
+    <TR>
+      <TD>run_date</TD>
+      <TD>SNP Selection Run Date</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Date of this SNP selection run</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_created</TD>
+      <TD>Date Record Created</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>created_by_id</TD>
+      <TD>Record Created By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_modified</TD>
+      <TD>Date Record Modified</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>modified_by_id</TD>
+      <TD>Record Modified By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>owner_group_id</TD>
+      <TD>Owner Group ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>1</TD>
+      <TD>N</TD>
+      <TD>work_group</TD>
+      <TD>work_group_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>record_status</TD>
+      <TD>Record Status</TD>
+      <TD>char(1)</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    </TABLE>
+  
+    <H1>status</H1>
+    <TABLE border=1>
+    <TR>
+      <TH>column_name</TH>
+      <TH>column_title</TH>
+      <TH>datatype</TH>
+      <TH>nullable</TH>
+      <TH>default_value</TH>
+      <TH>is_auto_inc</TH>
+      <TH>fk_table</TH>
+      <TH>fk_column</TH>
+      <TH>column_description</TH>
+    </TR>
+  
+    <TR>
+      <TD>status_id</TD>
+      <TD>Status ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>status_name</TD>
+      <TD>Status Name</TD>
+      <TD>text</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>"SNP status name: Library, Picked, Failed Design, Failed Constant"</TD>
+    </TR>
+  
+    <TR>
+      <TD>status_description</TD>
+      <TD>Status Description</TD>
+      <TD>text</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Longer description of the SNP status</TD>
+    </TR>
+  
+    <TR>
+      <TD>comment</TD>
+      <TD>Comment</TD>
+      <TD>text</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Additional comments</TD>
+    </TR>
+  
+    <TR>
+      <TD>sort_order</TD>
+      <TD>Sort Order</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>10</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_created</TD>
+      <TD>Date Record Created</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>created_by_id</TD>
+      <TD>Record Created By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_modified</TD>
+      <TD>Date Record Modified</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>modified_by_id</TD>
+      <TD>Record Modified By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>owner_group_id</TD>
+      <TD>Owner Group ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>1</TD>
+      <TD>N</TD>
+      <TD>work_group</TD>
+      <TD>work_group_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>record_status</TD>
+      <TD>Record Status</TD>
+      <TD>char(1)</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    </TABLE>
+  
+    <H1>manual_genotype_call</H1>
+    <TABLE border=1>
+    <TR>
+      <TH>column_name</TH>
+      <TH>column_title</TH>
+      <TH>datatype</TH>
+      <TH>nullable</TH>
+      <TH>default_value</TH>
+      <TH>is_auto_inc</TH>
+      <TH>fk_table</TH>
+      <TH>fk_column</TH>
+      <TH>column_description</TH>
+    </TR>
+  
+    <TR>
+      <TD>manual_genotype_call_id</TD>
+      <TD>Manual Genotype Call ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>project_id</TD>
+      <TD>Project</TD>
+      <TD>varchar(255)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Project to which the genotype call belongs</TD>
+    </TR>
+  
+    <TR>
+      <TD>assay_id</TD>
+      <TD>Assay ID</TD>
+      <TD>varchar(255)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Assay of the genotype call</TD>
+    </TR>
+  
+    <TR>
+      <TD>sample_id</TD>
+      <TD>Sample ID</TD>
+      <TD>varchar(255)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Sample ID</TD>
+    </TR>
+  
+    <TR>
+      <TD>genotype_call</TD>
+      <TD>Genotype Call</TD>
+      <TD>varchar(20)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>"Genotype call in a form like T/T or T/C, etc."</TD>
+    </TR>
+  
+    <TR>
+      <TD>call_quality</TD>
+      <TD>Call Quality</TD>
+      <TD>varchar(255)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Genotype call quality</TD>
+    </TR>
+  
+    <TR>
+      <TD>comment</TD>
+      <TD>Comment</TD>
+      <TD>text</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Additional comments</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_created</TD>
+      <TD>Date Record Created</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>created_by_id</TD>
+      <TD>Record Created By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_modified</TD>
+      <TD>Date Record Modified</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>modified_by_id</TD>
+      <TD>Record Modified By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>owner_group_id</TD>
+      <TD>Owner Group ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>1</TD>
+      <TD>N</TD>
+      <TD>work_group</TD>
+      <TD>work_group_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>record_status</TD>
+      <TD>Record Status</TD>
+      <TD>char(1)</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    </TABLE>
+  
+    <H1>assay_order_list</H1>
+    <TABLE border=1>
+    <TR>
+      <TH>column_name</TH>
+      <TH>column_title</TH>
+      <TH>datatype</TH>
+      <TH>nullable</TH>
+      <TH>default_value</TH>
+      <TH>is_auto_inc</TH>
+      <TH>fk_table</TH>
+      <TH>fk_column</TH>
+      <TH>column_description</TH>
+    </TR>
+  
+    <TR>
+      <TD>assay_order_list_id</TD>
+      <TD>Assay Order List</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>assay_order_list_name</TD>
+      <TD>Assay Order List Name</TD>
+      <TD>varchar(255)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Name of the list of ordered assays (as it will appear in a drop-down list)</TD>
+    </TR>
+  
+    <TR>
+      <TD>assay_order_list_file</TD>
+      <TD>Assay Order List File</TD>
+      <TD>varchar(255)</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Hit [Browse] and specify the tab-delimited text file which contains the assay position information.  This must be in the correct format.</TD>
+    </TR>
+  
+    <TR>
+      <TD>comment</TD>
+      <TD>Comment</TD>
+      <TD>text</TD>
+      <TD>Y</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>Additional comments about this assay order list</TD>
+    </TR>
+  
+    <TR>
+      <TD>sort_order</TD>
+      <TD>Sort Order</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>10</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_created</TD>
+      <TD>Date Record Created</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>created_by_id</TD>
+      <TD>Record Created By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>date_modified</TD>
+      <TD>Date Record Modified</TD>
+      <TD>datetime</TD>
+      <TD>N</TD>
+      <TD>CURRENT_TIMESTAMP</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>modified_by_id</TD>
+      <TD>Record Modified By</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>N</TD>
+      <TD>contact</TD>
+      <TD>contact_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>owner_group_id</TD>
+      <TD>Owner Group ID</TD>
+      <TD>int</TD>
+      <TD>N</TD>
+      <TD>1</TD>
+      <TD>N</TD>
+      <TD>work_group</TD>
+      <TD>work_group_id</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    <TR>
+      <TD>record_status</TD>
+      <TD>Record Status</TD>
+      <TD>char(1)</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>N</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+      <TD>&nbsp;</TD>
+    </TR>
+  
+    </TABLE>
+  

@@ -1,0 +1,37 @@
+
+
+DROP TABLE dbo.assay_order_list
+GO
+DROP TABLE dbo.manual_genotype_call
+GO
+DROP TABLE dbo.status
+GO
+DROP TABLE dbo.snp_selection_run
+GO
+DROP TABLE dbo.replaced_snp
+GO
+DROP TABLE dbo.selected_snp
+GO
+DROP TABLE dbo.plate_type
+GO
+DROP TABLE dbo.instrument
+GO
+DROP TABLE dbo.instrument_type
+GO
+DROP TABLE dbo.snp_plate
+GO
+DROP TABLE dbo.biosequence_rank_list
+GO
+DROP TABLE dbo.source_version
+GO
+DROP TABLE dbo.snp_source
+GO
+DROP TABLE dbo.biosequence_property_set
+GO
+DROP TABLE dbo.biosequence
+GO
+DROP TABLE dbo.biosequence_set
+GO
+
+
+

@@ -1,0 +1,115 @@
+
+
+ALTER TABLE Genotyping.dbo.biosequence_set DROP CONSTRAINT fk_biosequence_set_project_id
+GO
+ALTER TABLE Genotyping.dbo.biosequence_set DROP CONSTRAINT fk_biosequence_set_organism_id
+GO
+ALTER TABLE Genotyping.dbo.biosequence_set DROP CONSTRAINT fk_biosequence_set_polymer_type_id
+GO
+ALTER TABLE Genotyping.dbo.biosequence_set DROP CONSTRAINT fk_biosequence_set_created_by_id
+GO
+ALTER TABLE Genotyping.dbo.biosequence_set DROP CONSTRAINT fk_biosequence_set_modified_by_id
+GO
+ALTER TABLE Genotyping.dbo.biosequence_set DROP CONSTRAINT fk_biosequence_set_owner_group_id
+GO
+ALTER TABLE Genotyping.dbo.dbxref DROP CONSTRAINT fk_dbxref_created_by_id
+GO
+ALTER TABLE Genotyping.dbo.dbxref DROP CONSTRAINT fk_dbxref_modified_by_id
+GO
+ALTER TABLE Genotyping.dbo.dbxref DROP CONSTRAINT fk_dbxref_owner_group_id
+GO
+ALTER TABLE Genotyping.dbo.biosequence DROP CONSTRAINT fk_biosequence_biosequence_set_id
+GO
+ALTER TABLE Genotyping.dbo.biosequence DROP CONSTRAINT fk_biosequence_dbxref_id
+GO
+ALTER TABLE Genotyping.dbo.biosequence_property_set DROP CONSTRAINT fk_biosequence_property_set_biosequence_id
+GO
+ALTER TABLE Genotyping.dbo.query_option DROP CONSTRAINT fk_query_option_created_by_id
+GO
+ALTER TABLE Genotyping.dbo.query_option DROP CONSTRAINT fk_query_option_modified_by_id
+GO
+ALTER TABLE Genotyping.dbo.query_option DROP CONSTRAINT fk_query_option_owner_group_id
+GO
+ALTER TABLE Genotyping.dbo.experiment DROP CONSTRAINT fk_experiment_project_id
+GO
+ALTER TABLE Genotyping.dbo.experiment DROP CONSTRAINT fk_experiment_contact_id
+GO
+ALTER TABLE Genotyping.dbo.experiment DROP CONSTRAINT fk_experiment_pooling_set_id
+GO
+ALTER TABLE Genotyping.dbo.experiment DROP CONSTRAINT fk_experiment_dna_type
+GO
+ALTER TABLE Genotyping.dbo.experiment DROP CONSTRAINT fk_experiment_created_by_id
+GO
+ALTER TABLE Genotyping.dbo.experiment DROP CONSTRAINT fk_experiment_modified_by_id
+GO
+ALTER TABLE Genotyping.dbo.experiment DROP CONSTRAINT fk_experiment_owner_group_id
+GO
+ALTER TABLE Genotyping.dbo.sample DROP CONSTRAINT fk_sample_experiment_id
+GO
+ALTER TABLE Genotyping.dbo.sample DROP CONSTRAINT fk_sample_created_by_id
+GO
+ALTER TABLE Genotyping.dbo.sample DROP CONSTRAINT fk_sample_modified_by_id
+GO
+ALTER TABLE Genotyping.dbo.sample DROP CONSTRAINT fk_sample_owner_group_id
+GO
+ALTER TABLE Genotyping.dbo.dna_type DROP CONSTRAINT fk_dna_type_created_by_id
+GO
+ALTER TABLE Genotyping.dbo.dna_type DROP CONSTRAINT fk_dna_type_modified_by_id
+GO
+ALTER TABLE Genotyping.dbo.dna_type DROP CONSTRAINT fk_dna_type_owner_group_id
+GO
+ALTER TABLE Genotyping.dbo.pooling_set DROP CONSTRAINT fk_pooling_set_created_by_id
+GO
+ALTER TABLE Genotyping.dbo.pooling_set DROP CONSTRAINT fk_pooling_set_modified_by_id
+GO
+ALTER TABLE Genotyping.dbo.pooling_set DROP CONSTRAINT fk_pooling_set_owner_group_id
+GO
+ALTER TABLE Genotyping.dbo.requested_genotyping_assay DROP CONSTRAINT fk_requested_genotyping_assay_experiment_id
+GO
+ALTER TABLE Genotyping.dbo.requested_genotyping_assay DROP CONSTRAINT fk_requested_genotyping_assay_created_by_id
+GO
+ALTER TABLE Genotyping.dbo.requested_genotyping_assay DROP CONSTRAINT fk_requested_genotyping_assay_modified_by_id
+GO
+ALTER TABLE Genotyping.dbo.requested_genotyping_assay DROP CONSTRAINT fk_requested_genotyping_assay_owner_group_id
+GO
+ALTER TABLE Genotyping.dbo.cost_scheme DROP CONSTRAINT fk_cost_scheme_created_by_id
+GO
+ALTER TABLE Genotyping.dbo.cost_scheme DROP CONSTRAINT fk_cost_scheme_modified_by_id
+GO
+ALTER TABLE Genotyping.dbo.cost_scheme DROP CONSTRAINT fk_cost_scheme_owner_group_id
+GO
+ALTER TABLE Genotyping.dbo.microsatellite_genotype_call DROP CONSTRAINT fk_microsatellite_genotype_call_project_id
+GO
+ALTER TABLE Genotyping.dbo.manual_genotype_call DROP CONSTRAINT fk_manual_genotype_call_created_by_id
+GO
+ALTER TABLE Genotyping.dbo.manual_genotype_call DROP CONSTRAINT fk_manual_genotype_call_modified_by_id
+GO
+ALTER TABLE Genotyping.dbo.manual_genotype_call DROP CONSTRAINT fk_manual_genotype_call_owner_group_id
+GO
+ALTER TABLE Genotyping.dbo.experiment_status DROP CONSTRAINT fk_experiment_status_experiment_id
+GO
+ALTER TABLE Genotyping.dbo.experiment_status DROP CONSTRAINT fk_experiment_status_experiment_status_state_id
+GO
+ALTER TABLE Genotyping.dbo.experiment_status DROP CONSTRAINT fk_experiment_status_created_by_id
+GO
+ALTER TABLE Genotyping.dbo.experiment_status DROP CONSTRAINT fk_experiment_status_modified_by_id
+GO
+ALTER TABLE Genotyping.dbo.experiment_status DROP CONSTRAINT fk_experiment_status_owner_group_id
+GO
+ALTER TABLE Genotyping.dbo.experiment_status_state DROP CONSTRAINT fk_experiment_status_state_created_by_id
+GO
+ALTER TABLE Genotyping.dbo.experiment_status_state DROP CONSTRAINT fk_experiment_status_state_modified_by_id
+GO
+ALTER TABLE Genotyping.dbo.experiment_status_state DROP CONSTRAINT fk_experiment_status_state_owner_group_id
+GO
+ALTER TABLE Genotyping.dbo.experiment_status_history DROP CONSTRAINT fk_experiment_status_history_experiment_id
+GO
+ALTER TABLE Genotyping.dbo.experiment_status_history DROP CONSTRAINT fk_experiment_status_history_experiment_status_state_id
+GO
+ALTER TABLE Genotyping.dbo.experiment_status_history DROP CONSTRAINT fk_experiment_status_history_created_by_id
+GO
+ALTER TABLE Genotyping.dbo.experiment_status_history DROP CONSTRAINT fk_experiment_status_history_modified_by_id
+GO
+ALTER TABLE Genotyping.dbo.experiment_status_history DROP CONSTRAINT fk_experiment_status_history_owner_group_id
+GO
+

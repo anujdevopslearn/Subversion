@@ -1,0 +1,113 @@
+
+
+ALTER TABLE dbo.biosequence_set ADD CONSTRAINT fk_biosequence_set_organism_id FOREIGN KEY (organism_id) REFERENCES dbo.organism(organism_id)
+GO
+ALTER TABLE dbo.biosequence ADD CONSTRAINT fk_biosequence_biosequence_set_id FOREIGN KEY (biosequence_set_id) REFERENCES dbo.biosequence_set(biosequence_set_id)
+GO
+ALTER TABLE dbo.biosequence_property_set ADD CONSTRAINT fk_biosequence_property_set_biosequence_id FOREIGN KEY (biosequence_id) REFERENCES dbo.PS_biosequence(biosequence_id)
+GO
+ALTER TABLE dbo.snp_plate ADD CONSTRAINT fk_snp_plate_contact_id FOREIGN KEY (contact_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.snp_plate ADD CONSTRAINT fk_snp_plate_project_id FOREIGN KEY (project_id) REFERENCES dbo.project(project_id)
+GO
+ALTER TABLE dbo.instrument ADD CONSTRAINT fk_instrument_instrument_type_id FOREIGN KEY (instrument_type_id) REFERENCES dbo.instrument_type(instrument_type_id)
+GO
+ALTER TABLE dbo.selected_snp ADD CONSTRAINT fk_selected_snp_selected_snp_id FOREIGN KEY (selected_snp_id) REFERENCES dbo.SN_snp(snp_id)
+GO
+ALTER TABLE dbo.selected_snp ADD CONSTRAINT fk_selected_snp_snp_selection_run_id FOREIGN KEY (snp_selection_run_id) REFERENCES dbo.snp_selection_run(snp_selection_run_id)
+GO
+ALTER TABLE dbo.selected_snp ADD CONSTRAINT fk_selected_snp_status FOREIGN KEY (status) REFERENCES dbo.status(description)
+GO
+ALTER TABLE dbo.replaced_snp ADD CONSTRAINT fk_replaced_snp_snp_id FOREIGN KEY (snp_id) REFERENCES dbo.SN_snp(snp_id)
+GO
+ALTER TABLE dbo.replaced_snp ADD CONSTRAINT fk_replaced_snp_snp_selection_run_id FOREIGN KEY (snp_selection_run_id) REFERENCES dbo.snp_selection_run(snp_selection_run_id)
+GO
+
+
+
+
+/**** Audit trail FOREIGN KEYS ****/
+
+ALTER TABLE dbo.biosequence_set ADD CONSTRAINT fk_biosequence_set_created_by_id FOREIGN KEY (created_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.biosequence_set ADD CONSTRAINT fk_biosequence_set_modified_by_id FOREIGN KEY (modified_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.biosequence_set ADD CONSTRAINT fk_biosequence_set_owner_group_id FOREIGN KEY (owner_group_id) REFERENCES dbo.work_group(work_group_id)
+GO
+ALTER TABLE dbo.biosequence ADD CONSTRAINT fk_biosequence_modified_by_id FOREIGN KEY (modified_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.biosequence ADD CONSTRAINT fk_biosequence_owner_group_id FOREIGN KEY (owner_group_id) REFERENCES dbo.work_group(work_group_id)
+GO
+ALTER TABLE dbo.snp_source ADD CONSTRAINT fk_snp_source_created_by_id FOREIGN KEY (created_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.snp_source ADD CONSTRAINT fk_snp_source_modified_by_id FOREIGN KEY (modified_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.snp_source ADD CONSTRAINT fk_snp_source_owner_group_id FOREIGN KEY (owner_group_id) REFERENCES dbo.work_group(work_group_id)
+GO
+ALTER TABLE dbo.source_version ADD CONSTRAINT fk_source_version_created_by_id FOREIGN KEY (created_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.source_version ADD CONSTRAINT fk_source_version_modified_by_id FOREIGN KEY (modified_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.source_version ADD CONSTRAINT fk_source_version_owner_group_id FOREIGN KEY (owner_group_id) REFERENCES dbo.work_group(work_group_id)
+GO
+ALTER TABLE dbo.biosequence_rank_list ADD CONSTRAINT fk_biosequence_rank_list_created_by_id FOREIGN KEY (created_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.biosequence_rank_list ADD CONSTRAINT fk_biosequence_rank_list_modified_by_id FOREIGN KEY (modified_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.biosequence_rank_list ADD CONSTRAINT fk_biosequence_rank_list_owner_group_id FOREIGN KEY (owner_group_id) REFERENCES dbo.work_group(work_group_id)
+GO
+ALTER TABLE dbo.snp_plate ADD CONSTRAINT fk_snp_plate_created_by_id FOREIGN KEY (created_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.snp_plate ADD CONSTRAINT fk_snp_plate_modified_by_id FOREIGN KEY (modified_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.snp_plate ADD CONSTRAINT fk_snp_plate_owner_group_id FOREIGN KEY (owner_group_id) REFERENCES dbo.work_group(work_group_id)
+GO
+ALTER TABLE dbo.instrument_type ADD CONSTRAINT fk_instrument_type_created_by_id FOREIGN KEY (created_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.instrument_type ADD CONSTRAINT fk_instrument_type_modified_by_id FOREIGN KEY (modified_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.instrument_type ADD CONSTRAINT fk_instrument_type_owner_group_id FOREIGN KEY (owner_group_id) REFERENCES dbo.work_group(work_group_id)
+GO
+ALTER TABLE dbo.instrument ADD CONSTRAINT fk_instrument_created_by_id FOREIGN KEY (created_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.instrument ADD CONSTRAINT fk_instrument_modified_by_id FOREIGN KEY (modified_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.instrument ADD CONSTRAINT fk_instrument_owner_group_id FOREIGN KEY (owner_group_id) REFERENCES dbo.work_group(work_group_id)
+GO
+ALTER TABLE dbo.plate_type ADD CONSTRAINT fk_plate_type_created_by_id FOREIGN KEY (created_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.plate_type ADD CONSTRAINT fk_plate_type_modified_by_id FOREIGN KEY (modified_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.plate_type ADD CONSTRAINT fk_plate_type_owner_group_id FOREIGN KEY (owner_group_id) REFERENCES dbo.work_group(work_group_id)
+GO
+ALTER TABLE dbo.selected_snp ADD CONSTRAINT fk_selected_snp_created_by_id FOREIGN KEY (created_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.selected_snp ADD CONSTRAINT fk_selected_snp_modified_by_id FOREIGN KEY (modified_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.selected_snp ADD CONSTRAINT fk_selected_snp_owner_group_id FOREIGN KEY (owner_group_id) REFERENCES dbo.work_group(work_group_id)
+GO
+ALTER TABLE dbo.snp_selection_run ADD CONSTRAINT fk_snp_selection_run_created_by_id FOREIGN KEY (created_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.snp_selection_run ADD CONSTRAINT fk_snp_selection_run_modified_by_id FOREIGN KEY (modified_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.snp_selection_run ADD CONSTRAINT fk_snp_selection_run_owner_group_id FOREIGN KEY (owner_group_id) REFERENCES dbo.work_group(work_group_id)
+GO
+ALTER TABLE dbo.status ADD CONSTRAINT fk_status_created_by_id FOREIGN KEY (created_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.status ADD CONSTRAINT fk_status_modified_by_id FOREIGN KEY (modified_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.status ADD CONSTRAINT fk_status_owner_group_id FOREIGN KEY (owner_group_id) REFERENCES dbo.work_group(work_group_id)
+GO
+ALTER TABLE dbo.manual_genotype_call ADD CONSTRAINT fk_manual_genotype_call_created_by_id FOREIGN KEY (created_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.manual_genotype_call ADD CONSTRAINT fk_manual_genotype_call_modified_by_id FOREIGN KEY (modified_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.manual_genotype_call ADD CONSTRAINT fk_manual_genotype_call_owner_group_id FOREIGN KEY (owner_group_id) REFERENCES dbo.work_group(work_group_id)
+GO
+ALTER TABLE dbo.assay_order_list ADD CONSTRAINT fk_assay_order_list_created_by_id FOREIGN KEY (created_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.assay_order_list ADD CONSTRAINT fk_assay_order_list_modified_by_id FOREIGN KEY (modified_by_id) REFERENCES dbo.contact(contact_id)
+GO
+ALTER TABLE dbo.assay_order_list ADD CONSTRAINT fk_assay_order_list_owner_group_id FOREIGN KEY (owner_group_id) REFERENCES dbo.work_group(work_group_id)
+GO
+

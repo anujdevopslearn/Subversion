@@ -1,0 +1,37 @@
+
+
+DROP TABLE Genotyping.dbo.experiment_status_history
+GO
+DROP TABLE Genotyping.dbo.experiment_status_state
+GO
+DROP TABLE Genotyping.dbo.experiment_status
+GO
+DROP TABLE Genotyping.dbo.manual_genotype_call
+GO
+DROP TABLE Genotyping.dbo.microsatellite_genotype_call
+GO
+DROP TABLE Genotyping.dbo.cost_scheme
+GO
+DROP TABLE Genotyping.dbo.requested_genotyping_assay
+GO
+DROP TABLE Genotyping.dbo.pooling_set
+GO
+DROP TABLE Genotyping.dbo.dna_type
+GO
+DROP TABLE Genotyping.dbo.sample
+GO
+DROP TABLE Genotyping.dbo.experiment
+GO
+DROP TABLE Genotyping.dbo.query_option
+GO
+DROP TABLE Genotyping.dbo.biosequence_property_set
+GO
+DROP TABLE Genotyping.dbo.biosequence
+GO
+DROP TABLE Genotyping.dbo.dbxref
+GO
+DROP TABLE Genotyping.dbo.biosequence_set
+GO
+
+
+
