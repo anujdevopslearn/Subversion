@@ -754,7 +754,7 @@ sub printEntryForm {
       my $data_file =
         "$TABLE_NAME/$parameters{$PK_COLUMN_NAME}_$column_name.dat";
       if ($parameters{$column_name}) {
-        my $file_size = -s "$PHYSICAL_BASE_DIR/data/$data_file";
+        my $file_size = -s "$UPLOAD_DIR/$data_file";
         my $file_name = $parameters{$column_name};
         #$file_name =~ s/^.+\///;
         #### Check for legacy names before original names were stored
@@ -2156,7 +2156,7 @@ sub writeDataFile {
 
 
     #### Check that the upload directory is there
-    unless (-d "$UPLOAD_DIR") {
+    unless (-e "$UPLOAD_DIR") {
       die("CONFIGURATION ERROR: The upload directory '$UPLOAD_DIR' does not exist! ".
         "Please report this problem to your SBEAMS administrator.<BR>");
     }
@@ -2229,10 +2229,8 @@ sub getFile {
     "$TABLE_NAME/$parameters{$PK_COLUMN_NAME}_".
     "$parameters{GetFile}.dat";
 
-  my $full_file_name = "$PHYSICAL_BASE_DIR/data/$data_file";
-  
- 
-  
+  my $full_file_name = "$UPLOAD_DIR/$data_file";
+
   my $file_size = -s $full_file_name;
 
 
