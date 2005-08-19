@@ -1997,7 +1997,7 @@ sub printCompletedEntry {
 	reaction as per table below:</B><BR><BR>
     ~;
     my %url_cols;
-    $sql_query = "SELECT * FROM arrays.dbo.xna_info";
+    $sql_query = "SELECT * FROM $TBMA_XNA_INFO";
     $sbeams->displayQueryResult(sql_query=>$sql_query,
         url_cols_ref=>\%url_cols,printable_table=>1);
 
@@ -2006,7 +2006,7 @@ sub printCompletedEntry {
 	Add Arabadopsis control RNA to samples to be labeled as
 	follows:</B><BR><BR>
     ~;
-    $sql_query = "SELECT * FROM arrays.dbo.arabadopsis";
+    $sql_query = "SELECT * FROM $TBMA_ARABIDOPSIS";
     $sbeams->displayQueryResult(sql_query=>$sql_query,
         url_cols_ref=>\%url_cols,printable_table=>1);
 
