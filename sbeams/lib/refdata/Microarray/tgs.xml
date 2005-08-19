@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SBEAMS_EXPORT>
+    <table_group_security
+        privilege_id="25"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2001-06-04 20:02:44"
+        date_created="2001-06-04 20:02:44"
+        table_group="arrays"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="4"
+        table_group_security_id="2" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2001-06-07 11:06:30"
+        date_created="2001-06-05 14:32:51"
+        table_group="project"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="6"
+        table_group_security_id="3" />
+    <table_group_security
+        privilege_id="50"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2001-06-07 11:05:42"
+        date_created="2001-06-05 17:29:26"
+        table_group="admin"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="6"
+        table_group_security_id="5" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2002-08-28 15:42:23"
+        date_created="2001-06-05 17:29:44"
+        table_group="infrastructure"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="6"
+        table_group_security_id="6" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2002-05-17 16:54:52"
+        date_created="2001-06-05 17:30:02"
+        table_group="process"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="6"
+        table_group_security_id="7" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2002-11-07 09:17:58"
+        date_created="2001-06-05 17:30:37"
+        table_group="request"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="6"
+        table_group_security_id="8" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2001-06-07 11:06:52"
+        date_created="2001-06-05 17:30:45"
+        table_group="rowprivate"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="6"
+        table_group_security_id="9" />
+    <table_group_security
+        privilege_id="50"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2001-06-06 13:04:08"
+        date_created="2001-06-05 17:59:48"
+        table_group="admin"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="4"
+        table_group_security_id="10" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2002-08-28 15:42:46"
+        date_created="2001-06-05 18:00:30"
+        table_group="infrastructure"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="4"
+        table_group_security_id="11" />
+    <table_group_security
+        privilege_id="25"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2001-06-05 18:00:35"
+        date_created="2001-06-05 18:00:35"
+        table_group="process"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="4"
+        table_group_security_id="12" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2001-06-05 18:00:52"
+        date_created="2001-06-05 18:00:52"
+        table_group="project"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="4"
+        table_group_security_id="13" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2001-06-05 18:01:12"
+        date_created="2001-06-05 18:01:12"
+        table_group="request"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="4"
+        table_group_security_id="14" />
+    <table_group_security
+        privilege_id="30"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2001-06-05 18:01:32"
+        date_created="2001-06-05 18:01:32"
+        table_group="rowprivate"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="4"
+        table_group_security_id="15" />
+    <table_group_security
+        privilege_id="40"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2001-06-07 11:05:19"
+        date_created="2001-06-07 11:05:19"
+        table_group="arrays"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="6"
+        table_group_security_id="21" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2002-11-27 12:23:00"
+        date_created="2002-11-27 12:23:00"
+        table_group="common"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="6"
+        table_group_security_id="58" />
+    <table_group_security
+        privilege_id="20"
+        record_status="N"
+        created_by_id="3"
+        date_modified="2002-11-27 12:23:10"
+        date_created="2002-11-27 12:23:10"
+        table_group="common"
+        owner_group_id="1"
+        modified_by_id="3"
+        work_group_id="4"
+        table_group_security_id="59" />
+</SBEAMS_EXPORT>
+---------------------------------- SBEAMS -------------------------------------
