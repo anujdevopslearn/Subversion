@@ -34,7 +34,8 @@ Statistics::R [Optional] Not used in production code.  Only used in a test scrip
 The following non-Perl software is required:
 
 R -Version 2.0 or greater
-R -Bioconductor libraries, see below 
+R -Bioconductor libraries, see below. 
+
  library(affy)
  library(gcrma)
  library(vsn)
@@ -46,6 +47,11 @@ R -Bioconductor libraries, see below
 
  library(siggenes)
  
+You can install all these libraries at once from within your R (after you've installed it) by running these 2 commands:
+source("http://www.bioconductor.org/getBioC.R")
+getBioC()
+
+
  #XSLT transformation engine {semi-optional} Only need to view the help pages
  Ehttp://xmlsoft.org/XSLT/
  xsltproc
