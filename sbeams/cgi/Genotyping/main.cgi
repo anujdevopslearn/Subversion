@@ -38,6 +38,7 @@ use SBEAMS::Connection::TabMenu;
 
 use SBEAMS::Genotyping;
 use SBEAMS::Genotyping::Settings;
+use SBEAMS::Genotyping::Tables;
 
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::Genotyping;
@@ -172,8 +173,9 @@ sub handle_request {
   $$html_ref
   ~;
 
-
+  my $content;
   my $project_id = $sbeams->getCurrent_project_id();
+
   if ( $project_id ) {
     my $sql = qq~
                SELECT experiment_id
@@ -181,7 +183,7 @@ sub handle_request {
                 WHERE project_id = $project_id
     ~;
 
-    my $content = '<h2 class="med_gray_bg">Experiment Information</h2>';
+    $content = '<h2 class="med_gray_bg">Experiment Information</h2>';
     my @experiment_rows = $sbeams->selectSeveralColumns($sql);
 
     #### If there are experiments, display the status of each, either in an
@@ -198,9 +200,11 @@ sub handle_request {
     } else {
       if ($project_id == -99) {
         $content .= qq~	<TR><TD WIDTH="100%">You do not have access to this project.  Contact the owner of this project if you want to have access.</TD></TR>\n ~;
-    } else {
-      $content .= qq~	<TR><TD COLSPAN=2 class='red_bg'>No genotyping experiments registered in this project.</TD></TR> \n~;
+      } else {
+        $content .= qq~	<TR><TD COLSPAN=2 class='red_bg'>No genotyping experiments registered in this project.</TD></TR> \n~;
+      }
     }
+
   }
 
   #### Finish the table
@@ -209,6 +213,7 @@ sub handle_request {
 	</TABLE>
   ~;
 
+  print $content;
 
 } # end handle_request
 
@@ -235,7 +240,7 @@ sub make_experiment_summary_html {
 <th nowrap>View/Edit<br/>Record</th>
 </tr>
     ~;
-	my $search_batch_counter = 0;
+	my $experiment_status_counter = 0;
 	foreach my $row (@rows) {
 	  my ($experiment_id) = @{$row};
 
@@ -259,7 +264,7 @@ sub make_experiment_summary_html {
 	  $content .= "<TR> \n";
       }
       $content .= qq~
-	<TD NOWRAP>- <font color="green">$experiment_tag</font></TD>
+	<TD NOWRAP>- <font color="green">$experiment_id</font></TD>
 	<TD NOWRAP ALIGN=CENTER><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=GT_experiment&experiment_id=$experiment_id">[View/Edit]</A></TD>
       ~;
 
