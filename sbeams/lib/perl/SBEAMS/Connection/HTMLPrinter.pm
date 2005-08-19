@@ -846,6 +846,13 @@ sub printCGIParams {
 
 sub getMainPageTabMenu {
   my $self = shift;
+	my $tabmenu = $self->getMainPageTabMenuObj( @_ );
+  my $HTML = "$tabmenu";
+  return \$HTML;
+}
+
+sub getMainPageTabMenuObj {
+  my $self = shift;
   my %args = @_;
 
   # Create new tabmenu item.
@@ -896,8 +903,7 @@ sub getMainPageTabMenu {
   }
 
   $tabmenu->addContent( $content );
-  my $HTML = "$tabmenu";
-  return \$HTML;
+	return $tabmenu;
 
 }
 
