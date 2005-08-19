@@ -108,6 +108,10 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/main.cgi">$SBEAMS_PART Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
+        <tr><td>Submit a Genotyping Request:</td></tr>
+        <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Display_submission_details.cgi"><nobr>&nbsp;&nbsp;&nbsp;Submission Instructions</nobr></a></td></tr>
+        <tr><td><a href="$HTML_BASE_DIR/doc/Genotyping/SampleFileColumnDefinitions.php"><nobr>&nbsp;&nbsp;&nbsp;Sample and Assay File Templates</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=project"><nobr>&nbsp;&nbsp;&nbsp;Projects</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=GT_experiment"><nobr>&nbsp;&nbsp;&nbsp;Experiments</nobr></a></td></tr>
@@ -186,6 +190,28 @@ sub printJavascriptFunctions {
             confirm( "selected option ="+document.forms[0].slide_id.options[document.forms[0].slide_id.selectedIndex].text+"=");
 	    return;
 	} // end showPassed
+
+
+function ClickedNowButton(input_field) {
+  field_name = input_field.name;
+  today = new Date();
+  date_value =
+      today.getFullYear() + "-" + (today.getMonth()+1) + "-" +
+      today.getDate() + " " +
+      today.getHours() + ":" +today.getMinutes();
+  
+  if (field_name == "DNA_delivery_date") {
+      document.MainForm.DNA_delivery_date.value = date_value;
+  }else if (field_name == "preliminary_checks_completed_date") {
+      document.MainForm.preliminary_checks_completed_date.value = date_value;
+  }else if (field_name == "estimated_completion_date") {
+      document.MainForm.estimated_completion_date.value = date_value;
+  }else if (field_name == "final_completion_date") {
+      document.MainForm.final_completion_date.value = date_value;
+  }
+
+  return;
+}
 
 
 
