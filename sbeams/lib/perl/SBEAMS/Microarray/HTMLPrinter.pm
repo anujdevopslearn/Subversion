@@ -122,118 +122,142 @@ sub displaySBEAMSPageHeader
 
   print qq~$http_header
 	<HTML><HEAD>
-	<TITLE>$DBTITLE - Microarray</TITLE>
+	<TITLE>$DBTITLE - $SBEAMS_PART</TITLE>
   ~;
+
+  
 
 
   $self->printJavascriptFunctions();
   $self->printStyleSheet();
 
-
-  #### Determine the Title bar background decoration
-  my $header_bkg = "bgcolor=\"$BGCOLOR\"";
+    #### Determine the Title bar background decoration
+    my $header_bkg = "bgcolor=\"$BGCOLOR\"";
     $header_bkg = "background=\"/images/plaintop.jpg\"" if ($DBVERSION =~ /Primary/);
-
-    print qq~
+	print qq~
 	<!--META HTTP-EQUIV="Expires" CONTENT="Fri, Jun 12 1981 08:20:00 GMT"-->
 	<!--META HTTP-EQUIV="Pragma" CONTENT="no-cache"-->
 	<!--META HTTP-EQUIV="Cache-Control" CONTENT="no-cache"-->
 	</HEAD>
 
 	<!-- Background white, links blue (unvisited), navy (visited), red (active) -->
-	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" TOPMARGIN=0 LEFTMARGIN=0 >
-	<table border=0 width="100%" cellspacing=0 cellpadding=0>
+	<BODY BGCOLOR="#FFFFFF" TEXT="#000000" LINK="#0000FF" VLINK="#000080" ALINK="#FF0000" TOPMARGIN=0 LEFTMARGIN=0 OnLoad="self.focus();">
+	<table border=0 width="100%" cellspacing=0 cellpadding=1>
 
 	<!------- Header ------------------------------------------------>
+
 	<a name="TOP"></a>
 	<tr>
-		<td colspan=3>
-			<table border=0 width=100% cellspacing=0 cellpadding=0>
-				<tr>
-				  <td bgcolor="#000000" align=left><img alt="MICROARRAY" src="$HTML_BASE_DIR/images/microarray.gif"></td>
-				  <td bgcolor="#000000" align=right valign=center><font color="#ffffff"><a href="$CGI_BASE_DIR/logout.cgi"><img src="$HTML_BASE_DIR/images/logout.gif" border=0 alt="LOGOUT"></a><img src="$HTML_BASE_DIR/images/space.gif" height=1 width=25></td>
-				</tr>
-			</table>
-		</td>
+	  <td bgcolor="$BARCOLOR"><a href="http://db.systemsbiology.net/"><img height=64 width=64 border=0 alt="ISB DB" src="$HTML_BASE_DIR/images/dbsmltblue.gif"></a><a href="https://db.systemsbiology.net/sbeams/cgi/main.cgi"><img height=64 width=64 border=0 alt="SBEAMS" src="$HTML_BASE_DIR/images/sbeamssmltblue.gif"></a></td>
+	  <td WIDTH="100%" align="left" $header_bkg><H1>  $DBTITLE - $SBEAMS_PART<BR> $DBVERSION</H1></td>
 	</tr>
 
     ~;
 
-    #print ">>>http_header=$http_header<BR>\n";
+  if ($navigation_bar eq "YES") {
+  
+    my $pad = '<NOBR>&nbsp;&nbsp;&nbsp;';
+    my $affy_docs = ( $CONFIG_SETTING{Microarray_affy_help_docs_url} =~ /http/ ) ?
+  		"<tr><td><a href='$CONFIG_SETTING{Microarray_affy_help_docs_url}'>$pad Affy Help Docs</a></td></tr>" :
+      "<tr><td><a href='$HTML_BASE_DIR/doc/Microarray/affy_help_pages/index.php'>$pad Affy Help Docs</a></td></tr>";
+  
+    $current_work_group_name = $sbeams->getCurrent_work_group_name();
+    my $admin_menu;
 
-    if ($navigation_bar eq "YES") {
-      print qq~
-	<!------- Button Bar -------------------------------------------->
-	<tr><td bgcolor="#ffffff" align="left" valign="top" width="150">
-	<table bgcolor="#ffffff" border=0 width="100%" cellpadding=2 cellspacing=0>
-	<tr><td><a href="$CGI_BASE_DIR/main.cgi"><img src="$HTML_BASE_DIR/images/ma_sbeams_home.jpg"></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi"><img src="$HTML_BASE_DIR/images/ma_array_home.jpg"></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi"><IMG SRC="$HTML_BASE_DIR/images/ma_project_home.jpg"></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GridAlignCheck.cgi"><img src="$HTML_BASE_DIR/images/ma_alignment_check.jpg"></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi?tab=data_pipeline"><img src="$HTML_BASE_DIR/images/ma_pipeline.jpg"></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi?tab=data_download"><img src="$HTML_BASE_DIR/images/ma_data_download.jpg"></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetExpression"><img src="$HTML_BASE_DIR/images/ma_get_expression.jpg"></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetAffy_GeneIntensity.cgi"><img src="$HTML_BASE_DIR/images/ma_get_affy_intensity.jpg"></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi?tab=miame_status"><img src="$HTML_BASE_DIR/images/ma_miame_status.jpg"></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SubmitArrayRequest.cgi?TABLE_NAME=MA_array_request"><img src="$HTML_BASE_DIR/images/ma_array_requests.jpg"></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=protocol"><img src="$HTML_BASE_DIR/images/ma_protocols.jpg"></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_labeling"><img src="$HTML_BASE_DIR/images/ma_labeling.jpg"></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_hybridization"><img src="$HTML_BASE_DIR/images/ma_hybridization.jpg"></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_quantitation"><img src="$HTML_BASE_DIR/images/ma_quantitation.jpg"></a></td></tr>
-    ~;
-
-      $current_work_group_name = $sbeams->getCurrent_work_group_name();
-      if ($current_work_group_name eq "Microarray_admin" || $current_work_group_name eq "Admin" || 1) {
-       print qq~
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=contact"><img src="$HTML_BASE_DIR/images/ma_contacts.jpg"></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array"><img src="$HTML_BASE_DIR/images/ma_arrays.jpg"></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_scan"><img src="$HTML_BASE_DIR/images/ma_array_scans.jpg"></a></td></tr>
-       ~;
-      }
-
-      $current_work_group_name = $sbeams->getCurrent_work_group_name();
-      if ($current_work_group_name eq "Microarray_admin" || $current_work_group_name eq "Admin") {
-       print qq~
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_slide_lot"><img src="$HTML_BASE_DIR/images/ma_slide_lots.jpg"></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_layout"><img src="$HTML_BASE_DIR/images/ma_array_layout.jpg"></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_printing_batch"><img src="$HTML_BASE_DIR/images/ma_printing_batches.jpg"></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_slide_type"><img src="$HTML_BASE_DIR/images/ma_slide_types_costs.jpg"></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=user_login"><img src="$HTML_BASE_DIR/images/ma_admin.jpg"></a></td></tr>
-       ~;
-      }
+    if ($current_work_group_name eq "Microarray_admin" || $current_work_group_name eq "Admin" ) {
+      $admin_menu =<<"      END";
+	    <tr><td>&nbsp;</td></tr>
+	    <tr><td>Administration: </td></tr>
+  	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array">$pad Arrays</a></td></tr>
+    	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_scan">$pad Array scans</a></td></tr>
+    	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_slide_lot">$pad Slide Lots</a></td></tr>
+  	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_layout">$pad Array Layouts</a></td></tr>
+    	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_printing_batch">$pad Printing Batches</a></td></tr>
+  	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_slide_type">$pad Slide Types</a></td></tr>
+      END
+    }
       
-      if ( exists $CONFIG_SETTING{Microarray_affy_help_docs_url} && $CONFIG_SETTING{Microarray_affy_help_docs_url} =~ /http/){
-      
-      	print qq~ 
-		<tr><td><a class='blue_button' href="$CONFIG_SETTING{Microarray_affy_help_docs_url}">Affy Help Docs</a></td></tr>
-	      ~;
-      }else{
-      	print qq~ <tr><td><a class='blue_button' href="$HTML_BASE_DIR/doc/Microarray/affy_help_pages/index.php">Affy Help Docs</a></td></tr>
-	~;
-     }	
+    my $mod_link = ucfirst( lc($SBEAMS_PART) );
+  
+    print qq~
+	<!------- Button Bar ------------------------------------------>
+	
+	<tr><td bgcolor="$BARCOLOR" align="left" valign="top">
+	<table border=0 width="120" cellpadding=1 cellspacing=0>
+	<tr><td><a href="$CGI_BASE_DIR/main.cgi">$DBTITLE Home</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$mod_link/main.cgi">$mod_link Home</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
+
+	<tr><td>&nbsp;</td></tr>
+	<tr><td>Affymetrix Arrays: </td></tr>
+  <!--<A HREF="$CGI_BASE_DIR/main.cgi"><IMG SRC=$HTML_BASE_DIR/images/home_small.gif></A>-->
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/bioconductor/upload.cgi">$pad Data Pipeline</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/dataDownload.cgi?type=affy">$pad Download Data</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetExpression">$pad Get Expression</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetAffy_GeneIntensity.cgi">$pad Affy Gene Intensity</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/bioconductor/Add_affy_annotation.cgi">$pad Annotate Files</td></tr>
+	<tr><td>$affy_docs</td></tr>
+
+  ~;
+    unless ( $CONFIG_SETTING{MA_HIDE_TWO_COLOR} ) {
       print qq~
+
+	<tr><td>&nbsp;</td></tr>
+	<tr><td>Two Color Arrays:</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/PipelineSetup.cgi">$pad Data Pipeline</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/dataDownload.cgi?type=2color">$pad Download Data</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetExpression">$pad Get Expression</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/graphicalOverview.cgi">$pad Graphical Overview</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SubmitArrayRequest.cgi?TABLE_NAME=MA_array_request">$pad Array Requests</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=protocol">$pad Protocols</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_labeling">$pad Labeling</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_hybridization">$pad Hybridization</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_quantitation">$pad Quantitation</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GridAlignCheck.cgi">$pad Check Alignment </td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?mode=miame_status">$pad MIAME Status</td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?mode=management">$pad Manage Arrays</td></tr>
+	<tr><td><a href="http://db.systemsbiology.net/software/ArrayProcess" TARGET=_blank>$pad Pipeline Help</td></tr>
+
+	<!--<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/graphicalOverview.cgi?tab=news_and_links">$pad News and Links</td></tr>-->
+
+  $admin_menu
+
+	<tr><td>&nbsp;</td></tr>
+  ~;
+    }
+#	<tr><td>&nbsp;</td></tr>
+#	<tr><td>Array Requests:</td></tr>
+
+    print qq~
 	</table>
-	</td>
-	<td width=2 bgcolor="#cc0000">
-		<img src="$HTML_BASE_DIR/images/space.gif" width=5 height=1>
 	</td>
 
 	<!-------- Main Page ------------------------------------------->
 	<td valign=top>
 	<table border=0 bgcolor="#ffffff" cellpadding=4>
 	<tr><td>
-
     ~;
+ 
     } else {
-      print qq~
+      print qq~  
 	</TABLE>
       ~;
     }
 
+
+
 }
 
-# 	<table border=0 width="680" bgcolor="#ffffff" cellpadding=4>
 
+sub getMofoMenu {
+
+  my $pad = '&nbsp;&nbsp;';
+  return <<"  END";
+
+      
+  END
+
+}
 
 ###############################################################################
 # printStyleSheet
@@ -269,39 +293,39 @@ sub getMenu {
   my $sbeams = $self->getSBEAMS();
   my $menu =<<"  END";
 	<table bgcolor="#ffffff" border=0 width="100%" cellpadding=2 cellspacing=0>
-	<tr><td><a href="$CGI_BASE_DIR/main.cgi"><img src="$HTML_BASE_DIR/images/ma_sbeams_home.jpg"></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi"><img src="$HTML_BASE_DIR/images/ma_array_home.jpg"></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi"><IMG SRC="$HTML_BASE_DIR/images/ma_project_home.jpg"></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GridAlignCheck.cgi"><img src="$HTML_BASE_DIR/images/ma_alignment_check.jpg"></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi?tab=data_pipeline"><img src="$HTML_BASE_DIR/images/ma_pipeline.jpg"></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi?tab=data_download"><img src="$HTML_BASE_DIR/images/ma_data_download.jpg"></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetExpression"><img src="$HTML_BASE_DIR/images/ma_get_expression.jpg"></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetAffy_GeneIntensity.cgi"><img src="$HTML_BASE_DIR/images/ma_get_affy_intensity.jpg"></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi?tab=miame_status"><img src="$HTML_BASE_DIR/images/ma_miame_status.jpg"></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SubmitArrayRequest.cgi?TABLE_NAME=MA_array_request"><img src="$HTML_BASE_DIR/images/ma_array_requests.jpg"></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=protocol"><img src="$HTML_BASE_DIR/images/ma_protocols.jpg"></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_labeling"><img src="$HTML_BASE_DIR/images/ma_labeling.jpg"></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_hybridization"><img src="$HTML_BASE_DIR/images/ma_hybridization.jpg"></a></td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_quantitation"><img src="$HTML_BASE_DIR/images/ma_quantitation.jpg"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/main.cgi">Lassie go home</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GridAlignCheck.cgi"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi?tab=data_pipeline"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi?tab=data_download"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetExpression"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetAffy_GeneIntensity.cgi"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ProjectHome.cgi?tab=miame_status"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SubmitArrayRequest.cgi?TABLE_NAME=MA_array_request"></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=protocol"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_labeling"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_hybridization"></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_quantitation"></a></td></tr>
   END
 
   $current_work_group_name = $sbeams->getCurrent_work_group_name();
   if ($current_work_group_name eq "Microarray_admin" || $current_work_group_name eq "Admin" || 1) {
     $menu .=<<"    END";
-  	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=contact"><img src="$HTML_BASE_DIR/images/ma_contacts.jpg"></a></td></tr>
-	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array"><img src="$HTML_BASE_DIR/images/ma_arrays.jpg"></a></td></tr>
-  	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_scan"><img src="$HTML_BASE_DIR/images/ma_array_scans.jpg"></a></td></tr>
+  	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=contact"></a></td></tr>
+	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array"></a></td></tr>
+  	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_scan"></a></td></tr>
     END
   }
 
   $current_work_group_name = $sbeams->getCurrent_work_group_name();
   if ($current_work_group_name eq "Microarray_admin" || $current_work_group_name eq "Admin") {
     $menu .=<<"    END";
-  	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_slide_lot"><img src="$HTML_BASE_DIR/images/ma_slide_lots.jpg"></a></td></tr>
-	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_layout"><img src="$HTML_BASE_DIR/images/ma_array_layout.jpg"></a></td></tr>
-  	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_printing_batch"><img src="$HTML_BASE_DIR/images/ma_printing_batches.jpg"></a></td></tr>
-	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_slide_type"><img src="$HTML_BASE_DIR/images/ma_slide_types_costs.jpg"></a></td></tr>
-	  <tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=user_login"><img src="$HTML_BASE_DIR/images/ma_admin.jpg"></a></td></tr>
+  	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_slide_lot"></a></td></tr>
+	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_layout"></a></td></tr>
+  	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_printing_batch"></a></td></tr>
+	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_slide_type"></a></td></tr>
+	  <tr><td><a href="$CGI_BASE_DIR/ManageTable.cgi?TABLE_NAME=user_login"></a></td></tr>
     END
   }
 
@@ -744,40 +768,44 @@ function updateCheckBoxButtons(input_obj){
 ###############################################################################
 # make_checkbox_contol_table
 ###############################################################################
-sub make_checkbox_contol_table {
+sub get_file_cbox {
 
 	my $self = shift;
 	my %args = @_;
 	
-	my @box_names = @ {$args{box_names}};
+	my @box_names = @{$args{box_names}};
 	my @default_file_types = @ {$args{default_file_types}};
+  my %cbox;
 	
-	print qq~<table border=0>
-			  <tr>
-			    <td colspan=2>Click to select or de-select all arrays</td>
-			  </tr>
-			~;
-			  
-		      	
-		foreach my $file_type (@box_names){
-			
-			my $checked = '';
+  foreach my $file_type (@box_names){
+  my $checked = '';
 			
 			if ( grep {$file_type eq $_} @default_file_types) {
 				$checked = "CHECKED";
 			}
-			print qq~  <tr>
-				  	<td>$file_type </td>
-				  	<td><input type='checkbox' name='click_all_files' value='$file_type' $checked onClick="Javascript:updateCheckBoxButtons(this)"></td>
-				  </tr>
-				~;
+      $cbox{$file_type} ="<input type='checkbox' name='click_all_files' value='$file_type' $checked onClick='Javascript:updateCheckBoxButtons(this)'>"
 		}
-			 
-		print "</table>";
-
-
+  return \%cbox;
 }
 
+
+sub make_checkbox_control_table {
+  my $self = shift;
+  my %args = @_;
+  my $cbox = $self->get_file_cbox( %args );
+  my $table =<<'  END';
+  <TABLE BORDER=0>
+  <TR><TD COLSPAN=2>Click to select or de-select all arrays</TD></TR>
+  END
+
+  for my $bname ( @{$args{box_names}} ){
+    $table .= "<TR><TD>$bname</TD><TD>$cbox->{$bname}</TD></TR>";
+  }
+  $table .= '</TABLE>';
+
+  # Ouch!  I'd rather return the scalar and print from the source.
+  print $table;
+}
 
 
 
