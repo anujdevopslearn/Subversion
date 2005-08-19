@@ -845,7 +845,6 @@ sub translateSQL{
   my $self = shift || croak("parameter self not passed");
   my %args = @_;
 
- 
   #### Process the arguments list
   my $sql = $args{'sql'} || croak "parameter sql missing";
 
@@ -1291,7 +1290,16 @@ sub executeSQL {
 
     #### If the prepare() succeeds, execute
     if ($sth) {
-      $rows  = $sth->execute();
+
+      my $rows = '';
+      eval {
+           $rows  = $sth->execute();
+           };
+      if ( $@ ) {
+        $log->error( "Caught error: $@" );
+        $log->error( "DBI errorstring is $DBI::errstr" );
+      }
+
       if ($rows) {
         if (ref($return_error)) {
           $$return_error = '';
@@ -1303,8 +1311,8 @@ sub executeSQL {
         }
         return 0;
       } else {
+        $log->error( "Error on execute DBI errorstring is $DBI::errstr" );
         die("ERROR on SQL execute():\n$sql\n\n".$dbh->errstr);
-        die("ERROR on SQL execute(): ".$dbh->errstr);
       }
 
     #### If the prepare() fails
@@ -4941,6 +4949,7 @@ sub getModules {
     #### current user has access (i.e. belongs to one of the groups
     #### associated with the module)
     foreach my $module (@all_modules) {
+#			print STDERR "$module\n";
       if (exists($work_groups{"${module}_user"}) ||
           exists($work_groups{"${module}_admin"}) ||
           exists($work_groups{"${module}_readonly"})) {
