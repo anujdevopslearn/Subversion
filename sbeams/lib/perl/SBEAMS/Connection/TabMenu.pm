@@ -201,7 +201,7 @@ sub getTable {
   my $this = shift;
 
   # tab menu is at its heart just a table...
-  $this->{_table} = SBEAMS::Connection::DataTable->new( WIDTH => '650',
+  $this->{_table} = SBEAMS::Connection::DataTable->new( WIDTH => '100%',
                                                         BORDER => 0,
                                                         CELLSPACING => 0,
                                                         CELLPADDING => 0 );
@@ -214,6 +214,14 @@ sub getTable {
 sub setBoxContent {
   my $this = shift;
   $this->{boxContent} = shift;
+}
+
+#+
+# get tab content, allows for a crude 'append'
+#-
+sub getContent {
+  my $this = shift;
+  return $this->{_content}; 
 }
 
 #+
