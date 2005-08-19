@@ -34,6 +34,10 @@ use vars qw(@ISA @EXPORT
     $TBGT_MICROSATELLITE_GENOTYPE_CALL
     $TBGT_MANUAL_GENOTYPE_CALL
 
+    $TBGT_EXPERIMENT_STATUS
+    $TBGT_EXPERIMENT_STATUS_STATE
+    $TBGT_EXPERIMENT_STATUS_HISTORY
+
     $TBGT_QUERY_OPTION
 
 );
@@ -60,6 +64,10 @@ require Exporter;
     $TBGT_MICROSATELLITE_GENOTYPE_CALL
     $TBGT_MANUAL_GENOTYPE_CALL
 
+    $TBGT_EXPERIMENT_STATUS
+    $TBGT_EXPERIMENT_STATUS_STATE
+    $TBGT_EXPERIMENT_STATUS_HISTORY
+
     $TBGT_QUERY_OPTION
 
 );
@@ -84,6 +92,10 @@ $TBGT_COST_SCHEME           = "${mod}cost_scheme";
 $TBGT_QUERY_OPTION          = "${mod}query_option";
 $TBGT_MICROSATELLITE_GENOTYPE_CALL = "${mod}microsatellite_genotype_call";
 $TBGT_MANUAL_GENOTYPE_CALL  = "${mod}manual_genotype_call";
+$TBGT_EXPERIMENT_STATUS     = "${mod}experiment_status";
+$TBGT_EXPERIMENT_STATUS_STATE    = "${mod}experiment_status_state";
+$TBGT_EXPERIMENT_STATUS_HISTORY  = "${mod}experiment_status_history";
+
 
 
 
