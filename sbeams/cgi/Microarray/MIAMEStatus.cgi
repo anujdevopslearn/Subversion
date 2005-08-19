@@ -256,17 +256,7 @@ sub handle_request {
   $current_contact_id = $sbeams->getCurrent_contact_id();
   $project_name = $sbeams->getCurrent_project_name();
 
-
-  #### Print ProjectHome tabs
-  my @tab_titles = ("Summary","MIAME Status","Management","Data Analysis","Permissions");
-  my $tab_titles_ref = \@tab_titles;
   my $page_link = 'ProjectHome.cgi';
-
-  $sbeamsMOD->print_tabs(tab_titles_ref=>$tab_titles_ref,
-			 page_link=>$page_link,
-			 selected_tab=>1);
-
-	print "<BR><BR>";
 
 	#### Print MIAME Status tabs
 	my @miame_tabs = ("Experiment Design","Array Design","Sample Information","Labeling and Hybridization","Measurements");
