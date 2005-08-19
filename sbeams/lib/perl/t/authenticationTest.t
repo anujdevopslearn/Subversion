@@ -4,7 +4,8 @@
 
 use strict;
 use Test::More tests => 7;
-use lib '/net/dblocal/www/html/devDC/sbeams/lib/perl';
+#use lib '/net/dblocal/www/html/devDC/sbeams/lib/perl';
+use lib '/net/dblocal/www/html/sbeams/lib/perl';
 
 # Need to provide username/password for registered user on target system.
 #use constant BASE_URL => 'http://db.systemsbiology.net/devDC/sbeams';
