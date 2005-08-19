@@ -70,6 +70,7 @@ contain a foreign key to the main query.  It assumes that in both queries
 to join there will be column with the same name containing the keys to 
 join on.  The name of column will need to be supplied to the method.
 
+=over 2
 
 =item m_sbeams->get_pk_from_results_set
 
@@ -112,6 +113,7 @@ Will merge the main results set with the secondary results set.
 on the column names from the secondary query
 Give back a regular sbeams results sets that can be used in any of the functions you wish
 
+=back
 
 =head1 append_new_data
 
@@ -119,6 +121,8 @@ Method to add new data to a results set such as hyper-linked columns or
 checkboxes.  This method was setup to add links to files or checkboxes so 
 a certain file can be downloaded.  Therefore it is built around the toughs 
 the new urls or checkboxes will be "pointing" to a file
+
+=over 2
 
 =item $m_sbeams->append_new_data
 
@@ -179,6 +183,7 @@ $find_object->check_for_file(
 			);
 The method needs to return a true value if the files exists and 0 (zero) if the file is missing
 
+=back
 
 
 =head2 EXPORT
@@ -197,7 +202,7 @@ Pat Moss, E<lt>pmoss@systemsbiology.org<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2004 by Pat Moss
+Copyright (C) 2005 by Pat Moss
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.8.3 or,
