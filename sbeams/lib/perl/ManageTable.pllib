@@ -815,11 +815,11 @@ sub printEntryForm {
     }
 
     if ($input_type eq "textdate") {
-      if ($parameters{$column_name} eq "") {
-        my ($sec,$min,$hour,$mday,$mon,$year) = localtime(time());
-        $year+=1900; $mon+=1;
-        $parameters{$column_name} = "$year-$mon-$mday $hour:$min";
-      }
+      #if ($parameters{$column_name} eq "") {
+      #  my ($sec,$min,$hour,$mday,$mon,$year) = localtime(time());
+      #  $year+=1900; $mon+=1;
+      #  $parameters{$column_name} = "$year-$mon-$mday $hour:$min";
+      #}
       print qq!
         <TD><INPUT TYPE="text" NAME="$column_name"
          VALUE="$parameters{$column_name}" SIZE=$input_length>
