@@ -865,11 +865,13 @@ sub getProjectDetailsTable {
     <TD></TD>
     <TD COLSPAN="2"><B>Description:</B> $proj_desc</TD>
   </TR>
+  <PRE_PRIVILEGES_HOOK>
 	<TR>
     <TD></TD>
     <TD COLSPAN="2"><B>Access Privileges:</B> <A HREF="$CGI_BASE_DIR/ManageProjectPrivileges">[View/Edit]</A>
     </TD>
   </TR>
+  <POST_PRIVILEGES_HOOK>
   </TABLE>
   <BR>
   END_TAB
@@ -881,7 +883,12 @@ sub getProjectDetailsTable {
 sub evalSQL {
   my $self = shift;
   my $sql = shift;
-  return eval "\"$sql\"";
+	my $post;
+	{
+    $post = eval "\"$sql\"";
+	};
+	if ( $@ ) { $log->error( "Error in evalSQL: $@" ) }
+	return $post;
 }
 
 
