@@ -116,6 +116,9 @@ CONFIG_SETTING{PGPLOT_FONT} = /usr/local/lib/grfont.dat
 #### Microarray Settings
 CONFIG_SETTING{Microarray_affy_help_docs_url} = provide url if needed, see install notes
 
+# Is set to true value, 2-color menus and options will not be shown
+CONFIG_SETTING{MA_HIDE_TWO_COLOR} = 0
+
 
 #### Period of time in hours before login sessions expire
 LOGIN_DURATION         = 24
