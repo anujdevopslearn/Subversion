@@ -1155,7 +1155,7 @@ sub getArrayNames {
 				-action => "$CGI_BASE_DIR/Microarray/$PROG_NAME",
 			);
 
-			$sbeamsMOD->make_checkbox_contol_table(
+			$sbeamsMOD->make_checkbox_control_table(
 				box_names          => \@downloadable_file_types,
 				default_file_types => \@default_file_types,
 			);

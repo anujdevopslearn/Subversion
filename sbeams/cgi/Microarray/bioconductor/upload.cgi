@@ -492,7 +492,7 @@ END
 				-action => "$CGI_BASE_DIR/Microarray/bioconductor/upload.cgi",
 			);
 
-			$sbeamsMOD->make_checkbox_contol_table(
+			$sbeamsMOD->make_checkbox_control_table(
 				box_names          => \@downloadable_file_types,
 				default_file_types => \@default_file_types,
 			);
