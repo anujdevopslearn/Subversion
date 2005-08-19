@@ -1,14 +1,13 @@
-package SBEAMS::Biomarker::Biosample;
-
 ###############################################################################
 #
 # Description :   Library code for inserting biosource/biosample records into 
-# the database from an initial upload
+# the database
 #
 ###############################################################################
+{
+package SBEAMS::Biomarker::Biosample;
 
 use SBEAMS::Connection;
-
 use strict;
 
 #### Set up new variables
@@ -28,10 +27,10 @@ sub new {
 }
 
 #+
-#
+# Routine for inserting 
 #
 #-
-sub insert {
+sub insert_biosamples {
   my $this = shift;
   my %args = @_;
   my $p = $args{'wb_parser'} || die "Missing required parameter wb_parser";
@@ -39,6 +38,32 @@ sub insert {
   $this->insert_biosamples( wb_parser => $p );
 }
 
+sub getStr {
+  my $this = shift;
+  return "I am Biosample!\n";
+}
+
+} # End biosample
+
+{
+package SBEAMS::Biomarker::Biosource;
+
+use SBEAMS::Connection;
+use strict;
+
+sub new {
+  my $class = shift;
+	my $this = {};
+	bless $this, $class;
+	return $this;
+}
+
+sub getStr {
+  my $this = shift;
+  return "I am Biosource!\n";
+}
+}
+1;
 __DATA__
 
 # Attributes 

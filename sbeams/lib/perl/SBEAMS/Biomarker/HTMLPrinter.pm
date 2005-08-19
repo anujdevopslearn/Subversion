@@ -99,6 +99,7 @@ sub display_page_header {
     #print ">>>http_header=$http_header<BR>\n";
 
     if ($navigation_bar eq "YES") {
+		  my $pad = "<NOBR>&nbsp;&nbsp;&nbsp;";
       print qq~
 	<!------- Button Bar -------------------------------------------->
 	<tr><td bgcolor="$BARCOLOR" align="left" valign="top">
@@ -109,7 +110,8 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=ModTmpTAG_biosequence_set"><nobr>&nbsp;&nbsp;&nbsp;BioSequenceSets</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=Treatment_type">$pad Treatment_type</nobr></a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=Treatment">$pad Treatment</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Browse Data:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/BrowseBioSequence.cgi"><nobr>&nbsp;&nbsp;&nbsp;Browse BioSeqs</nobr></a></td></tr>
