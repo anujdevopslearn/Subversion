@@ -450,7 +450,7 @@ foreach my $p (keys %parameters)
 	INNER JOIN $TBIS_ANTIBODY A ON ( AC.antibody_id = A.antibody_id )
 	  LEFT JOIN $TBIS_ANTIGEN AG ON ( A.antigen_id = AG.antigen_id )
 	  LEFT JOIN $TBIS_BIOSEQUENCE BS ON ( AG.biosequence_id = BS.biosequence_id )
-	  LEFT JOIN Immunostain.dbo.biosequence_refseq_association BSRSA ON ( BS.biosequence_accession = BSRSA.LocusLinkID )
+	  LEFT JOIN $TBIS_BIOSEQUENCE_REFSEQ_ASSOCIATION BSRSA ON ( BS.biosequence_accession = BSRSA.LocusLinkID )
 	 WHERE 1 = 1
 	$project_clause
 	$specimen_block_clause
@@ -1134,7 +1134,7 @@ sub convertGenomeCoordinates {
 
       my $igcSQL = qq~
 	SELECT AB.antibody_id
-	  FROM Immunostain.dbo.genome_coordinates GC
+	  FROM $TBIS_GENOME_COORDINATES GC
 	  JOIN $TBIS_BIOSEQUENCE BS
 	    ON (GC.locus_link_id = BS.biosequence_accession )
 	  JOIN $TBIS_ANTIGEN AN ON ( BS.biosequence_id = AN.biosequence_id )
