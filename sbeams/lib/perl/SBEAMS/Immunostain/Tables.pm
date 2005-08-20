@@ -24,6 +24,7 @@ use vars qw(@ISA @EXPORT
     $TBIS_BIOSEQUENCE_SET
     $TBIS_DBXREF
     $TBIS_BIOSEQUENCE
+    $TBIS_BIOSEQUENCE_REFSEQ_ASSOCIATION
     $TBIS_QUERY_OPTION
 
     $TBIS_ANTIBODY
@@ -66,6 +67,7 @@ require Exporter;
     $TBIS_BIOSEQUENCE_SET
     $TBIS_DBXREF
     $TBIS_BIOSEQUENCE
+    $TBIS_BIOSEQUENCE_REFSEQ_ASSOCIATION
     $TBIS_QUERY_OPTION
 
     $TBIS_ANTIBODY
@@ -110,6 +112,7 @@ $TB_PROTOCOL_TYPE           = "${core}protocol_type";
 $TBIS_BIOSEQUENCE_SET       = "${mod}biosequence_set";
 $TBIS_DBXREF                = "${mod}dbxref";
 $TBIS_BIOSEQUENCE           = "${mod}biosequence";
+$TBIS_BIOSEQUENCE_REFSEQ_ASSOCIATION = "${mod}biosequence_refseq_association";
 $TBIS_QUERY_OPTION          = "${mod}query_option";
 
 $TBIS_ANTIBODY              = "${mod}antibody";

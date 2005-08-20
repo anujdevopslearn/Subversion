@@ -34,6 +34,8 @@ use vars qw(@ISA @EXPORT
     $TBMA_LABELING_METHOD
     $TBMA_DYE
     $TBMA_XNA_TYPE
+    $TBMA_XNA_INFO
+    $TBMA_ARABIDOPSIS
 
     $TBMA_ARRAY_REQUEST
     $TBMA_ARRAY_REQUEST_SLIDE
@@ -119,6 +121,8 @@ require Exporter;
     $TBMA_LABELING_METHOD
     $TBMA_DYE
     $TBMA_XNA_TYPE
+    $TBMA_XNA_INFO
+    $TBMA_ARABIDOPSIS
 
     $TBMA_ARRAY_REQUEST
     $TBMA_ARRAY_REQUEST_SLIDE
@@ -209,6 +213,8 @@ $TBMA_QUERY_OPTION        = "${modMARR}query_option";
 $TBMA_LABELING_METHOD     = "${modMARR}labeling_method";
 $TBMA_DYE                 = "${modMARR}dye";
 $TBMA_XNA_TYPE            = "${modMARR}xna_type";
+$TBMA_XNA_INFO            = "${modMARR}xna_info";
+$TBMA_ARABIDOPSIS         = "${modMARR}arabidopsis";
 
 $TBMA_ARRAY_REQUEST       = "${mod}array_request";
 $TBMA_ARRAY_REQUEST_SLIDE = "${mod}array_request_slide";
