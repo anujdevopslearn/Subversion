@@ -34,6 +34,8 @@ use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
+use SBEAMS::BioLink::Tables;
+
 use SBEAMS::MODULETEMPLATE;
 use SBEAMS::MODULETEMPLATE::Settings;
 use SBEAMS::MODULETEMPLATE::Tables;
@@ -365,18 +367,18 @@ sub handle_request {
        $molecular_function_clause.$biological_process_clause.
        $cellular_component_clause.$protein_domain_clause ) {
     $GO_join = qq~
-        LEFT JOIN flybase.dbo.annotated_gene AG
+        LEFT JOIN $TBBL_ANNOTATED_GENE AG
              ON ( BS.biosequence_accession = AG.gene_accession )
-        LEFT JOIN flybase.dbo.gene_annotation MFA
+        LEFT JOIN $TBBL_GENE_ANNOTATION MFA
              ON ( AG.annotated_gene_id = MFA.annotated_gene_id
                    AND MFA.gene_annotation_type_id = 1 AND MFA.idx = 0 )
-        LEFT JOIN flybase.dbo.gene_annotation BPA
+        LEFT JOIN $TBBL_GENE_ANNOTATION BPA
              ON ( AG.annotated_gene_id = BPA.annotated_gene_id
                    AND BPA.gene_annotation_type_id = 2 AND BPA.idx = 0 )
-        LEFT JOIN flybase.dbo.gene_annotation CCA
+        LEFT JOIN $TBBL_GENE_ANNOTATION CCA
              ON ( AG.annotated_gene_id = CCA.annotated_gene_id
                    AND CCA.gene_annotation_type_id = 3 AND CCA.idx = 0 )
-        LEFT JOIN flybase.dbo.gene_annotation IPDA
+        LEFT JOIN $TBBL_GENE_ANNOTATION IPDA
              ON ( AG.annotated_gene_id = IPDA.annotated_gene_id
                    AND IPDA.gene_annotation_type_id = 4 AND IPDA.idx = 0 )
     ~;
