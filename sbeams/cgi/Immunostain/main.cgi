@@ -681,7 +681,7 @@ sub processAntibody
 	left join $TBIS_BIOSEQUENCE bs on an.biosequence_id = bs.biosequence_id
 	left join $TBIS_GENOME_COORDINATES gc on bs.biosequence_accession = gc.locus_link_id
 	left join $TBIS_BIOSEQUENCE_SET bss on bs.biosequence_set_id = bss.biosequence_set_id
-	left join sbeams.dbo.organism sbo on bss.organism_id = sbo.organism_id
+	left join $TB_ORGANISM sbo on bss.organism_id = sbo.organism_id
 	left join $TBIS_DBXREF dbx on bs.dbxref_id = dbx.dbxref_id 
 	where ab.antibody_id in ($includeClause) and set_Name ='LocusLink' and 
 	dbxref_name = 'LocusLink' ~;
