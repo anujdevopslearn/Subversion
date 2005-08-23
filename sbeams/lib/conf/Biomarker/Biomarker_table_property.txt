@@ -1,13 +1,13 @@
 table_name	Category	table_group	manage_table_allowed	db_table_name	PK_column_name	multi_insert_column	table_url	manage_tables	next_step
-BMRK_biosource	Biomarker	Biomarker_user	YES	$BMRK_biosource	biosource_id		ManageTable.cgi?TABLE_NAME=BMRK_biosource	BMRK_biosource	
-BMRK_biosample	Biomarker	Biomarker_user	YES	$BMRK_biosample	biosample_id		ManageTable.cgi?TABLE_NAME=BMRK_biosample	BMRK_biosample	
-BMRK_disease	Biomarker	Biomarker_user	YES	$BMRK_disease	disease_id		ManageTable.cgi?TABLE_NAME=BMRK_disease	BMRK_disease	
-BMRK_attribute_type	Biomarker	Biomarker_user	YES	$BMRK_attribute_type	attribute_type_id		ManageTable.cgi?TABLE_NAME=BMRK__attribute_type	BMRK_attribute_type	
-BMRK_attribute	Biomarker	Biomarker_user	YES	$BMRK_attribute	attribute_id		ManageTable.cgi?TABLE_NAME=BMRK__attribute	BMRK_attribute	
-BMRK_biosource_attribute	Biomarker	Biomarker_user	NO	$BMRK_biosource_attribute	biosource_attribute_id		ManageTable.cgi?TABLE_NAME=BMRK_biosource_attribute	BMRK_biosource_attribute	
-BMRK_biosource_disease	Biomarker	Biomarker_user	NO	$BMRK_biosource_disease	biosource_disease_id		ManageTable.cgi?TABLE_NAME=BMRK_biosource_disease	BMRK_biosource_disease	
-BMRK_storage_location	Biomarker	Biomarker_user	YES	$BMRK_storage_location	storage_location_id		ManageTable.cgi?TABLE_NAME=BMRK_storage_location	BMRK_storage_location	
-BMRK_analysis_file	Biomarker	Biomarker_user	YES	$BMRK_analysis_file	analysis_file_id		ManageTable.cgi?TABLE_NAME=BMRK_analysis_file	BMRK_analysis_file	
-BMRK_experiment	Biomarker	Biomarker_user	YES	$BMRK_experiment	experiment_id		ManageTable.cgi?TABLE_NAME=BMRK_experiment	BMRK_experiment	
-BMRK_treatment_type	Biomarker	Biomarker_user	YES	$BMRK_treatment_type	treatment_type_id		ManageTable.cgi?TABLE_NAME=BMRK_treatment_type	BMRK_treatment_type	
-BMRK_treatment	Biomarker	Biomarker_user	YES	$BMRK_treatment	treatment_id		ManageTable.cgi?TABLE_NAME=BMRK_treatment	BMRK_treatment	
+BM_biosource	Biomarker	Biomarker_user	YES	$TBBM_biosource	biosource_id		ManageTable.cgi?TABLE_NAME=BM_biosource	BM_biosource	
+BM_biosample	Biomarker	Biomarker_user	YES	$TBBM_biosample	biosample_id		ManageTable.cgi?TABLE_NAME=BM_biosample	BM_biosample	
+BM_disease	Biomarker	Biomarker_user	YES	$TBBM_disease	disease_id		ManageTable.cgi?TABLE_NAME=BM_disease	BM_disease	
+BM_attribute_type	Biomarker	Biomarker_user	YES	$TBBM_attribute_type	attribute_type_id		ManageTable.cgi?TABLE_NAME=BM__attribute_type	BM_attribute_type	
+BM_attribute	Biomarker	Biomarker_user	YES	$TBBM_attribute	attribute_id		ManageTable.cgi?TABLE_NAME=BM__attribute	BM_attribute	
+BM_biosource_attribute	Biomarker	Biomarker_user	NO	$TBBM_biosource_attribute	biosource_attribute_id		ManageTable.cgi?TABLE_NAME=BM_biosource_attribute	BM_biosource_attribute	
+BM_biosource_disease	Biomarker	Biomarker_user	NO	$TBBM_biosource_disease	biosource_disease_id		ManageTable.cgi?TABLE_NAME=BM_biosource_disease	BM_biosource_disease	
+BM_storage_location	Biomarker	Biomarker_user	YES	$TBBM_storage_location	storage_location_id		ManageTable.cgi?TABLE_NAME=BM_storage_location	BM_storage_location	
+BM_analysis_file	Biomarker	Biomarker_user	YES	$TBBM_analysis_file	analysis_file_id		ManageTable.cgi?TABLE_NAME=BM_analysis_file	BM_analysis_file	
+BM_experiment	Biomarker	Biomarker_user	YES	$TBBM_experiment	experiment_id		ManageTable.cgi?TABLE_NAME=BM_experiment	BM_experiment	
+BM_treatment_type	Biomarker	Biomarker_user	YES	$TBBM_treatment_type	treatment_type_id		ManageTable.cgi?TABLE_NAME=BM_treatment_type	BM_treatment_type	
+BM_treatment	Biomarker	Biomarker_user	YES	$TBBM_treatment	treatment_id		ManageTable.cgi?TABLE_NAME=BM_treatment	BM_treatment	
