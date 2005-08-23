@@ -382,19 +382,26 @@ contribute to this effort if you try different RDBMS engines.
   This account should be the one used to make changes to the schema, i.e.
   create, update, and drop tables and constraints.
 
-- Generate the appropriate schema for your type(s) of database as follows:
+- Generate the appropriate schema for your type(s) of database as follows,
+  using the generate_schema.pl script.  You can see the usage notes for this
+  script by invoking the command without any arguments.
 
 (logged in as your account ("user1" above))
 (and working in the dev1 area - this is a good habit)
 
 setenv SBEAMS /local/www/html/dev1/sbeams
 set DBTYPES="mssql"   #### or one or more of mssql mysql pgsql oracle etc.
-cd $SBEAMS/lib/scripts/Core
+cd $SBEAMS/lib/scripts/Core 
+
+You will need to define a prefix for the database you are going to build the
+tables in.  In this example, we assume a database of sbeams and a default
+schema user of dbo, and use the mssql syntax.  This yeilds a dbprefix of
+'sbeams.dbo'.  This corresponds to the DBPREFIX{Core} setting in SBEAMS.conf.
 
 foreach dbtype ( $DBTYPES )
   ./generate_schema.pl --table_prop ../../conf/Core/Core_table_property.txt \
   --table_col ../../conf/Core/Core_table_column.txt --schema_file \
-  ../../sql/Core/Core --destination_type $dbtype
+  ../../sql/Core/Core --dbprefix sbeams.dbo --destination_type $dbtype 
 end
 
 - You must also install and build the BioLink module, please see the install
