@@ -17,6 +17,7 @@ use SBEAMS::Connection::Settings;
 
 
 use vars qw(@ISA @EXPORT 
+    
     $TB_ORGANISM
 
     $TBBL_BIOSEQUENCE_SET
@@ -27,6 +28,18 @@ use vars qw(@ISA @EXPORT
 		$TBBM_TREATMENT
 		$TBBM_TREATMENT_TYPE
 
+    $TBBM_BIOSOURCE
+    $TBBM_BIOSAMPLE
+    $TBBM_DISEASE
+    $TBBM_ATTRIBUTE_TYPE
+    $TBBM_ATTRIBUTE
+    $TBBM_BIOSOURCE_ATTRIBUTE
+    $TBBM_BIOSOURCE_DISEASE
+    $TBBM_STORAGE_LOCATION
+    $TBBM_ANALYSIS_FILE
+    $TBBM_EXPERIMENT
+    $TBBM_TREATEMENT_TYPE
+    $TBBM_TREATMENT
 );
 
 
@@ -44,6 +57,18 @@ require Exporter;
 		$TBBM_TREATMENT
 		$TBBM_TREATMENT_TYPE
 
+    $TBBM_BIOSOURCE
+    $TBBM_BIOSAMPLE
+    $TBBM_DISEASE
+    $TBBM_ATTRIBUTE_TYPE
+    $TBBM_ATTRIBUTE
+    $TBBM_BIOSOURCE_ATTRIBUTE
+    $TBBM_BIOSOURCE_DISEASE
+    $TBBM_STORAGE_LOCATION
+    $TBBM_ANALYSIS_FILE
+    $TBBM_EXPERIMENT
+    $TBBM_TREATEMENT_TYPE
+    $TBBM_TREATMENT
 );
 
 
@@ -59,8 +84,19 @@ $TBBL_DBXREF                = "${bl}dbxref";
 $TBBL_BIOSEQUENCE           = "${bl}biosequence";
 $TBBL_BIOSEQUENCE_PROPERTY_SET   = "${bl}biosequence_property_set";
 $TBBL_QUERY_OPTION          = "${bl}query_option";
+
+$TBBM_BIOSOURCE           = "${mod}biosource";
+$TBBM_BIOSAMPLE           = "${mod}biosample";
+$TBBM_DISEASE             = "${mod}disease";
+$TBBM_ATTRIBUTE_TYPE      = "${mod}attribute_type";
+$TBBM_ATTRIBUTE           = "${mod}attribute";
+$TBBM_BIOSOURCE_ATTRIBUTE = "${mod}biosource_attribute";
+$TBBM_BIOSOURCE_DISEASE   = "${mod}attribute";
+$TBBM_STORAGE_LOCATION    = "${mod}storage_location";
+$TBBM_ANALYSIS_FILE       = "${mod}analysis_file";
+$TBBM_EXPERIMENT          = "${mod}experiment";
 $TBBM_TREATMENT             = "${mod}treatment";
 $TBBM_TREATMENT_TYPE        = "${mod}treatment_type";
 
 
-
+1;
