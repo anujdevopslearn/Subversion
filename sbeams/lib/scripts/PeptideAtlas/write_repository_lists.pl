@@ -758,10 +758,26 @@ sub get_raw_data_type
     }
 
 
+    ## check for .dta tar files:
+    unless ($raw_data_type)
+    {
+
+        my @files = `ls $data_dir/*_dta.tar`;
+
+        if ( $#files > -1)
+        {
+
+            $raw_data_type = "dta.tar";
+
+        }
+
+    }
+
+
     if ($TEST)
     {
 
-        print "raw data type in $data_dir is $raw_data_type\n";
+        print "original data format in $data_dir is $raw_data_type\n";
 
     }
 
@@ -1282,7 +1298,7 @@ sub get_notpublic_sample_info
             cell_type_term,
             data_contributors
         FROM $TBAT_SAMPLE
-        WHERE is_public = 'n'
+        WHERE is_public = 'N'
     ~;
 
     my @rows = $sbeams->selectSeveralColumns($sql) or 
@@ -1294,39 +1310,12 @@ sub get_notpublic_sample_info
 
         my ($sample_tag, $cell_type, $data_contributors) = @{$row};
 
-        if ( $sample_tag ne "test" && $sample_tag ne "LnCAP_nuc3" )
-        {
+        $sample_info{$sample_tag}->{cell_type} = $cell_type;
 
-            $sample_info{$sample_tag}->{cell_type} = $cell_type;
-
-            $sample_info{$sample_tag}->{data_contributors} = $data_contributors;
-
-        }
-
+        $sample_info{$sample_tag}->{data_contributors} = $data_contributors;
 
     }
 
-
-#   if ($TEST)
-#   {
-#
-#       ## print out attribs if testing
-#       foreach my $st ( keys %sample_info )
-#       {
-#
-#           my $str = "\$sample_info{$st}->";
-#
-#           my $str2 = $sample_info{$st}->{cell_type};
-#
-#           print ("$str", "{cell_type} = ", $str2, "\n");
-#
-#           $str2 = $sample_info{$st}->{data_contributors};
-#
-#           print ("  $str", "{data_contributors} = ", $str2, "\n");
-#
-#       }
-#
-#   } ## end $TEST
 
 
     ## assert data structure contents:
@@ -1341,8 +1330,11 @@ sub get_notpublic_sample_info
             if ($sample_info{$sample_tag}->{cell_type} ne $cell_type)
             {
 
-                warn "TEST fails for 
-                    $sample_info{$sample_tag}->{cell_type} ($!)";
+                warn "TEST fails for " .
+                    "$sample_info{$sample_tag}->{cell_type} ($!)".
+                    " ($sample_info{$sample_tag}->{cell_type} != " .
+                    " $cell_type)\n";
+
 
             }
 
@@ -1351,8 +1343,10 @@ sub get_notpublic_sample_info
                 $data_contributors)
             {
 
-                warn "TEST fails for 
-                    $sample_info{$sample_tag}->{data_contributors} ($!)";
+                warn "TEST fails for " .
+                    "$sample_info{$sample_tag}->{data_contributors} ($!)\n".
+                    " ( $sample_info{$sample_tag}->{data_contributors} != " .
+                    " $data_contributors )\n";
 
             }
 
@@ -1388,7 +1382,7 @@ sub get_public_sample_info
         JOIN $TBPR_BIOSEQUENCE_SET BS 
             ON (BS.biosequence_set_id = SB.biosequence_set_id)
         JOIN $TB_ORGANISM O ON (BS.organism_id = O.organism_id)
-        WHERE S.is_public = 'y'
+        WHERE S.is_public = 'Y'
     ~;
 
     my @rows = $sbeams->selectSeveralColumns($sql) or 
@@ -1407,6 +1401,10 @@ sub get_public_sample_info
 
         $sample_description =~ s/\n/ /g;
 
+        $data_contributors =~ s/\r/ /g;
+
+        $data_contributors =~ s/\n/ /g;
+
         $sample_info{$sample_tag}->{organism} = $organism;
 
         $sample_info{$sample_tag}->{description} = $sample_description;
@@ -1421,39 +1419,9 @@ sub get_public_sample_info
 
     }
 
-
     if ($TEST)
     {
  
-#       ## print out attribs if testing
-#       foreach my $st ( keys %sample_info )
-#       {
-#
-#           my $str = "\$sample_info{$st}->";
-#
-#           my $str2 = $sample_info{$st}->{description};
-#
-#           print ("$str", "{description} = ", $str2, "\n");
-#
-#           $str2 = $sample_info{$st}->{search_batch_id};
-#
-#           print ("  $str", "{search_batch_id} = ", $str2, "\n");
-#
-#           $str2 = $sample_info{$st}->{data_contributors};
-#
-#           print ("  $str", "{data_contributors} = ", $str2, "\n");
-#
-#           $str2 = $sample_info{$st}->{is_public};
-#
-#           print ("  $str", "{is_public} = ", $str2, "\n");
-#
-#           $str2 = $sample_info{$st}->{publication_ids};
-#
-#           print ("  $str", "{publication_ids} = ", $str2, "\n");
-#
-#       }
-
-
         ## assert data structure contents
         foreach my $row (@rows) 
         {
@@ -1467,12 +1435,15 @@ sub get_public_sample_info
 
             $sample_description =~ s/\n/ /g;
 
-            if ( $sample_info{$organism}->{organism} ne
-            $organism)
+            $data_contributors =~ s/\r/ /g;
+
+            $data_contributors =~ s/\n/ /g;
+
+            if ( $sample_info{$sample_tag}->{organism} ne $organism)
             {
 
-                warn "TEST fails for 
-                    $sample_info{$sample_tag}->{organism} ($!)";
+                warn "TEST fails for $sample_tag" .
+                    "$sample_info{$sample_tag}->{organism} ($!)";
 
             }
 
@@ -1481,8 +1452,10 @@ sub get_public_sample_info
             $sample_description)
             {
 
-                warn "TEST fails for 
-                    $sample_info{$sample_tag}->{description} ($!)";
+                warn "TEST fails for $sample_tag " .
+                    "$sample_info{$sample_tag}->{description} ($!)\n".
+                    "  ($sample_info{$sample_tag}->{description} ".
+                    " != $sample_description)\n";
 
             }
 
@@ -1491,8 +1464,10 @@ sub get_public_sample_info
             $search_batch_id)
             {
 
-                warn "TEST fails for 
-                    $sample_info{$sample_tag}->{search_batch_id} ($!)";
+                warn "TEST fails for $sample_tag " .
+                    "$sample_info{$sample_tag}->{search_batch_id} ($!)\n" .
+                    "  ($sample_info{$sample_tag}->{search_batch_id} NE " .
+                    " $search_batch_id)\n";
 
             }
 
@@ -1501,8 +1476,10 @@ sub get_public_sample_info
             $data_contributors)
             {
 
-                warn "TEST fails for 
-                    $sample_info{$sample_tag}->{data_contributors} ($!)";
+                warn "TEST fails for $sample_tag " .
+                    "$sample_info{$sample_tag}->{data_contributors} ($!)\n" .
+                    "  ($sample_info{$sample_tag}->{data_contributors} NE " .
+                    " $data_contributors)\n";
 
             }
 
@@ -1510,8 +1487,10 @@ sub get_public_sample_info
             $is_public)
             {
 
-                warn "TEST fails for 
-                    $sample_info{$sample_tag}->{is_public} ($!)";
+                warn "TEST fails for $sample_tag " .
+                    "$sample_info{$sample_tag}->{is_public} ($!)\n" .
+                    "  ($sample_info{$sample_tag}->{is_public} NE " .
+                    " $is_public)\n";
 
             }
 
@@ -1519,8 +1498,8 @@ sub get_public_sample_info
             $sample_publication_ids)
             {
 
-                warn "TEST fails for 
-                    $sample_info{$sample_tag}->{publication_ids} ($!)";
+                warn "TEST fails for $sample_tag " .
+                    "$sample_info{$sample_tag}->{publication_ids} ($!)";
 
             }
 
