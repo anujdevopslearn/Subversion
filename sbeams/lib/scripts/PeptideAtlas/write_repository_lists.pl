@@ -291,6 +291,11 @@ sub write_public_file()
             
         );
 
+        ## set file pattern expression ot search for.  The dta's need special treatment:
+        my $pat = "*.$rawDataType";
+       
+        $pat = "*_dta.tar" if ($rawDataType eq "TarOfDtas");
+
 
         ## get raw data location.
         ## (if doesn't already exist in $repository_dir, will create gzipped tar file)
@@ -302,7 +307,7 @@ sub write_public_file()
 
             file_suffix => $rawDataType,
 
-            file_pattern => "*.$rawDataType",
+            file_pattern => $pat,
 
         );
 
@@ -451,7 +456,7 @@ sub write_to_public_file
         die "need rawDataLocation ($!)";
 
     my $rawDataType = $args{rawDataType} ||
-        die "need rawDataType ($!)";
+        warn "need rawDataType for $sample_tag ($!)";
 
     my $mzXMLDataLocation = $args{mzXMLDataLocation} ||
         die "need mzXMLDataLocation ($!)";
@@ -580,7 +585,9 @@ sub get_data_location
 
     my $data_dir = $args{data_dir} || die "need data directory for $sample_tag ($!)";
 
-    my $file_suffix = $args{file_suffix} || die "need file_suffix($!)";
+    my $file_suffix = $args{file_suffix} || 
+        error_message ( 
+            message => "need file_suffix for $sample_tag, looking in $data_dir ($!)");
 
     my $file_pattern = $args{file_pattern} || die "need file_pattern for list($!)";
 
@@ -767,7 +774,23 @@ sub get_raw_data_type
         if ( $#files > -1)
         {
 
-            $raw_data_type = "dta.tar";
+            $raw_data_type = "TarOfDtas";
+
+        }
+
+    }
+
+
+    ## check for an empty file with "nothingHere" where we don't have original data
+    unless ($raw_data_type)
+    {
+
+        my @files = `ls $data_dir/*.nothingHere`;
+
+        if ( $#files > -1)
+        {
+
+            $raw_data_type = "nothingHere";
 
         }
 
@@ -868,7 +891,7 @@ sub get_README_location
         die "need experiment description for $sample_tag ($!)";
 
     my $raw_data_type = $args{raw_data_type} ||
-        die "need experiment raw data type for $sample_tag "
+        warn "need experiment raw data type for $sample_tag "
         ."(the data is probably not in the directory)";
 
 
@@ -909,14 +932,40 @@ sub get_README_location
 
 
 
-        ## Get repository file names, content, and sizes:
-        my $file1 = get_compressed_archive_filename(
+        my ($file1, $file1_content, $file1_size);
 
-            sample_tag => $sample_tag,
+        if ($raw_data_type)
+        {
 
-            file_suffix => $raw_data_type,
+            ## Get repository file names, content, and sizes:
+            $file1 = get_compressed_archive_filename(
 
-        );
+                sample_tag => $sample_tag,
+
+                file_suffix => $raw_data_type,
+
+            );
+
+            $file1_content = "spectra in .$raw_data_type format\n";
+
+            if (-e $file1)
+            {
+
+                $file1_size = stat($file1)->size;
+
+            }
+
+        } else 
+        {
+
+            $file1 = "-";
+
+            $file1_content = "orig spectra not avail\n";
+
+            $file1_size = 0;
+        }
+
+
 
         my $file2 = get_compressed_archive_filename(
 
@@ -942,7 +991,6 @@ sub get_README_location
 
         );
 
-        my $file1_content = "spectra in .$raw_data_type format\n";
 
         my $file2_content = "spectra in .mzXML format\n";
 
@@ -957,14 +1005,8 @@ sub get_README_location
 
         my $file4_content = "ProteinProphet files\n";
 
-        my ($file1_size, $file2_size, $file3_size, $file4_size);
+        my ($file2_size, $file3_size, $file4_size);
 
-        if (-e $file1)
-        {
-
-            $file1_size = stat($file1)->size;
-
-        }
 
         if (-e $file2)
         {
@@ -1144,19 +1186,6 @@ sub get_data_directories
     }
 
 
-#   ## print out attribs if testing
-#   if ($TEST)
-#   {
-#
-#       foreach my $sbid ( keys %data_dir_hash )
-#       {
-#
-#           print "search_batch_id = $sbid ---> path = $data_dir_hash{$sbid}\n";
-#
-#       }
-#
-#   }
-
     ## assert hash not empty
     if ($TEST)
     {
@@ -1224,23 +1253,6 @@ sub get_publication_info()
 
     }
 
-
-#   ## print out attribs if testing
-#   if ($TEST)
-#   {
-#
-#       foreach my $pid ( keys %publ_info )
-#       {
-#
-#           print "\$publ_info{$pid}->{citation}=$publ_info{$pid}->{citation}\n";
-#
-#           print "  \$publ_info{$pid}->{url}=$publ_info{$pid}->{url}\n";
-#
-#           print "  \$publ_info{$pid}->{pmid}=$publ_info{$pid}->{pmid}\n";
-#
-#       }
-#
-#   }
 
     ## assert data structure contents:
     if ($TEST)
@@ -1618,7 +1630,9 @@ sub write_to_notpublic_file
 
 #######################################################################
 # get_compressed_archive_filename --  given sample_tag and data_type,
-#    returns name of compressed file archive
+#    returns name of compressed file archive 
+#    (for example, returns: exp1_mzXML.tar.gz)
+##   (exception for $file_suffix eq "TarOfDtas" ==> exp1_dtas.tar.gz)
 #######################################################################
 sub get_compressed_archive_filename
 {
@@ -1648,6 +1662,8 @@ sub get_compressed_archive_filename
 #######################################################################
 # get_archive_filename --  given sample_tag and data_type,
 #    returns name of file archive
+#    (for example, returns: exp1_mzXML.tar)
+##   (exception for $file_suffix == "TarOfDtas", returns exp1_dtas.tar)
 #######################################################################
 sub get_archive_filename
 {
@@ -1657,6 +1673,13 @@ sub get_archive_filename
     my $sample_tag = $args{sample_tag} || die "need sample_tag ($!)";
 
     my $file_suffix = $args{file_suffix} || die "need file suffix ($!)";
+
+    if ($file_suffix eq "TarOfDtas")
+    {
+
+        $file_suffix = "dtas";
+
+    }
 
     my $file = $sample_tag."_$file_suffix".".tar";
 
