@@ -49,14 +49,7 @@ sub returnTableInfo {
   my $tinfo = $self->getTableProperties($table_name);
   my $cinfo = $self->getColumnProperties($table_name);
 
-  my $dbtable = $sbeams->evalSQL( $tinfo->{db_table_name} );
-
-#  for my $t ( keys( %$tinfo ) ) {
-#    $log->debug( "TINFO: $t => $tinfo->{$t}" );
-#  }
-
- 
-
+  my $dbtable = $sbeams->evalSQL( "$tinfo->{db_table_name}" );
 
   # First we have table-specific overrides of the default answers
   if ($table_name eq "TABLESQUE") {
@@ -89,14 +82,14 @@ sub returnTableInfo {
     if ($info_key eq "BASICQuery") {
       return qq~
  		  SELECT *
-      FROM $tinfo
+      FROM $dbtable
       WHERE record_status!='D'
       ~;
 
     } elsif ($info_key eq "FULLQuery") {
       return qq~
  		  SELECT *
-      FROM $table_name
+      FROM $dbtable
       WHERE record_status!='D'
       ~;
     } elsif ($info_key eq "FULLQuery") {
@@ -127,6 +120,7 @@ sub returnTableInfo {
       $log->debug( $info_key );
     } elsif ($info_key eq "ManageTableAllowed") {
       $log->debug( $info_key );
+      $log->debug('MNG?: ' . $tinfo->{manage_table_allowed} );
       return( $tinfo->{manage_table_allowed} );
     } elsif ($info_key eq "MENU_OPTIONS") {
       $log->debug( $info_key );
@@ -163,7 +157,7 @@ sub getTableProperties {
   
   # See if we have this cached
   if ( $self->{_tinfo}->{$table_name} ) {
-    $log->debug( "Using cached table info" );
+#    $log->debug( "Using cached table info" );
   } else {
 
     my $tabSQL =<<"    END_TSQL";
@@ -192,7 +186,7 @@ sub getColumnProperties {
 
   # See if we have this cached
   if ( $self->{_cinfo}->{$table_name} ) {
-    $log->debug( "Using cached column info" );
+#    $log->debug( "Using cached column info" );
     
   } else {
 
@@ -206,7 +200,7 @@ sub getColumnProperties {
     WHERE table_name = '$table_name'
     END_CSQL
 
-    $self->{_tinfo}->{$table_name} = $self->getSBEAMS()->selectHashArray( $colSQL );
+    $self->{_cinfo}->{$table_name} = $self->getSBEAMS()->selectHashArray( $colSQL );
   }
   return $self->{_cinfo}->{$table_name} 
 

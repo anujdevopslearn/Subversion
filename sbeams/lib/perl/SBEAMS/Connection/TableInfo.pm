@@ -30,7 +30,7 @@ use SBEAMS::Proteomics::Tables;
 use SBEAMS::BEDB::Tables;
 use SBEAMS::BioLink::Tables;
 use SBEAMS::Biosap::Tables;
-use SBEAMS::Biosap::Tables;
+use SBEAMS::Biomarker::Tables;
 use SBEAMS::Cytometry::Tables;
 use SBEAMS::Genotyping::Tables;
 use SBEAMS::Immunostain::Tables;

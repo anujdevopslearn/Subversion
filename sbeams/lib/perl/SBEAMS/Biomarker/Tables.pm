@@ -74,8 +74,8 @@ require Exporter;
 
 #### Get the appropriate database prefixes for the SBEAMS core and this module
 my $core = $DBPREFIX{Core};
-my $bl = $DBPREFIX{Biolink};
-my $mod = $DBPREFIX{Biomarker};
+my $bl   = $DBPREFIX{BioLink};
+my $mod  = $DBPREFIX{Biomarker};
 
 $TB_ORGANISM                      = "${core}organism";
 

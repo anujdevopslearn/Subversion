@@ -58,9 +58,18 @@ BM_biosample	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMEST
 BM_biosample	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
 BM_biosample	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N	N			
 BM_biosample	15	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
+BM_disease_type	1	disease_type_id	Disease Type ID	int	4	0	N		Y			N				N	N	N			pkDEFAULT
+BM_disease_type	2	disease_type_name	Disease Type Name	varchar	36	0	N		N			Y	text	36		Y	Y	Y	Name of disease type		
+BM_disease_type	3	disease_type_description	Attribure Type Description	varchar	255	0	N		N			N	textarea	4		Y	Y	N	Description of attribute type		
+BM_disease_type	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
+BM_disease_type	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
+BM_disease_type	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
+BM_disease_type	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
+BM_disease_type	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N	N			
+BM_disease_type	9	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
 BM_disease	1	disease_id	Disease ID	int	4	0	N		Y			N				N	N	N			
 BM_disease	2	disease_name	Disease Name	varchar 	36	0	N		N			Y	text	36		Y	Y	Y	Name of disease		
-BM_disease	3	disease_type	Disease Type	varchar 	36	0	Y		N	disease_type	disease_type_id	Y	optionlist			Y	Y	N	Type of disease (e.g. Cancer)		
+BM_disease	3	disease_type_id	Disease Type	int 	4	0	Y		N	disease_type	disease_type_id	N	optionlist			Y	Y	N	Type of disease (e.g. Cancer)		
 BM_disease	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
 BM_disease	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
 BM_disease	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
