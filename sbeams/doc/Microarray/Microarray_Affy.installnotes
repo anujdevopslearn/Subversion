@@ -106,7 +106,7 @@ foreach dbtype ( mssql mysql pgsql oracle )
   ./generate_schema.pl \
     --table_prop ../../conf/Microarray/Microarray_table_property.txt \
     --table_col ../../conf/Microarray/Microarray_table_column.txt \
-    --schema_file ../../sql/Microarray/Microarray \
+    --schema_file ../../sql/Microarray/Microarray --module Microarray \
     --destination_type $dbtype
 end
 

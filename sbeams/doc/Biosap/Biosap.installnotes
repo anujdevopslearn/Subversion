@@ -74,7 +74,7 @@ setenv SBEAMS /local/html/dev1/sbeams
 cd $SBEAMS/lib/scripts/Core
 
 foreach dbtype ( mssql mysql pgsql oracle )
-  ./generate_schema.pl \
+  ./generate_schema.pl --module Biosap \
     --table_prop ../../conf/Biosap/Biosap_table_property.txt \
     --table_col ../../conf/Biosap/Biosap_table_column.txt \
     --schema_file ../../sql/Biosap/Biosap --destination_type $dbtype

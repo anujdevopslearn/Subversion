@@ -82,7 +82,7 @@ foreach dbtype ( $DBTYPES )
   ./generate_schema.pl \
     --table_prop ../../conf/Proteomics/Proteomics_table_property.txt \
     --table_col ../../conf/Proteomics/Proteomics_table_column.txt \
-    --schema_file ../../sql/Proteomics/Proteomics \
+    --schema_file ../../sql/Proteomics/Proteomics --module Proteomics \
     --destination_type $dbtype
 end
 

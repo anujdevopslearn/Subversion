@@ -59,7 +59,7 @@ foreach dbtype ( $DBTYPES )
   ./generate_schema.pl \
     --table_prop ../../conf/BioLink/BioLink_table_property.txt \
     --table_col ../../conf/BioLink/BioLink_table_column.txt \
-    --schema_file ../../sql/BioLink/BioLink \
+    --schema_file ../../sql/BioLink/BioLink --module BioLink \
     --destination_type $dbtype
 end
 

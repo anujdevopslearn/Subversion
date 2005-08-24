@@ -393,15 +393,18 @@ setenv SBEAMS /local/www/html/dev1/sbeams
 set DBTYPES="mssql"   #### or one or more of mssql mysql pgsql oracle etc.
 cd $SBEAMS/lib/scripts/Core 
 
-You will need to define a prefix for the database you are going to build the
-tables in.  In this example, we assume a database of sbeams and a default
+You will often need to define a prefix for the database you are going to build
+the schema in.  In this example, we assume a database of sbeams and a default
 schema user of dbo, and use the mssql syntax.  This yeilds a dbprefix of
 'sbeams.dbo'.  This corresponds to the DBPREFIX{Core} setting in SBEAMS.conf.
+When using generate schema you can either specify a module with --module, in  
+which case the value defined in the SBEAMS.conf file is used, or else you can
+explicity specify a prefix with --dbprefix. 
 
 foreach dbtype ( $DBTYPES )
   ./generate_schema.pl --table_prop ../../conf/Core/Core_table_property.txt \
   --table_col ../../conf/Core/Core_table_column.txt --schema_file \
-  ../../sql/Core/Core --dbprefix sbeams.dbo --destination_type $dbtype 
+  ../../sql/Core/Core --module Core --destination_type $dbtype 
 end
 
 - You must also install and build the BioLink module, please see the install
