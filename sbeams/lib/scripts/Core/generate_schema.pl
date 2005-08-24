@@ -30,13 +30,14 @@ use lib "$Bin";
 
 use vars qw ($sbeams $sbeamsMOD $q
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG
-             $current_contact_id $current_username
+             $current_contact_id $current_username %DBPREFIX
             );
 
 require "generate_schema.pllib";
 
 #### Set up SBEAMS core module
 use SBEAMS::Connection qw($q);
+use SBEAMS::Connection::Settings qw(%DBPREFIX);
 $sbeams = new SBEAMS::Connection;
 
 
@@ -53,13 +54,15 @@ Options:
   --table_property_file ccc  Set the name of table_property file
   --table_column_file ccc    Set the name of table_column file
   --schema_file ccc          Set the root of the output schema file
-  --dbprefix ccc             prefix for schema elements, e.g. SNP.dbo
   --destination_type ccc     Set the destination database server type
         (one of: mssql, mysql, pgsql, oracle)
+  --dbprefix string          prefix for schema elements, e.g. SNP.dbo.
+	--module string            Specify module, dbprefix defined in SBEAMS.conf
+	                           will be used as a prefix on schema elements
 
  e.g.:  $PROG_NAME --table_prop \$CONFDIR/Core/Core_table_property.txt \\
                            --table_col \$CONFDIR/Core/Core_table_column.txt \\
-                           --schema_file Core \\
+                           --schema_file Core --module Core\\
                            --destination_type mssql
 
 EOU
@@ -68,9 +71,15 @@ EOU
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
   "table_property_file:s","table_column_file:s","schema_file:s",
-  "destination_type:s","dbprefix:s")) {
+  "destination_type:s","dbprefix:s","module=s","conf_file=s")) {
   print "$USAGE";
   exit;
+}
+
+if ( $OPTIONS{module} && !$DBPREFIX{$OPTIONS{module}} ){
+	print "If you specify a module you must have a corresponding entry in your config file\n";
+  print "$USAGE";
+	exit;
 }
 
 $VERBOSE = $OPTIONS{"verbose"} || 0;
@@ -298,7 +307,9 @@ sub generateSchema {
     table_columns    => $table_columns,
     schema_file      => $schema_file,
     destination_type => $destination_type,
-    dbprefix         => $OPTIONS{dbprefix}
+    dbprefix         => $OPTIONS{dbprefix},
+    conf_file        => $OPTIONS{conf_file},
+    module           => $OPTIONS{module}
   );
 
   print "Done.\n\n" unless ($QUIET);

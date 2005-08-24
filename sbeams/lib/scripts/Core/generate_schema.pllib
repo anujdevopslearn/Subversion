@@ -172,8 +172,10 @@ sub writeSchema {
   my $SB = ";$LB";
   $SB = "${LB}GO${LB}" if ($destination_type eq "mssql");
 
-  #### Set a table prefix
-  my $table_prefix = ( $args{dbprefix} ) ? $args{dbprefix} . '.' : '';
+  # Set table prefix, dbprefix if supplied, else module if supplied, else ''
+  my $table_prefix = ( $args{dbprefix} ) ? $args{dbprefix} :
+	                   ( $args{module} ) ? $DBPREFIX{$args{module}}  : '';
+
 #  $table_prefix = 'dbo.' if ($destination_type eq "mssql");
 
 
