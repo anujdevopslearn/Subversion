@@ -304,7 +304,7 @@ sub handleRequest {
 
 
   #### scan for all available  set_tags
-  if ($check_status || $load_all )
+  if ( ($check_status && !$set_tag) || $load_all )
   { 
     $sql = qq~
           SELECT biosequence_set_id
