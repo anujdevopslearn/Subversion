@@ -97,7 +97,7 @@ sub returnTableInfo {
     } elsif ($info_key eq "BASICQuery") {
       $log->debug( $info_key );
     } elsif ($info_key eq "CATEGORY") {
-      $log->debug( $info_key );
+      return( $tinfo->{category} );
     } elsif ($info_key eq "data_columns") {
       $log->debug( $info_key );
     } elsif ($info_key eq "data_scales") {
@@ -105,22 +105,18 @@ sub returnTableInfo {
     } elsif ($info_key eq "data_types") {
       $log->debug( $info_key );
     } elsif ($info_key eq "DB_TABLE_NAME") {
-      $log->debug( $info_key );
+      return( $dbtable );
     } elsif ($info_key eq "fk_tables") {
-      $log->debug( $info_key );
-    } elsif ($info_key eq "FULLQuery") {
-      $log->debug( $info_key );
-    } elsif ($info_key eq "FULLQuery") {
-      $log->debug( $info_key );
-    } elsif ($info_key eq "FULLQuery") {
-      $log->debug( $info_key );
+      my %fktabs;
+      for( @$cinfo ){
+        $fktabs{$cinfo->{column_name}} = $cinfo->{fk_table};
+      }
+      return \%fktabs;
     } elsif ($info_key eq "input_types") {
       $log->debug( $info_key );
     } elsif ($info_key eq "key_columns") {
       $log->debug( $info_key );
     } elsif ($info_key eq "ManageTableAllowed") {
-      $log->debug( $info_key );
-      $log->debug('MNG?: ' . $tinfo->{manage_table_allowed} );
       return( $tinfo->{manage_table_allowed} );
     } elsif ($info_key eq "MENU_OPTIONS") {
       $log->debug( $info_key );
