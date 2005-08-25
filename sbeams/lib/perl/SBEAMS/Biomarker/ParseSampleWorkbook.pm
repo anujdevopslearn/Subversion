@@ -3,9 +3,11 @@ package SBEAMS::Biomarker::ParseSampleWorkbook;
 ###############################################################################
 #
 # Description :   Library code for parsing sample workbook files
-#
+# Copywrite 2005 
 ###############################################################################
 
+use Spreadsheet::ParseExcel::Simple;
+use Spreadsheet::ParseExcel;
 use SBEAMS::Connection;
 
 use strict;
@@ -27,13 +29,58 @@ sub new {
 }
 
 #+
-# Based on file format as of 2005-08-01
+#
 #-
 sub parse_file {
+  my $this = shift;
+  my %args = @_;
+  
+  # Check for required params
+  for ( qw( type wbook ) ) {
+	  die "Missing required parameter $_" unless $args{$_};
+  }
+
+  # Make sure workbook exists and is readable 
+  unless( -e $args{wbook} && -r $args{wbook} ) {
+	  die "Workbook file, $args{wbook}, unreadable or does not exist";
+  }
+
+  # Call appropriate parsing method 
+  return ( $args{type} eq 'tsv' ) ? $this->_parse_tab_file( %args ) :  
+                                    $this->_parse_excel_file( %args ); 
+} # End parse_file
+
+#+
+# 
+# -
+sub process_data {
+} # End process_data
+
+#+
+# Returns reference to hash of column index values keyed by column heading
+# -
+sub getHeadingsIndex {
+  my $this = shift;
+  return $this->{_headidx} || {};
+}
+
+#+
+# Returns reference to array of arrayrefs which each represent worksheet row
+# -
+sub getDataRef {
+  my $this = shift;
+  return $this->{_data} || [];
+}
+
+### Private subroutines ###
+
+#+
+# Based on file format as of 2005-08-01
+#-
+sub _parse_tab_file {
 	my $this = shift;
 	my %args = @_;
 
-	die 'Missing required parameter wbook' unless $args{wbook};
 
   # Array of column headings
   my @headings;
@@ -69,22 +116,61 @@ sub parse_file {
   return;
 }
 
+#
 #+
-# Returns reference to hash of column index values keyed by column heading
-# -
-sub getHeadingsIndex {
-  my $this = shift;
-  return $this->{_headidx} || {};
-}
+# Based on file format(s) as of 2005-08-25
+#-
+sub _parse_excel_file {
+	my $this = shift;
+	my %args = @_;
 
-#+
-# Returns reference to array of arrayrefs which each represent worksheet row
-# -
-sub getDataRef {
-  my $this = shift;
-  return $this->{_data} || [];
-}
+  # Messages to return to caller about the parse
+  my @msg;
 
+  my $xls =  Spreadsheet::ParseExcel::Simple->read( $args{wbook} ) ||
+                                      die 'Unable to parse workbook';
+
+  $this->{_wbook} = $args{wbook};
+
+  # Array of column headings
+  my @headings;
+  # column heading indicies
+  my %idx;
+  my %seen;
+
+  my $active_sheet;
+  my $cnt = 1;
+
+  foreach my $sheet ( $xls->sheets() ) { 
+    $active_sheet ||= $sheet;
+    $cnt++;
+  }
+  push @msg, 'workbook has multiple sheets, using only the first' if $cnt > 1;
+
+  while ( $active_sheet->has_data() ) {
+    my @line = $active_sheet->next_row();
+    unless( @headings ) {
+      # Meaningful headings fingerprint?
+      next unless ( $line[0] =~ /Sample Setup Order/  &&
+                    $line[1] =~ /MS Sample Run Number/ );
+      @headings = @line;
+
+      my $i = 0;
+      foreach (@headings) {
+        $idx{$_} = $i++;
+      }
+
+      $this->{_headidx} = \%idx;
+      next;
+    }
+
+    push @{$this->{_data}}, \@line;
+    next;
+  }
+  push @msg, 'Unable to find heading signature' unless @headings;
+  push @msg, 'No data found in first sheet' unless @{$this->{_data}};
+  return \@msg;
+}
 
 1;
 
@@ -170,15 +256,15 @@ Analysis_file
 
 
 # Attributes 
-'Sample Setup Order'
-'MS Sample Run Number'
-'Name of Investigators'
-'PARAM:time of sample collection '
-'PARAM:meal'
-'PARAM:alcohole'
-'PARAM:smoke'
-'PARAM:Date of Sample Collection'
-'Study Histology'
+'Sample Setup Order'  # same
+'MS Sample Run Number' # same
+'Name of Investigators' # same
+'PARAM:time of sample collection ' # param
+'PARAM:meal' # param
+'PARAM:alcohole' # param
+'PARAM:smoke' # param
+'PARAM:Date of Sample Collection' # param
+'Study Histology' # anonymous
 
 # Bioource 
 'ISB sample ID'
@@ -188,7 +274,6 @@ Analysis_file
 'species'
 'age'
 'gender'
-
 'Sample type'
 
 # Biosample
@@ -252,6 +337,8 @@ biosource_disease
 
         # Odd bits, tries to unify column indices between worksheets
         if ( 0 ) {
+
+
           if ( $_ eq 'ISB sample ID' ){
             $i = 4;
           } elsif ( $_ eq 'PARAM:Others' ) {
@@ -275,3 +362,4 @@ biosource_disease
           }
         }
         
+
