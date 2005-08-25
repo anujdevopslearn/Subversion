@@ -6,6 +6,7 @@ BM_disease_type	Disease_type	Biomarker	YES	$TBBM_DISEASE_TYPE	disease_type_id		M
 BM_attribute_type	Attribute_type	Biomarker	YES	$TBBM_ATTRIBUTE_TYPE	attribute_type_id		ManageTable.cgi?TABLE_NAME=BM_attribute_type	BM_attribute_type	
 BM_attribute	Attribute	Biomarker	YES	$TBBM_ATTRIBUTE	attribute_id		ManageTable.cgi?TABLE_NAME=BM_attribute	BM_attribute	
 BM_biosource_attribute	Biosource_attribute	Biomarker	NO	$TBBM_BIOSOURCE_ATTRIBUTE	biosource_attribute_id		ManageTable.cgi?TABLE_NAME=BM_biosource_attribute	BM_biosource_attribute	
+BM_biosample_attribute	Biosample_attribute	Biomarker	NO	$TBBM_BIOSAMPLE_ATTRIBUTE	biosample_attribute_id		ManageTable.cgi?TABLE_NAME=BM_biosample_attribute	BM_biosample_attribute	
 BM_biosource_disease	Biosource_disease	Biomarker	NO	$TBBM_BIOSOURCE_DISEASE	biosource_disease_id		ManageTable.cgi?TABLE_NAME=BM_biosource_disease	BM_biosource_disease	
 BM_storage_location	Storage_location	Biomarker	YES	$TBBM_STORAGE_LOCATION	storage_location_id		ManageTable.cgi?TABLE_NAME=BM_storage_location	BM_storage_location	
 BM_analysis_file	Analysis_file	Biomarker	YES	$TBBM_ANALYSIS_FILE	analysis_file_id		ManageTable.cgi?TABLE_NAME=BM_analysis_file	BM_analysis_file	
