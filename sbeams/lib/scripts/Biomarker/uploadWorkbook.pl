@@ -17,17 +17,30 @@ use strict;
   my $parser = SBEAMS::Biomarker::ParseSampleWorkbook->new();
   
   # Give parser workbook file to chew on
-  $parser->parse_file( wbook => $params->{workbook} );
+  my $msgs = $parser->parse_file( type => $params->{type},
+                                  wbook => $params->{workbook} );
+
+  if ( $params->{verbose} ) {
+    for my $msg ( @$msgs ) {
+      print "$msg\n";
+    }
+  }
   
   # Allow parser to chew data into digestable bits
   $parser->process_data();
   
   sub processParams {
     my %params;
-    GetOptions( \%params, "workbook=s" );
+    GetOptions( \%params, "workbook=s", "type=s", "verbose" );
+
+    $params{type} ||= 'xls';
   
     unless( $params{workbook} ) {
       printUsage( "Missing required parameter 'workbook'" );
+    }
+
+    unless ( $params{type} =~ /^xls$|^tsv$/ ) {
+      printUsage( 'Type must be either xls or tsv' );
     }
     return \%params;
   }
@@ -45,7 +58,8 @@ sub printUsage {
   uploadWorkbook.pl --workbook path/to/workbook/filename.txt
 
   Arguements:
-  -w --workbook      Filename of workbook file (tsv) to upload
+  -w --workbook      Filename of workbook file to upload
+  -t --type          Type of file, either xls or tsv (defaults to xls) 
 
   END_USAGE
   
