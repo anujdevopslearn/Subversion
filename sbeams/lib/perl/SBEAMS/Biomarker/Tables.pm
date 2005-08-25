@@ -34,6 +34,7 @@ use vars qw(@ISA @EXPORT
     $TBBM_ATTRIBUTE_TYPE
     $TBBM_ATTRIBUTE
     $TBBM_BIOSOURCE_ATTRIBUTE
+    $TBBM_BIOSAMPLE_ATTRIBUTE
     $TBBM_BIOSOURCE_DISEASE
     $TBBM_STORAGE_LOCATION
     $TBBM_ANALYSIS_FILE
@@ -63,6 +64,7 @@ require Exporter;
     $TBBM_ATTRIBUTE_TYPE
     $TBBM_ATTRIBUTE
     $TBBM_BIOSOURCE_ATTRIBUTE
+    $TBBM_BIOSAMPLE_ATTRIBUTE
     $TBBM_BIOSOURCE_DISEASE
     $TBBM_STORAGE_LOCATION
     $TBBM_ANALYSIS_FILE
@@ -91,6 +93,7 @@ $TBBM_DISEASE             = "${mod}disease";
 $TBBM_ATTRIBUTE_TYPE      = "${mod}attribute_type";
 $TBBM_ATTRIBUTE           = "${mod}attribute";
 $TBBM_BIOSOURCE_ATTRIBUTE = "${mod}biosource_attribute";
+$TBBM_BIOSAMPLE_ATTRIBUTE = "${mod}biosample_attribute";
 $TBBM_BIOSOURCE_DISEASE   = "${mod}attribute";
 $TBBM_STORAGE_LOCATION    = "${mod}storage_location";
 $TBBM_ANALYSIS_FILE       = "${mod}analysis_file";
