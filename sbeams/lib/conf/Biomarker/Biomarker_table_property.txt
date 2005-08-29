@@ -13,3 +13,4 @@ BM_analysis_file	Analysis_file	Biomarker	YES	$TBBM_ANALYSIS_FILE	analysis_file_i
 BM_experiment	Experiment	Biomarker	YES	$TBBM_EXPERIMENT	experiment_id		ManageTable.cgi?TABLE_NAME=BM_experiment	BM_experiment	
 BM_treatment_type	Treatment_type	Biomarker	YES	$TBBM_TREATMENT_TYPE	treatment_type_id		ManageTable.cgi?TABLE_NAME=BM_treatment_type	BM_treatment_type	
 BM_treatment	Treatment	Biomarker	YES	$TBBM_TREATMENT	treatment_id		ManageTable.cgi?TABLE_NAME=BM_treatment	BM_treatment	
+BM_bio_group	Group	Biomarker	YES	$TBBM_BIO_GROUP	bio_group_id		ManageTable.cgi?TABLE_NAME=BM_bio_group	BM_bio_group	

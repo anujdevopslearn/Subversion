@@ -33,14 +33,15 @@ BM_biosource	7	external_id	Identifier defined by external organization	varchar	6
 BM_biosource	8	patient_id	Identifier of patient or donor	varchar	64	0	Y		N			N	text	36		Y	Y	N	 patient identifier (if any) from external organization		
 BM_biosource	9	biosource_description	Biosource Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Description of Biosource		pkDEFAULT
 BM_biosource	10	experiment_id	Experiment	int	4	0	N		N	experiment	experiment_id	Y	optionlist			Y	Y	N	Experiment with which this biosource is associated	“SELECT experiment_id, experiment_name FROM $TBBM_EXPERIMENT WHERE record_status != 'D' ORDER BY experiment_name ASC”	
-BM_biosource	11	tissue_type_id	Tissue Type	int	4	0	N		N	tissue_type	tissue_type_id	N	optionlist			Y	Y	N	Tissue type of this sample	“SELECT tissue_type_id, tissue_type_name FROM $TBAT_TISSUE_TYPE WHERE record_status != 'D' ORDER BY tissue_type_name ASC”	
-BM_biosource	12	source_type	Source Type	varchar	64	0	Y		N			N	text	36		Y	Y	N	Type of source material, e.g. serum, plasma, etc.		
-BM_biosource	13	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
-BM_biosource	14	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
-BM_biosource	15	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
-BM_biosource	16	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
-BM_biosource	17	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N	N			
-BM_biosource	18	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
+BM_biosource	11	tissue_type_id	Tissue Type	int	4	0	N		N	tissue_type	tissue_type_id	N	optionlist			Y	Y	N	Tissue type of this biosource	“SELECT tissue_type_id, tissue_type_name FROM $TBAT_TISSUE_TYPE WHERE record_status != 'D' ORDER BY tissue_type_name ASC”	
+BM_biosource	12	biosource_group_id	Biosource Group	int	4	0	Y		N	bio_group	bio_group_id	N	optionlist			Y	Y	N	Biosource group for this biosource	“SELECT bio_group_id, bio_group_name FROM $TBBM_BIO_GROUP WHERE record_status != 'D' ORDER BY bio_group_name ASC”	
+BM_biosource	13	source_type	Source Type	varchar	64	0	Y		N			N	text	36		Y	Y	N	Type of source material, e.g. serum, plasma, etc.		
+BM_biosource	14	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
+BM_biosource	15	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
+BM_biosource	16	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
+BM_biosource	17	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
+BM_biosource	18	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N	N			
+BM_biosource	19	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
 BM_biosample	1	biosample_id	Biosample ID	int	4	0	N		Y			N				N	N	N			pkDEFAULT
 BM_biosample	2	biosample_name	Biosample Name	varchar	36	0	N		N			Y	text	36		Y	Y	Y	Name of this Biosample		
 BM_biosample	3	biosource_id	Biosource_id	int	4	0	N		N	biosource	biosource_id	Y	optionlist			Y	Y	N	ID of biosource	“SELECT biosource_id, biosource_name FROM $TBBM_BIOSOURCE WHERE record_status != 'D' ORDER BY biosource_name ASC”	
@@ -51,12 +52,13 @@ BM_biosample	7	treatment_id	Treatment_id	int	4	0	Y		N	treatment	treatment_id	N	o
 BM_biosample	8	original_volumne	Original Volume	float	4	0	Y		N			N	text	12		Y	Y	N	Original volume of this sample		
 BM_biosample	9	storage_location_id	Storage Location	int	4	0	Y		N	storage_location	storage_location_id	N	optionlist			Y	Y	N	Location where this sample is stored	“SELECT location_id, location_name FROM $TBBM_STORAGE_LOCATION WHERE record_status != 'D' ORDER BY location_name ASC”	
 BM_biosample	10	well_id	Well ID	varchar	16	0	Y		N			N	text	12		Y	Y	N	Well coordinates for this sample on the microtiter plate		
-BM_biosample	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
-BM_biosample	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
-BM_biosample	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
-BM_biosample	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
-BM_biosample	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N	N			
-BM_biosample	16	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
+BM_biosample	11	biosample_group_id	Biosample Group	int	4	0	Y		N	bio_group	bio_group_id	N	optionlist			Y	Y	N	Biosource group for this biosource	“SELECT bio_group_id, bio_group_name FROM $TBBM_BIO_GROUP WHERE record_status != 'D' ORDER BY bio_group_name ASC”	
+BM_biosample	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
+BM_biosample	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
+BM_biosample	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
+BM_biosample	15	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
+BM_biosample	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N	N			
+BM_biosample	17	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
 BM_disease_type	1	disease_type_id	Disease Type ID	int	4	0	N		Y			N				N	N	N			pkDEFAULT
 BM_disease_type	2	disease_type_name	Disease Type Name	varchar	36	0	N		N			Y	text	36		Y	Y	Y	Name of disease type		
 BM_disease_type	3	disease_type_description	Attribure Type Description	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Description of attribute type		
@@ -149,3 +151,12 @@ BM_treatment	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMEST
 BM_treatment	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
 BM_treatment	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N	N			
 BM_treatment	13	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
+BM_bio_group	1	bio_group_id	BioGroup ID	int	4	0	N		Y			N				N	N	N			pkDEFAULT
+BM_bio_group	2	bio_group_name	Group Name	varchar	36	0	N		N			Y	text	36		Y	Y	Y	Name of attribute		
+BM_bio_group	3	bio_group_description	Group Description	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Description of attribute		
+BM_bio_group	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
+BM_bio_group	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
+BM_bio_group	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
+BM_bio_group	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
+BM_bio_group	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N	N			
+BM_bio_group	9	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
