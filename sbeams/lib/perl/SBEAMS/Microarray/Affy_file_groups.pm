@@ -24,12 +24,14 @@ SBEAMS::Microarray
 =head1 SYNOPSIS
 
  use SBEAMS::Connection::Tables;
+ use SBEAMS::Connection::Log;
  use SBEAMS::Microarray::Tables;
  
  use SBEAMS::Microarray::Affy;
  use SBEAMS::Microarray::Affy_file_groups;
 
  my $sbeams_affy_groups = new SBEAMS::Microarray::Affy_file_groups;
+ my $log = SBEAMS::Connection::Log->new();
 
 $sbeams_affy_groups->setSBEAMS($sbeams);		#set the sbeams object into the sbeams_affy_groups
 
@@ -80,6 +82,9 @@ use FindBin;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Microarray::Tables;
 use SBEAMS::BioLink::Tables;
+use SBEAMS::Connection::Log;
+
+my $log = SBEAMS::Connection::Log->new();
 
 use base qw(SBEAMS::Microarray::Affy);		#declare superclass
 
@@ -721,7 +726,7 @@ sub _group_files {
 					"PREVIOUS DATA FILE '". $self->get_file_path(root_file_name => $1,
 										     file_ext => $file_ext,
 									             ) . "'\n";
-					"CURRENT  DATA FILE '$File::Find::name'\n";
+					$log->debug("CURRENT  DATA FILE '$File::Find::name'\n");
 			}
 		}
 	}
@@ -803,7 +808,7 @@ sub check_file_group {
 sub get_projects_with_arrays {
 	my $method = 'get_projects_with_arrays';
 	my $self = shift;
-  my %args = shift;
+	my %args = @_;
 
   # Should we limit access to projects that this user has access to?
   # off by default for backwards compatibilty
@@ -817,7 +822,6 @@ sub get_projects_with_arrays {
     END_SQL
   }
 	
-	my %args = @_;
 	
 	
 	my $sql = qq~ 

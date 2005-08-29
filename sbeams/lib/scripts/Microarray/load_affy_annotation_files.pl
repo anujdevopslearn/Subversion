@@ -2,7 +2,8 @@
 
 ###############################################################################
 # Program     : load_affy_annotation_files.pl
-# Author      : Pat Moss <pmoss@systemsbiology.org>
+# Author      : Pat Moss <moss.pat@gmail.com>
+# $Id$
 #
 # Description : This scirpt will parse a Annotation file from Affymetrix.  Affymetrix provides a file for each chip
 # in csv format with 38 columns of data.  The data will parsed and loaded into affy_annotation tables within sbeams 
@@ -155,7 +156,7 @@ $VERBOSE    = $OPTIONS{verbose} || 0;
 $QUIET      = $OPTIONS{quiet};
 $DEBUG      = $OPTIONS{debug};
 $TESTONLY   = $OPTIONS{testonly};
-$RUN_MODE   = $OPTIONS{run_mode};
+$RUN_MODE   = $OPTIONS{run_mode} || '';
 
 $FILE_NAME = $OPTIONS{file_name};
 

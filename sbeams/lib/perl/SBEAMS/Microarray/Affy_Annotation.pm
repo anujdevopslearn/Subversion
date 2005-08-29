@@ -356,7 +356,7 @@ sub add_record_to_annotation_table {
 			  
 			  );
 
-	my %rowdata_h = $self->truncate_data(record_href => \%rowdata_h); #some of the data will need to truncated to make it easy to put all data in varchar 255 or less
+	%rowdata_h = $self->truncate_data(record_href => \%rowdata_h); #some of the data will need to truncated to make it easy to put all data in varchar 255 or less
 	
 	my $rowdata_ref = \%rowdata_h;
 	
@@ -999,7 +999,7 @@ sub get_xref_id {
 		return $self->{$dbxref_tag};
 	}
 	
-	confess(__PACKAGE__ . "::$method Need to provide  'dbxref_tag' => \d YOU GAVE '$dbxref_tag'") unless ($dbxref_tag =~ /^\w/);
+	confess(__PACKAGE__ . "::$method Need to provide  'dbxref_tag' =>  YOU GAVE '$dbxref_tag'") unless ($dbxref_tag =~ /^\w/);
 	
 	my $sql = qq~ SELECT dbxref_id
 			FROM $TB_DBXREF
@@ -1203,7 +1203,7 @@ sub delete_affy_annotation_data {
 	my $affy_annotation_set_id = $args{affy_annotation_set_id};
 	
 	print "ID '$affy_annotation_set_id'\n";
-	confess(__PACKAGE__ . "::$method Need to provide key value pair 'affy_annotation_set_id' => \d YOU GAVE '$affy_annotation_set_id'") unless ($affy_annotation_set_id =~ /^\d/);
+	confess(__PACKAGE__ . "::$method Need to provide key value pair 'affy_annotation_set_id' =>  YOU GAVE '$affy_annotation_set_id'") unless ($affy_annotation_set_id =~ /^\d/);
 	
 
 	my %table_child_relationship = ();
