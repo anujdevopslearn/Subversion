@@ -53,7 +53,9 @@ GDGraph-1.35a        (specially modified version by Deutsch and included)
 GDGraph-XY-0.92
 GDTextUtil-0.84
 Regexp::Common
+Time::HiRes
 XML::Parser
+XML::XPath
 
 Some versions of perl may require the following module be installed
 URI
@@ -402,7 +404,7 @@ which case the value defined in the SBEAMS.conf file is used, or else you can
 explicity specify a prefix with --dbprefix. 
 
 foreach dbtype ( $DBTYPES )
-  ./generate_schema.pl --table_prop ../../conf/Core/Core_table_property.txt \
+  ./generate_schema.pl --dbprefix dbo. --table_prop ../../conf/Core/Core_table_property.txt \
   --table_col ../../conf/Core/Core_table_column.txt --schema_file \
   ../../sql/Core/Core --module Core --destination_type $dbtype 
 end
