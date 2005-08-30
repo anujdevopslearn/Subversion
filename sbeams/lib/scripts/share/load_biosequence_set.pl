@@ -282,7 +282,6 @@ sub handleRequest {
   #### Define a scalar and array of biosequence_set_id's
   my ($biosequence_set_id,$n_biosequence_sets);
   my @biosequence_set_ids;
-  my $sql;
 
   #### If there was a set_tag specified, identify it
   if ($set_tag) {
@@ -636,7 +635,7 @@ sub loadBiosequenceSet {
 
 
   #### Test if there are already sequences for this biosequence_set
-  my $sql = "SELECT COUNT(*) FROM ${DATABASE}biosequence ".
+  $sql = "SELECT COUNT(*) FROM ${DATABASE}biosequence ".
          " WHERE biosequence_set_id = '$biosequence_set_id'";
   my ($count) = $sbeams->selectOneColumn($sql);
   if ($count)
