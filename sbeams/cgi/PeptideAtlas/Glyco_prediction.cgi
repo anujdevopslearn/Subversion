@@ -1,19 +1,13 @@
 #!/usr/local/bin/perl
 
 ###############################################################################
-# Program     : main.cgi
-# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
 # $Id$
-#
-# Description : This script authenticates the user, and then
-#               displays the opening access page.
 #
 # SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
 # version 2 as published by the Free Software Foundation.  It is provided
 # WITHOUT ANY WARRANTY.  See the full description of GPL terms in the
 # LICENSE file distributed with this software.
-#
 ###############################################################################
 
 
@@ -53,7 +47,7 @@ $glyco_query_o->setSBEAMS($sbeams);
 ###############################################################################
 $PROG_NAME = 'main.cgi';
 my $file_name    = $$ . "_glyco_predict.png";
-my $tmp_img_path = "usr/images";
+my $tmp_img_path = "images/tmp";
 my $img_file     = "$PHYSICAL_BASE_DIR/$tmp_img_path/$file_name";
 my $predicted_track_type = "Predicted Peptides";
 my $id_track_type 		 = 'Identified Peptides';
@@ -268,7 +262,6 @@ sub display_hits_form {
     	
     	$ref_parameters = clean_params($ref_parameters);
     	my %parameters = %{$ref_parameters};
-$log->debug(Dumper($ref_parameters));
 		
 		my $sql_data = find_hits($ref_parameters);
 	
