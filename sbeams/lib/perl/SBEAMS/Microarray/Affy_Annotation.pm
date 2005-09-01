@@ -230,7 +230,7 @@ sub parse_data_file {
 	my $file_name = shift;
 	
 	open DATA, $file_name or 
-		die "CANNOT OPEN ANNOTAION FILE '$!' \n";
+		die "CANNOT OPEN ANNOTATION FILE '$!' \n";
 	
 	my @col_names = ();
 	my $count = 0;
@@ -273,7 +273,7 @@ sub parse_data_file {
 			}
 			
 			
-			if ($self->verbose > 0){
+			if ( $self->verbose() > 0 ){
 				print "ANNO FILE ROOT NAME '$file_base_name'\n";
 			}
 			
@@ -473,7 +473,7 @@ sub add_record_to_affy_db_links {
 			
 			$val =~ s/^EC://;			#remove the EC tag from the EC accession number it is not needed
 				
-			if ($self->debug > 0){
+			if ( $self->debug ){
 				print "EXTERNAL DBID '$val'\n";
 			}
 			
@@ -767,7 +767,10 @@ sub add_data_child_tables {
 		
 		my $rowdata_ref = {};
 		my @multi_records = ();
-		
+
+                # Set a default
+                $child_tables{$record_key}{MULTIPULE_RECORDS} ||= 'NO';
+
 		if ( $child_tables{$record_key}{MULTIPULE_RECORDS} eq 'NO'){
 		 	push @multi_records, $full_record_value;			 	
 		}else{
@@ -777,7 +780,7 @@ sub add_data_child_tables {
 		
 		RECORD_VAL:foreach my $record_value (@multi_records) {
 		
-			next if $record_value eq '---';					#skip the blank fields
+			next if $record_value && $record_value eq '---';					#skip the blank fields
 			if ($self->verbose() > 0){
 				print "RECORD PART '$record_value'\n";
 			} 
@@ -786,7 +789,7 @@ sub add_data_child_tables {
 				my $reg_exp_key = $all_reg_exp[$i];
 				my $reg_exp = $child_tables{$record_key}{$reg_exp_key};	
 				
-				if ($record_value =~ /$reg_exp/){			#run the regular expression
+				if ($record_value && $record_value =~ /$reg_exp/){			#run the regular expression
 					for (my $i = 1; $i <= $#+; $i ++){		# @+ = LAST_MATCH_END perl internal variable, array holds the offsets of the ends of the last successful sub matches, which can be use to find out how many matches where made
 					
 						my $column_name = $child_tables{$record_key}{COLUMN_NAMES}{$i};
@@ -801,6 +804,7 @@ sub add_data_child_tables {
 				}else{
 						
 					if ($i == $#all_reg_exp){
+                                                $record_value = '' if !defined $record_value;
 						$self->anno_error(error => "ERROR: Cannot MATCH VAL '$record_value'\n\tREG_EXP '$reg_exp'");
 						next RECORD_VAL ;	#if no more regular expression are in the @all_reg_exp array move on to the next record since there is not data to insert for this particular chunk	
 					}
@@ -836,7 +840,10 @@ sub add_data_child_tables {
 ###################################################################			
 ### Add in link to Affy_Db_links table if needed
 
-			if ($child_tables{$record_key}{RUN_METHOD} =~ /add_affy_db_links/ && $record_key !~ /Gene Ontology/){
+			if ( defined $record_key && 
+                             defined $child_tables{$record_key}{RUN_METHOD} && 
+                             $child_tables{$record_key}{RUN_METHOD} =~ /add_affy_db_links/ 
+                             && $record_key !~ /Gene Ontology/ ) {
 				my $accession_number = $$rowdata_ref{accession_number};
 				delete($$rowdata_ref{accession_number});			#need to delete the key since the data will be kept in the affy_db_links table
 				
@@ -1040,9 +1047,9 @@ sub truncate_data {
 		%record_h = %{$record_href};
 	
 		foreach my $key ( keys %record_h){
-		
-			if ($key eq 'gene_symbol' || $key eq 'chromosomal_location' || $key eq 'archival_unigene_cluster'){			#some gene symbol rows were comming in way to big chop them down to size
-				if (length $record_h{$key} > 50){
+	                next if !defined $key;	
+			if ( $key eq 'gene_symbol' || $key eq 'chromosomal_location' || $key eq 'archival_unigene_cluster'){			#some gene symbol rows were comming in way to big chop them down to size
+				if ( $record_h{$key} && length $record_h{$key} > 50){
 					my $big_val = $record_h{$key};
 		
 					my $truncated_val = substr($record_h{$key}, 0, 49);
@@ -1053,7 +1060,7 @@ sub truncate_data {
 				}
 			}
 			
-			if (length $record_h{$key} > 255){
+			if ( $record_h{$key} && length $record_h{$key} > 255){
 				my $big_val = $record_h{$key};
 		
 				my $truncated_val = substr($record_h{$key}, 0, 254);
@@ -1069,7 +1076,7 @@ sub truncate_data {
 		@data = @$data_aref;
 		
 		for(my $i=0; $i<=$#data; $i++){
-			if (length $data[$i] > 255){
+			if ( $data[$i] && length $data[$i] > 255){
 				my $big_val = $data[$i];
 		
 				my $truncated_val = substr($data[$i], 0, 254);
@@ -1114,24 +1121,32 @@ sub check_previous_annotation_set {
 	my @rows = $sbeams->selectOneColumn($sql);	  
 		 
 	
-	if ($rows[0] =~ /^\d/) { 		#Record exists so ask the user if previous data should be deleted
-	
-		
-		
+	if ( scalar(@rows) && $rows[0] =~ /^\d/ ) { 		#Record exists so ask the user if previous data should be deleted
+
+                # if they say they wanna delete, accept the default since they can still bail.
+
+                my $answer = ( $self->run_mode() =~ /delete/i ) ? 'Y' : '';	
+
 		QUESTION:{
-		print "\n\n\n********* WARNING THIS AFFYMETRIX ANNOTATION FILE HAS ALREADY BEEN UPLOADED*****\n",
-		        "RE-DOING THIS WILL DELETE THE PREVIOUS VERSION !!!!\n".
-		 	($self->run_mode =~ /delete/i) ? "YOU ARE IN RUN_MODE 'DELETE' ALL ANNOTAION IS ABOUT TO BE DELETED FOR\n":
-		 	 "ARE YOU SURE YOU WANT TO DELETE ALL ANNOTATION for ",
-		       "'$genome_version - $annotation_date' ANNOTATION SET_ID '$rows[0]'\n";
+                unless ( $answer ) {
+		  print "\n\n\n********* WARNING THIS AFFYMETRIX ANNOTATION FILE HAS ALREADY BEEN UPLOADED*****\n" .
+		        "re-uploading it will delete the previous version, are you sure you want to delete the annotation for\n" .
+		       "'$genome_version - $annotation_date', annotation_set_id  '$rows[0]'\n" .
+                       "Enter Y or [N]:";
+		  $answer = <STDIN>;
+                  chomp $answer;
+
+                  # Did they just hit enter (default)?
+                  $answer = 'N' if $answer eq '';
+                }
 		
-		my $answer = <STDIN>;
+
 		if ($answer =~ /^[nN]/){
 			print "OK I WILL NOT DELETE ANYTHING\n";
 			die "Data already exists in the database and you do not want to updated it so there is nothing to do\n";
 			
 		}elsif($answer =~ /^[Yy]/) {
-			print "OK I WILL DELETE ALL THE ANNOTAION IN 5 secs... LAST CHANCE push crtl-c TO ABORT....\n";
+			print "OK I WILL DELETE ALL THE ANNOTATION IN 5 secs... LAST CHANCE push crtl-c TO ABORT....\n";
 			sleep 5;
 		
 			if ($self->verbose() > 0){
@@ -1141,12 +1156,13 @@ sub check_previous_annotation_set {
 		
 		}else{
 			print "Sorry I do not understand your answer, Type Y or N\n";
+                        $answer = '';
 			QUESTION:redo;
 		}
 		}
 		
 		if ($self->run_mode() =~ /delete/i){	#if we are in delete mode return the annotation_set_id
-			print "RETRUN ANNOTAION SET ID FROM '$method' ID = '$rows[0]'\n" if ( $self->verbose() );
+			print "RETRUN ANNOTATION SET ID FROM '$method' ID = '$rows[0]'\n" if ( $self->verbose() );
 			return $rows[0];
 		}
 		
