@@ -97,7 +97,15 @@ my @default = @EXPORT;
 #### Decide which version settings to use based the script location
 my $SBEAMS_PATH =  "$FindBin::Bin";
 my $subdir = $SBEAMS_PATH;
-$subdir =~ s/^.*\///;
+
+# Replaced this regex, due to problems at UW where their PATH had a trailing
+# slash that was causing the subdir name to become ''.  DSC 2005-09-01  
+$subdir =~ s/^.*\/([^\/]+)\/*/$1/;
+
+# Old version, just in case we need to roll back.
+# $subdir =~ s/^.*\///;
+
+
 $subdir = '' if ($subdir eq 'cgi');  # Clear it if it's the top cgi directory
 setSBEAMS_SUBDIR('dummy',$subdir);
 
