@@ -181,6 +181,7 @@ sub add_peptide_annotation{
 	my $db_smilarity 	= new Bio::Annotation::SimpleValue(-value => sprintf("%d\%",$href->{'protein_similarity_score'} * 100));
 	my $predicted_mass 	= new Bio::Annotation::SimpleValue(-value => sprintf("%01.2f", $href->{'predicted_peptide_mass'}));
 #annotation in both predicted and identified
+	my $detection_probability		= new Bio::Annotation::SimpleValue(-value => sprintf("%01.2f", $href->{'detection_probability'}));	
 	my $glyco_score		= new Bio::Annotation::SimpleValue(-value => sprintf("%01.2f", $href->{'glyco_score'}));	
 	my $protein_glyco_position   = new Bio::Annotation::SimpleValue(-value =>  $href->{'protein_glyco_site_position'});
 	
@@ -195,6 +196,7 @@ sub add_peptide_annotation{
 	$coll->add_Annotation('tryptic_end', $number_tryptic_ends);
 	$coll->add_Annotation('peptide_prophet_score', $pep_prophet_score);
 	$coll->add_Annotation('peptide_mass', $peptide_mass);
+	$coll->add_Annotation('detection_probability', $detection_probability);
 	$coll->add_Annotation('tissues', $tissues);
 	
 	

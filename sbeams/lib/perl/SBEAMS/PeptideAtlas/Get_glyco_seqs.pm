@@ -855,20 +855,19 @@ END
 								)
 					),
 			        $q->td("Predicted Sequence"),
-			     	
+			     	  $q->td($self->linkToColumnText(
+			     			display => "Detection Probability",
+								title   => "Likelihoop of detecting peptide in MS", 
+								column  => "detection_probability", 
+								table   => "AT_predicted_peptide", 
+								),
+					),
 			     	
 			     	$q->td("Predicted Mass"),
 			     	$q->td("Number Proteins<br>with Peptide"),
 			     );
 
 my $foo=<<'  END';
-			     	$q->td($self->linkToColumnText(
-			       				display => "Detection Probability",
-								title   => "Likelihoop of detecting peptide in MS", 
-								column  => "detection_probability", 
-								table   => "AT_predicted_peptide", 
-								),
-					),
   END
 	
 	foreach my $f (@{$features_aref}){
@@ -910,8 +909,8 @@ my $foo=<<'  END';
 									 anno_type => 'glyco_score');
 			$protein_glyco_site =  $self->get_annotation(seq_obj =>$pep_seq_obj,
                                                                          anno_type => 'protein_glyco_site');
-			#$detection_prop = $self->get_annotation(seq_obj =>$pep_seq_obj, 
-			#						 anno_type => 'detection_probability');
+			$detection_prop = $self->get_annotation(seq_obj =>$pep_seq_obj, 
+									 anno_type => 'detection_probability');
 			$database_hits = $self->get_annotation(seq_obj =>$pep_seq_obj, 
 									 anno_type => 'number_proteins_match_peptide');
 			$ipi_ids = $self->get_annotation(seq_obj =>$pep_seq_obj, 
@@ -936,12 +935,12 @@ my $foo=<<'  END';
 		 $html .= $q->Tr(
 				$q->td($protein_glyco_site),
 				$q->td("$first_aa.$html_seq.$end_aa"),
+				$q->td({align=>'center'},$detection_prop),
 				$q->td({align=>'center'},$predicted_mass),
 				$q->td({align=>'center'},$hit_link),
 				
 			     );
 
-				#$q->td({align=>'center'},$detection_prop),
 		}
 	$html .= "</table>";
 	return $html;
@@ -982,7 +981,7 @@ sub identified_pep_html{
 			     );
 				 
 	
-	$log->debug("HTML DUMP '$html'");
+#	$log->debug("HTML DUMP '$html'");
 	
 			    
 
@@ -1158,6 +1157,7 @@ sub get_annotation {
         if ($annotations[0]){
                 $info = $annotations[0]->hash_tree;
         }else{
+          $log->debug( "$ac" );
                 $info = "Cannot find Info for '$anno_type'";
         }
 
