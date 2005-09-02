@@ -191,6 +191,11 @@ sub readOutFile {
     $format = "a5a8a11a8a8a8a8";
   } elsif ($parameters{search_program} eq 'TurboSEQUEST') {
     $format = "a5a8a11a11a8a8a8a8";
+  } elsif ($parameters{search_program} =~ /^SEQUEST/ ) {
+    if ( $verbose ) {
+      print "Non-standard search program version ($parameters{search_program}), should be OK\n";
+    }
+    $format = "a5a8a11a8a8a8a8";
   } else {
     die("ERROR: Unrecognized search program specified in header of file");
   }
