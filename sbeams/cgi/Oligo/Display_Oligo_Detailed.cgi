@@ -220,8 +220,6 @@ sub print_entry_form {
             <TR> <TD>IN STOCK:</TD> <TD>$in_stock</TD> </TR>
             <TR> <TD>MELTING TEMP:</TD> <TD>$melting_temp</TD> </TR>
 			<TR> <TD>CUT SITE:</TD> <TD>$restr_enzyme</TD> </TR>
-            <TR> <TD>START COORDINATE:</TD> <TD>$start_coordinate</TD> </TR>
-            <TR> <TD>STOP COORDINATE:</TD> <TD>$stop_coordinate</TD> </TR>
 			<TR> <TD>SEQUENCE LENGTH:</TD> <TD>$length</TD> </TR>
             <TR> <TD>GC PERCENTAGE:</TD> <TD>$GC_content</TD> </TR>
 			<TR> <TD>PRIMER DIMER:</TD> <TD>$primer_dimer</TD> </TR>
@@ -231,7 +229,8 @@ sub print_entry_form {
             <TR> <TD>DATE CREATED:</TD> <TD>$date_created</TD> </TR>
 			<TR> <TD>LAST MODIFIED:</TD> <TD>$last_modified</TD> </TR>
     </TABLE> ~;
-
+ #<TR> <TD>START COORDINATE:</TD> <TD>$start_coordinate</TD> </TR>
+ #<TR> <TD>STOP COORDINATE:</TD> <TD>$stop_coordinate</TD> </TR>
   print "<br>";
   
   
@@ -251,10 +250,16 @@ sub print_entry_form {
 				   -default=>[$in_stock],
 				   -override=>1);
   }
+
   print
 	$cg->p,
-	"Location: ", $cg->p,
-	"Please enter: (K) Deep, (P) Minh, (S) Amy, (W) Kenia, (V) Madhavi, (F) Marc, (B) Nitin, (Z) Alok, (M) Patrick, (G) General, (N) Not Applicable", $cg->p, 
+	"Edit Sequence: ", 
+	$cg->textfield(-name=>'sequence', -default=>$oligo_sequence), $cg->p;
+
+  print
+	$cg->p,
+	"Location: ",
+	"(K) Deep, (P) Minh, (S) Amy, (W) Kenia, (V) Madhavi, (F) Marc, (B) Nitin, (Z) Alok, (M) Patrick, (G) General, (N) Not Applicable", $cg->p, 
 	$cg->textfield(-name=>'location'),
 	$cg->p, 
 	"Comments: ", $cg->textarea(-name=>'comments'),
@@ -303,6 +308,7 @@ sub handle_request {
   my $in_stock = $parameters{in_stock};
   my $location = $parameters{location};
   my $comments = $parameters{comments};
+  my $sequence = $parameters{sequence};
 
   ## Output Stuff
   print "The following have been updated:\n";
@@ -331,6 +337,26 @@ sub handle_request {
     $sbeams->executeSQL($sql_stock);
 	print $cg->p, "In stock: Set to $in_stock", $cg->p;
 	
+  }
+  
+  #Update sequence
+  if ($sequence){
+	my $sql_sequence = qq~
+	  UPDATE OG
+	  SET OG.feature_sequence = '$sequence'
+	  $table_joins
+	  ~;
+	$sbeams->executeSQL($sql_sequence);
+    #update sequence length
+	my $new_length = length $sequence;
+	my $sql_length = qq~
+	  UPDATE OG
+	  SET OG.sequence_length = $new_length
+	  $table_joins
+	  ~;
+	$sbeams->executeSQL($sql_length);
+	  
+	print "Sequence: Set to $sequence", $cg->p;
   }
 
   #Update location
