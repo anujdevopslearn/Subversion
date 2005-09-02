@@ -1,11 +1,17 @@
 #!/usr/local/bin/perl
 
-###############################################################################
-# Program     : Display_Oligo_Detailed.cgi
-# Author      : Patrick Mar <pmar@systemsbiology.org>
+##############################################################################
+# Program  	: Display_Oligo_Detailed.cgi
+# Authors	: Patrick Mar <pmar@systemsbiology.org>,
+#             Michael Johnson <mjohnson@systemsbiology.org>
 #
-# Description : Prints a more detailed description of a particular oligo. 
-#               Allows updating of oligo fields.  
+# Other contributors : Eric Deutsch <edeutsch@systemsbiology.org>
+# 
+# Description : Displays more detailed information about 
+#
+#               
+#
+# Last modified : 9/2/05
 ###############################################################################
 
 ###############################################################################
@@ -59,7 +65,7 @@ Options:
 
 EOU
 
-#### Process options
+## Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
 	print "$USAGE";
   exit;
@@ -82,7 +88,6 @@ main();
 exit(0);
 
 
-
 ###############################################################################
 # Main Program:
 #
@@ -90,78 +95,72 @@ exit(0);
 ###############################################################################
 sub main {
 
-  #### Do the SBEAMS authentication and exit if a username is not returned
-  exit unless ($current_username = $sbeams->Authenticate(
-    #connect_read_only=>1,
-    #allow_anonymous_access=>1,
-    #permitted_work_groups_ref=>['Proteomics_user','Proteomics_admin'],
-  ));
+  ## Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate());
 
-
-  #### Read in the default input parameters
+  ## Read in the default input parameters
   my %parameters;
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$cg,parameters_ref=>\%parameters);
+
   #$sbeams->printDebuggingInfo($cg);     #Undo comment for debug mode
+
   my $apply_action = $parameters{'action'} || $parameters{'apply_action'};
 
-  #### Process generic "state" parameters before we start
+  ## Process generic "state" parameters before we start
   $sbeams->processStandardParameters(
     parameters_ref=>\%parameters);
 
 
-  #### Decide what action to take based on information so far
+  ## Decide what action to take based on information so far
   if ($parameters{action} eq "???") {
     # Some action
   }elsif ($apply_action eq "EDIT") {                    #Make the changes
     $sbeamsMOD->printPageHeader();
-    handle_request(ref_parameters=>\%parameters,
-				 );
+    handle_request(ref_parameters=>\%parameters,);
 	$sbeamsMOD->printPageFooter();
   }else {
     $sbeamsMOD->printPageHeader();                     #Go to entry form
 	print_entry_form(ref_parameters=>\%parameters);
     $sbeamsMOD->printPageFooter();
   }
-
-
-
-
 } # end main
 
 
 ###############################################################################
-# Print Entry Form
+# print_entry_form - Print the form
 ###############################################################################
 sub print_entry_form {
   my %args = @_;
   my $SUB_NAME = "handle_request";
 
-  #### Process the arguments list
+  ## Process the arguments list
   my $ref_parameters = $args{'ref_parameters'}
     || die "ref_parameters not passed";
   my %parameters = %{$ref_parameters};
 
 
-  #start the form
-  #the statement shown defaults to POST method, and action equal to this script
+  ## Start the form
+  ## The statement shown defaults to POST method, and action equal to this script
   print $cg->start_form;  
 
-  #print the form elements
+  ## Print the form elements
   my $gene = $parameters{Gene};
            ###ugly hack: gene is actually oligo name at this point, need to reconvert
            $gene =~ s/(\w+)\..*/$1/g;
   my $oligo_type = $parameters{Oligo_type};
   my $oligo_sequence = $parameters{Oligo_Sequence};
   
-  #pass gene and oligo_type to the edit form so that updates can be executed for this oligo
+  ## Pass gene and oligo_type to the edit form so that updates can be executed for this oligo
   print qq~                                                                       
           <INPUT TYPE="hidden" NAME="gene" VALUE="$gene"> 
           <INPUT TYPE="hidden" NAME="oligo_type" VALUE="$oligo_type"> 
           ~;
 
-  ####Extract and Display more detailed info about selected oligo
-  my $gc_percent = calc_gc(sequence=>$oligo_sequence); 
+  ## Extract and display more detailed info about selected oligo
+  my $gc_percent = calc_gc(sequence=>$oligo_sequence);
+
+  ## Include any restriction enzymes that may be involved 
   my $restr_enzyme = get_restriction_enzyme(sequence=>$oligo_sequence);
 
   my $sql = qq~
@@ -174,6 +173,7 @@ sub print_entry_form {
             WHERE BS.biosequence_name='$gene' AND OT.oligo_type_name='$oligo_type'
 	        ~;
 
+  ## Declare the items we are retrieving 
   my @rows = $sbeams->selectSeveralColumns($sql);
 
   my  $in_stock;
@@ -206,12 +206,8 @@ sub print_entry_form {
 	$location = $l;
     $oligo_id = $m;
   }
-
-  
-  
-
  
-  ####print simple table displaying oligo info
+  ## Print simple table displaying oligo info
   print qq~
 	<TABLE> <TR> <TD>OLIGO ID:</TD> <TD> $oligo_id</TD></TR>
 	        <TR> <TD>ASSOCIATED GENE:</TD> <TD>$gene</TD> </TR>
@@ -229,33 +225,34 @@ sub print_entry_form {
             <TR> <TD>DATE CREATED:</TD> <TD>$date_created</TD> </TR>
 			<TR> <TD>LAST MODIFIED:</TD> <TD>$last_modified</TD> </TR>
     </TABLE> ~;
- #<TR> <TD>START COORDINATE:</TD> <TD>$start_coordinate</TD> </TR>
- #<TR> <TD>STOP COORDINATE:</TD> <TD>$stop_coordinate</TD> </TR>
   print "<br>";
   
   
-  ####USER INTERFACE section for editing oligo
+  ## Display the UI section for editing oligo
+  ## Only sequence, in stock (Y/N), location (associated with a person), and comments 
+  ## can be changed.  Everything else must remain constant.
+  
   print
 	"In Stock: ";
   if($in_stock eq 'N'){
 	print
-	$cg->popup_menu(-name=>'in_stock',
+	  $cg->popup_menu(-name=>'in_stock',
 				   -values=>['N','Y'],
-				   -default=>[$in_stock],
-				   -override=>1);
+					  -default=>[$in_stock],
+					  -override=>1);
   }else{
 	print
-	$cg->popup_menu(-name=>'in_stock',
-				   -values=>['Y','N'],
-				   -default=>[$in_stock],
-				   -override=>1);
+	  $cg->popup_menu(-name=>'in_stock',
+					  -values=>['Y','N'],
+					  -default=>[$in_stock],
+					  -override=>1);
   }
-
+  
   print
 	$cg->p,
 	"Edit Sequence: ", 
 	$cg->textfield(-name=>'sequence', -default=>$oligo_sequence), $cg->p;
-
+  
   print
 	$cg->p,
 	"Location: ",
@@ -265,29 +262,30 @@ sub print_entry_form {
 	"Comments: ", $cg->textarea(-name=>'comments'),
 	$cg->p,
 	$cg->submit(-name=>"action", value=>"EDIT");
-
-  ####Back button
+  
+  ## Back button
   print qq~
 	<BR><BR><A HREF="$CGI_BASE_DIR/Oligo/Search_Oligo.cgi">Search New Oligo</A><BR><BR>Use back button to return to search results.<BR>  
     ~;
   
-  # end of the form
+  ## End of the form
   print $cg->end_form,
-      $cg->hr; 
-
+  $cg->hr; 
+  
   return;
-
+  
 } # end print_entry_form
 
 
 ####################################################################################
-# Handle Request
+# Handle Request - Called when the user edits the oligo and submits the changes
+# This method updates the database fields appropriately. 
 ####################################################################################
 sub handle_request {
   my %args = @_;
   my $SUB_NAME = "handle_request";
 
-  #### Process the arguments list
+  ## Process the arguments list
   my $ref_parameters = $args{'ref_parameters'}
     || die "ref_parameters not passed";
   my %parameters = %{$ref_parameters};
@@ -315,7 +313,7 @@ sub handle_request {
 
   ## SQL updates
 
-  #table joins (same for all updates)
+  ## table joins (same for all updates)
   my $table_joins = qq~
 	                   FROM $TBOG_SELECTED_OLIGO SO
 					   LEFT JOIN $TBOG_OLIGO OG ON (OG.oligo_id=SO.oligo_id)
@@ -326,7 +324,7 @@ sub handle_request {
 					   ~;
 
  
-  #Update whether In_stock
+  ## Update whether In_stock
   if ($in_stock){
 	my $sql_stock = qq~
 	  UPDATE OA
@@ -339,7 +337,7 @@ sub handle_request {
 	
   }
   
-  #Update sequence
+  ## Update sequence
   if ($sequence){
 	my $sql_sequence = qq~
 	  UPDATE OG
@@ -347,7 +345,7 @@ sub handle_request {
 	  $table_joins
 	  ~;
 	$sbeams->executeSQL($sql_sequence);
-    #update sequence length
+    ## Update sequence length
 	my $new_length = length $sequence;
 	my $sql_length = qq~
 	  UPDATE OG
@@ -359,7 +357,7 @@ sub handle_request {
 	print "Sequence: Set to $sequence", $cg->p;
   }
 
-  #Update location
+  ## Update location
   if ($location){
 	my $sql_location = qq~
 	  UPDATE OA
@@ -370,7 +368,7 @@ sub handle_request {
 	print "Location: Set to $location", $cg->p;
   }
   
-  #Update comments
+  ## Update comments
   if ($comments){
 	my $sql_comments = qq~
 	  UPDATE SO
@@ -383,7 +381,7 @@ sub handle_request {
 	
   }
  
-  ####Update date_modified fields in Oligo Annot. and Selected Oligo tables
+  ## Update date_modified fields in Oligo Annot. and Selected Oligo tables
   my $sql_SOmodified = qq~
 	UPDATE SO
 	SET SO.date_modified = CURRENT_TIMESTAMP
@@ -399,7 +397,7 @@ sub handle_request {
   $sbeams->executeSQL($sql_OAmodified);
 
 
-  ####Back button
+  ## Back button
   print qq~
 	<BR><A HREF="$CGI_BASE_DIR/Oligo/Search_Oligo.cgi">Search New Oligo</A><BR><BR>  
     ~;
@@ -411,7 +409,7 @@ sub handle_request {
 
 
 ##########################################################################################
-#calc_gc - takes a sequence and calculates the percentage that g,c 
+# calc_gc - Takes a sequence and calculates the percentage that g,c 
 #########################################################################################
 sub calc_gc {
 
@@ -443,7 +441,9 @@ sub calc_gc {
 
 
 #############################################################################################
-#get_restriction_enzyme - returns the type of restriction enzyme that cuts along the cut site
+# get_restriction_enzyme - Returns the type of restriction enzyme that cuts along the cut site
+# Not all oligos have these.  If they exist, they will be a sequence of (usually 6) bps in 
+# capitals.  Add any additional enzymes to the elsif conditionals below.
 #############################################################################################
 sub get_restriction_enzyme {
   my %args = @_;
