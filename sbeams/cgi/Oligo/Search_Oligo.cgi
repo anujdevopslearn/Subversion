@@ -1,6 +1,22 @@
 #!/usr/local/bin/perl 
 
 
+#########################################################################
+# Program  	: Search_Oligo.cgi
+# Authors	: Patrick Mar <pmar@systemsbiology.org>,
+#             Michael Johnson <mjohnson@systemsbiology.org>
+#
+# Other contributors : Eric Deutsch <edeutsch@systemsbiology.org>
+# 
+# Description : Implements the search and display of oligos, Asks
+# users to enter search criteria and queries the database appropriately
+#
+#               
+#
+# Last modified : 9/1/05
+#########################################################################
+
+
 ###############################################################################
 # Set up all needed modules and objects
 ###############################################################################
@@ -34,41 +50,8 @@ $sbeamsMOD = new SBEAMS::Oligo;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
-
 use CGI;
 $cg = new CGI;
-
-
-###############################################################################
-# Set program name and usage banner for command like use
-###############################################################################
-$PROG_NAME = $FindBin::Script;
-$USAGE = <<EOU;
-Usage: $PROG_NAME [OPTIONS] key=value kay=value ...
-Options:
-  --verbose n         Set verbosity level.  default is 0
-  --quiet             Set flag to print nothing at all except errors
-  --debug n           Set debug flag
-
- e.g.:  $PROG_NAME [OPTIONS] [keyword=value],...
-
-EOU
-
-#### Process options
-unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s")) {
-	print "$USAGE";
-  exit;
-}
-
-$VERBOSE = $OPTIONS{"verbose"} || 0;
-$QUIET   = $OPTIONS{"quiet"} || 0;
-$DEBUG   = $OPTIONS{"debug"} || 0;
-if ($DEBUG) {
-  print "Options settings:\n";
-  print "  VERBOSE = $VERBOSE\n";
-  print "  QUIET = $QUIET\n";
-  print "  DEBUG = $DEBUG\n";
-}
 
 
 ###############################################################################
@@ -79,7 +62,6 @@ main();
 exit(0);
 
 
-
 ###############################################################################
 # Main Program:
 #
@@ -87,25 +69,23 @@ exit(0);
 ###############################################################################
 sub main {
 
-  #### Do the SBEAMS authentication and exit if a username is not returned
-  exit unless ($current_username = $sbeams->Authenticate(
-  ));
+  ## Do the SBEAMS authentication and exit if a username is not returned
+  exit unless ($current_username = $sbeams->Authenticate());
 
-
-  #### Read in the default input parameters
+  ## Read in the default input parameters
   my %parameters;
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$cg,parameters_ref=>\%parameters);
+
+  #Uncomment for debugging mode
   #$sbeams->printDebuggingInfo($cg);
+
   my $apply_action = $parameters{'action'} || $parameters{'apply_action'};
 
+  ## Process generic "state" parameters before we start
+  $sbeams->processStandardParameters(parameters_ref=>\%parameters);
 
-  #### Process generic "state" parameters before we start
-  $sbeams->processStandardParameters(
-    parameters_ref=>\%parameters);
-
-
-  #### Decide what action to take based on information so far
+  ## Decide what action to take based on information so far
   if ($parameters{apply_action} eq "???") {
     # Some action
   }elsif ($apply_action eq "VIEWRESULTSET" ||
@@ -115,64 +95,45 @@ sub main {
 	$sbeamsMOD->printPageFooter();
   }else {
     $sbeamsMOD->printPageHeader();
-    print_javascript();
 	print_entry_form(ref_parameters=>\%parameters);
     $sbeamsMOD->printPageFooter();
   }
 
-
 } # end main
 
 
-###############################################################################
-# print_javascript 
-##############################################################################
-sub print_javascript {
-
-print qq~
-<SCRIPT LANGUAGE="Javascript">
-<!--
-
-//-->
-</SCRIPT>
-~;
-return 1;
-}
 
 ###############################################################################
-# print entry form
+# print_entry_form - Prints the form that will ask user to input info.
+# necessary for the query
 ###############################################################################
 sub print_entry_form {
   my %args = @_;
   my $SUB_NAME = "print_entry_form";
 
-  #### Process the arguments list
+  ## Process the arguments list
   my $ref_parameters = $args{'ref_parameters'}
   || die "ref_parameters not passed";
   my %parameters = %{$ref_parameters};
 
-  # start the form
-  # the statement shown defaults to POST method, and action equal to this script
+  ## start the form
+  ## the statement shown defaults to POST method, and action equal to this script
   print "<H1> Oligo Search</H1>";
   
   print $cg->start_form;  
   
   ## Print the form elements
-  ## TO DO:
-  #  1) Generalize this form to query SBEAMS for organism
-  #  2) Generalize this form to query SBEAMS for set_type
-  #
   print
     "Genes: ",$cg->textarea(-name=>'genes'),
     $cg->p,
     "Organism: ",
     $cg->popup_menu(-name=>'organism',
-	               -values=>['halobacterium-nrc1','haloarcula marismortui']),
+	               -values=>['halobacterium-nrc1']),
     $cg->p,
     "Select oligo set type to search: ",
     $cg->p,
     $cg->popup_menu(-name=>'set_type',
-                   -values=>['Gene Knockout', 'Gene Expression', 'Other']),
+                   -values=>['Gene Knockout', 'Other']),
     
     $cg->p,
 	$cg->submit(-name=>"action", value=>"QUERY");
@@ -209,6 +170,7 @@ sub handle_request {
   my @column_titles = ();
   my $limit_clause = '';
 
+  ## These were selected by the user
   my $organism = $parameters{organism};
   my $set_type = $parameters{set_type};
 
@@ -222,8 +184,6 @@ sub handle_request {
 	}
 
   
-  ## TO DO : Generalize this so we can use it for non-halo purposes.
-
   ## Stuff gene names from text area into array
   my $genes = $parameters{genes};
   my @gene_array = split(/\s\n/,$genes);   
@@ -250,17 +210,18 @@ sub handle_request {
 	print "ERROR: No organism type selected.\n";
   }
 
-  ####process for each individual gene in array
+  ## Process for each individual gene in array
   foreach my $gene (@gene_array) {
 
     my $common_name = lc $gene;
    
     
-    ####strip gene name of letters and get just the gene number (in case of partial entry)
+    ## Strip gene name of letters and get just the gene number (in case of partial entry)
 	$gene =~ /[a-z,A-Z]*(\d*)[a-z,A-Z]*/;
 	my $gene_number = $1; 
 	
-    ####search for vng synonym of common name
+    ## Search for vng synonym of common name, Use the local coordinate files as lookup tables
+    ## Note that in many cases, common name is the same as canonical name
 	if($organism eq 'halobacterium-nrc1'){
 	  open(A, "halobacterium.txt") || die "Could not open halobacterium.txt";
 	}elsif($organism eq 'haloarcula marismortui'){
@@ -269,15 +230,12 @@ sub handle_request {
 	  open(A, "halobacterium.txt") || die "Could not open halobacterium.txt"; #default = nrc-1
 	}
 
-    my $vngC = "VNG" . $gene_number . "C";
-    my $vngH = "VNG" . $gene_number . "H";
-    my $vngG = "VNG" . $gene_number . "G"; 
 	while(<A>){
 	  my @temp = split;
 	  if($common_name =~ /[a-z,A-Z]*\d+[a-z,A-Z]*/ && 
-		                          ($vngC eq $temp[0] || 
-								   $vngH eq $temp[0] ||
-								   $vngG eq $temp[0] ) ){
+		                          ("VNG".$gene_number."C" eq $temp[0] || 
+								   "VNG".$gene_number."H" eq $temp[0] ||
+								   "VNG".$gene_number."G" eq $temp[0] ) ){
 		$common_name = lc $temp[1];
 	  }
 	  if(lc $gene eq lc $temp[1]){  #if a common name was entered
@@ -286,8 +244,8 @@ sub handle_request {
 	}  
 	close(A);
 
-	####Define the desired columns in the query
-	#### [friendly name used in url_cols,SQL,displayed column title]
+	## Define the desired columns in the query
+	## [friendly name used in url_cols,SQL,displayed column title]
 	my @column_array = (
 						["Primer","BS.biosequence_name","Oligo"],
 						["Oligo_type","OT.oligo_type_name","Oligo Type"],
@@ -310,7 +268,6 @@ sub handle_request {
             column_titles_ref=>\@column_titles
 															   );
   
-
 	#Code to search for identical genes
 	my $warning_phrase = "WARNING: Identical Genes Found: ";
 	my @identical_matches = ();
@@ -345,8 +302,8 @@ sub handle_request {
 		LEFT JOIN $TBOG_BIOSEQUENCE_SET BSS ON (BSS.biosequence_set_id=BS.biosequence_set_id)
 		WHERE BS.biosequence_name LIKE '%$gene_number%' AND $set_type_search AND BSS.set_tag=$set_tag
 		~;
-	 
-	
+	  
+	  
 	  ##Define the hypertext links for columns that need them
 	  my %url_cols = ('Primer_Sequence' => "./Display_Oligo_Detailed.cgi?Gene=%0V&Oligo_type=%1V&Oligo_Sequence=%2V&In_Stock=%7V");
 	  
@@ -363,8 +320,6 @@ sub handle_request {
 								  'Secondary Structure' => 1,
 								  'In_Stock' => 1,
 								  'Location' => 1);
-	  
-	  ##  Print the data ##
 	  
 	  ## ROWCOUNT
 	  $parameters{row_limit} = 5000
@@ -395,7 +350,7 @@ sub handle_request {
 		## Set the column_titles to just the column_names
 		@column_titles = @{$resultset_ref->{column_list_ref}};
 		
-		## make additional modifications to display table
+		## Make additional modifications to display table
 		modify_table(resultset_ref => $resultset_ref);	
 		
 		## Display the resultset
@@ -408,22 +363,14 @@ sub handle_request {
 								  base_url=>$base_url,
 								  );
 		
-		
-        #Too detailed for common user -- can uncomment for development purposes
-		## Display the resultset controls - This allows table downloads in excel format
-		#$sbeams->displayResultSetControls(rs_params_ref=>\%rs_params,
-			#							  resultset_ref=>$resultset_ref,
-				#						  query_parameters_ref=>\%parameters,
-					#					  base_url=>$base_url
-						#				  );
-		
-		
-		#Option(s) for Downloading Oligos
+   	
+		## Option(s) for Downloading Oligos
 		print qq~
 		  <A HREF="./Download_Options.cgi?gene=$match&organism=$organism&set_tag=$set_tag&set_type_search=$set_type_search&gene_number=$gene_number">View Download Options</A><BR>
 		  ~;
 		
-        #Option for Displaying Oligo in Chromosomal Context
+        ## Options for Displaying Oligo in Chromosomal Context
+        ## This uses Michael Johnson's SequenceViewer script in the ProteinStructure database
 		my $id = get_ProteinStructure_biosequence_id(vng=>$gene);
         print qq~ 
 		<BR><A HREF="$CGI_BASE_DIR/ProteinStructure/SequenceViewer.cgi?biosequence_id=$id&mode=OLIGO">Graphical View (Only Default Oligos Shown)</A><BR>
@@ -433,11 +380,13 @@ sub handle_request {
 	
   }
   
-  ####Back button
+  ## Back button
   print qq~
 	<BR><A HREF="$CGI_BASE_DIR/Oligo/Search_Oligo.cgi">Search again</A><BR>  
-    <BR><A HREF="$CGI_BASE_DIR/Oligo/Add_Oligo.cgi">Add New Oligo</A><BR><BR>
-  ~;
+	~;
+
+  ## The Add Oligo link has been taken out as that is not ready yet.
+  ## <BR><A HREF="$CGI_BASE_DIR/Oligo/Add_Oligo.cgi">Add New Oligo</A><BR><BR>
 
   return;
 
@@ -446,12 +395,14 @@ sub handle_request {
 
 
 ##############################################################################
-# modify_table
-#
-# make additional modifications to SBEAMS table such as primer name, checkboxes, etc.
+# modify_table - Make additional modifications to SBEAMS table such as primer name
 ##############################################################################
 sub modify_table{  
     my %args = @_;
+
+    ## Access the resultset and pull out necessary arguments to reformat the oligo
+    ## name into: <gene>.<extension type>
+
 	my $resultset_ref = $args{resultset_ref};
 
     my $aref = $$resultset_ref{data_ref};
@@ -462,35 +413,8 @@ sub modify_table{
 		$full_oligo_name = $row_aref->[0] . "." . $1; 
 	  }
       $row_aref->[0] = $full_oligo_name;
-	  #my $input = "<input type='checkbox' name='select_oligo'>";
-	  #push @$row_aref, $input;
 	}
-
-    #push @{$resultset_ref->{column_list_ref}}, "select"; 
-
-    #append_precision_data($resultset_ref);
-    
 }
-
-
-
-
-###############################################################################
-# append_precision_data
-#
-# need to append a value for every column added otherwise the column headers will not show
-###############################################################################
-sub append_precision_data {
-	my $resultset_ref = shift;
-	
-	my $aref = $$resultset_ref{precisions_list_ref};	
-	
-	push @$aref, '-10';					
-	
-	$$resultset_ref{precisions_list_ref} = $aref;
-}
-
-
 
 
 ##############################################################################
@@ -504,14 +428,15 @@ sub get_ProteinStructure_biosequence_id {
   
   my $VNG = $args{vng};
   
-  ####reformat VNG name
-  #make sure that parameter is just the gene number
+  ## Reformat VNG name
+  ## Make sure that parameter is just the gene number
   if($VNG =~ /[a-z,A-Z]*(\d*)[a-z,A-Z]*/) {
-	$VNG = $1;
+   	$VNG = $1;
   } 
-  #if VNG ends with a letter, get rid of it
+  ## If VNG ends with a letter, get rid of it
   $VNG = "VNG" . $VNG;
 
+  ## Search for all matches (could be same sequence, multiple genes)
   my $sql = qq~
 	use ProteinStructure2
 	SELECT BS.biosequence_id
