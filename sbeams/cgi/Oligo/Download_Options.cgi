@@ -1,5 +1,24 @@
 #!/usr/local/bin/perl 
 
+#########################################################################
+# Program  	: Download_Options.cgi
+# Authors	: Patrick Mar,
+#             Michael Johnson <mjohnson@systemsbiology.org>
+#
+# Other contributors : Eric Deutsch <edeutsch@systemsbiology.org>
+# 
+# Description : Provides the user with options to download the oligo set
+# information in excel, csv formats.  Note: This script is pretty much the
+# same as Search_Oligo.cgi except that it has the additional download options.
+# This is extremely redundant but for some reason there was a major bug 
+# when I tried to combine Download_Options.cgi and Search_Oligo.cgi into the
+# same script.  This is only a temporary hack.  Will need to fix it in the
+# future.
+#               
+#
+# Last modified : 9/2/05
+#########################################################################
+
 
 ###############################################################################
 # Set up all needed modules and objects
@@ -79,29 +98,33 @@ exit(0);
 ###############################################################################
 # Main Program:
 #
-# Call $sbeams->Authenticate() and exit if it fails or continue if it works.
+# Call $sbeams->Authenticate() and exit if it fails or continue if it works. 
+# Print the forms.
 ###############################################################################
 sub main {
 
-  #### Do the SBEAMS authentication and exit if a username is not returned
+  ## Do the SBEAMS authentication and exit if a username is not returned
   exit unless ($current_username = $sbeams->Authenticate(
   ));
 
 
-  #### Read in the default input parameters
+  ## Read in the default input parameters
   my %parameters;
   my $n_params_found = $sbeams->parse_input_parameters(
     q=>$cg,parameters_ref=>\%parameters);
+
+  ## Uncomment below to allow debugging
   #$sbeams->printDebuggingInfo($cg);
+
   my $apply_action = $parameters{'action'} || $parameters{'apply_action'};
 
 
-  #### Process generic "state" parameters before we start
+  ## Process generic "state" parameters before we start
   $sbeams->processStandardParameters(
     parameters_ref=>\%parameters);
 
 
-  #### Decide what action to take based on information so far
+  ## Decide what action to take based on information so far
   if ($parameters{apply_action} eq "???") {
     # Some action
   }elsif ($apply_action eq "VIEWRESULTSET" ||
@@ -111,33 +134,15 @@ sub main {
 	$sbeamsMOD->printPageFooter();
   }else {
     $sbeamsMOD->printPageHeader();
-    print_javascript();
-	#print_entry_form(ref_parameters=>\%parameters);
 	handle_request(ref_parameters=>\%parameters);
     $sbeamsMOD->printPageFooter();
   }
-
-
 } # end main
 
 
-###############################################################################
-# print_javascript 
-##############################################################################
-sub print_javascript {
-
-print qq~
-<SCRIPT LANGUAGE="Javascript">
-<!--
-
-//-->
-</SCRIPT>
-~;
-return 1;
-}
 
 ###############################################################################
-# print entry form
+# print_entry_form - This is the same interface as in Search_Oligo.cgi
 ###############################################################################
 sub print_entry_form {
   my %args = @_;
@@ -155,11 +160,6 @@ sub print_entry_form {
   print $cg->start_form;  
   
   ## Print the form elements
-  ## TO DO:
-  #  1) Generalize this form to query SBEAMS for organism
-  #  2) Generalize this form to query SBEAMS for set_type
-  #
-  print
     "Genes: ",$cg->textarea(-name=>'genes'),
     $cg->p,
     "Organism: ",
@@ -383,6 +383,7 @@ sub handle_request {
 		
 		
 		## Display the resultset controls - This allows table downloads in excel format
+        ## This is what makes Download_Options.cgi different from Search_Oligo.cgi
 		$sbeams->displayResultSetControls(rs_params_ref=>\%rs_params,
 										  resultset_ref=>$resultset_ref,
 										  query_parameters_ref=>\%parameters,
@@ -398,7 +399,6 @@ sub handle_request {
   ####Back button
   print qq~
 	<BR><A HREF="$CGI_BASE_DIR/Oligo/Search_Oligo.cgi">Search again</A><BR>  
-    <BR><A HREF="$CGI_BASE_DIR/Oligo/Add_Oligo.cgi">Add New Oligo</A><BR><BR>
   ~;
 
   return;
