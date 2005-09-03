@@ -47,6 +47,7 @@ sub readTableProperty {
 
   my $table_properties;
   my @ordered_list;
+  my @real_name_list;  # sigh
 
   #### Read through the rest of the file, load the relevant data
   while ($line = <INFILE>) {
@@ -58,17 +59,19 @@ sub readTableProperty {
     my ($table_name,$category,$table_group) = @columns[0..2];
 
     #### If the table begins with a two capital letter prefix, remove it
-    my $real_name = $table_name;
-    $real_name =~ s/^[A-Z]{2,4}\_//;
+    my ( $mod_prefix, $real_name ) = ( $table_name =~ /^([A-Z]{2,4})\_(.*)$/ );
 
     $table_properties->{$table_name}->{category} = $category;
     $table_properties->{$table_name}->{table_group} = $table_group;
     $table_properties->{$table_name}->{real_name} = $real_name;
+    $table_properties->{$table_name}->{mod_prefix} = $mod_prefix;
     push(@ordered_list,$table_name);
+    push(@real_name_list,$real_name);
   }
 
   #### Add the ordered list to the structure
   $table_properties->{__ordered_list} = \@ordered_list;
+  $table_properties->{__real_name_list} = \@real_name_list;
 
   #### Close and return
   close(INFILE);
@@ -231,12 +234,21 @@ sub writeSchema {
       my @column_list = @{$table_columns->{$table_name}->{__ordered_list}};
       my $column_name;
       my $table_ref = $table_columns->{$table_name};
+      
       foreach $column_name (@column_list) {
         my ($column_title,$datatype,$scale,$precision,$nullable,$default_value,
             $is_auto_inc,$fk_table,$fk_column,$column_description) =
           @{$table_ref->{$column_name}}[3..11,19];
 
         print "    Processing column $column_name\n" if ($VERBOSE);
+
+        my $extra = '';
+        # If user wants to suppress bogus fk relationships
+        if ( $fk_table && $args{suppress} && $table_properties->{$table_name}->{mod_prefix} ) {
+          if ( !grep /^$fk_table$/, @{$table_properties->{__real_name_list}} ) {
+            $extra = ' <I>external</I>';
+          }
+        }
 
         #### Look up the fk_table name if any
         if ($fk_table && $table_properties->{$fk_table}->{real_name}) {
@@ -258,6 +270,8 @@ sub writeSchema {
           table_prefix => $table_prefix,
         );
 
+          
+
         $dictionary_buffer .= generateColumnDictionary(
           table_name => $real_table_name,
           column_name => $column_name,
@@ -268,8 +282,8 @@ sub writeSchema {
           nullable => $nullable,
           default_value => $default_value,
           is_auto_inc => $is_auto_inc,
-          fk_table => $fk_table,
-          fk_column => $fk_column,
+          fk_table => $fk_table . $extra,
+          fk_column => $fk_column . $extra,
           column_description => $column_description,
           destination_type => 'HTML',
         );
@@ -277,21 +291,19 @@ sub writeSchema {
         $line_buffer .= $result->{line}.",$LB";
 
         #### Add generated constraints to corresponding buffers
-        if ($result->{add_reference_constraint}) {
+        if ($result->{add_reference_constraint} && !$extra ) {
 
           #### If this is an audit column, then keep it separate
-          if ($column_name eq 'created_by_id' ||
-              $column_name eq 'modified_by_id' ||
-              $column_name eq 'owner_group_id') {
-            $add_audit_constraints_buffer .=
-              $result->{add_reference_constraint}."$SB";
+          if ($column_name eq 'created_by_id' || $column_name eq 'modified_by_id' ||
+                                                 $column_name eq 'owner_group_id') {
+            $add_audit_constraints_buffer .= $result->{add_reference_constraint}."$SB";
           } else {
             $add_constraints_buffer .=
               $result->{add_reference_constraint}."$SB";
           }
 
         }
-        if ($result->{drop_reference_constraint}) {
+        if ($result->{drop_reference_constraint} && !$extra ) {
           $drop_constraints_buffer .=
             $result->{drop_reference_constraint}."$SB";
         }
@@ -641,6 +653,8 @@ sub generateColumnDefinition {
     $constraint_name = 'fk_'.substr(${table_name},1,13).
                          '_'.substr(${column_name},1,13)
           if ($destination_type eq 'oracle') ;
+
+          
     $add_reference_constraint = "ALTER TABLE $table_prefix$table_name ADD CONSTRAINT ".
         "$constraint_name FOREIGN KEY ($column_name) ".
         "REFERENCES $table_prefix$fk_table($fk_column)";

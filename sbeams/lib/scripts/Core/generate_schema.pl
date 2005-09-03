@@ -48,7 +48,7 @@ $PROG_NAME = $FindBin::Script;
 $USAGE = <<EOU;
 Usage: $PROG_NAME [OPTIONS]
 Options:
-  --verbose n                Set verbosity level.  default is 0
+  -v, --verbose n                Set verbosity level.  default is 0
   --quiet                    Set flag to print nothing at all except errors
   --debug n                  Set debug flag
   --table_property_file ccc  Set the name of table_property file
@@ -57,8 +57,10 @@ Options:
   --destination_type ccc     Set the destination database server type
         (one of: mssql, mysql, pgsql, oracle)
   --dbprefix string          prefix for schema elements, e.g. SNP.dbo.
-	--module string            Specify module, dbprefix defined in SBEAMS.conf
+	-m, --module string            Specify module, dbprefix defined in SBEAMS.conf
 	                           will be used as a prefix on schema elements
+  --suppress                 Will suppress creation of (potential)
+                             cross-database constaints
 
  e.g.:  $PROG_NAME --table_prop \$CONFDIR/Core/Core_table_property.txt \\
                            --table_col \$CONFDIR/Core/Core_table_column.txt \\
@@ -71,7 +73,7 @@ EOU
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
   "table_property_file:s","table_column_file:s","schema_file:s",
-  "destination_type:s","dbprefix:s","module=s","conf_file=s")) {
+  "destination_type:s","dbprefix:s","module=s","conf_file=s","suppress")) {
   print "$USAGE";
   exit;
 }
@@ -309,7 +311,8 @@ sub generateSchema {
     destination_type => $destination_type,
     dbprefix         => $OPTIONS{dbprefix},
     conf_file        => $OPTIONS{conf_file},
-    module           => $OPTIONS{module}
+    module           => $OPTIONS{module},
+    suppress         => $OPTIONS{suppress}
   );
 
   print "Done.\n\n" unless ($QUIET);
