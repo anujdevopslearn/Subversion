@@ -241,8 +241,8 @@ sub writeSchema {
       
       foreach $column_name (@column_list) {
         my ($column_title,$datatype,$scale,$precision,$nullable,$default_value,
-            $is_auto_inc,$fk_table,$fk_column,$column_description) =
-          @{$table_ref->{$column_name}}[3..11,19];
+            $is_auto_inc,$fk_table,$fk_column,$input_type,$column_description) =
+          @{$table_ref->{$column_name}}[3..11,13,19];
 
         print "    Processing column $column_name\n" if ($VERBOSE);
 
@@ -270,6 +270,7 @@ sub writeSchema {
           is_auto_inc => $is_auto_inc,
           fk_table => $fk_table,
           fk_column => $fk_column,
+	  input_type => $input_type,
           destination_type => $destination_type,
           table_prefix => $table_prefix,
         );
@@ -288,6 +289,7 @@ sub writeSchema {
           is_auto_inc => $is_auto_inc,
           fk_table => $fk_table . $extra,
           fk_column => $fk_column . $extra,
+	  input_type => $input_type,
           column_description => $column_description,
           destination_type => 'HTML',
         );
@@ -484,6 +486,7 @@ sub generateColumnDefinition {
   my $is_auto_inc = $args{'is_auto_inc'} || "";
   my $fk_table = $args{'fk_table'} || "";
   my $fk_column = $args{'fk_column'} || "";
+  my $input_type = $args{'input_type'} | '';
   my $destination_type = $args{'destination_type'}
     || die "destination_type not passed";
   my $table_prefix = $args{'table_prefix'} || "";
@@ -650,7 +653,11 @@ sub generateColumnDefinition {
   my $add_reference_constraint;
   my $add_audit_reference_constraint;
   my $drop_reference_constraint;
-  if ($fk_table && $fk_column) {
+
+  #### If we have both the foreign key table and column information
+  #### AND this is not a multilink column (which contains fk_table and
+  #### fk_column information but this should not be used to make a constraint)
+  if ($fk_table && $fk_column && $input_type ne 'multilink') {
     #$line .= " /* REFERENCES $fk_table($fk_column) */";
     my $constraint_name =  "fk_${table_name}_${column_name}"; 
     #### Oracle has constraint name maximum length of 30
