@@ -118,7 +118,7 @@ sub dbConnect {
   my $DB_DATABASE = $DBCONFIG->{$DBINSTANCE}->{DB_DATABASE};
   my $cstring = eval "\"$DBCONFIG->{$DBINSTANCE}->{DB_DRIVER}\"";
 
-  my $dbh = DBI->connect( $cstring, "$args->{user}", "$args->{pass}" ) || die ('couldn\'t connect' );
+  my $dbh = DBI->connect( $cstring, $args->{user}, $args->{pass} ) || die ('couldn\'t connect' );
 #  $dbh->{AutoCommit} = 0;
   $dbh->{RaiseError} = ( $args->{ignore_errors} ) ? 0 : 1;
 
@@ -152,8 +152,8 @@ sub processArgs {
     chomp $pass;
     print "\n";
     if ( $pass ) {
-      ( my $err = $pass ) =~ s/[\w\#]//g;
-      die "Illegal characters in password: $err \n" if $err;
+      #( my $err = $pass ) =~ s/[\w\#]//g;
+      #die "Illegal characters in password: $err \n" if $err;
       $args{pass} = $pass;
     } else {
       print "No input received.\n";
