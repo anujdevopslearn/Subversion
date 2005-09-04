@@ -61,6 +61,10 @@ sub readTableProperty {
     #### If the table begins with a two capital letter prefix, remove it
     my ( $mod_prefix, $real_name ) = ( $table_name =~ /^([A-Z]{2,4})\_(.*)$/ );
 
+    #### For Core tables, the above regexp does not work, so set manually
+    $mod_prefix = '' unless ($mod_prefix);
+    $real_name = $table_name unless ($real_name);
+
     $table_properties->{$table_name}->{category} = $category;
     $table_properties->{$table_name}->{table_group} = $table_group;
     $table_properties->{$table_name}->{real_name} = $real_name;
