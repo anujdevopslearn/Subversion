@@ -51,6 +51,12 @@ sub parseFile {
   open( FIL, $args->{sfile} ) || die "Unable to open file $args->{sfile}";
   while ( my $line = <FIL> ) {
     chomp $line;
+
+    #### If the user opts to ignore Audit Trail FOREIGN KEYS, stop when found
+    if ($args->{no_audit_constraints} && $line =~ /Audit trail FOREIGN KEYS/) {
+      last;
+    }
+
     if ( $args->{delimiter} eq 'GO' ) {
       if ( $line =~ /^GO\s*$/i ) {
         push @cmds, $cmd;
@@ -129,7 +135,8 @@ sub dbConnect {
 sub processArgs {
   my %args;
   unless( GetOptions ( \%args, 'pass=s', 'user=s', 'verbose', 'sfile=s',
-                      'delimiter=s', 'ignore_errors', 'manual:s' ) ) {
+                      'delimiter=s', 'ignore_errors', 'manual:s',
+                      'no_audit_constraints' ) ) {
   printUsage("Error with options, please check usage:");
   }
 
@@ -185,6 +192,7 @@ sub printUsage {
    -q --query_mode    Run (SELECT) query(s) and return results
    -m --manual_query  SELECT query provided explicitly, obviates the need for
                       a SQL file.
+   -n --no_audit_constraints  If set, then the Audit Trail FOREIGN KEYS are skipped
 
   EOU
   exit;
