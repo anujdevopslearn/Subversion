@@ -2152,8 +2152,8 @@ sub fetchNextRowOld {
 ###############################################################################
 sub decodeDataType {
     my $self = shift;
-    my $types_ref = shift || die "decodeDataType: insufficient paramaters\n";
-
+    my $types_ref = shift || die "decodeDataType: insufficient paramaters: types_ref not passed\n";
+    
     my %typelist = ( 1=>"varchar", 4=>"int", 2=>"numeric", 6=>"float", #7=>"real",
       11=>"date",-1=>"text" );
     my ($i,$type,$newtype);
@@ -2215,7 +2215,13 @@ sub fetchResultSet {
 
 
     #### Decode the type numbers into type strings
-    my $types_list_ref = $self->decodeDataType($sth->{TYPE});
+    my $types_list_ref;
+    if (defined($sth->{TYPE})) {
+      $types_list_ref = $self->decodeDataType($sth->{TYPE});
+    } else {
+      die("DBI DRIVER ERROR: fetchResultSet: No data or type information returned");
+      return 0;
+    }
 
     my @precisions = @{$sth->{PRECISION}};
 
