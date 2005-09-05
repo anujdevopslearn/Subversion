@@ -7,7 +7,6 @@ PR_fraction	MS Run	Proteomics_user	YES	$TBPR_FRACTION	fraction_id		ManageTable.c
 PR_msms_spectrum	MS/MS Spectrum	Proteomics_infrastructure	NO	$TBPR_MSMS_SPECTRUM	msms_spectrum_id				
 PR_msms_spectrum_peak	MS/MS Spectrum Peak	Proteomics_infrastructure	NO	$TBPR_MSMS_SPECTRUM_PEAK					
 PR_biosequence_set	BioSequence Set	Proteomics_infrastructure	YES	$TBPR_BIOSEQUENCE_SET	biosequence_set_id		ManageTable.cgi?TABLE_NAME=PR_biosequence_set	PR_biosequence_set	
-PR_dbxref	Biosequence Database Cross Reference	Proteomics_infrastructure	YES	$TB_DBXREF	dbxref_id		ManageTable.cgi?TABLE_NAME=PR_dbxref	PR_dbxref	
 PR_biosequence	BioSequence	Proteomics_infrastructure	NO	$TBPR_BIOSEQUENCE	biosequence_id				
 PR_biosequence_annotation	Biosequence Annotation	Proteomics_project	YES	$TBPR_BIOSEQUENCE_ANNOTATION	biosequence_annotation_id		ManageTable.cgi?TABLE_NAME=PR_biosequence_annotation		
 PR_biosequence_property_set	BioSequence Property Set	Proteomics_infrastructure	NO	$TBPR_BIOSEQUENCE_PROPERTY_SET	biosequence_property_set_id				
