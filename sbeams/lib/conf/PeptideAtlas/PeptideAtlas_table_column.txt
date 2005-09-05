@@ -102,7 +102,7 @@ AT_biosequence	1	biosequence_id	BioSequence ID	int	4	0	N		Y							N	N				pkDEFAU
 AT_biosequence	2	biosequence_set_id	BioSequence Set	int	4	0	N		N	AT_biosequence_set	biosequence_set_id					N	N	Y	BioSequence Set to which this BioSequence belongs		pkDEFAULT
 AT_biosequence	3	biosequence_name	BioSequence Name	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Name of this BioSequence (generally everything before the first space in a FASTA file header line)		
 AT_biosequence	4	biosequence_gene_name	BioSequence Gene Name	varchar	255	0	Y		N			Y	text	20		Y	Y	N	Gene name of this BioSequence if applicable.  Most common gene name if applicable		
-AT_biosequence	5	dbxref_id	Database Cross Reference	int	4	0	Y		N	AT_dbxref	dbxref_id					Y	Y	N	Database cross reference for which the accession number applies		pkDEFAULT
+AT_biosequence	5	dbxref_id	Database Cross Reference	int	4	0	Y		N	BL_dbxref	dbxref_id					Y	Y	N	Database cross reference for which the accession number applies		pkDEFAULT
 AT_biosequence	6	biosequence_accession	BioSequence Accession	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Accession number for this BioSequence in some external database designated above		
 AT_biosequence	7	organism_id	Organism	int	4	0	Y		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism to which this BioSequence belongs	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 AT_biosequence	8	polymer_type_id	Polymer Type	int	4	0	Y		N	BL_polymer_type	polymer_type_id	Y	optionlist			Y	Y	N	"Polymer type (e.g. protein, DNA, RNA) of this BioSequence"	"SELECT polymer_type_id, polymer_type_name FROM $TBBL_POLYMER_TYPE ORDER BY sort_order,polymer_type_name"	
@@ -164,21 +164,6 @@ AT_GetPeptides	13	n_genome_locations_constraint	Number of Genome Locations Mappe
 AT_GetPeptides	14	is_exon_spanning_constraint	Does Mapping Span Exons Constraint									N	text	5		Y	Y	N	Constraint for whether the peptide spans more than one exon (y or n)		
 AT_GetPeptides	15	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the Protein description (description string from input FASTA file). '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; multiple entries may be separated with a  semicolon; Use ! for NOT.		
 AT_GetPeptides	16	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBAT_QUERY_OPTION WHERE option_type = 'GP_display_options' ORDER BY sort_order,option_value"	
-AT_dbxref	1	dbxref_id	dbxref ID	int	4	0	N		Y							N	N				pkDEFAULT
-AT_dbxref	2	dbxref_name	CrossRef Name	varchar	50	0	N		N			Y	text	40		Y	Y	N	Name of this Database Cross Reference		
-AT_dbxref	3	dbxref_tag	CrossRef Tag	varchar	20	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this Database Cross Reference		
-AT_dbxref	4	dbxref_description	Description	varchar	255	0	N		N			Y	text	50		Y	Y	N	Longer description of this Database Cross Reference		
-AT_dbxref	5	accessor	Accessor	varchar	255	0	N		N			Y	text	50		Y	Y	N	Part of a URL or URI to which an accession number can be appended to get more information about the entity using this cross reference		
-AT_dbxref	6	accessor_suffix	Accessor Suffix	varchar	255	0	Y		N			N	text	50		Y	Y	N	Part of a URL or URI which comes after the accession number to build the full URL to get more information about the entity using this cross reference		
-AT_dbxref	7	uri	URI	varchar	255	0	N		N			Y	text	50		Y	Y	N	External web page or other URI of the database		SELF
-AT_dbxref	8	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-AT_dbxref	9	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
-AT_dbxref	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_dbxref	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_dbxref	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_dbxref	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-AT_dbxref	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-AT_dbxref	15	record_status	Record Status	char	1	0	N	N	N							N	N				
 AT_query_option	1	query_option_id	Query Option ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_query_option	2	option_type	Option Type	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Type or category of this option		
 AT_query_option	3	option_key	Option Key	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Key for this key/value pair option		
