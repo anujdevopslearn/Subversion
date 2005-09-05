@@ -880,29 +880,24 @@ sub getAccessibleProjects{
              MIN(CASE WHEN P.PI_contact_id = $current_contact_id THEN 10
                       ELSE UPP.privilege_id END) AS "best_user_privilege_id"
       FROM $TB_PROJECT P
-      INNER JOIN $TB_CONTACT C ON ( P.PI_contact_id = C.contact_id )
-      LEFT JOIN $TB_USER_LOGIN UL ON ( C.contact_id = UL.contact_id )
+     INNER JOIN $TB_CONTACT C 
+           ON ( P.PI_contact_id = C.contact_id AND C.record_status != 'D' )
+      LEFT JOIN $TB_USER_LOGIN UL
+           ON ( C.contact_id = UL.contact_id AND UL.record_status != 'D' )
       LEFT JOIN $TB_USER_PROJECT_PERMISSION UPP
-      ON ( P.project_id = UPP.project_id
-	   AND UPP.contact_id='$current_contact_id' )
+           ON ( P.project_id = UPP.project_id AND UPP.record_status != 'D'
+	        AND UPP.contact_id='$current_contact_id' )
       LEFT JOIN $TB_GROUP_PROJECT_PERMISSION GPP
-      ON ( P.project_id = GPP.project_id )
+           ON ( P.project_id = GPP.project_id AND GPP.record_status != 'D' )
       LEFT JOIN $TB_PRIVILEGE PRIV
-      ON ( GPP.privilege_id = PRIV.privilege_id )
+           ON ( GPP.privilege_id = PRIV.privilege_id AND PRIV.record_status != 'D' )
       LEFT JOIN $TB_USER_WORK_GROUP UWG
-      ON ( GPP.work_group_id = UWG.work_group_id
-	   AND UWG.contact_id='$current_contact_id' )
+           ON ( GPP.work_group_id = UWG.work_group_id AND UWG.record_status != 'D'
+	        AND UWG.contact_id='$current_contact_id' )
       LEFT JOIN $TB_WORK_GROUP WG
-      ON ( UWG.work_group_id = WG.work_group_id )
-      WHERE 1=1
-      AND P.record_status != 'D'
-      AND C.record_status != 'D'
-      AND ( UL.record_status != 'D' OR  UL.record_status IS NULL )
-      AND ( UPP.record_status != 'D' OR UPP.record_status IS NULL )
-      AND ( GPP.record_status != 'D' OR GPP.record_status IS NULL )
-      AND ( PRIV.record_status != 'D' OR PRIV.record_status IS NULL )
-      AND ( UWG.record_status != 'D' OR UWG.record_status IS NULL )
-      AND ( WG.record_status != 'D' OR WG.record_status IS NULL )
+           ON ( UWG.work_group_id = WG.work_group_id AND WG.record_status != 'D' )
+     WHERE 1=1
+       AND P.record_status != 'D'
   ~;
 
 	if ($work_group_name ne "Admin") {
