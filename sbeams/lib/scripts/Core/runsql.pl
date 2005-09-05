@@ -121,7 +121,7 @@ sub dbConnect {
 
   # Get db driver from configuration file
   my $DB_SERVER = $DBCONFIG->{$DBINSTANCE}->{DB_SERVER};
-  my $DB_DATABASE = $DBCONFIG->{$DBINSTANCE}->{DB_DATABASE};
+  my $DB_DATABASE = $args->{database} || $DBCONFIG->{$DBINSTANCE}->{DB_DATABASE};
   my $cstring = eval "\"$DBCONFIG->{$DBINSTANCE}->{DB_DRIVER}\"";
 
   my $dbh = DBI->connect( $cstring, $args->{user}, $args->{pass} ) || die ('couldn\'t connect' );
@@ -136,7 +136,7 @@ sub processArgs {
   my %args;
   unless( GetOptions ( \%args, 'pass=s', 'user=s', 'verbose', 'sfile=s',
                       'delimiter=s', 'ignore_errors', 'manual:s',
-                      'no_audit_constraints' ) ) {
+                      'no_audit_constraints', 'database=s' ) ) {
   printUsage("Error with options, please check usage:");
   }
 
@@ -193,6 +193,7 @@ sub printUsage {
    -m --manual_query  SELECT query provided explicitly, obviates the need for
                       a SQL file.
    -n --no_audit_constraints  If set, then the Audit Trail FOREIGN KEYS are skipped
+      --database      Specify a database to initially connect to besides the default
 
   EOU
   exit;
