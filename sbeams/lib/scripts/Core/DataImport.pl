@@ -228,6 +228,12 @@ sub start_element {
         $return_PK = 0;
         delete($attrs{$PK_column_name});
 
+      #### If this row is determined to be already present, then update
+      } elsif ($OPTIONS{ignore_pK}) {
+        print "INFO: $element:$attrs{$PK_column_name} was provided.  Since ".
+          "--ignore_pK was selected, we will just insert it without checking\n";
+        $PK_value = $orig_PK_value;
+
       #### Otherwise get rid of the PK and INSERT
       } else {
         print "INFO: $element:$attrs{$PK_column_name} was provided.  It ".
