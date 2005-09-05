@@ -867,7 +867,7 @@ APD_aggregated_peptide	8	experiment_list	Search Batch ID List	varchar	255	0	N		N
 APD_aggregated_peptide	9	n_experiments	Number of Experiments	int	4	0	N		N									N
 APD_aggregated_peptide	10	maximum_probability	Maximum Probability	real	4	0	N		N									N
 APD_peptide_summary_experiment	1	peptide_summary_id	APD Peptide Summary ID	int	4	0	N		N	APD_peptide_summary	peptide_summary_id							Y
-APD_peptide_summary_experiment	2	proteomics_experiment_id	Proteomics Experiment ID	int	4	0	N		N	PR_proteomics_experiment	proteomics_experiment_id							Y
+APD_peptide_summary_experiment	2	proteomics_experiment_id	Proteomics Experiment ID	int	4	0	N		N	PR_proteomics_experiment	experiment_id							Y
 APD_peptide_identifier	1	peptide_identifier_id	APD Peptide Identifier ID	int	4	0	N		Y									N
 APD_peptide_identifier	2	peptide_identifier_str	APD Peptide Identifier (f. ex. PAp12345678)	varchar	50	0	N		N									Y
 APD_peptide_identifier	3	peptide	APD Peptide aa sequence	varchar	512	0	N		N									N
