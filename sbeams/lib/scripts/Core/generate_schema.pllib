@@ -70,12 +70,10 @@ sub readTableProperty {
     $table_properties->{$table_name}->{real_name} = $real_name;
     $table_properties->{$table_name}->{mod_prefix} = $mod_prefix;
     push(@ordered_list,$table_name);
-    push(@real_name_list,$real_name);
   }
 
   #### Add the ordered list to the structure
   $table_properties->{__ordered_list} = \@ordered_list;
-  $table_properties->{__real_name_list} = \@real_name_list;
 
   #### Close and return
   close(INFILE);
@@ -249,7 +247,8 @@ sub writeSchema {
         my $extra = '';
         # If user wants to suppress bogus fk relationships
         if ( $fk_table && $args{suppress} && $table_properties->{$table_name}->{mod_prefix} ) {
-          if ( !grep /^$fk_table$/, @{$table_properties->{__real_name_list}} ) {
+          
+          if ( !grep /^$fk_table$/, @{$table_properties->{__ordered_list}} ) {
             $extra = ' <I>external</I>';
           }
         }
