@@ -105,7 +105,7 @@ sub getProjectData {
     $title .= "$row->[2] Affymetrix arrays" if $row->[2];
 
     $project_data{$row->[0]} =<<"    END_LINK";
-    <A HREF=${cgi_dir}ProjectHome.cgi?set_current_project_id=$row->[0]>
+    <A HREF=${cgi_dir}main.cgi?set_current_project_id=$row->[0]>
     <DIV id=Microarray_button TITLE='$title'>Microarray</DIV></A>
     END_LINK
   }
