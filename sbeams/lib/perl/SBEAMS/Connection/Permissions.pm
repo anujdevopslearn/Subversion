@@ -987,10 +987,10 @@ sub calculateTablePermission {
   my @uperms = $self->selectSeveralColumns( $usql );
  
   if ( scalar( @uperms ) > 1 ) { # Should only return one row
-    $log->error( $usql );
-    die ( <<'    END_ERROR' );
+    $log->error("Error: multiple rows from user permissions  query:\n $usql");
+    die ( <<"    END_ERROR" );
     More than one row returned from permissions query.  Please report this
-    error to your local $DBTITLE administrator $DBADMIN
+    error to your local $DBTITLE administrator $DBADMIN 
     END_ERROR
   }
 
@@ -1013,8 +1013,8 @@ sub calculateTablePermission {
   my @gperms = $self->selectSeveralColumns( $gsql );
  
   if ( scalar( @gperms ) > 1 ) { # Should only return one row
-    $log->error( $gsql );
-    die ( <<'    END_ERROR' );
+    $log->error("Error: multiple rows from group permissions  query:\n $gsql");
+    die ( <<"    END_ERROR" );
     More than one row returned from permissions query.  Please report this 
     error to your local $DBTITLE administrator $DBADMIN
     END_ERROR
