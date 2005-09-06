@@ -6,11 +6,21 @@ use Getopt::Long;
 
 use lib( "$Bin/../../perl" );
 use SBEAMS::Biomarker::ParseSampleWorkbook;
+use SBEAMS::Biomarker::Tables;
+use SBEAMS::Biomarker;
+use SBEAMS::Connection qw($log);
 
 use strict;
 
+# Setup global objects
+my $sbeams = SBEAMS::Connection->new();
+my $biomarker = SBEAMS::Biomarker->new();
+
 # Main
 {
+  $sbeams->Authenticate();
+  $biomarker->setSBEAMS( $sbeams );
+
   my $params = processParams();
   
   # Instantiate new parser
@@ -28,23 +38,28 @@ use strict;
   
   # Allow parser to chew data into digestable bits
   $parser->process_data();
-  
-  sub processParams {
-    my %params;
-    GetOptions( \%params, "workbook=s", "type=s", "verbose" );
 
-    $params{type} ||= 'xls';
-  
-    unless( $params{workbook} ) {
-      printUsage( "Missing required parameter 'workbook'" );
-    }
-
-    unless ( $params{type} =~ /^xls$|^tsv$/ ) {
-      printUsage( 'Type must be either xls or tsv' );
-    }
-    return \%params;
-  }
 }
+  
+sub processParams {
+  my %params;
+  GetOptions( \%params, "workbook=s", "type=s", "verbose",
+                        "experiment=s", 'autocreate' );
+
+  $params{type} ||= 'xls';
+  
+  if ( !$params{workbook} ) {
+    printUsage( "Missing required parameter 'workbook'" );
+  } elsif ( $params{type} !~ /^xls$|^tsv$/ ) {
+    printUsage( 'Type must be either xls or tsv' );
+  } elsif ( !$params{experiment} ) {
+    printUsage( "Missing required parameter 'experiment'" ); 
+  } elsif ( !$biomarker->checkExperiment( $params{experiment} ) ) {
+    printUsage( "Experiment doesn't exist or can't be modified by you" );
+  }
+  return \%params;
+}
+
 
 sub printUsage {
   my $msg = shift || '';
@@ -60,6 +75,8 @@ sub printUsage {
   Arguements:
   -w --workbook      Filename of workbook file to upload
   -t --type          Type of file, either xls or tsv (defaults to xls) 
+  -e --experiment    Name of experiment in database in which to load data 
+  -a --autocreate    autcreate attributes/diseases if they don't already exist 
 
   END_USAGE
   
@@ -73,4 +90,3 @@ __DATA__
     my $name;
     ( $name = $file ) =~ s/Sample_progress_workbook.csv//g;
     my $pos = ( length( $hidx{$k} ) == 1 ) ? '0' . $hidx{$k} : $hidx{$k};
-  }
