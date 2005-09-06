@@ -45,11 +45,11 @@ sub returnTableInfo {
   my $result;
 
   my $sbeams = $self->getSBEAMS();
-  
   my $tinfo = $self->getTableProperties($table_name);
   my $cinfo = $self->getColumnProperties($table_name);
 
   my $dbtable = $sbeams->evalSQL( "$tinfo->{db_table_name}" );
+  $log->debug( "Table name is $table_name, dbtable is $dbtable" );
 
   # First we have table-specific overrides of the default answers
   if ($table_name eq "TABLESQUE") {

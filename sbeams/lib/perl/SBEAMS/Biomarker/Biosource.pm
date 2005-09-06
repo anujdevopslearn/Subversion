@@ -1,16 +1,16 @@
-package SBEAMS::Biomarker::Biosample;
+package SBEAMS::Biomarker::Biosource;
 
 ###############################################################################
 #
-# Description :   Library code for inserting biosource/biosample records into 
+# Description :   Library code for inserting biosample records into 
 # the database
-# $Id$
+# $Id:   $
 #
 # Copywrite 2005   
 #
 ###############################################################################
 
-use SBEAMS::Connection qw( $log );
+use SBEAMS::Connection qw($log);
 use strict;
 
 #### Set up new variables
@@ -30,10 +30,10 @@ sub new {
 }
 
 #+
-# Routine for inserting biosample
+# Routine for inserting biosource(s)
 #
 #-
-sub insert_biosamples {
+sub insert_biosources {
   my $this = shift;
   my %args = @_;
   my $p = $args{'wb_parser'} || die "Missing required parameter wb_parser";
@@ -41,32 +41,28 @@ sub insert_biosamples {
 }
 
 #+
-# Routine to cache biosource object,
+# Routine to create and cache biosource object if desired
 #-
-sub setBiosource {
+sub setBiosample {
   my $this = shift;
-
-  # Use passed biosource if available
-  $this->{_biosource} = shift || die 'Missing required biosource parameter';
+  $this->{_biosample} = shift || die 'Missing required biosource parameter'; 
 }
 
 #+
-# Routine to fetch Biosource object
+# Routine to fetch Biosample object
 #-
-sub getBiosource {
+sub getBiosample {
   my $this = shift;
 
-  unless ( $this->{_biosource} ) {
-    log->warn('getBiosource called, none defined'); 
+  unless ( $this->{_biosample} ) {
+    $log->warn('getBiosample called, none defined'); 
     return undef;
   }
-  return $this->{_biosource};
+  return $this->{_biosample};
 }
 
 1;
-
-
-
+# End biosource
 
 
 

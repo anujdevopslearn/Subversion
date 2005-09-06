@@ -54,6 +54,18 @@ sub parse_file {
 # 
 # -
 sub process_data {
+  my $this = shift;
+
+  my ( @sou_attr, @sam_attr, @dis );
+
+  my $pmap = $this->_getParser2dbMap();
+
+  foreach my $row ( @{$this->{_data}} ) {
+    # Pull out 
+  }
+
+
+  
 } # End process_data
 
 #+
@@ -172,6 +184,104 @@ sub _parse_excel_file {
   return \@msg;
 }
 
+sub _getParser2dbMap {
+  my $this = shift;
+  my %map = (
+
+    # Biosource
+    'ISB sample ID' => 'biosource_name',   # to be used as biosample_name also?
+    'Patient_id' => 'patient_id',
+    'External Sample ID' => 'external_id',
+    'Name of Institute' => 'organization', # look up id
+    'Name of Investigators' => 'investigators', # need to add
+    'Sample type' => 'source_type', 
+    'species' => 'organism', # Do ID lookup
+    'age' => 'age',  # will have to split
+    'gender' => 'gender', # need to add
+    'amount of sample received' => 'original_volume',
+
+    # Biosource Attributes
+    'PARAM:time of sample collection' => 'collection_time',  # type => PARAM, name => collection_time, value => value
+    'PARAM:meal' => 'meal',   
+    'PARAM:alcohole' => 'alcohol',   
+    'PARAM:alcohol' => 'alcohol',   
+    'PARAM:smoke' => 'smoke',   
+    'PARAM:Date of Sample Collection' => 'collection_date',   
+    'PARAM:Others' => 'other',   
+
+    'others' => 'other',  # type => general, name => others, value => value
+    'Plate Layout' => 'plate_layout',
+    'Study Histology' => 'study_histology',
+    'Disease Info: Group' => 'group_disease',
+
+    # biosource_disease.disease_stage
+    'Disease Stage' => 'disease_stage',
+
+    # Diseases
+    'Disease:Breast cancer' => 'breast_cancer',   # disease_type => cancer, disease_name => breast_cancer, value => value
+    'Disease:Ovarian cancer' => 'ovarian_cancer',   # source disease
+    'Disease:Prostate cancer' => 'prostate_cancer',    # source disease
+    'Disease:Blader Cancer' => 'bladder_cancer',     # source disease
+    'Disease:Skin cancer' => 'skin_cancer',    # source disease
+    'Disease:Lung cancer' => 'lung_cancer',    # source disease
+    'Disease: Huntingtons Disease' => 'Huntingtons_disease',    # source disease
+    'Disease:other cancers' => 'other_cancers',
+
+    # Biosample
+    'Location of orginal sample' => 'storage_location',
+
+    # Biosample Attributes
+    'Sample Setup Order' => 'sample_setup',#   biosample_attribute, type is sample_order name is sample_setup_order, value is value
+    'MS Sample Run Number' => 'ms_run_number',
+
+    # Tissue types 
+    'heart' => 'heart',
+    'blood' => 'blood',
+    'liver' => 'liver',
+    'diabetic' => 'diabetic',
+    'neuron' => 'neuron',
+    'lung' => 'lung',
+    'bone' => 'bone',
+
+    # Prep stuff,    samples -> treatment
+    'Prep Replicate id' => 'xxxx',   #   biosample_attribute, type is sample_order name is prep_replicate_id, value is value
+    'Sample Prep Name' => 'xxxx',    # treatement_name  =>> deprecated, still a possibility???  # biogroup.bio_group_name, group type is sample_prep
+    'status of sample prep' => 'xxxx',  # treatement.status
+    'date of finishing prep' => 'xxxx', # treatment.date_completed
+    'amount of sample used in prep' => 'xxxx', # input_volume
+    'Sample prep method' => 'xxxx', # protocol
+    'person prepared the samples' => 'xxxx',  # treatment.processed_by
+    'Volume of re-suspended sample' => 'xxxx',  # New sample.original_volume
+    'location of finished sample prep' => 'xxxx',   # New sample.storage_location 
+
+    # MS stuff, all downstream!
+    'MS Replicate Number' => 'xxxx',
+    'MS Run Name' => 'xxxx',
+    'status of MS' => 'xxxx',
+    'date finishing MS' => 'xxxx',
+    'Random Sample Run order' => 'xxxx',
+    'order of samples ran per day' => 'xxxx',
+    'MS run protocol' => 'xxxx',
+    'Volume Injected' => 'xxxx',
+
+    # analysis stuff, all downstream!
+    'location of data' => 'xxxx',
+    'status of Conversion' => 'xxxx',
+    'Date finishing conversion' => 'xxxx',
+    'name of raw files' => 'xxxx',
+    'location of raw files' => 'xxxx',
+    'name of mzXML' => 'xxxx',
+    'location of mzXML' => 'xxxx',
+    'person for MS analysis' => 'xxxx',
+    'date finishing alignment' => 'xxxx',
+    'location of alignment files' => 'xxxx',
+    'person for data analysis' => 'xxxx',
+    'peplist peptide peaks file location' => 'xxxx'
+    );
+
+  return \%map;
+}
+
 1;
 
 __DATA__
@@ -184,79 +294,77 @@ Treatment
 Storage_location
 Analysis_file
 
-01      Sample Setup Order
-02      MS Sample Run Number
-03      Plate Layout
-04      ISB sample ID
-05      Patient_id
-06      External Sample ID
-07      Name of Institute
-08      Name of Investigators
-09      Sample type
-10      species
-11      age
-12      gender
-13      amount of sample received
-14      Location of orginal sample
-15      PARAM:time of sample collection
-16      PARAM:meal
-17      PARAM:alcohole
-18      PARAM:smoke
-19      PARAM:Date of Sample Collection
-20      PARAM:Others
-21      Disease:Breast cancer
-22      Disease:Ovarian cancer
-23      Disease:Prostate cancer
-24      Disease:Blader Cancer
-25      Disease:Skin cancer
-26      Disease:Lung cancer
-27      Disease: Huntington's Disease
-28      Disease:other cancers
-29      heart
-30      blood
-31      liver
-32      diabetic
-33      neuron
-34      lung
-35      bone
-36      Disease Stage
-37      others
-38      Study Histology
-39      Disease Info: Group
-40      Prep Replicate id
-41      Sample Prep Name
-42      status of sample prep
-43      date of finishing prep
-44      amount of sample used in prep
-45      Sample prep method
-46      person prepared the samples
-47      Volume of re-suspended sample
-48      location of finished sample prep
-49      MS Replicate Number
-50      MS Run Name
-51      status of MS
-52      date finishing MS
-53      Random Sample Run order
-54      order of samples ran per day
-55      MS run protocol
-56      Volume Injected
-57      location of data
-58      status of Conversion
-59      Date finishing conversion
-60      name of raw files
-61      location of raw files
-62      name of mzXML
-63      location of mzXML
-64      person for MS analysis
-65      date finishing alignment
-66      location of alignment files
-67      person for data analysis
-68      peplist peptide peaks file location
-
-
+    'Sample Setup Order' => xxxx
+    'MS Sample Run Number' => xxxx
+    'Plate Layout' => xxxx
+    'ISB sample ID' => xxxx
+    'Patient_id' => xxxx
+    'External Sample ID' => xxxx
+    'Name of Institute' => xxxx
+    'Name of Investigators' => xxxx
+    'Sample type' => xxxx
+    'species' => xxxx
+    'age' => xxxx
+    'gender' => xxxx
+    'amount of sample received' => xxxx
+    'Location of orginal sample' => xxxx
+    'PARAM:time of sample collection' => xxxx
+    'PARAM:meal' => xxxx
+    'PARAM:alcohole' => xxxx
+    'PARAM:smoke' => xxxx
+    'PARAM:Date of Sample Collection' => xxxx
+    'PARAM:Others' => xxxx
+    'Disease:Breast cancer' => xxxx
+    'Disease:Ovarian cancer' => xxxx
+    'Disease:Prostate cancer' => xxxx
+    'Disease:Blader Cancer' => xxxx
+    'Disease:Skin cancer' => xxxx
+    'Disease:Lung cancer' => xxxx
+    'Disease: Huntington's Disease' => xxxx
+    'Disease:other cancers' => xxxx
+    'heart' => xxxx
+    'blood' => xxxx
+    'liver' => xxxx
+    'diabetic' => xxxx
+    'neuron' => xxxx
+    'lung' => xxxx
+    'bone' => xxxx
+    'Disease Stage' => xxxx
+    'others' => xxxx
+    'Study Histology' => xxxx
+    'Disease Info: Group' => xxxx
+    'Prep Replicate id' => xxxx
+    'Sample Prep Name' => xxxx
+    'status of sample prep' => xxxx
+    'date of finishing prep' => xxxx
+    'amount of sample used in prep' => xxxx
+    'Sample prep method' => xxxx
+    'person prepared the samples' => xxxx
+    'Volume of re-suspended sample' => xxxx
+    'location of finished sample prep' => xxxx
+    'MS Replicate Number' => xxxx
+    'MS Run Name' => xxxx
+    'status of MS' => xxxx
+    'date finishing MS' => xxxx
+    'Random Sample Run order' => xxxx
+    'order of samples ran per day' => xxxx
+    'MS run protocol' => xxxx
+    'Volume Injected' => xxxx
+    'location of data' => xxxx
+    'status of Conversion' => xxxx
+    'Date finishing conversion' => xxxx
+    'name of raw files' => xxxx
+    'location of raw files' => xxxx
+    'name of mzXML' => xxxx
+    'location of mzXML' => xxxx
+    'person for MS analysis' => xxxx
+    'date finishing alignment' => xxxx
+    'location of alignment files' => xxxx
+    'person for data analysis' => xxxx
+    'peplist peptide peaks file location' => xxxx
 
 # Attributes 
-'Sample Setup Order'  # same
+'Sample Setup Order'  # 
 'MS Sample Run Number' # same
 'Name of Investigators' # same
 'PARAM:time of sample collection ' # param
