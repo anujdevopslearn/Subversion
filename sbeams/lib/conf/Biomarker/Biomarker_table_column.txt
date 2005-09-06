@@ -18,16 +18,16 @@ BM_biosource	1	biosource_id	Experiment ID	int	4	0	N		Y			N				N	N	N			pkDEFAULT
 BM_biosource	2	biosource_name	Experiment Name	varchar	36	0	N		N			Y	text	36		Y	Y	Y	Name of this Biosource		
 BM_biosource	3	age	Age	int	4	0	Y		N			N	text	12		Y	Y	N	Age of organism from which sample was collected		
 BM_biosource	4	age_units	Age Units	char	5	0	Y		N			N	optionlist			Y	Y	N	Units for age value	“Select 1, 'years',2, 'months',3, 'weeks',4, 'days',5, 'hours' FROM $TB_CONTACT”	
-BM_biosource	5	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	genus/species of organism 	“SELECT organism_id, organism_name FROM $TB_ORGANISM WHERE record_status != 'D' ORDER BY sort_order,organism_name”	
+BM_biosource	5	organism_id	Organism	int	4	0	N		N	BL_organism	organism_id	Y	optionlist			Y	Y	N	genus/species of organism 	“SELECT organism_id, organism_name FROM $TB_ORGANISM WHERE record_status != 'D' ORDER BY sort_order,organism_name”	
 BM_biosource	6	organization_id	Organization	int	4	0	Y		N	organization	organization_id	N	optionlist			Y	Y	N	Organization which provided the samples (if any)	“SELECT organization_id, organization FROM $TB_ORGANIZATION WHERE record_status != 'D' ORDER BY sort_order, organization”	
 BM_biosource	7	external_id	External ID	varchar	64	0	Y		N			N	text	36		Y	Y	N	sample identifier (if any) from external organization		
 BM_biosource	8	gender	Gender	varchar	16	0	Y		N			N	text	12		Y	Y	N	Gender of patient providing sample		
 BM_biosource	9	investigators	Investigators	varchar	255	0	Y		N			N	text	48		Y	Y	N	Investigators providing samples		
 BM_biosource	10	patient_id	Patient ID	varchar	64	0	Y		N			N	text	36		Y	Y	N	 patient identifier (if any) from external organization		
 BM_biosource	11	biosource_description	Biosource Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Description of Biosource		pkDEFAULT
-BM_biosource	12	experiment_id	Experiment	int	4	0	N		N	experiment	experiment_id	Y	optionlist			Y	Y	N	Experiment with which this biosource is associated	“SELECT experiment_id, experiment_name FROM $TBBM_EXPERIMENT WHERE record_status != 'D' ORDER BY experiment_name ASC”	
-BM_biosource	13	tissue_type_id	Tissue Type	int	4	0	N		N	tissue_type	tissue_type_id	N	optionlist			Y	Y	N	Tissue type of this biosource	“SELECT tissue_type_id, tissue_type_name FROM $TBAT_TISSUE_TYPE WHERE record_status != 'D' ORDER BY tissue_type_name ASC”	
-BM_biosource	14	biosource_group_id	Biosource Group	int	4	0	Y		N	bio_group	bio_group_id	N	optionlist			Y	Y	N	Biosource group for this biosource	“SELECT bio_group_id, bio_group_name FROM $TBBM_BIO_GROUP WHERE record_status != 'D' ORDER BY bio_group_name ASC”	
+BM_biosource	12	experiment_id	Experiment	int	4	0	N		N	BM_experiment	experiment_id	Y	optionlist			Y	Y	N	Experiment with which this biosource is associated	“SELECT experiment_id, experiment_name FROM $TBBM_EXPERIMENT WHERE record_status != 'D' ORDER BY experiment_name ASC”	
+BM_biosource	13	tissue_type_id	Tissue Type	int	4	0	N		N	AT_tissue_type	tissue_type_id	N	optionlist			Y	Y	N	Tissue type of this biosource	“SELECT tissue_type_id, tissue_type_name FROM $TBAT_TISSUE_TYPE WHERE record_status != 'D' ORDER BY tissue_type_name ASC”	
+BM_biosource	14	biosource_group_id	Biosource Group	int	4	0	Y		N	BM_bio_group	bio_group_id	N	optionlist			Y	Y	N	Biosource group for this biosource	“SELECT bio_group_id, bio_group_name FROM $TBBM_BIO_GROUP WHERE record_status != 'D' ORDER BY bio_group_name ASC”	
 BM_biosource	15	source_type	Source Type	varchar	64	0	Y		N			N	text	36		Y	Y	N	Type of source material, e.g. serum, plasma, etc.		
 BM_biosource	16	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
 BM_biosource	17	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
@@ -37,15 +37,15 @@ BM_biosource	20	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_grou
 BM_biosource	21	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
 BM_biosample	1	biosample_id	Biosample ID	int	4	0	N		Y			N				N	N	N			pkDEFAULT
 BM_biosample	2	biosample_name	Biosample Name	varchar	36	0	N		N			Y	text	36		Y	Y	Y	Name of this Biosample		
-BM_biosample	3	biosource_id	Biosource_id	int	4	0	N		N	biosource	biosource_id	Y	optionlist			Y	Y	N	ID of biosource	“SELECT biosource_id, biosource_name FROM $TBBM_BIOSOURCE WHERE record_status != 'D' ORDER BY biosource_name ASC”	
-BM_biosample	4	parent_biosample_id	Parent Biosample	int	4	0	Y		N	biosample	biosample_id	N	optionlist			Y	Y	N	Parent biosample if this is a derived sample	“SELECT biosample_id,_biosample_name FROM $TBBM_BIOSAMPLE WHERE record_status != 'D' ORDER BY biosample_name ASC”	
+BM_biosample	3	biosource_id	Biosource_id	int	4	0	N		N	BM_biosource	biosource_id	Y	optionlist			Y	Y	N	ID of biosource	“SELECT biosource_id, biosource_name FROM $TBBM_BIOSOURCE WHERE record_status != 'D' ORDER BY biosource_name ASC”	
+BM_biosample	4	parent_biosample_id	Parent Biosample	int	4	0	Y		N	BM_biosample	biosample_id	N	optionlist			Y	Y	N	Parent biosample if this is a derived sample	“SELECT biosample_id,_biosample_name FROM $TBBM_BIOSAMPLE WHERE record_status != 'D' ORDER BY biosample_name ASC”	
 BM_biosample	5	num_ancestors	Number of Ancestors	int	4	0	Y		N			N	 			N	N	N	Number of ancestors of this biosample to get to root biosample		
-BM_biosample	6	experiment_id	Experiment	int	4	0	Y		N	experiment	experiment_id	N	optionlist			Y	Y	N	Experiment with which this sample is associated	“SELECT experiment_id, experiment_name FROM $TBBM_EXPERIMENT WHERE record_status != 'D' ORDER BY experiment_name ASC”	
-BM_biosample	7	treatment_id	Treatment_id	int	4	0	Y		N	treatment	treatment_id	N	optionlist			Y	Y	N	Treatment which yielded this sample	“SELECT treatment_id, treatment_name FROM $TBBM_TREATMENT WHERE record_status != 'D' ORDER BY treatment_name ASC”	
+BM_biosample	6	experiment_id	Experiment	int	4	0	Y		N	BM_experiment	experiment_id	N	optionlist			Y	Y	N	Experiment with which this sample is associated	“SELECT experiment_id, experiment_name FROM $TBBM_EXPERIMENT WHERE record_status != 'D' ORDER BY experiment_name ASC”	
+BM_biosample	7	treatment_id	Treatment_id	int	4	0	Y		N	BM_treatment	treatment_id	N	optionlist			Y	Y	N	Treatment which yielded this sample	“SELECT treatment_id, treatment_name FROM $TBBM_TREATMENT WHERE record_status != 'D' ORDER BY treatment_name ASC”	
 BM_biosample	8	original_volumne	Original Volume	float	4	0	Y		N			N	text	12		Y	Y	N	Original volume of this sample		
 BM_biosample	9	storage_location_id	Storage Location	int	4	0	Y		N	storage_location	storage_location_id	N	optionlist			Y	Y	N	Location where this sample is stored	“SELECT location_id, location_name FROM $TBBM_STORAGE_LOCATION WHERE record_status != 'D' ORDER BY location_name ASC”	
-BM_biosample	10	well_id	Well ID	varchar	16	0	Y		N			N	text	12		Y	Y	N	Well coordinates for this sample on the microtiter plate		
-BM_biosample	11	biosample_group_id	Biosample Group	int	4	0	Y		N	bio_group	bio_group_id	N	optionlist			Y	Y	N	Biosource group for this biosource	“SELECT bio_group_id, bio_group_name FROM $TBBM_BIO_GROUP WHERE record_status != 'D' ORDER BY bio_group_name ASC”	
+BM_biosample	10	well_id	Well ID	varchar	16	0	Y		N	BM_storage_location		N	text	12		Y	Y	N	Well coordinates for this sample on the microtiter plate		
+BM_biosample	11	biosample_group_id	Biosample Group	int	4	0	Y		N	BM_bio_group	bio_group_id	N	optionlist			Y	Y	N	Biosource group for this biosource	“SELECT bio_group_id, bio_group_name FROM $TBBM_BIO_GROUP WHERE record_status != 'D' ORDER BY bio_group_name ASC”	
 BM_biosample	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
 BM_biosample	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
 BM_biosample	14	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
@@ -63,7 +63,7 @@ BM_disease_type	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_gr
 BM_disease_type	9	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
 BM_disease	1	disease_id	Disease ID	int	4	0	N		Y			N				N	N	N			
 BM_disease	2	disease_name	Disease Name	varchar 	36	0	N		N			Y	text	36		Y	Y	Y	Name of disease		
-BM_disease	3	disease_type_id	Disease Type	int 	4	0	N		N	disease_type	disease_type_id	Y	optionlist			Y	Y	N	Type of disease (e.g. Cancer)	“SELECT disease_type_id, disease_type FROM $TBBM_DISEASE_TYPE WHERE record_status != 'D' ORDER BY disease_type ASC”	
+BM_disease	3	disease_type_id	Disease Type	int 	4	0	N		N	BM_disease_type	disease_type_id	Y	optionlist			Y	Y	N	Type of disease (e.g. Cancer)	“SELECT disease_type_id, disease_type FROM $TBBM_DISEASE_TYPE WHERE record_status != 'D' ORDER BY disease_type ASC”	
 BM_disease	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
 BM_disease	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
 BM_disease	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
@@ -82,7 +82,7 @@ BM_attribute_type	9	record_status	Record Status	char	1	0	N	N	N			N				N	N	N
 BM_attribute	1	attribute_id	Attribute ID	int	4	0	N		Y			N				N	N	N			pkDEFAULT
 BM_attribute	2	attribute_name	Attribute Name	varchar	36	0	N		N			Y	text	36		Y	Y	Y	Name of attribute		
 BM_attribute	3	attribute_description	Attribure Description	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Description of attribute		
-BM_attribute	4	attribute_type_id	Attribute Type	int	4	0	N		N	attribute_type	attribute_type_id	N	optionlist			Y	Y	N	Type of attribute	SELECT attribute_type_id, attribute_type FROM $TBBM_ATTRIBUTE_TYPE WHERE record_status != 'D' ORDER BY disease_type ASC”	
+BM_attribute	4	attribute_type_id	Attribute Type	int	4	0	N		N	BM_attribute_type	attribute_type_id	N	optionlist			Y	Y	N	Type of attribute	SELECT attribute_type_id, attribute_type FROM $TBBM_ATTRIBUTE_TYPE WHERE record_status != 'D' ORDER BY disease_type ASC”	
 BM_attribute	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
 BM_attribute	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
 BM_attribute	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
@@ -90,16 +90,16 @@ BM_attribute	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_i
 BM_attribute	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N	N			
 BM_attribute	10	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
 BM_biosample_attribute	1	biosample_attribute_id	Biosample Attribute ID	int	4	0	N		Y			N				N	N	N			pkDEFAULT
-BM_biosample_attribute	2	biosample_id	Biosample ID	int	4	0	N		N	biosample	biosample_id	Y	optionlist			Y	Y	Y	Biosource to which attribute belongs	“SELECT biosample_id, biosample_name FROM $TBBM_BIOSAMPLE WHERE record_status != 'D' ORDER BY biosample_name ASC”	
-BM_biosample_attribute	3	attribute_id	Attribute ID	int	4	0	N		N	attribute	attribute_id	Y	optionlist			Y	Y	Y	Attribute which belongs to specified Biosource	SELECT attribute_type_id, attribute_name FROM $TBBM_ATTRIBUTE WHERE record_status != 'D' ORDER BY attribute_name ASC”	
+BM_biosample_attribute	2	biosample_id	Biosample ID	int	4	0	N		N	BM_biosample	biosample_id	Y	optionlist			Y	Y	Y	Biosource to which attribute belongs	“SELECT biosample_id, biosample_name FROM $TBBM_BIOSAMPLE WHERE record_status != 'D' ORDER BY biosample_name ASC”	
+BM_biosample_attribute	3	attribute_id	Attribute ID	int	4	0	N		N	BM_attribute	attribute_id	Y	optionlist			Y	Y	Y	Attribute which belongs to specified Biosource	SELECT attribute_type_id, attribute_name FROM $TBBM_ATTRIBUTE WHERE record_status != 'D' ORDER BY attribute_name ASC”	
 BM_biosample_attribute	4	attribute_value	Attribute Value	varchar	64	0	Y		N			N	text	36		Y	Y	N	Value of attribute		
 BM_biosource_attribute	1	biosource_attribute_id	Biosource Attribute ID	int	4	0	N		Y			N				N	N	N			pkDEFAULT
-BM_biosource_attribute	2	biosource_id	Biosource ID	int	4	0	N		N	biosource	biosource_id	Y	optionlist			Y	Y	Y	Biosource to which attribute belongs	“SELECT biosource_id, biosource_name FROM $TBBM_BIOSOURCE WHERE record_status != 'D' ORDER BY biosource_name ASC”	
-BM_biosource_attribute	3	attribute_id	Attribute ID	int	4	0	N		N	attribute	attribute_id	Y	optionlist			Y	Y	Y	Attribute which belongs to specified Biosource	SELECT attribute_type_id, attribute_name FROM $TBBM_ATTRIBUTE WHERE record_status != 'D' ORDER BY attribute_name ASC”	
+BM_biosource_attribute	2	biosource_id	Biosource ID	int	4	0	N		N	BM_biosource	biosource_id	Y	optionlist			Y	Y	Y	Biosource to which attribute belongs	“SELECT biosource_id, biosource_name FROM $TBBM_BIOSOURCE WHERE record_status != 'D' ORDER BY biosource_name ASC”	
+BM_biosource_attribute	3	attribute_id	Attribute ID	int	4	0	N		N	BM_attribute	attribute_id	Y	optionlist			Y	Y	Y	Attribute which belongs to specified Biosource	SELECT attribute_type_id, attribute_name FROM $TBBM_ATTRIBUTE WHERE record_status != 'D' ORDER BY attribute_name ASC”	
 BM_biosource_attribute	4	attribute_value	Attribute Value	varchar	64	0	Y		N			N	text	36		Y	Y	N	Value of attribute		
 BM_biosource_disease	1	biosource_disease_id	Experiment ID	int	4	0	N		N			N				Y	Y	N			pkDEFAULT
-BM_biosource_disease	2	biosource_id	Biosource ID	int	4	0	N		N	biosource	biosource_id	Y	optionlist			Y	Y	Y	Biosource to which disease attribute belongs	“SELECT biosource_id, biosource_name FROM $TBBM_BIOSOURCE WHERE record_status != 'D' ORDER BY biosource_name ASC”	
-BM_biosource_disease	3	disease_id	Disease ID	int	4	0	N		N	disease	disease_id	Y	optionlist			Y	Y	Y	Disease attribute which belongs to specified Biosource	SELECT disease_id, disease_name FROM $TBBM_DISEASE WHERE record_status != 'D' ORDER BY disease_name ASC”	
+BM_biosource_disease	2	biosource_id	Biosource ID	int	4	0	N		N	BM_biosource	biosource_id	Y	optionlist			Y	Y	Y	Biosource to which disease attribute belongs	“SELECT biosource_id, biosource_name FROM $TBBM_BIOSOURCE WHERE record_status != 'D' ORDER BY biosource_name ASC”	
+BM_biosource_disease	3	disease_id	Disease ID	int	4	0	N		N	BM_disease	disease_id	Y	optionlist			Y	Y	Y	Disease attribute which belongs to specified Biosource	SELECT disease_id, disease_name FROM $TBBM_DISEASE WHERE record_status != 'D' ORDER BY disease_name ASC”	
 BM_biosource_disease	4	disease_stage	Disease Stage	varchar	64	0	Y		N			N	text	36		Y	Y	N	Stage of disease in Biosource		
 BM_storage_location	1	storage_location_id	Storage Location ID	int	4	0	N		Y			N				N	N	N			pkDEFAULT
 BM_storage_location	2	location_name	Location Name	varchar	36	0	N		N			Y	text	36		Y	Y	Y	Location name (e.g. -20 freezer in room 404)		
@@ -112,7 +112,7 @@ BM_storage_location	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	wor
 BM_storage_location	9	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
 BM_analysis_file	1	analysis_file_id	Analysis File ID	int	4	0	N		Y			N				N	N	N			pkDEFAULT
 BM_analysis_file	2	file_name	File Name	varchar	64	0	N		N			Y	text	36		Y	Y	Y	Name of file being stored		
-BM_analysis_file	3	analysis_id	Analysis	int	4	0	N		N	data_analysis	analysis_id	Y	optionlist			Y	Y	Y	Name of analysis that generated this file	“SELECT data_analysis_id, analysis_name FROM $TBBM_DATA_ANALYSIS WHERE record_status != 'D' ORDER BY analysis_name ASC”	
+BM_analysis_file	3	analysis_id	Analysis	int	4	0	N		N	BM_data_analysis	analysis_id	Y	optionlist			Y	Y	Y	Name of analysis that generated this file	“SELECT data_analysis_id, analysis_name FROM $TBBM_DATA_ANALYSIS WHERE record_status != 'D' ORDER BY analysis_name ASC”	
 BM_analysis_file	4	file_path	File Path	varchar	255	0	N		N			Y	text	48		Y	Y	Y	Path to file on specified server		
 BM_analysis_file	5	file_type	File Type	varchar	36	0	Y		N			N	text	12		Y	Y	N	Type of file		
 BM_analysis_file	6	server_name	Server Name	varchar	64	0	Y		N			N	text	36		Y	Y	Y	Computer on which file resides		
@@ -135,7 +135,7 @@ BM_treatment_type	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_
 BM_treatment_type	9	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
 BM_treatment	1	treatment_id	Treatment ID	int	4	0	N		Y			N				N	N	N			pkDEFAULT
 BM_treatment	2	treatment_name	Treatment Name	varchar	36	0	N		N			Y	text	36		Y	Y	Y	Name of treatment		
-BM_treatment	3	treatment_type_id	Treatment Type	int	4	0	N		N	treatment_type	treatment_type_id	Y	optionlist			Y	Y	N	Treatment type of this treatment	“SELECT treatment_type_id, treatment_type_name FROM $TBBM_TREATMENT_TYPE where record_status ~= 'D' ORDER BY treatment type_name (ASC)”	
+BM_treatment	3	treatment_type_id	Treatment Type	int	4	0	N		N	BM_treatment_type	treatment_type_id	Y	optionlist			Y	Y	N	Treatment type of this treatment	“SELECT treatment_type_id, treatment_type_name FROM $TBBM_TREATMENT_TYPE where record_status ~= 'D' ORDER BY treatment type_name (ASC)”	
 BM_treatment	4	treatment_description	Treatment Description	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Description of treatment		
 BM_treatment	5	input_volume	Input Volume	int	4	0	Y		N			N				Y	Y	N	Volume used for treament (prep)		
 BM_treatment	6	number_fractions	Number Fractions	int	4	0	Y		N			N				Y	Y	N	Number of fractions generated		
@@ -167,7 +167,7 @@ BM_data_analysis	5	program_parameters	Program Parameters	varchar	255	0	N		N			Y	
 BM_data_analysis	6	program_version	Program Version	varchar	36	0	Y		N			N	text	12		Y	Y	N	Version of program used in the analysis		
 BM_data_analysis	7	analysis_type	Analysis Type	varchar	36	0	Y		N			N	text	12		Y	Y	N	Type of analysis		
 BM_data_analysis	8	analysis_date	Analysis Date	varchar	36	0	Y	CURRENT_TIMESTAMP	N			N	text	12		Y	Y	N	Date of analysis		
-BM_data_analysis	9	experiment_id	Experiment	int	4	0	N		N	experiment	experiment_id	Y	optionlist			Y	Y	N	Experiment with which this analysis is associated	“SELECT experiment_id, experiment_name FROM $TBBM_EXPERIMENT WHERE record_status != 'D' ORDER BY experiment_name ASC”	
+BM_data_analysis	9	experiment_id	Experiment	int	4	0	N		N	BM_experiment	experiment_id	Y	optionlist			Y	Y	N	Experiment with which this analysis is associated	“SELECT experiment_id, experiment_name FROM $TBBM_EXPERIMENT WHERE record_status != 'D' ORDER BY experiment_name ASC”	
 BM_data_analysis	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
 BM_data_analysis	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
 BM_data_analysis	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
@@ -178,12 +178,12 @@ BM_ms_run	1	ms_run_id	MS Run ID	int	4	0	N		Y			N				N	N	N			pkDEFAULT
 BM_ms_run	2	ms_run_name	MS Run Name	varchar	36	0	N		N			Y	text	36		Y	Y	Y	Name of MS (or LC/MS) run		
 BM_ms_run	3	ms_run_description	MS Run Description	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Description of MS run		
 BM_ms_run	4	ms_run_parameters	Run Parameters	varchar	255	0	Y		N			N	text	48		Y	Y	N	Parameters/Settings for LC/MS run		
-BM_ms_run	5	ms_instrument	MS Instrument	varchar	36	0	Y		N	instrument	instrument_id	N	optionlist			Y	Y	N	Mass Spectrometry Instrument	“SELECT instrument_id, instrument FROM $TBPR_INSTRUMENT WHERE record_status != 'D' AND instrument_type_id IN (1,2,3,4)”	
+BM_ms_run	5	ms_instrument	MS Instrument	varchar	36	0	Y		N	PR_instrument	instrument_id	N	optionlist			Y	Y	N	Mass Spectrometry Instrument	“SELECT instrument_id, instrument FROM $TBPR_INSTRUMENT WHERE record_status != 'D' AND instrument_type_id IN (1,2,3,4)”	
 BM_ms_run	6	injection_volume	Injection Volume (ul)	real	4	0	Y		N			N	text	12		Y	Y	N	Volume of samples injected		
 BM_ms_run	7	ms_protocol	MS Protocol	int	4	0	Y		N	protocol	protocol_id	N	optionlist			Y	Y	N	Protocol used for Mass Spec run	“SELECT protocol_id, protocol_name FROM $TB_PROTOCOL WHERE record_status != 'D' AND protocol_type_id IN ( 1 )”	
 BM_ms_run	8	lc_run_description	LC Run Description	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Description of LC run		
-BM_ms_run	9	lc_instrument	LC Instrument	int	4	0	Y		N	instrument	instrument_id	N	optionlist			Y	Y	N	Instrument used for LC run	“SELECT instrument_id, instrument FROM $TBPR_INSTRUMENT WHERE record_status != 'D' AND instrument_type_id IN (5)”	
-BM_ms_run	10	lc_gradient_program	LC Gradient	int	4	0	Y		N	gradient_program	gradient_program_id	N	optionlist			Y	Y	N	Gradient program used for liquid chromatography	“SELECT gradient_program_id, gradient_program_name FROM $TBPR_GRADIENT_PROGRAM WHERE record_status != 'D' AND protocol_type_id IN ( 1 )”	
+BM_ms_run	9	lc_instrument	LC Instrument	int	4	0	Y		N	PR_instrument	instrument_id	N	optionlist			Y	Y	N	Instrument used for LC run	“SELECT instrument_id, instrument FROM $TBPR_INSTRUMENT WHERE record_status != 'D' AND instrument_type_id IN (5)”	
+BM_ms_run	10	lc_gradient_program	LC Gradient	int	4	0	Y		N	PR_gradient_program	gradient_program_id	N	optionlist			Y	Y	N	Gradient program used for liquid chromatography	“SELECT gradient_program_id, gradient_program_name FROM $TBPR_GRADIENT_PROGRAM WHERE record_status != 'D' AND protocol_type_id IN ( 1 )”	
 BM_ms_run	11	ms_run_date	MS Run Date	varchar	36	0	Y	CURRENT_TIMESTAMP	N			N	text	12		Y	Y	N	Date of analysis		
 BM_ms_run	12	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
 BM_ms_run	13	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
@@ -192,5 +192,5 @@ BM_ms_run	15	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	
 BM_ms_run	16	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	N				N	N	N			
 BM_ms_run	17	record_status	Record Status	char	1	0	N	N	N			N				N	N	N			
 BM_ms_run_sample	1	ms_run_sample_id	MS Run Sample ID	int	4	0	N		Y			N				N	N	N			pkDEFAULT
-BM_ms_run_sample	2	biosample_id	Biosample	int	4	0	N		N	biosample	biosample_id	Y	optionlist			Y	Y	Y	Biosource to which attribute belongs	“SELECT biosample_id, biosample_name FROM $TBBM_BIOSAMPLE WHERE record_status != 'D' ORDER BY biosample_name ASC”	
-BM_ms_run_sample	3	ms_run_id	MS Run	int	4	0	N		N	ms_run	ms_run_id	Y	optionlist			Y	Y	Y	Attribute which belongs to specified Biosource	SELECT ms_run_id, ms_run_name FROM $TBBM_MS_RUN WHERE record_status != 'D' ORDER BY ms_run_name ASC”	
+BM_ms_run_sample	2	biosample_id	Biosample	int	4	0	N		N	BM_biosample	biosample_id	Y	optionlist			Y	Y	Y	Biosource to which attribute belongs	“SELECT biosample_id, biosample_name FROM $TBBM_BIOSAMPLE WHERE record_status != 'D' ORDER BY biosample_name ASC”	
+BM_ms_run_sample	3	ms_run_id	MS Run	int	4	0	N		N	BM_ms_run	ms_run_id	Y	optionlist			Y	Y	Y	Attribute which belongs to specified Biosource	SELECT ms_run_id, ms_run_name FROM $TBBM_MS_RUN WHERE record_status != 'D' ORDER BY ms_run_name ASC”	
