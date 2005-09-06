@@ -9,8 +9,11 @@ BM_biosource_attribute	Biosource_attribute	Biomarker	NO	$TBBM_BIOSOURCE_ATTRIBUT
 BM_biosample_attribute	Biosample_attribute	Biomarker	NO	$TBBM_BIOSAMPLE_ATTRIBUTE	biosample_attribute_id		ManageTable.cgi?TABLE_NAME=BM_biosample_attribute	BM_biosample_attribute	
 BM_biosource_disease	Biosource_disease	Biomarker	NO	$TBBM_BIOSOURCE_DISEASE	biosource_disease_id		ManageTable.cgi?TABLE_NAME=BM_biosource_disease	BM_biosource_disease	
 BM_storage_location	Storage_location	Biomarker	YES	$TBBM_STORAGE_LOCATION	storage_location_id		ManageTable.cgi?TABLE_NAME=BM_storage_location	BM_storage_location	
-BM_analysis_file	Analysis_file	Biomarker	YES	$TBBM_ANALYSIS_FILE	analysis_file_id		ManageTable.cgi?TABLE_NAME=BM_analysis_file	BM_analysis_file	
 BM_experiment	Experiment	Biomarker	YES	$TBBM_EXPERIMENT	experiment_id		ManageTable.cgi?TABLE_NAME=BM_experiment	BM_experiment	
 BM_treatment_type	Treatment_type	Biomarker	YES	$TBBM_TREATMENT_TYPE	treatment_type_id		ManageTable.cgi?TABLE_NAME=BM_treatment_type	BM_treatment_type	
 BM_treatment	Treatment	Biomarker	YES	$TBBM_TREATMENT	treatment_id		ManageTable.cgi?TABLE_NAME=BM_treatment	BM_treatment	
 BM_bio_group	Group	Biomarker	YES	$TBBM_BIO_GROUP	bio_group_id		ManageTable.cgi?TABLE_NAME=BM_bio_group	BM_bio_group	
+BM_ms_run	Group	Biomarker	YES	$TBBM_MS_RUN	ms_run_id		ManageTable.cgi?TABLE_NAME=BM_ms_run	BM_ms_run	
+BM_ms_run_sample	Group	Biomarker	YES	$TBBM_MS_RUN_SAMPLE	ms_run_sample_id		ManageTable.cgi?TABLE_NAME=BM_ms_run_sample	BM_ms_run_sample	
+BM_analysis_file	Analysis_file	Biomarker	YES	$TBBM_ANALYSIS_FILE	analysis_file_id		ManageTable.cgi?TABLE_NAME=BM_analysis_file	BM_analysis_file	
+BM_data_analysis	Group	Biomarker	YES	$TBBM_DATA_ANALYSIS	data_analysis_id		ManageTable.cgi?TABLE_NAME=BM_data_analysis	BM_data_analysis	
