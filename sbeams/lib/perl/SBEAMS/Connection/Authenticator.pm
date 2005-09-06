@@ -1177,9 +1177,9 @@ sub checkLogin {
     unless (exists $query_result{$user}) {
       if ($more_helpful_message) {
         push(@ERRORS, "This username is not registered in the system");
-        $log->debug( "username $user is not registered in the system");
+        $log->error( "username $user is not registered in the system");
       } else {
-	push(@ERRORS, "Login Incorrect");
+      	push(@ERRORS, "Login Incorrect");
       }
       $success = 0;
       $failed = 1;
@@ -1323,7 +1323,6 @@ sub getContact_id {
 	 WHERE username = '$username'
 	   AND record_status != 'D'
     ~;
-    $log->debug( $sql_query );
 
     my ($contact_id) = $self->selectOneColumn($sql_query);
 
