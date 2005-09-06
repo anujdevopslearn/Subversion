@@ -2,8 +2,7 @@ package SBEAMS::Biomarker;
 
 ###############################################################################
 # Program     : SBEAMS::Biomarker
-# Author      : Eric Deutsch <edeutsch@systemsbiology.org>
-# $$
+# $Id$
 #
 # Description : Perl Module to handle all SBEAMS - Biomarker specific items.
 #
@@ -17,6 +16,7 @@ use CGI::Carp qw(fatalsToBrowser croak);
 use SBEAMS::Biomarker::DBInterface;
 use SBEAMS::Biomarker::HTMLPrinter;
 use SBEAMS::Biomarker::TableInfo;
+use SBEAMS::Biomarker::Tables;
 use SBEAMS::Biomarker::Settings;
 
 @ISA = qw(SBEAMS::Biomarker::DBInterface
@@ -31,42 +31,59 @@ use SBEAMS::Biomarker::Settings;
 $VERSION = '0.02';
 
 
-###############################################################################
+#+
 # Constructor
-###############################################################################
+#-
 sub new {
-    my $this = shift;
-    my $class = ref($this) || $this;
-    my $self = {};
-    bless $self, $class;
-    return($self);
+    my $class = shift;
+    my $this = { @_ };
+    bless $this, $class;
+    return($this);
 }
 
-
-###############################################################################
-# Receive the main SBEAMS object
-###############################################################################
+#+
+# Routine to cache sbeams object
+#-
 sub setSBEAMS {
-    my $self = shift;
-    $sbeams = shift;
-    return($sbeams);
+  my $self = shift;
+  $sbeams = shift;
 }
 
-
-###############################################################################
-# Provide the main SBEAMS object
-###############################################################################
+#+
+# Routine to return cached sbeams object
+#-
 sub getSBEAMS {
-    my $self = shift;
-    return($sbeams);
+  my $self = shift;
+  return($sbeams);
 }
 
+#+
+# Routine to check existence and writability of an experiment
+# argument  experiment name (req) 
+# returns   boolean, whether expt exists and project is writable
+#-
+sub checkExperiment {
+  my $this = shift;
+  my $expt = shift || die 'Missing required experiment parameter';
 
-###############################################################################
+  my $sbeams = $this->getSBEAMS();
+
+  my $sql =<<"  END";
+  SELECT experiment_id, project_id
+  FROM $TBBM_EXPERIMENT
+  WHERE experiment_name = '$expt'
+  END
+
+  $sql = $sbeams->evalSQL( $sql );
+  my @row = $sbeams->selectrow_array( $sql );
+
+  # project doesn't exist, test fails
+  return undef unless $row[0];
+
+  # Is user authorized to write this project?
+  return $sbeams->isProjectWritable( project_id => $row[1] );
+
+}
+
 
 1;
-
-__END__
-###############################################################################
-###############################################################################
-###############################################################################
