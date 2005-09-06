@@ -273,7 +273,7 @@ If this doesn't work.  Do not proceed, debug first.
 
 ########################
 Test Data Background
-- Set 1) Set of 8 Hu6800 arrays to demonstrate loading externally-generated data: External_test_data.tar.gz
+- Set 1) Set of 12 HG-U133A arrays to demonstrate loading externally-generated data: External_test_data.tar.gz
 - Set 2) 4 arrays on (HG-133 Plus 2) to be loaded as internally-generated data. Experiments with C4-2 and LNCaP human prostate cancer cell lines.  File: Affy_test_data.tar.gz
 ########################
 - Download the data sets from
@@ -290,21 +290,19 @@ tar -xvf External_test_data.tar
 gunzip Affy_test_data.tar.gz
 tar -xvf Affy_test_data.tar
 
+-Move the annotation file to annotation directory
+mv External_test_data/HG-U133A_annot.csv $SBEAMS/var/Microarray/Affy_data/annotation/
+mv Affy_test_data/HG-U133_Plus_2_annot.csv $SBEAMS/var/Microarray/Affy_data/annotation/
  
 - Make the folders to hold the CEL files
 mkdir $SBEAMS/var/Microarray/Affy_data/probe_data/external/External_test
 mkdir $SBEAMS/var/Microarray/Affy_data/probe_data/200404
 
-- Move the the CEL files And info file to the test folder
-mv LG*.CEL $SBEAMS/var/Microarray/Affy_data/probe_data/external/External_test/
-mv External_test_data_master.txt $SBEAMS/var/Microarray/Affy_data/probe_data/external/External_test
+- Move the the CEL files and info file to the test folder
+mv External_test_data/* $SBEAMS/var/Microarray/Affy_data/probe_data/external/External_test/
 
 -Move All the files CEL, XML, RPT files from the Affy_test_data to the data folder
-mv ./20040421_* $SBEAMS/var/Microarray/Affy_data/probe_data/200404/
-
--Move the annotation file to annotation directory
-mv Hu6800_annot.csv $SBEAMS/var/Microarray/Affy_data/annotation/
-mv HG-U133_Plus_2_annot.csv $SBEAMS/var/Microarray/Affy_data/annotation/
+mv Affy_test_data/* $SBEAMS/var/Microarray/Affy_data/probe_data/200404/
 
 ########################
 (logged in as your user account)
@@ -338,10 +336,10 @@ Add a Project:
 - Under "My Projects" tab, click [Add A New Project].
   Required fields are in red.  If you don't have a budget number, enter NA.
 - Make a project using the following information
-   Project Name: "Stegmaier Cell Types"
-   Project Tag:  "KSCells"
+   Project Name: "Primary APL Samples"
+   Project Tag:  "Primary APL"
    PI Contact:	 "Stegmaier, Kimberley"
-   Description:  "Human cell type arrays from K. Stegmaier paper."
+   Description:  "Human cell type arrays from Stegmaier 2004 paper."
    Budget:	 "NA"
 - Fill in the appropriate information and click [INSERT]
 
@@ -361,9 +359,9 @@ Add An Array Type
 - At the bottom of the page, on the Navigation bar click on [Slide Type] button
 - Click On [Add Slide Type]
 - Fill in the Data
-   Name: "Hu6800"
+   Name: "HG-U133A"
    Organism: "Human"
-   Comment: "Affymetrix Human Genome 6800 Array"
+   Comment: "Affymetrix Human Genome U133A Array"
 - Click Insert
 
 - Make a second array 
@@ -451,7 +449,7 @@ test data set was downloaded from Affymetrix.
 
 cd $SBEAMS/lib/scripts/Microarray
 ./load_affy_annotation_files.pl --run_mode update \
---file_name $SBEAMS/var/Microarray/Affy_data/annotation/Hu6800_annot.csv
+--file_name $SBEAMS/var/Microarray/Affy_data/annotation/HG-U133A_annot.csv
 
 It could take about 15-30 minutes to upload the data...
 
