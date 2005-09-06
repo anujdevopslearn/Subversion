@@ -651,6 +651,37 @@ sub getDbTableName {
   return eval "\"$dbname\"";
 } # End getDbTableName
 
+###############################################################################
+# selectrow_array
+#
+# Thinly wrapped dbh->selectrow_array call
+###############################################################################
+sub selectrow_array {
+  my $self = shift || croak("parameter self not passed");
+  my $sql = shift || croak("parameter sql not passed");
+
+  #### Get the database handle
+  $dbh = $self->getDBHandle();
+
+  #### Convert the SQL dialect if necessary
+  $sql = $self->translateSQL( sql => $sql );
+
+  my @row;
+
+  eval {
+    @row = $dbh->selectrow_array( $sql );
+  };
+  if ( $@ ) {
+    my $msg =<<"    END";
+    Error executing SQL: $@
+    SQL causing error: $sql
+    END
+    $log->error( $msg );
+    die $msg;
+  }
+  return @row;
+}
+
 
 ###############################################################################
 # SelectOneColumn
