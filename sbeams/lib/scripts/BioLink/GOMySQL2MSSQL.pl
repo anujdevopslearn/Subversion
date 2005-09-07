@@ -71,9 +71,6 @@ sub main {
   die("ERROR: Unable to open output file $output_root.DROP.mssql")
     unless (open(OUTFILEDROP,">$output_root.DROP.mssql"));
 
-#  die("ERROR: Unable to open output file $output_root.DROP.mssql")
-#    unless (open(OUTFILEINSERT,">$output_root.INSERT.mssql"));
-
   die("ERROR: Unable to open output file $output_root.DROP.mssql")
     unless (open(OUTFILEBCP,">$output_root.BCP.mssql"));
 
@@ -81,12 +78,6 @@ sub main {
   my $within_CREATE_statement = 0;
   my $delay_buffer = '';
   my $buffer = '';
-
-#### The very long dump lines get truncated with regular reads
-#  read(INFILE,$buffer,36419599);
-#  my @lines = split(/\n/,$buffer);
-#  foreach $line (@lines) {
-#    $line .= "\n";
 
   while ($line=<INFILE>) {
 
@@ -146,41 +137,6 @@ sub main {
         $delay_buffer = $line;
         next;
       }
-    }
-
-    if (0 && $line =~ /\s*INSERT INTO/) {
-      if ($line =~ /(INSERT INTO `\w+` VALUES) (\(.+?\))[,;]/) {
-	my $insert_start = $1;
-	my $insert_part2 = $2;
-        $insert_start =~ s/`//g;
-	my $final_stmt = "$insert_start $insert_part2";
-	print OUTFILEINSERT "$final_stmt\n";
-	print "\n\n  $final_stmt\n";
-	$line = substr($line,length($final_stmt)+3,36419599);
-	#print substr($line,0,70)."\n";
-	my $ctr = 0;
-	while ($line =~ /\S/) {
-	  $ctr++;
-	  if ($ctr/100 == int($ctr/100)) {
-	    print "$ctr..";
-	  }
-	  if ($line =~ /^(\(.+?\))(,\(|;\n)/) {
-	    $insert_part2 = $1;
-	    $final_stmt = "$insert_start $insert_part2";
-	    #print "    $final_stmt\n";
-            $final_stmt =~ s/\\'/''/g;
-	    print OUTFILEINSERT "$final_stmt\n";
-	    $line = substr($line,length($insert_part2)+1,36419599);
-	    #print substr($line,0,70)."\n";
-	  } else {
-	    die("ERROR: Unable to parse line:\n".substr($line,0,70));
-	  }
-	}
-
-      } else {
-	die("ERROR: Unable to parse line:\n".substr($line,0,70));
-      }
-      next;
     }
 
   }
