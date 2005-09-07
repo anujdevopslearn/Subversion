@@ -17,7 +17,7 @@
 #
 #               
 #
-# Last modified : 3/22/05
+# Last modified : 8/31/05
 ######################################################################
 
 
@@ -30,12 +30,12 @@ use FindBin;
 
 use lib "$FindBin::Bin/../../perl";
 
-use vars qw ($sbeams $sbeamsMOD $q $module $work_group $USAGE %OPTIONS 
+use vars qw ($sbeams $sbeamsMOD $cg $module $work_group $USAGE %OPTIONS 
 			 $QUIET $VERBOSE $DEBUG $DATABASE $TESTONLY $PROG_NAME
              $current_contact_id $current_username);
 
 ####Setup SBEAMS core module####
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
@@ -48,13 +48,16 @@ $sbeamsMOD = new SBEAMS::Oligo;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
-#use CGI;
-#$q = new CGI;
+
+####Setup variables####
+$cg = new CGI;
 
 $PROG_NAME = "load_oligo.pl";
 
+
+
 ######################################################################
-# Command line stuff
+# Command line args
 ######################################################################
 $USAGE = <<EOU;
 Usage: load_oligo.pl [OPTIONS]
@@ -62,7 +65,7 @@ Options:
 
   ## REQUIRED parameters.  They must be set 
 
-  ####See COMMANDLINE_README for more info on how to set these parameters
+  ####See README for more info on how to set these parameters
   ####for the most common uses 
   --search_tool_id n     The search tool that was used to 
                           create this oligo set.
@@ -108,10 +111,7 @@ unless (GetOptions(\%OPTIONS,
 }
 
 
-
-
-
-
+#### Configure settings ####
 $VERBOSE = $OPTIONS{"verbose"} || 0;
 $QUIET = $OPTIONS{"quiet"} || 0;
 $DEBUG = $OPTIONS{"debug"} || 0;
@@ -126,17 +126,14 @@ if($DEBUG) {
 
 
 ######################################################################
-# Set Global Variables and execute main()
+# Execute main()
 ######################################################################
 main();
 exit(0);
 
 
 ######################################################################
-# Main:
-# 
-# Call $sbeams->Authenticate() and exit if it fails or continue if it 
-#   works
+# main
 ######################################################################
 sub main{
 
@@ -146,11 +143,13 @@ sub main{
   my $sql;
   my @rows;
 
-  ## Prep Work
-  $current_username = authenticate_user(); 
+  ## Authenticate user 
+  $current_username = authenticate_user();
+
+  ## Verify that command line syntax is correct, get the project id #
   $project_id = check_command_line();
 
-  ## Handle the Task
+  ## Load oligos
   $sbeams->printPageHeader() unless ($QUIET);
   handleRequest(user=>$current_username,
 				project=>$project_id);
@@ -160,7 +159,7 @@ sub main{
 
 
 ######################################################################
-# handleRequest
+# handleRequest - processes the oligo file and loads oligos
 ######################################################################
 sub handleRequest {
   my %args = @_;
@@ -198,7 +197,7 @@ sub handleRequest {
 
 
 ######################################################################
-# handleOligoFile
+# handleOligoFile 
 ######################################################################
 sub handle_oligo_file {
   my %args = @_;
@@ -219,8 +218,6 @@ sub handle_oligo_file {
 	die "[BUG-$SUB]: biosequence_set_id not passed.\n";
   my $project_id = $args{project_id} ||
 	die "[BUG-$SUB]: project_id not passed\n";
-
-  #my %oligo_types = %{$oligo_types_ref};
   my %selected_oligos;
 
   ## Verify that the oligo file exists
@@ -336,7 +333,6 @@ sub handle_oligo_file {
 
   }
 
-
   close(INFILE);
   print "\n$counter rows INSERTed\n";
 
@@ -356,6 +352,8 @@ sub handle_oligo_file {
 #
 ######################################################################
 sub special_parsing {  
+
+  ## Check parameters
   my %args=@_;
   my $SUB="special_parsing";
 
@@ -379,16 +377,9 @@ sub special_parsing {
   my @rows = $sbeams->selectOneColumn($sql);
   my $search_tool_name = $rows[0];
   
-  ## Sample FASTA entry for:
-  # "create_halobacterium_ko.pl"
-  # "create_haloarcula_expr.pl"
-  # "create_halobacterium_expr.pl"
-  #
-  #    >VNG0019H.a   100329   100439
-  #    ACTGACTGactgactgactg
-  # 
-  # NOTE: synthetic sequence is capitalized
-  
+
+  ## This part needs to be changed if additional search tools are used.
+  ## Definitely not very extensible, needs to be modified.
   if ($search_tool_name eq "create_halobacterium_ko.pl" ||
 	  $search_tool_name eq "create_haloarcula_expr.pl" ||
 	  $search_tool_name eq "create_halobacterium_expr.pl" ||
@@ -399,7 +390,7 @@ sub special_parsing {
 	$rowdata_ref->{biosequence_id} = get_biosequence_id(name=>$1,
 														bs_set_id=>$bs_set_id);
 
-	## Get Oligo Type
+	## Get Oligo Type, sets oligo type id based on letter extension in oligo name
 	my $type = $2;
 	my $oligo_type_id;
 	if ($type eq "a") {
@@ -426,7 +417,7 @@ sub special_parsing {
 	  print "[WARNING]: no oligo_type \'$type\' for oligo \'$header\'.\n";
 	}
 
-    ## Calculate Stop Coordinate (wrong in the oligo files for expression)
+    ## Calculate Stop Coordinate 
 	if($type eq "for"){
 	  $rowdata_ref->{stop_coordinate} = $3 + 21;
 	}elsif($type eq "rev"){
@@ -439,7 +430,8 @@ sub special_parsing {
 	  $rowdata_ref->{oligo_type_id} = $oligo_type_id;
 	}
 
-	## Search sequence for capitalized (i.e. synthetic) sequence
+	## Search sequence for capitalized (i.e. synthetic) sequence, synthetic sequences
+    ## are often added to oligos to form cut sites
 	my ($synth_start, $synth_stop);
 	my @seq = split //, $sequence;
 	for (my $m=0;$m<=$#seq;$m++) {
@@ -466,9 +458,12 @@ sub special_parsing {
 
 
 ######################################################################
-# get_biosequence_id
+# get_biosequence_id - based on a name and biosequence set id, retrieve
+#                      the corresponding biosequence id
 ######################################################################
 sub get_biosequence_id {
+  
+  ## Check parameters
   my %args = @_;
   my $SUB="get_biosequence_id";
   my $name = $args{name} ||
@@ -476,12 +471,13 @@ sub get_biosequence_id {
   my $set_id = $args{bs_set_id} ||
 	die "[BUG-$SUB]: bs_set_id not passed\n";
 
+  ## get biosequence id, check for errors
   my $sql = qq~
-SELECT biosequence_id
-  FROM $TBOG_BIOSEQUENCE
- WHERE biosequence_name = '$name'
-   AND biosequence_set_id = '$set_id'
-   ~;
+	SELECT biosequence_id
+	FROM $TBOG_BIOSEQUENCE
+	WHERE biosequence_name = '$name'
+	AND biosequence_set_id = '$set_id'
+	~;
   my @rows = $sbeams->selectOneColumn($sql);
   if ( scalar(@rows) == 0 ){
 	print "[ERROR]: No biosequence found with name \'$name\'\n";
@@ -490,16 +486,21 @@ SELECT biosequence_id
 	print "[WARNING-$SUB]: multiple biosequence names match to $name.".
 	  "Returning first one\n";
   }
+
+  ## return the first biosequence id found matching the given criteria
   return $rows[0];
 }
 
 ######################################################################
-# get_oligo
+# get_oligo - Retrieves the oligos from the oligo text file.  Parses
+#             the information and inserts the oligo record into the 
+#             oligo table.  Also inserts the corresponding info. into
+#             the oligo annotation table.
 ######################################################################
 sub get_oligo {      
   my %args = @_;
   my $oligo_id;
-
+  
   ## Variables
   my $SUB = "get_oligo";
   my $sequence = $args{sequence} || 
@@ -508,22 +509,22 @@ sub get_oligo {
 	die "[BUG-$SUB]: project_id not passed\n";
   my $header = $args{header} ||
 	die "[BUG-$SUB]: header not passed\n";
-
- 
+  
+  
   ## Strip out any non-sequence (whitespace, numbers) characers
   $sequence =~ s/\s//g;
   $sequence =~ s/\d//g;
-
+  
   my $length = length($sequence);
-			  
+  
   ## Process header
-  $header =~ /(\w+)\.(\w+)\s+(\d+)\s(\d+)\sTM=(\d+)\.(\d+)\sSS=(\w)/;
-
+  $header =~ /(\w+)\.(\w+)\s+(\d+)\s(\d+)\sTM=(\d+)\.(\d+)\sSS=(\w)/;  
  
-  my $melt_temp = $5 . "." . $6;  #get melting temp
+  ## Get melting temperature and secondary structure
+  my $melt_temp = $5 . "." . $6; 
   $melt_temp = sprintf "%.1f", $melt_temp;  #limit to 1 decimal place
 
-  my $sec_struct = $7;            #get secondary structure
+  my $sec_struct = $7;            
   
   ## See if there is already a matching oligo (within the project) 
   my $sql = qq~
@@ -536,51 +537,45 @@ sub get_oligo {
    AND OA.record_status != 'D'
    ~;
   my @rows = $sbeams->selectOneColumn($sql);
-  
-  ## INSERT record or return an ID, based upon the returned result
-  #if ( scalar(@rows) > 1 ) {
-#	print "[WARNING]: Yikes! multiple oligos appear to have a sequence".
-#	  " of \'$sequence\' and a length of $length.  Using the first one.\n";
-#	$oligo_id = $rows[0];  
-#    } elsif ( scalar(@rows) == 1 ) {
-#	$oligo_id = $rows[0];
-#	} else{
 
-	## In this case, we need to INSERT the oligo record...
-	my %rowdata;
-	$rowdata{melting_temp} = $melt_temp;
-	$rowdata{sequence_length} = $length;
-	$rowdata{feature_sequence} = $sequence;
-	$oligo_id = $sbeams->updateOrInsertRow(table_name=>$TBOG_OLIGO,
-										   rowdata_ref=>\%rowdata,
-										   insert=>1,
-										   return_PK=>1,
-										   testonly=>$TESTONLY,
-										   verbose=>$VERBOSE);
-	undef %rowdata;
-      
-              
-	## ...AND INSERT the oligo_annotation record
-	my %rowdata;
-	$rowdata{oligo_id} = $oligo_id;
-	$rowdata{project_id} = $project_id;
-	$rowdata{in_stock} = 'N'; #default is it's not in stock
-	$rowdata{secondary_structure} = $sec_struct;
-	$rowdata{GC_content} = sprintf "%.1f", calc_gc(sequence => $sequence);
-	$rowdata{primer_dimer} = 'U'; #need to change later
-	$rowdata{location} = 'U'; 
-	$sbeams->updateOrInsertRow(table_name=>$TBOG_OLIGO_ANNOTATION,
-							   rowdata_ref=>\%rowdata,
-							   insert=>1,
-							   testonly=>$TESTONLY,
-							   verbose=>$VERBOSE);
-  #}  
+  ## In this case, we need to INSERT the oligo record...
+  my %rowdata;
+  $rowdata{melting_temp} = $melt_temp;
+  $rowdata{sequence_length} = $length;
+  $rowdata{feature_sequence} = $sequence;
+  $oligo_id = $sbeams->updateOrInsertRow(table_name=>$TBOG_OLIGO,
+										 rowdata_ref=>\%rowdata,
+										 insert=>1,
+										 return_PK=>1,
+										 testonly=>$TESTONLY,
+										 verbose=>$VERBOSE);
+  undef %rowdata;
+  
+  
+  ## ...AND INSERT the oligo_annotation record
+  my %rowdata;
+  $rowdata{oligo_id} = $oligo_id;
+  $rowdata{project_id} = $project_id;
+  $rowdata{in_stock} = 'N'; #default is it's not in stock
+  $rowdata{secondary_structure} = $sec_struct;
+  $rowdata{GC_content} = sprintf "%.1f", calc_gc(sequence => $sequence);
+  $rowdata{primer_dimer} = 'U'; #need to change later
+  $rowdata{location} = 'U'; 
+  $sbeams->updateOrInsertRow(table_name=>$TBOG_OLIGO_ANNOTATION,
+							 rowdata_ref=>\%rowdata,
+							 insert=>1,
+							 testonly=>$TESTONLY,
+							 verbose=>$VERBOSE);
+    
   return $oligo_id;
 }
 
 
 ######################################################################
-# add_oligo_parameter_set_record
+# add_oligo_parameter_set_record - Updates the oligo parameter set
+#                                  table in the database.  Returns
+#                                  the numberical id of the corresponding
+#                                  gene library 
 ######################################################################
 sub add_oligo_parameter_set_record{
   my %args = @_;
@@ -599,11 +594,11 @@ sub add_oligo_parameter_set_record{
 
   ## Find biosequence_set_ids corresponding to gene tag
   $sql = qq~
-SELECT biosequence_set_id 
-  FROM $TBOG_BIOSEQUENCE_SET
- WHERE set_tag = '$gene_tag'
-   AND record_status != 'D'
-   ~;
+	SELECT biosequence_set_id 
+	FROM $TBOG_BIOSEQUENCE_SET
+	WHERE set_tag = '$gene_tag'
+	AND record_status != 'D'
+	~;
   my @rows = $sbeams->selectOneColumn($sql);
   if ( scalar(@rows) == 0 ) {
 	print "[ERROR]: no biosequence set found with tag $gene_tag\n";
@@ -612,14 +607,14 @@ SELECT biosequence_set_id
 	print "[WARNING]: Multiple ids found for $gene_tag.  Using first one.\n";
   }
   my $gene_library_id = $rows[0];
-
-  ## Find biosequence_set_ids corresponding to chrom tag
+  
+  ## Find biosequence_set_ids corresponding to chrom tag, catch any errors
   $sql = qq~
-SELECT biosequence_set_id 
-  FROM $TBOG_BIOSEQUENCE_SET
- WHERE set_tag = '$chrom_tag'
-   AND record_status != 'D'
-   ~;
+	SELECT biosequence_set_id 
+	FROM $TBOG_BIOSEQUENCE_SET
+	WHERE set_tag = '$chrom_tag'
+	AND record_status != 'D'
+	~;
   my @rows = $sbeams->selectOneColumn($sql);
   if ( scalar(@rows) == 0 ) {
 	print "[ERROR]: no biosequence set found with tag $chrom_tag\n";
@@ -629,10 +624,12 @@ SELECT biosequence_set_id
   }
   my $chromosome_library_id = $rows[0];
 
+  ## Now we know all the associated biosequences
   my %rowdata =('oligo_search_id' => $oligo_search_id,
 				'gene_library_id'=>$gene_library_id,
 				'chromosome_library_id'=>$chromosome_library_id);
   
+ ## Update the oligo parameter set table
  $sbeams->updateOrInsertRow(
 	table_name => "$TBOG_OLIGO_PARAMETER_SET",
 		print_SQL=>1,
@@ -701,7 +698,8 @@ sub get_timestamp {
 
 
 ######################################################################
-# check_command_line - verifies command line is cool
+# check_command_line - verifies command line syntax is correct
+#                      returns project id
 ######################################################################
 sub check_command_line {
   print "[STATUS]: Verifying Command Line Options...\n";
@@ -710,54 +708,31 @@ sub check_command_line {
   my $sql;
   my @rows;
 
-  #### Process the commmand line
-
   ## Required arguments
   my $search_tool_id = $OPTIONS{"search_tool_id"};
   my $gene_set_tag = $OPTIONS{"gene_set_tag"} || '';
   my $chromosome_set_tag = $OPTIONS{"chromosome_set_tag"} || '';
 
-  unless ($search_tool_id && 
-		  #$oligo_set_type_name && 
+  unless ($search_tool_id &&  
 		  $gene_set_tag &&
 		  $chromosome_set_tag) {
 	print $USAGE;
 	exit;
   }
 
-  ## Data Loading Options
-#  my $delete_existing = $OPTIONS{"delete_existing"};
-#  my $update_existing = $OPTIONS{"update_existing"};
-#  if ( defined($delete_existing) && defined($update_existing) ) {
-#	print "[ERROR]: Select delete_existing OR update_existing...not both.\n";
-#	exit;
-#  }elsif ( !defined($delete_existing) && !defined($update_existing) ) {
-#	print "[STATUS]: INSERTing instead of UPDATEing or DELETEing\n";
-#	$OPTIONS{load_option} = "insert";
-#  }
-#
-#  if ($delete_existing){
-#	print "[STATUS]: Delete Existing selected\n";
-#	$OPTIONS{load_option} = "delete";
-#  }else {
-#	print "[STATUS]: Update Existing selected\n";
-#	$OPTIONS{load_option} = "update";
-#  }
-
-  ## Data Loading Time/Date
-#  if ( !defined($OPTIONS{datetime}) ) {
-	$OPTIONS{datetime} = 'CURRENT_TIMESTAMP';
-#  } 
+  ## Get the timestamp
+  $OPTIONS{datetime} = 'CURRENT_TIMESTAMP';
+ 
   my $datetime = $OPTIONS{datetime};
   print "[STATUS]: Load Date = $datetime\n";
 
   ## Verify the search tool and oligo set types.
   $sql = qq~
-SELECT search_tool_id, search_tool_name
-  FROM $TBOG_SEARCH_TOOL
- WHERE search_tool_id = '$search_tool_id'
-   AND record_status != 'D'
- ~;
+	SELECT search_tool_id, search_tool_name
+	FROM $TBOG_SEARCH_TOOL
+	WHERE search_tool_id = '$search_tool_id'
+	AND record_status != 'D'
+	~;
   @rows = $sbeams->selectSeveralColumns($sql);
   if ( scalar(@rows) == 1 ) {
 	print "[STATUS]: Search Tool - $rows[0]->[1]\n";
@@ -765,7 +740,7 @@ SELECT search_tool_id, search_tool_name
 	print "[ERROR]: search tool not found\n";
 	exit;
   }
-  ## If user doesn't specify project_id, use current project_id####
+  ## If user doesn't specify project_id, use current project_id
   my $project_id = $OPTIONS{"project_id"} || $sbeams->getCurrent_project_id();
   
   ## Verify that the user can write to the project
@@ -781,6 +756,7 @@ SELECT search_tool_id, search_tool_name
 	exit;
   }
 
+  ## Return the project id
   return $project_id;
 
 } #end check_command_line
@@ -793,7 +769,7 @@ SELECT search_tool_id, search_tool_name
 sub authenticate_user {
   print "[STATUS]: Authenticating user...\n";
 
-  #### User Authentication
+  ## User Authentication
   my $module = 'Oligo';
   my $work_group = 'Oligo_admin';
   $DATABASE = $DBPREFIX{$module};
@@ -806,21 +782,23 @@ sub authenticate_user {
 
 
 ####################################################################
-#calc_gc - takes a sequence and calculates the percentage that g,c 
+#calc_gc - takes a sequence and calculates the percentage of bps
+#          that are g or c.  g and c bases improve the binding 
+#          properties of the sequence 
 ####################################################################
 sub calc_gc {
 
+  ## Variables
   my %args = @_;
-  my $SUB_NAME = "calc_gc";
-
-  my $seq = $args{'sequence'};
+  my $SUB_NAME = "calc_gc"; 
+  my $seq = $args{'sequence'};  #the sequence we're considering
   my @array = split(//,$seq);
 
-  my $total = 0;
-  my $gc = 0;
-
+  my $total = 0;  #the total # bps in the sequence
+  my $gc = 0;     #the # bps that are g or c
   $seq = lc $seq;
   
+  ## Count the number that are g,c
   foreach my $character (@array) {
 	if($character eq "g" || $character eq "c") {
 	  $gc = $gc + 1;       #increase count for each 'g' or 'c' found
@@ -828,7 +806,7 @@ sub calc_gc {
     $total = $total + 1;
   }
   
-  
+  ## Calculate percentage and return
   if ($total == 0) {
     return 0.0;           #to avoid dividing by zero
   }else{  
