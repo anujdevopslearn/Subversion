@@ -471,8 +471,8 @@ MA_condition	4	sort_order	Sort Order	int	4	10	Y		N							Y	Y	N
 MA_condition	5	processed_date	Precessed Date	datetime	8	23	Y		N							Y	Y	N			
 MA_condition	6	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	N	Organism which the condition should be associated with.  Leave blank if not applicable	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 MA_condition	7	comment	Comment	text	16	16	Y		N							Y	Y	N			
-MA_condition	8	analysis_name	Analysis Name	varchar	255	255	Y		N							Y	Y	N			
-MA_condition	9	analysis_type	Analysis Type	int	4	10	Y		N							Y	Y	N			
+MA_condition	8	analysis_type	Analysis Type	varchar	255	255	Y		N							Y	Y	N			
+MA_condition	9	analysis_id	Analysis ID	int	4	10	Y		N							Y	Y	N			
 MA_condition	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
 MA_condition	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
 MA_condition	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
