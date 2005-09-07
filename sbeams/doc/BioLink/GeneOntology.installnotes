@@ -17,7 +17,7 @@ Visit http://archive.godatabase.org/full to see
 what is the latest monthly build. In this example, it is 2005-08-01:
 
 cd $GOARC
-
+setenv MONTH 2005-08-01
 setenv DATAFILE go_200508-assocdb
 setenv GZFILE ${DATAFILE}-data.gz
 setenv TGZFILE ${DATAFILE}-tables.tar.gz
@@ -30,7 +30,7 @@ gunzip -c $GZFILE > $DATAFILE.mysql
 
 --- Load -------------------------------------------------------------
 
-If your back-end is MySQL, then you can load the direct distribution as
+If your SBEAMS back-end is MySQL, then you can load the direct distribution as
 provided by the Gene Ontology folks.  If you have a different back-end,
 the process can be a little more difficult.
 
@@ -61,22 +61,24 @@ date ; nice +19 zcat $GZFILE | mysql $DSN ; date
 
 --- SQL Server Example
 
-No direct dump is provided for SQL Server, so the data must be BCPed in
+No direct dump is provided for SQL Server, so the data must be BCPed in.
+(BCP is a SQL server/SYBASE specific tool for bulk loading data into 
+tables)
 
-Create a database on SQL Server call 'go' or something like that.
+Create a database on SQL Server called 'go' or something like that.
 Let 'sbeamsadmin' or some similar account have dbo privileges.
 
 cd $GOARC
 tar -zxvf go_200508-assocdb-tables.tar.gz
 cd go_200508-assocdb-tables
 rm *.sql
-$SBEAMS/lib/scripts/BioLink/GOMySQL2MSSQL.pl --in ../go_200508-assocdb-data.mysql --out GO
+$SBEAMS/lib/scripts/BioLink/GOMySQL2MSSQL.pl --in ../go_200508-assocdb.mysql --out GO
 $SBEAMS/lib/scripts/Core/runsql.pl --user sbeamsadmin --database go --delim GO \
-  --source GO.CREATE.mssql
+  --sfile GO.CREATE.mssql
 
-foreach file (*.sql)
+foreach file (*.txt)
   mv $file $file.before
-  cat $file | sed -e "s/\t\\N/\t/g" > $file
+  cat $file.before | sed -e 's/\t\\N/\t/g' > $file
 end
 #### If the above produced no errors, then
 rm *.before
@@ -101,15 +103,16 @@ tar -zxf go_200508-utilities-src.tar.gz
 
 cat > ~/.geneontologyrc
 dbms mysql
-dbhost mysql
+dbhost hostname
 dbname go@mysql
 dbuser sbeamsadmin
 dbauth xxxxxxxxxx
 ^D
 
+
 cd $GOARC/go_200508-utilities-src/apps/query-utils
 setenv GO_ROOT $GOARC/go_200508-utilities-src
-setenv PERL5LIB $GOROOT/go-db-perl:$GOROOT/go-perl
+setenv PERL5LIB $GO_ROOT/go-db-perl:$GO_ROOT/go-perl
 setenv DBNAME sbeams_go
 
 - Make sure the below work okay
