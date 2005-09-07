@@ -386,13 +386,15 @@ sub checkValidUID {
     my @local_users = `/bin/cat /etc/passwd`;
     foreach $element (@local_users) {
       ($uname,$pword,$uid)=split(":",$element);
-      last if ($uid eq $current_uid);
+      if ($uid) {
+        last if ($uid eq $current_uid);
+      }
     }
 
     #### If it wasn't there, check all the NIS users too
     #### It might be faster to use ypmatch instead of ypcat, but
     #### TaintPerl doesn't like user input going into a shell command!
-    unless ($uid eq $current_uid) {
+    unless ($uid && $uid eq $current_uid) {
       my @NIS_users = `/usr/bin/ypcat passwd`;
       foreach $element (@NIS_users) {
         ($uname,$pword,$uid)=split(":",$element);
