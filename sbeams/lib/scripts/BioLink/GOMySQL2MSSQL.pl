@@ -72,7 +72,7 @@ sub main {
     unless (open(OUTFILEDROP,">$output_root.DROP.mssql"));
 
   die("ERROR: Unable to open output file $output_root.DROP.mssql")
-    unless (open(OUTFILEBCP,">$output_root.BCP.mssql"));
+    unless (open(OUTFILEBCP,">$output_root.BCP.bat"));
 
   my $line;
   my $within_CREATE_statement = 0;
