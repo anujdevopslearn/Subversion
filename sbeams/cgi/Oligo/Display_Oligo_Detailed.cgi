@@ -28,7 +28,7 @@ use vars qw ($sbeams $sbeamsMOD $cg $current_contact_id $current_username
              @MENU_OPTIONS);
 
 
-use DBI;
+###use DBI;
 use CGI::Carp qw(fatalsToBrowser croak);
 use POSIX;
 
