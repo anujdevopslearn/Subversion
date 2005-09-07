@@ -1,0 +1,7 @@
+
+DROP INDEX annotated_gene.idx_annotated_gene_gene_accession
+DROP INDEX gene_annotation.idx_gene_annotation_annotated_gene_id
+DROP INDEX gene_annotation.idx_gene_annotation_annotation
+DROP INDEX biosequence_annotated_gene.idx_biosequence_id
+DROP INDEX biosequence_annotated_gene.idx_annotated_gene_id
+
