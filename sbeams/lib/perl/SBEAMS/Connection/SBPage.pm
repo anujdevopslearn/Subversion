@@ -107,7 +107,7 @@ sub asHTML {
   my $padding = '&nbsp;' x 300;
   my $mpad = '&nbsp;' x 5;
 
-  my $maintab = SBEAMS::Connection::DataTable->new( BORDER => 1, WIDTH => '60%', CELLPADDING => 0, CELLSPACING => 0 );
+  my $maintab = SBEAMS::Connection::DataTable->new( BORDER => 0, WIDTH => '60%', CELLPADDING => 0, CELLSPACING => 0 );
   my $isblink =<<"  END_LINK";
   <a href="http://db.systemsbiology.net/">
    <img height=64 width=64 border=0 alt="ISB DB" src="$HTML_BASE_DIR/images/dbsmltblue.gif">
