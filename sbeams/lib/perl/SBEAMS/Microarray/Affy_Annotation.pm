@@ -463,7 +463,9 @@ sub add_record_to_affy_db_links {
 		
 		my $dbxref_id = $self->get_xref_id($db_ref_tag);
 
-		next if $db_id =~ /---/;			#skip uploading blank data
+                if ( !defined $db_id || $db_id =~ /---/ ) { #skip uploading blank data
+		  next; 
+                }
 		
 		my @parts = split "///", $db_id;		#each field could hold multiple ids
 		
