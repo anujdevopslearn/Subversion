@@ -107,7 +107,7 @@ foreach dbtype ( mssql mysql pgsql oracle )
     --table_prop ../../conf/Microarray/Microarray_table_property.txt \
     --table_col ../../conf/Microarray/Microarray_table_column.txt \
     --schema_file ../../sql/Microarray/Microarray --module Microarray \
-    --destination_type $dbtype
+    --destination_type $dbtype --suppress
 end
 
 
@@ -143,16 +143,7 @@ Core installation notes and will not be repeated here.
 Notes:
 A few warnings or errors might be seen while creating the tables and constraints.  The ones
 below should be considered normal
-#Table not used by the Affy Portion of the module
-Error: Foreign key 'fk_array_request_sample_array_request_slide_id' references invalid table 'dbo.MA_array_request_MA_slide'.
-#In order for some of the linking table to display correctly on some of the web forms
-#the conf file was altered to know how to do certain things.  As a side affect it produced
-# a few incorrect sql statements
-Error: Column 'dbo.sample_protocol.sample_protocol_id' is not the same data type as referencing column 'array_request_sample.protocol_ids' in foreign key 'fk_array_request_sample_protocol_ids'.
-Error: Column 'dbo.affy_array_sample_protocol.affy_array_sample_protocol_id' is not the same data type as referencing column 'affy_array_sample.affy_sample_protocol_ids' in foreign key 'fk_affy_array_sample_affy_sample_protocol_ids'.
-Error: Column 'dbo.affy_array_protocol.affy_array_protocol_id' is not the same data type as referencing column 'affy_array.affy_array_protocol_ids' in foreign key 'fk_affy_array_affy_array_protocol_ids'.
-#Sizes does not matter..
-W (1): Warning: The table 'file_location' has been created but its maximum row size (8080) exceeds the maximum number of bytes per row (8060). INSERT or UPDATE of a row in this table will fail if the resulting row length exceeds 8060 bytes.
+DBD::Sybase::db do failed: Server message number=2714 severity=16 state=6 line=3 server=TITAN text=There is already an object named 'biosequence_set' in the database. at /var/www/html/sbeams/lib/scripts/Core/runsql.pl line 113, <FIL> line 866.
 
 -------------------------------------------------------------------------------
 3-1) Data storage locations and naming conventions
@@ -184,6 +175,7 @@ mkdir $SBEAMS/tmp $SBEAMS/var
 # These will have to be created.
 mkdir $SBEAMS/tmp/Microarray \
 $SBEAMS/tmp/Microarray/AFFY_ANNO_LOGS \
+$SBEAMS/tmp/Microarray/R_CHP_RUNS \
 $SBEAMS/tmp/Microarray/GetExpression \
 $SBEAMS/tmp/Microarray/GetExpression/jws \
 $SBEAMS/var/Microarray \
@@ -193,44 +185,70 @@ $SBEAMS/var/Microarray/Affy_data/probe_data/external \
 $SBEAMS/var/Microarray/Affy_data/delivery \
 $SBEAMS/var/Microarray/Affy_data/annotation
 
-chgrp -R sbeams $SBEAMS/tmp/Microarray; chgrp -R sbeams $SBEAMS/var/Microarray
+chgrp -R sbeams $SBEAMS/tmp/Microarray; chgrp -R sbeams $SBEAMS/var/Microarray;
 chmod -R g+ws $SBEAMS/tmp/Microarray; chmod -R g+ws $SBEAMS/var/Microarray;
 
 -------------------------------------------------------------------------------
-4-1) Edit the SBEAMS Configuration files
+4) Edit the SBEAMS Configuration files
 
 cd $SBEAMS/lib/conf
 edit SBEAMS.conf
 
 Specifically:
-#Change to the correct Database Name, see sbeams.installnotes for more information
-DBPREFIX{Microarray_Affy}    = microarray.dbo.
+
+# In the DBPREFIX section, change to the correct db name, see main 
+# sbeams.installnotes for more information
+
+DBPREFIX{Microarray}    = microarray.dbo.
+
+# Next, the general microarray settings are grouped under 'Microarray Settings'
+# The section below tells a bit about each setting.  Creating the directories
+# specified above and leaving the default settings should result in a working 
+# system.
+
+# URL to help docs index page, if applicable
+CONFIG_SETTING{MA_AFFY_HELPDOCS_URL} 
+
+# Is set to true value, 2-color menus and options will not be shown
+CONFIG_SETTING{MA_HIDE_TWO_COLOR} = 0
+
+# Specify paths to R executable and library
+CONFIG_SETTING{MA_R_EXE_PATH} = /usr/local/bin/R
+CONFIG_SETTING{MA_R_LIB_PATH} = /usr/local/lib/R/library
+
+# The next 6 settings below can be specified as absolute or relative paths, see 
+# RELATIVE VS. ABSOLUTE PATHS below for details.  Default settings are relative
+
+# Directory to which affy log files will be written, if not set will default
+# to LOG_BASE_DIR above, else $sbeams/var/log.
+CONFIG_SETTING{MA_LOG_BASE_DIR}         = var/logs
+
+# Full path to a folder that will house all Affy CEL files and support files
+CONFIG_SETTING{MA_AFFY_PROBE_DIR}       = var/Microarray/Affy_data/probe_data
+
+# Location that all analysis results will be written to(see below)
+CONFIG_SETTING{MA_BIOC_DELIVERY_PATH}   = var/Microarray/Affy_data/delivery
+
+# Location that errors from loading affy annotation files will be kept 
+CONFIG_SETTING{MA_ANNOTATION_OUT_PATH}  = tmp/Microarray/Affy_data/annotation
+
+# path to tmp dir
+CONFIG_SETTING{MA_AFFY_TMP_DIR}         = tmp/Microarray
+
+# Location where zip files will be created for user downloads
+CONFIG_SETTING{MA_AFFY_ZIP_REQUEST_DIR} = tmp/Microarray/zip_request_dir
 
 
-4-2) Edit the SBEAMS Microarray/Settings.pm file
+# files that will be used to determine if an entire group of files, all sharing
+# the same basename, are present when uploading Affy arrays 
+CONFIG_SETTING{MA_AFFY_DEFAULT_FILES}   = CHP CEL XML INFO RPT R_CHP JPEG EGRAM_PF.jpg EGRAM_T.jpg EGRAM_F.jpg
 
-cd $SBEAMS/lib/perl/SBEAMS/Microarray
-edit Settings.pm
+# Current protocol that describes the R script to produce the CHP like file
+$CONFIG_SETTING{MA_AFFY_R_CHP_PROTOCOL} = R Mas5.0 CHP
 
-Specifically: use the default folders created above and tweak the perl variables
-to look like the lines below.  Remember this is perl code so do not use single quotes around the
-path, otherwise variables will not be interpolated
-
-$AFFY_DEFAULT_DIR	    = "$PHYSICAL_BASE_DIR/var/Microarray/Affy_data/probe_data";
-$BIOCONDUCTOR_DELIVERY_PATH = "$PHYSICAL_BASE_DIR/var/Microarray/Affy_data/delivery";
-$ADD_ANNOTATION_OUT_FOLDER  = "$PHYSICAL_BASE_DIR/tmp/Microarray/Add_affy_annotation";
-$AFFY_TMP_DIR	    = "$PHYSICAL_BASE_DIR/tmp/Microarray/";
-$AFFY_ZIP_REQUEST_DIR = "$PHYSICAL_BASE_DIR/tmp/Microarray";
-
-  Notes: $AFFY_DEFAULT_DIR = Full path to a folder that will house all Affy CEL files and support files
-  	 $BIOCONDUCTOR_DELIVERY_PATH = Location that all analysis results will be written to(see below)
-	 $ADD_ANNOTATION_OUT_FOLDER  = Location that errors from loading affy annotation files will be kept 
-	 $AFFY_ZIP_REQUEST_DIR = Location where zip files will be created for
-	 user downloads
 	 			        
-  Notes: The web server user will need read access to the CEL file folders and read/write access to the 
-	 $BIOCONDUCTOR_DELIVERY_PATH folder
-
+# Notes: The web server user will need read access to the CEL file folders and
+# read/write access to the $CONFIG_SETTING{MA_BIOC_DELIVERY_PATH} folder
 
 
 -------------------------------------------------------------------------------
@@ -282,13 +300,26 @@ Click on the link "External_test_data.tar.gz"
 Click on the link "Affy_test_data.tar.gz"
 Save the data to any folder or use the folder $SBEAMS/lib/refdata/Microarray
 
+Alternatively, cd to the target directory and fetch the files with wget:
+wget http://www.sbeams.org/sample_data/Microarray/External_test_data.tar.gz
+wget http://www.sbeams.org/sample_data/Microarray/Affy_test_data.tar.gz
+
+You can check the integrity of the downloads with the md5sum command:
+>md5sum External_test_data.tar.gz
+9dd1227992ddc99684ced06f08d637a0  External_test_data.tar.gz
+
+>md5sum Affy_test_data.tar.gz
+04d81273f454701e74526b450e79b740  Affy_test_data.tar.gz
+
+Check the download website for the most up-to-date checksum values.
+
 - Unpack the data and annotation file and copy them to the data folders
 cd $SBEAMS/lib/refdata/Microarray
-gunzip External_test_data.tar.gz
-tar -xvf External_test_data.tar
+tar xvfz External_test_data.tar.gz
+tar xvfz Affy_test_data.tar.gz
 
-gunzip Affy_test_data.tar.gz
-tar -xvf Affy_test_data.tar
+## Note that the directories below are based on the default directory structure,
+## you may need to modify the paths if you've changed anything.
 
 -Move the annotation file to annotation directory
 mv External_test_data/HG-U133A_annot.csv $SBEAMS/var/Microarray/Affy_data/annotation/
@@ -337,8 +368,8 @@ Add a Project:
   Required fields are in red.  If you don't have a budget number, enter NA.
 - Make a project using the following information
    Project Name: "Primary APL Samples"
-   Project Tag:  "Primary APL"
-   PI Contact:	 "Stegmaier, Kimberley"
+   Project Tag:  "PrimaryAPL"
+   PI Contact:	 "Stegmaier, Kimberly"
    Description:  "Human cell type arrays from Stegmaier 2004 paper."
    Budget:	 "NA"
 - Fill in the appropriate information and click [INSERT]
@@ -348,7 +379,6 @@ Add a second Project:
 - Make a project using the following information
    Project Name: "ISB Test Data"
    Project Tag:  "ISB_test"
-   PI Contact:	 "Marzolf, Bruz"
    Description:  "4 Human CEL files HG-U133_Plus_2.  2 files from Human LNCaP prostate cancer cell, 2files from C4-2 cancer cell lines"
 - Fill in the appropriate information and click [INSERT]
 
@@ -512,6 +542,7 @@ http://<sbeams_server>/sbeams/cgi/Microarray/GetAffy_GeneIntensity.cgi
 - Enter "IL%" in the box Gene Name, Click 'Simple Query'
 
 -------------------------------------------------------------------------------
+########################
 8) Setup the help pages
 ########################
 
@@ -550,9 +581,9 @@ Most of the links are relative but a few links go directly into SBEAMS therefore
 Also note some of the links will not work since they are specific to ISB
 
 -------------------------------------------------------------------------------
+##############################
 9) Setup the analysis pipeline
-########################
-Setup the analysis pipeline
+##############################
 
 The analysis pipeline allows users to analize affy arrays and find differentially 
 expressed genes.  The analysis is done in R and the processing can be done on the 
@@ -570,36 +601,28 @@ a bit different and the analysis capabilities have been extended, but the setup
 requirements and some of the settings are still applicable
 http://bioconductor.org/repository/devel/vignette/demoscript.pdf
 
-- Setup Variables in Setting.pm
-Make sure the setting done in step 4-2 is complete for the variable  $BIOCONDUCTOR_DELIVERY_PATH
+
+# Create a new unix group, affydata, for example:
+/usr/sbin/groupadd affydata
+
+# Add web user to this group, e.g. (assumes web server runs as 'apache'):
+/usr/sbin/usermod -G affydata apache
+
+# Change the group of the delivery dir specified above (MA_BIOC_DELIVERY_PATH), 
+# default locatin used here as an example.
+chgrp -R affydata $SBEAMS/var/Microarray/Affy_data/delivery
+
+# Set sticky bit so all data will have the group arraydata
+chmod g+s  $SBEAMS/var/Microarray/Affy_data/delivery
 
 
-After the folder is setup change the permissions to make sure the web user can write to the folder, see below
+You can run the bioconductor jobs as a forked process, or farm them
+to a batch scheduler such as pbs.  
 
-########### Change directory permissions if data is not local to the web server
-
-At ISB the data produced by these scripts is not kept local to the web server.
-
-So the web user needs permission to write to the remote drives.
-
-Have IT setup a new group affydata
-
-Add the web user to this group.
-
-setup the folder "delivery" and change the group to affydata
-
-Need to set group id on the delivery folder so all data written into the folder 
-will have the group arraydata
-$SBEAMS/var/Microarray/Affy_data/delivery  chmod g+s
-
-
-To run the job on pbs you might need to create a new user to run the jobs (See Below for more info)
-
-We created a user arraybot and added it to the affydata group.
-
-Need to setup a key less ssh connection to the pbs server so the apache cgi
-script can hand off the job to the batch scheduler, and then the process on the batch scheduler can 
-write files back to the directories created by the web user.
+To run the job on pbs you may need to create a new user (See Below),
+and set up a keyless ssh connection apache cgi script can hand the job off
+to the batch scheduler, and that process can write files back.  This is
+beyond the scope of this document, we can provide more info if desired.
 
 #############
 
@@ -690,29 +713,4 @@ Read about, "Grouping arrays","Normalizing Array Data" and "Analyze Arrays"
 
 -------------------------------------------------------------------------------
 Troubleshooting
-
-1) How to re-generate and update table schemas
-
-- Drop table and (firstly) its constraints, via SQL commands. Look under 
-  DOMAIN_DROPCONSTRAINTS.mssql and DOMAIN_DROPTABLES.mssql.
-  e.g. look under Core_DROPCONSTRAINTS.mssql and Core_DROPTABLES.mssql
-
-- Edit the appropriate $DOMAIN_table_column.txt file
-  e.g. make a field in conf/Core/Core_table_property.txt nullable=N
-
-- Generate new schema files using generate_schema.pl
-  e.g.  cd $SBEAMS/lib/scripts/Core
-	./generate_schema.pl \
-          --table_prop ../../conf/Core/Core_table_property.txt \
-          --table_col ../../conf/Core/Core_table_column.txt \
-          --schema_file ../../sql/Core/Core \
-          --destination_type mssql
-
-- Now re-create table and its constraints using the new (updated) ll.
-  e.g. look under Core_CREATETABLES.mssql and Core_CREATECONSTRAINTS.mssql
-
-- Populate the table, if required.
-  e.g. look in Core_POPULATE.mssql
-
--------------------------------------------------------------------------------
 
