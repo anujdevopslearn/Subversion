@@ -14,20 +14,24 @@ package SBEAMS::Microarray::Settings;
 use strict;
 
 #### Begin with the main Settings.pm
-use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Settings qw(:default $LOG_BASE_DIR);
+use SBEAMS::Connection::Log;
 
 
 #### Set up new variables
 use vars qw(@ISA @EXPORT 
-    $SBEAMS_PART
-    $AFFY_DEFAULT_DIR
-    @AFFY_DEFAULT_FILES
-    $AFFY_ZIP_REQUEST_DIR
-    $AFFY_R_CHP_ANALYSIS_PROTOCOL
-	$BIOCONDUCTOR_DELIVERY_PATH
-	$ADD_ANNOTATION_OUT_FOLDER
-    $AFFY_TMP_DIR
+            $SBEAMS_PART
+            $AFFY_DEFAULT_DIR
+            @AFFY_DEFAULT_FILES
+            $AFFY_ZIP_REQUEST_DIR
+            $AFFY_R_CHP_ANALYSIS_PROTOCOL
+            $BIOCONDUCTOR_DELIVERY_PATH
+            $ADD_ANNOTATION_OUT_FOLDER
+            $AFFY_TMP_DIR
+            $AFFY_LOG_DIR
 );
+
+my $log = SBEAMS::Connection::Log->new();
 
 require Exporter;
 @ISA = qw (Exporter);
@@ -37,31 +41,99 @@ require Exporter;
     $AFFY_TMP_DIR
 );
 
+for my $k ( keys %CONFIG_SETTING ) {
+#  print STDERR "CS: $k => $CONFIG_SETTING{$k}\n";
+}
 
-#### Define new variables
-$SBEAMS_PART            = 'MicroArray';
+my $affy_file_types = $CONFIG_SETTING{MA_AFFY_DEFAULT_FILES} || '';
+@AFFY_DEFAULT_FILES = split ( /\s/, $affy_file_types);
+
+# Convert any relative paths to absolute paths
+for my $k qw(MA_LOG_BASE_DIR MA_AFFY_PROBE_DIR MA_BIOC_DELIVERY_PATH
+             MA_ANNOTATION_OUT_PATH MA_AFFY_TMP_DIR MA_AFFY_ZIP_REQUEST_DIR) {
+  next unless defined $CONFIG_SETTING{$k};
+  if ( $CONFIG_SETTING{$k} !~ /^\// ) {
+    my $delim = ($PHYSICAL_BASE_DIR =~ /\/$/) ? '' : '/';
+    $CONFIG_SETTING{$k} = $PHYSICAL_BASE_DIR . $delim . $CONFIG_SETTING{$k};
+  }
+}
+
 
 #Edit Location to suit installation requirements
-$AFFY_DEFAULT_DIR	= '/net/arrays/Affymetrix/core/probe_data';
-$BIOCONDUCTOR_DELIVERY_PATH = "/net/arrays/Affymetrix/core/data_analysis/delivery";
-$ADD_ANNOTATION_OUT_FOLDER = "$PHYSICAL_BASE_DIR/tmp/Microarray/Add_affy_annotation";
+$AFFY_LOG_DIR               = $CONFIG_SETTING{MA_LOG_BASE_DIR} || '';
+$AFFY_DEFAULT_DIR           = $CONFIG_SETTING{MA_AFFY_PROBE_DIR} || '';
+$BIOCONDUCTOR_DELIVERY_PATH = $CONFIG_SETTING{MA_BIOC_DELIVERY_PATH} || '';
+$ADD_ANNOTATION_OUT_FOLDER  = $CONFIG_SETTING{MA_ANNOTATION_OUT_PATH} || '';
+$AFFY_TMP_DIR               = $CONFIG_SETTING{MA_AFFY_TMP_DIR} || '';
+$AFFY_ZIP_REQUEST_DIR       = $CONFIG_SETTING{MA_AFFY_ZIP_REQUEST_DIR} || '';
 
-$AFFY_TMP_DIR		= "$PHYSICAL_BASE_DIR/tmp/Microarray";
-
-
-@AFFY_DEFAULT_FILES	= qw(CHP CEL XML INFO RPT R_CHP JPEG EGRAM_PF.jpg EGRAM_T.jpg EGRAM_F.jpg);		#files that will be used to determine if a group of files, all sharing the same basename, are all present when uploading Affy arrays 
-
-$AFFY_ZIP_REQUEST_DIR 	= '/net/arrays/Affy_Zip_Request';
-
-$AFFY_R_CHP_ANALYSIS_PROTOCOL = 'R Mas5.0 CHP';				#Current protocol that describes the R script to produce the CHP like file
+#Current protocol that describes the R script to produce the CHP like file
+$AFFY_R_CHP_ANALYSIS_PROTOCOL = $CONFIG_SETTING{MA_AFFY_R_CHP_PROTOCOL} || '';
 
 
 #### Override variables from main Settings.pm
 $SBEAMS_SUBDIR          = 'Microarray';
+$SBEAMS_PART            = 'MicroArray';
 
 
+##############################
+### Methods to access data ###
+##############################
 
-### Methods to access data
+#+
+# get_affy_log_dir
+#
+#-
+sub get_affy_log_dir {
+  my $self = shift;
+
+  my $dir = ( $AFFY_LOG_DIR ) ? $AFFY_LOG_DIR :
+            ( $LOG_BASE_DIR ) ? $LOG_BASE_DIR :  "$PHYSICAL_BASE_DIR/var/logs";
+
+  if ( !$dir ) {
+    $log->warn( 'No logging dir configured' );
+  } elsif ( !-e $log ) {
+    $log->warn( "Logging dir, $log, does not exist" );
+  }
+
+  return $dir;
+}
+
+#+
+# get_R_exe_path
+#
+# returns configured path to R executable
+#-
+sub get_R_exe_path {
+  my $self = shift;
+
+  my $rpath = $CONFIG_SETTING{MA_R_EXE_PATH} || '';
+
+  if ( !$rpath ) {
+    $log->warn( 'No path to R specified' );
+  }
+
+  return $rpath;
+}
+
+#+
+# get_R_lib_path
+#
+# returns configured path to R libraries
+#-
+sub get_R_lib_path {
+  my $self = shift;
+
+  my $rlib = $CONFIG_SETTING{MA_R_LIB_PATH} || '';
+
+  if ( !$rlib ) {
+    $log->warn( 'No path to R library specified' );
+  }
+
+  return $rlib;
+}
+
+
 #######################################################
 # get_affy_temp_dir_path
 # get the path to the top level temp directory
