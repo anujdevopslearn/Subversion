@@ -87,6 +87,7 @@ DB_TYPE     = MS SQL Server
 DBPREFIX{Core}          = sbeams.dbo.
 DBPREFIX{BEDB}          = BEDB.dbo.
 DBPREFIX{BioLink}       = BioLink.dbo.
+DBPREFIX{Biomarker}        = Biomarker.dbo.
 DBPREFIX{Biosap}        = Biosap.dbo.
 DBPREFIX{Cytometry}     = Cytometry.dbo.
 DBPREFIX{Genotyping}    = Genotyping.dbo.
@@ -113,11 +114,48 @@ CONFIG_SETTING{Proteomics_SPECTRUM_DESTINATION} = TABLE
 CONFIG_SETTING{Proteomics_MAX_TOP_HITS_TO_LOAD} = 10
 CONFIG_SETTING{PGPLOT_FONT} = /usr/local/lib/grfont.dat
 
-#### Microarray Settings
-CONFIG_SETTING{Microarray_affy_help_docs_url} = provide url if needed, see install notes
+###############################
+#### Microarray Settings ####
+CONFIG_SETTING{MA_AFFY_HELPDOCS_URL} = provide url if needed, see install notes
 
 # Is set to true value, 2-color menus and options will not be shown
 CONFIG_SETTING{MA_HIDE_TWO_COLOR} = 0
+
+# Specify paths to R executable and library
+CONFIG_SETTING{MA_R_EXE_PATH} = /usr/local/bin/R
+CONFIG_SETTING{MA_R_LIB_PATH} = /usr/local/lib/R/library
+
+# The next 5 settings below can be specified as absolute or relative paths, see 
+# RELATIVE VS. ABSOLUTE PATHS below for details.  Default settings are relative
+
+# Directory to which affy log files will be written, if not set will default
+# to LOG_BASE_DIR above, else $sbeams/var/log.
+CONFIG_SETTING{MA_LOG_BASE_DIR}         = var/logs
+
+# path to probe data
+CONFIG_SETTING{MA_AFFY_PROBE_DIR}       = var/Microarray/Affy_data/probe_data
+
+# path to bioconductor delivery dir
+CONFIG_SETTING{MA_BIOC_DELIVERY_PATH}   = var/Microarray/Affy_data/delivery
+
+# path to affy annotation output files
+CONFIG_SETTING{MA_ANNOTATION_OUT_PATH}  = tmp/Microarray/Affy_data/annotation
+
+# path to tmp dir
+CONFIG_SETTING{MA_AFFY_TMP_DIR}         = tmp/Microarray
+
+# path to dir where zip tmp files can be written
+CONFIG_SETTING{MA_AFFY_ZIP_REQUEST_DIR} = tmp/Microarray/zip_request_dir
+
+# files that will be used to determine if an entire group of files, all sharing
+# the same basename, are present when uploading Affy arrays 
+CONFIG_SETTING{MA_AFFY_DEFAULT_FILES}   = CHP CEL XML INFO RPT R_CHP JPEG EGRAM_PF.jpg EGRAM_T.jpg EGRAM_F.jpg
+
+# Current protocol that describes the R script to produce the CHP like file
+CONFIG_SETTING{MA_AFFY_R_CHP_PROTOCOL} = R Mas5.0 CHP
+
+### End Microarray Settings ###
+###############################
 
 
 #### Period of time in hours before login sessions expire
@@ -138,6 +176,7 @@ SESSION_REAUTH         = 0
 # config settings, different dev sites can have different values.
 LOGGING_LEVEL = warn
 
+# RELATIVE VS. ABSOLUTE PATHS
 # For UPLOAD_DIR and QUERY_DIR, the path can specified either as an
 # absolute or relative path.  If the path set has a leading slash, it
 # is assumed that the path is absolute from the base of the filesystem.
