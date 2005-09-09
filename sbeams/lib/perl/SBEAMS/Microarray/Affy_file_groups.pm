@@ -223,7 +223,7 @@ sub check_previous_arrays {
 	}
 	
 	
-	if ($rows[0] =~ /^\d/){
+	if (defined $rows[0] && $rows[0] =~ /^\d/){
 		if ($self->verbose() > 0){
 			print "RETURN ARRAY IN DB PK'$rows[0]'\n";
 		}
@@ -232,7 +232,8 @@ sub check_previous_arrays {
 		if ($self->verbose() > 0){
 			print "RETURN '0' ARRAY ROOT NOT IN DB\n";
 		}
-		return "ADD";
+	#	return "ADD";
+		return 0;
 	}
 
 }
@@ -317,7 +318,7 @@ sub get_all_affy_file_root_names {
 	
 	my $sql = qq~ SELECT file_root
 			FROM $TBMA_AFFY_ARRAY
-			AND record_status != 'D'
+			WHERE record_status != 'D'
 		 ~;
 		  
 	my @all_file_names = $sbeams->selectOneColumn($sql);
