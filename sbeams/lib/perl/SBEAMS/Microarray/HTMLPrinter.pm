@@ -157,8 +157,8 @@ sub displaySBEAMSPageHeader
   if ($navigation_bar eq "YES") {
   
     my $pad = '<NOBR>&nbsp;&nbsp;&nbsp;';
-    my $affy_docs = ( $CONFIG_SETTING{Microarray_affy_help_docs_url} =~ /http/ ) ?
-  		"<tr><td><a href='$CONFIG_SETTING{Microarray_affy_help_docs_url}'>$pad Affy Help Docs</a></td></tr>" :
+    my $affy_docs = ( $CONFIG_SETTING{MA_AFFY_HELPDOCS_URL} =~ /http/ ) ?
+  		"<tr><td><a href='$CONFIG_SETTING{MA_AFFY_HELPDOCS_URL}'>$pad Affy Help Docs</a></td></tr>" :
       "<tr><td><a href='$HTML_BASE_DIR/doc/Microarray/affy_help_pages/index.php'>$pad Affy Help Docs</a></td></tr>";
   
     $current_work_group_name = $sbeams->getCurrent_work_group_name();
@@ -166,14 +166,14 @@ sub displaySBEAMSPageHeader
     my $admin_menu;
     if ($current_work_group_name eq "Microarray_admin" || $current_work_group_name eq "Admin" ) {
       $admin_menu =<<"      END";
-	    <tr><td>&nbsp;</td></tr>
-	    <tr><td>Administration: </td></tr>
-  	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array">$pad Arrays</a></td></tr>
+	<tr><td>Administration: </td></tr>
+  	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array">$pad Arrays</a></td></tr>
     	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_scan">$pad Array scans</a></td></tr>
     	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_slide_lot">$pad Slide Lots</a></td></tr>
-  	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_layout">$pad Array Layouts</a></td></tr>
+  	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_layout">$pad Array Layouts</a></td></tr>
     	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_printing_batch">$pad Printing Batches</a></td></tr>
-  	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_slide_type">$pad Slide Types</a></td></tr>
+  	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_slide_type">$pad Slide Types</a></td></tr>
+	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=protocol">$pad Protocols</a></td></tr>
       END
     }
       
@@ -197,7 +197,6 @@ sub displaySBEAMSPageHeader
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetAffy_GeneIntensity.cgi">$pad Affy Gene Intensity</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/bioconductor/Add_affy_annotation.cgi">$pad Annotate Files</td></tr>
 	<tr><td>$affy_docs</td></tr>
-
   ~;
     unless ( $CONFIG_SETTING{MA_HIDE_TWO_COLOR} ) {
       print qq~
@@ -209,7 +208,6 @@ sub displaySBEAMSPageHeader
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetExpression">$pad Get Expression</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/graphicalOverview.cgi">$pad Graphical Overview</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SubmitArrayRequest.cgi?TABLE_NAME=MA_array_request">$pad Array Requests</td></tr>
-	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=protocol">$pad Protocols</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_labeling">$pad Labeling</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_hybridization">$pad Hybridization</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_quantitation">$pad Quantitation</a></td></tr>
@@ -219,16 +217,16 @@ sub displaySBEAMSPageHeader
 	<tr><td><a href="http://db.systemsbiology.net/software/ArrayProcess" TARGET=_blank>$pad Pipeline Help</td></tr>
 
 	<!--<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/graphicalOverview.cgi?tab=news_and_links">$pad News and Links</td></tr>-->
-
-  $admin_menu
-
 	<tr><td>&nbsp;</td></tr>
-  ~;
+      ~;
+
+
     }
 #	<tr><td>&nbsp;</td></tr>
 #	<tr><td>Array Requests:</td></tr>
 
     print qq~
+        $admin_menu
 	</table>
 	</td>
 
@@ -311,14 +309,14 @@ sub getMenu {
   my $admin_menu;
   if ($current_work_group_name eq "Microarray_admin" || $current_work_group_name eq "Admin" ) {
     $admin_menu =<<"    END";
-    <tr><td>&nbsp;</td></tr>
     <tr><td>Administration: </td></tr>
-	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array">$pad Arrays</a></td></tr>
-  	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_scan">$pad Array scans</a></td></tr>
-  	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_slide_lot">$pad Slide Lots</a></td></tr>
-	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_layout">$pad Array Layouts</a></td></tr>
-  	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_printing_batch">$pad Printing Batches</a></td></tr>
- 	  <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_slide_type">$pad Slide Types</a></td></tr>
+    <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array">$pad Arrays</a></td></tr>
+    <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_scan">$pad Array scans</a></td></tr>
+    <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_slide_lot">$pad Slide Lots</a></td></tr>
+    <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_layout">$pad Array Layouts</a></td></tr>
+    <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_printing_batch">$pad Printing Batches</a></td></tr>
+    <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_slide_type">$pad Slide Types</a></td></tr>
+    <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=protocol">$pad Protocols</a></td></tr>
     END
   }
   $BARCOLOR ||= '#FFFFFF';
@@ -352,32 +350,28 @@ sub getMenu {
   	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetExpression">$pad Get Expression</td></tr>
   	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/graphicalOverview.cgi">$pad Graphical Overview</td></tr>
   	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/SubmitArrayRequest.cgi?TABLE_NAME=MA_array_request">$pad Array Requests</td></tr>
-  	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=protocol">$pad Protocols</a></td></tr>
   	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_labeling">$pad Labeling</a></td></tr>
   	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_hybridization">$pad Hybridization</a></td></tr>
   	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=MA_array_quantitation">$pad Quantitation</a></td></tr>
   	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GridAlignCheck.cgi">$pad Check Alignment </td></tr>
   	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?mode=miame_status">$pad MIAME Status</td></tr>
   	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?mode=management">$pad Manage Arrays</td></tr>
-    <tr><td><a href="http://db.systemsbiology.net/software/ArrayProcess" TARGET=_blank>$pad Pipeline Help</td></tr>
+        <tr><td><a href="http://db.systemsbiology.net/software/ArrayProcess" TARGET=_blank>$pad Pipeline Help</td></tr>
   	<!--<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/graphicalOverview.cgi?tab=news_and_links">$pad News and Links</td></tr>-->  
     END
   }
-  $menu .= $admin_menu;
-
-
-
 
   $menu .=<<"  END";
+  $admin_menu
   </table>
   END
 
   return $menu;
       
   # This code never gets reached for now, update when needed.
-  if ( exists $CONFIG_SETTING{Microarray_affy_help_docs_url} && $CONFIG_SETTING{Microarray_affy_help_docs_url} =~ /http/){
+  if ( exists $CONFIG_SETTING{MA_AFFY_HELPDOCS_URL} && $CONFIG_SETTING{MA_AFFY_HELPDOCS_URL} =~ /http/){
     $menu .=<<"    END";
-		<tr><td><a class='blue_button' href="$CONFIG_SETTING{Microarray_affy_help_docs_url}">Affy Help Docs</a></td></tr>
+		<tr><td><a class='blue_button' href="$CONFIG_SETTING{MA_AFFY_HELPDOCS_URL}">Affy Help Docs</a></td></tr>
     END
   } else {
     $menu .=<<"    END";
