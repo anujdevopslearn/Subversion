@@ -85,7 +85,7 @@ use Cwd;
 use lib "$FindBin::Bin/../../perl";
 use vars qw ($sbeams $q $sbeams_affy $sbeams_affy_groups
              $PROG_NAME $USAGE %OPTIONS 
-			 $VERBOSE $QUIET $DEBUG 
+                	 $VERBOSE $QUIET $DEBUG 
 			 $DATABASE $TESTONLY $PROJECT_ID 
 			 $CURRENT_USERNAME 
 			 $SBEAMS_SUBDIR
@@ -97,12 +97,14 @@ use vars qw ($sbeams $q $sbeams_affy $sbeams_affy_groups
 			 $METHOD
 			 $RECOMPUTE_R
 	    	 $FILES_TO_UPDATE
+       		 %CONFIG_SETTING
+       		 $LOG_BASE_DIR
 	    );
 
 
 #### Set up SBEAMS core module
 use SBEAMS::Connection qw($q);
-use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Settings qw(:default $LOG_BASE_DIR);
 use SBEAMS::Connection::Tables;
 
 use SBEAMS::Microarray::Tables;
@@ -113,6 +115,7 @@ use SBEAMS::Microarray::Affy_Analysis;
 
 
 $sbeams = new SBEAMS::Connection;
+
 
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
@@ -171,7 +174,7 @@ unless (GetOptions(\%OPTIONS,
 		   "redo_R:s",
 		   "testonly",
 		   "files:s")) {
-  print "$USAGE";
+  die $USAGE;
  
 }
 
@@ -186,9 +189,10 @@ $RECOMPUTE_R = $OPTIONS{redo_R};
 $FILES_TO_UPDATE = $OPTIONS{files};
 
 
-my $val = grep {$RUN_MODE eq $_} @run_modes;
-
-die "*** RUN_MODE DOES NOT LOOK GOOD '$RUN_MODE' ***\n $USAGE" unless ($val);
+unless ( $RUN_MODE && grep /^$RUN_MODE$/, @run_modes ) {
+  $RUN_MODE = '' if !defined $RUN_MODE;
+  die "Invalid run_mode: $RUN_MODE\n\n $USAGE";
+}
 
 if ($RUN_MODE eq 'update' ){		#if update mode check to see if --method <name> is set correctly
 	#FIX ME
@@ -411,7 +415,6 @@ sub add_R_CHP_data {
 sub find_affy_R_CHP {
 	my $SUB_NAME = 'find_affy_R_CHP';
 	
-	
 	my %args = @_;
 	
 	my $sbeams_affy_groups = $args{object};
@@ -452,6 +455,7 @@ sub find_affy_R_CHP {
 		$sbeams_affy->set_afs_sample_tag($sample_tag);			#set the sample_tag, within a project this should be a unique name
 		
 		my $sql = $sbeams_affy_groups->get_all_affy_info_sql(affy_array_ids => $affy_array_id);
+
 		$sbeams->display_sql(sql=>$sql) if ($VERBOSE > 1);
 		my ($array_info_href) = $sbeams->selectHashArray($sql);		#bit dorkey running huge query just to find the organism name
 		my $organisim_name = $$array_info_href{Organism};
@@ -485,42 +489,37 @@ sub find_affy_R_CHP {
 # Collect information about files that do have enough information to upload and print out a nice file
 # so someone can go and fix the problem
 ###############################################################################
-	
 sub write_error_log{
 	
-	my %args = @_;
+  my %args = @_;
 	
-	my $sbeams_affy_groups = $args{object};
+  my $sbeams_affy_groups = $args{object};
 
+  my $logdir = $sbeams_affy->get_affy_log_dir();
+
+  unless ( -e $logdir ) {
+    print STDERR "Error log not configured or does not exist: $logdir\n";     
+  }
 	
-	my $SUB_NAME = 'write_error_log';
+  open ERROR_LOG, ">$logdir/AFFY_ADD_R_CHP_FILES_LOG.txt" ||
+                              die "Cannot open affy error log in $logdir: $!\n";
 	
+  my $date = `date`;
+  chomp $date;
+  print ERROR_LOG "TIME OF RUN '$date'\n";
 	
-	open ERROR_LOG, ">../../../tmp/Microarray/AFFY_ADD_R_CHP_FILES_LOG.txt" or 
-		die "CANNOT OPEN AFFY ERROR LOG $!\n";
+  my $count = 1;
 	
-	my $date = `date`;
-	chomp $date;
-	print ERROR_LOG "TIME OF RUN '$date'\n";
-	
-	my $count = 1;
-	
-	foreach my $file_name ($sbeams_affy_groups->sorted_root_names()) {
-		
-		if (my $error = $sbeams_affy_groups->group_error(root_file_name => $file_name) ){
+  foreach my $file_name ($sbeams_affy_groups->sorted_root_names()) {
+
+    if ( my $error = $sbeams_affy_groups->group_error(root_file_name => $file_name) ) {
 					
-			print ERROR_LOG "$count\t$error\n";
-			
-			
-			foreach my $file_path ( $sbeams_affy_groups->get_file_group(root_file_name => $file_name)) {
-				
-				print ERROR_LOG "\t\t$file_path\n";
-			
-			}
-			
-			$count ++;
-		}
-		
-	}
+      print ERROR_LOG "$count\t$error\n";
+      foreach my $file_path ( $sbeams_affy_groups->get_file_group(root_file_name => $file_name)) {
+        print ERROR_LOG "\t\t$file_path\n";
+      }
+      $count ++;
+    }
+  }
 }
 		

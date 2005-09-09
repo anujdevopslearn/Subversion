@@ -447,7 +447,7 @@ sub add_protocl_information {
 	
 	my $sample_protocol_val     = $affy_o->get_afs_affy_sample_protocol_ids();
 	my $affy_array_protocol_val = $affy_o->get_afa_affy_array_protocol_ids();
-	
+	$sample_protocol_val = '' if !defined $sample_protocol_val;
 	my @sample_ids = split /,/, $sample_protocol_val;			#might be comma delimited list of protocol_ids
 	
 	
@@ -476,12 +476,13 @@ sub add_protocl_information {
 				   		   	add_audit_parameters=>1,
 						   );
 		if ($VERBOSE > 0){
-			print "ADD PROTOCOL '$protocol_id' to SAMPLE LINKING TABLE '$affy_array_sample_protocol_id'for SAMPLE '$affy_array_sample_id'\n";
+			print "ADD PROTOCOL '$protocol_id' to SAMPLE LINKING TABLE '$affy_array_sample_protocol_id' for SAMPLE '$affy_array_sample_id'\n";
 		}
 	
 	}
    #################################################################################
    ###Add the protocols to the array linking table
+        $affy_array_protocol_val = '' if !defined $affy_array_protocol_val;
 	my @array_p_ids = split /,/, $affy_array_protocol_val;			#might be comma delimited list of protocol_ids
 	
 	
@@ -510,7 +511,7 @@ sub add_protocl_information {
 				   		   	add_audit_parameters=>1,
 						   );
 		if ($VERBOSE > 0){
-			print "ADD PROTOCOL '$protocol_id' to AFFY ARRAY LINKING TABLE '$affy_array_protocol_id'for ARRAY '$affy_array_id'\n";
+			print "ADD PROTOCOL '$protocol_id' to AFFY ARRAY LINKING TABLE '$affy_array_protocol_id' for ARRAY '$affy_array_id'\n";
 		}
 	
 	}
@@ -1243,7 +1244,7 @@ sub convert_val_to_id {
 		print "DATA TO CONVERT '$data_key' RESULTS '@rows'\n";
 	}
 	
-	if ($rows[0] =~ /^\d/){									#if the query works it will give back a id, if not it will try and find a default value below
+	if (defined $rows[0] && $rows[0] =~ /^\d/){									#if the query works it will give back a id, if not it will try and find a default value below
 		$HOLD_COVERSION_VALS{$data_key}{$val} = $rows[0];
 		return $rows[0];
 	
@@ -1282,7 +1283,7 @@ sub convert_val_to_id {
 					   
 					   };   
 			
-				if ($DEBUG > 0) {
+				if ($DEBUG) {
 				print "SQL DATA\n";
 				print Dumper($rowdata_ref);
 			}
@@ -1538,12 +1539,10 @@ sub delete_affy_data {
 		
 			my @all_names_to_delete = $sbeams_affy_groups->get_all_affy_file_root_names();  #pull all the names from affy_arrays and reset to global $DELETE_BOTH to the names
 													#method returns zero if nothing to return
-			die "Nothing to delete\n" if  $all_names_to_delete[0] == 0;			
+			die "Nothing to delete\n" if !$all_names_to_delete[0];			
 			
-			$DELETE_BOTH = join " ", @all_names_to_delete;
-			
-			
-			print "NAMES TO DELETE '$DELETE_BOTH'";
+			$DELETE_BOTH = join "\n\t\t\t", @all_names_to_delete;
+			print "NAMES TO DELETE\t $DELETE_BOTH\n";
 			
 			
 			delete_affy_data();								#re-run the delete_sub with the new parameters															
@@ -1848,7 +1847,8 @@ sub parse_info_file{
 		}
 		
 		
-		if ($data_to_find{$data_key}{FILE_VAL_REQUIRED} eq 'YES' &! $val) {
+		if ( $data_to_find{$data_key}{FILE_VAL_REQUIRED} && 
+                      $data_to_find{$data_key}{FILE_VAL_REQUIRED} eq 'YES' &! $val) {
 			$sbeams_affy_groups->group_error(root_file_name => $root_file,
 							 error => "CANNOT FIND VAL FOR '$data_key' EITHER FROM THE INFO".
 								 "FILE OR DEFAULT, THIS IS NOT GOOD.  Please EDIT THE FILE AND TRY AGAIN",
@@ -1889,7 +1889,7 @@ sub parse_info_file{
 		$data_to_find{$data_key}{VAL} = $id_val;		
 ##########################################################################################
 #collected errors in the all_files_h and print them to the log file			
-		if  ($id_val =~ /ERROR/) {				
+		if  ( defined $id_val && $id_val =~ /ERROR/) {				
 			$sbeams_affy_groups->group_error(root_file_name => $root_file,
 							 error => "$id_val",
 							);
