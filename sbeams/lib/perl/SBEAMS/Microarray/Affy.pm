@@ -134,8 +134,8 @@ sub registered{
 # private method to sort the instances by their root_name
 #######################################################
 sub _sorted_affy_objects{
+  no warnings; # Turn off warnings for this block...
 	my @objects = @_;
-	
 	 
 
 	my @sorted_objects =  map { $_->[0]}
@@ -449,7 +449,7 @@ sub set_afa_file_root {
 	
 sub get_afa_file_root {
 	my $self = shift;
-	return $self->{ROOT_NAME};
+	return $self->{ROOT_NAME} || '';
 }	
 
 
