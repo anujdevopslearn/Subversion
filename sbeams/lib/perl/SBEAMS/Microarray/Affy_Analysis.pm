@@ -83,8 +83,8 @@ use SBEAMS::Microarray::Tables;
 use SBEAMS::Microarray::Analysis_Data;
 use SBEAMS::Microarray::Settings qw( $AFFY_TMP_DIR );
 
-my $R_program = '/net/arrays/Affymetrix/bioconductor/bin/R';
-my $R_library = '/net/arrays/Affymetrix/bioconductor/library';
+my $R_program = SBEAMS::Microarray::Settings->get_R_exe_path( 'obj_placeholder' );
+my $R_library = SBEAMS::Microarray::Settings->get_R_lib_path( 'obj_placeholder' );
 
 #our $PHYSICAL_BASE_DIR;
 
@@ -130,9 +130,9 @@ sub make_R_CHP_file {
    	
   # temp dir for storing R/shell scripts, use config value or fall back
 	my $R_temp_dir = ( $AFFY_TMP_DIR ) ? "${AFFY_TMP_DIR}/R_CHP_RUNS/${file_name}_R_CHP" : 
-                  "/net/dblocal/www/html/sbeams/tmp/Microarray/R_CHP_RUNS/${file_name}_R_CHP";
+                           "$PHYSICAL_BASE_DIR/tmp/Microarray/R_CHP_RUNS/${file_name}_R_CHP";
 
-  my $out_shell_script = "${file_name}_shell.sh";
+        my $out_shell_script = "${file_name}_shell.sh";
 	my $out_R_script = "${file_name}_R_script.R";					#these paths will be relative to where the shell script will be running, they all should be in the same directory
 	my $out_error_log = "${file_name}_error.txt";
 	
@@ -170,7 +170,6 @@ END
 
 
 	
-	
 	if (-d $R_temp_dir){
 		my $command_line = "rm -r $R_temp_dir";
 		my $results = `$command_line`;
@@ -178,7 +177,6 @@ END
 		
 	}
 
-		
 	mkdir $R_temp_dir;
 		
 	open OUT,  ">$R_temp_dir/$out_R_script" or 
@@ -210,7 +208,7 @@ fi
 END
 
 	open OUT, ">$R_temp_dir/$out_shell_script"
-		or "Cannot open '$out_shell_script'\n";
+		or die "Cannot open '/$R_temp_dir/$out_shell_script'\n";
 		
 	print OUT $shell_script;
 	close OUT;
@@ -429,23 +427,20 @@ sub get_R_CHP_protocol_id {
 #Using the shell script to facilitate making graphics.  
 ###############################################################################
 sub log_R_run {
-	my $method = 'log_R_run';
- 
-	my $self = shift;
+  my $self = shift;
+  my $info = shift;
+
+  my $logdir = $self->get_affy_log_dir();
 	
-	my $info = shift;
-	
-	
-	open OUT, ">>/net/dblocal/www/html/sbeams/tmp/Microarray/AFFY_R_CHP_RUNS.log" or
-		die "CANNOT OPEN R_CHP RUN LOG $!\n";
+  open OUT, ">>$logdir/AFFY_R_CHP_RUNS.log" || die "Can't open R_CHP log dir $!\n";
 		
-	my $date = `date`;
-	chomp $date;
+  my $date = `date`;
+  chomp $date;
 	
-	my $line = "$date $info\n";
+  my $line = "$date $info\n";
 	
-	print OUT $line;
-	close OUT;
+  print OUT $line;
+  close OUT;
 } 
 
 
