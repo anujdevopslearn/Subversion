@@ -1,4 +1,4 @@
-#!/tools/bin/perl
+#!/usr/local/bin/perl
 
 ###############################################################################
 # Set up all needed modules and objects
