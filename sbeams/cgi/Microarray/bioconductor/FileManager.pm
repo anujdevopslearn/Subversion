@@ -122,15 +122,24 @@ sub filenames {
 	}
 		
 	
+        {
+        # This block was spewing tons of warnings, basically due to incorrect
+        # 'type' with the cmp and <=> operators.  Turned off for now, should
+        # revisit FIXME. 
+        no warnings;
 	@filenames = map{$_->[0]} 
-				 sort {my @a_fields = @$a[1..$#$a]; 
+				 sort {  
+                                           my @a_fields = @$a[1..$#$a]; 
 					   my @b_fields = @$b[1..$#$a]; 
+                                           for ( @a_fields ) { $_ = '' unless defined $_; }
+                                           for ( @b_fields ) { $_ = '' unless defined $_; }
 							
 					   $a_fields[2] cmp $b_fields[2]
 								     ||
 					   $a_fields[1] <=> $b_fields[1]
 							 
 				  } @sample_names;
+        }
 				  
 	
 				  
