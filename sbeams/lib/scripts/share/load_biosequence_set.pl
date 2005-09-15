@@ -913,7 +913,11 @@ sub loadBiosequence {
 	$property_set{duplicate_biosequences} = $rowdata_ref->{duplicate_biosequences};
 	delete($rowdata_ref->{duplicate_biosequences});
   }
-  
+  if (defined($rowdata_ref->{fav_codon_frequency})) {
+	$property_set{fav_codon_frequency} = $rowdata_ref->{fav_codon_frequency};
+	delete($rowdata_ref->{fav_codon_frequency});
+  }
+
 
   #### Remove any attributes that go in annotation
   if (defined($rowdata_ref->{gene_symbol})){
