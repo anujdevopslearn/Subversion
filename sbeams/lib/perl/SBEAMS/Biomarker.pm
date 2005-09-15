@@ -4,7 +4,7 @@ package SBEAMS::Biomarker;
 # Program     : SBEAMS::Biomarker
 # $Id$
 #
-# Description : Perl Module to handle all SBEAMS - Biomarker specific items.
+# Description : Perl Module to handle Biomarker specific items.
 #
 ###############################################################################
 
@@ -24,11 +24,6 @@ use SBEAMS::Biomarker::Settings;
           SBEAMS::Biomarker::TableInfo
           SBEAMS::Biomarker::Settings);
 
-
-###############################################################################
-# Global Variables
-###############################################################################
-$VERSION = '0.02';
 
 
 #+
@@ -70,7 +65,7 @@ sub checkExperiment {
 
   my $sql =<<"  END";
   SELECT experiment_id, project_id
-  FROM $TBBM_EXPERIMENT
+  FROM $TBBM_BMRK_EXPERIMENT
   WHERE experiment_name = '$expt'
   END
 
@@ -87,3 +82,16 @@ sub checkExperiment {
 
 
 1;
+
+__END__
+
+=head1 NAME:
+
+SBEAMS::Biomarker
+
+=head1 DESCRIPTION:
+
+root object for SBEAMS Biomarker database.  Database is
+designed to support activities of LCMS data acquisition.
+
+=cut
