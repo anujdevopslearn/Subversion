@@ -268,7 +268,7 @@ sub getPeptideSummaryStatus {
   $status{minimum_probability} = $rows[0]->[3];
 
 
-  #### Get the number of rows for this biosequence_set_id from database
+  #### Get the number of rows for this peptide_summary_id from database
   $sql = qq~
           SELECT count(*) AS 'count'
             FROM $TBAPD_PEPTIDE
