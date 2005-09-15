@@ -10,17 +10,16 @@ package SBEAMS::Biomarker::Biosample;
 #
 ###############################################################################
 
-use SBEAMS::Connection qw( $log );
 use strict;
 
+use SBEAMS::Connection qw( $log );
+use SBEAMS::Biomarker::Tables;     
+ 
 #### Set up new variables
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw (Exporter);
-
-@EXPORT = qw (
-);
+#use vars qw(@ISA @EXPORT);
+#require Exporter;
+#@ISA = qw (Exporter);
+#@EXPORT = qw ();
 
 sub new {
   my $class = shift;
@@ -28,6 +27,35 @@ sub new {
 	bless $this, $class;
 	return $this;
 }
+
+sub attr_exists {
+  my $this = shift;
+  my $attr = shift;
+  return unless $attr;
+
+  my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
+  die "unsafe attr detected: $attr\n" if $sbeams->isTaintedSQL($attr);
+
+  my ($cnt) = $sbeams->selectrow_array( <<"  END_SQL" );
+  SELECT COUNT(*) FROM $TBBM_BMRK_ATTRIBUTE
+  WHERE attribute_name = '$attr'
+  END_SQL
+
+  return $cnt;
+}   
+  
+sub setSBEAMS {
+  my $this = shift;
+  my $sbeams = shift || die "Must pass sbeams object";
+  $this->{_sbeams} = $sbeams;
+}
+
+sub getSBEAMS {
+  my $this = shift;
+  return $this->{_sbeams};
+}
+
+
 
 #+
 # Routine for inserting biosample

@@ -1,26 +1,25 @@
 package SBEAMS::Biomarker::Biosource;
 
-###############################################################################
+##############################################################################
 #
-# Description :   Library code for inserting biosample records into 
+# Description :   Library code for maniulating biosample records within 
 # the database
 # $Id:   $
 #
 # Copywrite 2005   
 #
-###############################################################################
+##############################################################################
 
-use SBEAMS::Connection qw($log);
 use strict;
 
+use SBEAMS::Connection qw($log);
+use SBEAMS::Biomarker::Tables;
+
 #### Set up new variables
-use vars qw(@ISA @EXPORT);
-
-require Exporter;
-@ISA = qw (Exporter);
-
-@EXPORT = qw (
-);
+#use vars qw(@ISA @EXPORT);
+#require Exporter;
+#@ISA = qw (Exporter);
+#@EXPORT = qw ();
 
 sub new {
   my $class = shift;
@@ -28,6 +27,68 @@ sub new {
 	bless $this, $class;
 	return $this;
 }
+
+sub tissue_exists {
+  my $this = shift;
+  my $tissue = shift;
+  return unless $tissue;
+
+  my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
+  die "unsafe tissue detected: $tissue\n" if $sbeams->isTaintedSQL($tissue);
+
+  my ($cnt) = $sbeams->selectrow_array( <<"  END_SQL" );
+  SELECT COUNT(*) FROM $TBBM_BMRK_ATTRIBUTE
+  WHERE tissue_name = '$tissue'
+  END_SQL
+
+  return $cnt;
+}   
+  
+sub disease_exists {
+  my $this = shift;
+  my $disease = shift;
+  return unless $disease;
+
+  my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
+  die "unsafe disease detected: $disease\n" if $sbeams->isTaintedSQL($disease);
+
+  my ($cnt) = $sbeams->selectrow_array( <<"  END_SQL" );
+  SELECT COUNT(*) FROM $TBBM_BMRK_ATTRIBUTE
+  WHERE disease_name = '$disease'
+  END_SQL
+
+  return $cnt;
+}   
+  
+sub attr_exists {
+  my $this = shift;
+  my $attr = shift;
+  return unless $attr;
+
+  my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
+  die "unsafe attr detected: $attr\n" if $sbeams->isTaintedSQL($attr);
+
+  my ($cnt) = $sbeams->selectrow_array( <<"  END_SQL" );
+  SELECT COUNT(*) FROM $TBBM_BMRK_ATTRIBUTE
+  WHERE attribute_name = '$attr'
+  END_SQL
+
+  return $cnt;
+}   
+  
+sub setSBEAMS {
+  my $this = shift;
+  my $sbeams = shift || die "Must pass sbeams object";
+  $this->{_sbeams} = $sbeams;
+}
+
+sub getSBEAMS {
+  my $this = shift;
+  return $this->{_sbeams};
+}
+
+  
+
 
 #+
 # Routine for inserting biosource(s)
@@ -64,86 +125,3 @@ sub getBiosample {
 1;
 # End biosource
 
-
-
-
-__DATA__
-
-# Attributes 
-'Sample Setup Order'
-'MS Sample Run Number'
-'Name of Investigators'
-'PARAM:time of sample collection '
-'PARAM:meal'
-'PARAM:alcohole'
-'PARAM:smoke'
-'PARAM:Date of Sample Collection'
-'Study Histology'
-
-# Bioource 
-'ISB sample ID'
-'Patient_id'
-'External Sample ID'
-'Name of Institute'
-'species'
-'age'
-'gender'
-
-'Sample type'
-
-# Biosample
-'amount of sample received'
-'Location of orginal sample'
-
-# Disease
-'Disease:Breast cancer'
-'Disease:Ovarian cancer'
-'Disease:Prostate cancer'
-'Disease:Blader Cancer'
-'Disease:Skin cancer'
-'Disease:Lung cancer'
-'Disease: Huntington\'s Disease'
-'diabetic'
-
-# tissue_type
-'heart'
-'blood'
-'liver'
-'neuron'
-'lung'
-'bone'
-
-biosource_disease
-'Disease Stage'
-
-#orphan
-'Disease Info: Group'
-'Prep Replicate id'
-'Sample Prep Name'
-'status of sample prep'
-'date of finishing prep'
-'amount of sample used in prep'
-'Sample prep method'
-'person prepared the samples'
-'Volume of re-suspended sample'
-'location of finished sample prep'
-'MS Replicate Number'
-'MS Run Name'
-'status of MS'
-'date finishing MS'
-'Random Sample Run order'
-'order of samples ran per day'
-'MS run protocol'
-'Volume Injected'
-'location of data'
-'status of Conversion'
-'Date finishing conversion'
-'name of raw files'
-'location of raw files'
-'name of mzXML'
-'location of mzXML'
-'person for MS analysis'
-'date finishing alignment'
-'location of alignment files'
-'person for data analysis'
-'peplist peptide peaks file location'
