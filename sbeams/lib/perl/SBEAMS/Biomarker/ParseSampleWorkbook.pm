@@ -58,13 +58,56 @@ sub process_data {
 
   my ( @sou_attr, @sam_attr, @dis );
 
-  my $pmap = $this->_getParser2dbMap();
+  my $idx = $this->getHeadingsIndex();
 
+  # Array to hold list of separated objects
+  my @items;
+
+  # Get headers for various sub-groups
+  my @tags = qw( biosource biosource_attr biosource_disease tissue_type
+                 biosource_disease_stage biosample biosample_attr );
+
+  # Get headers for all columns
+  my %head;
+  for my $tag ( @tags ) {
+    $head{$tag} = $this->_getDb2ParserMap($tag);
+  }
+  
+  # accumulator for processed lines
+  my @all_items;
+
+  # Each row represents one sample
   foreach my $row ( @{$this->{_data}} ) {
-    # Pull out 
+    
+    # hash representing item (line in file)
+    my %item;
+
+    # For each of the categories (tables)
+    for my $tag ( @tags ) {
+
+      my %subitem;
+
+      # Had to rewrite as a loop.
+      foreach my $key ( keys(%{$head{$tag}}) ) {
+        $subitem{$key} = ( !defined( $idx->{${$head{$tag}}{$key}} ) ? undef :
+                                     $row->[$idx->{${$head{$tag}}{$key}}] ); 
+      }
+      
+      $item{$tag} = \%subitem;
+
+      # Confused yet?
+      # The item hash is keyed by tags, i.e. biosource, biosample, etc. 
+      # Each of these points at an anonymous hashref.
+      # The referenced hash holds the actual spreadsheet values, keyed by db 
+      # column name (keys of %{$head{$tag}} rather than by the spreadsheet
+      # column header, which are the values of %{$head{$tag}}
+      # @{$item{$tag}}{keys(%{$head{$tag}})} = @$row[@$idx{values(%{$head{$tag}})}];
+    }
+    push @all_items, \%item;
   }
 
-
+  # We have them all, cache and return.
+  $this->{processed_items} = \@all_items;
   
 } # End process_data
 
@@ -84,7 +127,38 @@ sub getDataRef {
   return $this->{_data} || [];
 }
 
-### Private subroutines ###
+sub get_processed_items {
+  my $this = shift;
+  return $this->{processed_items} || undef;
+}
+
+sub setSBEAMS {
+  my $this = shift;
+  my $sbeams = shift || die "Must pass sbeams object";
+  $this->{_sbeams} = $sbeams;
+}
+
+sub getSBEAMS {
+  my $this = shift;
+  return $this->{_sbeams};
+}
+
+
+ 
+ # # # ####################### # # #
+  # #   ## Private methods ##   # #
+   #     ###################     
+
+
+#+
+# Rudimentry method to avoid dangerous SQL stmts
+#-
+sub _safe_sql {
+  my $this = shift;
+  my $value = shift;
+  return ( $value =~ /DELETE|DROP|UPDATE|INSERT|ALTER/gi );
+}
+
 
 #+
 # Based on file format as of 2005-08-01
@@ -184,66 +258,105 @@ sub _parse_excel_file {
   return \@msg;
 }
 
-sub _getParser2dbMap {
+#+ 
+# returns reversed hash; dangerous as always!
+#-
+sub _getDb2ParserMap {
   my $this = shift;
-  my %map = (
+  my $mode = shift || 'all';
+  my $map = $this->_getParser2DbMap( $mode );
+  print "Got the map, has " . scalar( keys( %$map ) ) . " items\n";
+  my %reverse = reverse( %$map );
+  for( keys( %reverse ) ) {
+    #print "$_ => $reverse{$_}\n";
+  }
+  return \%reverse;
+}
 
-    # Biosource
+sub _getParser2DbMap {
+  my $this = shift;
+  my $mode = shift || 'all';
+
+  # Biosource
+  my %biosource = (
     'ISB sample ID' => 'biosource_name',   # to be used as biosample_name also?
     'Patient_id' => 'patient_id',
     'External Sample ID' => 'external_id',
-    'Name of Institute' => 'organization', # look up id
+    'Name of Institute' => 'organization', #  Do ID lookup
     'Name of Investigators' => 'investigators', # need to add
     'Sample type' => 'source_type', 
     'species' => 'organism', # Do ID lookup
     'age' => 'age',  # will have to split
     'gender' => 'gender', # need to add
     'amount of sample received' => 'original_volume',
+  );
+  return \%biosource if $mode eq 'biosource';
+  
 
-    # Biosource Attributes
+  # Biosource Attributes
+  my %biosource_attr = (
     'PARAM:time of sample collection' => 'collection_time',  # type => PARAM, name => collection_time, value => value
     'PARAM:meal' => 'meal',   
     'PARAM:alcohole' => 'alcohol',   
     'PARAM:alcohol' => 'alcohol',   
-    'PARAM:smoke' => 'smoke',   
+#    'PARAM:smoke' => 'smoke',   
     'PARAM:Date of Sample Collection' => 'collection_date',   
     'PARAM:Others' => 'other',   
 
     'others' => 'other',  # type => general, name => others, value => value
-    'Plate Layout' => 'plate_layout',
+#    'Plate Layout' => 'plate_layout',      
     'Study Histology' => 'study_histology',
     'Disease Info: Group' => 'group_disease',
+  );
+  return \%biosource_attr if $mode eq 'biosource_attr';
 
-    # biosource_disease.disease_stage
+  # biosource_disease.disease_stage
+  my %biosource_disease_stage = (
     'Disease Stage' => 'disease_stage',
+  );
+  return \%biosource_disease_stage if $mode eq 'biosource_disease_stage';
 
     # Diseases
+  my %biosource_disease = (
     'Disease:Breast cancer' => 'breast_cancer',   # disease_type => cancer, disease_name => breast_cancer, value => value
     'Disease:Ovarian cancer' => 'ovarian_cancer',   # source disease
     'Disease:Prostate cancer' => 'prostate_cancer',    # source disease
     'Disease:Blader Cancer' => 'bladder_cancer',     # source disease
     'Disease:Skin cancer' => 'skin_cancer',    # source disease
     'Disease:Lung cancer' => 'lung_cancer',    # source disease
-    'Disease: Huntingtons Disease' => 'Huntingtons_disease',    # source disease
+    "Disease: Huntington's Disease" => 'huntingtons_disease',    # source disease
     'Disease:other cancers' => 'other_cancers',
+  );
+  return \%biosource_disease if $mode eq 'biosource_disease';
 
-    # Biosample
+  # Biosample
+  my %biosample = (
     'Location of orginal sample' => 'storage_location',
+    'Plate Layout' => 'well_id'
+  );
+  return \%biosample if $mode eq 'biosample';
 
-    # Biosample Attributes
+  # Biosample Attributes
+  my %biosample_attr = (
     'Sample Setup Order' => 'sample_setup',#   biosample_attribute, type is sample_order name is sample_setup_order, value is value
     'MS Sample Run Number' => 'ms_run_number',
+  );
+  return \%biosample_attr if $mode eq 'biosample_attr';
 
-    # Tissue types 
+  # Tissue types 
+  my %tissue_type = (
     'heart' => 'heart',
     'blood' => 'blood',
     'liver' => 'liver',
     'diabetic' => 'diabetic',
     'neuron' => 'neuron',
     'lung' => 'lung',
-    'bone' => 'bone',
+    'bone' => 'bone'
+  );
+  return \%tissue_type if $mode eq 'tissue_type';
 
-    # Prep stuff,    samples -> treatment
+  # Prep stuff,    samples -> treatment
+  my %prep_params = (
     'Prep Replicate id' => 'xxxx',   #   biosample_attribute, type is sample_order name is prep_replicate_id, value is value
     'Sample Prep Name' => 'xxxx',    # treatement_name  =>> deprecated, still a possibility???  # biogroup.bio_group_name, group type is sample_prep
     'status of sample prep' => 'xxxx',  # treatement.status
@@ -253,8 +366,11 @@ sub _getParser2dbMap {
     'person prepared the samples' => 'xxxx',  # treatment.processed_by
     'Volume of re-suspended sample' => 'xxxx',  # New sample.original_volume
     'location of finished sample prep' => 'xxxx',   # New sample.storage_location 
+  );
+  return \%prep_params if $mode eq 'prep_params';
 
-    # MS stuff, all downstream!
+  # MS stuff, all downstream!
+  my %ms_params = (
     'MS Replicate Number' => 'xxxx',
     'MS Run Name' => 'xxxx',
     'status of MS' => 'xxxx',
@@ -263,8 +379,11 @@ sub _getParser2dbMap {
     'order of samples ran per day' => 'xxxx',
     'MS run protocol' => 'xxxx',
     'Volume Injected' => 'xxxx',
+  );
+  return \%ms_params if $mode eq 'prep_params';
 
     # analysis stuff, all downstream!
+  my %analysis_params = (
     'location of data' => 'xxxx',
     'status of Conversion' => 'xxxx',
     'Date finishing conversion' => 'xxxx',
@@ -277,9 +396,24 @@ sub _getParser2dbMap {
     'location of alignment files' => 'xxxx',
     'person for data analysis' => 'xxxx',
     'peplist peptide peaks file location' => 'xxxx'
-    );
+  );
+  return \%analysis_params if $mode eq 'prep_params';
 
-  return \%map;
+  my %map = ( %biosource,
+              %biosource_attr,
+              %biosource_disease,
+              %biosource_disease_stage,
+              %biosample,
+              %biosample_attr, 
+              %tissue_type,
+              %prep_params,
+              %ms_params,
+              %analysis_params
+            );
+
+  return \%map if $mode eq 'all';
+  die "Unknown mode $mode, try again";
+  
 }
 
 1;
