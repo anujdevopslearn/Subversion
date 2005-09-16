@@ -10,7 +10,8 @@ use strict;
 
 # Number of times to execute each statement.
 use constant ITERATIONS => 10;
-use constant REFRESH_HANDLE => 1;
+use constant REFRESH_HANDLE => 0;
+use constant VERBOSE => 0;
 
 # Quiet down in there!
 close(STDERR);
@@ -20,7 +21,8 @@ $|++;
 
 my %queries = ( 1 => 'SELECT * FROM pubs.dbo.authors ORDER BY au_id',
                 2 => 'SELECT * FROM pubs.dbo.employee ORDER BY emp_id',
-                3 => "SELECT * FROM pubs.dbo.titles T JOIN pubs.dbo.titleauthor TA ON T.title_id = TA.title_id JOIN pubs.dbo.authors A ON A.au_id = TA.au_id ORDER BY A.au_id, T.title_id DESC" 
+                3 => "SELECT * FROM pubs.dbo.titles T JOIN pubs.dbo.titleauthor TA ON T.title_id = TA.title_id JOIN pubs.dbo.authors A ON A.au_id = TA.au_id ORDER BY A.au_id, T.title_id DESC", 
+                #4 => "SELECT TOP 1000 * FROM microarray_test.dbo.affy_gene_intensity"
               ); 
   
 # Set up user agent and sbeams objects
@@ -85,13 +87,15 @@ sub stringify {
     $contents .= join "::", map{ ( defined $_ ) ? $_ : 'NULL' } @row;
   }
   my $chksum = md5_base64( $contents );
-  print STDERR "$chksum => $contents\n" if 0; # Debug stmt, proves something is working!
+#  print STDERR "$chksum => $contents\n" if 1; # Debug stmt, proves something is working!
+  print "checksum => $chksum\n" if VERBOSE; # Debug stmt, proves something is working!
   return ( $cnt, $chksum );
 }
 
 sub dbConnect {
   # Define the database you want to interrogate
-  my $db = 'pgsql';
+  my $db = 'sqlserv';
+          # 'pgsql';
           # 'mysql';
           # 'sqlserv';
   
@@ -99,19 +103,11 @@ sub dbConnect {
                  sqlserv => "DBI:Sybase:server=mssql;database=SBEAMSTest1", 
                  pgsql => "DBI:Pg:host=pgsql;dbname=sbeamstest1" );
 
-#  my $connect = "DBI:Sybase:server=mssql;database=pubs";
+  my $user = 'sbeams_user';
 
-#  my $user = ( $db eq 'mysql' ) ? 'guest' : 
-#  my $user = 'dcampbel';
-  my $user = 'tsbeamsadmin';
-
-#  my $pass = ( $db eq 'mysql' ) ? 'guest' : 
-  my %pass = ( mysql => 'something',
-               sqlserv => 'SB1440LM',
-               pgsql => 'TSB1397' ); 
-  # my $pass = 'guest'
-
-  
+  my %pass = ( mysql => 'mysql_pass',
+               sqlserv => 'mssql_pass',
+               pgsql => 'pgsql_pass' ); 
 
   my $dbh = DBI->connect( $connect{$db}, $user, $pass{$db}, { RaiseError => 1, AutoCommit => 0 } ) || die( $DBI::errstr );
   return $dbh;
