@@ -18,6 +18,7 @@ use strict;
 # Setup global objects
 my $sbeams = SBEAMS::Connection->new();
 my $biomarker = SBEAMS::Biomarker->new();
+$sbeams->output_mode( 'interactive' );
 
 # Main
 {
@@ -55,25 +56,39 @@ my $biomarker = SBEAMS::Biomarker->new();
   if ( $params->{test_only} ) {
     test_data( biosource => $biosource,
                biosample => $biosample,
-               items     => $all_items );
+               items     => $all_items,
+               redundant => 0,
+               verbose   => 1 );
   } else {
     add_items( biosource => $biosource,
                biosample => $biosample,
-               items     => $all_items );
+               items     => $all_items,
+               make_new  => $params->{autocreate} );
   }
 
 }
   
+#+
+#
+#
+#-
+sub add_items {
+#      $biosource->add_new( biosource => $item->{biosource},
+#                           biosource_attr => $item->{biosource_attr},
+#                           tissue_type => $item->{tissue_type},
+#                          disease => $item->{disease},
+#                          disease_stage => $item->{disease_stage}
+#                         );
 
-sub test_data {
   my %args = @_;
   for my $arg qw( biosource biosample items ) {
     die "Missing required parameter $arg" unless defined $args{$arg};
   }
+  $args{make_new} ||= 0;
+
   my $item_no = 0;
   for my $item ( @{$args{items}} ){
     $item_no++;
-
     for my $k ( keys(%{$item->{biosource_attr}}) ) {
       my $res = $args{biosource}->attr_exists( $k );
       print "Line $item_no: Source Attribute $k does not yet exist\n" unless $res;
@@ -93,22 +108,76 @@ sub test_data {
   }
 }
 
+#+
+# Subroutine checks attributes, tissues, and diseases to see if they exist in
+# the db.  Returns ref to hash keyed by items above, each pointing to an array
+# of items that did not exist.
+#-
+sub test_data {
+  my %args = @_;
+  for my $arg qw( biosource biosample items ) {
+    die "Missing required parameter $arg" unless defined $args{$arg};
+  }
 
+  my %redundant_attr;
+  my %redundant_tissue;
+  my %redundant_disease;
 
-sub add_items {
-#      $biosource->add_new( biosource => $item->{biosource},
-#                           biosource_attr => $item->{biosource_attr},
-#                           tissue_type => $item->{tissue_type},
-#                          disease => $item->{disease},
-#                          disease_stage => $item->{disease_stage}
-#                         );
+  my %missing = ( attributes => [],
+                  tissues    => [],
+                  diseases   => [] );
+
+  my $item_no = 0;
+  for my $item ( @{$args{items}} ){
+    $item_no++;
+
+    for my $k ( keys(%{$item->{biosource_attr}}) ) {
+      unless ( $args{redundant} ) {
+        next if $redundant_attr{$k};
+        $redundant_attr{$k}++;
+      }
+      my $res = $args{biosource}->attr_exists( $k );
+      if ( !$res && $args{verbose} ) {
+        push @{$missing{attributes}}, $k;
+        print "Line $item_no: Source Attribute $k does not yet exist\n"
+      }
+    }
+    for my $k ( keys(%{$item->{tissue_type}}) ) {
+      unless ( $args{redundant} ) {
+        next if $redundant_tissue{$k};
+        $redundant_tissue{$k}++;
+      }
+      my $res = $args{biosource}->tissue_exists( $k );
+      if ( !$res && $args{verbose} ) {
+        push @{$missing{tissues}}, $k;
+        print "Line $item_no: Tissue type $k does not yet exist\n";
+      }
+    }
+    for my $k ( keys(%{$item->{disease}}) ) {
+      unless ( $args{redundant} ) {
+        next if $redundant_disease{$k};
+        $redundant_disease{$k}++;
+      }
+      my $res = $args{biosource}->disease_exists( $k );
+      if ( !$res && $args{verbose} ) {
+        push @{$missing{diseases}}, $k;
+        print "Line $item_no: Disease $k does not yet exist\n";
+      }
+    }
+    for my $k ( keys(%{$item->{biosample_attr}}) ) {
+      unless ( $args{redundant} ) {
+        next if $redundant_attr{$k};
+        $redundant_attr{$k}++;
+      }
+      my $res = $args{biosample}->attr_exists( $k );
+      if ( !$res && $args{verbose} ) {
+        push @{$missing{attributes}}, $k;
+        print "Line $item_no: Sample Attribute $k does not yet exist\n"
+      }
+    }
+  }
+  return \%missing;
 }
-
-
-
-
-
-
 
 sub processParams {
   my %params;
@@ -145,10 +214,12 @@ sub printUsage {
   uploadWorkbook.pl --file_name path/to/file_name/filename.txt
 
   Arguements:
-  -w --file_name      Filename of file_name file to upload
+  -f --file_name     Filename of file_name file to upload
   -t --type          Type of file, either xls or tsv (defaults to xls) 
   -e --experiment    Name of experiment in database in which to load data 
   -a --autocreate    autcreate attributes/diseases if they don't already exist 
+  -t --test_only     Tests biosource/biosample, experiment, etc. entries, 
+                     reports if they don't already exist in the database.
 
   END_USAGE
   
