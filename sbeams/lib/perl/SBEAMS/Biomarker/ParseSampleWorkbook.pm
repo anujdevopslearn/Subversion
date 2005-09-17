@@ -76,6 +76,8 @@ sub process_data {
   # accumulator for processed lines
   my @all_items;
 
+  print "Saw a total of " . scalar @{$this->{_data}} . " lines\n";
+
   # Each row represents one sample
   foreach my $row ( @{$this->{_data}} ) {
     
@@ -235,6 +237,13 @@ sub _parse_excel_file {
 
   while ( $active_sheet->has_data() ) {
     my @line = $active_sheet->next_row();
+
+    # Sweet, the excel parser loves blank lines.  Doh!
+    if ( !$line[0] &&  !$line[1] &&  !$line[2] &&  !$line[3] &&  !$line[4] &&
+         !$line[5] &&  !$line[6] &&  !$line[7] &&  !$line[8] &&  !$line[9] ) { 
+      next;
+    }
+
     unless( @headings ) {
       # Meaningful headings fingerprint?
       next unless ( $line[0] =~ /Sample Setup Order/  &&
@@ -265,7 +274,6 @@ sub _getDb2ParserMap {
   my $this = shift;
   my $mode = shift || 'all';
   my $map = $this->_getParser2DbMap( $mode );
-  print "Got the map, has " . scalar( keys( %$map ) ) . " items\n";
   my %reverse = reverse( %$map );
   for( keys( %reverse ) ) {
     #print "$_ => $reverse{$_}\n";

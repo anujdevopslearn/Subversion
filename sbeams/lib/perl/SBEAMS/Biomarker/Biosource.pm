@@ -37,7 +37,7 @@ sub tissue_exists {
   die "unsafe tissue detected: $tissue\n" if $sbeams->isTaintedSQL($tissue);
 
   my ($cnt) = $sbeams->selectrow_array( <<"  END_SQL" );
-  SELECT COUNT(*) FROM $TBBM_BMRK_ATTRIBUTE
+  SELECT COUNT(*) FROM $TBAT_TISSUE_TYPE
   WHERE tissue_name = '$tissue'
   END_SQL
 
