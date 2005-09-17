@@ -19,10 +19,9 @@ close(STDERR);
 # Immediate gratification desired, do not buffer output
 $|++; 
 
-my %queries = ( 1 => 'SELECT * FROM pubs.dbo.authors ORDER BY au_id',
-                2 => 'SELECT * FROM pubs.dbo.employee ORDER BY emp_id',
-                3 => "SELECT * FROM pubs.dbo.titles T JOIN pubs.dbo.titleauthor TA ON T.title_id = TA.title_id JOIN pubs.dbo.authors A ON A.au_id = TA.au_id ORDER BY A.au_id, T.title_id DESC", 
-                #4 => "SELECT TOP 1000 * FROM microarray_test.dbo.affy_gene_intensity"
+my %queries = ( 1 => 'SELECT TOP 10000 * FROM proteomics.dbo.search_hit',
+                2 => 'SELECT TOP 10000 * FROM proteomics.dbo.msms_spectrum_peak',
+                3 => 'SELECT TOP 10000 * FROM proteomics.dbo.quantitation',
               ); 
   
 # Set up user agent and sbeams objects
