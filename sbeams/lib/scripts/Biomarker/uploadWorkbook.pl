@@ -17,8 +17,8 @@ use strict;
 
 # Setup global objects
 my $sbeams = SBEAMS::Connection->new();
-my $biomarker = SBEAMS::Biomarker->new();
 $sbeams->output_mode( 'interactive' );
+my $biomarker = SBEAMS::Biomarker->new();
 
 # Main
 {
@@ -26,6 +26,10 @@ $sbeams->output_mode( 'interactive' );
   $biomarker->setSBEAMS( $sbeams );
 
   my $params = processParams();
+
+  my $foo;
+
+  print $foo;
   
   # Instantiate new parser
   my $parser = SBEAMS::Biomarker::ParseSampleWorkbook->new();
@@ -63,7 +67,7 @@ $sbeams->output_mode( 'interactive' );
     add_items( biosource => $biosource,
                biosample => $biosample,
                items     => $all_items,
-               make_new  => $params->{autocreate} );
+               autocreate  => $params->{autocreate} );
   }
 
 }
@@ -73,6 +77,70 @@ $sbeams->output_mode( 'interactive' );
 #
 #-
 sub add_items {
+  my %args = @_;
+  for my $arg qw( biosource biosample items autocreate ) {
+    die "Missing required parameter $arg" unless defined $args{$arg};
+  }
+  $args{ autocreate} ||= 0;
+
+  my $missing = test_data( biosource => $args{biosource},
+                           biosample => $args{biosample},
+                           items     => $args{items},
+                           redundant => 0,
+                           verbose   => 0 );
+
+  my $msg = '';
+  if ( $missing->{attributes} ) {
+    for ( @{$missing->{attributes}} ) {
+      $msg .= "Missing attribute: $_ \n";
+    }
+  } elsif ( $missing->{diseases} ) {
+    for ( @{$missing->{diseases}} ) {
+      $msg .= "Missing disease: $_ \n";
+    }
+  } elsif ( $missing->{tissues} ) {
+    for ( @{$missing->{tissues}} ) {
+      $msg .= "Missing tissue: $_ \n";
+    }
+  }
+
+  if ( $args{autocreate} ) {
+    # We are allowed to make new stuff as needed!
+    
+  }
+
+  my $item_no = 0;
+  for my $item ( @{$args{items}} ){
+    $item_no++;
+
+    for my $k ( keys(%{$item->{biosource_attr}}) ) {
+      my $res = $args{biosource}->attr_exists( $k );
+      if ( !$res && $args{verbose} ) {
+        push @{$missing->{attributes}}, $k;
+      }
+    }
+
+    for my $k ( keys(%{$item->{tissue_type}}) ) {
+      my $res = $args{biosource}->tissue_exists( $k );
+      if ( !$res && $args{verbose} ) {
+        push @{$missing->{tissues}}, $k;
+      }
+    }
+
+    for my $k ( keys(%{$item->{disease}}) ) {
+      my $res = $args{biosource}->disease_exists( $k );
+      if ( !$res && $args{verbose} ) {
+        push @{$missing->{diseases}}, $k;
+      }
+    }
+
+    for my $k ( keys(%{$item->{biosample_attr}}) ) {
+      my $res = $args{biosample}->attr_exists( $k );
+      if ( !$res && $args{verbose} ) {
+        push @{$missing->{attributes}}, $k;
+      }
+    }
+  }
 #      $biosource->add_new( biosource => $item->{biosource},
 #                           biosource_attr => $item->{biosource_attr},
 #                           tissue_type => $item->{tissue_type},
@@ -80,32 +148,6 @@ sub add_items {
 #                          disease_stage => $item->{disease_stage}
 #                         );
 
-  my %args = @_;
-  for my $arg qw( biosource biosample items ) {
-    die "Missing required parameter $arg" unless defined $args{$arg};
-  }
-  $args{make_new} ||= 0;
-
-  my $item_no = 0;
-  for my $item ( @{$args{items}} ){
-    $item_no++;
-    for my $k ( keys(%{$item->{biosource_attr}}) ) {
-      my $res = $args{biosource}->attr_exists( $k );
-      print "Line $item_no: Source Attribute $k does not yet exist\n" unless $res;
-    }
-    for my $k ( keys(%{$item->{tissue_type}}) ) {
-      my $res = $args{biosource}->tissue_exists( $k );
-      print "Line $item_no: Tissue type $k does not yet exist\n" unless $res;
-    }
-    for my $k ( keys(%{$item->{disease}}) ) {
-      my $res = $args{biosource}->disease_exists( $k );
-      print "Line $item_no: Disease $k does not yet exist\n" unless $res;
-    }
-    for my $k ( keys(%{$item->{biosample_attr}}) ) {
-      my $res = $args{biosample}->attr_exists( $k );
-      print "Line $item_no: Sample Attribute $k does not yet exist\n" unless $res;
-    }
-  }
 }
 
 #+
@@ -142,6 +184,8 @@ sub test_data {
         print "Line $item_no: Source Attribute $k does not yet exist\n"
       }
     }
+
+
     for my $k ( keys(%{$item->{tissue_type}}) ) {
       unless ( $args{redundant} ) {
         next if $redundant_tissue{$k};
@@ -153,6 +197,8 @@ sub test_data {
         print "Line $item_no: Tissue type $k does not yet exist\n";
       }
     }
+
+
     for my $k ( keys(%{$item->{disease}}) ) {
       unless ( $args{redundant} ) {
         next if $redundant_disease{$k};
@@ -164,6 +210,8 @@ sub test_data {
         print "Line $item_no: Disease $k does not yet exist\n";
       }
     }
+
+
     for my $k ( keys(%{$item->{biosample_attr}}) ) {
       unless ( $args{redundant} ) {
         next if $redundant_attr{$k};
@@ -176,6 +224,8 @@ sub test_data {
       }
     }
   }
+
+
   return \%missing;
 }
 
