@@ -1,10 +1,9 @@
-#!/tools/bin/perl -w
+#!/local/programs/bin/perl -w
 
 #$Id$
 
 use DBI;
-use Test::More tests => 7;
-use Test::Harness;
+use Test::More; 
 use Digest::MD5 qw( md5 md5_base64 );
 use strict;
 
@@ -23,14 +22,21 @@ my %queries = ( 1 => 'SELECT TOP 10000 * FROM proteomics.dbo.search_hit',
                 2 => 'SELECT TOP 10000 * FROM proteomics.dbo.msms_spectrum_peak',
                 3 => 'SELECT TOP 10000 * FROM proteomics.dbo.quantitation',
               ); 
+
+my $num_tests = scalar(keys(%queries)) * 2 + 1;
+plan( tests => $num_tests );
   
 # Set up user agent and sbeams objects
-my $dbh;
-ok( $dbh = dbConnect(), "Connect to database ($dbh->{Driver}->{Name}, version $dbh->{Driver}->{Version}  )" );
+my $dbh = dbConnect();
+my $msg = ( ref($dbh) ) ?  "Connect to db ($dbh->{Driver}->{Name}, version $dbh->{Driver}->{Version}  )" : "Failed to connect to database, $dbh";
+ok( ref($dbh), $msg ); 
 
 # Setup
 my %results;
 
+
+SKIP: {
+skip "queries, db connection failed", $num_tests - 1 unless ref($dbh);
 # Establish baseline data.
 for my $key ( sort( keys( %queries ) ) ) { 
   my $sth = $dbh->prepare( $queries{$key} );
@@ -72,6 +78,7 @@ for my $key ( sort( keys( %queries ) ) ) {
   }
   ok( $status, "Run query $key for $iterations iterations" );
 }
+} # End skip block
 eval { $dbh->disconnect() };
 
 #+
@@ -108,7 +115,16 @@ sub dbConnect {
                sqlserv => 'mssql_pass',
                pgsql => 'pgsql_pass' ); 
 
-  my $dbh = DBI->connect( $connect{$db}, $user, $pass{$db}, { RaiseError => 1, AutoCommit => 0 } ) || die( $DBI::errstr );
-  return $dbh;
+  my $dbh;
+  eval { $dbh = DBI->connect( $connect{$db}, $user, $pass{$db}, { RaiseError => 1, AutoCommit => 0 } ) }; 
+
+  my $errstr;
+  if ( $@ ) {
+    my @errs = split /\n/, $DBI::errstr;
+    $errstr = $errs[0];
+  }
+    
+
+  return $dbh || $errstr;
 }
 
