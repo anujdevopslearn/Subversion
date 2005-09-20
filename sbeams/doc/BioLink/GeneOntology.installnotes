@@ -54,12 +54,12 @@ echo "CREATE DATABASE go;" | mysql $ROOTDSN
 mysql $DSN
 
 - Load!
-cd $GOARC
+cd $GOARC/$MONTH
 date ; nice +19 zcat $GZFILE | mysql $DSN ; date
 (possibly several hours)
 
 
---- SQL Server Example
+--- SQL Server/Sybase Example
 
 No direct dump is provided for SQL Server, so the data must be BCPed in.
 (BCP is a SQL server/SYBASE specific tool for bulk loading data into 
@@ -68,24 +68,27 @@ tables)
 Create a database on SQL Server called 'go' or something like that.
 Let 'sbeamsadmin' or some similar account have dbo privileges.
 
-cd $GOARC
+cd $GOARC/$MONTH
 tar -zxvf go_200508-assocdb-tables.tar.gz
 cd go_200508-assocdb-tables
 rm *.sql
-$SBEAMS/lib/scripts/BioLink/GOMySQL2MSSQL.pl --in ../go_200508-assocdb.mysql --out GO
+$SBEAMS/lib/scripts/BioLink/GOMySQL2MSSQL.pl --in ../go_200508-assocdb.mysql --out GO \
+  --bcpuser sbeamsadmin --bcppass xxxxxx --bcpdatabase go
+
 $SBEAMS/lib/scripts/Core/runsql.pl --user sbeamsadmin --database go --delim GO \
   --sfile GO.CREATE.mssql
 
 foreach file (*.txt)
   mv $file $file.before
-  cat $file.before | sed -e 's/\t\\N/\t/g' > $file
+  cat $file.before | sed -e 's/\t\\N/\t/g' | unix2dos > $file
 end
-#### If the above produced no errors, then
+
+#### If the above produced no errors, then you could
 rm *.before
 
 Now copy the entire directory go_200508-assocdb-tables to a location that is
-visible from the SQL Server OS itself (if not already), then in a shell
-on the SQL Server itself, cd to this diretory and run:
+visible from the SQL Server OS itself (if it is not already), then in a shell
+on the SQL Server itself (cmd.exe), cd to this diretory and run:
 
 GO.BCP.bat
 (usually under 30 mins)
