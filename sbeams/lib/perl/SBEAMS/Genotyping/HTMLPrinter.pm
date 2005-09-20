@@ -109,6 +109,7 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
         <tr><td>Submit a Genotyping Request:</td></tr>
+        <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=GT_experiment&ShowEntryForm=1"><nobr>&nbsp;&nbsp;&nbsp;Register a New Experiment</nobr></a></td></tr>
         <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/Display_submission_details.cgi"><nobr>&nbsp;&nbsp;&nbsp;Submission Instructions</nobr></a></td></tr>
         <tr><td><a href="$HTML_BASE_DIR/doc/Genotyping/SampleFileColumnDefinitions.php"><nobr>&nbsp;&nbsp;&nbsp;Sample and Assay File Templates</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
@@ -120,7 +121,10 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=GT_dna_type"><nobr>&nbsp;&nbsp;&nbsp;DNA Type</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=GT_cost_scheme"><nobr>&nbsp;&nbsp;&nbsp;Cost Scheme</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
-	<tr><td>Browse Data:</td></tr>
+        <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=GT_experiment_status"><nobr>Update Experiment Status</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>
+        <tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/main.cgi?_tab=1&expt_format=facility"><nobr>Show Facility Queue</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>	<tr><td>Browse Data:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/GetGenotypesMS"><nobr>&nbsp;&nbsp;&nbsp;Genotypes</nobr></a></td></tr>
 
 	</table>
