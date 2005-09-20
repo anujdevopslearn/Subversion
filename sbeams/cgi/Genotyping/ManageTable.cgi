@@ -34,6 +34,7 @@ use vars qw ($sbeams $sbeamsMOD $q $dbh $current_contact_id $current_username
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              $PK_COLUMN_NAME @MENU_OPTIONS);
 use DBI;
+use Spreadsheet::ParseExcel::Simple;
 use CGI::Carp qw(fatalsToBrowser croak);
 
 use SBEAMS::Connection qw($q);
@@ -280,6 +281,10 @@ sub postUpdateOrInsertHook {
   my %parameters = %{$query_parameters_ref};
   my $pk_value = $args{'pk_value'};
 
+  foreach my $key (keys %parameters) {
+    print "$key: $parameters{$key}\n";
+  }
+
 
   #### If table XXXX
   if ($TABLE_NAME eq "XXXX") {
@@ -313,8 +318,9 @@ sub postUpdateOrInsertHook {
     } else {
       $do_insert = 1;
       $rowdata{experiment_id} = $pk_value;
-      $rowdata{file_formats_approved} = 'Pending'; #### FIXME only do if file
-      #### is present
+      if ($parameters{'samples_file'} || $parameters{'assays_file'}) {
+        $rowdata{file_formats_approved} = 'Pending';
+      }
       $rowdata{experiment_status_state_id} = 1;
       $rowdata{initial_request_date} = 'CURRENT_TIMESTAMP';
       $sbeams->insert_update_row(
@@ -334,122 +340,67 @@ sub postUpdateOrInsertHook {
     my $cc_name = "SBEAMS";
     my $cc = "edeutsch\@systemsbiology.org";
 
+    my $apply_action = $q->param('apply_action') || $parameters{'action'};
+    my $subdir = $sbeams->getSBEAMS_SUBDIR();
+
+    my $sql = qq~
+      SELECT UL.username+' - '+P.name FROM $TB_PROJECT P
+   LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id )
+       WHERE P.project_id = '$parameters{'project_id'}'
+    ~;
+    my @rows = $sbeams->selectOneColumn($sql);
+    my $proj_name = $rows[0];
+
+    $sql = qq~
+      SELECT last_name+', '+first_name+' ('+organization+')'
+        FROM $TB_CONTACT C
+        JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id )
+       WHERE contact_id = '$parameters{'contact_id'}'
+    ~;
+    @rows = $sbeams->selectOneColumn($sql);
+    my $contact_name = $rows[0];
+
     open (MAIL, "|$mailprog $recipient,$cc") || croak "Can't open $mailprog!\n";
     print MAIL "From: SBEAMS-Genotyping <kdeutsch\@systemsbiology.org>\n";
     print MAIL "To: $recipient_name <$recipient>\n";
-    print MAIL "Cc: $cc_name <$cc>\n";
+#    print MAIL "Cc: $cc_name <$cc>\n";
     print MAIL "Reply-to: $current_username <${current_username}\@systemsbiology.org>\n";
     print MAIL "Subject: Genotyping request submission\n\n";
     print MAIL "An $apply_action of a genotyping request was just executed in SBEAMS by ${current_username}.\n\n";
+    print MAIL "Project: $proj_name\n";
+    print MAIL "Contact: $contact_name\n";
+    print MAIL "Experiment Name: $parameters{'experiment_name'}\n";
+    print MAIL "Samples File: $parameters{'samples_file'}\n";
+    print MAIL "Assays File: $parameters{'assays_file'}\n\n";
+
     print MAIL "To see the request view this link:\n\n";
-    print MAIL "$SERVER_BASE_DIR$CGI_BASE_DIR/${subdir}$PROGRAM_FILE_NAME&$PK_COLUMN_NAME=$resulting_PK&apply_action=VIEW\n\n";
+    print MAIL "$SERVER_BASE_DIR$CGI_BASE_DIR/${subdir}/ManageTable.cgi?TABLE_NAME=GT_experiment&experiment_id=$parameters{'experiment_id'}\n\n";
     close (MAIL);
 
-      print "<BR><BR>An email was just sent to the Genotyping_admin Group informing them of your request.<BR>\n";
+    print "<BR><BR>An email was just sent to the Genotyping_admin Group informing them of your request.<BR>\n";
 
 
+    #### Process the Samples file
+    if ($parameters{'samples_file'}) {
+      my $samples_file = "GT_experiment/".
+	"$query_parameters_ref->{experiment_id}".
+	  "_samples_file.dat";
+      processSamples(
+        samples=>$samples_file,
+	parameters_ref=>$query_parameters_ref
+      );
+    }
 
-    #### Get the predicted location of the samples file
-    my $samples_file = "GT_experiment/".
-      "$query_parameters_ref->{experiment_id}".
-      "_samples_file.dat";
-
-
-    #### Read in the samples file and create hash out of its contents
-    open (SAMPLESFILE,"$UPLOAD_DIR/$samples_file") ||
-      die "Cannot open $UPLOAD_DIR/$samples_file";
-
-    my $row_index = 1;
-    my @data_rows = ();
-    my @columns = ();
-    while (<SAMPLESFILE>) {
-      #### Ignore if it's the column header line
-      next if ($_ =~ /olvent/);
-
-      #### Strip leading and trailing space
-      $_ =~ s/^\s+//;
-      $_ =~ s/\s+$//;
-
-
-      #### Separate the columns
-      @columns = split(/\t/,$_);
-      #### If there are 7 columns, save the values
-      if (scalar(@columns) == 7) {
-        push(@data_rows,\@columns);
-      #### Else complain about a bad number of columns
-      } else {
-        print "Skipping samples file row $row_index with ".
-          "incorrect number of columns: '$_'<BR>\n";
-      }
-
-      #### Increment the row counter
-      $row_index++;
-
-    } # end while <SAMPLESFILE>
-
-    #### Store the results to the sample table
-    my @child_data_columns = qw(plate_id well_position sample_name
-      dna_concentration initial_well_volume stock_dna_solvent dna_dilution_solvent);
-    updateChildTable(
-      parent_table_name => $TABLE_NAME,
-      parent_pk_column_name => $PK_COLUMN_NAME,
-      parent_pk_value => $parameters{$PK_COLUMN_NAME},
-      child_table_name => 'GT_sample',
-      child_pk_column_name => 'sample_id',
-      child_data_columns => \@child_data_columns,
-      child_data_values => \@data_rows,
-    );
-
-    #### Get the predicted location of the assays file
-    my $assay_file = "GT_experiment/".
-      "$query_parameters_ref->{experiment_id}".
-      "_assays_file.dat";
-
-    #### Read in the requested assay file and create hash out of its contents
-    open (ASSAYFILE,"$UPLOAD_DIR/$assay_file") ||
-      die "Cannot open $UPLOAD_DIR/$assay_file";
-
-    $row_index = 1;
-    @data_rows = ();
-    my @columns = ();
-    while (<ASSAYFILE>) {
-      #### Ignore if it's the column header line
-      next if $_ =~ /^Name/;
-
-      #### Strip leading and trailing space
-      $_ =~ s/^\s+//;
-      $_ =~ s/\s+$//;
-
-
-      #### Separate the columns
-      @columns = split(/\t/,$_);
-
-      #### If there are 2 columns, save the values
-      if (scalar(@columns) == 2) {
-        push(@data_rows,\@columns);
-
-      #### Else complain about a bad number of columns
-      } else {
-        print "Skipping assays file row $row_index with ".
-          "incorrect number of columns: '$_'<BR>\n";
-      }
-
-      #### Increment the row counter
-      $row_index++;
-
-    } # end while <ASSAYFILE>
-
-    #### Store the results to the requested_genotyping_assay table
-    my @child_data_columns = qw(requested_assay_name requested_assay_sequence);
-    updateChildTable(
-      parent_table_name => $TABLE_NAME,
-      parent_pk_column_name => $PK_COLUMN_NAME,
-      parent_pk_value => $parameters{$PK_COLUMN_NAME},
-      child_table_name => 'GT_requested_genotyping_assay',
-      child_pk_column_name => 'requested_genotyping_assay_id',
-      child_data_columns => \@child_data_columns,
-      child_data_values => \@data_rows,
-    );
+    #### Process the Assays file
+    if ($parameters{'assays_file'}) {
+      my $assay_file = "GT_experiment/".
+        "$query_parameters_ref->{experiment_id}".
+        "_assays_file.dat";
+      processAssays(
+        assays=>$assay_file,
+        parameters_ref=>$query_parameters_ref
+      );
+    }
 
     return;
 
@@ -460,3 +411,156 @@ sub postUpdateOrInsertHook {
 
 } # end postUpdateOrInsertHook
 
+
+###############################################################################
+# processSamples
+#
+# Locate, parse, and load the Sample Excel file
+###############################################################################
+sub processSamples {
+  my %args = @_;
+
+  my $query_parameters_ref = $args{'parameters_ref'};
+  my %parameters = %{$query_parameters_ref};
+
+  #### Get the predicted location of the samples file
+  my $samples = $args{'samples'};
+
+
+  #### Read in the samples excel file and create hash out of its contents
+  my $xls = Spreadsheet::ParseExcel::Simple->read("$UPLOAD_DIR/$samples");
+  die "Count not parse plate file $UPLOAD_DIR/$samples $!\n" unless $xls;
+
+  my $sheet_number = 0;
+  my (@well_data, @sample_data, @conc_data, @vol_data, @stock_data);
+  my (@dilution_data, @data_rows);
+  my $plate_code;
+
+  #### Define the well position array
+  my @let = qw (A B C D E F G H);
+  for (my $letter = 0; $letter <= 7; $letter++) {
+    for (my $i = 1; $i <= 12; $i++) {
+      push @well_data, "$let[$letter]"."$i";
+    }
+  }
+
+  foreach my $sheet ($xls->sheets) {
+
+    #### All sample information should be on the first sheet
+    if ($sheet_number > 1) {
+      print "Too many pages in this sample file\n";
+      exit;
+    }
+
+    #### Read in each set of 96 well plates
+    while ($sheet->has_data) {
+      my @row = $sheet->next_row;
+      if (defined $row[1]) {
+        if ($row[1] ne '') {
+          $plate_code = $row[1];
+
+          #### Read in rows A->H (absolute rows 2 -> 9)
+          for (my $row_num = 2; $row_num <= 9; $row_num++) {
+            @row = $sheet->next_row;
+            push @sample_data, @row[4 .. 15];
+            push @conc_data, @row[18 .. 29];
+            push @vol_data, @row[32 .. 43];
+            push @stock_data, @row[46 .. 57];
+            push @dilution_data, @row[60 .. 71];
+          }
+         #### Create the data_rows array of all information
+         for (my $i = 0; $i <= 95; $i++) {
+           my @tmp_row;
+           push (@tmp_row,$plate_code,$well_data[$i],$sample_data[$i],
+                 $conc_data[$i],$vol_data[$i],$stock_data[$i],
+                 $dilution_data[$i]);
+	   push (@data_rows,\@tmp_row);
+         }
+
+          @sample_data=();
+          @conc_data=();
+          @vol_data=();
+          @stock_data=();
+          @dilution_data=();
+        }
+      }
+    }
+    $sheet_number ++;
+  }
+
+  #### Store the results to the sample table
+  my @child_data_columns = qw(plate_id well_position sample_name
+    dna_concentration initial_well_volume stock_dna_solvent dna_dilution_solvent);
+  updateChildTable(
+    parent_table_name => $TABLE_NAME,
+    parent_pk_column_name => $PK_COLUMN_NAME,
+    parent_pk_value => $parameters{$PK_COLUMN_NAME},
+    child_table_name => 'GT_sample',
+    child_pk_column_name => 'sample_id',
+    child_data_columns => \@child_data_columns,
+    child_data_values => \@data_rows,
+  );
+
+} # end processSamples
+
+###############################################################################
+# processAssays
+#
+# Locate, parse, and load the Assays file
+###############################################################################
+sub processAssays {
+  my %args = @_;
+
+  my $query_parameters_ref = $args{'parameters_ref'};
+  my %parameters = %{$query_parameters_ref};
+
+  #### Get the predicted location of the samples file
+  my $assay_file = $args{'assays'};
+
+  #### Read in the requested assay file and create hash out of its contents
+  open (ASSAYFILE,"$UPLOAD_DIR/$assay_file") ||
+    die "Cannot open $UPLOAD_DIR/$assay_file";
+
+  my $row_index = 1;
+  my @data_rows = ();
+  my @columns = ();
+  while (<ASSAYFILE>) {
+    #### Ignore if it's the column header line
+    next if $_ =~ /^Name/;
+
+    #### Strip leading and trailing space
+    $_ =~ s/^\s+//;
+    $_ =~ s/\s+$//;
+
+
+    #### Separate the columns
+    @columns = split(/\t/,$_);
+
+    #### If there are 2 columns, save the values
+    if (scalar(@columns) == 2) {
+      push(@data_rows,\@columns);
+
+    #### Else complain about a bad number of columns
+    } else {
+      print "Skipping assays file row $row_index with ".
+        "incorrect number of columns: '$_'<BR>\n";
+    }
+
+    #### Increment the row counter
+    $row_index++;
+
+  } # end while <ASSAYFILE>
+
+  #### Store the results to the requested_genotyping_assay table
+  my @child_data_columns = qw(requested_assay_name requested_assay_sequence);
+  updateChildTable(
+    parent_table_name => $TABLE_NAME,
+    parent_pk_column_name => $PK_COLUMN_NAME,
+    parent_pk_value => $parameters{$PK_COLUMN_NAME},
+    child_table_name => 'GT_requested_genotyping_assay',
+    child_pk_column_name => 'requested_genotyping_assay_id',
+    child_data_columns => \@child_data_columns,
+    child_data_values => \@data_rows,
+  );
+
+} # end processAssays
