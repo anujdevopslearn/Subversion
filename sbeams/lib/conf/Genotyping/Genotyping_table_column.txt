@@ -62,22 +62,22 @@ GT_query_option	3	option_key	Option Key	varchar	255	0	N		N			Y	text	50		Y	Y	Y	Ke
 GT_query_option	4	option_value	Option Value	varchar	255	0	Y		N			Y	text	50		Y	Y	N	Value of this key/value pair option		
 GT_query_option	5	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Numbers which override alphabetical sorting in a list box		
 GT_query_option	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-GT_query_option	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N			
-GT_query_option	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N			
-GT_query_option	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N			
-GT_query_option	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N			
-GT_query_option	11	record_status	Record Status	char	1	0	N	N	N							N	N			
-GT_BrowseBioSequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBGT_BIOSEQUENCE_SET ORDER BY sort_order,set_name"
-GT_BrowseBioSequence	2	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-GT_BrowseBioSequence	3	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-GT_BrowseBioSequence	4	molecular_function_constraint	Molecular Function Constraint									N	text	40		Y	Y	N	Constraint for the GO Molecular Function. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-GT_BrowseBioSequence	5	biological_process_constraint	Biological Process Constraint									N	text	40		Y	Y	N	Constraint for the GO Biological Process. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-GT_BrowseBioSequence	6	cellular_component_constraint	Cellular Component Constraint									N	text	40		Y	Y	N	Constraint for the GO Cellular Component. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-GT_BrowseBioSequence	7	protein_domain_constraint	Protein Domain Constraint									N	text	40		Y	Y	N	Constraint for the InterPro Protein Domain. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-GT_BrowseBioSequence	8	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	Y	N	"Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""	
-GT_BrowseBioSequence	9	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	Y	N	"Constraint for the number of transmembrane regions (based on a 19-residue wide sliding window of hydropathy indexes above 1.58).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""	
-GT_BrowseBioSequence	10	biosequence_seq_constraint	Sequence Constraint									N	text	40		Y	Y	N	Constraint for the actual sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
-GT_BrowseBioSequence	11	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.	
+GT_query_option	7	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+GT_query_option	8	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GT_query_option	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+GT_query_option	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+GT_query_option	11	record_status	Record Status	char	1	0	N	N	N							N	N				
+GT_BrowseBioSequence	1	biosequence_set_id	BioSequence Sets									N	multioptionlist	4		Y	Y	N	"Select desired BioSequence Sets to include in query.  Multiple items may be selected.  If no items are selected, ALL sets are searched."	"SELECT biosequence_set_id,set_name FROM $TBGT_BIOSEQUENCE_SET ORDER BY sort_order,set_name"	
+GT_BrowseBioSequence	2	biosequence_name_constraint	Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+GT_BrowseBioSequence	3	biosequence_gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Gene Name. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+GT_BrowseBioSequence	4	molecular_function_constraint	Molecular Function Constraint									N	text	40		Y	Y	N	Constraint for the GO Molecular Function. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+GT_BrowseBioSequence	5	biological_process_constraint	Biological Process Constraint									N	text	40		Y	Y	N	Constraint for the GO Biological Process. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+GT_BrowseBioSequence	6	cellular_component_constraint	Cellular Component Constraint									N	text	40		Y	Y	N	Constraint for the GO Cellular Component. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+GT_BrowseBioSequence	7	protein_domain_constraint	Protein Domain Constraint									N	text	40		Y	Y	N	Constraint for the InterPro Protein Domain. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+GT_BrowseBioSequence	8	fav_codon_frequency_constraint	Favored Codon Frequency Constraint									N	text	40		Y	Y	N	"Constraint for the favored codon frequency (calculation by Patrick Pedrioli).  Allowed syntax: ""n.n"", ""> n.n"", ""< n.n"", ""between n.n and n.n"", ""n.n +- n.n"""		
+GT_BrowseBioSequence	9	n_transmembrane_regions_constraint	Number of Transmembrane Regions Constraint									N	text	40		Y	Y	N	"Constraint for the number of transmembrane regions (based on a 19-residue wide sliding window of hydropathy indexes above 1.58).  Allowed syntax: ""n"", ""> n"", ""< n"", ""between n and n"", ""n +- n"""		
+GT_BrowseBioSequence	10	biosequence_seq_constraint	Sequence Constraint									N	text	40		Y	Y	N	Constraint for the actual sequence. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
+GT_BrowseBioSequence	11	biosequence_desc_constraint	Description Constraint									N	text	40		Y	Y	N	Constraint for the BioSequence Description. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
 GT_BrowseBioSequence	12	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBGT_QUERY_OPTION WHERE option_type = 'BBS_sort_options' ORDER BY sort_order,option_value"	
 GT_BrowseBioSequence	13	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBGT_QUERY_OPTION WHERE option_type = 'BBS_display_options' ORDER BY sort_order,option_value"	
 GT_BrowseBioSequence	14	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."		
@@ -96,8 +96,8 @@ GT_experiment	12	want_typing	Typing	char	1	0	N		N			Y	optionlist		Y	Y	Y	N	Is typ
 GT_experiment	13	is_multiplexing_allowed	Multiplexing Allowed?	char	1	0	N		N			Y	optionlist		Y	Y	Y	N	Is Multiplexing allowed?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
 GT_experiment	14	dna_type	Type of DNA	varchar	50	0	N		N	GT_dna_type	dna_type_id	Y	optionlist		Y	Y	Y	N	Type of DNA	"SELECT dna_type_id,dna_type_tag FROM $TBGT_DNA_TYPE ORDER BY sort_order,dna_type_tag"	
 GT_experiment	15	dna_extraction_protocol	DNA Extraction Protocol	text	16	0	N		N			Y	textarea	4		Y	Y	N	Brief description of the DNA extraction protocol		
-GT_experiment	16	samples_file	Samples file	varchar	255	0	N		N			Y	file	40	Y	Y	Y	N	Select the tab-delimited text file of sample information to be uploaded via the web interface		
-GT_experiment	17	assays_file	Assays file	varchar	255	0	N		N			Y	file	40	Y	Y	Y	N	Select the tab-delimited text file of assay information to be uploaded via the web interface		
+GT_experiment	16	samples_file	Samples file	varchar	255	0	Y		N			N	file	40	Y	Y	Y	N	Select the tab-delimited text file of sample information to be uploaded via the web interface		
+GT_experiment	17	assays_file	Assays file	varchar	255	0	Y		N			N	file	40	Y	Y	Y	N	Select the tab-delimited text file of assay information to be uploaded via the web interface		
 GT_experiment	18	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 GT_experiment	19	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
 GT_experiment	20	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -238,9 +238,9 @@ GT_experiment_status_history	9	preliminary_checks_completed_date	Preliminary Che
 GT_experiment_status_history	10	estimated_completion_date	Estimated Completion Date	datetime	8	0	Y		N			N	textdate			Y	Y	N	Estimated completion date		
 GT_experiment_status_history	11	final_completion_date	Final Completion Date	datetime	8	0	Y		N			N	textdate			Y	Y	N	Final completion date		
 GT_experiment_status_history	12	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-GT_experiment_status_history	13	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	
-GT_experiment_status_history	14	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N	
-GT_experiment_status_history	15	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	
-GT_experiment_status_history	16	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N	
-GT_experiment_status_history	17	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	
-GT_experiment_status_history	18	record_status	Record Status	char	1	0	N	N	N							N	N	N
+GT_experiment_status_history	13	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GT_experiment_status_history	14	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N				
+GT_experiment_status_history	15	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+GT_experiment_status_history	16	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N				
+GT_experiment_status_history	17	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+GT_experiment_status_history	18	record_status	Record Status	char	1	0	N	N	N							N	N	N			
