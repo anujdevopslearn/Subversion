@@ -59,6 +59,11 @@ sub main {
   my $input_file = $OPTIONS{input_file} || die("No input file");
   my $output_root = $OPTIONS{output_root} || die("No output root");
 
+  my $bcpusername = $OPTIONS{bcpusername} || 'bcpusername';
+  my $bcppassword = $OPTIONS{bcppassword} || 'bcppassword';
+  my $bcpdatabase = $OPTIONS{bcpdatabase} || 'bcpdatabase';
+
+
   die("ERROR: Unable to find input file $input_file")
     unless (-e $input_file);
 
@@ -100,8 +105,8 @@ sub main {
       $line =~ s/`//g;
       print OUTFILE $line;
 
-      if ($line =~ /CREATE TABLE (\w+)/) {
-	print OUTFILEBCP "bcp FGCZ_GO.dbo.$1 in $1.txt -b 10000 -c -E -U fgcz_go -P fgcz_go\n";
+      if ($line =~ /CREATE TABLE dbo\.(\w+)/) {
+	print OUTFILEBCP "bcp $bcpdatabase.dbo.$1 in $1.txt -b 10000 -c -E -U $bcpusername -P $bcppassword\r\n";
       }
 
       next;
@@ -155,6 +160,7 @@ sub main {
 sub processOptions {
   GetOptions( \%OPTIONS, "verbose:s", "quiet", "debug:s", "testonly", 'help',
              'input_file=s','output_root=s',
+             'bcpusername=s','bcppassword=s','bcpdatabase',
   ) || printUsage( "Failed to get parameters" );
 
   for my $param ( qw(input_file output_root) ) {
