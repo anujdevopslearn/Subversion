@@ -246,7 +246,7 @@ sub preUpdateDataCheck {
                                          tname => $TABLE_NAME,
                                          dbtname => $DB_TABLE_NAME );
     return ( $errstr ) if $errstr;
-    
+
   } elsif ($TABLE_NAME eq "XXXX") {
 
     return "An error of some sort $parameters{something} invalid";
