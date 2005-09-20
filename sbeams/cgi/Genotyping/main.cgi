@@ -87,7 +87,7 @@ if ($DEBUG) {
 # Set Global Variables and execute main()
 ###############################################################################
 $PROGRAM_FILE_NAME = basename( $0 );
-my $display_submission_details_cgi_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/Display_submission_details.cgi";
+#my $display_submission_details_cgi_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/Display_submission_details.cgi";
 
 main();
 exit(0);
@@ -130,7 +130,6 @@ sub main {
 
 
 } # end main
-
 
 
 ###############################################################################
@@ -184,18 +183,22 @@ sub handle_request {
     ~;
 
     $content = '<h2 class="med_gray_bg">Experiment Information</h2>';
-    my @experiment_rows = $sbeams->selectSeveralColumns($sql);
+    $content .= '<A HREF="main.cgi?_tab=1&expt_format=summary">[Show summary/</A><A HREF="main.cgi?_tab=1&expt_format=details">Show details/</A><A HREF="main.cgi?_tab=1&expt_format=facility">Facility summary]</A>';
+    my @experiment_rows = $sbeams->selectOneColumn($sql);
 
     #### If there are experiments, display the status of each, either in an
     #### overall summary, or detailed view
     if (@experiment_rows) {
 
-      if ($parameters{expt_format} eq "summary") {
+      if ($parameters{expt_format} eq "details") {
         #make summary view
-        $content .= make_experiment_summary_html(exp_results_set_aref => \@experiment_rows);
+        $content .= make_detailed_experiment_summary_html(exp_results_set_aref => \@experiment_rows);
+      } elsif ($parameters{expt_format} eq "facility") {
+        #make full facility review
+        $content .= make_facility_summary_html(exp_results_set_aref => \@experiment_rows);
       } else {
         #make detailed view
-        $content .= make_detailed_experiment_html(exp_results_set_areg => \@experiment_rows);
+        $content .= make_experiment_summary_html(exp_results_set_aref => \@experiment_rows);
       }
     } else {
       if ($project_id == -99) {
@@ -225,28 +228,110 @@ sub handle_request {
 ###############################################################################
 
 sub make_experiment_summary_html {
-	my %args = @_;
-	my $results_set_array_ref = $args{exp_results_set_aref};
+  my %args = @_;
+  my $results_set_array_ref = $args{exp_results_set_aref};
 	
-	my @rows = @{$results_set_array_ref};
+  my @rows = @{$results_set_array_ref};
 
-#tag below with colspan=3 would be better suited as colspan=$#search_batch_rows+1, though expts are -not- sorted by number of search batches at this time
+  my $content .= qq~
+      <TABLE BORDER=0>
+      <tr>
+      <th align=left> Name</font></th>
+      <th>Description</th>
+      <th>Status</th>
+      <th nowrap>Estimated<br/>Completion Date</th>
+      <th nowrap>View/Edit<br/>Record</th>
+      </tr>
+   ~;
 
+  my $experiment_status_counter = 0;
+  foreach my $row (@rows) {
+    my ($experiment_id) = $row;
 
-	my $content .= qq~
-<TABLE BORDER=0>
-<tr>
-<th align=left><font color="green">- Experiment Name</font> : Description</th>
-<th nowrap>View/Edit<br/>Record</th>
-</tr>
+    #### Select summary info from experiment_status
+    my $sql = qq~
+	SELECT E.experiment_tag,E.experiment_description,
+               ESS.experiment_status_state_name,
+               ES.estimated_completion_date
+	  FROM $TBGT_EXPERIMENT_STATUS ES
+	 INNER JOIN $TBGT_EXPERIMENT E
+	       ON ( ES.experiment_id = E.experiment_id )
+         INNER JOIN $TBGT_EXPERIMENT_STATUS_STATE ESS
+               ON ( ES.experiment_status_state_id = ESS.experiment_status_state_id)
+	 WHERE ES.experiment_id = '$experiment_id'
+	 ORDER BY E.experiment_tag
     ~;
-	my $experiment_status_counter = 0;
-	foreach my $row (@rows) {
-	  my ($experiment_id) = @{$row};
+    my @experiment_status_rows = $sbeams->selectSeveralColumns($sql);
 
-	  #### Select summary info from experiment_status
-	  my $sql = qq~
-	SELECT E.experiment_tag,ESS.experiment_status_state_name,ES.estimated_completion_date
+    $experiment_status_counter++;
+    if (($experiment_status_counter % 2) == 1){
+      $content .= "<TR BGCOLOR='#efefef'> \n";
+    }else{
+      $content .= "<TR> \n";
+    }
+
+
+    foreach my $experiment_status_row (@experiment_status_rows) {
+      my ($experiment_tag,$experiment_description,$experiment_status_state_name,$est_completion_date) = @{$experiment_status_row};
+      $content .= qq~
+	  <TD>&nbsp;&nbsp;&nbsp;<font color="green">$experiment_tag</font></TD>
+	  <TD>&nbsp;&nbsp;&nbsp;<font color="green">$experiment_description</font></TD>
+          <TD>&nbsp;&nbsp;&nbsp;<font color="green">$experiment_status_state_name</font></TD>
+          <TD>&nbsp;&nbsp;&nbsp;<font color="green">$est_completion_date</font></TD>
+	  <TD NOWRAP ALIGN=CENTER><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=GT_experiment&experiment_id=$experiment_id">[View/Edit]</A></TD>        ~;
+    }
+
+    $content .= qq~
+       	</TR>
+    ~;
+  }
+  return $content;
+} # end make_experiment_summary_html
+
+
+###############################################################################
+# make_detailed_experiment_summary_html
+#
+# Return a block of html to print a detailed experimental summary
+###############################################################################
+
+sub make_detailed_experiment_summary_html {
+  my %args = @_;
+  my $results_set_array_ref = $args{exp_results_set_aref};
+	
+  my @rows = @{$results_set_array_ref};
+
+
+  my $content .= qq~
+      <TABLE BORDER=0>
+      <tr>
+      <th align=left> Name</font></th>
+      <th>Description</th>
+      <th>Status Summary</th>
+      <th>Submission Date</th>
+      <th>Uploaded Files</th>
+      <th>DNA</br>Delivery</br>Date</th>
+      <th>DNA Quality</th>
+      <th nowrap>Pre-checks<br/>Completion<br/>Date</th>
+      <th nowrap>Estimated<br/>Completion<br/>Date</th>
+      <th nowrap>View/Edit<br/>Record</th>
+      </tr>
+  ~;
+
+  my $experiment_status_counter = 0;
+  foreach my $row (@rows) {
+    my ($experiment_id) = $row;
+
+    #### Select summary info from experiment_status
+    my $sql = qq~
+	SELECT E.experiment_tag,E.experiment_description,
+               convert(varchar(10),ES.initial_request_date,121),
+               ESS.experiment_status_state_name,
+               ES.file_formats_approved,
+               convert(varchar(10),ES.DNA_delivery_date,121),
+               ES.DNA_quality_approved,
+               convert(varchar(10),ES.preliminary_checks_completed_date,121),
+               convert(varchar(10),ES.estimated_completion_date,121)
 	  FROM $TBGT_EXPERIMENT_STATUS ES
 	 INNER JOIN $TBGT_EXPERIMENT E
 	       ON ( ES.experiment_id = E.experiment_id )
@@ -255,29 +340,103 @@ sub make_experiment_summary_html {
 	 WHERE ES.experiment_id = '$experiment_id'
 	 ORDER BY E.experiment_tag
       ~;
-      my @experiment_status_rows = $sbeams->selectSeveralColumns($sql);
+    my @experiment_status_rows = $sbeams->selectSeveralColumns($sql);
 
-      $experiment_status_counter++;
-      if (($experiment_status_counter % 2) == 1){
-	  $content .= "<TR BGCOLOR='#efefef'> \n";
-      }else{
-	  $content .= "<TR> \n";
-      }
-      $content .= qq~
-	<TD NOWRAP>- <font color="green">$experiment_id</font></TD>
-	<TD NOWRAP ALIGN=CENTER><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=GT_experiment&experiment_id=$experiment_id">[View/Edit]</A></TD>
-      ~;
-
-      foreach my $experiment_status_row (@experiment_status_rows) {
-        my ($experiment_tag,$experiment_status_state_name,$est_completion_date) = @{$experiment_status_row};
-        $content .= qq~
-	  <TD>&nbsp;&nbsp;&nbsp;<font color="green">$experiment_tag</font></TD>
-        ~;
-      }
-
-	  $content .= qq~
-      	</TR>
-      ~;
+    $experiment_status_counter++;
+    if (($experiment_status_counter % 2) == 1){
+      $content .= "<TR BGCOLOR='#efefef'> \n";
+    }else{
+      $content .= "<TR> \n";
     }
-	return $content;
-}
+
+    foreach my $experiment_status_row (@experiment_status_rows) {
+      my ($experiment_tag,$experiment_description,$initial_request_date,
+          $experiment_status_state_name,$file_formats_approved,
+          $dna_delivery_date,$dna_quality_approved,
+          $prechecks_completion_date,$est_completion_date) = @{$experiment_status_row};
+
+
+      $content .= qq~
+	  <TD><font color="green">$experiment_tag</font></TD>
+	  <TD><font color="green">$experiment_description</font></TD>
+          <TD><font color="green">$experiment_status_state_name</font></TD>
+          <TD><font color="green">$initial_request_date</font></TD>
+	  <TD><font color="green">$file_formats_approved</font></TD>
+	  <TD><font color="green">$dna_delivery_date</font></TD>
+          <TD><font color="green">$dna_quality_approved</font></TD>
+          <TD><font color="green">$prechecks_completion_date</font></TD>
+          <TD><font color="green">$est_completion_date</font></TD>
+	  <TD NOWRAP ALIGN=CENTER><A HREF="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=GT_experiment&experiment_id=$experiment_id">[View/Edit]</A></TD>        ~;
+    }
+
+    $content .= qq~
+       	</TR>
+    ~;
+  }
+  return $content;
+} #end make_detailed_experiment_summary_html
+
+
+###############################################################################
+# make_facility_summary_html
+#
+# Return a block of html to print a facility summary
+###############################################################################
+
+sub make_facility_summary_html {
+  my %args = @_;
+#  my $results_set_array_ref = $args{exp_results_set_aref};
+	
+#  my @rows = @{$results_set_array_ref};
+
+  my $content .= qq~
+      <TABLE BORDER=0>
+      <tr>
+      <th align=left> Name</font></th>
+      <th>Description</th>
+      <th>Status</th>
+      <th nowrap>Estimated<br/>Completion Date</th>
+      </tr>
+   ~;
+
+  my $experiment_status_counter = 0;
+#  foreach my $row (@rows) {
+#    my ($experiment_id) = $row;
+
+    #### Select summary info from experiment_status
+    my $sql = qq~
+	SELECT E.experiment_tag,E.experiment_description,
+               ESS.experiment_status_state_name,
+               ES.estimated_completion_date
+	  FROM $TBGT_EXPERIMENT_STATUS ES
+	 INNER JOIN $TBGT_EXPERIMENT E
+	       ON ( ES.experiment_id = E.experiment_id )
+         INNER JOIN $TBGT_EXPERIMENT_STATUS_STATE ESS
+               ON ( ES.experiment_status_state_id = ESS.experiment_status_state_id)
+	 WHERE ESS.experiment_status_state_name != 'Complete'
+	 ORDER BY ES.estimated_completion_date
+    ~;
+    my @experiment_status_rows = $sbeams->selectSeveralColumns($sql);
+
+    $experiment_status_counter++;
+    if (($experiment_status_counter % 2) == 1){
+      $content .= "<TR BGCOLOR='#efefef'> \n";
+    }else{
+      $content .= "<TR> \n";
+    }
+
+
+    foreach my $experiment_status_row (@experiment_status_rows) {
+      my ($experiment_tag,$experiment_description,$experiment_status_state_name,$est_completion_date) = @{$experiment_status_row};
+      $content .= qq~
+	  <TD>&nbsp;&nbsp;&nbsp;<font color="green">$experiment_tag</font></TD>
+	  <TD>&nbsp;&nbsp;&nbsp;<font color="green">$experiment_description</font></TD>
+          <TD>&nbsp;&nbsp;&nbsp;<font color="green">$experiment_status_state_name</font></TD>
+          <TD>&nbsp;&nbsp;&nbsp;<font color="green">$est_completion_date</font></TD>        ~;
+
+    $content .= qq~
+       	</TR>
+    ~;
+  }
+  return $content;
+} # end make_facility_summary_html
