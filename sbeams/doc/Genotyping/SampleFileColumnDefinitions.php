@@ -25,9 +25,9 @@
 
 <P>Revised: 2005-07-27</P>
 
-<P>You may enter your data in either columnar or 96 well plate format.  Please download and use one of the following Excel templates: <A HREF="Genotyping_Template_96_Well_to_Columns.xlt">[Plate format]</A> or <A HREF="Genotyping_Template_Columns_to_96_Well.xlt">[Column format]</A>. The templates should also work in Open Office.</P>
+<P>Please enter your data in either 96 well plate format using the following Excel <A HREF="Genotyping_Samples.xlt">template</A>.</P>
 <P><B>All fields are required!</B>  Please take note of the assumed units (e.g. ng/&#181;l), but do not include the units in your file.</P>
-<P>If you are submitting several plates together, please zip or gzip them together as one sample group for uploading.</P>
+<P>If you are submitting several plates together, simply replicate the tables, one for each plate.</P>
 
 <TABLE>
 <TR>
