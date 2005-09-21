@@ -651,11 +651,43 @@ sub getDbTableName {
   return eval "\"$dbname\"";
 } # End getDbTableName
 
-###############################################################################
+
+#+
+# do
+#
+# Thinly wrapped call to $dbh->do() method
+#-
+sub do {
+  my $self = shift || croak("parameter self not passed");
+  my $sql = shift || croak("parameter sql not passed");
+
+  #### Get the database handle
+  $dbh = $self->getDBHandle();
+
+  #### Convert the SQL dialect if necessary
+  $sql = $self->translateSQL( sql => $sql );
+
+  my $status;
+
+  eval {
+    $status = $dbh->do( $sql );
+  };
+  if ( $@ ) {
+    my $msg =<<"    END";
+    Error executing SQL: $@
+    SQL causing error: $sql
+    END
+    $log->error( $msg );
+    die $msg;
+  }
+  return $status;
+}
+
+#+
 # selectrow_array
 #
 # Thinly wrapped dbh->selectrow_array call
-###############################################################################
+#-
 sub selectrow_array {
   my $self = shift || croak("parameter self not passed");
   my $sql = shift || croak("parameter sql not passed");
@@ -682,6 +714,105 @@ sub selectrow_array {
   return @row;
 }
 
+#+
+# Routine to start a transaction on the sbeams db handle.
+#
+#-
+sub initiate_transaction {
+  my $self = shift || croak("parameter self not passed");
+
+  #### Get the database handle
+  $dbh = $self->getDBHandle();
+
+  # Turn autocommit off
+  $dbh->{AutoCommit} = 0;
+
+  # Finish any incomplete transactions
+  $dbh->commit();
+
+  # Turn RaiseError commit
+  $dbh->{RaiseError} = 0;
+
+  # Begin transaction
+  $dbh->begin_work();
+}
+
+#+
+# Routine to roll back a transaction.
+#-
+sub rollback_transaction {
+  my $self = shift || croak("parameter self not passed");
+
+  #### Get the database handle
+  $dbh = $self->getDBHandle();
+
+  $dbh->rollback();
+}
+
+#+
+# Routine commit a transaction.
+#-
+sub commit_transaction {
+  my $self = shift || croak("parameter self not passed");
+
+  #### Get the database handle
+  $dbh = $self->getDBHandle();
+
+  $dbh->commit();
+}
+
+
+
+#+
+# Routine to set sbeams dbh autocommit.
+#-
+sub setAutoCommit {
+  my $self = shift || croak("parameter self not passed");
+  my $autocommit = shift || 0;
+
+  #### Get the database handle
+  $dbh = $self->getDBHandle();
+
+  $dbh->{AutoCommit} = $autocommit;
+}
+
+#+
+# Routine to set sbeams dbh RaiseError.
+#-
+sub setRaiseError {
+  my $self = shift || croak("parameter self not passed");
+  my $raiseError = shift || 0;
+
+  #### Get the database handle
+  $dbh = $self->getDBHandle();
+
+  $dbh->{RaiseError} = $raiseError;
+}
+
+
+#+
+# Routine to determine if sbeams dbh has autocommit set.
+#-
+sub isRaiseError {
+  my $self = shift || croak("parameter self not passed");
+
+  #### Get the database handle
+  $dbh = $self->getDBHandle();
+
+  return $dbh->{RaiseError};
+}
+
+#+
+# Routine to determine if sbeams dbh has autocommit set.
+#-
+sub isAutoCommit {
+  my $self = shift || croak("parameter self not passed");
+
+  #### Get the database handle
+  $dbh = $self->getDBHandle();
+
+  return $dbh->{AutoCommit};
+}
 
 ###############################################################################
 # SelectOneColumn
