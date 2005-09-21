@@ -23,7 +23,9 @@ require Exporter;
 
 sub new {
   my $class = shift;
-	my $this = {};
+	my $this = { verbose => 0,
+               @_
+             };
 	bless $this, $class;
 	return $this;
 }
@@ -134,15 +136,31 @@ sub get_processed_items {
   return $this->{processed_items} || undef;
 }
 
+#+
+# cache sbeams object
+#-
 sub setSBEAMS {
   my $this = shift;
   my $sbeams = shift || die "Must pass sbeams object";
   $this->{_sbeams} = $sbeams;
 }
 
+#+
+# Fetch cached sbeams object
+#-
 sub getSBEAMS {
   my $this = shift;
   return $this->{_sbeams};
+}
+
+#+
+# Set the 'verbose' level for parser
+# named argument  verbose (integer)
+#-
+sub setVerbosity {
+  my $this = shift;
+  my %args = @_;
+  $this->{verbose} = $args{verbose} || 0;
 }
 
 
@@ -151,6 +169,14 @@ sub getSBEAMS {
   # #   ## Private methods ##   # #
    #     ###################     
 
+
+#+
+# Fetch the 'verbose' level for parser
+#-
+sub _verbose {
+  my $this = shift;
+  return $this->{verbose};
+}
 
 #+
 # Rudimentry method to avoid dangerous SQL stmts
