@@ -7,8 +7,10 @@ use Test::More;
 use Digest::MD5 qw( md5 md5_base64 );
 use strict;
 
-use lib( "../.." );
+use FindBin qw($Bin);
+use lib( "$Bin/../.." );
 use SBEAMS::Connection;
+use SBEAMS::Connection::Tables;
 
 # Number of times to execute each statement.
 use constant ITERATIONS => 50; # Number of times to exec each query
@@ -17,15 +19,15 @@ use constant VERBOSE => 0;  # Level of loquaciousness to exhibit
 use constant NUM_ROWS => 100;  # (Max) Number of rows to hash together
 
 # Quiet down in there!
-close(STDERR);
+#close(STDERR);
 
 # Immediate gratification desired, do not buffer output
 $|++; 
 
-my %queries = ( 1 => 'SELECT * FROM sbeams.dbo.organism',
-                2 => 'SELECT * FROM biolink.dbo.MGEDOntologyRelationship',
-                3 => 'SELECT * FROM biolink.dbo.MGEDOntologyTerm',
-                4 => 'SELECT * FROM biolink.dbo.dbxref',
+my %queries = ( 1 => "SELECT * FROM $TB_ORGANISM",
+                2 => "SELECT * FROM $TB_MGED_ONTOLOGY_RELATIONSHIP",
+                3 => "SELECT * FROM $TB_MGED_ONTOLOGY_TERM",
+                4 => "SELECT * FROM $TB_DBXREF",
               ); 
 
 my $num_tests = scalar(keys(%queries)) * 2 + 1;
