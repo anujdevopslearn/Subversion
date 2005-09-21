@@ -7,6 +7,8 @@ use Getopt::Long;
 use lib( "$Bin/../../perl" );
 use SBEAMS::Connection qw($log);
 
+use Carp;
+
 use SBEAMS::Biomarker;
 use SBEAMS::Biomarker::ParseSampleWorkbook;
 use SBEAMS::Biomarker::Tables;
@@ -17,7 +19,7 @@ use strict;
 
 # Setup global objects
 my $sbeams = SBEAMS::Connection->new();
-$sbeams->output_mode( 'interactive' );
+#$sbeams->output_mode( 'interactive' );
 my $biomarker = SBEAMS::Biomarker->new();
 
 # Main
@@ -26,13 +28,14 @@ my $biomarker = SBEAMS::Biomarker->new();
   $biomarker->setSBEAMS( $sbeams );
 
   my $params = processParams();
-
-  my $foo;
-
-  print $foo;
+  my $foobar;
+  print $foobar;
+  
+  # Silly, don't want next line to exceed 80 chars
+  my $v = 'verbose';
   
   # Instantiate new parser
-  my $parser = SBEAMS::Biomarker::ParseSampleWorkbook->new();
+  my $parser = SBEAMS::Biomarker::ParseSampleWorkbook->new($v => $params->{$v});
   
   # Give parser file_name file to chew on
   my $msgs = $parser->parse_file( type => $params->{type},
@@ -104,8 +107,36 @@ sub add_items {
     }
   }
 
-  if ( $args{autocreate} ) {
-    # We are allowed to make new stuff as needed!
+  
+  if ( !$args{autocreate} ) {
+    print "Unable to proceed, autocreate not set and unfulfilled dependancies found:\n";
+    print "$msg\n";
+    exit;
+  } else { # We are allowed to make new stuff as needed!
+  
+    # We are going to (try to) do this atomically.
+
+     # cache initial values for these
+    my $ac = $sbeams->isAutoCommit();
+    my $re = $sbeams->isRaiseError();
+    
+    $sbeams->initiate_transaction();
+
+    eval {
+      $args{biosource}->create_attributes( attr   => $missing->{attributes} );
+     # $args{biosource}->create_diseases( diseases => $missing->{diseases} );
+     # $args{biosource}->create_tissues( tissues   => $missing->{tissues} );
+
+         };
+         if ( $@ ) {
+           print STDERR "$@\n";
+           $sbeams->rollback_transaction();
+           exit;
+         } 
+    $sbeams->commit_transaction();
+    $sbeams->isAutoCommit( $ac );
+    $sbeams->isRaiseError( $re );
+    
     
   }
 
@@ -248,6 +279,8 @@ sub processParams {
   } elsif ( $params{test_only} && $params{autocreate} ) {
     printUsage( "Test only and autocreate are mutually exclusive parameters" );
   }
+
+  $params{verbose} ||= 0;
   return \%params;
 }
 
