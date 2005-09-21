@@ -20,6 +20,8 @@ use GD::Graph::xypoints;
 use GD::Graph::bars;
 use GD::Text;
 
+use POSIX qw(ceil);
+
 
 ## for serialization 
 use Storable qw(store retrieve freeze thaw dclone);
@@ -30,7 +32,7 @@ use lib "$FindBin::Bin/../../perl";
 use vars qw ($sbeams $sbeamsMOD $current_username 
              $PROG_NAME $USAGE %OPTIONS $TEST 
              $outfile $atlas_build_id $useSerializedData
-             $serDataFile $serTitleFile
+             $serDataFile $serTitleFile $makeHistogram
             );
 
 #### Set up SBEAMS core module
@@ -60,6 +62,7 @@ Options:
   --atlas_build_id  atlas build id
   --use_last_run    use data collected from last run of this program
                     (serialization)
+  --histogram       plot as a histogram
 
  e.g.:  $PROG_NAME --test
         $PROG_NAME --atlas_build_id '73' --run
@@ -67,7 +70,8 @@ Options:
 EOU
 
 
-GetOptions(\%OPTIONS, "test", "run", "atlas_build_id:s", "use_last_run");
+GetOptions(\%OPTIONS, "test", "run", "atlas_build_id:s", "use_last_run",
+"histogram");
 
 
 if ( $OPTIONS{"test"} || $OPTIONS{"use_last_run"} ||
@@ -81,6 +85,8 @@ if ( $OPTIONS{"test"} || $OPTIONS{"use_last_run"} ||
     $useSerializedData = $OPTIONS{"use_last_run"} || 0;
 
     $atlas_build_id = '78' if ($TEST);
+
+    $makeHistogram = $OPTIONS{"histogram"} || 0;
 
 } else
 {
@@ -225,13 +231,29 @@ sub handleRequest()
     }
 
 
-    plot_data( 
-        data_hash_ref => \%proteinCoverageHash,
-        title => $title{"title"},
-        x_title => "protein (sorted by coverage)",
-        y_title => "protein coverage",
-        outfile => $outfile
-    );
+    if ($makeHistogram)
+    {
+
+        plot_data_histogram( 
+            data_hash_ref => \%proteinCoverageHash,
+            title => $title{"title"},
+            y_title => "number of proteins in protein coverage bin",
+            x_title => "protein coverage %",
+            outfile => $outfile
+        );
+
+    } else
+    {
+
+        plot_data( 
+            data_hash_ref => \%proteinCoverageHash,
+            title => $title{"title"},
+            x_title => "protein identity (sorted by coverage)",
+            y_title => "protein coverage",
+            outfile => $outfile
+        );
+
+    }
 
 }
 
@@ -720,6 +742,126 @@ sub plot_data
         x_max_value     => $count,
         y_min_value     => 0,
         y_max_value     => 100,
+        y_number_format => sub{ return sprintf "%.0f",shift},
+        x_number_format => sub{ return sprintf "%.0f",shift},
+        l_margin => 10,
+        r_margin => 10,
+        b_margin => 10,
+        t_margin => 10,
+        dclrs    => [ qw(black) ],
+        markers => [1],
+        bgclr    => 'white', 
+        transparent   => 0,
+        fgclr         => 'black',
+        labelclr      => 'black',
+        legendclr      => 'black',
+        axislabelclr  => 'black',
+        textclr      => 'black',
+    ) or die $graph->error;
+
+    #   y_tick_number   => 10,
+    #   long_ticks      => 1,
+    #   bar_spacing     => 10,
+    #   bar_width     => 2000,
+    #   long_ticks      => 1,
+    #   y_label_skip    => 2,
+
+
+    ##Available line types are 1: solid, 2: dashed, 3: dotted, 4: dot-dashed.
+    ##graph->set( line_types => [3, 2, 4] );
+    #$graph->set( types => [qw(lines bars points area linespoints)] );
+    #$graph->set( types => ['lines', undef, undef, 'bars'] );
+
+
+#   $graph->set_legend( 
+#       "Not Public (= unpublished)", "Public (usually published)" );
+
+    my $gd_image = $graph->plot( \@data ) or die $graph->error;
+
+
+    open(PLOT, ">$outfile") or die("Cannot open $outfile for writing");
+
+    # Make sure we are writing to a binary stream
+    binmode PLOT;
+
+    # Convert the image to PNG and print it to the file PLOT
+    print PLOT $gd_image->png;
+    close PLOT;
+
+}
+
+########################################################################
+# plot_data_histogram
+########################################################################
+sub plot_data_histogram
+{
+    my %args = @_;
+
+    my $data_hash_ref = $args{data_hash_ref} or die 
+        "need data hash reference";
+
+    my %data_hash = %{$data_hash_ref};
+
+    my $title = $args{title};
+
+    my $x_title = $args{x_title};
+
+    my $y_title = $args{y_title};
+
+    my $outfile = $args{outfile};
+
+
+    my (@x, @y, @data);
+
+    ## sort numerically by values:
+    my @sortedKeys = sort{ $data_hash{$a} <=>  $data_hash{$b}} 
+        keys %data_hash;
+
+    my $count = 0;
+
+    ## will make bins 0-10, 10-20, 20-30, 30-40, ...
+    my @bin_centers = qw/ 5.0 15.0 25.0 35.0 45.0 55.0 65.0 75.0 85.0 95.0 /;
+
+    my $half_bin_size = 5.0;
+
+    my $num_bins = 10;
+
+    ## this will be an array of size $num_bins, of the number of proteins per prot cov bin
+    my (@binned_data) = 0;
+
+    foreach my $key (@sortedKeys)
+    {
+
+        my $bin_number = (ceil($data_hash{$key}/$num_bins)) - 1;
+
+        $binned_data[$bin_number]++;
+
+    }
+
+
+    #### Create a combined array
+    @data = ([@bin_centers],[@binned_data]);
+
+
+    my $graph = new GD::Graph::bars( 512, 512);
+    #my $graph = new GD::Graph::xylines( 512, 512);
+    #my $graph = new GD::Graph::xylinespoints( 512, 512);
+    #my $graph = new GD::Graph::xypoints( 512, 512);
+
+    $graph->set_x_label_font(gdMediumBoldFont);
+    $graph->set_y_label_font(gdMediumBoldFont);
+    $graph->set_x_axis_font(gdMediumBoldFont);
+    $graph->set_y_axis_font(gdMediumBoldFont);
+    $graph->set_title_font(gdGiantFont);
+
+
+    $graph->set( 
+        line_width      => 2,
+        title           => $title,
+        y_label         => $y_title,
+        x_label         => $x_title,
+        x_min_value     => 0,
+        x_max_value     => 100,
         y_number_format => sub{ return sprintf "%.0f",shift},
         x_number_format => sub{ return sprintf "%.0f",shift},
         l_margin => 10,
