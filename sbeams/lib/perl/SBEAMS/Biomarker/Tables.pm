@@ -90,9 +90,9 @@ require Exporter;
 #### Get the appropriate database prefixes for the SBEAMS core and this module
 my $core = $DBPREFIX{Core};
 my $prot = $DBPREFIX{Proteomics};
-my $glyco = $DBPREFIX{GlycoPeptide};
+my $glyco = $DBPREFIX{GlycoPeptide} || 'GlycoPeptideModuleNotDefinedInSBEAMS.conf';
 my $bl   = $DBPREFIX{BioLink};
-my $mod  = $DBPREFIX{Biomarker};
+my $mod  = $DBPREFIX{Biomarker} || 'BiomarkerModuleNotDefinedInSBEAMS.conf';
 
 $TB_ORGANISM                    = "${core}organism";
 
