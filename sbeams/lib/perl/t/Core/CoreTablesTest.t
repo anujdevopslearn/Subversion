@@ -1,4 +1,4 @@
-#!/local/programs/bin/perl -w
+#!/usr/local/bin/perl -w
 
 #$Id: DBStressTest.t 3927 2005-09-19 17:23:26Z dcampbel $
 
