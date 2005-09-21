@@ -1,0 +1,31 @@
+
+The following changes to the Proteomics database should be made when
+upgrading SBEAMS
+
+from version 0.21
+
+to 0.22 or later or to the latest code in the SVN repository
+
+---------------
+
+Update table protein_summary
+  Add at end the column:  summary_xml varchar(255) NULL
+  Change column execution_date to NULLABLE
+  Change column program_version to NULLABLE
+
+Update table protein_summary_header
+  Change column enzyme to NULLABLE
+  Change column occam_flag to NULLABLE
+  Change column groups_flag to NULLABLE
+  Change column degen_flag to NULLABLE
+  Change column nsp_flag to NULLABLE
+
+---------------
+
+The APD table 'peptide' has been renamed 'aggregated_peptide'.  It is
+recommended that all the APD table be dropped and recreated.  If this is
+not feasible, contact the developers.
+
+---------------
+
+
