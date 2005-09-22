@@ -160,7 +160,7 @@ sub main {
 sub processOptions {
   GetOptions( \%OPTIONS, "verbose:s", "quiet", "debug:s", "testonly", 'help',
              'input_file=s','output_root=s',
-             'bcpusername=s','bcppassword=s','bcpdatabase',
+             'bcpusername=s','bcppassword=s','bcpdatabase=s',
   ) || printUsage( "Failed to get parameters" );
 
   for my $param ( qw(input_file output_root) ) {
@@ -172,7 +172,7 @@ sub processOptions {
 
 
 ###############################################################################
-# processOptions
+# printUsage
 ###############################################################################
 sub printUsage {
   my $msg = shift;
@@ -191,6 +191,10 @@ sub printUsage {
 
     -i, --input_file xxxx     File from which SQL is read
     -o, --output_root xxxx    Root of filenames to which new SQL is written
+    --bcpdatabase xxxx        Database name of the mssql GO database
+    --bcpuser xxxx            User name for the mssql GO database
+    --bcppass xxxx            Password for the mssql GO database
+
 
    e.g.:  $0 --input_file go_200508-termdb-data.mysql --output_root go
 
