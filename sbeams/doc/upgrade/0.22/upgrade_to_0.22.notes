@@ -1,7 +1,15 @@
 $Id: dcampbel $
 
-The following notes describe the procedure for upgrading an SBEAMS version
-0.21 installation to 0.22.
+The following notes describe the procedure for upgrading an existing
+installation of SBEAMS from:
+  from version 0.21
+  to version 0.22
+     or to an SVN-checkout version after the release 0.21
+If you are upgrading from 0.21 to a version later than 0.22, you must
+execute all these steps and then continue with the upgrade notes for
+all subsequent releases.
+
+See notes for individual modules in this same directory.
 
 Please send questions to spctools-discuss@googlegroups.com
 
@@ -11,13 +19,24 @@ For this release cycle we changed our source repository to subversion and made
 it publicly available.  If you would like to check out the latest code, you can 
 check out a development repository with the following commands:
 
-svn checkout   http://www.sbeams.org/svn/sbeams/trunk/sbeams
+svn checkout http://www.sbeams.org/svn/sbeams/trunk/sbeams
 
 You can use this as a dev branch in a distribution-based sbeams installation. 
 
 ---------
 
-Schema changes since last release.  The current best course of action is to run generate_schema.pl using the latest driver_table files for each Module that has changes, copy the SQL stmts to CREATE tables from there and run each manually.  ALTER TABLE statements must be prepared manually, contact listserv above for assistance if required.
+Schema changes since last release.  The current best course of action is to run
+generate_schema.pl using the latest driver_table files for each Module that has
+changes, copy the SQL stmts to CREATE tables from there and run each manually. 
+
+ALTER TABLE statements must be prepared manually, contact listserv above for
+assistance if required.
+
+You should also run update_driver_tables.pl for the Core and each of the
+installed module.
+See $SBEAMS/lib/scripts/Core/batch_update_driver_tables.csh
+
+---------
 
 Microarray: Altered the conditions table to include the columns analysis_type
 and analysis_id, to facilitate updating annotations.
