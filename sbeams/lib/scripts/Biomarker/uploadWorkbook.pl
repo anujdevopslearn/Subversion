@@ -57,6 +57,7 @@ my $biomarker = SBEAMS::Biomarker->new();
 
   my $group;
 
+  # Fetch processed file as hash of hashrefs
   my $all_items = $parser->get_processed_items();
   die "No valid objects found" unless $all_items;
 
@@ -194,55 +195,85 @@ sub test_data {
   for my $arg qw( biosource biosample items ) {
     die "Missing required parameter $arg" unless defined $args{$arg};
   }
-
+  # Can autocreate
   my %redundant_attr;
   my %redundant_tissue;
   my %redundant_disease;
+  my %redundant_storage_loc;
 
-  my %missing = ( attributes => [],
-                  tissues    => [],
-                  diseases   => [] );
+  # Cannot autocreate
+  my %redundant_organism;
+  my %redundant_organization;
+
+  my %missing = ( attributes   => [],
+                  tissues      => [],
+                  diseases     => [],
+                  storage_loc  => [],
+                  organism     => [],
+                  organization => []
+                );
 
   my $item_no = 0;
+
+  # Iterate through the items (lines)
   for my $item ( @{$args{items}} ){
     $item_no++;
 
-    for my $k ( keys(%{$item->{biosource_attr}}) ) {
-      unless ( $args{redundant} ) {
-        next if $redundant_attr{$k};
-        $redundant_attr{$k}++;
-      }
-      my $res = $args{biosource}->attr_exists( $k );
-      if ( !$res && $args{verbose} ) {
-        push @{$missing{attributes}}, $k;
-        print "Line $item_no: Source Attribute $k does not yet exist\n"
+    # Check Attributes
+    for my $k ( keys( %{$item->{biosource_attr}} ),
+                keys( %{$item->{biosample_attr}} ) ) {
+
+      # Cache value so we only have to look for it once.
+      next if $args{redundant} && $redundant_attr{$k};
+      $redundant_attr{$k}++;
+
+      # push into missing array, print message if desired.
+      if ( $args{biosource}->attr_exists( $k ) ) {
+        push @{$missing{attributes}}, $k if $redundant_attr{$k};
+        print "Line $item_no: Attribute $k doesn't exist\n" if $args{verbose};
       }
     }
 
-
+    # Check tissues
     for my $k ( keys(%{$item->{tissue_type}}) ) {
-      unless ( $args{redundant} ) {
-        next if $redundant_tissue{$k};
-        $redundant_tissue{$k}++;
-      }
-      my $res = $args{biosource}->tissue_exists( $k );
-      if ( !$res && $args{verbose} ) {
-        push @{$missing{tissues}}, $k;
-        print "Line $item_no: Tissue type $k does not yet exist\n";
+
+      # Cache value so we only have to look for it once.
+      next if $args{redundant} && $redundant_tissue{$k};
+      $redundant_tissue{$k}++;
+
+      # push into missing array, print message if desired.
+      if ( $args{biosource}->tissue( $k ) ) {
+        push @{$missing{tissues}}, $k if $redundant_tissue{$k};
+        print "Line $item_no: Tissue $k doesn't exist\n" if $args{verbose};
       }
     }
 
-
+    # Check Diseases
     for my $k ( keys(%{$item->{biosource_disease}}) ) {
-      unless ( $args{redundant} ) {
-        next if $redundant_disease{$k};
-        $redundant_disease{$k}++;
+
+      # Cache value so we only have to look for it once.
+      next if $args{redundant} && $redundant_disease{$k};
+      $redundant_disease{$k}++;
+
+      # push into missing array, print message if desired.
+      if ( $args{biosource}->attr_exists( $k ) ) {
+        push @{$missing{diseases}}, $k if $redundant_disease{$k};
+        print "Line $item_no: Disease $k doesn't exist\n" if $args{verbose};
       }
-      my $res = $args{biosource}->disease_exists( $k );
-      if ( !$res && $args{verbose} ) {
-        push @{$missing{diseases}}, $k;
-        print "Line $item_no: Disease $k does not yet exist\n";
-      }
+    }
+     
+    # Check storage_location 
+    #for my $k ( keys(%{$item->{biosample}}) ) {
+    my $stor = $item->{biosample}->{storage_location};
+    print "$stor\n";
+
+    next if $redundant_storage_loc{$stor} && $args{redundant};
+    $redundant_storage_loc{$stor}++;
+
+    if ( $args{biosample}->storage_location_exists($stor) ) {
+      !$res && $args{verbose} ) {
+      push @{$missing{storage_loc}}, $stor if $redundant_storage_loc{$stor};
+      print "Line $item_no: Disease $k does not yet exist\n";
     }
 
 
