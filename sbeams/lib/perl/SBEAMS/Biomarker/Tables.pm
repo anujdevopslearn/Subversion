@@ -26,10 +26,10 @@ use vars qw(@ISA @EXPORT
             $TBBL_BIOSEQUENCE_PROPERTY_SET
             $TBBL_QUERY_OPTION
 
-            $TBAT_TISSUE_TYPE
+            $TBBM_TISSUE_TYPE
     
-            $TBPR_PROTOCOL
-            $TBPR_GRADIENT_PROGRAM
+            $TBBM_PROTOCOL
+            $TBBM_GRADIENT_PROGRAM
 
             $TBBM_BMRK_ATTRIBUTE
             $TBBM_BMRK_ATTRIBUTE_TYPE
@@ -40,6 +40,7 @@ use vars qw(@ISA @EXPORT
             $TBBM_BMRK_BIOSOURCE_ATTRIBUTE
             $TBBM_BMRK_BIOSOURCE_DISEASE
             $TBBM_BMRK_DISEASE
+            $TBBM_BMRK_DISEASE_TYPE
             $TBBM_BMRK_DATA_ANALYSIS
             $TBBM_BMRK_ANALYSIS_FILE
             $TBBM_BMRK_EXPERIMENT
@@ -61,10 +62,10 @@ require Exporter;
                $TBBL_BIOSEQUENCE_PROPERTY_SET
                $TBBL_QUERY_OPTION
 
-               $TBAT_TISSUE_TYPE
+               $TBBM_TISSUE_TYPE
     
-               $TBPR_PROTOCOL
-               $TBPR_GRADIENT_PROGRAM
+               $TBBM_PROTOCOL
+               $TBBM_GRADIENT_PROGRAM
 
                $TBBM_BMRK_ATTRIBUTE
                $TBBM_BMRK_ATTRIBUTE_TYPE
@@ -75,6 +76,7 @@ require Exporter;
                $TBBM_BMRK_BIOSOURCE_ATTRIBUTE
                $TBBM_BMRK_BIOSOURCE_DISEASE
                $TBBM_BMRK_DISEASE
+               $TBBM_BMRK_DISEASE_TYPE
                $TBBM_BMRK_DATA_ANALYSIS
                $TBBM_BMRK_ANALYSIS_FILE
                $TBBM_BMRK_EXPERIMENT
@@ -96,10 +98,11 @@ my $mod  = $DBPREFIX{Biomarker} || 'BiomarkerModuleNotDefinedInSBEAMS.conf';
 
 $TB_ORGANISM                    = "${core}organism";
 
-$TBAT_TISSUE_TYPE               = "${glyco}tissue_type";
+# Chose to specify external db tables as TBBM
+$TBBM_TISSUE_TYPE               = "${glyco}tissue_type";
 
-$TBPR_PROTOCOL                  = "${prot}protocol";
-$TBPR_GRADIENT_PROGRAM          = "${prot}gradient_program";
+$TBBM_PROTOCOL                  = "${prot}protocol";
+$TBBM_GRADIENT_PROGRAM          = "${prot}gradient_program";
 
 $TBBL_BIOSEQUENCE_SET           = "${bl}biosequence_set";
 $TBBL_DBXREF                    = "${bl}dbxref";
@@ -111,6 +114,7 @@ $TBBM_BMRK_BIO_GROUP           = "${mod}BMRK_bio_group";
 $TBBM_BMRK_BIOSOURCE           = "${mod}BMRK_biosource";
 $TBBM_BMRK_BIOSAMPLE           = "${mod}BMRK_biosample";
 $TBBM_BMRK_DISEASE             = "${mod}BMRK_disease";
+$TBBM_BMRK_DISEASE_TYPE        = "${mod}BMRK_disease_type";
 $TBBM_BMRK_ATTRIBUTE_TYPE      = "${mod}BMRK_attribute_type";
 $TBBM_BMRK_ATTRIBUTE           = "${mod}BMRK_attribute";
 $TBBM_BMRK_BIOSOURCE_ATTRIBUTE = "${mod}BMRK_biosource_attribute";
