@@ -28,6 +28,9 @@ sub new {
 	return $this;
 }
 
+#+
+# Method to check for existance of specified tissue
+#-
 sub tissue_exists {
   my $this = shift;
   my $tissue = shift;
@@ -43,7 +46,49 @@ sub tissue_exists {
 
   return $cnt;
 }   
+
+#+
+# Method to check for existance of specified organization
+#-
+sub organization_exists {
+  my $this = shift;
+  my $org = shift;
+  return unless $org;
+
+  my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
+  die "unsafe org detected: $org\n" if $sbeams->isTaintedSQL($org);
+
+  my ($cnt) = $sbeams->selectrow_array( <<"  END_SQL" );
+  SELECT COUNT(*) FROM $TB_ORGANIZATION
+  WHERE organization_name = '$org'
+  END_SQL
+
+  return $cnt;
+}   
+
+
+#+
+# Method to check for existance of specified organism
+#-
+sub organism_exists {
+  my $this = shift;
+  my $organism = shift;
+  return unless $organism;
+
+  my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
+  die "unsafe organism: $organism\n" if $sbeams->isTaintedSQL($organism);
+
+  my ($cnt) = $sbeams->selectrow_array( <<"  END_SQL" );
+  SELECT COUNT(*) FROM $TB_ORGANISM
+  WHERE organism_name = '$organism'
+  END_SQL
+
+  return $cnt;
+}   
   
+#+
+# Method to check for existance of specified disease
+#-
 sub disease_exists {
   my $this = shift;
   my $disease = shift;

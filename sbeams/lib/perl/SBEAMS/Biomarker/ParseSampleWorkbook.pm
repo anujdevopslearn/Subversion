@@ -66,8 +66,9 @@ sub process_data {
   my @items;
 
   # Get headers for various sub-groups
-  my @tags = qw( biosource biosource_attr biosource_disease tissue_type
-                 biosource_disease_stage biosample biosample_attr );
+  my @tags = qw( biosample biosample_attr prep_params ms_params analysis_params
+                 biosource biosource_attr biosource_disease 
+                 biosource_disease_stage tissue_type );
 
   # Get headers for all columns
   my %head;
@@ -78,7 +79,7 @@ sub process_data {
   # accumulator for processed lines
   my @all_items;
 
-  print "Saw a total of " . scalar @{$this->{_data}} . " lines\n";
+#  print "Saw a total of " . scalar @{$this->{_data}} . " lines\n";
 
   # Each row represents one sample
   foreach my $row ( @{$this->{_data}} ) {
@@ -90,15 +91,7 @@ sub process_data {
     for my $tag ( @tags ) {
 
       my %subitem;
-
-      # Had to rewrite as a loop.
-      foreach my $key ( keys(%{$head{$tag}}) ) {
-        $subitem{$key} = ( !defined( $idx->{${$head{$tag}}{$key}} ) ? undef :
-                                     $row->[$idx->{${$head{$tag}}{$key}}] ); 
-      }
       
-      $item{$tag} = \%subitem;
-
       # Confused yet?
       # The item hash is keyed by tags, i.e. biosource, biosample, etc. 
       # Each of these points at an anonymous hashref.
@@ -106,6 +99,13 @@ sub process_data {
       # column name (keys of %{$head{$tag}} rather than by the spreadsheet
       # column header, which are the values of %{$head{$tag}}
       # @{$item{$tag}}{keys(%{$head{$tag}})} = @$row[@$idx{values(%{$head{$tag}})}];
+
+      # Had to rewrite as a loop to avoid undefined cols getting $row[0].
+      foreach my $key ( keys(%{$head{$tag}}) ) {
+        $subitem{$key} = ( !defined( $idx->{${$head{$tag}}{$key}} ) ? undef :
+                                     $row->[$idx->{${$head{$tag}}{$key}}] ); 
+      }
+      $item{$tag} = \%subitem;
     }
     push @all_items, \%item;
   }
@@ -414,7 +414,7 @@ sub _getParser2DbMap {
     'MS run protocol' => 'xxxx',
     'Volume Injected' => 'xxxx',
   );
-  return \%ms_params if $mode eq 'prep_params';
+  return \%ms_params if $mode eq 'ms_params';
 
     # analysis stuff, all downstream!
   my %analysis_params = (
@@ -431,7 +431,7 @@ sub _getParser2DbMap {
     'person for data analysis' => 'xxxx',
     'peplist peptide peaks file location' => 'xxxx'
   );
-  return \%analysis_params if $mode eq 'prep_params';
+  return \%analysis_params if $mode eq 'analysis_params';
 
   my %map = ( %biosource,
               %biosource_attr,

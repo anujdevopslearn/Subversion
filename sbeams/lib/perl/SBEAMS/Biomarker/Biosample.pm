@@ -28,6 +28,9 @@ sub new {
 	return $this;
 }
 
+#+
+# Method to check for existance of specified Attribute
+#-
 sub attr_exists {
   my $this = shift;
   my $attr = shift;
@@ -39,6 +42,26 @@ sub attr_exists {
   my ($cnt) = $sbeams->selectrow_array( <<"  END_SQL" );
   SELECT COUNT(*) FROM $TBBM_BMRK_ATTRIBUTE
   WHERE attribute_name = '$attr'
+  END_SQL
+
+  return $cnt;
+}   
+
+
+#+
+# Method to check for existance of specified storage_location
+#-
+sub storage_loc_exists {
+  my $this = shift;
+  my $stor = shift;
+  return unless $stor;
+
+  my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
+  die "unsafe storage location: $stor\n" if $sbeams->isTaintedSQL($stor);
+
+  my ($cnt) = $sbeams->selectrow_array( <<"  END_SQL" );
+  SELECT COUNT(*) FROM $TBMB_STORAGE_LOCATION
+  WHERE location_name = '$stor'
   END_SQL
 
   return $cnt;
