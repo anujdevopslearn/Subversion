@@ -90,8 +90,7 @@ sub add_items {
                            biosample => $args{biosample},
                            items     => $args{items},
                            redundant => 0,
-                           verbose   => 0 );
-
+                           verbose   => 1 );
   my $msg = '';
   if ( $missing->{attributes} ) {
     for ( @{$missing->{attributes}} ) {
@@ -123,9 +122,13 @@ sub add_items {
     $sbeams->initiate_transaction();
 
     eval {
-      $args{biosource}->create_attributes( attr   => $missing->{attributes} );
-     # $args{biosource}->create_diseases( diseases => $missing->{diseases} );
-     # $args{biosource}->create_tissues( tissues   => $missing->{tissues} );
+      $args{biosource}->create_attributes( attr => $missing->{attributes},
+                                           auto => 1 
+                                         );
+      $args{biosource}->create_diseases( diseases => $missing->{diseases},
+                                         auto => 1 
+                                         );
+      $args{biosource}->create_tissues( tissue => $missing->{tissues} );
 
          };
          if ( $@ ) {
@@ -134,8 +137,8 @@ sub add_items {
            exit;
          } 
     $sbeams->commit_transaction();
-    $sbeams->isAutoCommit( $ac );
-    $sbeams->isRaiseError( $re );
+    $sbeams->setAutoCommit( $ac );
+    $sbeams->setRaiseError( $re );
     
     
   }
@@ -230,7 +233,7 @@ sub test_data {
     }
 
 
-    for my $k ( keys(%{$item->{disease}}) ) {
+    for my $k ( keys(%{$item->{biosource_disease}}) ) {
       unless ( $args{redundant} ) {
         next if $redundant_disease{$k};
         $redundant_disease{$k}++;
@@ -255,7 +258,6 @@ sub test_data {
       }
     }
   }
-
 
   return \%missing;
 }
