@@ -730,11 +730,15 @@ sub initiate_transaction {
   # Finish any incomplete transactions
   $dbh->commit();
 
-  # Turn RaiseError commit
+  # Turn RaiseError off, because mssql begin_work is AFU
   $dbh->{RaiseError} = 0;
 
   # Begin transaction
   $dbh->begin_work();
+
+  # Turn RaiseError on
+  $dbh->{RaiseError} = 1;
+
 }
 
 #+
