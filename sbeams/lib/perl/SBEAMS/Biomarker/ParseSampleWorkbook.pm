@@ -130,7 +130,6 @@ sub getDataRef {
   my $this = shift;
   return $this->{_data} || [];
 }
-
 sub get_processed_items {
   my $this = shift;
   return $this->{processed_items} || undef;
@@ -306,7 +305,6 @@ sub _getDb2ParserMap {
   }
   return \%reverse;
 }
-
 sub _getParser2DbMap {
   my $this = shift;
   my $mode = shift || 'all';

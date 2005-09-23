@@ -14,6 +14,7 @@ use strict;
 
 use SBEAMS::Connection qw( $log );
 use SBEAMS::Biomarker::Tables;     
+use SBEAMS::Connection::Tables;     
  
 #### Set up new variables
 #use vars qw(@ISA @EXPORT);
@@ -60,7 +61,7 @@ sub storage_loc_exists {
   die "unsafe storage location: $stor\n" if $sbeams->isTaintedSQL($stor);
 
   my ($cnt) = $sbeams->selectrow_array( <<"  END_SQL" );
-  SELECT COUNT(*) FROM $TBMB_STORAGE_LOCATION
+  SELECT COUNT(*) FROM $TBBM_BMRK_STORAGE_LOCATION
   WHERE location_name = '$stor'
   END_SQL
 

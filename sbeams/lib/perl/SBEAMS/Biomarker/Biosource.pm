@@ -14,6 +14,7 @@ use strict;
 
 use SBEAMS::Connection qw($log);
 use SBEAMS::Biomarker::Tables;
+use SBEAMS::Connection::Tables;
 
 #### Set up new variables
 #use vars qw(@ISA @EXPORT);
@@ -60,7 +61,7 @@ sub organization_exists {
 
   my ($cnt) = $sbeams->selectrow_array( <<"  END_SQL" );
   SELECT COUNT(*) FROM $TB_ORGANIZATION
-  WHERE organization_name = '$org'
+  WHERE organization = '$org'
   END_SQL
 
   return $cnt;
@@ -302,7 +303,6 @@ sub getAttrTypeID {
   return $id || undef;
 
 } # End getAttrTypeID
-  
 sub attr_exists {
   my $this = shift;
   my $attr = shift;
@@ -318,13 +318,11 @@ sub attr_exists {
 
   return $cnt;
 }   
-
 sub setSBEAMS {
   my $this = shift;
   my $sbeams = shift || die "Must pass sbeams object";
   $this->{_sbeams} = $sbeams;
 }
-
 sub getSBEAMS {
   my $this = shift;
   return $this->{_sbeams};
