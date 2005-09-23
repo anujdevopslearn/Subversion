@@ -189,6 +189,17 @@ sub handle_request {
         AND record_status!='D'
     ~;
     my %atlas_build_names = $sbeams->selectTwoColumnHash($sql);
+    
+    #### Get a list of id's sorted by name
+    my $sql = qq~
+      SELECT atlas_build_id,atlas_build_name
+      FROM $TBAT_ATLAS_BUILD
+      WHERE project_id IN ( $accessible_project_ids )
+      AND record_status!='D'
+      ORDER BY atlas_build_name
+    ~;
+    my @ordered_atlas_build_ids = $sbeams->selectOneColumn($sql);
+
 
     #### Get the passed parameters
     my $protein_name = $parameters{"protein_name"} || $parameters{"biosequence_name"};
@@ -215,7 +226,7 @@ sub handle_request {
         print "PeptideAtlas Build: ";
 
         print $q->popup_menu(-name => "atlas_build_id",
-                             -values => [ keys(%atlas_build_names) ],
+                             -values => [ @ordered_atlas_build_ids ],
                              -labels => \%atlas_build_names,
                              -default => $atlas_build_id,
                             );

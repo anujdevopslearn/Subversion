@@ -271,6 +271,7 @@ sub handle_request {
         FROM $TBAT_ATLAS_BUILD
         WHERE project_id IN ( $project_string )
         AND record_status!='D'
+	ORDER BY atlas_build_name
     ~;
 
     my @rows = $sbeams->selectSeveralColumns($sql) or
@@ -280,8 +281,8 @@ sub handle_request {
 
         my ($tmp_id, $tmp_name) = @{$row};
 
-        unshift(@atlas_option_id_array, $tmp_id);
-        unshift(@atlas_option_name_array, $tmp_name);
+        push(@atlas_option_id_array, $tmp_id);
+        push(@atlas_option_name_array, $tmp_name);
     
     }
 
