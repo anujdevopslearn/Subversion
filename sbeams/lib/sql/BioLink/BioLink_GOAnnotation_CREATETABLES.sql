@@ -1,3 +1,5 @@
+-- $Id$
+
 
 CREATE TABLE dbo.organism_namespace (
   organism_namespace_id       int IDENTITY NOT NULL,
@@ -18,7 +20,7 @@ GO
 
 CREATE TABLE dbo.annotated_gene (
   annotated_gene_id     int NOT NULL IDENTITY,
-  gene_name             varchar(100) NOT NULL,
+  gene_name             varchar(100) NULL,
   gene_accession        varchar(50) NOT NULL,
   organism_namespace_id    int NOT NULL REFERENCES organism_namespace(organism_namespace_id),
   biosequence_id        int NULL,
