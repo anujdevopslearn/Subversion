@@ -28,8 +28,6 @@ my $biomarker = SBEAMS::Biomarker->new();
   $biomarker->setSBEAMS( $sbeams );
 
   my $params = processParams();
-  my $foobar;
-  print $foobar;
   
   # Silly, don't want next line to exceed 80 chars
   my $v = 'verbose';
@@ -62,11 +60,15 @@ my $biomarker = SBEAMS::Biomarker->new();
   die "No valid objects found" unless $all_items;
 
   if ( $params->{test_only} ) {
-    test_data( biosource => $biosource,
-               biosample => $biosample,
-               items     => $all_items,
-               redundant => 0,
-               verbose   => 1 );
+    my $missing = test_data( biosource => $biosource,
+                             biosample => $biosample,
+                             items     => $all_items,
+                             redundant => 0 
+                           );
+
+    # Print some info, if warranted
+    printMissing( $missing ) if $missing->{true};
+
   } else {
     add_items( biosource => $biosource,
                biosample => $biosample,
@@ -76,6 +78,38 @@ my $biomarker = SBEAMS::Biomarker->new();
 
 }
   
+sub printMissing {
+  my $missing = shift;
+
+  print <<"  END";
+  Found one or more related entities that don't yet exist in the database.  
+  END
+
+  if ( @{$missing->{auto}} ) {
+    print <<"    END";
+  If you run with the --autocreate flag ( and without the --test_only flag )
+  then these will be autocreated for you.  The descriptions will be generic,
+  so you should go back and update them via the manage table interface.
+  --------------------------------------------------------------------------
+    END
+    sleep 2;
+    for ( @{$missing->{auto}} ) { print $_; }
+    print "\n";
+  }
+  if ( @{$missing->{manual}} ) {
+    print <<"    END";
+
+  The following attributes must be added via the web UI before you can can
+  upload this dataset. 
+  --------------------------------------------------------------------------
+    END
+    sleep 2;
+    for ( @{$missing->{manual}} ) { print $_; }
+    print "\n";
+  }
+}
+
+
 #+
 #
 #
@@ -85,104 +119,50 @@ sub add_items {
   for my $arg qw( biosource biosample items autocreate ) {
     die "Missing required parameter $arg" unless defined $args{$arg};
   }
-  $args{ autocreate} ||= 0;
 
   my $missing = test_data( biosource => $args{biosource},
                            biosample => $args{biosample},
                            items     => $args{items},
                            redundant => 0,
                            verbose   => 1 );
-  my $msg = '';
-  if ( $missing->{attributes} ) {
-    for ( @{$missing->{attributes}} ) {
-      $msg .= "Missing attribute: $_ \n";
-    }
-  } elsif ( $missing->{diseases} ) {
-    for ( @{$missing->{diseases}} ) {
-      $msg .= "Missing disease: $_ \n";
-    }
-  } elsif ( $missing->{tissues} ) {
-    for ( @{$missing->{tissues}} ) {
-      $msg .= "Missing tissue: $_ \n";
-    }
-  }
 
+  if ( $missing->{true} ) {
+    printMissing( $missing );
+    if ( !$args{autocreate} ) {
+      print "Unable to proceed, autocreate not set and unfulfilled dependancies found:\n";
+      exit;
+    } elsif ( @{$missing->{manual}} ) {
+      print "Unable to proceed, cannot manually add one or more missing attributes\n";
+      exit;
+    }
+
+    
   
-  if ( !$args{autocreate} ) {
-    print "Unable to proceed, autocreate not set and unfulfilled dependancies found:\n";
-    print "$msg\n";
-    exit;
-  } else { # We are allowed to make new stuff as needed!
-  
-    # We are going to (try to) do this atomically.
+  # We are going to (try to) do this atomically.
 
-     # cache initial values for these
-    my $ac = $sbeams->isAutoCommit();
-    my $re = $sbeams->isRaiseError();
+  # cache initial values for these
+  my $ac = $sbeams->isAutoCommit();
+  my $re = $sbeams->isRaiseError();
     
-    $sbeams->initiate_transaction();
+  $sbeams->initiate_transaction();
 
-    eval {
-      $args{biosource}->create_attributes( attr => $missing->{attributes},
-                                           auto => 1 
-                                         );
-      $args{biosource}->create_diseases( diseases => $missing->{diseases},
-                                         auto => 1 
-                                         );
-      $args{biosource}->create_tissues( tissue => $missing->{tissues} );
+  eval {
+    $args{biosource}->create_attributes( attr => $missing->{attributes},
+                                         auto => 1 );
+    $args{biosource}->create_diseases( diseases => $missing->{diseases},
+                                       auto => 1 );
+    $args{biosource}->create_tissues( tissue => $missing->{tissues} );
 
-         };
-         if ( $@ ) {
-           print STDERR "$@\n";
-           $sbeams->rollback_transaction();
-           exit;
-         } 
-    $sbeams->commit_transaction();
-    $sbeams->setAutoCommit( $ac );
-    $sbeams->setRaiseError( $re );
-    
-    
+       };
+       if ( $@ ) {
+         print STDERR "$@\n";
+         $sbeams->rollback_transaction();
+         exit;
+       } 
+  $sbeams->commit_transaction();
+  $sbeams->setAutoCommit( $ac );
+  $sbeams->setRaiseError( $re );
   }
-
-  my $item_no = 0;
-  for my $item ( @{$args{items}} ){
-    $item_no++;
-
-    for my $k ( keys(%{$item->{biosource_attr}}) ) {
-      my $res = $args{biosource}->attr_exists( $k );
-      if ( !$res && $args{verbose} ) {
-        push @{$missing->{attributes}}, $k;
-      }
-    }
-
-    for my $k ( keys(%{$item->{tissue_type}}) ) {
-      my $res = $args{biosource}->tissue_exists( $k );
-      if ( !$res && $args{verbose} ) {
-        push @{$missing->{tissues}}, $k;
-      }
-    }
-
-    for my $k ( keys(%{$item->{disease}}) ) {
-      my $res = $args{biosource}->disease_exists( $k );
-      if ( !$res && $args{verbose} ) {
-        push @{$missing->{diseases}}, $k;
-      }
-    }
-
-    for my $k ( keys(%{$item->{biosample_attr}}) ) {
-      my $res = $args{biosample}->attr_exists( $k );
-      if ( !$res && $args{verbose} ) {
-        push @{$missing->{attributes}}, $k;
-      }
-    }
-  }
-#      $biosource->add_new( biosource => $item->{biosource},
-#                           biosource_attr => $item->{biosource_attr},
-#                           tissue_type => $item->{tissue_type},
-#                          disease => $item->{disease},
-#                          disease_stage => $item->{disease_stage}
-#                         );
-
 }
 
 #+
@@ -205,6 +185,7 @@ sub test_data {
   my %redundant_organism;
   my %redundant_organization;
 
+  # Hash to hold various missing entities.
   my %missing = ( attributes   => [],
                   tissues      => [],
                   diseases     => [],
@@ -213,85 +194,114 @@ sub test_data {
                   organization => []
                 );
 
+  # Arrays to hold warning messages, distinguish autocreate and manual fields.
+  my ( @auto, @manual );
+
   my $item_no = 0;
 
-  # Iterate through the items (lines)
+  # Iterate through the items (lines), check whether various peripheral
+  # values exist in the database. 
   for my $item ( @{$args{items}} ){
     $item_no++;
 
-    # Check Attributes
+    ### Check Attributes ###
     for my $k ( keys( %{$item->{biosource_attr}} ),
                 keys( %{$item->{biosample_attr}} ) ) {
 
-      # Cache value so we only have to look for it once.
-      next if $args{redundant} && $redundant_attr{$k};
-      $redundant_attr{$k}++;
+      # Skip if we've seen it (unless redundant mode)
+      next if $redundant_attr{$k} && !$args{redundant};
 
       # push into missing array, print message if desired.
-      if ( $args{biosource}->attr_exists( $k ) ) {
-        push @{$missing{attributes}}, $k if $redundant_attr{$k};
-        print "Line $item_no: Attribute $k doesn't exist\n" if $args{verbose};
+      unless ( $args{biosource}->attr_exists($k) ) {
+        push @{$missing{attributes}}, $k; 
+        push @auto, "Line $item_no: Attribute $k doesn't exist yet\n";
       }
+      # record the fact that we've seen it.
+      $redundant_attr{$k}++;
     }
 
-    # Check tissues
+
+    ### Check tissues ###
     for my $k ( keys(%{$item->{tissue_type}}) ) {
 
-      # Cache value so we only have to look for it once.
-      next if $args{redundant} && $redundant_tissue{$k};
-      $redundant_tissue{$k}++;
+      # Skip if we've seen it (unless redundant mode)
+      next if $redundant_tissue{$k} && !$args{redundant};
 
       # push into missing array, print message if desired.
-      if ( $args{biosource}->tissue( $k ) ) {
-        push @{$missing{tissues}}, $k if $redundant_tissue{$k};
-        print "Line $item_no: Tissue $k doesn't exist\n" if $args{verbose};
+      unless ( $args{biosource}->tissue_exists( $k ) ) { 
+        push @{$missing{tissues}}, $k;
+        push @auto, "Line $item_no: Tissue $k doesn't exist yet\n";
       }
+      # record the fact that we've seen it.
+      $redundant_tissue{$k}++;
     }
 
-    # Check Diseases
+    
+    ### Check Diseases ###
     for my $k ( keys(%{$item->{biosource_disease}}) ) {
 
-      # Cache value so we only have to look for it once.
-      next if $args{redundant} && $redundant_disease{$k};
-      $redundant_disease{$k}++;
+      # Skip if we've seen it (unless redundant mode)
+      next if $redundant_disease{$k} && !$args{redundant};
 
       # push into missing array, print message if desired.
-      if ( $args{biosource}->attr_exists( $k ) ) {
-        push @{$missing{diseases}}, $k if $redundant_disease{$k};
-        print "Line $item_no: Disease $k doesn't exist\n" if $args{verbose};
+      unless ( $args{biosource}->disease_exists( $k ) ) {
+        push @{$missing{diseases}}, $k;
+        push @auto, "Line $item_no: Disease $k doesn't exist yet\n";
       }
+      # record the fact that we've seen it.
+      $redundant_disease{$k}++;
     }
      
-    # Check storage_location 
-    #for my $k ( keys(%{$item->{biosample}}) ) {
+    ### Check storage_location ###
     my $stor = $item->{biosample}->{storage_location};
-    print "$stor\n";
-
-    next if $redundant_storage_loc{$stor} && $args{redundant};
+    
+    # Skip if we've seen it (unless redundant mode)
+    next if $redundant_storage_loc{$stor} && !$args{redundant};
+    
+    # push into missing array, print message if desired.
+    unless ( $args{biosample}->storage_loc_exists($stor) ) {
+      push @{$missing{storage_loc}}, $stor;
+      push @auto, "Line $item_no: Storage location $stor does not yet exist\n";
+    }
     $redundant_storage_loc{$stor}++;
 
-    if ( $args{biosample}->storage_location_exists($stor) ) {
-      !$res && $args{verbose} ) {
-      push @{$missing{storage_loc}}, $stor if $redundant_storage_loc{$stor};
-      print "Line $item_no: Disease $k does not yet exist\n";
+     
+    ### Check organism ###
+    my $organism = $item->{biosource}->{organism};
+    
+    # Skip if we've seen it (unless redundant mode)
+    next if $redundant_organism{$organism} && !$args{redundant};
+    
+    unless ( $args{biosource}->organism_exists($organism) ) {
+      push @{$missing{organism}}, $organism;
+      push @manual, "Line $item_no: Organism $organism does not yet exist\n"; 
     }
+    $redundant_organism{$organism}++;
 
-
-    for my $k ( keys(%{$item->{biosample_attr}}) ) {
-      unless ( $args{redundant} ) {
-        next if $redundant_attr{$k};
-        $redundant_attr{$k}++;
-      }
-      my $res = $args{biosample}->attr_exists( $k );
-      if ( !$res && $args{verbose} ) {
-        push @{$missing{attributes}}, $k;
-        print "Line $item_no: Sample Attribute $k does not yet exist\n"
-      }
+     
+    ### Check organization ###
+    my $organization = $item->{biosource}->{organization};
+    
+    # Skip if we've seen it (unless redundant mode)
+    next if $redundant_organization{$organization} && !$args{redundant};
+    
+    unless ( $args{biosource}->organization_exists($organization) ) {
+      push @{$missing{organization}}, $organization;
+      push @manual, "Line $item_no: Organization $organization does not yet exist\n";
     }
+    $redundant_organization{$organization}++;
   }
+
+  # Are there any missing things?
+  $missing{true} = ( @auto || @manual ) ? 1 : 0;
+
+  # Cache here, this way we get the line numbers...
+  $missing{auto} = \@auto;
+  $missing{manual} = \@manual;
 
   return \%missing;
 }
+
 
 sub processParams {
   my %params;
@@ -314,10 +324,9 @@ sub processParams {
   }
 
   $params{verbose} ||= 0;
+  $params{autocreate} ||= 0;
   return \%params;
 }
-
-
 sub printUsage {
   my $msg = shift || '';
 
