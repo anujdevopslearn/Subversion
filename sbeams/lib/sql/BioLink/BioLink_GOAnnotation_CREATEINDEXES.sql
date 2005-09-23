@@ -3,8 +3,6 @@ CREATE NONCLUSTERED INDEX idx_annotated_gene_gene_accession ON dbo.annotated_gen
 CREATE NONCLUSTERED INDEX idx_gene_annotation_annotated_gene_id ON dbo.gene_annotation ( annotated_gene_id )
 CREATE NONCLUSTERED INDEX idx_gene_annotation_annotation ON dbo.gene_annotation ( gene_annotation_type_id,idx,annotation )
 
-CREATE NONCLUSTERED INDEX idx_biosequence_id ON dbo.biosequence_annotated_gene ( biosequence_id )
-CREATE NONCLUSTERED INDEX idx_annotated_gene_id ON dbo.biosequence_annotated_gene ( annotated_gene_id )
 
 
 
