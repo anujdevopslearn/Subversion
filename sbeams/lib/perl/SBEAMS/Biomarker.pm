@@ -11,7 +11,7 @@ package SBEAMS::Biomarker;
 
 use strict;
 use vars qw($VERSION @ISA $sbeams);
-use CGI::Carp qw(fatalsToBrowser croak);
+use SBEAMS::Connection qw($log);
 
 use SBEAMS::Biomarker::DBInterface;
 use SBEAMS::Biomarker::HTMLPrinter;
@@ -80,6 +80,46 @@ sub checkExperiment {
 
 }
 
+
+#+
+# Method for creating biogroup records.
+# narg data_ref   Reference to array of record hashrefs
+#-
+sub create_biogroup {
+  my $this = shift;
+  my %args = @_;
+
+  my $name = $args{group_name} || die 'missing required parameter "group_name"';
+  my $desc = $args{description} || '';
+  my $type = $args{type} || 'unknown';
+
+  my $data = {     bio_group_name => $name,
+            bio_group_description => $desc,
+                   bio_group_type => $type };
+
+  my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
+
+  # Sanity check 
+  my ($is_there) = $sbeams->selectrow_array( <<"  END_SQL" );
+  SELECT COUNT(*) FROM $TBBM_BMRK_BIO_GROUP
+  WHERE bio_group_name = '$name'
+  END_SQL
+
+  if ( $is_there ) {
+    $log->error( "Attempting to create duplicate group" );
+    return undef;
+  }
+
+  my $id = $sbeams->updateOrInsertRow( insert => 1,
+                                    return_PK => 1,
+                         add_audit_parameters => 1,
+                                   table_name => $TBBM_BMRK_BIO_GROUP,
+                                  rowdata_ref => $data
+                                     );
+
+  $log->error( "Couldn't create biogroup: $name" ) unless $id;
+  return $id;
+}
 
 1;
 

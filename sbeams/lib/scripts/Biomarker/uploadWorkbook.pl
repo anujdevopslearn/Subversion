@@ -1,13 +1,14 @@
 #!/usr/local/bin/perl -w
+
+# perl script to upload sample worksheet into the database
 #
+# $Id$
 
 use FindBin qw($Bin);
 use Getopt::Long;
 
 use lib( "$Bin/../../perl" );
 use SBEAMS::Connection qw($log);
-
-use Carp;
 
 use SBEAMS::Biomarker;
 use SBEAMS::Biomarker::ParseSampleWorkbook;
@@ -29,14 +30,11 @@ my $biomarker = SBEAMS::Biomarker->new();
 
   my $params = processParams();
   
-  # Silly, don't want next line to exceed 80 chars
-  my $v = 'verbose';
-  
   # Instantiate new parser
-  my $parser = SBEAMS::Biomarker::ParseSampleWorkbook->new($v => $params->{$v});
+  my $p = SBEAMS::Biomarker::ParseSampleWorkbook->new(verbose => $params->{verbose});
   
   # Give parser file_name file to chew on
-  my $msgs = $parser->parse_file( type => $params->{type},
+  my $msgs = $p->parseFile( type => $params->{type},
                                   wbook => $params->{file_name} );
 
   if ( $params->{verbose} ) {
@@ -46,7 +44,7 @@ my $biomarker = SBEAMS::Biomarker->new();
   }
   
   # Allow parser to chew data into digestable bits
-  $parser->process_data();
+  $p->process_data();
 
   my $biosource = SBEAMS::Biomarker::Biosource->new();
   $biosource->setSBEAMS( $sbeams );
@@ -56,18 +54,18 @@ my $biomarker = SBEAMS::Biomarker->new();
   my $group;
 
   # Fetch processed file as hash of hashrefs
-  my $all_items = $parser->get_processed_items();
+  my $all_items = $p->getProcessedItems();
   die "No valid objects found" unless $all_items;
 
   if ( $params->{test_only} ) {
-    my $missing = test_data( biosource => $biosource,
+    my $results = test_data( biosource => $biosource,
                              biosample => $biosample,
                              items     => $all_items,
                              redundant => 0 
                            );
 
     # Print some info, if warranted
-    printMissing( $missing ) if $missing->{true};
+    printMissing( $results ) if $results->{missing};
 
   } else {
     add_items( biosource => $biosource,
@@ -82,6 +80,8 @@ sub printMissing {
   my $missing = shift;
 
   print <<"  END";
+
+
   Found one or more related entities that don't yet exist in the database.  
   END
 
@@ -93,7 +93,7 @@ sub printMissing {
   --------------------------------------------------------------------------
     END
     sleep 2;
-    for ( @{$missing->{auto}} ) { print $_; }
+    for ( @{$missing->{auto}} ) { print "  > $_"; }
     print "\n";
   }
   if ( @{$missing->{manual}} ) {
@@ -104,7 +104,7 @@ sub printMissing {
   --------------------------------------------------------------------------
     END
     sleep 2;
-    for ( @{$missing->{manual}} ) { print $_; }
+    for ( @{$missing->{manual}} ) { print "  > $_"; }
     print "\n";
   }
 }
@@ -120,45 +120,80 @@ sub add_items {
     die "Missing required parameter $arg" unless defined $args{$arg};
   }
 
-  my $missing = test_data( biosource => $args{biosource},
+  my $results = test_data( biosource => $args{biosource},
                            biosample => $args{biosample},
                            items     => $args{items},
                            redundant => 0,
                            verbose   => 1 );
 
-  if ( $missing->{true} ) {
-    printMissing( $missing );
+  if ( $results->{missing} ) {
+
+    # Missing peripherals, and autocreate isn't set
     if ( !$args{autocreate} ) {
+      printMissing( $results );
       print "Unable to proceed, autocreate not set and unfulfilled dependancies found:\n";
-      exit;
-    } elsif ( @{$missing->{manual}} ) {
-      print "Unable to proceed, cannot manually add one or more missing attributes\n";
       exit;
     }
 
-    
+    # Missing peripherals that we cannot autocreate
+    if ( @{$results->{manual}} ) {
+      print "Unable to proceed, cannot manually add one or more results attributes\n";
+      exit;
+    }
   
-  # We are going to (try to) do this atomically.
 
   # cache initial values for these
   my $ac = $sbeams->isAutoCommit();
   my $re = $sbeams->isRaiseError();
     
+  # We are going to (try to) do this atomically.
   $sbeams->initiate_transaction();
 
   eval {
-    $args{biosource}->create_attributes( attr => $missing->{attributes},
-                                         auto => 1 );
-    $args{biosource}->create_diseases( diseases => $missing->{diseases},
-                                       auto => 1 );
-    $args{biosource}->create_tissues( tissue => $missing->{tissues} );
+         # First, add any peripheral things that need to be added
+         $args{biosource}->createAttributes( attr => $results->{attributes},
+                                              auto => 1 );
+         $args{biosource}->createDiseases( diseases => $results->{diseases},
+                                            auto => 1 );
+         $args{biosource}->createTissues( tissue => $results->{tissues} );
+         $args{biosample}->createStorageLoc( strg_loc => $results->{storage_loc} );
 
+         my $name =   'upload-' . $sbeams->get_datetime();
+         print "Yabba dabba doo\n";
+
+         my $grp_id = $biomarker->create_biogroup( group_name  => $name,
+                                                   description => "Dataset uploaded via $0",
+                                                   type        => 'import' );
+
+         # Next, iterate through lines and add src/samples, join records.
+         foreach my $item ( @{$args{items}} ) {
+
+           # Add biosource record
+           my $src_id = $args{biosource}->addNew( data_ref => $item->{biosource},
+                                                  group_id => $grp_id );
+
+           # Biosource related
+           $args{biosource}->addBiosourceAttrs(  attrs => $item->{biosource_attr},
+                                                src_id => $src_id );
+           $args{biosource}->addBiosourceDiseases(  diseases => $item->{biosource_disease},
+                                                src_id => $src_id );
+
+
+           # Add biosample record
+           my $smpl_id = $args{biosample}->addNew(  data_ref => $item->{biosample},
+                                                    group_id => $grp_id,
+                                                   source_id => $src_id );
+           # Biosample related
+           $args{biosample}->addBiosampleAttrs(  attrs => $item->{biosample_attr},
+                                                src_id => $src_id );
+         }
        };
        if ( $@ ) {
          print STDERR "$@\n";
          $sbeams->rollback_transaction();
          exit;
        } 
+  $sbeams->rollback_transaction();
   $sbeams->commit_transaction();
   $sbeams->setAutoCommit( $ac );
   $sbeams->setRaiseError( $re );
@@ -186,7 +221,7 @@ sub test_data {
   my %redundant_organization;
 
   # Hash to hold various missing entities.
-  my %missing = ( attributes   => [],
+  my %results = ( attributes   => [],
                   tissues      => [],
                   diseases     => [],
                   storage_loc  => [],
@@ -211,9 +246,9 @@ sub test_data {
       # Skip if we've seen it (unless redundant mode)
       next if $redundant_attr{$k} && !$args{redundant};
 
-      # push into missing array, print message if desired.
-      unless ( $args{biosource}->attr_exists($k) ) {
-        push @{$missing{attributes}}, $k; 
+      # push into missing attributes array, print message if desired.
+      unless ( $args{biosource}->attrExists($k) ) {
+        push @{$results{attributes}}, $k; 
         push @auto, "Line $item_no: Attribute $k doesn't exist yet\n";
       }
       # record the fact that we've seen it.
@@ -227,9 +262,9 @@ sub test_data {
       # Skip if we've seen it (unless redundant mode)
       next if $redundant_tissue{$k} && !$args{redundant};
 
-      # push into missing array, print message if desired.
-      unless ( $args{biosource}->tissue_exists( $k ) ) { 
-        push @{$missing{tissues}}, $k;
+      # push into missing tissues array, print message if desired.
+      unless ( $args{biosource}->tissueExists( $k ) ) { 
+        push @{$results{tissues}}, $k;
         push @auto, "Line $item_no: Tissue $k doesn't exist yet\n";
       }
       # record the fact that we've seen it.
@@ -243,9 +278,9 @@ sub test_data {
       # Skip if we've seen it (unless redundant mode)
       next if $redundant_disease{$k} && !$args{redundant};
 
-      # push into missing array, print message if desired.
-      unless ( $args{biosource}->disease_exists( $k ) ) {
-        push @{$missing{diseases}}, $k;
+      # push into missing disease array, print message if desired.
+      unless ( $args{biosource}->diseaseExists( $k ) ) {
+        push @{$results{diseases}}, $k;
         push @auto, "Line $item_no: Disease $k doesn't exist yet\n";
       }
       # record the fact that we've seen it.
@@ -258,9 +293,9 @@ sub test_data {
     # Skip if we've seen it (unless redundant mode)
     next if $redundant_storage_loc{$stor} && !$args{redundant};
     
-    # push into missing array, print message if desired.
-    unless ( $args{biosample}->storage_loc_exists($stor) ) {
-      push @{$missing{storage_loc}}, $stor;
+    # push into missing storage_loc array, print message if desired.
+    unless ( $args{biosample}->storageLocExists($stor) ) {
+      push @{$results{storage_loc}}, $stor;
       push @auto, "Line $item_no: Storage location $stor does not yet exist\n";
     }
     $redundant_storage_loc{$stor}++;
@@ -272,8 +307,9 @@ sub test_data {
     # Skip if we've seen it (unless redundant mode)
     next if $redundant_organism{$organism} && !$args{redundant};
     
-    unless ( $args{biosource}->organism_exists($organism) ) {
-      push @{$missing{organism}}, $organism;
+    # Cache info
+    unless ( $args{biosource}->organismExists($organism) ) {
+      push @{$results{organism}}, $organism;
       push @manual, "Line $item_no: Organism $organism does not yet exist\n"; 
     }
     $redundant_organism{$organism}++;
@@ -285,21 +321,24 @@ sub test_data {
     # Skip if we've seen it (unless redundant mode)
     next if $redundant_organization{$organization} && !$args{redundant};
     
-    unless ( $args{biosource}->organization_exists($organization) ) {
-      push @{$missing{organization}}, $organization;
+    # Cache info
+    unless ( $args{biosource}->organizationExists($organization) ) {
+      push @{$results{organization}}, $organization;
       push @manual, "Line $item_no: Organization $organization does not yet exist\n";
     }
     $redundant_organization{$organization}++;
   }
+  # Total number of items seen
+  $results{total} = $item_no;
 
   # Are there any missing things?
-  $missing{true} = ( @auto || @manual ) ? 1 : 0;
+  $results{missing} = ( @auto || @manual ) ? 1 : 0;
 
   # Cache here, this way we get the line numbers...
-  $missing{auto} = \@auto;
-  $missing{manual} = \@manual;
+  $results{auto} = \@auto;
+  $results{manual} = \@manual;
 
-  return \%missing;
+  return \%results;
 }
 
 

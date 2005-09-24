@@ -13,7 +13,7 @@ package SBEAMS::Biomarker::DBInterface;
 
 use strict;
 use vars qw(@ERRORS);
-use CGI::Carp qw(fatalsToBrowser croak);
+
 use DBI;
 
 

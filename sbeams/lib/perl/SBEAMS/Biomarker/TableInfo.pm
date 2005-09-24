@@ -3,7 +3,7 @@ package SBEAMS::Biomarker::TableInfo;
 # $Id$
 
 use strict;
-use CGI::Carp qw(fatalsToBrowser croak);
+
 
 use SBEAMS::Biomarker::Settings;
 use SBEAMS::Biomarker::Tables;

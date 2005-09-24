@@ -33,7 +33,7 @@ sub new {
 #+
 #
 #-
-sub parse_file {
+sub parseFile {
   my $this = shift;
   my %args = @_;
   
@@ -48,9 +48,9 @@ sub parse_file {
   }
 
   # Call appropriate parsing method 
-  return ( $args{type} eq 'tsv' ) ? $this->_parse_tab_file( %args ) :  
-                                    $this->_parse_excel_file( %args ); 
-} # End parse_file
+  return ( $args{type} eq 'tsv' ) ? $this->_parseTabFile( %args ) :  
+                                    $this->_parseExcelFile( %args ); 
+} # End parseFile
 
 #+
 # 
@@ -130,7 +130,7 @@ sub getDataRef {
   my $this = shift;
   return $this->{_data} || [];
 }
-sub get_processed_items {
+sub getProcessedItems {
   my $this = shift;
   return $this->{processed_items} || undef;
 }
@@ -180,7 +180,7 @@ sub _verbose {
 #+
 # Rudimentry method to avoid dangerous SQL stmts
 #-
-sub _safe_sql {
+sub _safeSQL {
   my $this = shift;
   my $value = shift;
   return ( $value =~ /DELETE|DROP|UPDATE|INSERT|ALTER/gi );
@@ -190,7 +190,7 @@ sub _safe_sql {
 #+
 # Based on file format as of 2005-08-01
 #-
-sub _parse_tab_file {
+sub _parseTabFile {
 	my $this = shift;
 	my %args = @_;
 
@@ -233,7 +233,7 @@ sub _parse_tab_file {
 #+
 # Based on file format(s) as of 2005-08-25
 #-
-sub _parse_excel_file {
+sub _parseExcelFile {
 	my $this = shift;
 	my %args = @_;
 
@@ -329,7 +329,7 @@ sub _getParser2DbMap {
   my %biosource_attr = (
     'PARAM:time of sample collection' => 'collection_time',  # type => PARAM, name => collection_time, value => value
     'PARAM:meal' => 'meal',   
-    'PARAM:alcohole' => 'alcohol',   
+#    'PARAM:alcohole' => 'alcohol',   
     'PARAM:alcohol' => 'alcohol',   
 #    'PARAM:smoke' => 'smoke',   
     'PARAM:Date of Sample Collection' => 'collection_date',   
@@ -363,6 +363,7 @@ sub _getParser2DbMap {
 
   # Biosample
   my %biosample = (
+#    'ISB sample ID' => 'biosample_name',   # to be used as biosample_name also?
     'Location of orginal sample' => 'storage_location',
     'Plate Layout' => 'well_id'
   );
