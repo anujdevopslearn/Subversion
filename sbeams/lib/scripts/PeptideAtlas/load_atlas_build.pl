@@ -1139,7 +1139,7 @@ sub readCoords_updateRecords_calcAttributes {
         biosequence_set_id => $biosequence_set_id);
 
 
-    my (@peptide_accession, @biosequence_name, @is_subpeptide_of);
+    my (@peptide_accession, @biosequence_name);
 
     my (@chromosome, @strand, @start_in_chromosome, @end_in_chromosome);
 
@@ -1432,47 +1432,41 @@ sub readCoords_updateRecords_calcAttributes {
    }
 
 
+    ## Calculate is_subpeptide_of
 
-    ## attempt to contrain scope of hashes to release memory
-    { 
+    ## hash with key = peptide_accession, value = sub-peptide string list
+    my %peptideAccession_subPeptide;
 
-        ## hash with key = peptide_accession, value = sub-peptide string list
-        my %peptideAccession_subPeptide;
+    foreach my $sub_pep_acc (keys %peptideAccession_peptideSequence)
+    {        
 
-        foreach my $sub_pep_acc (keys %peptideAccession_peptideSequence)
+        for my $super_pep_acc (keys %peptideAccession_peptideSequence)
         {        
 
-            for my $super_pep_acc (keys %peptideAccession_peptideSequence)
-            {        
+            if ( ( index($peptideAccession_peptideSequence{$super_pep_acc}, 
+                $peptideAccession_peptideSequence{$sub_pep_acc}) >= 0) 
+                && ($super_pep_acc ne $sub_pep_acc) ) {
+   
+                if ( exists $peptideAccession_subPeptide{$sub_pep_acc} )
+                {
 
-                if ( ( index($peptideAccession_peptideSequence{$super_pep_acc}, 
-                    $peptideAccession_peptideSequence{$sub_pep_acc}) >= 0) 
-                    && ($super_pep_acc ne $sub_pep_acc) ) {
-       
-                    if ( exists $peptideAccession_subPeptide{$sub_pep_acc} )
-                    {
-
-                        $peptideAccession_subPeptide{$sub_pep_acc} =
-                            join ",", $peptideAccession_subPeptide{$sub_pep_acc},
-                            $peptides{$super_pep_acc};
-
-                    } else { 
-
-                        $peptideAccession_subPeptide{$sub_pep_acc} = 
+                    $peptideAccession_subPeptide{$sub_pep_acc} =
+                        join ",", $peptideAccession_subPeptide{$sub_pep_acc},
                         $peptides{$super_pep_acc};
 
-                    }
+                } else { 
+
+                    $peptideAccession_subPeptide{$sub_pep_acc} = 
+                    $peptides{$super_pep_acc};
 
                 }
 
             }
 
-            push(@is_subpeptide_of, $peptideAccession_subPeptide{$sub_pep_acc});
-
         }
 
-    } ## end Calculate is_subpeptide_of
-       
+    }
+
 
    if ($TESTVARS) {
 
@@ -1593,7 +1587,7 @@ sub readCoords_updateRecords_calcAttributes {
             n_genome_locations => $n_genome_locations[$i],
             is_exon_spanning => $is_exon_spanning[$i],
             n_protein_mappings => $n_protein_mappings[$i],
-            is_subpeptide_of => $is_subpeptide_of[$i]
+            is_subpeptide_of => $peptideAccession_subPeptide{$tmp_pep_acc},
         );
  
 
