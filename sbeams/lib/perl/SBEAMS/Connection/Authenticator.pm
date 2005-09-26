@@ -24,12 +24,11 @@ use vars qw( $q $http_header $log @ISA $DBTITLE $SESSION_REAUTH @ERRORS
              $current_project_id $current_project_name $SMBAUTH
              $current_user_context_id @EXPORT_OK  );
 
-use CGI::Carp qw(fatalsToBrowser croak);
+use CGI::Carp qw(croak);
 use CGI qw(-no_debug);
 use DBI;
 use Crypt::CBC;
 use Authen::Smb;
-#use Data::Dumper;
 
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Settings qw(:default $SESSION_REAUTH $LOGIN_DURATION $SMBAUTH);
@@ -303,6 +302,9 @@ sub guessMode {
   if ($ENV{REMOTE_ADDR}) {
     $self->invocation_mode('http');
     $self->output_mode('html');
+    # If we are in html output mode send errors to browser - many cgi's already
+    # use this anyway. 
+    eval "use CGI::Carp qw( fatalsToBrowser )";
   } else {
     $self->invocation_mode('user');
     $self->output_mode('interactive');

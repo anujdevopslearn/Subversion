@@ -24,7 +24,8 @@ use Exporter;
 @EXPORT	= qw( error );
 
 use CGI;
-use CGI::Carp qw( fatalsToBrowser );
+use CGI::Carp;
+
 
 
 

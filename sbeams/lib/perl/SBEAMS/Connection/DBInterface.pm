@@ -21,7 +21,7 @@ use strict;
 use vars qw(@ERRORS $dbh $sth $q $resultset_ref $rs_params_ref
             $SORT_COLUMN $SORT_TYPE $timing_info
            );
-use CGI::Carp qw(fatalsToBrowser croak);
+use CGI::Carp qw(croak);
 use DBI;
 use File::Basename;
 use POSIX;

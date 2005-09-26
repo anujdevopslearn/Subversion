@@ -25,7 +25,7 @@ use strict;
 use vars qw($current_contact_id $current_username
              $current_work_group_id $current_work_group_name
              $current_project_id $current_project_name $current_user_context_id);
-use CGI::Carp qw(fatalsToBrowser croak);
+use CGI::Carp qw(croak);
 use SBEAMS::Connection::DBConnector;
 use SBEAMS::Connection::Log;
 use SBEAMS::Connection::Settings;

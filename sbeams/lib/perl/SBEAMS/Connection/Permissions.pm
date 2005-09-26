@@ -19,7 +19,7 @@ package SBEAMS::Connection::Permissions;
 
 use strict;
 use vars qw(@ERRORS $q @EXPORT @EXPORT_OK);
-use CGI::Carp qw(fatalsToBrowser croak);
+use CGI::Carp qw(croak);
 use Exporter;
 our @ISA = qw( Exporter );
 
