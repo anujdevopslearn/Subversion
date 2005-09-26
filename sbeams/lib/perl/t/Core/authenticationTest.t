@@ -86,10 +86,13 @@ sub load_cookie {
 sub store_cookie {
   $ua = LWP::UserAgent->new( );
   my $time = time();
-  $ua->cookie_jar( HTTP::Cookies->new( file => '/tmp/lwpcookies', autosave => 1, ignore_discard => 1 ) );
+  $ua->cookie_jar( HTTP::Cookies->new( file     => '/tmp/lwpcookies.txt', 
+                                       autosave => 1, 
+                                       ignore_discard => 1 ) );
   my $response = $ua->post( BASE_URL . '/cgi/main.cgi' , \%auth );
   $ua->cookie_jar()->save( '/tmp/lwpcookies.txt' );
-  return ( $ua->{cookie_jar} ) ? 1 : 0;
+  print "Cjar is " . $ua->cookie_jar();
+  return ( $ua->cookie_jar() ) ? 1 : 0;
 } 
 
 END {

@@ -119,7 +119,8 @@ return $p;
 }
 
 sub sbeams_getTablePermissions {
-my $p = $sbeams->getTablePermission( table_name => 'project',
+my $p = $sbeams->calculateTablePermission( table_name => 'project',
+                                      dbtable => '$TB_PROJECT',
                                      contact_id => $sbeams->getCurrent_contact_id(),
                                      work_group_id => $sbeams->getCurrent_work_group_id()
  );
