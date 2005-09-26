@@ -13,7 +13,7 @@ package SBEAMS::MODULETEMPLATE::DBInterface;
 
 use strict;
 use vars qw(@ERRORS);
-use CGI::Carp qw(fatalsToBrowser croak);
+use CGI::Carp qw( croak);
 use DBI;
 
 

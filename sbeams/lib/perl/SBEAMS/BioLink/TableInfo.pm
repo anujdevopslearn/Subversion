@@ -11,7 +11,7 @@ package SBEAMS::BioLink::TableInfo;
 ###############################################################################
 
 use strict;
-use CGI::Carp qw(fatalsToBrowser croak);
+use CGI::Carp qw( croak);
 
 use SBEAMS::BioLink::Settings;
 use SBEAMS::BioLink::Tables;

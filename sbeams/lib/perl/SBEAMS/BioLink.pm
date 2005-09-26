@@ -12,7 +12,7 @@ package SBEAMS::BioLink;
 
 use strict;
 use vars qw($VERSION @ISA $sbeams);
-use CGI::Carp qw(fatalsToBrowser croak);
+use CGI::Carp qw( croak);
 
 use SBEAMS::BioLink::DBInterface;
 use SBEAMS::BioLink::HTMLPrinter;

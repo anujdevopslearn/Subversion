@@ -11,7 +11,7 @@ package SBEAMS::MODULETEMPLATE::TableInfo;
 ###############################################################################
 
 use strict;
-use CGI::Carp qw(fatalsToBrowser croak);
+use CGI::Carp qw( croak);
 
 use SBEAMS::MODULETEMPLATE::Settings;
 use SBEAMS::MODULETEMPLATE::Tables;

@@ -11,7 +11,7 @@ package SBEAMS::Microarray::TableInfo;
 ###############################################################################
 
 use strict;
-use CGI::Carp qw(fatalsToBrowser croak);
+use CGI::Carp qw( croak);
 
 use SBEAMS::Microarray::Settings;
 use SBEAMS::Microarray::Tables;

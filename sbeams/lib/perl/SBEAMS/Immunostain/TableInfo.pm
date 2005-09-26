@@ -11,7 +11,7 @@ package SBEAMS::Immunostain::TableInfo;
 ###############################################################################
 
 use strict;
-use CGI::Carp qw(fatalsToBrowser croak);
+use CGI::Carp qw( croak);
 
 use SBEAMS::Immunostain::Settings;
 use SBEAMS::Immunostain::Tables;
