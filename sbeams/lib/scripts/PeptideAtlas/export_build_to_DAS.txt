@@ -19,9 +19,8 @@ Make the necessary changes to dazzlecfg.xml
  (not yet automatic; replace/add the xml output by above program runs)
 
 
-Restart tomcat:
-/etc/rc.d/init.d/tomcat restart
-  (this should be replaced by just restarting the das app)
+To shutdown the das webapp and reload it with updated /WEB-INF/ contents:
+    http://db.systemsbiology.net:8080/manager/reload?path=/das
 
 
 Test:
