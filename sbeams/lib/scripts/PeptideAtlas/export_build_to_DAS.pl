@@ -608,7 +608,7 @@ sub updateDazzleConfigFile {
     <string name="dbHolder" value="PeptideAtlasDASConn" />
     <string name="tableName" value="$atlas_build_tag" />
     <map name="uriPatterns">
-      <string name="more..." value="$linkout_URL" />
+      <string name="this peptide in PeptideAtlas" value="$linkout_URL" />
     </map>
   </datasource>
   <!-- END #### Datasource definition for PeptideAtlas Build $atlas_build_tag -->
