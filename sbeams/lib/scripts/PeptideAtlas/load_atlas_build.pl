@@ -589,6 +589,26 @@ sub get_search_batch_sample_id_hash {
     %hash = $sbeams->selectTwoColumnHash($sql) or die
         "unable to execute statement:\n$sql\n($!)";
 
+    ## for older datasets where we have new search batches, this query
+    ## fails to fill in a value, so need to iterate over list and dig
+    ## up old record where possible...this isn't clean...need a search
+    ## batch table in PeptideAtlas...
+    my @search_batch_array = split(",", $search_batch_id_list);
+
+    for (my $i=0; $i <= $#search_batch_array; $i++)
+    {
+
+        if (!exists $hash{$search_batch_array[$i]} )
+        {
+
+            die "No sample record with search_batch_id = "
+                . "$search_batch_array[$i].  There is probably a "
+                . "newer search batch associated with the sample.\n";
+
+        }
+
+    }
+
     return %hash;
      
 }
@@ -861,8 +881,6 @@ sub readAPD_writeRecords {
  
     #### read the rest of the file  APD_{organism}_all.tsv and store in hashes with
     ##   keys of peptide_accession 
-    my $counter = 0;
-
     while ($line = <INFILE>) {
 
         chomp($line);
@@ -935,7 +953,6 @@ sub readAPD_writeRecords {
         ## (setting n_genome_locations = 0, n_protein_mappings=0, 
         ## is_exon_spanning='N'---> they're updated in coordinate 
         ## mapping section)
-
         my %rowdata = (   ##   peptide_instance    table attributes
             atlas_build_id => $atlas_build_id,
             peptide_id => $peptide_id,
