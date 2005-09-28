@@ -104,6 +104,7 @@ sub process_data {
       foreach my $key ( keys(%{$head{$tag}}) ) {
         $subitem{$key} = ( !defined( $idx->{${$head{$tag}}{$key}} ) ? undef :
                                      $row->[$idx->{${$head{$tag}}{$key}}] ); 
+#        print "$key, $subitem{$key}\n" if $tag eq 'biosource';
       }
       $item{$tag} = \%subitem;
     }
@@ -204,6 +205,7 @@ sub _parseTabFile {
   open( WBOOK, "<$args{wbook}" ) || die "unable to open $args{wbook}";
   $this->{_wbook} = $args{wbook};
   
+  die;
   while( my $line = <WBOOK> ){
     chomp $line;
     next if $line =~ /^\s*$/;
@@ -212,7 +214,10 @@ sub _parseTabFile {
       # Meaningful headings fingerprint?
       next unless ( $line[0] =~ /Sample Setup Order/  &&
                     $line[1] =~ /MS Sample Run Number/ );
-      @headings = @line;
+      for my $h ( @line ) {
+        $h =~ s/\s+$//g;
+        push @headings, $h;
+      }
 
       my $i = 0;
       foreach (@headings) {
@@ -273,7 +278,11 @@ sub _parseExcelFile {
       # Meaningful headings fingerprint?
       next unless ( $line[0] =~ /Sample Setup Order/  &&
                     $line[1] =~ /MS Sample Run Number/ );
-      @headings = @line;
+      for my $h ( @line ) {
+#        $h =~ s/\s+$//g;
+#        $h =~ s/^\s+//g;
+        push @headings, $h;
+      }
 
       my $i = 0;
       foreach (@headings) {
@@ -314,13 +323,12 @@ sub _getParser2DbMap {
     'ISB sample ID' => 'biosource_name',   # to be used as biosample_name also?
     'Patient_id' => 'patient_id',
     'External Sample ID' => 'external_id',
-    'Name of Institute' => 'organization', #  Do ID lookup
+    'Name of Institute' => 'organization_id', #  Do ID lookup
     'Name of Investigators' => 'investigators', # need to add
-    'Sample type' => 'source_type', 
-    'species' => 'organism', # Do ID lookup
+    'Sample type ' => 'tissue_type_id', 
+    'species' => 'organism_id', # Do ID lookup
     'age' => 'age',  # will have to split
     'gender' => 'gender', # need to add
-    'amount of sample received' => 'original_volume',
   );
   return \%biosource if $mode eq 'biosource';
   
@@ -364,7 +372,8 @@ sub _getParser2DbMap {
   # Biosample
   my %biosample = (
 #    'ISB sample ID' => 'biosample_name',   # to be used as biosample_name also?
-    'Location of orginal sample' => 'storage_location',
+    'Location of orginal sample' => 'storage_location_id',
+    'amount of sample received' => 'original_volume',
     'Plate Layout' => 'well_id'
   );
   return \%biosample if $mode eq 'biosample';

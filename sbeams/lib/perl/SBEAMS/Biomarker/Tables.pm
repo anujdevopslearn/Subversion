@@ -63,6 +63,8 @@ require Exporter;
                $TBBL_QUERY_OPTION
 
                $TBBM_TISSUE_TYPE
+               $TB_ORGANISM
+               $TB_ORGANIZATION
     
                $TBBM_PROTOCOL
                $TBBM_GRADIENT_PROGRAM
@@ -97,6 +99,7 @@ my $bl   = $DBPREFIX{BioLink};
 my $mod  = $DBPREFIX{Biomarker} || 'BiomarkerModuleNotDefinedInSBEAMS.conf';
 
 $TB_ORGANISM                    = "${core}organism";
+$TB_ORGANIZATION                = "${core}organization";
 
 # Chose to specify external db tables as TBBM
 $TBBM_TISSUE_TYPE               = "${glyco}tissue_type";
@@ -119,7 +122,7 @@ $TBBM_BMRK_ATTRIBUTE_TYPE      = "${mod}BMRK_attribute_type";
 $TBBM_BMRK_ATTRIBUTE           = "${mod}BMRK_attribute";
 $TBBM_BMRK_BIOSOURCE_ATTRIBUTE = "${mod}BMRK_biosource_attribute";
 $TBBM_BMRK_BIOSAMPLE_ATTRIBUTE = "${mod}BMRK_biosample_attribute";
-$TBBM_BMRK_BIOSOURCE_DISEASE   = "${mod}BMRK_attribute";
+$TBBM_BMRK_BIOSOURCE_DISEASE   = "${mod}BMRK_biosource_disease";
 $TBBM_BMRK_STORAGE_LOCATION    = "${mod}BMRK_storage_location";
 $TBBM_BMRK_ANALYSIS_FILE       = "${mod}BMRK_analysis_file";
 $TBBM_BMRK_DATA_ANALYSIS       = "${mod}BMRK_data_analysis";
