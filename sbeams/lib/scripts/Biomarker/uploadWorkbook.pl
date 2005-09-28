@@ -35,7 +35,7 @@ my $biomarker = SBEAMS::Biomarker->new();
   
   # Give parser file_name file to chew on
   my $msgs = $p->parseFile( type => $params->{type},
-                                  wbook => $params->{file_name} );
+                           wbook => $params->{file_name} );
 
   if ( $params->{verbose} ) {
     for my $msg ( @$msgs ) {
@@ -71,7 +71,7 @@ my $biomarker = SBEAMS::Biomarker->new();
     add_items( biosource => $biosource,
                biosample => $biosample,
                items     => $all_items,
-               autocreate  => $params->{autocreate} );
+               params  => $params );
   }
 
 }
@@ -116,9 +116,11 @@ sub printMissing {
 #-
 sub add_items {
   my %args = @_;
-  for my $arg qw( biosource biosample items autocreate ) {
+  for my $arg qw( biosource biosample items params ) {
     die "Missing required parameter $arg" unless defined $args{$arg};
   }
+
+  my %params = %{$args{params}};
 
   my $results = test_data( biosource => $args{biosource},
                            biosample => $args{biosample},
@@ -129,7 +131,7 @@ sub add_items {
   if ( $results->{missing} ) {
 
     # Missing peripherals, and autocreate isn't set
-    if ( !$args{autocreate} ) {
+    if ( !$params{autocreate} ) {
       printMissing( $results );
       print "Unable to proceed, autocreate not set and unfulfilled dependancies found:\n";
       exit;
@@ -159,7 +161,6 @@ sub add_items {
          $args{biosample}->createStorageLoc( strg_loc => $results->{storage_loc} );
 
          my $name =   'upload-' . $sbeams->get_datetime();
-         print "Yabba dabba doo\n";
 
          my $grp_id = $biomarker->create_biogroup( group_name  => $name,
                                                    description => "Dataset uploaded via $0",
@@ -167,37 +168,126 @@ sub add_items {
 
          # Next, iterate through lines and add src/samples, join records.
          foreach my $item ( @{$args{items}} ) {
+#           print join( "::", keys( %$item ), "\n");
+            
+           # Gotta map a few strings to their corresponding primary key.
+           # Biosource
+           set_organism_id( $item->{biosource} );
+           set_org_id( $item->{biosource} );
+           set_tissuetype_id( $item->{biosource} );
+
+           # Biosample
+           set_exp_id( $params{experiment}, $item->{biosample} );
+           set_storageloc_id( $item->{biosample} );
+
+           # Gotta clean up some ill-advised data
+           na_to_undef( $item->{biosource} );
 
            # Add biosource record
-           my $src_id = $args{biosource}->addNew( data_ref => $item->{biosource},
+           my $src_id = $args{biosource}->add_new( data_ref => $item->{biosource},
                                                   group_id => $grp_id );
+           next unless $src_id;
 
            # Biosource related
-           $args{biosource}->addBiosourceAttrs(  attrs => $item->{biosource_attr},
+           $args{biosource}->add_biosource_attrs(  attrs => $item->{biosource_attr},
                                                 src_id => $src_id );
-           $args{biosource}->addBiosourceDiseases(  diseases => $item->{biosource_disease},
-                                                src_id => $src_id );
+           $args{biosource}->add_biosource_diseases(  diseases => $item->{biosource_disease},
+                                                      src_id => $src_id );
 
 
            # Add biosample record
-           my $smpl_id = $args{biosample}->addNew(  data_ref => $item->{biosample},
+           # first a little triage
+           $item->{biosample}->{biosample_name} = $item->{biosource}->{biosource_name}; 
+           $item->{biosample}->{original_volume} = interpret_vol ( $item->{biosample}->{original_volume} );
+
+           my $smpl_id = $args{biosample}->add_new( data_ref => $item->{biosample},
                                                     group_id => $grp_id,
-                                                   source_id => $src_id );
+                                                      src_id => $src_id
+                                                  );
            # Biosample related
-           $args{biosample}->addBiosampleAttrs(  attrs => $item->{biosample_attr},
-                                                src_id => $src_id );
+           $args{biosample}->add_biosample_attrs( attrs => $item->{biosample_attr},
+                                                smpl_id => $smpl_id );
          }
-       };
+       };   # End eval block
        if ( $@ ) {
          print STDERR "$@\n";
          $sbeams->rollback_transaction();
          exit;
-       } 
-  $sbeams->rollback_transaction();
+       }  # End eval catch-error block
+
+       
+#  $sbeams->rollback_transaction();
   $sbeams->commit_transaction();
   $sbeams->setAutoCommit( $ac );
   $sbeams->setRaiseError( $re );
   }
+}
+
+sub interpret_vol {
+  my $vol = shift;
+  $vol =~ s/\D//g;
+  return $vol;
+}
+
+sub set_exp_id {
+  my $exp_name = shift;
+  my $biosample = shift;
+  ($biosample->{experiment_id}) = $sbeams->selectrow_array( <<"  END" );
+  SELECT experiment_id 
+  FROM $TBBM_BMRK_EXPERIMENT
+  WHERE experiment_name = '$exp_name'
+  END
+}
+
+sub set_organism_id {
+  my $biosource = shift;
+  return unless $biosource->{organism_id};
+  ($biosource->{organism_id}) = $sbeams->selectrow_array( <<"  END" );
+  SELECT organism_id 
+  FROM $TB_ORGANISM
+  WHERE organism_name = '$biosource->{organism_id}'
+  END
+}
+
+sub set_org_id {
+  my $biosource = shift;
+  return unless $biosource->{organization_id};
+  ($biosource->{organization_id}) = $sbeams->selectrow_array( <<"  END" );
+  SELECT organization_id 
+  FROM $TB_ORGANIZATION
+  WHERE organization = '$biosource->{organization_id}'
+  END
+}
+
+sub na_to_undef {
+  my $dref = shift;
+  for ( keys( %$dref ) ) {
+    $dref->{$_} =~ s/^N\/A$//gi
+  }
+}
+
+sub set_tissuetype_id {
+  my $biosource = shift;
+#  for my $k ( keys( %$biosource ) ) {
+#    print "KEYHASH $k => $biosource->{$k}\n";
+#  }
+#  die;
+  return unless $biosource->{tissue_type_id};
+  ($biosource->{tissue_type_id}) = $sbeams->selectrow_array( <<"  END" );
+  SELECT tissue_type_id 
+  FROM $TBBM_TISSUE_TYPE
+  WHERE tissue_type_name = '$biosource->{tissue_type_id}'
+  END
+}
+
+sub set_storageloc_id {
+  my $biosample = shift;
+  return unless $biosample->{storage_location_id};
+  ($biosample->{storage_location_id}) = $sbeams->selectrow_array( <<"  END" );
+  SELECT storage_location_id 
+  FROM $TBBM_BMRK_STORAGE_LOCATION
+  WHERE location_name = '$biosample->{storage_location_id}'
+  END
 }
 
 #+
@@ -288,7 +378,7 @@ sub test_data {
     }
      
     ### Check storage_location ###
-    my $stor = $item->{biosample}->{storage_location};
+    my $stor = $item->{biosample}->{storage_location_id};
     
     # Skip if we've seen it (unless redundant mode)
     next if $redundant_storage_loc{$stor} && !$args{redundant};
@@ -302,31 +392,34 @@ sub test_data {
 
      
     ### Check organism ###
-    my $organism = $item->{biosource}->{organism};
+    my $organism = $item->{biosource}->{organism_id} || '';
+
+    dumpstuff( $item_no, $item ) if !$organism;
     
     # Skip if we've seen it (unless redundant mode)
-    next if $redundant_organism{$organism} && !$args{redundant};
-    
-    # Cache info
-    unless ( $args{biosource}->organismExists($organism) ) {
-      push @{$results{organism}}, $organism;
-      push @manual, "Line $item_no: Organism $organism does not yet exist\n"; 
+    if ( (!$redundant_organism{$organism} || $args{redundant})) {
+      # Cache info
+      unless ( $args{biosource}->organismExists($organism) || $organism eq '' ) {
+        push @{$results{organism}}, $organism;
+        push @manual, "Line $item_no: Organism $organism does not yet exist\n"; 
+      }
+      $redundant_organism{$organism}++;
     }
-    $redundant_organism{$organism}++;
 
      
     ### Check organization ###
-    my $organization = $item->{biosource}->{organization};
+    my $organization = $item->{biosource}->{organization_id} || '';
     
     # Skip if we've seen it (unless redundant mode)
-    next if $redundant_organization{$organization} && !$args{redundant};
+    if( !$redundant_organization{$organization} || $args{redundant} ) {
     
-    # Cache info
-    unless ( $args{biosource}->organizationExists($organization) ) {
-      push @{$results{organization}}, $organization;
-      push @manual, "Line $item_no: Organization $organization does not yet exist\n";
+      # Cache info
+      unless ( $args{biosource}->organizationExists($organization)  || $organism eq '' ) {
+        push @{$results{organization}}, $organization;
+        push @manual, "Line $item_no: Organization $organization does not yet exist\n";
+      }
+      $redundant_organization{$organization}++;
     }
-    $redundant_organization{$organization}++;
   }
   # Total number of items seen
   $results{total} = $item_no;
@@ -341,6 +434,13 @@ sub test_data {
   return \%results;
 }
 
+
+sub dumpstuff {
+  my $num = shift;
+  my $item = shift;
+  use Data::Dumper;
+  print Dumper( $item );
+}
 
 sub processParams {
   my %params;
