@@ -23,6 +23,8 @@ use strict;
 use Getopt::Long;
 use FindBin;
 
+use POSIX qw(ceil);
+
 use lib "$FindBin::Bin/../../lib/perl";
 use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
@@ -112,10 +114,10 @@ sub main {
 
     ## If no parameters are defined, set up some defaults to help with browsing
     ## until I get a help menu set-up
-    if ( !$parameters{'searchWithinThis'}  && !$parameters{'searchForThis'}
-         && (  !$parameters{'atlas_build_name'}  || !$parameters{'atlas_build_id'} ) ) {
+    if ( !exists $parameters{'searchWithinThis'}  && !exists $parameters{'searchForThis'}
+         && ( !exists $parameters{'atlas_build_name'}  || !exists $parameters{'atlas_build_id'} ) ) {
 
-        $parameters{'atlas_build_name'} = "Human_P0.9_Ens26_NCBI35";
+        $parameters{'atlas_build_name'} = "Human_P0.9_Ens30_NCBI35";
 
         $parameters{'searchWithinThis'} = "Peptide Name";
 
@@ -434,7 +436,7 @@ sub handle_request {
 
     #### Define the SQL statement
     $sql = qq~
-         SELECT 
+         SELECT distinct
          P.peptide_accession, P.peptide_sequence,
          PI.best_probability, PI.n_observations, PI.n_genome_locations, PI.n_protein_mappings,
          PM.chromosome, PM.start_in_chromosome, PM.end_in_chromosome, PM.strand,
@@ -493,7 +495,7 @@ sub handle_request {
             my (@chrom, @start_chrom, @end_chrom, @strand);
             my (@biosequence_name);
             my (@sample_tag, @sample_title);
-            my %chrom_HoHoHoHoA;
+            my %chrom_HoHoHoHoH;
             my %sample_H;
 
             my $i=0;  ##index counter
@@ -506,14 +508,13 @@ sub handle_request {
                 $biosequence_name[$i],
                 $sample_tag[$i], $sample_title[$i]) = @{$row};
 
-                ###  store value as array, array = $biosequence_names
-                if ($chrom_HoHoHoHoA{$chrom[$i]}{$start_chrom[$i]}{$end_chrom[$i]}{$strand[$i]} eq "" ) {
+                ###  store crazy data structure (xxxxxxx redo this someday)
+                if (!exists $chrom_HoHoHoHoH{$chrom[$i]}{$start_chrom[$i]}{$end_chrom[$i]}{$strand[$i]}{$peptide_sequence[$i]}{$biosequence_name[$i]} ) 
+                {
 
-                    $chrom_HoHoHoHoA{$chrom[$i]}{$start_chrom[$i]}{$end_chrom[$i]}{$strand[$i]}[0] = $i;
+                    $chrom_HoHoHoHoH{$chrom[$i]}{$start_chrom[$i]}{$end_chrom[$i]}{$strand[$i]}{$peptide_sequence[$i]}{$biosequence_name[$i]}
+                        = $biosequence_name[$i];
 
-                } else {
-
-                    push @{ $chrom_HoHoHoHoA{$chrom[$i]}{$start_chrom[$i]}{$end_chrom[$i]}{$strand[$i]} }, $i;
                 }
 
                 $sample_H{$sample_tag[$i]} = $i;
@@ -555,40 +556,102 @@ sub handle_request {
                      $n_genome_locations[0] <BR><HR>";
             print $prnt;
 
-            foreach my $tmp_chrom ( keys %chrom_HoHoHoHoA) {
+            foreach my $tmp_chrom ( keys %chrom_HoHoHoHoH) {
 
-                print "&nbsp;&nbsp;&nbsp;&nbsp;";
-                print "Chromosome $tmp_chrom : <BR>";
+                print "<BR>&nbsp;&nbsp;&nbsp;&nbsp;";
+                print "<nobr><B>Chromosome $tmp_chrom :</B></nobr><BR>";
                 my %tmp_hash;
 
-                foreach my $tmp_start ( keys %{$chrom_HoHoHoHoA{$tmp_chrom}}  ) {
+                my $last_protein;
 
-                    foreach my $tmp_end ( keys %{$chrom_HoHoHoHoA{$tmp_chrom}{$tmp_start}}  ) {
+                my $last_seq_used_length;
 
-                        foreach my $tmp_strand ( keys %{$chrom_HoHoHoHoA{$tmp_chrom}{$tmp_start}{$tmp_end}}  ) {
+                print "<TABLE border=1>";
 
-                            print "&nbsp;&nbsp;&nbsp;&nbsp;";
-                            print "&nbsp;&nbsp;&nbsp;&nbsp;";
-                            print "exon:&nbsp;&nbsp;$tmp_start - $tmp_end";
-                            print "&nbsp;&nbsp;&nbsp;&nbsp;strand: &nbsp;&nbsp;$tmp_strand<BR>";
-                            my @tmp_indices=@{$chrom_HoHoHoHoA{$tmp_chrom}{$tmp_start}{$tmp_end}{$tmp_strand}};
-                            for (my $j=0; $j<=$#tmp_indices; $j++){
-                                my $i = $tmp_indices[$j];
-                                $tmp_hash{$biosequence_name[$i]} = $biosequence_name[$i];
+                foreach my $tmp_start ( keys %{$chrom_HoHoHoHoH{$tmp_chrom}}  ) {
+
+                    foreach my $tmp_end ( keys %{$chrom_HoHoHoHoH{$tmp_chrom}{$tmp_start}}  ) {
+
+                        foreach my $tmp_strand ( keys %{$chrom_HoHoHoHoH{$tmp_chrom}{$tmp_start}{$tmp_end}}  ) {
+
+                            foreach my $tmp_peptide ( keys %{$chrom_HoHoHoHoH{$tmp_chrom}{$tmp_start}{$tmp_end}{$tmp_strand}} )
+                            {
+
+                                foreach my $tmp_protein ( keys %{$chrom_HoHoHoHoH{$tmp_chrom}{$tmp_start}{$tmp_end}{$tmp_strand}{$tmp_peptide}} )
+                                {
+
+                                    $tmp_hash{$tmp_protein} = $tmp_protein;
+
+                                    ## get residue's on given exons:
+                                    my $seq;
+
+                                    my $exon_bp_length = ceil( (abs($tmp_end - $tmp_start)/3.) );
+                                        
+                                    ## reverse peptide residues if strand is reverse
+                                    $tmp_peptide = reverse $tmp_peptide if ($tmp_strand eq "-");
+
+                                    if ($tmp_protein eq $last_protein)
+                                    {
+
+                                        $seq = substr($tmp_peptide, $last_seq_used_length, (length $tmp_peptide));
+ 
+                                    } else 
+                                    {
+
+                                        $seq = substr($tmp_peptide, 0, $exon_bp_length);
+                                        
+                                    }
+
+                                    $last_protein = $tmp_protein;
+
+                                    $last_seq_used_length = length($seq);
+
+                                    print "<TR><TD>";
+
+                                    print "&nbsp;&nbsp;&nbsp;&nbsp;";
+
+                                    print "&nbsp;&nbsp;&nbsp;&nbsp;";
+
+                                    print "Protein: &nbsp;&nbsp;";
+
+                                    print "<A HREF=\"$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$parameters{atlas_build_id}&protein_name=$tmp_protein&action=QUERY\" class=\"text_link\">$tmp_protein</A>";
+
+                                    print "</TD>";
+
+                                    print "<TD>";
+
+                                    print "&nbsp;&nbsp;&nbsp;&nbsp;";
+
+                                    print "residues on exon:&nbsp;&nbsp;$seq";
+
+                                    print "&nbsp;&nbsp;&nbsp;&nbsp;";
+
+                                    print "</TD>";
+
+                                    print "<TD>";
+
+                                    print "exon:&nbsp;&nbsp;$tmp_start - $tmp_end";
+
+                                    print "&nbsp;&nbsp;&nbsp;&nbsp;";
+
+                                    print "</TD>";
+
+                                    print "<TD>";
+
+                                    print "strand: &nbsp;$tmp_strand";
+
+                                    print "</TD></TR>";
+
+                                }
                             }
-                            print "<BR>";
-
                         }
                     }
                 }
-                print "&nbsp;&nbsp;&nbsp;&nbsp;";
-                print "&nbsp;&nbsp;&nbsp;&nbsp;";
-                print "Proteins:&nbsp;&nbsp;&nbsp;";
-                foreach my $k ( keys %tmp_hash) {
-                    print "<A HREF=\"$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$parameters{atlas_build_id}&protein_name=$k&action=QUERY\">$k</A> &nbsp;&nbsp;&nbsp;";
-                } 
-                print "<BR><BR>";
+
+                print "</TABLE>";
+
             }
+
             print "</DIV>";
 
 
