@@ -222,7 +222,7 @@ AT_ipi_version	2	ipi_version_name	IPI Version Name	varchar	255	0	N		N			Y	text	5
 AT_ipi_version	3	ipi_version_date	IPI Version Date	datetime	8	0	N		N				text	50		Y	Y	N	Date the data file was produced		
 AT_ipi_version	4	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 AT_ipi_version	5	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_ipi_version	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_ipi_version	6	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N		
 AT_ipi_version	7	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
 AT_ipi_version	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N		
 AT_ipi_version	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N		
@@ -238,7 +238,7 @@ AT_ipi_data	8	protein_summary	Protein Summary	text	16	0	Y		N			N	textarea	4		Y	Y
 AT_ipi_data	9	protein_sequence	Protein Sequence	text	16	0	N		N			Y	textarea	4		Y	Y	N	Protein Sequence
 AT_ipi_data	10	transmembrane_info	Transmembrane Info	varchar	255	0	N		N			Y	text	50		Y	Y	N	Encoded TM domain informaion from TMHMM  ie o528-550i
 AT_ipi_data	11	signal_sequence_info	Signal Sequence Info	varchar	255	0	N		N			Y	text	50		Y	Y	N	Encoded Singal sequence information from SingalP: ie 28 Y 0.988 Y
-AT_ipi_data	12	synonyms	Synonyms	varchar	500	0	N		N			Y	text	50		Y	Y	N	Synonyms
+AT_ipi_data	12	synonyms	Synonyms	varchar	500	0	N		N			Y	text	50		Y	Y	N	Synonyms		
 AT_cellular_location	1	cellular_location_id	Cellular Location	int	4	0	N		Y							N	N				pkDEFAULT
 AT_cellular_location	2	cellular_location_name	Cellular Location Name	varchar	255	0	N		N			Y	text	50		Y	Y	N	"Name of the subcellular location: Secreted, Transmembrane"		
 AT_cellular_location	3	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -303,13 +303,20 @@ AT_glyco_sample	8	project_id	Owner Project	int	4	0	Y		N	project	project_id	N	opt
 AT_glyco_sample	9	generation_date	Sample Date	datetime	8	0	Y	CURRENT_TIMESTAMP	N			N	textdate	20		Y	Y	N	Date on which this sample was prepared		
 AT_glyco_sample	10	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 AT_glyco_sample	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-AT_glyco_sample	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N		
-AT_glyco_sample	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N		
-AT_glyco_sample	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N		
-AT_glyco_sample	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N		
-AT_glyco_sample	16	record_status	Record Status	char	1	0	N	N	N							N	N		
-AT_identified_to_ipi	1	identified_to_ipi	Identified to IPI ID	int	4	0	N		Y			Y				N	N	Y	
-AT_identified_to_ipi	2	identified_peptide_id	Identified peptide ID	int	4	0	N		N	AT_identified_peptide	identified_peptide_id	Y				N	N	Y	
-AT_identified_to_ipi	3	ipi_data_id	IPI Data ID	int	4	0	N		N	AT_ipi_data	ipi_data_id	Y				N	N	Y	
-AT_identified_to_ipi	4	identified_start	Identified Peptide Start	int	4	0	N		N			Y	text	10		N	N	N	Start position of the peptide on the IPI protein
-AT_identified_to_ipi	5	identified_stop	Identified  Peptide Stop	int	4	0	N		N			Y	text	10		N	N	N	Stop position of the peptide on the IPI protein
+AT_glyco_sample	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_glyco_sample	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+AT_glyco_sample	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+AT_glyco_sample	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+AT_glyco_sample	16	record_status	Record Status	char	1	0	N	N	N							N	N				
+AT_identified_to_ipi	1	identified_to_ipi	Identified to IPI ID	int	4	0	N		Y			Y				N	N	Y			
+AT_identified_to_ipi	2	identified_peptide_id	Identified peptide ID	int	4	0	N		N	AT_identified_peptide	identified_peptide_id	Y				N	N	Y			
+AT_identified_to_ipi	3	ipi_data_id	IPI Data ID	int	4	0	N		N	AT_ipi_data	ipi_data_id	Y				N	N	Y			
+AT_identified_to_ipi	4	identified_start	Identified Peptide Start	int	4	0	N		N			Y	text	10		N	N	N	Start position of the peptide on the IPI protein		
+AT_identified_to_ipi	5	identified_stop	Identified  Peptide Stop	int	4	0	N		N			Y	text	10		N	N	N	Stop position of the peptide on the IPI protein		
+AT_synthesized_peptide	1	synthesized_peptide_id	Synthesized Peptide ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_synthesized_peptide	2	predicted_peptide_id	Predicted Peptide ID	int	4	0	Y		N	AT_predicted_peptide	predicted_peptide_id	Y				N	N	Y			
+AT_synthesized_peptide	3	synthesized_peptide_sequence	Synthesized Peptide Sequence	text	16	0	Y		N			Y	text	50		Y	Y	N	Peptide Sequence Identified by MS/MS run		
+AT_synthesized_peptide	4	predicted_peptide_sequence	Predicted Peptide Sequence	text	16	0	Y		N			Y	text	50		Y	Y	N	Peptide Sequence Identified by MS/MS run		
+AT_synthesized_peptide	5	peptide_mass	Peptide Mass	real	4	0	Y		N			Y	text	50		Y	Y	N	Probability that this peptide will be detected in a MS run		
+AT_synthesized_peptide	6	glyco_site_id	Glyco Site ID	int	4	0	Y		N	AT_glyco_site	glyco_site_id					N	N		
+AT_synthesized_peptide	7	Synthesized_by	Synthesized_by	text	16	0	Y		N			Y	text	50		Y	Y	N	Peptide Sequence Identified by MS/MS run
