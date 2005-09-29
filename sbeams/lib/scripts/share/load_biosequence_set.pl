@@ -36,9 +36,9 @@ use vars qw ($sbeams $sbeamsMOD $q
 use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
-$sbeams = SBEAMS::Connection->new();
 
 use SBEAMS::Proteomics::Utilities;
+$sbeams = SBEAMS::Connection->new();
 
 #use CGI;
 #$q = CGI->new();
@@ -130,7 +130,8 @@ if ($DEBUG) {
 unless ( $OPTIONS{"load"} || $OPTIONS{"load_all"} || 
 $OPTIONS{"check_status"} || $OPTIONS{"delete"} || $OPTIONS{"update_existing"})
 {
-    die "\n$USAGE";
+    print "\n$USAGE";
+    exit;
 }
 
 
@@ -139,7 +140,8 @@ if ($OPTIONS{"delete"} || $OPTIONS{"load"} || $OPTIONS{"purge"} || $OPTIONS{"upd
 {
     unless ( $OPTIONS{"set_tag"} )
     {
-        die "\n$USAGE\nNeed to specify --set_tag too ";
+        print "\n$USAGE\nNeed to specify --set_tag too\n";
+        exit;
     }
 }
 
@@ -148,7 +150,8 @@ if ($OPTIONS{"delete"} || $OPTIONS{"load"} || $OPTIONS{"purge"} || $OPTIONS{"upd
 if ( ($OPTIONS{"load_all"} || $OPTIONS{"check_status"}) && 
 ( $OPTIONS{"delete"} || $OPTIONS{"purge"} ) )
 {
-    die "\n$USAGE\nCan't use all those tags together";
+    print "\n$USAGE\nCan't use all those tags together\n";
+    exit;
 }
 
 
