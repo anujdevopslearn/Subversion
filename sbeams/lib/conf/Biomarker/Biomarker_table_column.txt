@@ -3,11 +3,11 @@ BM_BMRK_experiment	1	experiment_id	Experiment ID	int	4	0	N		Y			N				N	N	N			pkD
 BM_BMRK_experiment	2	contact_id	Contact	int	4	0	N		N	contact	contact_id	Y	optionlist	 		Y	Y	N	Primary contact for this experiment	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS ""name"" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
 BM_BMRK_experiment	3	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project to which the experiment belongs	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id "	
 BM_BMRK_experiment	4	experiment_name	Experiment Name	varchar	36	0	N		N			Y	text	36		Y	Y	Y	Experiment name or title		
-BM_BMRK_experiment	5	experiment_description	Experiment Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	"Description of this experiment, the sample or samples used, and any other relevant information not contained in the project description or in list-box elements in this form"		
+BM_BMRK_experiment	5	experiment_description	Experiment Description	varchar	2000	0	Y		N			N	textarea	4		Y	Y	N	"Description of this experiment, the sample or samples used, and any other relevant information not contained in the project description or in list-box elements in this form"		
 BM_BMRK_experiment	6	experiment_path	Experiment Path	varchar	255	0	Y		N			N	text	48		Y	Y	N	Data path for this experiment (e.g. /data/search/edeutsch/TCells/T_000/human_nci)		
 BM_BMRK_experiment	7	investigators	Investigators	varchar	255	0	Y		N			N	text	48		Y	Y	N	List of investigators for this project		
 BM_BMRK_experiment	8	notebook_page	Notebook Page	varchar	36	0	Y		N			N	text	36		Y	Y	Y	Reference to notebook number and page where related information can be found.		
-BM_BMRK_experiment	9	experiment_type	Experiment Type	varchar	36	0	Y		N			N				Y	Y	N	"Type/class of experiment (e.g. d0/d8 ICAT, etc.)"		
+BM_BMRK_experiment	9	experiment_type	Experiment Type	varchar	36	0	Y		N			N	text	36		Y	Y	N	"Type/class of experiment (e.g. d0/d8 ICAT, etc.)"		
 BM_BMRK_experiment	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
 BM_BMRK_experiment	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id	N				N	N	N			
 BM_BMRK_experiment	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N			N				N	N	N			
