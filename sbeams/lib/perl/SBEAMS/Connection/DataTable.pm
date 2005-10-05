@@ -191,6 +191,21 @@ sub getRowNum {
 #+
 # Method to add row to data structure.
 # arg reference to array of data for row
+#
+sub addResultsetHeader {
+  my $this = shift;
+  $this->setHeaderAttr( BOLD => 1, UNDERLINE => 0, WHITE_TEXT => 1 );
+  $this->setRowAttr( ROWS => [1], BGCOLOR => '#0000A0' );
+  my $rowref = shift;
+  my @row = @$rowref;
+  $this->{__maxlen} = scalar( @row ) if scalar( @row ) > $this->{__maxlen};
+  unshift @{$this->{__rowvals}}, \@row; 
+}
+
+
+#+
+# Method to add row to data structure.
+# arg reference to array of data for row
 sub addRow {
   my $this = shift;
   my $rowref = shift;
@@ -228,6 +243,7 @@ sub formatHeader {
   my %format = %{$this->{__header}};
   $text = "<B>$text</B>" if $format{BOLD};
   $text = "<U>$text</U>" if $format{UNDERLINE};
+  $text = "<FONT COLOR=WHITE>$text</FONT>" if $format{WHITE_TEXT};
   return $text;
 
 }

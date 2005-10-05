@@ -127,7 +127,7 @@ sub asHTML {
   $context
   <!-------- Main Page -------------------------------------------------------->
   $padding
-  $mpad <TABLE CELLPADDING=2><TR><TD>$this->{_content}</TD></TR></TABLE>
+  $mpad <TABLE CELLPADDING=1><TR><TD>$this->{_content}</TD></TR></TABLE>
   END_MAIN
 
   $maintab->addRow( [ $isblink, $banner ] );
@@ -139,7 +139,7 @@ sub asHTML {
   $maintab->setCellAttr( ROW => 1, COL => 2, $head_tag => $head_bkg,
                          ALIGN => 'LEFT', NOWRAP => 1 ); 
 
-  $maintab->setCellAttr( ROW => 2, COL => 1, # BGCOLOR => $BARCOLOR,
+  $maintab->setCellAttr( ROW => 2, COL => 1,  BGCOLOR => "#CDD1E7",
                          ALIGN => 'LEFT', NOWRAP => 1, VALIGN => 'TOP' ); 
 
   $maintab->setCellAttr( ROW => 2, COL => 2, VALIGN => 'TOP',
