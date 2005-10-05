@@ -80,6 +80,70 @@ sub checkExperiment {
 
 }
 
+#+
+# Routine builds a list of experiments/samples within.
+#-
+sub get_experiment_overview {
+  my $this = shift;
+  my $sbeams = $this->getSBEAMS();
+  my $pid = $sbeams->getCurrent_project_id || die("Can't determine project_id");
+
+  my %msruns = $sbeams->selectTwoColumnHash( <<"  END" );
+  SELECT e.experiment_id, COUNT(msrs.biosample_id)
+  FROM $TBBM_BMRK_EXPERIMENT e 
+  LEFT OUTER JOIN $TBBM_BMRK_BIOSAMPLE b
+  ON e.experiment_id = b.experiment_id
+  LEFT OUTER JOIN $TBBM_BMRK_MS_RUN_SAMPLE msrs
+  ON b.biosample_id = msrs.biosample_id
+--  JOIN $TBBM_BMRK_MS_RUN msr
+--  ON e. = msrs.ms_run_id = msr.ms_run_id
+  WHERE project_id = $pid
+  -- Just grab the 'primary' samples 
+  GROUP BY e.experiment_id
+  END
+
+  my $sql =<<"  END";
+  SELECT e.experiment_id, experiment_name, experiment_type, 
+  experiment_description, COUNT(biosample_id)
+  FROM $TBBM_BMRK_EXPERIMENT e 
+  LEFT OUTER JOIN $TBBM_BMRK_BIOSAMPLE b
+  ON e.experiment_id = b.experiment_id
+--  JOIN $TBBM_BMRK_MS_RUN_SAMPLE msrs
+--  ON e. = b.biosample_id = msrs.biosample_id
+--  JOIN $TBBM_BMRK_MS_RUN msr
+--  ON e. = msrs.ms_run_id = msr.ms_run_id
+  WHERE project_id = $pid
+  -- Just grab the 'primary' samples 
+  AND parent_biosample_id IS NULL
+  GROUP by experiment_name, experiment_description, 
+           experiment_type, e.experiment_id
+  ORDER BY experiment_name ASC
+  END
+  
+  my $table = SBEAMS::Connection::DataTable->new( WIDTH => '100%' );
+  $table->addResultsetHeader( ['Experiment Name', 'Type', 'Description', 
+                         '# samples', '# ms runs' ] );
+
+  for my $row ( $sbeams->selectSeveralColumns($sql) ) {
+    my @row = @$row;
+    my $id = shift @row;
+    $row[2] = ( length $row[2] <= 50 ) ? $row[2] :
+                                         substr( $row[2], 0, 47 ) . '...';
+    $row[0] =<<"    END";
+    <A HREF=experiment_details.cgi?experiment_id=$id>$row[0]</A>
+    END
+    push @row, $msruns{$id};
+    $table->addRow( \@row )
+  }
+  $table->alternateColors( PERIOD => 1,
+                           BGCOLOR => '#FFFFFF',
+                           DEF_BGCOLOR => '#E0E0E0' ); 
+  $table->setColAttr( ROWS => [ 1..$table->getRowNum() ], 
+                      COLS => [ 4, 5 ], 
+                      ALIGN => 'RIGHT' );
+  return $table;
+}
+
 
 #+
 # Method for creating biogroup records.

@@ -2,7 +2,7 @@ package SBEAMS::Biomarker::Biosource;
 
 ##############################################################################
 #
-# Description :   Library code for maniulating biosource records within 
+# Description :   Library code for manipulating biosource records within 
 # the database
 # $Id:   $
 #
@@ -78,7 +78,7 @@ sub organizationExists {
 sub organismExists {
   my $this = shift;
   my $organism = shift;
-  return unless $organism;
+  return '' unless $organism;
 
   my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
   die "unsafe organism: $organism\n" if $sbeams->isTaintedSQL($organism);
@@ -124,11 +124,9 @@ sub add_new {
   for ( qw( data_ref group_id ) ) {
     die "Missing parameter $_" unless defined $_;    
   }
-
   my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
   my $name = $args{data_ref}->{biosource_name} || die "no biosource name!";
   $args{data_ref}->{biosource_group_id} = $args{group_id};
-
 
   # Sanity check 
   my ($is_there) = $sbeams->selectrow_array( <<"  END_SQL" );
@@ -141,6 +139,7 @@ sub add_new {
     return;
   }
 
+  for my $k ( keys( %{$args{data_ref}} ) ){ print "$k => $args{data_ref}->{$k}\n"; }
   my $id = $sbeams->updateOrInsertRow( insert => 1,
                                     return_PK => 1,
                                    table_name => $TBBM_BMRK_BIOSOURCE,

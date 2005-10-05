@@ -134,7 +134,7 @@ sub add_biosample_attrs {
 sub storageLocExists {
   my $this = shift;
   my $stor = shift;
-  return unless $stor;
+  return '' unless $stor;
 
   my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
   die "unsafe storage location: $stor\n" if $sbeams->isTaintedSQL($stor);

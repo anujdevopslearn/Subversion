@@ -142,6 +142,7 @@ sub add_items {
       print "Unable to proceed, cannot manually add one or more results attributes\n";
       exit;
     }
+  }
   
 
   # cache initial values for these
@@ -168,7 +169,6 @@ sub add_items {
 
          # Next, iterate through lines and add src/samples, join records.
          foreach my $item ( @{$args{items}} ) {
-#           print join( "::", keys( %$item ), "\n");
             
            # Gotta map a few strings to their corresponding primary key.
            # Biosource
@@ -182,6 +182,7 @@ sub add_items {
 
            # Gotta clean up some ill-advised data
            na_to_undef( $item->{biosource} );
+           interpret_age( $item->{biosource} ) if $item->{biosource}->{age};
 
            # Add biosource record
            my $src_id = $args{biosource}->add_new( data_ref => $item->{biosource},
@@ -220,7 +221,16 @@ sub add_items {
   $sbeams->commit_transaction();
   $sbeams->setAutoCommit( $ac );
   $sbeams->setRaiseError( $re );
-  }
+}
+
+sub interpret_age {
+  my $biosource = shift;
+  my ($age) = $biosource->{age} =~ /(\d+)/g;
+  my ($units) = $biosource->{age} =~ /(\D+)/g;
+  print STDERR "$biosource->{age} => $age and $units\n";
+  $biosource->{age} = $age;
+  $biosource->{age_units} = $units;
+  return;
 }
 
 sub interpret_vol {
@@ -282,12 +292,14 @@ sub set_tissuetype_id {
 
 sub set_storageloc_id {
   my $biosample = shift;
-  return unless $biosample->{storage_location_id};
+  $biosample->{storage_location_id} ||= undef;
   ($biosample->{storage_location_id}) = $sbeams->selectrow_array( <<"  END" );
   SELECT storage_location_id 
   FROM $TBBM_BMRK_STORAGE_LOCATION
   WHERE location_name = '$biosample->{storage_location_id}'
   END
+  print STDERR "loc_id is $biosample->{storage_location_id}\n";
+  return;
 }
 
 #+
@@ -378,17 +390,16 @@ sub test_data {
     }
      
     ### Check storage_location ###
-    my $stor = $item->{biosample}->{storage_location_id};
-    
-    # Skip if we've seen it (unless redundant mode)
-    next if $redundant_storage_loc{$stor} && !$args{redundant};
+    my $stor = $item->{biosample}->{storage_location_id} || '';
     
     # push into missing storage_loc array, print message if desired.
-    unless ( $args{biosample}->storageLocExists($stor) ) {
-      push @{$results{storage_loc}}, $stor;
-      push @auto, "Line $item_no: Storage location $stor does not yet exist\n";
+    if ( (!$redundant_storage_loc{$stor} || $args{redundant})) {
+      unless ( $args{biosample}->storageLocExists($stor) ) {
+        push @{$results{storage_loc}}, $stor;
+        push @auto, "Line $item_no: Storage location $stor does not yet exist\n";
+      }
+      $redundant_storage_loc{$stor}++;
     }
-    $redundant_storage_loc{$stor}++;
 
      
     ### Check organism ###
@@ -399,7 +410,7 @@ sub test_data {
     # Skip if we've seen it (unless redundant mode)
     if ( (!$redundant_organism{$organism} || $args{redundant})) {
       # Cache info
-      unless ( $args{biosource}->organismExists($organism) || $organism eq '' ) {
+      unless ( $args{biosource}->organismExists($organism) ) {
         push @{$results{organism}}, $organism;
         push @manual, "Line $item_no: Organism $organism does not yet exist\n"; 
       }
@@ -423,6 +434,7 @@ sub test_data {
   }
   # Total number of items seen
   $results{total} = $item_no;
+  print STDERR "Saw $results{total} items\n" if $args{verbose}; 
 
   # Are there any missing things?
   $results{missing} = ( @auto || @manual ) ? 1 : 0;

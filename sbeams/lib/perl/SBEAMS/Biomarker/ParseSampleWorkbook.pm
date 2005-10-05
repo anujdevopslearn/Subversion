@@ -374,6 +374,7 @@ sub _getParser2DbMap {
 #    'ISB sample ID' => 'biosample_name',   # to be used as biosample_name also?
     'Location of orginal sample' => 'storage_location_id',
     'amount of sample received' => 'original_volume',
+    'amount of sample received' => 'original_volume',
     'Plate Layout' => 'well_id'
   );
   return \%biosample if $mode eq 'biosample';
