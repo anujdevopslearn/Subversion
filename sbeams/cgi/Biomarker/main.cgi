@@ -21,8 +21,7 @@
 # Get the script set up with everything it will need
 ###############################################################################
 use strict;
-use vars qw ($q $sbeams $sbeamsBiomarker $PROGRAM_FILE_NAME
-             $current_contact_id $current_username);
+use vars qw ($q $PROGRAM_FILE_NAME $current_contact_id $current_username);
 use lib qw (../../lib/perl);
 #use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
@@ -33,10 +32,9 @@ use SBEAMS::Connection::Settings;
 use SBEAMS::Biomarker;
 use SBEAMS::Biomarker::Settings;
 
-#$q   = new CGI;
-$sbeams = new SBEAMS::Connection;
-$sbeamsBiomarker = new SBEAMS::Biomarker;
-$sbeamsBiomarker->setSBEAMS($sbeams);
+my $sbeams = new SBEAMS::Connection;
+my $biomarker = new SBEAMS::Biomarker;
+$biomarker->setSBEAMS($sbeams);
 
 
 ###############################################################################
@@ -58,9 +56,9 @@ sub main {
     exit unless ($current_username = $sbeams->Authenticate());
 
     #### Print the header, do what the program does, and print footer
-    $sbeamsBiomarker->printPageHeader();
+    $biomarker->printPageHeader();
     showMainPage();
-    $sbeamsBiomarker->printPageFooter();
+    $biomarker->printPageFooter();
 
 } # end main
 
@@ -70,11 +68,30 @@ sub main {
 ###############################################################################
 sub showMainPage {
 
-    $sbeams->printUserContext();
+  $sbeams->printUserContext();
+  my $tab = $sbeams->getMainPageTabMenuObj( cgi => $q );
+#  $tab->addHRule();
 
-    print qq!
+  if ( $tab->getActiveTab == 1 ) { 
+    my $project = $sbeams->getCurrent_project_name();
+    $tab->setBoxContent( 0 );
+    my $edit =<<"    END";
+    <A HREF=$CGI_BASE_DIR/ManageProjectPrivileges>[Edit permissions]</A>
+    END
+
+    # Pull out content
+    my $content = "<H1>$project $edit</H1>";
+
+    my $expTable = $biomarker->get_experiment_overview();
+
+    $tab->addContent( "$content $expTable" );
+
+
+   }
+
+  print qq!
 	<BR>
-	<BR>
+  $tab
 	<BR>
 	<BR>
 
