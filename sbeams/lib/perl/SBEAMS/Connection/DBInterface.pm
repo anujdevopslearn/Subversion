@@ -971,31 +971,40 @@ sub selectTwoColumnHashref {
 # selectTwoColumnHash
 #
 # Given a SQL statement which returns exactly two columns, return a hash
-# containing the results of that query.
+# containing the results of that query. 
 ###############################################################################
 sub selectTwoColumnHash {
-    my $self = shift || croak("parameter self not passed");
-    my $sql = shift || croak("parameter sql not passed");
+  my $self = shift || croak("parameter self not passed");
+  my $sql = shift || croak("parameter sql not passed");
 
-    my %hash;
+  my ($rv, $sth, %hash);
 
-    #### Get the database handle
-    $dbh = $self->getDBHandle();
+  #### Get the database handle
+  $dbh = $self->getDBHandle();
 
-    #### Convert the SQL dialect if necessary
-    $sql = $self->translateSQL(sql=>$sql);
+  #### Convert the SQL dialect if necessary
+  $sql = $self->translateSQL(sql=>$sql);
 
-    my $sth = $dbh->prepare("$sql") or croak $dbh->errstr;
-    my $rv  = $sth->execute or croak $dbh->errstr;
+  eval {
+    $sth = $dbh->prepare("$sql") or croak $dbh->errstr;
+    $rv  = $sth->execute or croak $dbh->errstr;
+  };
+  if ( $@ ) {
+    my $msg =<<"    END";
+    Error executing SQL: $@
+    SQL causing error: $sql
+    END
+    $log->error( $msg );
+    die $msg;
+  }
 
-    while (my @row = $sth->fetchrow_array) {
-        $hash{$row[0]} = $row[1];
-    }
+  while (my @row = $sth->fetchrow_array) {
+    $hash{$row[0]} = $row[1];
+  }
 
-    $sth->finish;
+  $sth->finish;
 
-    return %hash;
-
+  return %hash;
 }
 
 
