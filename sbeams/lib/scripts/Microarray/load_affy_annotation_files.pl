@@ -20,10 +20,9 @@ load_affy_annotation_files.pl - Load affy annotation files into SBEAMS::Microarr
 
   --run_mode <update or delete>  [OPTIONS]
 Options:
-    --verbose <num>    Set verbosity level.  Default is 0
+    --verbose n        Set verbosity level.  Default is 0
     --quiet            Set flag to print nothing at all except errors
     --debug n          Set debug flag    
-    --base_directory  <file path> Override the default directory to start searching for files
     --testonly         Information in the database is not altered
 
 =head1 DESCRIPTION
@@ -120,11 +119,10 @@ $PROG_NAME is used to load Affy annotation files into SBEAMS.
 
 Usage: $PROG_NAME --run_mode <update, delete> --file_name <full_path to annotation file>[OPTIONS]
 Options:
-    --verbose <num>    Set verbosity level.  Default is 0
+    --testonly         Information in the database is not altered
+    --verbose n        Set verbosity level.  Default is 0
     --quiet            Set flag to print nothing at all except errors
     --debug n          Set debug flag    
-    --base_directory  <file path> Override the default directory to start searching for files
-    --testonly         Information in the database is not altered
 
 Run Mode Notes:
  
@@ -146,8 +144,7 @@ unless (GetOptions(\%OPTIONS,
 		   "method:s",
 		   "file_name:s",
 		   "testonly")) {
-  print "$USAGE";
-  exit;
+  printUsage();
 }
 
 
@@ -162,11 +159,8 @@ $FILE_NAME = $OPTIONS{file_name};
 
 my $val = grep {$RUN_MODE eq $_} @run_modes;
 
-die "*** RUN_MODE DOES NOT LOOK GOOD '$RUN_MODE' ***\n $USAGE" unless ($val);
-
-die "*** PLEASE PROVIDE A FILE NAME ***\n $USAGE" unless $FILE_NAME;
-
-
+printUsage( 'Missing required file name arguement' ) unless $FILE_NAME;
+printUsage( 'Missing required run mode arguement' ) unless $val;
 
 if ($DEBUG) {
   print "Options settings:\n";
@@ -233,6 +227,11 @@ sub main {
 } # end main
 
 
+sub printUsage {
+  my $msg = shift || '';
+  print "$msg\n\n$USAGE\n";
+  exit 1;
+}
 
 ###############################################################################
 # handleRequest
@@ -258,7 +257,7 @@ sub handleRequest {
 		$sbeams_affy_anno->parse_data_file($FILE_NAME);	
 		write_error_log(object => $sbeams_affy_anno);
 	}else{
-		die "This is not a valid run mode '$RUN_MODE'\n $USAGE";
+          printUsage( "Unknown run mode $RUN_MODE" );
 	}
 }
 
