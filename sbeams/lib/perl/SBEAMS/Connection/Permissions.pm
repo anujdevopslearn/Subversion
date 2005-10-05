@@ -91,13 +91,21 @@ sub print_permissions_table {
     $self->printUserContext();
   };
   $project_name = $self->getCurrent_project_name;
+  my $pid = $self->getCurrent_project_id();
+  $permission = $self->get_best_permission();
+
+  my $edit = '';
+  if ( $permission <= DATA_NONE ) {
+    $edit =<<"    END";
+    <A HREF=ManageTable.cgi?TABLE_NAME=project&project_id=$pid>[view/edit]</A>
+    END
+  }
 
   print qq~
-      <H1>Privileges for $project_name</H1>
+      <H1>Privileges for <I>$project_name</I>$edit</H1>
       $LINESEPARATOR
       ~;
   
-  $permission = $self->get_best_permission();
 
   ## SQL to get administrator privilege ID
   $sql = qq~
