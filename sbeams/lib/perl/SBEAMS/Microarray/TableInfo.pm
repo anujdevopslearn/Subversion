@@ -458,9 +458,34 @@ sub returnTableInfo {
       AND record_status!='D'
       END_QUERY
 
-    } 
+    }
+
+###############################################################################
+   } elsif ( $table_name eq 'MA_condition' ) {
+
+   if ($info_key eq "BASICQuery") {
+      return( <<"      END_QUERY" );
+      SELECT condition_id,project_id,organism_id,condition_name,
+             processed_date,sort_order
+        FROM $TBMA_CONDITION
+       WHERE project_id IN ( $project_string )
+         AND record_status!='D'
+      END_QUERY
+    }
+
+   if ($info_key eq "FULLQuery") {
+      return( <<"      END_QUERY" );
+      SELECT *
+        FROM $TBMA_CONDITION
+       WHERE project_id IN ( $project_string )
+         AND record_status!='D'
+      END_QUERY
+    }
 
   }
+
+
+
 ###############################################################################
 
     #### Obtain main SBEAMS object and fall back to its TableInfo handler
