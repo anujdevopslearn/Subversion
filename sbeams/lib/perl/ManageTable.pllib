@@ -1779,6 +1779,10 @@ sub processEntryForm {
                   $sql_query .= "$element=NULL,\n";
                 }
 
+              #### If the datatype was fixed, then this can't be updated via MT
+              } elsif ($input_types{$element} eq "fixed") {
+		#### Do nothing with this field, ignore it
+
               # Change all ' to '' so that it can go in the INSERT statement
               } else {
                 $tmp =~ s/\'/\'\'/g;
@@ -1847,6 +1851,10 @@ sub processEntryForm {
           #### If the value is blank, put in a NULL value
           if ( $tmp eq '') {
             #$query_part2 .= "NULL,";
+
+          #### If the datatype was fixed, then this can't be updated via MT
+          } elsif ($input_types{$element} eq "fixed") {
+	    #### Do nothing with this field, ignore it
 
           # Change all ' to '' so that it can go in the INSERT statement
           } else {
