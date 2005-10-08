@@ -466,19 +466,20 @@ MA_affy_annotation_set	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	
 MA_affy_annotation_set	10	record_status	Record Status	char	1	0	N	N	N							N	N	N			
 MA_condition	1	condition_id	Condition ID	int	4	10	N		Y							N	N	Y			pkDEFAULT
 MA_condition	2	project_id	Project ID	int	4	10	N		N	project	project_id	Y	optionlist			Y	Y	Y		"SELECT project_id, username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) WHERE project_id IN ( $accessible_project_ids ) AND P.record_status != 'D' ORDER BY name"	
-MA_condition	3	condition_name	Condition name	varchar	255	255	N		N			Y	text	50		Y	Y	Y			
-MA_condition	4	sort_order	Sort Order	int	4	10	Y		N			N	text	10		Y	Y	N			
-MA_condition	5	processed_date	Precessed Date	datetime	8	23	Y		N			N	fixed			Y	Y	N			
-MA_condition	6	organism_id	Organism	int	4	0	Y		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism which the condition should be associated with.  Leave blank if not applicable	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
-MA_condition	7	comment	Comment	text	16	16	Y		N			N	textarea	5		Y	Y	N			
+MA_condition	3	condition_name	Condition name	varchar	255	255	N		N			Y	text	50		Y	Y	Y	Name for the condition		
+MA_condition	4	condition_file_name	Condition file name	varchar	255	255	N		N			Y	fixed	50		Y	Y	N	Original filename or identifier for a processed condition. May not be changed		
+MA_condition	5	sort_order	Sort Order	int	4	10	N	100	N			N	text	10		Y	Y	N			
+MA_condition	6	processed_date	Precessed Date	datetime	8	23	Y		N			N	fixed			Y	Y	N			
+MA_condition	7	organism_id	Organism	int	4	0	Y		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism which the condition should be associated with.  Leave blank if not applicable	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 MA_condition	8	analysis_type	Analysis Type	varchar	255	255	Y		N			N	fixed			Y	Y	N			
 MA_condition	9	analysis_id	Analysis ID	int	4	10	Y		N			N	fixed			Y	Y	N			
-MA_condition	10	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
-MA_condition	11	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
-MA_condition	12	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
-MA_condition	13	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
-MA_condition	14	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
-MA_condition	15	record_status	Record Status	char	1	0	N	N	N							N	N	N
+MA_condition	10	comment	Comment	text	16	16	Y		N			N	textarea	5		Y	Y	N			
+MA_condition	11	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+MA_condition	12	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
+MA_condition	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+MA_condition	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
+MA_condition	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y
+MA_condition	16	record_status	Record Status	char	1	0	N	N	N							N	N	N
 MA_gene_expression	1	gene_expression_id	Gene Expression Id	int	4	10	N		Y							N	N	Y
 MA_gene_expression	2	condition_id	Condition name	int	4	10	N		N	MA_condition	condition_id					Y	Y	Y
 MA_gene_expression	3	reporter_name	Reporter Name	varchar	255	255	Y		N							Y	Y	N
@@ -493,7 +494,7 @@ MA_gene_expression	11	log10_ratio	log10 Ratio	real	4	7	Y		N							Y	Y	N
 MA_gene_expression	12	log10_uncertainty	log10 Ratio	real	4	7	Y		N							Y	Y	N
 MA_gene_expression	13	log10_std_deviation	log10 Std Deviation	real	4	7	Y		N							Y	Y	N
 MA_gene_expression	14	lambda	Lambda	real	4	7	Y		N							Y	Y	N
-MA_gene_expression	15	mu_x	Mu X	real	4	7	Y		N							Y	Y	N
+MA_gene_expression	15	mu_x	Mu X	real	4	7	Y		N							Y	Y	N	
 MA_gene_expression	16	mu_y	mu Y	real	4	7	Y		N							Y	Y	N	
 MA_gene_expression	17	p_value	P Value	real	4	7	Y		N							Y	Y	N	
 MA_gene_expression	18	mean_intensity	Mean Intensity	real	4	7	Y		N							Y	Y	N	
@@ -541,7 +542,7 @@ MA_protein_domain	1	protein_domain_id	Protein Domain ID	int	4	0	N		Y			Y
 MA_protein_domain	2	affy_annotation_id	Affy Annotation ID	int	4	0	N		N	MA_affy_annotation	affy_annotation_id	Y							
 MA_protein_domain	3	affy_db_links_id	Affy DB Links ID	int	4	0	N		N	MA_affy_db_links	affy_db_links_id	Y							
 MA_protein_domain	4	protein_domain_description	Protein Domain Description	varchar	255	0	N		N										Pfam or SCOP annotations
-MA_protein_domain	5	protein_domain_e_value	Protein Domain E-value	float	8	0	Y		N										An E-value reveals how well the RefSeq peptide sequence corresponding to our probe set matches to the sequence in question.  Smaller numbers are better..
+MA_protein_domain	5	protein_domain_e_value	Protein Domain E-value	float	8	0	Y		N										An E-value reveals how well the RefSeq peptide sequence corresponding to our probe set matches to the sequence in question.  Smaller numbers are better..	
 MA_alignment	1	alignment_id	Alignment ID	int	4		N		Y											
 MA_alignment	2	affy_annotation_id	Affy Annotation ID	int	4		N		N	MA_affy_annotation	affy_annotation_id	Y								
 MA_alignment	3	gene_start	Gene Start bp	int	4	0	N		N			Y				Y	Y	N	Position of the alignment of the target sequence on the genome.  Parsed from Alignments Column	
@@ -589,7 +590,7 @@ MA_affy_analysis_type	2	affy_analysis_name	Affy Analysis Name	varchar	50	0	N		N	
 MA_affy_analysis_type	3	affy_analysis_description	Affy Analysis Description	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Affy analysis description	
 MA_affy_analysis_type	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N		
 MA_affy_analysis_type	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N	Y		
-MA_affy_analysis_type	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N		
+MA_affy_analysis_type	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
 MA_affy_analysis_type	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N	Y			
 MA_affy_analysis_type	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
 MA_affy_analysis_type	9	record_status	Record Status	char	1	0	N	N	N							N	N	N			
