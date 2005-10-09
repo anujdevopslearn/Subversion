@@ -209,12 +209,13 @@ unless (-d $java_out_path) {
 ##Make and run command to make jar file	
 		my $command_line = "$JAVA_PATH/bin/jar -cf $java_out_path/$jar_file_name -C $file_path $file_to_jar";
 		my $results = `$command_line`;
-		#print "<br>Results for Make JAR for $file_type '$results'<br>$command_line<br>";
+#		print "<br>Results for Make JAR for $file_type '$results'<br>$command_line<br>";
 		
+#               print "<BR><BR>Alias is $KEYALIAS, Store is $KEYSTORE, Pass is $KEYPASS\n";
 ##Make and run command to sign jar file
-		$command_line = "$JAVA_PATH/bin/jarsigner -storepass $KEYPASS -keystore $KEYSTORE $java_out_path/$jar_file_name  myself";
+		$command_line = "$JAVA_PATH/bin/jarsigner -storepass $KEYPASS -keystore $KEYSTORE $java_out_path/$jar_file_name  $KEYALIAS";
 		$results = `$command_line`;
-		#print "Results for Signing JAR for $file_type '$results'<br>$command_line<br>";
+#		print "Results for Signing JAR for $file_type '$results'<br>$command_line<br>";
 		
 	}
 		
