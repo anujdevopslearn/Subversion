@@ -7,13 +7,15 @@ use SBEAMS::Connection::Settings;
 use SBEAMS::Microarray;
 use SBEAMS::Microarray::Settings;
 use strict;
+
+my $sbeams = new SBEAMS::Connection;
 my $sbeamsMOD = new SBEAMS::Microarray;
 
 our @ISA    = qw/Exporter/;
 our @EXPORT = qw/site_header site_footer
   $BC_UPLOAD_DIR $RESULT_DIR $RESULT_URL $BIOC_URL $SITE_URL $SAMPLE_GROUP_XML
   $ADMIN_EMAIL $R_BINARY $R_LIBS $USE_FRAMES $DEBUG $AFFY_ANNO_PATH
-  $JAVA_PATH $JWS_PATH $TOMCAT $KEYSTORE $KEYPASS
+  $JAVA_PATH $JWS_PATH $TOMCAT $KEYSTORE $KEYPASS $KEYALIAS
   $SH_HEADER $BATCH_SYSTEM %BATCH_ENV $BATCH_BIN $BATCH_ARG
   $MEV_JWS_BASE_DIR $MEV_JWS_BASE_HTML $SHARED_JAVA_DIR $SHARED_JAVA_HTML/;
  
@@ -33,29 +35,28 @@ our $RESULT_URL = "$CGI_BASE_DIR/Microarray/View_Affy_files.cgi";
 our $BIOC_URL = "$CGI_BASE_DIR/Microarray/bioconductor";
 
 # Admin e-mail
-#our $ADMIN_EMAIL = 'pmoss@systemsbiology.org';
-our $ADMIN_EMAIL = 'bmarzolf@systemsbiology.org';
+our $ADMIN_EMAIL = $sbeamsMOD->get_admin_email();
 
 # Location of R binary & R libraries
-our $R_BINARY = "/net/arrays/Affymetrix/bioconductor/bin/R";
-our $R_LIBS   = "/net/arrays/Affymetrix/bioconductor/library";
+our $R_BINARY = $sbeamsMOD->get_R_exe_path();
+our $R_LIBS = $sbeamsMOD->get_R_lib_path();
 
 # Location of Annotation file from affymetrix for chip you will be using
-our $AFFY_ANNO_PATH = "/net/arrays/Affymetrix/library_files";
+our $AFFY_ANNO_PATH = $sbeamsMOD->get_affy_annotation_path();
 
 #Java Path
-our $JAVA_PATH = "/usr/java/j2sdk1.4";
+our $JAVA_PATH = $sbeams->get_java_path();
+our $KEYSTORE  = $sbeams->get_jnlp_keystore();
+our $KEYPASS   = $sbeams->get_keystore_passwd();
+our $KEYALIAS  = $sbeams->get_keystore_alias();
 #our $JWS_PATH  = "/local/tomcat/webapps/microarray";
 #our $TOMCAT    = "http://db:8080/microarray";
-our $KEYSTORE  = "/users/pmoss/myKeystore";
-our $KEYPASS   = "test01";
 
-#MEV (Multipule experiment viewer from TIGR) Info
-
-our $MEV_JWS_BASE_DIR = "$PHYSICAL_BASE_DIR/tmp/Microarray/Make_MEV_jws_files/jws";
-our $MEV_JWS_BASE_HTML   = "$SERVER_BASE_DIR$HTML_BASE_DIR/tmp/Microarray/Make_MEV_jws_files/jws";
-our $SHARED_JAVA_DIR  = "$PHYSICAL_BASE_DIR/usr/java/shared";
-our $SHARED_JAVA_HTML = "$SERVER_BASE_DIR$HTML_BASE_DIR/usr/java/share/MEV";
+#MEV (Multiple experiment viewer from TIGR) Info
+our $MEV_JWS_BASE_DIR  = "$PHYSICAL_BASE_DIR/tmp/Microarray/Make_MEV_jws_files/jws";
+our $MEV_JWS_BASE_HTML = "$SERVER_BASE_DIR/$HTML_BASE_DIR/tmp/Microarray/Make_MEV_jws_files/jws";
+our $SHARED_JAVA_DIR   = "$PHYSICAL_BASE_DIR/usr/java/share";
+our $SHARED_JAVA_HTML  = "$SERVER_BASE_DIR/$HTML_BASE_DIR/usr/java/share/MEV";
 
 # Use frames for showing results
 our $USE_FRAMES = 0;
@@ -69,7 +70,7 @@ export PATH=$PATH:/usr/sbin:/usr/local/bin
 END
 
 # Batch system to use (fork, sge, pbs)
-our $BATCH_SYSTEM = "pbs";
+our $BATCH_SYSTEM = $sbeamsMOD->get_batch_system() || 'fork';
 
 # Batch system environment variables
 our %BATCH_ENV = ( SGE_ROOT => "/path/to/sge" );
