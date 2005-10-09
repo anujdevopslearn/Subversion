@@ -453,7 +453,7 @@ END
     $job->name($jobname);
     $job->out("$RESULT_DIR/$jobname/$jobname.out");
     $job->submit ||
-    	error("Couldn't start job");
+    	error("Couldn't start job in $RESULT_DIR");
     open(ID, ">$RESULT_DIR/$jobname/id") || error("Couldn't write job id file");
     print ID $job->id;
     close(ID);
