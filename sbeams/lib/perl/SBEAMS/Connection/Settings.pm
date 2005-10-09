@@ -503,6 +503,34 @@ sub getModulePrefix {
   return( $prefix{$SBEAMS_SUBDIR} || '' );
 }
 
+#+
+# Utility method returns configured java path or default
+#-
+sub get_java_path {
+  return $CONFIG_SETTING{JAVA_PATH} || '/usr/java/bin/';
+}
+
+#+
+# Utility method returns configured keystore
+#-
+sub get_jnlp_keystore {
+  return $CONFIG_SETTING{JNLP_KEYSTORE} || '/var/keystore/';
+}
+
+#+
+# Utility method returns configured keystore_passwd
+#-
+sub get_keystore_passwd {
+  return $CONFIG_SETTING{KEYSTORE_PASSWD} || 'fixme';
+}
+
+#+
+# Utility method returns configured keystore_alias
+#-
+sub get_keystore_alias {
+  return $CONFIG_SETTING{KEYSTORE_ALIAS} || 'sbeamsDEV';
+}
+
 
 
 ###############################################################################
