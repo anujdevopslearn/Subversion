@@ -133,6 +133,34 @@ sub get_R_lib_path {
   return $rlib;
 }
 
+#+
+# get_admin_email
+#
+# returns configured path to admin_email
+#-
+sub get_admin_email {
+  my $self = shift;
+
+  my $rlib = $CONFIG_SETTING{MA_ADMIN_EMAIL} || '';
+  ( $rlib ) = $DBADMIN  =~ /(\w+\@\w+\.\w+)/ unless ( $rlib );
+
+  if ( !$rlib ) {
+    $log->warn( 'No Admin email configured! ' );
+  }
+
+  return $rlib;
+}
+
+#+
+# get_batch_system
+#
+# returns configured batch system, one of fork, sge, pbs
+#-
+sub get_batch_system {
+
+  return $CONFIG_SETTING{MA_BATCH_SYSTEM} || 'fork';
+
+}
 
 #######################################################
 # get_affy_temp_dir_path
@@ -267,6 +295,16 @@ sub set_ZIP_REQUEST_DIR {
 	}
 	
 	return $AFFY_ZIP_REQUEST_DIR;
+}
+
+#+
+# Utility method to return path to affy annotation files.
+#-
+sub get_affy_annotation_path {
+    
+   return $CONFIG_SETTING{MA_AFFY_ANNOTATION_PATH} || 
+          "$PHYSICAL_BASE_DIR/var/Microarray/Affy_data/annotation";
+
 }
 
 #######################################################
