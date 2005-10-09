@@ -3,7 +3,21 @@
 
 #######################################################################
 # make_protCoverage_figure.pl - make a figure of 
-#  sorted proteins vs protein coverage %
+# sorted proteins vs protein coverage %.  
+# serializes bin info and also writes 
+# outfile protCoverageData.txt (for use by idl program for eps fig)
+#
+#  flags are:
+# --test            test this code
+# --run             run program
+# --atlas_build_id  atlas build id
+# --use_last_run    use data collected from last run of this program
+#                   (serialization)
+# --histogram       plot as a histogram
+
+#USAGE: make_protCoverage_figure.pl --test
+#       make_protCoverage_figure.pl --atlas_build_id '78' --run
+#       make_protCoverage_figure.pl --atlas_build_id '78' --run --histogram
 #
 #   Author: Nichole King
 #######################################################################
@@ -31,8 +45,9 @@ use lib "$FindBin::Bin/../../perl";
 
 use vars qw ($sbeams $sbeamsMOD $current_username 
              $PROG_NAME $USAGE %OPTIONS $TEST 
-             $outfile $atlas_build_id $useSerializedData
+             $outfig $atlas_build_id $useSerializedData
              $serDataFile $serTitleFile $makeHistogram
+             $outfile
             );
 
 #### Set up SBEAMS core module
@@ -65,7 +80,7 @@ Options:
   --histogram       plot as a histogram
 
  e.g.:  $PROG_NAME --test
-        $PROG_NAME --atlas_build_id '73' --run
+        $PROG_NAME --atlas_build_id '78' --run
 
 EOU
 
@@ -91,16 +106,20 @@ if ( $OPTIONS{"test"} || $OPTIONS{"use_last_run"} ||
 } else
 {
 
-    die "$USAGE\n";
+    print "$USAGE\n";
+
+    exit(0);
 
 }
 
 
-$outfile = "protCoverage.png";
+$outfig = "protCoverage.png";
 
 $serDataFile = "./.protCoverageData.ser";
 
 $serTitleFile = "./.protCoverageTitle.ser";
+
+$outfile = "./protCoverageData.txt";
 
 main();
 
@@ -165,6 +184,10 @@ sub check_files()
 {
 
     ## write new empty file:
+    open(OUTFILE,">$outfig") or die "cannot write to $outfig";
+
+    close(OUTFILE) or die "cannot close $outfig";
+
     open(OUTFILE,">$outfile") or die "cannot write to $outfile";
 
     close(OUTFILE) or die "cannot close $outfile";
@@ -234,12 +257,19 @@ sub handleRequest()
     if ($makeHistogram)
     {
 
-        plot_data_histogram( 
+        my (@bins, @nums) = make_histogram_data(
             data_hash_ref => \%proteinCoverageHash,
+            outfile => $outfile
+        );
+
+
+        plot_data_histogram( 
+            x_data_ref => \@bins,
+            y_data_ref => \@nums,
             title => $title{"title"},
             y_title => "number of proteins in protein coverage bin",
             x_title => "protein coverage %",
-            outfile => $outfile
+            outfig => $outfig
         );
 
     } else
@@ -250,7 +280,7 @@ sub handleRequest()
             title => $title{"title"},
             x_title => "protein identity (sorted by coverage)",
             y_title => "protein coverage",
-            outfile => $outfile
+            outfig => $outfig
         );
 
     }
@@ -694,7 +724,7 @@ sub plot_data
 
     my $y_title = $args{y_title};
 
-    my $outfile = $args{outfile};
+    my $outfig = $args{outfig};
 
 
     my (@x, @y, @data);
@@ -779,7 +809,7 @@ sub plot_data
     my $gd_image = $graph->plot( \@data ) or die $graph->error;
 
 
-    open(PLOT, ">$outfile") or die("Cannot open $outfile for writing");
+    open(PLOT, ">$outfig") or die("Cannot open $outfig for writing");
 
     # Make sure we are writing to a binary stream
     binmode PLOT;
@@ -791,9 +821,9 @@ sub plot_data
 }
 
 ########################################################################
-# plot_data_histogram
+# make_histogram_data
 ########################################################################
-sub plot_data_histogram
+sub make_histogram_data
 {
     my %args = @_;
 
@@ -801,12 +831,6 @@ sub plot_data_histogram
         "need data hash reference";
 
     my %data_hash = %{$data_hash_ref};
-
-    my $title = $args{title};
-
-    my $x_title = $args{x_title};
-
-    my $y_title = $args{y_title};
 
     my $outfile = $args{outfile};
 
@@ -842,6 +866,40 @@ sub plot_data_histogram
     #### Create a combined array
     @data = ([@bin_centers],[@binned_data]);
 
+    write_to_outfile( x_array_ref => \@bin_centers, 
+        y_array_ref => \@binned_data);
+
+    return @bin_centers, @binned_data;
+
+}
+
+
+########################################################################
+# plot_data_histogram
+########################################################################
+sub plot_data_histogram
+{
+    my %args = @_;
+
+    my $x_data_ref = $args{x_data_ref} or die 
+        "need x data reference";
+
+    my $y_data_ref = $args{y_data_ref} or die 
+        "need y data reference";
+
+    my $title = $args{title};
+
+    my $x_title = $args{x_title};
+
+    my $y_title = $args{y_title};
+
+    my $outfig = $args{outfig};
+
+    my @x = @{$x_data_ref};
+
+    my @y = @{$y_data_ref};
+
+    my @data = ([@x],[@y]);
 
     my $graph = new GD::Graph::bars( 512, 512);
     #my $graph = new GD::Graph::xylines( 512, 512);
@@ -899,7 +957,7 @@ sub plot_data_histogram
     my $gd_image = $graph->plot( \@data ) or die $graph->error;
 
 
-    open(PLOT, ">$outfile") or die("Cannot open $outfile for writing");
+    open(PLOT, ">$outfig") or die("Cannot open $outfig for writing");
 
     # Make sure we are writing to a binary stream
     binmode PLOT;
@@ -907,6 +965,38 @@ sub plot_data_histogram
     # Convert the image to PNG and print it to the file PLOT
     print PLOT $gd_image->png;
     close PLOT;
+
+}
+
+
+########################################################################
+# write_to_outfile -- writes x and y arrays to outfile in 2 columns
+########################################################################
+sub write_to_outfile
+{
+    my %args = @_;
+
+    my $x_array_ref = $args{x_array_ref} or die 
+        "need x array reference";
+
+    my $y_array_ref = $args{y_array_ref} or die 
+        "need y array reference";
+
+    my @x_array= @{$x_array_ref};
+
+    my @y_array= @{$y_array_ref};
+
+
+    open(OUTFILE,">$outfile") or die "cannot write to $outfile";
+
+    for (my $i=0; $i <= $#x_array; $i++)
+    {
+
+        print OUTFILE "$x_array[$i]\t$y_array[$i]\n";
+
+    }
+
+    close(OUTFILE) or die "cannot close $outfile";
 
 }
 
