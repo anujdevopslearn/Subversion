@@ -19,6 +19,9 @@
 #        so human, etc. would have to be entered and design changed just
 #        a little.
 #
+# Also writes an output yeastMolecularFunctionData.txt for use with
+# IDL plotting program
+#
 ###############################################################################
 
 use strict;
@@ -29,7 +32,7 @@ use lib "$FindBin::Bin/../../perl";
 
 use vars qw ($sbeams $sbeamsMOD $current_username
              $PROG_NAME $USAGE %OPTIONS $TEST $QUIET
-             $atlas_build_id $PASS
+             $atlas_build_id $PASS $outfile
             );
 
 #### Set up SBEAMS core module
@@ -87,7 +90,9 @@ if ( ($OPTIONS{"run"} && $OPTIONS{"atlas_build_id"}) || $OPTIONS{"test"} )
 } else
 {
 
-    die "$USAGE";
+    print "$USAGE\n";
+
+    exit(0);
 
 };
 
@@ -112,6 +117,8 @@ if ( $OPTIONS{"test"} )
 ## set default test pass to zero
 $PASS = 0;
 
+$outfile = "yeastMolecularFunctionData.txt";
+
 
 main();
 
@@ -132,6 +139,13 @@ sub main
 
     #### Print out the header
     ##$sbeams->printUserContext() if ($QUIET > 0);
+
+    ## make sure that user is on atlas:
+    check_host();
+
+
+    ## check that can write to outfile (also initialize):
+    check_file();
 
 
     ## define the term hash for the molecular function bins.
@@ -166,6 +180,11 @@ sub main
        #    sgd_counts_ref => \%molecular_function_counts_sgd,
        #);
 
+        write_to_outfile( term_hash_ref => \%molecular_function_terms,
+            atlas_counts_ref => \%molecular_function_counts_atlas,
+            sgd_counts_ref => \%molecular_function_counts_sgd,
+        );
+
         make_percent_bar_graph( term_hash_ref => \%molecular_function_terms,
             atlas_counts_ref => \%molecular_function_counts_atlas,
             sgd_counts_ref => \%molecular_function_counts_sgd,
@@ -199,6 +218,44 @@ sub check_authentication
     );
 
 }
+
+#######################################################################
+# check_host -- check that host name is atlas 
+#######################################################################
+sub check_host()
+{
+
+    ## make sure that this is running on atlas for queries
+    my $uname = `uname -a`;
+
+    if ($uname =~ /.*(atlas).*/)
+    {
+
+        # continue
+
+    } else
+    {
+
+        die "you must run this on atlas";
+
+    }
+
+}
+
+
+#######################################################################
+# check_file -- check that can write to outfile and initialize
+#######################################################################
+sub check_file()
+{
+
+    ## initialize file:
+    open(OUTFILE,">$outfile") or die "cannot write to $outfile";
+
+    close(OUTFILE) or die "cannot close $outfile";
+
+}
+
 
 
 #######################################################################
@@ -542,7 +599,6 @@ sub make_bar_graph
 
     my %sgd_counts = %{$sgd_counts_ref};
 
-    ##xxxxxxx   finish!
     ## %term_hash :      keys = GO id, value = the GO term
     ## %binsHash  :      keys = GO id, value = num genes per bin
 
@@ -607,7 +663,8 @@ sub make_bar_graph
 
     my $gd_image = $graph->plot( \@data ) or die $graph->error;
 
-    open(PLOT, ">yeast_go_molecular_function.png") or die("Cannot open file for writing");
+    open(PLOT, ">yeast_go_molecular_function.png") or 
+        die("Cannot open file for writing");
 
     # Make sure we are writing to a binary stream
     binmode PLOT;
@@ -618,6 +675,52 @@ sub make_bar_graph
     close PLOT;
 
 }
+
+
+
+#######################################################################
+# write_to_outfile - write to outfile the GO molecular term,
+# the number of SGD genes in the term bin, the number of Yeast
+# atlas genes in the term bin
+#######################################################################
+sub write_to_outfile
+{
+
+    my %args = @_;
+
+    my $term_hash_ref = $args{term_hash_ref} || 
+        die "ERROR: Must pass term hash ($!)";
+
+    my %term_hash= %{$term_hash_ref};
+
+    my $atlas_counts_ref = $args{atlas_counts_ref} || 
+        die "ERROR: Must pass atlas_counts_ref ($!)";
+
+    my %atlas_counts = %{$atlas_counts_ref};
+
+    my $sgd_counts_ref = $args{sgd_counts_ref} || 
+        die "ERROR: Must pass sgd_counts_ref ($!)";
+
+    my %sgd_counts = %{$sgd_counts_ref};
+
+    ## %term_hash :      keys = GO id, value = the GO term
+    ## %binsHash  :      keys = GO id, value = num genes per bin
+
+    open(OUTFILE,">$outfile") or die "cannot write to $outfile";
+
+    ## fill x, y, and data arrays:
+    foreach my $term ( keys %term_hash )
+    {
+
+        print OUTFILE sprintf("%45s    %8.0f    %8.0f\n",
+            $term_hash{$term}, $sgd_counts{$term}, $atlas_counts{$term});
+
+    }
+
+    close(OUTFILE) or die "cannot close $outfile";
+
+}
+
 #######################################################################
 #
 # make_percent_bar_graph
@@ -628,19 +731,21 @@ sub make_percent_bar_graph
 
     my %args = @_;
 
-    my $term_hash_ref = $args{term_hash_ref} || die "ERROR: Must pass term hash ($!)";
+    my $term_hash_ref = $args{term_hash_ref} || 
+        die "ERROR: Must pass term hash ($!)";
 
     my %term_hash= %{$term_hash_ref};
 
-    my $atlas_counts_ref = $args{atlas_counts_ref} || die "ERROR: Must pass atlas_counts_ref ($!)";
+    my $atlas_counts_ref = $args{atlas_counts_ref} || 
+        die "ERROR: Must pass atlas_counts_ref ($!)";
 
     my %atlas_counts = %{$atlas_counts_ref};
 
-    my $sgd_counts_ref = $args{sgd_counts_ref} || die "ERROR: Must pass sgd_counts_ref ($!)";
+    my $sgd_counts_ref = $args{sgd_counts_ref} || 
+        die "ERROR: Must pass sgd_counts_ref ($!)";
 
     my %sgd_counts = %{$sgd_counts_ref};
 
-    ##xxxxxxx   finish!
     ## %term_hash :      keys = GO id, value = the GO term
     ## %binsHash  :      keys = GO id, value = num genes per bin
 
