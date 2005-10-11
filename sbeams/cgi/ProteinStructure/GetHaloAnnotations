@@ -655,7 +655,8 @@ $LINESEPARATOR
 	  #### Special (fragile?) handling for halo aliases
 	  my @alias_items = split ",", $aliases;
 	  my $NCBI_PID_BASE = "http://www.ncbi.nlm.nih.gov/sutils/blink.cgi?pid=";
-	  my $COG_BASE = "http://www.ncbi.nlm.nih.gov/COG/new/release/cow.cgi?cog=";
+#	  my $COG_BASE = "http://www.ncbi.nlm.nih.gov/COG/new/release/cow.cgi?cog=";
+	  my $COG_BASE = "http://www.ncbi.nlm.nih.gov/COG/old/palox.cgi?txt=";
 
 	  foreach my $item (@alias_items) {
 		if ($item =~ /^\d+$/) {
