@@ -27,3 +27,4 @@ AT_sample_publication	Sample Publication	PeptideAtlas_user	NO	$TBAT_SAMPLE_PUBLI
 AT_identified_to_ipi	Identified To IPI	PeptideAtlas_infrastructure	NO	$TBAT_IDENTIFIED_TO_IPI	identified_to_ipi_id		
 AT_glyco_sample	Sample	PeptideAtlas_infrastructure	YES	$TBAT_GLYCO_SAMPLE	sample_id		ManageTable.cgi?TABLE_NAME=AT_glyco_sample
 AT_synthesized_peptide	Synthesized Peptide	PeptideAtlas_infrastructure	NO	$TBAT_SYNTHESIZED_PEPTIDE	synthesized_peptide_id		
+AT_search_key	Search Key	PeptideAtlas_infrastructure	NO	$TBAT_SEARCH_KEY	search_key_id		
