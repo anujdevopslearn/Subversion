@@ -48,6 +48,8 @@ use vars qw(@ISA @EXPORT
     $TBAT_TISSUE_TYPE
     $TBAT_GLYCO_SAMPLE
     $TBAT_IDENTIFIED_TO_IPI
+
+    $TBAT_SEARCH_KEY
 );
 
 
@@ -87,6 +89,8 @@ require Exporter;
     $TBAT_TISSUE_TYPE
     $TBAT_GLYCO_SAMPLE
     $TBAT_IDENTIFIED_TO_IPI
+
+    $TBAT_SEARCH_KEY
 );
 
 
@@ -128,5 +132,7 @@ $TBAT_PEPTIDE_TO_TISSUE		= "${glycomod}peptide_to_tissue";
 $TBAT_TISSUE_TYPE			= "${glycomod}tissue_type";
 $TBAT_IDENTIFIED_TO_IPI= "${glycomod}identified_to_ipi";
 $TBAT_GLYCO_SAMPLE   = "${glycomod}glyco_sample";
+
+$TBAT_SEARCH_KEY                = "${mod}search_key";
 
 
