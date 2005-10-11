@@ -7,7 +7,9 @@ use HTTP::Request::Common;
 use HTTP::Cookies;
 use LWP::UserAgent;
 
-use lib '/net/dblocal/www/html/devDC/sbeams/lib/perl';
+#use lib '/net/dblocal/www/html/devDC/sbeams/lib/perl';
+use FindBin qw ( $Bin );
+use lib( "$Bin/../.." );
 
 ## Constants ##
 use constant BASE_URL => 'http://db.systemsbiology.net/devDC/sbeams';

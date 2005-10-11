@@ -3,7 +3,8 @@
 use strict;
 use Test::More tests => 21;
 #use lib '/net/dblocal/www/html/devDC/sbeams/lib/perl';
-use lib qw ( ../.. );
+use FindBin qw ( $Bin );
+use lib( "$Bin/../.." );
 
 my ( $sbeams, $q );
 
