@@ -455,8 +455,9 @@ public class SBEAMSClient {
 	System.out.println ("test SBEAMS Table Retrieval");
 	try {
 	  SBEAMSClient client = new SBEAMSClient(true);
-	  //System.out.println(client.fetchSbeamsPage ( "https://db.systemsbiology.net/sbeams/cgi/ProteinStructure/GetAnnotations?search_scope=All&search_key=iron&action=GO&biosequence_set_id=3&action=QUERY&output_mode=tsv"));
 	  System.out.println(client.fetchSbeamsPage ("https://db.systemsbiology.net/sbeams/cgi/ManageTable.cgi?TABLE_NAME=organism&output_mode=tsv"));
+	  //System.out.println(client.fetchSbeamsPage ( "https://db.systemsbiology.net/sbeams/cgi/ProteinStructure/GetAnnotations?search_scope=All&search_key=iron&action=GO&biosequence_set_id=3&action=QUERY&output_mode=tsv"));
+	  //System.out.println(client.fetchSbeamsPage ("https://db.systemsbiology.net/sbeams/cgi/Microarray/ManageTable.cgi?TABLE_NAME=MA_condition&output_mode=tsv"));
 
 	}catch (IOException e) {
 	  System.err.println("Page Not Found");
