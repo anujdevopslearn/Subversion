@@ -1,1 +1,36 @@
 Remember to set this directory (e.g /root/to/sbeams/lib/java) in your CLASSPATH.
+
+#### Make sure Java is in your PATH
+which java javac
+#setenv PATH /tools/java/j2sdk1.4.2/bin:$PATH
+
+#### Set SBEAMS env variable for convenience only
+#setenv SBEAMS /net/dblocal/www/html/dev2/sbeams
+
+#### Add this directory to the CLASSPATH
+setenv CLASSPATH $SBEAMS/lib/java:$CLASSPATH
+
+#### Add junit to the CLASSPATH if necessary
+setenv CLASSPATH $SBEAMS/usr/java/share/util/junit.jar:$CLASSPATH
+
+ 
+cd $SBEAMS/lib/java/SBEAMS
+make
+
+cat > .infoFile
+user=edeutsch
+password=xxxx
+url=http://db.systemsbiology.net/dev2/sbeams
+^D
+
+
+cd $SBEAMS/lib/java/SBEAMS
+java SBEAMS.SBEAMSClient
+
+- Popup dialog box should request the username and password
+- Then a tsv list of organisms should be written to stdout
+
+rm .infoFile
+make clean
+
+
