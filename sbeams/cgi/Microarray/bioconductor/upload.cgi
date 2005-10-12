@@ -675,6 +675,7 @@ sub filelist {
 		
 		for (my $i = 0; $i < @filenames; $i++) {
 			$filestat = stat("$basepath/$filenames[$i]");
+      die ("Missing file $i: $basepath/$filenames[$i]") unless $filestat;
 			$size = $filestat->size;
 			$date = strftime("%a %b %e %H:%M:%S %Y", localtime($filestat->mtime));
 			print Tr(td('<input type="checkbox" name="files" value="' . $filenames[$i] . '" CHECKED>'), 
