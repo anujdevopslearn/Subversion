@@ -67,7 +67,7 @@ public void testSecureSBEAMSClientSetup () throws Exception
 private boolean configure() {
   File file = new File (infoFile);
   if (!file.canRead ())
-	System.out.println("CAN'T READ FILE!!!!!");
+	System.out.println("ERROR: Unable to read config file "+infoFile);
 
   try{
 	BufferedReader br = new BufferedReader(new FileReader(infoFile));
