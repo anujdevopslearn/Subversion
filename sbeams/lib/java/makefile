@@ -12,16 +12,20 @@ JC=javac
 .java.class:
 	$(JC) $<
 
+default: all
+
 microarray: 
-	(cd Microarray; make all)
+	(cd SBEAMS/Microarray; make all)
 
 oligo:
-	(cd Oligo;make all)
+	(cd SBEAMS/Oligo;make all)
 
 all:
-	(cd Microarray; make all)
-	(cd Oligo; make all)
+	(cd SBEAMS; make all)
+	(cd SBEAMS/Microarray; make all)
+	(cd SBEAMS/Oligo; make all)
 
 clean:
-	(cd Microarray; make clean)
-	(cd Oligo; make clean)
+	(cd SBEAMS; make clean)
+	(cd SBEAMS/Microarray; make clean)
+	(cd SBEAMS/Oligo; make clean)
