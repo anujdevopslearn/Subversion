@@ -22,9 +22,13 @@ OBJS =  SBEAMSClient.class \
 default: objs
 
 objs: $(OBJS)
+	(cd unitTests; make)
+
+test: objs
+	(cd unitTests; make test)
 
 all: objs
-
+	
 client: objs
 	java $(PKG).SBEAMSClient
 
@@ -40,3 +44,4 @@ update_sbeams: signed_jar
 
 clean:
 	- rm *.class
+	(cd unitTests; make clean)
