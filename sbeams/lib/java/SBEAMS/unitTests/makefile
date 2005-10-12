@@ -15,22 +15,19 @@ PKG=SBEAMS.unitTests
 
 OBJS = SBEAMSClientTest.class
 
+default: objs
+
 objs: $(OBJS)
 
+test: objs 0
 
-default: objs run
-
-clean:
-	- rm *.class
-
-#------ all
-#  run all the tests
-#
-all: $(OBJS) 0
+all: objs
 
 #------ 0
-#  build and run the DataMatrixFileReaderTest
+#  build and run the SBEAMSClientTest
 #
 0: SBEAMSClientTest.class
 	java $(PKG).SBEAMSClientTest
 
+clean:
+	- rm *.class
