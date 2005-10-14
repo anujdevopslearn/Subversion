@@ -32,7 +32,7 @@ use vars qw ($sbeams $sbeamsPROT $q
              $PROG_NAME $USAGE %OPTIONS $QUIET $VERBOSE $DEBUG $DATABASE
              $TESTONLY
              $current_contact_id $current_username
-             %spectra_written
+             %spectra_written $interact_fname
             );
 
 
@@ -80,8 +80,9 @@ Options:
   --experiment_tag    The experiment_tag of a proteomics_experiment
                       that is to be worked on; all are checked if
                       none is provided
+  --experiment_id     Load into this experiment using id (enforced uniqueness)
   --search_subdir     Subdirectory (from the experiment_path of the
-                      specific sequest search to load
+                      specific sequest search to load)
   --check_status      If set, nothing is actually done, but rather the
                       experiments are verified
   --testonly          If set, nothing is actually inserted into the database,
@@ -112,11 +113,15 @@ Options:
   --fix_ipi           If set, then convert long ugly IPI accessions to a
                       simple IPInnnnnnnnnn
 
-  --interact_fname    name of interact file (e.g. interact-prob-data.htm or
-                      interact-prob.xml)
+  --interact_fname    name of interact file (e.g. interact-prob.xml, or
+                      older format interact-prob-data.htm,  etc.).  use this
+                      in conjunction with --search_subdir "subdirectory"
 
  e.g.:  $PROG_NAME --list_all
         $PROG_NAME --check --experiment_tag=rafapr
+        $PROG_NAME --experiment_id '12' --check_status ----testonly
+        $PROG_NAME --experiment_id '12' --search_subdir 'HsIPI_v4.0' --load
+        $PROG_NAME --experiment_id '12' --search_subdir 'HsIPI_v4.0' --interact_fname 'interact-prob.xml' --update_probabilities
 
 EOU
 
@@ -135,7 +140,7 @@ unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s",
   "update_timing_info","gradient_program_id:i","column_delay:i",
   "cleanup_archive","delete_search_batch","delete_experiment",
   "delete_fraction:s","force_search_batch","fix_ipi",
-  "interact_fname:s",
+  "interact_fname:s", "experiment_id:s",
   )) {
   print "$USAGE";
   exit;
@@ -210,7 +215,8 @@ sub handleRequest {
   my $search_subdir = $OPTIONS{"search_subdir"} || '';
   my $file_prefix = $OPTIONS{"file_prefix"} || '';
   my $force_ref_db = $OPTIONS{'force_ref_db'} || '';
-  my $interact_file = $OPTIONS{"interact_fname"} || '';
+  $interact_fname = $OPTIONS{"interact_fname"} || '';
+  my $experiment_id = $OPTIONS{"experiment_id"} || '';
 
   $TESTONLY = $OPTIONS{'testonly'} || 0;
   $DATABASE = $DBPREFIX{'Proteomics'};
@@ -238,28 +244,56 @@ sub handleRequest {
   }
 
 
+  ## if experiment_id was specified, check on it
+  if ($experiment_id)
+  {
+
+      $experiment_tag = getExperimentTag( exp_id => $experiment_id );
+
+  }
+
+
+  ## if $interact_fname was set and updating_probabilities, require $search_subdir too...
+  if ( $interact_fname && $update_probabilities )
+  {
+
+      unless ($search_subdir)
+      {
+
+          print "$USAGE\n";
+
+          print "ERROR: need to set --search_subdir\n";
+
+          exit;
+
+      }
+       
+  }
+
+
   #### Define a scalar and array of experiment_id's
-  my ($experiment_id,$n_experiment_ids);
+  my $n_experiment_ids;
   my @experiment_ids;
 
-
-  #### If there was a set_tag specified, identify it
-  if ($experiment_tag) {
-    $sql = qq~
+  #### If there was a set_tag specified, and no experiment_id specified,
+  #### identify from tag:
+  if ($experiment_tag && (!$experiment_id) ) {
+      $sql = qq~
           SELECT PE.experiment_id
-            FROM $TBPR_PROTEOMICS_EXPERIMENT PE
-           WHERE PE.experiment_tag = '$experiment_tag'
-             AND PE.record_status != 'D'
-    ~;
+          FROM $TBPR_PROTEOMICS_EXPERIMENT PE
+          WHERE PE.experiment_tag = '$experiment_tag'
+          AND PE.record_status != 'D'
+      ~;
 
-    @experiment_ids = $sbeams->selectOneColumn($sql);
-    $n_experiment_ids = @experiment_ids;
+      @experiment_ids = $sbeams->selectOneColumn($sql);
+      $n_experiment_ids = @experiment_ids;
 
-    die "No experiments found with experiment_tag = '$experiment_tag'"
-      if ($n_experiment_ids < 1);
-    die "Too many experiments found with experiment_tag = '$experiment_tag'"
-      if ($n_experiment_ids > 1);
+      die "No experiments found with experiment_tag = '$experiment_tag'"
+          if ($n_experiment_ids < 1);
+      die "Too many experiments found with experiment_tag = '$experiment_tag'"
+          if ($n_experiment_ids > 1);
 
+      $experiment_id = $experiment_ids[0];
 
   #### If there was NOT a experiment_tag specified, scan for all available ones
   } else {
@@ -277,7 +311,39 @@ sub handleRequest {
     die "No experiments found with experiment_tag = '$experiment_tag'"
       if ($n_experiment_ids < 1);
 
+    ## xxxxxxx note, need assignment to experiment_id here, but not sure that
+    ## original intention of this section is still carried through rest of code
+
   }
+
+
+  ### check $search_subdir and $interact_fname and make sure all's swell before proceeding
+  my $full_interact_file_path;
+
+  if ( $interact_fname && $search_subdir)
+  {
+
+      ## retrieve experiment directory from experiment record:
+      my $exp_dir = getExperimentDirectory( exp_id => $experiment_id);
+
+      print, "interact file:  $interact_fname\n";
+
+      if ( -e "$file_prefix/$exp_dir/$search_subdir/$interact_fname")
+      {
+
+          $full_interact_file_path = "$file_prefix/$exp_dir/$search_subdir/$interact_fname";
+
+      } else
+      {
+
+          die "File $file_prefix/$exp_dir/$search_subdir/$interact_fname "
+              . "not found.  Please check --interact_fname $interact_fname "
+              . " and --search_subdir $search_subdir ($!)";
+
+      }
+
+  } 
+
 
 
   #### Loop over each experiment, determining its status and processing
@@ -324,7 +390,9 @@ sub handleRequest {
       if ($list_all eq '' && $status->{experiment_path}) {
 
         my $prefix = $file_prefix;
+
         $prefix = '' if ($status->{experiment_path} =~ /\/dblocal/);
+
         my $source_dir = $prefix."/".$status->{experiment_path}."/".
           $search_batch_subdir;
 
@@ -358,7 +426,7 @@ sub handleRequest {
   	    experiment_tag=>$status->{experiment_tag},
   	    search_batch_subdir=>$search_batch_subdir,
   	    source_dir=>$source_dir,
-            interact_file=>$interact_file,
+            full_interact_path => $full_interact_file_path,
           );
   	  print "\n";
   	}
@@ -369,7 +437,8 @@ sub handleRequest {
   	  $result = updateSearchResults(
   	    experiment_tag=>$status->{experiment_tag},
   	    search_batch_subdir=>$search_batch_subdir,
-  	    source_dir=>$source_dir);
+  	    source_dir=>$source_dir,
+          );
   	  print "\n";
   	}
 
@@ -395,8 +464,7 @@ sub handleRequest {
 
   	#### If user asked for delete_search_batch, do it
   	if ($delete_search_batch) {
-          print "Deleting search batch $search_batch_subdir in the database ".
-            "(but not the files)...\n\n";
+          print "Deleting search batch $search_batch_subdir in the database...\n\n";
   	  $result = deleteSearchBatch(
   	    experiment_tag=>$status->{experiment_tag},
   	    search_batch_subdir=>$search_batch_subdir,
@@ -411,8 +479,7 @@ sub handleRequest {
 
     #### If user asked for delete_experiment, do it
     if ($delete_experiment) {
-    print "Deleting experiment '$experiment_tag' in the database ".
-      "(but not the files)...\n\n";
+    print "Deleting experiment '$experiment_tag' in the database...\n\n";
       $result = deleteExperiment(
         experiment_tag=>$experiment_tag,
       );
@@ -517,7 +584,7 @@ sub getExperimentStatus {
 
 
 ###############################################################################
-# loadProteomicsExperiment
+# loadProteomicsExperiment - load spectra and .out's
 ###############################################################################
 sub loadProteomicsExperiment { 
   my %args = @_;
@@ -1079,7 +1146,7 @@ sub addSearchBatchEntry {
 
 
 ###############################################################################
-# addSearchEntry: Insert a new entry in search table
+# addSearchEntry: Insert a new entry in search table;  does not add probabilities
 ###############################################################################
 sub addSearchEntry {
   my ($parameters_ref) = shift
@@ -1523,7 +1590,9 @@ sub updateFromSummaryFiles {
 
 
 ###############################################################################
-# updateProbabilities
+# updateProbabilities - this is the only subroutine which will load probabilities.
+# If user has specified an interact_fname, will look for it and die if not
+# found.
 ###############################################################################
 sub updateProbabilities {
   my %args = @_;
@@ -1538,7 +1607,7 @@ sub updateProbabilities {
   my $source_dir = $args{'source_dir'}
    || die "ERROR[$SUB_NAME]: source_dir not passed";
 
-  my $interact_file = $args{'interact_file'} || "";
+  my $interact_file_path = $args{'full_interact_file_path'} || "";
 
 
   #### Define standard variables
@@ -1575,28 +1644,33 @@ sub updateProbabilities {
     return;
   }
 
-
+  
   #### Read in the probabilities
   my $data_ref;
 
   ## determine interact file name and whether it's an htm or xml
-  my $source_file;
+  my $isXMLFile = "";
 
-  my $isXMLFile = '';
+  my $isHTMFile = "";
 
-  my $isHTMFile = '';
-
-  my @potential_xml_files = ( "$source_dir/interact-prob.xml",
-    "$source_dir/interact.xml" );
-
-  my $potential_htm_file = "$source_dir/interact-prob-data.htm";
-
-  ## use user speficied interact file if exists:
-  if ( -f "$source_dir/$interact_file")
+  ## If user specified interact file name, check for it one more time, and die if not
+  ## found.  This is repeat of section above...should clean one day
+  if ( $interact_file_path )
   {
-      $source_file = "$source_dir/$interact_file";
 
-      if ($source_file =~ /(.+)(xml)$/)
+      if ( -e "$interact_file_path")
+      {
+
+          ##do nothing
+
+      } else
+      {
+
+          die "File $interact_file_path not found. "
+              . "Please check --interact_fname $interact_fname ";
+      }
+
+      if ($interact_file_path =~ /(.+)(xml)$/)
       {
 
           $isXMLFile = 1;
@@ -1608,59 +1682,83 @@ sub updateProbabilities {
 
       }
 
-  }
+  } 
 
-  ## otherwise, run through potential names:
-  if (!$source_file)
+  ## else, run through list of default interact file names
+  ## and use one of those
+  if ( !$interact_file_path )
   {
-    foreach my $potential_xml_file ( @potential_xml_files ) {
-print "Trying $potential_xml_file...\n";
-      if (-f $potential_xml_file)
-      {
-          $source_file = $potential_xml_file;
-          $isXMLFile = 1;
-          last;
-      }
-    }
+      my @potential_xml_files;
 
-  }
+      push( @potential_xml_files, "$source_dir/interact-prob.xml" );
 
-  ## otherwise, run through potential names:
-  if (!$source_file)
-  {
-      if (-f $potential_htm_file)
+      push( @potential_xml_files, "$source_dir/interact.xml" );
+
+      my $potential_htm_file = "$source_dir/interact-prob-data.htm";
+
+      for (my $ii = 0; $ii <= $#potential_xml_files; $ii++)
       {
-          $source_file = $potential_htm_file;
+    
+          if (-e $potential_xml_files[$ii] )
+          {
+
+              $interact_file_path =  $potential_xml_files[$ii];
+
+              $isXMLFile = 1;
+
+              last;
+
+          }
+          
+      } ## end run through @potential_xml_files
+
+      ## if still not found, try old pipeline product:
+      if (-e $potential_htm_file)
+      {
+
+          $interact_file_path = $potential_htm_file;
 
           $isHTMFile = 1;
 
-          $isXMLFile = '';
+          $isXMLFile = "";
+
       }
+
   }
 
-  print "attempting to load $source_file\n";
+  ## if still no file found, tell user and die
+  if (!$interact_file_path)
+  {
+
+      die "Can't find peptide interact file in $source_dir. "
+      . "Please check, and if still problems, use file name flag "
+      . "For example:  --interact_fname interact-prob.xml ";
+
+  }
+
+  print "attempting to load $interact_file_path\n";
 
   #### First guess an XML Interact file with probabilities
   if ($isXMLFile == 1) {
     print "Found XML interact file. " +
-    "Reading probabilities from source file '$source_file'\n";
+    "Reading probabilities from source file '$interact_file_path'\n";
     use SBEAMS::Proteomics::XMLUtilities;
     my $XMLreader = new SBEAMS::Proteomics::XMLUtilities;
     $data_ref = $XMLreader->readXInteractFile(
-      source_file=>$source_file,
-      #verbose=>$VERBOSE,
+      source_file => $interact_file_path,
+      verbose=>$VERBOSE,
     );
 
   #### Second, guess an HTML Interact file with probabilities
   } elsif ( $isHTMFile == 1 ) {
     print "Found HTM interact file. " +
-    "Reading probabilities from source file '$source_file'...\n";
+    "Reading probabilities from source file '$interact_file_path'...\n";
     $data_ref = $sbeamsPROT->readSummaryFile(
-      inputfile=>$source_file,
+      inputfile => $interact_file_path,
       verbose=>$VERBOSE
     );
   } else {
-    die "!! UNABLE TO FIND INTERACT FILE (looking for $source_file)";
+    die "!! UNABLE TO FIND INTERACT FILE (looking for $interact_file_path)";
   }
 
 
@@ -1668,6 +1766,7 @@ print "Trying $potential_xml_file...\n";
   #print $data_ref->{files},"\n";
   my @nfiles = keys(%{$data_ref->{files}});
   print "\n  nfiles = ".scalar(@nfiles)."\n";;
+  print "\n  nfiles = ", $#nfiles + 1, "\n";;
 
 
   #### Get all the rank 1 search_hit_id's for this search_batch
@@ -2856,5 +2955,83 @@ sub deleteFraction {
     testonly => $TESTONLY,
   );
 
+
+}
+
+
+#######################################################################
+# getExperimentTag - retrieve experiment tag, given experiment id
+# @param exp_id 
+# @return exp tag
+#######################################################################
+sub getExperimentTag
+{
+
+    my %args = @_;
+
+    my $exp_id = $args{exp_id} || die "need exp_id ($!)";
+
+    my $exp_tag;
+
+    my $sql = qq~
+        SELECT PE.experiment_tag
+        FROM $TBPR_PROTEOMICS_EXPERIMENT PE
+        WHERE PE.experiment_id = '$exp_id'
+        AND PE.record_status != 'D'
+    ~;
+
+
+    ($exp_tag) = $sbeams->selectOneColumn($sql) or die
+        "Could not find record for experiment id $exp_id";
+
+    return $exp_tag;
+
+}
+
+
+#######################################################################
+# getExperimentDirectory - retrieve path to experiment directory
+# @param exp_id 
+# @param exp_tag
+# @return path to experiment
+#######################################################################
+sub getExperimentDirectory
+{
+
+    my %args = @_;
+
+    my $exp_tag = $args{exp_tag};
+
+    my $exp_id = $args{exp_id};
+
+    my $exp_path;
+
+    unless ($exp_tag || $exp_id)
+    {
+
+        die "need exp_tag or exp_id ($!)";
+
+    }
+
+    if (!$exp_tag)
+    {
+
+        $exp_tag = getExperimentTag( exp_id => $exp_id );
+
+    }
+
+    
+    my $sql = qq~
+        SELECT PE.experiment_path
+        FROM $TBPR_PROTEOMICS_EXPERIMENT PE
+        WHERE PE.experiment_id = '$exp_id'
+        AND PE.record_status != 'D'
+    ~;
+
+
+    ($exp_path) = $sbeams->selectOneColumn($sql) or die
+        "Could not find record for experiment id $exp_id";
+
+    return $exp_path;
 
 }
