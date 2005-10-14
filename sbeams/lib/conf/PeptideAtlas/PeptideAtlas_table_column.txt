@@ -252,26 +252,23 @@ AT_glyco_site	2	protein_glyco_site_position	Protein Glyco Site Prosition	int	4	0
 AT_glyco_site	3	ipi_data_id	IPI Data ID	int	4	0	N		N	AT_ipi_data	ipi_data_id	Y				N	N	Y			
 AT_glyco_site	4	glyco_score	Glyco Score	real	4	0	N		N			Y	text	50		Y	Y	N	Probability that there is glyco site		
 AT_identified_peptide	1	identified_peptide_id	Identified Peptide ID	int	4	0	N		Y							N	N				pkDEFAULT
-AT_identified_peptide	2	ipi_data_id	IPI Data ID	int	4	0	N		N	AT_ipi_data	ipi_data_id	Y				N	N	Y			
-AT_identified_peptide	3	identified_peptide_sequence	Identified Peptide Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	N	Peptide Sequence Identified by MS/MS run		
-AT_identified_peptide	4	peptide_prophet_score	Peptide Prophet Score 	real	4	0	N		N			Y	text	50		Y	Y	N	Peptide Prophet Score		
-AT_identified_peptide	5	peptide_mass	Peptide Mass	real	4	0	N		N			Y	text	50		Y	Y	N	Mass of the identified peptide		
-AT_identified_peptide	6	glyco_site_id	Glyco Site ID	int	4	0	N		N	AT_glyco_site	glyco_site_id					N	N				
-AT_identified_peptide	7	tryptic_end	Tryptic Ends	int	4	0	Y		N										Number of tryptic ends for this identified peptide		
+AT_identified_peptide	2	identified_peptide_sequence	Identified Peptide Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	N	Peptide Sequence Identified by MS/MS run		
+AT_identified_peptide	3	peptide_prophet_score	Peptide Prophet Score 	real	4	0	N		N			Y	text	50		Y	Y	N	Peptide Prophet Score		
+AT_identified_peptide	4	peptide_mass	Peptide Mass	real	4	0	N		N			Y	text	50		Y	Y	N	Mass of the identified peptide		
+AT_identified_peptide	5	tryptic_end	Tryptic Ends	int	4	0	Y		N										Number of tryptic ends for this identified peptide		
 AT_predicted_peptide	1	predicted_peptide_id	Predicted Peptide ID	int	4	0	N		Y							N	N				pkDEFAULT
-AT_predicted_peptide	2	ipi_data_id	IPI Data ID	int	4	0	N		N	AT_ipi_data	ipi_data_id	Y				N	N	Y			
-AT_predicted_peptide	3	predicted_peptide_sequence	Predicted Peptide Sequence	text	16	0	N		N			Y	text	50		Y	Y	N	Peptide Sequence Identified by MS/MS run		
-AT_predicted_peptide	4	predicted_peptide_mass	Predicted Peptide Mass	real	4	0	N		N			Y	text	50		Y	Y	N	Predicted Peptide Mass		
-AT_predicted_peptide	5	detection_probability	Detection Probability	real	4	0	N		N			Y	text	50		Y	Y	N	Probability that this peptide will be detected in a MS run		
-AT_predicted_peptide	6	number_proteins_match_peptide	Number of Proteins Matching Peptide	int	4	0	N		N			Y	text	10		N	N	Y	"Number of Proteins that match this protein, including the current protein"		
-AT_predicted_peptide	7	matching_protein_ids	IPI Protein Ids	text	16	0	N		N			Y	text	50		Y	Y	N	IPI accession numbers for all the proteins that contain this predicted peptide		
-AT_predicted_peptide	8	protein_similarity_score	Protein Similarity Score	real	4	0	N		N			Y	text	50		Y	Y	N	Smiliarity score for all the IPI proteins that match this peptide		
-AT_predicted_peptide	9	glyco_site_id	Glyco Site ID	int	4	0	N		N	AT_glyco_site	glyco_site_id					N	N				
-AT_predicted_peptide	10	predicted_start	Identified Peptide Start	int	4	0	N		N			Y	text	10		N	N	N	Start position of the peptide on the IPI protein		
-AT_predicted_peptide	11	predicted_stop	Identified  Peptide Stop	int	4	0	N		N			Y	text	10		N	N	N	Stop position of the peptide on the IPI protein		
-AT_peptide_to_tissue	1	peptide_to_tissue_id	Peptide To Tissue ID	int	4	0	N		Y							N	N				pkDEFAULT
-AT_peptide_to_tissue	2	identified_peptide_id	Identified Peptide ID	int	4	0	N		N	AT_identified_peptide	identified_peptide_id	Y				N	N				pkDEFAULT
-AT_peptide_to_tissue	3	sample_id	Sample ID	int	4	0	N		N	AT_glyco_sample	sample_id	Y				N	N				pkDEFAULT
+AT_predicted_peptide	2	predicted_peptide_sequence	Predicted Peptide Sequence	text	16	0	N		N			Y	text	50		Y	Y	N	Peptide Sequence Identified by MS/MS run		
+AT_predicted_peptide	3	predicted_peptide_mass	Predicted Peptide Mass	real	4	0	N		N			Y	text	50		Y	Y	N	Predicted Peptide Mass		
+AT_predicted_peptide	4	detection_probability	Detection Probability	real	4	0	N		N			Y	text	50		Y	Y	N	Probability that this peptide will be detected in a MS run		
+AT_predicted_peptide	5	number_proteins_match_peptide	Number of Proteins Matching Peptide	int	4	0	N		N			Y	text	10		N	N	Y	"Number of Proteins that match this protein, including the current protein"		
+AT_predicted_peptide	6	matching_protein_ids	IPI Protein Ids	text	16	0	N		N			Y	text	50		Y	Y	N	IPI accession numbers for all the proteins that contain this predicted peptide		
+AT_predicted_peptide	7	protein_similarity_score	Protein Similarity Score	real	4	0	N		N			Y	text	50		Y	Y	N	Smiliarity score for all the IPI proteins that match this peptide		
+AT_predicted_peptide	8	glyco_site_id	Glyco Site ID	int	4	0	N		N	AT_glyco_site	glyco_site_id					N	N				
+AT_predicted_peptide	9	predicted_start	Identified Peptide Start	int	4	0	N		N			Y	text	10		N	N	N	Start position of the peptide on the IPI protein		
+AT_predicted_peptide	10	predicted_stop	Identified  Peptide Stop	int	4	0	N		N			Y	text	10		N	N	N	Stop position of the peptide on the IPI protein		
+AT_identified_to_sample	1	identified_to_sample_id	Identified To Sample ID	int	4	0	N		Y							N	N				pkDEFAULT
+AT_identified_to_sample	2	identified_peptide_id	Identified Peptide ID	int	4	0	N		N	AT_identified_peptide	identified_peptide_id	Y				N	N				pkDEFAULT
+AT_identified_to_sample	3	sample_id	Sample ID	int	4	0	N		N	AT_glyco_sample	sample_id	Y				N	N				pkDEFAULT
 AT_sample_publication	1	sample_publication_id	Sample Publication ID	int	4	0	N		Y			Y				N	N	N			pkDEFAULT
 AT_sample_publication	2	sample_id	Sample ID	int	4	0	N		N	AT_sample	sample_id	Y				Y	N	Y			
 AT_sample_publication	3	publication_id	Publication ID	int	4	0	N		N	AT_publication	publication_id	Y				N	N	Y	Publication ID		
@@ -308,25 +305,28 @@ AT_glyco_sample	13	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIM
 AT_glyco_sample	14	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
 AT_glyco_sample	15	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 AT_glyco_sample	16	record_status	Record Status	char	1	0	N	N	N							N	N				
-AT_identified_to_ipi	1	identified_to_ipi	Identified to IPI ID	int	4	0	N		Y			Y				N	N	Y			
-AT_identified_to_ipi	2	identified_peptide_id	Identified peptide ID	int	4	0	N		N	AT_identified_peptide	identified_peptide_id	Y				N	N	Y			
-AT_identified_to_ipi	3	ipi_data_id	IPI Data ID	int	4	0	N		N	AT_ipi_data	ipi_data_id	Y				N	N	Y			
-AT_identified_to_ipi	4	identified_start	Identified Peptide Start	int	4	0	N		N			Y	text	10		N	N	N	Start position of the peptide on the IPI protein		
-AT_identified_to_ipi	5	identified_stop	Identified  Peptide Stop	int	4	0	N		N			Y	text	10		N	N	N	Stop position of the peptide on the IPI protein		
+AT_identified_to_glycosite	1	identified_to_glycosite_id	Identified to IPI ID	int	4	0	N		Y			Y				N	N	Y			
+AT_identified_to_glycosite	2	identified_peptide_id	Identified peptide ID	int	4	0	N		N	AT_identified_peptide	identified_peptide_id	Y				N	N	Y			
+AT_identified_to_glycosite	3	glyco_site_id	Glycosite ID	int	4	0	N		N	AT_glyco_site	glyco_site_id	Y				N	N	Y			
+AT_identified_to_glycosite	4	identified_start	Identified Peptide Start	int	4	0	N		N			Y	text	10		N	N	N	Start position of the peptide on the IPI protein		
+AT_identified_to_glycosite	5	identified_stop	Identified  Peptide Stop	int	4	0	N		N			Y	text	10		N	N	N	Stop position of the peptide on the IPI protein		
+AT_predicted_to_glycosite	1	predicted_to_glycosite_id	Predicted to glycosite ID	int	4	0	N		Y			Y				N	N	Y			
+AT_predicted_to_glycosite	2	predicted_peptide_id	Predicted peptide ID	int	4	0	N		N	AT_predicted_peptide	predicted_peptide_id	Y				N	N	Y			
+AT_predicted_to_glycosite	3	glyco_site_id	Glycosite ID	int	4	0	N		N	AT_glyco_site	glyco_site_id	Y				N	N	Y			
+AT_predicted_to_glycosite	4	predicted_start	Predicted Peptide Start	int	4	0	N		N			Y	text	10		N	N	N	Start position of the peptide on the IPI protein		
+AT_predicted_to_glycosite	5	predicted_stop	Predicted  Peptide Stop	int	4	0	N		N			Y	text	10		N	N	N	Stop position of the peptide on the IPI protein		
 AT_synthesized_peptide	1	synthesized_peptide_id	Synthesized Peptide ID	int	4	0	N		Y							N	N				pkDEFAULT
-AT_synthesized_peptide	2	peptide_name	Peptide Name	varchar	255	0	N		N			Y	text	2		Y	Y	Y	Name of this Sample		
-AT_synthesized_peptide	3	vendor_peptide_name	Vendor Peptide Name	varchar	255	0	Y		N			Y	text	2		Y	Y	Y	Name of this Sample		
-AT_synthesized_peptide	4	predicted_peptide_id	Predicted Peptide ID	int	4	0	Y		N	AT_predicted_peptide	predicted_peptide_id	Y				N	N	Y	ID of predicted peptide this peptide matches		
-AT_synthesized_peptide	5	synthesized_sequence	Synthesized Sequence	varchar	2000	0	Y		N			Y	text	50		Y	Y	N	Peptide Sequence as synthesized		
-AT_synthesized_peptide	6	predicted_sequence	Predicted Sequence	varchar	2000	0	Y		N			Y	text	50		Y	Y	N	Theoretical Peptide Sequence which this peptide matches
+AT_synthesized_peptide	2	glyco_site_id	Glyco Site ID	int	4	0	Y		N	AT_glyco_site	glyco_site_id					N	N		Glyco site index this peptide represents		
+AT_synthesized_peptide	3	peptide_name	Peptide Name	varchar	255	0	N		N			Y	text	2		Y	Y	Y	Name of this Sample		
+AT_synthesized_peptide	4	vendor_peptide_name	Vendor Peptide Name	varchar	255	0	Y		N			Y	text	2		Y	Y	Y	Name of this Sample
+AT_synthesized_peptide	5	synthesized_sequence	Synthesized Sequence	varchar	2000	0	Y		N			Y	text	50		Y	Y	N	Peptide Sequence as synthesized
+AT_synthesized_peptide	6	matching_sequence	Matching Sequence	varchar	2000	0	Y		N			Y	text	50		Y	Y	N	Theoretical Peptide Sequence which this peptide matches
 AT_synthesized_peptide	7	mass	Mass	real	4	0	Y		N			Y	text	50		Y	Y	N	Mass in daltons
 AT_synthesized_peptide	8	concentration	Concentration	real	4	0	Y		N			Y	text	50		Y	Y	N	Concentration in pm/ul
-AT_synthesized_peptide	9	glyco_site_id	Glyco Site ID	int	4	0	Y		N	AT_glyco_site	glyco_site_id					N	N		Glyco site index this peptide represents
-AT_synthesized_peptide	10	synthesized_by	Synthesized_by	int	4	0	Y		N	organization	organization_id	Y				Y	Y	N	Company synthesizing peptide
-AT_synthesized_peptide	11	ipi_data_id	IPI Data ID	int	4	0	Y		N	AT_ipi_data	ipi_data_id	Y				N	N	Y	IPI data ID for the protein this peptide was patterned after
-AT_synthesized_peptide	12	plate_position	Plate Position	varchar	36	0	Y		N			Y	text	2		Y	Y	Y	Plate position for synthesized peptide
-AT_synthesized_peptide	13	description	Description	varchar	1000	0	Y		N			Y	text	2		Y	Y	Y	Description of peptide (annotation)
-AT_synthesized_peptide	14	was_synthesized	Was Synthesized	char	1	0	Y		N			Y	text	2		Y	Y	Y	Was peptide synthesized
+AT_synthesized_peptide	9	synthesized_by	Synthesized_by	int	4	0	Y		N	organization	organization_id	Y				Y	Y	N	Company synthesizing peptide
+AT_synthesized_peptide	10	plate_position	Plate Position	varchar	36	0	Y		N			Y	text	2		Y	Y	Y	Plate position for synthesized peptide
+AT_synthesized_peptide	11	description	Description	varchar	1000	0	Y		N			Y	text	2		Y	Y	Y	Description of peptide (annotation)
+AT_synthesized_peptide	12	was_synthesized	Was Synthesized	char	1	0	Y		N			Y	text	2		Y	Y	Y	Was peptide synthesized
 AT_search_key	1	search_key_id	Search Key ID	int	4	0	N		Y										
 AT_search_key	2	search_key_name	Search Key Name	varchar	255	0	N		N										
 AT_search_key	3	search_key_type	Search Key Type	varchar	50	0	N		N										
