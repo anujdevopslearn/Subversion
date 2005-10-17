@@ -83,7 +83,7 @@ sub getProjectData {
 
   # SQL to determine which projects have data.
   my $sql =<<"  END_SQL";
-  SELECT COUNT(fraction_id) runs, COUNT(DISTINCT PE.experiment_id) exps , project_id 
+  SELECT COUNT(fraction_id) AS runs, COUNT(DISTINCT PE.experiment_id) AS exps , project_id 
   FROM $TBPR_PROTEOMICS_EXPERIMENT PE LEFT OUTER JOIN $TBPR_FRACTION F
     ON F.experiment_id = PE.experiment_id
 	WHERE project_id IN ( $projects )
