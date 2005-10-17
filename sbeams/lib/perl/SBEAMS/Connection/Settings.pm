@@ -87,6 +87,7 @@ require Exporter;
     %CONFIG_SETTING
     $SBEAMS_VERSION
 
+    extractInstanceParams
     );
 my @default = @EXPORT;
 #push @EXPORT, 'default';
@@ -140,79 +141,85 @@ if ( $SBEAMS_PATH =~ /\/(dev\d)\// ) {
 
 }
 
-
 #### Make sure that there are settings for this instance
 #print "DBINSTANCE = $DBINSTANCE\n";
 unless (defined($DBCONFIG->{$DBINSTANCE})) {
   die("Attempt to invoke non-existent dev instance $DBINSTANCE\n");
 }
 
+extractInstanceParams();
 
-#### Now that we've determined the instance, extract the relevant settings
+
+###############################################################################
+# extractInstanceParams
+#
+# Once db instance is determined, extract working settingss for all parameters
+# needed for db connection
+###############################################################################
+sub extractInstanceParams {
 #print Dumper($DBCONFIG->{$DBINSTANCE});
-$DBTITLE = $DBCONFIG->{$DBINSTANCE}->{DBTITLE};
-$DBVERSION = $DBCONFIG->{$DBINSTANCE}->{DBVERSION};
-$DBADMIN = $DBCONFIG->{$DBINSTANCE}->{DBADMIN};
-$BGCOLOR = $DBCONFIG->{$DBINSTANCE}->{BGCOLOR};
-$BARCOLOR = $DBCONFIG->{$DBINSTANCE}->{BARCOLOR};
-$HTML_BASE_DIR = $DBCONFIG->{$DBINSTANCE}->{HTML_BASE_DIR};
-$PHYSICAL_BASE_DIR = $DBCONFIG->{$DBINSTANCE}->{PHYSICAL_BASE_DIR};
-$UPLOAD_DIR = $DBCONFIG->{$DBINSTANCE}->{UPLOAD_DIR};
-$RESULTSET_DIR = $DBCONFIG->{$DBINSTANCE}->{RESULTSET_DIR} || 'tmp/queries'; #legacy
-$HOSTNAME = $DBCONFIG->{$DBINSTANCE}->{HOSTNAME};
-$CYTOSCAPE_URL = $DBCONFIG->{$DBINSTANCE}->{CYTOSCAPE_URL};
-%DBPREFIX = %{$DBCONFIG->{$DBINSTANCE}->{DBPREFIX}};
-%RAW_DATA_DIR = %{$DBCONFIG->{$DBINSTANCE}->{RAW_DATA_DIR}};
-$LOGGING_LEVEL = $DBCONFIG->{$DBINSTANCE}->{LOGGING_LEVEL};
-$LOG_BASE_DIR = $DBCONFIG->{$DBINSTANCE}->{LOG_BASE_DIR};
-$LOGIN_DURATION = $DBCONFIG->{$DBINSTANCE}->{LOGIN_DURATION};
-$SESSION_REAUTH = $DBCONFIG->{$DBINSTANCE}->{SESSION_REAUTH};
-$SMBAUTH = \%{$DBCONFIG->{$DBINSTANCE}->{SMBAUTH}};
+    $DBTITLE = $DBCONFIG->{$DBINSTANCE}->{DBTITLE};
+    $DBVERSION = $DBCONFIG->{$DBINSTANCE}->{DBVERSION};
+    $DBADMIN = $DBCONFIG->{$DBINSTANCE}->{DBADMIN};
+    $BGCOLOR = $DBCONFIG->{$DBINSTANCE}->{BGCOLOR};
+    $BARCOLOR = $DBCONFIG->{$DBINSTANCE}->{BARCOLOR};
+    $HTML_BASE_DIR = $DBCONFIG->{$DBINSTANCE}->{HTML_BASE_DIR};
+    $PHYSICAL_BASE_DIR = $DBCONFIG->{$DBINSTANCE}->{PHYSICAL_BASE_DIR};
+    $UPLOAD_DIR = $DBCONFIG->{$DBINSTANCE}->{UPLOAD_DIR};
+    $RESULTSET_DIR = $DBCONFIG->{$DBINSTANCE}->{RESULTSET_DIR} || 'tmp/queries'; #legacy
+    $HOSTNAME = $DBCONFIG->{$DBINSTANCE}->{HOSTNAME};
+    $CYTOSCAPE_URL = $DBCONFIG->{$DBINSTANCE}->{CYTOSCAPE_URL};
+    %DBPREFIX = %{$DBCONFIG->{$DBINSTANCE}->{DBPREFIX}};
+    %RAW_DATA_DIR = %{$DBCONFIG->{$DBINSTANCE}->{RAW_DATA_DIR}};
+    $LOGGING_LEVEL = $DBCONFIG->{$DBINSTANCE}->{LOGGING_LEVEL};
+    $LOG_BASE_DIR = $DBCONFIG->{$DBINSTANCE}->{LOG_BASE_DIR};
+    $LOGIN_DURATION = $DBCONFIG->{$DBINSTANCE}->{LOGIN_DURATION};
+    $SESSION_REAUTH = $DBCONFIG->{$DBINSTANCE}->{SESSION_REAUTH};
+    $SMBAUTH = \%{$DBCONFIG->{$DBINSTANCE}->{SMBAUTH}};
 
-my $config_setting = $DBCONFIG->{$DBINSTANCE}->{CONFIG_SETTING} || {};
-%CONFIG_SETTING = %{$config_setting};
+    my $config_setting = $DBCONFIG->{$DBINSTANCE}->{CONFIG_SETTING} || {};
+    %CONFIG_SETTING = %{$config_setting};
 
 # Translate relative paths to absolute.
-for my $arg ( $UPLOAD_DIR, $RESULTSET_DIR ) {
-  if ( $arg !~ /^\// ) {
-    my $delim = ($PHYSICAL_BASE_DIR =~ /\/$/) ? '' : '/'; 
-    $arg = $PHYSICAL_BASE_DIR . $delim . $arg;
-  }
-}
+    for my $arg ( $UPLOAD_DIR, $RESULTSET_DIR ) {
+	if ( $arg !~ /^\// ) {
+	    my $delim = ($PHYSICAL_BASE_DIR =~ /\/$/) ? '' : '/'; 
+	    $arg = $PHYSICAL_BASE_DIR . $delim . $arg;
+	}
+    }
 
 #### Determine what the BASE URL is: first pull out some environment variables
-my $_server_port = $ENV{SERVER_PORT} || "";
-my $_http_host = $ENV{HTTP_HOST} || "";
-my $_script_name = $ENV{SCRIPT_NAME} || "";
+    my $_server_port = $ENV{SERVER_PORT} || "";
+    my $_http_host = $ENV{HTTP_HOST} || "";
+    my $_script_name = $ENV{SCRIPT_NAME} || "";
 
 ### If a SERVER_PORT was defined, then build the BASE URL
-if ($_server_port) {
-  if ($_server_port eq '443') {
-    $SERVER_BASE_DIR = "https://";
-  } else {
-    $SERVER_BASE_DIR = "http://";
-  }
+    if ($_server_port) {
+	if ($_server_port eq '443') {
+	    $SERVER_BASE_DIR = "https://";
+	} else {
+	    $SERVER_BASE_DIR = "http://";
+	}
 
-  if ($_http_host) {
-    $SERVER_BASE_DIR .= $_http_host;
-  } else {
-    $SERVER_BASE_DIR .= $HOSTNAME;
-  }
+	if ($_http_host) {
+	    $SERVER_BASE_DIR .= $_http_host;
+	} else {
+	    $SERVER_BASE_DIR .= $HOSTNAME;
+	}
 
 #### Otherwise, we're probably not coming through HTTP, so just set it
-} else {
-  $SERVER_BASE_DIR = "http://$HOSTNAME";
-}
-
+    } else {
+	$SERVER_BASE_DIR = "http://$HOSTNAME";
+    }
 
 #### Set some additional settings which depend on version-specific parameters
-$DATA_DIR       = "$HTML_BASE_DIR/data";
-$CGI_BASE_DIR   = "$HTML_BASE_DIR/cgi";
-$OPTIONARROW    = "<P><IMG SRC=\"$HTML_BASE_DIR/images/yellow-arrow.gif\">&nbsp;";
-$LINESEPARATOR  = "<P><IMG SRC=\"$HTML_BASE_DIR/images/smalline.gif\">&nbsp;";
-$MESSAGE_WIDTH  = '350';
+    $DATA_DIR       = "$HTML_BASE_DIR/data";
+    $CGI_BASE_DIR   = "$HTML_BASE_DIR/cgi";
+    $OPTIONARROW    = "<P><IMG SRC=\"$HTML_BASE_DIR/images/yellow-arrow.gif\">&nbsp;";
+    $LINESEPARATOR  = "<P><IMG SRC=\"$HTML_BASE_DIR/images/smalline.gif\">&nbsp;";
+    $MESSAGE_WIDTH  = '350';
 
-
+}
 
 
 ###############################################################################

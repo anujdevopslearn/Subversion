@@ -188,93 +188,102 @@ require Exporter;
     $TBPR_PROTEOMICS_SAMPLE
     $TBPR_PROTEOMICS_SAMPLE_PROTOCOL
     $TBPR_EXPERIMENTS_SAMPLES
+
+    setProteomicsTableNamesForPerl
 );
 
+setProteomicsTableNamesForPerl();
+
+1;
+
+##############################################################################
+# setProteomicsTableNamesForPerl
+##############################################################################
+sub setProteomicsTableNamesForPerl {
 
 #### Get the appropriate database prefixes for the SBEAMS core and this module
-my $core = $DBPREFIX{Core};
-my $mod = $DBPREFIX{Proteomics};
-my $APD = $DBPREFIX{APD};
-my $BioLink = $DBPREFIX{BioLink};
+    my $core = $DBPREFIX{Core};
+    my $mod = $DBPREFIX{Proteomics};
+    my $APD = $DBPREFIX{APD};
+    my $BioLink = $DBPREFIX{BioLink};
 
 
-$TB_ORGANISM                      = "${core}organism";
-$TB_PROTOCOL			  = "${core}protocol";		
-$TB_PROTOCOL_TYPE		  = "${core}protocol_type";
+    $TB_ORGANISM                      = "${core}organism";
+    $TB_PROTOCOL		      = "${core}protocol";		
+    $TB_PROTOCOL_TYPE	              = "${core}protocol_type";
 
-$TBPR_BIOSEQUENCE_SET             = "${mod}biosequence_set";
-$TBPR_BIOSEQUENCE_ANNOTATION      = "${mod}biosequence_annotation";
-$TBPR_BIOSEQUENCE                 = "${mod}biosequence";
-$TBPR_BIOSEQUENCE_PROPERTY_SET    = "${mod}biosequence_property_set";
+    $TBPR_BIOSEQUENCE_SET             = "${mod}biosequence_set";
+    $TBPR_BIOSEQUENCE_ANNOTATION      = "${mod}biosequence_annotation";
+    $TBPR_BIOSEQUENCE                 = "${mod}biosequence";
+    $TBPR_BIOSEQUENCE_PROPERTY_SET    = "${mod}biosequence_property_set";
 
-$TBPR_PROTEOMICS_EXPERIMENT       = "${mod}proteomics_experiment";
-$TBPR_GRADIENT_PROGRAM            = "${mod}gradient_program";
-$TBPR_GRADIENT_DELTA              = "${mod}gradient_delta";
-$TBPR_FRACTIONATION_TYPE          = "${mod}fractionation_type";
-$TBPR_FRACTION                    = "${mod}fraction";
-$TBPR_SEARCH_BATCH                = "${mod}search_batch";
-$TBPR_SEARCH_BATCH_PARAMETER      = "${mod}search_batch_parameter";
-$TBPR_SEARCH_BATCH_PARAMETER_SET  = "${mod}search_batch_parameter_set";
-$TBPR_SEARCH                      = "${mod}search";
-$TBPR_SEARCH_HIT                  = "${mod}search_hit";
-$TBPR_SEARCH_HIT_PROTEIN          = "${mod}search_hit_protein";
-$TBPR_QUANTITATION                = "${mod}quantitation";
-$TBPR_MSMS_SPECTRUM               = "${mod}msms_spectrum";
-$TBPR_MSMS_SPECTRUM_PEAK          = "${mod}msms_spectrum_peak";
+    $TBPR_PROTEOMICS_EXPERIMENT       = "${mod}proteomics_experiment";
+    $TBPR_GRADIENT_PROGRAM            = "${mod}gradient_program";
+    $TBPR_GRADIENT_DELTA              = "${mod}gradient_delta";
+    $TBPR_FRACTIONATION_TYPE          = "${mod}fractionation_type";
+    $TBPR_FRACTION                    = "${mod}fraction";
+    $TBPR_SEARCH_BATCH                = "${mod}search_batch";
+    $TBPR_SEARCH_BATCH_PARAMETER      = "${mod}search_batch_parameter";
+    $TBPR_SEARCH_BATCH_PARAMETER_SET  = "${mod}search_batch_parameter_set";
+    $TBPR_SEARCH                      = "${mod}search";
+    $TBPR_SEARCH_HIT                  = "${mod}search_hit";
+    $TBPR_SEARCH_HIT_PROTEIN          = "${mod}search_hit_protein";
+    $TBPR_QUANTITATION                = "${mod}quantitation";
+    $TBPR_MSMS_SPECTRUM               = "${mod}msms_spectrum";
+    $TBPR_MSMS_SPECTRUM_PEAK          = "${mod}msms_spectrum_peak";
 
-$TBPR_SEARCH_HIT_ANNOTATION       = "${mod}search_hit_annotation";
-$TBPR_ANNOTATION_LABEL            = "${mod}annotation_label";
-$TBPR_ANNOTATION_CONFIDENCE       = "${mod}annotation_confidence";
-$TBPR_ANNOTATION_SOURCE           = "${mod}annotation_source";
-$TBPR_USER_ANNOTATION_LABEL       = "${mod}user_annotation_label";
-$TBPR_QUERY_OPTION                = "${mod}query_option";
+    $TBPR_SEARCH_HIT_ANNOTATION       = "${mod}search_hit_annotation";
+    $TBPR_ANNOTATION_LABEL            = "${mod}annotation_label";
+    $TBPR_ANNOTATION_CONFIDENCE       = "${mod}annotation_confidence";
+    $TBPR_ANNOTATION_SOURCE           = "${mod}annotation_source";
+    $TBPR_USER_ANNOTATION_LABEL       = "${mod}user_annotation_label";
+    $TBPR_QUERY_OPTION                = "${mod}query_option";
 
-$TBPR_PROTEOMICS_EXPERIMENT_REQUEST  = "${mod}proteomics_experiment_request";
-$TBPR_EXPERIMENT_TYPE             = "${mod}experiment_type";
-$TBPR_INSTRUMENT_TYPE             = "${mod}instrument_type";
-$TBPR_INSTRUMENT                  = "${mod}instrument";
-$TBPR_REQUEST_STATUS              = "${mod}request_status";
-$TBPR_FUNDING_STATUS              = "${mod}funding_status";
+    $TBPR_PROTEOMICS_EXPERIMENT_REQUEST  = "${mod}proteomics_experiment_request";
+    $TBPR_EXPERIMENT_TYPE             = "${mod}experiment_type";
+    $TBPR_INSTRUMENT_TYPE             = "${mod}instrument_type";
+    $TBPR_INSTRUMENT                  = "${mod}instrument";
+    $TBPR_REQUEST_STATUS              = "${mod}request_status";
+    $TBPR_FUNDING_STATUS              = "${mod}funding_status";
 
-$TBPR_PROCESSING_STATUS           = "${mod}processing_status";
-$TBPR_RAW_DATA_FILE               = "${mod}raw_data_file";
+    $TBPR_PROCESSING_STATUS           = "${mod}processing_status";
+    $TBPR_RAW_DATA_FILE               = "${mod}raw_data_file";
 
-$TBAPD_PEPTIDE_SUMMARY            = "${APD}peptide_summary";
-$TBAPD_PEPTIDE_SUMMARY_EXPERIMENT = "${APD}peptide_summary_experiment";
-$TBAPD_PEPTIDE_IDENTIFIER         = "${APD}peptide_identifier";
-$TBAPD_PEPTIDE                    = "${APD}aggregated_peptide";
-$TBAPD_MODIFIED_PEPTIDE           = "${APD}modified_peptide";
-$TBAPD_MODIFIED_PEPTIDE_PROPERTY  = "${APD}modified_peptide_property";
-$TBAPD_PEPTIDE_PROPERTY_TYPE      = "${APD}peptide_property_type";
+    $TBAPD_PEPTIDE_SUMMARY            = "${APD}peptide_summary";
+    $TBAPD_PEPTIDE_SUMMARY_EXPERIMENT = "${APD}peptide_summary_experiment";
+    $TBAPD_PEPTIDE_IDENTIFIER         = "${APD}peptide_identifier";
+    $TBAPD_PEPTIDE                    = "${APD}aggregated_peptide";
+    $TBAPD_MODIFIED_PEPTIDE           = "${APD}modified_peptide";
+    $TBAPD_MODIFIED_PEPTIDE_PROPERTY  = "${APD}modified_peptide_property";
+    $TBAPD_PEPTIDE_PROPERTY_TYPE      = "${APD}peptide_property_type";
 
-$TBPR_POSSIBLE_PEPTIDE            = "${mod}possible_peptide";
+    $TBPR_POSSIBLE_PEPTIDE            = "${mod}possible_peptide";
 
-$TBPR_PUBLICATION_CATEGORY        = "${mod}publication_category";
-$TBPR_PUBLICATION_RATING          = "${mod}publication_rating";
-$TBPR_PUBLICATION                 = "${mod}publication";
+    $TBPR_PUBLICATION_CATEGORY        = "${mod}publication_category";
+    $TBPR_PUBLICATION_RATING          = "${mod}publication_rating";
+    $TBPR_PUBLICATION                 = "${mod}publication";
 
-$TBPR_SEARCH_BATCH_PROTEIN_SUMMARY= "${mod}search_batch_protein_summary";
-$TBPR_PROTEIN_SUMMARY             = "${mod}protein_summary";
-$TBPR_PROTEIN_SUMMARY_HEADER      = "${mod}protein_summary_header";
-$TBPR_PROTEIN_SUMMARY_DATA_FILTER = "${mod}protein_summary_data_filter";
-$TBPR_PROTEIN_GROUP               = "${mod}protein_group";
-$TBPR_PROTEIN                     = "${mod}protein";
-$TBPR_INDISTINGUISHABLE_PROTEIN   = "${mod}indistinguishable_protein";
-$TBPR_PEPTIDE                     = "${mod}peptide";
-$TBPR_PEPTIDE_PARENT_PROTEIN      = "${mod}peptide_parent_protein";
-$TBPR_INDISTINGUISHABLE_PEPTIDE   = "${mod}indistinguishable_peptide";
-$TBPR_SUMMARY_QUANTITATION        = "${mod}summary_quantitation";
+    $TBPR_SEARCH_BATCH_PROTEIN_SUMMARY= "${mod}search_batch_protein_summary";
+    $TBPR_PROTEIN_SUMMARY             = "${mod}protein_summary";
+    $TBPR_PROTEIN_SUMMARY_HEADER      = "${mod}protein_summary_header";
+    $TBPR_PROTEIN_SUMMARY_DATA_FILTER = "${mod}protein_summary_data_filter";
+    $TBPR_PROTEIN_GROUP               = "${mod}protein_group";
+    $TBPR_PROTEIN                     = "${mod}protein";
+    $TBPR_INDISTINGUISHABLE_PROTEIN   = "${mod}indistinguishable_protein";
+    $TBPR_PEPTIDE                     = "${mod}peptide";
+    $TBPR_PEPTIDE_PARENT_PROTEIN      = "${mod}peptide_parent_protein";
+    $TBPR_INDISTINGUISHABLE_PEPTIDE   = "${mod}indistinguishable_peptide";
+    $TBPR_SUMMARY_QUANTITATION        = "${mod}summary_quantitation";
 
-$TBBL_GENE_ANNOTATION             = "${BioLink}gene_annotation";
-$TBPR_BIOSEQUENCE_ANNOTATED_GENE  = "${mod}biosequence_annotated_gene";
+    $TBBL_GENE_ANNOTATION             = "${BioLink}gene_annotation";
+    $TBPR_BIOSEQUENCE_ANNOTATED_GENE  = "${mod}biosequence_annotated_gene";
 
-$TBBL_POLYMER_TYPE                = "${BioLink}polymer_type";
+    $TBBL_POLYMER_TYPE                = "${BioLink}polymer_type";
 
-$TBPR_NSP_INFORMATION             = "${mod}nsp_information";
-$TBPR_NSP_DISTRIBUTION            = "${mod}nsp_distribution";
+    $TBPR_NSP_INFORMATION             = "${mod}nsp_information";
+    $TBPR_NSP_DISTRIBUTION            = "${mod}nsp_distribution";
 
-$TBPR_PROTEOMICS_SAMPLE		  = "${mod}proteomics_sample";
-$TBPR_PROTEOMICS_SAMPLE_PROTOCOL  = "${mod}proteomics_sample_protocol";
-$TBPR_EXPERIMENTS_SAMPLES		  = "${mod}experiments_samples";
-
-
+    $TBPR_PROTEOMICS_SAMPLE	      = "${mod}proteomics_sample";
+    $TBPR_PROTEOMICS_SAMPLE_PROTOCOL  = "${mod}proteomics_sample_protocol";
+    $TBPR_EXPERIMENTS_SAMPLES	      = "${mod}experiments_samples";
+}
