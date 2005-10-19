@@ -121,7 +121,10 @@ $DBCONFIG = readMainConfFile();
 
 #### Set instance-specific parameters
 $SBEAMS_PATH = $DBCONFIG->{__SOURCE_FILE};
-if ( $SBEAMS_PATH =~ /\/(dev\d)\// ) {
+if ( $ENV{SBEAMS_DBINSTANCE} ) {
+  $DBINSTANCE = $ENV{SBEAMS_DBINSTANCE};
+
+} elsif ( $SBEAMS_PATH =~ /\/(dev\d)\// ) {
   $DBINSTANCE = $1;
 
 } elsif ( $SBEAMS_PATH =~ /\/(dev[A-Z][A-Z])\// ) {
