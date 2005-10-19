@@ -683,6 +683,42 @@ sub do {
   return $status;
 }
 
+###
+#+
+# selectrow_hashref
+#
+# Thinly wrapped dbh->selectrow_hashref call
+#-
+sub selectrow_hashref {
+  my $self = shift || croak("parameter self not passed");
+  my $sql = shift || croak("parameter sql not passed");
+
+  #### Get the database handle
+  $dbh = $self->getDBHandle();
+
+  #### Convert the SQL dialect if necessary
+  $sql = $self->translateSQL( sql => $sql );
+
+  my $cursor;
+
+  eval {
+    $cursor = $dbh->selectrow_hashref( $sql );
+  };
+  if ( $@ ) {
+    my $msg =<<"    END";
+    Error executing SQL: $@
+    SQL causing error: $sql
+    END
+    $log->error( $msg );
+    die $msg;
+  }
+  return $cursor;
+}
+
+
+###
+
+
 #+
 # selectrow_array
 #
@@ -2381,8 +2417,13 @@ sub fetchResultSet {
     #### Execute the query
     $sth = $dbh->prepare("$sql_query") ||
       croak("Unable to prepare query:\n".$dbh->errstr);
-    my $rv  = $sth->execute ||
+
+    my $rv  = $sth->execute;
+    unless ( $rv ) {
+      $log->error( "Execute failed on SQL:\n $sql_query" );
+      $log->printStack();
       croak("Unable to execute query: $sql_query \n".$dbh->errstr);
+    }
 
 
     #### Update timing info
