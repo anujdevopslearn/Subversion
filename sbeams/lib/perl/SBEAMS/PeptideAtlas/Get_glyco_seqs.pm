@@ -834,8 +834,24 @@ sub predicted_pep_html{
     my $method = 'predicted_pep_html';
     my $self = shift;
 	my $features_aref = shift;
+	my $synth = ( $sbeams->isGuestUser() ) ? '' : $q->td("Synthesized Peptide" );
 	
-	my $foo =<<END;
+	my $html  = "<table>";
+	$html .= $q->Tr({class=>'rev_gray'},
+			       $q->td( $self->linkToColumnText(
+			       				display => "NXS/T<br>Location",
+								title   =>"Glyco Site Location within the protein", 
+								column  =>"protein_glyco_site_position", 
+								table   => "AT_glyco_site" )
+					         ),
+			        $q->td("Predicted Sequence"),
+			     	
+			     	$q->td("Predicted Mass"),
+			     	$q->td("Number Proteins<br>with Peptide"),
+            $synth
+			     );
+
+my $foo=<<'  END';
 			     	$q->td($self->linkToColumnText(
 			       				display => "NXS/T Score",
 								title   => "Likelihood of NXS/T sequon", 
@@ -843,31 +859,13 @@ sub predicted_pep_html{
 								table   => "AT_glyco_site" ,
 								),
 					),
-END
-
-	my $html  = "<table>";
-	$html .= $q->Tr({class=>'rev_gray'},
-			       $q->td( $self->linkToColumnText(
-			       				display => "NXS/T<br>Location",
-								title   =>"Glyco Site Location within the protein", 
-								column  =>"protein_glyco_site_position", 
-								table   => "AT_glyco_site" 
-								)
 					),
-			        $q->td("Predicted Sequence"),
 			     	  $q->td($self->linkToColumnText(
 			     			display => "Detection Probability",
 								title   => "Likelihoop of detecting peptide in MS", 
 								column  => "detection_probability", 
 								table   => "AT_predicted_peptide", 
 								),
-					),
-			     	
-			     	$q->td("Predicted Mass"),
-			     	$q->td("Number Proteins<br>with Peptide"),
-			     );
-
-my $foo=<<'  END';
   END
 	
 	foreach my $f (@{$features_aref}){
@@ -886,6 +884,7 @@ my $foo=<<'  END';
 		my $predicted_mass = 0;
 		my $glyco_score = 0;
 		my $protein_glyco_site = 1;		
+		my $synthesized_seq = '';		
 		
 		
 		if ($f->has_tag('Peptide_seq_obj')){
@@ -919,6 +918,13 @@ my $foo=<<'  END';
 									 anno_type => 'predicted_mass');
 			$protein_sim = $self->get_annotation(seq_obj =>$pep_seq_obj, 
 									 anno_type => 'protein_similarity_score');
+			$synthesized_seq = $self->get_annotation( seq_obj =>$pep_seq_obj, 
+									                        anno_type => 'synthesized_seq');
+      use Data::Dumper;
+      my $dump = Dumper( $feature_href );
+      $dump =~ s/\n/\<BR\>/g;
+#      print $dump;
+#      exit;
 					
 		}
 ## Detmine what to do with the number of other protein database hits
@@ -935,13 +941,16 @@ my $foo=<<'  END';
 		 $html .= $q->Tr(
 				$q->td($protein_glyco_site),
 				$q->td("$first_aa.$html_seq.$end_aa"),
-				$q->td({align=>'center'},$detection_prop),
 				$q->td({align=>'center'},$predicted_mass),
 				$q->td({align=>'center'},$hit_link),
+				$q->td({align=>'center'},$synthesized_seq),
 				
 			     );
 
 		}
+    my $excess =<<'      END';
+				$q->td({align=>'center'},$detection_prop),
+      END
 	$html .= "</table>";
 	return $html;
 }
