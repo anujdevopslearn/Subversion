@@ -255,8 +255,8 @@ sub get_predicted_peptides{
 	confess(__PACKAGE__ . "::$method ipi_data_id '$ipi_data_id' is not good  \n") unless $ipi_data_id  ; 
 	my $sql = qq~
 				SELECT 
-				predicted_peptide_id,
-				predicted_peptide_sequence,
+				pp.predicted_peptide_id,
+				pp.predicted_peptide_sequence,
 				predicted_peptide_mass,
 				detection_probability,
 				number_proteins_match_peptide,
@@ -265,9 +265,12 @@ sub get_predicted_peptides{
 				protein_similarity_score,
 				gs.glyco_score,
 				gs.protein_glyco_site_position,
-				predicted_stop 
+				predicted_stop, 
+        synthesized_sequence
 				FROM $TBAT_PREDICTED_PEPTIDE pp
 				JOIN $TBAT_GLYCO_SITE gs ON (gs.glyco_site_id = pp.glyco_site_id)
+				LEFT JOIN $TBAT_SYNTHESIZED_PEPTIDE sp 
+         ON (sp.glyco_site_id = pp.glyco_site_id AND sp.ipi_data_id = $ipi_data_id)
 				WHERE pp.ipi_data_id = $ipi_data_id
 				~;
 	
@@ -296,9 +299,9 @@ sub get_identified_peptides{
 				identified_start,
 				identified_stop 
 				FROM $TBAT_IDENTIFIED_PEPTIDE id
-				JOIN $TBAT_GLYCO_SITE gs ON (gs.glyco_site_id = id.glyco_site_id)
         JOIN $TBAT_IDENTIFIED_TO_IPI iti 
           ON iti.identified_peptide_id = id.identified_peptide_id
+				JOIN $TBAT_GLYCO_SITE gs ON (gs.glyco_site_id = iti.glyco_site_id)
 				WHERE iti.ipi_data_id = $ipi_data_id
 				~;
 	
