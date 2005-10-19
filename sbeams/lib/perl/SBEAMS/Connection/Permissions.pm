@@ -1496,8 +1496,13 @@ sub getMin {
 sub isGuestUser {
   my $sbeams = shift;
   my $currID =  $sbeams->getCurrent_contact_id();
+  my $username =  $sbeams->getCurrent_username();
+
   if ( !defined $currID ) {
     return undef;
+  } elsif ( $username eq 'guest' ) {
+    $log->debug( "Returning guest mode due to username" );
+    return 1;
   } elsif ( $currID == 107 ) {
     return 1;
   } else { 
