@@ -26,6 +26,7 @@ require Exporter;
 $VERSION = q[$Id$];
 @EXPORT_OK = qw();
 
+use SBEAMS::Connection::Tables;
 use SBEAMS::PeptideAtlas::Tables;
 
 
@@ -55,9 +56,9 @@ sub setSBEAMS {
     $sbeams = shift;
     return($sbeams);
 } # end setSBEAMS
- 
- 
- 
+
+
+
 ###############################################################################
 # getSBEAMS: Provide the main SBEAMS object
 ###############################################################################
@@ -229,14 +230,14 @@ sub buildGoaKeyIndex {
 
     if ($Database and $Accession) {
       $Database = 'UniProt' if ($Database eq 'SP');
-      my @tmp = ($Database,$Accession);
+      my @tmp = ($Database,$Accession,40);
       push(@links,\@tmp);
     }
 
     if ($IPI) {
       my @list = splitEntities($IPI);
       foreach my $item ( @list ) {
-        my @tmp = ('IPI',$item);
+        my @tmp = ('IPI',$item,9);
         push(@links,\@tmp);
       }
     }
@@ -244,7 +245,7 @@ sub buildGoaKeyIndex {
     if ($UniProtTR) {
       my @list = splitEntities($UniProtTR);
       foreach my $item ( @list ) {
-        my @tmp = ('UniProt/TrEMBL',$item);
+        my @tmp = ('UniProt/TrEMBL',$item,35);
         push(@links,\@tmp);
       }
     }
@@ -252,7 +253,7 @@ sub buildGoaKeyIndex {
     if ($RefSeqNP) {
       my @list = splitEntities($RefSeqNP);
       foreach my $item ( @list ) {
-        my @tmp = ('RefSeq',$item);
+        my @tmp = ('RefSeq',$item,39);
         push(@links,\@tmp);
       }
     }
@@ -260,7 +261,7 @@ sub buildGoaKeyIndex {
     if ($RefSeqXP) {
       my @list = splitEntities($RefSeqXP);
       foreach my $item ( @list ) {
-        my @tmp = ('RefSeq',$item);
+        my @tmp = ('RefSeq',$item,39);
         push(@links,\@tmp);
       }
     }
@@ -269,9 +270,9 @@ sub buildGoaKeyIndex {
       my @list = splitEntities($EntrezGene);
       foreach my $item ( @list ) {
         my @pair = split(/,/,$item);
-        my @tmp = ('Entrez GeneID',$pair[0]);
+        my @tmp = ('Entrez GeneID',$pair[0],37);
         push(@links,\@tmp);
-        my @tmp2 = ('Entrez Gene Symbol',$pair[1]);
+        my @tmp2 = ('Entrez Gene Symbol',$pair[1],38);
         push(@links,\@tmp2);
       }
     }
@@ -288,7 +289,7 @@ sub buildGoaKeyIndex {
     my $handle = "$Database:$Accession";
     if ($associations->{$handle}) {
       if ($associations->{$handle}->{Symbol}) {
-        my @tmp = ('UniProt Symbol',$associations->{$handle}->{Symbol});
+        my @tmp = ('UniProt Symbol',$associations->{$handle}->{Symbol},35);
         push(@links,\@tmp);
       }
       if ($associations->{$handle}->{DB_Object_Name}) {
@@ -305,6 +306,7 @@ sub buildGoaKeyIndex {
       my %rowdata = (
         search_key_name => $Ensembl_ID,
         search_key_type => 'Ensembl Protein',
+        search_key_dbxref_id => 20,
         resource_name => $Ensembl_ID,
         resource_type => 'Ensembl Protein',
         resource_url => "GetProtein?atlas_build_id=70&protein_name=$Ensembl_ID&action=QUERY",
@@ -322,6 +324,7 @@ sub buildGoaKeyIndex {
         my %rowdata = (
           search_key_name => $link->[1],
 	  search_key_type => $link->[0],
+	  search_key_dbxref_id => $link->[2],
 	  resource_name => $Ensembl_ID,
 	  resource_type => 'Ensembl Protein',
 	  resource_url => "GetProtein?atlas_build_id=70&protein_name=$Ensembl_ID&action=QUERY",
@@ -485,6 +488,35 @@ sub buildPeptideKeyIndex {
   return(1);
 
 } # end buildPeptideKeyIndex
+
+
+
+###############################################################################
+# getProteinSynonyms
+###############################################################################
+sub getProteinSynonyms {
+  my $METHOD = 'getProteinSynonyms';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+
+  my $resource_name = $args{resource_name} || return;
+
+
+  #### Get all the peptides in the database, regardless of build
+  my $sql = qq~
+       SELECT search_key_name,search_key_type,accessor,accessor_suffix
+         FROM $TBAT_SEARCH_KEY SK
+         LEFT JOIN $TB_DBXREF D
+              ON ( SK.search_key_dbxref_id = D.dbxref_id )
+        WHERE resource_name = '$resource_name'
+        ORDER BY search_key_type,search_key_name
+  ~;
+  my @synonyms = $sbeams->selectSeveralColumns($sql);
+
+  return @synonyms;
+
+} # end getProteinSynonyms
+
 
 
 
