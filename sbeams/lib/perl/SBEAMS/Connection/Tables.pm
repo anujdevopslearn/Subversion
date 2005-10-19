@@ -62,6 +62,7 @@ use vars qw(@ISA @EXPORT
     $TB_TEST_SAMPLE_PROTOCOL
 );
 
+
 require Exporter;
 @ISA = qw (Exporter);
 
@@ -105,64 +106,59 @@ require Exporter;
     $TB_TEST_SAMPLE
     $TB_TEST_SAMPLE_PROTOCOL
 
-    setCoreTableNamesForPerl
 );
 
-setCoreTableNamesForPerl();
-
-1;
-
-##############################################################################
-# setCoreTableNamesForPerl
-##############################################################################
-sub setCoreTableNamesForPerl {
-
-#### Get the appropriate database prefixes for the SBEAMS core and this module
-    my $core = $DBPREFIX{Core};
 
 
-    $TB_USER_LOGIN          = "${core}user_login";
-    $TB_WORK_GROUP          = "${core}work_group";
-    $TB_USER_WORK_GROUP     = "${core}user_work_group";
-    $TB_USER_CONTEXT        = "${core}user_context";
-    $TB_RECORD_STATUS       = "${core}record_status";
-    $TB_PRIVILEGE           = "${core}privilege";
-    $TB_CONTACT_TYPE        = "${core}contact_type";
-    $TB_CONTACT             = "${core}contact";
-    $TB_ORGANIZATION_TYPE   = "${core}organization_type";
-    $TB_ORGANIZATION        = "${core}organization";
-    $TB_PROJECT             = "${core}project";
-    $TB_USER_PROJECT_PERMISSION     = "${core}user_project_permission";
-    $TB_GROUP_PROJECT_PERMISSION    = "${core}group_project_permission";
+#### Get the appropriate database prefix for the SBEAMS core
+my $core = $DBPREFIX{Core};
 
-    $TB_DBXREF              = $DBPREFIX{BioLink}."dbxref";
-    $TB_ORGANISM            = "${core}organism";
 
-    $TB_TABLE_COLUMN        = "${core}table_column";
-    $TB_TABLE_PROPERTY      = "${core}table_property";
-    $TB_TABLE_GROUP_SECURITY= "${core}table_group_security";
-    $TB_SQL_COMMAND_LOG     = "${core}sql_command_log";
-    $TB_USAGE_LOG           = "${core}usage_log";
-    $TB_HELP_TEXT           = "${core}help_text";
-    $TB_MISC_OPTION         = "${core}misc_option";
-    $TB_QUERY_OPTION        = "${core}query_option";
-    $TB_CACHED_RESULTSET    = "${core}cached_resultset";
-    $TB_FORM_TEMPLATE       = "${core}form_template";
-    $TB_SOFTWARE_HARDWARE_PROTOCOL = "${core}software_hardware_protocol";
-    $TB_SHORT_URL           = "${core}short_url";
+#### Define the physical table names
+$TB_USER_LOGIN          = "${core}user_login";
+$TB_WORK_GROUP          = "${core}work_group";
+$TB_USER_WORK_GROUP     = "${core}user_work_group";
+$TB_USER_CONTEXT        = "${core}user_context";
+$TB_RECORD_STATUS       = "${core}record_status";
+$TB_PRIVILEGE           = "${core}privilege";
+$TB_CONTACT_TYPE        = "${core}contact_type";
+$TB_CONTACT             = "${core}contact";
+$TB_ORGANIZATION_TYPE   = "${core}organization_type";
+$TB_ORGANIZATION        = "${core}organization";
+$TB_PROJECT             = "${core}project";
+$TB_USER_PROJECT_PERMISSION     = "${core}user_project_permission";
+$TB_GROUP_PROJECT_PERMISSION    = "${core}group_project_permission";
 
-    $TB_MGED_ONTOLOGY_RELATIONSHIP  = $DBPREFIX{BioLink}."MGEDOntologyRelationship";
-    $TB_MGED_ONTOLOGY_TERM          = $DBPREFIX{BioLink}."MGEDOntologyTerm";
-    $TB_ONTOLOGY_RELATIONSHIP_TYPE  = $DBPREFIX{BioLink}."OntologyRelationshipType";
-    $TB_ONTOLOGY_TERM_TYPE          = $DBPREFIX{BioLink}."OntologyTermType";
+$TB_DBXREF              = $DBPREFIX{BioLink}."dbxref";
+$TB_ORGANISM            = "${core}organism";
 
-    $TB_TEST_PROTOCOL               = ${core}."test_protocol";
-    $TB_TEST_SAMPLE                 = ${core}."test_sample";
-    $TB_TEST_SAMPLE_PROTOCOL        = ${core}."test_sample_protocol";
+$TB_TABLE_COLUMN        = "${core}table_column";
+$TB_TABLE_PROPERTY      = "${core}table_property";
+$TB_TABLE_GROUP_SECURITY= "${core}table_group_security";
+$TB_SQL_COMMAND_LOG     = "${core}sql_command_log";
+$TB_USAGE_LOG           = "${core}usage_log";
+$TB_HELP_TEXT           = "${core}help_text";
+$TB_MISC_OPTION         = "${core}misc_option";
+$TB_QUERY_OPTION        = "${core}query_option";
+$TB_CACHED_RESULTSET    = "${core}cached_resultset";
+$TB_FORM_TEMPLATE       = "${core}form_template";
+$TB_SOFTWARE_HARDWARE_PROTOCOL = "${core}software_hardware_protocol";
+$TB_SHORT_URL           = "${core}short_url";
 
-}
+$TB_MGED_ONTOLOGY_RELATIONSHIP  = $DBPREFIX{BioLink}."MGEDOntologyRelationship";
+$TB_MGED_ONTOLOGY_TERM          = $DBPREFIX{BioLink}."MGEDOntologyTerm";
+$TB_ONTOLOGY_RELATIONSHIP_TYPE  = $DBPREFIX{BioLink}."OntologyRelationshipType";
+$TB_ONTOLOGY_TERM_TYPE          = $DBPREFIX{BioLink}."OntologyTermType";
+
+$TB_TEST_PROTOCOL               = ${core}."test_protocol";
+$TB_TEST_SAMPLE                 = ${core}."test_sample";
+$TB_TEST_SAMPLE_PROTOCOL        = ${core}."test_sample_protocol";
+
+
 
 ###############################################################################
+
+1;
 
 __END__
 
