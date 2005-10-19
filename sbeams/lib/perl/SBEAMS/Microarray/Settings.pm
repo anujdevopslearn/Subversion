@@ -50,7 +50,8 @@ my $affy_file_types = $CONFIG_SETTING{MA_AFFY_DEFAULT_FILES} || '';
 
 # Convert any relative paths to absolute paths
 for my $k qw(MA_LOG_BASE_DIR MA_AFFY_PROBE_DIR MA_BIOC_DELIVERY_PATH
-             MA_ANNOTATION_OUT_PATH MA_AFFY_TMP_DIR MA_AFFY_ZIP_REQUEST_DIR) {
+             MA_ANNOTATION_OUT_PATH MA_AFFY_TMP_DIR MA_AFFY_ZIP_REQUEST_DIR
+             MA_AFFY_ANNOTATION_PATH ) {
   next unless defined $CONFIG_SETTING{$k};
   if ( $CONFIG_SETTING{$k} !~ /^\// ) {
     my $delim = ($PHYSICAL_BASE_DIR =~ /\/$/) ? '' : '/';
@@ -301,10 +302,10 @@ sub set_ZIP_REQUEST_DIR {
 # Utility method to return path to affy annotation files.
 #-
 sub get_affy_annotation_path {
-    
-   return $CONFIG_SETTING{MA_AFFY_ANNOTATION_PATH} || 
-          "$PHYSICAL_BASE_DIR/var/Microarray/Affy_data/annotation";
-
+  my $apath = $CONFIG_SETTING{MA_AFFY_ANNOTATION_PATH} || '';
+  # Trim trailing spaces
+  $apath =~ s/\s+$//g;
+  return $apath || "$PHYSICAL_BASE_DIR/var/Microarray/Affy_data/annotation";
 }
 
 #######################################################
