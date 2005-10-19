@@ -20,81 +20,87 @@
 
 use strict;
 use FindBin qw ( $Bin );
-use lib( "$Bin/../.." );         # path to SBEAMS directory
+use lib( "$Bin/../.." );         # path to $SBEAMS/lib/perl directory
 use Test::More;
 
-my @args;
 
+###############################################################################
+# BEGIN
+###############################################################################
 BEGIN {
-#    print "ARGV = @ARGV\n";
-    @args = @ARGV;
-    if ( ! ( @args ) ) {
-	@args = ( 'dev1' );
-    }
-    plan tests => 5 + @args;
+    plan tests => 6;
     use_ok( 'SBEAMS::Connection' );
     use_ok( 'SBEAMS::Connection::Settings' );
     use_ok( 'SBEAMS::Connection::Tables' );
-    use_ok( 'SBEAMS::Proteomics' );
-    use_ok( 'SBEAMS::Proteomics::Tables' );
-#    print "Before the script, there was ... BEGIN\n";
 } # end BEGIN
+
+
+###############################################################################
+# END
+###############################################################################
 END {
     breakdown();
 } # end END
 
-my @project_ids = ( 1, 2, 3 );   # dummy list of project ids
-use vars qw ( $sbeams $prot );   # for instantiating Connection and
-                                 # Proteomics objects
- 
-$sbeams = SBEAMS::Connection->new() ||
-    die "Couldn't create new Connection object\n";
-$prot = SBEAMS::Proteomics->new() ||
-    die "Couldn't create new Proteomics object\n";
-$prot->setSBEAMS( $sbeams );     # set main SBEAMS object
 
-foreach my $instance ( @args ) {      # process each db instance
-    if ( ! defined ( $DBCONFIG->{ $instance } ) ) {
-	print "\nInstance $instance is not defined in SBEAMS.conf.\n";
-	next;
-    }
-    $DBINSTANCE = $instance;          # set global db instance value for use
-                                      #      with $DBCONFIG
-    extractInstanceParams;            # call on Connection::Settings to update
-                                      #      db instance parameters 
-    
-    print "\n#####################################################################\n";
-    print "\nTesting instance $DBINSTANCE at DB_SERVER = " .
-	"$DBCONFIG->{ $DBINSTANCE }->{ DB_SERVER }, " .
-	"DB_DATABASE = $DBCONFIG->{ $DBINSTANCE }->{ DB_DATABASE }\n\n";
+###############################################################################
+# MAIN
+###############################################################################
+use vars qw ( $sbeams );   # Main SBEAMS Connection object
 
-    eval { $sbeams->setNewDBHandle(); };        # force refresh of db handle to new instance
+ok($sbeams = SBEAMS::Connection->new(),"create main SBEAMS object");
 
-    # update db table names to correct values for this db instance
-    setCoreTableNamesForPerl;                   # call on Connection::Tables
-    setProteomicsTableNamesForPerl;             # call on Proteomics::Tables
+#### Authenticate the current user
+my $current_username;
+ok($current_username = $sbeams->Authenticate(
+			 permitted_work_groups_ref=>['Admin'],
+			 #connect_read_only=>1,
+			),"Authenticate current user");
 
-    ok( callProteomicsPm(), 'called Proteomics.pm getProjectData' );
-    if ( $@ ) {
-	print "$@\n";
-    }
-    #######################################################
-    # place additional calls to modules containing SQL here
-    #######################################################
+
+#######################################################
+# Test individal methods here
+#######################################################
+
+ok(testSimpleStringColumnConcat(),"Simple varchar column concatenation");
+
+
+
+
+
+
+
+###############################################################################
+# testSimpleStringColumnConcat
+###############################################################################
+sub testSimpleStringColumnConcat {
+
+  my $sql = qq~
+SELECT first_name+' '+last_name
+  FROM $TB_CONTACT
+  ~;
+
+  my @contacts = $sbeams->selectOneColumn($sql);
+
+  if (defined(@contacts) && scalar(@contacts)>5 &&
+      grep('Homo sapiens',@contacts)) {
+    diag("Returned ".scalar(@contacts)." rows");
+    return(1);
+  }
+
+  return(0);
 }
 
-print "\n";
 
-sub callProteomicsPm {                # make direct call to method containing SQL
-    eval {
-	$prot->getProjectData( projects => \@project_ids );
-    };
-    $@ ? return ( 0 ) : return ( 1 );
-}
 
+###############################################################################
+# breakdown
+###############################################################################
 sub breakdown {
 #    print "After the script, there was ... END\n\n";
 }
+
+
 
 ################################################################################
 
