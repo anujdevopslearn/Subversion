@@ -43,6 +43,9 @@ $sbeamsMOD = new SBEAMS::PeptideAtlas;
 $sbeamsMOD->setSBEAMS($sbeams);
 $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 
+use SBEAMS::PeptideAtlas::KeySearch;
+my $keySearch = new SBEAMS::PeptideAtlas::KeySearch;
+$keySearch->setSBEAMS($sbeams);
 
 
 ###############################################################################
@@ -464,35 +467,92 @@ sub handle_request {
 
   #### Print out a summary of the protein
   if ($sbeams->output_mode() eq 'html') {
+    my $section_header = $sbeamsMOD->encodeSectionHeader(
+      text=>$biosequence->{biosequence_name},
+    );
+
     print qq~
       <TABLE width="600">
-        <TR><TD colspan="2" background="$HTML_BASE_DIR/images/fade_orange_header_2.png" width="600"><font color="white">$biosequence->{biosequence_name}</font></TD></TR>
-        <TR><TD NOWRAP bgcolor="cccccc">Protein Name</TD><TD bgcolor="cccccc">$biosequence->{biosequence_name}</TD></TR>
-        <TR><TD NOWRAP bgcolor="cccccc">Gene Name</TD><TD bgcolor="cccccc">$biosequence->{biosequence_gene_name}</TD></TR>
-        <TR><TD bgcolor="cccccc">Accession</TD><TD bgcolor="cccccc"><A HREF="$biosequence->{accessor}$biosequence->{biosequence_accession}$biosequence->{accessor_suffix}" target="_blank">$biosequence->{biosequence_accession}</A></TD></TR>
-        <TR><TD bgcolor="cccccc">Description</TD><TD bgcolor="cccccc">$biosequence->{biosequence_desc}</TD></TR>
+        $section_header
+    ~;
+    print $sbeamsMOD->encodeSectionItem(
+      key=>'Protein Name',
+      value=>$biosequence->{biosequence_name},
+      url=>"$biosequence->{accessor}$biosequence->{biosequence_accession}$biosequence->{accessor_suffix}",
+    );
+
+    print $sbeamsMOD->encodeSectionItem(
+      key=>'Gene Name',
+      value=>$biosequence->{biosequence_gene_name},
+    );
+
+    print $sbeamsMOD->encodeSectionItem(
+      key=>'Description',
+      value=>$biosequence->{biosequence_desc},
+    );
+
+    my @synonyms = $keySearch->getProteinSynonyms(
+      resource_name => $biosequence->{biosequence_name}
+    );
+
+    foreach my $synonym ( @synonyms ) {
+      my $url;
+      $url = "$synonym->[2]$synonym->[0]$synonym->[3]" if ($synonym->[2]);
+      print $sbeamsMOD->encodeSectionItem(
+        key=>$synonym->[1],
+        value=>$synonym->[0],
+        url=>$url,
+      );
+    }
+
+
+    print qq~
       </TABLE>
       <BR>
+    ~;
+
+    $section_header = $sbeamsMOD->encodeSectionHeader(
+      text=>'SEQUENCE',
+    );
+    print qq~
       <TABLE width="600">
-        <TR><TD colspan="2" background="$HTML_BASE_DIR/images/fade_orange_header_2.png" width="600"><font color="white">SEQUENCE</font></TD></TR>
+        $section_header
       </TABLE>
     ~;
   }
 
 
+  #### Define the desired columns in the query
+  #### [friendly name used in url_cols,SQL,displayed column title]
+  my @column_array = (
+    ["peptide_accession","P.peptide_accession","Peptide Accession"],
+    ["peptide_sequence","P.peptide_sequence","Peptide Sequence"],
+    ["best_probability","STR(PI.best_probability,7,3)","Best Prob"],
+    ["n_observations","PI.n_observations","N Obs"],
+    ["sample_ids","PI.sample_ids","Sample IDs"],
+    ["n_protein_mappings","PI.n_protein_mappings","N Protein Mappings"],
+    ["n_genome_locations","PI.n_genome_locations","N Genome Locations"],
+    ["is_subpeptide_of","PI.is_subpeptide_of","Parent Peptides"],
+  );
+
+  #### Build the columns part of the SQL statement
+  my %colnameidx = ();
+  my @column_titles = ();
+  ## Sends @column_array_ref to build_SQL_columns_list, which
+  ## (1) appends the 2nd element in array to $columns_clause
+  ## (2) fills %colnameidx_ref as a hash with key = 1st element
+  ## and value = 3rd element, and (3) fills @column_titles_ref
+  ## array with the 3rd element
+  my $columns_clause = $sbeams->build_SQL_columns_list(
+    column_array_ref=>\@column_array,
+    colnameidx_ref=>\%colnameidx,
+    column_titles_ref=>\@column_titles
+  );
+
 
   #### Define a query to return peptides for this protein
   $sql = qq~
-     SELECT DISTINCT
-           P.peptide_accession AS "peptide_accession",
-           P.peptide_sequence AS "peptide_sequence",
-           STR(PI.best_probability,7,3) AS "best_probability",
-           PI.n_observations AS "n_observations",
-           PI.sample_ids AS "sample_ids",
-           PI.n_protein_mappings AS "n_protein_mappings",
-           PI.n_genome_locations AS "n_genome_locations",
-           PI.is_exon_spanning AS "is_exon_spanning",
-           PI.is_subpeptide_of AS "is_subpeptide_of"
+     SELECT DISTINCT $columns_clause
      FROM $TBAT_PEPTIDE_INSTANCE PI
     INNER JOIN $TBAT_PEPTIDE P
           ON ( PI.peptide_id = P.peptide_id )
@@ -516,8 +576,7 @@ sub handle_request {
 
   #### Define the hypertext links for columns that need them
   %url_cols = (
-    	       'peptide_accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY",
-    	       #'Peptide_ATAG' => 'TARGET="Win2" ONMOUSEOVER="window.status=\'Show summary for this peptide\'; return true"',
+    	       'Peptide Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=%V&action=QUERY",
   );
 
 
@@ -571,9 +630,10 @@ sub handle_request {
       url_cols_ref=>\%url_cols,
       hidden_cols_ref=>\%hidden_cols,
       max_widths=>\%max_widths,
-      #column_titles_ref=>\@column_titles,
+      column_titles_ref=>\@column_titles,
       base_url=>$base_url,
     );
+
 
     #### Display the resultset controls
     $sbeams->displayResultSetControls(
@@ -581,6 +641,12 @@ sub handle_request {
       query_parameters_ref=>\%parameters,
       rs_params_ref=>\%rs_params,
       base_url=>$base_url,
+    ) if (0);
+
+
+    #### Display the samples list
+    displaySamples(
+      resultset_ref=>$resultset_ref,
     );
 
 
@@ -689,13 +755,84 @@ sub displayAnnotatedSequence {
     "%";
 
 
-  print "<BR><BR><BR>";
-
-
-
-
-
-
-
+  print "<BR>";
 
 } # end displayAnnotatedSequence
+
+
+###############################################################################
+# getSamples
+###############################################################################
+sub getSamples {
+  my %args = @_;
+  my $SUB_NAME = 'getSamples';
+
+  my $sql = qq~
+    SELECT sample_id,sample_title
+      FROM $TBAT_SAMPLE
+     WHERE record_status != 'D'
+     ORDER BY sample_id
+  ~;
+
+  my @samples = $sbeams->selectSeveralColumns($sql);
+
+  return \@samples;
+
+} # end getSamples
+
+
+###############################################################################
+# displaySamples
+###############################################################################
+sub displaySamples {
+  my %args = @_;
+  my $SUB_NAME = 'displaySamples';
+
+  #### Decode the argument list
+  my $resultset_ref = $args{'resultset_ref'}
+   || die "ERROR[$SUB_NAME]: resultset_ref not passed";
+
+  #### Get the hash of indices of the columns
+  my %col = %{$resultset_ref->{column_hash_ref}};
+
+  #### Loop over all the peptides
+  my $data_ref = $resultset_ref->{data_ref};
+  my %observed_samples;
+  foreach my $row (@{$data_ref}) {
+    my $observed_sample_list = $row->[$col{sample_ids}];
+    my @all = split(/[,;]/,$observed_sample_list);
+    foreach my $element ( @all ) {
+      $observed_samples{$element} = 1;
+    }
+  }
+
+  my $samples = getSamples();
+
+  my $section_header = $sbeamsMOD->encodeSectionHeader(
+    text=>'Observed in Samples:',
+  );
+
+  print qq~
+      <TABLE width="600">
+        $section_header
+    ~;
+
+  foreach my $sample (@{$samples}) {
+    my ($sample_id,$sample_title) = @{$sample};
+    if ($observed_samples{$sample_id}) {
+      print $sbeamsMOD->encodeSectionItem(
+        key=>$sample_id,
+        value=>$sample_title,
+        url=>"$CGI_BASE_DIR/$SBEAMS_PART/ManageTable.cgi?TABLE_NAME=AT_SAMPLE&sampled_id=$sample_id",
+      );
+    }
+
+  }
+
+  print qq~
+      </TABLE>
+      <BR>
+  ~;
+
+
+} # end displaySamples
