@@ -252,12 +252,11 @@ AT_glyco_site	2	protein_glyco_site_position	Protein Glyco Site Prosition	int	4	0
 AT_glyco_site	3	ipi_data_id	IPI Data ID	int	4	0	N		N	AT_ipi_data	ipi_data_id	Y				N	N	Y			
 AT_glyco_site	4	glyco_score	Glyco Score	real	4	0	N		N			Y	text	50		Y	Y	N	Probability that there is glyco site		
 AT_identified_peptide	1	identified_peptide_id	Identified Peptide ID	int	4	0	N		Y							N	N				pkDEFAULT
-AT_identified_peptide	2	ipi_data_id	IPI Data ID	int	4	0	N		N	AT_ipi_data	ipi_data_id	Y				N	N	Y			
-AT_identified_peptide	3	identified_peptide_sequence	Identified Peptide Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	N	Peptide Sequence Identified by MS/MS run		
-AT_identified_peptide	4	peptide_prophet_score	Peptide Prophet Score 	real	4	0	N		N			Y	text	50		Y	Y	N	Peptide Prophet Score		
-AT_identified_peptide	5	peptide_mass	Peptide Mass	real	4	0	N		N			Y	text	50		Y	Y	N	Mass of the identified peptide		
-AT_identified_peptide	6	glyco_site_id	Glyco Site ID	int	4	0	N		N	AT_glyco_site	glyco_site_id					N	N				
-AT_identified_peptide	7	tryptic_end	Tryptic Ends	int	4	0	Y		N										Number of tryptic ends for this identified peptide		
+AT_identified_peptide	2	identified_peptide_sequence	Identified Peptide Sequence	varchar	255	0	N		N			Y	text	50		Y	Y	N	Peptide Sequence Identified by MS/MS run		
+AT_identified_peptide	3	peptide_prophet_score	Peptide Prophet Score 	real	4	0	N		N			Y	text	50		Y	Y	N	Peptide Prophet Score		
+AT_identified_peptide	4	peptide_mass	Peptide Mass	real	4	0	N		N			Y	text	50		Y	Y	N	Mass of the identified peptide		
+AT_identified_peptide	5	glyco_site_id	Glyco Site ID	int	4	0	N		N	AT_glyco_site	glyco_site_id					N	N				
+AT_identified_peptide	6	tryptic_end	Tryptic Ends	int	4	0	Y		N										Number of tryptic ends for this identified peptide		
 AT_predicted_peptide	1	predicted_peptide_id	Predicted Peptide ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_predicted_peptide	2	ipi_data_id	IPI Data ID	int	4	0	N		N	AT_ipi_data	ipi_data_id	Y				N	N	Y			
 AT_predicted_peptide	3	predicted_peptide_sequence	Predicted Peptide Sequence	text	16	0	N		N			Y	text	50		Y	Y	N	Peptide Sequence Identified by MS/MS run		
@@ -311,8 +310,9 @@ AT_glyco_sample	16	record_status	Record Status	char	1	0	N	N	N							N	N
 AT_identified_to_ipi	1	identified_to_ipi	Identified to IPI ID	int	4	0	N		Y			Y				N	N	Y			
 AT_identified_to_ipi	2	identified_peptide_id	Identified peptide ID	int	4	0	N		N	AT_identified_peptide	identified_peptide_id	Y				N	N	Y			
 AT_identified_to_ipi	3	ipi_data_id	IPI Data ID	int	4	0	N		N	AT_ipi_data	ipi_data_id	Y				N	N	Y			
-AT_identified_to_ipi	4	identified_start	Identified Peptide Start	int	4	0	N		N			Y	text	10		N	N	N	Start position of the peptide on the IPI protein		
-AT_identified_to_ipi	5	identified_stop	Identified  Peptide Stop	int	4	0	N		N			Y	text	10		N	N	N	Stop position of the peptide on the IPI protein		
+AT_identified_to_ipi	4	glyco_site_id	Glyco Site ID	int	4	0	N		N	AT_glyco_site	glyco_site_id	Y				N	N	Y			
+AT_identified_to_ipi	5	identified_start	Identified Peptide Start	int	4	0	N		N			Y	text	10		N	N	N	Start position of the peptide on the IPI protein		
+AT_identified_to_ipi	6	identified_stop	Identified  Peptide Stop	int	4	0	N		N			Y	text	10		N	N	N	Stop position of the peptide on the IPI protein		
 AT_synthesized_peptide	1	synthesized_peptide_id	Synthesized Peptide ID	int	4	0	N		Y							N	N				pkDEFAULT
 AT_synthesized_peptide	2	peptide_name	Peptide Name	varchar	255	0	N		N			Y	text	2		Y	Y	Y	Name of this Sample		
 AT_synthesized_peptide	3	vendor_peptide_name	Vendor Peptide Name	varchar	255	0	Y		N			Y	text	2		Y	Y	Y	Name of this Sample		
