@@ -378,6 +378,56 @@ sub display_page_footer {
 
 
 ###############################################################################
+# encodeSectionHeader
+###############################################################################
+sub encodeSectionHeader {
+  my $METHOD = 'encodeSectionHeader';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+
+  my $text = $args{text} || '';
+
+  my $buffer = qq~
+        <TR><TD colspan="2" background="$HTML_BASE_DIR/images/fade_orange_header_2.png" width="600"><font color="white">$text</font></TD></TR>
+~;
+
+  return $buffer;
+
+}
+
+
+###############################################################################
+# encodeSectionItem
+###############################################################################
+sub encodeSectionItem {
+  my $METHOD = 'encodeSectionItem';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+
+  my $key = $args{key} || '';
+  my $value = $args{value} || '';
+  my $url = $args{url} || '';
+
+  $url =~ s/ /+/g;
+
+  my $astart = '';
+  my $aend = '';
+  if ($url) {
+    $astart = qq~<A HREF="$url" target="_blank">~;
+    $aend = qq~</A>~;
+  }
+
+  my $buffer = qq~
+        <TR><TD NOWRAP bgcolor="cccccc">$key</TD><TD>$astart$value$aend</TD></TR>
+~;
+
+  return $buffer;
+
+}
+
+
+
+###############################################################################
 
 1;
 
