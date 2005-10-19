@@ -234,7 +234,7 @@ sub checkHeaders {
   my @current_cols = keys(%heads);
 
   for my $curr_col ( @current_cols ) {
-#    print "Checking for curr_col $curr_col\n";
+    print "Checking for curr_col $curr_col\n";
     unless( grep /$curr_col/, @version_8_columns ) {
       print STDERR "Column $curr_col is not known by the parser\n";
       exit;
@@ -292,6 +292,13 @@ sub add_identified_peptides{
 	
   # make sure we have an identifed peptide otherwise do nothing
 	return unless ($row->[$heads{'identified sequences'}]); 
+
+  # Special case, some peptides have the sequence 'N.AME.?', has some meaning
+  # Can't cope with this now, log it and return FIXME
+  if ( $row->[$heads{'identified sequences'}] eq 'N.AME.?' ) {
+    print STDERR "Got an oddball, $row->[$heads{'ipi'}]: $row->[$heads{'predicted tryptic nxt/s peptide sequence'}]\n"; 
+    return;
+    }
 	
 	my $ipi_acc = $row->[$heads{'ipi'}];
 	my $clean_seq = $self->clean_seq($row->[$heads{'identified sequences'}]); 
@@ -331,6 +338,7 @@ sub add_identified_peptides{
 
   # Now, add row to identified_to_ipi lookup(join) table
   my %iden_to_ipi_row = ( ipi_data_id => $self->get_ipi_data_id($ipi_acc),
+                          glyco_site_id => $glyco_pk,
                           identified_peptide_id => $iden_pep_id,
 					                identified_start      => $start,
 			                		identified_stop       => $stop, 
@@ -343,7 +351,7 @@ sub add_identified_peptides{
 		              		   			verbose     => $self->verbose(),
 	              			   			testonly    => $self->testonly(),
               				   			insert      => 1,
-			              	   			PK          => 'identified__to_ipi_id',
+			              	   			PK          => 'identified_to_ipi_id',
 	            		   		    );
 
 				   		   
@@ -470,7 +478,7 @@ sub add_predicted_peptide {
 					predicted_peptide_mass 		=> $row->[$heads{'predicted peptide mass'}],
 					detection_probability 		=> $det_prob, #
 					number_proteins_match_peptide => $row->[$heads{'database hits'}],
-					matching_protein_ids 		=> $row->[$heads{'database hits ipis'}],
+					matching_protein_ids 		=> $row->[$heads{'database hit ipis'}],
 					protein_similarity_score	=> $row->[$heads{'min similarity score'}],
 					predicted_start 			=> $start,
 					predicted_stop 				=> $stop,
@@ -791,7 +799,7 @@ sub find_cellular_code {
 	if ($code eq 'S'){
 		$full_name = 'Secreted';
 	}elsif($code eq 'TM'){
-		$full_name = 'Trans Membrane';
+		$full_name = 'Transmembrane';
 	}elsif($code eq 'A'){
 		$full_name = 'Anchor';
 	}elsif($code == 0){
