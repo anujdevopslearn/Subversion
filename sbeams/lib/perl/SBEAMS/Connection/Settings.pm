@@ -87,7 +87,6 @@ require Exporter;
     %CONFIG_SETTING
     $SBEAMS_VERSION
 
-    extractInstanceParams
     );
 my @default = @EXPORT;
 #push @EXPORT, 'default';
@@ -151,6 +150,7 @@ unless (defined($DBCONFIG->{$DBINSTANCE})) {
 }
 
 extractInstanceParams();
+
 
 
 ###############################################################################
