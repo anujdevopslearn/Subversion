@@ -119,6 +119,178 @@ sub displayInternalResearcherPageHeader {
   $self->printJavascriptFunctions();
   }
 
+###
+
+# displayUnipepHeader
+###############################################################################
+sub displayUnipepHeader {
+ 	my $self = shift;
+  my %args = @_;
+
+  my $sbeams = $self->getSBEAMS();
+
+  my $navigation_bar = $args{'navigation_bar'} || "YES";
+
+  my $LOGIN_URI = "$SERVER_BASE_DIR$ENV{REQUEST_URI}";
+  if ($LOGIN_URI =~ /\?/) {
+    $LOGIN_URI .= "&force_login=yes";
+  } else {
+    $LOGIN_URI .= "?force_login=yes";
+  }
+  my $LOGIN_LINK = qq~<A HREF="$LOGIN_URI" class="Nav_link">LOGIN</A>~;
+
+
+  #### Obtain main SBEAMS object and use its http_header
+  my $sbeams = $self->getSBEAMS();
+  my $http_header = $sbeams->get_http_header();
+  use LWP::UserAgent;
+  use HTTP::Request;
+  my $ua = LWP::UserAgent->new();
+  my $skinLink = 'http://www.unipep.org';
+#  my $skinLink = 'http://www.peptideatlas.org';
+  print STDERR "\n\n\nSkin link is $skinLink\n\n\n";
+  my $response = $ua->request( HTTP::Request->new( GET => "$skinLink/.index.dbbrowse.php" ) );
+  my @page = split( "\r", $response->content() );
+  my $skin = '';
+  for ( @page ) {
+    if ( $_ =~ /LOGIN/ ) {
+       $_ =~ s/\<\!-- LOGIN_LINK --\>/$LOGIN_LINK/;
+    } elsif ( $_ =~ /td\s+\{font/ ) {
+  #    next;
+    } elsif ( $_ =~ /body\s+\{font/ ) {
+  #    next;
+    }
+    last if $_ =~ /--- Main Page Content ---/;
+    $skin .= $_;
+  }
+  $skin =~ s/\/images\//\/sbeams\/images\//gm;
+ 
+  print "$http_header\n\n";
+  print <<"  END_PAGE";
+  <HTML>
+    $skin
+  END_PAGE
+  print '<STYLE TYPE=text/css>' . $self->getGlycoStyleSheet() . '</STYLE>';
+
+  $self->printJavascriptFunctions();
+  }
+
+
+sub getGlycoStyleSheet {
+  use Env qw (HTTP_USER_AGENT);   
+   
+  my $FONT_SIZE=9;
+  my $FONT_SIZE_SM=8;
+  my $FONT_SIZE_LG=12;
+  my $FONT_SIZE_HG=14;
+
+  if ( $HTTP_USER_AGENT =~ /Mozilla\/4.+X11/ ) {
+    $FONT_SIZE=12;
+    $FONT_SIZE_SM=11;
+    $FONT_SIZE_LG=14;
+    $FONT_SIZE_HG=19;
+  }
+
+return <<END;
+   .table_setup{border: 0px ; border-collapse: collapse;   }
+   .pad_cell{padding:5px;  }
+   .sequence_font{font-family:courier; ${FONT_SIZE_LG}pt; font-weight: bold; letter-spacing:0.5}
+   .white_hyper_text{font-family: Helvetica,Arial,sans-serif; color:#000000;}
+   .white_text    {  font-family: Helvetica, Arial, sans-serif; font-size: ${FONT_SIZE}pt; text-decoration: underline; color: white; CURSOR: help;}
+   .grey_header{ font-family: Helvetica, Arial, sans-serif; color: #000000; font-size: ${FONT_SIZE_HG}pt; background-color: #CCCCCC; font-weight: bold; padding:1 2}
+   .rev_gray{background-color: #555555; ${FONT_SIZE_LG}pt; font-weight: bold; color:white; line-height: 25px;}
+	 .blue_bg{ font-family: Helvetica, Arial, sans-serif; background-color: #4455cc; ${FONT_SIZE_HG}pt; font-weight: bold; color: white}
+	 .lite_blue_bg{font-family: Helvetica, Arial, sans-serif; background-color: #eeeeff; ${FONT_SIZE_HG}pt; color: #cc1111; font-weight: bold;border-style: solid; border-width: 1px; border-color: #555555 #cccccc #cccccc #555555;}
+  	 
+       .identified_pep{
+  	         background-color: #882222;
+  	         ${FONT_SIZE_LG}pt;
+  	         font-weight: bold ;
+  	         color:white;
+  	         Padding:1;
+  	         border-style: solid;
+  	         border-left-width: 1px;
+  	         border-right-width: 1px;
+  	         border-top-width: 1px;
+  	         border-left-color: #eeeeee;
+  	         border-right-color: #eeeeee;
+  	         border-top-color: #aaaaaa;
+  	         border-bottom-color:#aaaaaa;
+  	         }
+  	         .predicted_pep{
+  	         background-color: #FFCC66;
+  	         ${FONT_SIZE_LG}pt;
+  	         font-weight: bold;
+  	         border-style: solid;
+  	         border-width: 1px;
+  	 
+  	         border-right-color: blue ;
+  	         border-left-color:  red ;
+  	 
+  	         }
+  	 
+  	         .sseq{ background-color: #CCCCFF; ${FONT_SIZE_LG}pt; font-weight: bold}
+  	         .tmhmm{ background-color: #CCFFCC; ${FONT_SIZE_LG}pt; font-weight: bold; text-decoration:underline}
+  	 
+  	         .glyco_site{ background-color: #ee9999;
+  	         border-style: solid;
+  	         border-width: 1px;
+  	         /* top right bottom left */
+  	         border-color: #444444 #eeeeee #eeeee #444444; }
+  	 
+  	 
+         a.edit_menuButton:link { 	         a.edit_menuButton:link {
+         /* font-size: 12px; */ 	         /* font-size: 12px; */
+         background-color: #ff0066; 	         background-color: #ff0066;
+ } 	 }
+  	 
+  	 a.blue_button:link{
+  	         background: #366496;
+  	         color: #ffffff;
+  	         text-decoration: none;
+  	         padding:0px 3px 0px 3px;
+  	         border-top: 1px solid #CBE3FF;
+  	         border-right: 1px solid #003366;
+  	         border-bottom: 1px solid #003366; \
+  	         border-left:1px solid #B7CFEB;
+  	 }
+  	 
+  	 a.blue_button:visited{
+  	         background: #366496;
+  	         color: #ffffff;
+  	         text-decoration: none;
+  	         padding:0px 3px 0px 3px;
+  	         border-top: 1px solid #CBE3FF;
+  	         border-right: 1px solid #003366;
+  	         border-bottom: 1px solid #003366; \
+  	         border-left:1px solid #B7CFEB;
+  	 }
+  	 a.blue_button:hover{
+  	         background: #366496;
+  	         color: #777777;
+  	         text-decoration: none;
+  	         padding:0px 3px 0px 3px;
+  	         border-top: 1px solid #CBE3FF;
+  	         border-right: 1px solid #003366;
+  	         border-bottom: 1px solid #003366; \
+  	         border-left:1px solid #B7CFEB;
+  	 }
+  	 
+  	 a.blue_button:active{
+  	         background: #366496;
+  	         color: #ffffff;
+  	         text-decoration: none;
+  	         padding:0px 3px 0px 3px;
+  	         border-top: 1px solid #CBE3FF;
+  	         border-right: 1px solid #003366;
+  	         border-bottom: 1px solid #003366; \
+  	         border-left:1px solid #B7CFEB;
+  	 }
+     td {white-text}
+END
+
+}
+
 
 ###############################################################################
 # displayGuestPageHeader
@@ -130,6 +302,12 @@ sub displayGuestPageHeader {
   my $navigation_bar = $args{'navigation_bar'} || "YES";
 
   my $LOGIN_URI = "$SERVER_BASE_DIR$ENV{REQUEST_URI}";
+
+  if ( $ENV{REQUEST_URI} =~ /Glyco_prediction/ ) {
+    $self->displayUnipepHeader( %args );
+    return;
+  }
+  
   if ($LOGIN_URI =~ /\?/) {
     $LOGIN_URI .= "&force_login=yes";
   } else {
