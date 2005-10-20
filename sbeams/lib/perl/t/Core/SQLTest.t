@@ -82,8 +82,8 @@ SELECT first_name+' '+last_name
 
   my @contacts = $sbeams->selectOneColumn($sql);
 
-  if (defined(@contacts) && scalar(@contacts)>5 &&
-      grep('Homo sapiens',@contacts)) {
+  if (defined(@contacts) && scalar(@contacts)>1 &&
+      grep(/SBEAMS Administrator/,@contacts)) {
     diag("Returned ".scalar(@contacts)." rows");
     return(1);
   }
