@@ -243,12 +243,41 @@ sub handle_request {
     constraint_value=>$parameters{project_id} );
   return if ($project_clause eq '-1');
 
+  # Make sure we only show info for conditions in accessible projects
+  my $acc_proj = join( ', ', $sbeams->getAccessibleProjects() );
+
+  # All conditions
+  my @total = $sbeams->selectOneColumn( <<"  END_SQL" );
+  SELECT condition_id FROM $TBMA_CONDITION
+  WHERE record_status != 'D'
+  END_SQL
+
+  # Accessible conditions
+  my @accessible = $sbeams->selectOneColumn( <<"  END_SQL" );
+  SELECT condition_id FROM $TBMA_CONDITION
+  WHERE project_id IN ($acc_proj)
+  AND record_status != 'D'
+  END_SQL
+
+  $parameters{condition_id} =~ s/\s//g;
+  $log->warn( "Before, $parameters{condition_id} " );
+  my @input_cond = split ",", $parameters{condition_id};
+
+  my $valid_cond = $sbeams->validateParamList( name       => 'condition_id',
+                                               total      => \@total,
+                                               accessible => \@accessible,
+                                               input      => \@input_cond
+                                            );
+
+  my $valid_str = join ",", @$valid_cond;
+  $log->warn( $valid_str );
+  
   #### Build CONDITION constraint
   my $condition_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"C.condition_id",
     constraint_type=>"int_list",
     constraint_name=>"Condition List",
-    constraint_value=>$parameters{condition_id} );
+    constraint_value=>$valid_str );
   return if ($condition_clause eq '-1');
 
 
