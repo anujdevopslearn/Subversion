@@ -932,6 +932,57 @@ sub getAccessibleProjects{
   return (@project_ids);
 } # end getAccessibleProjects
 
+#+
+# Subroutine to standardize checking of a parameter list.  Checks input list
+# against acceptable values, returns reference to array of valid input items, 
+# logs any errors.
+#
+# named arg, req: input, arrayref or comma separated list of input to validate
+# named arg, req: name, name (type) of parameter, for reportException call
+# named arg, req: total, ref to array of all possible values.
+# named arg, opt: accessible, ref to array holding all accessible values.
+#-
+sub validateParamList {
+  my $this = shift;
+  my %args = @_;
+  for ( qw( input total name ) ) {
+    unless( $args{$_} ) {
+      $log->error( "Missing parameter $_");
+      return undef;
+    }
+  }
+
+  # Can be an arrayref or a comma delimited string
+  my @input = (ref($args{input}) eq 'ARRAY' ) ? @{$args{input}} : split ",", $args{input};
+
+  # Array to hold validated entities
+  my @valid;
+
+  for my $ent ( @input ) {
+    $log->warn( "looking at $ent" );
+    if ( !grep /^$ent$/, @{$args{total}} ) {
+      $this->reportException ( state => 'ERROR',
+                                type => "Bad $args{name}",
+                             message => "Non-existent $args{name} specified: $ent" );
+    } elsif ( defined $args{accessible} && !grep /^$ent$/, @{$args{accessible}} ) {
+      $this->reportException ( state => 'ERROR',
+                                type => "Bad $args{name}",
+                             message => "You do not have access to specified $args{name}: $ent" );
+    } else {
+      push @valid, $ent;
+    }
+  }
+
+  # If any values were culled, log warning and print stack to show context. 
+  unless ( scalar @valid == scalar @input ) {
+    $log->warn( "Invalid parameters submitted, investigate" );
+    $log->printStack( 'warn' );
+  }
+
+  # return reference to array of validated entities
+  return ( \@valid )
+}
+
 
 ###############################################################################
 # Passed a table name, the routine will determine the access
