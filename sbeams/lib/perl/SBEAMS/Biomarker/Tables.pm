@@ -87,7 +87,7 @@ require Exporter;
                $TBBM_BMRK_MS_RUN_SAMPLE
                $TBBM_BMRK_STORAGE_LOCATION
                $TBBM_BMRK_TREATMENT
-               $TBBM_BMRK_TREATEMENT_TYPE
+               $TBBM_BMRK_TREATEENT_TYPE
              );
 
 

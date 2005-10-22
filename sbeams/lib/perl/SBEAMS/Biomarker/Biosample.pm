@@ -64,6 +64,9 @@ sub add_new {
   my $name = $args{data_ref}->{biosample_name} || die "no biosample name!";
   $args{data_ref}->{biosource_id} = $args{src_id};
   $args{data_ref}->{biosample_group_id} = $args{group_id};
+  $args{data_ref}->{biosample_type_id} ||= ( get_sample_type_id('source') ) ?
+              $this->get_sample_type_id('source') : $this->add_source_type();
+
 
 
   # Sanity check 
@@ -107,8 +110,7 @@ sub add_biosample_attrs {
   SELECT attribute_name, attribute_id FROM $TBBM_BMRK_ATTRIBUTE
   END
    
-  for my $key (keys(%{$args{attr}})) {
-    print "attr loop\n";
+  for my $key (keys(%{$args{attrs}})) {
 
     my $dataref = { biosample_id => $args{smpl_id},
                     attribute_id => $attr_hash{$key},
@@ -118,7 +120,7 @@ sub add_biosample_attrs {
                                       return_PK => 1,
                                    table_name => $TBBM_BMRK_BIOSAMPLE_ATTRIBUTE,
                                     rowdata_ref => $dataref, 
-                           add_audit_parameters => 1
+                           add_audit_parameters => 0
                                        );
 
     $log->error( "Couldn't create biosample record" ) unless $id;
@@ -199,18 +201,46 @@ sub getSBEAMS {
   return $this->{_sbeams};
 }
 
+add_source_type {
+  my $this = shift;
+  # if it exists, return it, else create it
+  my $id = $this->get_sample_type_id( 'source' );
+  return $return $id if $id;
 
+  my $rd = { biosample_type_name => 'source',
+             biosample_type_description => 'New sample direct from biosource' };
+
+  $sbeams->updateOrInsertRow( insert => 1,
+                           return_PK => 1,
+                          table_name => $TBBM_BIOSOURCE_TYPE,
+                         rowdata_ref => $rd,
+                add_audit_parameters => 1
+                                    );         
+  }
+}
+
+
+sub get_sample_type_id {
+  my $this = shift;
+  my $type = shift;
+  $sbeams->selectrow_array( <<"  END" );
+  SELECT sample_type_id FROM $TBBM_BMRK_SAMPLE_TYPE
+  WHERE sample_type_name = '$type'
+  END
+}
 
 #+
 # Routine for inserting biosample
 #
 #-
-sub insertBiosamples {
-  my $this = shift;
-  my %args = @_;
-  my $p = $args{'wb_parser'} || die "Missing required parameter wb_parser";
-  $this->insertBiosamples( wb_parser => $p );
-}
+#sub insertBiosamples {
+#  my $this = shift;
+#  my %args = @_;
+#  my $p = $args{'wb_parser'} || die "Missing required parameter wb_parser";
+#  $this->insertBiosamples( wb_parser => $p );
+#}
+#
+
 
 #+
 # Routine to cache biosource object,

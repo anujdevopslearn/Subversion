@@ -109,6 +109,12 @@ sub display_page_header {
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_PART/main.cgi">$SBEAMS_PART Home</a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/logout.cgi">Logout</a></td></tr>
 	<tr><td>&nbsp;</td></tr>
+	<tr><td>Lab Workflow:</td></tr>
+	<tr><td><a href="main.cgi">$pad View experiments</nobr></a></td></tr>
+	<tr><td><a href="upload_workbook.cgi">$pad Upload samples</nobr></a></td></tr>
+	<tr><td><a href="treatment.cgi">$pad Add glycopture prep</nobr></a></td></tr>
+	<tr><td><a href="lc_ms.cgi">$pad Add LC/MS run</nobr></a></td></tr>
+	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_BMRK_Analysis_file">$pad Analysis_file</nobr></a></td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_BMRK_Attribute">$pad Attribute</nobr></a></td></tr>

@@ -139,7 +139,7 @@ sub add_new {
     return;
   }
 
-  for my $k ( keys( %{$args{data_ref}} ) ){ print "$k => $args{data_ref}->{$k}\n"; }
+#  for my $k ( keys( %{$args{data_ref}} ) ){ print "$k => $args{data_ref}->{$k}\n"; }
   my $id = $sbeams->updateOrInsertRow( insert => 1,
                                     return_PK => 1,
                                    table_name => $TBBM_BMRK_BIOSOURCE,
@@ -170,8 +170,7 @@ sub add_biosource_attrs {
   SELECT attribute_name, attribute_id FROM $TBBM_BMRK_ATTRIBUTE
   END
    
-  for my $key (keys(%{$args{attr}})) {
-    print "attr loop\n";
+  for my $key (keys(%{$args{attrs}})) {
 
     my $dataref = { biosource_id => $args{src_id},
                     attribute_id => $attr_hash{$key},
@@ -181,7 +180,7 @@ sub add_biosource_attrs {
                                       return_PK => 1,
                                    table_name => $TBBM_BMRK_BIOSOURCE_ATTRIBUTE,
                                     rowdata_ref => $dataref, 
-                           add_audit_parameters => 1
+                           add_audit_parameters => 0
                                        );
 
     $log->error( "Couldn't create biosource record" ) unless $id;
@@ -200,18 +199,20 @@ sub add_biosource_diseases {
   for ( qw( diseases src_id ) ) {
     die "Missing parameter $_" unless defined $_;    
   }
+  my %diseases = %{$args{diseases}};
 
   my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
 
-  my %dis_hash = $sbeams->selectTwoColumnHash( <<"  END" );
+  my %dnames = $sbeams->selectTwoColumnHash( <<"  END" );
   SELECT disease_name, disease_id FROM $TBBM_BMRK_DISEASE
   END
    
-  for my $key (keys(%{$args{diseases}})) {
+  for my $key (keys(%diseases)) {
+    next unless $diseases{$key};
+    print "$key, $diseases{$key}\n";
 
     my $dataref = { biosource_id => $args{src_id},
-                    disease_id => $dis_hash{$key} };
-
+                    disease_id => $dnames{$key} };
 
     my $id = $sbeams->updateOrInsertRow( insert => 1,
                                       return_PK => 1,
@@ -219,7 +220,6 @@ sub add_biosource_diseases {
                                     rowdata_ref => $dataref,
                            add_audit_parameters => 0
                                        );
-
     $log->error( "Couldn't create biosource disease record" ) unless $id;
   }
 
