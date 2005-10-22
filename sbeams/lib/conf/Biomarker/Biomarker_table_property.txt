@@ -12,8 +12,9 @@ BM_BMRK_storage_location	Storage_location	Biomarker	YES	$TBBM_BMRK_STORAGE_LOCAT
 BM_BMRK_experiment	Experiment	Biomarker	YES	$TBBM_BMRK_EXPERIMENT	experiment_id		ManageTable.cgi?TABLE_NAME=BM_BMRK_experiment	BM_BMRK_experiment	
 BM_BMRK_treatment_type	Treatment_type	Biomarker	YES	$TBBM_BMRK_TREATMENT_TYPE	treatment_type_id		ManageTable.cgi?TABLE_NAME=BM_BMRK_treatment_type	BM_BMRK_treatment_type	
 BM_BMRK_treatment	Treatment	Biomarker	YES	$TBBM_BMRK_TREATMENT	treatment_id		ManageTable.cgi?TABLE_NAME=BM_BMRK_treatment	BM_BMRK_treatment	
-BM_BMRK_bio_group	Group	Biomarker	YES	$TBBM_BMRK_BIO_GROUP	bio_group_id		ManageTable.cgi?TABLE_NAME=BM_BMRK_bio_group	BM_BMRK_bio_group	
-BM_BMRK_ms_run	Group	Biomarker	YES	$TBBM_BMRK_MS_RUN	ms_run_id		ManageTable.cgi?TABLE_NAME=BM_BMRK_ms_run	BM_BMRK_ms_run	
-BM_BMRK_ms_run_sample	Group	Biomarker	YES	$TBBM_BMRK_MS_RUN_SAMPLE	ms_run_sample_id		ManageTable.cgi?TABLE_NAME=BM_BMRK_ms_run_sample	BM_BMRK_ms_run_sample	
-BM_BMRK_analysis_file	Analysis_file	Biomarker	YES	$TBBM_BMRK_ANALYSIS_FILE	analysis_file_id		ManageTable.cgi?TABLE_NAME=BM_BMRK_analysis_file	BM_BMRK_analysis_file	
-BM_BMRK_data_analysis	Group	Biomarker	YES	$TBBM_BMRK_DATA_ANALYSIS	data_analysis_id		ManageTable.cgi?TABLE_NAME=BM_BMRK_data_analysis	BM_BMRK_data_analysis	
+BM_BMRK_biosample_type	Biosample_type	Biomarker	YES	$TBBM_BMRK_BIOSAMPLE_TYPE	biosample_type_id		ManageTable.cgi?TABLE_NAME=BM_BMRK_biosample_type	BM_BMRK_biosample_type	
+BM_BMRK_bio_group	Biogroup	Biomarker	YES	$TBBM_BMRK_BIO_GROUP	bio_group_id		ManageTable.cgi?TABLE_NAME=BM_BMRK_bio_group	BM_BMRK_bio_group	
+BM_BMRK_ms_run	MS_run	Biomarker	YES	$TBBM_BMRK_MS_RUN	ms_run_id		ManageTable.cgi?TABLE_NAME=BM_BMRK_ms_run	BM_BMRK_ms_run
+BM_BMRK_ms_run_sample	MS_run_sample	Biomarker	YES	$TBBM_BMRK_MS_RUN_SAMPLE	ms_run_sample_id		ManageTable.cgi?TABLE_NAME=BM_BMRK_ms_run_sample	BM_BMRK_ms_run_sample
+BM_BMRK_analysis_file	Analysis_file	Biomarker	YES	$TBBM_BMRK_ANALYSIS_FILE	analysis_file_id		ManageTable.cgi?TABLE_NAME=BM_BMRK_analysis_file	BM_BMRK_analysis_file
+BM_BMRK_data_analysis	Data_analysis	Biomarker	YES	$TBBM_BMRK_DATA_ANALYSIS	data_analysis_id		ManageTable.cgi?TABLE_NAME=BM_BMRK_data_analysis	BM_BMRK_data_analysis
