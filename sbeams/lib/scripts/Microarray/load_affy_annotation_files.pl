@@ -226,7 +226,9 @@ sub main {
 
 } # end main
 
-
+#+
+# Prints optional message and usage, then exits
+#-
 sub printUsage {
   my $msg = shift || '';
   print "$msg\n\n$USAGE\n";
