@@ -161,7 +161,7 @@ sub add_items {
          $args{biosource}->createTissues( tissue => $results->{tissues} );
          $args{biosample}->createStorageLoc( strg_loc => $results->{storage_loc} );
 
-         my $name =   'upload-' . $sbeams->get_datetime();
+         my $name =   'upload-' . $sbeams->get_datetime() . '-' . $params{experiment};
 
          my $grp_id = $biomarker->create_biogroup( group_name  => $name,
                                                    description => "Dataset uploaded via $0",
@@ -189,12 +189,12 @@ sub add_items {
                                                   group_id => $grp_id );
            next unless $src_id;
 
+
            # Biosource related
            $args{biosource}->add_biosource_attrs(  attrs => $item->{biosource_attr},
                                                 src_id => $src_id );
            $args{biosource}->add_biosource_diseases(  diseases => $item->{biosource_disease},
                                                       src_id => $src_id );
-
 
            # Add biosample record
            # first a little triage
@@ -215,7 +215,6 @@ sub add_items {
          $sbeams->rollback_transaction();
          exit;
        }  # End eval catch-error block
-
        
 #  $sbeams->rollback_transaction();
   $sbeams->commit_transaction();
@@ -245,7 +244,7 @@ sub set_exp_id {
   ($biosample->{experiment_id}) = $sbeams->selectrow_array( <<"  END" );
   SELECT experiment_id 
   FROM $TBBM_BMRK_EXPERIMENT
-  WHERE experiment_name = '$exp_name'
+  WHERE experiment_tag = '$exp_name'
   END
 }
 
@@ -298,7 +297,6 @@ sub set_storageloc_id {
   FROM $TBBM_BMRK_STORAGE_LOCATION
   WHERE location_name = '$biosample->{storage_location_id}'
   END
-  print STDERR "loc_id is $biosample->{storage_location_id}\n";
   return;
 }
 
@@ -390,10 +388,11 @@ sub test_data {
     }
      
     ### Check storage_location ###
-    my $stor = $item->{biosample}->{storage_location_id} || '';
+    $item->{biosample}->{storage_location_id} ||= $biomarker->set_default_location();
+    my $stor = $item->{biosample}->{storage_location_id};
     
     # push into missing storage_loc array, print message if desired.
-    if ( (!$redundant_storage_loc{$stor} || $args{redundant})) {
+    if ( (!$redundant_storage_loc{$stor} || $args{redundant} )) {
       unless ( $args{biosample}->storageLocExists($stor) ) {
         push @{$results{storage_loc}}, $stor;
         push @auto, "Line $item_no: Storage location $stor does not yet exist\n";
@@ -492,7 +491,7 @@ sub printUsage {
   Arguements:
   -f --file_name     Filename of file_name file to upload
   -t --type          Type of file, either xls or tsv (defaults to xls) 
-  -e --experiment    Name of experiment in database in which to load data 
+  -e --experiment    Tag (short name) of experiment in db in which to load data 
   -a --autocreate    autcreate attributes/diseases if they don't already exist 
   -t --test_only     Tests biosource/biosample, experiment, etc. entries, 
                      reports if they don't already exist in the database.
