@@ -39,7 +39,7 @@ sub main {
 
   $biomarker->printPageHeader();
   my $params = process_params();
-  print_experiment_details( $params );
+  print_upload_form( $params );
   $biomarker->printPageFooter();
 
 } # end main
@@ -55,20 +55,24 @@ sub process_params {
   return $params;
 }
 
-sub print_experiment_details {
+sub print_upload_form {
   my $params = shift;
   $sbeams->printUserContext();
-#  my $etable = SBEAMS::Connection::DataTable->new();
-  my $details = $biomarker->get_experiment_details($params->{experiment_id});
-  my $samples = $biomarker->get_experiment_samples($params->{experiment_id});
-  my $experiment_name = $biomarker->get_experiment_name( $params->{experiment_id} );
   
+  my $pad = '&nbsp;' x 5;
+  my $namelist = $biomarker->get_experiment_list();
 
   print <<"  END";
-  <H1>Samples in $experiment_name</H1>
-  $details
-	<BR>
-  $samples
+  <H1>Upload samples</H1>
+  <FORM>
+  <TABLE>
+  <TR><TD ALIGN=RIGHT><B>Experiment name:</B></TD><TD>$namelist</TD></TR>
+  <TR><TD ALIGN=RIGHT><B>Workbook file:</B></TD><TD><INPUT TYPE=FILE SIZE=30></TD></TR>
+  <TR><TD ALIGN=RIGHT><B>Type:</B></TD>
+    <TD>$pad Excel <INPUT TYPE=RADIO NAME=type CHECKED VALUE=xls</INPUT>
+    Tab-text <INPUT TYPE=RADIO NAME=type VALUE=tabtext </INPUT></TD>
+  </TR>
+  </FORM>
 	<BR>
   END
 

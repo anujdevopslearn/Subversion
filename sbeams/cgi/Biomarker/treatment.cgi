@@ -1,10 +1,11 @@
 #!/usr/local/bin/perl
 
 ###############################################################################
-# Program     : main.cgi
+# Program treatment.cgi    
 # $Id: $
 #
-# Description : Displays info/data for a particular experiment.
+# Description : Form for describing a laboratory manipulation or treatment
+# of a set of samples.
 #
 # SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public License (GPL)
@@ -39,7 +40,13 @@ sub main {
 
   $biomarker->printPageHeader();
   my $params = process_params();
-  print_experiment_details( $params );
+  if ( $params->{apply_action} eq 'process_treatment' ) {
+    my $status = process_treatment( $params );
+    # Where to go from here? redirect?
+    print $status;
+  } else {
+    print_treatment_form( $params );
+  }
   $biomarker->printPageFooter();
 
 } # end main
@@ -55,20 +62,18 @@ sub process_params {
   return $params;
 }
 
-sub print_experiment_details {
+sub print_treatment_form {
   my $params = shift;
-  $sbeams->printUserContext();
-#  my $etable = SBEAMS::Connection::DataTable->new();
-  my $details = $biomarker->get_experiment_details($params->{experiment_id});
-  my $samples = $biomarker->get_experiment_samples($params->{experiment_id});
-  my $experiment_name = $biomarker->get_experiment_name( $params->{experiment_id} );
-  
+
+# Don't think I need this...
+#  $sbeams->printUserContext();
+
+  my $treatment_list = $biomarker->get_treatment_select(types => ['glycocap']);
 
   print <<"  END";
-  <H1>Samples in $experiment_name</H1>
-  $details
-	<BR>
-  $samples
+  <H1>Process Samples</H1>
+  <FORM NAME=sample_treatment>
+  </FORM>
 	<BR>
   END
 
