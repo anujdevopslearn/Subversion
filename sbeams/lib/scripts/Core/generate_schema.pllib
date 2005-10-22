@@ -242,6 +242,8 @@ sub writeSchema {
             $is_auto_inc,$fk_table,$fk_column,$input_type,$column_description) =
           @{$table_ref->{$column_name}}[3..11,13,19];
 
+        $datatype =~ s/\s+$//g;
+
         print "    Processing column $column_name\n" if ($VERBOSE);
 
         my $extra = '';
