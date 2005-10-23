@@ -360,10 +360,11 @@ sub handleRequest {
 
     #### If there are search_batchs, print out information on them
     if ($status->{n_search_batches}) {
-      my $search_batch;
-      foreach $search_batch (@{$status->{search_batch_subdirs}}) {
-        printf("                                          %s\n",
-          $search_batch);
+      foreach my $search_batch (@{$status->{search_batch_subdirs}}) {
+	my $search_batch_id = $status->{search_batch_ids_by_subdir}
+	  ->{$search_batch};
+        printf("                        id=%5d          %s\n",
+          $search_batch_id,$search_batch);
       }
     }
 
@@ -574,6 +575,16 @@ sub getExperimentStatus {
   my @subdirs = $sbeams->selectOneColumn($sql);
   $status{n_search_batches} = scalar(@subdirs);
   $status{search_batch_subdirs} = \@subdirs;
+
+
+  #### Get the search_batch_ids for this experiment
+  $sql = qq~
+          SELECT search_batch_subdir,search_batch_id
+            FROM $TBPR_SEARCH_BATCH SB
+           WHERE SB.experiment_id = '$experiment_id'
+  ~;
+  my %ids_by_subdirs = $sbeams->selectTwoColumnHash($sql);
+  $status{search_batch_ids_by_subdir} = \%ids_by_subdirs;
 
 
   #### Return information
