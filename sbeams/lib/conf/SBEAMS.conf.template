@@ -110,9 +110,9 @@ RAW_DATA_DIR{Proteomics} = /raw/datasets/root/location
 
 # Settings for java/jnlp helper applications
 CONFIG_SETTING{JAVA_PATH} = /usr/java/j2sdk1.4/
-CONFIG_SETTING{JNLP_KEYSTORE} = /users/pmoss/myKeystore
-CONFIG_SETTING{KEYSTORE_PASSWD} = test01
-CONFIG_SETTING{KEYSTORE_ALIAS} = sbeamsDEV
+CONFIG_SETTING{JNLP_KEYSTORE} = lib/java/.keystore
+CONFIG_SETTING{KEYSTORE_PASSWD} = sbeams_distro
+CONFIG_SETTING{KEYSTORE_ALIAS} = sbeamsDistro
 
 #### Define the place where Proteomics MS/MS spectrum peaks are written
 #### either TABLE, SKIP, or a file path (Default is TABLE)
