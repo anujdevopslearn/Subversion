@@ -169,6 +169,8 @@ sub handleRequest {
     my $num_verified_biosequence_names = 0;
     my $num_pseudogene_tyorfs_biosequence_names = 0;
 
+    my @dubious_biosequence_names;
+
     foreach my $bioseq_nm ( keys %biosequence_name_desc_hash ) {
 
         my $bd = $biosequence_name_desc_hash{$bioseq_nm};
@@ -279,6 +281,7 @@ sub handleRequest {
             }  elsif ($bd  =~ /dubious/i) {
 
                 $num_dubious_biosequence_names_mapped_to++;
+                push(@dubious_biosequence_names,$bn);
 
             }  elsif ( $bd  =~ /Uncharacterized/i) {
 
@@ -350,6 +353,7 @@ sub handleRequest {
 
     print "\nMapped to $num_dubious_biosequence_names_mapped_to".
     " dubious proteins out of $num_dubious_biosequence_names (=$fraction3)";
+    print "\n  ".join(";",@dubious_biosequence_names);
 
     print "\nMapped to $num_uncharacterized_biosequence_names_mapped_to".
     " uncharacterized proteins out of $num_uncharacterized_biosequence_names (=$fraction4)";
