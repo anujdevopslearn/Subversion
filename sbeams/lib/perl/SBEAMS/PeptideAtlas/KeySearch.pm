@@ -98,21 +98,49 @@ sub rebuildKeyIndex {
   print "INFO[$METHOD]: Rebuilding key index..." if ($VERBOSE);
 
   #### Retreive parameters
-  my $GOA_directory = $args{GOA_directory}
-    or die("ERROR[$METHOD]: Parameter GOA_directory not passed");
+  my $organism_name = $args{organism_name}
+    or die("ERROR[$METHOD]: Parameter organism_name not passed");
 
-  $self->dropKeyIndex();
+  if ($organism_name eq 'Human') {
 
-  print "Loading protein keys from GOA...\n";
-  $self->buildGoaKeyIndex(
-    GOA_directory => $GOA_directory,
-    organism_name => 'human',
-  );
+    my $GOA_directory = $args{GOA_directory}
+      or die("ERROR[$METHOD]: Parameter GOA_directory not passed");
 
-  print "Loading peptides keys...\n";
-  $self->buildPeptideKeyIndex();
+    $self->dropKeyIndex(organism_id=>2);
 
-  print "\n";
+    print "Loading protein keys from GOA...\n";
+    $self->buildGoaKeyIndex(
+      GOA_directory => $GOA_directory,
+      organism_name => 'human',
+    );
+
+    print "Loading peptides keys...\n";
+    $self->buildPeptideKeyIndex(organism_id=>2);
+
+    print "\n";
+
+  }
+
+
+  if ($organism_name eq 'Yeast') {
+
+    my $SGD_directory = $args{SGD_directory}
+      or die("ERROR[$METHOD]: Parameter SGD_directory not passed");
+
+    $self->dropKeyIndex(organism_id=>3);
+
+    print "Loading protein keys from SGD_features.tab...\n";
+    $self->buildSGDKeyIndex(
+      SGD_directory => $SGD_directory,
+    );
+
+    print "Loading peptides keys...\n";
+    $self->buildPeptideKeyIndex(organism_id=>3);
+
+    print "\n";
+
+  }
+
 
   #my $sql = "CREATE NONCLUSTERED INDEX idx_search_key_name ON $TBAT_SEARCH_KEY ( search_key_name )";
   #$sbeams->executeSQL($sql);
@@ -131,7 +159,11 @@ sub dropKeyIndex {
   my $self = shift || die ("self not passed");
   my %args = @_;
 
-  print "INFO[$METHOD] Dropping key index...\n" if ($VERBOSE);
+  my $organism_id = $args{organism_id}
+    or die("ERROR[$METHOD]: Parameter organism_id not passed");
+
+  print "INFO[$METHOD] Dropping key index for organism_id=$organism_id...\n"
+    if ($VERBOSE);
 
   unless ($sbeams) {
     die("ERROR[$METHOD]: sbeams object is not defined. Use setSBEAMS() method");
@@ -140,7 +172,7 @@ sub dropKeyIndex {
   #my $sql = "DROP INDEX $TBAT_SEARCH_KEY.idx_search_key_name";
   #$sbeams->executeSQL($sql);
 
-  my $sql = "DELETE FROM $TBAT_SEARCH_KEY";
+  my $sql = "DELETE FROM $TBAT_SEARCH_KEY WHERE organism_id = '$organism_id'";
   $sbeams->executeSQL($sql);
 
   return(1);
@@ -179,6 +211,9 @@ sub buildGoaKeyIndex {
     assocations_file => "$GOA_directory/gene_association.goa_${organism_name}",
   );
 
+  #### Get the list of proteins that have a match
+  my $matched_proteins = $self->getNProteinHits(organism_id=>2);
+
   #### Read all the data
   my $line;
   my $counter = 0;
@@ -216,7 +251,7 @@ sub buildGoaKeyIndex {
     }
 
     #### Split the Ensembl ID's
-    my @Ensembl_IDS = splitEntities($Ensembl);
+    my @Ensembl_IDS = splitEntities(list=>$Ensembl,delimiter=>';');
     my $n_Ensembl_IDS = scalar(@Ensembl_IDS);
 
     if ($n_Ensembl_IDS == 0) {
@@ -235,7 +270,7 @@ sub buildGoaKeyIndex {
     }
 
     if ($IPI) {
-      my @list = splitEntities($IPI);
+      my @list = splitEntities(list=>$IPI,delimiter=>';');
       foreach my $item ( @list ) {
         my @tmp = ('IPI',$item,9);
         push(@links,\@tmp);
@@ -243,7 +278,7 @@ sub buildGoaKeyIndex {
     }
 
     if ($UniProtTR) {
-      my @list = splitEntities($UniProtTR);
+      my @list = splitEntities(list=>$UniProtTR);
       foreach my $item ( @list ) {
         my @tmp = ('UniProt/TrEMBL',$item,35);
         push(@links,\@tmp);
@@ -251,7 +286,7 @@ sub buildGoaKeyIndex {
     }
 
     if ($RefSeqNP) {
-      my @list = splitEntities($RefSeqNP);
+      my @list = splitEntities(list=>$RefSeqNP,delimiter=>';');
       foreach my $item ( @list ) {
         my @tmp = ('RefSeq',$item,39);
         push(@links,\@tmp);
@@ -259,7 +294,7 @@ sub buildGoaKeyIndex {
     }
 
     if ($RefSeqXP) {
-      my @list = splitEntities($RefSeqXP);
+      my @list = splitEntities(list=>$RefSeqXP,delimiter=>';');
       foreach my $item ( @list ) {
         my @tmp = ('RefSeq',$item,39);
         push(@links,\@tmp);
@@ -267,7 +302,7 @@ sub buildGoaKeyIndex {
     }
 
     if ($EntrezGene) {
-      my @list = splitEntities($EntrezGene);
+      my @list = splitEntities(list=>$EntrezGene,delimiter=>';');
       foreach my $item ( @list ) {
         my @pair = split(/,/,$item);
         my @tmp = ('Entrez GeneID',$pair[0],37);
@@ -278,7 +313,7 @@ sub buildGoaKeyIndex {
     }
 
     if ($UniGene) {
-      my @list = splitEntities($UniGene);
+      my @list = splitEntities(list=>$UniGene,delimiter=>';');
       foreach my $item ( @list ) {
         my @tmp = ('UniGene',$item);
         push(@links,\@tmp);
@@ -307,9 +342,11 @@ sub buildGoaKeyIndex {
         search_key_name => $Ensembl_ID,
         search_key_type => 'Ensembl Protein',
         search_key_dbxref_id => 20,
+        organism_id => 2,
         resource_name => $Ensembl_ID,
         resource_type => 'Ensembl Protein',
         resource_url => "GetProtein?atlas_build_id=70&protein_name=$Ensembl_ID&action=QUERY",
+        resource_n_matches => $matched_proteins->{$Ensembl_ID},
       );
       $sbeams->updateOrInsertRow(
         insert => 1,
@@ -325,9 +362,11 @@ sub buildGoaKeyIndex {
           search_key_name => $link->[1],
 	  search_key_type => $link->[0],
 	  search_key_dbxref_id => $link->[2],
+          organism_id => 2,
 	  resource_name => $Ensembl_ID,
 	  resource_type => 'Ensembl Protein',
 	  resource_url => "GetProtein?atlas_build_id=70&protein_name=$Ensembl_ID&action=QUERY",
+          resource_n_matches => $matched_proteins->{$Ensembl_ID},
         );
         $sbeams->updateOrInsertRow(
           insert => 1,
@@ -407,13 +446,159 @@ sub readGOAAssociations {
 
 
 ###############################################################################
+# buildSGDKeyIndex
+###############################################################################
+sub buildSGDKeyIndex {
+  my $METHOD = 'buildSGDKeyIndex';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+
+  print "INFO[$METHOD]: Building SGD key index...\n" if ($VERBOSE);
+
+  my $SGD_directory = $args{SGD_directory}
+    or die("ERROR[$METHOD]: Parameter SGD_directory not passed");
+
+  unless (-d $SGD_directory) {
+    die("ERROR[$METHOD]: '$SGD_directory' is not a directory");
+  }
+
+  #### Open the provided SGD_features.tab file
+  my $SGD_file = "$SGD_directory/SGD_features.tab";
+  open(INFILE,$SGD_file)
+    or die("ERROR[$METHOD]: Unable to open file '$SGD_file'");
+
+
+  #### Get the list of proteins that have a match
+  my $matched_proteins = $self->getNProteinHits(organism_id=>3);
+
+
+  #### Read all the data
+  my $line;
+  my $counter = 0;
+
+  while ($line=<INFILE>) {
+    chomp($line);
+    my ($SGDID,$feature_type,$feature_qualifier,$feature_name,$gene_name,
+        $aliases,$chromosome_string,$chr_junk,$chromosome,
+	$chr_start,$chr_end,$strand,
+        $gene_pos,$seq_version,$unknown_version,$description,
+       ) = split(/\t/,$line);
+
+    #### Skip if this isn't an ORF
+    unless ($feature_type eq 'ORF') {
+      next;
+    }
+
+    if (0) {
+      print "-------------------------------------------------\n";
+      print "SGDID=$SGDID\n";
+      print "feature_type=$feature_type\n";
+      print "feature_qualifier=$feature_qualifier\n";
+      print "feature_name=$feature_name\n";
+      print "gene_name=$gene_name\n";
+      print "chromosome_string=$chromosome_string\n";
+      print "chr_junk=$chr_junk\n";
+      print "chromosome=$chromosome\n";
+      print "chr_start=$chr_start\n";
+      print "chr_end=$chr_end\n";
+      print "strand=$strand\n";
+      print "gene_pos=$gene_pos\n";
+      print "seq_version=$seq_version\n";
+      print "unknown_version=$unknown_version\n";
+      print "description=$description\n";
+    }
+
+
+    #### Skip if we don't have a feature_name
+    unless ($feature_name) {
+      print "WARNING: No feature_name for SGDID $SGDID. Skipping...\n";
+      next;
+    }
+
+    #### Build a list of protein links
+    my @links;
+
+    if ($SGDID) {
+      my @tmp = ('SGD ID',$SGDID);
+      push(@links,\@tmp);
+    }
+
+    if ($feature_qualifier) {
+      my @tmp = ('ORF qualifier',$feature_qualifier);
+      push(@links,\@tmp);
+    }
+
+    if ($feature_name) {
+      my @tmp = ('ORF name',$feature_name);
+      push(@links,\@tmp);
+    }
+
+    if ($gene_name) {
+      my @tmp = ('Gene name',$gene_name);
+      push(@links,\@tmp);
+    }
+
+    if ($aliases) {
+      my @list = splitEntities(list=>$aliases,delimiter=>'\|');
+      foreach my $item ( @list ) {
+        my @tmp = ('Alias',$item);
+        push(@links,\@tmp);
+      }
+    }
+
+    if ($description) {
+      my @tmp = ('Description',$description);
+      push(@links,\@tmp);
+    }
+
+
+    foreach my $link (@links) {
+      #print "    ".join("=",@{$link})."\n";
+      my %rowdata = (
+        search_key_name => $link->[1],
+        search_key_type => $link->[0],
+        search_key_dbxref_id => $link->[2],
+        organism_id => 3,
+        resource_name => $feature_name,
+        resource_type => 'Yeast ORF Name',
+        resource_url => "GetProtein?atlas_build_id=73&protein_name=$feature_name&action=QUERY",
+        resource_n_matches => $matched_proteins->{$feature_name},
+      );
+      $sbeams->updateOrInsertRow(
+        insert => 1,
+        table_name => "$TBAT_SEARCH_KEY",
+        rowdata_ref => \%rowdata,
+        verbose=>$VERBOSE,
+        testonly=>$TESTONLY,
+      );
+    }
+
+
+    $counter++;
+    print "$counter... " if ($counter/100 eq int($counter/100));
+
+    my $xx=<STDIN> if (0);
+
+  } # endwhile ($line=<INFILE>)
+
+  print "\n";
+  close(INFILE);
+
+} # end buildGoaKeyIndex
+
+
+
+###############################################################################
 # splitEntities: Split a semi-colon separated list of items into an array
 ###############################################################################
 sub splitEntities {
   my $SUB = 'splitEntities';
-  my $string = shift;
+  my %args = @_;
 
-  my @tmp_IDS = split(/;/,$string);
+  my $list = $args{list};
+  my $delimiter = $args{delimiter} || ';';
+
+  my @tmp_IDS = split(/$delimiter/,$list);
   my @IDS;
   foreach my $ID ( @tmp_IDS ) {
     next if ($ID =~ /^\s*$/);
@@ -421,6 +606,7 @@ sub splitEntities {
   }
 
   return(@IDS);
+
 } # end splitEntities
 
 
@@ -433,16 +619,28 @@ sub buildPeptideKeyIndex {
   my $self = shift || die ("self not passed");
   my %args = @_;
 
+  my $organism_id = $args{organism_id}
+    or die("ERROR[$METHOD]: Parameter organism_id not passed");
+
   print "INFO[$METHOD]: Building Peptide key index...\n" if ($VERBOSE);
 
   #### Get all the peptides in the database, regardless of build
   my $sql = qq~
-       SELECT peptide_accession,peptide_sequence
-         FROM $TBAT_PEPTIDE
+       SELECT DISTINCT peptide_accession,peptide_sequence
+         FROM $TBAT_PEPTIDE P
+         JOIN $TBAT_PEPTIDE_INSTANCE PI ON (P.peptide_id = PI.peptide_id)
+         JOIN $TBAT_ATLAS_BUILD AB ON (AB.atlas_build_id = PI.atlas_build_id)
+         JOIN $TBAT_BIOSEQUENCE_SET BS
+              ON (BS.biosequence_set_id = AB.biosequence_set_id)
+        WHERE BS.organism_id = '$organism_id'
   ~;
   my @peptides = $sbeams->selectSeveralColumns($sql);
 
   my $counter = 0;
+
+  #### FIXME!!!
+  my $atlas_build_id = 70;
+  $atlas_build_id = 73 if ($organism_id == 3);
 
   #### Loop over each one, inserting records for both the accession numbers
   #### and the sequences
@@ -452,9 +650,10 @@ sub buildPeptideKeyIndex {
     my %rowdata = (
       search_key_name => $peptide->[0],
       search_key_type => 'PeptideAtlas',
+      organism_id => $organism_id,
       resource_name => $peptide->[0],
       resource_type => 'PeptideAtlas peptide',
-      resource_url => "GetPeptide?atlas_build_id=70&searchWithinThis=Peptide+Name&searchForThis=$peptide->[0]&action=QUERY",
+      resource_url => "GetPeptide?atlas_build_id=$atlas_build_id&searchWithinThis=Peptide+Name&searchForThis=$peptide->[0]&action=QUERY",
     );
     $sbeams->updateOrInsertRow(
       insert => 1,
@@ -468,6 +667,7 @@ sub buildPeptideKeyIndex {
     my %rowdata = (
       search_key_name => $peptide->[1],
       search_key_type => 'peptide sequence',
+      organism_id => $organism_id,
       resource_name => $peptide->[0],
       resource_type => 'PeptideAtlas peptide',
       resource_url => "GetPeptide?atlas_build_id=70&searchWithinThis=Peptide+Name&searchForThis=$peptide->[0]&action=QUERY",
@@ -488,6 +688,41 @@ sub buildPeptideKeyIndex {
   return(1);
 
 } # end buildPeptideKeyIndex
+
+
+
+###############################################################################
+# getNProteinHits
+###############################################################################
+sub getNProteinHits {
+  my $METHOD = 'getNProteinHits';
+  my $self = shift || die ("self not passed");
+  my %args = @_;
+
+  my $organism_id = $args{organism_id}
+    or die("ERROR[$METHOD]: Parameter organism_id not passed");
+
+  #### FIXME!!!
+  my $atlas_build_id = 70;
+  $atlas_build_id = 73 if ($organism_id == 3);
+
+  #### Get all the peptides in the database, regardless of build
+  my $sql = qq~
+       SELECT biosequence_name,SUM(n_observations) AS N_obs
+         FROM $TBAT_PEPTIDE_INSTANCE PI
+         JOIN $TBAT_ATLAS_BUILD AB ON (AB.atlas_build_id = PI.atlas_build_id)
+         JOIN $TBAT_PEPTIDE_MAPPING PIM
+              ON (PIM.peptide_instance_id = PI.peptide_instance_id)
+         JOIN $TBAT_BIOSEQUENCE B
+              ON (B.biosequence_id = PIM.matched_biosequence_id)
+        WHERE AB.atlas_build_id = '$atlas_build_id'
+        GROUP BY biosequence_name
+  ~;
+  my %proteins = $sbeams->selectTwoColumnHash($sql);
+
+  return(\%proteins);
+
+} # end getNProteinHits
 
 
 
