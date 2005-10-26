@@ -28,7 +28,7 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
              $TABLE_NAME $PROGRAM_FILE_NAME $CATEGORY $DB_TABLE_NAME
              @MENU_OPTIONS);
 
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 use SBEAMS::Connection::TabMenu;
@@ -178,6 +178,13 @@ sub handle_request {
 
   #### Get the passed parameters
   my $search_key = $parameters{"search_key"};
+  my $organism_name = $parameters{"organism_name"};
+
+
+  #### Build the list of organism_names
+  my $organism_selection = getOrganismSelection(
+    organism_name => $organism_name,
+  );
 
 
   #### This is needed for displaying the page header
@@ -217,7 +224,10 @@ sub handle_request {
           <A HREF="$base_url?search_key=MCCC2_HUMAN&action=GO">MCCC2_HUMAN</A>,
           <A HREF="$base_url?search_key=PAp00000097&action=GO">PAp00000097</A>,
           <A HREF="$base_url?search_key=AAVEEGIVLGGGCALLR&action=GO">AAVEEGIVLGGGCALLR</A>
-        )
+        )<BR>
+        Organism: <select name="organism_name">
+        $organism_selection->{HTML_optionlist}
+        </select>
         </CENTER></nobr>
         </P>
       ~;
@@ -256,23 +266,27 @@ sub handle_request {
 
   #### Define the SQL statement to find the biosequence
   $sql = qq~
-       SELECT search_key_name,search_key_type,resource_name,
-              resource_type,resource_url
-         FROM $TBAT_SEARCH_KEY
-       WHERE 1 = 1
+       SELECT search_key_name,search_key_type,organism_name,resource_name,
+              resource_type,resource_n_matches,resource_url,O.organism_id
+         FROM $TBAT_SEARCH_KEY SK
+         JOIN $TB_ORGANISM O ON (O.organism_id = SK.organism_id)
+        WHERE 1 = 1
           $search_key_clause
+          AND O.organism_id IN ( $organism_selection->{organism_ids} )
        ORDER BY search_key_name
   ~;
+$log->debug($sql);
 
 
   #### Define the hypertext links for columns that need them
   %url_cols = (
-    	       'resource_name' => "$CGI_BASE_DIR/PeptideAtlas/%4V",
+    	       'resource_name' => "$CGI_BASE_DIR/PeptideAtlas/%6V",
   );
 
   #### Define the hidden columns
   %hidden_cols = (
     	       'resource_url' => 1,
+    	       'organism_id' => 1,
   );
 
 
@@ -312,7 +326,7 @@ sub handle_request {
     if ($n_results == 1) {
       print "Status: 302 Resource Temporarily Moved\n";
       print "Location: $CGI_BASE_DIR/PeptideAtlas/".
-	$resultset_ref->{data_ref}->[0]->[4]."\n\n";
+	$resultset_ref->{data_ref}->[0]->[6]."\n\n";
       exit;
     }
 
@@ -375,3 +389,101 @@ sub handle_request {
 } # end handle_request
 
 
+
+###############################################################################
+# getOrganismSelection
+###############################################################################
+sub getOrganismSelection {
+  my $SUB_NAME = 'getOrganismSelection';
+  my %args = @_;
+
+  #### Decode the argument list
+  my $organism_name = $args{'organism_name'};
+
+
+  #### If none was supplied, see if it was cached for this session
+  unless ($organism_name) {
+    $organism_name = $sbeams->getSessionAttribute(
+      key => 'PeptideAtlas_organism_name',
+    );
+  }
+
+  #### Or default to Any
+  unless ($organism_name) {
+    $organism_name = 'Any';
+  }
+
+
+  #### Get a list of accessible project_ids
+  my @accessible_project_ids = $sbeams->getAccessibleProjects();
+  my $accessible_project_ids = join( ",", @accessible_project_ids ) || '0';
+
+  #### Get a hash of available organisms via atlas builds
+  my $sql = qq~
+      SELECT DISTINCT O.organism_id,O.organism_name
+        FROM $TBAT_ATLAS_BUILD AB
+        JOIN $TBAT_BIOSEQUENCE_SET BS
+             ON (BS.biosequence_set_id = AB.biosequence_set_id)
+        JOIN $TB_ORGANISM O ON (O.organism_id = BS.organism_id)
+       WHERE AB.project_id IN ( $accessible_project_ids )
+         AND AB.record_status!='D'
+       ORDER BY organism_name
+  ~;
+  my @organisms = $sbeams->selectSeveralColumns($sql);
+
+  my @options = ('Any');
+  my %options = ('Any'=>'Any');
+  my %organism_ids;
+
+  #### Build the list of available organisms
+  foreach my $organism ( @organisms ) {
+    my $each_organism_name = $organism->[1];
+    push(@options,$each_organism_name);
+    $options{$each_organism_name} = $each_organism_name;
+    $organism_ids{$each_organism_name} = $organism->[0];
+  }
+
+
+  #### Build the option list HTML
+  my $optionlist = '';
+  my $matched_parameter = 0;
+  foreach my $key ( @options ) {
+    my $flag = '';
+    if ($key eq $organism_name) {
+      $flag = 'SELECTED';
+      $matched_parameter++;
+    }
+    $optionlist .= "<OPTION VALUE=\"$key\" $flag>$options{$key}</OPTION>\n";
+  };
+
+
+  #### Also make sure the user selected a valid option
+  unless ($matched_parameter) {
+    $organism_name = 'Any';
+  }
+
+
+  #### Get the organism_ids
+  my $organism_ids = $organism_ids{$organism_name};
+  if ($organism_name eq 'Any') {
+    $organism_ids = join(",",values(%organism_ids));
+  }
+
+  #### Build a data structure to return
+  my %tmp = (
+    HTML_optionlist => $optionlist,
+    organism_name => $organism_name,
+    organism_ids => $organism_ids,
+  );
+
+  #### Store the selected organism_name in the session cache
+  if ($organism_name) {
+    $sbeams->setSessionAttribute(
+      key => 'PeptideAtlas_organism_name',
+      value => $organism_name,
+    );
+  }
+
+  return \%tmp;
+
+} # end getOrganismSelection
