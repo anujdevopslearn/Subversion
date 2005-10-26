@@ -24,6 +24,9 @@ use vars qw( $q $http_header $log @ISA $DBTITLE $SESSION_REAUTH @ERRORS
              $current_project_id $current_project_name $SMBAUTH
              $current_user_context_id @EXPORT_OK  );
 
+use vars qw( %session $session_string );
+use Storable;
+
 use CGI::Carp qw(croak);
 use CGI qw(-no_debug);
 use DBI;
@@ -106,7 +109,16 @@ sub Authenticate {
     exit;
   }
 
+  #### Get the cookies from the request
   my %cookie = $q->cookie('SBEAMSName');
+  my $session_cookie = $self->getSessionCookie();
+  $log->debug("session_cookie=\n".Data::Dumper->Dump([$session_cookie]));
+  if (scalar(keys(%{$session_cookie}))) {
+    my $tmp = $self->getSessionAttribute(key=>'session_started_date');
+    $log->debug("session_started_date=$tmp");
+    $log->debug("session data=\n".Data::Dumper->Dump([\%session]));
+  }
+
 
   #### If the effective UID is the apache user, then go through the
   #### cookie authentication mechanism
@@ -114,24 +126,37 @@ sub Authenticate {
   my $www_uid = $self->getWWWUID();
   if ( $uid == $www_uid && !$q->param('force_login') ) {
     # We are presumably here due to a cgi request.
- 
+
+    unless(scalar(keys(%{$session_cookie}))) {
+      $log->debug("Creating new session cookie\n");
+      $session_cookie = $self->createSessionCookie();
+      $http_header = $q->header(-cookie => $session_cookie);
+      $self->setSessionAttribute(
+        key=>'session_started_date',
+        value=>time(),
+      );
+    }
+
     $current_username = $self->processLogin(cookie_ref => \%cookie);
 
-     # Has cookie/login processing obtained a valid username?
+    # Has cookie/login processing obtained a valid username?
     if ( !$current_username ) {
       $log->info( "Testing alternate authentication modes" );
 
       # Otherwise use SBEAMSentrycode if defined
       if ( my $entrycode = $q->param('SBEAMSentrycode') ) {
         $log->info( "Using entry code" );
-	      $current_username = $DBCONFIG->{$DBINSTANCE}->{ENTRYCODE}->{$entrycode};
-       if ( $current_username ) { 
-	        $http_header = $self->createAuthHeader($current_username)
+	$current_username=$DBCONFIG->{$DBINSTANCE}->{ENTRYCODE}->{$entrycode};
+	if ( $current_username ) {
+	  $http_header = $self->createAuthHeader(
+            username => $current_username,
+            session_cookie => $session_cookie,
+	  );
         } else {
           $log->warn( "Entry code was specified but not in config file" );
         }
 
-    # Allow anonymous access?
+      # Allow anonymous access?
       } elsif ( $allow_anonymous_access ) {
         $log->info( "allowing guest authentication" );
         #print "Content-type: text/plain\n\nReceived no cookie; runs as guest\n";
@@ -150,21 +175,21 @@ sub Authenticate {
   }
 
   # Haven't been able to authenticate, force login
-  if ( !$current_username ) { 
+  if ( !$current_username ) {
 
     # If we have cookie (forced login), destroy it
     $self->destroyAuthHeader() if %cookie;
 
-	  # Draw a login form for the user to fill out
+    # Draw a login form for the user to fill out
     $self->printPageHeader(minimal_header=>"YES");
     $self->printLoginForm();
     $self->printPageFooter();
 
   # Else if we've have a valid user, get additional information
-  } elsif ( requestingNoAuthPage() ) { 
+  } elsif ( requestingNoAuthPage() ) {
 
     return $current_username;
-  } else { 
+  } else {
 
       $current_contact_id = $self->getContact_id($current_username);
       $current_work_group_id = $self->getCurrent_work_group_id();
@@ -234,7 +259,7 @@ sub processLogin {
   # If user and pass were given in login context, use the info.
   if ( $user && $pass && $login ) { 
     if ($self->checkLogin($user, $pass)) {
-      $http_header = $self->createAuthHeader($user);
+      $http_header = $self->createAuthHeader(username => $user);
       $current_contact_id = $self->getContact_id($user);
       $current_username = $user;
       # $log->info( "User $user connected from " . $q->remote_host() );
@@ -272,7 +297,7 @@ sub processLogin {
       } else {
         if ( $stale < $half_eaten || $time_diff < 0 ) {
           # The cookie is in its final 60 minutes of validity, or postdated
-          $http_header = $self->createAuthHeader($valid_username);
+          $http_header = $self->createAuthHeader(username=>$valid_username);
           $log->info( "Cookie will expire soon or is postdated, reissuing" );
         }
         $current_username = $valid_username;
@@ -1029,7 +1054,7 @@ sub displayPermissionToPageDenied{
 
 
 ###############################################################################
-# 
+# destroyAuthHeader
 ###############################################################################
 sub destroyAuthHeader {
     my $self = shift;
@@ -1062,11 +1087,15 @@ sub destroyAuthHeader {
 
 
 ###############################################################################
-# 
+# createAuthHeader
 ###############################################################################
 sub createAuthHeader {
+    my $SUB_NAME = "createAuthHeader";
     my $self = shift;
-    my $username = shift;
+    my %args = @_;
+
+    my $username = $args{'username'};
+    my $session_cookie = $args{'session_cookie'};
 
     # Fetch configured cookie timeout, else use 24 hrs.
     my $chours = $self->isValidDuration(cookie_duration => $LOGIN_DURATION) || 24;
@@ -1084,7 +1113,7 @@ sub createAuthHeader {
     my %cookie = (  $ctime => $encrypted_user );
 
     my $cookie;
-    
+
     if ( $SESSION_REAUTH ) {
       $cookie = $q->cookie( -name    => 'SBEAMSName',
                             -path    => "$cookie_path",
@@ -1099,10 +1128,153 @@ sub createAuthHeader {
 
     }
 
-    my $head = $q->header(-cookie => $cookie);
+    my $head;
+    if ($session_cookie) {
+      $head = $q->header(-cookie => $cookie,
+			 -cookie => $session_cookie
+			);
+    } else {
+      $head = $q->header(-cookie => $cookie);
+    }
 
     return $head;
 }
+
+
+###############################################################################
+# getSessionCookie
+###############################################################################
+sub getSessionCookie {
+  my $self = shift;
+
+  my %cookie = $q->cookie('SBEAMSSession');
+
+  if (scalar(keys(%cookie))) {
+    ($session_string) = values(%cookie);
+  }
+
+  return \%cookie;
+
+} # end getSessionCookie
+
+
+###############################################################################
+# createSessionCookie
+###############################################################################
+sub createSessionCookie {
+  my $self = shift;
+
+  my $cookie_path = $HTML_BASE_DIR;
+
+  $session_string = $self->getRandomString( num_chars => 20,
+    char_set  => [ 'a'..'z', 0..9 ] );
+
+  my $ctime = time();
+  my %cookie = ( $ctime => $session_string );
+
+  my $cookie;
+
+  $cookie = $q->cookie( -name    => 'SBEAMSSession',
+                        -path    => "$cookie_path",
+                        -value   => \%cookie );
+
+  return $cookie;
+}
+
+
+###############################################################################
+# getSessionAttribute
+###############################################################################
+sub getSessionAttribute {
+  my $SUB_NAME = "getSessionAttribute";
+  my $self = shift;
+  my %args = @_;
+
+  my $key = $args{'key'}
+    || die("ERROR: $SUB_NAME: Parameter 'key' not passed");
+
+  unless (%session) {
+
+    unless ($session_string) {
+      #die("ERROR: $SUB_NAME: No session_string available");
+      return;
+    }
+
+    my $session_store_file = "$PHYSICAL_BASE_DIR/tmp/sessions/".
+      "$session_string.dat";
+
+    if (-e $session_store_file) {
+      %session = %{retrieve($session_store_file)};
+      unless (%session) {
+	die("ERROR: $SUB_NAME: Unable to open or parse session file ".
+	    "'$session_store_file' (it does exist)");
+      }
+
+    } else {
+      #### We don't even have a session file yet
+      return;
+    }
+  }
+
+  if (%session) {
+    if ($session{$key}) {
+      return($session{$key});
+    } else {
+      #### No such attribute yet
+      return(undef);
+    }
+  }
+
+} # end getSessionAttribute
+
+
+###############################################################################
+# setSessionAttribute
+###############################################################################
+sub setSessionAttribute {
+  my $SUB_NAME = "setSessionAttribute";
+  my $self = shift;
+  my %args = @_;
+
+  my $key = $args{'key'}
+    || die("ERROR: $SUB_NAME: Parameter 'key' not passed");
+  my $value = $args{'value'};
+
+
+  unless ($session_string) {
+    #die("ERROR: $SUB_NAME: No session_string available");
+    return;
+  }
+
+
+  my $session_store_file = "$PHYSICAL_BASE_DIR/tmp/sessions/".
+    "$session_string.dat";
+
+
+  unless (%session) {
+
+    if (-e $session_store_file) {
+      %session = %{retrieve($session_store_file)};
+      unless (%session) {
+	die("ERROR: $SUB_NAME: Unable to open or parse session file ".
+	    "'$session_store_file' (it does exist)");
+      }
+
+    } else {
+      #### We don't even have a session file yet
+    }
+  }
+
+
+  $session{$key} = $value;
+
+  store(\%session,$session_store_file);
+
+  return(1);
+
+} # end setSessionAttribute
+
+
 
 #+
 # Wrapper method CGI.pm redirect method, allows for pertinant code to be
