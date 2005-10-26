@@ -52,17 +52,19 @@ Options:
   --debug n              Set debug flag
   --testonly             If set, rows in the database are not changed or added
   --GOA_directory        Directory where the latest GOA files are
+  --SGD_directory        Directory where the latest SGD files are
+  --organism_name        Name of organism to process (Human,Yeast)
 
- e.g.: $PROG_NAME 
+ e.g.: $PROG_NAME --organism_name Yeast --SGD_directory ./annotations
 EOU
 
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
-                   "GOA_directory:s",
+                   "GOA_directory:s","SGD_directory:s","organism_name:s",
     )) {
 
-    die "\n$USAGE";
-
+    print "\n$USAGE";
+    exit;
 }
 
 $VERBOSE = $OPTIONS{"verbose"} || 0;
@@ -118,6 +120,8 @@ sub handleRequest {
 
   #### Set the command-line options
   my $GOA_directory = $OPTIONS{"GOA_directory"};
+  my $SGD_directory = $OPTIONS{"SGD_directory"};
+  my $organism_name = $OPTIONS{"organism_name"};
 
 
   #### If there are any unresolved parameters, exit
@@ -127,16 +131,25 @@ sub handleRequest {
     exit;
   }
 
+  unless ($organism_name) {
+    print "\n$USAGE\nINSUFFICIENT OPTIONS: You must supply --organism_name\n";
+    exit;
+  }
+
+
+
   my $keySearch = new SBEAMS::PeptideAtlas::KeySearch;
 
   $keySearch->setSBEAMS($sbeams);
 
   $keySearch->rebuildKeyIndex(
     GOA_directory => $GOA_directory,
+    SGD_directory => $SGD_directory,
+    organism_name => $organism_name,
     verbose => $VERBOSE,
     testonly => $TESTONLY,
   );
-  
+
 
 } # end handleRequest
 
