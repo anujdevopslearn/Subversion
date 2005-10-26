@@ -342,6 +342,7 @@ sub _getParser2DbMap {
 #    'PARAM:smoke' => 'smoke',   
     'PARAM:Date of Sample Collection' => 'collection_date',   
     'PARAM:Others' => 'other',   
+    'PARAM:Strain' => 'strain',
 
     'others' => 'other',  # type => general, name => others, value => value
 #    'Plate Layout' => 'plate_layout',      

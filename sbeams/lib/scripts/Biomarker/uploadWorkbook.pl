@@ -158,7 +158,9 @@ sub add_items {
                                               auto => 1 );
          $args{biosource}->createDiseases( diseases => $results->{diseases},
                                             auto => 1 );
-         $args{biosource}->createTissues( tissue => $results->{tissues} );
+
+# This is vestigal, when disease tissues were being autocreated.
+         $args{biosource}->create_tissues( tissue_type => $results->{tissue_type} );
          $args{biosample}->createStorageLoc( strg_loc => $results->{storage_loc} );
 
          my $name =   'upload-' . $sbeams->get_datetime() . '-' . $params{experiment};
@@ -243,7 +245,7 @@ sub set_exp_id {
   my $biosample = shift;
   ($biosample->{experiment_id}) = $sbeams->selectrow_array( <<"  END" );
   SELECT experiment_id 
-  FROM $TBBM_BMRK_EXPERIMENT
+  FROM $TBBM_EXPERIMENT
   WHERE experiment_tag = '$exp_name'
   END
 }
@@ -277,16 +279,18 @@ sub na_to_undef {
 
 sub set_tissuetype_id {
   my $biosource = shift;
-#  for my $k ( keys( %$biosource ) ) {
-#    print "KEYHASH $k => $biosource->{$k}\n";
-#  }
-#  die;
+
+#  for my $k ( keys( %$biosource ) ) { print "KEYHASH $k => $biosource->{$k}\n";  } #  die;
+
   return unless $biosource->{tissue_type_id};
+
+  # What is currently in the database
   ($biosource->{tissue_type_id}) = $sbeams->selectrow_array( <<"  END" );
   SELECT tissue_type_id 
   FROM $TBBM_TISSUE_TYPE
   WHERE tissue_type_name = '$biosource->{tissue_type_id}'
   END
+  
 }
 
 sub set_storageloc_id {
@@ -294,7 +298,7 @@ sub set_storageloc_id {
   $biosample->{storage_location_id} ||= undef;
   ($biosample->{storage_location_id}) = $sbeams->selectrow_array( <<"  END" );
   SELECT storage_location_id 
-  FROM $TBBM_BMRK_STORAGE_LOCATION
+  FROM $TBBM_STORAGE_LOCATION
   WHERE location_name = '$biosample->{storage_location_id}'
   END
   return;
@@ -312,7 +316,7 @@ sub test_data {
   }
   # Can autocreate
   my %redundant_attr;
-  my %redundant_tissue;
+  my %redundant_tissue_type;
   my %redundant_disease;
   my %redundant_storage_loc;
 
@@ -355,22 +359,6 @@ sub test_data {
       $redundant_attr{$k}++;
     }
 
-
-    ### Check tissues ###
-    for my $k ( keys(%{$item->{tissue_type}}) ) {
-
-      # Skip if we've seen it (unless redundant mode)
-      next if $redundant_tissue{$k} && !$args{redundant};
-
-      # push into missing tissues array, print message if desired.
-      unless ( $args{biosource}->tissueExists( $k ) ) { 
-        push @{$results{tissues}}, $k;
-        push @auto, "Line $item_no: Tissue $k doesn't exist yet\n";
-      }
-      # record the fact that we've seen it.
-      $redundant_tissue{$k}++;
-    }
-
     
     ### Check Diseases ###
     for my $k ( keys(%{$item->{biosource_disease}}) ) {
@@ -398,6 +386,18 @@ sub test_data {
         push @auto, "Line $item_no: Storage location $stor does not yet exist\n";
       }
       $redundant_storage_loc{$stor}++;
+    }
+
+    ### Check tissue_type ###
+    my $tissue_type = $item->{biosource}->{tissue_type_id};
+    
+    # push into missing storage_loc array, print message if desired.
+    if ( (!$redundant_tissue_type{$tissue_type} || $args{redundant} )) {
+      unless ( $args{biosource}->tissue_type_exists($tissue_type) ) {
+        push @{$results{tissue_type}}, $tissue_type;
+        push @auto, "Line $item_no: Tissue type $tissue_type does not yet exist\n";
+      }
+      $redundant_tissue_type{$tissue_type}++;
     }
 
      
