@@ -5,10 +5,11 @@
 # Author	: Jeff Howbert <peak.list@verizon.net>
 # $Id$
 #
-# Description	: This script exercises specific SQL statements in a
-#		  variety of modules, primarily to confirm they
-#		  execute correctly when passed to different SQL
-#		  engines.
+# Description	: This script passes prototypical SQL statements to
+#		  the current database instance.  It is intended to
+#		  be exercised against multiple database instances,
+#                 to confirm the syntax of the SQL statements is valid
+#                 in each instance.
 #
 # SBEAMS is Copyright (C) 2000-2005 Institute for Systems Biology
 # This program is governed by the terms of the GNU General Public
@@ -116,39 +117,21 @@ __END__
 
 =head2  DESCRIPTION
 
-This script exercises specific SQL statements in a variety of modules,
-primarily to confirm they execute correctly when passed to different SQL
-engines.
+This script passes prototypical SQL statements to the current database instance.
+It is intended to be exercised against multiple database instances, to confirm
+the syntax of the SQL statements is valid in each instance.
 
 Executable currently located in sbeams/lib/perl/t/Core.
 
 =head2  USAGE
 
-Invoke on the command line as "SQLTest.t [ arg1 arg2 ... ]", where name of
-script is followed zero or more arguments, each argument being the name of
-a database instance used by the SBEAMS system.  The database instance names
-should be the same as the names appearing as section headings in SBEAMS.conf.
-
-Sample usages:
-
-SQLTest.t               # defaults to "SQLTest.t dev1"
-SQLTest.t mysql
-SQLTest.t mssql
-SQLTest.t mysql mssql
-SQLTest.t dev1 mssql mysql
 
 =head2  KNOWN BUGS AND LIMITATIONS
 
-1) "SQLTest.t default" gives errors.
-2) "SQLTest.t xxx", where xxx is not one of the database instance names
-used in SBEAMS.conf, gives appropriate notification, but throws off the
-count of tests.
-3) Running the script with against a database instance that is valid
-within SBEAMS.conf but inaccessible may cause premature termination
-of the script.
 
 =head2  AUTHOR
 
 Jeff Howbert <peak.list@verizon.net>
 
 =cut
+
