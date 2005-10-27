@@ -509,7 +509,7 @@ sub buildAtlas {
 
 ###############################################################################
 # get_sample_id_hash -- get hash with key= search_batch_id, value=sample_id
-#    creates smaple records if they don't exist yet
+#    creates sample records if they don't exist yet
 # @param atlas_build_id
 # @param APD_id
 ###############################################################################
@@ -525,7 +525,6 @@ sub get_sample_id_hash {
 
     my $sb_list = get_search_batch_id_list( APD_id => $APD_id );
         
-
     ## fill in hash values with sample_id's
     my %sb_s_hash = get_search_batch_sample_id_hash( 
         sb_list => $sb_list );
@@ -574,7 +573,7 @@ sub get_search_batch_sample_id_hash {
 
     my %args = @_;
 
-    my %hash;
+    my %tmp_hash;
   
     my $search_batch_id_list = $args{sb_list} or die "need search batch list ($!)";
 
@@ -586,14 +585,45 @@ sub get_search_batch_sample_id_hash {
         AND record_status != 'D'
     ~;
 
-    %hash = $sbeams->selectTwoColumnHash($sql) or die
+    %tmp_hash = $sbeams->selectTwoColumnHash($sql) or die
         "unable to execute statement:\n$sql\n($!)";
 
-    ## for older datasets where we have new search batches, this query
+
+    ## For older datasets where we have new search batches, this query
     ## fails to fill in a value, so need to iterate over list and dig
     ## up old record where possible...this isn't clean...need a search
     ## batch table in PeptideAtlas...
     my @search_batch_array = split(",", $search_batch_id_list);
+
+    for (my $i=0; $i <= $#search_batch_array; $i++)
+    {
+
+        if (!exists $tmp_hash{$search_batch_array[$i]} )
+        {
+
+            ## create sample record and atlas build sample record:
+            my $tmp_sample_id = createSampleRecords(
+                search_batch_id => $search_batch_array[$i],
+                atlas_build_id => $ATLAS_BUILD_ID
+            );
+
+        }
+
+    }
+
+
+    ## Make one more sql call to make sure records did get entered:
+
+    #### Get existing sample_id's in peptide atlas:
+    $sql = qq~
+        SELECT search_batch_id, sample_id
+        FROM $TBAT_SAMPLE
+        WHERE search_batch_id IN ($search_batch_id_list)
+        AND record_status != 'D'
+    ~;
+
+    my %hash = $sbeams->selectTwoColumnHash($sql) or die
+        "unable to execute statement:\n$sql\n($!)";
 
     for (my $i=0; $i <= $#search_batch_array; $i++)
     {
@@ -603,11 +633,42 @@ sub get_search_batch_sample_id_hash {
 
             die "No sample record with search_batch_id = "
                 . "$search_batch_array[$i].  There is probably a "
-                . "newer search batch associated with the sample.\n";
+                . "newer search batch associated with the sample?\n";
 
         }
 
     }
+
+
+    ## now make sure atlas_build_sample records exist ##
+
+    ## get all atlas_build_sample records into a hash:
+    $sql = qq~
+        SELECT sample_id, atlas_build_sample_id
+        FROM $TBAT_ATLAS_BUILD_SAMPLE
+        WHERE record_status != 'D'
+    ~;
+ 
+     my %abs_hash = $sbeams->selectTwoColumnHash($sql) or die
+         "unable to execute statement:\n$sql\n($!)";
+
+    ## check that there's an atals_build_sample_record, and if not, create one
+    foreach my $key (keys %hash)
+    {
+
+        my $sample_id = $hash{$key};
+
+        if (!exists $abs_hash{$sample_id})
+        {
+
+            my $tmp_abs_id = createAtlasBuildSampleRecords(
+                sample_id => $sample_id,
+                atlas_build_id => $ATLAS_BUILD_ID
+            );
+
+        }
+    }
+   
 
     return %hash;
      
@@ -615,7 +676,44 @@ sub get_search_batch_sample_id_hash {
 
 
 ###############################################################################
-#  createSampleRecords -- create sample record and atlas_build_sample record
+#  createAtlasBuildSampleRecords -- create atlas build sample record 
+# @param sample_id
+# @param atlas_build_id
+###############################################################################
+sub createAtlasBuildSampleRecords {
+
+    my %args = @_;
+
+    my $sample_id = $args{sample_id} or die "need sample_id ($!)";
+
+    my $atlas_build_id = $args{atlas_build_id} or 
+        die "need atlas_build_id ($!)";
+
+
+    ## Populate atlas_build_sample table
+    my %rowdata = (   ##   atlas_build_sample    table attributes
+        atlas_build_id => $atlas_build_id,
+        sample_id => $sample_id,
+    );
+
+
+    my $atlas_build_sample_id = $sbeams->updateOrInsertRow(
+        insert=>1,
+        table_name=>$TBAT_ATLAS_BUILD_SAMPLE,
+        rowdata_ref=>\%rowdata,
+        PK => 'atlas_build_sample_id',
+        return_PK => 1,
+        add_audit_parameters => 1,
+        verbose=>$VERBOSE,
+        testonly=>$TESTONLY,
+    );
+
+    return $sample_id;
+
+} ## end createAtlasBuildSampleRecords
+
+###############################################################################
+#  createSampleRecords -- create sample record 
 #     with minimum info and some default settings 
 #     [ specifically: is_public='N', project_id='475' ]
 # @param search_batch_id
@@ -688,25 +786,6 @@ sub createSampleRecords {
     );
 
     $sample_id = $tmp_sample_id;
-
-
-    ## Populate atlas_build_sample table
-    my %rowdata = (   ##   atlas_build_sample    table attributes
-        atlas_build_id => $atlas_build_id,
-        sample_id => $sample_id,
-    );
-
-
-    my $atlas_build_sample_id = $sbeams->updateOrInsertRow(
-        insert=>1,
-        table_name=>$TBAT_ATLAS_BUILD_SAMPLE,
-        rowdata_ref=>\%rowdata,
-        PK => 'atlas_build_sample_id',
-        return_PK => 1,
-        add_audit_parameters => 1,
-        verbose=>$VERBOSE,
-        testonly=>$TESTONLY,
-    );
 
     return $sample_id;
 
