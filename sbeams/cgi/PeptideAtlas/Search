@@ -275,7 +275,6 @@ sub handle_request {
           AND O.organism_id IN ( $organism_selection->{organism_ids} )
        ORDER BY search_key_name
   ~;
-$log->debug($sql);
 
 
   #### Define the hypertext links for columns that need them
