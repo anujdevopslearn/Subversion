@@ -112,11 +112,11 @@ sub Authenticate {
   #### Get the cookies from the request
   my %cookie = $q->cookie('SBEAMSName');
   my $session_cookie = $self->getSessionCookie();
-  $log->debug("session_cookie=\n".Data::Dumper->Dump([$session_cookie]));
+  #$log->debug("session_cookie=\n".Data::Dumper->Dump([$session_cookie]));
   if (scalar(keys(%{$session_cookie}))) {
     my $tmp = $self->getSessionAttribute(key=>'session_started_date');
-    $log->debug("session_started_date=$tmp");
-    $log->debug("session data=\n".Data::Dumper->Dump([\%session]));
+    #$log->debug("session_started_date=$tmp");
+    #$log->debug("session data=\n".Data::Dumper->Dump([\%session]));
   }
 
 
@@ -1176,7 +1176,9 @@ sub createSessionCookie {
 
   $cookie = $q->cookie( -name    => 'SBEAMSSession',
                         -path    => "$cookie_path",
-                        -value   => \%cookie );
+                        -value   => \%cookie,
+		        -expires => "+1M",
+                      );
 
   return $cookie;
 }
@@ -1200,13 +1202,20 @@ sub getSessionAttribute {
       return;
     }
 
-    my $session_store_file = "$PHYSICAL_BASE_DIR/tmp/sessions/".
+    my $session_store_file = "$PHYSICAL_BASE_DIR/var/sessions/".
       "$session_string.dat";
 
     if (-e $session_store_file) {
-      %session = %{retrieve($session_store_file)};
+      my $session_hashref;
+      eval {
+	$session_hashref = retrieve($session_store_file) ||
+	  $log->error("Unable to retrieve session $session_string");
+      };
+      if ($session_hashref) {
+	%session = %{$session_hashref};
+      }
       unless (%session) {
-	die("ERROR: $SUB_NAME: Unable to open or parse session file ".
+	$log->error("ERROR: $SUB_NAME: Unable to open or parse session file ".
 	    "'$session_store_file' (it does exist)");
       }
 
@@ -1247,16 +1256,23 @@ sub setSessionAttribute {
   }
 
 
-  my $session_store_file = "$PHYSICAL_BASE_DIR/tmp/sessions/".
+  my $session_store_file = "$PHYSICAL_BASE_DIR/var/sessions/".
     "$session_string.dat";
 
 
   unless (%session) {
 
     if (-e $session_store_file) {
-      %session = %{retrieve($session_store_file)};
+      my $session_hashref;
+      eval {
+	$session_hashref = retrieve($session_store_file) ||
+	  $log->error("Unable to retrieve session $session_string");
+      };
+      if ($session_hashref) {
+	%session = %{$session_hashref};
+      }
       unless (%session) {
-	die("ERROR: $SUB_NAME: Unable to open or parse session file ".
+	$log->error("ERROR: $SUB_NAME: Unable to open or parse session file ".
 	    "'$session_store_file' (it does exist)");
       }
 
