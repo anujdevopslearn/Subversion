@@ -182,7 +182,7 @@ Instructions:<BR>
                       ELSE GPP.privilege_id END) AS "best_group_privilege_id",
              MIN(CASE WHEN P.PI_contact_id = $current_contact_id THEN 10
                       ELSE UPP.privilege_id END) AS "best_user_privilege_id",
-			COUNT (AR.array_request_id) AS 'array_requests'
+			COUNT(AR.array_request_id) AS 'array_requests'
       FROM $TB_PROJECT P
      INNER JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
 
@@ -1244,7 +1244,7 @@ Instructions:<BR>
                       ELSE GPP.privilege_id END) AS "best_group_privilege_id",
              MIN(CASE WHEN P.PI_contact_id = $current_contact_id THEN 10
                       ELSE UPP.privilege_id END) AS "best_user_privilege_id",
-			COUNT (AR.array_request_id) AS 'array_requests'
+			COUNT(AR.array_request_id) AS 'array_requests'
       FROM $TB_PROJECT P
      INNER JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
 

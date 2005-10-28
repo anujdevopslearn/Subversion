@@ -395,8 +395,8 @@ sub print_project_info {
 
 
       $sql = qq~
-	  SELECT COUNT (ASCAN.array_scan_id) AS 'Scans', 
-	         COUNT (AQ.array_quantitation_id) AS 'Quantitations'
+	  SELECT COUNT(ASCAN.array_scan_id) AS 'Scans', 
+	         COUNT(AQ.array_quantitation_id) AS 'Quantitations'
             FROM $TBMA_ARRAY A
             LEFT JOIN $TBMA_ARRAY_SCAN ASCAN ON (A.array_id = ASCAN.array_id)
 	    LEFT JOIN $TBMA_ARRAY_QUANTITATION AQ ON ( AQ.array_scan_id = ASCAN.array_scan_id )
@@ -441,7 +441,7 @@ print qq~
 my $n_affy_chips = 0;
 
 if ($project_id > 0) {
-	$sql = qq~ 	SELECT count (afa.affy_array_id)
+	$sql = qq~ 	SELECT count(afa.affy_array_id)
 		   	FROM $TBMA_AFFY_ARRAY afa
 		   	JOIN $TBMA_AFFY_ARRAY_SAMPLE afs ON (afa.affy_array_sample_id = afs.affy_array_sample_id)
 		   	WHERE afs.project_id = $project_id 
@@ -1455,7 +1455,7 @@ sub print_data_download_tab {
 		my $n_two_color_runs = 0;
 		
 		if ($project_id > 0) {
-			my $sql = qq~ 	SELECT count (afa.affy_array_id)
+			my $sql = qq~ 	SELECT count(afa.affy_array_id)
 		   			FROM $TBMA_AFFY_ARRAY afa, $TBMA_AFFY_ARRAY_SAMPLE afs 
 					WHERE afs.project_id = $project_id 
 					AND afa.affy_array_sample_id = afs.affy_array_sample_id
