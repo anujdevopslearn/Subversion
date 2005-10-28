@@ -193,9 +193,29 @@ or:
 Do as much of this as possible as a regular user account, i.e. yours.
 
 cd /local/www/html
+
+#####
+# There are two ways to acquire the source code, now that the SBEAMS subversion
+# repository it online.  You can download a distribution tar archive and follow
+# these instructions:
+
 mkdir dev1   (this may need to be done as root. then do: chown user1 dev1)
 cd dev1
 tar -zxvf ~/sbeams-0.20.1.tar.gz
+
+# or, you can set up sbeams directly from subversion, which will make updating
+# the system much easier.  (This will require that you have a subversion client
+# installed on the system):
+
+svn checkout http://www.sbeams.org/svn/sbeams/trunk/sbeams
+
+# For more information on subversion, or to obtain the client software, you can
+# check the following site:
+
+http://subversion.tigris.org/
+
+# The rest of the instructions are the same regardless of the method.
+##### 
 
 Create a sbeamscommon directory for sharing dynamic files between
 different instances and create symlinks:
@@ -210,7 +230,7 @@ cd sbeamscommon
 mkdir images images/tmp
 mkdir lib lib/conf
 chmod a+w images/tmp
-mkdir var var/resultsets var/logs var/upload
+mkdir var var/resultsets var/logs var/upload sessions
 chmod g+w var/*
    (The previous command assumes that the owner of the web server process
     e.g. "apache" is a member of the same group as the account with which
