@@ -230,7 +230,7 @@ cd sbeamscommon
 mkdir images images/tmp
 mkdir lib lib/conf
 chmod a+w images/tmp
-mkdir var var/resultsets var/logs var/upload sessions
+mkdir var var/resultsets var/logs var/upload var/sessions
 chmod g+w var/*
    (The previous command assumes that the owner of the web server process
     e.g. "apache" is a member of the same group as the account with which
