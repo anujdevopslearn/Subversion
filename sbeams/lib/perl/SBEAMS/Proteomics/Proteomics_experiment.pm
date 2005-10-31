@@ -123,7 +123,7 @@ sub get_experiment_tag {
 	  WHERE PE.experiment_id = $experiment_id
     ~;
     
-   my @rows = $sbeams->selectOneColumn($sql);
+   @rows = $sbeams->selectOneColumn($sql);
    
    if (@rows){
    	return $rows[0];
@@ -161,7 +161,7 @@ sub get_sample_tag {
 	  WHERE proteomics_sample_id = $proteomics_sample_id
     ~;
     
-   my @rows = $sbeams->selectOneColumn($sql);
+   @rows = $sbeams->selectOneColumn($sql);
    
    if (@rows){
    	return $rows[0];
@@ -253,8 +253,9 @@ sub add_sample_to_experiments_samples_linker_table {
 	my $method = 'add_sample_to_experiments_samples_linker_table';
 	my $self = shift;
 	my %args = @_;
-	my $experiment_id = $args{experiment_id};
-	my $proteomics_sample_id = $args{sample_id};
+	my $experiment_id = $args{ experiment_id };
+	my $proteomics_sample_id = $args{ sample_id };
+	my $test_only = $args{ test_only };       # if true, do not actually execute SQL
 	
 	confess(__PACKAGE__ . "::$method Need sample_id and experiment_id You Gave '$proteomics_sample_id'  and '$experiment_id'\n") unless 
 	($proteomics_sample_id =~ /^\d/ && $experiment_id =~ /^\d/);
@@ -272,9 +273,9 @@ sub add_sample_to_experiments_samples_linker_table {
 		   			rowdata_ref=>$rowdata_ref,
 		   			return_PK=>1,
 		   			verbose=>'',
-		   			testonly=>'',
+		   			testonly => $test_only,
 		   			insert=>1,
-		   			PK=>'experiments_samples_id	',
+		   			PK=>'experiments_samples_id',
 		   		   	add_audit_parameters=>1,
 				        );
 				        
@@ -302,6 +303,8 @@ sub update_experiments_sample_linker_table {
 	my %args = @_;
 	my $experiment_id = $args{experiment_id};
 	my $proteomics_sample_id = $args{proteomics_sample_id};
+	my $test_only = $args{ test_only };       # if true, do not actually execute SQL
+
 	my $sbeams = $self->getSBEAMS();
 	
 	confess(__PACKAGE__ . "::$method Need sample_id and experiment_id You Gave '$proteomics_sample_id'  and '$experiment_id'\n") unless 
@@ -330,7 +333,7 @@ sub update_experiments_sample_linker_table {
 	   			rowdata_ref=>$rowdata_ref,
 	   			return_PK=>1,
 	   			verbose=>'',
-	   			testonly=>'',
+	   			testonly => $test_only,
 	   			update=>1,
 	   			PK_name => 'experiment_id',
 				PK_value=> $experiment_id,
