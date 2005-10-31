@@ -1427,17 +1427,17 @@ sub updateOrInsertRow {
 
 
   #### If we're just testing
-  if ($testonly) {
-    #print "Not actually executing SQL...\n";
+  if ( $testonly ) {
+      print "          ( not actually executing SQL ... )\n";
+      $self->prepareSQL( sql => $sql );
 
-    #### If the user asked for the PK to be returned, make a random one up
-    if ($return_PK) {
-      return int(rand()*10000);
-
-    #### Otherwise, just return a 1
-    } else {
-      return 1;
-    }
+      #### If the user asked for the PK to be returned, make a random one up
+      if ( $return_PK ) {
+	  return int( rand()*10000 );
+	  #### Otherwise, just return a 1
+      } else {
+	  return 1;
+      }
   }
 
 
@@ -1462,6 +1462,48 @@ sub updateOrInsertRow {
   }
 
 
+}
+
+
+###############################################################################
+# prepareSQL
+#
+# Prepare the supplied SQL statement, but do not execute.
+# Primarily for use by SQL testing scripts, when actual modification of
+#    database records is not desired.
+# NOTE: This is probably not working as intended, because some databases
+#    (which? - don't know) apparently don't process prepare() statement until
+#    execute() occurs.
+###############################################################################
+sub prepareSQL {
+    my $self = shift || croak("parameter self not passed");
+    my $SUB_NAME = "prepareSQL";
+
+    #### Allow old-style single argument
+    my $n_params = scalar @_;
+    my %args;
+    die("parameter sql not passed") unless ($n_params >= 1);
+    #### If the old-style single argument exists, create args hash with it
+    if ($n_params == 1) {
+      $args{sql} = shift;
+    } else {
+      %args = @_;
+    }
+
+    #### Decode the argument list
+    my $sql = $args{'sql'} || die("parameter sql not passed");
+    my $return_error = $args{'return_error'} || '';
+
+    #### Get the database handle
+    $dbh = $self->getDBHandle();
+
+    #### Prepare the query and return if successful
+    my $sth = $dbh->prepare($sql);
+    if ( $sth ) {
+	return $sth;
+    } else {
+	die( "ERROR on SQL prepare(): ".$dbh->errstr );
+    }
 }
 
 
