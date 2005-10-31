@@ -140,9 +140,6 @@ sub main
     #### Print out the header
     ##$sbeams->printUserContext() if ($QUIET > 0);
 
-    ## make sure that user is on atlas:
-    check_host();
-
 
     ## check that can write to outfile (also initialize):
     check_file();
@@ -216,29 +213,6 @@ sub check_authentication
 
         work_group=>'PeptideAtlas_admin')
     );
-
-}
-
-#######################################################################
-# check_host -- check that host name is atlas 
-#######################################################################
-sub check_host()
-{
-
-    ## make sure that this is running on atlas for queries
-    my $uname = `uname -a`;
-
-    if ($uname =~ /.*(atlas).*/)
-    {
-
-        # continue
-
-    } else
-    {
-
-        die "you must run this on atlas";
-
-    }
 
 }
 

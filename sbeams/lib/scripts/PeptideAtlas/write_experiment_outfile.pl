@@ -89,10 +89,6 @@ sub main
     );
 
 
-    ## make sure that user is on atlas:
-    check_host();
-
-
     ## set name of output file:
     $outfile = getOutfileName(atlas_build_id => $OPTIONS{"atlas_build_id"});
 
@@ -111,30 +107,6 @@ sub main
 
 } ## end main
 
-
-#######################################################################
-# check_host -- check that host name is atlas as we need to write to
-#   /sbeams/
-#######################################################################
-sub check_host()
-{
-
-    ## make sure that this is running on atlas for queries
-    my $uname = `uname -a`;
-
-    if ($uname =~ /.*(atlas).*/)
-    {
-
-        # continue
-
-    } else
-    {
-
-        die "you must run this on atlas";
-
-    }
-
-}
 
 #######################################################################
 # check_files -- check that can write to repository files, and

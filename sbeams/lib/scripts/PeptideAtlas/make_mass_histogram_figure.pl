@@ -136,10 +136,6 @@ sub main
     );
 
 
-    ## make sure that user is on atlas:
-    check_host();
-
-
     ## check that can write to outfiles (also initializes ):
     check_files();
 
@@ -149,30 +145,6 @@ sub main
 
 } ## end main
 
-
-#######################################################################
-# check_host -- check that host name is atlas as we need to write to
-#   /sbeams/
-#######################################################################
-sub check_host()
-{
-
-    ## make sure that this is running on atlas for queries
-    my $uname = `uname -a`;
-
-    if ($uname =~ /.*(atlas).*/)
-    {
-
-        # continue
-
-    } else
-    {
-
-        die "you must run this on atlas";
-
-    }
-
-}
 
 #######################################################################
 # check_files -- check that can write to outfiles and initializes
@@ -741,7 +713,11 @@ sub write_to_outfile
     for (my $i=0; $i <= $#x_array; $i++)
     {
 
-        print OUTFILE "$x_array[$i]\t$y_array[$i]\n";
+        my $x = $x_array[$i];
+
+        my $y = $y_array[$i] || "0";
+
+        print OUTFILE "$x\t$y\n";
 
     }
 
