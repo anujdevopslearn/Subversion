@@ -3,7 +3,7 @@
 #####################################################################
 # Program	: SQLTest.t
 # Author	: Jeff Howbert <peak.list@verizon.net>
-# $Id$
+# $Id: $
 #
 # Description	: This script passes prototypical SQL statements to
 #		  the current database instance.  It is intended to
@@ -29,7 +29,7 @@ use Test::More;
 # BEGIN
 ###############################################################################
 BEGIN {
-    plan tests => 6;
+    plan tests => 9;
     use_ok( 'SBEAMS::Connection' );
     use_ok( 'SBEAMS::Connection::Settings' );
     use_ok( 'SBEAMS::Connection::Tables' );
@@ -64,12 +64,9 @@ ok($current_username = $sbeams->Authenticate(
 #######################################################
 
 ok(testSimpleStringColumnConcat(),"Simple varchar column concatenation");
-
-
-
-
-
-
+ok(testStringColumnConcat(),"Varchar column concatenation");
+ok(testANSIConcat(),"Varchar concatenation with ANSI concat operator ||");
+ok(testANSIStringConcat(),"String concatenation with ANSI concat operator ||");
 
 ###############################################################################
 # testSimpleStringColumnConcat
@@ -83,8 +80,8 @@ SELECT first_name+' '+last_name
 
   my @contacts = $sbeams->selectOneColumn($sql);
 
-  if (defined(@contacts) && scalar(@contacts)>1 &&
-      grep(/SBEAMS Administrator/,@contacts)) {
+  if ( scalar(@contacts)>1 &&
+      grep(/SBEAMS Administrator/,@contacts) ) {
     diag("Returned ".scalar(@contacts)." rows");
     return(1);
   }
@@ -92,6 +89,72 @@ SELECT first_name+' '+last_name
   return(0);
 }
 
+
+###############################################################################
+# testStringColumnConcat
+###############################################################################
+sub testStringColumnConcat {
+
+  my $sql = qq~
+SELECT contact_id, 
+       first_name + ' ' + last_name
+  FROM $TB_CONTACT
+  ~;
+
+  my @contacts = $sbeams->selectSeveralColumns($sql);
+
+  if ( scalar(@contacts) ) {
+    my $first = $contacts[0];
+    return( $first->[1] );
+  }
+
+  return(0);
+}
+
+###############################################################################
+# testANSIConcat
+###############################################################################
+sub testANSIConcat {
+
+  my $sql = qq~
+SELECT first_name, 
+       first_name || last_name AS full_name
+  FROM $TB_CONTACT
+  ~;
+
+  my @contacts;
+  eval {
+    @contacts = $sbeams->selectSeveralColumns($sql);
+  };
+
+
+  if ( scalar(@contacts) ) {
+    my $first = $contacts[0];
+    return( $first->[1] );
+  }
+
+  return(0);
+}
+
+###############################################################################
+# testANSIStringConcat
+###############################################################################
+sub testANSIStringConcat {
+
+  my $sql = qq~
+  SELECT 'first' || '_' || 'last_name'
+  FROM $TB_CONTACT
+  ~;
+
+  my @contacts;
+  eval {
+    @contacts = $sbeams->selectOneColumn($sql);
+  };
+
+  if ( scalar(@contacts) && grep /first_last/, @contacts ) {
+    return(1);
+  }
+}
 
 
 ###############################################################################
