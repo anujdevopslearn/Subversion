@@ -50,13 +50,13 @@ MA_labeling_method	15	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	wor
 MA_labeling_method	16	record_status	Record Status	char	1	0	N	N	N							N	N				
 MA_array_request	1	array_request_id	Array Request ID	int	8	0	N		Y							N	N				pkDEFAULT
 MA_array_request	2	contact_id	Contact	int	8	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	N	Requestor of these slides		
-MA_array_request	3	project_id	Project	int	8	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which these slides are requested	"SELECT project_id, name + ' ['+budget+']' FROM $TB_PROJECT WHERE PI_contact_id='$contact_id' AND record_status != 'D' ORDER BY name"	
+MA_array_request	3	project_id	Project	int	8	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which these slides are requested	"SELECT project_id, name || ' ['||budget||']' FROM $TB_PROJECT WHERE PI_contact_id='$contact_id' AND record_status != 'D' ORDER BY name"	
 MA_array_request	4	cost_scheme_id	Cost Structure	varchar	50	0	N		N			N	optionlist			Y	Y	N	Cost Structure from which pricing is calculated	"SELECT cost_scheme_id,cost_scheme_name FROM $TBMA_COST_SCHEME ORDER BY sort_order,cost_scheme_name"	
 MA_array_request	5	slide_type_id	Slide Type	int	8	0	N		N	MA_slide_type	slide_type_id	Y	optionlist			Y	Y	N	Slide Type	MANUAL	
 MA_array_request	6	n_slides	Number of Arrays	int	8	0	N		N			Y	text	10		Y	Y	N	"Number of arrays in this request (note that for the Yeast Half slide option, the number of arrays you specify here is TWICE the number of pieces of glass)"		
 MA_array_request	7	n_samples_per_slide	Samples per Array	int	8	0	N		N			Y	optionlist			Y	Y	N	Number of samples per array (usually 2)	"SELECT option_key,option_value FROM $TBMA_MISC_OPTION WHERE option_type='samples_per_slide' ORDER BY sort_order,option_value"	
 MA_array_request	8	hybridization_request	Prep Request	varchar	50	0	N		N			Y	optionlist			Y	Y	N	Whether you want the arrays Group to perform labeling and hybridization (priced by labeling method)	"SELECT option_key,option_value FROM $TBMA_ARRAY_REQUEST_OPTION WHERE option_type='hybridization_request' ORDER BY sort_order,option_value"	
-MA_array_request	9	scanning_request	Analysis Request	varchar	50	0	N		N			Y	optionlist			Y	Y	N	Whether you want the arrays Group to perform Scanning and Quantitation	"SELECT option_key,option_value+' (\$'+CONVERT(varchar(50),price)+')' FROM $TBMA_ARRAY_REQUEST_OPTION WHERE option_type='scanning_request' ORDER BY sort_order,option_value"	
+MA_array_request	9	scanning_request	Analysis Request	varchar	50	0	N		N			Y	optionlist			Y	Y	N	Whether you want the arrays Group to perform Scanning and Quantitation	"SELECT option_key,option_value||' (\$'||CONVERT(varchar(50),price)||')' FROM $TBMA_ARRAY_REQUEST_OPTION WHERE option_type='scanning_request' ORDER BY sort_order,option_value"	
 MA_array_request	10	request_status	Request Status	varchar	50	0	N		N			Y	fixed			Y	Y	N	Status of this request	"SELECT option_key,option_value FROM $TBMA_MISC_OPTION WHERE option_type='job_status' ORDER BY sort_order,option_value"	
 MA_array_request	11	price	Price	int	8	0	Y		N			N	fixed			N	Y	N	Total price for this request		
 MA_array_request	12	comment	Comment	text	0	0	Y		N			N	textarea	4		Y	Y	N	Additional comments about this request		
@@ -115,7 +115,7 @@ MA_sample_protocol	9	record_status	Record Status	char	1	0	N	N	N							N	N
 MA_slide_model	1	slide_model_id	Slide Model ID	int	8	0	N		Y							N	N				pkDEFAULT
 MA_slide_model	2	vendor_name	Vendor Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Vendor for this slide model		
 MA_slide_model	3	model_name	Model Name	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Model name of these slides		
-MA_slide_model	4	contact_id	Contact	int	8	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Vendor contact entry for these slides	"SELECT contact_id, first_name+' '+last_name+' ('+organization+')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY organization,last_name,first_name"	
+MA_slide_model	4	contact_id	Contact	int	8	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Vendor contact entry for these slides	"SELECT contact_id, first_name||' '||last_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY organization,last_name,first_name"	
 MA_slide_model	5	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 MA_slide_model	6	sort_order	Sort Order	int	4	0	N	10	N							N	N	N			
 MA_slide_model	7	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -125,7 +125,7 @@ MA_slide_model	10	modified_by_id	Record Modified By	int	8	0	N		N	contact	contact
 MA_slide_model	11	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 MA_slide_model	12	record_status	Record Status	char	1	0	N	N	N							N	N				
 MA_slide_lot	1	slide_lot_id	Slide Lot ID	int	8	0	N		Y							N	N				pkDEFAULT
-MA_slide_lot	2	slide_model_id	Slide Model	int	8	0	N		N	MA_slide_model	slide_model_id	Y	optionlist			Y	Y	Y	Model name of these slides	"SELECT slide_model_id,vendor_name+' '+model_name AS 'name' FROM $TBMA_SLIDE_MODEL ORDER BY 2"	
+MA_slide_lot	2	slide_model_id	Slide Model	int	8	0	N		N	MA_slide_model	slide_model_id	Y	optionlist			Y	Y	Y	Model name of these slides	"SELECT slide_model_id,vendor_name||' '||model_name AS 'name' FROM $TBMA_SLIDE_MODEL ORDER BY 2"	
 MA_slide_lot	3	lot_number	Lot Number	varchar	50	0	N		N			Y	text	50		Y	Y	Y	Lot number of these slides		
 MA_slide_lot	4	date_received	Date Received	datetime	8	0	Y		N			N	textdate	30		Y	Y	N	Date this lot was received		
 MA_slide_lot	5	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
@@ -155,7 +155,7 @@ MA_printing_batch	17	modified_by_id	Record Modified By	int	8	0	N		N	contact	cont
 MA_printing_batch	18	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 MA_printing_batch	19	record_status	Record Status	char	1	0	N	N	N							N	N				
 MA_slide	1	slide_id	Slide ID	int	8	0	N		Y							N	N				pkDEFAULT
-MA_slide	2	slide_lot_id	Slide Lot	int	8	0	N		N	MA_slide_lot	slide_lot_id	Y	optionlist			Y	Y	Y	Slide Lot	"SELECT slide_lot_id, vendor_name+' '+model_name+' # '+lot_number FROM $TBMA_SLIDE_LOT SL LEFT JOIN $TBMA_SLIDE_MODEL SM ON (SL.slide_model_id=SM.slide_model_id) ORDER BY 2"	
+MA_slide	2	slide_lot_id	Slide Lot	int	8	0	N		N	MA_slide_lot	slide_lot_id	Y	optionlist			Y	Y	Y	Slide Lot	"SELECT slide_lot_id, vendor_name||' '||model_name||' # '||lot_number FROM $TBMA_SLIDE_LOT SL LEFT JOIN $TBMA_SLIDE_MODEL SM ON (SL.slide_model_id=SM.slide_model_id) ORDER BY 2"	
 MA_slide	3	slide_number	Slide Number	int	4	0	N		N			Y	text	10		Y	Y	Y	"Slide Number (you may enter a range such as 50-68,70-75 to generate many entries)"		
 MA_slide	4	barcode	Barcode	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Barcode		
 MA_slide	5	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
@@ -179,10 +179,10 @@ MA_array_layout	11	modified_by_id	Record Modified By	int	8	0	N		N	contact	contac
 MA_array_layout	12	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 MA_array_layout	13	record_status	Record Status	char	1	0	N	N	N							N	N				
 MA_array	1	array_id	Layout ID	int	8	0	N		Y						document.forms[0].MA_array_name.value=document.forms[0].MA_slide_id.options[document.forms[0].MA_slide_id.selectedIndex].text	N	N				pkDEFAULT
-MA_array	2	project_id	Project	int	8	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project to which this microarray is to be assigned	"SELECT project_id, username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) WHERE  P.project_id IN ( $accessible_project_ids ) AND P.record_status != 'D' ORDER BY name"	
-MA_array	3	layout_id	Layout	int	8	0	N		N	MA_array_layout	layout_id	Y	optionlist			Y	Y	N	Layout name associated with this microarray	"SELECT layout_id, ST.name+' - '+AL.name FROM $TBMA_ARRAY_LAYOUT AL LEFT JOIN $TBMA_SLIDE_TYPE ST ON ( AL.slide_type_id=ST.slide_type_id ) ORDER BY ST.name,AL.name"	
-MA_array	4	printing_batch_id	Printing Batch	int	8	0	N		N	MA_printing_batch	printing_batch_id	Y	optionlist			Y	Y	N	Printing batch in which this microarray was produced	"SELECT printing_batch_id, ST.name+' ('+slide_list+') ('+SUBSTRING(CONVERT(varchar(50),date_started,121),1,16)+')' FROM $TBMA_PRINTING_BATCH PB LEFT JOIN $TBMA_SLIDE_TYPE ST ON ( PB.slide_type_id=ST.slide_type_id ) ORDER BY ST.name,date_started"	
-MA_array	5	slide_id	Slide	int	8	0	N		N	MA_slide	slide_id	Y	scrolloptionlist	4	setArrayName()	Y	Y	N	Slide serial number for this microarray (choose only one slide)	"SELECT S.slide_id, convert(varchar(20),slide_number)+CASE WHEN A.slide_id IS NOT NULL THEN ' - *DONE*' ELSE '' END FROM $TBMA_SLIDE S LEFT JOIN $TBMA_ARRAY A ON ( S.slide_id=A.slide_id ) ORDER BY slide_number"	
+MA_array	2	project_id	Project	int	8	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project to which this microarray is to be assigned	"SELECT project_id, username||' - '||name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) WHERE  P.project_id IN ( $accessible_project_ids ) AND P.record_status != 'D' ORDER BY name"	
+MA_array	3	layout_id	Layout	int	8	0	N		N	MA_array_layout	layout_id	Y	optionlist			Y	Y	N	Layout name associated with this microarray	"SELECT layout_id, ST.name||' - '||AL.name FROM $TBMA_ARRAY_LAYOUT AL LEFT JOIN $TBMA_SLIDE_TYPE ST ON ( AL.slide_type_id=ST.slide_type_id ) ORDER BY ST.name,AL.name"	
+MA_array	4	printing_batch_id	Printing Batch	int	8	0	N		N	MA_printing_batch	printing_batch_id	Y	optionlist			Y	Y	N	Printing batch in which this microarray was produced	"SELECT printing_batch_id, ST.name||' ('||slide_list||') ('||SUBSTRING(CONVERT(varchar(50),date_started,121),1,16)||')' FROM $TBMA_PRINTING_BATCH PB LEFT JOIN $TBMA_SLIDE_TYPE ST ON ( PB.slide_type_id=ST.slide_type_id ) ORDER BY ST.name,date_started"	
+MA_array	5	slide_id	Slide	int	8	0	N		N	MA_slide	slide_id	Y	scrolloptionlist	4	setArrayName()	Y	Y	N	Slide serial number for this microarray (choose only one slide)	"SELECT S.slide_id, convert(varchar(20),slide_number)||CASE WHEN A.slide_id IS NOT NULL THEN ' - *DONE*' ELSE '' END FROM $TBMA_SLIDE S LEFT JOIN $TBMA_ARRAY A ON ( S.slide_id=A.slide_id ) ORDER BY slide_number"	
 MA_array	6	array_name	Array Name	varchar	50	0	N		N			Y	text	25		Y	Y	Y	"Official Name of this microarray that it will be subsequently referred to (usually just the serial number of the slide, but can be different)"		
 MA_array	7	array_request_slide_id	Requested Slide ID	int	8	0	N		N		array_request_slide_id	Y	scrolloptionlist	4		Y	Y	N	ID assigned to this slide during the array request process	MANUAL	
 MA_array	8	comment	Comment	varchar	255	0	Y		N			N	textarea	4		Y	Y	N	Optional comment about this particular microarray		
@@ -213,7 +213,7 @@ MA_labeling	18	record_status	Record Status	char	1	0	N	N	N							N	N
 MA_hybridization	1	hybridization_id	Hybridization ID	int	8	0	N		Y							N	N				pkDEFAULT
 MA_hybridization	2	name	Batch Name	varchar	100	0	Y		N			N	text	25		Y	Y	N	Arbitrary name for this hybridization		
 MA_hybridization	3	protocol_id	Protocol	int	8	0	N		N	protocol	protocol_id	Y	optionlist			Y	Y	N	Protocol used for this step	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='hybridization' ORDER BY P.name"	
-MA_hybridization	4	array_id	Array Name	int	8	0	N		N	MA_array	array_id	Y	multioptionlist	4		Y	Y	Y	Array Name (must already have been defined)	"SELECT A.array_id,array_name+CASE WHEN H.array_id IS NOT NULL THEN ' - *DONE*' ELSE '' END, H.array_id FROM $TBMA_ARRAY A LEFT JOIN $TBMA_HYBRIDIZATION H ON ( A.array_id=H.array_id ) ORDER BY A.array_name"	
+MA_hybridization	4	array_id	Array Name	int	8	0	N		N	MA_array	array_id	Y	multioptionlist	4		Y	Y	Y	Array Name (must already have been defined)	"SELECT A.array_id,array_name||CASE WHEN H.array_id IS NOT NULL THEN ' - *DONE*' ELSE '' END, H.array_id FROM $TBMA_ARRAY A LEFT JOIN $TBMA_HYBRIDIZATION H ON ( A.array_id=H.array_id ) ORDER BY A.array_name"	
 MA_hybridization	5	date_hybridized	Date Hybridized	datetime	8	0	N	CURRENT_TIMESTAMP	N			Y	textdate	30		Y	Y	N	Date/time this was performed		
 MA_hybridization	6	prehyb_chamber	PreHyb Chamber	varchar	25	0	Y		N			N	text	10		Y	Y	N			
 MA_hybridization	7	hyb_chamber	Hyb Chamber	varchar	25	0	Y		N			N	text	10		Y	Y	N			
@@ -226,7 +226,7 @@ MA_hybridization	13	modified_by_id	Record Modified By	int	8	0	N		N	contact	conta
 MA_hybridization	14	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 MA_hybridization	15	record_status	Record Status	char	1	0	N	N	N							N	N				
 MA_array_scan	1	array_scan_id	Array Scan ID	int	8	0	N		Y							N	N				pkDEFAULT
-MA_array_scan	2	array_id	Array Name	int	8	0	N		N	MA_array	array_id	Y	scrolloptionlist	4	setDefaultImagesLocation()	Y	Y	Y	Array Name which was scanned	"SELECT A.array_id,array_name+CASE WHEN S.array_id IS NOT NULL THEN ' - *DONE*' ELSE '' END, S.array_id FROM $TBMA_ARRAY A LEFT JOIN $TBMA_ARRAY_SCAN S ON ( A.array_id=S.array_id ) WHERE A.record_status != 'D' ORDER BY A.array_name"	
+MA_array_scan	2	array_id	Array Name	int	8	0	N		N	MA_array	array_id	Y	scrolloptionlist	4	setDefaultImagesLocation()	Y	Y	Y	Array Name which was scanned	"SELECT A.array_id,array_name||CASE WHEN S.array_id IS NOT NULL THEN ' - *DONE*' ELSE '' END, S.array_id FROM $TBMA_ARRAY A LEFT JOIN $TBMA_ARRAY_SCAN S ON ( A.array_id=S.array_id ) WHERE A.record_status != 'D' ORDER BY A.array_name"	
 MA_array_scan	3	protocol_id	Protocol	int	8	0	N		N	protocol	protocol_id	Y	optionlist			Y	Y	N	Protocol used for scanning	"SELECT protocol_id,P.name FROM $TB_PROTOCOL P LEFT JOIN $TB_PROTOCOL_TYPE PT ON ( P.protocol_type_id=PT.protocol_type_id ) WHERE PT.name='array_scanning' ORDER BY P.name"	
 MA_array_scan	4	protocol_deviations	Protocol Deviations	text	16	0	Y		N			N	textarea	4		Y	Y	N	List any deviations from the selected protocol		
 MA_array_scan	5	resolution	Resolution	float	8	0	Y		N			Y	text	10		Y	Y	N	Scan resolution in microns		
@@ -256,7 +256,7 @@ MA_array_quantitation	12	modified_by_id	Record Modified By	int	8	0	N		N	contact	
 MA_array_quantitation	13	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 MA_array_quantitation	14	record_status	Record Status	char	1	0	N	N	N							N	N				
 MA_biosequence_set	1	biosequence_set_id	BioSequence Set ID	int	4	0	N		Y							N	N				pkDEFAULT
-MA_biosequence_set	2	project_id	Owner Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username+' - '+P.name,P.project_id"	
+MA_biosequence_set	2	project_id	Owner Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	Project under which this Biosequence Set is organized and for which user privileges is controlled	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' AND P.project_id IN ( $accessible_project_ids ) ORDER BY UL.username||' - '||P.name,P.project_id"	
 MA_biosequence_set	3	organism_id	Organism	int	4	0	N		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism to which the BioSequences in this database belong	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 MA_biosequence_set	4	set_name	Set Name	varchar	100	0	N		N			Y	text	50		Y	Y	N	Name of this BioSequence database		
 MA_biosequence_set	5	set_tag	Set Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Short tag (name) of this BioSequence database		
@@ -340,7 +340,7 @@ MA_quantitation_type	7	modified_by_id	Record Modified By	int	8	0	N		N	contact	co
 MA_quantitation_type	8	owner_group_id	Owner Group ID	int	8	0	N	1	N	work_group	work_group_id					N	N				
 MA_quantitation_type	9	record_status	Record Status	char	1	0	Y	N	N							N	N				
 MA_GetExpression	1	input_form_format	Input Form Format									N	optionlist		refreshDocument()	Y	Y	N	Options for level of detail and layout for this input form	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type = 'input_form_options' ORDER BY sort_order,option_value"	
-MA_GetExpression	2	project_id	Projects									Y	multioptionlist	4	refreshDocument()	Y	Y	N	Constrain conditions to one or more projects.  At least one project must be selected.	"SELECT DISTINCT P.project_id,UL.username+' - '+P.name FROM $TB_PROJECT P INNER JOIN $TBMA_CONDITION C ON ( P.project_id = C.project_id ) LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.project_id IN ( $accessible_project_ids ) AND P.record_status != 'D' ORDER BY UL.username+' - '+P.name,P.project_id"	
+MA_GetExpression	2	project_id	Projects									Y	multioptionlist	4	refreshDocument()	Y	Y	N	Constrain conditions to one or more projects.  At least one project must be selected.	"SELECT DISTINCT P.project_id,UL.username||' - '||P.name FROM $TB_PROJECT P INNER JOIN $TBMA_CONDITION C ON ( P.project_id = C.project_id ) LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.project_id IN ( $accessible_project_ids ) AND P.record_status != 'D' ORDER BY UL.username||' - '||P.name,P.project_id"	
 MA_GetExpression	3	condition_id	Conditions									N	multioptionlist	10		Y	Y	N	"Constrain Interactions to selected Projects.  MultipleProjects may be selected.  If no Projects are selected, ALLProjects are searched."	MANUAL	
 MA_GetExpression	4	gene_name_constraint	Gene Name Constraint									N	text	40		Y	Y	N	Constraint for the Gene Name as provided in the raw pipeline output. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
 MA_GetExpression	5	second_name_constraint	Second Name Constraint									N	text	40		Y	Y	N	Constraint for the Second Name as provided in the raw pipeline output. '%' is wildcard character; '_' is single character wildcard; character range is like '[a-m]'; no other regexps supported.		
@@ -362,7 +362,7 @@ MA_GetExpression	20	sort_order	Sort Order									N	optionlist			Y	N	N	Desired d
 MA_GetExpression	21	display_options	Display Options									N	multioptionlist	5		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBMA_QUERY_OPTION WHERE option_type = 'GE_display_options' ORDER BY sort_order,option_value"	
 MA_GetExpression	22	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 10000 rows."		
 MA_affy_array_sample	1	affy_array_sample_id	Affy Array Sample ID	int	4	0	N		Y			Y				N	N	Y	Affy Array Sample ID		pkDEFAULT
-MA_affy_array_sample	2	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	FK to project.project_id	"SELECT project_id, UL.username + ' - ' + proj.name + ' ( ' + RTRIM(CAST(proj.project_id AS CHAR)) + ' )'   AS name FROM $TB_PROJECT proj JOIN $TB_USER_LOGIN UL ON (proj.PI_contact_id = UL.contact_id)  WHERE  proj.project_id IN ( $accessible_project_ids ) AND proj.project_tag IS NOT NULL AND proj.record_status != 'D' ORDER BY UL.username"	
+MA_affy_array_sample	2	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	FK to project.project_id	"SELECT project_id, UL.username || ' - ' || proj.name || ' ( ' || RTRIM(CAST(proj.project_id AS CHAR)) || ' )'   AS name FROM $TB_PROJECT proj JOIN $TB_USER_LOGIN UL ON (proj.PI_contact_id = UL.contact_id)  WHERE  proj.project_id IN ( $accessible_project_ids ) AND proj.project_tag IS NOT NULL AND proj.record_status != 'D' ORDER BY UL.username"	
 MA_affy_array_sample	3	sample_tag	Sample Tag	varchar	50	0	N		N			Y	text	50		Y	Y	N	Sample Name.  Keep it short.  Do not use any strange characters like /\*&$() (e.g. NP Epi 03-123)		
 MA_affy_array_sample	4	full_sample_name	Full Sample Name	varchar	255	0	Y		N			Y	textarea	3		Y	Y	N	"Full Sample Name.  A longer, less cryptic name should be placed here.  It should be long enough so that someone else can understand quickly the general idea of the sample. (e.g. Epithelial cells FACS sorted from ""normal"" prostate tissue from specimen 03-123)"		
 MA_affy_array_sample	5	sample_group_name	Sample Group Name	varchar	50	0	Y		N			Y	text	50		Y	Y	N	Sample Group Name.  Name used to group together biological replicates		
@@ -465,7 +465,7 @@ MA_affy_annotation_set	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact
 MA_affy_annotation_set	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
 MA_affy_annotation_set	10	record_status	Record Status	char	1	0	N	N	N							N	N	N			
 MA_condition	1	condition_id	Condition ID	int	4	10	N		Y							N	N	Y			pkDEFAULT
-MA_condition	2	project_id	Project ID	int	4	10	N		N	project	project_id	Y	optionlist			Y	Y	Y		"SELECT project_id, username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) WHERE project_id IN ( $accessible_project_ids ) AND P.record_status != 'D' ORDER BY name"	
+MA_condition	2	project_id	Project ID	int	4	10	N		N	project	project_id	Y	optionlist			Y	Y	Y		"SELECT project_id, username||' - '||name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) WHERE project_id IN ( $accessible_project_ids ) AND P.record_status != 'D' ORDER BY name"	
 MA_condition	3	condition_name	Condition name	varchar	255	255	N		N			Y	text	50		Y	Y	Y	Name for the condition		
 MA_condition	4	condition_file_name	Condition file name	varchar	255	255	N		N			Y	fixed	50		Y	Y	N	Original filename or identifier for a processed condition. May not be changed		
 MA_condition	5	sort_order	Sort Order	int	4	10	N	100	N			N	text	10		Y	Y	N			
@@ -573,7 +573,7 @@ MA_GetAffy_GeneIntensity	21	display_options	Display Options									N	multioptio
 MA_GetAffy_GeneIntensity	22	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 10000 rows."		
 MA_affy_analysis	1	affy_analysis_id	Affy Analysis ID	int	4	0	N		Y							N	N	Y	Affy Analysis ID		
 MA_affy_analysis	2	user_id	User 	int	4		N					Y	optionlist	5		Y	Y	N	User Name	"SELECT user_login_id, username FROM $TB_USER_LOGIN WHERE record_status != 'D' ORDER BY username"	
-MA_affy_analysis	3	project_id	Project	int	4		N					Y	optionlist	5		Y	Y	N	Project Name	"SELECT project_id, username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) WHERE  P.project_id IN ( $accessible_project_ids ) ORDER BY username"	
+MA_affy_analysis	3	project_id	Project	int	4		N					Y	optionlist	5		Y	Y	N	Project Name	"SELECT project_id, username||' - '||name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) WHERE  P.project_id IN ( $accessible_project_ids ) ORDER BY username"	
 MA_affy_analysis	4	folder_name	Folder Name	varchar	50		N					Y	text	50		Y	Y	N	"Folder that contains the analysis.  There should be no need to change, but if you have to please make sure you know what you are doing."		
 MA_affy_analysis	5	parent_analysis_id	Parent Analysis ID	int	4		Y					N	text	10		Y	Y	N	Parent analysis ID		
 MA_affy_analysis	6	affy_analysis_type_id	Affy Analysis Type Name	int	4		N			MA_affy_analysis_type	affy_analysis_type_id	Y	optionlist	5		Y	Y	N	Type of analysis	"SELECT aat.affy_analysis_type_id, aat.affy_analysis_name FROM $TBMA_AFFY_ANALYSIS_TYPE aat"	
@@ -595,7 +595,7 @@ MA_affy_analysis_type	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	
 MA_affy_analysis_type	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
 MA_affy_analysis_type	9	record_status	Record Status	char	1	0	N	N	N							N	N	N			
 MA_experiment_information	1	experiment_information_id	Experiment Information ID	int	4	0	N		Y							N	N				pkDEFAULT
-MA_experiment_information	2	project_id	Project ID	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	Project with which this experiment is associated	"SELECT project_id, username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) WHERE project_id IN ( $accessible_project_ids ) AND P.record_status != 'D' ORDER BY name"	
+MA_experiment_information	2	project_id	Project ID	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	Project with which this experiment is associated	"SELECT project_id, username||' - '||name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) WHERE project_id IN ( $accessible_project_ids ) AND P.record_status != 'D' ORDER BY name"	
 MA_experiment_information	3	name	Name	varchar	255	0	N		N			Y	text	50		Y	Y	N	Name of this Experiment Information		
 MA_experiment_information	4	tag	Experiment Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Shortened Name of this Experiment Information		
 MA_experiment_information	5	xml_file	XML File	varchar	255	0	N		N			Y	file	40		Y	Y	N	Experiment XML File		
@@ -608,7 +608,7 @@ MA_experiment_information	11	modified_by_id	Record Modified By	int	4	0	N		N	cont
 MA_experiment_information	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 MA_experiment_information	13	record_status	Record Status	char	1	0	N	N	N							N	N				
 MA_experiment_constants	1	experiment_constants_id	Experiment Constants ID	int	4	0	N		Y							N	N				pkDEFAULT
-MA_experiment_constants	2	project_id	Project ID	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	Project with which this experiment is associated	"SELECT project_id, username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) WHERE project_id IN ( $accessible_project_ids ) AND P.record_status != 'D' ORDER BY name"	
+MA_experiment_constants	2	project_id	Project ID	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	Project with which this experiment is associated	"SELECT project_id, username||' - '||name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) WHERE project_id IN ( $accessible_project_ids ) AND P.record_status != 'D' ORDER BY name"	
 MA_experiment_constants	3	name	Name	varchar	255	0	N		N			Y	text	50		Y	Y	N	Name of this Constants File		
 MA_experiment_constants	4	tag	Constants Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	Shortened Name of this Constants File		
 MA_experiment_constants	5	constants_file	Constants File	varchar	255	0	N		N			Y	file	40		Y	Y	N	Constants File Path		
