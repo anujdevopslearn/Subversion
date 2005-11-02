@@ -90,6 +90,7 @@ sub dbConnect {
 
 
     #### Get the needed connection variables
+    my $DB_TYPE = $self->getDBType();
     my $DB_SERVER = $self->getDBServer();
     my $DB_DATABASE = $self->getDBDatabase();
     my $DB_USER = $self->getDBUser();
@@ -145,6 +146,18 @@ $DBI::errstr
       END_ERR
     print STDERR $err;
     die ( $err );
+    }
+
+    # Place any DB specific initialization calls here
+    if ( !$DB_TYPE ) {
+
+      die( 'Database type not defined, cannot continue' );
+      
+    } elsif ( $DB_TYPE && $DB_TYPE =~ /mysql/i ) {
+      
+      # Set mysql mode to honor || as concatenation symbol
+      $dbh->do( "SET sql_mode=PIPES_AS_CONCAT" );
+
     }
 
     #### This should only be used if the database cannot be specified in
