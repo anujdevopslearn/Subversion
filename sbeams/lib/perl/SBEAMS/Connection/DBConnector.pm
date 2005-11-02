@@ -156,7 +156,7 @@ $DBI::errstr
     } elsif ( $DB_TYPE && $DB_TYPE =~ /mysql/i ) {
       
       # Set mysql mode to honor || as concatenation symbol
-      $dbh->do( "SET sql_mode=PIPES_AS_CONCAT" );
+      $this_dbh->do( "SET sql_mode=PIPES_AS_CONCAT" );
 
     }
 
