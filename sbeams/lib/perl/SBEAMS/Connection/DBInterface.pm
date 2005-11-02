@@ -1053,6 +1053,7 @@ sub selectTwoColumnHash {
 use Regexp::Common qw /delimited balanced/; # needed by translateSQL for mysql
 use re 'eval'; # needed by Regexp::Common::balanced
 sub translateSQL{
+ 
   my $self = shift || croak("parameter self not passed");
   my %args = @_;
 
@@ -1060,21 +1061,27 @@ sub translateSQL{
   my $sql = $args{'sql'} || croak "parameter sql missing";
 
   my $DBType = $self->getDBType() || "";
-  return $sql if ($DBType =~ /MS SQL Server/i);
+#  return $sql if ($DBType =~ /MS SQL Server/i);
 
   my $new_statement = $sql;
 
   #### Conversion syntax from MS SQL Server to PostgreSQL
   if ($DBType =~ /PostgreSQL/i) {
 
+    # Changed to using || as the concatenation operator 2005-11-03, obviates
+    # the need to do the following substitution.
+   
     #### Real naive and stupid so far...
-    #print "Content-type: text/html\n\nLooking at $sql<BR><BR>\n";
-    if ($new_statement =~ /\+/) {
-      $new_statement =~ s/\+/||/g;
-    }
+    #  $new_statement =~ s/\+/||/g;
 
+  } elsif ($DBType =~ /MS SQL Server/i) {
+    $new_statement = convert_concatenation_mssql( $sql );
+    
+    # Temporarily log this to find where the existing concats are.  This will
+    # catch some extras (where + is +) but will hopefully be useful in   
+    # tracking down SQL using the deprecated concat symbol.
+    $log->info( "ConcatSQL: $sql" ) if $sql =~ /\+/;
 
-  #### Conversion syntax from MS SQL Server to MySQL
   } elsif ($DBType =~ /mysql/i) {
 
     #### Loop through each of the SELECT statements in the SQL
@@ -1087,33 +1094,43 @@ sub translateSQL{
       #### Get the start and end of the column list
       my ($start,$end) = ($-[2],$+[2]);
 
-      #### Perform the necessary conversion for various functions
-      $list = convert_functions($list);
-      #### Perform the necessary conversion for string concatentation syntax
-      $list = convert_concatenation($list);
+      #### Perform the necessary conversion for various functions.  This is 
+      #### still somewhat raw, so we only do conversion if we (might) have an
+      #### affected function
+      if ( $list =~ /STR\(/i ) {
+        $list = convert_functions_mysql($list);
+        #### Update the statement with the new syntax and
+        #### since we are modifying $new_statement in place then we need
+        #### to update its 'pos' for the pattern match to work under /g
+        substr($new_statement,$start,$end-$start) = $list;
+        pos($new_statement) = $start + length $list;
+      }
 
-      #### Update the statement with the new syntax and
-      #### since we are modifying $new_statement in place then we need
-      #### to update its 'pos' for the pattern match to work under /g
-      substr($new_statement,$start,$end-$start) = $list;
-      pos($new_statement) = $start + length $list;
-
-    }
-
+      # Make sure we're in ANSI mode...
+      # eval { $dbh->do( "SET sql_mode=PIPES_AS_CONCAT" ); };
+    } 
   }
-	
+
   return $new_statement;
 
 } # endtranslateSQL
 
-
+#+
+#  Convert || symbol to + for MS SQL Server
+#-
+sub convert_concatenation_mssql {
+  my $sql = shift;
+  $sql =~ s/\|\|/\+/gm;
+  return $sql;
+}
 
 ###############################################################################
-# convert_concatenation
+# convert_concatenation_mysql
 #
 # Convert any SQL catenation operators into the MySQL CONCAT() function syntax
+# Not in use as of 2005-11-03 (DSC)
 ###############################################################################
-sub convert_concatenation {
+sub convert_concatenation_mysql {
   my $select_list = shift;
 
   #### Separate out functions and quoted text segments
@@ -1199,7 +1216,7 @@ sub convert_concatenation {
 #
 # Convert SQL Server functions to MySQL functions
 ###############################################################################
-sub convert_functions {
+sub convert_functions_mysql {
   my $select_list = shift;
   my @ops;
 
@@ -6099,7 +6116,7 @@ function switchProject(){
   my @project_ids = $self->getAccessibleProjects(module=>"$module");
   my $project_ids_list = join(',',@project_ids) || '-1';
   $project_sql = qq~
-    SELECT P.project_id, UL.username+' - '+P.name
+    SELECT P.project_id, UL.username || ' - ' || P.name
       FROM $TB_PROJECT P 
       LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id )
      WHERE P.project_id IN ( $project_ids_list )
@@ -6308,6 +6325,23 @@ sub isTaintedSQL {
     return 1;
   }
   return 0;
+}
+
+sub get_quoted_list {
+  my $this = shift;
+  my $listref = shift;
+  unless( ref( $listref ) eq 'ARRAY' ) {
+    $log->error( "Required arrayref not passed to get_quoted_list" );
+    exit;
+  } 
+  my $qlist = '';
+  my $sep = '';
+  for my $entry( @$listref ) {
+    $qlist .= $sep . "'$entry'";
+    $sep ||= ', ';
+  }
+  $log->warn( "Empty entity list in get_quoted_list" ) unless $qlist;
+  return $qlist;
 }
 
 
