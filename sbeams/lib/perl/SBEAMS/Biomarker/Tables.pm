@@ -19,6 +19,8 @@ use SBEAMS::Connection::Settings;
 use vars qw(@ISA @EXPORT 
             $TB_ORGANISM
             $TB_ORGANIZATION
+            $TB_PROTOCOL
+            $TB_PROTOCOL_TYPE
 
             $TBBL_BIOSEQUENCE_SET
             $TBBL_DBXREF
@@ -28,7 +30,6 @@ use vars qw(@ISA @EXPORT
 
             $TBBM_TISSUE_TYPE
     
-            $TBBM_PROTOCOL
             $TBBM_GRADIENT_PROGRAM
 
             $TBBM_ATTRIBUTE
@@ -67,7 +68,8 @@ require Exporter;
                $TB_ORGANISM
                $TB_ORGANIZATION
     
-               $TBBM_PROTOCOL
+               $TB_PROTOCOL
+               $TB_PROTOCOL_TYPE
                $TBBM_GRADIENT_PROGRAM
 
                $TBBM_ATTRIBUTE
@@ -102,11 +104,12 @@ my $mod  = $DBPREFIX{Biomarker} || 'BiomarkerModuleNotDefinedInSBEAMS.conf';
 
 $TB_ORGANISM                    = "${core}organism";
 $TB_ORGANIZATION                = "${core}organization";
+$TB_PROTOCOL                    = "${core}protocol";
+$TB_PROTOCOL_TYPE               = "${core}protocol_type";
 
 # Chose to specify external db tables as TBBM
 $TBBM_TISSUE_TYPE               = "${glyco}tissue_type";
 
-$TBBM_PROTOCOL                  = "${prot}protocol";
 $TBBM_GRADIENT_PROGRAM          = "${prot}gradient_program";
 
 $TBBL_BIOSEQUENCE_SET           = "${bl}biosequence_set";

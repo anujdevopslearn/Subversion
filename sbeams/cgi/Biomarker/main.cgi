@@ -21,44 +21,35 @@
 # Get the script set up with everything it will need
 ###############################################################################
 use strict;
-use vars qw ($q $PROGRAM_FILE_NAME $current_contact_id $current_username);
 use lib qw (../../lib/perl);
-#use CGI;
 use CGI::Carp qw(fatalsToBrowser croak);
 
-use SBEAMS::Connection qw($q);
+use SBEAMS::Connection qw($q $log);
 use SBEAMS::Connection::Settings;
 
 use SBEAMS::Biomarker;
 use SBEAMS::Biomarker::Settings;
 
+# Program globals
 my $sbeams = new SBEAMS::Connection;
 my $biomarker = new SBEAMS::Biomarker;
 $biomarker->setSBEAMS($sbeams);
 
 
-###############################################################################
-# Global Variables
-###############################################################################
-$PROGRAM_FILE_NAME = 'main.cgi';
-main();
+{ # Main 
 
+  # Authenticate and exit if a username is not returned
+  my $user = $sbeams->Authenticate() || die "Unable to authenticate";
 
-###############################################################################
-# Main Program:
-#
-# Call $sbeams->Authentication and stop immediately if authentication
-# fails else continue.
-###############################################################################
-sub main { 
+  my %param;
+  $sbeams->parse_input_parameters( q => $q, parameters_ref => \%param );
+  $sbeams->processStandardParameters( parameters_ref => \%param );
 
-    #### Do the SBEAMS authentication and exit if a username is not returned
-    exit unless ($current_username = $sbeams->Authenticate());
+#  test_session_cookie();
 
-    #### Print the header, do what the program does, and print footer
-    $biomarker->printPageHeader();
-    showMainPage();
-    $biomarker->printPageFooter();
+  $biomarker->printPageHeader();
+  showMainPage();
+  $biomarker->printPageFooter();
 
 } # end main
 
@@ -75,9 +66,9 @@ sub showMainPage {
   if ( $tab->getActiveTab == 1 ) { 
     my $project = $sbeams->getCurrent_project_name();
     $tab->setBoxContent( 0 );
-    my $edit =<<"    END";
+    my $edit = qq~
     <A HREF=$CGI_BASE_DIR/ManageProjectPrivileges>[Edit permissions]</A>
-    END
+    ~;
 
     # Pull out content
     my $content = "<H1>$project $edit</H1>";
@@ -85,23 +76,29 @@ sub showMainPage {
     my $expTable = $biomarker->get_experiment_overview();
 
     $tab->addContent( "$content $expTable" );
-
-
-   }
+  }
 
   print qq!
 	<BR>
   $tab
 	<BR>
 	<BR>
-
-	<UL>
-	</UL>
-
 	<BR>
 	<BR>
-    !;
+  !;
 
 } # end showMainPage
 
+sub test_session_cookie { 
 
+  my $ltime = 'string' x 10000;
+  my $time = time();
+  $sbeams->getSessionCookie();
+  $sbeams->setSessionAttribute( key => $time,  value => $ltime ); 
+  $sbeams->setSessionAttribute( key => 'time',  value => $ltime ); 
+  $log->debug( "Time is $ltime" );
+  $log->debug( "Time is $ltime" );
+
+  # Print the header, do what the program does, and print footer
+
+}

@@ -78,32 +78,6 @@ sub checkExperiment {
 
 }
 
-#+
-#-
-sub get_experiment_list {
-  my $this = shift;
-
-  my $sbeams = $this->getSBEAMS();
-  my $project_id = $sbeams->getCurrent_project_id();
-
-  my $select = '<SELECT>';
-
-  my $sql =<<"  END";
-  SELECT experiment_id, experiment_name
-  FROM $TBBM_EXPERIMENT
-  WHERE project_id = $project_id
-  ORDER BY experiment_name ASC
-  END
-
-  my @rows = $sbeams->selectSeveralColumns( $sql );
-  for my $row ( @rows ) {
-    $select .= "<OPTION VALUE=$row->[0]> $row->[1]";
-  }
-  $select .= '</SELECT>';
-
-  return $select;
-}
-
 
 #+
 #-

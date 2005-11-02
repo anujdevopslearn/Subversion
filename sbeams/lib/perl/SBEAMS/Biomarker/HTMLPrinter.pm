@@ -268,7 +268,53 @@ sub display_page_footer {
 
 ## Interface routines ##
 
+sub get_treatment_sample_list {
+  my $this = shift;
+  my %args = @_;
+  my $params = $args{params} || die "missing required 'params' hashref";
+  my $type = $args{types} || die "missing required parameter types";
 
+  $params->{experiment_id} ||= $this->get_first_experiment_id(@_);
+  
+  die "Must pass type as an arrayref" unless (ref($type) eq 'ARRAY');
+
+
+  my $sbeams = $this->getSBEAMS();
+  my $pid = $sbeams->getCurrent_project_id || die("Can't determine project_id");
+  my @acc = $sbeams->getAccessibleProjects();
+  my $table = SBEAMS::Connection::DataTable->new( BORDER => 1 );
+  my $sql =<<"  END";
+  SELECT biosample_id, biosample_name, bio_group_name
+  FROM $TBBM_BIOSAMPLE BS JOIN $TBBM_BIO_GROUP BG
+  ON BS.biosample_group_id = BG.bio_group_id
+  WHERE BS.experiment_id = $params->{experiment_id}
+  AND BS.record_status <> 'D'
+  AND BG.record_status <> 'D'
+  END
+
+  for my $row ( $sbeams->selectSeveralColumns( $sql ) ) {
+    $row->[0] = get_ts_checkbox( $row->[0] );
+    $table->addRow( $row );
+  }
+  
+  $table->alternateColors( PERIOD => 3,
+                           BGCOLOR => '#FFFFFF',
+                           DEF_BGCOLOR => '#E0E0E0',
+                           FIRSTROW => 0 ); 
+  $table->setColAttr( ROWS => [ 2..$table->getRowNum() ], 
+                      COLS => [ 1,2 ], 
+                      ALIGN => 'RIGHT' );
+  $table->setColAttr( ROWS => [ 1 ], 
+                      COLS => [ 1..2], 
+                      ALIGN => 'CENTER' );
+  my $list = $table->asHTML();
+  return $list;
+}
+
+sub get_ts_checkbox {
+  my $val = shift;
+  return "<INPUT TYPE=CHECKBOX NAME=biosample_id VALUE=$val></INPUT>";
+}
 
 #+ 
 # Routine builds a list of experiments/samples within.
@@ -327,7 +373,8 @@ sub get_experiment_overview {
   }
   $table->alternateColors( PERIOD => 1,
                            BGCOLOR => '#FFFFFF',
-                           DEF_BGCOLOR => '#E0E0E0' ); 
+                           DEF_BGCOLOR => '#E0E0E0',
+                           FIRSTROW => 0 ); 
   $table->setColAttr( ROWS => [ 2..$table->getRowNum() ], 
                       COLS => [ 4, 5 ], 
                       ALIGN => 'RIGHT' );
@@ -335,6 +382,212 @@ sub get_experiment_overview {
                       COLS => [ 1..6 ], 
                       ALIGN => 'CENTER' );
   return $table;
+}
+
+
+#+
+#-
+sub get_treatment_type_select {
+  my $this = shift;
+  my %args = @_;
+
+  # Select currval?
+  if ( $args{current} && ref($args{current} eq 'ARRAY') ) {
+    # stringify args if we were passed an arrayref
+    $args{current} = join ",", @{$args{current}};
+  }
+
+  my $sbeams = $this->getSBEAMS();
+
+  my $sql =<<"  END";
+  SELECT treatment_type_id, treatment_type_name
+  FROM $TBBM_TREATMENT_TYPE
+  WHERE record_status <> 'D'
+  ORDER BY treatment_type_name ASC
+  END
+
+  my $options = $sbeams->buildOptionList( $sql, $args{current} );
+
+  my $select_name = $args{name} || 'treatment_type';
+  my $select = "<SELECT NAME=$select_name>$options</SELECT>";
+  return $select;
+
+  # deprecated
+  my @rows = $sbeams->selectSeveralColumns( $sql );
+  for my $row ( @rows ) {
+    $select .= "<OPTION VALUE=$row->[0]> $row->[1]";
+  }
+
+  return $select;
+}
+
+#+
+# Routine returns a select list of input biosample types, constrained 
+# by include and/or exclude lists
+#-
+sub get_sample_type_select {
+  my $this = shift;
+  my $sbeams = $this->getSBEAMS();
+  my %args = @_;
+
+  # Select currval?
+  if ( $args{current} && ref($args{current} eq 'ARRAY') ) {
+    # stringify args if we were passed an arrayref
+    $args{current} = join ",", @{$args{current}};
+  }
+
+  my $limit_clause = '';
+  if ($args{include_types} && ref $args{include_types} eq 'ARRAY' ) {
+    my $qlist = $sbeams->get_quoted_list( $args{include_types} );
+    $limit_clause = "WHERE biosample_type_name IN ( $qlist )" if $qlist;
+  }
+  if ($args{exclude_types} && ref $args{exclude_types} eq 'ARRAY' ) {
+    my $qlist = $sbeams->get_quoted_list( $args{exclude_types} );
+    my $type = ( $limit_clause ) ? 'AND' : 'WHERE';
+    $limit_clause = " $type biosample_type_name NOT IN ( $qlist )" if $qlist;
+  }
+
+  $log->debug( "with $args{name}, where is $limit_clause\n" );
+  $log->debug( "Args are $args{include_types}" );
+  $log->debug( "Args are $args{exclude_types}" );
+
+  my $sbeams = $this->getSBEAMS();
+
+  my $sql =<<"  END";
+  SELECT biosample_type_id, biosample_type_name 
+  FROM $TBBM_BIOSAMPLE_TYPE
+  $limit_clause
+  ORDER BY biosample_type_name ASC
+  END
+
+  my $options = $sbeams->buildOptionList( $sql, $args{current} );
+
+  my $select_name = $args{name} || 'sample_type';
+  my $select = "<SELECT NAME=$select_name>$options</SELECT>";
+  return $select;
+
+  # deprecated
+  my @rows = $sbeams->selectSeveralColumns( $sql );
+  for my $row ( @rows ) {
+    $select .= "<OPTION VALUE=$row->[0]> $row->[1]";
+  }
+
+  return $select;
+}
+#+
+#-
+sub get_protocol_select {
+  my $this = shift;
+  my %args = @_;
+
+  # Select currval?
+  if ( $args{current} && ref($args{current} eq 'ARRAY') ) {
+    # stringify args if we were passed an arrayref
+    $args{current} = join ",", @{$args{current}};
+  }
+
+  my $sbeams = $this->getSBEAMS();
+
+  my $sql =<<"  END";
+  SELECT protocol_id, P.name
+  FROM $TB_PROTOCOL P JOIN $TB_PROTOCOL_TYPE PT
+  ON PT.protocol_type_id = P.protocol_type_id
+  WHERE PT.name = 'glycocapture' 
+  AND PT.record_status <> 'D'
+  AND PT.record_status <> 'D'
+  ORDER BY P.name ASC
+  END
+
+  my $options = $sbeams->buildOptionList( $sql, $args{current} );
+
+  my $select_name = $args{name} || 'protocol';
+  my $select = "<SELECT NAME=$select_name>$options</SELECT>";
+  return $select;
+
+  # deprecated
+  my @rows = $sbeams->selectSeveralColumns( $sql );
+  for my $row ( @rows ) {
+    $select .= "<OPTION VALUE=$row->[0]> $row->[1]";
+  }
+
+  return $select;
+}
+
+#+
+#-
+sub get_replicate_names_select {
+  my $this = shift;
+  my %args = @_;
+  return <<"  END";
+  <SELECT>
+   <OPTION VALUE=abc>a,b,c</OPTION>
+   <OPTION VALUE=123>1,2,3</OPTION>
+  </SELECT>
+  END
+
+}
+
+
+#+
+#-
+sub get_experiment_select {
+  my $this = shift;
+  my %args = @_;
+
+  # Select currval?
+  if ( $args{current} && ref($args{current} eq 'ARRAY') ) {
+    # stringify args if we were passed an arrayref
+    $args{current} = join ",", @{$args{current}};
+  }
+
+  my $sbeams = $this->getSBEAMS();
+  my $project_id = $sbeams->getCurrent_project_id();
+
+  my $project_list;
+  if ( $args{writeable} ) {
+    $project_list = join( ',', $sbeams->getWritableProjects() ) || '';
+  } elsif ( $args{accessible} ) {
+    $project_list = join( ',', $sbeams->getAccessibleProjects() ) || '';
+  }
+  my $project_list ||= $project_id;
+
+  my $project_constraint = "WHERE project_id IN ( $project_list )";
+
+  my $sql =<<"  END";
+  SELECT experiment_id, experiment_name
+  FROM $TBBM_EXPERIMENT
+  $project_constraint
+  ORDER BY experiment_name ASC
+  END
+
+  return ($sql) if $args{sql_only};
+
+  my $options = $sbeams->buildOptionList( $sql, $args{current} );
+
+  my $select_name = $args{name} || 'experiment';
+  my $select = "<SELECT NAME=$select_name>$options</SELECT>";
+  return $select;
+
+  # deprecated
+  my @rows = $sbeams->selectSeveralColumns( $sql );
+  for my $row ( @rows ) {
+    $select .= "<OPTION VALUE=$row->[0]> $row->[1]";
+  }
+
+  return $select;
+}
+
+#+
+# Odd routine to get first experiment_id from list get_expt_select, for first
+# load.
+#-
+sub get_first_experiment_id {
+  my $this = shift;
+  my $sql = $this->get_experiment_select( sql_only => 1,
+                                          writable => 1 );
+  my $sbeams = $this->getSBEAMS();
+  my @rows = $sbeams->selectSeveralColumns( $sql );
+  return $rows[0]->[0];
 }
 
 #+

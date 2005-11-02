@@ -60,7 +60,7 @@ sub print_upload_form {
   $sbeams->printUserContext();
   
   my $pad = '&nbsp;' x 5;
-  my $namelist = $biomarker->get_experiment_list();
+  my $namelist = $biomarker->get_experiment_select();
 
   print <<"  END";
   <H1>Upload samples</H1>
