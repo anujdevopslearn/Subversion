@@ -89,7 +89,7 @@ GO
 UPDATE table_column
   SET optionlist_query = '
 SELECT DISTINCT P.project_id,UL.username|| - ''||P.name 
-FROM PROJECT P 
+FROM $TB_PROJECT P 
 INNER JOIN $TBMA_AFFY_ARRAY_SAMPLE afs ON ( P.project_id = afs.project_id )
 INNER JOIN $TBMA_AFFY_ARRAY afa ON (afa.affy_array_sample_id = afs.affy_array_sample_id)  
 LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) 
