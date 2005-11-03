@@ -2,7 +2,7 @@ table_name	column_index	column_name	column_title	datatype	scale	precision	nullab
 project	1	project_id	Project ID	int	4	0	N		Y						showPassed(this)	N	N				pkDEFAULT
 project	2	name	Project Name	varchar	100	0	N		N			Y	text	75		Y	Y	N	Name or Title of the project		
 project	3	project_tag	Project Tag	varchar	50	0	N		N			Y	text	20		Y	Y	Y	"A short 'tag' or identity of the project.  Treat this like a folder name.  Use only alphanumeric characters, no spaces (e.g., FlyCatalog, HuTCellRaft, YeastShockExpr)"		
-project	4	PI_contact_id	PI Contact	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	PI or Primary contact for this project	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS name FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+project	4	PI_contact_id	PI Contact	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	PI or Primary contact for this project	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS name FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
 project	5	description	Description	text	16	0	Y		N			Y	textarea	8		Y	Y	N	"Describe this project: what are the goals, how are the samples prepared, derived citations, etc."		
 project	6	budget	Budget	varchar	25	0	Y		N			Y	text	25		Y	Y	N	Budget number to be charged for experiments under this project		
 project	7	project_status	Project Status	varchar	100	0	Y		N			N	text	50		Y	Y	N	"For example: Active, Finished"		
@@ -26,7 +26,7 @@ hardware_type	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_
 hardware_type	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 hardware_type	10	record_status	Record Status	char	1	0	N	N	N							N	N				
 hardware	1	hardware_id	Hardware ID	int	4	0	N		Y							N	N				pkDEFAULT
-hardware	2	contact_id	Contact	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Vendor/creator contact for this hardware	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS ""name"" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+hardware	2	contact_id	Contact	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Vendor/creator contact for this hardware	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS ""name"" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
 hardware	3	hardware_type_id	Hardware Type	int	4	0	N		N	hardware_type	hardware_type_id	Y	optionlist			Y	Y	Y	Type of hardware	"SELECT hardware_type_id, name FROM $TB_HARDWARE_TYPE ORDER BY name"	
 hardware	4	other_type	Other Hardware Type	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Only fill in if Type is Other		
 hardware	5	make	Make	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Make or Manufacturer of this hardware		
@@ -52,7 +52,7 @@ software_type	8	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_
 software_type	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 software_type	10	record_status	Record Status	char	1	0	N	N	N							N	N				
 software	1	software_id	Software ID	int	4	0	N		Y							N	N				pkDEFAULT
-software	2	contact_id	Contact	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Vendor/creator contact for this software	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS ""name"" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+software	2	contact_id	Contact	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Vendor/creator contact for this software	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS ""name"" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
 software	3	software_type_id	Software Type	int	4	0	N		N	software_type	software_type_id	Y	optionlist			Y	Y	Y	Type of software	"SELECT software_type_id, name FROM $TB_SOFTWARE_TYPE ORDER BY name"	
 software	4	other_type	Other Software Type	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Only fill in if Type is Other		
 software	5	name	Name	varchar	50	0	Y		N			Y	text	50		Y	Y	Y	Name of software		
@@ -138,7 +138,7 @@ contact	4	middle_name	Middle Name	varchar	50	0	Y		N			N	text	25		Y	Y	Y	Middle Na
 contact	5	gender	Gender	char	1	0	Y		N			N	optionlist			Y	Y	N	Gender of the this contact	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='gender' ORDER BY sort_order,option_value"	
 contact	6	contact_type_id	Contact Type	int	4	0	N		N	contact_type	contact_type_id	Y	optionlist			Y	Y	N	Classification of this contact	"SELECT contact_type_id,contact_type_name FROM $TB_CONTACT_TYPE ORDER BY sort_order,contact_type_name"	
 contact	7	job_title	Job Title	varchar	100	0	Y		N			N	text	50		Y	Y	N	Job title or function of this contact if appropriate		
-contact	8	supervisor_contact_id	Supervisor	int	4	0	Y		N	contact	contact_id	N	optionlist			Y	Y	N	Supervisor of this person if applicable	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS ""name"" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+contact	8	supervisor_contact_id	Supervisor	int	4	0	Y		N	contact	contact_id	N	optionlist			Y	Y	N	Supervisor of this person if applicable	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS ""name"" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
 contact	9	is_at_local_facility	At Local Facility	char	1	0	Y		N			N	optionlist			Y	Y	N	Is this contact to be considered a local person at this institution (ISB) ?	"SELECT option_key,option_value FROM $TB_MISC_OPTION WHERE option_type='yesno' ORDER BY sort_order,option_value"	
 contact	10	photo_filename	Photograph filename	varchar	255	0	Y		N			N	text	50		Y	Y	N	Filename of the photograph/mug shot of this contact		
 contact	11	organization_id	Organization	int	4	0	N		N	organization	organization_id	Y	optionlist			Y	Y	N	Organization for which contact works	"SELECT O.organization_id,O.organization FROM $TB_ORGANIZATION O INNER JOIN $TB_ORGANIZATION_TYPE OT ON (O.organization_type_id=OT.organization_type_id) WHERE OT.organization_type_name NOT IN ('Lab','Department','Group') ORDER BY organization"	
@@ -166,7 +166,7 @@ contact	32	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id	
 contact	33	record_status	Record Status	char	1	0	N	N	N							N	N				
 work_group	1	work_group_id	Work Group ID	int	4	0	N		Y							N	N				pkDEFAULT
 work_group	2	work_group_name	Work Group Name	varchar	50	0	N		N			Y	text	25		Y	Y	Y	Short name of the work group		
-work_group	3	primary_contact_id	Primary Contact	int	4	0	Y		N	contact	contact_id	N	optionlist			Y	Y	N	Primary contact for this group	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS ""name"" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+work_group	3	primary_contact_id	Primary Contact	int	4	0	Y		N	contact	contact_id	N	optionlist			Y	Y	N	Primary contact for this group	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS ""name"" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
 work_group	4	sort_order	Sort Order	int	4	0	N	10	N			N	text	10		Y	Y	N	Number to control the default sort order		
 work_group	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional notes		
 work_group	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -176,7 +176,7 @@ work_group	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id	
 work_group	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 work_group	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 user_login	1	user_login_id	User Login ID	int	4	0	N		Y							N	N				pkDEFAULT
-user_login	2	contact_id	Contact	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	N	Contact entry for this user	"SELECT contact_id, last_name+', '+first_name+' ('+organization+')' AS ""name"" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
+user_login	2	contact_id	Contact	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	N	Contact entry for this user	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS ""name"" FROM $TB_CONTACT C INNER JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
 user_login	3	username	Username	varchar	50	0	N		N			Y	text	25		Y	Y	Y	user login alias (preferably same as unix user alias)		
 user_login	4	password	password	varchar	50	0	Y		N			N	password	25		Y	Y	N	password (leave blank to use unix password of this username)		
 user_login	5	privilege_id	Privilege	int	4	0	N		N	privilege	privilege_id	Y	optionlist			Y	Y	N	General privilege of this user (different privileges may also be set by group)	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
@@ -199,8 +199,8 @@ user_work_group	9	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contac
 user_work_group	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 user_work_group	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 user_context	1	user_context_id	User Login ID	int	4	0	N		Y							N	N				pkDEFAULT
-user_context	2	contact_id	Username	int	4	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	Y	Contact/username	"SELECT C.contact_id, username+' ('+first_name+' '+last_name+')' AS 'name' FROM $TB_CONTACT C INNER JOIN $TB_USER_LOGIN UL ON ( C.contact_id = UL.contact_id ) ORDER BY username"	
-user_context	3	project_id	Active Project	int	4	0	Y		N	project	project_id	N	optionlist			Y	Y	N	"If an Active Project is selected, only relevant items are displayed in some screens"	"SELECT project_id, username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) ORDER BY username,name"	
+user_context	2	contact_id	Username	int	4	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	Y	Contact/username	"SELECT C.contact_id, username||' ('||first_name||' '||last_name||')' AS 'name' FROM $TB_CONTACT C INNER JOIN $TB_USER_LOGIN UL ON ( C.contact_id = UL.contact_id ) ORDER BY username"	
+user_context	3	project_id	Active Project	int	4	0	Y		N	project	project_id	N	optionlist			Y	Y	N	"If an Active Project is selected, only relevant items are displayed in some screens"	"SELECT project_id, username||' - '||name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) ORDER BY username,name"	
 user_context	4	work_group_id	Active Work Group	int	4	0	Y		N	work_group	work_group_id	N	optionlist			Y	Y	N	New records are written under this work group	"SELECT WG.work_group_id,WG.work_group_name FROM $TB_WORK_GROUP WG INNER JOIN $TB_USER_WORK_GROUP UWG ON ( WG.work_group_id=UWG.work_group_id ) WHERE contact_id=$contact_id ORDER BY WG.work_group_name"	
 user_context	5	privilege_id	Privilege	int	4	0	Y		N	privilege	privilege_id	N	optionlist			Y	Y	N	General privilege of this user under this group	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
 user_context	6	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
@@ -232,7 +232,7 @@ help_text	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id
 help_text	9	record_status	Record Status	char	1	0	N	N	N							N	N				
 user_project_permission	1	user_project_permission_id	User Project Permission ID	int	4	0	N		Y							N	N				pkDEFAULT
 user_project_permission	2	contact_id	Username	int	4	0	N		N	contact	contact_id	Y	optionlist			Y	Y	Y	Username	"SELECT contact_id,username FROM $TB_USER_LOGIN ORDER BY username"	
-user_project_permission	3	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	Project for which the permissions apply	"SELECT project_id,username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' ORDER BY username,name"	
+user_project_permission	3	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	Project for which the permissions apply	"SELECT project_id,username||' - '||name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' ORDER BY username,name"	
 user_project_permission	4	privilege_id	Privilege	int	4	0	N		N	privilege	privilege_id	Y	optionlist			Y	Y	N	Privilege level of this user within this project	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
 user_project_permission	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 user_project_permission	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -243,7 +243,7 @@ user_project_permission	10	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_grou
 user_project_permission	11	record_status	Record Status	char	1	0	N	N	N							N	N				
 group_project_permission	1	group_project_permission_id	User Project Permission ID	int	4	0	N		Y							N	N				pkDEFAULT
 group_project_permission	2	work_group_id	Work Group	int	4	0	N		N	work_group	work_group_id	Y	optionlist			Y	Y	Y	Work Group	"SELECT work_group_id,work_group_name FROM $TB_WORK_GROUP ORDER BY work_group_name"	
-group_project_permission	3	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	Project for which the permissions apply	"SELECT project_id,username+' - '+name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' ORDER BY username,name"	
+group_project_permission	3	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	Y	Project for which the permissions apply	"SELECT project_id,username||' - '||name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) WHERE P.record_status != 'D' ORDER BY username,name"	
 group_project_permission	4	privilege_id	Privilege	int	4	0	N		N	privilege	privilege_id	Y	optionlist			Y	Y	N	Privilege level of this user within this project	"SELECT privilege_id, name FROM $TB_PRIVILEGE ORDER BY privilege_id"	
 group_project_permission	5	comment	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
 group_project_permission	6	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
@@ -356,7 +356,7 @@ table_column	21	column_text	Column Description	text	16	0	Y		N			N	textarea	4		Y	
 table_column	22	optionlist_query	Drop down list query	text	16	0	Y		N			N	textarea	6		Y	Y	N	A query which will populate the contents of this field		
 table_column	23	url	URL	varchar	255	0	Y		N			N	text	50		Y	Y	N	The URL or URL fragment that this column is assoctiated with when it appears in a table		
 cached_resultset	1	cached_resultset_id	Cached Resultset ID	int	4	0	N		Y							N	N				pkDEFAULT
-cached_resultset	2	contact_id	Resultset Owner	int	4	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	Y	Creator of this resultset	"SELECT C.contact_id, username+' ('+first_name+' '+last_name+')' AS 'name' FROM $TB_CONTACT C INNER JOIN $TB_USER_LOGIN UL ON ( C.contact_id = UL.contact_id ) ORDER BY username"	
+cached_resultset	2	contact_id	Resultset Owner	int	4	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	Y	Creator of this resultset	"SELECT C.contact_id, username||' ('||first_name||' '||last_name||')' AS 'name' FROM $TB_CONTACT C INNER JOIN $TB_USER_LOGIN UL ON ( C.contact_id = UL.contact_id ) ORDER BY username"	
 cached_resultset	3	resultset_name	Resultset Name	varchar	100	0	Y		N			Y	text	50		Y	Y	Y	Friendly name of this resultset		
 cached_resultset	4	resultset_description	Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Longer description about the nature of this resultset		
 cached_resultset	5	query_name	Generating Query Name	varchar	100	0	Y		N			Y	fixed	50		Y	Y	N	Name of the SBEAMS query that manages this resultset		
@@ -369,7 +369,7 @@ cached_resultset	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	cont
 cached_resultset	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
 cached_resultset	13	record_status	Record Status	char	1	0	N	N	N							N	N				
 form_template	1	form_template_id	Form Template ID	int	4	0	N		Y							N	N				pkDEFAULT
-form_template	2	contact_id	Template Owner	int	4	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	Y	Creator of this template	"SELECT C.contact_id, username+' ('+first_name+' '+last_name+')' AS 'name' FROM $TB_CONTACT C INNER JOIN $TB_USER_LOGIN UL ON ( C.contact_id = UL.contact_id ) ORDER BY username"	
+form_template	2	contact_id	Template Owner	int	4	0	N		N	contact	contact_id	Y	current_contact_id			Y	Y	Y	Creator of this template	"SELECT C.contact_id, username||' ('||first_name||' '||last_name||')' AS 'name' FROM $TB_CONTACT C INNER JOIN $TB_USER_LOGIN UL ON ( C.contact_id = UL.contact_id ) ORDER BY username"	
 form_template	3	program_file_name	Program File Name	varchar	255	0	Y		N			Y	text	50		Y	Y	Y	CGI program locator to which this template belongs		
 form_template	4	template_name	Template Name	varchar	255	0	Y		N			N	text	50		Y	Y	Y	Name of the template		
 form_template	5	parameters	Parameters	text	16	0	Y		N			Y	textarea	10		Y	Y	N	Stored parameters in the form for a Perl hash Dumper Dump		
@@ -385,12 +385,12 @@ short_url	3	url	URL	text	16	0	Y		N
 AdHocQuery	1	query	SQL Query									Y	textarea	15		Y	Y		"Enter your Ad Hoc Query here.  Be careful with your SQL because a bad query and beat up the server, or worse yet, return data that look right but are not what you intended.  Writing direct SQL is generally discouraged unless you know what you're doing.  You have been warned."		
 GetDataSource	1	source_name	Source Name									Y	text	50		Y	Y		Enter the predenfined data source name here.  This must be a data source originally configured by your SBEAMS administrator		
 GetDataSource	2	row_limit	Maximum Rows									N	text	10		Y	Y		"Limit the numbers of rows displayed.  If not provided, default is 10000 rows."		
-IntegrateResultsets	1	interactions_resultset	Interactions Resultset									N	multioptionlist	8		Y	Y		Select the SBEAMS - Interactions resultset that you want to use to define the edges for the Cytoscape network visualization	"SELECT cache_descriptor,CONVERT(varchar(19),date_created,121)+' ('+query_name+') '+ISNULL(resultset_name,'') FROM $TB_CACHED_RESULTSET WHERE contact_id='$contact_id' AND record_status!='D' AND query_name LIKE 'Interactions/GetInteractions' ORDER BY date_created DESC"	
-IntegrateResultsets	2	microarray_resultset	Microarray Resultset									N	multioptionlist	8		Y	Y		Select the SBEAMS - Microarray resultset that you want to use to define node attributes for the Cytoscape network visualization	"SELECT cache_descriptor,CONVERT(varchar(19),date_created,121)+' ('+query_name+') '+ISNULL(resultset_name,'') FROM $TB_CACHED_RESULTSET WHERE contact_id='$contact_id' AND record_status!='D' AND query_name LIKE 'Microarray/GetExpression' ORDER BY date_created DESC"	
-IntegrateResultsets	3	proteomics_resultset	Proteomics Resultset									N	multioptionlist	8		Y	Y		Select the SBEAMS - Proteomics resultset that you want to use to define the edges for the Cytoscape network visualization	"SELECT cache_descriptor,CONVERT(varchar(19),date_created,121)+' ('+query_name+') '+ISNULL(resultset_name,'') FROM $TB_CACHED_RESULTSET WHERE contact_id='$contact_id' AND record_status!='D' AND query_name LIKE 'Proteomics/BrowseProteinSummary' ORDER BY date_created DESC"	
+IntegrateResultsets	1	interactions_resultset	Interactions Resultset									N	multioptionlist	8		Y	Y		Select the SBEAMS - Interactions resultset that you want to use to define the edges for the Cytoscape network visualization	"SELECT cache_descriptor,CONVERT(varchar(19),date_created,121)||' ('||query_name||') '||ISNULL(resultset_name,'') FROM $TB_CACHED_RESULTSET WHERE contact_id='$contact_id' AND record_status!='D' AND query_name LIKE 'Interactions/GetInteractions' ORDER BY date_created DESC"	
+IntegrateResultsets	2	microarray_resultset	Microarray Resultset									N	multioptionlist	8		Y	Y		Select the SBEAMS - Microarray resultset that you want to use to define node attributes for the Cytoscape network visualization	"SELECT cache_descriptor,CONVERT(varchar(19),date_created,121)||' ('||query_name||') '||ISNULL(resultset_name,'') FROM $TB_CACHED_RESULTSET WHERE contact_id='$contact_id' AND record_status!='D' AND query_name LIKE 'Microarray/GetExpression' ORDER BY date_created DESC"	
+IntegrateResultsets	3	proteomics_resultset	Proteomics Resultset									N	multioptionlist	8		Y	Y		Select the SBEAMS - Proteomics resultset that you want to use to define the edges for the Cytoscape network visualization	"SELECT cache_descriptor,CONVERT(varchar(19),date_created,121)||' ('||query_name||') '||ISNULL(resultset_name,'') FROM $TB_CACHED_RESULTSET WHERE contact_id='$contact_id' AND record_status!='D' AND query_name LIKE 'Proteomics/BrowseProteinSummary' ORDER BY date_created DESC"	
 IntegrateResultsets	4	m	Mode Command									N	fixed			Y	N		Cytoscape integrator mode	"SELECT 1,1"	
 Test_sample	1	sample_id	Sample ID	int	4	0	N		Y			Y				N	N	Y	Sample ID		pkDEFAULT
-Test_sample	2	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	FK to project.project_id	"SELECT project_id, UL.username + ' - ' + proj.name + ' ( ' + RTRIM(CAST(proj.project_id AS CHAR)) + ' )'   AS name FROM $TB_PROJECT proj JOIN $TB_USER_LOGIN UL ON (proj.PI_contact_id = UL.contact_id)  WHERE proj.project_tag IS NOT NULL AND proj.record_status != 'D' ORDER BY UL.username"	
+Test_sample	2	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	FK to project.project_id	"SELECT project_id, UL.username || ' - ' || proj.name || ' ( ' || RTRIM(CAST(proj.project_id AS CHAR)) || ' )'   AS name FROM $TB_PROJECT proj JOIN $TB_USER_LOGIN UL ON (proj.PI_contact_id = UL.contact_id)  WHERE proj.project_tag IS NOT NULL AND proj.record_status != 'D' ORDER BY UL.username"	
 Test_sample	3	sample_tag	Sample Tag	varchar	50	0	N		N			Y	text	50		Y	Y	N	Sample Name.  Keep it short.  Do not use any strange characters like /\*&$() (e.g. NP Epi 03-123)		
 Test_sample	4	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	N	Organism from which the biomaterial was derived	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
 Test_sample	5	age	Age	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Age of the individual at the time of harvest of the biomaterial.  Free form text; include units, developmental stage, and reference point as appropriate (e.g., days since planting, years after birth, minutes after death)"		

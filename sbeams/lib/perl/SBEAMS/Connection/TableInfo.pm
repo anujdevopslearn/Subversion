@@ -119,7 +119,7 @@ sub returnTableInfo {
       my $fields = qq~
 	  	P.project_id,P.project_tag,P.name,
       CASE WHEN UL.username IS NULL 
-           THEN first_name + '_' + last_name + '(No Login)' 
+           THEN first_name || '_' || last_name || '(No Login)' 
            ELSE UL.username END AS username,
 		  SUBSTRING(P.description,1,100) AS "description"
       ~;
@@ -226,7 +226,7 @@ sub returnTableInfo {
         if ($info_key eq "BASICQuery") {
             return qq~
 		SELECT GPP.group_project_permission_id,WG.work_group_name,
-                       UL.username+' - '+PROJ.name AS "Project",PRIV.name,GPP.comment
+                       UL.username|| - '||PROJ.name AS "Project",PRIV.name,GPP.comment
                   FROM $TB_GROUP_PROJECT_PERMISSION GPP
                   LEFT JOIN $TB_PROJECT PROJ ON ( GPP.project_id=PROJ.project_id )
                   LEFT JOIN $TB_USER_LOGIN UL ON ( PROJ.PI_contact_id=UL.contact_id )
@@ -250,7 +250,7 @@ sub returnTableInfo {
         if ($info_key eq "BASICQuery") {
             return qq~
 		SELECT UPP.user_project_permission_id,
-                       PUL.username+' - '+PROJ.name AS "Project",UL.username,PRIV.name,UPP.comment
+                       PUL.username|| - '||PROJ.name AS "Project",UL.username,PRIV.name,UPP.comment
                   FROM $TB_USER_PROJECT_PERMISSION UPP
                   LEFT JOIN $TB_PROJECT PROJ ON ( UPP.project_id = PROJ.project_id )
                   LEFT JOIN $TB_USER_LOGIN PUL ON ( PROJ.PI_contact_id = PUL.contact_id )
@@ -827,7 +827,7 @@ sub getProjectDetailsTable {
   
   my @rows = $self->selectSeveralColumns( <<"  END_SQL" );
   SELECT project_id, project_status, project_tag, description,
-         first_name + ' ' + last_name AS PI_name, name 
+         first_name || ' ' || last_name AS PI_name, name 
   FROM $TB_PROJECT p JOIN $TB_CONTACT c
   ON c.contact_id = p.PI_contact_id
   WHERE project_id = $args{project_id}

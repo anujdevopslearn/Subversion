@@ -1191,7 +1191,7 @@ sub addProjectErrors {
 
   # Need more project info
   my @rows = $sbeams->selectSeveralColumns( <<"  END_SQL" );
-  SELECT first_name + ' ' + last_name as uname, project_id, name
+  SELECT first_name || ' ' || last_name as uname, project_id, name
   FROM $TB_PROJECT p JOIN $TB_CONTACT c
   ON p.pi_contact_id = c.contact_id
   WHERE p.project_id = $parent_project_id

@@ -826,13 +826,13 @@ sub get_projects_with_arrays {
 	
 	
 	my $sql = qq~ 
-				SELECT DISTINCT P.project_id,UL.username+' - '+P.name 
-				FROM PROJECT P 
+				SELECT DISTINCT P.project_id,UL.username || ' - ' || P.name 
+				FROM $TB_PROJECT P 
 				INNER JOIN $TBMA_AFFY_ARRAY_SAMPLE afs ON ( P.project_id = afs.project_id )
 				INNER JOIN $TBMA_AFFY_ARRAY afa ON (afa.affy_array_sample_id = afs.affy_array_sample_id)  
 				LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) 
 				WHERE P.record_status != 'D'
-				ORDER BY UL.username+' - '+P.name 
+				ORDER BY UL.username || ' - ' || P.name 
 			~;
 	#$sbeams->display_sql(sql=> $sql);
 	my @all_projects_info = $sbeams->selectSeveralColumns($sql);

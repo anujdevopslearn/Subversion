@@ -1065,6 +1065,11 @@ sub translateSQL{
 
   my $new_statement = $sql;
 
+  # Temporarily log this to find where the existing concats are.  This will
+  # catch some extras (where + is +) but will hopefully be useful in   
+  # tracking down SQL using the deprecated concat symbol.
+  $log->info( "ConcatSQL: $sql" ) if $sql =~ /\+/;
+
   #### Conversion syntax from MS SQL Server to PostgreSQL
   if ($DBType =~ /PostgreSQL/i) {
 
@@ -1077,11 +1082,6 @@ sub translateSQL{
   } elsif ($DBType =~ /MS SQL Server/i) {
     $new_statement = convert_concatenation_mssql( $sql );
     
-    # Temporarily log this to find where the existing concats are.  This will
-    # catch some extras (where + is +) but will hopefully be useful in   
-    # tracking down SQL using the deprecated concat symbol.
-    $log->info( "ConcatSQL: $sql" ) if $sql =~ /\+/;
-
   } elsif ($DBType =~ /mysql/i) {
 
     #### Loop through each of the SELECT statements in the SQL
@@ -5680,7 +5680,7 @@ sub getProjectsYouHaveAccessTo {
   # Build SQL to fetch other data
   my $sql =<<"  END_SQL";
   SELECT P.project_id, P.project_tag, P.name, 'desc_placeholder',
-         CASE WHEN UL.username IS NULL THEN C.first_name + '_' + C.last_name
+         CASE WHEN UL.username IS NULL THEN C.first_name || '_' || C.last_name
               ELSE UL.username END AS username,
          MIN( CASE WHEN UWG.contact_id IS NULL THEN 9999
               ELSE GPP.privilege_id END ) AS "best_group_privilege_id",
@@ -5896,7 +5896,7 @@ sub getProjectsYouHaveAccessTo_deprecated {
   #### Get all the projects user has access to
   $sql = qq~
   SELECT P.project_id,P.project_tag,P.name,
-         CASE WHEN UL.username IS NULL THEN C.first_name + '_' + C.last_name
+         CASE WHEN UL.username IS NULL THEN C.first_name || '_' || C.last_name
               ELSE UL.username END AS username,
          MIN( CASE WHEN UWG.contact_id IS NULL THEN 9999
               ELSE GPP.privilege_id END ) AS "best_group_privilege_id",
