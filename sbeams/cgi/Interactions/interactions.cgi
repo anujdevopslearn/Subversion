@@ -32,6 +32,7 @@ use vars qw ($sbeams $sbeamsMOD $q $current_contact_id $current_username
 
 use SBEAMS::Connection qw($q);
 use SBEAMS::Connection::Settings;
+use SBEAMS::Connection::Tables;
 
 use SBEAMS::Interactions;
 use SBEAMS::Interactions::Settings;
@@ -240,9 +241,9 @@ print File "<center><b>You can edit  your  Sbeams entries by clicking on the lin
 #######################################
 
 print File "<br><pre>";
-	my $organismSql = "select upper( full_name), organism_id  from sbeams.dbo.organism";
- 	my $organismIDSql = "select organism_id, upper( full_name)  from sbeams.dbo.organism";
-	my $organismNameSql = " select upper( organism_Name), organism_id  from sbeams.dbo.organism";
+	my $organismSql = "select upper( full_name), organism_id  from $TB_ORGANISM";
+ 	my $organismIDSql = "select organism_id, upper( full_name)  from $TB_ORGANISM";
+	my $organismNameSql = " select upper( organism_Name), organism_id  from $TB_ORGANISM";
 	my $interactionTypeSql = "select upper(interaction_type_name), interaction_type_id from $TBIN_INTERACTION_TYPE";	
 	my $bioentityTypeSql = "select upper(bioentity_type_name), bioentity_type_id from $TBIN_BIOENTITY_TYPE";
 	
@@ -487,9 +488,9 @@ CanonicalName: $bioentityHash{canTarget}\n";
 	
 
 		
-		my $projectIDSql = "SELECT DISTINCT P.project_id,UL.username+\' -\ '+P.name FROM sbeams.dbo.project P 
+		my $projectIDSql = "SELECT DISTINCT P.project_id,UL.username+\' -\ '+P.name FROM $TB_PROJECT P 
 INNER JOIN $TBIN_INTERACTION_GROUP IG ON ( P.project_id = IG.project_id ) 
-LEFT JOIN sbeams.dbo.USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) 
+LEFT JOIN $TB_USER_LOGIN UL ON ( P.PI_contact_id=UL.contact_id ) 
 WHERE P.record_status != 'D' ORDER BY UL.username+\' -\ '+P.name,P.project_id";
 		
 		print "<!--Project-->\n";
@@ -513,9 +514,9 @@ WHERE P.record_status != 'D' ORDER BY UL.username+\' -\ '+P.name,P.project_id";
 		
 		my $interactionUserSql = qq /SELECT interaction_group_id,UL.username+' - '+P.project_tag+' - '+O.organism_name+' - '+IG.interaction_group_name 
 		FROM $TBIN_INTERACTION_GROUP IG 
-		INNER JOIN sbeams.dbo.PROJECT P ON ( IG.project_id = P.project_id ) INNER JOIN
-		sbeams.dbo.USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id ) INNER JOIN 
-		sbeams.dbo.organism O ON ( IG.organism_id = O.organism_id )
+		INNER JOIN $TB_PROJECT P ON ( IG.project_id = P.project_id ) INNER JOIN
+		$TB_USER_LOGIN UL ON ( P.PI_contact_id = UL.contact_id ) INNER JOIN 
+		$TB_ORGANISM O ON ( IG.organism_id = O.organism_id )
 		where P.project_id = $parameters{set_current_project_id}
 		ORDER BY UL.username,P.project_tag,O.organism_name,IG.interaction_group_name/;
 	
@@ -535,9 +536,12 @@ WHERE P.record_status != 'D' ORDER BY UL.username+\' -\ '+P.name,P.project_id";
 		my $can = shift; 
 		my $organism = 0;
 	
-		my $sql = qq / Select upper(organism) from locuslink.dbo.loci l 
-			join locuslink.dbo. refseq rs on l.locus_id = rs.locus_id 
-			where (rs.mrna ='$can' or protein = '$can') /;
+		my $sql = qq~
+    SELECT upper(organism) 
+    FROM $TBIN_LOCI l 
+		JOIN $TBIN_REFSEQ rs ON l.locus_id = rs.locus_id 
+		WHERE (rs.mrna ='$can' or protein = '$can')
+    ~;
 		
 			
 		my @rows = $sbeams->selectOneColumn($sql);
