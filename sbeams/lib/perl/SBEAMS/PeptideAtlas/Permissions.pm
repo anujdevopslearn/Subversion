@@ -189,6 +189,10 @@ sub getProjectID
 #}
 
 
+
+###############################################################################
+# prntVar
+###############################################################################
 sub prntVar
 {
 
@@ -197,8 +201,151 @@ sub prntVar
   print "$str = $val\n";
 
 }
+
+
+
+###############################################################################
+# getCurrentAtlasBuildID
+###############################################################################
+sub getCurrentAtlasBuildID {
+  my $METHOD_NAME = 'getCurrentAtlasBuildID';
+  my $self = shift || die("ERROR[$METHOD_NAME]: parameter self not passed");
+  my %args = @_;
+
+  #### Decode the argument list
+  my $parameters_ref = $args{'parameters_ref'}
+   || die "ERROR[$METHOD_NAME]: parameters_ref not passed";
+  my %parameters = %{$parameters_ref};
+  my $sbeams = $self->getSBEAMS();
+
+
+  #### Extract what was specified as a parameter
+  my $atlas_build_id = $parameters{'atlas_build_id'};
+  my $atlas_build_name = $parameters{'atlas_build_name'};
+
+
+  #### If atlas_build_id was supplied
+  if ($atlas_build_id) {
+    #### we're fine, this is exactly what we want
+
+  #### Else if atlas_build_name was supplied
+  } elsif ($atlas_build_name) {
+
+    #### Build atlas_build_name constraint
+    my $atlas_build_name_clause = $sbeams->parseConstraint2SQL(
+      constraint_column=>"atlas_build_name",
+      constraint_type=>"plain_text",
+      constraint_name=>"Atlas Build Name",
+      constraint_value=>$parameters{atlas_build_name} );
+    return if ($atlas_build_name_clause eq '-1');
+
+    #### Fetch the id based on the name
+    my $sql = qq~
+      SELECT atlas_build_id
+        FROM $TBAT_ATLAS_BUILD
+       WHERE 1=1
+         $atlas_build_name_clause
+         AND record_status != 'D'
+    ~;
+    my @rows = $sbeams->selectOneColumn($sql);
+
+
+    #### Check that we got only one result or squawk
+    if (scalar(@rows) == 0) {
+      print "ERROR[$METHOD_NAME]: No atlas_build_id's found for ".
+	"'$atlas_build_name'<BR>\n";
+      return(-1);
+
+    } elsif (scalar(@rows) > 1) {
+      print "ERROR[$METHOD_NAME]: Too many atlas_build_id's found for ".
+	"'$atlas_build_name'<BR>\n";
+      return(-1);
+
+    } else {
+      $atlas_build_id = $rows[0];
+    }
+
+  #### Otherwise try to get it from the session cookie
+  } else {
+    $atlas_build_id = $sbeams->getSessionAttribute(
+      key => 'PeptideAtlas_atlas_build_id',
+    );
+  }
+
+
+  #### If we still don't have an atlas_build_id, guess!
+  unless ($atlas_build_id) {
+    my $organism_name = $sbeams->getSessionAttribute(
+      key => 'PeptideAtlas_organism_name',
+    );
+
+    if ($organism_name) {
+      if ($organism_name eq 'Human') {
+	$atlas_build_id = 70;
+      } elsif ($organism_name eq 'Yeast') {
+	$atlas_build_id = 73;
+      } elsif ($organism_name eq 'Drosophila') {
+	$atlas_build_id = 75;
+      }
+    }
+  }
+
+
+  #### If we still don't have an atlas_build_id, just assume the latest human!
+  unless ($atlas_build_id) {
+    $atlas_build_id = 70;
+  }
+
+
+  #### Verify that the user is allowed to see this atlas_build_id
+  my @accessible_project_ids = $sbeams->getAccessibleProjects();
+  my $accessible_project_ids = join( ",", @accessible_project_ids ) || '0';
+  my $sql = qq~
+      SELECT atlas_build_id
+        FROM $TBAT_ATLAS_BUILD AB
+       WHERE AB.project_id IN ( $accessible_project_ids )
+         AND AB.record_status!='D'
+         AND atlas_build_id = '$atlas_build_id'
+  ~;
+  my @rows = $sbeams->selectOneColumn($sql);
+
+  #### If not, stop here
+  unless (scalar(@rows) == 1 && $rows[0] eq $atlas_build_id) {
+    print "<BR>ERROR: You are not permitted to access atlas_build_id ".
+      "'$atlas_build_id' with your current credentials.  You may need to ".
+      "login with your username and password.  Click on the LOGIN link at ".
+      "left.<BR>\n";
+    return(-1);
+  }
+
+
+  #### Test if the current session already has this atlas_build_id, and if
+  #### not, then set it
+  my $cached_atlas_build_id = $sbeams->getSessionAttribute(
+      key => 'PeptideAtlas_atlas_build_id',
+    );
+
+  if ($cached_atlas_build_id != $atlas_build_id) {
+    $sbeams->setSessionAttribute(
+      key => 'PeptideAtlas_atlas_build_id',
+      value => $atlas_build_id,
+    );
+  }
+
+  return($atlas_build_id);
+
+} # end getCurrentAtlasBuildID
+
+
+
+###############################################################################
 1;
 __END__
+###############################################################################
+###############################################################################
+###############################################################################
+
+
 # Below is stub documentation for your module. You'd better edit it!
 
 =head1 NAME
