@@ -148,57 +148,28 @@ sub handle_request {
   my %parameters = %{$ref_parameters};
 
 
-  if ($sbeams->output_mode() eq 'html') {
-    print <<"    END";
-        <BR>
-    END
+  #### Show current user context information
+  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
+  #$sbeams->printUserContext();
+
+  #### Get the HTML to display the tabs
+  my $parameters_string = $sbeamsMOD->printTabMenu(
+    parameters_ref => \%parameters,
+    program_name => $PROG_NAME,
+  );
+
+
+  #### Get the current atlas_build_id based on parameters or session
+  my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
+    parameters_ref => \%parameters,
+  );
+  if (defined($atlas_build_id) && $atlas_build_id < 0) {
+    return;
   }
 
 
-  ## if tab menu is requested, display tabs and append parameters to PROG_NAME
-# if ( $parameters{_tab} )
-# {
-      my $parameters_string = $sbeamsMOD->printTabMenu(
-          parameters_ref => \%parameters,
-          program_name => $PROG_NAME,
-          );
-
-      ##print "<BR>params:$parameters_string<BR>";
-
-      #### No, the program name does not include the parameters
-      #$PROG_NAME = $PROG_NAME.$parameters_string;
-# }
-
-    my ($atlas_build_id, $atlas_build_name);
-
-    ## if have atlas_build_id, but no name, get the name
-    if ( (exists $parameters{'atlas_build_id'})
-    && (!exists $parameters{'atlas_build_name'}) )
-    {
-        $atlas_build_id = $parameters{'atlas_build_id'};
-
-        my $sql = qq~
-            SELECT atlas_build_name
-            FROM $TBAT_ATLAS_BUILD
-            WHERE atlas_build_id = '$atlas_build_id'
-            AND record_status != 'D'
-            ~;
-
-#       $sbeams->display_sql(sql=>$sql);
-
-        my ($tmp) = $sbeams->selectOneColumn($sql) or
-            die "Cannot complete $sql ($!)";
-
-        $atlas_build_name = $tmp;
-
-        $parameters{'atlas_build_name'} = $atlas_build_name;
-
-    }
-
-
-
-  #### Define some generic varibles
-  my ($i,$element,$key,$value,$line,$result,$sql);
+  #### Get the search keyword
+  my $protein_name = $parameters{"protein_name"};
 
 
   #### Define some variables for a query and resultset
@@ -259,20 +230,17 @@ sub handle_request {
   my @ordered_atlas_build_ids = $sbeams->selectOneColumn($sql);
 
 
-  #### Get the passed parameters
-  my $atlas_build_id = $parameters{"atlas_build_id"};
-  my $protein_name = $parameters{"protein_name"};
-
-
-  #### If no atlas_build_id has been set, choose the latest human one.
-  #### FIXME. Come up with a better way of doing this.
-  unless ($atlas_build_id) {
-    $atlas_build_id = 70;
-  }
-
-
   #### If the output_mode is HTML, then display the form
   if ($sbeams->output_mode() eq 'html') {
+
+      print qq~
+        <script LANGUAGE="Javascript">
+          function switchAtlasBuild() {
+            document.SearchForm.apply_action.value = "GO";
+            document.SearchForm.submit();
+          }
+        </script>
+      ~;
 
       print "<P>";
 
@@ -280,6 +248,7 @@ sub handle_request {
 
       print $q->start_form(-method=>"POST",
                            -action=>"$base_url",
+			   -name=>"SearchForm",
                           );
 
       print "PeptideAtlas Build: ";
@@ -288,6 +257,7 @@ sub handle_request {
                            -values => [ @ordered_atlas_build_ids ],
                            -labels => \%atlas_build_names,
                            -default => $atlas_build_id,
+                           -onChange => 'switchAtlasBuild()',
 			  );
 
       print "&nbsp;&nbsp;&nbsp;";
@@ -295,6 +265,7 @@ sub handle_request {
       print "Protein Name: ";
 
       print $q->textfield( "protein_name", $protein_name);
+      print $q->hidden( "apply_action", '');
 
       print "&nbsp;&nbsp;&nbsp;";
 
@@ -314,7 +285,7 @@ sub handle_request {
   #### Process all the constraints
 
   #### If atlas_build_id was not selected, stop here
-  unless ($parameters{atlas_build_id}) {
+  unless ($atlas_build_id) {
     if ($sbeams->output_mode() eq 'html') {
       print "Please select an atlas build, type in a protein name ".
         "(e.g. ENSP00000290230 for human Ensembl protein), and ".
@@ -331,7 +302,7 @@ sub handle_request {
 
 
   #### If biosequence_name was not selected, stop here
-  unless ($parameters{protein_name}) {
+  unless ($protein_name) {
     if ($sbeams->output_mode() eq 'html') {
       print "Please type in a protein name ".
         "(e.g. ENSP00000290230 for human Ensembl protein), and ".
@@ -452,18 +423,6 @@ sub handle_request {
   my @rows = $sbeams->selectHashArray($sql);
   my $biosequence = $rows[0];
 
-  #### For now, hard-code to Ensembl human if not already provided
-  $biosequence->{accessor} = "http://www.ensembl.org/Homo_sapiens/protview?peptide=" unless ($biosequence->{accessor});
-
-  ## if atlas_build_name has yeast in it, use SGD look-up
-  if ($atlas_build_name =~ /yeast/i)
-  {
-
-      $biosequence->{accessor} = 
-          "http://db.yeastgenome.org/cgi-bin/locus.pl?locus=";
-
-  }
-
 
   #### Print out a summary of the protein
   if ($sbeams->output_mode() eq 'html') {
@@ -478,7 +437,7 @@ sub handle_request {
     print $sbeamsMOD->encodeSectionItem(
       key=>'Protein Name',
       value=>$biosequence->{biosequence_name},
-      url=>"$biosequence->{accessor}$biosequence->{biosequence_accession}$biosequence->{accessor_suffix}",
+      #url=>"$biosequence->{accessor}$biosequence->{biosequence_accession}$biosequence->{accessor_suffix}",
     );
 
     print $sbeamsMOD->encodeSectionItem(
@@ -619,7 +578,7 @@ sub handle_request {
       <TABLE width="600">
         <TR><TD colspan="2" background="$HTML_BASE_DIR/images/fade_orange_header_2.png" width="680"><font color="white">Observed Peptides</font></TD></TR>
       </TABLE>
-    ~;
+    ~ if ($sbeams->output_mode() eq 'html');
 
 
     #### Display the resultset
@@ -836,3 +795,6 @@ sub displaySamples {
 
 
 } # end displaySamples
+
+
+
