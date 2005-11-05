@@ -84,13 +84,12 @@ $sbeams = new SBEAMS::Connection;
 ###############################################################################
 $PROG_NAME = $FindBin::Script;
 
-my @run_modes = qw(add_new update delete);
 
 $USAGE = <<EOU;
-$PROG_NAME is used to find and load Affy arrays into SBEAMS. 
+$PROG_NAME is used load glyco_peptide data. 
 
 
-Usage: $PROG_NAME --run_mode <add_new, update, delete>  [OPTIONS]
+Usage: $PROG_NAME --file [OPTIONS]
 Options:
     --verbose <num>    Set verbosity level.  Default is 0
     --quiet            Set flag to print nothing at all except errors
@@ -114,12 +113,11 @@ unless (GetOptions(\%OPTIONS,
 		   "file:s",
 		   "testonly",
 		   )) {
-  print "$USAGE";
+  printUSAGE();
  
 }
 
-
-
+#Setup a few global variables
 $VERBOSE    = $OPTIONS{verbose} || 0;
 $QUIET      = $OPTIONS{quiet};
 $DEBUG      = $OPTIONS{debug};
@@ -127,15 +125,7 @@ $TESTONLY   = $OPTIONS{testonly};
 $FILE = $OPTIONS{file};
 
 
-die "File Name Does not look good $USAGE\n" unless -e $FILE;
-
-##############################
-##Setup a few global variables
-############################
-print "FILE '$FILE'\n";
-
-
-
+printUsage( 'Specified file does not exist' ) unless -e $FILE;
 
 if ($DEBUG) {
   print "Options settings:\n";
@@ -160,54 +150,39 @@ exit(0);
 # Call $sbeams->Authenticate() and exit if it fails or continue if it works.
 ###############################################################################
 sub main {
-
   
-#### Try to determine which module we want to affect
+  # Try to determine which module we want to affect
   my $module = $sbeams->getSBEAMS_SUBDIR();
   my $work_group = 'unknown';
   if ($module eq 'PeptideAtlas') {
 	$work_group = "PeptideAtlas_admin";
 	$DATABASE = $DBPREFIX{$module};
  	print "DATABASE '$DATABASE'\n" if ($DEBUG);
- 
+  } else {
+    printUsage( "Unknown module: $module" );
   }
- 
-  print "$module\n";
-  print "$DBPREFIX{$module}\n";
+  print "$DBPREFIX{$module}\n" if $VERBOSE;
 
-#### Do the SBEAMS authentication and exit if a username is not returned
-  exit unless ($CURRENT_USERNAME = $sbeams->Authenticate(
-		work_group=>$work_group,
-	 ));
+  # Authenticate() or exit
+  $CURRENT_USERNAME = $sbeams->Authenticate(work_group => $work_group) ||
+  printUsage('Authentication failed');
 	
-  	$sbeams->printPageHeader() unless ($QUIET);
-  	handleRequest();
- 	$sbeams->printPageFooter() unless ($QUIET);
- 
-
-	
-
+ 	load_file();
 } # end main
 
 
 
-###############################################################################
-# handleRequest
-#
-# Handles the core functionality of this script
-###############################################################################
-sub handleRequest {
+sub load_file {
 	my %args = @_;
- 	my $SUB_NAME = "handleRequest";
 	
+  # The meat...
 	my $glyco_o = new SBEAMS::PeptideAtlas::Glyco_peptide_load(sbeams => $sbeams,
 														   verbose => $VERBOSE,
 														   debug =>$DEBUG,
 														   test_only =>$TESTONLY,
 														   file =>$FILE,);
-
+  # and potatoes.
 	$glyco_o->process_data_file();
-	
 	
 	if ($glyco_o->anno_error){
 		print "*" x 75 .  "\n\n";
@@ -220,6 +195,11 @@ sub handleRequest {
  
 }
 
+sub printUsage {
+  my $msg = shift || '';
+  print "\n$msg\n\n$USAGE\n";
+  exit;
+}
 
 
 
