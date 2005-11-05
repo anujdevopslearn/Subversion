@@ -274,6 +274,7 @@ sub get_treatment_sample_list {
   my $params = $args{params} || die "missing required 'params' hashref";
   my $type = $args{types} || die "missing required parameter types";
 
+  print "Params says $params->{experiment_id}\n";
   $params->{experiment_id} ||= $this->get_first_experiment_id(@_);
   
   die "Must pass type as an arrayref" unless (ref($type) eq 'ARRAY');
@@ -284,13 +285,19 @@ sub get_treatment_sample_list {
   my @acc = $sbeams->getAccessibleProjects();
   my $table = SBEAMS::Connection::DataTable->new( BORDER => 1 );
   my $sql =<<"  END";
-  SELECT biosample_id, biosample_name, bio_group_name
-  FROM $TBBM_BIOSAMPLE BS JOIN $TBBM_BIO_GROUP BG
-  ON BS.biosample_group_id = BG.bio_group_id
+  SELECT biosample_id, biosample_name || ' - ' || bio_group_name AS sample
+  FROM $TBBM_BIOSAMPLE BS 
+  JOIN $TBBM_BIO_GROUP BG ON BS.biosample_group_id = BG.bio_group_id
   WHERE BS.experiment_id = $params->{experiment_id}
   AND BS.record_status <> 'D'
   AND BG.record_status <> 'D'
   END
+  
+  my $options = $sbeams->buildOptionList($sql, $args{current});
+  my $select = "<SELECT MULTIPLE SIZE=10 NAME=sample_list>$options</SELECT>";
+  return $select;
+  
+## Deprecated in favor of a multi-select list
 
   for my $row ( $sbeams->selectSeveralColumns( $sql ) ) {
     $row->[0] = get_ts_checkbox( $row->[0] );
@@ -535,9 +542,10 @@ sub get_experiment_select {
   my %args = @_;
 
   # Select currval?
-  if ( $args{current} && ref($args{current} eq 'ARRAY') ) {
+  if ( $args{current} && ref($args{current}) eq 'ARRAY' ) {
     # stringify args if we were passed an arrayref
     $args{current} = join ",", @{$args{current}};
+    $log->debug( "PARAM: $args{current}" . ref( $args{current} ) );
   }
 
   my $sbeams = $this->getSBEAMS();
@@ -564,11 +572,15 @@ sub get_experiment_select {
 
   my $options = $sbeams->buildOptionList( $sql, $args{current} );
 
-  my $select_name = $args{name} || 'experiment';
-  my $select = "<SELECT NAME=$select_name>$options</SELECT>";
-  return $select;
+  my $select_name = $args{name} || 'experiment_id';
+  return ( <<"  END" );
+  <SELECT NAME=$select_name ONCHANGE=switchExperiment()>
+  $options
+  </SELECT>
+  END
 
   # deprecated
+  my $select;
   my @rows = $sbeams->selectSeveralColumns( $sql );
   for my $row ( @rows ) {
     $select .= "<OPTION VALUE=$row->[0]> $row->[1]";
@@ -712,6 +724,19 @@ sub get_treatment_select {
   END
   return $select;
  
+}
+
+sub get_experiment_change_js {
+  return ( <<"  END" );
+	<SCRIPT LANGUAGE="JavaScript">
+  function switchExperiment(){
+    var experiment_id = document.sample_treatment.experiment_id;
+    var value = experiment_id.options[experiment_id.selectedIndex].value;
+    document.sample_treatment.apply_action_hidden.value = "REFRESH";
+    document.sample_treatment.submit();
+  }
+  </SCRIPT>
+  END
 }
 
 ## Utility routines
