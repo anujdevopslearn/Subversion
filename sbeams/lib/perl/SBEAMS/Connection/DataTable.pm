@@ -140,7 +140,7 @@ sub alternateColors {
   my $this = shift;
   my %args = @_;
   for( qw( PERIOD FIRSTROW BGCOLOR ) ){
-    unless ( $args{$_} ) {
+    unless ( defined $args{$_} ) {
       $log->warn( "Missing param $_ in alternateColors" );
 #return;
     }
