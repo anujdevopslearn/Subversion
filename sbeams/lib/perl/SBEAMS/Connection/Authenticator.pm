@@ -1130,9 +1130,7 @@ sub createAuthHeader {
 
     my $head;
     if ($session_cookie) {
-      $head = $q->header(-cookie => $cookie,
-			 -cookie => $session_cookie
-			);
+      $head = $q->header(-cookie => [$cookie,$session_cookie]);
     } else {
       $head = $q->header(-cookie => $cookie);
     }
