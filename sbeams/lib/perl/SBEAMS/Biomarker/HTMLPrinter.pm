@@ -268,7 +268,7 @@ sub display_page_footer {
 
 ## Interface routines ##
 
-sub get_treatment_sample_list {
+sub get_treatment_sample_select {
   my $this = shift;
   my %args = @_;
   my $params = $args{params} || die "missing required 'params' hashref";
@@ -291,10 +291,11 @@ sub get_treatment_sample_list {
   WHERE BS.experiment_id = $params->{experiment_id}
   AND BS.record_status <> 'D'
   AND BG.record_status <> 'D'
+  ORDER BY biosample_group_id ASC, biosample_id ASC
   END
   
   my $options = $sbeams->buildOptionList($sql, $args{current});
-  my $select = "<SELECT MULTIPLE SIZE=10 NAME=sample_list>$options</SELECT>";
+  my $select = "<SELECT MULTIPLE SIZE=6 NAME=biosample_id>$options</SELECT>";
   return $select;
   
 ## Deprecated in favor of a multi-select list
@@ -390,9 +391,38 @@ sub get_experiment_overview {
                       ALIGN => 'CENTER' );
   return $table;
 }
+#+
+#
+#-
+sub get_storage_loc_select {
+  my $this = shift;
+  my %args = @_;
+
+  # Select currval?
+  if ( $args{current} && ref($args{current} eq 'ARRAY') ) {
+    # stringify args if we were passed an arrayref
+    $args{current} = join ",", @{$args{current}};
+  }
+
+  my $sbeams = $this->getSBEAMS();
+
+  my $sql =<<"  END";
+  SELECT storage_location_id, location_name
+  FROM $TBBM_STORAGE_LOCATION
+  WHERE record_status <> 'D'
+  ORDER BY location_name ASC
+  END
+
+  my $options = $sbeams->buildOptionList( $sql, $args{current} );
+
+  my $select_name = $args{name} || 'storage_location_id';
+  my $select = "<SELECT NAME=$select_name>$options</SELECT>";
+  return $select;
+}
 
 
 #+
+#
 #-
 sub get_treatment_type_select {
   my $this = shift;
@@ -415,7 +445,7 @@ sub get_treatment_type_select {
 
   my $options = $sbeams->buildOptionList( $sql, $args{current} );
 
-  my $select_name = $args{name} || 'treatment_type';
+  my $select_name = $args{name} || 'treatment_type_id';
   my $select = "<SELECT NAME=$select_name>$options</SELECT>";
   return $select;
 
@@ -507,7 +537,7 @@ sub get_protocol_select {
 
   my $options = $sbeams->buildOptionList( $sql, $args{current} );
 
-  my $select_name = $args{name} || 'protocol';
+  my $select_name = $args{name} || 'protocol_id';
   my $select = "<SELECT NAME=$select_name>$options</SELECT>";
   return $select;
 
@@ -519,6 +549,36 @@ sub get_protocol_select {
 
   return $select;
 }
+#+
+# Returns array of HTML form buttons
+#
+# arg types    arrayref, required, values of submit, back, reset
+# arg name     name of submit button (if any)
+# arg value    value of submit button (if any)
+# arg back_name     name of submit button (if any)
+# arg back_value    value of submit button (if any)
+# arg reset_value    value of reset button (if any)
+#-
+sub get_form_buttons {
+  my $this = shift;
+  my %args = @_;
+  $args{name} ||= 'Submit';
+  $args{value} ||= 'Submit';
+  $args{back_name} ||= 'Back';
+  $args{back_value} ||= 'Back';
+  $args{reset_value} ||= 'Reset';
+  $args{types} ||= [];
+
+  my @b;
+
+  for my $type ( @{$args{types}} ) {
+    push @b, "<INPUT TYPE=SUBMIT NAME=$args{name} VALUE=$args{value}>" if $type =~ /^submit$/i; 
+    push @b, "<INPUT TYPE=SUBMIT NAME=$args{back_name} VALUE=$args{back_value}>" if $type =~ /^back$/i; 
+    push @b, "<INPUT TYPE=RESET VALUE=$args{reset_value}>" if $type =~ /^reset$/i; 
+  }
+  return @b;
+}
+
 
 #+
 #-
@@ -526,7 +586,7 @@ sub get_replicate_names_select {
   my $this = shift;
   my %args = @_;
   return <<"  END";
-  <SELECT>
+  <SELECT NAME=replicate_names>
    <OPTION VALUE=abc>a,b,c</OPTION>
    <OPTION VALUE=123>1,2,3</OPTION>
   </SELECT>
@@ -737,6 +797,61 @@ sub get_experiment_change_js {
   }
   </SCRIPT>
   END
+}
+
+#+
+#
+#-
+sub get_verify_content {
+  my $this = shift;
+  my %args = @_;
+  for my $arg ( qw( sample_map p_ref ) ) {
+    die( "Missing required arguement $arg" ) unless defined $args{$arg};
+  }
+
+  # Cache all the existing parameters (gotcha?)
+  my $hidden = '';
+  for my $key ( keys ( %{$args{p_ref}} ) ) {
+    $hidden .=<<"    END";
+    <INPUT TYPE=HIDDEN NAME= $key VALUE=$args{p_ref}->{$key}></INPUT>
+    END
+  }
+
+  # There must be at least one biosample_id
+  my @samples = split ",", @args{p_ref}->{biosample_id};
+  return undef unless scalar( @samples );
+
+  # Avoid dref hell
+  my %parents = %{$args{sample_map}->{parents}};
+  my %children = %{$args{sample_map}->{children}};
+
+  my $table = SBEAMS::Connection::DataTable->new();
+  my @buttons = $this->get_form_buttons( name => 'process_samples', 
+                                        value => 'Process samples',
+                                        types => [ qw(submit back) ] );
+  $table->addRow( \@buttons );
+
+  for my $id ( @samples ) {
+    print "With id $id<BR>";
+    my $name = $parents{id}->{biosample_name};
+    for my $child ( @{$children{$id}} ) {
+      $table->addRow( [ $name, '=>', $child->{biosample_name} ] );
+      $name = '"';
+    }
+  }
+  my $end = $table->getRowNum();
+  $table->setColAttr( ROWS => [1] ,COLS => [1], COLSPAN => 3, ALIGN => 'CENTER' );
+  $table->setColAttr( ROWS => [2..$end] ,COLS => [1], ALIGN => 'RIGHT');
+  $table->setColAttr( ROWS => [2..$end] ,COLS => [2], ALIGN => 'CENTER');
+  $table->setColAttr( ROWS => [2..$end] ,COLS => [3], ALIGN => 'LEFT');
+
+  # Caller will supply form tags
+  return <<"  END_RETURN";
+  $table
+  $hidden
+  END_RETURN
+  
+  
 }
 
 ## Utility routines
