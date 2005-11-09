@@ -166,18 +166,18 @@ BL_BrowseBioSequence	11	biosequence_desc_constraint	Description Constraint						
 BL_BrowseBioSequence	12	sort_order	Sort Order									N	optionlist	 		Y	Y	N	Desired display sorting order (DESC means descending: highest to lowest)	"SELECT option_key,option_value FROM $TBBL_QUERY_OPTION WHERE option_type = 'BBS_sort_options' ORDER BY sort_order,option_value"	
 BL_BrowseBioSequence	13	display_options	Display Options									N	multioptionlist	3		Y	Y	N	Various selectable table display options	"SELECT option_key,option_value FROM $TBBL_QUERY_OPTION WHERE option_type = 'BBS_display_options' ORDER BY sort_order,option_value"	
 BL_BrowseBioSequence	14	row_limit	Maximum Rows									N	text	10		Y	Y	N	"Limit the numbers of rows displayed.  If not provided, default is 100 rows."		
-BL_CBIL_genome_coordinates	1	Coordinate_id	Primary key	int	4	0	N		Y			Y									
-BL_CBIL_genome_coordinates	2	Probe_Set_Name	Affymetrix probe set name	varchar	255	0	Y		N			N									
-BL_CBIL_genome_coordinates	3	Genome_Build	Genome build version number	varchar	255	0	Y		N			N									
-BL_CBIL_genome_coordinates	4	Chromosome	Chromosome defined by coordinates	varchar	255	0	Y		N			N									
-BL_CBIL_genome_coordinates	5	Gene_start	Transcription start coordinate	int	4	0	Y		N			N									
-BL_CBIL_genome_coordinates	6	gene_end	Transcription end coordinate	int	4	0	Y		N			N									
-BL_CBIL_genome_coordinates	7	Strand	Coding strand orientation	char	1	0	Y		N			N									
-BL_CBIL_genome_coordinates	8	DoTS	DoTS accession	varchar	255	0	Y		N			N									
-BL_CBIL_genome_coordinates	9	GenBank	GenBank accession	varchar	255	0	Y		N			N									
-BL_CBIL_genome_coordinates	10	Gene_Symbol	Official Gene Symbol	varchar	255	0	Y		N			N									
-BL_CBIL_genome_coordinates	11	Gene_Synonyms	Gene Synonyms	varchar	255	0	Y		N			N									
-BL_CBIL_genome_coordinates	12	organism_id	Organism identifier	int	4	0	N		N			N									
+BL_cbil_genome_coordinates	1	Coordinate_id	Primary key	int	4	0	N		Y			Y									
+BL_cbil_genome_coordinates	2	Probe_Set_Name	Affymetrix probe set name	varchar	255	0	Y		N			N									
+BL_cbil_genome_coordinates	3	Genome_Build	Genome build version number	varchar	255	0	Y		N			N									
+BL_cbil_genome_coordinates	4	Chromosome	Chromosome defined by coordinates	varchar	255	0	Y		N			N									
+BL_cbil_genome_coordinates	5	Gene_start	Transcription start coordinate	int	4	0	Y		N			N									
+BL_cbil_genome_coordinates	6	gene_end	Transcription end coordinate	int	4	0	Y		N			N									
+BL_cbil_genome_coordinates	7	Strand	Coding strand orientation	char	1	0	Y		N			N									
+BL_cbil_genome_coordinates	8	DoTS	DoTS accession	varchar	255	0	Y		N			N									
+BL_cbil_genome_coordinates	9	GenBank	GenBank accession	varchar	255	0	Y		N			N									
+BL_cbil_genome_coordinates	10	Gene_Symbol	Official Gene Symbol	varchar	255	0	Y		N			N									
+BL_cbil_genome_coordinates	11	Gene_Synonyms	Gene Synonyms	varchar	255	0	Y		N			N									
+BL_cbil_genome_coordinates	12	organism_id	Organism identifier	int	4	0	N		N			N									
 BL_MGEDOntologyRelationship	1	MGED_ontology_relationship_id	MGED ontology relationship ID	int	4	0	N		N			Y									
 BL_MGEDOntologyRelationship	2	subject_term_id	Subject Term ID	int	4	0	N		N			Y									
 BL_MGEDOntologyRelationship	3	predicate_term_id	Predicate Term ID	varchar	255	0	Y		N			N									

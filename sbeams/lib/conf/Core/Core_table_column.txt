@@ -389,35 +389,36 @@ IntegrateResultsets	1	interactions_resultset	Interactions Resultset									N	mu
 IntegrateResultsets	2	microarray_resultset	Microarray Resultset									N	multioptionlist	8		Y	Y		Select the SBEAMS - Microarray resultset that you want to use to define node attributes for the Cytoscape network visualization	"SELECT cache_descriptor,CONVERT(varchar(19),date_created,121)||' ('||query_name||') '||ISNULL(resultset_name,'') FROM $TB_CACHED_RESULTSET WHERE contact_id='$contact_id' AND record_status!='D' AND query_name LIKE 'Microarray/GetExpression' ORDER BY date_created DESC"	
 IntegrateResultsets	3	proteomics_resultset	Proteomics Resultset									N	multioptionlist	8		Y	Y		Select the SBEAMS - Proteomics resultset that you want to use to define the edges for the Cytoscape network visualization	"SELECT cache_descriptor,CONVERT(varchar(19),date_created,121)||' ('||query_name||') '||ISNULL(resultset_name,'') FROM $TB_CACHED_RESULTSET WHERE contact_id='$contact_id' AND record_status!='D' AND query_name LIKE 'Proteomics/BrowseProteinSummary' ORDER BY date_created DESC"	
 IntegrateResultsets	4	m	Mode Command									N	fixed			Y	N		Cytoscape integrator mode	"SELECT 1,1"	
-Test_sample	1	sample_id	Sample ID	int	4	0	N		Y			Y				N	N	Y	Sample ID		pkDEFAULT
-Test_sample	2	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	FK to project.project_id	"SELECT project_id, UL.username || ' - ' || proj.name || ' ( ' || RTRIM(CAST(proj.project_id AS CHAR)) || ' )'   AS name FROM $TB_PROJECT proj JOIN $TB_USER_LOGIN UL ON (proj.PI_contact_id = UL.contact_id)  WHERE proj.project_tag IS NOT NULL AND proj.record_status != 'D' ORDER BY UL.username"	
-Test_sample	3	sample_tag	Sample Tag	varchar	50	0	N		N			Y	text	50		Y	Y	N	Sample Name.  Keep it short.  Do not use any strange characters like /\*&$() (e.g. NP Epi 03-123)		
-Test_sample	4	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	N	Organism from which the biomaterial was derived	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
-Test_sample	5	age	Age	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Age of the individual at the time of harvest of the biomaterial.  Free form text; include units, developmental stage, and reference point as appropriate (e.g., days since planting, years after birth, minutes after death)"		
-Test_sample	6	sample_protocol_ids	Sample Protocols	varchar	255	0	Y		N	Test_sample_protocol	sample_protocol_id	N	multilink	4		Y	Y	N	Select all protocols that apply to this biomaterial.  Describe sequence of protocols in the Treatment Description below	"SELECT protocol_id,P.name FROM $TB_TEST_PROTOCOL P  WHERE P.record_status != 'D' ORDER BY P.name"	
-Test_sample	7	sample_description	Sample Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Describe the biomaterial briefly		
-Test_sample	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	Y	N			
-Test_sample	9	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N	Y			
-Test_sample	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
-Test_sample	11	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N	Y			
-Test_sample	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
-Test_sample	13	record_status	Record Status	char	1	0	N	N	N							N	N	N			
-Test_protocol	1	protocol_id	Protocol ID	int	4	0	N		Y							N	N				pkDEFAULT
-Test_protocol	4	name	Name	varchar	50	0	Y		N			Y	text	50		Y	Y	Y	Name of the protocol		
-Test_protocol	6	protocol	Protocol	text	16	0	Y		N			Y	textarea	6		Y	Y	N	Complete description of the protocol		
-Test_protocol	7	cmnt	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
-Test_protocol	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-Test_protocol	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-Test_protocol	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-Test_protocol	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-Test_protocol	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-Test_protocol	13	record_status	Record Status	char	1	0	N	N	N							N	N				
-Test_sample_protocol	1	sample_protocol_id	Sample Protocol	int	4	0	N		Y							N	N	N			
-Test_sample_protocol	2	sample_id	Sample ID	int	4	0	N		N	Test_sample	sample_id	Y	optionlist			Y	Y	Y	Sample ID	"SELECT sample_id,S.sample_tag FROM $TB_TEST_SAMPLE S  WHERE S.record_status != 'D' ORDER BY S.sample_tag"	
-Test_sample_protocol	3	protocol_id	Protocol ID	int	4	0	N		N	Test_protocol	protocol_id	Y	optionlist			Y	Y	Y	Protocol ID	"SELECT protocol_id,P.name FROM $TB_TEST_PROTOCOL P  WHERE P.record_status != 'D' ORDER BY P.name"	
-Test_sample_protocol	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-Test_sample_protocol	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
-Test_sample_protocol	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
-Test_sample_protocol	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
-Test_sample_protocol	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
-Test_sample_protocol	9	record_status	Record Status	char	1	0	N	N	N							N	N				
+test_sample	1	sample_id	Sample ID	int	4	0	N		Y			Y				N	N	Y	Sample ID		pkDEFAULT
+test_sample	2	project_id	Project	int	4	0	N		N	project	project_id	Y	optionlist			Y	Y	N	FK to project.project_id	"SELECT project_id, UL.username || ' - ' || proj.name || ' ( ' || RTRIM(CAST(proj.project_id AS CHAR)) || ' )'   AS name FROM $TB_PROJECT proj JOIN $TB_USER_LOGIN UL ON (proj.PI_contact_id = UL.contact_id)  WHERE proj.project_tag IS NOT NULL AND proj.record_status != 'D' ORDER BY UL.username"	
+test_sample	3	sample_tag	Sample Tag	varchar	50	0	N		N			Y	text	50		Y	Y	N	Sample Name.  Keep it short.  Do not use any strange characters like /\*&$() (e.g. NP Epi 03-123)		
+test_sample	4	organism_id	Organism	int	4	0	Y		N	organism	organism_id	N	optionlist			Y	Y	N	Organism from which the biomaterial was derived	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
+test_sample	5	age	Age	varchar	255	0	Y		N			N	text	50		Y	Y	N	"Age of the individual at the time of harvest of the biomaterial.  Free form text; include units, developmental stage, and reference point as appropriate (e.g., days since planting, years after birth, minutes after death)"		
+test_sample	6	sample_protocol_ids	Sample Protocols	varchar	255	0	Y		N	Test_sample_protocol	sample_protocol_id	N	multilink	4		Y	Y	N	Select all protocols that apply to this biomaterial.  Describe sequence of protocols in the Treatment Description below	"SELECT protocol_id,P.name FROM $TB_TEST_PROTOCOL P  WHERE P.record_status != 'D' ORDER BY P.name"	
+test_sample	7	sample_description	Sample Description	text	16	0	Y		N			N	textarea	4		Y	Y	N	Describe the biomaterial briefly		
+test_sample	8	sample_score	Sample Score	real	4	0	Y		N			N	text	20		Y	Y	N	Score, token real column		
+test_sample	9	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	Y	N			
+test_sample	10	created_by_id	Record Created By	int	4	0	N		N	contact	contact_id					N	N	Y			
+test_sample	11	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N	N			
+test_sample	12	modified_by_id	Record Modified By	int	4	0	N		N	contact	contact_id					N	N	Y			
+test_sample	13	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N	Y			
+test_sample	14	record_status	Record Status	char	1	0	N	N	N							N	N	N			
+test_protocol	1	protocol_id	Protocol ID	int	4	0	N		Y							N	N				pkDEFAULT
+test_protocol	4	name	Name	varchar	50	0	Y		N			Y	text	50		Y	Y	Y	Name of the protocol		
+test_protocol	6	protocol	Protocol	text	16	0	Y		N			Y	textarea	6		Y	Y	N	Complete description of the protocol		
+test_protocol	7	cmnt	Comment	text	16	0	Y		N			N	textarea	4		Y	Y	N	Additional comments		
+test_protocol	8	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+test_protocol	9	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+test_protocol	10	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+test_protocol	11	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+test_protocol	12	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+test_protocol	13	record_status	Record Status	char	1	0	N	N	N							N	N				
+test_sample_protocol	1	sample_protocol_id	Sample Protocol	int	4	0	N		Y							N	N	N			
+test_sample_protocol	2	sample_id	Sample ID	int	4	0	N		N	Test_sample	sample_id	Y	optionlist			Y	Y	Y	Sample ID	"SELECT sample_id,S.sample_tag FROM $TB_TEST_SAMPLE S  WHERE S.record_status != 'D' ORDER BY S.sample_tag"	
+test_sample_protocol	3	protocol_id	Protocol ID	int	4	0	N		N	Test_protocol	protocol_id	Y	optionlist			Y	Y	Y	Protocol ID	"SELECT protocol_id,P.name FROM $TB_TEST_PROTOCOL P  WHERE P.record_status != 'D' ORDER BY P.name"	
+test_sample_protocol	4	date_created	Date Record Created	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+test_sample_protocol	5	created_by_id	Record Created By	int	4	0	N	1	N	contact	contact_id					N	N				
+test_sample_protocol	6	date_modified	Date Record Modified	datetime	8	0	N	CURRENT_TIMESTAMP	N							N	N				
+test_sample_protocol	7	modified_by_id	Record Modified By	int	4	0	N	1	N	contact	contact_id					N	N				
+test_sample_protocol	8	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	work_group_id					N	N				
+test_sample_protocol	9	record_status	Record Status	char	1	0	N	N	N							N	N				

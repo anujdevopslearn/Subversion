@@ -103,8 +103,8 @@ $TBBL_EVIDENCE              = "${mod}evidence";
 $TBBL_EVIDENCE_SOURCE       = "${mod}evidence_source";
 
 $TBBL_BLAST_RESULTS         = "${mod}blast_results";
-$TBBL_CBIL_GENOME_COORDINATES  = "${mod}CBIL_GENOME_COORDINATES";
-$TBBL_DOTS_TO_LOCUSLINK = "${mod}DOTS_TO_LOCUSLINK";
+$TBBL_CBIL_GENOME_COORDINATES  = "${mod}cbil_genome_coordinates";
+$TBBL_DOTS_TO_LOCUSLINK = "${mod}dots_to_locuslink";
 
 $TBBL_MGED_ONTOLOGY_RELATIONSHIP = "${mod}MGEDOntologyRelationship";
 $TBBL_MGED_ONTOLOGY_TERM	= "${mod}MGEDOntologyTerm";

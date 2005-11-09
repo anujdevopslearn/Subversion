@@ -33,6 +33,6 @@ short_url	Short URL	rowprivate	NO	$TB_SHORT_URL	url_id
 AdHocQuery	Ad Hoc Query	QUERY					AdHocQuery		
 GetDataSource	Get Data Source	QUERY					GetDataSource		
 IntegrateResultsets	Integrate Resultsets	QUERY					IntegrateResultsets		
-Test_sample	Test Sample	admin	YES	$TB_TEST_SAMPLE	sample_id		ManageTable.cgi?TABLE_NAME=test_sample	"test_sample,test_protocol,test_sample_protocol"	
-Test_protocol	Test Protocol	admin	YES	$TB_TEST_PROTOCOL	protocol_id		ManageTable.cgi?TABLE_NAME=test_protocol	"test_sample,test_protocol,test_sample_protocol"	
-Test_sample_protocol	Test Sample Protocol	admin	YES	$TB_TEST_SAMPLE_PROTOCOL	sample_protocol_id		ManageTable.cgi?TABLE_NAME=test_sample_protocol	"test_sample,test_protocol,test_sample_protocol"	
+test_sample	Test Sample	admin	YES	$TB_TEST_SAMPLE	sample_id		ManageTable.cgi?TABLE_NAME=test_sample	"test_sample,test_protocol,test_sample_protocol"	
+test_protocol	Test Protocol	admin	YES	$TB_TEST_PROTOCOL	protocol_id		ManageTable.cgi?TABLE_NAME=test_protocol	"test_sample,test_protocol,test_sample_protocol"	
+test_sample_protocol	Test Sample Protocol	admin	YES	$TB_TEST_SAMPLE_PROTOCOL	sample_protocol_id		ManageTable.cgi?TABLE_NAME=test_sample_protocol	"test_sample,test_protocol,test_sample_protocol"	
