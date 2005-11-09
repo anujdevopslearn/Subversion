@@ -1223,13 +1223,8 @@ sub getSessionAttribute {
     }
   }
 
-  if (%session) {
-    if ($session{$key}) {
-      return($session{$key});
-    } else {
-      #### No such attribute yet
-      return(undef);
-    }
+  if (defined %session) {
+    return($session{$key});
   }
 
 } # end getSessionAttribute
@@ -1288,6 +1283,56 @@ sub setSessionAttribute {
 
 } # end setSessionAttribute
 
+#+
+# Subroutine to delete attribute from the global session hash.
+#-
+sub deleteSessionAttribute {
+  my $self = shift;
+  my %args = @_;
+  my $SUB_NAME = $self->get_subname();
+
+  my $key = $args{'key'}
+    || die("ERROR: $SUB_NAME: Parameter 'key' not passed");
+  my $value = $args{'value'};
+
+  unless ($session_string) {
+    $log->warn( "$SUB_NAME: No session_string available" );
+    return;
+  }
+
+  my $session_store_file = "$PHYSICAL_BASE_DIR/var/sessions/".
+    "$session_string.dat";
+
+  unless (%session) {
+
+    if (-e $session_store_file) {
+      my $session_hashref;
+      eval {
+      	$session_hashref = retrieve($session_store_file) ||
+	      $log->error("Unable to retrieve session $session_string");
+      };
+      if ($session_hashref) {
+      	%session = %{$session_hashref};
+      }
+      unless (%session) {
+      	$log->error( <<"        END" );
+        Unable to open or parse existing session file '$session_store_file' 
+        END
+      }
+
+    } else {
+      #### We don't even have a session file yet
+    }
+  }
+
+
+  delete($session{$key});
+
+  store(\%session,$session_store_file);
+
+  return(1);
+
+} # end deleteSessionAttribute
 
 
 #+
