@@ -554,7 +554,6 @@ sub max {
   return($maximum);
 
 }
-
 sub get_datetime {
   my $self = shift;
   my @time = localtime();
@@ -570,6 +569,48 @@ sub get_datetime {
   }
   my $date = "${year}-${mon}-${day} ${hour}:${min}:${sec}";
   return $date;
+}
+
+
+#+
+# Routine to return pseudo-random string of characters
+#
+# narg: num_chars   Optional, length of character string, def = 8.
+# narg: char_set    Optional, character set to use passed as array reference,
+#                   def = ( 'A'-'Z', 'a'-'z', 0-9, !, @, #, $, %, ^, &, *, ? )
+# ret:              Random string of specified length comprised of elements of 
+#                   character set.
+#-
+sub getRandomString {
+  my $self =  shift;
+  my %args = @_;
+
+  # Use passed number of chars or 8
+  $args{num_chars} ||= 8;
+
+  # Use passed char set if any, else use default a-z, A-Z, 0-9
+  my @chars = ( ref( $args{char_set} ) eq 'ARRAY' ) ?  @{$args{char_set}} :
+                         ( 'A'..'Z', 'a'..'z', 0..9, qw( ! @ $ % ^ & * ? ) );
+
+  # Thank you perl cookbook... 
+  my $rstring = join( "", @chars[ map {rand @chars} ( 1..$args{num_chars} ) ]);
+  
+  return( $rstring );
+
+}
+
+
+#+
+# Routine returns name of subroutine from which it was called.  if an argument
+# is also sent, will return fully qualified namespace name 
+# (e.g. SBEAMS::Foo::my_subroutine)
+#-
+sub get_subname {
+  my $self = shift;
+  my $package = shift || 0;
+  my @call = caller(1);
+  $call[3] =~ s/.*:+([^\:]+)$/$1/ unless $package;
+  return $call[3];
 }
 
 
