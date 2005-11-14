@@ -200,7 +200,7 @@ sub handle_request {
                            -action=>"$base_url",
                           );
       $buffer .= "<P>";
-      $buffer .= qq~<nobr><CENTER><IMG SRC="http://www.peptideatlas.org/images/PeptideAtlas_Logo.png"><BR>~;
+      $buffer .= qq~<nobr><CENTER><IMG SRC="$HTML_BASE_DIR/images/PeptideAtlas_Logo.png"><BR>~;
       #$buffer .= qq~<img src="$HTML_BASE_DIR/images/space.gif" height=1 width=30>~;
       $buffer .= $q->textfield(-name=>"search_key",
                           -default=>$search_key,
