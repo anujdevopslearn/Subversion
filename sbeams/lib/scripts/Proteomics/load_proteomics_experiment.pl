@@ -653,6 +653,11 @@ sub loadProteomicsExperiment {
     die "ERROR: Unable to read directory '$source_dir'\n";
   }
 
+  print "\nDuring the load process, the following symbols may be printed\n";
+  print "  . Each inserted search result (single .out/.dta)\n";
+  print "  - Spectrum is intentionally not INSERTed into database tables\n";
+  print "  < Fewer than all of the search_hits are INSERTed as per config\n\n";
+
   foreach $element (@dir_contents) {
 
     #### If it's a directory but not ./ or ../
