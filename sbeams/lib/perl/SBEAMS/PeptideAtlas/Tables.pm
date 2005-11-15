@@ -39,6 +39,7 @@ use vars qw(@ISA @EXPORT
     $TBAT_SAMPLE_PUBLICATION
     
     $TBAT_IPI_VERSION
+    $TBAT_IPI_XREFS
     $TBAT_IPI_DATA
     $TBAT_CELLULAR_LOCATION
     $TBAT_GLYCO_SITE
@@ -81,6 +82,7 @@ require Exporter;
     $TBAT_SAMPLE_PUBLICATION
     
     $TBAT_IPI_VERSION
+    $TBAT_IPI_XREFS
     $TBAT_IPI_DATA
     $TBAT_CELLULAR_LOCATION
     $TBAT_GLYCO_SITE
@@ -125,6 +127,7 @@ $TBAT_SAMPLE                = "${mod}sample";
 $TBAT_SAMPLE_PUBLICATION    = "${mod}sample_publication";
 
 $TBAT_IPI_VERSION	    	= "${glycomod}ipi_version";
+$TBAT_IPI_XREFS	    	= "${glycomod}ipi_xrefs";
 $TBAT_IPI_DATA			= "${glycomod}ipi_data";
 $TBAT_CELLULAR_LOCATION		= "${glycomod}cellular_location";
 $TBAT_GLYCO_SITE		= "${glycomod}glyco_site";
