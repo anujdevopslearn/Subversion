@@ -47,6 +47,7 @@ use constant DEFAULT_VOLUME => 10;
 
   # Print cgi headers
   $biomarker->printPageHeader();
+#  $sbeams->printCGIParams( $q );
 
   # Decision block, what type of page are we going to display?
   if ( $params->{apply_action} eq 'process_treatment' ) {
@@ -71,9 +72,12 @@ use constant DEFAULT_VOLUME => 10;
 #-
 sub process_params {
   my $params = {};
-  
+
   # Standard SBEAMS processing
   $sbeams->parse_input_parameters( parameters_ref => $params, q => $q );
+
+#for ( keys( %$params ) ){ print "$_ = $params->{$_}<BR>" } 
+
 
   # Process "state" parameters
   $sbeams->processStandardParameters( parameters_ref => $params );
@@ -258,7 +262,7 @@ sub get_input_fields_hash {
   # Treatment description
   $fields{treat_desc} =<<"  END";
   <TEXTAREA NAME=treatment_description ROWS=2 COLS=64 WRAP=VIRTUAL>
-    $p->{treatment_description}
+  $p->{treatment_description}
   </TEXTAREA>
   END
 
@@ -306,17 +310,49 @@ sub get_form_buttons {
 # Apply user-defined changes, create new samples
 #-
 sub process_treatment {
+  my $params = shift;
   print "Process_treatment<BR>";
+  my $cache = $sbeams->getSessionAttribute( key => $params->{_session_key} );
+  for ( keys( %$cache ) ) {
+    print "$_ => $cache->{$_}<BR>";
+  }
+  my $treat = $cache->{treatment};
+#  for ( keys %$treat ) { print "$_ => $treat->{$_}<BR>"; }
+  
+  # Cache initial values
+  my $ac = $sbeams->isAutoCommit();
+  my $re = $sbeams->isRaiseError();
+
+  # Set up transaction
+  $sbeams->initiate_transaction();
+
+  eval {
+  # insert treatment record
+    my $treatment_id = $biomarker->insert_treatment( data_ref => $treat );
+  # insert new samples
+    my $status = $biosample->insert_biosamples(    bio_group => $treat->{treatment_name},
+                                                treatment_id => $treatment_id,
+                                                    data_ref => $cache->{children} );
+  };   # End eval block
+
+  if ( $@ ) {
+    print STDERR "$@\n";
+    $sbeams->rollback_transaction();
+    exit;
+  }  # End eval catch-error block
+  $sbeams->commit_transaction();
+  $sbeams->setAutoCommit( $ac );
+  $sbeams->setRaiseError( $re );
+
 }
 
 #+
-# display summary page showing the changes that will occur 
+# Renders intermediate page to display summary info on 
+# the changes that will occur if user approves treatment 'settings'.
 #-
 sub verify_change {
-  $sbeams->printCGIParams( $q );
   my $params = shift;
 
- 
   # is there an old value?
   my $old_map = {};
   if ( $params->{_session_key} ) {
@@ -324,30 +360,60 @@ sub verify_change {
     # Stomp old value 
     $sbeams->setSessionAttribute( key => $params->{_session_key}, value => undef );
   }
+  $log->debug( "deleting session attr key => $params->{_session_key}, val was $old_map" );
 
-  print "Fizzle: <BR>";
   my $sample_maps = $biosample->get_treatment_mappings( p_ref => $params );
-  print "Funk dat: $sample_maps<BR>";
 
   # fetch and cache new values
   my $session_key = $sbeams->getRandomString( num_chars => 20 );
   $sbeams->setSessionAttribute( key => $session_key,  value => $sample_maps );
-  
+  $log->debug( "set new attr w/ key => $session_key, val is $sample_maps" );
 
   # Cache new key value
   $params->{_session_key} = $session_key;
+  my $map = $sbeams->getSessionAttribute( key => $params->{_session_key} );
+  $log->debug( "got new attr w/ key => $params->{_session_key}, val is $map" );
   
 
-  my $html = $biomarker->get_verify_content( sample_map => $sample_maps, p_ref => $params ); 
+  my $sample_info = $biomarker->treatment_sample_content( sample_map => $sample_maps, 
+                                                               p_ref => $params ); 
+
+  my $tname = $params->{treatment_name};
+  my $cnt = 0;
+  if ( $params->{biosample_id} ) {
+    ($cnt) = $params->{biosample_id} =~ tr/,/,/;
+    $cnt++;
+  }
+  my $new_cnt = $cnt * $params->{num_replicates};
+
+  my $summary_table = get_treatment_summary( p_ref => $params,
+                                              cnt => $cnt,
+                                              new_cnt => $new_cnt ); 
+#  $summary_table->addRow( [ $sample_info ] );
+#  $summary_table->setColAttr( ROWS=>[ $summary_table->getRowNum() ], COLS=>[1],
+#                              COLSPAN => 4, ALIGN => 'CENTER' );
+
+  my $ttype = $biomarker->get_treatment_type($params->{treatment_type_id});
+
+  my $verify_message =<<"  END";
+  This shows the potential results of treatment $tname ($ttype) to the
+  $cnt samples shown below.  This will result in $new_cnt samples being 
+  created.  Please check this info, and click 'process samples' button if you
+  wish to continue, or click 'back' to return to the form and modify any 
+  information.
+  END
 
   my $verify_page =<<"  END";
   <H2>Verify Samples</H2><BR>
+  <P>$verify_message</P>
+  <BR>
   <FORM NAME=verify_samples METHOD=POST>
-  <TABLE BORDER=1 BGCOLOR='#DDDDDD'>
-   <TR><TD></TD></TR>
-   <TR><TD>$html</TD></TR>
-   <TR><TD></TD></TR>
+  <TABLE>
+  <TR><TD ALIGN=CENTER>$summary_table</TD></TR>
+  <TR><TD ALIGN=CENTER>&nbsp;</TD></TR>
+  <TR><TD ALIGN=CENTER>$sample_info</TD></TR>
   </TABLE>
+  <img src="$HTML_BASE_DIR/images/clear.gif" width="300" height=2> 
   </FORM>
 	<BR>
   END
@@ -360,3 +426,28 @@ sub verify_change {
   # sample->sample mapping
 
 }
+
+sub get_treatment_summary {
+  my %args = @_;
+  my %p = %{$args{p_ref}};
+  my $exp_name = $biomarker->get_experiment_name($p{experiment_id});
+  my %label = get_labels_hash();
+  my $table = SBEAMS::Connection::DataTable->new( BORDER => 1 );
+  $table->addRow( [$label{experiment}, $exp_name, 
+                   $label{treat_name}, $p{treatment_name} ] );
+  $table->addRow( ['<B># input samples:</B>', $args{cnt}, 
+                   '<B># new samples:</B>', $args{new_cnt} ] );
+  $table->addRow( [$label{input_vol}, $p{input_volume}, 
+                   $label{output_vol }, $p{output_volume} ] );
+  $table->addRow( [$label{treat_desc}, $p{treatment_description}] );
+
+  $table->setColAttr( ROWS=>[ $table->getRowNum() ], COLS=>[2], 
+                       COLSPAN => 3 );
+  $table->setColAttr( ROWS=>[1..$table->getRowNum()], COLS=>[1,3],
+                       ALIGN => 'RIGHT' );
+  $table->setColAttr( ROWS=>[1..$table->getRowNum()], COLS=>[2,4], 
+                       ALIGN => 'LEFT' );
+
+  return $table;
+}
+

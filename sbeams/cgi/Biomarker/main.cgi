@@ -45,7 +45,7 @@ $biomarker->setSBEAMS($sbeams);
   $sbeams->parse_input_parameters( q => $q, parameters_ref => \%param );
   $sbeams->processStandardParameters( parameters_ref => \%param );
 
-#  test_session_cookie();
+  test_session_cookie();
 
   $biomarker->printPageHeader();
   showMainPage();
@@ -91,14 +91,21 @@ sub showMainPage {
 
 sub test_session_cookie { 
 
-  my $ltime = 'string' x 10000;
+  my $ltime = 'string' x 10;
   my $time = time();
   $sbeams->getSessionCookie();
   $sbeams->setSessionAttribute( key => $time,  value => $ltime ); 
   $sbeams->setSessionAttribute( key => 'time',  value => $ltime ); 
   $log->debug( "Time is $ltime" );
-  $log->debug( "Time is $ltime" );
 
   # Print the header, do what the program does, and print footer
+  my $val = $sbeams->getSessionAttribute( key => 'time' );
+  $log->debug( "Time is $val" );
+  
+  $log->debug( 'deleteting' );
+  my $val = $sbeams->deleteSessionAttribute( key => 'time' );
+  my $val = $sbeams->getSessionAttribute( key => 'time' );
+  $log->debug( "post delete time is $val" ) if defined $val;
+  
 
 }
