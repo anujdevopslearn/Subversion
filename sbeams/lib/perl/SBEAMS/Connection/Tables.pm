@@ -56,6 +56,8 @@ use vars qw(@ISA @EXPORT
     $TB_ONTOLOGY_TERM_TYPE
 
     $TB_SOFTWARE_HARDWARE_PROTOCOL
+    $TB_PROTOCOL
+    $TB_PROTOCOL_TYPE
 
     $TB_TEST_PROTOCOL
     $TB_TEST_SAMPLE
@@ -101,6 +103,8 @@ require Exporter;
     $TB_ONTOLOGY_TERM_TYPE
 
     $TB_SOFTWARE_HARDWARE_PROTOCOL
+    $TB_PROTOCOL
+    $TB_PROTOCOL_TYPE
 
     $TB_TEST_PROTOCOL
     $TB_TEST_SAMPLE
@@ -143,6 +147,8 @@ $TB_QUERY_OPTION        = "${core}query_option";
 $TB_CACHED_RESULTSET    = "${core}cached_resultset";
 $TB_FORM_TEMPLATE       = "${core}form_template";
 $TB_SOFTWARE_HARDWARE_PROTOCOL = "${core}software_hardware_protocol";
+$TB_PROTOCOL            = "${core}protocol";
+$TB_PROTOCOL_TYPE       = "${core}protocol_type";
 $TB_SHORT_URL           = "${core}short_url";
 
 $TB_MGED_ONTOLOGY_RELATIONSHIP  = $DBPREFIX{BioLink}."MGEDOntologyRelationship";
