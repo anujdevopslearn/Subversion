@@ -226,7 +226,7 @@ sub returnTableInfo {
         if ($info_key eq "BASICQuery") {
             return qq~
 		SELECT GPP.group_project_permission_id,WG.work_group_name,
-                       UL.username|| - '||PROJ.name AS "Project",PRIV.name,GPP.comment
+                       UL.username||' - '||PROJ.name AS "Project",PRIV.name,GPP.comment
                   FROM $TB_GROUP_PROJECT_PERMISSION GPP
                   LEFT JOIN $TB_PROJECT PROJ ON ( GPP.project_id=PROJ.project_id )
                   LEFT JOIN $TB_USER_LOGIN UL ON ( PROJ.PI_contact_id=UL.contact_id )
@@ -250,7 +250,7 @@ sub returnTableInfo {
         if ($info_key eq "BASICQuery") {
             return qq~
 		SELECT UPP.user_project_permission_id,
-                       PUL.username|| - '||PROJ.name AS "Project",UL.username,PRIV.name,UPP.comment
+                       PUL.username||' - '||PROJ.name AS "Project",UL.username,PRIV.name,UPP.comment
                   FROM $TB_USER_PROJECT_PERMISSION UPP
                   LEFT JOIN $TB_PROJECT PROJ ON ( UPP.project_id = PROJ.project_id )
                   LEFT JOIN $TB_USER_LOGIN PUL ON ( PROJ.PI_contact_id = PUL.contact_id )
