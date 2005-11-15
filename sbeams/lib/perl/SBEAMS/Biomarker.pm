@@ -95,10 +95,46 @@ sub get_experiment_name {
 
   my @row = $sbeams->selectrow_array( $sql );
 
-  # project doesn't exist, test fails
   return $row[0];
 }
 
+
+#+
+#-
+sub get_treatment_type {
+  my $this = shift;
+  my $ttype_id = shift || die 'Missing parameter treatment_type_id';
+
+  my $sbeams = $this->getSBEAMS();
+
+  my $sql =<<"  END";
+  SELECT treatment_type_name
+  FROM $TBBM_TREATMENT_TYPE
+  WHERE treatment_type_id = $ttype_id
+  END
+
+  my ( $id ) = $sbeams->selectrow_array( $sql );
+  $log->debug("ID: $id, SQL: $sql\n");
+
+  return $id;
+}
+
+#+ 
+# inserts treatment record into database
+#-
+sub insert_treatment {
+  my $this = shift;
+  my %args = @_;
+  
+  my $id = $sbeams->updateOrInsertRow( insert => 1,
+                                    return_PK => 1,
+                                   table_name => $TBBM_TREATMENT,
+                                  rowdata_ref => $args{data_ref},
+                         add_audit_parameters => 1
+                                     );
+  $log->info( "ID is $id\n" );
+  return $id;
+}
 
 
 #+
@@ -138,6 +174,7 @@ sub create_biogroup {
                                      );
 
   $log->error( "Couldn't create biogroup: $name" ) unless $id;
+  $log->error( "oCreated biogroup: $name" ) if $id;
   return $id;
 }
 

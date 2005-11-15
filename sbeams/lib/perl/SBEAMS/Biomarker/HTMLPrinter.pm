@@ -274,7 +274,6 @@ sub get_treatment_sample_select {
   my $params = $args{params} || die "missing required 'params' hashref";
   my $type = $args{types} || die "missing required parameter types";
 
-  print "Params says $params->{experiment_id}\n";
   $params->{experiment_id} ||= $this->get_first_experiment_id(@_);
   
   die "Must pass type as an arrayref" unless (ref($type) eq 'ARRAY');
@@ -293,8 +292,10 @@ sub get_treatment_sample_select {
   AND BG.record_status <> 'D'
   ORDER BY biosample_group_id ASC, biosample_id ASC
   END
+
+  my @current = split /,/, $params->{biosample_id};
   
-  my $options = $sbeams->buildOptionList($sql, $args{current});
+  my $options = $sbeams->buildOptionList($sql, $params->{biosample_id}, 'MULTIOPTIONLIST' );
   my $select = "<SELECT MULTIPLE SIZE=6 NAME=biosample_id>$options</SELECT>";
   return $select;
   
@@ -564,17 +565,33 @@ sub get_form_buttons {
   my %args = @_;
   $args{name} ||= 'Submit';
   $args{value} ||= 'Submit';
+  $args{onclick} ||= '';
+
   $args{back_name} ||= 'Back';
   $args{back_value} ||= 'Back';
+  $args{back_onclick} ||= '';
+
   $args{reset_value} ||= 'Reset';
+  $args{reset_onclick} ||= '';
+
+  for ( qw( reset_onclick back_onclick onclick ) ) {
+    $args{$_} = "onClick=$args{$_}" if $args{$_};
+  }
+  
   $args{types} ||= [];
 
   my @b;
 
   for my $type ( @{$args{types}} ) {
-    push @b, "<INPUT TYPE=SUBMIT NAME=$args{name} VALUE=$args{value}>" if $type =~ /^submit$/i; 
-    push @b, "<INPUT TYPE=SUBMIT NAME=$args{back_name} VALUE=$args{back_value}>" if $type =~ /^back$/i; 
-    push @b, "<INPUT TYPE=RESET VALUE=$args{reset_value}>" if $type =~ /^reset$/i; 
+    push @b, <<"    END" if $type =~ /^submit$/i; 
+    <INPUT TYPE=SUBMIT NAME=$args{name} VALUE=$args{value} $args{onclick}>
+    END
+    push @b, <<"    END" if $type =~ /^back$/i; 
+    <INPUT TYPE=SUBMIT NAME=$args{back_name} VALUE=$args{back_value} $args{back_onclick}>
+    END
+    push @b, <<"    END" if $type =~ /^reset$/i; 
+    <INPUT TYPE=RESET VALUE=$args{reset_value} $args{reset_onclick}>
+    END
   }
   return @b;
 }
@@ -786,6 +803,18 @@ sub get_treatment_select {
  
 }
 
+sub get_back_button_js {
+  return ( <<"  END" );
+	<SCRIPT LANGUAGE="JavaScript">
+  function send_back(){
+    document.verify_samples.apply_action.value = "REFRESH";
+    document.verify_samples.submit();
+  }
+  </SCRIPT>
+  END
+}
+
+#+
 sub get_experiment_change_js {
   return ( <<"  END" );
 	<SCRIPT LANGUAGE="JavaScript">
@@ -799,47 +828,62 @@ sub get_experiment_change_js {
   END
 }
 
+
 #+
-#
+# Returns HTML summary of mapping between old and new samples for a given 
+# treatment
 #-
-sub get_verify_content {
+sub treatment_sample_content {
   my $this = shift;
   my %args = @_;
   for my $arg ( qw( sample_map p_ref ) ) {
     die( "Missing required arguement $arg" ) unless defined $args{$arg};
   }
 
+  my $back_js = get_back_button_js();
+
   # Cache all the existing parameters (gotcha?)
-  my $hidden = '';
-  for my $key ( keys ( %{$args{p_ref}} ) ) {
+  my $hidden =<<"  END";
+  <INPUT TYPE=HIDDEN NAME=apply_action VALUE='process_treatment'></INPUT>
+  END
+ 
+  my %params = %{$args{p_ref}};
+
+  for my $key ( keys ( %params ) ) {
+    next if $key =~ /action/;
     $hidden .=<<"    END";
-    <INPUT TYPE=HIDDEN NAME= $key VALUE=$args{p_ref}->{$key}></INPUT>
+    <INPUT TYPE=HIDDEN NAME=$key VALUE='$params{$key}'></INPUT>
     END
   }
-
+  
   # There must be at least one biosample_id
-  my @samples = split ",", @args{p_ref}->{biosample_id};
+  my @samples = split ",", $params{biosample_id};
   return undef unless scalar( @samples );
 
   # Avoid dref hell
   my %parents = %{$args{sample_map}->{parents}};
   my %children = %{$args{sample_map}->{children}};
 
-  my $table = SBEAMS::Connection::DataTable->new();
+  my $table = SBEAMS::Connection::DataTable->new( BORDER => 1 );
   my @buttons = $this->get_form_buttons( name => 'process_samples', 
-                                        value => 'Process samples',
+                                        value => 'Process_samples',
+                                   back_value => 'Review_form',
+                                 back_onclick => 'send_back();',
                                         types => [ qw(submit back) ] );
-  $table->addRow( \@buttons );
+  $table->addRow( [join "&nbsp;", @buttons] );
 
   for my $id ( @samples ) {
-    print "With id $id<BR>";
-    my $name = $parents{id}->{biosample_name};
+    my $name = $parents{$id}->{biosample_name};
     for my $child ( @{$children{$id}} ) {
       $table->addRow( [ $name, '=>', $child->{biosample_name} ] );
-      $name = '"';
+      $name = '"&nbsp;&nbsp;&nbsp;';
     }
   }
   my $end = $table->getRowNum();
+  $table->alternateColors( PERIOD => $params{num_replicates},
+                           BGCOLOR => '#FFFFFF',
+                           DEF_BGCOLOR => '#E0E0E0',
+                           FIRSTROW => 0 ); 
   $table->setColAttr( ROWS => [1] ,COLS => [1], COLSPAN => 3, ALIGN => 'CENTER' );
   $table->setColAttr( ROWS => [2..$end] ,COLS => [1], ALIGN => 'RIGHT');
   $table->setColAttr( ROWS => [2..$end] ,COLS => [2], ALIGN => 'CENTER');
@@ -847,6 +891,7 @@ sub get_verify_content {
 
   # Caller will supply form tags
   return <<"  END_RETURN";
+  $back_js
   $table
   $hidden
   END_RETURN

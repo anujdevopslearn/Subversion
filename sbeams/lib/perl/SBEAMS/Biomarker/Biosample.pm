@@ -52,7 +52,7 @@ sub attrExists {
 
 ####
 #+
-# Method for creating new biosample.
+# Method for creating new biosample from a biosource/upload.
 #-
 sub add_new {
   my $this = shift;
@@ -94,6 +94,46 @@ sub add_new {
 
 } # End add_new   
 
+#+
+# Inserts new biosamples genearted by applying a treatment to a set of 
+# input samples
+#-
+sub insert_biosamples {
+  my $this = shift;
+  my %args = @_;
+
+  for my $arg ( qw( data_ref treatment_id bio_group ) ) {
+    die( "Missing required arguement $arg" ) unless $args{$arg};
+  }
+  my $sbeams = $this->get_sbeams() || die "sbeams object not set";
+  my $biomarker = $this->get_biomarker();
+  my $gid = $biomarker->create_biogroup(group_name => $args{bio_group});
+
+  my %kids = %{$args{data_ref}};
+
+  for my $key (sort{$a <=> $b}(keys( %kids ))) {
+    my $dup_id;
+    for my $child ( @{$kids{$key}} ) {
+      $child->{biosample_group_id} = $gid;
+      $child->{biosource_id} = 1;
+      $child->{treatment_id} = $args{treatment_id};
+      $child->{duplicate_biosample_id} = $dup_id if $dup_id;
+
+      my $id = $sbeams->updateOrInsertRow( insert => 1,
+                                        return_PK => 1,
+                                       table_name => $TBBM_BIOSAMPLE,
+                                      rowdata_ref => $child,
+                             add_audit_parameters => 1
+                                         );
+      $log->info( "Inserted new child sample: $id" );
+      $dup_id = $id unless $dup_id;
+    }
+  $log->info( "NEXT!" ); 
+  }
+
+
+}
+
 
 #+
 # Routine to resolve/validate user-specified mappings for a sample 'treatment'
@@ -101,7 +141,6 @@ sub add_new {
 sub get_treatment_mappings {
   my $this = shift;
   my %args = @_;
-  print "In the mapper<BR>";
   for my $arg ( qw( p_ref ) ) {
     die( "Missing required arguement $arg" ) unless $args{$arg};
   }
@@ -141,6 +180,7 @@ sub get_treatment_mappings {
                 treatment_description => $p{treatment_description},
                        treatment_name => $p{treatment_name},
                          input_volume => $p{input_volume},
+                        notebook_page => $p{notebook_page},
                          processed_by => $contact_id );
  
   # Hash to hold parent/child samples keyed by parent sample_id 
@@ -152,7 +192,7 @@ sub get_treatment_mappings {
     my $num_anc = $psample->{num_ancestors} + 1;
     my $rep_base = $base;
     for ( my $i = 1; $i <= $p{num_replicates}; $i++ ) {
-      my %child = ( biosample_name => $psample->{biosample_name} . $rep_base,
+      my %child = ( biosample_name => "$psample->{biosample_name}_${rep_base}",
                     parent_biosample_id => $psample->{biosample_id},
                     num_ancestors => $num_anc,
                     experiment_id => $p{experiment_id},
@@ -204,8 +244,6 @@ sub get_sample_info {
   AND BG.record_status <> 'D'
   AND BS.record_status <> 'D'
   END
-
-  print "$sql<BR>";
 
   # Simply return array of sample info hashrefs 
   my @samples = $sbeams->selectHashArray($sql);
