@@ -794,6 +794,10 @@ sub find_cellular_code {
 	my $method = 'find_cellular_code';
 	my $self = shift;
 	my $code = shift;
+
+  # Lets not look it up every single time, eh?
+  my $cached = $self->cellular_code_id( $code );
+  return $cached if $cached;
 	
 	my $full_name = '';
 	if ($code eq 'S'){
@@ -802,16 +806,19 @@ sub find_cellular_code {
 		$full_name = 'Transmembrane';
 	}elsif($code eq 'A'){
 		$full_name = 'Anchor';
-	}elsif($code == 0){
+	}elsif($code eq '0'){
 		$full_name = 'Cytoplasmic';
-	}elsif($code == 0){
-		print "ERROR:Cannot find full name for CELLULAR CODE '$code'\n";
-	}
-	my $sql = qq~ 	SELECT cellular_location_id
-					FROM $TBAT_CELLULAR_LOCATION
-					WHERE cellular_location_name = '$full_name'
-		      ~;
-	
+	}elsif($code eq 'A_low' ){
+		$full_name = 'Anchor';
+	} else {
+  	print STDERR "ERROR:Cannot find full name for CELLULAR CODE '$code'\n";
+  }
+
+	my $sql =<<"  END"; 
+  SELECT cellular_location_id
+  FROM $TBAT_CELLULAR_LOCATION
+  WHERE cellular_location_name = '$full_name'
+  END
 	
 	 my ($id) = $sbeams->selectOneColumn($sql);
 	if ($self->verbose){
@@ -830,15 +837,14 @@ sub find_cellular_code {
 ###############################################################################
 sub cellular_code_id {
 	my $self = shift;
+  my ( $code, $id ) = @_;
 	
-	if (@_){
-		#it's a setter
-		$self->{_CELLULAR_CODES}{$_[0]} = $_[1];
-	}else{
-		#it's a getter
-		$self->{_CELLULAR_CODES}{$_[0]};
+	if ( defined $id ){ #it's a setter
+    print "Code $code is getting set to $id\n" if $self->verbose();
+		$self->{_CELLULAR_CODES}{$code} = $id;
 	}
 
+  return $self->{_CELLULAR_CODES}{$code};
 }
 
 ###############################################################################
