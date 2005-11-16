@@ -731,3 +731,10 @@ Read about, "Grouping arrays","Normalizing Array Data" and "Analyze Arrays"
 -------------------------------------------------------------------------------
 Troubleshooting
 
+Problem: Analysis Pipeline doesn't produce diagnostic PNG images during
+normalization, and the R
+error code file shows "Ghostscript *.**: Unrecoverable error, exit code 1".
+Alternatively, producing JPEG images from the chips during
+load_affy_R_CHP_files.pl runs may not work.
+
+Fix: Install AFPL Ghostscript 8.51.
