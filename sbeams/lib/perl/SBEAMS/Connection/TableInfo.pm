@@ -880,6 +880,9 @@ sub getProjectDetailsTable {
 
 } # End getProjectDetailsTable
 
+#+
+# 'Official' sbeams evalSQL method
+#-
 sub evalSQL {
   my $self = shift;
   my $sql = shift;
@@ -889,6 +892,28 @@ sub evalSQL {
 	};
 	if ( $@ ) { $log->error( "Error in evalSQL: $@" ) }
 	return $post;
+}
+
+#+
+# Returns reference to a list of tables that this routine knows about.
+#-
+sub get_info_tables {
+  return [qw(organization project contact user_work_group protocol
+             group_project_permission user_project_permission
+             table_group_security cached_resultset )
+         ];
+}
+
+#+
+# Returns reference to a list of info_keys that this routine knows about.
+#-
+sub get_info_keys {
+  return [ qw( ManageTableAllowed CATEGORY DB_TABLE_NAME PK_COLUMN_NAME
+               fk_tables MULTI_INSERT_COLUMN MENU_OPTIONS BASICQuery
+               FULLQuery PROGRAM_FILE_NAME QueryTypes url_cols ordered_columns
+               required_columns data_columns key_columns input_types
+               data_types data_scales)
+         ];
 }
 
 
