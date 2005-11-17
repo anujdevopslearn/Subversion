@@ -215,7 +215,6 @@ sub get_treatment_mappings {
                    parents => \%parents,
                    children => \%children );
 
-  print "Send the data<BR>";
   return \%data_ref; 
 }
 
@@ -451,16 +450,32 @@ sub get_sample_type_id {
 }
 
 #+
-# Routine for inserting biosample
+# Routine for inserting run_samples
 #
 #-
-#sub insertBiosamples {
-#  my $this = shift;
-#  my %args = @_;
-#  my $p = $args{'wb_parser'} || die "Missing required parameter wb_parser";
-#  $this->insertBiosamples( wb_parser => $p );
-#}
-#
+sub insert_lcms_run_samples {
+  my $this = shift;
+  my $sbeams = $this->get_sbeams();
+  my %args = @_;
+  for ( qw( biosample_id ms_run_id ) ) {
+    die "Missing parameter $_" unless defined $_;    
+  }
+  my @ids = split /,/, $args{biosample_id};
+  return unless scalar @ids;
+
+  for my $id ( @ids ) {
+    my $id = $sbeams->updateOrInsertRow( insert => 1,
+                                      return_PK => 1,
+                                     table_name => $TBBM_MS_RUN_SAMPLE,
+                                    rowdata_ref => 
+                                              { biosample_id => $id,
+                                                ms_run_id    => $args{ms_run_id}
+                                               },
+                                        );
+  }
+
+}
+
 
 
 

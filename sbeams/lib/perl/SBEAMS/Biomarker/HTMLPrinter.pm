@@ -114,7 +114,7 @@ sub display_page_header {
 	<tr><td><a href="main.cgi">$pad View experiments</nobr></a></td></tr>
 	<tr><td><a href="upload_workbook.cgi">$pad Upload samples</nobr></a></td></tr>
 	<tr><td><a href="treatment.cgi">$pad Add glycopture prep</nobr></a></td></tr>
-	<tr><td><a href="lc_ms.cgi">$pad Add LC/MS run</nobr></a></td></tr>
+	<tr><td><a href="lcms_run.cgi">$pad Add LC/MS run</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Analysis_file">$pad Analysis_file</nobr></a></td></tr>
@@ -320,6 +320,57 @@ sub get_treatment_sample_select {
   return $list;
 }
 
+sub get_lcms_sample_select {
+  my $this = shift;
+  my %args = @_;
+  my $params = $args{params} || die "missing required 'params' hashref";
+  my $type = $args{types} || die "missing required parameter types";
+
+  $params->{treatment_id} ||= $this->get_first_treatment_id(@_);
+  
+  die "Must pass type as an arrayref" unless (ref($type) eq 'ARRAY');
+
+  my $sbeams = $this->getSBEAMS();
+  my $pid = $sbeams->getCurrent_project_id || die("Can't determine project_id");
+  my @acc = $sbeams->getAccessibleProjects();
+  my $table = SBEAMS::Connection::DataTable->new( BORDER => 1 );
+  my $sql =<<"  END";
+  SELECT biosample_id, biosample_name || ' - ' || bio_group_name AS sample
+  FROM $TBBM_BIOSAMPLE BS 
+  JOIN $TBBM_BIO_GROUP BG ON BS.biosample_group_id = BG.bio_group_id
+  WHERE BS.treatment_id = $params->{treatment_id}
+  AND BS.record_status <> 'D'
+  AND BG.record_status <> 'D'
+  ORDER BY biosample_group_id ASC, biosample_id ASC
+  END
+
+  my @current = split /,/, $params->{biosample_id};
+  
+  my $options = $sbeams->buildOptionList($sql, $params->{biosample_id}, 'MULTIOPTIONLIST' );
+  my $select = "<SELECT MULTIPLE SIZE=6 NAME=biosample_id>$options</SELECT>";
+  return $select;
+  
+## Deprecated in favor of a multi-select list
+
+  for my $row ( $sbeams->selectSeveralColumns( $sql ) ) {
+    $row->[0] = get_ts_checkbox( $row->[0] );
+    $table->addRow( $row );
+  }
+  
+  $table->alternateColors( PERIOD => 3,
+                           BGCOLOR => '#FFFFFF',
+                           DEF_BGCOLOR => '#E0E0E0',
+                           FIRSTROW => 0 ); 
+  $table->setColAttr( ROWS => [ 2..$table->getRowNum() ], 
+                      COLS => [ 1,2 ], 
+                      ALIGN => 'RIGHT' );
+  $table->setColAttr( ROWS => [ 1 ], 
+                      COLS => [ 1..2], 
+                      ALIGN => 'CENTER' );
+  my $list = $table->asHTML();
+  return $list;
+}
+
 sub get_ts_checkbox {
   my $val = shift;
   return "<INPUT TYPE=CHECKBOX NAME=biosample_id VALUE=$val></INPUT>";
@@ -392,6 +443,36 @@ sub get_experiment_overview {
                       ALIGN => 'CENTER' );
   return $table;
 }
+
+#+
+#
+#-
+sub get_ms_instrument_select {
+  my $this = shift;
+  my %args = @_;
+
+  # Select currval?
+  if ( $args{current} && ref($args{current} eq 'ARRAY') ) {
+    # stringify args if we were passed an arrayref
+    $args{current} = join ",", @{$args{current}};
+  }
+
+  my $sbeams = $this->getSBEAMS();
+
+  my $sql =<<"  END";
+  SELECT instrument_id, instrument_name
+  FROM $TBBM_INSTRUMENT
+  WHERE record_status <> 'D'
+  ORDER BY instrument_name ASC
+  END
+
+  my $options = $sbeams->buildOptionList( $sql, $args{current} );
+
+  my $select_name = $args{name} || 'instrument_id';
+  my $select = "<SELECT NAME=$select_name>$options</SELECT>";
+  return $select;
+}
+
 #+
 #
 #-
@@ -512,6 +593,46 @@ sub get_sample_type_select {
 
   return $select;
 }
+
+#+
+#
+#-
+sub get_gradient_select {
+  my $this = shift;
+  my %args = @_;
+
+  # Select currval?
+  if ( $args{current} && ref($args{current} eq 'ARRAY') ) {
+    # stringify args if we were passed an arrayref
+    $args{current} = join ",", @{$args{current}};
+  }
+
+  my $sbeams = $this->getSBEAMS();
+
+  my $sql =<<"  END";
+  SELECT gradient_program_id, 
+         SUBSTRING(gradient_program_name, 1, 25)
+  FROM $TBBM_GRADIENT_PROGRAM
+  WHERE record_status <> 'D'
+  ORDER BY gradient_program_name ASC
+  END
+
+  my $options = $sbeams->buildOptionList( $sql, $args{current} );
+
+  my $select_name = $args{name} || 'protocol_id';
+  my $select = "<SELECT NAME=$select_name>$options</SELECT>";
+  return $select;
+
+  # deprecated
+  my @rows = $sbeams->selectSeveralColumns( $sql );
+  for my $row ( @rows ) {
+    $select .= "<OPTION VALUE=$row->[0]> $row->[1]";
+  }
+
+  return $select;
+}
+
+
 #+
 #-
 sub get_protocol_select {
@@ -525,12 +646,13 @@ sub get_protocol_select {
   }
 
   my $sbeams = $this->getSBEAMS();
+  my $types = ( $args{types} ) ? join(',', @{$args{types}}) : 'glycocapture';
 
   my $sql =<<"  END";
   SELECT protocol_id, P.name
   FROM $TB_PROTOCOL P JOIN $TB_PROTOCOL_TYPE PT
   ON PT.protocol_type_id = P.protocol_type_id
-  WHERE PT.name = 'glycocapture' 
+  WHERE PT.name = '$types' 
   AND PT.record_status <> 'D'
   AND PT.record_status <> 'D'
   ORDER BY P.name ASC
@@ -550,6 +672,7 @@ sub get_protocol_select {
 
   return $select;
 }
+
 #+
 # Returns array of HTML form buttons
 #
@@ -584,7 +707,7 @@ sub get_form_buttons {
 
   for my $type ( @{$args{types}} ) {
     push @b, <<"    END" if $type =~ /^submit$/i; 
-    <INPUT TYPE=SUBMIT NAME=$args{name} VALUE=$args{value} $args{onclick}>
+    <INPUT TYPE=SUBMIT NAME='$args{name}' VALUE='$args{value}' $args{onclick}>
     END
     push @b, <<"    END" if $type =~ /^back$/i; 
     <INPUT TYPE=SUBMIT NAME=$args{back_name} VALUE=$args{back_value} $args{back_onclick}>
@@ -611,6 +734,77 @@ sub get_replicate_names_select {
 
 }
 
+#+
+# Returns a select list with any appropriate entries highlighted.
+# narg current -> arrayref of allowed values (or comma-separated string)
+# narg types ->   arrayref of allowed types
+# narg project_id -> project_id to use to constrain list
+# narg accessible -> constrain list to accessible projects (by default only
+#                    items from writeable projects are shown.  If project_id
+#                    is included, make sure user has permission on that one.
+#-
+sub get_treatment_select {
+  my $this = shift;
+  my %args = @_;
+
+  # Select currval?
+  if ( $args{current} && ref($args{current}) eq 'ARRAY' ) {
+    # stringify args if we were passed an arrayref
+    $args{current} = join ",", @{$args{current}};
+    $log->debug( "PARAM: $args{current}" . ref( $args{current} ) );
+  }
+
+  my $sbeams = $this->getSBEAMS();
+#  my $project_id = $sbeams->getCurrent_project_id();
+
+  my $project_list;
+  my @projects;
+  if ( $args{accessible} ) {
+    @projects = $sbeams->getAccessibleProjects();
+  } else {
+    @projects = $sbeams->getWritableProjects();
+  }
+  return unless @projects; 
+
+  if ( $args{project_id} ) {
+    $project_list = (!grep /^$args{project_id}$/, @projects) ? '' :
+                    $args{project_id};  
+  } else {
+    $project_list = join( ',', @projects ) || '';
+  }
+  return unless $project_list; 
+
+  my $project_constraint = "WHERE project_id IN ( $project_list )";
+  my $type_constraint = ( !$args{types} ) ? '' :
+     "AND tt.treatment_type IN (" . join(',', @{$args{types}} ) . ")\n";
+
+  my $sql =<<"  END";
+  SELECT DISTINCT tr.treatment_id, treatment_name
+  FROM $TBBM_TREATMENT tr JOIN $TBBM_TREATMENT_TYPE tt
+  ON tr.treatment_type_id = tt.treatment_type_id
+  JOIN $TBBM_BIOSAMPLE bi
+  ON tr.treatment_id = bi.treatment_id
+  JOIN $TBBM_EXPERIMENT ex
+  ON ex.experiment_id = bi.experiment_id
+  $project_constraint
+  $type_constraint
+  AND tt.record_status <> 'D'
+  AND tr.record_status <> 'D'
+  AND bi.record_status <> 'D'
+  ORDER BY treatment_name ASC
+  END
+
+  return ($sql) if $args{sql_only};
+
+  my $options = $sbeams->buildOptionList( $sql, $args{current} );
+
+  my $select_name = $args{name} || 'treatment_id';
+  return ( <<"  END" );
+  <SELECT NAME=$select_name ONCHANGE=switchTreatment()>
+  $options
+  </SELECT>
+  END
+}
 
 #+
 #-
@@ -674,6 +868,18 @@ sub get_first_experiment_id {
   my $this = shift;
   my $sql = $this->get_experiment_select( sql_only => 1,
                                           writable => 1 );
+  my $sbeams = $this->getSBEAMS();
+  my @rows = $sbeams->selectSeveralColumns( $sql );
+  return $rows[0]->[0];
+}
+
+#+
+# Odd routine to get first treatment_id from list get_treat_select, for first
+# load.
+#-
+sub get_first_treatment_id {
+  my $this = shift;
+  my $sql = $this->get_treatment_select( sql_only => 1 );
   my $sbeams = $this->getSBEAMS();
   my @rows = $sbeams->selectSeveralColumns( $sql );
   return $rows[0]->[0];
@@ -791,7 +997,7 @@ sub get_experiment_details {
   return $table;
 }
 
-sub get_treatment_select {
+sub get_treatment_select_simple {
   my $this = shift;
   my $sbeams = $this->getSBEAMS();
   my $select = $sbeams->buildOptionList( <<"  END" );
@@ -816,13 +1022,33 @@ sub get_back_button_js {
 
 #+
 sub get_experiment_change_js {
+  my $this = shift;
+  my $form_name = shift;
+
   return ( <<"  END" );
 	<SCRIPT LANGUAGE="JavaScript">
   function switchExperiment(){
-    var experiment_id = document.sample_treatment.experiment_id;
+    var experiment_id = document.$form_name.experiment_id;
     var value = experiment_id.options[experiment_id.selectedIndex].value;
-    document.sample_treatment.apply_action_hidden.value = "REFRESH";
-    document.sample_treatment.submit();
+    document.$form_name.apply_action_hidden.value = "REFRESH";
+    document.$form_name.submit();
+  }
+  </SCRIPT>
+  END
+}
+
+#+
+sub get_treatment_change_js {
+  my $this = shift;
+  my $form_name = shift;
+
+  return ( <<"  END" );
+	<SCRIPT LANGUAGE="JavaScript">
+  function switchTreatment(){
+    var treatment_id = document.$form_name.treatment_id;
+    var value = treatment_id.options[treatment_id.selectedIndex].value;
+    document.$form_name.apply_action_hidden.value = "REFRESH";
+    document.$form_name.submit();
   }
   </SCRIPT>
   END

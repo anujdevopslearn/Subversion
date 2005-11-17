@@ -46,7 +46,7 @@ use constant DEFAULT_VOLUME => 10;
   my $params = process_params();
 
   # Print cgi headers
-  $biomarker->printPageHeader();
+  $biomarker->printPageHeader( -TITLE => 'Verify Samples');
 #  $sbeams->printCGIParams( $q );
 
   # Decision block, what type of page are we going to display?
@@ -141,7 +141,7 @@ sub print_treatment_form {
   $ftable->setColAttr( ROWS=>[$ftable->getRowNum()], COLS=>[1], ALIGN => 'CENTER' );
 
   # Get javascript for experiment/samples interaction
-  my $expt_js = $biomarker->get_experiment_change_js();
+  my $expt_js = $biomarker->get_experiment_change_js('sample_treatment');
 
   # Print form
   print <<"  END";
@@ -396,11 +396,13 @@ sub verify_change {
   my $ttype = $biomarker->get_treatment_type($params->{treatment_type_id});
 
   my $verify_message =<<"  END";
+  <TABLE WIDTH=500><TR><TD>
   This shows the potential results of treatment $tname ($ttype) to the
   $cnt samples shown below.  This will result in $new_cnt samples being 
   created.  Please check this info, and click 'process samples' button if you
   wish to continue, or click 'back' to return to the form and modify any 
   information.
+  </TD></TR></TABLE>
   END
 
   my $verify_page =<<"  END";

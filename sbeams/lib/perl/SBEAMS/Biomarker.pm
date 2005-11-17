@@ -136,6 +136,24 @@ sub insert_treatment {
   return $id;
 }
 
+#+ 
+# inserts treatment record into database
+#-
+sub insert_lcms_run {
+  my $this = shift;
+  my %args = @_;
+  return undef unless $args{data_ref};
+  
+  my $id = $sbeams->updateOrInsertRow( insert => 1,
+                                    return_PK => 1,
+                                   table_name => $TBBM_MS_RUN,
+                                  rowdata_ref => $args{data_ref},
+                         add_audit_parameters => 1
+                                     );
+  $log->info( "New lcms run ID is $id\n" );
+  return $id;
+}
+
 
 #+
 # Method for creating biogroup records.

@@ -31,6 +31,7 @@ use vars qw(@ISA @EXPORT
             $TBBM_TISSUE_TYPE
     
             $TBBM_GRADIENT_PROGRAM
+            $TBBM_INSTRUMENT
 
             $TBBM_ATTRIBUTE
             $TBBM_ATTRIBUTE_TYPE
@@ -70,6 +71,7 @@ require Exporter;
     
                $TB_PROTOCOL
                $TB_PROTOCOL_TYPE
+               $TBBM_INSTRUMENT
                $TBBM_GRADIENT_PROGRAM
 
                $TBBM_ATTRIBUTE
@@ -110,6 +112,7 @@ $TB_PROTOCOL_TYPE               = "${core}protocol_type";
 # Chose to specify external db tables as TBBM
 $TBBM_TISSUE_TYPE               = "${glyco}tissue_type";
 
+$TBBM_INSTRUMENT                = "${prot}instrument";
 $TBBM_GRADIENT_PROGRAM          = "${prot}gradient_program";
 
 $TBBL_BIOSEQUENCE_SET           = "${bl}biosequence_set";
