@@ -476,7 +476,7 @@ sub handle_request {
             $peptide_name_clause
             $peptide_sequence_clause
 
-        ORDER BY P.peptide_accession
+        ORDER BY PM.chromosome, BS.biosequence_name, PM.start_in_chromosome
     ~;
     #$sbeams->display_sql(sql=>$sql);
 
@@ -495,27 +495,28 @@ sub handle_request {
             my (@chrom, @start_chrom, @end_chrom, @strand);
             my (@biosequence_name);
             my (@sample_tag, @sample_title);
-            my %chrom_HoHoHoHoH;
             my %sample_H;
 
             my $i=0;  ##index counter
 
             foreach my $row (@rows) {
 
-                ($peptide_accession[$i], $peptide_sequence[$i],
-                $best_probability[$i], $n_observations[$i], $n_genome_locations[$i], $n_protein_mappings[$i],
-                $chrom[$i], $start_chrom[$i], $end_chrom[$i], $strand[$i],
-                $biosequence_name[$i],
-                $sample_tag[$i], $sample_title[$i]) = @{$row};
+                my ($pa, $seq, $prob, $n_obs, $n_g_loc, $n_prot_map, 
+                $chr, $s_chr, $e_chr, $str, $b_name, $s_tag, $s_title) = @{$row};
 
-                ###  store crazy data structure (xxxxxxx redo this someday)
-                if (!exists $chrom_HoHoHoHoH{$chrom[$i]}{$start_chrom[$i]}{$end_chrom[$i]}{$strand[$i]}{$peptide_sequence[$i]}{$biosequence_name[$i]} ) 
-                {
-
-                    $chrom_HoHoHoHoH{$chrom[$i]}{$start_chrom[$i]}{$end_chrom[$i]}{$strand[$i]}{$peptide_sequence[$i]}{$biosequence_name[$i]}
-                        = $biosequence_name[$i];
-
-                }
+                $peptide_accession[$i] = $pa;
+                $peptide_sequence[$i] = $seq;
+                $best_probability[$i] = $prob;
+                $n_observations[$i] = $n_obs;
+                $n_genome_locations[$i] = $n_g_loc;
+                $n_protein_mappings[$i] = $n_prot_map;
+                $chrom[$i] = $chr;
+                $start_chrom[$i] = $s_chr;
+                $end_chrom[$i] = $e_chr;
+                $strand[$i] = $str;
+                $biosequence_name[$i] = $b_name;
+                $sample_tag[$i] = $s_tag;
+                $sample_title[$i] = $s_title;
 
                 $sample_H{$sample_tag[$i]} = $i;
 
@@ -556,101 +557,151 @@ sub handle_request {
                      $n_genome_locations[0] <BR><HR>";
             print $prnt;
 
-            foreach my $tmp_chrom ( keys %chrom_HoHoHoHoH) {
+            my $last_chrom = "";
 
-                print "<BR>&nbsp;&nbsp;&nbsp;&nbsp;";
-                print "<nobr><B>Chromosome $tmp_chrom :</B></nobr><BR>";
-                my %tmp_hash;
+            my $last_protein = "";
 
-                my $last_protein;
+            my $last_seq_used_length = "";
 
-                my $last_seq_used_length;
 
-                print "<TABLE border=1>";
+            my $n_indices=$#peptide_accession;
 
-                foreach my $tmp_start ( keys %{$chrom_HoHoHoHoH{$tmp_chrom}}  ) {
+            for ($i = 0; $i <= $n_indices; $i++) 
+            {
 
-                    foreach my $tmp_end ( keys %{$chrom_HoHoHoHoH{$tmp_chrom}{$tmp_start}}  ) {
+                my $current_chrom = $chrom[$i];
 
-                        foreach my $tmp_strand ( keys %{$chrom_HoHoHoHoH{$tmp_chrom}{$tmp_start}{$tmp_end}}  ) {
+                my $current_prot = $biosequence_name[$i];
 
-                            foreach my $tmp_peptide ( keys %{$chrom_HoHoHoHoH{$tmp_chrom}{$tmp_start}{$tmp_end}{$tmp_strand}} )
-                            {
+                ## $current_peptide_seq is the entire peptide sequence, even if split over 2 exons
+                my $current_peptide_seq = $peptide_sequence[$i];
 
-                                foreach my $tmp_protein ( keys %{$chrom_HoHoHoHoH{$tmp_chrom}{$tmp_start}{$tmp_end}{$tmp_strand}{$tmp_peptide}} )
-                                {
 
-                                    $tmp_hash{$tmp_protein} = $tmp_protein;
+                if ($current_chrom ne $last_chrom)
+                {
 
-                                    ## get residue's on given exons:
-                                    my $seq;
+                    print "<BR>&nbsp;&nbsp;&nbsp;&nbsp;";
 
-                                    my $exon_bp_length = ceil( (abs($tmp_end - $tmp_start)/3.) );
-                                        
-                                    ## reverse peptide residues if strand is reverse
-                                    $tmp_peptide = reverse $tmp_peptide if ($tmp_strand eq "-");
+                    print "<nobr><B>Chromosome $current_chrom :</B></nobr><BR>";
 
-                                    if ($tmp_protein eq $last_protein)
-                                    {
+                    print "<TABLE border=1>";
 
-                                        $seq = substr($tmp_peptide, $last_seq_used_length, (length $tmp_peptide));
- 
-                                    } else 
-                                    {
-
-                                        $seq = substr($tmp_peptide, 0, $exon_bp_length);
-                                        
-                                    }
-
-                                    $last_protein = $tmp_protein;
-
-                                    $last_seq_used_length = length($seq);
-
-                                    print "<TR><TD>";
-
-                                    print "&nbsp;&nbsp;&nbsp;&nbsp;";
-
-                                    print "&nbsp;&nbsp;&nbsp;&nbsp;";
-
-                                    print "Protein: &nbsp;&nbsp;";
-
-                                    print "<A HREF=\"$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$parameters{atlas_build_id}&protein_name=$tmp_protein&action=QUERY\" class=\"text_link\">$tmp_protein</A>";
-
-                                    print "</TD>";
-
-                                    print "<TD>";
-
-                                    print "&nbsp;&nbsp;&nbsp;&nbsp;";
-
-                                    print "residues on exon:&nbsp;&nbsp;$seq";
-
-                                    print "&nbsp;&nbsp;&nbsp;&nbsp;";
-
-                                    print "</TD>";
-
-                                    print "<TD>";
-
-                                    print "exon:&nbsp;&nbsp;$tmp_start - $tmp_end";
-
-                                    print "&nbsp;&nbsp;&nbsp;&nbsp;";
-
-                                    print "</TD>";
-
-                                    print "<TD>";
-
-                                    print "strand: &nbsp;$tmp_strand";
-
-                                    print "</TD></TR>";
-
-                                }
-                            }
-                        }
-                    }
                 }
 
-                print "</TABLE>";
+                my $tmp_start = $start_chrom[$i];
+
+                my $tmp_end = $end_chrom[$i];
+
+                my $tmp_strand = $strand[$i];
+
+                my $tmp_protein = $biosequence_name[$i];
+
+                my $tmp_seq;
+
+                    
+                #### get residues on given exons ####
+
+                my $exon_bp_length = ceil( (abs($tmp_end - $tmp_start)/3.) );
+                                        
+                ## reverse peptide residues if strand is reverse
+                #$tmp_peptide = reverse $tmp_peptide if ($tmp_strand eq "-");
+
+                ## if the strand is negative, count residues on exon starting from end
+                if ($tmp_strand eq "-")
+                {
+
+                    if ($tmp_protein eq $last_protein)
+                    {
+
+                        #$tmp_seq = substr($current_peptide_seq, $last_seq_used_length, (length $current_peptide_seq));
+                        $tmp_seq = substr($current_peptide_seq, 
+                            ((length $current_peptide_seq) - $last_seq_used_length - $exon_bp_length), 
+                            ((length $current_peptide_seq) - $last_seq_used_length ) );
+ 
+                    } else 
+                    {
+
+                        #$tmp_seq = substr($current_peptide_seq, 0, $exon_bp_length);
+                        $tmp_seq = substr($current_peptide_seq, 
+                            ((length $current_peptide_seq) - $exon_bp_length), 
+                            (length $current_peptide_seq));
+                                        
+                    }
+
+                }
+
+
+                if ($tmp_strand eq "+")
+                {
+
+                    if ($tmp_protein eq $last_protein)
+                    {
+
+                        $tmp_seq = substr($current_peptide_seq, $last_seq_used_length, (length $current_peptide_seq));
+ 
+                    } else 
+                    {
+
+                        $tmp_seq = substr($current_peptide_seq, 0, $exon_bp_length);
+                                        
+                    }
+
+                }
+
+
+                $last_seq_used_length = length($tmp_seq);
+
+                print "<TR><TD>";
+
+                print "&nbsp;&nbsp;&nbsp;&nbsp;";
+
+                print "&nbsp;&nbsp;&nbsp;&nbsp;";
+
+                print "Protein: &nbsp;&nbsp;";
+
+                print "<A HREF=\"$CGI_BASE_DIR/PeptideAtlas/GetProtein?atlas_build_id=$parameters{atlas_build_id}&protein_name=$tmp_protein&action=QUERY\" class=\"text_link\">$tmp_protein</A>";
+
+                print "</TD>";
+
+                print "<TD>";
+
+                print "&nbsp;&nbsp;&nbsp;&nbsp;";
+
+                print "residues on exon:&nbsp;&nbsp;$tmp_seq";
+
+                print "&nbsp;&nbsp;&nbsp;&nbsp;";
+
+                print "</TD>";
+
+                print "<TD>";
+
+                print "exon:&nbsp;&nbsp;$tmp_start - $tmp_end";
+
+                print "&nbsp;&nbsp;&nbsp;&nbsp;";
+
+                print "</TD>";
+
+                print "<TD>";
+
+                print "strand: &nbsp;$tmp_strand";
+
+                print "</TD></TR>";
+
+                $last_chrom = $current_chrom;
+
+                $last_protein = $current_prot;
+
+                if ($i < $n_indices && ($current_chrom ne $chrom[$i+1]) )
+                {
+
+                    print "</TABLE>";
+
+                }
+
 
             }
+
+            print "</TABLE>";
 
             print "</DIV>";
 
