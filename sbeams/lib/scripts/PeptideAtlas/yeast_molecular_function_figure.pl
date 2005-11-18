@@ -2,17 +2,14 @@
 
 ###############################################################################
 # Program     : yeast_molecular_function_figure.pl
-# Author      : Nichole King <nking@systemsbiology.org>
+# Author      : N. King 
 # $Id:
 #
 # Description : 
 #               Makes a figure of the number of Yeast PeptideAtlas genes
-#               in each molecular_function bin along with the number of
-#               genes per bin in the SGD database for contrast.
-#
-#               For yeast, the parent molecular function id is GO:0003674.
-#               The children are 15 categories, only 14 of which appear to be
-#               present in the modern GO for SGD? (missing protein_tag)
+#               in first level children of molecular_function.  Needs
+#               to be corrected to descend and find end of leaves.
+#               (soon)...
 #
 #        NOTE: At this time, this should only be used for Yeast (Sc).
 #        The GO numbers for the molecular function children are for yeast
