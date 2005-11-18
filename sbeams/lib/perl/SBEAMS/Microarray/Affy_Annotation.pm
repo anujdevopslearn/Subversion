@@ -1348,7 +1348,7 @@ sub get_annotation_sql {
 ###############################################################################
 sub get_dbxref_accessor_urls {
 	my $self = shift;
-	return $sbeams->selectTwoColumnHash( <<"  END );
+	return $sbeams->selectTwoColumnHash( <<"  END" );
   SELECT dbxref_id , dbxref_tag || '__' || accessor
 	FROM $TB_DBXREF
   END
