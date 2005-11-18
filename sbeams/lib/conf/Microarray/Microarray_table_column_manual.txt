@@ -47,7 +47,7 @@ GO
 
 UPDATE table_column
   SET optionlist_query = '
-SELECT ST.slide_type_id, name||   ( \$''||CONVERT(varchar(50),STC.price)|| )''
+SELECT ST.slide_type_id, name||''   ( \$''||CONVERT(varchar(50),STC.price)||'' )''
   FROM $TBMA_SLIDE_TYPE ST
   JOIN $TBMA_SLIDE_TYPE_COST STC ON ( ST.slide_type_id = STC.slide_type_id )
  WHERE STC.cost_scheme_id=$cost_scheme_id
