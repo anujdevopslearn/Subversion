@@ -19,7 +19,7 @@
 #       make_protCoverage_figure.pl --atlas_build_id '78' --run
 #       make_protCoverage_figure.pl --atlas_build_id '78' --run --histogram
 #
-#   Author: Nichole King
+#   Author: N King
 #######################################################################
 use strict;
 use Getopt::Long;
@@ -229,15 +229,14 @@ sub handleRequest()
     if ($makeHistogram)
     {
 
-        my (@bins, @nums) = make_histogram_data(
+        my (@data) = make_histogram_data(
             data_hash_ref => \%proteinCoverageHash,
             outfile => $outfile
         );
 
 
         plot_data_histogram( 
-            x_data_ref => \@bins,
-            y_data_ref => \@nums,
+            data_ref => \@data,
             title => $title{"title"},
             y_title => "number of proteins in protein coverage bin",
             x_title => "protein coverage %",
@@ -268,12 +267,10 @@ sub get_protein_coverage_hash
     ## get hash with key = proteinName, value = 0
     my %prtHash = get_mapped_protein_hash();
 
-
     ## replace hash values with percentage of sequence matched
     %prtHash = calculate_percentage_matched(
         protein_hash_ref => \%prtHash
     );
-
 
     return %prtHash;
 
@@ -815,12 +812,35 @@ sub make_histogram_data
 
     my $count = 0;
 
+    my $xmin = 0;
+
+    my $xmax = 100;
+
+    my $bin_sz = 10.0;
+
+    my $half_bin_size = ($bin_sz/2.0);
+
+    my $num_bins = ($xmax-$xmin)/$bin_sz;
+
+    my (@bin_centers, @binned_data);
+
+    for (my $i=0; $i < $num_bins; $i++)
+    {
+
+        my $bin_center = $xmin + ($bin_sz*($i + 0.5));
+
+        $bin_centers[$i] = sprintf("%.2f", $bin_center);
+
+        $binned_data[$i] = 0;
+
+#       print "$i -- $bin_centers[$i] $binned_data[$i]\n";
+
+    }
+ 
     ## will make bins 0-10, 10-20, 20-30, 30-40, ...
-    my @bin_centers = qw/ 5.0 15.0 25.0 35.0 45.0 55.0 65.0 75.0 85.0 95.0 /;
-
-    my $half_bin_size = 5.0;
-
-    my $num_bins = 10;
+    #my @bin_centers = qw/ 5.0 15.0 25.0 35.0 45.0 55.0 65.0 75.0 85.0 95.0 /;
+    #
+    #my $num_bins = 10;
 
     ## this will be an array of size $num_bins, of the number of proteins per prot cov bin
     my (@binned_data) = 0;
@@ -828,11 +848,20 @@ sub make_histogram_data
     foreach my $key (@sortedKeys)
     {
 
-        my $bin_number = (ceil($data_hash{$key}/$num_bins)) - 1;
+        my $bin_number = (ceil($data_hash{$key}/$bin_sz)) - 1;
+
+#       die "$data_hash{$key} is in bin $bin_number ..." . $data_hash{$key}/$bin_sz . "\n";
 
         $binned_data[$bin_number]++;
 
     }
+
+    #for (my $i=0; $i<=$#bin_centers;$i++)
+    #{
+    # 
+    #  print"$bin_centers[$i]  $binned_data[$i]\n";
+    # 
+    #}
 
 
     #### Create a combined array
@@ -841,7 +870,7 @@ sub make_histogram_data
     write_to_outfile( x_array_ref => \@bin_centers, 
         y_array_ref => \@binned_data);
 
-    return @bin_centers, @binned_data;
+    return @data;
 
 }
 
@@ -853,11 +882,8 @@ sub plot_data_histogram
 {
     my %args = @_;
 
-    my $x_data_ref = $args{x_data_ref} or die 
-        "need x data reference";
-
-    my $y_data_ref = $args{y_data_ref} or die 
-        "need y data reference";
+    my $data_ref = $args{data_ref} or die 
+        "need data reference";
 
     my $title = $args{title};
 
@@ -867,11 +893,7 @@ sub plot_data_histogram
 
     my $outfig = $args{outfig};
 
-    my @x = @{$x_data_ref};
-
-    my @y = @{$y_data_ref};
-
-    my @data = ([@x],[@y]);
+    my @data = @{$data_ref};
 
     my $graph = new GD::Graph::bars( 512, 512);
     #my $graph = new GD::Graph::xylines( 512, 512);
