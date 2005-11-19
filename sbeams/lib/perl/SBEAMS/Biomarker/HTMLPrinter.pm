@@ -96,7 +96,8 @@ sub display_page_header {
 	</tr>
 
     ~;
-
+  my $message = $sbeams->get_page_message();
+  print STDERR "Message is $message\n";
     #print ">>>http_header=$http_header<BR>\n";
 
     if ($navigation_bar eq "YES") {
@@ -137,12 +138,12 @@ sub display_page_header {
 	<!-------- Main Page ------------------------------------------->
 	<td valign=top>
 	<table border=0 bgcolor="#ffffff" cellpadding=4>
-	<tr><td>
+	<tr><td>$message
 
     ~;
     } else {
       print qq~
-	</TABLE>
+	</TABLE>$message
       ~;
     }
 
@@ -436,7 +437,71 @@ sub get_experiment_overview {
                            DEF_BGCOLOR => '#E0E0E0',
                            FIRSTROW => 0 ); 
   $table->setColAttr( ROWS => [ 2..$table->getRowNum() ], 
-                      COLS => [ 4, 5 ], 
+                      COLS => [ 4..6 ], 
+                      ALIGN => 'RIGHT' );
+  $table->setColAttr( ROWS => [ 1 ], 
+                      COLS => [ 1..6 ], 
+                      ALIGN => 'CENTER' );
+  return $table;
+}
+
+#+ 
+# Routine builds a list of experiments/samples within.
+#-
+sub lcms_run_list {
+  my $this = shift;
+  my $sbeams = $this->getSBEAMS();
+  my $pid = $sbeams->getCurrent_project_id || die("Can't determine project_id");
+
+
+  my $sql =<<"  END";
+  SELECT msr.ms_run_id, ms_run_name, ms_run_description, instrument_name, 
+         ms_run_date, COUNT( b.biosample_id ) num_samples
+  FROM  $TBBM_MS_RUN msr 
+  JOIN $TBBM_MS_RUN_SAMPLE msrs ON msrs.ms_run_id = msr.ms_run_id
+  JOIN $TBBM_BIOSAMPLE b ON  b.biosample_id = msrs.biosample_id
+  JOIN $TBBM_EXPERIMENT e  ON e.experiment_id = b.experiment_id
+  LEFT OUTER JOIN $TBBM_INSTRUMENT i  ON i.instrument_id = msr.ms_instrument
+  WHERE project_id = $pid
+  GROUP BY msr.ms_run_id, ms_run_name, ms_run_description, 
+           instrument_name, ms_run_date
+  ORDER BY ms_run_date DESC, ms_run_name ASC
+  END
+  $log->error( $sql );
+
+  my $foo =<<'  EMD';
+ SELECT msr.ms_run_id, ms_run_name, ms_run_description, ms_instrument, 
+         ms_run_date, COUNT( b.biosample_id ) num_samples
+  FROM  biomarker.dbo.BMRK_ms_run msr 
+  JOIN biomarker.dbo.BMRK_ms_run_sample msrs ON msrs.ms_run_id = msr.ms_run_id
+  JOIN biomarker.dbo.BMRK_biosample b ON  b.biosample_id = msrs.biosample_id
+  JOIN biomarker.dbo.BMRK_experiment e  ON b.experiment_id = e.experiment_id
+  WHERE project_id = 542
+  GROUP BY msr.ms_run_id, ms_run_name, ms_run_description, ms_instrument, 
+         ms_run_date
+  ORDER BY ms_run_date DESC, ms_run_name ASC
+  EMD
+
+  
+  my $table = SBEAMS::Connection::DataTable->new( WIDTH => '100%' );
+  $table->addResultsetHeader( ['Run Name', 'Description', 'Instrument', 
+                        'Run Date', '# samples'] );
+
+  for my $row ( $sbeams->selectSeveralColumns($sql) ) {
+    my @row = @$row;
+    my $id = shift @row;
+    $row[2] = ( length $row[2] <= 40 ) ? $row[2] : shortlink($row[2], 40);
+    $row[0] =<<"    END";
+    <A HREF=ms_run_details.cgi?ms_run_id=$id>$row[0]</A>
+    END
+    $table->addRow( \@row )
+  }
+  $table->alternateColors( PERIOD => 1,
+                           BGCOLOR => '#FFFFFF',
+                           DEF_BGCOLOR => '#E0E0E0',
+                           FIRSTROW => 0 ); 
+  $table->setColAttr( ROWS => [ 2..$table->getRowNum() ], 
+                      COLS => [ 4..6 ], 
                       ALIGN => 'RIGHT' );
   $table->setColAttr( ROWS => [ 1 ], 
                       COLS => [ 1..6 ], 
@@ -468,7 +533,7 @@ sub get_ms_instrument_select {
 
   my $options = $sbeams->buildOptionList( $sql, $args{current} );
 
-  my $select_name = $args{name} || 'instrument_id';
+  my $select_name = $args{name} || 'ms_instrument';
   my $select = "<SELECT NAME=$select_name>$options</SELECT>";
   return $select;
 }
@@ -566,9 +631,9 @@ sub get_sample_type_select {
     $limit_clause = " $type biosample_type_name NOT IN ( $qlist )" if $qlist;
   }
 
-  $log->debug( "with $args{name}, where is $limit_clause\n" );
-  $log->debug( "Args are $args{include_types}" );
-  $log->debug( "Args are $args{exclude_types}" );
+#  $log->debug( "with $args{name}, where is $limit_clause\n" );
+#  $log->debug( "Args are $args{include_types}" );
+#  $log->debug( "Args are $args{exclude_types}" );
 
   my $sbeams = $this->getSBEAMS();
 
@@ -619,7 +684,7 @@ sub get_gradient_select {
 
   my $options = $sbeams->buildOptionList( $sql, $args{current} );
 
-  my $select_name = $args{name} || 'protocol_id';
+  my $select_name = $args{name} || 'lc_gradient_program';
   my $select = "<SELECT NAME=$select_name>$options</SELECT>";
   return $select;
 
@@ -646,6 +711,8 @@ sub get_protocol_select {
   }
 
   my $sbeams = $this->getSBEAMS();
+  $log->debug( $sbeams->dump_hashref( href => \%args, mode => 'text' ) );
+
   my $types = ( $args{types} ) ? join(',', @{$args{types}}) : 'glycocapture';
 
   my $sql =<<"  END";
@@ -1133,6 +1200,43 @@ sub shortlink {
   return "<DIV title='$val'> ". substr( $val, 0, $len - 3 ) . '...</DIV>';
 }
 
+#+
+# Returns list of links to Core caller, shows which projects have what type
+# of data in them.
+#-
+sub getProjectData {
+  my $self = shift;
+  my %args = @_;
+  my %project_data;
+  $log->debug( 'Got here, yo' );
+
+  unless ( scalar(@{$args{projects}}) ) {
+    $log->warn( 'No project list provided to getProjectData' );
+    return ( \%project_data);
+  }
+ 
+  my $projects = join ',', @{$args{projects}};
+
+  # SQL to determine which projects have data.
+  my $sql =<<"  END_SQL";
+  SELECT project_id, COUNT(*) total 
+  FROM $TBBM_EXPERIMENT
+  WHERE project_id IN ( $projects )
+  AND record_status != 'D'
+  GROUP BY project_id
+  END_SQL
+
+  my $cgi_dir = $CGI_BASE_DIR . '/Biomarker/';
+  my @rows = $self->getSBEAMS()->selectSeveralColumns( $sql );
+  foreach my $row ( @rows ) {
+    my $title = "$row->[1] Experiments";
+    $project_data{$row->[0]} =<<"    END_LINK";
+    <A HREF=${cgi_dir}main.cgi?set_current_project_id=$row->[0]>
+    <DIV id=Biomarker_button TITLE='$title'>Biomarker</DIV></A>
+    END_LINK
+  }
+  return ( \%project_data );
+}
 
 
 ###############################################################################
