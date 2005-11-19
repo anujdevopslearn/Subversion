@@ -5412,7 +5412,7 @@ sub getDataFromModules {
   
   # Prune list of modules to the ones we know support this functionality 
   my @supp = qw( Microarray Proteomics ProteinStructure Immunostain 
-                 Cytometry Interactions Inkjet PeptideAtlas );
+                 Cytometry Interactions Inkjet PeptideAtlas Biomarker );
 
   my @valid_mods;
   for my $mod ( @{$args{modules}} ) {
