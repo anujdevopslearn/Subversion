@@ -152,6 +152,7 @@ BM_BMRK_treatment	4	treatment_description	Treatment Description	varchar	255	0	Y	
 BM_BMRK_treatment	5	input_volume	Input Volume	int	4	0	Y		N			N				Y	Y	N	Volume used for treament (prep)		
 BM_BMRK_treatment	6	number_fractions	Number Fractions	int	4	0	Y		N			N				Y	Y	N	Number of fractions generated		
 BM_BMRK_treatment	7	notebook_page	Notebook Page	varchar	36	0	Y		N			N	text	36		Y	Y	Y	Reference to notebook number and page where related information can be found.		
+BM_BMRK_treatment	7	protocol_id	Protocol	int	4	0	Y		N	protocol	protocol_id	N	optionlist			Y	Y	N	Protocol used for Mass Spec run	"SELECT protocol_id, protocol_name FROM $TB_PROTOCOL WHERE record_status != 'D' AND protocol_type_id IN ( 1 )"	
 BM_BMRK_treatment	8	treatment_status	Status	varchar	36	0	Y		N			N	text	12		Y	Y	N	Treatment (Prep) status		
 BM_BMRK_treatment	9	date_completed	Date Completed	varchar	36	0	Y	CURRENT_TIMESTAMP	N			N	text	12		Y	Y	N	Date that treatment was completed		
 BM_BMRK_treatment	10	processed_by	Processed By	int	4	0	N		N	contact	contact_id	N	optionlist			Y	Y	N	Person that processed Treatment (Prep).	"SELECT contact_id, last_name||', '||first_name||' ('||organization||')' AS 'name' FROM $TB_CONTACT C JOIN $TB_ORGANIZATION O ON ( C.organization_id = O.organization_id ) ORDER BY last_name,first_name,organization"	
