@@ -903,7 +903,7 @@ sub getMainPageTabMenuObj {
   }
 
   $tabmenu->addContent( $content );
-	return $tabmenu;
+	return($tabmenu);
 
 }
 
@@ -969,6 +969,7 @@ sub getModuleButton {
   my $module = shift || 'unknown';
   my %colors = ( Immunostain => '#77A8FF',
                  Microarray  => '#FFCC66',
+                 Biomarker   => '#CC99CC',
                  Proteomics  => '#66CC66',
                  Cytometry   => '#EEEEEE',
                  Inkjet      => '#AABBFF',
