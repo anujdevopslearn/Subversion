@@ -613,9 +613,74 @@ sub get_subname {
   return $call[3];
 }
 
+#+
+# Utility routine to dump out a hash in key => value formatt
+#-
+sub dump_hashref {
+  my $this = shift;
+  my %args = @_;
+  return unless $args{href};
+  my $mode = $args{mode} || 'text';
+  my $eol = ( $mode =~ /HTML/i ) ? "<BR>\n" : "\n";
+  my $dumpstr = '';
+  for my $k ( keys( %{$args{href}} ) ) {
+    $dumpstr .= "$k => $args{href}->{$_}" . $eol;
+  }
+  return $dumpstr;
+}
 
+#+
+# Utility routine to dump out an array ref
+#-
+sub dump_arrayref {
+  my $this = shift;
+  my %args = @_;
+  return unless $args{aref};
+  my $mode = $args{mode} || 'text';
+  my $eol = ( $mode =~ /HTML/i ) ? "<BR>\n" : "\n";
+  my $dumpstr = '';
+  for my $line ( @{$args{aref}} ) {
+    $dumpstr .= $line . $eol;
+  }
+  return $dumpstr;
+}
 
-###############################################################################
+sub set_page_message {
+  my $this = shift;
+  my %args = @_;
+  return unless $args{msg};
+
+  my $type = ( $args{type} && $args{type} eq 'Error' ) ? 'Error' : 'Info';
+
+  $this->setSessionAttribute( key => '_SBEAMS_message', 
+                            value => $type . '::' . $args{msg} );
+  
+}
+
+sub get_page_message {
+  my $this = shift;
+  my %args = @_;
+
+  my %color = ( Error => $args{error_color} || 'red',
+                Info => $args{info_color} || 'green' );
+
+  my $sbeams_msg = $this->getSessionAttribute( key => '_SBEAMS_message' );
+  my ( $mode, $msg ) = $sbeams_msg =~ /^(\w+)::(.+)$/;
+
+  # In case the format was goofy:
+  $mode ||= 'info';
+  $msg ||= $sbeams_msg;
+
+  # Clean up
+  $this->deleteSessionAttribute( key => '_SBEAMS_message' );
+  if ( $args{no_color} ) {
+    return $msg; 
+  } else {
+    $msg = "<FONT COLOR=$color{$mode}>$msg</FONT>"; 
+    $msg = "<I>$msg</I>" unless $args{no_italics};
+  }
+  return $msg;
+}
 
 1;
 
