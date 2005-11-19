@@ -45,24 +45,42 @@ use constant DEFAULT_VOLUME => 10;
   # Process cgi parameters
   my $params = process_params();
 
+  my $content = 'placeholder';
+  $params->{apply_action} ||= 'new_run';
 
   # Decision block, what type of page are we going to display?
   if ( $params->{apply_action} eq 'Create run' ) {
     my $status = create_run( $params );
     
     # Where to go from here? redirect?
-    print $q->redirect( 'lcms_run_list.cgi' );
+    # print $q->redirect( 'lcms_run_list.cgi' );
 
-  } elsif ( 0 ) {
-    # Something I'm forgetting?
+    if ( $status !~ /Error/ ) {
+      $sbeams->set_page_message( msg => $status, type => 'Info' );
+      $content = $biomarker->lcms_run_list($params);
+    } else {
+      # Give them back the page
+      $sbeams->set_page_message( msg => $status, type => 'Error' );
+      $q->delete( 'apply_action' );
+      print $q->redirect( $q->self_url() );
+      exit;
+    }
+
+  } elsif ( $params->{apply_action} eq 'list_runs'  ) {
+    $content = $biomarker->lcms_run_list($params);
 
   } else {
-
-    # Print cgi headers
-    $biomarker->printPageHeader();
-    print_lcms_form( $params );
+    $content = get_lcms_form($params);
   }
 
+  # Print cgi headers
+  $biomarker->printPageHeader();
+
+  # Don't think I really need this, but...
+  $sbeams->printUserContext();
+
+  print $content;
+  $sbeams->printCGIParams( $q );
   $biomarker->printPageFooter();
 
 } # end Main
@@ -88,7 +106,7 @@ sub process_params {
 #+
 # Print lc/ms form
 #-
-sub print_lcms_form {
+sub get_lcms_form {
 
   my $params = shift;
 
@@ -97,9 +115,6 @@ sub print_lcms_form {
 
   # hash of labels for form
   my %labels = get_labels_hash( $params );
-
-  # Don't think I really need this, but...
-  $sbeams->printUserContext();
 
   my $ftable = SBEAMS::Connection::DataTable->new( BORDER => 0, 
                                               CELLSPACING => 2,
@@ -146,8 +161,8 @@ sub print_lcms_form {
   # Get javascript for experiment/samples interaction
   my $expt_js = $biomarker->get_treatment_change_js('lcms_run');
 
-  # Print form
-  print <<"  END";
+  # Return form
+  return <<"  END";
   <H3>New LC/MS run</H3>
   $expt_js
   <FORM NAME=lcms_run METHOD=POST>
@@ -160,9 +175,8 @@ sub print_lcms_form {
   </FORM>
 	<BR>
   END
-  $sbeams->printCGIParams( $q );
 
-} # end print_treatment_form
+} # end get_treatment_form
 
 #+
 #
@@ -207,6 +221,7 @@ sub get_input_fields_hash {
 
   # Get list of ms protcols from db 
   $fields{ms_protocol} = $biomarker->get_protocol_select( types => ['mass_spec'],
+                                                           name => 'ms_protocol',
                                                        current => [$p->{ms_protocol}] );
 
   # Get list of instruments from db 
@@ -241,7 +256,7 @@ sub get_input_fields_hash {
   # LC run description
   $fields{lc_run_description} =<<"  END";
   <TEXTAREA NAME=lc_run_description ROWS=2 COLS=64 WRAP=VIRTUAL>
-  $p->{ms_run_description}
+  $p->{lc_run_description}
   </TEXTAREA>
   END
 
@@ -287,7 +302,10 @@ sub create_run {
                      ms_run_parameters injection_volume ms_run_name 
                      lc_run_description ms_run_description ) ) {
       $run{$tag} = $params->{$tag};
+      $log->error("$tag => $run{$tag}");
+      print STDERR "$tag => $run{$tag}";
     }
+
     my $lcms_run_id = $biomarker->insert_lcms_run( data_ref => \%run );
     die 'Run creation failed' unless $lcms_run_id;
 
@@ -313,10 +331,12 @@ sub create_run {
   if ( $@ ) {
     print STDERR "$@\n";
     $sbeams->rollback_transaction();
-    exit;
+    return "Error: Unable to insert lcms run";
   }  # End eval catch-error block
-
+  my @ids = split ',', $params->{biosample_id};
+  my $cnt = scalar( @ids );
   $sbeams->commit_transaction();
   $sbeams->setAutoCommit( $ac );
   $sbeams->setRaiseError( $re );
+  return "LC/MS run $params->{ms_run_name} created with $cnt samples";
 }

@@ -145,7 +145,7 @@ sub print_treatment_form {
 
   # Print form
   print <<"  END";
-  <H2>Process Samples</H2><BR>
+  <H2>New sample treatment</H2><BR>
   $expt_js
   <FORM NAME=sample_treatment METHOD=POST>
   <TABLE BORDER=1 BGCOLOR='#DDDDDD'>
@@ -217,7 +217,7 @@ sub get_input_fields_hash {
                                                       );
 
   # Get list of protcols from db 
-  $fields{protocol} = $biomarker->get_protocol_select( types => ['glycocap'],
+  $fields{protocol} = $biomarker->get_protocol_select( types => ['glycocapture'],
                                                        current => [$p->{protocol_id}] );
 
   # Get list of acceptable name strings
@@ -311,7 +311,6 @@ sub get_form_buttons {
 #-
 sub process_treatment {
   my $params = shift;
-  print "Process_treatment<BR>";
   my $cache = $sbeams->getSessionAttribute( key => $params->{_session_key} );
   for ( keys( %$cache ) ) {
     print "$_ => $cache->{$_}<BR>";
