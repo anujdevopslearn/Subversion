@@ -246,11 +246,12 @@ sub create_tissues {
                                          if $sbeams->isTaintedSQL($tissue_type);
 
     # Sanity check 
-    my ($id) = $sbeams->selectrow_array( <<"    END_SQL" );
+    my ($existing_id) = $sbeams->selectrow_array( <<"    END_SQL" );
     SELECT tissue_type_id FROM $TBBM_TISSUE_TYPE
     WHERE tissue_type_name = '$tissue_type'
     END_SQL
 
+    $log->warn("tissue type already exists, why are we making it? ($existing_id)");
     $log->info("Creating Tissue: $tissue_type");
 
     my $id = $sbeams->updateOrInsertRow( insert => 1,

@@ -448,6 +448,60 @@ sub get_experiment_overview {
 #+ 
 # Routine builds a list of experiments/samples within.
 #-
+sub treatment_list {
+  my $this = shift;
+  my $sbeams = $this->getSBEAMS();
+  my $pid = $sbeams->getCurrent_project_id || die("Can't determine project_id");
+
+
+  my $sql =<<"  END";
+  SELECT treatment_id, treatment_name, treatment_description,
+         treatment_type_name, COUNT(b.biosample_id)  num_samples
+  FROM  $TBBM_TREATMENT t
+  JOIN $TBBM_TREATMENT_TYPE tt ON tt.treatment_type_id = t.treatment_type_id
+  JOIN $TBBM_BIOSAMPLE b ON  b.treatment_id = t.treatment_id
+  JOIN $TBBM_EXPERIMENT e  ON e.experiment_id = b.experiment_id
+  WHERE project_id = $pid
+  GROUP BY treatment_name, treatment_description, treatment_type_name,
+           treatment_id
+  ORDER BY  treatment_name, date_created, treatment_type_name
+  END
+  $log->error( $sql );
+
+  my $table = SBEAMS::Connection::DataTable->new( WIDTH => '100%' );
+  $table->addResultsetHeader( ['Name', 'Description', 'Type', '# samples'] );
+
+  for my $row ( $sbeams->selectSeveralColumns($sql) ) {
+    my @row = @$row;
+    my $id = shift @row;
+    $row[1] = ( length $row[1] <= 40 ) ? $row[1] : shortlink($row[1], 40);
+    $row[0] =<<"    END";
+    <A HREF=treatment.cgi?apply_action=treatment_details&treatment_id=$id>$row[0]</A>
+    END
+    $table->addRow( \@row )
+  }
+  $table->alternateColors( PERIOD => 1,
+                           BGCOLOR => '#FFFFFF',
+                           DEF_BGCOLOR => '#E0E0E0',
+                           FIRSTROW => 0 ); 
+  $table->setColAttr( ROWS => [ 2..$table->getRowNum() ], 
+                      COLS => [ 4], 
+                      ALIGN => 'RIGHT' );
+  $table->setColAttr( ROWS => [ 1 ], 
+                      COLS => [ 1..4 ], 
+                      ALIGN => 'CENTER' );
+  return $table;
+}
+
+#+
+#
+#-
+###
+
+
+#+ 
+# Routine builds a list of experiments/samples within.
+#-
 sub lcms_run_list {
   my $this = shift;
   my $sbeams = $this->getSBEAMS();
@@ -634,8 +688,6 @@ sub get_sample_type_select {
 #  $log->debug( "with $args{name}, where is $limit_clause\n" );
 #  $log->debug( "Args are $args{include_types}" );
 #  $log->debug( "Args are $args{exclude_types}" );
-
-  my $sbeams = $this->getSBEAMS();
 
   my $sql =<<"  END";
   SELECT biosample_type_id, biosample_type_name 
@@ -880,7 +932,7 @@ sub get_experiment_select {
   my %args = @_;
 
   # Select currval?
-  if ( $args{current} && ref($args{current}) eq 'ARRAY' ) {
+  if ( ref($args{current}) eq 'ARRAY' ) {
     # stringify args if we were passed an arrayref
     $args{current} = join ",", @{$args{current}};
     $log->debug( "PARAM: $args{current}" . ref( $args{current} ) );
@@ -895,7 +947,7 @@ sub get_experiment_select {
   } elsif ( $args{accessible} ) {
     $project_list = join( ',', $sbeams->getAccessibleProjects() ) || '';
   }
-  my $project_list ||= $project_id;
+  $project_list ||= $project_id;
 
   my $project_constraint = "WHERE project_id IN ( $project_list )";
 
