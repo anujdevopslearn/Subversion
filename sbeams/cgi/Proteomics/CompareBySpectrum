@@ -303,7 +303,7 @@ sub handle_request {
   my $i_exp = 1;
   foreach my $id (@search_batch_ids) {
     my $tmp_constraint = $sbeams->parseConstraint2SQL(
-      constraint_column=>"$experiment_names{$id}",
+      constraint_column=>"$experiment_names{$id}->{cleaned}",
       constraint_type=>"flexible_float",
       constraint_name=>"Individual Probability Constraint",
       constraint_value=>$parameters{"probability_in_column_${i_exp}_constraint"} );
@@ -362,19 +362,19 @@ sub handle_request {
   my @tmp_columns3;
 
   foreach my $id (@search_batch_ids) {
-    push(@column_array, ["$experiment_names{$id}",
-      "STR($experiment_names{$id},7,3)",
-      "$experiment_names{$id}"] );
-    push(@tmp_columns2, ["$experiment_names{$id}__peptide",
-      "$experiment_names{$id}__peptide",
-      "$experiment_names{$id}__peptide"] );
-    push(@tmp_columns3, ["$experiment_names{$id}__cross_corr",
-      "$experiment_names{$id}__cross_corr",
-      "$experiment_names{$id}__cross_corr"] );
+    push(@column_array, ["$experiment_names{$id}->{cleaned}",
+      "STR($experiment_names{$id}->{cleaned},7,3)",
+      "$experiment_names{$id}->{cleaned}"] );
+    push(@tmp_columns2, ["$experiment_names{$id}->{cleaned}__peptide",
+      "$experiment_names{$id}->{cleaned}__peptide",
+      "$experiment_names{$id}->{cleaned}__peptide"] );
+    push(@tmp_columns3, ["$experiment_names{$id}->{cleaned}__cross_corr",
+      "$experiment_names{$id}->{cleaned}__cross_corr",
+      "$experiment_names{$id}->{cleaned}__cross_corr"] );
     push(@experiment_names_and_ids,$experiment_names{$id},$id);
-    $pivot_clause .= "	       SUM(CASE WHEN search_batch_subdir = '$experiment_names{$id}' THEN NULLIF(probability,0.0) ELSE 0.0 END) AS \"$experiment_names{$id}\",\n";
-    $pivot_clause2 .= "	       MAX(CASE WHEN search_batch_subdir = '$experiment_names{$id}' THEN peptide ELSE NULL END) AS \"$experiment_names{$id}__peptide\",\n";
-    $pivot_clause3 .= "	       MAX(CASE WHEN search_batch_subdir = '$experiment_names{$id}' THEN cross_corr ELSE NULL END) AS \"$experiment_names{$id}__cross_corr\",\n";
+    $pivot_clause .= "	       SUM(CASE WHEN search_batch_subdir = '$experiment_names{$id}->{original}' THEN NULLIF(probability,0.0) ELSE 0.0 END) AS \"$experiment_names{$id}->{cleaned}\",\n";
+    $pivot_clause2 .= "	       MAX(CASE WHEN search_batch_subdir = '$experiment_names{$id}->{original}' THEN peptide ELSE NULL END) AS \"$experiment_names{$id}->{cleaned}__peptide\",\n";
+    $pivot_clause3 .= "	       MAX(CASE WHEN search_batch_subdir = '$experiment_names{$id}->{original}' THEN cross_corr ELSE NULL END) AS \"$experiment_names{$id}->{cleaned}__cross_corr\",\n";
   }
   chop($pivot_clause3);
   chop($pivot_clause3);
@@ -630,7 +630,8 @@ sub getExperimentNames {
     my $set_tag = $row->[2];
     $set_tag =~ s/\W/_/g;
     my $search_batch_subdir = $row->[3];
-    $search_batch_subdir =~ s/\W/_/g;
+    my $cleaned_search_batch_subdir = $search_batch_subdir;
+    $cleaned_search_batch_subdir =~ s/\W/_/g;
 
     $need_subdirs = 1 if (exists($used_set_tags_hash{$set_tag}));
     #### Force used of subdirs for this query
@@ -638,7 +639,9 @@ sub getExperimentNames {
 
     $set_tag_hash{$search_batch_id} = $set_tag;
     $used_set_tags_hash{$set_tag} = 1;
-    $subdir_tag_hash{$search_batch_id} = $search_batch_subdir;
+    #### Added logic to allow returning of both unchanged and changed strings
+    $subdir_tag_hash{$search_batch_id}->{original} = $search_batch_subdir;
+    $subdir_tag_hash{$search_batch_id}->{cleaned} = $cleaned_search_batch_subdir;
 
     $allowed_experiment_tag = $experiment_tag unless ($allowed_experiment_tag);
     if ($experiment_tag ne $allowed_experiment_tag) {
