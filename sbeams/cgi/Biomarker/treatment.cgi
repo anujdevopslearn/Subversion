@@ -39,29 +39,65 @@ use constant DEFAULT_VOLUME => 10;
 
 { # Main 
 
+  } elsif ( $params->{apply_action} eq 'list_runs'  ) {
+    $content = $biomarker->lcms_run_list($params);
+
+  } else {
+    $content = get_lcms_form($params);
+  }
+
+  # Print cgi headers
+  $biomarker->printPageHeader();
+
+  # Don't think I really need this, but...
+  $sbeams->printUserContext();
+
+  print $content;
+  $sbeams->printCGIParams( $q );
+  $biomarker->printPageFooter();
+
+####
   # Authenticate user.
   my $current_username = $sbeams->Authenticate() || die "Authentication failed";
 
   # Process cgi parameters
   my $params = process_params();
 
-  # Print cgi headers
-  $biomarker->printPageHeader( -TITLE => 'Verify Samples');
-#  $sbeams->printCGIParams( $q );
+  my $content = 'placeholder';
+  $params->{apply_action} ||= 'new_treatment';
 
   # Decision block, what type of page are we going to display?
   if ( $params->{apply_action} eq 'process_treatment' ) {
     my $status = process_treatment( $params );
-    # Where to go from here? redirect?
-    print $status;
+
+    if ( $status !~ /Error/ ) { # Insertion completed OK
+      $sbeams->set_page_message( msg => $status, type => 'Info' );
+      $content = $biomarker->treatment_list($params);
+    } else {
+      # Give them back the page
+      $sbeams->set_page_message( msg => $status, type => 'Error' );
+      $q->delete( 'apply_action' );
+
+# Is this superfluous?
+      print $q->redirect( $q->self_url() );
+
+      exit;
+    }
 
   } elsif ( $params->{apply_action} eq 'Review' ) {
-    my $status = verify_change( $params );
+    $content = verify_change( $params );
+
+  } elsif ( $params->{apply_action} eq 'list_treatments' ) {
+    $content = $biomarker->treatment_list($params);
 
   } else {
-    print_treatment_form( $params );
+    $content = treatment_form( $params );
 
   }
+
+  # Print cgi headers
+  $biomarker->printPageHeader( -TITLE => 'Verify Samples');
+  print $content;
 
   $biomarker->printPageFooter();
 
@@ -334,14 +370,21 @@ sub process_treatment {
                                                     data_ref => $cache->{children} );
   };   # End eval block
 
+  my $status;
   if ( $@ ) {
     print STDERR "$@\n";
     $sbeams->rollback_transaction();
-    exit;
-  }  # End eval catch-error block
-  $sbeams->commit_transaction();
+    $status = "Error: Unable to create treatment/samples";
+  } else { 
+    my $cnt = scalar( keys( %{$cache->{children}} ) );
+    $status = "Successfully created treatment with $cnt new samples";
+    $sbeams->commit_transaction();
+  }# End eval catch-error block
+
   $sbeams->setAutoCommit( $ac );
   $sbeams->setRaiseError( $re );
+  return $status;
+
 
 }
 
@@ -420,8 +463,9 @@ sub verify_change {
   END
   print $verify_page;
   
-  my $error_ref = $sample_maps->{errors};
-  my $treatment_ref = $sample_maps->{treatment};
+  return $verify_page;
+#  my $error_ref = $sample_maps->{errors};
+#  my $treatment_ref = $sample_maps->{treatment};
 
   # Print message about how many samples were specified, and show
   # sample->sample mapping
