@@ -115,7 +115,7 @@ sub main {
     ## If no parameters are defined, set up some defaults to help with browsing
     ## until I get a help menu set-up
     if ( !exists $parameters{'searchWithinThis'}  && !exists $parameters{'searchForThis'}
-         && ( !exists $parameters{'atlas_build_name'}  || !exists $parameters{'atlas_build_id'} ) ) {
+         && ( !exists $parameters{'atlas_build_name'}  && !exists $parameters{'atlas_build_id'} ) ) {
 
         $parameters{'atlas_build_name'} = "Human_P0.9_Ens30_NCBI35";
 
