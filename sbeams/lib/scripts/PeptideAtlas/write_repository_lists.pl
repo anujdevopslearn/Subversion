@@ -21,7 +21,7 @@ use lib "$FindBin::Bin/../../perl";
 use vars qw ($sbeams $sbeamsMOD $current_username 
              $PROG_NAME $USAGE %OPTIONS $TEST 
              $repository_dir $public_outfile $notpublic_outfile 
-             $data_root_dir $errorfile
+             $data_root_dir $errorfile 
             );
 
 #### Set up SBEAMS core module
@@ -48,17 +48,20 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 $USAGE = <<EOU;
 Usage: [OPTIONS] key=value key=value ...
 Options:
-  --test      test this code
+  --test             test this code
 
-  --run       run program
+  --run              run program
+
+  --make_tmp_files   output files are named rep*.tmp to minimize 
+                     interruption of active download service
 
  e.g.:  $PROG_NAME --run
 
 EOU
 
-GetOptions(\%OPTIONS, "test", "run");
+GetOptions(\%OPTIONS, "test", "run", "make_tmp_files");
 
-unless ( $OPTIONS{"test"}, $OPTIONS{"run"} )
+unless ( $OPTIONS{"test"}, $OPTIONS{"run"}, $OPTIONS{"make_tmp_files"} )
 {
 
     print "$USAGE";
@@ -69,6 +72,7 @@ unless ( $OPTIONS{"test"}, $OPTIONS{"run"} )
 
 
 $TEST = $OPTIONS{"test"} || 0;
+
 
 
 ## repository path:
@@ -84,12 +88,22 @@ if ($TEST)
 ## root dir of SBEAMS experiments:
 $data_root_dir = "/sbeams/archive"; 
 
+
 ## paths for output files:
 $public_outfile = "$repository_dir/repository_public.txt";
 
 $notpublic_outfile = "$repository_dir/repository_notpublic.txt";
 
 $errorfile = "$repository_dir/errorfile.txt";
+
+if ( $OPTIONS{"make_tmp_files"} )
+{
+
+    $public_outfile = $public_outfile . ".tmp";    
+
+    $notpublic_outfile = $notpublic_outfile . ".tmp";    
+
+}
 
 main();
 
@@ -322,7 +336,7 @@ sub write_public_file()
 
             file_suffix => "searched",
 
-            file_pattern => "inter* ASAP*",
+            file_pattern => "inter* ASAP* *.tgz *.html sequest.params",
 
         );
 
@@ -629,6 +643,8 @@ sub get_data_location
         system $cmd;
 
         $cmd = "ls $file_pattern > $filelist";
+##      try this next round:
+#       $cmd = "find $data_dir -name \'$file_pattern\' -print > $filelist";
 
         system $cmd;
 
