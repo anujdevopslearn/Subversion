@@ -330,6 +330,9 @@ AT_synthesized_peptide	14	was_synthesized	Was Synthesized	char	1	0	Y		N			Y	text
 AT_search_key	1	search_key_id	Search Key ID	int	4	0	N		Y										
 AT_search_key	2	search_key_name	Search Key Name	varchar	255	0	N		N										
 AT_search_key	3	search_key_type	Search Key Type	varchar	50	0	N		N										
-AT_search_key	4	resource_name	Resource Name	varchar	255	0	N		N										
-AT_search_key	5	resource_type	Resource Type	varchar	50	0	N		N										
-AT_search_key	6	resource_url	Resource URL	varchar	255	0	N		N										
+AT_search_key	4	search_key_dbxref_id	DBXRef ID	int	4	0	N		N										
+AT_search_key	5	organism_id	Organism ID	int	4	0	N		N										
+AT_search_key	6	resource_name	Resource Name	varchar	255	0	N		N										
+AT_search_key	7	resource_type	Resource Type	varchar	50	0	N		N										
+AT_search_key	8	resource_url	Resource URL	varchar	255	0	N		N										
+AT_search_key	9	resource_n_matches	Resource N Matches	int	4	0	N		N										
