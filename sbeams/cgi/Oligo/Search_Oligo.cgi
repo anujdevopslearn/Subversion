@@ -37,10 +37,6 @@ use SBEAMS::Connection;
 use SBEAMS::Connection::Settings;
 use SBEAMS::Connection::Tables;
 
-use SBEAMS::Oligo;
-use SBEAMS::Oligo::Settings;
-use SBEAMS::Oligo::Tables;
-
 use SBEAMS::ProteinStructure;
 use SBEAMS::ProteinStructure::Settings;
 use SBEAMS::ProteinStructure::Tables;
