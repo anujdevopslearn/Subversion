@@ -41,6 +41,10 @@ use SBEAMS::ProteinStructure;
 use SBEAMS::ProteinStructure::Settings;
 use SBEAMS::ProteinStructure::Tables;
 
+use SBEAMS::Oligo;
+use SBEAMS::Oligo::Settings;
+use SBEAMS::Oligo::Tables;
+
 $sbeams = new SBEAMS::Connection;
 $sbeamsMOD = new SBEAMS::Oligo;
 $sbeamsMOD->setSBEAMS($sbeams);
