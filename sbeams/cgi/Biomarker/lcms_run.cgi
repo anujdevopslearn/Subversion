@@ -24,6 +24,7 @@ use SBEAMS::Connection::Settings;
 use SBEAMS::Biomarker;
 use SBEAMS::Biomarker::Biosample;
 use SBEAMS::Biomarker::Settings;
+use SBEAMS::Biomarker::Tables;
 
 
 ## Globals ##
@@ -69,6 +70,12 @@ use constant DEFAULT_VOLUME => 10;
   } elsif ( $params->{apply_action} eq 'list_runs'  ) {
     $content = $biomarker->lcms_run_list($params);
 
+  } elsif ( $params->{apply_action} eq 'download'  ) {
+    download_run($params);
+
+  } elsif ( $params->{apply_action} eq 'run_details'  ) {
+    run_details($params);
+
   } else {
     $content = get_lcms_form($params);
   }
@@ -80,7 +87,7 @@ use constant DEFAULT_VOLUME => 10;
   $sbeams->printUserContext();
 
   print $content;
-  $sbeams->printCGIParams( $q );
+#  $sbeams->printCGIParams( $q );
   $biomarker->printPageFooter();
 
 } # end Main
@@ -340,3 +347,30 @@ sub create_run {
   $sbeams->setRaiseError( $re );
   return "LC/MS run $params->{ms_run_name} created with $cnt samples";
 }
+
+sub download_run {
+  my $params = shift;
+  die "Missing parameter run_id" unless $params->{ms_run_id};
+  my $sql = qq~ 
+  SELECT * from $TBBM_MS_RUN mr
+  JOIN $TBBM_MS_RUN_SAMPLE rs ON mr.ms_run_id = rs.ms_run_id
+  WHERE mr.ms_run_id = $params->{ms_run_id}
+  ~;
+
+  my @rows = $sbeams->selectSeveralColumns( $sql );
+  print $q->header( -type=>'TEXT/TSV' );
+  for my $row ( @rows ) {
+    print join "\t", @$row;
+  }
+  exit;
+}
+
+sub run_details {
+  my $params = shift;
+  $sbeams->set_page_message( msg => 'Show details functionality is not yet complete', type => 'Info' );
+  $q->delete( $q->param() );
+  my $url = $q->self_url() . "?apply_action=list_runs";
+  print $q->redirect( $url );
+  exit;
+}
+

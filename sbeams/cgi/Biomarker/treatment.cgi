@@ -39,24 +39,6 @@ use constant DEFAULT_VOLUME => 10;
 
 { # Main 
 
-  } elsif ( $params->{apply_action} eq 'list_runs'  ) {
-    $content = $biomarker->lcms_run_list($params);
-
-  } else {
-    $content = get_lcms_form($params);
-  }
-
-  # Print cgi headers
-  $biomarker->printPageHeader();
-
-  # Don't think I really need this, but...
-  $sbeams->printUserContext();
-
-  print $content;
-  $sbeams->printCGIParams( $q );
-  $biomarker->printPageFooter();
-
-####
   # Authenticate user.
   my $current_username = $sbeams->Authenticate() || die "Authentication failed";
 
@@ -80,7 +62,6 @@ use constant DEFAULT_VOLUME => 10;
 
 # Is this superfluous?
       print $q->redirect( $q->self_url() );
-
       exit;
     }
 
@@ -90,15 +71,20 @@ use constant DEFAULT_VOLUME => 10;
   } elsif ( $params->{apply_action} eq 'list_treatments' ) {
     $content = $biomarker->treatment_list($params);
 
+  } elsif ( $params->{apply_action} eq 'treatment_details' ) {
+    treatment_details( $params );
+
   } else {
     $content = treatment_form( $params );
 
   }
 
   # Print cgi headers
-  $biomarker->printPageHeader( -TITLE => 'Verify Samples');
-  print $content;
+  $biomarker->printPageHeader();
+  # Don't think I really need this, but...
+  $sbeams->printUserContext();
 
+  print $content;
   $biomarker->printPageFooter();
 
 } # end Main
@@ -125,7 +111,7 @@ sub process_params {
 #+
 # Print treatment form
 #-
-sub print_treatment_form {
+sub treatment_form {
 
   my $params = shift;
 
@@ -134,9 +120,6 @@ sub print_treatment_form {
 
   # hash of labels for form
   my %labels = get_labels_hash( $params );
-
-  # Don't think I really need this, but...
-  $sbeams->printUserContext();
 
   my $ftable = SBEAMS::Connection::DataTable->new( BORDER => 0, 
                                               CELLSPACING => 2,
@@ -180,7 +163,7 @@ sub print_treatment_form {
   my $expt_js = $biomarker->get_experiment_change_js('sample_treatment');
 
   # Print form
-  print <<"  END";
+  return <<"  END";
   <H2>New sample treatment</H2><BR>
   $expt_js
   <FORM NAME=sample_treatment METHOD=POST>
@@ -194,7 +177,7 @@ sub print_treatment_form {
 	<BR>
   END
 
-} # end print_treatment_form
+} # end treatment_form
 
 #+
 #
@@ -349,7 +332,7 @@ sub process_treatment {
   my $params = shift;
   my $cache = $sbeams->getSessionAttribute( key => $params->{_session_key} );
   for ( keys( %$cache ) ) {
-    print "$_ => $cache->{$_}<BR>";
+    print STDERR "$_ => $cache->{$_}\n";
   }
   my $treat = $cache->{treatment};
 #  for ( keys %$treat ) { print "$_ => $treat->{$_}<BR>"; }
@@ -376,7 +359,17 @@ sub process_treatment {
     $sbeams->rollback_transaction();
     $status = "Error: Unable to create treatment/samples";
   } else { 
+
+    # want to calculate the number of new samples created.  $cache->{children}
+    # is a hash keyed by parent_biosample_id and a arrayref of individual kids
+    # as a value.  
     my $cnt = scalar( keys( %{$cache->{children}} ) );
+    for my $child ( keys(  %{$cache->{children}} ) ) {
+      my $reps = scalar( @{$cache->{children}->{$child}} );
+      $cnt = $cnt * $reps;
+      last;  # Just need the first one
+    }
+
     $status = "Successfully created treatment with $cnt new samples";
     $sbeams->commit_transaction();
   }# End eval catch-error block
@@ -384,8 +377,6 @@ sub process_treatment {
   $sbeams->setAutoCommit( $ac );
   $sbeams->setRaiseError( $re );
   return $status;
-
-
 }
 
 #+
@@ -461,7 +452,6 @@ sub verify_change {
   </FORM>
 	<BR>
   END
-  print $verify_page;
   
   return $verify_page;
 #  my $error_ref = $sample_maps->{errors};
@@ -494,5 +484,14 @@ sub get_treatment_summary {
                        ALIGN => 'LEFT' );
 
   return $table;
+}
+
+sub treatment_details {
+  my $params = shift;
+  $sbeams->set_page_message( msg => 'Show details functionality is not yet complete', type => 'Info' );
+  $q->delete( $q->param() );
+  my $url = $q->self_url() . "?apply_action=list_treatments";
+  print $q->redirect( $url );
+  exit;
 }
 

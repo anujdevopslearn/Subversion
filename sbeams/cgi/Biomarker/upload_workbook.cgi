@@ -37,9 +37,15 @@ main();
 sub main { 
   my $current_username = $sbeams->Authenticate() || die "Authentication failed";
 
-  $biomarker->printPageHeader();
   my $params = process_params();
-  print_upload_form( $params );
+  $params->{apply_action} ||= 'show form';
+
+  if ( $params->{apply_action} eq 'Upload file' ) {
+    process_upload( $params );
+  } elsif ( $params->{apply_action} eq 'show form' ) {
+    $biomarker->printPageHeader();
+    print_upload_form( $params );
+  }
   $biomarker->printPageFooter();
 
 } # end main
@@ -61,21 +67,38 @@ sub print_upload_form {
   
   my $pad = '&nbsp;' x 5;
   my $namelist = $biomarker->get_experiment_select();
+  my $template_link = "$pad<A HREF=$HTML_BASE_DIR/doc/Biomarker/workbook_template.xls>download template</A>";
+  my @buttons = $biomarker->get_form_buttons( name => 'apply_action', 
+                                             value => 'Upload file', 
+                                             types => [ qw(submit reset) ] );
+  my $buttons = join $pad, @buttons;
 
   print <<"  END";
   <H1>Upload samples</H1>
   <FORM>
-  <TABLE>
-  <TR><TD ALIGN=RIGHT><B>Experiment name:</B></TD><TD>$namelist</TD></TR>
-  <TR><TD ALIGN=RIGHT><B>Workbook file:</B></TD><TD><INPUT TYPE=FILE SIZE=30></TD></TR>
+  <TABLE BORDER=0>
+  <TR><TD ALIGN=RIGHT><B>Experiment:</B></TD><TD>$namelist</TD></TR>
+  <TR><TD ALIGN=RIGHT><B>Upload name:</B></TD><TD><INPUT TYPE=TEXT SIZE=30></TD></TR>
+  <TR><TD ALIGN=RIGHT><B>Sample file:</B></TD><TD><INPUT TYPE=FILE NAME=workbook SIZE=30>$template_link</TD></TR>
   <TR><TD ALIGN=RIGHT><B>Type:</B></TD>
-    <TD>$pad Excel <INPUT TYPE=RADIO NAME=type CHECKED VALUE=xls</INPUT>
-    Tab-text <INPUT TYPE=RADIO NAME=type VALUE=tabtext </INPUT></TD>
+    <TD>$pad Excel <INPUT TYPE=RADIO NAME=type CHECKED VALUE=xls></INPUT>
+    Tab-text <INPUT TYPE=RADIO NAME=type VALUE=tabtext> </INPUT></TD>
   </TR>
+  <TR><TD></TD><TD ALIGN=LEFT>$buttons</TD></TR>
+  </TABLE>
   </FORM>
 	<BR>
   END
+#<TR><TD COLSPAN=2 ALIGN=CENTER>$buttons</TD>
 
 } # end showMainPage
 
+sub process_upload {
+  my $params = shift;
+  $sbeams->set_page_message( msg => 'This functionality is not yet complete', type => 'Info' );
+  $q->delete( 'apply_action' );
+  $q->delete( 'workbook' );
+  print $q->redirect( $q->self_url() );
+  exit;
+}
 
