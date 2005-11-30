@@ -50,9 +50,21 @@ sub new
 
 
 ###############################################################################
-# 
+# printTabMenu
 ###############################################################################
-sub printTabMenu 
+sub printTabMenu {
+  my $self = shift;
+
+  my $tabMenu = $self->getTabMenu(@_);
+
+  print $tabMenu->asHTML();
+}
+
+
+###############################################################################
+# getTabMenu
+###############################################################################
+sub getTabMenu
 {
 
     my $self = shift;
@@ -63,51 +75,41 @@ sub printTabMenu
 
     ## read in parameters, and store in a string to be use with url's
     my $parameters_ref = $args{parameters_ref};
-
     my %parametersHash = %{$parameters_ref};
+
 
     ## parse PROG_NAME to learn tab number
     my $PROG_NAME = $args{program_name};
-    ##print "PROG_NAME:$PROG_NAME<BR>";
 
     my $current_tab=1;
-    
-    if ( ($PROG_NAME =~ /^GetPeptides/) || 
-    ($PROG_NAME =~ /^GetPeptides\?(\S+)/ ))
+
+    if ( ($PROG_NAME =~ /^main.cgi/) ||
+    ($PROG_NAME =~ /^main.cgi\?(\S+)/ ))
     {
        $current_tab=2;
 
-    } elsif( ($PROG_NAME =~ /^GetPeptide/) || 
-    ($PROG_NAME =~ /^GetPeptide\?(\S+)/ ))
+    } elsif( ($PROG_NAME =~ /^Search/) ||
+    ($PROG_NAME =~ /^Search\?(\S+)/ ))
+    {
+       $current_tab=1;
+
+    } elsif( ($PROG_NAME =~ /^GetPeptides/) ||
+    ($PROG_NAME =~ /^GetPeptides\?(\S+)/ ))
     {
        $current_tab=3;
+
+    } elsif( ($PROG_NAME =~ /^GetPeptide/) ||
+    ($PROG_NAME =~ /^GetPeptide\?(\S+)/ ))
+    {
+       $current_tab=4;
 
     } elsif ( ($PROG_NAME =~ /^GetProtein/) ||
     ($PROG_NAME =~ /GetProtein\?(\S+)/ ))
     {
-       $current_tab=4;
+       $current_tab=5;
 
     }
 
-    my $paramString = "\?_tab=$current_tab";
-    ##print "PARAM_STRING:$paramString<BR>";
-
-    ## add parameters to tail of string for url
-    foreach my $key (%parametersHash)
-    {
-
-        my $value = $parametersHash{$key};
-
-        unless ($value eq '')
-        {
-            unless ($value eq '' || $key eq "_tab")
-            {
-               ##print "&nbsp;&nbsp;&nbsp;KEY:&nbsp;$key&nbsp;=&nbsp;$value<BR>";
-               $paramString = "$paramString&$key=$value";
-            }
-        }
-    }
-     
 
     ## set up tab structure:
     my $tabmenu = SBEAMS::Connection::TabMenu->
@@ -126,56 +128,49 @@ sub printTabMenu
              # _tabs => [ 'placeholder' ]
     );
 
-    $tabmenu->addTab( label => 'Select PeptideAtlas',
-                      helptext => 'Select a PeptideAtlas to be used in neighboring tabs',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/main.cgi$paramString" 
+
+    $tabmenu->addTab( label => 'Search',
+                      helptext => 'Search PeptideAtlas by keyword',
+                      URL => "$CGI_BASE_DIR/PeptideAtlas/Search"
+                    );
+
+    $tabmenu->addTab( label => 'Select Build',
+                      helptext => 'Select a preferred PeptideAtlas build',
+                      URL => "$CGI_BASE_DIR/PeptideAtlas/main.cgi"
                     );
 
     $tabmenu->addTab( label => 'Browse Peptides',
                       helptext => 'Multi-constraint browsing of PeptideAtlas',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides$paramString" 
+                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides"
                     );
 
-    $tabmenu->addTab( label => 'Get Peptide',
-                      helptext => 'Look-up info on a peptide by sequence or name',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide$paramString"
+    $tabmenu->addTab( label => 'Peptide',
+                      helptext => 'View information about a peptide',
+                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide"
                     );
 
-#   $tabmenu->addTab( label => 'Browse Proteins',
-#                     helptext => 'Not implemented yet',
-#                     URL => "$CGI_BASE_DIR/PeptideAtlas/main.cgi"
-#                     );
-
-    $tabmenu->addTab( label => 'Get Protein',
-                      helptext => 'Get an observation summary of a protein',
-                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetProtein$paramString"
+    $tabmenu->addTab( label => 'Protein',
+                      helptext => 'View information about a protein',
+                      URL => "$CGI_BASE_DIR/PeptideAtlas/GetProtein"
                     );
 
     $tabmenu->setCurrentTab( currtab => $current_tab );
 
-    my $content;
-
-    if ( $tabmenu->getActiveTabName() eq 'Browse Proteins' ){
-
-        $content = "<BR><BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<b>"
-           ."[coming soon, not implemented yet]<B><BR><BR>";
-
-    }
-
     $tabmenu->addHRule();
 
-    $tabmenu->addContent( $content );
-
-    ##print "ACTIVE_TAB:".$tabmenu->getActiveTab()."<BR>";
-    ##print "paramString:$paramString<BR>";
-    print "$tabmenu";
-
-    return $paramString;
+    return($tabmenu);
 
 }
 
+
+###############################################################################
 1;
 __END__
+
+
+###############################################################################
+###############################################################################
+###############################################################################
 # Below is stub documentation for your module. You'd better edit it!
 
 =head1 NAME
