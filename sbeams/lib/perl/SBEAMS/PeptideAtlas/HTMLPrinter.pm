@@ -137,7 +137,7 @@ sub displayUnipepHeader {
   } else {
     $LOGIN_URI .= "?force_login=yes";
   }
-  my $LOGIN_LINK = qq~<A HREF="$LOGIN_URI" class="Nav_link">LOGIN</A>~;
+  my $LOGIN_LINK = qq~<A HREF="$LOGIN_URI" class="leftnavlink">LOGIN</A>~;
 
 
   #### Obtain main SBEAMS object and use its http_header
@@ -323,6 +323,7 @@ sub displayGuestPageHeader {
   use HTTP::Request;
   my $ua = LWP::UserAgent->new();
   my $skinLink = 'http://www.peptideatlas.org';
+  #my $skinLink = 'http://dbtmp.systemsbiology.net/';
   my $response = $ua->request( HTTP::Request->new( GET => "$skinLink/.index.dbbrowse.php" ) );
   my @page = split( "\r", $response->content() );
   my $skin = '';
@@ -331,8 +332,9 @@ sub displayGuestPageHeader {
     last if $_ =~ /--- Main Page Content ---/;
     $skin .= $_;
   }
-  $skin =~ s/\/images\//\/sbeams\/images\//gm;
- 
+  $skin =~ s#/images/#/sbeams/images/#gm;
+  #$skin =~ s#/images/#/dev2/sbeams/images/#gm;
+
   print "$http_header\n\n";
   print <<"  END_PAGE";
   <HTML>
@@ -547,8 +549,12 @@ sub display_page_footer {
 
   #### If finishing up the page completely is desired
   if ($display_footer eq 'YES') {
+    my $close_main_tables = 'NO';
+    $close_main_tables = 'YES' unless ($close_tables eq 'YES');
+
     #### Default to the Core footer
-    $sbeams->display_page_footer(display_footer=>'YES');
+    $sbeams->display_page_footer(display_footer=>'YES',
+      close_tables=>$close_main_tables);
   }
 
 }
