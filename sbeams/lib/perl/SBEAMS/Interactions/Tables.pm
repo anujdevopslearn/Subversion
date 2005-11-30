@@ -46,6 +46,7 @@ use vars qw(@ISA @EXPORT
 		
 		$TBIN_BIOENTITY_RECORDS
 		$TBIN_BIOENTITY_LOCUSLINK
+		$TBIN_LOCI
 		$TBIN_ALIASPROTEINS	
 		$TBIN_ALIASSYMBOLS	
 		$TBIN_REFSEQ
@@ -86,6 +87,7 @@ require Exporter;
 		
 		$TBIN_BIOENTITY_RECORDS
 		$TBIN_BIOENTITY_LOCUSLINK
+		$TBIN_LOCI
 		$TBIN_ALIASPROTEINS	
 		$TBIN_ALIASSYMBOLS	
 		$TBIN_REFSEQ
@@ -129,6 +131,10 @@ $TBIN_BIOSEQUENCE_DBXREF          = "${mod}dbxref";
 
 $TBIN_BIOENTITY_RECORDS						= "${mod}bioentity_records";
 $TBIN_BIOENTITY_LOCUSLINK					= "${mod}bioentity_locuslink";
+
+# FIXME!!
+$TBIN_LOCI	                			= "locuslink.dbo.loci";
+
 $TBIN_ALIASPROTEINS								= "${mod}aliasproteins";
 $TBIN_ALIASSYMBOLS								= "${mod}aliassymbols";
 $TBIN_REFSEQ											= "${mod}refseq";
