@@ -143,32 +143,29 @@ sub handle_request {
     || die "ref_parameters not passed";
   my %parameters = %{$ref_parameters};
 
-    print <<"    END" if ($sbeams->output_mode() eq 'html');
-        <BR>
-    END
+
+  #### Show current user context information
+  print "<BR>\n" if ($sbeams->output_mode() eq 'html');
+  #$sbeams->printUserContext();
+
+  #### Get the HTML to display the tabs
+  my $tabMenu = $sbeamsMOD->getTabMenu(
+    parameters_ref => \%parameters,
+    program_name => $PROG_NAME,
+  );
+  print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
 
 
-
-  ## if tab menu is requested, display tabs and append parameters to PROG_NAME
-# if ( $parameters{_tab} )
-  if ($sbeams->output_mode() eq 'html')
-  {
-      ## filter parameters:
-      filterParameters(
-          query_parameters_ref=>\%parameters
-      );
-
-      my $parameters_string = $sbeamsMOD->printTabMenu(
-          parameters_ref => \%parameters,
-          program_name => $PROG_NAME,
-          );
-
-      #print "<BR>parameter_string:$parameters_string<BR>";
-
-      $PROG_NAME = $PROG_NAME.$parameters_string;
+  #### Get the current atlas_build_id based on parameters or session
+  my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
+    parameters_ref => \%parameters,
+  );
+  if (defined($atlas_build_id) && $atlas_build_id < 0) {
+    return;
   }
+  $parameters{atlas_build_id} = $atlas_build_id;
 
-  
+
   #### Define some generic variables
   my ($i,$element,$key,$value,$line,$result,$sql);
 
@@ -187,11 +184,7 @@ sub handle_request {
   $TABLE_NAME="AT_GetPeptides" unless ($TABLE_NAME);
   ($PROGRAM_FILE_NAME) =
     $sbeamsMOD->returnTableInfo($TABLE_NAME,"PROGRAM_FILE_NAME");
-
-## night need to uncomment this next, but base_url probably okay...:
-# $PROGRAM_FILE_NAME = $PROG_NAME;
   my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME";
-# my $base_url = "$CGI_BASE_DIR/$SBEAMS_SUBDIR/$PROG_NAME";
 
   #### Get the columns and input types for this table/query
   my @columns = $sbeamsMOD->returnTableInfo($TABLE_NAME,"ordered_columns");
@@ -229,8 +222,6 @@ sub handle_request {
 
 
   #### Display the user-interaction input form
-## mightneed to put back PROGRAM_FILE_NAME here
-#   PROGRAM_FILE_NAME=>$PROGRAM_FILE_NAME,
   $sbeams->display_input_form(
     TABLE_NAME=>$TABLE_NAME,CATEGORY=>$CATEGORY,apply_action=>$apply_action,
     PROGRAM_FILE_NAME=>$PROG_NAME,
@@ -239,12 +230,6 @@ sub handle_request {
     mask_user_context=> '1',
   );
 
-  #for (my $i=0; $i<=$#columns;$i++){
-  #    print " columns[$i] = $columns[$i] <br>";
-  #}
-  #foreach my $k (keys %input_types){
-  #    print "key = $k<BR>&nbsp;&nbsp;&nbsp;value=$input_types{$k} <br>";
-  #}
 
   #### Display the form action buttons
   $sbeams->display_form_buttons(TABLE_NAME=>$TABLE_NAME);
@@ -576,10 +561,8 @@ sub handle_request {
 
 
   #### Define the hypertext links for columns that need them
-  if ( $parameters{atlas_build_id} == 48 ) {
-
-      %url_cols = (
-          'Biosequence Name' => "$CGI_BASE_DIR/PeptideAtlas/BrowseBioSequence.cgi?biosequence_name_constraint=\%$colnameidx{biosequence_name}V&apply_action=$pass_action",
+  %url_cols = (
+          'Biosequence Name' => "$CGI_BASE_DIR/PeptideAtlas/GetProtein?protein_name=\%$colnameidx{biosequence_name}V&apply_action=$pass_action",
           'Biosequence Name_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information about this protein\'; return true"',
 
           'Peptide Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$parameters{atlas_build_id}&searchWithinThis=Peptide+Name&searchForThis=\%$colnameidx{peptide_accession}V&action=QUERY",
@@ -598,27 +581,6 @@ sub handle_request {
           'Start Position_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show peptide in Ensembl DAS genome viewer\'; return true"',
       );
 
-  } else {
-
-      %url_cols = (
-          'Biosequence Name' => "$CGI_BASE_DIR/PeptideAtlas/BrowseBioSequence.cgi?biosequence_name_constraint=\%$colnameidx{biosequence_name}V&organism_id=$parameters{organism_id}&display_options=ShowExtraProteinProps&apply_action=$pass_action",
-          'Biosequence Name_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show more information about this protein\'; return true"',
-
-          'Peptide Accession' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$parameters{atlas_build_id}&searchWithinThis=Peptide+Name&searchForThis=\%$colnameidx{peptide_accession}V&action=QUERY",
-          'Peptide Accession_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show summary for this peptide\'; return true"',
-
-          'Peptide Sequence' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$parameters{atlas_build_id}&searchWithinThis=Peptide+Sequence&searchForThis=\%$colnameidx{peptide_sequence}V&action=QUERY",
-          'Peptide Sequence_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show summary for this peptide\'; return true"',
-
-          'Peptides that include this sequence' => "$CGI_BASE_DIR/PeptideAtlas/GetPeptides?_tab=2&atlas_build_id=$parameters{atlas_build_id}&peptide_ids_constraint=\%$colnameidx{is_subpeptide_of}V&action=QUERY",
-          'Peptides that include this sequence_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show peptides with these IDs\'; return true"',
-
-          'Sample IDs'  => "$CGI_BASE_DIR/PeptideAtlas/GetPeptide?_tab=3&atlas_build_id=$parameters{atlas_build_id}&searchWithinThis=Peptide+Name&searchForThis=\%$colnameidx{peptide_accession}V&action=QUERY",
-          'Sample IDs_ATAG' => 'TARGET="Win1" ONMOUSEOVER="window.status=\'Show sample summaries for this peptide\'; return true"',
-      );
-
-  }
-
 
   #### Define columns that should be hidden in the output table
   %hidden_cols = (
@@ -635,54 +597,6 @@ sub handle_request {
   #########################################################################
   #### If QUERY or VIEWRESULTSET was selected, display the data
   if ($apply_action =~ /QUERY/i || $apply_action eq "VIEWRESULTSET") {
-
-    ## have to filter %parameters{'rs_<*>'} as without filter, will see each page
-    ## query added on and only first will be used in display below
-    ## filter to retain only latest rs_set_name:
-    filterParameters(
-        query_parameters_ref=>\%parameters
-    );
-    ## filtering rs_params:
-    $rs_params{'rs_set_name'} =~ /(.*)(query_\S+)$/;
-    $rs_params{'rs_set_name'} = $2;
-    $rs_params{'set_name'} =~ /(.*)(query_\S+)$/;
-    $rs_params{'set_name'} = $2;
-    if ( $rs_params{'apply_action'} =~ /(\S+),(\S+)/ )
-    {
-        $rs_params{'apply_action'} = $2;
-    }
-    if ( $rs_params{'rs_page_size'} =~ /(\S+),(\d+)/)
-    {
-        $rs_params{'rs_page_size'} = $2;
-    }
-    if ( $rs_params{'rs_page_number'} =~ /(\S+),(\d+)/)
-    {
-        $rs_params{'rs_page_number'} = $2;
-    }
-    if ( $rs_params{'page_size'} =~ /(\S+),(\d+)/)
-    {
-        $rs_params{'page_size'} = $2;
-    }
-
-    ## and re-setting the %parameters which are in %rs_params:
-    $parameters{'apply_action'} = $rs_params{'apply_action'};
-    $parameters{'rs_set_name'} = $rs_params{'rs_set_name'};
-    $parameters{'action'} = $rs_params{'action'};
-    $parameters{'rs_page_size'} = $rs_params{'rs_page_size'};
-    $parameters{'rs_page_number'} = $rs_params{'rs_page_number'};
-
-#   ##xxxxxxx
-#   #$sbeams->printDebuggingInfo($q);
-#   print "<BR><BR>BEFORE POST-PROCESSING (PARAMETERS)<BR>";
-#   foreach my $key (keys %parameters)
-#   {
-#      print "$key:$parameters{$key}<BR>";
-#   }
-#   print "<BR><BR>BEFORE POST-PROCESSING (RS_PARAMS)<BR><BR>";
-#   foreach my $key (keys %rs_params)
-#   {
-#      print "$key:$rs_params{$key}<BR>";
-#   }
 
     #### If the action contained QUERY, then fetch the results from
     #### the database
@@ -705,19 +619,6 @@ sub handle_request {
         column_titles_ref=>\@column_titles,
       ) if ($parameters{display_options} =~ /DASFormat/i);
 
-#     ##xxxxxxx
-#     #$sbeams->printDebuggingInfo($q);
-#     print "<BR><BR>AFTER POST-PROCESSING (PARAMETERS)<BR>";
-#     foreach my $key (keys %parameters)
-#     {
-#        print "$key:$parameters{$key}<BR>";
-#     }
-#     print "<BR><BR>AFTER POST-PROCESSING (RS_PARAMS)<BR><BR>";
-#     foreach my $key (keys %rs_params)
-#     {
-#        print "$key:$rs_params{$key}<BR>";
-#     }
-
       #### Store the resultset and parameters to disk resultset cache
       $rs_params{set_name} = "SETME";
       $sbeams->writeResultSet(
@@ -726,33 +627,9 @@ sub handle_request {
         query_parameters_ref=>\%parameters,
         resultset_params_ref=>\%rs_params,
         query_name=>"$SBEAMS_SUBDIR/$PROGRAM_FILE_NAME",
-#       query_name=>"$parameters{'QUERY_NAME'}",
-#       query_name=>"$parameters{'rs_set_name'}",
         column_titles_ref=>\@column_titles,
       );
     }
-
-    ##xxxxxxx
-    ##xxxxxxx
-    ## more debugging:
-#   print "$base_url<BR>";
-#   #$sbeams->printDebuggingInfo($q);
-#   print "<BR><BR>AFTER POST-PROCESSING (PARAMETERS)<BR>";
-#   foreach my $key (keys %parameters)
-#   {
-#       print "$key:$parameters{$key}<BR>";
-#   }
-#   print "<BR><BR>AFTER POST-PROCESSING (RS_PARAMS)<BR><BR>";
-#   foreach my $key (keys %rs_params)
-#   {
-#      print "$key:$rs_params{$key}<BR>";
-#   }
-#   for( int i = 0; i < $#column_titles; i++)
-#   {
-#      print "$column_titles[I4]<BR>";
-#   } 
-
-    
 
 
     #### Display the resultset
@@ -867,41 +744,3 @@ sub postProcessResultset {
 
 } # end postProcessResult
 
-###############################################################################
-# filterParameters
-#
-# removes second entries to parameters (the additional entries are a by-product
-# of passing parameters between tabbed pages)
-###############################################################################
-sub filterParameters {
-
-    my %args = @_;
-
-    my $query_parameters_ref = $args{'query_parameters_ref'};
-    my %parameters = %{$query_parameters_ref};
-
-    ## have to filter %parameters{'rs_<*>'} as without filter, will see each page
-    ## query added on and only first will be used in display below
-    ## filter to retain only latest rs_set_name:
-    $parameters{'rs_set_name'} =~ /(.*)(query_\S+)$/;
-    $parameters{'rs_set_name'} = $2;
-    ## filter to retain only latest page number if there's a comma:
-    if ( $parameters{'rs_page_number'} =~ /(\S+),(\d+)/)
-    {
-        $parameters{'rs_page_number'} = $2;
-    }
-    ## filter to retain only latest page size if there's a comma:
-    if ( $parameters{'rs_page_size'} =~ /(\S+),(\d+)/)
-    {
-        $parameters{'rs_page_size'} = $2;
-    }
-    ## filter to retain only latest query_name if there's a comma:
-    if ( $parameters{'QUERY_NAME'} =~ /(\S+),(\S+)/)
-    {
-        $parameters{'QUERY_NAME'} = $2;
-    }
-    if ( $parameters{'apply_action'} =~ /(\S+),(\S+)/ )
-    {
-        $parameters{'apply_action'} = $2;
-    }
-}
