@@ -26,7 +26,7 @@ my $biomarker = SBEAMS::Biomarker->new();
 # Main
 {
   $sbeams->Authenticate();
-  $biomarker->setSBEAMS( $sbeams );
+  $biomarker->set_sbeams( $sbeams );
 
   my $params = processParams();
   
@@ -47,9 +47,9 @@ my $biomarker = SBEAMS::Biomarker->new();
   $p->process_data();
 
   my $biosource = SBEAMS::Biomarker::Biosource->new();
-  $biosource->setSBEAMS( $sbeams );
+  $biosource->set_sbeams( $sbeams );
   my $biosample = SBEAMS::Biomarker::Biosample->new();
-  $biosample->setSBEAMS( $sbeams );
+  $biosample->set_sbeams( $sbeams );
 
   my $group;
 
@@ -163,7 +163,8 @@ sub add_items {
          $args{biosource}->create_tissues( tissue_type => $results->{tissue_type} );
          $args{biosample}->createStorageLoc( strg_loc => $results->{storage_loc} );
 
-         my $name =   'upload-' . $sbeams->get_datetime() . '-' . $params{experiment};
+         my $name = $params{group_tag} || 'upload-' . $sbeams->get_datetime() .
+                                          '-' . $params{experiment};
 
          my $grp_id = $biomarker->create_biogroup( group_name  => $name,
                                                    description => "Dataset uploaded via $0",
@@ -457,7 +458,7 @@ sub processParams {
   my %params;
   GetOptions( \%params, 'file_name=s', 'type=s', 'verbose',
                         'experiment=s', 'autocreate',
-                        'test_only');
+                        'test_only', 'group_tag=s' );
 
   $params{type} ||= 'xls';
   
@@ -490,6 +491,8 @@ sub printUsage {
 
   Arguements:
   -f --file_name     Filename of file_name file to upload
+  -g --group_tag     'group' for this file, will show up in database as
+                     the name of this collection of samples.
   -t --type          Type of file, either xls or tsv (defaults to xls) 
   -e --experiment    Tag (short name) of experiment in db in which to load data 
   -a --autocreate    autcreate attributes/diseases if they don't already exist 
