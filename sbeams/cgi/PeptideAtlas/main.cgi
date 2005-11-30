@@ -53,8 +53,8 @@ main();
 # Call $sbeams->Authentication and stop immediately if authentication
 # fails else continue.
 ###############################################################################
-sub main 
-{ 
+sub main
+{
     #### Do the SBEAMS authentication and exit if a username is not returned
     exit unless ($current_username = $sbeams->Authenticate(
         permitted_work_groups_ref=>['PeptideAtlas_user','PeptideAtlas_admin',
@@ -117,54 +117,27 @@ sub handle_request {
 
     my %parameters = %{$ref_parameters};
 
-    print <<"    END";
-        <BR>
-    END
 
-    my $atlas_build_id = $parameters{atlas_build_id} || '';
-
-    my $atlas_build_name = '';
-
-    ## only have atlas_build_name, get atlas_build_id too to pass on to neighboring cgi's
-    if ( $atlas_build_id )
-    {
-
-        my $sql = qq~
-            SELECT atlas_build_name
-            FROM $TBAT_ATLAS_BUILD
-            WHERE atlas_build_id = '$atlas_build_id'
-            AND record_status != 'D'
-            ~;
-
-        #$sbeams->display_sql(sql=>$sql);
-
-        my ($tmp) = $sbeams->selectOneColumn($sql) or
-            die "Cannot complete $sql ($!)";
-
-        if ($tmp)
-        {
-
-            $parameters{atlas_build_name} = $tmp;
-
-        }
-
-    }
+  #### Get the current atlas_build_id based on parameters or session
+  my $atlas_build_id = $sbeamsMOD->getCurrentAtlasBuildID(
+    parameters_ref => \%parameters,
+  );
+  if (defined($atlas_build_id) && $atlas_build_id < 0) {
+    return;
+  }
 
 
-    ## if tab menu is requested, display tabs and append parameters to PROG_NAME
-#   if ( $parameters{_tab} )
-#   {
-        my $parameters_string = $sbeamsMOD->printTabMenu(
-            parameters_ref => \%parameters,
-            program_name => $PROG_NAME,
-            );
+  #### Get the HTML to display the tabs
+  my $tabMenu = $sbeamsMOD->getTabMenu(
+    parameters_ref => \%parameters,
+    program_name => $PROG_NAME,
+  );
+  if ($sbeams->output_mode() eq 'html') {
+    print "<BR>\n";
+    print $tabMenu->asHTML() if ($sbeams->output_mode() eq 'html');
+    print "<BR>\n";
+  }
 
-        ##print "<BR>parameters_string:$parameters_string<BR>";
-
-        $PROG_NAME = $PROG_NAME.$parameters_string;
-#   }
-
-    print "<BR>";
 
     #### Read in the standard form values
     my $apply_action  = $parameters{'action'} || $parameters{'apply_action'};
@@ -181,88 +154,75 @@ sub handle_request {
     my @accessible_project_ids = $sbeams->getAccessibleProjects();
     my $accessible_project_ids = join( ",", @accessible_project_ids ) || '0';
 
-    #### Get a hash of available atlas builds
+    #### Get a list of available atlas builds
     my $sql = qq~
-        SELECT atlas_build_id,atlas_build_name
-        FROM $TBAT_ATLAS_BUILD
-        WHERE project_id IN ( $accessible_project_ids )
-        AND record_status!='D'
+        SELECT atlas_build_id,atlas_build_name,atlas_build_description
+          FROM $TBAT_ATLAS_BUILD
+         WHERE project_id IN ( $accessible_project_ids )
+           AND record_status!='D'
+         ORDER BY atlas_build_name
     ~;
-    my %atlas_build_names = $sbeams->selectTwoColumnHash($sql);
-    
-    #### Get a list of id's sorted by name
-    my $sql = qq~
-      SELECT atlas_build_id,atlas_build_name
-      FROM $TBAT_ATLAS_BUILD
-      WHERE project_id IN ( $accessible_project_ids )
-      AND record_status!='D'
-      ORDER BY atlas_build_name
-    ~;
-    my @ordered_atlas_build_ids = $sbeams->selectOneColumn($sql);
+    my @atlas_builds = $sbeams->selectSeveralColumns($sql);
 
-
-    #### Get the passed parameters
-    my $protein_name = $parameters{"protein_name"} || $parameters{"biosequence_name"};
-
-    #### If no atlas_build_id has been set, choose the latest human one.
-    #### FIXME. Come up with a better way of doing this.
-    unless ($atlas_build_id) {
-        $atlas_build_id = 48;
+    my $default_build_name = '';
+    foreach my $atlas_build ( @atlas_builds ) {
+      if ($atlas_build->[0] == $atlas_build_id) {
+	$default_build_name = $atlas_build->[1];
+      }
     }
-
 
     #### If the output_mode is HTML, then display the form
     if ($sbeams->output_mode() eq 'html') {
 
-        print "<P>";
-
-        print "<nobr>";
-
+        print qq~
+        <script LANGUAGE="Javascript">
+          function switchAtlasBuild() {
+            document.AtlasBuildList.apply_action.value = "GO";
+            document.AtlasBuildList.submit();
+          }
+        </script>
+        ~;
 
         print $q->start_form(-method=>"POST",
                              -action=>"$base_url",
+			     -name=>"AtlasBuildList",
                             );
 
-        print "PeptideAtlas Build: ";
-
-        print $q->popup_menu(-name => "atlas_build_id",
-                             -values => [ @ordered_atlas_build_ids ],
-                             -labels => \%atlas_build_names,
-                             -default => $atlas_build_id,
-                            );
-
-        print "&nbsp;&nbsp;";
-
-        print $q->submit(-name => "query",
-                         -value => 'QUERY',
-                         -label => 'SELECT');
-
-        print $q->endform;
-
-        print "</nobr>";
-
-        print "</P>";
-
-    }
-
-    $parameters{atlas_build_id} = $atlas_build_id;
-
-    my $sql = qq~
-        SELECT atlas_build_name
-        FROM $TBAT_ATLAS_BUILD
-        WHERE atlas_build_id = '$atlas_build_id'
-        AND record_status != 'D'
+        print qq~
+<P>Below is a listing of the PeptideAtlas builds available to
+you.  Your current default build is checked.  Other
+PeptideAtlas pages will show you information from the
+selected default build.  Click on any of the radio buttons
+below to select another build as your default. Your
+selection is stored in a cookie and future accesses
+to PeptideAtlas in this session will use the selected build</P>
+<P>Your current build is: <font color="red">$default_build_name</font></P>
         ~;
 
-    #$sbeams->display_sql(sql=>$sql);
+        print qq~<TABLE>~;
 
-    my ($tmp) = $sbeams->selectOneColumn($sql) or
-        die "Cannot complete $sql ($!)";
+	foreach my $atlas_build ( @atlas_builds ) {
+	  my $selected = '';
+	  if ($atlas_build->[0] == $atlas_build_id) {
+	    $selected = 'CHECKED ';
+	  }
+	  print qq~
+            <TR><TD><INPUT $selected TYPE="radio" NAME="atlas_build_id"
+                  VALUE="$atlas_build->[0]" onchange="switchAtlasBuild()"></TD>
+                <TD bgcolor="cccccc">$atlas_build->[1]</TD>
+                <TD bgcolor="eeeeee">$atlas_build->[2]</TD>
+            </TR>
 
-    if ($tmp)
-    {
+          ~;
+        }
+        print "</TABLE>";
 
-        $parameters{atlas_build_name} = $tmp;
+        #print $q->submit(-name => "query",
+        #                 -value => 'QUERY',
+        #                 -label => 'SELECT');
+        print $q->hidden( "apply_action", '');
+
+        print $q->endform;
 
     }
 
