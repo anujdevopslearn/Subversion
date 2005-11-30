@@ -834,21 +834,20 @@ sub predicted_pep_html{
     my $method = 'predicted_pep_html';
     my $self = shift;
 	my $features_aref = shift;
-	my $synth = ( $sbeams->isGuestUser() ) ? '' : $q->td("Synthesized Peptide" );
+	my $synth = ( $sbeams->isGuestUser() ) ? '' : $q->td( text_class("Synthesized Peptide") );
 	
 	my $html  = "<table>";
 	$html .= $q->Tr({class=>'rev_gray'},
 			       $q->td( $self->linkToColumnText(
 			       				display => "NXS/T<br>Location",
-								title   =>"Glyco Site Location within the protein", 
-								column  =>"protein_glyco_site_position", 
-								table   => "AT_glyco_site" )
+						    		title   =>"Glyco Site Location within the protein", 
+								    column  =>"protein_glyco_site_position", 
+							    	table   => "AT_glyco_site" )
 					         ),
-			        $q->td("Predicted Sequence"),
-			     	
-			     	$q->td("Predicted Mass"),
-			     	$q->td("Number Proteins<br>with Peptide"),
-            $synth
+			       $q->td( text_class("Predicted Sequence")),
+			     	 $q->td(text_class("Predicted Mass")),
+			     	 $q->td( {NOBR => 1}, text_class("# Proteins with Peptide")),
+             $synth
 			     );
 
 my $foo=<<'  END';
@@ -919,7 +918,7 @@ my $foo=<<'  END';
 			$protein_sim = $self->get_annotation(seq_obj =>$pep_seq_obj, 
 									 anno_type => 'protein_similarity_score');
 			$synthesized_seq = $self->get_annotation( seq_obj =>$pep_seq_obj, 
-									                        anno_type => 'synthesized_seq');
+									                        anno_type => 'synthesized_seq') unless $sbeams->isGuestUser();
       use Data::Dumper;
       my $dump = Dumper( $feature_href );
       $dump =~ s/\n/\<BR\>/g;
@@ -956,6 +955,11 @@ my $foo=<<'  END';
 }
 
 
+sub text_class {
+  my $text = shift;
+  return "<SPAN CLASS=rev_gray>$text</SPAN>";
+}
+
 ###############################################
 #identified_pep_html
 ##############################################
@@ -975,7 +979,7 @@ sub identified_pep_html{
 								 
 								)
 					),
-			        $q->td("Identifed Sequence"),
+			        $q->td(text_class("Identifed Sequence")),
 			     	$q->td($self->linkToColumnText(
 			       				display => "PeptideProphet Score",
 								title   => "PeptideProphet Score: 1 Best, 0 Worst", 
@@ -984,9 +988,9 @@ sub identified_pep_html{
 								)
 			     	
 			     	),
-			     	$q->td("Tryptic Ends"),
-			     	$q->td("Peptide Mass"),
-			     	$q->td("Tissues"),
+			     	$q->td(text_class("Tryptic Ends")),
+			     	$q->td(text_class("Peptide Mass")),
+			     	$q->td(text_class("Tissues")),
 			     );
 				 
 	
