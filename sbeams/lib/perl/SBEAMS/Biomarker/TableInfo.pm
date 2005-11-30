@@ -44,7 +44,7 @@ sub returnTableInfo {
   my $sql_query;
   my $result;
 
-  my $sbeams = $self->getSBEAMS();
+  my $sbeams = $self->get_sbeams();
   my $tinfo = $self->getTableProperties($table_name);
   my $cinfo = $self->getColumnProperties($table_name);
 
@@ -163,7 +163,7 @@ sub getTableProperties {
     WHERE table_name = '$table_name'
     END_TSQL
 
-    my @prop_array = $self->getSBEAMS()->selectHashArray( $tabSQL );
+    my @prop_array = $self->get_sbeams()->selectHashArray( $tabSQL );
     $self->{_tinfo}->{$table_name} = $prop_array[0];
   }
   return $self->{_tinfo}->{$table_name} 
@@ -196,7 +196,7 @@ sub getColumnProperties {
     WHERE table_name = '$table_name'
     END_CSQL
 
-    $self->{_cinfo}->{$table_name} = $self->getSBEAMS()->selectHashArray( $colSQL );
+    $self->{_cinfo}->{$table_name} = $self->get_sbeams()->selectHashArray( $colSQL );
   }
   return $self->{_cinfo}->{$table_name} 
 
@@ -228,7 +228,7 @@ sub getParentProject {
   }
 
   #### Get sbeams object, needed for Core tables and SQL queries
-  my $sbeams = $self->getSBEAMS();
+  my $sbeams = $self->get_sbeams();
 
   #### Define the project_id, starting as undef, it gets filled if there is one
   my $project_id;

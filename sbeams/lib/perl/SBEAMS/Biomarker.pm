@@ -39,15 +39,35 @@ sub new {
 #-
 sub setSBEAMS {
   my $self = shift;
-  $sbeams = shift;
+  $self->set_sbeams( @_ );
 }
+
 
 #+
 # Routine to return cached sbeams object
 #-
 sub getSBEAMS {
   my $self = shift;
-  return($sbeams);
+  return $self->get_sbeams();
+}
+
+#+
+#+
+# Routine to cache sbeams object
+#-
+sub set_sbeams {
+  my $self = shift;
+  $sbeams = shift || die "Must pass sbeams object";
+  $self->{_sbeams} = $sbeams;
+}
+
+
+#+
+# Routine to return cached sbeams object
+#-
+sub get_sbeams {
+  my $self = shift;
+  return $self->{_sbeams} || new SBEAMS::Connection;
 }
 
 #+
@@ -59,7 +79,7 @@ sub checkExperiment {
   my $this = shift;
   my $expt = shift || die 'Missing required experiment parameter';
 
-  my $sbeams = $this->getSBEAMS();
+  my $sbeams = $this->get_sbeams();
 
   my $sql =<<"  END";
   SELECT experiment_id, project_id
@@ -85,7 +105,7 @@ sub get_experiment_name {
   my $this = shift;
   my $expt_id = shift || die 'Missing required experiment parameter';
 
-  my $sbeams = $this->getSBEAMS();
+  my $sbeams = $this->get_sbeams();
 
   my $sql =<<"  END";
   SELECT experiment_name
@@ -105,7 +125,7 @@ sub get_treatment_type {
   my $this = shift;
   my $ttype_id = shift || die 'Missing parameter treatment_type_id';
 
-  my $sbeams = $this->getSBEAMS();
+  my $sbeams = $this->get_sbeams();
 
   my $sql =<<"  END";
   SELECT treatment_type_name
@@ -171,7 +191,7 @@ sub create_biogroup {
             bio_group_description => $desc,
                    bio_group_type => $type };
 
-  my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
+  my $sbeams = $this->get_sbeams() || die "sbeams object not set";
 
   # Sanity check 
   my ($is_there) = $sbeams->selectrow_array( <<"  END_SQL" );

@@ -139,7 +139,7 @@ sub getProcessedItems {
 #+
 # cache sbeams object
 #-
-sub setSBEAMS {
+sub set_sbeams {
   my $this = shift;
   my $sbeams = shift || die "Must pass sbeams object";
   $this->{_sbeams} = $sbeams;
@@ -148,7 +148,7 @@ sub setSBEAMS {
 #+
 # Fetch cached sbeams object
 #-
-sub getSBEAMS {
+sub get_sbeams {
   my $this = shift;
   return $this->{_sbeams};
 }

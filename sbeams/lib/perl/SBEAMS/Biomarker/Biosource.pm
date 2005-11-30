@@ -41,7 +41,7 @@ sub tissue_type_exists {
   my $tissue = shift;
   return unless $tissue;
 
-  my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
+  my $sbeams = $this->get_sbeams() || die "sbeams object not set";
   die "unsafe tissue detected: $tissue\n" if $sbeams->isTaintedSQL($tissue);
 
   my ($cnt) = $sbeams->selectrow_array( <<"  END_SQL" );
@@ -60,7 +60,7 @@ sub organizationExists {
   my $org = shift;
   return unless $org;
 
-  my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
+  my $sbeams = $this->get_sbeams() || die "sbeams object not set";
   die "unsafe org detected: $org\n" if $sbeams->isTaintedSQL($org);
 
   my ($cnt) = $sbeams->selectrow_array( <<"  END_SQL" );
@@ -80,7 +80,7 @@ sub organismExists {
   my $organism = shift;
   return '' unless $organism;
 
-  my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
+  my $sbeams = $this->get_sbeams() || die "sbeams object not set";
   die "unsafe organism: $organism\n" if $sbeams->isTaintedSQL($organism);
 
   my ($cnt) = $sbeams->selectrow_array( <<"  END_SQL" );
@@ -99,7 +99,7 @@ sub diseaseExists {
   my $disease = shift;
   return unless $disease;
 
-  my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
+  my $sbeams = $this->get_sbeams() || die "sbeams object not set";
   die "unsafe disease detected: $disease\n" if $sbeams->isTaintedSQL($disease);
 
   my ($cnt) = $sbeams->selectrow_array( <<"  END_SQL" );
@@ -124,7 +124,7 @@ sub add_new {
   for ( qw( data_ref group_id ) ) {
     die "Missing parameter $_" unless defined $_;    
   }
-  my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
+  my $sbeams = $this->get_sbeams() || die "sbeams object not set";
   my $name = $args{data_ref}->{biosource_name} || die "no biosource name!";
   $args{data_ref}->{biosource_group_id} = $args{group_id};
 
@@ -164,7 +164,7 @@ sub add_biosource_attrs {
     die "Missing parameter $_" unless defined $_;    
   }
 
-  my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
+  my $sbeams = $this->get_sbeams() || die "sbeams object not set";
    
   my %attr_hash = $sbeams->selectTwoColumnHash( <<"  END" );
   SELECT attribute_name, attribute_id FROM $TBBM_ATTRIBUTE
@@ -201,7 +201,7 @@ sub add_biosource_diseases {
   }
   my %diseases = %{$args{diseases}};
 
-  my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
+  my $sbeams = $this->get_sbeams() || die "sbeams object not set";
 
   my %dnames = $sbeams->selectTwoColumnHash( <<"  END" );
   SELECT disease_name, disease_id FROM $TBBM_DISEASE
@@ -239,7 +239,7 @@ sub create_tissues {
   return unless $args{tissue_type};
   my $tissues = $args{tissue_type};
 
-  my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
+  my $sbeams = $this->get_sbeams() || die "sbeams object not set";
 
   for my $tissue_type ( @$tissues ) {
     die "unsafe tissue detected: $tissue_type\n" 
@@ -290,7 +290,7 @@ sub createDiseases {
     return;
   }
 
-  my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
+  my $sbeams = $this->get_sbeams() || die "sbeams object not set";
 
   foreach my $disease ( @{$args{diseases}} ) {
     die "unsafe disease detected: $disease\n" if $sbeams->isTaintedSQL($disease);
@@ -328,7 +328,7 @@ sub getDiseaseTypeID {
   $args{disease_type} ||= 'unknown';
   $args{auto} ||= 0;
 
-  my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
+  my $sbeams = $this->get_sbeams() || die "sbeams object not set";
 
   my $sql =<<"  END_SQL";
   SELECT disease_type_id FROM $TBBM_DISEASE_TYPE
@@ -372,7 +372,7 @@ sub createAttributes {
     return;
   }
 
-  my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
+  my $sbeams = $this->get_sbeams() || die "sbeams object not set";
 
   foreach my $attr ( @{$args{attr}} ) {
     die "unsafe attr detected: $attr\n" if $sbeams->isTaintedSQL($attr);
@@ -411,7 +411,7 @@ sub getAttrTypeID {
   $args{attr_type} ||= 'unknown';
   $args{auto} ||= 0;
 
-  my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
+  my $sbeams = $this->get_sbeams() || die "sbeams object not set";
 
   my $sql =<<"  END_SQL";
   SELECT attribute_type_id FROM $TBBM_ATTRIBUTE_TYPE
@@ -436,7 +436,7 @@ sub attrExists {
   my $attr = shift;
   return unless $attr;
 
-  my $sbeams = $this->getSBEAMS() || die "sbeams object not set";
+  my $sbeams = $this->get_sbeams() || die "sbeams object not set";
   die "unsafe attr detected: $attr\n" if $sbeams->isTaintedSQL($attr);
 
   my ($cnt) = $sbeams->selectrow_array( <<"  END_SQL" );
@@ -446,12 +446,12 @@ sub attrExists {
 
   return $cnt;
 }   
-sub setSBEAMS {
+sub set_sbeams {
   my $this = shift;
   my $sbeams = shift || die "Must pass sbeams object";
   $this->{_sbeams} = $sbeams;
 }
-sub getSBEAMS {
+sub get_sbeams {
   my $this = shift;
   return $this->{_sbeams};
 }

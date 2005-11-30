@@ -47,7 +47,7 @@ sub display_page_header {
     my $navigation_bar = $args{'navigation_bar'} || "YES";
 
     #### If the output mode is interactive text, display text header
-    my $sbeams = $this->getSBEAMS();
+    my $sbeams = $this->get_sbeams();
     if ($sbeams->output_mode() eq 'interactive') {
       $sbeams->printTextHeader();
       return;
@@ -61,7 +61,7 @@ sub display_page_header {
 
 
     #### Obtain main SBEAMS object and use its http_header
-    $sbeams = $this->getSBEAMS();
+    $sbeams = $this->get_sbeams();
     my $http_header = $sbeams->get_http_header();
 
     print qq~$http_header
@@ -114,8 +114,10 @@ sub display_page_header {
 	<tr><td>Lab Workflow:</td></tr>
 	<tr><td><a href="main.cgi">$pad View experiments</nobr></a></td></tr>
 	<tr><td><a href="upload_workbook.cgi">$pad Upload samples</nobr></a></td></tr>
-	<tr><td><a href="treatment.cgi">$pad Add glycopture prep</nobr></a></td></tr>
-	<tr><td><a href="lcms_run.cgi">$pad Add LC/MS run</nobr></a></td></tr>
+	<tr><td><a href="treatment.cgi?apply_action=list_treatments">$pad View treatments</nobr></a></td></tr>
+	<tr><td><a href="treatment.cgi">$pad $pad Add treatment</nobr></a></td></tr>
+	<tr><td><a href="lcms_run.cgi?apply_action=list_runs">$pad View LC/MS runs</nobr></a></td></tr>
+	<tr><td><a href="lcms_run.cgi">$pad $pad Add LC/MS run</nobr></a></td></tr>
 	<tr><td>&nbsp;</td></tr>
 	<tr><td>Manage Tables:</td></tr>
 	<tr><td><a href="$CGI_BASE_DIR/$SBEAMS_SUBDIR/ManageTable.cgi?TABLE_NAME=BM_Analysis_file">$pad Analysis_file</nobr></a></td></tr>
@@ -163,7 +165,7 @@ sub display_page_header {
 sub printStyleSheet {
     my $this = shift;
     #### Obtain main SBEAMS object and use its style sheet
-    my $sbeams = $this->getSBEAMS();
+    my $sbeams = $this->get_sbeams();
     $sbeams->printStyleSheet();
 }
 
@@ -225,7 +227,7 @@ sub display_page_footer {
 
 
   #### If the output mode is interactive text, display text header
-  my $sbeams = $this->getSBEAMS();
+  my $sbeams = $this->get_sbeams();
   if ($sbeams->output_mode() eq 'interactive') {
     $sbeams->printTextHeader(%args);
     return;
@@ -280,7 +282,7 @@ sub get_treatment_sample_select {
   die "Must pass type as an arrayref" unless (ref($type) eq 'ARRAY');
 
 
-  my $sbeams = $this->getSBEAMS();
+  my $sbeams = $this->get_sbeams();
   my $pid = $sbeams->getCurrent_project_id || die("Can't determine project_id");
   my @acc = $sbeams->getAccessibleProjects();
   my $table = SBEAMS::Connection::DataTable->new( BORDER => 1 );
@@ -331,7 +333,7 @@ sub get_lcms_sample_select {
   
   die "Must pass type as an arrayref" unless (ref($type) eq 'ARRAY');
 
-  my $sbeams = $this->getSBEAMS();
+  my $sbeams = $this->get_sbeams();
   my $pid = $sbeams->getCurrent_project_id || die("Can't determine project_id");
   my @acc = $sbeams->getAccessibleProjects();
   my $table = SBEAMS::Connection::DataTable->new( BORDER => 1 );
@@ -382,7 +384,7 @@ sub get_ts_checkbox {
 #-
 sub get_experiment_overview {
   my $this = shift;
-  my $sbeams = $this->getSBEAMS();
+  my $sbeams = $this->get_sbeams();
   my $pid = $sbeams->getCurrent_project_id || die("Can't determine project_id");
 
   my %msruns = $sbeams->selectTwoColumnHash( <<"  END" );
@@ -450,12 +452,12 @@ sub get_experiment_overview {
 #-
 sub treatment_list {
   my $this = shift;
-  my $sbeams = $this->getSBEAMS();
+  my $sbeams = $this->get_sbeams();
   my $pid = $sbeams->getCurrent_project_id || die("Can't determine project_id");
 
 
   my $sql =<<"  END";
-  SELECT treatment_id, treatment_name, treatment_description,
+  SELECT t.treatment_id, treatment_name, treatment_description,
          treatment_type_name, COUNT(b.biosample_id)  num_samples
   FROM  $TBBM_TREATMENT t
   JOIN $TBBM_TREATMENT_TYPE tt ON tt.treatment_type_id = t.treatment_type_id
@@ -463,8 +465,8 @@ sub treatment_list {
   JOIN $TBBM_EXPERIMENT e  ON e.experiment_id = b.experiment_id
   WHERE project_id = $pid
   GROUP BY treatment_name, treatment_description, treatment_type_name,
-           treatment_id
-  ORDER BY  treatment_name, date_created, treatment_type_name
+           t.treatment_id
+  ORDER BY  t.treatment_id DESC
   END
   $log->error( $sql );
 
@@ -504,7 +506,7 @@ sub treatment_list {
 #-
 sub lcms_run_list {
   my $this = shift;
-  my $sbeams = $this->getSBEAMS();
+  my $sbeams = $this->get_sbeams();
   my $pid = $sbeams->getCurrent_project_id || die("Can't determine project_id");
 
 
@@ -539,21 +541,27 @@ sub lcms_run_list {
   
   my $table = SBEAMS::Connection::DataTable->new( WIDTH => '100%' );
   $table->addResultsetHeader( ['Run Name', 'Description', 'Instrument', 
-                        'Run Date', '# samples'] );
+                        'Run Date', '# samples', undef] );
 
   for my $row ( $sbeams->selectSeveralColumns($sql) ) {
     my @row = @$row;
     my $id = shift @row;
     $row[2] = ( length $row[2] <= 40 ) ? $row[2] : shortlink($row[2], 40);
     $row[0] =<<"    END";
-    <A HREF=ms_run_details.cgi?ms_run_id=$id>$row[0]</A>
+    <A HREF=lcms_run.cgi?apply_action=run_details;ms_run_id=$id>$row[0]</A>
     END
+    push @row, download_link( $id );
     $table->addRow( \@row )
   }
+  $table->setColAttr( ROWS => [ 1 ], 
+                      COLS => [ 7 ], 
+                      BGCOLOR => '#FFFFFF' );
   $table->alternateColors( PERIOD => 1,
                            BGCOLOR => '#FFFFFF',
                            DEF_BGCOLOR => '#E0E0E0',
                            FIRSTROW => 0 ); 
+
+
   $table->setColAttr( ROWS => [ 2..$table->getRowNum() ], 
                       COLS => [ 4..6 ], 
                       ALIGN => 'RIGHT' );
@@ -576,7 +584,7 @@ sub get_ms_instrument_select {
     $args{current} = join ",", @{$args{current}};
   }
 
-  my $sbeams = $this->getSBEAMS();
+  my $sbeams = $this->get_sbeams();
 
   my $sql =<<"  END";
   SELECT instrument_id, instrument_name
@@ -605,7 +613,7 @@ sub get_storage_loc_select {
     $args{current} = join ",", @{$args{current}};
   }
 
-  my $sbeams = $this->getSBEAMS();
+  my $sbeams = $this->get_sbeams();
 
   my $sql =<<"  END";
   SELECT storage_location_id, location_name
@@ -635,7 +643,7 @@ sub get_treatment_type_select {
     $args{current} = join ",", @{$args{current}};
   }
 
-  my $sbeams = $this->getSBEAMS();
+  my $sbeams = $this->get_sbeams();
 
   my $sql =<<"  END";
   SELECT treatment_type_id, treatment_type_name
@@ -665,7 +673,7 @@ sub get_treatment_type_select {
 #-
 sub get_sample_type_select {
   my $this = shift;
-  my $sbeams = $this->getSBEAMS();
+  my $sbeams = $this->get_sbeams();
   my %args = @_;
 
   # Select currval?
@@ -724,7 +732,7 @@ sub get_gradient_select {
     $args{current} = join ",", @{$args{current}};
   }
 
-  my $sbeams = $this->getSBEAMS();
+  my $sbeams = $this->get_sbeams();
 
   my $sql =<<"  END";
   SELECT gradient_program_id, 
@@ -762,7 +770,7 @@ sub get_protocol_select {
     $args{current} = join ",", @{$args{current}};
   }
 
-  my $sbeams = $this->getSBEAMS();
+  my $sbeams = $this->get_sbeams();
   $log->debug( $sbeams->dump_hashref( href => \%args, mode => 'text' ) );
 
   my $types = ( $args{types} ) ? join(',', @{$args{types}}) : 'glycocapture';
@@ -873,7 +881,7 @@ sub get_treatment_select {
     $log->debug( "PARAM: $args{current}" . ref( $args{current} ) );
   }
 
-  my $sbeams = $this->getSBEAMS();
+  my $sbeams = $this->get_sbeams();
 #  my $project_id = $sbeams->getCurrent_project_id();
 
   my $project_list;
@@ -938,7 +946,7 @@ sub get_experiment_select {
     $log->debug( "PARAM: $args{current}" . ref( $args{current} ) );
   }
 
-  my $sbeams = $this->getSBEAMS();
+  my $sbeams = $this->get_sbeams();
   my $project_id = $sbeams->getCurrent_project_id();
 
   my $project_list;
@@ -987,7 +995,7 @@ sub get_first_experiment_id {
   my $this = shift;
   my $sql = $this->get_experiment_select( sql_only => 1,
                                           writable => 1 );
-  my $sbeams = $this->getSBEAMS();
+  my $sbeams = $this->get_sbeams();
   my @rows = $sbeams->selectSeveralColumns( $sql );
   return $rows[0]->[0];
 }
@@ -999,7 +1007,7 @@ sub get_first_experiment_id {
 sub get_first_treatment_id {
   my $this = shift;
   my $sql = $this->get_treatment_select( sql_only => 1 );
-  my $sbeams = $this->getSBEAMS();
+  my $sbeams = $this->get_sbeams();
   my @rows = $sbeams->selectSeveralColumns( $sql );
   return $rows[0]->[0];
 }
@@ -1010,21 +1018,23 @@ sub get_first_treatment_id {
 sub get_experiment_samples {
   my $this = shift;
   my $expt_id = shift;
-  my $sbeams = $this->getSBEAMS();
+  my $sbeams = $this->get_sbeams();
   my $pid = $sbeams->getCurrent_project_id || die("Can't determine project_id");
 
   my $sql =<<"  END";
-  SELECT biosample_id, biosample_name, tissue_type_name, 
+  SELECT biosample_id, biosample_name, organism_name, 
          original_volume, location_name, 'glycocapture' AS glyco, 
          'msrun' AS msrun, 'mzXML' AS mzXML, 'pep3D' AS pep3D  
   FROM $TBBM_BIOSAMPLE b 
    JOIN $TBBM_BIOSOURCE r ON r.biosource_id = b.biosource_id
-   JOIN $TBBM_TISSUE_TYPE t ON r.tissue_type_id = t.tissue_type_id
+   JOIN $TB_ORGANISM o ON r.organism_id = o.organism_id
    JOIN $TBBM_STORAGE_LOCATION s ON s.storage_location_id = b.storage_location_id
   WHERE experiment_id = $expt_id
-  ORDER BY biosample_name ASC
+  AND b.parent_biosample_id IS NULL
+  ORDER BY biosample_group_id, biosample_name ASC
   END
        
+  $log->debug( $sql );
   my $table = SBEAMS::Connection::DataTable->new( WIDTH => '80%' );
   $table->addResultsetHeader( ['Sample Name', 'Tissue', 'Vol (&#181;l)',
                        'Storage location', 'Glycocap', 'MS_run', 'mzXML', 'pep3D' ] );
@@ -1083,7 +1093,7 @@ sub get_experiment_details {
   my $this = shift;
   my $expt_id = shift;
   return '';
-  my $sbeams = $this->getSBEAMS();
+  my $sbeams = $this->get_sbeams();
   my $pid = $sbeams->getCurrent_project_id || die("Can't determine project_id");
 
   my $sql =<<"  END";
@@ -1118,7 +1128,7 @@ sub get_experiment_details {
 
 sub get_treatment_select_simple {
   my $this = shift;
-  my $sbeams = $this->getSBEAMS();
+  my $sbeams = $this->get_sbeams();
   my $select = $sbeams->buildOptionList( <<"  END" );
   SELECT treatment_name, treatment_id
   FROM $TBBM_TREATMENT
@@ -1252,6 +1262,12 @@ sub shortlink {
   return "<DIV title='$val'> ". substr( $val, 0, $len - 3 ) . '...</DIV>';
 }
 
+sub download_link {
+  my $val = shift;
+  my $run_name = shift || 'ms_run.txt';
+  return "<A HREF=lcms_run.cgi/$run_name?apply_action=download&ms_run_id=$val>download</A>";
+}
+
 #+
 # Returns list of links to Core caller, shows which projects have what type
 # of data in them.
@@ -1279,7 +1295,7 @@ sub getProjectData {
   END_SQL
 
   my $cgi_dir = $CGI_BASE_DIR . '/Biomarker/';
-  my @rows = $self->getSBEAMS()->selectSeveralColumns( $sql );
+  my @rows = $self->get_sbeams()->selectSeveralColumns( $sql );
   foreach my $row ( @rows ) {
     my $title = "$row->[1] Experiments";
     $project_data{$row->[0]} =<<"    END_LINK";
