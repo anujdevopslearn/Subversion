@@ -62,8 +62,11 @@ Options:
                        in the file
   --check_status       Is set, nothing is actually done, but rather
                        a summary of the data is printed
+  --reference_set_tag  biosequence_set_tag of the IPI biosequence_set
+  --link_set_tag       biosequence_set_tag of the Refseq biosequence_set
 
- e.g.:  $PROG_NAME --check_status
+ e.g.:  $PROG_NAME --reference_set_tag MmIPI \
+           --link_set_tag MmRefseqNP --verbose 2 --testonly
 
 EOU
 
@@ -71,6 +74,7 @@ EOU
 #### Process options
 unless (GetOptions(\%OPTIONS,"verbose:s","quiet","debug:s","testonly",
 		   "delete_existing","update_existing","check_status",
+		   "reference_set_tag:s","link_set_tag:s",
 		  )) {
   print "$USAGE";
   exit;
@@ -134,6 +138,11 @@ sub handleRequest {
   my $update_existing = $OPTIONS{"update_existing"} || '';
   my $check_status = $OPTIONS{"check_status"} || '';
 
+  my $reference_set_tag = $OPTIONS{"reference_set_tag"} ||
+    die("ERROR: option reference_set_tag must be provided");
+  my $link_set_tag = $OPTIONS{"link_set_tag"} ||
+    die("ERROR: option link_set_tag must be provided");
+
 
   #### FIXME
   $DATABASE = 'BioLink.dbo.';
@@ -156,8 +165,8 @@ sub handleRequest {
 
   #### Define the biosequence set translations
   my %genelynx_namespaces = (
-    HuRefseqNP => 'HuRefseqNP',
-    HuIPI => 'HuIPI',
+    "$link_set_tag" => $link_set_tag,
+    "$reference_set_tag" => $reference_set_tag,
   );
 
   #### Make the list of namespaces to extract
@@ -177,10 +186,11 @@ sub handleRequest {
   #### Generate the dataset to load
   $sql = qq~
     SELECT ipi_accession,refseq_np_ids
-      FROM BioLink.dbo.goa_xref
+      FROM ${DATABASE}goa_xref
   ~;
 
   my @rows = $sbeams->selectSeveralColumns($sql);
+  print "INFO: Fetched ".scalar(@rows). " IPI numbers from goa_xref\n";
 
 
   #### Loop over all the input data, updating the BioLink database
@@ -216,18 +226,18 @@ sub handleRequest {
     if (scalar(@names2) > 1) {
       print "WARNING[row $counter]: More than one NP number is associated with ".
         "IPI accession '$biosequence_name1': '$biosequence_name2'. ".
-        "Skipping...\n";
-      $counter++;
-      next;
+        "Just keep the first one '$names2[0]' for now...\n";
+      #$counter++;
+      #next;
     }
     $biosequence_name2 = $names2[0];
 
 
     #### Set the relationship
     $result = setRelationship(
-      biosequence_set_id1 => $biosequence_set_ids{HuRefseqNP},
+      biosequence_set_id1 => $biosequence_set_ids{$link_set_tag},
       biosequence_name1 => $biosequence_name2,
-      biosequence_set_id2 => $biosequence_set_ids{HuIPI},
+      biosequence_set_id2 => $biosequence_set_ids{$reference_set_tag},
       biosequence_name2 => $biosequence_name1,
       relationship_type_id => 1,
       evidence_source_id => $load_evidence_source_id,
