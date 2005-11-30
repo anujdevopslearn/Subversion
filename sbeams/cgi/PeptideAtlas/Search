@@ -180,6 +180,20 @@ sub handle_request {
   my $search_key = $parameters{"search_key"};
   my $organism_name = $parameters{"organism_name"};
 
+  #### If a new search_key was supplied, store it
+  if ($search_key) {
+    $sbeams->setSessionAttribute(
+      key => 'PeptideAtlas_search_key',
+      value => $search_key,
+    );
+
+  #### Else see if we had one stored
+  } else {
+    $search_key = $sbeams->getSessionAttribute(
+      key => 'PeptideAtlas_search_key',
+    );
+  }
+
 
   #### Build the list of organism_names
   my $organism_selection = getOrganismSelection(
@@ -192,6 +206,19 @@ sub handle_request {
     atlas_build_id => $parameters{atlas_build_id}
   );
 
+
+  #### Show current user context information
+  #print "<BR>\n" if ($sbeams->output_mode() eq 'html');
+  #$sbeams->printUserContext();
+
+  #### Get the HTML to display the tabs
+  my $tabMenu = $sbeamsMOD->getTabMenu(
+    parameters_ref => \%parameters,
+    program_name => $PROG_NAME,
+  );
+
+
+
   #### If the output_mode is HTML, then display the form
   my $buffer = '';
   if ($sbeams->output_mode() eq 'html') {
@@ -199,7 +226,8 @@ sub handle_request {
       $buffer .= $q->start_form(-method=>"POST",
                            -action=>"$base_url",
                           );
-      $buffer .= "<P>";
+      $buffer .= "<BR>".$tabMenu->asHTML();
+      $buffer .= "<BR><BR><P>";
       $buffer .= qq~<nobr><CENTER><IMG SRC="$HTML_BASE_DIR/images/PeptideAtlas_Logo.png"><BR>~;
       #$buffer .= qq~<img src="$HTML_BASE_DIR/images/space.gif" height=1 width=30>~;
       $buffer .= $q->textfield(-name=>"search_key",
@@ -338,19 +366,31 @@ sub handle_request {
     }
 
 
+    my $cleaned_search_key = $search_key;
+    $cleaned_search_key =~ s/^%//;
+    $cleaned_search_key =~ s/%$//;
+
     #### If 0 results came back, then inform the user
     if ($n_results == 0) {
       print "There were no matches in the index to match your search key '$search_key'<BR>";
       if ($search_key !~ /%/) {
         print qq~
           <BR>You can broaden the search by placing wildcards around your search key like this:
-          <A HREF="$base_url?search_key=$search_key%25&action=GO">$search_key%</A>,
-          <A HREF="$base_url?search_key=%25$search_key%25&action=GO">%$search_key%</A>
+          <A HREF="$base_url?search_key=$cleaned_search_key%25&action=GO">$cleaned_search_key%</A>,
+          <A HREF="$base_url?search_key=%25$cleaned_search_key%25&action=GO">%$cleaned_search_key%</A>
         ~;
       }
       return(0);
     }
 
+    print qq~
+      <P>
+      Your search returned $n_results matches.  Please choose one from below.
+      Or you can broaden the search by placing wildcards around your search key like this:
+          <A HREF="$base_url?search_key=$cleaned_search_key%25&action=GO">$cleaned_search_key%</A>,
+          <A HREF="$base_url?search_key=%25$cleaned_search_key%25&action=GO">%$cleaned_search_key%</A>
+      </P>
+    ~;
 
     #### Display the resultset
     $sbeams->displayResultSet(
