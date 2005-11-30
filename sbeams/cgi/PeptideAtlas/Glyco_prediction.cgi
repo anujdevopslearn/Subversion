@@ -355,12 +355,14 @@ sub print_out_hits_page{
 			$q->Tr({class=>'rev_gray'},
 			  $q->td('IPI ID'),
 			  $q->td('Protein Name'),
-			  $q->td('Protein Symbol')
+			  $q->td('Protein Symbol'),
+			  $q->td('Identified Peptides')
 			
 			);
 	my $cgi_url = "$base_url?action=Show_detail_form&ipi_data_id";
 	foreach my $h_ref (@results_set){
 		my $ipi_id = $h_ref->{ipi_data_id};
+		my $num_identified = $h_ref->{num_identified};
 		my $ipi_acc = $h_ref->{ipi_accession_number};
 		my $protein_name = nice_term_print($h_ref->{protein_name});
 		my $protein_sym = $h_ref->{protein_symbol};
@@ -370,7 +372,8 @@ sub print_out_hits_page{
 			    	$q->a({href=>"$cgi_url=$ipi_id"},$ipi_acc)
 			    ),
 			    $q->td($protein_name),
-			    $q->td($protein_sym)
+			    $q->td($protein_sym),
+			    $q->td({ALIGN=>'right'},$num_identified)
 			  );
 	}
 
