@@ -98,10 +98,13 @@ sub gene_symbol_query{
 	
 	confess(__PACKAGE__ . "::$method term '$term' is not good  \n") unless $term;
 	
-	my $sql = qq~ SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol 
-				  FROM $TBAT_IPI_DATA 
-				  WHERE protein_symbol like '$term'
-		  ~;
+	my $sql = qq~
+    SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
+    (SELECT COUNT(*) FROM $TBAT_IDENTIFIED_TO_IPI 
+    WHERE ipi_data_id = $TBAT_IPI_DATA.ipi_data_id ) AS num_identified 
+    FROM $TBAT_IPI_DATA
+    WHERE protein_symbol like '$term'
+  ~;
 	
 	$log->debug(__PACKAGE__. "::$method $sql");
 	return $sbeams->selectHashArray($sql);
@@ -116,10 +119,14 @@ sub gene_name_query{
 	
 	confess(__PACKAGE__ . "::$method term '$term' is not good  \n") unless $term;
 	
-	my $sql = qq~ SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol 
-				  FROM $TBAT_IPI_DATA 
-				  WHERE protein_name like '$term'
-		  ~;
+	my $sql = qq~
+    SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
+    (SELECT COUNT(*) FROM $TBAT_IDENTIFIED_TO_IPI 
+    WHERE ipi_data_id = $TBAT_IPI_DATA.ipi_data_id ) AS num_identified 
+    FROM $TBAT_IPI_DATA
+    WHERE protein_name like '$term'
+  ~;
+
 	return $sbeams->selectHashArray($sql)
 }
 
@@ -142,11 +149,13 @@ sub ipi_accession_query{
 		$search_string = "$table_name like '$term' ";
 	}
 
-
-	my $sql = qq~ SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol 
-				  FROM $TBAT_IPI_DATA 
-				  WHERE  $search_string
-		  ~;
+	my $sql = qq~
+    SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
+    (SELECT COUNT(*) FROM $TBAT_IDENTIFIED_TO_IPI 
+    WHERE ipi_data_id = $TBAT_IPI_DATA.ipi_data_id ) AS num_identified 
+    FROM $TBAT_IPI_DATA
+    WHERE $search_string
+  ~;
 
 	$log->debug($sql);
 	return $sbeams->selectHashArray($sql)
@@ -184,10 +193,14 @@ sub swiss_prot_query{
 	
 	confess(__PACKAGE__ . "::$method term '$term' is not good  \n") unless $term;
 	
-	my $sql = qq~ SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol 
-				  FROM $TBAT_IPI_DATA 
-				  WHERE swiss_prot_acc like '$term'
-		  ~;
+	my $sql = qq~
+    SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
+    (SELECT COUNT(*) FROM $TBAT_IDENTIFIED_TO_IPI 
+    WHERE ipi_data_id = $TBAT_IPI_DATA.ipi_data_id ) AS num_identified 
+    FROM $TBAT_IPI_DATA
+	  WHERE swiss_prot_acc like '$term'
+  ~;
+
 	return $sbeams->selectHashArray($sql)
 }
 
@@ -200,10 +213,14 @@ sub protein_seq_query{
 	my $self = shift;
 	my $seq = shift;
 	confess(__PACKAGE__ . "::$method seq '$seq' is not good  \n") unless $seq;
-	my $sql = qq~ SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol 
-				  FROM $TBAT_IPI_DATA 
-				  WHERE protein_sequence like '%$seq%'
-		  ~;
+	my $sql = qq~
+    SELECT ipi_data_id, ipi_accession_number, protein_name, protein_symbol, 
+    (SELECT COUNT(*) FROM $TBAT_IDENTIFIED_TO_IPI 
+    WHERE ipi_data_id = $TBAT_IPI_DATA.ipi_data_id ) AS num_identified 
+    FROM $TBAT_IPI_DATA
+    WHERE protein_sequence like '%$seq%'
+  ~;
+
 	$log->debug($sql);
 	
 	return $sbeams->selectHashArray($sql)
@@ -270,7 +287,7 @@ sub get_predicted_peptides{
 				FROM $TBAT_PREDICTED_PEPTIDE pp
 				JOIN $TBAT_GLYCO_SITE gs ON (gs.glyco_site_id = pp.glyco_site_id)
 				LEFT JOIN $TBAT_SYNTHESIZED_PEPTIDE sp 
-         ON (sp.glyco_site_id = pp.glyco_site_id AND sp.ipi_data_id = $ipi_data_id)
+         ON sp.glyco_site_id = pp.glyco_site_id
 				WHERE pp.ipi_data_id = $ipi_data_id
 				~;
 	
