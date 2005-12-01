@@ -234,7 +234,6 @@ sub handle_request {
 
         #print "<BR>parameters_string:$parameters_string<BR>";
 
-        $PROG_NAME = $PROG_NAME.$parameters_string;
 #   }
 
 
