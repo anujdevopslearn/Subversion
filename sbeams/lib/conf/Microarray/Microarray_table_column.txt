@@ -466,8 +466,8 @@ MA_affy_annotation_set	9	owner_group_id	Owner Group ID	int	4	0	N	1	N	work_group	
 MA_affy_annotation_set	10	record_status	Record Status	char	1	0	N	N	N							N	N	N			
 MA_condition	1	condition_id	Condition ID	int	4	10	N		Y							N	N	Y			pkDEFAULT
 MA_condition	2	project_id	Project ID	int	4	10	N		N	project	project_id	Y	optionlist			Y	Y	Y		"SELECT project_id, username||' - '||name FROM $TB_PROJECT P LEFT JOIN $TB_USER_LOGIN US ON ( P.PI_contact_id=US.contact_id ) WHERE project_id IN ( $accessible_project_ids ) AND P.record_status != 'D' ORDER BY name"	
-MA_condition	3	condition_name	Condition name	varchar	255	255	N		N			Y	text	50		Y	Y	Y	Name for the condition		
-MA_condition	4	condition_file_name	Condition file name	varchar	255	255	N		N			Y	fixed	50		Y	Y	N	Original filename or identifier for a processed condition. May not be changed		
+MA_condition	3	condition_name	Condition name	varchar	255	255	N		N			Y	fixed	50		Y	Y	Y	Name for the condition		
+MA_condition	4	condition_file_name	Condition file name	varchar	255	255	N		N			N	fixed	50		Y	Y	N	Original filename or identifier for a processed condition. May not be changed		
 MA_condition	5	sort_order	Sort Order	int	4	10	N	100	N			N	text	10		Y	Y	N			
 MA_condition	6	processed_date	Precessed Date	datetime	8	23	Y		N			N	fixed			Y	Y	N			
 MA_condition	7	organism_id	Organism	int	4	0	Y		N	organism	organism_id	Y	optionlist			Y	Y	N	Organism which the condition should be associated with.  Leave blank if not applicable	"SELECT organism_id, organism_name FROM $TB_ORGANISM ORDER BY sort_order,organism_name"	
