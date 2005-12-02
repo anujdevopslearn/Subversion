@@ -376,14 +376,31 @@ sub handle_request {
     constraint_name=>"Mean_Intensity",
     constraint_value=>$parameters{mean_intensity_constraint} );
   return if ($mean_level_clause eq '-1');
-  
-  #### Build Mean Level constraint
+
+  #### Build False Discovery Rate constraint
   my $false_discovery_rate_clause = $sbeams->parseConstraint2SQL(
     constraint_column=>"GE.false_discovery_rate",
     constraint_type=>"flexible_float",
     constraint_name=>"False Discovery Rate",
     constraint_value=>$parameters{false_discovery_rate_constraint} );
   return if ($false_discovery_rate_clause eq '-1');
+
+  #### Build mu_x OR mu_y constraint
+  my $mu_x_or_mu_y_clause = $sbeams->parseConstraint2SQL(
+    constraint_column=>"GE.mu_x",
+    constraint_type=>"flexible_float",
+    constraint_name=>"mu_x",
+    constraint_value=>$parameters{mu_x_or_mu_y_constraint} );
+  return if ($mu_x_or_mu_y_clause eq '-1');
+  if ($mu_x_or_mu_y_clause) {
+    if ($mu_x_or_mu_y_clause =~ /(\s*AND\s+)(GE.mu_x.+)/) {
+      my $first_part = $1;
+      my $mu_x_part = $2;
+      my $mu_y_part = $2;
+      $mu_y_part =~ s/mu_x/mu_y/;
+      $mu_x_or_mu_y_clause = "$first_part($mu_x_part OR $mu_y_part)";
+    }
+  }
 
 
   #### Build SORT ORDER
@@ -583,6 +600,7 @@ sub handle_request {
 	      $lambda_clause
               $mean_level_clause
 	      $false_discovery_rate_clause
+              $mu_x_or_mu_y_clause
 	     )
     ~;
     #### Remove contraints that might limit conditions
@@ -591,6 +609,7 @@ sub handle_request {
     $lambda_clause = '';
     $mean_level_clause = '';
     $false_discovery_rate_clause = '';
+    $mu_x_or_mu_y_clause = '';
   }
 
 
@@ -616,6 +635,7 @@ sub handle_request {
 	$reporter_name_clause
         $mean_level_clause
 	$false_discovery_rate_clause
+        $mu_x_or_mu_y_clause
 	
 	$subselect_clause
 	$group_by_clause
