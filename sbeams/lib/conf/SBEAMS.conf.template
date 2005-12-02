@@ -108,17 +108,29 @@ DBPREFIX{UESC}          = UESC.dbo.
 #### Set the raw data directory location as a function of module.
 RAW_DATA_DIR{Proteomics} = /raw/datasets/root/location
 
+
 # Settings for java/jnlp helper applications
 CONFIG_SETTING{JAVA_PATH} = /usr/java/j2sdk1.4/
 CONFIG_SETTING{JNLP_KEYSTORE} = lib/java/.keystore
 CONFIG_SETTING{KEYSTORE_PASSWD} = sbeams_distro
 CONFIG_SETTING{KEYSTORE_ALIAS} = sbeamsDistro
 
+
 #### Define the place where Proteomics MS/MS spectrum peaks are written
 #### either TABLE, SKIP, or a file path (Default is TABLE)
 CONFIG_SETTING{Proteomics_SPECTRUM_DESTINATION} = TABLE
 CONFIG_SETTING{Proteomics_MAX_TOP_HITS_TO_LOAD} = 10
 CONFIG_SETTING{PGPLOT_FONT} = /usr/local/lib/grfont.dat
+
+
+#### Define settings for the PeptideAtlas module
+CONFIG_SETTING{PeptideAtlas_PIPELINE_DIRECTORY} = /data/PeptideAtlas/pipeline/output
+CONFIG_SETTING{PeptideAtlas_DAS_SERVERNAME} = mysql
+CONFIG_SETTING{PeptideAtlas_DAS_DATABASENAME} = PeptideAtlasDAS
+CONFIG_SETTING{PeptideAtlas_DAS_USERNAME} = xxxxx
+CONFIG_SETTING{PeptideAtlas_DAS_PASSWORD} = yyyyy
+CONFIG_SETTING{PeptideAtlas_DAS_URL} = http://das.example.org:8080/das
+
 
 #### Microarray Settings ####
 CONFIG_SETTING{MA_AFFY_HELPDOCS_URL} = provide url if needed, see install notes
