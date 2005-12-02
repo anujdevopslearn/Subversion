@@ -184,12 +184,23 @@ sub extractInstanceParams {
     %CONFIG_SETTING = %{$config_setting};
 
 # Translate relative paths to absolute.
-    for my $arg ( $UPLOAD_DIR, $RESULTSET_DIR ) {
+    for my $arg ( $UPLOAD_DIR, $RESULTSET_DIR  ) {
 	if ( $arg !~ /^\// ) {
 	    my $delim = ($PHYSICAL_BASE_DIR =~ /\/$/) ? '' : '/'; 
 	    $arg = $PHYSICAL_BASE_DIR . $delim . $arg;
 	}
     }
+
+# Translate relative paths to absolute.
+    for my $key ( keys(%CONFIG_SETTING)  ) {
+      for my $arg ( qw(JNLP_KEYSTORE)  ) {
+	if ( $CONFIG_SETTING{$arg} !~ /^\// ) {
+	    my $delim = ($PHYSICAL_BASE_DIR =~ /\/$/) ? '' : '/'; 
+	    $CONFIG_SETTING{$arg} = $PHYSICAL_BASE_DIR . $delim . $CONFIG_SETTING{$arg};
+        }
+      }
+    }
+
 
 #### Determine what the BASE URL is: first pull out some environment variables
     my $_server_port = $ENV{SERVER_PORT} || "";
