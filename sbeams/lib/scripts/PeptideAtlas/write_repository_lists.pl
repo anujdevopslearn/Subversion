@@ -16,12 +16,17 @@ use Getopt::Long;
 use FindBin;
 use File::stat;
 
+use XML::Writer;
+use XML::Parser;
+use IO::File;
+
 use lib "$FindBin::Bin/../../perl";
 
 use vars qw ($sbeams $sbeamsMOD $current_username 
              $PROG_NAME $USAGE %OPTIONS $TEST 
              $repository_dir $public_outfile $notpublic_outfile 
-             $data_root_dir $errorfile 
+             $data_root_dir $errorfile $public_xml_outfile
+             $repository_url $repository_web_path
             );
 
 #### Set up SBEAMS core module
@@ -48,20 +53,35 @@ $sbeams->setSBEAMS_SUBDIR($SBEAMS_SUBDIR);
 $USAGE = <<EOU;
 Usage: [OPTIONS] key=value key=value ...
 Options:
-  --test             test this code
+  --test                 test this code
 
-  --run              run program
+  --run                  run program
 
-  --make_tmp_files   output files are named rep*.tmp to minimize 
-                     interruption of active download service
+  --make_tmp_files       output files are named rep*.tmp to minimize 
+                         interruption of active download service
 
- e.g.:  $PROG_NAME --run
+  --public_archive_path  path to public repository archive
+
+  --sbeams_data_path     path to sbeams data 
+
+  --repository_url       URL for PA repository 
+
+  --repository_web_path  path to directory that apache accesses
+
+ e.g.:  ./$PROG_NAME --public_archive_path "/pa_public_archive"  --sbeams_data_path "/sbeams" --repository_url "http://www.peptideatlas.org/repository" --repository_web_path "/www/peptideatlas/repository/pa_public_archive" --run --make_tmp_files
 
 EOU
 
-GetOptions(\%OPTIONS, "test", "run", "make_tmp_files");
+## get arguments:
+GetOptions(\%OPTIONS, "test", "run", "make_tmp_files", 
+"public_archive_path:s", "sbeams_data_path:s", "repository_url:s",
+"repository_web_path:s");
 
-unless ( $OPTIONS{"test"}, $OPTIONS{"run"}, $OPTIONS{"make_tmp_files"} )
+
+## check for required arguments:
+unless ( ($OPTIONS{"test"} || $OPTIONS{"run"} ) && 
+$OPTIONS{"public_archive_path"} && $OPTIONS{"sbeams_data_path"} &&
+$OPTIONS{"repository_url"} && $OPTIONS{"repository_web_path"})
 {
 
     print "$USAGE";
@@ -71,12 +91,17 @@ unless ( $OPTIONS{"test"}, $OPTIONS{"run"}, $OPTIONS{"make_tmp_files"} )
 };
 
 
+## set some vars based upon arguments:
 $TEST = $OPTIONS{"test"} || 0;
 
+$repository_dir = $OPTIONS{"public_archive_path"};
 
+$data_root_dir = $OPTIONS{"sbeams_data_path"};
 
-## repository path:
-$repository_dir = "/sbeams/pa_public_archive";
+$repository_url = $OPTIONS{"repository_url"};
+
+$repository_web_path = $OPTIONS{"repository_web_path"};
+
 
 if ($TEST)
 {
@@ -85,12 +110,12 @@ if ($TEST)
 
 }
 
-## root dir of SBEAMS experiments:
-$data_root_dir = "/sbeams/archive"; 
 
 
 ## paths for output files:
 $public_outfile = "$repository_dir/repository_public.txt";
+
+$public_xml_outfile = "$repository_dir/repository_public.xml";
 
 $notpublic_outfile = "$repository_dir/repository_notpublic.txt";
 
@@ -101,10 +126,14 @@ if ( $OPTIONS{"make_tmp_files"} )
 
     $public_outfile = $public_outfile . ".tmp";    
 
+    $public_xml_outfile = $public_xml_outfile . ".tmp";    
+
     $notpublic_outfile = $notpublic_outfile . ".tmp";    
 
 }
 
+
+#### execute main #####
 main();
 
 exit(0);
@@ -133,14 +162,16 @@ sub main
     );
 
 
-
     ## make sure that user is on atlas:
     check_host();
 
 
-    ## check that can write to repository files (also initializes them):
+    ## check that can write to files (also initializes them):
     check_files();
 
+
+    ## write namespace and root tag to xml file:
+    initializeXMLFile();
 
     ## write repository_public.txt, tar up relevant files and move em
     ## if needed
@@ -148,6 +179,18 @@ sub main
 
     ## write repository_notpublic.txt
     write_private_file();
+
+
+    ## write ending root node and check that xml is well-formed
+    finalizeXMLFile();
+
+
+    print "\nWrote the following files:\n";
+
+    print "$public_outfile\n$public_xml_outfile\n"; 
+
+    print "$notpublic_outfile\n$errorfile\n"; 
+
 
     print "\nDial up jsp page on browser to generate HTML and
     copy that viewed source to web location. \n";
@@ -180,33 +223,31 @@ sub check_host()
 }
 
 #######################################################################
-# check_files -- check that can write to repository files, and
+# check_files -- check that can write to files, and
 #   initialize them
 #######################################################################
 sub check_files()
 {
 
-    ## write new empty public file:
-    open(OUTFILE,">$public_outfile") or die 
-        "cannot open $public_outfile for writing ($!)";
+    my @outfiles =  ($public_outfile, $public_xml_outfile,
+        $notpublic_outfile, $errorfile);
 
-    close(OUTFILE) or die
-        "cannot close $public_outfile ($!)";
+    for (my $i=0; $i <= $#outfiles; $i++)
+    {
+
+        my $outfile = $outfiles[$i];
+
+        open(OUTFILE,">$outfile") or die 
+           "cannot open $outfile for writing";
+
+        close(OUTFILE) or die "cannot close $outfile";
+
+    }
 
 
-    ## write new empty "not public" file:
-    open(OUTFILE,">$notpublic_outfile") or die 
-        "cannot open $notpublic_outfile for writing ($!)";
+    ## initialize the xml file:
+    
 
-    close(OUTFILE) or die
-        "cannot close $notpublic_outfile ($!)";
-
-    ## write new empty error file:
-    open(OUTFILE,">$errorfile") or die 
-        "cannot open $errorfile for writing ($!)";
-
-    close(OUTFILE) or die
-        "cannot close $errorfile ($!)";
 
 }
 
@@ -282,9 +323,12 @@ sub write_public_file()
 
         $orig_data_dir =~ s/(.+)\/(.*)$/$1/gi; ## path up one dir level
 
+        ## Use get_data_location to: Check that compressed archive is in the public
+        ## archive area -- if not, use file_pattern to search for files and create
+        ## compressed archive and move it to public archive area -- if files with 
+        ## file_pattern don't exist, the location is an empty string
 
         ## get mzXMLDataLocation. 
-        ## (if doesn't already exist in $repository_dir, will create gzipped tar file)
         my $mzXMLDataLocation = get_data_location( 
 
             sample_tag => $sample_tag, 
@@ -305,14 +349,13 @@ sub write_public_file()
             
         );
 
-        ## set file pattern expression ot search for.  The dta's need special treatment:
+        ## set file pattern expression to search for.  The dta's need special treatment:
         my $pat = "*.$rawDataType";
        
         $pat = "*_dta.tar" if ($rawDataType eq "TarOfDtas");
 
 
         ## get raw data location.
-        ## (if doesn't already exist in $repository_dir, will create gzipped tar file)
         my $rawDataLocation = get_data_location(
 
             sample_tag => $sample_tag,
@@ -327,7 +370,6 @@ sub write_public_file()
 
 
         ## get search results file location.
-        ## (if doesn't already exist in $repository_dir, will create gzipped tar file)
         my $searchResultsLocation = get_data_location(
 
             sample_tag => $sample_tag,
@@ -342,7 +384,6 @@ sub write_public_file()
 
 
         ## get protein prophet file location.
-        ## (if doesn't already exist in $repository_dir, will create gzipped tar file)
         my $proteinProphetLocation = get_data_location(
 
             sample_tag => $sample_tag,
@@ -397,8 +438,6 @@ sub write_public_file()
         );
 
 
-
-
         ## get README file location.
         ## (if doesn't already exist in $repository_dir, will create it with
         ## minimum information...NOTE: this needs to be filled with more sample
@@ -420,6 +459,7 @@ sub write_public_file()
         );
 
         
+        ## write txt and xml files:
         write_to_public_file(
             
             sample_tag => $sample_tag,
@@ -453,9 +493,17 @@ sub write_public_file()
 }
 
 #######################################################################
-# write_to_public_file -- write info to the public repository file
-#    while replacing disk file locations, with http locations relative
-#    to www.peptideatlas.org
+# write_to_public_file -- write info to the public repository files
+# and write soft-links accessible by URLs
+# @param $sample_tag
+# @param $organism
+# @param $rawDataLocation (not required)
+# @param $rawDataType (not required)
+# @param $mzXMLDataLocation
+# @param $READMELocation
+# @param $searchResultsLocation
+# @param $proteinProphetLocation (not required)
+# @param $description
 #######################################################################
 sub write_to_public_file
 {
@@ -466,11 +514,9 @@ sub write_to_public_file
 
     my $organism = $args{organism} || die "need organism ($!)";
 
-    my $rawDataLocation = $args{rawDataLocation} || 
-        die "need rawDataLocation ($!)";
+    my $rawDataLocation = $args{rawDataLocation};
 
-    my $rawDataType = $args{rawDataType} ||
-        warn "need rawDataType for $sample_tag ($!)";
+    my $rawDataType = $args{rawDataType};
 
     my $mzXMLDataLocation = $args{mzXMLDataLocation} ||
         die "need mzXMLDataLocation ($!)";
@@ -481,21 +527,20 @@ sub write_to_public_file
     my $searchResultsLocation = $args{searchResultsLocation} ||
         die "need searchResultsLocation ($!)";
 
-    my $proteinProphetLocation = $args{proteinProphetLocation} ||
-        die "need proteinProphetLocation ($!)";
+    my $proteinProphetLocation = $args{proteinProphetLocation};
 
     my $description = $args{description} ||
         die "need description ($!)";
 
+    ## xxxxxxx this should be required, why did I set it to empty set?
     my $data_contributors = $args{data_contributors} || "[]";
 
     $data_contributors =~ s/\r/ /g;
 
     $data_contributors =~ s/\n/ /g;
 
-    ## create soft-links from /sbeams/pa_public_archive to
-    ## http://www.peptideatlas.org/repository/pa_public_archive
-    ## and replace the former with the later here
+    ## create soft-links from $repository_dir to PA repository public archive URL
+    ## (will return empty string if location is empty string)
     $rawDataLocation = makeHttpLocation( 
         location => $rawDataLocation );
 
@@ -524,6 +569,7 @@ sub write_to_public_file
     my @pub_url = @{$pub_url_array_ref};
 
 
+    ####### write to txt file: ########
     my $str = "$sample_tag\t$organism\t$rawDataLocation\t$rawDataType\t"
         ."$mzXMLDataLocation\t$READMELocation\t$searchResultsLocation\t"
         ."$proteinProphetLocation\t$description\t$data_contributors\t";
@@ -545,39 +591,138 @@ sub write_to_public_file
     close(OUTFILE) or die
         "cannot close $public_outfile ($!)";
 
+
+    ######## write to xml file: ########
+    writeXMLSample(
+        sample_tag => $sample_tag,
+        organism => $organism,
+        description => $description,
+        rawDataType => $rawDataType,
+        rawDataLocation => $rawDataLocation,
+        mzXMLDataLocation => $mzXMLDataLocation,
+        READMELocation => $READMELocation,
+        searchResultsLocation => $searchResultsLocation,
+        proteinProphetLocation => $proteinProphetLocation,
+        data_contributors => $data_contributors,
+        pub_citation_array_ref => \@pub_cit,
+        pub_url_array_ref => \@pub_url,
+    );
+
+
 }
 
 
 #######################################################################
-# makeHttpLocation
+#  initializeXMLFile -- write xml declaration and root node start tag
+#######################################################################
+sub initializeXMLFile
+{
+
+    my $out = new IO::File(">$public_xml_outfile");
+
+    my $writer = new XML::Writer(OUTPUT=> $out, UNSAFE => 1);
+
+    $writer->xmlDecl('UTF-8');
+
+    $writer->startTag( 'repository' );
+
+    $writer->end();
+
+    $out->close();
+
+}
+
+#######################################################################
+#  finalizeXMLFile -- write root node end tag, and check well-formedness
+#######################################################################
+sub finalizeXMLFile
+{
+
+    my $out = new IO::File(">>$public_xml_outfile");
+
+    my $writer = new XML::Writer(OUTPUT=> $out, UNSAFE => 1);
+
+    $writer->endTag( 'repository' );
+
+    $writer->end();
+
+    $out->close();
+
+    checkWellFormedness();
+
+}
+
+
+#######################################################################
+#  checkWellFormedness -- check that xml file is well-formed
+#######################################################################
+sub checkWellFormedness
+{
+
+    ## check that xml file is well-formed
+    my $parser = new XML::Parser();
+
+    eval
+    {
+        $parser->parsefile ("$public_xml_outfile");
+    };
+
+
+    if ($@)
+    {
+
+        print "WARNING: $public_xml_outfile is not well-formed\n";
+
+        error_message (
+            message => "WARNING: $public_xml_outfile is not well-formed");
+
+    }
+
+}
+
+
+#######################################################################
+# makeHttpLocation - make soft-link from public archive area to
+# repository web path
+# @param $location 
+# @return webapp relative URI
+# (returns empty string if location is empty string)
 #######################################################################
 sub makeHttpLocation
 {
 
     my %args = @_;
 
-    my $location = $args{location} || die "need location ($!)";
-
-    ## replace /sbeams/ with http://www.peptideatlas.org/repository
-    my $str1 ="\/sbeams\/";
-
-    my $str2 ="http://www.peptideatlas.org/repository/";
+    my $location = $args{location};
 
     my $newLocation = $location;
 
-    $newLocation =~ s/($str1)(.+)$/$str2$2/gi;
+    if ($newLocation ne "")
+    {
+
+        ## xxxxxxx assuming that all web implementations have sub-dir of
+        ## repository called pa_public_archive
+        my $pa_public_uri = "pa_public_archive";
+
+        my $pa_public_url = "$repository_url/$pa_public_uri";
+
+        ## extract filename from location....
+        my $lastDirMarkerIndex = rindex($location, "/");
+
+        my $filename = substr( $newLocation, $lastDirMarkerIndex + 1);
+    
+        ## file location with respect to repository url:
+        $newLocation = "$pa_public_url/$filename";
 
 
-    ## make soft link from /sbeams/pa_public_archive to 
-    ## /net/dblocal/wwwspecial/peptideatlas/repository/pa_public_archive
-    my $newSoftLink = $location;
+        ###### now, make soft link from $location to $repository_web_path/$filename
+        my $newSoftLink = "$repository_web_path/$filename";
 
-    my $str3 ="/net/dblocal/wwwspecial/peptideatlas/repository/";
+        symlink $location, $newSoftLink;
+#       symlink $location, $newSoftLink or warn 
+#           "Can't make soft link from $location to $newSoftLink ($!)\n";
 
-    $newSoftLink =~ s/($str1)(.+)$/$str3$2/gi;
-
-    symlink $location, $newSoftLink or warn 
-        "Can't make soft link from $location to $newLocation ($!)\n";
+    }
 
 
     return $newLocation;
@@ -589,6 +734,14 @@ sub makeHttpLocation
 #     gets the path of the gzipped tar file.  If the file isn't found
 #     in $repository_dir, it packs up the files from the data dir
 #     and puts the gzipped tar file in $repository_dir
+# @param sample_tag
+# @param data_dir
+# @param file_suffix  to use as archive file suffix (for example "searched")
+# @param file_pattern to use for inclusion in archive file 
+#    (for example "inter* ASAP* *.tgz *.html sequest.params")
+# @return data_location or compressed archive file; returns nothing if
+#    if files with file_pattern don't exist.  (for example, happens
+#    when original vendor specific spectra are missing)
 #######################################################################
 sub get_data_location
 {
@@ -605,6 +758,8 @@ sub get_data_location
 
     my $file_pattern = $args{file_pattern} || die "need file_pattern for list($!)";
 
+
+    ## get a formatted name to look for:
     my $compressed_archive_file = get_compressed_archive_filename(
 
         sample_tag => $sample_tag,
@@ -613,11 +768,11 @@ sub get_data_location
 
     );
 
+
     my $data_location = "$repository_dir/$compressed_archive_file";
 
 
-
-    ## Is file in $repository_dir ?
+    ## Does file exist in $repository_dir ?
     if ( -e $data_location )
     {
 
@@ -625,7 +780,7 @@ sub get_data_location
             
     } else 
     {
-
+        ## else, need to create archive compress it, and move it to public area:
         print "making $data_location may take awhile, patience...\n";
 
 
@@ -635,22 +790,21 @@ sub get_data_location
         chdir $data_dir || die "cannot chdir to $data_dir ($!)";
 
 
-        ## make a file that contains list of files:
+        #### make a file containing files with pattern: ####
         my $filelist = "tt.txt";
 
         my $cmd = "rm -f $filelist";
 
         system $cmd;
 
-        $cmd = "ls $file_pattern > $filelist";
-##      try this next round:
-#       $cmd = "find $data_dir -name \'$file_pattern\' -print > $filelist";
+#       $cmd = "ls $file_pattern > $filelist";
+
+        $cmd = "find $data_dir -name \'$file_pattern\' -print > $filelist";
 
         system $cmd;
 
 
-        ## if filelist is empty, die with error message:
-        #die "could not find $file_pattern files in $data_dir" if (-z $filelist);
+        ## if filelist is empty, report error message, and set data_location to null: 
         if (-z $filelist)
         {
 
@@ -659,6 +813,8 @@ sub get_data_location
                 message => "could not find $file_pattern files in $data_dir",
 
             );
+
+            $data_location = "";
 
         } else
         {
@@ -738,7 +894,9 @@ sub get_raw_data_type
 
 
     ## check for .dat files:
-    my @files = `ls $data_dir/*.dat`;
+#   my @files = `ls $data_dir/*.dat`;
+    my @files = `find $data_dir -name \'*.dat\' -print`;
+
 
     if ( $#files > -1)
     {
@@ -753,7 +911,8 @@ sub get_raw_data_type
     unless ($raw_data_type)
     {
 
-        my @files = `ls $data_dir/*.RAW`;
+#       my @files = `ls $data_dir/*.RAW`;
+        my @files = `find $data_dir -name \'*.RAW\' -print`;
 
         if ( $#files > -1)
         {
@@ -769,7 +928,8 @@ sub get_raw_data_type
     unless ($raw_data_type)
     {
 
-        my @files = `ls $data_dir/*.raw`;
+#       my @files = `ls $data_dir/*.raw`;
+        my @files = `find $data_dir -name \'*.raw\' -print`;
 
         if ( $#files > -1)
         {
@@ -785,7 +945,8 @@ sub get_raw_data_type
     unless ($raw_data_type)
     {
 
-        my @files = `ls $data_dir/*_dta.tar`;
+#       my @files = `ls $data_dir/*_dta.tar`;
+        my @files = `find $data_dir -name \'*_dta.tar\' -print`;
 
         if ( $#files > -1)
         {
@@ -798,6 +959,7 @@ sub get_raw_data_type
 
 
     ## check for an empty file with "nothingHere" where we don't have original data
+    ##  xxxxxxx changing this... entry not necessary now, so remove this implementation
     unless ($raw_data_type)
     {
 
@@ -1645,10 +1807,11 @@ sub write_to_notpublic_file
 
 
 #######################################################################
-# get_compressed_archive_filename --  given sample_tag and data_type,
+# get_compressed_archive_filename --  given sample_tag and file_suffix
 #    returns name of compressed file archive 
-#    (for example, returns: exp1_mzXML.tar.gz)
-##   (exception for $file_suffix eq "TarOfDtas" ==> exp1_dtas.tar.gz)
+# @param $sample_tag (for example: exp1)
+# @param $file_suffix (for example: mzXML)
+# @return formatted name for the archive file (for example: exp1_mzXML.tar.gz)
 #######################################################################
 sub get_compressed_archive_filename
 {
@@ -1676,10 +1839,11 @@ sub get_compressed_archive_filename
 
 
 #######################################################################
-# get_archive_filename --  given sample_tag and data_type,
-#    returns name of file archive
-#    (for example, returns: exp1_mzXML.tar)
-##   (exception for $file_suffix == "TarOfDtas", returns exp1_dtas.tar)
+# get_archive_filename --  given sample_tag and file_suffix,
+#    returns a formatted name of file archive
+# @param $sample_tag (for example: exp1)
+# @param $file_suffix (for example: mzXML)
+# @return formatted name for the archive file (for example: exp1_mzXML.tar)
 #######################################################################
 sub get_archive_filename
 {
@@ -1700,6 +1864,195 @@ sub get_archive_filename
     my $file = $sample_tag."_$file_suffix".".tar";
 
     return $file;
+
+}
+
+
+#######################################################################
+# writeXMLSample -- write sample info to xml file.  
+#
+# Format will be:
+#  <sample>
+#    <tag>exp1</tag>
+#    <organism>Human</organism>
+#    <description>Erythroleukemia K562 cell line</description>
+#    <data_contributors>Katherine Resing (U Col), Meyer-Arendt K, Mendoza AM, Aveline-Wolf LD Jonscher KR, Pierce KG, Old WM, Cheung HT, Russell S, Wattawa JL, Goehle GR, Knight RD, Ahn NG</data_contributors>
+#    <resource>
+#      <README="http://www.peptideatlas.org/repository/pa_public_archive/A8_IP_README"/>
+#    </resource>
+#    <resource>
+#      <RAW_Format="http://www.peptideatlas.org/repository/pa_public_archive/A8_IP_RAW.tar.gz"/>
+#    </resource>
+#    <resource>
+#      <dat_Format="http://www.peptideatlas.org/repository/pa_public_archive/A8_IP_dat.tar.gz"/>
+#    </resource>
+#    <resource>
+#      <mzXML_Format="http://www.peptideatlas.org/repository/pa_public_archive/A8_IP_mzXML.tar.gz"/>
+#    </resource>
+#    <resource>
+#      <Search_Results="http://www.peptideatlas.org/repository/pa_public_archive/A8_IP_searched.tar.gz"/>
+#    </resource>
+#    <resource>
+#      <ProteinProphet_file="http://www.peptideatlas.org/repository/pa_public_archive/A8_IP_prot.tar.gz"/>
+#    </resource>
+#    <publication>
+#      <citation="Resing et al. 2004, Anal Chem"/>
+#      <url="http://www.ncbi.nlm.nih.gov/entrez/query.fcgi?cmd=Retrieve&db=pubmed&dopt=Abstract&list_uids=15228325"/>
+#    </publication>
+#  </sample>
+#######################################################################
+sub writeXMLSample
+{
+
+    my %args = @_;
+
+    ## read arguments:
+    my $sample_tag = $args{'sample_tag'} || die "need sample tag ($!)";
+
+    my $organism = $args{'organism'} || die "need organism ($!)";
+
+    my $description = $args{'description'} || die "need description ($!)";
+
+    my $mzXMLDataLocation = $args{'mzXMLDataLocation'} || 
+        die "need mzXMLDataLocation ($!)";
+
+    my $READMELocation = $args{'READMELocation'} || 
+        die "need READMELocation ($!)";
+
+    my $data_contributors = $args{'data_contributors'} ||
+        die "need data_contributors ($!)";
+
+    my $searchResultsLocation = $args{'searchResultsLocation'} || 
+        die "need searchResultsLocation ($!)";
+
+    my $rawDataLocation = $args{'rawDataLocation'};
+
+    my $rawDataType = $args{'rawDataType'};
+
+    my $proteinProphetLocation = $args{'proteinProphetLocation'};
+
+    my $pub_citation_array_ref = $args{'pub_citation_array_ref'};
+
+    my $pub_url_array_ref = $args{'pub_url_array_ref'};
+
+    #my @pub_cit = @{$pub_citation_array_ref};
+
+    #my @pub_url = @{$pub_url_array_ref};
+
+
+
+    ## open xml file and writer:
+    my $out = new IO::File(">>$public_xml_outfile");
+
+    my $writer = new XML::Writer(OUTPUT=> $out, UNSAFE => 1);
+
+    ## indent 2 spaces, write start tag, write end-of line marker
+    $out->print("  ");
+    $writer->startTag("sample");
+    $out->print("\n");
+
+
+    ## indent 4 spaces, write tag, write end-of line marker
+    $out->print("    ");
+    $writer->startTag("sample_tag");
+    $writer->characters($sample_tag);
+    $writer->endTag("sample_tag");
+    $out->print("\n");
+
+
+    ## indent 4 spaces, write tag, write end-of line marker
+    $out->print("    ");
+    $writer->startTag("organism");
+    $writer->characters($organism);
+    $writer->endTag("organism");
+    $out->print("\n");
+
+
+    ## indent 4 spaces, write tag, write end-of line marker
+    $out->print("    ");
+    $writer->startTag("description");
+    $writer->characters($description);
+    $writer->endTag("description");
+    $out->print("\n");
+
+
+    ## indent 4 spaces, write tag, write end-of line marker
+    $out->print("    ");
+    $writer->startTag("resource", "README" => $READMELocation);
+    $writer->endTag("resource");
+    $out->print("\n");
+
+    ## indent 4 spaces, write tag, write end-of line marker
+    $out->print("    ");
+    $writer->startTag("resource", "Data_Contributors" => $data_contributors);
+    $writer->endTag("resource");
+    $out->print("\n");
+
+
+    ## indent 4 spaces, write tag, write end-of line marker
+    $out->print("    ");
+    $writer->startTag("resource", "mzXML_format" => $mzXMLDataLocation);
+    $writer->endTag("resource");
+    $out->print("\n");
+
+
+    ## indent 4 spaces, write tag, write end-of line marker
+    $out->print("    ");
+    $writer->startTag("resource", "Search_Results" => $searchResultsLocation);
+    $writer->endTag("resource");
+    $out->print("\n");
+
+
+    if ($rawDataLocation ne "")
+    {
+        ## indent 4 spaces, write tag, write end-of line marker
+        $out->print("    ");
+        $writer->startTag("resource", "${rawDataType}_format" => $rawDataLocation);
+        $writer->endTag("resource");
+        $out->print("\n");
+    }
+
+    if ($proteinProphetLocation ne "")
+    {
+        ## indent 4 spaces, write tag, write end-of line marker
+        $out->print("    ");
+        $writer->startTag("resource", 
+            "ProteinProphet_file" => $proteinProphetLocation);
+        $writer->endTag("resource");
+        $out->print("\n");
+    }
+
+
+    if ($pub_citation_array_ref )
+    {
+
+        my @pub_cit = @{$pub_citation_array_ref};
+
+        my @pub_url = @{$pub_url_array_ref};
+
+        for (my $i = 0; $i <= $#pub_cit; $i++)
+        {
+            ## indent 4 spaces, write tag, write end-of line marker
+            $out->print("    ");
+            $writer->startTag("publication",
+                "citation" => $pub_cit[$i],
+                "url" => $pub_url[$i],
+            );
+            $writer->endTag("publication");
+            $out->print("\n");
+        }
+    }
+
+    ####### end resources #######
+
+
+    ## indent 2 spaces, write end sample tag:
+    $out->print("  ");
+    $writer->endTag("sample");
+
+    $writer->end();
+
+    $out->close();
 
 }
 
