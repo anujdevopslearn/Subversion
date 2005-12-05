@@ -259,6 +259,7 @@ sub make_experiment_summary_html {
          INNER JOIN $TBGT_EXPERIMENT_STATUS_STATE ESS
                ON ( ES.experiment_status_state_id = ESS.experiment_status_state_id)
 	 WHERE ES.experiment_id = '$experiment_id'
+           AND E.record_status != 'D'
 	 ORDER BY E.experiment_tag
     ~;
     my @experiment_status_rows = $sbeams->selectSeveralColumns($sql);
@@ -338,6 +339,7 @@ sub make_detailed_experiment_summary_html {
          INNER JOIN $TBGT_EXPERIMENT_STATUS_STATE ESS
                ON ( ES.experiment_status_state_id = ESS.experiment_status_state_id)
 	 WHERE ES.experiment_id = '$experiment_id'
+           AND E.record_status != 'D'
 	 ORDER BY E.experiment_tag
       ~;
     my @experiment_status_rows = $sbeams->selectSeveralColumns($sql);
@@ -414,6 +416,7 @@ sub make_facility_summary_html {
          INNER JOIN $TBGT_EXPERIMENT_STATUS_STATE ESS
                ON ( ES.experiment_status_state_id = ESS.experiment_status_state_id)
 	 WHERE ESS.experiment_status_state_name != 'Complete'
+           AND E.record_status != 'D'
 	 ORDER BY ES.estimated_completion_date
     ~;
     my @experiment_status_rows = $sbeams->selectSeveralColumns($sql);
