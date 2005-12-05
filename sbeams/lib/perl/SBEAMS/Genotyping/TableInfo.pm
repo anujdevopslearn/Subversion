@@ -79,7 +79,52 @@ sub returnTableInfo {
 
     }
 
+    if ($table_name eq "GT_experiment") {
 
+        if ($info_key eq "BASICQuery") {
+            return qq~
+                SELECT experiment_id,PR.name as 'project',
+                       CT.first_name + ' ' + CT.last_name as 'contact',
+                       experiment_tag,experiment_description,
+                       number_of_samples,number_of_assays,
+                       want_validation as 'validation',
+                       want_pooling as 'pooling',pooling_set_id,
+                       want_typing as 'typing',is_multiplexing_allowed as
+                       'multiplexing',dna_type,dna_extraction_protocol,
+                       samples_file,assays_file
+                  FROM $TBGT_EXPERIMENT E
+             LEFT JOIN $TB_PROJECT PR
+                    ON (E.project_id = PR.project_id)
+             LEFT JOIN $TB_CONTACT CT
+                    ON (E.contact_id = CT.contact_id)
+                 WHERE E.record_status!='D'
+
+            ~;
+        }
+
+        if ($info_key eq "FULLQuery") {
+            return qq~
+                SELECT experiment_id,PR.name as 'project',
+                       CT.first_name + ' ' + CT.last_name as 'contact',
+                       experiment_tag,experiment_description,
+                       number_of_samples,number_of_assays,
+                       want_validation as 'validation',
+                       want_pooling as 'pooling',pooling_set_id,
+                       want_typing as 'typing',is_multiplexing_allowed as
+                       'multiplexing',dna_type,dna_extraction_protocol,
+                       samples_file,assays_file,e.comment,e.date_created,
+                       e.date_modified
+                  FROM $TBGT_EXPERIMENT E
+             LEFT JOIN $TB_PROJECT PR
+                    ON (E.project_id = PR.project_id)
+             LEFT JOIN $TB_CONTACT CT
+                    ON (E.contact_id = CT.contact_id)
+                 WHERE E.record_status!='D'
+            ~;
+        }
+
+
+    }
 
 ###############################################################################
 
