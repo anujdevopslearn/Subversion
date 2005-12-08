@@ -2960,8 +2960,11 @@ sub displayResultSet {
 	  $line =~ s~codebase=\".+\"~codebase="$SERVER_BASE_DIR/$tmp_html_base_dir"~;
 	}elsif($line =~ /CYTOSCAPE_JAR_HOOK/){
 	  $line =~ s~CYTOSCAPE_JAR_HOOK~$SERVER_BASE_DIR/$HTML_BASE_DIR/usr/java/share/Cytoscape/cytoscape_1.0.jar~;
+
+	} elsif ($line =~ /CYTOSCAPE_JARS/) {
+	  $line =~ s~CYTOSCAPE_JARS~$SERVER_BASE_DIR/$HTML_BASE_DIR/usr/java/share/Cytoscape~;
 	}
-		
+	
 	$buffer .= $line;
       }
 
