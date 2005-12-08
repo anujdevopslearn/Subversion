@@ -72,7 +72,7 @@ if ($DEBUG) {
 }
 
 my $JAVA_PATH = $sbeams->get_java_path();
-my $KEYSTORE  = "$PHYSICAL_BASE_DIR/" . $sbeams->get_jnlp_keystore();
+my $KEYSTORE  = $sbeams->get_jnlp_keystore();
 my $KEYPASS   = $sbeams->get_keystore_passwd();
 my $KEYALIAS  = $sbeams->get_keystore_alias();
 
@@ -120,7 +120,7 @@ sub process_file{
 	move_files(temp_folder => $temp_dir,
 		   file	       => $file,
 	          );
-	delete_temp_folder(
+	delete_temp_files(
 		   temp_folder => $temp_dir,
 		   file	       => $file,
 	          );
@@ -217,12 +217,14 @@ sub move_files{
 	
 }
 
-sub delete_temp_folder {
+sub delete_temp_files {
 	my %args = @_;
 	my $file = $args{file};
 	my $temp_folder = $args{temp_folder};
 	print "Deleting temporary folder $temp_folder\n" if $VERBOSE;
-	run_command("rm -r $temp_folder");	
+	run_command("rm -r $temp_folder");
+	print "Deleting temporary manifest /tmp/temp_manifest.mf\n" if $VERBOSE;
+	run_command("rm /tmp/temp_manifest.mf");
 }
 
 sub sign_jar {
