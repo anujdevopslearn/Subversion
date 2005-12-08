@@ -1,0 +1,4 @@
+#!/bin/sh
+
+java -Xmx500m -cp ../../../../usr/java/share/Cytoscape/cytoscape.jar \
+  cytoscape.cytoscape -p project -x

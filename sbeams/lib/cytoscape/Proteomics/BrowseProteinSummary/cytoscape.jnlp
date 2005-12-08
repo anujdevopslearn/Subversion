@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<jnlp
+  codebase="http://db.systemsbiology.net/tmp/test1"
+  href="cytoscape.jnlp">
+  <information>
+    <title>SBEAMS BrowseProteinSummary to Cytoscape</title>
+    <vendor>ISB</vendor>
+    <offline-allowed/>
+  </information>
+  <security>
+      <all-permissions/>
+  </security>
+  <resources>
+    <j2se version="1.4+" max-heap-size="1g"/>
+    <jar href="CYTOSCAPE_JAR_HOOK"/>
+    <jar href="data.jar"/>
+  </resources>
+  <application-desc>
+    <argument>-p</argument>
+    <argument>jar://project-jnlp</argument>
+    <argument>-x</argument>
+  </application-desc>
+</jnlp>
+

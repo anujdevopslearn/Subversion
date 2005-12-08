@@ -1,0 +1,5 @@
+props=cytoscape.props
+dataServer=http://db.systemsbiology.net/cytoscape/annotation/human/manifest
+vprops=vizmap.props
+noa=organism.noa
+noa=commonName.noa

@@ -1,0 +1,4 @@
+props=jar://cytoscape.props
+dataServer=http://db.systemsbiology.net:8080/cytoscape/annotation/mouse/manifest
+vprops=jar://vizmap.props
+$ALLFILESHERE
