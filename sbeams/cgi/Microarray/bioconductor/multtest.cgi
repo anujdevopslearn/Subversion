@@ -417,7 +417,7 @@ sub step3 {
 	
 	 print p(checkbox('exprs','checked','YES','Include expression values in results')),
 		  
-		  p("Web Page Title:", br, textfield('title', $desc, 40)),
+		  p("Name for analysis:", br, textfield('title', $desc, 40)),
 	      p("E-mail address where you would like your job status sent: (optional)", br,
             textfield('email', $email, 40)),
           p(submit("Submit Job")),
@@ -789,7 +789,7 @@ END
 																        analysis_name_type  =>'normalization',
 																        );
 
-  my ($user_description) = $sbeams->selectOneColumn( <<"  END_SQL" );
+  my ($user_description) = $cgi->param('title') || $sbeams->selectOneColumn( <<"  END_SQL" );
   SELECT user_description
   FROM $TBMA_AFFY_ANALYSIS
   WHERE affy_analysis_id = $previous_analysis_id;
